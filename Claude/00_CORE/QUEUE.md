@@ -16,14 +16,48 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-13) — day one, scaffolding green
+## ⭐⭐⭐ YOU ARE HERE (2026-09-13) — `IN1` built, first device pass done, **owed a second**
 
-✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **37 golden
-vectors, all passing**. ✅ The engine boundary is enforced by a test. ✅ The
-mate-connector geometry and the constraint-stack solver are in and covered.
-⛔ **NEXT: `IN1`** — the gesture recognizer state machine. It is the spine every
-input rule hangs off, and §1.3 of the spec calls it *"the central change"*.
-⛔ **OWED: a look on a real device.** Nothing here has been touched by a finger.
+✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **100 golden
+vectors, all passing** (37 → 100 with `IN1`). ✅ The engine boundary is enforced by a
+test. ✅ The mate-connector geometry and the constraint-stack solver are in and
+covered. ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated
+on `npm run verify`.
+
+✅ **`IN1` IS BUILT**: the recognizer state machine, provisional motion with
+rollback, roll detection, the release-time priority ladder, and a double-tap §1.4
+could not work without. ⭐ `src/render/hud.ts` prints the recognizer's own state on
+the glass — a state machine has no visible shape, and "the cube moved" tests none of
+this.
+
+⭐⭐ **THE FIRST DEVICE PASS FOUND THREE DEFECTS THAT 81 GREEN VECTORS COULD NOT.**
+Commit, tap/hold and double-tap passed. Rollback was **inconsistent** — the lift
+speed was measured from the LAST SAMPLE PAIR, and a `pointerup` that repeats the
+previous coordinates reads as a dead stop, so identical flicks were judged
+differently. Yaw and pitch ran **backwards**, and in **two different frames**, because
+Euler assignment applies components in a fixed order. Roll **detected but never
+rolled**: the detector froze its own angle at commit. ✅ All three fixed and pinned.
+⛔⛔ **A SECOND DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
+
+⛔ **NEXT once `IN1` closes: `3D1`** — the object model. `IN3`, `IN4`, `RND1` and
+`RND2` are all waiting on it, and `IN2` is blocked behind the `IN8` decision below.
+⚠ **Three defects were found in §1.3 while building `IN1`** and they are the
+owner's to ratify: no double-tap, no duration bound on `TAP`, and a roll test that
+cannot fire as specified. → [`queue_notes/IN1.md`](queue_notes/IN1.md).
+
+✅✅ **THE FAST DEVICE LOOP WORKS** (`DEP1a`, 2026-09-13). `npm run dev:usb` +
+`adb reverse tcp:5173 tcp:5173`, and the tablet loads it as `localhost` — a **secure
+context**, so sensors and rule 1's tilt are testable. Two cubes confirmed on a Lenovo
+TB-X606F. ⭐ Procedure and the three traps:
+[`../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).
+
+⭐ **So `IN1` can be closed properly** — built and verified headlessly, then LOOKED AT
+on the device, which is the only thing `METHOD` accepts as closing a change.
+
+⭐ **Two defects were already found and fixed on day one**, both recorded: the
+spec's §1.1 "accumulated travel" rule (unusable — path length of a resting finger
+is an unbounded random walk) and a metre-scale scene clipped by Babylon's
+1-world-unit default near plane.
 
 ---
 
@@ -33,13 +67,13 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
-| IN0 | Units, motion states, flick test | IN | feature | ✅ **built 2026-09-13**, 37 vectors. ⚠ §1.1's "accumulated travel" replaced by net displacement — see the dossier | — |
-| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ⛔ **NEXT** | IN0 |
+| IN0 | Units, motion states, flick test | IN | feature | ✅ **built 2026-09-13**, 37 vectors. ⚠ §1.1's "accumulated travel" replaced by net displacement — see the dossier. ✅ its `moveExitDistance` debt closed by `IN1` | — |
+| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ⚠ **BUILT + GREEN, FIRST DEVICE PASS DONE 2026-09-13 — NOT CLOSED.** 63 new vectors. 3 defects found in §1.3 while building, then **3 more found by finger** (inconsistent rollback = last-pair lift-speed estimator; yaw/pitch reversed AND in mixed frames = Euler assignment; roll detected but frozen). All fixed + pinned. ⛔ **Owed: a SECOND device pass.** → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | queued | IN1 |
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | queued | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | queued | IN2, 3D1 |
-| IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued | IN3 |
-| IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued | IN1 |
+| IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued. ⚠ `IN1` added four more (`tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop`, and a moved `stillTime`) and found `stillSpeed`/`stillTime`/`moveExitDistance` are **not independent** — measure them together | IN3 |
+| IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
 
@@ -68,10 +102,10 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | DEP0 | Vite + TS + vitest, `npm run verify` | DEP | infra | ✅ built 2026-09-13 | — |
-| DEP1a | ⛔⛔ **Device loop over USB (Android)** — `chrome://inspect` port forwarding. ⭐ No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ⛔ **do this FIRST** | DEP0 |
+| DEP1a | ⭐⭐ **Device loop over USB (Android)** — `adb reverse`. No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ✅✅ **WORKING 2026-09-13** on the Lenovo TB-X606F — two cubes confirmed on the device. ⭐ `adb reverse`, NOT Chrome port forwarding; the fix for the stuck handshake was the REAL `adb`. Procedure + 3 traps: `50_BUILD_DEPLOY/DEVICE_TESTING_USB.md` | DEP0 |
 | DEP1b | Device loop over LAN — for iOS, or a second device. ⚠ needs a Private network + a scoped firewall rule (`scripts/allow-lan-dev.ps1`) | DEP | infra | queued | DEP0 |
 | DEP1c | ⭐ **HTTPS on the LAN** (`@vitejs/plugin-basic-ssl`) — the only way to get a secure context on iOS over Wi-Fi | DEP | infra | queued — needed before rule 1 (tilt) can be tested on iPhone | DEP1b |
-| DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop. `.github/workflows/pages.yml` is written | DEP | infra | ⛔ **enable Pages in repo settings** | DEP0 |
+| DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop | DEP | infra | ✅ **LIVE 2026-09-13** — https://dsug1.github.io/3d_assembly_game/ . Procedure: `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md` | DEP0 |
 | DEP2 | Capacitor shells for iOS/Android | DEP | platform | queued | DEP1 |
 | DEP3 | Desktop shell (Tauri) | DEP | platform | queued | DEP2 |
 | DEP4 | CI: typecheck + vectors on every push | DEP | infra | ✅ **rides in `pages.yml`** — the deploy is gated on `npm run verify` | DEP1d |

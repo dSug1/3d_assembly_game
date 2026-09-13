@@ -1,11 +1,17 @@
 /**
  * THE ONLY FILE THAT IMPORTS BABYLON. Deliberately thin.
  *
- * ⚠ STUB — it stands up a scene with two objects and reports what the pointer hits,
- * so the loop is closed end to end. The gesture rules are NOT wired yet; that is
- * queue rows `IN1`–`IN4`. What matters today is the BOUNDARY: everything with a
- * rule in it lives in `src/core` or `src/input`, and `tests/boundary.test.ts`
- * fails the build if an engine import creeps into either.
+ * ⚠ STUB — it stands up a scene with two objects and drives one `IN1` recognizer
+ * per touchpoint, so the loop is closed end to end. The gesture RULES are NOT wired
+ * yet; that is queue rows `IN2`–`IN4`. What matters today is the BOUNDARY:
+ * everything with a rule in it lives in `src/core` or `src/input`, and
+ * `tests/boundary.test.ts` fails the build if an engine import creeps into either.
+ *
+ * ⛔⛔ THE ROTATION BELOW IS A DIAGNOSTIC STAND-IN, NOT RULE 2bis. It exists so the
+ * recognizer's PROVISIONAL MOTION AND ROLLBACK have a visible shape on a device --
+ * drag and the cube turns, flick and it snaps back to where the press found it.
+ * It has no gain from `gestureConfig`, no selection semantics, no constrained
+ * variant and no constraint stack. `IN3` builds the real thing and deletes this.
  *
  * ⭐ Face picking is why Babylon is here: rule 2 selects a FACE, not an object, and
  * `pickResult.faceId` gives it directly. That is also the seam to a mate connector.
@@ -29,16 +35,49 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import "@babylonjs/core/Culling/ray";
+import {
+  DEFAULT_CONFIG,
+  Recognizer,
+  TapHistory,
+  screenPlaneRotation,
+  screenRollRotation,
+  type PosePort,
+  type ReleaseVerdict,
+  type Sample,
+  type ScreenFrame,
+} from "../input";
+import type { Quat, Vec3 } from "../core/vec";
+import { createHud } from "./hud";
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
 const OBJECT_SIZE_M = 0.08;
 const CAMERA_RADIUS_M = 0.6;
+
+/**
+ * ⚠ DIAGNOSTIC ONLY — radians per CSS pixel for the stand-in rotation.
+ * ⛔ THIS IS NOT A GESTURE GAIN AND MUST NOT BECOME ONE. The real gains are
+ * `gainRotateFree` / `gainRotateConstrained` in `gestureConfig.ts`, they are in
+ * millimetres, and they belong to `IN3`. Keeping this number OUT of the config is
+ * the point: one constant, one place, and a debug value that leaks into production
+ * is exactly the drift `gestureConfig`'s header warns about.
+ */
+const DIAGNOSTIC_RAD_PER_PX = 0.008;
+
+/**
+ * ⛔⛔ A QUATERNION, NOT EULER ANGLES. Device-reported 2026-09-13: *"the yaw is in
+ * the world coordinates while the pitch is in the object coordinates."* That is what
+ * `mesh.rotation` does — Euler components are applied in a FIXED ORDER, so the second
+ * angle acts inside the frame the first one just made, and the cube tumbles. The
+ * composition now lives in `input/screen_rotate.ts`, where vectors can check it.
+ */
+type DiagnosticPose = Quat;
 
 export interface SceneHandle {
   readonly scene: Scene;
@@ -78,6 +117,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const make = (name: string, x: number, rgb: [number, number, number]) => {
     const mesh = CreateBox(name, { size: OBJECT_SIZE_M }, scene);
     mesh.position = new Vector3(x, 0, 0);
+    // ⛔ Quaternion mode. While `rotationQuaternion` is null Babylon uses the Euler
+    // `rotation` instead, which is the frame-mixing defect above.
+    mesh.rotationQuaternion = Quaternion.Identity();
     const mat = new StandardMaterial(name + "-mat", scene);
     mat.diffuseColor = new Color3(...rgb);
     mesh.material = mat;
@@ -86,14 +128,149 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   make("objectA", -0.07, [0.65, 0.67, 0.72]);
   make("objectB", 0.07, [0.45, 0.58, 0.72]);
 
-  // ⚠ Diagnostic only, and it is the seam the input layer will replace.
-  scene.onPointerObservable.add((info) => {
-    if (info.type !== PointerEventTypes.POINTERDOWN) return;
-    const pick = info.pickInfo;
-    if (!pick?.hit || !pick.pickedMesh) return;
-    // eslint-disable-next-line no-console
-    console.log("hit", pick.pickedMesh.name, "faceId", pick.faceId);
+  // ───────────────────────────────────────────────────────────────────
+  // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
+  // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
+  const hud = createHud();
+  const taps = new TapHistory(DEFAULT_CONFIG);
+  interface Held {
+    rec: Recognizer<DiagnosticPose>;
+    mesh: AbstractMesh;
+    frame: ScreenFrame;
+    /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
+    prev: Sample;
+    lastRollDeg: number;
+  }
+  const live = new Map<number, Held>();
+  let lastVerdict = "—";
+
+  /** Babylon stores `(x, y, z, w)`; `core/vec` uses `[w, x, y, z]`. One conversion. */
+  const readPose = (mesh: AbstractMesh): Quat => {
+    const q = mesh.rotationQuaternion!;
+    return [q.w, q.x, q.y, q.z];
+  };
+  const writePose = (mesh: AbstractMesh, q: Quat): void => {
+    mesh.rotationQuaternion!.set(q[1], q[2], q[3], q[0]);
+  };
+
+  const poseOf = (mesh: AbstractMesh): PosePort<DiagnosticPose> => ({
+    snapshot: () => readPose(mesh),
+    restore: (p) => writePose(mesh, p),
   });
+
+  const asVec3 = (v: Vector3): Vec3 => [v.x, v.y, v.z];
+
+  /**
+   * The camera's screen axes in WORLD space. ⚠ Latched at press, not recomputed per
+   * frame: rule 1's camera orbit must not silently redefine the axes half-way
+   * through a gesture. Same lesson as §1.4's `WORLD_AXIS_ALIGN`.
+   */
+  const screenFrame = (): ScreenFrame => ({
+    right: asVec3(camera.getDirection(Vector3.Right())),
+    up: asVec3(camera.getDirection(Vector3.Up())),
+    viewAxis: asVec3(camera.getDirection(Vector3.Forward())),
+  });
+
+  const describe = (v: ReleaseVerdict): string => {
+    const rule = v.rule === "NONE" ? "" : `  → ${v.rule}`;
+    const back = v.rolledBack ? "  ROLLED BACK" : "";
+    const f = v.flick ? `  ${v.flick.axis}${v.flick.sign > 0 ? "+" : "-"}` : "";
+    // ⭐ The measured lift speed is printed WHETHER OR NOT it passed, against the
+    // threshold it was judged by. "The flick did not fire" is otherwise
+    // unfalsifiable on a device: too slow a finger and a broken estimator look the
+    // same. That ambiguity is what made the first rollback build feel inconsistent.
+    const lift = `lift ${Math.round(v.liftSpeedMmPerS)}/${DEFAULT_CONFIG.flickLiftSpeed}mm/s`;
+    return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms  ${lift}`;
+  };
+
+  const paint = () => {
+    const first = live.values().next().value;
+    hud.update({
+      pointers: live.size,
+      // ⛔ Straight off the recognizer that made the decision. Never recomputed here:
+      // a readout that derives its own answer is a second implementation, and it can
+      // disagree with the product while showing green. See `METHOD`.
+      phase: first ? first.rec.currentPhase : "—",
+      motion: first ? first.rec.motionState : "—",
+      rollDeg: first ? first.rec.rollDeg : 0,
+      rollCommitted: first ? first.rec.rollCommitted : false,
+      lastVerdict,
+    });
+  };
+
+  /**
+   * ⚠ `performance.now()`, NOT `event.timeStamp`. Their epochs differ by browser
+   * (and historically within one), and every threshold in `gestureConfig` is a
+   * duration. One clock, chosen here, used for every sample.
+   */
+  const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
+    x: e.clientX,
+    y: e.clientY,
+    t: performance.now(),
+  });
+
+  scene.onPointerObservable.add((info) => {
+    const e = info.event as PointerEvent;
+    const s = sampleOf(e);
+
+    if (info.type === PointerEventTypes.POINTERDOWN) {
+      const pick = info.pickInfo;
+      if (!pick?.hit || !pick.pickedMesh) return; // rule 1's no-hit case is `IN3`
+      const mesh = pick.pickedMesh;
+      const rec = new Recognizer(DEFAULT_CONFIG, poseOf(mesh), taps);
+      rec.press(s);
+      live.set(e.pointerId, { rec, mesh, frame: screenFrame(), prev: s, lastRollDeg: 0 });
+      paint();
+      return;
+    }
+
+    const held = live.get(e.pointerId);
+    if (!held) return;
+
+    if (info.type === PointerEventTypes.POINTERMOVE) {
+      if (held.rec.move(s) === "COMMITTED_CONTINUOUS") {
+        // The provisional motion — applied LIVE, and undone by the recognizer itself
+        // if the flick test passes at release. See the header: stand-in, not 2bis.
+        //
+        // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
+        // about the screen axes latched at press. Every step is a small world-frame
+        // rotation, so the two axes never end up nested inside one another.
+        const cur = readPose(held.mesh);
+        if (held.rec.rollCommitted) {
+          // 2quinte has taken over: roll about the view axis by what the finger has
+          // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
+          // this gesture, which is what "commits to roll" means.
+          writePose(held.mesh, screenRollRotation(cur, held.frame, held.rec.rollDeg - held.lastRollDeg));
+        } else {
+          writePose(
+            held.mesh,
+            screenPlaneRotation(
+              cur,
+              held.frame,
+              s.x - held.prev.x,
+              s.y - held.prev.y,
+              DIAGNOSTIC_RAD_PER_PX,
+            ),
+          );
+        }
+      }
+      held.lastRollDeg = held.rec.rollDeg;
+      held.prev = s;
+      paint();
+      return;
+    }
+
+    if (info.type === PointerEventTypes.POINTERUP) {
+      // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
+      // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
+      // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
+      lastVerdict = describe(held.rec.release(s));
+      live.delete(e.pointerId);
+      paint();
+    }
+  });
+
+  paint();
 
   let frames = 0;
   engine.runRenderLoop(() => {
