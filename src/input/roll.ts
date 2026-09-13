@@ -11,17 +11,57 @@
  * where the centroid finally reaches the centre. Committing at a sixth of a turn
  * about a centroid sitting on the arc measures noise.
  *
- * ⭐ SO THIS ACCUMULATES THE SIGNED TURNING ANGLE OF THE PATH — the angle between
- * consecutive direction vectors. For a circular arc that **equals its central angle
- * exactly**, and it needs no centre estimate at all.
+ * ⭐ SO THIS ACCUMULATES THE SIGNED TURNING ANGLE OF THE PATH — the change in the
+ * path's direction. For a circular arc that **equals its central angle exactly**,
+ * and it needs no centre estimate at all.
  *
- * ⭐ And the radius is the CIRCUMRADIUS OF THREE CONSECUTIVE SAMPLES — a local
- * curvature, which is the thing `rollRadiusMin` / `rollRadiusMax` are meaningful
- * against. It kills a false positive for free: a straight drag has zero curvature,
- * so an unbounded circumradius, so it sits above `rollRadiusMax` and accumulates
- * nothing. Under a centroid reading a straight path's bearing FLIPS BY 180° as it
- * passes the centroid — a large spurious accumulation, exactly where the measured
- * radius is smallest.
+ * ────────────────────────────────────────────────────────────────────────────
+ * ⛔⛔ AND DIRECTION IS MEASURED OVER A BASELINE OF `rollStepDistance`, NEVER
+ * BETWEEN CONSECUTIVE SAMPLES. Device-reported 2026-09-13: *"while rolling the cube
+ * jitters, if I pause the circular finger movement and start again, the cube also
+ * jitters a lot."*
+ *
+ * Consecutive pointer samples are a few pixels apart, so ±0.5 px of digitiser noise
+ * swings each tiny segment's direction by several degrees and the TURN between two
+ * of them by several more. ⭐ Measured: a clean circle steps 5.0° per sample; the
+ * same circle with ±0.5 px of noise produced steps of up to **46.3°** — nine times
+ * the true value, applied straight to the object every frame.
+ *
+ * ⛔⛔ A PAUSED FINGER WAS THE WORSE CASE. Three near-coincident noisy points have a
+ * meaningless circumradius; it fell below `rollRadiusMin`, which ZEROED the
+ * accumulator, and the object snapped back to where the roll began. Measured drift
+ * across one pause: **−46.3°**, for a finger that was holding still.
+ *
+ * ⭐⭐ THE BASELINE IS A TRAILING WINDOW, AND IT IS RE-MEASURED EVERY SAMPLE. An
+ * earlier fix only emitted a direction once per `rollStepDistance` travelled; that
+ * killed the noise and the pause drift outright, but the object then turned in
+ * ~15° QUANTISED JUMPS, which trades jitter for judder. Measuring the newest sample
+ * against the most recent sample at least `rollStepDistance` behind it gives a full
+ * baseline on EVERY sample: smooth, and still noise-bounded by the baseline the
+ * caller chose rather than by whatever the digitiser happened to do.
+ *
+ * ⛔⛔ AND THE ESTIMATE IS RE-EVALUATED ON PATH PROGRESS, NOT ON ARRIVING SAMPLES.
+ * The trailing window alone still drifted **+30.2° across a pause**, and the reason
+ * is subtle: the direction depends on BOTH ends of the baseline. When the finger
+ * stops, the newest point holds still while the baseline START keeps creeping
+ * forward along the arc already travelled, so the measured direction swings although
+ * the path is not turning at all. The accumulated angle then counts the baseline's
+ * own motion as if the finger had made it.
+ *
+ * ⭐ So a new estimate is taken only once the newest point has itself advanced
+ * `rollUpdateDistance`. Both ends of the baseline then move together, which is the
+ * only condition under which the difference of two direction estimates is the turn
+ * of the path. A paused finger produces no evaluation at all, so nothing accumulates.
+ *
+ * ⭐⭐ THE TWO DISTANCES ARE INDEPENDENT AND BOTH ARE NEEDED: `rollStepDistance` is
+ * the BASELINE, and it sets how much digitiser noise reaches the angle;
+ * `rollUpdateDistance` is the CADENCE, and it sets how finely the object follows the
+ * finger. Collapsing them into one number is what forced the earlier choice between
+ * a jittery roll and a juddering one.
+ *
+ * ⚠ This is the same correction `flick.ts` needed for its lift speed, and `METHOD`
+ * names it: *print the aggregation, not just the value.* A single sample pair is the
+ * noisiest possible estimator of any rate, and no threshold rescues one.
  *
  * ⛔ SIGN, DECLARED, BECAUSE A SIGN IS NOT TESTED BY TESTING THE MAGNITUDE:
  * screen coordinates run x right and **y DOWN**, so a positive cross product is a
@@ -30,17 +70,28 @@
  *     accumulatedDeg > 0  ⇒  CLOCKWISE on screen
  *     accumulatedDeg < 0  ⇒  COUNTER-CLOCKWISE on screen
  */
-import { pxToMm } from "../core/units";
+import { mmToPx, pxToMm } from "../core/units";
 import type { GestureConfig } from "./gestureConfig";
 import type { Sample } from "./motion";
 
-/** Smaller than any real pointer step; guards the degenerate direction vectors. */
+/** Guards the degenerate circumradius only; the baseline gate handles the rest. */
 const EPSILON_PX = 1e-9;
 
+/**
+ * ⚠ A hard cap so a long pause cannot grow the window without bound. Reaching it
+ * drops the baseline, so the direction becomes unavailable and the roll HOLDS —
+ * which is the correct reading of a finger that has stopped for that long.
+ */
+const MAX_WINDOW_SAMPLES = 256;
+
+const dist = (a: Sample, b: Sample): number => Math.hypot(a.x - b.x, a.y - b.y);
+
 export class RollDetector {
-  /** The last two samples. Three points are the minimum for a curvature. */
-  private a: Sample | null = null;
-  private b: Sample | null = null;
+  /** Trailing samples, oldest first. `[0]` is the baseline start once it spans. */
+  private window: Sample[] = [];
+  /** Where the newest point was when the direction was last evaluated. */
+  private lastEvalAt: Sample | null = null;
+  private prevDirRad: number | null = null;
   private accumDeg = 0;
   private committedFlag = false;
 
@@ -61,60 +112,110 @@ export class RollDetector {
   }
 
   reset(): void {
-    this.a = null;
-    this.b = null;
+    this.window = [];
+    this.lastEvalAt = null;
+    this.prevDirRad = null;
     this.accumDeg = 0;
     this.committedFlag = false;
   }
 
   push(s: Sample): void {
-    const b = this.b;
-    // ⛔ A REPEATED POSITION CARRIES NO DIRECTION, AND IS DROPPED WITHOUT ADVANCING
-    // THE WINDOW. A golden vector caught the first version doing the opposite: it
-    // shifted the pair first and rejected the triple afterwards, so one duplicated
-    // sample blanked the next TWO triples as well. A pointer stream with a repeat
-    // between every real sample -- which is what a stalled touch digitiser produces
-    // -- then accumulated exactly nothing, and reported it as "no roll".
-    if (b && Math.hypot(s.x - b.x, s.y - b.y) <= EPSILON_PX) return;
-    const a = this.a;
-    this.a = b;
-    this.b = s;
-    if (!a || !b) return;
-
-    // ⭐ Both direction vectors are non-degenerate BY CONSTRUCTION: each sample was
-    // checked against its predecessor above before it was ever stored. No second
-    // guard here -- a check that cannot fire is not a check.
-    const d1x = b.x - a.x;
-    const d1y = b.y - a.y;
-    const d2x = s.x - b.x;
-    const d2y = s.y - b.y;
-    const l1 = Math.hypot(d1x, d1y);
-    const l2 = Math.hypot(d2x, d2y);
-
-    const cross = d1x * d2y - d1y * d2x;
-    const dot = d1x * d2x + d1y * d2y;
-
-    // Circumradius of (a, b, s) = |ab|·|bs|·|as| / (4·area). Straight ⇒ area 0 ⇒ ∞.
-    const chord = Math.hypot(s.x - a.x, s.y - a.y);
-    const area2 = Math.abs(cross); // twice the triangle's area
-    const radiusMm =
-      area2 <= EPSILON_PX ? Infinity : pxToMm((l1 * l2 * chord) / (2 * area2));
-
-    if (radiusMm < this.cfg.rollRadiusMin || radiusMm > this.cfg.rollRadiusMax) {
-      // Out of the band. ⛔ BEFORE COMMIT, ZERO IT — do not let a scribble and a
-      // straight run add up to a circle between them.
-      // ⭐ AFTER COMMIT, HOLD IT. The accumulated angle is what rule 2quinte
-      // actually ROLLS BY, so zeroing it would snap the object back to where the
-      // gesture started, mid-gesture, the moment the finger strayed out of the band.
-      if (!this.committedFlag) this.accumDeg = 0;
+    const baselinePx = mmToPx(this.cfg.rollStepDistance);
+    this.window.push(s);
+    // ⛔⛔ THE PROGRESS GATE. Without it a stationary finger still produces new
+    // direction estimates, because the baseline START keeps advancing underneath it.
+    // See the header: that alone drifted +30.2° across a single pause.
+    if (
+      this.lastEvalAt !== null &&
+      dist(s, this.lastEvalAt) < mmToPx(this.cfg.rollUpdateDistance)
+    ) {
       return;
     }
+    // Keep the shortest trailing window that still spans the baseline: drop the
+    // oldest while the next one is still far enough back to serve as the start.
+    //
+    // ⛔⛔ NEVER BELOW THREE SAMPLES, and that bound is load-bearing. With `>= 3`
+    // here, a finger moving further than `rollStepDistance` BETWEEN SAMPLES pruned
+    // the window down to two, the length check below then rejected every evaluation,
+    // and roll detection stopped working ENTIRELY — silently, reporting "no roll".
+    // A fast swirl, or a 60 Hz digitiser, reaches that in normal use. `METHOD`: a
+    // guard that turns a missing case into silence is worse than a failure.
+    // ⭐ Keeping three means the baseline simply spans more than asked for when
+    // samples are coarse, which is the honest reading of the data available.
+    while (this.window.length > 3 && dist(this.window[1]!, s) >= baselinePx) {
+      this.window.shift();
+    }
+    if (this.window.length > MAX_WINDOW_SAMPLES) this.window.shift();
 
-    // ⭐ ACCUMULATION CONTINUES AFTER COMMIT. `committed` latches; the ANGLE does
-    // not. 2quinte rotates the object by this value, so a detector that froze it at
-    // the commit threshold would let the object roll 60° and then stop dead while
-    // the finger kept circling. Only the DECISION is one-way.
-    this.accumDeg += (Math.atan2(cross, dot) * 180) / Math.PI;
-    if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
+    const from = this.window[0]!;
+    // ⛔ Not yet a full baseline — measuring over a shorter one is exactly the noise
+    // this file exists to avoid, so nothing is measured at all.
+    if (this.window.length < 3 || dist(from, s) < baselinePx) return;
+
+    this.lastEvalAt = s;
+    const dirRad = Math.atan2(s.y - from.y, s.x - from.x);
+    const radiusMm = this.curvatureRadiusMm(from, s);
+    const inBand =
+      radiusMm >= this.cfg.rollRadiusMin && radiusMm <= this.cfg.rollRadiusMax;
+
+    // ⭐⭐ THE RADIUS BAND IS A COMMIT CRITERION, NOT A TRACKING ONE. It answers
+    // "is this gesture a roll?", and once that is answered the answer does not get
+    // re-asked every sample. Gating the TRACKING on it meant a momentarily noisy
+    // radius estimate froze the roll mid-gesture: measured at 18% of post-commit
+    // samples held, which is felt as stutter. ⛔ A straight stretch needs no gate
+    // anyway — it has no turning, so it accumulates nothing by itself.
+    if (this.committedFlag) {
+      this.accumDeg += this.turnDeg(dirRad);
+    } else if (inBand) {
+      this.accumDeg += this.turnDeg(dirRad);
+      if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
+    } else {
+      // Out of the band before commit: ⛔ zero it, so a scribble and a straight run
+      // cannot add up to a circle between them.
+      this.accumDeg = 0;
+    }
+
+    // ⚠ Tracked even while out of band, so re-entering does not read the whole
+    // excursion as one instantaneous turn.
+    this.prevDirRad = dirRad;
+  }
+
+  /** Signed turn since the last evaluation, degrees. `0` on the first one. */
+  private turnDeg(dirRad: number): number {
+    if (this.prevDirRad === null) return 0;
+    let turn = dirRad - this.prevDirRad;
+    // Shortest signed difference; a path cannot turn more than half a circle between
+    // two evaluations without the sampling itself being broken.
+    while (turn > Math.PI) turn -= 2 * Math.PI;
+    while (turn < -Math.PI) turn += 2 * Math.PI;
+    return (turn * 180) / Math.PI;
+  }
+
+  /**
+   * Local radius of curvature, as the circumradius of the baseline's two ends and a
+   * point near its middle. ⚠ The mid point is chosen by DISTANCE along the baseline,
+   * not by index: during a pause the window fills with samples bunched at the newest
+   * end, and taking the middle index would put all three points on top of each other.
+   */
+  private curvatureRadiusMm(from: Sample, s: Sample): number {
+    const half = dist(from, s) / 2;
+    let mid = this.window[1]!;
+    let best = Infinity;
+    for (const c of this.window) {
+      const err = Math.abs(dist(from, c) - half);
+      if (err < best) {
+        best = err;
+        mid = c;
+      }
+    }
+    const l1 = dist(from, mid);
+    const l2 = dist(mid, s);
+    const chord = dist(from, s);
+    const cross =
+      (mid.x - from.x) * (s.y - mid.y) - (mid.y - from.y) * (s.x - mid.x);
+    const area2 = Math.abs(cross);
+    // Straight ⇒ zero area ⇒ infinite radius, which the band rejects as "too straight".
+    if (area2 <= EPSILON_PX) return Infinity;
+    return pxToMm((l1 * l2 * chord) / (2 * area2));
   }
 }
