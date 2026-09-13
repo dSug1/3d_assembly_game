@@ -1,0 +1,30 @@
+{
+  "name": "3d-assembly-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Touchscreen 3D assembly game -- objects joined by mate connectors.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run test",
+    "cap:sync": "npm run build && cap sync"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^7.54.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
+  }
+}

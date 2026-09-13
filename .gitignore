@@ -1,0 +1,46 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# build output
+dist/
+dist-ssr/
+build/
+.vite/
+*.tsbuildinfo
+
+# native shells (generated -- `npx cap add` recreates them)
+/android/
+/ios/
+
+# test + coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# editors / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# env and local overrides
+.env
+.env.*
+!.env.example
+*.local
+
+# ⛔ Playtest captures. They can contain input traces; they are DATA, not source,
+# and they live outside the repo (see Claude/00_CORE/CONSTRAINTS.md).
+/captures/
+/recordings/
+
+# logs
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

@@ -1,0 +1,150 @@
+/**
+ * THE CONSTRAINT STACK — an ORDERED list of constraints per object, oldest first.
+ *
+ * Design of record: `Claude/10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md` §1.4.
+ *
+ * ⭐⭐ IT REPLACES THREE BOOLEANS AND EVERY HAND-WRITTEN CASE BRANCH. The previous
+ * shape (`faceAlignedWithGravity`, `faceAlignedWithXAxis`, `faceAlignedWithOther`)
+ * had no defined behaviour for the `GRAVITY + WORLD_AXIS` combination at all, and
+ * the branches inside three separate rules each re-derived the same solve.
+ *
+ * ⛔⛔ A `WORLD_AXIS_ALIGN` STORES A **WORLD** VECTOR, RESOLVED AT THE MOMENT THE
+ * SNAP FIRES — never a screen axis. The gesture is view-relative; the resulting
+ * constraint is world-absolute. Storing the screen axis meant a later camera orbit
+ * silently redefined the constraint, and the next snap re-solved against a
+ * different axis and rotated the object.
+ *
+ * ⛔ DOF BUDGET: rotation has three. Entry 1 is HARD and consumes two (the swing
+ * bringing a face normal onto its axis). Entry 2 is SOFT and consumes the last one
+ * (the twist about entry 1's axis). Entry 3 has nothing left and is REJECTED by
+ * default.
+ */
+import type { Quat, Vec3 } from "./vec";
+import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, shortestArc } from "./vec";
+
+export type ConstraintKind = "GRAVITY_ALIGN" | "WORLD_AXIS_ALIGN" | "MATE";
+
+export interface Constraint {
+  readonly kind: ConstraintKind;
+  /** The face normal being constrained, in the object's LOCAL frame. */
+  readonly localNormal: Vec3;
+  /** The WORLD direction that normal is driven onto. See the header. */
+  readonly targetWorld: Vec3;
+  /** For `MATE`, who it is mated to — carried so the stack can be rendered. */
+  readonly otherObjectId?: string;
+}
+
+export interface SolveOptions {
+  /** Spec §1.4: evict the oldest instead of rejecting when the stack overflows. */
+  readonly evictOnOverflow: boolean;
+}
+
+export interface SolveResult {
+  /** The rotation to apply to the object's CURRENT orientation. */
+  readonly rotation: Quat;
+  /** The stack actually in force after solving (may be shorter than the input). */
+  readonly applied: readonly Constraint[];
+  /** True when the gesture must be refused — spec §6 asks for a negative haptic. */
+  readonly rejected: boolean;
+  /** Rotational DOF still free afterwards: 3, 1 or 0. */
+  readonly freeDof: 3 | 1 | 0;
+}
+
+/**
+ * Solve the stack. ⚠ Pure: it returns a rotation and never mutates the object.
+ *
+ * ⭐ Entry 2 is "the twist about entry 1's axis that MAXIMISES the projection of
+ * entry 2's normal onto its target" — which is exactly the "projects maximally to"
+ * language of the original rules, now written once instead of three times.
+ */
+export function solve(
+  stack: readonly Constraint[],
+  current: Quat,
+  opts: SolveOptions,
+): SolveResult {
+  if (stack.length === 0) {
+    return { rotation: IDENTITY, applied: [], rejected: false, freeDof: 3 };
+  }
+
+  let effective = stack;
+  let rejected = false;
+  if (stack.length > 2) {
+    if (opts.evictOnOverflow) {
+      // Drop the OLDEST until two remain. Spec §1.4.
+      effective = stack.slice(stack.length - 2);
+    } else {
+      return { rotation: IDENTITY, applied: stack.slice(0, 2), rejected: true, freeDof: 0 };
+    }
+  }
+
+  const first = effective[0]!;
+  // ── Entry 1: hard, 2 DOF. The minimal swing onto the target axis.
+  const n0World = qRotate(current, first.localNormal);
+  const swing = shortestArc(n0World, first.targetWorld);
+  let rotation = swing;
+
+  if (effective.length === 1) {
+    return { rotation, applied: effective, rejected, freeDof: 1 };
+  }
+
+  // ── Entry 2: soft, 1 DOF. Twist about entry 1's axis only.
+  const axis = normalize(first.targetWorld);
+  const second = effective[1]!;
+  if (axis) {
+    const afterSwing = qmul(swing, current);
+    const nWorld = qRotate(afterSwing, second.localNormal);
+    const target = normalize(second.targetWorld);
+    if (target) {
+      const twist = bestTwist(nWorld, target, axis);
+      rotation = qmul(twist, swing);
+    }
+  }
+  return { rotation, applied: effective, rejected, freeDof: 0 };
+}
+
+/**
+ * The angle about `axis` that best aligns `from` with `to`.
+ *
+ * ⭐ Closed form, not a search: project both vectors onto the plane perpendicular to
+ * `axis` and take the signed angle between the projections. A numeric sweep would
+ * be a tunable with a step size, and a step size is a threshold nobody measured.
+ *
+ * ⚠ Returns identity when either projection collapses — that is the case where the
+ * vector is parallel to the axis and the twist genuinely cannot change anything.
+ * SUPPRESS, DO NOT GUESS.
+ */
+export function bestTwist(from: Vec3, to: Vec3, axis: Vec3): Quat {
+  const a = normalize(axis);
+  if (!a) return IDENTITY;
+  const proj = (v: Vec3): Vec3 => {
+    const k = dot(v, a);
+    return [v[0] - a[0] * k, v[1] - a[1] * k, v[2] - a[2] * k];
+  };
+  const pf = normalize(proj(from));
+  const pt = normalize(proj(to));
+  if (!pf || !pt) return IDENTITY;
+  const c = Math.max(-1, Math.min(1, dot(pf, pt)));
+  const s = dot(cross(pf, pt), a);
+  return qFromAxisAngle(a, Math.atan2(s, c));
+}
+
+/** Spec §1.4: a double-tap clears the stack. ⛔ No drag ever clears it. */
+export function cleared(): readonly Constraint[] {
+  return [];
+}
+
+/**
+ * Append a constraint. ⭐ NEWEST LAST, so an existing anchor stays OLDER and
+ * therefore HARD, and a new mate best-fits the remaining twist.
+ *
+ * ⚠ `matePriorityOverAnchor` inverts this for A/B. It should not be the default:
+ * the user established the anchor deliberately, and a later gesture should not
+ * silently break it.
+ */
+export function push(
+  stack: readonly Constraint[],
+  c: Constraint,
+  matePriorityOverAnchor: boolean,
+): readonly Constraint[] {
+  return matePriorityOverAnchor ? [c, ...stack] : [...stack, c];
+}

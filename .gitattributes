@@ -1,2 +1,25 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# ⭐ Source is LF in the repo AND in the working tree. The previous project ran
+# `core.autocrlf=true` with CRLF on disk, and a routine script that read a file in
+# text mode and wrote it back silently converted the whole file to LF -- which
+# altered a byte-verified block and failed its own integrity check. Pinning the
+# working tree removes the class.
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.yml  text eol=lf
+
+# Windows launchers must stay CRLF or cmd.exe mis-parses them.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+*.glb  binary
+*.gltf text eol=lf
+*.png  binary
+*.jpg  binary
