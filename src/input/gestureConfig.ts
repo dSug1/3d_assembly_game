@@ -21,7 +21,14 @@ export interface GestureConfig {
   stillTime: number;
   /** mm of accumulated travel to enter MOVING. */
   moveEnterDistance: number;
-  /** mm to fall back out. ⛔ Must be < moveEnterDistance or the state chatters. */
+  /**
+   * mm. The EXCURSION BOUND during settle candidacy: once speed drops below
+   * `stillSpeed`, the finger must stay within this of where it slowed down, for
+   * the whole `stillTime`, before STATIONARY latches.
+   * ⛔ Must be < moveEnterDistance or the state chatters.
+   * ⛔⛔ AND `stillSpeed * stillTime` must EXCEED it, or it can never bind --
+   * asserted in MotionTracker's constructor. See motion.ts.
+   */
   moveExitDistance: number;
 
   // ── §1.2 gains ──────────────────────────────────────────────────────────
@@ -46,8 +53,26 @@ export interface GestureConfig {
   flickPurity: number;
   /** degrees of accumulated signed angle to commit to roll. */
   rollAngle: number;
+  /** mm. Below this the path curls too tightly to be a deliberate roll. */
   rollRadiusMin: number;
+  /** mm. Above this the path is too straight to be a roll at all. */
   rollRadiusMax: number;
+
+  // ── §1.3 taps ──────────────────────────────────────────────────
+  // ⭐ NOT IN THE SPEC, AND §1.4 DOES NOT WORK WITHOUT THEM. §1.4 / rule 2septies
+  // make a double-tap the ONLY way a constraint is ever evicted, and §1.3's state
+  // machine stops at TAP. Recorded in `Claude/10_INPUT_TOUCH/INDEX.md`.
+
+  /**
+   * ms. A press released LATER than this, having never moved, is a HOLD -- not a
+   * TAP. ⛔ §1.3 bounds TAP only by distance, so without this a finger resting for
+   * ten seconds and lifting is a tap, and two of those clear a constraint stack.
+   */
+  tapMaxDuration: number;
+  /** ms from the first tap's RELEASE to the second tap's PRESS. */
+  doubleTapWindow: number;
+  /** mm between the two taps' press points. */
+  doubleTapSlop: number;
 
   // ── §1.4 constraints ────────────────────────────────────────────────────
   evictOnOverflow: boolean;
@@ -73,7 +98,11 @@ export interface GestureConfig {
 
 export const DEFAULT_CONFIG: GestureConfig = {
   stillSpeed: 6,
-  stillTime: 80,
+  // ⚠ MOVED 80 -> 150 by IN1, and it is NOT a measurement. `stillSpeed * stillTime`
+  // must exceed `moveExitDistance` or the exit threshold can never bind: 6 mm/s x
+  // 80 ms = 0.48 mm against a 0.8 mm bound made it decorative. A placeholder moved
+  // to make another placeholder reachable. IN5 measures both.
+  stillTime: 150,
   moveEnterDistance: 1.5,
   moveExitDistance: 0.8,
 
@@ -93,6 +122,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   rollAngle: 60,
   rollRadiusMin: 4,
   rollRadiusMax: 40,
+
+  tapMaxDuration: 250,
+  doubleTapWindow: 300,
+  doubleTapSlop: 8,
 
   evictOnOverflow: false,
   matePriorityOverAnchor: false,

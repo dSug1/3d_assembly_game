@@ -46,12 +46,14 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-13)
 
-✅ Scaffolding green: TypeScript + Babylon + Vite, **37 golden vectors passing**.
+✅ Scaffolding green: TypeScript + Babylon + Vite, **81 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet — a **secure context**, so sensors and
 rule 1's tilt are testable. See `Claude/50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`.
-⛔ **NEXT is `IN1`** — the gesture recognizer state machine.
+✅ **`IN1` is BUILT and green** — the gesture recognizer state machine.
+⛔⛔ **It is NOT closed: no finger has touched it.** The device look is what closes
+it, and the one glance is *drag rotates, flick snaps back*. Then `3D1` is next.
 ⚠ Every number in `src/input/gestureConfig.ts` is a placeholder, not a measurement
 (`IN5` is the row that measures them, and it needs the device loop above).
 

@@ -1,11 +1,17 @@
 /**
  * THE ONLY FILE THAT IMPORTS BABYLON. Deliberately thin.
  *
- * ⚠ STUB — it stands up a scene with two objects and reports what the pointer hits,
- * so the loop is closed end to end. The gesture rules are NOT wired yet; that is
- * queue rows `IN1`–`IN4`. What matters today is the BOUNDARY: everything with a
- * rule in it lives in `src/core` or `src/input`, and `tests/boundary.test.ts`
- * fails the build if an engine import creeps into either.
+ * ⚠ STUB — it stands up a scene with two objects and drives one `IN1` recognizer
+ * per touchpoint, so the loop is closed end to end. The gesture RULES are NOT wired
+ * yet; that is queue rows `IN2`–`IN4`. What matters today is the BOUNDARY:
+ * everything with a rule in it lives in `src/core` or `src/input`, and
+ * `tests/boundary.test.ts` fails the build if an engine import creeps into either.
+ *
+ * ⛔⛔ THE ROTATION BELOW IS A DIAGNOSTIC STAND-IN, NOT RULE 2bis. It exists so the
+ * recognizer's PROVISIONAL MOTION AND ROLLBACK have a visible shape on a device --
+ * drag and the cube turns, flick and it snaps back to where the press found it.
+ * It has no gain from `gestureConfig`, no selection semantics, no constrained
+ * variant and no constraint stack. `IN3` builds the real thing and deletes this.
  *
  * ⭐ Face picking is why Babylon is here: rule 2 selects a FACE, not an object, and
  * `pickResult.faceId` gives it directly. That is also the seam to a mate connector.
@@ -34,11 +40,37 @@ import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import "@babylonjs/core/Culling/ray";
+import {
+  DEFAULT_CONFIG,
+  Recognizer,
+  TapHistory,
+  type PosePort,
+  type ReleaseVerdict,
+  type Sample,
+} from "../input";
+import { createHud } from "./hud";
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
 const OBJECT_SIZE_M = 0.08;
 const CAMERA_RADIUS_M = 0.6;
+
+/**
+ * ⚠ DIAGNOSTIC ONLY — radians per CSS pixel for the stand-in rotation.
+ * ⛔ THIS IS NOT A GESTURE GAIN AND MUST NOT BECOME ONE. The real gains are
+ * `gainRotateFree` / `gainRotateConstrained` in `gestureConfig.ts`, they are in
+ * millimetres, and they belong to `IN3`. Keeping this number OUT of the config is
+ * the point: one constant, one place, and a debug value that leaks into production
+ * is exactly the drift `gestureConfig`'s header warns about.
+ */
+const DIAGNOSTIC_RAD_PER_PX = 0.008;
+
+interface DiagnosticPose {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
 
 export interface SceneHandle {
   readonly scene: Scene;
@@ -86,14 +118,103 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   make("objectA", -0.07, [0.65, 0.67, 0.72]);
   make("objectB", 0.07, [0.45, 0.58, 0.72]);
 
-  // ⚠ Diagnostic only, and it is the seam the input layer will replace.
-  scene.onPointerObservable.add((info) => {
-    if (info.type !== PointerEventTypes.POINTERDOWN) return;
-    const pick = info.pickInfo;
-    if (!pick?.hit || !pick.pickedMesh) return;
-    // eslint-disable-next-line no-console
-    console.log("hit", pick.pickedMesh.name, "faceId", pick.faceId);
+  // ───────────────────────────────────────────────────────────────────
+  // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
+  // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
+  const hud = createHud();
+  const taps = new TapHistory(DEFAULT_CONFIG);
+  const live = new Map<
+    number,
+    { rec: Recognizer<DiagnosticPose>; mesh: AbstractMesh; base: DiagnosticPose; press: Sample }
+  >();
+  let lastVerdict = "—";
+
+  const poseOf = (mesh: AbstractMesh): PosePort<DiagnosticPose> => ({
+    snapshot: () => ({ x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z }),
+    restore: (p) => mesh.rotation.set(p.x, p.y, p.z),
   });
+
+  const describe = (v: ReleaseVerdict): string => {
+    const rule = v.rule === "NONE" ? "" : `  → ${v.rule}`;
+    const back = v.rolledBack ? "  ROLLED BACK" : "";
+    const f = v.flick ? `  ${v.flick.axis}${v.flick.sign > 0 ? "+" : "-"}` : "";
+    return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms`;
+  };
+
+  const paint = () => {
+    const first = live.values().next().value;
+    hud.update({
+      pointers: live.size,
+      // ⛔ Straight off the recognizer that made the decision. Never recomputed here:
+      // a readout that derives its own answer is a second implementation, and it can
+      // disagree with the product while showing green. See `METHOD`.
+      phase: first ? first.rec.currentPhase : "—",
+      motion: first ? first.rec.motionState : "—",
+      rollDeg: first ? first.rec.rollDeg : 0,
+      rollCommitted: first ? first.rec.rollCommitted : false,
+      lastVerdict,
+    });
+  };
+
+  /**
+   * ⚠ `performance.now()`, NOT `event.timeStamp`. Their epochs differ by browser
+   * (and historically within one), and every threshold in `gestureConfig` is a
+   * duration. One clock, chosen here, used for every sample.
+   */
+  const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
+    x: e.clientX,
+    y: e.clientY,
+    t: performance.now(),
+  });
+
+  scene.onPointerObservable.add((info) => {
+    const e = info.event as PointerEvent;
+    const s = sampleOf(e);
+
+    if (info.type === PointerEventTypes.POINTERDOWN) {
+      const pick = info.pickInfo;
+      if (!pick?.hit || !pick.pickedMesh) return; // rule 1's no-hit case is `IN3`
+      const mesh = pick.pickedMesh;
+      const rec = new Recognizer(DEFAULT_CONFIG, poseOf(mesh), taps);
+      rec.press(s);
+      live.set(e.pointerId, {
+        rec,
+        mesh,
+        base: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
+        press: s,
+      });
+      paint();
+      return;
+    }
+
+    const held = live.get(e.pointerId);
+    if (!held) return;
+
+    if (info.type === PointerEventTypes.POINTERMOVE) {
+      if (held.rec.move(s) === "COMMITTED_CONTINUOUS") {
+        // The provisional motion — applied LIVE, and undone by the recognizer itself
+        // if the flick test passes at release. See the header: stand-in, not 2bis.
+        held.mesh.rotation.set(
+          held.base.x + (s.y - held.press.y) * DIAGNOSTIC_RAD_PER_PX,
+          held.base.y + (s.x - held.press.x) * DIAGNOSTIC_RAD_PER_PX,
+          held.base.z,
+        );
+      }
+      paint();
+      return;
+    }
+
+    if (info.type === PointerEventTypes.POINTERUP) {
+      // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
+      // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
+      // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
+      lastVerdict = describe(held.rec.release(s));
+      live.delete(e.pointerId);
+      paint();
+    }
+  });
+
+  paint();
 
   let frames = 0;
   engine.runRenderLoop(() => {

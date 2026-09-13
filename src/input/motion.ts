@@ -18,6 +18,24 @@
  * finger oscillating ±0.5 px crossed a 5.7 px threshold in under half a second.
  * ⭐ Net displacement from the anchor is bounded for jitter and grows for a real
  * drag, which is the discrimination actually wanted. Reported back to the spec.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ⭐⭐ AND THE EXIT IS NOT A SPEED TEST ALONE. `IN0` left `moveExitDistance`
+ * DECLARED AND UNUSED -- an unused tunable is a lie in the config, and `IN5` would
+ * have gone and measured a number that did nothing.
+ *
+ * It is now the EXCURSION BOUND during settle candidacy: the moment speed drops
+ * below `stillSpeed`, that position becomes a candidate rest point, and STATIONARY
+ * latches only if the finger stayed within `moveExitDistance` of it for the whole
+ * `stillTime`. ⭐ This catches what an instantaneous speed test STRUCTURALLY cannot:
+ * a SLOW PERSISTENT CREEP, which is never at rest and never exceeds `stillSpeed`.
+ *
+ * ⛔⛔ AND THE TWO THRESHOLDS MUST BE MUTUALLY CONSISTENT, WHICH THEY WERE NOT.
+ * Motion sustained below `stillSpeed` for `stillTime` cannot cover more ground than
+ * `stillSpeed * stillTime`, so if that product does not EXCEED `moveExitDistance`,
+ * the bound is unreachable under any wiring whatsoever. The shipped defaults were
+ * `6 mm/s x 80 ms = 0.48 mm` against a `0.8 mm` bound. Asserted below, so the next
+ * inconsistent config is a loud failure rather than another dead threshold.
  */
 import { mmToPx } from "../core/units";
 import type { GestureConfig } from "./gestureConfig";
@@ -38,11 +56,24 @@ export class MotionTracker {
   /** Where the finger settled. Displacement is measured from HERE, not integrated. */
   private anchor: Sample | null = null;
   private stillSinceMs: number | null = null;
+  /** Where the finger was when it first slowed down. Excursion is measured from HERE. */
+  private settleAnchor: Sample | null = null;
 
   constructor(private readonly cfg: GestureConfig) {
     if (cfg.moveEnterDistance <= cfg.moveExitDistance) {
       throw new Error(
         "moveEnterDistance must exceed moveExitDistance, or the motion state chatters.",
+      );
+    }
+    // ⛔⛔ See the header. Without this the exit distance is decorative and nobody
+    // finds out, which is exactly the shape of failure `METHOD` forbids: a check
+    // that cannot fire, reported as if it had passed.
+    const reachableMm = (cfg.stillSpeed * cfg.stillTime) / 1000;
+    if (reachableMm <= cfg.moveExitDistance) {
+      throw new Error(
+        `moveExitDistance (${cfg.moveExitDistance} mm) can never bind: motion held ` +
+          `below stillSpeed (${cfg.stillSpeed} mm/s) for stillTime (${cfg.stillTime} ms) ` +
+          `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
       );
     }
   }
@@ -56,6 +87,7 @@ export class MotionTracker {
     this.last = null;
     this.anchor = null;
     this.stillSinceMs = null;
+    this.settleAnchor = null;
   }
 
   push(s: Sample): MotionState {
@@ -81,18 +113,32 @@ export class MotionTracker {
       return this.state;
     }
 
-    // MOVING -> STATIONARY needs BOTH a slow speed and it sustained for stillTime.
+    // MOVING -> STATIONARY needs THREE things, not one: the speed low, the
+    // EXCURSION from where it slowed inside `moveExitDistance`, and both of those
+    // sustained for `stillTime`. The excursion term is the one that sees a creep.
     if (speedPxPerS <= stillSpeedPx) {
-      this.stillSinceMs ??= prev.t;
-      if (s.t - this.stillSinceMs >= this.cfg.stillTime) {
+      if (this.settleAnchor === null) {
+        this.settleAnchor = prev;
+        this.stillSinceMs = prev.t;
+      }
+      const excursionPx = Math.hypot(s.x - this.settleAnchor.x, s.y - this.settleAnchor.y);
+      if (excursionPx > mmToPx(this.cfg.moveExitDistance)) {
+        // ⭐ Slow, but it went somewhere. Restart candidacy HERE rather than
+        // cancelling outright -- a creep then simply never accumulates `stillTime`
+        // and stays MOVING, which is the correct reading of a deliberate slow drag.
+        this.settleAnchor = s;
+        this.stillSinceMs = s.t;
+      } else if (s.t - this.stillSinceMs! >= this.cfg.stillTime) {
         this.state = "STATIONARY";
         // ⭐ Re-anchor HERE. The next MOVING decision is measured from where the
         // finger actually came to rest, not from where the gesture began.
         this.anchor = s;
         this.stillSinceMs = null;
+        this.settleAnchor = null;
       }
     } else {
       this.stillSinceMs = null;
+      this.settleAnchor = null;
     }
     return this.state;
   }
