@@ -21,9 +21,28 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 ✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **37 golden
 vectors, all passing**. ✅ The engine boundary is enforced by a test. ✅ The
 mate-connector geometry and the constraint-stack solver are in and covered.
+✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
+`npm run verify`.
+
 ⛔ **NEXT: `IN1`** — the gesture recognizer state machine. It is the spine every
 input rule hangs off, and §1.3 of the spec calls it *"the central change"*.
 ⛔ **OWED: a look on a real device.** Nothing here has been touched by a finger.
+
+⚠ **`DEP1a` (the USB fast loop) is BLOCKED at ADB authorisation.** The USB and
+driver layer is verified correct; the tablet simply never shows the "Allow USB
+debugging?" prompt. ⭐ **Everything ruled out is written down in
+[`../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md)
+— read it instead of re-diagnosing.** The decisive untried step is installing
+Google platform-tools and running the real `adb`.
+
+⭐ **`IN1` does not need it.** It is a state machine with golden vectors, built and
+verified headlessly. USB matters most for `IN5`, and Pages covers sensor checks
+meanwhile.
+
+⭐ **Two defects were already found and fixed on day one**, both recorded: the
+spec's §1.1 "accumulated travel" rule (unusable — path length of a resting finger
+is an unbounded random walk) and a metre-scale scene clipped by Babylon's
+1-world-unit default near plane.
 
 ---
 
@@ -68,10 +87,10 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | DEP0 | Vite + TS + vitest, `npm run verify` | DEP | infra | ✅ built 2026-09-13 | — |
-| DEP1a | ⛔⛔ **Device loop over USB (Android)** — `chrome://inspect` port forwarding. ⭐ No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ⛔ **do this FIRST** | DEP0 |
+| DEP1a | ⛔⛔ **Device loop over USB (Android)** — `chrome://inspect` port forwarding. ⭐ No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ⚠ **BLOCKED at ADB authorisation** — USB/driver layer verified OK; tablet never prompts. ⛔ Read `50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`, do not re-diagnose. Untried: real `adb` | DEP0 |
 | DEP1b | Device loop over LAN — for iOS, or a second device. ⚠ needs a Private network + a scoped firewall rule (`scripts/allow-lan-dev.ps1`) | DEP | infra | queued | DEP0 |
 | DEP1c | ⭐ **HTTPS on the LAN** (`@vitejs/plugin-basic-ssl`) — the only way to get a secure context on iOS over Wi-Fi | DEP | infra | queued — needed before rule 1 (tilt) can be tested on iPhone | DEP1b |
-| DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop. `.github/workflows/pages.yml` is written | DEP | infra | ⛔ **enable Pages in repo settings** | DEP0 |
+| DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop | DEP | infra | ✅ **LIVE 2026-09-13** — https://dsug1.github.io/3d_assembly_game/ . Procedure: `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md` | DEP0 |
 | DEP2 | Capacitor shells for iOS/Android | DEP | platform | queued | DEP1 |
 | DEP3 | Desktop shell (Tauri) | DEP | platform | queued | DEP2 |
 | DEP4 | CI: typecheck + vectors on every push | DEP | infra | ✅ **rides in `pages.yml`** — the deploy is gated on `npm run verify` | DEP1d |

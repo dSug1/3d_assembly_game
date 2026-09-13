@@ -18,6 +18,10 @@ and its router still reads *"no amount of building advances it."* See
 [`DEPLOY_GITHUB_PAGES.md`](DEPLOY_GITHUB_PAGES.md) — including the dark-page
 near-plane trap that cost the first deploy.
 
+⚠ **The USB device loop, and why it is currently BLOCKED, are in**
+[`DEVICE_TESTING_USB.md`](DEVICE_TESTING_USB.md) — it lists everything already ruled
+out, so a new session does not repeat two hours of diagnosis.
+
 ## Commands
 
 | | |

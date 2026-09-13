@@ -29,8 +29,9 @@ They are the record, not the briefing.
 
 ## Where it stands, in five lines
 
-⭐ **Day one.** The scaffolding is up and green: TypeScript + Babylon.js + Vite,
-`npm run verify` runs a typecheck and **37 golden vectors, all passing**.
+⭐ **Day one, and it is DEPLOYED**: TypeScript + Babylon.js + Vite, `npm run verify`
+runs a typecheck and **37 golden vectors, all passing**, and the build is live at
+**https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
 ✅ **Built engine-agnostic and enforced**: `src/core` and `src/input` import no
 engine, and [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if
 that ever stops being true.
@@ -38,6 +39,10 @@ that ever stops being true.
 cost live sessions in the predecessor project.
 ⛔ **NOT yet built**: the gesture recognizer state machine (`IN1`–`IN4`), and every
 tunable in `gestureConfig.ts` is a starting point, not a measurement.
+⚠ **The USB device loop is BLOCKED at ADB authorisation** — everything else about it
+is ruled out and written down; see
+[`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](50_BUILD_DEPLOY/DEVICE_TESTING_USB.md)
+rather than re-diagnosing it.
 Full status: [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md).
 
 ---
