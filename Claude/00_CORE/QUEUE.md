@@ -28,16 +28,14 @@ mate-connector geometry and the constraint-stack solver are in and covered.
 input rule hangs off, and §1.3 of the spec calls it *"the central change"*.
 ⛔ **OWED: a look on a real device.** Nothing here has been touched by a finger.
 
-⚠ **`DEP1a` (the USB fast loop) is BLOCKED at ADB authorisation.** The USB and
-driver layer is verified correct; the tablet simply never shows the "Allow USB
-debugging?" prompt. ⭐ **Everything ruled out is written down in
-[`../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md)
-— read it instead of re-diagnosing.** The decisive untried step is installing
-Google platform-tools and running the real `adb`.
+✅✅ **THE FAST DEVICE LOOP WORKS** (`DEP1a`, 2026-09-13). `npm run dev:usb` +
+`adb reverse tcp:5173 tcp:5173`, and the tablet loads it as `localhost` — a **secure
+context**, so sensors and rule 1's tilt are testable. Two cubes confirmed on a Lenovo
+TB-X606F. ⭐ Procedure and the three traps:
+[`../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).
 
-⭐ **`IN1` does not need it.** It is a state machine with golden vectors, built and
-verified headlessly. USB matters most for `IN5`, and Pages covers sensor checks
-meanwhile.
+⭐ **So `IN1` can be closed properly** — built and verified headlessly, then LOOKED AT
+on the device, which is the only thing `METHOD` accepts as closing a change.
 
 ⭐ **Two defects were already found and fixed on day one**, both recorded: the
 spec's §1.1 "accumulated travel" rule (unusable — path length of a resting finger
@@ -87,7 +85,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | DEP0 | Vite + TS + vitest, `npm run verify` | DEP | infra | ✅ built 2026-09-13 | — |
-| DEP1a | ⛔⛔ **Device loop over USB (Android)** — `chrome://inspect` port forwarding. ⭐ No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ⚠ **BLOCKED at ADB authorisation** — USB/driver layer verified OK; tablet never prompts. ⛔ Read `50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`, do not re-diagnose. Untried: real `adb` | DEP0 |
+| DEP1a | ⭐⭐ **Device loop over USB (Android)** — `adb reverse`. No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ✅✅ **WORKING 2026-09-13** on the Lenovo TB-X606F — two cubes confirmed on the device. ⭐ `adb reverse`, NOT Chrome port forwarding; the fix for the stuck handshake was the REAL `adb`. Procedure + 3 traps: `50_BUILD_DEPLOY/DEVICE_TESTING_USB.md` | DEP0 |
 | DEP1b | Device loop over LAN — for iOS, or a second device. ⚠ needs a Private network + a scoped firewall rule (`scripts/allow-lan-dev.ps1`) | DEP | infra | queued | DEP0 |
 | DEP1c | ⭐ **HTTPS on the LAN** (`@vitejs/plugin-basic-ssl`) — the only way to get a secure context on iOS over Wi-Fi | DEP | infra | queued — needed before rule 1 (tilt) can be tested on iPhone | DEP1b |
 | DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop | DEP | infra | ✅ **LIVE 2026-09-13** — https://dsug1.github.io/3d_assembly_game/ . Procedure: `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md` | DEP0 |

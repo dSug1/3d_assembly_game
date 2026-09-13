@@ -48,8 +48,11 @@ npm run build       # production bundle into dist/
 
 ✅ Scaffolding green: TypeScript + Babylon + Vite, **37 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
+✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
+then `http://localhost:5173` on the tablet — a **secure context**, so sensors and
+rule 1's tilt are testable. See `Claude/50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`.
 ⛔ **NEXT is `IN1`** — the gesture recognizer state machine.
-⛔ **Nothing has been touched by a finger yet**, and every number in
-`src/input/gestureConfig.ts` is a placeholder, not a measurement.
+⚠ Every number in `src/input/gestureConfig.ts` is a placeholder, not a measurement
+(`IN5` is the row that measures them, and it needs the device loop above).
 
 Full status: [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block.

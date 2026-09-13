@@ -18,9 +18,10 @@ and its router still reads *"no amount of building advances it."* See
 [`DEPLOY_GITHUB_PAGES.md`](DEPLOY_GITHUB_PAGES.md) — including the dark-page
 near-plane trap that cost the first deploy.
 
-⚠ **The USB device loop, and why it is currently BLOCKED, are in**
-[`DEVICE_TESTING_USB.md`](DEVICE_TESTING_USB.md) — it lists everything already ruled
-out, so a new session does not repeat two hours of diagnosis.
+✅ **The USB device loop WORKS, and the procedure is in**
+[`DEVICE_TESTING_USB.md`](DEVICE_TESTING_USB.md) — two commands, plus the three traps
+that cost an evening: IPv6-only binding, a stuck ADB handshake that only the real
+`adb` could clear, and a second Vite silently taking another port.
 
 ## Commands
 
@@ -34,7 +35,7 @@ out, so a new session does not repeat two hours of diagnosis.
 ⚠ `base: "./"` in `vite.config.ts` is load-bearing: a build must work from a
 `file://` path and inside a Capacitor webview, not only from a web-server root.
 
-## ⛔⛔ `DEP1` — the device loop comes BEFORE the next feature
+## ✅ `DEP1a` — the device loop, and it works
 
 **Touch gestures cannot be honestly tested with a mouse.** One pointer, no DPI story,
 no tilt, no haptics. `METHOD` closes a change with a look on a real device and

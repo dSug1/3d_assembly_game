@@ -39,10 +39,9 @@ that ever stops being true.
 cost live sessions in the predecessor project.
 ⛔ **NOT yet built**: the gesture recognizer state machine (`IN1`–`IN4`), and every
 tunable in `gestureConfig.ts` is a starting point, not a measurement.
-⚠ **The USB device loop is BLOCKED at ADB authorisation** — everything else about it
-is ruled out and written down; see
-[`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](50_BUILD_DEPLOY/DEVICE_TESTING_USB.md)
-rather than re-diagnosing it.
+✅✅ **The fast device loop WORKS** — `npm run dev:usb` + `adb reverse`, and the
+tablet loads it as `localhost` (a secure context, so sensors work). See
+[`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).
 Full status: [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md).
 
 ---
