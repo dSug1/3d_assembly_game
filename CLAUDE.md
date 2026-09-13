@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-13)
 
-✅ Scaffolding green: TypeScript + Babylon + Vite, **106 golden vectors passing**.
+✅ Scaffolding green: TypeScript + Babylon + Vite, **112 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet — a **secure context**, so sensors and

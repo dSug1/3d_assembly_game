@@ -63,6 +63,25 @@
  * names it: *print the aggregation, not just the value.* A single sample pair is the
  * noisiest possible estimator of any rate, and no threshold rescues one.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ⭐⭐ ROLL RELEASES WHEN THE PATH STOPS BEING CIRCULAR. Device-reported
+ * 2026-09-13: *"when I do a circular finger movement followed immediately by a
+ * linear finger movement, there is no smooth transition between roll and yaw/pitch:
+ * the linear finger movement instead control an erratic movement which jitters and
+ * snaps with big amplitude."*
+ *
+ * ⛔ The commit used to LATCH for the whole gesture, so a straight drag after a
+ * circle was still read as roll — and the turn from the circle's tangent onto the
+ * new line is a large, genuine direction change, applied in one step. That is the
+ * "snap with big amplitude".
+ *
+ * ⭐ Rule 2quinte's own condition is *"delta position has a circular movement"*, so
+ * when the movement stops being circular the rule should stop applying. Commit is
+ * the ENTRY hysteresis; `rollReleaseDistance` is the EXIT hysteresis — the same
+ * shape as §1.1's `STATIONARY`/`MOVING` pair, which the project already accepts.
+ * ⚠ §1.3 reads as a latch, so this is a spec amendment and the owner's to ratify.
+ * Recorded in `Claude/10_INPUT_TOUCH/INDEX.md`.
+ *
  * ⛔ SIGN, DECLARED, BECAUSE A SIGN IS NOT TESTED BY TESTING THE MAGNITUDE:
  * screen coordinates run x right and **y DOWN**, so a positive cross product is a
  * turn from +x toward +y — which is **CLOCKWISE AS SEEN ON THE SCREEN**.
@@ -73,6 +92,7 @@
 import { mmToPx, pxToMm } from "../core/units";
 import type { GestureConfig } from "./gestureConfig";
 import type { Sample } from "./motion";
+import { OneEuroFilter } from "./one_euro";
 
 /** Guards the degenerate circumradius only; the baseline gate handles the rest. */
 const EPSILON_PX = 1e-9;
@@ -91,15 +111,40 @@ export class RollDetector {
   private window: Sample[] = [];
   /** Where the newest point was when the direction was last evaluated. */
   private lastEvalAt: Sample | null = null;
+  /** Path travelled, in px, since the path last looked circular. Exit hysteresis. */
+  private offBandPx = 0;
   private prevDirRad: number | null = null;
   private accumDeg = 0;
+  private smoothDeg = 0;
   private committedFlag = false;
+  private readonly filter: OneEuroFilter;
 
-  constructor(private readonly cfg: GestureConfig) {}
+  constructor(private readonly cfg: GestureConfig) {
+    this.filter = new OneEuroFilter({
+      minCutoff: cfg.rollFilterMinCutoff,
+      beta: cfg.rollFilterBeta,
+      dCutoff: 1.0,
+    });
+  }
 
-  /** ⭐ Signed: positive is CLOCKWISE on screen. See the header. */
+  /**
+   * ⭐ Signed: positive is CLOCKWISE on screen. See the header.
+   * ⚠ RAW — this is what the COMMIT decision reads, deliberately unfiltered so the
+   * threshold is not delayed by smoothing.
+   */
   get accumulatedDeg(): number {
     return this.accumDeg;
+  }
+
+  /**
+   * ⭐⭐ THE ANGLE TO ROTATE BY. 1€-filtered (`one_euro.ts`): heavy smoothing while
+   * the roll is slow, where the eye sees jitter; almost none while it is fast, where
+   * the eye sees lag. The device reported exactly that asymmetry.
+   * ⛔ Filtering the DISPLAYED angle and not the COMMIT signal is deliberate: the
+   * commit is a threshold crossing, and lagging it would make the gesture feel late.
+   */
+  get smoothedDeg(): number {
+    return this.smoothDeg;
   }
 
   /**
@@ -114,9 +159,12 @@ export class RollDetector {
   reset(): void {
     this.window = [];
     this.lastEvalAt = null;
+    this.offBandPx = 0;
     this.prevDirRad = null;
     this.accumDeg = 0;
+    this.smoothDeg = 0;
     this.committedFlag = false;
+    this.filter.reset();
   }
 
   push(s: Sample): void {
@@ -152,6 +200,7 @@ export class RollDetector {
     // this file exists to avoid, so nothing is measured at all.
     if (this.window.length < 3 || dist(from, s) < baselinePx) return;
 
+    const stepPx = this.lastEvalAt === null ? 0 : dist(this.lastEvalAt, s);
     this.lastEvalAt = s;
     const dirRad = Math.atan2(s.y - from.y, s.x - from.x);
     const radiusMm = this.curvatureRadiusMm(from, s);
@@ -165,19 +214,46 @@ export class RollDetector {
     // samples held, which is felt as stutter. ⛔ A straight stretch needs no gate
     // anyway — it has no turning, so it accumulates nothing by itself.
     if (this.committedFlag) {
+      // ⭐⭐ EXIT HYSTERESIS. A committed roll survives a brief wobble out of the
+      // band, but a sustained non-circular stretch RELEASES it, so the gesture hands
+      // back to yaw/pitch instead of reading a straight drag as an enormous turn.
+      this.offBandPx = inBand ? 0 : this.offBandPx + stepPx;
+      if (this.offBandPx >= mmToPx(this.cfg.rollReleaseDistance)) {
+        this.committedFlag = false;
+        // ⛔ Reset, so re-entering a circle must earn `rollAngle` again rather than
+        // resuming from an angle the finger has since abandoned.
+        this.accumDeg = 0;
+        this.offBandPx = 0;
+        this.prevDirRad = dirRad;
+        // ⛔ The filter carries state; leaving it primed with the old angle would
+        // make the next roll start by racing back to an angle nobody asked for.
+        this.filter.reset();
+        this.smoothDeg = 0;
+        return;
+      }
       this.accumDeg += this.turnDeg(dirRad);
-    } else if (inBand) {
-      this.accumDeg += this.turnDeg(dirRad);
-      if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
     } else {
-      // Out of the band before commit: ⛔ zero it, so a scribble and a straight run
-      // cannot add up to a circle between them.
-      this.accumDeg = 0;
+      // ⛔⛔ THE BAND IS HYSTERETIC ON THIS SIDE TOO, and it has to be. Zeroing on a
+      // SINGLE out-of-band evaluation meant a slow sweep — which produces many more
+      // evaluations per degree, and so many more chances to be unlucky — was reset
+      // over and over and NEVER COMMITTED. Measured: 300° swept, 0.0° read.
+      // ⭐ Entry already had hysteresis (`rollAngle` must accumulate); this gives the
+      // same treatment to the exit, exactly as §1.1 does for STATIONARY/MOVING.
+      this.offBandPx = inBand ? 0 : this.offBandPx + stepPx;
+      if (this.offBandPx >= mmToPx(this.cfg.rollReleaseDistance)) {
+        // A scribble and a straight run must not add up to a circle between them.
+        this.accumDeg = 0;
+        this.offBandPx = 0;
+      } else if (inBand) {
+        this.accumDeg += this.turnDeg(dirRad);
+        if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
+      }
     }
 
     // ⚠ Tracked even while out of band, so re-entering does not read the whole
     // excursion as one instantaneous turn.
     this.prevDirRad = dirRad;
+    this.smoothDeg = this.filter.filter(this.accumDeg, s.t);
   }
 
   /** Signed turn since the last evaluation, degrees. `0` on the first one. */

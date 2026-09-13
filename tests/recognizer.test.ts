@@ -310,9 +310,13 @@ describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
     const { rec, pose } = fresh();
     const swept = circle(30, true);
     const last = swept[swept.length - 1]!;
+    // ⚠ The tail must stay SHORTER than `rollReleaseDistance`, or the roll is
+    // released on purpose and the flick correctly applies again. 400 mm/s for 25 ms
+    // is 10 mm: a flick by every criterion, and under the 12 mm release.
     const tail = run({
       speedMmPerS: 400,
-      ms: 120,
+      ms: 25,
+      stepMs: 5,
       x0: last.x,
       y0: last.y,
       t0: last.t + 10,
