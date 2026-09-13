@@ -14,6 +14,10 @@ equivalent decision for months; it blocked four queue rows and the whole game la
 and its router still reads *"no amount of building advances it."* See
 [`../00_CORE/LESSONS_CARRIED.md`](../00_CORE/LESSONS_CARRIED.md) §1.
 
+⭐ **The full deploy procedure, and the troubleshooting table, are in**
+[`DEPLOY_GITHUB_PAGES.md`](DEPLOY_GITHUB_PAGES.md) — including the dark-page
+near-plane trap that cost the first deploy.
+
 ## Commands
 
 | | |
