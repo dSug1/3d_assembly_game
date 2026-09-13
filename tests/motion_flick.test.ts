@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "../src/input/motion";
-import { detectFlick, trimBuffer } from "../src/input/flick";
+import { detectFlick, terminalSpeedPxPerS, trimBuffer } from "../src/input/flick";
 import { mmToPx } from "../src/core/units";
 
 const cfg = DEFAULT_CONFIG;
@@ -192,5 +192,82 @@ describe("moveExitDistance — the slow creep an instantaneous speed test cannot
 
   it("the shipped defaults satisfy it", () => {
     expect((cfg.stillSpeed * cfg.stillTime) / 1000).toBeGreaterThan(cfg.moveExitDistance);
+  });
+});
+
+/**
+ * ⭐⭐ THE DEVICE-CONFIRMED DEFECT: THE SAME FLICK, JUDGED DIFFERENTLY DEPENDING ON
+ * WHAT THE BROWSER EMITTED AT LIFT. Reported from a Lenovo TB-X606F on 2026-09-13 —
+ * "rollback is not consistent" — and reproduced here headlessly.
+ *
+ * A browser emits `pointerup` at a position and time of its own choosing, and very
+ * commonly REPEATS the last `pointermove` coordinates. The old estimator read the
+ * final pair, saw zero displacement, and called a 400 mm/s stroke a dead stop.
+ *
+ * ⛔ No value of `flickLiftSpeed` fixes this: the measurement itself was zero. That
+ * is why the answer is the window the speed is averaged over, and not a tuned
+ * threshold — the failure was in the instrument, as `METHOD` keeps warning.
+ */
+
+/** The pre-fix estimator: the last sample pair, and nothing else. */
+function lastPairLiftPxPerS(buffer: readonly Sample[]): number {
+  if (buffer.length < 2) return 0;
+  const last = buffer[buffer.length - 1]!;
+  const prev = buffer[buffer.length - 2]!;
+  const dt = last.t - prev.t;
+  if (dt <= 0) return 0;
+  return (Math.hypot(last.x - prev.x, last.y - prev.y) / dt) * 1000;
+}
+
+describe("flick lift speed — the same gesture must survive any lift event", () => {
+  /** One 400 mm/s horizontal stroke. `lift` decides only how it is RELEASED. */
+  function stroke(lift: "clean" | "repeated-coords" | "tiny-step"): Sample[] {
+    const b = run(400, 120);
+    const last = b[b.length - 1]!;
+    if (lift === "repeated-coords") b.push({ x: last.x, y: last.y, t: last.t + 8 });
+    if (lift === "tiny-step") b.push({ x: last.x + 0.3, y: last.y, t: last.t + 1 });
+    return b;
+  }
+
+  for (const lift of ["clean", "repeated-coords", "tiny-step"] as const) {
+    it(`is a flick when the pointerup is "${lift}"`, () => {
+      expect(detectFlick(trimBuffer(stroke(lift), cfg), cfg)).not.toBeNull();
+    });
+  }
+
+  it("⛔ ...and THE OLD LAST-PAIR ESTIMATOR loses two of those three", () => {
+    // The defect, pinned. Revert the window and this vector goes red with the
+    // reason on it: the finger did the same thing all three times.
+    const threshold = mmToPx(cfg.flickLiftSpeed);
+    expect(lastPairLiftPxPerS(trimBuffer(stroke("clean"), cfg))).toBeGreaterThan(threshold);
+    expect(lastPairLiftPxPerS(trimBuffer(stroke("repeated-coords"), cfg))).toBe(0);
+    expect(lastPairLiftPxPerS(trimBuffer(stroke("tiny-step"), cfg))).toBeLessThan(threshold);
+  });
+
+  it("⭐ the three lifts now agree to within a few percent", () => {
+    // Not just "all three pass" — a discriminator whose VALUE swings wildly while
+    // happening to stay one side of a threshold is still fragile, and the next
+    // config change would expose it. Assert the spread, not the verdict.
+    const speeds = (["clean", "repeated-coords", "tiny-step"] as const).map((l) =>
+      terminalSpeedPxPerS(trimBuffer(stroke(l), cfg), cfg),
+    );
+    const spread = (Math.max(...speeds) - Math.min(...speeds)) / Math.max(...speeds);
+    expect(spread).toBeLessThan(0.25);
+  });
+
+  it("⛔ a decelerating drag is STILL not a flick — the fix did not buy sensitivity", () => {
+    // The other half. A windowed estimator that made everything a flick would have
+    // traded one failure for its opposite, and the rollback would fire on drags.
+    const fast = run(400, 100);
+    const last = fast[fast.length - 1]!;
+    const settled: Sample[] = [];
+    for (let i = 1; i <= 6; i++) settled.push({ x: last.x + i * 0.3, y: 0, t: last.t + i * 10 });
+    expect(detectFlick(trimBuffer([...fast, ...settled], cfg), cfg)).toBeNull();
+  });
+
+  it("⛔ a lift window wider than the motion buffer is rejected loudly", () => {
+    expect(
+      () => new MotionTracker({ ...cfg, flickLiftWindow: cfg.flickWindow + 1 }),
+    ).toThrow(/exceeds flickWindow/);
   });
 });

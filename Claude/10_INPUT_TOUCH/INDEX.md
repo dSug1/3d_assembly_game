@@ -12,14 +12,13 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 ## Where it stands
 
 ✅ **`IN0` built** — units (mm→px), the hysteretic motion state, and the flick test.
-✅ **`IN1` BUILT AND GREEN** — the recognizer state machine, provisional motion with
-rollback, roll detection, the release-time priority ladder, and the double-tap §1.4
-could not work without. **81 golden vectors, all passing** (37 → 81).
-⛔⛔ **`IN1` IS NOT CLOSED: no finger has touched it.** Green suites are necessary
-and not sufficient. ⭐ `src/render/hud.ts` puts the recognizer's own state on the
-glass, because a state machine has no visible shape — and the one glance that closes
-the row is: **drag rotates, flick snaps back.**
-⛔ Every threshold is still a placeholder, and `IN1` added four more.
+✅ **`IN1` BUILT** — the recognizer state machine, provisional motion with rollback,
+roll detection, the release-time priority ladder, and the double-tap §1.4 could not
+work without. **100 golden vectors, all passing** (37 → 100).
+⭐⭐ **THE FIRST DEVICE PASS FOUND THREE DEFECTS 81 GREEN VECTORS COULD NOT** — all
+three recorded below, all fixed and pinned. ⛔⛔ **A second pass is owed, so `IN1` is
+NOT CLOSED.**
+⛔ Every threshold is still a placeholder, and `IN1` added five more.
 
 ## ⛔⛔ Where the build already had to DEPART from the spec
 
@@ -132,3 +131,45 @@ make another placeholder reachable, not a measurement.** Both belong to `IN5`.
 | know why a threshold is in mm | [`../00_CORE/CONSTRAINTS.md`](../00_CORE/CONSTRAINTS.md) §6 |
 | change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place** |
 | know what is built | [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md), phase `IN` |
+
+---
+
+## ⭐⭐ What the FIRST DEVICE PASS found (2026-09-13, Lenovo TB-X606F)
+
+Commit, tap-vs-hold and double-tap passed as designed. The other three did not, and
+**not one of them was visible to 81 passing vectors.** Full record:
+[`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+
+**1. ⛔⛔ Rollback was inconsistent — and it was the INSTRUMENT.** `detectFlick`
+measured terminal speed from the **last sample pair**. A browser emits `pointerup`
+wherever and whenever it likes and **very commonly repeats the last `pointermove`
+coordinates**; the estimator then read zero displacement, computed a lift speed of
+**zero**, and discarded a 400 mm/s flick. Nothing the user can feel or control —
+hence identical gestures judged differently.
+⛔ **No value of `flickLiftSpeed` could have fixed it**: the measurement was zero.
+Retuning would have chased a threshold to explain an instrument fault.
+✅ Lift speed is now averaged over a stated window, `flickLiftWindow` (40 ms,
+placeholder). `METHOD` said this in advance: *print the aggregation, not just the
+value* — a single sample pair is the noisiest possible estimator of a speed.
+
+**2. ⛔⛔ Yaw and pitch ran backwards, and in two different frames.** Owner: *"if the
+finger moves to the right the cube yaw rotates towards the left"*, and *"the yaw is in
+the world coordinates while the pitch is in the object coordinates."* One cause for
+both: `mesh.rotation.set(...)` — **Euler components apply in a fixed order, so the
+second angle acts inside the frame the first one just made.**
+✅ New `src/input/screen_rotate.ts`, engine-free and vector-covered: both rotations
+are built about the camera's **world-space screen axes** and left-multiplied onto the
+pose, per frame, as increments. ⭐ The axes are latched **at press** — rule 1's orbit
+must not redefine them mid-gesture, which is §1.4's `WORLD_AXIS_ALIGN` lesson again.
+⭐ The world-frame claim is asserted the only way that means it: **the delta applied
+is independent of the pose it is applied to.**
+
+**3. ⛔ Roll detected but never rolled.** `RollDetector` latched on commit and stopped
+accumulating — but 2quinte rotates the object BY that angle, so it would have rolled
+60° and stopped dead while the finger kept circling. ✅ Only the **decision** latches;
+the angle keeps growing, and **holds** rather than zeroing when the path leaves the
+radius band, so a stray finger cannot snap the object back mid-gesture.
+
+⭐ **And the readout now prints the measured lift speed whether or not it passed**
+(`lift 412/250mm/s`). Without it, *"the flick did not fire"* is **unfalsifiable on a
+device**: a finger that was too slow and an estimator reading zero look identical.

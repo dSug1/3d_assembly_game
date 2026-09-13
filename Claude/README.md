@@ -30,17 +30,18 @@ They are the record, not the briefing.
 ## Where it stands, in five lines
 
 ⭐ **Day one, and it is DEPLOYED**: TypeScript + Babylon.js + Vite, `npm run verify`
-runs a typecheck and **81 golden vectors, all passing**, and the build is live at
+runs a typecheck and **100 golden vectors, all passing**, and the build is live at
 **https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
 ✅ **Built engine-agnostic and enforced**: `src/core` and `src/input` import no
 engine, and [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if
 that ever stops being true.
 ✅ **Carried across as code**: the mate-connector geometry and the four rules that
 cost live sessions in the predecessor project.
-✅ **`IN1` built and green**: the recognizer state machine — commit point,
-provisional motion with rollback, roll, release-time priority. ⛔⛔ **Not closed: no
-finger has touched it.** `IN2`–`IN4` are not built, and every tunable in
-`gestureConfig.ts` is a starting point, not a measurement.
+✅ **`IN1` built**: the recognizer state machine — commit point, provisional motion
+with rollback, roll, release-time priority. ⭐⭐ **Its first device pass found three
+defects no green suite could see**; all fixed, and a second pass is owed, so it is
+**not closed**. `IN2`–`IN4` are not built, and every tunable in `gestureConfig.ts` is
+a starting point, not a measurement.
 ✅✅ **The fast device loop WORKS** — `npm run dev:usb` + `adb reverse`, and the
 tablet loads it as `localhost` (a secure context, so sensors work). See
 [`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).

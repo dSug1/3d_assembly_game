@@ -38,7 +38,7 @@
  * inconsistent config is a loud failure rather than another dead threshold.
  */
 import { mmToPx } from "../core/units";
-import type { GestureConfig } from "./gestureConfig";
+import { validateGestureConfig, type GestureConfig } from "./gestureConfig";
 
 export type MotionState = "STATIONARY" | "MOVING";
 
@@ -60,22 +60,9 @@ export class MotionTracker {
   private settleAnchor: Sample | null = null;
 
   constructor(private readonly cfg: GestureConfig) {
-    if (cfg.moveEnterDistance <= cfg.moveExitDistance) {
-      throw new Error(
-        "moveEnterDistance must exceed moveExitDistance, or the motion state chatters.",
-      );
-    }
-    // ⛔⛔ See the header. Without this the exit distance is decorative and nobody
-    // finds out, which is exactly the shape of failure `METHOD` forbids: a check
-    // that cannot fire, reported as if it had passed.
-    const reachableMm = (cfg.stillSpeed * cfg.stillTime) / 1000;
-    if (reachableMm <= cfg.moveExitDistance) {
-      throw new Error(
-        `moveExitDistance (${cfg.moveExitDistance} mm) can never bind: motion held ` +
-          `below stillSpeed (${cfg.stillSpeed} mm/s) for stillTime (${cfg.stillTime} ms) ` +
-          `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
-      );
-    }
+    // ⭐ Every cross-tunable consistency rule lives in ONE place, and every
+    // Recognizer builds one of these. See `validateGestureConfig` for the rules.
+    validateGestureConfig(cfg);
   }
 
   get current(): MotionState {

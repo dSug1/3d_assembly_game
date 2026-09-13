@@ -3,7 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built and green — **NOT CLOSED, no device look yet** · **SUB** · IN
+> **STATUS** · ⚠ built, green, **first device pass done — 3 defects found and fixed;
+> a SECOND pass is owed, so NOT CLOSED** · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -52,7 +53,7 @@ and are **the owner's to ratify.**
    is at 0.955 R — essentially on the path.** The build accumulates the **signed
    turning angle** instead, which for a circular arc equals its central angle
    exactly, with the **circumradius of three consecutive samples** as the local
-   radius. Pinned by a vector that reads 60.000° off a 12 × 5° arc.
+   radius. Pinned by a vector that reads 45.000° off a 9 × 5° arc.
 
 ## ⭐ The `moveExitDistance` debt `IN0` handed over, closed
 
@@ -89,11 +90,12 @@ Revert the excursion term and the suite goes red, with the reason written on it.
   product would accept. Replaced with a real side-to-side wiggle whose curvature
   genuinely lands **inside** the roll band, so the band alone cannot reject it.
 
-## ⚠ What this row does NOT close
+## ⚠ What this row did NOT close, as written on the morning of 2026-09-13
 
 ⛔⛔ **NO DEVICE LOOK YET. THIS ROW IS NOT CLOSED.** Green suites are necessary and
 not sufficient, and touch cannot be tested with a mouse. What must be checked by
-finger, on the Lenovo TB-X606F, over `npm run dev:usb` + `adb reverse`:
+finger, on the Lenovo TB-X606F, over `npm run dev:usb` + `adb reverse`
+— ⭐ **all five were run that evening; see the device-pass section below**:
 
 1. **Commit** — the phase flips to `COMMITTED_CONTINUOUS` where the finger actually
    feels committed, not before and not after.
@@ -132,3 +134,99 @@ real rule and deletes it.
   observed. Watch for it on the device; if it fires, it is a data question.
 * `tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop` are three more unmeasured
   placeholders, and they are now on the critical path for **eviction**.
+
+---
+
+## 2026-09-13 (evening) — ⭐⭐ THE FIRST DEVICE PASS. Three defects, all found by finger
+
+Lenovo TB-X606F over `npm run dev:usb` + `adb reverse`. **81 → 100 golden vectors.**
+
+| check | verdict |
+|---|---|
+| 1. commit | ✅ works as designed |
+| 2. **rollback** | ⛔ **INCONSISTENT** — see below |
+| 3. tap vs hold | ✅ works as designed |
+| 4. double-tap | ✅ works as designed |
+| 5. roll detection | ✅ detects — ⛔ but the cube did not ROLL, and yaw/pitch ran BACKWARDS |
+
+⭐⭐ **Every one of the three was invisible to 81 green vectors.** This is the entry
+`METHOD` is about: automated green is necessary and not sufficient, and not one of
+these could have been found with a mouse.
+
+### ⛔⛔ 1. Rollback was inconsistent — and it was the INSTRUMENT, not the threshold
+
+Owner: *"not sure what makes it inconsistent: the flick, the timing, the amplitude."*
+None of those. **`detectFlick` measured terminal speed from the LAST SAMPLE PAIR.**
+
+A browser emits `pointerup` at a position and instant of its own choosing, and **very
+commonly repeats the last `pointermove` coordinates**. The estimator then saw zero
+displacement across the final pair, computed a lift speed of **zero**, and threw away
+a 400 mm/s flick. Whether the browser coalesces that last event is nothing the user
+can feel or control — hence "inconsistent" for an identical gesture.
+
+⭐ **Reproduced headlessly before anything was changed**: one 400 mm/s stroke is a
+flick; the SAME stroke with a coordinate-repeating `pointerup` appended is not.
+
+⛔ **No value of `flickLiftSpeed` could have fixed this** — the measurement itself was
+zero. Retuning would have chased a threshold to explain an instrument fault, which is
+precisely the heuristic pile-up `METHOD` forbids.
+
+✅ Lift speed is now averaged over `flickLiftWindow` (40 ms, placeholder). The three
+lift variants now agree to within a few percent, and the **spread is asserted, not
+just the verdict** — a discriminator whose value swings wildly while happening to stay
+one side of a threshold is still fragile.
+⭐ The old last-pair estimator is kept in the suite as `lastPairLiftPxPerS` and the
+vectors assert it **still loses two of the three**. Revert the window, go red.
+
+### ⛔⛔ 2. Yaw and pitch ran backwards, and in two different frames
+
+Owner, precisely: *"if the finger moves to the right the cube yaw rotates towards the
+left"*, and *"the yaw is in the world coordinates while the pitch is in the object
+coordinates."*
+
+Both symptoms, one cause: `mesh.rotation.set(...)`. **Euler components are applied in
+a fixed order, so the second angle acts inside the frame the first one just made.**
+
+✅ New `src/input/screen_rotate.ts` — engine-free, vector-covered — builds both
+rotations about the camera's **world-space screen axes** and LEFT-multiplies them onto
+the pose, per frame, as increments. Signs flipped to follow the finger.
+⭐ The axes are latched **at press**, not recomputed per frame: rule 1's orbit must not
+redefine them mid-gesture. Same lesson as §1.4's `WORLD_AXIS_ALIGN`.
+
+⭐⭐ **The composite is asserted, not assumed.** `METHOD`: *a composition is a thing to
+measure.* The vectors rotate a marker and check where it lands, and the world-frame
+claim is stated as the only thing that actually means it: **the delta applied is
+independent of the pose it is applied to.**
+
+### ⛔ 3. Roll detected but never rolled — the detector froze its own output
+
+`RollDetector` latched on commit and **stopped accumulating**. But 2quinte rotates the
+object BY that angle, so the object would have rolled 60° and stopped dead while the
+finger kept circling. ✅ Only the **decision** latches now; the angle keeps growing,
+and holds (rather than zeroing) when the path leaves the radius band.
+
+### ⛔ Two of MY OWN vectors were wrong, and both are kept
+
+* One asserted a downward drag lowers the viewer-facing point by the **same amount**
+  at any yaw. **False** — a rotation about the screen-x axis moves a point by an
+  amount depending on its distance FROM that axis, and a point sitting on it does not
+  move at all. Correct geometry, wrong premise.
+* One built its counter-example by rotating about the object's **transformed** right
+  axis. That is the identity `R(q·axis, θ) ⊗ q = q ⊗ R(axis, θ)` — the *same*
+  rotation. The "defect" and the fix agreed exactly, so the vector proved nothing.
+  ⛔ **A test that cannot fail is not a test.** The real counter-example is
+  right-multiplication, which is genuinely the object's frame.
+
+### ⭐ And the readout now prints the measured lift speed, pass or fail
+
+`lift 412/250mm/s`, against the threshold it was judged by. Without it *"the flick did
+not fire"* is **unfalsifiable on a device** — a finger that was too slow and an
+estimator reading zero look identical. That ambiguity is what made this defect cost a
+device session instead of a glance.
+
+## ⚠ Still not closed — a SECOND device pass is owed
+
+All three fixes are vector-covered and **none has been touched by a finger yet.**
+Re-check on the tablet: (a) rollback now consistent across many flicks, (b) the cube
+follows the finger on both axes and does not tumble when already turned, (c) a swirl
+actually rolls, clockwise for clockwise.

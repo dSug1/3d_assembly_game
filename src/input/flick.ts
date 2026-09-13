@@ -9,6 +9,26 @@
  * ⭐ Direction purity is ONE RATIO, not two independent thresholds. The old form
  * (`|x| < smallThreshold` AND `|y| > bigThreshold`) left a large undefined wedge
  * between the two — directions that were neither accepted nor rejected.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ⛔⛔ AND THE LIFT SPEED IS MEASURED OVER A WINDOW, NOT OVER THE LAST SAMPLE PAIR.
+ * THIS IS A DEVICE-CONFIRMED DEFECT, found on a Lenovo TB-X606F on 2026-09-13: the
+ * owner reported the flick rollback firing INCONSISTENTLY for the same gesture.
+ *
+ * The cause is not the finger and not the thresholds. A browser emits `pointerup`
+ * at whatever position and instant it chooses, and **very commonly repeats the last
+ * `pointermove` coordinates**. A two-sample estimator then reads a displacement of
+ * ZERO across that final pair, computes a lift speed of zero, and throws away a
+ * flick that plainly happened. Whether the browser coalesces that last event is not
+ * something the user can feel or control — hence "inconsistent".
+ *
+ * ⭐ Reproduced headlessly, both ways: a clean 400 mm/s stroke is a flick; the SAME
+ * stroke with a coordinate-repeating `pointerup` appended is not. Pinned by vectors.
+ *
+ * ⭐⭐ THIS IS THE `METHOD` LESSON VERBATIM: *print the aggregation, not just the
+ * value.* A single sample pair is the noisiest possible estimator of a speed, and
+ * the fix is not a tuned threshold — no value of `flickLiftSpeed` rescues a
+ * measurement of zero. It is to state the window the speed is averaged over.
  */
 import { mmToPx } from "../core/units";
 import type { GestureConfig } from "./gestureConfig";
@@ -37,13 +57,10 @@ export function detectFlick(buffer: readonly Sample[], cfg: GestureConfig): Flic
   if (buffer.length < 2) return null;
   const first = buffer[0]!;
   const last = buffer[buffer.length - 1]!;
-  const prev = buffer[buffer.length - 2]!;
 
-  // 1. terminal speed at lift — the drag/flick discriminator.
-  const dtLift = last.t - prev.t;
-  if (dtLift <= 0) return null;
-  const liftPxPerS =
-    (Math.hypot(last.x - prev.x, last.y - prev.y) / dtLift) * 1000;
+  // 1. terminal speed at lift — the drag/flick discriminator. See the header for why
+  // this is a WINDOW and not the last pair; it is the fix for inconsistent rollback.
+  const liftPxPerS = terminalSpeedPxPerS(buffer, cfg);
   if (liftPxPerS < mmToPx(cfg.flickLiftSpeed)) return null;
 
   // 2. travel within the window.
@@ -66,6 +83,33 @@ export function detectFlick(buffer: readonly Sample[], cfg: GestureConfig): Flic
     liftSpeedMmPerS: liftPxPerS / mmToPx(1),
     purity,
   };
+}
+
+/**
+ * Mean speed over the last `flickLiftWindow` ms of the buffer.
+ *
+ * ⚠ Exported because the on-device readout must be able to show the value the
+ * product ACTUALLY USED. A readout that recomputes it is a second implementation,
+ * and it can disagree with the product while both look right.
+ */
+export function terminalSpeedPxPerS(
+  buffer: readonly Sample[],
+  cfg: GestureConfig,
+): number {
+  if (buffer.length < 2) return 0;
+  const last = buffer[buffer.length - 1]!;
+  const cutoff = last.t - cfg.flickLiftWindow;
+  let i = buffer.length - 1;
+  while (i > 0 && buffer[i - 1]!.t >= cutoff) i--;
+  // ⚠ Sampling sparser than the window leaves nothing inside it to measure against.
+  // Step back one more rather than returning zero: a real interval measured slightly
+  // too wide is an estimate; a zero is a fabricated dead stop, which is the whole
+  // defect being fixed here.
+  if (i === buffer.length - 1) i = buffer.length - 2;
+  const from = buffer[i]!;
+  const dt = last.t - from.t;
+  if (dt <= 0) return 0;
+  return (Math.hypot(last.x - from.x, last.y - from.y) / dt) * 1000;
 }
 
 /** Keep only the samples inside `flickWindow` of the newest one. */

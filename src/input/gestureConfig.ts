@@ -47,6 +47,14 @@ export interface GestureConfig {
   flickWindow: number;
   /** mm/s at lift, below which it is a drag that stopped — never a flick. */
   flickLiftSpeed: number;
+  /**
+   * ms. The trailing window the LIFT SPEED is averaged over.
+   * ⛔⛔ NOT THE LAST SAMPLE PAIR. A browser emits `pointerup` at whatever position
+   * and time it likes — very often repeating the last `pointermove` coordinates —
+   * and a two-sample estimator reads that as a dead stop and throws the flick away.
+   * Device-confirmed as the cause of inconsistent rollback. See flick.ts.
+   */
+  flickLiftWindow: number;
   /** mm of travel within the window. */
   flickDistance: number;
   /** max(|dx|,|dy|) / (min(|dx|,|dy|) + eps). One ratio, no undefined wedge. */
@@ -117,6 +125,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   flickWindow: 120,
   flickLiftSpeed: 250,
+  // ⚠ Placeholder, like every number here. Long enough to span several pointer
+  // samples at 60-120 Hz, short enough to still mean "at lift". IN5 measures it.
+  flickLiftWindow: 40,
   flickDistance: 6,
   flickPurity: 2.5,
   rollAngle: 60,
@@ -139,3 +150,39 @@ export const DEFAULT_CONFIG: GestureConfig = {
   mateBreakLinear: 0.02,
   mateBreakAngular: 0.35,
 };
+
+/**
+ * ⭐⭐ EVERY CONSISTENCY RULE BETWEEN TUNABLES, IN ONE PLACE.
+ *
+ * ⛔ A config can be individually plausible and jointly impossible, and when it is,
+ * the threshold that cannot bind simply does nothing while `IN5` goes off and
+ * measures it. `METHOD`: a guard that turns a broken state into silence is worse
+ * than a failure. Each rule here depends on TWO numbers, which is exactly why no
+ * single-value vector catches it.
+ *
+ * Called from `MotionTracker`'s constructor, which every `Recognizer` builds.
+ */
+export function validateGestureConfig(cfg: GestureConfig): void {
+  if (cfg.moveEnterDistance <= cfg.moveExitDistance) {
+    throw new Error(
+      "moveEnterDistance must exceed moveExitDistance, or the motion state chatters.",
+    );
+  }
+  // Motion held below `stillSpeed` for `stillTime` cannot cover more ground than
+  // their product, so below it the exit distance is decorative in EVERY wiring.
+  const reachableMm = (cfg.stillSpeed * cfg.stillTime) / 1000;
+  if (reachableMm <= cfg.moveExitDistance) {
+    throw new Error(
+      `moveExitDistance (${cfg.moveExitDistance} mm) can never bind: motion held ` +
+        `below stillSpeed (${cfg.stillSpeed} mm/s) for stillTime (${cfg.stillTime} ms) ` +
+        `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
+    );
+  }
+  if (cfg.flickLiftWindow > cfg.flickWindow) {
+    throw new Error(
+      `flickLiftWindow (${cfg.flickLiftWindow} ms) exceeds flickWindow ` +
+        `(${cfg.flickWindow} ms): the lift-speed window would read samples the ` +
+        "motion buffer has already discarded.",
+    );
+  }
+}

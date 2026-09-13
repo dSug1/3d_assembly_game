@@ -69,11 +69,25 @@ describe("roll detection", () => {
 
   it("the accumulated angle IS the swept angle, not an artefact of the centre estimate", () => {
     // ⭐⭐ THE REASON FOR THE DEPARTURE FROM §1.3, PINNED AS A NUMBER. The turning
-    // angle of a circular arc equals its central angle EXACTLY. Twelve 5° steps is
-    // 60° of sweep, and that is what must be read — the spec's running centroid
-    // sits at 0.955 R at this point and cannot produce it. See src/input/roll.ts.
+    // angle of a circular arc equals its central angle EXACTLY — the spec's running
+    // centroid sits at 0.955 R and cannot produce it. See src/input/roll.ts.
+    // ⚠ Deliberately BELOW `rollAngle`, so the identity is read on its own: 10 steps
+    // give 9 turns of 5° = 45°. An earlier version swept past the commit threshold
+    // and read whatever the latch happened to stop at, which tested the latch, not
+    // the identity.
+    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 10, clockwise: true }));
+    expect(d.committed).toBe(false);
+    expect(d.accumulatedDeg).toBeCloseTo(45, 6);
+  });
+
+  it("⭐ the angle KEEPS accumulating past the commit threshold", () => {
+    // ⛔ Only the DECISION latches. 2quinte rotates the object BY this value, so a
+    // detector that froze it at `rollAngle` would let the object roll 60° and then
+    // stop dead while the finger kept circling.
     const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 14, clockwise: true }));
-    expect(d.accumulatedDeg).toBeCloseTo(cfg.rollAngle, 3);
+    expect(d.committed).toBe(true);
+    expect(d.accumulatedDeg).toBeCloseTo(65, 6); // 13 turns of 5°
+    expect(d.accumulatedDeg).toBeGreaterThan(cfg.rollAngle);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -144,13 +158,13 @@ describe("roll detection", () => {
   });
 
   it("a duplicated sample is skipped, not read as a zero turn", () => {
-    const circle = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 14, clockwise: true });
+    const circle = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 10, clockwise: true });
     const withDupes: Sample[] = [];
     for (const s of circle) {
       withDupes.push(s);
       withDupes.push({ ...s, t: s.t + 1 }); // same position, later timestamp
     }
     const d = feed(withDupes);
-    expect(d.accumulatedDeg).toBeCloseTo(cfg.rollAngle, 3);
+    expect(d.accumulatedDeg).toBeCloseTo(45, 6); // identical to the clean arc
   });
 });

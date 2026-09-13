@@ -51,7 +51,11 @@ export class RollDetector {
     return this.accumDeg;
   }
 
-  /** Latches. §1.3: once roll is committed the flick test is skipped. */
+  /**
+   * Latches — and only this latches. ⚠ `accumulatedDeg` keeps growing afterwards,
+   * because 2quinte needs an ongoing angle to roll BY. §1.3: once roll is committed
+   * the flick test is skipped.
+   */
   get committed(): boolean {
     return this.committedFlag;
   }
@@ -64,7 +68,6 @@ export class RollDetector {
   }
 
   push(s: Sample): void {
-    if (this.committedFlag) return; // latched; nothing can un-commit a roll
     const b = this.b;
     // ⛔ A REPEATED POSITION CARRIES NO DIRECTION, AND IS DROPPED WITHOUT ADVANCING
     // THE WINDOW. A golden vector caught the first version doing the opposite: it
@@ -98,13 +101,19 @@ export class RollDetector {
       area2 <= EPSILON_PX ? Infinity : pxToMm((l1 * l2 * chord) / (2 * area2));
 
     if (radiusMm < this.cfg.rollRadiusMin || radiusMm > this.cfg.rollRadiusMax) {
-      // Out of the band: this stretch of path is not a roll, so nothing it swept
-      // counts toward one. ⛔ Zero it — do not let a scribble and a straight run
-      // add up to a circle between them.
-      this.accumDeg = 0;
+      // Out of the band. ⛔ BEFORE COMMIT, ZERO IT — do not let a scribble and a
+      // straight run add up to a circle between them.
+      // ⭐ AFTER COMMIT, HOLD IT. The accumulated angle is what rule 2quinte
+      // actually ROLLS BY, so zeroing it would snap the object back to where the
+      // gesture started, mid-gesture, the moment the finger strayed out of the band.
+      if (!this.committedFlag) this.accumDeg = 0;
       return;
     }
 
+    // ⭐ ACCUMULATION CONTINUES AFTER COMMIT. `committed` latches; the ANGLE does
+    // not. 2quinte rotates the object by this value, so a detector that froze it at
+    // the commit threshold would let the object roll 60° and then stop dead while
+    // the finger kept circling. Only the DECISION is one-way.
     this.accumDeg += (Math.atan2(cross, dot) * 180) / Math.PI;
     if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
   }

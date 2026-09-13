@@ -29,11 +29,11 @@
  * than that, one IMPLEMENTATION: a re-derived commit test is a second opinion that
  * can silently disagree with the first.
  */
-import { detectFlick, trimBuffer, type Flick } from "./flick";
+import { detectFlick, terminalSpeedPxPerS, trimBuffer, type Flick } from "./flick";
 import type { GestureConfig } from "./gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "./motion";
 import { RollDetector } from "./roll";
-import { mmToPx } from "../core/units";
+import { mmToPx, pxToMm } from "../core/units";
 
 export type Phase = "PRESSED" | "COMMITTED_CONTINUOUS" | "RELEASED";
 
@@ -94,6 +94,13 @@ export interface ReleaseVerdict {
   readonly rollDeg: number;
   /** Press → release, ms. */
   readonly durationMs: number;
+  /**
+   * The lift speed the flick test ACTUALLY MEASURED, mm/s — reported whether or not
+   * it passed. ⭐ Without it, "the flick did not fire" is unfalsifiable on a device:
+   * you cannot tell a finger that was too slow from an estimator that read zero, and
+   * that ambiguity is exactly what made the first rollback build feel inconsistent.
+   */
+  readonly liftSpeedMmPerS: number;
 }
 
 /** Snapshot/restore for whatever the caller calls a pose. See the header. */
@@ -245,6 +252,8 @@ export class Recognizer<P> {
     this.buffer.push(s);
     this.phase = "RELEASED";
     const durationMs = press ? s.t - press.t : 0;
+    const trimmed = trimBuffer(this.buffer, this.cfg);
+    const liftSpeedMmPerS = pxToMm(terminalSpeedPxPerS(trimmed, this.cfg));
 
     if (!wasCommitted) {
       // Never committed: nothing moved, so there is nothing to roll back.
@@ -260,6 +269,7 @@ export class Recognizer<P> {
         rule: resolveDiscreteRule(kind, null, ctx, this.cfg),
         rollDeg: this.roll.accumulatedDeg,
         durationMs,
+        liftSpeedMmPerS,
       };
     }
 
@@ -274,10 +284,11 @@ export class Recognizer<P> {
         rule: "NONE",
         rollDeg: this.roll.accumulatedDeg,
         durationMs,
+        liftSpeedMmPerS,
       };
     }
 
-    const flick = detectFlick(trimBuffer(this.buffer, this.cfg), this.cfg);
+    const flick = detectFlick(trimmed, this.cfg);
     if (!flick) {
       return {
         kind: "CONTINUOUS_KEPT",
@@ -286,6 +297,7 @@ export class Recognizer<P> {
         rule: "NONE",
         rollDeg: this.roll.accumulatedDeg,
         durationMs,
+        liftSpeedMmPerS,
       };
     }
 
@@ -300,6 +312,7 @@ export class Recognizer<P> {
       rule: resolveDiscreteRule("FLICK", flick, ctx, this.cfg),
       rollDeg: this.roll.accumulatedDeg,
       durationMs,
+      liftSpeedMmPerS,
     };
   }
 }

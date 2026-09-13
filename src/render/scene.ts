@@ -35,7 +35,7 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
@@ -46,10 +46,14 @@ import {
   DEFAULT_CONFIG,
   Recognizer,
   TapHistory,
+  screenPlaneRotation,
+  screenRollRotation,
   type PosePort,
   type ReleaseVerdict,
   type Sample,
+  type ScreenFrame,
 } from "../input";
+import type { Quat, Vec3 } from "../core/vec";
 import { createHud } from "./hud";
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
@@ -66,11 +70,14 @@ const CAMERA_RADIUS_M = 0.6;
  */
 const DIAGNOSTIC_RAD_PER_PX = 0.008;
 
-interface DiagnosticPose {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-}
+/**
+ * ⛔⛔ A QUATERNION, NOT EULER ANGLES. Device-reported 2026-09-13: *"the yaw is in
+ * the world coordinates while the pitch is in the object coordinates."* That is what
+ * `mesh.rotation` does — Euler components are applied in a FIXED ORDER, so the second
+ * angle acts inside the frame the first one just made, and the cube tumbles. The
+ * composition now lives in `input/screen_rotate.ts`, where vectors can check it.
+ */
+type DiagnosticPose = Quat;
 
 export interface SceneHandle {
   readonly scene: Scene;
@@ -110,6 +117,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const make = (name: string, x: number, rgb: [number, number, number]) => {
     const mesh = CreateBox(name, { size: OBJECT_SIZE_M }, scene);
     mesh.position = new Vector3(x, 0, 0);
+    // ⛔ Quaternion mode. While `rotationQuaternion` is null Babylon uses the Euler
+    // `rotation` instead, which is the frame-mixing defect above.
+    mesh.rotationQuaternion = Quaternion.Identity();
     const mat = new StandardMaterial(name + "-mat", scene);
     mat.diffuseColor = new Color3(...rgb);
     mesh.material = mat;
@@ -123,22 +133,54 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
   const hud = createHud();
   const taps = new TapHistory(DEFAULT_CONFIG);
-  const live = new Map<
-    number,
-    { rec: Recognizer<DiagnosticPose>; mesh: AbstractMesh; base: DiagnosticPose; press: Sample }
-  >();
+  interface Held {
+    rec: Recognizer<DiagnosticPose>;
+    mesh: AbstractMesh;
+    frame: ScreenFrame;
+    /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
+    prev: Sample;
+    lastRollDeg: number;
+  }
+  const live = new Map<number, Held>();
   let lastVerdict = "—";
 
+  /** Babylon stores `(x, y, z, w)`; `core/vec` uses `[w, x, y, z]`. One conversion. */
+  const readPose = (mesh: AbstractMesh): Quat => {
+    const q = mesh.rotationQuaternion!;
+    return [q.w, q.x, q.y, q.z];
+  };
+  const writePose = (mesh: AbstractMesh, q: Quat): void => {
+    mesh.rotationQuaternion!.set(q[1], q[2], q[3], q[0]);
+  };
+
   const poseOf = (mesh: AbstractMesh): PosePort<DiagnosticPose> => ({
-    snapshot: () => ({ x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z }),
-    restore: (p) => mesh.rotation.set(p.x, p.y, p.z),
+    snapshot: () => readPose(mesh),
+    restore: (p) => writePose(mesh, p),
+  });
+
+  const asVec3 = (v: Vector3): Vec3 => [v.x, v.y, v.z];
+
+  /**
+   * The camera's screen axes in WORLD space. ⚠ Latched at press, not recomputed per
+   * frame: rule 1's camera orbit must not silently redefine the axes half-way
+   * through a gesture. Same lesson as §1.4's `WORLD_AXIS_ALIGN`.
+   */
+  const screenFrame = (): ScreenFrame => ({
+    right: asVec3(camera.getDirection(Vector3.Right())),
+    up: asVec3(camera.getDirection(Vector3.Up())),
+    viewAxis: asVec3(camera.getDirection(Vector3.Forward())),
   });
 
   const describe = (v: ReleaseVerdict): string => {
     const rule = v.rule === "NONE" ? "" : `  → ${v.rule}`;
     const back = v.rolledBack ? "  ROLLED BACK" : "";
     const f = v.flick ? `  ${v.flick.axis}${v.flick.sign > 0 ? "+" : "-"}` : "";
-    return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms`;
+    // ⭐ The measured lift speed is printed WHETHER OR NOT it passed, against the
+    // threshold it was judged by. "The flick did not fire" is otherwise
+    // unfalsifiable on a device: too slow a finger and a broken estimator look the
+    // same. That ambiguity is what made the first rollback build feel inconsistent.
+    const lift = `lift ${Math.round(v.liftSpeedMmPerS)}/${DEFAULT_CONFIG.flickLiftSpeed}mm/s`;
+    return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms  ${lift}`;
   };
 
   const paint = () => {
@@ -177,12 +219,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const mesh = pick.pickedMesh;
       const rec = new Recognizer(DEFAULT_CONFIG, poseOf(mesh), taps);
       rec.press(s);
-      live.set(e.pointerId, {
-        rec,
-        mesh,
-        base: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
-        press: s,
-      });
+      live.set(e.pointerId, { rec, mesh, frame: screenFrame(), prev: s, lastRollDeg: 0 });
       paint();
       return;
     }
@@ -194,12 +231,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (held.rec.move(s) === "COMMITTED_CONTINUOUS") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release. See the header: stand-in, not 2bis.
-        held.mesh.rotation.set(
-          held.base.x + (s.y - held.press.y) * DIAGNOSTIC_RAD_PER_PX,
-          held.base.y + (s.x - held.press.x) * DIAGNOSTIC_RAD_PER_PX,
-          held.base.z,
-        );
+        //
+        // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
+        // about the screen axes latched at press. Every step is a small world-frame
+        // rotation, so the two axes never end up nested inside one another.
+        const cur = readPose(held.mesh);
+        if (held.rec.rollCommitted) {
+          // 2quinte has taken over: roll about the view axis by what the finger has
+          // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
+          // this gesture, which is what "commits to roll" means.
+          writePose(held.mesh, screenRollRotation(cur, held.frame, held.rec.rollDeg - held.lastRollDeg));
+        } else {
+          writePose(
+            held.mesh,
+            screenPlaneRotation(
+              cur,
+              held.frame,
+              s.x - held.prev.x,
+              s.y - held.prev.y,
+              DIAGNOSTIC_RAD_PER_PX,
+            ),
+          );
+        }
       }
+      held.lastRollDeg = held.rec.rollDeg;
+      held.prev = s;
       paint();
       return;
     }
