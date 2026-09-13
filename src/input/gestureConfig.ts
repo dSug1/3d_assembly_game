@@ -65,6 +65,27 @@ export interface GestureConfig {
   rollRadiusMin: number;
   /** mm. Above this the path is too straight to be a roll at all. */
   rollRadiusMax: number;
+  /**
+   * mm the finger must travel before a new direction is measured.
+   * ⛔⛔ THE BASELINE THE ROLL DIRECTION IS ESTIMATED OVER. Between consecutive
+   * pointer samples the baseline is a few pixels, so digitiser noise dominates the
+   * angle: a clean circle stepping 5.0° per sample measured up to 46.3° per sample
+   * with ±0.5 px of noise. Device-confirmed as the cause of roll jitter, and of the
+   * snap-back when a circling finger pauses. See roll.ts.
+   * ⚠ Must stay below `rollRadiusMin`, or the tightest allowed roll cannot be
+   * sampled finely enough to be one. Asserted in `validateGestureConfig`.
+   */
+  rollStepDistance: number;
+  /**
+   * mm the newest point must itself advance before the direction is re-measured.
+   * ⛔ THE CADENCE, and it is NOT the baseline. A direction depends on both ends of
+   * its baseline: with no progress gate a paused finger keeps producing new
+   * estimates while the baseline start creeps along the arc behind it, and the roll
+   * drifted +30.2° across one pause. ⭐ Smaller = the object follows the finger more
+   * finely; it does NOT make the angle noisier, which is `rollStepDistance`'s job.
+   * ⚠ Must stay below `rollStepDistance`. Asserted in `validateGestureConfig`.
+   */
+  rollUpdateDistance: number;
 
   // ── §1.3 taps ──────────────────────────────────────────────────
   // ⭐ NOT IN THE SPEC, AND §1.4 DOES NOT WORK WITHOUT THEM. §1.4 / rule 2septies
@@ -133,6 +154,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   rollAngle: 60,
   rollRadiusMin: 4,
   rollRadiusMax: 40,
+  rollStepDistance: 3,
+  rollUpdateDistance: 0.5,
 
   tapMaxDuration: 250,
   doubleTapWindow: 300,
@@ -176,6 +199,20 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `moveExitDistance (${cfg.moveExitDistance} mm) can never bind: motion held ` +
         `below stillSpeed (${cfg.stillSpeed} mm/s) for stillTime (${cfg.stillTime} ms) ` +
         `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
+    );
+  }
+  if (cfg.rollUpdateDistance >= cfg.rollStepDistance) {
+    throw new Error(
+      `rollUpdateDistance (${cfg.rollUpdateDistance} mm) must stay below ` +
+        `rollStepDistance (${cfg.rollStepDistance} mm): the cadence cannot be coarser ` +
+        "than the baseline it re-measures, or the two ends stop moving together.",
+    );
+  }
+  if (cfg.rollStepDistance >= cfg.rollRadiusMin) {
+    throw new Error(
+      `rollStepDistance (${cfg.rollStepDistance} mm) must stay below rollRadiusMin ` +
+        `(${cfg.rollRadiusMin} mm): at the tightest roll the band allows, a step that ` +
+        "long cannot sample the arc finely enough to measure its curvature.",
     );
   }
   if (cfg.flickLiftWindow > cfg.flickWindow) {

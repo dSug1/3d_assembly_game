@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built, green, **first device pass done — 3 defects found and fixed;
-> a SECOND pass is owed, so NOT CLOSED** · **SUB** · IN
+> **STATUS** · ⚠ built, green, **TWO device passes done — 4 defects found and fixed;
+> a THIRD pass is owed on the roll smoothing, so NOT CLOSED** · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -230,3 +230,100 @@ All three fixes are vector-covered and **none has been touched by a finger yet.*
 Re-check on the tablet: (a) rollback now consistent across many flicks, (b) the cube
 follows the finger on both axes and does not tumble when already turned, (c) a swirl
 actually rolls, clockwise for clockwise.
+
+---
+
+## 2026-09-13 (later) — ⭐⭐ SECOND DEVICE PASS: roll works, but it JITTERED
+
+Owner: *"the roll is working, however it is not nice: while rolling the cube jitters,
+if I pause the circular finger movement and start again, the cube also jitters a
+lot."* **100 → 106 golden vectors.**
+
+⭐⭐ **ONE ROOT CAUSE, AND IT IS THE SAME SHAPE AS THE FLICK DEFECT**: direction was
+estimated **between consecutive samples** — a baseline of a few pixels, where
+digitiser noise dominates the angle. `METHOD` names it exactly: *print the
+aggregation, not just the value.* A single sample pair is the noisiest possible
+estimator of any rate, and no threshold rescues one.
+
+**Measured, headlessly, before anything was changed:**
+
+| | before | after |
+|---|---|---|
+| worst per-sample step, clean circle | 5.0° | 5.0° |
+| worst per-sample step, ±0.5 px noise | **46.3°** | **10.2°** |
+| drift across one pause | **−46.3°** | **0.0°** |
+| total angle under noise vs clean | 197° / 225° | **225° / 225°** |
+
+### The fix took THREE attempts, and the two rejected ones are the record
+
+1. **Anchor gate** — emit a direction only once per `rollStepDistance` travelled.
+   Killed the noise and the pause drift outright, **but the cube then turned in ~15°
+   QUANTISED JUMPS.** Trading jitter for judder is not a fix.
+2. **Trailing baseline, re-measured every sample** — smooth again, noise bounded.
+   ⛔ But it still drifted **+30.2° across a pause**, and the reason is subtle: a
+   direction depends on BOTH ends of its baseline. When the finger stops, the newest
+   point holds still while the baseline START keeps creeping along the arc already
+   travelled, so the measured direction swings although the path is not turning. The
+   accumulated angle counted the baseline's own motion as the finger's.
+3. ✅ **Trailing baseline + a PROGRESS GATE.** A new estimate is taken only once the
+   newest point has itself advanced `rollUpdateDistance`. Both ends then move
+   together, which is the only condition under which the difference of two direction
+   estimates is the turning of the path.
+
+⭐⭐ **The two distances are independent and both are needed.** `rollStepDistance` is
+the **baseline** and sets how much noise reaches the angle; `rollUpdateDistance` is
+the **cadence** and sets how finely the object follows the finger. Collapsing them
+into one number is exactly what forced the choice between a jittery roll and a
+juddering one.
+
+### ⛔ And the radius band was gating the wrong thing
+
+At a 3 mm baseline, **18% of post-commit samples were HELD** because the noisy
+circumradius estimate flickered outside `[rollRadiusMin, rollRadiusMax]` — felt as
+stutter, and it cost 28° of the total angle.
+
+✅ **The band is a COMMIT criterion, not a TRACKING one.** It answers *"is this
+gesture a roll?"*, and once answered the question is not re-asked every sample.
+⭐ No gate is needed afterwards: a straight stretch has no turning, so it accumulates
+nothing by itself. Holds went to **0%** and the noisy total became exact.
+
+### ⛔⛔ A latent defect the new vectors caught: COARSE SAMPLING WENT SILENT
+
+Writing the fixtures exposed it. The window pruned itself to two samples whenever the
+finger moved **further than `rollStepDistance` between samples** — a fast swirl, or a
+60 Hz digitiser — the length check then rejected every evaluation, and **roll
+detection stopped working entirely while reporting "no roll".** `METHOD`: a guard
+that turns a missing case into silence is worse than a failure. ✅ The window now
+never drops below three samples, so a coarse stream simply spans a longer baseline
+than asked for, which is the honest reading of the data available. Vectored.
+
+### ⚠ One inherent behaviour, pinned so it is not mistaken for a defect later
+
+A trailing chord **lags the true tangent by half the arc it spans** (~5.8° here), so
+straightening out of a roll pays that lag off in **one ~5° step**. It is the price of
+measuring direction over a baseline instead of between adjacent samples, which is what
+killed the jitter. The vector asserts it stays **one-off** — thirty further straight
+samples add nothing.
+
+### ⚠ Another of my own fixtures was invalid, again
+
+The "straight run cannot un-commit a roll" vector **teleported** the finger to a
+far-away point to make its straight run — ~6000 mm/s, which no finger does, and the
+detector was right to read the jump as a direction change. Replaced with a
+**tangential continuation** from where the circle ended. ⛔ That is twice now that a
+teleporting fixture has judged correct code wrong.
+
+## ⭐ Carried to `IN5` — the roll tunables are COUPLED, measure them together
+
+* `rollStepDistance` (3 mm) and `rollUpdateDistance` (0.5 mm) are placeholders.
+  ⛔ `rollUpdateDistance < rollStepDistance < rollRadiusMin` is **asserted** in
+  `validateGestureConfig`, so they cannot be measured independently.
+* ⚠ **A longer baseline is quieter but laggier, and it is currently CAPPED by
+  `rollRadiusMin`.** Swept headlessly: 8 mm and 12 mm baselines were markedly quieter
+  (8.7° and 6.2° worst step) than 3 mm (10.2°) — but a baseline must stay below the
+  tightest roll radius the band admits, or the chord cannot lie on such an arc at
+  all. **If the device wants a quieter roll, `rollRadiusMin` has to rise first.**
+  That coupling is the measurement question, not either number alone.
+* ⚠ The startup transient is **one baseline of arc** (~11.5° on a 15 mm circle) — the
+  roll does not begin responding until the baseline is established. Vectored as a
+  known quantity; judge it by finger.

@@ -14,7 +14,7 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 ✅ **`IN0` built** — units (mm→px), the hysteretic motion state, and the flick test.
 ✅ **`IN1` BUILT** — the recognizer state machine, provisional motion with rollback,
 roll detection, the release-time priority ladder, and the double-tap §1.4 could not
-work without. **100 golden vectors, all passing** (37 → 100).
+work without. **106 golden vectors, all passing** (37 → 106).
 ⭐⭐ **THE FIRST DEVICE PASS FOUND THREE DEFECTS 81 GREEN VECTORS COULD NOT** — all
 three recorded below, all fixed and pinned. ⛔⛔ **A second pass is owed, so `IN1` is
 NOT CLOSED.**
