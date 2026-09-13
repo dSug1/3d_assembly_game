@@ -40,7 +40,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | queued | IN2, 3D1 |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued | IN3 |
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued | IN1 |
-| IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued | IN1 |
+| IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
 
 ## Phase 3D — objects and assembly
@@ -68,10 +68,13 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | DEP0 | Vite + TS + vitest, `npm run verify` | DEP | infra | ✅ built 2026-09-13 | — |
-| DEP1 | ⛔ **Device testing loop** — `--host`, phone on the LAN. Nothing is closable without it | DEP | infra | ⛔ **do this before IN1** | DEP0 |
+| DEP1a | ⛔⛔ **Device loop over USB (Android)** — `chrome://inspect` port forwarding. ⭐ No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ⛔ **do this FIRST** | DEP0 |
+| DEP1b | Device loop over LAN — for iOS, or a second device. ⚠ needs a Private network + a scoped firewall rule (`scripts/allow-lan-dev.ps1`) | DEP | infra | queued | DEP0 |
+| DEP1c | ⭐ **HTTPS on the LAN** (`@vitejs/plugin-basic-ssl`) — the only way to get a secure context on iOS over Wi-Fi | DEP | infra | queued — needed before rule 1 (tilt) can be tested on iPhone | DEP1b |
+| DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop. `.github/workflows/pages.yml` is written | DEP | infra | ⛔ **enable Pages in repo settings** | DEP0 |
 | DEP2 | Capacitor shells for iOS/Android | DEP | platform | queued | DEP1 |
 | DEP3 | Desktop shell (Tauri) | DEP | platform | queued | DEP2 |
-| DEP4 | CI: typecheck + vectors on every push | DEP | infra | queued | DEP0 |
+| DEP4 | CI: typecheck + vectors on every push | DEP | infra | ✅ **rides in `pages.yml`** — the deploy is gated on `npm run verify` | DEP1d |
 
 ## Phase SEC — privacy, stores, compliance
 
