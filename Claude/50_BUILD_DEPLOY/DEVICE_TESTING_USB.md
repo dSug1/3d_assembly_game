@@ -121,6 +121,50 @@ assignment throws.
 
 ---
 
+## ⭐ A dev server can OUTLIVE the session that started it, and that is fine
+
+A `vite` process launched from a terminal (or by an assistant session) keeps running
+after that terminal or session ends. It is a normal detached Node process.
+
+⚠ **"Orphaned" only means nobody is holding its handle any more** — it does NOT mean
+stale, degraded, or serving old code:
+
+* Vite reads each file **from disk per request** and watches for changes, so a
+  long-running server serves **current** source and HMR keeps working. Verified
+  2026-09-13: a server started at 19:04 was still serving edits committed after it.
+* ⛔ **So do not switch ports and do not restart it just because it is old.** That
+  only means re-pointing the tunnel for no gain.
+
+**Check what is actually on the port before assuming anything:**
+
+```powershell
+Get-CimInstance Win32_Process -Filter "ProcessId = $((Get-NetTCPConnection -State Listen -LocalPort 5173).OwningProcess)" |
+  Select-Object ProcessId, CommandLine
+```
+
+The `CommandLine` tells you whether it is the right server — it must say
+`--host 127.0.0.1`, not `--host localhost` (trap 1) and not `--host` alone, which
+would put it on the LAN.
+
+### When a restart IS required
+
+| | |
+|---|---|
+| changed `vite.config.ts` | ⛔ **yes** — config is read once, at startup |
+| changed any `src/` file | no — HMR handles it |
+| changed `package.json` scripts | yes, for the new script to be used |
+| reboot, or the owning terminal closed | it is gone anyway |
+
+⛔ **And before starting a new one, make sure the port is free** — otherwise Vite
+silently takes the next port while the tunnel still points at 5173. That is trap 3
+above, and it is the one that actually costs time:
+
+```powershell
+Stop-Process -Id (Get-NetTCPConnection -State Listen -LocalPort 5173).OwningProcess -Force
+```
+
+---
+
 ## ⭐ Meanwhile, Pages remains the other half
 
 **https://dsug1.github.io/3d_assembly_game/** — real HTTPS, any device, no cable.
