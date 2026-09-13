@@ -14,7 +14,7 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 ✅ **`IN0` built** — units (mm→px), the hysteretic motion state, and the flick test.
 ✅ **`IN1` BUILT** — the recognizer state machine, provisional motion with rollback,
 roll detection, the release-time priority ladder, and the double-tap §1.4 could not
-work without. **106 golden vectors, all passing** (37 → 106).
+work without. **112 golden vectors, all passing** (37 → 112).
 ⭐⭐ **THE FIRST DEVICE PASS FOUND THREE DEFECTS 81 GREEN VECTORS COULD NOT** — all
 three recorded below, all fixed and pinned. ⛔⛔ **A second pass is owed, so `IN1` is
 NOT CLOSED.**
@@ -173,3 +173,58 @@ radius band, so a stray finger cannot snap the object back mid-gesture.
 ⭐ **And the readout now prints the measured lift speed whether or not it passed**
 (`lift 412/250mm/s`). Without it, *"the flick did not fire"* is **unfalsifiable on a
 device**: a finger that was too slow and an estimator reading zero look identical.
+
+---
+
+## ⭐⭐ What the THIRD device pass found (2026-09-13) — and the literature answer
+
+Full record: [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+
+**⛔⛔ A SLOW circular sweep never committed at all — 300° swept, 0.0° read.** Worse
+than the jitter it was found while chasing, and it explains why the device reported
+*fast* swirl as fine and *slow* roll as bad.
+
+⭐ **The physics is the SAGITTA.** A chord of length `L` across a circle of radius `R`
+bows from the straight line by `L²/(8R)`, and that bow **is** the curvature signal. At
+a 3 mm baseline on a 15 mm circle it is **0.075 mm against ~0.15 mm of pointer
+noise** — so the radius estimate was noise and the in-band test was a coin toss. A
+*single* out-of-band reading then zeroed the accumulator, and a slow sweep produces
+far more evaluations per degree, so far more chances to be unlucky.
+
+✅ **`validateGestureConfig` now enforces the sagitta criterion and THROWS** on a
+config whose curvature signal sits under the noise floor — it would have caught this
+before it ever reached a device. New field `pointerNoiseMm` makes the assumption
+explicit and measurable instead of buried. ✅ The band is hysteretic before commit
+too, mirroring §1.1's `STATIONARY`/`MOVING`.
+
+**⛔ Roll now RELEASES when the path stops being circular.** ⚠ **Spec amendment,
+owner's to ratify.** §1.3 reads as a latch, so a straight drag after a circle was
+still roll — and the turn from the circle's tangent onto the new line is a large
+*genuine* direction change applied in one step, felt as *"an erratic movement which
+jitters and snaps with big amplitude"*. 2quinte's own condition is *"circular
+movement"*, so when the movement stops being circular the rule stops applying.
+`rollReleaseDistance` is the exit hysteresis to the commit's entry hysteresis.
+
+**⭐ And roll cannot be made as smooth as yaw/pitch by tuning.** They are different
+measurements: yaw/pitch is a *displacement* scaled by a small gain (±0.23° of noise);
+roll is an *angle differentiated from positions*, whose noise is `σ / lever-arm`.
+Lengthening the baseline was measured at ~25–30% for a linear cost in responsiveness;
+a least-squares circle fit at ~25%, because the fitted centre's own noise eats the
+radius lever-arm. **Neither is the lever.**
+
+✅ **The 1€ filter is** (Casiez, Roussel & Vogel, CHI 2012). Its premise is exactly
+the reported asymmetry — jitter matters at low speed, lag at high speed, and a fixed
+low-pass cannot serve both — so its cutoff rises with the signal's own speed. Applied
+to the **displayed** angle only; the commit threshold reads the raw one, because
+lagging a threshold crossing makes a gesture feel late. Measured: **1.95° → 1.20°**
+slow, **1.43° → 0.86°** medium. Licence and the rejected alternatives (Kalman,
+LaViola DES) are in [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
+
+## ⛔⛔ The pattern across all three passes — it binds `IN3` and `IN4`
+
+Every single defect found by finger has been **the same mistake**: *a rate estimated
+over the shortest available baseline.* Flick lift speed (last sample pair), roll
+direction (consecutive samples), roll curvature (a sagitta under the noise floor).
+⛔ **None was visible to a green suite, and none was a threshold that needed tuning.**
+⭐ `IN3` and `IN4` each need a velocity. **State the window, and check the signal
+clears the noise, BEFORE writing the threshold.**

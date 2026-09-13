@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { Sample } from "../src/input/motion";
 import { RollDetector } from "../src/input/roll";
+import { MotionTracker } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
 
 const cfg = DEFAULT_CONFIG;
@@ -87,14 +88,19 @@ describe("roll detection", () => {
 
   it("the startup transient is ONE baseline of arc, and no more", () => {
     // ⚠ Pinned so the lag is a known quantity rather than a surprise on a device.
-    // A 3 mm baseline on a 15 mm circle is 2·asin(3/30) = 11.5° of arc.
-    const swept = 50;
+    // The roll cannot begin reading until the baseline is spanned, and that arc is
+    // never counted. A `rollStepDistance` chord on a 15 mm circle subtends
+    // 2·asin(L/30), so the loss is predictable from the config rather than guessed.
+    const swept = 100;
     const measured = feed(
-      arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 10, clockwise: true }),
+      arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 20, clockwise: true }),
     ).accumulatedDeg;
     const lost = swept - measured;
+    const expectedLostDeg =
+      (2 * Math.asin(Math.min(1, cfg.rollStepDistance / 30)) * 180) / Math.PI;
     expect(lost).toBeGreaterThan(0);
-    expect(lost).toBeLessThan(20);
+    // Within one evaluation cadence of the geometric prediction.
+    expect(Math.abs(lost - expectedLostDeg)).toBeLessThan(8);
   });
 
   it("⭐ the angle KEEPS accumulating past the commit threshold", () => {
@@ -112,7 +118,12 @@ describe("roll detection", () => {
     // case, every evaluation was rejected, and roll detection stopped working
     // entirely while reporting "no roll". `METHOD`: a guard that turns a missing
     // case into silence is worse than a failure.
-    const coarse = arc({ radiusMm: 15, startDeg: 0, stepDeg: 20, steps: 12, clockwise: true });
+    // ⚠ The fixture must be coarse RELATIVE TO `rollStepDistance`, so it is derived
+    // from the config rather than hard-coded — an earlier version stopped being
+    // coarse at all when the baseline was lengthened, and silently tested nothing.
+    const stepDeg =
+      (2 * Math.asin(Math.min(0.95, (cfg.rollStepDistance * 1.3) / 30)) * 180) / Math.PI;
+    const coarse = arc({ radiusMm: 15, startDeg: 0, stepDeg, steps: 12, clockwise: true });
     const stepMm = Math.hypot(coarse[1]!.x - coarse[0]!.x, coarse[1]!.y - coarse[0]!.y) / mmToPx(1);
     expect(stepMm).toBeGreaterThan(cfg.rollStepDistance); // the fixture IS coarse
     const d = feed(coarse);
@@ -177,44 +188,42 @@ describe("roll detection", () => {
     expect(Math.abs(d.accumulatedDeg)).toBeLessThan(cfg.rollAngle);
   });
 
-  it("a committed roll LATCHES, and a straight continuation adds no turning", () => {
-    // ⚠ An earlier version of this vector TELEPORTED the finger to a far-away point
-    // to make its "straight run". That is ~6000 mm/s and no finger does it; the
-    // detector rightly read the jump as a direction change. `METHOD`: a fixture must
-    // be a specimen the product would accept. This one continues TANGENTIALLY from
-    // where the circle ended, which is what a real finger straightening out does.
+  it("⭐⭐ a SHORT straight wobble does not release a roll, but a SUSTAINED one does", () => {
+    // ⚠ THE BEHAVIOUR CHANGED HERE, ON DEVICE EVIDENCE. The commit used to latch
+    // for the whole gesture, so a straight drag after a circle was still read as
+    // roll -- and the turn from the circle's tangent onto the new line is a large
+    // GENUINE direction change, applied in one step. The owner felt it as "an
+    // erratic movement which jitters and snaps with big amplitude".
+    //
+    // ⭐ Rule 2quinte applies to "circular movement", so when the movement stops
+    // being circular the rule stops applying. Commit is the entry hysteresis;
+    // `rollReleaseDistance` is the exit. Both halves are asserted here -- an exit
+    // with no hysteresis would chatter between roll and yaw/pitch on every wobble.
     const circle = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 30, clockwise: true });
-    const d = feed(circle);
-    expect(d.committed).toBe(true);
-    const at = d.accumulatedDeg;
-
     const last = circle[circle.length - 1]!;
     const prev = circle[circle.length - 2]!;
     const ux = last.x - prev.x;
     const uy = last.y - prev.y;
     const n = Math.hypot(ux, uy);
-    const straightTo = (i: number) => ({
-      x: last.x + (ux / n) * i * 4,
-      y: last.y + (uy / n) * i * 4,
-      t: last.t + i * 10,
-    });
-    for (let i = 1; i <= 10; i++) d.push(straightTo(i));
-    const afterTen = d.accumulatedDeg;
-    for (let i = 11; i <= 40; i++) d.push(straightTo(i));
-    const afterForty = d.accumulatedDeg;
+    const straightFor = (travelMm: number): Sample[] => {
+      const out: Sample[] = [];
+      const stepPx = mmToPx(travelMm) / 20;
+      for (let i = 1; i <= 20; i++) {
+        out.push({
+          x: last.x + (ux / n) * i * stepPx,
+          y: last.y + (uy / n) * i * stepPx,
+          t: last.t + i * 10,
+        });
+      }
+      return out;
+    };
 
-    expect(d.committed).toBe(true); // ⛔ nothing un-commits a roll
+    const short = feed([...circle, ...straightFor(cfg.rollReleaseDistance * 0.5)]);
+    expect(short.committed).toBe(true); // a wobble must not drop the roll
 
-    // ⭐⭐ THE CLAIM THAT MATTERS: a straight path does not accumulate. Thirty more
-    // samples of it must add nothing, so no gate is needed to stop them.
-    expect(Math.abs(afterForty - afterTen)).toBeLessThan(0.5);
-
-    // ⚠ There IS a one-off step of ~5° as the path straightens, and it is inherent,
-    // not a defect. A trailing chord LAGS the true tangent by half the arc it spans
-    // (here 11.5°/2 ≈ 5.8°), and straightening pays that lag off exactly once. The
-    // lag is the price of measuring direction over a baseline instead of between two
-    // adjacent samples, which is what killed the jitter. Pinned so it stays one-off.
-    expect(Math.abs(afterTen - at)).toBeLessThan(8);
+    const long = feed([...circle, ...straightFor(cfg.rollReleaseDistance * 3)]);
+    expect(long.committed).toBe(false); // sustained straight travel hands back
+    expect(long.accumulatedDeg).toBe(0); // and a new roll must earn rollAngle again
   });
 
   it("a duplicated sample is skipped, not read as a zero turn", () => {
@@ -331,5 +340,120 @@ describe("⛔⛔ roll under digitiser noise", () => {
       d.push({ x: 300 + r * Math.cos(a), y: 300 + r * Math.sin(a), t: last.t + 600 + i * 8 });
     }
     expect(d.accumulatedDeg - afterPause).toBeGreaterThan(100); // ~150° more swept
+  });
+});
+
+/**
+ * ⭐⭐ THE SAGITTA CRITERION, AND THE SLOW-ROLL DEFECT IT EXPLAINS.
+ *
+ * A chord of length L across a circle of radius R bows away from the straight line
+ * by L²/(8R). That bow IS the curvature signal. If it does not clear the pointer's
+ * own noise, the measured radius is noise — and every decision keyed on it is a coin
+ * toss. This is the one config rule here derived from physics rather than chosen.
+ */
+describe("⛔⛔ slow roll, and the curvature signal-to-noise that governs it", () => {
+  function slowCircle(steps: number, noisePx: number): Sample[] {
+    let seed = 7;
+    const rnd = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return (seed / 0x7fffffff) * 2 - 1;
+    };
+    const r = mmToPx(15);
+    const out: Sample[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const a = (2.5 * i * Math.PI) / 180; // a DELIBERATE, slow sweep
+      out.push({
+        x: 300 + r * Math.cos(a) + rnd() * noisePx,
+        y: 300 + r * Math.sin(a) + rnd() * noisePx,
+        t: i * 16,
+      });
+    }
+    return out;
+  }
+
+  it("⭐⭐ a SLOW noisy sweep still commits — it used to never commit at all", () => {
+    // ⛔ THE DEFECT, MEASURED: 300° swept, 0.0° read, never committed. Two causes,
+    // both fixed. (1) At a 3 mm baseline the sagitta on a 15 mm circle is 0.075 mm
+    // against ~0.15 mm of noise, so the radius estimate was pure noise. (2) A single
+    // out-of-band reading ZEROED the accumulator, and a slow sweep produces many
+    // more evaluations per degree — so many more chances to be unlucky.
+    const d = feed(slowCircle(120, 0.5));
+    expect(d.committed).toBe(true);
+    expect(Math.abs(d.accumulatedDeg)).toBeGreaterThan(200);
+  });
+
+  it("⛔ a config whose curvature signal is below the noise is REJECTED", () => {
+    // ⭐ This validator would have caught the defect above at construction, instead
+    // of it costing a device session. The shipped config had an SNR of 0.2.
+    expect(
+      () => new MotionTracker({ ...cfg, rollStepDistance: 3, rollRadiusMax: 40 }),
+    ).toThrow(/sagitta/);
+  });
+
+  it("the shipped config clears the sagitta bar", () => {
+    const sagitta = (cfg.rollStepDistance * cfg.rollStepDistance) / (8 * cfg.rollRadiusMax);
+    expect(sagitta).toBeGreaterThanOrEqual(2 * cfg.pointerNoiseMm);
+  });
+});
+
+/**
+ * ⭐ THE 1€ FILTER on the displayed roll angle. Casiez, Roussel & Vogel, CHI 2012.
+ * See `src/input/one_euro.ts` for the citation, the licence (BSD/MIT reference
+ * implementations, no patent asserted) and why it was chosen over Kalman and DES.
+ */
+describe("1€-filtered roll angle", () => {
+  it("⭐ the smoothed angle tracks the raw one — smoothing is not drift", () => {
+    // A filter that was quiet because it stopped following would pass a jitter test
+    // and be useless. Over a long sweep the two must agree closely.
+    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 60, clockwise: true }));
+    expect(Math.abs(d.smoothedDeg - d.accumulatedDeg)).toBeLessThan(10);
+  });
+
+  it("⭐ it reduces noise on a noisy sweep", () => {
+    // ⚠ Compared against the RAW channel on the SAME detector, so the two differ
+    // only by the filter — not by a second implementation that could disagree.
+    let seed = 11;
+    const rnd = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return (seed / 0x7fffffff) * 2 - 1;
+    };
+    const r = mmToPx(15);
+    const clean: Sample[] = [];
+    const noisy: Sample[] = [];
+    for (let i = 0; i <= 60; i++) {
+      const a = (5 * i * Math.PI) / 180;
+      const x = 300 + r * Math.cos(a);
+      const y = 300 + r * Math.sin(a);
+      clean.push({ x, y, t: i * 8 });
+      noisy.push({ x: x + rnd() * 0.5, y: y + rnd() * 0.5, t: i * 8 });
+    }
+    const c = new RollDetector(cfg);
+    const n = new RollDetector(cfg);
+    let rawErr = 0;
+    let smoothErr = 0;
+    for (let i = 0; i <= 60; i++) {
+      c.push(clean[i]!);
+      n.push(noisy[i]!);
+      if (!c.committed || !n.committed) continue;
+      rawErr = Math.max(rawErr, Math.abs(n.accumulatedDeg - c.accumulatedDeg));
+      smoothErr = Math.max(smoothErr, Math.abs(n.smoothedDeg - c.smoothedDeg));
+    }
+    expect(smoothErr).toBeLessThan(rawErr);
+  });
+
+  it("a released roll resets the filter, so the next one does not race back", () => {
+    const circle = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 40, clockwise: true });
+    const d = feed(circle);
+    expect(d.committed).toBe(true);
+    const last = circle[circle.length - 1]!;
+    const prev = circle[circle.length - 2]!;
+    const ux = (last.x - prev.x) / Math.hypot(last.x - prev.x, last.y - prev.y);
+    const uy = (last.y - prev.y) / Math.hypot(last.x - prev.x, last.y - prev.y);
+    for (let i = 1; i <= 60; i++) {
+      d.push({ x: last.x + ux * i * 4, y: last.y + uy * i * 4, t: last.t + i * 10 });
+    }
+    expect(d.committed).toBe(false);
+    expect(d.accumulatedDeg).toBe(0);
+    expect(d.smoothedDeg).toBe(0); // ⛔ not left primed with the abandoned angle
   });
 });

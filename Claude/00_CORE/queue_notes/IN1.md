@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built, green, **TWO device passes done — 4 defects found and fixed;
-> a THIRD pass is owed on the roll smoothing, so NOT CLOSED** · **SUB** · IN
+> **STATUS** · ⚠ built, green, **THREE device passes done — 6 defects found and
+> fixed; a FOURTH is owed, so NOT CLOSED** · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -327,3 +327,98 @@ teleporting fixture has judged correct code wrong.
 * ⚠ The startup transient is **one baseline of arc** (~11.5° on a 15 mm circle) — the
   roll does not begin responding until the baseline is established. Vectored as a
   known quantity; judge it by finger.
+
+---
+
+## 2026-09-13 (third pass) — ⭐⭐ THE LITERATURE CHECK, AND WHAT IT UNCOVERED
+
+Device report: roll *"more quiet now, but still has some jitter, which yaw and pitch
+do not have"*; pause ✅; fast swirl ✅; and a new one — *"a circular finger movement
+followed immediately by a linear finger movement… the linear finger movement instead
+control an erratic movement which jitters and snaps with big amplitude."*
+**106 → 112 golden vectors.**
+
+⚠ The owner also said *"straightening out: I do not understand what I have to check"*.
+That was my failure to explain: it is the same case as their own circle-then-line
+report. Their observation was the better-stated version of my check.
+
+### ⛔ Why roll can never be as smooth as yaw/pitch, stated properly
+
+They are not the same kind of measurement, and no tuning closes the gap:
+
+* **Yaw/pitch is a DISPLACEMENT scaled by a small gain.** ±0.5 px of noise × 0.008
+  rad/px = **±0.23°**.
+* **Roll is an ANGLE differentiated from positions.** Its noise is `σ / lever-arm`,
+  and the lever arm was the 3 mm baseline — **≈ 2.5°, about ten times worse.**
+
+⛔ Two structural fixes were measured and **both were rejected on the numbers**:
+lengthening the baseline buys only ~25–30% and costs responsiveness linearly; a
+least-squares circle fit buys ~25% because the fitted centre's own noise eats the
+radius lever-arm it was supposed to provide.
+
+### ⭐⭐ THE SLOW-ROLL DEFECT THE PROBING EXPOSED — worse than the jitter
+
+**A slow circular sweep never committed at all: 300° swept, 0.0° read.**
+
+⭐ **The physics: the SAGITTA.** A chord of length `L` across a circle of radius `R`
+bows from the straight line by `L²/(8R)`, and that bow **is** the curvature signal.
+At a 3 mm baseline on a 15 mm circle it is **0.075 mm — against ~0.15 mm of pointer
+noise.** The radius estimate was noise, so the in-band test was a coin toss.
+⛔ And a **single** out-of-band reading zeroed the accumulator. A slow sweep produces
+far more evaluations per degree, so far more chances to be unlucky — it was reset
+over and over and never reached `rollAngle`. Fast sweeps escaped, which is exactly
+why the device reported fast swirl as fine and slow roll as bad.
+
+✅ **Fixed on both sides**, and the second is the more important:
+* The band is now **hysteretic before commit too** — zeroing needs sustained
+  out-of-band travel, mirroring §1.1's `STATIONARY`/`MOVING` pair.
+* ⭐⭐ **`validateGestureConfig` now enforces the sagitta criterion**, so a config
+  whose curvature signal sits under the noise floor **throws at construction**. It
+  would have caught this before it ever reached a device. New config field
+  `pointerNoiseMm` makes the assumption explicit and measurable rather than buried.
+* Coupled retune: `rollStepDistance` 3 → 9 mm, `rollRadiusMax` 40 → 30,
+  `rollRadiusMin` 4 → 10. ⚠ The binding case is the **largest** radius, not the
+  smallest — sagitta shrinks as R grows, so a lazy wide swirl is the hard one.
+
+### ⭐ 1€ FILTER — the state-of-the-art answer, and it fits the reported symptom
+
+Casiez, Roussel & Vogel, CHI 2012 (doi 10.1145/2207676.2208639). ⭐ Its premise is
+precisely the asymmetry the owner described: people see **jitter at low speed** and
+**lag at high speed**, and a fixed low-pass cannot serve both. Its cutoff rises with
+the signal's own speed. In a published comparison it had the smallest standard error
+— ahead of LaViola's DES, a moving average, Kalman, and single exponential smoothing.
+
+✅ **Licence, per `N13`**: reference implementations are **BSD**/**MIT** and **no
+patent is asserted**. ⚠ Ours is an independent implementation from the paper, so no
+licence binds at all; the citation is attribution. Recorded in `THIRD_PARTY_NOTICES`.
+
+⭐ **Applied to the DISPLAYED angle only.** The commit threshold reads the RAW angle,
+deliberately — lagging a threshold crossing would make the gesture feel late.
+⭐ Measured: noise rms **1.95° → 1.20°** slow, **1.43° → 0.86°** medium.
+
+### ⭐ Roll now RELEASES when the path stops being circular
+
+The commit used to latch for the whole gesture, so a straight drag after a circle was
+still read as roll — and the turn from the circle's tangent onto the new line is a
+large **genuine** direction change applied in one step. That is the reported snap.
+✅ `rollReleaseDistance` is the exit hysteresis; 2quinte's own condition is *"circular
+movement"*, so when the movement stops being circular the rule stops applying.
+⚠ §1.3 reads as a latch, so this is a **spec amendment, the owner's to ratify.**
+
+## ⛔⛔ THE PATTERN ACROSS ALL THREE DEVICE PASSES — carry this into `IN3`/`IN4`
+
+Every defect found by finger has been **the same mistake**: a rate estimated over the
+shortest available baseline. Flick lift speed (last sample pair), then roll direction
+(consecutive samples), then roll curvature (a sagitta under the noise floor). None was
+visible to a green suite, and none was a threshold that needed tuning.
+⭐ `IN3` and `IN4` each need a velocity (translation, mutual approach). **State the
+window and check the signal clears the noise before writing the threshold.**
+
+## ⚠ What is still owed
+
+⛔ **A FOURTH device pass.** All of the above is vector-covered and untouched by a
+finger. ⚠ And the 1€ parameters are placeholders: the paper's own procedure is to set
+`beta` to 0, lower `minCutoff` until slow jitter is acceptable, then raise `beta`
+until fast movement stops lagging — **a device procedure, so an `IN5` row.**
+⭐ `pointerNoiseMm` should be measured FIRST: hold a finger still and read the spread.
+Several thresholds are only defensible relative to it.

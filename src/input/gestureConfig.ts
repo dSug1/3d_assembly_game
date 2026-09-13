@@ -86,6 +86,36 @@ export interface GestureConfig {
    * ⚠ Must stay below `rollStepDistance`. Asserted in `validateGestureConfig`.
    */
   rollUpdateDistance: number;
+  /**
+   * mm of sustained NON-circular travel that releases a committed roll.
+   * ⭐ The exit hysteresis for 2quinte, matching §1.1's `STATIONARY`/`MOVING` pair.
+   * ⛔ Without it the commit latches for the whole gesture, so a straight drag after
+   * a circle is still read as roll — and the turn from the circle's tangent onto the
+   * new line is a large genuine direction change applied in one step, which is felt
+   * as a violent snap. Device-confirmed. ⚠ §1.3 reads as a latch, so this is a spec
+   * amendment; see `Claude/10_INPUT_TOUCH/INDEX.md`.
+   */
+  rollReleaseDistance: number;
+  /**
+   * Hz. 1€ filter floor cutoff for the roll angle — governs JITTER at slow roll.
+   * ⭐ Lower = quieter when the finger creeps. See `one_euro.ts` for the citation
+   * and the licence (BSD/MIT reference implementations, no patent asserted).
+   * ⚠ Tune on a device with `rollFilterBeta` at 0 first, per the paper. `IN5`.
+   */
+  rollFilterMinCutoff: number;
+  /**
+   * 1€ filter speed coefficient for the roll angle — governs LAG at fast roll.
+   * ⭐ Raise until a fast swirl stops lagging. ⚠ Tuned second, per the paper. `IN5`.
+   */
+  rollFilterBeta: number;
+  /**
+   * mm. Typical position noise of ONE pointer sample from a resting finger.
+   * ⭐⭐ A DEVICE PROPERTY, not a preference, and it is what decides whether a
+   * curvature can be measured at all. ⚠ Measured trivially on a device: hold still
+   * and read the spread. `IN5`, and it is the first one to measure — several other
+   * thresholds are only defensible relative to it.
+   */
+  pointerNoiseMm: number;
 
   // ── §1.3 taps ──────────────────────────────────────────────────
   // ⭐ NOT IN THE SPEC, AND §1.4 DOES NOT WORK WITHOUT THEM. §1.4 / rule 2septies
@@ -152,10 +182,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
   flickDistance: 6,
   flickPurity: 2.5,
   rollAngle: 60,
-  rollRadiusMin: 4,
-  rollRadiusMax: 40,
-  rollStepDistance: 3,
+  rollRadiusMin: 10,
+  rollRadiusMax: 30,
+  rollStepDistance: 9,
   rollUpdateDistance: 0.5,
+  rollReleaseDistance: 12,
+  // ⚠ Placeholders. The device reported jitter at SLOW roll and none at fast roll,
+  // which is exactly the asymmetry this filter exists for. IN5 measures both.
+  rollFilterMinCutoff: 1.0,
+  rollFilterBeta: 0.05,
+  pointerNoiseMm: 0.15,
 
   tapMaxDuration: 250,
   doubleTapWindow: 300,
@@ -201,6 +237,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
     );
   }
+  if (cfg.rollReleaseDistance <= cfg.rollStepDistance) {
+    throw new Error(
+      `rollReleaseDistance (${cfg.rollReleaseDistance} mm) must exceed ` +
+        `rollStepDistance (${cfg.rollStepDistance} mm): a roll cannot be released ` +
+        "before the path has travelled far enough to measure its shape at all.",
+    );
+  }
   if (cfg.rollUpdateDistance >= cfg.rollStepDistance) {
     throw new Error(
       `rollUpdateDistance (${cfg.rollUpdateDistance} mm) must stay below ` +
@@ -208,11 +251,33 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "than the baseline it re-measures, or the two ends stop moving together.",
     );
   }
+  // ⭐⭐ THE SAGITTA CRITERION — the one config rule here derived from physics
+  // rather than chosen. A chord of length L across a circle of radius R bows away
+  // from the straight line by a SAGITTA of L²/(8R). That bow IS the entire curvature
+  // signal: if it does not clear the pointer's own noise, the measured radius is
+  // noise, and every decision keyed on it is a coin toss.
+  //
+  // ⛔ IT WOULD HAVE CAUGHT A REAL DEFECT AT CONSTRUCTION. With a 3 mm baseline and
+  // a 40 mm maximum radius the sagitta was 0.028 mm against ~0.15 mm of noise — a
+  // signal-to-noise ratio of 0.2 — and the symptom on the device was that a SLOW
+  // circular sweep never registered as a roll at all: 300° swept, 0.0° read.
+  //
+  // ⚠ The binding case is the LARGEST radius, not the smallest: sagitta shrinks as
+  // R grows, so a lazy wide swirl is the hard one to detect, not a tight scribble.
+  const sagittaMm = (cfg.rollStepDistance * cfg.rollStepDistance) / (8 * cfg.rollRadiusMax);
+  if (sagittaMm < 2 * cfg.pointerNoiseMm) {
+    throw new Error(
+      `rollStepDistance (${cfg.rollStepDistance} mm) is too short to measure curvature ` +
+        `at rollRadiusMax (${cfg.rollRadiusMax} mm): the chord's sagitta is ` +
+        `${sagittaMm.toFixed(3)} mm against ${cfg.pointerNoiseMm} mm of pointer noise. ` +
+        `Lengthen the baseline, lower rollRadiusMax, or measure a smaller noise.`,
+    );
+  }
   if (cfg.rollStepDistance >= cfg.rollRadiusMin) {
     throw new Error(
       `rollStepDistance (${cfg.rollStepDistance} mm) must stay below rollRadiusMin ` +
-        `(${cfg.rollRadiusMin} mm): at the tightest roll the band allows, a step that ` +
-        "long cannot sample the arc finely enough to measure its curvature.",
+        `(${cfg.rollRadiusMin} mm): at the tightest roll the band allows, a chord that ` +
+        "long spans most of the circle and stops being a tangent at all.",
     );
   }
   if (cfg.flickLiftWindow > cfg.flickWindow) {
