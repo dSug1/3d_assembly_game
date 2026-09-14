@@ -13,9 +13,16 @@
  */
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
-import { OrbitController, distanceTurningPoints, orbitOffset, rigsOf } from "../src/input/orbit";
+import {
+  OrbitCentreBlend,
+  OrbitController,
+  distanceTurningPoints,
+  orbitOffset,
+  rigsOf,
+} from "../src/input/orbit";
 import { MotionTracker } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
+import type { Vec3 } from "../src/core/vec";
 
 const cfg = DEFAULT_CONFIG;
 
@@ -275,5 +282,98 @@ describe("⭐⭐⭐ the orbit surface, measured as a whole", () => {
       expect(pose.offsetM[1]).toBeCloseTo(ring.heightM, 9);
       expect(Math.hypot(pose.offsetM[0], pose.offsetM[2])).toBeCloseTo(ring.radiusM, 9);
     }
+  });
+});
+
+/**
+ * ⭐⭐ THE ORBIT CENTRE MIGRATES — device-reported 2026-09-14: *"when I touchpoint on
+ * another barycenter, the camera position jumps to a new position… I do not want this
+ * jump. I want the camera quaternion and position to blend to the new orbit along the
+ * progress of the delta position."*
+ *
+ * ⭐ Blending the CENTRE blends both at once: the camera sits at `centre + offset` and
+ * looks at `centre`, so there is no second interpolation that could fall out of step.
+ */
+describe("⭐⭐ orbit centre blend", () => {
+  const A: Vec3 = [0, 0, 0];
+  const B: Vec3 = [1, 0, 0];
+
+  it("⭐⭐ retargeting does NOT jump — the centre starts where it was", () => {
+    // ⛔ THE REPORTED DEFECT, PINNED. The first frame after a new barycentre is chosen
+    // must be indistinguishable from the last frame before it.
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    expect(b.centreM).toEqual(A);
+    expect(b.isBlending).toBe(true);
+  });
+
+  it("⭐ it ARRIVES after the budgeted finger travel, exactly", () => {
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    b.advance(cfg.orbitBlendDistanceMm);
+    expect(b.progress).toBe(1);
+    expect(b.centreM).toEqual(B);
+    expect(b.isBlending).toBe(false);
+  });
+
+  it("⭐ and it does not overshoot however far the finger keeps going", () => {
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    b.advance(cfg.orbitBlendDistanceMm * 50);
+    expect(b.centreM).toEqual(B);
+  });
+
+  it("⭐ progress is EASED — no velocity step at either end", () => {
+    // A linear blend starts and stops abruptly, which reads as two small jumps at the
+    // ends instead of one big one in the middle.
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    const step = cfg.orbitBlendDistanceMm / 20;
+    const deltas: number[] = [];
+    let prev = 0;
+    for (let i = 0; i < 20; i++) {
+      b.advance(step);
+      deltas.push(b.progress - prev);
+      prev = b.progress;
+    }
+    // Slow at the start, fastest in the middle, slow at the end.
+    expect(deltas[0]!).toBeLessThan(deltas[9]!);
+    expect(deltas[19]!).toBeLessThan(deltas[9]!);
+  });
+
+  it("⛔⛔ retargeting MID-BLEND starts from where the centre IS, not the old target", () => {
+    // ⚠ Interrupt a half-finished migration and the previous target is a point the
+    // camera never reached; resuming from it would put the jump straight back.
+    // ⭐ Third instance of this lesson on this project — a difference is only
+    // meaningful when BOTH of its ends are current.
+    const C: Vec3 = [0, 1, 0];
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    b.advance(cfg.orbitBlendDistanceMm / 2);
+    const midway = b.centreM;
+    expect(midway[0]).toBeGreaterThan(0);
+    expect(midway[0]).toBeLessThan(1);
+
+    b.retarget(C);
+    // No discontinuity across the retarget.
+    expect(b.centreM).toEqual(midway);
+    b.advance(cfg.orbitBlendDistanceMm);
+    expect(b.centreM).toEqual(C);
+  });
+
+  it("⛔ a budget of ZERO is legal and reproduces the old jump — for an A/B", () => {
+    const b = new OrbitCentreBlend({ ...cfg, orbitBlendDistanceMm: 0 }, A);
+    b.retarget(B);
+    expect(b.progress).toBe(1);
+    expect(b.centreM).toEqual(B);
+  });
+
+  it("⛔ a finger that does not move does not advance the blend", () => {
+    // The whole point of measuring travel rather than time: the camera must not drift
+    // on its own while the finger is still.
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    for (let i = 0; i < 100; i++) b.advance(0);
+    expect(b.centreM).toEqual(A);
   });
 });

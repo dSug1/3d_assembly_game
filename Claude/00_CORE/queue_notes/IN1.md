@@ -10,6 +10,37 @@
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
 Amendments live in [`../../10_INPUT_TOUCH/INDEX.md`](../../10_INPUT_TOUCH/INDEX.md), never inside the spec's `VERBATIM` block.
 
+## ⭐ WHAT THIS ROW CONCLUDED — read this before the 800 lines below
+
+`IN1` took **seven device passes** and found **14 defects, not one of which a green
+suite could see.** They fall into four shapes, and the shapes are the transferable part:
+
+| # | the mistake | where it bit |
+|---|---|---|
+| 1 | **A rate estimated over the shortest available baseline** | flick lift speed (last sample pair), roll direction (consecutive samples), roll curvature (a sagitta under the noise floor) |
+| 2 | **Measuring a DIFFERENT QUANTITY than the one asked for** | the tangent's turning instead of the angle about the centre — invisible until a finger reversed |
+| 3 | **IDEALISED FIXTURES** | roll vanished from the deployed page with every vector green, because every fixture was a mathematically perfect circle |
+| 4 | **A threshold propping up a weak estimator** | `rollAngle` at 120° and the 1€ filter both existed to compensate for a bad fit; fixing the fit made both free |
+
+⛔ **The practical rules that fall out**, for `IN3`/`IN4` and anything that estimates:
+* State the window, and check the signal clears the noise, **before** writing the threshold.
+* When an estimator is hard, ask whether you have **replaced the quantity** rather than improved the estimate of it.
+* Build the **imperfect specimen and the negative first**. A suite of ideal inputs certifies a case that cannot occur.
+* When a threshold has to be large, ask **what weakness it is compensating for** before accepting the cost.
+* ⭐ Twice, a device judgement overturned a confident synthetic measurement. When they disagree, suspect the metric.
+
+⚠ **Scope note**: this row also carries rule **2quinte**'s roll detector, built early
+and hardened over five passes. `IN3` inherits it rather than writing it.
+
+## How to read the rest
+
+Chronological, oldest first: the headless build, then one section per device pass.
+⭐ The narrative also lives, distilled, in
+[`../../10_INPUT_TOUCH/history/2026-09-13_IN1_device_passes.md`](../../10_INPUT_TOUCH/history/2026-09-13_IN1_device_passes.md).
+⚠ Passages that were later **overturned are kept on purpose** — a retraction is more
+useful than a silence. The **current** position on anything is in
+[`../../10_INPUT_TOUCH/INDEX.md`](../../10_INPUT_TOUCH/INDEX.md).
+
 ## 2026-09-13 — built headlessly. 37 → **81 golden vectors**
 
 ✅ `src/input/recognizer.ts` (the state machine, the release-time priority ladder,

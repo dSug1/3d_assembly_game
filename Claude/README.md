@@ -29,23 +29,26 @@ They are the record, not the briefing.
 
 ## Where it stands, in five lines
 
-⭐ **Day one, and it is DEPLOYED**: TypeScript + Babylon.js + Vite, `npm run verify`
-runs a typecheck and **205 golden vectors, all passing**, and the build is live at
+⭐ **DEPLOYED and driven by finger**: TypeScript + Babylon.js + Vite, `npm run verify`
+runs a typecheck and **212 golden vectors, all passing**, live at
 **https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
-✅ **Built engine-agnostic and enforced**: `src/core` and `src/input` import no
-engine, and [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if
-that ever stops being true.
-✅ **Carried across as code**: the mate-connector geometry and the four rules that
-cost live sessions in the predecessor project.
-✅✅ **`IN1` CLOSED**: the recognizer state machine — commit point, provisional
-motion with rollback, tap/double-tap/hold, release-time priority, screen-plane
-rotation and roll — validated by finger over **seven device passes** that found
-**14 defects no green suite could see**. ⛔ `IN2`–`IN4` are not built, and every
-tunable in `gestureConfig.ts` is a starting point, not a measurement — though `IN5`
-is now practical, since tunables override from the URL (`?rollAngle=45`).
-✅✅ **The fast device loop WORKS** — `npm run dev:usb` + `adb reverse`, and the
-tablet loads it as `localhost` (a secure context, so sensors work). See
-[`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).
+✅ **Engine-agnostic and enforced**: `src/core` and `src/input` import no engine, and
+[`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if that stops
+being true. ⭐ It has paid for itself: every gesture defect found by finger was
+reproduced **headlessly** before it was fixed.
+✅✅ **`IN1` CLOSED** (the recognizer) and **`IN9` rule 4 CLOSED** (pinch zoom), both
+by device look. ⚠ **`IN9` rule 1** — camera orbit on a three-ring surface — is built
+and green but **not closed**. ⛔ Nothing yet touches an OBJECT for real: `IN2`–`IN4`
+are unbuilt and wait on `3D1`.
+⛔⛔ **Sixteen defects have been found BY FINGER, none visible to a green suite**, and
+they are four repeating shapes — a rate over too short a baseline, a substituted
+quantity, idealised fixtures, and a composition nobody computed. They are written out
+in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md)'s YOU-ARE-HERE block because they bind every
+row still to come.
+✅✅ **The fast device loop WORKS** — `npm run dev:usb` + `adb reverse`, and the tablet
+loads it as `localhost`. ⭐ Tunables now override from the **URL** and the orbit rings
+have an on-screen **tuning menu**, so `IN5` can measure by finger without a rebuild.
+See [`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).
 Full status: [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md).
 
 ---

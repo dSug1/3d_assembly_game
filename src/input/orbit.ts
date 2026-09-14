@@ -282,3 +282,83 @@ export function distanceTurningPoints(cfg: GestureConfig, steps = 200): number {
   }
   return turns;
 }
+
+/**
+ * MIGRATES THE ORBIT CENTRE instead of teleporting it.
+ *
+ * ⛔⛔ §2 rule 1 re-chooses a barycentre on every press, so aiming at a different pair
+ * of objects picks a different centre — and the camera, which is placed relative to
+ * that centre, JUMPED. Device-reported 2026-09-14: *"I do not want this jump. I want
+ * the camera quaternion and position to blend to the new orbit along the progress of
+ * the delta position."*
+ *
+ * ⭐ Blending the CENTRE blends both at once. The camera sits at `centre + offset` and
+ * looks at `centre`, so a centre that travels smoothly carries the position and the
+ * orientation with it — there is no second interpolation to keep in step, and no
+ * chance of the two disagreeing.
+ *
+ * ⭐⭐ PROGRESS IS FINGER TRAVEL IN MILLIMETRES, not milliseconds. Three reasons, and
+ * the first is the owner's own framing (*"along the progress of the delta position"*):
+ *   * a time-based blend keeps moving after the finger lifts, which is a camera that
+ *     drifts on its own;
+ *   * every threshold in this project is millimetres on the physical screen
+ *     (`core/units.ts`), so a millimetre budget is comparable with everything else;
+ *   * it makes the blend a property of the GESTURE — a slow careful drag arrives
+ *     slowly, a fast one arrives fast, and neither surprises the hand.
+ *
+ * ⛔ RETARGETING STARTS FROM WHERE THE CENTRE ACTUALLY IS, not from the previous
+ * target. Interrupt a half-finished blend and the old target is a point the camera
+ * never reached; resuming from it would put back the jump this class exists to
+ * remove. ⭐ Third instance of the same lesson on this project: *a difference is only
+ * meaningful when both of its ends are current.*
+ */
+export class OrbitCentreBlend {
+  private fromM: Vec3;
+  private toM: Vec3;
+  private travelledMm = 0;
+
+  constructor(
+    private readonly cfg: GestureConfig,
+    startM: Vec3 = [0, 0, 0],
+  ) {
+    this.fromM = startM;
+    this.toM = startM;
+  }
+
+  /** ⭐ Eased, so the centre neither starts nor arrives with a velocity step. */
+  get progress(): number {
+    const budget = this.cfg.orbitBlendDistanceMm;
+    // ⚠ A budget of zero is legal and means "no blend" — it is how the old jumping
+    // behaviour is reproduced for an A/B, so it must not divide by zero.
+    if (budget <= 0) return 1;
+    const t = Math.min(1, this.travelledMm / budget);
+    return t * t * (3 - 2 * t);
+  }
+
+  /** Where the camera should orbit around right now. */
+  get centreM(): Vec3 {
+    const t = this.progress;
+    return [
+      this.fromM[0] + (this.toM[0] - this.fromM[0]) * t,
+      this.fromM[1] + (this.toM[1] - this.fromM[1]) * t,
+      this.fromM[2] + (this.toM[2] - this.fromM[2]) * t,
+    ];
+  }
+
+  /** True while the centre is still on its way — the readout shows it. */
+  get isBlending(): boolean {
+    return this.progress < 1;
+  }
+
+  /** Aim at a new centre, starting from wherever the centre is NOW. */
+  retarget(nextM: Vec3): void {
+    this.fromM = this.centreM;
+    this.toM = nextM;
+    this.travelledMm = 0;
+  }
+
+  /** Feed one frame's finger travel, in millimetres. */
+  advance(travelMm: number): void {
+    if (travelMm > 0) this.travelledMm += travelMm;
+  }
+}
