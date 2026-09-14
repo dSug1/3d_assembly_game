@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` CLOSED, camera rules next
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **185 golden vectors,
-all passing** (37 → 185). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **192 golden vectors,
+all passing** (37 → 192). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
@@ -68,7 +68,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
-| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needs NO object model, so it does not wait on `3D1` | IN | feature | ✅ **rule 4 CLOSED 2026-09-14** (5/5 device checks). ⚠ **rule 1 BUILT + GREEN, NOT CLOSED** — 24 vectors, no device look. ⭐⭐ Orbit **STOPS SHORT** on a three-ring surface (radius + height each), so **no pole is reachable and there is nothing to gimbal**. ⚠ `tiltDeadband` is now orphaned — wire it or delete it. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
+| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needs NO object model | IN | feature | ✅ **rule 4 CLOSED** (5/5 device checks). ⚠ **rule 1 BUILT + GREEN, NOT CLOSED** — 31 vectors. First device look found **three monotone segments where three rings allow two**: radius and height were interpolated separately and their `hypot` is not a quadratic — `METHOD`'s *a composition is a thing to measure* — now **monotone (Fritsch–Carlson) in (distance, angle)**. ⚠ `tiltDeadband` orphaned. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
 
 ## Phase 3D — objects and assembly
 

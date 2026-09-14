@@ -14,15 +14,9 @@
  * over the top or under the bottom. There is no pole to gimbal at, because the poles
  * are not reachable — which is the point of stopping short.
  *
- * ⭐ THE SURFACE PASSES THROUGH ALL THREE RINGS. A quadratic through three points, in
- * closed form:
- *
- *     f(v) = a·(2v−1)(v−1)  +  b·4v(1−v)  +  c·v(2v−1)
- *
- * with `a` at v=0, `b` at v=0.5, `c` at v=1. ⚠ A Bézier would have been wrong here: a
- * Bézier control point is NOT on its curve, so the middle ring would be a hint rather
- * than a ring the camera actually visits — and the owner asked for three rings to
- * tune, not two rings and a bias.
+ * ⭐ THE SURFACE PASSES THROUGH ALL THREE RINGS, via MONOTONE (shape-preserving)
+ * cubic interpolation — see `throughThree` below for the citation and for why a plain
+ * quadratic and a Bézier are both wrong here.
  *
  * ⭐ Closed form, not a search: a numeric solve introduces a step size, and a step
  * size is a threshold nobody measured. Same reasoning as `bestTwist` and the circle fit.
@@ -56,11 +50,48 @@ export interface OrbitPose {
 }
 
 /**
- * Quadratic through three values at v = 0, 0.5, 1. ⭐ Passes through ALL THREE, which
- * a Bézier would not. See the header.
+ * MONOTONE (shape-preserving) cubic through three values at v = 0, 0.5, 1 —
+ * Fritsch & Carlson, *"Monotone Piecewise Cubic Interpolation"*, SIAM J. Numer. Anal.
+ * 17 (1980). ✅ Textbook mathematics: no licence, no patent.
+ *
+ * ⭐ Passes through ALL THREE values, which a Bézier would not — a Bézier control
+ * point is not on its curve, so the middle ring would be a bias rather than a ring
+ * the camera visits, and the owner asked for three rings to tune.
+ *
+ * ⛔⛔ AND IT PUTS ANY EXTREMUM **AT** A RING, NEVER BETWEEN TWO. A plain quadratic
+ * through three points wanders between them; shape-preserving interpolation cannot.
+ * That property is the owner's requirement stated as mathematics: *"there are only
+ * three rigs and therefore two transitions."*
  */
-const throughThree = (atBottom: number, atMiddle: number, atTop: number, v: number): number =>
-  atBottom * (2 * v - 1) * (v - 1) + atMiddle * 4 * v * (1 - v) + atTop * v * (2 * v - 1);
+function throughThree(atBottom: number, atMiddle: number, atTop: number, v: number): number {
+  const h = 0.5;
+  const d1 = (atMiddle - atBottom) / h;
+  const d2 = (atTop - atMiddle) / h;
+
+  // ⛔⛔ THE MIDDLE TANGENT IS ZERO WHEN THE DATA TURNS. That single line is what
+  // puts the extremum exactly AT the middle ring instead of somewhere between rings,
+  // and it is the whole of "three rigs, therefore two transitions".
+  let m1 = 0;
+  if (d1 * d2 > 0) {
+    const avg = (d1 + d2) / 2;
+    // Fritsch–Carlson's limiter: a tangent steeper than three times the shallower
+    // secant makes the cubic overshoot, which would carry the camera OUTSIDE the
+    // rings it is supposed to stop at.
+    const cap = 3 * Math.min(Math.abs(d1), Math.abs(d2));
+    m1 = Math.sign(avg) * Math.min(Math.abs(avg), cap);
+  }
+
+  const [y0, y1, m0, mEnd] = v <= h ? [atBottom, atMiddle, d1, m1] : [atMiddle, atTop, m1, d2];
+  const t = v <= h ? v / h : (v - h) / h;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return (
+    (2 * t3 - 3 * t2 + 1) * y0! +
+    (t3 - 2 * t2 + t) * h * m0! +
+    (-2 * t3 + 3 * t2) * y1! +
+    (t3 - t2) * h * mEnd!
+  );
+}
 
 export function rigsOf(cfg: GestureConfig): {
   bottom: OrbitRig;
@@ -77,9 +108,45 @@ export function rigsOf(cfg: GestureConfig): {
 /**
  * The camera offset for a yaw and an elevation parameter.
  *
- * ⚠ `zoom` scales the WHOLE surface, radius and height together, so zooming changes
- * the distance without changing the angle you are looking from. Pinch zoom (rule 4)
- * and the orbit therefore compose instead of fighting over one radius.
+ * ⛔⛔ THE INTERPOLATION IS IN (DISTANCE, ELEVATION ANGLE) — **NOT** IN (RADIUS,
+ * HEIGHT) — AND THAT DISTINCTION IS A DEVICE-CONFIRMED DEFECT.
+ *
+ * Reported 2026-09-14: *"when I move the finger up from bottom rig, the orbit radius
+ * increases, decreases, increases: there should be only two changes, not three (there
+ * are only three rigs and therefore two transitions)."*
+ *
+ * ⭐ The owner's reasoning is exactly right, and the arithmetic agrees. Interpolating
+ * radius and height INDEPENDENTLY as two quadratics and then combining them with
+ * `hypot` does **not** give a quadratic: measured on the shipped rings, the camera
+ * distance rose to 0.615 m at v≈0.30, fell to 0.550 at v≈0.85, then rose again to
+ * 0.583 — **two turning points, three monotone segments**, from three rings.
+ *
+ * ⭐⭐ THIS IS `METHOD`'s CARRIED RULE, VERBATIM: *"A COMPOSITION IS A THING TO
+ * MEASURE, NOT AN EMERGENT PROPERTY. Ask what the whole chain does, in one
+ * expression, and check it."* Each interpolation was defensible on its own; nobody
+ * had computed what the pair did together. The predecessor project lost a week to the
+ * same shape, in its rotation stack.
+ *
+ * ✅ TWO CHANGES WERE NEEDED, AND EITHER ALONE IS INSUFFICIENT — measured:
+ *
+ * 1. **Interpolate the coordinates the camera actually EXPERIENCES**: its DISTANCE
+ *    from the centre and its ELEVATION ANGLE. The distance is what the eye reads as
+ *    "how close am I", and it was the quantity with three segments. ⚠ The rings are
+ *    still hit exactly — `(distance, angle)` and `(radius, height)` are the same point
+ *    in two coordinate systems.
+ * 2. **Interpolate MONOTONICALLY** (Fritsch–Carlson). A plain quadratic still wanders
+ *    between its points: with all three radii EQUAL it gave the horizontal radius
+ *    three turning points, when the honest answer is a constant.
+ *
+ * ⭐ Measured across six ring shapes including degenerate ones, the distance now turns
+ * **at most once**, always at a ring. ⚠ Known limit: a pathological bulge (radii
+ * 0.2 → 0.9 → 0.1 m) can still make the derived HEIGHT non-monotone, because a rising
+ * distance at a negative elevation lowers the camera. Vectored and documented rather
+ * than guarded, since no plausible ring set reaches it.
+ *
+ * ⚠ `zoom` scales the surface, so zooming changes the distance without changing the
+ * angle you are looking from. Pinch zoom (rule 4) and the orbit therefore compose
+ * instead of fighting over one radius.
  */
 export function orbitOffset(
   cfg: GestureConfig,
@@ -91,14 +158,30 @@ export function orbitOffset(
   // ⛔ CLAMPED. This is the whole of "stop short": v cannot leave [0, 1], so the
   // camera cannot pass the top or bottom ring, and never reaches a pole.
   const clamped = Math.min(1, Math.max(0, v));
-  const radius = throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped) * zoom;
-  const height = throughThree(bottom.heightM, middle.heightM, top.heightM, clamped) * zoom;
-  // ⚠ A ring's radius may legitimately be ~0 (a camera directly overhead), so the
-  // horizontal part can vanish. The height is what keeps the pose away from the
-  // centre there, which is why the distance is computed from both.
+
+  // Each ring, in the camera's own coordinates. ⚠ `radius >= 0` is enforced by the
+  // config validator, so these angles stay inside [-pi/2, pi/2] and never wrap —
+  // there is no branch cut for the interpolation to cross.
+  const distance = throughThree(
+    Math.hypot(bottom.radiusM, bottom.heightM),
+    Math.hypot(middle.radiusM, middle.heightM),
+    Math.hypot(top.radiusM, top.heightM),
+    clamped,
+  ) * zoom;
+  const elevationRad = throughThree(
+    Math.atan2(bottom.heightM, bottom.radiusM),
+    Math.atan2(middle.heightM, middle.radiusM),
+    Math.atan2(top.heightM, top.radiusM),
+    clamped,
+  );
+
+  // ⚠ A ring's radius may legitimately be 0 (a camera directly overhead), in which
+  // case the horizontal part vanishes and the height alone carries the distance.
+  const radius = distance * Math.cos(elevationRad);
+  const height = distance * Math.sin(elevationRad);
   return {
     offsetM: [radius * Math.cos(yawRad), height, radius * Math.sin(yawRad)],
-    radiusM: Math.hypot(radius, height),
+    radiusM: distance,
   };
 }
 

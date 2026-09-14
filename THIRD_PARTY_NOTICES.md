@@ -27,6 +27,7 @@ uncited algorithm is indistinguishable from an invented one six months later.
 
 | algorithm | source | licence situation | used by |
 |---|---|---|---|
+| **Monotone piecewise cubic** | F. N. Fritsch & R. E. Carlson, *"Monotone Piecewise Cubic Interpolation"*, SIAM J. Numer. Anal. **17** (1980) 238–246 | ✅ Textbook mathematics — no licence attaches to a formula and no patent is asserted. | `src/input/orbit.ts` — puts any extremum of the orbit surface AT a ring, never between two |
 | **Hyper circle fit** | A. Al-Sharadqah & N. Chernov, *"Error analysis for circle fitting algorithms"*, Electronic J. Statistics **3** (2009) 886–911, [arXiv:0907.0421](https://arxiv.org/abs/0907.0421) | ✅ Published mathematics — no licence attaches to a formula and no patent is asserted. Independent implementation from the paper's algebraic form. `N13`: clear for commercial use. | `src/input/roll.ts` — estimates the centre the roll angle is measured about |
 | **1€ filter** | Casiez, Roussel & Vogel, CHI 2012, doi [10.1145/2207676.2208639](https://dl.acm.org/doi/10.1145/2207676.2208639) | ✅ Reference implementations at <https://gery.casiez.net/1euro/> are **BSD**/**MIT**, **no patent asserted**; ours is an independent implementation from the paper. `N13`-clear. | `src/input/one_euro.ts` — ⭐ **SHIPPED, smoothing the roll angle** (`beta = 0`), on a device A/B that overturned my own metric |
 
