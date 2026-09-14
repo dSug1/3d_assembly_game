@@ -35,8 +35,14 @@ below is made),
 ⭐⭐ **`IN5` IS NOW PRACTICAL.** Tunables override from the **URL**
 (`?rollAngle=45&rollFilterBeta=0`) and the orbit rings have an on-screen **tuning
 menu**, so a placeholder can be A/B'd by finger without a rebuild.
-⛔ **Every threshold is still a placeholder** — except the six orbit ring values, which
-the owner chose on the device on 2026-09-14 and are the first *judgements* in the file.
+⛔ **Every threshold is still a placeholder** — except the six orbit ring values and the
+four gains (`gainRotateFree` 0.07, `gainRoll` 1, `gainOrbitYaw` 0.054,
+`gainOrbitElevation` 0.02), which the owner chose on the device on 2026-09-14 and are
+the first *judgements* in the file, plus `pointerNoiseMm`, the first *measurement*.
+⛔⛔ **A GUESSED GAIN IS RELIABLY TOO SLOW — THREE FOR THREE.** Every gain a hand has
+touched was raised from my guess: ×3.4, ×2.3, and ×2 for the elevation gain, whose row
+had already *predicted* it was slow — which was worth nothing until a finger moved the
+slider. ⭐ Ship the slider WITH the rule, not after a session is spent disliking it.
 ⭐ Measure **`pointerNoiseMm` first** — **the instrument exists** since 2026-09-14:
 `src/input/noise_meter.ts`, reported on the HUD as `noise floor=… now=… n=… cfg=…`. Hold
 one finger still for a few seconds; `floor` is the answer. The sagitta criterion and

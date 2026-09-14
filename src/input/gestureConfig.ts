@@ -382,9 +382,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // hand more than doubled: a guessed gain is reliably too slow, and only a slider
   // finds that out.
   gainOrbitYaw: 0.054,
-  // ⚠ Still a guess: a full bottom-to-top sweep in ~100 mm. Its slider sits beside
-  // the yaw one, and on the evidence of the other two gains it is probably slow.
-  gainOrbitElevation: 0.01,
+  // ⭐ CHOSEN ON THE DEVICE 2026-09-14. A full bottom-to-top sweep in 50 mm.
+  // ⚠ It replaces the 0.01 I guessed (~100 mm per sweep) — DOUBLED by a hand, and the
+  // guess had already been flagged on the row as "probably slow" for exactly this
+  // reason. THIRD FOR THREE: every gain guessed on this project has been too slow,
+  // by ×3.4, ×2.3 and now ×2. ⛔ Stop guessing gains; ship the slider with the rule.
+  gainOrbitElevation: 0.02,
 
   // ⚠ Placeholders like everything else. `IN5` measures them — and can now do it by
   // finger, since tunables override from the URL (`?pinchDeadband=1`).
