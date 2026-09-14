@@ -62,6 +62,17 @@ export interface GestureConfig {
    * scaling the latter would silently move `rollAngle` as well. See `roll.ts`.
    */
   gainRoll: number;
+  /**
+   * §4 rule 6 — screen-plane translation. ⭐⭐ DIMENSIONLESS, and **1 means the object
+   * stays exactly under the finger**.
+   * ⛔ It is a MULTIPLIER on a computed tracking factor, not metres per millimetre. The
+   * factor comes from the camera's field of view, its distance and the viewport height
+   * (`input/translate.ts`), because the honest value spans **20× across the zoom clamp**
+   * and another 1.6× across plausible screen sizes — no constant can serve both.
+   * ⭐ THE FIRST GAIN IN THIS FILE WITH A CORRECT VALUE RATHER THAN A PREFERRED ONE.
+   * Above 1 the object outruns the finger; below 1 it lags. Both are tastes, and 1 is
+   * the answer to "where should it be".
+   */
   gainTranslateScreen: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
