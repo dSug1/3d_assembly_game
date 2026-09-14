@@ -6,4 +6,6 @@ export * from "./one_euro";
 export * from "./roll";
 export * from "./screen_rotate";
 export * from "./pinch";
+export * from "./barycentre";
+export * from "./orbit";
 export * from "./recognizer";

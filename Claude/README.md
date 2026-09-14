@@ -30,7 +30,7 @@ They are the record, not the briefing.
 ## Where it stands, in five lines
 
 ⭐ **Day one, and it is DEPLOYED**: TypeScript + Babylon.js + Vite, `npm run verify`
-runs a typecheck and **161 golden vectors, all passing**, and the build is live at
+runs a typecheck and **185 golden vectors, all passing**, and the build is live at
 **https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
 ✅ **Built engine-agnostic and enforced**: `src/core` and `src/input` import no
 engine, and [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if

@@ -202,6 +202,30 @@ export interface GestureConfig {
   /** Metres. The far end of the zoom. */
   cameraRadiusMaxM: number;
 
+  // ── §2 rule 1 — camera orbit, on a three-ring surface ───────────────────
+  // ⭐⭐ THE ORBIT STOPS SHORT, and these six numbers are what it stops at. Three
+  // rings — TOP, MIDDLE, BOTTOM — each with a RADIUS and a HEIGHT about the orbit
+  // centre. The camera rides a quadratic surface through all three and cannot leave
+  // it, so there is no pole to gimbal at: the poles are simply not reachable.
+  // ⚠ Owner's request, 2026-09-14. Heights must increase bottom → middle → top or
+  // the surface folds back on itself; asserted in `validateGestureConfig`.
+  /** Metres. Radius of the BOTTOM ring — the lowest the camera may orbit. */
+  orbitBottomRadiusM: number;
+  /** Metres. Height of the BOTTOM ring, below the orbit centre (so negative). */
+  orbitBottomHeightM: number;
+  /** Metres. Radius of the MIDDLE ring — the camera passes through it, level on. */
+  orbitMiddleRadiusM: number;
+  /** Metres. Height of the MIDDLE ring. `0` puts it level with the orbit centre. */
+  orbitMiddleHeightM: number;
+  /** Metres. Radius of the TOP ring. ⚠ `0` is legal: directly overhead. */
+  orbitTopRadiusM: number;
+  /** Metres. Height of the TOP ring — the highest the camera may orbit. */
+  orbitTopHeightM: number;
+  /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
+  gainOrbitYaw: number;
+  /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
+  gainOrbitElevation: number;
+
   // ── §2 / §4 rules ───────────────────────────────────────────────────────
   /** degrees of device tilt below which the orbit ignores it. */
   tiltDeadband: number;
@@ -293,6 +317,18 @@ export const DEFAULT_CONFIG: GestureConfig = {
   evictOnOverflow: false,
   matePriorityOverAnchor: false,
 
+  // ⚠ Placeholders, like everything else here. ⭐ A starting shape: the camera sweeps
+  // from below to above, pulling in as it rises, and cannot pass overhead.
+  orbitBottomRadiusM: 0.45,
+  orbitBottomHeightM: -0.35,
+  orbitMiddleRadiusM: 0.6,
+  orbitMiddleHeightM: 0,
+  orbitTopRadiusM: 0.3,
+  orbitTopHeightM: 0.5,
+  // ⭐ ~0.9° of yaw per mm of drag, and a full bottom-to-top sweep in ~100 mm.
+  gainOrbitYaw: 0.016,
+  gainOrbitElevation: 0.01,
+
   // ⚠ Placeholders like everything else. `IN5` measures them — and can now do it by
   // finger, since tunables override from the URL (`?pinchDeadband=1`).
   pinchDeadband: 2,
@@ -356,6 +392,28 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         `(${cfg.rollFitArcDeg}°): tracking an already-decided roll cannot need MORE ` +
         "arc than deciding it did.",
     );
+  }
+  // ⛔⛔ THE RINGS MUST CLIMB. If the heights do not increase bottom → middle → top
+  // the surface folds back through itself, and the elevation parameter stops meaning
+  // "how high the camera is" — it would move the camera DOWN over part of its range,
+  // which no amount of gain tuning can fix because the geometry is wrong.
+  if (
+    !(cfg.orbitBottomHeightM < cfg.orbitMiddleHeightM &&
+      cfg.orbitMiddleHeightM < cfg.orbitTopHeightM)
+  ) {
+    throw new Error(
+      `orbit ring heights must increase bottom → middle → top, got ` +
+        `${cfg.orbitBottomHeightM} / ${cfg.orbitMiddleHeightM} / ${cfg.orbitTopHeightM} m: ` +
+        "the orbit surface would fold back through itself.",
+    );
+  }
+  // ⚠ A radius of 0 is legal (directly overhead); a negative one is not a radius.
+  for (const [name, r] of [
+    ["orbitBottomRadiusM", cfg.orbitBottomRadiusM],
+    ["orbitMiddleRadiusM", cfg.orbitMiddleRadiusM],
+    ["orbitTopRadiusM", cfg.orbitTopRadiusM],
+  ] as const) {
+    if (!(r >= 0)) throw new Error(`${name} (${r} m) cannot be negative.`);
   }
   if (cfg.cameraRadiusMinM >= cfg.cameraRadiusMaxM) {
     throw new Error(
