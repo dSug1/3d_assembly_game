@@ -284,7 +284,7 @@ describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
 
   it("a clockwise sweep commits to roll, with a POSITIVE angle, and keeps its motion", () => {
     const { rec, pose } = fresh();
-    const samples = circle(30, true);
+    const samples = circle(70, true);
     rec.press(samples[0]!);
     for (const s of samples.slice(1, -1)) rec.move(s);
     pose.moveProvisionally(42);
@@ -297,7 +297,7 @@ describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
 
   it("a counter-clockwise sweep commits with a NEGATIVE angle", () => {
     const { rec } = fresh();
-    const v = gesture(rec, circle(30, false));
+    const v = gesture(rec, circle(70, false));
     expect(v.kind).toBe("ROLL_KEPT");
     expect(v.rollDeg).toBeLessThan(0);
   });
@@ -308,7 +308,7 @@ describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
     // that IS a flick on its own — asserted below as the counter-example — and the
     // recognizer must still report ROLL_KEPT and roll nothing back.
     const { rec, pose } = fresh();
-    const swept = circle(30, true);
+    const swept = circle(70, true);
     const last = swept[swept.length - 1]!;
     // ⚠ The tail must stay SHORTER than `rollReleaseDistance`, or the roll is
     // released on purpose and the flick correctly applies again. 400 mm/s for 25 ms

@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built, green, **FOUR device passes done — 7 defects found and
-> fixed, one change measured and REVERTED; a FIFTH is owed, so NOT CLOSED** · **SUB** · IN
+> **STATUS** · ⚠ built, green, **FIVE device passes — 12 defects found and fixed,
+> one change measured and REVERTED; a SIXTH is owed, so NOT CLOSED** · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -507,3 +507,84 @@ for, and only discovering it at the input where the two diverge.** ⭐ The spec 
 to estimate, and the substitution was invisible until a finger reversed.
 ⛔ **`IN3`/`IN4`: when an estimator is hard, check whether you have replaced the
 quantity rather than improved the estimate of it.**
+
+---
+
+## 2026-09-14 (fifth pass) — ⛔⛔⛔ ROLL DISAPPEARED ON THE DEPLOYED PAGE
+
+Device: *"On the github page test, the roll feature has fully disappeared."*
+**114 → 124 golden vectors.** ⛔ Every vector was green while roll did not work at all.
+
+### ⛔⛔⛔ THE ROOT CAUSE IS THE PREDECESSOR'S MOST EXPENSIVE LESSON, VERBATIM
+
+`METHOD`: *a golden vector's fixture must be a specimen the product would accept.*
+**Every roll fixture in the suite was a MATHEMATICALLY PERFECT CIRCLE.** No hand
+produces one. Measured against realistic gestures, the shipped build rolled on:
+
+| gesture | rolled? |
+|---|---|
+| perfect circle (the fixture) | ✅ |
+| ellipse 1.3:1 | ❌ |
+| ellipse + wobble + drift | ❌ |
+| lazy wide swirl R=35 | ❌ |
+| tight swirl R=8 | ❌ |
+
+⭐ **Only a mathematically perfect circle qualified.** The suite certified a case that
+cannot occur — the predecessor lost a month to the same shape.
+
+### ⛔ Three causes, and the first is a CATEGORY ERROR
+
+1. ⛔⛔ **The fit residual was judged against `pointerNoiseMm`.** The residual measures
+   **how non-circular the HAND'S PATH is** — a shape property, millimetres — while
+   pointer noise is a **sensor** property in fractions of a millimetre. At the
+   resulting 0.45 mm tolerance nothing a hand can draw qualified.
+   ✅ It is now a **fraction of the fitted radius** (`rollFitResidualFraction`):
+   dimensionless and scale-free, so one tolerance judges a tight swirl and a lazy one.
+2. **The radius band `[10, 30] mm` excluded both ends** of what a finger actually
+   does. ✅ Now `[5, 60]`.
+3. **`rollAngle` 60° could not tell a swirl from a sloppy S-shaped drag.** One
+   half-period of a lazy 8 mm × 90 mm wiggle contains **~67° of genuine arc** at ~25 mm
+   radius — indistinguishable by shape. ✅ **120°**; measured, the false positive
+   disappears at 90°.
+
+### ⛔ And two more the sweep exposed in the new estimator
+
+* **Both angles must be taken about the SAME centre.** Storing the previous *angle*
+  let the fitted centre's own motion accumulate — and on a wiggle the centre jumps
+  clean across the path each time the window slides over an inflection. ✅ The previous
+  **position** is stored and re-measured about the current centre, so centre motion
+  cancels exactly. Same principle as the progress gate: a difference only means
+  something when both ends of it move together.
+* **The window was bounded by point COUNT**, justified as a proxy for path length.
+  Evaluations are spaced by *at least* `rollUpdateDistance`, never exactly it, so a
+  fast finger packed **162 mm** of path into a window meant to hold 30 mm. ✅ Bounded
+  by **path length**, maintained incrementally.
+* ⭐⭐ **And the window is sized by ARC, not by length** (`rollFitArcDeg`). What
+  conditions a circle fit is angular extent: 30 mm is 215° of a tight 8 mm swirl and
+  only 49° of a lazy 35 mm one, and **no fixed length served both**.
+
+### ⚠ The cost, pinned rather than hidden
+
+⛔ **Release is slow: ~83 mm of straight drag** before a committed roll hands back to
+yaw/pitch, against an 18 mm `rollReleaseDistance` — the window must flush before the
+fitted radius leaves the band. ⚠ **This is the sluggish handover the owner reported at
+the third pass, and it is in direct tension with detecting a lazy wide swirl**, which
+is what the long arc buys. Judging the recent path rather than the whole window was
+tried and did not move it; the gate is the fitted radius, not the residual.
+⛔ **Only a device can settle the trade.** `IN5`.
+
+### ⛔ A validator was deleted with the estimator it belonged to
+
+`rollStepDistance < rollRadiusMin` existed because a long chord "stops being a
+tangent". Nothing uses a chord as a tangent any more, and under a circle fit a long
+span is **better**. Keeping it would have capped the span at the tightest roll radius
+and locked out every lazy wide swirl — the very defect being fixed.
+
+## ⛔⛔⛔ THE LESSON OF THIS ROW, AND IT OUTRANKS THE OTHERS
+
+Four passes taught estimator discipline. **This one taught that a green suite proves
+nothing about gestures if its fixtures are idealised.** The realistic-gesture block in
+`tests/roll.test.ts` is now the primary guard: any change to the roll geometry must
+keep **all six imperfect swirls rolling and none of the three negatives rolling.**
+⭐ Every roll number is swept against *synthetic humanity* — ellipses with drifting
+centres — which is far better than perfect circles and **still not a hand.** `IN5`.

@@ -77,11 +77,15 @@ export interface GestureConfig {
    */
   rollStepDistance: number;
   /**
-   * mm of trailing path the circle fit is taken over.
-   * ⭐ Longer = a steadier CENTRE, which is what the roll angle is measured about.
-   * ⚠ Shorter = the fit follows a changing circle sooner. See roll.ts.
+   * Degrees of ARC the circle fit is taken over — the window is sized as
+   * `rollFitArcDeg` of arc at the radius last measured, never shorter than
+   * `rollStepDistance`.
+   * ⛔⛔ AN ANGLE, NOT A LENGTH. What conditions a circle fit is angular extent: a
+   * fixed 30 mm window is 215° of a tight 8 mm swirl and 49° of a lazy 35 mm one, and
+   * measured, no fixed length served both — the wide swirl needed 100 mm, which
+   * pushed the release out to 84 mm of straight drag. See roll.ts.
    */
-  rollFitWindow: number;
+  rollFitArcDeg: number;
   /**
    * mm the newest point must itself advance before the direction is re-measured.
    * ⛔ THE CADENCE, and it is NOT the baseline. A direction depends on both ends of
@@ -103,12 +107,16 @@ export interface GestureConfig {
    */
   rollReleaseDistance: number;
   /**
-   * ⭐ How many multiples of `pointerNoiseMm` the circle fit's RMS residual may
-   * reach before the path stops counting as circular. A 3-sigma criterion by default.
-   * ⛔ Without a residual test the fit accepts ANY point set — Kasa always returns
-   * some circle — so a side-to-side wiggle committed as a roll. See roll.ts.
+   * The circle fit's RMS residual may reach this FRACTION OF THE FITTED RADIUS before
+   * the path stops counting as circular.
+   * ⛔⛔ A FRACTION OF THE RADIUS, NOT A MULTIPLE OF `pointerNoiseMm`. Tying it to
+   * noise was a category error that took roll off the device completely: the residual
+   * measures how non-circular the HAND'S PATH is — millimetres — while pointer noise
+   * is a sensor property in fractions of a millimetre. A human circle is an ellipse
+   * with a drifting centre, so at a 0.45 mm tolerance nothing a hand can draw
+   * qualified. ⭐ Dimensionless, so one tolerance judges a tight swirl and a lazy one.
    */
-  rollFitResidualSigmas: number;
+  rollFitResidualFraction: number;
   /**
    * mm. Typical position noise of ONE pointer sample from a resting finger.
    * ⭐⭐ A DEVICE PROPERTY, not a preference, and it is what decides whether a
@@ -182,14 +190,30 @@ export const DEFAULT_CONFIG: GestureConfig = {
   flickLiftWindow: 40,
   flickDistance: 6,
   flickPurity: 2.5,
-  rollAngle: 60,
-  rollRadiusMin: 10,
-  rollRadiusMax: 30,
-  rollStepDistance: 9,
-  rollFitWindow: 25,
+  // ⛔⛔ ALL SIX ROLL NUMBERS MOVED TOGETHER ON 2026-09-14, because roll had
+  // DISAPPEARED on the device: only a mathematically perfect circle qualified. They
+  // are coupled and were swept together against REALISTIC gestures (ellipses with
+  // drifting centres) and against realistic NEGATIVES (wiggles, sloppy arcs).
+  // ⚠ Still placeholders — swept against synthetic humanity, not measured on a hand.
+  // ⭐ 120°, not 60°: one half-period of a lazy 8 mm x 90 mm wiggle contains ~67° of
+  // genuine arc, so a 60° threshold cannot tell a deliberate swirl from a sloppy
+  // S-shaped drag. Measured: the false positive disappears at 90°.
+  rollAngle: 120,
+  // ⭐ A wide band. A finger swirls anywhere from a tight 5 mm to a lazy 60 mm, and
+  // the old [10, 30] silently excluded both ends.
+  rollRadiusMin: 5,
+  rollRadiusMax: 60,
+  rollStepDistance: 13,
+  // ⚠ 150°, swept: it is the shortest arc at which EVERY realistic swirl in
+  // tests/roll.test.ts commits (a tight R=8 and a slow R=12 are the demanding ones)
+  // while no wiggle or sloppy arc does. ⛔ The cost is a slow RELEASE — ~83 mm of
+  // straight drag before a committed roll hands back to yaw/pitch, against a
+  // rollReleaseDistance of 18 mm, because the window must flush before the fitted
+  // radius leaves the band. Known, reported, and the next device pass judges it.
+  rollFitArcDeg: 150,
   rollUpdateDistance: 0.5,
-  rollReleaseDistance: 12,
-  rollFitResidualSigmas: 3,
+  rollReleaseDistance: 18,
+  rollFitResidualFraction: 0.25,
   pointerNoiseMm: 0.15,
 
   tapMaxDuration: 250,
@@ -243,11 +267,11 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "before the path has travelled far enough to measure its shape at all.",
     );
   }
-  if (cfg.rollFitWindow <= cfg.rollStepDistance) {
+  if (cfg.rollFitArcDeg < 45 || cfg.rollFitArcDeg > 360) {
     throw new Error(
-      `rollFitWindow (${cfg.rollFitWindow} mm) must exceed rollStepDistance ` +
-        `(${cfg.rollStepDistance} mm): the fit window cannot be shorter than the ` +
-        "minimum span required before the fit is trusted.",
+      `rollFitArcDeg (${cfg.rollFitArcDeg}°) is outside 45–360°: below 45° a circle ` +
+        "fit is too ill-conditioned to locate a centre, and beyond a full turn the " +
+        "window stops being able to follow a gesture whose circle changes.",
     );
   }
   if (cfg.rollUpdateDistance >= cfg.rollStepDistance) {
@@ -279,13 +303,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         `Lengthen the baseline, lower rollRadiusMax, or measure a smaller noise.`,
     );
   }
-  if (cfg.rollStepDistance >= cfg.rollRadiusMin) {
-    throw new Error(
-      `rollStepDistance (${cfg.rollStepDistance} mm) must stay below rollRadiusMin ` +
-        `(${cfg.rollRadiusMin} mm): at the tightest roll the band allows, a chord that ` +
-        "long spans most of the circle and stops being a tangent at all.",
-    );
-  }
+  // ⚠ A rule once lived here requiring `rollStepDistance < rollRadiusMin`, on the
+  // grounds that a chord that long "stops being a tangent". ⛔ IT WAS DELETED WITH
+  // THE ESTIMATOR IT BELONGED TO: nothing uses a chord as a tangent any more, and
+  // under a CIRCLE FIT a long span relative to the radius is BETTER, not worse —
+  // more arc conditions the fit. Keeping it would have capped the span at the
+  // tightest roll radius and locked out every lazy wide swirl.
   if (cfg.flickLiftWindow > cfg.flickWindow) {
     throw new Error(
       `flickLiftWindow (${cfg.flickLiftWindow} ms) exceeds flickWindow ` +
