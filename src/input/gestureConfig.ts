@@ -56,6 +56,11 @@ export interface GestureConfig {
    */
   gainRotateFree: number;
   gainRotateConstrained: number;
+  /**
+   * §2quinte roll: a dimensionless multiplier on the swept angle.
+   * ⛔ It scales what the object is TURNED BY, never what the commit threshold reads —
+   * scaling the latter would silently move `rollAngle` as well. See `roll.ts`.
+   */
   gainRoll: number;
   gainTranslateScreen: number;
   gainTranslateAxis: number;
@@ -275,12 +280,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // as it moves into the config. ⚠ A placeholder like everything else; `IN5`.
   gainRotateFree: 0.03,
   gainRotateConstrained: 0.6,
-  // ⚠⚠ UNUSED. Rule 2quinte applies the swept angle DIRECTLY — a roll gain would
-  // mean the cube turned by a different amount than the finger swept, which is not
-  // obviously wanted and has never been asked for. ⛔ An unused tunable is a lie in
-  // the config (`moveExitDistance` was one through the whole of `IN0`, and `IN5` would
-  // have gone and measured a number that did nothing). Wire it or delete it when
-  // `IN3` takes over 2quinte; flagged here so it is not forgotten.
+  // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
+  // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
+  // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
   gainRoll: 1,
   gainTranslateScreen: 1,
   gainTranslateAxis: 1,

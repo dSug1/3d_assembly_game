@@ -44,8 +44,8 @@ function arc(opts: {
   return out;
 }
 
-function feed(samples: readonly Sample[]): RollDetector {
-  const d = new RollDetector(cfg);
+function feed(samples: readonly Sample[], config = cfg): RollDetector {
+  const d = new RollDetector(config);
   for (const s of samples) d.push(s);
   return d;
 }
@@ -838,5 +838,61 @@ describe("⭐⭐ shipped roll smoothing", () => {
     // complaint from the one the filter is there to answer.
     const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 70, clockwise: true }));
     expect(Math.abs(d.accumulatedDeg)).toBeGreaterThanOrEqual(cfg.rollAngle);
+  });
+});
+
+/**
+ * ⭐⭐ `gainRoll`, wired 2026-09-14 on the owner's instruction. It had been declared
+ * and unused, which `tests/config_debt.test.ts` exists to catch — and did.
+ *
+ * ⛔ The point of these vectors is the SEPARATION: the gain scales what the object is
+ * turned by, and must not touch what the COMMIT threshold reads.
+ */
+describe("⭐⭐ roll gain", () => {
+  const swirl = (c = cfg) =>
+    feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 70, clockwise: true }), c);
+
+  it("⭐ the DEFAULT is direct manipulation — the cube turns as far as the finger swept", () => {
+    expect(cfg.gainRoll).toBe(1);
+    const d = swirl();
+    expect(d.appliedDeg).toBeCloseTo(d.smoothedDeg, 9);
+  });
+
+  it("⭐ a gain scales the APPLIED angle", () => {
+    const doubled = swirl({ ...cfg, gainRoll: 2 });
+    const plain = swirl();
+    expect(doubled.appliedDeg).toBeCloseTo(plain.appliedDeg * 2, 6);
+  });
+
+  it("⛔⛔ but it does NOT move the commit threshold", () => {
+    // ⚠ THE REASON THE GAIN IS A THIRD CHANNEL AND NOT A MULTIPLICATION AT THE SOURCE.
+    // Scaling `accumulatedDeg` would silently scale `rollAngle` too: a gain of 2 would
+    // commit a roll after HALF the sweep, coupling "how far the cube turns" to "how
+    // much of a circle counts as a roll" — two unrelated questions.
+    const plain = swirl();
+    const doubled = swirl({ ...cfg, gainRoll: 2 });
+    expect(doubled.accumulatedDeg).toBeCloseTo(plain.accumulatedDeg, 9);
+  });
+
+  it("⛔ and it does not change WHEN a roll commits", () => {
+    // The same gesture must become a roll at the same moment, whatever the gain.
+    const commitStep = (gain: number) => {
+      const d = new RollDetector({ ...cfg, gainRoll: gain });
+      const samples = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 70, clockwise: true });
+      for (let i = 0; i < samples.length; i++) {
+        d.push(samples[i]!);
+        if (d.committed) return i;
+      }
+      return -1;
+    };
+    expect(commitStep(2)).toBe(commitStep(1));
+    expect(commitStep(0.25)).toBe(commitStep(1));
+  });
+
+  it("⭐ a gain below 1 makes the object turn LESS than the finger", () => {
+    const slow = swirl({ ...cfg, gainRoll: 0.25 });
+    expect(Math.abs(slow.appliedDeg)).toBeLessThan(Math.abs(slow.smoothedDeg));
+    // ⚠ Sign must survive — a gain is a magnitude, not a direction.
+    expect(Math.sign(slow.appliedDeg)).toBe(Math.sign(slow.smoothedDeg));
   });
 });
