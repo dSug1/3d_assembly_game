@@ -16,42 +16,58 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` CLOSED, camera rules next
+## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` closed, camera rules nearly there
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **205 golden vectors,
-all passing** (37 → 205). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **212 golden vectors,
+all passing** (37 → 212). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
-✅✅ **`IN1` IS CLOSED.** The recognizer state machine — commit point, provisional
-motion with rollback, tap / double-tap / hold, the release-time priority ladder,
-screen-plane rotation and roll — all judged working by finger over **seven device
-passes**, which found **14 defects that a green suite could not see**. Full record:
-[`queue_notes/IN1.md`](queue_notes/IN1.md).
+### What works, by finger, on a real device
 
-⛔⛔ **THE THREE LESSONS THAT BIND `IN3`/`IN4`**, in order of what they cost:
-1. **A rate estimated over the shortest available baseline** (flick lift speed, roll
-   direction, roll curvature). *State the window, and check the signal clears the
+✅ **`IN1` CLOSED** — the recognizer: commit point, provisional motion with rollback,
+tap / double-tap / hold, the release-time priority ladder, screen-plane yaw/pitch, and
+roll. ✅ **`IN9` rule 4 CLOSED** — pinch zoom. ⚠ **`IN9` rule 1** — orbit on a
+three-ring surface: built, green, **not closed**.
+
+⛔ **Nothing yet touches an OBJECT for real.** The rotation in `scene.ts` is a
+diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
+
+### ⛔⛔ THE FOUR MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
+
+Sixteen defects have been found **by finger**, and **not one was visible to a green
+suite**. They are four shapes, not sixteen problems:
+
+1. **A rate estimated over the shortest available baseline.** Flick lift speed, roll
+   direction, roll curvature. ⭐ *State the window, and check the signal clears the
    noise, BEFORE writing the threshold.*
-2. **Measuring a DIFFERENT QUANTITY than the one asked for** — the tangent's turning
-   instead of the angle about the centre, invisible until a finger reversed.
-3. ⭐⭐ **IDEALISED FIXTURES.** Roll vanished from the device with every vector green,
-   because every fixture was a perfect circle. *Build the imperfect specimen and the
-   negative first.* — and **when a threshold has to be large, ask what weakness it is
-   compensating for** before accepting the cost. It was propping up a bad estimator
-   twice, at 16 mm of gesture lag.
+2. **Measuring a DIFFERENT QUANTITY than the one asked for.** The tangent's turning
+   instead of the angle about a centre — invisible until a finger reversed. ⭐ *When an
+   estimator is hard, ask whether you replaced the quantity rather than improved it.*
+3. **IDEALISED FIXTURES.** Roll vanished from the deployed page with every vector
+   green, because every fixture was a perfect circle. ⭐ *Build the imperfect specimen
+   and the negative first.*
+4. **A COMPOSITION NOBODY COMPUTED.** Radius and height were each interpolated
+   correctly; their `hypot` was never checked, and gave three segments from three
+   rings. ⭐ *`METHOD` already says this — ask what the whole chain does, in one
+   expression.*
 
-⭐⭐ **`IN5` IS NOW PRACTICAL**: tunables override from the URL
-(`?rollAngle=45&rollFilterBeta=0`), so a placeholder can be A/B'd by finger without a
-rebuild. ⭐ Measure **`pointerNoiseMm` first** — hold a finger still and read the
-spread; the sagitta criterion and several other thresholds are only defensible
-relative to it.
+⭐ And twice, a **device judgement overturned a confident synthetic measurement**.
+When they disagree, suspect the metric.
 
-⚠ **IN PROGRESS: `IN9`**, the two CAMERA-ONLY rules — no object model, so they do not wait on `3D1`. ✅ **Rule 4 (pinch zoom) is built and green**, owed a device look.
-⭐⭐ **Rule 1 is AMENDED BY THE OWNER: orbit on DELTA POSITION, not device tilt.**
-That takes `DeviceOrientation` off the critical path, and leaves `tiltDeadband`
-unused — wire it or delete it. Then `3D1`, which `IN3`, `IN4`, `RND1` and `RND2`
-are all waiting on.
+### ⭐⭐ `IN5` is now practical, and mostly unblocked
+
+Tunables override from the **URL** (`?rollAngle=45&rollFilterBeta=0`), and the orbit
+rings have an on-screen **tuning menu** that validates and explains refusals — so a
+placeholder can be A/B'd by finger without a rebuild.
+⭐ Measure **`pointerNoiseMm` FIRST**: hold a finger still and read the spread. The
+sagitta criterion and several other thresholds are only defensible relative to it.
+⛔ `tests/config_debt.test.ts` now refuses any tunable nothing reads — after three
+orphans (`moveExitDistance`, `tiltDeadband`, `gainRoll`).
+
+⛔ **NEXT**: close `IN9` rule 1 on a device, then **`3D1`** — the object model, which
+`IN3`, `IN4`, `RND1` and `RND2` are all waiting on, and the last thing between here and
+actual assembly.
 
 ## Phase IN — the touch input system
 

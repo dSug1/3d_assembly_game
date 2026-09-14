@@ -230,6 +230,14 @@ export interface GestureConfig {
   orbitTopRadiusM: number;
   /** Metres. Height of the TOP ring — the highest the camera may orbit. */
   orbitTopHeightM: number;
+  /**
+   * mm of finger travel over which the orbit CENTRE migrates to a newly chosen
+   * barycentre, instead of teleporting there.
+   * ⛔ Millimetres, not milliseconds: a time-based blend keeps moving after the finger
+   * lifts, and the owner asked for it to follow *"the progress of the delta
+   * position"*. ⚠ `0` is legal and reproduces the old jump, for an A/B.
+   */
+  orbitBlendDistanceMm: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -349,6 +357,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitTopRadiusM: 0.5,
   orbitTopHeightM: 0.5,
   // ⭐ ~0.9° of yaw per mm of drag, and a full bottom-to-top sweep in ~100 mm.
+  orbitBlendDistanceMm: 40,
   gainOrbitYaw: 0.016,
   gainOrbitElevation: 0.01,
 

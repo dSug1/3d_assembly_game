@@ -11,28 +11,43 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 
 ## Where it stands
 
-✅ **`IN0` built** — units (mm→px), the hysteretic motion state, the flick test.
-✅ **`IN1` BUILT** — the recognizer state machine (`src/input/recognizer.ts`):
-commit point, provisional motion with **rollback**, the release-time priority ladder,
-tap / double-tap / hold, roll detection (`roll.ts`), and the screen-plane rotation
-mapping (`screen_rotate.ts`). **146 golden vectors, all passing** (37 → 146).
+✅ **`IN0`** — units (mm→px), the hysteretic motion state, the flick test.
 
-✅✅ **`IN1` IS CLOSED (2026-09-14).** Seven device passes found **14 defects, not
-one of which was visible to a green suite.**
-⛔⛔⛔ **The fifth is the one to learn from: roll had DISAPPEARED from the deployed
-page while every vector passed, because every roll fixture was a mathematically
-PERFECT CIRCLE — a specimen no hand produces.** `tests/roll.test.ts` now carries six
-deliberately imperfect swirls and three negatives as the primary guard, and any change
-to the roll geometry must keep all six rolling and none of the three.
-⭐ The story of all four — including the two changes that were **measured and
-reverted** — is
-[`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md).
-The row's dossier is [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+✅✅ **`IN1` CLOSED (2026-09-14)** — the recognizer state machine
+(`recognizer.ts`): commit point, provisional motion with **rollback**, the
+release-time priority ladder, tap / double-tap / hold, roll detection (`roll.ts`), and
+the screen-plane rotation mapping (`screen_rotate.ts`).
+⛔ **Seven device passes found 14 defects, not one visible to a green suite.**
+
+⚠ **`IN9` IN PROGRESS** — the two CAMERA-ONLY rules, which need no object model and so
+do not wait on `3D1`:
+* ✅ **rule 4, pinch zoom** (`pinch.ts`) — **CLOSED**, all five device checks passed.
+* ⚠ **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — built and green, **not closed**;
+  two defects already found by finger and fixed.
+
+**212 golden vectors, all passing** (37 → 212).
 
 ⛔ **Not built**: `IN2` (pointer roles, blocked behind the `IN8` decision below),
-`IN3`/`IN4` (the rules themselves, blocked on `3D1`), `IN6` undo, `IN7` haptics.
-⛔ **Every threshold is a placeholder.** `IN1` added seven, and `pointerNoiseMm` is
-the one to measure **first** — several others are only defensible relative to it.
+`IN3`/`IN4` (the object rules, blocked on `3D1`), `IN5` (measurement), `IN6` undo,
+`IN7` haptics.
+
+⭐⭐ **`IN5` IS NOW PRACTICAL.** Tunables override from the **URL**
+(`?rollAngle=45&rollFilterBeta=0`) and the orbit rings have an on-screen **tuning
+menu**, so a placeholder can be A/B'd by finger without a rebuild.
+⛔ **Every threshold is still a placeholder** — except the six orbit ring values, which
+the owner chose on the device on 2026-09-14 and are the first *judgements* in the file.
+⭐ Measure **`pointerNoiseMm` first**: hold a finger still and read the spread. The
+sagitta criterion and several other thresholds are only defensible relative to it.
+
+⛔ **A guard now refuses dead tunables.** `tests/config_debt.test.ts` requires every
+config field to be **read by the code or declared as debt with the row that will wire
+it** — after `moveExitDistance` (dead through all of `IN0`), `tiltDeadband` (orphaned
+by the rule-1 amendment, deleted) and `gainRoll` (dead now).
+
+⭐ The narrative of every device pass is in
+[`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md);
+the rows' dossiers are [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md)
+and [`../00_CORE/queue_notes/IN9.md`](../00_CORE/queue_notes/IN9.md).
 
 ## ⛔⛔ Where the build already had to DEPART from the spec
 
@@ -137,6 +152,56 @@ an inconsistent config is a loud failure and not a silently dead threshold.
 ⚠ `stillTime` moved `80 → 150 ms` to satisfy it. **That is a placeholder moved to
 make another placeholder reachable, not a measurement.** Both belong to `IN5`.
 
+## ⭐⭐ Amendments the OWNER made, 2026-09-14
+
+⚠ These are different in kind from the departures above. Those are places the build
+**could not** follow the spec and reported why. These are places the owner **chose**
+something else, on the device, with the alternative in front of them.
+
+**§2 rule 1 is DRAG-ORBIT, not tilt-orbit.** The spec orbits *"by the value of yaw
+and pitch of the **device tilt**"* and states that *"the touch delta gates this rule
+but its value is unused: touch acts as a clutch for tilt-orbit."*
+⛔ **The orbit is now driven by the DELTA POSITION** of one touchpoint that hits no
+object. ⭐ Consequences, so they are not rediscovered: `DeviceOrientation` leaves the
+critical path entirely (no iOS permission prompt, no platform axis conventions, no
+gimbal behaviour near vertical), and `tiltDeadband` was orphaned and **deleted**.
+⚠ The barycentre selection is unaffected: it still chooses what the camera orbits
+*around*.
+
+**The orbit CENTRE migrates, it does not teleport.** Rule 1 re-chooses a barycentre on
+every press, so aiming at a different pair of objects jumped the camera. ⭐ The centre
+now blends over `orbitBlendDistanceMm` of **finger travel** — not wall-clock, so it
+cannot drift on after the finger lifts — and blending the centre carries the position
+and the orientation together.
+
+**The orbit STOPS SHORT, on a three-ring surface.** Owner: *"we should define height
+and radius of top and bottom rigs and not exceed these."* The camera rides a surface
+defined by TOP / MIDDLE / BOTTOM rings, each with a radius **and** a height, and the
+elevation parameter is clamped.
+⭐⭐ **There is no pole to gimbal at, because the poles are not reachable** — the
+classic orbit-camera failure cannot occur, rather than being patched where it occurs.
+⭐ And *"three rigs, therefore two transitions"* is now **enforced by
+`validateGestureConfig`**, which refuses any ring set whose camera distance changes
+direction more than once — so the tuning menu explains a bad shape instead of leaving
+it to be found by finger, which is how it was found the first time.
+
+**Orbit directions are INVERTED** — *"if fingers move up and right, camera orbits down
+and left."* The grab-the-**world** convention: the finger pushes the scene and the
+camera swings the other way.
+⛔ Recorded as a decision, not a detail: the two readings are exact opposites and both
+internally consistent, so no sign-checking can tell you which a hand expects. `IN1`
+shipped yaw **and** pitch inverted for precisely that reason.
+
+**Roll smoothing ships ENGAGED, against the measurement.** A device A/B chose the
+1€-filtered roll; the metric had scored it as a bad trade. ⭐ The metric was what was
+wrong — its synthetic swirl rolled at twice a hand's speed, inflating the predicted
+lag, and an error-against-ground-truth metric cannot score *"feels steady"*.
+
+⚠ **Licence note for the three-ring orbit**, since it is the same idea as Unity
+Cinemachine's FreeLook: ✅ no patent found, but ⛔ **Cinemachine's CODE is under the
+Unity Companion License**, usable only in Unity-engine-dependent applications. Ours is
+written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
+
 ## ⚠ Open questions the spec itself flags
 
 * **`IN8` — two touchpoints on the same object** is *undefined and reachable*. Decide
@@ -153,52 +218,24 @@ make another placeholder reachable, not a measurement.** Both belong to `IN5`.
 |---|---|
 | **any gesture rule** | [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md) — and mind the section numbers, they are referenced from code |
 | know why a threshold is in mm | [`../00_CORE/CONSTRAINTS.md`](../00_CORE/CONSTRAINTS.md) §6 |
-| change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place** |
+| change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place**. ⭐ To try one *without a rebuild*: `?rollAngle=45` on the URL, or the on-screen menu for the orbit rings |
 | know what is built | [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md), phase `IN` |
+| **why the input code looks the way it does** | [`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md) — every defect found by finger, including the ones that were measured and reverted |
+
+### The source, and what each file owns
+
+| file | owns |
+|---|---|
+| `gestureConfig.ts` | every tunable, **and every cross-tunable rule** in `validateGestureConfig` — the checks that catch a config which is individually plausible and jointly impossible |
+| `config_override.ts` | `?name=value` overrides, so `IN5` can A/B by finger. ⛔ Refusals are reported, never ignored |
+| `motion.ts` | §1.1 hysteretic `STATIONARY`/`MOVING` |
+| `flick.ts` | §1.3's flick test. ⚠ Lift speed over a **window**, never the last sample pair |
+| `roll.ts` | rule 2quinte. The **Hyper** circle fit; roll is the angle about a fitted centre |
+| `one_euro.ts` | the 1€ filter, smoothing the displayed roll angle |
+| `screen_rotate.ts` | rule 2bis's world-frame yaw/pitch, and 2quinte's roll about the view axis |
+| `pinch.ts` | rule 4. A **ratio** of separations, never a rate |
+| `orbit.ts` | rule 1's three-ring surface, monotone and bounded by the rings |
+| `barycentre.ts` | rule 1's orbit **centre** — what the camera orbits around |
+| `recognizer.ts` | §1.3 itself: the state machine, rollback, and the release-time priority ladder |
 
 ---
-
----
-
-## ⭐⭐ The SIXTH device pass (2026-09-14): the estimator, not the filter
-
-Full record: [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
-
-Reported: *"big jumps when I switch from roll to yaw/pitch or when I change roll
-directions"*, with a preference for the older 1€-filtered behaviour.
-
-⭐ **The framing was wrong and that mattered.** A circle fit is an **estimator** (how
-the angle is computed); the 1€ filter is a **smoother** (how the result is cleaned).
-They are orthogonal — the question was never which, but why the output got worse.
-
-**1. ⛔ Kåsa is the worst of the standard algebraic circle fits.** Chernov's error
-analysis ranks them Kåsa poor → Pratt moderate → Taubin good → **Hyper best** (zero
-essential bias, better than the iterative geometric fit). Kåsa is **severely biased
-toward small circles on SHORT ARCS** — precisely this regime, since the window holds
-an arc and never a whole circle. ✅ Now **Hyper**, pinned by vectors that recover a
-**40° arc to four decimal places**. The bias correction is a single coefficient, and
-it is also all that separates Hyper from Taubin, so a vector guards it.
-
-**2. ⛔⛔ The angle's reference point went stale.** The out-of-band path returned
-without updating it, so a transient excursion — which is exactly what a reversal and
-a roll→yaw/pitch handover produce — left the reference behind and collected the whole
-excursion into **one step** on re-entry. ⭐ Third time this row has had that shape:
-*a difference is only meaningful when both ends of it are current.* ✅ Fixed, with a
-chord-consistency guard: two points on a circle of radius `r` separated by chord `c`
-subtend exactly `2·asin(c/2r)`, so the angle cannot disagree with the distance
-travelled.
-
-**3. ⛔⛔⛔ The 1€ revert had been made on evidence wrong twice over.** The null result
-was measured on perfect-circle fixtures **and** with `beta` so high that the filter
-was effectively bypassed — the roll angle moves at hundreds of deg/s, so `beta = 0.05`
-drove the cutoff to ~30 Hz. **A filter that was never switched on was reverted for not
-working.** ✅ Restored and re-measured properly, including **lag**, which the old
-metric could not see (both its channels were filtered, so lag cancelled).
-
-⛔ **No setting earns its place**: `beta = 0` removes 13% of noise for ~30° per gesture
-of lag; `beta = 0.01` removes 0.3% for ~13°. The roll angle is a **ramp**, and
-low-passing a ramp costs `slope × τ`. Filtering the per-step turn instead is worse
-still (6.8° → 17.7°): evaluations are gated by distance, so they are irregular in
-time, and a time-based low-pass over irregular increments does not preserve their sum.
-⭐⭐ **What removed the jitter was the estimator, not a filter.** Left wired at a
-low-lag default so it can be judged by finger — one config line makes it transparent.

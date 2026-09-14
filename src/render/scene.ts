@@ -49,6 +49,7 @@ import {
   PinchTracker,
   clampCameraRadiusM,
   OrbitController,
+  OrbitCentreBlend,
   orbitCentre,
   Recognizer,
   TapHistory,
@@ -198,7 +199,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // the same number. `1` is the rings as configured.
   let zoom = 1;
   let zoomAtPinchStart = 1;
-  /** The last outside touchpoint to move, so the orbit centre follows the finger. */
+  // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
+  // every press, so aiming at a different pair of objects used to JUMP the camera.
+  // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
+  const centreBlend = new OrbitCentreBlend(cfg, [0, 0, 0]);
   let orbitCentreM: Vector3 = Vector3.Zero();
 
   /**
@@ -217,7 +221,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       { origin: [ray.origin.x, ray.origin.y, ray.origin.z], direction: [ray.direction.x, ray.direction.y, ray.direction.z] },
       cfg,
     );
+    // ⚠ RETARGET, never assign. The blend starts from wherever the centre actually is,
+    // so interrupting a half-finished migration does not put the jump back.
+    centreBlend.retarget(c);
+    syncCentre();
+  };
+
+  /** Read the blended centre into the scene, and show it. */
+  const syncCentre = () => {
+    const c = centreBlend.centreM;
     orbitCentreM = new Vector3(c[0], c[1], c[2]);
+    // ⭐ The marker follows the BLENDED centre, because that is what the camera is
+    // actually orbiting — showing the target instead would describe a place the
+    // camera is not.
     centreMarker.position.copyFrom(orbitCentreM);
   };
 
@@ -314,6 +330,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // force — including a typo'd key, which is REPORTED rather than ignored.
       camera:
         `c=(${orbitCentreM.x.toFixed(2)},${orbitCentreM.y.toFixed(2)},${orbitCentreM.z.toFixed(2)}) ` +
+        `${centreBlend.isBlending ? `→${(centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
         `r=${camera.radius.toFixed(3)}m zoom=${zoom.toFixed(2)} ` +
         `elev=${orbit.elevation.toFixed(2)}${orbit.atLimit ? "⛔LIMIT" : ""}` +
         `${pinch.isZooming ? "  ZOOMING" : ""}`,
@@ -388,6 +405,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("middle height (m)", "orbitMiddleHeightM", -1.5, 1.5, 0.01),
         tunable("bottom radius (m)", "orbitBottomRadiusM", 0, 1.5, 0.01),
         tunable("bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
+        // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
+        tunable("centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
       ],
     },
   ]);
@@ -438,7 +457,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           updatePinch();
         } else if (outside.size === 1 && live.size === 0) {
           // §2 rule 1: ONE touchpoint, no hit — orbit.
-          orbit.drag(s.x - prev.x, s.y - prev.y);
+          const dx = s.x - prev.x;
+          const dy = s.y - prev.y;
+          orbit.drag(dx, dy);
+          // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so
+          // the camera arrives as the gesture progresses rather than on a timer.
+          centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+          syncCentre();
           applyCamera();
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {

@@ -10,6 +10,26 @@ Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10
 ⭐ **Neither rule touches an object**, so this row does **not** wait on `3D1` — which
 is what makes it buildable now, and it is the owner's reason for scheduling it here.
 
+## ⭐ WHERE THIS ROW STANDS
+
+| | |
+|---|---|
+| **rule 4 — pinch zoom** | ✅ **CLOSED** 2026-09-14, all five device checks |
+| **rule 1 — orbit** | ⚠ built and green, **NOT closed**; two defects found by finger and fixed |
+
+⭐ **What was decided here**, beyond the code:
+* Rule 1 is **drag-orbit, not tilt-orbit** — the owner's amendment. `DeviceOrientation`
+  leaves the critical path; `tiltDeadband` was orphaned and deleted.
+* The orbit **stops short** on a three-ring surface, so **no pole is reachable and
+  there is nothing to gimbal**.
+* *"Three rigs, therefore two transitions"* is **enforced by the config validator**,
+  not left to care.
+* Directions are **inverted** — grab-the-world.
+* The six ring values are the owner's, chosen on the device: a **waist**,
+  0.5 → 0.36 → 0.5 m.
+* ⛔ **Cinemachine's code is Unity-Companion-licensed** and must not be ported; the
+  three-ring idea itself is unpatented and ours is written from the geometry.
+
 ## ⛔⛔ RULE 1 IS AMENDED BY THE OWNER: DELTA POSITION, NOT DEVICE TILT
 
 §2 rule 1 as written orbits *"by the value of yaw and pitch of the **device tilt**"*,
@@ -467,3 +487,44 @@ machinery than the answer is worth. ⛔ It runs on config CHANGE, never per fram
 for any ring set, and a height that always climbs. **And for the shipped rings
 specifically**: exactly one turning point in the distance. A shape that would break
 that is asserted to throw.
+
+---
+
+## 2026-09-14 — the orbit centre MIGRATES instead of teleporting. 205 → 212 vectors
+
+Owner: *"when I touchpoint on another barycenter, the camera position jumps… I want
+the camera quaternion and position to blend to the new orbit along the progress of the
+delta position."*
+
+⭐ **Blending the CENTRE blends both at once.** The camera sits at `centre + offset` and
+looks at `centre`, so a centre that travels smoothly carries the position *and* the
+orientation with it. There is no second interpolation to keep in step, and therefore
+no chance of the two disagreeing — which is the failure a separate position/quaternion
+blend would eventually have.
+
+### ⭐⭐ Progress is FINGER TRAVEL IN MILLIMETRES, not milliseconds
+
+The owner offered mm, angle or ms. Millimetres, for three reasons:
+
+* it is their own framing — *"along the progress of the delta position"*;
+* ⛔ a **time**-based blend keeps moving after the finger lifts, which is a camera
+  that drifts on its own;
+* every threshold in this project is millimetres on the physical screen
+  (`core/units.ts`), so a millimetre budget is comparable with everything else.
+
+⭐ It also makes the blend a property of the **gesture**: a slow careful drag arrives
+slowly, a fast one arrives fast, and neither surprises the hand.
+
+⭐ Eased (smoothstep), so the centre neither starts nor arrives with a velocity step —
+a linear blend replaces one big jump with two small ones at the ends.
+
+### ⛔⛔ Retargeting starts from where the centre IS — the third time this lesson has bitten
+
+Interrupt a half-finished migration and the previous target is a point the camera
+**never reached**; resuming from it would put the jump straight back. ⭐ Same shape as
+`IN1`'s stale reference, its creeping baseline and its moving fit centre: **a
+difference is only meaningful when both of its ends are current.** Vectored explicitly,
+including the no-discontinuity assertion across the retarget.
+
+⚠ `orbitBlendDistanceMm` defaults to **40 mm** and is a slider in the menu.
+⭐ **Zero is legal and reproduces the old jump**, so the two can be compared by finger.

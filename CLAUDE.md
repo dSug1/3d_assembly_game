@@ -44,23 +44,32 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-13)
+## Where it stands (2026-09-14)
 
-✅ Scaffolding green: TypeScript + Babylon + Vite, **205 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **212 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
-then `http://localhost:5173` on the tablet — a **secure context**, so sensors and
-rule 1's tilt are testable. See `Claude/50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`.
-✅✅ **`IN1` is CLOSED** — the gesture recognizer state machine, validated by finger
-over **seven device passes** that found **14 defects, none of which a green suite
-could see**. ⭐ The three lessons that bind every later input row are in
-[`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block — short
-estimation baselines, substituted quantities, and **idealised fixtures**.
-⛔ **NEXT is `IN9`** — the two CAMERA-ONLY rules (pinch zoom, tilt-orbit); they need
-no object model. Then `3D1`, which `IN3`, `IN4`, `RND1` and `RND2` all wait on.
-⭐⭐ **Tunables override from the URL** (`?rollAngle=45`), so `IN5` can A/B a
-placeholder by finger without a rebuild.
-⚠ Every number in `src/input/gestureConfig.ts` is a placeholder, not a measurement
-(`IN5` is the row that measures them, and it needs the device loop above).
+then `http://localhost:5173` on the tablet. See
+`Claude/50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`.
+
+✅✅ **`IN1` CLOSED** — the gesture recognizer, validated by finger over seven device
+passes. ✅✅ **`IN9` rule 4 CLOSED** — pinch zoom. ⚠ **`IN9` rule 1** — camera orbit
+on a three-ring surface — built and green, **not closed**.
+⛔ **Nothing touches an OBJECT for real yet**: the rotation in `scene.ts` is a
+diagnostic stand-in, and `IN3` deletes it.
+
+⛔⛔ **Sixteen defects have been found BY FINGER and none was visible to a green
+suite.** They are four repeating shapes — a rate estimated over too short a baseline, a
+substituted quantity, idealised fixtures, and a composition nobody computed. ⭐ They
+are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
+block, and they bind every row still to come.
+
+⭐⭐ **Tunables can be A/B'd by finger without a rebuild** — `?rollAngle=45` on the URL,
+or the on-screen menu for the orbit rings. That is what makes `IN5` practical.
+⚠ Every number in `src/input/gestureConfig.ts` is still a placeholder, except the six
+orbit ring values the owner chose on the device.
+
+⛔ **NEXT**: close `IN9` rule 1 on a device, then **`3D1`** — the object model, which
+`IN3`, `IN4`, `RND1` and `RND2` all wait on.
 
 Full status: [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block.
