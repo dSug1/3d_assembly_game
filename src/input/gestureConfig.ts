@@ -360,19 +360,26 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   // ⭐⭐ CHOSEN BY THE OWNER ON THE DEVICE, 2026-09-14, with the tuning menu — the
   // first numbers in this file that are a JUDGEMENT rather than a guess.
-  // ⭐ The shape is a WAIST: 0.5 m at both the bottom and the top, pinching to 0.36 m
-  // level with the objects. So the camera is closest when looking straight on and
-  // draws back as it swings under or over, which keeps the whole scene in frame at
-  // the extremes. ⚠ The distance therefore turns exactly once, AT the middle ring —
-  // which is the two-transitions property the owner asked for, and it holds because
-  // the interpolation is shape-preserving (see orbit.ts).
+  // ⭐ The shape is an ASYMMETRIC WAIST, pinching to 0.36 m level with the objects and
+  // opening out at both ends — so the camera is closest looking straight on and draws
+  // back as it swings under or over, keeping the whole scene in frame at the extremes.
+  // ⚠ ASYMMETRIC since the owner raised the top ring to 1.0 m / 0.55 m on 2026-09-14:
+  // the eye is now **1.14 m out at the top against 0.71 m at the bottom**, so a
+  // top-down view frames far wider than a bottom-up one. That is the judgement, not a
+  // slip — but it means the two extremes are no longer interchangeable, and anything
+  // later keyed to "how much of the scene is visible" must ask WHICH end.
+  // ⚠ The distance turns exactly once, near the middle ring (the minimum sits at
+  // v ≈ 0.42, not exactly 0.5, because the two ends are now unequal) — the
+  // two-transitions property the owner asked for, and it holds because the
+  // interpolation is shape-preserving. ⭐ Enforced, not assumed: `validateGestureConfig`
+  // scans the sweep with `distanceTurningPoints` and refuses more than one.
   // ⚠ Still not a MEASUREMENT: chosen by feel, on one device, at one screen size.
   orbitBottomRadiusM: 0.5,
   orbitBottomHeightM: -0.5,
   orbitMiddleRadiusM: 0.36,
   orbitMiddleHeightM: 0.1,
-  orbitTopRadiusM: 0.5,
-  orbitTopHeightM: 0.5,
+  orbitTopRadiusM: 1.0,
+  orbitTopHeightM: 0.55,
   // ⭐ Chosen on the device by the owner, 2026-09-14. ⚠ `0` reproduces the old jump.
   orbitBlendDistanceMm: 30,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
