@@ -153,6 +153,24 @@ export interface GestureConfig {
    * otherwise fling the rest of the scene across the view.
    */
   swayReferenceSpeedMmPerS: number;
+  /**
+   * degrees — how far the rest of the scene swings when the held object starts turning
+   * or turns the other way, before springing back.
+   * ⭐⭐ AS A BLOCK, rigidly: every other object ORBITS the held object's centre and
+   * SPINS on its own by the same angle, about the axis the held object is turning on.
+   * ⛔ Orbiting without spinning would shear the group — things sliding past each other
+   * rather than one scene reacting.
+   */
+  rotateSwayDeg: number;
+  /** ms — the softness of that spring, and when the swing peaks. */
+  rotateSwayTauMs: number;
+  /**
+   * degrees — how far the rotation AXIS must swing before the scene reacts again.
+   * ⚠ A reversal is a 180° axis change, so anything below that catches a change of hand.
+   */
+  rotateSwayTurnDeg: number;
+  /** degrees/s — the turn rate at which `rotateSwayDeg` is the amplitude you get. */
+  rotateSwayReferenceDegPerS: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
   gainTranslateMutual: number;
@@ -337,6 +355,19 @@ export interface GestureConfig {
    * position"*. ⚠ `0` is legal and reproduces the old jump, for an A/B.
    */
   orbitBlendDistanceMm: number;
+  /**
+   * ms — how long §2 rule 1 WAITS before committing to a new orbit centre, in case a
+   * second touchpoint is on its way down outside any object.
+   * ⭐⭐ TWO FINGERS OUTSIDE IS A PINCH (rule 4), NOT AN ORBIT. They never land at the
+   * same instant, so the first one arriving alone is indistinguishable from the start of
+   * an orbit — and rule 1 would pick a barycentre, move the marker and retarget the
+   * camera for a gesture the user meant as a zoom. ⚠ Waiting a beat costs nothing: the
+   * centre blend takes 30 mm of finger travel anyway, so a retarget deferred by a tenth
+   * of a second is invisible.
+   * ⛔ `0` commits immediately — the behaviour before this existed, and the only setting
+   * where a press and a retarget are the same event.
+   */
+  orbitCentreGraceMs: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -418,6 +449,19 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // *"medium translation velocities"*, so that is the speed it is anchored to.
   swayTurnDeg: 50,
   swayReferenceSpeedMmPerS: 120,
+  // ⭐ CHOSEN ON THE DEVICE, over two passes. The amplitude ended at a QUARTER of my
+  // guess (1.2° → 0.45° → 0.3°) — the swing wanted to be barely there.
+  // ⭐ And the reference landed at 90°/s, which is where the NOISE FLOOR puts the
+  // slowest turn that can register at all (92°/s): so the gentlest turn that fires does
+  // so at about ×1, and the scaling runs upward from the nominal amplitude rather than
+  // starting part-way up it. ⚠ That alignment is worth keeping if either number moves.
+  rotateSwayDeg: 0.3,
+  rotateSwayReferenceDegPerS: 90,
+  // ⚠ Still guesses, with sliders.
+  rotateSwayTauMs: 180,
+  // ⛔ 60° for the re-trigger, NOT 170°: yaw and pitch change axis continuously as a
+  // hand curves, so only a reversal would ever register at a near-180° threshold.
+  rotateSwayTurnDeg: 60,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,
@@ -508,6 +552,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitTopHeightM: 0.55,
   // ⭐ Chosen on the device by the owner, 2026-09-14. ⚠ `0` reproduces the old jump.
   orbitBlendDistanceMm: 30,
+  // ⚠ A GUESS, with a slider. Two fingers of one hand land within roughly 30–80 ms of
+  // each other; 120 covers that with margin without being long enough to notice.
+  orbitCentreGraceMs: 120,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to

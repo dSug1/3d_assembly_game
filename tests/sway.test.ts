@@ -14,9 +14,13 @@ import {
   turnDegrees,
   SWAY_SCALE_MIN,
   SWAY_SCALE_MAX,
+  SpinSwayWatcher,
+  rotationVector,
+  turnDegrees3,
 } from "../src/input/sway";
 import { mmToPx } from "../src/core/units";
 import type { Sample } from "../src/input/motion";
+import { qFromAxisAngle, qmul, type Quat, type Vec3 } from "../src/core/vec";
 
 const DT = 8; // ms between samples
 /** The MEASURED pointer noise this device reports (`pointerNoiseMm`). */
@@ -183,5 +187,119 @@ describe("where the other objects go", () => {
   it("⚠ the speed ceiling is ×4.5, raised from ×3 on the device", () => {
     expect(SWAY_SCALE_MAX).toBe(4.5);
     expect(swayScale(5000, 120)).toBe(4.5);
+  });
+});
+
+/**
+ * ⭐⭐ THE SAME EFFECT FOR ROTATION — the scene swings as a BLOCK about the held object's
+ * centre, on the axis it is turning about.
+ */
+describe("the rotation sway trigger", () => {
+  const AXIS = [0.2, 0.95, -0.24] as const;
+  /** Turn `steps` times at `degPerS` about `axis`, feeding the watcher. */
+  function turn(
+    w: SpinSwayWatcher,
+    axis: readonly [number, number, number],
+    degPerS: number,
+    steps: number,
+    from: { q: Quat; t: number },
+  ) {
+    const kicks: { axis: Vec3; degPerS: number }[] = [];
+    let { q, t } = from;
+    const stepRad = ((degPerS * Math.PI) / 180) * (DT / 1000);
+    for (let i = 0; i < steps; i++) {
+      q = qmul(qFromAxisAngle(axis as unknown as Vec3, stepRad), q);
+      t += DT;
+      const k = w.push(q, t, true);
+      if (k) kicks.push(k);
+    }
+    return { kicks, q, t };
+  }
+
+  it("⭐⭐ a REVERSAL of the turn fires a kick", () => {
+    const w = new SpinSwayWatcher(60, 9.2);
+    const a = turn(w, AXIS, 200, 40, { q: [1, 0, 0, 0], t: 0 });
+    expect(a.kicks.length).toBe(1); // the start
+    const back = turn(w, [-AXIS[0], -AXIS[1], -AXIS[2]], 200, 40, a);
+    expect(back.kicks.length).toBe(1); // ⭐ the reversal
+    // …and it points the other way.
+    expect(turnDegrees3(back.kicks[0]!.axis, a.kicks[0]!.axis)).toBeGreaterThan(150);
+  });
+
+  it("⛔ ONE kick per reversal, however long the new direction is held", () => {
+    const w = new SpinSwayWatcher(60, 9.2);
+    const a = turn(w, AXIS, 200, 30, { q: [1, 0, 0, 0], t: 0 });
+    const long = turn(w, [-AXIS[0], -AXIS[1], -AXIS[2]], 200, 300, a);
+    expect(long.kicks.length).toBe(1);
+  });
+
+  it("⛔⛔ a still finger's ORIENTATION NOISE fires nothing", () => {
+    // ⛔ The floor is derived from the measured pointer noise through the rotation gain:
+    // 0.761 mm × 0.07 rad/mm ≈ 3.05° per sample. Measured over 10 s of a still finger
+    // that is still reported MOVING: ×1 → 377 false kicks, ×2 → 14, ×3 → 0.
+    const noiseRad = 0.07 * 0.761;
+    const w = new SpinSwayWatcher(60, 3 * noiseRad * (180 / Math.PI));
+    let seed = 11;
+    const rnd = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return (seed / 0x7fffffff) * 2 - 1;
+    };
+    let kicks = 0;
+    for (let i = 0; i < 1200; i++) {
+      const jitter = qmul(
+        qFromAxisAngle([1, 0.3, -0.2], rnd() * noiseRad),
+        qFromAxisAngle([0, 1, 0], rnd() * noiseRad),
+      );
+      if (w.push(jitter, i * DT, true)) kicks++;
+    }
+    expect(kicks).toBe(0);
+  });
+
+  it("⛔ nothing fires while the gesture is not rotating", () => {
+    const w = new SpinSwayWatcher(60, 9.2);
+    let q: Quat = [1, 0, 0, 0];
+    for (let i = 0; i < 40; i++) {
+      q = qmul(qFromAxisAngle(AXIS as unknown as Vec3, 0.05), q);
+      expect(w.push(q, i * DT, false)).toBeNull();
+    }
+  });
+
+  it("⭐ the speed it reports is the TURN RATE, and it scales the same way", () => {
+    const fast = turn(new SpinSwayWatcher(60, 9.2), AXIS, 300, 40, { q: [1, 0, 0, 0], t: 0 });
+    expect(fast.kicks[0]!.degPerS).toBeGreaterThan(250);
+    expect(fast.kicks[0]!.degPerS).toBeLessThan(350);
+    expect(swayScale(300, 90)).toBeCloseTo(300 / 90, 9);
+  });
+
+  it("⛔ a wobble OUT AND BACK is not two turns — the window reads the NET rotation", () => {
+    // ⚠ A hand that jitters has gone nowhere. Summing per-step rotations would call that
+    // a turn every time the sign flipped.
+    const w = new SpinSwayWatcher(60, 9.2);
+    let q: Quat = [1, 0, 0, 0];
+    let kicks = 0;
+    for (let i = 0; i < 300; i++) {
+      const dir = i % 2 === 0 ? 1 : -1;
+      q = qmul(qFromAxisAngle(AXIS as unknown as Vec3, dir * 0.06), q);
+      if (w.push(q, i * DT, true)) kicks++;
+    }
+    expect(kicks).toBe(0);
+  });
+});
+
+describe("the rotation vector", () => {
+  it("⛔ the identity gives a ZERO vector, not a 0/0", () => {
+    expect(rotationVector([1, 0, 0, 0])).toEqual([0, 0, 0]);
+  });
+
+  it("⛔ it always takes the SHORT way — a 350° turn is a −10° turn", () => {
+    const r = rotationVector(qFromAxisAngle([0, 0, 1], (350 * Math.PI) / 180));
+    expect(Math.hypot(r[0], r[1], r[2])).toBeLessThan(Math.PI);
+    expect(r[2]).toBeLessThan(0);
+  });
+
+  it("turnDegrees3 is the angle between two axes, and 0 for a zero vector", () => {
+    expect(turnDegrees3([1, 0, 0], [1, 0, 0])).toBeCloseTo(0, 9);
+    expect(turnDegrees3([1, 0, 0], [-1, 0, 0])).toBeCloseTo(180, 9);
+    expect(turnDegrees3([0, 0, 0], [1, 0, 0])).toBe(0);
   });
 });

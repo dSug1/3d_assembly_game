@@ -63,7 +63,9 @@ import {
   SwayWatcher,
   swayScale,
   swayWorldDirection,
+  SpinSwayWatcher,
   type SwayKick,
+  type SpinSwayKick,
   type FollowState,
   Recognizer,
   TapHistory,
@@ -74,7 +76,7 @@ import {
   type Sample,
   type ScreenFrame,
 } from "../input";
-import type { Quat, Vec3 } from "../core/vec";
+import { qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "../core/vec";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
 import { validateGestureConfig } from "../input/gestureConfig";
@@ -179,6 +181,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // object results; nothing keeps a second copy. See input/config_override.ts.
   const tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
   const cfg = tuning.config;
+  /**
+   * ⭐⭐ ONE history for EVERY touchpoint, on an object or not.
+   * ⛔ It was briefly two, so that a tap on a part and a tap beside it could not fuse.
+   * The owner overruled it: *"no discrimination inside or outside any object"* — and the
+   * case that settles it is the one that motivated the reset in the first place. When
+   * the camera is stuck close in, an object FILLS THE SCREEN: there is nowhere left to
+   * tap that is outside one, so a camera reset that only listened outside would be
+   * unreachable exactly when it is needed. ⚠ With one history a double-tap that straddles
+   * an object's edge still counts, which is what a hand meant by it.
+   */
   const taps = new TapHistory(cfg);
   interface Held {
     rec: Recognizer<DiagnosticPose>;
@@ -217,6 +229,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * speed estimate over a stated window, so this file does not invent a second one.
      */
     sway: SwayWatcher;
+    /** The same, for ROTATION — see `input/sway.ts`'s `SpinSwayWatcher`. */
+    spinSway: SpinSwayWatcher;
   }
   /**
    * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
@@ -264,6 +278,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     swayX: FollowState;
     swayY: FollowState;
     swayZ: FollowState;
+    /**
+     * ⭐ THE ROTATIONAL SWAY, as a rotation VECTOR sprung back to zero — three scalar
+     * springs on its components. ⛔ A vector and not an angle-about-a-fixed-axis: two
+     * kicks on different axes then superpose correctly, which they cannot if the state
+     * is one angle and the axis gets overwritten. ⚠ Superposition is exact only for
+     * small rotations, which these are by construction.
+     */
+    swayRotX: FollowState;
+    swayRotY: FollowState;
+    swayRotZ: FollowState;
+    /** What the block swings AROUND: the held object's centre, captured at the kick. */
+    swayPivot: Vector3;
+    /**
+     * The orientation this object would have with no sway at all. ⛔ Kept because the
+     * sway is applied ON TOP every frame; reading the mesh back would compound it.
+     */
+    qHome: Quat;
   }
   const followers = new Map<AbstractMesh, Follow>();
 
@@ -281,6 +312,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         swayX: { x: 0, v: 0 },
         swayY: { x: 0, v: 0 },
         swayZ: { x: 0, v: 0 },
+        swayRotX: { x: 0, v: 0 },
+        swayRotY: { x: 0, v: 0 },
+        swayRotZ: { x: 0, v: 0 },
+        swayPivot: p.clone(),
+        qHome: readPose(mesh),
       };
       followers.set(mesh, f);
     }
@@ -297,13 +333,29 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // between two different mappings mid-gesture. ⭐ `IN2` now owns that latch.
   const pinch = new PinchTracker(cfg);
 
+  /**
+   * An orbit centre chosen but NOT YET COMMITTED — see `orbitCentreGraceMs`.
+   * ⛔ Resolved in the RENDER LOOP rather than by a timer: the loop is already running,
+   * a frame is the granularity anything visible happens at, and there is no callback to
+   * cancel, leak, or fire after the scene is gone.
+   */
+  let pendingCentre: { x: number; y: number; at: number } | null = null;
+
   // ─────────────────────────────────────────────────────────────────
   // §2 RULE 1 — ORBIT, for ONE touchpoint that hits nothing.
   //
   // ⛔⛔ OWNER'S AMENDMENT: driven by DELTA POSITION, not device tilt. The spec has
   // touch as a clutch for a tilt-orbit and says its delta is unused; the owner
   // changed that deliberately. See `Claude/00_CORE/queue_notes/IN9.md`.
-  const orbit = new OrbitController(cfg, -Math.PI / 2, 0.62);
+  /**
+   * ⭐ WHERE THE CAMERA LAUNCHES, and therefore what a double-tap outside any object
+   * resets it to. ⛔ Named once and used twice — a reset that drifted from the start
+   * state would be the same defect as a debug constant living in two places (`L1`).
+   */
+  const ORBIT_START_YAW_RAD = -Math.PI / 2;
+  const ORBIT_START_ELEVATION = 0.62;
+  const ORBIT_START_CENTRE_M: Vec3 = [0, 0, 0];
+  const orbit = new OrbitController(cfg, ORBIT_START_YAW_RAD, ORBIT_START_ELEVATION);
   // ⭐ ONE zoom scalar, shared. Pinch scales the whole orbit SURFACE rather than
   // setting a radius directly, so rule 1 and rule 4 compose instead of fighting over
   // the same number. `1` is the rings as configured.
@@ -312,7 +364,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
-  const centreBlend = new OrbitCentreBlend(cfg, [0, 0, 0]);
+  const centreBlend = new OrbitCentreBlend(cfg, ORBIT_START_CENTRE_M);
   let orbitCentreM: Vector3 = Vector3.Zero();
 
   /**
@@ -362,6 +414,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /** Put the camera where the rig surface says, clamped away from the near plane. */
+  /**
+   * §1.3's DOUBLE-TAP outside any object: put the camera back where it launched.
+   * ⛔ Everything that defines the view — yaw, elevation, zoom AND the orbit centre.
+   * Resetting the angles but leaving the centre where a barycentre had moved it would
+   * give a "default" view of somewhere the camera has never been.
+   */
+  const resetCamera = () => {
+    orbit.reset(ORBIT_START_YAW_RAD, ORBIT_START_ELEVATION);
+    zoom = 1;
+    zoomAtPinchStart = 1;
+    centreBlend.snapTo(ORBIT_START_CENTRE_M);
+    // ⚠ Any centre still waiting out its grace is dropped: it was chosen for a gesture
+    // that has turned out to be a reset.
+    pendingCentre = null;
+    syncCentre();
+    applyCamera();
+  };
+
   const applyCamera = () => {
     const pose = orbit.pose(zoom);
     // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
@@ -548,6 +618,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
         // ⭐ 1 is direct manipulation — the cube turns as far as the finger swept.
         tunable("roll gain (x swept)", "gainRoll", 0.1, 3, 0.05),
+        // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
+        // object's centre when it starts turning or turns the other way.
+        tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
+        tunable("sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
+        tunable("sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
+        tunable("sway reference turn (deg/s)", "rotateSwayReferenceDegPerS", 20, 400, 10),
       ],
     },
     {
@@ -601,6 +677,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
         // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
         tunable("centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
+        // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
+        // whether this is an orbit or the start of a pinch. 0 commits immediately.
+        tunable("centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
         // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
         // per pixel — a pixel means something different on a phone and a tablet.
         tunable("yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
@@ -672,6 +751,37 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
   };
 
+  /**
+   * Swing every OTHER object as a BLOCK about the held object's centre, on the axis it
+   * has just started turning about.
+   *
+   * ⛔ Every object gets the SAME pivot and the SAME impulse, which is what makes it a
+   * block rather than a crowd: each one orbits the held object's centre and spins by the
+   * same angle, so their relative geometry is preserved through the whole swing.
+   * ⚠ Their own distance from the pivot is what makes it read as rotation — an object
+   * far from the pivot travels further, exactly as a rigid body does.
+   */
+  const spinOthers = (grip: Held, kick: SpinSwayKick): void => {
+    const scale = swayScale(kick.degPerS, cfg.rotateSwayReferenceDegPerS);
+    const peakRad = (cfg.rotateSwayDeg * Math.PI) / 180 * scale;
+    const impulse = impulseForPeak(peakRad, cfg.rotateSwayTauMs / 1000);
+    if (!(impulse > 0)) return;
+
+    const pivot = grip.mesh.position;
+    for (const mesh of scene.meshes) {
+      if (mesh.metadata?.orbitCandidate !== true) continue;
+      if (mesh === grip.mesh) continue;
+      const f = followerFor(mesh);
+      // ⚠ The pivot is captured per kick and shared by the block. A kick arriving while
+      // an older one is still decaying moves the pivot; for the sub-degree swings this
+      // produces, the difference is second-order and invisible.
+      f.swayPivot.copyFrom(pivot);
+      f.swayRotX = { x: f.swayRotX.x, v: f.swayRotX.v + kick.axis[0] * impulse };
+      f.swayRotY = { x: f.swayRotY.x, v: f.swayRotY.v + kick.axis[1] * impulse };
+      f.swayRotZ = { x: f.swayRotZ.x, v: f.swayRotZ.v + kick.axis[2] * impulse };
+    }
+  };
+
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
     x: e.clientX,
     y: e.clientY,
@@ -720,7 +830,26 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (routed.role === "OUTSIDE") {
         // ⭐ Rule 1 chooses what to orbit AROUND at press, from the ray of the finger
         // that started it — so the centre cannot wander mid-drag as the ray moves.
-        if (router.outside().length === 1) recomputeOrbitCentre(e);
+        // ⛔⛔ AND ONLY IF NOTHING IS BEING HELD. A touchpoint outside an object while a
+        // finger is already ON one is rule 6's ANCHOR, not an orbit — §2 rule 1 requires
+        // ONE touchpoint and no hit. Choosing a barycentre for it would move the marker
+        // and retarget the camera for a gesture that will never orbit at all.
+        if (router.outside().length === 1 && router.objects().length === 0) {
+          // ⭐⭐ DEFERRED, NOT IMMEDIATE. A second touchpoint outside any object turns
+          // this into a PINCH (rule 4), and the two never land in the same instant — so
+          // committing a new orbit centre on the first one moves the marker and
+          // retargets the camera for a gesture the user meant as a zoom.
+          // ⚠ The PRESS coordinates are kept, not re-read later: rule 1 chooses what to
+          // orbit around from the ray of the finger that STARTED it, and a finger that
+          // has drifted 120 ms' worth would choose a different barycentre.
+          pendingCentre =
+            cfg.orbitCentreGraceMs > 0 ? { x: e.clientX, y: e.clientY, at: s.t } : null;
+          if (!pendingCentre) recomputeOrbitCentre(e);
+        } else {
+          // ⛔ A SECOND ONE ARRIVED: this is a pinch. Drop the pending retarget entirely
+          // — the camera keeps orbiting whatever it was already orbiting.
+          pendingCentre = null;
+        }
         const p = pinchPair();
         if (p) {
           pinch.begin(p[0], p[1]);
@@ -744,6 +873,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         lastRollDeg: 0,
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
+        // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
+        // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
+        // of orientation noise per sample. Measured over 10 s of a still finger that is
+        // still reported MOVING: ×1 → 377 false kicks, ×1.5 → 135, ×2 → 14, **×3 → 0**.
+        // ⚠ The cost is the slowest turn that can still register — 92°/s at ×3, which is
+        // a quarter turn a second, an ordinary rotation.
+        spinSway: new SpinSwayWatcher(
+          cfg.rotateSwayTurnDeg,
+          3 * cfg.gainRotateFree * cfg.pointerNoiseMm * (180 / Math.PI),
+        ),
       });
       paint();
       return;
@@ -785,10 +924,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           applyCamera();
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {
+        // ⭐⭐ DOUBLE-TAP OUTSIDE ANY OBJECT RESETS THE CAMERA. ⛔ Judged BEFORE the
+        // release, while the router still knows where this touchpoint pressed: §1.3
+        // measures a tap by its own press, not by whatever the last event happened to be.
+        // ⚠ The SAME two thresholds §1.3 uses for an object — a tap is a tap whatever it
+        // lands on, and a second definition here could disagree with the first.
+        const wasTap =
+          s.t - routed.pressed.t <= cfg.tapMaxDuration &&
+          Math.hypot(s.x - routed.pressed.x, s.y - routed.pressed.y) <=
+            mmToPx(cfg.doubleTapSlop);
         router.release(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         pinch.end();
+        if (wasTap && taps.record(routed.pressed, s.t) === "DOUBLE_TAP") {
+          resetCamera();
+          lastVerdict = "DOUBLE_TAP → camera reset";
+        }
       }
       paint();
       return;
@@ -884,6 +1036,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           );
         }
       }
+      // ⭐⭐ THE ROTATIONAL SWAY. Same shape as the translational one: it fires when the
+      // object STARTS turning and whenever the turn AXIS swings by more than
+      // `rotateSwayTurnDeg` — a reversal being a 180° axis change.
+      if (grip.mode === "ROTATE") {
+        const home = readPose(grip.mesh);
+        // ⛔ The held object's own pose is the truth here, so its follower's `qHome` has
+        // to track it — otherwise the render loop would fight the rotation rule.
+        followerFor(grip.mesh).qHome = home;
+        const spin = grip.spinSway.push(home, s.t, true);
+        if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
+      } else {
+        grip.spinSway.push(readPose(grip.mesh), s.t, false);
+      }
+
       grip.lastRollDeg = grip.rec.rollAppliedDeg;
       grip.prev = s;
       paint();
@@ -894,7 +1060,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
       // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
-      lastVerdict = describe(grip.rec.release(s));
+      const verdict = grip.rec.release(s);
+      lastVerdict = describe(verdict);
+      // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
+      // orbit can get stuck close in with an object filling the view, and then every tap
+      // lands ON something — a reset that only listened to empty space would be
+      // unreachable precisely when it is wanted.
+      // ⚠⚠ THIS COLLIDES WITH §1.4, and the collision is real rather than hypothetical:
+      // the spec makes a double-tap the ONLY way a constraint is ever evicted, and that
+      // is `IN3`'s job. When `IN3` lands, one of the two has to give — either the same
+      // double-tap does both, or the reset moves to a gesture of its own. Recorded here
+      // and in `queue_notes/IN3.md` so it is decided rather than discovered.
+      if (verdict.kind === "DOUBLE_TAP") {
+        resetCamera();
+        lastVerdict = "DOUBLE_TAP → camera reset";
+      }
       router.release(e.pointerId);
       held.delete(e.pointerId);
       paint();
@@ -914,7 +1094,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally
     // stable, so a stalled frame simply arrives rather than exploding.
+    // ⭐ The deferred orbit centre, committed once its grace has passed with no second
+    // touchpoint outside. ⚠ `router.outside().length` is re-checked here and not only at
+    // press: a finger could have arrived and left again within the window.
+    if (pendingCentre !== null && now - pendingCentre.at >= cfg.orbitCentreGraceMs) {
+      const p = pendingCentre;
+      pendingCentre = null;
+      // ⚠ BOTH conditions re-checked at commit time, not only at press: within the grace
+      // a second finger could have arrived and left, or a finger could have landed on an
+      // object and turned the whole gesture into a translation.
+      if (router.outside().length === 1 && router.objects().length === 0) {
+        recomputeOrbitCentre({ clientX: p.x, clientY: p.y });
+      }
+    }
+
     const tauSec = cfg.translateInertiaMs / 1000;
+    // ⚠ A mesh under a finger owns its own pose this frame — the rotation rule writes it
+    // directly — so the sway must not write over it on the way past.
+    const heldMeshes = new Set([...held.values()].map((h) => h.mesh));
     for (const [mesh, f] of followers) {
       const zeta = cfg.translateDampingRatio;
       const leadSec = cfg.translateLeadMs / 1000;
@@ -938,7 +1135,42 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       f.swayX = advanceFollow(f.swayX, 0, swayTau, 1, dtSec);
       f.swayY = advanceFollow(f.swayY, 0, swayTau, 1, dtSec);
       f.swayZ = advanceFollow(f.swayZ, 0, swayTau, 1, dtSec);
-      mesh.position.set(f.x.x + f.swayX.x, f.y.x + f.swayY.x, f.z.x + f.swayZ.x);
+      f.swayRotX = advanceFollow(f.swayRotX, 0, swayTau, 1, dtSec);
+      f.swayRotY = advanceFollow(f.swayRotY, 0, swayTau, 1, dtSec);
+      f.swayRotZ = advanceFollow(f.swayRotZ, 0, swayTau, 1, dtSec);
+
+      // ⭐ The block's swing, as a rotation about the pivot. ⛔ RIGID: the object both
+      // ORBITS the pivot and SPINS on its own by the same angle. Orbiting alone would
+      // shear the group — things sliding past one another rather than one scene moving.
+      const rot: Vec3 = [f.swayRotX.x, f.swayRotY.x, f.swayRotZ.x];
+      const rotAngle = Math.hypot(rot[0], rot[1], rot[2]);
+      let ox = 0;
+      let oy = 0;
+      let oz = 0;
+      if (rotAngle > 1e-9) {
+        const swayQ = qFromAxisAngle(rot, rotAngle);
+        const rel: Vec3 = [
+          f.x.x - f.swayPivot.x,
+          f.y.x - f.swayPivot.y,
+          f.z.x - f.swayPivot.z,
+        ];
+        const spun = qRotate(swayQ, rel);
+        // The ORBITAL part is the displacement the rotation causes, added like any other
+        // offset — so it composes with the translational sway instead of fighting it.
+        ox = spun[0] - rel[0];
+        oy = spun[1] - rel[1];
+        oz = spun[2] - rel[2];
+        writePose(mesh, qmul(swayQ, f.qHome));
+      } else if (!heldMeshes.has(mesh)) {
+        // ⚠ Written back even at rest: otherwise the last swayed pose would stick.
+        writePose(mesh, f.qHome);
+      }
+
+      mesh.position.set(
+        f.x.x + f.swayX.x + ox,
+        f.y.x + f.swayY.x + oy,
+        f.z.x + f.swayZ.x + oz,
+      );
     }
 
     scene.render();

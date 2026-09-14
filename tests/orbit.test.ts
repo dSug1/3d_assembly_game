@@ -403,3 +403,47 @@ describe("⭐ the chosen centre is readable immediately", () => {
     expect(b.centreM).toEqual(b.targetM);
   });
 });
+
+/**
+ * ⭐ THE CAMERA RESET — §1.3's double-tap outside any object.
+ * ⛔ Getting lost is easy: yaw wraps without limit while the elevation is clamped to its
+ * rings, so "spin back the way I came" is not something a hand can reliably do. The
+ * reset is the way out, which means it has to put back EVERYTHING that defines the view.
+ */
+describe("resetting the orbit", () => {
+  it("⭐ puts yaw and elevation back exactly", () => {
+    const o = new OrbitController(DEFAULT_CONFIG, -Math.PI / 2, 0.62);
+    o.drag(500, -400);
+    o.drag(900, 300);
+    expect(o.yaw).not.toBeCloseTo(-Math.PI / 2, 6);
+    o.reset(-Math.PI / 2, 0.62);
+    expect(o.yaw).toBeCloseTo(-Math.PI / 2, 12);
+    expect(o.elevation).toBeCloseTo(0.62, 12);
+  });
+
+  it("⛔ the elevation is still CLAMPED on reset — no way in past the rings", () => {
+    // ⚠ A reset is not a back door: `v` outside [0,1] would put the camera beyond the
+    // top or bottom ring, which is the one thing the whole surface exists to prevent.
+    const o = new OrbitController(DEFAULT_CONFIG, 0, 0.5);
+    o.reset(0, 4);
+    expect(o.elevation).toBe(1);
+    o.reset(0, -3);
+    expect(o.elevation).toBe(0);
+  });
+
+  it("⭐ snapTo leaves the centre there with NO blend left to run", () => {
+    // ⛔ A blend is driven by finger TRAVEL, and a double-tap supplies none — a reset
+    // that eased would simply never arrive.
+    const b = new OrbitCentreBlend(DEFAULT_CONFIG, [0, 0, 0]);
+    b.retarget([1, 2, 3]);
+    b.advance(5);
+    expect(b.isBlending).toBe(true);
+    b.snapTo([0, 0, 0]);
+    expect(b.centreM).toEqual([0, 0, 0]);
+    expect(b.targetM).toEqual([0, 0, 0]);
+    expect(b.isBlending).toBe(false);
+    // …and it stays there however far a later gesture travels.
+    b.advance(500);
+    expect(b.centreM).toEqual([0, 0, 0]);
+  });
+});

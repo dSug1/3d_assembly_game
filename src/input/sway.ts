@@ -23,7 +23,7 @@
  * ⛔ ENGINE-FREE, and it decides nothing about what the sway looks like: it says WHEN and
  * HOW HARD, and `follow.ts`'s `impulseForPeak` says what that does.
  */
-import type { Vec3 } from "../core/vec";
+import { canon, qconj, qmul, type Quat, type Vec3 } from "../core/vec";
 import { pxToMm } from "../core/units";
 import type { ScreenFrame } from "./screen_rotate";
 import type { Sample } from "./motion";
@@ -215,4 +215,110 @@ export class SwayWatcher {
     this.hasKicked = true;
     return { dirX: dxMm / travel, dirY: dyMm / travel, speedMmPerS: travel / dtSec };
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE SAME EFFECT FOR ROTATION.
+//
+// ⭐⭐ When the held object starts turning, or turns the OTHER way, the rest of the scene
+// swings with it — as a BLOCK, rigidly, about the held object's own centre and about the
+// axis it is turning on. ⛔ Rigidly means each object both ORBITS the pivot and spins on
+// its own by the same angle; orbiting alone would shear the group, which reads as things
+// sliding past each other rather than as one scene reacting.
+
+/**
+ * The rotation vector of `q` — axis × angle, radians. ⚠ Canonical first, so it is always
+ * the SHORT way round: a 350° turn is a −10° turn, and nothing here should ever be told
+ * the scene swung most of a revolution.
+ */
+export function rotationVector(q: Quat): Vec3 {
+  const [w, x, y, z] = canon(q);
+  const s = Math.sqrt(x * x + y * y + z * z);
+  // ⛔ At the identity the axis is UNDEFINED, not small. Zero is the correct limit, and
+  // it avoids the 0/0 — an object that is being tracked perfectly sits here every frame.
+  if (s < 1e-12) return [0, 0, 0];
+  const angle = 2 * Math.atan2(s, w);
+  return [(x / s) * angle, (y / s) * angle, (z / s) * angle];
+}
+
+export interface SpinSwayKick {
+  /** Unit axis the held object is turning about, world frame, right-handed. */
+  readonly axis: Vec3;
+  /** How fast it is turning, degrees per second, over the measured window. */
+  readonly degPerS: number;
+}
+
+/**
+ * The rotation window is LONGER than the translation one.
+ * ⛔ Because rotation's noise is worse: pointer jitter reaches the pose multiplied by
+ * `gainRotateFree`, so the device's measured 0.761 mm becomes about 3° of orientation
+ * noise per sample. A 60 ms window would be asking a ~4° noise floor to resolve the 5°
+ * a slow deliberate turn covers. ⚠ 100 ms costs a little latency on a reversal and buys
+ * the signal-to-noise back.
+ */
+const SPIN_WINDOW_MS = 100;
+
+export class SpinSwayWatcher {
+  private readonly window: { q: Quat; t: number }[] = [];
+  private wasTurning = false;
+  private kicked: Vec3 = [0, 0, 0];
+  private hasKicked = false;
+  private armed = false;
+
+  /**
+   * @param turnDeg      how far the AXIS must swing before the scene reacts again. ⚠ A
+   *   reversal is a 180° axis change, so anything under that catches a change of hand.
+   * @param minTravelDeg how much the object must actually have turned across the window
+   *   before a direction is claimed. ⭐ Derived by the caller from the MEASURED pointer
+   *   noise and the rotation gain — it is a property of the glass, not a preference.
+   */
+  constructor(
+    private readonly turnDeg: number,
+    private readonly minTravelDeg: number,
+  ) {}
+
+  /**
+   * @param q       the object's orientation this frame.
+   * @param turning whether the gesture is currently rotating at all.
+   */
+  push(q: Quat, t: number, turning: boolean): SpinSwayKick | null {
+    this.window.push({ q, t });
+    while (this.window.length > 1 && t - this.window[0]!.t > SPIN_WINDOW_MS) {
+      this.window.shift();
+    }
+
+    if (turning && !this.wasTurning) this.armed = true;
+    this.wasTurning = turning;
+    if (!turning) return null;
+
+    const first = this.window[0]!;
+    const dtSec = (t - first.t) / 1000;
+    if (!(dtSec > 0)) return null;
+
+    // The NET rotation across the window, not a sum of steps: a hand that wobbled out
+    // and back has gone nowhere, and should not be read as having turned twice.
+    const net = rotationVector(qmul(q, qconj(first.q)));
+    const angle = Math.hypot(net[0], net[1], net[2]);
+    const deg = (angle * 180) / Math.PI;
+    if (!(deg > this.minTravelDeg)) return null;
+
+    const axis: Vec3 = [net[0] / angle, net[1] / angle, net[2] / angle];
+    const turned =
+      this.hasKicked && turnDegrees3(axis, this.kicked) > this.turnDeg;
+    if (!this.armed && !turned) return null;
+    this.armed = false;
+
+    this.kicked = axis;
+    this.hasKicked = true;
+    return { axis, degPerS: deg / dtSec };
+  }
+}
+
+/** Degrees between two 3-vectors. ⚠ Zero for a zero vector, never a NaN. */
+export function turnDegrees3(a: Vec3, b: Vec3): number {
+  const la = Math.hypot(a[0], a[1], a[2]);
+  const lb = Math.hypot(b[0], b[1], b[2]);
+  if (!(la > 0) || !(lb > 0)) return 0;
+  const cos = Math.min(1, Math.max(-1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb)));
+  return (Math.acos(cos) * 180) / Math.PI;
 }
