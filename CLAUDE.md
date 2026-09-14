@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-14)
 
-✅ Green: TypeScript + Babylon + Vite, **277 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **307 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -97,5 +97,8 @@ FACE centres, which is exactly what `3D1` owns.
 **Compute what one millimetre of finger does at BOTH zoom extremes before writing the
 gain.** That is mistake shape 4's exact territory.
 ⚠ `3D1` is still the last thing before actual assembly.
+
+⭐ **What a finger can already do, by touchpoint configuration**:
+[`Claude/10_INPUT_TOUCH/spec/BUILT_INVENTORY.md`](Claude/10_INPUT_TOUCH/spec/BUILT_INVENTORY.md).
 
 Full status: [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block.

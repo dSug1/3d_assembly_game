@@ -113,6 +113,64 @@ export interface GestureConfig {
    * written before this existed was measured against.
    */
   translateLeadMs: number;
+  /**
+   * mm ON THE SCREEN — how far every OTHER object drifts **the same way as** the held one
+   * when it starts, resumes or turns, before springing back to exactly where it was.
+   * ⚠ Alongside, not against. It was built opposite for one round on a request that was
+   * then corrected; the sign lives in `swayWorldDirection` and nowhere else.
+   * ⭐⭐ THE SCENE REACTS INSTEAD OF STANDING FROZEN around the one thing that moves.
+   * ⛔ Screen millimetres, not world metres, and converted through the SAME tracking
+   * factor rule 6 uses (`input/translate.ts`) — so the sway is the same size to the eye
+   * whatever the zoom. A world-metre amplitude would vanish zoomed out and swamp the
+   * scene zoomed in. ⚠ Rule 3 of the project: thresholds are millimetres on the glass.
+   * ⛔ `0` disables it exactly.
+   */
+  translateSwayMm: number;
+  /**
+   * ms — the softness of that spring: its time constant, and also exactly when the drift
+   * reaches its peak (see `impulseForPeak`). Bigger is slower and lazier.
+   * ⚠ IT HAS ITS OWN SLIDER EVEN THOUGH ONLY ONE WAS ASKED FOR, and the reason is this
+   * project's own record: **every guessed number here has been wrong** — four gains moved
+   * by a hand, a simulated recommendation halved, a computed landmark rejected. A
+   * softness nobody can reach is a softness that stays at my guess.
+   */
+  translateSwayTauMs: number;
+  /**
+   * degrees — how far a drag must swing before the scene reacts AGAIN, mid-drag.
+   * ⛔ Without this the sway fired only when the finger started moving, and
+   * `motionState` does not fall back to STATIONARY until 150 ms below 6 mm/s — so a hand
+   * reversing at speed never went still and the scene sat frozen through the whole
+   * shake. ⚠ Found by finger, not by a suite.
+   */
+  swayTurnDeg: number;
+  /**
+   * mm/s — the drag speed at which `translateSwayMm` is the amplitude you get.
+   * ⭐⭐ THE SWAY SCALES WITH HOW FAST THE OBJECT SETS OFF: the impulse is proportional
+   * to the drag speed, as a viscous coupling would be, so a slow drag nudges the scene
+   * gently and slowly while a fast one throws it further AND quicker — the excursion
+   * still peaks at `translateSwayTauMs`, so a bigger one covers that ground faster.
+   * ⚠ Clamped to ×0.3…×3 (`input/sway.ts`): a flick reaches twenty times this and would
+   * otherwise fling the rest of the scene across the view.
+   */
+  swayReferenceSpeedMmPerS: number;
+  /**
+   * degrees — how far the rest of the scene swings when the held object starts turning
+   * or turns the other way, before springing back.
+   * ⭐⭐ AS A BLOCK, rigidly: every other object ORBITS the held object's centre and
+   * SPINS on its own by the same angle, about the axis the held object is turning on.
+   * ⛔ Orbiting without spinning would shear the group — things sliding past each other
+   * rather than one scene reacting.
+   */
+  rotateSwayDeg: number;
+  /** ms — the softness of that spring, and when the swing peaks. */
+  rotateSwayTauMs: number;
+  /**
+   * degrees — how far the rotation AXIS must swing before the scene reacts again.
+   * ⚠ A reversal is a 180° axis change, so anything below that catches a change of hand.
+   */
+  rotateSwayTurnDeg: number;
+  /** degrees/s — the turn rate at which `rotateSwayDeg` is the amplitude you get. */
+  rotateSwayReferenceDegPerS: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
   gainTranslateMutual: number;
@@ -297,6 +355,19 @@ export interface GestureConfig {
    * position"*. ⚠ `0` is legal and reproduces the old jump, for an A/B.
    */
   orbitBlendDistanceMm: number;
+  /**
+   * ms — how long §2 rule 1 WAITS before committing to a new orbit centre, in case a
+   * second touchpoint is on its way down outside any object.
+   * ⭐⭐ TWO FINGERS OUTSIDE IS A PINCH (rule 4), NOT AN ORBIT. They never land at the
+   * same instant, so the first one arriving alone is indistinguishable from the start of
+   * an orbit — and rule 1 would pick a barycentre, move the marker and retarget the
+   * camera for a gesture the user meant as a zoom. ⚠ Waiting a beat costs nothing: the
+   * centre blend takes 30 mm of finger travel anyway, so a retarget deferred by a tenth
+   * of a second is invisible.
+   * ⛔ `0` commits immediately — the behaviour before this existed, and the only setting
+   * where a press and a retarget are the same event.
+   */
+  orbitCentreGraceMs: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -365,6 +436,32 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ The HUD prints `lead <set>/<neutral>` so the landmark stays visible as the other
   // two sliders move it.
   translateLeadMs: 0.2,
+  // ⭐ 0.8 mm CHOSEN ON THE DEVICE — and it lands almost exactly on the measured pointer
+  // noise (0.761 mm), so at an ordinary drag speed the other objects move by about as
+  // much as the digitiser's own jitter. ⚠ That is not a coincidence worth reading too
+  // much into, but it does say the effect is meant to be felt rather than seen: the
+  // ×0.3…×4.5 speed scaling is what makes it visible on a fast drag.
+  translateSwayMm: 0.8,
+  // ⚠ Still a guess, with a slider.
+  translateSwayTauMs: 180,
+  // ⚠ Guesses, both with sliders. 50° is "a deliberate change of heading, not a wobble";
+  // 120 mm/s is an ordinary drag — the owner's existing amplitude was judged right at
+  // *"medium translation velocities"*, so that is the speed it is anchored to.
+  swayTurnDeg: 50,
+  swayReferenceSpeedMmPerS: 120,
+  // ⭐ CHOSEN ON THE DEVICE, over two passes. The amplitude ended at a QUARTER of my
+  // guess (1.2° → 0.45° → 0.3°) — the swing wanted to be barely there.
+  // ⭐ And the reference landed at 90°/s, which is where the NOISE FLOOR puts the
+  // slowest turn that can register at all (92°/s): so the gentlest turn that fires does
+  // so at about ×1, and the scaling runs upward from the nominal amplitude rather than
+  // starting part-way up it. ⚠ That alignment is worth keeping if either number moves.
+  rotateSwayDeg: 0.3,
+  rotateSwayReferenceDegPerS: 90,
+  // ⚠ Still guesses, with sliders.
+  rotateSwayTauMs: 180,
+  // ⛔ 60° for the re-trigger, NOT 170°: yaw and pitch change axis continuously as a
+  // hand curves, so only a reversal would ever register at a near-180° threshold.
+  rotateSwayTurnDeg: 60,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,
@@ -455,6 +552,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitTopHeightM: 0.55,
   // ⭐ Chosen on the device by the owner, 2026-09-14. ⚠ `0` reproduces the old jump.
   orbitBlendDistanceMm: 30,
+  // ⚠ A GUESS, with a slider. Two fingers of one hand land within roughly 30–80 ms of
+  // each other; 120 covers that with margin without being long enough to notice.
+  orbitCentreGraceMs: 120,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to

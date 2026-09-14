@@ -200,6 +200,20 @@ export class OrbitController {
     this.v = Math.min(1, Math.max(0, startV));
   }
 
+  /**
+   * ⭐ Back to where the camera launched. §1.3's DOUBLE-TAP outside any object is the way
+   * out of a view you have got lost in — and getting lost is easy, because yaw wraps
+   * without limit while the elevation is clamped to its rings, so "spin back the way I
+   * came" is not a thing a hand can reliably do.
+   * ⛔ It snaps rather than blends. A blend is driven by finger TRAVEL (see
+   * `OrbitCentreBlend`), and a double-tap supplies none — a reset that eased would
+   * simply never arrive.
+   */
+  reset(yawRad: number, v: number): void {
+    this.yawRad = yawRad;
+    this.v = Math.min(1, Math.max(0, v));
+  }
+
   get yaw(): number {
     return this.yawRad;
   }
@@ -323,6 +337,20 @@ export class OrbitCentreBlend {
   ) {
     this.fromM = startM;
     this.toM = startM;
+  }
+
+  /**
+   * Put the centre somewhere with NO blend — both ends of the interpolation at once.
+   * ⭐ For a reset, where there is no finger travel to drive a blend with.
+   */
+  snapTo(centreM: Vec3): void {
+    this.fromM = centreM;
+    this.toM = centreM;
+    // ⚠ The counter is left SPENT, not rewound. `isBlending` asks whether the travel
+    // budget has run out, not whether the centre is actually moving — so a rewound
+    // counter would have the readout announcing a blend that is going nowhere, which is
+    // exactly the kind of instrument that describes itself rather than the scene.
+    this.travelledMm = this.cfg.orbitBlendDistanceMm;
   }
 
   /** ⭐ Eased, so the centre neither starts nor arrives with a velocity step. */

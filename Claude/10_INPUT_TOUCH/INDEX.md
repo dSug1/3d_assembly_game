@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**277 golden vectors, all passing** (37 → 219).
+**307 golden vectors, all passing** (37 → 219).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -283,6 +283,7 @@ written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PART
 
 | you want to… | read |
 |---|---|
+| **what a finger can ALREADY do** | ⭐ [`spec/BUILT_INVENTORY.md`](spec/BUILT_INVENTORY.md) — the inventory by touchpoint configuration, what is built, what is blocked, and the two behaviours with no spec clause behind them |
 | **any gesture rule** | [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md) — and mind the section numbers, they are referenced from code |
 | know why a threshold is in mm | [`../00_CORE/CONSTRAINTS.md`](../00_CORE/CONSTRAINTS.md) §6 |
 | change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place**. ⭐ To try one *without a rebuild*: `?rollAngle=45` on the URL, or the on-screen menu for the orbit rings |

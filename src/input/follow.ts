@@ -141,3 +141,26 @@ export function advanceFollow(
 export function isSettled(state: FollowState, target: number, epsilon: number): boolean {
   return Math.abs(state.x - target) < epsilon && Math.abs(state.v) < epsilon;
 }
+
+/**
+ * The velocity kick that makes a follower at rest swing out to `peak` and come back.
+ *
+ * ⭐⭐ THE SYMPATHETIC SWAY. When the held object starts moving, every OTHER object is
+ * nudged the same way and springs home — so the scene reacts instead of standing frozen
+ * around the one thing that moves.
+ *
+ * ⛔ A VELOCITY, NOT A DISPLACEMENT. Setting the offset to `peak` outright would be a
+ * JUMP, which is the opposite of subtle; kicking the velocity makes the object drift out
+ * and ease back, which is what a soft spring does and what was asked for.
+ *
+ * ⚠ Critically damped, from rest at the origin, the response to a kick is
+ * `x(t) = v₀·t·e^(−t/τ)`, whose maximum is at `t = τ` and equals `v₀·τ/e`. So the kick
+ * for a wanted peak is `v₀ = peak·e/τ` — ⭐ closed form, so the slider's number IS the
+ * millimetres the other objects will move, not a coefficient that has to be discovered.
+ * ⚠ It is exact only at `ζ = 1`; softer or stiffer damping changes the peak, which is
+ * why the sway runs critically damped and only its amplitude and softness are tunable.
+ */
+export function impulseForPeak(peak: number, tauSec: number): number {
+  if (!(tauSec > 0) || !Number.isFinite(peak)) return 0;
+  return (peak * Math.E) / tauSec;
+}

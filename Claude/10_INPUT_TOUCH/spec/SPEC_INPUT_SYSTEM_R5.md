@@ -15,6 +15,12 @@ build already had to depart from it — go in
 ⚠ Section numbers (`§1.3`, `§6quater`, …) are referenced throughout the code and the
 queue. They are stable; do not renumber.
 
+⭐⭐ **WHAT OF THIS ACTUALLY EXISTS IS IN [`BUILT_INVENTORY.md`](BUILT_INVENTORY.md)** — an
+inventory by touchpoint configuration (one finger on an object, two outside, one of each,
+…), which rules are built, which are blocked and on what, and ⛔ **two behaviours that
+exist with no clause in this document behind them**. Read it before building an input
+rule: it is the only place that says what a finger can already do.
+
 <!-- VERBATIM-BEGIN -->
 # Input System — Revision 5
 

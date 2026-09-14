@@ -7,7 +7,12 @@
  * a numerical-integration problem when you are holding the device.
  */
 import { describe, expect, it } from "vitest";
-import { advanceFollow, isSettled, type FollowState } from "../src/input/follow";
+import {
+  advanceFollow,
+  impulseForPeak,
+  isSettled,
+  type FollowState,
+} from "../src/input/follow";
 
 const REST: FollowState = { x: 0, v: 0 };
 
@@ -242,5 +247,46 @@ describe("inertia — the damping ratio, and Unity's model", () => {
     expect(Math.abs(physx(1 / 30, 0.3) - physx(1 / 120, 0.3))).toBeGreaterThan(0.02);
     // Ours at the same two frame rates: identical to twelve places.
     expect(run(1, TAU, 0.3, 9, ZETA).x).toBeCloseTo(run(1, TAU, 0.3, 36, ZETA).x, 12);
+  });
+});
+
+describe("the sympathetic sway", () => {
+  it("⭐⭐ the kick peaks at EXACTLY the asked-for displacement", () => {
+    // ⛔ The property that makes the slider mean millimetres rather than coefficients.
+    for (const [peak, tau] of [
+      [2, 0.18],
+      [0.5, 0.3],
+      [8, 0.05],
+    ]) {
+      let s: FollowState = { x: 0, v: impulseForPeak(peak!, tau!) };
+      let high = 0;
+      const dt = 1 / 240;
+      for (let i = 0; i < 4000; i++) {
+        s = advanceFollow(s, 0, tau!, 1, dt);
+        high = Math.max(high, s.x);
+      }
+      expect(high).toBeCloseTo(peak!, 3);
+    }
+  });
+
+  it("⛔ it RETURNS to where it started, and does not overshoot the other way", () => {
+    // ⚠ "Before returning to their initial position" — an object that settled anywhere
+    // else would have silently moved the scene, and barycentres are computed from these
+    // positions.
+    let s: FollowState = { x: 0, v: impulseForPeak(3, 0.18) };
+    let low = 0;
+    for (let i = 0; i < 2000; i++) {
+      s = advanceFollow(s, 0, 0.18, 1, 1 / 240);
+      low = Math.min(low, s.x);
+    }
+    expect(low).toBeGreaterThanOrEqual(-1e-12); // ⛔ never crosses back past home
+    expect(s.x).toBeCloseTo(0, 9);
+    expect(s.v).toBeCloseTo(0, 9);
+  });
+
+  it("⛔ a zero or negative time constant yields no kick, not an infinity", () => {
+    expect(impulseForPeak(2, 0)).toBe(0);
+    expect(impulseForPeak(2, -1)).toBe(0);
+    expect(impulseForPeak(Number.NaN, 0.18)).toBe(0);
   });
 });
