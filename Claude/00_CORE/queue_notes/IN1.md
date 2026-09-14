@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built, green, **THREE device passes done — 6 defects found and
-> fixed; a FOURTH is owed, so NOT CLOSED** · **SUB** · IN
+> **STATUS** · ⚠ built, green, **FOUR device passes done — 7 defects found and
+> fixed, one change measured and REVERTED; a FIFTH is owed, so NOT CLOSED** · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -422,3 +422,88 @@ finger. ⚠ And the 1€ parameters are placeholders: the paper's own procedure 
 until fast movement stops lagging — **a device procedure, so an `IN5` row.**
 ⭐ `pointerNoiseMm` should be measured FIRST: hold a finger still and read the spread.
 Several thresholds are only defensible relative to it.
+
+---
+
+## 2026-09-14 (fourth pass) — ⭐⭐ THE REVERSAL, AND A REVERT
+
+Device: roll *"much better"*; then — *"when I roll in one direction and then roll in
+the other direction, there is a jump of the cube when I change the roll directions."*
+**112 → 114 golden vectors.**
+
+### ⛔⛔ It was not tuning. It was the WRONG QUANTITY, and it was mine
+
+For three device passes this file accumulated the **turning angle of the tangent**.
+Retrace an arc backwards and the tangent **flips 180° at the cusp**. Measured on a
+200° sweep reversed:
+
+| | |
+|---|---|
+| samples 41–52 | **frozen** — the cube stops responding entirely |
+| sample 53 | **+150° in one step** |
+| end | **180° off** — 200° out and 200° back should return to ~0 |
+
+⭐⭐ **The owner's §1.3 asked for the "angle accumulated about the centroid" all
+along. THE QUANTITY WAS RIGHT; only the estimator was wrong.** My earlier departure
+correctly rejected the centroid (an arc's centroid is at 0.955 R, essentially on the
+path) — but replacing it with the tangent's turning **silently changed what was being
+measured**, and reversals are where the two differ.
+
+✅ **Closed-form least-squares CIRCLE FIT (Kåsa, 1976 — textbook, no licence, no
+patent)** over the trailing path, and the roll is the angle swept about that centre.
+Retracing the same arc fits the **same circle**, so the centre holds still and the
+angle runs smoothly back down through zero. ⭐ Closed form, not a search — a numeric
+fit introduces a step size, and a step size is a threshold nobody measured.
+⭐ Worst single step: **150° → 5.0°**, which is the true step.
+
+### ⛔ Two defects the vectors then caught in the new estimator
+
+* **A fit with no RESIDUAL is not a test.** Kåsa returns *a* circle for any point set,
+  so accepting it on radius alone accepted paths that are not circular: a side-to-side
+  **wiggle committed as a roll**, and a straight drag after a circle took **35 mm** to
+  release instead of the 12 mm configured. ✅ The RMS residual is now judged against
+  `rollFitResidualSigmas × pointerNoiseMm` — tied to the same measurable device
+  property as the sagitta criterion, not to a free number.
+* **The span was measured as a CHORD from the oldest window point.** On a reversal the
+  finger comes back toward where the window began, so the chord **shrinks while the
+  fitted arc grows** — the span read as "too short", the roll released mid-gesture and
+  zeroed, a **35° jump at exactly the moment the reversal fix was meant to be smooth**.
+  ✅ Measured along the **path** now; divided by the radius that IS the angular extent,
+  which is what conditions a circle fit, and it cannot be inflated by a resting finger.
+
+### ⛔⛔ AND THE 1€ FILTER WAS REVERTED — the null result, kept
+
+Added one pass ago on a literature check, licence-cleared and correctly chosen for the
+jitter-vs-lag trade. Against the **new** estimator it measured:
+
+| | raw | 1€-filtered |
+|---|---|---|
+| slow, small circle | 5.80° | 5.78° |
+| normal | 3.03° | 2.91° |
+| wide circle | 3.54° | **4.70° — worse** |
+
+⛔ `METHOD`: *measure or revert; a null result is recorded, not shipped hopefully.*
+Removed, along with `src/input/one_euro.ts` and its two config fields, and recorded in
+`THIRD_PARTY_NOTICES` as evaluated-and-reverted rather than quietly deleted.
+
+⭐⭐ **THE LESSON, AND IT GENERALISES: THE FILTER HAD BEEN COMPENSATING FOR A BAD
+ESTIMATOR.** Fixing the estimator removed the need for it, and a filter that measures
+nothing is pure lag. **Reach for the estimator before the filter.**
+
+### ⚠ One inherent behaviour, pinned rather than hidden
+
+Nothing can be read until the fit window spans `rollStepDistance`, so a symmetric
+out-and-back does **not** return the object to its starting orientation — the outward
+leg starts being measured later than the return leg finishes. Vectored with a bound.
+⚠ Judge it by finger; if it reads as wrong rather than as inherent, the lever is
+`rollAngle` (the commit threshold), not the estimator.
+
+## ⛔⛔ The pattern, updated after four passes
+
+Passes 1–3 were all **a rate estimated over the shortest available baseline**. Pass 4
+is a different and worse shape: **measuring a DIFFERENT QUANTITY than the one asked
+for, and only discovering it at the input where the two diverge.** ⭐ The spec said
+"angle about the centre"; I substituted "turning of the tangent" because it was easier
+to estimate, and the substitution was invisible until a finger reversed.
+⛔ **`IN3`/`IN4`: when an estimator is hard, check whether you have replaced the
+quantity rather than improved the estimate of it.**
