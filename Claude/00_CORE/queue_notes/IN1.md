@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built, green, **FIVE device passes — 12 defects found and fixed,
-> one change measured and REVERTED; a SIXTH is owed, so NOT CLOSED** · **SUB** · IN
+> **STATUS** · ⚠ built, green, **SIX device passes — 14 defects found and fixed; a
+> SEVENTH is owed, so NOT CLOSED** · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -588,3 +588,88 @@ nothing about gestures if its fixtures are idealised.** The realistic-gesture bl
 keep **all six imperfect swirls rolling and none of the three negatives rolling.**
 ⭐ Every roll number is swept against *synthetic humanity* — ellipses with drifting
 centres — which is far better than perfect circles and **still not a hand.** `IN5`.
+
+---
+
+## 2026-09-14 (sixth pass) — ⭐⭐ HYPER replaces KÅSA, and a revert that was made on bad evidence
+
+Device: *"it is now working, but I liked better the results of the 1€ filter than this
+new implementation of Kåsa: this new implementation creates big jumps when I switch
+from roll to yaw/pitch or when I change roll directions."* **124 → 129 vectors.**
+Owner asked for a literature check and advice **before** any change was made.
+
+### ⭐ First, the framing was wrong, and that mattered
+
+**Kåsa and the 1€ filter are not alternatives.** Kåsa is an **estimator** (how the
+angle is computed); 1€ is a **smoother** (how the computed signal is cleaned). They
+are orthogonal — the real question was never which one, but why the output got worse.
+Three independent causes, all now addressed.
+
+### ⛔⛔ 1. Kåsa is the WORST of the standard algebraic circle fits
+
+Chernov's error analysis ranks them: **Kåsa poor, Pratt moderate, Taubin good, Hyper
+best** — Hyper having *zero essential bias* and beating even the iterative geometric
+fit. ⛔ Kåsa is **severely biased toward small circles on SHORT ARCS**, which is
+precisely the regime here: the window holds an arc, never a whole circle. A biased,
+high-variance centre is what makes the per-step angle jump, and it makes the radius
+estimate wander across the band edges, flapping the gesture in and out.
+
+✅ Replaced with **Hyper** (Al-Sharadqah & Chernov 2009, arXiv:0907.0421). Published
+mathematics: no licence, no patent, `N13`-clear.
+⭐ **The fit is now pinned directly against circles whose answer is known exactly** —
+including a **40° short arc recovered to four decimal places**, which is the case
+Kåsa gets wrong. The bias correction is one coefficient
+(`a2 = 4·Cov_xy − 3·Mz² − Mzz`), and it is also all that separates Hyper from Taubin,
+so a vector guards it.
+
+### ⛔⛔ 2. The reference point went stale — the actual jump mechanism
+
+The out-of-band branch `return`ed **without updating `prevPos`**. An excursion out of
+band — which happens transiently at a reversal and at the roll→yaw/pitch handover —
+left the reference behind while the finger kept moving, and the **whole excursion was
+collected into one step on re-entry**. A jump of arbitrary size, exactly as reported.
+
+⭐⭐ **Third time this row has had the same bug shape**: the baseline creep, the centre
+motion, and now this. *A difference is only meaningful when BOTH ends of it are
+current.* ✅ Fixed, plus a **chord-consistency guard**: two points on a circle of
+radius `r` separated by chord `c` subtend exactly `2·asin(c/2r)`, so the angle is not
+free to disagree with the distance the finger actually travelled.
+
+### ⛔⛔⛔ 3. The 1€ revert was made on evidence that was wrong TWICE OVER
+
+I removed it under measure-or-revert. That decision was invalid for **two independent
+reasons**, and only one of them was known at the time:
+
+1. The measurements were taken on **perfect-circle fixtures** — the same ones that
+   later turned out to be why roll vanished from the device.
+2. ⛔⛔ **`beta` was set so high the filter was effectively bypassed.** `beta` scales
+   the cutoff with the signal's speed; the roll angle moves at hundreds of deg/s, so
+   `beta = 0.05` drove the cutoff to ~30 Hz. **I reverted a filter that had never been
+   switched on**, and reported the null result as if it meant something.
+
+✅ Restored and re-measured properly — realistic gestures, the Hyper estimator, and a
+full sweep **including LAG**, which the earlier metric could not see at all (both of
+its channels were filtered, so lag cancelled).
+
+| `beta` | noise removed | lag added |
+|---|---|---|
+| 0 | 13% | **~30° per gesture** |
+| 0.01 | 0.3% — nothing | ~13° |
+| 0.02 | *worse* | ~8.5° |
+
+⛔ **No setting earns its place.** The roll angle is a fast **ramp**, and low-passing a
+ramp costs `slope × τ` of lag. Filtering the per-step turn and integrating it instead
+was tried and is far worse (6.8° → 17.7° of error): evaluations here are gated by
+DISTANCE, so they are irregular in time, and a time-based low-pass over irregular
+increments does not preserve their sum — the bias integrates into drift.
+
+⭐⭐ **What actually removed the jitter was the ESTIMATOR, not a filter.** Left wired at
+a low-lag default so it can be judged by finger; one config line makes it transparent
+(`beta` → 0.05) or maximal (`beta` → 0).
+
+## ⚠ What is owed
+
+⛔ **A SEVENTH device pass.** Specifically: are the jumps gone at a reversal and at the
+roll→yaw/pitch handover, and is the 1€ filter worth keeping at all? ⭐ The owner's
+device judgement has overturned my synthetic measurements twice on this row; if it
+feels better with the filter, the filter stays and my metric is what is wrong.

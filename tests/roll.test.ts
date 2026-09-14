@@ -13,9 +13,9 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { Sample } from "../src/input/motion";
-import { RollDetector } from "../src/input/roll";
+import { RollDetector, fitCircle } from "../src/input/roll";
 import { MotionTracker } from "../src/input/motion";
-import { mmToPx } from "../src/core/units";
+import { mmToPx, pxToMm } from "../src/core/units";
 
 const cfg = DEFAULT_CONFIG;
 
@@ -631,5 +631,68 @@ describe("⭐⭐⭐ REALISTIC gestures — imperfect, as hands actually are", ()
     const wide = humanSwirl({ steps: 80, radiusMm: 35, aspect: 1.2, driftMm: 5, wobbleMm: 3, stepDeg: 5 });
     expect(feed(tight).committed).toBe(true);
     expect(feed(wide).committed).toBe(true);
+  });
+});
+
+/**
+ * ⭐⭐ THE CIRCLE FIT ITSELF, PINNED AGAINST CIRCLES WHOSE ANSWER IS KNOWN EXACTLY.
+ *
+ * The estimator is the **Hyper** algebraic fit (Al-Sharadqah & Chernov 2009). Its
+ * bias correction lives entirely in one coefficient, `a2 = 4·Cov_xy − 3·Mz² − Mzz`,
+ * which is also the only thing separating it from Taubin — get it wrong and you have
+ * silently built a different, worse estimator that still returns plausible circles.
+ *
+ * ⛔ It replaced a Kåsa fit, which the literature rates the WORST of the standard
+ * algebraic fits: severely biased toward small circles on SHORT ARCS, which is
+ * exactly the regime here. These vectors exist so that bias cannot creep back in
+ * unnoticed — an estimator that is merely *plausible* passes every gesture test.
+ */
+describe("⭐⭐ Hyper circle fit — exact recovery", () => {
+  function arcPoints(cxMm: number, cyMm: number, rMm: number, fromDeg: number, toDeg: number, n: number): Sample[] {
+    const out: Sample[] = [];
+    for (let i = 0; i <= n; i++) {
+      const a = ((fromDeg + ((toDeg - fromDeg) * i) / n) * Math.PI) / 180;
+      out.push({ x: mmToPx(cxMm + rMm * Math.cos(a)), y: mmToPx(cyMm + rMm * Math.sin(a)), t: i * 10 });
+    }
+    return out;
+  }
+
+  it("recovers the centre and radius of a FULL circle exactly", () => {
+    const fit = fitCircle(arcPoints(50, 70, 15, 0, 360, 40));
+    expect(fit).not.toBeNull();
+    expect(pxToMm(fit!.cx)).toBeCloseTo(50, 6);
+    expect(pxToMm(fit!.cy)).toBeCloseTo(70, 6);
+    expect(pxToMm(fit!.r)).toBeCloseTo(15, 6);
+    expect(fit!.residualPx).toBeCloseTo(0, 6);
+  });
+
+  it("⭐⭐ recovers a SHORT ARC exactly — the regime Kåsa gets wrong", () => {
+    // ⛔ THE WHOLE REASON FOR THE CHANGE. A 40° arc is what the fit window actually
+    // holds, and it is where Kåsa's bias toward small circles bites hardest.
+    const fit = fitCircle(arcPoints(20, -30, 35, 10, 50, 25));
+    expect(fit).not.toBeNull();
+    expect(pxToMm(fit!.r)).toBeCloseTo(35, 4);
+    expect(pxToMm(fit!.cx)).toBeCloseTo(20, 4);
+    expect(pxToMm(fit!.cy)).toBeCloseTo(-30, 4);
+  });
+
+  it("recovers a range of radii on short arcs without systematic shrinkage", () => {
+    // ⚠ Asserted as a RATIO, so a bias shows up as a consistent under-estimate
+    // rather than hiding inside a per-case tolerance.
+    for (const rMm of [5, 8, 15, 35, 60]) {
+      const fit = fitCircle(arcPoints(0, 0, rMm, 0, 45, 20));
+      expect(fit).not.toBeNull();
+      expect(pxToMm(fit!.r) / rMm).toBeCloseTo(1, 3);
+    }
+  });
+
+  it("⛔ returns null for collinear points — a straight drag has no circle", () => {
+    const line: Sample[] = [];
+    for (let i = 0; i <= 20; i++) line.push({ x: 100 + i * 5, y: 200 + i * 2, t: i * 10 });
+    expect(fitCircle(line)).toBeNull();
+  });
+
+  it("⛔ returns null when there are too few points to determine a circle", () => {
+    expect(fitCircle([{ x: 0, y: 0, t: 0 }, { x: 1, y: 1, t: 1 }, { x: 2, y: 0, t: 2 }])).toBeNull();
   });
 });

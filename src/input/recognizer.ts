@@ -212,6 +212,14 @@ export class Recognizer<P> {
     return this.roll.committed;
   }
 
+  /**
+   * ⭐ The 1€-filtered roll angle — what the object is actually rotated BY.
+   * `rollDeg` stays raw because the COMMIT threshold reads it and must not lag.
+   */
+  get rollSmoothedDeg(): number {
+    return this.roll.smoothedDeg;
+  }
+
 
   press(s: Sample): void {
     this.phase = "PRESSED";

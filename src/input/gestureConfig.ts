@@ -118,6 +118,18 @@ export interface GestureConfig {
    */
   rollFitResidualFraction: number;
   /**
+   * Hz. 1€ filter floor cutoff for the roll angle — governs JITTER at slow roll.
+   * ⭐ Lower = quieter when the finger creeps. See `one_euro.ts` for the citation and
+   * the licence (BSD/MIT reference implementations, no patent asserted).
+   * ⚠ Tune on a device with `rollFilterBeta` at 0 first, per the paper. `IN5`.
+   */
+  rollFilterMinCutoff: number;
+  /**
+   * 1€ filter speed coefficient for the roll angle — governs LAG at fast roll.
+   * ⭐ Raise until a fast swirl stops lagging. ⚠ Tuned second, per the paper. `IN5`.
+   */
+  rollFilterBeta: number;
+  /**
    * mm. Typical position noise of ONE pointer sample from a resting finger.
    * ⭐⭐ A DEVICE PROPERTY, not a preference, and it is what decides whether a
    * curvature can be measured at all. ⚠ Measured trivially on a device: hold still
@@ -214,6 +226,18 @@ export const DEFAULT_CONFIG: GestureConfig = {
   rollUpdateDistance: 0.5,
   rollReleaseDistance: 18,
   rollFitResidualFraction: 0.25,
+  // ⚠⚠ MEASURED AT EVERY SETTING AND IT EARNS NOTHING ON THIS SIGNAL. The roll
+  // angle is a fast RAMP (hundreds of deg/s), and low-passing a ramp costs
+  // `slope x tau` of lag. Swept on realistic gestures against the Hyper estimator:
+  //   beta 0     -> 13% less noise, but ~30° per gesture of LAG
+  //   beta 0.01  -> 0.3% less noise (nothing), ~13° of lag
+  //   beta 0.02  -> noise WORSE, ~8.5° of lag
+  // ⭐ What actually removed the jitter was the ESTIMATOR (Hyper, the consistency
+  // guard, and the stale-reference fix), not a filter. Kept wired so it can be A/B'd
+  // by finger: raise `beta` toward 0.05 to make it transparent, drop it to 0 for
+  // maximum smoothing and maximum lag. `IN5` settles it.
+  rollFilterMinCutoff: 3.0,
+  rollFilterBeta: 0.01,
   pointerNoiseMm: 0.15,
 
   tapMaxDuration: 250,

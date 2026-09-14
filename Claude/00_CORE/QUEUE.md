@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` built, **five device passes, a sixth owed**
 
-✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **124 golden
-vectors, all passing** (37 → 124 with `IN1`). ✅ The engine boundary is enforced by a
+✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **129 golden
+vectors, all passing** (37 → 129 with `IN1`). ✅ The engine boundary is enforced by a
 test. ✅ The mate-connector geometry and the constraint-stack solver are in and
 covered. ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated
 on `npm run verify`.
@@ -62,7 +62,14 @@ retraced. ⭐ §1.3 asked for the *"angle about the centroid"* all along — the
 was right, only the estimator was wrong. Now a closed-form **least-squares circle
 fit**; worst step **150° → 5°**. ⛔ And the 1€ filter added one pass earlier was
 **MEASURED AND REVERTED** — it had been compensating for a bad estimator.
-⛔⛔ **A SIXTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
+⭐⭐ **THE SIXTH PASS: KÅSA → HYPER, and a revert undone.** Roll jumped at reversals
+and at the roll→yaw/pitch handover. Three causes: **Kåsa is the worst standard circle
+fit** (severely biased on short arcs — replaced with **Hyper**, Al-Sharadqah &
+Chernov 2009, zero essential bias); the angle's **reference point went stale** across
+out-of-band excursions, collecting a whole excursion into one step; and the **1€
+filter had been reverted on evidence that was wrong twice over** — perfect-circle
+fixtures AND a `beta` so high the filter was never switched on.
+⛔⛔ **A SEVENTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
 
 ⛔⛔ **THE PATTERN, AND IT BINDS `IN3`/`IN4`**: passes 1–3 were all **a rate estimated
 over the shortest available baseline** — flick lift speed, roll direction, roll
