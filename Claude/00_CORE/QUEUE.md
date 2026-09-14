@@ -68,7 +68,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
-| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needs NO object model, so it does not wait on `3D1` | IN | feature | ⚠ **rule 4 BUILT + GREEN 2026-09-14, NOT CLOSED** — 15 vectors, no device look. ⛔ rule 1 NOT started. ⭐⭐ **Rule 1 AMENDED BY THE OWNER: delta position, NOT device tilt**, so `DeviceOrientation` leaves the critical path and `tiltDeadband` becomes unused. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
+| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needs NO object model, so it does not wait on `3D1` | IN | feature | ✅ **rule 4 CLOSED 2026-09-14** — device look passed all five checks, incl. the browser's own pinch-zoom staying suppressed. ⚠ **rule 1 IN PROGRESS.** ⭐⭐ **Rule 1 AMENDED BY THE OWNER: delta position, NOT device tilt**, and the orbit **STOPS SHORT** at top/bottom rigs defined by radius AND height. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
 
 ## Phase 3D — objects and assembly
 

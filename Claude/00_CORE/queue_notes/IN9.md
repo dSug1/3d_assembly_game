@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ rule 4 built and green — **NOT CLOSED, no device look yet**;
-> rule 1 not started · **SUB** · IN · **KIND** · feature
+> **STATUS** · ✅ **rule 4 CLOSED 2026-09-14** (device look passed, all five checks);
+> ⚠ rule 1 in progress · **SUB** · IN · **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §2 rules 1 and 4.
 ⭐ **Neither rule touches an object**, so this row does **not** wait on `3D1` — which
@@ -88,7 +88,31 @@ within 10× the near plane**. ⭐ `CAMERA_NEAR_PLANE_M` is exported from
 `gestureConfig.ts` and *read* by `scene.ts`, so the number exists in one place: the
 validator needs it, and the camera is the only thing that can apply it.
 
-## ⚠ What rule 4 does NOT close
+## ✅ 2026-09-14 — RULE 4 CLOSED. Device look passed, all five checks
+
+Owner: *"Five checks ok."* ⭐ That is what closes a change here; a green suite never is.
+
+| check | verdict |
+|---|---|
+| 1. fingers apart bring the camera CLOSER | ✅ |
+| 2. no snap as the zoom starts (the deadband re-anchor) | ✅ |
+| 3. out and back returns to the same zoom | ✅ |
+| 4. nothing clips at full zoom-in (the black-page guard) | ✅ |
+| 5. the browser's own pinch-zoom stays suppressed | ✅ |
+
+⭐ **Check 5 was the one to worry about and it held.** `index.html`'s
+`user-scalable=no` + `touch-action: none` had been in place since day one but had
+**never been exercised by two fingers on glass** — an untested claim, now tested.
+⭐ **Check 1 passing first time is worth noting**: `IN1` shipped yaw AND pitch
+inverted, because an internally consistent sign was never checked against the
+gesture. Writing the vector as *"the direction a hand expects"* rather than as the
+sign of an internal number is what caught it here before the device did.
+
+⚠ **Still placeholders**: `pinchDeadband`, `gainZoom`, and both radius bounds.
+`IN5` measures them, and can now do it by finger — `?pinchDeadband=1&gainZoom=1.5`.
+
+## ⚠ What rule 4 did NOT close, as written before the device look
+
 
 ⛔⛔ **No device look yet.** Green suites are necessary and not sufficient — `IN1`
 found 14 defects by finger that no suite could see. What must be checked:
