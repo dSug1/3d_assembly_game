@@ -36,10 +36,9 @@ runs a typecheck and **217 golden vectors, all passing**, live at
 [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if that stops
 being true. ⭐ It has paid for itself: every gesture defect found by finger was
 reproduced **headlessly** before it was fixed.
-✅✅ **`IN1` CLOSED** (the recognizer) and **`IN9` rule 4 CLOSED** (pinch zoom), both
-by device look. ⚠ **`IN9` rule 1** — camera orbit on a three-ring surface — is built
-and green but **not closed**. ⛔ Nothing yet touches an OBJECT for real: `IN2`–`IN4`
-are unbuilt and wait on `3D1`.
+✅✅ **`IN1` CLOSED** (the recognizer) and **`IN9` CLOSED** (pinch zoom + camera orbit
+on a three-ring surface), all by device look. ⛔ Nothing yet touches an OBJECT for
+real: `IN2`–`IN4` are unbuilt and wait on `3D1`.
 ⛔⛔ **Sixteen defects have been found BY FINGER, none visible to a green suite**, and
 they are four repeating shapes — a rate over too short a baseline, a substituted
 quantity, idealised fixtures, and a composition nobody computed. They are written out

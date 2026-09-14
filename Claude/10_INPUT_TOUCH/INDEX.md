@@ -19,11 +19,11 @@ release-time priority ladder, tap / double-tap / hold, roll detection (`roll.ts`
 the screen-plane rotation mapping (`screen_rotate.ts`).
 ⛔ **Seven device passes found 14 defects, not one visible to a green suite.**
 
-⚠ **`IN9` IN PROGRESS** — the two CAMERA-ONLY rules, which need no object model and so
-do not wait on `3D1`:
-* ✅ **rule 4, pinch zoom** (`pinch.ts`) — **CLOSED**, all five device checks passed.
-* ⚠ **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — built and green, **not closed**;
-  two defects already found by finger and fixed.
+✅✅ **`IN9` CLOSED (2026-09-14)** — the two CAMERA-ONLY rules, which needed no object
+model and so did not wait on `3D1`:
+* **rule 4, pinch zoom** (`pinch.ts`) — all five device checks passed.
+* **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
+  fixed, including a **composition nobody had computed**.
 
 **217 golden vectors, all passing** (37 → 217).
 

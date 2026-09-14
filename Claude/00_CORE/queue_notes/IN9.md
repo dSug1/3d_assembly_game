@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ✅ **rule 4 CLOSED 2026-09-14**; ⚠ **rule 1 BUILT + GREEN, NOT
-> CLOSED** — no device look yet · **SUB** · IN · **KIND** · feature
+> **STATUS** · ✅✅ **CLOSED 2026-09-14** — both rules working on the device
+> · **SUB** · IN · **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §2 rules 1 and 4.
 ⭐ **Neither rule touches an object**, so this row does **not** wait on `3D1` — which
@@ -15,7 +15,7 @@ is what makes it buildable now, and it is the owner's reason for scheduling it h
 | | |
 |---|---|
 | **rule 4 — pinch zoom** | ✅ **CLOSED** 2026-09-14, all five device checks |
-| **rule 1 — orbit** | ⚠ built and green, **NOT closed**; two defects found by finger and fixed |
+| **rule 1 — orbit** | ✅ **CLOSED** 2026-09-14 — *"Working"*, after three defects found by finger and fixed |
 
 ⭐ **What was decided here**, beyond the code:
 * Rule 1 is **drag-orbit, not tilt-orbit** — the owner's amendment. `DeviceOrientation`
@@ -566,3 +566,51 @@ the owner's to make on the glass.
 **failed on the now-stale allowlist** and required the entry to be removed — exactly
 the second direction it was built to check. ⭐ *"A stale allowlist is the same lie one
 level up"* was not a hypothetical: it fired the same day it was written.
+
+---
+
+## ✅✅ 2026-09-14 — `IN9` CLOSED. Both camera rules work on the device
+
+Owner: *"Working."* ⭐ That is what closes a change here; a green suite never is.
+Plus refinements taken in the same breath: **centre blend default 30 mm**, **sliders
+for the two orbit gains** (yaw per mm, elevation per mm), and **yaw/pitch gain 0.07
+rad/mm**.
+
+⭐⭐ **That last one is the argument for the sliders, in one number.** 0.07 replaces
+0.03 — and 0.03 was never a judgement: it was the hard-coded diagnostic constant
+`scene.ts` had carried since day one (0.008 rad/px), converted exactly so the feel
+would not change as it moved into the config. **A hand says the object should turn
+more than twice as fast as the number nobody had ever chosen.** It had been wrong for
+the whole life of the project, invisibly, because nothing made it adjustable.
+
+### What rule 1 cost, and what it taught
+
+Three defects found by finger, none visible to a green suite:
+
+1. **Three monotone segments where three rings allow two.** Radius and height were each
+   interpolated correctly and their `hypot` was never checked — `METHOD`'s *a
+   composition is a thing to measure, not an emergent property*, which the predecessor
+   lost a week to in its rotation stack.
+2. **The interpolation scheme had to be REVERSED** once the owner chose a waist shape:
+   interpolating (distance, angle) overshot the rings — 0.532 m against a 0.500 m
+   ring — breaking *"not exceed these"*. Back to the rings' own coordinates, where
+   shape-preserving interpolation cannot overshoot by construction.
+3. **The orbit centre teleported** when a new barycentre was chosen. Fixed by migrating
+   it over finger travel — and the fix needed the same *both ends must be current*
+   lesson that `IN1` learned three times.
+
+⭐⭐ **The durable win is that the owner's requirement became a CONFIG RULE.** *"Three
+rigs, therefore two transitions"* is now enforced by `validateGestureConfig` for every
+ring set — defaults, URL, or menu — so the artefact cannot be rediscovered by finger,
+which is how it was found the first time.
+
+### ⚠ What closing does NOT mean
+
+⛔ **The numbers are still placeholders**, except the six ring values and the blend
+distance, which the owner chose on the device. Every gain remains an `IN5` row — now
+with a slider, so measuring them is a tuning session rather than a rebuild cycle.
+⛔ **Rule 1's barycentre has only ever been exercised with three objects.** `2^N−N−1`
+grows fast and `maxBarycenterCandidates` caps it; the cap has never actually bitten on
+a device.
+⚠ The camera rules touch **no object**, which is exactly why this row could be built
+before `3D1`. Nothing here is evidence about the object rules.
