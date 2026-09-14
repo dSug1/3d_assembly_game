@@ -74,6 +74,18 @@ export interface GestureConfig {
    * the answer to "where should it be".
    */
   gainTranslateScreen: number;
+  /**
+   * ms — the TIME CONSTANT of rule 6's inertia. ⭐ The owner asked for the object to
+   * behave *"a bit like physics applying a force to the object with some inertia"*
+   * rather than teleporting with the finger, so it follows a CRITICALLY DAMPED target
+   * (`input/follow.ts`): it accelerates out of rest and decelerates into place, and
+   * never overshoots.
+   * ⛔ `0` disables it exactly — the object is pinned to the finger, which is the only
+   * setting that can be checked against rule 6's tracking factor. Keep it reachable.
+   * ⚠ A GUESS, and on this project's record almost certainly the wrong one: every gain
+   * set by hand was raised from mine. `IN5`, by slider.
+   */
+  translateInertiaMs: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
   gainTranslateMutual: number;
@@ -303,6 +315,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
   gainRoll: 1,
   gainTranslateScreen: 1,
+  // ⚠ A GUESS. ~90 ms reads as weight without reading as lag in the literature on
+  // direct manipulation, but this project's record on guessed numbers is three for
+  // three too slow — it ships with a slider for exactly that reason.
+  translateInertiaMs: 90,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,
