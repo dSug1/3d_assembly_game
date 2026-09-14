@@ -61,6 +61,7 @@ import {
 } from "../input";
 import type { Quat, Vec3 } from "../core/vec";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
+import { mmToPx } from "../core/units";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -69,15 +70,6 @@ import { createMenu, type MenuSlider } from "./menu";
 const OBJECT_SIZE_M = 0.08;
 const CAMERA_RADIUS_M = 0.6;
 
-/**
- * ⚠ DIAGNOSTIC ONLY — radians per CSS pixel for the stand-in rotation.
- * ⛔ THIS IS NOT A GESTURE GAIN AND MUST NOT BECOME ONE. The real gains are
- * `gainRotateFree` / `gainRotateConstrained` in `gestureConfig.ts`, they are in
- * millimetres, and they belong to `IN3`. Keeping this number OUT of the config is
- * the point: one constant, one place, and a debug value that leaks into production
- * is exactly the drift `gestureConfig`'s header warns about.
- */
-const DIAGNOSTIC_RAD_PER_PX = 0.008;
 
 /**
  * ⛔⛔ A QUATERNION, NOT EULER ANGLES. Device-reported 2026-09-13: *"the yaw is in
@@ -380,6 +372,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
   createMenu([
     {
+      title: "OBJECT ROTATION",
+      sliders: [
+        // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel. The
+        // diagnostic stand-in reads it, so tuning here tunes what `IN3` will inherit.
+        tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
+      ],
+    },
+    {
       title: "CAMERA ORBIT — rings",
       sliders: [
         tunable("top radius (m)", "orbitTopRadiusM", 0, 1.5, 0.01),
@@ -481,7 +481,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
               held.frame,
               s.x - held.prev.x,
               s.y - held.prev.y,
-              DIAGNOSTIC_RAD_PER_PX,
+              // ⭐ THE REAL GAIN, from the config, in radians per MILLIMETRE.
+              // ⛔ A hard-coded `DIAGNOSTIC_RAD_PER_PX` used to live in this file,
+              // deliberately kept OUT of the config so a debug value could not leak
+              // into production. The owner now wants to tune it by hand, and the
+              // config already had the properly-named field for it — so the duplicate
+              // is gone rather than a second one added. Carried rule `L1`: a tuning
+              // value living in both a debug tool and production silently drifted.
+              cfg.gainRotateFree / mmToPx(1),
             ),
           );
         }

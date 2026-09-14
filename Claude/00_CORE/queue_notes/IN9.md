@@ -363,3 +363,107 @@ expects"* rather than the sign of an internal number. The same form is used here
 ✅ Both axes flipped together, and a vector asserts they are **consistent** — a
 half-applied inversion is the likeliest way to get this wrong, and it feels like
 neither convention.
+
+---
+
+## 2026-09-14 — rotation gain in the menu, `tiltDeadband` deleted, and a CONFIG DEBT GUARD
+
+Owner: a menu section for object rotation with a gain slider; and *"tiltDeadband:
+delete it for the moment: no device tilt used for the moment."* **198 → 204 vectors.**
+
+### ⭐ The rotation gain moved INTO the config rather than a second one being added
+
+The yaw/pitch gain was a hard-coded `DIAGNOSTIC_RAD_PER_PX` in `render/scene.ts`,
+deliberately kept OUT of the config so a debug value could not leak into production.
+⭐ But the config already had the properly-named field for it — **`gainRotateFree`,
+§2bis's own gain** — so making it tunable meant *deleting the duplicate*, not adding
+one. Carried rule `L1`: a tuning value that lived in both a debug tool and production
+silently drifted apart.
+
+✅ `gainRotateFree` is now defined as **radians per MILLIMETRE** (never per pixel), set
+to **0.03 rad/mm** — exactly the old constant converted (`0.008 rad/px × 3.78 px/mm`),
+so the feel does not change as it moves. ⭐ Tuning the slider now tunes what `IN3`
+will inherit.
+
+### ✅ `tiltDeadband` deleted
+
+Orphaned when the owner amended rule 1 to drag-orbit. Gone, on their instruction.
+
+### ⭐⭐⭐ AND A GUARD, BECAUSE THAT IS THE THIRD ORPHANED TUNABLE
+
+`tests/config_debt.test.ts`. ⛔ *"An unused tunable is a lie in the config"* has now
+bitten three times, always the same way: a number sits in `gestureConfig.ts` looking
+authoritative, nothing reads it, and **`IN5` would go and measure it on a device** —
+a session spent deriving a value that changes nothing.
+
+* `moveExitDistance` — declared and unused through the whole of `IN0`;
+* `tiltDeadband` — orphaned by the rule-1 amendment, deleted today;
+* `gainRoll` — unused right now, because 2quinte applies the swept angle directly.
+
+✅ Every tunable must now be **read by the code, or listed as debt with the queue row
+that will wire it**. ⛔ The list is asserted **exact in both directions**: a new dead
+tunable fails, and wiring one up fails until it leaves the list — *a stale allowlist is
+the same lie one level up*. Twelve entries today, each naming its row.
+
+⭐ It matches a **property access**, never a bare word, so prose cannot make a tunable
+look used — the defect `boundary.test.ts` shipped with and keeps as a counter-example.
+⭐ And it carries its own counter-example: a fabricated name must read as dead.
+
+⚠ **Two limits of the guard, stated in the file so they are not mistaken for
+coverage**: it cannot tell two interfaces apart when they share a field name
+(`evictOnOverflow` reads as used because `SolveOptions` has one too, though the CONFIG
+value is not yet passed to the solver — `IN3`'s to close); and a first version excluded
+`gestureConfig.ts` entirely and wrongly reported `pointerNoiseMm` dead, when
+`validateGestureConfig` depends on it for the sagitta criterion.
+
+---
+
+## 2026-09-14 — the owner's ring values, and a scheme REVERSED on measurement
+
+Owner, from the tuning menu: **radius/height in menu order = 0.5, 0.5, 0.36, 0.1,
+0.5, −0.5** — i.e. top (0.5, 0.5), middle (0.36, 0.1), bottom (0.5, −0.5).
+**204 → 205 vectors.**
+
+⭐ **The first numbers in `gestureConfig.ts` that are a JUDGEMENT rather than a guess.**
+The shape is a **WAIST**: 0.5 m at top and bottom, pinching to 0.36 m level with the
+objects — so the camera is closest looking straight on and draws back as it swings
+under or over, keeping the scene in frame at the extremes.
+
+### ⛔⛔ AND THE SHAPE REVERSED AN EARLIER DECISION, ON MEASUREMENT
+
+The previous pass had switched the interpolation to the camera's own **(distance,
+angle)** because that made the distance clean. ⛔ Applied to the owner's waist it
+**overshot**: the horizontal radius swung to **0.532 m when no ring exceeds 0.500 m** —
+breaking *"not exceed these"* outright.
+
+✅ Interpolation is back in the **rings' own (radius, height)**, still monotone. ⭐
+Shape-preserving interpolation **cannot overshoot** — no-overshoot is precisely what it
+means — so the surface is bounded by the rings by construction, for **any** shape.
+
+| on the owner's waist | distance turns | overshoots? |
+|---|---|---|
+| **(radius, height)** ✅ | **1** | **no** |
+| (distance, angle) | 1 | **yes — 0.532 vs 0.500** |
+
+⚠ **NEITHER SCHEME IS UNIVERSALLY CLEAN, and saying so is the honest part.** In
+(radius, height) the distance can turn more than once for a shape whose radius *humps*
+while its height climbs — which is what the old default did, and why the other scheme
+looked better when it was the only shape on the table. The owner's shape is clean on
+every count.
+
+### ⭐⭐ So the requirement became a CONFIG RULE, not a hope
+
+`validateGestureConfig` now **refuses any ring set whose distance turns more than
+once** — the owner's *"three rigs, therefore two transitions"* enforced for every ring
+set, from the defaults, the URL, or the tuning menu. ⭐ The menu therefore **explains
+why** a shape is rejected, instead of leaving the artefact to be rediscovered by
+finger, which is how it was found in the first place.
+
+⚠ Sampled over a 200-step sweep rather than solved: the closed form is a piecewise
+cubic in two components under `hypot`, and counting its extrema analytically is more
+machinery than the answer is worth. ⛔ It runs on config CHANGE, never per frame.
+
+⭐ **What the vectors now guarantee, universally**: no overshoot in radius or height
+for any ring set, and a height that always climbs. **And for the shipped rings
+specifically**: exactly one turning point in the distance. A shape that would break
+that is asserted to throw.
