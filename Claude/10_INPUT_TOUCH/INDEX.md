@@ -61,9 +61,12 @@ slider. ⭐ Ship the slider WITH the rule, not after a session is spent dislikin
 one finger still for a few seconds; `floor` is the answer. The sagitta criterion and
 several other thresholds are only defensible relative to it.
 
-⭐ **Rule 6's four numbers were chosen on the device over three passes, 2026-09-14**:
-`gainTranslateScreen` **1.15**, `translateInertiaMs` **8**, `translateDampingRatio` **0.2**,
-`translateLeadMs` **0.5**. Every one ended up well away from what the simulation argued for
+⭐ **Rule 6's four numbers were chosen on the device over FIVE passes, 2026-09-14**:
+`gainTranslateScreen` **1.17**, `translateInertiaMs` **7.6**, `translateDampingRatio` **0.2**,
+`translateLeadMs` **0.2**. ⚠ τ has a FLOOR of roughly one pointer interval (8–12 ms): below
+it the mass stops smoothing the staircase the target arrives in and the pointer/frame beat
+is visible as jitter. ⛔ **Rotation has NO inertia** — it was built and rejected on the
+device; see `QUEUE.md`'s YOU-ARE-HERE block before rebuilding it. Every one ended up well away from what the simulation argued for
 (I proposed 30 ms at ζ 0.65, and a lead of 3.2 ms). ⚠ **A simulation narrows the range; it
 does not pick the number** — and a *computed landmark* does not either: the lead has an
 exact value at which a steady drag leaves no gap, and the hand chose a sixth of it.

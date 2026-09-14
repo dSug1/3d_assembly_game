@@ -55,10 +55,15 @@ then `http://localhost:5173` on the tablet. See
 ✅✅ **`IN1` CLOSED** — the gesture recognizer, validated by finger over seven device
 passes. ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit on a
 three-ring surface, working by finger.
-⛔ **Nothing touches an OBJECT for real yet**: the rotation in `scene.ts` is a
-diagnostic stand-in, and `IN3` deletes it.
+✅✅ **`IN2` CLOSED** — pointer plumbing, three roles latched at press. ✅ **RULE 6
+(screen-plane translate) built and tuned by finger over five device passes** — it has
+mass: a critically/under-damped follower plus a phantom target that leads along the
+finger's own motion (`src/input/translate.ts`, `follow.ts`, `lead.ts`).
+⛔ **Object ROTATION is still a diagnostic stand-in** and `IN3` deletes it — and it has
+**no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
+block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Seventeen defects have been found BY FINGER and none was visible to a green
+⛔⛔ **Nineteen defects have been found BY FINGER and none was visible to a green
 suite.** They are four repeating shapes — a rate estimated over too short a baseline, a
 substituted quantity, idealised fixtures, and a composition nobody computed. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
@@ -67,13 +72,20 @@ block, and they bind every row still to come.
 ⭐⭐ **Tunables can be A/B'd by finger without a rebuild** — `?rollAngle=45` on the URL,
 or the on-screen menu for the orbit rings. That is what makes `IN5` practical.
 ⚠ Every number in `src/input/gestureConfig.ts` is still a placeholder, except the six
-orbit ring values and the three gains the owner chose on the device — and
-**`pointerNoiseMm` = 0.761 mm, the first number actually MEASURED** (2026-09-14,
-`src/input/noise_meter.ts`). ⛔ Measuring it exposed a defect in the sagitta guard that
-had stood through eight device passes: see `Claude/10_INPUT_TOUCH/INDEX.md`.
+orbit ring values, the four gains and rule 6's four feel numbers, all chosen on the
+device — and **`pointerNoiseMm` = 0.761 mm, the first number actually MEASURED**
+(2026-09-14, `src/input/noise_meter.ts`). ⛔ Measuring it exposed a defect in the sagitta
+guard that had stood through eight device passes: see `Claude/10_INPUT_TOUCH/INDEX.md`.
+⛔⛔ **A GUESSED NUMBER HAS BEEN WRONG EVERY SINGLE TIME** — four gains raised ×3.4,
+×2.3 and ×2 by a hand, a simulated recommendation halved, and a *computed landmark*
+(the lead at which a drag leaves no gap) rejected in favour of a fifteenth of it.
+⭐ **A simulation narrows the range; it does not pick the number. Ship the slider WITH
+the rule.**
 
-⛔⛔ **NEXT is `3D1`** (the object model). ✅ `IN2` **CLOSED** and ⭐ **rule 6
-(screen-plane translate) BUILT** 2026-09-14 — awaiting a device look.
+⛔⛔ **NEXT is `3D1`** (the object model) — the last thing before actual assembly, and
+where mistake shape 4 is likeliest to recur, since an assembly tree composes transforms
+through parent–child chains. ⭐ **Write the composite check BEFORE the code**, the way
+rule 6's gain was computed before it was written.
 ⭐⭐ Rule 6's gain was **computed, not guessed**: `gainTranslateScreen` is a multiplier on
 a tracking factor and **1.0 puts the object exactly under the finger**.
 ⭐ **The order is `IN2` → rule 6 translate → `3D1` → 6bis onward.** `IN4`'s dependency

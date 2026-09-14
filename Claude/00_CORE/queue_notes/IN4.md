@@ -1,7 +1,8 @@
 # `IN4` — rules 4–6 (two touchpoints)
 
-**Status: partial. Rule 4 ✅ (`IN9`). Rule 6 built 2026-09-14, ⛔ NOT CLOSED — needs a
-device look. Rules 6bis / 6ter / 6quater wait on `3D1`.**
+**Status: partial. Rule 4 ✅ (`IN9`). Rule 6 ✅ BUILT AND TUNED BY FINGER over five device
+passes, 2026-09-14 — ⚠ not formally closed: it wants a verdict in ordinary play rather
+than in a tuning session. Rules 6bis / 6ter / 6quater wait on `3D1`.**
 `src/input/translate.ts` · `tests/translate.test.ts` · wired in `src/render/scene.ts`.
 
 ## ⭐⭐ Why rule 6 came before `3D1`
@@ -160,35 +161,43 @@ and ζ has nothing to act on. The owner's 10 ms was chosen under a model where �
 only add lag; with ζ available, τ becomes usable again. ⭐ **Try τ ≈ 60–90 ms with
 ζ ≈ 0.5** before concluding the inertia should stay near zero.
 
-### ✅ THE SHIPPED SET, chosen on the device 2026-09-14
+### ✅ THE SHIPPED SET — five device passes, 2026-09-14
 
 | tunable | value | slider |
 |---|---|---|
-| `gainTranslateScreen` | **1.15** | 0.1–3, step 0.05 |
-| `translateInertiaMs` (τ) | **8** | 1–20, step 0.2 |
+| `gainTranslateScreen` | **1.17** | 0.1–3, step 0.05 |
+| `translateInertiaMs` (τ) | **7.6** | 1–20, step 0.2 |
 | `translateDampingRatio` (ζ) | **0.2** | 0.1–0.5, step 0.05 |
-| `translateLeadMs` | **0.5** | 0–5, step 0.5 |
+| `translateLeadMs` | **0.2** | 0–1.5, step 0.1 |
 
 Measured against a simulated drag — ramp to speed, hold, stop dead. ⚠ The column is
 **peak deviation**, not "trail": with a lead the object can be AHEAD of the finger, so
 signing it as a trail would be the wrong quantity.
 
-| drag speed | peak deviation | same, lead = 0 | overshoot on stop | settles |
-|---|---|---|---|---|
-| 50 mm/s | 0.07 mm | 0.05 mm | 0.30 mm | 17 ms |
-| 100 mm/s | 0.15 mm | 0.10 mm | 0.60 mm | 42 ms |
-| 300 mm/s | 0.44 mm | 0.29 mm | 1.81 mm | 92 ms |
+| drag speed | peak deviation | overshoot on stop | settles |
+|---|---|---|---|
+| 50 mm/s | ~0.13 mm | ~0.27 mm | ~17 ms |
+| 100 mm/s | ~0.27 mm | ~0.54 mm | ~42 ms |
+| 300 mm/s | ~0.81 mm | ~1.63 mm | ~92 ms |
 
-⭐⭐ **READ THE SECOND COLUMN.** At τ=8 ms the object was ALREADY within 0.3 mm of the
-finger with no lead at all — well under the measured pointer noise (`pointerNoiseMm`
-0.761 mm). So the phantom is not removing a lag here; there was none left to remove. It
-adds a touch of anticipation, and by this metric it slightly INCREASES the peak
-deviation. The owner kept it anyway, at 0.5 ms. ⚠ That is a taste, and it is recorded as
-one rather than dressed up as a correction.
+⭐ At ordinary drag speeds both numbers sit at or under the MEASURED pointer noise
+(`pointerNoiseMm` 0.761 mm): the weight is felt in the acceleration, not seen as a gap,
+and only shows on a fast flick — which is where a real object's momentum would show
+anyway. ⛔ **The whole of the feel lives in the OVERSHOOT, not in any gap.** Worth not
+breaking by accident when `3D1` adds connectors that want to snap.
 
-⚠ **The whole of the feel now lives in the OVERSHOOT**, not in any gap: no visible lag
-going out, and 0.3–1.8 mm of follow-through coming to rest. That is a coherent design
-and it is worth not breaking by accident.
+⚠ **The τ floor**: 7.6 ms is not free to lower. Below roughly one pointer interval the
+mass stops smoothing the staircase the target arrives in, and the pointer/frame beat
+becomes visible — see the YOU-ARE-HERE block in `QUEUE.md`.
+
+### ⛔ REVERTED, AND RECORDED SO IT IS NOT REBUILT
+
+* **`targetVelocity` in `follow.ts`** — makes the trail frame-rate exact, makes the
+  object visibly jitter, and the thing it fixes is under the noise floor. The parameter
+  and its vectors survive in `follow.ts`; **both call sites pass nothing.** Full
+  measurement in `QUEUE.md`'s YOU-ARE-HERE block.
+* **Rotation inertia + phantom slerp** (`src/input/spin.ts`) — built, 12 vectors green,
+  rejected by the owner on the device. Rotation stays direct.
 
 ### ⛔⛔ THE COMPUTED LANDMARK MARKED THE WRONG END OF THE RANGE
 
