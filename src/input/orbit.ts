@@ -345,6 +345,19 @@ export class OrbitCentreBlend {
     ];
   }
 
+  /**
+   * The centre most recently CHOSEN, reached or not.
+   *
+   * ⭐ The diagnostic marker is drawn here rather than at `centreM`, on the owner's
+   * instruction: the marker exists to show which barycentre §2 rule 1 SELECTED, and a
+   * marker that crawls along with the camera makes that selection harder to read, not
+   * easier. ⚠ So the marker is the target and the camera visibly travels to it — the
+   * migration is legible as the gap between the two.
+   */
+  get targetM(): Vec3 {
+    return this.toM;
+  }
+
   /** True while the centre is still on its way — the readout shows it. */
   get isBlending(): boolean {
     return this.progress < 1;

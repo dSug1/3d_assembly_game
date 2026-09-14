@@ -614,3 +614,26 @@ grows fast and `maxBarycenterCandidates` caps it; the cap has never actually bit
 a device.
 ⚠ The camera rules touch **no object**, which is exactly why this row could be built
 before `3D1`. Nothing here is evidence about the object rules.
+
+---
+
+## 2026-09-14 — the marker shows the CHOSEN barycentre, not the blended one. 219 vectors
+
+Owner: *"move the yellow point to the new barycenter position as soon as the raycast
+barycenter is computed."*
+
+⭐ **This corrects a judgement I had made the wrong way, and the reasoning is theirs.**
+When the centre blend landed I drew the marker at the *blended* centre, arguing that
+showing the target would *"describe a place the camera is not"*. ⛔ That mistook what
+the marker is **for**: it exists to show which barycentre §2 rule 1 **SELECTED** — that
+is why it was asked for — and a marker crawling along with the camera makes the
+selection *harder* to read, not easier.
+
+✅ The marker now jumps to the chosen centre immediately while the camera migrates to
+it. ⭐ The migration is still perfectly visible — as the **gap** between the camera and
+a marker that is already where it is going. Arguably more visible than before, when
+both moved together and neither showed the decision.
+
+⚠ Worth keeping as a small lesson in its own right: **an instrument's correctness is
+judged against the question it is there to answer**, not against the quantity it
+happens to be nearest.
