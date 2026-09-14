@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` CLOSED, camera rules next
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **146 golden vectors,
-all passing** (37 → 146 with `IN1`). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **161 golden vectors,
+all passing** (37 → 161). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
@@ -47,10 +47,11 @@ rebuild. ⭐ Measure **`pointerNoiseMm` first** — hold a finger still and read
 spread; the sagitta criterion and several other thresholds are only defensible
 relative to it.
 
-⛔ **NEXT**: `IN9`, the two CAMERA-ONLY rules — they need no object model, so they do
-not wait on `3D1`. ⚠ **Rule 1 is TILT-orbit with touch as a clutch, not drag-orbit**
-(§2 rule 1: *"the touch delta gates this rule but its value is unused"*). Then `3D1`,
-which is what `IN3`, `IN4`, `RND1` and `RND2` are all waiting on.
+⚠ **IN PROGRESS: `IN9`**, the two CAMERA-ONLY rules — no object model, so they do not wait on `3D1`. ✅ **Rule 4 (pinch zoom) is built and green**, owed a device look.
+⭐⭐ **Rule 1 is AMENDED BY THE OWNER: orbit on DELTA POSITION, not device tilt.**
+That takes `DeviceOrientation` off the critical path, and leaves `tiltDeadband`
+unused — wire it or delete it. Then `3D1`, which `IN3`, `IN4`, `RND1` and `RND2`
+are all waiting on.
 
 ## Phase IN — the touch input system
 
@@ -67,7 +68,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
-| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (tilt-orbit)** — ⛔ needs NO object model, so it does not wait on `3D1` | IN | feature | ⛔ **NEXT.** ⚠ Rule 1 is **TILT**-orbit with touch as a clutch, NOT drag-orbit (§2: *"the touch delta gates this rule but its value is unused"*), so it needs `DeviceOrientation` — a secure context, an iOS permission prompt, and platform axis conventions. Rule 4 is the easy half; do it first | IN1 |
+| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needs NO object model, so it does not wait on `3D1` | IN | feature | ⚠ **rule 4 BUILT + GREEN 2026-09-14, NOT CLOSED** — 15 vectors, no device look. ⛔ rule 1 NOT started. ⭐⭐ **Rule 1 AMENDED BY THE OWNER: delta position, NOT device tilt**, so `DeviceOrientation` leaves the critical path and `tiltDeadband` becomes unused. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
 
 ## Phase 3D — objects and assembly
 

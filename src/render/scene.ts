@@ -45,6 +45,8 @@ import "@babylonjs/core/Culling/ray";
 import {
   DEFAULT_CONFIG,
   parseConfigOverrides,
+  PinchTracker,
+  clampCameraRadiusM,
   Recognizer,
   TapHistory,
   screenPlaneRotation,
@@ -55,6 +57,7 @@ import {
   type ScreenFrame,
 } from "../input";
 import type { Quat, Vec3 } from "../core/vec";
+import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { createHud } from "./hud";
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
@@ -102,7 +105,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     scene,
   );
   // ⛔⛔ SEE THE HEADER. Without this the whole scene is inside the near plane.
-  camera.minZ = 0.01;
+  // ⛔ ONE CONSTANT, ONE PLACE: the value lives in `gestureConfig.ts` because the
+  // config VALIDATOR needs it to refuse a zoom range that would clip the scene.
+  camera.minZ = CAMERA_NEAR_PLANE_M;
   camera.maxZ = 100;
   // ⛔ The camera does NOT take the pointer. Rules 1 and 4 drive the orbit through
   // the gesture layer; letting Babylon's own controls attach as well means two
@@ -151,6 +156,32 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const live = new Map<number, Held>();
   let lastVerdict = "—";
 
+  // ─────────────────────────────────────────────────────────────────
+  // §2 RULE 4 — PINCH ZOOM, for touchpoints that hit NOTHING.
+  //
+  // ⭐ §4: *"Anchor role is latched at press time."* Whether a touchpoint is ON an
+  // object or OUTSIDE one is decided once, when it goes down, and never revisited.
+  // Without that a user steadying their grip near a part would silently switch
+  // between two different mappings mid-gesture.
+  const outside = new Map<number, Sample>();
+  const pinch = new PinchTracker(cfg);
+  let pinchStartRadiusM = camera.radius;
+
+  /** The two outside touchpoints, oldest first, or `null` unless there are exactly two. */
+  const pinchPair = (): [Sample, Sample] | null => {
+    if (outside.size !== 2 || live.size !== 0) return null;
+    const [a, b] = [...outside.values()];
+    return [a!, b!];
+  };
+
+  const updatePinch = () => {
+    const p = pinchPair();
+    if (!p) return;
+    const factor = pinch.scale(p[0], p[1]);
+    if (factor === null) return; // still inside the deadband: leave the camera alone
+    camera.radius = clampCameraRadiusM(pinchStartRadiusM * factor, cfg);
+  };
+
   /** Babylon stores `(x, y, z, w)`; `core/vec` uses `[w, x, y, z]`. One conversion. */
   const readPose = (mesh: AbstractMesh): Quat => {
     const q = mesh.rotationQuaternion!;
@@ -193,7 +224,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const paint = () => {
     const first = live.values().next().value;
     hud.update({
-      pointers: live.size,
+      pointers: live.size + outside.size,
       // ⛔ Straight off the recognizer that made the decision. Never recomputed here:
       // a readout that derives its own answer is a second implementation, and it can
       // disagree with the product while showing green. See `METHOD`.
@@ -204,6 +235,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       lastVerdict,
       // ⚠ Shown so a session can never be spent testing a value that was not in
       // force — including a typo'd key, which is REPORTED rather than ignored.
+      camera: `r=${camera.radius.toFixed(3)}m${pinch.isZooming ? "  ZOOMING" : ""}`,
       tuning: tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
       tuningRejected: tuning.rejected,
     });
@@ -226,11 +258,39 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
       const pick = info.pickInfo;
-      if (!pick?.hit || !pick.pickedMesh) return; // rule 1's no-hit case is `IN3`
+      if (!pick?.hit || !pick.pickedMesh) {
+        // ⭐ Hit nothing: this touchpoint belongs to the camera rules, and that role
+        // is now LATCHED for its lifetime (§4).
+        outside.set(e.pointerId, s);
+        const p = pinchPair();
+        if (p) {
+          pinch.begin(p[0], p[1]);
+          // ⚠ The radius is captured HERE, once. The zoom is a ratio against the
+          // gesture's start, never an accumulation — so a pinch out and back returns
+          // exactly where it began. See input/pinch.ts.
+          pinchStartRadiusM = camera.radius;
+        }
+        paint();
+        return;
+      }
       const mesh = pick.pickedMesh;
       const rec = new Recognizer(cfg, poseOf(mesh), taps);
       rec.press(s);
       live.set(e.pointerId, { rec, mesh, frame: screenFrame(), prev: s, lastRollDeg: 0 });
+      paint();
+      return;
+    }
+
+    if (outside.has(e.pointerId)) {
+      if (info.type === PointerEventTypes.POINTERMOVE) {
+        outside.set(e.pointerId, s);
+        updatePinch();
+      } else if (info.type === PointerEventTypes.POINTERUP) {
+        outside.delete(e.pointerId);
+        // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
+        // the survivor keep scaling against a partner that is gone.
+        pinch.end();
+      }
       paint();
       return;
     }

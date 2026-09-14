@@ -25,6 +25,8 @@ export interface HudFields {
   readonly rollCommitted: boolean;
   /** The last release verdict, already formatted by whoever owns the recognizer. */
   readonly lastVerdict: string;
+  /** Camera radius, and whether a pinch is live. §2 rule 4. */
+  readonly camera: string;
   /** Which tunables the URL overrode, or "defaults". ⛔ Never guess what is in force. */
   readonly tuning: string;
   /** Query keys that were refused, with the reason. Shown, never swallowed. */
@@ -71,6 +73,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
           f.rollCommitted ? "  COMMITTED" : ""
         }`,
         `last      ${f.lastVerdict}`,
+        `camera    ${f.camera}`,
       ].join("\n");
     },
   };
