@@ -53,8 +53,8 @@ then `http://localhost:5173` on the tablet. See
 `Claude/50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`.
 
 ✅✅ **`IN1` CLOSED** — the gesture recognizer, validated by finger over seven device
-passes. ✅✅ **`IN9` rule 4 CLOSED** — pinch zoom. ⚠ **`IN9` rule 1** — camera orbit
-on a three-ring surface — built and green, **not closed**.
+passes. ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit on a
+three-ring surface, working by finger.
 ⛔ **Nothing touches an OBJECT for real yet**: the rotation in `scene.ts` is a
 diagnostic stand-in, and `IN3` deletes it.
 
@@ -69,7 +69,7 @@ or the on-screen menu for the orbit rings. That is what makes `IN5` practical.
 ⚠ Every number in `src/input/gestureConfig.ts` is still a placeholder, except the six
 orbit ring values the owner chose on the device.
 
-⛔ **NEXT**: close `IN9` rule 1 on a device, then **`3D1`** — the object model, which
-`IN3`, `IN4`, `RND1` and `RND2` all wait on.
+⛔⛔ **NEXT is `3D1`** — the object model, which `IN3`, `IN4`, `RND1` and `RND2` all
+wait on, and the last thing before actual assembly.
 
 Full status: [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block.

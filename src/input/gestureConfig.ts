@@ -275,10 +275,13 @@ export const DEFAULT_CONFIG: GestureConfig = {
   moveExitDistance: 0.8,
 
   referenceCameraDistance: 0.6,
-  // ⭐ 0.03 rad/mm — the value the hard-coded diagnostic constant in `scene.ts` had
-  // (0.008 rad/px x 3.78 px/mm), carried across exactly so the feel does not change
-  // as it moves into the config. ⚠ A placeholder like everything else; `IN5`.
-  gainRotateFree: 0.03,
+  // ⭐⭐ 0.07 rad/mm — CHOSEN ON THE DEVICE by the owner, 2026-09-14, with the menu
+  // slider. ⚠ It replaces 0.03, which was not a judgement at all: it was the
+  // hard-coded diagnostic constant `scene.ts` used to carry (0.008 rad/px x 3.78
+  // px/mm), converted exactly so the feel would not change as it moved into the
+  // config. ⭐ A hand says the object should turn more than twice as fast as the
+  // number nobody had ever chosen — which is the whole argument for the slider.
+  gainRotateFree: 0.07,
   gainRotateConstrained: 0.6,
   // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
@@ -358,8 +361,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitMiddleHeightM: 0.1,
   orbitTopRadiusM: 0.5,
   orbitTopHeightM: 0.5,
+  // ⭐ Chosen on the device by the owner, 2026-09-14. ⚠ `0` reproduces the old jump.
+  orbitBlendDistanceMm: 30,
   // ⭐ ~0.9° of yaw per mm of drag, and a full bottom-to-top sweep in ~100 mm.
-  orbitBlendDistanceMm: 40,
+  // ⚠ Both are sliders in the tuning menu: they are the two numbers that decide
+  // whether the camera feels heavy or twitchy, and only a hand can say which.
   gainOrbitYaw: 0.016,
   gainOrbitElevation: 0.01,
 

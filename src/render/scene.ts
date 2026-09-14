@@ -399,7 +399,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       ],
     },
     {
-      title: "CAMERA ORBIT — rings",
+      title: "CAMERA ORBIT",
       sliders: [
         tunable("top radius (m)", "orbitTopRadiusM", 0, 1.5, 0.01),
         tunable("top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
@@ -409,6 +409,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
         // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
         tunable("centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
+        // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
+        // per pixel — a pixel means something different on a phone and a tablet.
+        tunable("yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
+        tunable("elevation gain ↑↓ (/mm)", "gainOrbitElevation", 0.002, 0.05, 0.002),
       ],
     },
   ]);

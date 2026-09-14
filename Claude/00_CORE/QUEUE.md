@@ -27,8 +27,8 @@ all passing** (37 → 217). ✅ The engine boundary is enforced by a test.
 
 ✅ **`IN1` CLOSED** — the recognizer: commit point, provisional motion with rollback,
 tap / double-tap / hold, the release-time priority ladder, screen-plane yaw/pitch, and
-roll. ✅ **`IN9` rule 4 CLOSED** — pinch zoom. ⚠ **`IN9` rule 1** — orbit on a
-three-ring surface: built, green, **not closed**.
+roll. ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit, working by
+finger.
 
 ⛔ **Nothing yet touches an OBJECT for real.** The rotation in `scene.ts` is a
 diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
@@ -65,9 +65,12 @@ sagitta criterion and several other thresholds are only defensible relative to i
 ⛔ `tests/config_debt.test.ts` now refuses any tunable nothing reads — after three
 orphans (`moveExitDistance`, `tiltDeadband`, `gainRoll`).
 
-⛔ **NEXT**: close `IN9` rule 1 on a device, then **`3D1`** — the object model, which
-`IN3`, `IN4`, `RND1` and `RND2` are all waiting on, and the last thing between here and
-actual assembly.
+⛔⛔ **NEXT IS `3D1`** — the object model. `IN3`, `IN4`, `RND1` and `RND2` all wait on
+it, and it is the last thing between here and actual assembly.
+⚠ **It is where mistake shape 4 is most likely to recur**: an assembly tree composes
+transforms through parent-child chains, which is exactly what cost the predecessor a
+week and what the orbit surface did last night. ⭐ Write the composite check BEFORE the
+code, not after.
 
 ## Phase IN — the touch input system
 
@@ -84,7 +87,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
-| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needs NO object model | IN | feature | ✅ **rule 4 CLOSED** (5/5 device checks). ⚠ **rule 1 BUILT + GREEN, NOT CLOSED** — 36 vectors. First device look found three monotone segments where three rings allow two (`METHOD`: *a composition is a thing to measure*); now **monotone Fritsch–Carlson in (distance, angle)**. ⭐ A **tuning menu** (6 ring sliders, validated) and a **third object** + visible orbit-centre marker. ✅ `tiltDeadband` deleted, and a **config-debt guard** now refuses any tunable nothing reads. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
+| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needed NO object model, so it did not wait on `3D1` | IN | feature | ✅✅ **CLOSED 2026-09-14**, both rules working by finger. 56 vectors. Rule 1 cost **three** defects no green suite could see — including a **composition nobody had computed** (three rings gave three monotone segments) and a scheme **reversed on measurement** when the owner's ring shape overshot. ⭐ *"Three rigs, therefore two transitions"* is now enforced by `validateGestureConfig`. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
 
 ## Phase 3D — objects and assembly
 
