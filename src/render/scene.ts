@@ -394,6 +394,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel. The
         // diagnostic stand-in reads it, so tuning here tunes what `IN3` will inherit.
         tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
+        // ⭐ 1 is direct manipulation — the cube turns as far as the finger swept.
+        tunable("roll gain (x swept)", "gainRoll", 0.1, 3, 0.05),
       ],
     },
     {
@@ -496,7 +498,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // this drives what the eye sees. See input/one_euro.ts.
           writePose(
             held.mesh,
-            screenRollRotation(cur, held.frame, held.rec.rollSmoothedDeg - held.lastRollDeg),
+            screenRollRotation(cur, held.frame, held.rec.rollAppliedDeg - held.lastRollDeg),
           );
         } else {
           writePose(
@@ -518,7 +520,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           );
         }
       }
-      held.lastRollDeg = held.rec.rollSmoothedDeg;
+      held.lastRollDeg = held.rec.rollAppliedDeg;
       held.prev = s;
       paint();
       return;

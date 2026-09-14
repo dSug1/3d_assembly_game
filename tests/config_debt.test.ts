@@ -9,7 +9,8 @@
  *   * `moveExitDistance` was declared and unused through the whole of `IN0`;
  *   * `tiltDeadband` was orphaned the moment rule 1 stopped reading device tilt, and
  *     was deleted on the owner's instruction;
- *   * `gainRoll` is unused right now, because 2quinte applies the swept angle directly.
+ *   * `gainRoll` was unused because 2quinte applied the swept angle directly — wired
+ *     on 2026-09-14, and this list caught the staleness the moment it was.
  *
  * ⭐ So the debt is made EXPLICIT instead of noted in prose that nobody re-reads. A
  * tunable that nothing reads must appear in `PENDING` below, with the queue row that
@@ -43,7 +44,6 @@ const PENDING: Readonly<Record<string, string>> = {
   // §1.2 — gains for rules that are not built.
   referenceCameraDistance: "IN3/IN4 — translation gains scale by camera distance",
   gainRotateConstrained: "IN3 — rule 2sexte, constrained rotation",
-  gainRoll: "IN3 — rule 2quinte currently applies the swept angle directly",
   gainTranslateScreen: "IN4 — rule 6",
   gainTranslateAxis: "IN4 — rule 6bis",
   gainTranslateDepth: "IN4 — rule 6bis",

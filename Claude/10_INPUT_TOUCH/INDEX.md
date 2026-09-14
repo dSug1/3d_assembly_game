@@ -25,7 +25,7 @@ do not wait on `3D1`:
 * ⚠ **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — built and green, **not closed**;
   two defects already found by finger and fixed.
 
-**212 golden vectors, all passing** (37 → 212).
+**217 golden vectors, all passing** (37 → 217).
 
 ⛔ **Not built**: `IN2` (pointer roles, blocked behind the `IN8` decision below),
 `IN3`/`IN4` (the object rules, blocked on `3D1`), `IN5` (measurement), `IN6` undo,
@@ -41,8 +41,10 @@ sagitta criterion and several other thresholds are only defensible relative to i
 
 ⛔ **A guard now refuses dead tunables.** `tests/config_debt.test.ts` requires every
 config field to be **read by the code or declared as debt with the row that will wire
-it** — after `moveExitDistance` (dead through all of `IN0`), `tiltDeadband` (orphaned
-by the rule-1 amendment, deleted) and `gainRoll` (dead now).
+it** — after three orphans: `moveExitDistance` (dead through all of `IN0`),
+`tiltDeadband` (orphaned by the rule-1 amendment, deleted) and `gainRoll` (since
+wired). ⭐ It proved itself the same day: wiring `gainRoll` made the allowlist stale,
+and the guard failed until the entry was removed — the second direction it checks.
 
 ⭐ The narrative of every device pass is in
 [`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md);

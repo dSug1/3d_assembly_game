@@ -256,6 +256,26 @@ export class RollDetector {
   }
 
   /**
+   * ⭐⭐ THE ANGLE THE OBJECT IS ACTUALLY TURNED BY — the smoothed sweep times
+   * `gainRoll`. At the default of 1 the cube turns exactly as far as the finger
+   * swept, which is direct manipulation and is what shipped up to now.
+   *
+   * ⛔ THE GAIN IS DELIBERATELY **NOT** APPLIED TO `accumulatedDeg`, which is what the
+   * COMMIT threshold reads. Scaling that would silently move `rollAngle` too: a gain
+   * of 2 would commit a roll after half the sweep, coupling "how far the cube turns"
+   * to "how much of a circle counts as a roll" — two questions that have nothing to do
+   * with each other. Keeping them apart is why this is a third channel and not a
+   * multiplication at the source.
+   *
+   * ⚠ A gain other than 1 means the cube turns by a different amount than the finger
+   * swept, so the object stops tracking the fingertip. That is a real trade and the
+   * owner's to make on the glass — `IN5`.
+   */
+  get appliedDeg(): number {
+    return this.smoothDeg * this.cfg.gainRoll;
+  }
+
+  /**
    * Latches until the path stops being circular. ⚠ `accumulatedDeg` keeps changing
    * afterwards, because 2quinte needs an ongoing angle to roll BY. §1.3: once roll is
    * committed the flick test is skipped.

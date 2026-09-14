@@ -528,3 +528,41 @@ including the no-discontinuity assertion across the retarget.
 
 ⚠ `orbitBlendDistanceMm` defaults to **40 mm** and is a slider in the menu.
 ⭐ **Zero is legal and reproduces the old jump**, so the two can be compared by finger.
+
+---
+
+## 2026-09-14 — `gainRoll` wired, and the debt guard proved itself. 212 → 217 vectors
+
+Owner: wire it, and put a slider under the yaw/pitch one with the current value as the
+default.
+
+✅ `gainRoll` scales what rule 2quinte **turns the object by** — `roll.ts` gains an
+`appliedDeg` channel, and the scene uses it. Default **1**, which is direct
+manipulation: the cube turns exactly as far as the finger swept, so nothing changes
+until the slider is moved.
+
+### ⛔⛔ THE GAIN IS A THIRD CHANNEL, NOT A MULTIPLICATION AT THE SOURCE
+
+Scaling `accumulatedDeg` would have been the obvious one-line change, and it would
+**silently move `rollAngle` too**: a gain of 2 commits a roll after HALF the sweep.
+That couples *"how far the cube turns"* to *"how much of a circle counts as a roll"* —
+two questions with nothing to do with each other.
+
+⭐ So there are three channels now, each answering one question:
+* `accumulatedDeg` — raw swept angle. **The commit threshold reads this.**
+* `smoothedDeg` — 1€-filtered, for what the eye sees.
+* `appliedDeg` — smoothed × gain. **What the object is turned by.**
+
+Vectored both ways: a gain scales the applied angle, and it changes **neither** the
+accumulated angle **nor the sample at which the roll commits**.
+
+⚠ A gain other than 1 means the object stops tracking the fingertip. A real trade, and
+the owner's to make on the glass.
+
+### ⭐⭐ AND THE CONFIG-DEBT GUARD EARNED ITS PLACE ON ITS FIRST OUTING
+
+`gainRoll` was one of the three orphans that motivated
+`tests/config_debt.test.ts` a few hours earlier. The moment it was wired, the guard
+**failed on the now-stale allowlist** and required the entry to be removed — exactly
+the second direction it was built to check. ⭐ *"A stale allowlist is the same lie one
+level up"* was not a hypothetical: it fired the same day it was written.

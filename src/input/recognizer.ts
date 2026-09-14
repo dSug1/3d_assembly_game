@@ -220,6 +220,15 @@ export class Recognizer<P> {
     return this.roll.smoothedDeg;
   }
 
+  /**
+   * ⭐ The angle rule 2quinte should actually turn the object by — smoothed, and
+   * scaled by `gainRoll`. ⛔ `rollDeg` stays raw and ungained because the COMMIT
+   * threshold reads it.
+   */
+  get rollAppliedDeg(): number {
+    return this.roll.appliedDeg;
+  }
+
 
   press(s: Sample): void {
     this.phase = "PRESSED";
