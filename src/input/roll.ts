@@ -67,6 +67,14 @@ interface Circle {
   readonly residualPx: number;
 }
 
+/**
+ * The fewest points the window keeps, so a circle fit always has something to fit.
+ * ⚠ Not a tunable: four points is the algebraic minimum for a least-squares circle,
+ * and eight is a modest margin over it. Bounding the window by PATH LENGTH is what
+ * controls the estimate; this only stops that bound emptying the window.
+ */
+const MIN_FIT_POINTS = 8;
+
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
   Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -141,7 +149,12 @@ export class RollDetector {
   private lastEvalAt: Sample | null = null;
   /** Travel, in px, since the path last looked circular. Hysteresis both ways. */
   private offBandPx = 0;
-  private prevAngleRad: number | null = null;
+  /** Path length currently held in `evalPts`, px. Maintained incrementally. */
+  private windowPathPx = 0;
+  /** Radius of the last accepted fit, px. Sizes the window. See `windowTargetPx`. */
+  private lastRadiusPx: number | null = null;
+  /** ⚠ The previous POSITION, not the previous angle. See `push`. */
+  private prevPos: Sample | null = null;
   private accumDeg = 0;
   private committedFlag = false;
 
@@ -176,9 +189,57 @@ export class RollDetector {
     this.evalPts = [];
     this.lastEvalAt = null;
     this.offBandPx = 0;
-    this.prevAngleRad = null;
+    this.windowPathPx = 0;
+    this.lastRadiusPx = null;
+    this.prevPos = null;
     this.accumDeg = 0;
     this.committedFlag = false;
+  }
+
+  /**
+   * How much PATH the fit window should hold, in px.
+   *
+   * ⛔⛔ IT SCALES WITH THE RADIUS, because what conditions a circle fit is ANGULAR
+   * EXTENT, not distance. A fixed 30 mm window is 215° of a tight 8 mm swirl and
+   * only 49° of a lazy 35 mm one — and measured, the wide swirl simply would not
+   * roll at any fixed length that also kept the release responsive: it needed 100 mm,
+   * which pushed the release out to 84 mm of straight drag.
+   * ⭐ `rollFitArcDeg` of arc at the radius last measured gives every swirl the same
+   * quality of fit, and makes a big gesture's window big and a small one's small.
+   */
+  private windowTargetPx(): number {
+    const seedPx = mmToPx((this.cfg.rollRadiusMin + this.cfg.rollRadiusMax) / 2);
+    const radiusPx = this.lastRadiusPx ?? seedPx;
+    const arcRad = (this.cfg.rollFitArcDeg * Math.PI) / 180;
+    // ⚠ Never shorter than the minimum span, or the window could not satisfy the
+    // sagitta criterion it is bounded by in the first place.
+    return Math.max(mmToPx(this.cfg.rollStepDistance), radiusPx * arcRad);
+  }
+
+  /**
+   * RMS deviation of the most recent `rollStepDistance` of path from `fit`.
+   * ⚠ Deliberately the RECENT path only — see the note at the call site. Always at
+   * least four points, so a single stray sample cannot decide it.
+   */
+  private recentResidualPx(fit: Circle): number {
+    const wantPx = mmToPx(this.cfg.rollStepDistance);
+    let walked = 0;
+    let i = this.evalPts.length - 1;
+    while (i > 0 && walked < wantPx) {
+      walked += dist(this.evalPts[i - 1]!, this.evalPts[i]!);
+      i--;
+    }
+    i = Math.min(i, this.evalPts.length - 4);
+    if (i < 0) i = 0;
+    let sq = 0;
+    let n = 0;
+    for (let k = i; k < this.evalPts.length; k++) {
+      const p = this.evalPts[k]!;
+      const e = Math.hypot(p.x - fit.cx, p.y - fit.cy) - fit.r;
+      sq += e * e;
+      n++;
+    }
+    return n === 0 ? Infinity : Math.sqrt(sq / n);
   }
 
   push(s: Sample): void {
@@ -188,14 +249,22 @@ export class RollDetector {
     if (this.lastEvalAt !== null && stepPx < mmToPx(this.cfg.rollUpdateDistance)) return;
     this.lastEvalAt = s;
 
+    if (this.evalPts.length > 0) this.windowPathPx += stepPx;
     this.evalPts.push(s);
-    // ⚠ Bounded by COUNT, not by chord distance from the newest point. On a reversal
-    // the finger comes back over its own path, so a chord-based bound would stop
-    // trimming exactly when the window most needs to move on. Evaluations are spaced
-    // by real travel, so a count is a faithful proxy for path length and cannot be
-    // inflated by a resting finger.
-    const maxPts = Math.max(8, Math.ceil(this.cfg.rollFitWindow / this.cfg.rollUpdateDistance));
-    while (this.evalPts.length > maxPts) this.evalPts.shift();
+    // ⛔⛔ BOUNDED BY PATH LENGTH — not by a chord, and not by a point COUNT.
+    // * Not a chord from the oldest point: on a reversal the finger comes back over
+    //   its own path, so the chord shrinks exactly when the window needs to move on.
+    // * Not a count: evaluations are spaced by AT LEAST `rollUpdateDistance`, never
+    //   exactly it, so a fast finger packed 162 mm of path into a window meant to
+    //   hold 30 mm — and a committed roll then refused to release across a straight
+    //   drag three times longer than `rollReleaseDistance`.
+    // ⭐ Path length is the quantity `rollFitWindow` actually names, it keeps growing
+    // through a reversal, and a resting finger cannot inflate it because evaluations
+    // only exist where the finger travelled.
+    while (this.evalPts.length > MIN_FIT_POINTS && this.windowPathPx > this.windowTargetPx()) {
+      this.windowPathPx -= dist(this.evalPts[0]!, this.evalPts[1]!);
+      this.evalPts.shift();
+    }
 
     const fit = fitCircle(this.evalPts);
     // ⛔ Below the minimum span the sagitta is under the noise floor and the fit is
@@ -218,12 +287,31 @@ export class RollDetector {
     const spanned = windowPathPx >= mmToPx(this.cfg.rollStepDistance);
     const radiusMm = fit === null ? Number.NaN : pxToMm(fit.r);
     // ⭐ Circularity is TWO questions, and the band only answers one. "Is the circle
-    // the right size?" is the radius; "is the path actually on a circle at all?" is
-    // the residual, judged against the pointer's own noise — the same measurable
-    // device property the sagitta criterion is stated against.
+    // the right size?" is the radius; "is the path actually ON a circle at all?" is
+    // the residual — and that one is asked of the RECENT path, not the whole window.
+    //
+    // ⛔⛔ JUDGING IT OVER THE WHOLE WINDOW MAKES RELEASE HOPELESSLY SLOW. The window
+    // holds a full arc's worth of path, so a straight departure only dominates it
+    // once nearly all of it has been flushed: measured at **83 mm of straight drag**
+    // before a committed roll let go, against a `rollReleaseDistance` of 18 mm. The
+    // owner had already reported that exact sluggishness as roll and yaw/pitch not
+    // handing over cleanly.
+    // ⭐ The fit still uses the WHOLE window — it needs the arc to locate a centre —
+    // but whether the finger is STILL ON that circle is a question only the recent
+    // path can answer, and it answers immediately.
+    //
+    // ⛔⛔ AND THE RESIDUAL IS A FRACTION OF THE FITTED RADIUS, NOT A MULTIPLE OF THE
+    // POINTER NOISE. Tying it to noise was a category error and it took roll off the
+    // device entirely: the residual measures HOW NON-CIRCULAR THE HAND'S PATH IS,
+    // which is a shape property measured in millimetres, while pointer noise is a
+    // sensor property measured in fractions of one. A human "circle" is an ellipse
+    // with a drifting centre; at a 0.45 mm tolerance NOTHING a hand can draw
+    // qualified, and only a mathematically perfect circle rolled.
+    // ⭐ As a fraction of the radius it is dimensionless and scale-free: the same
+    // tolerance judges a tight swirl and a lazy wide one.
     const residualOk =
       fit !== null &&
-      pxToMm(fit.residualPx) <= this.cfg.rollFitResidualSigmas * this.cfg.pointerNoiseMm;
+      this.recentResidualPx(fit) <= this.cfg.rollFitResidualFraction * fit.r;
     const inBand =
       fit !== null &&
       spanned &&
@@ -242,17 +330,30 @@ export class RollDetector {
         this.committedFlag = false;
         this.accumDeg = 0;
         this.offBandPx = 0;
-        this.prevAngleRad = null;
+        this.prevPos = null;
       }
       return;
     }
 
     this.offBandPx = 0;
+    this.lastRadiusPx = fit.r;
     // ⭐⭐ THE SPEC'S QUANTITY: the angle about the CENTRE, not the turning of the
     // tangent. This is what reverses smoothly instead of flipping 180° at a cusp.
+    //
+    // ⛔⛔ BOTH ANGLES ARE TAKEN ABOUT THE **SAME** CENTRE — the current one — which
+    // is why the PREVIOUS POSITION is stored rather than the previous angle. A
+    // difference of two angles measured about two different centres is not a swept
+    // angle at all; it conflates the finger's motion with the CENTRE'S. The fit's
+    // centre genuinely does move: on a side-to-side wiggle it jumps clean across the
+    // path each time the window slides over an inflection, and storing the previous
+    // angle let that jump accumulate — a sloppy lazy drag committed as a roll.
+    // ⭐ Re-measuring the previous point about the current centre makes centre motion
+    // cancel exactly. Same principle as the progress gate: a difference only means
+    // something when both ends of it move together.
     const angleRad = Math.atan2(s.y - fit.cy, s.x - fit.cx);
-    if (this.prevAngleRad !== null) {
-      let turn = angleRad - this.prevAngleRad;
+    if (this.prevPos !== null) {
+      const prevAngleRad = Math.atan2(this.prevPos.y - fit.cy, this.prevPos.x - fit.cx);
+      let turn = angleRad - prevAngleRad;
       // Shortest signed difference. ⚠ Legitimate here in a way it was NOT for the
       // tangent: between two readings the finger cannot sweep half a circle about the
       // centre without the sampling itself being broken.
@@ -261,6 +362,6 @@ export class RollDetector {
       this.accumDeg += (turn * 180) / Math.PI;
       if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
     }
-    this.prevAngleRad = angleRad;
+    this.prevPos = s;
   }
 }

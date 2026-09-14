@@ -16,10 +16,10 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-13) — `IN1` built, first device pass done, **owed a second**
+## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` built, **five device passes, a sixth owed**
 
-✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **114 golden
-vectors, all passing** (37 → 114 with `IN1`). ✅ The engine boundary is enforced by a
+✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **124 golden
+vectors, all passing** (37 → 124 with `IN1`). ✅ The engine boundary is enforced by a
 test. ✅ The mate-connector geometry and the constraint-stack solver are in and
 covered. ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated
 on `npm run verify`.
@@ -48,13 +48,21 @@ single unlucky reading zeroed the accumulator. `validateGestureConfig` now **thr
 on such a config. ✅ The **1€ filter** (CHI 2012, BSD/MIT, no patent — see
 `THIRD_PARTY_NOTICES`) smooths the displayed angle; roll now **releases** when the
 path stops being circular.
+⛔⛔⛔ **THE FIFTH PASS: ROLL HAD DISAPPEARED FROM THE DEPLOYED PAGE, WITH EVERY
+VECTOR GREEN.** Cause: **every roll fixture was a mathematically perfect circle** — a
+specimen no hand produces — and the fit's residual tolerance had been tied to
+POINTER NOISE, a category error (the residual measures how non-circular the HAND is,
+not how noisy the sensor is). Only a perfect circle qualified. ✅ Fixed, and
+`tests/roll.test.ts` now carries six **imperfect** swirls and three negatives as the
+primary guard. ⚠ Known cost: release takes ~83 mm of straight drag.
+
 ⭐⭐ **THE FOURTH PASS FOUND THE WRONG QUANTITY.** Roll reversal jumped: the
 detector accumulated the **turning of the tangent**, which flips 180° when an arc is
 retraced. ⭐ §1.3 asked for the *"angle about the centroid"* all along — the quantity
 was right, only the estimator was wrong. Now a closed-form **least-squares circle
 fit**; worst step **150° → 5°**. ⛔ And the 1€ filter added one pass earlier was
 **MEASURED AND REVERTED** — it had been compensating for a bad estimator.
-⛔⛔ **A FIFTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
+⛔⛔ **A SIXTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
 
 ⛔⛔ **THE PATTERN, AND IT BINDS `IN3`/`IN4`**: passes 1–3 were all **a rate estimated
 over the shortest available baseline** — flick lift speed, roll direction, roll
@@ -92,7 +100,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | IN0 | Units, motion states, flick test | IN | feature | ✅ **built 2026-09-13**, 37 vectors. ⚠ §1.1's "accumulated travel" replaced by net displacement — see the dossier. ✅ its `moveExitDistance` debt closed by `IN1` | — |
-| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ⚠ **BUILT + GREEN, FIRST DEVICE PASS DONE 2026-09-13 — NOT CLOSED.** 63 new vectors. 3 defects found in §1.3 while building, then **6 more found by finger** across three passes (inconsistent rollback = last-pair lift-speed estimator; yaw/pitch reversed AND in mixed frames = Euler assignment; roll detected but frozen; roll jitter + pause drift; **slow roll never committed — curvature sagitta under the noise floor**; roll latched through a straight drag). All fixed + pinned. ⛔ **Owed: a FOURTH device pass.** → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
+| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ⚠ **BUILT + GREEN, FIRST DEVICE PASS DONE 2026-09-13 — NOT CLOSED.** 63 new vectors. 3 defects found in §1.3 while building, then **11 more found by finger** across five passes (inconsistent rollback = last-pair lift-speed estimator; yaw/pitch reversed AND in mixed frames = Euler assignment; roll detected but frozen; roll jitter + pause drift; **slow roll never committed — curvature sagitta under the noise floor**; roll latched through a straight drag). plus **roll vanishing entirely because every fixture was a perfect circle**. All fixed + pinned. ⛔ **Owed: a SIXTH device pass.** → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | queued | IN1 |
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | queued | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | queued | IN2, 3D1 |

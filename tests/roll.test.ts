@@ -55,14 +55,14 @@ describe("roll detection", () => {
   // begin on the +x side is not a detector, and one starting phase cannot tell.
   for (const startDeg of [0, 90, 180, 270]) {
     it(`a CLOCKWISE circle started at ${startDeg}° commits, with a POSITIVE angle`, () => {
-      const d = feed(arc({ radiusMm: 15, startDeg, stepDeg: 5, steps: 30, clockwise: true }));
+      const d = feed(arc({ radiusMm: 15, startDeg, stepDeg: 5, steps: 70, clockwise: true }));
       expect(d.committed).toBe(true);
       expect(d.accumulatedDeg).toBeGreaterThan(0);
       expect(Math.abs(d.accumulatedDeg)).toBeGreaterThanOrEqual(cfg.rollAngle);
     });
 
     it(`a COUNTER-CLOCKWISE circle started at ${startDeg}° commits, with a NEGATIVE angle`, () => {
-      const d = feed(arc({ radiusMm: 15, startDeg, stepDeg: 5, steps: 30, clockwise: false }));
+      const d = feed(arc({ radiusMm: 15, startDeg, stepDeg: 5, steps: 70, clockwise: false }));
       expect(d.committed).toBe(true);
       expect(d.accumulatedDeg).toBeLessThan(0);
     });
@@ -107,7 +107,7 @@ describe("roll detection", () => {
     // ⛔ Only the DECISION latches. 2quinte rotates the object BY this value, so a
     // detector that froze it at `rollAngle` would let the object roll 60° and then
     // stop dead while the finger kept circling.
-    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 30, clockwise: true }));
+    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 70, clockwise: true }));
     expect(d.committed).toBe(true);
     expect(d.accumulatedDeg).toBeGreaterThan(cfg.rollAngle);
   });
@@ -158,7 +158,7 @@ describe("roll detection", () => {
   });
 
   it("⛔ a GENTLE curve is above rollRadiusMax and does not commit", () => {
-    const d = feed(arc({ radiusMm: 60, startDeg: 0, stepDeg: 3, steps: 40, clockwise: true }));
+    const d = feed(arc({ radiusMm: 120, startDeg: 0, stepDeg: 1.5, steps: 60, clockwise: true }));
     expect(d.committed).toBe(false);
   });
 
@@ -199,7 +199,7 @@ describe("roll detection", () => {
     // being circular the rule stops applying. Commit is the entry hysteresis;
     // `rollReleaseDistance` is the exit. Both halves are asserted here -- an exit
     // with no hysteresis would chatter between roll and yaw/pitch on every wobble.
-    const circle = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 30, clockwise: true });
+    const circle = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 70, clockwise: true });
     const last = circle[circle.length - 1]!;
     const prev = circle[circle.length - 2]!;
     const ux = last.x - prev.x;
@@ -221,9 +221,19 @@ describe("roll detection", () => {
     const short = feed([...circle, ...straightFor(cfg.rollReleaseDistance * 0.5)]);
     expect(short.committed).toBe(true); // a wobble must not drop the roll
 
-    const long = feed([...circle, ...straightFor(cfg.rollReleaseDistance * 3)]);
+    const long = feed([...circle, ...straightFor(150)]);
     expect(long.committed).toBe(false); // sustained straight travel hands back
     expect(long.accumulatedDeg).toBe(0); // and a new roll must earn rollAngle again
+
+    // ⛔⛔ A KNOWN COST, PINNED RATHER THAN HIDDEN. Release is NOT governed by
+    // `rollReleaseDistance` alone: the fit window holds `rollFitArcDeg` of arc, and a
+    // committed roll only lets go once enough of that has flushed for the fitted
+    // radius to leave the band. Measured at **~83 mm** of straight drag against an
+    // 18 mm release distance. ⚠ That is the sluggish roll-to-yaw/pitch handover the
+    // owner reported; the arc length is what buys detection of a lazy wide swirl, so
+    // the two are in direct tension and only a device can settle it. `IN5`.
+    const mid = feed([...circle, ...straightFor(40)]);
+    expect(mid.committed).toBe(true); // ⚠ still rolling after 40 mm of straight drag
   });
 
   it("a duplicated sample is skipped, not read as a zero turn", () => {
@@ -305,7 +315,7 @@ describe("⛔⛔ roll under digitiser noise", () => {
     // holding still. Three near-coincident noisy points have a meaningless
     // circumradius; it fell below rollRadiusMin, which zeroed the accumulator, and
     // the cube snapped back to where the roll began.
-    const circling = noisyCircle(30, 0.5);
+    const circling = noisyCircle(70, 0.5);
     const d = new RollDetector(cfg);
     for (const s of circling) d.push(s);
     expect(d.committed).toBe(true);
@@ -324,7 +334,7 @@ describe("⛔⛔ roll under digitiser noise", () => {
   it("⭐ ...and the roll RESUMES cleanly after the pause", () => {
     // The other half: a detector that ignored everything after a pause would pass
     // the test above and be useless.
-    const circling = noisyCircle(30, 0.5);
+    const circling = noisyCircle(70, 0.5);
     const d = new RollDetector(cfg);
     for (const s of circling) d.push(s);
     const last = circling[circling.length - 1]!;
@@ -509,5 +519,117 @@ describe("⛔⛔ roll reversal", () => {
     for (const s of reversal(200, 200)) d.push(s);
     expect(d.accumulatedDeg).toBeLessThan(0); // short by the startup arc
     expect(Math.abs(d.accumulatedDeg)).toBeLessThan(60); // but only by that much
+  });
+});
+
+/**
+ * ⭐⭐⭐ THE VECTORS THAT WOULD HAVE CAUGHT THE WORST REGRESSION OF THIS ROW.
+ *
+ * 2026-09-14, on the deployed page: **roll had disappeared entirely.** Every vector
+ * above was green. The reason is the predecessor's most expensive lesson, in the
+ * exact form `METHOD` warns about: *a golden vector's fixture must be a specimen the
+ * product would accept* — and every roll fixture here was a MATHEMATICALLY PERFECT
+ * CIRCLE, which is a specimen no hand will ever produce.
+ *
+ * ⛔ A human "circle" is an ellipse with a drifting centre and a wobbling radius. The
+ * circle fit's residual tolerance had been tied to POINTER NOISE (0.45 mm) — a
+ * category error, because the residual measures how non-circular the HAND is, not how
+ * noisy the sensor is. Nothing a hand can draw qualified.
+ *
+ * ⭐ So these fixtures are deliberately imperfect, and they are the primary guard:
+ * any future change to the roll geometry must keep ALL of them rolling and NONE of
+ * the negatives rolling.
+ */
+describe("⭐⭐⭐ REALISTIC gestures — imperfect, as hands actually are", () => {
+  /** An ellipse with a drifting centre, a wobbling radius, and pointer noise. */
+  function humanSwirl(o: {
+    steps: number;
+    radiusMm: number;
+    aspect: number;
+    driftMm: number;
+    wobbleMm: number;
+    stepDeg: number;
+  }): Sample[] {
+    let seed = 13;
+    const rnd = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return (seed / 0x7fffffff) * 2 - 1;
+    };
+    const out: Sample[] = [];
+    for (let i = 0; i <= o.steps; i++) {
+      const a = (o.stepDeg * i * Math.PI) / 180;
+      const rr = o.radiusMm + o.wobbleMm * Math.sin(a * 2.3);
+      const drift = (o.driftMm * i) / o.steps;
+      out.push({
+        x: 400 + mmToPx(rr * o.aspect * Math.cos(a) + drift) + rnd() * 0.5,
+        y: 400 + mmToPx(rr * Math.sin(a)) + rnd() * 0.5,
+        t: i * 10,
+      });
+    }
+    return out;
+  }
+
+  const MUST_ROLL: [string, Sample[]][] = [
+    ["a near-circle with noise", humanSwirl({ steps: 80, radiusMm: 15, aspect: 1, driftMm: 0, wobbleMm: 0, stepDeg: 5 })],
+    ["an ellipse, 1.3:1", humanSwirl({ steps: 80, radiusMm: 15, aspect: 1.3, driftMm: 0, wobbleMm: 0, stepDeg: 5 })],
+    ["ellipse + wobble + 8mm drift", humanSwirl({ steps: 80, radiusMm: 15, aspect: 1.3, driftMm: 8, wobbleMm: 2, stepDeg: 5 })],
+    ["a lazy WIDE swirl, R=35", humanSwirl({ steps: 80, radiusMm: 35, aspect: 1.2, driftMm: 5, wobbleMm: 3, stepDeg: 5 })],
+    ["a TIGHT swirl, R=8", humanSwirl({ steps: 80, radiusMm: 8, aspect: 1.2, driftMm: 3, wobbleMm: 1, stepDeg: 5 })],
+    ["a SLOW small swirl, R=12", humanSwirl({ steps: 160, radiusMm: 12, aspect: 1.25, driftMm: 4, wobbleMm: 1.5, stepDeg: 2.5 })],
+  ];
+
+  for (const [name, gesture] of MUST_ROLL) {
+    it(`⭐ rolls: ${name}`, () => {
+      expect(feed(gesture).committed).toBe(true);
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ⛔ AND THE NEGATIVES, WHICH ARE THE OTHER HALF. A detector that rolls on
+  // everything passes every test above and ruins every drag.
+
+  function alongX(amplitudeMm: number, wavelengthMm: number, steps: number): Sample[] {
+    const out: Sample[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const xMm = i * 1.2;
+      out.push({
+        x: 100 + mmToPx(xMm),
+        y: 200 + mmToPx(amplitudeMm * Math.sin((2 * Math.PI * xMm) / wavelengthMm)),
+        t: i * 10,
+      });
+    }
+    return out;
+  }
+
+  it("⛔ does NOT roll: a small side-to-side wiggle", () => {
+    expect(feed(alongX(3, 42, 200)).committed).toBe(false);
+  });
+
+  it("⛔ does NOT roll: a BIG lazy S-shaped drag", () => {
+    // ⚠ THE HARDEST NEGATIVE, and it set `rollAngle`. One half-period of an
+    // 8 mm × 90 mm wiggle contains ~67° of GENUINE arc at ~25 mm radius — it is not
+    // distinguishable from a swirl by shape at all. Only the total swept angle
+    // separates them, which is why the commit threshold moved 60° → 120°.
+    expect(feed(alongX(8, 90, 200)).committed).toBe(false);
+  });
+
+  it("⛔ does NOT roll: a single gentle curved drag", () => {
+    const out: Sample[] = [];
+    for (let i = 0; i <= 120; i++) {
+      const a = (i * 0.4 * Math.PI) / 180; // ~48° of sweep at R=90mm
+      out.push({ x: 300 + mmToPx(90 * Math.cos(a)), y: 300 + mmToPx(90 * Math.sin(a)), t: i * 10 });
+    }
+    expect(feed(out).committed).toBe(false);
+  });
+
+  it("⛔ the residual tolerance is a FRACTION OF RADIUS, not a noise multiple", () => {
+    // ⭐ The category error, pinned. Tying it to `pointerNoiseMm` gave a ~0.45 mm
+    // tolerance, and roll vanished from the device. Scale-free is the point: one
+    // tolerance must judge a tight swirl and a lazy wide one alike.
+    expect(cfg.rollFitResidualFraction).toBeLessThan(1);
+    const tight = humanSwirl({ steps: 80, radiusMm: 8, aspect: 1.2, driftMm: 3, wobbleMm: 1, stepDeg: 5 });
+    const wide = humanSwirl({ steps: 80, radiusMm: 35, aspect: 1.2, driftMm: 5, wobbleMm: 3, stepDeg: 5 });
+    expect(feed(tight).committed).toBe(true);
+    expect(feed(wide).committed).toBe(true);
   });
 });
