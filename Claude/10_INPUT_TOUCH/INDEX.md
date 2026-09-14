@@ -25,10 +25,20 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**227 golden vectors, all passing** (37 → 219).
+**247 golden vectors, all passing** (37 → 219).
 
-⛔ **Not built**: `IN2` (pointer roles — ⭐ **unblocked 2026-09-14**, the `IN8` decision
-below is made),
+⭐ **`IN2` is BUILT** (2026-09-14, 22 vectors, `src/input/router.ts`, awaiting a device
+look): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
+touchpoint's lifetime** (§4), bindings keyed by pointer id so §0's order-independence
+holds in both release orders, and `activeCount` excludes ignored touchpoints because
+that is the count the §4 rule table is written against.
+⚠ **Its visible consequence is the thing to judge by finger**: lift the finger holding a
+part while a second finger rests on that same part and **the part stops responding** —
+the second was ignored at press and stays ignored until it lifts. The HUD prints the
+latched roles (`#1OBJ #2IGN  active=1`) so that is distinguishable from a bug.
+→ [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
+
+⛔ **Not built**:
 `IN3`/`IN4` (the object rules, blocked on `3D1`), `IN5` (measurement), `IN6` undo,
 `IN7` haptics.
 

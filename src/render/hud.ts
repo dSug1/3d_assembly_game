@@ -37,6 +37,15 @@ export interface HudFields {
    * only instrument able to report it is the device the gesture is running on.
    */
   readonly noise: string;
+  /**
+   * ⭐⭐ `IN2`'s latched roles, per touchpoint. ⛔ WITHOUT THIS AN IGNORED FINGER IS
+   * INVISIBLE: the `IN8` decision means a second touchpoint on a held object does
+   * nothing, so the part stops responding while a finger is still on it — and with no
+   * readout that is indistinguishable from a bug. A role is latched at press and
+   * cannot be inferred from where the finger is now, which is exactly why it has to be
+   * printed rather than reasoned about.
+   */
+  readonly roles: string;
 }
 
 export interface Hud {
@@ -80,6 +89,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         }`,
         `last      ${f.lastVerdict}`,
         `camera    ${f.camera}`,
+        `roles     ${f.roles}`,
         `noise     ${f.noise}`,
       ].join("\n");
     },

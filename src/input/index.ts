@@ -9,4 +9,5 @@ export * from "./pinch";
 export * from "./barycentre";
 export * from "./orbit";
 export * from "./noise_meter";
+export * from "./router";
 export * from "./recognizer";

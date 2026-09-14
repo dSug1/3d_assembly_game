@@ -18,7 +18,7 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` closed, camera rules nearly there
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **227 golden vectors,
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **247 golden vectors,
 all passing** (37 → 219). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
@@ -85,12 +85,35 @@ a statistic taken over the shortest available baseline.
 ⛔ `tests/config_debt.test.ts` now refuses any tunable nothing reads — after three
 orphans (`moveExitDistance`, `tiltDeadband`, `gainRoll`).
 
-⛔⛔ **NEXT IS `3D1`** — the object model. `IN3`, `IN4`, `RND1` and `RND2` all wait on
-it, and it is the last thing between here and actual assembly.
-⚠ **It is where mistake shape 4 is most likely to recur**: an assembly tree composes
-transforms through parent-child chains, which is exactly what cost the predecessor a
-week and what the orbit surface did last night. ⭐ Write the composite check BEFORE the
-code, not after.
+⛔⛔ **NEXT IS RULE 6 (screen-plane translate)** — `IN2` was built on 2026-09-14 and is
+awaiting a device look, not a build.
+
+### ⭐⭐ THE ORDER, and why `3D1` is not next after all
+
+**`IN2` → rule 6 translate → `3D1` → 6bis onward.**
+
+⭐ **`IN4`'s dependency on `3D1` IS NOT UNIFORM, and that is what reorders the queue.**
+Rule 6 (screen-plane translate) is defined on *the selected object* plus a screen
+frame — no faces, no connectors, no assembly tree. Rules **6bis / 6ter / 6quater** are
+defined on `AxisBtwFaces`, *the axis between the centres of the two selected FACES*,
+and a face centre is exactly what `3D1` owns. ⭐ Same reason `IN9` shipped ahead of
+`3D1`: ask what a rule actually reads, not which phase it is filed under.
+⛔ So translation goes as far as rule 6 **and must stop there**.
+
+⛔⛔ **AND RULE 6 IS A COMPOSITION — mistake shape 4's exact territory.** §1.2 scales
+translation gains by `cameraDistance / referenceCameraDistance`, so rule 6 is
+`translate × zoom × orbit`: one millimetre of finger means a different world
+displacement at every camera distance, and the orbit surface now makes that distance
+**asymmetric** (1.14 m at the top ring against 0.71 m at the bottom).
+⭐ **Compute what ONE MILLIMETRE of finger does at both zoom extremes BEFORE writing
+the gain.** Not after a device session is spent disliking it — and not as a check
+bolted on afterwards, which is how the orbit surface got three segments from three
+rings.
+
+⚠ `3D1` remains the last thing between here and actual assembly, and it is where
+mistake shape 4 is most likely to recur: an assembly tree composes transforms through
+parent-child chains, which is what cost the predecessor a week. ⭐ Write the composite
+check BEFORE the code, not after.
 
 ## Phase IN — the touch input system
 
@@ -100,7 +123,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 |---|---|---|---|---|---|
 | IN0 | Units, motion states, flick test | IN | feature | ✅ **built 2026-09-13**, 37 vectors. ⚠ §1.1's "accumulated travel" replaced by net displacement — see the dossier. ✅ its `moveExitDistance` debt closed by `IN1` | — |
 | IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ✅ **CLOSED 2026-09-14.** 109 new vectors. **7 device passes, 14 defects none of which a green suite could see.** ⚠ It also carries rule **2quinte**'s roll detector, built early and hardened — `IN3` inherits it. → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
-| IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | ⭐ **UNBLOCKED 2026-09-14** by the `IN8` decision — next in the input phase, and it needs no object model | IN1, IN8 |
+| IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | ⭐ **BUILT 2026-09-14**, 22 vectors — `src/input/router.ts`, engine-free and generic over an opaque object handle. Three roles: `OBJECT` / `OUTSIDE` / `IGNORED` (`IN8`), each latched at press for the touchpoint's lifetime; §0 order-independence keyed by pointer id, both release orders as vectors. ⛔ **NOT CLOSED — needs a device look**, and the thing to judge is `IN8`'s visible consequence: lift the holding finger with a second finger still on the same part and **the part stops responding**. ⭐ A vector pass found **two vectors that could not fail** and fixed them → [`queue_notes/IN2.md`](queue_notes/IN2.md) | IN1, IN8 |
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | queued | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | queued. ⭐⭐ **THE `3D1` DEPENDENCY IS NOT UNIFORM — rule 6 does NOT need it.** Rule 6 (screen-plane translate) is defined on *the selected object* and a screen frame: no faces, no connectors, no assembly tree — the same reason `IN9` shipped ahead of `3D1`. Rules **6bis/6ter/6quater** are defined on `AxisBtwFaces`, *the axis between the centres of the two selected FACES*, and a face centre is exactly what `3D1` owns. ⛔ So translation can be built as far as rule 6 and must stop there. ⚠ And rule 6 carries §1.2's distance-scaled gain (`gainTranslateScreen × cameraDistance / referenceCameraDistance`) — a COMPOSITION of translate × zoom × orbit, which is mistake shape 4's exact territory: compute what one mm of finger does at both zoom extremes BEFORE writing the gain | IN2, 3D1 (6bis onward only) |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued. ⛔⛔ **A GUESSED GAIN IS RELIABLY TOO SLOW — THREE FOR THREE**: every gain a hand has set was raised from my guess, by ×3.4, ×2.3 and ×2 (`gainRotateFree`, `gainOrbitYaw`, `gainOrbitElevation` — the last one on 2026-09-14, and its row had already *predicted* it was slow without that being worth anything until a finger moved the slider). `IN3`/`IN4` add seven more — **give each a slider when it is wired**, not after a session is spent disliking it. ⭐⭐ **Now practical: tunables override from the URL** (`?rollAngle=45&rollFilterBeta=0`), so a value can be A/B'd by finger without a rebuild — `src/input/config_override.ts`. ⭐⭐ **`pointerNoiseMm` FIRST** — ⭐ **instrument BUILT 2026-09-14** (`src/input/noise_meter.ts`, on the HUD as `noise floor=…`): hold one finger still and read `floor`; the sagitta criterion and several thresholds are only defensible relative to it. ✅ **READ 2026-09-14: 0.761 mm**, five times the placeholder — and measuring it exposed a defect in the sagitta guard (see the YOU-ARE-HERE block). ⚠ Then the 1€ pair by the paper's procedure (`beta`=0, lower `minCutoff` until slow jitter is acceptable, then raise `beta` until fast motion stops lagging). ⚠ `IN1` added four more (`tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop`, and a moved `stillTime`) and found `stillSpeed`/`stillTime`/`moveExitDistance` are **not independent** — measure them together | IN3 |
