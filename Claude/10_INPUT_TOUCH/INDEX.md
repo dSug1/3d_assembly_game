@@ -27,7 +27,8 @@ model and so did not wait on `3D1`:
 
 **227 golden vectors, all passing** (37 → 219).
 
-⛔ **Not built**: `IN2` (pointer roles, blocked behind the `IN8` decision below),
+⛔ **Not built**: `IN2` (pointer roles — ⭐ **unblocked 2026-09-14**, the `IN8` decision
+below is made),
 `IN3`/`IN4` (the object rules, blocked on `3D1`), `IN5` (measurement), `IN6` undo,
 `IN7` haptics.
 
@@ -234,8 +235,13 @@ written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PART
 
 ## ⚠ Open questions the spec itself flags
 
-* **`IN8` — two touchpoints on the same object** is *undefined and reachable*. Decide
-  before `IN2` ships (§5).
+* ✅ **`IN8` — two touchpoints on the same object: DECIDED 2026-09-14 — IGNORE THE
+  SECOND HIT**, for the moment. Reading 2 (the segment between the fingers as a
+  rotation axis) is deferred, not rejected. ⛔ It binds `IN2`: *ignored* is a THIRD
+  latched role beside on-object and outside, and lifting an ignored touchpoint must NOT
+  run the release verdict, the flick test or the tap history — the opposite of the
+  pinch, where lifting one of two fingers ends the gesture.
+  → [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md)
 * **`axisMappingMode`** `rotated` vs `direct` (§6bis) — build both, A/B on a device.
 * **`matePriorityOverAnchor`** (§1.4) — default is anchor-wins; the flag exists for
   the comparison.
