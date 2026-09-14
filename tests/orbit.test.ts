@@ -67,35 +67,51 @@ describe("orbit drag — the directions a hand expects", () => {
     return c;
   };
 
-  it("⭐ dragging RIGHT yaws one way, LEFT the other", () => {
-    expect(drag(20, 0).yaw).toBeGreaterThan(0);
-    expect(drag(-20, 0).yaw).toBeLessThan(0);
+  // ⛔⛔ DECLARED TRUTH, chosen by the owner on the device (2026-09-14):
+  // *"if fingers move up and right, camera orbits down and left"* — the camera moves
+  // OPPOSITE the finger. That is the "grab the world" convention: the finger pushes
+  // the scene and the camera swings the other way, so whatever is under the thumb
+  // tracks with it.
+  // ⭐ Both readings are defensible and they are exact opposites, which is why this is
+  // a decision and not a detail. An internally consistent sign cannot tell you which
+  // one a hand expects — `IN1` shipped yaw AND pitch inverted for that very reason.
+
+  it("⭐ finger RIGHT orbits the camera LEFT, and the reverse", () => {
+    expect(drag(20, 0).yaw).toBeLessThan(0);
+    expect(drag(-20, 0).yaw).toBeGreaterThan(0);
   });
 
-  it("⭐ dragging DOWN lowers the camera; UP raises it", () => {
-    // ⛔ Asserted as the elevation a hand expects. `IN1` shipped yaw AND pitch
-    // inverted because an internally consistent sign was never checked this way.
-    expect(drag(0, 20).elevation).toBeLessThan(0.5); // finger down → camera lower
-    expect(drag(0, -20).elevation).toBeGreaterThan(0.5);
+  it("⭐ finger UP orbits the camera DOWN, and the reverse", () => {
+    // ⚠ `dyPx` is positive DOWNWARD, so a finger moving UP is a negative dy.
+    expect(drag(0, -20).elevation).toBeLessThan(0.5); // finger up → camera lower
+    expect(drag(0, 20).elevation).toBeGreaterThan(0.5);
+  });
+
+  it("⛔ the two axes are inverted CONSISTENTLY — not one and not the other", () => {
+    // ⚠ A half-applied inversion is the likeliest way to get this wrong, and it feels
+    // like neither convention. Asserted together so one cannot drift from the other.
+    const c = drag(20, -20); // up and right
+    expect(c.yaw).toBeLessThan(0); // … orbits left
+    expect(c.elevation).toBeLessThan(0.5); // … and down
   });
 
   it("⭐ gains are per MILLIMETRE, so a denser screen does not change the gesture", () => {
     // The same physical 20 mm of travel must give the same yaw whatever the DPI.
     const c = new OrbitController(cfg, 0, 0.5);
     c.drag(mmToPx(20), 0);
-    expect(c.yaw).toBeCloseTo(20 * cfg.gainOrbitYaw, 9);
+    expect(c.yaw).toBeCloseTo(-20 * cfg.gainOrbitYaw, 9);
   });
 
   it("⭐⭐ the elevation limit HOLDS under sustained dragging", () => {
     // Not merely "a clamp exists": drag far past it, repeatedly, and check it neither
     // escapes nor accumulates a debt that has to be paid back before it moves again.
     const c = new OrbitController(cfg, 0, 0.5);
-    for (let i = 0; i < 200; i++) c.drag(0, mmToPx(-10));
+    for (let i = 0; i < 200; i++) c.drag(0, mmToPx(10));
     expect(c.elevation).toBe(1);
     expect(c.atLimit).toBe(true);
     // ⛔ One small drag the other way must move it IMMEDIATELY — if the clamp had
     // stored the overshoot, the camera would sit dead for 2 metres of finger travel.
-    c.drag(0, mmToPx(5));
+    c.drag(0, mmToPx(-5));
     expect(c.elevation).toBeLessThan(1);
   });
 

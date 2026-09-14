@@ -341,3 +341,25 @@ what it measures, which `METHOD` warns about in those words. Vectored.
 
 ⚠ The readout also prints the chosen centre, so it can be checked without trusting the
 marker's position alone.
+
+---
+
+## 2026-09-14 — orbit directions INVERTED, by the owner's choice. 198 vectors
+
+Owner: *"invert all the directions for camera orbit (if fingers move up and right,
+camera orbits down and left)."*
+
+⭐ **This is the "grab the WORLD" convention**, not "grab the camera": the finger
+pushes the scene and the camera swings the other way, so whatever is under the thumb
+tracks with it.
+
+⛔⛔ **It is a DECISION, not a detail, and that is why it is recorded rather than just
+changed.** The two readings are exact opposites and both are internally consistent —
+so no amount of code review or self-consistent sign checking can tell you which one a
+hand expects. ⚠ `IN1` shipped **yaw and pitch both inverted** for precisely that
+reason, and the vectors there had to be rewritten to assert *"the direction a hand
+expects"* rather than the sign of an internal number. The same form is used here.
+
+✅ Both axes flipped together, and a vector asserts they are **consistent** — a
+half-applied inversion is the likeliest way to get this wrong, and it feels like
+neither convention.
