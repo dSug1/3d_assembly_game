@@ -53,8 +53,9 @@ import {
   orbitCentre,
   PointerNoiseMeter,
   PointerRouter,
-  MotionTracker,
   screenTranslation,
+  advanceFollow,
+  type FollowState,
   Recognizer,
   TapHistory,
   screenPlaneRotation,
@@ -178,15 +179,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     prev: Sample;
     lastRollDeg: number;
     /**
-     * ⭐⭐ WHAT THIS GESTURE DOES, LATCHED AT THE MOMENT IT COMMITS. `null` until then.
+     * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
      *
-     * ⛔ §4's principle applied one level up: *"without this, a user steadying their
-     * grip would silently switch between two different mappings mid-gesture."* Rule 6's
-     * own wording is a per-frame condition (*the anchor is `STATIONARY`*), and read
-     * literally it would flip the object between TRANSLATING and ROTATING every time
-     * the resting thumb twitched. So the `STATIONARY` clause is honoured where it is
-     * meaningful — as the ENTRY condition — and the answer is then latched.
-     * ⚠ Recorded as a deviation from the literal §4 in `queue_notes/IN4.md`.
+     * ⛔⛔ THE OWNER OVERTURNED THE LATCH, 2026-09-14, and was right. I first gated rule 6
+     * on the anchor being `STATIONARY` at the moment the drag committed, and latched the
+     * answer — reasoning from §4 that a mode must not flip mid-gesture. On the device
+     * that produced a plain bug: move the second finger, let it settle, and the object
+     * ROTATED as though the finger were not there.
+     * ⭐ THE LESSON IS THE DISTINCTION BETWEEN THE TWO SIGNALS. §4 latches roles because
+     * `MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading — a resting thumb crosses the
+     * threshold by itself, so a rule keyed to it would flicker. Whether a finger is DOWN
+     * is neither: it is discrete and deliberate, it changes only when a person decides
+     * it does, and it is the one thing they can see. Latching it hides state instead of
+     * protecting it. ⚠ Do not generalise "latch at press" to every input.
+     * ⚠ `null` only before the gesture commits.
      */
     mode: "ROTATE" | "TRANSLATE" | null;
   }
@@ -199,14 +205,42 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const router = new PointerRouter<AbstractMesh>();
   const held = new Map<number, Held>();
+
   /**
-   * Motion state for each OUTSIDE touchpoint. ⭐ Rule 6 needs to know that the anchor is
-   * `STATIONARY`, and only touchpoints on an object get a `Recognizer` — so the anchor
-   * gets the same `MotionTracker` the recognizer uses internally, rather than this file
-   * inventing a second definition of "still". `METHOD`: a harness that recomputes the
-   * value is a second implementation.
+   * RULE 6's INERTIA. ⭐ The finger drives a TARGET; the mesh follows it under a
+   * critically damped law (`input/follow.ts`), so it accelerates out of rest and
+   * decelerates into place instead of being pinned to the fingertip.
+   *
+   * ⛔⛔ KEYED BY MESH, NOT BY TOUCHPOINT, AND IT OUTLIVES THE RELEASE — that is the
+   * whole of the deceleration. A follower torn down with the gesture would stop the
+   * object dead the instant the finger left, which is exactly the teleporting feel the
+   * inertia exists to remove.
+   * ⛔ ADVANCED IN THE RENDER LOOP, not on pointer events: pointer events stop arriving
+   * the moment the finger stops, and a system with momentum has to keep integrating
+   * after its input goes quiet.
    */
-  const anchors = new Map<number, MotionTracker>();
+  interface Follow {
+    readonly target: Vector3;
+    x: FollowState;
+    y: FollowState;
+    z: FollowState;
+  }
+  const followers = new Map<AbstractMesh, Follow>();
+
+  const followerFor = (mesh: AbstractMesh): Follow => {
+    let f = followers.get(mesh);
+    if (!f) {
+      const p = mesh.position;
+      f = {
+        target: p.clone(),
+        x: { x: p.x, v: 0 },
+        y: { x: p.y, v: 0 },
+        z: { x: p.z, v: 0 },
+      };
+      followers.set(mesh, f);
+    }
+    return f;
+  };
   let lastVerdict = "—";
 
   // ─────────────────────────────────────────────────────────────────
@@ -464,6 +498,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // unknown. ⚠ Every other gain on this project was guessed too slow; this is the
         // first one that was computed. See input/translate.ts.
         tunable("screen-plane gain (1 = under finger)", "gainTranslateScreen", 0.1, 3, 0.05),
+        // ⭐ 0 pins the object to the fingertip — the behaviour before inertia existed,
+        // and the only setting that can be checked against the tracking factor.
+        tunable("inertia (ms, 0 = none)", "translateInertiaMs", 0, 400, 10),
       ],
     },
     {
@@ -554,8 +591,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       }
 
       if (routed.role === "OUTSIDE") {
-        anchors.set(e.pointerId, new MotionTracker(cfg));
-        anchors.get(e.pointerId)!.push(s);
         // ⭐ Rule 1 chooses what to orbit AROUND at press, from the ray of the finger
         // that started it — so the centre cannot wander mid-drag as the ray moves.
         if (router.outside().length === 1) recomputeOrbitCentre(e);
@@ -608,7 +643,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
-        anchors.get(e.pointerId)?.push(s);
         if (router.outside().length === 2) {
           updatePinch();
         } else if (router.outside().length === 1 && router.objects().length === 0) {
@@ -624,7 +658,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {
         router.release(e.pointerId);
-        anchors.delete(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         pinch.end();
@@ -641,13 +674,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // part and slides off is still holding it (§4).
       router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
       if (grip.rec.move(s) === "COMMITTED_CONTINUOUS") {
-        // ⭐⭐ THE MODE IS DECIDED ONCE, HERE, at the moment the gesture commits — see
-        // `Held.mode`. Rule 6 needs exactly one object held and exactly one anchor
-        // outside it, and that anchor must be STILL as the drag begins.
-        grip.mode ??=
-          router.objects().length === 1 &&
-          router.outside().length === 1 &&
-          anchors.get(router.outside()[0]!.id)?.current === "STATIONARY"
+        // ⭐⭐ PRESENCE, RE-READ EVERY FRAME. A second finger outside any object — no
+        // matter what it has done since it went down — means rule 6. Lift it and the
+        // gesture goes back to rotating, which is a deliberate act and a visible one.
+        // ⚠ `>= 1`: two anchors and one object is not in §4's table, and translating is
+        // the answer that surprises nobody. Pinch and orbit both require NOTHING held,
+        // so neither can be running at the same time.
+        grip.mode =
+          router.objects().length === 1 && router.outside().length >= 1
             ? "TRANSLATE"
             : "ROTATE";
       }
@@ -668,10 +702,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         );
         // ⭐ The screen axes LATCHED AT PRESS, exactly as the rotation uses — so an
         // orbit that happens mid-drag cannot redefine which way "right" is.
-        grip.mesh.position.addInPlace(
-          new Vector3(...grip.frame.right).scale(t.rightM),
-        );
-        grip.mesh.position.addInPlace(new Vector3(...grip.frame.up).scale(t.upM));
+        // ⛔ THE FINGER MOVES THE TARGET, NOT THE MESH. The mesh chases it in the render
+        // loop. With `translateInertiaMs` at 0 the two are the same thing.
+        const f = followerFor(grip.mesh);
+        f.target.addInPlace(new Vector3(...grip.frame.right).scale(t.rightM));
+        f.target.addInPlace(new Vector3(...grip.frame.up).scale(t.upM));
       } else if (grip.mode === "ROTATE") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release. See the header: stand-in, not 2bis.
@@ -730,7 +765,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   paint();
 
   let frames = 0;
+  /** ⚠ One clock, `performance.now()`, as everywhere else in this file. */
+  let lastFrameMs: number | null = null;
   engine.runRenderLoop(() => {
+    const now = performance.now();
+    const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
+    lastFrameMs = now;
+
+    // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
+    // deceleration is the part that makes it feel like mass. The step is unconditionally
+    // stable, so a stalled frame simply arrives rather than exploding.
+    const tauSec = cfg.translateInertiaMs / 1000;
+    for (const [mesh, f] of followers) {
+      f.x = advanceFollow(f.x, f.target.x, tauSec, dtSec);
+      f.y = advanceFollow(f.y, f.target.y, tauSec, dtSec);
+      f.z = advanceFollow(f.z, f.target.z, tauSec, dtSec);
+      mesh.position.set(f.x.x, f.y.x, f.z.x);
+    }
+
     scene.render();
     frames++;
   });
