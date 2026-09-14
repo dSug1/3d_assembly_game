@@ -326,16 +326,18 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
   gainRoll: 1,
-  gainTranslateScreen: 1.35,
-  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14. My guess of 90 ms read as LAG, not as weight —
-  // four for four on guessed numbers being wrong, and the first one guessed too SLOW in
-  // the other sense. ⚠ At 10 ms the motion is over in ~30 ms, so the damping ratio below
-  // has almost nothing to act on: if the catch-up is wanted, this has to come back up.
-  translateInertiaMs: 10,
-  // ⚠ A GUESS, and deliberately a mild one: 0.6 is the usual "snappy, barely
-  // overshoots" figure in direct-manipulation work. ⛔ It does almost nothing at a 10 ms
-  // time constant — the pair has to be judged together.
-  translateDampingRatio: 0.6,
+  gainTranslateScreen: 1.05,
+  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14, with the damping ratio below and against a
+  // simulated drag. My 90 ms guess read as LAG — at ζ=1 it put the object 17 mm behind
+  // the finger at 100 mm/s, and the TRAIL is what a hand judges, not the millisecond
+  // count. ⚠ The owner also went below my 30 ms recommendation, and with ζ=0.35 rather
+  // than 0.65: a lighter, snappier object than I proposed.
+  translateInertiaMs: 15,
+  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14. Well under the 0.65 I suggested — a hand wanted
+  // MORE catch-up and more overshoot than the numbers alone argued for. ⚠ At τ=15 ms the
+  // overshoot this buys is ~0.6 mm, which is under the measured pointer noise
+  // (`pointerNoiseMm` 0.761 mm): felt as acceleration, not seen as a bounce.
+  translateDampingRatio: 0.35,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,

@@ -500,7 +500,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("screen-plane gain (1 = under finger)", "gainTranslateScreen", 0.1, 3, 0.05),
         // ⭐ 0 pins the object to the fingertip — the behaviour before inertia existed,
         // and the only setting that can be checked against the tracking factor.
-        tunable("inertia (ms, 0 = none)", "translateInertiaMs", 0, 400, 10),
+        // ⚠ STARTS AT 5, NOT 0: the owner's range, and it puts the useful band at a
+        // finer grain. ⛔ It does mean `0` — exact tracking, the only setting checkable
+        // against rule 6's tracking factor — is no longer reachable from the slider.
+        // It is still reachable from the URL: `?translateInertiaMs=0`.
+        tunable("inertia (ms)", "translateInertiaMs", 5, 400, 5),
         // ⭐ BELOW 1 IS THE CATCH-UP. 1 = critically damped, never overshoots; lower
         // accelerates through the gap and overshoots a little; far lower rings.
         // ⚠ It does nothing perceptible unless the inertia above is large enough to
