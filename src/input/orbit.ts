@@ -230,11 +230,21 @@ export class OrbitController {
     // threshold-driven. `core/units.ts`.
     const dxMm = dxPx / mmToPx(1);
     const dyMm = dyPx / mmToPx(1);
-    this.yawRad += dxMm * this.cfg.gainOrbitYaw;
-    // ⚠ Dragging DOWN lowers the camera, so the scene appears to tip up — the same
-    // direction convention rule 2bis settled on the device, where an internally
-    // consistent sign shipped inverted twice.
-    this.v = Math.min(1, Math.max(0, this.v - dyMm * this.cfg.gainOrbitElevation));
+
+    // ⛔⛔ THE CAMERA MOVES OPPOSITE THE FINGER, BY THE OWNER'S CHOICE (2026-09-14):
+    // *"if fingers move up and right, camera orbits down and left"*.
+    //
+    // ⭐ This is the "grab the WORLD" convention, not "grab the camera" — the finger
+    // pushes the scene and the camera swings the other way, so the object under the
+    // thumb tracks with it. Both readings are defensible and the two are exact
+    // opposites, which is precisely why it is a decision and not a detail: an
+    // internally consistent sign cannot tell you which one a hand expects.
+    // ⚠ `IN1` shipped yaw AND pitch inverted for exactly that reason, twice.
+    this.yawRad -= dxMm * this.cfg.gainOrbitYaw;
+    // ⚠ `dyPx` is positive DOWNWARD, so `+dyMm` here means a finger moving UP lowers
+    // the camera — the same inversion, in the axis where screen coordinates already
+    // point the other way.
+    this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation));
   }
 
   pose(zoom: number): OrbitPose {
