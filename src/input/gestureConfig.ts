@@ -22,6 +22,8 @@
  * two places is exactly what `one constant, one place` forbids, so it is exported
  * from here and `scene.ts` reads it — it does not keep its own copy.
  */
+import { distanceTurningPoints } from "./orbit";
+
 export const CAMERA_NEAR_PLANE_M = 0.01;
 
 export interface GestureConfig {
@@ -45,6 +47,13 @@ export interface GestureConfig {
   // ── §1.2 gains ──────────────────────────────────────────────────────────
   /** Metres. Translation gains scale by cameraDistance / this. */
   referenceCameraDistance: number;
+  /**
+   * §2bis free rotation: RADIANS of object rotation per MILLIMETRE of finger travel.
+   * ⛔ Per millimetre, never per pixel — a pixel means something different on a phone
+   * and a tablet, and the whole gesture set is threshold-driven (`core/units.ts`).
+   * ⚠ Until `IN3` builds rule 2bis properly, the diagnostic rotation in
+   * `render/scene.ts` reads this, so tuning it by hand tunes the real thing.
+   */
   gainRotateFree: number;
   gainRotateConstrained: number;
   gainRoll: number;
@@ -227,8 +236,6 @@ export interface GestureConfig {
   gainOrbitElevation: number;
 
   // ── §2 / §4 rules ───────────────────────────────────────────────────────
-  /** degrees of device tilt below which the orbit ignores it. */
-  tiltDeadband: number;
   /** §1: the barycentre candidate set grows as 2^N − N − 1. Cap it. */
   maxBarycenterCandidates: number;
   /** §6bis A/B. "rotated" is the spec's default; "direct" is the comparison arm. */
@@ -255,8 +262,17 @@ export const DEFAULT_CONFIG: GestureConfig = {
   moveExitDistance: 0.8,
 
   referenceCameraDistance: 0.6,
-  gainRotateFree: 1,
+  // ⭐ 0.03 rad/mm — the value the hard-coded diagnostic constant in `scene.ts` had
+  // (0.008 rad/px x 3.78 px/mm), carried across exactly so the feel does not change
+  // as it moves into the config. ⚠ A placeholder like everything else; `IN5`.
+  gainRotateFree: 0.03,
   gainRotateConstrained: 0.6,
+  // ⚠⚠ UNUSED. Rule 2quinte applies the swept angle DIRECTLY — a roll gain would
+  // mean the cube turned by a different amount than the finger swept, which is not
+  // obviously wanted and has never been asked for. ⛔ An unused tunable is a lie in
+  // the config (`moveExitDistance` was one through the whole of `IN0`, and `IN5` would
+  // have gone and measured a number that did nothing). Wire it or delete it when
+  // `IN3` takes over 2quinte; flagged here so it is not forgotten.
   gainRoll: 1,
   gainTranslateScreen: 1,
   gainTranslateAxis: 1,
@@ -317,13 +333,20 @@ export const DEFAULT_CONFIG: GestureConfig = {
   evictOnOverflow: false,
   matePriorityOverAnchor: false,
 
-  // ⚠ Placeholders, like everything else here. ⭐ A starting shape: the camera sweeps
-  // from below to above, pulling in as it rises, and cannot pass overhead.
-  orbitBottomRadiusM: 0.45,
-  orbitBottomHeightM: -0.35,
-  orbitMiddleRadiusM: 0.6,
-  orbitMiddleHeightM: 0,
-  orbitTopRadiusM: 0.3,
+  // ⭐⭐ CHOSEN BY THE OWNER ON THE DEVICE, 2026-09-14, with the tuning menu — the
+  // first numbers in this file that are a JUDGEMENT rather than a guess.
+  // ⭐ The shape is a WAIST: 0.5 m at both the bottom and the top, pinching to 0.36 m
+  // level with the objects. So the camera is closest when looking straight on and
+  // draws back as it swings under or over, which keeps the whole scene in frame at
+  // the extremes. ⚠ The distance therefore turns exactly once, AT the middle ring —
+  // which is the two-transitions property the owner asked for, and it holds because
+  // the interpolation is shape-preserving (see orbit.ts).
+  // ⚠ Still not a MEASUREMENT: chosen by feel, on one device, at one screen size.
+  orbitBottomRadiusM: 0.5,
+  orbitBottomHeightM: -0.5,
+  orbitMiddleRadiusM: 0.36,
+  orbitMiddleHeightM: 0.1,
+  orbitTopRadiusM: 0.5,
   orbitTopHeightM: 0.5,
   // ⭐ ~0.9° of yaw per mm of drag, and a full bottom-to-top sweep in ~100 mm.
   gainOrbitYaw: 0.016,
@@ -337,7 +360,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraRadiusMinM: 0.15,
   cameraRadiusMaxM: 3,
 
-  tiltDeadband: 2,
   maxBarycenterCandidates: 8,
   axisMappingMode: "rotated",
   mateDirectionPurity: 2,
@@ -407,6 +429,22 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "the orbit surface would fold back through itself.",
     );
   }
+  // ⛔⛔ THE OWNER'S "TWO TRANSITIONS" RULE, ENFORCED. Reported by finger on
+  // 2026-09-14: *"there are only three rigs and therefore two transitions"* — and a
+  // ring set can still produce three, if its radius humps while its height climbs.
+  // ⭐ Checked here so the TUNING MENU can explain a refusal, instead of leaving the
+  // artefact to be rediscovered on the glass. See orbit.ts.
+  // ⚠ Deferred import: `orbit.ts` imports only the TYPE from this file, so there is
+  // no runtime cycle.
+  const turns = distanceTurningPoints(cfg);
+  if (turns > 1) {
+    throw new Error(
+      `these rings make the camera distance change direction ${turns} times; three ` +
+        "rings allow only two transitions, so it would swing in and out again on one " +
+        "sweep. Try a radius that does not hump while the height climbs.",
+    );
+  }
+
   // ⚠ A radius of 0 is legal (directly overhead); a negative one is not a radius.
   for (const [name, r] of [
     ["orbitBottomRadiusM", cfg.orbitBottomRadiusM],

@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
-import { OrbitController, orbitOffset, rigsOf } from "../src/input/orbit";
+import { OrbitController, distanceTurningPoints, orbitOffset, rigsOf } from "../src/input/orbit";
 import { MotionTracker } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
 
@@ -213,33 +213,59 @@ describe("⭐⭐⭐ the orbit surface, measured as a whole", () => {
     orbitTopRadiusM: 0.1,
   };
 
-  it("⛔ the DISTANCE holds for every ring shape, pathological ones included", () => {
-    // ⭐ This is the owner's actual complaint, and it now holds universally.
+  it("⭐⭐ NO OVERSHOOT — the surface never leaves the rings, for ANY shape", () => {
+    // ⛔ THE OWNER'S REQUIREMENT IN THEIR OWN WORDS: *"define height and radius of top
+    // and bottom rigs and not exceed these."* Shape-preserving interpolation gives
+    // this for free — no-overshoot is exactly what it means — and it is why the
+    // interpolation is done in the RINGS' OWN coordinates. Interpolating the camera's
+    // (distance, angle) instead was shipped first and swung the horizontal radius to
+    // 0.532 m when no ring exceeded 0.500 m.
     for (const shape of [...PLAUSIBLE, PATHOLOGICAL]) {
       const c = { ...cfg, ...shape };
-      expect(turningPoints(sweep(c).map((p) => p.radiusM))).toBeLessThanOrEqual(1);
+      const { bottom, middle, top } = rigsOf(c);
+      const rMin = Math.min(bottom.radiusM, middle.radiusM, top.radiusM);
+      const rMax = Math.max(bottom.radiusM, middle.radiusM, top.radiusM);
+      const hMin = Math.min(bottom.heightM, middle.heightM, top.heightM);
+      const hMax = Math.max(bottom.heightM, middle.heightM, top.heightM);
+      for (const pose of sweep(c)) {
+        const horizontal = Math.hypot(pose.offsetM[0], pose.offsetM[2]);
+        expect(horizontal).toBeGreaterThanOrEqual(rMin - 1e-9);
+        expect(horizontal).toBeLessThanOrEqual(rMax + 1e-9);
+        expect(pose.offsetM[1]).toBeGreaterThanOrEqual(hMin - 1e-9);
+        expect(pose.offsetM[1]).toBeLessThanOrEqual(hMax + 1e-9);
+      }
     }
   });
 
-  it("⛔ the HEIGHT climbs for every PLAUSIBLE ring shape", () => {
-    for (const shape of PLAUSIBLE) {
-      const c = { ...cfg, ...shape };
-      expect(turningPoints(sweep(c).map((p) => p.offsetM[1]))).toBe(0);
+  it("⭐ the HEIGHT climbs for every ring shape — now universal, not shape-dependent", () => {
+    for (const shape of [...PLAUSIBLE, PATHOLOGICAL]) {
+      expect(turningPoints(sweep({ ...cfg, ...shape }).map((p) => p.offsetM[1]))).toBe(0);
     }
   });
 
-  it("⚠ KNOWN LIMIT: a pathological radius bulge can still dip the height", () => {
-    // ⛔ RECORDED, NOT HIDDEN. With radii bulging 0.2 → 0.9 → 0.1 m, a rising
-    // DISTANCE while the elevation is still negative pulls the camera DOWN, so the
-    // derived height is not monotone even though the distance is well behaved.
-    // ⭐ It is left unguarded deliberately: no plausible ring set reaches it, and
-    // `METHOD` forbids bolting a special case onto an output to patch a case nobody
-    // has observed. If a device ever lands here, it becomes a data question.
-    // ⚠ This vector exists so the limit is a KNOWN quantity rather than a surprise —
-    // and it FAILS if someone "fixes" it, which is the prompt to update this note.
-    const c = { ...cfg, ...PATHOLOGICAL };
-    expect(turningPoints(sweep(c).map((p) => p.offsetM[1]))).toBeGreaterThan(0);
-    expect(turningPoints(sweep(c).map((p) => p.radiusM))).toBeLessThanOrEqual(1);
+  it("⭐⭐ the SHIPPED rings give TWO TRANSITIONS — one turning point in the distance", () => {
+    // ⛔ The reported defect, pinned against the config actually in use. The owner
+    // chose these six numbers on the device: a WAIST, 0.5 → 0.36 → 0.5 m.
+    expect(distanceTurningPoints(cfg)).toBeLessThanOrEqual(1);
+    expect(turningPoints(sweep().map((p) => p.radiusM))).toBeLessThanOrEqual(1);
+  });
+
+  it("⛔⛔ a ring set that would turn TWICE is REFUSED, not silently accepted", () => {
+    // ⚠ Not every ring set is clean, and pretending otherwise would be the mistake.
+    // A radius that HUMPS while the height climbs makes the distance swing in and out
+    // again — exactly what was reported by finger. ⭐ The validator refuses it, so the
+    // tuning menu explains the problem instead of leaving it to be rediscovered.
+    const humped = {
+      ...cfg,
+      orbitBottomRadiusM: 0.45,
+      orbitMiddleRadiusM: 0.6,
+      orbitTopRadiusM: 0.3,
+      orbitBottomHeightM: -0.35,
+      orbitMiddleHeightM: 0,
+      orbitTopHeightM: 0.5,
+    };
+    expect(distanceTurningPoints(humped)).toBeGreaterThan(1);
+    expect(() => new MotionTracker(humped)).toThrow(/two transitions/);
   });
 
   it("⭐ and the rings are STILL hit exactly — the fix changed shape, not anchors", () => {

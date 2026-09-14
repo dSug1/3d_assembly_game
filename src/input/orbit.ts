@@ -127,22 +127,27 @@ export function rigsOf(cfg: GestureConfig): {
  * had computed what the pair did together. The predecessor project lost a week to the
  * same shape, in its rotation stack.
  *
- * ✅ TWO CHANGES WERE NEEDED, AND EITHER ALONE IS INSUFFICIENT — measured:
+ * ✅ THE FIX IS **MONOTONE (shape-preserving) INTERPOLATION**, Fritsch–Carlson. A plain
+ * quadratic wanders between its points; a monotone cubic cannot, and it puts any
+ * extremum AT a ring. ⭐ That is the owner's *"three rigs, therefore two transitions"*
+ * stated as mathematics.
  *
- * 1. **Interpolate the coordinates the camera actually EXPERIENCES**: its DISTANCE
- *    from the centre and its ELEVATION ANGLE. The distance is what the eye reads as
- *    "how close am I", and it was the quantity with three segments. ⚠ The rings are
- *    still hit exactly — `(distance, angle)` and `(radius, height)` are the same point
- *    in two coordinate systems.
- * 2. **Interpolate MONOTONICALLY** (Fritsch–Carlson). A plain quadratic still wanders
- *    between its points: with all three radii EQUAL it gave the horizontal radius
- *    three turning points, when the honest answer is a constant.
+ * ⚠⚠ AND IT IS APPLIED TO (RADIUS, HEIGHT), NOT TO (DISTANCE, ANGLE) — a choice that
+ * was made, measured, REVERSED, and measured again. Interpolating the camera's own
+ * (distance, angle) also gives a clean distance, and was shipped first for that
+ * reason. ⛔ But it does not bound the result by the rings: on the owner's chosen
+ * shape it swung the horizontal radius out to **0.532 m when no ring exceeds
+ * 0.500 m**, which breaks *"not exceed these"* outright. Monotone cubic on the rings'
+ * own coordinates cannot overshoot, because no-overshoot is exactly what
+ * shape-preserving means.
  *
- * ⭐ Measured across six ring shapes including degenerate ones, the distance now turns
- * **at most once**, always at a ring. ⚠ Known limit: a pathological bulge (radii
- * 0.2 → 0.9 → 0.1 m) can still make the derived HEIGHT non-monotone, because a rising
- * distance at a negative elevation lowers the camera. Vectored and documented rather
- * than guarded, since no plausible ring set reaches it.
+ * ⚠ NEITHER SCHEME IS UNIVERSALLY CLEAN, and pretending otherwise would be the
+ * mistake. Measured over four ring shapes: in (radius, height) the DISTANCE can turn
+ * more than once for a shape whose radius humps while its height climbs; in
+ * (distance, angle) the horizontal radius overshoots. ⭐ The owner's shipped shape — a
+ * WAIST, 0.5 → 0.36 → 0.5 m — is clean on every count in (radius, height), and
+ * `validateGestureConfig` now REFUSES any ring set that is not, so the menu explains
+ * the problem instead of leaving it to be rediscovered by finger.
  *
  * ⚠ `zoom` scales the surface, so zooming changes the distance without changing the
  * angle you are looking from. Pinch zoom (rule 4) and the orbit therefore compose
@@ -159,29 +164,18 @@ export function orbitOffset(
   // camera cannot pass the top or bottom ring, and never reaches a pole.
   const clamped = Math.min(1, Math.max(0, v));
 
-  // Each ring, in the camera's own coordinates. ⚠ `radius >= 0` is enforced by the
-  // config validator, so these angles stay inside [-pi/2, pi/2] and never wrap —
-  // there is no branch cut for the interpolation to cross.
-  const distance = throughThree(
-    Math.hypot(bottom.radiusM, bottom.heightM),
-    Math.hypot(middle.radiusM, middle.heightM),
-    Math.hypot(top.radiusM, top.heightM),
-    clamped,
-  ) * zoom;
-  const elevationRad = throughThree(
-    Math.atan2(bottom.heightM, bottom.radiusM),
-    Math.atan2(middle.heightM, middle.radiusM),
-    Math.atan2(top.heightM, top.radiusM),
-    clamped,
-  );
+  // ⭐ Interpolated in the rings' OWN coordinates, radius and height. Monotone cubic
+  // has no overshoot, so the surface is BOUNDED BY THE RINGS — which is the owner's
+  // requirement in their words: *"define height and radius of top and bottom rigs and
+  // not exceed these."*
+  const radius =
+    throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped) * zoom;
+  const height =
+    throughThree(bottom.heightM, middle.heightM, top.heightM, clamped) * zoom;
 
-  // ⚠ A ring's radius may legitimately be 0 (a camera directly overhead), in which
-  // case the horizontal part vanishes and the height alone carries the distance.
-  const radius = distance * Math.cos(elevationRad);
-  const height = distance * Math.sin(elevationRad);
   return {
     offsetM: [radius * Math.cos(yawRad), height, radius * Math.sin(yawRad)],
-    radiusM: distance,
+    radiusM: Math.hypot(radius, height),
   };
 }
 
@@ -250,4 +244,41 @@ export class OrbitController {
   pose(zoom: number): OrbitPose {
     return orbitOffset(this.cfg, this.yawRad, this.v, zoom);
   }
+}
+
+
+/**
+ * How many times the camera's DISTANCE from the centre changes direction across the
+ * whole sweep.
+ *
+ * ⭐⭐ THE OWNER'S REQUIREMENT, MADE CHECKABLE: *"there are only three rigs and
+ * therefore two transitions."* Two transitions is one turning point. A ring set that
+ * produces more is exactly the artefact they reported by finger on 2026-09-14, and
+ * `validateGestureConfig` refuses it — so the tuning menu can say WHY a shape was
+ * rejected, rather than letting the artefact be rediscovered on the glass.
+ *
+ * ⚠ Sampled, not solved. The closed form is a piecewise cubic in two components
+ * combined under `hypot`; counting its extrema analytically is more machinery than
+ * the answer is worth, and a 200-step sweep resolves a turn the eye could see many
+ * times over. ⛔ It runs on config CHANGE, never per frame.
+ */
+export function distanceTurningPoints(cfg: GestureConfig, steps = 200): number {
+  let previous = Number.NaN;
+  let direction = 0;
+  let turns = 0;
+  for (let i = 0; i <= steps; i++) {
+    const d = orbitOffset(cfg, 0, i / steps, 1).radiusM;
+    if (Number.isFinite(previous)) {
+      const delta = d - previous;
+      // ⚠ Ignore steps too small to be a real change, or float noise at an extremum
+      // would be counted as a turn and this would measure rounding.
+      if (Math.abs(delta) > 1e-9) {
+        const next = Math.sign(delta);
+        if (direction !== 0 && next !== direction) turns++;
+        direction = next;
+      }
+    }
+    previous = d;
+  }
+  return turns;
 }
