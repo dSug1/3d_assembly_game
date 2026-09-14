@@ -52,6 +52,7 @@ import {
   OrbitCentreBlend,
   orbitCentre,
   PointerNoiseMeter,
+  PointerRouter,
   Recognizer,
   TapHistory,
   screenPlaneRotation,
@@ -175,7 +176,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     prev: Sample;
     lastRollDeg: number;
   }
-  const live = new Map<number, Held>();
+  /**
+   * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
+   * a `live` map and an `outside` map and decide membership by which one an id was in —
+   * which worked, and had no way to express the `IN8` decision, no explicit press order,
+   * and no vectors. The router is engine-free and tested; `held` below is only the
+   * per-gesture state a role cannot carry.
+   */
+  const router = new PointerRouter<AbstractMesh>();
+  const held = new Map<number, Held>();
   let lastVerdict = "—";
 
   // ─────────────────────────────────────────────────────────────────
@@ -184,8 +193,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⭐ §4: *"Anchor role is latched at press time."* Whether a touchpoint is ON an
   // object or OUTSIDE one is decided once, when it goes down, and never revisited.
   // Without that a user steadying their grip near a part would silently switch
-  // between two different mappings mid-gesture.
-  const outside = new Map<number, Sample>();
+  // between two different mappings mid-gesture. ⭐ `IN2` now owns that latch.
   const pinch = new PinchTracker(cfg);
 
   // ─────────────────────────────────────────────────────────────────
@@ -264,11 +272,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // own alpha/beta/radius, which would jump the instant a finger touched the glass.
   applyCamera();
 
-  /** The two outside touchpoints, oldest first, or `null` unless there are exactly two. */
+  /**
+   * The two outside touchpoints, OLDEST FIRST, or `null` unless there are exactly two
+   * and nothing is being held. ⭐ Press order is the router's `seq`, not a `Map`'s
+   * insertion order — the two agree until an id is reused.
+   */
   const pinchPair = (): [Sample, Sample] | null => {
-    if (outside.size !== 2 || live.size !== 0) return null;
-    const [a, b] = [...outside.values()];
-    return [a!, b!];
+    const out = router.outside();
+    if (out.length !== 2 || router.objects().length !== 0) return null;
+    return [out[0]!.last, out[1]!.last];
   };
 
   const updatePinch = () => {
@@ -320,9 +332,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   const paint = () => {
-    const first = live.values().next().value;
+    const first = held.get(router.objects()[0]?.id ?? -1);
     hud.update({
-      pointers: live.size + outside.size,
+      // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
+      // what is on the glass. The rules read `activeCount`, which excludes them.
+      pointers: router.size,
       // ⛔ Straight off the recognizer that made the decision. Never recomputed here:
       // a readout that derives its own answer is a second implementation, and it can
       // disagree with the product while showing green. See `METHOD`.
@@ -341,6 +355,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         `${pinch.isZooming ? "  ZOOMING" : ""}`,
       tuning: tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
       tuningRejected: tuning.rejected,
+      // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
+      // ⛔ `IGN` is the one that matters: it is the visible form of the IN8 decision.
+      roles:
+        router.size === 0
+          ? "—"
+          : router
+              .all()
+              .map((p) => `#${p.id}${p.role.slice(0, 3)}`)
+              .join(" ") + `  active=${router.activeCount}`,
       noise: noiseLine(),
     });
   };
@@ -479,13 +502,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
       const pick = info.pickInfo;
-      if (!pick?.hit || !pick.pickedMesh) {
-        // ⭐ Hit nothing: this touchpoint belongs to the camera rules, and that role
-        // is now LATCHED for its lifetime (§4).
-        outside.set(e.pointerId, s);
+      const hit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
+      // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
+      const routed = router.press(e.pointerId, s, hit);
+
+      if (routed.role === "IGNORED") {
+        // ⛔ `IN8`: a second touchpoint on an object something else already holds.
+        // It starts no recognizer, takes no anchor and moves nothing. ⚠ It is still
+        // COUNTED on the readout, so "why is nothing happening" has a visible answer.
+        paint();
+        return;
+      }
+
+      if (routed.role === "OUTSIDE") {
         // ⭐ Rule 1 chooses what to orbit AROUND at press, from the ray of the finger
         // that started it — so the centre cannot wander mid-drag as the ray moves.
-        if (outside.size === 1) recomputeOrbitCentre(e);
+        if (router.outside().length === 1) recomputeOrbitCentre(e);
         const p = pinchPair();
         if (p) {
           pinch.begin(p[0], p[1]);
@@ -497,21 +529,40 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         paint();
         return;
       }
-      const mesh = pick.pickedMesh;
+
+      const mesh = routed.object!;
       const rec = new Recognizer(cfg, poseOf(mesh), taps);
       rec.press(s);
-      live.set(e.pointerId, { rec, mesh, frame: screenFrame(), prev: s, lastRollDeg: 0 });
+      held.set(e.pointerId, { rec, mesh, frame: screenFrame(), prev: s, lastRollDeg: 0 });
       paint();
       return;
     }
 
-    if (outside.has(e.pointerId)) {
+    // ⛔ Everything past here is a MOVE or an UP for a touchpoint already latched. The
+    // role decides which rule sees it — never a second look at what is under the finger.
+    const routed = router.get(e.pointerId);
+    if (!routed) return;
+
+    if (routed.role === "IGNORED") {
+      // ⛔⛔ AN IGNORED TOUCHPOINT RUNS NOTHING, INCLUDING ON RELEASE — no release
+      // verdict, no flick test, no tap history. ⚠ The OPPOSITE of the pinch three
+      // branches below, where lifting one of two fingers ends the gesture. A stray TAP
+      // from here would evict a constraint (§1.4) that the user never asked to lose.
+      if (info.type === PointerEventTypes.POINTERUP) router.release(e.pointerId);
+      else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      paint();
+      return;
+    }
+
+    if (routed.role === "OUTSIDE") {
       if (info.type === PointerEventTypes.POINTERMOVE) {
-        const prev = outside.get(e.pointerId)!;
-        outside.set(e.pointerId, s);
-        if (outside.size === 2) {
+        const prev = routed.last;
+        // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
+        // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
+        router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        if (router.outside().length === 2) {
           updatePinch();
-        } else if (outside.size === 1 && live.size === 0) {
+        } else if (router.outside().length === 1 && router.objects().length === 0) {
           // §2 rule 1: ONE touchpoint, no hit — orbit.
           const dx = s.x - prev.x;
           const dy = s.y - prev.y;
@@ -523,7 +574,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           applyCamera();
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {
-        outside.delete(e.pointerId);
+        router.release(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         pinch.end();
@@ -532,36 +583,39 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       return;
     }
 
-    const held = live.get(e.pointerId);
-    if (!held) return;
+    const grip = held.get(e.pointerId);
+    if (!grip) return;
 
     if (info.type === PointerEventTypes.POINTERMOVE) {
-      if (held.rec.move(s) === "COMMITTED_CONTINUOUS") {
+      // ⚠ Handed the live hit, which the router discards: a finger that presses on a
+      // part and slides off is still holding it (§4).
+      router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      if (grip.rec.move(s) === "COMMITTED_CONTINUOUS") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release. See the header: stand-in, not 2bis.
         //
         // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
         // about the screen axes latched at press. Every step is a small world-frame
         // rotation, so the two axes never end up nested inside one another.
-        const cur = readPose(held.mesh);
-        if (held.rec.rollCommitted) {
+        const cur = readPose(grip.mesh);
+        if (grip.rec.rollCommitted) {
           // 2quinte has taken over: roll about the view axis by what the finger has
           // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
           // this gesture, which is what "commits to roll" means.
           // ⭐ The 1€-FILTERED angle. The raw channel drives the COMMIT threshold;
           // this drives what the eye sees. See input/one_euro.ts.
           writePose(
-            held.mesh,
-            screenRollRotation(cur, held.frame, held.rec.rollAppliedDeg - held.lastRollDeg),
+            grip.mesh,
+            screenRollRotation(cur, grip.frame, grip.rec.rollAppliedDeg - grip.lastRollDeg),
           );
         } else {
           writePose(
-            held.mesh,
+            grip.mesh,
             screenPlaneRotation(
               cur,
-              held.frame,
-              s.x - held.prev.x,
-              s.y - held.prev.y,
+              grip.frame,
+              s.x - grip.prev.x,
+              s.y - grip.prev.y,
               // ⭐ THE REAL GAIN, from the config, in radians per MILLIMETRE.
               // ⛔ A hard-coded `DIAGNOSTIC_RAD_PER_PX` used to live in this file,
               // deliberately kept OUT of the config so a debug value could not leak
@@ -574,8 +628,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           );
         }
       }
-      held.lastRollDeg = held.rec.rollAppliedDeg;
-      held.prev = s;
+      grip.lastRollDeg = grip.rec.rollAppliedDeg;
+      grip.prev = s;
       paint();
       return;
     }
@@ -584,8 +638,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
       // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
-      lastVerdict = describe(held.rec.release(s));
-      live.delete(e.pointerId);
+      lastVerdict = describe(grip.rec.release(s));
+      router.release(e.pointerId);
+      held.delete(e.pointerId);
       paint();
     }
   });

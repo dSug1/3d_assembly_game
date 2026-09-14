@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-14)
 
-✅ Green: TypeScript + Babylon + Vite, **227 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **247 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -72,7 +72,16 @@ orbit ring values and the three gains the owner chose on the device — and
 `src/input/noise_meter.ts`). ⛔ Measuring it exposed a defect in the sagitta guard that
 had stood through eight device passes: see `Claude/10_INPUT_TOUCH/INDEX.md`.
 
-⛔⛔ **NEXT is `3D1`** — the object model, which `IN3`, `IN4`, `RND1` and `RND2` all
-wait on, and the last thing before actual assembly.
+⛔⛔ **NEXT is RULE 6 (screen-plane translate).** `IN2` is **built** (2026-09-14,
+22 vectors, `src/input/router.ts`) and awaiting a device look.
+⭐ **The order is `IN2` → rule 6 translate → `3D1` → 6bis onward.** `IN4`'s dependency
+on `3D1` is NOT uniform: rule 6 translates *the selected object* in the screen plane and
+needs no object model, while 6bis onward are defined on the axis between two selected
+FACE centres, which is exactly what `3D1` owns.
+⛔ Rule 6 is a **composition** — §1.2 scales translation gains by
+`cameraDistance / referenceCameraDistance`, so it is `translate × zoom × orbit`.
+**Compute what one millimetre of finger does at BOTH zoom extremes before writing the
+gain.** That is mistake shape 4's exact territory.
+⚠ `3D1` is still the last thing before actual assembly.
 
 Full status: [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block.
