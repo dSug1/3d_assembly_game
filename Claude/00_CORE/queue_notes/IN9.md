@@ -637,3 +637,30 @@ both moved together and neither showed the decision.
 ⚠ Worth keeping as a small lesson in its own right: **an instrument's correctness is
 judged against the question it is there to answer**, not against the quantity it
 happens to be nearest.
+
+---
+
+## 2026-09-14 — orbit yaw gain 0.054 rad/mm, and a pattern in the three tuned gains
+
+Owner, from the slider: **`gainOrbitYaw` = 0.054 rad/mm** — ~3.1° of yaw per millimetre,
+so a full turn of the camera takes ~116 mm of drag. It replaces **0.016** (~0.9°/mm),
+which I had guessed.
+
+⭐⭐ **THREE GAINS HAVE NOW BEEN SET BY HAND, AND EVERY ONE WAS TOO SLOW:**
+
+| gain | guessed | chosen | |
+|---|---|---|---|
+| `gainRotateFree` (object yaw/pitch) | 0.03 rad/mm | **0.07** | ×2.3 |
+| `gainOrbitYaw` (camera) | 0.016 rad/mm | **0.054** | ×3.4 |
+| `gainRoll` | 1 | **1** | unchanged — and it is the one that was *derived*, not guessed |
+
+⛔ **That is a bias, not three coincidences.** A guessed gain is reliably too
+conservative, and nothing in a green suite can detect it: a gain has no correct value
+to assert against, only a preferred one. ⭐ It is the clearest case yet for the tuning
+menu — and a warning for `IN3`/`IN4`, which introduce **seven more gains**
+(`gainRotateConstrained`, `gainTranslateScreen`, `gainTranslateAxis`,
+`gainTranslateDepth`, `gainTranslateMutual`, and the two already here). **Give each one
+a slider when it is wired, not after a device session is spent disliking it.**
+
+⚠ `gainOrbitElevation` is still a guess (a full sweep in ~100 mm). On this evidence it
+is probably slow too; its slider is already beside the yaw one.

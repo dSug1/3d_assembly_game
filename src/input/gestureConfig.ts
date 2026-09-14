@@ -363,10 +363,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitTopHeightM: 0.5,
   // ⭐ Chosen on the device by the owner, 2026-09-14. ⚠ `0` reproduces the old jump.
   orbitBlendDistanceMm: 30,
-  // ⭐ ~0.9° of yaw per mm of drag, and a full bottom-to-top sweep in ~100 mm.
-  // ⚠ Both are sliders in the tuning menu: they are the two numbers that decide
-  // whether the camera feels heavy or twitchy, and only a hand can say which.
-  gainOrbitYaw: 0.016,
+  // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
+  // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
+  // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
+  // swing more than THREE TIMES faster. The same story as `gainRotateFree`, which a
+  // hand more than doubled: a guessed gain is reliably too slow, and only a slider
+  // finds that out.
+  gainOrbitYaw: 0.054,
+  // ⚠ Still a guess: a full bottom-to-top sweep in ~100 mm. Its slider sits beside
+  // the yaw one, and on the evidence of the other two gains it is probably slow.
   gainOrbitElevation: 0.01,
 
   // ⚠ Placeholders like everything else. `IN5` measures them — and can now do it by
