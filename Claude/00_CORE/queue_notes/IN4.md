@@ -160,36 +160,77 @@ and ζ has nothing to act on. The owner's 10 ms was chosen under a model where �
 only add lag; with ζ available, τ becomes usable again. ⭐ **Try τ ≈ 60–90 ms with
 ζ ≈ 0.5** before concluding the inertia should stay near zero.
 
-### ✅ THE SHIPPED PAIR, chosen on the device 2026-09-14
+### ✅ THE SHIPPED SET, chosen on the device 2026-09-14
 
-`gainTranslateScreen` **1.05** · `translateInertiaMs` **15** · `translateDampingRatio`
-**0.35**. Measured against a simulated drag (ramp to speed, hold, stop dead):
+| tunable | value | slider |
+|---|---|---|
+| `gainTranslateScreen` | **1.15** | 0.1–3, step 0.05 |
+| `translateInertiaMs` (τ) | **8** | 1–20, step 0.2 |
+| `translateDampingRatio` (ζ) | **0.2** | 0.1–0.5, step 0.05 |
+| `translateLeadMs` | **0.5** | 0–5, step 0.5 |
 
-| drag speed | trail behind the finger | overshoot on stop | settle |
-|---|---|---|---|
-| 50 mm/s | 0.3 mm | 0.37 mm | — |
-| 100 mm/s | 0.7 mm | 0.74 mm | 33 ms |
-| 300 mm/s | 2.0 mm | 2.21 mm | 83 ms |
+Measured against a simulated drag — ramp to speed, hold, stop dead. ⚠ The column is
+**peak deviation**, not "trail": with a lead the object can be AHEAD of the finger, so
+signing it as a trail would be the wrong quantity.
 
-⭐ **The owner went LIGHTER and BOUNCIER than I recommended** — I proposed 30 ms at
-ζ 0.65 (3.7 mm trail, 0.43 mm overshoot); they took 15 ms at ζ 0.35, which halves the
-trail and doubles the overshoot. ⚠ The lesson repeats: my numbers were defensible and a
-hand still moved them, in a direction the table alone did not argue for. **A simulation
-narrows the range; it does not pick the number.**
+| drag speed | peak deviation | same, lead = 0 | overshoot on stop | settles |
+|---|---|---|---|---|
+| 50 mm/s | 0.07 mm | 0.05 mm | 0.30 mm | 17 ms |
+| 100 mm/s | 0.15 mm | 0.10 mm | 0.60 mm | 42 ms |
+| 300 mm/s | 0.44 mm | 0.29 mm | 1.81 mm | 92 ms |
 
-⭐ Note what the shipped pair actually does: at ordinary drag speeds the trail and the
-overshoot are both **at or under the measured pointer noise** (`pointerNoiseMm`
-0.761 mm) — the weight is felt in the acceleration, not seen as a gap. It only becomes
-visible on a fast flick, which is where a real object's momentum would show anyway.
+⭐⭐ **READ THE SECOND COLUMN.** At τ=8 ms the object was ALREADY within 0.3 mm of the
+finger with no lead at all — well under the measured pointer noise (`pointerNoiseMm`
+0.761 mm). So the phantom is not removing a lag here; there was none left to remove. It
+adds a touch of anticipation, and by this metric it slightly INCREASES the peak
+deviation. The owner kept it anyway, at 0.5 ms. ⚠ That is a taste, and it is recorded as
+one rather than dressed up as a correction.
 
-⚠ **My advice one message earlier was wrong and is corrected here**: I suggested
-τ ≈ 60–90 ms with ζ ≈ 0.5, which the table then showed gives an **8–11 mm trail** —
-reproducing the exact complaint that started this. The trail is dominated by τ; ζ trims
-it by a third at best. I had the trade backwards, and only computing it caught that.
+⚠ **The whole of the feel now lives in the OVERSHOOT**, not in any gap: no visible lag
+going out, and 0.3–1.8 mm of follow-through coming to rest. That is a coherent design
+and it is worth not breaking by accident.
 
-⚠ The inertia slider now runs **5–400 ms in steps of 5** (the owner's range), so `0` —
-exact tracking, the only setting checkable against the tracking factor — is no longer
-reachable from the slider. It remains reachable from the URL: `?translateInertiaMs=0`.
+### ⛔⛔ THE COMPUTED LANDMARK MARKED THE WRONG END OF THE RANGE
+
+The phantom has a distinguished value: the follower trails `2·ζ·τ·rate`, the phantom
+leads `lead·rate`, so at **`lead = 2·ζ·τ`** they cancel exactly and the object sits ON
+the finger at every drag speed. For the shipped pair that is **3.2 ms**.
+
+⭐ **The owner chose 0.5 ms — under a sixth of it** — and narrowed the slider twice
+(60 → 5 ms) to get at the bottom of the range. So the answer to *"should the object sit
+exactly on the finger during a steady drag?"* is **no**.
+
+⛔ This is the fourth time on this project that a computed or simulated number has been
+moved by a hand, and it is the sharpest: the lead was the one figure here that looked
+like it did not need a device, because it falls out of the algebra rather than out of a
+preference. It was still the wrong end of the range — for a reason the algebra could not
+know, that at τ=8 ms there was no perceptible gap left for it to cancel.
+⭐ **A landmark tells you where a range's zero is. It does not tell you where to stand.**
+
+### The phantom, and why it is not a stiffer spring
+
+⚠ The cheap version of a lead derives it from the GAP — `phantom = target + k·(target − x)`
+— which is `(1+k)·(target − x)`: algebraically a spring with different `ω` and `ζ`, i.e.
+the two knobs we already had, wearing a hat. ⭐ A real lead needs an INDEPENDENT signal,
+and that is the target's **own velocity** — feed-forward, not more feedback. A vector
+fails if the lead is derived from the gap.
+
+⛔⛔ **And the velocity is SMOOTHED, over the object's own time constant.**
+⚠ Mistake shape 1 — *a rate estimated over the shortest available baseline* — has cost
+this project three defects, and a two-sample difference here would have been the fourth:
+it is noise divided by a few milliseconds, and the lead MULTIPLIES it into where the
+object is drawn. Measured: the raw difference injects **1.2 mm** of pure jitter into the
+position at ±0.5 mm of pointer noise; smoothed, **0.43 mm** — under the pointer's own
+floor. ⭐ Using the object's own τ also means no second slider: the lead is estimated at
+the only timescale that can matter to it.
+
+⚠ **Three reference settings are now off the sliders** — `translateInertiaMs = 0` (exact
+tracking, the only setting checkable against rule 6's tracking factor), `ζ = 1` (critical
+damping, what every overshoot vector is written against) and the neutral lead. All three
+stay reachable from the URL:
+`?translateInertiaMs=0&translateDampingRatio=1&translateLeadMs=3.2`.
+⛔ A slider that cannot reach a reference is fine; a reference nobody can reach at all
+is not.
 
 ## What the five wrong implementations did, and which vector caught each
 
@@ -214,9 +255,9 @@ zoom clamp and the orbit rings can actually produce.
 3. ⛔ **The trigger**: put the second finger down mid-drag, move it, let it settle, move
    it again — the object must translate throughout. Lift it and rotation must come back.
    The HUD prints `TRANSLATE` / `ROTATE`.
-4. ⭐⭐ **The inertia and the damping ratio TOGETHER.** At τ=0 the object is pinned to the
-   fingertip exactly (the reference point). The pair to try is **τ ≈ 60–90 ms with
-   ζ ≈ 0.5** — ζ does nothing perceptible at τ=10 ms, so judging them one at a time will
-   say the inertia should be off again.
+4. ✅ **The feel** — gain, inertia, damping ratio and lead were tuned by finger over
+   three device passes and are settled. ⚠ What is NOT settled is whether the design
+   survives contact with the rest of the game: the whole of the feel is in the overshoot
+   now, and `3D1` is about to put connectors on these objects that will want to snap.
 4. ⚠ Rotation must still work with **no** anchor down, and the anchor must not start an
    orbit while an object is held.

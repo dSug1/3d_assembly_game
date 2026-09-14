@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**269 golden vectors, all passing** (37 → 219).
+**277 golden vectors, all passing** (37 → 219).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -61,10 +61,14 @@ slider. ⭐ Ship the slider WITH the rule, not after a session is spent dislikin
 one finger still for a few seconds; `floor` is the answer. The sagitta criterion and
 several other thresholds are only defensible relative to it.
 
-⭐ **Rule 6's three numbers were chosen on the device 2026-09-14**: `gainTranslateScreen`
-1.05, `translateInertiaMs` 15, `translateDampingRatio` 0.35 — a lighter, bouncier object
-than the simulation argued for (I proposed 30 ms at ζ 0.65). ⚠ **A simulation narrows the
-range; it does not pick the number.**
+⭐ **Rule 6's four numbers were chosen on the device over three passes, 2026-09-14**:
+`gainTranslateScreen` **1.15**, `translateInertiaMs` **8**, `translateDampingRatio` **0.2**,
+`translateLeadMs` **0.5**. Every one ended up well away from what the simulation argued for
+(I proposed 30 ms at ζ 0.65, and a lead of 3.2 ms). ⚠ **A simulation narrows the range; it
+does not pick the number** — and a *computed landmark* does not either: the lead has an
+exact value at which a steady drag leaves no gap, and the hand chose a sixth of it.
+⭐ The object now deviates &lt;0.45 mm from the finger at 300 mm/s, under the measured pointer
+noise, so the whole of the feel is in the **overshoot** rather than in any gap.
 
 ⭐⭐ **MEASURED 2026-09-14: `pointerNoiseMm` = 0.761 mm** — five times the 0.15 mm
 placeholder it replaced. ⚠ **It is a RESTING-FINGER floor, and gameplay is not a

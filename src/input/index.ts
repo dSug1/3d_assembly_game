@@ -12,4 +12,5 @@ export * from "./noise_meter";
 export * from "./router";
 export * from "./translate";
 export * from "./follow";
+export * from "./lead";
 export * from "./recognizer";
