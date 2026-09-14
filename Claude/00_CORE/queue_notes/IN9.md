@@ -209,3 +209,72 @@ not, it goes.
    must survive zooming and the two must not fight.
 4. **The orbit centre** should be what you expect with two cubes on screen.
 5. **Gains** — `?gainOrbitYaw=0.03&gainOrbitElevation=0.02` to try faster.
+
+---
+
+## 2026-09-14 — ⭐⭐⭐ rule 1's first device look: THREE segments where there should be TWO
+
+Owner: *"Everything working except: when I move the finger up from bottom rig, the
+orbit radius increases, decreases, increases: there should be only two changes, not
+three (there are only three rigs and therefore two transitions)."*
+**185 → 192 golden vectors.**
+
+⭐ **The owner's reasoning is exactly right and the arithmetic agreed immediately.**
+Measured on the shipped rings, the camera distance rose to 0.615 m at v≈0.30, fell to
+0.550 at v≈0.85, then rose again to 0.583: **two turning points, three monotone
+segments, from three rings.**
+
+### ⛔⛔⛔ THE CAUSE IS `METHOD`'s CARRIED RULE, WORD FOR WORD
+
+> *"A COMPOSITION IS A THING TO MEASURE, NOT AN EMERGENT PROPERTY. Ask what the whole
+> chain does, in one expression, and check it."*
+
+Radius and height were each interpolated as a quadratic — defensible on its own, and
+each passing its own vector. **Their `hypot` is not a quadratic**, and nobody had
+computed what the pair did together. ⭐ The predecessor project lost a week to exactly
+this shape in its rotation stack, which is why the rule is carried.
+
+### ⛔ AND THE EXISTING VECTORS COULD NOT SEE IT
+
+There was a vector asserting the surface **passes through** all three rings, and one
+asserting it **stops** at the outer two. Both correct. **Both blind to what the
+surface does between them.** ⭐ The new block measures the composite directly —
+counting turning points in the distance, the horizontal radius and the height across a
+200-step sweep — which is the only kind of vector that could have caught this.
+
+### ✅ Two changes were needed, and either alone is insufficient — both measured
+
+1. **Interpolate the coordinates the camera EXPERIENCES** — distance from the centre
+   and elevation angle — not radius and height. The distance is what the eye reads as
+   *"how close am I"*, and it was the quantity with three segments. ⚠ The rings are
+   still hit exactly: `(distance, angle)` and `(radius, height)` are the same point in
+   two coordinate systems.
+2. **Interpolate MONOTONICALLY** — Fritsch & Carlson, *"Monotone Piecewise Cubic
+   Interpolation"*, SIAM J. Numer. Anal. 17 (1980). ✅ Textbook mathematics, no licence,
+   no patent. ⭐ A plain quadratic still wanders **between** its points: with all three
+   radii **equal**, it gave the horizontal radius **three** turning points when the
+   honest answer is a constant.
+
+⭐⭐ **The owner's requirement, stated as mathematics**: shape-preserving interpolation
+puts any extremum **AT a data point, never between two**. *"Three rigs, therefore two
+transitions"* is precisely the definition of a monotone interpolant through three
+values. ⛔ The single line that does it is the zeroed middle tangent when the data
+turns.
+
+⭐ Measured across six ring shapes including degenerate ones, the distance now turns
+**at most once**, always at a ring.
+
+### ⚠ One known limit, recorded rather than hidden
+
+A **pathological** bulge — radii 0.2 → 0.9 → 0.1 m — can still make the derived
+**height** non-monotone, because a rising distance while the elevation is still
+negative pulls the camera *down*. ⛔ Left unguarded on purpose: no plausible ring set
+reaches it, and `METHOD` forbids bolting a special case onto an output to patch a case
+nobody has observed. ⭐ There is a vector that **fails if someone "fixes" it**, which is
+the prompt to revisit this note.
+
+## ⚠ Still owed
+
+⛔ **A second device look at rule 1.** The other four checks reportedly pass
+(*"everything working except…"*), but the fix changes the surface everywhere, so
+direction, the limits, and composition with zoom all want re-confirming.
