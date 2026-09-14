@@ -16,7 +16,7 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` closed, camera rules nearly there
+## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — the input layer is done bar `IN3`
 
 ✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **277 golden vectors,
 all passing** (37 → 219). ✅ The engine boundary is enforced by a test.
@@ -35,8 +35,8 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FOUR MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Seventeen defects have been found **by finger**, and **not one was visible to a green
-suite**. They are four shapes, not seventeen problems:
+Nineteen defects have been found **by finger**, and **not one was visible to a green
+suite**. They are four shapes, not nineteen problems:
 
 1. **A rate estimated over the shortest available baseline.** Flick lift speed, roll
    direction, roll curvature. ⭐ *State the window, and check the signal clears the
@@ -58,6 +58,8 @@ suite**. They are four shapes, not seventeen problems:
    correctly; their `hypot` was never checked, and gave three segments from three
    rings. ⭐ *`METHOD` already says this — ask what the whole chain does, in one
    expression.*
+
+⭐⭐ **AND A FIFTH SHAPE EMERGED ON 2026-09-14: MY OWN FIXTURES.** Four false alarms in one session, every one of them a measurement bug rather than a code bug — comparing the object AFTER a step against the finger BEFORE it; a float loop taking one extra step; a window opened before two transients had finished; two frame rates given unequal total durations. ⚠ Each looked exactly like a real defect and one of them nearly got a correct implementation "fixed". ⭐ *State the instant each quantity is evaluated at, and step fixtures with integers.* ⛔ The tell for an unfinished transient versus a discretisation error: halve the timestep. Discretisation shrinks; a transient does not.
 
 ⭐ And **three times** a **device judgement overturned a confident synthetic
 measurement**. When they disagree, suspect the metric. ⛔ The third: measuring
@@ -85,8 +87,39 @@ a statistic taken over the shortest available baseline.
 ⛔ `tests/config_debt.test.ts` now refuses any tunable nothing reads — after three
 orphans (`moveExitDistance`, `tiltDeadband`, `gainRoll`).
 
-⛔⛔ **NEXT IS `3D1`** — the object model. Rule 6 (screen-plane translate) was built on
-2026-09-14 and is awaiting a device look; everything else in `IN3`/`IN4` needs `3D1`.
+⛔⛔ **NEXT IS `3D1`** — the object model. Everything left in `IN3`/`IN4` needs it.
+
+### ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD
+
+Both were built, MEASURED, and taken out. They are recorded because the ideas are
+attractive and will occur to anyone reading this code.
+
+1. **Inertia and a phantom lead on the object's ROTATION.** Built 2026-09-14 as
+   `src/input/spin.ts` — a critically/under-damped follower on the rotation vector of the
+   error, with the branch cut handled and 12 vectors green. ⛔ **The owner rejected it on
+   the device: *"I did not like the rotation inertia and slerp implementation."*** Rotation
+   stays direct. ⚠ Do not re-derive it because translation has it: they were judged
+   separately and came out differently.
+2. **Telling the follower how fast the TARGET is moving** (`targetVelocity` in
+   `follow.ts`). Arithmetically right — it makes a dragged object's trail frame-rate
+   exact, 0.32 mm instead of 0.74 mm at 120 Hz. ⛔ **It made everything visibly jitter and
+   was reverted.** Pointer events and render frames are not locked, so the per-frame target
+   delta alternates (a frame with no event sees 0, the next sees double) and the lag term
+   writes that beat into the position: frame-to-frame step change went from 1.12 mm to
+   3.25 mm at 90 Hz pointer / 60 Hz frame, and 1.63 → 4.58 at 60/120.
+   ⚠ **Mistake shape 1, committed in the file that warns about it.** Smoothing the
+   estimate does not rescue it — the estimate is not the problem, the BEAT is. And the
+   thing it bought was invisible: both trails are under the measured 0.761 mm pointer
+   noise. ⭐ *An invisible 0.4 mm of trail is not worth a visible 2 mm of jitter.*
+
+### ⭐ AND A NUMBER THAT CAME OUT OF THAT: the inertia has a FLOOR
+
+The target only moves when a pointer event lands, so it arrives as a staircase of about
+`speed ÷ pointer rate` — ~1.1 mm at 100 mm/s. **The mass is what smooths it**, which
+means `translateInertiaMs` must be at least about one pointer interval (**8–12 ms**) or
+the beat between the pointer clock and the frame clock is visible as jitter, whatever
+else is tuned. Measured: 1.0–1.6 mm of wobble at τ = 1 ms against 0.43–0.69 mm at τ = 8 ms.
+⚠ That is why the shipped τ is 7.6 ms and not lower.
 
 ### ⭐⭐ THE ORDER, and why `3D1` is not next after all
 

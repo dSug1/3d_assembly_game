@@ -538,7 +538,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ The phantom target's lead. The HUD prints the NEUTRAL value (2·ζ·τ) for
         // whatever the two sliders above are set to, so this one has a landmark rather
         // than a range of equally arbitrary numbers.
-        tunable("phantom lead (ms)", "translateLeadMs", 0, 5, 0.5),
+        tunable("phantom lead (ms)", "translateLeadMs", 0, 1.5, 0.1),
       ],
     },
     {
