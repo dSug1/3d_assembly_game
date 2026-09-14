@@ -278,3 +278,66 @@ the prompt to revisit this note.
 ⛔ **A second device look at rule 1.** The other four checks reportedly pass
 (*"everything working except…"*), but the fix changes the surface everywhere, so
 direction, the limits, and composition with zoom all want re-confirming.
+
+---
+
+## 2026-09-14 — a tuning menu, and a third object. 192 → 197 vectors
+
+Owner: a collapsible menu on the right with six sliders for the orbit rings, and a
+third object so the barycentre mechanism can be exercised.
+
+### ⭐⭐ The menu VALIDATES before it applies, and shows refusals
+
+`src/render/menu.ts`. ⛔ `validateGestureConfig` normally runs **once**, in
+`MotionTracker`'s constructor, so a slider writing straight into the config would
+bypass every cross-tunable rule there is — and these six are precisely the numbers
+that are only meaningful in combination: **ring heights that stop climbing fold the
+orbit surface back through itself**, and a camera radius inside the near plane
+**renders a black page with no error at all**.
+
+✅ Each change is tried on a **copy** first; a rejection is **shown on screen** with the
+validator's own message rather than dropped in silence — the same discipline as the
+URL parser's refusals, and for the same reason: a control that quietly ignores you
+means a tuning session spent on a value that was never in force.
+
+⛔ **One config object still.** The menu mutates the single `GestureConfig` everything
+already holds. Carried rule `L1`: a tuning value that existed in both a debug tool and
+production silently drifted apart.
+
+⚠ **Sliders AND step buttons, deliberately.** `index.html` sets `touch-action: none` on
+the page so the browser cannot claim the gestures, and that can interfere with
+dragging a native range input on some devices. The buttons are plain taps and always
+work, so a session cannot be lost to a slider that will not drag. ⭐ The panel takes
+`touch-action: pan-y` so a long menu scrolls, while the canvas keeps `none` — the
+browser pinch-zoom suppression the owner verified on 2026-09-14 is untouched.
+
+⚠ **Later**: the owner expects these to be computed from the objects' positions rather
+than set by hand. The rings are already independent of the orbit CENTRE, so that
+change is a new source for six numbers, not a reshaping of the surface.
+
+### ⭐ A third object — and why it is off-axis
+
+`objectC` at `(0.01, 0.1, −0.09)`. ⛔ **Deliberately not collinear with the other two.**
+With three collinear objects every barycentre lies on the same line, no ray could
+distinguish them, and the mechanism would look correct while **exercising nothing** —
+the predecessor's "a suite built its synthetic input in an idealised form" failure, in
+a new costume. A vector asserts the non-collinearity so it cannot be lost in a later
+tidy-up.
+
+⭐ Two objects gave exactly **one** candidate, so the ranking was untestable by
+inspection: it could have been broken in any way and still appeared to work. Three
+give **`2³ − 3 − 1 = 4`** — three pairs and the triple — and there are now vectors that
+aim a ray at each one and check it is selected.
+
+### ⛔ The orbit centre is now VISIBLE, and the marker cannot affect it
+
+A small emissive sphere is drawn at whatever §2 rule 1 chose. ⚠ Without it the
+selection is invisible and *"it seems to orbit the right thing"* is not an observation.
+
+⛔ **The marker is tagged out of the candidate set.** Real objects carry
+`metadata.orbitCandidate`, and the barycentre reads only those. A marker that became a
+candidate would **move the very centre it is drawn to show** — a readout that changes
+what it measures, which `METHOD` warns about in those words. Vectored.
+
+⚠ The readout also prints the chosen centre, so it can be checked without trusting the
+marker's position alone.

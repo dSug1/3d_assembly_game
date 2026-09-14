@@ -97,3 +97,82 @@ describe("the orbit centre", () => {
     for (let i = 0; i < 20; i++) expect(orbitCentre(pts, ray, cfg)).toEqual(first);
   });
 });
+
+/**
+ * ⭐⭐ THE ACTUAL SCENE, with the third object added on 2026-09-14 so the barycentre
+ * mechanism has something to choose BETWEEN.
+ *
+ * ⚠ Two objects give exactly ONE candidate, so the ranking was untestable by
+ * inspection — it could have been broken in any way at all and still "worked".
+ * Three give `2^3 − 3 − 1 = 4`: three pairs and the triple.
+ */
+describe("⭐⭐ the three-object scene", () => {
+  // The positions in `render/scene.ts`.
+  const A: Vec3 = [-0.07, 0, 0];
+  const B: Vec3 = [0.07, 0, 0];
+  const C: Vec3 = [0.01, 0.1, -0.09];
+  const SCENE = [A, B, C];
+
+  it("offers four candidates — three pairs and the triple", () => {
+    expect(barycentreCandidates(SCENE, cfg.maxBarycenterCandidates)).toHaveLength(4);
+  });
+
+  it("⛔ the objects are NOT collinear — or the test would exercise nothing", () => {
+    // ⚠ With three collinear objects every barycentre lies on the same line, so no ray
+    // could distinguish them and the mechanism would look correct while being
+    // untested. The third object is off-axis and off-plane deliberately.
+    const ab: Vec3 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
+    const ac: Vec3 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]];
+    const cross = Math.hypot(
+      ab[1] * ac[2] - ab[2] * ac[1],
+      ab[2] * ac[0] - ab[0] * ac[2],
+      ab[0] * ac[1] - ab[1] * ac[0],
+    );
+    expect(cross).toBeGreaterThan(1e-4);
+  });
+
+  it("⭐ a ray aimed at each pair selects THAT pair", () => {
+    // The real claim: aiming at a place picks the barycentre nearest that aim. Each
+    // pair's midpoint is a distinct point, so each is reachable.
+    const mid = (p: Vec3, q: Vec3): Vec3 => [
+      (p[0] + q[0]) / 2,
+      (p[1] + q[1]) / 2,
+      (p[2] + q[2]) / 2,
+    ];
+    for (const [p, q] of [[A, B], [A, C], [B, C]] as const) {
+      const target = mid(p, q);
+      // A ray straight down the +z axis through the target.
+      const ray = {
+        origin: [target[0], target[1], target[2] - 2] as Vec3,
+        direction: [0, 0, 1] as Vec3,
+      };
+      const chosen = orbitCentre(SCENE, ray, cfg);
+      for (let i = 0; i < 3; i++) expect(chosen[i]).toBeCloseTo(target[i]!, 9);
+    }
+  });
+
+  it("⭐ a ray aimed at the centroid of all three selects THE TRIPLE", () => {
+    const triple: Vec3 = [
+      (A[0] + B[0] + C[0]) / 3,
+      (A[1] + B[1] + C[1]) / 3,
+      (A[2] + B[2] + C[2]) / 3,
+    ];
+    const ray = {
+      origin: [triple[0], triple[1], triple[2] - 2] as Vec3,
+      direction: [0, 0, 1] as Vec3,
+    };
+    const chosen = orbitCentre(SCENE, ray, cfg);
+    for (let i = 0; i < 3; i++) expect(chosen[i]).toBeCloseTo(triple[i]!, 9);
+  });
+
+  it("⛔ the marker mesh must never be a candidate", () => {
+    // ⚠ `scene.ts` tags real objects with `metadata.orbitCandidate` and filters on it.
+    // A diagnostic marker that became a candidate would MOVE the centre it is drawn to
+    // show — a readout that changes what it measures, which `METHOD` warns about in
+    // those words. Asserted here as the arithmetic consequence: a fourth point drags
+    // every barycentre.
+    const withMarker = [...SCENE, [0, 0, 0] as Vec3];
+    expect(barycentreCandidates(withMarker, 1000)).toHaveLength(2 ** 4 - 4 - 1);
+    expect(barycentreCandidates(SCENE, 1000)).toHaveLength(4);
+  });
+});

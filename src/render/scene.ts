@@ -37,6 +37,7 @@ import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
+import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -60,7 +61,9 @@ import {
 } from "../input";
 import type { Quat, Vec3 } from "../core/vec";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
+import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
+import { createMenu, type MenuSlider } from "./menu";
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
 const OBJECT_SIZE_M = 0.08;
@@ -122,19 +125,42 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⚠ EXPLICIT materials rather than the auto-created default: with tree-shaken ES6
   // imports the default material is one more thing that has to have been pulled in,
   // and "the mesh is there but shaded black" is another silent-looking failure.
-  const make = (name: string, x: number, rgb: [number, number, number]) => {
+  const make = (name: string, at: Vector3, rgb: [number, number, number]) => {
     const mesh = CreateBox(name, { size: OBJECT_SIZE_M }, scene);
-    mesh.position = new Vector3(x, 0, 0);
+    mesh.position = at;
     // ⛔ Quaternion mode. While `rotationQuaternion` is null Babylon uses the Euler
     // `rotation` instead, which is the frame-mixing defect above.
     mesh.rotationQuaternion = Quaternion.Identity();
     const mat = new StandardMaterial(name + "-mat", scene);
     mat.diffuseColor = new Color3(...rgb);
     mesh.material = mat;
+    // ⭐⭐ TAGGED, so §2 rule 1's barycentre sees the OBJECTS and nothing else. The
+    // diagnostic marker below is a mesh too, and a marker that became a barycentre
+    // candidate would move the very centre it is drawn to show — a readout that
+    // changes what it measures, which `METHOD` warns about in those words.
+    mesh.metadata = { orbitCandidate: true };
     return mesh;
   };
-  make("objectA", -0.07, [0.65, 0.67, 0.72]);
-  make("objectB", 0.07, [0.45, 0.58, 0.72]);
+  make("objectA", new Vector3(-0.07, 0, 0), [0.65, 0.67, 0.72]);
+  make("objectB", new Vector3(0.07, 0, 0), [0.45, 0.58, 0.72]);
+  // ⭐ A THIRD OBJECT, so the barycentre mechanism has something to choose BETWEEN.
+  // ⚠ Deliberately off-axis and off-plane: with three collinear objects every
+  // barycentre lies on the same line and the ray could not distinguish them, so the
+  // test would look like it passed while exercising nothing. `2^3 − 3 − 1 = 4`
+  // candidates — three pairs and the triple.
+  make("objectC", new Vector3(0.01, 0.1, -0.09), [0.72, 0.58, 0.45]);
+
+  // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
+  // Without it the barycentre selection is invisible, and "it seems to orbit the right
+  // thing" is not an observation. `IN3` deletes this with the rest of the stand-in.
+  const centreMarker = CreateSphere("orbit-centre-marker", { diameter: 0.012 }, scene);
+  const markerMat = new StandardMaterial("orbit-centre-mat", scene);
+  markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
+  markerMat.disableLighting = true;
+  centreMarker.material = markerMat;
+  // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
+  // exists to display.
+  centreMarker.isPickable = false;
 
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
@@ -192,7 +218,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const recomputeOrbitCentre = (e: { clientX: number; clientY: number }) => {
     const ray = scene.createPickingRay(e.clientX, e.clientY, null, camera);
     const visible = scene.meshes
-      .filter((m) => m.isEnabled() && m.isVisible)
+      .filter((m) => m.isEnabled() && m.isVisible && m.metadata?.orbitCandidate === true)
       .map((m) => [m.position.x, m.position.y, m.position.z] as Vec3);
     const c = orbitCentre(
       visible,
@@ -200,6 +226,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       cfg,
     );
     orbitCentreM = new Vector3(c[0], c[1], c[2]);
+    centreMarker.position.copyFrom(orbitCentreM);
   };
 
   /** Put the camera where the rig surface says, clamped away from the near plane. */
@@ -294,6 +321,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⚠ Shown so a session can never be spent testing a value that was not in
       // force — including a typo'd key, which is REPORTED rather than ignored.
       camera:
+        `c=(${orbitCentreM.x.toFixed(2)},${orbitCentreM.y.toFixed(2)},${orbitCentreM.z.toFixed(2)}) ` +
         `r=${camera.radius.toFixed(3)}m zoom=${zoom.toFixed(2)} ` +
         `elev=${orbit.elevation.toFixed(2)}${orbit.atLimit ? "⛔LIMIT" : ""}` +
         `${pinch.isZooming ? "  ZOOMING" : ""}`,
@@ -307,6 +335,63 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * (and historically within one), and every threshold in `gestureConfig` is a
    * duration. One clock, chosen here, used for every sample.
    */
+  // ─────────────────────────────────────────────────────────────────
+  // THE TUNING MENU. ⭐ Every number it touches is an `IN5` placeholder.
+
+  /**
+   * One tunable, bound to the live config.
+   *
+   * ⛔⛔ THE CHANGE IS TRIED ON A COPY AND VALIDATED BEFORE IT IS KEPT.
+   * `validateGestureConfig` normally runs once, in `MotionTracker`'s constructor, so a
+   * slider writing straight into the config would bypass every cross-tunable rule
+   * there is — and these are exactly the numbers that are only meaningful in
+   * combination. Ring heights that stop climbing fold the orbit surface back through
+   * itself; a camera radius inside the near plane renders a black page with no error.
+   * ⭐ A rejected change is RETURNED so the menu can show why, never dropped in silence.
+   */
+  const tunable = (
+    label: string,
+    key: keyof typeof cfg & string,
+    min: number,
+    max: number,
+    step: number,
+  ): MenuSlider => ({
+    label,
+    min,
+    max,
+    step,
+    get: () => cfg[key] as unknown as number,
+    set: (value) => {
+      const candidate = { ...cfg, [key]: value };
+      try {
+        validateGestureConfig(candidate);
+      } catch (err) {
+        return err instanceof Error ? err.message : String(err);
+      }
+      // ⛔ Mutate the ONE config object everything already holds — no second copy.
+      // Carried rule `L1`: a tuning value living in both a debug tool and production
+      // silently drifted apart.
+      (cfg as unknown as Record<string, number>)[key] = value;
+      applyCamera();
+      paint();
+      return null;
+    },
+  });
+
+  createMenu([
+    {
+      title: "CAMERA ORBIT — rings",
+      sliders: [
+        tunable("top radius (m)", "orbitTopRadiusM", 0, 1.5, 0.01),
+        tunable("top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
+        tunable("middle radius (m)", "orbitMiddleRadiusM", 0, 1.5, 0.01),
+        tunable("middle height (m)", "orbitMiddleHeightM", -1.5, 1.5, 0.01),
+        tunable("bottom radius (m)", "orbitBottomRadiusM", 0, 1.5, 0.01),
+        tunable("bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
+      ],
+    },
+  ]);
+
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
     x: e.clientX,
     y: e.clientY,
