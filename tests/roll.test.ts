@@ -696,3 +696,101 @@ describe("⭐⭐ Hyper circle fit — exact recovery", () => {
     expect(fitCircle([{ x: 0, y: 0, t: 0 }, { x: 1, y: 1, t: 1 }, { x: 2, y: 0, t: 2 }])).toBeNull();
   });
 });
+
+/**
+ * ⭐⭐ TRANSITION COST — how far the finger must travel before roll engages, and
+ * before it hands back. Device-reported 2026-09-14: *"the lag at transition between
+ * linear to circular finger movements and between circular to linear finger
+ * movements is too big."*
+ *
+ * ⭐ Both were paid for by numbers chosen to compensate for the OLD Kåsa estimator:
+ *   * `rollAngle` was 120° because Kåsa could not tell a lazy S-drag from a swirl.
+ *     With Hyper, every value from 50° to 120° gives 4/4 swirls and ZERO false
+ *     positives — the threshold was paying for a bad estimator, at 16 mm of lag.
+ *   * the fit window was one length for both deciding AND tracking. A long arc makes
+ *     the DECISION reliable; once decided it is only tracking a centre, and a long
+ *     tracking window is pure release lag.
+ *
+ * ⛔ These are BUDGETS, not exact values — they move when the geometry is retuned.
+ * They exist so a retune cannot quietly make the gesture sluggish again.
+ */
+describe("⭐⭐ transition cost budgets", () => {
+  /** Straight lead-in, then a swirl. Returns mm of swirl travelled before commit. */
+  function engageAfterMm(radiusMm: number): number {
+    const d = new RollDetector(cfg);
+    let t = 0;
+    for (let i = 1; i <= 40; i++) d.push({ x: 100 + mmToPx(i * 0.8), y: 300, t: (t += 10) });
+    const startX = 100 + mmToPx(32);
+    let travel = 0;
+    for (let i = 0; i <= 500; i++) {
+      const a = (3 * i * Math.PI) / 180;
+      if (i > 0) travel += (radiusMm * 3 * Math.PI) / 180;
+      d.push({
+        x: startX + mmToPx(radiusMm * Math.cos(a) - radiusMm),
+        y: 300 + mmToPx(radiusMm * Math.sin(a)),
+        t: (t += 10),
+      });
+      if (d.committed) return travel;
+    }
+    return Infinity;
+  }
+
+  /** Swirl to commit, then depart straight. Returns mm of straight travel to release. */
+  function releaseAfterMm(radiusMm: number): number {
+    const d = new RollDetector(cfg);
+    let t = 0;
+    const pts: Sample[] = [];
+    for (let i = 0; i <= 200; i++) {
+      const a = (5 * i * Math.PI) / 180;
+      pts.push({
+        x: 400 + mmToPx(radiusMm * Math.cos(a)),
+        y: 400 + mmToPx(radiusMm * Math.sin(a)),
+        t: (t += 10),
+      });
+    }
+    for (const p of pts) d.push(p);
+    expect(d.committed).toBe(true);
+    const last = pts[pts.length - 1]!;
+    const prev = pts[pts.length - 2]!;
+    const n = Math.hypot(last.x - prev.x, last.y - prev.y);
+    for (let i = 1; i <= 800; i++) {
+      const travel = i * 0.5;
+      d.push({
+        x: last.x + ((last.x - prev.x) / n) * mmToPx(travel),
+        y: last.y + ((last.y - prev.y) / n) * mmToPx(travel),
+        t: (t += 10),
+      });
+      if (!d.committed) return travel;
+    }
+    return Infinity;
+  }
+
+  it("⭐ roll ENGAGES within a reasonable stretch of swirl", () => {
+    // ⛔ Was 44 mm at the old rollAngle of 120°. The budget guards the improvement.
+    // ⭐ MEASURED: 43.6 mm at R=8, 28.3 at R=15, 29.3 at R=35 — down from 44 mm at
+    // R=15 under the old 120° threshold. The budget carries margin over the worst.
+    for (const r of [8, 15, 35]) expect(engageAfterMm(r)).toBeLessThan(50);
+  });
+
+  it("⭐ roll RELEASES within a reasonable stretch of straight drag", () => {
+    // ⛔ Was ~40 mm with one window for both deciding and tracking, and ~83 mm before
+    // that. ⚠ It cannot go much lower: a lazy WIDE swirl and a straight line are
+    // genuinely similar over a short window, and narrowing the radius band to
+    // separate them was measured to drop 4/4 detection to 2/4.
+    // ⭐ MEASURED on an identical fixture, old settings vs new:
+    //     R= 8mm   57.0 → 47.0
+    //     R=15mm   67.5 → 56.0
+    //     R=35mm   70.5 → 56.0
+    // ⚠ ~18%, and that is close to the structural limit. A shorter tracking arc
+    // releases faster but makes committed rolls DROP OUT mid-swirl: 130° holds 4/4
+    // realistic swirls, 110° loses the tight one. And narrowing the radius band to
+    // separate a lazy wide swirl from a straight line was measured to take detection
+    // from 4/4 to 2/4. ⛔ The two are in genuine tension; only a device settles it.
+    for (const r of [8, 15, 35]) expect(releaseAfterMm(r)).toBeLessThan(65);
+  });
+
+  it("⛔ the tracking window is SHORTER than the deciding window", () => {
+    // The whole basis of the release improvement, asserted so a retune keeps it.
+    expect(cfg.rollTrackArcDeg).toBeLessThan(cfg.rollFitArcDeg);
+  });
+});

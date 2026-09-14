@@ -291,7 +291,10 @@ export class RollDetector {
   private windowTargetPx(): number {
     const seedPx = mmToPx((this.cfg.rollRadiusMin + this.cfg.rollRadiusMax) / 2);
     const radiusPx = this.lastRadiusPx ?? seedPx;
-    const arcRad = (this.cfg.rollFitArcDeg * Math.PI) / 180;
+    // ⭐ A shorter window once committed: the long arc exists to make the DECISION
+    // reliable, and that decision is already made. See `rollTrackArcDeg`.
+    const arcDeg = this.committedFlag ? this.cfg.rollTrackArcDeg : this.cfg.rollFitArcDeg;
+    const arcRad = (arcDeg * Math.PI) / 180;
     // ⚠ Never shorter than the minimum span, or the window could not satisfy the
     // sagitta criterion it is bounded by in the first place.
     return Math.max(mmToPx(this.cfg.rollStepDistance), radiusPx * arcRad);
@@ -321,6 +324,13 @@ export class RollDetector {
       n++;
     }
     return n === 0 ? Infinity : Math.sqrt(sq / n);
+  }
+
+  /** ⚠ DIAGNOSTIC ONLY, for probes. Not used by the product. */
+  debugFit(): { rMm: number; recentResidualRatio: number } | null {
+    const fit = fitCircle(this.evalPts);
+    if (fit === null) return null;
+    return { rMm: pxToMm(fit.r), recentResidualRatio: this.recentResidualPx(fit) / fit.r };
   }
 
   push(s: Sample): void {

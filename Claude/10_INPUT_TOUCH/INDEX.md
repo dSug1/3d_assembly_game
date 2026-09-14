@@ -15,7 +15,7 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 ✅ **`IN1` BUILT** — the recognizer state machine (`src/input/recognizer.ts`):
 commit point, provisional motion with **rollback**, the release-time priority ladder,
 tap / double-tap / hold, roll detection (`roll.ts`), and the screen-plane rotation
-mapping (`screen_rotate.ts`). **129 golden vectors, all passing** (37 → 129).
+mapping (`screen_rotate.ts`). **142 golden vectors, all passing** (37 → 142).
 
 ⛔⛔ **`IN1` IS NOT CLOSED. FIVE DEVICE PASSES HAVE EACH FOUND DEFECTS — TWELVE IN
 TOTAL — AND NOT ONE WAS VISIBLE TO A GREEN SUITE.** A sixth pass is owed.
