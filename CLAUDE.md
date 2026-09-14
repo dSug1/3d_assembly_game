@@ -46,16 +46,20 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-13)
 
-✅ Scaffolding green: TypeScript + Babylon + Vite, **142 golden vectors passing**.
+✅ Scaffolding green: TypeScript + Babylon + Vite, **146 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet — a **secure context**, so sensors and
 rule 1's tilt are testable. See `Claude/50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`.
-✅ **`IN1` is BUILT** — the gesture recognizer state machine.
-⭐⭐ **The first device pass found THREE defects 81 green vectors could not**:
-inconsistent rollback (lift speed read from the last sample pair), yaw/pitch reversed
-and in mixed frames (Euler assignment), and roll detected but frozen. All fixed.
-⛔⛔ **A second device pass is owed, so it is NOT closed.** Then `3D1` is next.
+✅✅ **`IN1` is CLOSED** — the gesture recognizer state machine, validated by finger
+over **seven device passes** that found **14 defects, none of which a green suite
+could see**. ⭐ The three lessons that bind every later input row are in
+[`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block — short
+estimation baselines, substituted quantities, and **idealised fixtures**.
+⛔ **NEXT is `IN9`** — the two CAMERA-ONLY rules (pinch zoom, tilt-orbit); they need
+no object model. Then `3D1`, which `IN3`, `IN4`, `RND1` and `RND2` all wait on.
+⭐⭐ **Tunables override from the URL** (`?rollAngle=45`), so `IN5` can A/B a
+placeholder by finger without a rebuild.
 ⚠ Every number in `src/input/gestureConfig.ts` is a placeholder, not a measurement
 (`IN5` is the row that measures them, and it needs the device loop above).
 

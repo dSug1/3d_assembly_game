@@ -15,10 +15,10 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 ✅ **`IN1` BUILT** — the recognizer state machine (`src/input/recognizer.ts`):
 commit point, provisional motion with **rollback**, the release-time priority ladder,
 tap / double-tap / hold, roll detection (`roll.ts`), and the screen-plane rotation
-mapping (`screen_rotate.ts`). **142 golden vectors, all passing** (37 → 142).
+mapping (`screen_rotate.ts`). **146 golden vectors, all passing** (37 → 146).
 
-⛔⛔ **`IN1` IS NOT CLOSED. FIVE DEVICE PASSES HAVE EACH FOUND DEFECTS — TWELVE IN
-TOTAL — AND NOT ONE WAS VISIBLE TO A GREEN SUITE.** A sixth pass is owed.
+✅✅ **`IN1` IS CLOSED (2026-09-14).** Seven device passes found **14 defects, not
+one of which was visible to a green suite.**
 ⛔⛔⛔ **The fifth is the one to learn from: roll had DISAPPEARED from the deployed
 page while every vector passed, because every roll fixture was a mathematically
 PERFECT CIRCLE — a specimen no hand produces.** `tests/roll.test.ts` now carries six

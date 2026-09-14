@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built, green, **SEVEN device passes — reversals now correct, roll
-> tuned; an EIGHTH is owed, so NOT CLOSED** · **SUB** · IN
+> **STATUS** · ✅ **CLOSED 2026-09-14**, after seven device passes and 14 defects none
+> of which a green suite could see · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -742,3 +742,69 @@ ignored means a session spent testing a value that was never in force, and then
 recording the result as a measurement. The readout shows what is actually applied and
 what was rejected, with the reason. ⭐ `rollFilterBeta=0` is explicitly a legitimate
 value, not an absent one — it is where the 1€ paper's own tuning recipe starts.
+
+---
+
+## 2026-09-14 (eighth pass) — ✅ `IN1` CLOSED. Smoothing shipped on device evidence
+
+Device: *"`?rollFilterBeta=0` is good. Ship this version as the default."* **146 vectors.**
+
+✅ `rollFilterBeta: 0` is now the default, so the plain URL and the USB loop both get
+the judged-good behaviour. ⚠ `beta` is **kept, not deleted** — the 1€ paper's tuning
+procedure needs it and `IN5` still has to measure both numbers;
+`?rollFilterBeta=0.05` makes it transparent again for a future comparison.
+
+### ⛔⛔ IT SHIPS AGAINST MY OWN MEASUREMENT, AND THE METRIC WAS WHAT WAS WRONG
+
+My sweep scored `beta = 0` as removing 13% of the noise for **~30° per gesture of
+lag** — a bad trade. The device said otherwise. Two reasons, both mine:
+
+1. **The synthetic swirl rolled at ~500 deg/s, about twice what a hand does.**
+   Predicted lag is `slope × τ`, so it was inflated by roughly the same factor.
+2. ⭐ **An error-against-ground-truth metric cannot score *"feels steady"***, which is
+   the thing actually being traded for. It measures a different quantity than the one
+   the user is judging.
+
+⭐⭐ **Third time on this row a device judgement has overturned a confident synthetic
+number.** Pinned by vectors so the setting is not "tidied" back by someone reading the
+old measurement.
+
+## ✅ WHY THIS ROW IS NOW CLOSED
+
+Seven device passes. Commit, rollback, tap / double-tap / hold, the release-time
+priority ladder, screen-plane rotation and roll are all judged working by finger, and
+the owner has accepted the build and asked for it to ship. `METHOD` is satisfied: a
+look on a real device closed it, several times over.
+
+⚠ **What is NOT closed, and is not a defect:**
+* ⛔ **Release lag is a stated TRADE, not a bug.** ~47–56 mm of straight drag before a
+  committed roll hands back to yaw/pitch. A lazy wide swirl and a straight line are
+  genuinely similar over a short window; two candidate fast-release signals were
+  measured and both failed to separate them, and narrowing the radius band takes
+  detection from 4/4 to 2/4. **How wide a swirl must still roll is a product decision**,
+  now testable by finger with `?rollRadiusMax=35`. → `IN5`.
+* ⛔ **Every threshold is still a placeholder.** `IN5` is unblocked now that tunables
+  override from the URL.
+* ⚠ **`ReleaseContext` is still empty from the scene**, so `6quater` cannot fire — a
+  missing input from `IN2`/`IN3`, not a recognizer fault. The ladder is covered headlessly.
+* ⚠ The **diagnostic rotation** in `scene.ts` is still not rule 2bis, and `IN3` deletes it.
+
+⭐ **Scope note for whoever picks up `IN3`:** the roll detector (`roll.ts`) is rule
+**2quinte** built early and hardened over five device passes. `IN3` inherits it rather
+than writing it.
+
+## ⛔⛔⛔ THE LESSON OF THIS ROW, FOR `IN3`/`IN4`
+
+Fourteen defects, **none visible to a green suite.** Three shapes, in order of cost:
+
+1. **A rate estimated over the shortest available baseline** — flick lift speed, roll
+   direction, roll curvature. *State the window, and check the signal clears the
+   noise, before writing the threshold.*
+2. **Measuring a DIFFERENT QUANTITY than the one asked for** — the tangent's turning
+   instead of the angle about the centre. *When an estimator is hard, check whether
+   you have replaced the quantity rather than improved the estimate of it.*
+3. ⭐⭐ **IDEALISED FIXTURES.** Roll vanished from the device with every vector green,
+   because every fixture was a perfect circle. And a threshold was large only because
+   it was compensating for a weak estimator — twice. *Build the negative and the
+   imperfect specimen first; and when a threshold has to be large, ask what it is
+   propping up before accepting the cost.*

@@ -16,99 +16,41 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` built, **five device passes, a sixth owed**
+## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` CLOSED, camera rules next
 
-✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **142 golden
-vectors, all passing** (37 → 142 with `IN1`). ✅ The engine boundary is enforced by a
-test. ✅ The mate-connector geometry and the constraint-stack solver are in and
-covered. ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated
-on `npm run verify`.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **146 golden vectors,
+all passing** (37 → 146 with `IN1`). ✅ The engine boundary is enforced by a test.
+✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
+`npm run verify`.
 
-✅ **`IN1` IS BUILT**: the recognizer state machine, provisional motion with
-rollback, roll detection, the release-time priority ladder, and a double-tap §1.4
-could not work without. ⭐ `src/render/hud.ts` prints the recognizer's own state on
-the glass — a state machine has no visible shape, and "the cube moved" tests none of
-this.
+✅✅ **`IN1` IS CLOSED.** The recognizer state machine — commit point, provisional
+motion with rollback, tap / double-tap / hold, the release-time priority ladder,
+screen-plane rotation and roll — all judged working by finger over **seven device
+passes**, which found **14 defects that a green suite could not see**. Full record:
+[`queue_notes/IN1.md`](queue_notes/IN1.md).
 
-⭐⭐ **THE FIRST DEVICE PASS FOUND THREE DEFECTS THAT 81 GREEN VECTORS COULD NOT.**
-Commit, tap/hold and double-tap passed. Rollback was **inconsistent** — the lift
-speed was measured from the LAST SAMPLE PAIR, and a `pointerup` that repeats the
-previous coordinates reads as a dead stop, so identical flicks were judged
-differently. Yaw and pitch ran **backwards**, and in **two different frames**, because
-Euler assignment applies components in a fixed order. Roll **detected but never
-rolled**: the detector froze its own angle at commit. ✅ All three fixed and pinned.
-⭐⭐ **THE SECOND PASS FOUND A FOURTH**: roll worked but **jittered**, and jittered
-badly when a circling finger paused. Same root as the flick defect — direction
-estimated between consecutive samples, where noise dominates. Worst per-sample step
-under ±0.5 px of noise: **46.3° → 10.2°**; drift across a pause: **−46.3° → 0.0°**.
-⭐⭐ **THE THIRD PASS FOUND THE WORST ONE YET**: a **slow** circular sweep never
-committed at all — 300° swept, 0.0° read. The **sagitta** of the measuring chord
-(`L²/8R`) sat *under* the pointer noise, so the curvature test was a coin toss, and a
-single unlucky reading zeroed the accumulator. `validateGestureConfig` now **throws**
-on such a config. ✅ The **1€ filter** (CHI 2012, BSD/MIT, no patent — see
-`THIRD_PARTY_NOTICES`) smooths the displayed angle; roll now **releases** when the
-path stops being circular.
-⛔⛔⛔ **THE FIFTH PASS: ROLL HAD DISAPPEARED FROM THE DEPLOYED PAGE, WITH EVERY
-VECTOR GREEN.** Cause: **every roll fixture was a mathematically perfect circle** — a
-specimen no hand produces — and the fit's residual tolerance had been tied to
-POINTER NOISE, a category error (the residual measures how non-circular the HAND is,
-not how noisy the sensor is). Only a perfect circle qualified. ✅ Fixed, and
-`tests/roll.test.ts` now carries six **imperfect** swirls and three negatives as the
-primary guard. ⚠ Known cost: release takes ~83 mm of straight drag.
+⛔⛔ **THE THREE LESSONS THAT BIND `IN3`/`IN4`**, in order of what they cost:
+1. **A rate estimated over the shortest available baseline** (flick lift speed, roll
+   direction, roll curvature). *State the window, and check the signal clears the
+   noise, BEFORE writing the threshold.*
+2. **Measuring a DIFFERENT QUANTITY than the one asked for** — the tangent's turning
+   instead of the angle about the centre, invisible until a finger reversed.
+3. ⭐⭐ **IDEALISED FIXTURES.** Roll vanished from the device with every vector green,
+   because every fixture was a perfect circle. *Build the imperfect specimen and the
+   negative first.* — and **when a threshold has to be large, ask what weakness it is
+   compensating for** before accepting the cost. It was propping up a bad estimator
+   twice, at 16 mm of gesture lag.
 
-⭐⭐ **THE FOURTH PASS FOUND THE WRONG QUANTITY.** Roll reversal jumped: the
-detector accumulated the **turning of the tangent**, which flips 180° when an arc is
-retraced. ⭐ §1.3 asked for the *"angle about the centroid"* all along — the quantity
-was right, only the estimator was wrong. Now a closed-form **least-squares circle
-fit**; worst step **150° → 5°**. ⛔ And the 1€ filter added one pass earlier was
-**MEASURED AND REVERTED** — it had been compensating for a bad estimator.
-⭐⭐ **THE SIXTH PASS: KÅSA → HYPER, and a revert undone.** Roll jumped at reversals
-and at the roll→yaw/pitch handover. Three causes: **Kåsa is the worst standard circle
-fit** (severely biased on short arcs — replaced with **Hyper**, Al-Sharadqah &
-Chernov 2009, zero essential bias); the angle's **reference point went stale** across
-out-of-band excursions, collecting a whole excursion into one step; and the **1€
-filter had been reverted on evidence that was wrong twice over** — perfect-circle
-fixtures AND a `beta` so high the filter was never switched on.
-⭐⭐ **THE SEVENTH PASS: reversals reported PERFECT; transition lag cut.** Engagement
-44 → 28 mm — `rollAngle` was 120° only because **Kåsa** could not tell a lazy S-drag
-from a swirl; with **Hyper** every value from 50° to 120° gives 4/4 swirls and zero
-false positives, so the threshold had been paying for a bad estimator. Release ~18%
-via a **separate, shorter tracking window** (a long arc decides; it does not need to
-track). ⛔ Release is near its structural limit: a lazy wide swirl and a straight line
-are genuinely similar over a short window, and two candidate fast-release signals
-(radius ratio, swept-angle-per-path) were measured and both failed to separate them.
-⭐⭐ **AND TUNABLES CAN NOW BE OVERRIDDEN FROM THE URL** — `?rollFilterBeta=0` — so
-`IN5` can A/B a number by finger instead of by rebuild. Refusals show on the HUD.
-⛔⛔ **AN EIGHTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
+⭐⭐ **`IN5` IS NOW PRACTICAL**: tunables override from the URL
+(`?rollAngle=45&rollFilterBeta=0`), so a placeholder can be A/B'd by finger without a
+rebuild. ⭐ Measure **`pointerNoiseMm` first** — hold a finger still and read the
+spread; the sagitta criterion and several other thresholds are only defensible
+relative to it.
 
-⛔⛔ **THE PATTERN, AND IT BINDS `IN3`/`IN4`**: passes 1–3 were all **a rate estimated
-over the shortest available baseline** — flick lift speed, roll direction, roll
-curvature. **State the window, and check the signal clears the noise, BEFORE writing
-the threshold.** ⭐ Pass 4 is a worse shape: **measuring a DIFFERENT QUANTITY than the
-one asked for**, invisible until the input where the two diverge. **When an estimator
-is hard, check whether you have replaced the quantity rather than improved it.**
-
-⛔ **NEXT once `IN1` closes: `3D1`** — the object model. `IN3`, `IN4`, `RND1` and
-`RND2` are all waiting on it, and `IN2` is blocked behind the `IN8` decision below.
-⚠ **Three defects were found in §1.3 while building `IN1`** and they are the
-owner's to ratify: no double-tap, no duration bound on `TAP`, and a roll test that
-cannot fire as specified. → [`queue_notes/IN1.md`](queue_notes/IN1.md).
-
-✅✅ **THE FAST DEVICE LOOP WORKS** (`DEP1a`, 2026-09-13). `npm run dev:usb` +
-`adb reverse tcp:5173 tcp:5173`, and the tablet loads it as `localhost` — a **secure
-context**, so sensors and rule 1's tilt are testable. Two cubes confirmed on a Lenovo
-TB-X606F. ⭐ Procedure and the three traps:
-[`../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).
-
-⭐ **So `IN1` can be closed properly** — built and verified headlessly, then LOOKED AT
-on the device, which is the only thing `METHOD` accepts as closing a change.
-
-⭐ **Two defects were already found and fixed on day one**, both recorded: the
-spec's §1.1 "accumulated travel" rule (unusable — path length of a resting finger
-is an unbounded random walk) and a metre-scale scene clipped by Babylon's
-1-world-unit default near plane.
-
----
+⛔ **NEXT**: `IN9`, the two CAMERA-ONLY rules — they need no object model, so they do
+not wait on `3D1`. ⚠ **Rule 1 is TILT-orbit with touch as a clutch, not drag-orbit**
+(§2 rule 1: *"the touch delta gates this rule but its value is unused"*). Then `3D1`,
+which is what `IN3`, `IN4`, `RND1` and `RND2` are all waiting on.
 
 ## Phase IN — the touch input system
 
@@ -117,7 +59,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | IN0 | Units, motion states, flick test | IN | feature | ✅ **built 2026-09-13**, 37 vectors. ⚠ §1.1's "accumulated travel" replaced by net displacement — see the dossier. ✅ its `moveExitDistance` debt closed by `IN1` | — |
-| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ⚠ **BUILT + GREEN, FIRST DEVICE PASS DONE 2026-09-13 — NOT CLOSED.** 63 new vectors. 3 defects found in §1.3 while building, then **11 more found by finger** across five passes (inconsistent rollback = last-pair lift-speed estimator; yaw/pitch reversed AND in mixed frames = Euler assignment; roll detected but frozen; roll jitter + pause drift; **slow roll never committed — curvature sagitta under the noise floor**; roll latched through a straight drag). plus **roll vanishing entirely because every fixture was a perfect circle**. All fixed + pinned. ⛔ **Owed: a SIXTH device pass.** → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
+| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ✅ **CLOSED 2026-09-14.** 109 new vectors. **7 device passes, 14 defects none of which a green suite could see.** ⚠ It also carries rule **2quinte**'s roll detector, built early and hardened — `IN3` inherits it. → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | queued | IN1 |
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | queued | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | queued | IN2, 3D1 |
@@ -125,6 +67,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
+| IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (tilt-orbit)** — ⛔ needs NO object model, so it does not wait on `3D1` | IN | feature | ⛔ **NEXT.** ⚠ Rule 1 is **TILT**-orbit with touch as a clutch, NOT drag-orbit (§2: *"the touch delta gates this rule but its value is unused"*), so it needs `DeviceOrientation` — a secure context, an iOS permission prompt, and platform axis conventions. Rule 4 is the easy half; do it first | IN1 |
 
 ## Phase 3D — objects and assembly
 

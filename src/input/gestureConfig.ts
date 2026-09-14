@@ -235,18 +235,20 @@ export const DEFAULT_CONFIG: GestureConfig = {
   rollUpdateDistance: 0.5,
   rollReleaseDistance: 12,
   rollFitResidualFraction: 0.25,
-  // ⚠⚠ MEASURED AT EVERY SETTING AND IT EARNS NOTHING ON THIS SIGNAL. The roll
-  // angle is a fast RAMP (hundreds of deg/s), and low-passing a ramp costs
-  // `slope x tau` of lag. Swept on realistic gestures against the Hyper estimator:
-  //   beta 0     -> 13% less noise, but ~30° per gesture of LAG
-  //   beta 0.01  -> 0.3% less noise (nothing), ~13° of lag
-  //   beta 0.02  -> noise WORSE, ~8.5° of lag
-  // ⭐ What actually removed the jitter was the ESTIMATOR (Hyper, the consistency
-  // guard, and the stale-reference fix), not a filter. Kept wired so it can be A/B'd
-  // by finger: raise `beta` toward 0.05 to make it transparent, drop it to 0 for
-  // maximum smoothing and maximum lag. `IN5` settles it.
+  // ⭐⭐ SHIPPED AS `beta = 0` ON DEVICE EVIDENCE, AGAINST MY OWN MEASUREMENT.
+  // A/B'd by finger on 2026-09-14 (`?rollFilterBeta=0` vs the default) and the
+  // filtered version was judged better. ⛔ My metric said the opposite — it scored
+  // `beta = 0` as removing 13% of the noise for ~30° per gesture of LAG — and the
+  // metric is what was wrong. Two reasons, both mine:
+  //   * the synthetic swirl rolled at ~500 deg/s, roughly twice what a hand does, so
+  //     the predicted lag (`slope x tau`) was inflated by about the same factor;
+  //   * an error-against-ground-truth metric cannot score "feels steady", which is
+  //     the thing actually being traded for.
+  // ⚠ `beta` is kept, not deleted: the paper's tuning procedure needs it, and `IN5`
+  // still has to measure both numbers. `?rollFilterBeta=0.05` makes it transparent
+  // again for a future comparison.
   rollFilterMinCutoff: 3.0,
-  rollFilterBeta: 0.01,
+  rollFilterBeta: 0,
   pointerNoiseMm: 0.15,
 
   tapMaxDuration: 250,
