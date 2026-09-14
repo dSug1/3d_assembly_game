@@ -82,6 +82,9 @@ plain taps and always work.
 **The orbit-centre marker** — a small emissive sphere at whatever §2 rule 1 chose.
 ⛔ Tagged **out** of the barycentre candidate set (`metadata.orbitCandidate`): a marker
 that became a candidate would move the very centre it is drawn to show.
+⭐ It sits at the **CHOSEN** centre, not the blended one, so the camera visibly travels
+toward it. ⚠ An instrument is judged against the question it exists to answer — here
+*"which barycentre was selected?"* — not against the quantity it happens to be nearest.
 
 ⚠ All three are diagnostic. They are listed here because they are the reason defects
 get *found*, and deleting them quietly would cost the next device session.

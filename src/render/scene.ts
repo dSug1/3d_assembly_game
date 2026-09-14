@@ -227,14 +227,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     syncCentre();
   };
 
-  /** Read the blended centre into the scene, and show it. */
+  /** Read the blended centre into the scene, and show the chosen target. */
   const syncCentre = () => {
     const c = centreBlend.centreM;
     orbitCentreM = new Vector3(c[0], c[1], c[2]);
-    // ⭐ The marker follows the BLENDED centre, because that is what the camera is
-    // actually orbiting — showing the target instead would describe a place the
-    // camera is not.
-    centreMarker.position.copyFrom(orbitCentreM);
+    // ⭐⭐ THE MARKER JUMPS TO THE CHOSEN BARYCENTRE IMMEDIATELY, while the camera
+    // migrates to it. Owner's instruction, and it is the right reading of what the
+    // marker is FOR: it exists to show which barycentre rule 1 SELECTED, so a marker
+    // that crawls along with the camera makes the selection harder to read rather
+    // than easier. ⚠ The migration is still visible — as the gap between the camera
+    // and a marker that is already where it is going.
+    const t = centreBlend.targetM;
+    centreMarker.position.set(t[0], t[1], t[2]);
   };
 
   /** Put the camera where the rig surface says, clamped away from the near plane. */

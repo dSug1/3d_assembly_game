@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**217 golden vectors, all passing** (37 → 217).
+**219 golden vectors, all passing** (37 → 219).
 
 ⛔ **Not built**: `IN2` (pointer roles, blocked behind the `IN8` decision below),
 `IN3`/`IN4` (the object rules, blocked on `3D1`), `IN5` (measurement), `IN6` undo,

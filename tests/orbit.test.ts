@@ -377,3 +377,29 @@ describe("⭐⭐ orbit centre blend", () => {
     expect(b.centreM).toEqual(A);
   });
 });
+
+/**
+ * ⭐ The diagnostic marker is drawn at `targetM`, not at the blended centre — owner's
+ * instruction, 2026-09-14. It exists to show which barycentre §2 rule 1 SELECTED, and
+ * a marker that crawls along with the camera makes that harder to read, not easier.
+ */
+describe("⭐ the chosen centre is readable immediately", () => {
+  const A: Vec3 = [0, 0, 0];
+  const B: Vec3 = [1, 0, 0];
+
+  it("⭐ the TARGET is the new barycentre the instant it is chosen", () => {
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    expect(b.targetM).toEqual(B);
+    // ⛔ …while the centre the camera orbits has not moved at all yet. Both facts at
+    // once is the whole point: the gap between them IS the migration.
+    expect(b.centreM).toEqual(A);
+  });
+
+  it("⭐ and the two converge as the finger travels", () => {
+    const b = new OrbitCentreBlend(cfg, A);
+    b.retarget(B);
+    b.advance(cfg.orbitBlendDistanceMm);
+    expect(b.centreM).toEqual(b.targetM);
+  });
+});
