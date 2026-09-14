@@ -78,6 +78,19 @@ cross-tunable rule — and those are exactly the numbers only meaningful in comb
 ⚠ Sliders **and** step buttons: the page sets `touch-action: none` so the browser
 cannot claim the gestures, which can stop a native range input dragging. Buttons are
 plain taps and always work.
+⭐ **Each section collapses, and the panel remembers what was open across a reload**
+(`localStorage`, keys `menu.open` and `menu.section.<title>`). A device pass is a long
+sequence of reloads — a panel that reopens fully expanded every time buries the two
+sliders actually being tuned. ⚠ Every `localStorage` access is wrapped: it throws
+outright in some private-browsing modes, and a tuning panel must not take the scene
+down with it.
+
+**`noise_meter.ts`** (in `src/input`, engine-free) — the `pointerNoiseMm` instrument,
+reported on the HUD. ⛔ Fed by **one** touchpoint, the first down, and reset when that
+hold begins: interleaving two fingers would measure the distance *between* them.
+⚠ Fed only from `POINTERDOWN`/`POINTERMOVE` — Babylon also emits `POINTERPICK` and
+`POINTERTAP` carrying the *same* event, and a duplicated sample pulls the RMS down.
+An instrument that flatters itself is worse than none.
 
 **The orbit-centre marker** — a small emissive sphere at whatever §2 rule 1 chose.
 ⛔ Tagged **out** of the barycentre candidate set (`metadata.orbitCandidate`): a marker

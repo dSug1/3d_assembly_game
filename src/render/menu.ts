@@ -19,6 +19,13 @@
  * already holds — it does not keep a second copy. Carried rule `L1`: a tuning value
  * that existed in both a debug tool and production silently drifted apart.
  *
+ * ⚠ SECTIONS COLLAPSE, AND THE STATE SURVIVES A RELOAD. A tuning session is dozens of
+ * reloads, and re-collapsing four sections each time is friction that ends with the
+ * menu left open over the scene. ⛔ `localStorage` is wrapped in try/catch at every
+ * access: it throws outright in a private window and returns nothing after site data
+ * is cleared, and a tuning menu that cannot open because storage was unavailable
+ * would be a far worse failure than one that forgets.
+ *
  * ⚠ Sliders AND step buttons, deliberately. `index.html` sets `touch-action: none` on
  * the whole page so the browser cannot claim the gestures, and that can interfere
  * with dragging a native range input on some devices. The buttons are plain taps and
@@ -65,11 +72,35 @@ const PANEL_CSS = [
   "border-left:1px solid #2b3648",
 ].join(";");
 
+/**
+ * ⛔ Every `localStorage` access is guarded. It throws in a private window, and
+ * returns nothing once site data is cleared — neither is a reason for the menu to
+ * fail, so a failure to remember is simply a forgotten preference.
+ */
+const remembered = (key: string, fallback: boolean): boolean => {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === "1";
+  } catch {
+    return fallback;
+  }
+};
+const remember = (key: string, value: boolean): void => {
+  try {
+    localStorage.setItem(key, value ? "1" : "0");
+  } catch {
+    // Forgetting is acceptable; failing to open is not.
+  }
+};
+
+const PANEL_KEY = "menu.open";
+const sectionKey = (title: string) => `menu.section.${title}`;
+
 export function createMenu(
   sections: readonly MenuSection[],
   parent: HTMLElement = document.body,
 ): Menu {
-  let open = false;
+  let open = remembered(PANEL_KEY, false);
 
   const toggle = document.createElement("button");
   toggle.textContent = "☰";
@@ -92,7 +123,7 @@ export function createMenu(
 
   const panel = document.createElement("div");
   panel.style.cssText = PANEL_CSS;
-  panel.hidden = true;
+  panel.hidden = !open;
   parent.appendChild(panel);
 
   const head = document.createElement("div");
@@ -115,11 +146,45 @@ export function createMenu(
   };
 
   for (const section of sections) {
-    const title = document.createElement("div");
-    title.textContent = section.title;
-    title.style.cssText =
-      "padding:8px 10px 4px 10px;color:#7fd0a0;border-top:1px solid #2b3648";
+    // ⭐ Sections start EXPANDED the first time — a menu whose contents are hidden by
+    // default reads as an empty menu — and remember whatever the owner chooses after.
+    let expanded = remembered(sectionKey(section.title), true);
+
+    const title = document.createElement("button");
+    title.style.cssText = [
+      "display:flex",
+      "justify-content:space-between",
+      "align-items:center",
+      "width:100%",
+      "padding:10px",
+      "font:inherit",
+      "color:#7fd0a0",
+      "background:transparent",
+      "border:0",
+      "border-top:1px solid #2b3648",
+      "text-align:left",
+      "touch-action:manipulation",
+    ].join(";");
+    const caret = document.createElement("span");
+    const label = document.createElement("span");
+    label.textContent = section.title;
+    title.append(label, caret);
     panel.appendChild(title);
+
+    const body = document.createElement("div");
+    panel.appendChild(body);
+
+    const applyExpanded = () => {
+      body.hidden = !expanded;
+      caret.textContent = expanded ? "–" : "+";
+      title.setAttribute("aria-expanded", String(expanded));
+    };
+    title.addEventListener("click", () => {
+      expanded = !expanded;
+      remember(sectionKey(section.title), expanded);
+      applyExpanded();
+    });
+    applyExpanded();
 
     for (const slider of section.sliders) {
       const row = document.createElement("div");
@@ -170,18 +235,23 @@ export function createMenu(
       }
 
       row.append(caption, input, controls);
-      panel.appendChild(row);
+      body.appendChild(row);
       refreshers.push(render);
       render();
     }
   }
 
-  toggle.addEventListener("click", () => {
-    open = !open;
+  const applyOpen = () => {
     panel.hidden = !open;
     toggle.textContent = open ? "✕" : "☰";
     if (open) for (const r of refreshers) r();
+  };
+  toggle.addEventListener("click", () => {
+    open = !open;
+    remember(PANEL_KEY, open);
+    applyOpen();
   });
+  applyOpen();
 
   return {
     refresh() {

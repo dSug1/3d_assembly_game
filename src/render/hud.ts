@@ -31,6 +31,12 @@ export interface HudFields {
   readonly tuning: string;
   /** Query keys that were refused, with the reason. Shown, never swallowed. */
   readonly tuningRejected: readonly string[];
+  /**
+   * ⭐ The live `pointerNoiseMm` measurement (`IN5`). Shown because the number cannot
+   * be read any other way: it is a property of THIS glass under THIS finger, and the
+   * only instrument able to report it is the device the gesture is running on.
+   */
+  readonly noise: string;
 }
 
 export interface Hud {
@@ -74,6 +80,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         }`,
         `last      ${f.lastVerdict}`,
         `camera    ${f.camera}`,
+        `noise     ${f.noise}`,
       ].join("\n");
     },
   };

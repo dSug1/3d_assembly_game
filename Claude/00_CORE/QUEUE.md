@@ -60,8 +60,17 @@ When they disagree, suspect the metric.
 Tunables override from the **URL** (`?rollAngle=45&rollFilterBeta=0`), and the orbit
 rings have an on-screen **tuning menu** that validates and explains refusals — so a
 placeholder can be A/B'd by finger without a rebuild.
-⭐ Measure **`pointerNoiseMm` FIRST**: hold a finger still and read the spread. The
-sagitta criterion and several other thresholds are only defensible relative to it.
+⭐ Measure **`pointerNoiseMm` FIRST**: the instrument is **built and on the HUD** as of
+2026-09-14 (`src/input/noise_meter.ts`, line `noise floor=… now=… n=… cfg=…`). Hold one
+finger still for a few seconds and read `floor`. The sagitta criterion and several other
+thresholds are only defensible relative to it. ⛔ **Reading it is the owner's step** —
+nothing in a suite can hold a finger on glass.
+⛔ ⭐ **The meter's own vectors found a hole in the meter's own vectors.** Three of four
+naive alternatives failed as designed; the fourth — a window that only ever GROWS —
+passed everything, because the minimum is taken while the window is still short. It
+would have pinned the answer in the first 0.3 s, so a finger still settling as it lands
+could never improve its reading. A fifth vector now covers it. ⚠ Mistake shape 1 again:
+a statistic taken over the shortest available baseline.
 ⛔ `tests/config_debt.test.ts` now refuses any tunable nothing reads — after three
 orphans (`moveExitDistance`, `tiltDeadband`, `gainRoll`).
 
@@ -83,7 +92,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | queued | IN1 |
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | queued | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | queued | IN2, 3D1 |
-| IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued. ⛔⛔ **A GUESSED GAIN IS RELIABLY TOO SLOW**: both gains set by hand so far were raised ×2.3 and ×3.4 from what I guessed. `IN3`/`IN4` add seven more — **give each a slider when it is wired**, not after a session is spent disliking it. ⭐⭐ **Now practical: tunables override from the URL** (`?rollAngle=45&rollFilterBeta=0`), so a value can be A/B'd by finger without a rebuild — `src/input/config_override.ts`. ⭐⭐ **`pointerNoiseMm` FIRST** — hold a finger still and read the spread; the sagitta criterion and several thresholds are only defensible relative to it. ⚠ Then the 1€ pair by the paper's procedure (`beta`=0, lower `minCutoff` until slow jitter is acceptable, then raise `beta` until fast motion stops lagging). ⚠ `IN1` added four more (`tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop`, and a moved `stillTime`) and found `stillSpeed`/`stillTime`/`moveExitDistance` are **not independent** — measure them together | IN3 |
+| IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued. ⛔⛔ **A GUESSED GAIN IS RELIABLY TOO SLOW**: both gains set by hand so far were raised ×2.3 and ×3.4 from what I guessed. `IN3`/`IN4` add seven more — **give each a slider when it is wired**, not after a session is spent disliking it. ⭐⭐ **Now practical: tunables override from the URL** (`?rollAngle=45&rollFilterBeta=0`), so a value can be A/B'd by finger without a rebuild — `src/input/config_override.ts`. ⭐⭐ **`pointerNoiseMm` FIRST** — ⭐ **instrument BUILT 2026-09-14** (`src/input/noise_meter.ts`, on the HUD as `noise floor=…`): hold one finger still and read `floor`; the sagitta criterion and several thresholds are only defensible relative to it. ⛔ **Awaiting the owner’s reading** — no suite can hold a finger on glass. ⚠ Then the 1€ pair by the paper's procedure (`beta`=0, lower `minCutoff` until slow jitter is acceptable, then raise `beta` until fast motion stops lagging). ⚠ `IN1` added four more (`tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop`, and a moved `stillTime`) and found `stillSpeed`/`stillTime`/`moveExitDistance` are **not independent** — measure them together | IN3 |
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |
