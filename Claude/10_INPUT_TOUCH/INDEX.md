@@ -35,7 +35,10 @@ below is made),
 ⭐⭐ **`IN5` IS NOW PRACTICAL.** Tunables override from the **URL**
 (`?rollAngle=45&rollFilterBeta=0`) and the orbit rings have an on-screen **tuning
 menu**, so a placeholder can be A/B'd by finger without a rebuild.
-⛔ **Every threshold is still a placeholder** — except the six orbit ring values and the
+⛔ **Every threshold is still a placeholder** — except the six orbit ring values
+(⚠ the top ring was reopened to **1.0 m / 0.55 m** on 2026-09-14, making the surface
+**asymmetric**: 1.14 m of eye distance at the top against 0.71 m at the bottom, so a
+top-down view frames far wider than a bottom-up one) and the
 four gains (`gainRotateFree` 0.07, `gainRoll` 1, `gainOrbitYaw` 0.054,
 `gainOrbitElevation` 0.02), which the owner chose on the device on 2026-09-14 and are
 the first *judgements* in the file, plus `pointerNoiseMm`, the first *measurement*.
