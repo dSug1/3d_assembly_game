@@ -47,6 +47,8 @@ import {
   parseConfigOverrides,
   PinchTracker,
   clampCameraRadiusM,
+  OrbitController,
+  orbitCentre,
   Recognizer,
   TapHistory,
   screenPlaneRotation,
@@ -165,7 +167,62 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // between two different mappings mid-gesture.
   const outside = new Map<number, Sample>();
   const pinch = new PinchTracker(cfg);
-  let pinchStartRadiusM = camera.radius;
+
+  // ─────────────────────────────────────────────────────────────────
+  // §2 RULE 1 — ORBIT, for ONE touchpoint that hits nothing.
+  //
+  // ⛔⛔ OWNER'S AMENDMENT: driven by DELTA POSITION, not device tilt. The spec has
+  // touch as a clutch for a tilt-orbit and says its delta is unused; the owner
+  // changed that deliberately. See `Claude/00_CORE/queue_notes/IN9.md`.
+  const orbit = new OrbitController(cfg, -Math.PI / 2, 0.62);
+  // ⭐ ONE zoom scalar, shared. Pinch scales the whole orbit SURFACE rather than
+  // setting a radius directly, so rule 1 and rule 4 compose instead of fighting over
+  // the same number. `1` is the rings as configured.
+  let zoom = 1;
+  let zoomAtPinchStart = 1;
+  /** The last outside touchpoint to move, so the orbit centre follows the finger. */
+  let orbitCentreM: Vector3 = Vector3.Zero();
+
+  /**
+   * §2 rule 1's orbit centre: the barycentre nearest the touchpoint's ray.
+   * ⚠ Only the objects actually ON SCREEN are offered — the spec asks for candidates
+   * to be viewport-culled before ranking, and culling needs the projection, which is
+   * why it happens here and not in `input/`.
+   */
+  const recomputeOrbitCentre = (e: { clientX: number; clientY: number }) => {
+    const ray = scene.createPickingRay(e.clientX, e.clientY, null, camera);
+    const visible = scene.meshes
+      .filter((m) => m.isEnabled() && m.isVisible)
+      .map((m) => [m.position.x, m.position.y, m.position.z] as Vec3);
+    const c = orbitCentre(
+      visible,
+      { origin: [ray.origin.x, ray.origin.y, ray.origin.z], direction: [ray.direction.x, ray.direction.y, ray.direction.z] },
+      cfg,
+    );
+    orbitCentreM = new Vector3(c[0], c[1], c[2]);
+  };
+
+  /** Put the camera where the rig surface says, clamped away from the near plane. */
+  const applyCamera = () => {
+    const pose = orbit.pose(zoom);
+    // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
+    // Clamping the components independently would change the viewing ANGLE, which is
+    // not what a near-plane guard is for.
+    const wanted = pose.radiusM;
+    const allowed = clampCameraRadiusM(wanted, cfg);
+    const k = wanted > 1e-9 ? allowed / wanted : 1;
+    camera.setPosition(
+      orbitCentreM.add(
+        new Vector3(pose.offsetM[0] * k, pose.offsetM[1] * k, pose.offsetM[2] * k),
+      ),
+    );
+    camera.setTarget(orbitCentreM);
+  };
+
+  // ⚠ Place the camera on the rig surface at startup, so the very first frame is
+  // already the pose the orbit will move from — not the ArcRotateCamera constructor's
+  // own alpha/beta/radius, which would jump the instant a finger touched the glass.
+  applyCamera();
 
   /** The two outside touchpoints, oldest first, or `null` unless there are exactly two. */
   const pinchPair = (): [Sample, Sample] | null => {
@@ -179,7 +236,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (!p) return;
     const factor = pinch.scale(p[0], p[1]);
     if (factor === null) return; // still inside the deadband: leave the camera alone
-    camera.radius = clampCameraRadiusM(pinchStartRadiusM * factor, cfg);
+    zoom = zoomAtPinchStart * factor;
+    applyCamera();
   };
 
   /** Babylon stores `(x, y, z, w)`; `core/vec` uses `[w, x, y, z]`. One conversion. */
@@ -235,7 +293,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       lastVerdict,
       // ⚠ Shown so a session can never be spent testing a value that was not in
       // force — including a typo'd key, which is REPORTED rather than ignored.
-      camera: `r=${camera.radius.toFixed(3)}m${pinch.isZooming ? "  ZOOMING" : ""}`,
+      camera:
+        `r=${camera.radius.toFixed(3)}m zoom=${zoom.toFixed(2)} ` +
+        `elev=${orbit.elevation.toFixed(2)}${orbit.atLimit ? "⛔LIMIT" : ""}` +
+        `${pinch.isZooming ? "  ZOOMING" : ""}`,
       tuning: tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
       tuningRejected: tuning.rejected,
     });
@@ -262,13 +323,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ Hit nothing: this touchpoint belongs to the camera rules, and that role
         // is now LATCHED for its lifetime (§4).
         outside.set(e.pointerId, s);
+        // ⭐ Rule 1 chooses what to orbit AROUND at press, from the ray of the finger
+        // that started it — so the centre cannot wander mid-drag as the ray moves.
+        if (outside.size === 1) recomputeOrbitCentre(e);
         const p = pinchPair();
         if (p) {
           pinch.begin(p[0], p[1]);
-          // ⚠ The radius is captured HERE, once. The zoom is a ratio against the
-          // gesture's start, never an accumulation — so a pinch out and back returns
-          // exactly where it began. See input/pinch.ts.
-          pinchStartRadiusM = camera.radius;
+          // ⚠ Captured HERE, once. The zoom is a ratio against the gesture's start,
+          // never an accumulation — so a pinch out and back returns exactly where it
+          // began. See input/pinch.ts.
+          zoomAtPinchStart = zoom;
         }
         paint();
         return;
@@ -283,8 +347,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
     if (outside.has(e.pointerId)) {
       if (info.type === PointerEventTypes.POINTERMOVE) {
+        const prev = outside.get(e.pointerId)!;
         outside.set(e.pointerId, s);
-        updatePinch();
+        if (outside.size === 2) {
+          updatePinch();
+        } else if (outside.size === 1 && live.size === 0) {
+          // §2 rule 1: ONE touchpoint, no hit — orbit.
+          orbit.drag(s.x - prev.x, s.y - prev.y);
+          applyCamera();
+        }
       } else if (info.type === PointerEventTypes.POINTERUP) {
         outside.delete(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
