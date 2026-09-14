@@ -58,6 +58,8 @@ import {
   exponentialSmooth,
   phantomTarget,
   neutralLeadSec,
+  impulseForPeak,
+  trackingMetresPerPx,
   type FollowState,
   Recognizer,
   TapHistory,
@@ -198,6 +200,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ `null` only before the gesture commits.
      */
     mode: "ROTATE" | "TRANSLATE" | null;
+    /**
+     * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
+     * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
+     * which would be a continuous shove rather than a reaction.
+     * ⚠ It reads `Recognizer.motionState`, which is `IN0`'s hysteretic still/moving test
+     * with its own measured thresholds. A speed comparison invented here would be a
+     * SECOND definition of "moving", free to disagree with the one the rules use.
+     */
+    wasMoving: boolean;
   }
   /**
    * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
@@ -236,6 +247,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     x: FollowState;
     y: FollowState;
     z: FollowState;
+    /**
+     * ⭐ THE SYMPATHETIC SWAY — an OFFSET from wherever this object otherwise is, sprung
+     * back to zero. ⛔ An offset and not a position: the object's real place is never
+     * touched, so a barycentre, a raycast or a future mate reads the same coordinates
+     * whether or not the scene happens to be swaying at that instant.
+     */
+    swayX: FollowState;
+    swayY: FollowState;
+    swayZ: FollowState;
   }
   const followers = new Map<AbstractMesh, Follow>();
 
@@ -250,6 +270,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         x: { x: p.x, v: 0 },
         y: { x: p.y, v: 0 },
         z: { x: p.z, v: 0 },
+        swayX: { x: 0, v: 0 },
+        swayY: { x: 0, v: 0 },
+        swayZ: { x: 0, v: 0 },
       };
       followers.set(mesh, f);
     }
@@ -294,7 +317,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const ray = scene.createPickingRay(e.clientX, e.clientY, null, camera);
     const visible = scene.meshes
       .filter((m) => m.isEnabled() && m.isVisible && m.metadata?.orbitCandidate === true)
-      .map((m) => [m.position.x, m.position.y, m.position.z] as Vec3);
+      // ⛔⛔ THE HOME POSITION, WITH THE SWAY TAKEN BACK OFF. The sympathetic sway is a
+      // decoration: it must not move what the scene MEANS. Reading `mesh.position`
+      // directly would let the barycentre — and so where the camera orbits — depend on
+      // whether the objects happened to be mid-wobble when the finger landed.
+      // ⚠ `METHOD`: an instrument must not be moved by the thing it is measuring.
+      .map((m) => {
+        const f = followers.get(m);
+        return f
+          ? ([m.position.x - f.swayX.x, m.position.y - f.swayY.x, m.position.z - f.swayZ.x] as Vec3)
+          : ([m.position.x, m.position.y, m.position.z] as Vec3);
+      });
     const c = orbitCentre(
       visible,
       { origin: [ray.origin.x, ray.origin.y, ray.origin.z], direction: [ray.direction.x, ray.direction.y, ray.direction.z] },
@@ -539,6 +572,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // whatever the two sliders above are set to, so this one has a landmark rather
         // than a range of equally arbitrary numbers.
         tunable("phantom lead (ms)", "translateLeadMs", 0, 1.5, 0.1),
+        // ⭐ The sympathetic sway: how far the OTHER objects drift when this one sets
+        // off, and how lazily they spring back. ⛔ 0 mm disables it exactly.
+        tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
+        tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
       ],
     },
     {
@@ -581,6 +618,47 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ever interesting as a comparison — and a config the sagitta rule is judged by
     // must not be compared against a half-remembered number.
     return `floor=${floor.toFixed(3)}mm now=${noise.rmsMm.toFixed(3)} n=${noise.samples} cfg=${cfg.pointerNoiseMm}`;
+  };
+
+  /**
+   * Kick every OTHER object along the direction the held one has just set off in.
+   *
+   * ⛔ THE AMPLITUDE IS IN SCREEN MILLIMETRES, converted through the same tracking factor
+   * rule 6 uses — so the sway looks the same size at every zoom. A world-metre amplitude
+   * would disappear zoomed out and swamp the scene zoomed in.
+   * ⚠ The direction comes from the finger's travel since the last sample, mapped through
+   * the axes LATCHED AT PRESS — the same frame the translation itself uses, so the scene
+   * cannot lean one way while the object goes another.
+   */
+  const nudgeOthers = (grip: Held, s: Sample): void => {
+    const dx = s.x - grip.prev.x;
+    const dy = s.y - grip.prev.y;
+    const len = Math.hypot(dx, dy);
+    // ⚠ No direction in a zero-length delta. Returning rather than normalising by zero:
+    // one NaN written into a position never washes out.
+    if (!(len > 0)) return;
+
+    const perPx = trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight);
+    const peakM = mmToPx(cfg.translateSwayMm) * perPx;
+    const kick = impulseForPeak(peakM, cfg.translateSwayTauMs / 1000);
+    if (!(kick > 0)) return;
+
+    // Screen direction → world, through the latched frame. Screen y is DOWN.
+    const right = new Vector3(...grip.frame.right).scale(dx / len);
+    const up = new Vector3(...grip.frame.up).scale(-dy / len);
+    const dir = right.add(up);
+
+    for (const mesh of scene.meshes) {
+      // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
+      // marker cannot sway — a readout that moved with the scene would be describing
+      // itself. And the held object is excluded: it is already going that way.
+      if (mesh.metadata?.orbitCandidate !== true) continue;
+      if (mesh === grip.mesh) continue;
+      const f = followerFor(mesh);
+      f.swayX = { x: f.swayX.x, v: f.swayX.v + dir.x * kick };
+      f.swayY = { x: f.swayY.x, v: f.swayY.v + dir.y * kick };
+      f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir.z * kick };
+    }
   };
 
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
@@ -654,6 +732,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         prev: s,
         lastRollDeg: 0,
         mode: null,
+        wasMoving: false,
       });
       paint();
       return;
@@ -723,6 +802,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             ? "TRANSLATE"
             : "ROTATE";
       }
+      // ⭐⭐ THE SYMPATHETIC SWAY FIRES HERE — on the TRANSITION into moving, whether that
+      // is the start of the drag or a resumption after a pause. ⛔ Not every frame: a
+      // per-frame kick would be a continuous shove, and the scene would drift rather
+      // than react.
+      const movingNow = grip.rec.motionState === "MOVING";
+      const started = movingNow && !grip.wasMoving;
+      grip.wasMoving = movingNow;
+      if (started && grip.mode === "TRANSLATE" && cfg.translateSwayMm > 0) {
+        nudgeOthers(grip, s);
+      }
+
       if (grip.mode === "TRANSLATE") {
         // §4 RULE 6 — the object translates in the screen view plane.
         // ⛔ The gain is a MULTIPLIER on a COMPUTED tracking factor, not a number: at
@@ -831,7 +921,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       f.x = advanceFollow(f.x, phantomTarget(f.target.x, f.vTarget.x, leadSec), tauSec, zeta, dtSec);
       f.y = advanceFollow(f.y, phantomTarget(f.target.y, f.vTarget.y, leadSec), tauSec, zeta, dtSec);
       f.z = advanceFollow(f.z, phantomTarget(f.target.z, f.vTarget.z, leadSec), tauSec, zeta, dtSec);
-      mesh.position.set(f.x.x, f.y.x, f.z.x);
+      // ⭐ The sway springs home on its own clock — slower and softer than the object's
+      // own inertia, and CRITICALLY damped so it returns without wobbling about.
+      const swayTau = cfg.translateSwayTauMs / 1000;
+      f.swayX = advanceFollow(f.swayX, 0, swayTau, 1, dtSec);
+      f.swayY = advanceFollow(f.swayY, 0, swayTau, 1, dtSec);
+      f.swayZ = advanceFollow(f.swayZ, 0, swayTau, 1, dtSec);
+      mesh.position.set(f.x.x + f.swayX.x, f.y.x + f.swayY.x, f.z.x + f.swayZ.x);
     }
 
     scene.render();

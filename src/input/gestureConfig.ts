@@ -113,6 +113,26 @@ export interface GestureConfig {
    * written before this existed was measured against.
    */
   translateLeadMs: number;
+  /**
+   * mm ON THE SCREEN — how far every OTHER object drifts when the held one starts or
+   * resumes translating, before springing back to exactly where it was.
+   * ⭐⭐ THE SCENE REACTS INSTEAD OF STANDING FROZEN around the one thing that moves.
+   * ⛔ Screen millimetres, not world metres, and converted through the SAME tracking
+   * factor rule 6 uses (`input/translate.ts`) — so the sway is the same size to the eye
+   * whatever the zoom. A world-metre amplitude would vanish zoomed out and swamp the
+   * scene zoomed in. ⚠ Rule 3 of the project: thresholds are millimetres on the glass.
+   * ⛔ `0` disables it exactly.
+   */
+  translateSwayMm: number;
+  /**
+   * ms — the softness of that spring: its time constant, and also exactly when the drift
+   * reaches its peak (see `impulseForPeak`). Bigger is slower and lazier.
+   * ⚠ IT HAS ITS OWN SLIDER EVEN THOUGH ONLY ONE WAS ASKED FOR, and the reason is this
+   * project's own record: **every guessed number here has been wrong** — four gains moved
+   * by a hand, a simulated recommendation halved, a computed landmark rejected. A
+   * softness nobody can reach is a softness that stays at my guess.
+   */
+  translateSwayTauMs: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
   gainTranslateMutual: number;
@@ -365,6 +385,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ The HUD prints `lead <set>/<neutral>` so the landmark stays visible as the other
   // two sliders move it.
   translateLeadMs: 0.2,
+  // ⚠ BOTH ARE GUESSES. 1.2 mm is "noticed only if you look for it" — deliberately near
+  // the measured pointer noise (0.761 mm) rather than above it — and 180 ms is a lazy
+  // spring. ⛔ Four for four says these are the wrong numbers; that is what the sliders
+  // are for.
+  translateSwayMm: 1.2,
+  translateSwayTauMs: 180,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,
