@@ -59,8 +59,10 @@ three-ring surface, working by finger.
 (screen-plane translate) built and tuned by finger over five device passes** — it has
 mass: a critically/under-damped follower plus a phantom target that leads along the
 finger's own motion (`src/input/translate.ts`, `follow.ts`, `lead.ts`).
-⛔ **Object ROTATION is still a diagnostic stand-in** and `IN3` deletes it — and it has
-**no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
+✅ **Object ROTATION works** — free yaw/pitch and roll, both by finger. ⚠ What it lacks is
+rule 2bis's PRECONDITION (*an empty constraint stack*), because §1.4's stack does not
+exist yet; `IN3` attaches it to the object model and adds that test, it does not delete
+the rotation. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
 ⛔⛔ **Nineteen defects have been found BY FINGER and none was visible to a green
@@ -98,7 +100,8 @@ FACE centres, which is exactly what `3D1` owns.
 gain.** That is mistake shape 4's exact territory.
 ⚠ `3D1` is still the last thing before actual assembly.
 
-⭐ **What a finger can already do, by touchpoint configuration**:
-[`Claude/10_INPUT_TOUCH/spec/BUILT_INVENTORY.md`](Claude/10_INPUT_TOUCH/spec/BUILT_INVENTORY.md).
+⭐ **What a finger can already do, by touchpoint configuration**: the **BUILD STATUS**
+section of [`Claude/10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](Claude/10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md)
+— the spec now carries its own build inventory.
 
 Full status: [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE block.
