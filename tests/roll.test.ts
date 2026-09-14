@@ -397,63 +397,117 @@ describe("⛔⛔ slow roll, and the curvature signal-to-noise that governs it", 
 });
 
 /**
- * ⭐ THE 1€ FILTER on the displayed roll angle. Casiez, Roussel & Vogel, CHI 2012.
- * See `src/input/one_euro.ts` for the citation, the licence (BSD/MIT reference
- * implementations, no patent asserted) and why it was chosen over Kalman and DES.
+ * ⭐⭐ THE 1€ FILTER WAS FITTED HERE AND THEN REVERTED, and the null result is kept
+ * on purpose. `METHOD`: *a change must show a MEASURED improvement on identical
+ * recorded input, or be reverted — a null result is recorded, not shipped hopefully.*
+ *
+ * Casiez, Roussel & Vogel, CHI 2012, is the right filter for the jitter-vs-lag trade
+ * and its licence was clear (BSD/MIT, no patent asserted). It measurably helped the
+ * OLD turning-angle estimator. Against the circle-fit estimator it measured
+ * **5.80°→5.78°, 3.03°→2.91°, and 3.54°→4.70° — worse — on a wide circle.**
+ *
+ * ⭐ The lesson is the useful part: the filter had been compensating for a bad
+ * ESTIMATOR. Fixing the estimator removed the need for it, and a filter that measures
+ * nothing is pure lag. Reach for the estimator before the filter.
  */
-describe("1€-filtered roll angle", () => {
-  it("⭐ the smoothed angle tracks the raw one — smoothing is not drift", () => {
-    // A filter that was quiet because it stopped following would pass a jitter test
-    // and be useless. Over a long sweep the two must agree closely.
-    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 60, clockwise: true }));
-    expect(Math.abs(d.smoothedDeg - d.accumulatedDeg)).toBeLessThan(10);
-  });
-
-  it("⭐ it reduces noise on a noisy sweep", () => {
-    // ⚠ Compared against the RAW channel on the SAME detector, so the two differ
-    // only by the filter — not by a second implementation that could disagree.
+describe("roll angle is deliberately unfiltered", () => {
+  it("⭐ the raw angle is already smooth enough that a filter earned nothing", () => {
+    // The property that made the filter redundant: a circle fit over a trailing
+    // window is inherently steady, because every point in the window constrains the
+    // centre. Consecutive readings must not jump.
     let seed = 11;
     const rnd = () => {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
       return (seed / 0x7fffffff) * 2 - 1;
     };
     const r = mmToPx(15);
-    const clean: Sample[] = [];
-    const noisy: Sample[] = [];
-    for (let i = 0; i <= 60; i++) {
+    const d = new RollDetector(cfg);
+    let prev = 0;
+    let worst = 0;
+    for (let i = 0; i <= 80; i++) {
       const a = (5 * i * Math.PI) / 180;
-      const x = 300 + r * Math.cos(a);
-      const y = 300 + r * Math.sin(a);
-      clean.push({ x, y, t: i * 8 });
-      noisy.push({ x: x + rnd() * 0.5, y: y + rnd() * 0.5, t: i * 8 });
+      d.push({ x: 300 + r * Math.cos(a) + rnd() * 0.5, y: 300 + r * Math.sin(a) + rnd() * 0.5, t: i * 8 });
+      if (d.committed) worst = Math.max(worst, Math.abs(d.accumulatedDeg - prev));
+      prev = d.accumulatedDeg;
     }
-    const c = new RollDetector(cfg);
-    const n = new RollDetector(cfg);
-    let rawErr = 0;
-    let smoothErr = 0;
-    for (let i = 0; i <= 60; i++) {
-      c.push(clean[i]!);
-      n.push(noisy[i]!);
-      if (!c.committed || !n.committed) continue;
-      rawErr = Math.max(rawErr, Math.abs(n.accumulatedDeg - c.accumulatedDeg));
-      smoothErr = Math.max(smoothErr, Math.abs(n.smoothedDeg - c.smoothedDeg));
+    // The true step is 5° per sample. Noise must not multiply it.
+    expect(worst).toBeLessThan(15);
+  });
+});
+
+/**
+ * ⭐⭐ THE REVERSAL, device-reported 2026-09-14: *"when I roll in one direction and
+ * then roll in the other direction, there is a jump of the cube when I change the
+ * roll directions."*
+ *
+ * ⛔ It was not a tuning problem. The detector accumulated the TURNING OF THE
+ * TANGENT, and retracing an arc backwards flips the tangent by 180° at the cusp.
+ * Measured on a 200° sweep reversed: the angle FROZE for twelve samples, jumped
+ * **+150° in one step**, and finished **180° from where it started**.
+ *
+ * ⭐ The owner's §1.3 asked for the *"angle about the centroid"* all along — the
+ * QUANTITY was right, only the estimator was wrong. The angle about a properly
+ * fitted centre runs smoothly back down through zero.
+ */
+describe("⛔⛔ roll reversal", () => {
+  /** Sweep clockwise to `forwardDeg`, then retrace counter-clockwise. */
+  function reversal(forwardDeg: number, backDeg: number, stepDeg = 5): Sample[] {
+    const r = mmToPx(15);
+    const out: Sample[] = [];
+    let t = 0;
+    const at = (deg: number) => {
+      const a = (deg * Math.PI) / 180;
+      out.push({ x: 300 + r * Math.cos(a), y: 300 + r * Math.sin(a), t: (t += 8) });
+    };
+    for (let d = 0; d <= forwardDeg; d += stepDeg) at(d);
+    for (let d = forwardDeg - stepDeg; d >= forwardDeg - backDeg; d -= stepDeg) at(d);
+    return out;
+  }
+
+  it("⭐⭐ reversing direction produces NO jump", () => {
+    // ⛔ THE DEFECT, PINNED: the worst single step used to be 150°. The true step is
+    // 5°, so anything beyond a small multiple of it is the cusp being read as a turn.
+    const d = new RollDetector(cfg);
+    let prev = 0;
+    let worst = 0;
+    for (const s of reversal(200, 200)) {
+      d.push(s);
+      worst = Math.max(worst, Math.abs(d.accumulatedDeg - prev));
+      prev = d.accumulatedDeg;
     }
-    expect(smoothErr).toBeLessThan(rawErr);
+    expect(worst).toBeLessThan(15);
   });
 
-  it("a released roll resets the filter, so the next one does not race back", () => {
-    const circle = arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 40, clockwise: true });
-    const d = feed(circle);
-    expect(d.committed).toBe(true);
-    const last = circle[circle.length - 1]!;
-    const prev = circle[circle.length - 2]!;
-    const ux = (last.x - prev.x) / Math.hypot(last.x - prev.x, last.y - prev.y);
-    const uy = (last.y - prev.y) / Math.hypot(last.x - prev.x, last.y - prev.y);
-    for (let i = 1; i <= 60; i++) {
-      d.push({ x: last.x + ux * i * 4, y: last.y + uy * i * 4, t: last.t + i * 10 });
+  it("⭐ the angle actually REVERSES — it does not merely stop", () => {
+    // A detector that froze on reversal would pass the jump test above and still be
+    // useless. The angle must come back DOWN.
+    const d = new RollDetector(cfg);
+    const samples = reversal(200, 200);
+    let peak = 0;
+    for (const s of samples) {
+      d.push(s);
+      peak = Math.max(peak, d.accumulatedDeg);
     }
-    expect(d.committed).toBe(false);
-    expect(d.accumulatedDeg).toBe(0);
-    expect(d.smoothedDeg).toBe(0); // ⛔ not left primed with the abandoned angle
+    expect(peak).toBeGreaterThan(100); // it rose on the way out
+    expect(d.accumulatedDeg).toBeLessThan(peak - 150); // and fell on the way back
+  });
+
+  it("⭐ a reversal stays committed — it is still a roll", () => {
+    // ⛔ Reversing is not "no longer circular": it is the SAME circle traced the
+    // other way. Releasing here would hand a deliberate roll back to yaw/pitch.
+    const d = new RollDetector(cfg);
+    for (const s of reversal(200, 120)) d.push(s);
+    expect(d.committed).toBe(true);
+  });
+
+  it("⛔ the roll does not track the finger during the un-measured startup arc", () => {
+    // ⚠ INHERENT, and pinned so it is not later mistaken for a defect. Nothing can
+    // be read until the fit window spans `rollStepDistance`, so a symmetric
+    // out-and-back does NOT return the object to its starting orientation — the
+    // outward leg is measured from later than the return leg finishes.
+    const d = new RollDetector(cfg);
+    for (const s of reversal(200, 200)) d.push(s);
+    expect(d.accumulatedDeg).toBeLessThan(0); // short by the startup arc
+    expect(Math.abs(d.accumulatedDeg)).toBeLessThan(60); // but only by that much
   });
 });

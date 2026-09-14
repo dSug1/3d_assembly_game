@@ -14,7 +14,7 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 ✅ **`IN0` built** — units (mm→px), the hysteretic motion state, and the flick test.
 ✅ **`IN1` BUILT** — the recognizer state machine, provisional motion with rollback,
 roll detection, the release-time priority ladder, and the double-tap §1.4 could not
-work without. **112 golden vectors, all passing** (37 → 112).
+work without. **114 golden vectors, all passing** (37 → 114).
 ⭐⭐ **THE FIRST DEVICE PASS FOUND THREE DEFECTS 81 GREEN VECTORS COULD NOT** — all
 three recorded below, all fixed and pinned. ⛔⛔ **A second pass is owed, so `IN1` is
 NOT CLOSED.**
@@ -228,3 +228,54 @@ direction (consecutive samples), roll curvature (a sagitta under the noise floor
 ⛔ **None was visible to a green suite, and none was a threshold that needed tuning.**
 ⭐ `IN3` and `IN4` each need a velocity. **State the window, and check the signal
 clears the noise, BEFORE writing the threshold.**
+
+---
+
+## ⭐⭐ The FOURTH device pass (2026-09-14): the wrong quantity, and a revert
+
+Full record: [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+
+**⛔⛔ Roll reversal jumped, and it was not tuning — it was the wrong QUANTITY.** For
+three passes the build accumulated the **turning angle of the tangent**. Retrace an
+arc backwards and the tangent flips **180° at the cusp**. Measured on a 200° sweep
+reversed: the angle **froze for twelve samples**, jumped **+150° in one step**, and
+finished **180° from where it started**.
+
+⭐⭐ **§1.3 asked for the *"angle accumulated about the centroid"* all along, and the
+QUANTITY was right — only the estimator was wrong.** Rejecting the centroid was
+correct (an arc's centroid sits at 0.955 R, essentially on the path); replacing it
+with the tangent's turning **silently changed what was being measured**.
+
+✅ Now a **closed-form least-squares circle fit** (Kåsa 1976 — textbook, no licence,
+no patent) over the trailing path, and the roll is the angle about that centre.
+Retracing the same arc fits the **same circle**, so the angle runs smoothly back down
+through zero. Worst single step **150° → 5.0°**.
+
+⭐ Two further defects the vectors caught in the new estimator: **a fit with no
+residual is not a test** (Kåsa returns *a* circle for any points, so a wiggle
+committed as a roll and a straight drag took 35 mm to release instead of 12) — the RMS
+residual is now judged against `rollFitResidualSigmas × pointerNoiseMm`; and the span
+was measured as a **chord**, which *shrinks* on a reversal while the fitted arc grows,
+releasing the roll at exactly the wrong moment. It is measured along the **path** now.
+
+## ⛔ The 1€ filter was measured and REVERTED
+
+Added one pass earlier on a literature check, and correctly chosen for the
+jitter-vs-lag trade. Against the **new** estimator: **5.80°→5.78°, 3.03°→2.91°, and
+3.54°→4.70° — worse — on a wide circle.** `METHOD`: *measure or revert; a null result
+is recorded, not shipped hopefully.* Removed, and recorded in
+[`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) as
+evaluated-and-reverted rather than quietly deleted.
+
+⭐⭐ **The lesson generalises: the filter had been compensating for a bad ESTIMATOR.**
+Fixing the estimator removed the need for it, and a filter that measures nothing is
+pure lag. **Reach for the estimator before the filter.**
+
+## ⛔⛔ The pattern after four passes — it binds `IN3` and `IN4`
+
+Passes 1–3 were all **a rate estimated over the shortest available baseline** (flick
+lift speed, roll direction, roll curvature): *state the window, and check the signal
+clears the noise, before writing the threshold.*
+⭐ Pass 4 is a worse shape: **measuring a DIFFERENT QUANTITY than the one asked for**,
+invisible until the input where the two diverge. **When an estimator is hard, check
+whether you have replaced the quantity rather than improved the estimate of it.**

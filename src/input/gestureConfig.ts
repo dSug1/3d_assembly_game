@@ -66,8 +66,8 @@ export interface GestureConfig {
   /** mm. Above this the path is too straight to be a roll at all. */
   rollRadiusMax: number;
   /**
-   * mm the finger must travel before a new direction is measured.
-   * ⛔⛔ THE BASELINE THE ROLL DIRECTION IS ESTIMATED OVER. Between consecutive
+   * mm — the MINIMUM SPAN of the circle-fit window before any angle is read.
+   * ⛔⛔ THE BASELINE THE ROLL GEOMETRY IS ESTIMATED OVER. Between consecutive
    * pointer samples the baseline is a few pixels, so digitiser noise dominates the
    * angle: a clean circle stepping 5.0° per sample measured up to 46.3° per sample
    * with ±0.5 px of noise. Device-confirmed as the cause of roll jitter, and of the
@@ -76,6 +76,12 @@ export interface GestureConfig {
    * sampled finely enough to be one. Asserted in `validateGestureConfig`.
    */
   rollStepDistance: number;
+  /**
+   * mm of trailing path the circle fit is taken over.
+   * ⭐ Longer = a steadier CENTRE, which is what the roll angle is measured about.
+   * ⚠ Shorter = the fit follows a changing circle sooner. See roll.ts.
+   */
+  rollFitWindow: number;
   /**
    * mm the newest point must itself advance before the direction is re-measured.
    * ⛔ THE CADENCE, and it is NOT the baseline. A direction depends on both ends of
@@ -97,17 +103,12 @@ export interface GestureConfig {
    */
   rollReleaseDistance: number;
   /**
-   * Hz. 1€ filter floor cutoff for the roll angle — governs JITTER at slow roll.
-   * ⭐ Lower = quieter when the finger creeps. See `one_euro.ts` for the citation
-   * and the licence (BSD/MIT reference implementations, no patent asserted).
-   * ⚠ Tune on a device with `rollFilterBeta` at 0 first, per the paper. `IN5`.
+   * ⭐ How many multiples of `pointerNoiseMm` the circle fit's RMS residual may
+   * reach before the path stops counting as circular. A 3-sigma criterion by default.
+   * ⛔ Without a residual test the fit accepts ANY point set — Kasa always returns
+   * some circle — so a side-to-side wiggle committed as a roll. See roll.ts.
    */
-  rollFilterMinCutoff: number;
-  /**
-   * 1€ filter speed coefficient for the roll angle — governs LAG at fast roll.
-   * ⭐ Raise until a fast swirl stops lagging. ⚠ Tuned second, per the paper. `IN5`.
-   */
-  rollFilterBeta: number;
+  rollFitResidualSigmas: number;
   /**
    * mm. Typical position noise of ONE pointer sample from a resting finger.
    * ⭐⭐ A DEVICE PROPERTY, not a preference, and it is what decides whether a
@@ -185,12 +186,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   rollRadiusMin: 10,
   rollRadiusMax: 30,
   rollStepDistance: 9,
+  rollFitWindow: 25,
   rollUpdateDistance: 0.5,
   rollReleaseDistance: 12,
-  // ⚠ Placeholders. The device reported jitter at SLOW roll and none at fast roll,
-  // which is exactly the asymmetry this filter exists for. IN5 measures both.
-  rollFilterMinCutoff: 1.0,
-  rollFilterBeta: 0.05,
+  rollFitResidualSigmas: 3,
   pointerNoiseMm: 0.15,
 
   tapMaxDuration: 250,
@@ -242,6 +241,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `rollReleaseDistance (${cfg.rollReleaseDistance} mm) must exceed ` +
         `rollStepDistance (${cfg.rollStepDistance} mm): a roll cannot be released ` +
         "before the path has travelled far enough to measure its shape at all.",
+    );
+  }
+  if (cfg.rollFitWindow <= cfg.rollStepDistance) {
+    throw new Error(
+      `rollFitWindow (${cfg.rollFitWindow} mm) must exceed rollStepDistance ` +
+        `(${cfg.rollStepDistance} mm): the fit window cannot be shorter than the ` +
+        "minimum span required before the fit is trusted.",
     );
   }
   if (cfg.rollUpdateDistance >= cfg.rollStepDistance) {

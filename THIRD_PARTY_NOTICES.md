@@ -27,14 +27,19 @@ uncited algorithm is indistinguishable from an invented one six months later.
 
 | algorithm | source | licence situation | used by |
 |---|---|---|---|
-| **1€ filter** | Casiez, Roussel & Vogel, *"1€ Filter: A Simple Speed-based Low-pass Filter for Noisy Input in Interactive Systems"*, CHI 2012, doi [10.1145/2207676.2208639](https://dl.acm.org/doi/10.1145/2207676.2208639) | ✅ Reference implementations at <https://gery.casiez.net/1euro/> are **BSD** (TypeScript, JS, Java, C++, Python, Arduino) and **MIT** (C, C++ templates). ⭐ **No patent is asserted** on the algorithm or the code. ⚠ Ours is an **independent implementation from the paper**, so even those terms do not bind — the citation is attribution, not obligation. `N13`: clear for commercial use. | `src/input/one_euro.ts`, smoothing the roll angle |
+| **Kasa circle fit** | I. Kasa, *"A circle fitting procedure and its error analysis"*, IEEE Trans. Instrum. Meas., 1976 | ✅ Standard closed-form least-squares result, textbook mathematics, no licence and no patent. | `src/input/roll.ts` — estimates the centre the roll angle is measured about |
 
-⛔ **Rejected after checking, and why** — kept so the comparison is not re-run blind:
-Kalman filtering (needs a motion model for a finger that nobody has, more blind
-parameters, and measured no better here) and LaViola's double exponential smoothing
-(IPT/EGVE 2003 — far cheaper than Kalman and genuinely good, but measured slightly
-worse than 1€, and its single smoothing factor cannot be jitter-quiet and lag-free at
-once, which is the exact trade this problem is stuck on).
+### ⛔ Evaluated and REVERTED — kept because a retraction is more useful than a silence
+
+| algorithm | source | outcome |
+|---|---|---|
+| **1€ filter** | Casiez, Roussel & Vogel, CHI 2012, doi [10.1145/2207676.2208639](https://dl.acm.org/doi/10.1145/2207676.2208639). ✅ Reference implementations at <https://gery.casiez.net/1euro/> are **BSD**/**MIT** with **no patent asserted**; `N13`-clear. | ⚠ **Fitted to the roll angle, measured, and reverted.** It measurably helped the old turning-angle estimator. Against the **circle-fit** estimator that replaced it, it measured **5.80°→5.78°, 3.03°→2.91°, and 3.54°→4.70° — WORSE — on a wide circle.** `METHOD`: measure or revert; a null result is recorded, not shipped hopefully. ⭐ The lesson: it had been compensating for a bad ESTIMATOR, and fixing the estimator removed the need for it. **Reach for the estimator before the filter.** |
+
+⛔ **Also rejected after checking, so the comparison is not re-run blind:** Kalman
+filtering (needs a motion model for a finger that nobody has, more blind parameters,
+and measured no better here) and LaViola's double exponential smoothing (IPT/EGVE
+2003 — far cheaper than Kalman and genuinely good, but measured slightly worse than
+1€, and its single smoothing factor cannot be jitter-quiet and lag-free at once).
 
 **When adding a dependency**: record it here in the same change, with its licence,
 and say whether it ships. A dependency added without this line is a `N13` violation

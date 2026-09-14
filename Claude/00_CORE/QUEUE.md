@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-13) — `IN1` built, first device pass done, **owed a second**
 
-✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **112 golden
-vectors, all passing** (37 → 112 with `IN1`). ✅ The engine boundary is enforced by a
+✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **114 golden
+vectors, all passing** (37 → 114 with `IN1`). ✅ The engine boundary is enforced by a
 test. ✅ The mate-connector geometry and the constraint-stack solver are in and
 covered. ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated
 on `npm run verify`.
@@ -48,13 +48,20 @@ single unlucky reading zeroed the accumulator. `validateGestureConfig` now **thr
 on such a config. ✅ The **1€ filter** (CHI 2012, BSD/MIT, no patent — see
 `THIRD_PARTY_NOTICES`) smooths the displayed angle; roll now **releases** when the
 path stops being circular.
-⛔⛔ **A FOURTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
+⭐⭐ **THE FOURTH PASS FOUND THE WRONG QUANTITY.** Roll reversal jumped: the
+detector accumulated the **turning of the tangent**, which flips 180° when an arc is
+retraced. ⭐ §1.3 asked for the *"angle about the centroid"* all along — the quantity
+was right, only the estimator was wrong. Now a closed-form **least-squares circle
+fit**; worst step **150° → 5°**. ⛔ And the 1€ filter added one pass earlier was
+**MEASURED AND REVERTED** — it had been compensating for a bad estimator.
+⛔⛔ **A FIFTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
 
-⛔⛔ **THE PATTERN, AND IT BINDS `IN3`/`IN4`**: every defect found by finger has been
-**a rate estimated over the shortest available baseline** — flick lift speed, roll
-direction, roll curvature. None was visible to a green suite; none was a threshold
-needing tuning. **State the window, and check the signal clears the noise, BEFORE
-writing the threshold.**
+⛔⛔ **THE PATTERN, AND IT BINDS `IN3`/`IN4`**: passes 1–3 were all **a rate estimated
+over the shortest available baseline** — flick lift speed, roll direction, roll
+curvature. **State the window, and check the signal clears the noise, BEFORE writing
+the threshold.** ⭐ Pass 4 is a worse shape: **measuring a DIFFERENT QUANTITY than the
+one asked for**, invisible until the input where the two diverge. **When an estimator
+is hard, check whether you have replaced the quantity rather than improved it.**
 
 ⛔ **NEXT once `IN1` closes: `3D1`** — the object model. `IN3`, `IN4`, `RND1` and
 `RND2` are all waiting on it, and `IN2` is blocked behind the `IN8` decision below.

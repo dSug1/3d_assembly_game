@@ -240,11 +240,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // 2quinte has taken over: roll about the view axis by what the finger has
           // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
           // this gesture, which is what "commits to roll" means.
-          // ⭐ The 1€-FILTERED angle, not the raw one. The raw channel drives the
-          // COMMIT threshold; this drives what the eye sees. See input/one_euro.ts.
           writePose(
             held.mesh,
-            screenRollRotation(cur, held.frame, held.rec.rollSmoothedDeg - held.lastRollDeg),
+            screenRollRotation(cur, held.frame, held.rec.rollDeg - held.lastRollDeg),
           );
         } else {
           writePose(
@@ -259,7 +257,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           );
         }
       }
-      held.lastRollDeg = held.rec.rollSmoothedDeg;
+      held.lastRollDeg = held.rec.rollDeg;
       held.prev = s;
       paint();
       return;
