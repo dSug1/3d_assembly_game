@@ -794,3 +794,49 @@ describe("⭐⭐ transition cost budgets", () => {
     expect(cfg.rollTrackArcDeg).toBeLessThan(cfg.rollFitArcDeg);
   });
 });
+
+/**
+ * ⭐⭐ THE SHIPPED ROLL SMOOTHING, AND WHY IT CONTRADICTS MY OWN MEASUREMENT.
+ *
+ * A/B'd by finger on 2026-09-14 (`?rollFilterBeta=0` against the default) and the
+ * filtered version was judged better. ⛔ My metric had scored it as removing 13% of
+ * the noise for ~30° per gesture of LAG, i.e. a bad trade. The metric was wrong:
+ *
+ * 1. the synthetic swirl rolled at ~500 deg/s, about twice what a hand does, so the
+ *    predicted lag (`slope × τ`) was inflated by roughly the same factor;
+ * 2. an error-against-ground-truth metric cannot score *"feels steady"*, which is
+ *    the thing actually being traded for.
+ *
+ * ⭐ Third time on this row that a device judgement has overturned a confident
+ * synthetic number. These vectors pin the shipped setting so it is not "tidied" back
+ * by someone reading the old measurement.
+ */
+describe("⭐⭐ shipped roll smoothing", () => {
+  it("⛔ the filter SHIPS ENGAGED — beta is 0, which is full smoothing", () => {
+    expect(cfg.rollFilterBeta).toBe(0);
+    expect(cfg.rollFilterMinCutoff).toBeGreaterThan(0);
+  });
+
+  it("the smoothed channel actually differs from the raw one", () => {
+    // ⚠ A filter shipped "on" that produced an identical signal would be the 2026-09-14
+    // defect all over again — beta so high the filter was never switched on, and a
+    // null result reported as if it meant something.
+    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 70, clockwise: true }));
+    expect(d.committed).toBe(true);
+    expect(d.smoothedDeg).not.toBe(d.accumulatedDeg);
+  });
+
+  it("...but still tracks it — smoothing must not become drift", () => {
+    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 90, clockwise: true }));
+    expect(Math.abs(d.smoothedDeg - d.accumulatedDeg)).toBeLessThan(40);
+    // Same sign and same order of magnitude: it is a lag, not a different answer.
+    expect(Math.sign(d.smoothedDeg)).toBe(Math.sign(d.accumulatedDeg));
+  });
+
+  it("⭐ the COMMIT threshold still reads the RAW angle, unlagged", () => {
+    // Lagging a threshold crossing makes the gesture feel late, which is a different
+    // complaint from the one the filter is there to answer.
+    const d = feed(arc({ radiusMm: 15, startDeg: 0, stepDeg: 5, steps: 70, clockwise: true }));
+    expect(Math.abs(d.accumulatedDeg)).toBeGreaterThanOrEqual(cfg.rollAngle);
+  });
+});
