@@ -61,6 +61,11 @@ slider. ⭐ Ship the slider WITH the rule, not after a session is spent dislikin
 one finger still for a few seconds; `floor` is the answer. The sagitta criterion and
 several other thresholds are only defensible relative to it.
 
+⭐ **Rule 6's three numbers were chosen on the device 2026-09-14**: `gainTranslateScreen`
+1.05, `translateInertiaMs` 15, `translateDampingRatio` 0.35 — a lighter, bouncier object
+than the simulation argued for (I proposed 30 ms at ζ 0.65). ⚠ **A simulation narrows the
+range; it does not pick the number.**
+
 ⭐⭐ **MEASURED 2026-09-14: `pointerNoiseMm` = 0.761 mm** — five times the 0.15 mm
 placeholder it replaced. ⚠ **It is a RESTING-FINGER floor, and gameplay is not a
 resting finger**: a moving contact patch is a different regime, and nothing is retuned

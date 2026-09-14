@@ -160,7 +160,36 @@ and ζ has nothing to act on. The owner's 10 ms was chosen under a model where �
 only add lag; with ζ available, τ becomes usable again. ⭐ **Try τ ≈ 60–90 ms with
 ζ ≈ 0.5** before concluding the inertia should stay near zero.
 
-⚠ `translateDampingRatio` defaults to 0.6 — a guess, and a mild one.
+### ✅ THE SHIPPED PAIR, chosen on the device 2026-09-14
+
+`gainTranslateScreen` **1.05** · `translateInertiaMs` **15** · `translateDampingRatio`
+**0.35**. Measured against a simulated drag (ramp to speed, hold, stop dead):
+
+| drag speed | trail behind the finger | overshoot on stop | settle |
+|---|---|---|---|
+| 50 mm/s | 0.3 mm | 0.37 mm | — |
+| 100 mm/s | 0.7 mm | 0.74 mm | 33 ms |
+| 300 mm/s | 2.0 mm | 2.21 mm | 83 ms |
+
+⭐ **The owner went LIGHTER and BOUNCIER than I recommended** — I proposed 30 ms at
+ζ 0.65 (3.7 mm trail, 0.43 mm overshoot); they took 15 ms at ζ 0.35, which halves the
+trail and doubles the overshoot. ⚠ The lesson repeats: my numbers were defensible and a
+hand still moved them, in a direction the table alone did not argue for. **A simulation
+narrows the range; it does not pick the number.**
+
+⭐ Note what the shipped pair actually does: at ordinary drag speeds the trail and the
+overshoot are both **at or under the measured pointer noise** (`pointerNoiseMm`
+0.761 mm) — the weight is felt in the acceleration, not seen as a gap. It only becomes
+visible on a fast flick, which is where a real object's momentum would show anyway.
+
+⚠ **My advice one message earlier was wrong and is corrected here**: I suggested
+τ ≈ 60–90 ms with ζ ≈ 0.5, which the table then showed gives an **8–11 mm trail** —
+reproducing the exact complaint that started this. The trail is dominated by τ; ζ trims
+it by a third at best. I had the trade backwards, and only computing it caught that.
+
+⚠ The inertia slider now runs **5–400 ms in steps of 5** (the owner's range), so `0` —
+exact tracking, the only setting checkable against the tracking factor — is no longer
+reachable from the slider. It remains reachable from the URL: `?translateInertiaMs=0`.
 
 ## What the five wrong implementations did, and which vector caught each
 
