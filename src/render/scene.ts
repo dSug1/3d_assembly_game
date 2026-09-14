@@ -501,6 +501,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ 0 pins the object to the fingertip — the behaviour before inertia existed,
         // and the only setting that can be checked against the tracking factor.
         tunable("inertia (ms, 0 = none)", "translateInertiaMs", 0, 400, 10),
+        // ⭐ BELOW 1 IS THE CATCH-UP. 1 = critically damped, never overshoots; lower
+        // accelerates through the gap and overshoots a little; far lower rings.
+        // ⚠ It does nothing perceptible unless the inertia above is large enough to
+        // give it something to act on.
+        tunable("damping ratio (<1 = catch-up)", "translateDampingRatio", 0.2, 2, 0.05),
       ],
     },
     {
@@ -777,9 +782,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // stable, so a stalled frame simply arrives rather than exploding.
     const tauSec = cfg.translateInertiaMs / 1000;
     for (const [mesh, f] of followers) {
-      f.x = advanceFollow(f.x, f.target.x, tauSec, dtSec);
-      f.y = advanceFollow(f.y, f.target.y, tauSec, dtSec);
-      f.z = advanceFollow(f.z, f.target.z, tauSec, dtSec);
+      const zeta = cfg.translateDampingRatio;
+      f.x = advanceFollow(f.x, f.target.x, tauSec, zeta, dtSec);
+      f.y = advanceFollow(f.y, f.target.y, tauSec, zeta, dtSec);
+      f.z = advanceFollow(f.z, f.target.z, tauSec, zeta, dtSec);
       mesh.position.set(f.x.x, f.y.x, f.z.x);
     }
 

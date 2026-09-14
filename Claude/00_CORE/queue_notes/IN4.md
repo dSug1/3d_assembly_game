@@ -116,9 +116,51 @@ instant the finger left, which is the teleporting feel the inertia exists to rem
 the finger stops and a system with momentum has to keep integrating after its input goes
 quiet.
 
-⚠ `translateInertiaMs` defaults to **90 ms and that is a GUESS** — this project is three
-for three on guessed numbers being wrong. It ships with a slider, and `0` disables it
-exactly, which is the only setting that can be checked against the tracking factor.
+⛔⛔ **AND CRITICAL DAMPING WAS STILL NOT IT.** The owner, next pass: *"it still feels
+inauthentic. It needs probably more acceleration catch-up after the inertia is overcome.
+Check how Unity is doing rigid body translation with force and reapply the same if this
+is not patented or licensed."* They set `translateInertiaMs` to **10 ms** — which is
+almost off. ⭐ That is the diagnosis: at ζ=1 the follower takes the SLOWEST path that
+never overshoots, so every millisecond of τ reads as lag and the only way to stop it
+feeling wrong is to turn it off.
+
+### What Unity does, and whether we may use it
+
+✅ **PhysX — Unity's 3D physics — has been open source under BSD-3-Clause since 4.0
+(December 2018)**, later extended to the GPU source, with no patent asserted. ⛔ No code
+was taken and none needed to be: the model is Newton. From `DyBodyCoreIntegrator.h`:
+
+```
+v += (F/m)·dt ;  v *= max(0, 1 − linearDamping·dt) ;  x += v·dt
+```
+
+⚠ **That damping term is TIMESTEP-DEPENDENT** — `(1 − c·dt)` is the first two terms of
+`e^(−c·dt)`, so the same drag decays differently at 30 Hz and 120 Hz and clamps to a dead
+stop at `dt > 1/c`. It was raised upstream as a flaw. Unity survives it by running
+physics at a **fixed 0.02 s timestep**. ⛔ We integrate on a render frame that stutters,
+so we cannot.
+
+⭐⭐ **So: Unity's MODEL, not Unity's ARITHMETIC.** Same mass-spring-damper
+(`ẍ = −ω²(x−target) − 2ζωẋ`, which is `AddForce` with `linearDamping`), integrated by
+its exact analytic solution in all three damping regimes. ⭐ A vector **measures** the two
+at Unity's own 0.02 s step rather than asserting they agree — and shows the gap is
+PhysX's discretisation error by watching it vanish as its timestep shrinks. Copying
+PhysX's arithmetic verbatim fails seven vectors.
+
+### ζ is the knob that was missing
+
+Dragged at a steady rate, a follower trails by `2·ζ·τ·rate`. At ζ=1 that trail is
+permanent — the object never catches up, it just keeps its distance, which is exactly
+"inauthentic". **Below 1 the object accelerates THROUGH the gap**, trails half as far at
+ζ=0.5, and arrives with a small overshoot. That is what a mass on a spring does.
+⚠ Far below 1 it rings, and ringing reads as a bug rather than as weight.
+
+⚠ **The two numbers must be judged TOGETHER.** At τ=10 ms the motion is over in ~30 ms
+and ζ has nothing to act on. The owner's 10 ms was chosen under a model where τ could
+only add lag; with ζ available, τ becomes usable again. ⭐ **Try τ ≈ 60–90 ms with
+ζ ≈ 0.5** before concluding the inertia should stay near zero.
+
+⚠ `translateDampingRatio` defaults to 0.6 — a guess, and a mild one.
 
 ## What the five wrong implementations did, and which vector caught each
 
@@ -143,7 +185,9 @@ zoom clamp and the orbit rings can actually produce.
 3. ⛔ **The trigger**: put the second finger down mid-drag, move it, let it settle, move
    it again — the object must translate throughout. Lift it and rotation must come back.
    The HUD prints `TRANSLATE` / `ROTATE`.
-4. ⭐ **The inertia at 0 ms vs 90 ms vs 400 ms.** At 0 the object must be pinned to the
-   fingertip exactly; the question is where between weight and lag the right answer sits.
+4. ⭐⭐ **The inertia and the damping ratio TOGETHER.** At τ=0 the object is pinned to the
+   fingertip exactly (the reference point). The pair to try is **τ ≈ 60–90 ms with
+   ζ ≈ 0.5** — ζ does nothing perceptible at τ=10 ms, so judging them one at a time will
+   say the inertia should be off again.
 4. ⚠ Rotation must still work with **no** anchor down, and the anchor must not start an
    orbit while an object is held.

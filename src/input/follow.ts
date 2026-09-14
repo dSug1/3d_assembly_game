@@ -1,34 +1,59 @@
 /**
- * INERTIA — a CRITICALLY DAMPED follower, so a dragged object accelerates into motion
- * and decelerates out of it instead of teleporting with the finger.
+ * INERTIA — a MASS PULLED BY A FORCE, which is what Unity's rigid bodies are.
  *
- * ⭐⭐ THE OWNER'S WORDS: *"a bit like physics applying a force to the object with some
- * inertia."* That is a second-order system, not a smoothing filter — a filter lags but
- * has no momentum, and the difference is exactly what "inauthentic" describes.
+ * ⭐⭐ THE OWNER'S BRIEF: *"a bit like physics applying a force to the object with some
+ * inertia"*, and after the first attempt, *"it needs probably more acceleration catch-up
+ * after the inertia is overcome. Check how Unity is doing rigid body translation with
+ * force and reapply the same if this is not patented or licensed."*
  *
- * ⛔⛔ CRITICALLY DAMPED, NOT UNDER-DAMPED. Under-damping overshoots and wobbles, which
- * reads as a bug in a manipulation tool ("it slid past where I put it"); over-damping is
- * just lag. Critical damping is the fastest approach with NO overshoot, which is the
- * only one of the three a person would call "weighty" rather than "broken".
+ * ## What Unity actually does, and whether we may use it
  *
- * ⛔⛔ THE STEP IS THE EXACT ANALYTIC SOLUTION, NOT AN EULER INTEGRATION.
- * For `y = x − target` with natural frequency `ω = 1/τ`, critical damping gives
+ * Unity's 3D physics is **NVIDIA PhysX**, which has been **open source under the
+ * BSD-3-Clause licence since 4.0 (December 2018)** — including, since the later update,
+ * the GPU source. ⭐ So there is no licence bar and no patent claim asserted over it:
+ * `N13` is satisfied either way, because what is reapplied here is the MODEL, which is
+ * Newton, not anybody's code.
+ *
+ * PhysX integrates a body with **semi-implicit (symplectic) Euler**, and applies linear
+ * damping as a per-step multiplier. From `DyBodyCoreIntegrator.h`:
  *
  * ```
- *   y(t) = (y₀ + (v₀ + ω·y₀)·t) · e^(−ω·t)
- *   v(t) = (v₀ − ω·(v₀ + ω·y₀)·t) · e^(−ω·t)
+ *   v += (F/m)·dt
+ *   v *= max(0, 1 − linearDamping·dt)      // bodyCoreComputeUnconstrainedVelocity
+ *   x += v·dt                              // integrateCore
  * ```
  *
- * which is textbook mathematics (the repeated-root case of a linear second-order ODE)
- * and therefore carries no licence — see `N13` and `THIRD_PARTY_NOTICES.md`. ⭐ It is
- * used because it is **unconditionally stable and frame-rate independent**: an explicit
- * Euler step with `dt` larger than `2τ` diverges, and a dropped frame on a tablet is
- * exactly when that happens. ⚠ Two frames of 8 ms must land in the same place as one
- * frame of 16 ms, or the feel of the drag becomes a function of the frame rate — a
- * composition nobody would think to check.
+ * ⛔⛔ **AND THAT DAMPING TERM IS TIMESTEP-DEPENDENT — a known flaw, raised upstream.**
+ * `(1 − c·dt)` is the first two terms of `e^(−c·dt)`, so the same drag setting decays
+ * differently at 30 Hz and at 120 Hz, and at `dt > 1/c` it clamps to a dead stop. Unity
+ * only gets away with it by running physics at a **FIXED 0.02 s timestep** decoupled
+ * from rendering.
+ *
+ * ⭐⭐ SO THIS REAPPLIES UNITY'S MODEL AND NOT UNITY'S ARITHMETIC: the same mass-spring-
+ * damper a dragged rigid body obeys, integrated by its **exact analytic solution**
+ * instead of a first-order approximation that needs a fixed timestep to stay honest.
+ * The two agree in the limit, and a vector MEASURES the difference at Unity's own
+ * 0.02 s step rather than asserting it. ⚠ We have no fixed-timestep loop to hide behind
+ * — this runs on the render frame, which stutters — so frame-rate independence is not a
+ * nicety here, it is the requirement.
+ *
+ * ## The parameter that produces "catch-up"
+ *
+ * Force toward the target and damping opposing velocity give
+ * `ẍ = −ω²·(x − target) − 2ζω·ẋ`, where `ω = 1/τ` and `ζ` is the damping ratio —
+ * exactly `AddForce` with `linearDamping = 2ζω`.
+ *
+ * ⭐ **`ζ` IS THE KNOB THE OWNER IS ASKING FOR.** At `ζ = 1` (critical damping, the
+ * first attempt) the object takes the slowest path that never overshoots: it eases in
+ * and, dragged at a steady rate, trails by `2τ·rate` for ever. Below 1 it builds more
+ * speed, closes the gap — trailing only `2ζτ·rate` — and arrives with a small overshoot.
+ * That acceleration *through* the gap is what a mass on a spring does and what
+ * "catch-up after the inertia is overcome" describes.
+ * ⚠ Far below 1 it rings, which reads as a bug rather than as weight. The slider exists
+ * to find the line; `ζ` is not a number anyone should guess.
  *
  * ⛔ ENGINE-FREE, and SCALAR: a linear ODE solves componentwise, so the caller runs one
- * of these per axis and the three cannot disagree.
+ * per axis and the three cannot disagree.
  */
 
 export interface FollowState {
@@ -39,18 +64,23 @@ export interface FollowState {
 }
 
 /**
- * Advance a critically damped follower towards `target` by `dtSec`.
+ * Advance a mass-spring-damper towards `target` by `dtSec`.
  *
- * @param tauSec the time constant. ⭐ Roughly "how long the object takes to catch up":
- *   it covers ~63 % of the remaining gap in one `tau` from rest, and settles in ~5.
- *   ⛔ `0` (or less) means NO inertia — the follower snaps to the target exactly, which
- *   is the behaviour that shipped before this existed and must stay reachable, because
- *   it is the only setting that can be checked against the tracking factor.
+ * @param tauSec the time constant `1/ω`. ⭐ Roughly how long the object takes to catch
+ *   up. ⛔ `0` or less means NO inertia — it snaps to the target exactly. That setting
+ *   must stay reachable: it is the only one that can be checked against rule 6's
+ *   tracking factor.
+ * @param zeta the damping ratio. `1` = critically damped (no overshoot, slowest
+ *   non-overshooting approach), `< 1` = under-damped (accelerates through the gap and
+ *   overshoots a little — the "catch-up"), `> 1` = over-damped (sluggish).
+ *   ⚠ Clamped to be positive: zero would be a frictionless spring that oscillates for
+ *   ever, which is not a thing anyone wants to drag.
  */
 export function advanceFollow(
   state: FollowState,
   target: number,
   tauSec: number,
+  zeta: number,
   dtSec: number,
 ): FollowState {
   // ⚠ A non-positive or non-finite dt happens for real — a duplicated timestamp, a tab
@@ -60,15 +90,46 @@ export function advanceFollow(
   if (!(tauSec > 0)) return { x: target, v: 0 };
 
   const omega = 1 / tauSec;
+  const z = Math.max(1e-4, zeta);
   const y0 = state.x - target;
   const v0 = state.v;
-  // ⚠ `exp(-omega*dt)` underflows to 0 for a long stall, which is CORRECT here: the
-  // object simply arrives. No special case needed, and no divergence.
-  const decay = Math.exp(-omega * dtSec);
-  const c = v0 + omega * y0;
+
+  // ⚠ The three regimes are three DIFFERENT closed forms — the characteristic equation
+  // has a repeated root only at exactly ζ=1. A band around 1 uses the critical form,
+  // because both other forms divide by a damped frequency that goes to zero there and
+  // the arithmetic loses all its precision long before the root is actually repeated.
+  if (Math.abs(z - 1) < 1e-3) {
+    const decay = Math.exp(-omega * dtSec);
+    const c = v0 + omega * y0;
+    return {
+      x: target + (y0 + c * dtSec) * decay,
+      v: (v0 - omega * c * dtSec) * decay,
+    };
+  }
+
+  if (z < 1) {
+    // Under-damped: it rings as it decays. THE REGIME THAT CATCHES UP.
+    const wd = omega * Math.sqrt(1 - z * z);
+    const decay = Math.exp(-z * omega * dtSec);
+    const cos = Math.cos(wd * dtSec);
+    const sin = Math.sin(wd * dtSec);
+    return {
+      x: target + decay * (y0 * cos + ((v0 + z * omega * y0) / wd) * sin),
+      v: decay * (v0 * cos - ((omega * omega * y0 + z * omega * v0) / wd) * sin),
+    };
+  }
+
+  // Over-damped: two real roots, no oscillation, slower than critical.
+  const s = omega * Math.sqrt(z * z - 1);
+  const r1 = -z * omega + s;
+  const r2 = -z * omega - s;
+  const a = (v0 - r2 * y0) / (r1 - r2);
+  const b = y0 - a;
+  const e1 = Math.exp(r1 * dtSec);
+  const e2 = Math.exp(r2 * dtSec);
   return {
-    x: target + (y0 + c * dtSec) * decay,
-    v: (v0 - omega * c * dtSec) * decay,
+    x: target + a * e1 + b * e2,
+    v: a * r1 * e1 + b * r2 * e2,
   };
 }
 

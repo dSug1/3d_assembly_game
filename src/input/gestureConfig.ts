@@ -86,6 +86,18 @@ export interface GestureConfig {
    * set by hand was raised from mine. `IN5`, by slider.
    */
   translateInertiaMs: number;
+  /**
+   * The DAMPING RATIO of rule 6's inertia — Unity's `linearDamping`, expressed
+   * dimensionlessly so it means the same thing at every `translateInertiaMs`.
+   * ⭐⭐ THE KNOB FOR "CATCH-UP". `1` is critically damped: the slowest approach that
+   * never overshoots, and dragged at a steady rate the object trails for ever by
+   * `2·τ·rate`. **Below 1 it accelerates through the gap**, trailing only `2·ζ·τ·rate`,
+   * and arrives with a small overshoot — which is what a mass on a spring does and what
+   * the owner meant by *"more acceleration catch-up after the inertia is overcome"*.
+   * ⚠ Far below 1 it RINGS, and ringing reads as a bug rather than as weight. `IN5`, by
+   * slider — nobody should guess this one.
+   */
+  translateDampingRatio: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
   gainTranslateMutual: number;
@@ -314,11 +326,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
   gainRoll: 1,
-  gainTranslateScreen: 1,
-  // ⚠ A GUESS. ~90 ms reads as weight without reading as lag in the literature on
-  // direct manipulation, but this project's record on guessed numbers is three for
-  // three too slow — it ships with a slider for exactly that reason.
-  translateInertiaMs: 90,
+  gainTranslateScreen: 1.35,
+  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14. My guess of 90 ms read as LAG, not as weight —
+  // four for four on guessed numbers being wrong, and the first one guessed too SLOW in
+  // the other sense. ⚠ At 10 ms the motion is over in ~30 ms, so the damping ratio below
+  // has almost nothing to act on: if the catch-up is wanted, this has to come back up.
+  translateInertiaMs: 10,
+  // ⚠ A GUESS, and deliberately a mild one: 0.6 is the usual "snappy, barely
+  // overshoots" figure in direct-manipulation work. ⛔ It does almost nothing at a 10 ms
+  // time constant — the pair has to be judged together.
+  translateDampingRatio: 0.6,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,
