@@ -18,7 +18,7 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` closed, camera rules nearly there
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **226 golden vectors,
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **227 golden vectors,
 all passing** (37 → 219). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
@@ -35,8 +35,8 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FOUR MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Sixteen defects have been found **by finger**, and **not one was visible to a green
-suite**. They are four shapes, not sixteen problems:
+Seventeen defects have been found **by finger**, and **not one was visible to a green
+suite**. They are four shapes, not seventeen problems:
 
 1. **A rate estimated over the shortest available baseline.** Flick lift speed, roll
    direction, roll curvature. ⭐ *State the window, and check the signal clears the
@@ -44,6 +44,13 @@ suite**. They are four shapes, not sixteen problems:
 2. **Measuring a DIFFERENT QUANTITY than the one asked for.** The tangent's turning
    instead of the angle about a centre — invisible until a finger reversed. ⭐ *When an
    estimator is hard, ask whether you replaced the quantity rather than improved it.*
+   ⛔⛔ **AND THE SHAPE GOT INTO A GUARD WRITTEN TO CATCH IT.** The sagitta criterion
+   computed `rollStepDistance² / (8 × rollRadiusMax)` — a fixed 13 mm chord at the
+   LARGEST radius — while `roll.ts` sizes its window as `max(rollStepDistance,
+   radius × arc)`. It was reading a span the product never fits, at the radius where
+   that span never binds: 0.352 mm claimed against ~3.3 mm real, and the binding case
+   is the SMALLEST radius, not the largest. ⭐ Quantity *and* direction wrong, for
+   eight device passes, inside the check that exists to prevent exactly this.
 3. **IDEALISED FIXTURES.** Roll vanished from the deployed page with every vector
    green, because every fixture was a perfect circle. ⭐ *Build the imperfect specimen
    and the negative first.*
@@ -52,8 +59,10 @@ suite**. They are four shapes, not sixteen problems:
    rings. ⭐ *`METHOD` already says this — ask what the whole chain does, in one
    expression.*
 
-⭐ And twice, a **device judgement overturned a confident synthetic measurement**.
-When they disagree, suspect the metric.
+⭐ And **three times** a **device judgement overturned a confident synthetic
+measurement**. When they disagree, suspect the metric. ⛔ The third: measuring
+`pointerNoiseMm` (0.15 → **0.761 mm**) made the sagitta guard reject a configuration
+seven device passes had already accepted. The finger was right and the guard was wrong.
 
 ### ⭐⭐ `IN5` is now practical, and mostly unblocked
 
@@ -64,7 +73,9 @@ placeholder can be A/B'd by finger without a rebuild.
 2026-09-14 (`src/input/noise_meter.ts`, line `noise floor=… now=… n=… cfg=…`). Hold one
 finger still for a few seconds and read `floor`. The sagitta criterion and several other
 thresholds are only defensible relative to it. ⛔ **Reading it is the owner's step** —
-nothing in a suite can hold a finger on glass.
+nothing in a suite can hold a finger on glass. ✅ **DONE 2026-09-14: 0.761 mm**, five
+times the placeholder. ⚠ A resting-finger floor is not gameplay; it is used for the
+sagitta rule only, where over-estimating is the safe direction.
 ⛔ ⭐ **The meter's own vectors found a hole in the meter's own vectors.** Three of four
 naive alternatives failed as designed; the fourth — a window that only ever GROWS —
 passed everything, because the minimum is taken while the window is still short. It

@@ -97,8 +97,12 @@ export interface GestureConfig {
    * angle: a clean circle stepping 5.0° per sample measured up to 46.3° per sample
    * with ±0.5 px of noise. Device-confirmed as the cause of roll jitter, and of the
    * snap-back when a circling finger pauses. See roll.ts.
-   * ⚠ Must stay below `rollRadiusMin`, or the tightest allowed roll cannot be
-   * sampled finely enough to be one. Asserted in `validateGestureConfig`.
+   * ⚠ A rule requiring this to stay below `rollRadiusMin` once lived in
+   * `validateGestureConfig` and WAS DELETED with the estimator it belonged to — under
+   * a circle fit a long span relative to the radius conditions the fit BETTER. This
+   * line claimed the assertion still existed long after it did not (13 mm vs a 5 mm
+   * `rollRadiusMin`); a doc that describes a guard which is not there is worse than
+   * no doc, because it is believed.
    */
   rollStepDistance: number;
   /**
@@ -337,7 +341,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // again for a future comparison.
   rollFilterMinCutoff: 3.0,
   rollFilterBeta: 0,
-  pointerNoiseMm: 0.15,
+  // ⭐⭐ MEASURED on the device 2026-09-14, not guessed: the owner held one finger
+  // still and read the meter's floor (`src/input/noise_meter.ts`). FIVE TIMES the
+  // 0.15 placeholder that preceded it.
+  // ⚠ IT IS A RESTING-FINGER FLOOR, AND GAMEPLAY IS NOT A RESTING FINGER. A moving
+  // contact patch is a different regime, and nothing here should be retuned around
+  // this number as though it described one. It is used for exactly one thing — the
+  // sagitta criterion below — and there it is the conservative direction: too large
+  // a noise can only make that rule stricter.
+  pointerNoiseMm: 0.761,
 
   tapMaxDuration: 250,
   doubleTapWindow: 300,
@@ -518,13 +530,42 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   //
   // ⚠ The binding case is the LARGEST radius, not the smallest: sagitta shrinks as
   // R grows, so a lazy wide swirl is the hard one to detect, not a tight scribble.
-  const sagittaMm = (cfg.rollStepDistance * cfg.rollStepDistance) / (8 * cfg.rollRadiusMax);
+  //
+  // ⛔⛔ IT IS MEASURED OVER THE WINDOW THE CODE ACTUALLY SPANS, and for a long time it
+  // was not. The rule used to read `rollStepDistance² / (8 × rollRadiusMax)` — a FIXED
+  // 13 mm chord at the LARGEST radius, giving 0.352 mm. But `roll.ts`'s `windowTargetPx`
+  // sizes the window as `max(rollStepDistance, radius × arc)`: at a 60 mm radius the
+  // window holds 130° of arc, which is 136 mm of path and bows by 32 mm, not 0.352 mm.
+  // The rule was reading a span the product never uses, at the radius where that span
+  // never binds. ⚠ Mistake shape 2 — a substituted quantity — inside the very check
+  // written to catch mistakes. It surfaced only when `pointerNoiseMm` was finally
+  // MEASURED (0.15 → 0.761) and the check rejected a configuration seven device passes
+  // had already accepted. ⭐ `METHOD`: when the device and the metric disagree, suspect
+  // the metric.
+  //
+  // ⚠ And the binding radius is the SMALLEST, not the largest: an arc-sized window bows
+  // in proportion to its radius, so a tight swirl is now the hard case. The old rule had
+  // this backwards too. The range is scanned rather than reasoned about — a composition
+  // is a thing to measure.
+  const arcRad = (Math.min(cfg.rollFitArcDeg, cfg.rollTrackArcDeg) * Math.PI) / 180;
+  let sagittaMm = Number.POSITIVE_INFINITY;
+  let sagittaAtRadiusMm = cfg.rollRadiusMin;
+  for (let r = cfg.rollRadiusMin; r <= cfg.rollRadiusMax; r += 0.05) {
+    // The arc the window holds at this radius, capped at a full turn.
+    const theta = Math.min(Math.max(arcRad, cfg.rollStepDistance / r), 2 * Math.PI);
+    const sag = r * (1 - Math.cos(theta / 2));
+    if (sag < sagittaMm) {
+      sagittaMm = sag;
+      sagittaAtRadiusMm = r;
+    }
+  }
   if (sagittaMm < 2 * cfg.pointerNoiseMm) {
     throw new Error(
-      `rollStepDistance (${cfg.rollStepDistance} mm) is too short to measure curvature ` +
-        `at rollRadiusMax (${cfg.rollRadiusMax} mm): the chord's sagitta is ` +
+      `the roll fit window is too short to measure curvature: at its worst radius ` +
+        `(${sagittaAtRadiusMm.toFixed(1)} mm) it holds ` +
+        `${Math.min(cfg.rollFitArcDeg, cfg.rollTrackArcDeg)}° of arc and bows by only ` +
         `${sagittaMm.toFixed(3)} mm against ${cfg.pointerNoiseMm} mm of pointer noise. ` +
-        `Lengthen the baseline, lower rollRadiusMax, or measure a smaller noise.`,
+        `Lengthen rollTrackArcDeg, raise rollRadiusMin, or measure a smaller noise.`,
     );
   }
   // ⚠ A rule once lived here requiring `rollStepDistance < rollRadiusMin`, on the
