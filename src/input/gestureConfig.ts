@@ -13,6 +13,17 @@
  * were derived — the previous project's most expensive constant was borrowed from
  * another row's derivation and inherited that row's question, not just its number.
  */
+/**
+ * ⛔⛔ THE CAMERA'S NEAR PLANE, IN METRES — duplicated here ON PURPOSE so the config
+ * validator can refuse a zoom range that would clip the scene away.
+ *
+ * ⚠ `render/scene.ts` is where it is actually SET on the camera, because `minZ` is a
+ * per-camera Babylon property and this layer imports no engine. Keeping the number in
+ * two places is exactly what `one constant, one place` forbids, so it is exported
+ * from here and `scene.ts` reads it — it does not keep its own copy.
+ */
+export const CAMERA_NEAR_PLANE_M = 0.01;
+
 export interface GestureConfig {
   // ── §1.1 motion states, hysteretic ──────────────────────────────────────
   /** mm/s below which a touchpoint counts as resting. */
@@ -167,6 +178,30 @@ export interface GestureConfig {
   evictOnOverflow: boolean;
   matePriorityOverAnchor: boolean;
 
+  // ── §2 rule 4 — pinch zoom ───────────────────────────────────────
+  /**
+   * mm the finger separation must change before zoom engages.
+   * ⚠ Crossing it RE-ANCHORS the gesture, so the zoom does not jump by the deadband
+   * at the moment it starts. See pinch.ts.
+   */
+  pinchDeadband: number;
+  /**
+   * Zoom gain, applied as an EXPONENT on the separation ratio — the quantity is a
+   * ratio, so a multiplier would be dimensionally wrong. `1` is the plain physical
+   * mapping: fingers twice as far apart halve the camera radius.
+   */
+  gainZoom: number;
+  /**
+   * Metres. ⛔⛔ THE NEAR-PLANE FLOOR, AND IT IS LOAD-BEARING. `render/scene.ts` sets
+   * the camera's `minZ` to 0.01 m because Babylon's default of 1 put this
+   * metre-scale scene entirely inside the near plane — a black page with no error
+   * anywhere. A zoom able to drive the radius below the near plane recreates that
+   * silently, so this must stay comfortably above it.
+   */
+  cameraRadiusMinM: number;
+  /** Metres. The far end of the zoom. */
+  cameraRadiusMaxM: number;
+
   // ── §2 / §4 rules ───────────────────────────────────────────────────────
   /** degrees of device tilt below which the orbit ignores it. */
   tiltDeadband: number;
@@ -258,6 +293,14 @@ export const DEFAULT_CONFIG: GestureConfig = {
   evictOnOverflow: false,
   matePriorityOverAnchor: false,
 
+  // ⚠ Placeholders like everything else. `IN5` measures them — and can now do it by
+  // finger, since tunables override from the URL (`?pinchDeadband=1`).
+  pinchDeadband: 2,
+  gainZoom: 1,
+  // ⛔ 0.15 m is 15x the camera's 0.01 m near plane. See the field comment.
+  cameraRadiusMinM: 0.15,
+  cameraRadiusMaxM: 3,
+
   tiltDeadband: 2,
   maxBarycenterCandidates: 8,
   axisMappingMode: "rotated",
@@ -312,6 +355,22 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `rollTrackArcDeg (${cfg.rollTrackArcDeg}°) exceeds rollFitArcDeg ` +
         `(${cfg.rollFitArcDeg}°): tracking an already-decided roll cannot need MORE ` +
         "arc than deciding it did.",
+    );
+  }
+  if (cfg.cameraRadiusMinM >= cfg.cameraRadiusMaxM) {
+    throw new Error(
+      `cameraRadiusMinM (${cfg.cameraRadiusMinM} m) must be below cameraRadiusMaxM ` +
+        `(${cfg.cameraRadiusMaxM} m), or the zoom has no range to work in.`,
+    );
+  }
+  // ⛔⛔ See `cameraRadiusMinM`: a radius at or inside the near plane renders a black
+  // page with no error at all, which is the single most expensive failure this
+  // project has already had. The near plane is 0.01 m in `render/scene.ts`.
+  if (cfg.cameraRadiusMinM < 10 * CAMERA_NEAR_PLANE_M) {
+    throw new Error(
+      `cameraRadiusMinM (${cfg.cameraRadiusMinM} m) is too close to the camera near ` +
+        `plane (${CAMERA_NEAR_PLANE_M} m): zooming in would clip the scene away and ` +
+        "render a black page with no error. Keep at least 10x the near plane.",
     );
   }
   if (cfg.rollFitArcDeg < 45 || cfg.rollFitArcDeg > 360) {
