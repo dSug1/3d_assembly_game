@@ -36,8 +36,21 @@ model and so did not wait on `3D1`:
 menu**, so a placeholder can be A/B'd by finger without a rebuild.
 ⛔ **Every threshold is still a placeholder** — except the six orbit ring values, which
 the owner chose on the device on 2026-09-14 and are the first *judgements* in the file.
-⭐ Measure **`pointerNoiseMm` first**: hold a finger still and read the spread. The
-sagitta criterion and several other thresholds are only defensible relative to it.
+⭐ Measure **`pointerNoiseMm` first** — **the instrument exists** since 2026-09-14:
+`src/input/noise_meter.ts`, reported on the HUD as `noise floor=… now=… n=… cfg=…`. Hold
+one finger still for a few seconds; `floor` is the answer. The sagitta criterion and
+several other thresholds are only defensible relative to it.
+
+⛔⛔ **THE STATISTIC IS THE POINT, AND IT IS EASY TO MEASURE THE WRONG ONE.** A resting
+finger produces sensor noise (high frequency — what `pointerNoiseMm` *means*) **and**
+hand tremor and drift (low frequency, often larger, and not a property of the digitiser
+at all). So deviation is taken from a **short trailing mean** (32 samples), as a distance
+from the mean **point** rather than per-axis — the sagitta is a bow in the plane, and a
+per-axis figure would be wrong by √2 with nothing to notice. ⭐ And the answer is the
+**minimum** window seen, not the average: movement can only raise a reading above the
+sensor’s floor, so the quietest window during a hold is the best estimate and a finger
+that shifts half-way cannot spoil it. ⛔ It reports `NaN`, never `0`, before it has
+enough samples — a zero would read as a perfect sensor and wave every config through.
 
 ⛔ **A guard now refuses dead tunables.** `tests/config_debt.test.ts` requires every
 config field to be **read by the code or declared as debt with the row that will wire

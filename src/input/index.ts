@@ -8,4 +8,5 @@ export * from "./screen_rotate";
 export * from "./pinch";
 export * from "./barycentre";
 export * from "./orbit";
+export * from "./noise_meter";
 export * from "./recognizer";

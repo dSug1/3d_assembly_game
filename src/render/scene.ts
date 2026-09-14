@@ -51,6 +51,7 @@ import {
   OrbitController,
   OrbitCentreBlend,
   orbitCentre,
+  PointerNoiseMeter,
   Recognizer,
   TapHistory,
   screenPlaneRotation,
@@ -340,6 +341,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         `${pinch.isZooming ? "  ZOOMING" : ""}`,
       tuning: tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
       tuningRejected: tuning.rejected,
+      noise: noiseLine(),
     });
   };
 
@@ -421,6 +423,29 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     },
   ]);
 
+  /**
+   * THE `pointerNoiseMm` INSTRUMENT (`IN5`). See `src/input/noise_meter.ts`.
+   *
+   * ⛔ ONE touchpoint feeds it — the first one down — and it is RESET when that hold
+   * begins. Interleaving two fingers into one window would measure the distance
+   * BETWEEN them, which is a different quantity entirely and a large one; the same
+   * shape of mistake as measuring a rate over the shortest available baseline.
+   *
+   * ⚠ The reading survives the lift on purpose: a person cannot read a number off the
+   * glass while their finger is covering it.
+   */
+  const noise = new PointerNoiseMeter();
+  let noisePointer: number | null = null;
+
+  const noiseLine = (): string => {
+    const floor = noise.floorMm;
+    if (Number.isNaN(floor)) return `— (n=${noise.samples}, hold one finger still)`;
+    // ⭐ Printed against the value currently IN FORCE, because the reading is only
+    // ever interesting as a comparison — and a config the sagitta rule is judged by
+    // must not be compared against a half-remembered number.
+    return `floor=${floor.toFixed(3)}mm now=${noise.rmsMm.toFixed(3)} n=${noise.samples} cfg=${cfg.pointerNoiseMm}`;
+  };
+
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
     x: e.clientX,
     y: e.clientY,
@@ -430,6 +455,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
+
+    // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
+    // see the raw stream whatever rule the touchpoint turns out to belong to, and it
+    // must not be able to change what that rule does.
+    if (info.type === PointerEventTypes.POINTERDOWN && noisePointer === null) {
+      noisePointer = e.pointerId;
+      noise.reset();
+    }
+    if (e.pointerId === noisePointer) {
+      // ⚠ DOWN and MOVE only, named explicitly. Babylon also emits `POINTERPICK`,
+      // `POINTERTAP` and `POINTERDOUBLETAP` carrying the SAME underlying event, and a
+      // duplicated sample would pull the RMS down — an instrument that flatters
+      // itself is worse than none. `METHOD`: the instrument is a suspect.
+      if (info.type === PointerEventTypes.POINTERUP) noisePointer = null;
+      else if (
+        info.type === PointerEventTypes.POINTERDOWN ||
+        info.type === PointerEventTypes.POINTERMOVE
+      ) {
+        noise.push(s);
+      }
+    }
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
       const pick = info.pickInfo;
