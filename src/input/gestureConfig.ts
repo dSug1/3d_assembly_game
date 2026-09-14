@@ -114,8 +114,10 @@ export interface GestureConfig {
    */
   translateLeadMs: number;
   /**
-   * mm ON THE SCREEN — how far every OTHER object drifts when the held one starts or
-   * resumes translating, before springing back to exactly where it was.
+   * mm ON THE SCREEN — how far every OTHER object drifts **the same way as** the held one
+   * when it starts, resumes or turns, before springing back to exactly where it was.
+   * ⚠ Alongside, not against. It was built opposite for one round on a request that was
+   * then corrected; the sign lives in `swayWorldDirection` and nowhere else.
    * ⭐⭐ THE SCENE REACTS INSTEAD OF STANDING FROZEN around the one thing that moves.
    * ⛔ Screen millimetres, not world metres, and converted through the SAME tracking
    * factor rule 6 uses (`input/translate.ts`) — so the sway is the same size to the eye
@@ -133,6 +135,24 @@ export interface GestureConfig {
    * softness nobody can reach is a softness that stays at my guess.
    */
   translateSwayTauMs: number;
+  /**
+   * degrees — how far a drag must swing before the scene reacts AGAIN, mid-drag.
+   * ⛔ Without this the sway fired only when the finger started moving, and
+   * `motionState` does not fall back to STATIONARY until 150 ms below 6 mm/s — so a hand
+   * reversing at speed never went still and the scene sat frozen through the whole
+   * shake. ⚠ Found by finger, not by a suite.
+   */
+  swayTurnDeg: number;
+  /**
+   * mm/s — the drag speed at which `translateSwayMm` is the amplitude you get.
+   * ⭐⭐ THE SWAY SCALES WITH HOW FAST THE OBJECT SETS OFF: the impulse is proportional
+   * to the drag speed, as a viscous coupling would be, so a slow drag nudges the scene
+   * gently and slowly while a fast one throws it further AND quicker — the excursion
+   * still peaks at `translateSwayTauMs`, so a bigger one covers that ground faster.
+   * ⚠ Clamped to ×0.3…×3 (`input/sway.ts`): a flick reaches twenty times this and would
+   * otherwise fling the rest of the scene across the view.
+   */
+  swayReferenceSpeedMmPerS: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
   gainTranslateMutual: number;
@@ -385,12 +405,19 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ The HUD prints `lead <set>/<neutral>` so the landmark stays visible as the other
   // two sliders move it.
   translateLeadMs: 0.2,
-  // ⚠ BOTH ARE GUESSES. 1.2 mm is "noticed only if you look for it" — deliberately near
-  // the measured pointer noise (0.761 mm) rather than above it — and 180 ms is a lazy
-  // spring. ⛔ Four for four says these are the wrong numbers; that is what the sliders
-  // are for.
-  translateSwayMm: 1.2,
+  // ⭐ 0.8 mm CHOSEN ON THE DEVICE — and it lands almost exactly on the measured pointer
+  // noise (0.761 mm), so at an ordinary drag speed the other objects move by about as
+  // much as the digitiser's own jitter. ⚠ That is not a coincidence worth reading too
+  // much into, but it does say the effect is meant to be felt rather than seen: the
+  // ×0.3…×4.5 speed scaling is what makes it visible on a fast drag.
+  translateSwayMm: 0.8,
+  // ⚠ Still a guess, with a slider.
   translateSwayTauMs: 180,
+  // ⚠ Guesses, both with sliders. 50° is "a deliberate change of heading, not a wobble";
+  // 120 mm/s is an ordinary drag — the owner's existing amplitude was judged right at
+  // *"medium translation velocities"*, so that is the speed it is anchored to.
+  swayTurnDeg: 50,
+  swayReferenceSpeedMmPerS: 120,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,

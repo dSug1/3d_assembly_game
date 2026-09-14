@@ -60,6 +60,10 @@ import {
   neutralLeadSec,
   impulseForPeak,
   trackingMetresPerPx,
+  SwayWatcher,
+  swayScale,
+  swayWorldDirection,
+  type SwayKick,
   type FollowState,
   Recognizer,
   TapHistory,
@@ -208,7 +212,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * with its own measured thresholds. A speed comparison invented here would be a
      * SECOND definition of "moving", free to disagree with the one the rules use.
      */
-    wasMoving: boolean;
+    /**
+     * ⭐ Decides WHEN the scene reacts — see `input/sway.ts`. It owns the direction and
+     * speed estimate over a stated window, so this file does not invent a second one.
+     */
+    sway: SwayWatcher;
   }
   /**
    * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
@@ -576,6 +584,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // off, and how lazily they spring back. ⛔ 0 mm disables it exactly.
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
+        // ⭐ How far the drag must swing before the scene reacts again, and the drag
+        // speed at which the amplitude above is what you get.
+        tunable("sway re-trigger turn (deg)", "swayTurnDeg", 15, 150, 5),
+        tunable("sway reference speed (mm/s)", "swayReferenceSpeedMmPerS", 30, 400, 10),
       ],
     },
     {
@@ -630,23 +642,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the axes LATCHED AT PRESS — the same frame the translation itself uses, so the scene
    * cannot lean one way while the object goes another.
    */
-  const nudgeOthers = (grip: Held, s: Sample): void => {
-    const dx = s.x - grip.prev.x;
-    const dy = s.y - grip.prev.y;
-    const len = Math.hypot(dx, dy);
-    // ⚠ No direction in a zero-length delta. Returning rather than normalising by zero:
-    // one NaN written into a position never washes out.
-    if (!(len > 0)) return;
-
+  const nudgeOthers = (grip: Held, kick: SwayKick): void => {
     const perPx = trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight);
-    const peakM = mmToPx(cfg.translateSwayMm) * perPx;
-    const kick = impulseForPeak(peakM, cfg.translateSwayTauMs / 1000);
-    if (!(kick > 0)) return;
+    // ⭐ Amplitude × how fast the object set off. Slow drag, small and slow sway; fast
+    // drag, bigger AND quicker — it still peaks at `translateSwayTauMs`, so a larger
+    // excursion covers that ground faster. See `swayScale`, which clamps the ratio.
+    const scale = swayScale(kick.speedMmPerS, cfg.swayReferenceSpeedMmPerS);
+    const peakM = mmToPx(cfg.translateSwayMm) * perPx * scale;
+    const impulse = impulseForPeak(peakM, cfg.translateSwayTauMs / 1000);
+    if (!(impulse > 0)) return;
 
-    // Screen direction → world, through the latched frame. Screen y is DOWN.
-    const right = new Vector3(...grip.frame.right).scale(dx / len);
-    const up = new Vector3(...grip.frame.up).scale(-dy / len);
-    const dir = right.add(up);
+    // ⭐ THE SAME way the held object set off, as a world vector — the mapping and the
+    // sign both live in `swayWorldDirection`, which is also where a depth component goes
+    // when 6bis/6ter start translating out of the view plane.
+    // ⚠ Through the axes LATCHED AT PRESS, the same frame the translation itself uses,
+    // so the scene cannot lean one way while the object goes another.
+    const dir = new Vector3(...swayWorldDirection(grip.frame, kick.dirX, kick.dirY));
 
     for (const mesh of scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
@@ -655,9 +666,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (mesh.metadata?.orbitCandidate !== true) continue;
       if (mesh === grip.mesh) continue;
       const f = followerFor(mesh);
-      f.swayX = { x: f.swayX.x, v: f.swayX.v + dir.x * kick };
-      f.swayY = { x: f.swayY.x, v: f.swayY.v + dir.y * kick };
-      f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir.z * kick };
+      f.swayX = { x: f.swayX.x, v: f.swayX.v + dir.x * impulse };
+      f.swayY = { x: f.swayY.x, v: f.swayY.v + dir.y * impulse };
+      f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir.z * impulse };
     }
   };
 
@@ -732,7 +743,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         prev: s,
         lastRollDeg: 0,
         mode: null,
-        wasMoving: false,
+        sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
       });
       paint();
       return;
@@ -802,16 +813,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             ? "TRANSLATE"
             : "ROTATE";
       }
-      // ⭐⭐ THE SYMPATHETIC SWAY FIRES HERE — on the TRANSITION into moving, whether that
-      // is the start of the drag or a resumption after a pause. ⛔ Not every frame: a
-      // per-frame kick would be a continuous shove, and the scene would drift rather
-      // than react.
-      const movingNow = grip.rec.motionState === "MOVING";
-      const started = movingNow && !grip.wasMoving;
-      grip.wasMoving = movingNow;
-      if (started && grip.mode === "TRANSLATE" && cfg.translateSwayMm > 0) {
-        nudgeOthers(grip, s);
-      }
+      // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
+      // finger starts or resumes moving, the gesture becomes a translation mid-rotation,
+      // or the drag turns by more than `swayTurnDeg`. ⛔ Never per frame — that would be
+      // a continuous shove, and the scene would drift rather than react.
+      const kick = grip.sway.push(
+        s,
+        grip.rec.motionState === "MOVING",
+        grip.mode === "TRANSLATE",
+      );
+      if (kick && cfg.translateSwayMm > 0) nudgeOthers(grip, kick);
 
       if (grip.mode === "TRANSLATE") {
         // §4 RULE 6 — the object translates in the screen view plane.
