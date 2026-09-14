@@ -98,6 +98,21 @@ export interface GestureConfig {
    * slider — nobody should guess this one.
    */
   translateDampingRatio: number;
+  /**
+   * ms — how far AHEAD of the finger rule 6's phantom target sits, along the finger's
+   * own smoothed motion.
+   * ⭐⭐ IT HAS A DISTINGUISHED VALUE, not a taste: the follower trails by `2·ζ·τ·rate`
+   * and the phantom leads by `lead·rate`, so at **`lead = 2·ζ·τ`** the two cancel
+   * EXACTLY and the object sits on the finger at every drag speed — while keeping all
+   * its mass in the transients. For the shipped `τ=8 ms, ζ=0.2` that is **3.2 ms** —
+   * ⚠ and the shipped lead is 0.5 ms, under a sixth of it. The landmark is real and the hand
+   * did not want it.
+   * ⚠ Above it the object runs AHEAD of the finger; below, it still trails. The price of
+   * any lead is overshoot when the finger stops dead, because the phantom is still out
+   * in front. ⛔ `0` disables it exactly, and that is the behaviour every rule-6 vector
+   * written before this existed was measured against.
+   */
+  translateLeadMs: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
   gainTranslateMutual: number;
@@ -326,18 +341,30 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
   gainRoll: 1,
-  gainTranslateScreen: 1.05,
-  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14, with the damping ratio below and against a
-  // simulated drag. My 90 ms guess read as LAG — at ζ=1 it put the object 17 mm behind
-  // the finger at 100 mm/s, and the TRAIL is what a hand judges, not the millisecond
-  // count. ⚠ The owner also went below my 30 ms recommendation, and with ζ=0.35 rather
-  // than 0.65: a lighter, snappier object than I proposed.
-  translateInertiaMs: 15,
-  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14. Well under the 0.65 I suggested — a hand wanted
-  // MORE catch-up and more overshoot than the numbers alone argued for. ⚠ At τ=15 ms the
-  // overshoot this buys is ~0.6 mm, which is under the measured pointer noise
-  // (`pointerNoiseMm` 0.761 mm): felt as acceleration, not seen as a bounce.
-  translateDampingRatio: 0.35,
+  gainTranslateScreen: 1.15,
+  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14, together with the damping ratio and the lead
+  // below — the three only mean anything as a set. My 90 ms guess read as LAG: at ζ=1 it
+  // put the object 17 mm behind the finger at 100 mm/s, and the TRAIL is what a hand
+  // judges, not the millisecond count. ⚠ The owner ended up well below my 30 ms
+  // recommendation and at a third of my damping ratio — a much lighter, snappier object
+  // than the simulation argued for.
+  translateInertiaMs: 8,
+  // ⭐ CHOSEN ON THE DEVICE, 2026-09-14. Less than HALF the 0.65 I suggested — a hand
+  // wanted far more catch-up, and more overshoot, than the numbers alone argued for.
+  // ⚠ At τ=8 ms the overshoot this buys stays under the measured pointer noise
+  // (`pointerNoiseMm` 0.761 mm) at ordinary speeds: felt as acceleration, not seen as a
+  // bounce. ⛔ Its slider now stops at 0.5, so ζ=1 — critical damping, the reference
+  // every overshoot vector is written against — is reachable only from the URL.
+  translateDampingRatio: 0.2,
+  // ⭐ 0.5 ms, chosen on the device 2026-09-14 — under a SIXTH of the neutral lead
+  // (`2·ζ·τ` = 3.2 ms for the pair above, where a steady drag would leave no gap at
+  // all). ⚠ So the answer to "should the object sit exactly on the finger?" is NO: a
+  // hand wants it to trail, and wants only a touch of anticipation. The computed
+  // landmark turned out to mark the wrong end of the range — worth knowing, since it was
+  // the one number here that looked like it did not need a device.
+  // ⚠ The HUD prints `lead <set>/<neutral>` so the landmark stays visible as the other
+  // two sliders move it.
+  translateLeadMs: 0.5,
   gainTranslateAxis: 1,
   gainTranslateDepth: 1,
   gainTranslateMutual: 0.5,

@@ -55,6 +55,9 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
+  exponentialSmooth,
+  phantomTarget,
+  neutralLeadSec,
   type FollowState,
   Recognizer,
   TapHistory,
@@ -220,7 +223,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * after its input goes quiet.
    */
   interface Follow {
+    /** Where the finger has put it. */
     readonly target: Vector3;
+    /**
+     * ⭐ The target's own SMOOTHED velocity, m/s, per axis — what the phantom is
+     * projected along. ⛔ Smoothed, never a two-sample difference: it gets multiplied by
+     * the lead and written straight into where the object is drawn. See `lead.ts`.
+     */
+    readonly vTarget: Vector3;
+    /** The previous frame's target, for that velocity. */
+    readonly lastTarget: Vector3;
     x: FollowState;
     y: FollowState;
     z: FollowState;
@@ -233,6 +245,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const p = mesh.position;
       f = {
         target: p.clone(),
+        vTarget: Vector3.Zero(),
+        lastTarget: p.clone(),
         x: { x: p.x, v: 0 },
         y: { x: p.y, v: 0 },
         z: { x: p.z, v: 0 },
@@ -424,7 +438,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // ⭐ The LATCHED mode of the gesture in progress — rule 6 vs the 2bis
             // stand-in. ⛔ Printed because it is decided once and cannot be inferred
             // from what the fingers are doing now, which is the whole point of a latch.
-            (first?.mode ? `  ${first.mode}` : ""),
+            (first?.mode ? `  ${first.mode}` : "") +
+            // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
+            // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
+            // the other two sliders moves, so a written-down number would go stale the
+            // first time the owner touched them.
+            `  lead ${cfg.translateLeadMs}/${(
+              neutralLeadSec(cfg.translateInertiaMs / 1000, cfg.translateDampingRatio) * 1000
+            ).toFixed(1)}ms`,
       noise: noiseLine(),
     });
   };
@@ -500,16 +521,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("screen-plane gain (1 = under finger)", "gainTranslateScreen", 0.1, 3, 0.05),
         // ⭐ 0 pins the object to the fingertip — the behaviour before inertia existed,
         // and the only setting that can be checked against the tracking factor.
-        // ⚠ STARTS AT 5, NOT 0: the owner's range, and it puts the useful band at a
-        // finer grain. ⛔ It does mean `0` — exact tracking, the only setting checkable
-        // against rule 6's tracking factor — is no longer reachable from the slider.
-        // It is still reachable from the URL: `?translateInertiaMs=0`.
-        tunable("inertia (ms)", "translateInertiaMs", 5, 400, 5),
+        // ⚠ 1–20 ms in steps of 0.2, and 0.1–0.5 for the ratio: the owner's ranges after
+        // two device passes, zoomed hard into the corner that worked. ⛔ Three reference
+        // settings are now OFF the sliders — `translateInertiaMs = 0` (exact tracking,
+        // the only setting checkable against rule 6's tracking factor), `ζ = 1`
+        // (critical damping, what every overshoot vector is written against), and the
+        // neutral lead. All three remain reachable from the URL, e.g.
+        // `?translateInertiaMs=0&translateDampingRatio=1`. ⚠ A slider that cannot reach
+        // a reference is fine; a reference nobody can reach at all is not.
+        tunable("inertia (ms)", "translateInertiaMs", 1, 20, 0.2),
         // ⭐ BELOW 1 IS THE CATCH-UP. 1 = critically damped, never overshoots; lower
         // accelerates through the gap and overshoots a little; far lower rings.
         // ⚠ It does nothing perceptible unless the inertia above is large enough to
         // give it something to act on.
-        tunable("damping ratio (<1 = catch-up)", "translateDampingRatio", 0.2, 2, 0.05),
+        tunable("damping ratio (<1 = catch-up)", "translateDampingRatio", 0.1, 0.5, 0.05),
+        // ⭐ The phantom target's lead. The HUD prints the NEUTRAL value (2·ζ·τ) for
+        // whatever the two sliders above are set to, so this one has a landmark rather
+        // than a range of equally arbitrary numbers.
+        tunable("phantom lead (ms)", "translateLeadMs", 0, 5, 0.5),
       ],
     },
     {
@@ -787,9 +816,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const tauSec = cfg.translateInertiaMs / 1000;
     for (const [mesh, f] of followers) {
       const zeta = cfg.translateDampingRatio;
-      f.x = advanceFollow(f.x, f.target.x, tauSec, zeta, dtSec);
-      f.y = advanceFollow(f.y, f.target.y, tauSec, zeta, dtSec);
-      f.z = advanceFollow(f.z, f.target.z, tauSec, zeta, dtSec);
+      const leadSec = cfg.translateLeadMs / 1000;
+      // ⭐ The finger's smoothed velocity, then the phantom projected along it. ⛔ The
+      // smoother uses the object's OWN time constant: the lead is estimated at the only
+      // timescale that can matter to it, and it costs no second slider.
+      if (dtSec > 0) {
+        f.vTarget.set(
+          exponentialSmooth(f.vTarget.x, (f.target.x - f.lastTarget.x) / dtSec, tauSec, dtSec),
+          exponentialSmooth(f.vTarget.y, (f.target.y - f.lastTarget.y) / dtSec, tauSec, dtSec),
+          exponentialSmooth(f.vTarget.z, (f.target.z - f.lastTarget.z) / dtSec, tauSec, dtSec),
+        );
+        f.lastTarget.copyFrom(f.target);
+      }
+      f.x = advanceFollow(f.x, phantomTarget(f.target.x, f.vTarget.x, leadSec), tauSec, zeta, dtSec);
+      f.y = advanceFollow(f.y, phantomTarget(f.target.y, f.vTarget.y, leadSec), tauSec, zeta, dtSec);
+      f.z = advanceFollow(f.z, phantomTarget(f.target.z, f.vTarget.z, leadSec), tauSec, zeta, dtSec);
       mesh.position.set(f.x.x, f.y.x, f.z.x);
     }
 
