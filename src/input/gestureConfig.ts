@@ -87,6 +87,15 @@ export interface GestureConfig {
    */
   rollFitArcDeg: number;
   /**
+   * Degrees of arc the fit window holds once a roll is COMMITTED.
+   * ⭐⭐ SHORTER THAN `rollFitArcDeg`, and deliberately so. A long arc is what makes
+   * the DECISION "is this a swirl?" reliable — but once that decision is made it is
+   * not re-asked, and the window only has to TRACK a centre. A long tracking window
+   * is pure release lag: a committed roll cannot let go until enough of it has
+   * flushed. Splitting the two is what buys reactiveness without losing detection.
+   */
+  rollTrackArcDeg: number;
+  /**
    * mm the newest point must itself advance before the direction is re-measured.
    * ⛔ THE CADENCE, and it is NOT the baseline. A direction depends on both ends of
    * its baseline: with no progress gate a paused finger keeps producing new
@@ -202,29 +211,29 @@ export const DEFAULT_CONFIG: GestureConfig = {
   flickLiftWindow: 40,
   flickDistance: 6,
   flickPurity: 2.5,
-  // ⛔⛔ ALL SIX ROLL NUMBERS MOVED TOGETHER ON 2026-09-14, because roll had
-  // DISAPPEARED on the device: only a mathematically perfect circle qualified. They
-  // are coupled and were swept together against REALISTIC gestures (ellipses with
-  // drifting centres) and against realistic NEGATIVES (wiggles, sloppy arcs).
-  // ⚠ Still placeholders — swept against synthetic humanity, not measured on a hand.
-  // ⭐ 120°, not 60°: one half-period of a lazy 8 mm x 90 mm wiggle contains ~67° of
-  // genuine arc, so a 60° threshold cannot tell a deliberate swirl from a sloppy
-  // S-shaped drag. Measured: the false positive disappears at 90°.
-  rollAngle: 120,
+  // ⛔⛔ THE ROLL NUMBERS ARE COUPLED AND ARE SWEPT TOGETHER, against REALISTIC
+  // gestures (ellipses with drifting centres) and realistic NEGATIVES (wiggles,
+  // sloppy arcs, zigzags). ⚠ Still placeholders — swept against synthetic humanity,
+  // not measured on a hand.
+  //
+  // ⭐⭐ 60°, back down from 120°. The 120° existed because KÅSA could not tell a
+  // lazy S-shaped drag from a swirl, so only a large swept angle could. With the
+  // HYPER fit the centre estimate does that work instead: swept from 50° to 120°,
+  // **every value gives 4/4 realistic swirls and ZERO false positives.** The
+  // threshold was paying for a bad estimator, and it cost 16 mm of engagement lag.
+  rollAngle: 60,
   // ⭐ A wide band. A finger swirls anywhere from a tight 5 mm to a lazy 60 mm, and
   // the old [10, 30] silently excluded both ends.
   rollRadiusMin: 5,
   rollRadiusMax: 60,
   rollStepDistance: 13,
-  // ⚠ 150°, swept: it is the shortest arc at which EVERY realistic swirl in
-  // tests/roll.test.ts commits (a tight R=8 and a slow R=12 are the demanding ones)
-  // while no wiggle or sloppy arc does. ⛔ The cost is a slow RELEASE — ~83 mm of
-  // straight drag before a committed roll hands back to yaw/pitch, against a
-  // rollReleaseDistance of 18 mm, because the window must flush before the fitted
-  // radius leaves the band. Known, reported, and the next device pass judges it.
+  // ⚠ 150° to DECIDE, swept: the shortest arc at which every realistic swirl
+  // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
+  // is now paid by `rollTrackArcDeg` instead — see below.
   rollFitArcDeg: 150,
+  rollTrackArcDeg: 130,
   rollUpdateDistance: 0.5,
-  rollReleaseDistance: 18,
+  rollReleaseDistance: 12,
   rollFitResidualFraction: 0.25,
   // ⚠⚠ MEASURED AT EVERY SETTING AND IT EARNS NOTHING ON THIS SIGNAL. The roll
   // angle is a fast RAMP (hundreds of deg/s), and low-passing a ramp costs
@@ -284,11 +293,23 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
     );
   }
-  if (cfg.rollReleaseDistance <= cfg.rollStepDistance) {
+  // ⚠ A rule once required `rollReleaseDistance > rollStepDistance`, reasoning that
+  // a roll "cannot be released before the path has travelled far enough to measure
+  // its shape". ⛔ DELETED: the shape is measured by the fit WINDOW, not by the
+  // release distance, and the two answer different questions. Keeping it capped how
+  // fast a committed roll could hand back to yaw/pitch, for no geometric reason.
+  if (cfg.rollReleaseDistance <= cfg.rollUpdateDistance) {
     throw new Error(
       `rollReleaseDistance (${cfg.rollReleaseDistance} mm) must exceed ` +
-        `rollStepDistance (${cfg.rollStepDistance} mm): a roll cannot be released ` +
-        "before the path has travelled far enough to measure its shape at all.",
+        `rollUpdateDistance (${cfg.rollUpdateDistance} mm), or release could be ` +
+        "decided before a single new reading has been taken.",
+    );
+  }
+  if (cfg.rollTrackArcDeg > cfg.rollFitArcDeg) {
+    throw new Error(
+      `rollTrackArcDeg (${cfg.rollTrackArcDeg}°) exceeds rollFitArcDeg ` +
+        `(${cfg.rollFitArcDeg}°): tracking an already-decided roll cannot need MORE ` +
+        "arc than deciding it did.",
     );
   }
   if (cfg.rollFitArcDeg < 45 || cfg.rollFitArcDeg > 360) {

@@ -1,4 +1,5 @@
 export * from "./gestureConfig";
+export * from "./config_override";
 export * from "./motion";
 export * from "./flick";
 export * from "./one_euro";

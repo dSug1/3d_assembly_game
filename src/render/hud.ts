@@ -25,6 +25,10 @@ export interface HudFields {
   readonly rollCommitted: boolean;
   /** The last release verdict, already formatted by whoever owns the recognizer. */
   readonly lastVerdict: string;
+  /** Which tunables the URL overrode, or "defaults". ⛔ Never guess what is in force. */
+  readonly tuning: string;
+  /** Query keys that were refused, with the reason. Shown, never swallowed. */
+  readonly tuningRejected: readonly string[];
 }
 
 export interface Hud {

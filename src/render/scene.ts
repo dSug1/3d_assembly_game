@@ -44,6 +44,7 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import "@babylonjs/core/Culling/ray";
 import {
   DEFAULT_CONFIG,
+  parseConfigOverrides,
   Recognizer,
   TapHistory,
   screenPlaneRotation,
@@ -132,7 +133,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
   const hud = createHud();
-  const taps = new TapHistory(DEFAULT_CONFIG);
+  // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
+  // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
+  // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
+  // object results; nothing keeps a second copy. See input/config_override.ts.
+  const tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
+  const cfg = tuning.config;
+  const taps = new TapHistory(cfg);
   interface Held {
     rec: Recognizer<DiagnosticPose>;
     mesh: AbstractMesh;
@@ -179,7 +186,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // threshold it was judged by. "The flick did not fire" is otherwise
     // unfalsifiable on a device: too slow a finger and a broken estimator look the
     // same. That ambiguity is what made the first rollback build feel inconsistent.
-    const lift = `lift ${Math.round(v.liftSpeedMmPerS)}/${DEFAULT_CONFIG.flickLiftSpeed}mm/s`;
+    const lift = `lift ${Math.round(v.liftSpeedMmPerS)}/${cfg.flickLiftSpeed}mm/s`;
     return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms  ${lift}`;
   };
 
@@ -195,6 +202,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       rollDeg: first ? first.rec.rollDeg : 0,
       rollCommitted: first ? first.rec.rollCommitted : false,
       lastVerdict,
+      // ⚠ Shown so a session can never be spent testing a value that was not in
+      // force — including a typo'd key, which is REPORTED rather than ignored.
+      tuning: tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
+      tuningRejected: tuning.rejected,
     });
   };
 
@@ -217,7 +228,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const pick = info.pickInfo;
       if (!pick?.hit || !pick.pickedMesh) return; // rule 1's no-hit case is `IN3`
       const mesh = pick.pickedMesh;
-      const rec = new Recognizer(DEFAULT_CONFIG, poseOf(mesh), taps);
+      const rec = new Recognizer(cfg, poseOf(mesh), taps);
       rec.press(s);
       live.set(e.pointerId, { rec, mesh, frame: screenFrame(), prev: s, lastRollDeg: 0 });
       paint();

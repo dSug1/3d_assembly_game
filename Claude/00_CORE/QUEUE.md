@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — `IN1` built, **five device passes, a sixth owed**
 
-✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **129 golden
-vectors, all passing** (37 → 129 with `IN1`). ✅ The engine boundary is enforced by a
+✅ TypeScript + Babylon + Vite up; `npm run verify` = typecheck + **142 golden
+vectors, all passing** (37 → 142 with `IN1`). ✅ The engine boundary is enforced by a
 test. ✅ The mate-connector geometry and the constraint-stack solver are in and
 covered. ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated
 on `npm run verify`.
@@ -69,7 +69,17 @@ Chernov 2009, zero essential bias); the angle's **reference point went stale** a
 out-of-band excursions, collecting a whole excursion into one step; and the **1€
 filter had been reverted on evidence that was wrong twice over** — perfect-circle
 fixtures AND a `beta` so high the filter was never switched on.
-⛔⛔ **A SEVENTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
+⭐⭐ **THE SEVENTH PASS: reversals reported PERFECT; transition lag cut.** Engagement
+44 → 28 mm — `rollAngle` was 120° only because **Kåsa** could not tell a lazy S-drag
+from a swirl; with **Hyper** every value from 50° to 120° gives 4/4 swirls and zero
+false positives, so the threshold had been paying for a bad estimator. Release ~18%
+via a **separate, shorter tracking window** (a long arc decides; it does not need to
+track). ⛔ Release is near its structural limit: a lazy wide swirl and a straight line
+are genuinely similar over a short window, and two candidate fast-release signals
+(radius ratio, swept-angle-per-path) were measured and both failed to separate them.
+⭐⭐ **AND TUNABLES CAN NOW BE OVERRIDDEN FROM THE URL** — `?rollFilterBeta=0` — so
+`IN5` can A/B a number by finger instead of by rebuild. Refusals show on the HUD.
+⛔⛔ **AN EIGHTH DEVICE PASS IS OWED, so `IN1` IS STILL NOT CLOSED.**
 
 ⛔⛔ **THE PATTERN, AND IT BINDS `IN3`/`IN4`**: passes 1–3 were all **a rate estimated
 over the shortest available baseline** — flick lift speed, roll direction, roll
@@ -111,7 +121,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | queued | IN1 |
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | queued | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | queued | IN2, 3D1 |
-| IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued. ⭐⭐ **`pointerNoiseMm` FIRST** — hold a finger still and read the spread; the sagitta criterion and several thresholds are only defensible relative to it. ⚠ Then the 1€ pair by the paper's procedure (`beta`=0, lower `minCutoff` until slow jitter is acceptable, then raise `beta` until fast motion stops lagging). ⚠ `IN1` added four more (`tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop`, and a moved `stillTime`) and found `stillSpeed`/`stillTime`/`moveExitDistance` are **not independent** — measure them together | IN3 |
+| IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued. ⭐⭐ **Now practical: tunables override from the URL** (`?rollAngle=45&rollFilterBeta=0`), so a value can be A/B'd by finger without a rebuild — `src/input/config_override.ts`. ⭐⭐ **`pointerNoiseMm` FIRST** — hold a finger still and read the spread; the sagitta criterion and several thresholds are only defensible relative to it. ⚠ Then the 1€ pair by the paper's procedure (`beta`=0, lower `minCutoff` until slow jitter is acceptable, then raise `beta` until fast motion stops lagging). ⚠ `IN1` added four more (`tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop`, and a moved `stillTime`) and found `stillSpeed`/`stillTime`/`moveExitDistance` are **not independent** — measure them together | IN3 |
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — currently undefined and reachable (§5) | IN | decision | **open — owner's call** | IN2 |

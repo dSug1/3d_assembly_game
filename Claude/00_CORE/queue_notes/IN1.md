@@ -3,8 +3,8 @@
 > **Dossier.** Full history of this row. Its one-line status is in
 > [`../QUEUE.md`](../QUEUE.md) — update **both** when it changes.
 >
-> **STATUS** · ⚠ built, green, **SIX device passes — 14 defects found and fixed; a
-> SEVENTH is owed, so NOT CLOSED** · **SUB** · IN
+> **STATUS** · ⚠ built, green, **SEVEN device passes — reversals now correct, roll
+> tuned; an EIGHTH is owed, so NOT CLOSED** · **SUB** · IN
 > **KIND** · feature
 
 Design of record: [`../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md) §1.3.
@@ -673,3 +673,72 @@ a low-lag default so it can be judged by finger; one config line makes it transp
 roll→yaw/pitch handover, and is the 1€ filter worth keeping at all? ⭐ The owner's
 device judgement has overturned my synthetic measurements twice on this row; if it
 feels better with the filter, the filter stays and my metric is what is wrong.
+
+---
+
+## 2026-09-14 (seventh pass) — transition lag, and a way to A/B a tunable by finger
+
+Device: *"much better and close to acceptable"*; reversals **perfect**. Two asks: the
+**linear↔circular transition lag is too big**, and *"I don't know how I can test the
+filter A/B"* — the second being my failure, since "edit the config and redeploy" is
+not a device test. **129 → 142 vectors.**
+
+### ⭐⭐ Both transition costs were paid for by the OLD estimator
+
+**Engagement: 44 mm → 28 mm at R=15.** `rollAngle` was **120°** because **Kåsa** could
+not tell a lazy S-shaped drag from a swirl, so only a large swept angle could.
+⭐ Swept with the **Hyper** fit: **every value from 50° to 120° gives 4/4 realistic
+swirls and ZERO false positives** — across wiggles, a big lazy S-drag, a sloppy arc, a
+zigzag and a straight drag. The threshold had been paying for a bad estimator, and it
+was costing 16 mm of lag. Set to **60°**, with margin over the 50° floor.
+
+**Release: ~18%, and that is near the structural limit.** The fit window served two
+different jobs at one length. ⭐ A long arc is what makes the DECISION *"is this a
+swirl?"* reliable; once decided it is not re-asked, and the window only has to TRACK a
+centre — so a long tracking window is **pure release lag**. Split into
+`rollFitArcDeg` (150°, deciding) and **`rollTrackArcDeg` (130°, tracking)**, with
+`rollReleaseDistance` 18 → 12 mm.
+
+Measured on an identical fixture, old settings vs new:
+
+| radius | old | new |
+|---|---|---|
+| 8 mm | 57.0 mm | **47.0 mm** |
+| 15 mm | 67.5 mm | **56.0 mm** |
+| 35 mm | 70.5 mm | **56.0 mm** |
+
+⛔ **It cannot go much further, and the reason is physical.** Two independent attempts
+were measured and rejected:
+* **Shorter tracking arc** — 130° holds 4/4 realistic swirls; **110° loses the tight
+  one**, i.e. committed rolls start DROPPING OUT mid-swirl, which feels worse than
+  the lag it cures.
+* **Narrower radius band** — takes detection from **4/4 to 2/4**.
+
+⭐ And two candidate fast-release signals were measured and **both failed**:
+* **Fitted radius ratio.** A straight departure reaches 1.3× after 16 mm — but a real
+  swirl swings its own fitted radius by **1.58× to 2.24×**, because a human circle is
+  an ellipse whose local curvature legitimately varies more than a departure does.
+  **No threshold separates them.**
+* **Swept angle per unit path** (which *is* curvature). A departure still sweeps
+  19.5° per 12 mm at 30 mm out, while a lazy wide swirl sweeps only **10.3°**. Again
+  no separation.
+⛔ **A lazy wide swirl and a straight line are genuinely similar over a short window.**
+Detecting the former and releasing fast are in direct tension, and only a device can
+say which matters more. `IN5`.
+
+### ⭐⭐ Tunables can now be overridden from the URL
+
+    http://localhost:5173/?rollFilterBeta=0&rollAngle=45
+
+`src/input/config_override.ts` — engine-free, string-in, so the boundary holds and it
+is testable headlessly. ⛔ It produces **one** `GestureConfig`; nothing keeps a second
+copy, so `one constant, one place` still holds (carried rule `L1`, where a value
+living in both a debug tool and production silently drifted). ⭐ The result still
+faces `validateGestureConfig`, so a query string cannot smuggle in a config the code
+would refuse from a file — vectored.
+
+⛔ **Refusals are surfaced on the HUD, never swallowed.** A typo'd key that is quietly
+ignored means a session spent testing a value that was never in force, and then
+recording the result as a measurement. The readout shows what is actually applied and
+what was rejected, with the reason. ⭐ `rollFilterBeta=0` is explicitly a legitimate
+value, not an absent one — it is where the 1€ paper's own tuning recipe starts.
