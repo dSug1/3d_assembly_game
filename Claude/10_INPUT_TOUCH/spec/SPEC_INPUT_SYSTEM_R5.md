@@ -1,27 +1,99 @@
 # INPUT SYSTEM — revision 5 (the owner's specification)
 
-> **STATUS** · ⭐ live — the DESIGN OF RECORD for the touch input system
-> **OWNS** · every gesture rule, and the terms the rest of the project uses for them
+> **STATUS** · ⭐ live — the DESIGN OF RECORD for the touch input system, **and the
+> inventory of what of it is built**
+> **OWNS** · every gesture rule, the terms the rest of the project uses for them, and the
+> build status of each
 > **READ IF** · you are building or changing anything a finger touches
 > **SOURCED FROM** · the owner's `input-system-v5.md`, supplied 2026-09-13
-> **LAST VERIFIED** · 2026-09-13
+> **LAST VERIFIED** · 2026-09-14, against 307 passing vectors
 
-⛔⛔ **THIS IS THE OWNER'S DOCUMENT AND IT IS NOT REWRITTEN.** It is reproduced below
-between `VERBATIM` markers, unchanged apart from repairing mojibake from the original
-file's encoding (`â` → `—`, `Â§` → `§`). Findings ABOUT it — including where the
-build already had to depart from it — go in
-[`../INDEX.md`](../INDEX.md), never inside the block.
+⛔⛔ **THE OWNER'S REVISION-5 TEXT IS REPRODUCED IN FULL AND UNALTERED**, apart from
+repairing mojibake from the original file's encoding (`â` → `—`, `Â§` → `§`). Not one of
+its sentences has been rewritten, reordered or removed.
+
+⚠ **What HAS been added, on the owner's authorisation of 2026-09-14**, is build status:
+the section below and the one at the end — **BUILD STATUS**, an inventory by touchpoint
+configuration, and **ADDED AFTER REVISION 5**, the behaviours that exist with no clause in
+this document behind them. ⭐ Both sit OUTSIDE the specification text and are headed as
+such, so the owner's words and the build's claims never blur.
+⛔ This file previously carried `VERBATIM` markers forbidding any edit; they were removed
+under that same authorisation, and the paragraph above replaces the guarantee they gave.
 
 ⚠ Section numbers (`§1.3`, `§6quater`, …) are referenced throughout the code and the
 queue. They are stable; do not renumber.
 
-⭐⭐ **WHAT OF THIS ACTUALLY EXISTS IS IN [`BUILT_INVENTORY.md`](BUILT_INVENTORY.md)** — an
-inventory by touchpoint configuration (one finger on an object, two outside, one of each,
-…), which rules are built, which are blocked and on what, and ⛔ **two behaviours that
-exist with no clause in this document behind them**. Read it before building an input
-rule: it is the only place that says what a finger can already do.
+---
 
-<!-- VERBATIM-BEGIN -->
+# BUILD STATUS — what of this specification exists *(added 2026-09-14, not the owner's text)*
+
+## The configurations a hand can actually make
+
+⭐ **Roles are latched at PRESS and never revisited** (§4, `src/input/router.ts`). This
+table is written against what each touchpoint was latched as, not where it is now.
+
+| touchpoints | what they are on | what happens | spec | status |
+|---|---|---|---|---|
+| 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, rollback, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` |
+| 1 | an object | **free rotation** — yaw/pitch about the screen axes, world-frame, gain in rad/mm | §2 rule 2bis | ✅ **works**, ⚠ applied UNCONDITIONALLY — see below |
+| 1 | an object | **roll** about the view axis, from a circular gesture (Hyper circle fit) | §2 rule 2quinte | ✅ `IN1` |
+| 1 | an object | double-tap → **reset the camera orbit** | ⛔ **no clause** | ✅ ⚠ collides with 2septies |
+| 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ **amended**: driven by delta position, NOT device tilt |
+| 1 | empty space | double-tap → **reset the camera orbit** | ⛔ **no clause** | ✅ |
+| 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
+| 2 | one object + one empty space | **translate in the screen plane**, with inertia and a phantom lead | §4 rule 6 | ✅ `IN4` (partial) |
+| 2 | both the SAME object | the second is **IGNORED**, for its lifetime | §5 (was undefined) | ✅ `IN8` decided, `IN2` built |
+| 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `3D1` |
+| 3+ | any | every hit on an already-held object is ignored; the rest keep their latched roles | — | ⚠ by construction, not measured — palm contact is untested |
+
+⚠ **Rule 6 is reached by PRESENCE, re-read every frame** — not by a latched mode, and not
+by the anchor's `STATIONARY` state as the rule's wording implies. A second finger outside
+any object means translate, whatever it has done since it went down. That is an owner
+correction of a build that latched it; see
+[`../../00_CORE/queue_notes/IN4.md`](../../00_CORE/queue_notes/IN4.md).
+
+## ⚠ What "rule 2bis is applied unconditionally" means
+
+⭐ **The free rotation WORKS, and is not a placeholder.** The gesture, the world-frame axes
+latched at press, the gain in radians per millimetre chosen on the device, the provisional
+motion and its rollback are all real and carry vectors (`src/input/screen_rotate.ts`).
+
+⛔ **What is missing is its PRECONDITION.** Rule 2bis reads *"one selected object with an
+empty constraint stack"* — and §1.4's constraint stack does not exist yet, because there
+is no object model (`3D1`). So the rule cannot ask whether the stack is empty, and
+proceeds as though it always were. ⚠ The day constraints exist, an anchored object would
+still rotate freely and silently break its own anchor unless `IN3` adds that test.
+
+⚠ It also drives a Babylon **mesh** directly rather than a modelled object's placement, so
+`IN3` rewires it. ⛔ **`IN3` does not delete the rotation maths** — that stays; it attaches
+it to the object model and gives it the precondition it is missing.
+
+## Rules specified and NOT built
+
+| rule | what it is | blocked on |
+|---|---|---|
+| §2 **2ter** | vertical flick → `GRAVITY_ALIGN` onto the constraint stack | `3D1` (faces), `IN3` |
+| §2 **2quater** | horizontal flick → `WORLD_AXIS_ALIGN` | `3D1`, `IN3` |
+| §2 **2sexte** | constrained rotation about the remaining free DOF | `3D1`, `IN3` |
+| §2 **2septies** | double-tap → clear the object's constraint stack | `3D1`, `IN3` · ⚠ **collides with the camera reset** |
+| §3 **3** | release unselects object and face, stack preserved | `3D1` |
+| §4 **5** | two objects and two faces selected | `3D1` |
+| §4 **6bis** | translate along `AxisBtwFaces` / its orthogonal | `3D1` (face centres) |
+| §4 **6ter** | both objects translate toward each other | `3D1` |
+| §4 **6quater** | mate flick | `3D1` |
+| §5 | landmark registration, contact / capture / seat, longest-axis alignment | deferred by the spec itself |
+| §6 | haptics | `IN7` · ⛔ iOS Safari has no Vibration API at all |
+
+⚠ **Every threshold is in `src/input/gestureConfig.ts`, in millimetres on the physical
+screen**, and all are placeholders except the six orbit ring values, the four gains, rule
+6's four feel numbers and the two sway sets — all chosen by finger — plus `pointerNoiseMm`
+= **0.761 mm**, the one number actually MEASURED. ⭐ Any of them can be overridden from the
+URL (`?rollAngle=45`) or moved on the on-screen menu, without a rebuild.
+
+---
+
+# THE SPECIFICATION — the owner's text, unaltered
+
 # Input System — Revision 5
 
 Revision of the last proposed input system, integrating the fixes raised in review.
@@ -373,4 +445,45 @@ Listed so the gaps are explicit rather than implicit.
 | 13 | Tilt-orbit touch clutch stated explicitly | 1 |
 | 14 | Undo, haptics, constraint visibility | §6 |
 
-<!-- VERBATIM-END -->
+---
+
+# ADDED AFTER REVISION 5 — behaviours with no clause above *(not the owner's text)*
+
+⭐ Two behaviours exist that this specification does not ask for. They are recorded here
+because this document is the first place anyone will look for them.
+
+## 1. Double-tap resets the camera orbit — anywhere on the glass
+
+Yaw, elevation, zoom **and** the orbit centre, back to where the camera launched.
+⭐ It listens on objects as well as empty space, and the reason is reachability: the orbit
+can get stuck close in with an object filling the view, and then every tap lands on
+something. A reset that only listened to empty space would be unreachable exactly when it
+is wanted.
+
+⚠⚠ **IT COLLIDES WITH §2 RULE 2SEPTIES**, which makes a double-tap on an object the ONLY
+way a constraint is ever evicted. Both cannot silently fire. The decision is queued in
+[`../../00_CORE/queue_notes/IN3.md`](../../00_CORE/queue_notes/IN3.md) and must be taken
+**before** eviction is written, or a user will lose a constraint every time they
+straighten the view.
+
+## 2. The sympathetic sway — the scene reacts to the held object
+
+When the held object starts, resumes, or **turns**, everything else moves a little and
+springs back.
+
+* **Translation** — the others drift the SAME way (0.8 mm at a 120 mm/s reference, 180 ms
+  spring).
+* **Rotation** — they swing as a rigid **block** about the held object's centre, on the
+  axis it is turning about: each orbits the pivot AND spins by the same angle (0.3° at a
+  90°/s reference).
+* Both scale ×0.3…×4.5 with how fast the object set off, from one proportionality — a
+  bigger excursion still peaks at the same time constant, so it also covers that ground
+  faster.
+
+⛔ **It is decoration, and it is kept out of everything that MEANS something**: the
+barycentre reads home positions with the sway subtracted, so the orbit centre cannot depend
+on whether the scene happened to be mid-wobble when a finger landed.
+
+⚠ Both re-trigger on a **change of direction**. `motionState` does not fall back to
+`STATIONARY` until 150 ms below 6 mm/s, so a hand reversing at speed never goes still —
+without a turn test the scene reacted once and then sat frozen through an entire shake.

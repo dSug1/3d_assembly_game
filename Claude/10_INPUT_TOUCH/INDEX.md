@@ -283,7 +283,7 @@ written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PART
 
 | you want to… | read |
 |---|---|
-| **what a finger can ALREADY do** | ⭐ [`spec/BUILT_INVENTORY.md`](spec/BUILT_INVENTORY.md) — the inventory by touchpoint configuration, what is built, what is blocked, and the two behaviours with no spec clause behind them |
+| **what a finger can ALREADY do** | ⭐ [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md)'s **BUILD STATUS** section — the inventory by touchpoint configuration, what is built, what is blocked, and the two behaviours with no clause behind them |
 | **any gesture rule** | [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md) — and mind the section numbers, they are referenced from code |
 | know why a threshold is in mm | [`../00_CORE/CONSTRAINTS.md`](../00_CORE/CONSTRAINTS.md) §6 |
 | change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place**. ⭐ To try one *without a rebuild*: `?rollAngle=45` on the URL, or the on-screen menu for the orbit rings |

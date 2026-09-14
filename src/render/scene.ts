@@ -161,7 +161,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
   // Without it the barycentre selection is invisible, and "it seems to orbit the right
-  // thing" is not an observation. `IN3` deletes this with the rest of the stand-in.
+  // thing" is not an observation. `IN3` deletes this along with the three placeholder
+  // boxes. ⚠ It does NOT delete the rotation — see below.
   const centreMarker = CreateSphere("orbit-centre-marker", { diameter: 0.012 }, scene);
   const markerMat = new StandardMaterial("orbit-centre-mat", scene);
   markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
@@ -613,8 +614,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     {
       title: "OBJECT ROTATION",
       sliders: [
-        // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel. The
-        // diagnostic stand-in reads it, so tuning here tunes what `IN3` will inherit.
+        // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
+        // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
         tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
         // ⭐ 1 is direct manipulation — the cube turns as far as the finger swept.
         tunable("roll gain (x swept)", "gainRoll", 0.1, 3, 0.05),
@@ -1000,7 +1001,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         f.target.addInPlace(new Vector3(...grip.frame.up).scale(t.upM));
       } else if (grip.mode === "ROTATE") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
-        // if the flick test passes at release. See the header: stand-in, not 2bis.
+        // if the flick test passes at release.
+        //
+        // ⚠⚠ THIS IS RULE 2bis MINUS ITS PRECONDITION, not a placeholder for it. The
+        // gesture, the world-frame axes latched at press and the gain are all real and
+        // vectored. What is missing is the clause *"with an empty constraint stack"*:
+        // §1.4's stack does not exist yet (no object model), so the rule cannot ask and
+        // proceeds as though it always were empty. ⛔ The day constraints exist, an
+        // anchored object would rotate freely and silently break its own anchor unless
+        // `IN3` adds that test. It also drives a MESH rather than a modelled placement.
         //
         // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
         // about the screen axes latched at press. Every step is a small world-frame
