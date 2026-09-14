@@ -15,7 +15,7 @@ the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside
 ✅ **`IN1` BUILT** — the recognizer state machine (`src/input/recognizer.ts`):
 commit point, provisional motion with **rollback**, the release-time priority ladder,
 tap / double-tap / hold, roll detection (`roll.ts`), and the screen-plane rotation
-mapping (`screen_rotate.ts`). **124 golden vectors, all passing** (37 → 124).
+mapping (`screen_rotate.ts`). **129 golden vectors, all passing** (37 → 129).
 
 ⛔⛔ **`IN1` IS NOT CLOSED. FIVE DEVICE PASSES HAVE EACH FOUND DEFECTS — TWELVE IN
 TOTAL — AND NOT ONE WAS VISIBLE TO A GREEN SUITE.** A sixth pass is owed.
@@ -100,7 +100,7 @@ runs back down. Measured on a 200° sweep reversed: the angle froze for twelve
 samples, jumped **+150° in one step**, and finished 180° from where it started.
 
 ✅ **THE BUILD NOW MEASURES §1.3's OWN QUANTITY — the angle about the centre — with a
-closed-form least-squares CIRCLE FIT** (Kasa 1976; textbook, no licence, no patent)
+least-squares CIRCLE FIT** (**Hyper**; Al-Sharadqah & Chernov 2009, no licence, no patent)
 over the trailing path. Retracing the same arc fits the **same circle**, so the centre
 holds still and the angle reverses smoothly through zero. Worst step **150° → 5.0°**.
 
@@ -108,7 +108,7 @@ holds still and the angle reverses smoothly through zero. Worst step **150° →
 its estimator is replaced.** The centroid becomes a circle fit, and nothing else about
 the rule changes.
 
-⛔ Two things the fit needs that are easy to omit: a **residual** test (Kasa returns
+⛔ Two things the fit needs that are easy to omit: a **residual** test (any algebraic fit returns
 *a* circle for any point set, so without it a side-to-side wiggle commits as a roll),
 judged against `rollFitResidualSigmas × pointerNoiseMm`; and a span measured **along
 the path**, never as a chord — on a reversal the chord *shrinks* while the fitted arc
@@ -157,3 +157,48 @@ make another placeholder reachable, not a measurement.** Both belong to `IN5`.
 | know what is built | [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md), phase `IN` |
 
 ---
+
+---
+
+## ⭐⭐ The SIXTH device pass (2026-09-14): the estimator, not the filter
+
+Full record: [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+
+Reported: *"big jumps when I switch from roll to yaw/pitch or when I change roll
+directions"*, with a preference for the older 1€-filtered behaviour.
+
+⭐ **The framing was wrong and that mattered.** A circle fit is an **estimator** (how
+the angle is computed); the 1€ filter is a **smoother** (how the result is cleaned).
+They are orthogonal — the question was never which, but why the output got worse.
+
+**1. ⛔ Kåsa is the worst of the standard algebraic circle fits.** Chernov's error
+analysis ranks them Kåsa poor → Pratt moderate → Taubin good → **Hyper best** (zero
+essential bias, better than the iterative geometric fit). Kåsa is **severely biased
+toward small circles on SHORT ARCS** — precisely this regime, since the window holds
+an arc and never a whole circle. ✅ Now **Hyper**, pinned by vectors that recover a
+**40° arc to four decimal places**. The bias correction is a single coefficient, and
+it is also all that separates Hyper from Taubin, so a vector guards it.
+
+**2. ⛔⛔ The angle's reference point went stale.** The out-of-band path returned
+without updating it, so a transient excursion — which is exactly what a reversal and
+a roll→yaw/pitch handover produce — left the reference behind and collected the whole
+excursion into **one step** on re-entry. ⭐ Third time this row has had that shape:
+*a difference is only meaningful when both ends of it are current.* ✅ Fixed, with a
+chord-consistency guard: two points on a circle of radius `r` separated by chord `c`
+subtend exactly `2·asin(c/2r)`, so the angle cannot disagree with the distance
+travelled.
+
+**3. ⛔⛔⛔ The 1€ revert had been made on evidence wrong twice over.** The null result
+was measured on perfect-circle fixtures **and** with `beta` so high that the filter
+was effectively bypassed — the roll angle moves at hundreds of deg/s, so `beta = 0.05`
+drove the cutoff to ~30 Hz. **A filter that was never switched on was reverted for not
+working.** ✅ Restored and re-measured properly, including **lag**, which the old
+metric could not see (both its channels were filtered, so lag cancelled).
+
+⛔ **No setting earns its place**: `beta = 0` removes 13% of noise for ~30° per gesture
+of lag; `beta = 0.01` removes 0.3% for ~13°. The roll angle is a **ramp**, and
+low-passing a ramp costs `slope × τ`. Filtering the per-step turn instead is worse
+still (6.8° → 17.7°): evaluations are gated by distance, so they are irregular in
+time, and a time-based low-pass over irregular increments does not preserve their sum.
+⭐⭐ **What removed the jitter was the estimator, not a filter.** Left wired at a
+low-lag default so it can be judged by finger — one config line makes it transparent.

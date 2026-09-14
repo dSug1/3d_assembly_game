@@ -27,13 +27,15 @@ uncited algorithm is indistinguishable from an invented one six months later.
 
 | algorithm | source | licence situation | used by |
 |---|---|---|---|
-| **Kasa circle fit** | I. Kasa, *"A circle fitting procedure and its error analysis"*, IEEE Trans. Instrum. Meas., 1976 | ✅ Standard closed-form least-squares result, textbook mathematics, no licence and no patent. | `src/input/roll.ts` — estimates the centre the roll angle is measured about |
+| **Hyper circle fit** | A. Al-Sharadqah & N. Chernov, *"Error analysis for circle fitting algorithms"*, Electronic J. Statistics **3** (2009) 886–911, [arXiv:0907.0421](https://arxiv.org/abs/0907.0421) | ✅ Published mathematics — no licence attaches to a formula and no patent is asserted. Independent implementation from the paper's algebraic form. `N13`: clear for commercial use. | `src/input/roll.ts` — estimates the centre the roll angle is measured about |
+| **1€ filter** | Casiez, Roussel & Vogel, CHI 2012, doi [10.1145/2207676.2208639](https://dl.acm.org/doi/10.1145/2207676.2208639) | ✅ Reference implementations at <https://gery.casiez.net/1euro/> are **BSD**/**MIT**, **no patent asserted**; ours is an independent implementation from the paper. `N13`-clear. | `src/input/one_euro.ts` — ⚠ wired but measured to earn nothing on this signal; see the note below |
 
 ### ⛔ Evaluated and REVERTED — kept because a retraction is more useful than a silence
 
 | algorithm | source | outcome |
 |---|---|---|
-| **1€ filter** | Casiez, Roussel & Vogel, CHI 2012, doi [10.1145/2207676.2208639](https://dl.acm.org/doi/10.1145/2207676.2208639). ✅ Reference implementations at <https://gery.casiez.net/1euro/> are **BSD**/**MIT** with **no patent asserted**; `N13`-clear. | ⚠ **Fitted to the roll angle, measured, and reverted.** It measurably helped the old turning-angle estimator. Against the **circle-fit** estimator that replaced it, it measured **5.80°→5.78°, 3.03°→2.91°, and 3.54°→4.70° — WORSE — on a wide circle.** `METHOD`: measure or revert; a null result is recorded, not shipped hopefully. ⭐ The lesson: it had been compensating for a bad ESTIMATOR, and fixing the estimator removed the need for it. **Reach for the estimator before the filter.** |
+| **Kåsa circle fit** | I. Kåsa, IEEE Trans. Instrum. Meas. 1976 | ⚠ **Used, then replaced by Hyper.** Chernov's error analysis rates Kåsa the WORST of the standard algebraic fits — severely biased toward small circles on SHORT ARCS, which is exactly the regime here. A biased, high-variance centre is what made the per-step roll angle jump. No licence issue either way; it was simply the wrong choice. |
+| **1€ filter** | Casiez et al., CHI 2012 | ⚠ **Reverted once on BAD EVIDENCE, then restored and re-measured.** The first null result was taken on perfect-circle fixtures AND with `beta` so high the filter was effectively bypassed — it had never been switched on. Re-measured properly (realistic gestures, Hyper estimator, full sweep including LAG): **no setting earns its place.** The roll angle is a fast ramp, and low-passing a ramp costs `slope × tau`; `beta = 0` removes 13% of noise for ~30° per gesture of lag, `beta = 0.01` removes 0.3% for ~13°. ⭐ What actually removed the jitter was the ESTIMATOR. Left wired at a low-lag setting so it can be judged by finger. |
 
 ⛔ **Also rejected after checking, so the comparison is not re-run blind:** Kalman
 filtering (needs a motion model for a finger that nobody has, more blind parameters,

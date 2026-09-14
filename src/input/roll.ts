@@ -57,9 +57,10 @@
 import { mmToPx, pxToMm } from "../core/units";
 import type { GestureConfig } from "./gestureConfig";
 import type { Sample } from "./motion";
+import { OneEuroFilter } from "./one_euro";
 
 /** A fitted circle, in CSS pixels, with the RMS residual of the points about it. */
-interface Circle {
+export interface Circle {
   readonly cx: number;
   readonly cy: number;
   readonly r: number;
@@ -75,20 +76,46 @@ interface Circle {
  */
 const MIN_FIT_POINTS = 8;
 
+/**
+ * How far a measured turn may exceed what the chord between two readings could
+ * subtend on the fitted circle before it is discarded as inconsistent.
+ * ⚠ Not a tunable: 1 is the exact geometric bound for points lying ON the circle;
+ * the slack only covers points sitting slightly off it.
+ */
+const TURN_CHORD_SLACK = 1.5;
+
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
   Math.hypot(a.x - b.x, a.y - b.y);
 
 /**
- * Closed-form least-squares circle fit (Kåsa). `null` when the points are collinear —
- * which is the correct answer for a straight drag, not an error.
+ * THE **HYPER** ALGEBRAIC CIRCLE FIT — Al-Sharadqah & Chernov, *"Error analysis for
+ * circle fitting algorithms"*, Electronic J. Statistics 3 (2009) 886–911,
+ * [arXiv:0907.0421](https://arxiv.org/abs/0907.0421).
  *
- * ⚠ Kåsa minimises the ALGEBRAIC residual, which biases the radius low on a short
- * arc. That is acceptable here: the radius is only compared against a band, while the
- * CENTRE — which is what the angle is measured about — is what the fit gets right.
+ * ⛔⛔ IT REPLACES A KÅSA FIT, WHICH THE LITERATURE RATES THE WORST OF THE STANDARD
+ * ALGEBRAIC FITS. Kåsa is **severely biased toward small circles on short arcs** —
+ * exactly the regime here, where the window holds an arc, never a whole circle. A
+ * biased, high-variance centre is what makes the per-step angle jump, and it makes
+ * the estimated radius wander across `rollRadiusMin`/`rollRadiusMax`, flapping the
+ * gesture in and out of band. Chernov's own ranking: Kåsa poor, Pratt moderate,
+ * Taubin good, **Hyper best — zero essential bias, and better than the iterative
+ * geometric fit.**
+ *
+ * ✅ LICENCE (`N13`): published mathematics. No licence attaches to a formula, and no
+ * patent is asserted. This is an independent implementation from the paper's
+ * algebraic form; the citation is attribution. Recorded in `THIRD_PARTY_NOTICES`.
+ *
+ * ⚠ "Non-iterative" in the literature's sense: there is no search over the data and
+ * no step size. It solves one quartic by Newton from a guaranteed-convergent start,
+ * which is a deterministic root-find — not the grid search `bestTwist`'s comment
+ * warns about. Typically five to ten iterations.
+ *
+ * `null` when the points are collinear — the correct answer for a straight drag.
  */
-function fitCircle(pts: readonly Sample[]): Circle | null {
+export function fitCircle(pts: readonly Sample[]): Circle | null {
   const n = pts.length;
   if (n < 4) return null;
+
   let mx = 0;
   let my = 0;
   for (const p of pts) {
@@ -98,48 +125,81 @@ function fitCircle(pts: readonly Sample[]): Circle | null {
   mx /= n;
   my /= n;
 
-  let suu = 0;
-  let svv = 0;
-  let suv = 0;
-  let suuu = 0;
-  let svvv = 0;
-  let suvv = 0;
-  let svuu = 0;
+  // Moments about the centroid, all normalised by n.
+  let mxx = 0;
+  let myy = 0;
+  let mxy = 0;
+  let mxz = 0;
+  let myz = 0;
+  let mzz = 0;
   for (const p of pts) {
-    const u = p.x - mx;
-    const v = p.y - my;
-    suu += u * u;
-    svv += v * v;
-    suv += u * v;
-    suuu += u * u * u;
-    svvv += v * v * v;
-    suvv += u * v * v;
-    svuu += v * u * u;
+    const xi = p.x - mx;
+    const yi = p.y - my;
+    const zi = xi * xi + yi * yi;
+    mxx += xi * xi;
+    myy += yi * yi;
+    mxy += xi * yi;
+    mxz += xi * zi;
+    myz += yi * zi;
+    mzz += zi * zi;
   }
-  const det = suu * svv - suv * suv;
-  // Collinear, or a single point: there is no circle. ⛔ Never invent one.
-  if (Math.abs(det) < 1e-9) return null;
+  mxx /= n;
+  myy /= n;
+  mxy /= n;
+  mxz /= n;
+  myz /= n;
+  mzz /= n;
 
-  const b1 = 0.5 * (suuu + suvv);
-  const b2 = 0.5 * (svvv + svuu);
-  const uc = (b1 * svv - b2 * suv) / det;
-  const vc = (b2 * suu - b1 * suv) / det;
-  const r = Math.sqrt(uc * uc + vc * vc + (suu + svv) / n);
-  if (!Number.isFinite(r) || r <= 0) return null;
-  const cx = uc + mx;
-  const cy = vc + my;
+  const mz = mxx + myy;
+  const covXY = mxx * myy - mxy * mxy;
+  const varZ = mzz - mz * mz;
 
-  // ⛔⛔ A FIT WITHOUT A RESIDUAL IS NOT A TEST. Kasa returns *a* circle for ANY
-  // point set, so accepting it on radius alone accepts paths that are not circular at
-  // all: a golden vector caught a side-to-side WIGGLE committing as a roll, and a
-  // straight drag after a circle took 35 mm to release instead of the 12 mm asked
-  // for, because the fit stayed nominally plausible while the path plainly was not.
+  // ⭐ THE HYPER CONSTRAINT. `a2` is where this differs from Taubin, and it is the
+  // whole of the bias correction — get it wrong and you have silently built a
+  // different, worse estimator. Pinned by a vector against an exact circle.
+  const a2 = 4 * covXY - 3 * mz * mz - mzz;
+  const a1 = varZ * mz + 4 * covXY * mz - mxz * mxz - myz * myz;
+  const a0 =
+    mxz * (mxz * myy - myz * mxy) + myz * (myz * mxx - mxz * mxy) - varZ * covXY;
+  const a22 = a2 + a2;
+
+  // Newton on P(x) = 4x⁴ + a2·x² + a1·x + a0, started at x = 0, which the paper
+  // shows converges to the required root.
+  let x = 0;
+  let y = a0;
+  for (let i = 0; i < 99; i++) {
+    const dy = a1 + x * (a22 + 16 * x * x);
+    if (dy === 0) break;
+    const xNext = x - y / dy;
+    if (xNext === x || !Number.isFinite(xNext)) break;
+    const yNext = a0 + xNext * (a1 + xNext * (a2 + 4 * xNext * xNext));
+    // ⚠ Stop as soon as the residual stops shrinking. Without this a flat region can
+    // walk the root away from the answer it had already found.
+    if (Math.abs(yNext) >= Math.abs(y)) break;
+    x = xNext;
+    y = yNext;
+  }
+
+  const det = x * x - x * mz + covXY;
+  if (!Number.isFinite(det) || Math.abs(det) < 1e-12) return null;
+  const cx = (mxz * (myy - x) - myz * mxy) / (det * 2);
+  const cy = (myz * (mxx - x) - mxz * mxy) / (det * 2);
+  const r2 = cx * cx + cy * cy + mz + 2 * x;
+  if (!(r2 > 0) || !Number.isFinite(r2)) return null;
+  const r = Math.sqrt(r2);
+
+  const centreX = cx + mx;
+  const centreY = cy + my;
+
+  // ⛔⛔ A FIT WITHOUT A RESIDUAL IS NOT A TEST. Any algebraic fit returns *a* circle
+  // for any point set, so accepting it on radius alone accepts paths that are not
+  // circular: a golden vector caught a side-to-side WIGGLE committing as a roll.
   let sq = 0;
   for (const p of pts) {
-    const e = Math.hypot(p.x - cx, p.y - cy) - r;
+    const e = Math.hypot(p.x - centreX, p.y - centreY) - r;
     sq += e * e;
   }
-  return { cx, cy, r, residualPx: Math.sqrt(sq / n) };
+  return { cx: centreX, cy: centreY, r, residualPx: Math.sqrt(sq / n) };
 }
 
 export class RollDetector {
@@ -156,9 +216,17 @@ export class RollDetector {
   /** ⚠ The previous POSITION, not the previous angle. See `push`. */
   private prevPos: Sample | null = null;
   private accumDeg = 0;
+  private smoothDeg = 0;
   private committedFlag = false;
+  private readonly filter: OneEuroFilter;
 
-  constructor(private readonly cfg: GestureConfig) {}
+  constructor(private readonly cfg: GestureConfig) {
+    this.filter = new OneEuroFilter({
+      minCutoff: cfg.rollFilterMinCutoff,
+      beta: cfg.rollFilterBeta,
+      dCutoff: 1.0,
+    });
+  }
 
   /**
    * ⭐ Signed: positive is CLOCKWISE on screen. See the header. This is both what
@@ -174,6 +242,17 @@ export class RollDetector {
    */
   get accumulatedDeg(): number {
     return this.accumDeg;
+  }
+
+  /**
+   * ⭐⭐ THE ANGLE TO ROTATE BY — 1€-filtered (`one_euro.ts`). Heavy smoothing while
+   * the roll is slow, where the eye sees jitter; almost none while it is fast, where
+   * the eye sees lag. The device reported exactly that asymmetry.
+   * ⛔ The COMMIT threshold reads `accumulatedDeg`, raw, on purpose: lagging a
+   * threshold crossing makes the gesture feel late.
+   */
+  get smoothedDeg(): number {
+    return this.smoothDeg;
   }
 
   /**
@@ -193,7 +272,9 @@ export class RollDetector {
     this.lastRadiusPx = null;
     this.prevPos = null;
     this.accumDeg = 0;
+    this.smoothDeg = 0;
     this.committedFlag = false;
+    this.filter.reset();
   }
 
   /**
@@ -323,14 +404,28 @@ export class RollDetector {
       // ⭐ Hysteresis on BOTH sides. Acting on a SINGLE out-of-band reading meant a
       // slow sweep — which produces many more readings per degree, so many more
       // chances to be unlucky — was reset over and over and NEVER COMMITTED.
+      // ⛔⛔ THE REFERENCE POINT MUST NOT GO STALE. An earlier version returned from
+      // here without touching `prevPos`, so an excursion out of band — which happens
+      // transiently at a direction reversal and at the roll-to-yaw/pitch handover —
+      // left the reference behind while the finger kept moving. The whole excursion
+      // was then collected into ONE step on re-entry, which is a jump of arbitrary
+      // size. Device-reported as *"big jumps when I switch from roll to yaw/pitch or
+      // when I change roll directions."*
+      // ⭐ Third time this row has had the same bug shape: a difference means
+      // something only when BOTH ends of it are current.
+      this.prevPos = s;
       this.offBandPx += stepPx;
       if (this.offBandPx >= mmToPx(this.cfg.rollReleaseDistance)) {
         // The gesture has stopped being circular: hand back to yaw/pitch, and make a
         // scribble plus a straight run unable to add up to a circle between them.
         this.committedFlag = false;
         this.accumDeg = 0;
+        this.smoothDeg = 0;
         this.offBandPx = 0;
         this.prevPos = null;
+        // ⛔ The filter carries state; leaving it primed with the abandoned angle
+        // would make the next roll start by racing back to it.
+        this.filter.reset();
       }
       return;
     }
@@ -354,14 +449,34 @@ export class RollDetector {
     if (this.prevPos !== null) {
       const prevAngleRad = Math.atan2(this.prevPos.y - fit.cy, this.prevPos.x - fit.cx);
       let turn = angleRad - prevAngleRad;
-      // Shortest signed difference. ⚠ Legitimate here in a way it was NOT for the
-      // tangent: between two readings the finger cannot sweep half a circle about the
-      // centre without the sampling itself being broken.
+      // Shortest signed difference.
       while (turn > Math.PI) turn -= 2 * Math.PI;
       while (turn < -Math.PI) turn += 2 * Math.PI;
-      this.accumDeg += (turn * 180) / Math.PI;
-      if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
+
+      // ⭐⭐ A CONSISTENCY CHECK BETWEEN TWO INDEPENDENT MEASUREMENTS, and the only
+      // guard that can catch a wrap landing on the wrong branch. Two points on a
+      // circle of radius `r` separated by a chord `c` subtend exactly
+      // `2·asin(c / 2r)`, so the angle is NOT free to disagree with the distance the
+      // finger actually travelled. When it does, the pair is not describing motion
+      // along this circle, and the honest reading of it is none.
+      // ⚠ Not a tunable: 1 is the exact geometric bound for points lying ON the
+      // circle, and the slack only covers points sitting slightly off it — which the
+      // residual test already bounds independently.
+      const chord = dist(this.prevPos, s);
+      const maxTurn = 2 * Math.asin(Math.min(1, chord / (2 * fit.r))) * TURN_CHORD_SLACK;
+      if (Math.abs(turn) <= maxTurn) {
+        const turnDeg = (turn * 180) / Math.PI;
+        this.accumDeg += turnDeg;
+        if (Math.abs(this.accumDeg) >= this.cfg.rollAngle) this.committedFlag = true;
+
+      }
     }
     this.prevPos = s;
+    // ⚠ THE FILTER SITS ON THE ANGLE, NOT ON THE PER-STEP TURN. Filtering the turns
+    // and integrating them was tried and is WORSE — measured 6.8° → 17.7° of error.
+    // Evaluations here are gated by DISTANCE, so they are irregular in time, and a
+    // time-based low-pass over irregular increments does not preserve their sum: the
+    // residual bias integrates into unbounded drift.
+    this.smoothDeg = this.filter.filter(this.accumDeg, s.t);
   }
 }
