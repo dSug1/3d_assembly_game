@@ -1,6 +1,9 @@
 # `IN2` — pointer plumbing
 
-**Status: built 2026-09-14, 22 vectors. ⛔ NOT CLOSED — a device look decides that.**
+**Status: ✅ CLOSED 2026-09-14, 22 vectors, confirmed by finger.**
+⭐ The owner checked all four cases on the device — the `IN8` consequence below included —
+and reported *"all working fine"*. ⚠ That makes `IN8`'s reading 1 an accepted BEHAVIOUR,
+not just an accepted decision.
 `src/input/router.ts` · `tests/router.test.ts` · wired in `src/render/scene.ts`.
 Spec: §0 (tracking), §4 (roles latched at press), §5 → the `IN8` decision.
 
@@ -46,6 +49,7 @@ is **the thing to judge by finger before `IN4` builds on it.** The alternative �
 promoting the survivor — means a role that changes without a press, which is the exact
 property §4 exists to forbid. ⭐ If it feels wrong on the glass, the fix is to revisit
 `IN8` (reading 2 is deferred, not rejected), not to quietly unlatch the role.
+✅ **Judged on the device 2026-09-14 and accepted.** It does not feel wrong.
 
 ⭐ **It is visible**: the HUD prints every touchpoint in press order with its latched
 role, e.g. `#1OBJ #2IGN  active=1`. Without that line, "nothing is happening" and "it is

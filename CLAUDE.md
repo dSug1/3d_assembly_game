@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-14)
 
-✅ Green: TypeScript + Babylon + Vite, **247 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **255 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -72,8 +72,10 @@ orbit ring values and the three gains the owner chose on the device — and
 `src/input/noise_meter.ts`). ⛔ Measuring it exposed a defect in the sagitta guard that
 had stood through eight device passes: see `Claude/10_INPUT_TOUCH/INDEX.md`.
 
-⛔⛔ **NEXT is RULE 6 (screen-plane translate).** `IN2` is **built** (2026-09-14,
-22 vectors, `src/input/router.ts`) and awaiting a device look.
+⛔⛔ **NEXT is `3D1`** (the object model). ✅ `IN2` **CLOSED** and ⭐ **rule 6
+(screen-plane translate) BUILT** 2026-09-14 — awaiting a device look.
+⭐⭐ Rule 6's gain was **computed, not guessed**: `gainTranslateScreen` is a multiplier on
+a tracking factor and **1.0 puts the object exactly under the finger**.
 ⭐ **The order is `IN2` → rule 6 translate → `3D1` → 6bis onward.** `IN4`'s dependency
 on `3D1` is NOT uniform: rule 6 translates *the selected object* in the screen plane and
 needs no object model, while 6bis onward are defined on the axis between two selected

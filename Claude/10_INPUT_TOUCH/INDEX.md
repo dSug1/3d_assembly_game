@@ -25,14 +25,14 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**247 golden vectors, all passing** (37 → 219).
+**255 golden vectors, all passing** (37 → 219).
 
-⭐ **`IN2` is BUILT** (2026-09-14, 22 vectors, `src/input/router.ts`, awaiting a device
-look): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
+✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
+finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
 touchpoint's lifetime** (§4), bindings keyed by pointer id so §0's order-independence
 holds in both release orders, and `activeCount` excludes ignored touchpoints because
 that is the count the §4 rule table is written against.
-⚠ **Its visible consequence is the thing to judge by finger**: lift the finger holding a
+✅ **Its visible consequence was judged by finger and accepted**: lift the finger holding a
 part while a second finger rests on that same part and **the part stops responding** —
 the second was ignored at press and stays ignored until it lifts. The HUD prints the
 latched roles (`#1OBJ #2IGN  active=1`) so that is distinguishable from a bug.

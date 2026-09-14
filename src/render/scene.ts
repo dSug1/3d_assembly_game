@@ -53,6 +53,8 @@ import {
   orbitCentre,
   PointerNoiseMeter,
   PointerRouter,
+  MotionTracker,
+  screenTranslation,
   Recognizer,
   TapHistory,
   screenPlaneRotation,
@@ -175,6 +177,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
     prev: Sample;
     lastRollDeg: number;
+    /**
+     * ⭐⭐ WHAT THIS GESTURE DOES, LATCHED AT THE MOMENT IT COMMITS. `null` until then.
+     *
+     * ⛔ §4's principle applied one level up: *"without this, a user steadying their
+     * grip would silently switch between two different mappings mid-gesture."* Rule 6's
+     * own wording is a per-frame condition (*the anchor is `STATIONARY`*), and read
+     * literally it would flip the object between TRANSLATING and ROTATING every time
+     * the resting thumb twitched. So the `STATIONARY` clause is honoured where it is
+     * meaningful — as the ENTRY condition — and the answer is then latched.
+     * ⚠ Recorded as a deviation from the literal §4 in `queue_notes/IN4.md`.
+     */
+    mode: "ROTATE" | "TRANSLATE" | null;
   }
   /**
    * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
@@ -185,6 +199,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const router = new PointerRouter<AbstractMesh>();
   const held = new Map<number, Held>();
+  /**
+   * Motion state for each OUTSIDE touchpoint. ⭐ Rule 6 needs to know that the anchor is
+   * `STATIONARY`, and only touchpoints on an object get a `Recognizer` — so the anchor
+   * gets the same `MotionTracker` the recognizer uses internally, rather than this file
+   * inventing a second definition of "still". `METHOD`: a harness that recomputes the
+   * value is a second implementation.
+   */
+  const anchors = new Map<number, MotionTracker>();
   let lastVerdict = "—";
 
   // ─────────────────────────────────────────────────────────────────
@@ -363,7 +385,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           : router
               .all()
               .map((p) => `#${p.id}${p.role.slice(0, 3)}`)
-              .join(" ") + `  active=${router.activeCount}`,
+              .join(" ") +
+            `  active=${router.activeCount}` +
+            // ⭐ The LATCHED mode of the gesture in progress — rule 6 vs the 2bis
+            // stand-in. ⛔ Printed because it is decided once and cannot be inferred
+            // from what the fingers are doing now, which is the whole point of a latch.
+            (first?.mode ? `  ${first.mode}` : ""),
       noise: noiseLine(),
     });
   };
@@ -425,6 +452,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
         // ⭐ 1 is direct manipulation — the cube turns as far as the finger swept.
         tunable("roll gain (x swept)", "gainRoll", 0.1, 3, 0.05),
+      ],
+    },
+    {
+      title: "OBJECT TRANSLATION",
+      sliders: [
+        // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
+        // under the finger at every camera distance. The slider exists so that claim
+        // can be DISPROVED by finger, and so the owner can judge whether direct
+        // manipulation actually feels best; it is not there because the number is
+        // unknown. ⚠ Every other gain on this project was guessed too slow; this is the
+        // first one that was computed. See input/translate.ts.
+        tunable("screen-plane gain (1 = under finger)", "gainTranslateScreen", 0.1, 3, 0.05),
       ],
     },
     {
@@ -515,6 +554,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       }
 
       if (routed.role === "OUTSIDE") {
+        anchors.set(e.pointerId, new MotionTracker(cfg));
+        anchors.get(e.pointerId)!.push(s);
         // ⭐ Rule 1 chooses what to orbit AROUND at press, from the ray of the finger
         // that started it — so the centre cannot wander mid-drag as the ray moves.
         if (router.outside().length === 1) recomputeOrbitCentre(e);
@@ -533,7 +574,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const mesh = routed.object!;
       const rec = new Recognizer(cfg, poseOf(mesh), taps);
       rec.press(s);
-      held.set(e.pointerId, { rec, mesh, frame: screenFrame(), prev: s, lastRollDeg: 0 });
+      held.set(e.pointerId, {
+        rec,
+        mesh,
+        frame: screenFrame(),
+        prev: s,
+        lastRollDeg: 0,
+        mode: null,
+      });
       paint();
       return;
     }
@@ -560,6 +608,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        anchors.get(e.pointerId)?.push(s);
         if (router.outside().length === 2) {
           updatePinch();
         } else if (router.outside().length === 1 && router.objects().length === 0) {
@@ -575,6 +624,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {
         router.release(e.pointerId);
+        anchors.delete(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         pinch.end();
@@ -591,6 +641,38 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // part and slides off is still holding it (§4).
       router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
       if (grip.rec.move(s) === "COMMITTED_CONTINUOUS") {
+        // ⭐⭐ THE MODE IS DECIDED ONCE, HERE, at the moment the gesture commits — see
+        // `Held.mode`. Rule 6 needs exactly one object held and exactly one anchor
+        // outside it, and that anchor must be STILL as the drag begins.
+        grip.mode ??=
+          router.objects().length === 1 &&
+          router.outside().length === 1 &&
+          anchors.get(router.outside()[0]!.id)?.current === "STATIONARY"
+            ? "TRANSLATE"
+            : "ROTATE";
+      }
+      if (grip.mode === "TRANSLATE") {
+        // §4 RULE 6 — the object translates in the screen view plane.
+        // ⛔ The gain is a MULTIPLIER on a COMPUTED tracking factor, not a number: at
+        // 1.0 the object stays exactly under the finger at every camera distance. The
+        // whole derivation, and the 20× spread that forced it, is in input/translate.ts.
+        // ⚠ `clientHeight` — CSS pixels, matching pointer coordinates. The render height
+        // is device pixels and would be wrong by `devicePixelRatio`.
+        const t = screenTranslation(
+          s.x - grip.prev.x,
+          s.y - grip.prev.y,
+          camera.radius,
+          camera.fov,
+          canvas.clientHeight,
+          cfg.gainTranslateScreen,
+        );
+        // ⭐ The screen axes LATCHED AT PRESS, exactly as the rotation uses — so an
+        // orbit that happens mid-drag cannot redefine which way "right" is.
+        grip.mesh.position.addInPlace(
+          new Vector3(...grip.frame.right).scale(t.rightM),
+        );
+        grip.mesh.position.addInPlace(new Vector3(...grip.frame.up).scale(t.upM));
+      } else if (grip.mode === "ROTATE") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release. See the header: stand-in, not 2bis.
         //

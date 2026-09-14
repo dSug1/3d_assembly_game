@@ -42,9 +42,12 @@ import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
  */
 const PENDING: Readonly<Record<string, string>> = {
   // §1.2 — gains for rules that are not built.
-  referenceCameraDistance: "IN3/IN4 — translation gains scale by camera distance",
+  // ⚠ NOT rule 6 any more. Rule 6 computes the exact tracking factor from the camera's
+  // field of view, distance and viewport height (`input/translate.ts`), which subsumes
+  // this ratio AND removes its device dependence. It survives for 6bis/6ter/6quater,
+  // and if those compute their factors the same way it should be DELETED, not kept.
+  referenceCameraDistance: "IN4 — rules 6bis/6ter/6quater, if they still want a ratio",
   gainRotateConstrained: "IN3 — rule 2sexte, constrained rotation",
-  gainTranslateScreen: "IN4 — rule 6",
   gainTranslateAxis: "IN4 — rule 6bis",
   gainTranslateDepth: "IN4 — rule 6bis",
   gainTranslateMutual: "IN4 — rule 6ter",
