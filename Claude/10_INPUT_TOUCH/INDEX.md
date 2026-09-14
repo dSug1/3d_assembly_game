@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**226 golden vectors, all passing** (37 → 219).
+**227 golden vectors, all passing** (37 → 219).
 
 ⛔ **Not built**: `IN2` (pointer roles, blocked behind the `IN8` decision below),
 `IN3`/`IN4` (the object rules, blocked on `3D1`), `IN5` (measurement), `IN6` undo,
@@ -40,6 +40,21 @@ the owner chose on the device on 2026-09-14 and are the first *judgements* in th
 `src/input/noise_meter.ts`, reported on the HUD as `noise floor=… now=… n=… cfg=…`. Hold
 one finger still for a few seconds; `floor` is the answer. The sagitta criterion and
 several other thresholds are only defensible relative to it.
+
+⭐⭐ **MEASURED 2026-09-14: `pointerNoiseMm` = 0.761 mm** — five times the 0.15 mm
+placeholder it replaced. ⚠ **It is a RESTING-FINGER floor, and gameplay is not a
+resting finger**: a moving contact patch is a different regime, and nothing is retuned
+around this number as though it described one. It feeds exactly one rule — the sagitta
+criterion — where an over-estimate is the safe direction, since it can only raise the
+bar.
+⛔⛔ **AND IT IMMEDIATELY EXPOSED A DEFECT IN THAT RULE.** With the real noise the guard
+rejected the configuration seven device passes had accepted. The guard was wrong: it
+computed `rollStepDistance² / (8 × rollRadiusMax)`, a fixed 13 mm chord at the largest
+radius (0.352 mm), while `roll.ts` spans `max(rollStepDistance, radius × arc)` — at a
+60 mm radius that is 136 mm of path bowing 32 mm. ⭐ It now scans the achievable radius
+range using the window the code actually spans; the binding case is the **smallest**
+radius, and the knob it protects is **`rollTrackArcDeg`** — the one a person is tempted
+to shrink, because it is release lag. 130° ships; below ~45° it is refused.
 
 ⛔⛔ **THE STATISTIC IS THE POINT, AND IT IS EASY TO MEASURE THE WRONG ONE.** A resting
 finger produces sensor noise (high frequency — what `pointerNoiseMm` *means*) **and**

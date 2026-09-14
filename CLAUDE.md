@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-14)
 
-✅ Green: TypeScript + Babylon + Vite, **226 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **227 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -58,7 +58,7 @@ three-ring surface, working by finger.
 ⛔ **Nothing touches an OBJECT for real yet**: the rotation in `scene.ts` is a
 diagnostic stand-in, and `IN3` deletes it.
 
-⛔⛔ **Sixteen defects have been found BY FINGER and none was visible to a green
+⛔⛔ **Seventeen defects have been found BY FINGER and none was visible to a green
 suite.** They are four repeating shapes — a rate estimated over too short a baseline, a
 substituted quantity, idealised fixtures, and a composition nobody computed. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
@@ -67,7 +67,10 @@ block, and they bind every row still to come.
 ⭐⭐ **Tunables can be A/B'd by finger without a rebuild** — `?rollAngle=45` on the URL,
 or the on-screen menu for the orbit rings. That is what makes `IN5` practical.
 ⚠ Every number in `src/input/gestureConfig.ts` is still a placeholder, except the six
-orbit ring values the owner chose on the device.
+orbit ring values and the three gains the owner chose on the device — and
+**`pointerNoiseMm` = 0.761 mm, the first number actually MEASURED** (2026-09-14,
+`src/input/noise_meter.ts`). ⛔ Measuring it exposed a defect in the sagitta guard that
+had stood through eight device passes: see `Claude/10_INPUT_TOUCH/INDEX.md`.
 
 ⛔⛔ **NEXT is `3D1`** — the object model, which `IN3`, `IN4`, `RND1` and `RND2` all
 wait on, and the last thing before actual assembly.

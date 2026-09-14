@@ -30,7 +30,7 @@ They are the record, not the briefing.
 ## Where it stands, in five lines
 
 ⭐ **DEPLOYED and driven by finger**: TypeScript + Babylon.js + Vite, `npm run verify`
-runs a typecheck and **226 golden vectors, all passing**, live at
+runs a typecheck and **227 golden vectors, all passing**, live at
 **https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
 ✅ **Engine-agnostic and enforced**: `src/core` and `src/input` import no engine, and
 [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if that stops
@@ -39,7 +39,7 @@ reproduced **headlessly** before it was fixed.
 ✅✅ **`IN1` CLOSED** (the recognizer) and **`IN9` CLOSED** (pinch zoom + camera orbit
 on a three-ring surface), all by device look. ⛔ Nothing yet touches an OBJECT for
 real: `IN2`–`IN4` are unbuilt and wait on `3D1`.
-⛔⛔ **Sixteen defects have been found BY FINGER, none visible to a green suite**, and
+⛔⛔ **Seventeen defects have been found BY FINGER, none visible to a green suite**, and
 they are four repeating shapes — a rate over too short a baseline, a substituted
 quantity, idealised fixtures, and a composition nobody computed. They are written out
 in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md)'s YOU-ARE-HERE block because they bind every

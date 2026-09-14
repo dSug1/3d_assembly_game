@@ -392,17 +392,47 @@ describe("⛔⛔ slow roll, and the curvature signal-to-noise that governs it", 
     expect(Math.abs(d.accumulatedDeg)).toBeGreaterThan(200);
   });
 
-  it("⛔ a config whose curvature signal is below the noise is REJECTED", () => {
-    // ⭐ This validator would have caught the defect above at construction, instead
-    // of it costing a device session. The shipped config had an SNR of 0.2.
-    expect(
-      () => new MotionTracker({ ...cfg, rollStepDistance: 3, rollRadiusMax: 40 }),
-    ).toThrow(/sagitta/);
+  it("⛔ a fit window too SHORT IN ARC to measure curvature is REJECTED", () => {
+    // ⭐ The criterion binds on the knob a person is actually tempted to shrink:
+    // `rollTrackArcDeg` is release lag, so "make it more reactive" means shortening
+    // it, and below ~45° the window stops bowing clear of the noise. 130° ships.
+    expect(() => new MotionTracker({ ...cfg, rollTrackArcDeg: 30 })).toThrow(/bows by only/);
   });
 
-  it("the shipped config clears the sagitta bar", () => {
-    const sagitta = (cfg.rollStepDistance * cfg.rollStepDistance) / (8 * cfg.rollRadiusMax);
-    expect(sagitta).toBeGreaterThanOrEqual(2 * cfg.pointerNoiseMm);
+  it("⛔⛔ it reads the window the CODE spans, not a fixed chord", () => {
+    // ⛔ THE CRITERION ITSELF CARRIED MISTAKE SHAPE 2 FOR EIGHT DEVICE PASSES.
+    // It used to compute `rollStepDistance² / (8 × rollRadiusMax)` — a fixed 13 mm
+    // chord at the LARGEST radius, 0.352 mm. But `roll.ts`'s `windowTargetPx` sizes
+    // the window as `max(rollStepDistance, radius × arc)`, so that chord is not what
+    // is ever fitted: the real bow is ~10× larger, and the binding radius is the
+    // SMALLEST, not the largest. The old formula had the quantity AND the direction
+    // wrong, and nothing noticed until `pointerNoiseMm` was measured.
+    const naive = (cfg.rollStepDistance * cfg.rollStepDistance) / (8 * cfg.rollRadiusMax);
+    expect(naive).toBeLessThan(2 * cfg.pointerNoiseMm); // ⛔ the OLD rule rejects what ships
+    expect(() => new MotionTracker(cfg)).not.toThrow(); // …and the corrected one does not
+
+    // ⭐ The historical defect — a 3 mm baseline at a 40 mm max radius — is no longer
+    // expressible through those two knobs, and that is not a weakened guard: the
+    // ARC-SIZED WINDOW is what fixed it. At a 5 mm radius that config now spans 130°
+    // and bows 2.9 mm. The knob moved; the guard followed it.
+    expect(
+      () => new MotionTracker({ ...cfg, rollStepDistance: 3, rollRadiusMax: 40 }),
+    ).not.toThrow();
+  });
+
+  it("the shipped config clears the sagitta bar, against a MEASURED noise", () => {
+    // ⚠ 0.761 mm, read off the device on 2026-09-14 by holding one finger still —
+    // five times the 0.15 mm placeholder it replaced. A resting finger is not
+    // gameplay, but for this rule the error is in the safe direction: too large a
+    // noise can only make the bar higher.
+    expect(cfg.pointerNoiseMm).toBeGreaterThan(0.5);
+    const arcRad = (Math.min(cfg.rollFitArcDeg, cfg.rollTrackArcDeg) * Math.PI) / 180;
+    let worst = Number.POSITIVE_INFINITY;
+    for (let r = cfg.rollRadiusMin; r <= cfg.rollRadiusMax; r += 0.05) {
+      const theta = Math.min(Math.max(arcRad, cfg.rollStepDistance / r), 2 * Math.PI);
+      worst = Math.min(worst, r * (1 - Math.cos(theta / 2)));
+    }
+    expect(worst).toBeGreaterThanOrEqual(2 * cfg.pointerNoiseMm);
   });
 });
 
