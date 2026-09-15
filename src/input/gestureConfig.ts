@@ -466,11 +466,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // about re-sizing applies to it, and the reasoning is kept because it is why the number
   // is 2.4 and not 0.8. ⚠ A DEVICE MUST JUDGE IT: it is the commit threshold, the rest
   // test and the jitter deadband all at once now.
-  // ⭐⭐ SET BY THE OWNER ON THE GLASS, 2026-09-15. ⚠ 2.3 mm sits 0.017 mm above the
-  // validator floor (3 x the measured 0.761 mm = 2.283) — deliberate, but it means
-  // **any future re-measurement of `pointerNoiseMm` upward will refuse this config**, and
-  // loudly, which is the intended behaviour rather than a trap.
-  motionDeadbandMm: 2.3,
+  // ⭐⭐ SET BY THE OWNER ON THE GLASS — 2.3 mm on 2026-09-15, raised to **3.5 mm** on
+  // 2026-09-16. ⚠ It now sits comfortably above the validator floor (3 x the measured
+  // 0.761 mm = 2.283 mm) rather than 0.017 mm above it, so a future re-measurement of
+  // `pointerNoiseMm` has room before it refuses the config.
+  // ⚠ THE COST, STATED: this is the travel before an object starts moving AT ALL, and it is
+  // paid once per axis per gesture — 3.5 mm of dead travel entering a drag, and a 45°
+  // entry pays it on both axes. ⭐ It buys a wider axis-purity corridor (A11): a drag
+  // wanders further off-axis before the other axis wakes up.
+  motionDeadbandMm: 3.5,
   // ⭐ SET BY THE OWNER, 2026-09-15 — a quarter of my guess, which is the fourth time a
   // hand has moved one of my numbers a long way. It only confirms the way BACK to
   // STATIONARY; at 30 ms it is roughly two frames, so the depth gate opens almost as soon

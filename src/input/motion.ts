@@ -162,8 +162,21 @@ const ZERO_STEP = { dx: 0, dy: 0 } as const;
  */
 class AxisBand {
   state: MotionState = "STATIONARY";
-  /** The band's centre. ⛔ It TRAILS the finger by one band while this axis moves. */
-  private anchor: number | null = null;
+  /**
+   * ⭐⭐ THE SIGNED DISPLACEMENT FROM THE BAND'S CENTRE, carried directly.
+   *
+   * ⛔⛔ NOT AN ANCHOR POSITION, AND THE DIFFERENCE IS A DEFECT THIS SHIPPED WITH. While an
+   * axis moves, the centre trails by EXACTLY one band, so the instant the finger stops its
+   * displacement is EXACTLY the band — the `<=` boundary, on every sample. ⚠ Storing the
+   * centre as `p - band` and re-deriving `p - centre` is a ROUND TRIP through floating
+   * point: at p ≈ 400 px it comes back about 1e-14 too large, which is on the wrong side of
+   * `<=`. The axis then NEVER became `STATIONARY`, because the rest timer never started.
+   * ⭐ An offset accumulated by `+= (p - prev)` adds exactly zero for a still finger, so it
+   * stays exactly at the boundary and rest is reached at every coordinate and every band.
+   * ⚠ Found by raising the band from 2.3 mm to 3.5 mm: a vector that had passed for a day
+   * went red, and it was not the fixture.
+   */
+  private offset = 0;
   private last: number | null = null;
   /** The timestamp of the most recent sample, so `tick` can measure the silence. */
   private lastT: number | null = null;
@@ -172,7 +185,7 @@ class AxisBand {
 
   reset(): void {
     this.state = "STATIONARY";
-    this.anchor = null;
+    this.offset = 0;
     this.last = null;
     this.lastT = null;
     this.restingSinceMs = null;
@@ -183,15 +196,17 @@ class AxisBand {
     const prev = this.last;
     this.last = p;
     this.lastT = t;
-    if (this.anchor === null || prev === null) {
-      this.anchor ??= p;
+    if (prev === null) {
+      this.offset = 0;
       this.restingSinceMs = t;
       return 0;
     }
 
-    const e = p - this.anchor;
-    if (Math.abs(e) <= bandPx) {
-      // ⭐ Inside the band: the anchor does NOT move.
+    const travel = p - prev;
+    this.offset += travel;
+
+    if (Math.abs(this.offset) <= bandPx) {
+      // ⭐ Inside the band: the centre does NOT move.
       // ⛔ Re-centring here would destroy a slow drag — displacement has to be allowed to
       // ACCUMULATE against a fixed point, or a finger creeping below one band per sample
       // would travel for ever and emit nothing.
@@ -201,18 +216,22 @@ class AxisBand {
           this.state = "STATIONARY";
           // ⭐ Re-centre where it came to rest, so the band is centred on the finger again
           // and the boundary chatter this confirmation absorbs cannot restart.
-          this.anchor = p;
+          this.offset = 0;
           return 0;
         }
         // ⚠ An axis already MOVING keeps emitting its raw travel even inside the band: it
         // has proven it is moving, and a wobble smaller than the band mid-drag is real.
-        return p - prev;
+        return travel;
       }
       return 0;
     }
 
     const wasMoving = this.state === "MOVING";
-    this.anchor = p - Math.sign(e) * bandPx;
+    const over = Math.abs(this.offset) - bandPx;
+    const sign = Math.sign(this.offset);
+    // ⭐ Clamp the offset back to the boundary — exactly, with no round trip through a
+    // position. This is the line the floating-point defect lived on.
+    this.offset = sign * bandPx;
     this.restingSinceMs = null;
     this.state = "MOVING";
     // ⭐⭐ Already moving: pass the travel straight through. The band was paid on the way
@@ -220,7 +239,7 @@ class AxisBand {
     // back-and-forth drag feel dead in the hand.
     // ⭐ Leaving rest: the EXCESS ONLY, so this axis starts from zero continuously rather
     // than stepping by a whole band.
-    return wasMoving ? p - prev : Math.sign(e) * (Math.abs(e) - bandPx);
+    return wasMoving ? travel : sign * over;
   }
 
   /** ⭐ Advance the clock with no sample. ⛔ Never enters `MOVING`, never emits travel. */
@@ -231,7 +250,7 @@ class AxisBand {
     if (since === null) return;
     if (nowMs - since < restConfirmMs) return;
     this.state = "STATIONARY";
-    if (this.last !== null) this.anchor = this.last;
+    this.offset = 0;
   }
 }
 

@@ -35,7 +35,7 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Thirty-one defects have been found **by finger** (thirty of them; one by composing a measurement with a threshold), and **not one was visible to a green
+Thirty-three defects have been found **by finger** (thirty-two of them; one by composing a measurement with a threshold), and **not one was visible to a green
 suite**. They are **five** shapes, not twenty-six problems — the fifth is below, and it is
 the one that costs a correct implementation rather than a broken one:
 
@@ -61,7 +61,9 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | **A8** — the roll's commit dropped its own angle | **1** — *"in rotation, when I switch from yaw/pitch to roll… there is a big jump at one point."* The rebase undid the swept yaw/pitch, and the scene then applied only ONE FRAME of roll against a `lastRollDeg` that had tracked the uncommitted phase — so ~60° of swept roll was silently dropped. ⭐ The owner's own third guess was right: *"anchoring on a previous quaternion which is now far away"* | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
 | **A11** — a still finger emits no events | **1** — ⛔⛔ §1.1 is driven by `pointermove`, and a resting finger sends none — so the tracker froze at `MOVING` and `STATIONARY` was unreachable *for the exact case the rule is about*. ⭐ The asymmetry is structural: MOVING is entered by an event that necessarily exists, STATIONARY by one that by definition may not arrive. ⚠ **It survived two fixes to the THRESHOLD before anyone checked the CLOCK**, and the owner said so: *"there is something wrong you did not explain nor check"* | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
 | **A11** — the band taxed the drag | **1** — *"the object translation is less fluid than when we had no depth translation built in."* ⛔⛔ The trailing anchor sits one radius BEHIND, so a REVERSAL had to cross the whole dead circle: **5.0 mm of dead travel, 88 ms at 50 mm/s** — more than ten times rule 6's entire follower time constant, as pure dead time in front of it. ⭐ Fixed by a distinction the first version missed: **the band gates the way OUT of rest, not the motion itself**. A reversal now costs one sample | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| | **= 31** | |
+| **A13** — a tracker outlived its finger | **1** — *"I release the second touchpoint and press it outside any object… the first object continues translation and then switch to rotation."* ⛔⛔ Motion trackers were keyed by POINTER ID, and **browsers reuse ids after a release** — so a new finger inherited the old one's anchor position and read `MOVING` at once, which under A13 means the holder keeps translating. ⭐⭐ **The same trap `router.ts` already guards and explains**: I copied the map and not the guard. Fixed structurally — keyed by the router's never-reused `seq` | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
+| **A11** — rest ON the band boundary | **1** — a finger stopping DEAD parks at **exactly** one band from the centre, so the `<=` comparison is made at its exact value on every sample — and computing the centre as `p − band` then re-deriving `p − centre` is a **round trip through floating point** that returns ~1e-14 too large. ⛔ The axis then never became `STATIONARY`. ⚠ Invisible at a 2.3 mm band, exposed by the owner raising it to 3.5 mm. ⭐ Fixed by carrying the signed OFFSET instead of a position | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
+| | **= 33** | |
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of

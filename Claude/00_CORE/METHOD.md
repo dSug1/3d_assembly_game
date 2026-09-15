@@ -65,6 +65,26 @@ be discontinuous.
 through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
 of two numbers passing through zero is garbage however carefully it is computed.
 
+## ⭐⭐ A threshold the state machine PARKS ON will be compared at its exact value
+
+*(2026-09-16.)* Hysteresis usually leaves a system somewhere in the middle of its band. ⛔ A
+**trailing** band does not: it drags its centre so the moving thing sits exactly ON the
+edge, and the instant that thing stops, the comparison is made at the boundary value — on
+every sample, for as long as it rests.
+
+⚠ So never compute that value by a **round trip**. Storing a centre as `p − band` and
+re-deriving `p − centre` returns about `1e-14` too much at ordinary screen coordinates,
+which is on the wrong side of `<=`. ⭐ Carry the quantity the comparison is actually
+about — here the signed offset, accumulated by `+= (p − prev)` and clamped — so a still
+input adds exactly zero and stays exactly on the boundary.
+
+⭐⭐ **And the tell that separates a defect from a stale fixture**: a fixture goes stale
+against a number it HARD-CODES; a defect changes behaviour when a number the PRODUCT uses
+moves. This one was invisible at one band size and appeared at another, so it was never the
+fixture. ⚠ Sweep the magnitudes a defect could hide behind — here five screen positions and
+five band sizes — because a fixture at one convenient coordinate passes while the product
+fails.
+
 ## ⭐⭐ A threshold has a SHAPE as well as a size
 
 *(2026-09-15.)* A deadband, a gate, a tolerance — each is usually defended on **one** axis of

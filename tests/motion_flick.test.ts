@@ -589,8 +589,11 @@ describe("⛔⛔ rest must be reachable WITHOUT further events", () => {
     const m = new MotionTracker(cfg);
     let x = 500;
     m.push({ x, y: 400, t: 0 });
+    // ⚠ DERIVED from the band, not a literal: at a literal 3 mm/sample this vector went
+    // red the moment the owner raised the band to 3.5 mm, for no reason but the fixture.
+    const stepMm = cfg.motionDeadbandMm + 1;
     for (let i = 1; i <= 30; i++) {
-      x += mmToPx(3);
+      x += mmToPx(stepMm);
       m.push({ x, y: 400, t: i * 8 });
       m.tick(i * 8 + 4);
       expect(m.current, `tick after sample ${i}`).toBe("MOVING");
@@ -668,7 +671,9 @@ describe("⭐⭐ once MOVING, travel passes through undiminished", () => {
     // ⚠ This half must NOT be removed: it is what rejects a resting finger's jitter, and
     // it is paid ONCE per gesture rather than at every change of direction.
     const r = outAndBack(0.5);
-    expect(r.startDead).toBeGreaterThan(BAND);
+    // ⚠ `>=`, not `>`: the first emitting sample can land EXACTLY on the band when the
+    // step divides it, which is a property of the fixture's arithmetic and not of the rule.
+    expect(r.startDead).toBeGreaterThanOrEqual(BAND);
     expect(r.startDead).toBeLessThanOrEqual(BAND + 0.5);
   });
 
@@ -881,5 +886,120 @@ describe("⭐⭐⭐ a deadband PER AXIS — a nearly-horizontal drag is purely h
     t += 8;
     m.push({ x, y: 400, t });
     expect(pxToMm(m.step.dx)).toBeCloseTo(-0.5, 6);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔⛔ A TRACKER THAT OUTLIVES ITS FINGER READS `MOVING` THE INSTANT A NEW ONE LANDS
+//
+// Device report, 2026-09-16: *"Two touchpoints on respective objects && both delta
+// positions -> translation of both objects -> OK. Then I release the second touchpoint and
+// press it outside any object while the first touchpoint remains pressed -> this should
+// control immediately rotation of the first object. However, I see that the first object
+// continues translation and then switch to rotation."*
+//
+// ⭐⭐ THE MECHANISM, PINNED HERE: a `MotionTracker` keeps an ANCHOR POSITION. Feed it a
+// sample from somewhere else on the glass — which is what a NEW finger reusing an old
+// pointer id does — and the displacement from that stale anchor is enormous, so it reads
+// `MOVING` at once and stays there until `restConfirmMs` of quiet. ⛔ Under A13 that means
+// the second finger is judged to be MOVING, so the holder TRANSLATES instead of ROTATING,
+// and it flips only once the new finger settles. Exactly the report.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ a stale tracker makes a NEW finger read as MOVING", () => {
+  it("⭐⭐ the mechanism: a far-away sample in an old tracker is instantly MOVING", () => {
+    const m = new MotionTracker(cfg);
+    // A finger lives at one corner and comes to rest there.
+    m.push({ x: 200, y: 200, t: 0 });
+    m.tick(cfg.restConfirmMs + 1);
+    expect(m.current).toBe("STATIONARY");
+    // ⛔ A DIFFERENT finger now lands 90 mm away and is perfectly still.
+    m.push({ x: 200 + mmToPx(90), y: 200, t: 100 });
+    expect(m.current, "the new finger has not moved at all").toBe("MOVING");
+  });
+
+  it("⭐ a FRESH tracker calls the same landing STATIONARY, which is the fix", () => {
+    // ⭐⭐ The whole difference is WHICH tracker the second finger gets, so the fix is to
+    // key them by something that is never reused. The router publishes `seq` — monotone
+    // press order — precisely because *"Map iteration order would look like press order
+    // right up until an id is reused."*
+    const fresh = new MotionTracker(cfg);
+    fresh.push({ x: 200 + mmToPx(90), y: 200, t: 100 });
+    expect(fresh.current).toBe("STATIONARY");
+  });
+
+  it("⛔ and contact settling under one band does NOT wake a fresh tracker", () => {
+    // ⚠ A finger landing on glass reports a centroid that shifts as the contact area
+    // grows. Under one dead band that must read as still, or every placement would start
+    // a translation.
+    const m = new MotionTracker(cfg);
+    let x = 400;
+    m.push({ x, y: 400, t: 0 });
+    for (let i = 1; i <= 6; i++) {
+      x += mmToPx(cfg.motionDeadbandMm / 8);
+      m.push({ x, y: 400 + mmToPx(0.2), t: i * 8 });
+    }
+    expect(m.current).toBe("STATIONARY");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔⛔ A FINGER THAT STOPS DEAD RESTS **EXACTLY ON** THE BAND BOUNDARY
+//
+// Found 2026-09-16, by raising the band from 2.3 mm to 3.5 mm: a vector that had passed
+// for a day went red, and it was not the fixture.
+//
+// ⭐⭐ While an axis moves, its anchor is dragged to trail by EXACTLY one band. So the
+// instant the finger stops, its displacement from the anchor is EXACTLY the band — the
+// `<=` boundary, on every single sample. ⛔ If that comparison lands on the wrong side, the
+// axis never becomes STATIONARY at all: `restingSinceMs` is never set, and the rest timer
+// never starts.
+//
+// ⚠ Computing the anchor as `p - band` and then re-deriving `p - anchor` is a ROUND TRIP
+// through floating point, and it does not return exactly `band` — at p ≈ 400 px it comes
+// back about 1e-14 too large, which is on the wrong side of `<=`. ⭐ Tracking the signed
+// OFFSET directly and clamping it removes the round trip, so a still sample adds exactly
+// zero and the offset stays exactly at the boundary.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ stopping ON the boundary still counts as rest", () => {
+  it("⭐⭐ a finger that stops dead settles — at ANY position on the glass", () => {
+    // ⚠ Swept over positions on purpose: the defect depended on the MAGNITUDE of the
+    // coordinate, so a fixture at one convenient x could pass while the product failed.
+    for (const x0 of [0, 137, 400, 1023.5, 4096]) {
+      const m = new MotionTracker(cfg);
+      let x = x0;
+      let t = 0;
+      m.push({ x, y: 400, t });
+      for (let i = 1; i <= 30; i++) {
+        x += mmToPx(0.8);
+        t += 10;
+        m.push({ x, y: 400, t });
+      }
+      expect(m.current, `x0=${x0} must be moving`).toBe("MOVING");
+      // ⛔ Dead stop: the same coordinate, again and again, for well over restConfirmMs.
+      for (let i = 1; i <= 20; i++) m.push({ x, y: 400, t: t + i * 10 });
+      expect(m.current, `x0=${x0} must come to rest`).toBe("STATIONARY");
+    }
+  });
+
+  it("⭐ and it settles at a band of ANY size", () => {
+    // ⚠ The defect was invisible at 2.3 mm and appeared at 3.5 mm — the comparison landed
+    // on the lucky side for one value and not the other. Sweep the slider's range.
+    for (const band of [0.9, 2.3, 3.5, 5.0, 7.75]) {
+      const c = { ...cfg, motionDeadbandMm: band, pointerNoiseMm: Math.min(cfg.pointerNoiseMm, band / 3) };
+      const m = new MotionTracker(c);
+      let x = 400;
+      let t = 0;
+      m.push({ x, y: 400, t });
+      for (let i = 1; i <= 40; i++) {
+        x += mmToPx(band / 3);
+        t += 10;
+        m.push({ x, y: 400, t });
+      }
+      expect(m.current, `band=${band}`).toBe("MOVING");
+      for (let i = 1; i <= 20; i++) m.push({ x, y: 400, t: t + i * 10 });
+      expect(m.current, `band=${band} must come to rest`).toBe("STATIONARY");
+    }
   });
 });

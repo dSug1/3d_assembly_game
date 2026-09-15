@@ -274,3 +274,72 @@ somewhere it should not be.
 ⭐ This is the fifth thing §1.1 has been wrong about, and the first that was a *design*
 distinction rather than a quantity or a clock. The file is worth reading end to end before
 touching `motion.ts`.
+
+---
+
+# ⛔⛔ TWO MORE, 2026-09-16 — a tracker that outlived its finger, and the band's own boundary
+
+## 1. A stale tracker made a NEW finger read as `MOVING`
+
+> *"Two touchpoints on respective objects && both delta positions → translation of both
+> objects → OK. Then I release the second touchpoint and press it outside any object while
+> the first touchpoint remains pressed → this should control immediately rotation of the
+> first object. However, I see that the first object continues translation and then switch
+> to rotation. What is wrong?"*
+
+⭐⭐ **The cause**: a `MotionTracker` keeps an anchor POSITION, and the scene kept one per
+touchpoint in a map **keyed by pointer id** — which **browsers reuse after a release**. A new
+finger landing on a reused id inherited the previous finger's tracker, measured its
+displacement from an anchor somewhere else entirely, and read `MOVING` at once.
+
+⛔ Under `A13` that is decisive: a second finger judged to be MOVING means the holder keeps
+**translating**, and it flips to **rotation** only once the new finger settles —
+*"continues translation and then switch to rotation"*, exactly.
+
+⭐⭐ **THE SAME TRAP, ONE LAYER UP.** `router.ts` already guards it and says why:
+
+> *"Browsers do reuse ids, but only AFTER a release — so treat this as a fresh press and
+> drop the stale latch."*
+>
+> *"`seq` … the ONLY ordering anyone gets, and it is explicit: `Map` iteration order is
+> insertion order and would LOOK like press order right up until an id is reused."*
+
+⚠ I copied the map and not the guard. **The fix is structural, not a cleanup to remember**:
+the trackers are now keyed by the router's `seq`, which is monotone for the life of the
+router and never reused. ⭐ Entries are also dropped on release, at all four release sites,
+so the map cannot grow — but that is belt to the structural brace, not the fix itself.
+
+⛔ **Stated plainly: no vector catches the WIRING.** `scene.ts` is behind the engine
+boundary — keying by `id` again reddens nothing. What *is* pinned is the **mechanism**: a
+far-away sample fed into an existing tracker reads `MOVING` instantly, while a fresh tracker
+calls the identical landing `STATIONARY`.
+
+## 2. A finger stopping DEAD rested exactly ON the band boundary — and never settled
+
+⚠ Found by the owner raising `motionDeadbandMm` from 2.3 mm to 3.5 mm: a vector that had
+passed for a day went red, **and it was not the fixture**.
+
+⭐⭐ While an axis moves, its band centre is dragged to trail by **exactly one band**. So the
+instant the finger stops, its displacement is **exactly** the band — the `<=` boundary, on
+every sample. ⛔ Land on the wrong side of that comparison and the axis never becomes
+`STATIONARY` at all: `restingSinceMs` is never set, so the rest timer never starts.
+
+⛔⛔ **And it did land on the wrong side.** Storing the centre as `p − band` and then
+re-deriving `p − centre` is a **round trip through floating point**: at `p ≈ 400 px` it comes
+back about `1e-14` too large. ⚠ Whether that bites depends on the MAGNITUDE of the
+coordinate and the SIZE of the band — which is why it was invisible at 2.3 mm and appeared
+at 3.5 mm.
+
+⭐ **The fix removes the round trip**: the axis now carries the signed **offset** and
+accumulates it by `+= (p − prev)`, clamping to `±band`. A still finger adds exactly zero, so
+the offset stays exactly on the boundary and rest is reached at **every** coordinate and
+**every** band. Both are swept in the vectors — five positions and five band sizes — because
+a fixture at one convenient `x` would have passed while the product failed.
+
+⭐⭐ **The carried lesson**: *a threshold the state machine PARKS ON is a threshold that will
+be compared at its exact value, for ever.* Never compute that value by a round trip; carry
+the quantity the comparison is about.
+
+⚠ And the tell that it was a defect rather than a stale fixture: the failure depended on the
+BAND SIZE, which is a tuning value. A fixture goes stale against a number it hard-codes; a
+defect changes behaviour when a number the PRODUCT uses moves.

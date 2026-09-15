@@ -319,6 +319,26 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * fingers would mix their histories and answer about neither.
      * ⚠ Rebuilt when a touchpoint goes down, never reused across a release.
      */
+    /**
+     * ⛔⛔ KEYED BY THE ROUTER'S `seq` — PRESS ORDER — AND NEVER BY THE POINTER ID.
+     *
+     * ⚠⚠ Device-reported, 2026-09-16: release the second touchpoint from its object,
+     * press it down outside any object, and the first object *"continues translation and
+     * then switches to rotation"* instead of rotating at once.
+     *
+     * ⭐⭐ THE CAUSE: a `MotionTracker` keeps an ANCHOR POSITION, and **browsers reuse
+     * pointer ids after a release**. A new finger landing on a reused id inherited the old
+     * finger's tracker, measured its displacement from an anchor somewhere else entirely,
+     * and read `MOVING` at once — so A13 judged the second finger to be moving and the
+     * holder kept translating until the new finger settled.
+     *
+     * ⭐ `seq` is monotone for the life of the router and never reused. `router.ts` already
+     * says why it exists: *"the ONLY ordering anyone gets... `Map` iteration order would
+     * LOOK like press order right up until an id is reused."* ⛔ The same trap, one layer
+     * up — this project has now hit it twice, so the fix is structural rather than a
+     * cleanup somebody has to remember.
+     * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
+     */
     anchorMotion: Map<number, MotionTracker>;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
@@ -1165,19 +1185,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const isSecond =
         q.role === "OUTSIDE" || (q.role === "SECOND" && q.object === grip.mesh);
       if (!isSecond) continue;
-      return { present: true, state: grip.anchorMotion.get(q.id)?.current ?? null };
+      return { present: true, state: grip.anchorMotion.get(q.seq)?.current ?? null };
     }
     return { present: false, state: null };
   };
 
-  const applyDepthDrag = (grip: Held, anchorId: number, anchorSample: Sample) => {
+  /**
+   * ⛔ Forget a released touchpoint's motion tracker, everywhere.
+   *
+   * ⚠ Keyed by `seq`, so a reused pointer id can no longer inherit it — this is belt to
+   * that structural brace, and it is what stops the map growing for the life of a gesture.
+   */
+  const forgetAnchor = (seq: number): void => {
+    for (const grip of held.values()) grip.anchorMotion.delete(seq);
+  };
+
+  const applyDepthDrag = (grip: Held, anchorSeq: number, anchorSample: Sample) => {
     // ⭐ The anchor gets a tracker of its own — the SAME §1.1 machine every other rule
     // reads, never a speed invented here. A second definition of "moving" would be free
     // to disagree with the one the holder is judged by.
-    let tracker = grip.anchorMotion.get(anchorId);
+    // ⛔ Keyed by PRESS ORDER, never by pointer id. See `Held.anchorMotion`.
+    let tracker = grip.anchorMotion.get(anchorSeq);
     if (!tracker) {
       tracker = new MotionTracker(cfg);
-      grip.anchorMotion.set(anchorId, tracker);
+      grip.anchorMotion.set(anchorSeq, tracker);
     }
     // ⭐⭐ ASK THE CLOCK RIGHT HERE TOO, not only in the render loop. This is the one
     // moment the holder's stillness actually decides something, and an anchor event can
@@ -1362,6 +1393,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
     if (routed.role === "SECOND") {
       if (info.type === PointerEventTypes.POINTERUP) {
+        forgetAnchor(routed.seq);
         router.release(e.pointerId);
         lastVerdict = "second touchpoint released";
       } else {
@@ -1373,7 +1405,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // / 6bis / 6ter's configuration and must stay reachable.
         const holder2 = router.objects().find((q) => q.object === routed.object);
         const grip2 = holder2 ? held.get(holder2.id) : undefined;
-        if (grip2) applyDepthDrag(grip2, routed.id, s);
+        if (grip2) applyDepthDrag(grip2, routed.seq, s);
       }
       paint();
       return;
@@ -1384,8 +1416,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // verdict, no flick test, no tap history. ⚠ The OPPOSITE of the pinch three
       // branches below, where lifting one of two fingers ends the gesture. A stray TAP
       // from here would evict a constraint (§1.4) that the user never asked to lose.
-      if (info.type === PointerEventTypes.POINTERUP) router.release(e.pointerId);
-      else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      if (info.type === PointerEventTypes.POINTERUP) {
+        forgetAnchor(routed.seq);
+        router.release(e.pointerId);
+      } else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
       paint();
       return;
     }
@@ -1402,7 +1436,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // and the two rules partition the configuration instead of competing for it.
         const holder = router.objects()[0];
         const grip = holder ? held.get(holder.id) : undefined;
-        if (grip && applyDepthDrag(grip, routed.id, s)) {
+        if (grip && applyDepthDrag(grip, routed.seq, s)) {
           paint();
           return;
         }
@@ -1429,6 +1463,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           s.t - routed.pressed.t <= cfg.tapMaxDuration &&
           Math.hypot(s.x - routed.pressed.x, s.y - routed.pressed.y) <=
             mmToPx(cfg.doubleTapSlop);
+        forgetAnchor(routed.seq);
         router.release(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
@@ -1610,6 +1645,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         resetCamera();
         lastVerdict = "DOUBLE_TAP → camera reset";
       }
+      forgetAnchor(routed.seq);
       router.release(e.pointerId);
       held.delete(e.pointerId);
       paint();
