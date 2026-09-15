@@ -35,7 +35,7 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FOUR MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Twenty-five defects have been found **by finger**, and **not one was visible to a green
+Twenty-six defects have been found **by finger**, and **not one was visible to a green
 suite**. They are four shapes, not twenty-five problems:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
@@ -54,7 +54,18 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | **A6** — depth, from below | **1** — *"chaotic on the bottom ring"*: "away" RISES on screen seen from above and SINKS seen from below, and the rule hard-coded the first | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) A6 |
 | **A6** — the gate | **1** — it re-decided every frame against a speed floor, so a hand SLOWING or REVERSING dropped into rule 6, whose dy is now gravity: *"blends into a translation along gravity"* and *"drifts along the gravity axis"*. **Two reports, one cause** | same |
 | **A6** — the gate, again | **2** — the latch I added exited on a **windowed** divergence, which is RATE-DEPENDENT: an idle anchor never exited below ~100 mm/s, and a turnaround skew spiked it so reversals still leaked. And a finger moving ALONE still moved the object, because the displacement was half of each finger's own delta and halves sum to the AVERAGE. ⭐ Both fixed by changing the QUANTITY: divergence measured cumulatively from the latch, and the object driven by the SHARED travel | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) A6 |
-| | **= 25** | |
+| **A9** — the rotation jitters | **1** — 2bis and rule 6 integrate the RAW per-event delta, and the pointer noise is 0.761 mm MEASURED, so a still finger turns a held object: *"there are some jumps in the rotation"*. ⭐ A **deadband**, queued as `IN12` | [`queue_notes/IN12.md`](queue_notes/IN12.md) |
+| | **= 26** | |
+
+⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
+entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of
+the screen view plane"* — withdrawn by the owner (*"it's alright: the logic is right"*) after
+`tests/a7_wiring.test.ts` composed the gravity frame with the rotation and asserted the axis
+that comes out, at four tilts including the bottom ring. ⛔ Every part of A7 already had
+green vectors and **the composition had none** — mistake shape 4 pointing the other way, at a
+correct piece of work. ⭐ `METHOD`: *a composition is a thing to MEASURE, not an emergent
+property* — and measuring it is what separated a real defect from an impression, in both
+directions at once.
 
 ⛔ **Amend the ledger, never a bare number written somewhere else.** That is exactly how
 this drifted: `README.md` said *seventeen* (the total before rule 6 and the sway) and
@@ -243,6 +254,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needed NO object model, so it did not wait on `3D1` | IN | feature | ✅✅ **CLOSED 2026-09-14**, both rules working by finger. 56 vectors. Rule 1 cost **three** defects no green suite could see — including a **composition nobody had computed** (three rings gave three monotone segments) and a scheme **reversed on measurement** when the owner's ring shape overshot. ⭐ *"Three rigs, therefore two transitions"* is now enforced by `validateGestureConfig`. → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
 | IN10 | Orbit about the point under the finger, not the barycentre | IN | feature | queued — ⛔ **deliberately behind `3D5`**, not behind a date: the scene holds **three** small objects and the barycentre is still the thing being worked on, while the catalog's case is explicitly about a model large enough that it is not. ⚠ Reopens a CLOSED row (`IN9`), and collides with three things: the yellow marker is where double-tap flies home to, pivot popping needs easing, and the orbit centre is already suppressed while an object is held. Prior art: conventional DCC/CAD, pre-1995 → [`queue_notes/IN10.md`](queue_notes/IN10.md) | IN9, 3D1, 3D5 |
 | IN11 | ⭐ **Is rule 2bis's free rotation PATH-DEPENDENT?** — a debugging row | IN | defect? | queued, and ⭐⭐ **UNBLOCKED — it needs no object model**. 2bis is applied as a per-frame increment about two fixed axes, which do not commute, so out-and-back by a DIFFERENT route may not return the object. ⚠ Retracing the SAME path does close, which is why a tuning session would never show it. ⭐ **Write the square-path vector FIRST and confirm it FAILS against today's code**; the answer is a curve against drag angle, not a yes/no, and the fix (pure function of total displacement) has its own cost — A/B it. ⛔ Must not undo the world-frame axis composition or the axes latched at press → [`queue_notes/IN11.md`](queue_notes/IN11.md) | IN1 |
+| IN12 | ⭐ **A DEADBAND on the pointer delta `dx`/`dy`, per axis, with a slider** | IN | defect | queued, ⭐⭐ **UNBLOCKED and small** — owner, 2026-09-15: *"the logic is right: we just need a deadband on x and y delta position"*, with *"a slider to manually finetune it"*. 2bis and rule 6 integrate the RAW per-event delta, and `pointerNoiseMm` is **0.761 mm measured**, so a still finger turns a held object and a slow drag staggers. ⛔⛔ **The trap: a HARD deadband is itself a jump** — it inserts a step of exactly the band at the crossing, and it destroys slow travel. Build the **residual-accumulator** form (hold the remainder, emit and subtract when it exceeds the band) and A/B it against the soft form on the slider. ⛔ The vector that matters asserts **continuity** — total travel over a long slow drag equals the input to within one band; *"small deltas do nothing"* passes for the broken form too. ⛔ Per AXIS, never on the magnitude: `dx` is yaw about gravity and `dy` is pitch about the horizontal, so a magnitude band lets noise cross-talk between them. ⚠ Scope excludes roll (1€ filtered) and A6's driver (its own hold window) — a decision, not an oversight. Amendment **A9** → [`queue_notes/IN12.md`](queue_notes/IN12.md) | IN1, IN4 |
 
 ## Phase 3D — objects and assembly
 

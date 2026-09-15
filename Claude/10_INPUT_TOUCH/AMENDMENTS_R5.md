@@ -786,3 +786,82 @@ replaces exactly as much unasked-for yaw/pitch with the roll the finger actually
 
 ⭐ A vector pins the distinction: a straight run followed by a circle rebases to the
 circle, and the straight run's rotation **survives**.
+
+---
+
+## A9 — ⭐⭐ A **DEADBAND** ON THE POINTER DELTA, PER AXIS *(owner, 2026-09-15)*
+
+**Amends** §1.3 and §4's rule 6 — both consume the raw per-event delta.
+
+> *"It's alright: the logic is right: we just need a deadband on x and y delta position."*
+> *"Implement a deadband for x and y and a slider to manually finetune it."*
+
+### ⭐ What this settles, and what it does NOT
+
+⛔⛔ **A7 IS NOT THE FAULT, and that is now a measured claim rather than a defence.** The
+report *"you destroyed the rotation around the gravity axis... it came back to the axis of
+the screen view plane"* is **withdrawn by the owner**. `tests/a7_wiring.test.ts` composes
+the gravity frame with the rotation end to end and asserts the axis that comes out: yaw is
+the world vertical to nine places at level, 45° down, 72° down and on the bottom ring; pitch
+and roll are horizontal at all four. ⭐ The counter-example in the same file shows the
+**camera's** up is 0.4 or less against the vertical at 72°, so *"it came back to the screen
+axes"* is a thing that can be told apart from *"it did not"*.
+
+⭐ `METHOD`, again: *a composition is a thing to measure, not an emergent property.* Every
+part of A7 had its own green vectors and the composition still had none.
+
+### The defect that IS there
+
+Every object gesture reads `s.x - grip.prev.x` and `s.y - grip.prev.y` **raw**, per pointer
+event, and integrates them. ⛔ **`pointerNoiseMm` is 0.761 mm, MEASURED** — a finger held
+still emits a delta on every event, so a held object turns while nobody is moving, and a
+slow drag arrives as a stagger rather than a glide. That is the *"jumps in the rotation"*.
+
+### ⛔ PER AXIS, not on the magnitude
+
+The rules are axis-separated: `dx` yaws about **gravity**, `dy` pitches about the
+**horizontal**. A deadband on the vector's LENGTH would pass a 3 mm horizontal drag intact
+and let the 0.7 mm of vertical noise riding on it pitch the object — the very cross-talk the
+band exists to stop. ⭐ One band, **applied to each axis independently**.
+
+⚠ **ONE constant, not two** — the owner said *a* slider. x and y are the same finger on the
+same glass; a band that differs between them would be a claim about the hardware nobody has
+measured.
+
+### ⛔⛔ A HARD DEADBAND IS ITSELF A JUMP — this is the trap in this row
+
+Zeroing everything below `b` and passing everything above it **unchanged** inserts a step of
+exactly `b` at the moment the band is crossed. That is a jump traded for a jump, and it is
+what a naive deadband always does. Two forms do not:
+
+| form | slow travel | leaving zero | cost |
+|---|---|---|---|
+| ⛔ hard — zero below `b`, pass above | **lost entirely** | discontinuous, by `b` | the defect, renamed |
+| ⭐ soft — pass `d − b·sign(d)` | **lost entirely** | continuous | every delta shrinks by `b` |
+| ⭐⭐ residual — accumulate, emit and subtract when `|acc| > b` | **exact** | continuous | ≤ `b` of latency |
+
+⭐ **Build the RESIDUAL form and A/B it against the soft one on the slider.** It is the only
+one that does not tax a slow drag: a hand moving 0.3 mm per event still covers its full
+distance, three events later. ⚠ Its cost is a quantised step — state it and watch for it.
+
+⛔ A vector must assert the **continuity**: total emitted travel over a long slow drag equals
+the input travel to within one band. A deadband whose only vector is *"small deltas do
+nothing"* passes in all three rows above, including the broken one.
+
+### Scope, stated so its edges are a decision and not an oversight
+
+- ✅ Rule **2bis** yaw/pitch, and rule **6** translate — the two that read `dx`/`dy`.
+- ⛔ **NOT** 2quinte's roll: its angle already goes through the 1€ filter.
+- ⛔ **NOT** A6's depth driver: `CommonDragDetector` already holds below
+  `MIN_TRAVEL_NOISE_MULTIPLE × pointerNoiseMm`, and a second band there would fight it.
+  ⚠ If the device still shows depth jitter after this lands, that is the same idea needing
+  the same fix, and it belongs in A6, not here.
+
+### The number
+
+⛔ **Millimetres, rule 3** — `deadbandMm`, in `gestureConfig.ts`, with a slider, because
+`IN5` says the slider ships **with** the rule. ⭐ Its natural landmark is the measured noise
+floor, **0.761 mm** — the first tunable on this project with a landmark that was measured
+rather than guessed. ⚠ And `IN4` is the standing warning about landmarks: the phantom lead's
+computed landmark marked the wrong end of its range and the hand shipped a fifteenth of it.
+**A landmark tells you where a range's zero is; it does not tell you where to stand.**
