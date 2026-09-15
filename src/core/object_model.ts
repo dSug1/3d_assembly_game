@@ -86,6 +86,17 @@ export interface World {
  */
 export const MAX_TREE_DEPTH = 16;
 
+
+/**
+ * ⭐ WHICH WAY IS DOWN. A property of the WORLD, so it lives with the world model rather
+ * than in a gesture's config — it is not a tunable and nothing should be able to A/B it.
+ *
+ * ⛔ It is the direction `GRAVITY_ALIGN` will drive a face onto (§1.4), and the direction
+ * amendment A5's depth pinch is perpendicular to. ⚠ One constant, one place: a second
+ * opinion about down would let a part be anchored to one vertical and pushed along another.
+ */
+export const WORLD_DOWN: Vec3 = [0, -1, 0];
+
 export function makeWorld(objects: readonly SceneObject[]): World {
   return { objects: new Map(objects.map((o) => [o.id, o])) };
 }

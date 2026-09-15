@@ -55,6 +55,9 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
+  depthPinchLimits,
+  depthPinchPosition,
+  depthPinchTracker,
   displayPose,
   exponentialSmooth,
   phantomTarget,
@@ -87,6 +90,7 @@ import {
   setWorldPlacement,
   worldPlacementOf,
   type Face,
+  WORLD_DOWN,
   type ObjectId,
   type World,
 } from "../core/object_model";
@@ -293,7 +297,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * protecting it. ⚠ Do not generalise "latch at press" to every input.
      * ⚠ `null` only before the gesture commits.
      */
-    mode: "ROTATE" | "TRANSLATE" | null;
+    mode: "ROTATE" | "TRANSLATE" | "DEPTH" | null;
     /**
      * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
      * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
@@ -945,6 +949,60 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
   };
 
+  /**
+   * ⭐⭐ AMENDMENT A5 — a live depth pinch, per pinched object.
+   *
+   * ⛔⛔ EVERY FIELD HERE IS CAPTURED AT THE PINCH'S START, AND THAT IS THE WHOLE POINT.
+   * `PinchTracker.scale` returns a ratio against the gesture's start, never an increment —
+   * so applying it to the object's CURRENT position each frame would compound it, and a
+   * pinch out and back would not return. The same discipline `pinch.ts` uses for the
+   * camera, where `zoomAtPinchStart` is captured once.
+   * ⚠ The view axis is latched too, for §4's reason: a camera that moves mid-gesture must
+   * not redefine which way "away" is under a finger already down.
+   */
+  interface DepthPinch {
+    readonly tracker: PinchTracker;
+    readonly startPosition: Vec3;
+    readonly viewAxis: Vec3;
+  }
+  const depthPinches = new Map<AbstractMesh, DepthPinch>();
+
+  /**
+   * Run A5 for one object, from whichever finger moved. ⭐ ONE implementation, two
+   * triggers: the holder's move reaches it through the grip, the partner's through its own
+   * branch — and a partner has no recognizer, so without this its motion would do nothing.
+   *
+   * @returns true when a pinch owns this object right now, so the caller skips its own rule.
+   */
+  const applyDepthPinch = (mesh: AbstractMesh): boolean => {
+    const state = depthPinches.get(mesh);
+    const partner = router.pinchPartner(mesh);
+    const holder = router.objects().find((q) => q.object === mesh);
+    if (!state || !partner || !holder) return false;
+
+    const factor = state.tracker.scale(holder.last, partner.last);
+    // ⛔ Inside the deadband the tracker says NOTHING, which is not "scale by one": the
+    // caller must leave the object alone rather than rewrite it with rounding.
+    if (factor === null) return true;
+
+    const mp = requirePose(mesh);
+    const { minM, maxM } = depthPinchLimits(cfg);
+    setModelPose(mesh, {
+      // ⛔ FROM THE START POSITION, never from `mp.position`. See `DepthPinch`.
+      position: depthPinchPosition(
+        asVec3(camera.position),
+        state.startPosition,
+        state.viewAxis,
+        WORLD_DOWN,
+        factor,
+        minM,
+        maxM,
+      ),
+      orientation: mp.orientation,
+    });
+    return true;
+  };
+
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
     x: e.clientX,
     y: e.clientY,
@@ -987,9 +1045,29 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const routed = router.press(e.pointerId, s, hit);
 
       if (routed.role === "IGNORED") {
-        // ⛔ `IN8`: a second touchpoint on an object something else already holds.
-        // It starts no recognizer, takes no anchor and moves nothing. ⚠ It is still
-        // COUNTED on the readout, so "why is nothing happening" has a visible answer.
+        // ⛔ A THIRD touchpoint on an object already held AND already pinched (A5 allows
+        // exactly one partner). It starts no recognizer, takes no anchor and moves
+        // nothing. ⚠ It is still COUNTED on the readout, so "why is nothing happening"
+        // has a visible answer.
+        paint();
+        return;
+      }
+
+      if (routed.role === "PINCH") {
+        // ⭐⭐ AMENDMENT A5: the second finger on a held object. It runs NO recognizer —
+        // it never begins a §1.3 gesture of its own — it only joins the holder to make a
+        // depth pinch. ⛔ Creating a `Held` here would give one mesh two recognizers.
+        const mesh = routed.object as AbstractMesh;
+        const holder = router.objects().find((q) => q.object === mesh);
+        if (holder) {
+          const tracker = depthPinchTracker(cfg);
+          tracker.begin(holder.last, s);
+          depthPinches.set(mesh, {
+            tracker,
+            startPosition: requirePose(mesh).position,
+            viewAxis: screenFrame().viewAxis,
+          });
+        }
         paint();
         return;
       }
@@ -1059,6 +1137,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // role decides which rule sees it — never a second look at what is under the finger.
     const routed = router.get(e.pointerId);
     if (!routed) return;
+
+    if (routed.role === "PINCH") {
+      const mesh = routed.object as AbstractMesh;
+      if (info.type === PointerEventTypes.POINTERUP) {
+        router.release(e.pointerId);
+        // ⛔ A pinch needs BOTH fingers. Lifting either ends it rather than letting the
+        // survivor keep scaling against a partner that is gone — and the holder falls
+        // back to one-touchpoint rotation, which is the dead end `D10` used to leave.
+        depthPinches.delete(mesh);
+        lastVerdict = "PINCH released";
+      } else {
+        router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        if (applyDepthPinch(mesh)) {
+          // ⭐ The HOLDER owns the readout, so say DEPTH there even when it is the
+          // PARTNER that moved. ⛔ `METHOD`: the readout must not lie about which rule is
+          // running — a mode that said ROTATE while a pinch drove the object would send
+          // the next debugging session to the wrong rule.
+          const holder = router.objects().find((q) => q.object === mesh);
+          const h = holder ? held.get(holder.id) : undefined;
+          if (h) h.mode = "DEPTH";
+        }
+      }
+      paint();
+      return;
+    }
 
     if (routed.role === "IGNORED") {
       // ⛔⛔ AN IGNORED TOUCHPOINT RUNS NOTHING, INCLUDING ON RELEASE — no release
@@ -1142,6 +1245,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         grip.mode === "TRANSLATE",
       );
       if (kick && cfg.translateSwayMm > 0) nudgeOthers(grip, kick);
+
+      // ⭐⭐ A5 TAKES PRECEDENCE. Two fingers on this object means a depth pinch, and the
+      // holder's drag must NOT also rotate it — a part that spun while being pushed away
+      // would be two rules answering one hand.
+      if (applyDepthPinch(grip.mesh)) {
+        grip.mode = "DEPTH";
+        grip.prev = s;
+        paint();
+        return;
+      }
 
       if (grip.mode === "TRANSLATE") {
         // §4 RULE 6 — the object translates in the screen view plane.
@@ -1246,6 +1359,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
       // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
+      // ⛔ The holder is leaving, so any pinch on its object is over too.
+      depthPinches.delete(grip.mesh);
       const verdict = grip.rec.release(s);
       lastVerdict = describe(verdict);
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:

@@ -12,19 +12,23 @@
  * silently switch between two different translation mappings mid-gesture — which is
  * unfixable from the user's side, because nothing on screen says it happened.
  *
- * ⛔⛔ THE THIRD ROLE IS `IGNORED`, and it is the `IN8` decision (§5).
- * Two touchpoints on the SAME object was *undefined and reachable*; the owner chose
- * **ignore the second hit** on 2026-09-14. So a press landing on an object some other
- * touchpoint is already holding takes the role `IGNORED` and never does anything.
- * ⚠ *Some other touchpoint* — a press on a DIFFERENT object is rule 6bis and must stay
- * reachable. "Ignore the second hit" is not "ignore the second finger".
+ * ⛔⛔ THE SECOND HIT ON A HELD OBJECT IS `PINCH`, NOT `IGNORED` — amendment **A5**
+ * (`D16`, 2026-09-15), which SUPERSEDES `D10`. Two touchpoints on the same object were
+ * *undefined and reachable* (§5); the owner first chose **ignore the second hit**
+ * (2026-09-14) and then, after a device pass, gave the configuration a meaning: the two
+ * fingers are a **horizontal DEPTH PINCH** on that object.
+ * ⚠ *Some other touchpoint* — a press on a DIFFERENT object is rule 6bis/6ter and must
+ * stay reachable. This is about a second finger on the SAME object.
  *
- * ⛔ AND `IGNORED` IS LATCHED LIKE THE OTHERS — including across the holder's release.
- * Lift the finger that was holding the part and the ignored one does NOT take over: it
- * was ignored at press, and it stays ignored until it lifts. ⚠ THIS IS VISIBLE AND MAY
- * FEEL WRONG — the part stops responding while a finger is still on it. It is the
- * honest consequence of the decision, it is the simplest thing that is well defined,
- * and it is the thing to look at on the device before `IN4` builds on it.
+ * ⭐ IT REMOVED A DEAD END. Under `D10` the part stopped responding while a finger was
+ * still on it — the honest consequence of ignoring the second hit, judged on the glass and
+ * accepted as the least-bad option. Now lifting one of the two simply returns to
+ * one-touchpoint rotation.
+ *
+ * ⛔⛔ `IGNORED` SURVIVES, WITH ITS TRIGGER MOVED TO THE **THIRD** TOUCHPOINT. A third
+ * finger on the same object has no meaning and must not turn a two-touchpoint rule into a
+ * three-touchpoint one. ⚠ `IGNORED` is still latched for life, including across the
+ * holder's release: it was ignored at press and stays ignored until it lifts.
  *
  * ⛔ RELEASING AN IGNORED TOUCHPOINT RUNS NOTHING — no release verdict, no flick test,
  * no tap history. ⚠ It is the OPPOSITE of the pinch, where lifting one of two fingers
@@ -47,9 +51,12 @@ import type { Sample } from "./motion";
  * * `OBJECT` — it hit an object nothing else was holding. It carries that object.
  * * `OUTSIDE` — it hit no object. Camera rules (§2 rule 1, rule 4) and the anchor of
  *   rule 6.
- * * `IGNORED` — it hit an object another touchpoint already holds (`IN8`). Inert.
+ * * `PINCH` — it hit an object ONE other touchpoint already holds. Together they are
+ *   amendment A5's depth pinch, so it CARRIES that object — unlike `IGNORED`.
+ * * `IGNORED` — a THIRD or later touchpoint on an object already held and already
+ *   pinched. Inert, and deliberately does not carry the object.
  */
-export type PointerRole = "OBJECT" | "OUTSIDE" | "IGNORED";
+export type PointerRole = "OBJECT" | "OUTSIDE" | "PINCH" | "IGNORED";
 
 export interface RoutedPointer<O> {
   readonly id: number;
@@ -58,8 +65,9 @@ export interface RoutedPointer<O> {
   /**
    * The object this touchpoint holds, or `null`. ⛔ Also latched: it is the object hit
    * AT PRESS, not whatever is under the finger now.
-   * ⚠ Non-null ONLY for `OBJECT`. An `IGNORED` pointer deliberately does not carry the
-   * object it landed on, so no rule can reach it through this and quietly act anyway.
+   * ⚠ Non-null for `OBJECT` and `PINCH` — A5's rule needs to find the pair. ⛔ An
+   * `IGNORED` pointer deliberately does NOT carry the object it landed on, so no rule can
+   * reach it through this and quietly act anyway.
    */
   readonly object: O | null;
   /** The press sample, kept so a rule can measure against the start of the gesture. */
@@ -78,8 +86,13 @@ export interface RoutedPointer<O> {
 export interface ReleasedPointer<O> {
   readonly pointer: RoutedPointer<O>;
   /**
-   * ⛔ `false` for `IGNORED`. The caller must not run the §1.3 release verdict, the
-   * flick test or the tap history for it — it never began a gesture to end.
+   * ⛔ `false` for `IGNORED` **and for `PINCH`**. The caller must not run the §1.3
+   * release verdict, the flick test or the tap history for either — neither began a
+   * gesture of its own to end.
+   * ⚠ A `PINCH` release still MATTERS: it ends the pinch, exactly as lifting one of two
+   * fingers ends the camera pinch. It simply is not a §1.3 gesture, and conflating "it
+   * did something" with "it ran a recognizer" is how a stray flick gets attributed to a
+   * finger that never held anything.
    */
   readonly wasActive: boolean;
 }
@@ -105,16 +118,20 @@ export class PointerRouter<O> {
     if (hit === null) {
       role = "OUTSIDE";
       object = null;
-    } else if (this.isHeld(hit)) {
-      // ⭐ `IN8`: the second hit on an object that is already held. Ignored, and it does
-      // NOT carry the object — see `RoutedPointer.object`.
-      role = "IGNORED";
-      object = null;
-    } else {
+    } else if (!this.isHeld(hit)) {
       role = "OBJECT";
       object = hit;
+    } else if (!this.isPinched(hit)) {
+      // ⭐ A5: the SECOND hit on a held object. It joins the holder as a depth pinch and
+      // carries the object, because the rule has to find the pair.
+      role = "PINCH";
+      object = hit;
+    } else {
+      // ⛔ A THIRD finger on the same object. No meaning, and it must not turn a
+      // two-touchpoint rule into a three-touchpoint one.
+      role = "IGNORED";
+      object = null;
     }
-
     const p: RoutedPointer<O> = {
       id,
       role,
@@ -157,7 +174,7 @@ export class PointerRouter<O> {
     const p = this.pointers.get(id);
     if (!p) return null;
     this.pointers.delete(id);
-    return { pointer: p, wasActive: p.role !== "IGNORED" };
+    return { pointer: p, wasActive: p.role === "OBJECT" || p.role === "OUTSIDE" };
   }
 
   /** ⚠ Everything goes. For a pointercancel storm, or a scene reset. */
@@ -193,6 +210,22 @@ export class PointerRouter<O> {
     return this.withRole("OUTSIDE");
   }
 
+  /** Second-finger touchpoints pinching an object (A5), in press order. */
+  pinches(): readonly RoutedPointer<O>[] {
+    return this.withRole("PINCH");
+  }
+
+  /**
+   * ⭐ A5's question: is some touchpoint pinching `o` alongside its holder?
+   * ⛔ Returns the PARTNER, not a boolean, because the rule needs its samples — and a
+   * boolean would send the caller back to `all()` to find it, which is where an
+   * index-based lookup would creep back in.
+   */
+  pinchPartner(o: O): RoutedPointer<O> | null {
+    for (const p of this.all()) if (p.role === "PINCH" && p.object === o) return p;
+    return null;
+  }
+
   /**
    * ⭐ How many touchpoints a RULE can see — `IGNORED` excluded.
    * ⛔ The count the §4 rule table is written against. An ignored finger must not turn
@@ -208,10 +241,18 @@ export class PointerRouter<O> {
     return this.pointers.size;
   }
 
-  /** Is some LIVE touchpoint already holding this object? `IN8`'s question. */
+  /** Is some LIVE touchpoint already holding this object? */
   private isHeld(o: O): boolean {
     for (const p of this.pointers.values()) {
       if (p.role === "OBJECT" && p.object === o) return true;
+    }
+    return false;
+  }
+
+  /** Does this object already have its ONE pinch partner? A5 allows exactly one. */
+  private isPinched(o: O): boolean {
+    for (const p of this.pointers.values()) {
+      if (p.role === "PINCH" && p.object === o) return true;
     }
     return false;
   }
