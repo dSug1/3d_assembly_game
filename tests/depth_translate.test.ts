@@ -15,14 +15,12 @@ import {
   depthLimits,
   depthPushDirection,
   depthTranslate,
-  coupling,
 } from "../src/input/depth_translate";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
 import { dot, length, normalize, scale, sub, type Vec3 } from "../src/core/vec";
 import { mmToPx } from "../src/core/units";
 
 const NOISE_MM = 0.761; // ⭐ MEASURED, 2026-09-14.
-const TOL_MM = 6;
 const WINDOW_MS = 60;
 
 const DOWN: Vec3 = [0, -1, 0];
@@ -39,7 +37,9 @@ const AWAY = Math.sign(dot(VIEW, DOWN));
 const move = (dyPx: number, gain = 1, obj: Vec3 = OBJ) =>
   depthTranslate(CAM, obj, push, AWAY, dyPx, PER_PX, gain, minM, maxM);
 
-const detector = () => new CommonDragDetector(WINDOW_MS, TOL_MM, NOISE_MM);
+/** ⭐ The shared detector: a validator must follow within ±35% to authorise a depth drag. */
+const FOLLOW_RATIO = 0.35;
+const detector = () => new CommonDragDetector(WINDOW_MS, FOLLOW_RATIO, NOISE_MM);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ⛔ WHAT MUST NOT READ AS DEPTH
@@ -93,43 +93,47 @@ describe("⛔ telling A6 apart from RULE 6", () => {
   });
 });
 
-describe("✅ what IS a common drag", () => {
-  const run = (aStepMm: number, bStepMm: number) => {
-    const d = detector();
+describe("✅ what the reading carries", () => {
+  // ⚠ This block was written against a detector that COMBINED the two fingers' travel and
+  // reported a mean and a spread. It no longer does: the object follows the DRIVER, and the
+  // reading exists so a caller (and a device readout) can see what was judged.
+  const RATIO = 0.35;
+  const det = () => new CommonDragDetector(WINDOW_MS, RATIO, NOISE_MM);
+
+  const run = (driverStepMm: number, followerStepMm: number) => {
+    const d = det();
     let last = null as ReturnType<CommonDragDetector["push"]>;
-    for (let i = 0; i <= 8; i++) last = d.push(i * 8, mmToPx(i * aStepMm), mmToPx(i * bStepMm));
+    for (let i = 0; i <= 12; i++) {
+      last = d.push(i * 8, mmToPx(i * driverStepMm), mmToPx(i * followerStepMm));
+    }
     return last;
   };
 
-  it("both fingers sweeping down together is reported", () => {
+  it("reports BOTH travels and their ratio, so a readout need not recompute them", () => {
+    // ⭐ `METHOD`: record the value the product actually used. A HUD that derived its own
+    // ratio would be a second implementation free to disagree with the one that decided.
     const v = run(3, 3)!;
     expect(v).not.toBeNull();
-    expect(v.spreadMm).toBeCloseTo(0, 9);
-    expect(v.commonMm).toBeGreaterThan(0); // screen y grows DOWNWARD
+    expect(v.driverMm).toBeGreaterThan(0); // screen y grows DOWNWARD
+    expect(v.followerMm).toBeCloseTo(v.driverMm, 6);
+    expect(v.ratio).toBeCloseTo(1, 6);
   });
 
-  it("⭐ a small spread INSIDE the tolerance still counts — hands are not machines", () => {
-    const v = run(3, 2.6)!;
-    expect(v).not.toBeNull();
-    expect(v.spreadMm).toBeGreaterThan(0);
-    expect(v.spreadMm).toBeLessThan(TOL_MM);
-  });
-
-  it("⭐ the reported common travel is the AVERAGE of the two, not either one", () => {
-    // ⚠ Two samples, both inside the window, so the travels are exactly what is written
-    // here. My first version of this used a ramp whose SPREAD (14 mm) exceeded the 6 mm
-    // tolerance, and the detector refused it — correctly. ⭐ Control the window when the
-    // assertion is about arithmetic rather than about the gate.
-    const d = detector();
-    d.push(0, 0, 0);
-    const v = d.push(8, mmToPx(10), mmToPx(6))!;
-    expect(v).not.toBeNull();
-    expect(v.commonMm).toBeCloseTo(8, 6);
-    expect(v.spreadMm).toBeCloseTo(4, 6);
+  it("⭐ the ratio reflects a validator that lags a little", () => {
+    const v = run(3, 2.4)!;
+    expect(v!.ratio).toBeCloseTo(0.8, 6);
   });
 
   it("works upward as well as downward", () => {
-    expect(run(-3, -3)!.commonMm).toBeLessThan(0);
+    const v = run(-3, -3)!;
+    expect(v.driverMm).toBeLessThan(0);
+    expect(v.ratio).toBeCloseTo(1, 6);
+  });
+
+  it("⛔ says nothing at all while the verdict is not COMMON", () => {
+    const d = det();
+    expect(d.push(0, 0, 0)).toBeNull();
+    expect(d.verdict).toBe("PENDING");
   });
 });
 
@@ -191,243 +195,143 @@ describe("the sense and the size of the motion", () => {
   });
 });
 
-describe("⭐⭐ THE OBJECT FOLLOWS THE **SHARED** TRAVEL", () => {
-  // ⚠⚠ THE DEFECT THIS PINS, FOUND BY FINGER: "the finger which is outside any object can
-  // move the object on depth once or twice even if the finger on the object is still."
-  // ⛔ The displacement used to be HALF OF EACH FINGER'S OWN DELTA, and halves sum to the
-  // average — so a finger moving alone still contributed real motion until the divergence
-  // test tripped. Any tolerance above zero leaks that way: it is inherent to averaging, and
-  // no value of `depthCommonToleranceMm` fixes it.
+describe("⭐⭐ DRIVER AND VALIDATOR — the classification", () => {
+  // ⛔⛔ THE OBJECT FOLLOWS ONE FINGER: the one touching it. The second finger contributes
+  // NO motion — it authorises the depth reading by following within a percentage ratio.
+  // ⚠ Three earlier versions of this blended the two fingers' travel (a mean, a minimum, a
+  // faded mean) and a hand felt every one of them within minutes. A blend has seams.
 
-  it("⭐ fingers in step are FULLY coupled — no penalty for being a pair", () => {
-    expect(coupling(0, TOL_MM)).toBe(1);
-    expect(coupling(1, TOL_MM)).toBeCloseTo(1 - 1 / TOL_MM, 9);
-  });
+  const RATIO = 0.35;
+  const det = () => new CommonDragDetector(WINDOW_MS, RATIO, NOISE_MM);
 
-  it("⛔ a full tolerance of drift couples NOTHING, and it never goes negative", () => {
-    expect(coupling(TOL_MM, TOL_MM)).toBe(0);
-    expect(coupling(TOL_MM * 4, TOL_MM)).toBe(0);
-    expect(coupling(-TOL_MM * 4, TOL_MM)).toBe(0);
-  });
-
-  it("⛔⛔ IT IS CONTINUOUS — the regression a hand felt within minutes", () => {
-    // ⚠⚠ The first version was `min(|a|,|b|)` with a sign test, and a hand reported:
-    // "during a normal synchronized finger movement, the object jumps erratically, as if it
-    // struggles to follow the finger movements." A minimum is DISCONTINUOUS: the fingers'
-    // events ALTERNATE, so it stalls on one and double-steps on the next, and near the
-    // latch the sign test flipped it between 0 and small values — each flip applied as real
-    // motion, because the object moves by the CHANGE.
-    // ⭐ So the property is continuity: no small change of drift may produce a large change
-    // of coupling.
-    let prev = coupling(-TOL_MM * 2, TOL_MM);
-    for (let d = -TOL_MM * 2; d <= TOL_MM * 2; d += 0.05) {
-      const now = coupling(d, TOL_MM);
-      expect(Math.abs(now - prev), `jump at drift=${d.toFixed(2)}`).toBeLessThan(0.02);
-      prev = now;
-    }
-  });
-
-  it("⛔⛔ AND IT SCALES THE STEP, NEVER THE TOTAL — no backward yank", () => {
-    // ⚠⚠ A defect I wrote and the vectors caught before a finger had to: fading the
-    // ACCUMULATED travel means that after 27 mm together, a 1 mm disagreement drops the
-    // result to 23 — the object is yanked BACK by four millimetres, and the yank grows with
-    // how far the drag has already gone. ⭐ A correction must never be proportional to the
-    // history it is correcting.
-    const d = detector();
-    enter(d);
-    let t = 96;
-    // Run a long way together, then introduce a small disagreement.
-    let far = null as ReturnType<CommonDragDetector["push"]>;
-    for (let mm = 36; mm <= 90; mm += 3) {
-      far = d.push(t, mmToPx(mm), mmToPx(mm));
-      t += 8;
-    }
-    const banked = far!.sharedMm;
-    const nudged = d.push(t, mmToPx(90), mmToPx(91))!;
-    // ⭐ The step contributes half a millimetre at slightly reduced coupling. What it must
-    // NOT do is revise the 50-odd millimetres already banked.
-    expect(Math.abs(nudged.sharedMm - banked)).toBeLessThan(1);
-  });
-
-  const enter = (d: CommonDragDetector) => {
+  /** Feed a run of (driver, validator) positions in mm, 8 ms apart. */
+  const feed = (
+    d: CommonDragDetector,
+    pairs: readonly (readonly [number, number])[],
+    t0 = 0,
+  ) => {
     let last = null as ReturnType<CommonDragDetector["push"]>;
-    for (let i = 0; i < 12; i++) last = d.push(i * 8, mmToPx(i * 3), mmToPx(i * 3));
-    return last!;
-  };
-
-  it("⛔⛔ A FINGER MOVING ALONE ADDS NOTHING — the shared travel does not budge", () => {
-    const d = detector();
-    const atLatch = enter(d);
-    // The holder freezes at 33 mm; the anchor runs on, well inside the tolerance.
-    let t = 96;
-    let last = atLatch;
-    for (let i = 1; i <= 5; i++) {
-      last = d.push(t, mmToPx(33), mmToPx(33 + i))!;
-      t += 8;
-    }
-    expect(last).not.toBeNull();
-    // ⭐ THE ASSERTION THE REPORT ASKS FOR: the object is driven by this number, so a lone
-    // finger must barely carry it. ⚠ The coupling TAPERS rather than cutting off, so the
-    // number creeps a little and then stops — bounded by about a quarter of the tolerance,
-    // and it never reverses.
-    expect(Math.abs(last.sharedMm - atLatch.sharedMm)).toBeLessThan(TOL_MM / 3);
-  });
-
-  it("⭐ both moving together DOES add, and a small disagreement costs only a little", () => {
-    // ⚠ RELATIVE, because the latch closes as soon as the entry test passes — several
-    // samples before `enter` finishes — so the absolute shared travel at that point is
-    // whatever it is. My first version assumed the latch closed on the LAST entry sample
-    // and asserted an absolute 4 mm; the geometry disagreed. ⭐ A difference is the honest
-    // assertion here, and it is the quantity the object actually moves by.
-    const d = detector();
-    const before = enter(d);
-    // Holder +4 mm, anchor +6 mm from where they were: they agree, so the shared part of
-    // the STEP is the smaller of the two.
-    const v = d.push(96, mmToPx(37), mmToPx(39))!;
-    // ⚠ The step is the pair's MEAN movement scaled by how well they agree, so it is a
-    // little under the mean — not the smaller travel outright. ⭐ That scaling is what makes
-    // it continuous; see the regression recorded above.
-    const step = v.sharedMm - before.sharedMm;
-    expect(step).toBeGreaterThan(0);
-    expect(step).toBeLessThan(6);
-  });
-
-  it("⛔ OUT AND BACK RETURNS TO THE SAME SHARED TRAVEL — this is what stops the drift", () => {
-    // ⭐ Stated as an INVARIANT rather than against a number: the shared travel at a given
-    // pair of finger positions is the same whichever direction the hand arrived from. That
-    // is exactly what "a back-and-forth leaves the object where it started" means, and it
-    // does not depend on where the latch happened to close.
-    const d = detector();
-    enter(d);
-    let t = 96;
-    const atOutbound = d.push(t, mmToPx(36), mmToPx(36))!;
-    t += 8;
-    // Push further out…
-    for (let mm = 39; mm <= 60; mm += 3) {
-      d.push(t, mmToPx(mm), mmToPx(mm));
-      t += 8;
-    }
-    // …then come back to exactly where `atOutbound` was read.
-    let back = atOutbound;
-    for (let mm = 57; mm >= 36; mm -= 3) {
-      back = d.push(t, mmToPx(mm), mmToPx(mm))!;
-      t += 8;
-    }
-    expect(back.sharedMm).toBeCloseTo(atOutbound.sharedMm, 6);
-  });
-
-  it("⛔⛔ the idle-anchor exit is RATE-INDEPENDENT — the flaw no tuning could fix", () => {
-    // ⚠ The first exit test was a WINDOWED spread, so the moving finger had to cover the
-    // whole tolerance INSIDE one 60 ms window — above ~100 mm/s. Slower than that it never
-    // exited at all, which is what "the depth translation continues" was.
-    // ⭐ Measured from the latch instead, the exit happens after a fixed DISTANCE at any
-    // speed. Asserted at two speeds an order of magnitude apart.
-    const exitAfterMm = (stepMm: number) => {
-      const d = detector();
-      enter(d);
-      let t = 96;
-      let travelled = 0;
-      for (let i = 0; i < 400; i++) {
-        travelled += stepMm;
-        const v = d.push(t, mmToPx(33), mmToPx(33 + travelled));
-        t += 8;
-        if (v === null) return travelled;
-      }
-      return Infinity;
-    };
-    const fast = exitAfterMm(4);
-    const slow = exitAfterMm(0.2);
-    expect(fast).toBeLessThan(TOL_MM + 5);
-    expect(slow).toBeLessThan(TOL_MM + 5);
-  });
-});
-
-describe("⛔⛔ THE GATE LATCHES — two defects, one cause", () => {
-  // ⚠⚠ BOTH OF THESE WERE FOUND BY FINGER ON THE SAME DAY, and they are the same bug seen
-  // from two angles:
-  //   "at the start the translation on depth is OK but then it seems to BLEND into a
-  //    translation along gravity axis, even though the two fingers continue their
-  //    synchronized movements"
-  //   "when I do BACK AND FORTH of the two synchronized fingers, the object DRIFTS along
-  //    the gravity axis"
-  // ⛔ The entry test needs both fingers to have travelled 3× the measured noise across the
-  // window. A hand SLOWS as it settles, and a hand STOPS at every reversal — so the gate
-  // dropped, control fell through to rule 6, and under A7 rule 6's dy is the GRAVITY axis.
-  // The first report is that handover happening once; the second is it happening at every
-  // turnaround, which ratchets into a drift.
-
-  const feed = (d: CommonDragDetector, pairs: readonly (readonly [number, number])[]) => {
-    let last = null as ReturnType<CommonDragDetector["push"]>;
-    pairs.forEach(([a, b], i) => {
-      last = d.push(i * 8, mmToPx(a), mmToPx(b));
+    pairs.forEach(([dr, fo], i) => {
+      last = d.push(t0 + i * 8, mmToPx(dr), mmToPx(fo));
     });
     return last;
   };
 
-  /** A brisk common drag, enough to latch. */
-  const entering = (): readonly (readonly [number, number])[] =>
-    Array.from({ length: 12 }, (_, i) => [i * 3, i * 3] as const);
+  const together = (n: number, step = 3, from = 0) =>
+    Array.from({ length: n }, (_, i) => [from + i * step, from + i * step] as const);
 
-  it("⛔⛔ a common drag that SLOWS TO A CRAWL keeps reporting — the BLEND defect", () => {
-    // ⚠⚠ ASSERTED ON WHAT `push` RETURNS, NOT ON THE FLAG. My first version of this
-    // checked `isCommon`, which stays set either way — so it passed with the latch REMOVED
-    // and proved nothing. `METHOD`: a test that cannot fail is not a test, and the only
-    // way to know is to break the code and watch.
-    const d = detector();
-    expect(feed(d, entering())).not.toBeNull();
-    // Now creep, far below the 3 × 0.761 mm floor the ENTRY test demands.
-    // ⚠ CONTINUOUS TIME. My first version jumped the clock by 112 ms here, which empties
-    // a 60 ms window — so the detector had no baseline and said null for an honest reason
-    // that had nothing to do with the defect. A fixture must not manufacture the failure
-    // it is testing for.
-    let lastDuringCreep = null as ReturnType<CommonDragDetector["push"]>;
-    for (let i = 0; i < 20; i++) {
-      const mm = 36 + i * 0.05;
-      lastDuringCreep = d.push(96 + i * 8, mmToPx(mm), mmToPx(mm));
-    }
-    expect(lastDuringCreep, "a hand that slows is still doing the same gesture").not.toBeNull();
+  it("⭐ starts PENDING — nothing has been decided and nothing may be acted on", () => {
+    const d = det();
+    expect(d.verdict).toBe("PENDING");
+    expect(feed(d, [[0, 0]])).toBeNull();
+    expect(d.verdict).toBe("PENDING");
   });
 
-  it("⛔⛔ a BACK-AND-FORTH never stops reporting, reversal included — the DRIFT defect", () => {
-    // ⭐ At the turnaround the window's travel passes through ZERO, which is exactly what
-    // the entry floor rejects — and every rejection leaked a few frames of rule 6, whose dy
-    // is the gravity axis. Repeated turnarounds ratchet that leak into a drift.
-    // ⛔ So the assertion is that NOT ONE sample after entry returns null.
-    const d = detector();
-    Array.from({ length: 12 }, (_, i) => i * 3).forEach((mm, i) => {
-      d.push(i * 8, mmToPx(mm), mmToPx(mm));
-    });
+  it("⭐⭐ two fingers in step read as COMMON", () => {
+    const d = det();
+    const v = feed(d, together(12));
+    expect(d.verdict).toBe("COMMON");
+    expect(v).not.toBeNull();
+    expect(v!.ratio).toBeCloseTo(1, 6);
+  });
 
-    let nulls = 0;
-    // ⚠ Continues the entry phase's clock — see the note in the crawl vector above.
-    let t = 96;
-    const sweep = (from: number, to: number, step: number) => {
-      for (let mm = from; step > 0 ? mm <= to : mm >= to; mm += step) {
-        if (d.push(t, mmToPx(mm), mmToPx(mm)) === null) nulls++;
-        t += 8;
-      }
+  it("⭐ a validator inside the ratio still follows — hands are not machines", () => {
+    const d = det();
+    // The validator covers 80% of the driver's travel: inside ±35%.
+    feed(d, Array.from({ length: 12 }, (_, i) => [i * 3, i * 2.4] as const));
+    expect(d.verdict).toBe("COMMON");
+  });
+
+  it("⛔ a validator well outside the ratio does NOT authorise it", () => {
+    const d = det();
+    // 30% of the driver's travel: outside ±35% of 1.
+    feed(d, Array.from({ length: 30 }, (_, i) => [i * 3, i * 0.9] as const));
+    expect(d.verdict).toBe("SEPARATE");
+  });
+
+  it("⛔⛔ AMBIGUITY 1 — AT A REVERSAL, BOTH TRAVELS PASS THROUGH ZERO, AND IT HOLDS", () => {
+    // ⚠⚠ The owner named this: "at the moment of direction reversion, both delta position y
+    // converge to zero before changing sign (maybe one before the other): this is the moment
+    // an ambiguity can occur between depth translation and gravity axis translation."
+    // ⭐ A ratio of two numbers passing through zero is noise. Deciding on it is what leaked
+    // vertical translation at every turnaround and ratcheted into a drift.
+    const d = det();
+    feed(d, together(12));
+    expect(d.verdict).toBe("COMMON");
+
+    // ⚠⚠ WITH THE MEASURED POINTER NOISE ON BOTH FINGERS, which is the whole point: a
+    // fixture whose fingers agree EXACTLY keeps a well-behaved ratio even at zero travel,
+    // so it cannot see this defect at all. My first version did exactly that and passed
+    // with the hold window REMOVED. ⭐ Near a turnaround the ratio is jitter ÷ jitter, and
+    // that is garbage however carefully it is computed.
+    // ⚠ The hand DWELLS at the turn — 25 samples, well past the two windows a SEPARATE
+    // decision needs — which is what makes the garbage persist long enough to decide on.
+    let seed = 20260915;
+    const jitterMm = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return ((seed / 0x7fffffff) * 2 - 1) * NOISE_MM;
     };
-    sweep(33, -39, -3); // back through the turnaround
-    sweep(-39, 33, 3); // and out again
-    expect(nulls, "every null here is a frame of vertical drift").toBe(0);
+    let t = 96;
+    for (let i = 0; i < 30; i++) {
+      // ⚠ A GENUINE dwell: under a millimetre of real travel across the whole turn, so the
+      // window travel sits below the noise floor and the ratio is jitter over jitter. A
+      // fixture that keeps moving 12 mm through the turnaround never reaches the state the
+      // hold window exists for — my first two attempts at this both did.
+      const along = 33 - 0.001 * i * i;
+      d.push(t, mmToPx(along + jitterMm()), mmToPx(along + jitterMm()));
+      t += 8;
+      expect(d.verdict, `flipped at sample ${i} of the reversal`).toBe("COMMON");
+    }
   });
 
-  it("⛔ but a genuine DIVERGENCE still ends it — that is the hand saying something else", () => {
-    const d = detector();
-    feed(d, entering());
-    expect(d.isCommon).toBe(true);
-    // One finger holds while the other runs on: a rule 6 drag, not a depth drag.
-    const diverge = Array.from({ length: 12 }, (_, i) => [36 + i * 4, 36] as const);
-    expect(feed(d, diverge)).toBeNull();
-    expect(d.isCommon).toBe(false);
+  it("⛔⛔ AMBIGUITY 2 — A VALIDATOR THAT STARTS LATE IS NOT A DIFFERENT GESTURE", () => {
+    // ⚠⚠ Also the owner's: "at the start, if the second finger is slightly lagging its
+    // start, it can also be confused with a gravity axis translation (finger on the object
+    // delta position y while second finger still idle)."
+    // ⭐ So a single disagreeing window must not decide. The verdict stays PENDING through
+    // the lag — and PENDING means the caller withholds the vertical rather than handing it
+    // to rule 6, which is what produced the lurch at the start of every gesture.
+    const d = det();
+    // Driver moves for one window; validator has not begun.
+    feed(d, Array.from({ length: 7 }, (_, i) => [i * 3, 0] as const));
+    expect(d.verdict, "one window of lag must not decide").toBe("PENDING");
+    // The validator catches up.
+    feed(d, Array.from({ length: 12 }, (_, i) => [18 + i * 3, i * 3] as const), 56);
+    expect(d.verdict).toBe("COMMON");
   });
 
-  it("⛔ ENTERING still needs both fingers moving — the latch does not lower the bar", () => {
-    // ⚠ Rule 6's anchor is deliberately still, and this is what keeps it out of A6.
-    const d = detector();
-    const oneMoving = Array.from({ length: 12 }, (_, i) => [i * 3, 0] as const);
-    expect(feed(d, oneMoving)).toBeNull();
-    expect(d.isCommon).toBe(false);
+  it("⛔ …but a validator that NEVER starts is rule 6, and it is decided", () => {
+    const d = det();
+    feed(d, Array.from({ length: 40 }, (_, i) => [i * 3, 0] as const));
+    expect(d.verdict).toBe("SEPARATE");
+  });
+
+  it("⛔ fingers moving OPPOSITE ways are not a depth drag", () => {
+    const d = det();
+    feed(d, Array.from({ length: 30 }, (_, i) => [i * 3, -i * 3] as const));
+    expect(d.verdict).toBe("SEPARATE");
+  });
+
+  it("⭐⭐ a SLOW drag stays COMMON — the hold window is not a speed test", () => {
+    // ⚠ The earlier gate re-decided every frame against a travel floor, so a hand that
+    // slowed as it settled dropped out of depth and into rule 6's vertical: "it seems to
+    // blend into a translation along gravity axis". ⭐ Below the floor the ratio is
+    // undefined, and undefined means HOLD, not "no".
+    const d = det();
+    feed(d, together(12));
+    expect(d.verdict).toBe("COMMON");
+    let t = 96;
+    for (let i = 1; i <= 30; i++) {
+      d.push(t, mmToPx(33 + i * 0.05), mmToPx(33 + i * 0.05));
+      t += 8;
+    }
+    expect(d.verdict).toBe("COMMON");
+  });
+
+  it("⛔ a lone VALIDATOR cannot start a depth drag on its own", () => {
+    const d = det();
+    feed(d, Array.from({ length: 30 }, (_, i) => [0, i * 3] as const));
+    expect(d.verdict).not.toBe("COMMON");
   });
 });
 

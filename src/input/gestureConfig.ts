@@ -175,17 +175,17 @@ export interface GestureConfig {
   gainTranslateDepth: number;
 
   /**
-   * Amendment **A6** — how far apart the two touchpoints' vertical travels may be, in
-   * millimetres on screen, and still count as ONE common drag.
+   * Amendment **A6** — how far the VALIDATOR's vertical travel may sit from the DRIVER's,
+   * as a fraction. `0.35` means *"within ±35%"*.
    *
-   * ⛔⛔ THE TOLERANCE IS ON THE **DIFFERENCE**, AND THAT IS THE WHOLE DISCRIMINATOR.
-   * A6 shares a touchpoint configuration with rule 6 — one finger on the object, one
-   * beside it — so the two are told apart by what the fingers DO: common mode is depth,
-   * differential mode is rule 6.
+   * ⛔⛔ A RATIO, NOT A DISTANCE, and the difference matters. The object follows the finger
+   * touching it; the second finger only authorises that reading by following. A fixed
+   * millimetre tolerance would make a fast drag trivially easy to validate and a slow one
+   * nearly impossible — the same absolute slack means something different at every speed.
    * ⚠ Too tight and a hand cannot hold two fingers parallel enough; too loose and an
    * ordinary rule 6 drag starts reading as depth. `IN5` — a placeholder, with a slider.
    */
-  depthCommonToleranceMm: number;
+  depthFollowRatio: number;
   /**
    * The window the two travels are measured across, milliseconds.
    * ⛔ Mistake shape 1 — *a rate estimated over the shortest available baseline* — has
@@ -539,9 +539,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // phantom lead, cut to a fifteenth of its landmark. A computation tells you where a
   // meaningful zero is; it does not tell you where a hand wants to stand.
   gainTranslateDepth: 3,
-  // ⚠ Both placeholders. 6 mm of slack over 60 ms is a guess at how parallel a hand can
-  // hold two fingers, and a guessed number has been wrong every time on this project.
-  depthCommonToleranceMm: 6,
+  // ⚠ Both placeholders, and a guessed number has been wrong every time on this project.
+  // ±35% is a guess at how closely a hand holds two fingers in step.
+  depthFollowRatio: 0.35,
   depthCommonWindowMs: 60,
   gainTranslateMutual: 0.5,
 

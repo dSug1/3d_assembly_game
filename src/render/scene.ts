@@ -314,12 +314,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     depth: CommonDragDetector;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
-    /**
-     * ⭐ How much of the shared travel has already been turned into depth, millimetres.
-     * ⛔ The detector reports a CUMULATIVE shared travel, so the object moves by the
-     * CHANGE — applying the value itself every frame would compound it.
-     */
-    appliedSharedMm: number;
+
     /**
      * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
      * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
@@ -903,7 +898,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
         // what baseline. ⛔ The tolerance is on the DIFFERENCE of the two travels: it is
         // what separates A6 from rule 6, whose anchor is deliberately still.
-        tunable("depth common tolerance (mm)", "depthCommonToleranceMm", 1, 20, 0.5),
+        tunable("depth follow ratio (±)", "depthFollowRatio", 0.05, 1, 0.05),
         tunable("depth common window (ms)", "depthCommonWindowMs", 20, 200, 10),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
@@ -1081,6 +1076,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * each event's delta sums to exactly the common travel. Applying the whole of each would
    * move the object TWICE as far as the hand asked.
    */
+  /**
+   * Move the held object in depth by the DRIVER's own travel.
+   *
+   * ⛔⛔ THE DRIVER IS THE FINGER TOUCHING THE OBJECT, AND IT SUPPLIES ALL THE MOTION. The
+   * second finger contributes none — it authorises the depth reading by following. ⚠ Three
+   * earlier versions of this blended the two fingers' travel (a mean, a minimum, a faded
+   * mean) and a hand felt every one of them: a blend has seams.
+   */
   const applyDepthStep = (grip: Held, dyPx: number): void => {
     const mp = requirePose(grip.mesh);
     const { minM, maxM } = depthLimits(cfg);
@@ -1094,7 +1097,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // bottom ring.
         grip.frame.depth,
         Math.sign(grip.frame.towardGravity),
-        dyPx / 2,
+        dyPx,
         // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object
         // as far INTO the scene as it would move it ACROSS. One hand's-worth of motion
         // means the same amount of movement whichever way it is going.
@@ -1114,24 +1117,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    *
    * @returns true when A6 owns this object right now, so the caller skips its own rule.
    */
-  const applyDepthDrag = (grip: Held, holderY: number, anchorY: number, t: number) => {
-    const common = grip.depth.push(t, holderY, anchorY);
-    if (!common) {
-      // ⛔ The latch is gone, so the next one starts its shared travel from zero.
-      grip.appliedSharedMm = 0;
-      return false;
-    }
-    // ⭐⭐ THE CHANGE IN THE SHARED TRAVEL — the part BOTH fingers agreed on since the
-    // latch, minus what has already been spent. ⛔ A finger moving alone contributes
-    // nothing to it, which is the whole point.
-    const stepMm = common.sharedMm - grip.appliedSharedMm;
-    grip.appliedSharedMm = common.sharedMm;
-    applyDepthStep(grip, mmToPx(stepMm));
+  /**
+   * Classify the gesture, and move the object only if the DRIVER moved and the validator
+   * authorised it.
+   *
+   * @param driverDyPx the driver's travel THIS FRAME. ⚠ Zero when it was the validator that
+   *   moved — a validator's event classifies and nothing more.
+   */
+  const applyDepthDrag = (
+    grip: Held,
+    driverY: number,
+    followerY: number,
+    t: number,
+    driverDyPx: number,
+  ) => {
+    const common = grip.depth.push(t, driverY, followerY);
+    if (!common) return false;
+    applyDepthStep(grip, driverDyPx);
     grip.mode = "DEPTH";
 
     // ⭐ THE SCENE REACTS TO A PUSH TOO — the same sway, the same four tunables.
     // ⚠ SIGN: fingers moving UP (negative screen y) push the object AWAY, which is +push.
-    const kick = grip.depthSway.push({ x: 0, y: holderY, t }, true, true);
+    const kick = grip.depthSway.push({ x: 0, y: driverY, t }, true, true);
     if (kick) {
       const push = grip.frame.depth;
       {
@@ -1250,11 +1257,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         depth: new CommonDragDetector(
           cfg.depthCommonWindowMs,
-          cfg.depthCommonToleranceMm,
+          cfg.depthFollowRatio,
           cfg.pointerNoiseMm,
         ),
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
-        appliedSharedMm: 0,
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
         // of orientation noise per sample. Measured over 10 s of a still finger that is
@@ -1285,7 +1291,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         const holder = router.objects().find((q) => q.object === mesh);
         const grip = holder ? held.get(holder.id) : undefined;
         // ⭐ Positions, not deltas: the detector owns the shared travel now.
-        if (grip) applyDepthDrag(grip, grip.prev.y, s.y, s.t);
+        // ⛔ A second touchpoint on the object is a validator too: it classifies only.
+        if (grip) applyDepthDrag(grip, grip.prev.y, s.y, s.t, 0);
       }
       paint();
       return;
@@ -1313,7 +1320,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // would only work while the OBJECT's finger moved, and a hand moves both.
         const holder = router.objects()[0];
         const grip = holder ? held.get(holder.id) : undefined;
-        if (grip && applyDepthDrag(grip, grip.prev.y, s.y, s.t)) {
+        // ⛔ The validator moved, so it classifies and moves NOTHING: zero travel.
+        if (grip && applyDepthDrag(grip, grip.prev.y, s.y, s.t, 0)) {
           paint();
           return;
         }
@@ -1389,7 +1397,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const depthAnchor = depthAnchorFor(grip);
       if (
         depthAnchor &&
-        applyDepthDrag(grip, s.y, depthAnchor.last.y, s.t)
+        applyDepthDrag(grip, s.y, depthAnchor.last.y, s.t, s.y - grip.prev.y)
       ) {
         grip.prev = s;
         paint();
