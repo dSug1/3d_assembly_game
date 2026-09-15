@@ -30,7 +30,7 @@ They are the record, not the briefing.
 ## Where it stands, in five lines
 
 ⭐ **DEPLOYED and driven by finger**: TypeScript + Babylon.js + Vite, `npm run verify`
-runs a typecheck and **466 golden vectors, all passing**, live at
+runs a typecheck and **480 golden vectors, all passing**, live at
 **https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
 ✅ **Engine-agnostic and enforced**: `src/core` and `src/input` import no engine, and
 [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if that stops
@@ -42,8 +42,9 @@ the screen plane — all closed by device look. ⛔ The rest of `IN3`/`IN4` wait
 ⛔⛔ **Every one of those defects was found BY FINGER, and none was visible to a green
 suite.** ⭐ The count and its ledger live in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md), which
 is the one place that carries them — this router deliberately no longer restates a number,
-because the one it restated went stale. They are four repeating shapes — a rate over too short a baseline, a substituted
-quantity, idealised fixtures, and a composition nobody computed. They are written out
+because the one it restated went stale. They are **five** repeating shapes — a rate over too short a baseline, a substituted
+quantity, idealised fixtures, a composition nobody computed, and ⭐ **my own FIXTURES**,
+which raise false alarms that look exactly like real defects. They are written out
 in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md)'s YOU-ARE-HERE block because they bind every
 row still to come.
 ✅✅ **The fast device loop WORKS** — `npm run dev:usb` + `adb reverse`, and the tablet

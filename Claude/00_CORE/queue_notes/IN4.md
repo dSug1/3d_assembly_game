@@ -393,3 +393,41 @@ nearest published relatives — Z-technique (3DUI 2010) and DS3 (TVCG 2012) — 
 onto a *second finger's relative motion*, not a pinch. ⭐ But it is the closest any gesture
 here has come to the ground the catalogue flags, so it is tagged ⚠ **NOVEL COMPOSITE** and
 marked for `SEC4` **at the moment of adoption** rather than after.
+
+---
+
+# ⚠ RULE 6 UNDER `A7` AND `A6` — what changed after this row closed *(2026-09-15)*
+
+This row closed on the device, and then two amendments changed what its two numbers MEAN.
+⛔ Neither reopens it; both are recorded here so the closure is not read as covering them.
+
+**`A7` — `dy` is now the GRAVITY axis, not the screen's up.** Rule 6 translates along
+`frame.right` and `frame.up`, and `frame.up` is the world vertical. ⭐ At a level camera
+nothing changed; as the camera tilts, a vertical drag now raises the object rather than
+sliding it along the screen. ⚠ **The stated cost**: vertical motion goes quiet looking
+straight down — the same *"goes quiet"* shape as `A3`'s handover, and for the same reason.
+
+**`A6` — the vertical is WITHHELD while the gesture is undecided.** Depth shares rule 6's
+touchpoint configuration, and the two are told apart by what the fingers DO, which takes a
+window to see. ⛔ Until the verdict, rule 6 applies the horizontal only:
+
+```ts
+const pending = depthAnchorFor(grip) !== null && grip.depth.verdict === "PENDING";
+const t = screenTranslation(s.x - grip.prev.x, pending ? 0 : s.y - grip.prev.y, …);
+```
+
+⭐ **One line, three reports fixed**: a lurch at the START of a drag, a lurch at the END,
+and a cumulative VERTICAL DRIFT over repeated back-and-forths. The old code read `PENDING`
+as *"not a depth drag"* and translated vertically, so every ambiguous frame at each end of
+every gesture leaked a little, and the leaks accumulated.
+
+⭐ *Acting is irreversible; not knowing is not a reason to act.* The horizontal is
+unambiguous and always applies.
+
+⚠ **THE COST, STATED**: the first window of vertical travel is **discarded**, not released
+in one step — releasing it IS the jump being complained about. A two-finger vertical
+gesture starts from where it was RECOGNISED, not from where it began.
+
+⛔ **And rule 6 has no DEADBAND either** (`A9`/`IN12`) — it integrates the same raw delta
+rule 2bis does. Its follower and phantom lead mask the jitter better than the rotation does,
+which is why it was reported on the rotation first.

@@ -183,3 +183,95 @@ named a direction: *"we will need to fix this by using the touch and pinch on tw
 **6ter** already occupies. ⚠ That is recorded as the owner's thought, **not** as a design:
 whether the fix is 6ter, a minimum touch target, or something else is the proposal that has
 not been made yet.
+
+---
+
+# ⭐⭐ THE PINCH IS GONE — `A6`/`D17`, and what the five failed models taught
+
+**2026-09-15.** Everything above describes the **pinch** (`A5`/`D16`). Its geometry stands
+— depth is HORIZONTAL, the view direction flattened onto the ground, so height never
+changes — but ⛔ **its TRIGGER is superseded**, on the owner's instruction:
+
+> *"Instead of a pinch on one (or, later, two) objects, the translation in depth shall be
+> controlled by one touchpoint on the object && one touchpoint anywhere && both touchpoints
+> delta position on y by the same amount (within a threshold): this will solve the hole in
+> A5 and be closer to the current translation mechanism."*
+
+⭐ It answers the hole a hand found: **two fingers will not fit on a small object**, and
+pushing a part away shrinks it — the pinch destroyed its own affordance as it succeeded.
+
+## ⛔⛔ FIVE MODELS, FOUR OF THEM REJECTED BY A HAND
+
+This row is the most expensive thing in the project so far, and none of the cost was in the
+geometry. It was all in **how two fingers are combined**:
+
+| # | model | what a hand said |
+|---|---|---|
+| 1 | the MEAN of the two travels | *"a finger which is outside any object can move the object on depth"* — halves sum to the average, so a lone finger still moved it |
+| 2 | a gate re-decided every frame against a travel floor | *"it blends into a translation along gravity axis"*, *"the object drifts"* — a hand that SLOWS or REVERSES drops out of depth into rule 6 |
+| 3 | a latch with a **windowed** divergence exit | *"if I stop moving the second finger… the depth translation continues"* — a windowed rate is RATE-DEPENDENT; an idle finger never exits below ~100 mm/s |
+| 4 | the SHARED travel (min-with-sign), cumulative exit | *"this is worse than before… it jumps erratically"* — `min` over alternating events stalls then double-steps, and the sign test flips near zero |
+| 5 | a coupled FADE of the accumulated total | caught by my own vectors before the glass: fading a cumulative total **yanks the object backwards** |
+| 6 | ⭐⭐ **DRIVER and VALIDATOR** — the owner's | *"that's the correct formulation of what I have in mind"* |
+
+⭐⭐ **THE TRANSFERABLE PART: A BLEND HAS SEAMS.** Models 1–5 all mixed the two fingers'
+travel into one number. Every one of them was discontinuous somewhere — at a reversal, at a
+slow patch, at an alternating event order — and a hand found the seam within minutes each
+time. ⛔ **The fix was not a better blend; it was to stop blending.** One finger drives and
+the other votes, so there is nothing to be discontinuous.
+
+⚠ **And I proposed four of the five.** The owner's correction was not a preference between
+options I offered — it was a different shape entirely:
+
+> *"There is a flaw in your logic: the depth translation shall not be done with a continuous
+> coupling. The depth translation shall follow the delta position y of the finger which
+> touchpoints the object provided that the other finger follows the same delta position y
+> within a certain percentage ratio."*
+
+## ⭐ The two ambiguities, named by the owner BEFORE any code
+
+Both are moments when the ratio is **undefined**, not moments when it is wrong:
+
+1. **At a reversal**, both travels pass through zero — *"maybe one before the other"* — so
+   the ratio is jitter ÷ jitter. ⛔ Deciding on it leaked vertical translation at every
+   turnaround, and the leaks ratcheted into a drift.
+2. **At a late start**, the validator is still idle while the driver moves — which is
+   *exactly* what rule 6 looks like.
+
+⭐ Both are answered by **HOLDING**: below `MIN_TRAVEL_NOISE_MULTIPLE × pointerNoiseMm` the
+verdict does not change, and a disagreement must persist **two** windows before it decides
+`SEPARATE`. ⛔ A single disagreeing window may not decide anything.
+
+## ⛔ The vector that could not have been written by me
+
+My first reversal fixture had both fingers agreeing **exactly** — no noise — so it kept a
+well-behaved ratio even at zero travel and **passed with the hold window removed**. ⚠ That
+is mistake shape 3 (an idealised fixture) and shape 5 (my own fixture) at once. The fixture
+now carries the **measured** 0.761 mm on both fingers, and the hand DWELLS at the turn for
+25 samples — well past the two windows a `SEPARATE` decision needs — which is what makes
+the garbage persist long enough to be decided on.
+
+## What rule 6 had to give up for this
+
+⛔⛔ **Rule 6 now WITHHOLDS the vertical while the verdict is `PENDING`.** A6 and rule 6
+share a touchpoint configuration and are told apart by what the fingers DO, which takes a
+window to see — and `A7` made rule 6's `dy` the gravity axis, so every ambiguous frame used
+to leak a little vertical. ⭐ *Acting is irreversible; not knowing is not a reason to act.*
+
+⚠ **The cost, stated**: the first window of vertical travel is **discarded**, not released
+in one step. Releasing it is precisely the jump being complained about. A two-finger
+vertical gesture therefore starts from where it was RECOGNISED, not from where it began.
+
+## The numbers, and what a hand set
+
+* `gainTranslateDepth` — ⭐ **0.5–5, default 3.0**, the range widened on the owner's
+  instruction after the first slider (0.25–3) proved too narrow at the top.
+* `depthFollowRatio` — the percentage band, a placeholder with a slider.
+* `depthCommonWindowMs` — the window the ratio is judged over, a placeholder.
+* ⭐ The **sympathetic sway answers a depth push** through the same implementation and the
+  same four tunables, on the owner's instruction to avoid new sliders.
+* ⭐ The ceiling is printed on the HUD (`depth=… [min–max] ⛔MAX`), because *"I can't see
+  the object hitting any wall"* — a claim a device cannot check is an assertion.
+
+⛔ **Still owed, and nothing is built**: how a SMALL object is reached at all. The owner's
+thought is to use TWO objects, which is 6ter's configuration.

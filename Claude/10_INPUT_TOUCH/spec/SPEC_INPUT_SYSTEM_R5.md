@@ -6,7 +6,7 @@
 > build status of each
 > **READ IF** · you are building or changing anything a finger touches
 > **SOURCED FROM** · the owner's `input-system-v5.md`, supplied 2026-09-13
-> **LAST VERIFIED** · 2026-09-15, against 466 passing vectors
+> **LAST VERIFIED** · 2026-09-15, against 480 passing vectors
 
 ⛔⛔ **THE OWNER'S REVISION-5 TEXT IS REPRODUCED IN FULL AND UNALTERED**, apart from
 repairing mojibake from the original file's encoding (`â` → `—`, `Â§` → `§`). Not one of
@@ -41,16 +41,17 @@ table is written against what each touchpoint was latched as, not where it is no
 | touchpoints | what they are on | what happens | spec | status |
 |---|---|---|---|---|
 | 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, rollback, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` |
-| 1 | an object | **free rotation** — yaw/pitch about the screen axes, world-frame, gain in rad/mm | §2 rule 2bis | ✅ **works**, ⚠ applied UNCONDITIONALLY — see below |
-| 1 | an object | **roll** about the view axis, from a circular gesture (Hyper circle fit) | §2 rule 2quinte | ✅ `IN1` |
+| 1 | an object | **free rotation** — yaw about the **world vertical**, pitch about the horizontal screen axis, gain in rad/mm | §2 rule 2bis · ⭐ **A7** | ✅ **works**, ⚠ applied UNCONDITIONALLY — see below. ⛔ No deadband yet (`A9`/`IN12`) |
+| 1 | an object | **roll** from a circular gesture (Hyper circle fit), about the view direction **flattened onto the ground** | §2 rule 2quinte · ⭐ **A7** | ✅ `IN1`, ⭐ **rebased to the circle's start** (`A8`) |
 | 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⭐ **collision RESOLVED 2026-09-15** — eviction moved away (amendments A1 → A4; it is now a quick back-and-forth), so a double-tap means one thing only |
 | 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ **amended**: driven by delta position, NOT device tilt |
 | 1 | empty space | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ |
 | 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
-| 2 | one object + one empty space | **translate in the screen plane**, with inertia and a phantom lead | §4 rule 6 | ✅ `IN4` (partial) |
-| 2 | both the SAME object | the second is **IGNORED**, for its lifetime | §5 (was undefined) | ✅ `IN8` decided, `IN2` built |
-| 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `3D1` |
-| 3+ | any | every hit on an already-held object is ignored; the rest keep their latched roles | — | ⚠ by construction, not measured — palm contact is untested |
+| 2 | one object + one empty space | **translate**: `dx` along the horizontal screen axis, `dy` along **gravity** — with inertia and a phantom lead | §4 rule 6 · ⭐ **A7** | ✅ `IN4` (partial) ⛔ **CLOSED 2026-09-15** |
+| 2 | one object + one **anywhere**, both `dy` together | **DEPTH** — the object moves along the view direction flattened onto the ground, so its **height never changes**. ⛔ The finger on the object DRIVES; the other only VALIDATES by following within a ratio | ⭐ **A6** (§5 was undefined) | ✅ wired and tuned by finger |
+| 2 | both the SAME object | a **validator** for the depth drag above — it authorises, it does not move the object | ⭐ **A6** supersedes `D10`/`A5` | ✅ built. ⛔⛔ **A hand found the hole this replaced a pinch to avoid, and it is STILL open: two fingers do not fit on a SMALL object**, and pushing a part away shrinks it. A proposal is owed |
+| 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `IN3`'s face selection — ✅ `3D1` is built and closed |
+| 3+ | any | the THIRD touchpoint and beyond are ignored; the rest keep their latched roles | — · **A5** moved this trigger | ⚠ by construction, not measured — palm contact is untested |
 
 ⚠ **Rule 6 is reached by PRESENCE, re-read every frame** — not by a latched mode, and not
 by the anchor's `STATIONARY` state as the rule's wording implies. A second finger outside
@@ -113,6 +114,8 @@ reached its 800-line cap. `METHOD`: *when two sections conflict, the later one w
 | **A5** | `D10`, and §5's *"two touchpoints on the same object — undefined and reachable"* | two fingers on ONE object are a **depth pinch**, and ⛔ *depth is HORIZONTAL* — the view axis flattened onto the ground plane, so **the object's height never changes**. The gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD touchpoint |
 | **A6** | A5's trigger | depth is a **COMMON VERTICAL DRAG** — one finger on the object, one ANYWHERE, both travelling in y together. ⛔ It shares rule 6's configuration: **common mode is depth, differential mode is rule 6** |
 | **A7** | 2bis, 2quinte and rule 6's *"screen view plane"* | every object gesture stands on a **GRAVITY FRAME** — yaw about the vertical, pitch about the horizontal screen-x, roll and depth about the flattened view direction. ⛔ The argument is **orthogonality**: about the camera's axes, roll stops being independent of yaw as the camera tilts |
+| **A8** | §1.3's provisional motion, which rolled back only at RELEASE | a roll **REBASES** to the start of its circle: the yaw/pitch applied before 60° of arc is undone. ⛔ To the FIT WINDOW's start, **not to the press** — a straight drag that precedes a circle was asked for and survives. ⚠ The object jumps at the commit, by exactly the unasked-for rotation it replaces |
+| **A9** | §1.3 and rule 6 — both consume the RAW per-event delta | a **DEADBAND** on `dx`/`dy`, **per axis**, with a slider. ⛔⛔ A *hard* deadband is a jump traded for a jump; the **residual-accumulator** form is the one to build, and the vector asserts CONTINUITY. ⚠ Not applied to roll (1€-filtered) or to A6's driver (its own hold window) — a decision, not an oversight. Row `IN12` |
 | **A3** | 2quinte's *"on a constrained object the circular gesture is ignored"* **and** 2sexte's undefined behaviour when its axis projects to a point | ⛔ roll **DRIVES the free DOF** of an anchored object, about the CONSTRAINT axis; **2sexte suppresses** where it is degenerate. **ONE handover constant with hysteresis**, latched at press |
 
 ---

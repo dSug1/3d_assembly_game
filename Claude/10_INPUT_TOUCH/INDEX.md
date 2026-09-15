@@ -3,11 +3,13 @@
 > **STATUS** · ⭐ active · **OWNS** · everything a finger touches, up to the point an
 > object's transform changes
 > **READ IF** · you are building or debugging any gesture
-> **LAST VERIFIED** · 2026-09-13
+> **LAST VERIFIED** · 2026-09-15
 
 ⭐⭐ **Design of record → [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md)**,
-the owner's revision-5 specification, reproduced verbatim. ⛔ Never edit inside its
-`VERBATIM` markers; findings ABOUT it go here.
+the owner's revision-5 specification. ⛔⛔ **READ [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)
+FIRST** — `A1`–`A9` are the owner's later decisions and **they supersede the spec's text**
+where the two conflict. The spec is left standing and unaltered, because a superseded
+clause explains why the current one exists.
 
 ## Where it stands
 
@@ -25,7 +27,26 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**466 golden vectors, all passing** (37 → 466).
+**480 golden vectors, all passing** (37 → 480).
+
+### ⭐⭐ The amendments, and what of them is on the glass
+
+| # | what it decided | built? |
+|---|---|---|
+| `A1`–`A4` | eviction: off the double-tap, off the roll channel, spares `MATE`s, and is a **quick back-and-forth** | ⚠ `shake.ts` built + 15 vectors, **NOT WIRED** |
+| `A3` | **roll drives an anchored object's free DOF**, 2sexte suppressed where it degenerates | ⚠ `anchor_rotate.ts` built + 25 vectors, **NOT WIRED** |
+| `A5` → `A6` | **depth**: a pinch, superseded by a **common vertical drag** — one finger DRIVES, a second **anywhere** only VALIDATES by following within a ratio | ✅ wired, tuned by finger |
+| `A7` | ⭐⭐ every object gesture stands on a **GRAVITY FRAME** | ✅ wired, and vectored end to end |
+| `A8` | a roll **rebases** to the start of its circle, not to the press | ✅ wired |
+| `A9` | ⛔ a **deadband** on `dx`/`dy`, per axis, with a slider | ⛔ queued — `IN12` |
+
+⛔⛔ **`A6` COST FIVE MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit,
+a shared minimum, a faded blend. ⭐⭐ **The transferable part: a BLEND HAS SEAMS.** Every
+version that mixed the two fingers' travel produced a discontinuity somewhere, and *"it
+jumps erratically"* came back within minutes each time. One finger drives and the other
+votes: nothing is mixed, so there is no seam. ⭐ The two ambiguities — **both travels pass
+through zero at a reversal**, and **a validator that starts late is not a different
+gesture** — are answered by HOLDING the last verdict, not by deciding on garbage.
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -320,12 +341,14 @@ written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PART
 
 ## ⚠ Open questions the spec itself flags
 
-* ✅ **`IN8` — two touchpoints on the same object: DECIDED 2026-09-14 — IGNORE THE
-  SECOND HIT**, for the moment. Reading 2 (the segment between the fingers as a
-  rotation axis) is deferred, not rejected. ⛔ It binds `IN2`: *ignored* is a THIRD
-  latched role beside on-object and outside, and lifting an ignored touchpoint must NOT
-  run the release verdict, the flick test or the tap history — the opposite of the
-  pinch, where lifting one of two fingers ends the gesture.
+* ✅✅ **`IN8` — two touchpoints on the same object: ANSWERED TWICE AND NOW BUILT.**
+  `D10` ignored the second hit; `D16`/`A5` made it a depth **pinch**; `D17`/`A6` replaced
+  the pinch's TRIGGER with a **common vertical drag** and kept its geometry. ⛔⛔ A hand
+  found the hole that forced the second change: **two fingers will not fit on a SMALL
+  object, and pushing a part away shrinks it** — the pinch destroyed its own affordance as
+  it succeeded. ⚠ `IGNORED` survives with its trigger moved to the THIRD touchpoint.
+  ⛔ **Still owed**: a proposal for reaching a small object at all (the owner's thought is
+  to use TWO objects, which is 6ter's configuration) — asked for, and nothing built.
   → [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md)
 * **`axisMappingMode`** `rotated` vs `direct` (§6bis) — build both, A/B on a device.
 * **`matePriorityOverAnchor`** (§1.4) — default is anchor-wins; the flag exists for
@@ -343,6 +366,8 @@ written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PART
 | change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place**. ⭐ To try one *without a rebuild*: `?rollAngle=45` on the URL, or the on-screen menu for the orbit rings |
 | know what is built | [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md), phase `IN` |
 | **why the input code looks the way it does** | [`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md) — every defect found by finger, including the ones that were measured and reverted |
+| **the OWNER's later decisions** | ⭐⭐ [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md), `A1`–`A9`. ⛔ They supersede the spec |
+| why eviction and depth ended where they did | [`history/2026-09-15_superseded_amendment_text.md`](history/2026-09-15_superseded_amendment_text.md) — `A1`'s and `A5`'s full original text, moved out when the amendments file passed its 800-line cap |
 
 ### The source, and what each file owns
 
@@ -354,7 +379,15 @@ written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PART
 | `flick.ts` | §1.3's flick test. ⚠ Lift speed over a **window**, never the last sample pair |
 | `roll.ts` | rule 2quinte. The **Hyper** circle fit; roll is the angle about a fitted centre |
 | `one_euro.ts` | the 1€ filter, smoothing the displayed roll angle |
-| `screen_rotate.ts` | rule 2bis's world-frame yaw/pitch, and 2quinte's roll about the view axis |
+| `screen_rotate.ts` | rule 2bis's yaw/pitch and 2quinte's roll, ⭐ **about the GRAVITY FRAME** (`A7`) — yaw about the world vertical, pitch about the horizontal, roll about the view direction flattened onto the ground |
+| `gravity_frame.ts` | ⭐⭐ `A7`'s frame itself: `{right, up, depth, towardGravity}` from a view axis and gravity. ⛔ A **distinct type** from `ScreenFrame`, so the compiler stops the two being interchanged — and `towardGravity` is what makes depth behave on the **bottom ring**, where "away" SINKS on screen instead of rising |
+| `depth_translate.ts` | `A6`'s depth: `CommonDragDetector` (`PENDING`/`COMMON`/`SEPARATE`, with hold windows), the push direction, and the world-space step. ⛔ It does **not** blend the two fingers |
+| `translate.ts`, `follow.ts`, `lead.ts` | rule 6: the computed gain, the critically-damped follower, and the phantom target that leads along the finger's own smoothed velocity |
+| `shake.ts` | `A4`'s eviction detector — oscillation **along an axis**, because a circle projects to a back-and-forth on every axis. ⚠ Built, not wired |
+| `anchor_rotate.ts` | 2sexte and `A3`'s handover, about the CONSTRAINT axis. ⚠ Built, not wired — and it wants the TRUE view axis, not the gravity frame |
+| `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
+| `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED` |
+| `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |
 | `orbit.ts` | rule 1's three-ring surface, monotone and bounded by the rings |
 | `barycentre.ts` | rule 1's orbit **centre** — what the camera orbits around |

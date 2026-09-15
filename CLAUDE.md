@@ -44,9 +44,9 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-14)
+## Where it stands (2026-09-15)
 
-✅ Green: TypeScript + Babylon + Vite, **466 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **480 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -63,12 +63,31 @@ finger's own motion (`src/input/translate.ts`, `follow.ts`, `lead.ts`).
 ✅ **Object ROTATION works** — free yaw/pitch and roll, both by finger. ⚠ What it lacks is
 rule 2bis's PRECONDITION (*an empty constraint stack*), because §1.4's stack does not
 exist yet; `IN3` attaches it to the object model and adds that test, it does not delete
-the rotation. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
+the rotation.
+✅✅ **AND IT NOW STANDS ON A GRAVITY FRAME** (`A7`/`D18`, `src/input/gravity_frame.ts`):
+yaw about the **world vertical**, pitch about the horizontal screen axis, roll about the
+view direction **flattened onto the ground** — and rule 6's `dy` is a true vertical.
+⛔⛔ **The argument is ORTHOGONALITY, not tidiness**: about the camera's own axes the view
+axis gains a vertical component as it tilts, so roll stops being independent of yaw and no
+gain can separate them. ⭐ One basis serves translation AND rotation.
+✅ **A roll REBASES to the start of its circle** (`A8`): a circle is not read as a roll until
+60° of arc, and the yaw/pitch applied meanwhile is now undone — to the FIT WINDOW's start,
+not to the press, so a straight drag that precedes a circle survives.
+⛔ **Queued, `IN12`/`A9`: a DEADBAND on `dx`/`dy`, per axis, with a slider.** Both rules
+integrate the raw per-event delta and the pointer noise is 0.761 mm, so a still finger turns
+a held object. ⚠ **The trap is written down before the build**: a *hard* deadband is a jump
+traded for a jump — build the residual-accumulator form and assert CONTINUITY.
+✅✅ **DEPTH translation works** (`A6`/`D17`, `IN8` wired): one finger on the object DRIVES
+it, a second finger **anywhere** only VALIDATES by following the same `dy` within a ratio.
+⛔ It took five models and a device pass each — a mean, a latch, a cumulative exit, a
+shared minimum, a faded blend — before the owner supplied the right one. ⭐ **A blend has
+seams and a hand feels every one of them.** ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Twenty-five defects have been found BY FINGER and none was visible to a green
-suite.** They are four repeating shapes — a rate estimated over too short a baseline, a
-substituted quantity, idealised fixtures, and a composition nobody computed. ⭐ They
+⛔⛔ **Twenty-six defects have been found BY FINGER and none was visible to a green
+suite.** They are **five** repeating shapes — a rate estimated over too short a baseline, a
+substituted quantity, idealised fixtures, a composition nobody computed, and ⭐ **my own
+FIXTURES**, which produce false alarms that look exactly like real defects. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
 block, and they bind every row still to come.
 
@@ -93,10 +112,16 @@ placement, faces, connectors, the assembly tree, and the constraint stack attach
 object. ⭐⭐ The vectors were written FIRST and then **falsified on purpose** — breaking the
 composition turns 14 of 42 red, which is why the green means something. ⭐ `reroot`
 implements **parent ≠ root** and moves nothing.
-⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`**, and a
-new owner decision sits in front of it: the hand reached for a **PINCH ON THE OBJECT** to
-get depth, which re-opens `D10`/`IN8` (two touchpoints on the same object). See
-`DECISIONS.md`.
+⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`**; `IN12`
+(the deadband) is smaller and unblocked and can go first.
+⭐⭐ **A REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
+entry**: *"you destroyed the rotation around the gravity axis… it came back to the axis of
+the screen view plane"* — withdrawn by the owner after `tests/a7_wiring.test.ts` composed
+the frame with the rotation and asserted the axis that comes out, at four camera tilts.
+⛔ Every part of `A7` already had green vectors and **the composition had none**. That is
+mistake shape 4 pointing at a CORRECT piece of work. ⭐ `METHOD`: *a composition is a thing
+to MEASURE, not an emergent property* — and measuring it is what told a real defect (the
+missing deadband) from an impression.
 ⭐⭐ Rule 6's gain was **computed, not guessed**: `gainTranslateScreen` is a multiplier on
 a tracking factor and **1.0 puts the object exactly under the finger**.
 ⭐ **The order is `IN2` → rule 6 translate → `3D1` → 6bis onward.** `IN4`'s dependency

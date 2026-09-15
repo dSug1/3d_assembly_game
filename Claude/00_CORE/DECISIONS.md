@@ -19,6 +19,7 @@ belong in a `REJECTED.md` — start one the first time something is measured out
 | `D6` | ⛔ **`src/core` and `src/input` import no engine**, and a test enforces it | 2026-09-13 | The predecessor stated the same contract in prose and it silently became false |
 | `D7` | **Thresholds in millimetres, never pixels** | 2026-09-13 | `src/core/units.ts`; every threshold converts at runtime |
 | `D8` | ⭐ **The constraint stack replaces the three booleans** | 2026-09-13 | Owner's revision-5 spec §1.4, adopted as the design of record |
+| `D19` | ⭐⭐ **A DEADBAND on the pointer delta, per axis, with a slider** | 2026-09-15 | *"The logic is right: we just need a deadband on x and y delta position"*, with *"a slider to manually finetune it"*. 2bis and rule 6 integrate the RAW per-event delta and `pointerNoiseMm` is **0.761 mm measured**, so a still finger turns a held object and a slow drag staggers. ⛔⛔ **The trap, written down before the build: a HARD deadband is a jump traded for a jump** — zeroing below `b` and passing above it unchanged inserts a step of exactly `b` at the crossing, and destroys slow travel outright. ⭐ The **residual-accumulator** form (hold the remainder, emit and subtract when it exceeds the band) keeps slow travel exact for ≤ `b` of latency; the soft form is the A/B. ⛔ The vector asserts **CONTINUITY** — total travel over a long slow drag equals the input to within one band — because *"small deltas do nothing"* passes for the broken form too. ⛔ Per AXIS, never on the magnitude: `dx` is yaw about gravity and `dy` is pitch about the horizontal, so a magnitude band lets noise cross-talk between them. ⚠ **ONE constant, not two** — same finger, same glass. ⭐ Its landmark is the first MEASURED one on this project, and `IN4`'s phantom lead is the standing warning that a landmark marks a range's zero, not where to stand. Amendment **A9**, row `IN12` |
 | `D18` | ⭐⭐ **Every object gesture stands on a GRAVITY FRAME** | 2026-09-15 | Yaw about the world vertical, pitch about the camera's (always horizontal) right, roll and A6's depth about the view direction FLATTENED onto the ground; translation's dy becomes a true vertical. ⭐ Two of the four were already true — pitch and dx — because the camera carries no roll. ⛔⛔ **The argument is ORTHOGONALITY, not tidiness**: about the camera's axes the view axis gains a vertical component as the camera tilts, so roll stops being independent of yaw and no gain can separate them. ⭐⭐ One basis serves translation AND rotation — *the axis you push along is the axis you can turn about* — and it is the frame the world is built in. ⚠ Costs: vertical motion goes quiet looking straight down (the third and fourth *"goes quiet"* shape), and the roll's PICTURE changes with tilt though the gesture does not. ⭐ It buys a roll that is **reproducible in world terms** across an orbit. Amendment **A7** |
 | `D17` | ⭐⭐ **Depth is a COMMON VERTICAL DRAG, not a pinch** | 2026-09-15 | Supersedes `D16`'s TRIGGER; its geometry stands. One finger on the object, one **anywhere**, both travelling in y together. ⛔ A hand found the hole: two fingers will not fit on a SMALL object, and pushing a part away shrinks it — **the pinch destroyed its own affordance as it succeeded**. ⭐⭐ It shares rule 6's configuration, so the discriminator is the design: **common mode is depth, differential mode is rule 6**, and the tolerance is on the DIFFERENCE of the two travels. ⭐ The gain is rule 6's computed factor redirected, so `gainTranslateDepth` — already declared as debt owed to 6bis — is wired rather than invented, and 1.0 means *as far as a drag would*. ⚠ Not "under the finger": that mapping diverges as the camera levels out. Amendment **A6** |
 | `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** — the pinch trigger is gone; the depth GEOMETRY it established stands | 2026-09-15 | Superseded `D10`. Pinch in pushes the object away, pinch out brings it closer; one finger on each of two objects is §4 rule **6ter**, already specified. ⭐⭐ It came from a HAND, as a fourth answer the watch item did not offer — so §3.2 DS3 is declined. ⭐ It removes `D10`'s dead end: lifting one of two fingers now returns to rotation instead of leaving the part unresponsive. ⛔⛔ **The gain is COMPUTABLE — `distance' = distance × (sep₀/sep₁)` — so `gainPinchDepth` is a multiplier on a computed factor and 1.0 is CORRECT, not preferred.** ⚠ `IN2`'s `IGNORED` role survives with a moved trigger: the SECOND touchpoint participates, the third and beyond are ignored — the 22 router vectors are written against the old rule. Amendment **A5** |
@@ -71,3 +72,27 @@ and `targetVelocity` in the follower. The note at the top of this file asks for 
 measurements, under *"TWO THINGS A NEW SESSION MUST NOT REBUILD"* in
 [`QUEUE.md`](QUEUE.md). ⛔ One home, not two — but if a third is measured out, that block
 is the thing to split into `REJECTED.md`, not this file.
+
+## ⭐⭐ A report the owner WITHDREW — kept, because it is the more useful entry
+
+> *"You destroyed the rotation around the gravity axis and orthogonal to gravity: the
+> rotation came back to the axis of the screen view plane."* — 2026-09-15, then
+> *"it's alright: the logic is right"*.
+
+⛔⛔ **`A7`/`D18` was not the fault, and that is now a MEASURED claim rather than a
+defence.** Every part of the gravity frame already had green vectors — it is orthonormal,
+`up` is the world vertical, the wiring compiled — and ⚠ **none of that is the same claim as
+*a horizontal drag yaws about gravity***, which is what a hand judges.
+`tests/a7_wiring.test.ts` composes the frame with the rotation and asserts the axis that
+comes out the far end, at level, 45° down, 72° down and on the **bottom ring**, with two
+counter-examples so *"it came back to the screen axes"* is distinguishable from *"it did
+not"*: the camera's own up is ≤ 0.4 against the vertical at 72°, and the view axis ≥ 0.9.
+
+⭐⭐ **The transferable part**: mistake shape 4 — *a composition nobody computed* — can
+aim at a **correct** piece of work as easily as a broken one, and it costs the same either
+way until someone measures the composition. ⭐ `METHOD`: *a composition is a thing to
+MEASURE, not an emergent property.* The real defect in the same report (no deadband, `D19`)
+was only separable from the impression once the composition had a number.
+
+⚠ This is not a rejected experiment and does not belong in a `REJECTED.md`: nothing was
+built and nothing was measured out. It is a **claim that was tested and did not hold**.

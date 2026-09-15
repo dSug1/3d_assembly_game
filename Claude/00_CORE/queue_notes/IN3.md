@@ -334,3 +334,82 @@ separates a block from a crowd.
    `anchorHandoverCos` + `anchorHandoverHysteresis`, **each with a slider**, latched at
    press.
 6. ⛔ **The device pass**, which closes both `IN3` and `3D1`.
+
+---
+
+# ⭐⭐ THE ROTATION GOT A FRAME, A REBASE, AND ONE DEFECT STILL OPEN *(2026-09-15)*
+
+Three changes landed on rule 2bis and 2quinte in one session, all from the glass. ⚠ None
+of them is the PRECONDITION this row still owes (§1.4's empty constraint stack).
+
+## `A7`/`D18` — every object gesture stands on a GRAVITY FRAME
+
+> *"A delta position on x shall rotate the object on yaw along the gravity direction, a
+> delta position on y shall rotate the object on pitch along the x axis, a roll shall rotate
+> the object on roll along the projection of the camera depth axis orthogonal to the gravity
+> direction."*
+
+⭐ `src/input/gravity_frame.ts` builds `{right, up, depth, towardGravity}` from the view
+axis and gravity, and `screen_rotate.ts` now takes it instead of a `ScreenFrame`.
+⛔ **The two are deliberately DISTINCT TYPES**, so the compiler stops them being
+interchanged — `anchor_rotate.ts` still wants the TRUE view axis, and will not accept the
+flattened one by accident.
+
+⛔⛔ **The argument is ORTHOGONALITY, not tidiness.** About the camera's own axes the view
+axis gains a vertical component as the camera tilts, so roll stops being independent of yaw
+and **no gain can separate them**. ⭐ One basis then serves rotation, translation and depth
+at once: *the axis you push along is the axis you can turn about.*
+
+⚠ **An owner correction worth keeping.** I claimed the roll would *"no longer follow the
+finger's circle when the camera is tilted"*. The owner: *"I don't think it is quite true: we
+do not project the delta position so the input is still a circular movement, we only modify
+the axis of rotation."* ⭐ Correct — the gesture is unchanged; only the PICTURE changes.
+
+⛔ One sign defect, caught by a vector rather than a finger: `cross(depth, up)` gives a
+NEGATED right. It is `cross(up, depth)`, and the vector that caught it compares against the
+camera's own right.
+
+## `A8` — a roll REBASES to the start of its circle
+
+A circle is not read as a roll until `rollAngle` (60°) of arc. Until then §1.3 applies the
+continuous rule **provisionally**, and that rule is 2bis — yaw and pitch. ⛔ So the roll
+began from a pose nobody asked for, which matters most precisely when it matters at all: a
+user rolling to preserve an alignment got the alignment quietly broken first.
+
+⭐ **The mechanism was already in the spec.** §1.3 defines provisional motion *with
+rollback*; it simply only ran it at release, for the flick test. A roll committing mid-drag
+is the same situation one transition earlier, and takes the same answer: **restore, then
+apply.**
+
+⛔⛔ **It rebases to the FIT WINDOW's start, not to the press.** A hand may drag in a
+straight line and only then begin to circle; that drag is a yaw the user asked for, it is
+not part of the evidence for a circle, and undoing it would be a second defect wearing the
+first one's clothes. `RollDetector.fitWindowStart` publishes where the evidence begins, and
+the recognizer keeps a pose history bounded by AGE — because the fit window is sized in
+PATH LENGTH, and a slow circle spans more samples than a fast one.
+
+⚠ **The object jumps at the commit**, by the whole swept angle. That is the trade, not a
+glitch: it replaces exactly as much unasked-for yaw/pitch with the roll the finger drew.
+
+## ⛔ `A9`/`IN12` — still open: there is no DEADBAND
+
+Rule 2bis integrates the RAW per-event delta and `pointerNoiseMm` is **0.761 mm measured**,
+so a still finger turns a held object. ⭐ Queued as its own row with the trap written down:
+a *hard* deadband is a jump traded for a jump. → [`IN12.md`](IN12.md)
+
+## ⭐⭐ And one report that DID NOT SURVIVE — the most useful entry in this dossier
+
+*"You destroyed the rotation around the gravity axis and orthogonal to gravity: the rotation
+came back to the axis of the screen view plane."* ⛔ It had not. Every part of `A7` already
+had green vectors — the frame is orthonormal, `up` is the world vertical, the wiring
+compiled — and ⚠ **none of that is the same claim as *a horizontal drag yaws about
+gravity***, which is what a hand judges.
+
+`tests/a7_wiring.test.ts` composes the frame with the rotation and asserts the axis that
+comes out the far end, at level / 45° down / 72° down / bottom ring, with counter-examples
+so the claim is distinguishable from its opposite. The owner withdrew the report:
+*"it's alright: the logic is right."*
+
+⭐⭐ **Mistake shape 4 — *a composition nobody computed* — can aim at a CORRECT piece of
+work as easily as a broken one**, and it costs the same either way until someone measures
+the composition. `METHOD`: *a composition is a thing to MEASURE, not an emergent property.*

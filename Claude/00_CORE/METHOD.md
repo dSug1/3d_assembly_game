@@ -36,6 +36,42 @@ predecessor's rotation stack was defensible at every layer and a **reflection** 
 whole, because nobody had ever computed the composite. **Ask what the whole chain
 does, in one expression, and check it.**
 
+⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.**
+*(2026-09-15.)* A gravity-referenced rotation was reported from the device as having
+regressed to the screen axes. Every part of it had green vectors — the frame is
+orthonormal, its `up` is the world vertical, the wiring compiled — and ⚠ **none of that
+is the same claim as *a horizontal drag yaws about gravity***, which is what a hand
+judges. Fourteen vectors composing the frame with the rotation, at four camera tilts,
+showed the composition was right; the report was withdrawn, and the real defect beside it
+(a missing deadband) became separable from the impression. ⭐ **Write the composite check
+even when you believe the pieces — especially then**: it is the only thing that can tell
+a defect from an impression, in either direction.
+
+## ⭐⭐ A BLEND HAS SEAMS
+
+*(2026-09-15, from five rejected models of one gesture.)* When two noisy inputs must
+produce one output, the tempting move is to **combine** them — a mean, a minimum, a
+weighted fade, a coupling that tightens with agreement. ⛔ **Every one of those has a
+discontinuity somewhere**, and a hand finds it within minutes: a `min` over alternating
+events stalls then double-steps; a sign test flips near zero; fading an accumulated total
+yanks the object backwards; a gate re-decided each frame drops out when the hand slows.
+
+⭐ **The answer is usually not a better blend — it is to stop blending.** Make one input
+the **DRIVER** and the other a **VALIDATOR**: the driver supplies all the motion, the
+validator only authorises it by agreeing within a ratio. Nothing is mixed, so nothing can
+be discontinuous.
+
+⭐ And where the validator's agreement is **undefined** — at a reversal both travels pass
+through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
+of two numbers passing through zero is garbage however carefully it is computed.
+
+## ⭐ Acting is irreversible; not knowing is not a reason to act
+
+When a gesture is genuinely ambiguous for a window, the choice is not *"which rule"* but
+*"whether to move at all"*. ⛔ Apply the unambiguous part and **withhold** the rest until
+the verdict arrives. ⚠ **State the cost**: the withheld travel is DISCARDED, not released
+in one step — releasing it is exactly the jump being complained about.
+
 ## ⛔⛔ The instrument is a suspect, always
 
 **This is the most expensive lesson carried over.** In one session, four harnesses

@@ -25,7 +25,7 @@ adopted a turning-angle estimator that the fourth pass replaced with a circle fi
 
 Commit, tap-vs-hold and double-tap passed as designed. The other three did not, and
 **not one of them was visible to 81 passing vectors.** Full record:
-[`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+[`../00_CORE/queue_notes/IN1.md`](../../00_CORE/queue_notes/IN1.md).
 
 **1. ⛔⛔ Rollback was inconsistent — and it was the INSTRUMENT.** `detectFlick`
 measured terminal speed from the **last sample pair**. A browser emits `pointerup`
@@ -65,7 +65,7 @@ device**: a finger that was too slow and an estimator reading zero look identica
 
 ## ⭐⭐ What the THIRD device pass found (2026-09-13) — and the literature answer
 
-Full record: [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+Full record: [`../00_CORE/queue_notes/IN1.md`](../../00_CORE/queue_notes/IN1.md).
 
 **⛔⛔ A SLOW circular sweep never committed at all — 300° swept, 0.0° read.** Worse
 than the jitter it was found while chasing, and it explains why the device reported
@@ -105,7 +105,7 @@ low-pass cannot serve both — so its cutoff rises with the signal's own speed. 
 to the **displayed** angle only; the commit threshold reads the raw one, because
 lagging a threshold crossing makes a gesture feel late. Measured: **1.95° → 1.20°**
 slow, **1.43° → 0.86°** medium. Licence and the rejected alternatives (Kalman,
-LaViola DES) are in [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
+LaViola DES) are in [`../../THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md).
 
 ## ⛔⛔ The pattern across all three passes — it binds `IN3` and `IN4`
 
@@ -120,7 +120,7 @@ clears the noise, BEFORE writing the threshold.**
 
 ## ⭐⭐ The FOURTH device pass (2026-09-14): the wrong quantity, and a revert
 
-Full record: [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+Full record: [`../00_CORE/queue_notes/IN1.md`](../../00_CORE/queue_notes/IN1.md).
 
 **⛔⛔ Roll reversal jumped, and it was not tuning — it was the wrong QUANTITY.** For
 three passes the build accumulated the **turning angle of the tangent**. Retrace an
@@ -151,7 +151,7 @@ Added one pass earlier on a literature check, and correctly chosen for the
 jitter-vs-lag trade. Against the **new** estimator: **5.80°→5.78°, 3.03°→2.91°, and
 3.54°→4.70° — worse — on a wide circle.** `METHOD`: *measure or revert; a null result
 is recorded, not shipped hopefully.* Removed, and recorded in
-[`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) as
+[`../../THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md) as
 evaluated-and-reverted rather than quietly deleted.
 
 ⭐⭐ **The lesson generalises: the filter had been compensating for a bad ESTIMATOR.**
@@ -171,7 +171,7 @@ whether you have replaced the quantity rather than improved the estimate of it.*
 
 ## ⭐⭐ The SIXTH device pass (2026-09-14): the estimator, not the filter
 
-Full record: [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md).
+Full record: [`../00_CORE/queue_notes/IN1.md`](../../00_CORE/queue_notes/IN1.md).
 
 Reported: *"big jumps when I switch from roll to yaw/pitch or when I change roll
 directions"*, with a preference for the older 1€-filtered behaviour.
