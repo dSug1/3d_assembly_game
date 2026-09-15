@@ -1501,11 +1501,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // STATIONARY latch taken at press, overturned by a hand first try. This reads it
         // live, off a position deadband rather than a speed test, but a device pass should
         // look for mode flicker directly.
+        // ⛔⛔⛔ PRESENCE ALONE, AND THE DEVICE SAID SO TWICE. I first keyed this on the
+        // second finger's MOTION STATE, and a hand overturned it: *"if I transition quickly
+        // there is a translation then a rotation, if I transition slowly there is directly
+        // a rotation."* ⭐ A finger PLACED QUICKLY skids as it lands — the centroid slides
+        // while the contact area grows — so it read MOVING for as long as the landing took,
+        // and the mode followed it. Nothing about the GESTURE differed; only the landing.
+        // ⛔⛔ `IN4` recorded the same verdict on 2026-09-14. See `holderDrive`.
         const second = secondFingerOf(grip);
         grip.mode =
-          router.objects().length === 1
-            ? holderDrive(second.present, second.state)
-            : "TRANSLATE";
+          router.objects().length === 1 ? holderDrive(second.present) : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,

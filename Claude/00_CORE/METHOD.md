@@ -65,6 +65,33 @@ be discontinuous.
 through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
 of two numbers passing through zero is garbage however carefully it is computed.
 
+## ⭐⭐⭐ A MODE may be keyed on PRESENCE; never on MOTION
+
+*(2026-09-14, and again on 2026-09-16 when I did it anyway.)* Two signals come off a
+touchpoint and they are not interchangeable:
+
+* **whether it is DOWN** — discrete, deliberate, visible to the user, and it changes only
+  when a person decides it does;
+* **whether it is MOVING** — noisy and continuous, and true or false by degrees no matter
+  how good the filter underneath it is.
+
+⛔ **A MODE must be keyed on the first.** A mode keyed on the second inherits every artefact
+of the sensor: this project shipped it twice, and both times a hand found it within minutes.
+
+⚠ The second time, the tell was a **timing signature**: *"if I transition quickly there is a
+translation then a rotation, if I transition slowly there is directly a rotation."* ⭐⭐ **A
+behaviour that depends on how BRISKLY a finger arrives is not about the gesture at all** — a
+finger placed quickly skids as it lands, because the reported centroid slides while the
+contact area grows. Nothing about the user's intent differed between the two transitions.
+
+⭐ The motion state is still the right input for deciding **what a moving finger drives**.
+It is the wrong input for deciding **which rule is running**.
+
+⚠⚠ And a note on process: the amendment that shipped this defect **had already flagged the
+resemblance** to the 2026-09-14 verdict and told the device pass to watch for it. ⛔ Naming
+a risk is not the same as not taking it. If the reasoning for a choice has to explain away a
+verdict a hand already gave, the verdict is the stronger evidence.
+
 ## ⭐⭐ A threshold the state machine PARKS ON will be compared at its exact value
 
 *(2026-09-16.)* Hysteresis usually leaves a system somewhere in the middle of its band. ⛔ A

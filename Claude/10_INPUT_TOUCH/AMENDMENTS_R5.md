@@ -754,6 +754,45 @@ drag — and watch whether it ever slips from rotate into translate. `restConfir
 is the number that absorbs it, and `motionDeadbandMm` the one that sets how much wobble a
 resting finger is allowed.
 
+### ⛔⛔⛔ CORRECTION — IT READS **PRESENCE ALONE**, AND THE DEVICE SAID SO TWICE
+
+> *"The issue is still here: if I transition quickly there is a translation then a rotation,
+> if I transition slowly there is directly a rotation."*
+
+⭐⭐ **THE TIMING SIGNATURE IS THE WHOLE DIAGNOSIS.** A finger **placed quickly skids as it
+lands** — the reported centroid slides while the contact area grows — so it read `MOVING`
+for as long as the landing took, and the mode followed it. Placed **slowly** it never left
+its band, so the mode was right at once. ⛔ **Nothing about the gesture differed; only the
+landing did**, and a mode must not depend on how briskly a finger arrives.
+
+⛔⛔ **THE CELL WAS MINE, NOT THE OWNER'S.** The four rules do not name *both fingers
+moving*; the section above resolved it as `TRANSLATE` — *the holder wins every tie* — and
+that was the defect. It is now **`ROTATE`**: a second touchpoint being **DOWN** is the whole
+input, whatever it is doing.
+
+⛔⛔⛔ **AND `IN4` RECORDED THIS VERDICT ALREADY, ON 2026-09-14**, when a mode keyed on the
+anchor's `STATIONARY` state was overturned by a hand, first try. The lesson written then is
+the one that applies now:
+
+> *`MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading … whether a finger is DOWN is
+> neither: it is discrete and deliberate, it changes only when a person decides it does, and
+> it is the one thing they can see.*
+
+⚠ **The section above FLAGGED this resemblance as the thing to watch** — *"the device pass
+must look for mode flicker directly"* — and then shipped the version that had it. ⭐ Naming
+a risk is not the same as not taking it.
+
+### ⭐ Two rules, two signals
+
+| signal | what it may decide |
+|---|---|
+| a touchpoint is **DOWN** | ⭐ the **MODE** — discrete, deliberate, visible |
+| a touchpoint is **MOVING** | the **MOTION** it supplies, once the mode is settled |
+
+⛔ The motion state is still exactly right where `A12` uses it — deciding whether the second
+finger's own travel drives roll or depth while the holder is still. It is never again used
+to pick a mode.
+
 ### ⛔ What is NOT covered by a vector, stated plainly
 
 `holderDrive` is pure and has seven vectors, including the unnamed both-moving cell.

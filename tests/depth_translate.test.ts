@@ -486,25 +486,48 @@ describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
   });
 
   it("⛔ …and lifting it goes straight back to translating", () => {
+    // ⭐ Symmetrical, and for the same reason: a lift is discrete, deliberate and visible.
     expect(holderDrive(false, null)).toBe("TRANSLATE");
   });
 
-  it("⛔⛔ BOTH MOVING is TRANSLATE — the holder wins every tie", () => {
-    // ⚠ The one cell the owner's four rules do not name. Deciding it any other way means
-    // waiting to see which finger settles, which is the decision lag A12 deleted.
-    expect(holderDrive(true, MOV)).toBe("TRANSLATE");
+  it("⛔⛔ A LANDING SKID CANNOT CHANGE THE MODE — the reported defect, as a vector", () => {
+    // ⭐ The same finger, down, reporting every motion state a landing can produce. The
+    // mode must not move: that is what *"immediately rotation"* means.
+    const seen = new Set([MOV, STI, MOV, MOV, STI].map((st) => holderDrive(true, st)));
+    expect([...seen]).toEqual(["ROTATE"]);
   });
 
-  it("⭐ the rule reads PRESENCE and STATE, never a latch", () => {
+  it("⛔⛔⛔ BOTH MOVING IS **ROTATE** — PRESENCE ALONE DECIDES, and a hand said so twice", () => {
+    // ⛔⛔ I FIRST DECIDED THIS CELL THE OTHER WAY, and the device overturned it:
+    // *"if I transition quickly there is a translation then a rotation, if I transition
+    // slowly there is directly a rotation."*
+    //
+    // ⭐⭐ THE TIMING SIGNATURE IS THE WHOLE DIAGNOSIS. A finger PLACED QUICKLY skids as
+    // it lands — the reported centroid slides while the contact area grows — so it reads
+    // MOVING for as long as the landing takes. Keying the mode on that made the holder
+    // translate for exactly that long. A finger placed SLOWLY never leaves its band, so the
+    // mode was right immediately. Nothing about the gesture differed; only the landing did.
+    //
+    // ⛔⛔⛔ AND `IN4` ALREADY RECORDED THIS VERDICT ONCE, on 2026-09-14: a mode keyed on
+    // the anchor's `STATIONARY` state was overturned by a hand, first try. The lesson
+    // written down then is the one that applies now — *whether a finger is DOWN is
+    // discrete, deliberate and VISIBLE; whether it is MOVING is a noisy continuous reading*
+    // — and I flagged the resemblance in A13 as the thing to watch before the device did.
+    expect(holderDrive(true, MOV)).toBe("ROTATE");
+  });
+
+  it("⭐ the rule reads PRESENCE ALONE, never a latch and never the motion state", () => {
     // ⛔⛔ `IN4` RECORDS A DEVICE VERDICT THAT LOOKS LIKE THIS ONE AND IS NOT: a
     // `STATIONARY` latch taken at press was overturned by a hand, first try, because
     // MOVING/STATIONARY is a noisy reading and latching it hid state instead of protecting
     // it. ⭐ This reads it LIVE, every frame, and the state it reads is now a position
     // deadband rather than a speed test — but the resemblance is close enough to be worth
     // watching on the glass.
-    expect(holderDrive(true, STI)).toBe("ROTATE");
-    expect(holderDrive(true, MOV)).toBe("TRANSLATE");
-    expect(holderDrive(true, STI)).toBe("ROTATE");
+    // ⭐ Whatever the second finger is doing, it is DOWN — and that is the whole input.
+    for (const st of [STI, MOV, null] as const) {
+      expect(holderDrive(true, st)).toBe("ROTATE");
+    }
+    expect(holderDrive(false, null)).toBe("TRANSLATE");
   });
 
   it("⭐⭐ a second finger that never moved at all counts as IDLE", () => {

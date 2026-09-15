@@ -252,39 +252,48 @@ export function rollDragDeg(dxPx: number, degPerMm: number): number {
  * > translation. One touchpoint on object with delta position x or y && second touchpoint
  * > idle anywhere → rotation on yaw along gravity axis or pitch along horizontal x axis."*
  *
- * ⭐⭐ THE SHAPE OF THE WHOLE TABLE: **whichever finger MOVES is the one that acts, and the
- * OTHER one's state says which rule.** Four cells, no overlap, nothing to arbitrate over
- * time:
+ * ⭐⭐ **A SECOND TOUCHPOINT BEING DOWN IS THE WHOLE INPUT.** It contributes no motion; its
+ * presence turns the holder's drag from a translation into a rotation.
  *
- * |               | second absent | second IDLE | second MOVING |
- * |---|---|---|---|
- * | **holder MOVING** | translate | ⭐ **ROTATE** | translate |
- * | **holder IDLE**   | — | — | x → roll, y → depth |
+ * |               | second absent | second DOWN |
+ * |---|---|---|
+ * | **holder MOVING** | translate | ⭐ **ROTATE** |
+ * | **holder IDLE**   | — | x → roll, y → depth |
  *
- * ⭐ A second finger held still is a **MODIFIER**: it contributes no motion, and holding it
- * still is the whole of the input. ⛔ That is a swap of the old assignment, where one finger
- * rotated and two translated.
+ * ## ⛔⛔⛔ IT READS PRESENCE **ALONE**, AND THE DEVICE SAID SO TWICE
  *
- * ⛔⛔ ONE CELL THE OWNER DID NOT NAME — both fingers moving. It resolves to `TRANSLATE`:
- * the holder wins every tie, as it has since A10, and it is what the build already did. ⚠ The
- * alternative — do nothing until one settles — reintroduces exactly the decision lag A12
- * was written to delete.
+ * ⚠ The owner's rules do not name the cell where BOTH fingers move. I first decided it as
+ * `TRANSLATE` — *the holder wins every tie* — and a hand overturned it:
  *
- * ⚠⚠ **A RESEMBLANCE WORTH WATCHING ON THE GLASS.** `IN4` records a device verdict that
- * looks like this rule and is not: a `STATIONARY` latch taken AT PRESS was overturned by a
- * hand, first try, because `MOVING`/`STATIONARY` was a noisy reading and latching it hid
- * state instead of protecting it. ⭐ This reads it **live, every frame**, and what it reads
- * is now a position deadband rather than a speed test — but the resemblance is close enough
- * that a device pass should look for mode flicker directly.
+ * > *"If I transition quickly there is a translation then a rotation, if I transition
+ * > slowly there is directly a rotation."*
  *
- * @param secondPresent whether a second touchpoint is down at all.
- * @param secondState   its motion state, or `null` if it has never moved — which is the
- *   strongest form of idle there is, not a missing answer.
+ * ⭐⭐ **THE TIMING SIGNATURE IS THE WHOLE DIAGNOSIS.** A finger PLACED QUICKLY skids as it
+ * lands — the reported centroid slides while the contact area grows — so it reads `MOVING`
+ * for as long as the landing takes, and the mode followed it. Placed SLOWLY it never leaves
+ * its band, so the mode was right at once. ⛔ Nothing about the *gesture* differed; only the
+ * landing did, and a mode must not depend on how briskly a finger arrives.
+ *
+ * ⛔⛔ **`IN4` RECORDED THIS VERDICT ALREADY, ON 2026-09-14**, when a mode keyed on the
+ * anchor's `STATIONARY` state was overturned by a hand first try. The lesson written then is
+ * the one that applies now:
+ *
+ * > *`MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading … whether a finger is DOWN is
+ * > neither: it is discrete and deliberate, it changes only when a person decides it does,
+ * > and it is the one thing they can see.*
+ *
+ * ⭐ So the motion state is used where it belongs — deciding what the second finger's own
+ * travel DRIVES, once the holder is still (`secondFingerDrive`) — and never for choosing a
+ * mode. ⚠ Two rules, two signals: **presence** picks the mode; **motion** supplies the
+ * motion.
+ *
+ * @param secondPresent whether a second touchpoint is down at all. ⛔ The only input that
+ *   matters. `secondState` is accepted so callers need not special-case it, and is
+ *   deliberately unused — see above.
  */
 export function holderDrive(
   secondPresent: boolean,
-  secondState: MotionState | null,
+  _secondState?: MotionState | null,
 ): "TRANSLATE" | "ROTATE" {
-  if (!secondPresent) return "TRANSLATE";
-  return secondState === "MOVING" ? "TRANSLATE" : "ROTATE";
+  return secondPresent ? "ROTATE" : "TRANSLATE";
 }

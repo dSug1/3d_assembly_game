@@ -35,7 +35,7 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Thirty-three defects have been found **by finger** (thirty-two of them; one by composing a measurement with a threshold), and **not one was visible to a green
+Thirty-four defects have been found **by finger** (thirty-three of them; one by composing a measurement with a threshold), and **not one was visible to a green
 suite**. They are **five** shapes, not twenty-six problems — the fifth is below, and it is
 the one that costs a correct implementation rather than a broken one:
 
@@ -63,7 +63,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | **A11** — the band taxed the drag | **1** — *"the object translation is less fluid than when we had no depth translation built in."* ⛔⛔ The trailing anchor sits one radius BEHIND, so a REVERSAL had to cross the whole dead circle: **5.0 mm of dead travel, 88 ms at 50 mm/s** — more than ten times rule 6's entire follower time constant, as pure dead time in front of it. ⭐ Fixed by a distinction the first version missed: **the band gates the way OUT of rest, not the motion itself**. A reversal now costs one sample | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
 | **A13** — a tracker outlived its finger | **1** — *"I release the second touchpoint and press it outside any object… the first object continues translation and then switch to rotation."* ⛔⛔ Motion trackers were keyed by POINTER ID, and **browsers reuse ids after a release** — so a new finger inherited the old one's anchor position and read `MOVING` at once, which under A13 means the holder keeps translating. ⭐⭐ **The same trap `router.ts` already guards and explains**: I copied the map and not the guard. Fixed structurally — keyed by the router's never-reused `seq` | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
 | **A11** — rest ON the band boundary | **1** — a finger stopping DEAD parks at **exactly** one band from the centre, so the `<=` comparison is made at its exact value on every sample — and computing the centre as `p − band` then re-deriving `p − centre` is a **round trip through floating point** that returns ~1e-14 too large. ⛔ The axis then never became `STATIONARY`. ⚠ Invisible at a 2.3 mm band, exposed by the owner raising it to 3.5 mm. ⭐ Fixed by carrying the signed OFFSET instead of a position | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| | **= 33** | |
+| **A13** — a mode keyed on MOTION, again | **1** — *"if I transition quickly there is a translation then a rotation, if I transition slowly there is directly a rotation."* ⛔⛔ A finger PLACED QUICKLY skids as it lands, so it read `MOVING` for the length of the landing and the mode followed it. ⭐⭐ **The cell was mine, not the owner's** — the four rules never named *both moving*, and I resolved it as translate. Now **presence alone** decides the mode. ⛔⛔⛔ **`IN4` recorded the identical verdict on 2026-09-14**, and A13 flagged the resemblance before shipping the defect anyway: *naming a risk is not the same as not taking it* | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
+| | **= 34** | |
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of

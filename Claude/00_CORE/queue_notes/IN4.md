@@ -431,3 +431,30 @@ gesture starts from where it was RECOGNISED, not from where it began.
 ⛔ **And rule 6 has no DEADBAND either** (`A9`/`IN12`) — it integrates the same raw delta
 rule 2bis does. Its follower and phantom lead mask the jitter better than the rotation does,
 which is why it was reported on the rotation first.
+
+---
+
+# ⛔⛔⛔ THE SAME VERDICT, A SECOND TIME — 2026-09-16
+
+This dossier already records a hand overturning a mode keyed on the anchor's `STATIONARY`
+state, on 2026-09-14, first try. ⭐ **`A13` did it again**, and the device answered again:
+
+> *"If I transition quickly there is a translation then a rotation, if I transition slowly
+> there is directly a rotation."*
+
+⭐⭐ **The timing signature is the whole diagnosis.** A finger PLACED QUICKLY skids as it
+lands — the reported centroid slides while the contact area grows — so it read `MOVING` for
+the length of the landing, and the mode followed it. Placed slowly it never left its band.
+⛔ **Nothing about the gesture differed; only the landing did.**
+
+⚠ **And the cell was mine.** The owner's four rules never named *both fingers moving*; I
+resolved it as `TRANSLATE` on the reasoning that *the holder wins every tie*. It is now
+**`ROTATE`** — presence alone decides the mode, and the motion state is used only where it
+belongs, deciding what a moving second finger DRIVES (`A12`).
+
+⛔⛔ **A13 had FLAGGED the resemblance to this dossier before shipping it**, and told the
+device pass to look for mode flicker. ⭐ *Naming a risk is not the same as not taking it.*
+
+⭐⭐ The rule now in `METHOD`: **a MODE may be keyed on PRESENCE; never on MOTION** — and if
+the reasoning for a choice has to explain away a verdict a hand already gave, the verdict is
+the stronger evidence.
