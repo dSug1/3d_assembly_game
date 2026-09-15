@@ -18,8 +18,9 @@ what cannot be measured gets shipped on hope.
 ⭐ It is also what makes `D9` (Babylon over three.js) **reversible in about a day**.
 
 ⭐⭐ **The boundary has paid for itself repeatedly.** Every gesture defect found by
-finger — and there have been sixteen — was reproduced *headlessly* before it was
-fixed, because the recognizer, the roll estimator, the pinch and the orbit surface are
+finger — ⭐ counted, with its ledger, in [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md) and
+not restated here, because the figure this line used to carry went stale — was reproduced
+*headlessly* before it was fixed, because the recognizer, the roll estimator, the pinch and the orbit surface are
 all plain code. `src/render/` holds only what genuinely needs the engine.
 
 ## Where it stands

@@ -1,8 +1,8 @@
 # `IN4` — rules 4–6 (two touchpoints)
 
-**Status: partial. Rule 4 ✅ (`IN9`). Rule 6 ✅ BUILT AND TUNED BY FINGER over five device
-passes, 2026-09-14 — ⚠ not formally closed: it wants a verdict in ordinary play rather
-than in a tuning session. Rules 6bis / 6ter / 6quater wait on `3D1`.**
+**Status: partial. Rule 4 ✅ (`IN9`). Rule 6 ✅✅ CLOSED 2026-09-15 — tuned by finger over
+five device passes and then confirmed by the owner in ORDINARY PLAY, which is what the row
+was holding out for. Rules 6bis / 6ter / 6quater wait on `3D1`, so the ROW stays partial.**
 `src/input/translate.ts` · `tests/translate.test.ts` · wired in `src/render/scene.ts`.
 
 ## ⭐⭐ Why rule 6 came before `3D1`
@@ -270,3 +270,63 @@ zoom clamp and the orbit rings can actually produce.
    now, and `3D1` is about to put connectors on these objects that will want to snap.
 4. ⚠ Rotation must still work with **no** anchor down, and the anchor must not start an
    orbit while an object is held.
+
+---
+
+## ✅✅ RULE 6 CLOSED — 2026-09-15, by the owner, in ordinary play
+
+*"Rule 6 is working OK on device."*
+
+⭐ **That is the verdict this dossier was explicitly holding out for**, and it is the one
+thing no suite could have supplied. The row withheld closure because the four numbers had
+been judged in a *tuning session* — a bench, where a hand is hunting for the difference
+between two settings — and not in ordinary play, where a hand is trying to do something
+else and the mapping either disappears or annoys. It disappeared. ⭐ So the claim that
+`gainTranslateScreen` = 1.0 is a **computed** value rather than a preferred one has now
+survived contact with a hand that was not auditing it.
+
+⛔ **What this does NOT close.** `IN4` stays **partial**: 6bis, 6ter and 6quater are
+defined on `AxisBtwFaces` — the axis between two selected FACE centres — and a face centre
+is exactly what `3D1` owns. The row cannot close before the object model exists.
+
+⚠ **And it closes at the moment something is about to pull on it.** The whole of the feel
+now lives in the OVERSHOOT — 0.3–1.8 mm of follow-through, against a measured 0.761 mm
+pointer noise floor — and `3D1` is about to put connectors on these objects that will want
+to snap. ⭐ **A capture radius near that scale will fire on the follow-through rather than
+on the intent.** That is a number to compute against this measurement BEFORE it is
+written, not to discover on a device afterwards: the capture radius has no measured floor
+today, and it was the predecessor's last unmeasured constant too.
+
+⭐ The shipped set is unchanged by this closure, and `gestureConfig.ts` is the one copy:
+gain **1.17**, τ **7.6 ms**, ζ **0.2**, lead **0.2 ms**.
+
+⚠ **One figure above is a snapshot, and is left standing as the record**: the landmark
+section says the owner chose **0.5 ms**, which was true of the pass that wrote it. The
+slider went lower afterwards and **0.2 ms shipped** — a *fifteenth* of the 3.2 ms landmark
+rather than a sixth, which makes that section's point more sharply, not less.
+
+---
+
+## ⚠ A CANDIDATE EXTENSION TO RULE 6, deferred to a device QUESTION — §3.2 DS3
+
+Raised 2026-09-15 from the owner's `TECHNIQUE_CATALOG.md` §3.2 (Z-technique, 3DUI 2010;
+DS3, IEEE TVCG 2012 — published prior art). ⛔ **Not queued and not planned.** It is
+recorded here because rule 6 is the thing it would change, and in
+[`3D1.md`](3D1.md) because that is where the evidence gets collected.
+
+**The observation.** Rule 6 is **two DOF** — `screenTranslation` returns `rightM` and
+`upM`, nothing more — and depth arrives only through 6bis, which needs a second object with
+a selected face under a second finger. ⭐ Meanwhile rule 6's anchor finger carries **no
+information at all**: since the device overturned the `STATIONARY` latch it is read as
+PRESENCE, so it is down or it is not. DS3 says that finger's *relative* motion should carry
+depth — a change to what an existing finger MEANS, not a new gesture.
+
+⛔ **But a free orbit already solves depth** by turning it into an in-plane motion, and this
+row closed on the glass with its whole feel in the overshoot. Adding a push to a finger that
+currently does nothing would change a settled feel to solve a problem the camera may not
+have.
+
+⭐⭐ **So it is an `IN5`-shaped question and the answer is behavioural**: mid-assembly, does
+a hand ORBIT for depth or PUSH at the glass? ⛔ Unanswerable until `3D1` exists. The watch
+item, with what each observation means, is in [`3D1.md`](3D1.md) — **on the first device
+pass, before the hand learns a workaround.**

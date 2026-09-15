@@ -6,12 +6,12 @@
 
 | prefix | meaning |
 |---|---|
-| `IN0`–`IN8` | the touch **input** system |
+| `IN0`–`IN9` | the touch **input** system |
 | `3D0`–`3D5` | objects, connectors, **assembly** |
 | `RND0`–` RND3` | scene and **rendering** |
 | `DEP0`–`DEP4` | build and **deployment** |
 | `SEC0`–`SEC3` | privacy, stores, **compliance** |
-| `D1`–`D9` | owner **decisions** (see `DECISIONS.md`) |
+| `D1`–`D10` | owner **decisions** (see `DECISIONS.md`) |
 | `N13` | carried: no non-commercially-licensed dependency. Binding |
 
 ## Terms

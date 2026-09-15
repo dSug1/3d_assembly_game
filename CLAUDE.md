@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-14)
 
-✅ Green: TypeScript + Babylon + Vite, **315 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **357 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -55,8 +55,9 @@ then `http://localhost:5173` on the tablet. See
 ✅✅ **`IN1` CLOSED** — the gesture recognizer, validated by finger over seven device
 passes. ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit on a
 three-ring surface, working by finger.
-✅✅ **`IN2` CLOSED** — pointer plumbing, three roles latched at press. ✅ **RULE 6
-(screen-plane translate) built and tuned by finger over five device passes** — it has
+✅✅ **`IN2` CLOSED** — pointer plumbing, three roles latched at press. ✅✅ **RULE 6 CLOSED 2026-09-15**
+(screen-plane translate) — tuned by finger over five device passes, then confirmed in
+ordinary play. ⛔ `IN4` itself stays partial: 6bis onward wait on `3D1`. It has
 mass: a critically/under-damped follower plus a phantom target that leads along the
 finger's own motion (`src/input/translate.ts`, `follow.ts`, `lead.ts`).
 ✅ **Object ROTATION works** — free yaw/pitch and roll, both by finger. ⚠ What it lacks is
@@ -84,10 +85,13 @@ guard that had stood through eight device passes: see `Claude/10_INPUT_TOUCH/IND
 ⭐ **A simulation narrows the range; it does not pick the number. Ship the slider WITH
 the rule.**
 
-⛔⛔ **NEXT is `3D1`** (the object model) — the last thing before actual assembly, and
-where mistake shape 4 is likeliest to recur, since an assembly tree composes transforms
-through parent–child chains. ⭐ **Write the composite check BEFORE the code**, the way
-rule 6's gain was computed before it was written.
+✅ **`3D1` IS BUILT (2026-09-15)** — `src/core/object_model.ts`, 42 vectors, engine-free:
+placement, faces, connectors, the assembly tree, and the constraint stack attached to an
+object. ⭐⭐ The vectors were written FIRST and then **falsified on purpose** — breaking the
+composition turns 14 of 42 red, which is why the green means something. ⭐ `reroot`
+implements **parent ≠ root** and moves nothing.
+⛔⛔ **BUILT is NOT CLOSED**: it has no visible behaviour, so no finger can judge it. It
+closes when **`IN3`** wires it — and `IN3` is NEXT.
 ⭐⭐ Rule 6's gain was **computed, not guessed**: `gainTranslateScreen` is a multiplier on
 a tracking factor and **1.0 puts the object exactly under the finger**.
 ⭐ **The order is `IN2` → rule 6 translate → `3D1` → 6bis onward.** `IN4`'s dependency

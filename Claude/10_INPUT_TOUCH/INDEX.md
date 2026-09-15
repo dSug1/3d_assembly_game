@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**315 golden vectors, all passing** (37 → 219).
+**357 golden vectors, all passing** (37 → 357).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -38,9 +38,34 @@ the second was ignored at press and stays ignored until it lifts. The HUD prints
 latched roles (`#1OBJ #2IGN  active=1`) so that is distinguishable from a bug.
 → [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
 
-⛔ **Not built**:
-`IN3`/`IN4` (the object rules, blocked on `3D1`), `IN5` (measurement), `IN6` undo,
-`IN7` haptics.
+⛔ **Not built**: `IN3` (the object rules) and `IN4`'s **6bis / 6ter / 6quater**.
+⭐⭐ **BOTH ARE NOW UNBLOCKED** — `3D1` was built 2026-09-15, so the object model, the face
+centres 6bis needs, and the constraint stack rule 2bis must consult all exist.
+⭐ **`IN3` is NEXT**, and it also CLOSES `3D1`, which cannot be closed on its own.
+⚠ `IN4`'s **rule 6 is CLOSED** (2026-09-15, confirmed in ordinary play); it is the rest of
+that row that waits. `IN5` (measurement), `IN6` undo, `IN7` haptics.
+⭐ `IN11` (is 2bis path-dependent?) is unblocked too and needs no device.
+
+⛔⛔ **THE OWNER'S LATER DECISIONS SUPERSEDE THE SPEC, AND THEY LIVE IN
+[`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)** — read it BEFORE the spec. ⭐ **A1 → A4**: constraint
+eviction left the double-tap (which is now purely the camera fly) and, after `D14` gave the
+roll channel back to a real control, left the roll too — it is a **quick BACK-AND-FORTH**,
+one touchpoint, ≥2 reversals in a window, reusing the sway's MEASURED reversal detector.
+⛔ The flick test must be skipped once one reversal is seen, or an abandoned shake ADDS a
+constraint instead of removing one. ⭐ **A1 §4 (`D13`)**: eviction **spares `MATE` entries** — *one gesture, one
+intention*. ⭐ **A2**: the scene holds THREE objects, not two. ⛔⛔ **A3**: roll **drives the free DOF of
+an ANCHORED object** — the spec forbade it on a reason that is conditional on camera pose
+and false when the camera looks along the constraint axis, which is exactly where 2sexte's
+own screen mapping DEGENERATES. The two are complementary charts over one DOF, not rivals.
+⚠ A3 puts the **eviction gesture back under review**: roll is now a legitimate control on
+precisely the objects eviction applies to.
+
+⭐⭐ **EVERY GESTURE IS NOW TAGGED WITH ITS PROVENANCE** (2026-09-15, `D11`,
+`CONSTRAINTS` §10) — prior art with a dated citation, an internal composition, or ⚠ novel
+to this project. Register: [`PROVENANCE.md`](PROVENANCE.md). ⛔ Three rules came out **NOVEL
+COMPOSITE** — §4's **6bis, 6ter and 6quater** — which is the catalog's caution zone and the
+reason `SEC4` exists. ⭐ It also records what was DECLINED and why, so a later session does
+not re-derive the assessment.
 
 ⭐⭐ **`IN5` IS NOW PRACTICAL.** Tunables override from the **URL**
 (`?rollAngle=45&rollFilterBeta=0`) and the orbit rings have an on-screen **tuning

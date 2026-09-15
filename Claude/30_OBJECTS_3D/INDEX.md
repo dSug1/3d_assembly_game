@@ -3,7 +3,7 @@
 > **STATUS** · ⭐ active · **OWNS** · the object model, mate connectors, the
 > constraint solver, mesh import
 > **READ IF** · you are touching assembly, connectors or the object tree
-> **LAST VERIFIED** · 2026-09-13
+> **LAST VERIFIED** · 2026-09-15
 
 ## Where it stands
 
@@ -11,8 +11,14 @@
 `src/core/constraint_stack.ts`, transliterated from a **shipped, live-confirmed**
 Python implementation that was written dependency-free precisely so it could move.
 Covered by 14 vectors.
-⛔ **`3D1` is the gap that blocks input**: there is no object model yet — no id,
-placement, connector list or assembly tree. `IN3`/`IN4` need it.
+✅ **`3D1` BUILT 2026-09-15** — `src/core/object_model.ts`, **42 vectors**, engine-free:
+`id`, `local` placement, `parent`, faces (centre + outward normal, what 6bis reads),
+connectors, and the constraint stack attached to the object. ⭐⭐ **`reroot` is rule 3 made
+executable** — it re-points the chain onto the held object while every object's world
+placement stays put, and *grabbing a child moves the whole assembly* is a vector by name.
+⭐ Every fixture is THREE deep, and the deep-chain vector goes to 16.
+⛔ **BUILT, NOT CLOSED**: no visible behaviour means no device look is possible; `IN3`
+wires it and closes it. ⛔ No snapping — that is `3D2`.
 
 ## ⛔⛔ The four rules that must not be rediscovered
 

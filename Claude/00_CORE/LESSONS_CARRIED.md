@@ -72,7 +72,11 @@ feels.** One replacement improved the median and tripled the p95 — smoother mo
 the time, occasionally much worse — and *the tail decides the feel every time*.
 
 ⛔ For this project: **touch gestures cannot be honestly tested with a mouse.** One
-pointer, no DPI, no tilt, no haptics. `npm run dev -- --host`, on a phone.
+pointer, no DPI, no tilt, no haptics. ⭐ The loop is **`npm run dev:usb` + `adb reverse
+tcp:5173 tcp:5173`**, which serves on `127.0.0.1` only and still reaches the tablet as
+`localhost` — so it is a SECURE CONTEXT and sensors work. ⛔ Not `--host`: that publishes
+the dev server to the LAN, which is `DEP1b` and has its own firewall procedure. See
+[`../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md).
 
 ## 5. ⭐⭐ MEASURE THE COMPOSITION, NOT THE LAYERS
 

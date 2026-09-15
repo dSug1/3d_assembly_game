@@ -1,0 +1,111 @@
+# PROVENANCE — where every gesture in this project comes from
+
+> **STATUS** · ⭐ live · **OWNS** · the prior-art anchor for each gesture rule, and the
+> explicit marking of the ones that are NOVEL to this project
+> **READ IF** · you are adopting a technique, adding a gesture, or preparing a
+> freedom-to-operate review
+> **LAST VERIFIED** · 2026-09-15
+
+⭐⭐ **Adopted 2026-09-15 from the owner's `TECHNIQUE_CATALOG.md` §0 and §5** (`D11`).
+The discipline is the catalog's, and the reason to take it is the catalog's own:
+
+> *"Publication date is the defence: a technique published in CHI / UIST / I3D /
+> SIGGRAPH proceedings is prior art from its publication date and cannot subsequently be
+> patented by a third party. Recording the citation costs nothing now and is the only
+> cheap moment to do it."*
+
+⛔ **This is not legal advice and this file is not an opinion.** It is a register, so that
+a freedom-to-operate review (`SEC4`) has something to review instead of starting from a
+codebase. ⚠ It is also load-bearing for `D3`: the game will be commercialised.
+
+---
+
+## The three tags, and why the middle one is the one that matters
+
+| tag | meaning |
+|---|---|
+| **PRIOR ART** | traceable to a dated publication or to practice so universal it cannot be claimed. Cite it here and the date is the defence |
+| ⚠ **NOVEL COMPOSITE** | no publication describes this gesture. It may be perfectly free, but nothing here *proves* it is, and it is what a review must look at |
+| **INTERNAL COMPOSITION** | prior-art parts, assembled here in a way that is ours. Between the two above |
+
+⛔⛔ **The exposure is not "two fingers change scale" — that is universal.** The catalog's
+caution zone is specific: *multi-finger composite gestures that no prior publication
+describes* are the litigated territory (Apple's pinch/scroll family, US 7,844,915 and
+relatives). ⭐ **This project's two-touchpoint rules are exactly that shape**, which is why
+they are marked below rather than left to be discovered.
+
+---
+
+## The register — §2, one touchpoint
+
+| rule | what it is | tag | anchor |
+|---|---|---|---|
+| **1** | orbit the camera, touch-clutched | **PRIOR ART** | turntable orbit (azimuth/elevation, persistent world-up) is conventional since the 1980s; Blender's default |
+| **1** *(pivot)* | the pivot is the BARYCENTRE with the smallest perpendicular distance to the finger's ray | ⚠ **NOVEL COMPOSITE** | pivot-on-selection is conventional DCC/CAD practice (Maya tumble pivot, SolidWorks rotate-about-selection, pre-1995). **Choosing among barycentres of object subsets by ray distance is ours** |
+| **1** *(surface)* | a three-ring orbit surface, radius and height interpolated through three rigs | **INTERNAL COMPOSITION** | parametric interpolation of a camera path is generic geometry; the three-ring shape is the owner's |
+| **2** | tap an object → select object + face | **PRIOR ART** | direct picking; Nielson & Olsen, *Direct manipulation techniques for 3D objects using 2D locator devices*, Interactive 3D Graphics 1986 |
+| **2bis** | drag → yaw/pitch about the screen axes | **PRIOR ART** | Chen, Mountford & Sellen, *A study in interactive 3-D rotation using 2-D control devices*, SIGGRAPH 1988 — the **virtual sphere**. ⚠ Our per-frame incremental form is the virtual sphere's, not Shoemake's arcball; see `queue_notes/IN11.md` |
+| **2ter** | vertical flick → `GRAVITY_ALIGN` | ⚠ **NOVEL COMPOSITE** | a flick is universal. **Flick-to-push-a-constraint is ours.** Nearest published relative: snap-dragging's alignment objects (Bier 1990) |
+| **2quater** | horizontal flick → `WORLD_AXIS_ALIGN`, screen-x resolved to world at snap time | ⚠ **NOVEL COMPOSITE** | as 2ter |
+| **2quinte** | circular gesture → roll about the view axis | ⚠ **NOVEL COMPOSITE** | rotate-by-circling is widely practised; **committing on signed angle accumulated about a FITTED centre, gated by a radius band, is ours** |
+| **2sexte** | drag → rotation about the remaining free DOF only | **INTERNAL COMPOSITION** | constrained-DOF manipulation is Bier, *Snap-dragging in three dimensions*, I3D 1990, and Bukowski & Séquin, *Object associations*, I3D 1995. Binding it to an ordered stack is ours |
+| **2septies** | ⭐ **a quick BACK-AND-FORTH** → clear the object's alignments, sparing mates *(owner, 2026-09-15, amendments A1 → A4; it was a double-tap, then briefly a 360° roll)* | ⚠ **NOVEL COMPOSITE** — flagged for `SEC4` | double-tap-to-reset is universal and was the original. ⚠ The nearest widely-known relative to the replacement is iOS's **shake-to-undo** (2009) — but that reads the **accelerometer**, a device motion, not a touch path, so it is a different input and **not a safe prior-art anchor**. ⭐ The metaphor is old; this gesture is not attested anywhere found |
+
+## The register — §4, two touchpoints ⚠ the section a review should read first
+
+| rule | what it is | tag | anchor |
+|---|---|---|---|
+| **4** | pinch → zoom | **PRIOR ART** | universal; explicitly outside the catalog's caution zone |
+| **5** | two hits → select both objects and both faces | **PRIOR ART** | direct picking, as rule 2 |
+| **6** | one finger on the object, one outside → translate in the screen plane | **INTERNAL COMPOSITION** | the translation itself is conventional unprojection ("sticky drag") and our gain is **computed** so 1.0 puts the object under the finger. ⚠ **Using a finger OUTSIDE any object as the mode selector is ours** |
+| **6bis** | depth + `AxisFirstOrthogonal` from a drag projected onto `AxisBtwFaces` | ⚠⚠ **NOVEL COMPOSITE** | nearest published relatives are Martinet, Casiez & Grisoni, *Z-technique*, 3DUI 2010, and **DS3**, IEEE TVCG 2012 — both separate depth onto a second finger. **Neither describes an axis between two selected face centres.** ⛔ The closest prior art does something materially different |
+| **6ter** | both fingers moving → both objects translate toward each other on `AxisBtwFaces` | ⚠⚠ **NOVEL COMPOSITE** | no published relative found. The spec itself flags it as the hardest case to control |
+| **6quater** | flick one object toward the other → push `MATE`, re-solve, unselect | ⚠⚠ **NOVEL COMPOSITE** | the *outcome* is snap-dragging (Bier 1990) and object associations (Bukowski & Séquin 1995), both prior art. **The gesture that triggers it — a direction-pure flick at a second selected object, separated from a drag by terminal lift speed — is ours** |
+
+## The register — behaviours with no clause in the spec
+
+| behaviour | tag | anchor |
+|---|---|---|
+| double-tap flies the camera home | **PRIOR ART** | reset-view is universal. ⚠ Easing the ORBIT PARAMETERS rather than the transform is an implementation choice, not a claimable gesture |
+| the sympathetic sway | **NOVEL**, and **not an input gesture** | it reads no input and consumes no DOF — it is decoration driven by the held object's motion. Recorded for completeness; outside the caution zone |
+
+---
+
+## Adopted techniques, with their citations
+
+⛔ **Every technique adopted from the catalog keeps its citation HERE, at the moment of
+adoption.** That is the discipline; a citation added later is a reconstruction.
+
+| adopted | from | citation | where it landed |
+|---|---|---|---|
+| **Snap priority and screen-space pointing tolerance** | catalog §4.1 | Bier, *Snap-dragging in three dimensions*, I3D 1990; Bier & Stone, *Snap-dragging*, SIGGRAPH 1986 | spec, *ADOPTED FROM THE TECHNIQUE CATALOG*; binds `3D2` |
+| **Provenance discipline and the IP register** | catalog §0, §5 | the catalog itself | this file; `CONSTRAINTS` §10; `D11`; `SEC4` |
+
+## Candidates recorded but NOT adopted
+
+⭐ Recorded so that a later session does not re-derive the assessment.
+
+| candidate | verdict | why |
+|---|---|---|
+| §2.3 frame snapshot, §2.2 turntable, §3.1 sticky drag | **already built** | shipped in `IN1`/`IN9`/`IN4` before the catalog was read. The catalog confirms them independently |
+| §3.3 tBox, §3.4 axis-handle gizmo | **declined** | both interpose a WIDGET between finger and object, against `D4` (direct, kinematic manipulation) and against rule 2, which selects a face by touching that face |
+| §2.4 raycast orbit pivot | **queued** — `IN10` | real for large assemblies; premature while the scene holds three small objects whose barycentre IS the thing being worked on |
+| §1.2 Halo / Wedge | **queued** — `RND4` | needed once 6ter/6quater can have an off-screen partner |
+| §3.2 Z-technique / DS3 | **candidate — deferred to a device QUESTION** | rule 6 is two DOF and its anchor finger carries no information; DS3 would give it depth. ⛔ But a free orbit already solves depth. ⭐ Decided by watching the first assembly attempt: [`../00_CORE/queue_notes/3D1.md`](../00_CORE/queue_notes/3D1.md), cross-referenced from [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md). ⚠ The catalog's depth-vs-pinch ambiguity **cannot occur here** — pinch requires nothing held, and §4 latches roles at press |
+| §1.1 Z-targeting lock-on | **declined** | its core substitution (lateral input becomes tangential) is what rule 1 already does, and its framing anchor is what the barycentre already does |
+| §2.1 Arcball as the default orbit | **moot** | 2bis is a gesture on an object, not a trackball. ⚠ But its path-dependence warning **does** apply to 2bis — `IN11` |
+
+---
+
+## ⚠ A correction to the catalog, recorded before it is relied on
+
+**Catalog §2.1 merges two techniques and assigns one's flaw to both.** It lists Chen et
+al.'s virtual sphere (1988) and Shoemake's ARCBALL (1992) under one entry and calls the
+result path-dependent. The literature separates them: **the virtual sphere is
+path-dependent; Shoemake's arcball is path-INdependent** — its rotation is a pure function
+of the start and current projected points, which was the point of it. The paper that sorts
+them out is Henriksen, Sporring & Hornbæk, *Virtual Trackballs Revisited*, IEEE TVCG 2004.
+
+⛔ As written, the entry disqualifies as a default exactly the variant whose property an
+assembly task wants. ⚠ **Verify against the paper before relying on either reading** — this
+note is a flag, not a finding.
