@@ -44,16 +44,7 @@ export class PinchTracker {
   /** True once the deadband has been crossed and zoom is live. */
   private live = false;
 
-  /**
-   * @param gain the exponent on the separation ratio. ⭐ A PARAMETER so that rule 4 and
-   *   amendment A5 (`depth_pinch.ts`) share ONE implementation of the ratio, the deadband
-   *   and the re-anchoring — `METHOD`: a second implementation can silently disagree.
-   *   ⚠ Defaults to `gainZoom`, so every existing caller is unchanged.
-   */
-  constructor(
-    private readonly cfg: GestureConfig,
-    private readonly gain: number = cfg.gainZoom,
-  ) {}
+  constructor(private readonly cfg: GestureConfig) {}
 
   get isZooming(): boolean {
     return this.live;
@@ -96,7 +87,7 @@ export class PinchTracker {
     // ⭐ The gain is an EXPONENT, not a multiplier, because the quantity is a ratio.
     // A multiplier would be dimensionally wrong: doubling a ratio is not doubling a
     // movement. At `gainZoom = 1` this is the plain physical mapping.
-    return Math.pow(anchor / now, this.gain);
+    return Math.pow(anchor / now, this.cfg.gainZoom);
   }
 }
 

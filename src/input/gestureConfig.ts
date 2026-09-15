@@ -173,6 +173,26 @@ export interface GestureConfig {
   rotateSwayReferenceDegPerS: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
+
+  /**
+   * Amendment **A6** — how far apart the two touchpoints' vertical travels may be, in
+   * millimetres on screen, and still count as ONE common drag.
+   *
+   * ⛔⛔ THE TOLERANCE IS ON THE **DIFFERENCE**, AND THAT IS THE WHOLE DISCRIMINATOR.
+   * A6 shares a touchpoint configuration with rule 6 — one finger on the object, one
+   * beside it — so the two are told apart by what the fingers DO: common mode is depth,
+   * differential mode is rule 6.
+   * ⚠ Too tight and a hand cannot hold two fingers parallel enough; too loose and an
+   * ordinary rule 6 drag starts reading as depth. `IN5` — a placeholder, with a slider.
+   */
+  depthCommonToleranceMm: number;
+  /**
+   * The window the two travels are measured across, milliseconds.
+   * ⛔ Mistake shape 1 — *a rate estimated over the shortest available baseline* — has
+   * cost this project three defects. A per-frame comparison of two fingers is noise.
+   * ⚠ It GATES only; the displacement applied is this frame's. See `depth_translate.ts`.
+   */
+  depthCommonWindowMs: number;
   gainTranslateMutual: number;
 
   // ── §1.3 the recognizer ─────────────────────────────────────────────────
@@ -352,15 +372,6 @@ export interface GestureConfig {
   gainZoom: number;
 
   /**
-   * Amendment A5 (`D16`) — the exponent for a DEPTH PINCH on an object.
-   * ⭐⭐ COMPUTED, NOT GUESSED: apparent size goes as 1/distance, so keeping the object
-   * under the two fingers makes the distance scale by the inverse separation ratio —
-   * **1.0 is the CORRECT value, not a preferred one**, the second gain on this project
-   * with a right answer rather than a taste. ⚠ The slider exists so a hand can DISPROVE
-   * that, not because the number is unknown.
-   */
-  gainPinchDepth: number;
-  /**
    * Metres. ⛔⛔ THE NEAR-PLANE FLOOR, AND IT IS LOAD-BEARING. `render/scene.ts` sets
    * the camera's `minZ` to 0.01 m because Babylon's default of 1 put this
    * metre-scale scene entirely inside the near plane — a black page with no error
@@ -515,7 +526,13 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // hand curves, so only a reversal would ever register at a near-180° threshold.
   rotateSwayTurnDeg: 60,
   gainTranslateAxis: 1,
+  // ⭐ A6: 1.0 moves the object as far into the scene as rule 6 would move it across —
+  // the same computed tracking factor, pointed along the ground instead of the screen.
   gainTranslateDepth: 1,
+  // ⚠ Both placeholders. 6 mm of slack over 60 ms is a guess at how parallel a hand can
+  // hold two fingers, and a guessed number has been wrong every time on this project.
+  depthCommonToleranceMm: 6,
+  depthCommonWindowMs: 60,
   gainTranslateMutual: 0.5,
 
   flickWindow: 120,
@@ -639,8 +656,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // finger, since tunables override from the URL (`?pinchDeadband=1`).
   pinchDeadband: 2,
   gainZoom: 1,
-  // ⭐ 1.0 = the object stays exactly under the two fingers. See A5.
-  gainPinchDepth: 1,
   // ⛔ 0.15 m is 15x the camera's 0.01 m near plane. See the field comment.
   cameraRadiusMinM: 0.15,
   cameraRadiusMaxM: 3,

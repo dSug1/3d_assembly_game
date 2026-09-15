@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**433 golden vectors, all passing** (37 → 433).
+**436 golden vectors, all passing** (37 → 436).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -65,7 +65,12 @@ roll channel back to a real control, left the roll too — it is a **quick BACK-
 one touchpoint, ≥2 reversals in a window, reusing the sway's MEASURED reversal detector.
 ⛔ The flick test must be skipped once one reversal is seen, or an abandoned shake ADDS a
 constraint instead of removing one. ⭐ **A1 §4 (`D13`)**: eviction **spares `MATE` entries** — *one gesture, one
-intention*. ⭐ **A2**: the scene holds THREE objects, not two. ⭐⭐ **A5 (`D16`)**: **two touchpoints on
+intention*. ⭐ **A2**: the scene holds THREE objects, not two. ⭐⭐ **A6 (`D17`)**: **depth is a COMMON VERTICAL DRAG** — one finger on the object, one
+ANYWHERE, both travelling in y together. ⛔ It replaced A5’s pinch because a hand found the
+hole: two fingers will not fit on a SMALL object, and pushing a part away shrinks it, so the
+pinch **destroyed its own affordance as it succeeded**. ⭐⭐ It shares rule 6’s configuration:
+**common mode is depth, differential mode is rule 6**.
+⚠ **A5 (`D16`)**, its geometry still standing: **two touchpoints on
 the SAME object are a DEPTH PINCH** — it supersedes `D10`, closes §5's last undefined
 configuration, and came from a HAND rather than a document. ⛔⛔ **Depth is HORIZONTAL** —
 the view axis flattened onto the ground plane — so **an object's height never changes**:

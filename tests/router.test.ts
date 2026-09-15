@@ -84,27 +84,30 @@ describe("IN2 — §0 order-independence", () => {
   });
 });
 
-describe("IN2 — A5: two touchpoints on the SAME object are a DEPTH PINCH", () => {
-  // ⭐⭐ THIS WHOLE BLOCK WAS WRITTEN AGAINST `D10` ("ignore the second hit") AND IS NOW
-  // WRITTEN AGAINST `D16`/A5. The owner reversed the decision after a device pass, and the
-  // vectors follow the decision — that is the point of keeping them small and explicit.
+describe("IN2 — two touchpoints on the SAME object: the SECOND role", () => {
+  // ⭐⭐ THIS BLOCK WAS WRITTEN AGAINST `D10` ("ignore the second hit") AND IS NOW WRITTEN
+  // AGAINST `D16`. The owner reversed the decision after a device pass, and the vectors
+  // follow the decision — that is the point of keeping them small and explicit.
+  // ⚠ The ROLE was briefly called `PINCH`, after A5's depth pinch. **A6 replaced that
+  // gesture** and the role was renamed for what it IS rather than for what consumed it: a
+  // name borrowed from a consumer goes stale the moment the consumer changes.
   // ⚠ The negatives survive unchanged, because they were never about which role the second
   // finger takes: a press on a DIFFERENT object must stay reachable either way.
 
-  it("⭐⭐ the second hit on an already-held object is a PINCH, not ignored", () => {
+  it("⭐⭐ the second hit on an already-held object is a SECOND, not ignored", () => {
     const r = new PointerRouter<typeof CUBE>();
     r.press(1, at(100, 100), CUBE);
     const second = r.press(2, at(110, 110), CUBE);
-    expect(second.role).toBe("PINCH");
+    expect(second.role).toBe("SECOND");
   });
 
-  it("⭐ a PINCH pointer DOES carry the object — the rule has to find the pair", () => {
+  it("⭐ a SECOND pointer DOES carry the object — a rule has to find the pair", () => {
     // ⛔ The opposite of IGNORED, deliberately, and the difference is load-bearing:
     // A5 needs both samples and the object; an ignored finger must be unreachable.
     const r = new PointerRouter<typeof CUBE>();
     r.press(1, at(100, 100), CUBE);
     expect(r.press(2, at(110, 110), CUBE).object).toBe(CUBE);
-    expect(r.pinchPartner(CUBE)!.id).toBe(2);
+    expect(r.secondTouchOn(CUBE)!.id).toBe(2);
   });
 
   it("⛔ …but it is NOT in objects() — that list means DISTINCT held objects", () => {
@@ -116,20 +119,20 @@ describe("IN2 — A5: two touchpoints on the SAME object are a DEPTH PINCH", () 
     r.press(1, at(100, 100), CUBE);
     r.press(2, at(110, 110), CUBE);
     expect(r.objects()).toHaveLength(1);
-    expect(r.pinches()).toHaveLength(1);
+    expect(r.seconds()).toHaveLength(1);
   });
 
-  it("⛔⛔ the THIRD finger on the same object IS ignored — A5 allows exactly one partner", () => {
+  it("⛔⛔ the THIRD finger on the same object IS ignored — exactly one second is allowed", () => {
     const r = new PointerRouter<typeof CUBE>();
     r.press(1, at(100, 100), CUBE);
     r.press(2, at(110, 110), CUBE);
     const third = r.press(3, at(120, 120), CUBE);
     expect(third.role).toBe("IGNORED");
     expect(third.object).toBeNull();
-    expect(r.pinches()).toHaveLength(1);
+    expect(r.seconds()).toHaveLength(1);
   });
 
-  it("⛔⛔ a press on a DIFFERENT object is neither pinched nor ignored — 6bis stays reachable", () => {
+  it("⛔⛔ a press on a DIFFERENT object takes OBJECT — 6bis/6ter stay reachable", () => {
     // ⛔ THE NEGATIVE THAT STOPS THE DECISION BEING OVER-APPLIED. A5 is about a second
     // finger on the SAME object: two fingers on two objects is the whole of rules
     // 6bis/6ter, and an over-eager read here would delete them silently.
@@ -138,10 +141,10 @@ describe("IN2 — A5: two touchpoints on the SAME object are a DEPTH PINCH", () 
     expect(r.press(2, at(300, 300), CONE).role).toBe("OBJECT");
     expect(r.press(3, at(500, 500), BALL).role).toBe("OBJECT");
     expect(r.objects()).toHaveLength(3);
-    expect(r.pinches()).toHaveLength(0);
+    expect(r.seconds()).toHaveLength(0);
   });
 
-  it("⭐⭐ lifting the HOLDER leaves the partner pinching nothing — the dead end is gone", () => {
+  it("⭐⭐ lifting the HOLDER does not promote the second — the role is latched for life", () => {
     // ⚠ Under `D10` this was the accepted-but-disliked behaviour: the part stopped
     // responding while a finger was still on it. The role is still latched for life — a
     // PINCH does not get promoted to OBJECT — but the configuration now has a meaning
@@ -150,19 +153,19 @@ describe("IN2 — A5: two touchpoints on the SAME object are a DEPTH PINCH", () 
     r.press(1, at(100, 100), CUBE);
     r.press(2, at(110, 110), CUBE);
     r.release(1);
-    expect(r.get(2)!.role).toBe("PINCH");
+    expect(r.get(2)!.role).toBe("SECOND");
     expect(r.objects()).toHaveLength(0);
   });
 
-  it("⛔ a PINCH pointer stays a PINCH wherever it slides", () => {
+  it("⛔ a SECOND pointer stays a SECOND wherever it slides", () => {
     const r = new PointerRouter<typeof CUBE>();
     r.press(1, at(100, 100), CUBE);
     r.press(2, at(110, 110), CUBE);
     r.move(2, at(900, 900, 300), null); // out over empty space
-    expect(r.get(2)!.role).toBe("PINCH");
+    expect(r.get(2)!.role).toBe("SECOND");
   });
 
-  it("⛔⛔ releasing a PINCH reports wasActive=false — it ran no gesture of its own", () => {
+  it("⛔⛔ releasing a SECOND reports wasActive=false — it ran no gesture of its own", () => {
     // ⭐ The caller reads this to decide whether to run the §1.3 release verdict, the
     // flick test and the tap history. A pinch partner never began one, so lifting it must
     // not end one — a stray TAP here would evict a constraint (§1.4).
@@ -193,12 +196,12 @@ describe("IN2 — A5: two touchpoints on the SAME object are a DEPTH PINCH", () 
 });
 
 describe("IN2 — what the rules are allowed to count", () => {
-  it("⛔⛔ activeCount EXCLUDES ignored touchpoints but COUNTS a pinch partner", () => {
-    // ⛔ The §4 rule table is written against this number, and A5 changed what belongs in
-    // it: a pinch partner is a touchpoint a RULE CAN SEE, so it counts. A third finger on
-    // the same object cannot be seen by any rule, so it does not.
-    // ⚠ This is what keeps the eviction shake (A4) off during a pinch — it is gated on
-    // `activeCount === 1`.
+  it("⛔⛔ activeCount EXCLUDES ignored touchpoints but COUNTS a second touchpoint", () => {
+    // ⛔ The §4 rule table is written against this number, and `D16` changed what belongs
+    // in it: a SECOND touchpoint is one a RULE CAN SEE, so it counts. A third finger on the
+    // same object cannot be seen by any rule, so it does not.
+    // ⚠ This is what keeps the eviction shake (A4) off while a two-finger rule is running —
+    // it is gated on `activeCount === 1`.
     const r = new PointerRouter<typeof CUBE>();
     r.press(1, at(100, 100), CUBE);
     r.press(2, at(110, 110), CUBE);

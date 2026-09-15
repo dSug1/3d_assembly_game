@@ -55,10 +55,10 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
-  depthPinchLimits,
+  CommonDragDetector,
+  depthLimits,
   depthPushDirection,
-  depthPinchPosition,
-  depthPinchTracker,
+  depthTranslate,
   displayPose,
   exponentialSmooth,
   phantomTarget,
@@ -81,6 +81,7 @@ import {
   type PosePort,
   type ReleaseVerdict,
   type Sample,
+  type RoutedPointer,
   type ScreenFrame,
 } from "../input";
 // ⭐ The quaternion arithmetic left this file with the composition it belonged to —
@@ -299,6 +300,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ `null` only before the gesture commits.
      */
     mode: "ROTATE" | "TRANSLATE" | "DEPTH" | null;
+    /** A6's gate: are both touchpoints travelling in y together? ⛔ It only DECIDES. */
+    depth: CommonDragDetector;
+    /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
+    depthSway: SwayWatcher;
     /**
      * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
      * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
@@ -689,14 +694,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * a blank one.
    */
   const depthReadout = (): string => {
-    for (const [mesh, state] of depthPinches) {
-      const push = depthPushDirection(state.viewAxis, WORLD_DOWN);
-      const mp = modelPose(mesh);
+    for (const grip of held.values()) {
+      const push = depthPushDirection(grip.frame.viewAxis, WORLD_DOWN);
+      const mp = modelPose(grip.mesh);
       if (!push || !mp) continue;
       const c = asVec3(camera.position);
       const r: Vec3 = [mp.position[0] - c[0], mp.position[1] - c[1], mp.position[2] - c[2]];
       const d = r[0] * push[0] + r[1] * push[1] + r[2] * push[2];
-      const { minM, maxM } = depthPinchLimits(cfg);
+      const { minM, maxM } = depthLimits(cfg);
       const at = d <= minM + 1e-4 ? "  ⛔MIN" : d >= maxM - 1e-4 ? "  ⛔MAX" : "";
       return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at}`;
     }
@@ -850,14 +855,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("phantom lead (ms)", "translateLeadMs", 0, 1.5, 0.1),
         // ⭐ The sympathetic sway: how far the OTHER objects drift when this one sets
         // off, and how lazily they spring back. ⛔ 0 mm disables it exactly.
-        // ⭐⭐ AMENDMENT A5's DEPTH PINCH. 1.0 is the COMPUTED value: apparent size goes
-        // as 1/distance, so scaling the horizontal depth by the inverse separation ratio
-        // keeps the object under the two fingers. ⛔ The SECOND gain on this project with a
-        // right answer rather than a taste, and the slider is here so a finger can
-        // DISPROVE it — not because the number is unknown.
-        // ⚠ It is an EXPONENT on a ratio, not a multiplier on a distance, so the useful
-        // range is narrow and centred on 1. See input/depth_pinch.ts.
-        tunable("depth pinch gain (1 = under fingers)", "gainPinchDepth", 0.25, 3, 0.05),
+        // ⭐⭐ AMENDMENT A6 — DEPTH TRANSLATION. 1.0 moves the object as far INTO the
+        // scene as rule 6 moves it ACROSS, for the same finger travel: one gain, one
+        // computed tracking factor, two directions. ⛔ Not a metres-per-millimetre
+        // constant — rule 6 proved that cannot serve both ends of a 20x zoom clamp.
+        tunable("depth gain (1 = as far as a drag)", "gainTranslateDepth", 0.25, 3, 0.05),
+        // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
+        // what baseline. ⛔ The tolerance is on the DIFFERENCE of the two travels: it is
+        // what separates A6 from rule 6, whose anchor is deliberately still.
+        tunable("depth common tolerance (mm)", "depthCommonToleranceMm", 1, 20, 0.5),
+        tunable("depth common window (ms)", "depthCommonWindowMs", 20, 200, 10),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
         // ⭐ How far the drag must swing before the scene reacts again, and the drag
@@ -1002,83 +1009,81 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
-   * ⭐⭐ AMENDMENT A5 — a live depth pinch, per pinched object.
+   * ⭐⭐ AMENDMENT A6 — DEPTH TRANSLATION BY A COMMON VERTICAL DRAG.
    *
-   * ⛔⛔ EVERY FIELD HERE IS CAPTURED AT THE PINCH'S START, AND THAT IS THE WHOLE POINT.
-   * `PinchTracker.scale` returns a ratio against the gesture's start, never an increment —
-   * so applying it to the object's CURRENT position each frame would compound it, and a
-   * pinch out and back would not return. The same discipline `pinch.ts` uses for the
-   * camera, where `zoomAtPinchStart` is captured once.
-   * ⚠ The view axis is latched too, for §4's reason: a camera that moves mid-gesture must
-   * not redefine which way "away" is under a finger already down.
+   * One touchpoint on the object, one touchpoint beside it, and **both travelling in y by
+   * the same amount** — the object goes deeper into the scene or comes back.
+   *
+   * ⛔⛔ IT SHARES A CONFIGURATION WITH RULE 6, so the discriminator is the whole design:
+   * **common mode is depth, differential mode is rule 6.** The anchor sitting still is what
+   * makes a gesture rule 6; both fingers travelling together is what makes it A6.
+   *
+   * ⭐ A6 replaced A5's pinch because a hand found the hole: two fingers will not fit on a
+   * SMALL object, and pushing a part away shrinks it — so the pinch destroyed its own
+   * affordance as it succeeded. The anchor can now be anywhere.
    */
-  interface DepthPinch {
-    readonly tracker: PinchTracker;
-    readonly startPosition: Vec3;
-    readonly viewAxis: Vec3;
-    /**
-     * ⭐⭐ THE SWAY TRIGGER, FED THE FINGER SEPARATION — and the UNITS are why this is a
-     * reuse rather than a hack. `SwayWatcher` asks *"has the heading changed, over a
-     * stated window, by more than the MEASURED pointer noise?"* A separation between two
-     * touchpoints is a pointer-space distance in exactly those units, so
-     * `pointerNoiseMm` means the same thing to it. ⚠ Fed as a 1-D sample
-     * (x = separation, y = 0): closing is one heading, opening is the other.
-     * ⛔ A second detector here would need its own noise floor, and nothing has measured
-     * one — 0.761 mm was paid for once, and it is not transferable by assumption.
-     */
-    readonly sway: SwayWatcher;
-  }
-  const depthPinches = new Map<AbstractMesh, DepthPinch>();
+  const depthAnchorFor = (grip: Held): RoutedPointer<AbstractMesh> | null => {
+    // ⭐ ANY other participating touchpoint: one outside every object (rule 6's anchor) or
+    // a second finger on this same object. ⛔ NOT a finger holding a DIFFERENT object —
+    // that configuration belongs to §4 rules 5/6bis/6ter and must stay reachable.
+    for (const q of router.all()) {
+      if (q.role === "OUTSIDE") return q;
+      if (q.role === "SECOND" && q.object === grip.mesh) return q;
+    }
+    return null;
+  };
 
   /**
-   * Run A5 for one object, from whichever finger moved. ⭐ ONE implementation, two
-   * triggers: the holder's move reaches it through the grip, the partner's through its own
-   * branch — and a partner has no recognizer, so without this its motion would do nothing.
+   * Move the held object in depth by ONE touchpoint's share of this frame's travel.
    *
-   * @returns true when a pinch owns this object right now, so the caller skips its own rule.
+   * ⛔⛔ HALF, AND THAT IS ARITHMETIC RATHER THAN CAUTION. The common travel is the AVERAGE
+   * of the two fingers', and each finger delivers its own move event — so applying half of
+   * each event's delta sums to exactly the common travel. Applying the whole of each would
+   * move the object TWICE as far as the hand asked.
    */
-  const applyDepthPinch = (mesh: AbstractMesh): boolean => {
-    const state = depthPinches.get(mesh);
-    const partner = router.pinchPartner(mesh);
-    const holder = router.objects().find((q) => q.object === mesh);
-    if (!state || !partner || !holder) return false;
-
-    const factor = state.tracker.scale(holder.last, partner.last);
-    // ⛔ Inside the deadband the tracker says NOTHING, which is not "scale by one": the
-    // caller must leave the object alone rather than rewrite it with rounding.
-    if (factor === null) return true;
-
-    const mp = requirePose(mesh);
-    const { minM, maxM } = depthPinchLimits(cfg);
-    setModelPose(mesh, {
-      // ⛔ FROM THE START POSITION, never from `mp.position`. See `DepthPinch`.
-      position: depthPinchPosition(
+  const applyDepthStep = (grip: Held, dyPx: number): void => {
+    const mp = requirePose(grip.mesh);
+    const { minM, maxM } = depthLimits(cfg);
+    setModelPose(grip.mesh, {
+      position: depthTranslate(
         asVec3(camera.position),
-        state.startPosition,
-        state.viewAxis,
+        mp.position,
+        grip.frame.viewAxis,
         WORLD_DOWN,
-        factor,
+        dyPx / 2,
+        // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object
+        // as far INTO the scene as it would move it ACROSS. One hand's-worth of motion
+        // means the same amount of movement whichever way it is going.
+        trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
+        cfg.gainTranslateDepth,
         minM,
         maxM,
       ),
       orientation: mp.orientation,
     });
+  };
 
-    // ⭐ THE SCENE REACTS TO A PUSH TOO. The others drift the way the pushed object went
-    // and spring back — the same amplitude, softness, re-trigger and reference speed the
-    // drag uses, because it is the same decoration answering the same question. ⛔ No new
-    // slider for a second cause.
-    // ⚠ SIGN: separation CLOSING means the object goes AWAY, which is +push.
-    const separationPx = Math.hypot(
-      holder.last.x - partner.last.x,
-      holder.last.y - partner.last.y,
-    );
-    const kick = state.sway.push({ x: separationPx, y: 0, t: partner.last.t }, true, true);
+  /**
+   * Feed the gate and, if this is a common drag, move the object. ⭐ Called from BOTH
+   * touchpoints' move handlers — the anchor has no recognizer, so without its own call its
+   * travel would be invisible and the gesture would work only while the object finger moved.
+   *
+   * @returns true when A6 owns this object right now, so the caller skips its own rule.
+   */
+  const applyDepthDrag = (grip: Held, holderY: number, anchorY: number, t: number, dyPx: number) => {
+    const common = grip.depth.push(t, holderY, anchorY);
+    if (!common) return false;
+    applyDepthStep(grip, dyPx);
+    grip.mode = "DEPTH";
+
+    // ⭐ THE SCENE REACTS TO A PUSH TOO — the same sway, the same four tunables.
+    // ⚠ SIGN: fingers moving UP (negative screen y) push the object AWAY, which is +push.
+    const kick = grip.depthSway.push({ x: 0, y: holderY, t }, true, true);
     if (kick) {
-      const push = depthPushDirection(state.viewAxis, WORLD_DOWN);
+      const push = depthPushDirection(grip.frame.viewAxis, WORLD_DOWN);
       if (push) {
-        const away = kick.dirX < 0 ? 1 : -1;
-        nudgeOthersWorld(mesh, [push[0] * away, push[1] * away, push[2] * away], kick.speedMmPerS);
+        const away = kick.dirY < 0 ? 1 : -1;
+        nudgeOthersWorld(grip.mesh, [push[0] * away, push[1] * away, push[2] * away], kick.speedMmPerS);
       }
     }
     return true;
@@ -1134,22 +1139,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         return;
       }
 
-      if (routed.role === "PINCH") {
-        // ⭐⭐ AMENDMENT A5: the second finger on a held object. It runs NO recognizer —
-        // it never begins a §1.3 gesture of its own — it only joins the holder to make a
-        // depth pinch. ⛔ Creating a `Held` here would give one mesh two recognizers.
-        const mesh = routed.object as AbstractMesh;
-        const holder = router.objects().find((q) => q.object === mesh);
-        if (holder) {
-          const tracker = depthPinchTracker(cfg);
-          tracker.begin(holder.last, s);
-          depthPinches.set(mesh, {
-            tracker,
-            startPosition: requirePose(mesh).position,
-            viewAxis: screenFrame().viewAxis,
-            sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
-          });
-        }
+      if (routed.role === "SECOND") {
+        // ⭐ A second finger on an object another touchpoint already holds. It runs NO
+        // recognizer — it never begins a §1.3 gesture of its own — it is one of A6's two
+        // travelling fingers. ⛔ Creating a `Held` here would give one mesh two recognizers.
+        // ⚠ A6's anchor may equally be a finger OUTSIDE every object; this branch is the
+        // case where the hand happened to put it back on the part.
         paint();
         return;
       }
@@ -1200,6 +1195,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         lastRollDeg: 0,
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
+        depth: new CommonDragDetector(
+          cfg.depthCommonWindowMs,
+          cfg.depthCommonToleranceMm,
+          cfg.pointerNoiseMm,
+        ),
+        depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
         // of orientation noise per sample. Measured over 10 s of a still finger that is
@@ -1220,26 +1221,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const routed = router.get(e.pointerId);
     if (!routed) return;
 
-    if (routed.role === "PINCH") {
+    if (routed.role === "SECOND") {
       const mesh = routed.object as AbstractMesh;
       if (info.type === PointerEventTypes.POINTERUP) {
         router.release(e.pointerId);
-        // ⛔ A pinch needs BOTH fingers. Lifting either ends it rather than letting the
-        // survivor keep scaling against a partner that is gone — and the holder falls
-        // back to one-touchpoint rotation, which is the dead end `D10` used to leave.
-        depthPinches.delete(mesh);
-        lastVerdict = "PINCH released";
+        lastVerdict = "second touchpoint released";
       } else {
+        const prev = routed.last;
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
-        if (applyDepthPinch(mesh)) {
-          // ⭐ The HOLDER owns the readout, so say DEPTH there even when it is the
-          // PARTNER that moved. ⛔ `METHOD`: the readout must not lie about which rule is
-          // running — a mode that said ROTATE while a pinch drove the object would send
-          // the next debugging session to the wrong rule.
-          const holder = router.objects().find((q) => q.object === mesh);
-          const h = holder ? held.get(holder.id) : undefined;
-          if (h) h.mode = "DEPTH";
-        }
+        const holder = router.objects().find((q) => q.object === mesh);
+        const grip = holder ? held.get(holder.id) : undefined;
+        // ⭐ This finger's own travel, halved — see `applyDepthStep`.
+        if (grip) applyDepthDrag(grip, grip.prev.y, s.y, s.t, s.y - prev.y);
       }
       paint();
       return;
@@ -1262,6 +1255,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        // ⭐⭐ A6 FIRST: an anchor travelling in y alongside the finger on the object is a
+        // depth drag, not an orbit and not a pinch. ⛔ Without this branch the gesture
+        // would only work while the OBJECT's finger moved, and a hand moves both.
+        const holder = router.objects()[0];
+        const grip = holder ? held.get(holder.id) : undefined;
+        if (grip && applyDepthDrag(grip, grip.prev.y, s.y, s.t, s.y - prev.y)) {
+          paint();
+          return;
+        }
         if (router.outside().length === 2) {
           updatePinch();
         } else if (router.outside().length === 1 && router.objects().length === 0) {
@@ -1328,11 +1330,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       );
       if (kick && cfg.translateSwayMm > 0) nudgeOthers(grip, kick);
 
-      // ⭐⭐ A5 TAKES PRECEDENCE. Two fingers on this object means a depth pinch, and the
-      // holder's drag must NOT also rotate it — a part that spun while being pushed away
-      // would be two rules answering one hand.
-      if (applyDepthPinch(grip.mesh)) {
-        grip.mode = "DEPTH";
+      // ⭐⭐ A6 TAKES PRECEDENCE. While both fingers travel together in y the object goes
+      // in DEPTH, and the holder's drag must not ALSO translate it across the screen or
+      // rotate it — that would be two rules answering one hand.
+      const depthAnchor = depthAnchorFor(grip);
+      if (
+        depthAnchor &&
+        applyDepthDrag(grip, s.y, depthAnchor.last.y, s.t, s.y - grip.prev.y)
+      ) {
         grip.prev = s;
         paint();
         return;
@@ -1441,8 +1446,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
       // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
-      // ⛔ The holder is leaving, so any pinch on its object is over too.
-      depthPinches.delete(grip.mesh);
       const verdict = grip.rec.release(s);
       lastVerdict = describe(verdict);
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:

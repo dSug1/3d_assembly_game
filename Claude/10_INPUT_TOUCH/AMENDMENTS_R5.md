@@ -379,7 +379,16 @@ metaphor is old; **this gesture is not attested anywhere found.** Registered in
 
 ---
 
-## A5 — ⭐⭐ TWO TOUCHPOINTS ON THE SAME OBJECT ARE A **DEPTH PINCH** *(owner, 2026-09-15)*
+## A5 — ⚠ ITS TRIGGER IS SUPERSEDED BY A6 — the depth GEOMETRY stands *(owner, 2026-09-15)*
+
+> ⛔ **The pinch is gone**: a hand found that two fingers will not fit on a small object,
+> and that pushing a part away shrinks it — so the gesture destroyed its own affordance as
+> it succeeded. **A6 replaced the trigger with a common vertical drag.**
+> ⭐ **Everything geometric here still stands and is still the design of record**: depth is
+> HORIZONTAL, height never changes, the across-view offset is untouched, and both clamps are
+> derived. `METHOD`: *retractions are kept on purpose.*
+
+### The original decision, kept as the record
 
 **Supersedes `D10`** (`IN8`, 2026-09-14: *ignore the second touchpoint*) and closes §5's
 *"two touchpoints on the same object — currently undefined and reachable"*.
@@ -503,3 +512,105 @@ Z-technique (3DUI 2010) and DS3 (TVCG 2012), separate depth onto a *second finge
 motion*, not a pinch. ⭐ But it is the nearest approach so far, so it is tagged ⚠ **NOVEL
 COMPOSITE** and marked for `SEC4` **at the moment of adoption**, which is the whole point of
 the discipline.
+
+---
+
+## A6 — ⭐⭐ DEPTH IS A **COMMON VERTICAL DRAG**, NOT A PINCH *(owner, 2026-09-15)*
+
+**Supersedes A5's TRIGGER.** ⭐ A5's *geometry* stands unchanged and is the reason this
+amendment is short: depth is still horizontal, the height still never changes, and the
+bounds are still derived. **Only what starts the gesture has moved.**
+
+> **One touchpoint on the object, one touchpoint anywhere, and BOTH travelling in y by the
+> same amount** (within a threshold) — the object translates in horizontal depth.
+
+### ⛔⛔ WHY THE PINCH HAD TO GO — a hole a hand found, not a preference
+
+> *"When the object is small, it is not possible to pinch it out to send it backwards
+> because two fingers cannot sit on the small object."*
+
+⭐⭐ **And it failed exactly where it hurts.** Pushing a part away SHRINKS it on screen — so
+the pinch **destroyed its own affordance as it succeeded**: the further you got, the harder
+it became to go further. A gesture whose reliability decreases with its own use is not a
+gesture that can be tuned into working.
+
+⭐ A6's second touchpoint goes **anywhere**, so the object's size on screen stops mattering.
+⚠ And it is the same hand shape rule 6 already uses — one finger on the part, one beside it
+— so **depth becomes a variation of translation rather than a separate idea**, which is
+what the owner asked for: *"closer to the current translation mechanism."*
+
+### ⛔⛔ IT SHARES A CONFIGURATION WITH RULE 6, AND THE DISCRIMINATOR IS THE WHOLE DESIGN
+
+Rule 6 is *one touchpoint on an object && one outside*; A6 is a **superset** of it. So they
+cannot be told apart by WHERE the fingers are — only by WHAT THEY DO:
+
+| the two fingers | rule |
+|---|---|
+| the anchor is **still**, the object finger drags | **rule 6** — translate in the screen plane |
+| both **travel in y together**, within a tolerance | ⭐ **A6** — translate in depth |
+
+⭐⭐ **COMMON MODE IS DEPTH; DIFFERENTIAL MODE IS RULE 6.** That is the sentence worth
+remembering, and it is why the tolerance is on the **difference** of the two travels rather
+than on either one. ⛔ Rule 6's anchor is *deliberately still* — that is what keeps the two
+apart, and the gate requires **both** fingers to clear the measured noise before it will
+call anything common.
+
+⚠ **A6 takes precedence while it holds**: the object must not also translate across the
+screen or rotate, or two rules would be answering one hand.
+
+### ⛔⛔ DETECTION NEEDS A BASELINE; APPLICATION NEEDS AN INCREMENT
+
+Mistake shape 1 — *a rate estimated over the shortest available baseline* — has cost this
+project three defects, so *"are these two fingers moving together?"* is decided over a
+**stated window** against the **measured** `pointerNoiseMm`.
+
+⛔ But the displacement applied is **this frame's**, not the window's: re-applying an
+overlapping window every frame would compound it, which is the trap A5's ratio had in its
+own way. ⭐ **The window GATES and the frame MOVES** — two questions, two baselines, and
+neither borrows the other's.
+
+⭐ And each finger's move event applies **half** its own delta. That is arithmetic, not
+caution: the common travel is the AVERAGE of the two, and both fingers deliver events, so
+halves sum to exactly the common travel. Applying the whole of each would move the object
+twice as far as the hand asked.
+
+### ⭐ THE GAIN IS RULE 6's, REDIRECTED — and `gainTranslateDepth` already existed
+
+The displacement uses `trackingMetresPerPx`, the same computed factor rule 6 uses, so
+**one hand's-worth of finger travel moves the object the same distance whichever direction
+it is going** — across the screen or into the scene. ⛔ Not a metres-per-millimetre
+constant: rule 6 proved that cannot serve both ends of a 20× zoom clamp.
+
+⭐ `gainTranslateDepth` was already declared, as debt owed to 6bis, so **no new gain was
+invented** — it is wired and off `config_debt`'s pending list. `gainPinchDepth` is deleted
+with the gesture it was named for.
+
+⚠ **1.0 means CONSISTENT, not tracking.** "The object stays under the finger" is not
+available here: that mapping diverges as the camera levels out, because an object pushed
+along the ground barely moves on screen when you are looking at it horizontally. ⭐
+Consistency with rule 6 holds at *every* camera elevation; tracking does not. **The trade is
+recorded rather than discovered.**
+
+### What `IN2`'s roles become
+
+⭐ The role A5 added is **renamed `SECOND`**, because it outlived the rule that prompted it:
+*a second finger on an object another touchpoint already holds*. ⛔ A role named after its
+consumer goes stale the moment the consumer changes, and this one did within a day.
+
+⚠ A6's anchor may be a `SECOND` **or** an `OUTSIDE` touchpoint — *anywhere*, as the owner
+specified. ⛔ It may **not** be a finger holding a DIFFERENT object: that configuration is
+§4 rules 5/6bis/6ter and must stay reachable.
+
+### ⚠ Two new tunables, both placeholders, both on sliders
+
+`depthCommonToleranceMm` (6) and `depthCommonWindowMs` (60). ⛔ Neither is measured: 6 mm
+of slack over 60 ms is a guess at how parallel a hand can hold two fingers, and **a guessed
+number has been wrong every time on this project.** ⭐ The tolerance is the whole boundary
+between A6 and rule 6, so it is the one to move first if either rule fires when the other
+was meant.
+
+### ⭐ What A5 keeps
+
+Everything geometric: horizontal depth, height preserved by construction, the across-view
+offset untouched, both clamps derived, and the sympathetic sway answering a push through
+the same implementation and the same four tunables.
