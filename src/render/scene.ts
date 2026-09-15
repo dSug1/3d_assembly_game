@@ -315,6 +315,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
     /**
+     * ⭐ How much of the shared travel has already been turned into depth, millimetres.
+     * ⛔ The detector reports a CUMULATIVE shared travel, so the object moves by the
+     * CHANGE — applying the value itself every frame would compound it.
+     */
+    appliedSharedMm: number;
+    /**
      * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
      * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
      * which would be a continuous shove rather than a reaction.
@@ -1108,10 +1114,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    *
    * @returns true when A6 owns this object right now, so the caller skips its own rule.
    */
-  const applyDepthDrag = (grip: Held, holderY: number, anchorY: number, t: number, dyPx: number) => {
+  const applyDepthDrag = (grip: Held, holderY: number, anchorY: number, t: number) => {
     const common = grip.depth.push(t, holderY, anchorY);
-    if (!common) return false;
-    applyDepthStep(grip, dyPx);
+    if (!common) {
+      // ⛔ The latch is gone, so the next one starts its shared travel from zero.
+      grip.appliedSharedMm = 0;
+      return false;
+    }
+    // ⭐⭐ THE CHANGE IN THE SHARED TRAVEL — the part BOTH fingers agreed on since the
+    // latch, minus what has already been spent. ⛔ A finger moving alone contributes
+    // nothing to it, which is the whole point.
+    const stepMm = common.sharedMm - grip.appliedSharedMm;
+    grip.appliedSharedMm = common.sharedMm;
+    applyDepthStep(grip, mmToPx(stepMm));
     grip.mode = "DEPTH";
 
     // ⭐ THE SCENE REACTS TO A PUSH TOO — the same sway, the same four tunables.
@@ -1239,6 +1254,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           cfg.pointerNoiseMm,
         ),
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
+        appliedSharedMm: 0,
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
         // of orientation noise per sample. Measured over 10 s of a still finger that is
@@ -1265,12 +1281,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         router.release(e.pointerId);
         lastVerdict = "second touchpoint released";
       } else {
-        const prev = routed.last;
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
         const holder = router.objects().find((q) => q.object === mesh);
         const grip = holder ? held.get(holder.id) : undefined;
-        // ⭐ This finger's own travel, halved — see `applyDepthStep`.
-        if (grip) applyDepthDrag(grip, grip.prev.y, s.y, s.t, s.y - prev.y);
+        // ⭐ Positions, not deltas: the detector owns the shared travel now.
+        if (grip) applyDepthDrag(grip, grip.prev.y, s.y, s.t);
       }
       paint();
       return;
@@ -1298,7 +1313,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // would only work while the OBJECT's finger moved, and a hand moves both.
         const holder = router.objects()[0];
         const grip = holder ? held.get(holder.id) : undefined;
-        if (grip && applyDepthDrag(grip, grip.prev.y, s.y, s.t, s.y - prev.y)) {
+        if (grip && applyDepthDrag(grip, grip.prev.y, s.y, s.t)) {
           paint();
           return;
         }
@@ -1374,7 +1389,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const depthAnchor = depthAnchorFor(grip);
       if (
         depthAnchor &&
-        applyDepthDrag(grip, s.y, depthAnchor.last.y, s.t, s.y - grip.prev.y)
+        applyDepthDrag(grip, s.y, depthAnchor.last.y, s.t)
       ) {
         grip.prev = s;
         paint();

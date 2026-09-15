@@ -38,10 +38,35 @@
  * baseline*, and it has cost three defects. So "are these two fingers moving together?" is
  * decided over a **stated window** against the **measured** pointer noise.
  *
- * ⛔ But the DISPLACEMENT applied must be this frame's, not the window's — re-applying an
- * overlapping window every frame would compound it, which is the same trap A5's ratio had.
- * ⭐ So the window GATES and the frame MOVES: two questions, two baselines, and neither
- * borrows the other's.
+ * ⛔ But the DISPLACEMENT applied must not be a re-applied window — that would compound,
+ * which is the trap A5's ratio had.
+ *
+ * ## ⭐⭐ THE OBJECT FOLLOWS THE **SHARED** MOTION, MEASURED FROM THE LATCH
+ *
+ * ⛔⛔ A THIRD DEFECT, FOUND BY FINGER: *"the finger which is outside any object can move
+ * the object on depth once or twice even if the finger on the object is still."* The
+ * displacement used to be **half of each finger's own delta**, and halves sum to the average
+ * — so a finger moving ALONE still contributed real motion until the divergence test tripped.
+ * ⚠ Any tolerance above zero leaks that way; it is inherent to averaging, not to the number.
+ *
+ * ⭐ So the quantity is now the part of the motion **both fingers agree on**:
+ *
+ * ```
+ *   sharedMm = the signed travel the two have IN COMMON since the latch
+ *            = 0 unless both have moved the same way
+ *            = the SMALLER of the two travels when they have
+ * ```
+ *
+ * ⭐⭐ Three properties fall out, and each answers a report:
+ *
+ * * a **still finger contributes nothing** — the smaller travel is zero, so the other
+ *   finger moving alone moves the object not at all;
+ * * it is **cumulative**, so nothing compounds and the caller applies only the CHANGE;
+ * * **out and back returns exactly**, because the shared travel retraces itself — which is
+ *   what stops a back-and-forth from drifting.
+ *
+ * ⚠ It follows the SLOWER finger when the two differ, which is conservative on purpose: a
+ * gesture that means "both of us" should not move further than the more hesitant half.
  *
  * ## ⭐ THE GAIN IS RULE 6's, REDIRECTED
  *
@@ -106,9 +131,15 @@ export function depthPushDirection(viewAxis: Vec3, gravityDown: Vec3): Vec3 | nu
 
 /** What the detector reports when two fingers are travelling together. */
 export interface CommonDrag {
-  /** Their shared vertical travel across the window, millimetres. ⚠ Screen y: DOWN is +. */
+  /**
+   * ⭐⭐ THE SIGNED TRAVEL THE TWO FINGERS HAVE IN COMMON SINCE THE LATCH, millimetres.
+   * ⚠ Screen y: DOWN is positive. ⛔ CUMULATIVE — the caller applies the CHANGE since it
+   * last acted, never this value itself, or the motion would compound every frame.
+   */
+  readonly sharedMm: number;
+  /** Their averaged travel across the window. ⚠ Diagnostic: the object does NOT follow it. */
   readonly commonMm: number;
-  /** How far apart the two travels were — the quantity the tolerance is on. */
+  /** How far apart the two travels were — the quantity the entry tolerance is on. */
   readonly spreadMm: number;
 }
 
@@ -137,12 +168,40 @@ export interface CommonDrag {
  * per frame — and `IN4` already wrote the rule down: a noisy continuous signal must not
  * pick a mode every frame.
  *
+ * ## ⛔⛔ AND THE EXIT IS **CUMULATIVE**, NOT WINDOWED — a second defect, found by finger
+ *
+ * The first latch exited on a WINDOWED divergence, and that is rate-dependent, which broke
+ * it both ways at once:
+ *
+ * * *"if I stop moving the second finger and it stays idle, the depth translation continues
+ *   instead of switching"* — the holder had to cover the whole tolerance **within one
+ *   window** (6 mm in 60 ms, i.e. >100 mm/s) before the spread could exceed it. Drag slower
+ *   and it never exited at all.
+ * * *"I can continue to see some drift when I do back and forth"* — two fingers never turn
+ *   around in the same millisecond, and that skew makes a windowed spread **spike** at each
+ *   reversal, releasing the latch and leaking frames of rule 6 before it re-entered.
+ *
+ * ⛔ **No pair of values fixes both**: lowering the tolerance leaks more at reversals,
+ * raising it makes an idle anchor stickier. ⭐ The quantity was wrong, not the number —
+ * which is `METHOD`'s *"ask whether you replaced the quantity rather than improved it"*,
+ * read from the other end.
+ *
+ * ⭐⭐ So divergence is now measured as **total displacement since the latch**:
+ * `|(a − a₀) − (b − b₀)|`. An idle finger diverges steadily and exits after a fixed
+ * DISTANCE at any speed; a turnaround skew is a transient that cancels itself as both
+ * fingers complete the turn.
+ *
  * ⚠ One per gesture: it carries the window and the latch.
  */
 export class CommonDragDetector {
   private readonly window: { t: number; a: number; b: number }[] = [];
-  /** ⭐ True once the two fingers have been seen travelling together. One-way, per gesture. */
+  /** ⭐ True once the two fingers have been seen travelling together. */
   private latched = false;
+  /**
+   * Where each finger was when the latch closed. ⛔ Divergence is measured from HERE, not
+   * across the window — see the header. `null` while unlatched.
+   */
+  private latchOrigin: { a: number; b: number } | null = null;
 
   /**
    * @param windowMs      the baseline the travels are measured over.
@@ -184,16 +243,28 @@ export class CommonDragDetector {
     if (!this.latched && (!(Math.abs(da) > floor) || !(Math.abs(db) > floor))) return null;
 
     const spreadMm = Math.abs(da - db);
-    // ⛔ A genuine DIVERGENCE ends it — the fingers stopped agreeing, which is the hand
-    // saying something different. That is the only exit, and it is deliberately not
-    // "they slowed down".
-    if (spreadMm > this.toleranceMm) {
-      this.latched = false;
-      return null;
+
+    if (this.latched && this.latchOrigin) {
+      // ⛔⛔ CUMULATIVE divergence: how far the two have drifted apart in TOTAL since the
+      // latch closed. Rate-independent, so an idle finger exits after a fixed distance
+      // however slowly the other moves, and a turnaround skew cancels itself.
+      const sinceA = pxToMm(aYPx - this.latchOrigin.a);
+      const sinceB = pxToMm(bYPx - this.latchOrigin.b);
+      if (Math.abs(sinceA - sinceB) > this.toleranceMm) {
+        this.latched = false;
+        this.latchOrigin = null;
+        return null;
+      }
+      return { sharedMm: shared(sinceA, sinceB), commonMm: (da + db) / 2, spreadMm };
     }
 
+    // ⛔ ENTERING still asks the windowed question: are they moving together RIGHT NOW?
+    if (spreadMm > this.toleranceMm) return null;
+
     this.latched = true;
-    return { commonMm: (da + db) / 2, spreadMm };
+    this.latchOrigin = { a: aYPx, b: bYPx };
+    // ⭐ Zero by construction at the latch: nothing shared has happened yet.
+    return { sharedMm: 0, commonMm: (da + db) / 2, spreadMm };
   }
 }
 
@@ -204,6 +275,19 @@ export class CommonDragDetector {
  * false kicks in 3 s from per-sample directions.
  */
 export const MIN_TRAVEL_NOISE_MULTIPLE = 3;
+
+/**
+ * ⭐⭐ THE PART OF TWO TRAVELS THAT IS COMMON TO BOTH.
+ *
+ * Zero unless they went the same way; otherwise the SMALLER of the two, carrying that
+ * shared sign. ⛔ This is what makes a still finger contribute nothing — its travel is
+ * zero, so the shared part is zero however far the other one goes.
+ */
+export function shared(aMm: number, bMm: number): number {
+  if (aMm > 0 && bMm > 0) return Math.min(aMm, bMm);
+  if (aMm < 0 && bMm < 0) return Math.max(aMm, bMm);
+  return 0;
+}
 
 /**
  * Move an object in horizontal depth by one frame's common travel.

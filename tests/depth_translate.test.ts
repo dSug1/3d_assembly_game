@@ -15,6 +15,7 @@ import {
   depthLimits,
   depthPushDirection,
   depthTranslate,
+  shared,
 } from "../src/input/depth_translate";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
 import { dot, length, normalize, scale, sub, type Vec3 } from "../src/core/vec";
@@ -187,6 +188,114 @@ describe("the sense and the size of the motion", () => {
 
   it("zero travel changes nothing", () => {
     expect(length(sub(move(0), OBJ))).toBeCloseTo(0, 12);
+  });
+});
+
+describe("⭐⭐ THE OBJECT FOLLOWS THE **SHARED** TRAVEL", () => {
+  // ⚠⚠ THE DEFECT THIS PINS, FOUND BY FINGER: "the finger which is outside any object can
+  // move the object on depth once or twice even if the finger on the object is still."
+  // ⛔ The displacement used to be HALF OF EACH FINGER'S OWN DELTA, and halves sum to the
+  // average — so a finger moving alone still contributed real motion until the divergence
+  // test tripped. Any tolerance above zero leaks that way: it is inherent to averaging, and
+  // no value of `depthCommonToleranceMm` fixes it.
+
+  it("⭐ shared() is zero unless BOTH went the same way", () => {
+    expect(shared(10, 0)).toBe(0);
+    expect(shared(0, 10)).toBe(0);
+    expect(shared(10, -10)).toBe(0);
+    expect(shared(0, 0)).toBe(0);
+  });
+
+  it("⭐ and is the SMALLER of the two when they agree, keeping the sign", () => {
+    expect(shared(10, 4)).toBe(4);
+    expect(shared(4, 10)).toBe(4);
+    expect(shared(-10, -4)).toBe(-4);
+    expect(shared(-4, -10)).toBe(-4);
+  });
+
+  const enter = (d: CommonDragDetector) => {
+    let last = null as ReturnType<CommonDragDetector["push"]>;
+    for (let i = 0; i < 12; i++) last = d.push(i * 8, mmToPx(i * 3), mmToPx(i * 3));
+    return last!;
+  };
+
+  it("⛔⛔ A FINGER MOVING ALONE ADDS NOTHING — the shared travel does not budge", () => {
+    const d = detector();
+    const atLatch = enter(d);
+    // The holder freezes at 33 mm; the anchor runs on, well inside the tolerance.
+    let t = 96;
+    let last = atLatch;
+    for (let i = 1; i <= 5; i++) {
+      last = d.push(t, mmToPx(33), mmToPx(33 + i))!;
+      t += 8;
+    }
+    expect(last).not.toBeNull();
+    // ⭐ THE ASSERTION THE REPORT ASKS FOR: the object is driven by this number, and it
+    // has not changed, so the object has not moved.
+    expect(last.sharedMm).toBeCloseTo(atLatch.sharedMm, 9);
+  });
+
+  it("⭐ both moving together DOES add — and it follows the SLOWER one", () => {
+    // ⚠ RELATIVE, because the latch closes as soon as the entry test passes — several
+    // samples before `enter` finishes — so the absolute shared travel at that point is
+    // whatever it is. My first version assumed the latch closed on the LAST entry sample
+    // and asserted an absolute 4 mm; the geometry disagreed. ⭐ A difference is the honest
+    // assertion here, and it is the quantity the object actually moves by.
+    const d = detector();
+    const before = enter(d);
+    // Holder +4 mm, anchor +6 mm from where they were: they agree, so the shared part of
+    // the STEP is the smaller of the two.
+    const v = d.push(96, mmToPx(37), mmToPx(39))!;
+    expect(v.sharedMm - before.sharedMm).toBeCloseTo(4, 6);
+  });
+
+  it("⛔ OUT AND BACK RETURNS TO THE SAME SHARED TRAVEL — this is what stops the drift", () => {
+    // ⭐ Stated as an INVARIANT rather than against a number: the shared travel at a given
+    // pair of finger positions is the same whichever direction the hand arrived from. That
+    // is exactly what "a back-and-forth leaves the object where it started" means, and it
+    // does not depend on where the latch happened to close.
+    const d = detector();
+    enter(d);
+    let t = 96;
+    const atOutbound = d.push(t, mmToPx(36), mmToPx(36))!;
+    t += 8;
+    // Push further out…
+    for (let mm = 39; mm <= 60; mm += 3) {
+      d.push(t, mmToPx(mm), mmToPx(mm));
+      t += 8;
+    }
+    // …then come back to exactly where `atOutbound` was read.
+    let back = atOutbound;
+    for (let mm = 57; mm >= 36; mm -= 3) {
+      back = d.push(t, mmToPx(mm), mmToPx(mm))!;
+      t += 8;
+    }
+    expect(back.sharedMm).toBeCloseTo(atOutbound.sharedMm, 6);
+  });
+
+  it("⛔⛔ the idle-anchor exit is RATE-INDEPENDENT — the flaw no tuning could fix", () => {
+    // ⚠ The first exit test was a WINDOWED spread, so the moving finger had to cover the
+    // whole tolerance INSIDE one 60 ms window — above ~100 mm/s. Slower than that it never
+    // exited at all, which is what "the depth translation continues" was.
+    // ⭐ Measured from the latch instead, the exit happens after a fixed DISTANCE at any
+    // speed. Asserted at two speeds an order of magnitude apart.
+    const exitAfterMm = (stepMm: number) => {
+      const d = detector();
+      enter(d);
+      let t = 96;
+      let travelled = 0;
+      for (let i = 0; i < 400; i++) {
+        travelled += stepMm;
+        const v = d.push(t, mmToPx(33), mmToPx(33 + travelled));
+        t += 8;
+        if (v === null) return travelled;
+      }
+      return Infinity;
+    };
+    const fast = exitAfterMm(4);
+    const slow = exitAfterMm(0.2);
+    expect(fast).toBeLessThan(TOL_MM + 5);
+    expect(slow).toBeLessThan(TOL_MM + 5);
   });
 });
 

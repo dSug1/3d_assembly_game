@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-14)
 
-✅ Green: TypeScript + Babylon + Vite, **460 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **466 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -66,7 +66,7 @@ exist yet; `IN3` attaches it to the object model and adds that test, it does not
 the rotation. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Twenty-three defects have been found BY FINGER and none was visible to a green
+⛔⛔ **Twenty-five defects have been found BY FINGER and none was visible to a green
 suite.** They are four repeating shapes — a rate estimated over too short a baseline, a
 substituted quantity, idealised fixtures, and a composition nobody computed. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
