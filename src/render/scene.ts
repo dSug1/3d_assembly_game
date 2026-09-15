@@ -1403,9 +1403,26 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // whole derivation, and the 20× spread that forced it, is in input/translate.ts.
         // ⚠ `clientHeight` — CSS pixels, matching pointer coordinates. The render height
         // is device pixels and would be wrong by `devicePixelRatio`.
+        // ⛔⛔ THE VERTICAL IS WITHHELD WHILE THE GESTURE IS UNDECIDED, and this one line
+        // is the fix for three separate reports: a lurch at the START of a drag, a lurch at
+        // the END, and a cumulative VERTICAL DRIFT over repeated back-and-forths.
+        //
+        // A6 and rule 6 share a touchpoint configuration and are told apart by what the
+        // fingers DO, which takes a window to see. Until then the detector says PENDING —
+        // and the old code read that as "not a common drag" and translated the object
+        // VERTICALLY, because A7 made rule 6's dy the gravity axis. Every ambiguous frame
+        // at each end of every gesture leaked a little vertical, and the leaks accumulated.
+        //
+        // ⭐ *Acting is irreversible; not knowing is not a reason to act.* The horizontal is
+        // unambiguous and always applies; the vertical waits for the verdict.
+        // ⚠ THE COST, STATED: the first window of vertical travel is DISCARDED rather than
+        // released in one step, because releasing it is exactly the jump being complained
+        // about. A two-finger vertical gesture therefore starts from where it was
+        // recognised, not from where it began.
+        const pending = depthAnchorFor(grip) !== null && grip.depth.verdict === "PENDING";
         const t = screenTranslation(
           s.x - grip.prev.x,
-          s.y - grip.prev.y,
+          pending ? 0 : s.y - grip.prev.y,
           camera.radius,
           camera.fov,
           canvas.clientHeight,

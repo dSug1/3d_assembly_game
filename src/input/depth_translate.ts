@@ -49,24 +49,16 @@
  * — so a finger moving ALONE still contributed real motion until the divergence test tripped.
  * ⚠ Any tolerance above zero leaks that way; it is inherent to averaging, not to the number.
  *
- * ⭐ So the quantity is now the part of the motion **both fingers agree on**:
- *
- * ```
- *   sharedMm = the signed travel the two have IN COMMON since the latch
- *            = 0 unless both have moved the same way
- *            = the SMALLER of the two travels when they have
- * ```
+ * ⭐ So the quantity is the travel the two fingers are **coupled** on — their mean, faded
+ * out by how far they have drifted apart since the latch. See `coupledTravel`, which also
+ * records the discontinuous first attempt and why a hand felt it within minutes.
  *
  * ⭐⭐ Three properties fall out, and each answers a report:
  *
- * * a **still finger contributes nothing** — the smaller travel is zero, so the other
- *   finger moving alone moves the object not at all;
+ * * a **still finger moves the object nowhere** — the fade takes the motion back to zero as
+ *   the drift grows, so a lone finger nudges and returns rather than translating;
  * * it is **cumulative**, so nothing compounds and the caller applies only the CHANGE;
- * * **out and back returns exactly**, because the shared travel retraces itself — which is
- *   what stops a back-and-forth from drifting.
- *
- * ⚠ It follows the SLOWER finger when the two differ, which is conservative on purpose: a
- * gesture that means "both of us" should not move further than the more hesitant half.
+ * * **out and back retraces exactly**, which is what stops a back-and-forth from drifting.
  *
  * ## ⭐ THE GAIN IS RULE 6's, REDIRECTED
  *
@@ -129,10 +121,26 @@ export function depthPushDirection(viewAxis: Vec3, gravityDown: Vec3): Vec3 | nu
   return normalize(sub(v, scale(g, dot(v, g))));
 }
 
+/**
+ * ⭐⭐ WHAT THE DETECTOR KNOWS SO FAR, and the distinction is the whole of the boundary fix.
+ *
+ * ⛔⛔ A DEFECT FOUND BY FINGER: *"at the end and beginning of the movement, it slightly
+ * jumps, as if it doesn't know what to follow."* Exactly so — it did not know. The detector
+ * used to answer `null` both for *"I have not decided"* and for *"this is not a common
+ * drag"*, so the caller could not tell them apart and fell through to rule 6 either way.
+ * ⚠ Under A7 rule 6's dy is the GRAVITY axis, so the undecided frames at each end of the
+ * gesture were applied as a vertical lurch before depth took over.
+ *
+ * ⭐ *Acting is irreversible; not knowing is not a reason to act.* The caller now WITHHOLDS
+ * the vertical component while `PENDING` and releases it to whichever rule wins.
+ */
+export type CommonDragVerdict = "PENDING" | "COMMON" | "SEPARATE";
+
 /** What the detector reports when two fingers are travelling together. */
 export interface CommonDrag {
   /**
-   * ⭐⭐ THE SIGNED TRAVEL THE TWO FINGERS HAVE IN COMMON SINCE THE LATCH, millimetres.
+   * ⭐⭐ THE COUPLED TRAVEL SINCE THE LATCH, millimetres — the running sum of each step's
+   * mean movement scaled by how well the two fingers agreed AT THAT STEP. See `coupling`.
    * ⚠ Screen y: DOWN is positive. ⛔ CUMULATIVE — the caller applies the CHANGE since it
    * last acted, never this value itself, or the motion would compound every frame.
    */
@@ -202,6 +210,15 @@ export class CommonDragDetector {
    * across the window — see the header. `null` while unlatched.
    */
   private latchOrigin: { a: number; b: number } | null = null;
+  /**
+   * ⛔ True once there is enough evidence to say *"these two are NOT one gesture"* — as
+   * opposed to *"I do not know yet"*. ⚠ The difference decides whether the caller may act.
+   */
+  private decided = false;
+  /** The two fingers' positions at the previous push — the increment's baseline. */
+  private prev: { a: number; b: number } | null = null;
+  /** ⭐ The integrated coupled travel since the latch, millimetres. */
+  private coupledMm = 0;
 
   /**
    * @param windowMs      the baseline the travels are measured over.
@@ -220,6 +237,15 @@ export class CommonDragDetector {
     return this.latched;
   }
 
+  /**
+   * ⭐ What the detector knows RIGHT NOW, without being fed anything. `PENDING` until it has
+   * enough evidence to say either way — see `CommonDragVerdict`.
+   */
+  get verdict(): CommonDragVerdict {
+    if (this.latched) return "COMMON";
+    return this.decided ? "SEPARATE" : "PENDING";
+  }
+
   /** Feed both touchpoints' current y. `null` when this is not a common drag. */
   push(t: number, aYPx: number, bYPx: number): CommonDrag | null {
     this.window.push({ t, a: aYPx, b: bYPx });
@@ -227,6 +253,7 @@ export class CommonDragDetector {
 
     const first = this.window[0]!;
     // ⛔ A window of one sample has no baseline at all; saying nothing is the honest answer.
+    // ⚠ And it is PENDING, not SEPARATE: nothing has been ruled out yet.
     if (this.window.length < 2) return null;
 
     const da = pxToMm(aYPx - first.a);
@@ -240,7 +267,18 @@ export class CommonDragDetector {
     // doing the same gesture, and re-asking this question every frame is what made the
     // depth translation blend into a vertical one as the fingers settled.
     const floor = MIN_TRAVEL_NOISE_MULTIPLE * this.noiseMm;
-    if (!this.latched && (!(Math.abs(da) > floor) || !(Math.abs(db) > floor))) return null;
+    if (!this.latched && (!(Math.abs(da) > floor) || !(Math.abs(db) > floor))) {
+      // ⭐⭐ THE DECISION, AND IT IS THE ONE THAT MATTERS AT THE START OF A GESTURE.
+      // One finger moving well while the other stays put is RULE 6 — an anchor is meant to
+      // be still. That is evidence, not an absence of it, so the caller may act on y.
+      // ⚠ Both merely slow is NOT evidence: it is a hand that has not committed yet, and
+      // acting on it is what produced the lurch at each end.
+      const spanMs = s_windowSpan(this.window);
+      if (spanMs >= this.windowMs * DECISION_WINDOWS && Math.abs(da - db) > this.toleranceMm) {
+        this.decided = true;
+      }
+      return null;
+    }
 
     const spreadMm = Math.abs(da - db);
 
@@ -250,20 +288,40 @@ export class CommonDragDetector {
       // however slowly the other moves, and a turnaround skew cancels itself.
       const sinceA = pxToMm(aYPx - this.latchOrigin.a);
       const sinceB = pxToMm(bYPx - this.latchOrigin.b);
+
+      // ⭐⭐ INTEGRATE. Each step contributes the pair's MEAN movement, scaled by how well
+      // they currently agree — so a pair moving together accrues the full travel, and a
+      // finger running on alone accrues less and less until it accrues nothing. ⛔ Nothing
+      // already banked is ever revised, which is what stops the backward yank.
+      if (this.prev) {
+        const stepMeanMm =
+          (pxToMm(aYPx - this.prev.a) + pxToMm(bYPx - this.prev.b)) / 2;
+        this.coupledMm += stepMeanMm * coupling(sinceA - sinceB, this.toleranceMm);
+      }
+      this.prev = { a: aYPx, b: bYPx };
+
       if (Math.abs(sinceA - sinceB) > this.toleranceMm) {
         this.latched = false;
         this.latchOrigin = null;
+        this.prev = null;
+        this.coupledMm = 0;
+        // ⭐ Leaving a latch IS a decision: the fingers demonstrably parted company, so the
+        // caller may hand the vertical back to rule 6 immediately.
+        this.decided = true;
         return null;
       }
-      return { sharedMm: shared(sinceA, sinceB), commonMm: (da + db) / 2, spreadMm };
+      return { sharedMm: this.coupledMm, commonMm: (da + db) / 2, spreadMm };
     }
 
     // ⛔ ENTERING still asks the windowed question: are they moving together RIGHT NOW?
     if (spreadMm > this.toleranceMm) return null;
 
     this.latched = true;
+    this.decided = false;
     this.latchOrigin = { a: aYPx, b: bYPx };
-    // ⭐ Zero by construction at the latch: nothing shared has happened yet.
+    this.prev = { a: aYPx, b: bYPx };
+    this.coupledMm = 0;
+    // ⭐ Zero by construction at the latch: nothing coupled has happened yet.
     return { sharedMm: 0, commonMm: (da + db) / 2, spreadMm };
   }
 }
@@ -277,16 +335,60 @@ export class CommonDragDetector {
 export const MIN_TRAVEL_NOISE_MULTIPLE = 3;
 
 /**
- * ⭐⭐ THE PART OF TWO TRAVELS THAT IS COMMON TO BOTH.
- *
- * Zero unless they went the same way; otherwise the SMALLER of the two, carrying that
- * shared sign. ⛔ This is what makes a still finger contribute nothing — its travel is
- * zero, so the shared part is zero however far the other one goes.
+ * How many full windows of disagreement before the detector will say SEPARATE.
+ * ⚠ One window is the shortest baseline that can tell the two fingers apart at all, and
+ * `METHOD` is blunt about the shortest available baseline. Two is a cheap margin on a
+ * decision that hands the vertical axis to a different rule.
  */
-export function shared(aMm: number, bMm: number): number {
-  if (aMm > 0 && bMm > 0) return Math.min(aMm, bMm);
-  if (aMm < 0 && bMm < 0) return Math.max(aMm, bMm);
-  return 0;
+const DECISION_WINDOWS = 2;
+
+/** The time the window currently spans, milliseconds. */
+function s_windowSpan(w: readonly { t: number }[]): number {
+  return w.length < 2 ? 0 : w[w.length - 1]!.t - w[0]!.t;
+}
+
+/**
+ * ⭐⭐ HOW MUCH OF A STEP THE TWO FINGERS ARE **COUPLED** ON — a fraction between 0 and 1,
+ * from how far they have drifted apart.
+ *
+ * ```
+ *   coupling = max(0, 1 − |a − b| / tolerance)
+ * ```
+ *
+ * ⛔⛔ IT MULTIPLIES THE **INCREMENT**, NEVER THE ACCUMULATED TRAVEL, and that distinction
+ * is a defect I wrote and the vectors caught before a finger had to. Fading the TOTAL means
+ * that after the pair has travelled 27 mm together, a 1 mm disagreement drops the result
+ * from 27 to 23 — **the object is yanked backwards by four millimetres**, and the yank
+ * grows with how far the drag has already gone. ⭐ A correction must never be proportional
+ * to the history it is correcting.
+ *
+ * ⛔⛔ THE FIRST VERSION OF THIS WAS `min(|a|,|b|)` WITH A SIGN TEST, AND IT WAS A
+ * REGRESSION FOUND IMMEDIATELY BY FINGER: *"during a normal synchronized finger movement,
+ * the object jumps erratically, as if it struggles to follow the finger movements."*
+ *
+ * ⚠ A minimum is **discontinuous**, and two things made that visible. The fingers' events
+ * ALTERNATE, so the minimum only advances when the LAGGING one does — it stalls on one
+ * event and double-steps on the next. And near the latch both travels hover about zero, so
+ * the sign test flipped the result between 0 and small values; since the object moves by
+ * the CHANGE, every flip was applied as real motion. ⭐ *A control must be a continuous
+ * function of the input, or the hand feels every seam in it.*
+ *
+ * ⭐⭐ THE THREE PROPERTIES THAT ACTUALLY MATTER, ALL KEPT, AND NOW WITHOUT THE SEAMS:
+ *
+ * * **moving together ⇒ full tracking.** `|a − b|` is small, the fade is ≈1, and the result
+ *   is their mean — smooth, and exactly what a synchronized drag asks for.
+ * * **a still finger ⇒ the motion TAPERS TO NOTHING, and nets to zero.** As one finger runs
+ *   on alone the drift grows, the fade falls linearly, and the coupled travel rises to a
+ *   small peak at half the tolerance and returns to zero by the tolerance. ⭐ So a lone
+ *   finger does not move the object anywhere — it nudges it out and brings it back.
+ * * **out and back retraces**, because both terms retrace.
+ *
+ * ⭐ It reuses `depthCommonToleranceMm` rather than inventing a number: "how far apart may
+ * two fingers drift and still be one gesture" is the same question the entry test asks.
+ */
+export function coupling(driftMm: number, toleranceMm: number): number {
+  if (!(toleranceMm > 0)) return 1;
+  return Math.max(0, 1 - Math.abs(driftMm) / toleranceMm);
 }
 
 /**

@@ -15,7 +15,7 @@ import {
   depthLimits,
   depthPushDirection,
   depthTranslate,
-  shared,
+  coupling,
 } from "../src/input/depth_translate";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
 import { dot, length, normalize, scale, sub, type Vec3 } from "../src/core/vec";
@@ -199,18 +199,54 @@ describe("⭐⭐ THE OBJECT FOLLOWS THE **SHARED** TRAVEL", () => {
   // test tripped. Any tolerance above zero leaks that way: it is inherent to averaging, and
   // no value of `depthCommonToleranceMm` fixes it.
 
-  it("⭐ shared() is zero unless BOTH went the same way", () => {
-    expect(shared(10, 0)).toBe(0);
-    expect(shared(0, 10)).toBe(0);
-    expect(shared(10, -10)).toBe(0);
-    expect(shared(0, 0)).toBe(0);
+  it("⭐ fingers in step are FULLY coupled — no penalty for being a pair", () => {
+    expect(coupling(0, TOL_MM)).toBe(1);
+    expect(coupling(1, TOL_MM)).toBeCloseTo(1 - 1 / TOL_MM, 9);
   });
 
-  it("⭐ and is the SMALLER of the two when they agree, keeping the sign", () => {
-    expect(shared(10, 4)).toBe(4);
-    expect(shared(4, 10)).toBe(4);
-    expect(shared(-10, -4)).toBe(-4);
-    expect(shared(-4, -10)).toBe(-4);
+  it("⛔ a full tolerance of drift couples NOTHING, and it never goes negative", () => {
+    expect(coupling(TOL_MM, TOL_MM)).toBe(0);
+    expect(coupling(TOL_MM * 4, TOL_MM)).toBe(0);
+    expect(coupling(-TOL_MM * 4, TOL_MM)).toBe(0);
+  });
+
+  it("⛔⛔ IT IS CONTINUOUS — the regression a hand felt within minutes", () => {
+    // ⚠⚠ The first version was `min(|a|,|b|)` with a sign test, and a hand reported:
+    // "during a normal synchronized finger movement, the object jumps erratically, as if it
+    // struggles to follow the finger movements." A minimum is DISCONTINUOUS: the fingers'
+    // events ALTERNATE, so it stalls on one and double-steps on the next, and near the
+    // latch the sign test flipped it between 0 and small values — each flip applied as real
+    // motion, because the object moves by the CHANGE.
+    // ⭐ So the property is continuity: no small change of drift may produce a large change
+    // of coupling.
+    let prev = coupling(-TOL_MM * 2, TOL_MM);
+    for (let d = -TOL_MM * 2; d <= TOL_MM * 2; d += 0.05) {
+      const now = coupling(d, TOL_MM);
+      expect(Math.abs(now - prev), `jump at drift=${d.toFixed(2)}`).toBeLessThan(0.02);
+      prev = now;
+    }
+  });
+
+  it("⛔⛔ AND IT SCALES THE STEP, NEVER THE TOTAL — no backward yank", () => {
+    // ⚠⚠ A defect I wrote and the vectors caught before a finger had to: fading the
+    // ACCUMULATED travel means that after 27 mm together, a 1 mm disagreement drops the
+    // result to 23 — the object is yanked BACK by four millimetres, and the yank grows with
+    // how far the drag has already gone. ⭐ A correction must never be proportional to the
+    // history it is correcting.
+    const d = detector();
+    enter(d);
+    let t = 96;
+    // Run a long way together, then introduce a small disagreement.
+    let far = null as ReturnType<CommonDragDetector["push"]>;
+    for (let mm = 36; mm <= 90; mm += 3) {
+      far = d.push(t, mmToPx(mm), mmToPx(mm));
+      t += 8;
+    }
+    const banked = far!.sharedMm;
+    const nudged = d.push(t, mmToPx(90), mmToPx(91))!;
+    // ⭐ The step contributes half a millimetre at slightly reduced coupling. What it must
+    // NOT do is revise the 50-odd millimetres already banked.
+    expect(Math.abs(nudged.sharedMm - banked)).toBeLessThan(1);
   });
 
   const enter = (d: CommonDragDetector) => {
@@ -230,12 +266,14 @@ describe("⭐⭐ THE OBJECT FOLLOWS THE **SHARED** TRAVEL", () => {
       t += 8;
     }
     expect(last).not.toBeNull();
-    // ⭐ THE ASSERTION THE REPORT ASKS FOR: the object is driven by this number, and it
-    // has not changed, so the object has not moved.
-    expect(last.sharedMm).toBeCloseTo(atLatch.sharedMm, 9);
+    // ⭐ THE ASSERTION THE REPORT ASKS FOR: the object is driven by this number, so a lone
+    // finger must barely carry it. ⚠ The coupling TAPERS rather than cutting off, so the
+    // number creeps a little and then stops — bounded by about a quarter of the tolerance,
+    // and it never reverses.
+    expect(Math.abs(last.sharedMm - atLatch.sharedMm)).toBeLessThan(TOL_MM / 3);
   });
 
-  it("⭐ both moving together DOES add — and it follows the SLOWER one", () => {
+  it("⭐ both moving together DOES add, and a small disagreement costs only a little", () => {
     // ⚠ RELATIVE, because the latch closes as soon as the entry test passes — several
     // samples before `enter` finishes — so the absolute shared travel at that point is
     // whatever it is. My first version assumed the latch closed on the LAST entry sample
@@ -246,7 +284,12 @@ describe("⭐⭐ THE OBJECT FOLLOWS THE **SHARED** TRAVEL", () => {
     // Holder +4 mm, anchor +6 mm from where they were: they agree, so the shared part of
     // the STEP is the smaller of the two.
     const v = d.push(96, mmToPx(37), mmToPx(39))!;
-    expect(v.sharedMm - before.sharedMm).toBeCloseTo(4, 6);
+    // ⚠ The step is the pair's MEAN movement scaled by how well they agree, so it is a
+    // little under the mean — not the smaller travel outright. ⭐ That scaling is what makes
+    // it continuous; see the regression recorded above.
+    const step = v.sharedMm - before.sharedMm;
+    expect(step).toBeGreaterThan(0);
+    expect(step).toBeLessThan(6);
   });
 
   it("⛔ OUT AND BACK RETURNS TO THE SAME SHARED TRAVEL — this is what stops the drift", () => {
