@@ -27,7 +27,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**476 golden vectors, all passing** (37 → 476).
+**482 golden vectors, all passing** (37 → 482).
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 
@@ -38,7 +38,7 @@ model and so did not wait on `3D1`:
 | `A5` → `A6` → `A10` | **depth**, decided three times: a pinch, then a common vertical drag, now a **STILL HOLDER and a MOVING ANCHOR** | ✅ wired — ⚠ device pass owed |
 | `A7` | ⭐⭐ every object gesture stands on a **GRAVITY FRAME** | ✅ wired, and vectored end to end |
 | `A8` | a roll **rebases** to the start of its circle, not to the press | ✅ wired |
-| `A9` | ⛔ a **deadband** on `dx`/`dy`, per axis, with a slider | ⛔ queued — `IN12` |
+| `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅ built — ⚠ device pass owed |
 | `A10` | ⭐⭐ depth is a **still holder and a moving anchor**; rule 6's second touchpoint may be on the object | ✅ wired — ⚠ device pass owed |
 
 ⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit,
@@ -355,7 +355,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 |---|---|
 | `gestureConfig.ts` | every tunable, **and every cross-tunable rule** in `validateGestureConfig` — the checks that catch a config which is individually plausible and jointly impossible |
 | `config_override.ts` | `?name=value` overrides, so `IN5` can A/B by finger. ⛔ Refusals are reported, never ignored |
-| `motion.ts` | §1.1 hysteretic `STATIONARY`/`MOVING`. ⛔⛔ Its speed is estimated over a **window**, never the last sample pair — at the measured 0.761 mm of noise a pair reads ~95 mm/s at rest, and until 2026-09-15 that made STATIONARY **unreachable**. See `queue_notes/IN0.md` |
+| `motion.ts` | ⭐⭐⭐ §1.1 as a **POSITION DEADBAND** (`A11`): an anchor trails the finger at one dead radius; inside it the finger is `STATIONARY` and emits nothing, outside it emits the **excess only**. ⛔ Every continuous rule consumes `step`, never a raw delta. ⚠ Four formulations of §1.1 have now failed on a real pointer — see `queue_notes/IN0.md`, it is the most instructive file in the project |
 | `flick.ts` | §1.3's flick test. ⚠ Lift speed over a **window**, never the last sample pair |
 | `roll.ts` | rule 2quinte. The **Hyper** circle fit; roll is the angle about a fitted centre |
 | `one_euro.ts` | the 1€ filter, smoothing the displayed roll angle |

@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-15)
 
-✅ Green: TypeScript + Babylon + Vite, **476 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **482 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -73,10 +73,20 @@ gain can separate them. ⭐ One basis serves translation AND rotation.
 ✅ **A roll REBASES to the start of its circle** (`A8`): a circle is not read as a roll until
 60° of arc, and the yaw/pitch applied meanwhile is now undone — to the FIT WINDOW's start,
 not to the press, so a straight drag that precedes a circle survives.
-⛔ **Queued, `IN12`/`A9`: a DEADBAND on `dx`/`dy`, per axis, with a slider.** Both rules
-integrate the raw per-event delta and the pointer noise is 0.761 mm, so a still finger turns
-a held object. ⚠ **The trap is written down before the build**: a *hard* deadband is a jump
-traded for a jump — build the residual-accumulator form and assert CONTINUITY.
+✅✅ **§1.1 IS NOW A POSITION DEADBAND** (`A11`/`D21`, the owner's model): an anchor trails
+the finger at one dead radius — inside it the finger is `STATIONARY` and emits **nothing**;
+outside, it emits the **excess only** and the anchor is dragged up. ⭐ Time-free, the
+emitted travel is exact (true travel minus one radius, **once**), and a slow drag survives.
+⛔ It deleted `stillSpeed`, `stillTime`, `moveEnterDistance`, `moveExitDistance` and a
+validator rule, and **absorbed `A9`/`IN12`**: the deadband is applied once, for every rule
+at the same time, so nothing consumes a raw delta any more.
+⛔⛔ **§1.1 HAS NOW HAD FOUR FORMULATIONS AND THE FIRST THREE ALL BROKE ON A REAL POINTER**
+— accumulated travel, instantaneous speed, speed over one sample pair. ⭐ Each fix made the
+NUMBER better without making the SHAPE right. `queue_notes/IN0.md` is the most instructive
+file in the project.
+⚠ **`motionDeadbandMm` is now the most load-bearing number in the input layer** — the commit
+threshold, the rest test and the jitter deadband at once. It has a slider and no hand has
+judged it.
 ✅ **DEPTH translation** (`A10`/`D20`, `IN8`): the finger **on the object holds still**, the
 finger **outside** supplies the travel. ⛔ No window, no ratio, no tolerance — and the
 holder wins every tie, so rule 6 and depth **partition** the two-finger configuration

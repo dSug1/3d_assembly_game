@@ -294,6 +294,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     prev: Sample;
     lastRollDeg: number;
     /**
+     * ⭐ Whether this scene has already reacted to the roll COMMIT. ⛔ Needed because the
+     * commit rebases the pose, and the roll swept up to that moment has to be applied
+     * from the rebased pose — once.
+     */
+    rollCommitHandled: boolean;
+    /**
      * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
      *
      * ⛔⛔ THE OWNER OVERTURNED THE LATCH, 2026-09-14, and was right. I first gated rule 6
@@ -911,10 +917,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐⭐ A10 MADE THESE FOUR LOAD-BEARING FOR A MODE, not only for a flick test:
         // the depth gate IS the holder's §1.1 motion state. ⛔ They were re-sized against
         // the measured noise floor when A10 landed, and a hand has not judged the new set.
-        tunable("still speed (mm/s)", "stillSpeed", 2, 40, 1),
-        tunable("still time (ms)", "stillTime", 50, 400, 10),
-        tunable("move ENTER distance (mm)", "moveEnterDistance", 0.5, 8, 0.1),
-        tunable("move EXIT distance (mm)", "moveExitDistance", 0.5, 6, 0.1),
+        // ⭐⭐⭐ ONE RADIUS, and it is now the commit threshold, the rest test AND the
+        // jitter deadband at once (A11). ⛔ The most load-bearing number in the input
+        // layer, and nobody has judged it by finger yet.
+        tunable("motion DEADBAND (mm)", "motionDeadbandMm", 0.5, 8, 0.1),
+        tunable("rest confirm (ms)", "restConfirmMs", 0, 400, 10),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
         // ⭐ How far the drag must swing before the scene reacts again, and the drag
@@ -1133,12 +1140,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * @param anchorDyPx its travel THIS FRAME.
    * @returns whether depth consumed the event, so the caller stops.
    */
-  const applyDepthDrag = (
-    grip: Held,
-    anchorId: number,
-    anchorSample: Sample,
-    anchorDyPx: number,
-  ) => {
+  const applyDepthDrag = (grip: Held, anchorId: number, anchorSample: Sample) => {
     // ⭐ The anchor gets a tracker of its own — the SAME §1.1 machine every other rule
     // reads, never a speed invented here. A second definition of "moving" would be free
     // to disagree with the one the holder is judged by.
@@ -1150,7 +1152,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const anchorState = tracker.push(anchorSample);
     if (depthGate(grip.rec.motionState, anchorState) !== "DEPTH") return false;
 
-    applyDepthStep(grip, anchorDyPx);
+    // ⭐⭐ The anchor's DEADBANDED travel, exactly as rule 6 and 2bis take the holder's.
+    // ⛔ `anchorDyPx` is the raw delta and is deliberately not used here.
+    applyDepthStep(grip, tracker.step.dy);
     grip.mode = "DEPTH";
     // ⛔⛔ AND THE HOLDER'S GESTURE IS NO LONGER A TAP. It is being held STILL on the
     // object, which is a tap's exact shape — and a DOUBLE_TAP resolves to 2septies
@@ -1274,6 +1278,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         frame: requireGestureFrame(),
         prev: s,
         lastRollDeg: 0,
+        rollCommitHandled: false,
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
@@ -1339,7 +1344,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // and the two rules partition the configuration instead of competing for it.
         const holder = router.objects()[0];
         const grip = holder ? held.get(holder.id) : undefined;
-        if (grip && applyDepthDrag(grip, routed.id, s, s.y - prev.y)) {
+        if (grip && applyDepthDrag(grip, routed.id, s)) {
           paint();
           return;
         }
@@ -1432,9 +1437,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // to tell apart — and the cost was that the first window of every drag's vertical
         // travel was DISCARDED. ⛔ There is no undecided state any more: this event exists
         // because the holder moved, and a moving holder is rule 6 by definition.
+        // ⭐⭐ THE DEADBANDED TRAVEL (A11), never the raw delta. The dead radius is
+        // applied once in §1.1 and every rule reads the same side of it — so a still
+        // finger moves nothing, and a drag leaves rest continuously rather than stepping
+        // by the radius. ⛔ This is also amendment A9, met at the source.
         const t = screenTranslation(
-          s.x - grip.prev.x,
-          s.y - grip.prev.y,
+          grip.rec.step.dx,
+          grip.rec.step.dy,
           camera.radius,
           camera.fov,
           canvas.clientHeight,
@@ -1474,6 +1483,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // about the screen axes latched at press. Every step is a small world-frame
         // rotation, so the two axes never end up nested inside one another.
         const cur = modelOrientation(grip.mesh);
+        // ⛔⛔ THE COMMIT FRAME: THE POSE WAS JUST REBASED, SO THE WHOLE SWEPT ROLL HAS
+        // TO BE APPLIED FROM IT — NOT ONE FRAME'S WORTH.
+        //
+        // A8 restores the pose the object held when the circle's evidence began, so the
+        // yaw/pitch swept meanwhile is undone. ⭐ Its promise was that 2quinte then
+        // *"applies the whole swept angle from the rebased pose"*. ⛔ IT DID NOT: the scene
+        // applies roll as a per-frame INCREMENT against `lastRollDeg`, and `lastRollDeg`
+        // had been tracking `rollAppliedDeg` all through the uncommitted phase — so the
+        // increment at the commit was a single frame, and ~60° of swept roll was silently
+        // dropped while the yaw/pitch it was meant to replace was undone.
+        // ⚠ Device-reported: *"in rotation, when I switch from yaw/pitch to roll… there is
+        // a big jump at one point."* ⭐ The owner's own third guess was right — the
+        // decision switched and re-anchored on a pose that was by then far away.
+        // ⭐ Zeroing the baseline here makes the increment the FULL swept angle, so what
+        // the object loses in yaw/pitch it gains in roll, which is what A8 promised.
+        if (grip.rec.rollCommitted && !grip.rollCommitHandled) {
+          grip.rollCommitHandled = true;
+          grip.lastRollDeg = 0;
+        }
         if (grip.rec.rollCommitted) {
           // 2quinte has taken over: roll about the view axis by what the finger has
           // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
@@ -1490,8 +1518,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             screenPlaneRotation(
               cur,
               grip.frame,
-              s.x - grip.prev.x,
-              s.y - grip.prev.y,
+              // ⭐⭐ Deadbanded (A11) — the raw delta is what made a held object turn
+              // while the hand was still.
+              grip.rec.step.dx,
+              grip.rec.step.dy,
               // ⭐ THE REAL GAIN, from the config, in radians per MILLIMETRE.
               // ⛔ A hard-coded `DIAGNOSTIC_RAD_PER_PX` used to live in this file,
               // deliberately kept OUT of the config so a debug value could not leak

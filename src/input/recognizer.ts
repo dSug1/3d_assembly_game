@@ -217,6 +217,18 @@ export class Recognizer<P> {
     return this.phase;
   }
 
+  /**
+   * ⭐⭐ THE DEADBANDED TRAVEL from the most recent sample, CSS pixels (A11).
+   *
+   * ⛔⛔ EVERY CONTINUOUS RULE MUST CONSUME THIS, never `s.x - prev.x`. The raw delta
+   * carries the measured 0.761 mm of pointer noise on every sample, which is what turned a
+   * held object while nobody was moving. ⭐ The deadband is applied ONCE, in §1.1, so the
+   * rules cannot disagree about how much of a wobble counts.
+   */
+  get step(): { readonly dx: number; readonly dy: number } {
+    return this.motion.step;
+  }
+
   get motionState(): MotionState {
     return this.motion.current;
   }

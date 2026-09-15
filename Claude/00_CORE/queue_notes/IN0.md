@@ -124,3 +124,49 @@ have sliders, in the tuning menu and on the URL.
 ⚠ **Two fixtures had to be re-based**, and both were stale rather than wrong: they held a
 finger still for a literal 600 ms, sized against `stillTime` = 150. They now derive the
 duration from the config, so the next re-size cannot silently break them.
+
+---
+
+# ⭐⭐⭐ AND THEN THE OWNER REPLACED THE WHOLE THING — `A11`, the same day
+
+The windowed-speed fix above **worked and was still wrong**, and a hand said so within
+minutes:
+
+> *"Most of the times, when I switch from x/y to depth translation, even if I make ample
+> movement with the second touchpoint finger, there is no depth translation for a while
+> and then suddenly the depth translation is triggered. On the opposite, if I switch from
+> depth to x/y translation, the switch is immediate and the object immediately follows the
+> first touchpoint finger. I don't understand why."*
+
+⭐ **The asymmetry was structural.** Entering `MOVING` was a DISTANCE test — instant.
+Returning to `STATIONARY` was a DURATION test, and the windowed-speed fix had made it
+worse: the window had to FILL (450 ms) before the settle timer could even start (450 ms
+more). ⛔ **Two durations in series, ~900 ms**, sitting in front of the one transition
+A10's depth gate depends on.
+
+## The owner's model
+
+> *"Stationary should mean a deadband around the touchpoint position (independently of the
+> time). Check how Unity defines deadband on delta position and how it catches up once
+> delta position crosses the deadband."*
+
+⭐⭐ An anchor trails the finger at one dead radius. Inside it, the finger is still and
+emits nothing; outside, it emits the **excess only** and drags the anchor up. ⛔ Time-free,
+exact, and it keeps slow travel — see `A11` for the full argument and
+[`IN12.md`](IN12.md) for why the per-axis form this project had specified was wrong.
+
+## ⚠ So what is the status of everything above?
+
+✅ **The DEFECT above was real and is the reason A11 exists.** ⭐ But its FIX — a windowed
+speed estimate, a re-sized four-threshold set, a reachability rule — lived for about an
+hour. `stillSpeed`, `stillTime`, `moveEnterDistance` and `moveExitDistance` are all gone.
+
+⭐⭐ **The carried lesson is the sequence, not either fix**: §1.1 has now had FOUR
+formulations, and the first three were each a threshold chosen to sit above a
+measurement — accumulated travel, instantaneous speed, windowed speed. ⛔ Every one of
+them broke on a real pointer, in a different way, and each fix made the *number* better
+without making the *shape* right. ⭐ A displacement deadband needs no such choice.
+
+⚠ **What survived from the fix above**: `SETTLE_NOISE_MULTIPLE`, and the validator rule
+that the dead radius must clear the measured noise. That was the half that was missing,
+and it is the only consistency rule §1.1 has left.

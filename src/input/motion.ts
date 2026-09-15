@@ -1,62 +1,76 @@
 /**
- * §1.1 — THE HYSTERETIC MOTION STATE.
+ * §1.1 — THE MOTION STATE, AS A **POSITION DEADBAND**.
  *
- * ⛔⛔ `delta === 0` IS NEVER EVALUATED LITERALLY. A resting finger jitters, so a
- * literal zero test is true almost never and the rules that depend on "the other
- * touchpoint is still" would essentially never fire. Every "delta position" in the
- * spec means `MOVING`; every "no delta position" means `STATIONARY`.
+ * ⭐⭐⭐ THE OWNER'S MODEL, 2026-09-15, AND IT REPLACES THREE GENERATIONS OF THIS FILE:
  *
- * ⭐ `moveEnterDistance > moveExitDistance` is REQUIRED and asserted: equal
- * thresholds chatter at the boundary, which is a state machine flipping many times
- * per second in the user's hand.
+ * > *"I think there is an error in the definition of stationary: stationary should mean a
+ * > deadband around the touchpoint position (independently of the time). Check how Unity
+ * > defines deadband on delta position and how it catches up once delta position crosses
+ * > the deadband."*
  *
- * ⛔⛔ AND THE THRESHOLD IS **NET DISPLACEMENT FROM AN ANCHOR**, NOT ACCUMULATED
- * TRAVEL. The spec (§1.1) says *"accumulated travel since the last STATIONARY frame
- * exceeds moveEnterDistance"*, and taken literally that is unusable: the path length
- * of a jittering finger is a random walk, so it GROWS WITHOUT BOUND and every
- * resting touchpoint eventually reads MOVING. Measured on the first test run — a
- * finger oscillating ±0.5 px crossed a 5.7 px threshold in under half a second.
- * ⭐ Net displacement from the anchor is bounded for jitter and grows for a real
- * drag, which is the discrimination actually wanted. Reported back to the spec.
+ * ⭐ Unity's stick and axis deadzone processors do exactly this: input below the dead
+ * radius reads as **zero**, and beyond it the value is **rescaled from zero** rather than
+ * passed through — so the output leaves rest CONTINUOUSLY instead of stepping by the whole
+ * dead radius the moment it is crossed. ⛔ That second half is the part everyone forgets,
+ * and without it a deadband is a jump traded for a jump.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * ⭐⭐ AND THE EXIT IS NOT A SPEED TEST ALONE. `IN0` left `moveExitDistance`
- * DECLARED AND UNUSED -- an unused tunable is a lie in the config, and `IN5` would
- * have gone and measured a number that did nothing.
+ * ## The model, in full
  *
- * It is now the EXCURSION BOUND during settle candidacy: the moment speed drops
- * below `stillSpeed`, that position becomes a candidate rest point, and STATIONARY
- * latches only if the finger stayed within `moveExitDistance` of it for the whole
- * `stillTime`. ⭐ This catches what an instantaneous speed test STRUCTURALLY cannot:
- * a SLOW PERSISTENT CREEP, which is never at rest and never exceeds `stillSpeed`.
+ * An ANCHOR trails the finger at exactly one dead radius. Every sample:
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * ⛔⛔⛔ AND THE SPEED WAS ESTIMATED OVER ONE SAMPLE PAIR, WHICH IS MISTAKE SHAPE 1 —
- * THIS PROJECT'S MOST FREQUENT DEFECT, IN THE FILE THAT DEFINES *moving*. Found
- * 2026-09-15, by composing the MEASURED pointer noise with the threshold:
+ * * **inside the radius** → the finger is `STATIONARY` and emits **nothing**;
+ * * **outside it** → emit the excess `d − band` along the direction of travel, and drag
+ *   the anchor up so it trails at exactly `band` again.
  *
- *   0.761 mm of noise / 8 ms between samples = **95 mm/s of apparent speed, at rest**
+ * ⭐⭐ THREE PROPERTIES FALL OUT, AND EACH ONE ANSWERS A DEFECT THIS PROJECT SHIPPED:
  *
- * against a `stillSpeed` of 6 mm/s. ⛔ Sixteen times over, from jitter alone — so the
- * candidacy branch was destroyed on essentially every sample and **STATIONARY was
- * unreachable for any real finger**: measured at four seconds of rest after a drag, the
- * state never came back.
+ * 1. **It is TIME-FREE.** `stillSpeed` and `stillTime` are gone. A hand reported the cost
+ *    of the old time-based settle directly: *"when I switch from x/y to depth translation,
+ *    even if I make ample movement with the second touchpoint finger, there is no depth
+ *    translation for a while and then suddenly the depth translation is triggered."* That
+ *    was ~900 ms of settle timer. It is now **one sample**.
+ * 2. **Emitted travel is EXACT.** Summed over a drag it is the true travel minus one dead
+ *    radius, once — not minus a radius per sample, and not with a step at the crossing.
+ *    ⭐ This IS amendment A9's deadband, so `dx`/`dy` need no second one: the jitter that
+ *    turned a held object while nobody moved is removed at the source, for every rule at
+ *    once.
+ * 3. **A slow drag survives.** Displacement ACCUMULATES against a stationary anchor, so a
+ *    finger creeping at 0.3 mm per sample still covers its full distance — it simply
+ *    arrives a few samples later. ⛔ A deadband that re-centres on the finger whenever it
+ *    is inside the radius loses that travel completely, which is the trap in A9's dossier.
  *
- * ⚠ IT WAS INVISIBLE FOR A YEAR OF DEVICE PASSES because nothing shipped depended on
- * RE-ENTERING STATIONARY. The commit threshold reads the MOVING transition, rule 6 reads
- * presence, the flick test reads lift speed. A10's depth gate is the first rule that asks
- * *"is that finger still?"* — and it would have been told "no", for ever.
+ * ## ⚠ THE ONE TIME TERM THAT SURVIVES, AND EXACTLY WHY
  *
- * ⭐ The fix is the one `flick.ts` already carries in its own header: **speed over a
- * stated window, never the last sample pair.** Noise does not accumulate over a window,
- * so a resting finger reads a few mm/s instead of ninety.
+ * ⛔⛔ A PURE POSITION DEADBAND CHATTERS AT ITS OWN BOUNDARY, and it is structural rather
+ * than a tuning problem: while the finger moves, the anchor is dragged to sit **exactly on
+ * the boundary**. When the finger then stops, it is sitting at `d = band` — and the
+ * measured 0.761 mm of pointer noise straddles that line, so roughly half of all samples
+ * read "outside" and the state flickers. ⚠ A bigger radius does not help; the anchor
+ * follows it out.
  *
- * ⛔⛔ AND THE TWO THRESHOLDS MUST BE MUTUALLY CONSISTENT, WHICH THEY WERE NOT.
- * Motion sustained below `stillSpeed` for `stillTime` cannot cover more ground than
- * `stillSpeed * stillTime`, so if that product does not EXCEED `moveExitDistance`,
- * the bound is unreachable under any wiring whatsoever. The shipped defaults were
- * `6 mm/s x 80 ms = 0.48 mm` against a `0.8 mm` bound. Asserted below, so the next
- * inconsistent config is a loud failure rather than another dead threshold.
+ * ⭐ So `restConfirmMs` confirms only the TRANSITION BACK to `STATIONARY`: the finger must
+ * emit nothing for that long. ⛔ It is **not** a settle timer and it is not on the path the
+ * owner complained about — leaving `STATIONARY` is still instantaneous, and the emitted
+ * delta never waits for it. ⚠ It is small on purpose (a tenth of the old settle), and it
+ * has a slider.
+ *
+ * ## What this replaced, kept because each one explains the current shape
+ *
+ * ⛔ §1.1's own *"accumulated travel since the last STATIONARY frame"* is unusable: the
+ * path length of a jittering finger is a random walk, so it grows without bound and every
+ * resting touchpoint eventually reads MOVING. Measured on the first test run — a finger
+ * oscillating ±0.5 px crossed a 5.7 px threshold in under half a second.
+ *
+ * ⛔ Then an instantaneous speed test, which could not see a SLOW PERSISTENT CREEP.
+ *
+ * ⛔⛔ Then a speed over ONE SAMPLE PAIR — mistake shape 1, in the file that defines
+ * *moving*: `0.761 mm / 8 ms` is ~95 mm/s of apparent speed AT REST against a 6 mm/s
+ * threshold, so `STATIONARY` was **unreachable for any real finger**.
+ *
+ * ⭐⭐ THE SHAPE REPEATS, AND IT IS THE CARRIED LESSON: **every quantity §1.1 names is
+ * defined on an ideal pointer, and a real one has noise.** A displacement deadband is the
+ * first formulation here that is robust by construction rather than by a threshold chosen
+ * to sit above a measurement.
  */
 import { mmToPx } from "../core/units";
 import { validateGestureConfig, type GestureConfig } from "./gestureConfig";
@@ -71,21 +85,31 @@ export interface Sample {
   readonly t: number;
 }
 
+/**
+ * What one sample produced: the state, and the DEADBANDED travel to act on.
+ *
+ * ⛔ `dx`/`dy` are what a rule must consume — never `s.x - prev.x`. They are zero inside
+ * the dead radius and, outside it, the excess only. See the header.
+ */
+export interface MotionStep {
+  readonly state: MotionState;
+  /** Deadbanded travel this sample, CSS pixels. Zero while `STATIONARY`. */
+  readonly dx: number;
+  readonly dy: number;
+}
+
+const ZERO_STEP = { dx: 0, dy: 0 } as const;
+
 export class MotionTracker {
   private state: MotionState = "STATIONARY";
-  private last: Sample | null = null;
-  /** Where the finger settled. Displacement is measured from HERE, not integrated. */
-  private anchor: Sample | null = null;
-  private stillSinceMs: number | null = null;
-  /** Where the finger was when it first slowed down. Excursion is measured from HERE. */
-  private settleAnchor: Sample | null = null;
   /**
-   * ⭐⭐ The trailing samples the SPEED is estimated over. ⛔ Never the last pair: at the
-   * measured 0.761 mm of noise and 8 ms between samples, a pair reads ~95 mm/s at rest.
-   * ⚠ Bounded by `stillTime`, so the window is the same duration the settle test uses and
-   * no second tunable is invented for it.
+   * The dead radius' centre. ⛔ It TRAILS the finger at exactly one radius while moving —
+   * it is not the press point and not the last sample.
    */
-  private window: Sample[] = [];
+  private anchor: Sample | null = null;
+  /** When the finger last emitted nothing. `null` while it is emitting. */
+  private restingSinceMs: number | null = null;
+  private lastStep: { dx: number; dy: number } = ZERO_STEP;
 
   constructor(private readonly cfg: GestureConfig) {
     // ⭐ Every cross-tunable consistency rule lives in ONE place, and every
@@ -97,78 +121,63 @@ export class MotionTracker {
     return this.state;
   }
 
+  /** ⭐ The deadbanded travel from the most recent `push`. See `MotionStep`. */
+  get step(): { readonly dx: number; readonly dy: number } {
+    return this.lastStep;
+  }
+
   reset(): void {
     this.state = "STATIONARY";
-    this.last = null;
     this.anchor = null;
-    this.stillSinceMs = null;
-    this.settleAnchor = null;
-    this.window = [];
+    this.restingSinceMs = null;
+    this.lastStep = ZERO_STEP;
   }
 
   push(s: Sample): MotionState {
-    const prev = this.last;
-    this.last = s;
-    this.anchor ??= s;
-    if (!prev) return this.state;
-
-    // ⭐⭐ SPEED OVER A WINDOW, NOT OVER THE LAST PAIR. See the header: the pair estimate
-    // read ~95 mm/s from a finger that was not moving at all, and no threshold below that
-    // could ever be met. ⛔ Net displacement across the window, divided by its duration —
-    // the same quantity `flick.ts` measures, for the same reason.
-    this.window.push(s);
-    while (this.window.length > 2 && s.t - this.window[0]!.t > this.cfg.stillTime) {
-      this.window.shift();
+    this.lastStep = ZERO_STEP;
+    if (this.anchor === null) {
+      this.anchor = s;
+      this.restingSinceMs = s.t;
+      return this.state;
     }
-    const oldest = this.window[0]!;
-    const spanMs = s.t - oldest.t;
-    // ⚠ A zero or negative span means duplicated/backwards timestamps. Treat the sample
-    // as position-only rather than dividing by it. ⛔ And until the window has SPANNED a
-    // useful duration the estimate is the short-baseline one again — so report the finger
-    // as moving rather than letting a two-sample window decide it is at rest.
-    const spanned = spanMs >= Math.min(this.cfg.stillTime, 32);
-    const speedPxPerS = spanned
-      ? (Math.hypot(s.x - oldest.x, s.y - oldest.y) / spanMs) * 1000
-      : Number.POSITIVE_INFINITY;
-    const stillSpeedPx = mmToPx(this.cfg.stillSpeed);
 
-    if (this.state === "STATIONARY") {
-      const anchor = this.anchor!;
-      const displaced = Math.hypot(s.x - anchor.x, s.y - anchor.y);
-      if (displaced >= mmToPx(this.cfg.moveEnterDistance)) {
-        this.state = "MOVING";
-        this.stillSinceMs = null;
+    const ex = s.x - this.anchor.x;
+    const ey = s.y - this.anchor.y;
+    const d = Math.hypot(ex, ey);
+    const band = mmToPx(this.cfg.motionDeadbandMm);
+
+    if (d <= band) {
+      // ⭐ Inside the dead radius: nothing happened, and the anchor does NOT move.
+      // ⛔ Re-centring it here would destroy a slow drag — displacement has to be allowed
+      // to ACCUMULATE against a fixed point, or a finger creeping below one radius per
+      // sample would travel for ever and emit nothing.
+      this.restingSinceMs ??= s.t;
+      if (
+        this.state === "MOVING" &&
+        s.t - this.restingSinceMs >= this.cfg.restConfirmMs
+      ) {
+        this.state = "STATIONARY";
+        // ⭐ Re-centre ON the finger at the moment rest is confirmed, so the next drag is
+        // measured from where it actually came to rest — and so the boundary chatter this
+        // confirmation exists to absorb cannot start again immediately.
+        this.anchor = s;
       }
       return this.state;
     }
 
-    // MOVING -> STATIONARY needs THREE things, not one: the speed low, the
-    // EXCURSION from where it slowed inside `moveExitDistance`, and both of those
-    // sustained for `stillTime`. The excursion term is the one that sees a creep.
-    if (speedPxPerS <= stillSpeedPx) {
-      if (this.settleAnchor === null) {
-        this.settleAnchor = prev;
-        this.stillSinceMs = prev.t;
-      }
-      const excursionPx = Math.hypot(s.x - this.settleAnchor.x, s.y - this.settleAnchor.y);
-      if (excursionPx > mmToPx(this.cfg.moveExitDistance)) {
-        // ⭐ Slow, but it went somewhere. Restart candidacy HERE rather than
-        // cancelling outright -- a creep then simply never accumulates `stillTime`
-        // and stays MOVING, which is the correct reading of a deliberate slow drag.
-        this.settleAnchor = s;
-        this.stillSinceMs = s.t;
-      } else if (s.t - this.stillSinceMs! >= this.cfg.stillTime) {
-        this.state = "STATIONARY";
-        // ⭐ Re-anchor HERE. The next MOVING decision is measured from where the
-        // finger actually came to rest, not from where the gesture began.
-        this.anchor = s;
-        this.stillSinceMs = null;
-        this.settleAnchor = null;
-      }
-    } else {
-      this.stillSinceMs = null;
-      this.settleAnchor = null;
-    }
+    // ⭐⭐ OUTSIDE: emit the EXCESS ONLY, along the direction of travel. `d - band` leaves
+    // zero continuously, which is the half of a deadband that stops it from being a jump
+    // traded for a jump.
+    const over = d - band;
+    const ux = ex / d;
+    const uy = ey / d;
+    this.lastStep = { dx: ux * over, dy: uy * over };
+    // ⭐ Drag the anchor up so it trails at exactly one radius again. Summed over a whole
+    // drag the emitted travel is therefore the true travel minus ONE radius — not one per
+    // sample, which is what makes slow and fast drags cover the same ground.
+    this.anchor = { x: s.x - ux * band, y: s.y - uy * band, t: s.t };
+    this.restingSinceMs = null;
+    this.state = "MOVING";
     return this.state;
   }
 }

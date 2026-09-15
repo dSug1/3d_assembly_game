@@ -6,6 +6,15 @@ import { mmToPx } from "../src/core/units";
 
 const cfg = DEFAULT_CONFIG;
 
+/**
+ * ⛔ The pre-A11 §1.1 thresholds, kept ONLY to drive the counter-examples below. They are
+ * literals on purpose: a pinned defect that reads its numbers from the live config stops
+ * being a fixed point the moment the config moves.
+ */
+const OLD_STILL_SPEED_MM_PER_S = 6;
+const OLD_STILL_TIME_MS = 450;
+const OLD_MOVE_EXIT_MM = 2.4;
+
 /** A straight run of samples at a constant speed, in mm/s along +x. */
 function run(speedMmPerS: number, ms: number, stepMs = 10, x0 = 0, t0 = 0): Sample[] {
   const out: Sample[] = [];
@@ -16,10 +25,13 @@ function run(speedMmPerS: number, ms: number, stepMs = 10, x0 = 0, t0 = 0): Samp
 }
 
 describe("motion state", () => {
-  it("refuses a config that would chatter", () => {
-    expect(
-      () => new MotionTracker({ ...cfg, moveEnterDistance: 1, moveExitDistance: 1 }),
-    ).toThrow();
+  it("⛔ refuses a dead radius the MEASURED noise does not fit inside", () => {
+    // ⭐⭐ A11 left ONE motion threshold, so this is the only consistency rule there is —
+    // and it is the one that was missing. ⚠ The rule it replaced (enter > exit, or the
+    // state chatters) went with the pair: a single radius has nothing to chatter against.
+    expect(() => new MotionTracker({ ...cfg, motionDeadbandMm: 0.8 })).toThrow(
+      /STATIONARY is unreachable/,
+    );
   });
 
   it("a resting, jittering finger stays STATIONARY -- for a LONG time", () => {
@@ -117,16 +129,19 @@ class SpeedOnlyExit {
   state: MotionState = "MOVING";
   private last: Sample | null = null;
   private stillSince: number | null = null;
-  constructor(private readonly c: typeof cfg) {}
+  constructor(_c: typeof cfg) {}
   push(s: Sample): MotionState {
     const prev = this.last;
     this.last = s;
     if (!prev || this.state === "STATIONARY") return this.state;
     const dt = s.t - prev.t;
     const speedPxPerS = dt > 0 ? (Math.hypot(s.x - prev.x, s.y - prev.y) / dt) * 1000 : 0;
-    if (speedPxPerS <= mmToPx(this.c.stillSpeed)) {
+    // ⚠ The DEFECT, pinned: an instantaneous speed test with no excursion term. Its
+    // thresholds are the pre-A11 shipped ones, hard-coded here because the config no
+    // longer carries them — the counter-example must not drift with the product.
+    if (speedPxPerS <= mmToPx(OLD_STILL_SPEED_MM_PER_S)) {
       this.stillSince ??= prev.t;
-      if (s.t - this.stillSince >= this.c.stillTime) this.state = "STATIONARY";
+      if (s.t - this.stillSince >= OLD_STILL_TIME_MS) this.state = "STATIONARY";
     } else {
       this.stillSince = null;
     }
@@ -178,25 +193,18 @@ describe("moveExitDistance — the slow creep an instantaneous speed test cannot
     for (const s of drag) m.push(s);
     expect(m.current).toBe("MOVING");
     const last = drag[drag.length - 1]!;
-    // ⚠ DERIVED from the config, not a literal: the duration needed is governed by
-    // `stillTime` AND by the speed window filling behind it, and a literal 600 ms went
-    // stale the moment A10 re-sized both. ⭐ 4x leaves room without hiding a regression —
-    // the vector above pins the actual latency at under a second.
-    const restMs = 4 * cfg.stillTime;
+    // ⚠ DERIVED from the config, not a literal — a literal went stale twice already.
+    // ⭐ Under A11 this is fast: leaving MOVING costs one `restConfirmMs`, not a settle.
+    const restMs = 4 * cfg.restConfirmMs;
     for (let t = 10; t <= restMs; t += 10) m.push({ x: last.x, y: 0, t: last.t + t });
     expect(m.current).toBe("STATIONARY");
   });
 
-  it("⛔ a config where the exit distance CANNOT BIND is rejected loudly", () => {
-    // `stillSpeed × stillTime` bounds how far sub-threshold motion can travel, so if
-    // that product does not exceed `moveExitDistance` the tunable is decorative in
-    // every possible wiring. These were the SHIPPED defaults: 6 mm/s × 80 ms =
-    // 0.48 mm against a 0.8 mm bound.
-    expect(() => new MotionTracker({ ...cfg, stillTime: 80 })).toThrow(/can never bind/);
-  });
-
-  it("the shipped defaults satisfy it", () => {
-    expect((cfg.stillSpeed * cfg.stillTime) / 1000).toBeGreaterThan(cfg.moveExitDistance);
+  it("⭐ the shipped radius clears the measured noise", () => {
+    // ⭐⭐ The only consistency rule A11 left, asserted on the SHIPPED numbers rather than
+    // only on a rejection — a guard nobody checks against the defaults is a guard that can
+    // be satisfied by a config nobody ships.
+    expect(cfg.motionDeadbandMm).toBeGreaterThanOrEqual(3 * cfg.pointerNoiseMm);
   });
 });
 
@@ -353,16 +361,16 @@ describe("⛔⛔ a finger AT REST returns to STATIONARY — with the MEASURED no
       const s: Sample = { x: 400 + mmToPx(80) + jit(), y: 400 + jit(), t: 320 + i * 8 };
       const dt = s.t - prev.t;
       const speed = (Math.hypot(s.x - prev.x, s.y - prev.y) / dt) * 1000;
-      if (speed <= mmToPx(cfg.stillSpeed)) {
+      if (speed <= mmToPx(OLD_STILL_SPEED_MM_PER_S)) {
         if (settleAnchor === null) {
           settleAnchor = prev;
           stillSince = prev.t;
         }
         const ex = Math.hypot(s.x - settleAnchor.x, s.y - settleAnchor.y);
-        if (ex > mmToPx(cfg.moveExitDistance)) {
+        if (ex > mmToPx(OLD_MOVE_EXIT_MM)) {
           settleAnchor = s;
           stillSince = s.t;
-        } else if (s.t - stillSince! >= cfg.stillTime) {
+        } else if (s.t - stillSince! >= OLD_STILL_TIME_MS) {
           state = "STATIONARY";
           cameBack = true;
         }
@@ -378,8 +386,130 @@ describe("⛔⛔ a finger AT REST returns to STATIONARY — with the MEASURED no
 
   it("⛔ and the config now REFUSES a settle bound the noise cannot fit inside", () => {
     // ⭐ The guard, so this cannot regress by someone lowering one number.
-    expect(() =>
-      validateGestureConfig({ ...cfg, moveExitDistance: 0.8, moveEnterDistance: 1.5 }),
-    ).toThrow(/STATIONARY is unreachable/);
+    expect(() => validateGestureConfig({ ...cfg, motionDeadbandMm: 0.8 })).toThrow(
+      /STATIONARY is unreachable/,
+    );
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ A11 — THE DEADBAND ITSELF: what it emits, not only what state it reports
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⭐⭐ the position deadband emits the EXCESS, and emits it exactly", () => {
+  const BAND_PX = mmToPx(cfg.motionDeadbandMm);
+
+  /** Walk a finger in a straight line, summing what the tracker actually emitted. */
+  const walk = (stepMm: number, n: number) => {
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let emitted = 0;
+    m.push({ x, y: 400, t: 0 });
+    for (let i = 1; i <= n; i++) {
+      x += mmToPx(stepMm);
+      m.push({ x, y: 400, t: i * 8 });
+      emitted += m.step.dx;
+    }
+    return { emitted, travelled: mmToPx(stepMm) * n, state: m.current };
+  };
+
+  it("⭐⭐ TOTAL EMITTED TRAVEL = TRUE TRAVEL − ONE RADIUS. Not one per sample", () => {
+    // ⛔⛔ THE VECTOR THAT SEPARATES THE THREE DEADBAND FORMS, and the reason A9's dossier
+    // insisted on it: *"small deltas do nothing"* passes for the BROKEN form too. A hard
+    // deadband loses everything below the radius; a per-sample subtraction taxes every
+    // sample; only the trailing anchor charges the radius ONCE.
+    const fast = walk(4, 50);
+    expect(fast.emitted).toBeCloseTo(fast.travelled - BAND_PX, 6);
+  });
+
+  it("⭐⭐ A SLOW DRAG COVERS ITS FULL DISTANCE — it just arrives later", () => {
+    // ⚠ 0.3 mm per sample, far below the 2.4 mm radius: every single step is inside the
+    // band, and a deadband that re-centred on the finger would emit NOTHING for ever.
+    const slow = walk(0.3, 200);
+    expect(slow.emitted).toBeCloseTo(slow.travelled - BAND_PX, 6);
+    expect(slow.state).toBe("MOVING");
+  });
+
+  it("⛔⛔ COUNTER-EXAMPLE: re-centring inside the band loses the whole slow drag", () => {
+    // ⭐ The trap, pinned. This is the obvious implementation and it is silently wrong.
+    let anchorX = 500;
+    let x = 500;
+    let emitted = 0;
+    for (let i = 1; i <= 200; i++) {
+      x += mmToPx(0.3);
+      const d = Math.abs(x - anchorX);
+      if (d > BAND_PX) {
+        emitted += d - BAND_PX;
+        anchorX = x - BAND_PX;
+      } else {
+        anchorX = x; // ⛔ the mistake
+      }
+    }
+    expect(emitted).toBe(0);
+  });
+
+  it("⭐ it LEAVES ZERO CONTINUOUSLY — no step at the crossing", () => {
+    // ⛔ A hard deadband inserts a jump of exactly one radius the moment it is crossed.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    m.push({ x, y: 400, t: 0 });
+    const first: number[] = [];
+    for (let i = 1; i <= 40; i++) {
+      x += mmToPx(0.2);
+      m.push({ x, y: 400, t: i * 8 });
+      if (m.step.dx !== 0) first.push(m.step.dx);
+    }
+    expect(first.length).toBeGreaterThan(0);
+    expect(first[0]!).toBeLessThan(mmToPx(0.25)); // a fifth of a millimetre, not 2.4 mm
+  });
+
+  it("⭐⭐ A STILL FINGER EMITS NOTHING, with the MEASURED noise on it", () => {
+    // ⭐ This is amendment A9's whole purpose, met by §1.1 itself: the jitter that turned
+    // a held object while nobody was moving never reaches a rule.
+    let seed = 4242;
+    const jit = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return mmToPx(((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)));
+    };
+    const m = new MotionTracker(cfg);
+    m.push({ x: 500, y: 400, t: 0 });
+    let emitted = 0;
+    for (let i = 1; i <= 600; i++) {
+      m.push({ x: 500 + jit(), y: 400 + jit(), t: i * 8 });
+      emitted += Math.hypot(m.step.dx, m.step.dy);
+    }
+    expect(emitted).toBe(0);
+    expect(m.current).toBe("STATIONARY");
+  });
+
+  it("⭐⭐ LEAVING rest is IMMEDIATE — the owner's complaint was about the other way", () => {
+    // ⚠ *"if I switch from depth to x/y translation, the switch is immediate"* — that half
+    // was always true and must stay true. ⛔ No timer stands in front of MOVING.
+    const m = new MotionTracker(cfg);
+    m.push({ x: 500, y: 400, t: 0 });
+    m.push({ x: 500 + BAND_PX + mmToPx(1), y: 400, t: 8 });
+    expect(m.current).toBe("MOVING");
+  });
+
+  it("⭐⭐ RETURNING to rest costs ONE restConfirmMs, not a settle timer", () => {
+    // ⛔⛔ THE REPORTED DEFECT: *"when I switch from x/y to depth translation… there is no
+    // depth translation for a while and then suddenly it is triggered."* That was ~900 ms
+    // of settle. ⭐ Now it is `restConfirmMs`, and the vector pins it.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    m.push({ x, y: 400, t: 0 });
+    for (let i = 1; i <= 30; i++) {
+      x += mmToPx(3);
+      m.push({ x, y: 400, t: i * 8 });
+    }
+    expect(m.current).toBe("MOVING");
+    const stoppedAt = 30 * 8;
+    let restoredAt: number | null = null;
+    for (let i = 1; i <= 200; i++) {
+      const t = stoppedAt + i * 8;
+      if (m.push({ x, y: 400, t }) === "STATIONARY" && restoredAt === null) restoredAt = t - stoppedAt;
+    }
+    expect(restoredAt).not.toBeNull();
+    expect(restoredAt!).toBeLessThanOrEqual(cfg.restConfirmMs + 16);
   });
 });

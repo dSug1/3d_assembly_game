@@ -413,3 +413,53 @@ so the claim is distinguishable from its opposite. The owner withdrew the report
 ⭐⭐ **Mistake shape 4 — *a composition nobody computed* — can aim at a CORRECT piece of
 work as easily as a broken one**, and it costs the same either way until someone measures
 the composition. `METHOD`: *a composition is a thing to MEASURE, not an emergent property.*
+
+---
+
+# ⛔⛔ THE ROLL'S COMMIT DROPPED ITS OWN ANGLE — found by finger, 2026-09-15
+
+> *"In rotation, when I switch from yaw/pitch to roll or from roll to yaw/pitch, there is a
+> big jump at one point: is it due to accumulated delta position or quaternion gimbal or
+> just the decision being switched from one to another but anchoring on a previous
+> quaternion which is now far away?"*
+
+⭐⭐ **The third guess, and it is worth recording that the owner named the cause from the
+feel alone.** Not accumulated delta, not gimbal — a re-anchor onto a pose that was by then
+far away. ⚠ And worse than `A8` intended.
+
+## What `A8` promised, and what the code did
+
+`A8` rebases the object to the pose it held when the circle's evidence began, so the
+yaw/pitch swept before the 60° commit is undone. Its own documentation says the object
+*"jumps by the whole swept angle, which 2quinte then applies from the rebased pose"*.
+
+⛔⛔ **2quinte did not apply it.** The scene applies roll as a per-frame INCREMENT:
+
+```ts
+screenRollRotation(cur, grip.frame, grip.rec.rollAppliedDeg - grip.lastRollDeg)
+```
+
+and `grip.lastRollDeg` had been tracking `rollAppliedDeg` on **every** move, including all
+through the uncommitted phase. So at the commit frame the increment was **one frame's**
+worth, and roughly 60° of swept roll was silently dropped — while the yaw/pitch it was
+supposed to replace had just been undone.
+
+⭐ Net effect on the glass: a large backward snap with nothing put in its place. Exactly
+the *"big jump at one point"*.
+
+## The fix
+
+Zero the baseline once, on the commit edge, so the increment is the **full** swept angle
+applied from the rebased pose — what the object loses in yaw/pitch it gains in roll.
+
+⚠ **A visible step remains, and it is A8's designed trade**: yaw/pitch through 60° of arc
+and roll through the same 60° are different orientations, and the commit chooses the one
+the finger actually drew. ⭐ `rollAngle` is the slider that shrinks it — commit earlier and
+there is less to replace. ⛔ It is no longer a snap to nowhere.
+
+## ⭐⭐ The shape, for the third time on this row
+
+`roll.ts` already carries a comment about *"big jumps when I switch from roll to yaw/pitch
+or when I change roll directions"* — a stale `prevPos`, fixed earlier. The note there
+says: **a difference means something only when BOTH ends of it are current.** ⛔ This is
+the same defect one layer up: `rollAppliedDeg` was current and `lastRollDeg` was not.

@@ -27,33 +27,37 @@ import { distanceTurningPoints } from "./orbit";
 export const CAMERA_NEAR_PLANE_M = 0.01;
 
 export interface GestureConfig {
-  // ── §1.1 motion states, hysteretic ──────────────────────────────────────
-  /** mm/s below which a touchpoint counts as resting. */
-  stillSpeed: number;
-  /** ms it must stay there before STATIONARY latches. */
-  stillTime: number;
-  /** mm of accumulated travel to enter MOVING. */
-  moveEnterDistance: number;
+  // ── §1.1 motion state, a POSITION DEADBAND ──────────────────────────────
   /**
-   * mm. The EXCURSION BOUND during settle candidacy: once speed drops below
-   * `stillSpeed`, the finger must stay within this of where it slowed down, for
-   * the whole `stillTime`, before STATIONARY latches.
+   * ⭐⭐⭐ THE DEAD RADIUS, in millimetres on the glass. A finger inside it of its anchor
+   * is `STATIONARY` and emits NOTHING; beyond it, rules receive the **excess only**.
    *
-   * ⛔⛔ IT IS SANDWICHED FROM BOTH SIDES, AND ONE SIDE WAS MISSING UNTIL A10.
+   * ⛔⛔ IT IS THE ONLY MOTION THRESHOLD, and it replaced four — `stillSpeed`,
+   * `stillTime`, `moveEnterDistance` and `moveExitDistance`. The owner's model (A11):
+   * *"stationary should mean a deadband around the touchpoint position (independently of
+   * the time)."*
    *
-   * * **From above** — `stillSpeed * stillTime` must EXCEED it, or motion held below
-   *   `stillSpeed` can never cover enough ground to test it and the bound is decorative.
-   * * ⭐⭐ **From below** — it must exceed the MEASURED `pointerNoiseMm` by
-   *   `SETTLE_NOISE_MULTIPLE`, or a finger that is genuinely at rest cannot stay inside
-   *   it and **STATIONARY becomes unreachable**. ⛔ At 0.8 mm against a measured
-   *   0.761 mm RMS floor it was: a finger that had once moved NEVER came back, measured
-   *   over four seconds of rest. Nothing shipped before A10 depended on RE-ENTERING
-   *   STATIONARY, which is why eight device passes never showed it.
+   * ⭐ It is also **A9's deadband**, so no rule needs a second one: the excess-only form
+   * is what stops a still finger turning a held object, and it is applied once, at the
+   * source, for every rule at the same time.
    *
-   * ⛔ Must also be < moveEnterDistance or the state chatters. All three asserted in
-   * `validateGestureConfig`. See motion.ts.
+   * ⚠ It must exceed the MEASURED `pointerNoiseMm` by `SETTLE_NOISE_MULTIPLE`, or a
+   * resting finger reads as moving. Asserted in `validateGestureConfig`.
    */
-  moveExitDistance: number;
+  motionDeadbandMm: number;
+  /**
+   * ms — how long a finger must emit NOTHING before `MOVING` gives way to `STATIONARY`.
+   *
+   * ⛔ NOT a settle timer, and not on the path a hand complained about: LEAVING
+   * `STATIONARY` is instantaneous, and the deadbanded delta never waits for this.
+   * ⭐ It exists for one structural reason: while the finger moves, the anchor is dragged
+   * to sit **exactly on** the dead radius, so when the finger stops it rests ON the
+   * boundary and the measured noise straddles it. Without this, the state flickers on
+   * roughly half of all samples — and a bigger radius does not help, because the anchor
+   * follows it out.
+   * ⚠ Small on purpose: a tenth of the settle timer it replaced. `IN5`, by slider.
+   */
+  restConfirmMs: number;
 
   // ── §1.2 gains ──────────────────────────────────────────────────────────
   /** Metres. Translation gains scale by cameraDistance / this. */
@@ -445,7 +449,16 @@ export interface GestureConfig {
 }
 
 export const DEFAULT_CONFIG: GestureConfig = {
-  // ⛔⛔ ALL FOUR RE-SIZED 2026-09-15 AGAINST THE MEASURED NOISE FLOOR (A10), and this
+  // ⭐⭐⭐ ONE RADIUS REPLACED FOUR THRESHOLDS (A11, the owner's model). Everything below
+  // about re-sizing applies to it, and the reasoning is kept because it is why the number
+  // is 2.4 and not 0.8. ⚠ A DEVICE MUST JUDGE IT: it is the commit threshold, the rest
+  // test and the jitter deadband all at once now.
+  motionDeadbandMm: 2.4,
+  // ⚠ A tenth of the 450 ms settle it replaced, and it only confirms the way BACK to
+  // STATIONARY. A guess, with a slider.
+  restConfirmMs: 120,
+
+  // ⛔⛔ THE HISTORY, KEPT — all four were re-sized 2026-09-15 against the measured floor
   // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of
   // 1.5 mm. ⭐ The previous set was sized when `pointerNoiseMm` was BELIEVED to be
   // 0.15 mm; it was measured at 0.761 mm on 2026-09-14 and these were never re-checked.
@@ -455,7 +468,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⛔ The binding constraint is the EXCURSION BOUND, which must sit above the noise or
   // STATIONARY is unreachable — 19 consecutive samples must all land inside it, so it
   // needs roughly 3x the RMS floor, not 1x. Everything else follows:
-  //   moveExitDistance  >= 3 x 0.761  = 2.28 -> 2.4
+  //   the radius      >= 3 x 0.761  = 2.28 -> 2.4
   //   moveEnterDistance >  moveExitDistance  -> 3.2 (a real gap, or the state chatters)
   //   stillSpeed x stillTime > moveExitDistance -> 6 mm/s x 0.45 s = 2.7 > 2.4
   //
@@ -470,11 +483,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // moved starts STATIONARY and waits for nothing, which is the ordinary case.
   // ⭐ Every one has a slider, because IN5 says the slider ships WITH the rule and these
   // four are now load-bearing for a MODE, not only for a flick test.
-  stillSpeed: 6,
-  // ⚠ MOVED 80 -> 150 by IN1, then 150 -> 450 by A10 (above). Not a measurement.
-  stillTime: 450,
-  moveEnterDistance: 3.2,
-  moveExitDistance: 2.4,
 
   referenceCameraDistance: 0.6,
   // ⭐⭐ 0.07 rad/mm — CHOSEN ON THE DEVICE by the owner, 2026-09-14, with the menu
@@ -743,11 +751,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "CIRCLE passes, and a circle is the gesture that must not evict.",
     );
   }
-  if (cfg.moveEnterDistance <= cfg.moveExitDistance) {
-    throw new Error(
-      "moveEnterDistance must exceed moveExitDistance, or the motion state chatters.",
-    );
-  }
+
   // ⭐⭐ THE OTHER SIDE OF THE SANDWICH, ADDED BY A10. A bound the noise cannot fit
   // inside is a bound a RESTING FINGER can never satisfy, so STATIONARY becomes
   // unreachable once anything has moved. ⛔ Nothing shipped before A10 depended on
@@ -757,25 +761,21 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // `stillTime` (~19 of them at 8 ms), not on average: 1x the RMS floor is satisfied
   // about half the time, and half^19 is never.
   const settleFloorMm = SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm;
-  if (cfg.moveExitDistance < settleFloorMm) {
+  if (cfg.motionDeadbandMm < settleFloorMm) {
     throw new Error(
-      `moveExitDistance (${cfg.moveExitDistance} mm) is below ${SETTLE_NOISE_MULTIPLE}x the ` +
+      `motionDeadbandMm (${cfg.motionDeadbandMm} mm) is below ${SETTLE_NOISE_MULTIPLE}x the ` +
         `measured pointerNoiseMm (${cfg.pointerNoiseMm} mm = ${settleFloorMm.toFixed(2)} mm), ` +
         `so a finger AT REST cannot stay inside it and STATIONARY is unreachable. ` +
-        `Raise moveExitDistance (and moveEnterDistance above it).`,
+        `Raise motionDeadbandMm.`,
     );
   }
 
-  // Motion held below `stillSpeed` for `stillTime` cannot cover more ground than
-  // their product, so below it the exit distance is decorative in EVERY wiring.
-  const reachableMm = (cfg.stillSpeed * cfg.stillTime) / 1000;
-  if (reachableMm <= cfg.moveExitDistance) {
-    throw new Error(
-      `moveExitDistance (${cfg.moveExitDistance} mm) can never bind: motion held ` +
-        `below stillSpeed (${cfg.stillSpeed} mm/s) for stillTime (${cfg.stillTime} ms) ` +
-        `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
-    );
-  }
+  // ⛔ THE REACHABILITY RULE IS GONE WITH THE QUANTITIES IT GUARDED. It asserted that
+  // `stillSpeed x stillTime` exceeded the excursion bound, so the bound was not decorative.
+  // ⭐ A11 removed all three: a position deadband has no rate and no duration to be
+  // inconsistent with, which is most of why it is the right shape. The rule ABOVE — the
+  // radius must clear the measured noise — is the one that survived, and it is the one
+  // that was missing.
   // ⚠ A rule once required `rollReleaseDistance > rollStepDistance`, reasoning that
   // a roll "cannot be released before the path has travelled far enough to measure
   // its shape". ⛔ DELETED: the shape is measured by the fit WINDOW, not by the

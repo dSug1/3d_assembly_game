@@ -119,7 +119,7 @@ describe("recognizer — the commit point", () => {
     const last = moving[moving.length - 1]!;
     // ⚠ DERIVED, not a literal: how long settling takes is governed by `stillTime` and
     // by the speed window behind it, and A10 re-sized both. A literal 600 ms went stale.
-    const restSamples = Math.ceil((4 * cfg.stillTime) / 10);
+    const restSamples = Math.ceil((4 * cfg.restConfirmMs) / 10);
     for (let i = 1; i <= restSamples; i++) rec.move({ x: last.x, y: last.y, t: last.t + i * 10 });
     expect(rec.motionState).toBe("STATIONARY"); // the FINGER settled...
     expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS"); // ...the GESTURE did not
