@@ -39,6 +39,34 @@
  *    arrives a few samples later. ⛔ A deadband that re-centres on the finger whenever it
  *    is inside the radius loses that travel completely, which is the trap in A9's dossier.
  *
+ * ## ⛔⛔⛔ AND REST MUST BE REACHABLE WITHOUT FURTHER EVENTS — `tick`
+ *
+ * A device report survived two fixes: *"I still experience issue passing from x/y
+ * translation to depth translation (sometimes, it is blocked) while passing from depth
+ * translation to x/y translation is smooth and instantaneous."*
+ *
+ * ⛔⛔ THE STATE MACHINE IS DRIVEN BY `push`, AND `push` IS DRIVEN BY `pointermove`. A
+ * finger resting on glass emits **no pointermove events** — that is what resting *is*. So
+ * the tracker freezes at whatever it last was, and what it last was is `MOVING`.
+ *
+ * ⭐⭐ THE ASYMMETRY IS STRUCTURAL, AND EXACTLY INVERTED FROM WHAT THE RULES NEED:
+ *
+ *     MOVING     is entered by an event that NECESSARILY EXISTS — the finger moved.
+ *     STATIONARY must be entered by an event that BY DEFINITION MAY NOT ARRIVE.
+ *
+ * ⚠ It explains *"sometimes"* precisely: the only thing that thaws the tracker is a stray
+ * jitter sample crossing the digitizer's own threshold, and those arrive at random. Hence
+ * blocked for a while, then suddenly triggered.
+ *
+ * ⭐ `tick(now)` is the fix, and the quantity it reads is not a consolation prize:
+ * **elapsed time with NO sample is the strongest evidence of stillness there is** — better
+ * than samples inside the dead radius, because a sample inside the radius is still a report
+ * of motion and silence is not. ⛔ It decides a STATE and emits no travel, ever: a tick that
+ * produced a delta would let a dropped frame move an object.
+ *
+ * ⚠ THE CALLER MUST DRIVE IT — the render loop, every frame, for every live touchpoint.
+ * A tracker nobody ticks behaves exactly as it did before this paragraph existed.
+ *
  * ## ⚠ THE ONE TIME TERM THAT SURVIVES, AND EXACTLY WHY
  *
  * ⛔⛔ A PURE POSITION DEADBAND CHATTERS AT ITS OWN BOUNDARY, and it is structural rather
@@ -109,6 +137,8 @@ export class MotionTracker {
   private anchor: Sample | null = null;
   /** When the finger last emitted nothing. `null` while it is emitting. */
   private restingSinceMs: number | null = null;
+  /** The most recent sample, so `tick` knows how long the silence has lasted. */
+  private lastSample: Sample | null = null;
   private lastStep: { dx: number; dy: number } = ZERO_STEP;
 
   constructor(private readonly cfg: GestureConfig) {
@@ -130,11 +160,38 @@ export class MotionTracker {
     this.state = "STATIONARY";
     this.anchor = null;
     this.restingSinceMs = null;
+    this.lastSample = null;
     this.lastStep = ZERO_STEP;
+  }
+
+  /**
+   * ⭐⭐ ADVANCE THE CLOCK WITHOUT A SAMPLE. Call it every frame, for every live touchpoint.
+   *
+   * ⛔⛔ WITHOUT THIS, `STATIONARY` IS UNREACHABLE FOR A FINGER THAT IS ACTUALLY STILL,
+   * because a still finger emits no events and `push` is the only thing that advances the
+   * state. See the header — it is the defect a hand reported three times.
+   *
+   * ⛔ It never emits travel and never enters `MOVING`: silence is evidence of rest and of
+   * nothing else.
+   */
+  tick(nowMs: number): MotionState {
+    // ⛔ A tick is not an event, so it leaves NO travel behind it. ⚠ Caught by its own
+    // vector: without this, `step` still held the last push's delta, and a caller that read
+    // it after a frame with no pointer events would apply that travel a second time.
+    this.lastStep = ZERO_STEP;
+    if (this.state !== "MOVING") return this.state;
+    const since = this.restingSinceMs ?? this.lastSample?.t;
+    if (since === undefined) return this.state;
+    if (nowMs - since < this.cfg.restConfirmMs) return this.state;
+    this.state = "STATIONARY";
+    // ⭐ Re-centre on where it actually came to rest, exactly as the sampled path does.
+    if (this.lastSample) this.anchor = this.lastSample;
+    return this.state;
   }
 
   push(s: Sample): MotionState {
     this.lastStep = ZERO_STEP;
+    this.lastSample = s;
     if (this.anchor === null) {
       this.anchor = s;
       this.restingSinceMs = s.t;

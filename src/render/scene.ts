@@ -1149,6 +1149,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       tracker = new MotionTracker(cfg);
       grip.anchorMotion.set(anchorId, tracker);
     }
+    // ⭐⭐ ASK THE CLOCK RIGHT HERE TOO, not only in the render loop. This is the one
+    // moment the holder's stillness actually decides something, and an anchor event can
+    // arrive between frames — or after a dropped one. ⛔ Belt and braces on the exact
+    // defect that made this gesture *"sometimes blocked"*.
+    grip.rec.tick(anchorSample.t);
     const anchorState = tracker.push(anchorSample);
     if (depthGate(grip.rec.motionState, anchorState) !== "DEPTH") return false;
 
@@ -1588,6 +1593,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const now = performance.now();
     const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
     lastFrameMs = now;
+
+    // ⛔⛔⛔ ADVANCE THE MOTION CLOCK FOR EVERY LIVE TOUCHPOINT, EVERY FRAME.
+    //
+    // A still finger emits NO `pointermove`, and `MotionTracker` is otherwise driven only
+    // by those events — so without this line a finger held deliberately still stays
+    // `MOVING` for ever, and A10's depth gate never opens. ⚠ Reported from the device three
+    // times before it was found: *"passing from x/y translation to depth translation
+    // (sometimes, it is blocked) while passing from depth translation to x/y translation is
+    // smooth and instantaneous."*
+    //
+    // ⭐ The asymmetry was structural: `MOVING` is entered by an event that necessarily
+    // exists, `STATIONARY` by one that by definition may not arrive. ⭐⭐ Elapsed time with
+    // no sample is the strongest evidence of stillness there is — it simply has to be asked
+    // for, and the render loop is the clock everything visible already runs on.
+    for (const grip of held.values()) {
+      grip.rec.tick(now);
+      for (const tracker of grip.anchorMotion.values()) tracker.tick(now);
+    }
 
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally

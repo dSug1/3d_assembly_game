@@ -65,6 +65,27 @@ be discontinuous.
 through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
 of two numbers passing through zero is garbage however carefully it is computed.
 
+## ⭐⭐ A threshold is only half a rule — the other half is what advances the clock
+
+*(2026-09-15, after three device reports of one defect.)* A state machine that waits for a
+condition must be **driven by something that runs when the condition holds**. ⛔ If it is
+driven by the very signal whose ABSENCE it is trying to detect, no threshold can ever be
+right, and every fix will look like a tuning problem.
+
+⚠ The instance: *"is this finger still?"* was answered by a tracker advanced only by
+`pointermove`. A still finger emits none, so the tracker froze at MOVING — and the state
+could only be reached by a stray jitter sample arriving at random. ⭐ Two rounds of fixing
+the THRESHOLD changed nothing, because the threshold was never the problem.
+
+⭐⭐ **The tell, and it was in the first report**: one direction of the transition was
+instant and the other was erratic. **An asymmetry between two directions of the same test
+is about the EVIDENCE, not the threshold** — entering MOVING is witnessed by an event that
+necessarily exists; leaving it is not.
+
+⭐ And the fix's quantity was the better one all along: *elapsed time with no sample* is
+stronger evidence of stillness than any sample inside a dead radius, because a sample is
+still a report of motion and silence is not.
+
 ## ⭐⭐ When a rule needs a WINDOW to decide, suspect the QUESTION
 
 *(2026-09-15, from the sixth model of one gesture.)* A window, a ratio, a tolerance and a

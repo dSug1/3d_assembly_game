@@ -668,6 +668,44 @@ durations in series, ~900 ms**, in front of the one transition A10's depth gate 
 ⛔ Under A11 there is no settle at all. Leaving rest stays instantaneous; returning costs
 one `restConfirmMs`, a tenth of what it replaced.
 
+### ⛔⛔⛔ AND REST MUST BE REACHABLE WITHOUT FURTHER EVENTS
+
+⚠ **The device report survived A10's fix AND A11's, and the owner was right that neither
+explained it:**
+
+> *"I still experience issue passing from x/y translation to depth translation (sometimes,
+> it is blocked) while passing from depth translation to x/y translation is smooth and
+> instantaneous: there is something wrong you did not explain nor check."*
+
+⛔⛔ **THE STATE MACHINE IS DRIVEN BY `push`, AND `push` IS DRIVEN BY `pointermove`. A
+finger resting on glass emits no `pointermove` events — that is what resting *is*.** So the
+tracker froze at whatever it last was, and what it last was is `MOVING`.
+
+⭐⭐ **The asymmetry was structural, and exactly inverted from what the rules need:**
+
+| transition | driven by |
+|---|---|
+| → `MOVING` | an event that **necessarily exists** — the finger moved |
+| → `STATIONARY` | an event that **by definition may not arrive** |
+
+⚠ And it explains *"sometimes"* precisely: the only thing that thawed the tracker was a
+stray jitter sample crossing the digitizer's own threshold, and those arrive at random.
+Blocked for a while, then suddenly triggered.
+
+⭐ **`MotionTracker.tick(now)`, driven by the render loop every frame**, for every live
+touchpoint — and again at the exact moment an anchor event asks the question, because an
+event can arrive between frames.
+
+⭐⭐ **The quantity it reads is not a consolation prize: elapsed time with NO sample is the
+strongest evidence of stillness there is** — stronger than samples inside the dead radius,
+because a sample inside the radius is still a *report of motion* and silence is not. It
+simply has to be asked for. ⛔ A tick decides a STATE and emits no travel, ever: a tick that
+produced a delta would let a dropped frame move an object, which its own vector caught.
+
+⚠ **CARRIED**: *a threshold is only half a rule — the other half is what advances the clock.*
+Three fixes went into the number before anyone checked that the thing which clears it can
+run at all.
+
 ### ⚠ The one time term that survives, and exactly why
 
 ⛔⛔ **A pure position deadband chatters at its own boundary**, structurally: while the

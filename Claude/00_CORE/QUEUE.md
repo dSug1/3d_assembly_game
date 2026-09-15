@@ -35,7 +35,7 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Twenty-nine defects have been found **by finger** (twenty-eight of them; one by composing a measurement with a threshold), and **not one was visible to a green
+Thirty defects have been found **by finger** (twenty-nine of them; one by composing a measurement with a threshold), and **not one was visible to a green
 suite**. They are **five** shapes, not twenty-six problems — the fifth is below, and it is
 the one that costs a correct implementation rather than a broken one:
 
@@ -59,7 +59,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | **A10** — §1.1 cannot see rest | **1** — ⛔⛔ **the speed was a rate over ONE SAMPLE PAIR**, so with the measured 0.761 mm of noise a resting finger read ~95 mm/s and **STATIONARY was unreachable**; the settle bound also sat below the noise. ⚠ Found by BUILDING the first rule that asks, not by a finger — and invisible to eight device passes because nothing else depended on re-entering STATIONARY | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
 | **A11** — the settle asymmetry | **1** — *"when I switch from x/y to depth translation… there is no depth translation for a while and then suddenly it is triggered"*, while the other direction was instant. ⛔ Entering MOVING was a DISTANCE test; returning to STATIONARY was TWO durations in series (~900 ms). ⭐ Fixed by the owner's model: §1.1 is a position deadband and the settle timer is gone | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
 | **A8** — the roll's commit dropped its own angle | **1** — *"in rotation, when I switch from yaw/pitch to roll… there is a big jump at one point."* The rebase undid the swept yaw/pitch, and the scene then applied only ONE FRAME of roll against a `lastRollDeg` that had tracked the uncommitted phase — so ~60° of swept roll was silently dropped. ⭐ The owner's own third guess was right: *"anchoring on a previous quaternion which is now far away"* | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
-| | **= 29** | |
+| **A11** — a still finger emits no events | **1** — ⛔⛔ §1.1 is driven by `pointermove`, and a resting finger sends none — so the tracker froze at `MOVING` and `STATIONARY` was unreachable *for the exact case the rule is about*. ⭐ The asymmetry is structural: MOVING is entered by an event that necessarily exists, STATIONARY by one that by definition may not arrive. ⚠ **It survived two fixes to the THRESHOLD before anyone checked the CLOCK**, and the owner said so: *"there is something wrong you did not explain nor check"* | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
+| | **= 30** | |
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of

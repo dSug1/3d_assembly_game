@@ -513,3 +513,98 @@ describe("⭐⭐ the position deadband emits the EXCESS, and emits it exactly", 
     expect(restoredAt!).toBeLessThanOrEqual(cfg.restConfirmMs + 16);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔⛔ A STILL FINGER EMITS NO EVENTS — SO NOTHING ASKS THE QUESTION
+//
+// Found 2026-09-15, from a device report that survived two fixes: *"I still experience
+// issue passing from x/y translation to depth translation (sometimes, it is blocked) while
+// passing from depth translation to x/y translation is smooth and instantaneous: there is
+// something wrong you did not explain nor check."* ⭐ Correct on every count.
+//
+// ⛔⛔ THE STATE MACHINE IS DRIVEN BY `push`, AND `push` IS DRIVEN BY `pointermove`. A
+// finger resting on glass generates NO pointermove events — that is what resting means. So
+// the tracker is FROZEN at whatever it last was, and `MOVING` is exactly what it last was.
+//
+// ⭐⭐ THE ASYMMETRY IS THEREFORE STRUCTURAL AND INVERTED:
+//
+//   MOVING     is entered by an event that NECESSARILY EXISTS — the finger moved.
+//   STATIONARY must be entered by an event that BY DEFINITION MAY NOT ARRIVE.
+//
+// ⚠ And it explains *"sometimes"* exactly: the only thing that thaws the tracker is a stray
+// jitter sample crossing the digitizer's own threshold, which arrives at random. Hence
+// blocked for a while, then suddenly triggered.
+//
+// ⭐ ELAPSED TIME WITH NO SAMPLE IS THE STRONGEST EVIDENCE OF STILLNESS THERE IS — stronger
+// than samples inside the dead radius. It just has to be ASKED FOR.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ rest must be reachable WITHOUT further events", () => {
+  const drag = (m: MotionTracker) => {
+    let x = 500;
+    m.push({ x, y: 400, t: 0 });
+    for (let i = 1; i <= 30; i++) {
+      x += mmToPx(3);
+      m.push({ x, y: 400, t: i * 8 });
+    }
+    return { x, t: 30 * 8 };
+  };
+
+  it("⭐⭐ a finger that STOPS DEAD becomes STATIONARY on the clock alone", () => {
+    // ⛔ THE DEFECT, STATED AS THE PRODUCT'S REQUIREMENT: not one further sample arrives,
+    // because the finger is not moving. The state must still come back.
+    const m = new MotionTracker(cfg);
+    const end = drag(m);
+    expect(m.current).toBe("MOVING");
+    m.tick(end.t + cfg.restConfirmMs + 1);
+    expect(m.current).toBe("STATIONARY");
+  });
+
+  it("⛔ …and NOT before restConfirmMs has actually passed", () => {
+    const m = new MotionTracker(cfg);
+    const end = drag(m);
+    m.tick(end.t + cfg.restConfirmMs - 10);
+    expect(m.current).toBe("MOVING");
+  });
+
+  it("⭐ a tick does not resurrect a finger that never moved", () => {
+    const m = new MotionTracker(cfg);
+    m.push({ x: 500, y: 400, t: 0 });
+    m.tick(5000);
+    expect(m.current).toBe("STATIONARY");
+  });
+
+  it("⛔⛔ a tick emits NOTHING — it decides a state, it never moves an object", () => {
+    // ⚠ A tick that produced travel would let a dropped frame translate the object.
+    const m = new MotionTracker(cfg);
+    const end = drag(m);
+    m.tick(end.t + cfg.restConfirmMs + 1);
+    expect(m.step.dx).toBe(0);
+    expect(m.step.dy).toBe(0);
+  });
+
+  it("⭐ ticks BETWEEN samples of a continuing drag change nothing", () => {
+    // ⛔ The render loop ticks every frame, including mid-drag. A tick must never
+    // interrupt a gesture that is still delivering events.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    m.push({ x, y: 400, t: 0 });
+    for (let i = 1; i <= 30; i++) {
+      x += mmToPx(3);
+      m.push({ x, y: 400, t: i * 8 });
+      m.tick(i * 8 + 4);
+      expect(m.current, `tick after sample ${i}`).toBe("MOVING");
+    }
+  });
+
+  it("⭐⭐ and the finger resumes IMMEDIATELY after a tick put it to rest", () => {
+    // ⚠ The half the owner said already worked, asserted so it stays working: leaving rest
+    // must never wait for anything.
+    const m = new MotionTracker(cfg);
+    const end = drag(m);
+    m.tick(end.t + cfg.restConfirmMs + 1);
+    expect(m.current).toBe("STATIONARY");
+    m.push({ x: end.x + mmToPx(cfg.motionDeadbandMm + 1), y: 400, t: end.t + 1000 });
+    expect(m.current).toBe("MOVING");
+  });
+});

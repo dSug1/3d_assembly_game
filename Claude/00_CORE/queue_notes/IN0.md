@@ -170,3 +170,58 @@ without making the *shape* right. ⭐ A displacement deadband needs no such choi
 ⚠ **What survived from the fix above**: `SETTLE_NOISE_MULTIPLE`, and the validator rule
 that the dead radius must clear the measured noise. That was the half that was missing,
 and it is the only consistency rule §1.1 has left.
+
+---
+
+# ⛔⛔⛔ AND THE REAL CAUSE WAS THE CLOCK, NOT THE THRESHOLD
+
+**The same report came back a third time**, after the windowed-speed fix and after A11's
+deadband:
+
+> *"I still experience issue passing from x/y translation to depth translation (sometimes,
+> it is blocked) while passing from depth translation to x/y translation is smooth and
+> instantaneous: there is something wrong you did not explain nor check. I want the same
+> smooth on both transitions, and your time and deadband does not explain this issue."*
+
+⭐ **Correct on every count.** Both previous fixes were to the THRESHOLD. Neither checked
+whether the thing that clears it can run.
+
+## The cause
+
+⛔⛔ **`MotionTracker` is advanced only by `push`, and `push` is called only from a
+`pointermove` handler. A finger resting on glass emits no `pointermove` events — that is
+what resting IS.** So the tracker froze at whatever it last was, and what it last was is
+`MOVING`.
+
+| transition | driven by |
+|---|---|
+| → `MOVING` | an event that **necessarily exists** — the finger moved |
+| → `STATIONARY` | an event that **by definition may not arrive** |
+
+⭐⭐ That is the asymmetry the owner described, stated exactly. And it explains
+*"sometimes"*: the only thing that thawed the tracker was a stray jitter sample crossing
+the digitizer's own threshold, arriving at random — blocked for a while, then suddenly
+triggered.
+
+## The fix
+
+`MotionTracker.tick(now)`, driven by the render loop every frame for every live
+touchpoint, and again at the moment an anchor event asks the question.
+
+⭐⭐ **The quantity is the right one, not a fallback: elapsed time with NO sample is the
+strongest evidence of stillness there is** — stronger than samples inside the dead radius,
+because a sample inside the radius is still a report of motion and silence is not.
+⛔ A tick decides a STATE and emits no travel: caught by its own vector, which found
+`step` still holding the previous push's delta after a tick.
+
+## ⭐⭐ THE CARRIED LESSON, AND IT IS THE POINT OF THIS WHOLE FILE
+
+§1.1 has now been wrong four times about the QUANTITY and once about the CLOCK, and the
+last one cost three device reports because I kept re-deriving the number:
+
+> **A threshold is only half a rule. The other half is what advances the clock — and if
+> the state machine is driven by the very signal whose ABSENCE it is trying to detect,
+> no threshold can ever be right.**
+
+⚠ The tell was in the report from the first day and I read past it three times: the
+transition that worked was the one whose evidence always exists.

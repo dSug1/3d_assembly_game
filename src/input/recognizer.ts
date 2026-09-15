@@ -218,6 +218,17 @@ export class Recognizer<P> {
   }
 
   /**
+   * ⭐⭐ ADVANCE THE MOTION CLOCK WITHOUT A SAMPLE — call it every frame while this
+   * touchpoint is down. ⛔ A still finger emits no `pointermove`, so without this the
+   * motion state freezes at `MOVING` and never comes back. See `MotionTracker.tick`.
+   * ⚠ It touches the motion state ONLY: no roll, no buffer, no phase. A tick is not an
+   * event and must not be mistaken for one by anything downstream.
+   */
+  tick(nowMs: number): void {
+    this.motion.tick(nowMs);
+  }
+
+  /**
    * ⭐⭐ THE DEADBANDED TRAVEL from the most recent sample, CSS pixels (A11).
    *
    * ⛔⛔ EVERY CONTINUOUS RULE MUST CONSUME THIS, never `s.x - prev.x`. The raw delta
