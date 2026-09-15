@@ -27,7 +27,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**502 golden vectors, all passing** (37 → 502).
+**512 golden vectors, all passing** (37 → 512).
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 
@@ -37,7 +37,8 @@ model and so did not wait on `3D1`:
 | `A3` | **roll drives an anchored object's free DOF**, 2sexte suppressed where it degenerates | ⚠ `anchor_rotate.ts` built + 25 vectors, **NOT WIRED** |
 | `A5` → `A6` → `A10` | **depth**, decided three times: a pinch, then a common vertical drag, now a **STILL HOLDER and a MOVING ANCHOR** | ✅ wired — ⚠ device pass owed |
 | `A7` | ⭐⭐ every object gesture stands on a **GRAVITY FRAME** | ✅ wired, and vectored end to end |
-| `A8` | a roll **rebases** to the start of its circle, not to the press | ✅ wired |
+| `A8` | ⛔ **RETIRED BY A12** — a roll rebased to the start of its circle | ⚠ unwired, kept callable |
+| `A12` | ⭐⭐⭐ **roll moves to the SECOND touchpoint's x**; its y stays depth. Retires the circle fit, the commit threshold and **the jump** | ✅ wired — ⚠ device pass owed |
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅ built — ⚠ device pass owed |
 | `A10` | ⭐⭐ depth is a **still holder and a moving anchor**; rule 6's second touchpoint may be on the object | ✅ wired — ⚠ device pass owed |
 

@@ -472,3 +472,46 @@ the same implementation and the same four tunables.
 
 ---
 
+
+---
+
+## A8, in full — the rebase A12 retired
+
+**Amends** §1.3's provisional motion, which applied rollback only at RELEASE.
+
+> *"When the circular finger movement is started, the roll is not immediately triggered: the
+> rotation starts with a yaw or pitch and then switches to a roll, but the switch is done
+> when the yaw or pitch have already rotated the object from its original quaternion. This
+> is misleading because the user should want a roll from the initial quaternion, especially
+> to maintain the alignment on an axis."*
+
+### The defect
+
+A circle does not read as a roll until `rollAngle` (60°) of arc has been swept. Until then
+§1.3 applies the continuous rule **provisionally** — and that rule is 2bis, yaw and pitch.
+⛔ So the roll began from a pose the user never asked for, and the result was **not a pure
+roll of the original orientation**. ⚠ Which matters most precisely when it matters at all:
+a user rolling to preserve an alignment got an alignment quietly broken first.
+
+### ⭐ The mechanism was already in the spec
+
+§1.3 defines provisional motion **with rollback** — it simply only ran it at release, for
+the flick test. A roll committing mid-drag is the same situation one transition earlier, and
+it takes the same answer: **restore, then apply.**
+
+### ⛔⛔ It rebases to the FIT WINDOW's start, NOT to the press
+
+A hand may drag in a straight line and only then begin to circle. That drag is a yaw the
+user asked for, it is **not part of the evidence** for a circle, and undoing it would be a
+second defect wearing the first one's clothes. ⭐ `RollDetector.fitWindowStart` publishes
+where the evidence begins, and the recognizer keeps a short pose history — bounded by AGE,
+because the fit window is sized in PATH LENGTH and a slow circle spans more samples than a
+fast one.
+
+⚠ **The object jumps at the commit**, by the whole swept angle. That is not a glitch: it
+replaces exactly as much unasked-for yaw/pitch with the roll the finger actually drew.
+
+⭐ A vector pins the distinction: a straight run followed by a circle rebases to the
+circle, and the straight run's rotation **survives**.
+
+---

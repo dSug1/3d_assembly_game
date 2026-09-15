@@ -316,7 +316,12 @@ export class Recognizer<P> {
         this.poseHistory.shift();
       }
       this.roll.push(s);
-      this.rebaseOnRollCommit();
+      // ⛔⛔ A12 RETIRED THE REBASE. Roll is no longer a one-touchpoint gesture, so there
+      // is no provisional yaw/pitch to undo and no circle to rebase to — and the jump it
+      // produced at the commit is gone with it. ⚠ `rebaseOnRollCommit` and the pose
+      // history are left in place, unused, exactly as `roll.ts` is: the machinery is
+      // correct and vectored, and the day a circular roll comes back it is what comes back.
+      // this.rebaseOnRollCommit();
     }
     return this.phase;
   }
@@ -344,7 +349,15 @@ export class Recognizer<P> {
    * then applies from the rebased pose. That is not a glitch: it replaces exactly as much
    * unasked-for yaw/pitch with the roll the finger actually drew.
    */
-  private rebaseOnRollCommit(): void {
+  /**
+   * ⛔ A8, RETIRED BY A12 AND KEPT CALLABLE. Roll is no longer a one-touchpoint gesture, so
+   * there is no provisional yaw/pitch to undo — but the mechanism is correct and vectored,
+   * and the day a circular roll comes back this is what comes back with it.
+   * ⚠ PUBLIC so the compiler does not call it dead: it is a deliberate retirement, not an
+   * oversight, and deleting tested machinery to satisfy a lint is how a project loses work
+   * it later needs.
+   */
+  rebaseOnRollCommit(): void {
     const committed = this.roll.committed;
     const justCommitted = committed && !this.wasRollCommitted;
     this.wasRollCommitted = committed;

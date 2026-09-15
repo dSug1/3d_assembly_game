@@ -249,46 +249,25 @@ that is the fifth time on this project.
 
 ---
 
-## A8 — ⭐⭐ A ROLL REBASES TO THE START OF ITS CIRCLE *(defect found by finger, 2026-09-15)*
+## A8 — ⛔ RETIRED BY A12 — a roll rebased to the start of its circle *(2026-09-15)*
 
-**Amends** §1.3's provisional motion, which applied rollback only at RELEASE.
+⛔⛔ **A12 MOVED ROLL TO THE SECOND TOUCHPOINT, SO THERE IS NO PROVISIONAL YAW/PITCH TO
+UNDO AND NOTHING TO REBASE TO.** A8 existed because a circle was not recognised until 60°
+of arc, and the yaw/pitch applied meanwhile had to be taken back. ⭐ Roll and yaw/pitch are
+now different touchpoint configurations, so the 60° of doubt never happens.
 
-> *"When the circular finger movement is started, the roll is not immediately triggered: the
-> rotation starts with a yaw or pitch and then switches to a roll, but the switch is done
-> when the yaw or pitch have already rotated the object from its original quaternion. This
-> is misleading because the user should want a roll from the initial quaternion, especially
-> to maintain the alignment on an axis."*
+⚠ **A8 also carried a defect of its own, found by finger and fixed before it was retired**:
+the scene applied roll as an increment against a `lastRollDeg` that had tracked the
+UNCOMMITTED phase, so the commit dropped ~60° of swept roll while undoing the yaw/pitch it
+was meant to replace — *"a big jump at one point"*. ⭐ The owner named the cause from the
+feel alone: *"anchoring on a previous quaternion which is now far away."*
 
-### The defect
+⭐ The mechanism is **kept callable** (`Recognizer.rebaseOnRollCommit`) with its three
+vectors driving it explicitly. Kept because retractions are kept on purpose, and because the
+day a circular roll comes back, this is what comes back with it. The original text follows.
 
-A circle does not read as a roll until `rollAngle` (60°) of arc has been swept. Until then
-§1.3 applies the continuous rule **provisionally** — and that rule is 2bis, yaw and pitch.
-⛔ So the roll began from a pose the user never asked for, and the result was **not a pure
-roll of the original orientation**. ⚠ Which matters most precisely when it matters at all:
-a user rolling to preserve an alignment got an alignment quietly broken first.
-
-### ⭐ The mechanism was already in the spec
-
-§1.3 defines provisional motion **with rollback** — it simply only ran it at release, for
-the flick test. A roll committing mid-drag is the same situation one transition earlier, and
-it takes the same answer: **restore, then apply.**
-
-### ⛔⛔ It rebases to the FIT WINDOW's start, NOT to the press
-
-A hand may drag in a straight line and only then begin to circle. That drag is a yaw the
-user asked for, it is **not part of the evidence** for a circle, and undoing it would be a
-second defect wearing the first one's clothes. ⭐ `RollDetector.fitWindowStart` publishes
-where the evidence begins, and the recognizer keeps a short pose history — bounded by AGE,
-because the fit window is sized in PATH LENGTH and a slow circle spans more samples than a
-fast one.
-
-⚠ **The object jumps at the commit**, by the whole swept angle. That is not a glitch: it
-replaces exactly as much unasked-for yaw/pitch with the roll the finger actually drew.
-
-⭐ A vector pins the distinction: a straight run followed by a circle rebases to the
-circle, and the straight run's rotation **survives**.
-
----
+⭐ **The full original text** is kept verbatim in
+[`history/2026-09-15_superseded_amendment_text.md`](history/2026-09-15_superseded_amendment_text.md).
 
 ## A9 — ✅ ABSORBED INTO A11 — a DEADBAND on the pointer delta *(owner, 2026-09-15)*
 
@@ -722,3 +701,85 @@ This is the **fourth** formulation of §1.1, and the first three all failed the 
 ⛔⛔ **Every quantity §1.1 names is defined on an IDEAL pointer**, and each fix so far had
 been a threshold chosen to sit above a measurement. ⭐ A displacement deadband needs no such
 choice: it is the *shape* that is right, not the number.
+
+---
+
+## A12 — ⭐⭐⭐ ROLL MOVES TO THE **SECOND TOUCHPOINT'S x** *(owner, 2026-09-15)*
+
+**Retires** 2quinte's circular roll as a gesture, and with it **A8** entirely.
+
+> *"One touchpoint idle on object && second touchpoint inside or outside any object &&
+> delta position y → depth translation control (= no change vs. current build). One
+> touchpoint idle on object && second touchpoint inside or outside any object && delta
+> position x → roll rotation control. This will remove the conflict and decision lag
+> between yaw/pitch and roll and the jump on roll that we have currently due to all being
+> controlled by the one touchpoint."*
+
+### ⭐⭐⭐ THE AMBIGUITY IS DISSOLVED BY MOVING THE GESTURE, NOT BY DECIDING BETTER
+
+Yaw/pitch is **one** touchpoint; roll is **two**. They stopped being the same hand shape,
+so **nothing has to tell them apart** — and everything that existed to do so is gone:
+
+| retired | why it existed |
+|---|---|
+| 2quinte's **circle fit** (Hyper) | to recognise a circle among drags |
+| `rollAngle`, the 60° **commit threshold** | to decide when the circle was certain |
+| the **provisional yaw/pitch** before the commit | because the decision took 60° of arc |
+| **A8's rebase** to the circle's start | to undo yaw/pitch the user never asked for |
+| the `lastRollDeg` baseline | to turn an absolute swept angle into an increment |
+| ⛔⛔ **the JUMP** | the unavoidable cost of all of the above |
+
+⭐⭐ **`METHOD`, and this is the second time it has paid on this exact row**: *when a rule
+needs a window to decide, suspect the question.* A6 needed a window to ask *"are these two
+travels equal?"*; 2quinte needed 60° of arc to ask *"is this a circle?"*. ⛔ Both were
+answered by **changing the gesture** so the question never arises.
+
+### The rules, in full
+
+| touchpoints | the one on the object | the second one | rule |
+|---|---|---|---|
+| 1 | moving | — | **2bis** yaw/pitch |
+| 2 | **moving** | anything | **rule 6** translate — the holder wins every tie |
+| 2 | **STILL** | **x** moves | ⭐ **A12 roll**, about the gravity frame's horizontal depth axis |
+| 2 | **STILL** | **y** moves | **A10 depth**, unchanged |
+| 2 | STILL | neither | nothing |
+
+⭐ The second touchpoint may be **inside or outside any object** — outside every object, or
+on the **same** object the holder has. ⚠ A touchpoint on a **DIFFERENT** object is
+deliberately excluded: that is §4 rule 5 / 6bis / 6ter's configuration and must stay
+reachable.
+
+### ⭐⭐ It only works because the deadband is PER AXIS
+
+A11's bands break out **independently**, so the second finger's mostly-horizontal drag is
+**pure roll** and its mostly-vertical drag is **pure depth**. ⛔ With one shared `MOVING`
+flag for the whole touchpoint — or with a radial band — a drag that is 95% horizontal would
+still carry its 5% of vertical into depth, and the object would creep away while you rolled
+it. ⭐ There is a counter-example vector for exactly that.
+
+⚠ **So A11 and A12 are load-bearing for each other**, and neither can be reverted alone.
+
+### The gain
+
+`gainRollDrag` — **degrees of roll per MILLIMETRE** of the second touchpoint's horizontal
+travel. ⛔ Millimetres, rule 3. Default **2 °/mm**, so a 45 mm drag rolls the object 90°.
+⚠ A guess, with a slider, and on this project's record almost certainly too small.
+
+⚠ **SIGN**: dragging right rolls clockwise on screen. An arbitrary choice between two
+self-consistent conventions — exactly like the orbit inversion, where no amount of
+sign-checking can tell you which a hand expects.
+
+### ⚠ What is kept, and why it is not deleted
+
+`roll.ts` (the Hyper circle fit, 40 vectors), `Recognizer.rebaseOnRollCommit` and the pose
+history are **left in place and unwired** — the same status as `shake.ts` and
+`anchor_rotate.ts`. ⭐ `METHOD`: *retractions are kept on purpose*, and deleting tested
+machinery to satisfy a lint is how a project loses work it later needs. `rebaseOnRollCommit`
+was made **public** so the compiler does not call it dead; A8's three vectors now drive it
+explicitly and still prove the mechanism, while no longer claiming the recognizer calls it.
+
+⛔⛔ **A TRAP FOR `IN5`, because no test can express it**: `rollAngle`, `gainRoll`,
+`rollStepDistance`, `rollReleaseDistance`, `rollFilterMinCutoff` and `rollFilterBeta` are
+still **read by `roll.ts`**, so `config_debt.test.ts` sees them as used — and they are
+**off the gesture path**. ⚠ Do not spend a device session measuring them unless the
+circular roll comes back.

@@ -272,7 +272,11 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
   });
 });
 
-describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
+describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular gesture", () => {
+  // ⛔⛔ A12 MOVED ROLL TO THE SECOND TOUCHPOINT'S x, so none of this is on the gesture
+  // path any more. ⭐ The block is KEPT, and kept GREEN, because the machinery is correct
+  // and vectored and the owner may want the circular roll back — `METHOD`: retractions are
+  // kept on purpose. ⚠ It no longer proves anything about what the product DOES.
   /** A circular sweep, clockwise on screen, at 15 mm radius. */
   function circle(steps: number, clockwise: boolean, t0 = 0): Sample[] {
     const r = mmToPx(15);
@@ -316,6 +320,12 @@ describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
     rec.press(samples[0]!);
     for (let i = 1; i < samples.length; i++) {
       rec.move(samples[i]!);
+      // ⛔⛔ A12 RETIRED A8 AND THE CALL MOVED HERE. Roll is no longer a one-touchpoint
+      // gesture, so `move` no longer rebases — there is no provisional yaw/pitch to undo.
+      // ⭐ The MECHANISM is kept callable and these vectors still prove it works, because
+      // the day a circular roll comes back this is what comes back with it. ⚠ What they no
+      // longer prove is that the recognizer calls it by itself; it deliberately does not.
+      rec.rebaseOnRollCommit();
       // The continuous rule turning the object, provisionally, for this frame.
       pose.moveProvisionally(i);
     }

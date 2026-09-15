@@ -27,6 +27,8 @@
 import { describe, expect, it } from "vitest";
 import {
   depthGate,
+  rollDragDeg,
+  secondFingerDrive,
   depthLimits,
   depthPushDirection,
   depthTranslate,
@@ -336,5 +338,109 @@ describe("⛔ the clamps and the degenerate cases", () => {
         expect(Number.isFinite(c)).toBe(true);
       }
     }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ A12 — THE SECOND FINGER DRIVES BOTH: x IS ROLL, y IS DEPTH
+//
+// > *"One touchpoint idle on object && second touchpoint inside or outside any object &&
+// > delta position y -> depth translation control. One touchpoint idle on object && second
+// > touchpoint inside or outside any object && delta position x -> roll rotation control.
+// > This will remove the conflict and decision lag between yaw/pitch and roll and the jump
+// > on roll that we have currently due to all being controlled by the one touchpoint."*
+//
+// ⭐⭐ THE AMBIGUITY IS DISSOLVED BY MOVING THE GESTURE, NOT BY DECIDING BETTER. Yaw/pitch
+// is ONE touchpoint; roll is TWO. They are no longer the same hand shape, so nothing has to
+// tell them apart — no `rollAngle` commit threshold, no circle fit, no provisional motion,
+// no rebase, and **no jump**.
+//
+// ⭐ And it composes with the per-axis deadband (A11) exactly: the second finger's x and y
+// break out INDEPENDENTLY, so a mostly-horizontal drag is pure roll and a mostly-vertical
+// one is pure depth. ⛔ A radial band would have made every diagonal do both.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⭐⭐⭐ A12 — the second finger's two axes drive two different rules", () => {
+  const MOV = "MOVING" as const;
+  const STI = "STATIONARY" as const;
+
+  it("⭐⭐ x drives ROLL, y drives DEPTH, and they are independent", () => {
+    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 });
+    expect(d.rollDxPx).toBe(12);
+    expect(d.depthDyPx).toBe(-7);
+  });
+
+  it("⭐⭐ a PURELY HORIZONTAL second drag rolls and does NOT push depth", () => {
+    // ⛔ The axis that has not broken its own band contributes nothing — that is A11's
+    // corridor doing the work this rule depends on.
+    const d = secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0 });
+    expect(d.rollDxPx).toBe(12);
+    expect(d.depthDyPx).toBe(0);
+  });
+
+  it("⭐⭐ a PURELY VERTICAL second drag pushes depth and does NOT roll", () => {
+    const d = secondFingerDrive(STI, { x: STI, y: MOV }, { dx: 0, dy: -9 });
+    expect(d.rollDxPx).toBe(0);
+    expect(d.depthDyPx).toBe(-9);
+  });
+
+  it("⛔⛔ NOTHING happens while the finger ON THE OBJECT is moving — that is rule 6", () => {
+    // ⭐ The holder wins every tie, exactly as in A10. A moving holder means translate, and
+    // the second finger is a mode selector that contributes no motion.
+    const d = secondFingerDrive(MOV, { x: MOV, y: MOV }, { dx: 12, dy: -7 });
+    expect(d.rollDxPx).toBe(0);
+    expect(d.depthDyPx).toBe(0);
+  });
+
+  it("⛔ a still hand does nothing", () => {
+    const d = secondFingerDrive(STI, { x: STI, y: STI }, { dx: 0, dy: 0 });
+    expect(d.rollDxPx).toBe(0);
+    expect(d.depthDyPx).toBe(0);
+  });
+
+  it("⭐ it passes the travel through UNCHANGED — the gate decides, it does not scale", () => {
+    // ⛔ A gate that also scaled would be a second gain, free to disagree with the one in
+    // the config. The deadband already shaped this travel; nothing here reshapes it.
+    for (const v of [0.01, 1, 37.5, -420]) {
+      expect(secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }).rollDxPx).toBe(v);
+    }
+  });
+
+  it("⛔⛔ COUNTER-EXAMPLE: one shared axis state would make every diagonal do BOTH", () => {
+    // ⭐ Why A11's per-axis corridor is load-bearing for A12 rather than a nicety: with a
+    // single MOVING flag for the whole touchpoint, a drag that is 95% horizontal still
+    // carries its 5% of vertical into DEPTH, and the object creeps away while you roll it.
+    const sharedFlag = MOV;
+    const naive = {
+      rollDxPx: sharedFlag === MOV ? 12 : 0,
+      depthDyPx: sharedFlag === MOV ? 0.6 : 0,
+    };
+    expect(naive.depthDyPx).not.toBe(0);
+    expect(secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0.6 }).depthDyPx).toBe(0);
+  });
+});
+
+describe("⭐ A12's roll angle is a DRAG, not a swept circle", () => {
+  it("⭐⭐ degrees are proportional to MILLIMETRES of travel, not to pixels", () => {
+    // ⛔ Rule 3: thresholds and gains are millimetres on the physical screen. A degrees-
+    // per-PIXEL gain would roll a phone and a tablet by different amounts for the same
+    // hand movement.
+    const gain = 2; // degrees per millimetre
+    expect(rollDragDeg(mmToPx(10), gain)).toBeCloseTo(20, 9);
+    expect(rollDragDeg(mmToPx(-4.5), gain)).toBeCloseTo(-9, 9);
+  });
+
+  it("⭐ zero travel is zero roll, and the sign follows the drag", () => {
+    expect(rollDragDeg(0, 3)).toBe(0);
+    expect(rollDragDeg(mmToPx(1), 3)).toBeGreaterThan(0);
+    expect(rollDragDeg(mmToPx(-1), 3)).toBeLessThan(0);
+  });
+
+  it("⭐⭐ it is INCREMENTAL — the same drag applied twice turns twice as far", () => {
+    // ⚠ The old roll was an ABSOLUTE swept angle against a baseline, and that baseline is
+    // exactly what went stale and produced the jump. An increment has no baseline to lose.
+    const gain = 1.5;
+    const once = rollDragDeg(mmToPx(6), gain);
+    expect(rollDragDeg(mmToPx(12), gain)).toBeCloseTo(2 * once, 9);
   });
 });

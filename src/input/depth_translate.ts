@@ -57,6 +57,7 @@
  */
 import { CAMERA_NEAR_PLANE_M, type GestureConfig } from "./gestureConfig";
 import type { MotionState } from "./motion";
+import { pxToMm } from "../core/units";
 import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
 
 /**
@@ -187,4 +188,59 @@ export function depthTranslate(
   const clamped = Math.min(maxM, Math.max(minM, wanted));
   // ⭐ Only the along-push component moves, so HEIGHT is untouched by construction.
   return add(objectPosition, scale(dir, clamped - depth));
+}
+
+/**
+ * ⭐⭐⭐ **AMENDMENT A12** — what the SECOND touchpoint is asking for, per axis.
+ *
+ * > *"One touchpoint idle on object && second touchpoint inside or outside any object &&
+ * > delta position y → depth translation control. …&& delta position x → roll rotation
+ * > control. This will remove the conflict and decision lag between yaw/pitch and roll and
+ * > the jump on roll."*
+ *
+ * ⭐⭐ THE AMBIGUITY IS DISSOLVED BY MOVING THE GESTURE, NOT BY DECIDING BETTER. Yaw/pitch
+ * is ONE touchpoint; roll is TWO. They stopped being the same hand shape, so nothing has to
+ * tell them apart — and everything that existed to do so is gone: the circle fit, the
+ * `rollAngle` commit threshold, the provisional yaw/pitch, A8's rebase, and **the jump**.
+ *
+ * ⭐ It composes with A11's per-axis deadband exactly. The second finger's x and y break
+ * out of their bands INDEPENDENTLY, so a mostly-horizontal drag is pure roll and a
+ * mostly-vertical one is pure depth. ⛔ With one shared MOVING flag — or a radial band —
+ * every diagonal would do both, and the object would creep away while you rolled it.
+ *
+ * ⛔ THE HOLDER WINS EVERY TIE, as in A10: while the finger on the object is moving this
+ * returns nothing at all, because that is rule 6.
+ *
+ * ⛔ It DECIDES; it does not scale. A gate that also applied a gain would be a second gain,
+ * free to disagree with the one in the config.
+ */
+export function secondFingerDrive(
+  holder: MotionState,
+  secondAxes: { readonly x: MotionState; readonly y: MotionState },
+  secondStep: { readonly dx: number; readonly dy: number },
+): { readonly rollDxPx: number; readonly depthDyPx: number } {
+  // ⭐ The SAME gate as A10, asked once per axis — which is all A12 adds to it.
+  return {
+    rollDxPx: depthGate(holder, secondAxes.x) === "DEPTH" ? secondStep.dx : 0,
+    depthDyPx: depthGate(holder, secondAxes.y) === "DEPTH" ? secondStep.dy : 0,
+  };
+}
+
+/**
+ * ⭐ A12's roll: DEGREES from the second touchpoint's horizontal travel.
+ *
+ * @param dxPx      deadbanded horizontal travel, CSS pixels.
+ * @param degPerMm  `gainRollDrag` — degrees of roll per MILLIMETRE of travel.
+ *
+ * ⛔ MILLIMETRES, rule 3: a degrees-per-PIXEL gain would roll a phone and a tablet by
+ * different amounts for the same hand movement.
+ *
+ * ⭐⭐ AND IT IS AN INCREMENT, not an absolute angle against a baseline. ⚠ The old
+ * 2quinte roll was a swept angle measured from a baseline, and that baseline going stale is
+ * precisely what produced the jump at the commit — `lastRollDeg` tracked the uncommitted
+ * phase, so ~60° was dropped at the moment the pose was rebased. An increment has no
+ * baseline to lose.
+ */
+export function rollDragDeg(dxPx: number, degPerMm: number): number {
+  return pxToMm(dxPx) * degPerMm;
 }

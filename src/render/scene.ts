@@ -55,7 +55,8 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
-  depthGate,
+  rollDragDeg,
+  secondFingerDrive,
   gravityFrame,
   type GravityFrame,
   depthLimits,
@@ -292,13 +293,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     frame: GravityFrame;
     /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
     prev: Sample;
-    lastRollDeg: number;
-    /**
-     * ⭐ Whether this scene has already reacted to the roll COMMIT. ⛔ Needed because the
-     * commit rebases the pose, and the roll swept up to that moment has to be applied
-     * from the rebased pose — once.
-     */
-    rollCommitHandled: boolean;
     /**
      * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
      *
@@ -748,7 +742,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐⭐ A10'S GATE, ON THE GLASS. The rule is invisible otherwise: a hand that gets
       // no depth cannot tell whether the holder was judged to be moving or whether the
       // anchor was. ⛔ It prints what the gate DECIDED, never a recomputation.
-      const mode = grip.mode === "DEPTH" ? "DEPTH" : grip.rec.motionState === "STATIONARY" ? "ready" : "held-MOVING";
+      // ⭐⭐⭐ A12 ON THE GLASS: which of the second finger's two corridors is open.
+      // ⛔ The rule is invisible otherwise — a hand that gets no roll cannot tell whether
+      // the holder was judged to be moving or whether its own x had not left the band.
+      const second = [...grip.anchorMotion.values()][0];
+      const corridor = second
+        ? `${second.axes.x === "MOVING" ? "X→roll " : ""}${second.axes.y === "MOVING" ? "Y→depth" : ""}` || "—"
+        : "no 2nd";
+      const mode =
+        grip.rec.motionState === "STATIONARY" ? `ready ${corridor}` : "held-MOVING";
       return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at} ${mode}`;
     }
     return "";
@@ -766,7 +768,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       phase: first ? first.rec.currentPhase : "—",
       motion: first ? first.rec.motionState : "—",
       rollDeg: first ? first.rec.rollDeg : 0,
-      rollCommitted: first ? first.rec.rollCommitted : false,
+      // ⚠ A12 RETIRED the circular roll, so this is always false and is kept only because
+      // the HUD type carries it. ⭐ A12's roll state is in the depth readout instead.
+      rollCommitted: false,
       lastVerdict,
       // ⚠ Shown so a session can never be spent testing a value that was not in
       // force — including a typo'd key, which is REPORTED rather than ignored.
@@ -920,6 +924,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐⭐⭐ ONE RADIUS, and it is now the commit threshold, the rest test AND the
         // jitter deadband at once (A11). ⛔ The most load-bearing number in the input
         // layer, and nobody has judged it by finger yet.
+        // ⭐⭐⭐ A12: the second touchpoint's x rolls the object. Nobody has judged this
+        // by finger, and every gain a hand has set was raised from my guess.
+        tunable("roll drag gain (deg/mm)", "gainRollDrag", 0.25, 12, 0.25),
         tunable("motion DEADBAND (mm)", "motionDeadbandMm", 0.5, 8, 0.1),
         tunable("rest confirm (ms)", "restConfirmMs", 0, 400, 10),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
@@ -1154,13 +1161,37 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // arrive between frames — or after a dropped one. ⛔ Belt and braces on the exact
     // defect that made this gesture *"sometimes blocked"*.
     grip.rec.tick(anchorSample.t);
-    const anchorState = tracker.push(anchorSample);
-    if (depthGate(grip.rec.motionState, anchorState) !== "DEPTH") return false;
+    tracker.push(anchorSample);
 
-    // ⭐⭐ The anchor's DEADBANDED travel, exactly as rule 6 and 2bis take the holder's.
-    // ⛔ `anchorDyPx` is the raw delta and is deliberately not used here.
-    applyDepthStep(grip, tracker.step.dy);
-    grip.mode = "DEPTH";
+    // ⭐⭐⭐ AMENDMENT A12 — the second finger's TWO AXES drive TWO RULES: x is ROLL, y is
+    // DEPTH, and A11's per-axis bands keep them independent. ⛔ The travel is the
+    // DEADBANDED travel, exactly as rule 6 and 2bis take the holder's.
+    const drive = secondFingerDrive(grip.rec.motionState, tracker.axes, tracker.step);
+    if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
+
+    if (drive.depthDyPx !== 0) {
+      applyDepthStep(grip, drive.depthDyPx);
+      grip.mode = "DEPTH";
+    }
+    if (drive.rollDxPx !== 0) {
+      // ⭐⭐ ROLL AS AN INCREMENT, about the gravity frame's horizontal depth axis (A7).
+      // ⚠ No baseline, no commit threshold, no circle fit, no rebase — the jump those
+      // produced is gone with them. A12 replaced the gesture rather than the arithmetic.
+      setModelOrientation(
+        grip.mesh,
+        screenRollRotation(
+          modelOrientation(grip.mesh),
+          grip.frame,
+          rollDragDeg(drive.rollDxPx, cfg.gainRollDrag),
+        ),
+      );
+      grip.mode = "ROTATE";
+      // ⭐ The rotational sway answers a driven roll too — same watcher, same tunables.
+      const home = modelOrientation(grip.mesh);
+      followerFor(grip.mesh).qHome = home;
+      const spin = grip.spinSway.push(home, anchorSample.t, true);
+      if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
+    }
     // ⛔⛔ AND THE HOLDER'S GESTURE IS NO LONGER A TAP. It is being held STILL on the
     // object, which is a tap's exact shape — and a DOUBLE_TAP resolves to 2septies
     // eviction. See `Recognizer.consumeAsMotion`.
@@ -1282,8 +1313,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         mesh,
         frame: requireGestureFrame(),
         prev: s,
-        lastRollDeg: 0,
-        rollCommitHandled: false,
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
@@ -1314,13 +1343,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         lastVerdict = "second touchpoint released";
       } else {
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
-        // ⛔⛔ A10: A SECOND FINGER ON THE SAME OBJECT MOVES NOTHING BY ITSELF. It makes
-        // rule 6 REACHABLE — the owner: *"the second touchpoint can be either outside any
-        // object or on the same object as the first touchpoint"* — and the FIRST
-        // touchpoint, the one whose raycast hit the object, is what drives.
-        // ⚠ It is deliberately NOT a depth anchor: A10 says *"the touchpoint OUTSIDE the
-        // object has delta position y"*, and a finger resting on a small part has nowhere
-        // to travel. Depth needs the anchor outside, where the whole screen is available.
+        // ⭐⭐⭐ A12: A SECOND FINGER ON THE SAME OBJECT DRIVES IT, exactly as one outside
+        // does — the owner: *"second touchpoint INSIDE OR OUTSIDE any object"*. Its x is
+        // roll and its y is depth, while the finger on the object is held still.
+        // ⚠ A touchpoint on a DIFFERENT object is deliberately excluded: that is §4 rule 5
+        // / 6bis / 6ter's configuration and must stay reachable.
+        const holder2 = router.objects().find((q) => q.object === routed.object);
+        const grip2 = holder2 ? held.get(holder2.id) : undefined;
+        if (grip2) applyDepthDrag(grip2, routed.id, s);
       }
       paint();
       return;
@@ -1488,56 +1518,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // about the screen axes latched at press. Every step is a small world-frame
         // rotation, so the two axes never end up nested inside one another.
         const cur = modelOrientation(grip.mesh);
-        // ⛔⛔ THE COMMIT FRAME: THE POSE WAS JUST REBASED, SO THE WHOLE SWEPT ROLL HAS
-        // TO BE APPLIED FROM IT — NOT ONE FRAME'S WORTH.
-        //
-        // A8 restores the pose the object held when the circle's evidence began, so the
-        // yaw/pitch swept meanwhile is undone. ⭐ Its promise was that 2quinte then
-        // *"applies the whole swept angle from the rebased pose"*. ⛔ IT DID NOT: the scene
-        // applies roll as a per-frame INCREMENT against `lastRollDeg`, and `lastRollDeg`
-        // had been tracking `rollAppliedDeg` all through the uncommitted phase — so the
-        // increment at the commit was a single frame, and ~60° of swept roll was silently
-        // dropped while the yaw/pitch it was meant to replace was undone.
-        // ⚠ Device-reported: *"in rotation, when I switch from yaw/pitch to roll… there is
-        // a big jump at one point."* ⭐ The owner's own third guess was right — the
-        // decision switched and re-anchored on a pose that was by then far away.
-        // ⭐ Zeroing the baseline here makes the increment the FULL swept angle, so what
-        // the object loses in yaw/pitch it gains in roll, which is what A8 promised.
-        if (grip.rec.rollCommitted && !grip.rollCommitHandled) {
-          grip.rollCommitHandled = true;
-          grip.lastRollDeg = 0;
-        }
-        if (grip.rec.rollCommitted) {
-          // 2quinte has taken over: roll about the view axis by what the finger has
-          // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
-          // this gesture, which is what "commits to roll" means.
-          // ⭐ The 1€-FILTERED angle. The raw channel drives the COMMIT threshold;
-          // this drives what the eye sees. See input/one_euro.ts.
-          setModelOrientation(
-            grip.mesh,
-            screenRollRotation(cur, grip.frame, grip.rec.rollAppliedDeg - grip.lastRollDeg),
-          );
-        } else {
-          setModelOrientation(
-            grip.mesh,
-            screenPlaneRotation(
-              cur,
-              grip.frame,
-              // ⭐⭐ Deadbanded (A11) — the raw delta is what made a held object turn
-              // while the hand was still.
-              grip.rec.step.dx,
-              grip.rec.step.dy,
-              // ⭐ THE REAL GAIN, from the config, in radians per MILLIMETRE.
-              // ⛔ A hard-coded `DIAGNOSTIC_RAD_PER_PX` used to live in this file,
-              // deliberately kept OUT of the config so a debug value could not leak
-              // into production. The owner now wants to tune it by hand, and the
-              // config already had the properly-named field for it — so the duplicate
-              // is gone rather than a second one added. Carried rule `L1`: a tuning
-              // value living in both a debug tool and production silently drifted.
-              cfg.gainRotateFree / mmToPx(1),
-            ),
-          );
-        }
+        // ⭐⭐⭐ A12: ONE TOUCHPOINT IS ALWAYS YAW/PITCH. There is nothing left to decide
+        // here. Roll moved to the SECOND touchpoint's x, so the two gestures are no longer
+        // the same hand shape — and everything that existed to tell them apart is gone:
+        // 2quinte's circle fit, the `rollAngle` commit threshold, the provisional
+        // yaw/pitch, A8's rebase to the circle's start, and the jump all of it produced.
+        // ⚠ `roll.ts` still exists with its 40 vectors and is no longer on the gesture
+        // path — the same status as `shake.ts` and `anchor_rotate.ts`.
+        setModelOrientation(
+          grip.mesh,
+          screenPlaneRotation(
+            cur,
+            grip.frame,
+            // ⭐⭐ Deadbanded (A11) — the raw delta is what made a held object turn
+            // while the hand was still.
+            grip.rec.step.dx,
+            grip.rec.step.dy,
+            // ⭐ THE REAL GAIN, from the config, in radians per MILLIMETRE.
+            // ⛔ A hard-coded `DIAGNOSTIC_RAD_PER_PX` used to live in this file,
+            // deliberately kept OUT of the config so a debug value could not leak
+            // into production. Carried rule `L1`: a tuning value living in both a debug
+            // tool and production silently drifted.
+            cfg.gainRotateFree / mmToPx(1),
+          ),
+        );
       }
       // ⭐⭐ THE ROTATIONAL SWAY. Same shape as the translational one: it fires when the
       // object STARTS turning and whenever the turn AXIS swings by more than
@@ -1553,7 +1557,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         grip.spinSway.push(modelOrientation(grip.mesh), s.t, false);
       }
 
-      grip.lastRollDeg = grip.rec.rollAppliedDeg;
       grip.prev = s;
       paint();
       return;

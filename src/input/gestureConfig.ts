@@ -76,6 +76,19 @@ export interface GestureConfig {
    * ⛔ It scales what the object is TURNED BY, never what the commit threshold reads —
    * scaling the latter would silently move `rollAngle` as well. See `roll.ts`.
    */
+  /**
+   * ⭐⭐⭐ AMENDMENT A12 — DEGREES of roll per MILLIMETRE of the SECOND touchpoint's
+   * HORIZONTAL travel, while the finger on the object is held still.
+   *
+   * ⛔ Millimetres, rule 3: a degrees-per-pixel gain would roll a phone and a tablet by
+   * different amounts for the same hand movement.
+   * ⚠ A GUESS, and on this project's record almost certainly too small — every gain a hand
+   * has set was raised from mine, and the last one was moved by a factor of four. Slider.
+   * ⚠ SIGN: positive x (dragging right) rolls clockwise on screen. An arbitrary choice
+   * between two self-consistent conventions, exactly like the orbit inversion — a hand
+   * decides, and no amount of sign-checking can.
+   */
+  gainRollDrag: number;
   gainRoll: number;
   /**
    * §4 rule 6 — screen-plane translation. ⭐⭐ DIMENSIONLESS, and **1 means the object
@@ -504,6 +517,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
+  // ⚠ A12, a guess with a slider. 2 deg/mm means a 45 mm drag rolls the object 90°.
+  gainRollDrag: 2,
   gainRoll: 1,
   gainTranslateScreen: 1.17,
   // ⭐ CHOSEN ON THE DEVICE, 2026-09-14, together with the damping ratio and the lead
