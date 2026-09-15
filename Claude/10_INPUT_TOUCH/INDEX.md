@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**357 golden vectors, all passing** (37 → 357).
+**372 golden vectors, all passing** (37 → 372).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -38,7 +38,13 @@ the second was ignored at press and stays ignored until it lifts. The HUD prints
 latched roles (`#1OBJ #2IGN  active=1`) so that is distinguishable from a bug.
 → [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
 
-⛔ **Not built**: `IN3` (the object rules) and `IN4`'s **6bis / 6ter / 6quater**.
+🔨 **`IN3` IS IN PROGRESS**: its **eviction shake detector is BUILT** (`src/input/shake.ts`,
+15 vectors) — ⛔ defined as oscillation ALONG AN AXIS, because **a circle projects to a
+back-and-forth on every axis** and `A3` made circles legal on constrained objects.
+⭐ `suppressesFlick` arms on the first reversal, which is A4's mandatory flick guard.
+⛔ Not built: the rest of `IN3` (2bis's precondition, 2sexte + A3's handover, roll on an
+anchored object, 2ter/2quater, the triangle→`FaceId` mapping, the `scene.ts` wiring that
+CLOSES `3D1`) and `IN4`'s **6bis / 6ter / 6quater**.
 ⭐⭐ **BOTH ARE NOW UNBLOCKED** — `3D1` was built 2026-09-15, so the object model, the face
 centres 6bis needs, and the constraint stack rule 2bis must consult all exist.
 ⭐ **`IN3` is NEXT**, and it also CLOSES `3D1`, which cannot be closed on its own.

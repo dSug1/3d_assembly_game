@@ -232,6 +232,39 @@ export interface GestureConfig {
    * flushed. Splitting the two is what buys reactiveness without losing detection.
    */
   rollTrackArcDeg: number;
+
+  // ── §2 rule 2septies, as amended: THE EVICTION SHAKE ──────────────────────────
+  // Design of record: `Claude/10_INPUT_TOUCH/AMENDMENTS_R5.md` A4 (`D15`).
+  // ⛔⛔ ALL FOUR ARE `IN5` PLACEHOLDERS AND EACH NEEDS A SLIDER. The whole safety of
+  // this gesture is the gap between a SHAKE and a corrective NUDGE, and that gap is a
+  // hand's judgement: "left a bit, right a bit" during fine positioning is a genuine
+  // back-and-forth, and no simulation can say where the boundary sits.
+
+  /** Reversals required to evict. A4: 2 — out, back, out. */
+  evictShakeReversals: number;
+  /**
+   * They must all fall inside this window, in milliseconds.
+   * ⚠ Too long and a slow fidget accumulates into an eviction; too short and the
+   * gesture demands a speed not everyone has. ⭐ The audience includes youth (`D2`).
+   */
+  evictShakeWindowMs: number;
+  /**
+   * Minimum travel back from an extremum before a reversal counts, in millimetres.
+   * ⭐ It is the HYSTERESIS as well as the amplitude floor — one number, because they
+   * are the same question asked twice: *is this a leg, or is it jitter?*
+   * ⛔ `validateGestureConfig` refuses a value that does not clear the MEASURED
+   * `pointerNoiseMm`.
+   */
+  evictShakeLegMm: number;
+  /**
+   * Maximum excursion PERPENDICULAR to the shake axis, as a fraction of the along-axis
+   * amplitude.
+   * ⛔⛔ THIS IS WHAT SEPARATES A SHAKE FROM A CIRCLE, and it is not optional: **a
+   * circle projects to a back-and-forth on EVERY axis**. Since `A3`/`D14` made roll a
+   * legitimate control on exactly the objects eviction applies to, a detector without
+   * this would destroy an alignment every time someone spun a part to look at it.
+   */
+  evictShakeStraightness: number;
   /**
    * mm the newest point must itself advance before the direction is re-measured.
    * ⛔ THE CADENCE, and it is NOT the baseline. A direction depends on both ends of
@@ -503,6 +536,17 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // is now paid by `rollTrackArcDeg` instead — see below.
   rollFitArcDeg: 150,
   rollTrackArcDeg: 130,
+
+  // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
+  evictShakeReversals: 2,
+  // ⚠ 600 ms is roughly three unhurried legs. Untested by any hand.
+  evictShakeWindowMs: 600,
+  // ⚠ 8 mm is ~10× the measured 0.761 mm noise floor — chosen to be obviously clear of
+  // jitter, NOT because 8 is known to be the boundary with a corrective nudge.
+  evictShakeLegMm: 8,
+  // ⚠ 0.4 admits a hand's natural bow and refuses a circle. ⛔ The gap between those two
+  // is the whole question, and it is a finger's to answer.
+  evictShakeStraightness: 0.4,
   rollUpdateDistance: 0.5,
   rollReleaseDistance: 12,
   rollFitResidualFraction: 0.25,
@@ -610,6 +654,34 @@ export const DEFAULT_CONFIG: GestureConfig = {
  * Called from `MotionTracker`'s constructor, which every `Recognizer` builds.
  */
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
+  // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
+  // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The
+  // multiple is `shake.ts`'s axis gate — a leg that cannot even establish a direction
+  // cannot be a leg.
+  if (cfg.evictShakeLegMm < 3 * cfg.pointerNoiseMm) {
+    throw new Error(
+      `evictShakeLegMm (${cfg.evictShakeLegMm} mm) does not clear 3× the measured ` +
+        `pointer noise (${cfg.pointerNoiseMm} mm): a reversal could be jitter, and ` +
+        "eviction destroys the user's alignments.",
+    );
+  }
+  // ⚠ Two reversals is the minimum that distinguishes a shake from a single stroke that
+  // merely came back. One would make every over-and-return drag an eviction.
+  if (cfg.evictShakeReversals < 2) {
+    throw new Error(
+      `evictShakeReversals (${cfg.evictShakeReversals}) must be at least 2: one ` +
+        "reversal is an ordinary drag that changed its mind.",
+    );
+  }
+  // ⛔ A straightness of 1 or more admits a circle, whose transverse excursion equals
+  // its along-axis amplitude. The guard would be decorative.
+  if (!(cfg.evictShakeStraightness > 0 && cfg.evictShakeStraightness < 1)) {
+    throw new Error(
+      `evictShakeStraightness (${cfg.evictShakeStraightness}) must be in (0, 1): at 1 a ` +
+        "CIRCLE passes, and a circle is the gesture that must not evict.",
+    );
+  }
   if (cfg.moveEnterDistance <= cfg.moveExitDistance) {
     throw new Error(
       "moveEnterDistance must exceed moveExitDistance, or the motion state chatters.",

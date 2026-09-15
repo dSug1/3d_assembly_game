@@ -152,3 +152,70 @@ this gesture is the gap between a shake and a corrective nudge, and that is a ha
 judgement, not a simulation's.
 
 ⭐ Full text: [`../../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../../10_INPUT_TOUCH/AMENDMENTS_R5.md), A3 and A4.
+
+---
+
+## 🔨 IN PROGRESS — the eviction shake detector is BUILT (2026-09-15, 15 vectors)
+
+`src/input/shake.ts` · `tests/shake.test.ts` · engine-free, and **not yet wired to
+anything**.
+
+⭐ Built first because it is the newest thing in `IN3`, the most self-contained, and a hard
+prerequisite: nothing can evict until something can recognise the gesture.
+
+### ⛔⛔ The design decision that is NOT obvious: a circle is a back-and-forth
+
+**A circle projects to an oscillation on EVERY axis.** A detector that counted reversals
+would fire on a finger sweeping a circle — which is precisely the gesture `A3`/`D14` just
+made legal on the objects eviction applies to. Spinning an anchored part to look at it would
+destroy the alignment the user set.
+
+⭐ So the detector is defined as **oscillation ALONG AN AXIS**, and how far the path strays
+off that axis is part of what the word means — not a guard bolted onto an observed failure
+(`METHOD`: *no heuristic pile-up*). The axis comes from the user's own first leg, so
+"whichever the direction" holds.
+
+### ⭐⭐ Falsified before it was trusted
+
+The counter-examples are the point, and both guards were **shown to fail**:
+
+| guard removed | what went red |
+|---|---|
+| straightness | ⛔ *a circle does not evict* and *a bowed back-and-forth is refused* |
+| leg hysteresis | ⛔ *a corrective nudge does not evict* |
+
+⭐ Seven of the fifteen vectors are things that must **NOT** fire — a circle, a corrective
+nudge, a single stroke, one reversal, a slow fidget, a bowed path, and **ten seconds of a
+still finger at the measured 0.761 mm noise floor**. That last one is `sway.ts`'s lesson
+paid forward: a per-sample direction is noise, and a still finger once produced 272 false
+kicks in 3 s.
+
+### What it exposes, and the one thing that must not be forgotten
+
+`suppressesFlick` goes true on the **FIRST** reversal, not on the completed shake — and a
+vector asserts it arms **before the path ends**. ⛔ A shake is two flicks in opposite
+directions, so a user who abandons one mid-way releases at speed, the flick test passes, and
+2ter or 2quater **pushes** a constraint instead of removing one. The recognizer must read
+this.
+
+### Four tunables, all placeholders, all needing a slider
+
+`evictShakeReversals` (2) · `evictShakeWindowMs` (600) · `evictShakeLegMm` (8) ·
+`evictShakeStraightness` (0.4). `validateGestureConfig` refuses a leg that does not clear
+3× the MEASURED `pointerNoiseMm`, a reversal count below 2, and a straightness of 1 or more
+— at 1 a circle passes, and the guard would be decorative.
+
+⛔ **None is measured.** The whole safety of this gesture is the gap between a shake and a
+corrective nudge, and `IN5`'s record is three-for-three that a guessed number is wrong.
+
+### ⛔ What remains in `IN3` — this is one piece of it
+
+1. **Rule 2bis's missing PRECONDITION** — *an empty constraint stack*. The object model now
+   exists, so the rule can finally ask.
+2. **2sexte**, constrained rotation about the remaining DOF, with **A3's handover** —
+   `anchorHandoverCos` plus hysteresis, latched at press, and 2sexte SUPPRESSING where its
+   axis projects to a point.
+3. **Roll driving an anchored object's free DOF** (A3), about the CONSTRAINT axis.
+4. **2ter / 2quater** pushing constraints on a flick, and **the flick skip** above.
+5. **The triangle → `FaceId` mapping** at the render seam.
+6. **Wiring `scene.ts` to the object model** — which is what CLOSES `3D1`.
