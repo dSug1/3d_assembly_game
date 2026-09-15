@@ -65,6 +65,22 @@ be discontinuous.
 through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
 of two numbers passing through zero is garbage however carefully it is computed.
 
+## ⭐⭐ A threshold has a SHAPE as well as a size
+
+*(2026-09-15.)* A deadband, a gate, a tolerance — each is usually defended on **one** axis of
+reasoning, the one that prompted it. ⛔ But its shape decides other things, and those
+decisions are made whether or not anyone noticed making them.
+
+⚠ The instance: a position deadband, argued as **radial** because a circle is the natural
+shape for rejecting isotropic noise — which it is. ⛔⛔ What nobody asked was what else the
+shape chooses: a **square** band gives a corridor along each axis in which the other axis
+emits *nothing*, so a nearly-axial drag becomes a *purely* axial one. A radial band cannot
+provide that **at any radius**. The owner asked for per-axis and named that reason.
+
+⭐ **Ask what else a threshold is choosing before defending it on the axis you happened to
+be thinking about** — and notice that the cost I had raised against the square (a diagonal
+drag travels 1.41× further) was real, small, and about entry only.
+
 ## ⭐ A threshold that guards a TRANSITION must not also tax the STEADY STATE
 
 *(2026-09-15.)* A deadband, a hysteresis band, a commit threshold — each exists to answer

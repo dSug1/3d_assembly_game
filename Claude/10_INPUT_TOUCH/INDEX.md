@@ -27,7 +27,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**494 golden vectors, all passing** (37 → 494).
+**502 golden vectors, all passing** (37 → 502).
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 

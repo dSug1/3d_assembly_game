@@ -730,3 +730,156 @@ describe("⭐⭐ once MOVING, travel passes through undiminished", () => {
     expect(pxToMm(emitted)).toBeCloseTo(150 - BAND, 6);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ THE DEADBAND IS PER AXIS, AND THE REASON IS NOT NOISE — IT IS AXIS PURITY
+//
+// > *"I would expect a deadband on delta position x and a deadband on delta position y
+// > (even if both are equal). So I could have a pure movement on x or y by filtering out
+// > the delta position which does not cross its deadband."*
+//
+// ⛔⛔ THIS PROJECT ARGUED AGAINST PER-AXIS ONCE, IN `IN12`'s DOSSIER, AND THE ARGUMENT WAS
+// ABOUT THE WRONG THING. It said a square band makes a diagonal drag travel 1.41× further
+// before it starts — true, and a cost worth paying, because what the square buys is a
+// CORRIDOR along each axis in which the other axis emits NOTHING.
+//
+// ⭐ A radial band cannot do that at any radius: the moment the finger leaves the circle,
+// BOTH components are live. Axis purity is a property of the SHAPE, not of the size.
+//
+// ⭐⭐ AND EACH AXIS CARRIES ITS OWN STATE, which is what makes the purity last: an axis
+// that has not broken out stays silent for as long as the hand keeps it inside its band —
+// not merely until the other axis moves.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⭐⭐⭐ a deadband PER AXIS — a nearly-horizontal drag is purely horizontal", () => {
+  const BAND = cfg.motionDeadbandMm;
+
+  /** Drag `n` samples with a per-sample step in each axis, summing what was emitted. */
+  const drag = (stepXMm: number, stepYMm: number, n = 120) => {
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let y = 400;
+    m.push({ x, y, t: 0 });
+    let ex = 0;
+    let ey = 0;
+    for (let i = 1; i <= n; i++) {
+      x += mmToPx(stepXMm);
+      y += mmToPx(stepYMm);
+      m.push({ x, y, t: i * 8 });
+      ex += m.step.dx;
+      ey += m.step.dy;
+    }
+    return { ex: pxToMm(ex), ey: pxToMm(ey), state: m.current };
+  };
+
+  it("⭐⭐ A DRAG THAT STAYS INSIDE THE Y BAND EMITS **NO Y AT ALL**", () => {
+    // ⛔⛔ THE WHOLE POINT, AND THE THING A RADIAL BAND CANNOT DO. 60 mm of x, and a y
+    // wobble that never leaves its own band: the object slides purely horizontally.
+    const r = drag(0.5, 0.015, 120); // 60 mm of x, 1.8 mm of y — inside a 2.3 mm band
+    expect(r.ey).toBe(0);
+    expect(r.ex).toBeCloseTo(60 - BAND, 6);
+    expect(r.state).toBe("MOVING");
+  });
+
+  it("⭐⭐ and purely VERTICALLY, the same way", () => {
+    const r = drag(0.015, 0.5, 120);
+    expect(r.ex).toBe(0);
+    expect(r.ey).toBeCloseTo(60 - BAND, 6);
+  });
+
+  it("⛔⛔ COUNTER-EXAMPLE: a RADIAL band leaks the y component from the first step", () => {
+    // ⭐ The claim stated as a number, so *"per axis gives axis purity"* is checkable
+    // rather than an assertion. A circular dead zone emits the FULL direction vector the
+    // moment the finger leaves it — there is no radius that suppresses one component.
+    const band = mmToPx(BAND);
+    let ax = 500;
+    let ay = 400;
+    let x = 500;
+    let y = 400;
+    let leakedY = 0;
+    for (let i = 1; i <= 120; i++) {
+      x += mmToPx(0.5);
+      y += mmToPx(0.015);
+      const dx = x - ax;
+      const dy = y - ay;
+      const d = Math.hypot(dx, dy);
+      if (d > band) {
+        const over = d - band;
+        leakedY += (dy / d) * over;
+        ax = x - (dx / d) * band;
+        ay = y - (dy / d) * band;
+      }
+    }
+    expect(pxToMm(leakedY)).toBeGreaterThan(1.5); // the wobble reaches the object
+  });
+
+  it("⭐ a DELIBERATE y move still breaks out — this is a filter, not a lock", () => {
+    const r = drag(0.5, 0.5, 120);
+    expect(r.ex).toBeCloseTo(60 - BAND, 6);
+    expect(r.ey).toBeCloseTo(60 - BAND, 6);
+  });
+
+  it("⭐⭐ each axis pays its band ONCE, and independently", () => {
+    // ⚠ The stated cost of a square band: a 45° drag pays one band on EACH axis, so it
+    // travels 1.41× further than a radial one before it starts. ⭐ That is the price of
+    // the corridor, and it is paid once per axis per gesture — never at a reversal.
+    const r = drag(1, 1, 60);
+    expect(r.ex).toBeCloseTo(60 - BAND, 6);
+    expect(r.ey).toBeCloseTo(60 - BAND, 6);
+  });
+
+  it("⭐⭐ THE PURITY LASTS — the silent axis does not wake up when the other moves", () => {
+    // ⛔ If the two axes shared one state, breaking out in x would let y through, and the
+    // corridor would exist only until the drag began. Each axis carries its own.
+    // ⚠⚠ THE Y AXIS MUST WOBBLE, NOT SIT STILL. My first version held y at a LITERAL
+    // constant, so a broken implementation that let y through emitted zero anyway and the
+    // vector could not fail — mistake shape 3, and shape 5, in one line. The wobble stays
+    // inside the band and is exactly what a real hand does over 200 mm of travel.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    m.push({ x, y: 400, t: 0 });
+    let emittedY = 0;
+    for (let i = 1; i <= 400; i++) {
+      x += mmToPx(0.5); // 200 mm of travel in x
+      const y = 400 + mmToPx(Math.sin(i / 9) * (cfg.motionDeadbandMm * 0.45));
+      m.push({ x, y, t: i * 8 });
+      emittedY += Math.abs(m.step.dy);
+    }
+    expect(emittedY).toBe(0);
+  });
+
+  it("⛔ a still finger still emits nothing on either axis", () => {
+    let seed = 31337;
+    const jit = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return mmToPx(((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)));
+    };
+    const m = new MotionTracker(cfg);
+    m.push({ x: 500, y: 400, t: 0 });
+    let emitted = 0;
+    for (let i = 1; i <= 600; i++) {
+      m.push({ x: 500 + jit(), y: 400 + jit(), t: i * 8 });
+      emitted += Math.abs(m.step.dx) + Math.abs(m.step.dy);
+    }
+    expect(emitted).toBe(0);
+    expect(m.current).toBe("STATIONARY");
+  });
+
+  it("⭐⭐ a reversal on a MOVING axis still costs one sample", () => {
+    // ⚠ The fluidity fix must survive going per-axis: the band gates entry, per axis, and
+    // an axis that is already moving passes travel through undiminished.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let t = 0;
+    m.push({ x, y: 400, t });
+    for (let i = 1; i <= 60; i++) {
+      x += mmToPx(0.5);
+      t += 8;
+      m.push({ x, y: 400, t });
+    }
+    x -= mmToPx(0.5);
+    t += 8;
+    m.push({ x, y: 400, t });
+    expect(pxToMm(m.step.dx)).toBeCloseTo(-0.5, 6);
+  });
+});

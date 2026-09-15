@@ -68,180 +68,56 @@ not a three-deep parent chain, and only the second exercises the composition.
 
 ---
 
-## A3 — ⛔⛔ ROLL MUST DRIVE THE FREE DOF OF AN ANCHORED OBJECT *(owner, 2026-09-15)*
+## A3 — ⛔⛔ ROLL DRIVES THE FREE DOF OF AN ANCHORED OBJECT *(owner, 2026-09-15)*
 
-**Supersedes** §2's 2quinte restriction — *"restricted to unconstrained objects, since roll
-about the view axis cannot preserve an existing alignment. On a constrained object the
-circular gesture is ignored"* — and A1's repetition of it.
+**Amends** 2quinte's *"on a constrained object the circular gesture is ignored"* **and**
+2sexte's undefined behaviour when its axis projects to a point. ⛔ **IN FORCE, NOT BUILT** —
+`src/input/anchor_rotate.ts` exists with 25 vectors and is **not wired**.
 
-> *"If an object is anchored on gravity, it still needs to be able to receive roll input in
-> case the camera has orbited and views the object from the gravity axis: therefore roll
-> shall be able to drive 1 DOF for an anchored object anyway and the spec seems wrong."*
+⭐ **The binding clauses, in full:**
 
-### ⭐ The spec's reason is TRUE IN GENERAL AND FALSE IN THE CASE THAT MATTERS
+1. **Roll DRIVES the free DOF** of an anchored object, about the **CONSTRAINT axis** — not
+   the view axis. The spec forbade it for a reason that is *conditional on camera pose* and
+   false when the camera looks along the constraint axis, where rolling about the view axis
+   **is** twisting about the anchor.
+2. **2sexte SUPPRESSES where it degenerates.** When the constraint axis projects to a point,
+   *"perpendicular to the axis as projected on screen"* has no value and the rule would turn
+   the object by an arbitrary amount. ⭐ The two are complementary charts over one DOF.
+3. ⛔ **ONE handover constant, with hysteresis, latched at press** (`anchorHandoverCos`).
+   Two thresholds would give either a dead band where the DOF has no driver, or an overlap
+   where it has two.
+4. ⭐⭐ **The handover must happen while the motion is still VISIBLE.** The near side's
+   excursion is `r·sin α`, so a rad/mm gain turns the object at the same rate while the drag
+   goes quiet — it fades over a range *before* it becomes undefined.
 
-Roll turns the object about the **view axis**. An anchor's surviving DOF is the twist about
-the **constraint axis**. Let **α** be the angle between them:
-
-| α | what a roll does to the anchor |
-|---|---|
-| **α ≈ 90°** (constraint axis lies across the screen) | roll swings the constrained normal straight off its target. **The spec is right here** |
-| **α ≈ 0°** (camera looking ALONG the constraint axis) | the two axes coincide: rolling about the view axis **IS** twisting about gravity. It preserves the anchor **exactly**, and it is precisely the one free DOF 2sexte exists to drive |
-
-⛔ So revision 5 states as unconditional a fact that is **conditional on camera pose**, and
-forbids the gesture in the configuration where it is not merely safe but ideal. ⚠ This is a
-shape this project has paid for before — a blanket rule standing in for a conditional one.
-
-### ⭐⭐ AND THE TWO INPUTS ARE COMPLEMENTARY, NOT COMPETING — the part that settles it
-
-2sexte is *"driven by the delta component perpendicular to the axis **as projected on
-screen**"*. ⛔ **When the camera looks along the constraint axis, that axis projects to a
-POINT** — and "perpendicular to a point" is undefined. Every screen direction is equally
-perpendicular, so the drag mapping is degenerate exactly at α ≈ 0.
-
-⭐⭐ **So 2sexte degenerates precisely where roll becomes exact, and roll is destructive
-precisely where 2sexte is well-conditioned.** They are not two rules competing for one DOF;
-they are two charts covering one circle, each valid where the other fails. That is the
-argument for admitting roll on an anchored object — stronger than "the user wants it".
-
-### What `IN3` implements
-
-⭐ **On a constrained object, roll drives the SAME single DOF that 2sexte drives** — the
-twist about the constraint axis — rather than a rotation about the view axis. The screen
-gesture is read as an angle; the axis it is applied about is the CONSTRAINT's, not the
-camera's. The anchor then survives by construction rather than by luck.
-
-⛔ **Gated on |cos α|, and SUPPRESSED in the crossover.** Near α = 90° the gesture must do
-nothing: a roll there cannot be honoured without breaking the anchor, and honouring it
-partially is worse than refusing it. `LESSONS_CARRIED` §6 — *where a quantity is
-ill-conditioned, stop using it; do not substitute a plausible value.*
-
-⚠ New tunable, landing with the code that reads it and **with a slider** (`IN5`):
-`rollAnchorAlignCos`, the minimum |cos α| at which roll is accepted on a constrained
-object. ⛔ It is **not** a number to guess — the honest range is wide and the crossover is
-exactly where a hand will tell you something a simulation cannot.
-
-⚠ **Two constraints on the stack ⇒ still nothing.** Zero free rotational DOF means zero,
-and roll is not an exception to the DOF budget.
-
-### ⛔⛔ AND 2SEXTE MUST BE CORRECTED TOO — it has no degeneracy handling at all
-
-§2's 2sexte is *"driven by the delta component perpendicular to the axis **as projected on
-screen**"* and says nothing about what happens when that projection collapses. ⛔ **At
-α ≈ 0° the constraint axis projects to a POINT**, every screen direction is equally
-perpendicular to it, and the rule as written produces a value from a quantity that has no
-value. That is not a rounding problem — the mapping's sign and magnitude both become
-arbitrary, so the object turns by an amount and in a direction nothing chose.
-
-⭐ **So the correction is symmetric, and it is one rule, not two:**
-
-| α, view axis to constraint axis | what drives the free DOF |
-|---|---|
-| **near 0°** — axis points at the camera | ⭐ **ROLL.** 2sexte is degenerate and must SUPPRESS |
-| **near 90°** — axis lies across the screen | ⭐ **2SEXTE.** Roll would break the anchor and must SUPPRESS |
-
-⛔⛔ **ONE CONSTANT GOVERNS THE HANDOVER, NOT TWO.** Two independently chosen thresholds
-give either a **dead band** where neither input drives the DOF — the control simply stops
-working at some camera angles, which reads as a bug nobody can reproduce — or an
-**overlap** where both drive it at once and the object turns twice as fast as either rule
-intends. `CONSTRAINTS` §4: *one constant lives in exactly one place.*
-
-⚠ **And the handover needs HYSTERESIS**, for the reason §1.1 gives for
-`moveEnterDistance` > `moveExitDistance` and the reason the orbit centre has a grace
-period: a bare threshold **chatters**. A camera parked near the crossover would flip the
-DOF's driver back and forth between two mappings with different gains, mid-gesture.
-⭐ One constant plus a band: `anchorHandoverCos` and `anchorHandoverHysteresis`, both
-device-tuned on sliders (`IN5`).
-
-⚠ **The handover is latched at PRESS**, like §4's roles and like the screen axes — a camera
-that moves during a gesture must not change which rule is driving the finger already down.
-
-### ⛔ Consequence for A1, and it is not small
-
-A1 made a full 360° roll the eviction gesture. ⚠ **A3 makes roll a legitimate continuous
-control on exactly the objects eviction applies to** — so the two now share a channel, and
-"spin the part round to look at it" becomes a path to accidental eviction rather than a
-hypothetical. ⭐ **The eviction gesture is under review for this reason**; see
-[`../00_CORE/queue_notes/IN3.md`](../00_CORE/queue_notes/IN3.md).
+⭐ The full argument, the geometry and the three fixtures of mine that were wrong in that
+one file are in
+[`history/2026-09-15_eviction_and_anchored_roll.md`](history/2026-09-15_eviction_and_anchored_roll.md).
 
 ---
 
 ## A4 — ⭐⭐ EVICTION IS A QUICK BACK-AND-FORTH, NOT A ROLL *(owner, 2026-09-15)*
 
-**Supersedes A1's TRIGGER.** ⭐ Everything else A1 established stands: the double-tap is
-still purely the camera-home fly, `D13` still spares `MATE` entries, and A1's conflict
-audit is still the reason this rule looks the way it does.
+**Supersedes A1's trigger.** ⛔ **IN FORCE, NOT BUILT** — `src/input/shake.ts` exists with
+15 vectors and is **not wired**.
 
-> **To clear a selected object's alignments, shake it** — one touchpoint on the object, a
-> quick **back-and-forth** in any direction, reversing within a time threshold.
+⭐ **The binding clauses, in full:**
 
-### ⛔ Why the roll had to go — A3 took its channel away
+1. Eviction is a **quick back-and-forth**, one touchpoint, **≥ 2 reversals in a window**.
+   ⭐ It left the double-tap (`A1`), then left the roll channel too, because `D14`/`A3` gave
+   the roll back to a real control — *a bigger number is not a resolution to an ambiguity;
+   a different channel is.*
+2. ⛔⛔ **The flick test is SKIPPED once ONE reversal is seen.** A shake is literally two
+   flicks in opposite directions, and without the guard an abandoned shake **ADDS** a
+   constraint instead of removing one. `suppressesFlick` arms on the first reversal.
+3. ⭐⭐ The detector is defined as **oscillation ALONG AN AXIS**, because a circle projects
+   to a back-and-forth on *every* axis — without that, spinning an anchored part to look at
+   it would evict, which `A3` made reachable.
+4. **Eviction SPARES `MATE` entries** (`A1 §4` / `D13`), and a full turn on a MATE-only
+   stack must **refuse audibly** (§6's negative haptic).
 
-A1 chose a 360° roll when roll was **forbidden** on a constrained object, so the channel
-was free and a full turn there could mean nothing else. ⛔ **A3 reverses that**: roll is now
-a legitimate continuous control on precisely the objects eviction applies to. *"Spin the
-part round to look at it"* stops being hypothetical and becomes a path to destroying the
-user's own work.
-
-⚠ **720° was considered and rejected.** Doubling the threshold widens a margin without
-changing the KIND of conflict — it is the same channel carrying a real control either way —
-and it buys that with a tedious, fatiguing gesture during which the object visibly spins
-two full turns. ⭐ *A bigger number is not a resolution to an ambiguity; a different channel
-is.*
-
-### ⭐⭐ Why the back-and-forth is the right channel
-
-1. ⭐ **It is not the roll channel**, so A3's control is left completely free — no threshold
-   anywhere near it.
-2. ⭐⭐ **The detector already exists and is already MEASURED.** The sympathetic sway
-   re-triggers on a change of direction, and that cost real work: a per-sample direction is
-   noise — at 8 ms between samples, 0.761 mm of jitter is ±95 mm/s, and **a still finger
-   fired 272 false kicks in 3 s**. It now reads displacement over **60 ms** and requires
-   **3× the measured noise** to claim a heading. ⛔ This is the only one of the three
-   candidates that can reuse a reversal detector with a KNOWN false-positive rate.
-3. ⭐ **A symmetric out-and-back nets to ZERO displacement**, so whatever 2bis or 2sexte
-   does during the shake cancels itself and the object ends where it started. The same
-   property the circle had, kept.
-4. ⭐ **Shake-it-loose** matches the destructive intent, which a tap never did.
-
-### ⛔ What must be implemented, because the shake has its own conflicts
-
-* ⛔⛔ **THE FLICK TEST IS SHARPER HERE, NOT MILDER.** A flick is *fast + straight + far*; a
-  shake is **literally two flicks in opposite directions**, so each leg matches the flick
-  signature by construction. **Once one reversal has been seen, the flick test is skipped
-  for that touchpoint.** Without it a user shaking to REMOVE a constraint gets 2ter or
-  2quater at release and ADDS one — and with two on the stack the object then has zero free
-  rotational DOF and stops responding entirely. ⭐ The discriminator is crisp — zero
-  reversals is a flick, one or more is a shake — but it must be written, not assumed.
-* ⚠ **Corrective nudges are the accident risk.** *"Left a bit, right a bit"* during fine
-  positioning is a genuine back-and-forth, and this risk is higher than a full circle's.
-  Managed by requiring **≥ 2 reversals inside a tight window** and a **minimum leg amplitude
-  well above the 0.761 mm measured noise floor** — not by hoping.
-* ⛔ **Single touchpoint only.** With a second finger down, rule 6 is translating the object
-  and a back-and-forth there is an ordinary drag. Gate on `activeCount === 1` (§4's count,
-  which already excludes `IN8`-ignored touchpoints).
-* ⚠ **Refuse audibly on a MATE-ONLY stack** (`D13`): the gesture was aimed at something and
-  did nothing, and silence reads as a broken control that gets repeated. ⭐ **On an EMPTY
-  stack, stay silent** — nothing was aimed at, and a buzz for every shake of a free object
-  is noise.
-
-### The tunables — all three device-tuned, none guessed
-
-`evictShakeReversals` (2), `evictShakeWindowMs`, `evictShakeLegMm`. ⛔ They land WITH the
-code that reads them (`config_debt` refuses an orphan) and **each ships with a slider**.
-⭐ `IN5`: a guessed number has been wrong every time on this project, and this gesture's
-whole safety rests on the gap between a shake and a nudge — which is a hand's judgement,
-not a simulation's.
-
-### ⚠ Provenance
-
-⚠ **NOVEL COMPOSITE**, and flagged for `SEC4`. The nearest widely-known relative is iOS's
-*shake to undo* (2009) — but that reads the **accelerometer**, a device motion, not a touch
-path, so it is a different input entirely and not a safe prior-art anchor for this. ⭐ The
-metaphor is old; **this gesture is not attested anywhere found.** Registered in
-[`PROVENANCE.md`](PROVENANCE.md).
-
----
+⭐ The full argument, including the 720° alternative that was considered and rejected, is in
+[`history/2026-09-15_eviction_and_anchored_roll.md`](history/2026-09-15_eviction_and_anchored_roll.md).
 
 ## A5 — ⚠ ITS TRIGGER IS SUPERSEDED BY A6 — the depth GEOMETRY stands *(owner, 2026-09-15)*
 
@@ -419,9 +295,11 @@ circle, and the straight run's rotation **survives**.
 ⭐⭐ **BUILT, but not where this section put it.** A9 asked for a deadband on `dx`/`dy` per
 rule; **A11 made §1.1 itself a position deadband**, so the excess-only travel is computed
 ONCE and every rule reads the same side of it. ⛔ Nothing consumes a raw delta any more.
-⚠ One thing A9 got wrong and A11 corrects: **per axis** would have been a mistake. The
-deadband is RADIAL — a per-axis band is square, so a diagonal drag would have to travel
-1.41× further in one direction than in another to start moving. ⭐ Everything else here —
+⛔⛔ **AND THE ONE THING I SAID A9 GOT WRONG, IT DID NOT.** This paragraph used to read
+*"per axis would have been a mistake, the deadband is RADIAL"* — arguing that a square band
+makes a diagonal drag travel 1.41× further. ⭐ The arithmetic was right and the conclusion
+was wrong: the owner restored per-axis for a reason I had not considered, **axis purity**,
+and a radial band cannot provide it at any radius. See A11. ⭐ Everything else here —
 especially the three forms and why the hard one is a jump traded for a jump — stands, and
 A11 implements the residual form it recommended. Row `IN12` is closed by A11, not built.
 
@@ -667,6 +545,59 @@ durations in series, ~900 ms**, in front of the one transition A10's depth gate 
 
 ⛔ Under A11 there is no settle at all. Leaving rest stays instantaneous; returning costs
 one `restConfirmMs`, a tenth of what it replaced.
+
+### ⭐⭐⭐ PER AXIS, AND THE REASON IS NOT NOISE — IT IS AXIS PURITY
+
+> *"I would expect a deadband on delta position x and a deadband on delta position y (even
+> if both are equal). So I could have a pure movement on x or y by filtering out the delta
+> position which does not cross its deadband."*
+
+⛔⛔ **THIS PROJECT ARGUED AGAINST PER-AXIS ONCE — IN `IN12`'s DOSSIER AND IN A9 — AND THE
+ARGUMENT WAS ABOUT THE WRONG THING.** It said a square band makes a diagonal drag travel
+1.41× further before it starts. ⚠ True, and beside the point: what the square buys is a
+**corridor along each axis in which the other axis emits nothing at all**, so a
+nearly-horizontal drag is *purely* horizontal.
+
+⭐ **A radial band cannot do that at any radius.** The moment the finger leaves the circle,
+both components are live and the wobble reaches the object. **Axis purity is a property of
+the SHAPE, not of the size** — there is a vector for exactly that, with the radial form
+implemented alongside as the counter-example, showing 1.5 mm+ of wobble reaching the object
+over a drag where the per-axis form emits **zero**.
+
+⭐⭐ **And each axis carries its OWN state**, which is what makes the purity *last*: an axis
+that has not broken out stays silent for as long as the hand keeps it inside its band — not
+merely until the other axis starts moving. ⛔ Shared state would give a corridor that
+existed only until the drag began, which is no corridor at all.
+
+⚠ **It is a filter, not a lock.** A deliberate move on the quiet axis breaks it out
+normally, and `restConfirmMs` of quiet puts it back — so the corridor is re-enterable
+within a gesture.
+
+### What per-axis costs, stated
+
+| | radial | per axis |
+|---|---|---|
+| entering along one axis | 1 band | **1 band** |
+| entering at 45° | 1 band | ⚠ **1 band on each axis** — 1.41× the diagonal travel |
+| a reversal | one sample | **one sample** — ⭐ fluidity is unchanged, measured |
+| a nearly-axial drag | ⛔ the off-axis wobble reaches the object | ⭐ **the off-axis emits zero** |
+
+⭐ Measured after the change: reversal cost is still **one sample at every speed**, and
+entering a drag still costs one band. Going per-axis bought the corridor for nothing.
+
+### ⭐ Where it is applied
+
+⛔ **Every `x`/`y` input of both touchpoints**, on the owner's instruction — rule 2bis's
+yaw/pitch, rule 6's translate, and A10's depth. ⚠ **Except the ROLL**, which is an angle
+about a fitted centre rather than an axis pair, and already carries its own 1€ filter.
+
+⚠ **One consumer is deliberately still raw: §2 rule 1, the camera orbit.** It is a CLOSED
+row (`IN9`) tuned by finger over three device passes, and the owner's instruction named
+rotation and translation of an OBJECT. ⭐ It is the same jitter and the same fix if a hand
+ever wants it — recorded so it is a decision rather than an omission.
+
+⭐ **Owner's note for a later row**: the second touchpoint's **delta position x** will drive
+something (A10 currently reads its `dy`). Not built.
 
 ### ⛔⛔⛔ THE BAND GATES **ENTRY INTO MOTION**, NOT THE MOTION ITSELF
 
