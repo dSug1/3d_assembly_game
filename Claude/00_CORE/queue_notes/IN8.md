@@ -81,48 +81,56 @@ and the 22 router vectors are written against the old rule.
 
 ## 🔌 WIRED 2026-09-15 — A5 is reachable by a finger
 
-'s router learned the  role and  runs the rule. ⭐ **This is the
-first thing since the  pass that a device can judge.**
+`IN2`'s router learned the `PINCH` role and `scene.ts` runs the rule. ⭐ **This is the
+first thing since the `3D1` device pass that a finger can judge.**
 
-### ⭐ Why a NEW role rather than a second 
-Making the partner  would put two entries in  for ONE object — and
+### ⭐ Why a NEW role rather than a second `OBJECT`
+
+Making the partner `OBJECT` would put two entries in `objects()` for ONE object — and
 rules 5, 6bis and 6ter all read that list as *two DIFFERENT objects*. They would fire on a
-single pinched part, silently. ⛔ A vector asserts  stays at one and
- reports the partner.
+single pinched part, **silently**. ⛔ A vector asserts `objects()` stays at one while
+`pinches()` reports the partner.
 
 ### What the roles mean now
 
 | touchpoint | role | why |
 |---|---|---|
-| first on an object |  | holds it, runs the §1.3 recognizer |
-| **second on the SAME object** | ⭐  | A5's partner. **Carries the object** — the rule must find the pair |
-| third and beyond |  | no meaning; must not turn a two-touchpoint rule into a three-touchpoint one |
+| first on an object | `OBJECT` | holds it, runs the §1.3 recognizer |
+| **second on the SAME object** | ⭐ `PINCH` | A5's partner. **Carries the object** — the rule must find the pair |
+| third and beyond | `IGNORED` | no meaning, and must not turn a two-touchpoint rule into a three-touchpoint one |
 
-⭐  **counts the partner** (a rule can see it) and still excludes .
+⭐ `activeCount` **counts the partner** (a rule can see it) and still excludes `IGNORED`.
 ⚠ That is what keeps the eviction shake off during a pinch — A4 is gated on
-.
+`activeCount === 1`.
 
-### ⛔⛔ The trap the wiring had to avoid: a ratio is not an increment
+### ⛔⛔ The trap the wiring had to avoid: A RATIO IS NOT AN INCREMENT
 
- returns a ratio against the gesture's START. Applying it to the
-object's CURRENT position each frame would **compound** it, and a pinch out and back would
+`PinchTracker.scale` returns a ratio against the gesture's **START**. Applying it to the
+object's **current** position each frame would COMPOUND it, and a pinch out and back would
 not return. ⭐ So the object's position, the view axis and the tracker are all captured at
-the pinch's start — the same discipline  uses for the camera's
-.
+the pinch's start — the same discipline `pinch.ts` uses for the camera's
+`zoomAtPinchStart`. ⚠ The view axis is latched for §4's reason too: a camera that moves
+mid-gesture must not redefine which way *"away"* is under a finger already down.
 
 ### ⭐ One implementation, two triggers
 
- is called from the holder's move AND from the partner's. A partner
-has no recognizer, so without its own branch its motion would do nothing at all — and the
-holder's branch alone would make the gesture work only while the *first* finger moved.
+`applyDepthPinch(mesh)` is called from the holder's move **and** from the partner's. A
+partner has no recognizer, so without its own branch its motion would do nothing at all —
+and the holder's branch alone would make the gesture work only while the *first* finger
+moved.
 
 ⛔ **It takes precedence over rotate and translate.** A part that spun while being pushed
 away would be two rules answering one hand.
 
-### ⚠ Known gaps, for the device pass
+⭐ And the readout says `DEPTH` even when it is the PARTNER that moved: a mode saying
+`ROTATE` while a pinch drove the object would send the next debugging session to the wrong
+rule.
 
-* **No sympathetic sway during a depth pinch.** The sway is told  from the
-  latched mode, which is  while a pinch runs. ⚠ Decoration only, and recorded
-  rather than silently changed.
-* **No visible partner indicator.** §6 asks for a ring on the anchored object; .
-* ⛔ **The gesture reaches a wall** — see the tight ceiling in .
+### ⚠ Known gaps, recorded rather than silently changed
+
+* **No sympathetic sway during a depth pinch.** The sway is told whether it is
+  *translating* from the latched mode, which is `ROTATE` while a pinch runs. ⚠ Decoration
+  only.
+* **No visible partner indicator.** §6 asks for a ring on the anchored object — `RND3`.
+* ⛔ **The gesture reaches a wall**, and sooner than feels natural — see the tight ceiling
+  in `src/input/depth_pinch.ts`.
