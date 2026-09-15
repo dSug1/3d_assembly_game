@@ -82,6 +82,15 @@ import {
 // ⭐ The quaternion arithmetic left this file with the composition it belonged to —
 // `input/display_pose.ts`, where it can be vectored. What stays is the plain types.
 import type { Quat, Vec3 } from "../core/vec";
+import {
+  makeWorld,
+  setWorldPlacement,
+  worldPlacementOf,
+  type Face,
+  type ObjectId,
+  type World,
+} from "../core/object_model";
+import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
 import { validateGestureConfig } from "../input/gestureConfig";
@@ -163,6 +172,69 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // test would look like it passed while exercising nothing. `2^3 − 3 − 1 = 4`
   // candidates — three pairs and the triple.
   make("objectC", new Vector3(0.01, 0.1, -0.09), [0.72, 0.58, 0.45]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ⭐⭐ `3D1` — THE OBJECT MODEL IS NOW AUTHORITATIVE, AND THE MESHES ARE A VIEW OF IT.
+  //
+  // ⛔ Until this point the object's real state was `(follower.target, follower.qHome)`
+  // — an implicit pair living inside a display filter. A finger wrote the filter, and
+  // the filter WAS the truth. That is exactly backwards: rule 6's inertia is FEEL, and
+  // feel must not be where meaning is stored.
+  //
+  // ⭐ So the chain is now `SWAY ∘ FOLLOW ∘ worldPlacementOf(world, id)` for real, and
+  // the render loop re-reads the model every frame. Nothing downstream of `displayPose`
+  // can be read back as state, and anything that MEANS something reads the model.
+  //
+  // ⚠ The parent chain is unexercised here — three loose boxes, no assembly yet — but
+  // it is the SAME call, so `3D2` parenting a part changes nothing in this file.
+  const idOf = new Map<AbstractMesh, ObjectId>();
+  const meshOf = new Map<ObjectId, AbstractMesh>();
+  const half = OBJECT_SIZE_M / 2;
+  // ⭐ Six faces, outward normals, LOCAL frame — the same convention `MateConnector`
+  // uses, so a face and a connector never disagree about which way "out" is.
+  // ⚠ Their ids are geometric ("+x"), not indices: a triangle index is an engine detail
+  // and `3D1` is explicit that a face is not a triangle.
+  const boxFaces: Face[] = [
+    { id: "+x", centre: [half, 0, 0], normal: [1, 0, 0] },
+    { id: "-x", centre: [-half, 0, 0], normal: [-1, 0, 0] },
+    { id: "+y", centre: [0, half, 0], normal: [0, 1, 0] },
+    { id: "-y", centre: [0, -half, 0], normal: [0, -1, 0] },
+    { id: "+z", centre: [0, 0, half], normal: [0, 0, 1] },
+    { id: "-z", centre: [0, 0, -half], normal: [0, 0, -1] },
+  ];
+  let world: World = makeWorld(
+    scene.meshes
+      .filter((m) => m.metadata?.orbitCandidate === true)
+      .map((m) => {
+        idOf.set(m, m.name);
+        meshOf.set(m.name, m);
+        return {
+          id: m.name,
+          local: {
+            position: [m.position.x, m.position.y, m.position.z] as Vec3,
+            orientation: [1, 0, 0, 0] as Quat,
+          },
+          parent: null,
+          faces: boxFaces,
+          connectors: [],
+          // §0's Start condition: every object begins with an EMPTY stack.
+          constraints: [],
+        };
+      }),
+  );
+
+  /** The object's TRUE placement, through its parent chain. `null` for a non-object. */
+  const modelPose = (mesh: AbstractMesh) => {
+    const id = idOf.get(mesh);
+    return id === undefined ? null : worldPlacementOf(world, id);
+  };
+
+  /** Write the model. ⛔ The only way an object's real pose ever changes. */
+  const setModelPose = (mesh: AbstractMesh, placed: Placed): void => {
+    const id = idOf.get(mesh);
+    if (id === undefined) return;
+    world = setWorldPlacement(world, id, placed);
+  };
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
   // Without it the barycentre selection is invisible, and "it seems to orbit the right
@@ -307,7 +379,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const followerFor = (mesh: AbstractMesh): Follow => {
     let f = followers.get(mesh);
     if (!f) {
-      const p = mesh.position;
+      // ⭐ Seeded from the MODEL where there is one. The mesh is a view, and seeding a
+      // filter from its own output is how a system acquires a memory nobody declared.
+      const mp = modelPose(mesh);
+      const p = mp ? new Vector3(mp.position[0], mp.position[1], mp.position[2]) : mesh.position;
       f = {
         target: p.clone(),
         vTarget: Vector3.Zero(),
@@ -322,7 +397,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         swayRotY: { x: 0, v: 0 },
         swayRotZ: { x: 0, v: 0 },
         swayPivot: p.clone(),
-        qHome: readPose(mesh),
+        qHome: mp ? mp.orientation : readPose(mesh),
       };
       followers.set(mesh, f);
     }
@@ -396,11 +471,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // directly would let the barycentre — and so where the camera orbits — depend on
       // whether the objects happened to be mid-wobble when the finger landed.
       // ⚠ `METHOD`: an instrument must not be moved by the thing it is measuring.
+      // ⭐⭐ NOW IT READS THE MODEL, so there is no sway to subtract: the decoration
+      // never enters the object's real placement in the first place. The subtraction this
+      // replaces was correct but defensive — it undid a contamination that can no longer
+      // happen. `display_pose.meaningfulPose` is the statement of that rule.
       .map((m) => {
-        const f = followers.get(m);
-        return f
-          ? ([m.position.x - f.swayX.x, m.position.y - f.swayY.x, m.position.z - f.swayZ.x] as Vec3)
-          : ([m.position.x, m.position.y, m.position.z] as Vec3);
+        const mp = modelPose(m);
+        return mp ? mp.position : ([m.position.x, m.position.y, m.position.z] as Vec3);
       });
     const c = orbitCentre(
       visible,
@@ -529,10 +606,47 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     mesh.rotationQuaternion!.set(q[1], q[2], q[3], q[0]);
   };
 
+  /**
+   * ⭐ §1.3's provisional-motion rollback, on the MODEL. ⛔ Snapshotting the mesh would
+   * capture whatever the sway happened to be doing, and restoring it would write a
+   * decoration back into the object's real pose — permanently.
+   */
+  /**
+   * ⛔⛔ THERE IS NO FALLBACK TO THE MESH, DELIBERATELY. Every pickable object is in the
+   * model by construction, so a miss here is a programming error — and the tempting
+   * `?? readPose(mesh)` would answer it by silently writing the object's real pose into
+   * a display transform instead, where the next frame overwrites it. The object would
+   * stop responding for reasons nothing could explain.
+   * ⭐ `METHOD`: *a guard that turns a broken state into silence is worse than a failure*,
+   * and `validateGestureConfig` and `testMate` both throw for the same reason.
+   */
+  const requirePose = (mesh: AbstractMesh): Placed => {
+    const mp = modelPose(mesh);
+    if (!mp) {
+      throw new Error(
+        `"${mesh.name}" is being manipulated but is not in the object model. Every ` +
+          "pickable object must be registered in the world model — see 3D1.",
+      );
+    }
+    return mp;
+  };
+
+  /**
+   * ⭐ §1.3's provisional-motion rollback, on the MODEL. ⛔ Snapshotting the mesh would
+   * capture whatever the sway happened to be doing, and restoring it would write a
+   * decoration back into the object's real pose — permanently.
+   */
   const poseOf = (mesh: AbstractMesh): PosePort<DiagnosticPose> => ({
-    snapshot: () => readPose(mesh),
-    restore: (p) => writePose(mesh, p),
+    snapshot: () => requirePose(mesh).orientation,
+    restore: (q) => setModelPose(mesh, { position: requirePose(mesh).position, orientation: q }),
   });
+
+  /** The model's orientation for a held object. ⚠ Never the mesh's — that carries sway. */
+  const modelOrientation = (mesh: AbstractMesh): Quat => requirePose(mesh).orientation;
+
+  const setModelOrientation = (mesh: AbstractMesh, q: Quat): void => {
+    setModelPose(mesh, { position: requirePose(mesh).position, orientation: q });
+  };
 
   const asVec3 = (v: Vector3): Vec3 => [v.x, v.y, v.z];
 
@@ -1048,9 +1162,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // orbit that happens mid-drag cannot redefine which way "right" is.
         // ⛔ THE FINGER MOVES THE TARGET, NOT THE MESH. The mesh chases it in the render
         // loop. With `translateInertiaMs` at 0 the two are the same thing.
-        const f = followerFor(grip.mesh);
-        f.target.addInPlace(new Vector3(...grip.frame.right).scale(t.rightM));
-        f.target.addInPlace(new Vector3(...grip.frame.up).scale(t.upM));
+        // ⛔ THE FINGER MOVES THE MODEL. The follower's target is re-read from it every
+        // frame, so the inertia stays exactly what it was — a filter on the way to the
+        // screen, and no longer the place the object's position is kept.
+        const mp = requirePose(grip.mesh);
+        const r = grip.frame.right;
+        const u = grip.frame.up;
+        setModelPose(grip.mesh, {
+          position: [
+            mp.position[0] + r[0] * t.rightM + u[0] * t.upM,
+            mp.position[1] + r[1] * t.rightM + u[1] * t.upM,
+            mp.position[2] + r[2] * t.rightM + u[2] * t.upM,
+          ],
+          orientation: mp.orientation,
+        });
       } else if (grip.mode === "ROTATE") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release.
@@ -1066,19 +1191,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
         // about the screen axes latched at press. Every step is a small world-frame
         // rotation, so the two axes never end up nested inside one another.
-        const cur = readPose(grip.mesh);
+        const cur = modelOrientation(grip.mesh);
         if (grip.rec.rollCommitted) {
           // 2quinte has taken over: roll about the view axis by what the finger has
           // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
           // this gesture, which is what "commits to roll" means.
           // ⭐ The 1€-FILTERED angle. The raw channel drives the COMMIT threshold;
           // this drives what the eye sees. See input/one_euro.ts.
-          writePose(
+          setModelOrientation(
             grip.mesh,
             screenRollRotation(cur, grip.frame, grip.rec.rollAppliedDeg - grip.lastRollDeg),
           );
         } else {
-          writePose(
+          setModelOrientation(
             grip.mesh,
             screenPlaneRotation(
               cur,
@@ -1101,14 +1226,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // object STARTS turning and whenever the turn AXIS swings by more than
       // `rotateSwayTurnDeg` — a reversal being a 180° axis change.
       if (grip.mode === "ROTATE") {
-        const home = readPose(grip.mesh);
+        const home = modelOrientation(grip.mesh);
         // ⛔ The held object's own pose is the truth here, so its follower's `qHome` has
         // to track it — otherwise the render loop would fight the rotation rule.
         followerFor(grip.mesh).qHome = home;
         const spin = grip.spinSway.push(home, s.t, true);
         if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
       } else {
-        grip.spinSway.push(readPose(grip.mesh), s.t, false);
+        grip.spinSway.push(modelOrientation(grip.mesh), s.t, false);
       }
 
       grip.lastRollDeg = grip.rec.rollAppliedDeg;
@@ -1179,8 +1304,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const tauSec = cfg.translateInertiaMs / 1000;
     // ⚠ A mesh under a finger owns its own pose this frame — the rotation rule writes it
     // directly — so the sway must not write over it on the way past.
-    const heldMeshes = new Set([...held.values()].map((h) => h.mesh));
     for (const [mesh, f] of followers) {
+      // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather
+      // than merely present. Whatever the rules wrote this frame is what the follower now
+      // chases and what the sway is applied on top of.
+      const mp = modelPose(mesh);
+      if (mp) {
+        f.target.set(mp.position[0], mp.position[1], mp.position[2]);
+        f.qHome = mp.orientation;
+      }
       const zeta = cfg.translateDampingRatio;
       const leadSec = cfg.translateLeadMs / 1000;
       // ⭐ The finger's smoothed velocity, then the phantom projected along it. ⛔ The
@@ -1222,13 +1354,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         pivot: [f.swayPivot.x, f.swayPivot.y, f.swayPivot.z],
       });
 
-      // ⚠ A mesh under a finger owns its own ORIENTATION this frame — the rotation rule
-      // writes it directly — so it is only written back here when the sway has something
-      // to say, or when nothing is holding it. ⛔ Written back even at rest in that second
-      // case, or the last swayed pose would stick.
-      const swaying = Math.hypot(f.swayRotX.x, f.swayRotY.x, f.swayRotZ.x) > 1e-9;
-      if (swaying || !heldMeshes.has(mesh)) writePose(mesh, pose.orientation);
-
+      // ⭐ ONE WRITER. The held-mesh exception is gone with the model: the rotation rule
+      // used to write the mesh directly, so this loop had to skip a held object or it
+      // would overwrite it. Now every rule writes the MODEL and this is the only place a
+      // mesh transform is set at all — which is what a "view" means, and one special case
+      // fewer to be wrong about.
+      writePose(mesh, pose.orientation);
       mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
     }
 

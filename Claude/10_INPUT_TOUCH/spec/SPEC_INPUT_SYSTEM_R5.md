@@ -6,7 +6,7 @@
 > build status of each
 > **READ IF** · you are building or changing anything a finger touches
 > **SOURCED FROM** · the owner's `input-system-v5.md`, supplied 2026-09-13
-> **LAST VERIFIED** · 2026-09-15, against 397 passing vectors
+> **LAST VERIFIED** · 2026-09-15, against 409 passing vectors
 
 ⛔⛔ **THE OWNER'S REVISION-5 TEXT IS REPRODUCED IN FULL AND UNALTERED**, apart from
 repairing mojibake from the original file's encoding (`â` → `—`, `Â§` → `§`). Not one of

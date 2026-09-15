@@ -17,8 +17,15 @@ connectors, and the constraint stack attached to the object. ⭐⭐ **`reroot` i
 executable** — it re-points the chain onto the held object while every object's world
 placement stays put, and *grabbing a child moves the whole assembly* is a vector by name.
 ⭐ Every fixture is THREE deep, and the deep-chain vector goes to 16.
-⛔ **BUILT, NOT CLOSED**: no visible behaviour means no device look is possible; `IN3`
-wires it and closes it. ⛔ No snapping — that is `3D2`.
+🔌 **WIRED 2026-09-15**: `scene.ts` builds a `World` and **every rule writes the model** —
+rule 6's translate, the rotation rules, §1.3's rollback and §2 rule 1's barycentre. ⭐ The
+render loop is now the SINGLE writer of a mesh transform, which removed the held-mesh
+exception and the barycentre's defensive sway subtraction at the same time.
+⛔ **STILL NOT CLOSED**: nothing here has been touched by a finger, and `METHOD` closes a
+change with a device look and nothing else. ⚠⚠ It rewired **rule 6**, which IS closed — the
+arithmetic is identical, but that is the kind of claim this project distrusts, and rule 6's
+feel lives entirely in its overshoot. **A re-look is owed.**
+⛔ No snapping — that is `3D2`.
 
 ## ⛔⛔ The four rules that must not be rediscovered
 

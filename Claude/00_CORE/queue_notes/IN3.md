@@ -303,3 +303,34 @@ one place*; the caller passes the gain. ⚠ `anchorHandoverCos` and
 3. the **triangle → `FaceId`** mapping at the render seam;
 4. **wiring `scene.ts` to the object model** — which is what CLOSES `3D1`;
 5. the two handover tunables, **each with a slider**.
+
+---
+
+## 🔌 `scene.ts` WIRED TO THE MODEL (2026-09-15) — and what that leaves
+
+⭐ The wiring is recorded in [`3D1.md`](3D1.md), since it is `3D1` that it closes. In
+`IN3`'s terms: **the render layer now writes the object model**, which is the prerequisite
+for every remaining rule in this row.
+
+⭐⭐ It also landed [`src/input/display_pose.ts`](../../../src/input/display_pose.ts) — the
+whole chain `SWAY ∘ FOLLOW ∘ model` as ONE expression, engine-free and vectored, which is
+what the `3D1` row asked for **before** the rewiring rather than after. Its RIGIDITY vector
+had never existed: the sway claimed in prose that the block *"both orbits and spins"*, and
+both half-implementations pass a pairwise-distance test, so only an orientation assertion
+separates a block from a crowd.
+
+### ⛔ Still to do in `IN3`
+
+1. **Rule 2bis's PRECONDITION** — *an empty constraint stack*. ⭐ Now askable: the stack is
+   on the object.
+2. **Face selection** — the triangle → `FaceId` mapping at the render seam. ⚠ Do it from
+   the picked **normal**, not from `pickResult.faceId`: the triangle ordering is an engine
+   detail, the normal is geometry. The six faces already exist on every box.
+3. **2ter / 2quater** pushing constraints on a flick, with the flick skip wired to
+   `ShakeDetector.suppressesFlick`.
+4. **Eviction** — wire `ShakeDetector`, sparing `MATE` entries (`D13`), refusing audibly on
+   a mate-only stack.
+5. **2sexte and the A3 handover** — `anchor_rotate.ts` exists; it needs
+   `anchorHandoverCos` + `anchorHandoverHysteresis`, **each with a slider**, latched at
+   press.
+6. ⛔ **The device pass**, which closes both `IN3` and `3D1`.
