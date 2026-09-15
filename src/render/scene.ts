@@ -1302,9 +1302,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
 
     const tauSec = cfg.translateInertiaMs / 1000;
-    // ⚠ A mesh under a finger owns its own pose this frame — the rotation rule writes it
-    // directly — so the sway must not write over it on the way past.
-    for (const [mesh, f] of followers) {
+    // ⛔⛔ ITERATE THE **MODEL**, NOT THE FOLLOWER MAP — and this line is a defect fix, not
+    // a tidy-up. The loop used to walk `followers`, a map populated lazily by whoever
+    // happened to need one: the sway (for the OTHER objects) and the rotation rule (for the
+    // held one). While the follower WAS the object's state that was self-consistent — a
+    // thing with no follower had no state to draw.
+    //
+    // ⚠ The moment the MODEL became authoritative it stopped being true, and it broke
+    // translation, found by finger 2026-09-15: drag an object at page load and nothing
+    // moves, because the model updates and nothing draws it. Then drag a SECOND object and
+    // the first JUMPS — the sway finally creates its follower, the sync pulls everything
+    // that had accumulated, and it snaps there in one frame.
+    //
+    // ⭐ Rotation hid it: the rotation rule creates the follower as a side effect of
+    // storing `qHome`, so only translation was affected — which is why a device pass that
+    // exercised rotation first saw nothing wrong.
+    //
+    // ⭐⭐ The lesson is the shape, not the line: **an implicit invariant died when the
+    // authority moved.** "Everything that needs drawing has a follower" was true by
+    // construction and became false silently, because nothing stated it.
+    for (const mesh of meshOf.values()) {
+      const f = followerFor(mesh);
       // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather
       // than merely present. Whatever the rules wrote this frame is what the follower now
       // chases and what the sway is applied on top of.

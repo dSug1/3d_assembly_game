@@ -66,7 +66,7 @@ exist yet; `IN3` attaches it to the object model and adds that test, it does not
 the rotation. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Nineteen defects have been found BY FINGER and none was visible to a green
+⛔⛔ **Twenty defects have been found BY FINGER and none was visible to a green
 suite.** They are four repeating shapes — a rate estimated over too short a baseline, a
 substituted quantity, idealised fixtures, and a composition nobody computed. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
@@ -85,13 +85,18 @@ guard that had stood through eight device passes: see `Claude/10_INPUT_TOUCH/IND
 ⭐ **A simulation narrows the range; it does not pick the number. Ship the slider WITH
 the rule.**
 
-✅ **`3D1` IS BUILT (2026-09-15)** — `src/core/object_model.ts`, 42 vectors, engine-free:
+⛔ **`3D1` IS BUILT AND WIRED, NOT CLOSED** — the 2026-09-15 device pass found one defect
+in the wiring (a translated object was LOCKED, then JUMPED: the render loop drew only
+objects that happened to have a follower). Fixed; a re-test is owed. ⭐ Everything else was
+clean, which re-confirms rule 6. Built — `src/core/object_model.ts`, 42 vectors, engine-free:
 placement, faces, connectors, the assembly tree, and the constraint stack attached to an
 object. ⭐⭐ The vectors were written FIRST and then **falsified on purpose** — breaking the
 composition turns 14 of 42 red, which is why the green means something. ⭐ `reroot`
 implements **parent ≠ root** and moves nothing.
-⛔⛔ **BUILT is NOT CLOSED**: it has no visible behaviour, so no finger can judge it. It
-closes when **`IN3`** wires it — and `IN3` is NEXT.
+⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`**, and a
+new owner decision sits in front of it: the hand reached for a **PINCH ON THE OBJECT** to
+get depth, which re-opens `D10`/`IN8` (two touchpoints on the same object). See
+`DECISIONS.md`.
 ⭐⭐ Rule 6's gain was **computed, not guessed**: `gainTranslateScreen` is a multiplier on
 a tracking factor and **1.0 puts the object exactly under the finger**.
 ⭐ **The order is `IN2` → rule 6 translate → `3D1` → 6bis onward.** `IN4`'s dependency

@@ -330,3 +330,66 @@ have.
 a hand ORBIT for depth or PUSH at the glass? ⛔ Unanswerable until `3D1` exists. The watch
 item, with what each observation means, is in [`3D1.md`](3D1.md) — **on the first device
 pass, before the hand learns a workaround.**
+
+---
+
+## ⭐⭐ DEPTH: THE HAND REACHED FOR A PINCH ON THE OBJECT (2026-09-15)
+
+The `3D1` device pass carried a watch item asking whether a hand orbits for depth or pushes
+with the anchor finger. ⛔ **Neither.** The owner:
+
+> *"Depth obtained by two fingers touchpoint on one object or two objects and pinch movement
+> to zoom the one or two objects out."*
+
+### ⛔ §3.2 DS3 is DECLINED
+
+Not because the camera solved it — the hand did not orbit. It reached for a different
+gesture entirely. ⭐ Giving rule 6's anchor finger a depth channel was a reasonable idea with
+published evaluation behind it, and it is simply not what a hand wants. Marked declined in
+[`../../10_INPUT_TOUCH/PROVENANCE.md`](../../10_INPUT_TOUCH/PROVENANCE.md).
+
+### ⭐⭐ Why the instinct is a STRONG answer, not merely the owner's preference
+
+1. ⭐⭐ **The metaphor already transfers exactly.** Pinching the camera out makes everything
+   smaller; pushing an object away makes *it* smaller. The visual result is nearly the same,
+   so the gesture does not have to be learned — it is the one the user already has for
+   *"put this further away"*.
+2. ⭐ **It needs NO new discriminator.** §4 already separates rule 4 from everything else by
+   *did the touchpoints hit an object*. Pinch on nothing zooms the camera; pinch on an object
+   moves the object. Same test, one more branch.
+3. ⭐⭐ **THE GAIN IS COMPUTABLE, NOT GUESSABLE** — like rule 6's, and for the same reason.
+   The object should stay under the two fingers, so the ratio of finger separation fixes the
+   ratio of camera distance exactly. ⛔ **Compute it before writing it**, and expect **1.0 to
+   be the correct value rather than a preferred one**.
+4. ⭐ **The two-object half is ALREADY SPECIFIED.** One finger on each of two objects,
+   pinched together, is §4 rule **6ter** — *"both selected objects translate oppositely
+   towards each other on `AxisBtwFaces`"*. ⚠ The spec flagged 6ter as *"the hardest case to
+   control"* and offered to drop it if it measured poorly. **A hand reached for it
+   unprompted, before it was built.** That is the strongest evidence a queued rule has had.
+
+### ⛔⛔ AND IT COLLIDES WITH `D10` — A DECISION THE OWNER TOOK, WHICH MUST BE RE-TAKEN
+
+**Two touchpoints on the SAME object currently means: ignore the second** (`IN8`, `D10`,
+2026-09-14) — and its consequence was *judged on the glass and accepted*: lift the holding
+finger with a second still on the part, and the part stops responding.
+
+⛔ The one-object half of this instinct needs that configuration to MEAN something:
+
+* **it is a re-opening, not a new rule** — `IN8`'s dossier anticipated one, recording
+  reading 2 as **deferred, not rejected**;
+* ⚠ **the accepted `IN8` behaviour would change**, and the *"part stops responding"*
+  behaviour goes with it;
+* ⛔ **it is the owner's call**, because it reverses a decision taken after a device look.
+  Open in [`../DECISIONS.md`](../DECISIONS.md).
+
+⚠ **No collision with rule 4 or rule 6.** Rule 4 needs both touchpoints on nothing; rule 6
+needs exactly one outside. Two on an object is disjoint from both.
+
+### ⚠ Provenance — this one sits nearest the litigated ground
+
+⛔ The catalogue's caution zone names **Apple's pinch/scroll family** specifically. A pinch
+that moves an object in depth rather than scaling or zooming is not that claim, and the
+nearest published relatives — Z-technique (3DUI 2010) and DS3 (TVCG 2012) — separate depth
+onto a *second finger's relative motion*, not a pinch. ⭐ But it is the closest any gesture
+here has come to the ground the catalogue flags, so it is tagged ⚠ **NOVEL COMPOSITE** and
+marked for `SEC4` **at the moment of adoption** rather than after.
