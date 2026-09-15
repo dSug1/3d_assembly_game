@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**372 golden vectors, all passing** (37 → 372).
+**397 golden vectors, all passing** (37 → 397).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -38,7 +38,13 @@ the second was ignored at press and stays ignored until it lifts. The HUD prints
 latched roles (`#1OBJ #2IGN  active=1`) so that is distinguishable from a bug.
 → [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
 
-🔨 **`IN3` IS IN PROGRESS**: its **eviction shake detector is BUILT** (`src/input/shake.ts`,
+🔨 **`IN3` IS IN PROGRESS**, 40 vectors of logic standing ahead of any renderer.
+⭐ **2sexte + A3's handover BUILT** (`src/input/anchor_rotate.ts`, 25 vectors) — every
+rotation is about the CONSTRAINT axis and *the anchor survives* is asserted directly, with
+rotating about the VIEW axis kept as the counter-example. ⭐⭐ The near side's excursion is
+`r·sin α`, so the drag **goes quiet over a range before it becomes undefined** — which is
+where `anchorHandoverCos` has to hand over, and a device question.
+⭐ **The eviction shake detector is BUILT** (`src/input/shake.ts`,
 15 vectors) — ⛔ defined as oscillation ALONG AN AXIS, because **a circle projects to a
 back-and-forth on every axis** and `A3` made circles legal on constrained objects.
 ⭐ `suppressesFlick` arms on the first reversal, which is A4's mandatory flick guard.

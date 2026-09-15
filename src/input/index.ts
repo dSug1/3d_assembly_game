@@ -13,6 +13,7 @@ export * from "./router";
 export * from "./translate";
 export * from "./follow";
 export * from "./lead";
+export * from "./anchor_rotate";
 export * from "./shake";
 export * from "./sway";
 export * from "./camera_reset";

@@ -219,3 +219,87 @@ corrective nudge, and `IN5`'s record is three-for-three that a guessed number is
 4. **2ter / 2quater** pushing constraints on a flick, and **the flick skip** above.
 5. **The triangle → `FaceId` mapping** at the render seam.
 6. **Wiring `scene.ts` to the object model** — which is what CLOSES `3D1`.
+
+---
+
+## 🔨 IN PROGRESS — 2sexte and A3's handover are BUILT (2026-09-15, 25 vectors)
+
+`src/input/anchor_rotate.ts` · `tests/anchor_rotate.test.ts` · engine-free, **not yet
+wired**. With `shake.ts` that is 40 vectors of `IN3` logic standing ahead of any renderer.
+
+### ⭐⭐ The composite property: THE ANCHOR SURVIVES
+
+Every rotation this file produces is about the **constraint axis**, never the camera's, and
+the vectors assert the consequence directly: a normal that starts ON its target axis is
+still on it afterwards — after one drag, after **forty** (so it is not a small-angle
+accident), and after a roll.
+
+⛔⛔ **And it carries the counter-example A3's wording exists to prevent**: rotating about
+the VIEW axis instead — what free rotation and 2quinte both do — is asserted to swing the
+anchored normal **more than 30°** off target with the camera at the front. ⚠ The very next
+vector asserts the *same* naive rotation is **harmless** looking down the axis, which is
+precisely why revision 5's blanket ban was wrong and `D14` corrected it.
+
+### ⭐ The mapping carries its own degeneracy test, derived rather than detected
+
+The near side moves along `axis × (−viewAxis)`, whose length is `sin α`. ⛔ That vanishes
+**exactly** when the axis points at the camera — so "2sexte is undefined" and "this returns
+`null`" are the *same case*, falling out of one expression instead of being caught by a
+separate guard that could disagree with it.
+
+### ⭐⭐ A FINDING THE VECTORS PRODUCED, and it bears on `anchorHandoverCos`
+
+The near side's screen excursion per radian is `r·sin α`. §2 2sexte specifies a **gain in
+rad/mm**, not a tracking factor — so the drag turns the object at the *same rate* whatever
+the camera does, while the motion that rate produces **fades to nothing** as the axis swings
+toward the camera.
+
+⛔ **So the drag does not fail suddenly at α = 0; it goes quiet over a range before it.**
+The honest tracking mapping would be `1/(r·sin α)` rad/mm, which DIVERGES there — a much
+stronger statement of the degeneracy than *"the projection is a point"*.
+⚠ **`anchorHandoverCos` must hand over while the drag still produces VISIBLE motion**, not
+at the point where it becomes undefined. ⭐ That is a device question of exactly the kind
+this project has lost three times to a guess.
+
+### ⛔⛔ THREE FIXTURES OF MINE WERE WRONG, IN ONE FILE, AND EACH LOOKED LIKE A CODE DEFECT
+
+⚠ **Mistake shape 5 again** — *my own fixtures*. Recorded in full because the shape is the
+finding, not the three mistakes:
+
+| what I asserted | why it was wrong |
+|---|---|
+| the drag angle shrinks as the axis turns toward the camera | `sin α` scales the near side's **excursion**, not the **angle**. The spec's gain is rad/mm |
+| the sign reverses when the camera orbits to the back | from behind, "screen right" is the opposite WORLD direction **and** the near side is the opposite FACE — the two reversals cancel |
+| a marker at `[0,0,1]` shows the `sin α` fade | that point sits on the axis's EQUATOR, radius 1 whatever the camera does. The **near point** is what has radius `r·sin α` |
+
+⭐ And a fourth, smaller: the `sin α` law is **infinitesimal**, so a finite 0.2 rad test
+angle reported 0.502 against 0.500 — the chord's second-order term. ⭐ *State the limit a
+law holds in, and test it there.*
+
+⭐⭐ **Each was caught by deriving the geometry independently of the product code**, never
+by adjusting an expectation until it went green. ⛔ That distinction is the whole of
+`METHOD`'s *the instrument is a suspect* — and twice here the "failing" test was the
+instrument, with a correct implementation one keystroke from being "fixed".
+
+### ⭐⭐ And one property worth keeping for its own sake
+
+**The same world rotation results from the front and from the back**, so the control
+**survives an orbit instead of inverting** — like a real turntable, where pushing the near
+edge to your right spins it the same way wherever you stand. ⚠ A user would notice
+immediately if that were missing, and no magnitude test would.
+
+### ⛔ No tunable was added, deliberately
+
+`anchor_rotate.ts` holds none, following `screen_rotate.ts`'s precedent — *one constant,
+one place*; the caller passes the gain. ⚠ `anchorHandoverCos` and
+`anchorHandoverHysteresis` land **with the wiring that reads them**, or
+`config_debt` would be carrying two numbers that change nothing.
+
+### ⛔ What remains in `IN3`
+
+1. Rule **2bis's PRECONDITION** — *an empty constraint stack*;
+2. **2ter / 2quater** pushing constraints on a flick, with the flick skip wired to
+   `ShakeDetector.suppressesFlick`;
+3. the **triangle → `FaceId`** mapping at the render seam;
+4. **wiring `scene.ts` to the object model** — which is what CLOSES `3D1`;
+5. the two handover tunables, **each with a slider**.
