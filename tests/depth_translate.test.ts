@@ -27,6 +27,7 @@
 import { describe, expect, it } from "vitest";
 import {
   depthGate,
+  holderDrive,
   rollDragDeg,
   secondFingerDrive,
   depthLimits,
@@ -442,5 +443,74 @@ describe("⭐ A12's roll angle is a DRAG, not a swept circle", () => {
     const gain = 1.5;
     const once = rollDragDeg(mmToPx(6), gain);
     expect(rollDragDeg(mmToPx(12), gain)).toBeCloseTo(2 * once, 9);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ A13 — THE WHOLE TWO-TOUCHPOINT TABLE, AS ONE FUNCTION
+//
+// > *"One touchpoint on object && delta position x or y -> horizontal x or gravity axis
+// > translation. One touchpoint on object idle && second touchpoint anywhere with delta
+// > position y -> horizontal depth translation. One touchpoint on object with delta
+// > position x or y && second touchpoint idle anywhere -> rotation on yaw along gravity
+// > axis or pitch along horizontal x axis. One touchpoint on object idle && second
+// > touchpoint anywhere with delta position x -> roll rotation along horizontal depth
+// > axis."*
+//
+// ⭐⭐ THE SHAPE OF IT: **whichever finger MOVES is the one that acts, and the OTHER one's
+// state says which rule.** Four cells, no overlap, nothing to arbitrate over time.
+//
+//              second absent   second IDLE      second MOVING
+//   holder MOVING  translate      ROTATE          translate (⚠ see below)
+//   holder IDLE    —              —               x → roll, y → depth
+//
+// ⛔⛔ ONE CELL THE OWNER DID NOT NAME: both fingers moving. It is resolved as TRANSLATE —
+// the holder wins every tie, as it has since A10, and it is what the build already did. The
+// alternative (do nothing until one of them settles) reintroduces exactly the decision lag
+// A12 was written to delete.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
+  const MOV = "MOVING" as const;
+  const STI = "STATIONARY" as const;
+
+  it("⭐⭐ ONE touchpoint on the object TRANSLATES", () => {
+    // x along the horizontal screen axis, y along GRAVITY — A7's frame, unchanged.
+    expect(holderDrive(false, null)).toBe("TRANSLATE");
+  });
+
+  it("⭐⭐ a second touchpoint HELD STILL turns the same drag into a ROTATION", () => {
+    // ⭐ The second finger contributes no motion at all: it is a MODIFIER, and holding it
+    // still is the whole of the input. Yaw about gravity, pitch about the horizontal.
+    expect(holderDrive(true, STI)).toBe("ROTATE");
+  });
+
+  it("⛔ …and lifting it goes straight back to translating", () => {
+    expect(holderDrive(false, null)).toBe("TRANSLATE");
+  });
+
+  it("⛔⛔ BOTH MOVING is TRANSLATE — the holder wins every tie", () => {
+    // ⚠ The one cell the owner's four rules do not name. Deciding it any other way means
+    // waiting to see which finger settles, which is the decision lag A12 deleted.
+    expect(holderDrive(true, MOV)).toBe("TRANSLATE");
+  });
+
+  it("⭐ the rule reads PRESENCE and STATE, never a latch", () => {
+    // ⛔⛔ `IN4` RECORDS A DEVICE VERDICT THAT LOOKS LIKE THIS ONE AND IS NOT: a
+    // `STATIONARY` latch taken at press was overturned by a hand, first try, because
+    // MOVING/STATIONARY is a noisy reading and latching it hid state instead of protecting
+    // it. ⭐ This reads it LIVE, every frame, and the state it reads is now a position
+    // deadband rather than a speed test — but the resemblance is close enough to be worth
+    // watching on the glass.
+    expect(holderDrive(true, STI)).toBe("ROTATE");
+    expect(holderDrive(true, MOV)).toBe("TRANSLATE");
+    expect(holderDrive(true, STI)).toBe("ROTATE");
+  });
+
+  it("⭐⭐ a second finger that never moved at all counts as IDLE", () => {
+    // ⚠ A touchpoint that goes down and stays put emits no events, so it may have no
+    // tracker yet. `null` means *nothing has ever moved this finger* — which is the
+    // strongest form of idle there is, not a missing answer.
+    expect(holderDrive(true, null)).toBe("ROTATE");
   });
 });

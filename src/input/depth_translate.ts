@@ -244,3 +244,47 @@ export function secondFingerDrive(
 export function rollDragDeg(dxPx: number, degPerMm: number): number {
   return pxToMm(dxPx) * degPerMm;
 }
+
+/**
+ * ⭐⭐⭐ **AMENDMENT A13** — what the finger ON THE OBJECT is doing, when it moves.
+ *
+ * > *"One touchpoint on object && delta position x or y → horizontal x or gravity axis
+ * > translation. One touchpoint on object with delta position x or y && second touchpoint
+ * > idle anywhere → rotation on yaw along gravity axis or pitch along horizontal x axis."*
+ *
+ * ⭐⭐ THE SHAPE OF THE WHOLE TABLE: **whichever finger MOVES is the one that acts, and the
+ * OTHER one's state says which rule.** Four cells, no overlap, nothing to arbitrate over
+ * time:
+ *
+ * |               | second absent | second IDLE | second MOVING |
+ * |---|---|---|---|
+ * | **holder MOVING** | translate | ⭐ **ROTATE** | translate |
+ * | **holder IDLE**   | — | — | x → roll, y → depth |
+ *
+ * ⭐ A second finger held still is a **MODIFIER**: it contributes no motion, and holding it
+ * still is the whole of the input. ⛔ That is a swap of the old assignment, where one finger
+ * rotated and two translated.
+ *
+ * ⛔⛔ ONE CELL THE OWNER DID NOT NAME — both fingers moving. It resolves to `TRANSLATE`:
+ * the holder wins every tie, as it has since A10, and it is what the build already did. ⚠ The
+ * alternative — do nothing until one settles — reintroduces exactly the decision lag A12
+ * was written to delete.
+ *
+ * ⚠⚠ **A RESEMBLANCE WORTH WATCHING ON THE GLASS.** `IN4` records a device verdict that
+ * looks like this rule and is not: a `STATIONARY` latch taken AT PRESS was overturned by a
+ * hand, first try, because `MOVING`/`STATIONARY` was a noisy reading and latching it hid
+ * state instead of protecting it. ⭐ This reads it **live, every frame**, and what it reads
+ * is now a position deadband rather than a speed test — but the resemblance is close enough
+ * that a device pass should look for mode flicker directly.
+ *
+ * @param secondPresent whether a second touchpoint is down at all.
+ * @param secondState   its motion state, or `null` if it has never moved — which is the
+ *   strongest form of idle there is, not a missing answer.
+ */
+export function holderDrive(
+  secondPresent: boolean,
+  secondState: MotionState | null,
+): "TRANSLATE" | "ROTATE" {
+  if (!secondPresent) return "TRANSLATE";
+  return secondState === "MOVING" ? "TRANSLATE" : "ROTATE";
+}

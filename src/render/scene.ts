@@ -55,6 +55,7 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
+  holderDrive,
   rollDragDeg,
   secondFingerDrive,
   gravityFrame,
@@ -84,6 +85,7 @@ import {
   type ReleaseVerdict,
   type Sample,
   MotionTracker,
+  type MotionState,
   type ScreenFrame,
 } from "../input";
 // ⭐ The quaternion arithmetic left this file with the composition it belonged to —
@@ -1147,6 +1149,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * @param anchorDyPx its travel THIS FRAME.
    * @returns whether depth consumed the event, so the caller stops.
    */
+  /**
+   * ⭐⭐ THE SECOND TOUCHPOINT AND ITS LIVE MOTION STATE, for A13's mode choice.
+   *
+   * ⛔ Presence and state, re-read every frame — never latched. ⚠ `null` state means the
+   * finger has gone down and NEVER MOVED, so it has no tracker yet: the strongest form of
+   * idle there is, not a missing answer.
+   * ⚠ A touchpoint on a DIFFERENT object is deliberately not one of these — that is §4
+   * rule 5 / 6bis / 6ter's configuration and must stay reachable.
+   */
+  const secondFingerOf = (
+    grip: Held,
+  ): { present: boolean; state: MotionState | null } => {
+    for (const q of router.all()) {
+      const isSecond =
+        q.role === "OUTSIDE" || (q.role === "SECOND" && q.object === grip.mesh);
+      if (!isSecond) continue;
+      return { present: true, state: grip.anchorMotion.get(q.id)?.current ?? null };
+    }
+    return { present: false, state: null };
+  };
+
   const applyDepthDrag = (grip: Held, anchorId: number, anchorSample: Sample) => {
     // ⭐ The anchor gets a tracker of its own — the SAME §1.1 machine every other rule
     // reads, never a speed invented here. A second definition of "moving" would be free
@@ -1433,15 +1456,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ `>= 1`: two anchors and one object is not in §4's table, and translating is
         // the answer that surprises nobody. Pinch and orbit both require NOTHING held,
         // so neither can be running at the same time.
-        // ⭐⭐ A10 WIDENED THIS: the second touchpoint may be OUTSIDE any object **or on
-        // the same object**, and either way the FIRST touchpoint drives. ⛔ The owner
-        // asked for it directly, and it removes the last place two fingers on one part
-        // did nothing useful.
+        // ⭐⭐⭐ A13 SWAPPED THE ASSIGNMENT: **one touchpoint TRANSLATES, and a second
+        // one held STILL turns the same drag into a ROTATION.** The second finger
+        // contributes no motion — holding it still is the whole of the input.
+        // ⛔ Presence AND state, re-read every frame, never latched. ⚠ Both fingers moving
+        // resolves to TRANSLATE: the holder wins every tie, which is the one cell the
+        // owner's four rules did not name.
+        // ⚠⚠ `IN4` records a device verdict that LOOKS like this and is not — a
+        // STATIONARY latch taken at press, overturned by a hand first try. This reads it
+        // live, off a position deadband rather than a speed test, but a device pass should
+        // look for mode flicker directly.
+        const second = secondFingerOf(grip);
         grip.mode =
-          router.objects().length === 1 &&
-          (router.outside().length >= 1 || router.secondTouchOn(grip.mesh) !== null)
-            ? "TRANSLATE"
-            : "ROTATE";
+          router.objects().length === 1
+            ? holderDrive(second.present, second.state)
+            : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,

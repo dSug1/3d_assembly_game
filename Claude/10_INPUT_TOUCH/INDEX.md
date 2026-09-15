@@ -27,7 +27,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**512 golden vectors, all passing** (37 → 512).
+**518 golden vectors, all passing** (37 → 518).
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 
@@ -39,6 +39,7 @@ model and so did not wait on `3D1`:
 | `A7` | ⭐⭐ every object gesture stands on a **GRAVITY FRAME** | ✅ wired, and vectored end to end |
 | `A8` | ⛔ **RETIRED BY A12** — a roll rebased to the start of its circle | ⚠ unwired, kept callable |
 | `A12` | ⭐⭐⭐ **roll moves to the SECOND touchpoint's x**; its y stays depth. Retires the circle fit, the commit threshold and **the jump** | ✅ wired — ⚠ device pass owed |
+| `A13` | ⭐⭐⭐ **one touchpoint TRANSLATES; a second held STILL ROTATES**. Whichever finger moves acts; the other one's state picks the rule | ✅ wired — ⚠ device pass owed |
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅ built — ⚠ device pass owed |
 | `A10` | ⭐⭐ depth is a **still holder and a moving anchor**; rule 6's second touchpoint may be on the object | ✅ wired — ⚠ device pass owed |
 
