@@ -591,6 +591,19 @@ along the ground barely moves on screen when you are looking at it horizontally.
 Consistency with rule 6 holds at *every* camera elevation; tracking does not. **The trade is
 recorded rather than discovered.**
 
+⛔⛔ **AND A HAND RAISED IT TO 3.0 THE SAME DAY — the gap is the finding, not the number.**
+Depth is **visually foreshortened**: an object pushed along the ground covers world distance
+while its picture barely changes, so a world-consistent gain reads as *sluggish* even though
+it is, in metres, exactly as strong as a drag. ⭐ **Equal WORLD motion is not equal PERCEIVED
+motion**, and the eye is what is being served.
+
+⚠ The slider range was widened to **0.5–5** in the same breath — the owner wanted room
+*above* the old ceiling of 3, so 3.0 may not be where this settles.
+⛔ Four gains have now been raised by a hand from a derived or guessed value (×3.4, ×2.3,
+×2, and this ×3), and **this is the SECOND time a COMPUTED one has been moved** — the first
+was rule 6's phantom lead, cut to a fifteenth of its landmark. ⭐ *A computation tells you
+where a meaningful zero is; it does not tell you where a hand wants to stand.*
+
 ### What `IN2`'s roles become
 
 ⭐ The role A5 added is **renamed `SECOND`**, because it outlived the rule that prompted it:

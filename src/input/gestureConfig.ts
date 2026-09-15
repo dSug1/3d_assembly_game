@@ -526,9 +526,19 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // hand curves, so only a reversal would ever register at a near-180° threshold.
   rotateSwayTurnDeg: 60,
   gainTranslateAxis: 1,
-  // ⭐ A6: 1.0 moves the object as far into the scene as rule 6 would move it across —
-  // the same computed tracking factor, pointed along the ground instead of the screen.
-  gainTranslateDepth: 1,
+  // ⭐⭐ A6. **1.0 is the COMPUTED value** — it moves the object as far into the scene as
+  // rule 6 moves it across, from the same tracking factor pointed along the ground.
+  // ⛔⛔ THE SHIPPED DEFAULT IS 3.0, SET BY A HAND, AND THE GAP IS THE FINDING.
+  // Depth is VISUALLY FORESHORTENED: an object pushed along the ground covers world
+  // distance while its picture barely changes, so a world-consistent gain reads as
+  // sluggish even though it is, in metres, exactly as strong as a drag. ⭐ Equal WORLD
+  // motion is not equal PERCEIVED motion, and the eye is what is being served.
+  // ⚠ Four gains on this project have now been raised by a hand from a derived or guessed
+  // value (×3.4, ×2.3, ×2, and this ×3). ⛔ **A guessed number has been wrong every time;
+  // this is the second time a COMPUTED one has been moved too** — the first was rule 6's
+  // phantom lead, cut to a fifteenth of its landmark. A computation tells you where a
+  // meaningful zero is; it does not tell you where a hand wants to stand.
+  gainTranslateDepth: 3,
   // ⚠ Both placeholders. 6 mm of slack over 60 ms is a guess at how parallel a hand can
   // hold two fingers, and a guessed number has been wrong every time on this project.
   depthCommonToleranceMm: 6,

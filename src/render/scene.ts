@@ -859,7 +859,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // scene as rule 6 moves it ACROSS, for the same finger travel: one gain, one
         // computed tracking factor, two directions. ⛔ Not a metres-per-millimetre
         // constant — rule 6 proved that cannot serve both ends of a 20x zoom clamp.
-        tunable("depth gain (1 = as far as a drag)", "gainTranslateDepth", 0.25, 3, 0.05),
+        // ⛔⛔ THE DEFAULT IS 3.0, NOT THE COMPUTED 1.0 — set by a hand on 2026-09-15.
+        // Depth is visually foreshortened, so equal WORLD motion is not equal PERCEIVED
+        // motion, and the eye is what is being served. ⚠ The range was widened to 0.5–5
+        // in the same breath, which is itself a reading: the owner wanted room ABOVE the
+        // old ceiling of 3, so 3 may not be the end of the movement either.
+        tunable("depth gain (1 = as far as a drag)", "gainTranslateDepth", 0.5, 5, 0.05),
         // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
         // what baseline. ⛔ The tolerance is on the DIFFERENCE of the two travels: it is
         // what separates A6 from rule 6, whose anchor is deliberately still.
