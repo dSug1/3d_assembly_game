@@ -134,3 +134,52 @@ rule.
 * **No visible partner indicator.** §6 asks for a ring on the anchored object — `RND3`.
 * ⛔ **The gesture reaches a wall**, and sooner than feels natural — see the tight ceiling
   in `src/input/depth_pinch.ts`.
+
+---
+
+## 🔧 TUNED 2026-09-15 — the slider, the sway, and the ceiling made VISIBLE
+
+Owner, after the first device look at A5: *"the rest is OK."*
+
+* ⭐ **`gainPinchDepth` has a slider**, in **OBJECT TRANSLATION** as asked (0.25–3, step
+  0.05). ⚠ It is an EXPONENT on a ratio, not a multiplier on a distance, so the useful
+  range is narrow and centred on 1 — and 1 is the COMPUTED value, so the slider exists to
+  **disprove** it rather than to find it.
+* ⭐⭐ **The sympathetic sway now answers a push as well as a drag**, and it is the SAME
+  implementation: `nudgeOthersWorld` took the world direction out of `nudgeOthers`, which
+  now converts its screen heading and hands it over. ⛔ **No new slider** — amplitude,
+  softness, re-trigger and reference speed are the four the drag already uses, per the
+  owner's instruction. A second copy would let the scene lean one way for a drag and
+  another for a pinch.
+* ⭐⭐ **The trigger is `SwayWatcher` fed the FINGER SEPARATION**, and the units are why
+  that is a reuse rather than a hack: a separation is a pointer-space distance, so the
+  MEASURED `pointerNoiseMm` means the same thing to it. ⛔ A new detector would have needed
+  its own noise floor, and 0.761 mm was paid for once — it is not transferable by
+  assumption.
+
+### ⚠ "I can't see the object hitting any wall. Not sure about your ceiling."
+
+⭐⭐ **So the ceiling is now ON THE HUD** — `depth=1.42m [0.02–3.0]`, with `⛔MAX` or
+`⛔MIN` when it is actually pinned. ⛔ `METHOD`: *a claim a device cannot check is an
+assertion, not a finding*, and "there is a tight ceiling" was mine, unverified, from a
+vector rather than a hand.
+
+⚠ **If it never reads `⛔MAX` in ordinary use, the warning in `depth_pinch.ts` is the thing
+to correct**, not the ceiling. The reading settles it either way, which is the point.
+
+### ⛔ A REAL LIMITATION, REPORTED BY FINGER — a small object cannot be pinched
+
+> *"When the object is small, it is not possible to pinch it out to send it backwards
+> because two fingers cannot sit on the small object."*
+
+⚠ **This is a genuine hole in A5, not a tuning matter**, and it gets worse exactly where it
+hurts: the further away a part is, the smaller it is on screen, and pushing it further away
+is the gesture that shrinks the target for its own next use. ⭐ A gesture that destroys its
+own affordance as it succeeds.
+
+⛔ **NOTHING IS BUILT FOR THIS, on the owner's instruction — a proposal is owed.** The owner
+named a direction: *"we will need to fix this by using the touch and pinch on two objects
+(provided a second object is visible on the screen)"*, which is the configuration §4 rule
+**6ter** already occupies. ⚠ That is recorded as the owner's thought, **not** as a design:
+whether the fix is 6ter, a minimum touch target, or something else is the proposal that has
+not been made yet.

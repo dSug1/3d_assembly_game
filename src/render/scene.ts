@@ -56,6 +56,7 @@ import {
   screenTranslation,
   advanceFollow,
   depthPinchLimits,
+  depthPushDirection,
   depthPinchPosition,
   depthPinchTracker,
   displayPose,
@@ -677,6 +678,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms  ${lift}`;
   };
 
+  /**
+   * How deep the pinched object is, against the bounds A5 derives.
+   *
+   * ⭐⭐ PRINTED BECAUSE A CLAIM A DEVICE CANNOT CHECK IS AN ASSERTION, NOT A FINDING.
+   * The owner looked for the ceiling and could not see it; rather than argue about whether
+   * it binds, the number and its limits go on the glass and say so themselves. ⛔ If it
+   * never reaches `⛔MAX`, the note warning about a tight ceiling is the thing to correct.
+   * ⚠ Empty when nothing is being pinched — a readout that invents a number is worse than
+   * a blank one.
+   */
+  const depthReadout = (): string => {
+    for (const [mesh, state] of depthPinches) {
+      const push = depthPushDirection(state.viewAxis, WORLD_DOWN);
+      const mp = modelPose(mesh);
+      if (!push || !mp) continue;
+      const c = asVec3(camera.position);
+      const r: Vec3 = [mp.position[0] - c[0], mp.position[1] - c[1], mp.position[2] - c[2]];
+      const d = r[0] * push[0] + r[1] * push[1] + r[2] * push[2];
+      const { minM, maxM } = depthPinchLimits(cfg);
+      const at = d <= minM + 1e-4 ? "  ⛔MIN" : d >= maxM - 1e-4 ? "  ⛔MAX" : "";
+      return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at}`;
+    }
+    return "";
+  };
+
   const paint = () => {
     const first = held.get(router.objects()[0]?.id ?? -1);
     hud.update({
@@ -698,7 +724,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         `${centreBlend.isBlending ? `→${(centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
         `r=${camera.radius.toFixed(3)}m zoom=${zoom.toFixed(2)} ` +
         `elev=${orbit.elevation.toFixed(2)}${orbit.atLimit ? "⛔LIMIT" : ""}` +
-        `${pinch.isZooming ? "  ZOOMING" : ""}`,
+        `${pinch.isZooming ? "  ZOOMING" : ""}` +
+        depthReadout(),
       tuning: tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
       tuningRejected: tuning.rejected,
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
@@ -823,6 +850,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("phantom lead (ms)", "translateLeadMs", 0, 1.5, 0.1),
         // ⭐ The sympathetic sway: how far the OTHER objects drift when this one sets
         // off, and how lazily they spring back. ⛔ 0 mm disables it exactly.
+        // ⭐⭐ AMENDMENT A5's DEPTH PINCH. 1.0 is the COMPUTED value: apparent size goes
+        // as 1/distance, so scaling the horizontal depth by the inverse separation ratio
+        // keeps the object under the two fingers. ⛔ The SECOND gain on this project with a
+        // right answer rather than a taste, and the slider is here so a finger can
+        // DISPROVE it — not because the number is unknown.
+        // ⚠ It is an EXPONENT on a ratio, not a multiplier on a distance, so the useful
+        // range is narrow and centred on 1. See input/depth_pinch.ts.
+        tunable("depth pinch gain (1 = under fingers)", "gainPinchDepth", 0.25, 3, 0.05),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
         // ⭐ How far the drag must swing before the scene reacts again, and the drag
@@ -888,34 +923,51 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the axes LATCHED AT PRESS — the same frame the translation itself uses, so the scene
    * cannot lean one way while the object goes another.
    */
-  const nudgeOthers = (grip: Held, kick: SwayKick): void => {
+  /**
+   * ⭐ The sympathetic sway, given a WORLD direction the held object set off in.
+   *
+   * ⛔ Split out of `nudgeOthers` when amendment A5's depth pinch needed the same
+   * reaction. The pinch already knows its world direction and has no screen heading to
+   * convert, so the conversion moved OUT and the reaction stayed put. ⚠ One
+   * implementation: a second copy would let the scene lean one way for a drag and another
+   * for a pinch, which is the drift `CONSTRAINTS` §4 exists to stop.
+   * ⭐ It reads the SAME four tunables the drag's sway does — amplitude, softness,
+   * re-trigger and reference speed — so no new slider appears for a second cause.
+   */
+  const nudgeOthersWorld = (heldMesh: AbstractMesh, dir: Vec3, speedMmPerS: number): void => {
     const perPx = trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight);
-    // ⭐ Amplitude × how fast the object set off. Slow drag, small and slow sway; fast
-    // drag, bigger AND quicker — it still peaks at `translateSwayTauMs`, so a larger
-    // excursion covers that ground faster. See `swayScale`, which clamps the ratio.
-    const scale = swayScale(kick.speedMmPerS, cfg.swayReferenceSpeedMmPerS);
+    // ⭐ Amplitude × how fast the object set off. Slow, small and slow; fast, bigger AND
+    // quicker — it still peaks at the same time constant, so a larger excursion covers
+    // that ground faster. See `swayScale`, which clamps the ratio.
+    const scale = swayScale(speedMmPerS, cfg.swayReferenceSpeedMmPerS);
     const peakM = mmToPx(cfg.translateSwayMm) * perPx * scale;
     const impulse = impulseForPeak(peakM, cfg.translateSwayTauMs / 1000);
     if (!(impulse > 0)) return;
-
-    // ⭐ THE SAME way the held object set off, as a world vector — the mapping and the
-    // sign both live in `swayWorldDirection`, which is also where a depth component goes
-    // when 6bis/6ter start translating out of the view plane.
-    // ⚠ Through the axes LATCHED AT PRESS, the same frame the translation itself uses,
-    // so the scene cannot lean one way while the object goes another.
-    const dir = new Vector3(...swayWorldDirection(grip.frame, kick.dirX, kick.dirY));
 
     for (const mesh of scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
       // marker cannot sway — a readout that moved with the scene would be describing
       // itself. And the held object is excluded: it is already going that way.
       if (mesh.metadata?.orbitCandidate !== true) continue;
-      if (mesh === grip.mesh) continue;
+      if (mesh === heldMesh) continue;
       const f = followerFor(mesh);
-      f.swayX = { x: f.swayX.x, v: f.swayX.v + dir.x * impulse };
-      f.swayY = { x: f.swayY.x, v: f.swayY.v + dir.y * impulse };
-      f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir.z * impulse };
+      f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
+      f.swayY = { x: f.swayY.x, v: f.swayY.v + dir[1] * impulse };
+      f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir[2] * impulse };
     }
+  };
+
+  /**
+   * Rule 6's drag: convert the screen heading to a world one and hand it over.
+   * ⚠ Through the axes LATCHED AT PRESS, the same frame the translation itself uses, so
+   * the scene cannot lean one way while the object goes another.
+   */
+  const nudgeOthers = (grip: Held, kick: SwayKick): void => {
+    nudgeOthersWorld(
+      grip.mesh,
+      swayWorldDirection(grip.frame, kick.dirX, kick.dirY),
+      kick.speedMmPerS,
+    );
   };
 
   /**
@@ -964,6 +1016,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     readonly tracker: PinchTracker;
     readonly startPosition: Vec3;
     readonly viewAxis: Vec3;
+    /**
+     * ⭐⭐ THE SWAY TRIGGER, FED THE FINGER SEPARATION — and the UNITS are why this is a
+     * reuse rather than a hack. `SwayWatcher` asks *"has the heading changed, over a
+     * stated window, by more than the MEASURED pointer noise?"* A separation between two
+     * touchpoints is a pointer-space distance in exactly those units, so
+     * `pointerNoiseMm` means the same thing to it. ⚠ Fed as a 1-D sample
+     * (x = separation, y = 0): closing is one heading, opening is the other.
+     * ⛔ A second detector here would need its own noise floor, and nothing has measured
+     * one — 0.761 mm was paid for once, and it is not transferable by assumption.
+     */
+    readonly sway: SwayWatcher;
   }
   const depthPinches = new Map<AbstractMesh, DepthPinch>();
 
@@ -1000,6 +1063,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       ),
       orientation: mp.orientation,
     });
+
+    // ⭐ THE SCENE REACTS TO A PUSH TOO. The others drift the way the pushed object went
+    // and spring back — the same amplitude, softness, re-trigger and reference speed the
+    // drag uses, because it is the same decoration answering the same question. ⛔ No new
+    // slider for a second cause.
+    // ⚠ SIGN: separation CLOSING means the object goes AWAY, which is +push.
+    const separationPx = Math.hypot(
+      holder.last.x - partner.last.x,
+      holder.last.y - partner.last.y,
+    );
+    const kick = state.sway.push({ x: separationPx, y: 0, t: partner.last.t }, true, true);
+    if (kick) {
+      const push = depthPushDirection(state.viewAxis, WORLD_DOWN);
+      if (push) {
+        const away = kick.dirX < 0 ? 1 : -1;
+        nudgeOthersWorld(mesh, [push[0] * away, push[1] * away, push[2] * away], kick.speedMmPerS);
+      }
+    }
     return true;
   };
 
@@ -1066,6 +1147,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             tracker,
             startPosition: requirePose(mesh).position,
             viewAxis: screenFrame().viewAxis,
+            sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
           });
         }
         paint();
