@@ -52,3 +52,27 @@ The **count**. Three or more touchpoints on one object follow the same rule by
 construction (every hit after the first on an already-held object is ignored), but
 nothing has been measured about palm contact, which is the realistic source of a third
 point. ⚠ `IN5`'s territory, and only observable on glass.
+
+---
+
+## ⚠ SUPERSEDED 2026-09-15 — the second touchpoint now PARTICIPATES (`D16`, amendment A5)
+
+⛔ **`D10`'s "ignore the second hit" is obsolete.** Two touchpoints on the same object are a
+**depth pinch**: pinch in to push the object away, pinch out to bring it closer.
+
+⭐ **Reading 2 was recorded here as *deferred, not rejected*, and this is that re-opening** —
+though it did not arrive the way this dossier expected. Reading 2 was *a rotation axis
+between the fingers*; what a hand actually reached for was depth.
+
+⚠ **The accepted behaviour goes with the decision.** *"Lift the holding finger with a second
+finger still on the same part and the part stops responding"* was judged on the glass and
+accepted — as the least-bad consequence of ignoring the second hit. ⭐ A5 removes the dead
+end rather than accepting it: the configuration now means something, and lifting one finger
+returns to one-touchpoint rotation.
+
+⛔ **What `IN2` must change.** `IGNORED` survives, but its trigger moves: the **second**
+touchpoint on an object participates, the **third and beyond** are ignored. `activeCount`
+and the 22 router vectors are written against the old rule.
+
+⭐ Full reasoning, the computed gain, and what was deliberately left undecided:
+[`../../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../../10_INPUT_TOUCH/AMENDMENTS_R5.md) A5.

@@ -376,3 +376,88 @@ not a simulation's.
 path, so it is a different input entirely and not a safe prior-art anchor for this. ⭐ The
 metaphor is old; **this gesture is not attested anywhere found.** Registered in
 [`PROVENANCE.md`](PROVENANCE.md).
+
+---
+
+## A5 — ⭐⭐ TWO TOUCHPOINTS ON THE SAME OBJECT ARE A **DEPTH PINCH** *(owner, 2026-09-15)*
+
+**Supersedes `D10`** (`IN8`, 2026-09-14: *ignore the second touchpoint*) and closes §5's
+*"two touchpoints on the same object — currently undefined and reachable"*.
+
+> **Two fingers on one object, pinching, move THAT OBJECT in depth** — pinch in to push it
+> away, pinch out to bring it closer. One finger on each of two objects is §4 rule **6ter**,
+> already specified.
+
+### ⭐⭐ It came from a hand, not from a document
+
+The `3D1` device pass carried a watch item asking whether a hand gets depth by ORBITING or
+by PUSHING with rule 6's anchor finger. ⛔ It did neither:
+
+> *"Depth obtained by two fingers touchpoint on one object or two objects and pinch movement
+> to zoom the one or two objects out."*
+
+⭐ **A fourth outcome the question did not offer** — which is the argument for watch items
+over A/Bs: an A/B can only return one of the options you thought of. §3.2 **DS3 is declined**
+as a result; giving the anchor finger a depth channel is not what a hand reaches for.
+
+### Why it is a strong rule and not merely a preference
+
+1. ⭐⭐ **The metaphor already transfers.** Pinching the camera out makes everything smaller;
+   pushing an object away makes *it* smaller. The visual result is nearly identical, so
+   there is nothing to learn — it is the gesture the user already has for *"put this further
+   away"*.
+2. ⭐ **No new discriminator.** §4 already branches on *did the touchpoints hit an object*.
+   Pinch on nothing zooms the camera (rule 4); pinch on an object moves the object. Same
+   test, one more branch.
+3. ⭐ **It removes a dead end.** `D10`'s accepted consequence was that lifting the holding
+   finger with a second still on the part left the part **unresponsive**. Under A5 the
+   configuration means something, and lifting one finger simply returns to one-touchpoint
+   rotation.
+4. ⭐ **The two-object half is already §4 rule 6ter**, which the spec flagged as *"the
+   hardest case to control"* and offered to drop if it measured poorly. **A hand reached for
+   it unprompted, before it was built.**
+
+### ⛔⛔ THE GAIN IS COMPUTABLE — compute it BEFORE writing it
+
+Apparent size goes as `1/distance`, so keeping the object under the two fingers fixes the
+mapping exactly: **the object's distance from the camera scales by the INVERSE of the finger
+separation ratio.**
+
+```
+  distance' = distance × (separation₀ / separation₁)
+```
+
+⭐ This is rule 6's lesson applied before the fact rather than after: `gainPinchDepth` is a
+**multiplier on a computed factor, and 1.0 is the correct value, not a preferred one**. ⛔ Do
+not tune a metres-per-millimetre constant here — it cannot serve both ends of a 20× zoom
+clamp, which is exactly what rule 6 proved.
+
+⚠ **It is a RATIO, not a difference**, so it is scale-free and needs no reference distance.
+
+### What `IN2`'s role latch must become
+
+⛔ `IGNORED` does not disappear — its trigger moves. The **second** touchpoint on an object
+now PARTICIPATES; the **third and beyond** are still ignored. §4's `activeCount` and the 22
+router vectors are written against the old rule and must be revisited with it.
+
+### ⚠ Deliberately NOT decided here
+
+* **Does the pinch also translate in the screen plane** when its centroid moves, or is that
+  rule 6's job alone? The owner specified depth. ⭐ Leaving it out is the smaller rule and
+  the easier one to add later; guessing it in would be a second meaning nobody asked for.
+* **What it does to a MATED object**, whose depth may be constrained. `3D2`/`3D3`.
+
+### No collision with anything built
+
+Rule 4 needs both touchpoints on **nothing**; rule 6 needs exactly **one** outside; the
+eviction shake (A4) is gated on `activeCount === 1`; every §2 rule is one touchpoint. Two on
+one object is disjoint from all of them.
+
+### ⚠ Provenance — the closest this project has come to the litigated ground
+
+⛔ The catalogue's caution zone names **Apple's pinch/scroll family** specifically. A pinch
+that moves an object in DEPTH is not that claim — and the nearest published relatives,
+Z-technique (3DUI 2010) and DS3 (TVCG 2012), separate depth onto a *second finger's relative
+motion*, not a pinch. ⭐ But it is the nearest approach so far, so it is tagged ⚠ **NOVEL
+COMPOSITE** and marked for `SEC4` **at the moment of adoption**, which is the whole point of
+the discipline.

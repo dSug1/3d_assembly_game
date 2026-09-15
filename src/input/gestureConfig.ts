@@ -350,6 +350,16 @@ export interface GestureConfig {
    * mapping: fingers twice as far apart halve the camera radius.
    */
   gainZoom: number;
+
+  /**
+   * Amendment A5 (`D16`) — the exponent for a DEPTH PINCH on an object.
+   * ⭐⭐ COMPUTED, NOT GUESSED: apparent size goes as 1/distance, so keeping the object
+   * under the two fingers makes the distance scale by the inverse separation ratio —
+   * **1.0 is the CORRECT value, not a preferred one**, the second gain on this project
+   * with a right answer rather than a taste. ⚠ The slider exists so a hand can DISPROVE
+   * that, not because the number is unknown.
+   */
+  gainPinchDepth: number;
   /**
    * Metres. ⛔⛔ THE NEAR-PLANE FLOOR, AND IT IS LOAD-BEARING. `render/scene.ts` sets
    * the camera's `minZ` to 0.01 m because Babylon's default of 1 put this
@@ -629,6 +639,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // finger, since tunables override from the URL (`?pinchDeadband=1`).
   pinchDeadband: 2,
   gainZoom: 1,
+  // ⭐ 1.0 = the object stays exactly under the two fingers. See A5.
+  gainPinchDepth: 1,
   // ⛔ 0.15 m is 15x the camera's 0.01 m near plane. See the field comment.
   cameraRadiusMinM: 0.15,
   cameraRadiusMaxM: 3,
