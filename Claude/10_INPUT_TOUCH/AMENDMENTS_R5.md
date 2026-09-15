@@ -627,3 +627,85 @@ was meant.
 Everything geometric: horizontal depth, height preserved by construction, the across-view
 offset untouched, both clamps derived, and the sympathetic sway answering a push through
 the same implementation and the same four tunables.
+
+---
+
+## A7 — ⭐⭐ EVERY OBJECT GESTURE STANDS ON A **GRAVITY FRAME** *(owner, 2026-09-15)*
+
+**Supersedes** §2 rule 2bis's *"yaw and pitch along the vertical and horizontal axes of the
+screen view plane"*, 2quinte's roll *"on the screen view plane"*, and §4 rule 6's
+*"translates in x and y in the screen view plane"*.
+
+> Object gestures are expressed in one world basis, not in the camera's:
+>
+> | finger | translates along | rotates about |
+> |---|---|---|
+> | **delta x** | `right` — horizontal, across the screen | `up` — **yaw about gravity** |
+> | **delta y** | `up` — **the world vertical** | `right` — pitch |
+> | **delta y, BOTH fingers** (A6) | `depth` — horizontal, into the scene | — |
+> | **a circle** (2quinte) | — | `depth` — **roll about horizontal depth** |
+
+### ⭐ Two of the four changes were already true
+
+**Pitch is already about the screen-x axis**, and **translation's dx is already
+horizontal** — because the camera carries no roll, so its right is `worldUp × forward`,
+which is horizontal at every elevation. ⭐ That is asserted, not assumed: the whole basis
+rests on it.
+
+**The real changes are YAW** (camera-up → gravity) **and ROLL** (view axis → horizontal
+depth), plus **translation's dy** (camera-up → the world vertical).
+
+### ⛔⛔ THE ARGUMENT IS ORTHOGONALITY, NOT TIDINESS
+
+Before A7 an object yawed about the CAMERA's up and rolled about the CAMERA's view axis.
+⚠ Tilt the camera and the view axis acquires a vertical component — so **roll stops being
+independent of yaw about the world vertical**, the two gestures partly do the same thing,
+and the overlap grows with the tilt. At the top ring the roll axis is more than 0.9 aligned
+with the vertical. ⛔ **There is no gain that fixes that; it is a basis that is not a
+basis**, and a vector asserts the overlap directly.
+
+⭐⭐ A7's three axes are **orthonormal at every camera elevation**, and the same basis
+serves translation AND rotation: *the axis you push along is the axis you can turn about.*
+A hand learns one frame instead of two, and it is the frame the world is built in — §2 rule
+2ter anchors a face to gravity and parts are assembled on a working plane, so gravity is
+what the user is already reasoning about.
+
+### ⚠ What it costs
+
+1. **Vertical translation goes quiet looking straight down** — gravity projects to a point,
+   so a finger moving up and down moves the object toward and away from the camera,
+   invisibly. ⭐ `verticalVisibility` publishes the factor (1 level → 0 overhead) so the
+   weakening is measurable rather than reported as *"it stopped working"*.
+2. **The gesture frame does not exist** at exactly that pose, and `requireGestureFrame`
+   **throws** rather than guessing. ⚠ Unreachable by construction — the orbit surface clamps
+   elevation to its rings and never reaches a pole.
+3. ⚠ **The roll LOOKS different when the camera is tilted — the gesture does not.**
+   ⛔ My first statement of this was wrong and the owner corrected it: *"we do not project
+   the delta position so the input is still a circular movement, we only modify the axis of
+   rotation."* Exactly so. `degClockwise` is a signed angle about a fitted centre, a pure
+   screen-space measurement, so the circle is no harder to sweep and the amount of rotation
+   is identical. What changes is the picture: the object's points turn in planes
+   perpendicular to `depth`, which project to **ellipses squashed by `cos(elevation)`** —
+   100% level, ~71% at 45°, ~31% at the top ring.
+   ⭐⭐ **And it buys reproducibility**: roll 90°, orbit, roll 90° again — about the view
+   axis those are two DIFFERENT world rotations; about `depth` they are the same one. For
+   getting a part into a specific orientation that is worth more than screen fidelity.
+
+⭐ Costs 1 and 2 are the *"goes quiet before it fails"* shape for the **third and fourth**
+time (after A3's handover and A6's depth). ⚠ It is a pattern now, not a coincidence:
+**every rule referenced to a world axis weakens as the camera lines up with that axis.**
+Expect it in the next one, and publish the factor rather than waiting for a report.
+
+### ⛔ Two frames, two purposes
+
+`GravityFrame` is **not** interchangeable with `ScreenFrame`. A3's handover asks for the
+angle between the **TRUE** view axis and a constraint axis, and a flattened one would answer
+a different question. ⚠ The split is deliberate and the types are distinct so it cannot be
+undone by accident.
+
+### ⛔ A sign, caught by its own assertion
+
+`right` was first built as `depth × up` and came out **negated** — every horizontal drag
+would have run backwards. ⭐ The vector that compares it against the camera's own right
+caught it immediately. *A sign is not tested by any amount of testing the magnitude*, and
+that is the fifth time on this project.

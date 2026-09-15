@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**436 golden vectors, all passing** (37 → 436).
+**448 golden vectors, all passing** (37 → 448).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -65,7 +65,13 @@ roll channel back to a real control, left the roll too — it is a **quick BACK-
 one touchpoint, ≥2 reversals in a window, reusing the sway's MEASURED reversal detector.
 ⛔ The flick test must be skipped once one reversal is seen, or an abandoned shake ADDS a
 constraint instead of removing one. ⭐ **A1 §4 (`D13`)**: eviction **spares `MATE` entries** — *one gesture, one
-intention*. ⭐ **A2**: the scene holds THREE objects, not two. ⭐⭐ **A6 (`D17`)**: **depth is a COMMON VERTICAL DRAG** — one finger on the object, one
+intention*. ⭐ **A2**: the scene holds THREE objects, not two. ⭐⭐ **A7 (`D18`)**: **every object gesture stands on a GRAVITY FRAME** —
+yaw about the world vertical, pitch about the horizontal screen-x, roll and depth about the
+flattened view direction, and translation's dy is a true vertical. ⛔ The argument is
+**orthogonality**: about the camera's axes, roll stops being independent of yaw as the
+camera tilts, and no gain fixes a basis that is not a basis. ⭐ One basis for translation
+AND rotation.
+⭐⭐ **A6 (`D17`)**: **depth is a COMMON VERTICAL DRAG** — one finger on the object, one
 ANYWHERE, both travelling in y together. ⛔ It replaced A5’s pinch because a hand found the
 hole: two fingers will not fit on a SMALL object, and pushing a part away shrinks it, so the
 pinch **destroyed its own affordance as it succeeded**. ⭐⭐ It shares rule 6’s configuration:

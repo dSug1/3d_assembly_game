@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-15) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **436 golden vectors,
-all passing** (37 → 436). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **448 golden vectors,
+all passing** (37 → 448). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 

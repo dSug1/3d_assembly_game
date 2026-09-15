@@ -6,7 +6,7 @@
 > build status of each
 > **READ IF** · you are building or changing anything a finger touches
 > **SOURCED FROM** · the owner's `input-system-v5.md`, supplied 2026-09-13
-> **LAST VERIFIED** · 2026-09-15, against 436 passing vectors
+> **LAST VERIFIED** · 2026-09-15, against 448 passing vectors
 
 ⛔⛔ **THE OWNER'S REVISION-5 TEXT IS REPRODUCED IN FULL AND UNALTERED**, apart from
 repairing mojibake from the original file's encoding (`â` → `—`, `Â§` → `§`). Not one of
@@ -112,13 +112,14 @@ reached its 800-line cap. `METHOD`: *when two sections conflict, the later one w
 | **A2** | §0's *"two objects"* | the scene holds **three** |
 | **A5** | `D10`, and §5's *"two touchpoints on the same object — undefined and reachable"* | two fingers on ONE object are a **depth pinch**, and ⛔ *depth is HORIZONTAL* — the view axis flattened onto the ground plane, so **the object's height never changes**. The gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD touchpoint |
 | **A6** | A5's trigger | depth is a **COMMON VERTICAL DRAG** — one finger on the object, one ANYWHERE, both travelling in y together. ⛔ It shares rule 6's configuration: **common mode is depth, differential mode is rule 6** |
+| **A7** | 2bis, 2quinte and rule 6's *"screen view plane"* | every object gesture stands on a **GRAVITY FRAME** — yaw about the vertical, pitch about the horizontal screen-x, roll and depth about the flattened view direction. ⛔ The argument is **orthogonality**: about the camera's axes, roll stops being independent of yaw as the camera tilts |
 | **A3** | 2quinte's *"on a constrained object the circular gesture is ignored"* **and** 2sexte's undefined behaviour when its axis projects to a point | ⛔ roll **DRIVES the free DOF** of an anchored object, about the CONSTRAINT axis; **2sexte suppresses** where it is degenerate. **ONE handover constant with hysteresis**, latched at press |
 
 ---
 
 # THE SPECIFICATION — the owner's text, unaltered
 
-⚠ **Seven clauses below are SUPERSEDED** — see the amendment table above: §1.4 / 2septies'
+⚠ **Ten clauses below are SUPERSEDED** — see the amendment table above: §1.4 / 2septies'
 double-tap eviction (eviction is now a quick **back-and-forth**), §1.4's *"clears its
 constraint stack"* where a `MATE` is concerned (eviction spares mates), 2quinte's ban on
 roll for a constrained object (roll DRIVES its free DOF, and 2sexte suppresses where it

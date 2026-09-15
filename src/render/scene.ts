@@ -56,8 +56,9 @@ import {
   screenTranslation,
   advanceFollow,
   CommonDragDetector,
+  gravityFrame,
+  type GravityFrame,
   depthLimits,
-  depthPushDirection,
   depthTranslate,
   displayPose,
   exponentialSmooth,
@@ -279,7 +280,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   interface Held {
     rec: Recognizer<DiagnosticPose>;
     mesh: AbstractMesh;
-    frame: ScreenFrame;
+    /**
+     * ⭐⭐ AMENDMENT A7 — the GRAVITY frame, latched at press. Yaw about the world
+     * vertical, pitch about the camera's (always horizontal) right, roll and depth about
+     * the view direction flattened onto the ground.
+     * ⛔ NOT the camera's own axes: with a tilted camera the view axis has a vertical
+     * component, so rolling about it partly duplicates yawing and the two gestures
+     * interfere. ⚠ `screenFrame()` still exists for A3's handover, which needs the TRUE
+     * view axis — two frames, two purposes.
+     */
+    frame: GravityFrame;
     /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
     prev: Sample;
     lastRollDeg: number;
@@ -665,6 +675,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * frame: rule 1's camera orbit must not silently redefine the axes half-way
    * through a gesture. Same lesson as §1.4's `WORLD_AXIS_ALIGN`.
    */
+  /**
+   * The gesture basis (A7). ⛔ Throws rather than guessing if the camera ever looks exactly
+   * along gravity: there is no horizontal heading to call "depth" there, and every
+   * direction across the screen would be equally entitled to the name.
+   * ⭐ Unreachable by construction — §2 rule 1's orbit surface clamps the elevation to its
+   * rings and never reaches a pole — and `requirePose`'s reasoning applies: a guard that
+   * turns a broken state into silence is worse than a failure.
+   */
+  const requireGestureFrame = (): GravityFrame => {
+    const g = gravityFrame(screenFrame().viewAxis, WORLD_DOWN);
+    if (!g) {
+      throw new Error(
+        "the camera is looking exactly along gravity, so there is no gesture frame. " +
+          "The orbit surface is supposed to make this unreachable — see A7.",
+      );
+    }
+    return g;
+  };
+
   const screenFrame = (): ScreenFrame => ({
     right: asVec3(camera.getDirection(Vector3.Right())),
     up: asVec3(camera.getDirection(Vector3.Up())),
@@ -695,9 +724,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const depthReadout = (): string => {
     for (const grip of held.values()) {
-      const push = depthPushDirection(grip.frame.viewAxis, WORLD_DOWN);
+      const push = grip.frame.depth;
       const mp = modelPose(grip.mesh);
-      if (!push || !mp) continue;
+      if (!mp) continue;
       const c = asVec3(camera.position);
       const r: Vec3 = [mp.position[0] - c[0], mp.position[1] - c[1], mp.position[2] - c[2]];
       const d = r[0] * push[0] + r[1] * push[1] + r[2] * push[2];
@@ -1053,7 +1082,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       position: depthTranslate(
         asVec3(camera.position),
         mp.position,
-        grip.frame.viewAxis,
+        // ⭐ Already horizontal: A7's frame flattened it at press. Passed through
+        // `depthTranslate`'s own projection, which is a no-op on it.
+        grip.frame.depth,
         WORLD_DOWN,
         dyPx / 2,
         // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object
@@ -1085,8 +1116,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ SIGN: fingers moving UP (negative screen y) push the object AWAY, which is +push.
     const kick = grip.depthSway.push({ x: 0, y: holderY, t }, true, true);
     if (kick) {
-      const push = depthPushDirection(grip.frame.viewAxis, WORLD_DOWN);
-      if (push) {
+      const push = grip.frame.depth;
+      {
         const away = kick.dirY < 0 ? 1 : -1;
         nudgeOthersWorld(grip.mesh, [push[0] * away, push[1] * away, push[2] * away], kick.speedMmPerS);
       }
@@ -1195,7 +1226,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       held.set(e.pointerId, {
         rec,
         mesh,
-        frame: screenFrame(),
+        frame: requireGestureFrame(),
         prev: s,
         lastRollDeg: 0,
         mode: null,

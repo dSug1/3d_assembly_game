@@ -25,7 +25,7 @@
  */
 import { canon, qconj, qmul, type Quat, type Vec3 } from "../core/vec";
 import { pxToMm } from "../core/units";
-import type { ScreenFrame } from "./screen_rotate";
+import type { GravityFrame } from "./gravity_frame";
 import type { Sample } from "./motion";
 
 /**
@@ -113,15 +113,15 @@ export function swayScale(speedMmPerS: number, referenceMmPerS: number): number 
  *   in depth gets the right answer by passing it, instead of silently getting a wrong one.
  */
 export function swayWorldDirection(
-  frame: ScreenFrame,
+  frame: GravityFrame,
   dirX: number,
   dirY: number,
   depth = 0,
 ): Vec3 {
   const v: Vec3 = [
-    frame.right[0] * dirX - frame.up[0] * dirY + frame.viewAxis[0] * depth,
-    frame.right[1] * dirX - frame.up[1] * dirY + frame.viewAxis[1] * depth,
-    frame.right[2] * dirX - frame.up[2] * dirY + frame.viewAxis[2] * depth,
+    frame.right[0] * dirX - frame.up[0] * dirY + frame.depth[0] * depth,
+    frame.right[1] * dirX - frame.up[1] * dirY + frame.depth[1] * depth,
+    frame.right[2] * dirX - frame.up[2] * dirY + frame.depth[2] * depth,
   ];
   const len = Math.hypot(v[0], v[1], v[2]);
   // ⚠ No direction in a zero vector. A zero back, never a normalise-by-zero: one NaN

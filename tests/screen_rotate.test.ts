@@ -15,14 +15,17 @@ import { IDENTITY, qRotate, qmul, qconj, qFromAxisAngle, type Vec3 } from "../sr
 import {
   screenPlaneRotation,
   screenRollRotation,
-  type ScreenFrame,
 } from "../src/input/screen_rotate";
+import type { GravityFrame } from "../src/input/gravity_frame";
 
 /** A camera looking along +z, screen x right, screen y up in world terms. */
-const FRAME: ScreenFrame = {
+const FRAME: GravityFrame = {
   right: [1, 0, 0],
   up: [0, 1, 0],
-  viewAxis: [0, 0, 1], // ⚠ away from the viewer, into the screen
+  // ⚠ A7: this is the gravity frame's DEPTH — the view direction flattened onto the
+  // ground. ⭐ At a LEVEL camera it equals the view axis, which is why these vectors and
+  // the signs they pin are unchanged by the amendment.
+  depth: [0, 0, 1],
 };
 
 /** The point of the object facing the viewer. Where it goes is the whole assertion. */
