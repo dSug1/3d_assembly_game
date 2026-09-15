@@ -55,6 +55,7 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
+  displayPose,
   exponentialSmooth,
   phantomTarget,
   neutralLeadSec,
@@ -78,7 +79,9 @@ import {
   type Sample,
   type ScreenFrame,
 } from "../input";
-import { qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "../core/vec";
+// ⭐ The quaternion arithmetic left this file with the composition it belonged to —
+// `input/display_pose.ts`, where it can be vectored. What stays is the plain types.
+import type { Quat, Vec3 } from "../core/vec";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
 import { validateGestureConfig } from "../input/gestureConfig";
@@ -1205,37 +1208,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       f.swayRotZ = advanceFollow(f.swayRotZ, 0, swayTau, 1, dtSec);
 
       // ⭐ The block's swing, as a rotation about the pivot. ⛔ RIGID: the object both
-      // ORBITS the pivot and SPINS on its own by the same angle. Orbiting alone would
-      // shear the group — things sliding past one another rather than one scene moving.
-      const rot: Vec3 = [f.swayRotX.x, f.swayRotY.x, f.swayRotZ.x];
-      const rotAngle = Math.hypot(rot[0], rot[1], rot[2]);
-      let ox = 0;
-      let oy = 0;
-      let oz = 0;
-      if (rotAngle > 1e-9) {
-        const swayQ = qFromAxisAngle(rot, rotAngle);
-        const rel: Vec3 = [
-          f.x.x - f.swayPivot.x,
-          f.y.x - f.swayPivot.y,
-          f.z.x - f.swayPivot.z,
-        ];
-        const spun = qRotate(swayQ, rel);
-        // The ORBITAL part is the displacement the rotation causes, added like any other
-        // offset — so it composes with the translational sway instead of fighting it.
-        ox = spun[0] - rel[0];
-        oy = spun[1] - rel[1];
-        oz = spun[2] - rel[2];
-        writePose(mesh, qmul(swayQ, f.qHome));
-      } else if (!heldMeshes.has(mesh)) {
-        // ⚠ Written back even at rest: otherwise the last swayed pose would stick.
-        writePose(mesh, f.qHome);
-      }
+      // ⭐⭐ THE WHOLE CHAIN, IN ONE EXPRESSION, AND IT LIVES OUTSIDE THIS FILE.
+      // `displayPose` is `SWAY ∘ FOLLOW ∘ model` — engine-free, pure, and vectored in
+      // `tests/display_pose.test.ts`, including the RIGIDITY property this loop used to
+      // claim in a comment and test nowhere: the block both ORBITS the pivot and SPINS by
+      // the same angle, because orbiting alone shears the group and spinning alone leaves
+      // it turning on the spot. ⛔ `QUEUE.md` names *a composition nobody computed* as the
+      // mistake this project keeps making; three writers meeting in a render loop is
+      // exactly that shape, so the composition was moved somewhere it could be checked.
+      const pose = displayPose([f.x.x, f.y.x, f.z.x], f.qHome, {
+        translation: [f.swayX.x, f.swayY.x, f.swayZ.x],
+        rotationVector: [f.swayRotX.x, f.swayRotY.x, f.swayRotZ.x],
+        pivot: [f.swayPivot.x, f.swayPivot.y, f.swayPivot.z],
+      });
 
-      mesh.position.set(
-        f.x.x + f.swayX.x + ox,
-        f.y.x + f.swayY.x + oy,
-        f.z.x + f.swayZ.x + oz,
-      );
+      // ⚠ A mesh under a finger owns its own ORIENTATION this frame — the rotation rule
+      // writes it directly — so it is only written back here when the sway has something
+      // to say, or when nothing is holding it. ⛔ Written back even at rest in that second
+      // case, or the last swayed pose would stick.
+      const swaying = Math.hypot(f.swayRotX.x, f.swayRotY.x, f.swayRotZ.x) > 1e-9;
+      if (swaying || !heldMeshes.has(mesh)) writePose(mesh, pose.orientation);
+
+      mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
     }
 
     scene.render();
