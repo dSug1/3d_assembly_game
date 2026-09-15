@@ -453,10 +453,18 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // about re-sizing applies to it, and the reasoning is kept because it is why the number
   // is 2.4 and not 0.8. ⚠ A DEVICE MUST JUDGE IT: it is the commit threshold, the rest
   // test and the jitter deadband all at once now.
-  motionDeadbandMm: 2.4,
-  // ⚠ A tenth of the 450 ms settle it replaced, and it only confirms the way BACK to
-  // STATIONARY. A guess, with a slider.
-  restConfirmMs: 120,
+  // ⭐⭐ SET BY THE OWNER ON THE GLASS, 2026-09-15. ⚠ 2.3 mm sits 0.017 mm above the
+  // validator floor (3 x the measured 0.761 mm = 2.283) — deliberate, but it means
+  // **any future re-measurement of `pointerNoiseMm` upward will refuse this config**, and
+  // loudly, which is the intended behaviour rather than a trap.
+  motionDeadbandMm: 2.3,
+  // ⭐ SET BY THE OWNER, 2026-09-15 — a quarter of my guess, which is the fourth time a
+  // hand has moved one of my numbers a long way. It only confirms the way BACK to
+  // STATIONARY; at 30 ms it is roughly two frames, so the depth gate opens almost as soon
+  // as the finger stops. ⛔ Low enough that boundary chatter is the thing to watch for on
+  // the next device pass: if depth flickers on and off while the holder rests, this is the
+  // number that is too small.
+  restConfirmMs: 30,
 
   // ⛔⛔ THE HISTORY, KEPT — all four were re-sized 2026-09-15 against the measured floor
   // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of
