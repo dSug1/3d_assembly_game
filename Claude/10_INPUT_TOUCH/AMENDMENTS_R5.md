@@ -668,6 +668,51 @@ durations in series, ~900 ms**, in front of the one transition A10's depth gate 
 ⛔ Under A11 there is no settle at all. Leaving rest stays instantaneous; returning costs
 one `restConfirmMs`, a tenth of what it replaced.
 
+### ⛔⛔⛔ THE BAND GATES **ENTRY INTO MOTION**, NOT THE MOTION ITSELF
+
+> *"Does your deadband impact the sway and the damping: the object translation is less
+> fluid than when we had no depth translation built in?"*
+
+⭐ **It did, and the cost was MEASURED before it was fixed:**
+
+| | dead travel | lag at 50 mm/s | lag at 200 mm/s |
+|---|---|---|---|
+| entering a drag | 1 band = **2.5 mm** | 48 ms | 16 ms |
+| ⛔⛔ at a **REVERSAL** | 2 bands = **5.0 mm** | **88 ms** | 24 ms |
+
+⛔⛔ **THE ANCHOR TRAILS ONE RADIUS *BEHIND*, SO REVERSING MEANS CROSSING THE WHOLE DEAD
+CIRCLE** — the far side, not the near one. ⚠ Against rule 6's tuned follower
+(τ = 7.6 ms, ζ = 0.2, lead = 0.2 ms) that is **more than ten times the entire time
+constant**, as pure dead time, in front of it. ⭐ No damping value can absorb dead time,
+which is why it reads as *"less fluid"* rather than as *"too slow"*.
+
+⚠ **And it was worst exactly where it hurts most**: a fixed distance costs more time the
+slower you move, so a careful, slow adjustment — the kind assembly is made of — paid the
+biggest penalty.
+
+⭐ **It desynchronised the sway, too.** The sympathetic sway reads the raw sample stream for
+its direction and speed, gated by the motion state — which stays `MOVING` through a
+reversal. So the scene kicked on the turn while the held object had not moved yet.
+
+### ⭐⭐ The distinction the first version missed
+
+**A finger that has already PROVEN it is moving needs no further proof.** The band exists to
+reject the jitter of a finger at **rest** — so it gates the way *out* of rest, paid once per
+gesture, and once out, travel passes through undiminished.
+
+| | before | after |
+|---|---|---|
+| entering a drag | 1 band | **1 band** — unchanged, and it is the whole point |
+| at a reversal | 2 bands | ⭐ **one sample**, at every speed |
+| a still finger | emits nothing | **emits nothing** |
+| total travel | true − 1 band | **true − 1 band** |
+
+⛔ The STATE machine is untouched, which is what makes this safe: rest is still found by the
+same trailing anchor and the same `restConfirmMs`, so A10's depth gate reads exactly what it
+read before.
+
+⭐ `METHOD`: *a threshold that guards a transition must not also tax the steady state.*
+
 ### ⛔⛔⛔ AND REST MUST BE REACHABLE WITHOUT FURTHER EVENTS
 
 ⚠ **The device report survived A10's fix AND A11's, and the owner was right that neither

@@ -35,7 +35,7 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Thirty defects have been found **by finger** (twenty-nine of them; one by composing a measurement with a threshold), and **not one was visible to a green
+Thirty-one defects have been found **by finger** (thirty of them; one by composing a measurement with a threshold), and **not one was visible to a green
 suite**. They are **five** shapes, not twenty-six problems — the fifth is below, and it is
 the one that costs a correct implementation rather than a broken one:
 
@@ -60,7 +60,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | **A11** — the settle asymmetry | **1** — *"when I switch from x/y to depth translation… there is no depth translation for a while and then suddenly it is triggered"*, while the other direction was instant. ⛔ Entering MOVING was a DISTANCE test; returning to STATIONARY was TWO durations in series (~900 ms). ⭐ Fixed by the owner's model: §1.1 is a position deadband and the settle timer is gone | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
 | **A8** — the roll's commit dropped its own angle | **1** — *"in rotation, when I switch from yaw/pitch to roll… there is a big jump at one point."* The rebase undid the swept yaw/pitch, and the scene then applied only ONE FRAME of roll against a `lastRollDeg` that had tracked the uncommitted phase — so ~60° of swept roll was silently dropped. ⭐ The owner's own third guess was right: *"anchoring on a previous quaternion which is now far away"* | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
 | **A11** — a still finger emits no events | **1** — ⛔⛔ §1.1 is driven by `pointermove`, and a resting finger sends none — so the tracker froze at `MOVING` and `STATIONARY` was unreachable *for the exact case the rule is about*. ⭐ The asymmetry is structural: MOVING is entered by an event that necessarily exists, STATIONARY by one that by definition may not arrive. ⚠ **It survived two fixes to the THRESHOLD before anyone checked the CLOCK**, and the owner said so: *"there is something wrong you did not explain nor check"* | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| | **= 30** | |
+| **A11** — the band taxed the drag | **1** — *"the object translation is less fluid than when we had no depth translation built in."* ⛔⛔ The trailing anchor sits one radius BEHIND, so a REVERSAL had to cross the whole dead circle: **5.0 mm of dead travel, 88 ms at 50 mm/s** — more than ten times rule 6's entire follower time constant, as pure dead time in front of it. ⭐ Fixed by a distinction the first version missed: **the band gates the way OUT of rest, not the motion itself**. A reversal now costs one sample | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
+| | **= 31** | |
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of

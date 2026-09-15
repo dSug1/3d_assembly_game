@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "../src/input/motion";
 import { detectFlick, terminalSpeedPxPerS, trimBuffer } from "../src/input/flick";
-import { mmToPx } from "../src/core/units";
+import { mmToPx, pxToMm } from "../src/core/units";
 
 const cfg = DEFAULT_CONFIG;
 
@@ -606,5 +606,127 @@ describe("⛔⛔ rest must be reachable WITHOUT further events", () => {
     expect(m.current).toBe("STATIONARY");
     m.push({ x: end.x + mmToPx(cfg.motionDeadbandMm + 1), y: 400, t: end.t + 1000 });
     expect(m.current).toBe("MOVING");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔⛔ THE DEADBAND MUST GATE ENTRY INTO MOTION, NOT THE MOTION ITSELF
+//
+// Device report: *"does your deadband impact the sway and the damping: the object
+// translation is less fluid than when we had no depth translation built in."* ⭐ It did,
+// and the cost was MEASURED before it was fixed:
+//
+//   dead travel entering a drag  = 1 band = 2.5 mm
+//   dead travel at a REVERSAL    = 2 bands = 5.0 mm   ⛔ 88 ms of lag at 50 mm/s
+//
+// ⚠ The trailing anchor sits one radius BEHIND the finger, so reversing means crossing the
+// whole dead circle — the far side, not the near one. ⛔ Against rule 6's tuned follower
+// (τ = 7.6 ms, lead = 0.2 ms) that is more than TEN TIMES the entire time constant, in
+// pure dead time, in front of it. No damping value can hide that.
+//
+// ⭐⭐ THE FIX IS A DISTINCTION THE FIRST VERSION MISSED: a finger that has ALREADY PROVEN
+// it is moving needs no further proof. The deadband exists to reject the jitter of a finger
+// at REST — so it gates the transition out of rest, and once out, travel passes through
+// undiminished. ⛔ The state machine is unchanged: rest is still detected by the same
+// trailing anchor and the same `restConfirmMs`.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⭐⭐ once MOVING, travel passes through undiminished", () => {
+  const BAND = cfg.motionDeadbandMm;
+
+  /** Drag out `n` samples, reverse, and report the dead travel on each side. */
+  const outAndBack = (stepMm: number, n = 80) => {
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let t = 0;
+    m.push({ x, y: 400, t });
+    let startDead: number | null = null;
+    for (let i = 1; i <= n; i++) {
+      x += mmToPx(stepMm);
+      t += 8;
+      m.push({ x, y: 400, t });
+      if (m.step.dx !== 0 && startDead === null) startDead = stepMm * i;
+    }
+    let reverseDead: number | null = null;
+    for (let i = 1; i <= n; i++) {
+      x -= mmToPx(stepMm);
+      t += 8;
+      m.push({ x, y: 400, t });
+      if (m.step.dx !== 0 && reverseDead === null) reverseDead = stepMm * i;
+    }
+    return { startDead, reverseDead, state: m.current };
+  };
+
+  it("⭐⭐ A REVERSAL COSTS ONE SAMPLE, not two dead radii", () => {
+    // ⛔⛔ THE DEFECT, PINNED AS A NUMBER: it used to cost 5.0 mm — the finger had to cross
+    // the whole dead circle, because the anchor trails on the far side.
+    const r = outAndBack(0.5);
+    expect(r.reverseDead).toBeCloseTo(0.5, 6);
+  });
+
+  it("⭐ entering a drag still costs one band — that is the whole point", () => {
+    // ⚠ This half must NOT be removed: it is what rejects a resting finger's jitter, and
+    // it is paid ONCE per gesture rather than at every change of direction.
+    const r = outAndBack(0.5);
+    expect(r.startDead).toBeGreaterThan(BAND);
+    expect(r.startDead).toBeLessThanOrEqual(BAND + 0.5);
+  });
+
+  it("⭐⭐ a slow reversal is as immediate as a fast one", () => {
+    // ⚠ The old cost was WORST where it hurt most: 88 ms of lag at 50 mm/s against 24 ms
+    // at 200 mm/s, because a fixed distance costs more time the slower you go.
+    for (const step of [0.2, 0.5, 1.6, 3.2]) {
+      const r = outAndBack(step);
+      expect(r.reverseDead, `step ${step} mm`).toBeCloseTo(step, 6);
+    }
+  });
+
+  it("⛔ a STILL finger still emits nothing — the deadband's actual job", () => {
+    let seed = 90210;
+    const jit = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return mmToPx(((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)));
+    };
+    const m = new MotionTracker(cfg);
+    m.push({ x: 500, y: 400, t: 0 });
+    let emitted = 0;
+    for (let i = 1; i <= 600; i++) {
+      m.push({ x: 500 + jit(), y: 400 + jit(), t: i * 8 });
+      emitted += Math.hypot(m.step.dx, m.step.dy);
+    }
+    expect(emitted).toBe(0);
+    expect(m.current).toBe("STATIONARY");
+  });
+
+  it("⛔⛔ and a finger that STOPS still comes to rest — the state is unchanged", () => {
+    // ⚠ Pass-through must not cost the depth gate: A10 reads this state, and it is still
+    // decided by the trailing anchor and `restConfirmMs`.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let t = 0;
+    m.push({ x, y: 400, t });
+    for (let i = 1; i <= 40; i++) {
+      x += mmToPx(3);
+      t += 8;
+      m.push({ x, y: 400, t });
+    }
+    expect(m.current).toBe("MOVING");
+    m.tick(t + cfg.restConfirmMs + 1);
+    expect(m.current).toBe("STATIONARY");
+  });
+
+  it("⭐ total emitted travel is still the true travel minus ONE band", () => {
+    // ⭐⭐ The continuity property survives pass-through: the band is charged once, on the
+    // way out of rest, and never again.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let emitted = 0;
+    m.push({ x, y: 400, t: 0 });
+    for (let i = 1; i <= 100; i++) {
+      x += mmToPx(1.5);
+      m.push({ x, y: 400, t: i * 8 });
+      emitted += m.step.dx;
+    }
+    expect(pxToMm(emitted)).toBeCloseTo(150 - BAND, 6);
   });
 });

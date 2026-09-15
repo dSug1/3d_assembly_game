@@ -65,6 +65,23 @@ be discontinuous.
 through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
 of two numbers passing through zero is garbage however carefully it is computed.
 
+## ⭐ A threshold that guards a TRANSITION must not also tax the STEADY STATE
+
+*(2026-09-15.)* A deadband, a hysteresis band, a commit threshold — each exists to answer
+*"has this started?"*. ⛔ If the same band is charged again on every direction change
+mid-gesture, it stops being a guard and becomes a tax, and what it costs is **dead time**,
+which no gain or damping value downstream can hide.
+
+⚠ The instance: a position deadband whose anchor trails one radius behind. Entering a drag
+cost one radius, which is correct. **Reversing cost two** — the far side of the circle —
+measured at 5.0 mm and 88 ms, against a follower whose entire time constant is 7.6 ms.
+⭐ The fix is a distinction, not a number: *a finger that has already proven it is moving
+needs no further proof.*
+
+⭐⭐ **The tell is a complaint about FLUIDITY rather than about speed or distance.** Dead
+time feels different from lag, and it points at a threshold being re-charged somewhere it
+should not be.
+
 ## ⭐⭐ A threshold is only half a rule — the other half is what advances the clock
 
 *(2026-09-15, after three device reports of one defect.)* A state machine that waits for a

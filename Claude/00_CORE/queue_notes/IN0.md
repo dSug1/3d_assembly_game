@@ -225,3 +225,52 @@ last one cost three device reports because I kept re-deriving the number:
 
 ⚠ The tell was in the report from the first day and I read past it three times: the
 transition that worked was the one whose evidence always exists.
+
+---
+
+# ⛔⛔ AND THE BAND WAS TAXING THE DRAG — found by finger, 2026-09-15
+
+> *"Does your deadband impact the sway and the damping: the object translation is less
+> fluid than when we had no depth translation built in?"*
+
+⭐ **Yes, and the answer is a measurement rather than an opinion:**
+
+| | dead travel | lag at 50 mm/s | at 200 mm/s |
+|---|---|---|---|
+| entering a drag | 1 band = **2.5 mm** | 48 ms | 16 ms |
+| ⛔⛔ at a **REVERSAL** | 2 bands = **5.0 mm** | **88 ms** | 24 ms |
+
+⛔⛔ **The anchor trails one radius BEHIND the finger, so reversing means crossing the whole
+dead circle** — the far side, not the near one. ⚠ Rule 6's follower is τ = 7.6 ms with a
+0.2 ms lead, tuned over five device passes; the band was putting **more than ten times
+that** in front of it as pure dead time. ⭐ Dead time is not lag — nothing downstream can
+absorb it, which is exactly why a hand reports it as *fluidity* rather than as slowness.
+
+⚠ **Worst where it hurts most**: a fixed distance costs more time the slower you move, so
+the careful slow adjustment that assembly is made of paid the largest penalty.
+
+⭐ **It desynchronised the sway**, too: the sway reads the raw sample stream for direction
+and speed, gated by the motion state — which stays `MOVING` through a reversal. So the
+scene kicked on the turn while the held object had not moved yet.
+
+## The fix is a distinction, not a number
+
+⭐⭐ **A finger that has already PROVEN it is moving needs no further proof.** The band
+exists to reject the jitter of a finger at REST, so it gates the way OUT of rest — paid once
+per gesture — and once out, travel passes through undiminished.
+
+⛔ The state machine is untouched, which is what makes this safe: rest is still found by the
+same trailing anchor and the same `restConfirmMs`, so A10's depth gate reads what it read
+before. A reversal now costs **one sample**, at every speed.
+
+## ⭐⭐ The carried lesson
+
+> **A threshold that guards a TRANSITION must not also tax the STEADY STATE.**
+
+⚠ And the tell is worth knowing: the complaint was about **fluidity**, not about speed or
+distance. Dead time feels different from lag, and it points at a threshold being re-charged
+somewhere it should not be.
+
+⭐ This is the fifth thing §1.1 has been wrong about, and the first that was a *design*
+distinction rather than a quantity or a clock. The file is worth reading end to end before
+touching `motion.ts`.

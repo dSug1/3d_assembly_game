@@ -39,6 +39,29 @@
  *    arrives a few samples later. ⛔ A deadband that re-centres on the finger whenever it
  *    is inside the radius loses that travel completely, which is the trap in A9's dossier.
  *
+ * ## ⛔⛔⛔ THE BAND GATES **ENTRY INTO MOTION**, NOT THE MOTION ITSELF
+ *
+ * ⚠ Device report: *"does your deadband impact the sway and the damping: the object
+ * translation is less fluid than when we had no depth translation built in."* ⭐ It did,
+ * and the cost was measured before it was fixed:
+ *
+ *     dead travel entering a drag = 1 band = 2.5 mm
+ *     dead travel at a REVERSAL   = 2 bands = 5.0 mm   ⛔ 88 ms of lag at 50 mm/s
+ *
+ * ⛔⛔ THE ANCHOR TRAILS ONE RADIUS **BEHIND**, SO REVERSING MEANS CROSSING THE WHOLE DEAD
+ * CIRCLE — the far side, not the near one. ⚠ Against rule 6's tuned follower (τ = 7.6 ms,
+ * lead = 0.2 ms) that is more than **ten times the entire time constant**, in pure dead
+ * time, in front of it. No damping value can hide that, and the sympathetic sway fires on
+ * the `MOVING` transition, so the scene reacted late as well.
+ *
+ * ⭐⭐ THE DISTINCTION THE FIRST VERSION MISSED: **a finger that has already PROVEN it is
+ * moving needs no further proof.** The band exists to reject the jitter of a finger at
+ * REST. So it gates the way OUT of rest — paid once per gesture — and once out, travel
+ * passes through undiminished.
+ *
+ * ⛔ The STATE machine is unchanged: rest is still found by the same trailing anchor and
+ * the same `restConfirmMs`, so A10's depth gate reads exactly what it read before.
+ *
  * ## ⛔⛔⛔ AND REST MUST BE REACHABLE WITHOUT FURTHER EVENTS — `tick`
  *
  * A device report survived two fixes: *"I still experience issue passing from x/y
@@ -190,10 +213,11 @@ export class MotionTracker {
   }
 
   push(s: Sample): MotionState {
+    const prev = this.lastSample;
     this.lastStep = ZERO_STEP;
     this.lastSample = s;
-    if (this.anchor === null) {
-      this.anchor = s;
+    if (this.anchor === null || prev === null) {
+      this.anchor ??= s;
       this.restingSinceMs = s.t;
       return this.state;
     }
@@ -202,6 +226,14 @@ export class MotionTracker {
     const ey = s.y - this.anchor.y;
     const d = Math.hypot(ex, ey);
     const band = mmToPx(this.cfg.motionDeadbandMm);
+
+    // ⭐⭐ ALREADY MOVING: pass the travel straight through. The band has been paid, and
+    // charging it again at every change of direction is what made a back-and-forth drag
+    // feel dead in the hand. ⛔ The anchor is still maintained below, because the STATE
+    // still depends on it — only the emitted travel changes.
+    if (this.state === "MOVING") {
+      this.lastStep = { dx: s.x - prev.x, dy: s.y - prev.y };
+    }
 
     if (d <= band) {
       // ⭐ Inside the dead radius: nothing happened, and the anchor does NOT move.
@@ -228,7 +260,10 @@ export class MotionTracker {
     const over = d - band;
     const ux = ex / d;
     const uy = ey / d;
-    this.lastStep = { dx: ux * over, dy: uy * over };
+    // ⭐ Leaving rest: the EXCESS only, so the object starts from zero continuously rather
+    // than stepping by a whole radius. ⛔ Only on the way out — once `MOVING`, the
+    // pass-through above already set the travel and this must not overwrite it.
+    if (this.state !== "MOVING") this.lastStep = { dx: ux * over, dy: uy * over };
     // ⭐ Drag the anchor up so it trails at exactly one radius again. Summed over a whole
     // drag the emitted travel is therefore the true travel minus ONE radius — not one per
     // sample, which is what makes slow and fast drags cover the same ground.
