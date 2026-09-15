@@ -6,7 +6,7 @@
 > build status of each
 > **READ IF** · you are building or changing anything a finger touches
 > **SOURCED FROM** · the owner's `input-system-v5.md`, supplied 2026-09-13
-> **LAST VERIFIED** · 2026-09-14, against 307 passing vectors
+> **LAST VERIFIED** · 2026-09-14, against 315 passing vectors
 
 ⛔⛔ **THE OWNER'S REVISION-5 TEXT IS REPRODUCED IN FULL AND UNALTERED**, apart from
 repairing mojibake from the original file's encoding (`â` → `—`, `Â§` → `§`). Not one of
@@ -37,9 +37,9 @@ table is written against what each touchpoint was latched as, not where it is no
 | 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, rollback, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` |
 | 1 | an object | **free rotation** — yaw/pitch about the screen axes, world-frame, gain in rad/mm | §2 rule 2bis | ✅ **works**, ⚠ applied UNCONDITIONALLY — see below |
 | 1 | an object | **roll** about the view axis, from a circular gesture (Hyper circle fit) | §2 rule 2quinte | ✅ `IN1` |
-| 1 | an object | double-tap → **reset the camera orbit** | ⛔ **no clause** | ✅ ⚠ collides with 2septies |
+| 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⚠ collides with 2septies |
 | 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ **amended**: driven by delta position, NOT device tilt |
-| 1 | empty space | double-tap → **reset the camera orbit** | ⛔ **no clause** | ✅ |
+| 1 | empty space | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ |
 | 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
 | 2 | one object + one empty space | **translate in the screen plane**, with inertia and a phantom lead | §4 rule 6 | ✅ `IN4` (partial) |
 | 2 | both the SAME object | the second is **IGNORED**, for its lifetime | §5 (was undefined) | ✅ `IN8` decided, `IN2` built |
@@ -452,13 +452,37 @@ Listed so the gaps are explicit rather than implicit.
 ⭐ Two behaviours exist that this specification does not ask for. They are recorded here
 because this document is the first place anyone will look for them.
 
-## 1. Double-tap resets the camera orbit — anywhere on the glass
+## 1. Double-tap flies the camera home — anywhere on the glass
 
-Yaw, elevation, zoom **and** the orbit centre, back to where the camera launched.
+Yaw, elevation and zoom go back to their launch values, **and the centre goes to the last
+yellow target** — the barycentre §2 rule 1 last CHOSE, which is what the marker shows and
+what the user has been orbiting. ⛔ NOT the world origin: that would reset the camera to a
+place it may never have looked at.
+
 ⭐ It listens on objects as well as empty space, and the reason is reachability: the orbit
 can get stuck close in with an object filling the view, and then every tap lands on
 something. A reset that only listened to empty space would be unreachable exactly when it
 is wanted.
+
+⭐⭐ **It is ANIMATED, over `cameraResetMs` (450 ms), and it eases the ORBIT PARAMETERS —
+not the camera's transform.** Yaw, elevation, zoom and centre are what the orbit surface
+is defined on, so easing those keeps the camera ON that surface the whole way: the same
+path a finger could have dragged. ⛔ Slerping the camera's quaternion and lerping its
+position instead would cut a chord through the middle of the scene — the camera would dive
+toward the objects and back out, a movement no rule can produce.
+
+⚠ Three of the four channels are not plain lerps, and each mistake looks fine in a still
+frame and awful in motion:
+
+* **yaw takes the SHORT way** — it accumulates without limit, so a straight lerp would
+  unwind every revolution the hand had put in;
+* **zoom interpolates GEOMETRICALLY** — it is a scale, so halfway between ×0.25 and ×4 is
+  ×1, not ×2.125;
+* **the curve is eased at both ends**, so the camera neither leaves nor arrives with a
+  velocity step.
+
+⛔ A new touch CANCELS a reset in flight: the animation writes the whole pose every frame,
+so a drag during one would be overwritten as fast as it was applied. `0` snaps.
 
 ⚠⚠ **IT COLLIDES WITH §2 RULE 2SEPTIES**, which makes a double-tap on an object the ONLY
 way a constraint is ever evicted. Both cannot silently fire. The decision is queued in

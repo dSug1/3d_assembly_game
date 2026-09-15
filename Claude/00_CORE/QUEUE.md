@@ -18,7 +18,7 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-14) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **307 golden vectors,
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **315 golden vectors,
 all passing** (37 → 219). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
@@ -125,9 +125,14 @@ rotation reads the NET rotation over 100 ms and needs 3× the noise seen through
   first one moved the marker and retargeted the camera for a gesture meant as a zoom.
 * **And it is suppressed entirely while an object is held**: a touchpoint outside while a
   finger is on a part is rule 6's ANCHOR, and that gesture will never orbit.
-* **Double-tap resets the camera** — yaw, elevation, zoom and centre, anywhere on the
-  glass. ⚠⚠ It COLLIDES with §2 rule 2septies (double-tap evicts a constraint) and the
-  decision is queued in [`queue_notes/IN3.md`](queue_notes/IN3.md).
+* **Double-tap FLIES the camera home** — anywhere on the glass, eased over
+  `cameraResetMs` (450 ms). ⭐ Home is the **last yellow target**, not the origin: only the
+  angles and the zoom go back to their launch values, because the centre is the thing the
+  user has been orbiting. ⭐ It eases the ORBIT PARAMETERS, not the camera transform, so
+  the camera stays on the orbit surface the whole way — yaw takes the short way round and
+  zoom interpolates geometrically, neither of which is a lerp.
+  ⚠⚠ It COLLIDES with §2 rule 2septies (double-tap evicts a constraint) and the decision
+  is queued in [`queue_notes/IN3.md`](queue_notes/IN3.md).
 
 ### ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD
 

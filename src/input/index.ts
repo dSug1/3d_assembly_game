@@ -14,4 +14,5 @@ export * from "./translate";
 export * from "./follow";
 export * from "./lead";
 export * from "./sway";
+export * from "./camera_reset";
 export * from "./recognizer";

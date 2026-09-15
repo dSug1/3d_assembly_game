@@ -64,6 +64,8 @@ import {
   swayScale,
   swayWorldDirection,
   SpinSwayWatcher,
+  CameraResetAnimation,
+  type CameraPose,
   type SwayKick,
   type SpinSwayKick,
   type FollowState,
@@ -342,6 +344,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let pendingCentre: { x: number; y: number; at: number } | null = null;
 
+  /**
+   * The double-tap reset in flight, or `null`.
+   * ⛔ CANCELLED BY THE NEXT TOUCH. An animation that kept running while a finger dragged
+   * would fight the hand for the camera, and the hand would lose — the reset writes the
+   * whole pose every frame.
+   */
+  let cameraReset: CameraResetAnimation | null = null;
+
   // ─────────────────────────────────────────────────────────────────
   // §2 RULE 1 — ORBIT, for ONE touchpoint that hits nothing.
   //
@@ -422,13 +432,46 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * give a "default" view of somewhere the camera has never been.
    */
   const resetCamera = () => {
-    orbit.reset(ORBIT_START_YAW_RAD, ORBIT_START_ELEVATION);
-    zoom = 1;
-    zoomAtPinchStart = 1;
-    centreBlend.snapTo(ORBIT_START_CENTRE_M);
     // ⚠ Any centre still waiting out its grace is dropped: it was chosen for a gesture
     // that has turned out to be a reset.
     pendingCentre = null;
+
+    // ⭐⭐ HOME IS THE LAST YELLOW TARGET, NOT THE ORIGIN. The marker shows the barycentre
+    // §2 rule 1 last CHOSE, and that is the thing the user has been orbiting — sending
+    // the camera back to the world origin instead would reset it to a place it may never
+    // have looked at. ⚠ Only the ANGLES and the zoom go back to their launch values.
+    const home: CameraPose = {
+      yawRad: ORBIT_START_YAW_RAD,
+      elevation: ORBIT_START_ELEVATION,
+      zoom: 1,
+      centreM: centreBlend.targetM,
+    };
+    const now: CameraPose = {
+      yawRad: orbit.yaw,
+      elevation: orbit.elevation,
+      zoom,
+      centreM: centreBlend.centreM,
+    };
+
+    if (cfg.cameraResetMs > 0) {
+      // ⛔ A blend in flight is ABANDONED to the animation: two things easing the same
+      // centre on two different clocks would fight, and the finger-travel one cannot
+      // even advance — a double-tap supplies no travel.
+      centreBlend.snapTo(now.centreM);
+      cameraReset = new CameraResetAnimation(now, home, cfg.cameraResetMs);
+      return;
+    }
+
+    cameraReset = null;
+    applyCameraPose(home);
+  };
+
+  /** Put the camera exactly at a pose. Shared by the reset's every frame and its end. */
+  const applyCameraPose = (p: CameraPose): void => {
+    orbit.reset(p.yawRad, p.elevation);
+    zoom = p.zoom;
+    zoomAtPinchStart = p.zoom;
+    centreBlend.snapTo(p.centreM);
     syncCentre();
     applyCamera();
   };
@@ -681,6 +724,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
         // whether this is an orbit or the start of a pinch. 0 commits immediately.
         tunable("centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
+        // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
+        tunable("reset time (ms)", "cameraResetMs", 0, 2000, 50),
         // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
         // per pixel — a pixel means something different on a phone and a tablet.
         tunable("yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
@@ -815,6 +860,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
+      // ⛔ A NEW TOUCH CANCELS A RESET IN FLIGHT. The animation writes the whole camera
+      // pose every frame, so a drag during one would be overwritten as fast as it was
+      // applied — the hand would appear to have no effect at all.
+      cameraReset = null;
       const pick = info.pickInfo;
       const hit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
@@ -1103,6 +1152,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally
     // stable, so a stalled frame simply arrives rather than exploding.
+    // ⭐ The double-tap reset, flying home. ⛔ Advanced here and not on a timer: the loop
+    // is the clock everything visible already runs on, and there is no callback to leak.
+    if (cameraReset !== null) {
+      applyCameraPose(cameraReset.advance(dtSec * 1000));
+      if (cameraReset.done) cameraReset = null;
+    }
+
     // ⭐ The deferred orbit centre, committed once its grace has passed with no second
     // touchpoint outside. ⚠ `router.outside().length` is re-checked here and not only at
     // press: a finger could have arrived and left again within the window.

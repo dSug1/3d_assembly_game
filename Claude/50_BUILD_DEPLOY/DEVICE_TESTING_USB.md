@@ -55,6 +55,28 @@ thing that could never complete the authorisation handshake — see below.
 ⚠ `adb reverse` does not survive a replug or an adb server restart. Re-run it; it is
 idempotent (`adb reverse --list` shows `UsbFfs tcp:5173 tcp:5173`).
 
+### ⛔⛔ WHEN THE TABLET SAYS THE PAGE CANNOT BE REACHED, CHECK THE TUNNEL FIRST
+
+⭐ **`adb reverse --list` printing NOTHING is the whole diagnosis.** Seen 2026-09-15: the
+dev server was healthy the entire time — it served `index.html`, `main.ts` and transformed
+`scene.ts`, all 200 — the device was listed by `adb devices`, and the tunnel had simply
+gone. ⚠ The browser gives the same generic failure for a missing tunnel, a stopped server
+and a typo'd URL, so guessing between them wastes the session. Ask the three questions in
+this order, and stop at the first `no`:
+
+```bash
+adb devices                 # is the tablet there at all?
+adb reverse --list          # is the tunnel there?  EMPTY = this is your problem
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:5173/   # is the server up?
+```
+
+⚠ **`adb` is NOT on this machine's `PATH`** — it lives at
+`C:\Users\sugit\platform-tools-sdk\platform-tools\adb.exe`, so the commands above only
+work from a shell that has it, or with the full path. `scripts/device-loop.ps1` finds it
+regardless. ⭐ Putting that folder on `PATH` once makes this page's commands work as
+written; until then, expect the first thing you type to fail with `command not found` and
+do not read that as the tablet being disconnected.
+
 ⭐ Chrome remote debugging is still worth having ON TOP: with the device authorised,
 `chrome://inspect` gives you the tablet's **DevTools console** — for *any* page it
 has open, including the GitHub Pages URL. Real HTTPS *and* a console.

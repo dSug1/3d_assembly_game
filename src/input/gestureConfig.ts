@@ -368,6 +368,15 @@ export interface GestureConfig {
    * where a press and a retarget are the same event.
    */
   orbitCentreGraceMs: number;
+  /**
+   * ms — how long the double-tap camera reset takes to fly home.
+   * ⭐ It EASES the orbit parameters (yaw, elevation, zoom, centre) rather than the
+   * camera's transform, so the camera stays on the orbit surface the whole way — the
+   * same path a finger could have dragged. ⚠ Yaw takes the short way round and zoom
+   * interpolates geometrically; see `input/camera_reset.ts` for why neither is a lerp.
+   * ⛔ `0` snaps, which is the behaviour before this existed.
+   */
+  cameraResetMs: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -555,6 +564,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A GUESS, with a slider. Two fingers of one hand land within roughly 30–80 ms of
   // each other; 120 covers that with margin without being long enough to notice.
   orbitCentreGraceMs: 120,
+  // ⚠ A GUESS, with a slider. Long enough to read as a movement rather than a cut, short
+  // enough not to feel like waiting for a cutscene.
+  cameraResetMs: 450,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
