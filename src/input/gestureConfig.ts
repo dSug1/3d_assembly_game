@@ -58,6 +58,18 @@ export interface GestureConfig {
    * ⚠ Small on purpose: a tenth of the settle timer it replaced. `IN5`, by slider.
    */
   restConfirmMs: number;
+  /**
+   * ⭐⭐⭐ AMENDMENT A14 — ms for which a second touchpoint still counts as HELD after it
+   * lifts, so that **lifting it and putting it down again is ONE gesture**.
+   *
+   * ⛔ Without it, the interval between the lift and the press has genuinely one touchpoint
+   * down, so `A13` translates through the middle of a swap — 150-300 ms of it, which is
+   * very visible if the holder happens to be moving at the time.
+   * ⭐ Keyed on a LIFT: discrete, deliberate and visible, never on a motion state.
+   * ⚠ THE COST: going back to one-touchpoint translation is delayed by this much, which is
+   * a real delay on a deliberate act. ⭐ `0` restores the old behaviour exactly.
+   */
+  secondTouchGraceMs: number;
 
   // ── §1.2 gains ──────────────────────────────────────────────────────────
   /** Metres. Translation gains scale by cameraDistance / this. */
@@ -482,6 +494,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // the next device pass: if depth flickers on and off while the holder rests, this is the
   // number that is too small.
   restConfirmMs: 30,
+  // ⚠ A guess, with a slider. Long enough for a deliberate lift-and-replace, short enough
+  // that a genuine lift to one finger does not feel stuck. IN5.
+  secondTouchGraceMs: 250,
 
   // ⛔⛔ THE HISTORY, KEPT — all four were re-sized 2026-09-15 against the measured floor
   // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of

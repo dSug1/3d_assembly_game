@@ -56,6 +56,7 @@ import {
   screenTranslation,
   advanceFollow,
   holderDrive,
+  secondTouchHeld,
   rollDragDeg,
   secondFingerDrive,
   gravityFrame,
@@ -340,6 +341,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
      */
     anchorMotion: Map<number, MotionTracker>;
+    /**
+     * ⭐⭐⭐ A14 — when a second touchpoint last LIFTED, so a lift-and-replace reads as ONE
+     * gesture. ⛔ `null` until one ever has. See `secondTouchHeld`.
+     */
+    secondLiftedAtMs: number | null;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -771,8 +777,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const corridor = second
         ? `${second.axes.x === "MOVING" ? "X→roll " : ""}${second.axes.y === "MOVING" ? "Y→depth" : ""}` || "—"
         : "no 2nd";
+      // ⭐⭐ AND THE MODE ITSELF, with the counts behind it. ⛔ Three device reports on this
+      // rule were diagnosed by reasoning about code because the HUD could not answer *"what
+      // does the build think is down right now?"* — an instrument is judged against the
+      // question it exists to answer.
+      const held2 = secondFingerOf(grip);
+      const graceLeft =
+        grip.secondLiftedAtMs === null
+          ? 0
+          : Math.max(0, cfg.secondTouchGraceMs - (performance.now() - grip.secondLiftedAtMs));
       const mode =
-        grip.rec.motionState === "STATIONARY" ? `ready ${corridor}` : "held-MOVING";
+        `${grip.mode ?? "—"} obj=${router.objects().length} out=${router.outside().length}` +
+        `${held2.present ? " 2nd" : graceLeft > 0 ? ` 2nd~${graceLeft.toFixed(0)}ms` : ""}` +
+        `${grip.rec.motionState === "STATIONARY" ? ` ready ${corridor}` : ""}`;
       return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at} ${mode}`;
     }
     return "";
@@ -951,6 +968,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("roll drag gain (deg/mm)", "gainRollDrag", 0.25, 12, 0.25),
         tunable("motion DEADBAND (mm)", "motionDeadbandMm", 0.5, 8, 0.1),
         tunable("rest confirm (ms)", "restConfirmMs", 0, 400, 10),
+        // ⭐⭐⭐ A14: how long a lift-and-replace of the second touchpoint stays ONE
+        // gesture. ⛔ 0 restores the old behaviour exactly, which is how to A/B it.
+        tunable("second touch grace (ms)", "secondTouchGraceMs", 0, 600, 25),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
         // ⭐ How far the drag must swing before the scene reacts again, and the drag
@@ -1196,8 +1216,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⚠ Keyed by `seq`, so a reused pointer id can no longer inherit it — this is belt to
    * that structural brace, and it is what stops the map growing for the life of a gesture.
    */
-  const forgetAnchor = (seq: number): void => {
-    for (const grip of held.values()) grip.anchorMotion.delete(seq);
+  const forgetAnchor = (seq: number, at: number): void => {
+    for (const grip of held.values()) {
+      grip.anchorMotion.delete(seq);
+      // ⭐⭐⭐ A14 — AND REMEMBER THAT A TOUCHPOINT JUST LIFTED. From every OTHER grip's
+      // point of view this was its second touchpoint, whatever role it held: outside every
+      // object, on the same object, or on a different one (which is the owner's case 3).
+      // ⛔ A lift-and-replace is ONE gesture, and without this the interval between them
+      // has a single touchpoint down and `A13` translates through the middle of it.
+      // ⚠ Setting it on the releasing grip itself is harmless: it is deleted immediately.
+      grip.secondLiftedAtMs = at;
+    }
   };
 
   const applyDepthDrag = (grip: Held, anchorSeq: number, anchorSample: Sample) => {
@@ -1370,6 +1399,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
+        secondLiftedAtMs: null,
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -1393,7 +1423,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
     if (routed.role === "SECOND") {
       if (info.type === PointerEventTypes.POINTERUP) {
-        forgetAnchor(routed.seq);
+        forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
         lastVerdict = "second touchpoint released";
       } else {
@@ -1417,7 +1447,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // branches below, where lifting one of two fingers ends the gesture. A stray TAP
       // from here would evict a constraint (§1.4) that the user never asked to lose.
       if (info.type === PointerEventTypes.POINTERUP) {
-        forgetAnchor(routed.seq);
+        forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
       } else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
       paint();
@@ -1463,7 +1493,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           s.t - routed.pressed.t <= cfg.tapMaxDuration &&
           Math.hypot(s.x - routed.pressed.x, s.y - routed.pressed.y) <=
             mmToPx(cfg.doubleTapSlop);
-        forgetAnchor(routed.seq);
+        forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
@@ -1508,9 +1538,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // while the contact area grows — so it read MOVING for as long as the landing took,
         // and the mode followed it. Nothing about the GESTURE differed; only the landing.
         // ⛔⛔ `IN4` recorded the same verdict on 2026-09-14. See `holderDrive`.
+        // ⭐⭐⭐ A14: A LIFT-AND-REPLACE IS ONE GESTURE. Between the lift and the press
+        // there is genuinely one touchpoint down, so without the grace A13 translates
+        // through the middle of a swap — and a swap is 150-300 ms of hand, which is very
+        // visible if the holder happens to be moving at the time. ⚠ That is exactly why the
+        // owner's cases 2 and 3 *"differ by timing of the input"*.
         const second = secondFingerOf(grip);
+        const secondHolds = secondTouchHeld(
+          second.present,
+          grip.secondLiftedAtMs === null ? null : s.t - grip.secondLiftedAtMs,
+          cfg.secondTouchGraceMs,
+        );
         grip.mode =
-          router.objects().length === 1 ? holderDrive(second.present) : "TRANSLATE";
+          router.objects().length === 1 ? holderDrive(secondHolds) : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,
@@ -1650,7 +1690,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         resetCamera();
         lastVerdict = "DOUBLE_TAP → camera reset";
       }
-      forgetAnchor(routed.seq);
+      forgetAnchor(routed.seq, s.t);
       router.release(e.pointerId);
       held.delete(e.pointerId);
       paint();

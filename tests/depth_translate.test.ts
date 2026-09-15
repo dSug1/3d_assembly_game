@@ -28,6 +28,7 @@ import { describe, expect, it } from "vitest";
 import {
   depthGate,
   holderDrive,
+  secondTouchHeld,
   rollDragDeg,
   secondFingerDrive,
   depthLimits,
@@ -535,5 +536,87 @@ describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
     // tracker yet. `null` means *nothing has ever moved this finger* — which is the
     // strongest form of idle there is, not a missing answer.
     expect(holderDrive(true, null)).toBe("ROTATE");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ A14 — A LIFT-AND-REPLACE OF THE SECOND TOUCHPOINT IS **ONE** GESTURE
+//
+// > *"1- one touchpoint on object -> it translates -> second touchpoint pressed on screen
+// > outside any object -> object immediately rotates -> everything is OK.
+// > 2- …second touchpoint is released then pressed on screen outside any object and I WAIT
+// > to input delta position the first touchpoint -> first object rotates -> OK.
+// > 3- …and I IMMEDIATELY input delta position the first touchpoint -> first object
+// > continues to translate for a while then rotates -> this is the issue."*
+//
+// ⭐⭐ THE DIAGNOSIS, AND THE MODE LOGIC WAS NEVER WRONG. Between the lift and the press
+// there is genuinely **ONE touchpoint down**, and A13 says one touchpoint TRANSLATES. So:
+//
+//   * case 3 — the holder keeps moving THROUGH the swap, so it translates for exactly as
+//     long as the swap takes: a lift and a replace is 150–300 ms of hand, which is very
+//     visible;
+//   * case 2 — the holder is still during the swap, so the same interval produces nothing
+//     to see and the mode is already right by the time it moves;
+//   * case 1 — there is no lift at all, so there is no interval.
+//
+// ⛔ Cases 2 and 3 differ ONLY by whether the holder happens to be moving during the gap —
+// which is exactly the owner's *"cases 2 and 3 differ by timing of the input"*.
+//
+// ⭐⭐⭐ SO THE RULE IS RIGHT AND THE GESTURE MODEL IS WRONG: a lift-and-replace is ONE
+// intention, and dropping to one-touchpoint behaviour in the middle of it is the artefact.
+// ⛔ The grace is keyed on a LIFT — discrete, deliberate, visible — never on a motion
+// state, which is the rule the previous round cost us.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⭐⭐⭐ A14 — a second touchpoint survives its own replacement", () => {
+  const GRACE = 250;
+
+  it("⭐ a touchpoint that is DOWN is held, with no grace involved", () => {
+    expect(secondTouchHeld(true, null, GRACE)).toBe(true);
+    expect(secondTouchHeld(true, 10_000, GRACE)).toBe(true);
+  });
+
+  it("⭐⭐ JUST LIFTED still counts as held — the replacement is coming", () => {
+    expect(secondTouchHeld(false, 0, GRACE)).toBe(true);
+    expect(secondTouchHeld(false, GRACE - 1, GRACE)).toBe(true);
+  });
+
+  it("⛔ …but a DELIBERATE lift stops counting once the grace has passed", () => {
+    // ⚠ THE COST, STATED: going back to one-touchpoint translation is delayed by the
+    // grace. That is a real delay on a deliberate act, and it is the trade.
+    expect(secondTouchHeld(false, GRACE, GRACE)).toBe(false);
+    expect(secondTouchHeld(false, GRACE + 1, GRACE)).toBe(false);
+  });
+
+  it("⛔⛔ a touchpoint that was NEVER down is not held", () => {
+    // ⭐ `null` means no lift has ever happened — not a lift infinitely long ago.
+    expect(secondTouchHeld(false, null, GRACE)).toBe(false);
+  });
+
+  it("⛔ a zero grace restores the old behaviour exactly — the slider can turn it off", () => {
+    expect(secondTouchHeld(false, 0, 0)).toBe(false);
+  });
+
+  it("⭐⭐ CASE 3, AS A SEQUENCE: the mode never drops to TRANSLATE across the swap", () => {
+    // ⭐ The reported defect, written as the event sequence that produces it.
+    const swap = [
+      { present: true, sinceLift: null }, // second finger on the other object
+      { present: false, sinceLift: 0 }, // lifted
+      { present: false, sinceLift: 120 }, // …still swapping, holder moving all the while
+      { present: false, sinceLift: 210 },
+      { present: true, sinceLift: 210 }, // pressed down outside
+    ];
+    const modes = swap.map((x) =>
+      holderDrive(secondTouchHeld(x.present, x.sinceLift, GRACE)),
+    );
+    expect(modes).toEqual(["ROTATE", "ROTATE", "ROTATE", "ROTATE", "ROTATE"]);
+  });
+
+  it("⛔⛔ COUNTER-EXAMPLE: without the grace, the swap translates in the middle", () => {
+    // ⭐ The defect, pinned — and it is what shipped.
+    const modes = [0, 120, 210].map((sinceLift) =>
+      holderDrive(secondTouchHeld(false, sinceLift, 0)),
+    );
+    expect(modes).toEqual(["TRANSLATE", "TRANSLATE", "TRANSLATE"]);
   });
 });

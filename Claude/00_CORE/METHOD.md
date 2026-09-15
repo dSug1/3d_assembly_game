@@ -65,6 +65,26 @@ be discontinuous.
 through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
 of two numbers passing through zero is garbage however carefully it is computed.
 
+## ⭐⭐ A GESTURE spans the moments between its touchpoints
+
+*(2026-09-16.)* A rule table maps *what is down right now* to *what happens*. ⛔ A hand does
+not work that way: **lifting a finger and putting it down again is one intention**, and for
+the 150–300 ms in between, the literal truth is a configuration the user never asked for.
+
+⚠ The instance: a rule table said *one touchpoint translates, two rotate*. Swap the second
+finger from one place to another, and the object translated through the middle of the swap —
+correctly, by the table, and wrongly by any account of what the hand was doing.
+
+⭐⭐ **The tell was the owner's own observation**: two cases that *"differ by timing of the
+input"*. When two runs of the same gesture differ only by WHEN the user moved, the rule is
+reading a momentary state that the gesture spans. ⚠ It is the same shape as *a mode keyed on
+motion*, one level up: there, the state was noisy; here, it is briefly and genuinely wrong.
+
+⭐ The fix is a grace on the DISCRETE event — a lift — never on a continuous reading. ⛔ And
+it has a real cost that must be stated rather than hidden: going back to the one-touchpoint
+rule is delayed by the grace, so a deliberate lift feels slower. Ship it as a slider with
+`0` restoring the old behaviour, so a hand can weigh the two.
+
 ## ⭐⭐⭐ A MODE may be keyed on PRESENCE; never on MOTION
 
 *(2026-09-14, and again on 2026-09-16 when I did it anyway.)* Two signals come off a

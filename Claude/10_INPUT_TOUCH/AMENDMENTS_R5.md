@@ -799,3 +799,70 @@ to pick a mode.
 ⛔⛔ **The WIRING is not**: `scene.ts` is behind the engine boundary, and breaking the mode
 selection there reddens **nothing** in the suite — checked, deliberately, rather than
 assumed. ⭐ `METHOD`: a look on a real device closes this change, and nothing else does.
+
+---
+
+## A14 — ⭐⭐⭐ A **LIFT-AND-REPLACE** OF THE SECOND TOUCHPOINT IS ONE GESTURE *(owner, 2026-09-16)*
+
+**Amends** `A13`'s *"second absent → translate"*, which was correct and incomplete.
+
+> *"1 — one touchpoint on object → it translates → second touchpoint pressed on screen
+> outside any object → object immediately rotates → everything is OK.
+> 2 — …second touchpoint is released then pressed on screen outside any object and I **wait**
+> to input delta position the first touchpoint → first object rotates → everything seems OK.
+> 3 — …and I **immediately** input delta position the first touchpoint → first object
+> continues to translate for a while then rotates → this is the issue, and cases 2 and 3
+> differ by timing of the input."*
+
+### ⭐⭐ THE DIAGNOSIS: THE MODE LOGIC WAS NEVER WRONG
+
+Between the lift and the press there is genuinely **one touchpoint down**, and `A13` says one
+touchpoint TRANSLATES. ⛔ So the object translates for exactly as long as the swap takes —
+and a lift and a replace is **150–300 ms of hand**, which is very visible.
+
+| case | during the swap | what is seen |
+|---|---|---|
+| **1** — no lift at all | no interval exists | correct |
+| **2** — the holder WAITS | interval exists, holder still | nothing to see |
+| **3** — the holder KEEPS MOVING | interval exists, holder moving | ⛔ **it translates** |
+
+⭐⭐ Cases 2 and 3 differ **only** by whether the holder happens to be moving during that
+interval — which is precisely the owner's *"cases 2 and 3 differ by timing of the input"*,
+and it is the observation that located the defect.
+
+### ⭐⭐⭐ So the RULE was right and the GESTURE MODEL was wrong
+
+**A lift-and-replace is ONE intention.** Dropping to one-touchpoint behaviour in the middle
+of it is the artefact. ⛔ A second touchpoint therefore stays **HELD** for
+`secondTouchGraceMs` after it lifts, and a replacement inside that window is continuous.
+
+⭐ **The grace is keyed on a LIFT** — discrete, deliberate and visible — and never on a
+motion state. ⚠ That is the rule the previous round of this defect cost us
+(*a MODE may be keyed on PRESENCE; never on MOTION*), and it is honoured here rather than
+quietly re-broken.
+
+⚠ **It counts a lift of ANY other touchpoint**, whatever role it held: outside every object,
+on the same object, or **on a different object** — which is the owner's case 3, where the
+second finger was holding a second part.
+
+### ⚠ THE COST, STATED
+
+Returning to one-touchpoint translation is **delayed by the grace**. Lift the second finger
+and keep dragging with one, and the object keeps ROTATING for up to
+`secondTouchGraceMs` before it starts translating. ⛔ That is a real delay on a deliberate
+act, and it is the trade this amendment makes.
+
+⭐ **`0` restores the old behaviour exactly**, so the two can be A/B'd on the glass without a
+rebuild. Default **250 ms** — a guess, with a slider.
+
+### ⭐⭐ And the instrument that should have answered this
+
+⛔ Three device reports on this rule were diagnosed by *reasoning about code*, because the
+HUD could not answer *"what does the build think is down right now?"* — and `METHOD` is
+explicit that an instrument is judged against the question it exists to answer. ⭐ The depth
+readout now prints the mode, the touchpoint counts, and how much grace is left:
+
+```
+  depth=1.42m [0.02–3.0]  ROTATE obj=1 out=1 2nd  ready X→roll
+  depth=1.42m [0.02–3.0]  ROTATE obj=1 out=0 2nd~180ms
+```

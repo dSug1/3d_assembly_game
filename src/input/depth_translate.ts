@@ -297,3 +297,48 @@ export function holderDrive(
 ): "TRANSLATE" | "ROTATE" {
   return secondPresent ? "ROTATE" : "TRANSLATE";
 }
+
+/**
+ * ⭐⭐⭐ **AMENDMENT A14** — is a second touchpoint holding, counting a replacement in
+ * progress?
+ *
+ * > *"…second touchpoint is released then pressed on screen outside any object and I
+ * > IMMEDIATELY input delta position the first touchpoint → first object continues to
+ * > translate for a while then rotates."*
+ *
+ * ⛔⛔ THE MODE LOGIC WAS NEVER WRONG. Between the lift and the press there is genuinely
+ * **one touchpoint down**, and `A13` says one touchpoint TRANSLATES. So the object
+ * translates for exactly as long as the swap takes — and a lift and a replace is 150–300 ms
+ * of hand, which is very visible.
+ *
+ * ⭐⭐ THAT IS ALSO WHY THE OWNER'S THREE CASES DIFFER *ONLY BY TIMING*:
+ *
+ * | case | during the swap | what is seen |
+ * |---|---|---|
+ * | 1 — no lift at all | no interval | correct |
+ * | 2 — holder WAITS | interval exists, holder still | nothing to see |
+ * | 3 — holder KEEPS MOVING | interval exists, holder moving | ⛔ it translates |
+ *
+ * ⭐⭐⭐ SO THE RULE IS RIGHT AND THE GESTURE MODEL WAS WRONG: **a lift-and-replace is ONE
+ * intention**, and dropping to one-touchpoint behaviour in the middle of it is the artefact.
+ *
+ * ⛔ THE GRACE IS KEYED ON A **LIFT** — discrete, deliberate and visible — never on a motion
+ * state. That is the rule the previous round of this defect cost us, and it is honoured
+ * here rather than quietly re-broken.
+ *
+ * ⚠ **THE COST, STATED**: returning to one-touchpoint translation is delayed by the grace.
+ * That is a real delay on a deliberate act, and it is the trade. ⭐ A grace of `0` restores
+ * the old behaviour exactly, so the slider can turn it off.
+ *
+ * @param present      whether a second touchpoint is down right now.
+ * @param msSinceLift  milliseconds since the last second-touchpoint LIFT, or `null` if none
+ *   has ever happened — which is not the same as a lift infinitely long ago.
+ */
+export function secondTouchHeld(
+  present: boolean,
+  msSinceLift: number | null,
+  graceMs: number,
+): boolean {
+  if (present) return true;
+  return msSinceLift !== null && msSinceLift < graceMs;
+}
