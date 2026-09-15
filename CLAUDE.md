@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-14)
 
-✅ Green: TypeScript + Babylon + Vite, **426 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **430 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -85,10 +85,10 @@ guard that had stood through eight device passes: see `Claude/10_INPUT_TOUCH/IND
 ⭐ **A simulation narrows the range; it does not pick the number. Ship the slider WITH
 the rule.**
 
-⛔ **`3D1` IS BUILT AND WIRED, NOT CLOSED** — the 2026-09-15 device pass found one defect
-in the wiring (a translated object was LOCKED, then JUMPED: the render loop drew only
-objects that happened to have a follower). Fixed; a re-test is owed. ⭐ Everything else was
-clean, which re-confirms rule 6. Built — `src/core/object_model.ts`, 42 vectors, engine-free:
+✅✅ **`3D1` IS CLOSED (2026-09-15)** — built, wired, and judged by finger. The pass found
+one defect in the wiring (a translated object was LOCKED, then JUMPED: the render loop drew
+only objects that happened to have a follower); fixed and confirmed. ⭐ Everything else was
+clean, which re-confirms rule 6 after its path was rewired. Built — `src/core/object_model.ts`, 42 vectors, engine-free:
 placement, faces, connectors, the assembly tree, and the constraint stack attached to an
 object. ⭐⭐ The vectors were written FIRST and then **falsified on purpose** — breaking the
 composition turns 14 of 42 red, which is why the green means something. ⭐ `reroot`

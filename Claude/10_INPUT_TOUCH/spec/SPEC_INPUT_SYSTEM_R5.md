@@ -6,7 +6,7 @@
 > build status of each
 > **READ IF** · you are building or changing anything a finger touches
 > **SOURCED FROM** · the owner's `input-system-v5.md`, supplied 2026-09-13
-> **LAST VERIFIED** · 2026-09-15, against 426 passing vectors
+> **LAST VERIFIED** · 2026-09-15, against 430 passing vectors
 
 ⛔⛔ **THE OWNER'S REVISION-5 TEXT IS REPRODUCED IN FULL AND UNALTERED**, apart from
 repairing mojibake from the original file's encoding (`â` → `—`, `Â§` → `§`). Not one of
@@ -110,7 +110,7 @@ reached its 800-line cap. `METHOD`: *when two sections conflict, the later one w
 | **A4** | A1's trigger | eviction is a **quick back-and-forth**, one touchpoint, ≥2 reversals in a window. ⛔ The flick test is skipped once one reversal is seen, or an abandoned shake ADDS a constraint |
 | **A1 §4** (`D13`) | §1.4's *"clears its constraint stack"*, for mates | eviction **spares `MATE` entries** — one gesture, one intention |
 | **A2** | §0's *"two objects"* | the scene holds **three** |
-| **A5** | `D10`, and §5's *"two touchpoints on the same object — undefined and reachable"* | two fingers on ONE object are a **depth pinch**; the gain is **computed** (`distance' = distance × sep₀/sep₁`), and `IN2`'s `IGNORED` role moves to the THIRD touchpoint |
+| **A5** | `D10`, and §5's *"two touchpoints on the same object — undefined and reachable"* | two fingers on ONE object are a **depth pinch**, and ⛔ *depth is HORIZONTAL* — the view axis flattened onto the ground plane, so **the object's height never changes**. The gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD touchpoint |
 | **A3** | 2quinte's *"on a constrained object the circular gesture is ignored"* **and** 2sexte's undefined behaviour when its axis projects to a point | ⛔ roll **DRIVES the free DOF** of an anchored object, about the CONSTRAINT axis; **2sexte suppresses** where it is degenerate. **ONE handover constant with hysteresis**, latched at press |
 
 ---

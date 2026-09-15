@@ -1,97 +1,146 @@
 /**
  * AMENDMENT A5 (`D16`) — THE DEPTH PINCH.
  *
- * ⭐⭐ THE VECTOR THAT MATTERS MOST IS THE ONE THAT ANSWERS A QUESTION A5 LEFT OPEN:
- * does a depth pinch also slide the object across the screen? A5 declined to decide, and
- * the geometry decides it — scaling along the camera-to-object ray leaves the object on the
- * SAME RAY, so its screen position cannot change. That is asserted here, not assumed.
+ * ⭐⭐ THE VECTOR THAT MATTERS MOST IS **HEIGHT NEVER CHANGES**. A5's "depth" is horizontal
+ * — the camera's view direction with its gravity component removed — and the reason is not
+ * only the visual feedback the owner asked for: **gravity is the primary constraint in this
+ * game**, so a gesture meaning *"put this further away"* must not quietly drive a part into
+ * the floor, which pushing along a tilted camera's ray does.
+ *
+ * ⛔ The first build DID push along the camera ray, and the counter-example below is that
+ * build: it is asserted to move the object's height, which is what disqualified it.
  */
 import { describe, expect, it } from "vitest";
-import { depthPinchLimits, depthPinchPosition, depthPinchTracker } from "../src/input/depth_pinch";
+import {
+  depthPinchLimits,
+  depthPinchPosition,
+  depthPinchTracker,
+  depthPushDirection,
+} from "../src/input/depth_pinch";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
-import { cross, length, sub, type Vec3 } from "../src/core/vec";
+import { add, dot, length, normalize, scale, sub, type Vec3 } from "../src/core/vec";
 import { mmToPx } from "../src/core/units";
 import type { Sample } from "../src/input/motion";
 
-// ⚠⚠ THE FIXTURE MUST LEAVE HEADROOM UNDER THE CEILING, and my first one did not: the
-// object sat 2.44 m from the camera against a `maxM` of 3 m, so a 1.25× push CLAMPED and
-// the "scales exactly" vector failed. The code was right and the fixture was unrealistic —
-// mistake shape 5, for the fourth time in this session. ⭐ State the range a law holds in.
-const CAM: Vec3 = [0, 0.2, -1];
-const OBJ: Vec3 = [0.1, 0, 0.05];
+const DOWN: Vec3 = [0, -1, 0];
+/** A camera above the scene looking down and forward — the ordinary way to view a build. */
+const CAM: Vec3 = [0, 0.8, -1.2];
+const VIEW: Vec3 = normalize([0, -0.5, 1])!; // into the screen, tilted down
+const OBJ: Vec3 = [0.15, 0.1, 0.1];
 const { minM, maxM } = depthPinchLimits(DEFAULT_CONFIG);
 
-const distance = (from: Vec3, to: Vec3) => length(sub(to, from));
+const height = (p: Vec3) => p[1];
+const pinch = (factor: number, obj: Vec3 = OBJ, view: Vec3 = VIEW) =>
+  depthPinchPosition(CAM, obj, view, DOWN, factor, minM, maxM);
 
-describe("⭐⭐ the object stays on its own ray — the screen position cannot change", () => {
-  it("the pinched position is COLLINEAR with the camera and the original position", () => {
-    for (const factor of [0.4, 0.75, 1.5, 3]) {
-      const moved = depthPinchPosition(CAM, OBJ, factor, minM, maxM);
-      // Same ray ⇒ the cross product of the two camera-relative vectors vanishes.
-      const before = sub(OBJ, CAM);
-      const after = sub(moved, CAM);
-      expect(length(cross(before, after)), `factor ${factor}`).toBeCloseTo(0, 9);
+describe("⭐⭐ HEIGHT NEVER CHANGES — gravity is the primary constraint", () => {
+  it("pushing away leaves the object at exactly the same height", () => {
+    for (const factor of [0.4, 0.8, 1.5, 3]) {
+      expect(height(pinch(factor)), `factor ${factor}`).toBeCloseTo(height(OBJ), 12);
     }
   });
 
-  it("⛔ and it stays on the FORWARD half of the ray — never behind the camera", () => {
-    for (const factor of [0.001, 0.4, 3, 1000]) {
-      const moved = depthPinchPosition(CAM, OBJ, factor, minM, maxM);
-      const before = sub(OBJ, CAM);
-      const after = sub(moved, CAM);
-      expect(
-        before[0] * after[0] + before[1] * after[1] + before[2] * after[2],
-        `factor ${factor}`,
-      ).toBeGreaterThan(0);
+  it("…at every camera elevation, including a steep look-down", () => {
+    for (const tilt of [0.1, 0.5, 1.5, 4]) {
+      const view = normalize([0, -tilt, 1])!;
+      expect(height(pinch(2, OBJ, view)), `tilt ${tilt}`).toBeCloseTo(height(OBJ), 12);
     }
+  });
+
+  it("⛔⛔ COUNTER-EXAMPLE: the first build pushed along the CAMERA RAY, and moved the height", () => {
+    // What A5 originally shipped: scale the whole camera-to-object vector.
+    const ray = sub(OBJ, CAM);
+    const alongRay = add(CAM, scale(normalize(ray)!, length(ray) * 2));
+    // ⭐ It drives the part downward — into the floor — because the camera looks down.
+    expect(height(alongRay)).toBeLessThan(height(OBJ) - 0.1);
+    // The rule as decided does not.
+    expect(height(pinch(2))).toBeCloseTo(height(OBJ), 12);
   });
 });
 
-describe("the sense of the gesture", () => {
-  it("⚠ a factor ABOVE 1 pushes the object away — fingers together make it smaller", () => {
-    expect(distance(CAM, depthPinchPosition(CAM, OBJ, 2, minM, maxM))).toBeGreaterThan(
-      distance(CAM, OBJ),
-    );
-  });
-
-  it("a factor BELOW 1 brings it closer", () => {
-    expect(distance(CAM, depthPinchPosition(CAM, OBJ, 0.5, minM, maxM))).toBeLessThan(
-      distance(CAM, OBJ),
-    );
-  });
-
-  it("⭐ a factor of exactly 1 changes nothing", () => {
-    const moved = depthPinchPosition(CAM, OBJ, 1, minM, maxM);
-    expect(distance(moved, OBJ)).toBeCloseTo(0, 12);
-  });
-
-  it("⭐⭐ scales the DISTANCE by the factor exactly — 1.0 is the computed value, not a taste", () => {
-    for (const factor of [0.5, 1.25, 2]) {
-      expect(distance(CAM, depthPinchPosition(CAM, OBJ, factor, minM, maxM))).toBeCloseTo(
-        distance(CAM, OBJ) * factor,
-        9,
-      );
+describe("the push direction is the view axis, flattened", () => {
+  it("is perpendicular to gravity, always", () => {
+    for (const tilt of [0, 0.3, 1, 5]) {
+      const d = depthPushDirection(normalize([0.2, -tilt, 1])!, DOWN)!;
+      expect(dot(d, DOWN), `tilt ${tilt}`).toBeCloseTo(0, 12);
+      expect(length(d)).toBeCloseTo(1, 12);
     }
   });
 
-  it("⭐ pinch out and back RETURNS — the mapping is a ratio, not an accumulation", () => {
-    const away = depthPinchPosition(CAM, OBJ, 1.7, minM, maxM);
-    const back = depthPinchPosition(CAM, away, 1 / 1.7, minM, maxM);
-    expect(distance(back, OBJ)).toBeCloseTo(0, 9);
+  it("keeps the view's heading — it flattens, it does not turn", () => {
+    const d = depthPushDirection(normalize([1, -1, 1])!, DOWN)!;
+    expect(d[0] / d[2]).toBeCloseTo(1, 12);
+  });
+
+  it("⛔ is null when the camera looks STRAIGHT DOWN — a real configuration, not a corner", () => {
+    expect(depthPushDirection([0, -1, 0], DOWN)).toBeNull();
+    expect(pinch(2, OBJ, [0, -1, 0])).toEqual(OBJ);
+  });
+
+  it("⚠ and it GOES QUIET as the camera moves OVERHEAD — the same shape as A3's handover", () => {
+    // ⚠⚠ My first version of this varied the view ANGLE with the camera fixed, and the
+    // travel did not change at all — because flattening [0,−tilt,1] gives [0,0,1] for
+    // EVERY tilt. The heading does not turn; that is the property asserted just above.
+    // ⭐ The effect is real but it comes from the camera's POSITION: climbing the orbit
+    // surface shortens the HORIZONTAL distance to the object, and that is what scales.
+    const travelFrom = (cam: Vec3) => {
+      const view = normalize(sub(OBJ, cam))!;
+      return length(sub(depthPinchPosition(cam, OBJ, view, DOWN, 1.5, minM, maxM), OBJ));
+    };
+    const low: Vec3 = [0, 0.3, -1.5];
+    const high: Vec3 = [0, 1.4, -0.25]; // near the top ring: almost overhead
+    expect(travelFrom(high)).toBeLessThan(travelFrom(low));
+  });
+});
+
+describe("only the horizontal DEPTH scales", () => {
+  const push = depthPushDirection(VIEW, DOWN)!;
+  const depthOf = (p: Vec3) => dot(sub(p, CAM), push);
+  /** The offset across the view, in the ground plane. */
+  const acrossOf = (p: Vec3) => {
+    const r = sub(p, CAM);
+    return sub(sub(r, scale(push, dot(r, push))), scale(DOWN, dot(r, DOWN)));
+  };
+
+  it("⭐⭐ scales the depth by the factor exactly — 1.0 is computed, not a taste", () => {
+    for (const factor of [0.5, 1.25, 2]) {
+      expect(depthOf(pinch(factor)), `factor ${factor}`).toBeCloseTo(depthOf(OBJ) * factor, 9);
+    }
+  });
+
+  it("leaves the ACROSS-view offset untouched", () => {
+    const before = acrossOf(OBJ);
+    const after = acrossOf(pinch(2.5));
+    expect(length(sub(after, before))).toBeCloseTo(0, 12);
+  });
+
+  it("⭐ a factor of exactly 1 changes nothing", () => {
+    expect(length(sub(pinch(1), OBJ))).toBeCloseTo(0, 12);
+  });
+
+  it("⭐ pinch out and back RETURNS — a ratio, not an accumulation", () => {
+    const away = pinch(1.7);
+    const back = depthPinchPosition(CAM, away, VIEW, DOWN, 1 / 1.7, minM, maxM);
+    expect(length(sub(back, OBJ))).toBeCloseTo(0, 9);
+  });
+
+  it("⚠ a factor ABOVE 1 pushes away, below 1 brings closer", () => {
+    expect(depthOf(pinch(2))).toBeGreaterThan(depthOf(OBJ));
+    expect(depthOf(pinch(0.5))).toBeLessThan(depthOf(OBJ));
   });
 });
 
 describe("⛔ the clamps, and why both bounds exist", () => {
-  it("cannot be pushed through the near plane — the failure is a BLACK PAGE with no error", () => {
-    const crushed = depthPinchPosition(CAM, OBJ, 1e-6, minM, maxM);
-    expect(distance(CAM, crushed)).toBeGreaterThanOrEqual(CAMERA_NEAR_PLANE_M);
-    expect(distance(CAM, crushed)).toBeCloseTo(minM, 9);
+  const push = depthPushDirection(VIEW, DOWN)!;
+  const depthOf = (p: Vec3) => dot(sub(p, CAM), push);
+
+  it("cannot be pulled onto the camera — the failure is a BLACK PAGE with no error", () => {
+    expect(depthOf(pinch(1e-6))).toBeCloseTo(minM, 9);
+    expect(minM).toBeGreaterThan(CAMERA_NEAR_PLANE_M);
   });
 
   it("cannot be pushed beyond the camera's own maximum orbit radius — an unreachable state", () => {
-    const flung = depthPinchPosition(CAM, OBJ, 1e6, minM, maxM);
-    expect(distance(CAM, flung)).toBeCloseTo(maxM, 9);
-    expect(maxM).toBe(DEFAULT_CONFIG.cameraRadiusMaxM);
+    expect(depthOf(pinch(1e6))).toBeCloseTo(maxM, 9);
   });
 
   it("⭐ both bounds are DERIVED, not invented — no new tunable to measure", () => {
@@ -99,36 +148,35 @@ describe("⛔ the clamps, and why both bounds exist", () => {
     expect(maxM).toBe(DEFAULT_CONFIG.cameraRadiusMaxM);
   });
 
-  it("⚠⚠ THE HEADROOM IS TIGHT, and this vector exists to say so out loud", () => {
-    // ⭐ A finding, not a property: an object already 2.4 m out cannot be pushed even 1.25×
-    // before the ceiling stops it, because the ceiling IS the camera's maximum radius. So
-    // how far a pinch can push depends on where the camera is, and at full zoom-out it can
-    // barely push at all. ⛔ A DEVICE QUESTION — if it feels like the gesture "sticks",
-    // this is why, and the fix is the ceiling, not the gain.
+  it("⚠⚠ the headroom is TIGHT, and this vector says so out loud", () => {
+    // ⭐ A finding, not a property. The ceiling IS the camera's max radius, so how far a
+    // pinch can push depends on where the camera already is. ⛔ If it feels like the
+    // gesture sticks, that is the ceiling — not the gain.
+    const farCam: Vec3 = [0, 0.5, -2.4];
     const far: Vec3 = [0.3, 0.2, 0.4];
-    const farCam: Vec3 = [0, 0.5, -2];
-    const room = maxM / distance(farCam, far);
-    expect(room).toBeLessThan(1.25);
-    expect(distance(farCam, depthPinchPosition(farCam, far, 2, minM, maxM))).toBeCloseTo(maxM, 9);
+    const pushed = depthPinchPosition(farCam, far, VIEW, DOWN, 2, minM, maxM);
+    expect(dot(sub(pushed, farCam), push)).toBeCloseTo(maxM, 9);
   });
 });
 
-describe("⛔ degenerate inputs return the position unchanged, never NaN", () => {
-  it("an object sitting ON the camera has no ray to scale along", () => {
-    expect(depthPinchPosition(CAM, CAM, 2, minM, maxM)).toEqual(CAM);
+describe("⛔ degenerate inputs return the position unchanged", () => {
+  it("an object BEHIND the camera has no depth to scale", () => {
+    const behind: Vec3 = [0, 0.1, -3];
+    expect(pinch(2, behind)).toEqual(behind);
   });
 
   it("a non-finite or non-positive factor is refused", () => {
     for (const bad of [0, -1, NaN, Infinity]) {
-      expect(depthPinchPosition(CAM, OBJ, bad, minM, maxM), `factor ${bad}`).toEqual(OBJ);
+      expect(pinch(bad), `factor ${bad}`).toEqual(OBJ);
     }
   });
 
-  it("⛔ never writes a NaN into a coordinate — one would never wash out of a placement", () => {
+  it("⛔ never writes a NaN — one would never wash out of a placement", () => {
     for (const factor of [0, NaN, Infinity, 1e300]) {
-      for (const c of depthPinchPosition(CAM, OBJ, factor, minM, maxM)) {
-        expect(Number.isFinite(c)).toBe(true);
-      }
+      for (const c of pinch(factor)) expect(Number.isFinite(c)).toBe(true);
+    }
+    for (const c of depthPinchPosition(CAM, OBJ, [0, 0, 0], DOWN, 2, minM, maxM)) {
+      expect(Number.isFinite(c)).toBe(true);
     }
   });
 });
@@ -139,21 +187,9 @@ describe("the tracker is the SAME one rule 4 uses", () => {
   it("⭐ it carries `gainPinchDepth`, not `gainZoom` — one class, two gains", () => {
     const tracker = depthPinchTracker({ ...DEFAULT_CONFIG, gainPinchDepth: 1 });
     tracker.begin(at(0, 0, 0), at(mmToPx(60), 0, 0));
-    // Cross the deadband, which re-anchors and returns 1.
     expect(tracker.scale(at(0, 0, 10), at(mmToPx(80), 0, 10))).toBe(1);
-    // Fingers now come together to half the separation ⇒ the object goes twice as far.
-    const factor = tracker.scale(at(0, 0, 20), at(mmToPx(40), 0, 20))!;
-    expect(factor).toBeCloseTo(2, 9);
-  });
-
-  it("⭐ a bigger gain moves it further for the same finger travel", () => {
-    const factorAt = (gain: number) => {
-      const tracker = depthPinchTracker({ ...DEFAULT_CONFIG, gainPinchDepth: gain });
-      tracker.begin(at(0, 0, 0), at(mmToPx(60), 0, 0));
-      tracker.scale(at(0, 0, 10), at(mmToPx(80), 0, 10));
-      return tracker.scale(at(0, 0, 20), at(mmToPx(40), 0, 20))!;
-    };
-    expect(factorAt(2)).toBeGreaterThan(factorAt(1));
+    // Fingers come together to half the separation ⇒ the object goes twice as deep.
+    expect(tracker.scale(at(0, 0, 20), at(mmToPx(40), 0, 20))!).toBeCloseTo(2, 9);
   });
 
   it("⛔ says nothing inside the deadband — a caller must leave the object alone", () => {

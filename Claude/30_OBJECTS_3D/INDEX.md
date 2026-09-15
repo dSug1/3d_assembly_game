@@ -21,13 +21,14 @@ placement stays put, and *grabbing a child moves the whole assembly* is a vector
 rule 6's translate, the rotation rules, §1.3's rollback and §2 rule 1's barycentre. ⭐ The
 render loop is now the SINGLE writer of a mesh transform, which removed the held-mesh
 exception and the barycentre's defensive sway subtraction at the same time.
-⛔ **STILL NOT CLOSED.** The 2026-09-15 device pass found **one defect, in the wiring**:
+✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*, after the pass found **one
+defect, in the wiring**:
 the render loop drew only objects that happened to have a *follower* entry, a map populated
 lazily by the sway and the rotation rule. When the model became authoritative that implicit
 invariant died silently — a translated object was **locked**, then **jumped** once something
-else created its entry. ⭐ Fixed (the loop now iterates the model), and a **re-test is
-owed**. ⛔ 409 vectors passed before and after: the iteration set is in `src/render`, on the
-far side of the boundary.
+else created its entry. ⭐ Fixed (the loop now iterates the model) and **confirmed by the hand that found it**.
+⛔ 409 vectors passed before and after the fix: the iteration set is in `src/render`, on the
+far side of the boundary, which is why a device look is what closes a change.
 ✅ Everything else was clean, which **re-confirms rule 6** after its path was rewired.
 ⛔ No snapping — that is `3D2`.
 

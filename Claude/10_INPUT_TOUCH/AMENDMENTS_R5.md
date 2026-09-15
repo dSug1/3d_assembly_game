@@ -442,9 +442,8 @@ router vectors are written against the old rule and must be revisited with it.
 
 ### ⚠ Deliberately NOT decided here
 
-* **Does the pinch also translate in the screen plane** when its centroid moves, or is that
-  rule 6's job alone? The owner specified depth. ⭐ Leaving it out is the smaller rule and
-  the easier one to add later; guessing it in would be a second meaning nobody asked for.
+* ✅ **Which way "depth" points was decided the same day** — see the section below. It is
+  NOT the camera ray.
 * **What it does to a MATED object**, whose depth may be constrained. `3D2`/`3D3`.
 
 ### No collision with anything built
@@ -452,6 +451,49 @@ router vectors are written against the old rule and must be revisited with it.
 Rule 4 needs both touchpoints on **nothing**; rule 6 needs exactly **one** outside; the
 eviction shake (A4) is gated on `activeCount === 1`; every §2 rule is one touchpoint. Two on
 one object is disjoint from all of them.
+
+### ⛔⛔ "DEPTH" IS HORIZONTAL — along the view axis FLATTENED ONTO THE GROUND PLANE
+
+*(owner, 2026-09-15, resolving what A5 first left open)*
+
+> *"I do not want the pinch on object(s) to move in the direction of the depth of the camera
+> view: I want to move in the direction of the projection of the camera view depth axis
+> orthogonal to the gravity direction … the gravity direction is an immutable direction and
+> I want the depth to be always orthogonal to it, whichever the camera orbit position is.
+> That will give better user feeling than pushing an object on the camera view axis (which,
+> except of scaling the object, does not provide much visual feedback)."*
+
+⭐ **The stated reason is right** — along the view axis an object only changes apparent
+SIZE, and size is the hardest change for an eye to judge. Flattened onto the ground it also
+climbs toward the horizon on screen, so the gesture has movement to show for itself.
+
+⭐⭐ **AND THERE IS A STRONGER REASON UNDERNEATH IT.** Gravity is the **primary constraint
+in this game**: §2 rule 2ter anchors a face to it, 2sexte rotates about it, and parts are
+assembled standing on a working plane. A camera looking down — the ordinary way to look at a
+build — makes "along the view axis" point into the FLOOR. ⛔ **A gesture meaning *"put this
+further away"* must not silently change an object's HEIGHT**, and the ray version did.
+
+**So the rule keeps three quantities separate**, and each is asserted:
+
+| quantity | what the pinch does to it |
+|---|---|
+| the object's **height** | ⛔ **never changes** — the push direction is perpendicular to gravity by construction, so there is no height term to get wrong |
+| its offset **across** the view | unchanged |
+| its **horizontal depth** | ⭐ scales by the pinch ratio — the only thing that moves |
+
+⚠ **The gain's meaning shifts slightly and it is worth stating.** Horizontal depth is not
+distance-from-camera, so `gainPinchDepth` = 1.0 tracks the fingers *exactly* only for an
+object at the camera's own height. A steeply tilted camera trades a little tracking to keep
+the part on its plane — **the right trade in an assembly game**, and the kind of choice that
+should be recorded rather than discovered.
+
+⚠⚠ **It goes quiet as the camera climbs, and the mechanism is easy to get backwards.**
+Flattening does not TURN the view direction — a camera tilted 10° or 80° about the same
+heading flattens to the same direction. What shrinks is the **horizontal distance** from
+camera to object as the camera moves overhead, and that is what the ratio scales. ⭐ So a
+pinch near the top ring moves the object barely at all: geometry, not a bug. **Second
+occurrence of the "goes quiet before it fails" shape** after A3's handover — worth expecting
+a third.
 
 ### ⚠ Provenance — the closest this project has come to the litigated ground
 

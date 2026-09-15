@@ -25,7 +25,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**426 golden vectors, all passing** (37 → 426).
+**430 golden vectors, all passing** (37 → 430).
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
@@ -67,8 +67,10 @@ one touchpoint, ≥2 reversals in a window, reusing the sway's MEASURED reversal
 constraint instead of removing one. ⭐ **A1 §4 (`D13`)**: eviction **spares `MATE` entries** — *one gesture, one
 intention*. ⭐ **A2**: the scene holds THREE objects, not two. ⭐⭐ **A5 (`D16`)**: **two touchpoints on
 the SAME object are a DEPTH PINCH** — it supersedes `D10`, closes §5's last undefined
-configuration, and came from a HAND rather than a document. Its gain is **computed**
-(`distance' = distance × sep₀/sep₁`), and `IN2`'s `IGNORED` role moves to the THIRD
+configuration, and came from a HAND rather than a document. ⛔⛔ **Depth is HORIZONTAL** —
+the view axis flattened onto the ground plane — so **an object's height never changes**:
+gravity is the primary constraint here, and a camera looking down makes the camera ray point
+into the floor. Its gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD
 touchpoint. ⛔⛔ **A3**: roll **drives the free DOF of
 an ANCHORED object** — the spec forbade it on a reason that is conditional on camera pose
 and false when the camera looks along the constraint axis, which is exactly where 2sexte's
