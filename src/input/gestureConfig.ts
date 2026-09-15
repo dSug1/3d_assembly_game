@@ -38,9 +38,20 @@ export interface GestureConfig {
    * mm. The EXCURSION BOUND during settle candidacy: once speed drops below
    * `stillSpeed`, the finger must stay within this of where it slowed down, for
    * the whole `stillTime`, before STATIONARY latches.
-   * ⛔ Must be < moveEnterDistance or the state chatters.
-   * ⛔⛔ AND `stillSpeed * stillTime` must EXCEED it, or it can never bind --
-   * asserted in MotionTracker's constructor. See motion.ts.
+   *
+   * ⛔⛔ IT IS SANDWICHED FROM BOTH SIDES, AND ONE SIDE WAS MISSING UNTIL A10.
+   *
+   * * **From above** — `stillSpeed * stillTime` must EXCEED it, or motion held below
+   *   `stillSpeed` can never cover enough ground to test it and the bound is decorative.
+   * * ⭐⭐ **From below** — it must exceed the MEASURED `pointerNoiseMm` by
+   *   `SETTLE_NOISE_MULTIPLE`, or a finger that is genuinely at rest cannot stay inside
+   *   it and **STATIONARY becomes unreachable**. ⛔ At 0.8 mm against a measured
+   *   0.761 mm RMS floor it was: a finger that had once moved NEVER came back, measured
+   *   over four seconds of rest. Nothing shipped before A10 depended on RE-ENTERING
+   *   STATIONARY, which is why eight device passes never showed it.
+   *
+   * ⛔ Must also be < moveEnterDistance or the state chatters. All three asserted in
+   * `validateGestureConfig`. See motion.ts.
    */
   moveExitDistance: number;
 
@@ -174,25 +185,6 @@ export interface GestureConfig {
   gainTranslateAxis: number;
   gainTranslateDepth: number;
 
-  /**
-   * Amendment **A6** — how far the VALIDATOR's vertical travel may sit from the DRIVER's,
-   * as a fraction. `0.35` means *"within ±35%"*.
-   *
-   * ⛔⛔ A RATIO, NOT A DISTANCE, and the difference matters. The object follows the finger
-   * touching it; the second finger only authorises that reading by following. A fixed
-   * millimetre tolerance would make a fast drag trivially easy to validate and a slow one
-   * nearly impossible — the same absolute slack means something different at every speed.
-   * ⚠ Too tight and a hand cannot hold two fingers parallel enough; too loose and an
-   * ordinary rule 6 drag starts reading as depth. `IN5` — a placeholder, with a slider.
-   */
-  depthFollowRatio: number;
-  /**
-   * The window the two travels are measured across, milliseconds.
-   * ⛔ Mistake shape 1 — *a rate estimated over the shortest available baseline* — has
-   * cost this project three defects. A per-frame comparison of two fingers is noise.
-   * ⚠ It GATES only; the displacement applied is this frame's. See `depth_translate.ts`.
-   */
-  depthCommonWindowMs: number;
   gainTranslateMutual: number;
 
   // ── §1.3 the recognizer ─────────────────────────────────────────────────
@@ -453,14 +445,36 @@ export interface GestureConfig {
 }
 
 export const DEFAULT_CONFIG: GestureConfig = {
+  // ⛔⛔ ALL FOUR RE-SIZED 2026-09-15 AGAINST THE MEASURED NOISE FLOOR (A10), and this
+  // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of
+  // 1.5 mm. ⭐ The previous set was sized when `pointerNoiseMm` was BELIEVED to be
+  // 0.15 mm; it was measured at 0.761 mm on 2026-09-14 and these were never re-checked.
+  // ⚠ Measuring it already exposed one defect in the sagitta guard. This is the second,
+  // and it is the same shape: a threshold sized against a number that later changed.
+  //
+  // ⛔ The binding constraint is the EXCURSION BOUND, which must sit above the noise or
+  // STATIONARY is unreachable — 19 consecutive samples must all land inside it, so it
+  // needs roughly 3x the RMS floor, not 1x. Everything else follows:
+  //   moveExitDistance  >= 3 x 0.761  = 2.28 -> 2.4
+  //   moveEnterDistance >  moveExitDistance  -> 3.2 (a real gap, or the state chatters)
+  //   stillSpeed x stillTime > moveExitDistance -> 6 mm/s x 0.45 s = 2.7 > 2.4
+  //
+  // ⛔⛔ AND  STAYS AT 6, WHICH IS WHY  HAD TO TRIPLE. Raising
+  // the SPEED instead was the first attempt and two existing vectors caught it: at
+  // 18 mm/s a deliberate 12 mm/s drag becomes a settle candidate, and it covers only
+  // 1.8 mm in 150 ms — so a REAL SLOW DRAG would latch STATIONARY, which under A10 means
+  // it would read as a request for DEPTH. ⭐ The discrimination matters more than the
+  // latency, so the latency is where the cost was taken.
+  // ⚠ THE COST, STATED: after the holder has moved, STATIONARY now takes 450 ms to latch,
+  // so depth is available ~0.45 s after a drag ends. ⭐ A finger that is placed and NOT
+  // moved starts STATIONARY and waits for nothing, which is the ordinary case.
+  // ⭐ Every one has a slider, because IN5 says the slider ships WITH the rule and these
+  // four are now load-bearing for a MODE, not only for a flick test.
   stillSpeed: 6,
-  // ⚠ MOVED 80 -> 150 by IN1, and it is NOT a measurement. `stillSpeed * stillTime`
-  // must exceed `moveExitDistance` or the exit threshold can never bind: 6 mm/s x
-  // 80 ms = 0.48 mm against a 0.8 mm bound made it decorative. A placeholder moved
-  // to make another placeholder reachable. IN5 measures both.
-  stillTime: 150,
-  moveEnterDistance: 1.5,
-  moveExitDistance: 0.8,
+  // ⚠ MOVED 80 -> 150 by IN1, then 150 -> 450 by A10 (above). Not a measurement.
+  stillTime: 450,
+  moveEnterDistance: 3.2,
+  moveExitDistance: 2.4,
 
   referenceCameraDistance: 0.6,
   // ⭐⭐ 0.07 rad/mm — CHOSEN ON THE DEVICE by the owner, 2026-09-14, with the menu
@@ -541,8 +555,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   gainTranslateDepth: 3,
   // ⚠ Both placeholders, and a guessed number has been wrong every time on this project.
   // ±35% is a guess at how closely a hand holds two fingers in step.
-  depthFollowRatio: 0.35,
-  depthCommonWindowMs: 60,
+
   gainTranslateMutual: 0.5,
 
   flickWindow: 120,
@@ -690,6 +703,17 @@ export const DEFAULT_CONFIG: GestureConfig = {
  *
  * Called from `MotionTracker`'s constructor, which every `Recognizer` builds.
  */
+/**
+ * How many times the MEASURED pointer noise the settle-excursion bound must exceed.
+ *
+ * ⭐ 3, because the bound must hold for EVERY sample across the whole `stillTime`, not on
+ * average — and a still finger's radial excursion is distributed, not constant. ⚠ At 1x it
+ * is satisfied about half the time per sample, and ~19 consecutive halves is never.
+ * ⛔ Measured, not argued: at the old 0.8 mm against a 0.761 mm floor, a finger that had
+ * moved did not return to STATIONARY in four seconds of rest.
+ */
+export const SETTLE_NOISE_MULTIPLE = 3;
+
 export function validateGestureConfig(cfg: GestureConfig): void {
   // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
   // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
@@ -724,6 +748,24 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       "moveEnterDistance must exceed moveExitDistance, or the motion state chatters.",
     );
   }
+  // ⭐⭐ THE OTHER SIDE OF THE SANDWICH, ADDED BY A10. A bound the noise cannot fit
+  // inside is a bound a RESTING FINGER can never satisfy, so STATIONARY becomes
+  // unreachable once anything has moved. ⛔ Nothing shipped before A10 depended on
+  // re-entering STATIONARY, so eight device passes never showed it — and A10's depth
+  // gate depends on nothing else.
+  // ⚠ The multiple is 3 because the bound must hold for EVERY sample across the whole
+  // `stillTime` (~19 of them at 8 ms), not on average: 1x the RMS floor is satisfied
+  // about half the time, and half^19 is never.
+  const settleFloorMm = SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm;
+  if (cfg.moveExitDistance < settleFloorMm) {
+    throw new Error(
+      `moveExitDistance (${cfg.moveExitDistance} mm) is below ${SETTLE_NOISE_MULTIPLE}x the ` +
+        `measured pointerNoiseMm (${cfg.pointerNoiseMm} mm = ${settleFloorMm.toFixed(2)} mm), ` +
+        `so a finger AT REST cannot stay inside it and STATIONARY is unreachable. ` +
+        `Raise moveExitDistance (and moveEnterDistance above it).`,
+    );
+  }
+
   // Motion held below `stillSpeed` for `stillTime` cannot cover more ground than
   // their product, so below it the exit distance is decorative in EVERY wiring.
   const reachableMm = (cfg.stillSpeed * cfg.stillTime) / 1000;

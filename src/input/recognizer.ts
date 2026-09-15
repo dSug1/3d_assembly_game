@@ -348,6 +348,28 @@ export class Recognizer<P> {
     return this.rollRebasedFlag;
   }
 
+  /**
+   * ⭐⭐ ANOTHER RULE MOVED THIS OBJECT WHILE THIS TOUCHPOINT HELD IT STILL.
+   *
+   * ⛔⛔ A10 CREATED THIS SITUATION AND IT HAS NO PRECEDENT IN §1.3. Depth requires the
+   * finger on the object to be STILL — which is, character for character, §1.3's own
+   * precondition for a TAP and for a HOLD. So without this, every depth push would end in
+   * a tap, and two pushes in quick succession would be a **DOUBLE-TAP**, which
+   * `resolveDiscreteRule` maps to **2septies eviction**: a gesture that destroys the
+   * user's constraint work, fired by a gesture that never touched a constraint.
+   *
+   * ⭐ The rule it follows is §1.3's own: a touchpoint whose gesture PRODUCED MOTION is
+   * not a discrete gesture. It simply was not this touchpoint that supplied the motion.
+   * ⚠ It does NOT commit the recognizer — nothing here rolls back, and the finger may
+   * still go on to drag, roll or flick normally.
+   */
+  consumeAsMotion(): void {
+    this.consumedFlag = true;
+  }
+
+  /** ⭐ Set by `consumeAsMotion`. See there for why a depth push must not be a tap. */
+  private consumedFlag = false;
+
   release(s: Sample, ctx: ReleaseContext = NO_RELEASE_CONTEXT): ReleaseVerdict {
     const press = this.pressSample;
     const wasCommitted = this.phase === "COMMITTED_CONTINUOUS";
@@ -359,8 +381,13 @@ export class Recognizer<P> {
 
     if (!wasCommitted) {
       // Never committed: nothing moved, so there is nothing to roll back.
+      // ⛔⛔ A GESTURE ANOTHER RULE CONSUMED IS NEVER A TAP. A10's depth push holds this
+      // finger STILL on the object, which is exactly a tap's shape — and a DOUBLE_TAP here
+      // resolves to 2septies, which evicts constraints the user never asked to lose.
+      // ⚠ `HOLD` is the honest verdict: held, fired nothing, and `taps.reset()` below
+      // makes sure it cannot be the first half of a double-tap either.
       const kind: ReleaseKind =
-        press && durationMs <= this.cfg.tapMaxDuration
+        !this.consumedFlag && press && durationMs <= this.cfg.tapMaxDuration
           ? this.taps.record(press, s.t)
           : "HOLD";
       if (kind === "HOLD") this.taps.reset();

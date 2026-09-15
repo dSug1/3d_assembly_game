@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-15)
 
-✅ Green: TypeScript + Babylon + Vite, **480 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **476 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -77,15 +77,27 @@ not to the press, so a straight drag that precedes a circle survives.
 integrate the raw per-event delta and the pointer noise is 0.761 mm, so a still finger turns
 a held object. ⚠ **The trap is written down before the build**: a *hard* deadband is a jump
 traded for a jump — build the residual-accumulator form and assert CONTINUITY.
-✅✅ **DEPTH translation works** (`A6`/`D17`, `IN8` wired): one finger on the object DRIVES
-it, a second finger **anywhere** only VALIDATES by following the same `dy` within a ratio.
-⛔ It took five models and a device pass each — a mean, a latch, a cumulative exit, a
-shared minimum, a faded blend — before the owner supplied the right one. ⭐ **A blend has
-seams and a hand feels every one of them.** ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
+✅ **DEPTH translation** (`A10`/`D20`, `IN8`): the finger **on the object holds still**, the
+finger **outside** supplies the travel. ⛔ No window, no ratio, no tolerance — and the
+holder wins every tie, so rule 6 and depth **partition** the two-finger configuration
+instead of competing for it. ⭐ Rule 6's second touchpoint may now be outside **or on the
+same object** (the first drives), which closes the small-object hole owed since `A5`.
+⛔⛔ **Depth took SIX models, five of them rejected by a hand**, and the two lessons are in
+`METHOD.md`: **a blend has seams**, and ⭐⭐ **when a rule needs a WINDOW to decide, suspect
+the QUESTION** — A6 was implemented correctly and still failed, because *"are these two
+travels equal?"* has no answer at a reversal or a late start.
+⛔⛔ **AND IT EXPOSED A DEFECT IN §1.1 THAT NOTHING ELSE COULD HAVE FOUND**: the motion
+state estimated speed over **one sample pair**, so with the measured 0.761 mm of noise a
+resting finger read ~95 mm/s and **STATIONARY was unreachable — for any real finger, since
+the day the noise was measured**. ⭐ Fixed to a windowed estimate, with a validator rule and
+four §1.1 numbers re-sized. ⚠ **A device pass is owed**: a drag now commits at 3.2 mm
+instead of 1.5 mm, and STATIONARY takes ~0.9 s to return after a drag. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Twenty-six defects have been found BY FINGER and none was visible to a green
-suite.** They are **five** repeating shapes — a rate estimated over too short a baseline, a
+⛔⛔ **Twenty-seven defects, twenty-six of them BY FINGER, and none visible to a green
+suite.** ⭐ The twenty-seventh is the exception worth knowing: §1.1's unreachable
+STATIONARY was found by **composing a measurement with a threshold**, not by a hand — and
+no hand could have found it, because nothing shipped depended on the path it broke. They are **five** repeating shapes — a rate estimated over too short a baseline, a
 substituted quantity, idealised fixtures, a composition nobody computed, and ⭐ **my own
 FIXTURES**, which produce false alarms that look exactly like real defects. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE

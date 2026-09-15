@@ -55,7 +55,7 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
-  CommonDragDetector,
+  depthGate,
   gravityFrame,
   type GravityFrame,
   depthLimits,
@@ -82,7 +82,7 @@ import {
   type PosePort,
   type ReleaseVerdict,
   type Sample,
-  type RoutedPointer,
+  MotionTracker,
   type ScreenFrame,
 } from "../input";
 // ⭐ The quaternion arithmetic left this file with the composition it belonged to —
@@ -310,8 +310,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ `null` only before the gesture commits.
      */
     mode: "ROTATE" | "TRANSLATE" | "DEPTH" | null;
-    /** A6's gate: are both touchpoints travelling in y together? ⛔ It only DECIDES. */
-    depth: CommonDragDetector;
+    /**
+     * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
+     * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer
+     * id, because `MotionTracker` is stateful and hysteretic: sharing one between two
+     * fingers would mix their histories and answer about neither.
+     * ⚠ Rebuilt when a touchpoint goes down, never reused across a release.
+     */
+    anchorMotion: Map<number, MotionTracker>;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -733,7 +739,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const d = r[0] * push[0] + r[1] * push[1] + r[2] * push[2];
       const { minM, maxM } = depthLimits(cfg);
       const at = d <= minM + 1e-4 ? "  ⛔MIN" : d >= maxM - 1e-4 ? "  ⛔MAX" : "";
-      return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at}`;
+      // ⭐⭐ A10'S GATE, ON THE GLASS. The rule is invisible otherwise: a hand that gets
+      // no depth cannot tell whether the holder was judged to be moving or whether the
+      // anchor was. ⛔ It prints what the gate DECIDED, never a recomputation.
+      const mode = grip.mode === "DEPTH" ? "DEPTH" : grip.rec.motionState === "STATIONARY" ? "ready" : "held-MOVING";
+      return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at} ${mode}`;
     }
     return "";
   };
@@ -898,8 +908,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
         // what baseline. ⛔ The tolerance is on the DIFFERENCE of the two travels: it is
         // what separates A6 from rule 6, whose anchor is deliberately still.
-        tunable("depth follow ratio (±)", "depthFollowRatio", 0.05, 1, 0.05),
-        tunable("depth common window (ms)", "depthCommonWindowMs", 20, 200, 10),
+        // ⭐⭐ A10 MADE THESE FOUR LOAD-BEARING FOR A MODE, not only for a flick test:
+        // the depth gate IS the holder's §1.1 motion state. ⛔ They were re-sized against
+        // the measured noise floor when A10 landed, and a hand has not judged the new set.
+        tunable("still speed (mm/s)", "stillSpeed", 2, 40, 1),
+        tunable("still time (ms)", "stillTime", 50, 400, 10),
+        tunable("move ENTER distance (mm)", "moveEnterDistance", 0.5, 8, 0.1),
+        tunable("move EXIT distance (mm)", "moveExitDistance", 0.5, 6, 0.1),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
         // ⭐ How far the drag must swing before the scene reacts again, and the drag
@@ -1057,17 +1072,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * SMALL object, and pushing a part away shrinks it — so the pinch destroyed its own
    * affordance as it succeeded. The anchor can now be anywhere.
    */
-  const depthAnchorFor = (grip: Held): RoutedPointer<AbstractMesh> | null => {
-    // ⭐ ANY other participating touchpoint: one outside every object (rule 6's anchor) or
-    // a second finger on this same object. ⛔ NOT a finger holding a DIFFERENT object —
-    // that configuration belongs to §4 rules 5/6bis/6ter and must stay reachable.
-    for (const q of router.all()) {
-      if (q.role === "OUTSIDE") return q;
-      if (q.role === "SECOND" && q.object === grip.mesh) return q;
-    }
-    return null;
-  };
-
   /**
    * Move the held object in depth by ONE touchpoint's share of this frame's travel.
    *
@@ -1118,27 +1122,44 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * @returns true when A6 owns this object right now, so the caller skips its own rule.
    */
   /**
-   * Classify the gesture, and move the object only if the DRIVER moved and the validator
-   * authorised it.
+   * ⭐⭐ AMENDMENT A10 — the ANCHOR drives depth, while the finger on the object is STILL.
    *
-   * @param driverDyPx the driver's travel THIS FRAME. ⚠ Zero when it was the validator that
-   *   moved — a validator's event classifies and nothing more.
+   * ⛔⛔ THE GATE IS THE HOLDER'S MOTION STATE AND NOTHING ELSE. No window, no ratio, no
+   * tolerance: A6 had all three and the owner rejected the result on the glass, because
+   * *"are these two travels equal?"* has no answer at a reversal or at a late start, and
+   * both happen in every gesture.
+   *
+   * @param anchor  the touchpoint OUTSIDE every object — the one supplying the motion.
+   * @param anchorDyPx its travel THIS FRAME.
+   * @returns whether depth consumed the event, so the caller stops.
    */
   const applyDepthDrag = (
     grip: Held,
-    driverY: number,
-    followerY: number,
-    t: number,
-    driverDyPx: number,
+    anchorId: number,
+    anchorSample: Sample,
+    anchorDyPx: number,
   ) => {
-    const common = grip.depth.push(t, driverY, followerY);
-    if (!common) return false;
-    applyDepthStep(grip, driverDyPx);
+    // ⭐ The anchor gets a tracker of its own — the SAME §1.1 machine every other rule
+    // reads, never a speed invented here. A second definition of "moving" would be free
+    // to disagree with the one the holder is judged by.
+    let tracker = grip.anchorMotion.get(anchorId);
+    if (!tracker) {
+      tracker = new MotionTracker(cfg);
+      grip.anchorMotion.set(anchorId, tracker);
+    }
+    const anchorState = tracker.push(anchorSample);
+    if (depthGate(grip.rec.motionState, anchorState) !== "DEPTH") return false;
+
+    applyDepthStep(grip, anchorDyPx);
     grip.mode = "DEPTH";
+    // ⛔⛔ AND THE HOLDER'S GESTURE IS NO LONGER A TAP. It is being held STILL on the
+    // object, which is a tap's exact shape — and a DOUBLE_TAP resolves to 2septies
+    // eviction. See `Recognizer.consumeAsMotion`.
+    grip.rec.consumeAsMotion();
 
     // ⭐ THE SCENE REACTS TO A PUSH TOO — the same sway, the same four tunables.
     // ⚠ SIGN: fingers moving UP (negative screen y) push the object AWAY, which is +push.
-    const kick = grip.depthSway.push({ x: 0, y: driverY, t }, true, true);
+    const kick = grip.depthSway.push({ x: 0, y: anchorSample.y, t: anchorSample.t }, true, true);
     if (kick) {
       const push = grip.frame.depth;
       {
@@ -1255,11 +1276,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         lastRollDeg: 0,
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
-        depth: new CommonDragDetector(
-          cfg.depthCommonWindowMs,
-          cfg.depthFollowRatio,
-          cfg.pointerNoiseMm,
-        ),
+        anchorMotion: new Map(),
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -1282,17 +1299,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (!routed) return;
 
     if (routed.role === "SECOND") {
-      const mesh = routed.object as AbstractMesh;
       if (info.type === PointerEventTypes.POINTERUP) {
         router.release(e.pointerId);
         lastVerdict = "second touchpoint released";
       } else {
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
-        const holder = router.objects().find((q) => q.object === mesh);
-        const grip = holder ? held.get(holder.id) : undefined;
-        // ⭐ Positions, not deltas: the detector owns the shared travel now.
-        // ⛔ A second touchpoint on the object is a validator too: it classifies only.
-        if (grip) applyDepthDrag(grip, grip.prev.y, s.y, s.t, 0);
+        // ⛔⛔ A10: A SECOND FINGER ON THE SAME OBJECT MOVES NOTHING BY ITSELF. It makes
+        // rule 6 REACHABLE — the owner: *"the second touchpoint can be either outside any
+        // object or on the same object as the first touchpoint"* — and the FIRST
+        // touchpoint, the one whose raycast hit the object, is what drives.
+        // ⚠ It is deliberately NOT a depth anchor: A10 says *"the touchpoint OUTSIDE the
+        // object has delta position y"*, and a finger resting on a small part has nowhere
+        // to travel. Depth needs the anchor outside, where the whole screen is available.
       }
       paint();
       return;
@@ -1315,13 +1333,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
-        // ⭐⭐ A6 FIRST: an anchor travelling in y alongside the finger on the object is a
-        // depth drag, not an orbit and not a pinch. ⛔ Without this branch the gesture
-        // would only work while the OBJECT's finger moved, and a hand moves both.
+        // ⭐⭐ A10: THIS IS THE FINGER THAT DRIVES DEPTH, and this branch is the only
+        // place depth is applied. ⛔ The gate opens only while the finger ON the object is
+        // STILL — so an anchor moving during an ordinary rule 6 drag does nothing at all,
+        // and the two rules partition the configuration instead of competing for it.
         const holder = router.objects()[0];
         const grip = holder ? held.get(holder.id) : undefined;
-        // ⛔ The validator moved, so it classifies and moves NOTHING: zero travel.
-        if (grip && applyDepthDrag(grip, grip.prev.y, s.y, s.t, 0)) {
+        if (grip && applyDepthDrag(grip, routed.id, s, s.y - prev.y)) {
           paint();
           return;
         }
@@ -1375,8 +1393,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ `>= 1`: two anchors and one object is not in §4's table, and translating is
         // the answer that surprises nobody. Pinch and orbit both require NOTHING held,
         // so neither can be running at the same time.
+        // ⭐⭐ A10 WIDENED THIS: the second touchpoint may be OUTSIDE any object **or on
+        // the same object**, and either way the FIRST touchpoint drives. ⛔ The owner
+        // asked for it directly, and it removes the last place two fingers on one part
+        // did nothing useful.
         grip.mode =
-          router.objects().length === 1 && router.outside().length >= 1
+          router.objects().length === 1 &&
+          (router.outside().length >= 1 || router.secondTouchOn(grip.mesh) !== null)
             ? "TRANSLATE"
             : "ROTATE";
       }
@@ -1391,18 +1414,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       );
       if (kick && cfg.translateSwayMm > 0) nudgeOthers(grip, kick);
 
-      // ⭐⭐ A6 TAKES PRECEDENCE. While both fingers travel together in y the object goes
-      // in DEPTH, and the holder's drag must not ALSO translate it across the screen or
-      // rotate it — that would be two rules answering one hand.
-      const depthAnchor = depthAnchorFor(grip);
-      if (
-        depthAnchor &&
-        applyDepthDrag(grip, s.y, depthAnchor.last.y, s.t, s.y - grip.prev.y)
-      ) {
-        grip.prev = s;
-        paint();
-        return;
-      }
+      // ⛔⛔ A10: THE HOLDER MOVING IS RULE 6, ALWAYS. There is nothing to test here and
+      // nothing to wait for — this event is proof the holder is not still, which is the
+      // only question A10 asks. ⭐ A6 used to attempt a depth classification on this very
+      // line and withhold the vertical until it had one; that hesitation at each end of
+      // every drag is exactly what the owner rejected.
 
       if (grip.mode === "TRANSLATE") {
         // §4 RULE 6 — the object translates in the screen view plane.
@@ -1411,26 +1427,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // whole derivation, and the 20× spread that forced it, is in input/translate.ts.
         // ⚠ `clientHeight` — CSS pixels, matching pointer coordinates. The render height
         // is device pixels and would be wrong by `devicePixelRatio`.
-        // ⛔⛔ THE VERTICAL IS WITHHELD WHILE THE GESTURE IS UNDECIDED, and this one line
-        // is the fix for three separate reports: a lurch at the START of a drag, a lurch at
-        // the END, and a cumulative VERTICAL DRIFT over repeated back-and-forths.
-        //
-        // A6 and rule 6 share a touchpoint configuration and are told apart by what the
-        // fingers DO, which takes a window to see. Until then the detector says PENDING —
-        // and the old code read that as "not a common drag" and translated the object
-        // VERTICALLY, because A7 made rule 6's dy the gravity axis. Every ambiguous frame
-        // at each end of every gesture leaked a little vertical, and the leaks accumulated.
-        //
-        // ⭐ *Acting is irreversible; not knowing is not a reason to act.* The horizontal is
-        // unambiguous and always applies; the vertical waits for the verdict.
-        // ⚠ THE COST, STATED: the first window of vertical travel is DISCARDED rather than
-        // released in one step, because releasing it is exactly the jump being complained
-        // about. A two-finger vertical gesture therefore starts from where it was
-        // recognised, not from where it began.
-        const pending = depthAnchorFor(grip) !== null && grip.depth.verdict === "PENDING";
+        // ⭐⭐ A10 GAVE THE VERTICAL BACK, WHOLE. A6 had to WITHHOLD it while its
+        // detector said PENDING — the two rules shared a configuration and took a window
+        // to tell apart — and the cost was that the first window of every drag's vertical
+        // travel was DISCARDED. ⛔ There is no undecided state any more: this event exists
+        // because the holder moved, and a moving holder is rule 6 by definition.
         const t = screenTranslation(
           s.x - grip.prev.x,
-          pending ? 0 : s.y - grip.prev.y,
+          s.y - grip.prev.y,
           camera.radius,
           camera.fov,
           canvas.clientHeight,

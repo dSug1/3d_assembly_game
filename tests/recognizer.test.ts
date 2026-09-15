@@ -117,7 +117,10 @@ describe("recognizer — the commit point", () => {
     for (const s of moving.slice(1)) rec.move(s);
     expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS");
     const last = moving[moving.length - 1]!;
-    for (let i = 1; i <= 60; i++) rec.move({ x: last.x, y: last.y, t: last.t + i * 10 });
+    // ⚠ DERIVED, not a literal: how long settling takes is governed by `stillTime` and
+    // by the speed window behind it, and A10 re-sized both. A literal 600 ms went stale.
+    const restSamples = Math.ceil((4 * cfg.stillTime) / 10);
+    for (let i = 1; i <= restSamples; i++) rec.move({ x: last.x, y: last.y, t: last.t + i * 10 });
     expect(rec.motionState).toBe("STATIONARY"); // the FINGER settled...
     expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS"); // ...the GESTURE did not
   });
@@ -473,5 +476,57 @@ describe("release-time priority (§1.3)", () => {
         ),
       ).toBe("NONE");
     }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔ A10: A DEPTH PUSH HOLDS THE FINGER STILL ON THE OBJECT — WHICH IS A TAP'S SHAPE
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ a gesture ANOTHER RULE consumed is never a tap", () => {
+  /**
+   * ⭐ Why this exists, stated as a consequence rather than as a rule: A10 says depth runs
+   * while the finger on the object is STILL. §1.3 says a touchpoint that never committed
+   * and lifts inside `tapMaxDuration` is a TAP, and two of those are a DOUBLE_TAP — which
+   * `resolveDiscreteRule` maps to **2septies**, eviction. ⛔ So without this, a quick depth
+   * nudge, twice, would clear constraints the user never touched.
+   */
+  const pressAndLift = (rec: ReturnType<typeof fresh>["rec"], t0: number, consumed: boolean) => {
+    rec.press({ x: 300, y: 300, t: t0 });
+    if (consumed) rec.consumeAsMotion();
+    return rec.release({ x: 300, y: 300, t: t0 + 40 });
+  };
+
+  it("⛔ a consumed press releases as HOLD, not TAP", () => {
+    const { rec } = fresh();
+    expect(pressAndLift(rec, 0, true).kind).toBe("HOLD");
+  });
+
+  it("⭐ COUNTER-EXAMPLE: the identical press, NOT consumed, is a TAP", () => {
+    // ⚠ Without this the vector above would pass for a recognizer that had simply
+    // stopped producing taps at all.
+    const { rec } = fresh();
+    expect(pressAndLift(rec, 0, false).kind).toBe("TAP");
+  });
+
+  it("⛔⛔ two consumed pushes are NOT a DOUBLE_TAP — so they cannot evict", () => {
+    // ⭐ The consequence that matters. `taps.reset()` on the HOLD path is what makes a
+    // consumed gesture unable to be the FIRST half of a double-tap either.
+    const a = fresh().rec;
+    expect(pressAndLift(a, 0, true).kind).toBe("HOLD");
+    const b = fresh().rec;
+    const second = pressAndLift(b, 120, true);
+    expect(second.kind).toBe("HOLD");
+    expect(second.rule).toBe("NONE");
+  });
+
+  it("⭐ it does NOT commit the gesture — the finger may still drag afterwards", () => {
+    // ⚠ Consuming says "someone else supplied motion", not "this gesture is over".
+    const { rec } = fresh();
+    const moving = run({ speedMmPerS: 40, ms: 200 });
+    rec.press(moving[0]!);
+    rec.consumeAsMotion();
+    for (const s of moving.slice(1)) rec.move(s);
+    expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS");
   });
 });

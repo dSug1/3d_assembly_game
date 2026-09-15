@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
+import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "../src/input/motion";
 import { detectFlick, terminalSpeedPxPerS, trimBuffer } from "../src/input/flick";
 import { mmToPx } from "../src/core/units";
@@ -178,7 +178,12 @@ describe("moveExitDistance — the slow creep an instantaneous speed test cannot
     for (const s of drag) m.push(s);
     expect(m.current).toBe("MOVING");
     const last = drag[drag.length - 1]!;
-    for (let t = 10; t <= 600; t += 10) m.push({ x: last.x, y: 0, t: last.t + t });
+    // ⚠ DERIVED from the config, not a literal: the duration needed is governed by
+    // `stillTime` AND by the speed window filling behind it, and a literal 600 ms went
+    // stale the moment A10 re-sized both. ⭐ 4x leaves room without hiding a regression —
+    // the vector above pins the actual latency at under a second.
+    const restMs = 4 * cfg.stillTime;
+    for (let t = 10; t <= restMs; t += 10) m.push({ x: last.x, y: 0, t: last.t + t });
     expect(m.current).toBe("STATIONARY");
   });
 
@@ -269,5 +274,112 @@ describe("flick lift speed — the same gesture must survive any lift event", ()
     expect(
       () => new MotionTracker({ ...cfg, flickLiftWindow: cfg.flickWindow + 1 }),
     ).toThrow(/exceeds flickWindow/);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔⛔ CAN A FINGER THAT HAS MOVED EVER BE STILL AGAIN?
+//
+// Found 2026-09-15, building A10's depth gate — the first rule that asks. The answer
+// was NO, for any real finger, and it had been no since `pointerNoiseMm` was MEASURED
+// on 2026-09-14. ⭐ Not one of eight device passes could have shown it: the commit
+// threshold reads the MOVING transition, rule 6 reads presence, and the flick test reads
+// lift speed. Nothing shipped depended on RE-ENTERING STATIONARY.
+//
+// ⭐⭐ THE CAUSE IS MISTAKE SHAPE 1 IN THE FILE THAT DEFINES *moving*: the speed was
+// estimated over ONE SAMPLE PAIR. 0.761 mm of noise across 8 ms is ~95 mm/s of apparent
+// speed at rest, against a 6 mm/s threshold.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ a finger AT REST returns to STATIONARY — with the MEASURED noise on it", () => {
+  /**
+   * Uniform per-axis amplitude reproducing an RMS RADIAL displacement of `pointerNoiseMm`.
+   * ⭐ `noise_meter.ts` reports the RMS distance from the window mean, which is a RADIUS —
+   * so a per-axis amplitude of the same number would be a different, smaller quantity.
+   * ⚠ For uniform ±A on two axes the RMS radius is `A·√(2/3)`, hence the division.
+   */
+  const AMP_MM = DEFAULT_CONFIG.pointerNoiseMm / Math.sqrt(2 / 3);
+
+  const resting = (seedStart: number) => {
+    let seed = seedStart;
+    return () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return mmToPx(((seed / 0x7fffffff) * 2 - 1) * AMP_MM);
+    };
+  };
+
+  /** Drag, then hold the finger still for `restMs` with real noise on every sample. */
+  const dragThenRest = (restMs: number, seed: number) => {
+    const jit = resting(seed);
+    const m = new MotionTracker(cfg);
+    for (let i = 0; i < 40; i++) m.push({ x: 400 + mmToPx(i * 2), y: 400, t: i * 8 });
+    const movingAfterDrag = m.current;
+    let firstStationaryAtMs: number | null = null;
+    for (let i = 0; i * 8 < restMs; i++) {
+      const t = 320 + i * 8;
+      const st = m.push({ x: 400 + mmToPx(80) + jit(), y: 400 + jit(), t });
+      if (st === "STATIONARY" && firstStationaryAtMs === null) firstStationaryAtMs = i * 8;
+    }
+    return { movingAfterDrag, firstStationaryAtMs, final: m.current };
+  };
+
+  it("⭐⭐ it comes back, and within a second", () => {
+    const r = dragThenRest(2000, 12345);
+    expect(r.movingAfterDrag).toBe("MOVING");
+    expect(r.firstStationaryAtMs).not.toBeNull();
+    // ⚠ Longer than `stillTime` on purpose: the window must FILL before the speed estimate
+    // means anything, and settle candidacy restarts while it does.
+    expect(r.firstStationaryAtMs!).toBeLessThan(1000);
+    expect(r.final).toBe("STATIONARY");
+  });
+
+  it("⭐ it comes back whatever the noise happens to do — four seeds", () => {
+    for (const seed of [1, 777, 20260915, 99991]) {
+      const r = dragThenRest(2000, seed);
+      expect(r.final, `seed ${seed}`).toBe("STATIONARY");
+    }
+  });
+
+  it("⛔⛔ COUNTER-EXAMPLE: the OLD per-pair speed estimate never comes back", () => {
+    // ⭐ The defect, pinned, so the fix cannot be quietly undone. This is what the shipped
+    // code did until 2026-09-15 — and it is a rate over the shortest available baseline.
+    const jit = resting(12345);
+    let state: MotionState = "MOVING";
+    let prev: Sample = { x: 400 + mmToPx(80), y: 400, t: 320 };
+    let settleAnchor: Sample | null = null;
+    let stillSince: number | null = null;
+    let cameBack = false;
+    for (let i = 1; i < 500; i++) {
+      const s: Sample = { x: 400 + mmToPx(80) + jit(), y: 400 + jit(), t: 320 + i * 8 };
+      const dt = s.t - prev.t;
+      const speed = (Math.hypot(s.x - prev.x, s.y - prev.y) / dt) * 1000;
+      if (speed <= mmToPx(cfg.stillSpeed)) {
+        if (settleAnchor === null) {
+          settleAnchor = prev;
+          stillSince = prev.t;
+        }
+        const ex = Math.hypot(s.x - settleAnchor.x, s.y - settleAnchor.y);
+        if (ex > mmToPx(cfg.moveExitDistance)) {
+          settleAnchor = s;
+          stillSince = s.t;
+        } else if (s.t - stillSince! >= cfg.stillTime) {
+          state = "STATIONARY";
+          cameBack = true;
+        }
+      } else {
+        stillSince = null;
+        settleAnchor = null;
+      }
+      prev = s;
+    }
+    expect(cameBack, "the old estimate must NOT come back — that is the defect").toBe(false);
+    expect(state).toBe("MOVING");
+  });
+
+  it("⛔ and the config now REFUSES a settle bound the noise cannot fit inside", () => {
+    // ⭐ The guard, so this cannot regress by someone lowering one number.
+    expect(() =>
+      validateGestureConfig({ ...cfg, moveExitDistance: 0.8, moveEnterDistance: 1.5 }),
+    ).toThrow(/STATIONARY is unreachable/);
   });
 });

@@ -65,6 +65,23 @@ be discontinuous.
 through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
 of two numbers passing through zero is garbage however carefully it is computed.
 
+## ⭐⭐ When a rule needs a WINDOW to decide, suspect the QUESTION
+
+*(2026-09-15, from the sixth model of one gesture.)* A window, a ratio, a tolerance and a
+hold are how you buy an answer to a question that **has no answer at this instant**. ⛔ When
+a rule needs them, the cheapest fix is usually not a better window — it is a **different
+question**.
+
+⚠ The instance: *"are these two fingers travelling by the same amount?"* is undefined at a
+reversal (both travels pass through zero) and at a late start (one has not moved yet), and
+both happen in **every** gesture. So the rule waited two windows and withheld a whole axis
+meanwhile, and a hand felt the hesitation at each end of every drag. ⭐ Replacing it with
+*"is that finger still?"* — answerable at every instant, including those two — removed the
+window, the ratio, the tolerance and the hold **together**.
+
+⛔ The tell: a correctly implemented rule that still feels wrong, and a tuning parameter
+whose value nobody can defend. ⭐ Ask what question the parameter is buying an answer to.
+
 ## ⭐ Acting is irreversible; not knowing is not a reason to act
 
 When a gesture is genuinely ambiguous for a window, the choice is not *"which rule"* but
