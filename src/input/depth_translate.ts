@@ -118,10 +118,31 @@ export interface CommonDrag {
  * ⛔⛔ IT ONLY DECIDES. It reports the window's travel so a caller can see what it judged,
  * but the caller must move the object by THIS FRAME's delta — see the header.
  *
- * ⚠ One per gesture: it carries the window.
+ * ⛔⛔ AND IT **LATCHES**, WHICH IS A DEFECT FIX, NOT A REFINEMENT.
+ * *"At the start when the two fingers move together the translation on depth is OK but then
+ * it seems to blend into a translation along gravity axis, even though the two fingers
+ * continue their synchronized movements."* — found by finger, 2026-09-15.
+ *
+ * The entry test needs BOTH fingers to have travelled more than 3× the measured pointer
+ * noise across the window. ⚠ Every deliberate drag SLOWS as it settles, so that floor stops
+ * being met while the hand is still doing exactly the same thing — the gate returned
+ * `null`, control fell through to rule 6, and under A7 rule 6's dy is the GRAVITY axis. The
+ * gesture converted itself from depth into a vertical lift, smoothly, as the speed decayed.
+ * ⭐ Hence "blend": it was not a glitch, it was a handover.
+ *
+ * ⛔ **A speed below the noise floor means "no new information", not "a different
+ * gesture".** So entering needs both fingers moving; STAYING needs only that they have not
+ * demonstrably diverged. That is §1.1's `moveEnterDistance > moveExitDistance` and §1.3's
+ * one-way `COMMITTED_CONTINUOUS`, applied to the one mode selector that was still deciding
+ * per frame — and `IN4` already wrote the rule down: a noisy continuous signal must not
+ * pick a mode every frame.
+ *
+ * ⚠ One per gesture: it carries the window and the latch.
  */
 export class CommonDragDetector {
   private readonly window: { t: number; a: number; b: number }[] = [];
+  /** ⭐ True once the two fingers have been seen travelling together. One-way, per gesture. */
+  private latched = false;
 
   /**
    * @param windowMs      the baseline the travels are measured over.
@@ -135,6 +156,11 @@ export class CommonDragDetector {
     private readonly noiseMm: number,
   ) {}
 
+  /** ⭐ True while a common drag is in force. Exits only on a real divergence. */
+  get isCommon(): boolean {
+    return this.latched;
+  }
+
   /** Feed both touchpoints' current y. `null` when this is not a common drag. */
   push(t: number, aYPx: number, bYPx: number): CommonDrag | null {
     this.window.push({ t, a: aYPx, b: bYPx });
@@ -147,15 +173,26 @@ export class CommonDragDetector {
     const da = pxToMm(aYPx - first.a);
     const db = pxToMm(bYPx - first.b);
 
-    // ⛔ BOTH must actually be moving. A still finger's "travel" is jitter, and pairing it
-    // with a real one would read as common motion whenever the moving one happened to be
-    // slow. This is what keeps rule 6 — whose anchor is deliberately still — out of A6.
+    // ⛔ BOTH must actually be moving — TO ENTER. A still finger's "travel" is jitter, and
+    // pairing it with a real one would read as common motion whenever the moving one
+    // happened to be slow. This is what keeps rule 6 — whose anchor is deliberately still —
+    // out of A6.
+    // ⭐⭐ ONCE LATCHED THE FLOOR NO LONGER APPLIES. A hand that slows mid-gesture is still
+    // doing the same gesture, and re-asking this question every frame is what made the
+    // depth translation blend into a vertical one as the fingers settled.
     const floor = MIN_TRAVEL_NOISE_MULTIPLE * this.noiseMm;
-    if (!(Math.abs(da) > floor) || !(Math.abs(db) > floor)) return null;
+    if (!this.latched && (!(Math.abs(da) > floor) || !(Math.abs(db) > floor))) return null;
 
     const spreadMm = Math.abs(da - db);
-    if (spreadMm > this.toleranceMm) return null;
+    // ⛔ A genuine DIVERGENCE ends it — the fingers stopped agreeing, which is the hand
+    // saying something different. That is the only exit, and it is deliberately not
+    // "they slowed down".
+    if (spreadMm > this.toleranceMm) {
+      this.latched = false;
+      return null;
+    }
 
+    this.latched = true;
     return { commonMm: (da + db) / 2, spreadMm };
   }
 }
@@ -171,9 +208,19 @@ export const MIN_TRAVEL_NOISE_MULTIPLE = 3;
 /**
  * Move an object in horizontal depth by one frame's common travel.
  *
+ * @param push     the horizontal direction depth runs along — `GravityFrame.depth`.
+ * @param awaySign +1 when moving the object AWAY makes it rise on screen (the camera looks
+ *   DOWN on the scene), −1 when it makes it sink (the camera looks UP from below).
+ *   ⛔⛔ IT IS NOT A CONSTANT, AND ASSUMING IT WAS WAS A DEFECT FOUND BY FINGER: *"when the
+ *   camera is on the bottom ring facing upwards, the depth translation is chaotic."* An
+ *   object further off along the ground rises toward the horizon seen from above and SINKS
+ *   seen from below, so *fingers-up means away* is right on the top rings and backwards on
+ *   the bottom one — and a hand correcting a backwards control produces exactly the chaos
+ *   that was reported. ⭐ `Math.sign(GravityFrame.towardGravity)` is the value.
+ *   ⚠ **0 at a level camera**, where a depth change produces no screen motion and there is
+ *   nothing to follow. The gesture goes quiet rather than guessing a direction.
  * @param commonDyPx this frame's shared vertical travel, CSS pixels. ⚠ Screen y grows
- *   DOWNWARD, and fingers moving UP push the object AWAY — an object further off along the
- *   ground sits higher on screen, so the gesture agrees with what the eye expects.
+ *   DOWNWARD.
  * @param metresPerPx `trackingMetresPerPx` for the camera — rule 6's computed factor, so a
  *   given finger travel moves the object as far into the scene as it would across it.
  *
@@ -183,24 +230,30 @@ export const MIN_TRAVEL_NOISE_MULTIPLE = 3;
 export function depthTranslate(
   cameraPosition: Vec3,
   objectPosition: Vec3,
-  viewAxis: Vec3,
-  gravityDown: Vec3,
+  push: Vec3,
+  awaySign: number,
   commonDyPx: number,
   metresPerPx: number,
   gain: number,
   minM: number,
   maxM: number,
 ): Vec3 {
-  const push = depthPushDirection(viewAxis, gravityDown);
-  if (!push || !Number.isFinite(commonDyPx) || !Number.isFinite(metresPerPx)) {
+  const dir = normalize(push);
+  if (!dir || !Number.isFinite(commonDyPx) || !Number.isFinite(metresPerPx)) {
     return objectPosition;
   }
-  const depth = dot(sub(objectPosition, cameraPosition), push);
+  // ⛔ A level camera shows nothing for a depth change, so there is no direction to
+  // follow. Suppress rather than pick one — `LESSONS_CARRIED` §6.
+  const sign = Math.sign(awaySign);
+  if (sign === 0 || !Number.isFinite(awaySign)) return objectPosition;
+
+  const depth = dot(sub(objectPosition, cameraPosition), dir);
   if (!(depth > 0)) return objectPosition;
 
-  // ⚠ NEGATED: screen y grows downward, and up means away.
-  const wanted = depth - commonDyPx * metresPerPx * gain;
+  // ⚠ NEGATED because screen y grows downward; ⭐ times `sign` because which way "away"
+  // looks depends on whether the camera is above the scene or below it.
+  const wanted = depth - commonDyPx * metresPerPx * gain * sign;
   const clamped = Math.min(maxM, Math.max(minM, wanted));
   // ⭐ Only the along-push component moves, so HEIGHT is untouched by construction.
-  return add(objectPosition, scale(push, clamped - depth));
+  return add(objectPosition, scale(dir, clamped - depth));
 }

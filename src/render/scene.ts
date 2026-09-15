@@ -1082,10 +1082,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       position: depthTranslate(
         asVec3(camera.position),
         mp.position,
-        // ⭐ Already horizontal: A7's frame flattened it at press. Passed through
-        // `depthTranslate`'s own projection, which is a no-op on it.
+        // ⭐ Both latched at press with the rest of the frame. `towardGravity` is what
+        // says whether "away" rises or sinks on screen — it is +1 looking down on the
+        // scene and −1 looking up at it, and assuming +1 made the gesture backwards on the
+        // bottom ring.
         grip.frame.depth,
-        WORLD_DOWN,
+        Math.sign(grip.frame.towardGravity),
         dyPx / 2,
         // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object
         // as far INTO the scene as it would move it ACROSS. One hand's-worth of motion

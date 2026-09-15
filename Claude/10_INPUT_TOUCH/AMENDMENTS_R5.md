@@ -622,6 +622,42 @@ number has been wrong every time on this project.** ⭐ The tolerance is the who
 between A6 and rule 6, so it is the one to move first if either rule fires when the other
 was meant.
 
+### ⛔⛔ TWO DEFECTS FOUND BY FINGER, 2026-09-15 — and the second one names the first
+
+**1. From below, the gesture was BACKWARDS.** *"When the camera position is on the bottom
+ring facing upwards, the depth translation is chaotic."*
+
+An object pushed further off along the ground **rises** toward the horizon seen from above
+and **sinks** seen from below. A6 hard-coded *fingers-up means away*, which is right on the
+top rings and inverted on the bottom one — and a hand correcting a backwards control
+produces exactly the chaos reported. ⭐ `GravityFrame.towardGravity` — `dot(viewAxis,
+gravityDown)`, +1 looking down, −1 looking up — is the sign, latched with the rest of the
+frame. ⚠ At **0**, a level camera, a depth change produces no screen motion at all, so the
+gesture goes quiet rather than guessing: the **fifth** appearance of that shape, and the
+first with the quiet zone in the MIDDLE of the range.
+
+**2. The gate had no hysteresis.** *"At the start the translation on depth is OK but then it
+seems to blend into a translation along gravity axis"*, and *"when I do back and forth of
+the two synchronized fingers, the object drifts along the gravity axis."*
+
+⭐⭐ **Two reports, one cause.** Entry needs both fingers to have travelled 3× the measured
+noise across the window — and a hand SLOWS as it settles, and STOPS at every reversal. The
+gate dropped, control fell through to rule 6, and under **A7** rule 6's dy is the GRAVITY
+axis. The first report is that handover happening once; the second is it happening at every
+turnaround, which **ratchets the leak into a drift**.
+
+⛔ **A speed below the noise floor means "no new information", not "a different gesture".**
+So the gate now LATCHES: entering needs both fingers moving, staying needs only that they
+have not demonstrably diverged. ⭐ That is §1.1's `moveEnterDistance > moveExitDistance` and
+§1.3's one-way `COMMITTED_CONTINUOUS`, applied to the last mode selector that was still
+deciding per frame — and `IN4` had already written the rule down after the `STATIONARY`
+latch was overturned: *a noisy continuous signal must not pick a mode every frame.*
+
+⚠ **My vectors for this passed with the fix removed**, because I asserted on the latch FLAG
+rather than on what `push()` returns — the thing that actually decides. Caught by breaking
+the code and watching. ⭐ *A test that cannot fail is not a test*, and it is not knowable
+without trying.
+
 ### ⭐ What A5 keeps
 
 Everything geometric: horizontal depth, height preserved by construction, the across-view
@@ -709,3 +745,44 @@ undone by accident.
 would have run backwards. ⭐ The vector that compares it against the camera's own right
 caught it immediately. *A sign is not tested by any amount of testing the magnitude*, and
 that is the fifth time on this project.
+
+---
+
+## A8 — ⭐⭐ A ROLL REBASES TO THE START OF ITS CIRCLE *(defect found by finger, 2026-09-15)*
+
+**Amends** §1.3's provisional motion, which applied rollback only at RELEASE.
+
+> *"When the circular finger movement is started, the roll is not immediately triggered: the
+> rotation starts with a yaw or pitch and then switches to a roll, but the switch is done
+> when the yaw or pitch have already rotated the object from its original quaternion. This
+> is misleading because the user should want a roll from the initial quaternion, especially
+> to maintain the alignment on an axis."*
+
+### The defect
+
+A circle does not read as a roll until `rollAngle` (60°) of arc has been swept. Until then
+§1.3 applies the continuous rule **provisionally** — and that rule is 2bis, yaw and pitch.
+⛔ So the roll began from a pose the user never asked for, and the result was **not a pure
+roll of the original orientation**. ⚠ Which matters most precisely when it matters at all:
+a user rolling to preserve an alignment got an alignment quietly broken first.
+
+### ⭐ The mechanism was already in the spec
+
+§1.3 defines provisional motion **with rollback** — it simply only ran it at release, for
+the flick test. A roll committing mid-drag is the same situation one transition earlier, and
+it takes the same answer: **restore, then apply.**
+
+### ⛔⛔ It rebases to the FIT WINDOW's start, NOT to the press
+
+A hand may drag in a straight line and only then begin to circle. That drag is a yaw the
+user asked for, it is **not part of the evidence** for a circle, and undoing it would be a
+second defect wearing the first one's clothes. ⭐ `RollDetector.fitWindowStart` publishes
+where the evidence begins, and the recognizer keeps a short pose history — bounded by AGE,
+because the fit window is sized in PATH LENGTH and a slow circle spans more samples than a
+fast one.
+
+⚠ **The object jumps at the commit**, by the whole swept angle. That is not a glitch: it
+replaces exactly as much unasked-for yaw/pitch with the roll the finger actually drew.
+
+⭐ A vector pins the distinction: a straight run followed by a circle rebases to the
+circle, and the straight run's rotation **survives**.

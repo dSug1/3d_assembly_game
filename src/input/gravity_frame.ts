@@ -84,6 +84,23 @@ export interface GravityFrame {
   readonly up: Vec3;
   /** Horizontal, into the scene: the view direction with everything vertical removed. */
   readonly depth: Vec3;
+  /**
+   * ⭐⭐ HOW THE CAMERA STANDS RELATIVE TO GRAVITY — `dot(viewAxis, gravityDown)`.
+   * **+1 looking straight down, −1 looking straight up, 0 level.**
+   *
+   * ⛔⛔ IT IS THE SIGN A DEPTH GESTURE NEEDS, AND ITS ABSENCE WAS A DEFECT FOUND BY
+   * FINGER: *"when the camera is on the bottom ring facing upwards, the depth translation
+   * is chaotic."* An object pushed further away along the ground rises toward the horizon
+   * when you look DOWN on the scene and **sinks** when you look UP at it — so a rule that
+   * hard-codes *fingers-up means away* is correct on the top rings and **backwards on the
+   * bottom one**, where every correction the hand makes goes the wrong way.
+   *
+   * ⚠ At 0 — a level camera — a depth change produces NO screen motion at all, so there is
+   * no direction to follow and the gesture has nothing to show. ⭐ The fifth appearance of
+   * the *"goes quiet before it fails"* shape, and the first where the quiet zone sits in the
+   * MIDDLE of the range rather than at an end.
+   */
+  readonly towardGravity: number;
 }
 
 /**
@@ -116,7 +133,7 @@ export function gravityFrame(viewAxis: Vec3, gravityDown: Vec3): GravityFrame | 
   const right = normalize(cross(up, depth));
   if (!right) return null;
 
-  return { right, up, depth };
+  return { right, up, depth, towardGravity: dot(v, g) };
 }
 
 /**

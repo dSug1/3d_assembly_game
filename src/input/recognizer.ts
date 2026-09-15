@@ -104,6 +104,14 @@ export interface ReleaseVerdict {
 }
 
 /** Snapshot/restore for whatever the caller calls a pose. See the header. */
+/**
+ * How long the pose history reaches back, milliseconds. ⭐ It must comfortably cover the
+ * roll detector's fit window, which is sized in PATH LENGTH — so a slow circle spans more
+ * time than a fast one. ⚠ Two seconds is generous for a gesture nobody sustains for longer;
+ * the cost is a few hundred quaternions.
+ */
+const POSE_HISTORY_MS = 2000;
+
 export interface PosePort<P> {
   snapshot(): P;
   restore(pose: P): void;
@@ -185,6 +193,16 @@ export class Recognizer<P> {
   private buffer: Sample[] = [];
   private pressSample: Sample | null = null;
   private snapshot: P | null = null;
+  /**
+   * ⭐⭐ THE POSE BEFORE EACH FRAME'S ROTATION, kept just long enough to undo the
+   * provisional yaw/pitch when a roll commits. See `rebaseOnRollCommit`.
+   * ⚠ Bounded by AGE, not by count: the fit window is sized in path length, so a slow
+   * circle spans more samples than a fast one and a fixed count would silently truncate
+   * the very case that needs the most history.
+   */
+  private poseHistory: { t: number; pose: P }[] = [];
+  private rollRebasedFlag = false;
+  private wasRollCommitted = false;
 
   constructor(
     private readonly cfg: GestureConfig,
@@ -239,6 +257,9 @@ export class Recognizer<P> {
     this.roll.reset();
     // §1.3: "On PRESSED, the object's pose is snapshotted."
     this.snapshot = this.pose.snapshot();
+    this.poseHistory = [];
+    this.rollRebasedFlag = false;
+    this.wasRollCommitted = false;
   }
 
   /**
@@ -260,8 +281,71 @@ export class Recognizer<P> {
     // ⛔ COMMITTED_CONTINUOUS IS ONE-WAY until release. Returning to STATIONARY
     // mid-drag must not un-commit: the pose has already moved provisionally, and
     // a rule that switched back would strand it half-applied.
-    if (this.phase === "COMMITTED_CONTINUOUS") this.roll.push(s);
+    if (this.phase === "COMMITTED_CONTINUOUS") {
+      // ⛔ RECORDED BEFORE THE ROLL IS PUSHED, and before the caller applies this frame's
+      // rotation — so `poseHistory[t]` is the pose as it was when the finger was AT `t`,
+      // with that sample's own turn not yet applied. That is what a rebase has to restore.
+      this.poseHistory.push({ t: s.t, pose: this.pose.snapshot() });
+      while (
+        this.poseHistory.length > 1 &&
+        s.t - this.poseHistory[0]!.t > POSE_HISTORY_MS
+      ) {
+        this.poseHistory.shift();
+      }
+      this.roll.push(s);
+      this.rebaseOnRollCommit();
+    }
     return this.phase;
+  }
+
+  /**
+   * ⭐⭐ AMENDMENT **A8** — WHEN A ROLL COMMITS, UNDO THE YAW/PITCH IT WAS MISTAKEN FOR.
+   *
+   * ⛔⛔ THE DEFECT THIS FIXES, FOUND BY FINGER: a circular sweep does not read as a roll
+   * immediately. The detector needs `rollAngle` of arc before it will say so, and until
+   * then §1.3 applies the continuous rule PROVISIONALLY — which is 2bis, yaw and pitch. So
+   * the roll used to begin from a pose the user never asked for, and the result was not a
+   * pure roll of the original orientation. ⚠ The owner: *"the user should want a roll from
+   * the initial quaternion, especially to maintain the alignment on an axis."*
+   *
+   * ⭐ THE MECHANISM IS ALREADY IN THE SPEC. §1.3 defines provisional motion with rollback
+   * — it simply only applied it at RELEASE, for the flick test. A roll committing mid-drag
+   * is the same situation one transition earlier, and it takes the same answer.
+   *
+   * ⛔ IT REBASES TO THE FIT WINDOW'S START, **NOT** TO THE PRESS. A hand may drag in a
+   * straight line and then begin to circle; that drag is a real yaw the user asked for, it
+   * is not part of the evidence for a circle, and undoing it would be a second defect
+   * wearing the first one's clothes.
+   *
+   * ⚠ The object therefore JUMPS at the commit — by the whole swept angle, which 2quinte
+   * then applies from the rebased pose. That is not a glitch: it replaces exactly as much
+   * unasked-for yaw/pitch with the roll the finger actually drew.
+   */
+  private rebaseOnRollCommit(): void {
+    const committed = this.roll.committed;
+    const justCommitted = committed && !this.wasRollCommitted;
+    this.wasRollCommitted = committed;
+    if (!justCommitted) return;
+
+    const start = this.roll.fitWindowStart;
+    if (!start) return;
+    // The latest snapshot taken at or before the window's first sample.
+    let chosen: { t: number; pose: P } | null = null;
+    for (const entry of this.poseHistory) {
+      if (entry.t <= start.t) chosen = entry;
+      else break;
+    }
+    // ⛔ No snapshot that old means the circle began before this gesture's history —
+    // which cannot happen, because the history starts at the commit point. Say nothing
+    // rather than restore an arbitrary pose.
+    if (!chosen) return;
+    this.pose.restore(chosen.pose);
+    this.rollRebasedFlag = true;
+  }
+
+  /** ⭐ True once the pose was rebased to the circle's start. For the readout. */
+  get rollRebased(): boolean {
+    return this.rollRebasedFlag;
   }
 
   release(s: Sample, ctx: ReleaseContext = NO_RELEASE_CONTEXT): ReleaseVerdict {

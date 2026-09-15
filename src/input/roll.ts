@@ -284,6 +284,19 @@ export class RollDetector {
     return this.committedFlag;
   }
 
+  /**
+   * ⭐⭐ WHERE THE EVIDENCE FOR A CIRCLE BEGINS — the oldest sample still in the fit
+   * window. `null` before there is a window.
+   *
+   * ⛔ Published for the REBASE (A8): when a roll commits, the yaw/pitch applied while the
+   * detector was still making up its mind has to be undone, and this says how far back to
+   * undo it. ⚠ It is the WINDOW's start, not the gesture's: a genuine straight drag that
+   * preceded the circle is not part of the evidence and must not be undone with it.
+   */
+  get fitWindowStart(): Sample | null {
+    return this.evalPts[0] ?? null;
+  }
+
   reset(): void {
     this.evalPts = [];
     this.lastEvalAt = null;

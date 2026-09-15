@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-15) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **448 golden vectors,
-all passing** (37 → 448). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **460 golden vectors,
+all passing** (37 → 460). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
@@ -35,8 +35,8 @@ diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
 
 ### ⛔⛔ THE FOUR MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Twenty defects have been found **by finger**, and **not one was visible to a green
-suite**. They are four shapes, not twenty problems:
+Twenty-three defects have been found **by finger**, and **not one was visible to a green
+suite**. They are four shapes, not twenty-three problems:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
 the sum of the rows' dossiers — not a figure anyone restates from memory:
@@ -50,7 +50,10 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | `IN4` — rule 6, translate | **1** — the `STATIONARY` latch, overturned first try | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
 | the sympathetic sway | **1** — re-trigger on a CHANGE OF DIRECTION, missing | this block, below |
 | `3D1` — the model wiring | **1** — the render loop drew only objects that HAPPENED to have a follower, so a translated object was LOCKED until something else created one, then JUMPED | [`queue_notes/3D1.md`](queue_notes/3D1.md) |
-| | **= 20** | |
+| **A8** — the roll's start | **1** — a circle does not read as a roll until `rollAngle` of arc, and the yaw/pitch applied meanwhile was never undone, so the roll began from a pose nobody asked for | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) A8 |
+| **A6** — depth, from below | **1** — *"chaotic on the bottom ring"*: "away" RISES on screen seen from above and SINKS seen from below, and the rule hard-coded the first | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) A6 |
+| **A6** — the gate | **1** — it re-decided every frame against a speed floor, so a hand SLOWING or REVERSING dropped into rule 6, whose dy is now gravity: *"blends into a translation along gravity"* and *"drifts along the gravity axis"*. **Two reports, one cause** | same |
+| | **= 23** | |
 
 ⛔ **Amend the ledger, never a bare number written somewhere else.** That is exactly how
 this drifted: `README.md` said *seventeen* (the total before rule 6 and the sway) and

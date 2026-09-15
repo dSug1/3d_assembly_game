@@ -26,6 +26,8 @@ const FRAME: GravityFrame = {
   // ground. ⭐ At a LEVEL camera it equals the view axis, which is why these vectors and
   // the signs they pin are unchanged by the amendment.
   depth: [0, 0, 1],
+  // ⚠ Unused by rotation: yaw, pitch and roll each name their axis directly.
+  towardGravity: 0.5,
 };
 
 /** The point of the object facing the viewer. Where it goes is the whole assertion. */

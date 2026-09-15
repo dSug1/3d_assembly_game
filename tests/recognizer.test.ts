@@ -295,6 +295,74 @@ describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
     expect(pose.current()).toBe(42);
   });
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // AMENDMENT A8 — the roll REBASES to the start of the circle.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Drive a path, moving the pose provisionally after every sample the way the caller's
+   * yaw/pitch does, and report what the recognizer restored.
+   *
+   * ⭐ The pose is a COUNTER: sample `i` leaves it at `i`. So a restored value says
+   * exactly WHICH SAMPLE the recognizer rebased to, which is the whole question.
+   */
+  function driveWithProvisionalMotion(samples: readonly Sample[]) {
+    const pose = recordingPose();
+    const taps = new TapHistory(cfg);
+    const rec = new Recognizer(cfg, pose.port, taps);
+    rec.press(samples[0]!);
+    for (let i = 1; i < samples.length; i++) {
+      rec.move(samples[i]!);
+      // The continuous rule turning the object, provisionally, for this frame.
+      pose.moveProvisionally(i);
+    }
+    return { rec, pose };
+  }
+
+  it("⛔⛔ REBASES when the roll commits — the yaw/pitch it was mistaken for is undone", () => {
+    // ⚠ THE DEFECT THIS PINS, FOUND BY FINGER: a circle does not read as a roll until
+    // `rollAngle` of arc has been swept, and until then §1.3 applies 2bis provisionally.
+    // The roll used to begin from a pose the user never asked for, so the result was not a
+    // pure roll of the original orientation.
+    const { rec, pose } = driveWithProvisionalMotion(circle(70, true));
+    expect(rec.rollRebased).toBe(true);
+    expect(pose.restored.length).toBeGreaterThan(0);
+  });
+
+  it("⛔ does NOT rebase when the path never becomes a circle", () => {
+    const { rec, pose } = driveWithProvisionalMotion(run({ speedMmPerS: 60, ms: 400 }));
+    expect(rec.rollRebased).toBe(false);
+    expect(pose.restored).toEqual([]);
+  });
+
+  it("⭐⭐ rebases to the CIRCLE'S START, not to the PRESS — a real drag before it survives", () => {
+    // ⛔⛔ THE COUNTER-EXAMPLE THAT SEPARATES THE FIX FROM ITS LAZY VERSION. A hand may
+    // drag in a straight line and only then begin to circle. That drag is a yaw the user
+    // asked for; it is not part of the evidence for a circle, and undoing it would be a
+    // second defect wearing the first one's clothes.
+    const straight = run({ speedMmPerS: 60, ms: 300, x0: 200, y0: 200 });
+    const lastStraight = straight[straight.length - 1]!;
+    const circled = circle(70, true, lastStraight.t + 10).map((s) => ({
+      ...s,
+      x: s.x + (lastStraight.x - 200),
+    }));
+    const samples = [...straight, ...circled];
+
+    const { rec, pose } = driveWithProvisionalMotion(samples);
+    expect(rec.rollRebased).toBe(true);
+    // ⭐ The restored pose is a sample INDEX. Rebasing to the press would restore ~0;
+    // rebasing to the circle's start restores something well past the straight run.
+    const restoredTo = pose.restored[pose.restored.length - 1]!;
+    expect(restoredTo).toBeGreaterThan(straight.length / 2);
+  });
+
+  it("⭐ the rebase happens ONCE, not on every frame after the commit", () => {
+    // ⚠ A rebase per frame would pin the object to the circle's start and the roll would
+    // never accumulate — the gesture would look frozen.
+    const { pose } = driveWithProvisionalMotion(circle(120, true));
+    expect(pose.restored.length).toBe(1);
+  });
+
   it("a counter-clockwise sweep commits with a NEGATIVE angle", () => {
     const { rec } = fresh();
     const v = gesture(rec, circle(70, false));
