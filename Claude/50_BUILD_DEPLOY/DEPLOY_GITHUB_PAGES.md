@@ -104,8 +104,10 @@ with `Cache-Control: max-age=600`, and Vite's assets are **content-hashed**
 is then served from cache **indefinitely**. ⛔ So the page is not stale for ten minutes; it
 is stale until something replaces the index — and an already-open tab is stale for ever.
 
-✅✅ **FIXED IN THE PRODUCT, not in a procedure.** The bundle carries its build id, asks the
-origin for `version.json` (`cache: "no-store"`) on boot, and **replaces itself once** if the
+✅✅ **FIXED IN THE PRODUCT, not in a procedure — and CLOSED ON THE DEVICE 2026-09-16**
+(*"working on device"*). ⭐ Its record is [`../00_CORE/queue_notes/DEP1d.md`](../00_CORE/queue_notes/DEP1d.md).
+
+**How it works.** The bundle carries its build id, asks the origin for `version.json` (`cache: "no-store"`) on boot, and **replaces itself once** if the
 two disagree — `src/core/build_gate.ts`, 16 vectors, every branch failing towards *carry on
 with what is loaded*. ⭐ So the **plain URL is now the right one to test**:
 

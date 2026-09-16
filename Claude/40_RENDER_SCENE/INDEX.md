@@ -115,7 +115,8 @@ sliders actually being tuned. ⚠ Every `localStorage` access is wrapped: it thr
 outright in some private-browsing modes, and a tuning panel must not take the scene
 down with it.
 
-**The staleness gate** (`src/core/build_gate.ts` + the boot check in `src/main.ts`) —
+**The staleness gate** (`src/core/build_gate.ts` + the boot check in `src/main.ts`, ✅✅ closed
+by a device look 2026-09-16) —
 ⛔ **not an instrument, a correction.** The page asks the origin for `version.json` with
 `cache: "no-store"` and **replaces itself once** if the served build id is not the one
 compiled in. ⭐ It is why the plain URL
