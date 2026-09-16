@@ -394,7 +394,18 @@ export interface GestureConfig {
    * ten seconds and lifting is a tap, and two of those clear a constraint stack.
    */
   tapMaxDuration: number;
-  /** ms from the first tap's RELEASE to the second tap's PRESS. */
+  /**
+   * ms from the first tap's RELEASE to the second tap's PRESS.
+   *
+   * ⭐⭐ **AND SINCE FORK C IT HAS A SECOND READER: it is the DELAY BEFORE A SINGLE TAP
+   * ACTS.** A tap cannot be known to be single until this window has passed with no second
+   * one — so in fork C the toggle lands this long after the tap.
+   * ⛔⛔ ONE CONSTANT, deliberately, not a second tunable: the quantity *is* *"the time
+   * within which a second tap would have arrived"*. Two numbers could disagree, and the gap
+   * between them would be a tap that is **neither** single nor double.
+   * ⚠ Unity's equivalent (`InputSettings.multiTapDelayTime`) defaults to 750 ms and
+   * `MultiTapInteraction.tapDelay` to 2 × the tap time; ours is 300 ms against a 250 ms tap.
+   */
   doubleTapWindow: number;
   /** mm between the two taps' press points. */
   doubleTapSlop: number;

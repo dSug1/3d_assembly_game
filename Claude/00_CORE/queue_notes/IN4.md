@@ -540,3 +540,45 @@ the one that applies now:
 must look for mode flicker directly"* — and then shipped the version that had it. ⭐ Naming
 a risk is not the same as not taking it.
 
+
+
+---
+
+## ⭐ MOVED HERE 2026-09-16 FROM `AMENDMENTS_R5.md` — A14's diagnosis
+
+⚠ The amendments file passed its cap as fork C grew. A14 is CLOSED and device-confirmed,
+and this is its narrative — the three cases, the timing signature, and why the rule was
+right while the gesture model was wrong. ⛔ Moved whole, not rewritten; the amendment keeps
+the decision, the owner's quote and the stated cost.
+
+### ⭐⭐ THE DIAGNOSIS: THE MODE LOGIC WAS NEVER WRONG
+
+Between the lift and the press there is genuinely **one touchpoint down**, and `A13` says one
+touchpoint TRANSLATES. ⛔ So the object translates for exactly as long as the swap takes —
+and a lift and a replace is **150–300 ms of hand**, which is very visible.
+
+| case | during the swap | what is seen |
+|---|---|---|
+| **1** — no lift at all | no interval exists | correct |
+| **2** — the holder WAITS | interval exists, holder still | nothing to see |
+| **3** — the holder KEEPS MOVING | interval exists, holder moving | ⛔ **it translates** |
+
+⭐⭐ Cases 2 and 3 differ **only** by whether the holder happens to be moving during that
+interval — which is precisely the owner's *"cases 2 and 3 differ by timing of the input"*,
+and it is the observation that located the defect.
+
+### ⭐⭐⭐ So the RULE was right and the GESTURE MODEL was wrong
+
+**A lift-and-replace is ONE intention.** Dropping to one-touchpoint behaviour in the middle
+of it is the artefact. ⛔ A second touchpoint therefore stays **HELD** for
+`secondTouchGraceMs` after it lifts, and a replacement inside that window is continuous.
+
+⭐ **The grace is keyed on a LIFT** — discrete, deliberate and visible — and never on a
+motion state. ⚠ That is the rule the previous round of this defect cost us
+(*a MODE may be keyed on PRESENCE; never on MOTION*), and it is honoured here rather than
+quietly re-broken.
+
+⚠ **It counts a lift of ANY other touchpoint**, whatever role it held: outside every object,
+on the same object, or **on a different object** — which is the owner's case 3, where the
+second finger was holding a second part.
+

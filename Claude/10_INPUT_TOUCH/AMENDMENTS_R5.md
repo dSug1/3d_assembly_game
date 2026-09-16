@@ -626,36 +626,17 @@ assumed. ⭐ `METHOD`: a look on a real device closes this change, and nothing e
 > continues to translate for a while then rotates → this is the issue, and cases 2 and 3
 > differ by timing of the input."*
 
-### ⭐⭐ THE DIAGNOSIS: THE MODE LOGIC WAS NEVER WRONG
+### ⭐⭐ THE DIAGNOSIS, IN ONE LINE
 
-Between the lift and the press there is genuinely **one touchpoint down**, and `A13` says one
-touchpoint TRANSLATES. ⛔ So the object translates for exactly as long as the swap takes —
-and a lift and a replace is **150–300 ms of hand**, which is very visible.
-
-| case | during the swap | what is seen |
-|---|---|---|
-| **1** — no lift at all | no interval exists | correct |
-| **2** — the holder WAITS | interval exists, holder still | nothing to see |
-| **3** — the holder KEEPS MOVING | interval exists, holder moving | ⛔ **it translates** |
-
-⭐⭐ Cases 2 and 3 differ **only** by whether the holder happens to be moving during that
-interval — which is precisely the owner's *"cases 2 and 3 differ by timing of the input"*,
-and it is the observation that located the defect.
-
-### ⭐⭐⭐ So the RULE was right and the GESTURE MODEL was wrong
-
-**A lift-and-replace is ONE intention.** Dropping to one-touchpoint behaviour in the middle
-of it is the artefact. ⛔ A second touchpoint therefore stays **HELD** for
-`secondTouchGraceMs` after it lifts, and a replacement inside that window is continuous.
-
-⭐ **The grace is keyed on a LIFT** — discrete, deliberate and visible — and never on a
-motion state. ⚠ That is the rule the previous round of this defect cost us
-(*a MODE may be keyed on PRESENCE; never on MOTION*), and it is honoured here rather than
-quietly re-broken.
-
-⚠ **It counts a lift of ANY other touchpoint**, whatever role it held: outside every object,
-on the same object, or **on a different object** — which is the owner's case 3, where the
-second finger was holding a second part.
+⛔⛔ **The mode logic was never wrong.** Between a lift and the replacing press there is
+genuinely **one touchpoint down**, and `A13` says one touchpoint translates — so the object
+translated for exactly as long as the swap took, 150-300 ms of hand. ⭐⭐ That is why the
+owner's three cases *differed only by timing*: the interval exists in all of them and is only
+VISIBLE when the holder happens to be moving through it.
+⭐⭐⭐ **So the RULE was right and the GESTURE MODEL was wrong**: a lift-and-replace is ONE
+intention, and dropping to one-touchpoint behaviour mid-swap is the artefact.
+⭐ The three cases, the timing signature and the full reasoning are in
+[`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
 
 ### ⚠ THE COST, STATED
 
@@ -771,30 +752,34 @@ untouched, and it is reachable as `?touchpointAssignment=2`.
 > (not tapped): same behavior as current (depth translation, roll, two touchpoints on two
 > objects translate their respective objects, etc.)."*
 
-⛔⛔ **IT IS NOT AN INVERSION, WHICH IS WHY IT IS A FORK AND NOT A SETTING.** In A and B the
-mode is a function of **presence**; in C presence does not choose the mode at all — a
-**discrete tap** does, which leaves a held second finger free to mean only what it already
-means. ⭐⭐ And that is structural rather than cosmetic: **fork C cannot have the defect
-`A14` fixed**, because there is no lift-and-replace gap for the mode to fall through.
+⛔⛔ **IT IS NOT AN INVERSION, WHICH IS WHY IT IS A FORK AND NOT A SETTING**: A and B compute
+the mode from **presence**, C from a **discrete tap** — which leaves a held second finger
+free to mean only what it already means. ⭐⭐ So **fork C cannot have the defect `A14`
+fixed**: there is no lift-and-replace gap for the mode to fall through.
+⭐ The toggle lives on the **grip** and dies with the gesture — a *second* touchpoint
+presupposes a first — which is *"for one single ongoing touchpoint"* read literally.
+⚠ **THE TRADE**: a gesture starts as `TRANSLATE`, so **rotation costs a tap every time**.
 
-⭐ **The toggle lives on the GRIP and dies with the gesture** — a *second* touchpoint
-presupposes a first, so there is no toggle without an ongoing gesture to toggle. That is
-*"for one single ongoing touchpoint"* read literally.
-⚠ **THE TRADE**: a gesture starts as `TRANSLATE` (fork A's behaviour, which the owner named
-first), so **rotation costs a tap every time**. That is the thing to judge, not a defect.
+⛔⛔ **A DOUBLE TAP IS NOT TWO SINGLE TAPS, AND THE DISCRIMINATOR IS THE TIME BETWEEN THEM**
+*(owner, 2026-09-16, correcting the first build the same day)*. It toggled on **every** tap
+as it landed, so a double tap toggled **twice** and the double-tap gesture could never form.
+⭐⭐ A single tap is now **held for `doubleTapWindow` and cancelled if a second arrives** —
+the classic single-vs-double-click answer, fired from the render loop because what is awaited
+is the *absence* of a second tap.
+⭐ **Unity was checked at the owner's instruction**: its parameter is the inter-tap delay,
+which this project already had — but its own `Tap` fires immediately and does **not** wait,
+so the deferral is the application's to add. ⚠ The comparison table and the citation are in
+[`../00_CORE/queue_notes/IN13.md`](../00_CORE/queue_notes/IN13.md) and `PROVENANCE.md`.
+⭐⭐ **AND IT RETIRED A RULE RATHER THAN ADDING ONE**: the first build had to *consume* a
+toggling tap so two toggles could not reset the camera. Once a double tap is not a toggle at
+all, the gestures stop overlapping and a double tap keeps its forks-A-and-B meaning.
+⚠ **THE COST**: the toggle lands `doubleTapWindow` (300 ms) after the tap, with a slider.
+⛔ ONE constant, shared with §1.3 — two would leave a tap that is neither single nor double.
 
-⛔⛔ **A TOGGLING TAP IS SPENT.** A tap outside any object already means something — two of
-them fly the camera home — so if a toggling tap also reached the tap history, **toggling
-twice would reset the camera**, unasked, exactly while the user was switching modes. ⭐ With
-nothing held it toggles nothing and falls straight through, so the double-tap reset stays
-reachable on an empty scene, which is the scene it is most wanted on. ⚠ Same rule as `D10`
-for an `IGNORED` touchpoint and `A15` for an orphaned holder.
-
-⚠ **One case is left open on purpose** — a tap on a *different* object, which is already
-rule 5 / 6bis's configuration and `IN3`'s selection to define. See
+⚠ **One case is left open on purpose** — a tap on a *different* object, already rule 5 /
+6bis's configuration and `IN3`'s selection to define.
+⭐ `modeFor` is the ONE place a held object's mode is decided, for all three forks, so the
+branch is not in the wiring — `D23`: *breaking the mode selection in `scene.ts` reddens
+nothing.* **⛔ A DEVICE LOOK IS OWED**, and the readout is the only way to see the toggle,
+since in fork C no finger position reveals it →
 [`../00_CORE/queue_notes/IN13.md`](../00_CORE/queue_notes/IN13.md).
-
-⭐ `modeFor` is now the ONE place a held object's mode is decided, for all three forks, so
-the branch is not in the wiring — `D23`: *breaking the mode selection in `scene.ts` reddens
-nothing.* 27 vectors, three mutants caught. **⛔ A DEVICE LOOK IS OWED**, and the readout is
-the only way to see the toggle's state, since in fork C no finger position reveals it.

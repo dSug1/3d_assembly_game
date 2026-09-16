@@ -89,6 +89,7 @@ adoption.** That is the discipline; a citation added later is a reconstruction.
 | adopted | from | citation | where it landed |
 |---|---|---|---|
 | **Snap priority and screen-space pointing tolerance** | catalog §4.1 | Bier, *Snap-dragging in three dimensions*, I3D 1990; Bier & Stone, *Snap-dragging*, SIGGRAPH 1986 | spec, *ADOPTED FROM THE TECHNIQUE CATALOG*; binds `3D2` |
+| **Single-vs-double tap discrimination by the INTER-TAP DELAY** | checked at the owner's instruction, 2026-09-16 | Unity Input System **1.12 docs**: `MultiTapInteraction` (`tapTime` ← `defaultTapTime`, `tapDelay` ← 2 × tapTime, `tapCount` 2) and `InputSettings` (`defaultTapTime` **0.2 s**, `multiTapDelayTime` **0.75 s**, `tapRadius` **5 px**) | `input/assignment.ts` — `pendingAfterTap` / `toggleDue`, and fork C's toggle. ⛔ **Parameters and shape only, read from documentation — no Unity code**, which matters for the same reason as the Cinemachine note below: Unity's code ships under the Unity Companion License and is usable only in Unity-engine applications. ⭐ The deferral itself is NOT Unity's — its `Tap` fires immediately and does not wait, which is the defect this fixed; holding a single action for the multi-tap delay is the universal single-vs-double-click answer, prior art since the desktop double-click |
 | **Provenance discipline and the IP register** | catalog §0, §5 | the catalog itself | this file; `CONSTRAINTS` §10; `D11`; `SEC4` |
 
 ## Candidates recorded but NOT adopted

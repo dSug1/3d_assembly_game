@@ -143,6 +143,76 @@ export function toggleBehaviour(b: Behaviour): Behaviour {
  *   camera double-tap has to stay reachable on an empty scene, which is the scene it is most
  *   wanted on.
  */
+/**
+ * ⭐⭐⭐ **A SINGLE TAP IS NOT KNOWN TO BE SINGLE UNTIL THE DOUBLE-TAP WINDOW HAS PASSED.**
+ *
+ * ⛔⛔ THE DEFECT THIS FIXES, owner-reported 2026-09-16: fork C toggled on **every** tap
+ * the instant it landed, so a **double** tap toggled **twice** — a visible net-nothing — and
+ * the double-tap gesture could never form at all. *"Double tap vs two single taps: it shall
+ * be discriminated by time between two taps."*
+ *
+ * ⭐⭐ **UNITY, CHECKED (Input System 1.12 docs), because the owner asked:**
+ *
+ * | Unity | ours |
+ * |---|---|
+ * | `InputSettings.defaultTapTime` = **0.2 s** — max press-to-release for a tap | `tapMaxDuration` = **250 ms** |
+ * | `MultiTapInteraction.tapDelay` = **2 × tapTime** (`multiTapDelayTime` = **0.75 s** globally) — max gap BETWEEN taps | `doubleTapWindow` = **300 ms** |
+ * | `InputSettings.tapRadius` = **5 px** — movement bound | `doubleTapSlop` = **8 mm** — ⭐ millimetres, per `D7` |
+ *
+ * ⭐ So the owner is right and the parameter is the **inter-tap delay**, which this project
+ * already had. ⛔⛔ **BUT UNITY DOES NOT SOLVE THE AMBIGUITY, AND THAT IS THE HALF WE WERE
+ * MISSING**: its `Tap` interaction *"triggers immediately upon release … It does not wait to
+ * detect a second tap"*, so binding `Tap` and `MultiTap` to one control fires the single
+ * action twice on a double tap. ⭐ Unity leaves the deferral to the application — so here it
+ * is, and it is the classic single-vs-double-click answer: **hold the single action for the
+ * inter-tap window, and cancel it if a second tap arrives.**
+ *
+ * ⚠ **THE COST, STATED**: in fork C the toggle now lands `doubleTapWindow` (300 ms) after
+ * the tap. That is real, and it is the price of the two gestures being distinguishable at
+ * all. ⭐ Unity's own default would make it 500-750 ms.
+ *
+ * ⛔⛔ **AND IT MUST BE THE SAME CONSTANT AS THE DOUBLE-TAP WINDOW, not a second tunable.**
+ * The quantity *is* *"the time within which a second tap would have arrived"*. Two numbers
+ * could disagree, and a gap between them is a tap that is **neither** single nor double:
+ * shorter, and a toggle fires before the pair completes; longer, and the pair is judged
+ * while a toggle is still pending. `CONSTRAINTS` §4 — one constant, one place.
+ */
+
+/** ⭐ Fork C's provisional tap: the release time of a tap not yet known to be single. */
+export type PendingToggle = number | null;
+
+/**
+ * ⭐⭐ Fold a tap verdict into the pending state.
+ *
+ * @param verdict `TapHistory`'s answer — ONE definition of the gap and slop tests, shared
+ *   with §1.3's camera double-tap rather than re-derived here.
+ * @param armed   is this tap one that fork C would act on at all (`tapTogglesBehaviour`)?
+ */
+export function pendingAfterTap(
+  pending: PendingToggle,
+  verdict: "TAP" | "DOUBLE_TAP",
+  armed: boolean,
+  releaseT: number,
+): PendingToggle {
+  // ⛔⛔ A DOUBLE TAP CANCELS, and this line is the whole fix. The first tap of the pair
+  // already armed a toggle; without cancelling it, the pair toggles once AND resets the
+  // camera — which is worse than the original defect, not better.
+  if (verdict === "DOUBLE_TAP") return null;
+  if (!armed) return pending;
+  return releaseT;
+}
+
+/**
+ * ⭐ Has a provisional tap outlived the window in which a second one could have joined it?
+ *
+ * ⚠ Strictly greater: at exactly `windowMs` a second tap would still form a pair
+ * (`TapHistory` compares `gap <= doubleTapWindow`), so firing AT the boundary would make
+ * both verdicts true for the same instant.
+ */
+export function toggleDue(pending: PendingToggle, now: number, windowMs: number): boolean {
+  return pending !== null && now - pending > windowMs;
+}
+
 export function tapTogglesBehaviour(
   assignment: Assignment,
   wasTap: boolean,

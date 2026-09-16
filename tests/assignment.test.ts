@@ -14,9 +14,12 @@ import {
   assignmentPending,
   initialBehaviour,
   isTapRelease,
+  pendingAfterTap,
   tapTogglesBehaviour,
   toggleBehaviour,
+  toggleDue,
   type Assignment,
+  type PendingToggle,
 } from "@input/assignment";
 import { modeFor } from "@input/depth_translate";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
@@ -222,5 +225,72 @@ describe("isTapRelease — §1.3's tap test, in one place", () => {
     expect(isTapRelease(0, 0, 0, DUR, 0, 0, DUR, SLOP)).toBe(true);
     expect(isTapRelease(0, 0, 0, 10, 6, 8, DUR, SLOP)).toBe(true);
     expect(isTapRelease(0, 0, 0, 10, 8, 8, DUR, SLOP)).toBe(false);
+  });
+});
+
+describe("⛔⛔ A DOUBLE TAP IS NOT TWO SINGLE TAPS — discriminated by the time between them", () => {
+  // ⭐ The project's window, and Unity's for comparison: `multiTapDelayTime` is 0.75 s and
+  // `MultiTapInteraction.tapDelay` defaults to 2 × the single-tap time.
+  const WINDOW = 300;
+
+  it("⛔⛔ THE REPORTED DEFECT: a double tap must not toggle TWICE", () => {
+    // ⭐⭐ *"Double tap vs two single taps: it shall be discriminated by time between two
+    // taps."* The first tap arms a toggle; the second, arriving inside the window, is
+    // reported by `TapHistory` as DOUBLE_TAP and must CANCEL it — net ZERO toggles, and the
+    // double tap keeps its own meaning.
+    let pending: PendingToggle = pendingAfterTap(null, "TAP", true, 1000);
+    expect(pending).toBe(1000);
+    pending = pendingAfterTap(pending, "DOUBLE_TAP", true, 1150);
+    expect(pending).toBeNull();
+    // ⛔ And nothing is due afterwards, however long we wait.
+    expect(toggleDue(pending, 1150 + 10 * WINDOW, WINDOW)).toBe(false);
+  });
+
+  it("⭐ two taps FAR APART are two single taps — two toggles", () => {
+    // ⚠ `TapHistory` reports the second as TAP because the gap exceeds the window, so each
+    // one settles on its own. This is the other half of the owner's sentence.
+    let pending: PendingToggle = pendingAfterTap(null, "TAP", true, 1000);
+    expect(toggleDue(pending, 1000 + WINDOW + 1, WINDOW)).toBe(true);
+    pending = null; // fired
+    pending = pendingAfterTap(pending, "TAP", true, 5000);
+    expect(toggleDue(pending, 5000 + WINDOW + 1, WINDOW)).toBe(true);
+  });
+
+  it("⛔ a single tap is NOT due before the window has passed", () => {
+    // ⭐⭐ THE WHOLE POINT: until the window expires, the tap might still become half of a
+    // pair. Acting early is what produced the defect.
+    const pending = pendingAfterTap(null, "TAP", true, 1000);
+    expect(toggleDue(pending, 1000, WINDOW)).toBe(false);
+    expect(toggleDue(pending, 1299, WINDOW)).toBe(false);
+  });
+
+  it("⚠ the boundary is STRICTLY greater, so the two verdicts cannot both be true", () => {
+    // ⛔ `TapHistory` pairs on `gap <= doubleTapWindow`. Firing AT the boundary would make
+    // one instant both a settled single tap and the first half of a double.
+    // ⭐ `METHOD`: a threshold the state machine parks on gets compared at its exact value.
+    const pending = pendingAfterTap(null, "TAP", true, 0);
+    expect(toggleDue(pending, WINDOW, WINDOW)).toBe(false);
+    expect(toggleDue(pending, WINDOW + 1, WINDOW)).toBe(true);
+  });
+
+  it("nothing pending is never due", () => {
+    expect(toggleDue(null, 1e9, WINDOW)).toBe(false);
+  });
+
+  it("⛔ an unarmed tap leaves the pending state ALONE, and does not arm one", () => {
+    // ⚠ Forks A and B, and fork C with nothing held. The tap still goes through §1.3's
+    // history — the camera double-tap must keep working — it simply arms no toggle.
+    expect(pendingAfterTap(null, "TAP", false, 1000)).toBeNull();
+    // ⭐ And an unarmed DOUBLE still cancels: whatever armed the pending tap, the pair that
+    // followed was not a single tap.
+    expect(pendingAfterTap(1000, "DOUBLE_TAP", false, 1100)).toBeNull();
+  });
+
+  it("⭐ a second armed tap outside the window REPLACES the pending one", () => {
+    // ⚠ Three slow taps must be three toggles, not one: each supersedes the last, and the
+    // one in flight has already fired by then.
+    const first = pendingAfterTap(null, "TAP", true, 1000);
+    const second = pendingAfterTap(first, "TAP", true, 9000);
+    expect(second).toBe(9000);
   });
 });
