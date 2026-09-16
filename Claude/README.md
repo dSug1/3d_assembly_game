@@ -42,6 +42,9 @@ the screen plane — all closed by device look. ✅✅ **And the whole two-touch
 (`A10`–`A14`) closed 2026-09-16** — depth, the per-axis deadband, roll on the second
 touchpoint, **one touchpoint translating** while a second held still rotates.
 ⛔ **`A15` owes its device look**; `IN3` is the only input row with unbuilt work left.
+⭐⭐ **`1.0.5` runs THREE forks of the touchpoint assignment from one build** (`IN13`) —
+one-finger translate (the default), the spec's two-finger, and a tap-toggle — so both the
+comparison and every later row cost one pipeline, not three.
 ⛔⛔ **Every one of those defects was found BY FINGER, and none was visible to a green
 suite.** ⭐ The count and its ledger live in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md), which
 is the one place that carries them — this router deliberately no longer restates a number,
@@ -70,6 +73,11 @@ Carried verbatim from the predecessor, where it was binding and earned:
 3. **Cap the front doors.** `INDEX.md` ≤ 400 lines, a topic file ≤ 800. Hitting the
    cap is the signal to push narrative down a tier, not to keep appending. This file
    stays a router, about one screen — never a status page.
+   ⭐⭐ **AND IN BYTES, CHECKED BY [`tests/doc_budget.test.ts`](../tests/doc_budget.test.ts).**
+   ⛔⛔ Every session honoured the line caps and **the tree grew anyway**: a table row is ONE
+   line however long, so `QUEUE.md` reached **61 KB** inside its 400-line cap. ⭐ So: per-file
+   byte budgets, a ceiling on the whole mandatory load, and **1.6 KB per table row** — a row
+   is a pointer, the dossier is the record. ⚠ A **ratchet**: lower it, never raise it.
 4. ⛔ **Never edit inside `<!-- VERBATIM-BEGIN/END -->` markers.**
 5. ⛔ **A queue row's status changes in TWO places or neither**: the one-line status
    in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md) **and** an append to its

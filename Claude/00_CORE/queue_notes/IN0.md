@@ -514,3 +514,12 @@ something (A10 currently reads its `dy`). Not built.
 threshold, the rest test and the jitter deadband are all one radius. ⛔ It has a slider, and
 a device must judge it.
 
+
+
+---
+
+## ⭐ CARRIED FROM THE QUEUE ROW, 2026-09-16 — verbatim
+
+⚠ `QUEUE.md` is a front door and this cell had grown to an essay inside a table. ⛔ Distilled there to state + one lesson + this pointer; the full text is below, unrewritten, per `README.md` rule 2.
+
+> ⛔⛔ **REOPENED AND FIXED 2026-09-15 — §1.1 COULD NOT SEE A FINGER COME TO REST.** A10's depth gate is the first rule that asks *"is that finger still?"*, and the answer was **no, for any real finger, for ever**. Two causes, both found by composing the MEASURED noise with the thresholds: (1) ⛔⛔ **the speed was estimated over ONE SAMPLE PAIR — mistake shape 1, in the file that defines *moving***: `0.761 mm / 8 ms = ~95 mm/s` of apparent speed AT REST against a 6 mm/s threshold, so settle candidacy was destroyed on essentially every sample; (2) the settle-excursion bound (0.8 mm) sat BELOW the noise floor (0.761 mm RMS), and a bound the noise cannot fit inside is one a resting finger can never satisfy. ⭐ Fixed the way `flick.ts` already prescribes — **speed over a stated window, never the last pair** — plus a validator rule (`SETTLE_NOISE_MULTIPLE`) and four re-sized numbers. ⭐⭐ **MEASURED both ways**: four seconds of rest never came back before; under a second after. The old estimate is kept as a counter-example vector. ⚠ **Why eight device passes missed it: nothing shipped depended on RE-ENTERING STATIONARY** — the commit threshold reads the MOVING *transition*, rule 6 reads presence, the flick test reads lift speed. ⭐ `METHOD`: *a composition is a thing to MEASURE* — the threshold and the measurement were each fine and their composition was not. ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"*, which is rule 5 and the only thing that closes a change here. ⚠ The numbers a hand has now accepted: `motionDeadbandMm` **3.5 mm**, `restConfirmMs` **30 ms**, `secondTouchGraceMs` **250 ms**, `gainRollDrag` **2 °/mm** — the last two never judged separately, so they are the first candidates if anything feels wrong later. ⚠ The 3.2 mm/0.9 s figures below were superseded by `A11` before any hand saw them. Previously: ✅ **built 2026-09-13**, 37 vectors. ⚠ §1.1's "accumulated travel" replaced by net displacement — see the dossier. ✅ its `moveExitDistance` debt closed by `IN1`

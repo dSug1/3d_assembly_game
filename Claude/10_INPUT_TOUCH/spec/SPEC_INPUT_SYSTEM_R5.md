@@ -35,30 +35,60 @@ queue. They are stable; do not renumber.
 
 ## The configurations a hand can actually make
 
-⭐ **Roles are latched at PRESS and never revisited** (§4, `src/input/router.ts`). This
-table is written against what each touchpoint was latched as, not where it is now.
+⭐ **Roles are latched at PRESS** (§4, `src/input/router.ts`), so this table is written
+against what each touchpoint was latched as, not where it is now. ⛔ One exception since
+`A15`: a holder whose object is no longer **under** it gives the selection up at the next
+input event.
 
-| touchpoints | what they are on | what happens | spec | status |
+⛔⛔ **AND SINCE `1.0.5` THERE ARE THREE FORKS, RUNNING FROM ONE BUILD** (`D26`, `D27`,
+row `IN13`). The owner is A/B/C-ing them and will judge holistically; the flag is
+`touchpointAssignment` (`?touchpointAssignment=1`), and it latches **only while nothing
+touches the glass**.
+
+| fork | flag | one touchpoint on an object | a second touchpoint |
+|---|---|---|---|
+| **A** — `A13`/`D23` | `0`, the **default** and the only reading a hand has judged | **translates** | held still → the drag **rotates** |
+| **B** — the **spec's own** assignment | `1` | **rotates** (§2 rule 2bis) | present → the drag **translates** (§4 rule 6) |
+| **C** — `A16`/`D27` | `2` | **translates**, until a tap says rotate | ⛔ **presence is irrelevant**: a **tap** toggles, a **press** drives one axis |
+
+### ⛔ Configurations whose meaning DEPENDS on the fork
+
+⚠ Fork C carries a **per-gesture toggle** that starts at `TRANSLATE` and flips on each
+confirmed single tap of a second touchpoint. *(Confirmed = it survived `doubleTapWindow`
+without a second tap — see the tap row.)*
+
+| touchpoints | on what, and what moves | fork **A** | fork **B** | fork **C** | spec |
+|---|---|---|---|---|---|
+| 1 | an object, **moving** | **translate** (x horizontal, y **gravity**) | **rotate** (yaw about the world vertical, pitch about horizontal x) | **translate** or **rotate**, per the toggle | §4 rule 6 / §2 rule 2bis · `A7`, `A13`, `A16` |
+| 2 | an object **moving** + a second held **STILL** | **rotate** | **translate** | per the toggle — ⛔ unchanged by the second finger being there | §2 2bis / §4 6 · `A13`, `A16` |
+| 2 | an object **STILL** + a second moving in **x** | **ROLL** about the flattened view direction | **ROLL** | ⛔ **roll ONLY if the toggle is `ROTATE`**; otherwise **nothing** | §2 2quinte · `A12`, `A16` |
+| 2 | an object **STILL** + a second moving in **y** | **DEPTH** along the flattened view direction — height never changes | **DEPTH** | ⛔ **depth ONLY if the toggle is `TRANSLATE`**; otherwise **nothing** | `A10` · `A16` |
+| 2 | an object **STILL** + a second moving **diagonally** | ⭐ **both at once**, kept independent by `A11`'s per-axis bands | both | ⛔ **exactly one** — the toggle decides, and switching needs a tap | `A12` · `A16` |
+| 2 | an object + a second **TAPPED** anywhere | — (it only feeds §1.3's tap history) | — | ⭐⭐ **TOGGLE**, `doubleTapWindow` after the tap | `A16` |
+| 2 | an object + a second **lifted then replaced** | `A14`'s grace holds it "present" for `secondTouchGraceMs` | same | ⛔ **inert** — the mode never depended on presence, so C cannot have the defect `A14` fixed | `A14` · `A16` |
+
+### ✅ Configurations that are the same in EVERY fork
+
+| touchpoints | on what | what happens | spec | status |
 |---|---|---|---|---|
 | 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, rollback, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` |
-| 1 | an object | ⭐⭐ **TRANSLATE** — x along the horizontal screen axis, y along **GRAVITY** | §4 rule 6 · ⭐ **A13** moved it here from two touchpoints | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
-| 2 | an object + a second held **STILL** | **free rotation** — yaw about the **world vertical**, pitch about the horizontal screen axis | §2 rule 2bis · ⭐ **A7** + **A13** | ✅ **works**, ⚠ applied UNCONDITIONALLY — see below |
-| 2 | an object (**STILL**) + a second moving in **x** | ⭐⭐ **ROLL** about the view direction flattened onto the ground | §2 rule 2quinte · ⭐ **A12** replaces the circular gesture | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"*. ⛔ The circle fit, `rollAngle`, the provisional yaw/pitch, `A8`'s rebase and **the jump** are all retired with it |
-| 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⭐ **collision RESOLVED 2026-09-15** — eviction moved away (amendments A1 → A4; it is now a quick back-and-forth), so a double-tap means one thing only |
-| 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ **amended**: driven by delta position, NOT device tilt |
-| 1 | empty space | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ |
+| 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⭐ collision resolved 2026-09-15 — eviction moved to a quick back-and-forth (`A1`→`A4`) |
+| 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ amended: delta position, NOT device tilt |
+| 1 | empty space | double-tap → **fly the camera home** | ⛔ **no clause** | ✅ — ⚠ in fork C a double tap also **cancels** a pending toggle, and keeps this meaning |
 | 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
-| 2 | one object + one empty space, **both moving** | **translate** — the holder wins every tie. With inertia and a phantom lead | §4 rule 6 · ⭐ **A7**, **A13** | ✅ `IN4` (partial) ⛔ **CLOSED 2026-09-15**, ⚠ reopened by A13's swap for a device look |
-| 2 | one object (**STILL**) + one outside (**MOVING in y**) | **DEPTH** — the object moves along the view direction flattened onto the ground, so its **height never changes**. ⛔ The finger OUTSIDE drives; the finger on the object is the mode selector, and it must be still | ⭐ **A10** supersedes A6 (§5 was undefined) | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
-| 2 | both the SAME object | **rule 6 becomes reachable** — the FIRST touchpoint (whose raycast hit) drives; the second is presence only. ⚠ Deliberately NOT a depth anchor | ⭐ **A10** supersedes `A6`/`A5`/`D10` | ✅ built. ⭐⭐ **The small-object hole is CLOSED**: A10's depth anchor may be anywhere on the glass, so an object's size on screen no longer matters |
-| 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `IN3`'s face selection — ✅ `3D1` is built and closed |
-| 3+ | any | the THIRD touchpoint and beyond are ignored; the rest keep their latched roles | — · **A5** moved this trigger | ⚠ by construction, not measured — palm contact is untested |
+| 2 | both the SAME object | rule 6 is reachable — the FIRST touchpoint (whose raycast hit) drives; the second is presence only | `A10` supersedes `A6`/`A5`/`D10` | ✅ ⭐⭐ the small-object hole is CLOSED: the depth anchor may be anywhere |
+| 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `IN3`'s face selection · ✅ `3D1` is built |
+| 2 | a second touchpoint **released**, holder no longer under its object | ⭐ the selection is dropped at the **next input event** and the configuration re-resolves | `A15` | ⛔ built, **device look owed** |
+| 3+ | any | the third touchpoint and beyond are **ignored**; the rest keep their latched roles | — · `A5` moved this trigger | ⚠ by construction, not measured — palm contact untested |
 
-⚠ **Rule 6 is reached by PRESENCE, re-read every frame** — not by a latched mode, and not
-by the anchor's `STATIONARY` state as the rule's wording implies. A second finger outside
-any object means translate, whatever it has done since it went down. That is an owner
-correction of a build that latched it; see
+⚠ **Forks A and B reach their mode by PRESENCE, re-read every frame** — not by a latched
+mode, and not by the second finger's `STATIONARY` state as rule 6's wording implies. That is
+an owner correction of a build that latched it, recorded twice:
 [`../../00_CORE/queue_notes/IN4.md`](../../00_CORE/queue_notes/IN4.md).
+⛔⛔ **Fork C reaches it by a discrete TAP instead**, which is why it is a fork rather than a
+setting of the other two — and why a readout is needed: in C no finger position reveals the
+mode, so the HUD prints the live fork, the toggle, and `→PENDING` while a tap is being judged.
+
 
 ## ⚠ What "rule 2bis is applied unconditionally" means
 
