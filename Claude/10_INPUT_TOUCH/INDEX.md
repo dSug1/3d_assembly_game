@@ -42,7 +42,7 @@ model and so did not wait on `3D1`:
 | `A13` | ⭐⭐⭐ **one touchpoint TRANSLATES; a second held STILL ROTATES**. Whichever finger moves acts; the other one's state picks the rule | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A10` | ⭐⭐ depth is a **still holder and a moving anchor**; rule 6's second touchpoint may be on the object | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
-| `A13` ↔ the spec | ⭐⭐⭐ **both assignments now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?translateNeedsSecondTouch=1` or the menu toggle | 🔧 built, 17 vectors — the **verdict** is row `IN13`, not due until the input system can be judged whole |
+| `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?touchpointAssignment=1`, and ⭐ **fork C** (`=2`) makes a TAPPED second touchpoint toggle the ongoing drag | 🔧 built, 17 vectors — the **verdict** is row `IN13`, not due until the input system can be judged whole |
 | `A15` | ⭐⭐⭐ **a holder no longer UNDER its object gives the selection up** — a raycast at the second touchpoint's lift, and the unselect is DEFERRED to the next input event | ⛔ built, 16 vectors, **A DEVICE LOOK IS OWED** |
 
 ⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit,
@@ -368,7 +368,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `anchor_rotate.ts` | 2sexte and `A3`'s handover, about the CONSTRAINT axis. ⚠ Built, not wired — and it wants the TRUE view axis, not the gravity frame |
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
 | `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⛔ One exception since `A15`: `relatchOnOrphan`, on a discrete event only |
-| `assignment.ts` | ⭐⭐⭐ `D26` — the `1.0.5` A/B: **which touchpoint translates**, as a flag rather than a fork. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
+| `assignment.ts` | ⭐⭐⭐ `D26`/`D27` — the `1.0.5` A/B/C: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
 | `holder_binding.ts` | ⭐⭐⭐ `A15` — is the object still UNDER the finger carrying it? A raycast at the second touchpoint's lift, and the unselect **deferred** to the next input event. ⚠ Reachable only because depth moves the object while the holder holds still |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |

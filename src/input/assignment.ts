@@ -35,18 +35,38 @@ export type Assignment =
   /** `A13`: one touchpoint translates; a second held still rotates. The default. */
   | "ONE_FINGER_TRANSLATE"
   /** The spec as written: one touchpoint rotates; two translate. */
-  | "TWO_FINGER_TRANSLATE";
+  | "TWO_FINGER_TRANSLATE"
+  /**
+   * ⭐⭐⭐ **FORK C — a second touchpoint TAPPED toggles what the ongoing drag does**
+   * (owner, 2026-09-16). A *pressed* second touchpoint keeps every meaning it has now
+   * (depth, roll, two objects); only a **tap** flips the holder between A's behaviour
+   * (translate) and B's (rotate), **for the gesture in progress**.
+   *
+   * ⛔⛔ IT IS NOT AN INVERSION, WHICH IS WHY IT IS A THIRD FORK AND NOT A SETTING OF THE
+   * FIRST TWO. In A and B the mode is a function of *presence*; in C presence does not
+   * choose the mode at all — a **discrete tap** does, and a held second finger is left free
+   * to mean only what it already means.
+   * ⭐ One consequence argues in C's favour and is worth recording: the mode no longer
+   * depends on whether a second touchpoint is down, so **fork C structurally cannot have the
+   * defect `A14` was written to fix** — there is no lift-and-replace gap to translate
+   * through.
+   */
+  | "TAP_TOGGLE";
+
+/** What a held object's own drag does. ⭐ Fork C carries one of these PER GESTURE. */
+export type Behaviour = "TRANSLATE" | "ROTATE";
 
 /**
  * Read the config flag as an assignment.
  *
  * ⚠ The flag is a **number** (`0`/`1`) and not a boolean for one concrete reason: the URL
  * override parser accepts the numeric fields of the config and nothing else, so a numeric
- * flag is A/B-able by URL (`?translateNeedsSecondTouch=1`) and by the menu's own slider with
+ * flag is A/B-able by URL (`?touchpointAssignment=1`) and by the menu's own slider with
  * **no new machinery**. ⛔ Anything other than 0 or 1 is refused by `validateGestureConfig`
  * rather than silently rounded — a half-set flag would be a third reading nobody designed.
  */
 export function assignmentOf(flag: number): Assignment {
+  if (flag === 2) return "TAP_TOGGLE";
   return flag === 1 ? "TWO_FINGER_TRANSLATE" : "ONE_FINGER_TRANSLATE";
 }
 
@@ -83,5 +103,77 @@ export function assignmentPending(live: Assignment, requested: Assignment): bool
 
 /** ⭐ Short form for the HUD. ⚠ Names the FORK, so a device report cannot be misattributed. */
 export function assignmentLabel(a: Assignment): string {
+  if (a === "TAP_TOGGLE") return "tap-toggle";
   return a === "TWO_FINGER_TRANSLATE" ? "two-finger-translate" : "one-finger-translate";
+}
+
+/**
+ * ⭐⭐⭐ FORK C — what a gesture STARTS as.
+ *
+ * ⛔ `TRANSLATE`, which is fork A's single-touchpoint behaviour, because the owner named
+ * the toggle as *"between the behaviors of fork A and fork B"* in that order — and because
+ * translate is the commonest gesture, which is `D23`'s whole argument.
+ * ⚠ So in fork C **rotation always costs one tap**. That is the trade the fork exists to be
+ * judged on, not an oversight.
+ */
+export function initialBehaviour(): Behaviour {
+  return "TRANSLATE";
+}
+
+/** ⭐ FORK C — flip the ongoing gesture's behaviour. A tap, and nothing else, calls this. */
+export function toggleBehaviour(b: Behaviour): Behaviour {
+  return b === "TRANSLATE" ? "ROTATE" : "TRANSLATE";
+}
+
+/**
+ * ⭐⭐⭐ FORK C — does this second-touchpoint RELEASE consume as a toggle?
+ *
+ * ⛔⛔ AND *CONSUME* IS THE LOAD-BEARING WORD. A tap outside any object already means
+ * something: two of them fly the camera home (§1.3's double-tap). If a toggling tap also
+ * reached the tap history, **toggling twice would reset the camera** — a gesture the user
+ * never asked for, arriving while they were switching modes. ⭐ So a tap that toggles is
+ * spent: no tap history, no release verdict, no flick test. ⚠ It is the rule `D10` already
+ * states for an `IGNORED` touchpoint and `A15` for an orphaned holder — a touch that did one
+ * job does not also get to do another.
+ *
+ * @param assignment    only `TAP_TOGGLE` toggles; A and B are untouched by this.
+ * @param wasTap        did the release pass §1.3's tap test (`isTapRelease`)?
+ * @param holderPresent is a touchpoint actually carrying an object? ⛔ With nothing held
+ *   there is no ongoing gesture to toggle, and the tap must keep its existing meaning — the
+ *   camera double-tap has to stay reachable on an empty scene, which is the scene it is most
+ *   wanted on.
+ */
+export function tapTogglesBehaviour(
+  assignment: Assignment,
+  wasTap: boolean,
+  holderPresent: boolean,
+): boolean {
+  return assignment === "TAP_TOGGLE" && wasTap && holderPresent;
+}
+
+/**
+ * §1.3's tap test, as one function instead of two copies.
+ *
+ * ⛔ It was inlined in the camera-reset branch, and fork C needs the identical question at
+ * a second place. ⭐ *"A tap is a tap whatever it lands on"* — that comment was already in
+ * the code; two copies of the arithmetic would be two definitions free to disagree, and
+ * `CONSTRAINTS` §4 is explicit that one rule lives in one place.
+ *
+ * @param slopPx the slop already converted to pixels. ⚠ Converted by the CALLER, because
+ *   `mmToPx` needs the device and this file is engine-free and device-free.
+ */
+export function isTapRelease(
+  pressedT: number,
+  pressedX: number,
+  pressedY: number,
+  releaseT: number,
+  releaseX: number,
+  releaseY: number,
+  maxDurationMs: number,
+  slopPx: number,
+): boolean {
+  return (
+    releaseT - pressedT <= maxDurationMs &&
+    Math.hypot(releaseX - pressedX, releaseY - pressedY) <= slopPx
+  );
 }

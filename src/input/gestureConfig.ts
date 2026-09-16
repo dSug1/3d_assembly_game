@@ -71,10 +71,19 @@ export interface GestureConfig {
    */
   secondTouchGraceMs: number;
   /**
-   * ⭐⭐⭐ **THE `1.0.5` A/B — WHICH TOUCHPOINT TRANSLATES.** `0` = `A13`/`D23`, one
-   * touchpoint translates and a second held still rotates (**the default, and the reading a
-   * hand has judged**). `1` = the **spec's original** assignment, where one touchpoint
-   * rotates and two translate.
+   * ⭐⭐⭐ **THE `1.0.5` A/B/C — WHICH RULE TABLE IS IN FORCE.**
+   *
+   * * `0` — **fork A**, `A13`/`D23`: one touchpoint translates, a second held still rotates.
+   *   **The default, and the only reading a hand has judged.**
+   * * `1` — **fork B**, the **spec's original**: one touchpoint rotates, two translate.
+   * * `2` — **fork C**: a second touchpoint **TAPPED** toggles the ongoing drag between
+   *   those two behaviours; a second touchpoint **PRESSED** keeps every meaning it has now.
+   *
+   * ⚠ It was called `translateNeedsSecondTouch` while there were two forks. Renamed when
+   * fork C arrived, because that name answers a yes/no question and this is a three-way
+   * choice — `router.ts` states the rule it follows: *a name that describes its consumer
+   * goes stale the moment the consumer changes.* ⛔ The old key is now REPORTED as unknown
+   * rather than silently ignored, which is `config_override`'s contract.
    *
    * ⭐ It exists as a flag rather than a fork because the entire difference is **one
    * inversion** in `holderDrive`: depth, roll, `A14`'s grace and `A15`'s orphan check all key
@@ -83,9 +92,9 @@ export interface GestureConfig {
    * ⛔⛔ It LATCHES ONLY WHILE NOTHING IS TOUCHING THE GLASS (owner, 2026-09-16) — nothing
    * down is the only state in which no gesture can be in flight. See `input/assignment.ts`.
    * ⚠ Numeric, not boolean, so the URL override and the menu slider reach it with no new
-   * machinery: `?translateNeedsSecondTouch=1`.
+   * machinery: `?touchpointAssignment=1`.
    */
-  translateNeedsSecondTouch: number;
+  touchpointAssignment: number;
 
   // ── §1.2 gains ──────────────────────────────────────────────────────────
   /** Metres. Translation gains scale by cameraDistance / this. */
@@ -513,8 +522,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A guess, with a slider. Long enough for a deliberate lift-and-replace, short enough
   // that a genuine lift to one finger does not feel stuck. IN5.
   secondTouchGraceMs: 250,
-  // ⭐ Fork A, the judged one. `1` is the spec's assignment — see `input/assignment.ts`.
-  translateNeedsSecondTouch: 0,
+  // ⭐ Fork A, the judged one. 1 = the spec's assignment, 2 = fork C's tap toggle.
+  touchpointAssignment: 0,
 
   // ⛔⛔ THE HISTORY, KEPT — all four were re-sized 2026-09-15 against the measured floor
   // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of
@@ -788,11 +797,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // so a half-set flag would LOOK like the default while the person setting it believed
   // they had changed the rule table. ⭐ Refused loudly instead, which is what this
   // validator is for: a config that is individually plausible and jointly impossible.
-  if (cfg.translateNeedsSecondTouch !== 0 && cfg.translateNeedsSecondTouch !== 1) {
+  if (![0, 1, 2].includes(cfg.touchpointAssignment)) {
     throw new Error(
-      `translateNeedsSecondTouch (${cfg.translateNeedsSecondTouch}) must be 0 ` +
-        "(A13: one touchpoint translates) or 1 (the spec: two translate). " +
-        "It selects a rule table, so there is no meaning between the two.",
+      `touchpointAssignment (${cfg.touchpointAssignment}) must be 0 (fork A: one ` +
+        "touchpoint translates), 1 (fork B, the spec: two translate) or 2 (fork C: a " +
+        "tapped second touchpoint toggles). It selects a rule table, so there is no " +
+        "meaning between the three.",
     );
   }
   // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.

@@ -148,12 +148,16 @@ implements **parent ≠ root** and moves nothing.
 ✅ `IN12` (the deadband) was CLOSED by `A11`, which put it in §1.1 itself rather than in
 each rule.
 
-⭐⭐⭐ **`1.0.5` RUNS TWO FORKS FROM ONE BUILD** (`D26`, row `IN13`). The owner is A/B-ing
+⭐⭐⭐ **`1.0.5` RUNS THREE FORKS FROM ONE BUILD** (`D26`, row `IN13`). The owner is A/B-ing
 two readings of §2/§4 and will judge them **holistically**, once the input system can be
 felt as a whole: **fork A** (the default, `A13`) one touchpoint translates and a second held
-still rotates; **fork B** (`?translateNeedsSecondTouch=1`, or the menu's `⭐ FORK` toggle) the
-**spec's own** assignment, one rotates and two translate. ⭐⭐ **It is a FLAG and not a fork
-because the whole difference is ONE INVERSION in `holderDrive`** — depth, roll, `A14` and
+still rotates; **fork B** (`?touchpointAssignment=1`, or the menu's `⭐ FORK` toggle) the
+**spec's own** assignment, one rotates and two translate. ⭐ **fork C** (`=2`, `D27`/`A16`) a second touchpoint **TAPPED** toggles the ongoing drag
+between those two, while a **PRESSED** one keeps every meaning it has now — ⛔⛔ not an
+inversion, so it is a fork rather than a setting, and **it structurally cannot have the
+defect `A14` fixed**. ⚠ Its trade: rotation costs a tap every time.
+⭐⭐ **A and B are a FLAG and not a fork
+because their whole difference is ONE INVERSION in `holderDrive`** — depth, roll, `A14` and
 `A15` all key on *the holder is still*. ⛔⛔ The flag latches **only while nothing touches
 the glass**: the only state in which no gesture can be in flight. ⚠ **The HUD names the live
 fork, and a device report that does not name it is unattributable.**

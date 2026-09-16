@@ -55,7 +55,6 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
-  holderDrive,
   secondTouchHeld,
   rollDragDeg,
   secondFingerDrive,
@@ -69,7 +68,13 @@ import {
   assignmentLabel,
   assignmentOf,
   assignmentPending,
+  initialBehaviour,
+  isTapRelease,
+  modeFor,
+  tapTogglesBehaviour,
+  toggleBehaviour,
   type Assignment,
+  type Behaviour,
   type HolderBinding,
   type InputEvent,
   displayPose,
@@ -363,6 +368,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * view axis while the holder holds still, so the object leaves the finger carrying it.
      */
     binding: HolderBinding;
+    /**
+     * ⭐⭐⭐ FORK C's PER-GESTURE TOGGLE — what this drag does, flipped by a TAP of a second
+     * touchpoint. ⛔ Ignored entirely by forks A and B, where presence decides the mode.
+     * ⚠ It lives on the GRIP and therefore dies with the gesture: a *second* touchpoint
+     * presupposes a first, so there is no toggle without an ongoing gesture to toggle. That
+     * is the owner's *"for one single ongoing touchpoint"*, read literally — and it means
+     * **rotation costs a tap every time**, which is the trade fork C exists to be judged on.
+     */
+    behaviour: Behaviour;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -866,13 +880,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // while this changes at runtime, and merging the two would make a stable
             // identity look mutable.
             `  ${assignmentLabel(assignment)}` +
+            // ⭐⭐⭐ FORK C's LIVE TOGGLE, and it is the least guessable state on the glass.
+            // ⛔ In fork C nothing VISIBLE says whether the next drag will translate or
+            // rotate — presence no longer decides it, so there is no finger position to
+            // read the answer off. ⚠ In forks A and B a user can see the mode by looking at
+            // their own hand; in C they cannot, so the readout is the only way a device pass
+            // can tell *"the toggle did not fire"* from *"I toggled twice"*.
+            (assignment === "TAP_TOGGLE" && first
+              ? `[${first.behaviour}]`
+              : "") +
             // ⛔⛔ AND A PENDING FLIP MUST SAY SO. The flag latches only while nothing is
             // touching the glass, so between a flip mid-gesture and the next lift the menu
             // shows one value and the product obeys another. ⭐ Without this line that gap
             // reads as *"the toggle is broken"* — and an absent readout cannot be caught by
             // looking at the screen.
-            (assignmentPending(assignment, assignmentOf(cfg.translateNeedsSecondTouch))
-              ? `→${assignmentLabel(assignmentOf(cfg.translateNeedsSecondTouch))} ⛔PENDING(lift all fingers)`
+            (assignmentPending(assignment, assignmentOf(cfg.touchpointAssignment))
+              ? `→${assignmentLabel(assignmentOf(cfg.touchpointAssignment))} ⛔PENDING(lift all fingers)`
               : "") +
             // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
             // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
@@ -908,14 +931,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⭐⭐⭐ THE LIVE TOUCHPOINT ASSIGNMENT — the `1.0.5` A/B, LATCHED.
    *
    * ⛔⛔ It may change **only while nothing is touching the glass** (owner, 2026-09-16).
-   * The menu and the URL write `cfg.translateNeedsSecondTouch` freely; this is what the
+   * The menu and the URL write `cfg.touchpointAssignment` freely; this is what the
    * rules actually read, and it follows the config only at a moment when no gesture can
    * possibly be in flight. ⭐ Stricter than latching at press, and better: at press, a flip
    * between two fingers landing would still swap the meaning of a gesture already begun.
    * ⚠ The toggle's own touch cannot block it — the menu is a DOM panel over the canvas, so
    * its events never reach the pointer router.
    */
-  let assignment: Assignment = assignmentOf(cfg.translateNeedsSecondTouch);
+  let assignment: Assignment = assignmentOf(cfg.touchpointAssignment);
 
   /**
    * ⭐ Adopt a pending assignment if the glass is empty. Called on every pointer event AND
@@ -927,7 +950,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const syncAssignment = (): void => {
     assignment = adoptAssignment(
       assignment,
-      assignmentOf(cfg.translateNeedsSecondTouch),
+      assignmentOf(cfg.touchpointAssignment),
       router.size,
     );
   };
@@ -991,10 +1014,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // native range input will not, which on this page is the common case
         // (`touch-action: none`).
         // ⭐ 0 = A13, one touchpoint translates (the judged default). 1 = the SPEC's
-        // assignment, one rotates and two translate.
+        // assignment, one rotates and two translate. 2 = fork C, where a TAPPED second
+        // touchpoint toggles the ongoing drag between those two and a PRESSED one keeps
+        // every meaning it already has.
         // ⚠ It takes effect only once nothing is touching the glass — the HUD says
         // `⛔PENDING(lift all fingers)` until then.
-        tunable("0=one-finger translate  1=two-finger", "translateNeedsSecondTouch", 0, 1, 1),
+        tunable("0=A one-finger 1=B two-finger 2=C tap-toggle", "touchpointAssignment", 0, 2, 1),
       ],
     },
     {
@@ -1463,6 +1488,37 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
   };
 
+  /**
+   * ⭐⭐⭐ FORK C — a TAPPED second touchpoint toggles every ongoing gesture, and the tap
+   * is then SPENT.
+   *
+   * ⛔⛔ Spent is the load-bearing part. A tap outside any object already means something:
+   * two of them fly the camera home. Without consuming it, **toggling twice would reset the
+   * camera** — arriving unasked, exactly while the user was switching modes. ⭐ Same rule
+   * `D10` states for an `IGNORED` touchpoint and `A15` for an orphaned holder: a touch that
+   * did one job does not also get to do another.
+   *
+   * ⭐ EVERY live grip flips, not a guessed pairing — the same choice `forgetAnchor` makes
+   * one line above, and for the same reason: with two objects held, *"which gesture was that
+   * tap meant for?"* has no answer worth trusting, while *"the hand asked to switch mode"*
+   * is a single intention.
+   *
+   * @returns whether the tap was consumed, so the caller can skip the tap history.
+   */
+  const applyTapToggle = (pressed: Sample, released: Sample): boolean => {
+    const wasTap = isTapRelease(
+      pressed.t, pressed.x, pressed.y,
+      released.t, released.x, released.y,
+      cfg.tapMaxDuration,
+      mmToPx(cfg.doubleTapSlop),
+    );
+    if (!tapTogglesBehaviour(assignment, wasTap, held.size > 0)) return false;
+    for (const grip of held.values()) grip.behaviour = toggleBehaviour(grip.behaviour);
+    const now = [...held.values()][0]?.behaviour;
+    lastVerdict = `fork C: second tap → ${now ?? "—"}`;
+    return true;
+  };
+
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
     x: e.clientX,
     y: e.clientY,
@@ -1585,6 +1641,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         anchorMotion: new Map(),
         secondLiftedAtMs: null,
         binding: "BOUND",
+        behaviour: initialBehaviour(),
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -1611,6 +1668,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
         lastVerdict = "second touchpoint released";
+        // ⭐⭐⭐ FORK C: *"tapped ANYWHERE"* includes the held object itself. ⚠ A `SECOND`
+        // release runs no §1.3 verdict and never fed the tap history, so here there is
+        // nothing to consume — the return value is ignored on purpose.
+        applyTapToggle(routed.pressed, s);
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
         evaluateBindings();
@@ -1677,10 +1738,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // measures a tap by its own press, not by whatever the last event happened to be.
         // ⚠ The SAME two thresholds §1.3 uses for an object — a tap is a tap whatever it
         // lands on, and a second definition here could disagree with the first.
-        const wasTap =
-          s.t - routed.pressed.t <= cfg.tapMaxDuration &&
-          Math.hypot(s.x - routed.pressed.x, s.y - routed.pressed.y) <=
-            mmToPx(cfg.doubleTapSlop);
+        // ⭐ ONE definition of a tap, shared with fork C's toggle. ⛔ It was inlined here
+        // and fork C needs the identical question: two copies of the arithmetic would be
+        // two definitions free to disagree (`CONSTRAINTS` §4).
+        const wasTap = isTapRelease(
+          routed.pressed.t, routed.pressed.x, routed.pressed.y,
+          s.t, s.x, s.y,
+          cfg.tapMaxDuration,
+          mmToPx(cfg.doubleTapSlop),
+        );
         forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
         // ⭐⭐⭐ A15: this is A10's DEPTH ANCHOR going up — the case that motivated the
@@ -1689,7 +1755,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         pinch.end();
-        if (wasTap && taps.record(routed.pressed, s.t) === "DOUBLE_TAP") {
+        // ⭐⭐⭐ FORK C, AND IT MUST COME BEFORE THE TAP HISTORY. If this tap toggled a
+        // gesture it is SPENT: feeding it to `taps` as well would make two mode switches
+        // fly the camera home. ⚠ With nothing held it toggles nothing and falls straight
+        // through, so the double-tap reset stays reachable on an empty scene — which is
+        // what it is for.
+        const consumed = applyTapToggle(routed.pressed, s);
+        if (!consumed && wasTap && taps.record(routed.pressed, s.t) === "DOUBLE_TAP") {
           resetCamera();
           lastVerdict = "DOUBLE_TAP → camera reset";
         }
@@ -1741,7 +1813,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           cfg.secondTouchGraceMs,
         );
         grip.mode =
-          router.objects().length === 1 ? holderDrive(secondHolds, assignment) : "TRANSLATE";
+          router.objects().length === 1
+            ? modeFor(assignment, secondHolds, grip.behaviour)
+            : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,

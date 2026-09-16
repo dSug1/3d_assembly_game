@@ -458,3 +458,85 @@ device pass to look for mode flicker. ⭐ *Naming a risk is not the same as not 
 ⭐⭐ The rule now in `METHOD`: **a MODE may be keyed on PRESENCE; never on MOTION** — and if
 the reasoning for a choice has to explain away a verdict a hand already gave, the verdict is
 the stronger evidence.
+
+
+---
+
+## ⭐ MOVED HERE 2026-09-16 FROM `AMENDMENTS_R5.md` — A13's instrument note
+
+⚠ The amendments file passed its 800-line cap when `A16` (fork C) landed, and this is
+narrative about an INSTRUMENT rather than a decision. ⛔ Moved whole, not rewritten.
+
+### ⭐⭐ And the instrument that should have answered this
+
+⛔ Three device reports on this rule were diagnosed by *reasoning about code*, because the
+HUD could not answer *"what does the build think is down right now?"* — and `METHOD` is
+explicit that an instrument is judged against the question it exists to answer. ⭐ The depth
+readout now prints the mode, the touchpoint counts, and how much grace is left:
+
+```
+  depth=1.42m [0.02–3.0]  ROTATE obj=1 out=1 2nd  ready X→roll
+  depth=1.42m [0.02–3.0]  ROTATE obj=1 out=0 2nd~180ms
+```
+
+
+---
+
+## ⭐ MOVED HERE 2026-09-16 FROM `AMENDMENTS_R5.md` — A13's resemblance and its correction
+
+⚠ The amendments file passed its cap again when `A16` landed. Both blocks below are
+NARRATIVE — a risk that was named before it was taken, and the device correction that
+followed — and this dossier is where `IN4`'s device history lives. ⛔ Moved whole.
+⭐⭐ The transferable rule they produced is in `METHOD`: *a mode may be keyed on
+PRESENCE; never on MOTION* — and *naming a risk is not the same as not taking it.*
+
+### ⚠⚠ A RESEMBLANCE THAT MUST BE WATCHED ON THE GLASS
+
+⛔ **`IN4` records a device verdict that looks like this rule and is not.** A `STATIONARY`
+latch **taken at press** was overturned by a hand, first try:
+
+> *"Move the second finger, let it settle, and the object ROTATED as though the finger were
+> not there."*
+
+⭐ The lesson recorded then was the distinction between the signals: whether a finger is
+DOWN is discrete, deliberate and visible; whether it is MOVING was *"a noisy, continuous
+reading"*. ⛔ **A13 keys a mode on exactly that noisy reading** — deliberately, on the
+owner's instruction, and with two things that were not true in September's build:
+
+* it is read **live, every frame**, never latched; and
+* `MOVING`/`STATIONARY` is now a **position deadband** (A11), not a speed test — the
+  formulation that made `STATIONARY` unreachable is gone.
+
+⚠ **The device pass must look for MODE FLICKER directly**: hold a part, rest a second finger,
+drag — and watch whether it ever slips from rotate into translate. `restConfirmMs` (30 ms)
+is the number that absorbs it, and `motionDeadbandMm` the one that sets how much wobble a
+resting finger is allowed.
+
+### ⛔⛔⛔ CORRECTION — IT READS **PRESENCE ALONE**, AND THE DEVICE SAID SO TWICE
+
+> *"The issue is still here: if I transition quickly there is a translation then a rotation,
+> if I transition slowly there is directly a rotation."*
+
+⭐⭐ **THE TIMING SIGNATURE IS THE WHOLE DIAGNOSIS.** A finger **placed quickly skids as it
+lands** — the reported centroid slides while the contact area grows — so it read `MOVING`
+for as long as the landing took, and the mode followed it. Placed **slowly** it never left
+its band, so the mode was right at once. ⛔ **Nothing about the gesture differed; only the
+landing did**, and a mode must not depend on how briskly a finger arrives.
+
+⛔⛔ **THE CELL WAS MINE, NOT THE OWNER'S.** The four rules do not name *both fingers
+moving*; the section above resolved it as `TRANSLATE` — *the holder wins every tie* — and
+that was the defect. It is now **`ROTATE`**: a second touchpoint being **DOWN** is the whole
+input, whatever it is doing.
+
+⛔⛔⛔ **AND `IN4` RECORDED THIS VERDICT ALREADY, ON 2026-09-14**, when a mode keyed on the
+anchor's `STATIONARY` state was overturned by a hand, first try. The lesson written then is
+the one that applies now:
+
+> *`MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading … whether a finger is DOWN is
+> neither: it is discrete and deliberate, it changes only when a person decides it does, and
+> it is the one thing they can see.*
+
+⚠ **The section above FLAGGED this resemblance as the thing to watch** — *"the device pass
+must look for mode flicker directly"* — and then shipped the version that had it. ⭐ Naming
+a risk is not the same as not taking it.
+

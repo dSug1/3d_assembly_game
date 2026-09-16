@@ -544,7 +544,7 @@ circular roll comes back.
 **Supersedes** §2 rule 2bis's and §4 rule 6's touchpoint assignments — it swaps them.
 
 ⭐⭐⭐ **AND SINCE `1.0.5` / `D26` THE SWAP IS A FLAG, NOT A FORK**: the spec's assignment
-is still reachable (`?translateNeedsSecondTouch=1`, or the menu toggle), because the whole
+is still reachable (`?touchpointAssignment=1`, or the menu toggle), because the whole
 difference is **one inversion in `holderDrive`** and everything since — `A14`, `A15`, the
 gravity frame, `A11` — is assignment-agnostic. ⛔ It latches **only while nothing touches
 the glass**. ⚠ A13 stays the DEFAULT; which one ships is row `IN13`, not due until the
@@ -581,55 +581,18 @@ the previous assignment had one finger rotating and two translating, which put t
 since A10, and it is what the build already did. ⚠ The alternative, *wait until one of them
 settles*, reintroduces exactly the decision lag A12 was written to delete.
 
-### ⚠⚠ A RESEMBLANCE THAT MUST BE WATCHED ON THE GLASS
+### ⛔⛔⛔ IT READS **PRESENCE ALONE**, AND THE DEVICE SAID SO TWICE
 
-⛔ **`IN4` records a device verdict that looks like this rule and is not.** A `STATIONARY`
-latch **taken at press** was overturned by a hand, first try:
-
-> *"Move the second finger, let it settle, and the object ROTATED as though the finger were
-> not there."*
-
-⭐ The lesson recorded then was the distinction between the signals: whether a finger is
-DOWN is discrete, deliberate and visible; whether it is MOVING was *"a noisy, continuous
-reading"*. ⛔ **A13 keys a mode on exactly that noisy reading** — deliberately, on the
-owner's instruction, and with two things that were not true in September's build:
-
-* it is read **live, every frame**, never latched; and
-* `MOVING`/`STATIONARY` is now a **position deadband** (A11), not a speed test — the
-  formulation that made `STATIONARY` unreachable is gone.
-
-⚠ **The device pass must look for MODE FLICKER directly**: hold a part, rest a second finger,
-drag — and watch whether it ever slips from rotate into translate. `restConfirmMs` (30 ms)
-is the number that absorbs it, and `motionDeadbandMm` the one that sets how much wobble a
-resting finger is allowed.
-
-### ⛔⛔⛔ CORRECTION — IT READS **PRESENCE ALONE**, AND THE DEVICE SAID SO TWICE
-
-> *"The issue is still here: if I transition quickly there is a translation then a rotation,
-> if I transition slowly there is directly a rotation."*
-
-⭐⭐ **THE TIMING SIGNATURE IS THE WHOLE DIAGNOSIS.** A finger **placed quickly skids as it
-lands** — the reported centroid slides while the contact area grows — so it read `MOVING`
-for as long as the landing took, and the mode followed it. Placed **slowly** it never left
-its band, so the mode was right at once. ⛔ **Nothing about the gesture differed; only the
-landing did**, and a mode must not depend on how briskly a finger arrives.
-
-⛔⛔ **THE CELL WAS MINE, NOT THE OWNER'S.** The four rules do not name *both fingers
-moving*; the section above resolved it as `TRANSLATE` — *the holder wins every tie* — and
-that was the defect. It is now **`ROTATE`**: a second touchpoint being **DOWN** is the whole
-input, whatever it is doing.
-
-⛔⛔⛔ **AND `IN4` RECORDED THIS VERDICT ALREADY, ON 2026-09-14**, when a mode keyed on the
-anchor's `STATIONARY` state was overturned by a hand, first try. The lesson written then is
-the one that applies now:
-
-> *`MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading … whether a finger is DOWN is
-> neither: it is discrete and deliberate, it changes only when a person decides it does, and
-> it is the one thing they can see.*
-
-⚠ **The section above FLAGGED this resemblance as the thing to watch** — *"the device pass
-must look for mode flicker directly"* — and then shipped the version that had it. ⭐ Naming
-a risk is not the same as not taking it.
+⚠ A13 first keyed the mode on the second finger's **motion state**, and a hand overturned
+it: *"if I transition quickly there is a translation then a rotation, if I transition slowly
+there is directly a rotation."* ⭐⭐ A finger placed QUICKLY skids as it lands — the reported
+centroid slides while the contact area grows — so it read `MOVING` for the length of the
+landing and the mode followed it. Nothing about the gesture differed; only the landing did.
+⛔⛔ And `IN4` had recorded the identical verdict on 2026-09-14, which this amendment had
+already FLAGGED as a resemblance to watch — *naming a risk is not the same as not taking it.*
+⭐⭐ **Both blocks, with the reasoning as it stood before and after, are in
+[`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md)**, moved there 2026-09-16.
+`METHOD` carries the rule: *a mode may be keyed on PRESENCE; never on MOTION.*
 
 ### ⭐ Two rules, two signals
 
@@ -709,12 +672,8 @@ rebuild. Default **250 ms** — a guess, with a slider.
 ⛔ Three device reports on this rule were diagnosed by *reasoning about code*, because the
 HUD could not answer *"what does the build think is down right now?"* — and `METHOD` is
 explicit that an instrument is judged against the question it exists to answer. ⭐ The depth
-readout now prints the mode, the touchpoint counts, and how much grace is left:
-
-```
-  depth=1.42m [0.02–3.0]  ROTATE obj=1 out=1 2nd  ready X→roll
-  depth=1.42m [0.02–3.0]  ROTATE obj=1 out=0 2nd~180ms
-```
+readout now prints the mode, the touchpoint counts and the grace remaining; the examples are
+in [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
 
 ---
 
@@ -798,3 +757,44 @@ but a new way for a gesture to end, so the HUD prints `⛔ORPHANED(next input un
 ⭐ **What was built, what it composes with, and the two mutants it was falsified against are
 in [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md).**
 **⛔ A DEVICE LOOK IS OWED.**
+
+
+---
+
+## A16 — ⭐⭐⭐ FORK C: A SECOND TOUCHPOINT **TAPPED** TOGGLES THE ONGOING DRAG *(owner, 2026-09-16)*
+
+**Adds** a third reading of §2/§4 to `D26`'s flag — it amends no clause, forks A and B are
+untouched, and it is reachable as `?touchpointAssignment=2`.
+
+> *"Second touchpoint tapped anywhere: toggle between the behaviors of fork A and fork B …
+> it does not change the fork … for one single ongoing touchpoint. Second touchpoint pressed
+> (not tapped): same behavior as current (depth translation, roll, two touchpoints on two
+> objects translate their respective objects, etc.)."*
+
+⛔⛔ **IT IS NOT AN INVERSION, WHICH IS WHY IT IS A FORK AND NOT A SETTING.** In A and B the
+mode is a function of **presence**; in C presence does not choose the mode at all — a
+**discrete tap** does, which leaves a held second finger free to mean only what it already
+means. ⭐⭐ And that is structural rather than cosmetic: **fork C cannot have the defect
+`A14` fixed**, because there is no lift-and-replace gap for the mode to fall through.
+
+⭐ **The toggle lives on the GRIP and dies with the gesture** — a *second* touchpoint
+presupposes a first, so there is no toggle without an ongoing gesture to toggle. That is
+*"for one single ongoing touchpoint"* read literally.
+⚠ **THE TRADE**: a gesture starts as `TRANSLATE` (fork A's behaviour, which the owner named
+first), so **rotation costs a tap every time**. That is the thing to judge, not a defect.
+
+⛔⛔ **A TOGGLING TAP IS SPENT.** A tap outside any object already means something — two of
+them fly the camera home — so if a toggling tap also reached the tap history, **toggling
+twice would reset the camera**, unasked, exactly while the user was switching modes. ⭐ With
+nothing held it toggles nothing and falls straight through, so the double-tap reset stays
+reachable on an empty scene, which is the scene it is most wanted on. ⚠ Same rule as `D10`
+for an `IGNORED` touchpoint and `A15` for an orphaned holder.
+
+⚠ **One case is left open on purpose** — a tap on a *different* object, which is already
+rule 5 / 6bis's configuration and `IN3`'s selection to define. See
+[`../00_CORE/queue_notes/IN13.md`](../00_CORE/queue_notes/IN13.md).
+
+⭐ `modeFor` is now the ONE place a held object's mode is decided, for all three forks, so
+the branch is not in the wiring — `D23`: *breaking the mode selection in `scene.ts` reddens
+nothing.* 27 vectors, three mutants caught. **⛔ A DEVICE LOOK IS OWED**, and the readout is
+the only way to see the toggle's state, since in fork C no finger position reveals it.

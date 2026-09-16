@@ -57,7 +57,7 @@
  */
 import { CAMERA_NEAR_PLANE_M, type GestureConfig } from "./gestureConfig";
 import type { MotionState } from "./motion";
-import type { Assignment } from "./assignment";
+import type { Assignment, Behaviour } from "./assignment";
 import { pxToMm } from "../core/units";
 import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
 
@@ -363,4 +363,34 @@ export function secondTouchHeld(
 ): boolean {
   if (present) return true;
   return msSinceLift !== null && msSinceLift < graceMs;
+}
+
+/**
+ * ⭐⭐⭐ **THE ONE PLACE A HELD OBJECT'S MODE IS DECIDED**, across all three forks.
+ *
+ * ⛔ It exists so the fork branch is NOT in `scene.ts`. `D23` recorded what that costs:
+ * *"the WIRING has no vector — breaking the mode selection in `scene.ts` reddens nothing."*
+ * ⭐ Here it reddens something, for every fork, including the cell each fork disagrees on.
+ *
+ * | fork | what decides the mode |
+ * |---|---|
+ * | A `ONE_FINGER_TRANSLATE` | **presence**: a second touchpoint means rotate |
+ * | B `TWO_FINGER_TRANSLATE` | **presence**, inverted: a second touchpoint means translate |
+ * | C `TAP_TOGGLE` | ⛔ **neither** — a discrete TAP flips it, and presence is ignored here |
+ *
+ * ⚠ Fork C ignoring `secondPresent` IS the whole of fork C: a held second finger keeps only
+ * the meanings it already has (depth while the holder is still, roll on its x), and what the
+ * holder's own drag DOES becomes a per-gesture toggle instead.
+ *
+ * @param toggled fork C's per-gesture behaviour. ⛔ Required, and unused by A and B — a
+ *   caller that cannot supply it has no business choosing a mode, and defaulting it would
+ *   let fork C silently run fork A's answer.
+ */
+export function modeFor(
+  assignment: Assignment,
+  secondPresent: boolean,
+  toggled: Behaviour,
+): "TRANSLATE" | "ROTATE" {
+  if (assignment === "TAP_TOGGLE") return toggled;
+  return holderDrive(secondPresent, assignment);
 }
