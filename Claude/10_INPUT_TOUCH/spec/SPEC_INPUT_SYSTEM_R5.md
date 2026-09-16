@@ -96,7 +96,7 @@ it to the object model and gives it the precondition it is missing.
 screen**, and all are placeholders except the six orbit ring values, the four gains, rule
 6's four feel numbers and the two sway sets — all chosen by finger — plus `pointerNoiseMm`
 = **0.761 mm**, the one number actually MEASURED. ⭐ Any of them can be overridden from the
-URL (`?rollAngle=45`) or moved on the on-screen menu, without a rebuild.
+URL (`?motionDeadbandMm=3.5`) or moved on the on-screen menu, without a rebuild.
 
 ---
 
@@ -113,24 +113,39 @@ reached its 800-line cap. `METHOD`: *when two sections conflict, the later one w
 | **A1 §4** (`D13`) | §1.4's *"clears its constraint stack"*, for mates | eviction **spares `MATE` entries** — one gesture, one intention |
 | **A2** | §0's *"two objects"* | the scene holds **three** |
 | **A5** | `D10`, and §5's *"two touchpoints on the same object — undefined and reachable"* | two fingers on ONE object are a **depth pinch**, and ⛔ *depth is HORIZONTAL* — the view axis flattened onto the ground plane, so **the object's height never changes**. The gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD touchpoint |
-| **A6** | A5's trigger | depth is a **COMMON VERTICAL DRAG** — one finger on the object, one ANYWHERE, both travelling in y together. ⛔ It shares rule 6's configuration: **common mode is depth, differential mode is rule 6** |
+| **A6** | ⚠ **ITS TRIGGER SUPERSEDED BY A10** — it superseded A5's | depth is a **COMMON VERTICAL DRAG** — one finger on the object, one ANYWHERE, both travelling in y together. ⛔ It shares rule 6's configuration: **common mode is depth, differential mode is rule 6** |
 | **A7** | 2bis, 2quinte and rule 6's *"screen view plane"* | every object gesture stands on a **GRAVITY FRAME** — yaw about the vertical, pitch about the horizontal screen-x, roll and depth about the flattened view direction. ⛔ The argument is **orthogonality**: about the camera's axes, roll stops being independent of yaw as the camera tilts |
-| **A8** | §1.3's provisional motion, which rolled back only at RELEASE | a roll **REBASES** to the start of its circle: the yaw/pitch applied before 60° of arc is undone. ⛔ To the FIT WINDOW's start, **not to the press** — a straight drag that precedes a circle was asked for and survives. ⚠ The object jumps at the commit, by exactly the unasked-for rotation it replaces |
-| **A9** | §1.3 and rule 6 — both consume the RAW per-event delta | a **DEADBAND** on `dx`/`dy`, **per axis**, with a slider. ⛔⛔ A *hard* deadband is a jump traded for a jump; the **residual-accumulator** form is the one to build, and the vector asserts CONTINUITY. ⚠ Not applied to roll (1€-filtered) or to A6's driver (its own hold window) — a decision, not an oversight. Row `IN12` |
+| **A8** | ⛔ **RETIRED BY A12** — it amended §1.3's provisional motion | a roll **REBASES** to the start of its circle: the yaw/pitch applied before 60° of arc is undone. ⛔ To the FIT WINDOW's start, **not to the press** — a straight drag that precedes a circle was asked for and survives. ⚠ The object jumps at the commit, by exactly the unasked-for rotation it replaces |
+| **A9** | ✅ **ABSORBED INTO A11**, which put the deadband in §1.1 itself | a **DEADBAND** on `dx`/`dy`, **per axis**, with a slider. ⛔⛔ A *hard* deadband is a jump traded for a jump; the **residual-accumulator** form is the one to build, and the vector asserts CONTINUITY. ⚠ Not applied to roll (1€-filtered) or to A6's driver (its own hold window) — a decision, not an oversight. Row `IN12` |
 | **A10** | A6's trigger, and §1.1's speed estimate | depth is **a STILL HOLDER and a MOVING ANCHOR**: no window, no ratio, no tolerance. ⛔ The holder wins every tie, so rule 6 and depth PARTITION the two-finger configuration. ⭐ Rule 6's second touchpoint may be outside **or on the same object**. ⛔⛔ It exposed §1.1 estimating speed over ONE SAMPLE PAIR — ~95 mm/s at rest against a 6 mm/s threshold — so **STATIONARY was unreachable**; fixed to a windowed estimate, with four §1.1 numbers re-sized — all since replaced by `A11`'s deadband and **closed by a device look 2026-09-16** |
 | **A12** | 2quinte's circular roll, and **A8** entirely | roll moves to the **SECOND touchpoint's x** while the holder is still; its y stays depth. ⛔ Retires the circle fit, `rollAngle`'s commit threshold, the provisional yaw/pitch, A8's rebase and **the jump** — yaw/pitch and roll are no longer the same hand shape, so nothing has to tell them apart |
 | **A13** | 2bis's and rule 6's touchpoint assignments — it SWAPS them | **one touchpoint TRANSLATES**; a second one held **STILL** turns the same drag into a **ROTATION**. ⭐ Whichever finger moves acts; the other one's state picks the rule. ⚠ Both moving = translate |
+| **A11** | ⛔⛔ **§1.1 ENTIRELY** — its motion states, and every threshold they name | `STATIONARY`/`MOVING` is a **PER-AXIS POSITION DEADBAND**: an anchor trails each axis by one band; inside it the axis is still and emits **nothing**, crossing it emits the **excess only**, and once moving travel passes through undiminished. ⛔ `stillSpeed`, `stillTime`, `moveEnterDistance` and `moveExitDistance` are **deleted**; one `motionDeadbandMm` replaces all four, plus `restConfirmMs` to confirm the way back to rest. ⭐ It also **absorbs A9** — the deadband is applied once, at the source, so no rule consumes a raw delta. ⚠ **§1.1's text below is superseded in full** |
+| **A14** | A13's *"second absent → translate"* | a **lift-and-replace** of the second touchpoint is **ONE gesture**: it stays HELD for `secondTouchGraceMs` after it lifts. ⛔ Without it the interval between the lift and the press has one touchpoint down, so A13 translated through the middle of a swap. ⚠ THE COST: returning to one-touchpoint translation is delayed by the grace |
 | **A3** | 2quinte's *"on a constrained object the circular gesture is ignored"* **and** 2sexte's undefined behaviour when its axis projects to a point | ⛔ roll **DRIVES the free DOF** of an anchored object, about the CONSTRAINT axis; **2sexte suppresses** where it is degenerate. **ONE handover constant with hysteresis**, latched at press |
 
 ---
 
 # THE SPECIFICATION — the owner's text, unaltered
 
-⚠ **Ten clauses below are SUPERSEDED** — see the amendment table above: §1.4 / 2septies'
-double-tap eviction (eviction is now a quick **back-and-forth**), §1.4's *"clears its
-constraint stack"* where a `MATE` is concerned (eviction spares mates), 2quinte's ban on
-roll for a constrained object (roll DRIVES its free DOF, and 2sexte suppresses where it
-degenerates), and §0's "two objects" (the scene has three).
+⚠⚠ **MUCH OF THE TEXT BELOW IS SUPERSEDED** — see the amendment table above, and read it
+first. The largest are:
+
+* ⛔⛔ **§1.1 ENTIRELY** (`A11`): the motion states are a **per-axis position deadband**, and
+  `stillSpeed`, `stillTime`, `moveEnterDistance` and `moveExitDistance` **no longer exist**.
+  ⭐ One `motionDeadbandMm` replaces all four. The state table and Config line in §1.1 below
+  describe a formulation that broke on a real pointer three times — `queue_notes/IN0.md`.
+* ⛔ **2quinte's circular roll** (`A12`): roll is the SECOND touchpoint's `x` while the
+  finger on the object is still. The circle fit, `rollAngle` and the 60° commit are retired.
+* ⛔ **2bis's and rule 6's touchpoint assignments are SWAPPED** (`A13`): one touchpoint
+  TRANSLATES, and a second one held DOWN turns the same drag into a rotation.
+* §1.4 / 2septies' double-tap eviction (eviction is now a quick **back-and-forth**),
+  §1.4's *"clears its constraint stack"* where a `MATE` is concerned (eviction spares mates),
+  2quinte's ban on roll for a constrained object (roll DRIVES its free DOF, and 2sexte
+  suppresses where it degenerates), and §0's "two objects" (the scene has three).
+
+⭐ **Nothing below is edited.** `METHOD`: *when two sections conflict, the later one wins*,
+and a superseded clause explains why the current one exists.
 
 # Input System — Revision 5
 
@@ -193,6 +208,12 @@ rules below means `MOVING`; every occurrence of "no delta position" / "delta pos
 vector2.zero" means `STATIONARY`. `[CHANGED — applies to rules 6, 6bis, 6ter, 6quater]`
 
 Config: `stillSpeed`, `stillTime`, `moveEnterDistance`, `moveExitDistance`.
+
+> ⛔⛔ **SUPERSEDED IN FULL BY `A11`.** None of those four config fields exists any more, and
+> the state table above describes a formulation that broke on a real pointer three separate
+> ways. ⭐ What ships is a **per-axis position deadband** with one `motionDeadbandMm`. See the
+> amendment table, and [`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)
+> for all four formulations and how each one failed.
 
 ### 1.2 Gains `[CLARIFIED]`
 

@@ -477,24 +477,24 @@ describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
 
   it("⭐⭐ ONE touchpoint on the object TRANSLATES", () => {
     // x along the horizontal screen axis, y along GRAVITY — A7's frame, unchanged.
-    expect(holderDrive(false, null)).toBe("TRANSLATE");
+    expect(holderDrive(false)).toBe("TRANSLATE");
   });
 
   it("⭐⭐ a second touchpoint HELD STILL turns the same drag into a ROTATION", () => {
     // ⭐ The second finger contributes no motion at all: it is a MODIFIER, and holding it
     // still is the whole of the input. Yaw about gravity, pitch about the horizontal.
-    expect(holderDrive(true, STI)).toBe("ROTATE");
+    expect(holderDrive(true)).toBe("ROTATE");
   });
 
   it("⛔ …and lifting it goes straight back to translating", () => {
     // ⭐ Symmetrical, and for the same reason: a lift is discrete, deliberate and visible.
-    expect(holderDrive(false, null)).toBe("TRANSLATE");
+    expect(holderDrive(false)).toBe("TRANSLATE");
   });
 
   it("⛔⛔ A LANDING SKID CANNOT CHANGE THE MODE — the reported defect, as a vector", () => {
     // ⭐ The same finger, down, reporting every motion state a landing can produce. The
     // mode must not move: that is what *"immediately rotation"* means.
-    const seen = new Set([MOV, STI, MOV, MOV, STI].map((st) => holderDrive(true, st)));
+    const seen = new Set([MOV, STI, MOV, MOV, STI].map(() => holderDrive(true)));
     expect([...seen]).toEqual(["ROTATE"]);
   });
 
@@ -514,7 +514,7 @@ describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
     // written down then is the one that applies now — *whether a finger is DOWN is
     // discrete, deliberate and VISIBLE; whether it is MOVING is a noisy continuous reading*
     // — and I flagged the resemblance in A13 as the thing to watch before the device did.
-    expect(holderDrive(true, MOV)).toBe("ROTATE");
+    expect(holderDrive(true)).toBe("ROTATE");
   });
 
   it("⭐ the rule reads PRESENCE ALONE, never a latch and never the motion state", () => {
@@ -525,17 +525,17 @@ describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
     // deadband rather than a speed test — but the resemblance is close enough to be worth
     // watching on the glass.
     // ⭐ Whatever the second finger is doing, it is DOWN — and that is the whole input.
-    for (const st of [STI, MOV, null] as const) {
-      expect(holderDrive(true, st)).toBe("ROTATE");
-    }
-    expect(holderDrive(false, null)).toBe("TRANSLATE");
+    // ⭐ Whatever the second finger is doing, it is DOWN — and `holderDrive` cannot even
+    // SEE what it is doing any more: the parameter was removed so it cannot be wired back.
+    expect(holderDrive(true)).toBe("ROTATE");
+    expect(holderDrive(false)).toBe("TRANSLATE");
   });
 
   it("⭐⭐ a second finger that never moved at all counts as IDLE", () => {
     // ⚠ A touchpoint that goes down and stays put emits no events, so it may have no
     // tracker yet. `null` means *nothing has ever moved this finger* — which is the
     // strongest form of idle there is, not a missing answer.
-    expect(holderDrive(true, null)).toBe("ROTATE");
+    expect(holderDrive(true)).toBe("ROTATE");
   });
 });
 

@@ -21,8 +21,6 @@ export interface HudFields {
   readonly pointers: number;
   readonly phase: string;
   readonly motion: string;
-  readonly rollDeg: number;
-  readonly rollCommitted: boolean;
   /** The last release verdict, already formatted by whoever owns the recognizer. */
   readonly lastVerdict: string;
   /** Camera radius, and whether a pinch is live. §2 rule 4. */
@@ -82,11 +80,13 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         `pointers  ${f.pointers}`,
         `phase     ${f.phase}`,
         `motion    ${f.motion}`,
-        // ⭐ Sign is shown explicitly. Positive is CLOCKWISE on screen (src/input/roll.ts),
-        // and a sign is the one thing no amount of magnitude-watching catches.
-        `roll      ${f.rollDeg >= 0 ? "+" : ""}${f.rollDeg.toFixed(1)}°${
-          f.rollCommitted ? "  COMMITTED" : ""
-        }`,
+        // ⛔⛔ THE ROLL LINE IS GONE, AND IT WAS WORSE THAN DEAD. It showed
+        // `RollDetector`'s swept angle — the CIRCULAR roll `A12` retired — so a circular
+        // drag made degrees accumulate on the HUD while nothing on screen rolled. ⭐ An
+        // instrument that reports a quantity the product no longer acts on is not merely
+        // useless; it actively misleads the one session that most needs it.
+        // ⭐ A12's roll state is on the depth readout instead (`ready X→roll`), fed by the
+        // gate that actually decides it.
         `last      ${f.lastVerdict}`,
         `camera    ${f.camera}`,
         `roles     ${f.roles}`,

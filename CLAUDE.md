@@ -107,16 +107,16 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Twenty-seven defects, twenty-six of them BY FINGER, and none visible to a green
-suite.** ⭐ The twenty-seventh is the exception worth knowing: §1.1's unreachable
-STATIONARY was found by **composing a measurement with a threshold**, not by a hand — and
-no hand could have found it, because nothing shipped depended on the path it broke. They are **five** repeating shapes — a rate estimated over too short a baseline, a
+⛔⛔ **Thirty-five defects, thirty-four of them BY FINGER, and none visible to a green
+suite.** ⭐ The one exception is worth knowing: §1.1's unreachable STATIONARY was found by
+**composing a measurement with a threshold**, not by a hand — and no hand could have found
+it, because nothing shipped depended on the path it broke. They are **five** repeating shapes — a rate estimated over too short a baseline, a
 substituted quantity, idealised fixtures, a composition nobody computed, and ⭐ **my own
 FIXTURES**, which produce false alarms that look exactly like real defects. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
 block, and they bind every row still to come.
 
-⭐⭐ **Tunables can be A/B'd by finger without a rebuild** — `?rollAngle=45` on the URL,
+⭐⭐ **Tunables can be A/B'd by finger without a rebuild** — `?motionDeadbandMm=3.5` on the URL,
 or the on-screen menu for the orbit rings. That is what makes `IN5` practical.
 ⚠ Every number in `src/input/gestureConfig.ts` is still a placeholder, except the six
 orbit ring values, the four gains and rule 6's four feel numbers, all chosen on the
@@ -137,8 +137,9 @@ placement, faces, connectors, the assembly tree, and the constraint stack attach
 object. ⭐⭐ The vectors were written FIRST and then **falsified on purpose** — breaking the
 composition turns 14 of 42 red, which is why the green means something. ⭐ `reroot`
 implements **parent ≠ root** and moves nothing.
-⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`**; `IN12`
-(the deadband) is smaller and unblocked and can go first.
+⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`** — now the only input row with unbuilt work left.
+✅ `IN12` (the deadband) was CLOSED by `A11`, which put it in §1.1 itself rather than in
+each rule.
 ⭐⭐ **A REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry**: *"you destroyed the rotation around the gravity axis… it came back to the axis of
 the screen view plane"* — withdrawn by the owner after `tests/a7_wiring.test.ts` composed

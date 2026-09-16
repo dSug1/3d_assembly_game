@@ -127,7 +127,7 @@ reason `SEC4` exists. ⭐ It also records what was DECLINED and why, so a later 
 not re-derive the assessment.
 
 ⭐⭐ **`IN5` IS NOW PRACTICAL.** Tunables override from the **URL**
-(`?rollAngle=45&rollFilterBeta=0`) and the orbit rings have an on-screen **tuning
+(`?motionDeadbandMm=3.5&gainRollDrag=3`) and the orbit rings have an on-screen **tuning
 menu**, so a placeholder can be A/B'd by finger without a rebuild.
 ⛔ **Every threshold is still a placeholder** — except the six orbit ring values
 (⚠ the top ring was reopened to **1.0 m / 0.55 m** on 2026-09-14, making the surface
@@ -279,24 +279,21 @@ grows.
 
 ---
 
-**`moveExitDistance` is now wired — and the shipped defaults made it unreachable.**
-`IN1`, 2026-09-13. Carried from `IN0`, which left it declared and unused.
+**⛔⛔ `moveExitDistance` — AND EVERY OTHER §1.1 THRESHOLD — IS GONE.** `A11`, 2026-09-15.
 
-✅ It is now the **excursion bound during settle candidacy**: when speed drops below
-`stillSpeed` the position at that moment becomes a candidate rest point, and
-`STATIONARY` latches only if the finger stayed within `moveExitDistance` of it for
-the whole `stillTime`. This catches what instantaneous speed structurally cannot —
-a **slow persistent creep**, which is never at rest yet never exceeds `stillSpeed`.
+This section used to describe the excursion bound being wired in `IN1`, and the
+`stillSpeed × stillTime > moveExitDistance` consistency rule that made it reachable. ⭐ All
+of it was correct and all of it is retired: the owner replaced §1.1 with a **per-axis
+position deadband**, and `stillSpeed`, `stillTime`, `moveEnterDistance` and
+`moveExitDistance` were deleted together with the rule that related them.
 
-⛔⛔ **But the exit distance can only ever bind if `stillSpeed × stillTime >
-moveExitDistance`** — sustained sub-`stillSpeed` motion cannot cover more ground than
-that, under any wiring. The shipped defaults gave `6 mm/s × 80 ms = 0.48 mm` against
-a `0.8 mm` bound. **The tunable could not have been anything but decorative.**
+⚠ **What replaced the reasoning, not just the numbers**: those four were each a threshold
+chosen to sit ABOVE a measurement, and §1.1 broke on a real pointer **three times** that
+way — accumulated travel, instantaneous speed, and speed over one sample pair. ⭐ A
+displacement deadband needs no such choice.
 
-✅ **The constructor now asserts it**, beside the existing anti-chatter assertion, so
-an inconsistent config is a loud failure and not a silently dead threshold.
-⚠ `stillTime` moved `80 → 150 ms` to satisfy it. **That is a placeholder moved to
-make another placeholder reachable, not a measurement.** Both belong to `IN5`.
+⭐⭐ **The full sequence, and it is the most instructive file in the project:**
+[`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md).
 
 ## ⭐ Amendments the OWNER made on the device, 2026-09-14
 
@@ -345,7 +342,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | **what a finger can ALREADY do** | ⭐ [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md)'s **BUILD STATUS** section — the inventory by touchpoint configuration, what is built, what is blocked, and the two behaviours with no clause behind them |
 | **any gesture rule** | [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md) — and mind the section numbers, they are referenced from code |
 | know why a threshold is in mm | [`../00_CORE/CONSTRAINTS.md`](../00_CORE/CONSTRAINTS.md) §6 |
-| change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place**. ⭐ To try one *without a rebuild*: `?rollAngle=45` on the URL, or the on-screen menu for the orbit rings |
+| change a tunable | `src/input/gestureConfig.ts` — ⛔ **one constant, one place**. ⭐ To try one *without a rebuild*: `?motionDeadbandMm=3.5` on the URL, or the on-screen menu for the orbit rings |
 | know what is built | [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md), phase `IN` |
 | **why the input code looks the way it does** | [`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md) — every defect found by finger, including the ones that were measured and reverted |
 | **the OWNER's later decisions** | ⭐⭐ [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md), `A1`–`A9`. ⛔ They supersede the spec |

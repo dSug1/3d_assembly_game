@@ -86,7 +86,6 @@ import {
   type ReleaseVerdict,
   type Sample,
   MotionTracker,
-  type MotionState,
   type ScreenFrame,
 } from "../input";
 // ⭐ The quaternion arithmetic left this file with the composition it belonged to —
@@ -806,10 +805,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // disagree with the product while showing green. See `METHOD`.
       phase: first ? first.rec.currentPhase : "—",
       motion: first ? first.rec.motionState : "—",
-      rollDeg: first ? first.rec.rollDeg : 0,
       // ⚠ A12 RETIRED the circular roll, so this is always false and is kept only because
-      // the HUD type carries it. ⭐ A12's roll state is in the depth readout instead.
-      rollCommitted: false,
       lastVerdict,
       // ⚠ Shown so a session can never be spent testing a value that was not in
       // force — including a typo'd key, which is REPORTED rather than ignored.
@@ -1198,16 +1194,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⚠ A touchpoint on a DIFFERENT object is deliberately not one of these — that is §4
    * rule 5 / 6bis / 6ter's configuration and must stay reachable.
    */
-  const secondFingerOf = (
-    grip: Held,
-  ): { present: boolean; state: MotionState | null } => {
+  const secondFingerOf = (grip: Held): { present: boolean } => {
     for (const q of router.all()) {
       const isSecond =
         q.role === "OUTSIDE" || (q.role === "SECOND" && q.object === grip.mesh);
       if (!isSecond) continue;
-      return { present: true, state: grip.anchorMotion.get(q.seq)?.current ?? null };
+      return { present: true };
     }
-    return { present: false, state: null };
+    return { present: false };
   };
 
   /**
@@ -1279,6 +1273,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // object, which is a tap's exact shape — and a DOUBLE_TAP resolves to 2septies
     // eviction. See `Recognizer.consumeAsMotion`.
     grip.rec.consumeAsMotion();
+
+    // ⛔⛔ THE DEPTH SWAY ANSWERS A **DEPTH** PUSH, NOT ANY DRIVE. A12 gave this function a
+    // second job — roll on the anchor's x — and the sway below was left firing on either.
+    // ⚠ It is fed the anchor's `y`, so a pure ROLL drag (x only, y still) would push the
+    // other objects along `frame.depth` on the strength of a coordinate that is not moving.
+    // ⭐ Harmless today only because a still `y` produces no kick; the guard makes it
+    // correct rather than lucky. The ROTATIONAL sway already fires in the roll branch above.
+    if (drive.depthDyPx === 0) return true;
 
     // ⭐ THE SCENE REACTS TO A PUSH TOO — the same sway, the same four tunables.
     // ⚠ SIGN: fingers moving UP (negative screen y) push the object AWAY, which is +push.

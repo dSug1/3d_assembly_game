@@ -287,14 +287,17 @@ export function rollDragDeg(dxPx: number, degPerMm: number): number {
  * mode. ⚠ Two rules, two signals: **presence** picks the mode; **motion** supplies the
  * motion.
  *
- * @param secondPresent whether a second touchpoint is down at all. ⛔ The only input that
- *   matters. `secondState` is accepted so callers need not special-case it, and is
- *   deliberately unused — see above.
+ * ⛔⛔ **IT TAKES NO MOTION STATE, AND IT MUST NOT BE GIVEN ONE.** An earlier version
+ * accepted one “so callers need not special-case it” and ignored it. ⚠ A dead parameter
+ * named after the very signal a hand rejected **twice** is an invitation to wire it back,
+ * and the signature is the cheapest place to make that impossible. ⭐ The motion state has a
+ * job — `secondFingerDrive`, deciding what a moving second finger DRIVES — and this is not
+ * it.
+ *
+ * @param secondPresent whether a second touchpoint is down, counting `A14`'s replacement
+ *   grace. The only input there is.
  */
-export function holderDrive(
-  secondPresent: boolean,
-  _secondState?: MotionState | null,
-): "TRANSLATE" | "ROTATE" {
+export function holderDrive(secondPresent: boolean): "TRANSLATE" | "ROTATE" {
   return secondPresent ? "ROTATE" : "TRANSLATE";
 }
 

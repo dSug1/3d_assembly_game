@@ -137,20 +137,6 @@ export interface Sample {
   readonly t: number;
 }
 
-/**
- * What one sample produced: the state, and the DEADBANDED travel to act on.
- *
- * ⛔ `dx`/`dy` are what a rule must consume — never `s.x - prev.x`. Each is zero while its
- * OWN axis is inside its own band, which is what makes a nearly-horizontal drag purely
- * horizontal. See the header.
- */
-export interface MotionStep {
-  readonly state: MotionState;
-  /** Deadbanded travel this sample, CSS pixels. Zero while that axis is `STATIONARY`. */
-  readonly dx: number;
-  readonly dy: number;
-}
-
 const ZERO_STEP = { dx: 0, dy: 0 } as const;
 
 /**
@@ -275,7 +261,14 @@ export class MotionTracker {
     return { x: this.ax.state, y: this.ay.state };
   }
 
-  /** ⭐ The deadbanded travel from the most recent `push`. See `MotionStep`. */
+  /**
+   * ⭐⭐ THE DEADBANDED TRAVEL from the most recent `push`, CSS pixels.
+   *
+   * ⛔ **This is what a rule must consume — never `s.x - prev.x`.** Each component is zero
+   * while its OWN axis is inside its own band, which is what makes a nearly-horizontal drag
+   * *purely* horizontal, and what stops a resting finger turning a held object.
+   * ⚠ A `tick` clears it: a tick is not an event and leaves no travel behind it.
+   */
   get step(): { readonly dx: number; readonly dy: number } {
     return this.lastStep;
   }
