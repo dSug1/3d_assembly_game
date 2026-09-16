@@ -31,8 +31,15 @@ const cfg = DEFAULT_CONFIG;
 function recordingPose() {
   let pose = 0;
   const restored: number[] = [];
+  // ⭐ Counted as well as recorded: since the flick rollback was retired (2026-09-16) the
+  // snapshot's only remaining owner is `IN6`'s undo, and *that it is still TAKEN* is now a
+  // claim a vector has to make — a mechanism nothing exercises is the next thing deleted.
+  let snapshots = 0;
   const port: PosePort<number> = {
-    snapshot: () => pose,
+    snapshot: () => {
+      snapshots++;
+      return pose;
+    },
     restore: (p) => {
       pose = p;
       restored.push(p);
@@ -41,6 +48,9 @@ function recordingPose() {
   return {
     port,
     restored,
+    get snapshots() {
+      return snapshots;
+    },
     /** Stand-in for a continuous rule moving the object provisionally. */
     moveProvisionally: (to: number) => {
       pose = to;
@@ -127,17 +137,44 @@ describe("recognizer — the commit point", () => {
 });
 
 describe("recognizer — provisional motion and rollback", () => {
-  it("⭐⭐ a FLICK restores the press snapshot", () => {
+  it("⛔⛔⛔ A FLICK KEEPS THE ROTATION IT WAS MADE WITH — the rollback is RETIRED", () => {
+    // ⛔⛔ THIS VECTOR ASSERTED THE OPPOSITE UNTIL 2026-09-16, and the retraction is the
+    // record: *"a rotation followed by a flick was previously resetting the quaternion of the
+    // object: get rid of that if this conflicts with the alignment by flick"* — owner.
+    //
+    // ⭐⭐ §1.3's rollback was right for the world it was written in, where a drag and a
+    // flick were RIVAL READINGS of one gesture and the loser's effect was unwanted. `A16`
+    // made rotation a mode a hand chooses — so the drag is deliberate — and `D33` made the
+    // flick readable at the END of a drag, so *drag-then-snap* is the normal gesture now.
+    // ⭐⭐⭐ **A ROLLBACK IS ONLY HONEST WHEN THE MOTION IT UNDOES WAS PROVISIONAL.**
+    // ⚠ `restore` is now called by nothing in the recognizer; the snapshot stays for `IN6`.
     const { rec, pose } = fresh();
     const samples = run({ speedMmPerS: 400, ms: 120 });
     rec.press(samples[0]!);
     for (const s of samples.slice(1, -1)) rec.move(s);
-    pose.moveProvisionally(42); // the continuous rule ran while committed
+    pose.moveProvisionally(42); // the rotation the hand performed, on purpose
     const v = rec.release(samples[samples.length - 1]!);
     expect(v.kind).toBe("FLICK");
-    expect(v.rolledBack).toBe(true);
-    expect(pose.restored).toEqual([0]); // restored ONCE, to the press pose
-    expect(pose.current()).toBe(0);
+    expect(v.rolledBack).toBe(false);
+    expect(pose.restored).toEqual([]);
+    expect(pose.current()).toBe(42);
+  });
+
+  it("⭐ the press snapshot is still TAKEN — `IN6`'s undo is the other owner", () => {
+    // ⛔ A snapshot nobody restores looks like dead code, and the next session would be
+    // right to delete it — except §6 pushes an undo entry *before every committed drag*, and
+    // this is that entry. ⭐ So the vector states the ownership rather than leaving the
+    // mechanism to be rediscovered or removed.
+    const { rec, pose } = fresh();
+    const samples = run({ speedMmPerS: 400, ms: 120 });
+    rec.press(samples[0]!);
+    expect(pose.snapshots).toBe(1);
+    for (const s of samples.slice(1, -1)) rec.move(s);
+    rec.release(samples[samples.length - 1]!);
+    expect(pose.snapshots).toBe(1);
+    // ⭐ And it is READABLE, which is what keeps it from being deleted as dead: `IN6` will
+    // push exactly this value. ⚠ The press pose, not the provisional one.
+    expect(rec.pressSnapshot).toBe(0);
   });
 
   it("⭐⭐ a DRAG that decelerates keeps the provisional motion, untouched", () => {

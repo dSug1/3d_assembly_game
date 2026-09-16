@@ -193,6 +193,17 @@ export class Recognizer<P> {
     this.motion = new MotionTracker(cfg);
   }
 
+  /**
+   * ⭐⭐ THE POSE AS IT WAS AT THE PRESS — `§6`'s UNDO ENTRY (`IN6`), and since the flick
+   * rollback was retired (2026-09-16) it is the snapshot's ONLY owner.
+   * ⛔ Exposed rather than left private: a field written and never read is dead weight the
+   * compiler is right to flag, and the honest fix is to name the consumer that wants it.
+   * ⚠ `null` before the press, and never restored by the recognizer itself any more.
+   */
+  get pressSnapshot(): P | null {
+    return this.snapshot;
+  }
+
   get currentPhase(): Phase {
     return this.phase;
   }
@@ -381,14 +392,35 @@ export class Recognizer<P> {
       };
     }
 
-    // ⭐⭐ THE ROLLBACK. The provisional motion is undone before the discrete rule
-    // is applied, so a flick snaps from where the gesture STARTED — the two never
-    // compose into a drag-then-snap the user did not ask for.
-    if (this.snapshot !== null) this.pose.restore(this.snapshot);
+    // ⛔⛔⛔ THE ROLLBACK IS GONE — OWNER, 2026-09-16, AND IT IS §1.3's ASSUMPTION THAT
+    // EXPIRED, not its arithmetic.
+    //
+    // > *"a rotation followed by a flick was previously resetting the quaternion of the
+    // > object: get rid of that if this conflicts with the alignment by flick."*
+    //
+    // ⭐⭐ §1.3 undid the provisional motion *"so a flick snaps from where the gesture
+    // STARTED — the two never compose into a drag-then-snap the user did not ask for."*
+    // ⛔ That sentence was written when a drag and a flick were **rival readings of one
+    // gesture**: whichever won, the other's effect was unwanted. Two things retired it.
+    // `A16` made rotation a MODE a hand chooses, so the drag is no longer a guess — it is
+    // what the user asked for; and `D33` made the flick readable at the END of a drag, so
+    // *drag-then-snap* became the normal gesture rather than an accident.
+    //
+    // ⭐⭐⭐ **A ROLLBACK IS ONLY HONEST WHEN THE MOTION IT UNDOES WAS PROVISIONAL.** Once
+    // the same drag both rotates deliberately AND ends in a flick, restoring the press pose
+    // throws away deliberate work — the defect the owner reported. ⚠ And the alignment
+    // makes it moot: 2ter/2quater re-solve the stack from the CURRENT orientation, so the
+    // constrained axis lands on its target either way and only the free DOF differs — by
+    // exactly the rotation the hand performed on purpose.
+    //
+    // ⚠ `snapshot` STAYS and is still taken at every press: §6's undo (`IN6`) is the same
+    // object with a different owner, and it is the one consumer that still wants it.
+    // ⛔ `rolledBack` stays on the verdict as a permanent `false` rather than being deleted
+    // — the HUD prints it, and a field that vanished would silently stop reporting.
     return {
       kind: "FLICK",
       flick,
-      rolledBack: true,
+      rolledBack: false,
       rule: resolveDiscreteRule("FLICK", flick, ctx, this.cfg),
       durationMs,
       liftSpeedMmPerS,

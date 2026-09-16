@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **595 golden vectors,
-all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel — → 595). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **596 golden vectors,
+all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel — → 596). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
@@ -27,6 +27,7 @@ all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel �
 
 ✅ **`IN1` CLOSED** — the recognizer: commit point, provisional motion with rollback,
 tap / double-tap / hold, the release-time priority ladder, and screen-plane yaw/pitch.
+⛔ Its **provisional-motion ROLLBACK is retired** (`D36`): a flick now keeps the rotation the hand made with it.
 ⛔ Its **one-touchpoint roll is deleted** (2026-09-16) — `A12` had moved roll to the second
 touchpoint's x and the detector was left running, *"unused"*, where it vetoed `IN3`'s flick
 (defect 40). ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit, working by

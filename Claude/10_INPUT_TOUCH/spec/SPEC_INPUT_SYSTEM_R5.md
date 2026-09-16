@@ -166,6 +166,8 @@ first. The largest are:
   test is skipped"* **no longer exist in the build**. ⛔ The skip's removal is why §1.3's
   purity ratio is now the only thing standing between a curved rotation drag and an
   alignment — see defect 40 in `queue_notes/IN3.md`.
+* ⛔⛔ **§1.3's PROVISIONAL-MOTION ROLLBACK** (`D36`, owner 2026-09-16): a flick no longer
+  restores the press pose. The snapshot is still taken, for §6's undo.
 * ⛔ **2bis's and rule 6's touchpoint assignments are SWAPPED** (`A13`): one touchpoint
   TRANSLATES, and a second one held DOWN turns the same drag into a rotation.
 * §1.4 / 2septies' double-tap eviction (eviction is now a quick **back-and-forth**),

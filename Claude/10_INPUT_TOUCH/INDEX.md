@@ -19,6 +19,10 @@ clause explains why the current one exists.
 (`recognizer.ts`): commit point, provisional motion with **rollback**, the
 release-time priority ladder, tap / double-tap / hold, and the screen-plane rotation
 mapping (`screen_rotate.ts`).
+⛔⛔ **ITS ROLLBACK IS RETIRED TOO** (`D36`, owner): a flick keeps the rotation it was made
+with. ⭐ *A rollback is only honest while the motion it undoes was provisional* — and once
+`A16` made rotation a chosen MODE and `D33` made a flick readable at the end of a drag, it
+was not. ⚠ The snapshot stays, for `IN6`.
 ⛔⛔ **ITS ROLL DETECTION IS DELETED** (2026-09-16, owner: *"clean the roll also for the
 fork A"*): `roll.ts`, `one_euro.ts`, 58 vectors, the rebase, the pose history, ~16
 tunables and the `ROLL_KEPT` verdict. ⭐ `A12` had moved roll to the second touchpoint's x
@@ -31,7 +35,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**595 golden vectors, all passing** (37 → 632 → 574 → 595).
+**596 golden vectors, all passing** (37 → 632 → 574 → 596).
 ⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
 longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
 protect anything — it certifies a module nothing calls, which is exactly how the roll

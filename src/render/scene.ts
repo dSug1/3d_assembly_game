@@ -802,14 +802,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
   const describe = (v: ReleaseVerdict): string => {
     const rule = v.rule === "NONE" ? "" : `  → ${v.rule}`;
-    const back = v.rolledBack ? "  ROLLED BACK" : "";
+    // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16).
+    // ⭐⭐ It could no longer fire — `rolledBack` is a permanent `false` — and a HUD line
+    // that cannot fire is the DEAD INSTRUMENT shape this project met three times on
+    // 2026-09-16 alone: a retired quantity printed as though it were live, a slider that
+    // changed nothing, and a detector that still vetoed. ⚠ The field stays on the verdict
+    // (one consumer could exist tomorrow); the LINE goes, because the line makes a claim.
     const f = v.flick ? `  ${v.flick.axis}${v.flick.sign > 0 ? "+" : "-"}` : "";
     // ⭐ The measured lift speed is printed WHETHER OR NOT it passed, against the
     // threshold it was judged by. "The flick did not fire" is otherwise
     // unfalsifiable on a device: too slow a finger and a broken estimator look the
     // same. That ambiguity is what made the first rollback build feel inconsistent.
     const lift = `lift ${Math.round(v.liftSpeedMmPerS)}/${cfg.flickLiftSpeed}mm/s`;
-    return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms  ${lift}`;
+    return `${v.kind}${f}${rule}  ${Math.round(v.durationMs)}ms  ${lift}`;
   };
 
   /**
