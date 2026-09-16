@@ -75,6 +75,7 @@ import {
   runsIn3,
   dragRule,
   isDriven,
+  alignFromFlick,
   type AnchorFork,
   type HolderBinding,
   type InputEvent,
@@ -118,8 +119,10 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
-import { faceFromPickedNormal } from "../core/face_pick";
-import { shortestArc } from "../core/vec";
+import { faceFromPickedNormal, faceMarkerOrientation } from "../core/face_pick";
+import { solve } from "../core/constraint_stack";
+import { pushObjectConstraint } from "../core/object_model";
+import { qmul } from "../core/vec";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -1993,6 +1996,52 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
       const verdict = grip.rec.release(s);
       lastVerdict = describe(verdict);
+
+      // ⭐⭐⭐ `IN3` RULES 2ter / 2quater — A FLICK PUSHES AN ALIGNMENT, and **only while the
+      // mode is `ROTATE`** (owner, 2026-09-16). ⛔ Read literally the spec anchors whatever
+      // the drag was doing, so a brisk vertical TRANSLATE would move a part and then spin it
+      // to align a face with gravity. In `ROTATE` the hand is already turning the object, so
+      // completing that with an alignment is the same intention.
+      //
+      // ⛔⛔ THE WORLD VECTOR IS RESOLVED **NOW**, from the gravity frame latched at press —
+      // never stored as a screen axis. §1.4: *storing a screen axis meant that rule 1's
+      // camera orbit invalidated the constraint, and the next snap would silently re-solve
+      // against a different axis and rotate the object.*
+      //
+      // ⚠ OWED, and it must not be forgotten when `shake.ts` is wired: §1.3's flick test has
+      // to be SKIPPED once one reversal is seen, or a hand shaking to EVICT a constraint
+      // adds one instead. Eviction is not wired yet, so there is nothing to skip today.
+      if (runsIn3(anchorFork) && verdict.kind === "FLICK" && selectedFace !== null) {
+        const id = idOf.get(grip.mesh);
+        const face = id === undefined
+          ? undefined
+          : world.objects.get(id)?.faces.find((f) => f.id === selectedFace!.faceId);
+        const c =
+          face === undefined
+            ? null
+            : alignFromFlick(behaviour, verdict.flick, face.normal, grip.frame.up, grip.frame.right);
+        if (c !== null && id !== undefined) {
+          // ⭐ Push, then RE-SOLVE, then apply — §1.4's order. The solver is pure: it returns
+          // a rotation to compose onto the object's current orientation and never mutates.
+          world = pushObjectConstraint(world, id, c, cfg.matePriorityOverAnchor);
+          const stack = world.objects.get(id)?.constraints ?? [];
+          const solved = solve(stack, modelOrientation(grip.mesh), {
+            evictOnOverflow: cfg.evictOnOverflow,
+          });
+          if (solved.rejected) {
+            // ⛔⛔ REFUSED, AND IT MUST BE AUDIBLE-OR-VISIBLE RATHER THAN SILENT. §1.4 asks for
+            // a short negative haptic (`IN7`, and iOS Safari has no Vibration API at all), so
+            // until that exists the readout is the whole of the feedback. ⚠ A gesture that was
+            // aimed at something and did nothing reads as a broken control and gets repeated.
+            lastVerdict = `IN3: ${c.kind} REFUSED — stack full (${stack.length})`;
+          } else {
+            setModelOrientation(grip.mesh, qmul(solved.rotation, modelOrientation(grip.mesh)));
+            lastVerdict =
+              `IN3: ${c.kind} pushed — stack ${solved.applied.length}, ` +
+              `${solved.freeDof} DOF free`;
+          }
+        }
+      }
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
       // orbit can get stuck close in with an object filling the view, and then every tap
       // lands ON something — a reset that only listened to empty space would be
@@ -2196,10 +2245,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ Lifted off the surface by a hair, or it z-fights with the face it marks.
         // ⚠ In METRES like everything else in this scene — `CAMERA_NEAR_PLANE_M`'s lesson.
         faceQuad.position.copyFrom(centre.add(normal.scale(0.0015)));
-        // ⛔ The plane's own facing is rotated onto the face normal with the SAME
-        // `shortestArc` the object model uses — engine-free, vectored, and one definition of
-        // *"turn this onto that"* rather than a second one written here in Babylon terms.
-        const q = shortestArc([0, 0, 1], [normal.x, normal.y, normal.z]);
+        // ⛔⛔ THE MARKER **INHERITS THE OBJECT'S ORIENTATION**, and does not derive one.
+        // Device-reported: aligning the marker's facing with the world normal left its SPIN
+        // free, so turning the cube about that face's own normal moved the face and not the
+        // marker — *"a growing mismatch between their respective quaternion."*
+        // ⭐ `faceMarkerOrientation` is the object's orientation plus ONE constant per-face
+        // rotation, so nothing can drift. ⚠ The MESH's orientation, not the model's: the eye
+        // sees `SWAY ∘ FOLLOW ∘ model`, and the marker must lag the face by nothing.
+        const mq = m.rotationQuaternion ?? Quaternion.Identity();
+        const q = faceMarkerOrientation([mq.w, mq.x, mq.y, mq.z], face.normal);
         faceQuad.rotationQuaternion!.set(q[1], q[2], q[3], q[0]);
         faceQuad.isVisible = true;
       }

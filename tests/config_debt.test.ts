@@ -50,8 +50,11 @@ const PENDING: Readonly<Record<string, string>> = {
   gainRotateConstrained: "IN3 — rule 2sexte, constrained rotation",
   gainTranslateAxis: "IN4 — rule 6bis",
   gainTranslateMutual: "IN4 — rule 6ter",
-  // §1.4 — the constraint stack's own flags, used once IN3 pushes constraints.
-  matePriorityOverAnchor: "IN4 — §1.4 ordering A/B for 6quater",
+  // ⭐ `matePriorityOverAnchor` LEFT THIS LIST on 2026-09-16: `IN3`'s 2ter/2quater now pass
+  // it to `pushObjectConstraint`, so it is READ. ⛔ The guard caught the stale entry the
+  // moment it was wired — the second direction it checks, and the same thing `gainRoll` did.
+  // ⚠ It is still an unanswered A/B (`DECISIONS`: *still the owner's to make*), but "nobody
+  // reads it" and "nobody has judged it" are different debts and only the first belongs here.
   // §6quater and the mate geometry, used once 3D2 lands.
   mateFacingCos: "3D2 — snap/seat; the anti-parallel test",
   mateBreakLinear: "3D3 — break on residual",

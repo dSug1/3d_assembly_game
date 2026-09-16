@@ -573,16 +573,77 @@ constraint until 2ter/2quater exist, so every stack is empty and the table's fir
 are the only reachable ones. ⭐ That is why 2ter/2quater come next — they are what makes this
 rule testable by finger.
 
+### ✅ BUILT: 2ter / 2quater — a flick pushes an alignment, in `ROTATE` only (`D30`)
+
+`src/input/align_flick.ts` · `tests/align_flick.test.ts` · **10 vectors**, engine-free.
+
+⭐ A **vertical** flick pushes `GRAVITY_ALIGN`, a **horizontal** one `WORLD_AXIS_ALIGN`; the
+release then pushes, **re-solves per §1.4**, applies the solver's rotation and unselects.
+⭐⭐ **The sign reads the way a hand expects**: screen y grows downward, so a flick UP aligns
+the face with `-g` — *you flick the face the way you want it to face*.
+
+⛔⛔ **ONLY WHILE THE MODE IS `ROTATE`** — the owner's call, and the reasoning is in `D30`.
+Read literally the spec would anchor after a brisk **translate**, moving a part and then
+spinning it. ⚠ The alternative was moving anchoring to its own channel (a HOLD, hold-then-
+drag, a two-finger flick); gating on the mode costs no new gesture, which is why it won.
+
+⛔⛔ **THE WORLD VECTOR IS RESOLVED AT THE SNAP**, from the gravity frame latched at press —
+never stored as a screen axis. §1.4 is explicit: storing the screen axis let a camera orbit
+silently redefine the constraint. ⭐ A vector asserts that two identical flicks from two
+camera poses produce **different** constraints, which is what *world-absolute* means.
+
+⚠ **A REFUSAL IS REPORTED, NOT SILENT.** A third constraint leaves no free rotational DOF,
+so the solver rejects and the readout says `REFUSED — stack full`. §1.4 asks for a negative
+haptic there; `IN7` owes it, and iOS Safari has no Vibration API at all — so until then the
+readout is the whole of the feedback, and a gesture that did nothing silently would read as a
+broken control and get repeated.
+
+⛔⛔ **OWED, AND IT MUST NOT BE FORGOTTEN WHEN `shake.ts` IS WIRED**: §1.3's flick test has to
+be SKIPPED once one reversal is seen. A shake is two flicks in opposite directions, so a hand
+shaking to EVICT a constraint would **add** one — after which two constraints leave zero free
+rotational DOF and the part stops responding to drags. ⭐ Nothing to skip today, because
+eviction is not wired; the guard lands with it.
+
+⭐ **`config_debt` caught a stale entry the moment this landed**: `matePriorityOverAnchor` was
+on the pending list and is now READ by the push. ⚠ Removed — and the note records that *"nobody
+reads it"* and *"nobody has judged it"* are different debts, only the first belonging there.
+
+### ⛔⛔ DEFECT, FOUND BY FINGER THE SAME HOUR — the marker's roll
+
+> *"In fork 1, the highlighted face does not rotate as the cube's face: consequently, there
+> is a growing mismatch between their respective quaternion. Not sure how the quaternion of
+> the highlighted face is computed."*
+
+⛔ It was computed as `shortestArc([0,0,1], worldNormal)` — the minimal rotation taking the
+marker's facing onto the face's world normal. ⭐ That is **correct about where the marker
+points and silent about its spin**: the shortest arc fixes ONE axis and leaves the roll about
+it free. ⚠ So turning the object about that face's own normal left the normal unchanged, the
+marker unmoved, and the face rotating underneath it — the mismatch growing exactly as
+reported.
+
+⭐⭐⭐ **A DIRECTION TEST CANNOT SEE A ROLL.** It is the same family as `METHOD`'s *a sign is
+not tested by any amount of testing the magnitude*: the quantity I had reasoned about — *does
+the marker face the right way?* — was true in every frame, while the quantity that mattered
+— *is it oriented like the face?* — drifted without bound.
+
+✅ **The fix is not to derive an orientation at all**: the marker **inherits the object's**
+and adds the ONE constant rotation taking its `+z` onto that face's LOCAL normal. Constant
+per face, so nothing can drift. `faceMarkerOrientation` in `core/face_pick.ts`.
+⭐ **4 vectors, and the mutant is the shipped defect itself**: restoring it reddens *in-plane
+axes follow the object* and *after forty spins*, and leaves both direction vectors green —
+which is the lesson stated as a test result rather than as a claim.
+⚠ It also explains why no vector caught it first: the marker's orientation was wiring in
+`src/render`, where none reach — the same class as `3D1`'s follower defect.
+
 ### ⛔ What remains in fork B
 
-1. **2bis's precondition** — *is the stack empty?* Now askable, and the mode (`TRANSLATE`/
-   `ROTATE`) has to meet it: a constrained object in `ROTATE` should get 2sexte instead.
-2. **2ter / 2quater** — a flick pushes `GRAVITY_ALIGN` / `WORLD_AXIS_ALIGN`, then unselects.
-   ⚠ And they now have to coexist with the movement mode: a one-touchpoint flick is also a
-   translate-or-rotate drag.
-3. **The flick skip** — wire `ShakeDetector.suppressesFlick`, or a hand shaking to REMOVE a
-   constraint **adds** one.
-4. **Wiring `anchor_rotate.ts`** (2sexte + `A3`'s handover) — ⚠ blocked on a decision: `A12`
+1. **Wiring `anchor_rotate.ts`** (2sexte + `A3`'s handover) — ⚠ blocked on a decision: `A12`
    moved roll to the second touchpoint, so `A3`'s handover now spans two touchpoint
-   configurations rather than one channel.
-5. **Wiring `shake.ts`** for eviction, with its four tunables and their sliders.
+   configurations rather than one channel. ⛔ Until then a constrained object does not rotate
+   and the readout names the rule that would have run.
+2. **Wiring `shake.ts`** for eviction, with its four tunables and their sliders — **and the
+   flick skip with it**, which is now load-bearing rather than theoretical: 2ter/2quater are
+   live, so a shake that is not suppressed ADDS a constraint.
+3. **The negative haptic** on a refusal (`IN7`).
+4. ⭐ **A device look**, which is now worth having: with 2ter/2quater wired, fork B finally
+   does something a finger can judge — flick a face up and it should end up pointing up.

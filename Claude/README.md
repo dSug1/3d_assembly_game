@@ -30,7 +30,7 @@ They are the record, not the briefing.
 ## Where it stands, in five lines
 
 ⭐ **DEPLOYED and driven by finger**: TypeScript + Babylon.js + Vite, `npm run verify`
-runs a typecheck and **618 golden vectors, all passing**, live at
+runs a typecheck and **632 golden vectors, all passing**, live at
 **https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
 ✅ **Engine-agnostic and enforced**: `src/core` and `src/input` import no engine, and
 [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if that stops

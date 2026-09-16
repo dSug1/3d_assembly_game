@@ -17,7 +17,7 @@
  * and the way to find out which guard is which is to break the product and watch.
  */
 import { describe, expect, it } from "vitest";
-import { faceFromPickedNormal } from "@core/face_pick";
+import { faceFromPickedNormal, faceMarkerOrientation } from "@core/face_pick";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import { qFromAxisAngle, type Vec3 } from "@core/vec";
 
@@ -141,6 +141,75 @@ describe("⛔ the degenerate cases return null, never a default", () => {
  */
 function qRotateForTest(o: SceneObject, v: Vec3): Vec3 {
   const [w, x, y, z] = o.local.orientation;
+  const t: Vec3 = [
+    2 * (y * v[2] - z * v[1]),
+    2 * (z * v[0] - x * v[2]),
+    2 * (x * v[1] - y * v[0]),
+  ];
+  return [
+    v[0] + w * t[0] + (y * t[2] - z * t[1]),
+    v[1] + w * t[1] + (z * t[0] - x * t[2]),
+    v[2] + w * t[2] + (x * t[1] - y * t[0]),
+  ];
+}
+
+describe("⛔⛔ faceMarkerOrientation — THE DEFECT A DIRECTION TEST COULD NOT SEE", () => {
+  // ⭐⭐ DEVICE-REPORTED, 2026-09-16: *"the highlighted face does not rotate as the cube's
+  // face: consequently, there is a growing mismatch between their respective quaternion."*
+  // ⛔ The first version aligned the marker's facing with the face's world NORMAL, which
+  // fixes ONE axis and leaves the spin about it free. So turning the object about that
+  // face's own normal moved the face and not the marker.
+  // ⭐⭐⭐ A DIRECTION TEST CANNOT SEE A ROLL — the same family as *a sign is not tested by
+  // any amount of testing the magnitude*. The quantity I checked (does it face the right
+  // way?) stayed true while the quantity that mattered drifted.
+
+  const qz = (radians: number) => qFromAxisAngle([0, 0, 1], radians);
+
+  it("⭐ the marker's +z lands on the face's WORLD normal — the old claim, still true", () => {
+    // ⚠ This is what the broken version got right, kept so the fix is not a regression.
+    const q = faceMarkerOrientation(qz(0.9), [0, 0, 1]);
+    const facing = rotateByTest(q, [0, 0, 1]);
+    const worldNormal = rotateByTest(qz(0.9), [0, 0, 1]);
+    facing.forEach((v, i) => expect(v).toBeCloseTo(worldNormal[i]!, 12));
+  });
+
+  it("⛔⛔ AND ITS IN-PLANE AXES FOLLOW THE OBJECT — which the old version failed", () => {
+    // ⭐⭐ THE VECTOR THAT WOULD HAVE CAUGHT IT. Spin the object about the very axis the
+    // face points along: the normal does not move, so a normal-aligned marker does not
+    // move either — while the face plainly does. ⛔ Here the marker's own +x must rotate
+    // with the object, quarter turn for quarter turn.
+    const spin = Math.PI / 2;
+    const q = faceMarkerOrientation(qz(spin), [0, 0, 1]);
+    const markerX = rotateByTest(q, [1, 0, 0]);
+    // a quarter turn about +z takes +x to +y
+    expect(markerX[0]).toBeCloseTo(0, 12);
+    expect(markerX[1]).toBeCloseTo(1, 12);
+  });
+
+  it("⛔ and it keeps following after FORTY spins — not a small-angle accident", () => {
+    // ⭐ `anchor_rotate.ts`'s vectors make the same move: one step can pass by luck, forty
+    // cannot. ⚠ The reported symptom was a GROWING mismatch, so accumulation is the test.
+    let total = 0;
+    for (let i = 0; i < 40; i++) total += 0.1;
+    const q = faceMarkerOrientation(qz(total), [0, 0, 1]);
+    const markerX = rotateByTest(q, [1, 0, 0]);
+    expect(markerX[0]).toBeCloseTo(Math.cos(total), 10);
+    expect(markerX[1]).toBeCloseTo(Math.sin(total), 10);
+  });
+
+  it("⭐ a side face works the same way", () => {
+    // ⚠ +z is the marker's own axis, so it is the one face where the offset is identity —
+    // exactly the fixture that would hide an order-of-multiplication error.
+    const q = faceMarkerOrientation(qz(0.4), [1, 0, 0]);
+    const facing = rotateByTest(q, [0, 0, 1]);
+    const worldNormal = rotateByTest(qz(0.4), [1, 0, 0]);
+    facing.forEach((v, i) => expect(v).toBeCloseTo(worldNormal[i]!, 12));
+  });
+});
+
+/** ⚠ The plain quaternion sandwich, written out, so the product cannot judge itself. */
+function rotateByTest(q: readonly [number, number, number, number], v: Vec3): Vec3 {
+  const [w, x, y, z] = q;
   const t: Vec3 = [
     2 * (y * v[2] - z * v[1]),
     2 * (z * v[0] - x * v[2]),

@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-16)
 
-✅ Green: TypeScript + Babylon + Vite, **618 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **632 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
 2026-09-16 a confirmed fix was reported broken from Pages on a tablet running an **old
@@ -114,7 +114,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Thirty-eight defects, thirty-seven of them BY FINGER, and none visible to a green
+⛔⛔ **Thirty-nine defects, thirty-eight of them BY FINGER, and none visible to a green
 suite.** ⭐ The one exception is worth knowing: §1.1's unreachable STATIONARY was found by
 **composing a measurement with a threshold**, not by a hand — and no hand could have found
 it, because nothing shipped depended on the path it broke. They are **five** repeating shapes — a rate estimated over too short a baseline, a
