@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the evidence discipline, and the instrument traps
 > **READ IF** · you are about to claim something works
-> **LAST VERIFIED** · 2026-09-13
+> **LAST VERIFIED** · 2026-09-16
 
 Carried from the predecessor project, where every rule below was bought with a
 failure. [`LESSONS_CARRIED.md`](LESSONS_CARRIED.md) tells the stories; this is the
@@ -209,6 +209,52 @@ When a gesture is genuinely ambiguous for a window, the choice is not *"which ru
 *"whether to move at all"*. ⛔ Apply the unambiguous part and **withhold** the rest until
 the verdict arrives. ⚠ **State the cost**: the withheld travel is DISCARDED, not released
 in one step — releasing it is exactly the jump being complained about.
+
+## ⭐⭐⭐ A DEVICE REPORT IS EVIDENCE ABOUT THE CODE THE DEVICE WAS RUNNING
+
+*(2026-09-16.)* `METHOD` closes a change on a look at a real device. ⛔ That makes the
+**identity of the build under the finger** part of every verdict this project records — and
+for three days nothing on the glass could name it.
+
+⚠ The instance: a gesture fix was judged correct over the USB loop and **wrong on GitHub
+Pages**, and the natural reading was that the fix was incomplete. The gesture code was
+identical — the deploy history showed the fix live two minutes *before* the USB session, and
+there is no dev/prod gating anywhere in `src/`. ⭐ What differed was the bundle the tablet
+had: Pages serves `index.html` with `Cache-Control: max-age=600` and the assets are
+**content-hashed**, so a cached index keeps loading an old bundle *indefinitely* — a stale
+page is not stale for ten minutes, it is stale until something replaces the index.
+
+⛔⛔ **So a deployment can indict correct work exactly as an unmeasured composition can.**
+It is the withdrawn-`A7` shape aimed one layer lower: the report was truthful, the reasoning
+from it was sound, and the premise — *"both surfaces are running the same code"* — was the
+thing nobody had checked. ⭐ The tell is **the same gesture behaving differently on two
+surfaces**: suspect the artefact before the algorithm, because code cannot be
+surface-dependent unless something makes it so.
+
+⭐ **The fix is identity, not discipline.** The page now stamps its build id on the HUD and
+asks the origin whether it is current, refreshing itself once if not
+(`src/core/build_gate.ts`). ⚠ A procedure — *"always hard-reload before judging"* — would
+have been a rule a tired hand skips, and it is the one moment nobody should be relying on
+memory.
+
+## ⛔⛔ AN ABSENT READOUT CANNOT BE CAUGHT BY LOOKING AT THE SCREEN
+
+*(2026-09-16, found while fixing the above.)* A dead instrument that **prints** a stale
+quantity gets caught eventually: someone reads it and it disagrees with the world. ⛔ One
+that prints **nothing at all** is invisible by construction — there is no wrong number to
+notice, and the documentation describing it reads exactly as it would if it worked.
+
+⚠ The instance: `scene.ts` has always computed which tunables the URL overrode, handed them
+to the HUD, and the HUD has **never rendered them** — for the whole life of the file.
+`40_RENDER_SCENE/INDEX.md` told a reader the line existed, and the field's own comment said
+*"never guess what is in force"*. ⭐ It would have gone unnoticed until an `IN5` session
+spent an hour measuring a default while believing it was measuring an override.
+
+⭐⭐ **So audit an instrument against the QUESTIONS it is supposed to answer, not against
+the lines it happens to print.** The check is cheap and it is a different check: *for each
+thing this readout is documented to tell me, point at the code that emits it.*
+⚠ A field passed into a readout and never read is the exact shape `tests/config_debt.test.ts`
+already refuses for tunables — and the HUD had no equivalent guard.
 
 ## ⛔⛔ The instrument is a suspect, always
 

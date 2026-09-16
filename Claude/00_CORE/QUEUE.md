@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · what gets built next, for the whole project
 > **READ IF** · you are starting any build, or wondering where an item stands
-> **LAST VERIFIED** · 2026-09-15
+> **LAST VERIFIED** · 2026-09-16
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list, in a subsystem folder or
 anywhere else. Do not reorder it to be helpful.
@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-15) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **531 golden vectors,
-all passing** (37 → 531). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **547 golden vectors,
+all passing** (37 → 547). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
@@ -76,6 +76,24 @@ green vectors and **the composition had none** — mistake shape 4 pointing the 
 correct piece of work. ⭐ `METHOD`: *a composition is a thing to MEASURE, not an emergent
 property* — and measuring it is what separated a real defect from an impression, in both
 directions at once.
+
+⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.**
+*"When I test it on github page, I still see the issue with transition from translation to
+rotation lagging"*, hours after the fix for it had been confirmed by finger over USB.
+⛔ The gesture code was **identical on both surfaces**: the Actions history shows the fix
+deployed at 05:28, two minutes *before* the USB session, and there is no dev/prod gating
+anywhere in `src/`. ⭐ The tablet was running an **old bundle** — Pages serves `index.html`
+with `Cache-Control: max-age=600` and the assets are content-hashed, so a cached index keeps
+loading a superseded hash *indefinitely*. ⭐⭐ **So it is the withdrawn-`A7` shape one layer
+lower**: the report was truthful, the reasoning from it was sound, and the unchecked premise
+was *"both surfaces run the same code"*. ⚠ **Not counted as a gesture defect** — `A13`/`A14`
+were right — but it is a real defect of the **deploy surface**, and it is fixed in the
+product rather than in a procedure: `src/core/build_gate.ts` (16 vectors) plus a build stamp
+on the HUD. ⭐ `METHOD`: *a device report is evidence about the code the device was running.*
+⚠ It also exposed a second thing, and this one was never a report at all: the HUD's
+**overridden-tunables line has never been rendered**, for the whole life of the file, while
+`40_RENDER_SCENE/INDEX.md` said it was. ⛔ An absent readout cannot be caught by looking at
+the screen. Both are in `METHOD` now.
 
 ⛔ **Amend the ledger, never a bare number written somewhere else.** That is exactly how
 this drifted: `README.md` said *seventeen* (the total before rule 6 and the sway) and
@@ -330,7 +348,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | DEP1a | ⭐⭐ **Device loop over USB (Android)** — `adb reverse`. No network exposure AND `localhost` is a SECURE CONTEXT, so tilt + sensors work | DEP | infra | ✅✅ **WORKING 2026-09-13** on the Lenovo TB-X606F — two cubes confirmed on the device. ⭐ `adb reverse`, NOT Chrome port forwarding; the fix for the stuck handshake was the REAL `adb`. Procedure + 3 traps: `50_BUILD_DEPLOY/DEVICE_TESTING_USB.md` | DEP0 |
 | DEP1b | Device loop over LAN — for iOS, or a second device. ⚠ needs a Private network + a scoped firewall rule (`scripts/allow-lan-dev.ps1`) | DEP | infra | queued | DEP0 |
 | DEP1c | ⭐ **HTTPS on the LAN** (`@vitejs/plugin-basic-ssl`) — the only way to get a secure context on iOS over Wi-Fi | DEP | infra | queued — needed before rule 1 (tilt) can be tested on iPhone | DEP1b |
-| DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop | DEP | infra | ✅ **LIVE 2026-09-13** — https://dsug1.github.io/3d_assembly_game/ . Procedure: `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md` | DEP0 |
+| DEP1d | GitHub Pages via Actions — real HTTPS anywhere, ⚠ slow loop | DEP | infra | ✅ **LIVE 2026-09-13** — https://dsug1.github.io/3d_assembly_game/ . Procedure: `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`. ⛔⛔ **AND IT SERVED A STALE BUILD FOR A MORNING (2026-09-16)**: `max-age=600` on `index.html` plus content-hashed assets means a cached index loads a superseded bundle **indefinitely**, and a confirmed gesture fix was reported broken on a tablet that had never fetched it. ✅ Fixed in the product — the page checks `version.json` on boot and replaces itself once (`src/core/build_gate.ts`, 16 vectors), and the HUD prints the build id. ⭐ The plain URL is trustworthy again; a `?v=` is the refresh's marker, not something to type | DEP0 |
 | DEP2 | Capacitor shells for iOS/Android | DEP | platform | queued | DEP1 |
 | DEP3 | Desktop shell (Tauri) | DEP | platform | queued | DEP2 |
 | DEP4 | CI: typecheck + vectors on every push | DEP | infra | ✅ **rides in `pages.yml`** — the deploy is gated on `npm run verify` | DEP1d |

@@ -50,6 +50,16 @@ export interface Hud {
   update(fields: HudFields): void;
 }
 
+/**
+ * ⭐ The build this bundle IS, as one line for the readout.
+ *
+ * ⚠ Not a `HudFields` entry on purpose: every field there is a value the recognizer
+ * REPORTED this frame, and mixing a compile-time constant into that contract invites a
+ * later reader to believe it came from the gesture layer. It is read here because
+ * `src/render` is on the engine side of the boundary, where `define` substitutions exist.
+ */
+const BUILD_STAMP = `${__BUILD_ID__}  ${__BUILT_AT__}`;
+
 export function createHud(parent: HTMLElement = document.body): Hud {
   const box = document.createElement("pre");
   box.setAttribute("data-role", "hud");
@@ -91,6 +101,22 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         `camera    ${f.camera}`,
         `roles     ${f.roles}`,
         `noise     ${f.noise}`,
+        // ⛔⛔ THIS LINE WAS COMPUTED, HANDED OVER AND DROPPED — for the whole life of
+        // the file. `scene.ts` has always filled `tuning` and `tuningRejected`, the
+        // field's own comment says *"never guess what is in force"*, and
+        // `40_RENDER_SCENE/INDEX.md` told a reader the HUD printed it. Nothing did.
+        // ⭐ It is the same shape as the roll line removed this morning, one step worse:
+        // a readout that is absent cannot be caught by reading the screen, only by
+        // reading the source. ⚠ An `IN5` session is exactly when it is needed.
+        `tuning    ${f.tuning}`,
+        // ⛔ Refusals are SHOWN, never swallowed: a typo'd key means the session is
+        // measuring the default while believing it is measuring the override.
+        ...f.tuningRejected.map((r) => `  ⛔ ${r}`),
+        // ⭐⭐ THE BUILD, so *"which code did I just judge?"* is answerable ON THE GLASS.
+        // A device report is only evidence about the code the device was running, and a
+        // stale Pages bundle cost a morning on 2026-09-16 — the fix had been live for two
+        // hours. ⚠ `+dirty` is what separates the USB dev loop from the same sha deployed.
+        `build     ${BUILD_STAMP}`,
       ].join("\n");
     },
   };

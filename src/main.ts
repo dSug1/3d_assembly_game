@@ -14,6 +14,45 @@
  * silent skip is worse than a failure, because a failure gets investigated.
  */
 import { createScene } from "@render/scene";
+import { isStaleBuild, parseServedBuild, refreshUrl } from "@core/build_gate";
+
+/**
+ * ⭐⭐⭐ ASK THE ORIGIN WHETHER THIS BUNDLE IS CURRENT, AND REPLACE THE PAGE ONCE IF NOT.
+ *
+ * ⛔⛔ The defect this closes, 2026-09-16: Pages serves `index.html` with
+ * `Cache-Control: max-age=600` and the assets are content-hashed, so a cached index keeps
+ * loading an OLD bundle indefinitely — and a gesture fix that had been live for hours was
+ * judged not to work, on a tablet that had never fetched it. See `core/build_gate.ts`.
+ *
+ * ⛔ IT NEVER BLOCKS THE SCENE. The fetch is started and not awaited on the critical path:
+ * a boot that waits on the network is a boot that hangs offline, and this page must run
+ * from `file://` and inside a Capacitor webview where there is no origin to ask.
+ * ⚠ Every failure path leaves the loaded page alone — see the gate's vectors.
+ */
+function checkBuildIsCurrent(): void {
+  // ⭐ The refresh marker is read off the URL rather than remembered in storage: it then
+  // travels WITH the page, survives a restored tab, and cannot be stranded in a
+  // private-browsing mode where `sessionStorage` throws.
+  const marker = new URL(window.location.href).searchParams.get("v");
+
+  void fetch(new URL("version.json", document.baseURI).toString(), { cache: "no-store" })
+    .then((r) => (r.ok ? r.text() : ""))
+    .then((body) => {
+      const served = parseServedBuild(body);
+      // ⭐ The marker is handed over RAW: the gate compares it against the served id, so
+      // that the one subtle line in this mechanism sits behind a vector instead of here,
+      // where nothing can reach it.
+      if (!isStaleBuild({ compiled: __BUILD_ID__, served, refreshMarker: marker })) return;
+      // ⚠ `replace`, not `assign`: a refresh must not put a stale page in the history
+      // stack for the back gesture to return to.
+      window.location.replace(refreshUrl(window.location.href, served));
+    })
+    .catch(() => {
+      // ⛔ Deliberately silent, and this is the ONE place in this file that is. Offline
+      // is the normal state of a packaged build; it is not a failure to report to a
+      // player, and `showError` is for things that stop the game from running.
+    });
+}
 
 function showError(title: string, detail: string): void {
   const box = document.createElement("pre");
@@ -33,6 +72,8 @@ window.addEventListener("unhandledrejection", (e) =>
 );
 
 try {
+  checkBuildIsCurrent();
+
   const canvas = document.getElementById("app") as HTMLCanvasElement | null;
   if (!canvas) throw new Error("no #app canvas in the document");
 

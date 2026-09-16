@@ -3,7 +3,7 @@
 > **STATUS** · ⚠ diagnostic scene, real camera rules · **OWNS** · the Babylon scene,
 > camera, picking, materials, the on-glass readout and the tuning menu
 > **READ IF** · you are drawing something, or wondering why the boundary exists
-> **LAST VERIFIED** · 2026-09-15
+> **LAST VERIFIED** · 2026-09-16
 
 ## The rule this folder exists to protect
 
@@ -82,9 +82,20 @@ A gesture recognizer is **invisible**. `METHOD` closes a change only on a look a
 real device, and *"the cube moved"* says nothing about whether a gesture committed,
 whether a flick rolled the pose back, or which rule won at release.
 
-**`hud.ts`** — phase, motion state, roll angle and sign, the release verdict, the
-**measured lift speed against the threshold it was judged by**, the camera state, and
-which tunables the URL overrode.
+**`hud.ts`** — phase, motion state, the release verdict, the camera state and depth
+readout, the latched roles, the live noise floor, **which tunables the URL overrode**, and
+⭐⭐ **the BUILD ID this bundle IS** (`build b1ce845+dirty  2026-09-16 04:52Z`).
+⛔⛔ **TWO OF THOSE WERE MISSING UNTIL 2026-09-16, AND THE FIRST ONE NEVER EXISTED.**
+`scene.ts` has always computed `tuning` and `tuningRejected` and handed them over; the HUD
+**never rendered them**, for the whole life of the file, while this very line told a reader
+that it did. ⭐ An absent readout cannot be caught by looking at the screen — there is no
+wrong number to notice — so audit a readout against the **questions** it is documented to
+answer, not the lines it prints (`METHOD`).
+⚠ The cost it was heading for: an `IN5` session measuring a default while believing it was
+measuring an override, with a typo'd key reported to nobody.
+⭐ **And the build stamp answers the question that cost a morning**: *which code did I just
+judge?* ⛔ `+dirty` is load-bearing — it is what distinguishes the USB dev loop from the
+same sha deployed, which is exactly the comparison that went wrong.
 ⛔ It prints what the recognizer **reported**, never a recomputation: a readout that
 derives its own answer is a second implementation, and it can disagree with the
 product while showing green.
@@ -103,6 +114,21 @@ sequence of reloads — a panel that reopens fully expanded every time buries th
 sliders actually being tuned. ⚠ Every `localStorage` access is wrapped: it throws
 outright in some private-browsing modes, and a tuning panel must not take the scene
 down with it.
+
+**The staleness gate** (`src/core/build_gate.ts` + the boot check in `src/main.ts`) —
+⛔ **not an instrument, a correction.** The page asks the origin for `version.json` with
+`cache: "no-store"` and **replaces itself once** if the served build id is not the one
+compiled in. ⭐ It is why the plain URL
+**https://dsug1.github.io/3d_assembly_game/** can be trusted for a device pass without a
+hand-typed cache-buster.
+⛔ Every branch fails **safe** — towards *carry on with what is loaded*: an absent or
+unparseable `version.json` (`file://`, a Capacitor webview, offline, a 404 in dev) is *no
+information*, never a mismatch, because the alternative to a stale page is a page that
+reloads for ever. ⭐ The one attempt is keyed on the **served** id, so a URL pinned to an
+old build still refreshes instead of being stranded. 16 vectors, and the two guards were
+falsified on purpose.
+⚠ The decision is in `src/core` and not in the wiring on purpose: `D23` recorded what it
+costs to leave one in `scene.ts`, where no vector can reach it.
 
 **`noise_meter.ts`** (in `src/input`, engine-free) — the `pointerNoiseMm` instrument,
 reported on the HUD. ⛔ Fed by **one** touchpoint, the first down, and reset when that

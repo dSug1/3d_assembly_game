@@ -89,6 +89,39 @@ first, or use `-F`.
 ⛔ **Never commit directly on `main`** — including editing a file in GitHub's web UI,
 which is a real commit. That is the one action that breaks the property above.
 
+## ⛔⛔⛔ THE STALE-PAGE TRAP — it cost a morning on 2026-09-16
+
+**A deployed fix was judged NOT to work, on a tablet that had never fetched it.**
+
+⚠ The report: the transition a device pass had just confirmed over USB *"still lags on the
+github page"*. ⛔ The gesture code was **identical** — the Actions history showed the fix
+live at 05:28, two minutes before the USB session, and there is no dev/prod gating anywhere
+in `src/`.
+
+⭐⭐ **THE MECHANISM, and it is worse than a ten-minute cache.** Pages serves `index.html`
+with `Cache-Control: max-age=600`, and Vite's assets are **content-hashed**
+(`assets/index-<hash>.js`). A cached index keeps pointing at the **old hash**, and that file
+is then served from cache **indefinitely**. ⛔ So the page is not stale for ten minutes; it
+is stale until something replaces the index — and an already-open tab is stale for ever.
+
+✅✅ **FIXED IN THE PRODUCT, not in a procedure.** The bundle carries its build id, asks the
+origin for `version.json` (`cache: "no-store"`) on boot, and **replaces itself once** if the
+two disagree — `src/core/build_gate.ts`, 16 vectors, every branch failing towards *carry on
+with what is loaded*. ⭐ So the **plain URL is now the right one to test**:
+
+**https://dsug1.github.io/3d_assembly_game/**
+
+⭐ And the build is **readable on the glass**: the HUD's last line is
+`build <sha>[+dirty]  <UTC minute>`. ⛔ **Check it before judging a gesture** — a device
+report is only evidence about the code the device was running, and `+dirty` is what
+separates the USB dev loop from the same sha deployed.
+⚠ A `?v=` in the URL is the refresh's own marker, not something to type. It is harmless,
+and a pinned one still refreshes when a newer build is served.
+
+⚠ **What a procedure would still be needed for**: nothing in the gate can help a page that
+is **already open** — the check runs at boot. Close the tab, or pull to refresh, then read
+the stamp.
+
 ## Deploying a branch WITHOUT merging
 
 **Actions → Deploy to GitHub Pages → Run workflow ▾ → choose the branch → Run.**

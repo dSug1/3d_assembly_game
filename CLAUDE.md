@@ -44,10 +44,17 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-15)
+## Where it stands (2026-09-16)
 
-✅ Green: TypeScript + Babylon + Vite, **531 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **547 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
+⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
+2026-09-16 a confirmed fix was reported broken from Pages on a tablet running an **old
+bundle**: `index.html` is served `max-age=600` and the assets are content-hashed, so a
+cached index loads a superseded hash indefinitely. ✅ The page now checks `version.json`
+on boot and replaces itself once (`src/core/build_gate.ts`), and prints its build id.
+⭐ `METHOD`: *a device report is evidence about the code the device was running* — the
+report was truthful, and the unchecked premise was that both surfaces ran the same code.
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
 `Claude/50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`.
