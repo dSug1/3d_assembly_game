@@ -36,11 +36,11 @@ a per-axis position deadband, **`A12`** roll on the second touchpoint's x, **`A1
 touchpoint translates and a second held still rotates, **`A14`** a lift-and-replace is one
 gesture. ⭐ That is what `1.0.4` is: **translation with one finger.**
 
-⛔ **`A15` IS BUILT AND ITS DEVICE LOOK IS OWED** — a holder that is no longer *under* its
-object gives the selection up: a raycast at the second touchpoint's lift, and the unselect
-**deferred** to the next input event. ⚠ It is the first exception to `IN2`'s latch, and the
-ray, the deferral and the re-resolution are all in `src/render` where no vector reaches
-them. → [`queue_notes/IN8.md`](queue_notes/IN8.md).
+✅✅ **`A15` CLOSED BY THE SAME LOOK** — a holder no longer *under* its object gives the
+selection up (a raycast at the second touchpoint's lift; the unselect deferred to the next
+input event). ⚠ **The close is only as strong as the phrase that gave it**: *"everything is
+working ok"* was general, and the three cases this row listed were not reported on
+individually → [`queue_notes/IN8.md`](queue_notes/IN8.md).
 
 ### ⭐⭐⭐ `1.0.5` — THREE FORKS FROM ONE BUILD, and what each owes a hand
 
@@ -52,7 +52,7 @@ one build**, so every later row lands in all of them:
 |---|---|---|---|
 | `0` | **A** — `A13`. ⚠ Was the default until 2026-09-16, and still the only fork closed by a device look of its own | translates | held still → rotate |
 | `1` | **B** — the **spec's** own assignment | rotates | → translate |
-| `2` | **C** — `A16`. ⛔⛔ **THE DEFAULT SINCE 2026-09-16** | translates until a tap says rotate; the mode **survives a release**, and **any tap anywhere** flips it — even with nothing carried | **tap** → toggle, immediately; **press** → depth *or* roll |
+| `2` | **C** — `A16`. ⛔⛔ **THE DEFAULT, AND ✅✅ CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working ok"* | translates until a tap says rotate; the mode **survives a release**, and **any tap anywhere** flips it — even with nothing carried | **tap** → toggle, immediately; **press** → depth *or* roll |
 
 ⭐⭐ **Fork C is not an inversion of the other two**, which is why it is a fork and not a
 setting: A and B read the mode from **presence**, C from a **discrete tap**. ⚠ Two
@@ -64,9 +64,13 @@ built and felt as lag — a double tap now flips twice and also resets the camer
 the owner's words) and it is a **session MODE**, surviving a release, which retires the
 *"rotation costs a tap every time"* cost I had stated against the fork.
 
-⛔ **What fork C owes a hand, specifically**: whether the axis purity beats `A12`'s
-two-axes-at-once; and whether a tap on a **different** object should toggle too, which is
-deliberately left to rule 5 / 6bis. → [`queue_notes/IN13.md`](queue_notes/IN13.md).
+✅✅ **FORK C IS CLOSED AND IS THE DEFAULT** (2026-09-16, *"everything is working ok"*) —
+after **three** formulations of its toggle, all three corrected by finger.
+⛔ **What is still open is the CHOICE between the forks, not fork C itself**: `IN13`'s verdict
+waits on the owner's own condition, a holistic judgement once the input system can be felt as
+a whole. ⚠ Two questions for that session: whether the axis purity beats `A12`'s
+two-axes-at-once, and whether a tap on a **different** object should toggle too (deliberately
+left to rule 5 / 6bis). → [`queue_notes/IN13.md`](queue_notes/IN13.md).
 ⚠ **The flag latches only while nothing touches the glass**, and the HUD names the live
 fork — a device report that does not name it is unattributable.
 
@@ -86,8 +90,8 @@ replaces itself once, and the HUD's last line is `build <sha>[+dirty]  <UTC minu
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Thirty-five defects have been found **by finger** (thirty-four of them; one by composing a measurement with a threshold), and **not one was visible to a green
-suite**. They are **five** shapes, not thirty-five problems — the fifth is below, and it is
+Thirty-eight defects have been found **by finger** (thirty-seven of them; one by composing a measurement with a threshold), and **not one was visible to a green
+suite**. They are **five** shapes, not thirty-eight problems — the fifth is below, and it is
 the one that costs a correct implementation rather than a broken one:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
@@ -98,25 +102,21 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | `IN1` — the recognizer | **14**, over seven device passes | [`queue_notes/IN1.md`](queue_notes/IN1.md) |
 | `IN9` — rule 1, orbit | **3** | [`queue_notes/IN9.md`](queue_notes/IN9.md) |
 | `IN9` — rule 4, pinch zoom | **0** — five device checks, all passed | [`queue_notes/IN9.md`](queue_notes/IN9.md) |
-| `IN2` — pointer plumbing | **0** — the `IN8` consequence was judged on the glass and ACCEPTED, which is a verdict, not a defect | [`queue_notes/IN2.md`](queue_notes/IN2.md) |
-| `IN4` — rule 6, translate | **1** — the `STATIONARY` latch, overturned first try | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
-| the sympathetic sway | **1** — re-trigger on a CHANGE OF DIRECTION, missing | this block, below |
-| `3D1` — the model wiring | **1** — the render loop drew only objects that HAPPENED to have a follower, so a translated object was LOCKED until something else created one, then JUMPED | [`queue_notes/3D1.md`](queue_notes/3D1.md) |
-| **A8** — the roll's start | **1** — a circle does not read as a roll until `rollAngle` of arc, and the yaw/pitch applied meanwhile was never undone, so the roll began from a pose nobody asked for | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) A8 |
-| **A6** — depth, from below | **1** — *"chaotic on the bottom ring"*: "away" RISES on screen seen from above and SINKS seen from below, and the rule hard-coded the first | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) A6 |
-| **A6** — the gate | **1** — it re-decided every frame against a speed floor, so a hand SLOWING or REVERSING dropped into rule 6, whose dy is now gravity: *"blends into a translation along gravity"* and *"drifts along the gravity axis"*. **Two reports, one cause** | same |
-| **A6** — the gate, again | **2** — the latch I added exited on a **windowed** divergence, which is RATE-DEPENDENT: an idle anchor never exited below ~100 mm/s, and a turnaround skew spiked it so reversals still leaked. And a finger moving ALONE still moved the object, because the displacement was half of each finger's own delta and halves sum to the AVERAGE. ⭐ Both fixed by changing the QUANTITY: divergence measured cumulatively from the latch, and the object driven by the SHARED travel | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) A6 |
-| **A9** — the rotation jitters | **1** — 2bis and rule 6 integrate the RAW per-event delta, and the pointer noise is 0.761 mm MEASURED, so a still finger turns a held object: *"there are some jumps in the rotation"*. ⭐ A **deadband**, queued as `IN12` | [`queue_notes/IN12.md`](queue_notes/IN12.md) |
-| **A10** — §1.1 cannot see rest | **1** — ⛔⛔ **the speed was a rate over ONE SAMPLE PAIR**, so with the measured 0.761 mm of noise a resting finger read ~95 mm/s and **STATIONARY was unreachable**; the settle bound also sat below the noise. ⚠ Found by BUILDING the first rule that asks, not by a finger — and invisible to eight device passes because nothing else depended on re-entering STATIONARY | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| **A11** — the settle asymmetry | **1** — *"when I switch from x/y to depth translation… there is no depth translation for a while and then suddenly it is triggered"*, while the other direction was instant. ⛔ Entering MOVING was a DISTANCE test; returning to STATIONARY was TWO durations in series (~900 ms). ⭐ Fixed by the owner's model: §1.1 is a position deadband and the settle timer is gone | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| **A8** — the roll's commit dropped its own angle | **1** — *"in rotation, when I switch from yaw/pitch to roll… there is a big jump at one point."* The rebase undid the swept yaw/pitch, and the scene then applied only ONE FRAME of roll against a `lastRollDeg` that had tracked the uncommitted phase — so ~60° of swept roll was silently dropped. ⭐ The owner's own third guess was right: *"anchoring on a previous quaternion which is now far away"* | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
-| **A11** — a still finger emits no events | **1** — ⛔⛔ §1.1 is driven by `pointermove`, and a resting finger sends none — so the tracker froze at `MOVING` and `STATIONARY` was unreachable *for the exact case the rule is about*. ⭐ The asymmetry is structural: MOVING is entered by an event that necessarily exists, STATIONARY by one that by definition may not arrive. ⚠ **It survived two fixes to the THRESHOLD before anyone checked the CLOCK**, and the owner said so: *"there is something wrong you did not explain nor check"* | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| **A11** — the band taxed the drag | **1** — *"the object translation is less fluid than when we had no depth translation built in."* ⛔⛔ The trailing anchor sits one radius BEHIND, so a REVERSAL had to cross the whole dead circle: **5.0 mm of dead travel, 88 ms at 50 mm/s** — more than ten times rule 6's entire follower time constant, as pure dead time in front of it. ⭐ Fixed by a distinction the first version missed: **the band gates the way OUT of rest, not the motion itself**. A reversal now costs one sample | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| **A13** — a tracker outlived its finger | **1** — *"I release the second touchpoint and press it outside any object… the first object continues translation and then switch to rotation."* ⛔⛔ Motion trackers were keyed by POINTER ID, and **browsers reuse ids after a release** — so a new finger inherited the old one's anchor position and read `MOVING` at once, which under A13 means the holder keeps translating. ⭐⭐ **The same trap `router.ts` already guards and explains**: I copied the map and not the guard. Fixed structurally — keyed by the router's never-reused `seq` | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| **A11** — rest ON the band boundary | **1** — a finger stopping DEAD parks at **exactly** one band from the centre, so the `<=` comparison is made at its exact value on every sample — and computing the centre as `p − band` then re-deriving `p − centre` is a **round trip through floating point** that returns ~1e-14 too large. ⛔ The axis then never became `STATIONARY`. ⚠ Invisible at a 2.3 mm band, exposed by the owner raising it to 3.5 mm. ⭐ Fixed by carrying the signed OFFSET instead of a position | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
-| **A13** — a mode keyed on MOTION, again | **1** — *"if I transition quickly there is a translation then a rotation, if I transition slowly there is directly a rotation."* ⛔⛔ A finger PLACED QUICKLY skids as it lands, so it read `MOVING` for the length of the landing and the mode followed it. ⭐⭐ **The cell was mine, not the owner's** — the four rules never named *both moving*, and I resolved it as translate. Now **presence alone** decides the mode. ⛔⛔⛔ **`IN4` recorded the identical verdict on 2026-09-14**, and A13 flagged the resemblance before shipping the defect anyway: *naming a risk is not the same as not taking it* | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
-| **A14** — the gap inside a lift-and-replace | **1** — *"cases 2 and 3 differ by timing of the input."* ⛔⛔ Between a lift and the replacing press there is genuinely ONE touchpoint down, so `A13` translated through the middle of a 150–300 ms swap — visible whenever the holder happened to be moving at the time, invisible when it was not. ⭐⭐ **The RULE was right and the GESTURE MODEL was wrong**: a lift-and-replace is one intention. ⭐ A grace keyed on the LIFT (discrete, deliberate) rather than on a motion state. ⚠ Found by the owner's own observation that the two cases differed only by WHEN they moved | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
-| | **= 35** | |
+| `IN2` — pointer plumbing | **0** — the `IN8` consequence was judged and ACCEPTED, which is a verdict, not a defect | [`queue_notes/IN2.md`](queue_notes/IN2.md) |
+| `IN4` — rule 6, translate | **1** — a `STATIONARY` latch, overturned first try | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
+| the sympathetic sway | **1** — no re-trigger on a change of DIRECTION | [`../40_RENDER_SCENE/INDEX.md`](../40_RENDER_SCENE/INDEX.md) |
+| `3D1` — the model wiring | **1** — the render loop drew only objects that HAPPENED to have a follower, so a translated object locked, then jumped | [`queue_notes/3D1.md`](queue_notes/3D1.md) |
+| **A8** — the roll's start | **1** — a circle is not a roll until `rollAngle` of arc, and the yaw/pitch applied meanwhile was never undone | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) |
+| **A8** — the roll's commit | **1** — the rebase undid the swept yaw/pitch and the scene then applied ONE frame of roll, dropping ~60° | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+| **A6** — depth, from below | **1** — *"chaotic on the bottom ring"*: "away" RISES seen from above and SINKS from below, and the rule hard-coded the first | [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) |
+| **A6** — the gate | **3** — re-decided every frame against a speed floor, so a hand slowing or reversing dropped into rule 6; then a windowed divergence that was rate-dependent; then a shared travel that summed to the average | same |
+| **A9** — the rotation jitters | **1** — rules integrated the RAW per-event delta against 0.761 mm of measured noise | [`queue_notes/IN12.md`](queue_notes/IN12.md) |
+| **A10/A11** — §1.1, four times | **5** — ⛔ speed over ONE sample pair (STATIONARY unreachable for any real finger); the settle asymmetry; a still finger emits no events so the clock never advanced; the band taxing every reversal; rest ON the band boundary, via a float round trip | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
+| **A13** — a tracker outlived its finger | **1** — keyed by POINTER ID, and browsers reuse ids after a release | [`queue_notes/IN0.md`](queue_notes/IN0.md) |
+| **A13** — a mode keyed on MOTION | **1** — a finger placed QUICKLY skids as it lands, so the mode followed the landing. ⛔⛔ `IN4` had recorded the identical verdict two days earlier | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
+| **A14** — the gap inside a lift-and-replace | **1** — between a lift and the replacing press there is genuinely ONE touchpoint down. ⭐⭐ The RULE was right and the GESTURE MODEL was wrong | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
+| **A16** — fork C's three formulations | **3** — a double tap toggled TWICE so the gesture could never form; a 300 ms lag I had stated as a cost and shipped anyway; the mode reset on every release. ⚠ Only the first is a defect in the strict sense — the other two correct MY READING of the owner's words, which is a different failure and arguably worse | [`queue_notes/IN13.md`](queue_notes/IN13.md) |
+| | **= 38** | |
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of
@@ -213,38 +213,14 @@ so every rule reads the same side of it and none consumes a raw delta.
 
 ### ⭐⭐ WHAT THE 2026-09-15 SESSION SETTLED, beyond the rows
 
-**`A7`/`D18` — every object gesture stands on a GRAVITY FRAME.** Yaw about the world
-vertical, pitch about the horizontal screen axis, roll and A6's depth about the view
-direction **flattened onto the ground**; rule 6's `dy` becomes a true vertical.
-⭐ `GravityFrame` and `ScreenFrame` are deliberately **distinct types**, so the compiler
-stops the two from being interchanged — `anchor_rotate.ts` still wants the true view axis.
-
-**`A8` — a roll REBASES to the start of its circle.** A circle is not read as a roll until
-60° of arc; the yaw/pitch applied meanwhile used to stand, so the roll began from a pose
-nobody asked for. It now rewinds to the FIT WINDOW's start — ⛔ **not to the press**, so a
-straight drag that precedes a circle survives, because that drag was asked for and is not
-part of the evidence for a circle.
-
-**`A6`/`D17` — depth is a DRIVER and a VALIDATOR.** The finger on the object supplies ALL
-the motion; the second finger **anywhere** only authorises it by following the same `dy`
-within a percentage ratio, with explicit HOLD windows at a reversal and at a late start.
-⛔⛔ **Five models were built and a hand rejected four of them** — a mean, a latch, a
-cumulative exit, a shared minimum, a faded blend. ⭐ **The transferable part: a BLEND HAS
-SEAMS.** Every version that mixed the two fingers' travel produced a discontinuity
-somewhere, and *"it jumps erratically"* arrived within minutes each time. The owner's model
-— one finger drives, the other votes — has no seam because nothing is mixed.
-⭐ And the two ambiguities were named by the owner before any code: **at a reversal both
-travels pass through zero**, and **a validator that starts late is not a different
-gesture**. Both are answered by HOLDING, not by deciding.
-
-**`A9`/`IN12` (since ABSORBED BY `A11`) — and one report that DID NOT SURVIVE.** *"You destroyed the rotation around
-the gravity axis… it came back to the axis of the screen view plane"*, withdrawn by the
-owner once `tests/a7_wiring.test.ts` composed the frame with the rotation and asserted the
-axis that comes out, at four tilts including the bottom ring. ⛔ Every part of `A7` had
-green vectors and **the composition had none** — mistake shape 4 aimed at a CORRECT piece
-of work. ⭐⭐ `METHOD`: *a composition is a thing to MEASURE, not an emergent property*, and
-measuring it is what separated a real defect (no deadband) from an impression.
-
+⭐ Four amendments, each now carrying its own account: **`A7`** every object gesture stands
+on a **gravity frame** (the argument is orthogonality, not tidiness); **`A8`** a roll rebases
+to the start of its circle; **`A6`/`A10`** depth is a **driver and a validator**, after five
+models a hand rejected — *a blend has seams*, and *when a rule needs a WINDOW to decide,
+suspect the QUESTION*; **`A9`/`A11`** §1.1 becomes a position deadband.
+⛔ Full text in [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md),
+the device narratives in the dossiers each one names. ⚠ Moved out of this file 2026-09-16:
+it is narrative, and this is a front door.
 
 ### ⭐⭐ THE SYMPATHETIC SWAY and the CAMERA GUARDS — built 2026-09-14
 

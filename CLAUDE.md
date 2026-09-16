@@ -114,7 +114,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Thirty-five defects, thirty-four of them BY FINGER, and none visible to a green
+⛔⛔ **Thirty-eight defects, thirty-seven of them BY FINGER, and none visible to a green
 suite.** ⭐ The one exception is worth knowing: §1.1's unreachable STATIONARY was found by
 **composing a measurement with a threshold**, not by a hand — and no hand could have found
 it, because nothing shipped depended on the path it broke. They are **five** repeating shapes — a rate estimated over too short a baseline, a
@@ -163,17 +163,22 @@ release, which retires the *"rotation costs a tap every time"* cost; and **the t
 the second finger's axis too**, depth *or* roll, never both, paired by KIND.
 ⭐ `METHOD`: *a device judgement overturns a confident synthetic argument* — the deferral was
 reasoned from first principles AND from Unity's own parameters.
-⛔⛔ **AND FORK C IS NOW THE DEFAULT** (2026-09-16), after the owner drove all three. ⚠ It is
-the default while its current build is **unjudged** — the two fixes ship with the change, so
-the next device look judges both. ⭐ `?touchpointAssignment=0` is the way back to fork A, the
-only fork closed by a device look of its own.
+✅✅ **FORK C IS THE DEFAULT AND IS CLOSED BY A DEVICE LOOK** (2026-09-16, *"everything is
+working ok"*) — after **three** formulations of its toggle, every one corrected by finger:
+the double tap that toggled twice, the 300 ms lag, and the mode that reset on every release.
+⭐ `?touchpointAssignment=0` and `=1` still reach forks A and B, which is what `D26`'s flag is
+for. ⛔ What remains open is `IN13`'s **choice** between the three, on the owner's condition:
+a holistic judgement once the input system can be felt as a whole.
 ⭐⭐ **A and B are a FLAG and not a fork
 because their whole difference is ONE INVERSION in `holderDrive`** — depth, roll, `A14` and
 `A15` all key on *the holder is still*. ⛔⛔ The flag latches **only while nothing touches
 the glass**: the only state in which no gesture can be in flight. ⚠ **The HUD names the live
 fork, and a device report that does not name it is unattributable.**
 
-⛔⛔ **`A15` IS BUILT AND ITS DEVICE LOOK IS OWED — the one open thing on the glass.** A
+✅✅ **`A15` IS CLOSED by the same look** — ⚠ and the close is only as strong as the phrase
+that gave it: *"everything is working ok"* was general, and `A15`'s three specific cases were
+not reported on individually.
+⭐ **What it does**: A
 holder that is **no longer under its object** gives the selection up: depth moves the object
 along the view axis *while the holder holds still*, so it leaves the finger carrying it, and
 §4's latch kept that finger holding it anyway. ⭐ A **raycast at the second touchpoint's

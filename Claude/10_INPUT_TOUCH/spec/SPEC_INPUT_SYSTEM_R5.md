@@ -49,7 +49,7 @@ touches the glass**.
 |---|---|---|---|
 | **A** — `A13`/`D23` | `0` · ⚠ the default until 2026-09-16, and still the only fork closed by a device look of its own | **translates** | held still → the drag **rotates** |
 | **B** — the **spec's own** assignment | `1` | **rotates** (§2 rule 2bis) | present → the drag **translates** (§4 rule 6) |
-| **C** — `A16`/`D27` | `2` · ⛔⛔ **THE DEFAULT SINCE 2026-09-16** | **translates**, until a tap says rotate — and the mode **survives a release** | ⛔ **presence is irrelevant**: a **tap** toggles immediately, a **press** drives one axis |
+| **C** — `A16`/`D27` | `2` · ⛔⛔ **THE DEFAULT, ✅✅ CLOSED 2026-09-16** | **translates**, until a tap says rotate — and the mode **survives a release** | ⛔ **presence is irrelevant**: a **tap** toggles immediately, a **press** drives one axis |
 
 ### ⛔ Configurations whose meaning DEPENDS on the fork
 
@@ -81,7 +81,7 @@ fires as usual. Both were the owner's explicit choices on the glass (2026-09-16)
 | 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
 | 2 | both the SAME object | rule 6 is reachable — the FIRST touchpoint (whose raycast hit) drives; the second is presence only | `A10` supersedes `A6`/`A5`/`D10` | ✅ ⭐⭐ the small-object hole is CLOSED: the depth anchor may be anywhere |
 | 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `IN3`'s face selection · ✅ `3D1` is built |
-| 2 | a second touchpoint **released**, holder no longer under its object | ⭐ the selection is dropped at the **next input event** and the configuration re-resolves | `A15` | ⛔ built, **device look owed** |
+| 2 | a second touchpoint **released**, holder no longer under its object | ⭐ the selection is dropped at the **next input event** and the configuration re-resolves | `A15` | ✅✅ closed 2026-09-16 — ⚠ by a general *"everything is working ok"* |
 | 3+ | any | the third touchpoint and beyond are **ignored**; the rest keep their latched roles | — · `A5` moved this trigger | ⚠ by construction, not measured — palm contact untested |
 
 ⚠ **Forks A and B reach their mode by PRESENCE, re-read every frame** — not by a latched
