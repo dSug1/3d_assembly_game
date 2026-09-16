@@ -147,6 +147,17 @@ implements **parent ≠ root** and moves nothing.
 ⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`** — now the only input row with unbuilt work left.
 ✅ `IN12` (the deadband) was CLOSED by `A11`, which put it in §1.1 itself rather than in
 each rule.
+
+⛔⛔ **`A15` IS BUILT AND ITS DEVICE LOOK IS OWED — the one open thing on the glass.** A
+holder that is **no longer under its object** gives the selection up: depth moves the object
+along the view axis *while the holder holds still*, so it leaves the finger carrying it, and
+§4's latch kept that finger holding it anyway. ⭐ A **raycast at the second touchpoint's
+lift**; if the object is not there the selection drops **at the next input event** and the
+§4 table re-resolves — orbit for a finger over empty space, ⛔ **keeping the previous yellow
+centre** (a gesture that ENDS must not retarget the camera). ⭐ First and only exception to
+`IN2`'s latch, on a **discrete** event only: *a mode may be keyed on PRESENCE, never on
+MOTION.* ⚠ 16 vectors, no new tunable, and the ray/deferral/re-resolution are all in
+`src/render` where none of them reach. `D25`, amendment `A15`.
 ⭐⭐ **A REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry**: *"you destroyed the rotation around the gravity axis… it came back to the axis of
 the screen view plane"* — withdrawn by the owner after `tests/a7_wiring.test.ts` composed

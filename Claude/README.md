@@ -38,7 +38,10 @@ being true. ⭐ It has paid for itself: every gesture defect found by finger was
 reproduced **headlessly** before it was fixed.
 ✅✅ **`IN1`, `IN9` and `IN2` CLOSED** (the recognizer; pinch zoom + camera orbit on a
 three-ring surface; pointer plumbing), and **`IN4`'s rule 6** translates a held object in
-the screen plane — all closed by device look. ⛔ The rest of `IN3`/`IN4` waits on `3D1`.
+the screen plane — all closed by device look. ✅✅ **And the whole two-touchpoint set
+(`A10`–`A14`) closed 2026-09-16** — depth, the per-axis deadband, roll on the second
+touchpoint, **one touchpoint translating** while a second held still rotates.
+⛔ **`A15` owes its device look**; `IN3` is the only input row with unbuilt work left.
 ⛔⛔ **Every one of those defects was found BY FINGER, and none was visible to a green
 suite.** ⭐ The count and its ledger live in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md), which
 is the one place that carries them — this router deliberately no longer restates a number,

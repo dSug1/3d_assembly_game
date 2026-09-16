@@ -16,7 +16,7 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-15) — the input layer is done bar `IN3`
+## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
 
 ✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **563 golden vectors,
 all passing** (37 → 563). ✅ The engine boundary is enforced by a test.
@@ -28,10 +28,33 @@ all passing** (37 → 563). ✅ The engine boundary is enforced by a test.
 ✅ **`IN1` CLOSED** — the recognizer: commit point, provisional motion with rollback,
 tap / double-tap / hold, the release-time priority ladder, screen-plane yaw/pitch, and
 roll. ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit, working by
-finger.
+finger. ✅✅ **`IN2` CLOSED** — the three latched roles.
 
-⛔ **Nothing yet touches an OBJECT for real.** The rotation in `scene.ts` is a
-diagnostic stand-in; `IN3` builds rule 2bis and deletes it.
+✅✅ **AND THE WHOLE TWO-TOUCHPOINT SET IS CLOSED BY A DEVICE LOOK (2026-09-16)** —
+*"everything is working"*: **`A10`** depth (still holder, moving anchor), **`A11`** §1.1 as
+a per-axis position deadband, **`A12`** roll on the second touchpoint's x, **`A13`** one
+touchpoint translates and a second held still rotates, **`A14`** a lift-and-replace is one
+gesture. ⭐ That is what `1.0.4` is: **translation with one finger.**
+
+⛔ **`A15` IS BUILT AND ITS DEVICE LOOK IS OWED** — a holder that is no longer *under* its
+object gives the selection up: a raycast at the second touchpoint's lift, and the unselect
+**deferred** to the next input event. ⚠ It is the first exception to `IN2`'s latch, and the
+ray, the deferral and the re-resolution are all in `src/render` where no vector reaches
+them. → [`queue_notes/IN8.md`](queue_notes/IN8.md).
+
+✅✅ **THE OBJECT MODEL IS AUTHORITATIVE** (`3D1`, closed 2026-09-15): every gesture writes
+`src/core/object_model.ts` and the render loop draws `SWAY ∘ FOLLOW ∘ model`.
+⚠ **This block said *"nothing yet touches an OBJECT for real"* until 2026-09-16**, and it is
+corrected rather than deleted: it was true on day one and stopped being true when `3D1` was
+wired. ⛔ What remains true is narrower — rule 2bis runs **without its §1.4 precondition**
+(an empty constraint stack), which is what `IN3` adds.
+
+✅✅ **AND THE PAGE NOW KNOWS WHICH BUILD IT IS** (`DEP1d`, closed on the device
+2026-09-16). ⛔ A confirmed fix was reported broken from Pages on a tablet running an old
+bundle: `index.html` is served `max-age=600` and the assets are content-hashed, so a cached
+index loads a superseded hash **indefinitely**. ⭐ The page checks `version.json` on boot and
+replaces itself once, and the HUD's last line is `build <sha>[+dirty]  <UTC minute>`.
+⚠ **Read it before judging any gesture** → [`queue_notes/DEP1d.md`](queue_notes/DEP1d.md).
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
