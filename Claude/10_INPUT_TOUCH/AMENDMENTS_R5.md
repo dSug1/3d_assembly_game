@@ -752,29 +752,30 @@ untouched, and it is reachable as `?touchpointAssignment=2`.
 > (not tapped): same behavior as current (depth translation, roll, two touchpoints on two
 > objects translate their respective objects, etc.)."*
 
-⛔⛔ **IT IS NOT AN INVERSION, WHICH IS WHY IT IS A FORK AND NOT A SETTING**: A and B compute
-the mode from **presence**, C from a **discrete tap** — which leaves a held second finger
-free to mean only what it already means. ⭐⭐ So **fork C cannot have the defect `A14`
-fixed**: there is no lift-and-replace gap for the mode to fall through.
-⭐ The toggle lives on the **grip** and dies with the gesture — a *second* touchpoint
-presupposes a first — which is *"for one single ongoing touchpoint"* read literally.
-⚠ **THE TRADE**: a gesture starts as `TRANSLATE`, so **rotation costs a tap every time**.
+⛔⛔ **NOT AN INVERSION, WHICH IS WHY IT IS A FORK AND NOT A SETTING**: A and B read the mode
+from **presence**, C from a **discrete tap**, leaving a held second finger to mean only what
+it already means. ⭐⭐ So **fork C cannot have the defect `A14` fixed** — no lift-and-replace
+gap for the mode to fall through.
+⛔⛔ **THE TOGGLE IS A SESSION MODE, NOT A PER-GESTURE FLAG — device-corrected 2026-09-16**:
+*"I would expect the movement resumes the behavior as it was prior to release."* I had read
+*"for one single ongoing touchpoint"* as *dies with the gesture*. ⭐⭐ It retires the cost I
+had stated against this fork — *rotation costs a tap every time* was an artefact of my
+reading; it costs one only when **switching**.
 
-⛔⛔ **A DOUBLE TAP IS NOT TWO SINGLE TAPS, AND THE DISCRIMINATOR IS THE TIME BETWEEN THEM**
-*(owner, 2026-09-16, correcting the first build the same day)*. It toggled on **every** tap
-as it landed, so a double tap toggled **twice** and the double-tap gesture could never form.
-⭐⭐ A single tap is now **held for `doubleTapWindow` and cancelled if a second arrives** —
-the classic single-vs-double-click answer, fired from the render loop because what is awaited
-is the *absence* of a second tap.
-⭐ **Unity was checked at the owner's instruction**: its parameter is the inter-tap delay,
-which this project already had — but its own `Tap` fires immediately and does **not** wait,
-so the deferral is the application's to add. ⚠ The comparison table and the citation are in
-[`../00_CORE/queue_notes/IN13.md`](../00_CORE/queue_notes/IN13.md) and `PROVENANCE.md`.
-⭐⭐ **AND IT RETIRED A RULE RATHER THAN ADDING ONE**: the first build had to *consume* a
-toggling tap so two toggles could not reset the camera. Once a double tap is not a toggle at
-all, the gestures stop overlapping and a double tap keeps its forks-A-and-B meaning.
-⚠ **THE COST**: the toggle lands `doubleTapWindow` (300 ms) after the tap, with a slider.
-⛔ ONE constant, shared with §1.3 — two would leave a tap that is neither single nor double.
+⛔⛔ **THE TOGGLE IS IMMEDIATE, AND THIS IS ITS THIRD FORMULATION.** ⭐ (1) toggle at once,
+*consuming* the tap so two toggles could not reset the camera; (2) on the owner's
+instruction, a single tap **held for `doubleTapWindow`** — which made the two gestures
+separable and retired the consume rule; (3) ⛔ **a hand felt the 300 ms**: *"it shall be
+immediate. Worst case, a double tap occurs and the behavior and movement can be reverted
+back while the camera orbit resets."*
+⭐⭐ So a double tap now flips the mode **twice** — back where it started — **and** resets the
+camera, and both are accepted in the owner's own words rather than hidden behind a special
+case. ⭐⭐⭐ Which is precisely Unity's `Tap` (*"does not wait to detect a second tap"*),
+chosen deliberately for a reason no documentation states: **immediacy on a mode switch beats
+the discrimination.** ⚠ `METHOD`: *a device judgement overturns a confident synthetic
+argument* — the deferral was reasoned from first principles AND from Unity's parameters, and
+the cost was invisible to both. Full sequence:
+[`../00_CORE/queue_notes/IN13.md`](../00_CORE/queue_notes/IN13.md).
 
 ⛔⛔ **AND THE TOGGLE PICKS THE SECOND FINGER'S AXIS TOO — DEPTH *OR* ROLL, NEVER BOTH**
 *(owner, 2026-09-16)*: *"depending on which is toggled, the second touchpoint shall only
@@ -787,9 +788,8 @@ the holder's screen-plane drag with the second finger's **depth** — both trans
 translating or rotating?*, and both fingers follow the same answer.
 ⛔ Forks A and B keep `A12` exactly: x and y live at once, kept independent by `A11`'s
 per-axis bands. The narrowing is fork C's alone, and a vector asserts that containment.
-⚠ **WHAT IT COSTS**: in fork C a roll and a depth push cannot be interleaved without a tap
-between them. ⭐ That is the point — no diagonal can do half of each by accident — and it is
-what a hand has to weigh against `A12`'s two-axes-at-once.
+⚠ **WHAT IT COSTS**: a roll and a depth push need a tap between them — which is the point
+(no diagonal does half of each by accident), and the thing to weigh against `A12`.
 
 ⚠ **One case is left open on purpose** — a tap on a *different* object, already rule 5 /
 6bis's configuration and `IN3`'s selection to define.

@@ -71,11 +71,8 @@ import {
   initialBehaviour,
   isTapRelease,
   modeFor,
-  pendingAfterTap,
   tapTogglesBehaviour,
   toggleBehaviour,
-  toggleDue,
-  type PendingToggle,
   type Assignment,
   type Behaviour,
   type HolderBinding,
@@ -371,15 +368,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * view axis while the holder holds still, so the object leaves the finger carrying it.
      */
     binding: HolderBinding;
-    /**
-     * ⭐⭐⭐ FORK C's PER-GESTURE TOGGLE — what this drag does, flipped by a TAP of a second
-     * touchpoint. ⛔ Ignored entirely by forks A and B, where presence decides the mode.
-     * ⚠ It lives on the GRIP and therefore dies with the gesture: a *second* touchpoint
-     * presupposes a first, so there is no toggle without an ongoing gesture to toggle. That
-     * is the owner's *"for one single ongoing touchpoint"*, read literally — and it means
-     * **rotation costs a tap every time**, which is the trade fork C exists to be judged on.
-     */
-    behaviour: Behaviour;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -889,9 +877,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // read the answer off. ⚠ In forks A and B a user can see the mode by looking at
             // their own hand; in C they cannot, so the readout is the only way a device pass
             // can tell *"the toggle did not fire"* from *"I toggled twice"*.
-            (assignment === "TAP_TOGGLE" && first
-              ? `[${first.behaviour}]${pendingToggle === null ? "" : "→PENDING"}`
-              : "") +
+            // ⛔ Shown whenever fork C is live, EVEN WITH NOTHING HELD: it is a session
+            // mode now, so it is the state the next press will inherit — and in fork C no
+            // finger position reveals it.
+            (assignment === "TAP_TOGGLE" ? `[${behaviour}]` : "") +
             // ⛔⛔ AND A PENDING FLIP MUST SAY SO. The flag latches only while nothing is
             // touching the glass, so between a flip mid-gesture and the next lift the menu
             // shows one value and the product obeys another. ⭐ Without this line that gap
@@ -1023,12 +1012,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ It takes effect only once nothing is touching the glass — the HUD says
         // `⛔PENDING(lift all fingers)` until then.
         tunable("0=A one-finger 1=B two-finger 2=C tap-toggle", "touchpointAssignment", 0, 2, 1),
-        // ⭐⭐ IT BELONGS IN THIS SECTION NOW, not only with the taps: in fork C it is the
-        // delay before a single tap's toggle lands, because a tap cannot be known to be
-        // single until this window has passed with no second one. ⛔ It is the SAME constant
-        // §1.3 judges a double tap by — two numbers could leave a tap that is neither.
-        // ⚠ Unity's equivalent default (`multiTapDelayTime`) is 750 ms; ours is 300.
-        tunable("double-tap window = toggle delay (ms)", "doubleTapWindow", 100, 800, 25),
+        // ⚠ It is here because fork C's toggle briefly WAITED for it, and a hand rejected
+        // that lag — the toggle is immediate now. ⭐ Kept on the panel because it still
+        // decides whether two taps read as a double tap, which in fork C is the difference
+        // between one mode switch and a switch-back plus a camera reset.
+        tunable("double-tap window (ms)", "doubleTapWindow", 100, 800, 25),
       ],
     },
     {
@@ -1374,7 +1362,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       tracker.axes,
       tracker.step,
       assignment,
-      grip.behaviour,
+      behaviour,
     );
     if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
 
@@ -1507,29 +1495,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
-   * ⭐⭐⭐ FORK C's PENDING TOGGLE — a tap that is not yet known to be a SINGLE tap.
+   * ⭐⭐⭐ FORK C's MODE — one latch for the session, not one per gesture.
    *
-   * ⛔⛔ Owner-reported 2026-09-16: the first version toggled on every tap the instant it
-   * landed, so a **double** tap toggled **twice** (a visible net-nothing) and the double-tap
-   * gesture could never form. *"It shall be discriminated by time between two taps."*
-   * ⭐ Unity's parameter, checked: `MultiTapInteraction.tapDelay` — the max gap BETWEEN
-   * taps. ⛔ But Unity's single `Tap` *"triggers immediately upon release"* and does not
-   * wait, so the deferral is the application's to add. See `input/assignment.ts`.
+   * ⛔⛔ Device-corrected 2026-09-16: *"when the first touchpoint is released and pressed
+   * again, the movement automatically resets to translation. I would expect the movement
+   * resumes the behavior as it was prior to release."* ⚠ I had put this on the grip, reading
+   * *"for one single ongoing touchpoint"* as *dies with the gesture*. It is a MODE: it
+   * persists until tapped again, and every new grip adopts it.
+   * ⭐ Which also retires the cost I had stated against fork C — rotation no longer costs a
+   * tap every time, only when switching.
    */
-  let pendingToggle: PendingToggle = null;
+  let behaviour: Behaviour = initialBehaviour();
 
   /**
-   * ⭐⭐ Fold one release into §1.3's tap history and into fork C's pending toggle.
+   * ⭐⭐ Judge one release as a tap, keep §1.3's history, and — in fork C — toggle the mode
+   * **immediately**.
    *
-   * ⛔ `taps.record` is called EXACTLY ONCE per tap, here, so the double-tap gap and slop
-   * have one definition shared by the camera reset and by fork C — two copies could disagree
-   * and produce a tap that is neither single nor double.
-   * ⭐⭐ AND THE DISCRIMINATION REMOVED A RULE RATHER THAN ADDING ONE: because a double tap
-   * is no longer a toggle at all, it needs no "consume" special case and keeps exactly the
-   * meaning it has in forks A and B.
+   * ⛔⛔ IMMEDIATELY, device-corrected the same day: *"there is a lag when the second
+   * touchpoint is tapped and the behavior change. It shall be immediate."* ⭐ The owner's
+   * accepted worst case is explicit — *"a double tap occurs and the behavior and movement can
+   * be reverted back while the camera orbit resets"* — so a double tap toggles twice, back to
+   * where it began, and the camera reset fires as in every other fork. ⚠ That is Unity's own
+   * behaviour (`Tap` does not wait for a second tap), chosen here deliberately.
    *
-   * @returns the verdict, or `null` if the release was not a tap at all (a PRESS — which
-   *   under fork C keeps every meaning it already has, per the owner).
+   * @returns the verdict, or `null` if the release was not a tap at all — a PRESS, which
+   *   keeps every meaning it already has.
    */
   const noteTap = (pressed: Sample, released: Sample): "TAP" | "DOUBLE_TAP" | null => {
     const wasTap = isTapRelease(
@@ -1539,31 +1529,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       mmToPx(cfg.doubleTapSlop),
     );
     if (!wasTap) return null;
+    // ⛔ The history is kept for §1.3's double tap whatever the fork, and the toggle no
+    // longer depends on its verdict — only on `held.size`, since a *second* touchpoint
+    // presupposes a first and a tap with nothing held belongs to the camera reset.
     const verdict = taps.record(pressed, released.t);
-    pendingToggle = pendingAfterTap(
-      pendingToggle,
-      verdict,
-      // ⛔ `held.size > 0`: with nothing carried there is no ongoing gesture to toggle, so
-      // the tap is left entirely to its existing meaning.
-      tapTogglesBehaviour(assignment, true, held.size > 0),
-      released.t,
-    );
+    if (tapTogglesBehaviour(assignment, true, held.size > 0)) {
+      behaviour = toggleBehaviour(behaviour);
+      lastVerdict = `fork C: tap → ${behaviour}`;
+    }
     return verdict;
-  };
-
-  /**
-   * ⭐⭐⭐ FIRE A CONFIRMED SINGLE TAP. Called every frame, because the thing being waited
-   * for is the ABSENCE of a second tap — and an absence produces no event.
-   * ⚠ `METHOD`: *a threshold is only half a rule — the other half is what advances the
-   * clock.* §1.1 cost three device reports by being driven by the very signal whose absence
-   * it was trying to detect; this one is driven by the render loop from the start.
-   */
-  const settleToggle = (now: number): void => {
-    if (!toggleDue(pendingToggle, now, cfg.doubleTapWindow)) return;
-    pendingToggle = null;
-    if (held.size === 0) return;
-    for (const grip of held.values()) grip.behaviour = toggleBehaviour(grip.behaviour);
-    lastVerdict = `fork C: single tap → ${[...held.values()][0]?.behaviour ?? "—"}`;
   };
 
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
@@ -1688,7 +1662,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         anchorMotion: new Map(),
         secondLiftedAtMs: null,
         binding: "BOUND",
-        behaviour: initialBehaviour(),
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -1853,7 +1826,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         );
         grip.mode =
           router.objects().length === 1
-            ? modeFor(assignment, secondHolds, grip.behaviour)
+            ? modeFor(assignment, secondHolds, behaviour)
             : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
@@ -2023,11 +1996,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const now = performance.now();
     const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
     lastFrameMs = now;
-
-    // ⭐⭐⭐ FORK C: a tap becomes a CONFIRMED single tap here, by nothing happening for
-    // `doubleTapWindow`. ⛔ It has to be the render loop: what is being waited for is the
-    // ABSENCE of a second tap, and an absence produces no pointer event.
-    settleToggle(now);
 
     // ⭐⭐ AND THE ASSIGNMENT LATCH RUNS HERE TOO, not only on pointer events. ⛔ A fork
     // flipped while the glass is empty produces NO pointer event, so without this the

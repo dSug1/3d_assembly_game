@@ -14,13 +14,11 @@ import {
   assignmentPending,
   initialBehaviour,
   isTapRelease,
-  pendingAfterTap,
   tapTogglesBehaviour,
   toggleBehaviour,
-  toggleDue,
   type Assignment,
-  type PendingToggle,
 } from "@input/assignment";
+import * as assignment from "@input/assignment";
 import { modeFor } from "@input/depth_translate";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 
@@ -228,69 +226,70 @@ describe("isTapRelease — §1.3's tap test, in one place", () => {
   });
 });
 
-describe("⛔⛔ A DOUBLE TAP IS NOT TWO SINGLE TAPS — discriminated by the time between them", () => {
-  // ⭐ The project's window, and Unity's for comparison: `multiTapDelayTime` is 0.75 s and
-  // `MultiTapInteraction.tapDelay` defaults to 2 × the single-tap time.
-  const WINDOW = 300;
+describe("⛔⛔ THE TOGGLE IS IMMEDIATE, and a double tap simply toggles TWICE", () => {
+  // ⭐⭐ DEVICE-CORRECTED 2026-09-16, and this suite REPLACES one that asserted the
+  // opposite. A deferral was built — a tap armed a toggle that fired only after
+  // `doubleTapWindow` with no second tap, so a double tap could be told from two singles
+  // before anything moved — and a hand rejected it: *"there is a lag when the second
+  // touchpoint is tapped and the behavior change. It shall be immediate."*
+  // ⛔ The owner's accepted worst case, in their words: *"a double tap occurs and the
+  // behavior and movement can be reverted back while the camera orbit resets."*
+  // ⭐⭐⭐ Which is what Unity's own `Tap` does — it *"does not wait to detect a second
+  // tap"* — chosen here deliberately rather than inherited.
 
-  it("⛔⛔ THE REPORTED DEFECT: a double tap must not toggle TWICE", () => {
-    // ⭐⭐ *"Double tap vs two single taps: it shall be discriminated by time between two
-    // taps."* The first tap arms a toggle; the second, arriving inside the window, is
-    // reported by `TapHistory` as DOUBLE_TAP and must CANCEL it — net ZERO toggles, and the
-    // double tap keeps its own meaning.
-    let pending: PendingToggle = pendingAfterTap(null, "TAP", true, 1000);
-    expect(pending).toBe(1000);
-    pending = pendingAfterTap(pending, "DOUBLE_TAP", true, 1150);
-    expect(pending).toBeNull();
-    // ⛔ And nothing is due afterwards, however long we wait.
-    expect(toggleDue(pending, 1150 + 10 * WINDOW, WINDOW)).toBe(false);
+  it("⭐ ONE tap switches the mode, with nothing to wait for", () => {
+    expect(toggleBehaviour("TRANSLATE")).toBe("ROTATE");
   });
 
-  it("⭐ two taps FAR APART are two single taps — two toggles", () => {
-    // ⚠ `TapHistory` reports the second as TAP because the gap exceeds the window, so each
-    // one settles on its own. This is the other half of the owner's sentence.
-    let pending: PendingToggle = pendingAfterTap(null, "TAP", true, 1000);
-    expect(toggleDue(pending, 1000 + WINDOW + 1, WINDOW)).toBe(true);
-    pending = null; // fired
-    pending = pendingAfterTap(pending, "TAP", true, 5000);
-    expect(toggleDue(pending, 5000 + WINDOW + 1, WINDOW)).toBe(true);
+  it("⛔⛔ TWO taps REVERT — the accepted worst case, as an invariant", () => {
+    // ⭐ A double tap is two taps, each acting at once, so the mode returns to where it
+    // started. ⚠ The camera reset that fires alongside it is wiring, and no vector reaches
+    // it — stated rather than implied.
+    for (const start of ["TRANSLATE", "ROTATE"] as const) {
+      expect(toggleBehaviour(toggleBehaviour(start))).toBe(start);
+    }
   });
 
-  it("⛔ a single tap is NOT due before the window has passed", () => {
-    // ⭐⭐ THE WHOLE POINT: until the window expires, the tap might still become half of a
-    // pair. Acting early is what produced the defect.
-    const pending = pendingAfterTap(null, "TAP", true, 1000);
-    expect(toggleDue(pending, 1000, WINDOW)).toBe(false);
-    expect(toggleDue(pending, 1299, WINDOW)).toBe(false);
+  it("⛔ there is NO deferral left in the module surface to wire back by accident", () => {
+    // ⭐⭐ A GUARD ON A RETRACTION, and it has to read the real surface to be worth
+    // anything. The deferral's functions were DELETED, not disabled, so a later session
+    // cannot reintroduce them believing they were dormant and intended.
+    for (const gone of ["pendingAfterTap", "toggleDue"]) {
+      expect(Object.keys(assignment)).not.toContain(gone);
+    }
   });
 
-  it("⚠ the boundary is STRICTLY greater, so the two verdicts cannot both be true", () => {
-    // ⛔ `TapHistory` pairs on `gap <= doubleTapWindow`. Firing AT the boundary would make
-    // one instant both a settled single tap and the first half of a double.
-    // ⭐ `METHOD`: a threshold the state machine parks on gets compared at its exact value.
-    const pending = pendingAfterTap(null, "TAP", true, 0);
-    expect(toggleDue(pending, WINDOW, WINDOW)).toBe(false);
-    expect(toggleDue(pending, WINDOW + 1, WINDOW)).toBe(true);
+  it("⚠ the inter-tap window still MEANS something — it is §1.3's, not the toggle's", () => {
+    // ⛔ `isTapRelease` still bounds a tap's own duration and travel; `TapHistory` still
+    // pairs two of them inside `doubleTapWindow` for the camera reset. ⭐ What changed is
+    // only that the toggle no longer waits for that verdict.
+    expect(isTapRelease(0, 0, 0, 100, 1, 1, 250, 10)).toBe(true);
+    expect(isTapRelease(0, 0, 0, 400, 1, 1, 250, 10)).toBe(false);
+  });
+});
+
+describe("⛔⛔ FORK C's MODE IS STICKY — it survives a release", () => {
+  // ⭐⭐ DEVICE-CORRECTED 2026-09-16: *"when the first touchpoint is released and pressed
+  // again, the movement automatically resets to translation. I would expect the movement
+  // resumes the behavior as it was prior to release."*
+  // ⚠ I had read the owner's *"for one single ongoing touchpoint"* as *the toggle dies with
+  // the gesture* and put the state on the grip. It is a MODE.
+
+  it("⭐ the session default is the only place TRANSLATE is imposed", () => {
+    // ⛔ `initialBehaviour` is now read ONCE per session, not once per gesture. That is
+    // wiring — the variable lives in `scene.ts` — so what is vectorable is the intent: there
+    // is exactly one initialiser, and nothing here resets a mode mid-session.
+    expect(initialBehaviour()).toBe("TRANSLATE");
   });
 
-  it("nothing pending is never due", () => {
-    expect(toggleDue(null, 1e9, WINDOW)).toBe(false);
-  });
-
-  it("⛔ an unarmed tap leaves the pending state ALONE, and does not arm one", () => {
-    // ⚠ Forks A and B, and fork C with nothing held. The tap still goes through §1.3's
-    // history — the camera double-tap must keep working — it simply arms no toggle.
-    expect(pendingAfterTap(null, "TAP", false, 1000)).toBeNull();
-    // ⭐ And an unarmed DOUBLE still cancels: whatever armed the pending tap, the pair that
-    // followed was not a single tap.
-    expect(pendingAfterTap(1000, "DOUBLE_TAP", false, 1100)).toBeNull();
-  });
-
-  it("⭐ a second armed tap outside the window REPLACES the pending one", () => {
-    // ⚠ Three slow taps must be three toggles, not one: each supersedes the last, and the
-    // one in flight has already fired by then.
-    const first = pendingAfterTap(null, "TAP", true, 1000);
-    const second = pendingAfterTap(first, "TAP", true, 9000);
-    expect(second).toBe(9000);
+  it("⚠ the stickiness itself is WIRING, and this says so rather than pretending", () => {
+    // ⛔ The mode lives in `scene.ts`, initialised once per session — no vector here can
+    // reach that, and an earlier draft of this test tried to imply it from the module's
+    // surface. ⭐ It asserted that nothing here "knows about a gesture", which is FALSE:
+    // `isTapRelease` takes a release by design. A vector built on a false premise is worse
+    // than none, so what remains is the true part: the only mutator is the toggle.
+    let mode = initialBehaviour();
+    mode = toggleBehaviour(mode);
+    expect(mode).toBe("ROTATE");
   });
 });

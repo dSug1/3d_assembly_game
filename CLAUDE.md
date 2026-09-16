@@ -156,12 +156,13 @@ still rotates; **fork B** (`?touchpointAssignment=1`, or the menu's `⭐ FORK` t
 between those two, while a **PRESSED** one keeps every meaning it has now — ⛔⛔ not an
 inversion, so it is a fork rather than a setting, and **it structurally cannot have the
 defect `A14` fixed**. ⚠ Its trade: rotation costs a tap every time.
-⛔⛔ **And two refinements the owner made the same day**: a **double tap is not two single
-taps** — discriminated by the time between them, so a single tap is held for
-`doubleTapWindow` and cancelled if a second arrives (⭐ Unity's parameter, checked; but
-Unity's own `Tap` fires immediately and does not wait, so the deferral is ours) — and **the
-toggle picks the second finger's axis too**, depth *or* roll, never both. ⭐⭐ The pairing is
-by KIND, which is what makes one toggle enough for two fingers.
+⛔⛔ **And THREE device corrections the same day**: the toggle is **immediate** (a deferral
+that waited out the double-tap window was felt as lag — so a double tap now flips twice and
+also resets the camera, accepted explicitly); it is a **session MODE** that survives a
+release, which retires the *"rotation costs a tap every time"* cost; and **the toggle picks
+the second finger's axis too**, depth *or* roll, never both, paired by KIND.
+⭐ `METHOD`: *a device judgement overturns a confident synthetic argument* — the deferral was
+reasoned from first principles AND from Unity's own parameters.
 ⭐⭐ **A and B are a FLAG and not a fork
 because their whole difference is ONE INVERSION in `holderDrive`** — depth, roll, `A14` and
 `A15` all key on *the holder is still*. ⛔⛔ The flag latches **only while nothing touches

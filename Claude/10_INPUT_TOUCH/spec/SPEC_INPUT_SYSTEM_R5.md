@@ -53,9 +53,10 @@ touches the glass**.
 
 ### ⛔ Configurations whose meaning DEPENDS on the fork
 
-⚠ Fork C carries a **per-gesture toggle** that starts at `TRANSLATE` and flips on each
-confirmed single tap of a second touchpoint. *(Confirmed = it survived `doubleTapWindow`
-without a second tap — see the tap row.)*
+⚠ Fork C carries a **SESSION MODE** that starts at `TRANSLATE` and flips on **every** tap of
+a second touchpoint, immediately. ⛔ It **survives a release** — the next press resumes it —
+and a **double tap therefore flips it twice**, back to where it was, while the camera reset
+fires as usual. Both were the owner's explicit choices on the glass (2026-09-16).
 
 | touchpoints | on what, and what moves | fork **A** | fork **B** | fork **C** | spec |
 |---|---|---|---|---|---|
@@ -64,7 +65,8 @@ without a second tap — see the tap row.)*
 | 2 | an object **STILL** + a second moving in **x** | **ROLL** about the flattened view direction | **ROLL** | ⛔ **roll ONLY if the toggle is `ROTATE`**; otherwise **nothing** | §2 2quinte · `A12`, `A16` |
 | 2 | an object **STILL** + a second moving in **y** | **DEPTH** along the flattened view direction — height never changes | **DEPTH** | ⛔ **depth ONLY if the toggle is `TRANSLATE`**; otherwise **nothing** | `A10` · `A16` |
 | 2 | an object **STILL** + a second moving **diagonally** | ⭐ **both at once**, kept independent by `A11`'s per-axis bands | both | ⛔ **exactly one** — the toggle decides, and switching needs a tap | `A12` · `A16` |
-| 2 | an object + a second **TAPPED** anywhere | — (it only feeds §1.3's tap history) | — | ⭐⭐ **TOGGLE**, `doubleTapWindow` after the tap | `A16` |
+| 2 | an object + a second **TAPPED** anywhere | — (it only feeds §1.3's tap history) | — | ⭐⭐ **TOGGLE, immediately** — and it persists past the release | `A16` |
+| 2 | an object + a second **DOUBLE-tapped** | double-tap → camera home | same | ⭐ toggles **twice** (net nothing) **and** the camera resets — accepted, in the owner's words | `A16` |
 | 2 | an object + a second **lifted then replaced** | `A14`'s grace holds it "present" for `secondTouchGraceMs` | same | ⛔ **inert** — the mode never depended on presence, so C cannot have the defect `A14` fixed | `A14` · `A16` |
 
 ### ✅ Configurations that are the same in EVERY fork

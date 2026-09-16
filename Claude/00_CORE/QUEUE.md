@@ -59,10 +59,12 @@ setting: A and B read the mode from **presence**, C from a **discrete tap**. ⚠
 consequences worth carrying into the comparison — **C cannot have the defect `A14` fixed**
 (no lift-and-replace gap for the mode to fall through), and in C the second finger drives
 **one axis, never both**, so a roll and a depth push need a tap between them.
+⛔⛔ **Two device corrections on 2026-09-16**: the toggle is **immediate** (a deferral was
+built and felt as lag — a double tap now flips twice and also resets the camera, accepted in
+the owner's words) and it is a **session MODE**, surviving a release, which retires the
+*"rotation costs a tap every time"* cost I had stated against the fork.
 
-⛔ **What fork C owes a hand, specifically**: whether the **300 ms** toggle delay is
-acceptable (it is `doubleTapWindow`, and a tap cannot be known to be single until it
-passes — Unity's equivalent default is 500-750 ms); whether the axis purity beats `A12`'s
+⛔ **What fork C owes a hand, specifically**: whether the axis purity beats `A12`'s
 two-axes-at-once; and whether a tap on a **different** object should toggle too, which is
 deliberately left to rule 5 / 6bis. → [`queue_notes/IN13.md`](queue_notes/IN13.md).
 ⚠ **The flag latches only while nothing touches the glass**, and the HUD names the live
