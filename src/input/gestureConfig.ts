@@ -304,9 +304,12 @@ export interface GestureConfig {
    * * `1` — **fork B, `IN3`**: §2 rules 1–3 — face selection, 2bis's empty-stack
    *   precondition, 2ter/2quater on a flick, 2sexte about the remaining DOF, eviction by a
    *   shake. ⚠ Under construction; `queue_notes/IN3.md` lists what is wired.
-   * * `2` — **fork C, `OWNER_TBD`**: a third set the owner has not specified. ⛔ **Inert on
-   *   purpose**, and the HUD says so — it must never quietly behave like fork A, or a session
-   *   would believe it had tested something.
+   * * `2` — **fork C**: the owner's set, specified 2026-09-16 (`spec/FORK_C_ANCHOR_RULES.md`)
+   *   — hold an object, **tap** a face on another, and the held one turns the minimum amount
+   *   that makes its own face point the same way. **Parallel** (the CAD *align* sense, not a
+   *   mate), **one** alignment at a time, a shake releases it, a flick resets the rotation.
+   *   ⛔ **No flick alignment anywhere**: the owner left fork B because a release-time
+   *   trigger *"releases the finger from the object it is tracking"*.
    *
    * ⚠ Numeric so the URL override and the menu slider reach it with no new machinery:
    * `?anchorRules=1`. ⛔ It latches only while nothing touches the glass — switching into or

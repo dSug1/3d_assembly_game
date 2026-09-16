@@ -22,7 +22,16 @@
 import type { Quat, Vec3 } from "./vec";
 import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, shortestArc } from "./vec";
 
-export type ConstraintKind = "GRAVITY_ALIGN" | "WORLD_AXIS_ALIGN" | "MATE";
+/**
+ * ⚠ `FACE_ALIGN` is **fork C's** (`FORK_C_ANCHOR_RULES.md`): the owner's *"FollowerFace
+ * normal aligns with PioneerFace normal"*, frozen to a world direction at the tap.
+ * ⛔ It is deliberately NOT spelled as a `WORLD_AXIS_ALIGN` even though the solver treats
+ * the two identically — the kind is what the readout and `evict` name, and a constraint that
+ * came from another object's face must not claim it came from a screen axis. ⭐ And it is not
+ * a `MATE`: the normals end up **PARALLEL** (the owner's choice, 2026-09-16), which is the
+ * CAD *align* operation, where a mate is anti-parallel.
+ */
+export type ConstraintKind = "GRAVITY_ALIGN" | "WORLD_AXIS_ALIGN" | "FACE_ALIGN" | "MATE";
 
 export interface Constraint {
   readonly kind: ConstraintKind;
@@ -148,6 +157,35 @@ export interface EvictResult {
    * nothing to undo*. `IN7` owes the negative haptic; this is what it will read.
    */
   readonly refused: boolean;
+}
+
+/**
+ * ⭐⭐⭐ **FORK C's CAP OF ONE** — *"There can be only one alignment axis... I do not want to
+ * have 2 DOF removed."*
+ *
+ * ⛔⛔ THE OWNER'S SENTENCE AND THE GEOMETRY DISAGREE BY ONE, AND THIS IS THE RECONCILIATION.
+ * Bringing a face normal onto a direction fixes **two** of the three rotational DOF; the one
+ * that survives is the **spin about that normal**. So *"one alignment axis"* cannot mean *one
+ * DOF removed* — there is no such alignment. It means what this function does: **the stack
+ * holds at most ONE entry, and a new alignment REPLACES it.** ⭐ Which delivers exactly what
+ * the owner asked for, because §1.4's entry 2 — the soft twist that took the last DOF and
+ * froze the object in fork B — becomes unreachable by construction.
+ *
+ * ⚠⚠ **AND IT IS A REPLACEMENT, NOT AN APPEND, WHICH IS THE WHOLE POINT**: appending would
+ * drop the free DOF to zero on the second tap and reproduce the defect the owner reported
+ * against fork B (*"the second flick completely freezes the rotation"*).
+ *
+ * ⛔ A `MATE` on the stack is REFUSED rather than silently dropped or joined: fork C has no
+ * rule that pushes one (§4's `6quater` is flick-based and fork C has no flick), so this cannot
+ * happen today — and the day it can, whether an alignment may override an assembly
+ * relationship is the owner's call, not a default. `FORK_C_ANCHOR_RULES.md` §7.12.
+ */
+export function singleAlignment(
+  stack: readonly Constraint[],
+  c: Constraint,
+): { readonly stack: readonly Constraint[]; readonly refused: boolean } {
+  if (stack.some((e) => e.kind === "MATE")) return { stack, refused: true };
+  return { stack: [c], refused: false };
 }
 
 /**

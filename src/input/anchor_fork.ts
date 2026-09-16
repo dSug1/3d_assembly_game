@@ -10,16 +10,22 @@
  * * **`IN3`** — §2 rules 1–3: face selection, 2bis's *empty stack* precondition, 2ter/2quater
  *   pushing `GRAVITY_ALIGN`/`WORLD_AXIS_ALIGN` on a flick, 2sexte rotating about the one
  *   remaining DOF, and eviction by a back-and-forth shake.
- * * **`OWNER_TBD`** — ⚠ **a third set the owner has not specified yet.** It is deliberately
- *   **INERT**: it creates and consults nothing, and the HUD says so.
+ * * **`FORK_C`** — ✅ **SPECIFIED 2026-09-16** (`spec/FORK_C_ANCHOR_RULES.md`), and no longer
+ *   inert. Hold one object, **TAP** a face on another, and the held object turns the minimum
+ *   amount that makes its own face point **the same way** (parallel — the CAD *align* sense,
+ *   not a mate). One alignment at a time, replaced by the next; a shake releases it; a flick
+ *   resets the rotation. ⛔ **NO FLICK ALIGNMENT** — the owner left fork B because a
+ *   release-time trigger *"releases the finger from the object it is tracking"*.
  *
  * ⛔⛔ **AND THIS FLAG IS A DIFFERENT SHAPE FROM `D26`'s, WHICH MATTERS.** That one selected
  * between two readings that differed by **one inversion in one function**, so both sides were
  * always live and equally exercised. ⭐ This one is a **GATE**: fork `NONE` is the absence of
  * a rule set. So the risk is not a subtle disagreement between two live paths, it is **a
- * session believing it tested a fork that did nothing** — which is why `OWNER_TBD` must be
- * visibly inert rather than quietly falling back to `NONE`, and why the readout names the
- * fork on the glass.
+ * session believing it tested a fork that did nothing** — which is why fork C was visibly
+ * inert rather than quietly falling back to `NONE` while it was unspecified, and why the
+ * readout names the fork on the glass.
+ * ⭐ It is named `FORK_C` and not `OWNER_TBD` since 2026-09-16: **a name that says *to be
+ * defined* while the thing runs rules is a lie the compiler cannot catch.**
  *
  * ⭐ `D28` is the precedent for how this ends: the day one set is chosen, the others are
  * **deleted** — not left dormant, because a dormant fork is a trap. ⚠ Name that expiry now:
@@ -34,8 +40,8 @@ export type AnchorFork =
   | "NONE"
   /** §2 rules 1–3 — the set being built. */
   | "IN3"
-  /** ⚠ The owner's third set, not yet specified. **Inert on purpose.** */
-  | "OWNER_TBD";
+  /** ✅ The owner's set — tap-to-align, one alignment, no flick. `FORK_C_ANCHOR_RULES.md`. */
+  | "FORK_C";
 
 /**
  * Read the config flag as a fork.
@@ -48,14 +54,14 @@ export type AnchorFork =
  */
 export function anchorForkOf(flag: number): AnchorFork {
   if (flag === 1) return "IN3";
-  if (flag === 2) return "OWNER_TBD";
+  if (flag === 2) return "FORK_C";
   return "NONE";
 }
 
 /** ⭐ Short form for the readout. ⚠ Names the FORK, so a device report can be attributed. */
 export function anchorForkLabel(f: AnchorFork): string {
   if (f === "IN3") return "anchor=IN3";
-  if (f === "OWNER_TBD") return "anchor=TBD(inert)";
+  if (f === "FORK_C") return "anchor=forkC";
   return "anchor=none";
 }
 
@@ -63,12 +69,32 @@ export function anchorForkLabel(f: AnchorFork): string {
  * ⭐⭐ Does this fork run `IN3`'s rules at all?
  *
  * ⛔ The ONE question the wiring asks, in one place, so the gate cannot be spelled three
- * different ways at three call sites. ⚠ `OWNER_TBD` answers **false** — it is inert until
- * the owner specifies it, and inert must mean *nothing happens*, not *something plausible
- * happens*.
+ * different ways at three call sites. ⚠ `FORK_C` answers **false**: it has its own rules and
+ * shares none of `IN3`'s — no flick alignment, no `GRAVITY_ALIGN`, no second constraint.
  */
 export function runsIn3(f: AnchorFork): boolean {
   return f === "IN3";
+}
+
+/**
+ * ⭐⭐ Does this fork run **fork C's** rules? ⛔ The mirror of `runsIn3`, and for the same
+ * reason: one spelling, one place.
+ *
+ * ⚠ The two are mutually exclusive by construction and the vectors say so — a session that
+ * could turn both on at once would be judging a rule set nobody specified.
+ */
+export function runsForkC(f: AnchorFork): boolean {
+  return f === "FORK_C";
+}
+
+/**
+ * ⭐⭐⭐ Does this fork SELECT FACES at a press? ⛔ Both `IN3` and fork C do, for entirely
+ * different rules — `IN3` needs the face a flick will align, fork C needs the Follower and
+ * the Pioneer. ⚠ Fork `NONE` must not, or a session judging today's behaviour would see a
+ * highlight the shipped default does not draw.
+ */
+export function selectsFaces(f: AnchorFork): boolean {
+  return runsIn3(f) || runsForkC(f);
 }
 
 /**

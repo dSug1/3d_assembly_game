@@ -18,6 +18,7 @@ export * from "./holder_binding";
 export * from "./mode_toggle";
 export * from "./anchor_fork";
 export * from "./drag_rule";
+export * from "./fork_c";
 export * from "./align_flick";
 export * from "./display_pose";
 export * from "./shake";

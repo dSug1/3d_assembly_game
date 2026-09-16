@@ -5,8 +5,11 @@
  * were always live and equally exercised. ⭐ This one is a **GATE**: fork A is the *absence*
  * of a rule set and fork C is *not specified yet*. So the risk is not a subtle disagreement
  * between two live paths — it is **a session believing it tested a fork that did nothing**.
- * ⚠ That is what these vectors are shaped around: `OWNER_TBD` must be inert AND
- * distinguishable, never a quiet fallback to fork A.
+ *
+ * ✅ **FORK C IS SPECIFIED SINCE 2026-09-16** (`spec/FORK_C_ANCHOR_RULES.md`) and is no longer
+ * inert. ⚠ Its vector here changed with it, and the shape of the file did not: what these
+ * assert is that each fork runs **its own** rules and no other's — the failure that matters
+ * is still a session judging a rule set it did not think it was judging.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -14,14 +17,16 @@ import {
   anchorForkLabel,
   anchorForkOf,
   anchorForkPending,
+  runsForkC,
   runsIn3,
+  selectsFaces,
   type AnchorFork,
 } from "@input/anchor_fork";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 
 const A: AnchorFork = "NONE";
 const B: AnchorFork = "IN3";
-const C: AnchorFork = "OWNER_TBD";
+const C: AnchorFork = "FORK_C";
 
 describe("anchorForkOf — the flag reads as a rule set", () => {
   it("0 is fork A, and it IS the shipped default", () => {
@@ -31,7 +36,7 @@ describe("anchorForkOf — the flag reads as a rule set", () => {
     expect(anchorForkOf(DEFAULT_CONFIG.anchorRules)).toBe(A);
   });
 
-  it("1 is fork B — `IN3` — and 2 is the owner's set", () => {
+  it("1 is fork B — `IN3` — and 2 is fork C, the owner's set", () => {
     expect(anchorForkOf(1)).toBe(B);
     expect(anchorForkOf(2)).toBe(C);
   });
@@ -49,13 +54,26 @@ describe("⛔⛔ runsIn3 — the gate, and fork C answers NO", () => {
     expect(runsIn3(A)).toBe(false);
   });
 
-  it("⛔⛔ FORK C IS INERT — it must not quietly behave like fork A's rules either", () => {
-    // ⭐⭐ THE VECTOR THIS FILE EXISTS FOR. `OWNER_TBD` is a slot for rules that do not exist.
-    // If it ran `IN3`, a session would test `IN3` believing it tested something else; if it
-    // silently WERE fork A, the owner would have no way to tell "not specified yet" from
-    // "specified and doing nothing". ⛔ So: inert, and labelled inert.
+  it("⛔⛔ FORK C RUNS ITS OWN RULES AND NONE OF `IN3`'s — the two never overlap", () => {
+    // ⭐⭐ THE VECTOR THIS FILE EXISTS FOR, in its second form. It used to assert that fork C
+    // was **inert** and labelled `inert`; the owner specified it on 2026-09-16, so what has to
+    // be true now is that the two rule sets are mutually exclusive.
+    // ⛔ They share no rule: fork C has no flick alignment, no `GRAVITY_ALIGN` and no second
+    // constraint. A session with both gates open would be judging a set nobody specified.
     expect(runsIn3(C)).toBe(false);
-    expect(anchorForkLabel(C)).toContain("inert");
+    expect(runsForkC(C)).toBe(true);
+    expect(runsForkC(B)).toBe(false);
+    expect(runsForkC(A)).toBe(false);
+    for (const f of [A, B, C]) expect(runsIn3(f) && runsForkC(f)).toBe(false);
+  });
+
+  it("⭐⭐ and BOTH rule sets select faces, while fork A must not", () => {
+    // ⛔ `IN3` needs the face a flick will align; fork C needs the Follower and the Pioneer.
+    // ⚠ Fork A draws no highlight — a session judging today's shipped behaviour must not see
+    // a marker the default does not draw. One spelling of the question, one place.
+    expect(selectsFaces(B)).toBe(true);
+    expect(selectsFaces(C)).toBe(true);
+    expect(selectsFaces(A)).toBe(false);
   });
 
   it("⭐ each fork is distinguishable on the readout", () => {
@@ -64,6 +82,11 @@ describe("⛔⛔ runsIn3 — the gate, and fork C answers NO", () => {
     const labels = [A, B, C].map(anchorForkLabel);
     expect(new Set(labels).size).toBe(3);
     expect(anchorForkLabel(B)).toBe("anchor=IN3");
+    // ⛔⛔ AND FORK C'S LABEL NO LONGER SAYS `inert`, because it is not. ⭐ A name that says
+    // *to be defined* while the thing runs rules is a lie the compiler cannot catch — which
+    // is why the type member was renamed from `OWNER_TBD` at the same time.
+    expect(anchorForkLabel(C)).not.toContain("inert");
+    expect(anchorForkLabel(C)).toBe("anchor=forkC");
   });
 });
 

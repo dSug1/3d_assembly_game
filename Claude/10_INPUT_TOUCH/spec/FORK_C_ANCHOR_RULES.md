@@ -1,13 +1,16 @@
 # FORK C — the owner's anchor and alignment rules
 
-> **STATUS** · 🔨 **SPECIFIED, NOT BUILT** (dictated 2026-09-16, branch `1.0.8-`) · **OWNS** ·
+> **STATUS** · 🔨 **STAGE 1 BUILT, NO DEVICE LOOK YET** (dictated + built 2026-09-16, `1.0.8-`) · **OWNS** ·
 > the rule set behind `?anchorRules=2`
 > **READ IF** · you are building or judging fork C
 > **LAST VERIFIED** · 2026-09-16
 
-⛔ **NOTHING IS BUILT.** `anchorForkOf(2)` returns `OWNER_TBD`, `runsIn3` answers **false**,
-and the HUD prints `anchor=TBD(inert)`. ⭐ The owner asked for the conflict check **before**
-any building, which is §4–§6 of this file.
+✅ **STAGE 1 IS BUILT** behind `?anchorRules=2` — the alignment, its cap, the highlight, the
+mode switch, the shake release, the rotation reset and the twist about the aligned normal.
+⛔ **NO HAND HAS TOUCHED IT.** Rule 5: a look on a real device closes a change and nothing
+else does. ⚠ `TargetPosition`, the gizmo, the orbit and the approach (§2's last four bullets)
+are **NOT built** — §7's remaining questions gate them.
+⭐ The conflict check the owner asked for, before any building, is §4–§6.
 
 ---
 
@@ -86,7 +89,7 @@ as a global behaviour: fork A shipped without it since `D36`.
 |---|---|---|---|
 | **C0** | nothing held | — | camera: orbit (§2 r1), pinch (§4 r4), double-tap home |
 | **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | **tap on obj 2's face ⇒ ALIGN** (→ C2). Pressed-and-held: ⚠ §7.5 |
-| **C2** | obj 1 aligned, `FollowerFace` highlighted, mode forced `TRANSLATE` | ⚠ **§7.3 — undefined** | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
+| **C2** | obj 1 aligned, `FollowerFace` highlighted, mode forced `TRANSLATE` | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
 | **C3** | aligned + `TargetPosition` live | `ROTATE`: orbit obj 1 about the target. `TRANSLATE`: move obj 1 along centre→target | its own delta moves **obj 2** along target→centre |
 | — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null (→ C1) | |
 | — | flick (any state) | **orientation restored to the press pose** (the reinstated reset) | |
@@ -304,19 +307,34 @@ one finger on it and no target. §7.3 is the question that blocks the first buil
 
 ---
 
-## 7. OPEN QUESTIONS — the owner's to answer, in priority order
+## 7. QUESTIONS — ✅ FOUR ANSWERED, and the rest still gate stage 2
 
-1. **Anti-parallel or parallel**, and is *one alignment* a **cap** (stack of one, spin free)?
-   What does a second tap on a new face do — replace, or refuse? (§5.1, §5.2)
-2. **The flick reset while an alignment holds**: refuse it, re-solve the constraint after
-   resetting, or let the flick clear the alignment as the shake does? (§4.5)
-3. **C2 — an aligned object, one finger, no target.** Twist about the aligned normal only
-   (2sexte's driver is built and vectored), free rotation that breaks the alignment, or
-   nothing? (§4.2, §6)
-4. **The tap's double meaning** as set out in §4.1 — correct? (assumed, not dictated)
-5. **A second touchpoint pressed and HELD on obj 2 while obj 1 is NOT aligned** — fork A's
-   roll/depth, §4's 6bis/6ter, or refuse? (§4.2)
-6. **The same, outside any object** while aligned. (§4.2)
+✅ **1. PARALLEL, with a CAP OF ONE** (owner, 2026-09-16). The normals end up pointing the
+**same way** — the CAD *align* sense, not a mate — with the consequence in §5.2 accepted: the
+held object presents its opposite side toward the tapped face. ⭐ *One alignment axis* is
+implemented as **at most one entry on the stack, replaced by the next tap**
+(`singleAlignment`), which makes fork B's zero-DOF freeze unreachable by construction.
+
+✅ **2. THE RESET IS SCOPED BY *WHEN*, NOT BY *WHETHER*** — the owner's own words:
+> *"If the object was already aligned when the rotation was started, reset to the beginning
+> of the rotation (therefore the alignment is conserved). If the alignment occurred during the
+> rotation, reset the rotation (therefore this looses the alignment)."*
+
+⭐⭐ **A SHARPER RULE THAN ANY OF THE THREE I OFFERED**, and the reason is worth keeping: I
+framed the question as a property of the STATE (*is it aligned?*) and the answer is a property
+of the GESTURE (*when did the alignment happen?*). The state cannot separate the two cases;
+the gesture can. ⭐ And the first case then costs nothing: a snapshot taken while aligned
+already satisfies the constraint, so restoring it conserves the alignment for free.
+
+✅ **3. TWIST ABOUT THE ALIGNED NORMAL** — `anchor_rotate.ts`, reused unchanged from `A3`.
+
+✅ **4. THE TAP'S DOUBLE MEANING** as set out in §4.1 — confirmed.
+
+✅ **5. EACH FINGER MOVES ITS OWN OBJECT** while obj 1 is not aligned — today's behaviour for
+two holders, per the current mode. ⚠ Not roll/depth: that is reserved for a second touchpoint
+on the **same** object, which the router already routes differently (`SECOND` vs `OBJECT`).
+6. **A second touchpoint outside any object** while aligned — fork A's roll/depth, or
+   nothing? (§4.2) ⚠ It is also the only channel that could rescue §5.4's degenerate twist.
 7. **`A15`'s orphan rule in C3**: exempt the holder while a target is live, or let the
    selection drop when the object leaves the finger? (§4.4)
 8. **Defaults**: `ROTATE` inside fork C only, and the flag's default left at `NONE` until a
@@ -354,3 +372,36 @@ needs a tunable pair (angle gain) plus a slider, like every other number here.
 still needs face picking and the highlight, which only fork B currently wires, and the
 constraint stack, which is fork-agnostic core. What it does **not** take from fork B is
 `align_flick.ts`, 2bis's empty-stack precondition and 2ter/2quater.
+
+---
+
+## 9. WHAT STAGE 1 BUILT — 2026-09-16
+
+✅ **Engine-free, 15 vectors, 3 mutants** (`src/input/fork_c.ts`, `tests/fork_c.test.ts`):
+`faceAlignConstraint` (the parallel align, world-frozen), `tapMeaning` (the tap's two
+meanings), `flickResetPlan` (the owner's *when*-scoping), and `singleAlignment` in
+`core/constraint_stack.ts` (the cap of one, with a `MATE` on the stack refusing).
+⭐ The mutants: anti-parallel reddens 5 including the composition, append-instead-of-replace
+reddens the cap, and a reset that never drops reddens the *during-the-gesture* case.
+
+✅ **Wired** (`src/render/scene.ts`): the Pioneer tap on a second holder's `TAP` verdict, the
+alignment applied through `solve`, the highlight raised **at the alignment** and dropped with
+the constraint, the mode switch to `TRANSLATE`, the shake release **in either mode** (see
+below), the rotation reset, and the twist about the aligned normal in `ROTATE`.
+
+⚠⚠ **THREE PLACES FORK C DELIBERATELY DIVERGES FROM A DECISION ALREADY TAKEN**, each recorded
+where it is written:
+
+1. **`D32`'s shake is `ROTATE`-only; fork C's is not.** Fork C's alignment *ends* in
+   `TRANSLATE`, so a mode-gated shake would force a toggle before the hand could undo — and
+   the owner's sentence carries no mode condition. ⚠ The cost: in fork C a vigorous
+   repositioning can evict. The four shake tunables are the only defence and have sliders.
+2. **`D36` deleted the rotation reset globally; fork C reinstates it** — as a fork rule, not a
+   restored global behaviour. Fork A shipped without it and still does.
+3. **The mode default is `ROTATE` inside fork C only** — fork A's `TRANSLATE` default has been
+   closed by a hand, and the flag's own default stays `0` until fork C is closed too (§4.6).
+
+⛔ **What a device look should ask first**, in order: does the tap reach the alignment at all
+(the HUD prints `forkC: ALIGNED …` or the refusal); is *parallel* what the hand expected once
+it sees it; does the twist feel like a control or like a dead axis; and can an ordinary
+reposition shake the alignment away by accident.

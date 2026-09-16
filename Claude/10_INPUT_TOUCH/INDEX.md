@@ -35,7 +35,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**596 golden vectors, all passing** (37 → 632 → 574 → 596).
+**612 golden vectors, all passing** (37 → 632 → 574 → 612).
 ⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
 longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
 protect anything — it certifies a module nothing calls, which is exactly how the roll
