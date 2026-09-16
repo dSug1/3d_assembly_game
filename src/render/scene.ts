@@ -38,6 +38,7 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
+import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -67,6 +68,12 @@ import {
   isTapRelease,
   toggleBehaviour,
   type Behaviour,
+  adoptAnchorFork,
+  anchorForkLabel,
+  anchorForkOf,
+  anchorForkPending,
+  runsIn3,
+  type AnchorFork,
   type HolderBinding,
   type InputEvent,
   displayPose,
@@ -109,6 +116,8 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
+import { faceFromPickedNormal } from "../core/face_pick";
+import { shortestArc } from "../core/vec";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -251,6 +260,38 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (id === undefined) return;
     world = setWorldPlacement(world, id, placed);
   };
+
+  /**
+   * ⭐⭐⭐ THE SELECTED FACE, DRAWN — `IN3` rule 2's only visible effect.
+   *
+   * ⛔⛔ WITHOUT IT, RULE 2 IS UNJUDGEABLE. Selecting a face changes nothing a user can see
+   * until 2ter or 2quater exist, so *"did it pick the face I aimed at?"* has no answer on the
+   * glass — and every rule built on top would inherit that doubt. ⭐ The HUD prints the face
+   * id and the pick's cosine; this is the same answer where the hand is looking.
+   *
+   * ⚠ A thin quad, not a material change: a per-face material needs submeshes, which is a
+   * mesh-authoring decision `3D4` has not made yet. ⛔ `DOUBLESIDE` on purpose — Babylon's
+   * plane winding faces one way and which way is exactly the sort of engine detail that
+   * would make the highlight invisible from one side only, found late and on a device.
+   */
+  const faceQuad = CreatePlane(
+    "selected-face",
+    { size: OBJECT_SIZE_M, sideOrientation: 2 /* DOUBLESIDE */ },
+    scene,
+  );
+  const faceQuadMat = new StandardMaterial("selected-face-mat", scene);
+  faceQuadMat.emissiveColor = new Color3(0.2, 0.9, 1);
+  faceQuadMat.disableLighting = true;
+  faceQuadMat.alpha = 0.35;
+  faceQuad.material = faceQuadMat;
+  faceQuad.rotationQuaternion = Quaternion.Identity();
+  // ⛔⛔ BOTH FLAGS MATTER, and each has a precedent in this file. `isPickable = false` or
+  // the highlight would intercept the very picks that select a face — the second tap would
+  // hit the marker, not the object. ⚠ And it is NOT tagged `orbitCandidate`, so it cannot
+  // become a barycentre: a readout that moved the thing it describes is the trap the
+  // orbit-centre marker already documents.
+  faceQuad.isPickable = false;
+  faceQuad.isVisible = false;
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
   // Without it the barycentre selection is invisible, and "it seems to orbit the right
@@ -855,6 +896,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // device pass can tell *"the toggle did not fire"* from *"I toggled twice"*.
             // ⚠ Shown even with nothing held: the mode is the state the next press inherits.
             `  [${behaviour}]` +
+            // ⭐⭐⭐ WHICH ANCHOR RULE SET IS LIVE, and it must be on the glass: fork A creates
+            // no constraints and fork C creates none YET, so *"nothing happened"* is the
+            // expected outcome in two of the three — and indistinguishable from a defect
+            // without a readout. ⛔ `D28` is the precedent: a device report that does not name
+            // the fork is unattributable.
+            `  ${anchorForkLabel(anchorFork)}` +
+            // ⛔ THE SELECTED FACE, because §2 rule 2 has no other visible effect yet: without
+            // this, *"did it select the face I aimed at?"* is unanswerable on the glass, and
+            // every rule built on top of it would inherit that doubt.
+            (selectedFace === null
+              ? ""
+              : `  face=${selectedFace.faceId}·${selectedFace.cos.toFixed(2)}`) +
+            (anchorForkPending(anchorFork, anchorForkOf(cfg.anchorRules))
+              ? `→${anchorForkLabel(anchorForkOf(cfg.anchorRules))}⛔PENDING`
+              : "") +
             // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
             // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
             // the other two sliders moves, so a written-down number would go stale the
@@ -929,6 +985,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
         tunable("sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
         tunable("sway reference turn (deg/s)", "rotateSwayReferenceDegPerS", 20, 400, 10),
+      ],
+    },
+    {
+      // ⭐⭐⭐ NOT A TUNABLE: it selects which RULE SET is in force (`D29`), where every other
+      // slider changes a number. ⚠ 0 = today's behaviour, 1 = `IN3` under construction,
+      // 2 = the owner's third set, which is INERT until specified.
+      title: "⭐ ANCHOR RULES (IN3 fork)",
+      sliders: [
+        tunable("0=none  1=IN3  2=owner's set (inert)", "anchorRules", 0, 2, 1),
       ],
     },
     {
@@ -1412,6 +1477,34 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   let behaviour: Behaviour = initialBehaviour();
 
   /**
+   * ⭐⭐⭐ WHICH ANCHOR / ALIGNMENT RULE SET IS LIVE (`D29`) — latched.
+   *
+   * ⛔ It may change **only while nothing is touching the glass**, the same rule the movement
+   * mode follows and for a stronger reason: switching into or out of `IN3` mid-drag would
+   * change whether the release pushes a constraint. ⚠ A flip made mid-gesture is deferred,
+   * not dropped, and the readout says so.
+   */
+  let anchorFork: AnchorFork = anchorForkOf(cfg.anchorRules);
+
+  /**
+   * ⭐⭐⭐ `IN3`'s SELECTED FACE — §2 rule 2's other half, and the input every remaining
+   * `IN3` rule reads: 2ter anchors it to gravity, 2quater to a world axis, `MATE` joins two.
+   *
+   * ⛔ `null` in forks A and C, always. ⚠ It carries the pick's COSINE because a later rule
+   * may want to refuse a grazing pick — and nothing refuses one yet, so the number is
+   * evidence on the readout rather than a hidden threshold.
+   */
+  let selectedFace: { objectId: string; faceId: string; cos: number } | null = null;
+
+  /** ⭐ Adopt a pending fork if the glass is empty. Called on every pointer event AND every
+   * frame — a flip made while idle produces no pointer event, and the readout must not lag
+   * the person who just made it. ⛔ `router.size`, not `activeCount`: an ignored finger is
+   * still a finger on the glass. */
+  const syncAnchorFork = (): void => {
+    anchorFork = adoptAnchorFork(anchorFork, anchorForkOf(cfg.anchorRules), router.size);
+  };
+
+  /**
    * ⭐⭐ Judge one release as a tap, keep §1.3's history, and toggle the mode **immediately**.
    *
    * ⛔⛔ IMMEDIATELY, device-corrected the same day: *"there is a lag when the second
@@ -1474,6 +1567,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         noise.push(s);
       }
     }
+
+    // ⭐ The anchor fork latches here, before anything is dispatched, so one event cannot be
+    // judged half under one rule set and half under another.
+    syncAnchorFork();
 
     // ⭐⭐⭐ A15 — AN ORPHANED SELECTION IS COLLECTED HERE, AT THE NEXT INPUT EVENT, and
     // before anything is dispatched. ⛔ The owner's requirement: the lift itself changes
@@ -1549,6 +1646,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       }
 
       const mesh = routed.object!;
+      // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*
+      //
+      // ⛔⛔ FROM THE PICKED **NORMAL**, never from `pickInfo.faceId`: that is a TRIANGLE
+      // index, a box face is two of them, and an imported mesh face is arbitrarily many.
+      // ⭐ `core/face_pick.ts` owns the mapping and carries the frame — the pick arrives in
+      // world, face normals are stored local, and getting that direction backwards is the
+      // silent error that only shows once an object has been turned.
+      // ⚠ GATED ON THE FORK: in forks A and C no face is ever selected, so nothing
+      // downstream can begin to depend on a selection that the shipped default does not
+      // make. ⛔ `getNormal(true)` asks Babylon for the WORLD-space normal at the hit.
+      if (runsIn3(anchorFork)) {
+        const n = pick?.getNormal(true);
+        const id = idOf.get(mesh);
+        const hit =
+          n && id !== undefined
+            ? faceFromPickedNormal(world, id, [n.x, n.y, n.z] as Vec3)
+            : null;
+        selectedFace = hit ? { objectId: id!, faceId: hit.faceId, cos: hit.cos } : null;
+        lastVerdict = hit
+          ? `IN3: selected ${id}/${hit.faceId} (cos ${hit.cos.toFixed(2)})`
+          : "IN3: no face resolved";
+      }
       const rec = new Recognizer(cfg, poseOf(mesh), taps);
       rec.press(s);
       held.set(e.pointerId, {
@@ -1882,6 +2001,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         behaviour = toggleBehaviour(behaviour);
         lastVerdict = `tap on the object → ${behaviour}`;
       }
+      // ⭐ §3 rule 3 — *"release unselects object and face, stack preserved."* ⛔ The stack
+      // lives on the OBJECT, so preserving it is not an action: it is what NOT clearing the
+      // selection state means.
+      selectedFace = null;
       forgetAnchor(routed.seq);
       router.release(e.pointerId);
       held.delete(e.pointerId);
@@ -1896,6 +2019,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   let lastFrameMs: number | null = null;
   engine.runRenderLoop(() => {
     const now = performance.now();
+
+    // ⭐ And on idle frames too: a flip made with an empty glass produces no pointer event.
+    syncAnchorFork();
     const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
     lastFrameMs = now;
 
@@ -2019,6 +2145,46 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // fewer to be wrong about.
       writePose(mesh, pose.orientation);
       mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
+    }
+
+    // ⭐⭐⭐ THE FACE HIGHLIGHT, placed from the MESH's world matrix — not from the model.
+    //
+    // ⛔⛔ THAT CHOICE IS THE WHOLE CORRECTNESS OF IT. What the eye sees is
+    // `displayPose = SWAY ∘ FOLLOW ∘ model`, so a highlight positioned from the MODEL would
+    // sit where the object *is* while the object is drawn where it is *going* — lagging by
+    // the follower's time constant during every drag and by the sway's excursion after it.
+    // ⭐ Reading the mesh's matrix makes the two agree by construction, which is the same
+    // reason the barycentre subtracts the sway rather than compensating for it.
+    // ⚠ The local face centre and normal come from the MODEL, which is where faces live.
+    if (selectedFace === null) {
+      faceQuad.isVisible = false;
+    } else {
+      const m = meshOf.get(selectedFace.objectId);
+      const face = world.objects
+        .get(selectedFace.objectId)
+        ?.faces.find((f) => f.id === selectedFace!.faceId);
+      if (!m || !face) {
+        faceQuad.isVisible = false;
+      } else {
+        const wm = m.getWorldMatrix();
+        const centre = Vector3.TransformCoordinates(
+          new Vector3(face.centre[0], face.centre[1], face.centre[2]),
+          wm,
+        );
+        const normal = Vector3.TransformNormal(
+          new Vector3(face.normal[0], face.normal[1], face.normal[2]),
+          wm,
+        ).normalize();
+        // ⭐ Lifted off the surface by a hair, or it z-fights with the face it marks.
+        // ⚠ In METRES like everything else in this scene — `CAMERA_NEAR_PLANE_M`'s lesson.
+        faceQuad.position.copyFrom(centre.add(normal.scale(0.0015)));
+        // ⛔ The plane's own facing is rotated onto the face normal with the SAME
+        // `shortestArc` the object model uses — engine-free, vectored, and one definition of
+        // *"turn this onto that"* rather than a second one written here in Babylon terms.
+        const q = shortestArc([0, 0, 1], [normal.x, normal.y, normal.z]);
+        faceQuad.rotationQuaternion!.set(q[1], q[2], q[3], q[0]);
+        faceQuad.isVisible = true;
+      }
     }
 
     scene.render();

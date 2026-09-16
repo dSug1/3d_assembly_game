@@ -472,3 +472,83 @@ the same defect one layer up: `rollAppliedDeg` was current and `lastRollDeg` was
 ⚠ `QUEUE.md` is a front door and this cell had grown to an essay inside a table. ⛔ Distilled there to state + one lesson + this pointer; the full text is below, unrewritten, per `README.md` rule 2.
 
 > 🔨 **IN PROGRESS.** ✅ **The eviction shake is BUILT** (2026-09-15, `src/input/shake.ts`, 15 vectors, engine-free, not yet wired). ⭐⭐ Its non-obvious decision: **a circle projects to a back-and-forth on every axis**, so the detector is defined as oscillation ALONG AN AXIS — without that, spinning an anchored part to look at it would evict, which `A3` made reachable. ⭐ Falsified before trusted: removing straightness reddens the circle vector, removing the leg hysteresis reddens the nudge. ⭐ `suppressesFlick` arms on the FIRST reversal, which is the flick guard A4 demands. ✅ **2sexte + A3's handover BUILT** (`src/input/anchor_rotate.ts`, 25 vectors): every rotation is about the CONSTRAINT axis, and *the anchor survives* is asserted directly — with rotating about the VIEW axis as the counter-example, swinging the normal >30° off target. ⭐⭐ **A finding for `anchorHandoverCos`**: the near side's excursion is `r·sin α`, so a rad/mm gain turns the object at the same rate while the motion FADES — the drag goes quiet over a range *before* it becomes undefined, so the handover must happen while it is still visible. ⚠ **Three of my own fixtures were wrong in that one file**, each looking like a code defect (mistake shape 5); all caught by deriving the geometry independently. ✅ **`scene.ts` WIRED to the object model** — see the `3D1` row. ⭐⭐ Also landed `src/input/display_pose.ts`: the chain `SWAY ∘ FOLLOW ∘ model` as ONE expression, engine-free and vectored, written BEFORE the rewiring as the `3D1` row demanded. Its RIGIDITY vector had never existed — both half-implementations pass a pairwise-distance test, so only an orientation assertion separates a block from a crowd. ✅✅ **`A7` AND `A8` LANDED 2026-09-15 and both are on the glass**: every object gesture now stands on a **GRAVITY FRAME** (`src/input/gravity_frame.ts` — yaw about the world vertical, pitch about the horizontal, roll about the view direction flattened onto the ground), and a roll **REBASES** to the start of its circle instead of keeping the yaw/pitch swept before the 60° commit. ⭐ `A7`'s composition is vectored END TO END in `tests/a7_wiring.test.ts` at four camera tilts — ⛔ which is what settled a report that the gravity frame had regressed: it had not, and the owner withdrew it. ⛔ **`A9`/`IN12` is the live defect instead**: no deadband on `dx`/`dy`, so a still finger turns a held object. ⛔ Still to do: 2bis's precondition, **face selection from the picked NORMAL** (not `faceId` — triangle ordering is an engine detail), 2ter/2quater + the flick skip, wiring the shake to eviction, the two handover tunables with sliders, and ⛔ **the device pass that closes both `IN3` and `3D1`**. ⛔ **It also CLOSES `3D1`**, which has no visible behaviour of its own. Three things it owns: rule 2bis's missing PRECONDITION (*an empty constraint stack* — an anchored object currently rotates freely and would silently break its own anchor), the triangle→`FaceId` mapping at the render seam, and the eviction gesture. ✅ **Four owner decisions landed 2026-09-15 and the row is fully unblocked** — `D12`/`D15` eviction is a **quick back-and-forth** (it left the double-tap, then left the roll channel too), `D13` it **spares MATEs**, `D14` **roll drives an anchored object's free DOF while 2sexte suppresses where it degenerates**, on ONE handover constant with hysteresis. ⛔ Non-negotiable: **skip the flick test once one reversal is seen**, or an abandoned shake ADDS a constraint. Amendments A1–A4 → [`queue_notes/IN3.md`](queue_notes/IN3.md)
+
+
+---
+
+## 🔨 2026-09-16 — THE FORK, AND `IN3`'s FIRST RULE IS WIRED
+
+⭐ `D29`: three anchor-rule sets behind `anchorRules` (`?anchorRules=1`, or the menu's
+`⭐ ANCHOR RULES` slider), so today's behaviour and `IN3` can be driven in one session.
+
+| flag | fork | what it does |
+|---|---|---|
+| `0` | **A — `NONE`** | today's behaviour. No constraint created, consulted or cleared. ⭐ **The default** |
+| `1` | **B — `IN3`** | §2 rules 1–3, under construction. What is wired is below |
+| `2` | **C — `OWNER_TBD`** | ⛔ **inert**, and labelled inert on the HUD, until the owner specifies it |
+
+⛔⛔ **IT IS A GATE, NOT AN INVERSION, AND THAT CHANGES THE FAILURE MODE.** `D26`'s flag had
+two live paths differing by one inversion; here two of three forks create nothing, so
+*"nothing happened"* is the **expected** outcome in both — and indistinguishable from a defect
+without a readout. ⭐ So the HUD names the live fork, fork C says `inert` rather than falling
+back silently, and the validator refuses anything but 0/1/2.
+⚠ `IN3` is **not** the default: an unbuilt rule set as the shipped behaviour would make every
+device session judge a moving target.
+
+### ✅ BUILT: rule 2 — face selection, from the picked NORMAL
+
+`src/core/face_pick.ts` · `tests/face_pick.test.ts` · **9 vectors**, engine-free.
+
+⛔⛔ **NOT from `pickInfo.faceId`.** That is a TRIANGLE index: a box face is two of them, an
+imported mesh face is arbitrarily many, and the ordering is a detail of however the geometry
+was built — `3D4` would break it on the first import. ⭐ The **normal is geometry**, and it is
+what the user aimed at: take the hit's surface normal and pick the face whose own outward
+normal points most nearly the same way.
+⭐ The comparison happens in **one frame**: the pick arrives in world, face normals are
+stored local, and the pick is rotated by the object's inverse world orientation to meet them.
+⚠ It returns the winning face **and its cosine** — a later rule may want to refuse a grazing
+pick, and **nothing refuses one here**: handing back the evidence beats burying a threshold in
+a function whose job is *which face*.
+⛔ Degenerate inputs return `null`, never a default (`LESSONS_CARRIED` §6).
+
+✅ **AND THE FACE IS DRAWN** — a thin emissive quad on the selected face
+(`selected-face` in `scene.ts`). ⛔⛔ Without it rule 2 is **unjudgeable**: selecting a face
+changes nothing visible until 2ter/2quater exist, so *"did it pick the face I aimed at?"* has
+no answer on the glass, and every rule built on top would inherit that doubt.
+⭐⭐ **Placed from the MESH's world matrix, not the model** — what the eye sees is
+`displayPose = SWAY ∘ FOLLOW ∘ model`, so a highlight positioned from the model would lag by
+the follower's time constant during every drag and by the sway's excursion after it.
+⚠ Both guards have precedents in this file: `isPickable = false` (or the highlight would
+intercept the picks that select a face) and **not** tagged `orbitCandidate` (or a readout
+would move the barycentre it describes). ⭐ Rotated onto the face normal with the model's own
+`shortestArc`, not a second Babylon-side definition of *turn this onto that*.
+
+✅ **Also wired**: §3 rule 3 — a release unselects the face. ⭐ The stack is *preserved* by
+construction, because it lives on the object; preserving it is not an action.
+
+### ⚠⚠ MISTAKE SHAPE 5 AGAIN — MY OWN FIXTURE, CAUGHT BY A MUTANT
+
+I wrote that the **180°** rotation case was *"the sharpest: the wrong direction gives exactly
+the OPPOSITE face rather than a near miss."* ⛔ **It is the one case that proves nothing about
+the frame direction**: a half turn is its own inverse, so `q` and `q⁻¹` rotate identically and
+the wrong mapping passes it untouched.
+⭐ Removing the conjugate reddened the **90°** case and the **arbitrary-angle** case, and left
+the 180° one green. Both comments are corrected in place, and the 180° vector is kept for
+what it does check — that a half turn maps each pick to the opposite face rather than a
+neighbour.
+⭐⭐ `METHOD`: *a guard that cannot fail is not a guard* — and the only way to learn which
+guard is which is to break the product and watch which vectors notice.
+
+### ⛔ What remains in fork B
+
+1. **2bis's precondition** — *is the stack empty?* Now askable, and the mode (`TRANSLATE`/
+   `ROTATE`) has to meet it: a constrained object in `ROTATE` should get 2sexte instead.
+2. **2ter / 2quater** — a flick pushes `GRAVITY_ALIGN` / `WORLD_AXIS_ALIGN`, then unselects.
+   ⚠ And they now have to coexist with the movement mode: a one-touchpoint flick is also a
+   translate-or-rotate drag.
+3. **The flick skip** — wire `ShakeDetector.suppressesFlick`, or a hand shaking to REMOVE a
+   constraint **adds** one.
+4. **Wiring `anchor_rotate.ts`** (2sexte + `A3`'s handover) — ⚠ blocked on a decision: `A12`
+   moved roll to the second touchpoint, so `A3`'s handover now spans two touchpoint
+   configurations rather than one channel.
+5. **Wiring `shake.ts`** for eviction, with its four tunables and their sliders.

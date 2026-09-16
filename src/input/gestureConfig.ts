@@ -369,6 +369,24 @@ export interface GestureConfig {
    * `MultiTapInteraction.tapDelay` to 2 × the tap time; ours is 300 ms against a 250 ms tap.
    */
   doubleTapWindow: number;
+  /**
+   * ⭐⭐⭐ **WHICH ANCHOR / ALIGNMENT RULE SET IS IN FORCE** (`D29`, `IN3`).
+   *
+   * * `0` — **fork A, `NONE`**: today's behaviour. No constraint is created, consulted or
+   *   cleared. ⭐ **The default**, because it is the only set a hand has closed.
+   * * `1` — **fork B, `IN3`**: §2 rules 1–3 — face selection, 2bis's empty-stack
+   *   precondition, 2ter/2quater on a flick, 2sexte about the remaining DOF, eviction by a
+   *   shake. ⚠ Under construction; `queue_notes/IN3.md` lists what is wired.
+   * * `2` — **fork C, `OWNER_TBD`**: a third set the owner has not specified. ⛔ **Inert on
+   *   purpose**, and the HUD says so — it must never quietly behave like fork A, or a session
+   *   would believe it had tested something.
+   *
+   * ⚠ Numeric so the URL override and the menu slider reach it with no new machinery:
+   * `?anchorRules=1`. ⛔ It latches only while nothing touches the glass — switching into or
+   * out of `IN3` mid-drag would change whether a flick pushes a constraint, and a pushed
+   * constraint is not something the user can un-mean. See `input/anchor_fork.ts`.
+   */
+  anchorRules: number;
   /** mm between the two taps' press points. */
   doubleTapSlop: number;
 
@@ -674,6 +692,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   tapMaxDuration: 250,
   doubleTapWindow: 300,
   doubleTapSlop: 8,
+  // ⛔ Fork A — today's behaviour, the only set a hand has closed. 1 = `IN3`,
+  // 2 = the owner's third set (inert until specified). See `input/anchor_fork.ts`.
+  anchorRules: 0,
 
   evictOnOverflow: false,
   matePriorityOverAnchor: false,
@@ -762,6 +783,17 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔⛔ THE ANCHOR FORK IS A CHOICE OF THREE, NOT A RANGE. `anchorForkOf` reads anything it
+  // does not recognise as fork A — so `0.5` or `3` would LOOK like today's behaviour while
+  // the person who set it believed a whole rule set had changed. ⭐ Refused loudly instead:
+  // the reader and this guard are a pair, and neither is sufficient alone.
+  if (![0, 1, 2].includes(cfg.anchorRules)) {
+    throw new Error(
+      `anchorRules (${cfg.anchorRules}) must be 0 (fork A: no anchor rules), 1 (fork B: ` +
+        "IN3) or 2 (fork C: the owner's set, inert). It selects a rule set, so there is no " +
+        "meaning between the three.",
+    );
+  }
   // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
   // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
   // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The

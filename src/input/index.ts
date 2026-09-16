@@ -18,6 +18,7 @@ export * from "./anchor_rotate";
 export * from "./depth_translate";
 export * from "./holder_binding";
 export * from "./mode_toggle";
+export * from "./anchor_fork";
 export * from "./display_pose";
 export * from "./shake";
 export * from "./sway";
