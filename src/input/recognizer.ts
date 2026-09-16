@@ -104,6 +104,14 @@ export interface ReleaseVerdict {
 }
 
 /** Snapshot/restore for whatever the caller calls a pose. See the header. */
+/**
+ * How long the pose history reaches back, milliseconds. ⭐ It must comfortably cover the
+ * roll detector's fit window, which is sized in PATH LENGTH — so a slow circle spans more
+ * time than a fast one. ⚠ Two seconds is generous for a gesture nobody sustains for longer;
+ * the cost is a few hundred quaternions.
+ */
+const POSE_HISTORY_MS = 2000;
+
 export interface PosePort<P> {
   snapshot(): P;
   restore(pose: P): void;
@@ -185,6 +193,16 @@ export class Recognizer<P> {
   private buffer: Sample[] = [];
   private pressSample: Sample | null = null;
   private snapshot: P | null = null;
+  /**
+   * ⭐⭐ THE POSE BEFORE EACH FRAME'S ROTATION, kept just long enough to undo the
+   * provisional yaw/pitch when a roll commits. See `rebaseOnRollCommit`.
+   * ⚠ Bounded by AGE, not by count: the fit window is sized in path length, so a slow
+   * circle spans more samples than a fast one and a fixed count would silently truncate
+   * the very case that needs the most history.
+   */
+  private poseHistory: { t: number; pose: P }[] = [];
+  private rollRebasedFlag = false;
+  private wasRollCommitted = false;
 
   constructor(
     private readonly cfg: GestureConfig,
@@ -197,6 +215,29 @@ export class Recognizer<P> {
 
   get currentPhase(): Phase {
     return this.phase;
+  }
+
+  /**
+   * ⭐⭐ ADVANCE THE MOTION CLOCK WITHOUT A SAMPLE — call it every frame while this
+   * touchpoint is down. ⛔ A still finger emits no `pointermove`, so without this the
+   * motion state freezes at `MOVING` and never comes back. See `MotionTracker.tick`.
+   * ⚠ It touches the motion state ONLY: no roll, no buffer, no phase. A tick is not an
+   * event and must not be mistaken for one by anything downstream.
+   */
+  tick(nowMs: number): void {
+    this.motion.tick(nowMs);
+  }
+
+  /**
+   * ⭐⭐ THE DEADBANDED TRAVEL from the most recent sample, CSS pixels (A11).
+   *
+   * ⛔⛔ EVERY CONTINUOUS RULE MUST CONSUME THIS, never `s.x - prev.x`. The raw delta
+   * carries the measured 0.761 mm of pointer noise on every sample, which is what turned a
+   * held object while nobody was moving. ⭐ The deadband is applied ONCE, in §1.1, so the
+   * rules cannot disagree about how much of a wobble counts.
+   */
+  get step(): { readonly dx: number; readonly dy: number } {
+    return this.motion.step;
   }
 
   get motionState(): MotionState {
@@ -239,6 +280,9 @@ export class Recognizer<P> {
     this.roll.reset();
     // §1.3: "On PRESSED, the object's pose is snapshotted."
     this.snapshot = this.pose.snapshot();
+    this.poseHistory = [];
+    this.rollRebasedFlag = false;
+    this.wasRollCommitted = false;
   }
 
   /**
@@ -260,9 +304,107 @@ export class Recognizer<P> {
     // ⛔ COMMITTED_CONTINUOUS IS ONE-WAY until release. Returning to STATIONARY
     // mid-drag must not un-commit: the pose has already moved provisionally, and
     // a rule that switched back would strand it half-applied.
-    if (this.phase === "COMMITTED_CONTINUOUS") this.roll.push(s);
+    if (this.phase === "COMMITTED_CONTINUOUS") {
+      // ⛔ RECORDED BEFORE THE ROLL IS PUSHED, and before the caller applies this frame's
+      // rotation — so `poseHistory[t]` is the pose as it was when the finger was AT `t`,
+      // with that sample's own turn not yet applied. That is what a rebase has to restore.
+      this.poseHistory.push({ t: s.t, pose: this.pose.snapshot() });
+      while (
+        this.poseHistory.length > 1 &&
+        s.t - this.poseHistory[0]!.t > POSE_HISTORY_MS
+      ) {
+        this.poseHistory.shift();
+      }
+      this.roll.push(s);
+      // ⛔⛔ A12 RETIRED THE REBASE. Roll is no longer a one-touchpoint gesture, so there
+      // is no provisional yaw/pitch to undo and no circle to rebase to — and the jump it
+      // produced at the commit is gone with it. ⚠ `rebaseOnRollCommit` and the pose
+      // history are left in place, unused, exactly as `roll.ts` is: the machinery is
+      // correct and vectored, and the day a circular roll comes back it is what comes back.
+      // this.rebaseOnRollCommit();
+    }
     return this.phase;
   }
+
+  /**
+   * ⭐⭐ AMENDMENT **A8** — WHEN A ROLL COMMITS, UNDO THE YAW/PITCH IT WAS MISTAKEN FOR.
+   *
+   * ⛔⛔ THE DEFECT THIS FIXES, FOUND BY FINGER: a circular sweep does not read as a roll
+   * immediately. The detector needs `rollAngle` of arc before it will say so, and until
+   * then §1.3 applies the continuous rule PROVISIONALLY — which is 2bis, yaw and pitch. So
+   * the roll used to begin from a pose the user never asked for, and the result was not a
+   * pure roll of the original orientation. ⚠ The owner: *"the user should want a roll from
+   * the initial quaternion, especially to maintain the alignment on an axis."*
+   *
+   * ⭐ THE MECHANISM IS ALREADY IN THE SPEC. §1.3 defines provisional motion with rollback
+   * — it simply only applied it at RELEASE, for the flick test. A roll committing mid-drag
+   * is the same situation one transition earlier, and it takes the same answer.
+   *
+   * ⛔ IT REBASES TO THE FIT WINDOW'S START, **NOT** TO THE PRESS. A hand may drag in a
+   * straight line and then begin to circle; that drag is a real yaw the user asked for, it
+   * is not part of the evidence for a circle, and undoing it would be a second defect
+   * wearing the first one's clothes.
+   *
+   * ⚠ The object therefore JUMPS at the commit — by the whole swept angle, which 2quinte
+   * then applies from the rebased pose. That is not a glitch: it replaces exactly as much
+   * unasked-for yaw/pitch with the roll the finger actually drew.
+   */
+  /**
+   * ⛔ A8, RETIRED BY A12 AND KEPT CALLABLE. Roll is no longer a one-touchpoint gesture, so
+   * there is no provisional yaw/pitch to undo — but the mechanism is correct and vectored,
+   * and the day a circular roll comes back this is what comes back with it.
+   * ⚠ PUBLIC so the compiler does not call it dead: it is a deliberate retirement, not an
+   * oversight, and deleting tested machinery to satisfy a lint is how a project loses work
+   * it later needs.
+   */
+  rebaseOnRollCommit(): void {
+    const committed = this.roll.committed;
+    const justCommitted = committed && !this.wasRollCommitted;
+    this.wasRollCommitted = committed;
+    if (!justCommitted) return;
+
+    const start = this.roll.fitWindowStart;
+    if (!start) return;
+    // The latest snapshot taken at or before the window's first sample.
+    let chosen: { t: number; pose: P } | null = null;
+    for (const entry of this.poseHistory) {
+      if (entry.t <= start.t) chosen = entry;
+      else break;
+    }
+    // ⛔ No snapshot that old means the circle began before this gesture's history —
+    // which cannot happen, because the history starts at the commit point. Say nothing
+    // rather than restore an arbitrary pose.
+    if (!chosen) return;
+    this.pose.restore(chosen.pose);
+    this.rollRebasedFlag = true;
+  }
+
+  /** ⭐ True once the pose was rebased to the circle's start. For the readout. */
+  get rollRebased(): boolean {
+    return this.rollRebasedFlag;
+  }
+
+  /**
+   * ⭐⭐ ANOTHER RULE MOVED THIS OBJECT WHILE THIS TOUCHPOINT HELD IT STILL.
+   *
+   * ⛔⛔ A10 CREATED THIS SITUATION AND IT HAS NO PRECEDENT IN §1.3. Depth requires the
+   * finger on the object to be STILL — which is, character for character, §1.3's own
+   * precondition for a TAP and for a HOLD. So without this, every depth push would end in
+   * a tap, and two pushes in quick succession would be a **DOUBLE-TAP**, which
+   * `resolveDiscreteRule` maps to **2septies eviction**: a gesture that destroys the
+   * user's constraint work, fired by a gesture that never touched a constraint.
+   *
+   * ⭐ The rule it follows is §1.3's own: a touchpoint whose gesture PRODUCED MOTION is
+   * not a discrete gesture. It simply was not this touchpoint that supplied the motion.
+   * ⚠ It does NOT commit the recognizer — nothing here rolls back, and the finger may
+   * still go on to drag, roll or flick normally.
+   */
+  consumeAsMotion(): void {
+    this.consumedFlag = true;
+  }
+
+  /** ⭐ Set by `consumeAsMotion`. See there for why a depth push must not be a tap. */
+  private consumedFlag = false;
 
   release(s: Sample, ctx: ReleaseContext = NO_RELEASE_CONTEXT): ReleaseVerdict {
     const press = this.pressSample;
@@ -275,8 +417,13 @@ export class Recognizer<P> {
 
     if (!wasCommitted) {
       // Never committed: nothing moved, so there is nothing to roll back.
+      // ⛔⛔ A GESTURE ANOTHER RULE CONSUMED IS NEVER A TAP. A10's depth push holds this
+      // finger STILL on the object, which is exactly a tap's shape — and a DOUBLE_TAP here
+      // resolves to 2septies, which evicts constraints the user never asked to lose.
+      // ⚠ `HOLD` is the honest verdict: held, fired nothing, and `taps.reset()` below
+      // makes sure it cannot be the first half of a double-tap either.
       const kind: ReleaseKind =
-        press && durationMs <= this.cfg.tapMaxDuration
+        !this.consumedFlag && press && durationMs <= this.cfg.tapMaxDuration
           ? this.taps.record(press, s.t)
           : "HOLD";
       if (kind === "HOLD") this.taps.reset();

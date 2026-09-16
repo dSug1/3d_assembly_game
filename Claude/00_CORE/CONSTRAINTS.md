@@ -3,7 +3,7 @@
 > **STATUS** · live · **OWNS** · the binding limits on any change
 > **READ IF** · you are about to add a dependency, a file format, a network call, a
 > constant, or anything a port will have to carry
-> **LAST VERIFIED** · 2026-09-13
+> **LAST VERIFIED** · 2026-09-15
 
 Each of these was paid for in the predecessor project. Violating one is not a style
 disagreement — it breaks something already decided or already measured.
@@ -78,3 +78,20 @@ desires*. `mateResidual` takes desired poses for exactly this reason.
 
 Nothing may prompt, persist, gate or block on a calibration. A per-device setting may
 later **override** a working default; it must never become required.
+
+## 10. ⛔ Every gesture carries a PROVENANCE tag
+
+Adopted 2026-09-15 (`D11`) from the owner's `TECHNIQUE_CATALOG.md` §0/§5. A gesture rule
+is tagged **prior art** (with a dated citation), **internal composition**, or ⚠ **novel
+composite** — and the citation is recorded **at the moment of adoption**, in
+[`../10_INPUT_TOUCH/PROVENANCE.md`](../10_INPUT_TOUCH/PROVENANCE.md).
+
+⭐ The reason is the catalog's own: *publication date is the defence*, and recording it
+costs nothing now. ⛔ It bites like `N13` and for the same reason — `D3`, the game will be
+commercialised — but on **gestures** rather than on packages. The exposure is not "two
+fingers change scale", which is universal; it is a multi-finger composite no publication
+describes, and this project has three of those (§4 rules 6bis, 6ter, 6quater).
+
+⚠ This is a register, not an opinion, and nothing here is legal advice. The review it feeds
+is `SEC4`.
+

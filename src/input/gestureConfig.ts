@@ -27,22 +27,49 @@ import { distanceTurningPoints } from "./orbit";
 export const CAMERA_NEAR_PLANE_M = 0.01;
 
 export interface GestureConfig {
-  // ── §1.1 motion states, hysteretic ──────────────────────────────────────
-  /** mm/s below which a touchpoint counts as resting. */
-  stillSpeed: number;
-  /** ms it must stay there before STATIONARY latches. */
-  stillTime: number;
-  /** mm of accumulated travel to enter MOVING. */
-  moveEnterDistance: number;
+  // ── §1.1 motion state, a POSITION DEADBAND ──────────────────────────────
   /**
-   * mm. The EXCURSION BOUND during settle candidacy: once speed drops below
-   * `stillSpeed`, the finger must stay within this of where it slowed down, for
-   * the whole `stillTime`, before STATIONARY latches.
-   * ⛔ Must be < moveEnterDistance or the state chatters.
-   * ⛔⛔ AND `stillSpeed * stillTime` must EXCEED it, or it can never bind --
-   * asserted in MotionTracker's constructor. See motion.ts.
+   * ⭐⭐⭐ THE DEAD RADIUS, in millimetres on the glass. A finger inside it of its anchor
+   * is `STATIONARY` and emits NOTHING; beyond it, rules receive the **excess only**.
+   *
+   * ⛔⛔ IT IS THE ONLY MOTION THRESHOLD, and it replaced four — `stillSpeed`,
+   * `stillTime`, `moveEnterDistance` and `moveExitDistance`. The owner's model (A11):
+   * *"stationary should mean a deadband around the touchpoint position (independently of
+   * the time)."*
+   *
+   * ⭐ It is also **A9's deadband**, so no rule needs a second one: the excess-only form
+   * is what stops a still finger turning a held object, and it is applied once, at the
+   * source, for every rule at the same time.
+   *
+   * ⚠ It must exceed the MEASURED `pointerNoiseMm` by `SETTLE_NOISE_MULTIPLE`, or a
+   * resting finger reads as moving. Asserted in `validateGestureConfig`.
    */
-  moveExitDistance: number;
+  motionDeadbandMm: number;
+  /**
+   * ms — how long a finger must emit NOTHING before `MOVING` gives way to `STATIONARY`.
+   *
+   * ⛔ NOT a settle timer, and not on the path a hand complained about: LEAVING
+   * `STATIONARY` is instantaneous, and the deadbanded delta never waits for this.
+   * ⭐ It exists for one structural reason: while the finger moves, the anchor is dragged
+   * to sit **exactly on** the dead radius, so when the finger stops it rests ON the
+   * boundary and the measured noise straddles it. Without this, the state flickers on
+   * roughly half of all samples — and a bigger radius does not help, because the anchor
+   * follows it out.
+   * ⚠ Small on purpose: a tenth of the settle timer it replaced. `IN5`, by slider.
+   */
+  restConfirmMs: number;
+  /**
+   * ⭐⭐⭐ AMENDMENT A14 — ms for which a second touchpoint still counts as HELD after it
+   * lifts, so that **lifting it and putting it down again is ONE gesture**.
+   *
+   * ⛔ Without it, the interval between the lift and the press has genuinely one touchpoint
+   * down, so `A13` translates through the middle of a swap — 150-300 ms of it, which is
+   * very visible if the holder happens to be moving at the time.
+   * ⭐ Keyed on a LIFT: discrete, deliberate and visible, never on a motion state.
+   * ⚠ THE COST: going back to one-touchpoint translation is delayed by this much, which is
+   * a real delay on a deliberate act. ⭐ `0` restores the old behaviour exactly.
+   */
+  secondTouchGraceMs: number;
 
   // ── §1.2 gains ──────────────────────────────────────────────────────────
   /** Metres. Translation gains scale by cameraDistance / this. */
@@ -61,6 +88,19 @@ export interface GestureConfig {
    * ⛔ It scales what the object is TURNED BY, never what the commit threshold reads —
    * scaling the latter would silently move `rollAngle` as well. See `roll.ts`.
    */
+  /**
+   * ⭐⭐⭐ AMENDMENT A12 — DEGREES of roll per MILLIMETRE of the SECOND touchpoint's
+   * HORIZONTAL travel, while the finger on the object is held still.
+   *
+   * ⛔ Millimetres, rule 3: a degrees-per-pixel gain would roll a phone and a tablet by
+   * different amounts for the same hand movement.
+   * ⚠ A GUESS, and on this project's record almost certainly too small — every gain a hand
+   * has set was raised from mine, and the last one was moved by a factor of four. Slider.
+   * ⚠ SIGN: positive x (dragging right) rolls clockwise on screen. An arbitrary choice
+   * between two self-consistent conventions, exactly like the orbit inversion — a hand
+   * decides, and no amount of sign-checking can.
+   */
+  gainRollDrag: number;
   gainRoll: number;
   /**
    * §4 rule 6 — screen-plane translation. ⭐⭐ DIMENSIONLESS, and **1 means the object
@@ -173,6 +213,7 @@ export interface GestureConfig {
   rotateSwayReferenceDegPerS: number;
   gainTranslateAxis: number;
   gainTranslateDepth: number;
+
   gainTranslateMutual: number;
 
   // ── §1.3 the recognizer ─────────────────────────────────────────────────
@@ -232,6 +273,39 @@ export interface GestureConfig {
    * flushed. Splitting the two is what buys reactiveness without losing detection.
    */
   rollTrackArcDeg: number;
+
+  // ── §2 rule 2septies, as amended: THE EVICTION SHAKE ──────────────────────────
+  // Design of record: `Claude/10_INPUT_TOUCH/AMENDMENTS_R5.md` A4 (`D15`).
+  // ⛔⛔ ALL FOUR ARE `IN5` PLACEHOLDERS AND EACH NEEDS A SLIDER. The whole safety of
+  // this gesture is the gap between a SHAKE and a corrective NUDGE, and that gap is a
+  // hand's judgement: "left a bit, right a bit" during fine positioning is a genuine
+  // back-and-forth, and no simulation can say where the boundary sits.
+
+  /** Reversals required to evict. A4: 2 — out, back, out. */
+  evictShakeReversals: number;
+  /**
+   * They must all fall inside this window, in milliseconds.
+   * ⚠ Too long and a slow fidget accumulates into an eviction; too short and the
+   * gesture demands a speed not everyone has. ⭐ The audience includes youth (`D2`).
+   */
+  evictShakeWindowMs: number;
+  /**
+   * Minimum travel back from an extremum before a reversal counts, in millimetres.
+   * ⭐ It is the HYSTERESIS as well as the amplitude floor — one number, because they
+   * are the same question asked twice: *is this a leg, or is it jitter?*
+   * ⛔ `validateGestureConfig` refuses a value that does not clear the MEASURED
+   * `pointerNoiseMm`.
+   */
+  evictShakeLegMm: number;
+  /**
+   * Maximum excursion PERPENDICULAR to the shake axis, as a fraction of the along-axis
+   * amplitude.
+   * ⛔⛔ THIS IS WHAT SEPARATES A SHAKE FROM A CIRCLE, and it is not optional: **a
+   * circle projects to a back-and-forth on EVERY axis**. Since `A3`/`D14` made roll a
+   * legitimate control on exactly the objects eviction applies to, a detector without
+   * this would destroy an alignment every time someone spun a part to look at it.
+   */
+  evictShakeStraightness: number;
   /**
    * mm the newest point must itself advance before the direction is re-measured.
    * ⛔ THE CADENCE, and it is NOT the baseline. A direction depends on both ends of
@@ -317,6 +391,7 @@ export interface GestureConfig {
    * mapping: fingers twice as far apart halve the camera radius.
    */
   gainZoom: number;
+
   /**
    * Metres. ⛔⛔ THE NEAR-PLANE FLOOR, AND IT IS LOAD-BEARING. `render/scene.ts` sets
    * the camera's `minZ` to 0.01 m because Babylon's default of 1 put this
@@ -368,6 +443,15 @@ export interface GestureConfig {
    * where a press and a retarget are the same event.
    */
   orbitCentreGraceMs: number;
+  /**
+   * ms — how long the double-tap camera reset takes to fly home.
+   * ⭐ It EASES the orbit parameters (yaw, elevation, zoom, centre) rather than the
+   * camera's transform, so the camera stays on the orbit surface the whole way — the
+   * same path a finger could have dragged. ⚠ Yaw takes the short way round and zoom
+   * interpolates geometrically; see `input/camera_reset.ts` for why neither is a lerp.
+   * ⛔ `0` snaps, which is the behaviour before this existed.
+   */
+  cameraResetMs: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -390,14 +474,55 @@ export interface GestureConfig {
 }
 
 export const DEFAULT_CONFIG: GestureConfig = {
-  stillSpeed: 6,
-  // ⚠ MOVED 80 -> 150 by IN1, and it is NOT a measurement. `stillSpeed * stillTime`
-  // must exceed `moveExitDistance` or the exit threshold can never bind: 6 mm/s x
-  // 80 ms = 0.48 mm against a 0.8 mm bound made it decorative. A placeholder moved
-  // to make another placeholder reachable. IN5 measures both.
-  stillTime: 150,
-  moveEnterDistance: 1.5,
-  moveExitDistance: 0.8,
+  // ⭐⭐⭐ ONE RADIUS REPLACED FOUR THRESHOLDS (A11, the owner's model). Everything below
+  // about re-sizing applies to it, and the reasoning is kept because it is why the number
+  // is 2.4 and not 0.8. ⚠ A DEVICE MUST JUDGE IT: it is the commit threshold, the rest
+  // test and the jitter deadband all at once now.
+  // ⭐⭐ SET BY THE OWNER ON THE GLASS — 2.3 mm on 2026-09-15, raised to **3.5 mm** on
+  // 2026-09-16. ⚠ It now sits comfortably above the validator floor (3 x the measured
+  // 0.761 mm = 2.283 mm) rather than 0.017 mm above it, so a future re-measurement of
+  // `pointerNoiseMm` has room before it refuses the config.
+  // ⚠ THE COST, STATED: this is the travel before an object starts moving AT ALL, and it is
+  // paid once per axis per gesture — 3.5 mm of dead travel entering a drag, and a 45°
+  // entry pays it on both axes. ⭐ It buys a wider axis-purity corridor (A11): a drag
+  // wanders further off-axis before the other axis wakes up.
+  motionDeadbandMm: 3.5,
+  // ⭐ SET BY THE OWNER, 2026-09-15 — a quarter of my guess, which is the fourth time a
+  // hand has moved one of my numbers a long way. It only confirms the way BACK to
+  // STATIONARY; at 30 ms it is roughly two frames, so the depth gate opens almost as soon
+  // as the finger stops. ⛔ Low enough that boundary chatter is the thing to watch for on
+  // the next device pass: if depth flickers on and off while the holder rests, this is the
+  // number that is too small.
+  restConfirmMs: 30,
+  // ⚠ A guess, with a slider. Long enough for a deliberate lift-and-replace, short enough
+  // that a genuine lift to one finger does not feel stuck. IN5.
+  secondTouchGraceMs: 250,
+
+  // ⛔⛔ THE HISTORY, KEPT — all four were re-sized 2026-09-15 against the measured floor
+  // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of
+  // 1.5 mm. ⭐ The previous set was sized when `pointerNoiseMm` was BELIEVED to be
+  // 0.15 mm; it was measured at 0.761 mm on 2026-09-14 and these were never re-checked.
+  // ⚠ Measuring it already exposed one defect in the sagitta guard. This is the second,
+  // and it is the same shape: a threshold sized against a number that later changed.
+  //
+  // ⛔ The binding constraint is the EXCURSION BOUND, which must sit above the noise or
+  // STATIONARY is unreachable — 19 consecutive samples must all land inside it, so it
+  // needs roughly 3x the RMS floor, not 1x. Everything else follows:
+  //   the radius      >= 3 x 0.761  = 2.28 -> 2.4
+  //   moveEnterDistance >  moveExitDistance  -> 3.2 (a real gap, or the state chatters)
+  //   stillSpeed x stillTime > moveExitDistance -> 6 mm/s x 0.45 s = 2.7 > 2.4
+  //
+  // ⛔⛔ AND  STAYS AT 6, WHICH IS WHY  HAD TO TRIPLE. Raising
+  // the SPEED instead was the first attempt and two existing vectors caught it: at
+  // 18 mm/s a deliberate 12 mm/s drag becomes a settle candidate, and it covers only
+  // 1.8 mm in 150 ms — so a REAL SLOW DRAG would latch STATIONARY, which under A10 means
+  // it would read as a request for DEPTH. ⭐ The discrimination matters more than the
+  // latency, so the latency is where the cost was taken.
+  // ⚠ THE COST, STATED: after the holder has moved, STATIONARY now takes 450 ms to latch,
+  // so depth is available ~0.45 s after a drag ends. ⭐ A finger that is placed and NOT
+  // moved starts STATIONARY and waits for nothing, which is the ordinary case.
+  // ⭐ Every one has a slider, because IN5 says the slider ships WITH the rule and these
+  // four are now load-bearing for a MODE, not only for a flick test.
 
   referenceCameraDistance: 0.6,
   // ⭐⭐ 0.07 rad/mm — CHOSEN ON THE DEVICE by the owner, 2026-09-14, with the menu
@@ -411,6 +536,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
+  // ⚠ A12, a guess with a slider. 2 deg/mm means a 45 mm drag rolls the object 90°.
+  gainRollDrag: 2,
   gainRoll: 1,
   gainTranslateScreen: 1.17,
   // ⭐ CHOSEN ON THE DEVICE, 2026-09-14, together with the damping ratio and the lead
@@ -463,7 +590,22 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // hand curves, so only a reversal would ever register at a near-180° threshold.
   rotateSwayTurnDeg: 60,
   gainTranslateAxis: 1,
-  gainTranslateDepth: 1,
+  // ⭐⭐ A6. **1.0 is the COMPUTED value** — it moves the object as far into the scene as
+  // rule 6 moves it across, from the same tracking factor pointed along the ground.
+  // ⛔⛔ THE SHIPPED DEFAULT IS 3.0, SET BY A HAND, AND THE GAP IS THE FINDING.
+  // Depth is VISUALLY FORESHORTENED: an object pushed along the ground covers world
+  // distance while its picture barely changes, so a world-consistent gain reads as
+  // sluggish even though it is, in metres, exactly as strong as a drag. ⭐ Equal WORLD
+  // motion is not equal PERCEIVED motion, and the eye is what is being served.
+  // ⚠ Four gains on this project have now been raised by a hand from a derived or guessed
+  // value (×3.4, ×2.3, ×2, and this ×3). ⛔ **A guessed number has been wrong every time;
+  // this is the second time a COMPUTED one has been moved too** — the first was rule 6's
+  // phantom lead, cut to a fifteenth of its landmark. A computation tells you where a
+  // meaningful zero is; it does not tell you where a hand wants to stand.
+  gainTranslateDepth: 3,
+  // ⚠ Both placeholders, and a guessed number has been wrong every time on this project.
+  // ±35% is a guess at how closely a hand holds two fingers in step.
+
   gainTranslateMutual: 0.5,
 
   flickWindow: 120,
@@ -494,6 +636,17 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // is now paid by `rollTrackArcDeg` instead — see below.
   rollFitArcDeg: 150,
   rollTrackArcDeg: 130,
+
+  // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
+  evictShakeReversals: 2,
+  // ⚠ 600 ms is roughly three unhurried legs. Untested by any hand.
+  evictShakeWindowMs: 600,
+  // ⚠ 8 mm is ~10× the measured 0.761 mm noise floor — chosen to be obviously clear of
+  // jitter, NOT because 8 is known to be the boundary with a corrective nudge.
+  evictShakeLegMm: 8,
+  // ⚠ 0.4 admits a hand's natural bow and refuses a circle. ⛔ The gap between those two
+  // is the whole question, and it is a finger's to answer.
+  evictShakeStraightness: 0.4,
   rollUpdateDistance: 0.5,
   rollReleaseDistance: 12,
   rollFitResidualFraction: 0.25,
@@ -555,6 +708,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A GUESS, with a slider. Two fingers of one hand land within roughly 30–80 ms of
   // each other; 120 covers that with margin without being long enough to notice.
   orbitCentreGraceMs: 120,
+  // ⚠ A GUESS, with a slider. Long enough to read as a movement rather than a cut, short
+  // enough not to feel like waiting for a cutscene.
+  cameraResetMs: 450,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
@@ -597,22 +753,71 @@ export const DEFAULT_CONFIG: GestureConfig = {
  *
  * Called from `MotionTracker`'s constructor, which every `Recognizer` builds.
  */
+/**
+ * How many times the MEASURED pointer noise the settle-excursion bound must exceed.
+ *
+ * ⭐ 3, because the bound must hold for EVERY sample across the whole `stillTime`, not on
+ * average — and a still finger's radial excursion is distributed, not constant. ⚠ At 1x it
+ * is satisfied about half the time per sample, and ~19 consecutive halves is never.
+ * ⛔ Measured, not argued: at the old 0.8 mm against a 0.761 mm floor, a finger that had
+ * moved did not return to STATIONARY in four seconds of rest.
+ */
+export const SETTLE_NOISE_MULTIPLE = 3;
+
 export function validateGestureConfig(cfg: GestureConfig): void {
-  if (cfg.moveEnterDistance <= cfg.moveExitDistance) {
+  // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
+  // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
+  // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The
+  // multiple is `shake.ts`'s axis gate — a leg that cannot even establish a direction
+  // cannot be a leg.
+  if (cfg.evictShakeLegMm < 3 * cfg.pointerNoiseMm) {
     throw new Error(
-      "moveEnterDistance must exceed moveExitDistance, or the motion state chatters.",
+      `evictShakeLegMm (${cfg.evictShakeLegMm} mm) does not clear 3× the measured ` +
+        `pointer noise (${cfg.pointerNoiseMm} mm): a reversal could be jitter, and ` +
+        "eviction destroys the user's alignments.",
     );
   }
-  // Motion held below `stillSpeed` for `stillTime` cannot cover more ground than
-  // their product, so below it the exit distance is decorative in EVERY wiring.
-  const reachableMm = (cfg.stillSpeed * cfg.stillTime) / 1000;
-  if (reachableMm <= cfg.moveExitDistance) {
+  // ⚠ Two reversals is the minimum that distinguishes a shake from a single stroke that
+  // merely came back. One would make every over-and-return drag an eviction.
+  if (cfg.evictShakeReversals < 2) {
     throw new Error(
-      `moveExitDistance (${cfg.moveExitDistance} mm) can never bind: motion held ` +
-        `below stillSpeed (${cfg.stillSpeed} mm/s) for stillTime (${cfg.stillTime} ms) ` +
-        `covers at most ${reachableMm.toFixed(3)} mm. Raise stillTime or lower moveExitDistance.`,
+      `evictShakeReversals (${cfg.evictShakeReversals}) must be at least 2: one ` +
+        "reversal is an ordinary drag that changed its mind.",
     );
   }
+  // ⛔ A straightness of 1 or more admits a circle, whose transverse excursion equals
+  // its along-axis amplitude. The guard would be decorative.
+  if (!(cfg.evictShakeStraightness > 0 && cfg.evictShakeStraightness < 1)) {
+    throw new Error(
+      `evictShakeStraightness (${cfg.evictShakeStraightness}) must be in (0, 1): at 1 a ` +
+        "CIRCLE passes, and a circle is the gesture that must not evict.",
+    );
+  }
+
+  // ⭐⭐ THE OTHER SIDE OF THE SANDWICH, ADDED BY A10. A bound the noise cannot fit
+  // inside is a bound a RESTING FINGER can never satisfy, so STATIONARY becomes
+  // unreachable once anything has moved. ⛔ Nothing shipped before A10 depended on
+  // re-entering STATIONARY, so eight device passes never showed it — and A10's depth
+  // gate depends on nothing else.
+  // ⚠ The multiple is 3 because the bound must hold for EVERY sample across the whole
+  // `stillTime` (~19 of them at 8 ms), not on average: 1x the RMS floor is satisfied
+  // about half the time, and half^19 is never.
+  const settleFloorMm = SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm;
+  if (cfg.motionDeadbandMm < settleFloorMm) {
+    throw new Error(
+      `motionDeadbandMm (${cfg.motionDeadbandMm} mm) is below ${SETTLE_NOISE_MULTIPLE}x the ` +
+        `measured pointerNoiseMm (${cfg.pointerNoiseMm} mm = ${settleFloorMm.toFixed(2)} mm), ` +
+        `so a finger AT REST cannot stay inside it and STATIONARY is unreachable. ` +
+        `Raise motionDeadbandMm.`,
+    );
+  }
+
+  // ⛔ THE REACHABILITY RULE IS GONE WITH THE QUANTITIES IT GUARDED. It asserted that
+  // `stillSpeed x stillTime` exceeded the excursion bound, so the bound was not decorative.
+  // ⭐ A11 removed all three: a position deadband has no rate and no duration to be
+  // inconsistent with, which is most of why it is the right shape. The rule ABOVE — the
+  // radius must clear the measured noise — is the one that survived, and it is the one
+  // that was missing.
   // ⚠ A rule once required `rollReleaseDistance > rollStepDistance`, reasoning that
   // a roll "cannot be released before the path has travelled far enough to measure
   // its shape". ⛔ DELETED: the shape is measured by the fit WINDOW, not by the

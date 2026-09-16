@@ -3,7 +3,7 @@
 > **STATUS** · ⚠ diagnostic scene, real camera rules · **OWNS** · the Babylon scene,
 > camera, picking, materials, the on-glass readout and the tuning menu
 > **READ IF** · you are drawing something, or wondering why the boundary exists
-> **LAST VERIFIED** · 2026-09-14
+> **LAST VERIFIED** · 2026-09-15
 
 ## The rule this folder exists to protect
 
@@ -18,8 +18,9 @@ what cannot be measured gets shipped on hope.
 ⭐ It is also what makes `D9` (Babylon over three.js) **reversible in about a day**.
 
 ⭐⭐ **The boundary has paid for itself repeatedly.** Every gesture defect found by
-finger — and there have been sixteen — was reproduced *headlessly* before it was
-fixed, because the recognizer, the roll estimator, the pinch and the orbit surface are
+finger — ⭐ counted, with its ledger, in [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md) and
+not restated here, because the figure this line used to carry went stale — was reproduced
+*headlessly* before it was fixed, because the recognizer, the roll estimator, the pinch and the orbit surface are
 all plain code. `src/render/` holds only what genuinely needs the engine.
 
 ## Where it stands
@@ -31,14 +32,32 @@ ray could distinguish them, and §2 rule 1 would look correct while exercising n
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.
 * **Rule 4 — pinch zoom** (`IN9`, ✅ closed on a device look).
-* **Rule 1 — orbit** on a three-ring surface (`IN9`, ⚠ not closed).
+* **Rule 1 — orbit** on a three-ring surface (`IN9`, ✅ closed on a device look).
 ⭐ They compose through **one shared `zoom` scalar** that scales the whole orbit
 surface, rather than both writing `camera.radius` and fighting over it.
 
-⚠ **Everything that touches an OBJECT is still a diagnostic stand-in** — the
-rotation in `scene.ts` is not rule 2bis. `IN3` builds the real rules and deletes it.
-⭐ It does read the real `gainRotateFree` from the config, so tuning it tunes what
-`IN3` inherits.
+✅✅ **THE OBJECT RULES ARE REAL NOW, and the MODEL is authoritative** (`3D1`, closed
+2026-09-15). A gesture writes `src/core/object_model.ts`; the render loop reads the model
+every frame and draws `displayPose = SWAY ∘ FOLLOW ∘ model`.
+⛔⛔ **The defect that taught this, found by finger**: the loop used to draw only the
+objects that HAPPENED to have a follower, so a translated object was **LOCKED** until
+something else created one — and then **JUMPED** to where it should have been all along.
+⭐ *Draw from the model, never from whatever bookkeeping a rule left behind.*
+
+⚠ **What is still a stand-in is narrower than it was**: rule 2bis runs without its
+PRECONDITION (§1.4's empty constraint stack), which `IN3` adds. The gesture, its axes and
+its gain are real.
+
+⭐⭐ **`requireGestureFrame()` THROWS rather than guessing.** Every object gesture stands
+on a gravity frame (`A7`), and that frame is undefined when the camera looks exactly along
+gravity. ⛔ The scene refuses to build one there instead of substituting an arbitrary
+basis — a silent fallback would turn *"the axes are wrong at the pole"* into a defect a
+hand has to find. ⚠ The three-ring orbit surface means the pole is not reachable, so the
+throw is a guard on an invariant, not a live failure mode.
+
+⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`), because
+*"I can't see the object hitting any wall"* — a claim a device cannot check is an
+assertion, not a finding.
 
 ### ⛔⛔ Two traps this folder exists to remember
 
@@ -107,4 +126,5 @@ get *found*, and deleting them quietly would cost the next device session.
 `RND1` constraint glyphs (hard vs soft) · `RND2` mate preview ghost + drop line ·
 `RND3` anchor ring during two-touchpoint gestures. All three are spec §6's
 *constraint visibility* requirement: **the stack must never be invisible state.**
-⚠ All three wait on `3D1`, the object model.
+✅ **All three are UNBLOCKED** — `3D1` is built and closed, so the constraint stack they
+must draw exists. · `RND4` Halo/Wedge for an off-screen partner, queued behind 6ter.

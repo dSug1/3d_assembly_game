@@ -36,6 +36,180 @@ predecessor's rotation stack was defensible at every layer and a **reflection** 
 whole, because nobody had ever computed the composite. **Ask what the whole chain
 does, in one expression, and check it.**
 
+⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.**
+*(2026-09-15.)* A gravity-referenced rotation was reported from the device as having
+regressed to the screen axes. Every part of it had green vectors — the frame is
+orthonormal, its `up` is the world vertical, the wiring compiled — and ⚠ **none of that
+is the same claim as *a horizontal drag yaws about gravity***, which is what a hand
+judges. Fourteen vectors composing the frame with the rotation, at four camera tilts,
+showed the composition was right; the report was withdrawn, and the real defect beside it
+(a missing deadband) became separable from the impression. ⭐ **Write the composite check
+even when you believe the pieces — especially then**: it is the only thing that can tell
+a defect from an impression, in either direction.
+
+## ⭐⭐ A BLEND HAS SEAMS
+
+*(2026-09-15, from five rejected models of one gesture.)* When two noisy inputs must
+produce one output, the tempting move is to **combine** them — a mean, a minimum, a
+weighted fade, a coupling that tightens with agreement. ⛔ **Every one of those has a
+discontinuity somewhere**, and a hand finds it within minutes: a `min` over alternating
+events stalls then double-steps; a sign test flips near zero; fading an accumulated total
+yanks the object backwards; a gate re-decided each frame drops out when the hand slows.
+
+⭐ **The answer is usually not a better blend — it is to stop blending.** Make one input
+the **DRIVER** and the other a **VALIDATOR**: the driver supplies all the motion, the
+validator only authorises it by agreeing within a ratio. Nothing is mixed, so nothing can
+be discontinuous.
+
+⭐ And where the validator's agreement is **undefined** — at a reversal both travels pass
+through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
+of two numbers passing through zero is garbage however carefully it is computed.
+
+## ⭐⭐ A GESTURE spans the moments between its touchpoints
+
+*(2026-09-16.)* A rule table maps *what is down right now* to *what happens*. ⛔ A hand does
+not work that way: **lifting a finger and putting it down again is one intention**, and for
+the 150–300 ms in between, the literal truth is a configuration the user never asked for.
+
+⚠ The instance: a rule table said *one touchpoint translates, two rotate*. Swap the second
+finger from one place to another, and the object translated through the middle of the swap —
+correctly, by the table, and wrongly by any account of what the hand was doing.
+
+⭐⭐ **The tell was the owner's own observation**: two cases that *"differ by timing of the
+input"*. When two runs of the same gesture differ only by WHEN the user moved, the rule is
+reading a momentary state that the gesture spans. ⚠ It is the same shape as *a mode keyed on
+motion*, one level up: there, the state was noisy; here, it is briefly and genuinely wrong.
+
+⭐ The fix is a grace on the DISCRETE event — a lift — never on a continuous reading. ⛔ And
+it has a real cost that must be stated rather than hidden: going back to the one-touchpoint
+rule is delayed by the grace, so a deliberate lift feels slower. Ship it as a slider with
+`0` restoring the old behaviour, so a hand can weigh the two.
+
+## ⭐⭐⭐ A MODE may be keyed on PRESENCE; never on MOTION
+
+*(2026-09-14, and again on 2026-09-16 when I did it anyway.)* Two signals come off a
+touchpoint and they are not interchangeable:
+
+* **whether it is DOWN** — discrete, deliberate, visible to the user, and it changes only
+  when a person decides it does;
+* **whether it is MOVING** — noisy and continuous, and true or false by degrees no matter
+  how good the filter underneath it is.
+
+⛔ **A MODE must be keyed on the first.** A mode keyed on the second inherits every artefact
+of the sensor: this project shipped it twice, and both times a hand found it within minutes.
+
+⚠ The second time, the tell was a **timing signature**: *"if I transition quickly there is a
+translation then a rotation, if I transition slowly there is directly a rotation."* ⭐⭐ **A
+behaviour that depends on how BRISKLY a finger arrives is not about the gesture at all** — a
+finger placed quickly skids as it lands, because the reported centroid slides while the
+contact area grows. Nothing about the user's intent differed between the two transitions.
+
+⭐ The motion state is still the right input for deciding **what a moving finger drives**.
+It is the wrong input for deciding **which rule is running**.
+
+⚠⚠ And a note on process: the amendment that shipped this defect **had already flagged the
+resemblance** to the 2026-09-14 verdict and told the device pass to watch for it. ⛔ Naming
+a risk is not the same as not taking it. If the reasoning for a choice has to explain away a
+verdict a hand already gave, the verdict is the stronger evidence.
+
+## ⭐⭐ A threshold the state machine PARKS ON will be compared at its exact value
+
+*(2026-09-16.)* Hysteresis usually leaves a system somewhere in the middle of its band. ⛔ A
+**trailing** band does not: it drags its centre so the moving thing sits exactly ON the
+edge, and the instant that thing stops, the comparison is made at the boundary value — on
+every sample, for as long as it rests.
+
+⚠ So never compute that value by a **round trip**. Storing a centre as `p − band` and
+re-deriving `p − centre` returns about `1e-14` too much at ordinary screen coordinates,
+which is on the wrong side of `<=`. ⭐ Carry the quantity the comparison is actually
+about — here the signed offset, accumulated by `+= (p − prev)` and clamped — so a still
+input adds exactly zero and stays exactly on the boundary.
+
+⭐⭐ **And the tell that separates a defect from a stale fixture**: a fixture goes stale
+against a number it HARD-CODES; a defect changes behaviour when a number the PRODUCT uses
+moves. This one was invisible at one band size and appeared at another, so it was never the
+fixture. ⚠ Sweep the magnitudes a defect could hide behind — here five screen positions and
+five band sizes — because a fixture at one convenient coordinate passes while the product
+fails.
+
+## ⭐⭐ A threshold has a SHAPE as well as a size
+
+*(2026-09-15.)* A deadband, a gate, a tolerance — each is usually defended on **one** axis of
+reasoning, the one that prompted it. ⛔ But its shape decides other things, and those
+decisions are made whether or not anyone noticed making them.
+
+⚠ The instance: a position deadband, argued as **radial** because a circle is the natural
+shape for rejecting isotropic noise — which it is. ⛔⛔ What nobody asked was what else the
+shape chooses: a **square** band gives a corridor along each axis in which the other axis
+emits *nothing*, so a nearly-axial drag becomes a *purely* axial one. A radial band cannot
+provide that **at any radius**. The owner asked for per-axis and named that reason.
+
+⭐ **Ask what else a threshold is choosing before defending it on the axis you happened to
+be thinking about** — and notice that the cost I had raised against the square (a diagonal
+drag travels 1.41× further) was real, small, and about entry only.
+
+## ⭐ A threshold that guards a TRANSITION must not also tax the STEADY STATE
+
+*(2026-09-15.)* A deadband, a hysteresis band, a commit threshold — each exists to answer
+*"has this started?"*. ⛔ If the same band is charged again on every direction change
+mid-gesture, it stops being a guard and becomes a tax, and what it costs is **dead time**,
+which no gain or damping value downstream can hide.
+
+⚠ The instance: a position deadband whose anchor trails one radius behind. Entering a drag
+cost one radius, which is correct. **Reversing cost two** — the far side of the circle —
+measured at 5.0 mm and 88 ms, against a follower whose entire time constant is 7.6 ms.
+⭐ The fix is a distinction, not a number: *a finger that has already proven it is moving
+needs no further proof.*
+
+⭐⭐ **The tell is a complaint about FLUIDITY rather than about speed or distance.** Dead
+time feels different from lag, and it points at a threshold being re-charged somewhere it
+should not be.
+
+## ⭐⭐ A threshold is only half a rule — the other half is what advances the clock
+
+*(2026-09-15, after three device reports of one defect.)* A state machine that waits for a
+condition must be **driven by something that runs when the condition holds**. ⛔ If it is
+driven by the very signal whose ABSENCE it is trying to detect, no threshold can ever be
+right, and every fix will look like a tuning problem.
+
+⚠ The instance: *"is this finger still?"* was answered by a tracker advanced only by
+`pointermove`. A still finger emits none, so the tracker froze at MOVING — and the state
+could only be reached by a stray jitter sample arriving at random. ⭐ Two rounds of fixing
+the THRESHOLD changed nothing, because the threshold was never the problem.
+
+⭐⭐ **The tell, and it was in the first report**: one direction of the transition was
+instant and the other was erratic. **An asymmetry between two directions of the same test
+is about the EVIDENCE, not the threshold** — entering MOVING is witnessed by an event that
+necessarily exists; leaving it is not.
+
+⭐ And the fix's quantity was the better one all along: *elapsed time with no sample* is
+stronger evidence of stillness than any sample inside a dead radius, because a sample is
+still a report of motion and silence is not.
+
+## ⭐⭐ When a rule needs a WINDOW to decide, suspect the QUESTION
+
+*(2026-09-15, from the sixth model of one gesture.)* A window, a ratio, a tolerance and a
+hold are how you buy an answer to a question that **has no answer at this instant**. ⛔ When
+a rule needs them, the cheapest fix is usually not a better window — it is a **different
+question**.
+
+⚠ The instance: *"are these two fingers travelling by the same amount?"* is undefined at a
+reversal (both travels pass through zero) and at a late start (one has not moved yet), and
+both happen in **every** gesture. So the rule waited two windows and withheld a whole axis
+meanwhile, and a hand felt the hesitation at each end of every drag. ⭐ Replacing it with
+*"is that finger still?"* — answerable at every instant, including those two — removed the
+window, the ratio, the tolerance and the hold **together**.
+
+⛔ The tell: a correctly implemented rule that still feels wrong, and a tuning parameter
+whose value nobody can defend. ⭐ Ask what question the parameter is buying an answer to.
+
+## ⭐ Acting is irreversible; not knowing is not a reason to act
+
+When a gesture is genuinely ambiguous for a window, the choice is not *"which rule"* but
+*"whether to move at all"*. ⛔ Apply the unambiguous part and **withhold** the rest until
+the verdict arrives. ⚠ **State the cost**: the withheld travel is DISCARDED, not released
+in one step — releasing it is exactly the jump being complained about.
+
 ## ⛔⛔ The instrument is a suspect, always
 
 **This is the most expensive lesson carried over.** In one session, four harnesses

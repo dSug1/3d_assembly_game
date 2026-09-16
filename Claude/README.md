@@ -30,18 +30,21 @@ They are the record, not the briefing.
 ## Where it stands, in five lines
 
 ⭐ **DEPLOYED and driven by finger**: TypeScript + Babylon.js + Vite, `npm run verify`
-runs a typecheck and **307 golden vectors, all passing**, live at
+runs a typecheck and **531 golden vectors, all passing**, live at
 **https://dsug1.github.io/3d_assembly_game/** via GitHub Actions.
 ✅ **Engine-agnostic and enforced**: `src/core` and `src/input` import no engine, and
 [`tests/boundary.test.ts`](../tests/boundary.test.ts) fails the build if that stops
 being true. ⭐ It has paid for itself: every gesture defect found by finger was
 reproduced **headlessly** before it was fixed.
-✅✅ **`IN1` CLOSED** (the recognizer) and **`IN9` CLOSED** (pinch zoom + camera orbit
-on a three-ring surface), all by device look. ⛔ Nothing yet touches an OBJECT for
-real: `IN2`–`IN4` are unbuilt and wait on `3D1`.
-⛔⛔ **Seventeen defects have been found BY FINGER, none visible to a green suite**, and
-they are four repeating shapes — a rate over too short a baseline, a substituted
-quantity, idealised fixtures, and a composition nobody computed. They are written out
+✅✅ **`IN1`, `IN9` and `IN2` CLOSED** (the recognizer; pinch zoom + camera orbit on a
+three-ring surface; pointer plumbing), and **`IN4`'s rule 6** translates a held object in
+the screen plane — all closed by device look. ⛔ The rest of `IN3`/`IN4` waits on `3D1`.
+⛔⛔ **Every one of those defects was found BY FINGER, and none was visible to a green
+suite.** ⭐ The count and its ledger live in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md), which
+is the one place that carries them — this router deliberately no longer restates a number,
+because the one it restated went stale. They are **five** repeating shapes — a rate over too short a baseline, a substituted
+quantity, idealised fixtures, a composition nobody computed, and ⭐ **my own FIXTURES**,
+which raise false alarms that look exactly like real defects. They are written out
 in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md)'s YOU-ARE-HERE block because they bind every
 row still to come.
 ✅✅ **The fast device loop WORKS** — `npm run dev:usb` + `adb reverse`, and the tablet

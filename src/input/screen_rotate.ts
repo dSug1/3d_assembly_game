@@ -31,12 +31,25 @@
  * ⚠ The caller resolves the three axes ONCE, at press. Storing them rather than
  * recomputing per frame is the same lesson as §1.4's `WORLD_AXIS_ALIGN`: rule 1's
  * camera orbit must not silently redefine the axes half-way through a gesture.
+ *
+ * ⛔⛔ AMENDMENT **A7**: THE AXES ARE THE **GRAVITY FRAME'S**, NOT THE CAMERA'S.
+ * Yaw is about the world vertical, pitch about the camera's (always horizontal) right, and
+ * roll about the view direction FLATTENED onto the ground plane. ⭐ The argument is
+ * orthogonality: with a tilted camera the true view axis has a vertical component, so
+ * rolling about it partly duplicates yawing about gravity and the two gestures interfere.
+ * ⚠ At a LEVEL camera the two frames coincide, so every sign declared below is unchanged —
+ * which is why the vectors that pin them still read the same.
  */
 import { qFromAxisAngle, qmul, type Quat, type Vec3 } from "../core/vec";
+import type { GravityFrame } from "./gravity_frame";
 
 /**
- * The camera's screen axes, in WORLD space, latched at press.
+ * The CAMERA's own screen axes, in WORLD space, latched at press.
  * ⚠ `viewAxis` points AWAY from the viewer, into the screen — a camera forward.
+ *
+ * ⛔ Still needed, and NOT interchangeable with `GravityFrame`: amendment A3's handover
+ * asks for the angle between the TRUE view axis and a constraint axis, and a flattened one
+ * would answer a different question. ⚠ Two frames, two purposes.
  */
 export interface ScreenFrame {
   readonly right: Vec3;
@@ -54,7 +67,7 @@ export interface ScreenFrame {
  */
 export function screenPlaneRotation(
   base: Quat,
-  frame: ScreenFrame,
+  frame: GravityFrame,
   dxPx: number,
   dyPx: number,
   radPerPx: number,
@@ -75,7 +88,7 @@ export function screenPlaneRotation(
  * for CLOCKWISE on screen. The two files must agree on that or the object rolls
  * against the finger, and no magnitude test anywhere would notice.
  */
-export function screenRollRotation(base: Quat, frame: ScreenFrame, degClockwise: number): Quat {
-  const roll = qFromAxisAngle(frame.viewAxis, (-degClockwise * Math.PI) / 180);
+export function screenRollRotation(base: Quat, frame: GravityFrame, degClockwise: number): Quat {
+  const roll = qFromAxisAngle(frame.depth, (-degClockwise * Math.PI) / 180);
   return qmul(roll, base);
 }

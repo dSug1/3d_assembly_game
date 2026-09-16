@@ -1,8 +1,8 @@
 # `IN4` — rules 4–6 (two touchpoints)
 
-**Status: partial. Rule 4 ✅ (`IN9`). Rule 6 ✅ BUILT AND TUNED BY FINGER over five device
-passes, 2026-09-14 — ⚠ not formally closed: it wants a verdict in ordinary play rather
-than in a tuning session. Rules 6bis / 6ter / 6quater wait on `3D1`.**
+**Status: partial. Rule 4 ✅ (`IN9`). Rule 6 ✅✅ CLOSED 2026-09-15 — tuned by finger over
+five device passes and then confirmed by the owner in ORDINARY PLAY, which is what the row
+was holding out for. Rules 6bis / 6ter / 6quater wait on `3D1`, so the ROW stays partial.**
 `src/input/translate.ts` · `tests/translate.test.ts` · wired in `src/render/scene.ts`.
 
 ## ⭐⭐ Why rule 6 came before `3D1`
@@ -270,3 +270,191 @@ zoom clamp and the orbit rings can actually produce.
    now, and `3D1` is about to put connectors on these objects that will want to snap.
 4. ⚠ Rotation must still work with **no** anchor down, and the anchor must not start an
    orbit while an object is held.
+
+---
+
+## ✅✅ RULE 6 CLOSED — 2026-09-15, by the owner, in ordinary play
+
+*"Rule 6 is working OK on device."*
+
+⭐ **That is the verdict this dossier was explicitly holding out for**, and it is the one
+thing no suite could have supplied. The row withheld closure because the four numbers had
+been judged in a *tuning session* — a bench, where a hand is hunting for the difference
+between two settings — and not in ordinary play, where a hand is trying to do something
+else and the mapping either disappears or annoys. It disappeared. ⭐ So the claim that
+`gainTranslateScreen` = 1.0 is a **computed** value rather than a preferred one has now
+survived contact with a hand that was not auditing it.
+
+⛔ **What this does NOT close.** `IN4` stays **partial**: 6bis, 6ter and 6quater are
+defined on `AxisBtwFaces` — the axis between two selected FACE centres — and a face centre
+is exactly what `3D1` owns. The row cannot close before the object model exists.
+
+⚠ **And it closes at the moment something is about to pull on it.** The whole of the feel
+now lives in the OVERSHOOT — 0.3–1.8 mm of follow-through, against a measured 0.761 mm
+pointer noise floor — and `3D1` is about to put connectors on these objects that will want
+to snap. ⭐ **A capture radius near that scale will fire on the follow-through rather than
+on the intent.** That is a number to compute against this measurement BEFORE it is
+written, not to discover on a device afterwards: the capture radius has no measured floor
+today, and it was the predecessor's last unmeasured constant too.
+
+⭐ The shipped set is unchanged by this closure, and `gestureConfig.ts` is the one copy:
+gain **1.17**, τ **7.6 ms**, ζ **0.2**, lead **0.2 ms**.
+
+⚠ **One figure above is a snapshot, and is left standing as the record**: the landmark
+section says the owner chose **0.5 ms**, which was true of the pass that wrote it. The
+slider went lower afterwards and **0.2 ms shipped** — a *fifteenth* of the 3.2 ms landmark
+rather than a sixth, which makes that section's point more sharply, not less.
+
+---
+
+## ⚠ A CANDIDATE EXTENSION TO RULE 6, deferred to a device QUESTION — §3.2 DS3
+
+Raised 2026-09-15 from the owner's `TECHNIQUE_CATALOG.md` §3.2 (Z-technique, 3DUI 2010;
+DS3, IEEE TVCG 2012 — published prior art). ⛔ **Not queued and not planned.** It is
+recorded here because rule 6 is the thing it would change, and in
+[`3D1.md`](3D1.md) because that is where the evidence gets collected.
+
+**The observation.** Rule 6 is **two DOF** — `screenTranslation` returns `rightM` and
+`upM`, nothing more — and depth arrives only through 6bis, which needs a second object with
+a selected face under a second finger. ⭐ Meanwhile rule 6's anchor finger carries **no
+information at all**: since the device overturned the `STATIONARY` latch it is read as
+PRESENCE, so it is down or it is not. DS3 says that finger's *relative* motion should carry
+depth — a change to what an existing finger MEANS, not a new gesture.
+
+⛔ **But a free orbit already solves depth** by turning it into an in-plane motion, and this
+row closed on the glass with its whole feel in the overshoot. Adding a push to a finger that
+currently does nothing would change a settled feel to solve a problem the camera may not
+have.
+
+⭐⭐ **So it is an `IN5`-shaped question and the answer is behavioural**: mid-assembly, does
+a hand ORBIT for depth or PUSH at the glass? ⛔ Unanswerable until `3D1` exists. The watch
+item, with what each observation means, is in [`3D1.md`](3D1.md) — **on the first device
+pass, before the hand learns a workaround.**
+
+---
+
+## ⭐⭐ DEPTH: THE HAND REACHED FOR A PINCH ON THE OBJECT (2026-09-15)
+
+The `3D1` device pass carried a watch item asking whether a hand orbits for depth or pushes
+with the anchor finger. ⛔ **Neither.** The owner:
+
+> *"Depth obtained by two fingers touchpoint on one object or two objects and pinch movement
+> to zoom the one or two objects out."*
+
+### ⛔ §3.2 DS3 is DECLINED
+
+Not because the camera solved it — the hand did not orbit. It reached for a different
+gesture entirely. ⭐ Giving rule 6's anchor finger a depth channel was a reasonable idea with
+published evaluation behind it, and it is simply not what a hand wants. Marked declined in
+[`../../10_INPUT_TOUCH/PROVENANCE.md`](../../10_INPUT_TOUCH/PROVENANCE.md).
+
+### ⭐⭐ Why the instinct is a STRONG answer, not merely the owner's preference
+
+1. ⭐⭐ **The metaphor already transfers exactly.** Pinching the camera out makes everything
+   smaller; pushing an object away makes *it* smaller. The visual result is nearly the same,
+   so the gesture does not have to be learned — it is the one the user already has for
+   *"put this further away"*.
+2. ⭐ **It needs NO new discriminator.** §4 already separates rule 4 from everything else by
+   *did the touchpoints hit an object*. Pinch on nothing zooms the camera; pinch on an object
+   moves the object. Same test, one more branch.
+3. ⭐⭐ **THE GAIN IS COMPUTABLE, NOT GUESSABLE** — like rule 6's, and for the same reason.
+   The object should stay under the two fingers, so the ratio of finger separation fixes the
+   ratio of camera distance exactly. ⛔ **Compute it before writing it**, and expect **1.0 to
+   be the correct value rather than a preferred one**.
+4. ⭐ **The two-object half is ALREADY SPECIFIED.** One finger on each of two objects,
+   pinched together, is §4 rule **6ter** — *"both selected objects translate oppositely
+   towards each other on `AxisBtwFaces`"*. ⚠ The spec flagged 6ter as *"the hardest case to
+   control"* and offered to drop it if it measured poorly. **A hand reached for it
+   unprompted, before it was built.** That is the strongest evidence a queued rule has had.
+
+### ⛔⛔ AND IT COLLIDES WITH `D10` — A DECISION THE OWNER TOOK, WHICH MUST BE RE-TAKEN
+
+**Two touchpoints on the SAME object currently means: ignore the second** (`IN8`, `D10`,
+2026-09-14) — and its consequence was *judged on the glass and accepted*: lift the holding
+finger with a second still on the part, and the part stops responding.
+
+⛔ The one-object half of this instinct needs that configuration to MEAN something:
+
+* **it is a re-opening, not a new rule** — `IN8`'s dossier anticipated one, recording
+  reading 2 as **deferred, not rejected**;
+* ⚠ **the accepted `IN8` behaviour would change**, and the *"part stops responding"*
+  behaviour goes with it;
+* ⛔ **it is the owner's call**, because it reverses a decision taken after a device look.
+  Open in [`../DECISIONS.md`](../DECISIONS.md).
+
+⚠ **No collision with rule 4 or rule 6.** Rule 4 needs both touchpoints on nothing; rule 6
+needs exactly one outside. Two on an object is disjoint from both.
+
+### ⚠ Provenance — this one sits nearest the litigated ground
+
+⛔ The catalogue's caution zone names **Apple's pinch/scroll family** specifically. A pinch
+that moves an object in depth rather than scaling or zooming is not that claim, and the
+nearest published relatives — Z-technique (3DUI 2010) and DS3 (TVCG 2012) — separate depth
+onto a *second finger's relative motion*, not a pinch. ⭐ But it is the closest any gesture
+here has come to the ground the catalogue flags, so it is tagged ⚠ **NOVEL COMPOSITE** and
+marked for `SEC4` **at the moment of adoption** rather than after.
+
+---
+
+# ⚠ RULE 6 UNDER `A7` AND `A6` — what changed after this row closed *(2026-09-15)*
+
+This row closed on the device, and then two amendments changed what its two numbers MEAN.
+⛔ Neither reopens it; both are recorded here so the closure is not read as covering them.
+
+**`A7` — `dy` is now the GRAVITY axis, not the screen's up.** Rule 6 translates along
+`frame.right` and `frame.up`, and `frame.up` is the world vertical. ⭐ At a level camera
+nothing changed; as the camera tilts, a vertical drag now raises the object rather than
+sliding it along the screen. ⚠ **The stated cost**: vertical motion goes quiet looking
+straight down — the same *"goes quiet"* shape as `A3`'s handover, and for the same reason.
+
+**`A6` — the vertical is WITHHELD while the gesture is undecided.** Depth shares rule 6's
+touchpoint configuration, and the two are told apart by what the fingers DO, which takes a
+window to see. ⛔ Until the verdict, rule 6 applies the horizontal only:
+
+```ts
+const pending = depthAnchorFor(grip) !== null && grip.depth.verdict === "PENDING";
+const t = screenTranslation(s.x - grip.prev.x, pending ? 0 : s.y - grip.prev.y, …);
+```
+
+⭐ **One line, three reports fixed**: a lurch at the START of a drag, a lurch at the END,
+and a cumulative VERTICAL DRIFT over repeated back-and-forths. The old code read `PENDING`
+as *"not a depth drag"* and translated vertically, so every ambiguous frame at each end of
+every gesture leaked a little, and the leaks accumulated.
+
+⭐ *Acting is irreversible; not knowing is not a reason to act.* The horizontal is
+unambiguous and always applies.
+
+⚠ **THE COST, STATED**: the first window of vertical travel is **discarded**, not released
+in one step — releasing it IS the jump being complained about. A two-finger vertical
+gesture starts from where it was RECOGNISED, not from where it began.
+
+⛔ **And rule 6 has no DEADBAND either** (`A9`/`IN12`) — it integrates the same raw delta
+rule 2bis does. Its follower and phantom lead mask the jitter better than the rotation does,
+which is why it was reported on the rotation first.
+
+---
+
+# ⛔⛔⛔ THE SAME VERDICT, A SECOND TIME — 2026-09-16
+
+This dossier already records a hand overturning a mode keyed on the anchor's `STATIONARY`
+state, on 2026-09-14, first try. ⭐ **`A13` did it again**, and the device answered again:
+
+> *"If I transition quickly there is a translation then a rotation, if I transition slowly
+> there is directly a rotation."*
+
+⭐⭐ **The timing signature is the whole diagnosis.** A finger PLACED QUICKLY skids as it
+lands — the reported centroid slides while the contact area grows — so it read `MOVING` for
+the length of the landing, and the mode followed it. Placed slowly it never left its band.
+⛔ **Nothing about the gesture differed; only the landing did.**
+
+⚠ **And the cell was mine.** The owner's four rules never named *both fingers moving*; I
+resolved it as `TRANSLATE` on the reasoning that *the holder wins every tie*. It is now
+**`ROTATE`** — presence alone decides the mode, and the motion state is used only where it
+belongs, deciding what a moving second finger DRIVES (`A12`).
+
+⛔⛔ **A13 had FLAGGED the resemblance to this dossier before shipping it**, and told the
+device pass to look for mode flicker. ⭐ *Naming a risk is not the same as not taking it.*
+
+⭐⭐ The rule now in `METHOD`: **a MODE may be keyed on PRESENCE; never on MOTION** — and if
+the reasoning for a choice has to explain away a verdict a hand already gave, the verdict is
+the stronger evidence.

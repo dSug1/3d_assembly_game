@@ -3,7 +3,7 @@
 > **STATUS** · ⭐ active · **OWNS** · the object model, mate connectors, the
 > constraint solver, mesh import
 > **READ IF** · you are touching assembly, connectors or the object tree
-> **LAST VERIFIED** · 2026-09-13
+> **LAST VERIFIED** · 2026-09-15
 
 ## Where it stands
 
@@ -11,8 +11,26 @@
 `src/core/constraint_stack.ts`, transliterated from a **shipped, live-confirmed**
 Python implementation that was written dependency-free precisely so it could move.
 Covered by 14 vectors.
-⛔ **`3D1` is the gap that blocks input**: there is no object model yet — no id,
-placement, connector list or assembly tree. `IN3`/`IN4` need it.
+✅ **`3D1` BUILT 2026-09-15** — `src/core/object_model.ts`, **42 vectors**, engine-free:
+`id`, `local` placement, `parent`, faces (centre + outward normal, what 6bis reads),
+connectors, and the constraint stack attached to the object. ⭐⭐ **`reroot` is rule 3 made
+executable** — it re-points the chain onto the held object while every object's world
+placement stays put, and *grabbing a child moves the whole assembly* is a vector by name.
+⭐ Every fixture is THREE deep, and the deep-chain vector goes to 16.
+🔌 **WIRED 2026-09-15**: `scene.ts` builds a `World` and **every rule writes the model** —
+rule 6's translate, the rotation rules, §1.3's rollback and §2 rule 1's barycentre. ⭐ The
+render loop is now the SINGLE writer of a mesh transform, which removed the held-mesh
+exception and the barycentre's defensive sway subtraction at the same time.
+✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*, after the pass found **one
+defect, in the wiring**:
+the render loop drew only objects that happened to have a *follower* entry, a map populated
+lazily by the sway and the rotation rule. When the model became authoritative that implicit
+invariant died silently — a translated object was **locked**, then **jumped** once something
+else created its entry. ⭐ Fixed (the loop now iterates the model) and **confirmed by the hand that found it**.
+⛔ 409 vectors passed before and after the fix: the iteration set is in `src/render`, on the
+far side of the boundary, which is why a device look is what closes a change.
+✅ Everything else was clean, which **re-confirms rule 6** after its path was rewired.
+⛔ No snapping — that is `3D2`.
 
 ## ⛔⛔ The four rules that must not be rediscovered
 

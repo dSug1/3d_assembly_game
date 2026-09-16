@@ -44,9 +44,9 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-14)
+## Where it stands (2026-09-15)
 
-✅ Green: TypeScript + Babylon + Vite, **307 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **531 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ✅ **The fast device loop works**: `npm run dev:usb` + `adb reverse tcp:5173 tcp:5173`,
 then `http://localhost:5173` on the tablet. See
@@ -55,19 +55,64 @@ then `http://localhost:5173` on the tablet. See
 ✅✅ **`IN1` CLOSED** — the gesture recognizer, validated by finger over seven device
 passes. ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit on a
 three-ring surface, working by finger.
-✅✅ **`IN2` CLOSED** — pointer plumbing, three roles latched at press. ✅ **RULE 6
-(screen-plane translate) built and tuned by finger over five device passes** — it has
+✅✅ **`IN2` CLOSED** — pointer plumbing, three roles latched at press. ✅✅ **RULE 6 CLOSED 2026-09-15**
+(screen-plane translate) — tuned by finger over five device passes, then confirmed in
+ordinary play. ⛔ `IN4` itself stays partial: 6bis onward wait on `3D1`. It has
 mass: a critically/under-damped follower plus a phantom target that leads along the
 finger's own motion (`src/input/translate.ts`, `follow.ts`, `lead.ts`).
 ✅ **Object ROTATION works** — free yaw/pitch and roll, both by finger. ⚠ What it lacks is
 rule 2bis's PRECONDITION (*an empty constraint stack*), because §1.4's stack does not
 exist yet; `IN3` attaches it to the object model and adds that test, it does not delete
-the rotation. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
+the rotation.
+✅✅ **AND IT NOW STANDS ON A GRAVITY FRAME** (`A7`/`D18`, `src/input/gravity_frame.ts`):
+yaw about the **world vertical**, pitch about the horizontal screen axis, roll about the
+view direction **flattened onto the ground** — and rule 6's `dy` is a true vertical.
+⛔⛔ **The argument is ORTHOGONALITY, not tidiness**: about the camera's own axes the view
+axis gains a vertical component as it tilts, so roll stops being independent of yaw and no
+gain can separate them. ⭐ One basis serves translation AND rotation.
+✅ **A roll REBASES to the start of its circle** (`A8`): a circle is not read as a roll until
+60° of arc, and the yaw/pitch applied meanwhile is now undone — to the FIT WINDOW's start,
+not to the press, so a straight drag that precedes a circle survives.
+✅✅ **§1.1 IS NOW A POSITION DEADBAND** (`A11`/`D21`, the owner's model): an anchor trails
+the finger at one dead radius — inside it the finger is `STATIONARY` and emits **nothing**;
+outside, it emits the **excess only** and the anchor is dragged up. ⭐ Time-free, the
+emitted travel is exact (true travel minus one radius, **once**), and a slow drag survives.
+⛔ It deleted `stillSpeed`, `stillTime`, `moveEnterDistance`, `moveExitDistance` and a
+validator rule, and **absorbed `A9`/`IN12`**: the deadband is applied once, for every rule
+at the same time, so nothing consumes a raw delta any more.
+⛔⛔ **§1.1 HAS NOW HAD FOUR FORMULATIONS AND THE FIRST THREE ALL BROKE ON A REAL POINTER**
+— accumulated travel, instantaneous speed, speed over one sample pair. ⭐ Each fix made the
+NUMBER better without making the SHAPE right. `queue_notes/IN0.md` is the most instructive
+file in the project.
+⚠ **`motionDeadbandMm` is now the most load-bearing number in the input layer** — the commit
+threshold, the rest test and the jitter deadband at once. It has a slider and no hand has
+judged it.
+✅ **DEPTH translation** (`A10`/`D20`, `IN8`): the finger **on the object holds still**, the
+finger **outside** supplies the travel. ⛔ No window, no ratio, no tolerance — and the
+holder wins every tie, so rule 6 and depth **partition** the two-finger configuration
+instead of competing for it. ⭐ Rule 6's second touchpoint may now be outside **or on the
+same object** (the first drives), which closes the small-object hole owed since `A5`.
+⛔⛔ **Depth took SIX models, five of them rejected by a hand**, and the two lessons are in
+`METHOD.md`: **a blend has seams**, and ⭐⭐ **when a rule needs a WINDOW to decide, suspect
+the QUESTION** — A6 was implemented correctly and still failed, because *"are these two
+travels equal?"* has no answer at a reversal or a late start.
+⛔⛔ **AND IT EXPOSED A DEFECT IN §1.1 THAT NOTHING ELSE COULD HAVE FOUND**: the motion
+state estimated speed over **one sample pair**, so with the measured 0.761 mm of noise a
+resting finger read ~95 mm/s and **STATIONARY was unreachable — for any real finger, since
+the day the noise was measured**. ⭐ Fixed to a windowed estimate, with a validator rule and
+four §1.1 numbers re-sized. ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"*, which is rule 5
+and the only thing that closes a change here. ⚠ The numbers a hand has now accepted:
+`motionDeadbandMm` **3.5 mm**, `restConfirmMs` **30 ms**, `secondTouchGraceMs` **250 ms**,
+`gainRollDrag` **2 °/mm** — the last two were never judged on their own, so they are the
+first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Nineteen defects have been found BY FINGER and none was visible to a green
-suite.** They are four repeating shapes — a rate estimated over too short a baseline, a
-substituted quantity, idealised fixtures, and a composition nobody computed. ⭐ They
+⛔⛔ **Twenty-seven defects, twenty-six of them BY FINGER, and none visible to a green
+suite.** ⭐ The twenty-seventh is the exception worth knowing: §1.1's unreachable
+STATIONARY was found by **composing a measurement with a threshold**, not by a hand — and
+no hand could have found it, because nothing shipped depended on the path it broke. They are **five** repeating shapes — a rate estimated over too short a baseline, a
+substituted quantity, idealised fixtures, a composition nobody computed, and ⭐ **my own
+FIXTURES**, which produce false alarms that look exactly like real defects. ⭐ They
 are spelled out in [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU-ARE-HERE
 block, and they bind every row still to come.
 
@@ -84,10 +129,24 @@ guard that had stood through eight device passes: see `Claude/10_INPUT_TOUCH/IND
 ⭐ **A simulation narrows the range; it does not pick the number. Ship the slider WITH
 the rule.**
 
-⛔⛔ **NEXT is `3D1`** (the object model) — the last thing before actual assembly, and
-where mistake shape 4 is likeliest to recur, since an assembly tree composes transforms
-through parent–child chains. ⭐ **Write the composite check BEFORE the code**, the way
-rule 6's gain was computed before it was written.
+✅✅ **`3D1` IS CLOSED (2026-09-15)** — built, wired, and judged by finger. The pass found
+one defect in the wiring (a translated object was LOCKED, then JUMPED: the render loop drew
+only objects that happened to have a follower); fixed and confirmed. ⭐ Everything else was
+clean, which re-confirms rule 6 after its path was rewired. Built — `src/core/object_model.ts`, 42 vectors, engine-free:
+placement, faces, connectors, the assembly tree, and the constraint stack attached to an
+object. ⭐⭐ The vectors were written FIRST and then **falsified on purpose** — breaking the
+composition turns 14 of 42 red, which is why the green means something. ⭐ `reroot`
+implements **parent ≠ root** and moves nothing.
+⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`**; `IN12`
+(the deadband) is smaller and unblocked and can go first.
+⭐⭐ **A REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
+entry**: *"you destroyed the rotation around the gravity axis… it came back to the axis of
+the screen view plane"* — withdrawn by the owner after `tests/a7_wiring.test.ts` composed
+the frame with the rotation and asserted the axis that comes out, at four camera tilts.
+⛔ Every part of `A7` already had green vectors and **the composition had none**. That is
+mistake shape 4 pointing at a CORRECT piece of work. ⭐ `METHOD`: *a composition is a thing
+to MEASURE, not an emergent property* — and measuring it is what told a real defect (the
+missing deadband) from an impression.
 ⭐⭐ Rule 6's gain was **computed, not guessed**: `gainTranslateScreen` is a multiplier on
 a tracking factor and **1.0 puts the object exactly under the finger**.
 ⭐ **The order is `IN2` → rule 6 translate → `3D1` → 6bis onward.** `IN4`'s dependency

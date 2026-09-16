@@ -55,6 +55,15 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
+  holderDrive,
+  secondTouchHeld,
+  rollDragDeg,
+  secondFingerDrive,
+  gravityFrame,
+  type GravityFrame,
+  depthLimits,
+  depthTranslate,
+  displayPose,
   exponentialSmooth,
   phantomTarget,
   neutralLeadSec,
@@ -64,6 +73,8 @@ import {
   swayScale,
   swayWorldDirection,
   SpinSwayWatcher,
+  CameraResetAnimation,
+  type CameraPose,
   type SwayKick,
   type SpinSwayKick,
   type FollowState,
@@ -74,9 +85,23 @@ import {
   type PosePort,
   type ReleaseVerdict,
   type Sample,
+  MotionTracker,
+  type MotionState,
   type ScreenFrame,
 } from "../input";
-import { qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "../core/vec";
+// ⭐ The quaternion arithmetic left this file with the composition it belonged to —
+// `input/display_pose.ts`, where it can be vectored. What stays is the plain types.
+import type { Quat, Vec3 } from "../core/vec";
+import {
+  makeWorld,
+  setWorldPlacement,
+  worldPlacementOf,
+  type Face,
+  WORLD_DOWN,
+  type ObjectId,
+  type World,
+} from "../core/object_model";
+import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
 import { validateGestureConfig } from "../input/gestureConfig";
@@ -159,6 +184,69 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // candidates — three pairs and the triple.
   make("objectC", new Vector3(0.01, 0.1, -0.09), [0.72, 0.58, 0.45]);
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // ⭐⭐ `3D1` — THE OBJECT MODEL IS NOW AUTHORITATIVE, AND THE MESHES ARE A VIEW OF IT.
+  //
+  // ⛔ Until this point the object's real state was `(follower.target, follower.qHome)`
+  // — an implicit pair living inside a display filter. A finger wrote the filter, and
+  // the filter WAS the truth. That is exactly backwards: rule 6's inertia is FEEL, and
+  // feel must not be where meaning is stored.
+  //
+  // ⭐ So the chain is now `SWAY ∘ FOLLOW ∘ worldPlacementOf(world, id)` for real, and
+  // the render loop re-reads the model every frame. Nothing downstream of `displayPose`
+  // can be read back as state, and anything that MEANS something reads the model.
+  //
+  // ⚠ The parent chain is unexercised here — three loose boxes, no assembly yet — but
+  // it is the SAME call, so `3D2` parenting a part changes nothing in this file.
+  const idOf = new Map<AbstractMesh, ObjectId>();
+  const meshOf = new Map<ObjectId, AbstractMesh>();
+  const half = OBJECT_SIZE_M / 2;
+  // ⭐ Six faces, outward normals, LOCAL frame — the same convention `MateConnector`
+  // uses, so a face and a connector never disagree about which way "out" is.
+  // ⚠ Their ids are geometric ("+x"), not indices: a triangle index is an engine detail
+  // and `3D1` is explicit that a face is not a triangle.
+  const boxFaces: Face[] = [
+    { id: "+x", centre: [half, 0, 0], normal: [1, 0, 0] },
+    { id: "-x", centre: [-half, 0, 0], normal: [-1, 0, 0] },
+    { id: "+y", centre: [0, half, 0], normal: [0, 1, 0] },
+    { id: "-y", centre: [0, -half, 0], normal: [0, -1, 0] },
+    { id: "+z", centre: [0, 0, half], normal: [0, 0, 1] },
+    { id: "-z", centre: [0, 0, -half], normal: [0, 0, -1] },
+  ];
+  let world: World = makeWorld(
+    scene.meshes
+      .filter((m) => m.metadata?.orbitCandidate === true)
+      .map((m) => {
+        idOf.set(m, m.name);
+        meshOf.set(m.name, m);
+        return {
+          id: m.name,
+          local: {
+            position: [m.position.x, m.position.y, m.position.z] as Vec3,
+            orientation: [1, 0, 0, 0] as Quat,
+          },
+          parent: null,
+          faces: boxFaces,
+          connectors: [],
+          // §0's Start condition: every object begins with an EMPTY stack.
+          constraints: [],
+        };
+      }),
+  );
+
+  /** The object's TRUE placement, through its parent chain. `null` for a non-object. */
+  const modelPose = (mesh: AbstractMesh) => {
+    const id = idOf.get(mesh);
+    return id === undefined ? null : worldPlacementOf(world, id);
+  };
+
+  /** Write the model. ⛔ The only way an object's real pose ever changes. */
+  const setModelPose = (mesh: AbstractMesh, placed: Placed): void => {
+    const id = idOf.get(mesh);
+    if (id === undefined) return;
+    world = setWorldPlacement(world, id, placed);
+  };
+
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
   // Without it the barycentre selection is invisible, and "it seems to orbit the right
   // thing" is not an observation. `IN3` deletes this along with the three placeholder
@@ -196,10 +284,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   interface Held {
     rec: Recognizer<DiagnosticPose>;
     mesh: AbstractMesh;
-    frame: ScreenFrame;
+    /**
+     * ⭐⭐ AMENDMENT A7 — the GRAVITY frame, latched at press. Yaw about the world
+     * vertical, pitch about the camera's (always horizontal) right, roll and depth about
+     * the view direction flattened onto the ground.
+     * ⛔ NOT the camera's own axes: with a tilted camera the view axis has a vertical
+     * component, so rolling about it partly duplicates yawing and the two gestures
+     * interfere. ⚠ `screenFrame()` still exists for A3's handover, which needs the TRUE
+     * view axis — two frames, two purposes.
+     */
+    frame: GravityFrame;
     /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
     prev: Sample;
-    lastRollDeg: number;
     /**
      * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
      *
@@ -216,7 +312,43 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * protecting it. ⚠ Do not generalise "latch at press" to every input.
      * ⚠ `null` only before the gesture commits.
      */
-    mode: "ROTATE" | "TRANSLATE" | null;
+    mode: "ROTATE" | "TRANSLATE" | "DEPTH" | null;
+    /**
+     * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
+     * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer
+     * id, because `MotionTracker` is stateful and hysteretic: sharing one between two
+     * fingers would mix their histories and answer about neither.
+     * ⚠ Rebuilt when a touchpoint goes down, never reused across a release.
+     */
+    /**
+     * ⛔⛔ KEYED BY THE ROUTER'S `seq` — PRESS ORDER — AND NEVER BY THE POINTER ID.
+     *
+     * ⚠⚠ Device-reported, 2026-09-16: release the second touchpoint from its object,
+     * press it down outside any object, and the first object *"continues translation and
+     * then switches to rotation"* instead of rotating at once.
+     *
+     * ⭐⭐ THE CAUSE: a `MotionTracker` keeps an ANCHOR POSITION, and **browsers reuse
+     * pointer ids after a release**. A new finger landing on a reused id inherited the old
+     * finger's tracker, measured its displacement from an anchor somewhere else entirely,
+     * and read `MOVING` at once — so A13 judged the second finger to be moving and the
+     * holder kept translating until the new finger settled.
+     *
+     * ⭐ `seq` is monotone for the life of the router and never reused. `router.ts` already
+     * says why it exists: *"the ONLY ordering anyone gets... `Map` iteration order would
+     * LOOK like press order right up until an id is reused."* ⛔ The same trap, one layer
+     * up — this project has now hit it twice, so the fix is structural rather than a
+     * cleanup somebody has to remember.
+     * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
+     */
+    anchorMotion: Map<number, MotionTracker>;
+    /**
+     * ⭐⭐⭐ A14 — when a second touchpoint last LIFTED, so a lift-and-replace reads as ONE
+     * gesture. ⛔ `null` until one ever has. See `secondTouchHeld`.
+     */
+    secondLiftedAtMs: number | null;
+    /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
+    depthSway: SwayWatcher;
+
     /**
      * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
      * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
@@ -302,7 +434,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const followerFor = (mesh: AbstractMesh): Follow => {
     let f = followers.get(mesh);
     if (!f) {
-      const p = mesh.position;
+      // ⭐ Seeded from the MODEL where there is one. The mesh is a view, and seeding a
+      // filter from its own output is how a system acquires a memory nobody declared.
+      const mp = modelPose(mesh);
+      const p = mp ? new Vector3(mp.position[0], mp.position[1], mp.position[2]) : mesh.position;
       f = {
         target: p.clone(),
         vTarget: Vector3.Zero(),
@@ -317,7 +452,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         swayRotY: { x: 0, v: 0 },
         swayRotZ: { x: 0, v: 0 },
         swayPivot: p.clone(),
-        qHome: readPose(mesh),
+        qHome: mp ? mp.orientation : readPose(mesh),
       };
       followers.set(mesh, f);
     }
@@ -341,6 +476,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * cancel, leak, or fire after the scene is gone.
    */
   let pendingCentre: { x: number; y: number; at: number } | null = null;
+
+  /**
+   * The double-tap reset in flight, or `null`.
+   * ⛔ CANCELLED BY THE NEXT TOUCH. An animation that kept running while a finger dragged
+   * would fight the hand for the camera, and the hand would lose — the reset writes the
+   * whole pose every frame.
+   */
+  let cameraReset: CameraResetAnimation | null = null;
 
   // ─────────────────────────────────────────────────────────────────
   // §2 RULE 1 — ORBIT, for ONE touchpoint that hits nothing.
@@ -383,11 +526,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // directly would let the barycentre — and so where the camera orbits — depend on
       // whether the objects happened to be mid-wobble when the finger landed.
       // ⚠ `METHOD`: an instrument must not be moved by the thing it is measuring.
+      // ⭐⭐ NOW IT READS THE MODEL, so there is no sway to subtract: the decoration
+      // never enters the object's real placement in the first place. The subtraction this
+      // replaces was correct but defensive — it undid a contamination that can no longer
+      // happen. `display_pose.meaningfulPose` is the statement of that rule.
       .map((m) => {
-        const f = followers.get(m);
-        return f
-          ? ([m.position.x - f.swayX.x, m.position.y - f.swayY.x, m.position.z - f.swayZ.x] as Vec3)
-          : ([m.position.x, m.position.y, m.position.z] as Vec3);
+        const mp = modelPose(m);
+        return mp ? mp.position : ([m.position.x, m.position.y, m.position.z] as Vec3);
       });
     const c = orbitCentre(
       visible,
@@ -422,13 +567,46 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * give a "default" view of somewhere the camera has never been.
    */
   const resetCamera = () => {
-    orbit.reset(ORBIT_START_YAW_RAD, ORBIT_START_ELEVATION);
-    zoom = 1;
-    zoomAtPinchStart = 1;
-    centreBlend.snapTo(ORBIT_START_CENTRE_M);
     // ⚠ Any centre still waiting out its grace is dropped: it was chosen for a gesture
     // that has turned out to be a reset.
     pendingCentre = null;
+
+    // ⭐⭐ HOME IS THE LAST YELLOW TARGET, NOT THE ORIGIN. The marker shows the barycentre
+    // §2 rule 1 last CHOSE, and that is the thing the user has been orbiting — sending
+    // the camera back to the world origin instead would reset it to a place it may never
+    // have looked at. ⚠ Only the ANGLES and the zoom go back to their launch values.
+    const home: CameraPose = {
+      yawRad: ORBIT_START_YAW_RAD,
+      elevation: ORBIT_START_ELEVATION,
+      zoom: 1,
+      centreM: centreBlend.targetM,
+    };
+    const now: CameraPose = {
+      yawRad: orbit.yaw,
+      elevation: orbit.elevation,
+      zoom,
+      centreM: centreBlend.centreM,
+    };
+
+    if (cfg.cameraResetMs > 0) {
+      // ⛔ A blend in flight is ABANDONED to the animation: two things easing the same
+      // centre on two different clocks would fight, and the finger-travel one cannot
+      // even advance — a double-tap supplies no travel.
+      centreBlend.snapTo(now.centreM);
+      cameraReset = new CameraResetAnimation(now, home, cfg.cameraResetMs);
+      return;
+    }
+
+    cameraReset = null;
+    applyCameraPose(home);
+  };
+
+  /** Put the camera exactly at a pose. Shared by the reset's every frame and its end. */
+  const applyCameraPose = (p: CameraPose): void => {
+    orbit.reset(p.yawRad, p.elevation);
+    zoom = p.zoom;
+    zoomAtPinchStart = p.zoom;
+    centreBlend.snapTo(p.centreM);
     syncCentre();
     applyCamera();
   };
@@ -483,10 +661,47 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     mesh.rotationQuaternion!.set(q[1], q[2], q[3], q[0]);
   };
 
+  /**
+   * ⭐ §1.3's provisional-motion rollback, on the MODEL. ⛔ Snapshotting the mesh would
+   * capture whatever the sway happened to be doing, and restoring it would write a
+   * decoration back into the object's real pose — permanently.
+   */
+  /**
+   * ⛔⛔ THERE IS NO FALLBACK TO THE MESH, DELIBERATELY. Every pickable object is in the
+   * model by construction, so a miss here is a programming error — and the tempting
+   * `?? readPose(mesh)` would answer it by silently writing the object's real pose into
+   * a display transform instead, where the next frame overwrites it. The object would
+   * stop responding for reasons nothing could explain.
+   * ⭐ `METHOD`: *a guard that turns a broken state into silence is worse than a failure*,
+   * and `validateGestureConfig` and `testMate` both throw for the same reason.
+   */
+  const requirePose = (mesh: AbstractMesh): Placed => {
+    const mp = modelPose(mesh);
+    if (!mp) {
+      throw new Error(
+        `"${mesh.name}" is being manipulated but is not in the object model. Every ` +
+          "pickable object must be registered in the world model — see 3D1.",
+      );
+    }
+    return mp;
+  };
+
+  /**
+   * ⭐ §1.3's provisional-motion rollback, on the MODEL. ⛔ Snapshotting the mesh would
+   * capture whatever the sway happened to be doing, and restoring it would write a
+   * decoration back into the object's real pose — permanently.
+   */
   const poseOf = (mesh: AbstractMesh): PosePort<DiagnosticPose> => ({
-    snapshot: () => readPose(mesh),
-    restore: (p) => writePose(mesh, p),
+    snapshot: () => requirePose(mesh).orientation,
+    restore: (q) => setModelPose(mesh, { position: requirePose(mesh).position, orientation: q }),
   });
+
+  /** The model's orientation for a held object. ⚠ Never the mesh's — that carries sway. */
+  const modelOrientation = (mesh: AbstractMesh): Quat => requirePose(mesh).orientation;
+
+  const setModelOrientation = (mesh: AbstractMesh, q: Quat): void => {
+    setModelPose(mesh, { position: requirePose(mesh).position, orientation: q });
+  };
 
   const asVec3 = (v: Vector3): Vec3 => [v.x, v.y, v.z];
 
@@ -495,6 +710,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * frame: rule 1's camera orbit must not silently redefine the axes half-way
    * through a gesture. Same lesson as §1.4's `WORLD_AXIS_ALIGN`.
    */
+  /**
+   * The gesture basis (A7). ⛔ Throws rather than guessing if the camera ever looks exactly
+   * along gravity: there is no horizontal heading to call "depth" there, and every
+   * direction across the screen would be equally entitled to the name.
+   * ⭐ Unreachable by construction — §2 rule 1's orbit surface clamps the elevation to its
+   * rings and never reaches a pole — and `requirePose`'s reasoning applies: a guard that
+   * turns a broken state into silence is worse than a failure.
+   */
+  const requireGestureFrame = (): GravityFrame => {
+    const g = gravityFrame(screenFrame().viewAxis, WORLD_DOWN);
+    if (!g) {
+      throw new Error(
+        "the camera is looking exactly along gravity, so there is no gesture frame. " +
+          "The orbit surface is supposed to make this unreachable — see A7.",
+      );
+    }
+    return g;
+  };
+
   const screenFrame = (): ScreenFrame => ({
     right: asVec3(camera.getDirection(Vector3.Right())),
     up: asVec3(camera.getDirection(Vector3.Up())),
@@ -513,6 +747,54 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return `${v.kind}${f}${rule}${back}  ${Math.round(v.durationMs)}ms  ${lift}`;
   };
 
+  /**
+   * How deep the pinched object is, against the bounds A5 derives.
+   *
+   * ⭐⭐ PRINTED BECAUSE A CLAIM A DEVICE CANNOT CHECK IS AN ASSERTION, NOT A FINDING.
+   * The owner looked for the ceiling and could not see it; rather than argue about whether
+   * it binds, the number and its limits go on the glass and say so themselves. ⛔ If it
+   * never reaches `⛔MAX`, the note warning about a tight ceiling is the thing to correct.
+   * ⚠ Empty when nothing is being pinched — a readout that invents a number is worse than
+   * a blank one.
+   */
+  const depthReadout = (): string => {
+    for (const grip of held.values()) {
+      const push = grip.frame.depth;
+      const mp = modelPose(grip.mesh);
+      if (!mp) continue;
+      const c = asVec3(camera.position);
+      const r: Vec3 = [mp.position[0] - c[0], mp.position[1] - c[1], mp.position[2] - c[2]];
+      const d = r[0] * push[0] + r[1] * push[1] + r[2] * push[2];
+      const { minM, maxM } = depthLimits(cfg);
+      const at = d <= minM + 1e-4 ? "  ⛔MIN" : d >= maxM - 1e-4 ? "  ⛔MAX" : "";
+      // ⭐⭐ A10'S GATE, ON THE GLASS. The rule is invisible otherwise: a hand that gets
+      // no depth cannot tell whether the holder was judged to be moving or whether the
+      // anchor was. ⛔ It prints what the gate DECIDED, never a recomputation.
+      // ⭐⭐⭐ A12 ON THE GLASS: which of the second finger's two corridors is open.
+      // ⛔ The rule is invisible otherwise — a hand that gets no roll cannot tell whether
+      // the holder was judged to be moving or whether its own x had not left the band.
+      const second = [...grip.anchorMotion.values()][0];
+      const corridor = second
+        ? `${second.axes.x === "MOVING" ? "X→roll " : ""}${second.axes.y === "MOVING" ? "Y→depth" : ""}` || "—"
+        : "no 2nd";
+      // ⭐⭐ AND THE MODE ITSELF, with the counts behind it. ⛔ Three device reports on this
+      // rule were diagnosed by reasoning about code because the HUD could not answer *"what
+      // does the build think is down right now?"* — an instrument is judged against the
+      // question it exists to answer.
+      const held2 = secondFingerOf(grip);
+      const graceLeft =
+        grip.secondLiftedAtMs === null
+          ? 0
+          : Math.max(0, cfg.secondTouchGraceMs - (performance.now() - grip.secondLiftedAtMs));
+      const mode =
+        `${grip.mode ?? "—"} obj=${router.objects().length} out=${router.outside().length}` +
+        `${held2.present ? " 2nd" : graceLeft > 0 ? ` 2nd~${graceLeft.toFixed(0)}ms` : ""}` +
+        `${grip.rec.motionState === "STATIONARY" ? ` ready ${corridor}` : ""}`;
+      return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at} ${mode}`;
+    }
+    return "";
+  };
+
   const paint = () => {
     const first = held.get(router.objects()[0]?.id ?? -1);
     hud.update({
@@ -525,7 +807,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       phase: first ? first.rec.currentPhase : "—",
       motion: first ? first.rec.motionState : "—",
       rollDeg: first ? first.rec.rollDeg : 0,
-      rollCommitted: first ? first.rec.rollCommitted : false,
+      // ⚠ A12 RETIRED the circular roll, so this is always false and is kept only because
+      // the HUD type carries it. ⭐ A12's roll state is in the depth readout instead.
+      rollCommitted: false,
       lastVerdict,
       // ⚠ Shown so a session can never be spent testing a value that was not in
       // force — including a typo'd key, which is REPORTED rather than ignored.
@@ -534,7 +818,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         `${centreBlend.isBlending ? `→${(centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
         `r=${camera.radius.toFixed(3)}m zoom=${zoom.toFixed(2)} ` +
         `elev=${orbit.elevation.toFixed(2)}${orbit.atLimit ? "⛔LIMIT" : ""}` +
-        `${pinch.isZooming ? "  ZOOMING" : ""}`,
+        `${pinch.isZooming ? "  ZOOMING" : ""}` +
+        depthReadout(),
       tuning: tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
       tuningRejected: tuning.rejected,
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
@@ -659,6 +944,33 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("phantom lead (ms)", "translateLeadMs", 0, 1.5, 0.1),
         // ⭐ The sympathetic sway: how far the OTHER objects drift when this one sets
         // off, and how lazily they spring back. ⛔ 0 mm disables it exactly.
+        // ⭐⭐ AMENDMENT A6 — DEPTH TRANSLATION. 1.0 moves the object as far INTO the
+        // scene as rule 6 moves it ACROSS, for the same finger travel: one gain, one
+        // computed tracking factor, two directions. ⛔ Not a metres-per-millimetre
+        // constant — rule 6 proved that cannot serve both ends of a 20x zoom clamp.
+        // ⛔⛔ THE DEFAULT IS 3.0, NOT THE COMPUTED 1.0 — set by a hand on 2026-09-15.
+        // Depth is visually foreshortened, so equal WORLD motion is not equal PERCEIVED
+        // motion, and the eye is what is being served. ⚠ The range was widened to 0.5–5
+        // in the same breath, which is itself a reading: the owner wanted room ABOVE the
+        // old ceiling of 3, so 3 may not be the end of the movement either.
+        tunable("depth gain (1 = as far as a drag)", "gainTranslateDepth", 0.5, 5, 0.05),
+        // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
+        // what baseline. ⛔ The tolerance is on the DIFFERENCE of the two travels: it is
+        // what separates A6 from rule 6, whose anchor is deliberately still.
+        // ⭐⭐ A10 MADE THESE FOUR LOAD-BEARING FOR A MODE, not only for a flick test:
+        // the depth gate IS the holder's §1.1 motion state. ⛔ They were re-sized against
+        // the measured noise floor when A10 landed, and a hand has not judged the new set.
+        // ⭐⭐⭐ ONE RADIUS, and it is now the commit threshold, the rest test AND the
+        // jitter deadband at once (A11). ⛔ The most load-bearing number in the input
+        // layer, and nobody has judged it by finger yet.
+        // ⭐⭐⭐ A12: the second touchpoint's x rolls the object. Nobody has judged this
+        // by finger, and every gain a hand has set was raised from my guess.
+        tunable("roll drag gain (deg/mm)", "gainRollDrag", 0.25, 12, 0.25),
+        tunable("motion DEADBAND (mm)", "motionDeadbandMm", 0.5, 8, 0.1),
+        tunable("rest confirm (ms)", "restConfirmMs", 0, 400, 10),
+        // ⭐⭐⭐ A14: how long a lift-and-replace of the second touchpoint stays ONE
+        // gesture. ⛔ 0 restores the old behaviour exactly, which is how to A/B it.
+        tunable("second touch grace (ms)", "secondTouchGraceMs", 0, 600, 25),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
         // ⭐ How far the drag must swing before the scene reacts again, and the drag
@@ -681,6 +993,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
         // whether this is an orbit or the start of a pinch. 0 commits immediately.
         tunable("centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
+        // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
+        tunable("reset time (ms)", "cameraResetMs", 0, 2000, 50),
         // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
         // per pixel — a pixel means something different on a phone and a tablet.
         tunable("yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
@@ -722,34 +1036,51 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the axes LATCHED AT PRESS — the same frame the translation itself uses, so the scene
    * cannot lean one way while the object goes another.
    */
-  const nudgeOthers = (grip: Held, kick: SwayKick): void => {
+  /**
+   * ⭐ The sympathetic sway, given a WORLD direction the held object set off in.
+   *
+   * ⛔ Split out of `nudgeOthers` when amendment A5's depth pinch needed the same
+   * reaction. The pinch already knows its world direction and has no screen heading to
+   * convert, so the conversion moved OUT and the reaction stayed put. ⚠ One
+   * implementation: a second copy would let the scene lean one way for a drag and another
+   * for a pinch, which is the drift `CONSTRAINTS` §4 exists to stop.
+   * ⭐ It reads the SAME four tunables the drag's sway does — amplitude, softness,
+   * re-trigger and reference speed — so no new slider appears for a second cause.
+   */
+  const nudgeOthersWorld = (heldMesh: AbstractMesh, dir: Vec3, speedMmPerS: number): void => {
     const perPx = trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight);
-    // ⭐ Amplitude × how fast the object set off. Slow drag, small and slow sway; fast
-    // drag, bigger AND quicker — it still peaks at `translateSwayTauMs`, so a larger
-    // excursion covers that ground faster. See `swayScale`, which clamps the ratio.
-    const scale = swayScale(kick.speedMmPerS, cfg.swayReferenceSpeedMmPerS);
+    // ⭐ Amplitude × how fast the object set off. Slow, small and slow; fast, bigger AND
+    // quicker — it still peaks at the same time constant, so a larger excursion covers
+    // that ground faster. See `swayScale`, which clamps the ratio.
+    const scale = swayScale(speedMmPerS, cfg.swayReferenceSpeedMmPerS);
     const peakM = mmToPx(cfg.translateSwayMm) * perPx * scale;
     const impulse = impulseForPeak(peakM, cfg.translateSwayTauMs / 1000);
     if (!(impulse > 0)) return;
-
-    // ⭐ THE SAME way the held object set off, as a world vector — the mapping and the
-    // sign both live in `swayWorldDirection`, which is also where a depth component goes
-    // when 6bis/6ter start translating out of the view plane.
-    // ⚠ Through the axes LATCHED AT PRESS, the same frame the translation itself uses,
-    // so the scene cannot lean one way while the object goes another.
-    const dir = new Vector3(...swayWorldDirection(grip.frame, kick.dirX, kick.dirY));
 
     for (const mesh of scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
       // marker cannot sway — a readout that moved with the scene would be describing
       // itself. And the held object is excluded: it is already going that way.
       if (mesh.metadata?.orbitCandidate !== true) continue;
-      if (mesh === grip.mesh) continue;
+      if (mesh === heldMesh) continue;
       const f = followerFor(mesh);
-      f.swayX = { x: f.swayX.x, v: f.swayX.v + dir.x * impulse };
-      f.swayY = { x: f.swayY.x, v: f.swayY.v + dir.y * impulse };
-      f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir.z * impulse };
+      f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
+      f.swayY = { x: f.swayY.x, v: f.swayY.v + dir[1] * impulse };
+      f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir[2] * impulse };
     }
+  };
+
+  /**
+   * Rule 6's drag: convert the screen heading to a world one and hand it over.
+   * ⚠ Through the axes LATCHED AT PRESS, the same frame the translation itself uses, so
+   * the scene cannot lean one way while the object goes another.
+   */
+  const nudgeOthers = (grip: Held, kick: SwayKick): void => {
+    nudgeOthersWorld(
+      grip.mesh,
+      swayWorldDirection(grip.frame, kick.dirX, kick.dirY),
+      kick.speedMmPerS,
+    );
   };
 
   /**
@@ -781,6 +1112,185 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       f.swayRotY = { x: f.swayRotY.x, v: f.swayRotY.v + kick.axis[1] * impulse };
       f.swayRotZ = { x: f.swayRotZ.x, v: f.swayRotZ.v + kick.axis[2] * impulse };
     }
+  };
+
+  /**
+   * ⭐⭐ AMENDMENT A6 — DEPTH TRANSLATION BY A COMMON VERTICAL DRAG.
+   *
+   * One touchpoint on the object, one touchpoint beside it, and **both travelling in y by
+   * the same amount** — the object goes deeper into the scene or comes back.
+   *
+   * ⛔⛔ IT SHARES A CONFIGURATION WITH RULE 6, so the discriminator is the whole design:
+   * **common mode is depth, differential mode is rule 6.** The anchor sitting still is what
+   * makes a gesture rule 6; both fingers travelling together is what makes it A6.
+   *
+   * ⭐ A6 replaced A5's pinch because a hand found the hole: two fingers will not fit on a
+   * SMALL object, and pushing a part away shrinks it — so the pinch destroyed its own
+   * affordance as it succeeded. The anchor can now be anywhere.
+   */
+  /**
+   * Move the held object in depth by ONE touchpoint's share of this frame's travel.
+   *
+   * ⛔⛔ HALF, AND THAT IS ARITHMETIC RATHER THAN CAUTION. The common travel is the AVERAGE
+   * of the two fingers', and each finger delivers its own move event — so applying half of
+   * each event's delta sums to exactly the common travel. Applying the whole of each would
+   * move the object TWICE as far as the hand asked.
+   */
+  /**
+   * Move the held object in depth by the DRIVER's own travel.
+   *
+   * ⛔⛔ THE DRIVER IS THE FINGER TOUCHING THE OBJECT, AND IT SUPPLIES ALL THE MOTION. The
+   * second finger contributes none — it authorises the depth reading by following. ⚠ Three
+   * earlier versions of this blended the two fingers' travel (a mean, a minimum, a faded
+   * mean) and a hand felt every one of them: a blend has seams.
+   */
+  const applyDepthStep = (grip: Held, dyPx: number): void => {
+    const mp = requirePose(grip.mesh);
+    const { minM, maxM } = depthLimits(cfg);
+    setModelPose(grip.mesh, {
+      position: depthTranslate(
+        asVec3(camera.position),
+        mp.position,
+        // ⭐ Both latched at press with the rest of the frame. `towardGravity` is what
+        // says whether "away" rises or sinks on screen — it is +1 looking down on the
+        // scene and −1 looking up at it, and assuming +1 made the gesture backwards on the
+        // bottom ring.
+        grip.frame.depth,
+        Math.sign(grip.frame.towardGravity),
+        dyPx,
+        // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object
+        // as far INTO the scene as it would move it ACROSS. One hand's-worth of motion
+        // means the same amount of movement whichever way it is going.
+        trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
+        cfg.gainTranslateDepth,
+        minM,
+        maxM,
+      ),
+      orientation: mp.orientation,
+    });
+  };
+
+  /**
+   * Feed the gate and, if this is a common drag, move the object. ⭐ Called from BOTH
+   * touchpoints' move handlers — the anchor has no recognizer, so without its own call its
+   * travel would be invisible and the gesture would work only while the object finger moved.
+   *
+   * @returns true when A6 owns this object right now, so the caller skips its own rule.
+   */
+  /**
+   * ⭐⭐ AMENDMENT A10 — the ANCHOR drives depth, while the finger on the object is STILL.
+   *
+   * ⛔⛔ THE GATE IS THE HOLDER'S MOTION STATE AND NOTHING ELSE. No window, no ratio, no
+   * tolerance: A6 had all three and the owner rejected the result on the glass, because
+   * *"are these two travels equal?"* has no answer at a reversal or at a late start, and
+   * both happen in every gesture.
+   *
+   * @param anchor  the touchpoint OUTSIDE every object — the one supplying the motion.
+   * @param anchorDyPx its travel THIS FRAME.
+   * @returns whether depth consumed the event, so the caller stops.
+   */
+  /**
+   * ⭐⭐ THE SECOND TOUCHPOINT AND ITS LIVE MOTION STATE, for A13's mode choice.
+   *
+   * ⛔ Presence and state, re-read every frame — never latched. ⚠ `null` state means the
+   * finger has gone down and NEVER MOVED, so it has no tracker yet: the strongest form of
+   * idle there is, not a missing answer.
+   * ⚠ A touchpoint on a DIFFERENT object is deliberately not one of these — that is §4
+   * rule 5 / 6bis / 6ter's configuration and must stay reachable.
+   */
+  const secondFingerOf = (
+    grip: Held,
+  ): { present: boolean; state: MotionState | null } => {
+    for (const q of router.all()) {
+      const isSecond =
+        q.role === "OUTSIDE" || (q.role === "SECOND" && q.object === grip.mesh);
+      if (!isSecond) continue;
+      return { present: true, state: grip.anchorMotion.get(q.seq)?.current ?? null };
+    }
+    return { present: false, state: null };
+  };
+
+  /**
+   * ⛔ Forget a released touchpoint's motion tracker, everywhere.
+   *
+   * ⚠ Keyed by `seq`, so a reused pointer id can no longer inherit it — this is belt to
+   * that structural brace, and it is what stops the map growing for the life of a gesture.
+   */
+  const forgetAnchor = (seq: number, at: number): void => {
+    for (const grip of held.values()) {
+      grip.anchorMotion.delete(seq);
+      // ⭐⭐⭐ A14 — AND REMEMBER THAT A TOUCHPOINT JUST LIFTED. From every OTHER grip's
+      // point of view this was its second touchpoint, whatever role it held: outside every
+      // object, on the same object, or on a different one (which is the owner's case 3).
+      // ⛔ A lift-and-replace is ONE gesture, and without this the interval between them
+      // has a single touchpoint down and `A13` translates through the middle of it.
+      // ⚠ Setting it on the releasing grip itself is harmless: it is deleted immediately.
+      grip.secondLiftedAtMs = at;
+    }
+  };
+
+  const applyDepthDrag = (grip: Held, anchorSeq: number, anchorSample: Sample) => {
+    // ⭐ The anchor gets a tracker of its own — the SAME §1.1 machine every other rule
+    // reads, never a speed invented here. A second definition of "moving" would be free
+    // to disagree with the one the holder is judged by.
+    // ⛔ Keyed by PRESS ORDER, never by pointer id. See `Held.anchorMotion`.
+    let tracker = grip.anchorMotion.get(anchorSeq);
+    if (!tracker) {
+      tracker = new MotionTracker(cfg);
+      grip.anchorMotion.set(anchorSeq, tracker);
+    }
+    // ⭐⭐ ASK THE CLOCK RIGHT HERE TOO, not only in the render loop. This is the one
+    // moment the holder's stillness actually decides something, and an anchor event can
+    // arrive between frames — or after a dropped one. ⛔ Belt and braces on the exact
+    // defect that made this gesture *"sometimes blocked"*.
+    grip.rec.tick(anchorSample.t);
+    tracker.push(anchorSample);
+
+    // ⭐⭐⭐ AMENDMENT A12 — the second finger's TWO AXES drive TWO RULES: x is ROLL, y is
+    // DEPTH, and A11's per-axis bands keep them independent. ⛔ The travel is the
+    // DEADBANDED travel, exactly as rule 6 and 2bis take the holder's.
+    const drive = secondFingerDrive(grip.rec.motionState, tracker.axes, tracker.step);
+    if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
+
+    if (drive.depthDyPx !== 0) {
+      applyDepthStep(grip, drive.depthDyPx);
+      grip.mode = "DEPTH";
+    }
+    if (drive.rollDxPx !== 0) {
+      // ⭐⭐ ROLL AS AN INCREMENT, about the gravity frame's horizontal depth axis (A7).
+      // ⚠ No baseline, no commit threshold, no circle fit, no rebase — the jump those
+      // produced is gone with them. A12 replaced the gesture rather than the arithmetic.
+      setModelOrientation(
+        grip.mesh,
+        screenRollRotation(
+          modelOrientation(grip.mesh),
+          grip.frame,
+          rollDragDeg(drive.rollDxPx, cfg.gainRollDrag),
+        ),
+      );
+      grip.mode = "ROTATE";
+      // ⭐ The rotational sway answers a driven roll too — same watcher, same tunables.
+      const home = modelOrientation(grip.mesh);
+      followerFor(grip.mesh).qHome = home;
+      const spin = grip.spinSway.push(home, anchorSample.t, true);
+      if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
+    }
+    // ⛔⛔ AND THE HOLDER'S GESTURE IS NO LONGER A TAP. It is being held STILL on the
+    // object, which is a tap's exact shape — and a DOUBLE_TAP resolves to 2septies
+    // eviction. See `Recognizer.consumeAsMotion`.
+    grip.rec.consumeAsMotion();
+
+    // ⭐ THE SCENE REACTS TO A PUSH TOO — the same sway, the same four tunables.
+    // ⚠ SIGN: fingers moving UP (negative screen y) push the object AWAY, which is +push.
+    const kick = grip.depthSway.push({ x: 0, y: anchorSample.y, t: anchorSample.t }, true, true);
+    if (kick) {
+      const push = grip.frame.depth;
+      {
+        const away = kick.dirY < 0 ? 1 : -1;
+        nudgeOthersWorld(grip.mesh, [push[0] * away, push[1] * away, push[2] * away], kick.speedMmPerS);
+      }
+    }
+    return true;
   };
 
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
@@ -815,15 +1325,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
+      // ⛔ A NEW TOUCH CANCELS A RESET IN FLIGHT. The animation writes the whole camera
+      // pose every frame, so a drag during one would be overwritten as fast as it was
+      // applied — the hand would appear to have no effect at all.
+      cameraReset = null;
       const pick = info.pickInfo;
       const hit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
       const routed = router.press(e.pointerId, s, hit);
 
       if (routed.role === "IGNORED") {
-        // ⛔ `IN8`: a second touchpoint on an object something else already holds.
-        // It starts no recognizer, takes no anchor and moves nothing. ⚠ It is still
-        // COUNTED on the readout, so "why is nothing happening" has a visible answer.
+        // ⛔ A THIRD touchpoint on an object already held AND already pinched (A5 allows
+        // exactly one partner). It starts no recognizer, takes no anchor and moves
+        // nothing. ⚠ It is still COUNTED on the readout, so "why is nothing happening"
+        // has a visible answer.
+        paint();
+        return;
+      }
+
+      if (routed.role === "SECOND") {
+        // ⭐ A second finger on an object another touchpoint already holds. It runs NO
+        // recognizer — it never begins a §1.3 gesture of its own — it is one of A6's two
+        // travelling fingers. ⛔ Creating a `Held` here would give one mesh two recognizers.
+        // ⚠ A6's anchor may equally be a finger OUTSIDE every object; this branch is the
+        // case where the hand happened to put it back on the part.
         paint();
         return;
       }
@@ -869,11 +1394,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       held.set(e.pointerId, {
         rec,
         mesh,
-        frame: screenFrame(),
+        frame: requireGestureFrame(),
         prev: s,
-        lastRollDeg: 0,
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
+        anchorMotion: new Map(),
+        secondLiftedAtMs: null,
+        depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
         // of orientation noise per sample. Measured over 10 s of a still finger that is
@@ -894,13 +1421,35 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const routed = router.get(e.pointerId);
     if (!routed) return;
 
+    if (routed.role === "SECOND") {
+      if (info.type === PointerEventTypes.POINTERUP) {
+        forgetAnchor(routed.seq, s.t);
+        router.release(e.pointerId);
+        lastVerdict = "second touchpoint released";
+      } else {
+        router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        // ⭐⭐⭐ A12: A SECOND FINGER ON THE SAME OBJECT DRIVES IT, exactly as one outside
+        // does — the owner: *"second touchpoint INSIDE OR OUTSIDE any object"*. Its x is
+        // roll and its y is depth, while the finger on the object is held still.
+        // ⚠ A touchpoint on a DIFFERENT object is deliberately excluded: that is §4 rule 5
+        // / 6bis / 6ter's configuration and must stay reachable.
+        const holder2 = router.objects().find((q) => q.object === routed.object);
+        const grip2 = holder2 ? held.get(holder2.id) : undefined;
+        if (grip2) applyDepthDrag(grip2, routed.seq, s);
+      }
+      paint();
+      return;
+    }
+
     if (routed.role === "IGNORED") {
       // ⛔⛔ AN IGNORED TOUCHPOINT RUNS NOTHING, INCLUDING ON RELEASE — no release
       // verdict, no flick test, no tap history. ⚠ The OPPOSITE of the pinch three
       // branches below, where lifting one of two fingers ends the gesture. A stray TAP
       // from here would evict a constraint (§1.4) that the user never asked to lose.
-      if (info.type === PointerEventTypes.POINTERUP) router.release(e.pointerId);
-      else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      if (info.type === PointerEventTypes.POINTERUP) {
+        forgetAnchor(routed.seq, s.t);
+        router.release(e.pointerId);
+      } else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
       paint();
       return;
     }
@@ -911,6 +1460,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        // ⭐⭐ A10: THIS IS THE FINGER THAT DRIVES DEPTH, and this branch is the only
+        // place depth is applied. ⛔ The gate opens only while the finger ON the object is
+        // STILL — so an anchor moving during an ordinary rule 6 drag does nothing at all,
+        // and the two rules partition the configuration instead of competing for it.
+        const holder = router.objects()[0];
+        const grip = holder ? held.get(holder.id) : undefined;
+        if (grip && applyDepthDrag(grip, routed.seq, s)) {
+          paint();
+          return;
+        }
         if (router.outside().length === 2) {
           updatePinch();
         } else if (router.outside().length === 1 && router.objects().length === 0) {
@@ -934,6 +1493,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           s.t - routed.pressed.t <= cfg.tapMaxDuration &&
           Math.hypot(s.x - routed.pressed.x, s.y - routed.pressed.y) <=
             mmToPx(cfg.doubleTapSlop);
+        forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
@@ -961,10 +1521,36 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ `>= 1`: two anchors and one object is not in §4's table, and translating is
         // the answer that surprises nobody. Pinch and orbit both require NOTHING held,
         // so neither can be running at the same time.
+        // ⭐⭐⭐ A13 SWAPPED THE ASSIGNMENT: **one touchpoint TRANSLATES, and a second
+        // one held STILL turns the same drag into a ROTATION.** The second finger
+        // contributes no motion — holding it still is the whole of the input.
+        // ⛔ Presence AND state, re-read every frame, never latched. ⚠ Both fingers moving
+        // resolves to TRANSLATE: the holder wins every tie, which is the one cell the
+        // owner's four rules did not name.
+        // ⚠⚠ `IN4` records a device verdict that LOOKS like this and is not — a
+        // STATIONARY latch taken at press, overturned by a hand first try. This reads it
+        // live, off a position deadband rather than a speed test, but a device pass should
+        // look for mode flicker directly.
+        // ⛔⛔⛔ PRESENCE ALONE, AND THE DEVICE SAID SO TWICE. I first keyed this on the
+        // second finger's MOTION STATE, and a hand overturned it: *"if I transition quickly
+        // there is a translation then a rotation, if I transition slowly there is directly
+        // a rotation."* ⭐ A finger PLACED QUICKLY skids as it lands — the centroid slides
+        // while the contact area grows — so it read MOVING for as long as the landing took,
+        // and the mode followed it. Nothing about the GESTURE differed; only the landing.
+        // ⛔⛔ `IN4` recorded the same verdict on 2026-09-14. See `holderDrive`.
+        // ⭐⭐⭐ A14: A LIFT-AND-REPLACE IS ONE GESTURE. Between the lift and the press
+        // there is genuinely one touchpoint down, so without the grace A13 translates
+        // through the middle of a swap — and a swap is 150-300 ms of hand, which is very
+        // visible if the holder happens to be moving at the time. ⚠ That is exactly why the
+        // owner's cases 2 and 3 *"differ by timing of the input"*.
+        const second = secondFingerOf(grip);
+        const secondHolds = secondTouchHeld(
+          second.present,
+          grip.secondLiftedAtMs === null ? null : s.t - grip.secondLiftedAtMs,
+          cfg.secondTouchGraceMs,
+        );
         grip.mode =
-          router.objects().length === 1 && router.outside().length >= 1
-            ? "TRANSLATE"
-            : "ROTATE";
+          router.objects().length === 1 ? holderDrive(secondHolds) : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,
@@ -977,6 +1563,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       );
       if (kick && cfg.translateSwayMm > 0) nudgeOthers(grip, kick);
 
+      // ⛔⛔ A10: THE HOLDER MOVING IS RULE 6, ALWAYS. There is nothing to test here and
+      // nothing to wait for — this event is proof the holder is not still, which is the
+      // only question A10 asks. ⭐ A6 used to attempt a depth classification on this very
+      // line and withhold the vertical until it had one; that hesitation at each end of
+      // every drag is exactly what the owner rejected.
+
       if (grip.mode === "TRANSLATE") {
         // §4 RULE 6 — the object translates in the screen view plane.
         // ⛔ The gain is a MULTIPLIER on a COMPUTED tracking factor, not a number: at
@@ -984,9 +1576,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // whole derivation, and the 20× spread that forced it, is in input/translate.ts.
         // ⚠ `clientHeight` — CSS pixels, matching pointer coordinates. The render height
         // is device pixels and would be wrong by `devicePixelRatio`.
+        // ⭐⭐ A10 GAVE THE VERTICAL BACK, WHOLE. A6 had to WITHHOLD it while its
+        // detector said PENDING — the two rules shared a configuration and took a window
+        // to tell apart — and the cost was that the first window of every drag's vertical
+        // travel was DISCARDED. ⛔ There is no undecided state any more: this event exists
+        // because the holder moved, and a moving holder is rule 6 by definition.
+        // ⭐⭐ THE DEADBANDED TRAVEL (A11), never the raw delta. The dead radius is
+        // applied once in §1.1 and every rule reads the same side of it — so a still
+        // finger moves nothing, and a drag leaves rest continuously rather than stepping
+        // by the radius. ⛔ This is also amendment A9, met at the source.
         const t = screenTranslation(
-          s.x - grip.prev.x,
-          s.y - grip.prev.y,
+          grip.rec.step.dx,
+          grip.rec.step.dy,
           camera.radius,
           camera.fov,
           canvas.clientHeight,
@@ -996,9 +1597,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // orbit that happens mid-drag cannot redefine which way "right" is.
         // ⛔ THE FINGER MOVES THE TARGET, NOT THE MESH. The mesh chases it in the render
         // loop. With `translateInertiaMs` at 0 the two are the same thing.
-        const f = followerFor(grip.mesh);
-        f.target.addInPlace(new Vector3(...grip.frame.right).scale(t.rightM));
-        f.target.addInPlace(new Vector3(...grip.frame.up).scale(t.upM));
+        // ⛔ THE FINGER MOVES THE MODEL. The follower's target is re-read from it every
+        // frame, so the inertia stays exactly what it was — a filter on the way to the
+        // screen, and no longer the place the object's position is kept.
+        const mp = requirePose(grip.mesh);
+        const r = grip.frame.right;
+        const u = grip.frame.up;
+        setModelPose(grip.mesh, {
+          position: [
+            mp.position[0] + r[0] * t.rightM + u[0] * t.upM,
+            mp.position[1] + r[1] * t.rightM + u[1] * t.upM,
+            mp.position[2] + r[2] * t.rightM + u[2] * t.upM,
+          ],
+          orientation: mp.orientation,
+        });
       } else if (grip.mode === "ROTATE") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release.
@@ -1014,52 +1626,46 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
         // about the screen axes latched at press. Every step is a small world-frame
         // rotation, so the two axes never end up nested inside one another.
-        const cur = readPose(grip.mesh);
-        if (grip.rec.rollCommitted) {
-          // 2quinte has taken over: roll about the view axis by what the finger has
-          // swept since the last frame. ⚠ Roll REPLACES yaw/pitch for the rest of
-          // this gesture, which is what "commits to roll" means.
-          // ⭐ The 1€-FILTERED angle. The raw channel drives the COMMIT threshold;
-          // this drives what the eye sees. See input/one_euro.ts.
-          writePose(
-            grip.mesh,
-            screenRollRotation(cur, grip.frame, grip.rec.rollAppliedDeg - grip.lastRollDeg),
-          );
-        } else {
-          writePose(
-            grip.mesh,
-            screenPlaneRotation(
-              cur,
-              grip.frame,
-              s.x - grip.prev.x,
-              s.y - grip.prev.y,
-              // ⭐ THE REAL GAIN, from the config, in radians per MILLIMETRE.
-              // ⛔ A hard-coded `DIAGNOSTIC_RAD_PER_PX` used to live in this file,
-              // deliberately kept OUT of the config so a debug value could not leak
-              // into production. The owner now wants to tune it by hand, and the
-              // config already had the properly-named field for it — so the duplicate
-              // is gone rather than a second one added. Carried rule `L1`: a tuning
-              // value living in both a debug tool and production silently drifted.
-              cfg.gainRotateFree / mmToPx(1),
-            ),
-          );
-        }
+        const cur = modelOrientation(grip.mesh);
+        // ⭐⭐⭐ A12: ONE TOUCHPOINT IS ALWAYS YAW/PITCH. There is nothing left to decide
+        // here. Roll moved to the SECOND touchpoint's x, so the two gestures are no longer
+        // the same hand shape — and everything that existed to tell them apart is gone:
+        // 2quinte's circle fit, the `rollAngle` commit threshold, the provisional
+        // yaw/pitch, A8's rebase to the circle's start, and the jump all of it produced.
+        // ⚠ `roll.ts` still exists with its 40 vectors and is no longer on the gesture
+        // path — the same status as `shake.ts` and `anchor_rotate.ts`.
+        setModelOrientation(
+          grip.mesh,
+          screenPlaneRotation(
+            cur,
+            grip.frame,
+            // ⭐⭐ Deadbanded (A11) — the raw delta is what made a held object turn
+            // while the hand was still.
+            grip.rec.step.dx,
+            grip.rec.step.dy,
+            // ⭐ THE REAL GAIN, from the config, in radians per MILLIMETRE.
+            // ⛔ A hard-coded `DIAGNOSTIC_RAD_PER_PX` used to live in this file,
+            // deliberately kept OUT of the config so a debug value could not leak
+            // into production. Carried rule `L1`: a tuning value living in both a debug
+            // tool and production silently drifted.
+            cfg.gainRotateFree / mmToPx(1),
+          ),
+        );
       }
       // ⭐⭐ THE ROTATIONAL SWAY. Same shape as the translational one: it fires when the
       // object STARTS turning and whenever the turn AXIS swings by more than
       // `rotateSwayTurnDeg` — a reversal being a 180° axis change.
       if (grip.mode === "ROTATE") {
-        const home = readPose(grip.mesh);
+        const home = modelOrientation(grip.mesh);
         // ⛔ The held object's own pose is the truth here, so its follower's `qHome` has
         // to track it — otherwise the render loop would fight the rotation rule.
         followerFor(grip.mesh).qHome = home;
         const spin = grip.spinSway.push(home, s.t, true);
         if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
       } else {
-        grip.spinSway.push(readPose(grip.mesh), s.t, false);
+        grip.spinSway.push(modelOrientation(grip.mesh), s.t, false);
       }
 
-      grip.lastRollDeg = grip.rec.rollAppliedDeg;
       grip.prev = s;
       paint();
       return;
@@ -1084,6 +1690,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         resetCamera();
         lastVerdict = "DOUBLE_TAP → camera reset";
       }
+      forgetAnchor(routed.seq, s.t);
       router.release(e.pointerId);
       held.delete(e.pointerId);
       paint();
@@ -1100,9 +1707,34 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
     lastFrameMs = now;
 
+    // ⛔⛔⛔ ADVANCE THE MOTION CLOCK FOR EVERY LIVE TOUCHPOINT, EVERY FRAME.
+    //
+    // A still finger emits NO `pointermove`, and `MotionTracker` is otherwise driven only
+    // by those events — so without this line a finger held deliberately still stays
+    // `MOVING` for ever, and A10's depth gate never opens. ⚠ Reported from the device three
+    // times before it was found: *"passing from x/y translation to depth translation
+    // (sometimes, it is blocked) while passing from depth translation to x/y translation is
+    // smooth and instantaneous."*
+    //
+    // ⭐ The asymmetry was structural: `MOVING` is entered by an event that necessarily
+    // exists, `STATIONARY` by one that by definition may not arrive. ⭐⭐ Elapsed time with
+    // no sample is the strongest evidence of stillness there is — it simply has to be asked
+    // for, and the render loop is the clock everything visible already runs on.
+    for (const grip of held.values()) {
+      grip.rec.tick(now);
+      for (const tracker of grip.anchorMotion.values()) tracker.tick(now);
+    }
+
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally
     // stable, so a stalled frame simply arrives rather than exploding.
+    // ⭐ The double-tap reset, flying home. ⛔ Advanced here and not on a timer: the loop
+    // is the clock everything visible already runs on, and there is no callback to leak.
+    if (cameraReset !== null) {
+      applyCameraPose(cameraReset.advance(dtSec * 1000));
+      if (cameraReset.done) cameraReset = null;
+    }
+
     // ⭐ The deferred orbit centre, committed once its grace has passed with no second
     // touchpoint outside. ⚠ `router.outside().length` is re-checked here and not only at
     // press: a finger could have arrived and left again within the window.
@@ -1118,10 +1750,35 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
 
     const tauSec = cfg.translateInertiaMs / 1000;
-    // ⚠ A mesh under a finger owns its own pose this frame — the rotation rule writes it
-    // directly — so the sway must not write over it on the way past.
-    const heldMeshes = new Set([...held.values()].map((h) => h.mesh));
-    for (const [mesh, f] of followers) {
+    // ⛔⛔ ITERATE THE **MODEL**, NOT THE FOLLOWER MAP — and this line is a defect fix, not
+    // a tidy-up. The loop used to walk `followers`, a map populated lazily by whoever
+    // happened to need one: the sway (for the OTHER objects) and the rotation rule (for the
+    // held one). While the follower WAS the object's state that was self-consistent — a
+    // thing with no follower had no state to draw.
+    //
+    // ⚠ The moment the MODEL became authoritative it stopped being true, and it broke
+    // translation, found by finger 2026-09-15: drag an object at page load and nothing
+    // moves, because the model updates and nothing draws it. Then drag a SECOND object and
+    // the first JUMPS — the sway finally creates its follower, the sync pulls everything
+    // that had accumulated, and it snaps there in one frame.
+    //
+    // ⭐ Rotation hid it: the rotation rule creates the follower as a side effect of
+    // storing `qHome`, so only translation was affected — which is why a device pass that
+    // exercised rotation first saw nothing wrong.
+    //
+    // ⭐⭐ The lesson is the shape, not the line: **an implicit invariant died when the
+    // authority moved.** "Everything that needs drawing has a follower" was true by
+    // construction and became false silently, because nothing stated it.
+    for (const mesh of meshOf.values()) {
+      const f = followerFor(mesh);
+      // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather
+      // than merely present. Whatever the rules wrote this frame is what the follower now
+      // chases and what the sway is applied on top of.
+      const mp = modelPose(mesh);
+      if (mp) {
+        f.target.set(mp.position[0], mp.position[1], mp.position[2]);
+        f.qHome = mp.orientation;
+      }
       const zeta = cfg.translateDampingRatio;
       const leadSec = cfg.translateLeadMs / 1000;
       // ⭐ The finger's smoothed velocity, then the phantom projected along it. ⛔ The
@@ -1149,37 +1806,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       f.swayRotZ = advanceFollow(f.swayRotZ, 0, swayTau, 1, dtSec);
 
       // ⭐ The block's swing, as a rotation about the pivot. ⛔ RIGID: the object both
-      // ORBITS the pivot and SPINS on its own by the same angle. Orbiting alone would
-      // shear the group — things sliding past one another rather than one scene moving.
-      const rot: Vec3 = [f.swayRotX.x, f.swayRotY.x, f.swayRotZ.x];
-      const rotAngle = Math.hypot(rot[0], rot[1], rot[2]);
-      let ox = 0;
-      let oy = 0;
-      let oz = 0;
-      if (rotAngle > 1e-9) {
-        const swayQ = qFromAxisAngle(rot, rotAngle);
-        const rel: Vec3 = [
-          f.x.x - f.swayPivot.x,
-          f.y.x - f.swayPivot.y,
-          f.z.x - f.swayPivot.z,
-        ];
-        const spun = qRotate(swayQ, rel);
-        // The ORBITAL part is the displacement the rotation causes, added like any other
-        // offset — so it composes with the translational sway instead of fighting it.
-        ox = spun[0] - rel[0];
-        oy = spun[1] - rel[1];
-        oz = spun[2] - rel[2];
-        writePose(mesh, qmul(swayQ, f.qHome));
-      } else if (!heldMeshes.has(mesh)) {
-        // ⚠ Written back even at rest: otherwise the last swayed pose would stick.
-        writePose(mesh, f.qHome);
-      }
+      // ⭐⭐ THE WHOLE CHAIN, IN ONE EXPRESSION, AND IT LIVES OUTSIDE THIS FILE.
+      // `displayPose` is `SWAY ∘ FOLLOW ∘ model` — engine-free, pure, and vectored in
+      // `tests/display_pose.test.ts`, including the RIGIDITY property this loop used to
+      // claim in a comment and test nowhere: the block both ORBITS the pivot and SPINS by
+      // the same angle, because orbiting alone shears the group and spinning alone leaves
+      // it turning on the spot. ⛔ `QUEUE.md` names *a composition nobody computed* as the
+      // mistake this project keeps making; three writers meeting in a render loop is
+      // exactly that shape, so the composition was moved somewhere it could be checked.
+      const pose = displayPose([f.x.x, f.y.x, f.z.x], f.qHome, {
+        translation: [f.swayX.x, f.swayY.x, f.swayZ.x],
+        rotationVector: [f.swayRotX.x, f.swayRotY.x, f.swayRotZ.x],
+        pivot: [f.swayPivot.x, f.swayPivot.y, f.swayPivot.z],
+      });
 
-      mesh.position.set(
-        f.x.x + f.swayX.x + ox,
-        f.y.x + f.swayY.x + oy,
-        f.z.x + f.swayZ.x + oz,
-      );
+      // ⭐ ONE WRITER. The held-mesh exception is gone with the model: the rotation rule
+      // used to write the mesh directly, so this loop had to skip a held object or it
+      // would overwrite it. Now every rule writes the MODEL and this is the only place a
+      // mesh transform is set at all — which is what a "view" means, and one special case
+      // fewer to be wrong about.
+      writePose(mesh, pose.orientation);
+      mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
     }
 
     scene.render();

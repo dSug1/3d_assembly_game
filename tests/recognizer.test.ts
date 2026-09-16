@@ -117,7 +117,10 @@ describe("recognizer — the commit point", () => {
     for (const s of moving.slice(1)) rec.move(s);
     expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS");
     const last = moving[moving.length - 1]!;
-    for (let i = 1; i <= 60; i++) rec.move({ x: last.x, y: last.y, t: last.t + i * 10 });
+    // ⚠ DERIVED, not a literal: how long settling takes is governed by `stillTime` and
+    // by the speed window behind it, and A10 re-sized both. A literal 600 ms went stale.
+    const restSamples = Math.ceil((4 * cfg.restConfirmMs) / 10);
+    for (let i = 1; i <= restSamples; i++) rec.move({ x: last.x, y: last.y, t: last.t + i * 10 });
     expect(rec.motionState).toBe("STATIONARY"); // the FINGER settled...
     expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS"); // ...the GESTURE did not
   });
@@ -269,7 +272,11 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
   });
 });
 
-describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
+describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular gesture", () => {
+  // ⛔⛔ A12 MOVED ROLL TO THE SECOND TOUCHPOINT'S x, so none of this is on the gesture
+  // path any more. ⭐ The block is KEPT, and kept GREEN, because the machinery is correct
+  // and vectored and the owner may want the circular roll back — `METHOD`: retractions are
+  // kept on purpose. ⚠ It no longer proves anything about what the product DOES.
   /** A circular sweep, clockwise on screen, at 15 mm radius. */
   function circle(steps: number, clockwise: boolean, t0 = 0): Sample[] {
     const r = mmToPx(15);
@@ -293,6 +300,80 @@ describe("recognizer — roll (2quinte) inside COMMITTED_CONTINUOUS", () => {
     expect(v.rollDeg).toBeGreaterThan(0);
     expect(v.rolledBack).toBe(false);
     expect(pose.current()).toBe(42);
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // AMENDMENT A8 — the roll REBASES to the start of the circle.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Drive a path, moving the pose provisionally after every sample the way the caller's
+   * yaw/pitch does, and report what the recognizer restored.
+   *
+   * ⭐ The pose is a COUNTER: sample `i` leaves it at `i`. So a restored value says
+   * exactly WHICH SAMPLE the recognizer rebased to, which is the whole question.
+   */
+  function driveWithProvisionalMotion(samples: readonly Sample[]) {
+    const pose = recordingPose();
+    const taps = new TapHistory(cfg);
+    const rec = new Recognizer(cfg, pose.port, taps);
+    rec.press(samples[0]!);
+    for (let i = 1; i < samples.length; i++) {
+      rec.move(samples[i]!);
+      // ⛔⛔ A12 RETIRED A8 AND THE CALL MOVED HERE. Roll is no longer a one-touchpoint
+      // gesture, so `move` no longer rebases — there is no provisional yaw/pitch to undo.
+      // ⭐ The MECHANISM is kept callable and these vectors still prove it works, because
+      // the day a circular roll comes back this is what comes back with it. ⚠ What they no
+      // longer prove is that the recognizer calls it by itself; it deliberately does not.
+      rec.rebaseOnRollCommit();
+      // The continuous rule turning the object, provisionally, for this frame.
+      pose.moveProvisionally(i);
+    }
+    return { rec, pose };
+  }
+
+  it("⛔⛔ REBASES when the roll commits — the yaw/pitch it was mistaken for is undone", () => {
+    // ⚠ THE DEFECT THIS PINS, FOUND BY FINGER: a circle does not read as a roll until
+    // `rollAngle` of arc has been swept, and until then §1.3 applies 2bis provisionally.
+    // The roll used to begin from a pose the user never asked for, so the result was not a
+    // pure roll of the original orientation.
+    const { rec, pose } = driveWithProvisionalMotion(circle(70, true));
+    expect(rec.rollRebased).toBe(true);
+    expect(pose.restored.length).toBeGreaterThan(0);
+  });
+
+  it("⛔ does NOT rebase when the path never becomes a circle", () => {
+    const { rec, pose } = driveWithProvisionalMotion(run({ speedMmPerS: 60, ms: 400 }));
+    expect(rec.rollRebased).toBe(false);
+    expect(pose.restored).toEqual([]);
+  });
+
+  it("⭐⭐ rebases to the CIRCLE'S START, not to the PRESS — a real drag before it survives", () => {
+    // ⛔⛔ THE COUNTER-EXAMPLE THAT SEPARATES THE FIX FROM ITS LAZY VERSION. A hand may
+    // drag in a straight line and only then begin to circle. That drag is a yaw the user
+    // asked for; it is not part of the evidence for a circle, and undoing it would be a
+    // second defect wearing the first one's clothes.
+    const straight = run({ speedMmPerS: 60, ms: 300, x0: 200, y0: 200 });
+    const lastStraight = straight[straight.length - 1]!;
+    const circled = circle(70, true, lastStraight.t + 10).map((s) => ({
+      ...s,
+      x: s.x + (lastStraight.x - 200),
+    }));
+    const samples = [...straight, ...circled];
+
+    const { rec, pose } = driveWithProvisionalMotion(samples);
+    expect(rec.rollRebased).toBe(true);
+    // ⭐ The restored pose is a sample INDEX. Rebasing to the press would restore ~0;
+    // rebasing to the circle's start restores something well past the straight run.
+    const restoredTo = pose.restored[pose.restored.length - 1]!;
+    expect(restoredTo).toBeGreaterThan(straight.length / 2);
+  });
+
+  it("⭐ the rebase happens ONCE, not on every frame after the commit", () => {
+    // ⚠ A rebase per frame would pin the object to the circle's start and the roll would
+    // never accumulate — the gesture would look frozen.
+    const { pose } = driveWithProvisionalMotion(circle(120, true));
+    expect(pose.restored.length).toBe(1);
   });
 
   it("a counter-clockwise sweep commits with a NEGATIVE angle", () => {
@@ -405,5 +486,57 @@ describe("release-time priority (§1.3)", () => {
         ),
       ).toBe("NONE");
     }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔ A10: A DEPTH PUSH HOLDS THE FINGER STILL ON THE OBJECT — WHICH IS A TAP'S SHAPE
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ a gesture ANOTHER RULE consumed is never a tap", () => {
+  /**
+   * ⭐ Why this exists, stated as a consequence rather than as a rule: A10 says depth runs
+   * while the finger on the object is STILL. §1.3 says a touchpoint that never committed
+   * and lifts inside `tapMaxDuration` is a TAP, and two of those are a DOUBLE_TAP — which
+   * `resolveDiscreteRule` maps to **2septies**, eviction. ⛔ So without this, a quick depth
+   * nudge, twice, would clear constraints the user never touched.
+   */
+  const pressAndLift = (rec: ReturnType<typeof fresh>["rec"], t0: number, consumed: boolean) => {
+    rec.press({ x: 300, y: 300, t: t0 });
+    if (consumed) rec.consumeAsMotion();
+    return rec.release({ x: 300, y: 300, t: t0 + 40 });
+  };
+
+  it("⛔ a consumed press releases as HOLD, not TAP", () => {
+    const { rec } = fresh();
+    expect(pressAndLift(rec, 0, true).kind).toBe("HOLD");
+  });
+
+  it("⭐ COUNTER-EXAMPLE: the identical press, NOT consumed, is a TAP", () => {
+    // ⚠ Without this the vector above would pass for a recognizer that had simply
+    // stopped producing taps at all.
+    const { rec } = fresh();
+    expect(pressAndLift(rec, 0, false).kind).toBe("TAP");
+  });
+
+  it("⛔⛔ two consumed pushes are NOT a DOUBLE_TAP — so they cannot evict", () => {
+    // ⭐ The consequence that matters. `taps.reset()` on the HOLD path is what makes a
+    // consumed gesture unable to be the FIRST half of a double-tap either.
+    const a = fresh().rec;
+    expect(pressAndLift(a, 0, true).kind).toBe("HOLD");
+    const b = fresh().rec;
+    const second = pressAndLift(b, 120, true);
+    expect(second.kind).toBe("HOLD");
+    expect(second.rule).toBe("NONE");
+  });
+
+  it("⭐ it does NOT commit the gesture — the finger may still drag afterwards", () => {
+    // ⚠ Consuming says "someone else supplied motion", not "this gesture is over".
+    const { rec } = fresh();
+    const moving = run({ speedMmPerS: 40, ms: 200 });
+    rec.press(moving[0]!);
+    rec.consumeAsMotion();
+    for (const s of moving.slice(1)) rec.move(s);
+    expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS");
   });
 });

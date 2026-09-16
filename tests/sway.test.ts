@@ -143,7 +143,10 @@ describe("where the other objects go", () => {
   const FRAME = {
     right: [1, 0, 0] as const,
     up: [0, 1, 0] as const,
-    viewAxis: [0, 0, -1] as const,
+    depth: [0, 0, -1] as const,
+    // ⚠ Unused here — the sway maps a screen heading and never asks which side of the
+    // horizon the camera is on. Present because the type is total.
+    towardGravity: 0.5,
   };
 
   it("⭐⭐ THE SAME WAY as the drag, not opposed to it", () => {

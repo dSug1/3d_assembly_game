@@ -72,7 +72,10 @@ describe("URL tunable overrides", () => {
   it("⛔⛔ the result still faces validateGestureConfig", () => {
     // A query string must not be able to smuggle in a config the code would refuse
     // from a file. `MotionTracker` validates, and every `Recognizer` builds one.
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?moveExitDistance=99");
-    expect(() => new MotionTracker(r.config)).toThrow();
+    // ⚠ A11 left ONE motion threshold, so the smuggled value is a dead radius BELOW the
+    // measured noise floor — which makes STATIONARY unreachable and must be refused.
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?motionDeadbandMm=0.5");
+    expect(r.applied.length, "the override must actually be accepted first").toBe(1);
+    expect(() => new MotionTracker(r.config)).toThrow(/STATIONARY is unreachable/);
   });
 });

@@ -6,17 +6,23 @@
 > build status of each
 > **READ IF** · you are building or changing anything a finger touches
 > **SOURCED FROM** · the owner's `input-system-v5.md`, supplied 2026-09-13
-> **LAST VERIFIED** · 2026-09-14, against 307 passing vectors
+> **LAST VERIFIED** · 2026-09-15, against 480 passing vectors
 
 ⛔⛔ **THE OWNER'S REVISION-5 TEXT IS REPRODUCED IN FULL AND UNALTERED**, apart from
 repairing mojibake from the original file's encoding (`â` → `—`, `Â§` → `§`). Not one of
 its sentences has been rewritten, reordered or removed.
 
 ⚠ **What HAS been added, on the owner's authorisation of 2026-09-14**, is build status:
-the section below and the one at the end — **BUILD STATUS**, an inventory by touchpoint
-configuration, and **ADDED AFTER REVISION 5**, the behaviours that exist with no clause in
-this document behind them. ⭐ Both sit OUTSIDE the specification text and are headed as
-such, so the owner's words and the build's claims never blur.
+**BUILD STATUS** below, an inventory by touchpoint configuration, and **ADDED AFTER
+REVISION 5** at the end, the behaviours that exist with no clause in this document behind
+them. ⭐ Three further sections were added 2026-09-15 on the owner's instruction —
+**ADOPTED FROM THE TECHNIQUE CATALOG**, which records what of §4.1 snap-dragging applies
+here; **PROVENANCE**, pointing at the per-rule prior-art register; and the **AMENDMENTS**
+table below, pointing at [`../AMENDMENTS_R5.md`](../AMENDMENTS_R5.md).
+⛔ **All of them sit OUTSIDE the specification text and are headed as such**, so the owner's
+words and the build's claims never blur. ⚠ **Read the amendments first** — where they
+conflict with the text below, they win, and the superseded clause is left standing because
+it explains why the current one exists.
 ⛔ This file previously carried `VERBATIM` markers forbidding any edit; they were removed
 under that same authorisation, and the paragraph above replaces the guarantee they gave.
 
@@ -35,16 +41,18 @@ table is written against what each touchpoint was latched as, not where it is no
 | touchpoints | what they are on | what happens | spec | status |
 |---|---|---|---|---|
 | 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, rollback, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` |
-| 1 | an object | **free rotation** — yaw/pitch about the screen axes, world-frame, gain in rad/mm | §2 rule 2bis | ✅ **works**, ⚠ applied UNCONDITIONALLY — see below |
-| 1 | an object | **roll** about the view axis, from a circular gesture (Hyper circle fit) | §2 rule 2quinte | ✅ `IN1` |
-| 1 | an object | double-tap → **reset the camera orbit** | ⛔ **no clause** | ✅ ⚠ collides with 2septies |
+| 1 | an object | ⭐⭐ **TRANSLATE** — x along the horizontal screen axis, y along **GRAVITY** | §4 rule 6 · ⭐ **A13** moved it here from two touchpoints | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
+| 2 | an object + a second held **STILL** | **free rotation** — yaw about the **world vertical**, pitch about the horizontal screen axis | §2 rule 2bis · ⭐ **A7** + **A13** | ✅ **works**, ⚠ applied UNCONDITIONALLY — see below |
+| 2 | an object (**STILL**) + a second moving in **x** | ⭐⭐ **ROLL** about the view direction flattened onto the ground | §2 rule 2quinte · ⭐ **A12** replaces the circular gesture | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"*. ⛔ The circle fit, `rollAngle`, the provisional yaw/pitch, `A8`'s rebase and **the jump** are all retired with it |
+| 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⭐ **collision RESOLVED 2026-09-15** — eviction moved away (amendments A1 → A4; it is now a quick back-and-forth), so a double-tap means one thing only |
 | 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ **amended**: driven by delta position, NOT device tilt |
-| 1 | empty space | double-tap → **reset the camera orbit** | ⛔ **no clause** | ✅ |
+| 1 | empty space | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ |
 | 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
-| 2 | one object + one empty space | **translate in the screen plane**, with inertia and a phantom lead | §4 rule 6 | ✅ `IN4` (partial) |
-| 2 | both the SAME object | the second is **IGNORED**, for its lifetime | §5 (was undefined) | ✅ `IN8` decided, `IN2` built |
-| 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `3D1` |
-| 3+ | any | every hit on an already-held object is ignored; the rest keep their latched roles | — | ⚠ by construction, not measured — palm contact is untested |
+| 2 | one object + one empty space, **both moving** | **translate** — the holder wins every tie. With inertia and a phantom lead | §4 rule 6 · ⭐ **A7**, **A13** | ✅ `IN4` (partial) ⛔ **CLOSED 2026-09-15**, ⚠ reopened by A13's swap for a device look |
+| 2 | one object (**STILL**) + one outside (**MOVING in y**) | **DEPTH** — the object moves along the view direction flattened onto the ground, so its **height never changes**. ⛔ The finger OUTSIDE drives; the finger on the object is the mode selector, and it must be still | ⭐ **A10** supersedes A6 (§5 was undefined) | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
+| 2 | both the SAME object | **rule 6 becomes reachable** — the FIRST touchpoint (whose raycast hit) drives; the second is presence only. ⚠ Deliberately NOT a depth anchor | ⭐ **A10** supersedes `A6`/`A5`/`D10` | ✅ built. ⭐⭐ **The small-object hole is CLOSED**: A10's depth anchor may be anywhere on the glass, so an object's size on screen no longer matters |
+| 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `IN3`'s face selection — ✅ `3D1` is built and closed |
+| 3+ | any | the THIRD touchpoint and beyond are ignored; the rest keep their latched roles | — · **A5** moved this trigger | ⚠ by construction, not measured — palm contact is untested |
 
 ⚠ **Rule 6 is reached by PRESENCE, re-read every frame** — not by a latched mode, and not
 by the anchor's `STATIONARY` state as the rule's wording implies. A second finger outside
@@ -75,7 +83,7 @@ it to the object model and gives it the precondition it is missing.
 | §2 **2ter** | vertical flick → `GRAVITY_ALIGN` onto the constraint stack | `3D1` (faces), `IN3` |
 | §2 **2quater** | horizontal flick → `WORLD_AXIS_ALIGN` | `3D1`, `IN3` |
 | §2 **2sexte** | constrained rotation about the remaining free DOF | `3D1`, `IN3` |
-| §2 **2septies** | double-tap → clear the object's constraint stack | `3D1`, `IN3` · ⚠ **collides with the camera reset** |
+| §2 **2septies** | ⭐ **SUPERSEDED by amendment A1** — eviction is a full **360° roll**, not a double-tap | `IN3` · ✅ the camera-reset collision is resolved; ⛔ A1 also amends **2quinte**, shares a context with **2sexte**, and leaves ONE open owner question: does a full turn break MATES too? |
 | §3 **3** | release unselects object and face, stack preserved | `3D1` |
 | §4 **5** | two objects and two faces selected | `3D1` |
 | §4 **6bis** | translate along `AxisBtwFaces` / its orthogonal | `3D1` (face centres) |
@@ -92,7 +100,37 @@ URL (`?rollAngle=45`) or moved on the on-screen menu, without a rebuild.
 
 ---
 
+# ⭐⭐ AMENDMENTS — READ BEFORE THE TEXT BELOW
+
+⛔ **The owner's later decisions SUPERSEDE clauses of revision 5**, and they live in
+[`../AMENDMENTS_R5.md`](../AMENDMENTS_R5.md) — moved out of this file on 2026-09-15 when it
+reached its 800-line cap. `METHOD`: *when two sections conflict, the later one wins.*
+
+| | supersedes | in force |
+|---|---|---|
+| **A1** | §1.4 / 2septies' double-tap eviction | the double-tap evicts nothing; it is purely the camera fly. ⚠ Its 360° roll trigger is itself superseded by **A4** |
+| **A4** | A1's trigger | eviction is a **quick back-and-forth**, one touchpoint, ≥2 reversals in a window. ⛔ The flick test is skipped once one reversal is seen, or an abandoned shake ADDS a constraint |
+| **A1 §4** (`D13`) | §1.4's *"clears its constraint stack"*, for mates | eviction **spares `MATE` entries** — one gesture, one intention |
+| **A2** | §0's *"two objects"* | the scene holds **three** |
+| **A5** | `D10`, and §5's *"two touchpoints on the same object — undefined and reachable"* | two fingers on ONE object are a **depth pinch**, and ⛔ *depth is HORIZONTAL* — the view axis flattened onto the ground plane, so **the object's height never changes**. The gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD touchpoint |
+| **A6** | A5's trigger | depth is a **COMMON VERTICAL DRAG** — one finger on the object, one ANYWHERE, both travelling in y together. ⛔ It shares rule 6's configuration: **common mode is depth, differential mode is rule 6** |
+| **A7** | 2bis, 2quinte and rule 6's *"screen view plane"* | every object gesture stands on a **GRAVITY FRAME** — yaw about the vertical, pitch about the horizontal screen-x, roll and depth about the flattened view direction. ⛔ The argument is **orthogonality**: about the camera's axes, roll stops being independent of yaw as the camera tilts |
+| **A8** | §1.3's provisional motion, which rolled back only at RELEASE | a roll **REBASES** to the start of its circle: the yaw/pitch applied before 60° of arc is undone. ⛔ To the FIT WINDOW's start, **not to the press** — a straight drag that precedes a circle was asked for and survives. ⚠ The object jumps at the commit, by exactly the unasked-for rotation it replaces |
+| **A9** | §1.3 and rule 6 — both consume the RAW per-event delta | a **DEADBAND** on `dx`/`dy`, **per axis**, with a slider. ⛔⛔ A *hard* deadband is a jump traded for a jump; the **residual-accumulator** form is the one to build, and the vector asserts CONTINUITY. ⚠ Not applied to roll (1€-filtered) or to A6's driver (its own hold window) — a decision, not an oversight. Row `IN12` |
+| **A10** | A6's trigger, and §1.1's speed estimate | depth is **a STILL HOLDER and a MOVING ANCHOR**: no window, no ratio, no tolerance. ⛔ The holder wins every tie, so rule 6 and depth PARTITION the two-finger configuration. ⭐ Rule 6's second touchpoint may be outside **or on the same object**. ⛔⛔ It exposed §1.1 estimating speed over ONE SAMPLE PAIR — ~95 mm/s at rest against a 6 mm/s threshold — so **STATIONARY was unreachable**; fixed to a windowed estimate, with four §1.1 numbers re-sized — all since replaced by `A11`'s deadband and **closed by a device look 2026-09-16** |
+| **A12** | 2quinte's circular roll, and **A8** entirely | roll moves to the **SECOND touchpoint's x** while the holder is still; its y stays depth. ⛔ Retires the circle fit, `rollAngle`'s commit threshold, the provisional yaw/pitch, A8's rebase and **the jump** — yaw/pitch and roll are no longer the same hand shape, so nothing has to tell them apart |
+| **A13** | 2bis's and rule 6's touchpoint assignments — it SWAPS them | **one touchpoint TRANSLATES**; a second one held **STILL** turns the same drag into a **ROTATION**. ⭐ Whichever finger moves acts; the other one's state picks the rule. ⚠ Both moving = translate |
+| **A3** | 2quinte's *"on a constrained object the circular gesture is ignored"* **and** 2sexte's undefined behaviour when its axis projects to a point | ⛔ roll **DRIVES the free DOF** of an anchored object, about the CONSTRAINT axis; **2sexte suppresses** where it is degenerate. **ONE handover constant with hysteresis**, latched at press |
+
+---
+
 # THE SPECIFICATION — the owner's text, unaltered
+
+⚠ **Ten clauses below are SUPERSEDED** — see the amendment table above: §1.4 / 2septies'
+double-tap eviction (eviction is now a quick **back-and-forth**), §1.4's *"clears its
+constraint stack"* where a `MATE` is concerned (eviction spares mates), 2quinte's ban on
+roll for a constrained object (roll DRIVES its free DOF, and 2sexte suppresses where it
+degenerates), and §0's "two objects" (the scene has three).
 
 # Input System — Revision 5
 
@@ -452,19 +490,44 @@ Listed so the gaps are explicit rather than implicit.
 ⭐ Two behaviours exist that this specification does not ask for. They are recorded here
 because this document is the first place anyone will look for them.
 
-## 1. Double-tap resets the camera orbit — anywhere on the glass
+## 1. Double-tap flies the camera home — anywhere on the glass
 
-Yaw, elevation, zoom **and** the orbit centre, back to where the camera launched.
+Yaw, elevation and zoom go back to their launch values, **and the centre goes to the last
+yellow target** — the barycentre §2 rule 1 last CHOSE, which is what the marker shows and
+what the user has been orbiting. ⛔ NOT the world origin: that would reset the camera to a
+place it may never have looked at.
+
 ⭐ It listens on objects as well as empty space, and the reason is reachability: the orbit
 can get stuck close in with an object filling the view, and then every tap lands on
 something. A reset that only listened to empty space would be unreachable exactly when it
 is wanted.
 
-⚠⚠ **IT COLLIDES WITH §2 RULE 2SEPTIES**, which makes a double-tap on an object the ONLY
-way a constraint is ever evicted. Both cannot silently fire. The decision is queued in
-[`../../00_CORE/queue_notes/IN3.md`](../../00_CORE/queue_notes/IN3.md) and must be taken
-**before** eviction is written, or a user will lose a constraint every time they
-straighten the view.
+⭐⭐ **It is ANIMATED, over `cameraResetMs` (450 ms), and it eases the ORBIT PARAMETERS —
+not the camera's transform.** Yaw, elevation, zoom and centre are what the orbit surface
+is defined on, so easing those keeps the camera ON that surface the whole way: the same
+path a finger could have dragged. ⛔ Slerping the camera's quaternion and lerping its
+position instead would cut a chord through the middle of the scene — the camera would dive
+toward the objects and back out, a movement no rule can produce.
+
+⚠ Three of the four channels are not plain lerps, and each mistake looks fine in a still
+frame and awful in motion:
+
+* **yaw takes the SHORT way** — it accumulates without limit, so a straight lerp would
+  unwind every revolution the hand had put in;
+* **zoom interpolates GEOMETRICALLY** — it is a scale, so halfway between ×0.25 and ×4 is
+  ×1, not ×2.125;
+* **the curve is eased at both ends**, so the camera neither leaves nor arrives with a
+  velocity step.
+
+⛔ A new touch CANCELS a reset in flight: the animation writes the whole pose every frame,
+so a drag during one would be overwritten as fast as it was applied. `0` snaps.
+
+✅✅ **THE COLLISION WITH §2 RULE 2SEPTIES IS RESOLVED** (owner, 2026-09-15). It was real:
+2septies made a double-tap the ONLY way to evict a constraint, and this reset fires on a
+double-tap anywhere including on an object, so straightening the view would have destroyed
+deliberate work. ⭐ **Eviction moved, not the reset** — it is now a quick **back-and-forth**
+(amendments A1 → A4, in [`../AMENDMENTS_R5.md`](../AMENDMENTS_R5.md)). A double-tap now means
+exactly one thing.
 
 ## 2. The sympathetic sway — the scene reacts to the held object
 
@@ -487,3 +550,105 @@ on whether the scene happened to be mid-wobble when a finger landed.
 ⚠ Both re-trigger on a **change of direction**. `motionState` does not fall back to
 `STATIONARY` until 150 ms below 6 mm/s, so a hand reversing at speed never goes still —
 without a turn test the scene reacted once and then sat frozen through an entire shake.
+
+---
+
+# ADOPTED FROM THE TECHNIQUE CATALOG — §4.1 snap-dragging *(added 2026-09-15, not the owner's text)*
+
+⭐ Source: the owner's `TECHNIQUE_CATALOG.md` §4.1, *skitters and jacks*.
+**Citation, kept at the moment of adoption**: Eric Bier, *Snap-dragging in three
+dimensions*, Symposium on Interactive 3D Graphics, 1990; Bier & Stone, *Snap-dragging*,
+SIGGRAPH 1986. Published prior art. Full register:
+[`../PROVENANCE.md`](../PROVENANCE.md).
+
+⛔ This section sits OUTSIDE the specification text, like BUILD STATUS above and ADDED
+AFTER REVISION 5 below. It changes no rule. It binds **`3D2`** (snap transform, capture
+radius, seat), which §5 defers, and it is recorded here because §5 is where the next
+session will look for it.
+
+## What is adopted, and what is not
+
+⭐⭐ **Most of §4.1 is already this project's design, arrived at independently.** A
+*skitter* carries a frame of `{position, normal, tangent}` — that is a `MateConnector`,
+field for field. Its alignment step, `frameToFrame(jackA, jackB, flipNormal = true)`, is
+our ANTI-PARALLEL mate. ⭐ That is a third independent arrival at `CONSTRAINTS` §7, and it
+is worth more as confirmation than it would have been as a source.
+
+**NOT adopted — two things, deliberately:**
+
+* ⛔ **User-placed jacks.** A jack is a frame the user drops at runtime. Our connectors are
+  **authored on the asset** (`D5`), so the user never places one; they pick a face that
+  already carries one. Adding runtime frame placement would be a second selection model
+  beside §2 rule 2.
+* ⛔ **The free-sliding skitter cursor.** Rule 2 selects a face *by touching that face*. A
+  cursor that slides across surfaces under the finger is a different interaction, and on a
+  touchscreen it is worse: the finger occludes exactly the thing the cursor is refining.
+
+## What IS adopted — three rules that bind `3D2`
+
+### 1. ⛔⛔ Snap priority must be a TOTAL order, declared, and deterministic
+
+The catalog's failure mode, verbatim: *"snap priority must be explicit — vertex beats edge
+beats face — or the skitter oscillates near corners."*
+
+⭐ Ours is not vertex/edge/face, because our snap targets are connectors. But the shape of
+the failure carries exactly: **where two candidates are within tolerance of each other, an
+undeclared tie-break makes the choice flip frame to frame**, and a snap that flickers
+between two seats is worse than no snap. So:
+
+* the candidate ordering is **declared**, not emergent from iteration order or from
+  whichever `Map` happens to enumerate first;
+* ties are broken by a stated quantity, and the tie-break is **stable across frames**;
+* ⚠ a candidate that wins must keep winning while it stays within tolerance —
+  **hysteresis**, the same discipline §1.1 already applies to `STATIONARY`/`MOVING`. A
+  boundary without hysteresis chatters; this project has already paid for that lesson once
+  in the orbit centre's grace period.
+
+### 2. ⛔⛔ The POINTING tolerance and the SEAT radius are two different constants
+
+The catalog says snap tolerance belongs in screen space *"or the behaviour changes with
+zoom"*. ⭐ §1.1 already goes further — millimetres on the physical screen, not NDC. But
+applying that rule here exposes a split that is currently invisible:
+
+| | question it answers | units | lives on |
+|---|---|---|---|
+| **seat / capture radius** | *does the peg physically reach the hole?* | **metres**, world | the connector (`MateConnector.radius`) — a property of the PART |
+| **pointing tolerance** | *did the user indicate this connector?* | **millimetres on screen** (§1.1, `D7`) | `gestureConfig`, a property of the GESTURE |
+
+⛔ **They are not the same number and must not be derived from one another.** A world-space
+pointing tolerance means the user must be three times as accurate when zoomed out, for no
+reason they can see. A screen-space seat radius means a part mates because the camera
+happened to be close. ⭐ `METHOD`: *a constant borrowed from another row's derivation
+inherits that row's question, not just its number.*
+
+⚠ `MateConnector.radius` exists and is authored in metres; the pointing tolerance **does
+not exist yet** and is `3D2`'s to add — with a slider, per `IN5`.
+
+### 3. ⭐ Frame derivation for imported geometry — `3D4`'s recipe, recorded early
+
+The skitter derives its frame from the surface it is on: position from the hit, normal from
+the face, **tangent from the dominant edge**. ⚠ That is exactly the problem `3D4` (glTF
+import) will face — an imported mesh arrives with triangles, not with connectors, and
+`rollOrder` is what makes a mate FASTENED rather than REVOLUTE. Bier's answer is on file
+rather than to be re-derived.
+
+⛔ **And it inherits the catalog's own open question** (its §8.3): does the Blender → glTF
+export preserve custom extras reliably enough to carry connector descriptors? That needs a
+spike before `3D4` commits to authoring connectors in Blender.
+
+
+---
+
+# PROVENANCE — this specification's gestures are TAGGED *(added 2026-09-15, not the owner's text)*
+
+⭐⭐ Adopted 2026-09-15 (`D11`, `CONSTRAINTS` §10) from the owner's
+`TECHNIQUE_CATALOG.md` §0 and §5: **every gesture rule above now carries a provenance tag**
+— prior art with a dated citation, an internal composition, or ⚠ **novel to this project**.
+
+⛔ The register is [`../PROVENANCE.md`](../PROVENANCE.md), not this file, because it must
+stay readable as one table rather than scattered through the rules.
+
+⚠ **What a reader of this spec should know**: the two-touchpoint rules **6bis, 6ter and
+6quater** are marked **NOVEL COMPOSITE** — no publication describes them. That is not a
+defect and does not block anything; it is the catalog's caution zone (*"the exposure is not
+'two fingers change scale' … it is novel composite gestures"*), and it is why `SEC4` exists.

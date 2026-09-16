@@ -49,7 +49,6 @@ const PENDING: Readonly<Record<string, string>> = {
   referenceCameraDistance: "IN4 — rules 6bis/6ter/6quater, if they still want a ratio",
   gainRotateConstrained: "IN3 — rule 2sexte, constrained rotation",
   gainTranslateAxis: "IN4 — rule 6bis",
-  gainTranslateDepth: "IN4 — rule 6bis",
   gainTranslateMutual: "IN4 — rule 6ter",
   // §1.4 — the constraint stack's own flags, used once IN3 pushes constraints.
   matePriorityOverAnchor: "IN4 — §1.4 ordering A/B for 6quater",
