@@ -982,8 +982,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
         // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
         tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
-        // ⭐ 1 is direct manipulation — the cube turns as far as the finger swept.
-        tunable("roll gain (x swept)", "gainRoll", 0.1, 3, 0.05),
         // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
         // object's centre when it starts turning or turns the other way.
         tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),

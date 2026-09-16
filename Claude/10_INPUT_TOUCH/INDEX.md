@@ -17,8 +17,12 @@ clause explains why the current one exists.
 
 ✅✅ **`IN1` CLOSED (2026-09-14)** — the recognizer state machine
 (`recognizer.ts`): commit point, provisional motion with **rollback**, the
-release-time priority ladder, tap / double-tap / hold, roll detection (`roll.ts`), and
-the screen-plane rotation mapping (`screen_rotate.ts`).
+release-time priority ladder, tap / double-tap / hold, and the screen-plane rotation
+mapping (`screen_rotate.ts`).
+⛔⛔ **ITS ROLL DETECTION IS DELETED** (2026-09-16, owner: *"clean the roll also for the
+fork A"*): `roll.ts`, `one_euro.ts`, 58 vectors, the rebase, the pose history, ~16
+tunables and the `ROLL_KEPT` verdict. ⭐ `A12` had moved roll to the second touchpoint's x
+two days after it was hardened — **the circle fit had had no channel since**.
 ⛔ **Seven device passes found 14 defects, not one visible to a green suite.**
 
 ✅✅ **`IN9` CLOSED (2026-09-14)** — the two CAMERA-ONLY rules, which needed no object
@@ -27,7 +31,11 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**632 golden vectors, all passing** (37 → 632).
+**574 golden vectors, all passing** (37 → 632 → 574).
+⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
+longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
+protect anything — it certifies a module nothing calls, which is exactly how the roll
+detector stayed alive long enough to cause defect 40.
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 
@@ -37,7 +45,7 @@ model and so did not wait on `3D1`:
 | `A3` | **roll drives an anchored object's free DOF**, 2sexte suppressed where it degenerates | ⚠ `anchor_rotate.ts` built + 25 vectors, **NOT WIRED** |
 | `A5` → `A6` → `A10` | **depth**, decided three times: a pinch, then a common vertical drag, now a **STILL HOLDER and a MOVING ANCHOR** | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A7` | ⭐⭐ every object gesture stands on a **GRAVITY FRAME** | ✅ wired, and vectored end to end |
-| `A8` | ⛔ **RETIRED BY A12** — a roll rebased to the start of its circle | ⚠ unwired, kept callable |
+| `A8` | ⛔⛔ **DELETED 2026-09-16** — a roll rebased to the start of its circle. Retired by `A12`, then removed with the whole circle-fit channel | ⛔ gone: `roll.ts`, `rebaseOnRollCommit`, the pose history |
 | `A12` | ⭐⭐⭐ **roll moves to the SECOND touchpoint's x**; its y stays depth. Retires the circle fit, the commit threshold and **the jump** | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A13` | ⭐⭐⭐ **one touchpoint TRANSLATES; a second held STILL ROTATES**. Whichever finger moves acts; the other one's state picks the rule | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
@@ -244,40 +252,12 @@ the second presses. It lives in a `TapHistory` shared across touchpoints.
 
 ---
 
-**§1.3's roll detection "about the running centroid" cannot fire at `rollAngle`.**
-`IN1`, 2026-09-13.
-
-§1.3 commits to roll on *"signed angle accumulated about the running centroid of the
-path"*. ⛔ **The centroid of an ARC is not its centre.** For a uniform arc of total
-angle `2α` at radius `R`, the centroid sits at `R·sin(α)/α` from the true centre — so
-at the 60° `rollAngle` wants to commit at, **the running centroid is at 0.955 R:
-essentially ON the path, not at its centre.** The angle measured about it is not the
-swept angle at all, and only becomes one as the gesture approaches a **full** turn
-(at 360° the centroid finally reaches the centre). Committing at a sixth of a turn,
-about a centroid sitting on the arc, measures noise.
-
-⛔⛔ **AND ACCUMULATING THE PATH'S TURNING ANGLE INSTEAD IS ALSO WRONG — it changes
-the QUANTITY.** The build did that for three device passes. Retrace an arc backwards
-and the **tangent flips 180° at the cusp**, while the angle about the centre simply
-runs back down. Measured on a 200° sweep reversed: the angle froze for twelve
-samples, jumped **+150° in one step**, and finished 180° from where it started.
-
-✅ **THE BUILD NOW MEASURES §1.3's OWN QUANTITY — the angle about the centre — with a
-least-squares CIRCLE FIT** (**Hyper**; Al-Sharadqah & Chernov 2009, no licence, no patent)
-over the trailing path. Retracing the same arc fits the **same circle**, so the centre
-holds still and the angle reverses smoothly through zero. Worst step **150° → 5.0°**.
-
-⭐ So the amendment is narrower than it first looked: **§1.3's quantity stands; only
-its estimator is replaced.** The centroid becomes a circle fit, and nothing else about
-the rule changes.
-
-⛔ Two things the fit needs that are easy to omit: a **residual** test (any algebraic fit returns
-*a* circle for any point set, so without it a side-to-side wiggle commits as a roll),
-judged against `rollFitResidualSigmas × pointerNoiseMm`; and a span measured **along
-the path**, never as a chord — on a reversal the chord *shrinks* while the fitted arc
-grows.
-
-⚠ Same standing: an amendment, recorded here, the owner's to ratify.
+**⛔ §1.3's roll detection — the centroid, the turning angle, and the circle fit.**
+`IN1`, 2026-09-13. ⭐⭐ **THE LESSON IS MISTAKE SHAPE 2 IN ITS CLEAREST FORM** — three
+estimators for one quantity, two of which silently measured a *different* quantity (the
+centroid of an arc sits at 0.955 R at 60°, essentially ON the path; the path's turning angle
+flips 180° at a cusp). ⛔ The code is **deleted** (`D31`), so the full account moves out of
+this front door: [`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md).
 
 ---
 
@@ -358,8 +338,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `config_override.ts` | `?name=value` overrides, so `IN5` can A/B by finger. ⛔ Refusals are reported, never ignored |
 | `motion.ts` | ⭐⭐⭐ §1.1 as a **POSITION DEADBAND** (`A11`): an anchor trails the finger at one dead radius; inside it the finger is `STATIONARY` and emits nothing, outside it emits the **excess only**. ⛔ Every continuous rule consumes `step`, never a raw delta. ⚠ Four formulations of §1.1 have now failed on a real pointer — see `queue_notes/IN0.md`, it is the most instructive file in the project |
 | `flick.ts` | §1.3's flick test. ⚠ Lift speed over a **window**, never the last sample pair |
-| `roll.ts` | rule 2quinte. The **Hyper** circle fit; roll is the angle about a fitted centre |
-| `one_euro.ts` | the 1€ filter, smoothing the displayed roll angle |
+| ⛔ ~~`roll.ts`~~, ~~`one_euro.ts`~~ | **DELETED 2026-09-16** — the Hyper circle fit and the 1€ filter, with rule 2quinte's one-touchpoint roll. ⚠ Roll itself LIVES, as the second touchpoint's x in `screen_rotate.ts`; what went is the *recogniser* that had had no channel since `A12` |
 | `screen_rotate.ts` | rule 2bis's yaw/pitch and 2quinte's roll, ⭐ **about the GRAVITY FRAME** (`A7`) — yaw about the world vertical, pitch about the horizontal, roll about the view direction flattened onto the ground |
 | `gravity_frame.ts` | ⭐⭐ `A7`'s frame itself: `{right, up, depth, towardGravity}` from a view axis and gravity. ⛔ A **distinct type** from `ScreenFrame`, so the compiler stops the two being interchanged — and `towardGravity` is what makes depth behave on the **bottom ring**, where "away" SINKS on screen instead of rising |
 | `depth_translate.ts` | `A10`'s depth: `depthGate` (the holder's stillness, and nothing else), the push direction, and the world-space step |
@@ -368,7 +347,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `anchor_rotate.ts` | 2sexte and `A3`'s handover, about the CONSTRAINT axis. ⚠ Built, not wired — and it wants the TRUE view axis, not the gravity frame |
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
 | `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⛔ One exception since `A15`: `relatchOnOrphan`, on a discrete event only |
-| `assignment.ts` | ⭐⭐⭐ `D26`/`D27` — the `1.0.5` A/B/C: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
+| ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ The superseded text, kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
 | `holder_binding.ts` | ⭐⭐⭐ `A15` — is the object still UNDER the finger carrying it? A raycast at the second touchpoint's lift, and the unselect **deferred** to the next input event. ⚠ Reachable only because depth moves the object while the holder holds still |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |

@@ -89,7 +89,6 @@ export interface GestureConfig {
    * decides, and no amount of sign-checking can.
    */
   gainRollDrag: number;
-  gainRoll: number;
   /**
    * §4 rule 6 — screen-plane translation. ⭐⭐ DIMENSIONLESS, and **1 means the object
    * stays exactly under the finger**.
@@ -221,46 +220,6 @@ export interface GestureConfig {
   flickDistance: number;
   /** max(|dx|,|dy|) / (min(|dx|,|dy|) + eps). One ratio, no undefined wedge. */
   flickPurity: number;
-  /** degrees of accumulated signed angle to commit to roll. */
-  rollAngle: number;
-  /** mm. Below this the path curls too tightly to be a deliberate roll. */
-  rollRadiusMin: number;
-  /** mm. Above this the path is too straight to be a roll at all. */
-  rollRadiusMax: number;
-  /**
-   * mm — the MINIMUM SPAN of the circle-fit window before any angle is read.
-   * ⛔⛔ THE BASELINE THE ROLL GEOMETRY IS ESTIMATED OVER. Between consecutive
-   * pointer samples the baseline is a few pixels, so digitiser noise dominates the
-   * angle: a clean circle stepping 5.0° per sample measured up to 46.3° per sample
-   * with ±0.5 px of noise. Device-confirmed as the cause of roll jitter, and of the
-   * snap-back when a circling finger pauses. See roll.ts.
-   * ⚠ A rule requiring this to stay below `rollRadiusMin` once lived in
-   * `validateGestureConfig` and WAS DELETED with the estimator it belonged to — under
-   * a circle fit a long span relative to the radius conditions the fit BETTER. This
-   * line claimed the assertion still existed long after it did not (13 mm vs a 5 mm
-   * `rollRadiusMin`); a doc that describes a guard which is not there is worse than
-   * no doc, because it is believed.
-   */
-  rollStepDistance: number;
-  /**
-   * Degrees of ARC the circle fit is taken over — the window is sized as
-   * `rollFitArcDeg` of arc at the radius last measured, never shorter than
-   * `rollStepDistance`.
-   * ⛔⛔ AN ANGLE, NOT A LENGTH. What conditions a circle fit is angular extent: a
-   * fixed 30 mm window is 215° of a tight 8 mm swirl and 49° of a lazy 35 mm one, and
-   * measured, no fixed length served both — the wide swirl needed 100 mm, which
-   * pushed the release out to 84 mm of straight drag. See roll.ts.
-   */
-  rollFitArcDeg: number;
-  /**
-   * Degrees of arc the fit window holds once a roll is COMMITTED.
-   * ⭐⭐ SHORTER THAN `rollFitArcDeg`, and deliberately so. A long arc is what makes
-   * the DECISION "is this a swirl?" reliable — but once that decision is made it is
-   * not re-asked, and the window only has to TRACK a centre. A long tracking window
-   * is pure release lag: a committed roll cannot let go until enough of it has
-   * flushed. Splitting the two is what buys reactiveness without losing detection.
-   */
-  rollTrackArcDeg: number;
 
   // ── §2 rule 2septies, as amended: THE EVICTION SHAKE ──────────────────────────
   // Design of record: `Claude/10_INPUT_TOUCH/AMENDMENTS_R5.md` A4 (`D15`).
@@ -294,49 +253,6 @@ export interface GestureConfig {
    * this would destroy an alignment every time someone spun a part to look at it.
    */
   evictShakeStraightness: number;
-  /**
-   * mm the newest point must itself advance before the direction is re-measured.
-   * ⛔ THE CADENCE, and it is NOT the baseline. A direction depends on both ends of
-   * its baseline: with no progress gate a paused finger keeps producing new
-   * estimates while the baseline start creeps along the arc behind it, and the roll
-   * drifted +30.2° across one pause. ⭐ Smaller = the object follows the finger more
-   * finely; it does NOT make the angle noisier, which is `rollStepDistance`'s job.
-   * ⚠ Must stay below `rollStepDistance`. Asserted in `validateGestureConfig`.
-   */
-  rollUpdateDistance: number;
-  /**
-   * mm of sustained NON-circular travel that releases a committed roll.
-   * ⭐ The exit hysteresis for 2quinte, matching §1.1's `STATIONARY`/`MOVING` pair.
-   * ⛔ Without it the commit latches for the whole gesture, so a straight drag after
-   * a circle is still read as roll — and the turn from the circle's tangent onto the
-   * new line is a large genuine direction change applied in one step, which is felt
-   * as a violent snap. Device-confirmed. ⚠ §1.3 reads as a latch, so this is a spec
-   * amendment; see `Claude/10_INPUT_TOUCH/INDEX.md`.
-   */
-  rollReleaseDistance: number;
-  /**
-   * The circle fit's RMS residual may reach this FRACTION OF THE FITTED RADIUS before
-   * the path stops counting as circular.
-   * ⛔⛔ A FRACTION OF THE RADIUS, NOT A MULTIPLE OF `pointerNoiseMm`. Tying it to
-   * noise was a category error that took roll off the device completely: the residual
-   * measures how non-circular the HAND'S PATH is — millimetres — while pointer noise
-   * is a sensor property in fractions of a millimetre. A human circle is an ellipse
-   * with a drifting centre, so at a 0.45 mm tolerance nothing a hand can draw
-   * qualified. ⭐ Dimensionless, so one tolerance judges a tight swirl and a lazy one.
-   */
-  rollFitResidualFraction: number;
-  /**
-   * Hz. 1€ filter floor cutoff for the roll angle — governs JITTER at slow roll.
-   * ⭐ Lower = quieter when the finger creeps. See `one_euro.ts` for the citation and
-   * the licence (BSD/MIT reference implementations, no patent asserted).
-   * ⚠ Tune on a device with `rollFilterBeta` at 0 first, per the paper. `IN5`.
-   */
-  rollFilterMinCutoff: number;
-  /**
-   * 1€ filter speed coefficient for the roll angle — governs LAG at fast roll.
-   * ⭐ Raise until a fast swirl stops lagging. ⚠ Tuned second, per the paper. `IN5`.
-   */
-  rollFilterBeta: number;
   /**
    * mm. Typical position noise of ONE pointer sample from a resting finger.
    * ⭐⭐ A DEVICE PROPERTY, not a preference, and it is what decides whether a
@@ -553,7 +469,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
   // ⚠ A12, a guess with a slider. 2 deg/mm means a 45 mm drag rolls the object 90°.
   gainRollDrag: 2,
-  gainRoll: 1,
   gainTranslateScreen: 1.17,
   // ⭐ CHOSEN ON THE DEVICE, 2026-09-14, together with the damping ratio and the lead
   // below — the three only mean anything as a set. My 90 ms guess read as LAG: at ζ=1 it
@@ -640,17 +555,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // HYPER fit the centre estimate does that work instead: swept from 50° to 120°,
   // **every value gives 4/4 realistic swirls and ZERO false positives.** The
   // threshold was paying for a bad estimator, and it cost 16 mm of engagement lag.
-  rollAngle: 60,
   // ⭐ A wide band. A finger swirls anywhere from a tight 5 mm to a lazy 60 mm, and
   // the old [10, 30] silently excluded both ends.
-  rollRadiusMin: 5,
-  rollRadiusMax: 60,
-  rollStepDistance: 13,
   // ⚠ 150° to DECIDE, swept: the shortest arc at which every realistic swirl
   // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
-  // is now paid by `rollTrackArcDeg` instead — see below.
-  rollFitArcDeg: 150,
-  rollTrackArcDeg: 130,
 
   // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
   evictShakeReversals: 2,
@@ -662,9 +570,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ 0.4 admits a hand's natural bow and refuses a circle. ⛔ The gap between those two
   // is the whole question, and it is a finger's to answer.
   evictShakeStraightness: 0.4,
-  rollUpdateDistance: 0.5,
-  rollReleaseDistance: 12,
-  rollFitResidualFraction: 0.25,
   // ⭐⭐ SHIPPED AS `beta = 0` ON DEVICE EVIDENCE, AGAINST MY OWN MEASUREMENT.
   // A/B'd by finger on 2026-09-14 (`?rollFilterBeta=0` vs the default) and the
   // filtered version was judged better. ⛔ My metric said the opposite — it scored
@@ -677,8 +582,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ `beta` is kept, not deleted: the paper's tuning procedure needs it, and `IN5`
   // still has to measure both numbers. `?rollFilterBeta=0.05` makes it transparent
   // again for a future comparison.
-  rollFilterMinCutoff: 3.0,
-  rollFilterBeta: 0,
   // ⭐⭐ MEASURED on the device 2026-09-14, not guessed: the owner held one finger
   // still and read the meter's floor (`src/input/noise_meter.ts`). FIVE TIMES the
   // 0.15 placeholder that preceded it.
@@ -841,31 +744,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
-  // ⛔ THE REACHABILITY RULE IS GONE WITH THE QUANTITIES IT GUARDED. It asserted that
-  // `stillSpeed x stillTime` exceeded the excursion bound, so the bound was not decorative.
-  // ⭐ A11 removed all three: a position deadband has no rate and no duration to be
-  // inconsistent with, which is most of why it is the right shape. The rule ABOVE — the
-  // radius must clear the measured noise — is the one that survived, and it is the one
-  // that was missing.
-  // ⚠ A rule once required `rollReleaseDistance > rollStepDistance`, reasoning that
-  // a roll "cannot be released before the path has travelled far enough to measure
-  // its shape". ⛔ DELETED: the shape is measured by the fit WINDOW, not by the
-  // release distance, and the two answer different questions. Keeping it capped how
-  // fast a committed roll could hand back to yaw/pitch, for no geometric reason.
-  if (cfg.rollReleaseDistance <= cfg.rollUpdateDistance) {
-    throw new Error(
-      `rollReleaseDistance (${cfg.rollReleaseDistance} mm) must exceed ` +
-        `rollUpdateDistance (${cfg.rollUpdateDistance} mm), or release could be ` +
-        "decided before a single new reading has been taken.",
-    );
-  }
-  if (cfg.rollTrackArcDeg > cfg.rollFitArcDeg) {
-    throw new Error(
-      `rollTrackArcDeg (${cfg.rollTrackArcDeg}°) exceeds rollFitArcDeg ` +
-        `(${cfg.rollFitArcDeg}°): tracking an already-decided roll cannot need MORE ` +
-        "arc than deciding it did.",
-    );
-  }
   // ⛔⛔ THE RINGS MUST CLIMB. If the heights do not increase bottom → middle → top
   // the surface folds back through itself, and the elevation parameter stops meaning
   // "how high the camera is" — it would move the camera DOWN over part of its range,
@@ -920,77 +798,11 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "render a black page with no error. Keep at least 10x the near plane.",
     );
   }
-  if (cfg.rollFitArcDeg < 45 || cfg.rollFitArcDeg > 360) {
-    throw new Error(
-      `rollFitArcDeg (${cfg.rollFitArcDeg}°) is outside 45–360°: below 45° a circle ` +
-        "fit is too ill-conditioned to locate a centre, and beyond a full turn the " +
-        "window stops being able to follow a gesture whose circle changes.",
-    );
-  }
-  if (cfg.rollUpdateDistance >= cfg.rollStepDistance) {
-    throw new Error(
-      `rollUpdateDistance (${cfg.rollUpdateDistance} mm) must stay below ` +
-        `rollStepDistance (${cfg.rollStepDistance} mm): the cadence cannot be coarser ` +
-        "than the baseline it re-measures, or the two ends stop moving together.",
-    );
-  }
-  // ⭐⭐ THE SAGITTA CRITERION — the one config rule here derived from physics
-  // rather than chosen. A chord of length L across a circle of radius R bows away
-  // from the straight line by a SAGITTA of L²/(8R). That bow IS the entire curvature
-  // signal: if it does not clear the pointer's own noise, the measured radius is
-  // noise, and every decision keyed on it is a coin toss.
-  //
-  // ⛔ IT WOULD HAVE CAUGHT A REAL DEFECT AT CONSTRUCTION. With a 3 mm baseline and
-  // a 40 mm maximum radius the sagitta was 0.028 mm against ~0.15 mm of noise — a
-  // signal-to-noise ratio of 0.2 — and the symptom on the device was that a SLOW
-  // circular sweep never registered as a roll at all: 300° swept, 0.0° read.
-  //
-  // ⚠ The binding case is the LARGEST radius, not the smallest: sagitta shrinks as
-  // R grows, so a lazy wide swirl is the hard one to detect, not a tight scribble.
-  //
-  // ⛔⛔ IT IS MEASURED OVER THE WINDOW THE CODE ACTUALLY SPANS, and for a long time it
-  // was not. The rule used to read `rollStepDistance² / (8 × rollRadiusMax)` — a FIXED
-  // 13 mm chord at the LARGEST radius, giving 0.352 mm. But `roll.ts`'s `windowTargetPx`
-  // sizes the window as `max(rollStepDistance, radius × arc)`: at a 60 mm radius the
-  // window holds 130° of arc, which is 136 mm of path and bows by 32 mm, not 0.352 mm.
-  // The rule was reading a span the product never uses, at the radius where that span
-  // never binds. ⚠ Mistake shape 2 — a substituted quantity — inside the very check
-  // written to catch mistakes. It surfaced only when `pointerNoiseMm` was finally
-  // MEASURED (0.15 → 0.761) and the check rejected a configuration seven device passes
-  // had already accepted. ⭐ `METHOD`: when the device and the metric disagree, suspect
-  // the metric.
-  //
-  // ⚠ And the binding radius is the SMALLEST, not the largest: an arc-sized window bows
-  // in proportion to its radius, so a tight swirl is now the hard case. The old rule had
-  // this backwards too. The range is scanned rather than reasoned about — a composition
-  // is a thing to measure.
-  const arcRad = (Math.min(cfg.rollFitArcDeg, cfg.rollTrackArcDeg) * Math.PI) / 180;
-  let sagittaMm = Number.POSITIVE_INFINITY;
-  let sagittaAtRadiusMm = cfg.rollRadiusMin;
-  for (let r = cfg.rollRadiusMin; r <= cfg.rollRadiusMax; r += 0.05) {
-    // The arc the window holds at this radius, capped at a full turn.
-    const theta = Math.min(Math.max(arcRad, cfg.rollStepDistance / r), 2 * Math.PI);
-    const sag = r * (1 - Math.cos(theta / 2));
-    if (sag < sagittaMm) {
-      sagittaMm = sag;
-      sagittaAtRadiusMm = r;
-    }
-  }
-  if (sagittaMm < 2 * cfg.pointerNoiseMm) {
-    throw new Error(
-      `the roll fit window is too short to measure curvature: at its worst radius ` +
-        `(${sagittaAtRadiusMm.toFixed(1)} mm) it holds ` +
-        `${Math.min(cfg.rollFitArcDeg, cfg.rollTrackArcDeg)}° of arc and bows by only ` +
-        `${sagittaMm.toFixed(3)} mm against ${cfg.pointerNoiseMm} mm of pointer noise. ` +
-        `Lengthen rollTrackArcDeg, raise rollRadiusMin, or measure a smaller noise.`,
-    );
-  }
-  // ⚠ A rule once lived here requiring `rollStepDistance < rollRadiusMin`, on the
-  // grounds that a chord that long "stops being a tangent". ⛔ IT WAS DELETED WITH
-  // THE ESTIMATOR IT BELONGED TO: nothing uses a chord as a tangent any more, and
-  // under a CIRCLE FIT a long span relative to the radius is BETTER, not worse —
-  // more arc conditions the fit. Keeping it would have capped the span at the
-  // tightest roll radius and locked out every lazy wide swirl.
+  // ⚠ RESTORED 2026-09-16: this rule has nothing to do with roll and was removed by
+  // accident — the sweep that deleted the roll validator matched on the COMMENT above it,
+  // which mentioned `rollStepDistance`. ⛔ A bulk deletion keyed on prose deletes prose's
+  // neighbours; the vector `a lift window wider than the motion buffer is rejected loudly`
+  // is what caught it, one run later.
   if (cfg.flickLiftWindow > cfg.flickWindow) {
     throw new Error(
       `flickLiftWindow (${cfg.flickLiftWindow} ms) exceeds flickWindow ` +
@@ -998,4 +810,20 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "motion buffer has already discarded.",
     );
   }
+  // ⛔⛔ THE SAGITTA CRITERION WAS DELETED HERE, 2026-09-16, WITH THE GESTURE IT GUARDED.
+  //
+  // ⭐ It was the one rule in this validator derived from physics rather than chosen: a
+  // chord of length L across a circle of radius R bows by L²/(8R), and that bow IS the
+  // curvature signal — if it does not clear the pointer's own noise, the measured radius is
+  // noise. ⚠ It guarded the CIRCULAR roll's fit, and `A12` retired that gesture; the owner
+  // then asked for the roll to be cleaned out of every fork, so the detector, its six
+  // tunables and this check went together.
+  //
+  // ⭐⭐ ITS HISTORY IS WORTH MORE THAN THE RULE, and it is kept in
+  // `Claude/10_INPUT_TOUCH/INDEX.md` and `queue_notes/IN5.md`: the check itself carried
+  // mistake shape 2 for eight device passes — it read `rollStepDistance² / (8 ×
+  // rollRadiusMax)`, a span the product never used at the radius where it never binds, and
+  // had the binding radius backwards. ⛔ It surfaced only when `pointerNoiseMm` was finally
+  // MEASURED (0.15 → 0.761) and the check rejected a configuration seven device passes had
+  // accepted. ⭐ `METHOD`: when the device and the metric disagree, suspect the metric.
 }

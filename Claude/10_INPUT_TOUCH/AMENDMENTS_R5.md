@@ -522,7 +522,21 @@ travel. ⛔ Millimetres, rule 3. Default **2 °/mm**, so a 45 mm drag rolls the 
 self-consistent conventions — exactly like the orbit inversion, where no amount of
 sign-checking can tell you which a hand expects.
 
-### ⚠ What is kept, and why it is not deleted
+### ⛔⛔ WHAT WAS KEPT IS NOW DELETED — 2026-09-16, and the reason is a defect
+
+⭐⭐ **THE SECTION BELOW ARGUED FOR KEEPING THE CIRCLE FIT UNWIRED, AND IT WAS WRONG IN ONE
+WORD: *unwired*.** The detector was still **fed**, and `release` still returned `ROLL_KEPT`
+above the flick test — so once `IN3`'s 2ter/2quater went live it silently vetoed alignment on
+any rotation drag that curved enough (defect 40, `queue_notes/IN3.md`).
+⛔ Deleted at the owner's instruction (*"clean the roll also for the fork A"*): `roll.ts`,
+`one_euro.ts`, 58 vectors, `rebaseOnRollCommit`, the pose history, the `ROLL_KEPT` verdict and
+~16 tunables.
+⭐ The argument below — *retractions are kept on purpose* — still holds for `shake.ts` and
+`anchor_rotate.ts`, and the distinction it missed is the one to carry: **those two are not
+CALLED. This one was.** Kept unrewritten, as the record of a defensible decision that turned
+out to cost a defect.
+
+### ⚠ What was kept, and the argument for it (superseded)
 
 `roll.ts` (the Hyper circle fit, 40 vectors), `Recognizer.rebaseOnRollCommit` and the pose
 history are **left in place and unwired** — the same status as `shake.ts` and

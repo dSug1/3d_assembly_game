@@ -17,23 +17,23 @@ import { MotionTracker } from "../src/input/motion";
 
 describe("URL tunable overrides", () => {
   it("applies a numeric override and reports it", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?rollAngle=45");
-    expect(r.config.rollAngle).toBe(45);
-    expect(r.applied).toEqual(["rollAngle=45"]);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?gainRotateFree=45");
+    expect(r.config.gainRotateFree).toBe(45);
+    expect(r.applied).toEqual(["gainRotateFree=45"]);
     expect(r.rejected).toEqual([]);
   });
 
   it("applies several, and leaves everything else alone", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "rollAngle=45&rollFilterBeta=0");
-    expect(r.config.rollAngle).toBe(45);
-    expect(r.config.rollFilterBeta).toBe(0);
-    expect(r.config.rollRadiusMax).toBe(DEFAULT_CONFIG.rollRadiusMax);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "gainRotateFree=45&gainRollDrag=0");
+    expect(r.config.gainRotateFree).toBe(45);
+    expect(r.config.gainRollDrag).toBe(0);
+    expect(r.config.gainTranslateScreen).toBe(DEFAULT_CONFIG.gainTranslateScreen);
   });
 
   it("⭐ ZERO is a legitimate value, not an absent one", () => {
-    // ⛔ `rollFilterBeta=0` is exactly the setting the 1€ paper's procedure starts
+    // ⛔ `gainRollDrag=0` is exactly the setting the 1€ paper's procedure starts
     // from. A parser that treated 0 as missing would make the recipe untestable.
-    expect(parseConfigOverrides(DEFAULT_CONFIG, "?rollFilterBeta=0").config.rollFilterBeta).toBe(0);
+    expect(parseConfigOverrides(DEFAULT_CONFIG, "?gainRollDrag=0").config.gainRollDrag).toBe(0);
   });
 
   it("⛔ REFUSES an unknown key, loudly", () => {
@@ -50,13 +50,13 @@ describe("URL tunable overrides", () => {
 
   it("⛔ REFUSES an empty value — it is a typo, not a request for zero", () => {
     // `Number("")` is 0, which would silently set a tunable to zero.
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?rollAngle=");
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?gainRotateFree=");
     expect(r.applied).toEqual([]);
-    expect(r.config.rollAngle).toBe(DEFAULT_CONFIG.rollAngle);
+    expect(r.config.gainRotateFree).toBe(DEFAULT_CONFIG.gainRotateFree);
   });
 
   it("⛔ REFUSES a non-number", () => {
-    expect(parseConfigOverrides(DEFAULT_CONFIG, "?rollAngle=fast").applied).toEqual([]);
+    expect(parseConfigOverrides(DEFAULT_CONFIG, "?gainRotateFree=fast").applied).toEqual([]);
   });
 
   it("ignores the cache-busting parameters this URL routinely carries", () => {

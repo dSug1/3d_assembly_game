@@ -289,129 +289,96 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
     return out;
   }
 
-  it("a clockwise sweep commits to roll, with a POSITIVE angle, and keeps its motion", () => {
+  // ⛔⛔ EVERY VECTOR IN THIS SUITE WAS REPLACED ON 2026-09-16, AND THE REASON IS A DEFECT
+  // THEY WERE PROTECTING.
+  //
+  // They asserted that a swept circle commits the roll detector, that `release` then reports
+  // `ROLL_KEPT` and **skips the flick test**, and that the provisional yaw/pitch is rebased —
+  // §1.3's rules while roll was a one-touchpoint gesture.
+  //
+  // ⚠ `A12` moved roll to the second touchpoint. The detector was left running and described
+  // in the code as *"unused"*: it was not. The veto still fired, so once `IN3`'s 2ter/2quater
+  // went live a rotation flick pushed **nothing** whenever the drag had curved enough to
+  // commit it — device-reported as *"the face does not point up at rotation flick"* and *"no
+  // DOF reduction at the first flick"*, intermittently, because it depended on how curved the
+  // drag happened to be.
+  //
+  // ⭐⭐ A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT — the third instance of
+  // that shape in one day, and the only one that vetoed a live rule rather than merely
+  // misinforming.
+  // ⛔ So the detector is no longer fed, `ROLL_KEPT` no longer exists, and these vectors'
+  // SUBJECT is gone. They are deleted rather than adjusted: a vector whose subject no longer
+  // exists is a liability. What replaced them is the behaviour that now holds.
+
+  it("⭐ A CURVED DRAG IS JUDGED BY THE FLICK TEST LIKE ANY OTHER", () => {
+    // ⛔ It used to be exempt by rule. Now a swept circle that ends without a flick keeps its
+    // motion, exactly as a straight slow drag does — no special case in either direction.
     const { rec, pose } = fresh();
     const samples = circle(70, true);
     rec.press(samples[0]!);
     for (const s of samples.slice(1, -1)) rec.move(s);
     pose.moveProvisionally(42);
     const v = rec.release(samples[samples.length - 1]!);
-    expect(v.kind).toBe("ROLL_KEPT");
-    expect(v.rollDeg).toBeGreaterThan(0);
+    expect(v.kind).toBe("CONTINUOUS_KEPT");
     expect(v.rolledBack).toBe(false);
     expect(pose.current()).toBe(42);
   });
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // AMENDMENT A8 — the roll REBASES to the start of the circle.
-  // ══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Drive a path, moving the pose provisionally after every sample the way the caller's
-   * yaw/pitch does, and report what the recognizer restored.
-   *
-   * ⭐ The pose is a COUNTER: sample `i` leaves it at `i`. So a restored value says
-   * exactly WHICH SAMPLE the recognizer rebased to, which is the whole question.
-   */
-  function driveWithProvisionalMotion(samples: readonly Sample[]) {
-    const pose = recordingPose();
-    const taps = new TapHistory(cfg);
-    const rec = new Recognizer(cfg, pose.port, taps);
-    rec.press(samples[0]!);
-    for (let i = 1; i < samples.length; i++) {
-      rec.move(samples[i]!);
-      // ⛔⛔ A12 RETIRED A8 AND THE CALL MOVED HERE. Roll is no longer a one-touchpoint
-      // gesture, so `move` no longer rebases — there is no provisional yaw/pitch to undo.
-      // ⭐ The MECHANISM is kept callable and these vectors still prove it works, because
-      // the day a circular roll comes back this is what comes back with it. ⚠ What they no
-      // longer prove is that the recognizer calls it by itself; it deliberately does not.
-      rec.rebaseOnRollCommit();
-      // The continuous rule turning the object, provisionally, for this frame.
-      pose.moveProvisionally(i);
-    }
-    return { rec, pose };
-  }
-
-  it("⛔⛔ REBASES when the roll commits — the yaw/pitch it was mistaken for is undone", () => {
-    // ⚠ THE DEFECT THIS PINS, FOUND BY FINGER: a circle does not read as a roll until
-    // `rollAngle` of arc has been swept, and until then §1.3 applies 2bis provisionally.
-    // The roll used to begin from a pose the user never asked for, so the result was not a
-    // pure roll of the original orientation.
-    const { rec, pose } = driveWithProvisionalMotion(circle(70, true));
-    expect(rec.rollRebased).toBe(true);
-    expect(pose.restored.length).toBeGreaterThan(0);
-  });
-
-  it("⛔ does NOT rebase when the path never becomes a circle", () => {
-    const { rec, pose } = driveWithProvisionalMotion(run({ speedMmPerS: 60, ms: 400 }));
-    expect(rec.rollRebased).toBe(false);
-    expect(pose.restored).toEqual([]);
-  });
-
-  it("⭐⭐ rebases to the CIRCLE'S START, not to the PRESS — a real drag before it survives", () => {
-    // ⛔⛔ THE COUNTER-EXAMPLE THAT SEPARATES THE FIX FROM ITS LAZY VERSION. A hand may
-    // drag in a straight line and only then begin to circle. That drag is a yaw the user
-    // asked for; it is not part of the evidence for a circle, and undoing it would be a
-    // second defect wearing the first one's clothes.
-    const straight = run({ speedMmPerS: 60, ms: 300, x0: 200, y0: 200 });
-    const lastStraight = straight[straight.length - 1]!;
-    const circled = circle(70, true, lastStraight.t + 10).map((s) => ({
-      ...s,
-      x: s.x + (lastStraight.x - 200),
-    }));
-    const samples = [...straight, ...circled];
-
-    const { rec, pose } = driveWithProvisionalMotion(samples);
-    expect(rec.rollRebased).toBe(true);
-    // ⭐ The restored pose is a sample INDEX. Rebasing to the press would restore ~0;
-    // rebasing to the circle's start restores something well past the straight run.
-    const restoredTo = pose.restored[pose.restored.length - 1]!;
-    expect(restoredTo).toBeGreaterThan(straight.length / 2);
-  });
-
-  it("⭐ the rebase happens ONCE, not on every frame after the commit", () => {
-    // ⚠ A rebase per frame would pin the object to the circle's start and the roll would
-    // never accumulate — the gesture would look frozen.
-    const { pose } = driveWithProvisionalMotion(circle(120, true));
-    expect(pose.restored.length).toBe(1);
-  });
-
-  it("a counter-clockwise sweep commits with a NEGATIVE angle", () => {
+  it("⚠ A SWEEP FOLLOWED BY A FAST STRAIGHT RUN IS STILL NOT A FLICK — measured, not assumed", () => {
+    // ⭐⭐ THIS IS THE COST OF REMOVING THE SKIP, MEASURED. §1.3's old comment claimed a
+    // circular path *"fails the purity ratio anyway"* and that the explicit skip existed
+    // *"rather than relying on that happening to hold"*. ⛔ Removing the veto means we now
+    // rely on exactly that — so the case is pinned here instead of left to be discovered.
+    // ⭐ With a 70 px circle and a 48 px straight run at ~1000 px/s, the flick test still
+    // refuses: the trailing window it judges spans part of the curve, so the direction purity
+    // does not clear its threshold.
+    // ⚠ WHAT THIS DOES **NOT** PROVE: that no curved gesture can ever flick. It is one
+    // fixture, and the honest claim is *the purity ratio rejected this one*. A longer straight
+    // exit would eventually pass, and that is a DEVICE question — can a hand produce an
+    // accidental alignment this way? `A4`'s eviction shake carries `suppressesFlick` for the
+    // reversal case and lands with its wiring.
     const { rec } = fresh();
-    const v = gesture(rec, circle(70, false));
-    expect(v.kind).toBe("ROLL_KEPT");
-    expect(v.rollDeg).toBeLessThan(0);
-  });
-
-  it("⭐⭐ once roll is committed the FLICK TEST IS SKIPPED — proven, not assumed", () => {
-    // §1.3 says a circular path fails the purity ratio anyway, so the skip could
-    // look decorative. It is not: here the gesture ENDS with a fast straight run
-    // that IS a flick on its own — asserted below as the counter-example — and the
-    // recognizer must still report ROLL_KEPT and roll nothing back.
-    const { rec, pose } = fresh();
     const swept = circle(70, true);
-    const last = swept[swept.length - 1]!;
-    // ⚠ The tail must stay SHORTER than `rollReleaseDistance`, or the roll is
-    // released on purpose and the flick correctly applies again. 400 mm/s for 25 ms
-    // is 10 mm: a flick by every criterion, and under the 12 mm release.
-    const tail = run({
-      speedMmPerS: 400,
-      ms: 25,
-      stepMs: 5,
-      x0: last.x,
-      y0: last.y,
-      t0: last.t + 10,
-    });
-    expect(detectFlick(trimBuffer(tail, cfg), cfg)).not.toBeNull(); // the counter-example
-
     rec.press(swept[0]!);
-    for (const s of [...swept.slice(1), ...tail.slice(0, -1)]) rec.move(s);
-    pose.moveProvisionally(42);
-    const v = rec.release(tail[tail.length - 1]!);
-    expect(v.kind).toBe("ROLL_KEPT");
-    expect(v.rolledBack).toBe(false);
-    expect(pose.current()).toBe(42);
+    for (const s of swept.slice(1)) rec.move(s);
+    const last = swept[swept.length - 1]!;
+    for (let k = 1; k <= 5; k++) {
+      rec.move({ x: last.x, y: last.y - 8 * k, t: last.t + 8 * k });
+    }
+    const v = rec.release({ x: last.x, y: last.y - 48, t: last.t + 48 });
+    expect(v.kind).toBe("CONTINUOUS_KEPT");
+
+    // ⭐⭐ AND THE COUNTER-EXAMPLE, WHICH IS WHAT MAKES THE ASSERTION ABOVE MEAN ANYTHING:
+    // the same straight run, on its own, IS a flick. ⛔ Without this the vector could not tell
+    // *"the purity ratio rejected the curve"* from *"my straight run was too weak to flick at
+    // all"* — and the second would make the whole test vacuous.
+    // ⚠ The old suite made exactly this move for the opposite claim; it is kept.
+    const tail: Sample[] = [{ x: last.x, y: last.y, t: last.t }];
+    for (let k = 1; k <= 6; k++) tail.push({ x: last.x, y: last.y - 8 * k, t: last.t + 8 * k });
+    expect(detectFlick(trimBuffer(tail, DEFAULT_CONFIG), DEFAULT_CONFIG)).not.toBeNull();
   });
+
+  it("⛔⛔ THE ROLL MACHINERY IS GONE FROM THE RECOGNIZER'S SURFACE, not merely unfed", () => {
+    // ⭐⭐ First the detector stopped being fed; then the owner said *"clean the roll also
+    // for fork A"* and it was DELETED — `roll.ts`, `one_euro.ts`, the four getters, the
+    // rebase, the pose history and six tunables with them.
+    // ⛔ So the guard is on the SURFACE: a later session cannot wire a dormant detector back
+    // believing it was intended, because there is nothing to wire. ⚠ `D28`'s rule, applied
+    // again — deleted, not disabled.
+    const { rec } = fresh();
+    const surface = Object.getOwnPropertyNames(Object.getPrototypeOf(rec));
+    for (const gone of [
+      "rollDeg",
+      "rollCommitted",
+      "rollSmoothedDeg",
+      "rollAppliedDeg",
+      "rebaseOnRollCommit",
+      "rollRebased",
+    ]) {
+      expect(surface).not.toContain(gone);
+    }
+  });
+
 });
 
 describe("release-time priority (§1.3)", () => {
@@ -476,7 +443,7 @@ describe("release-time priority (§1.3)", () => {
   });
 
   it("⛔ EXACTLY ONE rule can come back — the kinds that keep motion fire none", () => {
-    for (const kind of ["CONTINUOUS_KEPT", "ROLL_KEPT", "TAP", "HOLD"] as const) {
+    for (const kind of ["CONTINUOUS_KEPT", "TAP", "HOLD"] as const) {
       expect(
         resolveDiscreteRule(
           kind,

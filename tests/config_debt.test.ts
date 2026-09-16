@@ -126,7 +126,10 @@ describe("⭐⭐ config debt", () => {
     // A test that cannot fail is not a test. `nothingReadsThis` appears nowhere in
     // `src/`, so the matcher must reject it.
     expect(isRead("nothingReadsThis")).toBe(false);
-    expect(isRead("rollAngle")).toBe(true);
+    // ⚠ `rollAngle` was this example until the roll was deleted (2026-09-16). The example
+    // has to be a tunable something genuinely READS, or the guard's positive half proves
+    // nothing — so it moves with the code rather than being dropped.
+    expect(isRead("gainRotateFree")).toBe(true);
   });
 
   it("⛔ and prose in a comment cannot make a tunable look used", () => {

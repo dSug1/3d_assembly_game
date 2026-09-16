@@ -5,6 +5,16 @@
 live that is not a front door.
 
 
+✅✅ **THE TRAP BELOW IS GONE, 2026-09-16 — and by deletion, not by discipline.** The six
+tunables this dossier warned a session about — `rollAngle`, `gainRoll`, `rollStepDistance`,
+`rollReleaseDistance`, `rollFilterMinCutoff`, `rollFilterBeta` — **no longer exist**, with
+~10 more and the circle-fit channel they served (owner: *"clean the roll also for the fork
+A"*). ⭐ `config_debt.test.ts` now has nothing off-path to find, which is the only kind of
+proof that claim can have. ⚠ One number they warned about SURVIVES and still wants a hand:
+**`gainRollDrag`**, `A12`'s °/mm on the second touchpoint's x — a guess, with a slider.
+⛔ The text below is kept unrewritten: it is the record of *how* six tunables came to be read
+by nothing, which is a shape that will recur.
+
 ---
 
 ## ⭐ CARRIED FROM THE QUEUE ROW, 2026-09-16 — verbatim

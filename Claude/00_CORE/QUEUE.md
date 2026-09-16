@@ -18,16 +18,18 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **632 golden vectors,
-all passing** (37 → 632). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **574 golden vectors,
+all passing** (37 → 632 → 574 — ⭐ **58 DELETED with the roll channel they described**). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
 ### What works, by finger, on a real device
 
 ✅ **`IN1` CLOSED** — the recognizer: commit point, provisional motion with rollback,
-tap / double-tap / hold, the release-time priority ladder, screen-plane yaw/pitch, and
-roll. ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit, working by
+tap / double-tap / hold, the release-time priority ladder, and screen-plane yaw/pitch.
+⛔ Its **one-touchpoint roll is deleted** (2026-09-16) — `A12` had moved roll to the second
+touchpoint's x and the detector was left running, *"unused"*, where it vetoed `IN3`'s flick
+(defect 40). ✅✅ **`IN9` CLOSED** — both camera rules, pinch zoom and orbit, working by
 finger. ✅✅ **`IN2` CLOSED** — the three latched roles.
 
 ✅✅ **AND THE WHOLE TWO-TOUCHPOINT SET IS CLOSED BY A DEVICE LOOK (2026-09-16)** —
@@ -69,8 +71,8 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Thirty-nine defects have been found **by finger** (thirty-eight of them; one by composing a measurement with a threshold), and **not one was visible to a green
-suite**. They are **five** shapes, not thirty-nine problems — the fifth is below, and it is
+Forty-one defects have been found **by finger** (forty of them; one by composing a measurement with a threshold), and **not one was visible to a green
+suite**. They are **five** shapes, not forty-one problems — the fifth is below, and it is
 the one that costs a correct implementation rather than a broken one:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
@@ -96,7 +98,9 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | **A14** — the gap inside a lift-and-replace | **1** — between a lift and the replacing press there is genuinely ONE touchpoint down. ⭐⭐ The RULE was right and the GESTURE MODEL was wrong | [`queue_notes/IN4.md`](queue_notes/IN4.md) |
 | **A16** — fork C's three formulations | **3** — a double tap toggled TWICE so the gesture could never form; a 300 ms lag I had stated as a cost and shipped anyway; the mode reset on every release. ⚠ Only the first is a defect in the strict sense — the other two correct MY READING of the owner's words, which is a different failure and arguably worse | [`queue_notes/IN13.md`](queue_notes/IN13.md) |
 | **`IN3`** — the face marker's roll | **1** — *"the highlighted face does not rotate as the cube's face: consequently, there is a growing mismatch between their respective quaternion."* ⛔⛔ The marker aligned its facing with the face's world **normal**, which fixes ONE axis and leaves the spin about it free — so turning the object about that face's own normal moved the face and not the marker. ⭐⭐ **A DIRECTION TEST CANNOT SEE A ROLL**, the same family as *a sign is not tested by testing the magnitude*: the quantity I checked stayed true while the one that mattered drifted. ⭐ Fixed by INHERITING the object's orientation plus one constant per-face offset | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
-| | **= 39** | |
+| **`IN3`** — a RETIRED gesture still owning a verdict | **1** — *"the face does not point up at rotation flick"*, *"no DOF reduction at the first flick"*, intermittently. ⛔⛔ `A12` moved roll to the second touchpoint and left the detector **fed**; `release` still returned `ROLL_KEPT`, which **pre-empts the flick test**, so a hand whose rotation drag happened to curve enough pushed no alignment at all. ⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT** — the third dead instrument in one day, and the only one that changed behaviour instead of merely misinforming. ⭐ The composition test (`in3_align_wiring.test.ts`) was **green throughout**: it walks the chain from `alignFromFlick` onward, and the veto sat one stage EARLIER | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+| **`IN3`** — a mode with no way out | **1** — *"the second flick completely freezes the rotation."* ⛔ 2ter pushes constraints while 2sexte (their driver) and `A4`'s eviction are both **unwired**, so the second constraint makes `dragRule` return `ROTATE_REFUSED` and a hand has **no gesture that recovers**. ⭐⭐ Shipping one half of a pair is not a partial feature, it is a **trap**: entry 1 alone stays reversible by flicking again, entry 2 is terminal | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+| | **= 41** | |
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of
@@ -140,13 +144,10 @@ rejecting rotation inertia, is the loop working, not a fault found.
 2. **Measuring a DIFFERENT QUANTITY than the one asked for.** The tangent's turning
    instead of the angle about a centre — invisible until a finger reversed. ⭐ *When an
    estimator is hard, ask whether you replaced the quantity rather than improved it.*
-   ⛔⛔ **AND THE SHAPE GOT INTO A GUARD WRITTEN TO CATCH IT.** The sagitta criterion
-   computed `rollStepDistance² / (8 × rollRadiusMax)` — a fixed 13 mm chord at the
-   LARGEST radius — while `roll.ts` sizes its window as `max(rollStepDistance,
-   radius × arc)`. It was reading a span the product never fits, at the radius where
-   that span never binds: 0.352 mm claimed against ~3.3 mm real, and the binding case
-   is the SMALLEST radius, not the largest. ⭐ Quantity *and* direction wrong, for
-   eight device passes, inside the check that exists to prevent exactly this.
+   ⛔⛔ **AND THE SHAPE GOT INTO A GUARD WRITTEN TO CATCH IT** — the sagitta criterion
+   read a span the product never fits, at the radius where it never binds, wrong in
+   *quantity and direction* for eight device passes. ⭐ Deleted with the roll (`D31`);
+   the working is in [`../10_INPUT_TOUCH/INDEX.md`](../10_INPUT_TOUCH/INDEX.md).
 3. **IDEALISED FIXTURES.** Roll vanished from the deployed page with every vector
    green, because every fixture was a perfect circle. ⭐ *Build the imperfect specimen
    and the negative first.*
@@ -280,9 +281,9 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | IN0 | Units, motion states, flick test | IN | feature | ✅ **CLOSED**, and §1.1 has had **FOUR formulations** — the first three all broke on a real pointer. ⭐ Now a **per-axis position deadband** (`A11`): time-free, exact, and robust by construction rather than by a threshold above a measurement. ⚠ `motionDeadbandMm` is the most load-bearing number in the input layer. ⭐⭐ **The most instructive file in the project** → [`queue_notes/IN0.md`](queue_notes/IN0.md) | — |
-| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ✅ **CLOSED 2026-09-14.** 109 new vectors. **7 device passes, 14 defects none of which a green suite could see.** ⚠ It also carries rule **2quinte**'s roll detector, built early and hardened — `IN3` inherits it. → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
+| IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ✅ **CLOSED 2026-09-14.** 109 new vectors. **7 device passes, 14 defects none of which a green suite could see.** ⛔⛔ Its rule **2quinte** roll detector, *"built early and hardened"*, is **DELETED** (`D31`) — it had had no channel since `A12` and its retired verdict vetoed `IN3`'s flick. → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature ⛔⛔ **AND ITS LATCH NOW HAS EXACTLY ONE EXCEPTION** (`A15`/`D25`, 2026-09-16): `relatchOnOrphan`, callable on a **discrete** event only — a second touchpoint's lift, after a raycast shows the holder's object is no longer under it. ⭐ The header's *"never revisited"* was REWORDED rather than deleted: what the latch protects against is a role recomputed from a CONTINUOUS reading, frame after frame. ⚠ 8 more vectors, including the one that proves the holder does not demote itself to `SECOND` on its own object | ✅✅ **CLOSED 2026-09-14**, 22 vectors, confirmed by finger — `src/input/router.ts`, engine-free and generic over an opaque object handle. Three roles: `OBJECT` / `OUTSIDE` / `IGNORED` (`IN8`), each latched at press for the touchpoint's lifetime; §0 order-independence keyed by pointer id, both release orders as vectors. ✅ **Device look done**: the `IN8` consequence — lift the holding finger with a second finger still on the same part and **the part stops responding** — was judged on the glass and accepted, which makes reading 1 an accepted BEHAVIOUR and not merely an accepted decision. ⭐ Pinch and orbit were re-checked too, since the plumbing was replaced underneath them. ⭐ A vector pass found **two vectors that could not fail** and fixed them → [`queue_notes/IN2.md`](queue_notes/IN2.md) | IN1, IN8 |
-| IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | 🔨 **IN PROGRESS, in fork B of `D29`'s three anchor-rule forks** (`?anchorRules=1`; fork A = today's behaviour and the default, fork C = the owner's set, inert). ✅ **Rule 2 built and wired** — face selection from the picked **NORMAL**, not a triangle index (`core/face_pick.ts`, 9 vectors), drawn as a quad on the face, plus §3 rule 3's unselect. ✅ **2bis's PRECONDITION built** (`input/drag_rule.ts`, 8 vectors) — and with it the composition §2 never wrote: how the movement mode meets the stack. ⚠ Not observable until 2ter/2quater can push a constraint. ✅ Built, not wired: `shake.ts` (15) and `anchor_rotate.ts` (25). ✅ **2ter/2quater built and wired** (`input/align_flick.ts`, 10 vectors) — a flick pushes an alignment **only in `ROTATE`** (`D30`), the world vector resolved at the snap, then re-solve and unselect. ⛔ Not wired: 2sexte's driver (the `A3` handover, which `A12` reopened) and eviction — **and the flick skip with it, now load-bearing** → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
+| IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | 🔨 **IN PROGRESS, in fork B of `D29`'s three anchor-rule forks** (`?anchorRules=1`; fork A = today's behaviour and the default, fork C = the owner's set, inert). ✅ **Rule 2 built and wired** — face selection from the picked **NORMAL**, not a triangle index (`core/face_pick.ts`, 9 vectors), drawn as a quad on the face, plus §3 rule 3's unselect. ✅ **2bis's PRECONDITION built** (`input/drag_rule.ts`, 8 vectors) — and with it the composition §2 never wrote: how the movement mode meets the stack. ⚠ Not observable until 2ter/2quater can push a constraint. ✅ Built, not wired: `shake.ts` (15) and `anchor_rotate.ts` (25). ✅ **2ter/2quater built and wired** (`input/align_flick.ts`, 10 vectors) — a flick pushes an alignment **only in `ROTATE`** (`D30`), the world vector resolved at the snap, then re-solve and unselect. ⛔⛔ **AND A HAND CAN REACH A DEAD END TODAY** (defect 41, *"the second flick completely freezes the rotation"*): 2ter fills §1.4's hard capacity while 2sexte's driver (the `A3` handover, which `A12` reopened) and eviction are **both unwired**, so the second constraint refuses every rotation with no gesture that recovers. ⭐ An **escape** is now the row's first item, and eviction is the cheaper half. ⛔ The flick skip is gone with the roll (`D31`), so §1.3's purity ratio alone separates a curved drag from an alignment → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | ✅✅ **RULE 6 CLOSED 2026-09-15** — confirmed by finger in ordinary play, not only in a tuning session. ⭐ It has mass: a critically/under-damped follower plus a phantom lead, and its gain was **computed** (1.0 puts the object exactly under the finger). ⛔ **6bis / 6ter / 6quater wait on face centres** — now unblocked by `3D1`. ⚠ Rotation has **no inertia**: built and rejected on the device → [`queue_notes/IN4.md`](queue_notes/IN4.md) | IN2, 3D1 (6bis onward only) |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued, and ⭐⭐ **practical without a rebuild**: every tunable overrides from the URL and the menu validates refusals. ✅ `pointerNoiseMm` = **0.761 mm** is the one number MEASURED (2026-09-14) — and measuring it exposed a defect eight device passes had accepted. ⛔⛔ **A TRAP TO READ BEFORE BOOKING A SESSION**: several tunables are still READ but sit OFF the gesture path, so `config_debt` sees them used while they change nothing → [`queue_notes/IN5.md`](queue_notes/IN5.md) | IN3 |
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |

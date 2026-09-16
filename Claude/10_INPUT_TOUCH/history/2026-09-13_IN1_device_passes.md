@@ -211,3 +211,47 @@ still (6.8° → 17.7°): evaluations are gated by distance, so they are irregul
 time, and a time-based low-pass over irregular increments does not preserve their sum.
 ⭐⭐ **What removed the jitter was the estimator, not a filter.** Left wired at a
 low-lag default so it can be judged by finger — one config line makes it transparent.
+
+---
+
+## ⭐ MOVED HERE FROM `INDEX.md`, 2026-09-16 — unrewritten
+
+⚠ The code this describes is **deleted** (`D31`): roll is the second touchpoint's x, and the
+circle fit went with the channel it served. ⭐ The text is kept because the *lesson* is about
+substituting a quantity, not about circles — and `INDEX.md` is a front door, so a narrative
+whose subject no longer exists belongs here. Per `README.md` rule 2, it is not rewritten.
+**§1.3's roll detection "about the running centroid" cannot fire at `rollAngle`.**
+`IN1`, 2026-09-13.
+
+§1.3 commits to roll on *"signed angle accumulated about the running centroid of the
+path"*. ⛔ **The centroid of an ARC is not its centre.** For a uniform arc of total
+angle `2α` at radius `R`, the centroid sits at `R·sin(α)/α` from the true centre — so
+at the 60° `rollAngle` wants to commit at, **the running centroid is at 0.955 R:
+essentially ON the path, not at its centre.** The angle measured about it is not the
+swept angle at all, and only becomes one as the gesture approaches a **full** turn
+(at 360° the centroid finally reaches the centre). Committing at a sixth of a turn,
+about a centroid sitting on the arc, measures noise.
+
+⛔⛔ **AND ACCUMULATING THE PATH'S TURNING ANGLE INSTEAD IS ALSO WRONG — it changes
+the QUANTITY.** The build did that for three device passes. Retrace an arc backwards
+and the **tangent flips 180° at the cusp**, while the angle about the centre simply
+runs back down. Measured on a 200° sweep reversed: the angle froze for twelve
+samples, jumped **+150° in one step**, and finished 180° from where it started.
+
+✅ **THE BUILD NOW MEASURES §1.3's OWN QUANTITY — the angle about the centre — with a
+least-squares CIRCLE FIT** (**Hyper**; Al-Sharadqah & Chernov 2009, no licence, no patent)
+over the trailing path. Retracing the same arc fits the **same circle**, so the centre
+holds still and the angle reverses smoothly through zero. Worst step **150° → 5.0°**.
+
+⭐ So the amendment is narrower than it first looked: **§1.3's quantity stands; only
+its estimator is replaced.** The centroid becomes a circle fit, and nothing else about
+the rule changes.
+
+⛔ Two things the fit needs that are easy to omit: a **residual** test (any algebraic fit returns
+*a* circle for any point set, so without it a side-to-side wiggle commits as a roll),
+judged against `rollFitResidualSigmas × pointerNoiseMm`; and a span measured **along
+the path**, never as a chord — on a reversal the chord *shrinks* while the fitted arc
+grows.
+
+⚠ Same standing: an amendment, recorded here, the owner's to ratify.
+

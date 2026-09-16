@@ -635,9 +635,82 @@ which is the lesson stated as a test result rather than as a claim.
 ⚠ It also explains why no vector caught it first: the marker's orientation was wiring in
 `src/render`, where none reach — the same class as `3D1`'s follower defect.
 
+### ⛔⛔⛔ DEFECT 40, AND IT IS THE MOST INSTRUCTIVE ONE ON THIS ROW — a retired gesture that still owned a verdict
+
+> *"the face does not point up at rotation flick"* — then, unprompted, *"also, there is no
+> reduction of DOF after a flick"*, then *"correction: there seems to be no DOF reduction at
+> the first flick but the second flick completely freezes the rotation."*
+
+⭐⭐ **THE FIRST THING I DID WAS THE RIGHT THING AND IT PROVED THE OPPOSITE OF WHAT I
+EXPECTED.** `tests/in3_align_wiring.test.ts` walks the exact chain `scene.ts` runs — build
+the constraint → push → re-solve → apply → read the face's world normal — at five
+orientations including every face of a rotated cube. It was **5/5 green**, before and after
+the report. ⛔ So the composition was not the defect, and *a composition is a thing to
+MEASURE* had already paid for itself: it told me where NOT to look.
+
+⛔⛔ **The veto sat one stage EARLIER than the chain the test starts at.** `Recognizer.release`
+ran, in priority order:
+
+1. `if (this.roll.committed) return { kind: "ROLL_KEPT", ... }`
+2. the flick test
+
+⚠ `A12` had moved roll to the second touchpoint's `x` and the one-touchpoint circle detector
+was left **fed** — `this.roll.push(s)` on every move — and described in the code as *"unused,
+exactly as `roll.ts` is: the machinery is correct and vectored."* **It was not unused.** It
+still owned the top rung of the release ladder. A hand rotating a cube sweeps arcs, so it
+committed routinely, and every commit **pre-empted the flick test**: no `FLICK`, no
+`alignFromFlick`, no constraint, no alignment.
+
+⭐ That is exactly the reported shape: *intermittent*. A straight-enough flick got through;
+a curved one silently did nothing. ⚠ And it explains the sequence of reports — *"no DOF
+reduction at the first flick"* is the same defect as *"the face does not point up"*, seen from
+the other side.
+
+⭐⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT.** This project met the
+same shape three times in one day and this was the third: a HUD line printing a retired
+quantity (misinformed), `secondTouchGraceMs` decayed into a slider that changed nothing
+(misinformed) — and this one, which **changed behaviour**. ⛔ The difference is the verb: the
+first two were *read*, this one was *obeyed*.
+
+✅ **The fix is a DELETION, at the owner's instruction** — *"clean the roll also for the fork
+A."* `roll.ts`, `one_euro.ts`, their 58 vectors, `rebaseOnRollCommit`, the pose history, the
+`ROLL_KEPT` union member, ~16 tunables and the sagitta guard are gone. ⚠ The count dropped
+632 → 574 and that is the healthy direction: a vector certifying a module nothing calls is
+what kept this alive.
+
+⚠⚠ **AND THE DELETION HAS A COST I OWE ON THE RECORD.** §1.3's skip carried a comment
+saying a circular path *"fails the purity ratio anyway"* and that the explicit skip removed
+the edge case *"rather than relying on that happening to hold."* ⛔ We now rely on exactly
+that. ⭐ So it is **measured, not assumed**: a vector replays a 70 px swept circle followed by
+a fast straight run and asserts the `FLICK` — a curved drag that ends fast and straight
+**does** align now, stated rather than discovered. ⚠ A device question stands: is an
+accidental alignment reachable that way? `A4`'s eviction shake carries `suppressesFlick` for
+the reversal case and lands with its wiring.
+
+---
+
+### ⛔⛔ DEFECT 41 — *"the second flick completely freezes the rotation"*, and it is not a bug in a rule
+
+⭐ The behaviour is `dragRule` returning `ROTATE_REFUSED`: two entries fill §1.4's hard
+capacity, and 2sexte — the rule that *drives a constrained object* — is **not wired**, nor is
+eviction. So the object is correct, the readout is correct, and **a hand has no gesture that
+recovers.**
+
+⛔⛔ **SHIPPING ONE HALF OF A PAIR IS NOT A PARTIAL FEATURE, IT IS A TRAP.** One constraint is
+reversible — flick again and it re-solves. Two is terminal until the app is reloaded.
+⭐ The lesson is about **release granularity**, not about the rules: 2ter/2quater were wired
+because they were finished, and finished-and-live is not the same as safe-to-reach.
+⚠ What closes it is below — either 2sexte's wiring or eviction, and eviction is the smaller
+of the two and needs no decision from the owner.
+
+---
+
 ### ⛔ What remains in fork B
 
-1. **Wiring `anchor_rotate.ts`** (2sexte + `A3`'s handover) — ⚠ blocked on a decision: `A12`
+1. ⛔⛔ **AN ESCAPE FROM A FULL STACK — now the FIRST item, because defect 41 is reachable
+   today.** Either of the two below closes it; `shake.ts` is built, vectored and needs no
+   decision from the owner, so it is the cheaper half.
+2. **Wiring `anchor_rotate.ts`** (2sexte + `A3`'s handover) — ⚠ blocked on a decision: `A12`
    moved roll to the second touchpoint, so `A3`'s handover now spans two touchpoint
    configurations rather than one channel. ⛔ Until then a constrained object does not rotate
    and the readout names the rule that would have run.

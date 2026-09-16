@@ -32,7 +32,6 @@
 import { detectFlick, terminalSpeedPxPerS, trimBuffer, type Flick } from "./flick";
 import type { GestureConfig } from "./gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "./motion";
-import { RollDetector } from "./roll";
 import { mmToPx, pxToMm } from "../core/units";
 
 export type Phase = "PRESSED" | "COMMITTED_CONTINUOUS" | "RELEASED";
@@ -47,9 +46,11 @@ export type ReleaseKind =
   /** Committed, and the flick test passed at release. The pose was rolled back. */
   | "FLICK"
   /** Committed, flick test failed: the provisional motion stands. */
-  | "CONTINUOUS_KEPT"
-  /** Committed to roll (2quinte). §1.3: the flick test is SKIPPED. */
-  | "ROLL_KEPT";
+  | "CONTINUOUS_KEPT";
+
+// ⛔ `ROLL_KEPT` WAS REMOVED FROM THIS UNION ON 2026-09-16. `A12` retired the circular roll,
+// and leaving the kind producible let the detector **veto the flick test** — see `release`.
+// ⚠ An unreachable variant is a trap, so it is deleted rather than documented as impossible.
 
 /**
  * The discrete rule the release-time priority ladder selects. Exactly one may fire.
@@ -90,8 +91,6 @@ export interface ReleaseVerdict {
   readonly rolledBack: boolean;
   /** The one discrete rule permitted to fire. */
   readonly rule: DiscreteRule;
-  /** Signed accumulated roll at release, degrees. ⭐ Positive is CLOCKWISE on screen. */
-  readonly rollDeg: number;
   /** Press → release, ms. */
   readonly durationMs: number;
   /**
@@ -104,13 +103,6 @@ export interface ReleaseVerdict {
 }
 
 /** Snapshot/restore for whatever the caller calls a pose. See the header. */
-/**
- * How long the pose history reaches back, milliseconds. ⭐ It must comfortably cover the
- * roll detector's fit window, which is sized in PATH LENGTH — so a slow circle spans more
- * time than a fast one. ⚠ Two seconds is generous for a gesture nobody sustains for longer;
- * the cost is a few hundred quaternions.
- */
-const POSE_HISTORY_MS = 2000;
 
 export interface PosePort<P> {
   snapshot(): P;
@@ -189,20 +181,9 @@ export class TapHistory {
 export class Recognizer<P> {
   private phase: Phase = "PRESSED";
   private readonly motion: MotionTracker;
-  private readonly roll: RollDetector;
   private buffer: Sample[] = [];
   private pressSample: Sample | null = null;
   private snapshot: P | null = null;
-  /**
-   * ⭐⭐ THE POSE BEFORE EACH FRAME'S ROTATION, kept just long enough to undo the
-   * provisional yaw/pitch when a roll commits. See `rebaseOnRollCommit`.
-   * ⚠ Bounded by AGE, not by count: the fit window is sized in path length, so a slow
-   * circle spans more samples than a fast one and a fixed count would silently truncate
-   * the very case that needs the most history.
-   */
-  private poseHistory: { t: number; pose: P }[] = [];
-  private rollRebasedFlag = false;
-  private wasRollCommitted = false;
 
   constructor(
     private readonly cfg: GestureConfig,
@@ -210,7 +191,6 @@ export class Recognizer<P> {
     private readonly taps: TapHistory,
   ) {
     this.motion = new MotionTracker(cfg);
-    this.roll = new RollDetector(cfg);
   }
 
   get currentPhase(): Phase {
@@ -244,31 +224,7 @@ export class Recognizer<P> {
     return this.motion.current;
   }
 
-  /** ⭐ Signed, positive CLOCKWISE on screen. Read for the on-device readout. */
-  get rollDeg(): number {
-    return this.roll.accumulatedDeg;
-  }
 
-  get rollCommitted(): boolean {
-    return this.roll.committed;
-  }
-
-  /**
-   * ⭐ The 1€-filtered roll angle — what the object is actually rotated BY.
-   * `rollDeg` stays raw because the COMMIT threshold reads it and must not lag.
-   */
-  get rollSmoothedDeg(): number {
-    return this.roll.smoothedDeg;
-  }
-
-  /**
-   * ⭐ The angle rule 2quinte should actually turn the object by — smoothed, and
-   * scaled by `gainRoll`. ⛔ `rollDeg` stays raw and ungained because the COMMIT
-   * threshold reads it.
-   */
-  get rollAppliedDeg(): number {
-    return this.roll.appliedDeg;
-  }
 
 
   press(s: Sample): void {
@@ -277,12 +233,8 @@ export class Recognizer<P> {
     this.pressSample = s;
     this.motion.reset();
     this.motion.push(s);
-    this.roll.reset();
     // §1.3: "On PRESSED, the object's pose is snapshotted."
     this.snapshot = this.pose.snapshot();
-    this.poseHistory = [];
-    this.rollRebasedFlag = false;
-    this.wasRollCommitted = false;
   }
 
   /**
@@ -305,23 +257,24 @@ export class Recognizer<P> {
     // mid-drag must not un-commit: the pose has already moved provisionally, and
     // a rule that switched back would strand it half-applied.
     if (this.phase === "COMMITTED_CONTINUOUS") {
-      // ⛔ RECORDED BEFORE THE ROLL IS PUSHED, and before the caller applies this frame's
-      // rotation — so `poseHistory[t]` is the pose as it was when the finger was AT `t`,
-      // with that sample's own turn not yet applied. That is what a rebase has to restore.
-      this.poseHistory.push({ t: s.t, pose: this.pose.snapshot() });
-      while (
-        this.poseHistory.length > 1 &&
-        s.t - this.poseHistory[0]!.t > POSE_HISTORY_MS
-      ) {
-        this.poseHistory.shift();
-      }
-      this.roll.push(s);
-      // ⛔⛔ A12 RETIRED THE REBASE. Roll is no longer a one-touchpoint gesture, so there
-      // is no provisional yaw/pitch to undo and no circle to rebase to — and the jump it
-      // produced at the commit is gone with it. ⚠ `rebaseOnRollCommit` and the pose
-      // history are left in place, unused, exactly as `roll.ts` is: the machinery is
-      // correct and vectored, and the day a circular roll comes back it is what comes back.
-      // this.rebaseOnRollCommit();
+      // ⛔⛔⛔ THE ROLL DETECTOR IS NO LONGER FED, AND THE REASON IS A DEFECT IT CAUSED.
+      //
+      // `A12` retired the circular roll as a one-touchpoint gesture and the detector was
+      // left running — *"unused"*, the comment here said. ⚠ IT WAS NOT UNUSED: `release`
+      // returned `ROLL_KEPT` whenever it committed, which **pre-empts the flick test**. A
+      // hand rotating a cube sweeps arcs, so it committed routinely, and once `IN3`'s
+      // 2ter/2quater went live a rotation flick pushed **nothing** — device-reported
+      // 2026-09-16 as *"the face does not point up at rotation flick"* and *"no DOF
+      // reduction at the first flick"*, unpredictably, because it depended on how curved
+      // the drag happened to be.
+      //
+      // ⭐⭐ A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT. This project has now
+      // met that shape three times in one day: the HUD line showing a retired quantity,
+      // `secondTouchGraceMs` decayed into a slider that changed nothing, and this — the
+      // worst of the three, because the other two only misinformed while this one silently
+      // vetoed a live rule.
+      // ⛔ `roll.ts` itself stays, with its 40 vectors: the day a circular roll comes back it
+      // is what comes back. It simply is not wired to anything, and now that is TRUE.
     }
     return this.phase;
   }
@@ -349,40 +302,7 @@ export class Recognizer<P> {
    * then applies from the rebased pose. That is not a glitch: it replaces exactly as much
    * unasked-for yaw/pitch with the roll the finger actually drew.
    */
-  /**
-   * ⛔ A8, RETIRED BY A12 AND KEPT CALLABLE. Roll is no longer a one-touchpoint gesture, so
-   * there is no provisional yaw/pitch to undo — but the mechanism is correct and vectored,
-   * and the day a circular roll comes back this is what comes back with it.
-   * ⚠ PUBLIC so the compiler does not call it dead: it is a deliberate retirement, not an
-   * oversight, and deleting tested machinery to satisfy a lint is how a project loses work
-   * it later needs.
-   */
-  rebaseOnRollCommit(): void {
-    const committed = this.roll.committed;
-    const justCommitted = committed && !this.wasRollCommitted;
-    this.wasRollCommitted = committed;
-    if (!justCommitted) return;
 
-    const start = this.roll.fitWindowStart;
-    if (!start) return;
-    // The latest snapshot taken at or before the window's first sample.
-    let chosen: { t: number; pose: P } | null = null;
-    for (const entry of this.poseHistory) {
-      if (entry.t <= start.t) chosen = entry;
-      else break;
-    }
-    // ⛔ No snapshot that old means the circle began before this gesture's history —
-    // which cannot happen, because the history starts at the commit point. Say nothing
-    // rather than restore an arbitrary pose.
-    if (!chosen) return;
-    this.pose.restore(chosen.pose);
-    this.rollRebasedFlag = true;
-  }
-
-  /** ⭐ True once the pose was rebased to the circle's start. For the readout. */
-  get rollRebased(): boolean {
-    return this.rollRebasedFlag;
-  }
 
   /**
    * ⭐⭐ ANOTHER RULE MOVED THIS OBJECT WHILE THIS TOUCHPOINT HELD IT STILL.
@@ -432,26 +352,22 @@ export class Recognizer<P> {
         flick: null,
         rolledBack: false,
         rule: resolveDiscreteRule(kind, null, ctx, this.cfg),
-        rollDeg: this.roll.accumulatedDeg,
         durationMs,
         liftSpeedMmPerS,
       };
     }
 
-    // §1.3: "Once roll is committed, the flick test is skipped for that touchpoint."
-    // ⭐ A circular path fails the purity ratio anyway; the explicit skip removes
-    // the edge case rather than relying on that happening to hold.
-    if (this.roll.committed) {
-      return {
-        kind: "ROLL_KEPT",
-        flick: null,
-        rolledBack: false,
-        rule: "NONE",
-        rollDeg: this.roll.accumulatedDeg,
-        durationMs,
-        liftSpeedMmPerS,
-      };
-    }
+    // ⛔⛔ §1.3's *"once roll is committed, the flick test is skipped"* IS GONE WITH THE
+    // GESTURE IT PROTECTED (`A12`, and the defect above). ⚠ The old comment here said a
+    // circular path *"fails the purity ratio anyway"* and that the explicit skip removed the
+    // edge case *"rather than relying on that happening to hold"* — so removing the skip
+    // means we now rely on exactly what that sentence distrusted.
+    // ⭐ That is accepted deliberately, for two reasons: the gesture the skip existed to
+    // protect no longer runs on this channel, and the case that actually matters — a
+    // back-and-forth, whose every leg looks like a flick — is `A4`'s eviction shake, which
+    // carries its own `suppressesFlick` for precisely this and lands with the wiring.
+    // ⚠ **A DEVICE QUESTION, STATED**: can a strongly curved rotation drag now end in an
+    // accidental alignment? The purity ratio is the only thing saying no.
 
     const flick = detectFlick(trimmed, this.cfg);
     if (!flick) {
@@ -460,7 +376,6 @@ export class Recognizer<P> {
         flick: null,
         rolledBack: false,
         rule: "NONE",
-        rollDeg: this.roll.accumulatedDeg,
         durationMs,
         liftSpeedMmPerS,
       };
@@ -475,7 +390,6 @@ export class Recognizer<P> {
       flick,
       rolledBack: true,
       rule: resolveDiscreteRule("FLICK", flick, ctx, this.cfg),
-      rollDeg: this.roll.accumulatedDeg,
       durationMs,
       liftSpeedMmPerS,
     };

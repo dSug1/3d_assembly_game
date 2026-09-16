@@ -278,6 +278,12 @@ was wrong and the owner was right.
 * ⭐⭐⭐ **A SKIPPED CHECK MUST BE ANNOUNCED.** A suite fed the wrong-shaped data to a
   loader, got nothing, skipped on a `continue`, and printed ALL CHECKS PASSED. A
   guard that turns missing data into silence is worse than a failure.
+* ⭐⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT.** A detector whose
+  channel had been taken away was left **fed** and called *unused* in its own comment; it
+  still held the top rung of the release ladder and silently vetoed the rule that replaced
+  it. ⛔ *Unwired* means **nothing calls it** — not that nothing reads its output. The three
+  dead instruments of 2026-09-16 rank by verb: a HUD line was *read*, a slider was *read*,
+  this one was **obeyed**.
 * ⭐⭐ **A test that cannot FAIL is not a test.** Keep an explicit counter-example
   beside each guard, and check the guard fires on it.
 * ⭐⭐ **Independence has to be ARGUED, not inferred from numbers agreeing.** Three
