@@ -347,3 +347,76 @@ falsification run with the guard removed.
 
 A10 is the first rule that asks whether a finger is still, and §1.1 could not answer.
 → [`IN0.md`](IN0.md).
+
+---
+
+## ⭐⭐⭐ A15 / `D25`, 2026-09-16 — the holder that was no longer under its object
+
+**Owner's modification, on depth translation:** when the second touchpoint is released, the
+first fires a **raycast**. Same object → everything continues as wired. Nothing, or another
+object → *"the previously selected object is no longer under the finger which used to
+control it"*, and **at the next input event** the object is unselected and the state becomes
+whatever the new configuration is.
+
+### ⛔⛔ Why this row owns it, and why it was unreachable before
+
+`A10` is depth: **the holder holds still and the anchor supplies the travel.** So the object
+slides along the view axis under a finger that never moved — and past some distance it is
+simply **not under that finger any more**. ⛔ §4 latches a role at press for the touchpoint's
+lifetime, so the holder went on carrying an object the hand had visibly left behind, and
+every later rule read a selection that was already dead.
+
+⭐ It is the third defect this row has produced that **only depth could produce**: the
+others were §1.1's unreachable rest and the settle asymmetry (→ [`IN0.md`](IN0.md)). Depth
+keeps finding them because it is the one rule whose *whole point* is that the finger does
+not move.
+
+### ⭐⭐ The two decisions inside it
+
+1. **The test is a RAYCAST at a LIFT.** ⛔ Not a test per frame: re-deciding a role
+   continuously is what `IN2`'s latch exists to prevent, and this project has shipped that
+   defect twice (`D23`, and `IN4` on 2026-09-14). A lift is **presence** — discrete,
+   deliberate, visible — the same class of evidence `A14`'s grace uses.
+   ⚠ It fires on **every** second-touchpoint release while something is held, not only after
+   a depth drag: the ray is the whole test and answers `BOUND` for every other rule, and a
+   *"was that depth?"* flag would be a second, weaker way of asking the same question.
+2. **The consequence is DEFERRED.** ⭐ The binding is marked dead and nothing happens — no
+   jump, no deselect, no camera move. Only the next input event drops the selection,
+   re-latches every live touchpoint from what is under it now, and lets the §4 table decide.
+   ⛔ `METHOD`: *acting is irreversible; not knowing is not a reason to act* — at the lift the
+   user has given no new instruction, so a visible change would be the program's idea.
+
+### ⭐ What it composes with
+
+| | |
+|---|---|
+| **`A14`** | ⭐⭐ they **partition**, they do not fight: holder still on its object → the grace, unchanged; holder off it → there is no gesture left to preserve, because the finger A14 protects is not touching the thing it was moving |
+| **`IN2`'s latch** | ⛔ the **first and only** exception — `router.relatchOnOrphan`, callable on a discrete event only. The header's *"never revisited"* was reworded rather than deleted, because what the latch protects against is a role recomputed from a CONTINUOUS reading |
+| **§2 rule 1** | ⛔⛔ the orbit centre **does not move**: *"same as previous yellow point"* (owner, 2026-09-16, overruling what I built the same hour — I had it retarget through `orbitCentreGraceMs` on the grounds that rule 1 picks its centre when an orbit STARTS). ⭐ The owner's rule is `resetCamera`'s: *home is the last yellow target* — the centre is what the user has been orbiting, and **a gesture that ends must not retarget the camera** |
+| **§1.3** | ⛔ an orphaned holder's lift runs **no release verdict**: a flick-to-align or a double-tap belongs to a finger that was still on its object |
+
+### Built
+
+`src/input/holder_binding.ts` — pure, engine-free, generic over the object handle,
+**8 vectors**. `router.relatchOnOrphan` + `decideRole` shared with `press` — **8 vectors**.
+Wired in `src/render/scene.ts`: the ray at both second-touchpoint release sites (`SECOND`
+and `OUTSIDE`, since A10's anchor may be either), the collection before dispatch on a PRESS
+or a MOVE, and the verdict-free drop on the holder's own lift.
+
+⭐ **Falsified on purpose**: removing the delete-before-decide in `relatchOnOrphan` reddens
+exactly one vector — the holder re-latching onto its own object would otherwise read as
+`SECOND` on it, and the gesture would go dead with one finger on the glass and nothing to
+say why.
+
+⭐ **No new tunable.** A raycast has no threshold, so `IN5` inherits nothing from this.
+
+### ⛔ Owed
+
+**A DEVICE LOOK.** 563 vectors are green and none of them can reach the ray, the deferral
+or the re-resolution — all three are in `src/render`, on the far side of the boundary.
+⚠ What to look for, in the owner's own cases: push an object away in depth until the finger
+is off it, lift the second touchpoint, then (a) drag the remaining finger — the camera
+should orbit, not the object; (b) press a second finger on another object — that object's
+gesture should start; (c) lift the remaining finger — nothing should align or evict.
+⭐ The HUD prints `⛔ORPHANED(next input unselects)` while the binding is dead, so the
+deferral is visible rather than inferred.

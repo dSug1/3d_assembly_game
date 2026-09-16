@@ -343,3 +343,174 @@ the quantity the comparison is about.
 ⚠ And the tell that it was a defect rather than a stale fixture: the failure depended on the
 BAND SIZE, which is a tuning value. A fixture goes stale against a number it hard-codes; a
 defect changes behaviour when a number the PRODUCT uses moves.
+
+
+---
+
+## ⭐ MOVED HERE 2026-09-16 FROM `AMENDMENTS_R5.md` — A11's fluidity report
+
+⚠ The amendments file reached its 800-line cap, and this is NARRATIVE: the measurement
+that produced A11's *gates entry, not motion* clause. ⛔ Nothing is rewritten — it is moved
+whole, and the amendment keeps the decision plus a pointer here. `Claude/README.md`: *state
+in INDEX/amendments, narrative in the dossier.*
+
+### ⛔⛔⛔ THE BAND GATES **ENTRY INTO MOTION**, NOT THE MOTION ITSELF
+
+> *"Does your deadband impact the sway and the damping: the object translation is less
+> fluid than when we had no depth translation built in?"*
+
+⭐ **It did, and the cost was MEASURED before it was fixed:**
+
+| | dead travel | lag at 50 mm/s | lag at 200 mm/s |
+|---|---|---|---|
+| entering a drag | 1 band = **2.5 mm** | 48 ms | 16 ms |
+| ⛔⛔ at a **REVERSAL** | 2 bands = **5.0 mm** | **88 ms** | 24 ms |
+
+⛔⛔ **THE ANCHOR TRAILS ONE RADIUS *BEHIND*, SO REVERSING MEANS CROSSING THE WHOLE DEAD
+CIRCLE** — the far side, not the near one. ⚠ Against rule 6's tuned follower
+(τ = 7.6 ms, ζ = 0.2, lead = 0.2 ms) that is **more than ten times the entire time
+constant**, as pure dead time, in front of it. ⭐ No damping value can absorb dead time,
+which is why it reads as *"less fluid"* rather than as *"too slow"*.
+
+⚠ **And it was worst exactly where it hurts most**: a fixed distance costs more time the
+slower you move, so a careful, slow adjustment — the kind assembly is made of — paid the
+biggest penalty.
+
+⭐ **It desynchronised the sway, too.** The sympathetic sway reads the raw sample stream for
+its direction and speed, gated by the motion state — which stays `MOVING` through a
+reversal. So the scene kicked on the turn while the held object had not moved yet.
+
+### ⭐⭐ The distinction the first version missed
+
+**A finger that has already PROVEN it is moving needs no further proof.** The band exists to
+reject the jitter of a finger at **rest** — so it gates the way *out* of rest, paid once per
+gesture, and once out, travel passes through undiminished.
+
+| | before | after |
+|---|---|---|
+| entering a drag | 1 band | **1 band** — unchanged, and it is the whole point |
+| at a reversal | 2 bands | ⭐ **one sample**, at every speed |
+| a still finger | emits nothing | **emits nothing** |
+| total travel | true − 1 band | **true − 1 band** |
+
+⛔ The STATE machine is untouched, which is what makes this safe: rest is still found by the
+same trailing anchor and the same `restConfirmMs`, so A10's depth gate reads exactly what it
+read before.
+
+⭐ `METHOD`: *a threshold that guards a transition must not also tax the steady state.*
+
+
+---
+
+## ⭐ MOVED HERE 2026-09-16 FROM `AMENDMENTS_R5.md` — two more of A11's narratives
+
+⚠ Same reason as the block above: the amendments file passed its cap when `A15` landed, and
+both of these are RECORD rather than decision — §1.1's sequence is what this dossier owns.
+⛔ Moved whole, not rewritten; the amendment keeps its clause and points here.
+
+### ⛔⛔⛔ AND REST MUST BE REACHABLE WITHOUT FURTHER EVENTS
+
+⚠ **The device report survived A10's fix AND A11's, and the owner was right that neither
+explained it:**
+
+> *"I still experience issue passing from x/y translation to depth translation (sometimes,
+> it is blocked) while passing from depth translation to x/y translation is smooth and
+> instantaneous: there is something wrong you did not explain nor check."*
+
+⛔⛔ **THE STATE MACHINE IS DRIVEN BY `push`, AND `push` IS DRIVEN BY `pointermove`. A
+finger resting on glass emits no `pointermove` events — that is what resting *is*.** So the
+tracker froze at whatever it last was, and what it last was is `MOVING`.
+
+⭐⭐ **The asymmetry was structural, and exactly inverted from what the rules need:**
+
+| transition | driven by |
+|---|---|
+| → `MOVING` | an event that **necessarily exists** — the finger moved |
+| → `STATIONARY` | an event that **by definition may not arrive** |
+
+⚠ And it explains *"sometimes"* precisely: the only thing that thawed the tracker was a
+stray jitter sample crossing the digitizer's own threshold, and those arrive at random.
+Blocked for a while, then suddenly triggered.
+
+⭐ **`MotionTracker.tick(now)`, driven by the render loop every frame**, for every live
+touchpoint — and again at the exact moment an anchor event asks the question, because an
+event can arrive between frames.
+
+⭐⭐ **The quantity it reads is not a consolation prize: elapsed time with NO sample is the
+strongest evidence of stillness there is** — stronger than samples inside the dead radius,
+because a sample inside the radius is still a *report of motion* and silence is not. It
+simply has to be asked for. ⛔ A tick decides a STATE and emits no travel, ever: a tick that
+produced a delta would let a dropped frame move an object, which its own vector caught.
+
+⚠ **CARRIED**: *a threshold is only half a rule — the other half is what advances the clock.*
+Three fixes went into the number before anyone checked that the thing which clears it can
+run at all.
+
+
+### ⭐⭐ The carried lesson
+
+This is the **fourth** formulation of §1.1, and the first three all failed the same way:
+
+| formulation | how a real pointer broke it |
+|---|---|
+| *accumulated travel* (the spec's own words) | path length of jitter is a random walk — grows without bound, so every resting finger read MOVING |
+| instantaneous speed | cannot see a slow persistent creep |
+| speed over one sample pair | 0.761 mm / 8 ms = ~95 mm/s **at rest** — STATIONARY unreachable |
+| ⭐ **a position deadband** | robust by construction |
+
+⛔⛔ **Every quantity §1.1 names is defined on an IDEAL pointer**, and each fix so far had
+been a threshold chosen to sit above a measurement. ⭐ A displacement deadband needs no such
+choice: it is the *shape* that is right, not the number.
+
+---
+
+
+---
+
+## ⭐ MOVED HERE 2026-09-16 — A11's three reference tables
+
+⚠ The last of A11's RECORD, moved when `A15` pushed the amendments file past its cap.
+⛔ Moved whole, not rewritten. The amendment keeps the decision and points here.
+
+### What per-axis costs, stated
+
+| | radial | per axis |
+|---|---|---|
+| entering along one axis | 1 band | **1 band** |
+| entering at 45° | 1 band | ⚠ **1 band on each axis** — 1.41× the diagonal travel |
+| a reversal | one sample | **one sample** — ⭐ fluidity is unchanged, measured |
+| a nearly-axial drag | ⛔ the off-axis wobble reaches the object | ⭐ **the off-axis emits zero** |
+
+⭐ Measured after the change: reversal cost is still **one sample at every speed**, and
+entering a drag still costs one band. Going per-axis bought the corridor for nothing.
+
+
+### ⭐ Where it is applied
+
+⛔ **Every `x`/`y` input of both touchpoints**, on the owner's instruction — rule 2bis's
+yaw/pitch, rule 6's translate, and A10's depth. ⚠ **Except the ROLL**, which is an angle
+about a fitted centre rather than an axis pair, and already carries its own 1€ filter.
+
+⚠ **One consumer is deliberately still raw: §2 rule 1, the camera orbit.** It is a CLOSED
+row (`IN9`) tuned by finger over three device passes, and the owner's instruction named
+rotation and translation of an OBJECT. ⭐ It is the same jitter and the same fix if a hand
+ever wants it — recorded so it is a decision rather than an omission.
+
+⭐ **Owner's note for a later row**: the second touchpoint's **delta position x** will drive
+something (A10 currently reads its `dy`). Not built.
+
+
+### What A11 deleted
+
+| gone | why |
+|---|---|
+| `stillSpeed` | a rate; the radius over a duration *is* a rate, with a stated baseline |
+| `stillTime` | the settle timer the device complained about |
+| `moveEnterDistance` / `moveExitDistance` | one radius, so there is no pair to be inconsistent |
+| the *reachability* validator rule | it related a rate to a distance; neither exists now |
+| `A9`'s separate `deadbandMm` | ⭐ **the same thing, one tier down** — applied once, for every rule at the same time |
+
+⭐ **`motionDeadbandMm` is now the most load-bearing number in the input layer**: the commit
+threshold, the rest test and the jitter deadband are all one radius. ⛔ It has a slider, and
+a device must judge it.
+

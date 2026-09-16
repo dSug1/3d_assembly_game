@@ -93,6 +93,7 @@ wrong number to notice — so audit a readout against the **questions** it is do
 answer, not the lines it prints (`METHOD`).
 ⚠ The cost it was heading for: an `IN5` session measuring a default while believing it was
 measuring an override, with a typo'd key reported to nobody.
+⭐ **`A15`'s ORPHANED binding is printed too** (`⛔ORPHANED(next input unselects)`) — a state in which everything looks normal and the very next input does something different, so without it *"it deselected by itself"* and *"the selection was already dead"* are indistinguishable on the glass.
 ⭐ **And the build stamp answers the question that cost a morning**: *which code did I just
 judge?* ⛔ `+dirty` is load-bearing — it is what distinguishes the USB dev loop from the
 same sha deployed, which is exactly the comparison that went wrong.

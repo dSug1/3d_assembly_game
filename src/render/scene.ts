@@ -63,6 +63,10 @@ import {
   type GravityFrame,
   depthLimits,
   depthTranslate,
+  bindingAfterSecondRelease,
+  orphanAction,
+  type HolderBinding,
+  type InputEvent,
   displayPose,
   exponentialSmooth,
   phantomTarget,
@@ -345,6 +349,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * gesture. ⛔ `null` until one ever has. See `secondTouchHeld`.
      */
     secondLiftedAtMs: number | null;
+    /**
+     * ⭐⭐⭐ A15 — is the object still UNDER this finger? Evaluated by a RAYCAST when a
+     * second touchpoint lifts, and by nothing else.
+     * ⛔ `ORPHANED` changes nothing on its own: the selection is dropped at the NEXT input
+     * event, which is the owner's requirement and `METHOD`'s *acting is irreversible*.
+     * ⚠ Depth translation is what makes this reachable — it slides the object along the
+     * view axis while the holder holds still, so the object leaves the finger carrying it.
+     */
+    binding: HolderBinding;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -832,6 +845,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // stand-in. ⛔ Printed because it is decided once and cannot be inferred
             // from what the fingers are doing now, which is the whole point of a latch.
             (first?.mode ? `  ${first.mode}` : "") +
+            // ⭐⭐⭐ A15's ORPHANED BINDING, and it MUST be printed. ⛔ It is a state in
+            // which everything looks normal and the very next input does something
+            // different — the object is still drawn where it was, still lit, still
+            // apparently held. Without a readout, *"it deselected by itself"* and *"the
+            // selection was already dead"* are indistinguishable on the glass.
+            ([...held.values()].some((g) => g.binding === "ORPHANED")
+              ? "  ⛔ORPHANED(next input unselects)"
+              : "") +
             // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
             // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
             // the other two sliders moves, so a written-down number would go stale the
@@ -1295,6 +1316,85 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return true;
   };
 
+  /**
+   * ⭐ What object is under this screen point RIGHT NOW, or `null`.
+   *
+   * ⚠ Built from `createPickingRay` + `pickWithRay` rather than `scene.pick`, to use the
+   * SAME coordinate convention as `recomputeOrbitCentre` — client coordinates straight off
+   * the event, which is what already works on the device. ⛔ The orbit-centre marker is
+   * `isPickable = false`, so an instrument cannot answer a question about the scene.
+   */
+  const objectUnder = (x: number, y: number): AbstractMesh | null => {
+    const hit = scene.pickWithRay(scene.createPickingRay(x, y, null, camera));
+    return hit?.hit === true && hit.pickedMesh ? hit.pickedMesh : null;
+  };
+
+  /**
+   * ⭐⭐⭐ A15 — THE RAYCAST AT A SECOND TOUCHPOINT'S LIFT.
+   *
+   * ⛔⛔ Fired on EVERY second-touchpoint release while something is still held, not only
+   * after a depth drag. ⭐ The raycast is the whole test, and for every other two-finger
+   * rule it simply answers `BOUND`: roll does not translate the object, and rule 6 keeps it
+   * under the finger by construction. ⚠ A *"was that a depth gesture?"* flag would be a
+   * second, weaker way of asking the same question — `METHOD`'s no-heuristic-pile-up, and
+   * a flag can be wrong where a ray cannot.
+   *
+   * ⭐ EVERY remaining holder is evaluated, not a guessed pairing. With two objects held,
+   * *"which holder was that finger the partner of?"* has no answer worth trusting, while
+   * *"is THIS holder still on its object?"* is well posed for each of them.
+   */
+  const evaluateBindings = (): void => {
+    for (const holder of router.objects()) {
+      const grip = held.get(holder.id);
+      if (!grip) continue;
+      // ⚠ The HOLDER's own last position — never the releasing finger's, and never the
+      // live event's, which at a PRESS belongs to a different finger entirely.
+      const under = objectUnder(holder.last.x, holder.last.y);
+      grip.binding = bindingAfterSecondRelease(grip.mesh, under);
+      if (grip.binding === "ORPHANED") {
+        lastVerdict = "second released → object no longer under the finger, pending unselect";
+      }
+    }
+  };
+
+  /**
+   * ⭐⭐⭐ A15 — COLLECT AN ORPHANED HOLDER, at the next input event and not before.
+   *
+   * ⛔ The selection is dropped and every live touchpoint is re-latched from what is under
+   * it NOW, so the configuration re-resolves into whatever the hand is actually doing: a
+   * finger over empty space becomes §2 rule 1's orbit, a finger on another object carries
+   * that one. ⭐ None of that is a new rule — it is the rule table, read again.
+   *
+   * ⚠ Called BEFORE the event is dispatched, so the event itself falls through to the rule
+   * the new configuration selects rather than being spent on the transition.
+   */
+  const collectOrphans = (event: InputEvent): void => {
+    for (const [id, grip] of [...held.entries()]) {
+      if (orphanAction(grip.binding, event) !== "UNSELECT_AND_RERESOLVE") continue;
+      // ⛔ THE TRACKERS GO WITH THE SELECTION. They are keyed by `seq` and hold anchor
+      // positions from the gesture that just ended; a surviving one would answer A11's
+      // deadband question about travel that belongs to a different rule.
+      grip.anchorMotion.clear();
+      held.delete(id);
+      // ⚠ The position comes from the ROUTER, which owns `last` — not from the recognizer
+      // and not from the live event, which at a PRESS belongs to the new finger.
+      const where = router.get(id)?.last;
+      const relatched =
+        where === undefined ? null : router.relatchOnOrphan(id, objectUnder(where.x, where.y));
+      lastVerdict = `unselected → ${relatched ? relatched.role : "gone"}`;
+
+      // ⛔⛔ AND §2 RULE 1 KEEPS THE CENTRE IT ALREADY HAS — **the previous yellow point**
+      // (owner, 2026-09-16). ⭐ I had it retarget through the same `orbitCentreGraceMs`
+      // deferral a real press uses, reasoning that rule 1 chooses its centre from the ray
+      // of the finger that STARTS the orbit and this orbit was starting now. The owner
+      // overruled it, and the rule is the one `resetCamera` already states: **home is the
+      // last yellow target, not the origin** — the centre is the thing the user has been
+      // orbiting, and it does not change because a selection ended.
+      // ⚠ So there is deliberately NO centre code here. The marker does not move, and a
+      // gesture that ends cannot retarget the camera.
+    }
+  };
+
   const sampleOf = (e: { clientX: number; clientY: number }): Sample => ({
     x: e.clientX,
     y: e.clientY,
@@ -1325,6 +1425,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         noise.push(s);
       }
     }
+
+    // ⭐⭐⭐ A15 — AN ORPHANED SELECTION IS COLLECTED HERE, AT THE NEXT INPUT EVENT, and
+    // before anything is dispatched. ⛔ The owner's requirement: the lift itself changes
+    // nothing, and the object is unselected only once the hand says something new — after
+    // which THIS event flows into whatever rule the re-resolved configuration selects.
+    // ⚠ A POINTERUP is deliberately absent: the orphaned holder's own release is handled
+    // in its branch, where the §1.3 verdict has to be SKIPPED rather than re-resolved.
+    if (info.type === PointerEventTypes.POINTERDOWN) collectOrphans("PRESS");
+    else if (info.type === PointerEventTypes.POINTERMOVE) collectOrphans("MOVE");
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
       // ⛔ A NEW TOUCH CANCELS A RESET IN FLIGHT. The animation writes the whole camera
@@ -1402,6 +1511,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
         secondLiftedAtMs: null,
+        binding: "BOUND",
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -1428,6 +1538,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
         lastVerdict = "second touchpoint released";
+        // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
+        // the holder is still on its object before anything else can happen.
+        evaluateBindings();
       } else {
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
         // ⭐⭐⭐ A12: A SECOND FINGER ON THE SAME OBJECT DRIVES IT, exactly as one outside
@@ -1497,6 +1610,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             mmToPx(cfg.doubleTapSlop);
         forgetAnchor(routed.seq, s.t);
         router.release(e.pointerId);
+        // ⭐⭐⭐ A15: this is A10's DEPTH ANCHOR going up — the case that motivated the
+        // amendment, because depth is what slides the object off the holder's finger.
+        evaluateBindings();
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         pinch.end();
@@ -1674,6 +1790,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
 
     if (info.type === PointerEventTypes.POINTERUP) {
+      // ⭐⭐⭐ A15 — AN ORPHANED HOLDER LIFTS WITHOUT A VERDICT, and the exclusion is the
+      // point. ⛔ A flick-to-align or a double-tap belongs to a finger that was still on
+      // its object; running one here would align — or evict a constraint on — an object the
+      // user stopped touching a few hundred milliseconds ago, and never aimed this gesture
+      // at. ⚠ The camera reset is refused for the same reason: the press was on an object.
+      if (orphanAction(grip.binding, "RELEASE") === "DROP_WITHOUT_VERDICT") {
+        forgetAnchor(routed.seq, s.t);
+        router.release(e.pointerId);
+        held.delete(e.pointerId);
+        lastVerdict = "orphaned holder released — no verdict";
+        paint();
+        return;
+      }
       // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
       // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.

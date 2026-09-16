@@ -395,114 +395,44 @@ existed only until the drag began, which is no corridor at all.
 normally, and `restConfirmMs` of quiet puts it back — so the corridor is re-enterable
 within a gesture.
 
-### What per-axis costs, stated
+### ⚠ What per-axis costs, where it applies, and what it DELETED
 
-| | radial | per axis |
-|---|---|---|
-| entering along one axis | 1 band | **1 band** |
-| entering at 45° | 1 band | ⚠ **1 band on each axis** — 1.41× the diagonal travel |
-| a reversal | one sample | **one sample** — ⭐ fluidity is unchanged, measured |
-| a nearly-axial drag | ⛔ the off-axis wobble reaches the object | ⭐ **the off-axis emits zero** |
-
-⭐ Measured after the change: reversal cost is still **one sample at every speed**, and
-entering a drag still costs one band. Going per-axis bought the corridor for nothing.
-
-### ⭐ Where it is applied
-
-⛔ **Every `x`/`y` input of both touchpoints**, on the owner's instruction — rule 2bis's
-yaw/pitch, rule 6's translate, and A10's depth. ⚠ **Except the ROLL**, which is an angle
-about a fitted centre rather than an axis pair, and already carries its own 1€ filter.
-
-⚠ **One consumer is deliberately still raw: §2 rule 1, the camera orbit.** It is a CLOSED
-row (`IN9`) tuned by finger over three device passes, and the owner's instruction named
-rotation and translation of an OBJECT. ⭐ It is the same jitter and the same fix if a hand
-ever wants it — recorded so it is a decision rather than an omission.
-
-⭐ **Owner's note for a later row**: the second touchpoint's **delta position x** will drive
-something (A10 currently reads its `dy`). Not built.
+⚠ The cost of a square band is that a **diagonal** drag travels 1.41× further before it
+breaks out — real, small, and about ENTRY only. ⭐ It is applied in `motion.ts`, ONCE, so
+every rule reads the same excess-only travel and nothing consumes a raw delta.
+⛔ It **deleted** `stillSpeed`, `stillTime`, `moveEnterDistance`, `moveExitDistance`, the
+reachability validator rule and `A9`'s separate band — four thresholds chosen to sit above a
+measurement, replaced by one radius.
+⭐⭐ **The three tables — the costs, the application points and the deletions with their
+reasons — are in [`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)**,
+moved 2026-09-16.
 
 ### ⛔⛔⛔ THE BAND GATES **ENTRY INTO MOTION**, NOT THE MOTION ITSELF
 
-> *"Does your deadband impact the sway and the damping: the object translation is less
-> fluid than when we had no depth translation built in?"*
-
-⭐ **It did, and the cost was MEASURED before it was fixed:**
-
-| | dead travel | lag at 50 mm/s | lag at 200 mm/s |
-|---|---|---|---|
-| entering a drag | 1 band = **2.5 mm** | 48 ms | 16 ms |
-| ⛔⛔ at a **REVERSAL** | 2 bands = **5.0 mm** | **88 ms** | 24 ms |
-
-⛔⛔ **THE ANCHOR TRAILS ONE RADIUS *BEHIND*, SO REVERSING MEANS CROSSING THE WHOLE DEAD
-CIRCLE** — the far side, not the near one. ⚠ Against rule 6's tuned follower
-(τ = 7.6 ms, ζ = 0.2, lead = 0.2 ms) that is **more than ten times the entire time
-constant**, as pure dead time, in front of it. ⭐ No damping value can absorb dead time,
-which is why it reads as *"less fluid"* rather than as *"too slow"*.
-
-⚠ **And it was worst exactly where it hurts most**: a fixed distance costs more time the
-slower you move, so a careful, slow adjustment — the kind assembly is made of — paid the
-biggest penalty.
-
-⭐ **It desynchronised the sway, too.** The sympathetic sway reads the raw sample stream for
-its direction and speed, gated by the motion state — which stays `MOVING` through a
-reversal. So the scene kicked on the turn while the held object had not moved yet.
-
-### ⭐⭐ The distinction the first version missed
-
-**A finger that has already PROVEN it is moving needs no further proof.** The band exists to
-reject the jitter of a finger at **rest** — so it gates the way *out* of rest, paid once per
-gesture, and once out, travel passes through undiminished.
-
-| | before | after |
-|---|---|---|
-| entering a drag | 1 band | **1 band** — unchanged, and it is the whole point |
-| at a reversal | 2 bands | ⭐ **one sample**, at every speed |
-| a still finger | emits nothing | **emits nothing** |
-| total travel | true − 1 band | **true − 1 band** |
-
-⛔ The STATE machine is untouched, which is what makes this safe: rest is still found by the
-same trailing anchor and the same `restConfirmMs`, so A10's depth gate reads exactly what it
-read before.
-
+⛔ A trailing anchor sits one radius BEHIND, so a **reversal** had to cross the whole dead
+circle: measured at **5.0 mm and 88 ms** at 50 mm/s, against a follower whose entire time
+constant is 7.6 ms — pure dead time, which no gain downstream can hide. ⭐ The fix is a
+distinction, not a number: **a finger that has already proven it is moving needs no further
+proof**, so the band gates the way *out of rest*, paid once per gesture, and a reversal now
+costs one sample. ⛔ The STATE machine is untouched, so A10's depth gate reads what it read
+before.
 ⭐ `METHOD`: *a threshold that guards a transition must not also tax the steady state.*
+⭐⭐ **The report, the measurements and the before/after tables are in
+[`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)** — moved there
+2026-09-16 when this file hit its cap. ⚠ The tell was a complaint about **fluidity** rather
+than about speed or distance.
 
 ### ⛔⛔⛔ AND REST MUST BE REACHABLE WITHOUT FURTHER EVENTS
 
-⚠ **The device report survived A10's fix AND A11's, and the owner was right that neither
-explained it:**
-
-> *"I still experience issue passing from x/y translation to depth translation (sometimes,
-> it is blocked) while passing from depth translation to x/y translation is smooth and
-> instantaneous: there is something wrong you did not explain nor check."*
-
-⛔⛔ **THE STATE MACHINE IS DRIVEN BY `push`, AND `push` IS DRIVEN BY `pointermove`. A
-finger resting on glass emits no `pointermove` events — that is what resting *is*.** So the
-tracker froze at whatever it last was, and what it last was is `MOVING`.
-
-⭐⭐ **The asymmetry was structural, and exactly inverted from what the rules need:**
-
-| transition | driven by |
-|---|---|
-| → `MOVING` | an event that **necessarily exists** — the finger moved |
-| → `STATIONARY` | an event that **by definition may not arrive** |
-
-⚠ And it explains *"sometimes"* precisely: the only thing that thawed the tracker was a
-stray jitter sample crossing the digitizer's own threshold, and those arrive at random.
-Blocked for a while, then suddenly triggered.
-
-⭐ **`MotionTracker.tick(now)`, driven by the render loop every frame**, for every live
-touchpoint — and again at the exact moment an anchor event asks the question, because an
-event can arrive between frames.
-
-⭐⭐ **The quantity it reads is not a consolation prize: elapsed time with NO sample is the
-strongest evidence of stillness there is** — stronger than samples inside the dead radius,
-because a sample inside the radius is still a *report of motion* and silence is not. It
-simply has to be asked for. ⛔ A tick decides a STATE and emits no travel, ever: a tick that
-produced a delta would let a dropped frame move an object, which its own vector caught.
-
-⚠ **CARRIED**: *a threshold is only half a rule — the other half is what advances the clock.*
-Three fixes went into the number before anyone checked that the thing which clears it can
-run at all.
+⛔⛔ §1.1 was driven by `pointermove`, and **a still finger emits none** — so the tracker
+froze wherever the last event left it and `STATIONARY` was unreachable for the exact case the
+rule is about. ⭐ A **tick** now advances the state machine from the render loop: a tick
+decides a STATE and emits no travel, ever, or a dropped frame could move an object.
+⭐ `METHOD`: *a threshold is only half a rule — the other half is what advances the clock*,
+and *an asymmetry between two directions of the same test is about the EVIDENCE.*
+⭐⭐ **The three device reports, the two wrong fixes that preceded it, and the boundary
+round-trip defect are in
+[`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)** — moved 2026-09-16.
 
 ### ⚠ The one time term that survives, and exactly why
 
@@ -516,36 +446,16 @@ follows it out.
 settle timer, it is not on the path the owner complained about, and the deadbanded delta
 never waits for it.
 
-### What A11 deleted
-
-| gone | why |
-|---|---|
-| `stillSpeed` | a rate; the radius over a duration *is* a rate, with a stated baseline |
-| `stillTime` | the settle timer the device complained about |
-| `moveEnterDistance` / `moveExitDistance` | one radius, so there is no pair to be inconsistent |
-| the *reachability* validator rule | it related a rate to a distance; neither exists now |
-| `A9`'s separate `deadbandMm` | ⭐ **the same thing, one tier down** — applied once, for every rule at the same time |
-
-⭐ **`motionDeadbandMm` is now the most load-bearing number in the input layer**: the commit
-threshold, the rest test and the jitter deadband are all one radius. ⛔ It has a slider, and
-a device must judge it.
-
 ### ⭐⭐ The carried lesson
 
-This is the **fourth** formulation of §1.1, and the first three all failed the same way:
-
-| formulation | how a real pointer broke it |
-|---|---|
-| *accumulated travel* (the spec's own words) | path length of jitter is a random walk — grows without bound, so every resting finger read MOVING |
-| instantaneous speed | cannot see a slow persistent creep |
-| speed over one sample pair | 0.761 mm / 8 ms = ~95 mm/s **at rest** — STATIONARY unreachable |
-| ⭐ **a position deadband** | robust by construction |
-
-⛔⛔ **Every quantity §1.1 names is defined on an IDEAL pointer**, and each fix so far had
-been a threshold chosen to sit above a measurement. ⭐ A displacement deadband needs no such
-choice: it is the *shape* that is right, not the number.
-
----
+⛔⛔ **This is the FOURTH formulation of §1.1 and the first three all broke on a real
+pointer** — accumulated travel (a random walk), instantaneous speed (blind to a creep), and
+speed over one sample pair (~95 mm/s at rest, so STATIONARY was unreachable). ⭐ Each fix
+made the NUMBER better without making the SHAPE right; a displacement deadband needs no
+threshold chosen above a measurement.
+⭐⭐ **The full table and the sequence are in
+[`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)**, which is the most
+instructive file in the project.
 
 ## A12 — ⭐⭐⭐ ROLL MOVES TO THE **SECOND TOUCHPOINT'S x** *(owner, 2026-09-15)*
 
@@ -798,3 +708,93 @@ readout now prints the mode, the touchpoint counts, and how much grace is left:
   depth=1.42m [0.02–3.0]  ROTATE obj=1 out=1 2nd  ready X→roll
   depth=1.42m [0.02–3.0]  ROTATE obj=1 out=0 2nd~180ms
 ```
+
+---
+
+## A15 — ⭐⭐⭐ A HOLDER THAT IS NO LONGER **UNDER ITS OBJECT** GIVES THE SELECTION UP *(owner, 2026-09-16)*
+
+**Amends** §4's role latch — first time, and on a **discrete** event only.
+
+> *"On depth translation, when the second touchpoint is released, the first touchpoint
+> should fire a raycast: if the raycast hits the same selected object, translation of the
+> selected object continues as currently wired, if the raycast hits nothing or another
+> object (it means the previously selected object is no longer under the finger which used
+> to control it), at the next input event (delta position of one only touchpoint or second
+> touchpoint pressed, etc.) the object shall be unselected and the state shall switch to
+> whatever the new input configuration is: for example orbit of camera if the touchpoint is
+> outside any object and delta position is the new event, rotation of the new object if the
+> second touchpoint is pressed on a new object as the new event, etc."*
+
+### ⛔⛔ The hole is GEOMETRIC, not accidental
+
+`A10` moves the object **along the view direction while the holder holds still** — that is
+the rule, not a side effect — so past some distance **the object is simply not under the
+holder any more**. ⛔ §4 latches a role for the touchpoint's lifetime, so that finger went
+on carrying an object it was visibly no longer touching.
+
+### ⭐⭐ Why a RAYCAST at a LIFT, and not a test per frame
+
+⛔ Re-deciding a role continuously is what `IN2`'s latch exists to prevent, and this project
+has shipped that defect **twice** — `METHOD`: *a mode may be keyed on PRESENCE; never on
+MOTION.* ⭐ A lift is presence: discrete, deliberate, visible, and the same class of evidence
+`A14`'s grace uses. One ray, one moment, at the second touchpoint's release.
+
+⚠ It fires on **every** second-touchpoint release while something is held, not only after a
+depth drag: the ray is the whole test and answers `BOUND` for every other rule — roll does
+not translate the object, rule 6 keeps it under the finger. ⛔ A *"was that depth?"* flag
+would be a second, weaker way of asking the same question, and a flag can be wrong where a
+ray cannot.
+
+### ⭐⭐⭐ The consequence is DEFERRED, and that is the owner's second requirement
+
+The binding is marked dead and **nothing happens**: no jump, no deselect, no camera move.
+⛔ Only at the **next input event** does the selection drop, every live touchpoint re-latch
+from what is under it now, and the configuration re-resolve.
+⭐ `METHOD`: *acting is irreversible; not knowing is not a reason to act.* At the lift the
+user has given no new instruction, so a visible change would be the program's idea.
+
+| the next event is… | what happens |
+|---|---|
+| a delta position, finger over empty space | selection dropped → the finger is `OUTSIDE` → **§2 rule 1, orbit** |
+| a delta position, finger over another object | selection dropped → it carries **that** object |
+| a second touchpoint pressed on a new object | selection dropped → the new pair resolves by the §4 table |
+| the orphaned holder lifts | dropped ⛔ **with no §1.3 verdict** — see below |
+
+⛔ **The lift runs NO release verdict**, and the exclusion is the point: a flick-to-align or
+a double-tap belongs to a finger that was still on its object. Running one here would align
+— or evict a constraint on — an object the user stopped touching and never aimed at.
+
+### ⭐⭐ How it meets A14, and why they cannot fight
+
+`A14` keeps a second touchpoint *held* for `secondTouchGraceMs` after it lifts, so a
+lift-and-replace is ONE gesture. ⭐⭐ The raycast **partitions** the two: holder still on its
+object → A14's grace, unchanged; holder no longer on it → there is no gesture left to
+preserve, because the finger A14 protects is not touching the thing it was moving.
+⚠ Same shape as `A10` and rule 6 partitioning on the holder's stillness — one question, two
+disjoint answers, nothing to arbitrate over time.
+
+### ⛔⛔ AND THE ORBIT CENTRE DOES **NOT** MOVE — owner, on the spot
+
+> *"Orbit center: same as previous yellow point."*
+
+⚠ I had built the opposite and it was overruled the same hour. My reasoning: a touchpoint
+that pressed on an object never let rule 1 pick a barycentre, and rule 1 chooses its centre
+from the ray of the finger that STARTS the orbit — which, here, is starting now. So the
+collection retargeted through the same `orbitCentreGraceMs` deferral a real press uses.
+
+⭐⭐ **The owner's rule is the one `resetCamera` already states**: *home is the last yellow
+target, not the origin.* The centre is **the thing the user has been orbiting**, and it does
+not change because a selection ended — a gesture that ENDS must not retarget the camera.
+⛔ There is deliberately no centre code in the collection. The marker does not move.
+
+### What it costs, stated
+
+⚠ **A selection can now end without the user lifting the finger that made it** — the intent,
+reachable only when the object is demonstrably not under that finger, but a new way for a
+gesture to end. ⭐ The HUD prints `⛔ORPHANED(next input unselects)`, so *"it deselected by
+itself"* is distinguishable from *"the selection was already dead"*.
+⛔ No new tunable: a raycast has no threshold.
+
+`src/input/holder_binding.ts` (8 vectors) · `router.relatchOnOrphan` (8) · wired in
+`src/render/scene.ts`. **⛔ A DEVICE LOOK IS OWED** — the ray, the deferral and the
+re-resolution are all on the far side of the boundary.

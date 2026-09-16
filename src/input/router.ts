@@ -4,13 +4,24 @@
  * ⭐⭐ IT OWNS EXACTLY ONE THING: the ROLE of each live touchpoint. It does not run a
  * rule, move an object or touch the camera. Rules read the roles it publishes.
  *
- * ⛔⛔ A ROLE IS LATCHED AT PRESS AND NEVER REVISITED (§4).
+ * ⛔⛔ A ROLE IS LATCHED AT PRESS AND NEVER RECOMPUTED FROM MOTION (§4).
  * *"When the second touchpoint goes down, its role is fixed for the lifetime of the
  * gesture."* A finger that presses on a part and slides off is still holding that part;
  * a finger that presses on empty space and slides onto a part is still an anchor.
  * ⚠ Without the latch a user steadying their grip near the part they are moving would
  * silently switch between two different translation mappings mid-gesture — which is
  * unfixable from the user's side, because nothing on screen says it happened.
+ *
+ * ⛔⛔ **AND THERE IS NOW EXACTLY ONE EXCEPTION: `relatchOnOrphan` (`A15`, 2026-09-16).**
+ * ⚠ This header said *"never revisited"* until then, and that is why the sentence is
+ * reworded rather than deleted — what the latch protects against is a role recomputed from
+ * a CONTINUOUS reading, frame after frame. `A15` recomputes one, ONCE, on a **discrete**
+ * event the user performed: depth translation slides an object out from under the finger
+ * carrying it, so when the second touchpoint lifts, the caller raycasts and a holder that
+ * is no longer on its object gives the selection up.
+ * ⭐ The distinction is `METHOD`'s, and this project has paid for it twice: *a mode may be
+ * keyed on PRESENCE; never on MOTION.* A lift is presence. ⛔ Anything that calls
+ * `relatchOnOrphan` per frame has re-broken the latch, whatever the comment above it says.
  *
  * ⛔⛔ THE SECOND HIT ON A HELD OBJECT IS `SECOND`, NOT `IGNORED` — `D16`/A5, which
  * SUPERSEDED `D10`. Two touchpoints on the same object were *undefined and reachable*
@@ -119,25 +130,7 @@ export class PointerRouter<O> {
     // stale latch rather than keeping two records under one id.
     this.pointers.delete(id);
 
-    let role: PointerRole;
-    let object: O | null;
-    if (hit === null) {
-      role = "OUTSIDE";
-      object = null;
-    } else if (!this.isHeld(hit)) {
-      role = "OBJECT";
-      object = hit;
-    } else if (!this.isPinched(hit)) {
-      // ⭐ A5: the SECOND hit on a held object. It joins the holder as a depth pinch and
-      // carries the object, because the rule has to find the pair.
-      role = "SECOND";
-      object = hit;
-    } else {
-      // ⛔ A THIRD finger on the same object. No meaning, and it must not turn a
-      // two-touchpoint rule into a three-touchpoint one.
-      role = "IGNORED";
-      object = null;
-    }
+    const { role, object } = this.decideRole(hit, id);
     const p: RoutedPointer<O> = {
       id,
       role,
@@ -181,6 +174,37 @@ export class PointerRouter<O> {
     if (!p) return null;
     this.pointers.delete(id);
     return { pointer: p, wasActive: p.role === "OBJECT" || p.role === "OUTSIDE" };
+  }
+
+  /**
+   * ⭐⭐⭐ **`A15` — THE ONE EXCEPTION TO THE LATCH.** Re-decide this touchpoint's role from
+   * what is under it NOW, as though it had just pressed there.
+   *
+   * ⛔⛔ CALL IT ON A DISCRETE EVENT ONLY, AND THERE IS EXACTLY ONE: collecting an
+   * ORPHANED holder, after a second touchpoint lifted and a raycast showed the object is
+   * no longer under the finger carrying it. ⚠ Calling this per frame re-creates precisely
+   * the flicker §4's latch exists to prevent — see the header.
+   *
+   * ⭐ `seq` and `pressed` SURVIVE, and both matter:
+   * * `seq` is the key of the caller's motion trackers, and it must never be reused
+   *   (`scene.ts` has been bitten twice by an identity that was);
+   * * `pressed` keeps the ORIGINAL press, so a finger that has been holding an object for
+   *   two seconds cannot lift and read as a TAP — which, outside any object, is half of a
+   *   double-tap camera reset.
+   *
+   * @param hitNow what the caller's raycast found under this finger, or `null`.
+   * @returns the re-latched pointer, or `null` if the id is not down.
+   */
+  relatchOnOrphan(id: number, hitNow: O | null): RoutedPointer<O> | null {
+    const p = this.pointers.get(id);
+    if (!p) return null;
+    // ⚠ Removed BEFORE the decision, so `isHeld`/`isPinched` cannot see this touchpoint's
+    // own stale binding and answer "that object is already held — by me".
+    this.pointers.delete(id);
+    const { role, object } = this.decideRole(hitNow, id);
+    const next: RoutedPointer<O> = { ...p, role, object };
+    this.pointers.set(id, next);
+    return next;
   }
 
   /** ⚠ Everything goes. For a pointercancel storm, or a scene reset. */
@@ -245,6 +269,27 @@ export class PointerRouter<O> {
   /** Every live touchpoint, ignored ones included. For the readout, not for rules. */
   get size(): number {
     return this.pointers.size;
+  }
+
+  /**
+   * §4's role decision, in ONE place.
+   *
+   * ⛔ Shared by `press` and `A15`'s `relatchOnOrphan` on purpose: two copies of this
+   * ladder would be two definitions of what a touchpoint IS, free to disagree — and the
+   * disagreement would appear only in the rare configuration that reaches the second copy.
+   * ⚠ `id` is unused by the decision and taken anyway, so the signature says the answer is
+   * about a specific touchpoint rather than a global.
+   */
+  private decideRole(hit: O | null, id: number): { role: PointerRole; object: O | null } {
+    void id;
+    if (hit === null) return { role: "OUTSIDE", object: null };
+    if (!this.isHeld(hit)) return { role: "OBJECT", object: hit };
+    // ⭐ A5: the SECOND hit on a held object. It joins the holder and carries the object,
+    // because the rule has to find the pair.
+    if (!this.isPinched(hit)) return { role: "SECOND", object: hit };
+    // ⛔ A THIRD finger on the same object. No meaning, and it must not turn a
+    // two-touchpoint rule into a three-touchpoint one.
+    return { role: "IGNORED", object: null };
   }
 
   /** Is some LIVE touchpoint already holding this object? */

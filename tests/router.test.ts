@@ -269,3 +269,83 @@ describe("IN2 — the stray events a browser really sends", () => {
     expect(r.activeCount).toBe(0);
   });
 });
+
+describe("A15 — relatchOnOrphan, the ONE exception to the latch", () => {
+  it("⛔⛔ re-latching onto the SAME object gives OBJECT, not SECOND", () => {
+    // ⭐⭐ THE VECTOR THAT PROVES THE IMPLEMENTATION. `decideRole` asks "is this object
+    // already held?" — and this touchpoint is the one holding it. Without removing the
+    // pointer BEFORE deciding, the router sees its own stale binding, answers "held by
+    // someone", and demotes the holder to a SECOND finger on its own object: the gesture
+    // would go dead with one finger on the glass and nothing to say why.
+    const r = new PointerRouter<typeof CUBE>();
+    r.press(1, at(100, 100), CUBE);
+    const again = r.relatchOnOrphan(1, CUBE)!;
+    expect(again.role).toBe("OBJECT");
+    expect(again.object).toBe(CUBE);
+    expect(r.objects()).toHaveLength(1);
+  });
+
+  it("a holder now over NOTHING becomes OUTSIDE and carries nothing", () => {
+    // ⭐ This is the owner's first example: the finger is left over empty space, so the
+    // next delta position must reach §2 rule 1 — the camera orbit.
+    const r = new PointerRouter<typeof CUBE>();
+    r.press(1, at(100, 100), CUBE);
+    const out = r.relatchOnOrphan(1, null)!;
+    expect(out.role).toBe("OUTSIDE");
+    expect(out.object).toBeNull();
+    expect(r.objects()).toHaveLength(0);
+    expect(r.outside()).toHaveLength(1);
+  });
+
+  it("a holder now over ANOTHER unheld object carries that one instead", () => {
+    const r = new PointerRouter<typeof CUBE>();
+    r.press(1, at(100, 100), CUBE);
+    const moved = r.relatchOnOrphan(1, CONE)!;
+    expect(moved.role).toBe("OBJECT");
+    expect(moved.object).toBe(CONE);
+  });
+
+  it("a holder now over an object SOMEONE ELSE holds becomes SECOND on it", () => {
+    const r = new PointerRouter<typeof CUBE>();
+    r.press(1, at(100, 100), CUBE); // orphaned holder
+    r.press(2, at(400, 400), CONE); // another finger, holding the cone
+    const second = r.relatchOnOrphan(1, CONE)!;
+    expect(second.role).toBe("SECOND");
+    expect(second.object).toBe(CONE);
+    expect(r.secondTouchOn(CONE)?.id).toBe(1);
+  });
+
+  it("⛔ `seq` and `pressed` SURVIVE the re-latch", () => {
+    // ⭐ `seq` keys the caller's motion trackers and must never be reused — `scene.ts` has
+    // been bitten twice by an identity that was. ⚠ `pressed` keeps the original press, so
+    // a finger that held an object for two seconds cannot lift and read as a TAP, which
+    // outside any object is half of a double-tap camera reset.
+    const r = new PointerRouter<typeof CUBE>();
+    r.press(9, at(100, 100), null); // burn a seq, so 0 vs 1 is distinguishable
+    r.press(1, at(200, 200, 500), CUBE);
+    const before = r.get(1)!;
+    const after = r.relatchOnOrphan(1, null)!;
+    expect(after.seq).toBe(before.seq);
+    expect(after.pressed).toEqual(at(200, 200, 500));
+    expect(after.id).toBe(1);
+  });
+
+  it("an unknown id returns null rather than throwing", () => {
+    // ⚠ Same standing as `move` and `release`: a stray event must not take the scene down.
+    const r = new PointerRouter<typeof CUBE>();
+    expect(r.relatchOnOrphan(7, CUBE)).toBeNull();
+    expect(r.size).toBe(0);
+  });
+
+  it("⛔ it is still the caller's raycast — `move` ignores the live hit as before", () => {
+    // ⭐ A15 does NOT loosen the latch for moves. This is the regression guard on the
+    // distinction the whole amendment rests on: a discrete lift may re-decide a role, a
+    // continuous drag may not.
+    const r = new PointerRouter<typeof CUBE>();
+    r.press(1, at(100, 100), CUBE);
+    r.move(1, at(900, 900, 50), BALL);
+    r.move(1, at(910, 910, 60), null);
+    expect(r.get(1)!.role).toBe("OBJECT");
+    expect(r.get(1)!.object).toBe(CUBE);
+  });
+});

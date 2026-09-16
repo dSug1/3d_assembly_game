@@ -4,7 +4,7 @@
 > explicit marking of the ones that are NOVEL to this project
 > **READ IF** · you are adopting a technique, adding a gesture, or preparing a
 > freedom-to-operate review
-> **LAST VERIFIED** · 2026-09-15
+> **LAST VERIFIED** · 2026-09-16
 
 ⭐⭐ **Adopted 2026-09-15 from the owner's `TECHNIQUE_CATALOG.md` §0 and §5** (`D11`).
 The discipline is the catalog's, and the reason to take it is the catalog's own:
@@ -67,6 +67,8 @@ they are marked below rather than left to be discovered.
 | **A7** *(new)* | every object gesture is expressed in a **GRAVITY FRAME** — yaw about the world vertical, pitch about the horizontal, roll and depth about the view direction flattened onto the ground | **INTERNAL COMPOSITION** | ⭐ The parts are universal: a world-up-locked yaw is the standard turntable convention (any DCC package, pre-1995), and projecting a view vector onto a ground plane is elementary. ⚠ **What is ours is applying ONE such frame to rotation AND translation AND depth at once**, on the argument that *the axis you push along is the axis you can turn about*. Low exposure: no gesture is claimed, only a choice of basis |
 | **A8** *(new)* | a roll **rebases** the object to the pose it held when the circle's evidence began | **PRIOR ART** | provisional-motion-with-rollback is the owner's own §1.3, and deferred-commit with undo is universal in recognizer design (any gesture toolkit). ⭐ Rebasing to the FIT WINDOW's start rather than to the press is a detail of *this* recognizer, not a technique |
 | **A9** *(queued, `IN12`)* | a **deadband** on the per-axis pointer delta, with the residual carried forward | **PRIOR ART** | dead zones on an analogue input are universal and undatable — joystick and game-controller practice long predates touch, and every pointer stack ships one. ⛔ **Nothing here is claimable**, and the residual-accumulator form is textbook quantiser-with-memory |
+
+| **A15** *(new)* | when the second touchpoint lifts, a **raycast under the holder**: if its object is no longer there, the selection is dropped **at the next input event** and the configuration re-resolves | **INTERNAL COMPOSITION** | ⭐ Each half is ordinary practice with no plausible claim over it: **picking under a pointer** is the same raycast rule 2 already does (direct picking, universal), and **dropping a selection whose target is gone** is defensive state hygiene of the kind any direct-manipulation editor performs. ⚠ What is ours is the COMPOSITION and its timing — keying it on the lift of the *other* touchpoint, and deferring the consequence to the next input. ⛔ It is recorded as a composition rather than PRIOR ART because no publication is cited for that timing; it is deliberately NOT marked novel composite, since it adds no multi-finger gesture — it **removes** a stale binding, which is the opposite of the catalog's caution zone |
 
 ## The register — behaviours with no clause in the spec
 

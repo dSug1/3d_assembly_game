@@ -3,7 +3,7 @@
 > **STATUS** · ⭐ active · **OWNS** · everything a finger touches, up to the point an
 > object's transform changes
 > **READ IF** · you are building or debugging any gesture
-> **LAST VERIFIED** · 2026-09-15
+> **LAST VERIFIED** · 2026-09-16
 
 ⭐⭐ **Design of record → [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md)**,
 the owner's revision-5 specification. ⛔⛔ **READ [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)
@@ -27,7 +27,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**547 golden vectors, all passing** (37 → 547).
+**563 golden vectors, all passing** (37 → 563).
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 
@@ -42,6 +42,7 @@ model and so did not wait on `3D1`:
 | `A13` | ⭐⭐⭐ **one touchpoint TRANSLATES; a second held STILL ROTATES**. Whichever finger moves acts; the other one's state picks the rule | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A10` | ⭐⭐ depth is a **still holder and a moving anchor**; rule 6's second touchpoint may be on the object | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
+| `A15` | ⭐⭐⭐ **a holder no longer UNDER its object gives the selection up** — a raycast at the second touchpoint's lift, and the unselect is DEFERRED to the next input event | ⛔ built, 16 vectors, **A DEVICE LOOK IS OWED** |
 
 ⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit,
 a shared minimum, a faded blend, then A6's driver/validator. ⭐⭐ **Two transferable
@@ -365,7 +366,8 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `shake.ts` | `A4`'s eviction detector — oscillation **along an axis**, because a circle projects to a back-and-forth on every axis. ⚠ Built, not wired |
 | `anchor_rotate.ts` | 2sexte and `A3`'s handover, about the CONSTRAINT axis. ⚠ Built, not wired — and it wants the TRUE view axis, not the gravity frame |
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
-| `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED` |
+| `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⛔ One exception since `A15`: `relatchOnOrphan`, on a discrete event only |
+| `holder_binding.ts` | ⭐⭐⭐ `A15` — is the object still UNDER the finger carrying it? A raycast at the second touchpoint's lift, and the unselect **deferred** to the next input event. ⚠ Reachable only because depth moves the object while the holder holds still |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |
 | `orbit.ts` | rule 1's three-ring surface, monotone and bounded by the rings |
