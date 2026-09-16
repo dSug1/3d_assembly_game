@@ -30,14 +30,13 @@
  * gesture — *"whatever the new input configuration is"*. Both fall out of re-latching; none
  * of it is a new rule.
  *
- * ⛔ HOW IT MEETS `A14`. A14 keeps a second touchpoint *held* for `secondTouchGraceMs` after
- * it lifts, so a lift-and-replace reads as ONE gesture. ⭐⭐ The two **partition** rather
- * than compete, and the raycast is what separates them: holder still on its object → A14's
- * grace, unchanged; holder no longer on it → there is no gesture left to preserve, because
- * the finger A14 protects is not touching the thing it was moving. ⚠ That is the same shape
- * as `A10` and rule 6 partitioning on the holder's stillness — one question, two disjoint
- * answers, nothing to arbitrate over time.
- *
+ * ⚠ **IT USED TO PARTITION WITH `A14`, WHICH IS NOW RETIRED** (`D28`, 2026-09-16). A14
+ * kept a second touchpoint *held* for a grace after it lifted, so a lift-and-replace read as
+ * one gesture — and this rule's raycast is what separated the two cases. ⛔ The movement mode
+ * no longer reads second-touchpoint presence at all, so the gap A14 patched cannot be fallen
+ * through and the grace is gone. ⭐ What stands unchanged is this rule itself: the raycast
+ * still asks *is the object under the finger*, and the answer still defers to the next input.
+
  * ⛔ ENGINE-FREE and generic over the object handle, like `router.ts`: this file never
  * learns what a mesh or a ray is. The CALLER raycasts and hands over what it found.
  */

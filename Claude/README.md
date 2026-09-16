@@ -42,9 +42,8 @@ the screen plane — all closed by device look. ✅✅ **And the whole two-touch
 (`A10`–`A14`) closed 2026-09-16** — depth, the per-axis deadband, roll on the second
 touchpoint, **one touchpoint translating** while a second held still rotates.
 ⛔ **`A15` owes its device look**; `IN3` is the only input row with unbuilt work left.
-⭐⭐ **`1.0.5` runs THREE forks of the touchpoint assignment from one build** (`IN13`) —
-one-finger translate (the default), the spec's two-finger, and a tap-toggle — so both the
-comparison and every later row cost one pipeline, not three.
+✅✅ **`IN13` CLOSED** — three readings of the touchpoint assignment ran from ONE build across
+`1.0.5`–`1.0.7`, a hand chose the **tap toggle**, and the other two are deleted (`D28`).
 ⛔⛔ **Every one of those defects was found BY FINGER, and none was visible to a green
 suite.** ⭐ The count and its ledger live in [`00_CORE/QUEUE.md`](00_CORE/QUEUE.md), which
 is the one place that carries them — this router deliberately no longer restates a number,

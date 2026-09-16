@@ -42,51 +42,30 @@ input event). ⚠ **The close is only as strong as the phrase that gave it**: *"
 working ok"* was general, and the three cases this row listed were not reported on
 individually → [`queue_notes/IN8.md`](queue_notes/IN8.md).
 
-### ⭐⭐⭐ `1.0.5` — THREE FORKS FROM ONE BUILD, and what each owes a hand
+### ⭐⭐⭐ THE INPUT MODEL, AND IT IS NOW SINGULAR (`D28`, 2026-09-16)
 
-⭐ The owner is A/B-ing three readings of §2/§4 and will judge them **holistically**, once
-the input system can be felt as a whole (`D26`, `D27`, row `IN13`). ⛔ **All three run from
-one build**, so every later row lands in all of them:
+✅✅ **`IN13` IS ANSWERED AND CLOSED.** One build carried **three** readings of §2/§4 from
+`1.0.5` to `1.0.7` — fork A (one touchpoint translates), fork B (the spec's inversion) and
+the tap toggle — so a hand could compare them in the same minute on the same scene. ⭐ The
+owner drove all three and chose the toggle: *"remove the forks A and B. I am satisfied with
+fork C."*
 
-| flag | fork | one touchpoint | second touchpoint |
-|---|---|---|---|
-| `0` | **A** — `A13`. ⚠ Was the default until 2026-09-16, and still the only fork closed by a device look of its own | translates | held still → rotate |
-| `1` | **B** — the **spec's** own assignment | rotates | → translate |
-| `2` | **C** — `A16`. ⛔⛔ **THE DEFAULT, AND ✅✅ CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working ok"* | translates until a tap says rotate; the mode **survives a release**, and **any tap anywhere** flips it — even with nothing carried | **tap** → toggle, immediately; **press** → depth *or* roll |
+| what a finger does | what happens |
+|---|---|
+| one touchpoint drags an object | **translates** it, or **rotates** it — whichever the mode says |
+| **any single tap, anywhere** | flips the mode, immediately. ⚠ A double tap flips twice **and** flies the camera home |
+| a second touchpoint **pressed**, holder still | **roll** by its x *or* **depth** by its y — the mode picks one, never both |
+| a second touchpoint released, holder off its object | the selection drops at the next input event (`A15`) |
 
-⭐⭐ **Fork C is not an inversion of the other two**, which is why it is a fork and not a
-setting: A and B read the mode from **presence**, C from a **discrete tap**. ⚠ Two
-consequences worth carrying into the comparison — **C cannot have the defect `A14` fixed**
-(no lift-and-replace gap for the mode to fall through), and in C the second finger drives
-**one axis, never both**, so a roll and a depth push need a tap between them.
-⛔⛔ **Two device corrections on 2026-09-16**: the toggle is **immediate** (a deferral was
-built and felt as lag — a double tap now flips twice and also resets the camera, accepted in
-the owner's words) and it is a **session MODE**, surviving a release, which retires the
-*"rotation costs a tap every time"* cost I had stated against the fork.
+⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`, the flag, its latch, the menu slider,
+`assignment.ts` (→ `mode_toggle.ts`) and **44 vectors**. ⭐ A dormant fork is a trap, and a
+tunable nothing reads is what `config_debt.test.ts` refuses.
+⛔⛔ **AND IT RETIRED `A14` AND `A12` BY CONSTRUCTION** — the grace existed only because the
+mode read second-touchpoint presence, and two-axes-at-once is unreachable once the mode picks
+one axis. ⚠ Both texts stand as the record of defects that can no longer occur.
+⭐ The whole comparison, and the three formulations the toggle went through, are in
+[`queue_notes/IN13.md`](queue_notes/IN13.md).
 
-✅✅ **FORK C IS CLOSED AND IS THE DEFAULT** (2026-09-16, *"everything is working ok"*) —
-after **three** formulations of its toggle, all three corrected by finger.
-⛔ **What is still open is the CHOICE between the forks, not fork C itself**: `IN13`'s verdict
-waits on the owner's own condition, a holistic judgement once the input system can be felt as
-a whole. ⚠ Two questions for that session: whether the axis purity beats `A12`'s
-two-axes-at-once, and whether a tap on a **different** object should toggle too (deliberately
-left to rule 5 / 6bis). → [`queue_notes/IN13.md`](queue_notes/IN13.md).
-⚠ **The flag latches only while nothing touches the glass**, and the HUD names the live
-fork — a device report that does not name it is unattributable.
-
-✅✅ **THE OBJECT MODEL IS AUTHORITATIVE** (`3D1`, closed 2026-09-15): every gesture writes
-`src/core/object_model.ts` and the render loop draws `SWAY ∘ FOLLOW ∘ model`.
-⚠ **This block said *"nothing yet touches an OBJECT for real"* until 2026-09-16**, and it is
-corrected rather than deleted: it was true on day one and stopped being true when `3D1` was
-wired. ⛔ What remains true is narrower — rule 2bis runs **without its §1.4 precondition**
-(an empty constraint stack), which is what `IN3` adds.
-
-✅✅ **AND THE PAGE NOW KNOWS WHICH BUILD IT IS** (`DEP1d`, closed on the device
-2026-09-16). ⛔ A confirmed fix was reported broken from Pages on a tablet running an old
-bundle: `index.html` is served `max-age=600` and the assets are content-hashed, so a cached
-index loads a superseded hash **indefinitely**. ⭐ The page checks `version.json` on boot and
-replaces itself once, and the HUD's last line is `build <sha>[+dirty]  <UTC minute>`.
-⚠ **Read it before judging any gesture** → [`queue_notes/DEP1d.md`](queue_notes/DEP1d.md).
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
@@ -312,7 +291,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN10 | Orbit about the point under the finger, not the barycentre | IN | feature | queued — ⛔ **deliberately behind `3D5`**, not behind a date: the scene holds **three** small objects and the barycentre is still the thing being worked on, while the catalog's case is explicitly about a model large enough that it is not. ⚠ Reopens a CLOSED row (`IN9`), and collides with three things: the yellow marker is where double-tap flies home to, pivot popping needs easing, and the orbit centre is already suppressed while an object is held. Prior art: conventional DCC/CAD, pre-1995 → [`queue_notes/IN10.md`](queue_notes/IN10.md) | IN9, 3D1, 3D5 |
 | IN11 | ⭐ **Is rule 2bis's free rotation PATH-DEPENDENT?** — a debugging row | IN | defect? | queued, and ⭐⭐ **UNBLOCKED — it needs no object model**. 2bis is applied as a per-frame increment about two fixed axes, which do not commute, so out-and-back by a DIFFERENT route may not return the object. ⚠ Retracing the SAME path does close, which is why a tuning session would never show it. ⭐ **Write the square-path vector FIRST and confirm it FAILS against today's code**; the answer is a curve against drag angle, not a yes/no, and the fix (pure function of total displacement) has its own cost — A/B it. ⛔ Must not undo the world-frame axis composition or the axes latched at press → [`queue_notes/IN11.md`](queue_notes/IN11.md) | IN1 |
 | IN12 | ⭐ **A DEADBAND on the pointer delta** | IN | defect | ✅✅ **CLOSED 2026-09-15 BY `A11`, AND NOT THE WAY THIS ROW SPECIFIED IT.** The owner made §1.1 *itself* a position deadband, so the excess-only travel is computed ONCE and every rule reads the same side of it — rather than each rule deadbanding its own `dx`/`dy`. ⭐ The **residual/catch-up form** this row recommended is what shipped, and its continuity vector is the one that separates it from the two broken forms. ⛔⛔ **AND THE ONE THING I SAID THIS ROW GOT WRONG, IT DID NOT.** I argued per-axis was a mistake because a square band makes a diagonal drag travel 1.41× further. ⭐ The owner restored it for a reason I never considered — **axis purity**: a square band gives a CORRIDOR along each axis in which the other emits nothing, so a nearly-horizontal drag is purely horizontal. A radial band cannot do that at any radius. ⭐⭐ **A threshold has a SHAPE as well as a size, and the shape decides things the size cannot.** Measured after the change: reversal cost is still one sample, so the corridor was bought for nothing. ⛔ Still owed: a device pass — `motionDeadbandMm` is now the commit threshold, the rest test and the jitter deadband at once, and nobody has judged it by finger → [`queue_notes/IN12.md`](queue_notes/IN12.md) | IN1, IN4 |
-| IN13 | ⭐⭐ **WHICH TOUCHPOINT ASSIGNMENT SHIPS** — fork A (`A13`, one-finger translate), fork B (the spec's, two-finger translate) or ⭐ fork C (**any single TAP** toggles the movement behaviour; a PRESS keeps every meaning it has) | IN | decision | 🔧 **OPEN BY DESIGN, and the mechanism is BUILT (2026-09-16, `D26`).** Both readings run from **one build** — `?touchpointAssignment=1` or a menu toggle — because the whole difference is **one inversion in `holderDrive`**: depth, roll, `A14` and `A15` all key on *the holder is still*. ⭐ So the two compare **by the same hand in the same minute on the same scene**, and both forks get every later row for free. ⛔⛔ The flag latches **only while nothing touches the glass** (owner) — the only state in which no gesture can be in flight; a mid-gesture flip is deferred, not dropped, and the HUD says `⛔PENDING`. ⚠ **The verdict is NOT due until the input system can be judged as a whole** — it is a claim about a session of assembly work, not about one drag. ⭐⭐ **FORK C added 2026-09-16 (`D27`/`A16`) and it is NOT an inversion**: A and B compute the mode from presence, C from a discrete TAP — so **C structurally cannot have the defect `A14` fixed**. ⚠ Its trade: rotation costs a tap every time. ⛔ A toggling tap is CONSUMED, or toggling twice would reset the camera. 27 vectors, three mutants caught → [`queue_notes/IN13.md`](queue_notes/IN13.md) | IN4, IN8 |
+| IN13 | ⭐⭐ **WHICH TOUCHPOINT ASSIGNMENT SHIPS** | IN | decision | ✅✅ **ANSWERED AND CLOSED 2026-09-16 (`D28`)** — the tap toggle, after a hand drove three readings from one build over three versions. ⛔ Forks A and B are **deleted**, along with the flag, its latch, the slider and 44 vectors; `A14` and `A12` are retired **by construction**. ⭐ The comparison cost one boolean instead of two branches, which is what `D26` bought → [`queue_notes/IN13.md`](queue_notes/IN13.md) | IN4, IN8 |
 
 ## Phase 3D — objects and assembly
 

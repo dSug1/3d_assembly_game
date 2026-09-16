@@ -27,8 +27,6 @@
 import { describe, expect, it } from "vitest";
 import {
   depthGate,
-  holderDrive,
-  secondTouchHeld,
   rollDragDeg,
   secondFingerDrive,
   depthLimits,
@@ -362,63 +360,62 @@ describe("⛔ the clamps and the degenerate cases", () => {
 // one is pure depth. ⛔ A radial band would have made every diagonal do both.
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("⭐⭐⭐ A12 — the second finger's two axes drive two different rules", () => {
+describe("⭐⭐⭐ A12 — the second finger's axis, as `A16` narrowed it", () => {
   const MOV = "MOVING" as const;
   const STI = "STATIONARY" as const;
+  // ⛔⛔ THIS SUITE WAS REWRITTEN ON 2026-09-16 (`D28`) AND THE OLD ASSERTIONS ARE THE
+  // RECORD OF WHAT CHANGED. `A12` gave the second finger BOTH axes at once — x rolls, y
+  // pushes depth, kept independent by `A11`'s per-axis bands — and its vectors asserted a
+  // diagonal drag doing both. ⭐ `A16` narrowed it to ONE axis chosen by the mode, and with
+  // forks A and B deleted that narrowing is the only behaviour left, so those assertions
+  // would now be false. ⚠ What survives unchanged is everything `A12` was really about:
+  // the per-axis GATE, the travel passing through unscaled, and rule 6 winning while the
+  // holder moves.
 
-  it("⭐⭐ x drives ROLL, y drives DEPTH, and they are independent", () => {
-    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, A, "TRANSLATE");
-    expect(d.rollDxPx).toBe(12);
-    expect(d.depthDyPx).toBe(-7);
-  });
-
-  it("⭐⭐ a PURELY HORIZONTAL second drag rolls and does NOT push depth", () => {
-    // ⛔ The axis that has not broken its own band contributes nothing — that is A11's
-    // corridor doing the work this rule depends on.
-    const d = secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0 }, A, "TRANSLATE");
+  it("⭐⭐ in ROTATE the x axis rolls, and y is suppressed", () => {
+    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, "ROTATE");
     expect(d.rollDxPx).toBe(12);
     expect(d.depthDyPx).toBe(0);
   });
 
-  it("⭐⭐ a PURELY VERTICAL second drag pushes depth and does NOT roll", () => {
-    const d = secondFingerDrive(STI, { x: STI, y: MOV }, { dx: 0, dy: -9 }, A, "TRANSLATE");
+  it("⭐⭐ in TRANSLATE the y axis pushes depth, and x is suppressed", () => {
+    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, "TRANSLATE");
+    expect(d.depthDyPx).toBe(-7);
     expect(d.rollDxPx).toBe(0);
-    expect(d.depthDyPx).toBe(-9);
+  });
+
+  it("⛔ THE PER-AXIS GATE STILL DECIDES: a still axis contributes nothing", () => {
+    // ⭐ `A11`'s bands are what make this possible — the chosen axis must break out of its
+    // own corridor, so a mostly-vertical drag in ROTATE mode still rolls nothing.
+    expect(secondFingerDrive(STI, { x: STI, y: MOV }, { dx: 0, dy: -9 }, "ROTATE").rollDxPx).toBe(0);
+    expect(secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0 }, "TRANSLATE").depthDyPx).toBe(0);
   });
 
   it("⛔⛔ NOTHING happens while the finger ON THE OBJECT is moving — that is rule 6", () => {
-    // ⭐ The holder wins every tie, exactly as in A10. A moving holder means translate, and
-    // the second finger is a mode selector that contributes no motion.
-    const d = secondFingerDrive(MOV, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, A, "TRANSLATE");
-    expect(d.rollDxPx).toBe(0);
-    expect(d.depthDyPx).toBe(0);
+    // ⚠ A10's gate comes FIRST, in every mode. The narrowing is a mask on top of it, not a
+    // replacement — otherwise a second finger could move the object during an ordinary drag.
+    for (const t of ["TRANSLATE", "ROTATE"] as const) {
+      const d = secondFingerDrive(MOV, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, t);
+      expect(d.rollDxPx).toBe(0);
+      expect(d.depthDyPx).toBe(0);
+    }
   });
 
   it("⛔ a still hand does nothing", () => {
-    const d = secondFingerDrive(STI, { x: STI, y: STI }, { dx: 0, dy: 0 }, A, "TRANSLATE");
+    const d = secondFingerDrive(STI, { x: STI, y: STI }, { dx: 0, dy: 0 }, "TRANSLATE");
     expect(d.rollDxPx).toBe(0);
     expect(d.depthDyPx).toBe(0);
   });
 
   it("⭐ it passes the travel through UNCHANGED — the gate decides, it does not scale", () => {
-    // ⛔ A gate that also scaled would be a second gain, free to disagree with the one in
-    // the config. The deadband already shaped this travel; nothing here reshapes it.
-    for (const v of [0.01, 1, 37.5, -420]) {
-      expect(secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }, A, "TRANSLATE").rollDxPx).toBe(v);
+    for (const v of [0.4, 1, 7.5, -3.2, 120]) {
+      expect(
+        secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }, "ROTATE").rollDxPx,
+      ).toBe(v);
+      expect(
+        secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }, "TRANSLATE").depthDyPx,
+      ).toBe(v);
     }
-  });
-
-  it("⛔⛔ COUNTER-EXAMPLE: one shared axis state would make every diagonal do BOTH", () => {
-    // ⭐ Why A11's per-axis corridor is load-bearing for A12 rather than a nicety: with a
-    // single MOVING flag for the whole touchpoint, a drag that is 95% horizontal still
-    // carries its 5% of vertical into DEPTH, and the object creeps away while you roll it.
-    const sharedFlag = MOV;
-    const naive = {
-      rollDxPx: sharedFlag === MOV ? 12 : 0,
-      depthDyPx: sharedFlag === MOV ? 0.6 : 0,
-    };
-    expect(naive.depthDyPx).not.toBe(0);
-    expect(secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0.6 }, A, "TRANSLATE").depthDyPx).toBe(0);
   });
 });
 
@@ -471,120 +468,15 @@ describe("⭐ A12's roll angle is a DRAG, not a swept circle", () => {
 // A12 was written to delete.
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * ⭐ The two readings of §2/§4 the owner is A/B-ing. ⛔ Named in EVERY `holderDrive` call
- * below, because a default would let a vector assert fork A while reading as universal —
- * and *which rule table am I in* is the one thing an A/B must never guess.
- */
-const A = "ONE_FINGER_TRANSLATE" as const;
-const B = "TWO_FINGER_TRANSLATE" as const;
-const C = "TAP_TOGGLE" as const;
-
-describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate (FORK A, the default)", () => {
-  const MOV = "MOVING" as const;
-  const STI = "STATIONARY" as const;
-
-  it("⭐⭐ ONE touchpoint on the object TRANSLATES", () => {
-    // x along the horizontal screen axis, y along GRAVITY — A7's frame, unchanged.
-    expect(holderDrive(false, A)).toBe("TRANSLATE");
-  });
-
-  it("⭐⭐ a second touchpoint HELD STILL turns the same drag into a ROTATION", () => {
-    // ⭐ The second finger contributes no motion at all: it is a MODIFIER, and holding it
-    // still is the whole of the input. Yaw about gravity, pitch about the horizontal.
-    expect(holderDrive(true, A)).toBe("ROTATE");
-  });
-
-  it("⛔ …and lifting it goes straight back to translating", () => {
-    // ⭐ Symmetrical, and for the same reason: a lift is discrete, deliberate and visible.
-    expect(holderDrive(false, A)).toBe("TRANSLATE");
-  });
-
-  it("⛔⛔ A LANDING SKID CANNOT CHANGE THE MODE — the reported defect, as a vector", () => {
-    // ⭐ The same finger, down, reporting every motion state a landing can produce. The
-    // mode must not move: that is what *"immediately rotation"* means.
-    const seen = new Set([MOV, STI, MOV, MOV, STI].map(() => holderDrive(true, A)));
-    expect([...seen]).toEqual(["ROTATE"]);
-  });
-
-  it("⛔⛔⛔ BOTH MOVING IS **ROTATE** — PRESENCE ALONE DECIDES, and a hand said so twice", () => {
-    // ⛔⛔ I FIRST DECIDED THIS CELL THE OTHER WAY, and the device overturned it:
-    // *"if I transition quickly there is a translation then a rotation, if I transition
-    // slowly there is directly a rotation."*
-    //
-    // ⭐⭐ THE TIMING SIGNATURE IS THE WHOLE DIAGNOSIS. A finger PLACED QUICKLY skids as
-    // it lands — the reported centroid slides while the contact area grows — so it reads
-    // MOVING for as long as the landing takes. Keying the mode on that made the holder
-    // translate for exactly that long. A finger placed SLOWLY never leaves its band, so the
-    // mode was right immediately. Nothing about the gesture differed; only the landing did.
-    //
-    // ⛔⛔⛔ AND `IN4` ALREADY RECORDED THIS VERDICT ONCE, on 2026-09-14: a mode keyed on
-    // the anchor's `STATIONARY` state was overturned by a hand, first try. The lesson
-    // written down then is the one that applies now — *whether a finger is DOWN is
-    // discrete, deliberate and VISIBLE; whether it is MOVING is a noisy continuous reading*
-    // — and I flagged the resemblance in A13 as the thing to watch before the device did.
-    expect(holderDrive(true, A)).toBe("ROTATE");
-  });
-
-  it("⭐ the rule reads PRESENCE ALONE, never a latch and never the motion state", () => {
-    // ⛔⛔ `IN4` RECORDS A DEVICE VERDICT THAT LOOKS LIKE THIS ONE AND IS NOT: a
-    // `STATIONARY` latch taken at press was overturned by a hand, first try, because
-    // MOVING/STATIONARY is a noisy reading and latching it hid state instead of protecting
-    // it. ⭐ This reads it LIVE, every frame, and the state it reads is now a position
-    // deadband rather than a speed test — but the resemblance is close enough to be worth
-    // watching on the glass.
-    // ⭐ Whatever the second finger is doing, it is DOWN — and that is the whole input.
-    // ⭐ Whatever the second finger is doing, it is DOWN — and `holderDrive` cannot even
-    // SEE what it is doing any more: the parameter was removed so it cannot be wired back.
-    expect(holderDrive(true, A)).toBe("ROTATE");
-    expect(holderDrive(false, A)).toBe("TRANSLATE");
-  });
-
-  it("⭐⭐ a second finger that never moved at all counts as IDLE", () => {
-    // ⚠ A touchpoint that goes down and stays put emits no events, so it may have no
-    // tracker yet. `null` means *nothing has ever moved this finger* — which is the
-    // strongest form of idle there is, not a missing answer.
-    expect(holderDrive(true, A)).toBe("ROTATE");
-  });
-});
-
-describe("⭐⭐⭐ FORK B — the SPEC's assignment: one rotates, two translate", () => {
-  it("⭐⭐ ONE touchpoint on the object ROTATES — §2 rule 2bis, as written", () => {
-    expect(holderDrive(false, B)).toBe("ROTATE");
-  });
-
-  it("⭐⭐ a second touchpoint makes the drag a TRANSLATION — §4 rule 6, as written", () => {
-    expect(holderDrive(true, B)).toBe("TRANSLATE");
-  });
-
-  it("⛔⛔ THE TWO FORKS ARE EXACT OPPOSITES, and nothing else differs", () => {
-    // ⭐⭐ THE CLAIM THAT JUSTIFIES A FLAG INSTEAD OF A FORK. The day this stops being a
-    // pure inversion, the difference has grown a third case — and a branch becomes the
-    // honest answer. This vector is where that would show up first.
-    for (const present of [true, false]) {
-      expect(holderDrive(present, A)).not.toBe(holderDrive(present, B));
-    }
-  });
-
-  it("⛔ fork B is STILL presence-only — a landing skid cannot move the mode either", () => {
-    // ⚠ The defect A13 shipped is reachable in BOTH readings: it was never about which
-    // finger translates, it was about keying a mode on a noisy signal. The guard has to
-    // hold on both sides of the flag, or fork B reintroduces it.
-    const seen = new Set(["MOVING", "STATIONARY", "MOVING"].map(() => holderDrive(true, B)));
-    expect([...seen]).toEqual(["TRANSLATE"]);
-  });
-
-  it("⭐ A14's grace is assignment-agnostic — it decides PRESENCE, not meaning", () => {
-    // ⛔ The grace answers *is a second touchpoint held?*; the flag answers *what does that
-    // mean?*. Composing them must not make the grace fork-specific, or every later rule
-    // would need a fork-aware twin.
-    const heldDuringSwap = secondTouchHeld(false, 100, 250);
-    expect(heldDuringSwap).toBe(true);
-    expect(holderDrive(heldDuringSwap, A)).toBe("ROTATE");
-    expect(holderDrive(heldDuringSwap, B)).toBe("TRANSLATE");
-  });
-});
-
+// ⛔⛔ THE FORK A AND FORK B SUITES WERE DELETED HERE, 2026-09-16 (`D28`).
+//
+// ⭐ They asserted `holderDrive` — fork A: one touchpoint translates, a second held still
+// rotates; fork B: the spec's inversion — and the *exact opposites* invariant that justified
+// running both from one build. The owner closed fork C on the glass and chose it, so the
+// function and both suites are gone rather than left dormant.
+// ⚠ The account of all three forks, why a flag beat two branches, and what each one did is
+// one tier down in `Claude/00_CORE/queue_notes/IN13.md`. ⛔ A deleted vector whose subject no
+// longer exists is not a loss of coverage; a dormant one would have been a trap.
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ⭐⭐⭐ A14 — A LIFT-AND-REPLACE OF THE SECOND TOUCHPOINT IS **ONE** GESTURE
@@ -615,60 +507,19 @@ describe("⭐⭐⭐ FORK B — the SPEC's assignment: one rotates, two translate
 // state, which is the rule the previous round cost us.
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("⭐⭐⭐ A14 — a second touchpoint survives its own replacement", () => {
-  const GRACE = 250;
+// ⛔⛔ A14's SUITE WAS DELETED HERE, 2026-09-16 (`D28`), AND THE REASON IS THE INTERESTING
+// PART. `A14` gave a second touchpoint a **grace** after it lifted, so that a lift-and-replace
+// read as ONE gesture: without it the 150-300 ms gap has genuinely one touchpoint down, and a
+// mode keyed on PRESENCE fell through it.
+// ⭐⭐ **The mode is no longer keyed on presence** — a tap decides it — so the gap cannot be
+// fallen through and the grace has nothing left to protect. ⚠ It had already become decoration:
+// its only remaining readers were a HUD line and a slider, which is exactly the dead-tunable
+// shape `config_debt.test.ts` refuses and the same trap as the HUD's retired roll line.
+// ⛔ So `secondTouchHeld`, `secondTouchGraceMs` and the lift timestamp are **deleted**, not
+// left dormant. ⭐ `A14`'s text stands in `AMENDMENTS_R5.md` as the record of a defect that
+// can no longer occur, and `queue_notes/IN4.md` keeps its device narrative.
 
-  it("⭐ a touchpoint that is DOWN is held, with no grace involved", () => {
-    expect(secondTouchHeld(true, null, GRACE)).toBe(true);
-    expect(secondTouchHeld(true, 10_000, GRACE)).toBe(true);
-  });
-
-  it("⭐⭐ JUST LIFTED still counts as held — the replacement is coming", () => {
-    expect(secondTouchHeld(false, 0, GRACE)).toBe(true);
-    expect(secondTouchHeld(false, GRACE - 1, GRACE)).toBe(true);
-  });
-
-  it("⛔ …but a DELIBERATE lift stops counting once the grace has passed", () => {
-    // ⚠ THE COST, STATED: going back to one-touchpoint translation is delayed by the
-    // grace. That is a real delay on a deliberate act, and it is the trade.
-    expect(secondTouchHeld(false, GRACE, GRACE)).toBe(false);
-    expect(secondTouchHeld(false, GRACE + 1, GRACE)).toBe(false);
-  });
-
-  it("⛔⛔ a touchpoint that was NEVER down is not held", () => {
-    // ⭐ `null` means no lift has ever happened — not a lift infinitely long ago.
-    expect(secondTouchHeld(false, null, GRACE)).toBe(false);
-  });
-
-  it("⛔ a zero grace restores the old behaviour exactly — the slider can turn it off", () => {
-    expect(secondTouchHeld(false, 0, 0)).toBe(false);
-  });
-
-  it("⭐⭐ CASE 3, AS A SEQUENCE: the mode never drops to TRANSLATE across the swap", () => {
-    // ⭐ The reported defect, written as the event sequence that produces it.
-    const swap = [
-      { present: true, sinceLift: null }, // second finger on the other object
-      { present: false, sinceLift: 0 }, // lifted
-      { present: false, sinceLift: 120 }, // …still swapping, holder moving all the while
-      { present: false, sinceLift: 210 },
-      { present: true, sinceLift: 210 }, // pressed down outside
-    ];
-    const modes = swap.map((x) =>
-      holderDrive(secondTouchHeld(x.present, x.sinceLift, GRACE), A),
-    );
-    expect(modes).toEqual(["ROTATE", "ROTATE", "ROTATE", "ROTATE", "ROTATE"]);
-  });
-
-  it("⛔⛔ COUNTER-EXAMPLE: without the grace, the swap translates in the middle", () => {
-    // ⭐ The defect, pinned — and it is what shipped.
-    const modes = [0, 120, 210].map((sinceLift) =>
-      holderDrive(secondTouchHeld(false, sinceLift, 0), A),
-    );
-    expect(modes).toEqual(["TRANSLATE", "TRANSLATE", "TRANSLATE"]);
-  });
-});
-
-describe("⭐⭐⭐ A16 / FORK C — the toggle also picks DEPTH or ROLL, never both", () => {
+describe("⭐⭐⭐ A16 — the mode picks DEPTH or ROLL for the second finger, never both", () => {
   const MOV2 = "MOVING" as const;
   const STI2 = "STATIONARY" as const;
   const both = { x: MOV2, y: MOV2 };
@@ -677,13 +528,13 @@ describe("⭐⭐⭐ A16 / FORK C — the toggle also picks DEPTH or ROLL, never 
   it("⭐⭐ TRANSLATE keeps DEPTH and suppresses roll", () => {
     // ⭐ The pairing is by KIND: the holder's screen-plane drag and the second finger's
     // depth are both translations, so one toggle answers for both fingers.
-    const d = secondFingerDrive(STI2, both, step, C, "TRANSLATE");
+    const d = secondFingerDrive(STI2, both, step, "TRANSLATE");
     expect(d.depthDyPx).toBe(-7);
     expect(d.rollDxPx).toBe(0);
   });
 
   it("⭐⭐ ROTATE keeps ROLL and suppresses depth", () => {
-    const d = secondFingerDrive(STI2, both, step, C, "ROTATE");
+    const d = secondFingerDrive(STI2, both, step, "ROTATE");
     expect(d.rollDxPx).toBe(12);
     expect(d.depthDyPx).toBe(0);
   });
@@ -693,20 +544,25 @@ describe("⭐⭐⭐ A16 / FORK C — the toggle also picks DEPTH or ROLL, never 
     // do exactly one, so half a roll cannot arrive by accident during a depth push.
     for (const axes of [both, { x: MOV2, y: STI2 }, { x: STI2, y: MOV2 }]) {
       for (const t of ["TRANSLATE", "ROTATE"] as const) {
-        const d = secondFingerDrive(STI2, axes, { dx: 5, dy: 5 }, C, t);
+        const d = secondFingerDrive(STI2, axes, { dx: 5, dy: 5 }, t);
         expect(d.rollDxPx === 0 || d.depthDyPx === 0).toBe(true);
       }
     }
   });
 
-  it("⛔ FORKS A AND B KEEP A12 EXACTLY — both axes at once", () => {
-    // ⭐⭐ THE CONTAINMENT. A12 is device-approved in forks A and B, and fork C's narrowing
-    // must not reach it — the toggle value is deliberately varied here to prove it cannot.
+  it("⛔⛔ A12's TWO-AXES-AT-ONCE IS NOW UNREACHABLE, and that is the trade", () => {
+    // ⭐⭐ THIS VECTOR REPLACES ONE THAT ASSERTED THE OPPOSITE. It used to prove that forks A
+    // and B kept `A12` exactly — a diagonal second drag driving roll AND depth together —
+    // and that fork C's narrowing could not reach them. ⛔ With A and B deleted (`D28`) the
+    // narrowing is the only behaviour left, so the honest assertion is the consequence:
+    // there is no mode in which both axes move, for any input.
+    // ⚠ `A12`'s per-axis bands still do their work; what is gone is the diagonal that did
+    // half of each. The cost — a roll and a depth push need a tap between them — is the
+    // point, and it was closed on the glass.
     for (const t of ["TRANSLATE", "ROTATE"] as const) {
-      for (const f of [A, B] as const) {
-        const d = secondFingerDrive(STI2, both, step, f, t);
-        expect(d.rollDxPx).toBe(12);
-        expect(d.depthDyPx).toBe(-7);
+      for (const axes of [both, { x: MOV2, y: STI2 }, { x: STI2, y: MOV2 }]) {
+        const d = secondFingerDrive(STI2, axes, { dx: 9, dy: 9 }, t);
+        expect(d.rollDxPx === 0 || d.depthDyPx === 0).toBe(true);
       }
     }
   });
@@ -715,7 +571,7 @@ describe("⭐⭐⭐ A16 / FORK C — the toggle also picks DEPTH or ROLL, never 
     // ⚠ The narrowing is a MASK on top of A10's gate, not a replacement for it: with the
     // holder moving this is rule 6, and the second finger contributes nothing at all.
     for (const t of ["TRANSLATE", "ROTATE"] as const) {
-      const d = secondFingerDrive(MOV2, both, step, C, t);
+      const d = secondFingerDrive(MOV2, both, step, t);
       expect(d.rollDxPx).toBe(0);
       expect(d.depthDyPx).toBe(0);
     }

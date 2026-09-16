@@ -148,32 +148,18 @@ implements **parent ≠ root** and moves nothing.
 ✅ `IN12` (the deadband) was CLOSED by `A11`, which put it in §1.1 itself rather than in
 each rule.
 
-⭐⭐⭐ **`1.0.5` RUNS THREE FORKS FROM ONE BUILD** (`D26`, row `IN13`). The owner is A/B-ing
-two readings of §2/§4 and will judge them **holistically**, once the input system can be
-felt as a whole: **fork A** (`A13`, `?touchpointAssignment=0`) one touchpoint translates and a second
-held still rotates; **fork B** (`?touchpointAssignment=1`, or the menu's `⭐ FORK` toggle) the
-**spec's own** assignment, one rotates and two translate. ⭐ **fork C** (`=2`, `D27`/`A16`, **the default**) **any single TAP anywhere** toggles the drag
-between those two, while a **PRESSED** one keeps every meaning it has now — ⛔⛔ not an
-inversion, so it is a fork rather than a setting, and **it structurally cannot have the
-defect `A14` fixed**. ⚠ Its trade: rotation costs a tap every time.
-⛔⛔ **And THREE device corrections the same day**: the toggle is **immediate** (a deferral
-that waited out the double-tap window was felt as lag — so a double tap now flips twice and
-also resets the camera, accepted explicitly); it is a **session MODE** that survives a
-release, which retires the *"rotation costs a tap every time"* cost; and **the toggle picks
-the second finger's axis too**, depth *or* roll, never both, paired by KIND.
-⭐ `METHOD`: *a device judgement overturns a confident synthetic argument* — the deferral was
-reasoned from first principles AND from Unity's own parameters.
-✅✅ **FORK C IS THE DEFAULT AND IS CLOSED BY A DEVICE LOOK** (2026-09-16, *"everything is
-working ok"*) — after **three** formulations of its toggle, every one corrected by finger:
-the double tap that toggled twice, the 300 ms lag, and the mode that reset on every release.
-⭐ `?touchpointAssignment=0` and `=1` still reach forks A and B, which is what `D26`'s flag is
-for. ⛔ What remains open is `IN13`'s **choice** between the three, on the owner's condition:
-a holistic judgement once the input system can be felt as a whole.
-⭐⭐ **A and B are a FLAG and not a fork
-because their whole difference is ONE INVERSION in `holderDrive`** — depth, roll, `A14` and
-`A15` all key on *the holder is still*. ⛔⛔ The flag latches **only while nothing touches
-the glass**: the only state in which no gesture can be in flight. ⚠ **The HUD names the live
-fork, and a device report that does not name it is unattributable.**
+✅✅ **ONE INPUT MODEL, AND `IN13` IS CLOSED** (`D28`, 2026-09-16). A held object's drag
+**translates or rotates**; **any single tap anywhere** flips between the two, immediately; the
+mode is one latch for the **session**; and a second touchpoint pressed while the holder is
+still drives **roll by its x or depth by its y** — the mode picks one, never both.
+⚠ A double tap flips twice **and** flies the camera home: the owner's accepted trade.
+⭐⭐ **It was chosen by comparison, not assertion**: three readings of §2/§4 ran from ONE
+build across `1.0.5`–`1.0.7` so a hand could judge them in the same minute on the same scene
+— then forks A and B were **deleted**, with the flag, its latch, the slider and 44 vectors.
+⛔⛔ And it retired **`A14`** and **`A12`** by construction: the grace existed only because the
+mode read second-touchpoint presence, and two-axes-at-once is unreachable once the mode picks
+one axis. ⭐ The whole comparison: [`Claude/00_CORE/queue_notes/IN13.md`](Claude/00_CORE/queue_notes/IN13.md).
+
 
 ✅✅ **`A15` IS CLOSED by the same look** — ⚠ and the close is only as strong as the phrase
 that gave it: *"everything is working ok"* was general, and `A15`'s three specific cases were

@@ -58,45 +58,6 @@ export interface GestureConfig {
    * ⚠ Small on purpose: a tenth of the settle timer it replaced. `IN5`, by slider.
    */
   restConfirmMs: number;
-  /**
-   * ⭐⭐⭐ AMENDMENT A14 — ms for which a second touchpoint still counts as HELD after it
-   * lifts, so that **lifting it and putting it down again is ONE gesture**.
-   *
-   * ⛔ Without it, the interval between the lift and the press has genuinely one touchpoint
-   * down, so `A13` translates through the middle of a swap — 150-300 ms of it, which is
-   * very visible if the holder happens to be moving at the time.
-   * ⭐ Keyed on a LIFT: discrete, deliberate and visible, never on a motion state.
-   * ⚠ THE COST: going back to one-touchpoint translation is delayed by this much, which is
-   * a real delay on a deliberate act. ⭐ `0` restores the old behaviour exactly.
-   */
-  secondTouchGraceMs: number;
-  /**
-   * ⭐⭐⭐ **THE `1.0.5` A/B/C — WHICH RULE TABLE IS IN FORCE.**
-   *
-   * * `0` — **fork A**, `A13`/`D23`: one touchpoint translates, a second held still rotates.
-   *   ⚠ Was the default until 2026-09-16, and is still the only reading closed by a device
-   *   look of its own.
-   * * `1` — **fork B**, the **spec's original**: one touchpoint rotates, two translate.
-   * * `2` — **fork C**: a second touchpoint **TAPPED** toggles the ongoing drag between
-   *   those two behaviours; a second touchpoint **PRESSED** keeps every meaning it has now.
-   *   ⛔⛔ **THE DEFAULT SINCE 2026-09-16**, by the owner's decision after driving all three.
-   *
-   * ⚠ It was called `translateNeedsSecondTouch` while there were two forks. Renamed when
-   * fork C arrived, because that name answers a yes/no question and this is a three-way
-   * choice — `router.ts` states the rule it follows: *a name that describes its consumer
-   * goes stale the moment the consumer changes.* ⛔ The old key is now REPORTED as unknown
-   * rather than silently ignored, which is `config_override`'s contract.
-   *
-   * ⭐ It exists as a flag rather than a fork because the entire difference is **one
-   * inversion** in `holderDrive`: depth, roll, `A14`'s grace and `A15`'s orphan check all key
-   * on *the holder is still*, which neither reading touches. ⚠ So both forks get every later
-   * row for free, and they can be A/B'd **by the same hand in the same minute**.
-   * ⛔⛔ It LATCHES ONLY WHILE NOTHING IS TOUCHING THE GLASS (owner, 2026-09-16) — nothing
-   * down is the only state in which no gesture can be in flight. See `input/assignment.ts`.
-   * ⚠ Numeric, not boolean, so the URL override and the menu slider reach it with no new
-   * machinery: `?touchpointAssignment=1`.
-   */
-  touchpointAssignment: number;
 
   // ── §1.2 gains ──────────────────────────────────────────────────────────
   /** Metres. Translation gains scale by cameraDistance / this. */
@@ -399,12 +360,11 @@ export interface GestureConfig {
   /**
    * ms from the first tap's RELEASE to the second tap's PRESS.
    *
-   * ⭐⭐ **AND SINCE FORK C IT HAS A SECOND READER: it is the DELAY BEFORE A SINGLE TAP
-   * ACTS.** A tap cannot be known to be single until this window has passed with no second
-   * one — so in fork C the toggle lands this long after the tap.
-   * ⛔⛔ ONE CONSTANT, deliberately, not a second tunable: the quantity *is* *"the time
-   * within which a second tap would have arrived"*. Two numbers could disagree, and the gap
-   * between them would be a tap that is **neither** single nor double.
+   * ⚠⚠ **IT BRIEFLY GATED THE MODE TOGGLE, AND NO LONGER DOES.** A tap cannot be known to
+   * be single until this window passes with no second one, so the toggle was held for it —
+   * and a hand rejected the lag: *"it shall be immediate."* ⛔ So this number decides ONE
+   * thing again, §1.3's double tap — which in this model is the difference between one mode
+   * switch and a switch-back plus a camera reset.
    * ⚠ Unity's equivalent (`InputSettings.multiTapDelayTime`) defaults to 750 ms and
    * `MultiTapInteraction.tapDelay` to 2 × the tap time; ours is 300 ms against a 250 ms tap.
    */
@@ -534,11 +494,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   restConfirmMs: 30,
   // ⚠ A guess, with a slider. Long enough for a deliberate lift-and-replace, short enough
   // that a genuine lift to one finger does not feel stuck. IN5.
-  secondTouchGraceMs: 250,
-  // ⛔⛔ **FORK C IS THE DEFAULT SINCE 2026-09-16** — the owner's call after driving all three.
-  // ⚠ 0 = fork A (`A13`), 1 = the spec's assignment, 2 = fork C's tap toggle.
-  // ⭐ A and B stay one URL parameter away, which is the whole point of `D26`'s flag.
-  touchpointAssignment: 2,
 
   // ⛔⛔ THE HISTORY, KEPT — all four were re-sized 2026-09-15 against the measured floor
   // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of
@@ -807,19 +762,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
-  // ⛔⛔ THE ASSIGNMENT FLAG IS A CHOICE OF TWO, NOT A RANGE. A slider, a URL or a stray
-  // edit can hand over 0.5 or 2, and `assignmentOf` would read anything but 1 as fork A —
-  // so a half-set flag would LOOK like the default while the person setting it believed
-  // they had changed the rule table. ⭐ Refused loudly instead, which is what this
-  // validator is for: a config that is individually plausible and jointly impossible.
-  if (![0, 1, 2].includes(cfg.touchpointAssignment)) {
-    throw new Error(
-      `touchpointAssignment (${cfg.touchpointAssignment}) must be 0 (fork A: one ` +
-        "touchpoint translates), 1 (fork B, the spec: two translate) or 2 (fork C: a " +
-        "tapped second touchpoint toggles). It selects a rule table, so there is no " +
-        "meaning between the three.",
-    );
-  }
   // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
   // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
   // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The

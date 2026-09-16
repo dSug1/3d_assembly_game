@@ -57,7 +57,7 @@
  */
 import { CAMERA_NEAR_PLANE_M, type GestureConfig } from "./gestureConfig";
 import type { MotionState } from "./motion";
-import type { Assignment, Behaviour } from "./assignment";
+import type { Behaviour } from "./mode_toggle";
 import { pxToMm } from "../core/units";
 import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
 
@@ -219,32 +219,27 @@ export function secondFingerDrive(
   holder: MotionState,
   secondAxes: { readonly x: MotionState; readonly y: MotionState },
   secondStep: { readonly dx: number; readonly dy: number },
-  assignment: Assignment,
   toggled: Behaviour,
 ): { readonly rollDxPx: number; readonly depthDyPx: number } {
-  // ⭐ The SAME gate as A10, asked once per axis — which is all A12 adds to it.
-  const gated = {
-    rollDxPx: depthGate(holder, secondAxes.x) === "DEPTH" ? secondStep.dx : 0,
-    depthDyPx: depthGate(holder, secondAxes.y) === "DEPTH" ? secondStep.dy : 0,
-  };
-  // ⭐⭐⭐ FORK C, A16: THE TOGGLE PICKS A FAMILY, AND THE SECOND FINGER DRIVES ONE AXIS,
-  // NOT BOTH (owner, 2026-09-16): *"depending on which is toggled, the second touchpoint
-  // shall only control depth translation by delta position y or roll by delta position x
-  // (not both). Switching between the two shall indeed require the tap."*
-  //
-  // ⭐⭐ THE PAIRING IS BY KIND, and it is what makes one toggle enough: `TRANSLATE` pairs
-  // the holder's screen-plane drag with the second finger's **depth** — both translations —
-  // and `ROTATE` pairs yaw/pitch with **roll**. So the tap answers one question, *am I
+  // ⭐ A10's gate, asked per axis — the second finger drives only while the HOLDER is still.
+  const gate = (axis: MotionState): boolean => depthGate(holder, axis) === "DEPTH";
+  // ⛔⛔ ONE AXIS, NEVER BOTH, AND THE MODE PICKS IT (`A16`): *"depending on which is
+  // toggled, the second touchpoint shall only control depth translation by delta position y
+  // or roll by delta position x (not both). Switching between the two shall indeed require
+  // the tap."*
+  // ⭐⭐ THE PAIRING IS BY KIND, which is what makes one toggle enough for two fingers:
+  // `TRANSLATE` pairs the holder's screen-plane drag with the second finger's **depth** —
+  // both translations — and `ROTATE` pairs yaw/pitch with **roll**. One question, *am I
   // translating or rotating?*, and both fingers follow the same answer.
-  // ⛔ Forks A and B keep `A12` exactly: x and y live at once, kept independent by A11's
-  // per-axis bands. This narrowing is fork C's alone.
-  // ⚠ What it costs: in fork C a roll and a depth push cannot be interleaved without a tap
-  // between them — which is the point (no diagonal can do half of each by accident), and the
-  // thing a hand has to judge.
-  if (assignment !== "TAP_TOGGLE") return gated;
-  return toggled === "ROTATE"
-    ? { rollDxPx: gated.rollDxPx, depthDyPx: 0 }
-    : { rollDxPx: 0, depthDyPx: gated.depthDyPx };
+  // ⚠⚠ IT SUPERSEDES `A12`'s TWO-AXES-AT-ONCE, which is no longer reachable at all now that
+  // forks A and B are deleted (`D28`). A12's per-axis bands still do the work of keeping the
+  // corridors independent; what is gone is a diagonal driving roll AND depth together.
+  // ⛔ What it costs, stated: a roll and a depth push need a tap between them. ⭐ That is the
+  // point — no diagonal does half of each by accident.
+  if (toggled === "ROTATE") {
+    return { rollDxPx: gate(secondAxes.x) ? secondStep.dx : 0, depthDyPx: 0 };
+  }
+  return { rollDxPx: 0, depthDyPx: gate(secondAxes.y) ? secondStep.dy : 0 };
 }
 
 /**
@@ -266,151 +261,5 @@ export function rollDragDeg(dxPx: number, degPerMm: number): number {
   return pxToMm(dxPx) * degPerMm;
 }
 
-/**
- * ⭐⭐⭐ **AMENDMENT A13** — what the finger ON THE OBJECT is doing, when it moves.
- *
- * > *"One touchpoint on object && delta position x or y → horizontal x or gravity axis
- * > translation. One touchpoint on object with delta position x or y && second touchpoint
- * > idle anywhere → rotation on yaw along gravity axis or pitch along horizontal x axis."*
- *
- * ⭐⭐ **A SECOND TOUCHPOINT BEING DOWN IS THE WHOLE INPUT.** It contributes no motion; its
- * presence turns the holder's drag from a translation into a rotation.
- *
- * |               | second absent | second DOWN |
- * |---|---|---|
- * | **holder MOVING** | translate | ⭐ **ROTATE** |
- * | **holder IDLE**   | — | x → roll, y → depth |
- *
- * ## ⛔⛔⛔ IT READS PRESENCE **ALONE**, AND THE DEVICE SAID SO TWICE
- *
- * ⚠ The owner's rules do not name the cell where BOTH fingers move. I first decided it as
- * `TRANSLATE` — *the holder wins every tie* — and a hand overturned it:
- *
- * > *"If I transition quickly there is a translation then a rotation, if I transition
- * > slowly there is directly a rotation."*
- *
- * ⭐⭐ **THE TIMING SIGNATURE IS THE WHOLE DIAGNOSIS.** A finger PLACED QUICKLY skids as it
- * lands — the reported centroid slides while the contact area grows — so it reads `MOVING`
- * for as long as the landing takes, and the mode followed it. Placed SLOWLY it never leaves
- * its band, so the mode was right at once. ⛔ Nothing about the *gesture* differed; only the
- * landing did, and a mode must not depend on how briskly a finger arrives.
- *
- * ⛔⛔ **`IN4` RECORDED THIS VERDICT ALREADY, ON 2026-09-14**, when a mode keyed on the
- * anchor's `STATIONARY` state was overturned by a hand first try. The lesson written then is
- * the one that applies now:
- *
- * > *`MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading … whether a finger is DOWN is
- * > neither: it is discrete and deliberate, it changes only when a person decides it does,
- * > and it is the one thing they can see.*
- *
- * ⭐ So the motion state is used where it belongs — deciding what the second finger's own
- * travel DRIVES, once the holder is still (`secondFingerDrive`) — and never for choosing a
- * mode. ⚠ Two rules, two signals: **presence** picks the mode; **motion** supplies the
- * motion.
- *
- * ⛔⛔ **IT TAKES NO MOTION STATE, AND IT MUST NOT BE GIVEN ONE.** An earlier version
- * accepted one “so callers need not special-case it” and ignored it. ⚠ A dead parameter
- * named after the very signal a hand rejected **twice** is an invitation to wire it back,
- * and the signature is the cheapest place to make that impossible. ⭐ The motion state has a
- * job — `secondFingerDrive`, deciding what a moving second finger DRIVES — and this is not
- * it.
- *
- * ⭐⭐⭐ **AND THIS IS THE WHOLE OF THE `1.0.5` A/B** — the one inversion that separates the
- * two forks the owner intends to judge holistically. `ONE_FINGER_TRANSLATE` is `A13`, the
- * reading a hand has approved; `TWO_FINGER_TRANSLATE` is the **spec's original** assignment.
- * ⛔ Everything else in the input layer is assignment-agnostic, which is why this is a flag
- * and not a fork. See `input/assignment.ts`, and `adoptAssignment` for the latch rule:
- * **it may change only while nothing is touching the glass.**
- *
- * @param secondPresent whether a second touchpoint is down, counting `A14`'s replacement
- *   grace.
- * @param assignment which reading of §2/§4 is in force. ⛔ REQUIRED, and deliberately not
- *   defaulted: a default would let a call site silently get fork A while the owner was
- *   testing fork B, and *which rule table am I in* is the one thing an A/B must never guess.
- */
-export function holderDrive(
-  secondPresent: boolean,
-  assignment: Assignment,
-): "TRANSLATE" | "ROTATE" {
-  if (assignment === "TWO_FINGER_TRANSLATE") {
-    // ⭐ The spec as written: §2 rule 2bis on one touchpoint, §4 rule 6 on two.
-    return secondPresent ? "TRANSLATE" : "ROTATE";
-  }
-  // ⭐ `A13`/`D23`: the commonest gesture on the easiest hand shape.
-  return secondPresent ? "ROTATE" : "TRANSLATE";
-}
 
-/**
- * ⭐⭐⭐ **AMENDMENT A14** — is a second touchpoint holding, counting a replacement in
- * progress?
- *
- * > *"…second touchpoint is released then pressed on screen outside any object and I
- * > IMMEDIATELY input delta position the first touchpoint → first object continues to
- * > translate for a while then rotates."*
- *
- * ⛔⛔ THE MODE LOGIC WAS NEVER WRONG. Between the lift and the press there is genuinely
- * **one touchpoint down**, and `A13` says one touchpoint TRANSLATES. So the object
- * translates for exactly as long as the swap takes — and a lift and a replace is 150–300 ms
- * of hand, which is very visible.
- *
- * ⭐⭐ THAT IS ALSO WHY THE OWNER'S THREE CASES DIFFER *ONLY BY TIMING*:
- *
- * | case | during the swap | what is seen |
- * |---|---|---|
- * | 1 — no lift at all | no interval | correct |
- * | 2 — holder WAITS | interval exists, holder still | nothing to see |
- * | 3 — holder KEEPS MOVING | interval exists, holder moving | ⛔ it translates |
- *
- * ⭐⭐⭐ SO THE RULE IS RIGHT AND THE GESTURE MODEL WAS WRONG: **a lift-and-replace is ONE
- * intention**, and dropping to one-touchpoint behaviour in the middle of it is the artefact.
- *
- * ⛔ THE GRACE IS KEYED ON A **LIFT** — discrete, deliberate and visible — never on a motion
- * state. That is the rule the previous round of this defect cost us, and it is honoured
- * here rather than quietly re-broken.
- *
- * ⚠ **THE COST, STATED**: returning to one-touchpoint translation is delayed by the grace.
- * That is a real delay on a deliberate act, and it is the trade. ⭐ A grace of `0` restores
- * the old behaviour exactly, so the slider can turn it off.
- *
- * @param present      whether a second touchpoint is down right now.
- * @param msSinceLift  milliseconds since the last second-touchpoint LIFT, or `null` if none
- *   has ever happened — which is not the same as a lift infinitely long ago.
- */
-export function secondTouchHeld(
-  present: boolean,
-  msSinceLift: number | null,
-  graceMs: number,
-): boolean {
-  if (present) return true;
-  return msSinceLift !== null && msSinceLift < graceMs;
-}
 
-/**
- * ⭐⭐⭐ **THE ONE PLACE A HELD OBJECT'S MODE IS DECIDED**, across all three forks.
- *
- * ⛔ It exists so the fork branch is NOT in `scene.ts`. `D23` recorded what that costs:
- * *"the WIRING has no vector — breaking the mode selection in `scene.ts` reddens nothing."*
- * ⭐ Here it reddens something, for every fork, including the cell each fork disagrees on.
- *
- * | fork | what decides the mode |
- * |---|---|
- * | A `ONE_FINGER_TRANSLATE` | **presence**: a second touchpoint means rotate |
- * | B `TWO_FINGER_TRANSLATE` | **presence**, inverted: a second touchpoint means translate |
- * | C `TAP_TOGGLE` | ⛔ **neither** — a discrete TAP flips it, and presence is ignored here |
- *
- * ⚠ Fork C ignoring `secondPresent` IS the whole of fork C: a held second finger keeps only
- * the meanings it already has (depth while the holder is still, roll on its x), and what the
- * holder's own drag DOES becomes a per-gesture toggle instead.
- *
- * @param toggled fork C's per-gesture behaviour. ⛔ Required, and unused by A and B — a
- *   caller that cannot supply it has no business choosing a mode, and defaulting it would
- *   let fork C silently run fork A's answer.
- */
-export function modeFor(
-  assignment: Assignment,
-  secondPresent: boolean,
-  toggled: Behaviour,
-): "TRANSLATE" | "ROTATE" {
-  if (assignment === "TAP_TOGGLE") return toggled;
-  return holderDrive(secondPresent, assignment);
-}

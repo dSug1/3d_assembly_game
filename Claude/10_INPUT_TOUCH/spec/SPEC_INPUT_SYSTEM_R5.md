@@ -40,37 +40,29 @@ against what each touchpoint was latched as, not where it is now. ⛔ One except
 `A15`: a holder whose object is no longer **under** it gives the selection up at the next
 input event.
 
-⛔⛔ **AND SINCE `1.0.5` THERE ARE THREE FORKS, RUNNING FROM ONE BUILD** (`D26`, `D27`,
-row `IN13`). The owner is A/B/C-ing them and will judge holistically; the flag is
-`touchpointAssignment` (`?touchpointAssignment=1`), and it latches **only while nothing
-touches the glass**.
+⛔⛔ **ONE MODEL SINCE `D28` (2026-09-16).** From `1.0.5` to `1.0.7` a flag carried three
+readings of §2/§4 so a hand could compare them; the owner chose the **tap toggle** and forks
+A and B are deleted. ⭐ A held object's drag translates *or* rotates, **any single tap
+anywhere** flips between the two, and the mode is one latch for the session — it survives a
+release. ⚠ The comparison's record is in
+[`../../00_CORE/queue_notes/IN13.md`](../../00_CORE/queue_notes/IN13.md).
 
-| fork | flag | one touchpoint on an object | a second touchpoint |
+### ⛔ What the MODE decides
+
+⚠ The mode starts at `TRANSLATE` and flips on **every** tap of any touchpoint, anywhere,
+immediately — including with nothing carried, since it is what the next grab inherits.
+
+| touchpoints | on what, and what moves | what happens | spec |
 |---|---|---|---|
-| **A** — `A13`/`D23` | `0` · ⚠ the default until 2026-09-16, and still the only fork closed by a device look of its own | **translates** | held still → the drag **rotates** |
-| **B** — the **spec's own** assignment | `1` | **rotates** (§2 rule 2bis) | present → the drag **translates** (§4 rule 6) |
-| **C** — `A16`/`D27` | `2` · ⛔⛔ **THE DEFAULT, ✅✅ CLOSED 2026-09-16** | **translates**, until a tap says rotate — and the mode **survives a release** | ⛔ **presence is irrelevant**: a **tap** toggles immediately, a **press** drives one axis |
+| 1 | an object, **moving** | **translate** (x horizontal, y **gravity**) or **rotate** (yaw about the world vertical, pitch about horizontal x) — per the mode | §4 rule 6 / §2 rule 2bis · `A7`, `A16`, `A17` |
+| 2 | an object **moving** + a second one down | ⛔ unchanged by the second finger being there: presence decides nothing | `A16`, `A17` |
+| 2 | an object **STILL** + a second moving in **x** | **ROLL** about the flattened view direction — ⛔ only while the mode is `ROTATE` | §2 2quinte · `A12`, `A16` |
+| 2 | an object **STILL** + a second moving in **y** | **DEPTH** along the flattened view direction, height unchanged — ⛔ only while the mode is `TRANSLATE` | `A10` · `A16` |
+| 2 | an object **STILL** + a second moving **diagonally** | ⛔ **exactly one axis** — the mode decides, and switching needs a tap. ⚠ `A12`'s both-at-once is unreachable since `A17` | `A12` · `A16` |
+| any | a **TAP**, anywhere — empty space, the carried object, or a second finger | ⭐⭐ **flips the mode**, immediately | `A16` |
+| any | a **DOUBLE tap**, anywhere | ⭐ flips **twice** (a net nothing) **and** flies the camera home — accepted, in the owner's words | `A16` |
 
-### ⛔ Configurations whose meaning DEPENDS on the fork
-
-⚠ Fork C carries a **SESSION MODE** that starts at `TRANSLATE` and flips on **every tap,
-anywhere, by any touchpoint** — immediately, and whether or not anything is being carried. ⛔ It **survives a release** — the next press resumes it —
-and a **double tap therefore flips it twice**, back to where it was, while the camera reset
-fires as usual. Both were the owner's explicit choices on the glass (2026-09-16).
-
-| touchpoints | on what, and what moves | fork **A** | fork **B** | fork **C** | spec |
-|---|---|---|---|---|---|
-| 1 | an object, **moving** | **translate** (x horizontal, y **gravity**) | **rotate** (yaw about the world vertical, pitch about horizontal x) | **translate** or **rotate**, per the toggle | §4 rule 6 / §2 rule 2bis · `A7`, `A13`, `A16` |
-| 2 | an object **moving** + a second held **STILL** | **rotate** | **translate** | per the toggle — ⛔ unchanged by the second finger being there | §2 2bis / §4 6 · `A13`, `A16` |
-| 2 | an object **STILL** + a second moving in **x** | **ROLL** about the flattened view direction | **ROLL** | ⛔ **roll ONLY if the toggle is `ROTATE`**; otherwise **nothing** | §2 2quinte · `A12`, `A16` |
-| 2 | an object **STILL** + a second moving in **y** | **DEPTH** along the flattened view direction — height never changes | **DEPTH** | ⛔ **depth ONLY if the toggle is `TRANSLATE`**; otherwise **nothing** | `A10` · `A16` |
-| 2 | an object **STILL** + a second moving **diagonally** | ⭐ **both at once**, kept independent by `A11`'s per-axis bands | both | ⛔ **exactly one** — the toggle decides, and switching needs a tap | `A12` · `A16` |
-| 2 | an object + a second **TAPPED** anywhere | — (it only feeds §1.3's tap history) | — | ⭐⭐ **TOGGLE, immediately** — and it persists past the release | `A16` |
-| 1 | **TAPPED** anywhere — empty space or an object — with nothing carried | select (on an object); the tap history (outside) | same | ⭐⭐ **TOGGLE too**, setting the mode the next grab inherits | `A16` |
-| 2 | an object + a second **DOUBLE-tapped** | double-tap → camera home | same | ⭐ toggles **twice** (net nothing) **and** the camera resets — accepted, in the owner's words | `A16` |
-| 2 | an object + a second **lifted then replaced** | `A14`'s grace holds it "present" for `secondTouchGraceMs` | same | ⛔ **inert** — the mode never depended on presence, so C cannot have the defect `A14` fixed | `A14` · `A16` |
-
-### ✅ Configurations that are the same in EVERY fork
+### ✅ Configurations the mode does not touch
 
 | touchpoints | on what | what happens | spec | status |
 |---|---|---|---|---|

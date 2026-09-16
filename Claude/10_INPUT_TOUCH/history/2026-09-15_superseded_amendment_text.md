@@ -1,4 +1,4 @@
-# THE FULL TEXT OF TWO AMENDMENTS WHOSE TRIGGERS WERE SUPERSEDED
+# THE FULL TEXT OF SUPERSEDED AMENDMENTS
 
 > **STATUS** · record · **OWNS** · the original argument for `A1` and `A5`, moved here
 > **READ IF** · you want to know *why* eviction and depth ended up where they did
@@ -735,3 +735,137 @@ computed landmark marked the wrong end of its range and the hand shipped a fifte
 **A landmark tells you where a range's zero is; it does not tell you where to stand.**
 
 ---
+
+
+---
+
+# ADDED 2026-09-16 — `A13` AND `A14`, RETIRED BY `A17`/`D28`
+
+⛔⛔ **NOT THE DESIGN OF RECORD.** What is in force is in
+[`../AMENDMENTS_R5.md`](../AMENDMENTS_R5.md), which carries a short stub for each of these
+pointing here. ⭐ Moved when the forks were deleted and the amendments file passed its cap
+again; both sections below are **verbatim** as they stood.
+
+## Why `A13` is here
+
+Its assignment WAS fork A, and `A17`/`D28` deleted it.
+
+## A13 — ⭐⭐⭐ ONE TOUCHPOINT **TRANSLATES**; A SECOND ONE HELD STILL **ROTATES** *(owner, 2026-09-16)*
+
+**Supersedes** §2 rule 2bis's and §4 rule 6's touchpoint assignments — it swaps them.
+
+⭐⭐⭐ **AND SINCE `1.0.5` / `D26` THE SWAP IS A FLAG, NOT A FORK**: the spec's assignment
+is still reachable (`?touchpointAssignment=1`, or the menu toggle), because the whole
+difference is **one inversion in `holderDrive`** and everything since — `A14`, `A15`, the
+gravity frame, `A11` — is assignment-agnostic. ⛔ It latches **only while nothing touches
+the glass**. ⚠ A13 stays the DEFAULT; which one ships is row `IN13`, not due until the
+input system can be judged whole.
+
+> *"One touchpoint on object && delta position x or y → horizontal x or gravity axis
+> translation. One touchpoint on object idle && second touchpoint anywhere with delta
+> position y → horizontal depth translation. One touchpoint on object with delta position x
+> or y && second touchpoint idle anywhere → rotation on yaw along gravity axis or pitch
+> along horizontal x axis. One touchpoint on object idle && second touchpoint anywhere with
+> delta position x → roll rotation along horizontal depth axis."*
+
+### ⭐⭐ THE SHAPE OF IT
+
+**Whichever finger MOVES is the one that acts, and the OTHER one's state says which rule.**
+
+| | second absent | second **IDLE** | second **MOVING** |
+|---|---|---|---|
+| **holder MOVING** | **translate** — x along the horizontal screen axis, y along **gravity** | ⭐ **ROTATE** — yaw about **gravity**, pitch about the **horizontal** | translate ⚠ |
+| **holder IDLE** | — | — | ⭐ **x → ROLL** about the horizontal depth axis · **y → DEPTH** |
+
+⭐ Four cells, no overlap, **nothing to arbitrate over time**. Every gesture in the object
+layer is now selected by *which finger is moving* and *whether the other one is still* —
+both read live, every frame, from the same §1.1 deadband.
+
+⭐⭐ **A second finger held still is a MODIFIER.** It contributes no motion whatsoever;
+holding it still *is* the input. That is the cleanest form the two-finger rules have taken:
+the previous assignment had one finger rotating and two translating, which put the
+*commonest* gesture (translate) on the *harder* hand shape.
+
+### ⛔⛔ One cell the owner's four rules do not name
+
+**Both fingers moving.** It resolves to **TRANSLATE** — the holder wins every tie, as it has
+since A10, and it is what the build already did. ⚠ The alternative, *wait until one of them
+settles*, reintroduces exactly the decision lag A12 was written to delete.
+
+### ⛔⛔⛔ IT READS **PRESENCE ALONE**, AND THE DEVICE SAID SO TWICE
+
+⚠ A13 first keyed the mode on the second finger's **motion state**, and a hand overturned
+it: *"if I transition quickly there is a translation then a rotation, if I transition slowly
+there is directly a rotation."* ⭐⭐ A finger placed QUICKLY skids as it lands — the reported
+centroid slides while the contact area grows — so it read `MOVING` for the length of the
+landing and the mode followed it. Nothing about the gesture differed; only the landing did.
+⛔⛔ And `IN4` had recorded the identical verdict on 2026-09-14, which this amendment had
+already FLAGGED as a resemblance to watch — *naming a risk is not the same as not taking it.*
+⭐⭐ **Both blocks, with the reasoning as it stood before and after, are in
+[`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md)**, moved there 2026-09-16.
+`METHOD` carries the rule: *a mode may be keyed on PRESENCE; never on MOTION.*
+
+### ⭐ Two rules, two signals
+
+| signal | what it may decide |
+|---|---|
+| a touchpoint is **DOWN** | ⭐ the **MODE** — discrete, deliberate, visible |
+| a touchpoint is **MOVING** | the **MOTION** it supplies, once the mode is settled |
+
+⛔ The motion state is still exactly right where `A12` uses it — deciding whether the second
+finger's own travel drives roll or depth while the holder is still. It is never again used
+to pick a mode.
+
+### ⛔ What is NOT covered by a vector, stated plainly
+
+`holderDrive` is pure and has seven vectors, including the unnamed both-moving cell.
+⛔⛔ **The WIRING is not**: `scene.ts` is behind the engine boundary, and breaking the mode
+selection there reddens **nothing** in the suite — checked, deliberately, rather than
+assumed. ⭐ `METHOD`: a look on a real device closes this change, and nothing else does.
+
+## Why `A14` is here
+
+The grace it added is retired **by construction** — the mode no longer reads second-touchpoint presence, so the gap it patched cannot occur.
+
+## A14 — ⭐⭐⭐ A **LIFT-AND-REPLACE** OF THE SECOND TOUCHPOINT IS ONE GESTURE *(owner, 2026-09-16)*
+
+**Amends** `A13`'s *"second absent → translate"*, which was correct and incomplete.
+
+> *"1 — one touchpoint on object → it translates → second touchpoint pressed on screen
+> outside any object → object immediately rotates → everything is OK.
+> 2 — …second touchpoint is released then pressed on screen outside any object and I **wait**
+> to input delta position the first touchpoint → first object rotates → everything seems OK.
+> 3 — …and I **immediately** input delta position the first touchpoint → first object
+> continues to translate for a while then rotates → this is the issue, and cases 2 and 3
+> differ by timing of the input."*
+
+### ⭐⭐ THE DIAGNOSIS, IN ONE LINE
+
+⛔⛔ **The mode logic was never wrong.** Between a lift and the replacing press there is
+genuinely **one touchpoint down**, and `A13` says one touchpoint translates — so the object
+translated for exactly as long as the swap took, 150-300 ms of hand. ⭐⭐ That is why the
+owner's three cases *differed only by timing*: the interval exists in all of them and is only
+VISIBLE when the holder happens to be moving through it.
+⭐⭐⭐ **So the RULE was right and the GESTURE MODEL was wrong**: a lift-and-replace is ONE
+intention, and dropping to one-touchpoint behaviour mid-swap is the artefact.
+⭐ The three cases, the timing signature and the full reasoning are in
+[`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
+
+### ⚠ THE COST, STATED
+
+Returning to one-touchpoint translation is **delayed by the grace**. Lift the second finger
+and keep dragging with one, and the object keeps ROTATING for up to
+`secondTouchGraceMs` before it starts translating. ⛔ That is a real delay on a deliberate
+act, and it is the trade this amendment makes.
+
+⭐ **`0` restores the old behaviour exactly**, so the two can be A/B'd on the glass without a
+rebuild. Default **250 ms** — a guess, with a slider.
+
+### ⭐⭐ And the instrument that should have answered this
+
+⛔ Three device reports on this rule were diagnosed by *reasoning about code*, because the
+HUD could not answer *"what does the build think is down right now?"* — and `METHOD` is
+explicit that an instrument is judged against the question it exists to answer. ⭐ The depth
+readout now prints the mode, the touchpoint counts and the grace remaining; the examples are
+in [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
+

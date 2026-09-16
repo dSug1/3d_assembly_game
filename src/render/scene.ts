@@ -55,7 +55,6 @@ import {
   PointerRouter,
   screenTranslation,
   advanceFollow,
-  secondTouchHeld,
   rollDragDeg,
   secondFingerDrive,
   gravityFrame,
@@ -64,16 +63,9 @@ import {
   depthTranslate,
   bindingAfterSecondRelease,
   orphanAction,
-  adoptAssignment,
-  assignmentLabel,
-  assignmentOf,
-  assignmentPending,
   initialBehaviour,
   isTapRelease,
-  modeFor,
-  tapTogglesBehaviour,
   toggleBehaviour,
-  type Assignment,
   type Behaviour,
   type HolderBinding,
   type InputEvent,
@@ -354,11 +346,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
      */
     anchorMotion: Map<number, MotionTracker>;
-    /**
-     * ⭐⭐⭐ A14 — when a second touchpoint last LIFTED, so a lift-and-replace reads as ONE
-     * gesture. ⛔ `null` until one ever has. See `secondTouchHeld`.
-     */
-    secondLiftedAtMs: number | null;
     /**
      * ⭐⭐⭐ A15 — is the object still UNDER this finger? Evaluated by a RAYCAST when a
      * second touchpoint lifts, and by nothing else.
@@ -803,14 +790,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // rule were diagnosed by reasoning about code because the HUD could not answer *"what
       // does the build think is down right now?"* — an instrument is judged against the
       // question it exists to answer.
-      const held2 = secondFingerOf(grip);
-      const graceLeft =
-        grip.secondLiftedAtMs === null
-          ? 0
-          : Math.max(0, cfg.secondTouchGraceMs - (performance.now() - grip.secondLiftedAtMs));
+      // ⚠ A14's grace countdown was printed here and is gone with the grace itself
+      // (`D28`): the mode no longer reads second-touchpoint presence, so there was nothing
+      // left for it to protect — and a readout of a quantity the product no longer acts on
+      // is the trap the retired roll line already cost us.
       const mode =
         `${grip.mode ?? "—"} obj=${router.objects().length} out=${router.outside().length}` +
-        `${held2.present ? " 2nd" : graceLeft > 0 ? ` 2nd~${graceLeft.toFixed(0)}ms` : ""}` +
+        `${secondFingerOf(grip).present ? " 2nd" : ""}` +
         `${grip.rec.motionState === "STATIONARY" ? ` ready ${corridor}` : ""}`;
       return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at} ${mode}`;
     }
@@ -863,32 +849,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             ([...held.values()].some((g) => g.binding === "ORPHANED")
               ? "  ⛔ORPHANED(next input unselects)"
               : "") +
-            // ⭐⭐⭐ WHICH FORK IS IN FORCE, and it is printed for the reason this morning
-            // established: a device report is only evidence about the code — and now the
-            // RULE TABLE — the device was running. ⛔ `1.0.5` runs two readings of §2/§4
-            // from one build, so a report that does not name the fork is unattributable.
-            // ⚠ It is NOT on the `build` line: that one identifies an immutable artefact,
-            // while this changes at runtime, and merging the two would make a stable
-            // identity look mutable.
-            `  ${assignmentLabel(assignment)}` +
-            // ⭐⭐⭐ FORK C's LIVE TOGGLE, and it is the least guessable state on the glass.
-            // ⛔ In fork C nothing VISIBLE says whether the next drag will translate or
-            // rotate — presence no longer decides it, so there is no finger position to
-            // read the answer off. ⚠ In forks A and B a user can see the mode by looking at
-            // their own hand; in C they cannot, so the readout is the only way a device pass
-            // can tell *"the toggle did not fire"* from *"I toggled twice"*.
-            // ⛔ Shown whenever fork C is live, EVEN WITH NOTHING HELD: it is a session
-            // mode now, so it is the state the next press will inherit — and in fork C no
-            // finger position reveals it.
-            (assignment === "TAP_TOGGLE" ? `[${behaviour}]` : "") +
-            // ⛔⛔ AND A PENDING FLIP MUST SAY SO. The flag latches only while nothing is
-            // touching the glass, so between a flip mid-gesture and the next lift the menu
-            // shows one value and the product obeys another. ⭐ Without this line that gap
-            // reads as *"the toggle is broken"* — and an absent readout cannot be caught by
-            // looking at the screen.
-            (assignmentPending(assignment, assignmentOf(cfg.touchpointAssignment))
-              ? `→${assignmentLabel(assignmentOf(cfg.touchpointAssignment))} ⛔PENDING(lift all fingers)`
-              : "") +
+            // ⭐⭐⭐ THE MOVEMENT MODE, and it is the least guessable state on the glass:
+            // nothing VISIBLE says whether the next drag translates or rotates, because
+            // presence does not decide it — a tap does. ⛔ So the readout is the only way a
+            // device pass can tell *"the toggle did not fire"* from *"I toggled twice"*.
+            // ⚠ Shown even with nothing held: the mode is the state the next press inherits.
+            `  [${behaviour}]` +
             // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
             // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
             // the other two sliders moves, so a written-down number would go stale the
@@ -919,34 +885,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * itself; a camera radius inside the near plane renders a black page with no error.
    * ⭐ A rejected change is RETURNED so the menu can show why, never dropped in silence.
    */
-  /**
-   * ⭐⭐⭐ THE LIVE TOUCHPOINT ASSIGNMENT — the `1.0.5` A/B, LATCHED.
-   *
-   * ⛔⛔ It may change **only while nothing is touching the glass** (owner, 2026-09-16).
-   * The menu and the URL write `cfg.touchpointAssignment` freely; this is what the
-   * rules actually read, and it follows the config only at a moment when no gesture can
-   * possibly be in flight. ⭐ Stricter than latching at press, and better: at press, a flip
-   * between two fingers landing would still swap the meaning of a gesture already begun.
-   * ⚠ The toggle's own touch cannot block it — the menu is a DOM panel over the canvas, so
-   * its events never reach the pointer router.
-   */
-  let assignment: Assignment = assignmentOf(cfg.touchpointAssignment);
-
-  /**
-   * ⭐ Adopt a pending assignment if the glass is empty. Called on every pointer event AND
-   * every frame: a flip made while idle must take effect immediately — and be VISIBLE
-   * immediately — rather than waiting for the next touch to apply it.
-   * ⛔ `router.size`, not `activeCount`: an IGNORED third finger is still a finger on the
-   * glass, and the question is *"can a gesture be in flight?"*, not *"does a rule see it?"*.
-   */
-  const syncAssignment = (): void => {
-    assignment = adoptAssignment(
-      assignment,
-      assignmentOf(cfg.touchpointAssignment),
-      router.size,
-    );
-  };
-
   const tunable = (
     label: string,
     key: keyof typeof cfg & string,
@@ -991,32 +929,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
         tunable("sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
         tunable("sway reference turn (deg/s)", "rotateSwayReferenceDegPerS", 20, 400, 10),
-      ],
-    },
-    {
-      // ⭐⭐⭐ THE `1.0.5` A/B, AT THE TOP OF ITS OWN SECTION so it cannot be mistaken for a
-      // feel tunable. ⛔ Everything else in this menu changes a NUMBER; this changes which
-      // RULE TABLE is in force, which is a different kind of thing and the one control here
-      // that can make every other one behave differently.
-      title: "⭐ FORK (1.0.5 A/B)",
-      sliders: [
-        // ⛔⛔ 0/1, step 1: a slider, because the menu has no toggle and a two-position
-        // slider IS one — and `validateGestureConfig` refuses anything between, so a
-        // half-set flag cannot masquerade as the default. ⚠ Step buttons work where a
-        // native range input will not, which on this page is the common case
-        // (`touch-action: none`).
-        // ⭐ 0 = A13, one touchpoint translates (the judged default). 1 = the SPEC's
-        // assignment, one rotates and two translate. 2 = fork C, where a TAPPED second
-        // touchpoint toggles the ongoing drag between those two and a PRESSED one keeps
-        // every meaning it already has.
-        // ⚠ It takes effect only once nothing is touching the glass — the HUD says
-        // `⛔PENDING(lift all fingers)` until then.
-        tunable("0=A one-finger 1=B two-finger 2=C tap-toggle", "touchpointAssignment", 0, 2, 1),
-        // ⚠ It is here because fork C's toggle briefly WAITED for it, and a hand rejected
-        // that lag — the toggle is immediate now. ⭐ Kept on the panel because it still
-        // decides whether two taps read as a double tap, which in fork C is the difference
-        // between one mode switch and a switch-back plus a camera reset.
-        tunable("double-tap window (ms)", "doubleTapWindow", 100, 800, 25),
       ],
     },
     {
@@ -1077,7 +989,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("rest confirm (ms)", "restConfirmMs", 0, 400, 10),
         // ⭐⭐⭐ A14: how long a lift-and-replace of the second touchpoint stays ONE
         // gesture. ⛔ 0 restores the old behaviour exactly, which is how to A/B it.
-        tunable("second touch grace (ms)", "secondTouchGraceMs", 0, 600, 25),
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
         tunable("sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
         // ⭐ How far the drag must swing before the scene reacts again, and the drag
@@ -1321,16 +1232,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⚠ Keyed by `seq`, so a reused pointer id can no longer inherit it — this is belt to
    * that structural brace, and it is what stops the map growing for the life of a gesture.
    */
-  const forgetAnchor = (seq: number, at: number): void => {
+  const forgetAnchor = (seq: number): void => {
     for (const grip of held.values()) {
       grip.anchorMotion.delete(seq);
-      // ⭐⭐⭐ A14 — AND REMEMBER THAT A TOUCHPOINT JUST LIFTED. From every OTHER grip's
-      // point of view this was its second touchpoint, whatever role it held: outside every
-      // object, on the same object, or on a different one (which is the owner's case 3).
-      // ⛔ A lift-and-replace is ONE gesture, and without this the interval between them
-      // has a single touchpoint down and `A13` translates through the middle of it.
-      // ⚠ Setting it on the releasing grip itself is harmless: it is deleted immediately.
-      grip.secondLiftedAtMs = at;
     }
   };
 
@@ -1351,17 +1255,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     grip.rec.tick(anchorSample.t);
     tracker.push(anchorSample);
 
-    // ⭐⭐⭐ AMENDMENT A12 — the second finger's TWO AXES drive TWO RULES: x is ROLL, y is
-    // DEPTH, and A11's per-axis bands keep them independent. ⛔ The travel is the
-    // DEADBANDED travel, exactly as rule 6 and 2bis take the holder's.
-    // ⭐⭐⭐ A16: in fork C the toggle also picks WHICH axis this finger drives — depth by
-    // its y, or roll by its x, never both. ⛔ Handed the fork and the grip's toggle so the
-    // narrowing is decided inside the vectored rule and not here.
+    // ⭐⭐⭐ A12 + A16 — the second finger drives ONE of two rules: **roll** by its x or
+    // **depth** by its y, and the MODE picks which. ⚠ A12 gave it both at once, kept
+    // independent by A11's per-axis bands; A16 narrowed it to one, and with the forks gone
+    // (`D28`) that narrowing is all there is. ⛔ The travel is the DEADBANDED travel, exactly
+    // as rule 6 and 2bis take the holder's.
+    // ⛔ The live mode is handed over so the choice is made inside the vectored rule, not
+    // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
     const drive = secondFingerDrive(
       grip.rec.motionState,
       tracker.axes,
       tracker.step,
-      assignment,
       behaviour,
     );
     if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
@@ -1495,21 +1399,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
-   * ⭐⭐⭐ FORK C's MODE — one latch for the session, not one per gesture.
+   * ⭐⭐⭐ THE MOVEMENT MODE — one latch for the session, not one per gesture.
    *
    * ⛔⛔ Device-corrected 2026-09-16: *"when the first touchpoint is released and pressed
    * again, the movement automatically resets to translation. I would expect the movement
    * resumes the behavior as it was prior to release."* ⚠ I had put this on the grip, reading
    * *"for one single ongoing touchpoint"* as *dies with the gesture*. It is a MODE: it
    * persists until tapped again, and every new grip adopts it.
-   * ⭐ Which also retires the cost I had stated against fork C — rotation no longer costs a
-   * tap every time, only when switching.
+   * ⭐ Which also retired the cost I had stated against this model — rotation no longer
+   * costs a tap every time, only when switching.
    */
   let behaviour: Behaviour = initialBehaviour();
 
   /**
-   * ⭐⭐ Judge one release as a tap, keep §1.3's history, and — in fork C — toggle the mode
-   * **immediately**.
+   * ⭐⭐ Judge one release as a tap, keep §1.3's history, and toggle the mode **immediately**.
    *
    * ⛔⛔ IMMEDIATELY, device-corrected the same day: *"there is a lag when the second
    * touchpoint is tapped and the behavior change. It shall be immediate."* ⭐ The owner's
@@ -1533,10 +1436,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // on neither its verdict nor on anything being held: *"a single tap by one only
     // touchpoint ANYWHERE also toggles"* (owner, 2026-09-16).
     const verdict = taps.record(pressed, released.t);
-    if (tapTogglesBehaviour(assignment, true)) {
-      behaviour = toggleBehaviour(behaviour);
-      lastVerdict = `fork C: tap → ${behaviour}`;
-    }
+    // ⛔⛔ EVERY tap toggles — *"a single tap by one only touchpoint anywhere"* — with no
+    // condition left: not the fork (there is one model now), and not whether anything is
+    // held, since the mode is what the NEXT grab inherits.
+    behaviour = toggleBehaviour(behaviour);
+    lastVerdict = `tap → ${behaviour}`;
     return verdict;
   };
 
@@ -1570,11 +1474,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         noise.push(s);
       }
     }
-
-    // ⭐⭐⭐ THE ASSIGNMENT LATCH, FIRST: a pending fork change is adopted here if the glass
-    // is empty. ⛔ Before the A15 collection and before any dispatch, so one event cannot
-    // be judged half under one rule table and half under the other.
-    syncAssignment();
 
     // ⭐⭐⭐ A15 — AN ORPHANED SELECTION IS COLLECTED HERE, AT THE NEXT INPUT EVENT, and
     // before anything is dispatched. ⛔ The owner's requirement: the lift itself changes
@@ -1660,7 +1559,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         mode: null,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
-        secondLiftedAtMs: null,
         binding: "BOUND",
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
@@ -1685,15 +1583,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
     if (routed.role === "SECOND") {
       if (info.type === PointerEventTypes.POINTERUP) {
-        forgetAnchor(routed.seq, s.t);
+        forgetAnchor(routed.seq);
         router.release(e.pointerId);
         lastVerdict = "second touchpoint released";
-        // ⭐⭐⭐ FORK C: *"tapped ANYWHERE"* includes the held object itself.
-        // ⛔⛔ FORK C ONLY, and the condition is deliberate: a `SECOND` release has never
-        // fed §1.3's tap history, and making it do so in forks A and B would let a tap on a
-        // held part count toward the camera double-tap — a behaviour change in two forks a
-        // hand has already approved, arriving as a side effect of a third.
-        if (assignment === "TAP_TOGGLE") noteTap(routed.pressed, s);
+        // ⭐⭐⭐ *"Tapped ANYWHERE"* includes the held object itself.
+        // ⚠ A `SECOND` release never fed §1.3's tap history before the toggle existed. It
+        // does now, and that is deliberate: a tap on the held object is a tap *anywhere*.
+        noteTap(routed.pressed, s);
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
         evaluateBindings();
@@ -1718,7 +1614,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // branches below, where lifting one of two fingers ends the gesture. A stray TAP
       // from here would evict a constraint (§1.4) that the user never asked to lose.
       if (info.type === PointerEventTypes.POINTERUP) {
-        forgetAnchor(routed.seq, s.t);
+        forgetAnchor(routed.seq);
         router.release(e.pointerId);
       } else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
       paint();
@@ -1760,7 +1656,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // measures a tap by its own press, not by whatever the last event happened to be.
         // ⚠ The SAME two thresholds §1.3 uses for an object — a tap is a tap whatever it
         // lands on, and a second definition here could disagree with the first.
-        forgetAnchor(routed.seq, s.t);
+        forgetAnchor(routed.seq);
         router.release(e.pointerId);
         // ⭐⭐⭐ A15: this is A10's DEPTH ANCHOR going up — the case that motivated the
         // amendment, because depth is what slides the object off the holder's finger.
@@ -1812,21 +1708,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // a rotation."* ⭐ A finger PLACED QUICKLY skids as it lands — the centroid slides
         // while the contact area grows — so it read MOVING for as long as the landing took,
         // and the mode followed it. Nothing about the GESTURE differed; only the landing.
-        // ⛔⛔ `IN4` recorded the same verdict on 2026-09-14. See `holderDrive`.
         // ⭐⭐⭐ A14: A LIFT-AND-REPLACE IS ONE GESTURE. Between the lift and the press
         // there is genuinely one touchpoint down, so without the grace A13 translates
         // through the middle of a swap — and a swap is 150-300 ms of hand, which is very
         // visible if the holder happens to be moving at the time. ⚠ That is exactly why the
         // owner's cases 2 and 3 *"differ by timing of the input"*.
-        const second = secondFingerOf(grip);
-        const secondHolds = secondTouchHeld(
-          second.present,
-          grip.secondLiftedAtMs === null ? null : s.t - grip.secondLiftedAtMs,
-          cfg.secondTouchGraceMs,
-        );
         grip.mode =
           router.objects().length === 1
-            ? modeFor(assignment, secondHolds, behaviour)
+            ? behaviour
             : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
@@ -1955,7 +1844,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // user stopped touching a few hundred milliseconds ago, and never aimed this gesture
       // at. ⚠ The camera reset is refused for the same reason: the press was on an object.
       if (orphanAction(grip.binding, "RELEASE") === "DROP_WITHOUT_VERDICT") {
-        forgetAnchor(routed.seq, s.t);
+        forgetAnchor(routed.seq);
         router.release(e.pointerId);
         held.delete(e.pointerId);
         lastVerdict = "orphaned holder released — no verdict";
@@ -1980,7 +1869,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         resetCamera();
         lastVerdict = "DOUBLE_TAP → camera reset";
       }
-      // ⛔⛔ FORK C: *"a single tap by one only touchpoint ANYWHERE also toggles"* — and
+      // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
       // *anywhere* includes the object the touchpoint was carrying, which is this branch.
       // ⭐⭐ THE VERDICT IS READ, NOT RE-JUDGED: the recognizer already recorded this tap in
       // the SHARED `TapHistory` (`recognizer.ts` does it), so calling `noteTap` here would
@@ -1989,14 +1878,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // second tap of a pair, so two taps flip the mode twice — back where it started — and
       // also reset the camera, which is the owner's stated worst case and identical to what
       // a second touchpoint's taps do. ⛔ One rule: **one toggle per tap release.**
-      if (
-        (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") &&
-        tapTogglesBehaviour(assignment, true)
-      ) {
+      if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") {
         behaviour = toggleBehaviour(behaviour);
-        lastVerdict = `fork C: tap on the object → ${behaviour}`;
+        lastVerdict = `tap on the object → ${behaviour}`;
       }
-      forgetAnchor(routed.seq, s.t);
+      forgetAnchor(routed.seq);
       router.release(e.pointerId);
       held.delete(e.pointerId);
       paint();
@@ -2012,12 +1898,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const now = performance.now();
     const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
     lastFrameMs = now;
-
-    // ⭐⭐ AND THE ASSIGNMENT LATCH RUNS HERE TOO, not only on pointer events. ⛔ A fork
-    // flipped while the glass is empty produces NO pointer event, so without this the
-    // readout would keep showing the old fork until the next touch — and the person who
-    // just flipped it would be told the flag did nothing. ⚠ An idle tick, one comparison.
-    syncAssignment();
 
     // ⛔⛔⛔ ADVANCE THE MOTION CLOCK FOR EVERY LIVE TOUCHPOINT, EVERY FRAME.
     //
