@@ -74,10 +74,12 @@ export interface GestureConfig {
    * ⭐⭐⭐ **THE `1.0.5` A/B/C — WHICH RULE TABLE IS IN FORCE.**
    *
    * * `0` — **fork A**, `A13`/`D23`: one touchpoint translates, a second held still rotates.
-   *   **The default, and the only reading a hand has judged.**
+   *   ⚠ Was the default until 2026-09-16, and is still the only reading closed by a device
+   *   look of its own.
    * * `1` — **fork B**, the **spec's original**: one touchpoint rotates, two translate.
    * * `2` — **fork C**: a second touchpoint **TAPPED** toggles the ongoing drag between
    *   those two behaviours; a second touchpoint **PRESSED** keeps every meaning it has now.
+   *   ⛔⛔ **THE DEFAULT SINCE 2026-09-16**, by the owner's decision after driving all three.
    *
    * ⚠ It was called `translateNeedsSecondTouch` while there were two forks. Renamed when
    * fork C arrived, because that name answers a yes/no question and this is a three-way
@@ -533,8 +535,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A guess, with a slider. Long enough for a deliberate lift-and-replace, short enough
   // that a genuine lift to one finger does not feel stuck. IN5.
   secondTouchGraceMs: 250,
-  // ⭐ Fork A, the judged one. 1 = the spec's assignment, 2 = fork C's tap toggle.
-  touchpointAssignment: 0,
+  // ⛔⛔ **FORK C IS THE DEFAULT SINCE 2026-09-16** — the owner's call after driving all three.
+  // ⚠ 0 = fork A (`A13`), 1 = the spec's assignment, 2 = fork C's tap toggle.
+  // ⭐ A and B stay one URL parameter away, which is the whole point of `D26`'s flag.
+  touchpointAssignment: 2,
 
   // ⛔⛔ THE HISTORY, KEPT — all four were re-sized 2026-09-15 against the measured floor
   // is a FEEL CHANGE the device must judge: a drag now commits after 3.2 mm instead of

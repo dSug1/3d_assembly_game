@@ -5,8 +5,10 @@
  * when the input system is more complete rather than now:
  *
  * * **`ONE_FINGER_TRANSLATE`** — `A13`/`D23`: one touchpoint TRANSLATES, and a second one
- *   held still turns the same drag into a ROTATION. ⭐ The shipped default, because it is
- *   the one a hand has judged (2026-09-16, *"everything is working"*).
+ *   held still turns the same drag into a ROTATION. ⚠ The shipped default until 2026-09-16,
+ *   and still the only reading closed by a device look of its own (*"everything is
+ *   working"*). ⛔ **Fork C is now the default**, by the owner's decision after driving all
+ *   three — so A is one URL parameter away rather than the baseline.
  * * **`TWO_FINGER_TRANSLATE`** — ⭐ **the SPEC's original assignment**, which `A13` amended:
  *   §2 rule 2bis rotates on one touchpoint, §4 rule 6 translates on two. ⚠ Not a revert to
  *   an old commit: everything built since `A13` — `A14`'s grace, `A15`'s orphan check, the

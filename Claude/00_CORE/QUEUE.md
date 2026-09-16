@@ -50,9 +50,9 @@ one build**, so every later row lands in all of them:
 
 | flag | fork | one touchpoint | second touchpoint |
 |---|---|---|---|
-| `0` | **A** — `A13`, the default and the only reading a hand has judged | translates | held still → rotate |
+| `0` | **A** — `A13`. ⚠ Was the default until 2026-09-16, and still the only fork closed by a device look of its own | translates | held still → rotate |
 | `1` | **B** — the **spec's** own assignment | rotates | → translate |
-| `2` | **C** — `A16` | translates, until a tap says rotate | **tap** → toggle; **press** → depth *or* roll |
+| `2` | **C** — `A16`. ⛔⛔ **THE DEFAULT SINCE 2026-09-16** | translates until a tap says rotate, and the mode **survives a release** | **tap** → toggle, immediately; **press** → depth *or* roll |
 
 ⭐⭐ **Fork C is not an inversion of the other two**, which is why it is a fork and not a
 setting: A and B read the mode from **presence**, C from a **discrete tap**. ⚠ Two

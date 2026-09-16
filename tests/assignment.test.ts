@@ -27,11 +27,13 @@ const B: Assignment = "TWO_FINGER_TRANSLATE";
 const C: Assignment = "TAP_TOGGLE";
 
 describe("assignmentOf — the flag reads as a fork", () => {
-  it("0 is fork A, and it is the SHIPPED DEFAULT", () => {
-    // ⭐ The default is the reading a hand has judged (2026-09-16). A device-approved
-    // behaviour must not become reachable-only-by-flag because a new option arrived.
+  it("0 is fork A — and ⛔ FORK C IS NOW THE SHIPPED DEFAULT", () => {
+    // ⭐⭐ THE DEFAULT IS ASSERTED, not assumed, and this vector has now changed ONCE — on
+    // 2026-09-16, when the owner chose fork C after driving all three. ⚠ It is the guard
+    // that makes a default change a DELIBERATE act: anyone editing `DEFAULT_CONFIG` has to
+    // come here and say so, which is how a shipped behaviour stops moving by accident.
     expect(assignmentOf(0)).toBe(A);
-    expect(assignmentOf(DEFAULT_CONFIG.touchpointAssignment)).toBe(A);
+    expect(assignmentOf(DEFAULT_CONFIG.touchpointAssignment)).toBe(C);
   });
 
   it("1 is fork B, the spec's own assignment", () => {

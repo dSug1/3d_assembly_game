@@ -47,9 +47,9 @@ touches the glass**.
 
 | fork | flag | one touchpoint on an object | a second touchpoint |
 |---|---|---|---|
-| **A** — `A13`/`D23` | `0`, the **default** and the only reading a hand has judged | **translates** | held still → the drag **rotates** |
+| **A** — `A13`/`D23` | `0` · ⚠ the default until 2026-09-16, and still the only fork closed by a device look of its own | **translates** | held still → the drag **rotates** |
 | **B** — the **spec's own** assignment | `1` | **rotates** (§2 rule 2bis) | present → the drag **translates** (§4 rule 6) |
-| **C** — `A16`/`D27` | `2` | **translates**, until a tap says rotate | ⛔ **presence is irrelevant**: a **tap** toggles, a **press** drives one axis |
+| **C** — `A16`/`D27` | `2` · ⛔⛔ **THE DEFAULT SINCE 2026-09-16** | **translates**, until a tap says rotate — and the mode **survives a release** | ⛔ **presence is irrelevant**: a **tap** toggles immediately, a **press** drives one axis |
 
 ### ⛔ Configurations whose meaning DEPENDS on the fork
 

@@ -150,8 +150,8 @@ each rule.
 
 ⭐⭐⭐ **`1.0.5` RUNS THREE FORKS FROM ONE BUILD** (`D26`, row `IN13`). The owner is A/B-ing
 two readings of §2/§4 and will judge them **holistically**, once the input system can be
-felt as a whole: **fork A** (the default, `A13`) one touchpoint translates and a second held
-still rotates; **fork B** (`?touchpointAssignment=1`, or the menu's `⭐ FORK` toggle) the
+felt as a whole: **fork A** (`A13`, `?touchpointAssignment=0`) one touchpoint translates and a second
+held still rotates; **fork B** (`?touchpointAssignment=1`, or the menu's `⭐ FORK` toggle) the
 **spec's own** assignment, one rotates and two translate. ⭐ **fork C** (`=2`, `D27`/`A16`) a second touchpoint **TAPPED** toggles the ongoing drag
 between those two, while a **PRESSED** one keeps every meaning it has now — ⛔⛔ not an
 inversion, so it is a fork rather than a setting, and **it structurally cannot have the
@@ -163,6 +163,10 @@ release, which retires the *"rotation costs a tap every time"* cost; and **the t
 the second finger's axis too**, depth *or* roll, never both, paired by KIND.
 ⭐ `METHOD`: *a device judgement overturns a confident synthetic argument* — the deferral was
 reasoned from first principles AND from Unity's own parameters.
+⛔⛔ **AND FORK C IS NOW THE DEFAULT** (2026-09-16), after the owner drove all three. ⚠ It is
+the default while its current build is **unjudged** — the two fixes ship with the change, so
+the next device look judges both. ⭐ `?touchpointAssignment=0` is the way back to fork A, the
+only fork closed by a device look of its own.
 ⭐⭐ **A and B are a FLAG and not a fork
 because their whole difference is ONE INVERSION in `holderDrive`** — depth, roll, `A14` and
 `A15` all key on *the holder is still*. ⛔⛔ The flag latches **only while nothing touches
