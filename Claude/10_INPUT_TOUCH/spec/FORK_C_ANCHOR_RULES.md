@@ -1,88 +1,356 @@
 # FORK C — the owner's anchor and alignment rules
 
-> **STATUS** · 🔨 **BEING SPECIFIED** (opened 2026-09-16, branch `1.0.8-`) · **OWNS** · the
-> rule set behind `?anchorRules=2`
+> **STATUS** · 🔨 **SPECIFIED, NOT BUILT** (dictated 2026-09-16, branch `1.0.8-`) · **OWNS** ·
+> the rule set behind `?anchorRules=2`
 > **READ IF** · you are building or judging fork C
 > **LAST VERIFIED** · 2026-09-16
 
 ⛔ **NOTHING IS BUILT.** `anchorForkOf(2)` returns `OWNER_TBD`, `runsIn3` answers **false**,
-and the HUD prints `anchor=TBD(inert)`. The fork is visibly inert on purpose — *inert must
-mean nothing happens, not something plausible happens* — so specifying it changes no shipped
-behaviour and carries no risk.
-
-⭐ **The owner's rules go in §2 below, in the owner's words.** Everything outside §2 is
-mine: the record of why fork B's trigger was abandoned, and the seams a new rule set meets.
+and the HUD prints `anchor=TBD(inert)`. ⭐ The owner asked for the conflict check **before**
+any building, which is §4–§6 of this file.
 
 ---
 
 ## 1. Why fork B's trigger was abandoned — the owner's report, verbatim
 
 > *"I will leave fork B for the moment, as I am not satisfied with the flick mechanism."*
+> Asked what specifically: *"difficult for user to implement, and releases the finger from
+> the object it is tracking"*
 
-Asked what specifically dissatisfied, the owner named **two faults**:
+⛔⛔ **BOTH FAULTS ARE PROPERTIES OF A RELEASE-TIME TRIGGER, NOT OF THIS FLICK** (my claim,
+not the owner's). §1.3's flick is a verdict computed *at the lift*: the release **is** the
+trigger, so the finger must leave the glass for the alignment to happen — and 2ter/2quater
+then unselect the object. And because it must be told apart from an ordinary drag it has to
+clear three thresholds, which is what *difficult to implement* means: the gesture is not
+chosen, it is performed to a specification.
 
-> *"difficult for user to implement, and releases the finger from the object it is
-> tracking"*
-
-⛔⛔ **BOTH FAULTS ARE PROPERTIES OF A RELEASE-TIME TRIGGER, NOT OF THIS FLICK.** §1.3's
-flick is a verdict computed *at the lift*, from the motion buffer. That single fact produces
-both complaints by construction:
-
-* **The release IS the trigger**, so the finger must leave the glass for the alignment to
-  happen at all — and §2's 2ter/2quater then unselect the object. The hand loses what it was
-  holding in order to act on it.
-* **It must be distinguishable from an ordinary drag**, so it has to be fast, straight and
-  far enough to clear three thresholds. That is what *difficult to implement* means: the
-  gesture is not chosen, it is *performed to a specification*.
-
-⭐⭐ **SO THE CONSTRAINT ON FORK C IS STRUCTURAL, AND IT IS THE FIRST THING ANY RULE HERE MUST
-SATISFY: the alignment completes MID-GESTURE, with the object still held.** A trigger read
-from a release cannot satisfy it, however it is tuned. ⚠ This is recorded as a constraint
-rather than a design: what the trigger *is* is the owner's to state in §2.
-
-⭐ Two channels in the build already fire mid-gesture, and are named here as evidence that
-the constraint is reachable — not as a proposal: `ShakeDetector` (a back-and-forth, judged
-while the drag continues) and the tap channel (`isTapRelease`, which flips the movement mode
-without disturbing the finger that is holding an object).
+⭐⭐ So fork C's alignment **completes mid-gesture, with the object still held** — and the
+owner's rules below do exactly that: the trigger is a **tap by a second touchpoint**, while
+the first keeps its object.
 
 ---
 
-## 2. THE RULES — ⚠ THE OWNER'S TEXT, to be dictated
+## 2. THE RULES — ⚠ THE OWNER'S TEXT, verbatim
 
-*(Empty. Nothing is assumed, and nothing below this line is mine to write.)*
+> **Fork C rules**
+>
+> * Fork C branches from Fork A, not from Fork B (no flick).
+> * Default start: rotation mode and fork C
+> * There can be only one alignment axis (therefore one DOF reduction). I do not want to
+>   have 2 DOF removed.
+> * If in rotation mode && one touchpoint on first object's hit face (FollowerFace) && tap on
+>   second object's hit face (PioneerFace) => PioneerFace and FollowerFaces are defined, the
+>   FollowerFace shall remain highlighted until un-highlight occurs, then first object
+>   minimally rotates (rotation on the minimum number of axis) so that FollowerFace normal
+>   aligns with PioneerFace normal and then the PioneerFace resets as null and then the mode
+>   switches to translation mode.
+> * Shaking of one object releases the alignment constraints on that object and un-highlight
+>   the FollowerFace and then nullify the FollowerFace.
+> * If first object is aligned && Second touchpoint pressed on second object:
+> * The TargetPosition is defined by the point transform where the second touchpoint raycast
+>   hits the second object's face. Highlight the TargetPosition by a cross quad gizmo
+>   positioned at the TargetPosition which normal is aligned with the second object's face
+>   normal at this TargetPosition (for the moment, this is the normal of the second object's
+>   face).
+> * If rotation mode, the first object orbits along the gravity axis and the horizontal x
+>   axis around the TargetPosition while maintaining its alignment.
+> * If in mode translation, the first object translates towards / away from the
+>   TargetPosition based on the projection of its touchpoint's delta position vector onto the
+>   direction between first object center and TargetPosition. The Second object can also
+>   translate based on the projection of its touchpoint's delta position vector onto the
+>   direction between the TargetPosition and the first object center
+> * Second touchpoint release nullify the highlighted cross quad gizmo and the TargetPosition.
+>
+> * Before building anything, check if the above rules do conflict with any other inputs rule
+>   previously defined and how to transition back and forth from these rules to the other
+>   inputs rules
+
+And, dictated immediately after:
+
+> *"reinstate the rotation reset by flick which was previously implemented in fork C"*
+
+⭐ **What that was, exactly**: §1.3's provisional-motion rollback, deleted globally by `D36`
+the same day at the owner's instruction because it fought fork B's flick alignment. It
+restored the **orientation** captured at press and left the position alone — so *"rotation
+reset"* is literally what it did. ⭐⭐ Fork C has no flick alignment, so the channel is free
+and the conflict `D36` removed does not exist here. ⚠ It returns **as a fork C rule**, not
+as a global behaviour: fork A shipped without it since `D36`.
 
 ---
 
-## 3. The eight questions a rule set answers — fork C's column, for reference
+## 3. MY READING — the rules as a state machine
 
-⭐ Fork B's answers are recorded so fork C can be specified *by contrast* where that is
-shorter than stating it afresh. ⛔ An empty cell means **undefined**, never *"as fork B"*.
+⚠ Mine, for the conflict check. Where it guesses, §7 asks instead of assuming.
 
-| # | the question | fork B (`=1`) | fork C (`=2`) |
+| state | what is true | one finger on obj 1 does | second finger does |
 |---|---|---|---|
-| 1 | what CREATES an alignment | a flick at release, mode `ROTATE` | ⚠ owner — must complete mid-gesture (§1) |
-| 2 | what is ALIGNED | the face picked at press, from the picked normal | ⚠ owner |
-| 3 | onto WHAT | world up/down, or a world axis resolved from screen x at the snap | ⚠ owner |
-| 4 | how much FREEDOM it takes | entry 1 hard (2 DOF), entry 2 soft (1), entry 3 refused | ⚠ owner |
-| 5 | what drives what is LEFT | drag about the axis; second touchpoint's x rolls about it | ⚠ owner |
-| 6 | how it is UNDONE | a back-and-forth shake; alignments go, mates stay | ⚠ owner |
-| 7 | what is VISIBLE while it holds | the face highlight, until eviction | ⚠ owner |
-| 8 | when NONE of it applies | mode `TRANSLATE`, no selection, or fork `NONE` | ⚠ owner |
+| **C0** | nothing held | — | camera: orbit (§2 r1), pinch (§4 r4), double-tap home |
+| **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | **tap on obj 2's face ⇒ ALIGN** (→ C2). Pressed-and-held: ⚠ §7.5 |
+| **C2** | obj 1 aligned, `FollowerFace` highlighted, mode forced `TRANSLATE` | ⚠ **§7.3 — undefined** | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
+| **C3** | aligned + `TargetPosition` live | `ROTATE`: orbit obj 1 about the target. `TRANSLATE`: move obj 1 along centre→target | its own delta moves **obj 2** along target→centre |
+| — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null (→ C1) | |
+| — | flick (any state) | **orientation restored to the press pose** (the reinstated reset) | |
 
-## 4. What a rule set costs to build, by row
+⭐⭐ **THE DESIGN HAS A SHAPE WORTH NAMING**: in C3 the two modes are **angle** and
+**distance** about one point — orbit sets the direction of approach, translation sets the
+separation. That is a polar decomposition about `TargetPosition`, and it is why the mode
+switch at the end of the alignment rule reads naturally: aligning is finished, so what is
+left is *where*, not *which way up*.
 
-⚠ Stated so the specification can be made with the price visible — **not to steer it.**
+---
 
-* **Rows 4, 5, 6 are already built and engine-free** — `core/constraint_stack.ts` (the DOF
-  budget and the solver), `input/anchor_rotate.ts` (twist about a constraint axis, both
-  charts), `input/shake.ts` + `evict` (the undo). A fork that keeps them wires them.
-* **Rows 1 and 3 are the cheapest to replace**: `input/align_flick.ts` builds the constraint
-  and one block in `src/render/scene.ts` fires it. A new trigger is a new small module plus
-  that block.
-* **Row 4 is the deepest**: changing how much freedom an alignment takes means the solver,
-  which 42 + 16 vectors stand on.
-* **Row 2 is `core/face_pick.ts`** — a face from a picked normal, and the marker's
-  orientation. Independent of the trigger.
+## 4. CONFLICTS WITH RULES ALREADY IN FORCE
 
-⛔ **AND THE EXPIRY IS NAMED NOW, per `D28`'s precedent**: the day one fork is chosen the
-others are **deleted** — flag, slider, vectors and all. A dormant fork is a trap.
+### 4.1 ⛔⛔ THE TAP CHANNEL IS ALREADY TAKEN — and it resolves, by luck
+
+`D27`/`D28`: **any single tap anywhere** flips the movement mode, immediately, and the mode
+is a session latch. Fork C's alignment trigger *is* a tap (by a second touchpoint, on another
+object's face) — so today that tap toggles the mode and nothing else.
+`src/render/scene.ts` toggles in **two** places: `noteTap` (a non-holding touchpoint) and the
+holder's own release verdict.
+
+✅ **AND THE COLLISION RESOLVES WITHOUT A CONTRADICTION A HAND COULD SEE.** The rule fires
+only in `ROTATE`, and it ends by switching to `TRANSLATE` — which is *exactly* the flip the
+toggle would have produced. So in fork C the tap can carry both meanings at once:
+
+* tap **hits an object's face** while another object is **held** and mode is `ROTATE` ⇒
+  define `PioneerFace`, align, `Pioneer := null`, mode → `TRANSLATE`;
+* every other tap ⇒ toggle, as `D28` specifies.
+
+⚠ Assumed, not dictated — §7.4. ⛔ And the `ROTATE`-only condition is load-bearing: in
+`TRANSLATE` the same tap must still toggle (to `ROTATE`), or the hand loses the only way back.
+
+### 4.2 ⛔⛔ THE SECOND TOUCHPOINT *PRESSED* IS TAKEN — roll and depth (`A10`/`A12`/`D22`)
+
+Today, a second touchpoint pressed while the holder is still drives **roll by its x** *or*
+**depth by its y**, the mode picking one. Fork C's C3 gives that same configuration an
+entirely different meaning (target + orbit/approach).
+
+⭐ **The two are separable by a condition that is already discrete**: fork C's meaning needs
+*obj 1 aligned* **and** *the second touchpoint on another object*. So:
+
+| second touchpoint pressed… | obj 1 aligned? | fork C |
+|---|---|---|
+| on **another object** | yes | `TargetPosition` + orbit/approach (C3) |
+| on **another object** | no | ⚠ §7.6 — roll/depth, or 6bis/6ter, or nothing |
+| **outside** any object, or on obj 1 | either | ⚠ §7.6 — presumed roll/depth as fork A |
+
+⛔ Note what this displaces: in C3 there is **no roll and no depth at all**. `A12`'s roll is
+the only control that can spin the object about its aligned normal, and C3 takes it away —
+which matters because of §7.3.
+
+### 4.3 ⛔⛔ §4's **6bis / 6ter** ALREADY DEFINE TWO-OBJECT TRANSLATION, ALONG A DIFFERENT AXIS
+
+The owner's revision-5 §4 specifies, for two touchpoints on two objects:
+
+* **6bis** (one `MOVING`, one `STATIONARY`) — the axis between the two **selected FACE
+  CENTRES**, projected on screen; the delta is projected onto it *and its first orthogonal*,
+  and the moving object translates **in depth and along the orthogonal** (`axisMappingMode`
+  exists to A/B this against the `"direct"` reading).
+* **6ter** (both `MOVING`) — both objects translate **oppositely towards each other** along
+  that same axis.
+
+⭐⭐ **FORK C's approach rule IS 6ter's shape with three deliberate differences**, and they
+should be recorded as amendments rather than discovered later:
+
+| | §4 6bis/6ter | fork C |
+|---|---|---|
+| the axis | between two **selected face centres** | **obj 1's centre → the raycast POINT** on obj 2 |
+| the mapping | onto the axis **and its orthogonal**, depth-swapped in `"rotated"` mode | **onto the axis only** — the `"direct"` reading, one degree of freedom |
+| who may move | 6bis: the moving one. 6ter: both, toward each other | **each finger moves its own object** along the line |
+| the partition | by **`MOVING`/`STATIONARY`** | by **mode** and **alignment state** |
+
+⛔ The last row is the real conflict: 6bis/6ter's asymmetric-hands invariant (one hand holds
+the reference frame) is **gone** in fork C, and `A10`'s depth gate — *the holder must be
+still* — does not appear in the owner's text at all. ⚠ In fork C, both objects can move at
+once with no stillness condition, which is precisely what §4's own note flagged as *"the
+hardest case to control"*.
+
+### 4.4 ⛔⛔ `A15`/`D25` WILL DROP THE SELECTION MID-ASSEMBLY
+
+`A15` exists because depth slides an object *out from under the finger carrying it*: a
+raycast at the second touchpoint's lift asks whether the holder is still on its object, and
+if not the selection drops at the next input event. ⛔ **Fork C's C3 does the same thing by
+design** — obj 1 travels along the line to the target, so it leaves the finger — and `R9`
+(the second touchpoint's release) is exactly the moment `A15` fires its raycast.
+
+⚠ So as written, fork C ends an approach by **unselecting obj 1**, while the rules say the
+`FollowerFace` stays highlighted *"until un-highlight occurs"* (a shake). Those two cannot
+both be true → §7.7.
+
+### 4.5 ⛔ THE REINSTATED FLICK RESET FIGHTS THE ALIGNMENT IT SHARES A FORK WITH
+
+A flick restores the orientation captured **at the press**. In C2/C3 the press snapshot is
+from *before* the alignment, so a flick would rotate obj 1 off its aligned direction **while
+the constraint stays on the stack**: the object and its own constraint would then disagree,
+which is the one state §1.4 is built to prevent → §7.2.
+
+⚠ Also: `ShakeDetector.suppressesFlick` exists because *a shake is two flicks by
+construction*. In fork C the shake clears the alignment and the flick resets the rotation —
+two different undos on gestures that look alike. ⭐ The suppression should stay wired, and
+`D33`'s narrowing (it arms once the shake **fires**) is what keeps an abandoned shake from
+also resetting the rotation.
+
+### 4.6 ⚠ THE DEFAULTS CHANGE TWO THINGS, ONE OF THEM SHIPPED
+
+*"Default start: rotation mode and fork C"* means `initialBehaviour()` (today `TRANSLATE`)
+and `anchorRules` (today `0`). ⛔ Making fork C the **default flag** ships an unjudged rule
+set as the product, against `anchor_fork.ts`'s stated reason for `NONE` being the default —
+*it is the only set a hand has closed*. ⭐ Proposed sequencing: build fork C behind `=2`,
+default the **mode** to `ROTATE` *within fork C only* (so fork A's closed feel is untouched),
+and move the flag's default to `2` the day a device pass closes it → §7.8.
+
+### 4.7 ✅ WHAT DOES **NOT** CONFLICT — checked, and worth stating
+
+* **§2 rule 1 (camera orbit) and §4 rule 4 (pinch)**: both need every touchpoint `OUTSIDE`
+  any object; fork C's states all hold at least one object. No overlap.
+* **`A11`'s deadband**: fork C's projections consume `step`, like every other rule. It is
+  applied once, upstream, and needs no fork knowledge.
+* **`A7`'s gravity frame**: `R7`'s *"gravity axis and the horizontal x axis"* **are** `A7`'s
+  two axes — the same basis 2bis already turns about. Fork C inherits it unchanged.
+* **`D35`** (the highlight outlives the gesture and dies with the constraint): the owner's
+  `FollowerFace` rule states the same thing independently. ✅ Confirmation, not conflict.
+* **§1.4's world-vector doctrine**: *"the `PioneerFace` resets as null"* means the alignment
+  is a **frozen world direction**, not a live relationship — which is exactly what §1.4
+  demands of `WORLD_AXIS_ALIGN`. ⚠ Consequence: if obj 2 is later moved, obj 1's alignment
+  does not follow it.
+* **`D13`** (eviction spares `MATE`s): no mates exist in fork C yet, so the shake takes
+  everything. It will matter the day `6quater` or `3D2` lands.
+* **`IGNORED`** (a third touchpoint on a held object): unchanged and still inert.
+
+---
+
+## 5. GEOMETRY — where the rules as written cannot be built literally
+
+### 5.1 ⛔⛔ ONE FACE-NORMAL ALIGNMENT REMOVES **TWO** ROTATIONAL DOF, NOT ONE
+
+> *"There can be only one alignment axis (therefore one DOF reduction). I do not want to have
+> 2 DOF removed."*
+
+⭐ Bringing a face normal onto a direction fixes **two** of the three rotational DOF; what
+survives is the **spin about that normal**. There is no alignment of a normal that costs one
+DOF — one DOF is what is *left*. So the rule is buildable in exactly one reading:
+
+✅ **At most ONE alignment ever on an object; after it, the spin about the aligned normal
+stays free.** That is §1.4's entry 1 with the stack **capped at one entry** — and it does
+answer the fork B complaint, because entry 2 (which took the last DOF and froze the object)
+becomes unreachable by construction.
+
+⚠ Needs confirming, and §7.1 asks — including what a **second** tap on a new face then does:
+replace the alignment, or be refused.
+
+### 5.2 ⛔⛔ PARALLEL OR **ANTI**-PARALLEL? — the rules say parallel; assembly needs anti-parallel
+
+> *"so that FollowerFace normal aligns with PioneerFace normal"*
+
+⛔ Read literally that is **parallel**: both faces then point the same way, so obj 1 presents
+its *opposite* side to the target and the two faces cannot meet flush — while `CLAUDE.md`
+rule 4 and §4's `6quater` both state a mate is **ANTI-PARALLEL** (*"the selected face normal
+is brought anti-parallel to the other selected face normal"*).
+
+⭐ Both are legitimate operations and CAD tools ship both — *align* (same facing, like
+levelling two top faces) and *mate* (facing each other). ⚠ Which one fork C means changes the
+sign of every later rule, so §7.1 asks rather than guessing.
+
+### 5.3 ⚠ *"ORBITS … WHILE MAINTAINING ITS ALIGNMENT"* — position-only, or reorient and re-solve
+
+A rigid rotation of obj 1 about an external pivot changes its **orientation** too, which
+breaks the alignment unless the pivot axis happens to be the aligned normal. ⭐ So *maintaining
+the alignment* has one cheap reading: the orbit moves obj 1's **POSITION** along a sphere
+about `TargetPosition` and leaves its orientation untouched — the constraint is then
+maintained by construction, with no re-solve.
+
+⚠ My reading, and it has a consequence to accept knowingly: orbiting away from the line of
+the frozen Pioneer normal means the two faces end up parallel **but offset** — flush contact
+only happens on that line. → §7.9.
+
+### 5.4 ⛔⛔ THE APPROACH MAPPING DIES EXACTLY WHERE IT MATTERS MOST
+
+`R8` projects a screen delta onto *"the direction between first object center and
+TargetPosition"* — a **world** direction, so the projection must be onto its **screen
+projection**. That fails in two places, and one of them is the assembly itself:
+
+1. **The line points at the camera** ⇒ it projects to a point, every screen direction is
+   equally valid, and the gain is undefined. ⛔ This is the identical degeneracy
+   `anchor_rotate.ts` documents for 2sexte, where the honest tracking mapping `1/(r·sin α)`
+   *diverges*; the build's answer there is to **refuse** and say so.
+2. **The objects touch** ⇒ `centre → target` shrinks to nothing and its direction becomes
+   noise-dominated, so the control gets least stable at contact.
+
+⚠ Fork C has no second channel to hand over to in this state, because §4.2 took roll and
+depth away. → §7.10.
+
+---
+
+## 6. TRANSITIONS — in and out of fork C's rules
+
+⭐ What the owner asked for: *"how to transition back and forth from these rules to the other
+inputs rules"*. Every fork C state is **entered and left on a discrete event**, which is the
+one thing `METHOD` insists on: *a mode may be keyed on PRESENCE, never on MOTION.*
+
+| from | event | to | what the other rules do about it |
+|---|---|---|---|
+| C1 | tap on obj 2's face, mode `ROTATE` | C2 | the tap's toggle meaning is **consumed** by the alignment; the mode change is the same one it would have made (§4.1) |
+| C2 | second touchpoint **pressed** on obj 2 | C3 | roll/depth (`A10`/`A12`) are **displaced** for the life of that touchpoint (§4.2) |
+| C3 | second touchpoint **released** | C2 | gizmo and target null. ⛔ `A15`'s orphan raycast fires on this same event (§4.4) |
+| C2/C3 | **shake** obj 1 | C1 | `evict` clears the stack, the highlight goes; `D13` would spare mates |
+| C2/C3 | **flick** | same state, orientation reset | ⛔ leaves the constraint in place — §7.2 |
+| C1/C2/C3 | holder **released** | C0/C1 | §3 rule 3 unselects the object, ⭐ but `D35` keeps the highlight while the alignment holds |
+| any | fork slider moved | — | `adoptAnchorFork` defers the change until **nothing** is on the glass. ⚠ An alignment made in fork C **survives** a switch to fork A, where nothing consults it → §7.11 |
+| C0 | every touchpoint outside | camera | orbit and pinch are untouched (§4.7) |
+
+⛔⛔ **THE ONE TRANSITION WITH NO DEFINED DESTINATION IS C2 ITSELF** — an aligned object with
+one finger on it and no target. §7.3 is the question that blocks the first build stage.
+
+---
+
+## 7. OPEN QUESTIONS — the owner's to answer, in priority order
+
+1. **Anti-parallel or parallel**, and is *one alignment* a **cap** (stack of one, spin free)?
+   What does a second tap on a new face do — replace, or refuse? (§5.1, §5.2)
+2. **The flick reset while an alignment holds**: refuse it, re-solve the constraint after
+   resetting, or let the flick clear the alignment as the shake does? (§4.5)
+3. **C2 — an aligned object, one finger, no target.** Twist about the aligned normal only
+   (2sexte's driver is built and vectored), free rotation that breaks the alignment, or
+   nothing? (§4.2, §6)
+4. **The tap's double meaning** as set out in §4.1 — correct? (assumed, not dictated)
+5. **A second touchpoint pressed and HELD on obj 2 while obj 1 is NOT aligned** — fork A's
+   roll/depth, §4's 6bis/6ter, or refuse? (§4.2)
+6. **The same, outside any object** while aligned. (§4.2)
+7. **`A15`'s orphan rule in C3**: exempt the holder while a target is live, or let the
+   selection drop when the object leaves the finger? (§4.4)
+8. **Defaults**: `ROTATE` inside fork C only, and the flag's default left at `NONE` until a
+   hand closes fork C? (§4.6)
+9. **The orbit**: position-only about the target, orientation untouched? (§5.3)
+10. **The degenerate approach line**: refuse (as 2sexte does) or hand over to another
+    channel? (§5.4)
+11. **An alignment that outlives a fork switch** — keep, or clear on the switch? (§6)
+12. **How does a MATE ever get asserted in fork C?** §4's `6quater` is the only rule that
+    pushes one and it is **flick-based**, so fork C as dictated brings faces close and never
+    joins them. Deliberate for now, or is a joining rule owed? (§4.3)
+
+---
+
+## 8. WHAT IT COSTS TO BUILD — reuse versus new
+
+⚠ Stated so the specification can be revised with the price visible.
+
+✅ **Already built, engine-free, reusable as-is**: `core/constraint_stack.ts` (entry 1 is the
+minimal swing — the *"minimum number of axis"* the rules ask for — plus `evict`),
+`core/face_pick.ts` (a face from a picked normal, and the marker orientation `D35` needed),
+`input/shake.ts` (the undo trigger), `input/anchor_rotate.ts` (twist about a constraint axis,
+should §7.3 want it), `input/gravity_frame.ts` (`R7`'s two axes).
+
+⭐ **New, and small**: the tap-with-a-holder trigger (one predicate over the router's roles,
+plus the existing pick), the one-entry cap, the `TargetPosition` + cross-quad gizmo (a render
+concern, modelled on the existing `selected-face` quad), and one projection module for `R8`
+(the screen projection of a world direction, with the degenerate case refusing — the same
+shape as `nearSideScreenDirection`, which it can borrow from).
+
+⛔ **The orbit-about-an-external-point of `R7` is the only genuinely new mechanic**, and it
+needs a tunable pair (angle gain) plus a slider, like every other number here.
+
+⚠ **`branches from Fork A` means the TRIGGER and the RULE TABLE, not the mechanisms**: fork C
+still needs face picking and the highlight, which only fork B currently wires, and the
+constraint stack, which is fork-agnostic core. What it does **not** take from fork B is
+`align_flick.ts`, 2bis's empty-stack precondition and 2ter/2quater.
