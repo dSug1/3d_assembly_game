@@ -152,7 +152,7 @@ each rule.
 two readings of §2/§4 and will judge them **holistically**, once the input system can be
 felt as a whole: **fork A** (`A13`, `?touchpointAssignment=0`) one touchpoint translates and a second
 held still rotates; **fork B** (`?touchpointAssignment=1`, or the menu's `⭐ FORK` toggle) the
-**spec's own** assignment, one rotates and two translate. ⭐ **fork C** (`=2`, `D27`/`A16`) a second touchpoint **TAPPED** toggles the ongoing drag
+**spec's own** assignment, one rotates and two translate. ⭐ **fork C** (`=2`, `D27`/`A16`, **the default**) **any single TAP anywhere** toggles the drag
 between those two, while a **PRESSED** one keeps every meaning it has now — ⛔⛔ not an
 inversion, so it is a fork rather than a setting, and **it structurally cannot have the
 defect `A14` fixed**. ⚠ Its trade: rotation costs a tap every time.

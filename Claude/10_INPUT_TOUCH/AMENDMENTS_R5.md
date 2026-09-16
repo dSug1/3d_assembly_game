@@ -742,7 +742,7 @@ in [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md).**
 
 ---
 
-## A16 — ⭐⭐⭐ FORK C: A SECOND TOUCHPOINT **TAPPED** TOGGLES THE ONGOING DRAG *(owner, 2026-09-16)*
+## A16 — ⭐⭐⭐ FORK C: **ANY SINGLE TAP** TOGGLES THE MOVEMENT BEHAVIOUR *(owner, 2026-09-16)*
 
 **Adds** a third reading of §2/§4 to `D26`'s flag — it amends no clause, forks A and B are
 untouched, and it is reachable as `?touchpointAssignment=2`.
@@ -756,25 +756,26 @@ untouched, and it is reachable as `?touchpointAssignment=2`.
 from **presence**, C from a **discrete tap**, leaving a held second finger to mean only what
 it already means. ⭐⭐ So **fork C cannot have the defect `A14` fixed** — no lift-and-replace
 gap for the mode to fall through.
-⛔⛔ **THE TOGGLE IS A SESSION MODE, NOT A PER-GESTURE FLAG — device-corrected 2026-09-16**:
-*"I would expect the movement resumes the behavior as it was prior to release."* I had read
-*"for one single ongoing touchpoint"* as *dies with the gesture*. ⭐⭐ It retires the cost I
-had stated against this fork — *rotation costs a tap every time* was an artefact of my
-reading; it costs one only when **switching**.
+⛔⛔ **AND *ANY* SINGLE TAP TOGGLES, ANYWHERE** — *"a single tap by one only touchpoint
+anywhere also toggles … not only a tap by second touchpoint"* (owner, 2026-09-16). ⭐ A tap
+with nothing in hand sets the mode the **next grab inherits**; a tap on the carried object
+toggles too. ⛔ One rule: **one toggle per tap release** — and a `DOUBLE_TAP` verdict IS the
+second tap of a pair, which is why two taps are a net nothing plus a camera reset.
+⚠ The `holderPresent` guard is removed, not ignored, and the two arguments it rested on are
+in [`../00_CORE/queue_notes/IN13.md`](../00_CORE/queue_notes/IN13.md) with the double-count
+trap the object path had to avoid.
 
-⛔⛔ **THE TOGGLE IS IMMEDIATE, AND THIS IS ITS THIRD FORMULATION.** ⭐ (1) toggle at once,
-*consuming* the tap so two toggles could not reset the camera; (2) on the owner's
-instruction, a single tap **held for `doubleTapWindow`** — which made the two gestures
-separable and retired the consume rule; (3) ⛔ **a hand felt the 300 ms**: *"it shall be
-immediate. Worst case, a double tap occurs and the behavior and movement can be reverted
-back while the camera orbit resets."*
-⭐⭐ So a double tap now flips the mode **twice** — back where it started — **and** resets the
-camera, and both are accepted in the owner's own words rather than hidden behind a special
-case. ⭐⭐⭐ Which is precisely Unity's `Tap` (*"does not wait to detect a second tap"*),
-chosen deliberately for a reason no documentation states: **immediacy on a mode switch beats
-the discrimination.** ⚠ `METHOD`: *a device judgement overturns a confident synthetic
-argument* — the deferral was reasoned from first principles AND from Unity's parameters, and
-the cost was invisible to both. Full sequence:
+⛔⛔ **TWO DEVICE CORRECTIONS THE SAME DAY, both to my reading rather than to the owner's
+design.** ⭐ The toggle is a **SESSION MODE** — *"the movement resumes the behavior as it was
+prior to release"* — retiring the *rotation costs a tap every time* cost I had argued against
+the fork. ⭐ And it is **IMMEDIATE**: a deferral that waited out the double-tap window was
+felt as lag, so a double tap now flips twice (back where it started) **and** resets the
+camera, both accepted in the owner's words.
+⭐⭐⭐ Which is precisely Unity's `Tap` (*"does not wait to detect a second tap"*), chosen for
+a reason no documentation states: **immediacy on a mode switch beats the discrimination.**
+⚠ `METHOD`: *a device judgement overturns a confident synthetic argument* — the deferral was
+reasoned from first principles AND from Unity's parameters, and its cost was invisible to
+both. ⭐ Three formulations and what each traded:
 [`../00_CORE/queue_notes/IN13.md`](../00_CORE/queue_notes/IN13.md).
 
 ⛔⛔ **AND THE TOGGLE PICKS THE SECOND FINGER'S AXIS TOO — DEPTH *OR* ROLL, NEVER BOTH**
@@ -782,12 +783,11 @@ the cost was invisible to both. Full sequence:
 control depth translation by delta position y or roll by delta position x (not both).
 Switching between the two shall indeed require the tap."*
 
-⭐⭐ **THE PAIRING IS BY KIND, AND IT IS WHAT MAKES ONE TOGGLE ENOUGH.** `TRANSLATE` pairs
-the holder's screen-plane drag with the second finger's **depth** — both translations — and
-`ROTATE` pairs yaw/pitch with **roll**. So the tap answers a single question, *am I
-translating or rotating?*, and both fingers follow the same answer.
-⛔ Forks A and B keep `A12` exactly: x and y live at once, kept independent by `A11`'s
-per-axis bands. The narrowing is fork C's alone, and a vector asserts that containment.
+⭐⭐ **THE PAIRING IS BY KIND, WHICH IS WHAT MAKES ONE TOGGLE ENOUGH.** `TRANSLATE` pairs the
+holder's screen-plane drag with the second finger's **depth** — both translations — and
+`ROTATE` pairs yaw/pitch with **roll**, so one question (*am I translating or rotating?*)
+answers for both fingers. ⛔ Forks A and B keep `A12` exactly: x and y live at once via
+`A11`'s per-axis bands. The narrowing is fork C's alone, and a vector asserts it.
 ⚠ **WHAT IT COSTS**: a roll and a depth push need a tap between them — which is the point
 (no diagonal does half of each by accident), and the thing to weigh against `A12`.
 

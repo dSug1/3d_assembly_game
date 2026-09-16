@@ -178,27 +178,37 @@ describe("⭐⭐⭐ FORK C — a TAPPED second touchpoint toggles the ongoing dr
   });
 });
 
-describe("⛔⛔ FORK C — the tap is CONSUMED, or two toggles reset the camera", () => {
+describe("⛔⛔ FORK C — WHICH taps toggle, and it is now ALL of them", () => {
+  // ⚠ This block was titled *"the tap is CONSUMED, or two toggles reset the camera"* while
+  // that rule existed. It was retired when the double tap stopped being a toggle, and the
+  // title is corrected rather than left describing a rule the code no longer has.
   it("only fork C toggles", () => {
     // ⭐ A and B must be untouched: a tap outside while holding is their camera double-tap.
-    expect(tapTogglesBehaviour(A, true, true)).toBe(false);
-    expect(tapTogglesBehaviour(B, true, true)).toBe(false);
-    expect(tapTogglesBehaviour(C, true, true)).toBe(true);
+    expect(tapTogglesBehaviour(A, true)).toBe(false);
+    expect(tapTogglesBehaviour(B, true)).toBe(false);
+    expect(tapTogglesBehaviour(C, true)).toBe(true);
   });
 
   it("⛔ a PRESS does not toggle — it keeps every meaning it already has", () => {
     // ⭐ The owner's own split: *"second touchpoint pressed (not tapped) same behavior as
     // current (depth translation, roll, …)"*.
-    expect(tapTogglesBehaviour(C, false, true)).toBe(false);
+    expect(tapTogglesBehaviour(C, false)).toBe(false);
   });
 
-  it("⛔⛔ WITH NOTHING HELD IT DOES NOT TOGGLE, so the camera reset stays reachable", () => {
-    // ⭐⭐ THE COLLISION THIS GUARD EXISTS FOR. Two taps outside any object fly the camera
-    // home. If a tap with nothing held were consumed as a toggle, that reset would be
-    // unreachable on an empty scene — exactly the scene it is most wanted on. ⚠ And a
-    // *second* touchpoint presupposes a first, so there is no ongoing gesture to toggle
-    // either: both arguments point the same way.
-    expect(tapTogglesBehaviour(C, true, false)).toBe(false);
+  it("⛔⛔ ANY TAP TOGGLES — including with NOTHING HELD, and this vector was INVERTED", () => {
+    // ⭐⭐ IT ASSERTED THE OPPOSITE UNTIL 2026-09-16, on two arguments I had written down:
+    // that a *second* touchpoint presupposes a first, and that the camera double-tap had to
+    // stay reachable on an empty scene. ⛔ The owner overruled both: *"a single tap by one
+    // only touchpoint anywhere also toggles the movement behavior."*
+    // ⭐ The first argument dissolved when the toggle became a session MODE — setting it
+    // with an empty hand is now the useful case, since it is what the next grab inherits.
+    // ⭐ The second was already answered by the accepted trade: a double tap toggles twice
+    // (back where it started) AND resets the camera. Nothing became unreachable.
+    // ⚠ The `holderPresent` parameter is GONE, not ignored — a dead argument named after a
+    // condition a hand overruled is an invitation to wire it back.
+    expect(tapTogglesBehaviour(C, true)).toBe(true);
+    expect(Object.keys(assignment)).toContain("tapTogglesBehaviour");
+    expect(tapTogglesBehaviour.length).toBe(2);
   });
 });
 

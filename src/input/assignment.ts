@@ -183,12 +183,31 @@ export function toggleBehaviour(b: Behaviour): Behaviour {
  * (300 ms on every mode switch) was invisible to all of that.
  */
 
-export function tapTogglesBehaviour(
-  assignment: Assignment,
-  wasTap: boolean,
-  holderPresent: boolean,
-): boolean {
-  return assignment === "TAP_TOGGLE" && wasTap && holderPresent;
+/**
+ * ⛔⛔ **ANY SINGLE TAP TOGGLES, ANYWHERE — owner, 2026-09-16.** *"A single tap by one only
+ * touchpoint anywhere also toggles the movement behavior (not only a tap by second
+ * touchpoint as currently setup)."*
+ *
+ * ⚠ **THE GUARD THAT WENT, AND WHY IT WAS THERE.** This took a third argument —
+ * `holderPresent`, something actually being carried — on two arguments I had written down:
+ * that a *second* touchpoint presupposes a first, so with nothing held there was no ongoing
+ * gesture to toggle; and that §1.3's camera double-tap had to stay reachable on an empty
+ * scene. ⭐ The first dissolved when the toggle became a **session mode** — it is now the
+ * state the NEXT grab inherits, so setting it with an empty hand is the useful case rather
+ * than a meaningless one. ⭐⭐ The second was already answered by the owner's accepted trade:
+ * a double tap toggles twice — back where it started — **and** resets the camera. Nothing
+ * became unreachable; one gesture does two things, deliberately.
+ * ⛔ So the parameter is **removed rather than ignored**: a dead argument named after a
+ * condition a hand overruled is an invitation to wire it back — the same reason
+ * `holderDrive` refuses to take a motion state.
+ *
+ * @param assignment only `TAP_TOGGLE` toggles; forks A and B are untouched by this.
+ * @param wasTap     did the release pass §1.3's tap test — `isTapRelease` for a touchpoint
+ *   that carried nothing, or the recognizer's own `TAP`/`DOUBLE_TAP` verdict for one that
+ *   was carrying an object. ⛔ The only condition left.
+ */
+export function tapTogglesBehaviour(assignment: Assignment, wasTap: boolean): boolean {
+  return assignment === "TAP_TOGGLE" && wasTap;
 }
 
 /**

@@ -1529,11 +1529,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       mmToPx(cfg.doubleTapSlop),
     );
     if (!wasTap) return null;
-    // ⛔ The history is kept for §1.3's double tap whatever the fork, and the toggle no
-    // longer depends on its verdict — only on `held.size`, since a *second* touchpoint
-    // presupposes a first and a tap with nothing held belongs to the camera reset.
+    // ⛔ The history is kept for §1.3's double tap whatever the fork, and the toggle depends
+    // on neither its verdict nor on anything being held: *"a single tap by one only
+    // touchpoint ANYWHERE also toggles"* (owner, 2026-09-16).
     const verdict = taps.record(pressed, released.t);
-    if (tapTogglesBehaviour(assignment, true, held.size > 0)) {
+    if (tapTogglesBehaviour(assignment, true)) {
       behaviour = toggleBehaviour(behaviour);
       lastVerdict = `fork C: tap → ${behaviour}`;
     }
@@ -1979,6 +1979,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (verdict.kind === "DOUBLE_TAP") {
         resetCamera();
         lastVerdict = "DOUBLE_TAP → camera reset";
+      }
+      // ⛔⛔ FORK C: *"a single tap by one only touchpoint ANYWHERE also toggles"* — and
+      // *anywhere* includes the object the touchpoint was carrying, which is this branch.
+      // ⭐⭐ THE VERDICT IS READ, NOT RE-JUDGED: the recognizer already recorded this tap in
+      // the SHARED `TapHistory` (`recognizer.ts` does it), so calling `noteTap` here would
+      // record the same tap twice and corrupt the double-tap pairing for every consumer.
+      // ⚠ Both `TAP` and `DOUBLE_TAP` toggle, once each: a `DOUBLE_TAP` verdict IS the
+      // second tap of a pair, so two taps flip the mode twice — back where it started — and
+      // also reset the camera, which is the owner's stated worst case and identical to what
+      // a second touchpoint's taps do. ⛔ One rule: **one toggle per tap release.**
+      if (
+        (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") &&
+        tapTogglesBehaviour(assignment, true)
+      ) {
+        behaviour = toggleBehaviour(behaviour);
+        lastVerdict = `fork C: tap on the object → ${behaviour}`;
       }
       forgetAnchor(routed.seq, s.t);
       router.release(e.pointerId);
