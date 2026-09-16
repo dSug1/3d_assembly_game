@@ -776,6 +776,21 @@ all, the gestures stop overlapping and a double tap keeps its forks-A-and-B mean
 ⚠ **THE COST**: the toggle lands `doubleTapWindow` (300 ms) after the tap, with a slider.
 ⛔ ONE constant, shared with §1.3 — two would leave a tap that is neither single nor double.
 
+⛔⛔ **AND THE TOGGLE PICKS THE SECOND FINGER'S AXIS TOO — DEPTH *OR* ROLL, NEVER BOTH**
+*(owner, 2026-09-16)*: *"depending on which is toggled, the second touchpoint shall only
+control depth translation by delta position y or roll by delta position x (not both).
+Switching between the two shall indeed require the tap."*
+
+⭐⭐ **THE PAIRING IS BY KIND, AND IT IS WHAT MAKES ONE TOGGLE ENOUGH.** `TRANSLATE` pairs
+the holder's screen-plane drag with the second finger's **depth** — both translations — and
+`ROTATE` pairs yaw/pitch with **roll**. So the tap answers a single question, *am I
+translating or rotating?*, and both fingers follow the same answer.
+⛔ Forks A and B keep `A12` exactly: x and y live at once, kept independent by `A11`'s
+per-axis bands. The narrowing is fork C's alone, and a vector asserts that containment.
+⚠ **WHAT IT COSTS**: in fork C a roll and a depth push cannot be interleaved without a tap
+between them. ⭐ That is the point — no diagonal can do half of each by accident — and it is
+what a hand has to weigh against `A12`'s two-axes-at-once.
+
 ⚠ **One case is left open on purpose** — a tap on a *different* object, already rule 5 /
 6bis's configuration and `IN3`'s selection to define.
 ⭐ `modeFor` is the ONE place a held object's mode is decided, for all three forks, so the

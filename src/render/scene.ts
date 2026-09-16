@@ -1366,7 +1366,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐⭐⭐ AMENDMENT A12 — the second finger's TWO AXES drive TWO RULES: x is ROLL, y is
     // DEPTH, and A11's per-axis bands keep them independent. ⛔ The travel is the
     // DEADBANDED travel, exactly as rule 6 and 2bis take the holder's.
-    const drive = secondFingerDrive(grip.rec.motionState, tracker.axes, tracker.step);
+    // ⭐⭐⭐ A16: in fork C the toggle also picks WHICH axis this finger drives — depth by
+    // its y, or roll by its x, never both. ⛔ Handed the fork and the grip's toggle so the
+    // narrowing is decided inside the vectored rule and not here.
+    const drive = secondFingerDrive(
+      grip.rec.motionState,
+      tracker.axes,
+      tracker.step,
+      assignment,
+      grip.behaviour,
+    );
     if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
 
     if (drive.depthDyPx !== 0) {

@@ -27,7 +27,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**580 golden vectors, all passing** (37 → 580).
+**607 golden vectors, all passing** (37 → 607).
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 
@@ -42,7 +42,7 @@ model and so did not wait on `3D1`:
 | `A13` | ⭐⭐⭐ **one touchpoint TRANSLATES; a second held STILL ROTATES**. Whichever finger moves acts; the other one's state picks the rule | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A10` | ⭐⭐ depth is a **still holder and a moving anchor**; rule 6's second touchpoint may be on the object | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
-| `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?touchpointAssignment=1`, and ⭐ **fork C** (`=2`) makes a TAPPED second touchpoint toggle the ongoing drag | 🔧 built, 17 vectors — the **verdict** is row `IN13`, not due until the input system can be judged whole |
+| `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?touchpointAssignment=1`, and ⭐ **fork C** (`=2`) makes a TAPPED second touchpoint toggle the ongoing drag — ⛔ which also picks the second finger's axis, **depth or roll, never both** | 🔧 built, 17 vectors — the **verdict** is row `IN13`, not due until the input system can be judged whole |
 | `A15` | ⭐⭐⭐ **a holder no longer UNDER its object gives the selection up** — a raycast at the second touchpoint's lift, and the unselect is DEFERRED to the next input event | ⛔ built, 16 vectors, **A DEVICE LOOK IS OWED** |
 
 ⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit,

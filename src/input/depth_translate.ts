@@ -219,12 +219,32 @@ export function secondFingerDrive(
   holder: MotionState,
   secondAxes: { readonly x: MotionState; readonly y: MotionState },
   secondStep: { readonly dx: number; readonly dy: number },
+  assignment: Assignment,
+  toggled: Behaviour,
 ): { readonly rollDxPx: number; readonly depthDyPx: number } {
   // ⭐ The SAME gate as A10, asked once per axis — which is all A12 adds to it.
-  return {
+  const gated = {
     rollDxPx: depthGate(holder, secondAxes.x) === "DEPTH" ? secondStep.dx : 0,
     depthDyPx: depthGate(holder, secondAxes.y) === "DEPTH" ? secondStep.dy : 0,
   };
+  // ⭐⭐⭐ FORK C, A16: THE TOGGLE PICKS A FAMILY, AND THE SECOND FINGER DRIVES ONE AXIS,
+  // NOT BOTH (owner, 2026-09-16): *"depending on which is toggled, the second touchpoint
+  // shall only control depth translation by delta position y or roll by delta position x
+  // (not both). Switching between the two shall indeed require the tap."*
+  //
+  // ⭐⭐ THE PAIRING IS BY KIND, and it is what makes one toggle enough: `TRANSLATE` pairs
+  // the holder's screen-plane drag with the second finger's **depth** — both translations —
+  // and `ROTATE` pairs yaw/pitch with **roll**. So the tap answers one question, *am I
+  // translating or rotating?*, and both fingers follow the same answer.
+  // ⛔ Forks A and B keep `A12` exactly: x and y live at once, kept independent by A11's
+  // per-axis bands. This narrowing is fork C's alone.
+  // ⚠ What it costs: in fork C a roll and a depth push cannot be interleaved without a tap
+  // between them — which is the point (no diagonal can do half of each by accident), and the
+  // thing a hand has to judge.
+  if (assignment !== "TAP_TOGGLE") return gated;
+  return toggled === "ROTATE"
+    ? { rollDxPx: gated.rollDxPx, depthDyPx: 0 }
+    : { rollDxPx: 0, depthDyPx: gated.depthDyPx };
 }
 
 /**

@@ -367,7 +367,7 @@ describe("⭐⭐⭐ A12 — the second finger's two axes drive two different rul
   const STI = "STATIONARY" as const;
 
   it("⭐⭐ x drives ROLL, y drives DEPTH, and they are independent", () => {
-    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 });
+    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, A, "TRANSLATE");
     expect(d.rollDxPx).toBe(12);
     expect(d.depthDyPx).toBe(-7);
   });
@@ -375,13 +375,13 @@ describe("⭐⭐⭐ A12 — the second finger's two axes drive two different rul
   it("⭐⭐ a PURELY HORIZONTAL second drag rolls and does NOT push depth", () => {
     // ⛔ The axis that has not broken its own band contributes nothing — that is A11's
     // corridor doing the work this rule depends on.
-    const d = secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0 });
+    const d = secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0 }, A, "TRANSLATE");
     expect(d.rollDxPx).toBe(12);
     expect(d.depthDyPx).toBe(0);
   });
 
   it("⭐⭐ a PURELY VERTICAL second drag pushes depth and does NOT roll", () => {
-    const d = secondFingerDrive(STI, { x: STI, y: MOV }, { dx: 0, dy: -9 });
+    const d = secondFingerDrive(STI, { x: STI, y: MOV }, { dx: 0, dy: -9 }, A, "TRANSLATE");
     expect(d.rollDxPx).toBe(0);
     expect(d.depthDyPx).toBe(-9);
   });
@@ -389,13 +389,13 @@ describe("⭐⭐⭐ A12 — the second finger's two axes drive two different rul
   it("⛔⛔ NOTHING happens while the finger ON THE OBJECT is moving — that is rule 6", () => {
     // ⭐ The holder wins every tie, exactly as in A10. A moving holder means translate, and
     // the second finger is a mode selector that contributes no motion.
-    const d = secondFingerDrive(MOV, { x: MOV, y: MOV }, { dx: 12, dy: -7 });
+    const d = secondFingerDrive(MOV, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, A, "TRANSLATE");
     expect(d.rollDxPx).toBe(0);
     expect(d.depthDyPx).toBe(0);
   });
 
   it("⛔ a still hand does nothing", () => {
-    const d = secondFingerDrive(STI, { x: STI, y: STI }, { dx: 0, dy: 0 });
+    const d = secondFingerDrive(STI, { x: STI, y: STI }, { dx: 0, dy: 0 }, A, "TRANSLATE");
     expect(d.rollDxPx).toBe(0);
     expect(d.depthDyPx).toBe(0);
   });
@@ -404,7 +404,7 @@ describe("⭐⭐⭐ A12 — the second finger's two axes drive two different rul
     // ⛔ A gate that also scaled would be a second gain, free to disagree with the one in
     // the config. The deadband already shaped this travel; nothing here reshapes it.
     for (const v of [0.01, 1, 37.5, -420]) {
-      expect(secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }).rollDxPx).toBe(v);
+      expect(secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }, A, "TRANSLATE").rollDxPx).toBe(v);
     }
   });
 
@@ -418,7 +418,7 @@ describe("⭐⭐⭐ A12 — the second finger's two axes drive two different rul
       depthDyPx: sharedFlag === MOV ? 0.6 : 0,
     };
     expect(naive.depthDyPx).not.toBe(0);
-    expect(secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0.6 }).depthDyPx).toBe(0);
+    expect(secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0.6 }, A, "TRANSLATE").depthDyPx).toBe(0);
   });
 });
 
@@ -478,6 +478,7 @@ describe("⭐ A12's roll angle is a DRAG, not a swept circle", () => {
  */
 const A = "ONE_FINGER_TRANSLATE" as const;
 const B = "TWO_FINGER_TRANSLATE" as const;
+const C = "TAP_TOGGLE" as const;
 
 describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate (FORK A, the default)", () => {
   const MOV = "MOVING" as const;
@@ -664,5 +665,59 @@ describe("⭐⭐⭐ A14 — a second touchpoint survives its own replacement", (
       holderDrive(secondTouchHeld(false, sinceLift, 0), A),
     );
     expect(modes).toEqual(["TRANSLATE", "TRANSLATE", "TRANSLATE"]);
+  });
+});
+
+describe("⭐⭐⭐ A16 / FORK C — the toggle also picks DEPTH or ROLL, never both", () => {
+  const MOV2 = "MOVING" as const;
+  const STI2 = "STATIONARY" as const;
+  const both = { x: MOV2, y: MOV2 };
+  const step = { dx: 12, dy: -7 };
+
+  it("⭐⭐ TRANSLATE keeps DEPTH and suppresses roll", () => {
+    // ⭐ The pairing is by KIND: the holder's screen-plane drag and the second finger's
+    // depth are both translations, so one toggle answers for both fingers.
+    const d = secondFingerDrive(STI2, both, step, C, "TRANSLATE");
+    expect(d.depthDyPx).toBe(-7);
+    expect(d.rollDxPx).toBe(0);
+  });
+
+  it("⭐⭐ ROTATE keeps ROLL and suppresses depth", () => {
+    const d = secondFingerDrive(STI2, both, step, C, "ROTATE");
+    expect(d.rollDxPx).toBe(12);
+    expect(d.depthDyPx).toBe(0);
+  });
+
+  it("⛔⛔ NEVER BOTH — the owner's words, as an invariant over every combination", () => {
+    // ⚠ Including a pure diagonal, which under A12 drives both at once: in fork C it must
+    // do exactly one, so half a roll cannot arrive by accident during a depth push.
+    for (const axes of [both, { x: MOV2, y: STI2 }, { x: STI2, y: MOV2 }]) {
+      for (const t of ["TRANSLATE", "ROTATE"] as const) {
+        const d = secondFingerDrive(STI2, axes, { dx: 5, dy: 5 }, C, t);
+        expect(d.rollDxPx === 0 || d.depthDyPx === 0).toBe(true);
+      }
+    }
+  });
+
+  it("⛔ FORKS A AND B KEEP A12 EXACTLY — both axes at once", () => {
+    // ⭐⭐ THE CONTAINMENT. A12 is device-approved in forks A and B, and fork C's narrowing
+    // must not reach it — the toggle value is deliberately varied here to prove it cannot.
+    for (const t of ["TRANSLATE", "ROTATE"] as const) {
+      for (const f of [A, B] as const) {
+        const d = secondFingerDrive(STI2, both, step, f, t);
+        expect(d.rollDxPx).toBe(12);
+        expect(d.depthDyPx).toBe(-7);
+      }
+    }
+  });
+
+  it("⛔ the A10 GATE still comes first — a moving holder drives neither, in every fork", () => {
+    // ⚠ The narrowing is a MASK on top of A10's gate, not a replacement for it: with the
+    // holder moving this is rule 6, and the second finger contributes nothing at all.
+    for (const t of ["TRANSLATE", "ROTATE"] as const) {
+      const d = secondFingerDrive(MOV2, both, step, C, t);
+      expect(d.rollDxPx).toBe(0);
+      expect(d.depthDyPx).toBe(0);
+    }
   });
 });
