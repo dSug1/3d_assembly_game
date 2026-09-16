@@ -100,8 +100,11 @@ travels equal?"* has no answer at a reversal or a late start.
 state estimated speed over **one sample pair**, so with the measured 0.761 mm of noise a
 resting finger read ~95 mm/s and **STATIONARY was unreachable — for any real finger, since
 the day the noise was measured**. ⭐ Fixed to a windowed estimate, with a validator rule and
-four §1.1 numbers re-sized. ⚠ **A device pass is owed**: a drag now commits at 3.2 mm
-instead of 1.5 mm, and STATIONARY takes ~0.9 s to return after a drag. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
+four §1.1 numbers re-sized. ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"*, which is rule 5
+and the only thing that closes a change here. ⚠ The numbers a hand has now accepted:
+`motionDeadbandMm` **3.5 mm**, `restConfirmMs` **30 ms**, `secondTouchGraceMs` **250 ms**,
+`gainRollDrag` **2 °/mm** — the last two were never judged on their own, so they are the
+first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
 ⛔⛔ **Twenty-seven defects, twenty-six of them BY FINGER, and none visible to a green
