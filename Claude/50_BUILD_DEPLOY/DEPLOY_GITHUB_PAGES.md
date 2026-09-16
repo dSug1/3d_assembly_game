@@ -69,6 +69,19 @@ git diff --stat HEAD <branch>    # ⭐ CONFIRM: empty means the merged tree IS t
 directly — which the next line forbids — and a `--no-ff` merge would be a real merge with
 real conflicts, not a formality.
 
+⛔⛔ **AND THE NON-EMPTY CASE HAPPENED THE SAME DAY.** `c4105e9` — the commit that
+rewrote *this very section* — was made **directly on `main`**, so the first diagnostic came
+back **non-empty**: `main` held unique WORK, not merely merge shape.
+⭐⭐ **The resolution runs the other way — merge `main` INTO the branch first**
+(`git merge --no-ff main`). That restores `main` as a strict ancestor, and the routine
+`--ff-only` merge then works exactly as documented.
+⚠ It cost nothing here only because the two sides touched **disjoint files**; check that
+before trusting it (`git diff --stat <branch>...main`, and the file lists of each side).
+⭐ **Why it must not be left alone**: the next branch is cut from **the branch's** tip, so
+a correction stranded on `main` is invisible to every session afterwards — here, the
+sentence already proven wrong would have been the one a new session read — and `main`'s
+unique commit re-appears as divergence at every later merge.
+
 ⚠ A trap worth knowing: `git merge --no-ff -m "…" <branch>` with the message BEFORE the
 branch name silently merges **nothing** and reports *"Already up to date"*. Put the branch
 first, or use `-F`.
