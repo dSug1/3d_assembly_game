@@ -140,74 +140,16 @@ COMPOSITE** — §4's **6bis, 6ter and 6quater** — which is the catalog's caut
 reason `SEC4` exists. ⭐ It also records what was DECLINED and why, so a later session does
 not re-derive the assessment.
 
-⭐⭐ **`IN5` IS NOW PRACTICAL.** Tunables override from the **URL**
-(`?motionDeadbandMm=3.5&gainRollDrag=3`) and the orbit rings have an on-screen **tuning
-menu**, so a placeholder can be A/B'd by finger without a rebuild.
-⛔ **Every threshold is still a placeholder** — except the six orbit ring values
-(⚠ the top ring was reopened to **1.0 m / 0.55 m** on 2026-09-14, making the surface
-**asymmetric**: 1.14 m of eye distance at the top against 0.71 m at the bottom, so a
-top-down view frames far wider than a bottom-up one) and the
-four gains (`gainRotateFree` 0.07, `gainRoll` 1, `gainOrbitYaw` 0.054,
-`gainOrbitElevation` 0.02), which the owner chose on the device on 2026-09-14 and are
-the first *judgements* in the file, plus `pointerNoiseMm`, the first *measurement*.
-⛔⛔ **A GUESSED GAIN IS RELIABLY TOO SLOW — THREE FOR THREE.** Every gain a hand has
-touched was raised from my guess: ×3.4, ×2.3, and ×2 for the elevation gain, whose row
-had already *predicted* it was slow — which was worth nothing until a finger moved the
-slider. ⭐ Ship the slider WITH the rule, not after a session is spent disliking it.
-⭐ Measure **`pointerNoiseMm` first** — **the instrument exists** since 2026-09-14:
-`src/input/noise_meter.ts`, reported on the HUD as `noise floor=… now=… n=… cfg=…`. Hold
-one finger still for a few seconds; `floor` is the answer. The sagitta criterion and
-several other thresholds are only defensible relative to it.
-
-⭐ **Rule 6's four numbers were chosen on the device over FIVE passes, 2026-09-14**:
-`gainTranslateScreen` **1.17**, `translateInertiaMs` **7.6**, `translateDampingRatio` **0.2**,
-`translateLeadMs` **0.2**. ⚠ τ has a FLOOR of roughly one pointer interval (8–12 ms): below
-it the mass stops smoothing the staircase the target arrives in and the pointer/frame beat
-is visible as jitter. ⛔ **Rotation has NO inertia** — it was built and rejected on the
-device; see `QUEUE.md`'s YOU-ARE-HERE block before rebuilding it. Every one ended up well away from what the simulation argued for
-(I proposed 30 ms at ζ 0.65, and a lead of 3.2 ms). ⚠ **A simulation narrows the range; it
-does not pick the number** — and a *computed landmark* does not either: the lead has an
-exact value at which a steady drag leaves no gap, and the hand chose a sixth of it.
-⭐ The object now deviates &lt;0.45 mm from the finger at 300 mm/s, under the measured pointer
-noise, so the whole of the feel is in the **overshoot** rather than in any gap.
-
-⭐⭐ **MEASURED 2026-09-14: `pointerNoiseMm` = 0.761 mm** — five times the 0.15 mm
-placeholder it replaced. ⚠ **It is a RESTING-FINGER floor, and gameplay is not a
-resting finger**: a moving contact patch is a different regime, and nothing is retuned
-around this number as though it described one. It feeds exactly one rule — the sagitta
-criterion — where an over-estimate is the safe direction, since it can only raise the
-bar.
-⛔⛔ **AND IT IMMEDIATELY EXPOSED A DEFECT IN THAT RULE.** With the real noise the guard
-rejected the configuration seven device passes had accepted. The guard was wrong: it
-computed `rollStepDistance² / (8 × rollRadiusMax)`, a fixed 13 mm chord at the largest
-radius (0.352 mm), while `roll.ts` spans `max(rollStepDistance, radius × arc)` — at a
-60 mm radius that is 136 mm of path bowing 32 mm. ⭐ It now scans the achievable radius
-range using the window the code actually spans; the binding case is the **smallest**
-radius, and the knob it protects is **`rollTrackArcDeg`** — the one a person is tempted
-to shrink, because it is release lag. 130° ships; below ~45° it is refused.
-
-⛔⛔ **THE STATISTIC IS THE POINT, AND IT IS EASY TO MEASURE THE WRONG ONE.** A resting
-finger produces sensor noise (high frequency — what `pointerNoiseMm` *means*) **and**
-hand tremor and drift (low frequency, often larger, and not a property of the digitiser
-at all). So deviation is taken from a **short trailing mean** (32 samples), as a distance
-from the mean **point** rather than per-axis — the sagitta is a bow in the plane, and a
-per-axis figure would be wrong by √2 with nothing to notice. ⭐ And the answer is the
-**minimum** window seen, not the average: movement can only raise a reading above the
-sensor’s floor, so the quietest window during a hold is the best estimate and a finger
-that shifts half-way cannot spoil it. ⛔ It reports `NaN`, never `0`, before it has
-enough samples — a zero would read as a perfect sensor and wave every config through.
-
-⛔ **A guard now refuses dead tunables.** `tests/config_debt.test.ts` requires every
-config field to be **read by the code or declared as debt with the row that will wire
-it** — after three orphans: `moveExitDistance` (dead through all of `IN0`),
-`tiltDeadband` (orphaned by the rule-1 amendment, deleted) and `gainRoll` (since
-wired). ⭐ It proved itself the same day: wiring `gainRoll` made the allowlist stale,
-and the guard failed until the entry was removed — the second direction it checks.
-
-⭐ The narrative of every device pass is in
-[`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md);
-the rows' dossiers are [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md)
-and [`../00_CORE/queue_notes/IN9.md`](../00_CORE/queue_notes/IN9.md).
+⭐⭐ **`IN5` IS NOW PRACTICAL** — tunables override from the **URL**
+(`?motionDeadbandMm=3.5&gainRollDrag=3`) and an on-screen **menu** carries sliders, so a
+placeholder is A/B'd by finger without a rebuild.
+⛔ **Every threshold is still a placeholder** except the six orbit ring values, the four
+gains, rule 6's four feel numbers and the two sway sets — all chosen by a hand — and
+**`pointerNoiseMm` = 0.761 mm, the only MEASURED number** (`src/input/noise_meter.ts`).
+⚠ Measuring it immediately exposed a defect in a guard that eight device passes had accepted.
+⛔ A guard refuses dead tunables (`tests/config_debt.test.ts`), after three orphans.
+⭐ The instrument's design, the measurement, the orphan history and what each number rests on:
+[`../00_CORE/queue_notes/IN5.md`](../00_CORE/queue_notes/IN5.md).
 
 ## ⛔⛔ Where the build already had to DEPART from the spec
 
@@ -352,6 +294,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
 | `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⛔ One exception since `A15`: `relatchOnOrphan`, on a discrete event only |
 | ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ The superseded text, kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
+| **the `D29` forks** — `anchor_fork.ts` · `face_pick.ts` · `drag_rule.ts` · `align_flick.ts` (B) · `fork_c.ts` (C) | which anchor/alignment rule set is in force, and one file per fork's own decisions. ⭐ Fork C's whole rule set is `fork_c.ts`: the **parallel** face align, the tap's two meanings, the reset scoped by *when* the alignment happened. ⛔ One file per fork so choosing one makes deleting the others a `rm` — `D28` cost 44 vectors across four modules |
 | `holder_binding.ts` | ⭐⭐⭐ `A15` — is the object still UNDER the finger carrying it? A raycast at the second touchpoint's lift, and the unselect **deferred** to the next input event. ⚠ Reachable only because depth moves the object while the holder holds still |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |

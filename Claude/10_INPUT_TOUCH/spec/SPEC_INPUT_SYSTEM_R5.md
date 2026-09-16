@@ -40,9 +40,21 @@ against what each touchpoint was latched as, not where it is now. ⛔ One except
 `A15`: a holder whose object is no longer **under** it gives the selection up at the next
 input event.
 
+⛔⛔⛔ **“FORK” MEANS THE ANCHOR-RULE FORK IN THIS FILE, AND NOTHING ELSE — read this before
+the tables.** The word has labelled two different flags on this project, six days apart, and
+confusing them would have a session test one thing believing it tested another:
+
+| | the flag | A / B / C | status |
+|---|---|---|---|
+| ⛔ **GONE** | `touchpointAssignment` (`D26`, `1.0.5`–`1.0.7`) | which touchpoint translates, which rotates | **deleted** by `D28` — one input model, the tap toggle |
+| ✅ **LIVE** | `anchorRules` (`D29`) | **A** = no constraints at all (the default) · **B** = `IN3`, flick-to-align · **C** = the owner's **tap-to-align** (`D37`) | A closed by a hand; B parked by the owner; C stage-1 built, no device look |
+
+⭐ Where the text below says *fork* without qualification it means `anchorRules`. Sentences
+about the deleted assignment flag are marked **(assignment fork, deleted)**.
+
 ⛔⛔ **ONE MODEL SINCE `D28` (2026-09-16).** From `1.0.5` to `1.0.7` a flag carried three
-readings of §2/§4 so a hand could compare them; the owner chose the **tap toggle** and forks
-A and B are deleted. ⭐ A held object's drag translates *or* rotates, **any single tap
+readings of §2/§4 so a hand could compare them; the owner chose the **tap toggle** and the
+other two assignment readings are deleted. ⭐ A held object's drag translates *or* rotates, **any single tap
 anywhere** flips between the two, and the mode is one latch for the session — it survives a
 release. ⚠ The comparison's record is in
 [`../../00_CORE/queue_notes/IN13.md`](../../00_CORE/queue_notes/IN13.md).
@@ -51,6 +63,9 @@ release. ⚠ The comparison's record is in
 
 ⚠ The mode starts at `TRANSLATE` and flips on **every** tap of any touchpoint, anywhere,
 immediately — including with nothing carried, since it is what the next grab inherits.
+⛔ **In fork C the session starts in `ROTATE`** (`D37`, the owner's *"default start: rotation
+mode"*), and a tap that lands on **another object's face while one is held** aligns instead of
+toggling — see the fork C table below. Everywhere else the tap keeps exactly this meaning.
 
 | touchpoints | on what, and what moves | what happens | spec |
 |---|---|---|---|
@@ -66,23 +81,46 @@ immediately — including with nothing carried, since it is what the next grab i
 
 | touchpoints | on what | what happens | spec | status |
 |---|---|---|---|---|
-| 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, rollback, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` |
+| 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` · ⛔ its **ROLLBACK is retired** (`D36`) — a flick keeps the rotation it was made with, except where fork C's own reset applies |
 | 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⭐ collision resolved 2026-09-15 — eviction moved to a quick back-and-forth (`A1`→`A4`) |
 | 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ amended: delta position, NOT device tilt |
-| 1 | empty space | double-tap → **fly the camera home** | ⛔ **no clause** | ✅ — ⚠ in fork C a double tap also **cancels** a pending toggle, and keeps this meaning |
+| 1 | empty space | double-tap → **fly the camera home** | ⛔ **no clause** | ✅ — ⚠ it flips the mode twice on the way (a net nothing), the owner's accepted trade |
 | 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
 | 2 | both the SAME object | rule 6 is reachable — the FIRST touchpoint (whose raycast hit) drives; the second is presence only | `A10` supersedes `A6`/`A5`/`D10` | ✅ ⭐⭐ the small-object hole is CLOSED: the depth anchor may be anywhere |
 | 2 | two DIFFERENT objects | select both objects and both faces | §4 rule 5 | ⛔ needs `IN3`'s face selection · ✅ `3D1` is built |
 | 2 | a second touchpoint **released**, holder no longer under its object | ⭐ the selection is dropped at the **next input event** and the configuration re-resolves | `A15` | ✅✅ closed 2026-09-16 — ⚠ by a general *"everything is working ok"* |
 | 3+ | any | the third touchpoint and beyond are **ignored**; the rest keep their latched roles | — · `A5` moved this trigger | ⚠ by construction, not measured — palm contact untested |
 
-⚠ **Forks A and B reach their mode by PRESENCE, re-read every frame** — not by a latched
-mode, and not by the second finger's `STATIONARY` state as rule 6's wording implies. That is
-an owner correction of a build that latched it, recorded twice:
-[`../../00_CORE/queue_notes/IN4.md`](../../00_CORE/queue_notes/IN4.md).
-⛔⛔ **Fork C reaches it by a discrete TAP instead**, which is why it is a fork rather than a
-setting of the other two — and why a readout is needed: in C no finger position reveals the
-mode, so the HUD prints the live fork, the toggle, and `→PENDING` while a tap is being judged.
+### ⭐⭐⭐ FORK C (`?anchorRules=2`) — the owner's TAP-TO-ALIGN set (`D37`)
+
+⭐ Rules, conflict check and the open questions: [`FORK_C_ANCHOR_RULES.md`](FORK_C_ANCHOR_RULES.md).
+⛔ **Everything not listed here behaves as fork A**, which is what *"fork C branches from
+fork A"* means. ⛔ **NO HAND HAS TOUCHED ANY OF IT** — rule 5 is unpaid for this whole column.
+
+| touchpoints | configuration | what happens | status |
+|---|---|---|---|
+| 1 | an object, no alignment | rotate or translate per the mode — fork A's rules, ⚠ starting in `ROTATE` | ✅ built (inherited) |
+| 1 | an object, **ALIGNED**, mode `ROTATE` | ⭐⭐ **TWIST about the aligned normal** — the one surviving DOF (`anchor_rotate.ts`, reused from `A3`). ⛔ REFUSES where that normal points at the camera | ✅ built |
+| 1 | an object, **ALIGNED**, mode `TRANSLATE` | fork A's screen-plane drag — ⚠ assumed, not dictated | ✅ built |
+| 1 | an object, **FLICK** | ⭐⭐ **ROTATION RESET** to the press orientation. The alignment is **conserved** if it predates the press, **dropped** if it was made during the gesture | ✅ built (`D37`; `D36` deleted this globally, fork C alone reinstates it) |
+| 1 | an object, **SHAKE** (a quick back-and-forth) | releases the alignment, un-highlights the FollowerFace — ⛔ in **either** mode, unlike `D32`'s fork B rule | ✅ built |
+| 2 | holding obj 1 + **TAP on another object's face** | ⭐⭐⭐ **ALIGN**: obj 1 makes the **minimal** turn so its held face's normal is **PARALLEL** to the tapped face's (the CAD *align* sense, the owner's choice over a mate); the FollowerFace highlights until released; `Pioneer := null`; mode → `TRANSLATE` | ✅ built |
+| 2 | holding obj 1 + a tap on the SAME object, or on empty space | plain mode toggle, exactly as `D28` | ✅ built |
+| 2 | holding obj 1 + a tap while **two or more** other objects are held | ⛔ refuses and toggles — *which* object is the Follower has no trustworthy answer | ✅ built, reported on the HUD |
+| 2 | two holders, obj 1 **NOT** aligned | each finger moves its own object, per the mode (owner's answer) | ✅ built (inherited) |
+| 2 | holding an **ALIGNED** obj 1 + **press** on obj 2 | `TargetPosition` at the raycast hit + a **cross-quad gizmo** oriented to that face | ⛔ **NOT BUILT** |
+| 2 | … then mode `ROTATE` | obj 1 **orbits** about `TargetPosition` (gravity axis + horizontal x) while maintaining its alignment | ⛔ **NOT BUILT** — ⚠ position-only orbit is my reading, §7.9 |
+| 2 | … then mode `TRANSLATE` | obj 1 approaches/retreats along centre→target by its own delta's projection; obj 2 likewise, reversed | ⛔ **NOT BUILT** — ⛔⛔ the mapping **degenerates at contact** and when the line faces the camera, §7.10 |
+| 2 | the second touchpoint **releases** while a target is live | the gizmo and `TargetPosition` are nullified | ⛔ **NOT BUILT** — ⚠ the same event fires `A15`'s orphan raycast, §7.7 |
+| 2 | a second touchpoint **outside any object** while obj 1 is aligned | ⚠⚠ **UNDEFINED** — fork A's roll/depth, or nothing? §7.6 | ⛔ undecided |
+| any | a **DOUBLE tap** | unchanged: flips the mode twice and flies the camera home | ✅ |
+
+⚠ **(assignment fork, deleted)** Readings A and B reached their mode by PRESENCE, re-read
+every frame — not by a latched mode, and not by the second finger's `STATIONARY` state as
+rule 6's wording implies. That was an owner correction of a build that latched it, recorded
+twice: [`../../00_CORE/queue_notes/IN4.md`](../../00_CORE/queue_notes/IN4.md).
+⛔⛔ **Reading C reached it by a discrete TAP instead** — which is what `D28` kept, and why
+the HUD prints the mode: no finger position reveals it.
 
 
 ## ⚠ What "rule 2bis is applied unconditionally" means
@@ -107,7 +145,8 @@ it to the object model and gives it the precondition it is missing.
 |---|---|---|
 | §2 **2ter** | vertical flick → `GRAVITY_ALIGN` onto the constraint stack | `3D1` (faces), `IN3` |
 | §2 **2quater** | horizontal flick → `WORLD_AXIS_ALIGN` | `3D1`, `IN3` |
-| §2 **2sexte** | constrained rotation about the remaining free DOF | `3D1`, `IN3` |
+| §2 **2sexte** | constrained rotation about the remaining free DOF | `3D1`, `IN3` · ✅ **BUILT 2026-09-16** in forks B and C |
+| ⛔ **fork C's approach** | `TargetPosition`, the cross-quad gizmo, the orbit about it, and the two-object approach along centre→target | ⚠ **not in revision 5 at all** — the owner's own rules, [`FORK_C_ANCHOR_RULES.md`](FORK_C_ANCHOR_RULES.md) §2. Four owner decisions gate them (§7.6–§7.10) |
 | §2 **2septies** | ⭐ **SUPERSEDED by amendment A1** — eviction is a full **360° roll**, not a double-tap | `IN3` · ✅ the camera-reset collision is resolved; ⛔ A1 also amends **2quinte**, shares a context with **2sexte**, and leaves ONE open owner question: does a full turn break MATES too? |
 | §3 **3** | release unselects object and face, stack preserved | `3D1` |
 | §4 **5** | two objects and two faces selected | `3D1` |

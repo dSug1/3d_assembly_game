@@ -778,6 +778,93 @@ suppressing every post-reversal flick was recoverable by nothing.
 
 ---
 
+### ✅✅ FORK C IS SPECIFIED AND STAGE 1 IS BUILT — `D37`, 2026-09-16
+
+⛔⛔ **THE OWNER PARKED FORK B FIRST, AND THE REASON IS THE DESIGN INPUT FOR FORK C**: *"I am
+not satisfied with the flick mechanism — difficult for user to implement, and releases the
+finger from the object it is tracking."* ⭐ Both faults belong to a **release-time trigger**
+rather than to this flick: the release IS the trigger, so the finger must leave, and the
+gesture must be performed to a threshold specification instead of simply chosen.
+
+⭐⭐⭐ **SO FORK C's TRIGGER COMPLETES MID-GESTURE: hold one object, TAP a face on another.**
+The held object makes the minimal turn that points its own face **the same way** as the
+tapped one. Rules, conflict check, transitions and the open questions are in
+[`../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md);
+what follows is only what a session needs about the BUILD.
+
+#### What is built (15 vectors, 3 mutants, no device look)
+
+`src/input/fork_c.ts` — one file for the whole fork, on `D28`'s precedent: the day a fork is
+chosen the others are **deleted**, and the last deletion cost 44 vectors spread over four
+modules. ⭐ One file per fork makes that a `rm`.
+
+* `faceAlignConstraint` — the **parallel** align, target frozen to a world direction at the tap;
+* `tapMeaning` — the tap's two meanings (align / toggle);
+* `flickResetPlan` — the reset, scoped by *when* the alignment happened;
+* `singleAlignment` in `core/constraint_stack.ts` — the **cap of one**, refusing over a `MATE`;
+* wired in `scene.ts`: the alignment, the highlight, the mode switch, the shake, the reset,
+  and the twist about the aligned normal.
+
+#### ⭐⭐ THREE THINGS WORTH CARRYING, beyond the rules themselves
+
+1. **The owner's arithmetic and the geometry differed by one, and the geometry won without
+   changing the intent.** *"One alignment axis (therefore one DOF reduction). I do not want to
+   have 2 DOF removed."* ⛔ A normal-onto-direction alignment fixes **two** rotational DOF;
+   the survivor is the spin about that normal. There is no alignment that costs one. ✅ So it
+   is built as **at most one entry on the stack, replaced by the next tap** — which delivers
+   exactly what was asked, because fork B's zero-DOF freeze becomes unreachable by
+   construction rather than by care. ⭐ *When a request cannot be built literally, look for
+   the reading that keeps its PURPOSE.*
+2. **The owner re-framed a question I had framed wrongly.** I asked what the reset should do
+   *while an alignment holds* — a property of the STATE — and offered three answers. The reply
+   was a property of the **GESTURE**: *"if the object was already aligned when the rotation was
+   started... the alignment is conserved. If the alignment occurred during the rotation...
+   this looses the alignment."* ⭐⭐ The state cannot separate those cases; the gesture can, and
+   the recogniser's snapshot is already the right reference. ⛔ And the first case then costs
+   **nothing**: a snapshot taken while aligned already satisfies the constraint.
+3. **A vector of mine could not fail, and reading it caught it** — not a mutant. It built the
+   swing axis as `before × after` and asserted that axis was perpendicular to `after`, which a
+   cross product is by construction. ✅ Replaced by the honest test of *minimal*: the
+   rotation's **ANGLE** equals the arc between the normals, which any added twist exceeds.
+   ⚠ Mistake shape 5 again, and the cheapest catch of it so far.
+
+#### ⚠⚠ THREE DELIBERATE DIVERGENCES from decisions already taken
+
+⛔ Each is written at its site in the code as well as here, because a divergence nobody can
+find is indistinguishable from a bug:
+
+| | fork B / today | fork C | why |
+|---|---|---|---|
+| the shake's mode gate | `ROTATE` only (`D32`) | **either mode** | fork C's alignment ENDS in `TRANSLATE`, so a mode gate would force a toggle before the hand could undo — and the owner's sentence has no mode condition. ⚠ Cost: a vigorous reposition can evict |
+| the rotation reset | deleted globally (`D36`) | **reinstated, fork C only** | `D36` removed it because it fought fork B's flick-to-align; fork C has no flick alignment, so the conflict does not exist here. Fork A shipped without it and still does |
+| the session's start mode | `TRANSLATE` | **`ROTATE`** | the owner's *"default start: rotation mode"* — applied inside fork C alone, because fork A's default has been closed by a hand. ⚠ The FLAG's default stays fork A until fork C is closed too |
+
+#### ⛔ What is NOT built, and what blocks it
+
+⭐ The whole second half of the owner's rules — `TargetPosition`, the cross-quad gizmo, the
+orbit about it, and the two-object approach. ⚠ Four owner decisions gate them, and one is a
+real design problem rather than a preference:
+
+1. ⛔⛔ **The approach mapping degenerates exactly where it matters most.** It projects a screen
+   delta onto the screen projection of `centre → TargetPosition`; that line **has no direction**
+   when it faces the camera (2sexte's documented degeneracy, where the honest tracking mapping
+   `1/(r·sin α)` diverges) and **shrinks to noise at contact**, which is the instant precision
+   is wanted. ⚠ And fork C has no channel to hand over to, because its target state displaces
+   roll and depth.
+2. **`A15` will drop the selection mid-approach** — it exists because depth slides an object out
+   from under its finger, and fork C's approach does that deliberately. The owner's rules
+   simultaneously keep the FollowerFace highlighted *until a shake*.
+3. **A second touchpoint outside any object while aligned** is undefined.
+4. **The orbit's reading**: position-only about the target (my reading, which maintains the
+   alignment for free) or reorient-and-re-solve.
+
+⚠⚠ **AND THE MATE QUESTION IS STILL OPEN**: fork C's align is **parallel**, so it orients
+without joining. §4's `6quater` is the only rule that pushes a `MATE` and it is **flick-based**
+— which fork C does not have. ⛔ So as dictated, fork C brings faces close and never joins
+them; whether a joining rule is owed is the owner's call.
+
+---
+
 ### ⛔ What remains in fork B
 
 1. ✅✅ **DONE — THE ESCAPE (`D32`, 2026-09-16).** `shake.ts` is wired: a back-and-forth
