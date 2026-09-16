@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · how a build reaches a phone over HTTPS
 > **READ IF** · you are deploying, or a deploy went wrong
-> **LAST VERIFIED** · 2026-09-13 — first successful deploy
+> **LAST VERIFIED** · 2026-09-16 — the 1.0.3 deploy, live in ~30 s from the push
 
 ⭐ **Why Pages at all, when USB is the fast loop**: it is a **real HTTPS origin**.
 `DeviceOrientation` (spec rule 1's tilt-orbit) and most sensor APIs require a
@@ -38,11 +38,40 @@ git push origin main
 Then **Actions → Deploy to GitHub Pages**, and when it is green:
 **https://dsug1.github.io/3d_assembly_game/**
 
-⭐ **`--ff-only` is the guard, not a preference.** Branches are created from the tip
-of the previous branch, so `main` is always a strict ancestor and every merge is a
-fast-forward — which **cannot conflict**. `--ff-only` makes git *refuse* rather than
+⭐ **`--ff-only` is the guard, not a preference.** It makes git *refuse* rather than
 silently create a merge commit, so the day something has diverged you find out then
 instead of three merges later.
+
+⛔⛔ **AND IT FIRED, 2026-09-16 — THE SENTENCE THAT USED TO BE HERE WAS WRONG.** It
+claimed *"`main` is always a strict ancestor and every merge is a fast-forward"*. It is
+not: `main` carries **merge commits of its own** from this very procedure, so after the
+first `--no-ff` merge the graph has diverged by construction, even though no content has.
+
+⭐ **What to do when it refuses** — diagnose before reaching for `--no-ff`, because the
+guard cannot tell "harmless graph shape" from "someone committed on main":
+
+```powershell
+git log --oneline --no-merges <branch>..main   # ⭐ THE QUESTION. Empty = main has no
+                                               # unique WORK, only merge commits.
+git diff --stat $(git merge-base main <branch>) main   # empty = main's tip TREE is the
+                                                       # merge base: nothing to lose.
+```
+
+⛔ **Both empty → the merge is purely additive and cannot conflict.** Then, and only
+then:
+
+```powershell
+git merge --no-ff <branch> -F <message-file>
+git diff --stat HEAD <branch>    # ⭐ CONFIRM: empty means the merged tree IS the branch
+```
+
+⚠ **If either is NOT empty, stop and read what is there.** Someone committed on `main`
+directly — which the next line forbids — and a `--no-ff` merge would be a real merge with
+real conflicts, not a formality.
+
+⚠ A trap worth knowing: `git merge --no-ff -m "…" <branch>` with the message BEFORE the
+branch name silently merges **nothing** and reports *"Already up to date"*. Put the branch
+first, or use `-F`.
 
 ⛔ **Never commit directly on `main`** — including editing a file in GitHub's web UI,
 which is a real commit. That is the one action that breaks the property above.
