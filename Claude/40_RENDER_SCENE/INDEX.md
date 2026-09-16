@@ -93,6 +93,7 @@ wrong number to notice — so audit a readout against the **questions** it is do
 answer, not the lines it prints (`METHOD`).
 ⚠ The cost it was heading for: an `IN5` session measuring a default while believing it was
 measuring an override, with a typo'd key reported to nobody.
+⭐⭐ **The live FORK is printed by name** (`one-finger-translate`), and a pending flip with it. ⛔ `1.0.5` runs two rule tables from one build, so a device report that does not name the fork is **unattributable** — the morning's lesson aimed one layer up, at the rule table rather than the build. ⚠ Deliberately NOT on the `build` line: that identifies an immutable artefact, this changes at runtime.
 ⭐ **`A15`'s ORPHANED binding is printed too** (`⛔ORPHANED(next input unselects)`) — a state in which everything looks normal and the very next input does something different, so without it *"it deselected by itself"* and *"the selection was already dead"* are indistinguishable on the glass.
 ⭐ **And the build stamp answers the question that cost a morning**: *which code did I just
 judge?* ⛔ `+dirty` is load-bearing — it is what distinguishes the USB dev loop from the
@@ -109,6 +110,7 @@ cross-tunable rule — and those are exactly the numbers only meaningful in comb
 ⚠ Sliders **and** step buttons: the page sets `touch-action: none` so the browser
 cannot claim the gestures, which can stop a native range input dragging. Buttons are
 plain taps and always work.
+⛔⛔ **And one control in it is not a tunable at all**: `⭐ FORK (1.0.5 A/B)` selects which **rule table** is in force (`D26`) — every other slider changes a number. ⭐ A 0/1 slider, because a two-position slider IS a toggle and the menu has no other kind, and `validateGestureConfig` refuses anything between so a half-set flag cannot masquerade as the default. ⚠ It takes effect only once nothing is touching the glass; the HUD says `⛔PENDING(lift all fingers)` until then.
 ⭐ **Each section collapses, and the panel remembers what was open across a reload**
 (`localStorage`, keys `menu.open` and `menu.section.<title>`). A device pass is a long
 sequence of reloads — a panel that reopens fully expanded every time buries the two

@@ -57,6 +57,7 @@
  */
 import { CAMERA_NEAR_PLANE_M, type GestureConfig } from "./gestureConfig";
 import type { MotionState } from "./motion";
+import type { Assignment } from "./assignment";
 import { pxToMm } from "../core/units";
 import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
 
@@ -294,10 +295,28 @@ export function rollDragDeg(dxPx: number, degPerMm: number): number {
  * job — `secondFingerDrive`, deciding what a moving second finger DRIVES — and this is not
  * it.
  *
+ * ⭐⭐⭐ **AND THIS IS THE WHOLE OF THE `1.0.5` A/B** — the one inversion that separates the
+ * two forks the owner intends to judge holistically. `ONE_FINGER_TRANSLATE` is `A13`, the
+ * reading a hand has approved; `TWO_FINGER_TRANSLATE` is the **spec's original** assignment.
+ * ⛔ Everything else in the input layer is assignment-agnostic, which is why this is a flag
+ * and not a fork. See `input/assignment.ts`, and `adoptAssignment` for the latch rule:
+ * **it may change only while nothing is touching the glass.**
+ *
  * @param secondPresent whether a second touchpoint is down, counting `A14`'s replacement
- *   grace. The only input there is.
+ *   grace.
+ * @param assignment which reading of §2/§4 is in force. ⛔ REQUIRED, and deliberately not
+ *   defaulted: a default would let a call site silently get fork A while the owner was
+ *   testing fork B, and *which rule table am I in* is the one thing an A/B must never guess.
  */
-export function holderDrive(secondPresent: boolean): "TRANSLATE" | "ROTATE" {
+export function holderDrive(
+  secondPresent: boolean,
+  assignment: Assignment,
+): "TRANSLATE" | "ROTATE" {
+  if (assignment === "TWO_FINGER_TRANSLATE") {
+    // ⭐ The spec as written: §2 rule 2bis on one touchpoint, §4 rule 6 on two.
+    return secondPresent ? "TRANSLATE" : "ROTATE";
+  }
+  // ⭐ `A13`/`D23`: the commonest gesture on the easiest hand shape.
   return secondPresent ? "ROTATE" : "TRANSLATE";
 }
 

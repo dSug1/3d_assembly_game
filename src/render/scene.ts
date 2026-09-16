@@ -65,6 +65,11 @@ import {
   depthTranslate,
   bindingAfterSecondRelease,
   orphanAction,
+  adoptAssignment,
+  assignmentLabel,
+  assignmentOf,
+  assignmentPending,
+  type Assignment,
   type HolderBinding,
   type InputEvent,
   displayPose,
@@ -853,6 +858,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             ([...held.values()].some((g) => g.binding === "ORPHANED")
               ? "  ⛔ORPHANED(next input unselects)"
               : "") +
+            // ⭐⭐⭐ WHICH FORK IS IN FORCE, and it is printed for the reason this morning
+            // established: a device report is only evidence about the code — and now the
+            // RULE TABLE — the device was running. ⛔ `1.0.5` runs two readings of §2/§4
+            // from one build, so a report that does not name the fork is unattributable.
+            // ⚠ It is NOT on the `build` line: that one identifies an immutable artefact,
+            // while this changes at runtime, and merging the two would make a stable
+            // identity look mutable.
+            `  ${assignmentLabel(assignment)}` +
+            // ⛔⛔ AND A PENDING FLIP MUST SAY SO. The flag latches only while nothing is
+            // touching the glass, so between a flip mid-gesture and the next lift the menu
+            // shows one value and the product obeys another. ⭐ Without this line that gap
+            // reads as *"the toggle is broken"* — and an absent readout cannot be caught by
+            // looking at the screen.
+            (assignmentPending(assignment, assignmentOf(cfg.translateNeedsSecondTouch))
+              ? `→${assignmentLabel(assignmentOf(cfg.translateNeedsSecondTouch))} ⛔PENDING(lift all fingers)`
+              : "") +
             // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
             // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
             // the other two sliders moves, so a written-down number would go stale the
@@ -883,6 +904,34 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * itself; a camera radius inside the near plane renders a black page with no error.
    * ⭐ A rejected change is RETURNED so the menu can show why, never dropped in silence.
    */
+  /**
+   * ⭐⭐⭐ THE LIVE TOUCHPOINT ASSIGNMENT — the `1.0.5` A/B, LATCHED.
+   *
+   * ⛔⛔ It may change **only while nothing is touching the glass** (owner, 2026-09-16).
+   * The menu and the URL write `cfg.translateNeedsSecondTouch` freely; this is what the
+   * rules actually read, and it follows the config only at a moment when no gesture can
+   * possibly be in flight. ⭐ Stricter than latching at press, and better: at press, a flip
+   * between two fingers landing would still swap the meaning of a gesture already begun.
+   * ⚠ The toggle's own touch cannot block it — the menu is a DOM panel over the canvas, so
+   * its events never reach the pointer router.
+   */
+  let assignment: Assignment = assignmentOf(cfg.translateNeedsSecondTouch);
+
+  /**
+   * ⭐ Adopt a pending assignment if the glass is empty. Called on every pointer event AND
+   * every frame: a flip made while idle must take effect immediately — and be VISIBLE
+   * immediately — rather than waiting for the next touch to apply it.
+   * ⛔ `router.size`, not `activeCount`: an IGNORED third finger is still a finger on the
+   * glass, and the question is *"can a gesture be in flight?"*, not *"does a rule see it?"*.
+   */
+  const syncAssignment = (): void => {
+    assignment = adoptAssignment(
+      assignment,
+      assignmentOf(cfg.translateNeedsSecondTouch),
+      router.size,
+    );
+  };
+
   const tunable = (
     label: string,
     key: keyof typeof cfg & string,
@@ -927,6 +976,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
         tunable("sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
         tunable("sway reference turn (deg/s)", "rotateSwayReferenceDegPerS", 20, 400, 10),
+      ],
+    },
+    {
+      // ⭐⭐⭐ THE `1.0.5` A/B, AT THE TOP OF ITS OWN SECTION so it cannot be mistaken for a
+      // feel tunable. ⛔ Everything else in this menu changes a NUMBER; this changes which
+      // RULE TABLE is in force, which is a different kind of thing and the one control here
+      // that can make every other one behave differently.
+      title: "⭐ FORK (1.0.5 A/B)",
+      sliders: [
+        // ⛔⛔ 0/1, step 1: a slider, because the menu has no toggle and a two-position
+        // slider IS one — and `validateGestureConfig` refuses anything between, so a
+        // half-set flag cannot masquerade as the default. ⚠ Step buttons work where a
+        // native range input will not, which on this page is the common case
+        // (`touch-action: none`).
+        // ⭐ 0 = A13, one touchpoint translates (the judged default). 1 = the SPEC's
+        // assignment, one rotates and two translate.
+        // ⚠ It takes effect only once nothing is touching the glass — the HUD says
+        // `⛔PENDING(lift all fingers)` until then.
+        tunable("0=one-finger translate  1=two-finger", "translateNeedsSecondTouch", 0, 1, 1),
       ],
     },
     {
@@ -1426,6 +1494,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       }
     }
 
+    // ⭐⭐⭐ THE ASSIGNMENT LATCH, FIRST: a pending fork change is adopted here if the glass
+    // is empty. ⛔ Before the A15 collection and before any dispatch, so one event cannot
+    // be judged half under one rule table and half under the other.
+    syncAssignment();
+
     // ⭐⭐⭐ A15 — AN ORPHANED SELECTION IS COLLECTED HERE, AT THE NEXT INPUT EVENT, and
     // before anything is dispatched. ⛔ The owner's requirement: the lift itself changes
     // nothing, and the object is unselected only once the hand says something new — after
@@ -1668,7 +1741,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           cfg.secondTouchGraceMs,
         );
         grip.mode =
-          router.objects().length === 1 ? holderDrive(secondHolds) : "TRANSLATE";
+          router.objects().length === 1 ? holderDrive(secondHolds, assignment) : "TRANSLATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,
@@ -1837,6 +1910,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const now = performance.now();
     const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
     lastFrameMs = now;
+
+    // ⭐⭐ AND THE ASSIGNMENT LATCH RUNS HERE TOO, not only on pointer events. ⛔ A fork
+    // flipped while the glass is empty produces NO pointer event, so without this the
+    // readout would keep showing the old fork until the next touch — and the person who
+    // just flipped it would be told the flag did nothing. ⚠ An idle tick, one comparison.
+    syncAssignment();
 
     // ⛔⛔⛔ ADVANCE THE MOTION CLOCK FOR EVERY LIVE TOUCHPOINT, EVERY FRAME.
     //

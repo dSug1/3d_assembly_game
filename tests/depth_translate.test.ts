@@ -471,30 +471,38 @@ describe("⭐ A12's roll angle is a DRAG, not a swept circle", () => {
 // A12 was written to delete.
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
+/**
+ * ⭐ The two readings of §2/§4 the owner is A/B-ing. ⛔ Named in EVERY `holderDrive` call
+ * below, because a default would let a vector assert fork A while reading as universal —
+ * and *which rule table am I in* is the one thing an A/B must never guess.
+ */
+const A = "ONE_FINGER_TRANSLATE" as const;
+const B = "TWO_FINGER_TRANSLATE" as const;
+
+describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate (FORK A, the default)", () => {
   const MOV = "MOVING" as const;
   const STI = "STATIONARY" as const;
 
   it("⭐⭐ ONE touchpoint on the object TRANSLATES", () => {
     // x along the horizontal screen axis, y along GRAVITY — A7's frame, unchanged.
-    expect(holderDrive(false)).toBe("TRANSLATE");
+    expect(holderDrive(false, A)).toBe("TRANSLATE");
   });
 
   it("⭐⭐ a second touchpoint HELD STILL turns the same drag into a ROTATION", () => {
     // ⭐ The second finger contributes no motion at all: it is a MODIFIER, and holding it
     // still is the whole of the input. Yaw about gravity, pitch about the horizontal.
-    expect(holderDrive(true)).toBe("ROTATE");
+    expect(holderDrive(true, A)).toBe("ROTATE");
   });
 
   it("⛔ …and lifting it goes straight back to translating", () => {
     // ⭐ Symmetrical, and for the same reason: a lift is discrete, deliberate and visible.
-    expect(holderDrive(false)).toBe("TRANSLATE");
+    expect(holderDrive(false, A)).toBe("TRANSLATE");
   });
 
   it("⛔⛔ A LANDING SKID CANNOT CHANGE THE MODE — the reported defect, as a vector", () => {
     // ⭐ The same finger, down, reporting every motion state a landing can produce. The
     // mode must not move: that is what *"immediately rotation"* means.
-    const seen = new Set([MOV, STI, MOV, MOV, STI].map(() => holderDrive(true)));
+    const seen = new Set([MOV, STI, MOV, MOV, STI].map(() => holderDrive(true, A)));
     expect([...seen]).toEqual(["ROTATE"]);
   });
 
@@ -514,7 +522,7 @@ describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
     // written down then is the one that applies now — *whether a finger is DOWN is
     // discrete, deliberate and VISIBLE; whether it is MOVING is a noisy continuous reading*
     // — and I flagged the resemblance in A13 as the thing to watch before the device did.
-    expect(holderDrive(true)).toBe("ROTATE");
+    expect(holderDrive(true, A)).toBe("ROTATE");
   });
 
   it("⭐ the rule reads PRESENCE ALONE, never a latch and never the motion state", () => {
@@ -527,17 +535,55 @@ describe("⭐⭐⭐ A13 — one finger translates, two fingers rotate", () => {
     // ⭐ Whatever the second finger is doing, it is DOWN — and that is the whole input.
     // ⭐ Whatever the second finger is doing, it is DOWN — and `holderDrive` cannot even
     // SEE what it is doing any more: the parameter was removed so it cannot be wired back.
-    expect(holderDrive(true)).toBe("ROTATE");
-    expect(holderDrive(false)).toBe("TRANSLATE");
+    expect(holderDrive(true, A)).toBe("ROTATE");
+    expect(holderDrive(false, A)).toBe("TRANSLATE");
   });
 
   it("⭐⭐ a second finger that never moved at all counts as IDLE", () => {
     // ⚠ A touchpoint that goes down and stays put emits no events, so it may have no
     // tracker yet. `null` means *nothing has ever moved this finger* — which is the
     // strongest form of idle there is, not a missing answer.
-    expect(holderDrive(true)).toBe("ROTATE");
+    expect(holderDrive(true, A)).toBe("ROTATE");
   });
 });
+
+describe("⭐⭐⭐ FORK B — the SPEC's assignment: one rotates, two translate", () => {
+  it("⭐⭐ ONE touchpoint on the object ROTATES — §2 rule 2bis, as written", () => {
+    expect(holderDrive(false, B)).toBe("ROTATE");
+  });
+
+  it("⭐⭐ a second touchpoint makes the drag a TRANSLATION — §4 rule 6, as written", () => {
+    expect(holderDrive(true, B)).toBe("TRANSLATE");
+  });
+
+  it("⛔⛔ THE TWO FORKS ARE EXACT OPPOSITES, and nothing else differs", () => {
+    // ⭐⭐ THE CLAIM THAT JUSTIFIES A FLAG INSTEAD OF A FORK. The day this stops being a
+    // pure inversion, the difference has grown a third case — and a branch becomes the
+    // honest answer. This vector is where that would show up first.
+    for (const present of [true, false]) {
+      expect(holderDrive(present, A)).not.toBe(holderDrive(present, B));
+    }
+  });
+
+  it("⛔ fork B is STILL presence-only — a landing skid cannot move the mode either", () => {
+    // ⚠ The defect A13 shipped is reachable in BOTH readings: it was never about which
+    // finger translates, it was about keying a mode on a noisy signal. The guard has to
+    // hold on both sides of the flag, or fork B reintroduces it.
+    const seen = new Set(["MOVING", "STATIONARY", "MOVING"].map(() => holderDrive(true, B)));
+    expect([...seen]).toEqual(["TRANSLATE"]);
+  });
+
+  it("⭐ A14's grace is assignment-agnostic — it decides PRESENCE, not meaning", () => {
+    // ⛔ The grace answers *is a second touchpoint held?*; the flag answers *what does that
+    // mean?*. Composing them must not make the grace fork-specific, or every later rule
+    // would need a fork-aware twin.
+    const heldDuringSwap = secondTouchHeld(false, 100, 250);
+    expect(heldDuringSwap).toBe(true);
+    expect(holderDrive(heldDuringSwap, A)).toBe("ROTATE");
+    expect(holderDrive(heldDuringSwap, B)).toBe("TRANSLATE");
+  });
+});
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ⭐⭐⭐ A14 — A LIFT-AND-REPLACE OF THE SECOND TOUCHPOINT IS **ONE** GESTURE
@@ -607,7 +653,7 @@ describe("⭐⭐⭐ A14 — a second touchpoint survives its own replacement", (
       { present: true, sinceLift: 210 }, // pressed down outside
     ];
     const modes = swap.map((x) =>
-      holderDrive(secondTouchHeld(x.present, x.sinceLift, GRACE)),
+      holderDrive(secondTouchHeld(x.present, x.sinceLift, GRACE), A),
     );
     expect(modes).toEqual(["ROTATE", "ROTATE", "ROTATE", "ROTATE", "ROTATE"]);
   });
@@ -615,7 +661,7 @@ describe("⭐⭐⭐ A14 — a second touchpoint survives its own replacement", (
   it("⛔⛔ COUNTER-EXAMPLE: without the grace, the swap translates in the middle", () => {
     // ⭐ The defect, pinned — and it is what shipped.
     const modes = [0, 120, 210].map((sinceLift) =>
-      holderDrive(secondTouchHeld(false, sinceLift, 0)),
+      holderDrive(secondTouchHeld(false, sinceLift, 0), A),
     );
     expect(modes).toEqual(["TRANSLATE", "TRANSLATE", "TRANSLATE"]);
   });

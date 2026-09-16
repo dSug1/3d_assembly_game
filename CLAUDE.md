@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-16)
 
-✅ Green: TypeScript + Babylon + Vite, **563 golden vectors passing**.
+✅ Green: TypeScript + Babylon + Vite, **580 golden vectors passing**.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
 2026-09-16 a confirmed fix was reported broken from Pages on a tablet running an **old
@@ -147,6 +147,16 @@ implements **parent ≠ root** and moves nothing.
 ⭐ The model is now exercised by every gesture on the glass. ⛔⛔ **NEXT is `IN3`** — now the only input row with unbuilt work left.
 ✅ `IN12` (the deadband) was CLOSED by `A11`, which put it in §1.1 itself rather than in
 each rule.
+
+⭐⭐⭐ **`1.0.5` RUNS TWO FORKS FROM ONE BUILD** (`D26`, row `IN13`). The owner is A/B-ing
+two readings of §2/§4 and will judge them **holistically**, once the input system can be
+felt as a whole: **fork A** (the default, `A13`) one touchpoint translates and a second held
+still rotates; **fork B** (`?translateNeedsSecondTouch=1`, or the menu's `⭐ FORK` toggle) the
+**spec's own** assignment, one rotates and two translate. ⭐⭐ **It is a FLAG and not a fork
+because the whole difference is ONE INVERSION in `holderDrive`** — depth, roll, `A14` and
+`A15` all key on *the holder is still*. ⛔⛔ The flag latches **only while nothing touches
+the glass**: the only state in which no gesture can be in flight. ⚠ **The HUD names the live
+fork, and a device report that does not name it is unattributable.**
 
 ⛔⛔ **`A15` IS BUILT AND ITS DEVICE LOOK IS OWED — the one open thing on the glass.** A
 holder that is **no longer under its object** gives the selection up: depth moves the object

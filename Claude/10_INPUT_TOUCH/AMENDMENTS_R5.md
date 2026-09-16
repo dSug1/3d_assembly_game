@@ -543,6 +543,13 @@ circular roll comes back.
 
 **Supersedes** §2 rule 2bis's and §4 rule 6's touchpoint assignments — it swaps them.
 
+⭐⭐⭐ **AND SINCE `1.0.5` / `D26` THE SWAP IS A FLAG, NOT A FORK**: the spec's assignment
+is still reachable (`?translateNeedsSecondTouch=1`, or the menu toggle), because the whole
+difference is **one inversion in `holderDrive`** and everything since — `A14`, `A15`, the
+gravity frame, `A11` — is assignment-agnostic. ⛔ It latches **only while nothing touches
+the glass**. ⚠ A13 stays the DEFAULT; which one ships is row `IN13`, not due until the
+input system can be judged whole.
+
 > *"One touchpoint on object && delta position x or y → horizontal x or gravity axis
 > translation. One touchpoint on object idle && second touchpoint anywhere with delta
 > position y → horizontal depth translation. One touchpoint on object with delta position x
@@ -740,18 +747,15 @@ MOTION.* ⭐ A lift is presence: discrete, deliberate, visible, and the same cla
 `A14`'s grace uses. One ray, one moment, at the second touchpoint's release.
 
 ⚠ It fires on **every** second-touchpoint release while something is held, not only after a
-depth drag: the ray is the whole test and answers `BOUND` for every other rule — roll does
-not translate the object, rule 6 keeps it under the finger. ⛔ A *"was that depth?"* flag
-would be a second, weaker way of asking the same question, and a flag can be wrong where a
-ray cannot.
+depth drag: the ray is the whole test and answers `BOUND` for every other rule. ⛔ A *"was
+that depth?"* flag can be wrong where a ray cannot.
 
 ### ⭐⭐⭐ The consequence is DEFERRED, and that is the owner's second requirement
 
 The binding is marked dead and **nothing happens**: no jump, no deselect, no camera move.
 ⛔ Only at the **next input event** does the selection drop, every live touchpoint re-latch
-from what is under it now, and the configuration re-resolve.
-⭐ `METHOD`: *acting is irreversible; not knowing is not a reason to act.* At the lift the
-user has given no new instruction, so a visible change would be the program's idea.
+from what is under it now, and the configuration re-resolve. ⭐ `METHOD`: *acting is
+irreversible.* At the lift the user has given no new instruction.
 
 | the next event is… | what happens |
 |---|---|
@@ -766,12 +770,11 @@ a double-tap belongs to a finger that was still on its object. Running one here 
 
 ### ⭐⭐ How it meets A14, and why they cannot fight
 
-`A14` keeps a second touchpoint *held* for `secondTouchGraceMs` after it lifts, so a
-lift-and-replace is ONE gesture. ⭐⭐ The raycast **partitions** the two: holder still on its
-object → A14's grace, unchanged; holder no longer on it → there is no gesture left to
-preserve, because the finger A14 protects is not touching the thing it was moving.
-⚠ Same shape as `A10` and rule 6 partitioning on the holder's stillness — one question, two
-disjoint answers, nothing to arbitrate over time.
+`A14` keeps a second touchpoint *held* for `secondTouchGraceMs` after it lifts. ⭐⭐ The
+raycast **partitions** the two: holder still on its object → A14's grace, unchanged; holder
+no longer on it → there is no gesture left to preserve, because the finger A14 protects is
+not touching the thing it was moving. ⚠ Same shape as `A10` and rule 6 partitioning on the
+holder's stillness — nothing to arbitrate over time.
 
 ### ⛔⛔ AND THE ORBIT CENTRE DOES **NOT** MOVE — owner, on the spot
 
@@ -790,11 +793,8 @@ not change because a selection ended — a gesture that ENDS must not retarget t
 ### What it costs, stated
 
 ⚠ **A selection can now end without the user lifting the finger that made it** — the intent,
-reachable only when the object is demonstrably not under that finger, but a new way for a
-gesture to end. ⭐ The HUD prints `⛔ORPHANED(next input unselects)`, so *"it deselected by
-itself"* is distinguishable from *"the selection was already dead"*.
+but a new way for a gesture to end, so the HUD prints `⛔ORPHANED(next input unselects)`.
 ⛔ No new tunable: a raycast has no threshold.
-
-`src/input/holder_binding.ts` (8 vectors) · `router.relatchOnOrphan` (8) · wired in
-`src/render/scene.ts`. **⛔ A DEVICE LOOK IS OWED** — the ray, the deferral and the
-re-resolution are all on the far side of the boundary.
+⭐ **What was built, what it composes with, and the two mutants it was falsified against are
+in [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md).**
+**⛔ A DEVICE LOOK IS OWED.**
