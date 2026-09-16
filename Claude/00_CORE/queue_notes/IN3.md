@@ -707,9 +707,17 @@ of the two and needs no decision from the owner.
 
 ### ⛔ What remains in fork B
 
-1. ⛔⛔ **AN ESCAPE FROM A FULL STACK — now the FIRST item, because defect 41 is reachable
-   today.** Either of the two below closes it; `shake.ts` is built, vectored and needs no
-   decision from the owner, so it is the cheaper half.
+1. ✅✅ **DONE — THE ESCAPE (`D32`, 2026-09-16).** `shake.ts` is wired: a back-and-forth
+   while the mode is `ROTATE` evicts the object's alignments and **keeps its mates** (`D13`),
+   through `evict` / `evictObjectConstraints` in core. ⭐⭐ Two things make it the fix rather
+   than a feature: it is fed **before** `dragRule`'s refusal, so it works in the one state
+   where nothing else does; and it pays `A4`'s owed half, suppressing the flick test from the
+   **first reversal** — a shake is two flicks by construction, so without that the escape
+   would push the very constraint it is clearing. ⚠ An empty or mate-only take **refuses out
+   loud** in the readout (`IN7` owes the haptic), because *it did not work* and *there was
+   nothing to undo* are opposite situations with identical silence. ⚠⚠ **A DEVICE LOOK IS
+   OWED, and it is a SAFETY look**: the four tunables are guesses with sliders, and the whole
+   question is whether a corrective nudge during fine positioning can evict by accident.
 2. **Wiring `anchor_rotate.ts`** (2sexte + `A3`'s handover) — ⚠ blocked on a decision: `A12`
    moved roll to the second touchpoint, so `A3`'s handover now spans two touchpoint
    configurations rather than one channel. ⛔ Until then a constrained object does not rotate

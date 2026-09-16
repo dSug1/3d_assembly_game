@@ -133,6 +133,41 @@ export function cleared(): readonly Constraint[] {
   return [];
 }
 
+/** What an eviction did. ⭐ `refused` is the whole reason this is not just a filter. */
+export interface EvictResult {
+  /** The stack that remains — the MATEs, in their original order. */
+  readonly stack: readonly Constraint[];
+  /** How many alignments were taken. */
+  readonly removed: number;
+  /**
+   * ⛔⛔ **TRUE WHEN THE GESTURE FOUND NOTHING TO TAKE, AND THE CALLER MUST SAY SO.**
+   * ⭐ `shake.ts`'s header states the contract this half implements: *"a mate-only stack
+   * must refuse AUDIBLY rather than silently do nothing."* ⚠ Without it, a hand that
+   * shakes a mated object gets the same nothing as a hand whose shake was not recognised,
+   * and those are opposite situations — one means *it did not work*, the other *there was
+   * nothing to undo*. `IN7` owes the negative haptic; this is what it will read.
+   */
+  readonly refused: boolean;
+}
+
+/**
+ * ⭐⭐⭐ **EVICTION — `A4`/`D13`: THE ALIGNMENTS GO, THE MATES STAY.**
+ *
+ * ⛔⛔ THE DISTINCTION IS THE WHOLE RULE, AND `cleared()` DOES NOT MAKE IT. §2septies'
+ * double-tap *"clears its constraint stack"*, written before mates existed on it; `D13`
+ * amended that, because an alignment is a **gesture's** decision (cheap to redo by flicking
+ * again) while a mate is an **assembly** relationship — the thing the game is for. ⭐ A
+ * gesture that destroys assembly work must not be reachable by a shake of the hand.
+ *
+ * ⚠ Pure, and it decides nothing about feedback: it reports what it took and whether it
+ * came up empty. Compare `solve`'s `rejected` — same discipline, same reason.
+ */
+export function evict(stack: readonly Constraint[]): EvictResult {
+  const kept = stack.filter((c) => c.kind === "MATE");
+  const removed = stack.length - kept.length;
+  return { stack: kept, removed, refused: removed === 0 };
+}
+
 /**
  * Append a constraint. ⭐ NEWEST LAST, so an existing anchor stays OLDER and
  * therefore HARD, and a new mate best-fits the remaining twist.

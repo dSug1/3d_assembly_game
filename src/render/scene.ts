@@ -75,6 +75,7 @@ import {
   runsIn3,
   dragRule,
   isDriven,
+  ShakeDetector,
   alignFromFlick,
   type AnchorFork,
   type HolderBinding,
@@ -121,7 +122,7 @@ import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
 import { faceFromPickedNormal, faceMarkerOrientation } from "../core/face_pick";
 import { solve } from "../core/constraint_stack";
-import { pushObjectConstraint } from "../core/object_model";
+import { evictObjectConstraints, pushObjectConstraint } from "../core/object_model";
 import { qmul } from "../core/vec";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
@@ -364,6 +365,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ `null` only before the gesture commits.
      */
     mode: "ROTATE" | "TRANSLATE" | "DEPTH" | null;
+    /**
+     * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
+     * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
+     * established, and a fresh press is a fresh axis — `shake.ts` says so in its own header.
+     */
+    shake: ShakeDetector;
     /**
      * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
      * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer
@@ -988,6 +995,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
         tunable("sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
         tunable("sway reference turn (deg/s)", "rotateSwayReferenceDegPerS", 20, 400, 10),
+      ],
+    },
+    {
+      // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
+      // number has been wrong every single time*, and all four of these are guesses.
+      // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
+      // between a shake and a **corrective nudge** during fine positioning, because eviction
+      // destroys alignments the user set deliberately. ⚠ `evictShakeLegMm` has a validator
+      // rule under it (3× the measured noise), so the slider cannot reach a value where a
+      // reversal could be jitter.
+      title: "⭐ EVICTION SHAKE (A4)",
+      sliders: [
+        tunable("reversals to evict", "evictShakeReversals", 2, 5, 1),
+        tunable("window (ms)", "evictShakeWindowMs", 200, 1200, 50),
+        tunable("leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
+        tunable("straightness (0=strict, 1=any)", "evictShakeStraightness", 0.1, 0.9, 0.05),
       ],
     },
     {
@@ -1682,6 +1705,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
         binding: "BOUND",
+        // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
+        // `SwayWatcher` takes it. ⚠ All four are `IN5` placeholders with sliders: the whole
+        // safety of this gesture is the gap between a shake and a corrective nudge.
+        shake: new ShakeDetector(
+          {
+            reversals: cfg.evictShakeReversals,
+            windowMs: cfg.evictShakeWindowMs,
+            legMm: cfg.evictShakeLegMm,
+            straightness: cfg.evictShakeStraightness,
+          },
+          cfg.pointerNoiseMm,
+        ),
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -1917,10 +1952,33 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // clause exists to prevent, arriving by a different door.
         if (runsIn3(anchorFork)) {
           const id = idOf.get(grip.mesh);
+          // ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, AND IT IS FED **BEFORE** THE REFUSAL GATE.
+          //
+          // ⛔⛔ THAT ORDER IS THE ENTIRE FIX FOR DEFECT 41 (*"the second flick completely
+          // freezes the rotation"*). With two alignments on the stack `dragRule` returns
+          // `ROTATE_REFUSED` and this handler returns early — so a detector fed after the
+          // gate would never see the gesture that exists to escape that state. ⭐ **The
+          // escape has to work where nothing else does**, which is easy to state and easy
+          // to wire the other way round.
+          // ⚠ NOT COVERED BY A VECTOR, AND SAID SO: the ordering lives in this file, where
+          // no golden vector reaches — the same blind spot as `3D1`'s follower defect and
+          // the face marker's roll. `tests/eviction.test.ts` asserts that a REFUSED stack is
+          // what eviction is applied to; that it is reached from here is a device question.
+          if (id !== undefined) {
+            const fired = grip.shake.push(s);
+            if (fired) {
+              const ev = evictObjectConstraints(world, id);
+              world = ev.world;
+              lastVerdict = ev.result.refused
+                ? `IN3: shake — nothing to evict (mates stay, §D13)`
+                : `IN3: SHAKE EVICTED ${ev.result.removed} — ` +
+                  `stack ${ev.world.objects.get(id)?.constraints.length ?? 0}`;
+            }
+          }
           const stack = id === undefined ? [] : (world.objects.get(id)?.constraints ?? []);
           const rule = dragRule("ROTATE", stack);
           if (!isDriven(rule)) {
-            lastVerdict = `IN3: ${rule} (stack ${stack.length}) — not driven yet`;
+            lastVerdict = `IN3: ${rule} (stack ${stack.length}) — shake to clear`;
             grip.prev = s;
             paint();
             return;
@@ -2006,10 +2064,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // camera orbit invalidated the constraint, and the next snap would silently re-solve
       // against a different axis and rotate the object.*
       //
-      // ⚠ OWED, and it must not be forgotten when `shake.ts` is wired: §1.3's flick test has
-      // to be SKIPPED once one reversal is seen, or a hand shaking to EVICT a constraint
-      // adds one instead. Eviction is not wired yet, so there is nothing to skip today.
-      if (runsIn3(anchorFork) && verdict.kind === "FLICK" && selectedFace !== null) {
+      // ✅✅ AND THE FLICK SKIP IS PAID, NOT OWED — `grip.shake.suppressesFlick`.
+      // ⛔⛔ A SHAKE IS LITERALLY TWO FLICKS IN OPPOSITE DIRECTIONS, so every leg matches the
+      // flick signature (fast, straight, far) **by construction**. Without the skip, a hand
+      // that shakes to REMOVE a constraint releases mid-shake at speed, the flick test
+      // passes, and 2ter pushes one instead — which is defect 41 arriving through its own
+      // escape hatch. ⭐ It keys on ONE reversal, not on a completed shake: the release can
+      // come before the second.
+      if (
+        runsIn3(anchorFork) &&
+        verdict.kind === "FLICK" &&
+        selectedFace !== null &&
+        !grip.shake.suppressesFlick
+      ) {
         const id = idOf.get(grip.mesh);
         const face = id === undefined
           ? undefined
@@ -2039,6 +2106,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
               `${solved.freeDof} DOF free`;
           }
         }
+      }
+      if (runsIn3(anchorFork) && verdict.kind === "FLICK" && grip.shake.suppressesFlick) {
+        // ⚠ A SKIP MUST BE ANNOUNCED — `METHOD`, in those words. A flick that was recognised
+        // and deliberately ignored looks exactly like a flick that failed, and the readout is
+        // the only place the difference exists until `IN7`'s haptic.
+        lastVerdict = "IN3: flick skipped — the gesture reversed (A4: a shake is two flicks)";
       }
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
       // orbit can get stuck close in with an object filling the view, and then every tap

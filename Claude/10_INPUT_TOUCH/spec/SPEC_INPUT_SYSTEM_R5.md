@@ -133,7 +133,7 @@ reached its 800-line cap. `METHOD`: *when two sections conflict, the later one w
 
 | | supersedes | in force |
 |---|---|---|
-| **A1** | §1.4 / 2septies' double-tap eviction | the double-tap evicts nothing; it is purely the camera fly. ⚠ Its 360° roll trigger is itself superseded by **A4** |
+| **A1** | ✅✅ **WIRED 2026-09-16** (`D32`) — §1.4 / 2septies' double-tap eviction | the double-tap evicts nothing; it is purely the camera fly. ⚠ Its 360° roll trigger is itself superseded by **A4** |
 | **A4** | A1's trigger | eviction is a **quick back-and-forth**, one touchpoint, ≥2 reversals in a window. ⛔ The flick test is skipped once one reversal is seen, or an abandoned shake ADDS a constraint |
 | **A1 §4** (`D13`) | §1.4's *"clears its constraint stack"*, for mates | eviction **spares `MATE` entries** — one gesture, one intention |
 | **A2** | §0's *"two objects"* | the scene holds **three** |

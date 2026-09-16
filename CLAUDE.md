@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-16)
 
-✅ Green: TypeScript + Babylon + Vite, **574 golden vectors passing** (632 − 58: ⭐ the roll
+✅ Green: TypeScript + Babylon + Vite, **586 golden vectors passing** (632 − 58 + 12: ⭐ the roll
 channel and its vectors were **deleted together**, 2026-09-16).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
