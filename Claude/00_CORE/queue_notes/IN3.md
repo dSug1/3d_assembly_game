@@ -778,6 +778,40 @@ suppressing every post-reversal flick was recoverable by nothing.
 
 ---
 
+### ✅ FORK C's FIVE CORRECTIONS — the first device pass, 2026-09-16
+
+⭐ The owner drove stage 1 and sent five corrections; *"the rest is working good."* ⛔ Two of
+the five were **defects of mine**, and both are the kind no vector could have caught because
+they live in the wiring or in a baseline:
+
+1. **The highlight was built and wiped one event later.** *"You completely disregarded the
+   highlight rule — or if you built it, I can't see it."* ⛔⛔ The release handler's
+   persistence test asked *"is the object being RELEASED the highlighted one?"* — and in fork
+   C it never is: the highlight names the **Follower** while the release that follows an
+   alignment is the **Pioneer's** tap. ⭐ Mistake shape 2 in a new place: a condition about the
+   GESTURE standing in for a fact about the MODEL. ✅ The test now asks the question the
+   highlight answers — *is the highlighted object still aligned?* — whichever grip is going up.
+2. **The shake only fired if it began at the press** (and so *"not working in translation
+   mode"*, which was the same defect wearing a mode). ⛔⛔ The detector claimed its axis ONCE,
+   from the gesture's first leg, and accumulated reversals, amplitude and perpendicular
+   excursion from that origin for as long as the finger stayed down. ⭐⭐ **THE SAME MISTAKE
+   `D33` HAD JUST FIXED IN THE FLICK**: a quantity measured from the oldest sample of the
+   gesture instead of from the recent motion. ✅ Rewritten as a **windowed reading** — the
+   principal axis of the trailing window, scanned over sub-windows longest-first, exactly as
+   the flick now reads its tail. ⚠ And my first vector for it failed against my own fix, which
+   is how the sub-window scan got written: a 480 ms drag plus a 240 ms shake leaves the window
+   mostly drag, so the whole-window reading refused the very gesture the report asked for.
+
+⛔ The other three corrections were rules: fork C becomes the **default fork**, it starts in
+**`ROTATE`**, and the automatic switch to translation after an alignment is **retired** — a
+rule the owner had dictated himself, withdrawn because *"it makes the game too complicated"*
+and because it blocked testing the reset after an alignment. ⭐⭐ That last one cost an argument
+I had liked: the tap's two meanings *coincided* while the alignment ended in `TRANSLATE`.
+They no longer do — **the alignment consumes the tap**, overriding `D28` for that one
+gesture, and that is now stated rather than dressed up as a happy accident.
+
+---
+
 ### ✅✅ FORK C IS SPECIFIED AND STAGE 1 IS BUILT — `D37`, 2026-09-16
 
 ⛔⛔ **THE OWNER PARKED FORK B FIRST, AND THE REASON IS THE DESIGN INPUT FOR FORK C**: *"I am

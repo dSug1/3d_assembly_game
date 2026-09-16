@@ -64,8 +64,9 @@ release. ⚠ The comparison's record is in
 ⚠ The mode starts at `TRANSLATE` and flips on **every** tap of any touchpoint, anywhere,
 immediately — including with nothing carried, since it is what the next grab inherits.
 ⛔ **In fork C the session starts in `ROTATE`** (`D37`, the owner's *"default start: rotation
-mode"*), and a tap that lands on **another object's face while one is held** aligns instead of
-toggling — see the fork C table below. Everywhere else the tap keeps exactly this meaning.
+mode"*) — and **fork C is the default fork** since `D38`, so that is the shipped start. ⚠ A tap
+on **another object's face while one is held** aligns and is **consumed**: the mode does NOT
+change (`D38` retired that clause). Everywhere else the tap keeps exactly this meaning.
 
 | touchpoints | on what, and what moves | what happens | spec |
 |---|---|---|---|
@@ -99,12 +100,12 @@ fork A"* means. ⛔ **NO HAND HAS TOUCHED ANY OF IT** — rule 5 is unpaid for t
 
 | touchpoints | configuration | what happens | status |
 |---|---|---|---|
-| 1 | an object, no alignment | rotate or translate per the mode — fork A's rules, ⚠ starting in `ROTATE` | ✅ built (inherited) |
+| 1 | an object, no alignment | rotate or translate per the mode — fork A's rules, ⚠ starting in `ROTATE`, and **fork C is the DEFAULT fork** since 2026-09-16 | ✅ built (inherited) |
 | 1 | an object, **ALIGNED**, mode `ROTATE` | ⭐⭐ **TWIST about the aligned normal** — the one surviving DOF (`anchor_rotate.ts`, reused from `A3`). ⛔ REFUSES where that normal points at the camera | ✅ built |
 | 1 | an object, **ALIGNED**, mode `TRANSLATE` | fork A's screen-plane drag — ⚠ assumed, not dictated | ✅ built |
 | 1 | an object, **FLICK** | ⭐⭐ **ROTATION RESET** to the press orientation. The alignment is **conserved** if it predates the press, **dropped** if it was made during the gesture | ✅ built (`D37`; `D36` deleted this globally, fork C alone reinstates it) |
-| 1 | an object, **SHAKE** (a quick back-and-forth) | releases the alignment, un-highlights the FollowerFace — ⛔ in **either** mode, unlike `D32`'s fork B rule | ✅ built |
-| 2 | holding obj 1 + **TAP on another object's face** | ⭐⭐⭐ **ALIGN**: obj 1 makes the **minimal** turn so its held face's normal is **PARALLEL** to the tapped face's (the CAD *align* sense, the owner's choice over a mate); the FollowerFace highlights until released; `Pioneer := null`; mode → `TRANSLATE` | ✅ built |
+| 1 | an object, **SHAKE** (a quick back-and-forth) | releases the alignment, un-highlights the FollowerFace — ⛔ in **either** mode, unlike `D32`'s fork B rule, and **at any moment in a gesture** (defect 45) | ✅ built |
+| 2 | holding obj 1 + **TAP on another object's face** | ⭐⭐⭐ **ALIGN**: obj 1 makes the **minimal** turn so its held face's normal is **PARALLEL** to the tapped face's (the CAD *align* sense, the owner's choice over a mate); the FollowerFace stays highlighted until the alignment goes; `Pioneer := null`. ⛔ **The mode does NOT change** — the tap is CONSUMED, which overrides `D28` for this one gesture | ✅ built |
 | 2 | holding obj 1 + a tap on the SAME object, or on empty space | plain mode toggle, exactly as `D28` | ✅ built |
 | 2 | holding obj 1 + a tap while **two or more** other objects are held | ⛔ refuses and toggles — *which* object is the Follower has no trustworthy answer | ✅ built, reported on the HUD |
 | 2 | two holders, obj 1 **NOT** aligned | each finger moves its own object, per the mode (owner's answer) | ✅ built (inherited) |

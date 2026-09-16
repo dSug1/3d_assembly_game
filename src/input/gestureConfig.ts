@@ -299,8 +299,9 @@ export interface GestureConfig {
   /**
    * ⭐⭐⭐ **WHICH ANCHOR / ALIGNMENT RULE SET IS IN FORCE** (`D29`, `IN3`).
    *
-   * * `0` — **fork A, `NONE`**: today's behaviour. No constraint is created, consulted or
-   *   cleared. ⭐ **The default**, because it is the only set a hand has closed.
+   * * `0` — **fork A, `NONE`**: no constraint is created, consulted or cleared — the
+   *   behaviour `1.0.4`–`1.0.7` shipped. ⚠ **No longer the default** (owner, 2026-09-16);
+   *   reach it with `?anchorRules=0`.
    * * `1` — **fork B, `IN3`**: §2 rules 1–3 — face selection, 2bis's empty-stack
    *   precondition, 2ter/2quater on a flick, 2sexte about the remaining DOF, eviction by a
    *   shake. ⚠ Under construction; `queue_notes/IN3.md` lists what is wired.
@@ -310,6 +311,10 @@ export interface GestureConfig {
    *   mate), **one** alignment at a time, a shake releases it, a flick resets the rotation.
    *   ⛔ **No flick alignment anywhere**: the owner left fork B because a release-time
    *   trigger *"releases the finger from the object it is tracking"*.
+   *   ⭐⭐ **AND IT IS THE DEFAULT SINCE 2026-09-16** — *"the game shall start by default to
+   *   fork C, not fork A"*. ⚠ That overrules my own reasoning, which was that the default
+   *   must be the only set a hand had closed; the owner is the hand, and fork C is what is
+   *   being judged now.
    *
    * ⚠ Numeric so the URL override and the menu slider reach it with no new machinery:
    * `?anchorRules=1`. ⛔ It latches only while nothing touches the glass — switching into or
@@ -615,7 +620,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   doubleTapSlop: 8,
   // ⛔ Fork A — today's behaviour, the only set a hand has closed. 1 = `IN3`,
   // 2 = the owner's third set (inert until specified). See `input/anchor_fork.ts`.
-  anchorRules: 0,
+  // ⭐⭐ **FORK C**, at the owner's instruction 2026-09-16 — *"the game shall start by
+  // default to fork C, not fork A"*. ⚠ Fork A is `?anchorRules=0`, fork B is `1`.
+  anchorRules: 2,
 
   evictOnOverflow: false,
   matePriorityOverAnchor: false,

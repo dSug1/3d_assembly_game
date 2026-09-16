@@ -374,13 +374,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // cleared, which is how a message ends up saying `undefined` on the glass.
     const pioneerFaceId = pioneerGrip.pressFace.faceId;
     pioneerGrip.pressFace = null;
-    // ⭐⭐ *"and then the mode switches to translation mode"* — which is ALSO the flip the
-    // `D28` toggle would have made from `ROTATE`, so the hand sees one consistent outcome
-    // whichever rule owned the tap. That coincidence is what let both rules keep the gesture.
-    behaviour = "TRANSLATE";
+    // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
+    //
+    // > *"the mode shall not switch automatically to translation mode after an alignment in
+    // > rotation mode. It makes the game too complicated. Ignore this rule... This will also
+    // > allow me to test the flick after an alignment."*
+    //
+    // ⭐⭐ AND IT COSTS ME AN ARGUMENT I HAD LIKED: the tap's two meanings *coincided* while
+    // the alignment ended in `TRANSLATE`, because that was the same flip `D28`'s toggle would
+    // have made — so both rules could own the gesture without a hand seeing a contradiction.
+    // ⛔ They no longer coincide: **the alignment CONSUMES the tap** and the mode stays
+    // `ROTATE`. That is a real override of `D28`, not a coincidence, and it is the owner's.
+    // ⚠ Nothing is trapped by it: a tap on empty space or on the held object still toggles,
+    // so `TRANSLATE` is one tap away — and staying in `ROTATE` is what makes the rotation
+    // reset testable straight after an alignment.
     lastVerdict =
       `forkC: ALIGNED ${followerId}/${followerGrip.pressFace.faceId} → ` +
-      `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free → TRANSLATE`;
+      `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${behaviour}`;
     return true;
   };
 
@@ -1684,14 +1694,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⭐ Which also retired the cost I had stated against this model — rotation no longer
    * costs a tap every time, only when switching.
    */
-  // ⭐⭐ *"Default start: rotation mode and fork C"* (owner, 2026-09-16). ⛔ The MODE default
-  // is applied **inside fork C only**: fork A's session default is `TRANSLATE` and a hand has
-  // closed it, so changing it globally would alter shipped behaviour to serve an unjudged
-  // fork. ⚠ The FLAG's default stays `0` for the same reason — it moves the day a device
-  // pass closes fork C (`FORK_C_ANCHOR_RULES.md` §4.6).
-  // ⚠ Read at BOOT, not on a fork change: flipping the slider mid-session does not re-default
-  // the mode, because the mode is the one thing the hand sets constantly and silently
-  // overriding it would be the opposite of a latch.
+  // ⭐⭐ *"Default start: rotation mode and fork C"* (owner, 2026-09-16), and since the same
+  // day **fork C is the default fork**, so this is the shipped start. ⛔ The mode default is
+  // still applied **inside fork C only**: fork A's `TRANSLATE` start was closed by a hand and
+  // `?anchorRules=0` must reproduce it exactly.
+  // ⚠ Read at BOOT; `syncAnchorFork` covers the case of ENTERING fork C from the slider.
   let behaviour: Behaviour = runsForkC(anchorForkOf(cfg.anchorRules))
     ? "ROTATE"
     : initialBehaviour();
@@ -1721,7 +1728,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the person who just made it. ⛔ `router.size`, not `activeCount`: an ignored finger is
    * still a finger on the glass. */
   const syncAnchorFork = (): void => {
-    anchorFork = adoptAnchorFork(anchorFork, anchorForkOf(cfg.anchorRules), router.size);
+    const next = adoptAnchorFork(anchorFork, anchorForkOf(cfg.anchorRules), router.size);
+    // ⭐⭐ *"Fork C shall start by default in rotation mode"* — and **entering** fork C is a
+    // start. ⛔ On the TRANSITION only, never while it is merely in force: re-asserting the
+    // mode every frame would nail it to `ROTATE` and the toggle would look broken.
+    // ⚠ The boot case is handled where `behaviour` is declared; this covers the slider, which
+    // is how a device session actually reaches another fork.
+    if (next !== anchorFork && runsForkC(next)) behaviour = "ROTATE";
+    anchorFork = next;
   };
 
   /**
@@ -2111,10 +2125,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // > un-highlight the FollowerFace and then nullify the FollowerFace."*
       //
       // ⛔⛔ `D32` restricted fork B's shake to `ROTATE`, reasoning that a back-and-forth
-      // while translating is a hand moving a part around. ⭐ Fork C cannot afford that rule:
-      // its alignment **ends in `TRANSLATE`**, so a mode-gated shake would force the hand to
-      // toggle back to `ROTATE` before it could undo — and the owner's sentence carries no
-      // mode condition. ⚠ The cost is accepted and named: in fork C a vigorous
+      // while translating is a hand moving a part around. ⭐ Fork C does not: the owner's
+      // sentence carries no mode condition, and said so again when it failed — *"the shake is
+      // not working in translation mode, contradicting what you have written above: correct
+      // this bug."*
+      // ⚠⚠ IT WAS NOT THIS GATE THAT FAILED THEM. The block already ran in both modes; what
+      // failed was the detector, which claimed its axis ONCE at the start of the gesture — so
+      // after an alignment (which takes a hold and a tap, i.e. time) no later shake could
+      // ever register, in either mode. `shake.ts` carries that defect and its fix.
+      // ⚠ The cost of having no mode gate is accepted and named: in fork C a vigorous
       // repositioning can evict, and the four shake tunables are the only defence. Their
       // sliders ship with the rule.
       if (runsForkC(anchorFork)) {
@@ -2531,13 +2550,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // that made it and dies with the CONSTRAINT, which is the thing it now reports.
       // ⚠ §3's clause still governs an UNALIGNED object: press, look, release, and the
       // highlight goes — nothing to report, nothing drawn.
-      const releasedId = idOf.get(grip.mesh);
-      const stillAligned =
+      // ⛔⛔⛔ **DEVICE-REPORTED: *"the aligned face shall continue to be highlighted. You
+      // completely disregarded the highlight rule — or if you built it, I can't see it."***
+      //
+      // ⚠ It WAS built, and this line destroyed it one event later. The test asked *"is the
+      // object being RELEASED the highlighted one?"* — and in fork C it never is: the
+      // highlight names the **Follower**, while the release that follows an alignment is the
+      // **Pioneer's** tap. So the marker was raised and wiped in the same handler.
+      //
+      // ⭐⭐ THE FIX IS TO ASK THE QUESTION THE HIGHLIGHT ACTUALLY ANSWERS. It reports *this
+      // object is aligned on this face* (`D35`), so it lives exactly as long as that
+      // alignment does — **whichever** object is being released. ⛔ The old form was a
+      // condition about the GESTURE standing in for a fact about the MODEL, which is the
+      // shape `METHOD` calls a substituted quantity.
+      const highlightedStillAligned =
         selectsFaces(anchorFork) &&
-        releasedId !== undefined &&
-        selectedFace?.objectId === releasedId &&
-        (world.objects.get(releasedId)?.constraints.length ?? 0) > 0;
-      if (!stillAligned) selectedFace = null;
+        selectedFace !== null &&
+        (world.objects.get(selectedFace.objectId)?.constraints.length ?? 0) > 0;
+      if (!highlightedStillAligned) selectedFace = null;
       forgetAnchor(routed.seq);
       router.release(e.pointerId);
       held.delete(e.pointerId);

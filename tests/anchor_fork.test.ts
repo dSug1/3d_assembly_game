@@ -29,11 +29,15 @@ const B: AnchorFork = "IN3";
 const C: AnchorFork = "FORK_C";
 
 describe("anchorForkOf — the flag reads as a rule set", () => {
-  it("0 is fork A, and it IS the shipped default", () => {
-    // ⭐ The default must be today's behaviour: `IN3` is under construction, and shipping an
-    // unbuilt rule set as the default would make every device session judge a moving target.
+  it("⛔⛔ 0 is fork A — and FORK C is the shipped default since 2026-09-16", () => {
+    // ⛔⛔ THIS VECTOR ASSERTED THE OPPOSITE, with a reason I still think was sound while it
+    // held: *"the default must be today's behaviour — shipping an unbuilt rule set as the
+    // default would make every device session judge a moving target."*
+    // ⭐ The owner overruled it: *"the game shall start by default to fork C, not fork A."*
+    // ⚠ And the reasoning was mine about THEIR loop — fork C is what is being judged now, so
+    // reaching it should not require a URL. Fork A stays one flag away.
     expect(anchorForkOf(0)).toBe(A);
-    expect(anchorForkOf(DEFAULT_CONFIG.anchorRules)).toBe(A);
+    expect(anchorForkOf(DEFAULT_CONFIG.anchorRules)).toBe(C);
   });
 
   it("1 is fork B — `IN3` — and 2 is fork C, the owner's set", () => {

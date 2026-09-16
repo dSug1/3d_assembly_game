@@ -231,12 +231,83 @@ describe("the flick guard — ⛔ the one thing `IN3` must not forget", () => {
 });
 
 describe("the noise floor is a parameter, not an assumption", () => {
-  it("⛔ a noisier device needs more travel before the axis is claimed", () => {
-    // The same tiny path: accepted as an axis at a quiet noise floor, refused at a loud
-    // one. ⭐ `pointerNoiseMm` is a property of the GLASS and is passed in, as `sway.ts`
-    // takes it — never hard-coded here.
-    const tiny = [{ x: 0, y: 0, t: 0 }, ...leg(0, 20, 10, 0, 8), ...leg(20, -20, 20, 80, 8), ...leg(-20, 20, 20, 240, 8)];
-    expect(run(tiny, PARAMS, 0.1).verdict).not.toBeNull();
-    expect(run(tiny, PARAMS, 8).verdict).toBeNull();
+  it("⛔ a noisier device refuses a shake whose AMPLITUDE does not clear the noise", () => {
+    // ⭐ `pointerNoiseMm` is a property of the GLASS and is passed in, as `sway.ts` takes it.
+    // ⛔⛔ WHAT IT GATES MOVED WHEN THE DETECTOR BECAME A WINDOWED READING (2026-09-16): it
+    // used to gate *claiming the axis from the first leg*, and now gates the **windowed
+    // amplitude**, because there is no first leg any more — the axis is the windowed path's
+    // principal one, re-derived every sample.
+    // ⚠⚠ AND THE OLD FIXTURE USED A CONFIG THE PRODUCT REFUSES: noise 8 mm against
+    // `legMm` 8 mm, where `validateGestureConfig` demands `legMm >= 3×` the noise — so it
+    // proved the floor on a specimen that cannot occur. Mistake shape 5, kept on the record.
+    const path = [{ x: 0, y: 0, t: 0 }, ...leg(0, 20, 10, 0, 8), ...leg(20, -20, 20, 80, 8), ...leg(-20, 20, 20, 240, 8)];
+    expect(run(path, PARAMS, 0.1).verdict).not.toBeNull();
+    // 40 mm of amplitude against a 15 mm noise floor: 3× is 45 mm, so it must refuse.
+    expect(run(path, PARAMS, 15).verdict).toBeNull();
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ A SHAKE MAY START AT ANY MOMENT — the device report, 2026-09-16
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ A SHAKE AFTER A LONG DRAG — *\"only if the shake immediately follows\"*", () => {
+  it("⭐⭐⭐ a hand that drags somewhere and THEN shakes evicts — the reported defect", () => {
+    // > *"currently, your shake movement is triggered only if the touchpoint is pressed and
+    // > the shake immediately follows. Modify so the shake can occur at anytime during a
+    // > movement."*
+    //
+    // ⛔⛔ THE CAUSE WAS THE BASELINE, NOT A THRESHOLD. The first build claimed its axis ONCE,
+    // from the gesture's first leg, and then tracked headings, amplitude and perpendicular
+    // excursion against that stale origin for as long as the finger stayed down.
+    // ⭐ The fixture is the reported gesture: a long drag DOWN, then a shake left-and-right.
+    // ⚠ The drag is deliberately perpendicular to the shake — the worst case for a stale
+    // axis, and the one a hand makes when it moves a part and then changes its mind.
+    const drag: Sample[] = [];
+    for (let k = 1; k <= 60; k++) drag.push({ x: 0, y: mmToPx(k), t: k * 8 });
+    const t0 = 60 * 8;
+    const y0 = mmToPx(60);
+    const shake: Sample[] = [];
+    // out → back → out, 20 mm legs, along x this time
+    const legs = [20, -20, 20];
+    let t = t0;
+    let from = 0;
+    for (const to of legs) {
+      for (let i = 1; i <= 10; i++) {
+        t += 8;
+        shake.push({ x: mmToPx(from + ((to - from) * i) / 10), y: y0, t });
+      }
+      from = to;
+    }
+    const { verdict } = run([...drag, ...shake]);
+    expect(verdict).not.toBeNull();
+    expect(verdict!.reversals).toBeGreaterThanOrEqual(2);
+  });
+
+  it("⛔ and the long drag ALONE still evicts nothing — the guard can fail", () => {
+    // ⭐ `METHOD`: *a guard that cannot fail is not a guard.* A windowed reading that fired on
+    // any motion would pass the vector above and destroy an alignment on every drag.
+    const drag: Sample[] = [];
+    for (let k = 1; k <= 60; k++) drag.push({ x: 0, y: mmToPx(k), t: k * 8 });
+    expect(run(drag).verdict).toBeNull();
+  });
+
+  it("⚠ a shake is still refused when its legs straddle the WINDOW, however long the drag", () => {
+    // ⭐ The window is what makes the gesture reachable at any moment, and it is also what
+    // keeps a slow fidget from accumulating into an eviction — both halves of one number.
+    const drag: Sample[] = [];
+    for (let k = 1; k <= 60; k++) drag.push({ x: 0, y: mmToPx(k), t: k * 8 });
+    const y0 = mmToPx(60);
+    const slow: Sample[] = [];
+    let t = 60 * 8;
+    let from = 0;
+    for (const to of [20, -20, 20]) {
+      for (let i = 1; i <= 10; i++) {
+        t += 70; // ⚠ 700 ms a leg, against a 600 ms window: no sub-window holds two reversals
+        slow.push({ x: mmToPx(from + ((to - from) * i) / 10), y: y0, t });
+      }
+      from = to;
+    }
+    expect(run([...drag, ...slow]).verdict).toBeNull();
   });
 });

@@ -79,6 +79,32 @@ reset"* is literally what it did. ⭐⭐ Fork C has no flick alignment, so the c
 and the conflict `D36` removed does not exist here. ⚠ It returns **as a fork C rule**, not
 as a global behaviour: fork A shipped without it since `D36`.
 
+### ✅ CORRECTIONS AFTER THE FIRST DEVICE PASS — the owner's text, verbatim
+
+> *"corrections to be done to fork C:*
+> * *the game shall start by default to fork C, not fork A*
+> * *the fork C shall start by default in rotation mode. currently, it start in translation mode.*
+> * *when the object is aligned, the aligned face shall continue to be highlighted. you
+>   completely disregarded the highlight / un-highlight rule I gave you. Or if you built it, I
+>   can't see it on the usb debugging.*
+> * *modify the rule: the mode shall not switch automatically to translation mode after an
+>   alignment in rotation mode. It makes the game too complicated. Ignore this rule (therefore,
+>   remove the lines and continue in rotation mode). This will also allow me to test the flick
+>   after an alignment (currently, I cannot test since alignment triggers translation mode).*
+> * *shake: currently, your shake movement is triggered only if the touchpoint is pressed and
+>   the shake immediately follows (if I am correct). Modify so the shake can occur at anytime
+>   during a movement. Also, the shake is not working in translation mode, contradicting what
+>   you have written above: correct this bug.*
+>
+> *The rest is working good."*
+
+✅ **ALL FIVE ARE DONE** (2026-09-16, 615 vectors). ⭐ Two were **defects of mine** and are in
+the ledger — the highlight was built and wiped one event later, and the shake's axis was
+claimed once at the press. ⛔ The third correction **retires a rule the owner had dictated
+himself** (the automatic switch to translation), which is why §2's text keeps it and this
+block overrides it: *the later text wins, and the superseded one explains why the current one
+exists.*
+
 ---
 
 ## 3. MY READING — the rules as a state machine
@@ -89,7 +115,7 @@ as a global behaviour: fork A shipped without it since `D36`.
 |---|---|---|---|
 | **C0** | nothing held | — | camera: orbit (§2 r1), pinch (§4 r4), double-tap home |
 | **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | **tap on obj 2's face ⇒ ALIGN** (→ C2). Pressed-and-held: ⚠ §7.5 |
-| **C2** | obj 1 aligned, `FollowerFace` highlighted, mode forced `TRANSLATE` | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
+| **C2** | obj 1 aligned, `FollowerFace` highlighted, ⛔ mode **unchanged — stays `ROTATE`** | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
 | **C3** | aligned + `TargetPosition` live | `ROTATE`: orbit obj 1 about the target. `TRANSLATE`: move obj 1 along centre→target | its own delta moves **obj 2** along target→centre |
 | — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null (→ C1) | |
 | — | flick (any state) | **orientation restored to the press pose** (the reinstated reset) | |

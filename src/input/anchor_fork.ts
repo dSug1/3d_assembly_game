@@ -4,9 +4,10 @@
  * The owner is building `IN3` alongside the behaviour that exists today, so both can be
  * driven in one session and compared by finger (`D29`, 2026-09-16):
  *
- * * **`NONE`** — today's behaviour. A drag translates or rotates, a second touchpoint gives
- *   roll or depth, and **no constraint is ever created, consulted or cleared**. ⭐ The
- *   default, because it is the only set a hand has closed.
+ * * **`NONE`** — the behaviour `1.0.4`–`1.0.7` shipped. A drag translates or rotates, a
+ *   second touchpoint gives roll or depth, and **no constraint is ever created, consulted or
+ *   cleared**. ⚠ It was the default until 2026-09-16, when the owner made fork C the
+ *   default: *"the game shall start by default to fork C, not fork A."*
  * * **`IN3`** — §2 rules 1–3: face selection, 2bis's *empty stack* precondition, 2ter/2quater
  *   pushing `GRAVITY_ALIGN`/`WORLD_AXIS_ALIGN` on a flick, 2sexte rotating about the one
  *   remaining DOF, and eviction by a back-and-forth shake.
