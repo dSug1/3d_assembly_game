@@ -705,6 +705,79 @@ of the two and needs no decision from the owner.
 
 ---
 
+### ⛔⛔⛔ THREE DEVICE REPORTS IN ONE MESSAGE, and the third retracted a guard one hour old
+
+> *"in fork B: keep the face highlighted when the object is aligned, until the shaking
+> releases the alignment. — a flick immediately remove two DOF now and I cannot rotate the
+> aligned object around the alignment axis. — the flick should be triggerable during an
+> ongoing rotation (it seems the flick only triggers if the touchpoint presses and directly
+> do a flick)."*
+
+#### 1. The highlight is the alignment's only visible state (`D35`)
+
+§3 rule 3 says *"release unselects object and face"*, and it was written before a face could
+be ANCHORED. ⭐⭐ A constrained object looks exactly like a free one: the stack is invisible,
+2sexte's single DOF feels like a dead control, and *which* face is anchored is unknowable.
+✅ So the marker now outlives the gesture and **dies with the constraint** — eviction clears
+it, a surviving mate keeps it (`D13`). ⛔ Not the other way round: a highlight that outlived
+the stack would report something untrue, which is worse than reporting nothing.
+
+#### 2. 2sexte, and the blocker that was not one (`D34`)
+
+⛔ *"A flick immediately remove two DOF"* is correct and is §1.4 working: entry 1 is HARD and
+consumes two of three. ⛔ *"I cannot rotate the aligned object around the alignment axis"* is
+the defect — the third DOF had no driver, because `anchor_rotate.ts` sat built and unwired.
+
+⭐⭐⭐ **AND THE ROW HAD BEEN BLOCKED ON A DECISION THAT NO LONGER EXISTED.** `A3` framed the
+drag and the roll as two charts over one circle, well-conditioned in opposite geometries, to
+be selected by one constant (`anchorHandoverCos`) with hysteresis — and warned that two
+independently chosen thresholds give either a dead band or an overlap. ✅ `A12` had already
+removed the choice by moving roll to the SECOND touchpoint: the charts are two **channels**,
+both live, each reached by a different hand shape. ⭐ *A handover between rules became a
+handover between fingers, and stopped being a decision.* The constant is never written.
+
+⚠ What each channel does at its own degeneracy is REFUSE: the drag returns `null` where the
+axis projects to a point (every screen direction is equally perpendicular), the roll returns
+`null` square to the axis. ⛔ And a FULL stack refuses both — otherwise the second touchpoint
+would be a way to break an anchor the one-finger rule correctly protects.
+
+⭐⭐ **THREE COMPOSITION VECTORS, AND THEY CATCH WHAT 25 UNIT VECTORS DO NOT**: applying the
+twist in the object's LOCAL frame (`qmul(base, q)` — the classic order slip) leaves
+`anchor_rotate.test.ts` entirely green and reddens both of mine, because the anchor breaking
+is only visible in the composition *align → twist → read the face's world normal*. ⭐ Mistake
+shape 4, pre-empted for once rather than paid for.
+
+#### 3. The flick's baseline, and a guard that outlived its reading (`D33`)
+
+⛔⛔ The flick test measured travel and purity **from the oldest sample still inside
+`flickWindow`**. On a press-and-flick that sample is the flick's own start; at the end of an
+ongoing rotation it is mid-rotation — and a flick that REVERSES the drag (which is what
+flicking a face up after turning an object looks like) cancels to almost zero net travel.
+⭐ So the report was exact: *"only if the touchpoint presses and directly do a flick."*
+
+✅ `flickWindow` is now the LONGEST tail a flick may be read over rather than a fixed
+baseline, and the longest passing tail wins — longest, because a short tail is the easiest
+thing in the world to make look pure. ⚠ With a MINIMUM span of `flickLiftWindow`, so the
+displacement is never measured over a shorter baseline than the speed already is: one
+coalesced pointer jump is not a flick.
+
+⚠⚠ **MY FIRST FIXTURE FOR THIS DID NOT REPRODUCE IT** — mistake shape 5, caught by the
+mutant rather than by me: a slow rotation plus a fast run in another direction passes the
+OLD test too. The reproduction needs the reversal, and the vector now asserts the
+cancellation (net travel under the 6 mm bar) before asserting the fix.
+
+⛔⛔ **AND IT RETRACTED `A4`'s FLICK SKIP, WIRED ONE HOUR EARLIER.** The skip keyed on the
+first reversal — on `A4`'s own wording — which suppresses exactly this gesture. ⭐⭐ It had
+looked free when `A4` asked for it, because with a whole-window reading a reversal made a
+flick undetectable anyway: **the guard was sized against a reading of the signal that `D33`
+then changed.** ✅ Narrowed to *the shake has FIRED*, the case with a concrete harm (the hand
+has just cleared its alignments and the release would push a new one).
+⚠ The exposure left, stated: an ABANDONED shake can still end in a flick and push an
+alignment. It is reversible — one constraint rotates, and a shake removes it — while
+suppressing every post-reversal flick was recoverable by nothing.
+
+---
+
 ### ⛔ What remains in fork B
 
 1. ✅✅ **DONE — THE ESCAPE (`D32`, 2026-09-16).** `shake.ts` is wired: a back-and-forth

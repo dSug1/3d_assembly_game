@@ -99,7 +99,9 @@ describe("⛔ what must NOT be a shake", () => {
     const path = [{ x: 0, y: 0, t: 0 }, ...leg(0, 20, 10, 0, 8), ...leg(20, -20, 20, 80, 8)];
     const { verdict, detector } = run(path);
     expect(verdict).toBeNull();
-    expect(detector.sawReversal).toBe(true); // ⭐ but the flick guard is already armed
+    expect(detector.sawReversal).toBe(true);
+    // ⛔ ...and the flick guard is NOT armed by it — see the guard's own suite below.
+    expect(detector.suppressesFlick).toBe(false);
   });
 
   it("⛔ A SLOW fidget does not evict — the reversals fall outside one window", () => {
@@ -190,18 +192,41 @@ describe("the flick guard — ⛔ the one thing `IN3` must not forget", () => {
     expect(d.suppressesFlick).toBe(false);
   });
 
-  it("⭐ becomes TRUE on the FIRST reversal, long before the shake completes", () => {
+  it("⛔⛔ ONE REVERSAL DOES **NOT** ARM IT — retracted by a device report, `D33`", () => {
+    // ⛔⛔⛔ THIS VECTOR ASSERTED THE OPPOSITE FOR ONE HOUR, and the retraction is the
+    // record. It read: *"it must arm on the reversal, NOT at the completed shake — a user
+    // who abandons a shake mid-way releases at speed, and that release must not run the
+    // flick test."* ⭐ The argument was sound and the SIZE was wrong: *"the flick should be
+    // triggerable during an ongoing rotation"* (device, 2026-09-16), and a hand that turns
+    // an object and then flicks a face **reverses** — so a one-reversal skip suppresses the
+    // gesture `IN3` is for.
+    // ⭐⭐ WHY IT LOOKED FREE WHEN A4 ASKED FOR IT: a flick was then read over the whole
+    // motion window, where the two legs of a reversal CANCEL and no flick was detectable
+    // anyway. `D33` made the flick read its TAIL, and the guard's cost appeared with it.
+    // ⚠ The remaining exposure is stated in `shake.ts` and `D33`: an abandoned shake can
+    // end in a flick. It is reversible; suppressing every post-reversal flick was not.
     const d = new ShakeDetector(PARAMS, NOISE_MM);
     const path = [{ x: 0, y: 0, t: 0 }, ...leg(0, 20, 10, 0, 8), ...leg(20, -20, 20, 80, 8)];
+    for (const s of path) d.push(s);
+    expect(d.sawReversal).toBe(true);
+    expect(d.suppressesFlick).toBe(false);
+  });
+
+  it("✅ it arms when the shake FIRES — the case with a concrete harm", () => {
+    // ⭐ The harm is specific: the hand has just cleared its alignments, and a flick at the
+    // release would push a new one — undoing the escape with the gesture that made it.
+    const d = new ShakeDetector(PARAMS, NOISE_MM);
     let firedAt = -1;
+    const path = shakePath(20);
     path.forEach((s, i) => {
-      d.push(s);
-      if (firedAt < 0 && d.suppressesFlick) firedAt = i;
+      if (d.push(s) !== null && firedAt < 0) firedAt = i;
     });
     expect(firedAt).toBeGreaterThan(0);
-    // ⭐⭐ It must arm on the reversal, NOT at the completed shake — a user who abandons
-    // a shake mid-way releases at speed, and that release must not run the flick test.
-    expect(firedAt).toBeLessThan(path.length - 1);
+    expect(d.suppressesFlick).toBe(true);
+    // ⛔ AND IT STAYS ARMED for the rest of the gesture: the detector fires at most once,
+    // so a second release-time question must not get a different answer.
+    for (const s of leg(0, 40, 10, path[path.length - 1]!.t, 8)) d.push(s);
+    expect(d.suppressesFlick).toBe(true);
   });
 });
 

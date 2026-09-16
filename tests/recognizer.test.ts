@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { Sample } from "../src/input/motion";
-import { detectFlick, trimBuffer, type Flick } from "../src/input/flick";
+import { type Flick } from "../src/input/flick";
 import {
   NO_RELEASE_CONTEXT,
   Recognizer,
@@ -324,19 +324,26 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
     expect(pose.current()).toBe(42);
   });
 
-  it("⚠ A SWEEP FOLLOWED BY A FAST STRAIGHT RUN IS STILL NOT A FLICK — measured, not assumed", () => {
-    // ⭐⭐ THIS IS THE COST OF REMOVING THE SKIP, MEASURED. §1.3's old comment claimed a
+  it("⛔⛔ A SWEEP FOLLOWED BY A FAST STRAIGHT RUN **IS** A FLICK — and that is deliberate", () => {
+    // ⭐⭐⭐ THIS VECTOR HAS BEEN TRUE BOTH WAYS IN ONE DAY, AND THE HISTORY IS THE POINT.
+    //
+    // ⛔ §1.3 once SKIPPED the flick test after a committed roll, with a comment saying a
     // circular path *"fails the purity ratio anyway"* and that the explicit skip existed
-    // *"rather than relying on that happening to hold"*. ⛔ Removing the veto means we now
-    // rely on exactly that — so the case is pinned here instead of left to be discovered.
-    // ⭐ With a 70 px circle and a 48 px straight run at ~1000 px/s, the flick test still
-    // refuses: the trailing window it judges spans part of the curve, so the direction purity
-    // does not clear its threshold.
-    // ⚠ WHAT THIS DOES **NOT** PROVE: that no curved gesture can ever flick. It is one
-    // fixture, and the honest claim is *the purity ratio rejected this one*. A longer straight
-    // exit would eventually pass, and that is a DEVICE question — can a hand produce an
-    // accidental alignment this way? `A4`'s eviction shake carries `suppressesFlick` for the
-    // reversal case and lands with its wiring.
+    // *"rather than relying on that happening to hold"*. `D31` deleted the roll, so the skip
+    // went with it, and this vector then recorded that the purity ratio happened to reject
+    // one measured curve — stating plainly that it proved nothing about curves in general.
+    //
+    // ⭐ It did not hold for long: the device asked for *"the flick should be triggerable
+    // during an ongoing rotation"*, which is the SAME QUESTION from the other side. A flick
+    // is now read over the longest TAIL that passes rather than over the whole window, so a
+    // curve that ends in a fast straight run does flick — by design, because that is what a
+    // hand rotating an object and then flicking a face looks like.
+    //
+    // ⚠⚠ WHAT PROTECTS AN ALIGNMENT FROM AN ACCIDENT IS NOW THREE THINGS, none of them the
+    // purity ratio: the tail's MINIMUM SPAN (`flickLiftWindow`), `ShakeDetector.suppressesFlick`
+    // from the first reversal, and eviction as the escape (`D32`). ⭐ That is a better answer
+    // than a skip — each is a separate, testable statement — and it is the owner's report
+    // that forced it rather than my reasoning.
     const { rec } = fresh();
     const swept = circle(70, true);
     rec.press(swept[0]!);
@@ -346,16 +353,16 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
       rec.move({ x: last.x, y: last.y - 8 * k, t: last.t + 8 * k });
     }
     const v = rec.release({ x: last.x, y: last.y - 48, t: last.t + 48 });
-    expect(v.kind).toBe("CONTINUOUS_KEPT");
+    expect(v.kind).toBe("FLICK");
+    expect(v.flick?.axis).toBe("VERTICAL");
 
-    // ⭐⭐ AND THE COUNTER-EXAMPLE, WHICH IS WHAT MAKES THE ASSERTION ABOVE MEAN ANYTHING:
-    // the same straight run, on its own, IS a flick. ⛔ Without this the vector could not tell
-    // *"the purity ratio rejected the curve"* from *"my straight run was too weak to flick at
-    // all"* — and the second would make the whole test vacuous.
-    // ⚠ The old suite made exactly this move for the opposite claim; it is kept.
-    const tail: Sample[] = [{ x: last.x, y: last.y, t: last.t }];
-    for (let k = 1; k <= 6; k++) tail.push({ x: last.x, y: last.y - 8 * k, t: last.t + 8 * k });
-    expect(detectFlick(trimBuffer(tail, DEFAULT_CONFIG), DEFAULT_CONFIG)).not.toBeNull();
+    // ⛔ AND THE CURVE ALONE STILL IS NOT ONE — without the straight exit, the same sweep
+    // keeps its motion. ⭐ The tail scan did not make everything a flick; it made the TAIL
+    // the subject, and a tail that is still curving fails the purity ratio exactly as before.
+    const { rec: rec2 } = fresh();
+    rec2.press(swept[0]!);
+    for (const s of swept.slice(1, -1)) rec2.move(s);
+    expect(rec2.release(swept[swept.length - 1]!).kind).toBe("CONTINUOUS_KEPT");
   });
 
   it("⛔⛔ THE ROLL MACHINERY IS GONE FROM THE RECOGNIZER'S SURFACE, not merely unfed", () => {

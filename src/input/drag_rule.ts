@@ -70,14 +70,19 @@ export function dragRule(mode: Behaviour, stack: readonly Constraint[]): DragRul
 /**
  * ⭐ Is this rule one the build can currently DRIVE?
  *
- * ⛔⛔ It exists so an unwired rule cannot be mistaken for an inert one. `CONSTRAINED_ROTATE`
- * is recognised by `dragRule` and its driver (`anchor_rotate.ts`, 25 vectors) is **built but
- * not wired** — blocked on a decision `A12` reopened by moving roll to the second touchpoint.
- * ⚠ So the honest behaviour today is *nothing happens, and the readout names the rule that
- * would have run*. ⭐ Without this distinction the HUD would say `CONSTRAINED_ROTATE` while
- * the object sat still, and a device pass would read that as a defect in 2sexte rather than
- * as work not yet done.
+ * ⛔⛔ It exists so an unwired rule cannot be mistaken for an inert one — the HUD would
+ * otherwise name a rule while the object sat still, and a device pass would read that as a
+ * defect in the rule rather than as work not yet done.
+ *
+ * ✅✅ **`CONSTRAINED_ROTATE` IS DRIVEN SINCE 2026-09-16** (`D34`): `anchor_rotate.ts` is
+ * wired, so a one-constraint object turns about **the constraint's own axis** — device
+ * report, *"a flick immediately remove two DOF now and I cannot rotate the aligned object
+ * around the alignment axis."* ⭐ `A3`'s handover was never a decision after all: `A12` had
+ * already split the channels, so the DRAG chart is the one touchpoint and the ROLL chart is
+ * the second touchpoint's x, and each is well-conditioned where the other degenerates.
+ * ⚠ `ROTATE_REFUSED` stays undriveable BY DESIGN — it is a refusal, not a gap, and `D32`'s
+ * shake is how a hand leaves it.
  */
 export function isDriven(rule: DragRule): boolean {
-  return rule === "TRANSLATE" || rule === "FREE_ROTATE";
+  return rule === "TRANSLATE" || rule === "FREE_ROTATE" || rule === "CONSTRAINED_ROTATE";
 }

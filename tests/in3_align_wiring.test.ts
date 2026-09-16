@@ -19,6 +19,8 @@ import type { Flick } from "@input/flick";
 import { faceWorld, makeWorld, pushObjectConstraint, setWorldPlacement, type SceneObject } from "@core/object_model";
 import { solve } from "@core/constraint_stack";
 import { qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
+import { constrainedDragAngle, rotateAboutAxis } from "@input/anchor_rotate";
+import { mmToPx } from "@core/units";
 
 const UP: Vec3 = [0, 1, 0];
 const RIGHT: Vec3 = [1, 0, 0];
@@ -106,5 +108,87 @@ describe("⛔⛔ A FLICK UP MUST LEAVE THE SELECTED FACE POINTING UP", () => {
       sign: 1,
     });
     n.forEach((v, i) => expect(v).toBeCloseTo(RIGHT[i]!, 10));
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ 2sexte — THE TWIST THAT MUST NOT BREAK THE ANCHOR
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ AN ALIGNED FACE STAYS ALIGNED WHILE THE OBJECT TWISTS (rule 2sexte, `D34`)", () => {
+  /** ⭐ A screen frame looking down −z, so the constraint axis lies ACROSS the screen. */
+  const FRAME = {
+    right: [1, 0, 0] as Vec3,
+    up: [0, 1, 0] as Vec3,
+    viewAxis: [0, 0, -1] as Vec3,
+  };
+
+  it("⭐⭐⭐ flick to align, then drag: the face holds its target and the object DOES turn", () => {
+    // ⛔⛔ THE DEVICE REPORT WAS TWO STATEMENTS: *"a flick immediately remove two DOF now"*
+    // (correct — §1.4 entry 1 is hard) *"and I cannot rotate the aligned object around the
+    // alignment axis"* (the defect). ⭐ So the vector has to assert BOTH halves, because
+    // either one alone is satisfiable by doing the wrong thing: an object that refuses to
+    // move keeps its face aligned perfectly, and a free rotation turns beautifully while
+    // throwing the anchor away.
+    const orientation = qFromAxisAngle([0.2, 0.7, -0.3], 0.9);
+    let world = setWorldPlacement(makeWorld([BOX]), "box", { position: [0, 0, 0], orientation });
+    const face = BOX.faces.find((f) => f.id === "+x")!;
+    const c = alignFromFlick("ROTATE", flickUp, face.normal, UP, RIGHT)!;
+    world = pushObjectConstraint(world, "box", c, false);
+    const solved = solve(world.objects.get("box")!.constraints, orientation, {
+      evictOnOverflow: false,
+    });
+    const aligned = qmul(solved.rotation, orientation);
+    world = setWorldPlacement(world, "box", { position: [0, 0, 0], orientation: aligned });
+    // the face points up, as `flickUp` asked
+    faceWorld(world, "box", "+x")!.normal.forEach((v, i) => expect(v).toBeCloseTo(UP[i]!, 10));
+
+    // ⭐ 20 mm of drag, through the SHIPPED mapping — not an angle I chose.
+    const angle = constrainedDragAngle(FRAME, c.targetWorld, mmToPx(20), 0, 0.07)!;
+    expect(angle).not.toBeNull();
+    expect(Math.abs(angle)).toBeGreaterThan(0.1); // it really turns
+    const twisted = rotateAboutAxis(aligned, c.targetWorld, angle);
+    world = setWorldPlacement(world, "box", { position: [0, 0, 0], orientation: twisted });
+
+    // ⛔⛔ HALF ONE: THE ANCHOR SURVIVED. This is the assertion `anchor_rotate.ts`'s header
+    // calls the whole point — *rotating about the view axis and hoping is how an anchor
+    // silently breaks*.
+    faceWorld(world, "box", "+x")!.normal.forEach((v, i) => expect(v).toBeCloseTo(UP[i]!, 10));
+    // ⛔⛔ HALF TWO: THE OBJECT MOVED. A different face must have gone somewhere.
+    const before = faceWorld(
+      setWorldPlacement(world, "box", { position: [0, 0, 0], orientation: aligned }),
+      "box",
+      "+z",
+    )!.normal;
+    const after = faceWorld(world, "box", "+z")!.normal;
+    expect(Math.hypot(after[0] - before[0], after[1] - before[1], after[2] - before[2])).toBeGreaterThan(0.05);
+  });
+
+  it("⛔ forty twists do not drift the anchor — the case a per-frame increment is exposed to", () => {
+    // ⭐⭐ THE DRAG IS APPLIED AS AN INCREMENT EVERY FRAME, so the question is not whether one
+    // twist is exact but whether four hundred are. ⚠ `faceMarkerOrientation`'s defect was
+    // found by exactly this shape, one day earlier, and it is cheap to ask.
+    const orientation: Quat = [1, 0, 0, 0];
+    let world = setWorldPlacement(makeWorld([BOX]), "box", { position: [0, 0, 0], orientation });
+    const c = alignFromFlick("ROTATE", flickUp, BOX.faces.find((f) => f.id === "+x")!.normal, UP, RIGHT)!;
+    world = pushObjectConstraint(world, "box", c, false);
+    const solved = solve(world.objects.get("box")!.constraints, orientation, { evictOnOverflow: false });
+    let q = qmul(solved.rotation, orientation);
+    for (let i = 0; i < 400; i++) {
+      q = rotateAboutAxis(q, c.targetWorld, constrainedDragAngle(FRAME, c.targetWorld, mmToPx(3), 0, 0.07)!);
+    }
+    world = setWorldPlacement(world, "box", { position: [0, 0, 0], orientation: q });
+    faceWorld(world, "box", "+x")!.normal.forEach((v, i) => expect(v).toBeCloseTo(UP[i]!, 8));
+  });
+
+  it("⛔⛔ AND THE DEGENERATE CAMERA REFUSES rather than turning by an arbitrary amount", () => {
+    // ⭐ Looking ALONG the constraint axis, the axis projects to a POINT: §2 2sexte's
+    // *"component perpendicular to the axis as projected on screen"* has no direction, and
+    // every screen direction is equally perpendicular. ⛔ `null` is the honest answer, and
+    // the second touchpoint's roll is the chart that works there (`A3`, `A12`'s channels).
+    const along = { right: [1, 0, 0] as Vec3, up: [0, 0, -1] as Vec3, viewAxis: [0, 1, 0] as Vec3 };
+    expect(constrainedDragAngle(along, [0, 1, 0], mmToPx(20), 0, 0.07)).toBeNull();
+    // ⭐ and the counter-example, so the refusal is about the geometry and not the fixture
+    expect(constrainedDragAngle(FRAME, [0, 1, 0], mmToPx(20), 0, 0.07)).not.toBeNull();
   });
 });

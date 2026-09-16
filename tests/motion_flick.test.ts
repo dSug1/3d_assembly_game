@@ -104,6 +104,89 @@ describe("flick test", () => {
     expect(detectFlick(trimBuffer(run(400, 10), cfg), cfg)).toBeNull();
   });
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // ⭐⭐⭐ THE FLICK IS THE **TAIL**, AND THIS IS THE DEVICE REPORT THAT SAID SO
+  // ════════════════════════════════════════════════════════════════════════════
+
+  it("⛔⛔ A FLICK AT THE END OF AN ONGOING ROTATION IS A FLICK — the reported defect", () => {
+    // ⛔ *"the flick should be triggerable during an ongoing rotation (it seems the flick only
+    // triggers if the touchpoint presses and directly do a flick)"* — device, 2026-09-16.
+    // ⭐⭐ THE CAUSE WAS THE BASELINE, NOT THE THRESHOLDS: travel and purity were measured
+    // from `buffer[0]`, the oldest sample still inside `flickWindow`. On a press-and-flick
+    // that sample is the flick's own start; at the end of a rotation it is in the middle of
+    // the rotation, so the NET displacement is short and its direction is a mixture.
+    // ⛔⛔ AND MY FIRST FIXTURE FOR THIS DID NOT REPRODUCE IT — mistake shape 5, caught by
+    // the mutant. A slow rotation finished with a fast run in a DIFFERENT direction passes
+    // the old whole-window test too (the slow part contributes little, so purity survives).
+    // ⭐⭐ The reported gesture is a REVERSAL: a hand turning an object and then flicking a
+    // face upward drags one way and flicks back the other. Over the whole 120 ms window the
+    // two legs CANCEL — net travel ≈ 0 — so the old test refused it however hard the flick
+    // was. ⭐ That is why the report said *"only if the touchpoint presses and directly do a
+    // flick"*: only then is there nothing in the window to cancel against.
+    const rotate: Sample[] = [];
+    for (let t = 0; t <= 200; t += 10) rotate.push({ x: 0, y: mmToPx((400 * t) / 1000), t });
+    const last = rotate[rotate.length - 1]!;
+    const lastY = last.y;
+    const flick: Sample[] = [];
+    for (let k = 1; k <= 6; k++) {
+      flick.push({ x: 0, y: lastY - mmToPx((400 * (k * 10)) / 1000), t: last.t + k * 10 });
+    }
+    const buf = trimBuffer([...rotate, ...flick], cfg);
+    // ⚠ STATE THE CANCELLATION, so the vector shows WHY the old baseline failed rather than
+    // asserting the outcome alone: the window's net travel is under the 6 mm bar.
+    const netMm = Math.hypot(buf[buf.length - 1]!.x - buf[0]!.x, buf[buf.length - 1]!.y - buf[0]!.y) / mmToPx(1);
+    expect(netMm).toBeLessThan(cfg.flickDistance);
+    const f = detectFlick(buf, cfg);
+    expect(f).not.toBeNull();
+    expect(f!.axis).toBe("VERTICAL");
+    expect(f!.sign).toBe(-1); // ⚠ screen y grows downward, so −1 is upward
+    expect(f!.travelMm).toBeGreaterThan(cfg.flickDistance);
+  });
+
+  it("⭐ the tail it reports is the LONGEST one that passes, not the shortest", () => {
+    // ⛔ A shortest-tail scan would report ~2 samples of travel for every flick, because a
+    // short tail is the easiest thing in the world to make look pure — and `IN3` reads
+    // `travelMm` nowhere yet, so a wrong value here would be silent until something did.
+    // ⭐ On a wholly straight stroke the answer must be the whole window, which is also the
+    // proof that the scan did not stop early.
+    const buf = trimBuffer(run(400, 120), cfg);
+    const whole = Math.hypot(
+      buf[buf.length - 1]!.x - buf[0]!.x,
+      buf[buf.length - 1]!.y - buf[0]!.y,
+    ) / mmToPx(1);
+    expect(detectFlick(buf, cfg)!.travelMm).toBeCloseTo(whole, 6);
+  });
+
+  it("⛔ a TWO-SAMPLE jump is not a flick — the tail has a minimum span", () => {
+    // ⭐⭐ THE GUARD THAT MAKES THE SCAN SAFE, and it is the same discipline the lift speed
+    // already has: the displacement may not be measured over a shorter baseline than the
+    // speed is. ⛔ Without it, one coalesced 30 mm pointer jump — which browsers do emit
+    // under load — would be perfectly pure, plenty far, and a flick.
+    // ⚠ `flickLiftWindow` is 40 ms, so a 30 ms pair must be refused however fast it is.
+    const jump: Sample[] = [
+      { x: 0, y: 0, t: 0 },
+      { x: mmToPx(30), y: 0, t: 30 },
+    ];
+    expect(detectFlick(jump, cfg)).toBeNull();
+    // ⭐ AND THE COUNTER-EXAMPLE: the same travel over a span that DOES clear the window is
+    // a flick — so the refusal above is about the baseline and not about the fixture.
+    const spanned: Sample[] = [
+      { x: 0, y: 0, t: 0 },
+      { x: mmToPx(15), y: 0, t: 25 },
+      { x: mmToPx(30), y: 0, t: 50 },
+    ];
+    expect(detectFlick(spanned, cfg)).not.toBeNull();
+  });
+
+  it("⚠ a slow rotation with NO fast tail is still not a flick — the lift speed is untouched", () => {
+    // ⭐ `METHOD`: *a guard that cannot fail is not a guard.* The tail scan makes flicks
+    // EASIER to reach, so the vector that shows the speed test still refuses is what keeps
+    // the change honest — the scan does not run at all below the lift threshold.
+    const slow: Sample[] = [];
+    for (let t = 0; t <= 400; t += 10) slow.push({ x: mmToPx((30 * t) / 1000), y: 0, t });
+    expect(detectFlick(trimBuffer(slow, cfg), cfg)).toBeNull();
+  });
+
   it("trimBuffer keeps only the flick window", () => {
     const buf = run(100, 1000);
     const kept = trimBuffer(buf, cfg);

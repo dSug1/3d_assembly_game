@@ -76,6 +76,9 @@ import {
   dragRule,
   isDriven,
   ShakeDetector,
+  constrainedDragAngle,
+  constrainedRollAngle,
+  rotateAboutAxis,
   alignFromFlick,
   type AnchorFork,
   type HolderBinding,
@@ -989,6 +992,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
         // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
         tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
+        // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
+        // gain so one DOF does not feel like a different control from three — a guess, and
+        // the range is the same as the free gain's so a hand can compare them directly.
+        tunable("anchored twist gain (rad/mm)", "gainAnchorDrag", 0.005, 0.15, 0.005),
         // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
         // object's centre when it starts turning or turns the other way.
         tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
@@ -1369,6 +1376,34 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐⭐ ROLL AS AN INCREMENT, about the gravity frame's horizontal depth axis (A7).
       // ⚠ No baseline, no commit threshold, no circle fit, no rebase — the jump those
       // produced is gone with them. A12 replaced the gesture rather than the arithmetic.
+      //
+      // ⭐⭐⭐ AND ON AN ANCHORED OBJECT IT IS `A3`'s **OTHER CHART** OVER THE SAME ONE DOF.
+      // ⛔ A free roll would swing the anchored face straight off its target — revision 5
+      // forbade roll on a constrained object for exactly that reason, and `D14` corrected it
+      // by keeping the gesture and changing its AXIS: the twist goes about the constraint,
+      // never about the view. ⭐ This is the chart that works where the drag degenerates
+      // (camera looking along the axis), which is why `A12`'s channel split answers `A3`
+      // without a handover constant — see the 2sexte block in the ROTATE branch.
+      // ⚠ `constrainedRollAngle` returns `null` square to the axis, where a roll has no
+      // component to give: nothing happens, and the drag chart is the one that works there.
+      const rollId = idOf.get(grip.mesh);
+      const rollStack = rollId === undefined ? [] : (world.objects.get(rollId)?.constraints ?? []);
+      if (runsIn3(anchorFork) && rollStack.length === 1) {
+        const axis = rollStack[0]!.targetWorld;
+        const twist = constrainedRollAngle(
+          screenFrame(),
+          axis,
+          rollDragDeg(drive.rollDxPx, cfg.gainRollDrag),
+        );
+        if (twist !== null) {
+          setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
+        }
+      } else if (runsIn3(anchorFork) && rollStack.length > 1) {
+        // ⛔ A full stack has NO free rotational DOF, so a roll must refuse exactly as the
+        // drag does — otherwise the second touchpoint becomes a way to break an anchor that
+        // the one-finger rule correctly refuses. ⭐ `D32`'s shake is the way out of both.
+        lastVerdict = `IN3: roll refused — stack ${rollStack.length}, shake to clear`;
+      } else {
       setModelOrientation(
         grip.mesh,
         screenRollRotation(
@@ -1377,6 +1412,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           rollDragDeg(drive.rollDxPx, cfg.gainRollDrag),
         ),
       );
+      }
       grip.mode = "ROTATE";
       // ⭐ The rotational sway answers a driven roll too — same watcher, same tunables.
       const home = modelOrientation(grip.mesh);
@@ -1969,16 +2005,66 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             if (fired) {
               const ev = evictObjectConstraints(world, id);
               world = ev.world;
+              const left = ev.world.objects.get(id)?.constraints.length ?? 0;
               lastVerdict = ev.result.refused
                 ? `IN3: shake — nothing to evict (mates stay, §D13)`
-                : `IN3: SHAKE EVICTED ${ev.result.removed} — ` +
-                  `stack ${ev.world.objects.get(id)?.constraints.length ?? 0}`;
+                : `IN3: SHAKE EVICTED ${ev.result.removed} — stack ${left}`;
+              // ⭐⭐ *"...until the shaking releases the alignment"* — the owner's own words, and
+              // this is the half that makes the persistence honest. ⛔ A highlight that
+              // outlived the constraint would be reporting something that is no longer true,
+              // which is worse than not reporting it: the readout-that-lies shape.
+              // ⚠ Only when the stack is EMPTY. A surviving mate (`D13`) is still an
+              // alignment the object is holding, and the face that carries it stays marked.
+              if (left === 0 && selectedFace?.objectId === id) selectedFace = null;
             }
           }
           const stack = id === undefined ? [] : (world.objects.get(id)?.constraints ?? []);
           const rule = dragRule("ROTATE", stack);
           if (!isDriven(rule)) {
             lastVerdict = `IN3: ${rule} (stack ${stack.length}) — shake to clear`;
+            grip.prev = s;
+            paint();
+            return;
+          }
+          // ⭐⭐⭐ RULE 2sexte — AN ANCHORED OBJECT TURNS ABOUT **THE CONSTRAINT'S OWN AXIS**.
+          //
+          // ⛔⛔ DEVICE-REPORTED: *"a flick immediately remove two DOF now and I cannot rotate
+          // the aligned object around the alignment axis."* ⭐ Both halves are right: §1.4's
+          // entry 1 is HARD and consumes two of three DOF, and the third — the twist about
+          // the axis the face was driven onto — had no driver, because `anchor_rotate.ts` was
+          // built and unwired.
+          //
+          // ⭐⭐ AND THE REPORT DISSOLVED THE DECISION IT WAS WAITING ON. `A3` framed the
+          // handover as a choice between two charts over one circle — the drag (good across
+          // the screen) and the roll (good along the view axis) — governed by one constant,
+          // `anchorHandoverCos`. ⛔ `A12` had already made the choice unnecessary by moving
+          // roll to the SECOND touchpoint: the two charts are now two **channels**, both live,
+          // each reached by a different hand shape. ⭐ So there is no dead band and no overlap
+          // to size, and the constant is never written. *A handover between rules became a
+          // handover between fingers, and stopped being a decision.*
+          //
+          // ⚠ The axis is the constraint's `targetWorld` — a WORLD vector by construction
+          // (§1.4), so it does not move when the camera orbits, and a rotation about it
+          // preserves the constraint EXACTLY. No re-solve is needed or wanted here.
+          // ⛔ `constrainedDragAngle` returns `null` where the axis projects to a point: the
+          // rule does NOTHING there rather than turning the object by an arbitrary amount,
+          // and the readout says so. That is the case the second touchpoint's roll covers.
+          if (rule === "CONSTRAINED_ROTATE" && id !== undefined) {
+            const axis = stack[0]!.targetWorld;
+            const angle = constrainedDragAngle(
+              screenFrame(),
+              axis,
+              grip.rec.step.dx,
+              grip.rec.step.dy,
+              cfg.gainAnchorDrag,
+            );
+            if (angle === null) {
+              lastVerdict =
+                "IN3: 2sexte degenerate — the axis points at the camera; roll with a second finger";
+            } else if (angle !== 0) {
+              setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, angle));
+              lastVerdict = `IN3: 2sexte twist ${((angle * 180) / Math.PI).toFixed(1)}° about the anchor`;
+            }
             grip.prev = s;
             paint();
             return;
@@ -2142,7 +2228,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐ §3 rule 3 — *"release unselects object and face, stack preserved."* ⛔ The stack
       // lives on the OBJECT, so preserving it is not an action: it is what NOT clearing the
       // selection state means.
-      selectedFace = null;
+      //
+      // ⭐⭐⭐ AND THE OWNER AMENDED IT, 2026-09-16: *"keep the face highlighted when the
+      // object is aligned, until the shaking releases the alignment."*
+      // ⛔⛔ THE ARGUMENT IS THAT THE HIGHLIGHT IS NOT A SELECTION INDICATOR ANY MORE — it is
+      // **the alignment's only visible state**. A constrained object looks exactly like a
+      // free one: the stack is invisible, 2sexte's refusal to yaw feels like a dead control,
+      // and *which* face is anchored is unknowable. ⭐ So the marker outlives the gesture
+      // that made it and dies with the CONSTRAINT, which is the thing it now reports.
+      // ⚠ §3's clause still governs an UNALIGNED object: press, look, release, and the
+      // highlight goes — nothing to report, nothing drawn.
+      const releasedId = idOf.get(grip.mesh);
+      const stillAligned =
+        runsIn3(anchorFork) &&
+        releasedId !== undefined &&
+        selectedFace?.objectId === releasedId &&
+        (world.objects.get(releasedId)?.constraints.length ?? 0) > 0;
+      if (!stillAligned) selectedFace = null;
       forgetAnchor(routed.seq);
       router.release(e.pointerId);
       held.delete(e.pointerId);

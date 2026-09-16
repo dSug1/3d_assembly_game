@@ -84,13 +84,24 @@ describe("⛔ isDriven — an UNWIRED rule must not look like an inert one", () 
     expect(isDriven("FREE_ROTATE")).toBe(true);
   });
 
-  it("⭐⭐ CONSTRAINED_ROTATE is recognised but NOT yet driven", () => {
-    // ⚠ `anchor_rotate.ts` exists with 25 vectors and is not wired — blocked on a decision
-    // `A12` reopened by moving roll to the second touchpoint. ⛔ So the honest behaviour is
-    // *nothing happens, and the readout names the rule that would have run*. Without this
-    // distinction the HUD would say `CONSTRAINED_ROTATE` while the object sat still, and a
-    // device pass would read that as a defect in 2sexte rather than as work not yet done.
-    expect(isDriven("CONSTRAINED_ROTATE")).toBe(false);
+  it("✅✅ CONSTRAINED_ROTATE IS DRIVEN NOW — 2sexte is wired (`D34`)", () => {
+    // ⛔⛔ THIS VECTOR ASSERTED `false` UNTIL A HAND SAID WHAT IT COST: *"a flick immediately
+    // remove two DOF now and I cannot rotate the aligned object around the alignment axis."*
+    // ⭐⭐ The report also RESOLVED the decision it was waiting on. `A3`'s handover looked
+    // blocked because `A12` moved roll to the second touchpoint — but that IS the answer:
+    // the two charts over the one free DOF are now two CHANNELS, the drag on one touchpoint
+    // and the roll on the second, so nothing has to choose between them and
+    // `anchorHandoverCos` was never needed.
+    // ⚠ One DOF, and the owner said *two* were lost: entry 1 consumes two of three and
+    // leaves the twist about its own axis — which is exactly what now turns.
+    expect(isDriven("CONSTRAINED_ROTATE")).toBe(true);
+  });
+
+  it("⛔ and a REFUSAL is still not driven — that one is a decision, not a gap", () => {
+    // ⭐ `D32`'s shake is how a hand leaves a full stack. A fall-through to free rotation
+    // would silently break the anchors the user set, which is what §1.4's eviction clause
+    // exists to prevent.
+    expect(isDriven("ROTATE_REFUSED")).toBe(false);
   });
 
   it("and a refusal is never 'driven'", () => {

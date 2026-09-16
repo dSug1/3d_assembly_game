@@ -196,23 +196,17 @@ describe("⭐ eviction, attached to an object", () => {
 });
 
 describe("⛔⛔ THE FLICK SKIP — A4's owed half, and a shake is two flicks by construction", () => {
-  it("⭐⭐ ONE reversal already suppresses the flick, BEFORE the shake completes", () => {
-    // ⛔⛔ `shake.ts` says why in its own words: *"a shake is literally two flicks in
-    // opposite directions, so every leg matches the flick signature by construction."*
-    // ⚠ So the skip cannot wait for the shake to fire: a user who releases mid-shake at
-    // speed would push an alignment with the very gesture meant to remove one — and with
-    // two on the stack, that is defect 41 again, arriving through the escape hatch.
+  it("✅ THE SKIP KEYS ON THE SHAKE HAVING FIRED — narrowed by a device report (`D33`)", () => {
+    // ⛔⛔ WRITTEN AN HOUR EARLIER AS *"ONE reversal already suppresses the flick"*, on
+    // `A4`'s own wording, and retracted the same day: *"the flick should be triggerable
+    // during an ongoing rotation"* — and a rotate-then-flick IS a reversal. ⭐ The full
+    // argument is in `shake.ts` and `tests/shake.test.ts`; what this file asserts is the
+    // composition it cares about — an eviction and a flick cannot both land on one release.
     const d = new ShakeDetector(PARAMS, NOISE_MM);
-    const path = shakePath(12);
-    let firedAt = -1;
-    for (let i = 0; i < path.length; i++) {
-      if (d.push(path[i]!) !== null && firedAt < 0) firedAt = i;
-      if (d.sawReversal && firedAt < 0) {
-        // the moment a reversal is seen, the flick must already be suppressed
-        expect(d.suppressesFlick).toBe(true);
-      }
-    }
-    expect(firedAt).toBeGreaterThan(0);
+    let fired = false;
+    for (const s of shakePath(12)) fired = d.push(s) !== null || fired;
+    expect(fired).toBe(true);
+    expect(d.suppressesFlick).toBe(true);
   });
 
   it("⛔ a plain straight drag does NOT suppress a flick — the guard can fail", () => {

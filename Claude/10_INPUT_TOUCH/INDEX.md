@@ -31,7 +31,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**586 golden vectors, all passing** (37 → 632 → 574 → 586).
+**595 golden vectors, all passing** (37 → 632 → 574 → 595).
 ⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
 longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
 protect anything — it certifies a module nothing calls, which is exactly how the roll
@@ -42,7 +42,7 @@ detector stayed alive long enough to cause defect 40.
 | # | what it decided | built? |
 |---|---|---|
 | `A1`–`A4` | eviction: off the double-tap, off the roll channel, spares `MATE`s, and is a **quick back-and-forth** | ✅✅ **WIRED 2026-09-16** (`D32`) — fed **before** the refusal gate, because it is the escape from a full stack; alignments go, mates stay, and an empty take **refuses out loud**. ⚠ Four guessed tunables, four sliders, **no hand yet** |
-| `A3` | **roll drives an anchored object's free DOF**, 2sexte suppressed where it degenerates | ⚠ `anchor_rotate.ts` built + 25 vectors, **NOT WIRED** |
+| `A3` | **roll drives an anchored object's free DOF**, 2sexte suppressed where it degenerates | ✅✅ **WIRED 2026-09-16** (`D34`) — and its handover CONSTANT was never needed: `A12` made the drag and the roll two **channels**, so neither has to be chosen. Each REFUSES at its own degeneracy |
 | `A5` → `A6` → `A10` | **depth**, decided three times: a pinch, then a common vertical drag, now a **STILL HOLDER and a MOVING ANCHOR** | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A7` | ⭐⭐ every object gesture stands on a **GRAVITY FRAME** | ✅ wired, and vectored end to end |
 | `A8` | ⛔⛔ **DELETED 2026-09-16** — a roll rebased to the start of its circle. Retired by `A12`, then removed with the whole circle-fit channel | ⛔ gone: `roll.ts`, `rebaseOnRollCommit`, the pose history |

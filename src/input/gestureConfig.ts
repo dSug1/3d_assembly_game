@@ -229,6 +229,17 @@ export interface GestureConfig {
   // back-and-forth, and no simulation can say where the boundary sits.
 
   /** Reversals required to evict. A4: 2 — out, back, out. */
+  /**
+   * ⭐⭐ 2sexte's gain — **radians of twist per MILLIMETRE** of finger travel along the
+   * direction the anchored object's near side would move (`A3`).
+   * ⛔ A GAIN, not a tracking factor, and `anchor_rotate.ts`'s header says why the honest
+   * tracking mapping (`1/(r·sin α)`) cannot be used: it diverges as the constraint axis
+   * swings toward the camera. ⚠ So the drag *goes quiet* over a range before it degenerates
+   * — which is what the second touchpoint's roll chart is for.
+   * ⭐ Defaulted to `gainRotateFree` so a constrained object feels like a free one until a
+   * hand says otherwise; it has its own slider because it may well need to differ.
+   */
+  gainAnchorDrag: number;
   evictShakeReversals: number;
   /**
    * They must all fall inside this window, in milliseconds.
@@ -561,6 +572,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
 
   // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
+  // ⚠ A GUESS, equal to `gainRotateFree` on purpose: one free DOF should not feel like a
+  // different control from three. ⛔ Kept as a LITERAL rather than a reference to the other
+  // field — `IN5` overrides them independently, and a hand tuning one must not move both.
+  gainAnchorDrag: 0.07,
   evictShakeReversals: 2,
   // ⚠ 600 ms is roughly three unhurried legs. Untested by any hand.
   evictShakeWindowMs: 600,

@@ -55,34 +55,60 @@ const EPSILON_PX = 1e-6;
  */
 export function detectFlick(buffer: readonly Sample[], cfg: GestureConfig): Flick | null {
   if (buffer.length < 2) return null;
-  const first = buffer[0]!;
   const last = buffer[buffer.length - 1]!;
 
   // 1. terminal speed at lift — the drag/flick discriminator. See the header for why
   // this is a WINDOW and not the last pair; it is the fix for inconsistent rollback.
+  // ⭐ It does not depend on where the tail starts: it is always the last
+  // `flickLiftWindow` ms. Computed once, outside the scan.
   const liftPxPerS = terminalSpeedPxPerS(buffer, cfg);
   if (liftPxPerS < mmToPx(cfg.flickLiftSpeed)) return null;
 
-  // 2. travel within the window.
-  const dx = last.x - first.x;
-  const dy = last.y - first.y;
-  const travelPx = Math.hypot(dx, dy);
-  if (travelPx < mmToPx(cfg.flickDistance)) return null;
-
-  // 3. direction purity — one ratio.
-  const ax = Math.abs(dx);
-  const ay = Math.abs(dy);
-  const purity = Math.max(ax, ay) / (Math.min(ax, ay) + EPSILON_PX);
-  if (purity < cfg.flickPurity) return null;
-
-  const horizontal = ax >= ay;
-  return {
-    axis: horizontal ? "HORIZONTAL" : "VERTICAL",
-    sign: (horizontal ? dx : dy) >= 0 ? 1 : -1,
-    travelMm: travelPx / mmToPx(1),
-    liftSpeedMmPerS: liftPxPerS / mmToPx(1),
-    purity,
-  };
+  // ⭐⭐⭐ THE FLICK IS THE **TAIL** OF THE GESTURE, NOT THE WHOLE WINDOW.
+  //
+  // ⛔⛔ DEVICE-REPORTED 2026-09-16: *"the flick should be triggerable during an ongoing
+  // rotation — it seems the flick only triggers if the touchpoint presses and directly do a
+  // flick."* ⭐ Exactly right, and the cause was measuring travel and purity from
+  // `buffer[0]` — the oldest sample still inside `flickWindow`. On a press-and-flick that
+  // sample IS the start of the flick; at the end of an ongoing rotation it is somewhere in
+  // the middle of the rotation, so the NET displacement from it is short and its direction
+  // is a mixture. The gesture was fine and the baseline was wrong.
+  //
+  // ⭐⭐ THE SAME SHAPE AS MISTAKE 1 — *a rate estimated over the shortest available
+  // baseline* — with the sign reversed: here a DISPLACEMENT was measured over a baseline
+  // that included motion belonging to another gesture. ⛔ And it is the same fix in both
+  // directions: **state the window the quantity is measured over**, rather than taking
+  // whatever the buffer happens to hold.
+  //
+  // ⭐ So `flickWindow` becomes the LONGEST tail a flick may be read over, not a fixed
+  // baseline, and the test is applied to the longest tail that passes. Longest, not
+  // shortest: a short tail is the easiest thing in the world to make look pure, and the
+  // most travel the hand can be shown to have made in one direction is the honest reading.
+  // ⚠ With a MINIMUM span of `flickLiftWindow`, so the displacement is never measured
+  // over a shorter baseline than the speed already is — two samples of a coalesced jump
+  // are not a flick, and `validateGestureConfig` already refuses a lift window wider than
+  // the buffer.
+  for (let i = 0; i <= buffer.length - 2; i++) {
+    const from = buffer[i]!;
+    if (last.t - from.t < cfg.flickLiftWindow) break;
+    const dx = last.x - from.x;
+    const dy = last.y - from.y;
+    const travelPx = Math.hypot(dx, dy);
+    if (travelPx < mmToPx(cfg.flickDistance)) continue;
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
+    const purity = Math.max(ax, ay) / (Math.min(ax, ay) + EPSILON_PX);
+    if (purity < cfg.flickPurity) continue;
+    const horizontal = ax >= ay;
+    return {
+      axis: horizontal ? "HORIZONTAL" : "VERTICAL",
+      sign: (horizontal ? dx : dy) >= 0 ? 1 : -1,
+      travelMm: travelPx / mmToPx(1),
+      liftSpeedMmPerS: liftPxPerS / mmToPx(1),
+      purity,
+    };
+  }
+  return null;
 }
 
 /**

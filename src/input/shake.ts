@@ -108,15 +108,32 @@ export class ShakeDetector {
   }
 
   /**
-   * ⛔⛔ THE FLICK TEST MUST BE SKIPPED ONCE THIS IS TRUE, AND IT IS THE ONE THING `IN3`
-   * MUST NOT FORGET (A4). A shake is literally two flicks in opposite directions, so every
-   * leg matches the flick signature — fast, straight, far — by construction. Without the
-   * skip, a user who shakes to REMOVE a constraint releases mid-shake at speed, the flick
-   * test passes, and 2ter or 2quater **pushes** one instead. With two on the stack the
-   * object then has zero free rotational DOF and stops responding to drags at all.
+   * ⛔⛔ THE FLICK TEST IS SKIPPED ONCE THIS IS TRUE (A4). A shake is literally two flicks
+   * in opposite directions, so every leg matches the flick signature — fast, straight, far
+   * — by construction, and without a skip the gesture that REMOVES a constraint would push
+   * one at its release.
+   *
+   * ⛔⛔⛔ **IT KEYED ON THE FIRST REVERSAL FOR ONE HOUR, AND A DEVICE REPORT RETIRED THAT
+   * — the same hour it was wired.** *"The flick should be triggerable during an ongoing
+   * rotation"*: a hand turning an object and then flicking a face **reverses**, so a
+   * one-reversal skip suppresses exactly the gesture `IN3` exists to serve. ⭐⭐ A4's own
+   * text asked for the broad version, and it was written when a flick was read over the
+   * whole motion window — where a reversal made a flick undetectable anyway, so the skip
+   * cost nothing. `D33` made the flick read its TAIL, and the same rule suddenly cost the
+   * main gesture. ⭐ *A guard sized against one reading of a signal is not still the right
+   * size when the reading changes.*
+   *
+   * ✅ So it keys on the shake having **FIRED**, which is the case with a concrete harm: the
+   * hand has just cleared its alignments and the release would immediately push a new one,
+   * undoing the escape with the gesture that made it.
+   * ⚠⚠ THE COST, STATED: a shake ABANDONED before it fires (out-and-back, one reversal)
+   * can still end in a flick and push an alignment. ⛔ That is accepted rather than
+   * overlooked, because it is **reversible** — one constraint still rotates (2sexte), and a
+   * shake removes it — while suppressing every post-reversal flick is not recoverable by
+   * any gesture at all. ⚠ The owner's to overturn; `D33` records it as mine.
    */
   get suppressesFlick(): boolean {
-    return this.sawReversal;
+    return this.fired;
   }
 
   /**
