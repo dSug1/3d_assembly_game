@@ -58,8 +58,33 @@ export function faceAlignConstraint(
   };
 }
 
-/** What a tap means in fork C. ⭐ Two meanings, one gesture — see `tapMeaning`. */
-export type TapMeaning = "ALIGN" | "TOGGLE";
+/** What a tap means in fork C. ⭐ **Three** meanings, one gesture — see `tapMeaning`. */
+export type TapMeaning = "ALIGN" | "UNALIGN" | "TOGGLE";
+
+/**
+ * Everything the tap's meaning depends on. ⛔ An object rather than five positional
+ * arguments, because four of them are strings and `tapMeaning(mode, a, b, c, d)` is exactly
+ * how a caller swaps two of them silently.
+ */
+export interface TapContext {
+  /** The live movement mode. */
+  readonly mode: Behaviour;
+  /** The object the tap's PRESS hit, or `null` for empty space. */
+  readonly tappedObject: string | null;
+  /** The face that press resolved, or `null` if none did. */
+  readonly tappedFace: string | null;
+  /** The object another touchpoint is carrying, or `null` if none. */
+  readonly heldObject: string | null;
+  /**
+   * ⭐⭐ The face whose tap CREATED the held object's current alignment — remembered, not
+   * discarded. ⚠ The owner's first dictation said *"the PioneerFace resets as null"*; the
+   * amendment of 2026-09-16 keeps it, because both the Pioneer's contour highlight and the
+   * re-tap that breaks the alignment need to know which face it was.
+   * ⛔ It is a VISUAL and GESTURAL record only. The constraint itself still stores a **frozen
+   * world direction** (§1.4), so moving the Pioneer's object does not drag the alignment.
+   */
+  readonly pioneer: { readonly objectId: string; readonly faceId: string } | null;
+}
 
 /**
  * ⭐⭐⭐ **THE TAP'S TWO MEANINGS — and the collision that resolves itself.**
@@ -80,18 +105,31 @@ export type TapMeaning = "ALIGN" | "TOGGLE";
  * ⚠ A tap on the held object itself, or on empty space, is a plain toggle: the rule needs
  * *another* object's face, because a Pioneer and a Follower on one object is not a relation.
  *
- * @param mode the live movement mode.
- * @param tappedObject the object the tap's PRESS hit, or `null` for empty space.
- * @param heldObject the object the other touchpoint is carrying, or `null` if none.
+ * ⭐⭐⭐ **AND A THIRD MEANING SINCE 2026-09-16 — `UNALIGN`, on the owner's amendment:**
+ *
+ * > *"in addition to the shake, the alignment can be toggled off by taping another time to
+ * > the same PioneerFace."*
+ *
+ * ⭐⭐ THE SAME FACE IS THE WHOLE TEST, and it makes the gesture a **toggle** rather than a
+ * second command to remember: tap a face to align to it, tap it again to let go. ⛔ A tap on
+ * a DIFFERENT face is still `ALIGN`, which replaces — the cap of one — so nothing is
+ * ambiguous and nothing accumulates.
+ * ⚠ The owner's reason for wanting it is recorded because it will decide the shake's future:
+ * *"We will later see if we keep the shake, as this is a complicated movement to execute by
+ * the user; for the moment, we keep it."*
  */
-export function tapMeaning(
-  mode: Behaviour,
-  tappedObject: string | null,
-  heldObject: string | null,
-): TapMeaning {
-  if (mode !== "ROTATE") return "TOGGLE";
-  if (heldObject === null || tappedObject === null) return "TOGGLE";
-  if (tappedObject === heldObject) return "TOGGLE";
+export function tapMeaning(ctx: TapContext): TapMeaning {
+  if (ctx.mode !== "ROTATE") return "TOGGLE";
+  if (ctx.heldObject === null || ctx.tappedObject === null) return "TOGGLE";
+  if (ctx.tappedObject === ctx.heldObject) return "TOGGLE";
+  if (
+    ctx.pioneer !== null &&
+    ctx.tappedObject === ctx.pioneer.objectId &&
+    ctx.tappedFace !== null &&
+    ctx.tappedFace === ctx.pioneer.faceId
+  ) {
+    return "UNALIGN";
+  }
   return "ALIGN";
 }
 

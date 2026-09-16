@@ -15,7 +15,12 @@
  * these vectors is that single sign.
  */
 import { describe, expect, it } from "vitest";
-import { faceAlignConstraint, flickResetPlan, tapMeaning } from "@input/fork_c";
+import {
+  faceAlignConstraint,
+  flickResetPlan,
+  tapMeaning,
+  type TapContext,
+} from "@input/fork_c";
 import { singleAlignment, solve, type Constraint } from "@core/constraint_stack";
 import {
   faceWorld,
@@ -200,26 +205,64 @@ describe("⛔⛔ THE CAP OF ONE — a second alignment REPLACES, and never freez
   });
 });
 
-describe("⛔⛔ THE TAP'S TWO MEANINGS — `D28`'s toggle and fork C's align, on one gesture", () => {
+describe("⛔⛔ THE TAP'S THREE MEANINGS — `D28`'s toggle, fork C's align, and its UNDO", () => {
+  const ctx = (over: Partial<TapContext> = {}): TapContext => ({
+    mode: "ROTATE",
+    tappedObject: "objectB",
+    tappedFace: "+x",
+    heldObject: "objectA",
+    pioneer: null,
+    ...over,
+  });
+
   it("⭐⭐ holding an object in ROTATE and tapping ANOTHER object's face ⇒ ALIGN", () => {
-    expect(tapMeaning("ROTATE", "objectB", "objectA")).toBe("ALIGN");
+    expect(tapMeaning(ctx())).toBe("ALIGN");
+  });
+
+  it("⭐⭐⭐ TAPPING THE SAME PIONEER FACE AGAIN ⇒ UNALIGN — the owner's amendment", () => {
+    // > *"in addition to the shake, the alignment can be toggled off by taping another time
+    // > to the same PioneerFace."* ⭐ The gesture becomes a TOGGLE rather than a second
+    // command to remember, which is also why the owner expects to drop the shake later:
+    // *"this is a complicated movement to execute by the user."*
+    expect(tapMeaning(ctx({ pioneer: { objectId: "objectB", faceId: "+x" } }))).toBe("UNALIGN");
+  });
+
+  it("⛔ a DIFFERENT face of the same Pioneer object still ALIGNS — and replaces", () => {
+    // ⭐ The face is the whole test, not the object. ⚠ Otherwise re-aiming at the next face of
+    // the same part would silently UNDO instead of re-aligning, which is the opposite of what
+    // the hand asked for — and the cap makes the replacement safe.
+    expect(tapMeaning(ctx({ pioneer: { objectId: "objectB", faceId: "-y" } }))).toBe("ALIGN");
+  });
+
+  it("⛔ and a tap on a THIRD object aligns to it, whatever the current Pioneer is", () => {
+    expect(
+      tapMeaning(ctx({ tappedObject: "objectC", pioneer: { objectId: "objectB", faceId: "+x" } })),
+    ).toBe("ALIGN");
+  });
+
+  it("⚠ an unresolved face cannot UNALIGN — `null` must not match a remembered face", () => {
+    // ⛔ A grazing pick that resolves no face would otherwise compare `null === null` if the
+    // test were written carelessly, and a tap that hit nothing would destroy an alignment.
+    expect(
+      tapMeaning(ctx({ tappedFace: null, pioneer: { objectId: "objectB", faceId: "+x" } })),
+    ).toBe("ALIGN");
   });
 
   it("⛔⛔ in TRANSLATE it is always a TOGGLE — or the way back to ROTATE is gone", () => {
-    // ⭐ Load-bearing, not decoration: fork C's alignment ENDS in TRANSLATE, so if a tap in
-    // TRANSLATE aligned instead of toggling, the first alignment would be the last gesture
-    // the hand could make. ⚠ That is the `IN3` dead-end shape (defect 41) arriving by a
-    // different door, and it is cheaper to refuse it here than to need an escape.
-    expect(tapMeaning("TRANSLATE", "objectB", "objectA")).toBe("TOGGLE");
+    // ⭐ Load-bearing, not decoration. ⚠ It also means the re-tap UNDO is a `ROTATE` gesture:
+    // the shake is what undoes an alignment while translating, which is exactly why the owner
+    // keeps the shake *for the moment*.
+    expect(tapMeaning(ctx({ mode: "TRANSLATE" }))).toBe("TOGGLE");
+    expect(
+      tapMeaning(ctx({ mode: "TRANSLATE", pioneer: { objectId: "objectB", faceId: "+x" } })),
+    ).toBe("TOGGLE");
   });
 
   it("⛔ a tap with nothing held, or on empty space, or on the held object ⇒ TOGGLE", () => {
-    // ⭐ `D28` keeps every meaning it has except the one case fork C claims.
-    expect(tapMeaning("ROTATE", "objectB", null)).toBe("TOGGLE");
-    expect(tapMeaning("ROTATE", null, "objectA")).toBe("TOGGLE");
-    // ⚠ A Pioneer and a Follower on ONE object is not a relation — it would align a face to
-    // its own object's normal, which is either a no-op or nonsense depending on the faces.
-    expect(tapMeaning("ROTATE", "objectA", "objectA")).toBe("TOGGLE");
+    expect(tapMeaning(ctx({ heldObject: null }))).toBe("TOGGLE");
+    expect(tapMeaning(ctx({ tappedObject: null }))).toBe("TOGGLE");
+    // ⚠ A Pioneer and a Follower on ONE object is not a relation.
+    expect(tapMeaning(ctx({ tappedObject: "objectA" }))).toBe("TOGGLE");
   });
 });
 

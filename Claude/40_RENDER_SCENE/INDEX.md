@@ -165,6 +165,12 @@ get *found*, and deleting them quietly would cost the next device session.
   gesture?*, which no look at the state can answer.
 * The highlight is raised **at the alignment**, not at the press (`D35`), and ⛔ **every
   refusal is printed**: this gesture's failure mode is *nothing visibly happened*.
+* **TWO markers since `D39`** — a filled quad on the Follower (what moved) and a **line
+  contour** on the Pioneer (what it was aimed at), both through **one** `placeFaceMarker`:
+  a second copy of that geometry is a second implementation that can silently disagree.
+  ⛔ The pair is **atomic** — the contour may not outlive the fill, or it claims a
+  relationship that is gone. ⚠ `CreateLines` is one pixel wide by WebGL's rule, not by
+  choice; if a hand finds it faint the answer is `GreasedLine`, not a thicker hack.
 
 ## Queued
 

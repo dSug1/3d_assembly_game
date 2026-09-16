@@ -97,3 +97,27 @@ the list would be re-taken.
 ## `D29` — ✅ IN FORCE
 
 | `D29` | ⭐⭐⭐ **THREE ANCHOR-RULE FORKS BEHIND ONE FLAG, and `IN3` is built in fork B** | 2026-09-16 | Fork A is today's behaviour (**the default**), fork B is `IN3`, fork C is a set the owner has not specified. ⛔⛔ **A different shape from `D26`'s flag**: that chose between two readings differing by one inversion, so both were always live. This is a **GATE** — A is the *absence* of a rule set, C is *unspecified* — so the risk is **a session believing it tested a fork that did nothing**. ⭐ Hence C is visibly **inert**, never a quiet fallback to A; the HUD names the live fork; the validator refuses anything but 0/1/2; and it latches only while nothing touches the glass, since flipping mid-drag changes whether the release **pushes a constraint**. ⚠ **Expiry named now**: per `D28`, the day a set is chosen the others are **deleted** · [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+
+## `D14` — ✅ IN FORCE
+
+| `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | The spec forbade roll on a constrained object for a reason that is **conditional on camera pose** and false when the camera looks along the constraint axis — where rolling about the view axis IS twisting about the anchor. ⭐⭐ And 2sexte is **degenerate there**: its axis projects to a point, so *"perpendicular to the axis as projected on screen"* has no value and the rule would turn the object by an arbitrary amount. The two are complementary charts over one DOF. ⛔ **ONE handover constant, with hysteresis, latched at press** — two thresholds would give a dead band where the DOF has no driver, or an overlap where it has two. Amendment **A3** |
+
+
+## `D19` — ✅ IN FORCE
+
+| `D19` | ⭐⭐ **A DEADBAND on the pointer delta, per axis, with a slider** | 2026-09-15 | *"The logic is right: we just need a deadband on x and y delta position"*, with *"a slider to manually finetune it"*. ⛔⛔ The trap, written down before the build: **a HARD deadband is a jump traded for a jump**, and the residual form is what keeps slow travel exact. ⛔ Per AXIS, never on the magnitude — `dx` is yaw about gravity and `dy` is pitch, so a magnitude band lets noise cross-talk between them. ⭐ The vector asserts **CONTINUITY**, because *"small deltas do nothing"* passes for the broken form too. ⚠ **Absorbed by `D21`/`A11`**, which put the band in §1.1 itself. Amendment **A9** · [`queue_notes/IN12.md`](queue_notes/IN12.md) |
+
+
+## `D20` — ✅ IN FORCE
+
+| `D20` | ⭐⭐ **Depth is a STILL HOLDER and a MOVING ANCHOR** | 2026-09-15 | Supersedes `D17`/`A6`'s trigger the day it shipped. ⭐⭐ **The fault was in the QUESTION**: *"are these two travels equal?"* has no answer at a reversal or a late start, and both happen in every gesture — while *"is that finger still?"* is answerable at every instant. ⛔ No window, no ratio, no tolerance, no hold; **the holder wins every tie**, which makes the two rules a partition instead of a competition. ⭐ It also closed the small-object hole owed since `A5`. ⚠ What it cost: it was the first rule to ask whether a finger is still, and §1.1 could not answer. Amendment **A10** · [`queue_notes/IN8.md`](queue_notes/IN8.md) |
+
+
+## `D21` — ✅ IN FORCE
+
+| `D21` | ⭐⭐⭐ **STATIONARY is a POSITION DEADBAND, not a timer** | 2026-09-15 | *"Stationary should mean a deadband around the touchpoint position (independently of the time)."* ⭐ An anchor trails the finger at one dead radius: inside it the finger emits **nothing**; outside, it emits the **excess only** and the anchor is dragged up. ⛔ The second half is the one everyone forgets — without it a deadband inserts a step of exactly one radius. ⭐⭐ Time-free, its emitted travel EXACT, and a slow drag survives. ⚠ It deleted four tunables and a validator rule, and absorbed `A9`. ⛔ **The fourth formulation of §1.1 and the first robust by construction** rather than by a threshold above a measurement. Amendment **A11** · [`queue_notes/IN0.md`](queue_notes/IN0.md) |
+
+
+## `D25` — ✅ IN FORCE
+
+| `D25` | ⭐⭐⭐ **A HOLDER THAT IS NO LONGER UNDER ITS OBJECT GIVES THE SELECTION UP** | 2026-09-16 | Depth slides the object along the view axis *while the holder holds still*, so it leaves the finger carrying it — and §4's latch kept that finger holding it anyway. ⭐ A **raycast at the second touchpoint's lift** (discrete, deliberate, visible — honouring `D23` rather than re-breaking it), and the unselect **deferred to the next input event**, after which the §4 table re-resolves. ⛔ The orbit centre does **not** move: *"same as previous yellow point"*, overruling the retarget I had built. ⚠ A selection can now end without the user lifting the finger that made it. ✅✅ **CLOSED by a device look 2026-09-16** (⚠ a general *"everything is working ok"*, not case by case). Amendment **A15** · [`queue_notes/IN8.md`](queue_notes/IN8.md) |

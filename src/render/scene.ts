@@ -39,6 +39,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
+import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -78,6 +79,7 @@ import {
   faceAlignConstraint,
   tapMeaning,
   flickResetPlan,
+  type TapContext,
   dragRule,
   isDriven,
   ShakeDetector,
@@ -281,6 +283,49 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
+   * ⭐⭐ Put a marker ON a face: lifted off the surface, and INHERITING the object's
+   * orientation plus one constant per-face rotation.
+   *
+   * ⛔⛔ ONE PATH FOR BOTH MARKERS, because the second one would be a second implementation
+   * of the same geometry — and `METHOD` is explicit that a recomputation can silently
+   * disagree with the original while both look right. ⭐ The fill and the contour now differ
+   * in colour and in nothing else.
+   * ⚠ The MESH's orientation, not the model's: the eye sees `SWAY ∘ FOLLOW ∘ model`, and a
+   * marker must lag its face by nothing.
+   *
+   * @returns false when the object or face no longer exists — the caller hides the marker.
+   */
+  const placeFaceMarker = (
+    marker: { position: Vector3; rotationQuaternion: Quaternion | null },
+    objectId: ObjectId,
+    faceId: string,
+  ): boolean => {
+    const m = meshOf.get(objectId);
+    const face = world.objects.get(objectId)?.faces.find((f) => f.id === faceId);
+    if (!m || !face) return false;
+    const wm = m.getWorldMatrix();
+    const centre = Vector3.TransformCoordinates(
+      new Vector3(face.centre[0], face.centre[1], face.centre[2]),
+      wm,
+    );
+    const normal = Vector3.TransformNormal(
+      new Vector3(face.normal[0], face.normal[1], face.normal[2]),
+      wm,
+    ).normalize();
+    // ⭐ Lifted off the surface by a hair, or it z-fights with the face it marks.
+    // ⚠ In METRES like everything else in this scene — `CAMERA_NEAR_PLANE_M`'s lesson.
+    marker.position.copyFrom(centre.add(normal.scale(0.0015)));
+    // ⛔⛔ THE MARKER **INHERITS THE OBJECT'S ORIENTATION**, and does not derive one.
+    // Device-reported: aligning a marker's facing with the world normal left its SPIN free, so
+    // turning the cube about that face's own normal moved the face and not the marker — *"a
+    // growing mismatch between their respective quaternion."*
+    const mq = m.rotationQuaternion ?? Quaternion.Identity();
+    const q = faceMarkerOrientation([mq.w, mq.x, mq.y, mq.z], face.normal);
+    marker.rotationQuaternion?.set(q[1], q[2], q[3], q[0]);
+    return true;
+  };
+
+  /**
    * ⭐⭐⭐ **FORK C's ALIGNMENT** — *"first object minimally rotates ... so that FollowerFace
    * normal aligns with PioneerFace normal"*.
    *
@@ -368,12 +413,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       faceId: followerGrip.pressFace.faceId,
       cos: followerGrip.pressFace.cos,
     };
-    // ⭐ *"then the PioneerFace resets as null"* — literal, though the grip is about to be
-    // dropped anyway: a Pioneer is a transient and must not survive to a second alignment.
-    // ⚠ The id is kept for the readout FIRST: a report must not read the field the rule just
-    // cleared, which is how a message ends up saying `undefined` on the glass.
+    // ⛔⛔ *"THEN THE PIONEERFACE RESETS AS NULL"* WAS AMENDED THE SAME DAY. The owner now
+    // wants its **contour highlighted until the alignment is broken**, and a re-tap on that
+    // same face to break it — so the face's identity is REMEMBERED where it can be drawn and
+    // compared. ⭐ What *is* still discarded is the grip's own `pressFace`: a Pioneer's grip
+    // is being released, and a stale face on a dead grip is the kind of thing a later rule
+    // picks up by accident.
     const pioneerFaceId = pioneerGrip.pressFace.faceId;
     pioneerGrip.pressFace = null;
+    pioneerFace = { objectId: pioneerId, faceId: pioneerFaceId };
     // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
     //
     // > *"the mode shall not switch automatically to translation mode after an alignment in
@@ -425,6 +473,41 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // orbit-centre marker already documents.
   faceQuad.isPickable = false;
   faceQuad.isVisible = false;
+
+  /**
+   * ⭐⭐⭐ **THE PIONEER's CONTOUR** — *"the PioneerFace contour shall be highlighted"*.
+   *
+   * ⛔⛔ A CONTOUR AND NOT A FILL, BECAUSE THE TWO FACES ARE NOT THE SAME KIND OF THING. The
+   * Follower is what MOVED and carries the constraint; the Pioneer is only what it was aimed
+   * at, and its object is untouched. ⭐ One filled quad and one outline say that without a
+   * legend — and the owner asked for exactly that distinction.
+   *
+   * ⚠ A closed square of LINES, unit-sized and scaled: `CreateLines` gives a `color` and no
+   * material to tune, and its one-pixel width is a WebGL limit rather than a choice. ⛔ If a
+   * hand finds it too faint the answer is `GreasedLine`, not a thicker hack — recorded so the
+   * next session does not rediscover the limit.
+   * ⚠ `isPickable = false` and NOT `orbitCandidate`, for the same two reasons the fill has:
+   * an instrument must not intercept the picks it describes, nor move the barycentre it is
+   * drawn near.
+   */
+  const faceContour = CreateLines(
+    "pioneer-face-contour",
+    {
+      points: [
+        new Vector3(-0.5, -0.5, 0),
+        new Vector3(0.5, -0.5, 0),
+        new Vector3(0.5, 0.5, 0),
+        new Vector3(-0.5, 0.5, 0),
+        new Vector3(-0.5, -0.5, 0),
+      ],
+    },
+    scene,
+  );
+  faceContour.color = new Color3(1, 0.62, 0.1);
+  faceContour.scaling = new Vector3(OBJECT_SIZE_M, OBJECT_SIZE_M, 1);
+  faceContour.rotationQuaternion = Quaternion.Identity();
+  faceContour.isPickable = false;
+  faceContour.isVisible = false;
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
   // Without it the barycentre selection is invisible, and "it seems to orbit the right
@@ -1723,6 +1806,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let selectedFace: { objectId: string; faceId: string; cos: number } | null = null;
 
+  /**
+   * ⭐⭐⭐ **FORK C's PIONEER, REMEMBERED** — the face whose tap created the live alignment.
+   *
+   * ⛔⛔ THE OWNER'S FIRST DICTATION SAID *"the PioneerFace resets as null"*, AND THE
+   * AMENDMENT OF THE SAME DAY KEPT IT: *"when an object is aligned, the FollowerFace shall be
+   * highlighted and the PioneerFace contour shall be highlighted, until the alignment is
+   * broken"*, and *"the alignment can be toggled off by taping another time to the same
+   * PioneerFace."* ⭐ Both rules need to know which face it was, so the reference survives
+   * the gesture that made it.
+   *
+   * ⚠ IT CHANGES NOTHING ABOUT THE CONSTRAINT, which still stores a **frozen world
+   * direction** (§1.4): moving the Pioneer's object afterwards does not drag the alignment
+   * with it. What is remembered is the face's IDENTITY, for drawing and for the undo.
+   * ⛔ ONE pair is visualised, so two objects aligned at once show only the latest — stated
+   * rather than hidden, and a device question (`FORK_C_ANCHOR_RULES.md` §7).
+   */
+  let pioneerFace: { objectId: string; faceId: string } | null = null;
+
   /** ⭐ Adopt a pending fork if the glass is empty. Called on every pointer event AND every
    * frame — a flip made while idle produces no pointer event, and the readout must not lag
    * the person who just made it. ⛔ `router.size`, not `activeCount`: an ignored finger is
@@ -2147,7 +2248,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           } else {
             // ⭐ *"un-highlight the FollowerFace and then nullify the FollowerFace"* — the
             // highlight IS the alignment's state, so it goes with it (`D35`).
+            // ⭐ *"un-highlight the FollowerFace"* — and the Pioneer's contour with it: both
+            // report the same alignment, so neither may outlive it (the owner's amendment).
             if (selectedFace?.objectId === sid) selectedFace = null;
+            if (selectedFace === null) pioneerFace = null;
             grip.alignmentTouched = false;
             lastVerdict = `forkC: SHAKE released the alignment on ${sid}`;
           }
@@ -2486,7 +2590,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         if (plan.dropAlignment && rid !== undefined) {
           const ev = evictObjectConstraints(world, rid);
           world = ev.world;
-          if (selectedFace?.objectId === rid) selectedFace = null;
+          if (selectedFace?.objectId === rid) {
+            selectedFace = null;
+            pioneerFace = null;
+          }
           lastVerdict = `forkC: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
         } else {
           lastVerdict = "forkC: rotation reset — alignment older than the press, conserved";
@@ -2517,11 +2624,37 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // that would only muddy the readout.
       let alignedByThisTap = false;
       if (runsForkC(anchorFork) && verdict.kind === "TAP") {
-        const tappedId = idOf.get(grip.mesh) ?? null;
         const others = [...held.entries()].filter(([pid]) => pid !== e.pointerId);
         const heldId = others.length === 1 ? (idOf.get(others[0]![1].mesh) ?? null) : null;
-        if (tapMeaning(behaviour, tappedId, heldId) === "ALIGN") {
+        const ctx: TapContext = {
+          mode: behaviour,
+          tappedObject: idOf.get(grip.mesh) ?? null,
+          tappedFace: grip.pressFace?.faceId ?? null,
+          heldObject: heldId,
+          // ⚠ The Pioneer counts only for the object THIS tap could undo — the one being
+          // held. A remembered Pioneer belonging to some other object's alignment must not
+          // make this tap an undo.
+          pioneer:
+            heldId !== null && selectedFace?.objectId === heldId ? pioneerFace : null,
+        };
+        const meaning = tapMeaning(ctx);
+        if (meaning === "ALIGN") {
           alignedByThisTap = forkCAlign(e.pointerId, grip);
+        } else if (meaning === "UNALIGN" && heldId !== null) {
+          // ⭐⭐⭐ *"The alignment can be toggled off by taping another time to the same
+          // PioneerFace"* (owner, 2026-09-16) — the same undo the shake performs, on a
+          // gesture a hand can actually make. ⚠ The owner expects to judge the shake against
+          // it: *"we will later see if we keep the shake, as this is a complicated movement
+          // to execute by the user."*
+          const ev = evictObjectConstraints(world, heldId);
+          world = ev.world;
+          selectedFace = null;
+          pioneerFace = null;
+          others[0]![1].alignmentTouched = false;
+          alignedByThisTap = true; // ⛔ the tap is CONSUMED: it must not also flip the mode
+          lastVerdict = ev.result.refused
+            ? `forkC: re-tap — nothing to release on ${heldId}`
+            : `forkC: RE-TAP released the alignment on ${heldId}`;
         }
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
@@ -2567,7 +2700,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         selectsFaces(anchorFork) &&
         selectedFace !== null &&
         (world.objects.get(selectedFace.objectId)?.constraints.length ?? 0) > 0;
-      if (!highlightedStillAligned) selectedFace = null;
+      if (!highlightedStillAligned) {
+        selectedFace = null;
+        // ⭐ The Pioneer's contour reports the same alignment, so it goes at the same moment.
+        pioneerFace = null;
+      }
       forgetAnchor(routed.seq);
       router.release(e.pointerId);
       held.delete(e.pointerId);
@@ -2719,41 +2856,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐ Reading the mesh's matrix makes the two agree by construction, which is the same
     // reason the barycentre subtracts the sway rather than compensating for it.
     // ⚠ The local face centre and normal come from the MODEL, which is where faces live.
-    if (selectedFace === null) {
-      faceQuad.isVisible = false;
-    } else {
-      const m = meshOf.get(selectedFace.objectId);
-      const face = world.objects
-        .get(selectedFace.objectId)
-        ?.faces.find((f) => f.id === selectedFace!.faceId);
-      if (!m || !face) {
-        faceQuad.isVisible = false;
-      } else {
-        const wm = m.getWorldMatrix();
-        const centre = Vector3.TransformCoordinates(
-          new Vector3(face.centre[0], face.centre[1], face.centre[2]),
-          wm,
-        );
-        const normal = Vector3.TransformNormal(
-          new Vector3(face.normal[0], face.normal[1], face.normal[2]),
-          wm,
-        ).normalize();
-        // ⭐ Lifted off the surface by a hair, or it z-fights with the face it marks.
-        // ⚠ In METRES like everything else in this scene — `CAMERA_NEAR_PLANE_M`'s lesson.
-        faceQuad.position.copyFrom(centre.add(normal.scale(0.0015)));
-        // ⛔⛔ THE MARKER **INHERITS THE OBJECT'S ORIENTATION**, and does not derive one.
-        // Device-reported: aligning the marker's facing with the world normal left its SPIN
-        // free, so turning the cube about that face's own normal moved the face and not the
-        // marker — *"a growing mismatch between their respective quaternion."*
-        // ⭐ `faceMarkerOrientation` is the object's orientation plus ONE constant per-face
-        // rotation, so nothing can drift. ⚠ The MESH's orientation, not the model's: the eye
-        // sees `SWAY ∘ FOLLOW ∘ model`, and the marker must lag the face by nothing.
-        const mq = m.rotationQuaternion ?? Quaternion.Identity();
-        const q = faceMarkerOrientation([mq.w, mq.x, mq.y, mq.z], face.normal);
-        faceQuad.rotationQuaternion!.set(q[1], q[2], q[3], q[0]);
-        faceQuad.isVisible = true;
-      }
-    }
+    // ⭐⭐ BOTH MARKERS, ONE PATH — the filled quad on the Follower, the contour on the
+    // Pioneer, each drawn only while the state that MEANS something is present.
+    faceQuad.isVisible =
+      selectedFace !== null && placeFaceMarker(faceQuad, selectedFace.objectId, selectedFace.faceId);
+    // ⛔⛔ THE PAIR IS ATOMIC: the contour may not outlive the fill. Both report ONE
+    // alignment, so a contour drawn without its Follower would be an instrument claiming a
+    // relationship that no longer exists — the readout-that-lies shape, and the cheapest
+    // possible guard against it is this conjunction.
+    faceContour.isVisible =
+      selectedFace !== null &&
+      pioneerFace !== null &&
+      placeFaceMarker(faceContour, pioneerFace.objectId, pioneerFace.faceId);
 
     scene.render();
     frames++;

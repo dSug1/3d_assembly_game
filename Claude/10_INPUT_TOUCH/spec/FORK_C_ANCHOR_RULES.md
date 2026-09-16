@@ -98,7 +98,28 @@ as a global behaviour: fork A shipped without it since `D36`.
 >
 > *The rest is working good."*
 
-✅ **ALL FIVE ARE DONE** (2026-09-16, 615 vectors). ⭐ Two were **defects of mine** and are in
+And, immediately after, an amendment — verbatim:
+
+> *"amendment to my previous post:*
+> * *when an object is aligned, the FollowerFace shall be highlighted and the PioneerFace
+>   contour shall be highlighted, until the alignment is broken*
+> * *in addition to the shake, the alignment can be toggled off by taping another time to the
+>   same PioneerFace. We will later see if we keep the shake, as this is a complicated
+>   movement to execute by the user; for the moment, we keep it."*
+
+✅ **BOTH ARE BUILT** (619 vectors). ⭐⭐ Together they **retire the clause *"then the
+PioneerFace resets as null"*** from §2: the Pioneer's identity now survives the gesture,
+because the contour has to be drawn on it and the re-tap has to recognise it. ⛔ What has NOT
+changed is the constraint, which still stores a **frozen world direction** — so moving the
+Pioneer's object afterwards still does not drag the alignment with it.
+⚠ **The re-tap undo is a `ROTATE` gesture** (a tap in `TRANSLATE` keeps `D28`'s toggle), so
+the shake remains the only undo while translating — which is exactly why the owner keeps it
+*for the moment*: *"we will later see if we keep the shake, as this is a complicated movement
+to execute by the user."*
+⚠⚠ **ONE PAIR IS VISUALISED.** Two objects can each hold an alignment, and the highlights
+show only the latest — stated rather than hidden, and a question for the device pass.
+
+✅ **ALL FIVE CORRECTIONS ARE DONE** (2026-09-16, 615 vectors). ⭐ Two were **defects of mine** and are in
 the ledger — the highlight was built and wiped one event later, and the shake's axis was
 claimed once at the press. ⛔ The third correction **retires a rule the owner had dictated
 himself** (the automatic switch to translation), which is why §2's text keeps it and this
@@ -115,7 +136,7 @@ exists.*
 |---|---|---|---|
 | **C0** | nothing held | — | camera: orbit (§2 r1), pinch (§4 r4), double-tap home |
 | **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | **tap on obj 2's face ⇒ ALIGN** (→ C2). Pressed-and-held: ⚠ §7.5 |
-| **C2** | obj 1 aligned, `FollowerFace` highlighted, ⛔ mode **unchanged — stays `ROTATE`** | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
+| **C2** | obj 1 aligned, `FollowerFace` **filled** + `PioneerFace` **contour** drawn, ⛔ mode **unchanged — stays `ROTATE`** | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
 | **C3** | aligned + `TargetPosition` live | `ROTATE`: orbit obj 1 about the target. `TRANSLATE`: move obj 1 along centre→target | its own delta moves **obj 2** along target→centre |
 | — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null (→ C1) | |
 | — | flick (any state) | **orientation restored to the press pose** (the reinstated reset) | |
