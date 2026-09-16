@@ -73,6 +73,8 @@ import {
   anchorForkOf,
   anchorForkPending,
   runsIn3,
+  dragRule,
+  isDriven,
   type AnchorFork,
   type HolderBinding,
   type InputEvent,
@@ -1900,13 +1902,29 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release.
         //
-        // ⚠⚠ THIS IS RULE 2bis MINUS ITS PRECONDITION, not a placeholder for it. The
-        // gesture, the world-frame axes latched at press and the gain are all real and
-        // vectored. What is missing is the clause *"with an empty constraint stack"*:
-        // §1.4's stack does not exist yet (no object model), so the rule cannot ask and
-        // proceeds as though it always were empty. ⛔ The day constraints exist, an
-        // anchored object would rotate freely and silently break its own anchor unless
-        // `IN3` adds that test. It also drives a MESH rather than a modelled placement.
+        // ⭐⭐⭐ `IN3`: RULE 2bis NOW HAS ITS PRECONDITION — *"with an empty constraint
+        // stack"* — and it is asked through `dragRule`, which is also where 2sexte and the
+        // two-constraint refusal live. ⛔ In forks A and C the stack is never consulted, so
+        // this reads exactly as it did before: today's behaviour is the default.
+        //
+        // ⚠⚠ AND THE UNWIRED BRANCH DOES NOTHING RATHER THAN THE WRONG THING.
+        // `CONSTRAINED_ROTATE`'s driver (`anchor_rotate.ts`, 25 vectors) is built and NOT
+        // wired — blocked on a decision `A12` reopened by moving roll to the second
+        // touchpoint. ⛔ So a constrained object does not rotate at all, and the readout
+        // names the rule that would have run. A fall-through to free rotation would
+        // silently break the anchor the user set, which is the defect §1.4's eviction
+        // clause exists to prevent, arriving by a different door.
+        if (runsIn3(anchorFork)) {
+          const id = idOf.get(grip.mesh);
+          const stack = id === undefined ? [] : (world.objects.get(id)?.constraints ?? []);
+          const rule = dragRule("ROTATE", stack);
+          if (!isDriven(rule)) {
+            lastVerdict = `IN3: ${rule} (stack ${stack.length}) — not driven yet`;
+            grip.prev = s;
+            paint();
+            return;
+          }
+        }
         //
         // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
         // about the screen axes latched at press. Every step is a small world-frame

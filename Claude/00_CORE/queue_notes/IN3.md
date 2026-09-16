@@ -539,6 +539,40 @@ neighbour.
 ⭐⭐ `METHOD`: *a guard that cannot fail is not a guard* — and the only way to learn which
 guard is which is to break the product and watch which vectors notice.
 
+### ✅ BUILT: 2bis's PRECONDITION — and the composition the spec never wrote
+
+`src/input/drag_rule.ts` · `tests/drag_rule.test.ts` · **8 vectors**, engine-free.
+
+⛔⛔ **§2 WRITES 2bis AND 2sexte AGAINST THE STACK, AND SAYS NOTHING ABOUT THE MOVEMENT
+MODE** — the mode (`A16`) did not exist when it was written. That gap is now one table, in
+one place:
+
+| mode | stack | the drag |
+|---|---|---|
+| `TRANSLATE` | anything | **translate** |
+| `ROTATE` | empty | **free rotation** (2bis) |
+| `ROTATE` | one entry | **constrained rotation** (2sexte) |
+| `ROTATE` | two or more | ⛔ **refused** — no free rotational DOF |
+
+⚠⚠ **THE `TRANSLATE` ROW IS A CLAIM, NOT AN OMISSION.** An anchored object can still be
+carried: §1.4's solver consumes **rotational** DOF, so an anchor says where an object POINTS,
+not where it IS. ⭐ If a hand disagrees — if anchoring should pin a part in place — that is a
+new decision, and the vector asserting it is what would go red when it is made.
+
+⛔⛔ **AND THE UNWIRED BRANCH DOES NOTHING RATHER THAN THE WRONG THING.** `isDriven` separates
+*recognised* from *driveable*: `CONSTRAINED_ROTATE`'s driver is built (`anchor_rotate.ts`, 25
+vectors) and not wired, so a constrained object does not rotate and the readout **names the
+rule that would have run**. ⭐ A fall-through to free rotation would silently break the anchor
+the user set — §1.4's eviction clause exists to stop exactly that, and this is the same defect
+arriving by a different door. ⚠ Without the distinction the HUD would say
+`CONSTRAINED_ROTATE` while the object sat still, and a device pass would read that as a
+defect in 2sexte rather than as work not yet done.
+
+⚠ **It is not observable yet**, and that is worth saying plainly: nothing can PUSH a
+constraint until 2ter/2quater exist, so every stack is empty and the table's first two rows
+are the only reachable ones. ⭐ That is why 2ter/2quater come next — they are what makes this
+rule testable by finger.
+
 ### ⛔ What remains in fork B
 
 1. **2bis's precondition** — *is the stack empty?* Now askable, and the mode (`TRANSLATE`/
