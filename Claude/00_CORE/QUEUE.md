@@ -56,7 +56,7 @@ touchpoint's x and the detector was left running, *"unused"*, where it vetoed `I
 finger. ✅✅ **`IN2` CLOSED** — the three latched roles.
 
 ✅✅ **AND THE WHOLE TWO-TOUCHPOINT SET IS CLOSED BY A DEVICE LOOK (2026-09-16)** —
-*"everything is working"*: **`A10`** depth (still holder, moving anchor), **`A11`** §1.1 as
+*"everything is working"*: **`A10`** depth (⚠ its still-holder GATE is deleted, `D43`), **`A11`** §1.1 as
 a per-axis position deadband, **`A12`** roll on the second touchpoint's x, **`A13`** one
 touchpoint translates and a second held still rotates, **`A14`** a lift-and-replace is one
 gesture. ⭐ That is what `1.0.4` is: **translation with one finger.**
@@ -79,7 +79,7 @@ fork C."*
 |---|---|
 | one touchpoint drags an object | **translates** it, or **rotates** it — whichever the mode says |
 | **any single tap, anywhere** | flips the mode, immediately. ⚠ A double tap flips twice **and** flies the camera home |
-| a second touchpoint **pressed**, holder still | **roll** by its x *or* **depth** by its y — the mode picks one, never both |
+| a second touchpoint **pressed** | **roll** by its x *or* **depth** by its y — the mode picks one, never both. ✅ **SIMULTANEOUS with the holder's own drag** since `D43`: each finger owns a channel and they sum |
 | a second touchpoint released, holder off its object | the selection drops at the next input event (`A15`) |
 
 ⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`, the flag, its latch, the menu slider,

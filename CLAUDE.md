@@ -117,11 +117,16 @@ file in the project.
 ⚠ **`motionDeadbandMm` is now the most load-bearing number in the input layer** — the commit
 threshold, the rest test and the jitter deadband at once. It has a slider and no hand has
 judged it.
-✅ **DEPTH translation** (`A10`/`D20`, `IN8`): the finger **on the object holds still**, the
-finger **outside** supplies the travel. ⛔ No window, no ratio, no tolerance — and the
-holder wins every tie, so rule 6 and depth **partition** the two-finger configuration
-instead of competing for it. ⭐ Rule 6's second touchpoint may now be outside **or on the
-same object** (the first drives), which closes the small-object hole owed since `A5`.
+✅ **DEPTH translation** (`A10`/`D20`, `IN8`) — ⛔⛔ **AND ITS GATE IS DELETED (`D43`,
+2026-09-17): EVERYTHING IS SIMULTANEOUS NOW.** Depth used to require the finger **on the
+object** to hold still, which made rule 6 and depth a **partition** of the two-finger
+configuration rather than an overlap. ⭐ The owner rejected the partition itself: **each finger
+owns its own channel** — the holder's x/y, the second finger's single axis — and the two
+**SUM**, exactly as the holder's own x and y already do. ⚠ What it trades away: a hand can no
+longer move ONE finger and be sure only one rule ran; and **`A11`'s per-axis deadband is now
+the only thing** keeping a resting second finger from rolling the object with its jitter.
+⭐ Rule 6's second touchpoint may be outside **or on the same object**, which closed the
+small-object hole owed since `A5`.
 ⛔⛔ **Depth took SIX models, five of them rejected by a hand**, and the two lessons are in
 `METHOD.md`: **a blend has seams**, and ⭐⭐ **when a rule needs a WINDOW to decide, suspect
 the QUESTION** — A6 was implemented correctly and still failed, because *"are these two
@@ -191,7 +196,7 @@ that gave it: *"everything is working ok"* was general, and `A15`'s three specif
 not reported on individually.
 ⭐ **What it does**: A
 holder that is **no longer under its object** gives the selection up: depth moves the object
-along the view axis *while the holder holds still*, so it leaves the finger carrying it, and
+along the view axis *while the holder need not move at all*, so it leaves the finger carrying it, and
 §4's latch kept that finger holding it anyway. ⭐ A **raycast at the second touchpoint's
 lift**; if the object is not there the selection drops **at the next input event** and the
 §4 table re-resolves — orbit for a finger over empty space, ⛔ **keeping the previous yellow

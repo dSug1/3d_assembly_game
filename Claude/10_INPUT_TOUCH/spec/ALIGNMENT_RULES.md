@@ -233,7 +233,7 @@ toggle would have produced. So in fork C the tap can carry both meanings at once
 
 ### 4.2 ⛔⛔ THE SECOND TOUCHPOINT *PRESSED* IS TAKEN — roll and depth (`A10`/`A12`/`D22`)
 
-Today, a second touchpoint pressed while the holder is still drives **roll by its x** *or*
+⚠ **Since `D43` the holder's stillness is not required at all.** A second touchpoint drives **roll by its x** *or*
 **depth by its y**, the mode picking one. Fork C's C3 gives that same configuration an
 entirely different meaning (target + orbit/approach).
 
@@ -508,6 +508,8 @@ and nothing else does.* ⭐ The three decisions it rests on are `D37` (the tap t
 | **shake** an object | the alignment and both highlights go — in **either** mode, and **at any moment** in a gesture | `shake.ts` (a windowed reading), `evict` |
 | **TAP the same PioneerFace again** | the alignment and both highlights go — the same undo, on an easier gesture | `fork_c.tapMeaning` → `UNALIGN` |
 | any other tap | `D28`'s mode toggle, unchanged | `mode_toggle.ts` |
+| ⭐ **in EITHER movement mode** | the tap rules above do not read the movement mode at all (`D44`) | `alignment.tapMeaning` |
+| ⭐ **both fingers at once** | the holder's x/y and the second finger's axis apply **simultaneously** and sum (`D43`) | `depth_translate.secondFingerDrive` |
 
 ### ⭐ What was built ENGINE-FREE, with its mutants
 
@@ -610,6 +612,25 @@ means* is a question about assembling parts, and only a hand answers it.
    single taps takes two. ⭐ Then **shake obj 2** while in `FOLLOW`: the alignment releases.
    ⛔ In `SNAPSHOT` that shake releases only while the mode is `ROTATE` (it releases by turning
    the object); in `TRANSLATE` it does nothing, which is the gap §2 flags.
+
+### C-ter. ✅ WHAT THE SECOND DEVICE PASS ADDED (2026-09-17) — check these first
+
+9-bis. **Everything simultaneous (`D43`).** Hold an object and drag it while the **second
+   finger** drives its axis — roll in `ROTATE`, depth in `TRANSLATE`. ⛔ Both should apply at
+   the same time; neither finger should have to wait for the other to settle.
+   ⭐ *Falsified by* either contribution stopping while the other moves — that was `A10`'s
+   gate, and it is deleted.
+   ⚠⚠ **AND THE NEW EXPOSURE, WHICH IS WHAT TO WATCH FOR**: with no gate, a resting second
+   finger's jitter can reach the object. `A11`'s per-axis deadband is the only thing stopping
+   it, so if an object creeps or rolls while your second finger merely RESTS on the glass,
+   that is `motionDeadbandMm` and not the new rule — raise it on the slider and say so.
+9-ter. **The tap in `TRANSLATE` (`D44`).** While translating, tap (and double-tap) a face on
+   another object. ⛔ It should align exactly as it does in `ROTATE`, and the movement mode
+   should NOT change. ⭐ *Falsified by* the tap toggling the mode instead of aligning — and a
+   tap on **empty space** must still toggle, which is what keeps `ROTATE` reachable.
+9-quater. **The sway is back (defect 47).** Rotate an **aligned** object: the other objects
+   should swing sympathetically, as they do for a free rotation.
+   ⭐ *Falsified by* a still scene — that was the defect, caused by an early `return`.
 
 ### D. The safety question I cannot answer without a hand
 
