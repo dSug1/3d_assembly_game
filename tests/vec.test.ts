@@ -7,8 +7,11 @@ import {
   qAngle,
   qFromAxisAngle,
   qRotate,
+  qSlerp,
+  qconj,
   qmul,
   shortestArc,
+  type Quat,
   type Vec3,
 } from "../src/core/vec";
 
@@ -68,5 +71,65 @@ describe("shortestArc", () => {
   it("refuses a degenerate input instead of guessing", () => {
     expect(normalize([0, 0, 0])).toBeNull();
     expect(qAngle(shortestArc([0, 0, 0], Y))).toBeCloseTo(0, 12);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ qSlerp — the alignment's animated snap (`D45`)
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ qSlerp — constant angular speed, and the DOUBLE COVER", () => {
+  const axis: Vec3 = [0.3, 0.8, -0.5];
+
+  it("⭐ the endpoints are exact — nothing drifts at t=0 or t=1", () => {
+    const a = qFromAxisAngle(axis, 0.4);
+    const b = qFromAxisAngle(axis, 2.1);
+    qSlerp(a, b, 0).forEach((v, i) => expect(v).toBeCloseTo(a[i]!, 12));
+    qSlerp(a, b, 1).forEach((v, i) => expect(v).toBeCloseTo(b[i]!, 12));
+  });
+
+  it("⭐⭐ half-way is HALF THE ANGLE — the property a lerp does not have", () => {
+    // ⛔ A straight lerp between two quaternions cuts the chord: it arrives, but not at a
+    // constant rate, which is exactly what an animated snap would show as a slow-fast-slow
+    // wobble on top of its easing. ⭐ So the test is on the ANGLE, not on the components.
+    const a = qFromAxisAngle(axis, 0);
+    const b = qFromAxisAngle(axis, 1.6);
+    expect(qAngle(qmul(qSlerp(a, b, 0.5), qconj(a)))).toBeCloseTo(0.8, 9);
+    expect(qAngle(qmul(qSlerp(a, b, 0.25), qconj(a)))).toBeCloseTo(0.4, 9);
+  });
+
+  it("⛔⛔ IT TAKES THE SHORT WAY ROUND when the inputs differ in SIGN", () => {
+    // ⭐⭐ `q` and `−q` are the SAME rotation, and a caller cannot know which it holds. ⛔
+    // Without the negation this would travel the long way — up to 360° to express a small
+    // turn — and the object would spin right round on its way to an alignment 10° away.
+    const a = qFromAxisAngle(axis, 0.2);
+    const b = qFromAxisAngle(axis, 0.6);
+    const flipped: Quat = [-b[0]!, -b[1]!, -b[2]!, -b[3]!];
+    const viaFlipped = qSlerp(a, flipped, 0.5);
+    const direct = qSlerp(a, b, 0.5);
+    viaFlipped.forEach((v, i) => expect(v).toBeCloseTo(direct[i]!, 12));
+    // and the travel really is the short arc, not its 2π complement
+    expect(qAngle(qmul(viaFlipped, qconj(a)))).toBeCloseTo(0.2, 9);
+  });
+
+  it("⭐ every result is a UNIT quaternion — including the near-parallel fallback", () => {
+    // ⚠ The fallback is a LERP, which cuts the chord and is NOT unit until normalised. ⛔ A
+    // non-unit orientation scales every vector it rotates, which reads as a gain defect.
+    const a = qFromAxisAngle(axis, 1.0);
+    for (const sep of [1e-5, 1e-3, 0.5, 2.5]) {
+      const b = qFromAxisAngle(axis, 1.0 + sep);
+      for (const t of [0, 0.13, 0.5, 0.87, 1]) {
+        const q = qSlerp(a, b, t);
+        expect(Math.hypot(q[0], q[1], q[2], q[3])).toBeCloseTo(1, 12);
+      }
+    }
+  });
+
+  it("⚠ t is CLAMPED — an overrun cannot fling the object past its target", () => {
+    // ⭐ A frame can arrive late, so `(now - t0) / ms` exceeding 1 is ordinary, not a bug.
+    const a = qFromAxisAngle(axis, 0.2);
+    const b = qFromAxisAngle(axis, 1.2);
+    qSlerp(a, b, 1.9).forEach((v, i) => expect(v).toBeCloseTo(b[i]!, 12));
+    qSlerp(a, b, -0.4).forEach((v, i) => expect(v).toBeCloseTo(a[i]!, 12));
   });
 });

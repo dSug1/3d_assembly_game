@@ -35,7 +35,7 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**574 golden vectors, all passing** (37 → 632 → 574 → 619 → **568** → 575 → 567).
+**574 golden vectors, all passing** (37 → 632 → 574 → 619 → **568** → 575 → 567 → 572).
 ⭐ The count going DOWN is the shape to expect when a fork is chosen: 41 vectors described rules that no longer exist, and 10 more described orphans.
 
 ⭐⭐⭐ **ONE INPUT MODEL SINCE `D40` (2026-09-17)**: tap a face on another object to align the

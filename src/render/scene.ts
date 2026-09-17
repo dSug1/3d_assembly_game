@@ -94,6 +94,7 @@ import {
   swayWorldDirection,
   SpinSwayWatcher,
   CameraResetAnimation,
+  easeInOut,
   type CameraPose,
   type SwayKick,
   type SpinSwayKick,
@@ -131,7 +132,7 @@ import {
   faceWorld,
   pushObjectConstraint,
 } from "../core/object_model";
-import { qmul } from "../core/vec";
+import { qSlerp, qmul } from "../core/vec";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -435,7 +436,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
     // ⭐ ONE alignment, so this is §1.4's entry 1: the MINIMAL swing — *"rotation on the
     // minimum number of axis"* — and the spin about the aligned normal stays free.
-    setModelOrientation(followerGrip.mesh, qmul(solved.rotation, before));
+    // ⭐⭐ PLAYED AS A SLERP over `cameraResetMs`, not applied in one frame (owner, 2026-09-17).
+    // ⛔⛔ **THE DURATION IS THE CAMERA RESET'S, ON PURPOSE**: *"use the available sliders so we
+    // do not inflate the numbers of tuning parameters sliders."* ⭐ They are the same KIND of
+    // number — how long a discrete, hand-requested snap takes — and the camera's is the only
+    // one in the config. ⚠ Moving that slider moves both, which is the cost of not adding a
+    // knob; splitting them later is one field and one line.
+    // ⚠ At `0` the slider means *no animation*, exactly as it does for the camera.
+    const target = qmul(solved.rotation, before);
+    if (cfg.cameraResetMs > 0) {
+      alignAnim = { objectId: followerId, from: before, to: target, t0: performance.now() };
+    } else {
+      setModelOrientation(followerGrip.mesh, target);
+      alignAnim = null;
+    }
     followerGrip.alignmentTouched = true;
     // ⭐⭐ THE HIGHLIGHT IS THE ALIGNMENT'S STATE, not the press's: it appears HERE and dies
     // with the constraint (`D35`, and the owner's *"until un-highlight occurs"*).
@@ -1848,6 +1862,48 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let alignMode: AlignMode | null = null;
 
+  /**
+   * ⭐⭐⭐ **THE ALIGNMENT'S SNAP, ANIMATED** — owner, 2026-09-17: *"make the rotation a slerp
+   * instead of instantaneous."*
+   *
+   * ⛔⛔ NOT A RESURRECTION OF THE REJECTED ROTATION INERTIA. That was a follower on
+   * CONTINUOUS rotation — a drag with mass — and a hand rejected it on the device
+   * (`THIRD_PARTY_NOTICES.md`). ⭐ This is a **discrete** pose change played over time, the
+   * same kind of thing as the camera's fly-home, and the distinction is why one was wrong and
+   * this is right: a gesture in flight must answer the finger instantly; a snap that the hand
+   * has already asked for may take a moment to arrive.
+   *
+   * ⚠ THE CONSTRAINT IS PUSHED IMMEDIATELY while the pose travels, so for a few frames the
+   * object does not yet satisfy its own alignment. ⛔ Deliberate: the stack is what every other
+   * rule reads, and a stack that lags the gesture would make the twist, the readout and the
+   * re-tap all briefly wrong. The pose catches up and lands EXACTLY on the solved orientation.
+   */
+  let alignAnim: { objectId: ObjectId; from: Quat; to: Quat; t0: number } | null = null;
+
+  /**
+   * ⭐⭐ **DROP IT WHERE IT IS** — for every rule that RELEASES the alignment.
+   *
+   * ⛔⛔ THE DISTINCTION FROM `settleAlignAnim` IS THE WHOLE POINT, and it is the owner's own
+   * rule: releasing an alignment *"does not rotate the first object"*. ⭐ So a shake, a re-tap
+   * or a turned Pioneer that arrives mid-flight must **stop** the snap, not finish it —
+   * finishing would be the alignment still acting after it was let go, which is the one thing
+   * a release is supposed to guarantee against.
+   * ⚠ The object keeps whatever orientation the snap had reached. That is a partial rotation
+   * the hand can see and undo, which is honest; a jump back to the press pose would not be.
+   */
+  const cancelAlignAnim = (objectId: ObjectId): void => {
+    if (alignAnim?.objectId === objectId) alignAnim = null;
+  };
+
+  /** ⭐ Land it now. ⛔ Called by every rule that writes the same orientation — the hand wins
+   * over an animation it has already overtaken, and the object must not jump back afterwards. */
+  const settleAlignAnim = (): void => {
+    if (!alignAnim) return;
+    const mesh = meshOf.get(alignAnim.objectId);
+    if (mesh) setModelOrientation(mesh, alignAnim.to);
+    alignAnim = null;
+  };
+
 
   /**
    * ⭐⭐ Judge one release as a tap, keep §1.3's history, and toggle the mode **immediately**.
@@ -2245,7 +2301,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // highlight IS the alignment's state, so it goes with it (`D35`).
             // ⭐ *"un-highlight the FollowerFace"* — and the Pioneer's contour with it: both
             // report the same alignment, so neither may outlive it (the owner's amendment).
-            if (selectedFace?.objectId === sid) selectedFace = null;
+            if (selectedFace?.objectId === sid) {
+              cancelAlignAnim(selectedFace.objectId);
+              selectedFace = null;
+            }
             if (selectedFace === null) {
               pioneerFace = null;
               pioneerOrientation = null;
@@ -2268,6 +2327,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             const fId = selectedFace.objectId;
             const ev2 = evictObjectConstraints(world, fId);
             world = ev2.world;
+            cancelAlignAnim(fId);
             selectedFace = null;
             pioneerFace = null;
             pioneerOrientation = null;
@@ -2359,6 +2419,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             if (twist === null) {
               lastVerdict = "align: twist degenerate — the aligned normal points at the camera";
             } else if (twist !== 0) {
+              // ⛔ THE HAND WINS: land the snap before turning, or the animation would write
+              // over the twist next frame and the object would fight the finger.
+              settleAlignAnim();
               setModelOrientation(
                 grip.mesh,
                 rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
@@ -2462,6 +2525,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         const plan = flickResetPlan(grip.alignmentTouched);
         const snap = grip.rec.pressSnapshot;
         const rid = idOf.get(grip.mesh);
+        // ⛔ The reset restores the PRESS pose, so an alignment snap still in flight is over.
+        settleAlignAnim();
         if (plan.restoreOrientation && snap !== null) {
           // ⚠ ORIENTATION ONLY — the snapshot never carried a position, which is what makes
           // *"rotation reset"* the literal description of this rule rather than an analogy.
@@ -2529,6 +2594,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // release — which is the cost of one gesture carrying two jobs.
           const ev = evictObjectConstraints(world, heldId);
           world = ev.world;
+          cancelAlignAnim(heldId);
           selectedFace = null;
           pioneerFace = null;
           pioneerOrientation = null;
@@ -2744,6 +2810,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
     }
 
+    // ⭐⭐ THE ALIGNMENT'S SLERP, ADVANCED BEFORE ANYTHING READS AN ORIENTATION this frame —
+    // the Pioneer watch below compares orientations, and the markers are drawn from them.
+    // ⚠ `easeInOut` is the camera reset's own easing, imported rather than re-derived: two
+    // eased snaps in one product should not accelerate differently for no reason.
+    if (alignAnim !== null) {
+      const mesh = meshOf.get(alignAnim.objectId);
+      if (!mesh) {
+        alignAnim = null;
+      } else {
+        const u = cfg.cameraResetMs > 0 ? (now - alignAnim.t0) / cfg.cameraResetMs : 1;
+        if (u >= 1) {
+          // ⛔ LAND EXACTLY on the solved orientation, never on `slerp(…, 0.999)`: the
+          // constraint has been true since the tap, and the pose must agree with it exactly.
+          setModelOrientation(mesh, alignAnim.to);
+          alignAnim = null;
+        } else {
+          setModelOrientation(mesh, qSlerp(alignAnim.from, alignAnim.to, easeInOut(u)));
+        }
+      }
+    }
+
     // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1/C2, checked once per frame.
     //
     // ⛔⛔ THE CASE HAD NO RULE AT ALL UNTIL 2026-09-17, AND ITS ABSENCE WAS INVISIBLE: an
@@ -2769,6 +2856,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // so the pose is left exactly as the hand left it, and only the RULE goes.
           const ev = evictObjectConstraints(world, fId);
           world = ev.world;
+          cancelAlignAnim(fId);
           selectedFace = null;
           pioneerFace = null;
           pioneerOrientation = null;
@@ -2780,6 +2868,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           const followerMesh = meshOf.get(fId);
           if (followerMesh) {
             setModelOrientation(followerMesh, qmul(turn.delta, modelOrientation(followerMesh)));
+          }
+          // ⭐⭐ AN ANIMATION IN FLIGHT RIDES ALONG: both ends take the same world rotation, so
+          // the snap keeps travelling toward a target that has moved with the Pioneer.
+          // ⛔ Without this the slerp would drag the object back toward where the Pioneer USED
+          // to point — a tug backwards during the very gesture that is turning it.
+          if (alignAnim !== null && alignAnim.objectId === fId) {
+            alignAnim = {
+              ...alignAnim,
+              from: qmul(turn.delta, alignAnim.from),
+              to: qmul(turn.delta, alignAnim.to),
+            };
           }
           // ⭐ *"the alignment is updated per frame to match the second object's PioneerFace
           // normal"* — bookkeeping that keeps the CONSTRAINT truthful; the geometry above

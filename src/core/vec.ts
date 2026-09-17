@@ -98,3 +98,49 @@ export function shortestArc(from: Vec3, to: Vec3): Quat {
   const axis = cross(a, b);
   return qFromAxisAngle(axis, Math.acos(d));
 }
+
+/**
+ * ⭐⭐⭐ SPHERICAL LINEAR INTERPOLATION between two orientations — constant angular speed.
+ *
+ * ⛔⛔ **THE DOUBLE COVER IS THE WHOLE TRAP.** `q` and `−q` are the SAME rotation, so a naive
+ * interpolation between two quaternions can take the long way round — up to 360° of travel to
+ * express a 10° turn. ⭐ Negating one when their dot product is negative picks the short arc,
+ * and it is one line that cannot be reasoned about from the outside: a caller passing two
+ * perfectly ordinary orientations has no way to know which representation it got.
+ *
+ * ⚠ Nearly-parallel inputs fall back to a normalised LERP: `sin θ` divides both terms, so the
+ * exact formula loses precision as it goes to zero — and at that separation the two curves are
+ * indistinguishable anyway.
+ *
+ * @param t clamped to `[0, 1]`, so an overrun cannot fling the object past its target.
+ */
+export function qSlerp(a: Quat, b: Quat, t: number): Quat {
+  const u = Math.min(1, Math.max(0, t));
+  let [bw, bx, by, bz] = b;
+  let dot = a[0] * bw + a[1] * bx + a[2] * by + a[3] * bz;
+  if (dot < 0) {
+    // ⭐ The short way round. See the header — this is the double cover, not a sign bug.
+    bw = -bw;
+    bx = -bx;
+    by = -by;
+    bz = -bz;
+    dot = -dot;
+  }
+  if (dot > 0.9995) {
+    const lw = a[0] + (bw - a[0]) * u;
+    const lx = a[1] + (bx - a[1]) * u;
+    const ly = a[2] + (by - a[2]) * u;
+    const lz = a[3] + (bz - a[3]) * u;
+    // ⛔ A LERP OF TWO UNIT QUATERNIONS IS NOT A UNIT QUATERNION — it cuts the chord instead
+    // of following the arc — so it must be normalised. ⚠ `canon` only fixes the SIGN; a
+    // non-unit orientation would scale every vector it rotated, which is the kind of defect
+    // that looks like a gain being wrong.
+    const n = Math.hypot(lw, lx, ly, lz) || 1;
+    return canon([lw / n, lx / n, ly / n, lz / n]);
+  }
+  const theta = Math.acos(Math.min(1, dot));
+  const sin = Math.sin(theta);
+  const wa = Math.sin((1 - u) * theta) / sin;
+  const wb = Math.sin(u * theta) / sin;
+  return canon([a[0] * wa + bw * wb, a[1] * wa + bx * wb, a[2] * wa + by * wb, a[3] * wa + bz * wb]);
+}

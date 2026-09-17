@@ -132,6 +132,25 @@ himself** (the automatic switch to translation), which is why §2's text keeps i
 block overrides it: *the later text wins, and the superseded one explains why the current one
 exists.*
 
+### ✅ THE SNAP IS ANIMATED — `D45`, 2026-09-17
+
+> *"When the first object rotates to align (both in translation mode or rotation mode), make
+> the rotation a slerp instead of instantaneous. Use the available sliders so we do not inflate
+> the numbers of tuning parameters sliders."*
+
+⭐ Played over **`cameraResetMs`** with the camera reset's own **`easeInOut`** — the same kind
+of number (how long a discrete, hand-requested snap takes) and the only one in the config.
+⚠ Moving that slider moves both; at `0` the snap is instantaneous, exactly as the camera's is.
+⛔⛔ **IT IS NOT THE ROTATION INERTIA A HAND REJECTED** (`THIRD_PARTY_NOTICES.md`): that was a
+follower on CONTINUOUS rotation, where the finger must be answered instantly. ⭐ The
+distinction that makes one wrong and the other right: *a gesture in flight answers the hand; a
+snap the hand has already asked for may take a moment to arrive.*
+⚠ The **constraint is pushed immediately** while the pose travels — so for a few frames the
+object does not yet satisfy its own alignment. ⛔ Deliberate: the stack is what the twist, the
+readout and the re-tap all read, and a stack that lagged the gesture would make all three
+briefly wrong. ⛔ A release mid-flight **stops** the snap where it is rather than finishing it,
+because *releasing must not rotate the object* — the owner's own rule.
+
 ### ⭐⭐⭐ THE PIONEER'S OBJECT IS TURNED — dictated as a flag, **merged into the GESTURE**
 
 > *"Now create a flag with two forks for the case in which the second object with PioneerFace
@@ -509,6 +528,7 @@ and nothing else does.* ⭐ The three decisions it rests on are `D37` (the tap t
 | **TAP the same PioneerFace again** | the alignment and both highlights go — the same undo, on an easier gesture | `fork_c.tapMeaning` → `UNALIGN` |
 | any other tap | `D28`'s mode toggle, unchanged | `mode_toggle.ts` |
 | ⭐ **in EITHER movement mode** | the tap rules above do not read the movement mode at all (`D44`) | `alignment.tapMeaning` |
+| ⭐ **the snap is a SLERP** | over `cameraResetMs`, eased; a release mid-flight stops it where it is (`D45`) | `core/vec.qSlerp`, `scene.alignAnim` |
 | ⭐ **both fingers at once** | the holder's x/y and the second finger's axis apply **simultaneously** and sum (`D43`) | `depth_translate.secondFingerDrive` |
 
 ### ⭐ What was built ENGINE-FREE, with its mutants
@@ -631,6 +651,14 @@ means* is a question about assembling parts, and only a hand answers it.
 9-quater. **The sway is back (defect 47).** Rotate an **aligned** object: the other objects
    should swing sympathetically, as they do for a free rotation.
    ⭐ *Falsified by* a still scene — that was the defect, caused by an early `return`.
+
+9-quinquies. **The snap is a slerp (`D45`).** Align, and watch the turn: it should travel over
+   `cameraResetMs` (450 ms by default) with an ease in and out, not jump.
+   ⭐ *Falsified by* an instantaneous jump (check the **reset time** slider is not at 0 — it is
+   the camera's, shared on purpose), or by the object continuing to turn after you SHAKE it
+   mid-snap, which would mean a release is still rotating the object.
+   ⚠ It shares the camera's slider, so tuning one tunes both: if they want different times,
+   say so and it becomes two fields.
 
 ### D. The safety question I cannot answer without a hand
 
