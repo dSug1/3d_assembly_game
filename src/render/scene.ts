@@ -146,18 +146,21 @@ const MARKER_LIFT_M = 0.0015;
 
 /**
  * ⭐⭐ **THE ALIGNMENT SNAP RUNS AT A THIRD OF THE CAMERA RESET'S TIME** — owner, 2026-09-17:
- * *"too slow: make it twice faster"*, then *"make it 1/3rd of camera reset time"*. ⭐ Two
- * judgements one after the other, which is what a slider is for — except this one is a RATIO,
- * so it is the line below rather than a knob.
+ * *"too slow: make it twice faster"*, then *"1/3rd of camera reset time"*, then *"2/7th"*.
+ * ⭐⭐ THREE JUDGEMENTS IN A FEW MINUTES IS A HAND CONVERGING ON A FEEL, which is exactly what
+ * this project ships sliders for — and each round trip through a build and a deploy costs
+ * minutes that a slider or a `?` override costs nothing. ⚠ It stays a ratio because the owner
+ * asked for no new sliders; if the sweeping continues, the cheap fix is a config FIELD (URL
+ * override, no menu space) rather than another edit here.
  *
  * ⛔ A RATIO RATHER THAN A SECOND TUNABLE, because the instruction that introduced the
  * sharing still stands: *"use the available sliders so we do not inflate the numbers of tuning
  * parameters sliders."* ⭐ One slider still governs both animations; what differs is a
  * constant a hand cannot reach — and if the two ever want independent times, this is the line
  * that becomes a field.
- * ⚠ At 450 ms of camera reset the snap takes **150 ms**.
+ * ⚠ At 450 ms of camera reset the snap takes **≈129 ms**.
  */
-const ALIGN_SNAP_FRACTION = 1 / 3;
+const ALIGN_SNAP_FRACTION = 2 / 7;
 
 /** ⭐ The two marker colours, named once: cyan marks what MOVED, amber what it was aimed at. */
 const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
