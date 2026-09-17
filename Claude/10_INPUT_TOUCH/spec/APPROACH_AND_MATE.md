@@ -120,6 +120,7 @@ code so the change is one search.
 | **M1 — condition A** | a `TargetObject` is within the radius | ⭐ **both objects outlined in WHITE**; the drag is unchanged |
 | **M2 — condition B** | A, **and** the held object is aligned to one of the TargetObject's face normals | ⛔ the drag is partitioned **by ANGLE, not by mode**: within the threshold of the centre→centre direction it **approaches/retreats**; outside it **twists** |
 | **M3 — authorised** | B, **and** the two closest faces are near-anti-parallel (`SnapIsAuthorized`) | a push toward the target **MATES**: anti-align + translate-snap |
+| **M2′ / M3′ — two-handed** | the same, with a finger on **each** object | ⭐ the **fine approach**: each object follows its own finger along the line, and the pair docks when they meet. ⛔ The same gesture with the signs reversed is §8's **break** |
 
 ⭐ Four quantities the build has to name, because every rule above reads one of them:
 
@@ -258,31 +259,54 @@ docking. ⚠ Two states told apart by the presence of a third marker is a legend
 learn, so if it reads badly on the glass the cheap fix is to make the white **brighter or
 thicker in B**. ⛔ One line either way; a device look decides it.
 
-### ⚠ 6.2 THE SECOND FINGER IN CONDITION B — *"detail what is the issue. I did not understand"*
+### ✅ 6.2 THE SECOND FINGER IN CONDITION B — ANSWERED, and my question was the wrong one
 
-⭐ **The issue is that two rules would move the same object along two different axes at once,
-and one of them ignores the hold-off.** In detail:
+> *"I am not clear on the second finger: I expect the second finger will be on the second
+> object at one point to drive the fine approach and dock both objects."*
 
-1. Since `D43` the **second finger runs simultaneously** with the first — that is the
-   simultaneity you asked for. Its channel is picked by the **movement mode**: `TRANSLATE` →
-   **depth** (its y pushes the object along the flattened view direction), `ROTATE` → **roll**.
-2. Inside condition B, the **first** finger no longer obeys the mode (§4b): it approaches or
-   twists by ANGLE. ⛔ But the second finger's channel is still chosen by that same mode —
-   which now decides nothing for the first finger. **So the mode means one thing for one finger
-   and nothing for the other**, which is hard to explain and harder to predict.
-3. ⛔⛔ **And DEPTH specifically bypasses the docking rule.** 4b.1 says *"if `SnapIsAuthorized`
-   is false, the first object cannot be closer than `MinDistanceBeforeSnapIsConfirmed`"* — that
-   clamp lives in the approach. Depth moves the object along a **different** axis, so a second
-   finger can push it straight through the 8 mm hold-off and into (or through) the target
-   without the snap ever being authorised. ⚠ The clamp would be a rule one finger obeys and the
-   other does not.
+⭐⭐ **THAT SETTLES IT, AND IT DISSOLVES THE PROBLEM I RAISED.** A finger landing on the
+**TargetObject** is not the *second touchpoint* of `A10`/`A12` at all — `IN2`'s router latches
+it as a second **`OBJECT`**, a holder of its own. ⛔ Roll and depth belong to the `SECOND` role
+(a finger on the object someone else is already holding) or to `OUTSIDE`. ⭐ So in the
+configuration the owner expects — **one finger on each object** — depth and roll are not in
+play, and there was never a channel to suspend. The roles had already separated the two cases.
 
-⭐ **RECOMMENDATION**: while condition B holds, **suspend depth** and **keep roll**.
-⛔ Depth is the one that fights the approach and evades the clamp; roll is the twist reached by
-another channel, which is exactly what 4b.2 already allows the first finger to do.
-⚠ The alternative — keep both and apply the hold-off clamp to **every** rule that moves the
-object, not just the approach — is more honest but larger, and it would let a hand push a part
-sideways into a seat it never aimed at.
+⭐⭐⭐ **AND IT COMPLETES THE MECHANISM'S SYMMETRY**, which is the part worth seeing:
+
+| fingers | motion along the centre→centre line | what it is |
+|---|---|---|
+| **one**, on the held object | toward / away | §4b.1's coarse approach |
+| **two**, one on each object | **toward each other** | ⭐ the **fine approach**, and the dock |
+| **two**, one on each object | **apart**, past `BreakThreshold` | §8's **break** |
+
+⛔ The dock and the break are the same gesture with opposite signs — which is why a hand will
+not have to learn the second one.
+
+#### ⚠ What the build still has to decide about the two-finger case
+
+1. **Is the second holder's drag ALSO partitioned by the angle?** ⭐ Recommend **yes**, for
+   symmetry: within the angle each object moves along the line, outside it each rotates its own
+   object. ⚠ Otherwise the target could be dragged sideways while the held object docks into
+   where it used to be.
+2. **What maps a finger's travel to the gap?** ⭐ Recommend **each object follows its OWN
+   finger's projected travel**, through rule 6's existing tracking factor — so a millimetre of
+   finger is a millimetre of object at that zoom, and the gap closes by the sum. ⛔ That makes
+   *fine* mean **two hands sharing the work**, not a second gain to tune.
+3. **Does the hold-off still apply?** ⭐ Yes, and see below — it stops being a rule inside the
+   approach and becomes a property of the placement.
+
+#### ✅ AND THE CLAMP MOVES — which is a better answer than my *"suspend depth"*
+
+⛔⛔ I recommended suspending depth because it moves the object along a **different** axis and
+so bypasses 4b.1's *"cannot be closer than `MinDistanceBeforeSnapIsConfirmed`"*. ⭐⭐ The
+honest fix is not to forbid a rule, it is to stop writing the clamp inside one: **the hold-off
+is a property of the object's PLACEMENT while a target is captured and the snap is not
+authorised**, enforced wherever the placement is written — the approach, depth, rule 6, the
+second holder, anything later.
+⭐ `METHOD`'s shape: *a constraint enforced by every rule that could violate it is a rule; a
+constraint enforced at the one place the quantity is stored is an invariant.* ⚠ And it means
+no gesture has to be disabled to keep the guarantee — which is what made the suspension
+proposal feel wrong even as I wrote it.
 
 ### ⚠ 6.3 AFTER THE MATE — still unstated
 
@@ -332,6 +356,10 @@ each hand and pull.
 | 1 | **one finger on each of the two mated objects** | a one-handed drag, and any gesture that does not name BOTH parts |
 | 2 | the two travels are **opposite** and within an angle of the **centre→centre** direction | a pinch that happens to be near the parts, and a two-handed rotation |
 | 3 | the amplitude exceeds **`BreakThreshold`** | a nudge, a grip adjustment, and the jitter of two resting fingers |
+
+⭐⭐ **AND IT IS THE DOCK, REVERSED** (§6.2): one finger on each object moving **together**
+along the line is the fine approach; moving **apart** past the threshold is this. ⛔ One
+gesture, two signs — so the break costs a hand nothing to learn.
 
 ⭐ *"Same as zooming out"* is the right analogy and the right warning: **rule 4's pinch is
 exactly this gesture with both fingers OUTSIDE any object.** ⛔ The two cannot collide — the

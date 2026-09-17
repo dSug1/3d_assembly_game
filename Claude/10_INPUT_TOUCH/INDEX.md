@@ -43,8 +43,11 @@ model and so did not wait on `3D1`:
 hold-off 1.1×, white contours, docking by angle, anti-align + translate-snap. ✅ The owner answered the ten questions on the same day: the mate's second stack entry and the
 anti-align's missing DOF are **deferred to complex geometry** (true for cubes), the old
 `TargetPosition` half is **superseded**, and a mate is broken by **pulling it apart with two
-fingers** (`D47`). ⛔ Two things still open: what the second finger does while docking, and
-whether the white contours should differ between *captured* and *docking*.
+fingers** (`D47`). ⭐⭐ The **fine approach is two-handed** — a finger on each object, moving together along their
+centre line — which is the break gesture with the sign reversed, and which makes roll/depth
+irrelevant while docking because a finger on the other object is a second HOLDER, not a
+`SECOND`. ⛔ One thing still open: whether the white contours should differ between *captured*
+and *docking*.
 
 ⭐⭐⭐ **ONE INPUT MODEL SINCE `D40` (2026-09-17)**: tap a face on another object to align the
 held one, parallel, one alignment at a time, undone by a shake **or** a re-tap. ⛔ Forks A and
