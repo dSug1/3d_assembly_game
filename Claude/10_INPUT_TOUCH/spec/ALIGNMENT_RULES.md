@@ -138,11 +138,11 @@ exists.*
 > the rotation a slerp instead of instantaneous. Use the available sliders so we do not inflate
 > the numbers of tuning parameters sliders."*
 
-⭐ Played over **half of `cameraResetMs`** with the camera reset's own **`easeInOut`** — the
+⭐ Played over **a third of `cameraResetMs`** with the camera reset's own **`easeInOut`** — the
 same kind of number (how long a discrete, hand-requested snap takes) and the only one in the
-config. ⚠ *"Too slow: make it twice faster"* (owner, same day) is a **ratio**, not a second
-tunable: one slider still governs both animations, and at 450 ms of camera reset the snap takes
-**225 ms**. ⚠ At `0` it is instantaneous, exactly as the camera's is.
+config. ⚠ *"Too slow: make it twice faster"*, then *"make it 1/3rd of camera reset time"*
+(owner, same day): two judgements in a row, expressed as a **ratio** rather than a second
+tunable — one slider still governs both animations, and at 450 ms the snap takes **150 ms**. ⚠ At `0` it is instantaneous, exactly as the camera's is.
 
 ⛔⛔ **AND IT LOOKED UNWIRED IN `ROTATE` FOR AN HOUR** — *"there is no slerp during rotation:
 did you wire it?"* ⭐ It was wired in both modes; the TWIST killed it. The twist path used to
@@ -663,7 +663,7 @@ means* is a question about assembling parts, and only a hand answers it.
    ⭐ *Falsified by* a still scene — that was the defect, caused by an early `return`.
 
 9-quinquies. **The snap is a slerp (`D45`).** Align, and watch the turn: it should travel over
-   **half** `cameraResetMs` (225 ms by default) with an ease in and out, not jump — **in BOTH
+   **a third of** `cameraResetMs` (150 ms by default) with an ease in and out, not jump — **in BOTH
    modes**, including while you keep twisting the object.
    ⭐ *Falsified by* an instantaneous jump (check the **reset time** slider is not at 0 — it is
    the camera's, shared on purpose), or by the object continuing to turn after you SHAKE it
