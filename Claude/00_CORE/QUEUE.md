@@ -18,18 +18,18 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **572 golden vectors,
-all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel — → 619 → **568** — ⭐ the drop being forks A and B deleted — → 575 → 567 → 572, ⭐ the drop being `A10`'s gate suite, deleted with the gate). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **656 golden vectors,
+all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel — → 619 → **568** — ⭐ the drop being forks A and B deleted — → 575 → 567 → 572 → **656**, ⭐ the last rise being `D46`/`A16`–`A20`; ⚠ an earlier 640 was rolled back with two commits the owner reverted). ✅ The engine boundary is enforced by a test.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
 
-1. ✅✅ **APPROACH & MATE IS FULLY SPECIFIED AND READY TO BUILD** (`D46`/`D47`, every question
-   answered 2026-09-17). ⛔ Order: `3D2`'s **seat** first — §1.4's stack solves ORIENTATION, so
-   a mate does not hold POSITION and breaking would be indistinguishable from moving — then
-   `D47`'s two-handed break. ⭐ The engine-free half (capture, closest faces, the docking angle,
-   `SnapIsAuthorized`) is pure functions and can land first with its vectors.
+1. ⛔⛔ **APPROACH & MATE — THE HIGHLIGHTS AND THE ALIGNMENT TRACKING ARE BUILT; THE APPROACH IS NOT** (`D46`–`D48`, `A16`–`A21`, 2026-09-17). ✅ On the glass: white capture contours on a near pair (**translating + within `4L`**), every aligned body keeping its FollowerFace **and** a coloured body outline, a shake on a Pioneer releasing **all** its followers, a turned Pioneer releasing its cyan followers and rotating its orange ones **down a chain**, no cycles, and a **frozen** base plate. ⛔ NOT built: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
+   ⭐ New engine-free modules: `core/proximity.ts`, `core/alignment_links.ts`, `core/random_pose.ts`, `input/highlight.ts`, `input/pioneer_cascade.ts`, plus `frozen` in `core/object_model.ts`. **Suite 656.**
+   ⛔⛔ **THREE DEVICE REPORTS, EACH FINDING SOMETHING NO TEST HERE COULD**, and `METHOD` gained a shape from each: *a fix that lands beside the defect leaves a green suite and a broken product*; *when two readings fit one device report, name both*; *a second symptom that contradicts your theory is worth more than a third that confirms it.* → spec §14 and [`../10_INPUT_TOUCH/INDEX.md`](../10_INPUT_TOUCH/INDEX.md).
+   ⭐ Scene: three `L × 2L × 3L` parts `5L` apart at seeded random orientations (`?sceneSeed=N`), a **frozen** `6L × 0.3L × 9L` base plate `3L` below, camera at half max zoom-out. Ordered device lists: §12–§18 of [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md).
+   ⛔ **Next**: the approach itself (4b.1), then `3D2`'s seat + the mate, then `D47`'s break. ⛔⛔ **A live defect arms itself the moment a mate lands**: the twist reads `stack.length === 1` and otherwise falls through to FREE rotation, so a seated (2-entry) body rotates freely and breaks both constraints.
 2. ⛔⛔ **A DEVICE LOOK ON THE ALIGNMENT MODEL** — it is now the ONLY model (`D40`) and **no
    hand has judged any of it**. The ordered list, with what would falsify each item, is §10 of
    [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md).

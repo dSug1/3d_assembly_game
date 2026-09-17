@@ -44,9 +44,9 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-16)
+## Where it stands (2026-09-17)
 
-✅ Green: TypeScript + Babylon + Vite, **572 golden vectors passing** (⚠ 619 − 51 — forks A and B, and the orphans, took their vectors with them: ⭐ the roll
+✅ Green: TypeScript + Babylon + Vite, **656 golden vectors passing** (572 + 84 — ⭐ `A16`–`A20`, the approach & mate HIGHLIGHTS and alignment tracking; ⚠ before that 619 − 51, forks A and B and the orphans taking their vectors with them: ⭐ the roll
 channel and its vectors were **deleted together**, 2026-09-16).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
@@ -70,10 +70,31 @@ free, and a second one cannot be stacked — so zero-DOF, which froze an object 
 now unreachable **by construction** rather than by a guard.
 ✅✅ **CLOSED BY A DEVICE LOOK, 2026-09-17** — *"device pass ok, except these modifications"*,
 and all five are built (`D43`–`D45`, defects 47–48). ⚠ The corrections themselves have not
-been re-judged, except the slerp's speed. ⛔ **NEXT: `1.0.11-Approach-and-Mate-v0`** — the
-approach (`TargetPosition`, its gizmo, the orbit) and the **MATE**, which the game still
-cannot do at all: the alignment is PARALLEL, an orienting rule, and the only rule that pushes
-a `MATE` is flick-based. ⚠ Both are blocked on one owner decision each.
+been re-judged, except the slerp's speed. ⛔ **NOW ON `1.0.11-Approach-and-Mate-v0`**, and the game still
+cannot assemble anything: the alignment is PARALLEL, an orienting rule, and nothing pushes a
+`MATE`. ✅ **BUILT SO FAR — the HIGHLIGHTS ONLY** (`A16`/`A17`,
+[`Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)
+§12–§17): white contours on a near pair while it is being TRANSLATED, every aligned body keeping
+its FollowerFace and a coloured body outline, a shake on a Pioneer releasing ALL its followers
+via a two-way index, a turned Pioneer releasing its cyan followers and rotating its orange ones
+**down a chain**, **no cycles**, and a **`frozen`** attribute (enforced at `object_model.ts`'s
+two writers) carried by a new base plate. ⛔ The approach, hold-off, snap, mate and break are
+**not built**.
+⭐ The scene is now a workbench: three `L × 2L × 3L` parts `5L` apart at seeded random
+orientations (`?sceneSeed=N`), a frozen `6L × 0.3L × 9L` plate `3L` below.
+⛔⛔ **THE EARLIER `TargetPosition` + gizmo + orbit design is SUPERSEDED** — its
+finger-to-face-point direction collapses to noise exactly at contact; centre-to-centre cannot.
+⚠⚠ **AND THREE LESSONS FROM THIS DAY BIND EVERY ROW STILL TO COME**, each from a device report
+no test here could have produced. ⭐ *A fix that lands beside the defect instead of on it leaves
+a green suite and a broken product* — I wrote a corrected `faceMarkerExtent`, vectored it, and
+left the buggy copy wired. ⭐ *When two readings fit one device report, name both* — I read
+*"contours cannot appear if objects are not aligned"* as *require the alignment*, recorded it as
+`D48`, and the owner removed it hours later. ⭐⭐ *A second symptom that contradicts your theory
+is worth more than a third that confirms it* — a stale highlight produced TWO false reports
+(*"the release is not working"*, *"the shake is not working"*) while the rule they accused was
+correct and twice-vectored; the shake report is what inverted the diagnosis, and the cause was
+using the correct retire-by-membership pattern for one marker pool and the wrong one for
+another, in the same edit.
 ⭐ Rules, the conflict check against every earlier rule, the decisions and ⭐⭐ **an ordered
 list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §9–§10.
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On

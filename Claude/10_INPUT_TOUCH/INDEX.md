@@ -35,10 +35,37 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**574 golden vectors, all passing** (37 → 632 → 574 → 619 → **568** → 575 → 567 → 572).
+**656 golden vectors, all passing** (37 → 632 → 574 → 619 → **568** → 575 → 567 → 572 → 621 → **656**).
 ⭐ The count going DOWN is the shape to expect when a fork is chosen: 41 vectors described rules that no longer exist, and 10 more described orphans.
 
-⭐⭐ **APPROACH & MATE IS SPECIFIED, NOT BUILT** (`D46`,
+⭐⭐ **APPROACH & MATE — THE HIGHLIGHTS ARE BUILT, THE APPROACH IS NOT** (`A16`/`A17`, 2026-09-17):
+white capture contours on a near pair (**translating + within `4L`** — ⚠ the alignment was a
+condition for a few hours as `D48` and the owner **removed it**), every aligned body keeping its
+FollowerFace **and** a coloured body outline, and a shake on a Pioneer releasing **all** its
+followers through a two-way index built to scale (`core/alignment_links.ts`).
+✅ Also built: a turned Pioneer **releases its cyan followers and rotates its orange ones, down a
+chain** (`input/pioneer_cascade.ts`, a fixed point resolved in one frame); **no cycles** — a tap
+that would make a follower its own Pioneer's pioneer breaks the initial alignment instead; and
+**`frozen`**, an attribute enforced at `object_model.ts`'s two writers, carried by the new base
+plate.
+⛔⛔ **NOT built**: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
+⭐ Ordered device lists, with what falsifies each item: §12 and §13 of
+[`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md).
+⛔⛔ **AND THREE DEVICE REPORTS EACH FOUND SOMETHING NO TEST HERE COULD.** ⭐ The three lessons,
+all earned on 2026-09-17 and all in `METHOD`'s territory:
+* I wrote a corrected `faceMarkerExtent`, vectored it, and left `scene.ts` calling my **buggy
+  local copy** — green suite, broken product. ⭐ *A fix that lands beside the defect instead of
+  on it leaves a green suite and a broken product.*
+* `D48` was recorded and retired within hours: two readings fitted one device report and I chose
+  the stronger **silently**. ⭐ *When two readings fit one device report, name both.*
+* A stale highlight produced **two** false defect reports — *"the release is not working"* and
+  *"the shake is not working"* — while the rule they accused was correct and twice-vectored.
+  ⭐ *A second symptom that contradicts your theory is worth more than a third that confirms
+  it*; the shake report is what inverted the diagnosis. ⚠ And the cause was using the correct
+  retire-by-membership pattern for one marker pool and the wrong one for another, in the same
+  edit.
+
+⭐ **The earlier design** (`D46`,
 [`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md)): capture radius 1.25× the object,
 hold-off 1.1×, white contours, docking by angle, anti-align + translate-snap. ✅ The owner answered the ten questions on the same day: the mate's second stack entry and the
 anti-align's missing DOF are **deferred to complex geometry** (true for cubes), the old

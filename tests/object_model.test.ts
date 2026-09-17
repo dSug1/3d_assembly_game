@@ -488,3 +488,78 @@ describe("immutability — every operation returns a new world", () => {
     expect(world.objects.get("leaf")!.parent).toBe("mid");
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ `FROZEN` — the transform cannot be modified and the body cannot be a follower.
+// The owner, 2026-09-17, for the base plate.
+//
+// ⛔⛔ ENFORCED AT THE TWO WRITERS, which is the whole design. A dozen things move an object —
+// rule 6, depth, the approach, a snap, the sway, an alignment slerp, a FOLLOW cascade — and
+// asking each of them to check a flag means the next one added will not.
+// ══════════════════════════════════════════════════════════════════════════════
+describe("⛔⛔ frozen — an invariant at the writers, not a rule at the call sites", () => {
+  const plate = (frozen: boolean): SceneObject => ({
+    id: "plate",
+    local: { position: [0, -0.24, 0], orientation: IDENTITY },
+    parent: null,
+    faces: [{ id: "+y", centre: [0, 0.012, 0], normal: [0, 1, 0] }],
+    connectors: [],
+    constraints: [],
+    frozen,
+  });
+
+  it("⛔⛔⛔ A FROZEN BODY CANNOT BE MOVED, and the world comes back UNCHANGED", () => {
+    // ⭐ Unchanged rather than thrown: this runs inside a render loop, and a throw would take
+    // the scene down for a finger resting on the base plate.
+    const w = makeWorld([plate(true)]);
+    const after = setWorldPlacement(w, "plate", {
+      position: [1, 1, 1],
+      orientation: qFromAxisAngle([0, 1, 0], 1),
+    });
+    expect(worldPlacementOf(after, "plate")!.position).toEqual([0, -0.24, 0]);
+    expect(worldPlacementOf(after, "plate")!.orientation).toEqual(IDENTITY);
+  });
+
+  it("⭐ and the SAME body unfrozen moves normally — so the guard is what stops it", () => {
+    // ⛔ Without this, the vector above would also pass for a `setWorldPlacement` that was
+    // simply broken. ⚠ The only difference between the two cases is the attribute.
+    const w = makeWorld([plate(false)]);
+    const after = setWorldPlacement(w, "plate", { position: [1, 1, 1], orientation: IDENTITY });
+    expect(worldPlacementOf(after, "plate")!.position).toEqual([1, 1, 1]);
+  });
+
+  it("⛔⛔ A FROZEN BODY CANNOT BE A FOLLOWER — the constraint push is refused", () => {
+    // ⭐⭐ NOT a second feature: a constraint is what would MOVE it. An alignment's solve, a
+    // FOLLOW cascade and a mate all read the stack and write a pose, so refusing the stack
+    // closes the same guarantee through the other door.
+    const w = makeWorld([plate(true)]);
+    const after = pushObjectConstraint(
+      w,
+      "plate",
+      { kind: "FACE_ALIGN", localNormal: [0, 1, 0], targetWorld: [1, 0, 0] },
+      false,
+    );
+    expect(after.objects.get("plate")!.constraints).toEqual([]);
+  });
+
+  it("⭐ an unfrozen body accepts the same constraint", () => {
+    const w = makeWorld([plate(false)]);
+    const after = pushObjectConstraint(
+      w,
+      "plate",
+      { kind: "FACE_ALIGN", localNormal: [0, 1, 0], targetWorld: [1, 0, 0] },
+      false,
+    );
+    expect(after.objects.get("plate")!.constraints.length).toBe(1);
+  });
+
+  it("⚠ `frozen` is OPTIONAL and absent means free — every existing body is unaffected", () => {
+    // ⛔ The attribute was added to a live model with 40+ vectors already green. ⚠ If absence
+    // read as frozen, every object in the game would have stopped moving at once.
+    const loose: SceneObject = { ...plate(false) };
+    delete (loose as { frozen?: boolean }).frozen;
+    const w = makeWorld([loose]);
+    const after = setWorldPlacement(w, "plate", { position: [0.5, 0, 0], orientation: IDENTITY });
+    expect(worldPlacementOf(after, "plate")!.position).toEqual([0.5, 0, 0]);
+  });
+});

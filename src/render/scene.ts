@@ -40,6 +40,7 @@ import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -70,7 +71,6 @@ import {
   toggleBehaviour,
   type Behaviour,
   faceAlignConstraint,
-  pioneerTurned,
   type AlignMode,
   retargetAlignment,
   tapMeaning,
@@ -124,7 +124,12 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
-import { faceFromPickedNormal, faceMarkerLocalOrientation } from "../core/face_pick";
+import {
+  alignedFaceOf,
+  faceFromPickedNormal,
+  faceMarkerExtent,
+  faceMarkerLocalOrientation,
+} from "../core/face_pick";
 import { singleAlignment, solve } from "../core/constraint_stack";
 import {
   clearObjectConstraints,
@@ -133,6 +138,12 @@ import {
   pushObjectConstraint,
 } from "../core/object_model";
 import { IDENTITY, qSlerp, qmul } from "../core/vec";
+import { seededRotations } from "../core/random_pose";
+import { AlignmentLinks } from "../core/alignment_links";
+import { resolvePioneerTurns } from "../input/pioneer_cascade";
+// ⭐⭐ `A16`. ⛔ Both are ENGINE-FREE and answer questions; nothing in them moves or draws.
+import { captureRadiusM } from "../core/proximity";
+import { highlightedPair, translatesOnDrag, type HighlightVerdict } from "../input/highlight";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -165,9 +176,49 @@ const ALIGN_SNAP_FRACTION = 2 / 7;
 /** ⭐ The two marker colours, named once: cyan marks what MOVED, amber what it was aimed at. */
 const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
 const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
+/**
+ * ⭐⭐ `A16`'s **WHITE** — the capture contour, on BOTH bodies of the pair.
+ *
+ * ⛔ ONE WHITE FOR BOTH, by the owner's decision: *"make the white contours not differ for the
+ * moment, capture it for possible future improvement."*
+ */
+const CAPTURE_COLOUR = new Color3(1, 1, 1);
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
 const OBJECT_SIZE_M = 0.08;
+/**
+ * ⭐⭐⭐ **THE OBJECTS ARE CUBOIDS, `L × 2L × 3L`** (the owner, 2026-09-17: *"instead of three
+ * cubes, make the scene with three rectangles, each with dimensions L, 2L, 3L"*).
+ *
+ * ⛔⛔ **AND IT IS A BETTER TEST SCENE THAN CUBES, WHICH IS WORTH SAYING.** Two rules in this
+ * mechanism are **invisible with cubes** and a mutation run proved it: `objectSpan` returning
+ * the LARGEST extent rather than the mean, and the capture radius belonging to the CANDIDATE
+ * rather than the holder. ⭐ Both needed synthetic non-cube fixtures in `highlight.test.ts` to
+ * be pinned at all; with `L × 2L × 3L` on the glass they become things a hand can see.
+ * ⚠ A cube also hides every sign error in a face pair, because it has an opposite face for
+ * every face — which is exactly what made two of my own vectors hollow.
+ */
+const OBJECT_DIMS_M: readonly [number, number, number] = [
+  OBJECT_SIZE_M,
+  OBJECT_SIZE_M * 2,
+  OBJECT_SIZE_M * 3,
+];
+/**
+ * ⭐⭐⭐ **THE BASE PLATE** (the owner, 2026-09-17: *"make the orange rectangle with the following
+ * dimensions: 6L, 9L, 0.3L … this shall simulate the base plate of the scene"*).
+ *
+ * ⛔⛔ **`6L × 0.3L × 9L` IN WORLD `(x, y, z)`, AND THE ORDER IS A DELIBERATE READING.** The
+ * owner wrote *"respectively in the world X, Y and gravity axis"* — but `WORLD_DOWN` is
+ * `[0, −1, 0]`, so **the gravity axis IS world Y** and that sentence names Y twice. ⭐ Only one
+ * reading yields a *base plate*: `0.3L` is the THICKNESS, which must lie along gravity, leaving
+ * the `6L × 9L` footprint on the two HORIZONTAL axes — X and Z. ⚠ Taken literally the plate
+ * would be a 9L-tall wall 0.3L deep, which is not a base plate at all.
+ */
+const PLATE_DIMS_M: readonly [number, number, number] = [
+  OBJECT_SIZE_M * 6,
+  OBJECT_SIZE_M * 0.3,
+  OBJECT_SIZE_M * 9,
+];
 const CAMERA_RADIUS_M = 0.6;
 
 
@@ -190,6 +241,15 @@ export interface SceneHandle {
 export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const engine = new Engine(canvas, true, { stencil: true }, true);
   const scene = new Scene(engine);
+
+  // ⛔⛔ **PARSED HERE, FIRST, BECAUSE THE BOOT SCENE ITSELF NOW DEPENDS ON IT.** It used to sit
+  // three hundred lines below, next to the gesture state that reads it — fine while only
+  // gestures were tunable. ⚠ `sceneSeed` chooses the bodies' boot orientations, so the config
+  // has to exist before the first `make()` call. ⭐ Moved rather than duplicated: a second
+  // URL read would bypass `parseConfigOverrides`' validation and its rejected-key reporting,
+  // and a typo'd key would then silently do nothing instead of being named on the HUD.
+  const tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
+  const cfg = tuning.config;
   // ⚠ Explicit, so "dark page" always means the SCENE, never an unset default.
   scene.clearColor = new Color4(0.078, 0.086, 0.102, 1);
 
@@ -217,12 +277,44 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⚠ EXPLICIT materials rather than the auto-created default: with tree-shaken ES6
   // imports the default material is one more thing that has to have been pulled in,
   // and "the mesh is there but shaded black" is another silent-looking failure.
-  const make = (name: string, at: Vector3, rgb: [number, number, number]) => {
-    const mesh = CreateBox(name, { size: OBJECT_SIZE_M }, scene);
+  /**
+   * ⭐⭐ **EVERY BODY'S OWN DIMENSIONS.**
+   *
+   * ⛔⛔ THEY USED TO BE ONE SHARED CONSTANT, and the base plate is what broke that: at
+   * `6L × 0.3L × 9L` it shares nothing with the `L × 2L × 3L` parts. ⚠ Five things read a
+   * body's size — the mesh, its faces, the white capture contour, the alignment contour and
+   * the face-marker extents — and a single constant would have drawn all five of them at the
+   * parts' size on a plate seventy times their volume.
+   */
+  const dimsOf = new Map<ObjectId, readonly [number, number, number]>();
+  /** ⚠ Which bodies boot FROZEN. ⛔ The model is what enforces it; this is only the intent. */
+  const frozenIds = new Set<ObjectId>();
+
+  const make = (
+    name: string,
+    at: Vector3,
+    rgb: [number, number, number],
+    /** ⭐ The body's orientation at boot. ⚠ `core/vec` order `[w, x, y, z]`. */
+    boot?: Quat,
+    /** ⚠ Full extents along the body's own `x`, `y`, `z`. Defaults to the standard part. */
+    dims: readonly [number, number, number] = OBJECT_DIMS_M,
+    /**
+     * ⭐⭐ **FROZEN** — the transform cannot be modified and the body cannot be a follower
+     * (the owner, 2026-09-17). ⛔ Enforced in `core/object_model.ts` at the two WRITERS, not
+     * here: this only records the intent.
+     */
+    frozen = false,
+  ) => {
+    dimsOf.set(name, dims);
+    if (frozen) frozenIds.add(name);
+    // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
+    const mesh = CreateBox(name, { width: dims[0], height: dims[1], depth: dims[2] }, scene);
     mesh.position = at;
     // ⛔ Quaternion mode. While `rotationQuaternion` is null Babylon uses the Euler
     // `rotation` instead, which is the frame-mixing defect above.
     mesh.rotationQuaternion = Quaternion.Identity();
+    // ⚠ Babylon stores `(x, y, z, w)`; `core/vec` uses `[w, x, y, z]`. One conversion, here.
+    if (boot !== undefined) mesh.rotationQuaternion.set(boot[1], boot[2], boot[3], boot[0]);
     const mat = new StandardMaterial(name + "-mat", scene);
     mat.diffuseColor = new Color3(...rgb);
     mesh.material = mat;
@@ -233,14 +325,68 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     mesh.metadata = { orbitCandidate: true };
     return mesh;
   };
-  make("objectA", new Vector3(-0.07, 0, 0), [0.65, 0.67, 0.72]);
-  make("objectB", new Vector3(0.07, 0, 0), [0.45, 0.58, 0.72]);
+  // ⭐⭐⭐ **THE BOOT LAYOUT — `5L` APART, PAIRWISE, AT THREE RANDOM ORIENTATIONS.**
+  //
+  // The owner, 2026-09-17: *"set the cube three lengths apart at the scene boot"*, then
+  // *"increase their distances between each other by 2L"* (3L → **5L** = 400 mm), *"move the
+  // brown cube by two lengths away from the camera"* (**+2L in z**; the camera boots at yaw
+  // `-π/2`, which puts it on the **−z** side looking back toward `+z`), and *"rotate the three
+  // rectangles so they have three random rotations at scene boot"*.
+  //
+  // ⚠ EXACTLY 400 mm for all three pairs, not approximately: A↔B is the baseline and
+  // `objectC`'s height is DERIVED so A↔C and B↔C come out at 400 mm too —
+  // √((5L)² − (2.5L)² − (2L)²) = 0.307246. ⛔ A guessed y would leave the three distances
+  // unequal, and *"increase their distances"* would then be true of one pair and not the others.
+  //
+  // ✅✅ AND AT 5L NOTHING IS IN RANGE AT REST, WHICH IS THE POINT: the capture radius is `4L`
+  // (320 mm), so 400 mm spacing finally puts `A16`'s distance condition back to work — a hand
+  // has to bring two bodies together before anything can highlight. ⚠ At the previous 3L
+  // spacing every pair was already inside the radius, so that condition could never be seen to
+  // do anything on the glass.
+  //
+  // ⛔⛔ THE ROTATIONS ARE **SEEDED**, not per-boot random — `core/random_pose.ts` argues why,
+  // and `?sceneSeed=N` rolls a new scene. ⚠ Three arbitrary orientations mean **no two bodies
+  // start aligned**, which is correct: `A16`'s highlight should be something a hand earns.
+  const bootRotations = seededRotations(cfg.sceneSeed, 3);
+  make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72], bootRotations[0]);
+  make("objectB", new Vector3(0.2, 0, 0), [0.45, 0.58, 0.72], bootRotations[1]);
   // ⭐ A THIRD OBJECT, so the barycentre mechanism has something to choose BETWEEN.
-  // ⚠ Deliberately off-axis and off-plane: with three collinear objects every
-  // barycentre lies on the same line and the ray could not distinguish them, so the
-  // test would look like it passed while exercising nothing. `2^3 − 3 − 1 = 4`
-  // candidates — three pairs and the triple.
-  make("objectC", new Vector3(0.01, 0.1, -0.09), [0.72, 0.58, 0.45]);
+  // ⚠ Deliberately off-axis and off-plane: with three collinear objects every barycentre lies
+  // on the same line and the ray could not distinguish them, so the test would look like it
+  // passed while exercising nothing. `2^3 − 3 − 1 = 4` candidates — three pairs and the triple.
+  // ⭐⭐⭐ **THE BASE PLATE** — *"position it 3L below the two other rectangles"*.
+  //
+  // ⛔ NO RANDOM ORIENTATION: the owner asked for its dimensions to lie ALONG the world axes,
+  // which a random rotation would immediately destroy. ⚠ So `bootRotations[2]` is deliberately
+  // unused — `seededRotations` still asks for three so the first two do not change when this
+  // body's role does.
+  // ⚠ `3L` below the parts' CENTRES (they sit at `y = 0`), so the plate's own centre is at
+  // `−3L`. ⛔ Its top face is therefore at `−3L + 0.15L`, about `2.85L` under them — it is a
+  // landmark to fly down to, not a floor they are resting on.
+  // ⭐⭐ **AND IT IS FROZEN** — *"the object transform cannot be modified and the object cannot
+  // be a follower"*. ⛔ A base plate that could be dragged, rotated or aligned to something
+  // would not be a base plate; it is the fixed thing everything else is placed against.
+  make(
+    "objectC",
+    new Vector3(0, -OBJECT_SIZE_M * 3, 0),
+    [0.72, 0.58, 0.45],
+    undefined,
+    PLATE_DIMS_M,
+    true,
+  );
+  // ⭐⭐ **A FOURTH PART, PINK** — *"a fourth pink rectangle replicate of the blue rectangle and
+  // place it where the orange rectangle previously was"*.
+  //
+  // ⭐ *Replicate* is about the SIZE: the same `L × 2L × 3L` as the other two parts, which is
+  // why it takes the default dims rather than naming them. ⚠ Its POSE is the third seeded
+  // rotation — the one the base plate stopped using when it was told to sit square with the
+  // world. ⛔ That keeps `seededRotations(seed, 3)` answering for exactly three parts, so
+  // objectA's and objectB's orientations do not shift because a fourth body arrived.
+  //
+  // ⚠ `(0, 0.307246, 0.16)` is where the orange body sat when all three parts formed a 5L
+  // triangle — so the three PARTS are still 5L apart pairwise, and the plate is the only body
+  // that left that arrangement.
+  make("objectD", new Vector3(0, 0.307246, 0.16), [0.92, 0.5, 0.72], bootRotations[2]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // ⭐⭐ `3D1` — THE OBJECT MODEL IS NOW AUTHORITATIVE, AND THE MESHES ARE A VIEW OF IT.
@@ -256,21 +402,53 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   //
   // ⚠ The parent chain is unexercised here — three loose boxes, no assembly yet — but
   // it is the SAME call, so `3D2` parenting a part changes nothing in this file.
+  /** Babylon `(x, y, z, w)` → `core/vec` `[w, x, y, z]`. ⚠ Identity if the mesh has no quaternion. */
+  const quatOf = (m: AbstractMesh): Quat => {
+    const q = m.rotationQuaternion;
+    return q === null ? ([1, 0, 0, 0] as Quat) : ([q.w, q.x, q.y, q.z] as Quat);
+  };
+
   const idOf = new Map<AbstractMesh, ObjectId>();
   const meshOf = new Map<ObjectId, AbstractMesh>();
-  const half = OBJECT_SIZE_M / 2;
+  /**
+   * ⛔ PER-AXIS half-extents, and now per BODY. ⚠ A single `half` was a cube's privilege; a
+   * single set of three was the equal-parts privilege, and the base plate ended that too.
+   */
+  const facesFor = (dims: readonly [number, number, number]): Face[] => {
+    const hx = dims[0] / 2;
+    const hy = dims[1] / 2;
+    const hz = dims[2] / 2;
+    return [
+      { id: "+x", centre: [hx, 0, 0], normal: [1, 0, 0] },
+      { id: "-x", centre: [-hx, 0, 0], normal: [-1, 0, 0] },
+      { id: "+y", centre: [0, hy, 0], normal: [0, 1, 0] },
+      { id: "-y", centre: [0, -hy, 0], normal: [0, -1, 0] },
+      { id: "+z", centre: [0, 0, hz], normal: [0, 0, 1] },
+      { id: "-z", centre: [0, 0, -hz], normal: [0, 0, -1] },
+    ];
+  };
   // ⭐ Six faces, outward normals, LOCAL frame — the same convention `MateConnector`
   // uses, so a face and a connector never disagree about which way "out" is.
   // ⚠ Their ids are geometric ("+x"), not indices: a triangle index is an engine detail
   // and `3D1` is explicit that a face is not a triangle.
-  const boxFaces: Face[] = [
-    { id: "+x", centre: [half, 0, 0], normal: [1, 0, 0] },
-    { id: "-x", centre: [-half, 0, 0], normal: [-1, 0, 0] },
-    { id: "+y", centre: [0, half, 0], normal: [0, 1, 0] },
-    { id: "-y", centre: [0, -half, 0], normal: [0, -1, 0] },
-    { id: "+z", centre: [0, 0, half], normal: [0, 0, 1] },
-    { id: "-z", centre: [0, 0, -half], normal: [0, 0, -1] },
-  ];
+
+  // ⛔⛔⛔ **A LOCAL `faceExtent` LIVED HERE AND IT WAS THE 90° BUG — DEVICE-REPORTED
+  // 2026-09-17**: *"the contour highlight quad does not match the faces of the rectangles in
+  // rotation (90degree offset)"*.
+  //
+  // ⚠⚠ **THE FAILURE WAS NOT THE ARITHMETIC. IT WAS THAT I FIXED IT IN THE WRONG FILE.** I
+  // wrote the buggy version here (*"the two axes that are not the normal, in ascending order"*),
+  // realised it was wrong, wrote the CORRECT one as `faceMarkerExtent` in `core/face_pick.ts`,
+  // gave it three golden vectors — **and left this one wired.** ⛔ So the suite went green on the
+  // fix while the product kept the defect, and no test in this repository could have noticed:
+  // the vectors exercised the function nobody called.
+  //
+  // ⭐⭐ `METHOD`, and it is a NEW shape worth carrying: *a fix that lands beside the defect
+  // instead of on it leaves a green suite and a broken product.* ⚠ The old code must be
+  // DELETED in the same change, not left for later — which is the same lesson as defect 40
+  // (`A12`'s retired roll detector, still fed, still holding a verdict).
+  // ✅ The rule now lives in exactly one place, and this file calls it.
+
   let world: World = makeWorld(
     scene.meshes
       .filter((m) => m.metadata?.orbitCandidate === true)
@@ -281,10 +459,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           id: m.name,
           local: {
             position: [m.position.x, m.position.y, m.position.z] as Vec3,
-            orientation: [1, 0, 0, 0] as Quat,
+            // ⛔⛔ READ FROM THE MESH, NOT ASSUMED IDENTITY. This line said `[1, 0, 0, 0]`,
+            // which was true only for as long as every body booted square. ⚠ The moment the
+            // owner asked for a rolled and a yawed body, a hard-coded identity would have put
+            // the MODEL and the MESH in disagreement at frame zero — the model is authoritative
+            // (`3D1`), so every face normal, every alignment and every capture test would have
+            // been computed for an orientation the screen never showed.
+            orientation: quatOf(m),
           },
           parent: null,
-          faces: boxFaces,
+          faces: facesFor(dimsOf.get(m.name) ?? OBJECT_DIMS_M),
+          frozen: frozenIds.has(m.name),
           connectors: [],
           // §0's Start condition: every object begins with an EMPTY stack.
           constraints: [],
@@ -372,6 +557,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     );
     const q = faceMarkerLocalOrientation(face.normal);
     marker.rotationQuaternion?.set(q[1], q[2], q[3], q[0]);
+    // ⛔⛔ SIZED TO THE FACE IT MARKS. Both markers are authored unit-sized in `x`/`y`, so
+    // one scaling serves the filled quad and the line loop alike. ⚠ `z` stays 1: scaling the
+    // normal direction of a flat marker does nothing visible and would only obscure that the
+    // other two numbers are the ones doing the work.
+    // ⛔ `faceMarkerExtent` derives the size FROM the marker's own quaternion, so no convention
+    // inside `shortestArc` can make it wrong — see its header, and the block above for what
+    // happens when this call points at a local copy instead.
+    const e = faceMarkerExtent(
+      face.normal,
+      (dimsOf.get(objectId) ?? OBJECT_DIMS_M) as unknown as Vec3,
+    );
+    marker.scaling.set(e.u, e.v, 1);
     return true;
   };
 
@@ -415,6 +612,50 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (followerId === undefined || followerGrip.pressFace === null) {
       lastVerdict = "align: the held object has no resolved face — toggled instead";
       return false;
+    }
+
+    // ⭐⭐ **A FROZEN BODY CANNOT BE A FOLLOWER** — refused here only so the HUD can SAY so.
+    // ⛔⛔ THE GUARANTEE ITSELF IS IN `core/object_model.ts`: `pushObjectConstraint` refuses a
+    // frozen body, so even if this check were deleted the plate could not be aligned. ⚠ What
+    // would be lost is the EXPLANATION — the tap would silently do nothing, and *"tapping the
+    // plate does nothing"* is precisely the shape this file has been burned by twice today.
+    // ⭐ A frozen body remains a perfectly good PIONEER; only the Follower role is refused.
+    if (world.objects.get(followerId)?.frozen === true) {
+      lastVerdict = `align: ${followerId} is FROZEN — it cannot be a follower`;
+      // ⚠ `false`: the tap was NOT consumed, so it still falls through to the mode toggle.
+      // ⛔ Unlike the cycle case there is nothing to undo here, and a tap that did absolutely
+      // nothing would be the readout-that-lies shape again.
+      return false;
+    }
+
+    // ⭐⭐⭐ **A FOLLOWER MAY NOT BECOME ITS OWN PIONEER'S PIONEER — AND THE TAP UNDOES INSTEAD.**
+    //
+    // > *"a follower cannot become the pioneer of its own pioneer. in such case, the tap
+    // > triggering this configuration shall instead break the initial alignment"* — the owner
+    //
+    // ⛔⛔ **REFUSING WOULD HAVE BEEN THE WRONG ANSWER, AND THE OWNER SAID SO.** A tap that
+    // did nothing would leave a hand pressing the same face again and again with no feedback —
+    // and this file already knows that shape: `A15`'s orphaned binding was *"everything looks
+    // normal and the very next input does something different"*. ⭐ Breaking the initial
+    // alignment gives the gesture a visible, reversible consequence: the highlights drop.
+    //
+    // ⚠ IT IS THE **WHOLE CHAIN**, not one step: `F → P1 → P2` then a tap making `P2` follow
+    // `F` is the same cycle one link further out. ⛔ And a cycle is not cosmetic —
+    // `resolvePioneerTurns` is a fixed point over these links, so a ring of orange bodies would
+    // each take the other's rotation for ever. Its cap exists to stop that FREEZING the glass;
+    // this makes the state unrepresentable instead.
+    if (links.wouldCycle(followerId, pioneerId)) {
+      // ⭐ *"the initial alignment"* is the prospective PIONEER's own — the first edge of the
+      // offending chain, and in the two-body case exactly the `F → P` the hand made first.
+      releaseAlignmentOf(pioneerId);
+      lastVerdict =
+        `align: ${followerId}→${pioneerId} would cycle — ` +
+        `broke ${pioneerId}'s own alignment instead`;
+      // ⛔ `true`: the tap is CONSUMED. ⚠ Returning false would let it fall through to `D28`'s
+      // mode toggle as well, so one tap would both break an alignment and flip translate/rotate
+      // — two consequences for one gesture, which is exactly what the owner rejected when the
+      // automatic mode switch was removed.
+      return true;
     }
 
     // ⭐ The Pioneer normal is read in WORLD **now** and then frozen — §1.4's doctrine, and
@@ -486,8 +727,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const pioneerFaceId = pioneerGrip.pressFace.faceId;
     pioneerGrip.pressFace = null;
     pioneerFace = { objectId: pioneerId, faceId: pioneerFaceId };
-    pioneerOrientation = world.objects.get(pioneerId)?.local.orientation ?? null;
     alignMode = mode;
+    // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
+    // ACTIVE alignment's mode and would recolour an older object's highlight.
+    alignModeOf.set(followerId, mode);
+    // ⛔ And WHO it was aligned to, which the constraint itself does not record.
+    // ⚠ `link` MOVES an existing link rather than adding a second — a body has one alignment,
+    // so re-aligning it must remove it from its previous Pioneer's set.
+    links.link(
+      followerId,
+      pioneerId,
+      pioneerFaceId,
+      world.objects.get(pioneerId)?.local.orientation ?? IDENTITY,
+    );
     paintHighlightColours();
     // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
     //
@@ -522,24 +774,142 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * plane winding faces one way and which way is exactly the sort of engine detail that
    * would make the highlight invisible from one side only, found late and on a device.
    */
-  const faceQuad = CreatePlane(
-    "selected-face",
-    { size: OBJECT_SIZE_M, sideOrientation: 2 /* DOUBLESIDE */ },
-    scene,
-  );
-  const faceQuadMat = new StandardMaterial("selected-face-mat", scene);
-  faceQuadMat.emissiveColor = FOLLOWER_COLOUR.clone();
-  faceQuadMat.disableLighting = true;
-  faceQuadMat.alpha = 0.35;
-  faceQuad.material = faceQuadMat;
-  faceQuad.rotationQuaternion = Quaternion.Identity();
-  // ⛔⛔ BOTH FLAGS MATTER, and each has a precedent in this file. `isPickable = false` or
-  // the highlight would intercept the very picks that select a face — the second tap would
-  // hit the marker, not the object. ⚠ And it is NOT tagged `orbitCandidate`, so it cannot
-  // become a barycentre: a readout that moved the thing it describes is the trap the
-  // orbit-centre marker already documents.
-  faceQuad.isPickable = false;
-  faceQuad.isVisible = false;
+  /**
+   * ⭐⭐⭐ **ONE FOLLOWER QUAD PER ALIGNED OBJECT, NOT ONE IN TOTAL** (the owner, 2026-09-17:
+   * *"when an object is aligned, always maintain its FollowerFace highlighted (even if the
+   * touchpoints later select other objects) until its alignment is broken"*).
+   *
+   * ⛔⛔ **THE OLD DESIGN COULD NOT EXPRESS THE STATE THE OWNER WANTS TO SEE.** There was a
+   * single quad driven by a single `selectedFace` record, so aligning a SECOND object silently
+   * wiped the FIRST object's highlight — defeating the exact purpose: *"this will help keep
+   * track of which objects are aligned"*, plural.
+   *
+   * ⭐⭐ **AND THE POOL IS DRIVEN ENTIRELY BY THE MODEL.** Each frame every object is asked
+   * `alignedFaceOf(world, id)`; a non-null answer gets a quad on that face and nothing else
+   * does. ⛔ So there is no lifetime to manage and no cleanup path to forget: the instant a
+   * shake, a re-tap or a rotation reset evicts the constraint, the highlight has nothing to
+   * draw. ⚠ A remembered per-object record would be a second source of truth for a fact the
+   * constraint stack already holds, free to disagree after any eviction.
+   */
+  /**
+   * ⭐⭐⭐ **THE ALIGNED BODY'S FULL CONTOUR, IN THE ALIGNMENT'S COLOUR** (the owner,
+   * 2026-09-17: *"when an object is aligned, on top of the blue or orange face, highlight the
+   * full contour with blue or orange"*).
+   *
+   * ⭐ So an aligned body is now readable two ways at once: the FACE says *which face carries
+   * the alignment*, and the BODY outline says *this whole thing is aligned* — visible from any
+   * angle, including one where the aligned face is turned away from the camera. ⚠ That is the
+   * case the face quad alone could not cover, and with `L × 2L × 3L` bodies at arbitrary
+   * orientations it happens constantly.
+   *
+   * ⛔⛔ **IT IS DRAWN AT A LARGER SCALE THAN `A16`'s WHITE CAPTURE CONTOUR, ON PURPOSE.** Both
+   * are box outlines on the same body and a body can be **aligned AND captured at the same
+   * time** — which is in fact the normal state while docking, since `A16` requires an
+   * alignment. ⚠ At equal scale the two would z-fight into a dashed mess and neither colour
+   * would be legible. ⭐ 1.06 for this one against 1.02 for the white: they nest, and both read.
+   */
+  const ALIGN_CONTOUR_SCALE = 1.06;
+
+  const makeAlignContour = (name: string, dims: readonly [number, number, number]) => {
+    const m = CreateLines(name, { points: UNIT_BOX_OUTLINE }, scene);
+    m.color = FOLLOWER_COLOUR.clone();
+    // ⭐ Safe to bake in here, unlike the capture contours: this mesh is created per body and
+    // never adopted by another.
+    m.scaling = new Vector3(
+      dims[0] * ALIGN_CONTOUR_SCALE,
+      dims[1] * ALIGN_CONTOUR_SCALE,
+      dims[2] * ALIGN_CONTOUR_SCALE,
+    );
+    m.rotationQuaternion = Quaternion.Identity();
+    m.isPickable = false;
+    m.isVisible = false;
+    return m;
+  };
+
+  const makeFollowerQuad = (name: string) => {
+    // ⚠ UNIT-sized and SCALED per face by `placeFaceMarker`, because an `L × 2L × 3L` body
+    // has three differently shaped faces. ⛔ A fixed size would fit one pair and not the others.
+    const mesh = CreatePlane(name, { size: 1, sideOrientation: 2 /* DOUBLESIDE */ }, scene);
+    const mat = new StandardMaterial(name + "-mat", scene);
+    mat.emissiveColor = FOLLOWER_COLOUR.clone();
+    mat.disableLighting = true;
+    mat.alpha = 0.35;
+    mesh.material = mat;
+    mesh.rotationQuaternion = Quaternion.Identity();
+    // ⛔⛔ BOTH FLAGS MATTER, and each has a precedent in this file. `isPickable = false` or
+    // the highlight would intercept the very picks that select a face — the second tap would
+    // hit the marker, not the object. ⚠ And it is NOT tagged `orbitCandidate`, so it cannot
+    // become a barycentre: a readout that moved the thing it describes is the trap the orbit
+    // centre marker already documents.
+    mesh.isPickable = false;
+    mesh.isVisible = false;
+    return { mesh, mat };
+  };
+
+  /** Lazily one per object id. ⚠ Three bodies today; created on first alignment, never freed. */
+  const followerQuads = new Map<
+    ObjectId,
+    { mesh: AbstractMesh; mat: StandardMaterial; contour: LinesMesh }
+  >();
+  const followerQuadFor = (id: ObjectId) => {
+    let q = followerQuads.get(id);
+    if (q === undefined) {
+      const made = makeFollowerQuad(`follower-face-${id}`);
+      q = {
+        ...made,
+        contour: makeAlignContour(`align-contour-${id}`, dimsOf.get(id) ?? OBJECT_DIMS_M),
+      };
+      followerQuads.set(id, q);
+    }
+    return q;
+  };
+
+  /**
+   * ⚠⚠ **THE ONE THING THAT STILL HAS TO BE REMEMBERED: THE MODE.**
+   *
+   * ⛔ `SNAPSHOT` vs `FOLLOW` is not in the constraint — the stack records *which face onto
+   * which world direction*, not *by which gesture*. ⭐ So the FACE is derived and only the
+   * COLOUR is remembered, keyed by object. ⚠ Entries are PRUNED every frame against
+   * `alignedFaceOf`, so a stale one cannot outlive its alignment even though it is state.
+   */
+  const alignModeOf = new Map<ObjectId, AlignMode>();
+
+  /**
+   * ⭐⭐⭐ **WHO IS ALIGNED TO WHOM** — `core/alignment_links.ts`, a two-way index.
+   *
+   * The owner, 2026-09-17: *"for each aligned object, track its pioneer object. If the said
+   * pioneer object is later shaken, the alignment of the aligned object shall be released …
+   * when I shake the pioneer object it shall release all the follower objects"*, then *"make
+   * sure the tracking of pioneer and follower objects can be later scaled when there are
+   * several objects in the scene"*.
+   *
+   * ⛔⛔ **IT IS REMEMBERED BECAUSE IT CANNOT BE DERIVED.** A `FACE_ALIGN` stores a frozen world
+   * DIRECTION, not a reference to another body — that is what lets an alignment survive the
+   * Pioneer moving away or being deleted. ⚠ So *"which body did this come from"* is genuinely
+   * absent from the model.
+   *
+   * ⭐⭐ **AND IT IS RECONCILED AGAINST THE MODEL EVERY FRAME** (`links.prune`), so the one
+   * remembered fact cannot outlive the constraint that justifies it. ⛔ That is what removes
+   * the need for every release path — shake, re-tap, rotation reset, eviction — to remember to
+   * call `unlink`.
+   */
+  const links = new AlignmentLinks();
+
+  const releaseAlignmentOf = (followerId: ObjectId): void => {
+    const ev = evictObjectConstraints(world, followerId);
+    world = ev.world;
+    cancelAlignAnim(followerId);
+    links.unlink(followerId);
+    alignModeOf.delete(followerId);
+    // ⚠ The ACTIVE-alignment records are cleared only if this body is the one they name: the
+    // tap, shake and flick rules read them, and wiping them for an unrelated body would make
+    // the next gesture on the ACTIVE follower behave as though nothing were aligned.
+    if (selectedFace?.objectId === followerId) {
+      selectedFace = null;
+      pioneerFace = null;
+      alignMode = null;
+    }
+  };
 
   /**
    * ⭐⭐⭐ **THE PIONEER's CONTOUR** — *"the PioneerFace contour shall be highlighted"*.
@@ -569,28 +939,169 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * be a second writer for a value that changes on a gesture.
    */
   const paintHighlightColours = (): void => {
-    const follower = alignMode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
-    faceQuadMat.emissiveColor.copyFrom(follower);
+    // ⚠ EVERY aligned object, not just the active one: a body aligned in `FOLLOW` earlier must
+    // keep reporting `FOLLOW` after the fingers move on, or the colour would describe the most
+    // recent gesture instead of the relationship it names.
+    for (const [id, q] of followerQuads) {
+      const mode = alignModeOf.get(id);
+      const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
+      q.mat.emissiveColor.copyFrom(want);
+      q.contour.color.copyFrom(want);
+    }
   };
 
-  const faceContour = CreateLines(
-    "pioneer-face-contour",
-    {
-      points: [
-        new Vector3(-0.5, -0.5, 0),
-        new Vector3(0.5, -0.5, 0),
-        new Vector3(0.5, 0.5, 0),
-        new Vector3(-0.5, 0.5, 0),
-        new Vector3(-0.5, -0.5, 0),
-      ],
-    },
-    scene,
-  );
-  faceContour.color = PIONEER_COLOUR.clone();
-  faceContour.scaling = new Vector3(OBJECT_SIZE_M, OBJECT_SIZE_M, 1);
-  faceContour.rotationQuaternion = Quaternion.Identity();
-  faceContour.isPickable = false;
-  faceContour.isVisible = false;
+  /** ⭐ The unit square every Pioneer-face contour is built from, scaled per face. */
+  const FACE_SQUARE_OUTLINE = [
+    new Vector3(-0.5, -0.5, 0),
+    new Vector3(0.5, -0.5, 0),
+    new Vector3(0.5, 0.5, 0),
+    new Vector3(-0.5, 0.5, 0),
+    new Vector3(-0.5, -0.5, 0),
+  ];
+
+  /**
+   * ⭐⭐⭐ **`A16` — THE TWO WHITE CONTOURS**, one per body of the highlighted pair.
+   *
+   * ⛔⛔ **PARENTED TO THE MESH, NOT POSITIONED PER FRAME.** Defect 46 was exactly this mistake
+   * for the face markers: *"the highlighted quads always lag the movements of the faces they
+   * highlight."* ⭐ A child transform is resolved by the engine in the same pass that draws the
+   * parent, so no frame can show the outline and its body disagreeing. ⚠ Writing a world
+   * position each frame cannot achieve that — the write lands before the parent's own update,
+   * and the lag is one frame, permanently.
+   *
+   * ⚠ A single polyline tracing all twelve edges of the unit box; three are drawn twice, which
+   * costs nothing and keeps this to one mesh per body. ⛔ `CreateLines` gives a `color` and no
+   * material, and its one-pixel width is a WebGL limit rather than a choice — if a hand finds
+   * it too faint the answer is `GreasedLine`, as the Pioneer contour already records.
+   */
+  const UNIT_BOX_OUTLINE = [
+    [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5],
+    [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5],
+    [0.5, 0.5, -0.5], [0.5, -0.5, -0.5],
+    [0.5, -0.5, 0.5], [0.5, 0.5, 0.5],
+    [-0.5, 0.5, 0.5], [-0.5, -0.5, 0.5],
+  ].map(([x, y, z]) => new Vector3(x!, y!, z!));
+
+  const makeCaptureContour = (name: string) => {
+    const m = CreateLines(name, { points: UNIT_BOX_OUTLINE }, scene);
+    m.color = CAPTURE_COLOUR.clone();
+    // ⛔ SCALED TO THE BODY'S THREE DIMENSIONS — the outline is authored as a UNIT box, so a
+    // cuboid needs all three. ⚠ A hair over 1.0 so the lines do not z-fight the surface they
+    // trace. ⭐ One scaling, set once: every body in this scene has the same dimensions.
+    // ⚠ Scaled when PARENTED, not here: the two capture contours are shared meshes that move
+    // between bodies of different sizes, so a size baked in at creation would draw a plate's
+    // outline at a part's size. ⛔ That is the shared-constant bug in its second form.
+    m.scaling = new Vector3(1, 1, 1);
+    m.rotationQuaternion = Quaternion.Identity();
+    // ⛔ Both flags, for the two reasons this file has already paid for: an instrument must not
+    // intercept the picks it describes, and must not become an orbit barycentre.
+    m.isPickable = false;
+    m.isVisible = false;
+    return m;
+  };
+  /**
+   * ⭐⭐⭐ **ONE PIONEER CONTOUR PER DISTINCT PIONEER FACE** (the owner: *"the pioneerFaces and
+   * FollowerFaces tracking shall be scalable"*).
+   *
+   * ⛔⛔ **THE TWO SIDES WERE NOT SYMMETRIC, AND ONLY ONE OF THEM NEEDED WORK.** A
+   * FollowerFace is **derivable** — the constraint stores the face's own `localNormal`, so
+   * `alignedFaceOf` recovers it per body and there was never a single record to outgrow.
+   * ⚠ The Pioneer face is the opposite: like the Pioneer's identity it is absent from the
+   * model, so it lived in one `pioneerFace` variable and **at most one could ever be drawn**.
+   * ⭐ Align two bodies to the same block and only the most recent Pioneer face was outlined.
+   *
+   * ⚠ Keyed by `object/face`, so two followers pointing at the SAME face share one contour
+   * rather than stacking two — invisible at one pixel wide today, and a real artefact the day
+   * these markers gain a width or an alpha.
+   */
+  const pioneerContours = new Map<string, LinesMesh>();
+  const pioneerContourFor = (key: string): LinesMesh => {
+    let m = pioneerContours.get(key);
+    if (m === undefined) {
+      m = CreateLines(`pioneer-face-${key}`, { points: FACE_SQUARE_OUTLINE }, scene);
+      m.color = PIONEER_COLOUR.clone();
+      m.rotationQuaternion = Quaternion.Identity();
+      m.isPickable = false;
+      m.isVisible = false;
+      pioneerContours.set(key, m);
+    }
+    return m;
+  };
+
+  const subjectContour = makeCaptureContour("capture-contour-subject");
+  const targetContour = makeCaptureContour("capture-contour-target");
+
+  /**
+   * ⭐⭐ Show a contour on a body by PARENTING it; `null` hides it.
+   * ⚠ The guard makes it a write per CHANGE rather than per frame — the same discipline
+   * `paintHighlightColours` follows.
+   */
+  const showContourOn = (contour: AbstractMesh, objectId: ObjectId | null): void => {
+    // ⚠ Written as an early return on `objectId` itself rather than on the mesh, so the body's
+    // id is NARROWED for the rest of the function. ⛔ The previous form derived `mesh` first and
+    // needed a `!` on `objectId` below — an assertion where a check costs nothing.
+    if (objectId === null) {
+      if (contour.parent !== null) contour.parent = null;
+      contour.isVisible = false;
+      return;
+    }
+    const mesh = meshOf.get(objectId) ?? null;
+    if (mesh === null) {
+      if (contour.parent !== null) contour.parent = null;
+      contour.isVisible = false;
+      return;
+    }
+    if (contour.parent !== mesh) {
+      contour.parent = mesh;
+      contour.position.setAll(0);
+      contour.rotationQuaternion = Quaternion.Identity();
+      // ⛔ THE BODY'S OWN SIZE, read at the moment it is adopted. ⚠ A hair over 1.0 so the
+      // lines do not z-fight the surface they trace.
+      const d = dimsOf.get(objectId) ?? OBJECT_DIMS_M;
+      contour.scaling.set(d[0] * 1.02, d[1] * 1.02, d[2] * 1.02);
+    }
+    contour.isVisible = true;
+  };
+
+  /**
+   * ⭐⭐⭐ **`A16`, EVALUATED ONCE PER FRAME.**
+   *
+   * ⛔⛔ **DERIVED, NEVER REMEMBERED.** The only value carried across a frame is the previous
+   * target id, and only so a distance tie resolves in favour of the body already outlined —
+   * hysteresis by memory rather than by a second threshold, which costs no tunable.
+   *
+   * ⚠ IN THE RENDER LOOP AND NOT IN THE POINTER HANDLER: a pair can come into or out of range
+   * because the OTHER body moved (a sway nudge, an animation) with no pointer event at all, and
+   * a highlight that only updated on input would then describe a stale scene.
+   */
+  let highlighted: HighlightVerdict = { pair: null, translating: false, inRange: false };
+
+  const refreshHighlight = (): void => {
+    // ⭐ Held bodies in PRESS ORDER, de-duplicated — `router.objects()` is ordered by press, and
+    // press order is the only ordering a hand controls. ⚠ Two fingers on the SAME body collapse
+    // to one entry, which is right: that is a holder plus a `SECOND`, not a pair.
+    const ids: ObjectId[] = [];
+    for (const p of router.objects()) {
+      const g = held.get(p.id);
+      const id = g === undefined ? undefined : idOf.get(g.mesh);
+      if (id !== undefined && !ids.includes(id)) ids.push(id);
+    }
+    highlighted = highlightedPair(
+      world,
+      ids,
+      // ⛔ CONDITION 2, from the SAME function `grip.mode` is assigned from — one rule, one place.
+      translatesOnDrag(ids.length, behaviour),
+      {
+        snapRadiusM: captureRadiusM(OBJECT_SIZE_M, cfg.snapRadiusFactor),
+        alignMatchRad: (cfg.alignMatchDeg * Math.PI) / 180,
+      },
+      highlighted.pair?.target ?? null,
+    );
+    // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
+    // synced here and nowhere else.
+    showContourOn(subjectContour, highlighted.pair?.subject ?? null);
+    showContourOn(targetContour, highlighted.pair?.target ?? null);
+  };
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
   // Without it the barycentre selection is invisible, and "it seems to orbit the right
@@ -613,8 +1124,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
   // object results; nothing keeps a second copy. See input/config_override.ts.
-  const tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
-  const cfg = tuning.config;
   /**
    * ⭐⭐ ONE history for EVERY touchpoint, on an object or not.
    * ⛔ It was briefly two, so that a tap on a part and a tap beside it could not fuse.
@@ -884,8 +1393,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⭐ ONE zoom scalar, shared. Pinch scales the whole orbit SURFACE rather than
   // setting a radius directly, so rule 1 and rule 4 compose instead of fighting over
   // the same number. `1` is the rings as configured.
-  let zoom = 1;
-  let zoomAtPinchStart = 1;
+  /**
+   * ⭐⭐⭐ **THE BOOT ZOOM — HALF THE MAXIMUM ZOOM-OUT** (the owner, 2026-09-17: *"zoom out the
+   * camera at scene boot to place it at half its maximum zoom out so I can see the
+   * rectangles"*).
+   *
+   * ⛔⛔ **DERIVED, NOT A MAGIC NUMBER.** *"Maximum zoom out"* is not a zoom value at all — it
+   * is `cameraRadiusMaxM`, the clamp in `pinch.ts` that stops the camera leaving the scene. So
+   * half of it is **`cameraRadiusMaxM / 2` metres of camera radius**, and the zoom that produces
+   * it depends on the rig surface at the boot elevation. ⭐ `orbitOffset`'s radius and height both
+   * scale linearly with zoom, so `radiusM(z) = z × radiusM(1)` and the zoom follows by division.
+   * ⚠ A hard-coded 2.5 or whatever would silently stop meaning *half* the moment anyone touched
+   * `cameraRadiusMaxM`, the rig rings, or `ORBIT_START_ELEVATION`.
+   *
+   * ⚠ Clamped to at least 1: the boot view may be pushed OUT but never pulled in closer than
+   * the rig's own surface, which is what the orbit was designed around.
+   */
+  const ORBIT_START_ZOOM = (() => {
+    const base = orbit.pose(1).radiusM;
+    if (!(base > 1e-9)) return 1;
+    return Math.max(1, cfg.cameraRadiusMaxM / 2 / base);
+  })();
+
+  let zoom = ORBIT_START_ZOOM;
+  let zoomAtPinchStart = ORBIT_START_ZOOM;
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
@@ -959,7 +1490,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const home: CameraPose = {
       yawRad: ORBIT_START_YAW_RAD,
       elevation: ORBIT_START_ELEVATION,
-      zoom: 1,
+      // ⚠ THE BOOT ZOOM, NOT 1. ⛔ *"Home"* has to be the view the session opened with, or a
+      // double tap would fly the camera somewhere the user has never seen — the same argument
+      // this function already makes about the orbit CENTRE, applied to the zoom.
+      zoom: ORBIT_START_ZOOM,
       centreM: centreBlend.targetM,
     };
     const now: CameraPose = {
@@ -1238,7 +1772,45 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // first time the owner touched them.
             `  lead ${cfg.translateLeadMs}/${(
               neutralLeadSec(cfg.translateInertiaMs / 1000, cfg.translateDampingRatio) * 1000
-            ).toFixed(1)}ms`,
+            ).toFixed(1)}ms` +
+            // ⭐⭐⭐ **`A16`'s STATE — AND IT PRINTS WHICH CONDITION IS FAILING, NOT JUST THE
+            // VERDICT.** ⛔⛔ Three conditions AND together, and on the glass a missing highlight
+            // looks identical whichever one is false. ⚠ So *"I forgot to align"*, *"I am in
+            // rotation mode"* and *"they are too far apart"* would be one symptom with three
+            // causes — and this project has spent whole device passes on exactly that kind of
+            // ambiguity. ⭐ Each condition gets a letter: **A**ligned, **T**ranslating,
+            // **R**ange; upper case means satisfied, lower case means not.
+            // ⚠ STRAIGHT FROM THE VERDICT — nothing recomputed here. `highlight.ts` returns its
+            // reasons precisely so this line cannot become a second implementation.
+            // ⛔ TWO FLAGS NOW, NOT THREE: the `A` for *aligned* is gone because the alignment
+            // is no longer part of the approach. ⚠ Leaving it would have implied it still
+            // gated the contour — the readout-that-lies shape, one letter wide.
+            `  ${highlighted.pair === null ? "◇" : "◆"}` +
+            `${highlighted.translating ? "T" : "t"}` +
+            `${highlighted.inRange ? "R" : "r"}` +
+            (highlighted.pair === null
+              ? ""
+              : ` ${highlighted.pair.subject}↔${highlighted.pair.target}`) +
+            // ⭐⭐⭐ **THE ALIGNMENT LINKS, PRINTED — AND THIS LINE IS OWED TO A DEVICE REPORT.**
+            //
+            // ⛔⛔ A hand reported *"the release of the cyan follower objects by the rotation of
+            // the pioneer is not working"* and there was **nothing on the glass to narrow it
+            // with**: an alignment that never linked, a link pruned too eagerly, a mode read as
+            // `FOLLOW`, and a turn below the epsilon all look identical — nothing happens.
+            // ⭐ Now each link prints as `follower>pioneer/face:C` or `:F` for cyan/FOLLOW, so
+            // *the rule did not fire* and *the link was never there* stop being the same
+            // observation. ⚠ Straight from the index; nothing is recomputed here.
+            (links.size === 0
+              ? ""
+              : "  ⚭" +
+                links
+                  .alignedObjects()
+                  .map((f) => {
+                    const r = links.pioneerFor(f);
+                    const m = alignModeOf.get(f) === "FOLLOW" ? "F" : "C";
+                    return r === null ? f : `${f}>${r.objectId}/${r.faceId}:${m}`;
+                  })
+                  .join(" ")),
       noise: noiseLine(),
     });
   };
@@ -1863,13 +2435,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   let pioneerFace: { objectId: string; faceId: string } | null = null;
 
   /**
-   * ⭐⭐ The Pioneer object's orientation as of the last frame that looked at it — the
-   * baseline `pioneerTurned` compares against.
-   * ⛔ Captured when the alignment is made and refreshed every frame after, so it is *the
-   * previous frame's* pose and never the alignment's. ⚠ A stale baseline would make one
-   * turn fire the rule for ever.
+   * ⛔⛔⛔ **`pioneerOrientation` WAS DELETED HERE, 2026-09-17 — AND DELETED, NOT LEFT.**
+   *
+   * ⭐ It held ONE baseline: the pose of the ACTIVE alignment's Pioneer as of the last frame.
+   * ⚠ That is why a chain was invisible — *"if the pioneer object is rotated because it is
+   * aligned with another object"* could not be seen for any alignment but the current one.
+   * ✅ The baseline is now **per link**, inside `AlignmentLinks`, so every follower watches its
+   * own Pioneer.
+   *
+   * ⛔ Removed the same hour the replacement landed, because this file has already paid for the
+   * other choice twice: defect 40 (`A12`'s retired roll detector, still fed, still holding a
+   * veto) and the `faceExtent` bug earlier today (a corrected function written beside the
+   * broken one, which stayed wired). ⭐ *Deleted, not disabled.*
    */
-  let pioneerOrientation: Quat | null = null;
 
   /**
    * ⭐⭐⭐ **WHAT THE LIVE ALIGNMENT MEANS** — `SNAPSHOT` (a single tap made it) or `FOLLOW`
@@ -2270,10 +2848,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // through the middle of a swap — and a swap is 150-300 ms of hand, which is very
         // visible if the holder happens to be moving at the time. ⚠ That is exactly why the
         // owner's cases 2 and 3 *"differ by timing of the input"*.
-        grip.mode =
-          router.objects().length === 1
-            ? behaviour
-            : "TRANSLATE";
+        // ⭐⭐ **ONE RULE, ONE PLACE** (`A16`): `translatesOnDrag` is the same function the
+        // highlight condition reads, so the two cannot drift apart. ⛔ It used to be spelled
+        // inline here as `objects().length === 1 ? behaviour : "TRANSLATE"`, and a second copy
+        // in `highlight.ts` would have been two implementations of one rule — free to
+        // disagree, with nothing to catch it.
+        grip.mode = translatesOnDrag(router.objects().length, behaviour) ? "TRANSLATE" : "ROTATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,
@@ -2327,32 +2907,36 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             }
             if (selectedFace === null) {
               pioneerFace = null;
-              pioneerOrientation = null;
               alignMode = null;
             }
             grip.alignmentTouched = false;
             lastVerdict = `align: SHAKE released the alignment on ${sid}`;
           }
-          // ⭐⭐⭐ **C2 ONLY: A SHAKE ON THE *PIONEER* RELEASES THE FOLLOWER'S ALIGNMENT** —
-          // the owner's clause, and it belongs to C2 because C1 gets the same outcome for
-          // free: shaking while rotating turns the object, and in C1 a turn releases.
-          // ⚠⚠ **THE GAP THAT LEAVES, STATED**: in C1, a shake on the Pioneer *while the mode
-          // is `TRANSLATE`* turns nothing, so it releases nothing. Dictated that way; whether
-          // C1 wants it too is a question for the device pass (`ALIGNMENT_RULES.md` §7).
-          if (
-            alignMode === "FOLLOW" &&
-            pioneerFace?.objectId === sid &&
-            selectedFace !== null
-          ) {
-            const fId = selectedFace.objectId;
-            const ev2 = evictObjectConstraints(world, fId);
-            world = ev2.world;
-            cancelAlignAnim(fId);
-            selectedFace = null;
-            pioneerFace = null;
-            pioneerOrientation = null;
-            alignMode = null;
-            lastVerdict = `align: FOLLOW — shake on the Pioneer released the alignment on ${fId}`;
+          // ⭐⭐⭐ **A SHAKE ON A *PIONEER* RELEASES **EVERY** FOLLOWER ALIGNED TO IT.**
+          //
+          // > *"If the said pioneer object is later shaken, the alignment of the aligned object
+          // > shall be released … in case I have aligned one object and then another object to
+          // > the same pioneer object: when I shake the pioneer object it shall release all the
+          // > follower objects"* — the owner, 2026-09-17
+          //
+          // ⛔⛔ **TWO THINGS CHANGED HERE AND BOTH WERE LIMITATIONS, NOT CHOICES.**
+          // ⚠ It was gated on `alignMode === "FOLLOW"`, on the argument that `SNAPSHOT` got the
+          // same outcome for free — shaking while rotating turns the body, and a turned Pioneer
+          // releases a `SNAPSHOT`. ⛔ That argument had a hole this file already admitted: in
+          // `SNAPSHOT` with the mode on `TRANSLATE`, a shake turns nothing, so it released
+          // nothing. ✅ Now the rule is unconditional and the hole is closed.
+          // ⚠ And it compared ONE `pioneerFace` against ONE `selectedFace`, so at most a single
+          // follower was released. ✅ `pioneerOf` is many-to-one, so all of them go.
+          //
+          // ⭐⭐ AN INDEX LOOKUP, NOT A SCAN over every alignment in the scene — and
+          // `followersOf` hands back a COPY, because releasing mutates the very set being
+          // walked and deleting from a live `Set` mid-iteration silently skips entries.
+          const orphaned = links.followersOf(sid);
+          if (orphaned.length > 0) {
+            for (const followerId of orphaned) releaseAlignmentOf(followerId);
+            lastVerdict =
+              `align: SHAKE on Pioneer ${sid} released ${orphaned.length} follower` +
+              `${orphaned.length === 1 ? "" : "s"} (${orphaned.join(", ")})`;
           }
         }
       }
@@ -2577,7 +3161,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           if (selectedFace?.objectId === rid) {
             selectedFace = null;
             pioneerFace = null;
-            pioneerOrientation = null;
             alignMode = null;
           }
           lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
@@ -2622,6 +3205,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // faces and the poses are untouched, and only what the alignment MEANS changes.
           // ⭐ The colours are how a hand sees that it worked.
           alignMode = meaning.mode;
+          // ⚠ The SWITCH applies to the object whose face was tapped — `selectedFace` names it.
+          if (selectedFace !== null) alignModeOf.set(selectedFace.objectId, meaning.mode);
           paintHighlightColours();
           alignedByThisTap = true; // ⛔ consumed: it must not also flip the movement mode
           lastVerdict = `align: now ${meaning.mode} (the other gesture on the same face)`;
@@ -2636,7 +3221,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           cancelAlignAnim(heldId);
           selectedFace = null;
           pioneerFace = null;
-          pioneerOrientation = null;
           alignMode = null;
           others[0]![1].alignmentTouched = false;
           alignedByThisTap = true;
@@ -2705,7 +3289,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         selectedFace = null;
         // ⭐ The Pioneer's contour reports the same alignment, so it goes at the same moment.
         pioneerFace = null;
-        pioneerOrientation = null;
         alignMode = null;
       }
       forgetAnchor(routed.seq);
@@ -2744,6 +3327,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       grip.rec.tick(now);
       for (const tracker of grip.anchorMotion.values()) tracker.tick(now);
     }
+
+    // ⭐⭐ `A16`: re-derived EVERY FRAME, here, before anything reads it.
+    refreshHighlight();
 
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally
@@ -2883,57 +3469,96 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // by any rule — a drag, a twist, a rotation reset — and watching the ORIENTATION catches
     // every one of them without enumerating them. ⛔ The same discipline as `A15`'s raycast:
     // ask the state, not the gesture.
-    if (pioneerFace !== null && pioneerOrientation !== null && selectedFace !== null) {
-      const pObj = world.objects.get(pioneerFace.objectId);
-      const fId = selectedFace.objectId;
-      if (!pObj) {
-        pioneerFace = null;
-        pioneerOrientation = null;
-      } else {
-        const turn = pioneerTurned(pioneerOrientation, pObj.local.orientation, alignMode ?? "SNAPSHOT");
-        if (turn.kind === "RELEASE") {
-          // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* —
-          // so the pose is left exactly as the hand left it, and only the RULE goes.
-          const ev = evictObjectConstraints(world, fId);
-          world = ev.world;
-          cancelAlignAnim(fId);
-          selectedFace = null;
-          pioneerFace = null;
-          pioneerOrientation = null;
-          alignMode = null;
-          lastVerdict = `align: SNAPSHOT — the Pioneer turned, alignment released on ${fId}`;
-        } else if (turn.kind === "FOLLOW" && turn.delta !== null) {
-          // ⭐⭐ C2: the Follower takes the SAME WORLD ROTATION, which keeps the two normals
-          // parallel by construction — no solve, and no chance of the solver adding a twist.
-          const followerMesh = meshOf.get(fId);
-          if (followerMesh) {
-            setModelOrientation(followerMesh, qmul(turn.delta, modelOrientation(followerMesh)));
-          }
-          // ⭐⭐ AN ANIMATION IN FLIGHT RIDES ALONG: both ends take the same world rotation, so
-          // the snap keeps travelling toward a target that has moved with the Pioneer.
-          // ⛔ Without this the slerp would drag the object back toward where the Pioneer USED
-          // to point — a tug backwards during the very gesture that is turning it.
-          if (alignAnim !== null && alignAnim.objectId === fId) {
-            alignAnim = {
-              ...alignAnim,
-              from: qmul(turn.delta, alignAnim.from),
-              to: qmul(turn.delta, alignAnim.to),
-            };
-          }
-          // ⭐ *"the alignment is updated per frame to match the second object's PioneerFace
-          // normal"* — bookkeeping that keeps the CONSTRAINT truthful; the geometry above
-          // already holds. ⚠ Without it the stack would still name the old direction, and the
-          // next rule to read it (a twist, a reset) would act on a stale target.
-          const pn = faceWorld(world, pioneerFace.objectId, pioneerFace.faceId)?.normal;
-          const stack = world.objects.get(fId)?.constraints ?? [];
-          if (pn && stack.length === 1) {
-            world = clearObjectConstraints(world, fId);
-            world = pushObjectConstraint(world, fId, retargetAlignment(stack[0]!, pn), false);
-          }
-          lastVerdict = `align: FOLLOW — the Follower took the Pioneer's turn`;
-        }
-        if (pioneerOrientation !== null) pioneerOrientation = pObj.local.orientation;
+    // ⭐⭐⭐ **EVERY FOLLOWER WATCHES ITS OWN PIONEER, EVERY FRAME.**
+    //
+    // The owner, 2026-09-17: *"while the initial follower object is blue, if the pioneer object
+    // is rotated because it is aligned with another object, the alignment of the initial
+    // follower object shall be released"*, and *"the tracking shall enable a pioneer object to
+    // rotate all its follower objects which are orange"*.
+    //
+    // ⛔⛔ **BOTH OF THOSE ARE ONE GENERALISATION, NOT TWO RULES.** `pioneerTurned` already
+    // returns `RELEASE` for a `SNAPSHOT` (cyan) follower and `FOLLOW` for an orange one; it was
+    // simply being asked **once**, about the single active alignment. ⭐ Asked per LINK it
+    // covers every follower of every Pioneer, and chains fall out for free: an orange body
+    // rotates when its own Pioneer turns, and anything cyan aligned to THAT body then sees its
+    // baseline break and releases.
+    //
+    // ⚠ CHECKED AGAINST THE MODEL, never at a pointer event: a Pioneer can be turned by a drag,
+    // a twist, a rotation reset, a slerp, or another alignment's `FOLLOW`. ⭐ Comparing poses
+    // catches all of them without enumerating any — `A15`'s discipline, *ask the state, not the
+    // gesture.*
+    //
+    // ⚠⚠ ONE FRAME OF LAG IS POSSIBLE IN A CHAIN AND IS ACCEPTED: the links are visited in
+    // insertion order, so a follower processed before its Pioneer rotates sees the turn on the
+    // next frame instead. ⛔ It cannot be MISSED, because the baseline is only re-set after the
+    // turn has been accounted for — which is why this loop compares against a remembered pose
+    // rather than a per-frame delta.
+    // ⭐⭐ THE PLAN COMES FROM `input/pioneer_cascade.ts`, WHICH HAS VECTORS. ⛔ This block used
+    // to BE the rule, inside the render loop, where nothing could interrogate it — and when a
+    // hand reported the release *"not working"* there was no way to ask the code what it
+    // believed. ⚠ Now the rule is a pure function with 14 vectors and this is only the part
+    // that reads the world and applies the result.
+    const cascade = resolvePioneerTurns(
+      links.alignedObjects().flatMap((follower) => {
+        const ref = links.pioneerFor(follower);
+        if (ref === null) return [];
+        return [
+          {
+            follower,
+            pioneer: ref.objectId,
+            baseline: ref.orientation,
+            mode: alignModeOf.get(follower) ?? ("SNAPSHOT" as AlignMode),
+          },
+        ];
+      }),
+      // ⚠ WORLD orientation, through the parent chain — never `local`, which is measured in
+      // someone else's frame the moment an assembly exists.
+      (id) => worldPlacementOf(world, id)?.orientation ?? null,
+    );
+
+    for (const step of cascade.steps) {
+      if (step.kind === "RELEASE") {
+        // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* — the
+        // pose is left exactly as the hand left it, and only the RULE goes.
+        const ref = links.pioneerFor(step.follower);
+        releaseAlignmentOf(step.follower);
+        lastVerdict =
+          `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} turned, ` +
+          `alignment released on ${step.follower}`;
+        continue;
       }
+      // ⭐⭐ C2: the follower takes the SAME WORLD ROTATION, which keeps the two normals
+      // parallel by construction — no solve, and no chance of the solver adding a twist.
+      const followerMesh = meshOf.get(step.follower);
+      if (followerMesh) {
+        setModelOrientation(followerMesh, qmul(step.delta, modelOrientation(followerMesh)));
+      }
+      // ⭐⭐ AN ANIMATION IN FLIGHT RIDES ALONG: both ends take the same world rotation, so the
+      // snap keeps travelling toward a target that has moved with the Pioneer. ⛔ Without this
+      // the slerp would drag the body back toward where the Pioneer USED to point.
+      if (alignAnim !== null && alignAnim.objectId === step.follower) {
+        alignAnim = {
+          ...alignAnim,
+          from: qmul(step.delta, alignAnim.from),
+          to: qmul(step.delta, alignAnim.to),
+        };
+      }
+      // ⭐ Keep the CONSTRAINT truthful — the geometry above already holds. ⚠ Without this the
+      // stack would still name the old world direction, and the next rule to read it (a twist,
+      // a reset) would act on a stale target.
+      const ref = links.pioneerFor(step.follower);
+      const pn = ref === null ? null : faceWorld(world, ref.objectId, ref.faceId)?.normal;
+      const stack = world.objects.get(step.follower)?.constraints ?? [];
+      if (pn && stack.length === 1) {
+        world = clearObjectConstraints(world, step.follower);
+        world = pushObjectConstraint(world, step.follower, retargetAlignment(stack[0]!, pn), false);
+      }
+      lastVerdict = `align: FOLLOW — ${step.follower} took ${ref?.objectId ?? "pioneer"}'s turn`;
+    }
+    // ⛔ RE-BASELINE LAST, from the plan. ⚠ A released follower is deliberately absent from
+    // `baselines`, so this cannot resurrect a link `releaseAlignmentOf` has just removed.
+    for (const [follower, orientation] of cascade.baselines) {
+      links.noteOrientation(follower, orientation);
     }
 
     // ⭐⭐⭐ THE FACE HIGHLIGHT, placed from the MESH's world matrix — not from the model.
@@ -2947,16 +3572,98 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ The local face centre and normal come from the MODEL, which is where faces live.
     // ⭐⭐ BOTH MARKERS, ONE PATH — the filled quad on the Follower, the contour on the
     // Pioneer, each drawn only while the state that MEANS something is present.
-    faceQuad.isVisible =
-      selectedFace !== null && placeFaceMarker(faceQuad, selectedFace.objectId, selectedFace.faceId);
-    // ⛔⛔ THE PAIR IS ATOMIC: the contour may not outlive the fill. Both report ONE
-    // alignment, so a contour drawn without its Follower would be an instrument claiming a
-    // relationship that no longer exists — the readout-that-lies shape, and the cheapest
-    // possible guard against it is this conjunction.
-    faceContour.isVisible =
-      selectedFace !== null &&
-      pioneerFace !== null &&
-      placeFaceMarker(faceContour, pioneerFace.objectId, pioneerFace.faceId);
+    // ⭐⭐⭐ **EVERY ALIGNED OBJECT KEEPS ITS FOLLOWERFACE**, asked of the MODEL, every frame.
+    // ⛔ `selectedFace` is no longer what decides this — it names the ACTIVE alignment and is
+    // still what the tap, shake and flick rules read, but it is one record and the owner needs
+    // to see all of them at once.
+    //
+    // ⭐⭐ **THIS LOOP COSTS *ALIGNED BODIES*, NOT *SCENE BODIES*, AND THAT IS DELIBERATE.** It
+    // ran over `world.objects.keys()` when there were three; at sixty frames a second the shape
+    // that stops working as the scene grows is the one that walks everything to find the two
+    // that matter. ⚠ `links.prune` reconciles the index against the model and RETURNS what it
+    // dropped, so retiring a released body's markers needs no second sweep either.
+    // ⛔ `prune` reconciles the index against the model — it catches releases that evict a
+    // constraint WITHOUT unlinking (the shake-on-self path does exactly that). ⚠ Its return
+    // value is deliberately NOT used to decide what to hide; see below.
+    for (const id of links.prune((f) => alignedFaceOf(world, f) !== null)) {
+      alignModeOf.delete(id);
+    }
+
+    // ⛔⛔⛔ **HIDE BY SET MEMBERSHIP, NEVER BY WHAT `prune` HAPPENED TO DROP — DEVICE BUG,
+    // 2026-09-17.**
+    //
+    // > *"the rotation of the pioneer currently removes the highlight of the pioneer but does
+    // > not release the alignment of the cyan follower object"*, then the clue that cracked it:
+    // > *"if the highlight of the pioneer is toggled off, the shake on the cyan follower is not
+    // > working any longer"*
+    //
+    // ⚠⚠ **THE RELEASE WAS WORKING ALL ALONG.** The constraint was evicted and the link
+    // removed; what failed is that the follower's markers were never HIDDEN, so the body still
+    // LOOKED aligned — and a shake on it then answered *"nothing to release"*, which read as a
+    // second bug. ⭐ One stale quad produced two false reports and sent me hunting the rule,
+    // which was correct and is now vectored twice over.
+    //
+    // ⛔⛔ THE CAUSE WAS THE SHAPE OF THE LOOP: it hid only what `prune` dropped, and
+    // `releaseAlignmentOf` unlinks DIRECTLY — so for every release that went through it (the
+    // shake sweep, the re-tap, the rotation reset, a turned Pioneer, the cycle guard) `prune`
+    // never saw the body and nothing ever hid its markers.
+    // ⭐⭐ `METHOD`: *prefer the structure that cannot express the defect.* Hiding everything
+    // not currently wanted is correct **whatever** removed the link, and needs no cooperation
+    // from the paths that remove them. ⚠ I used exactly this pattern for the Pioneer contours
+    // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
+    // highlight DID disappear and the follower's did not, the asymmetry the report describes.
+    const alignedNow = new Set(links.alignedObjects());
+    for (const [id, q] of followerQuads) {
+      if (alignedNow.has(id)) continue;
+      q.mesh.isVisible = false;
+      // ⛔ THE PAIR IS ATOMIC. A body contour left behind by a released alignment would claim
+      // the body is still aligned — the readout-that-lies shape this file already guards
+      // against for the Pioneer's contour.
+      q.contour.isVisible = false;
+    }
+
+    for (const id of alignedNow) {
+      const faceId = alignedFaceOf(world, id);
+      // ⚠ `prune` just guaranteed this, so the guard is for the types rather than the logic.
+      if (faceId === null) continue;
+      const q = followerQuadFor(id);
+      const mode = alignModeOf.get(id);
+      const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
+      // ⚠ Written only on CHANGE, not blindly per frame — the same discipline the single
+      // material followed, kept now that there are several.
+      if (!q.mat.emissiveColor.equals(want)) q.mat.emissiveColor.copyFrom(want);
+      if (!q.contour.color.equals(want)) q.contour.color.copyFrom(want);
+      q.mesh.isVisible = placeFaceMarker(q.mesh, id, faceId);
+      // ⛔⛔ PARENTED, never positioned per frame — defect 46's lesson, and the same reason
+      // the white capture contours are parented: a child transform resolves in the pass that
+      // draws the parent, so the outline cannot lag the body it wraps.
+      const bodyMesh = meshOf.get(id) ?? null;
+      if (bodyMesh !== null && q.contour.parent !== bodyMesh) {
+        q.contour.parent = bodyMesh;
+        q.contour.position.setAll(0);
+        q.contour.rotationQuaternion = Quaternion.Identity();
+      }
+      q.contour.isVisible = bodyMesh !== null;
+    }
+    // ⛔⛔ **EVERY PIONEER FACE THAT SOMETHING IS ALIGNED TO**, from the index.
+    //
+    // ⭐ THE PAIR IS STILL ATOMIC, but the guarantee now comes from the STRUCTURE rather than
+    // from a conjunction: a Pioneer face is drawn only because a link names it, and a link
+    // exists only while its follower's constraint does (`links.prune`, above). ⚠ The old form
+    // was `selectedFace !== null && pioneerFace !== null && …` — two records that had to be
+    // kept in step by hand, and defect 44 was exactly them falling out of step.
+    const wantedPioneerKeys = new Set<string>();
+    for (const ref of links.pioneerFaces()) {
+      const key = `${ref.objectId}-${ref.faceId}`;
+      wantedPioneerKeys.add(key);
+      const m = pioneerContourFor(key);
+      m.isVisible = placeFaceMarker(m, ref.objectId, ref.faceId);
+    }
+    // ⚠ Retire the rest. ⛔ Hidden rather than disposed: a body can be re-aligned to the same
+    // face seconds later, and churning meshes per gesture is how a render loop acquires a stall.
+    for (const [key, m] of pioneerContours) {
+      if (!wantedPioneerKeys.has(key)) m.isVisible = false;
+    }
 
     scene.render();
     frames++;

@@ -17,8 +17,14 @@
  * and the way to find out which guard is which is to break the product and watch.
  */
 import { describe, expect, it } from "vitest";
-import { faceFromPickedNormal, faceMarkerLocalOrientation } from "@core/face_pick";
+import {
+  alignedFaceOf,
+  faceFromPickedNormal,
+  faceMarkerExtent,
+  faceMarkerLocalOrientation,
+} from "@core/face_pick";
 import { makeWorld, type SceneObject } from "@core/object_model";
+import type { Constraint } from "@core/constraint_stack";
 import { qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
 
 /** A unit box with the six faces `3D1` already gives every object. */
@@ -232,3 +238,137 @@ function rotateByTest(q: readonly [number, number, number, number], v: Vec3): Ve
     v[2] + w * t[2] + (x * t[1] - y * t[0]),
   ];
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ THE MARKER'S SIZE ON A NON-CUBE FACE — `L × 2L × 3L`, the owner's scene (2026-09-17).
+//
+// ⛔⛔ EVERY ONE OF THESE WAS INVISIBLE WHILE THE OBJECTS WERE CUBES, because a cube's six
+// faces are the same square. ⚠ And my first implementation was WRONG: it read the two axes
+// that are not the normal in ascending order, which swaps `2L` and `3L` on the ±x faces.
+// ⭐ `METHOD`: a composition is a thing to MEASURE.
+// ══════════════════════════════════════════════════════════════════════════════
+describe("⛔⛔ faceMarkerExtent — the marker must be the shape of the face it marks", () => {
+  const L = 0.08;
+  const DIMS: Vec3 = [L, 2 * L, 3 * L];
+  /** The two in-plane dimensions of each face, as a SET — the geometry, order aside. */
+  const expected: Record<string, [number, number]> = {
+    "+x": [2 * L, 3 * L],
+    "-x": [2 * L, 3 * L],
+    "+y": [L, 3 * L],
+    "-y": [L, 3 * L],
+    "+z": [L, 2 * L],
+    "-z": [L, 2 * L],
+  };
+  const normals: Record<string, Vec3> = {
+    "+x": [1, 0, 0],
+    "-x": [-1, 0, 0],
+    "+y": [0, 1, 0],
+    "-y": [0, -1, 0],
+    "+z": [0, 0, 1],
+    "-z": [0, 0, -1],
+  };
+
+  it("⭐⭐ all six faces get the two dimensions that actually lie IN that face", () => {
+    // ⛔ Asserted as a sorted pair, because WHICH of the two is the marker's local x depends on
+    // `shortestArc`'s convention — and that convention is not this function's promise. ⚠ What
+    // IS promised is that the marker covers the face, and a swap would leave it overhanging on
+    // one axis and short on the other.
+    for (const id of Object.keys(expected)) {
+      const { u, v } = faceMarkerExtent(normals[id]!, DIMS);
+      const got = [u, v].sort((a, b) => a - b);
+      const want = [...expected[id]!].sort((a, b) => a - b);
+      expect(got[0]).toBeCloseTo(want[0]!, 12);
+      expect(got[1]).toBeCloseTo(want[1]!, 12);
+    }
+  });
+
+  it("⛔⛔ AND THE ±x FACES ARE 2L × 3L — the pair my first version got BACKWARDS", () => {
+    // ⭐ Kept as its own vector because it is the specific case that was wrong, and because the
+    // sorted-pair check above would also pass for an implementation that happened to be right
+    // only on ±z. ⚠ 3L must appear, and L must NOT — the +x face never sees the body's width.
+    const { u, v } = faceMarkerExtent([1, 0, 0], DIMS);
+    expect(Math.max(u, v)).toBeCloseTo(3 * L, 12);
+    expect(Math.min(u, v)).toBeCloseTo(2 * L, 12);
+    expect(Math.min(u, v)).not.toBeCloseTo(L, 6);
+  });
+
+  it("⭐ a cube gives one square on every face — which is why none of this showed before", () => {
+    for (const id of Object.keys(normals)) {
+      const { u, v } = faceMarkerExtent(normals[id]!, [L, L, L]);
+      expect(u).toBeCloseTo(L, 12);
+      expect(v).toBeCloseTo(L, 12);
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ WHICH FACE CARRIES THE ALIGNMENT — the owner, 2026-09-17: *"when an object is aligned,
+// always maintain its FollowerFace highlighted (even if the touchpoints later select other
+// objects) until its alignment is broken."*
+//
+// ⛔⛔ THE DEFECT THIS REPLACES: one remembered `selectedFace` record, so aligning a SECOND
+// object wiped the FIRST object's highlight — defeating the exact purpose the owner wants it
+// for, which is seeing *which objects* are aligned, plural.
+// ══════════════════════════════════════════════════════════════════════════════
+describe("⛔⛔ alignedFaceOf — derived from the stack, so it cannot outlive the alignment", () => {
+  const L = 0.08;
+  const body = (id: string, constraints: readonly Constraint[]): SceneObject => ({
+    id,
+    local: { position: [0, 0, 0], orientation: [1, 0, 0, 0] },
+    parent: null,
+    faces: [
+      { id: "+x", centre: [L / 2, 0, 0], normal: [1, 0, 0] },
+      { id: "-x", centre: [-L / 2, 0, 0], normal: [-1, 0, 0] },
+      { id: "+y", centre: [0, L, 0], normal: [0, 1, 0] },
+      { id: "-y", centre: [0, -L, 0], normal: [0, -1, 0] },
+      { id: "+z", centre: [0, 0, 1.5 * L], normal: [0, 0, 1] },
+      { id: "-z", centre: [0, 0, -1.5 * L], normal: [0, 0, -1] },
+    ],
+    connectors: [],
+    constraints,
+  });
+  const align = (localNormal: Vec3): Constraint[] => [
+    { kind: "FACE_ALIGN", localNormal, targetWorld: [0, 1, 0] },
+  ];
+
+  it("⭐ the face whose LOCAL normal the alignment constrains", () => {
+    const w = makeWorld([body("a", align([0, 0, 1]))]);
+    expect(alignedFaceOf(w, "a")).toBe("+z");
+  });
+
+  it("⛔⛔ SIGNED, NOT |dot| — `-x` must not light up for a `+x` alignment", () => {
+    // ⭐⭐ `+x` and `-x` are one AXIS but two FACES. ⚠ An `|dot|` test would light the opposite
+    // face roughly half the time, and on a cuboid that is immediately visible to a hand — the
+    // highlight appears on the far side of the body from the finger that made it.
+    expect(alignedFaceOf(makeWorld([body("a", align([1, 0, 0]))]), "a")).toBe("+x");
+    expect(alignedFaceOf(makeWorld([body("a", align([-1, 0, 0]))]), "a")).toBe("-x");
+    expect(alignedFaceOf(makeWorld([body("a", align([0, -1, 0]))]), "a")).toBe("-y");
+  });
+
+  it("⛔⛔ NO ALIGNMENT ⇒ null, WHICH IS WHAT MAKES THE HIGHLIGHT SELF-CLEARING", () => {
+    // ⭐ This is the whole reason the function reads the model instead of a remembered record:
+    // the moment a shake, a re-tap or a rotation reset evicts the constraint, the highlight has
+    // nothing to draw. ⛔ No cleanup path to forget, and no way for the marker to survive the
+    // thing it reports.
+    expect(alignedFaceOf(makeWorld([body("a", [])]), "a")).toBeNull();
+  });
+
+  it("⛔ a MATE is not an alignment — a seat must not wear the alignment's highlight", () => {
+    const mate: Constraint[] = [
+      { kind: "MATE", localNormal: [0, 0, 1], targetWorld: [0, 0, -1], otherObjectId: "b" },
+    ];
+    expect(alignedFaceOf(makeWorld([body("a", mate)]), "a")).toBeNull();
+  });
+
+  it("⭐⭐ TWO OBJECTS ALIGNED AT ONCE, each reporting its OWN face", () => {
+    // ⭐⭐⭐ THE VECTOR FOR THE OWNER'S ACTUAL REQUEST. ⛔ The old single-record design could not
+    // express this state at all: whichever object was aligned second owned the only highlight.
+    const w = makeWorld([body("a", align([0, 0, 1])), body("b", align([0, 1, 0]))]);
+    expect(alignedFaceOf(w, "a")).toBe("+z");
+    expect(alignedFaceOf(w, "b")).toBe("+y");
+  });
+
+  it("⚠ a missing object answers null rather than throwing in a per-frame query", () => {
+    expect(alignedFaceOf(makeWorld([body("a", align([0, 0, 1]))]), "gone")).toBeNull();
+  });
+});

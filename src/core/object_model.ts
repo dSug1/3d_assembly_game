@@ -70,6 +70,27 @@ export interface SceneObject {
   readonly connectors: readonly MateConnector[];
   /** Spec §1.4, oldest first. §0: every object starts with an EMPTY stack. */
   readonly constraints: readonly Constraint[];
+  /**
+   * ⭐⭐⭐ **FROZEN — THE TRANSFORM CANNOT BE MODIFIED AND THE BODY CANNOT BE A FOLLOWER**
+   * (the owner, 2026-09-17, for the base plate).
+   *
+   * ⛔⛔ **IT IS ENFORCED IN THIS FILE, AT THE TWO WRITERS, AND NOT AT THE CALL SITES.**
+   * `setWorldPlacement` refuses to move it and `pushObjectConstraint` refuses to constrain it.
+   * ⚠ That is the difference between a rule and an invariant: a dozen things move an object
+   * here — rule 6, depth, the approach, a snap, the sway, an alignment slerp, a `FOLLOW`
+   * cascade — and asking each of them to check a flag means the next one added will not.
+   * ⭐ `METHOD`: *a constraint enforced at the one place the quantity is stored is an
+   * invariant.* The hold-off learned the same lesson the hard way earlier today.
+   *
+   * ⭐⭐ **WHY *BOTH* HALVES, AND WHY THEY ARE ONE ATTRIBUTE**: a base plate that could be
+   * aligned to something would be *moved* by that alignment's solve — so "cannot be a
+   * follower" is not a second feature, it is the same guarantee reached through the
+   * constraint stack instead of through a placement.
+   *
+   * ⚠ A frozen body may still be a **PIONEER**. That is the whole point of a base plate:
+   * everything aligns *to* it, and nothing aligns it.
+   */
+  readonly frozen?: boolean;
 }
 
 export interface World {
@@ -246,6 +267,12 @@ export function reroot(world: World, id: ObjectId): World {
 export function setWorldPlacement(world: World, id: ObjectId, target: Placed): World {
   const o = world.objects.get(id);
   if (!o) return world;
+  // ⛔⛔ FROZEN BODIES DO NOT MOVE, AND THIS IS THE ONLY PLACE THAT HAS TO KNOW.
+  // ⚠ Every gesture and every animation reaches a placement through here, so the guarantee
+  // holds for rules that do not exist yet. ⭐ Returning the world UNCHANGED rather than
+  // throwing: this runs inside a render loop, and a throw would take the scene down for a
+  // finger resting on the base plate.
+  if (o.frozen === true) return world;
   if (o.parent === null) return withObject(world, { ...o, local: target });
   const parentWorld = worldPlacementOf(world, o.parent);
   if (!parentWorld) return world;
@@ -347,6 +374,11 @@ export function pushObjectConstraint(
 ): World {
   const o = world.objects.get(id);
   if (!o) return world;
+  // ⛔⛔ A FROZEN BODY CANNOT BE A FOLLOWER. ⚠ Refused here rather than at the tap, because a
+  // constraint is what would MOVE it: an alignment's solve, a `FOLLOW` cascade and a mate all
+  // read the stack and write a pose. ⭐ Nothing can be constrained, so nothing can be moved
+  // through the constraint door either.
+  if (o.frozen === true) return world;
   return withObject(world, { ...o, constraints: push(o.constraints, c, matePriorityOverAnchor) });
 }
 

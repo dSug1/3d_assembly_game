@@ -1,0 +1,141 @@
+/**
+ * ⭐⭐⭐ **WHAT A TURNED PIONEER DOES TO ITS FOLLOWERS — INCLUDING DOWN A CHAIN.**
+ *
+ * > *"if a previous pioneer P1 has a follower F1 and if P1 becomes the follower of P2: if P1 is
+ * > orange, P2 rotation shall trigger rotation of P1 which in turn shall cascade to rotation of
+ * > F1; if P1 is blue, P2 rotation shall release the alignment of P1 with P2 but not the
+ * > alignment of F1 with P1"* — the owner, 2026-09-17
+ *
+ * > *"if the pioneer object rotates, all its blue follower shall be released from alignment"*
+ *
+ * ⛔⛔⛔ **THIS EXISTS BECAUSE THE RULE WAS UNTESTABLE WHERE IT LIVED.** It was a loop inside
+ * `render/scene.ts`, so no vector could reach it — and when a hand reported *"the release of
+ * the cyan follower objects by the rotation of the pioneer is not working"* there was **no way
+ * to ask the code what it thought**, only to re-read it. ⚠ That is the real defect: a RULE in a
+ * render file is a rule nothing can interrogate. ⭐ `METHOD`: *a composition is a thing to
+ * MEASURE* — and a cascade is a composition of the worst kind, because its output feeds its
+ * own input.
+ *
+ * ⭐⭐ **THE CASCADE RESOLVES WITHIN ONE CALL, not one level per frame.** The previous version
+ * compared each follower against a remembered pose, so a chain unwound at one link per frame.
+ * ⛔ That was defensible for two bodies and wrong for the owner's rule, which says P1's
+ * rotation *"shall cascade to rotation of F1"* — as one consequence, not as a sequence a hand
+ * can watch crawl.
+ *
+ * ⛔ ENGINE-FREE. It reads orientations through a callback and returns a PLAN; it moves nothing.
+ */
+import type { ObjectId } from "../core/object_model";
+import type { Quat } from "../core/vec";
+import { qmul } from "../core/vec";
+import type { AlignMode } from "./alignment";
+import { pioneerTurned } from "./alignment";
+
+/** One follower's link, as this resolver needs it. */
+export interface FollowerLink {
+  readonly follower: ObjectId;
+  readonly pioneer: ObjectId;
+  /** The Pioneer's orientation as this follower last saw it. */
+  readonly baseline: Quat;
+  /** `SNAPSHOT` (cyan) releases on a turn; `FOLLOW` (orange) takes the turn. */
+  readonly mode: AlignMode;
+}
+
+export type CascadeStep =
+  /** ⭐ Cyan: the alignment goes, and **the body does not move** (`D41`'s C1). */
+  | { readonly kind: "RELEASE"; readonly follower: ObjectId }
+  /** ⭐ Orange: the body takes the Pioneer's WORLD rotation (`D41`'s C2). */
+  | { readonly kind: "ROTATE"; readonly follower: ObjectId; readonly delta: Quat };
+
+export interface CascadePlan {
+  /** In the order they must be applied. ⚠ A `ROTATE` may precede a `RELEASE` it caused. */
+  readonly steps: readonly CascadeStep[];
+  /** Follower → the Pioneer pose it should now be baselined against. */
+  readonly baselines: ReadonlyMap<ObjectId, Quat>;
+}
+
+/**
+ * ⭐⭐⭐ **RESOLVE EVERY CONSEQUENCE OF EVERY PIONEER'S CURRENT POSE.**
+ *
+ * ⭐ The algorithm is a fixed point: a follower that rotates becomes a Pioneer whose pose has
+ * changed, so the pass repeats until nothing more moves. ⛔ **CAPPED**, because a cycle is
+ * expressible — A aligned to B and B aligned to A — and an uncapped fixed point on a cycle is
+ * a hung render loop rather than a wrong answer. ⚠ The cap is one pass per link plus one: a
+ * chain of `n` links needs at most `n` passes, so the cap cannot cut a legitimate cascade short.
+ *
+ * @param orientationOf the CURRENT world orientation of a body, or `null` if it is gone.
+ *   ⚠ Called for Pioneers and for followers that rotate; the resolver keeps its own view of
+ *   anything it moves, so the caller's world need not be updated between steps.
+ */
+export function resolvePioneerTurns(
+  linksIn: readonly FollowerLink[],
+  orientationOf: (id: ObjectId) => Quat | null,
+): CascadePlan {
+  const steps: CascadeStep[] = [];
+  const baselines = new Map<ObjectId, Quat>();
+  /** The resolver's own view of every pose it has moved. */
+  const pose = new Map<ObjectId, Quat>();
+  const now = (id: ObjectId): Quat | null => pose.get(id) ?? orientationOf(id);
+
+  /** Links still to resolve. ⚠ A released one is removed; a rotated one is re-baselined. */
+  let pending = linksIn.map((l) => ({ ...l }));
+  const cap = linksIn.length + 1;
+
+  for (let pass = 0; pass < cap; pass++) {
+    let moved = false;
+    const survivors: typeof pending = [];
+    for (const link of pending) {
+      const pioneerNow = now(link.pioneer);
+      if (pioneerNow === null) {
+        // ⚠ The Pioneer is gone. ⛔ The alignment does NOT go with it — §1.4 stores a frozen
+        // world direction precisely so an alignment survives its Pioneer being deleted.
+        survivors.push(link);
+        continue;
+      }
+      const turn = pioneerTurned(link.baseline, pioneerNow, link.mode);
+      if (turn.kind === "NONE") {
+        survivors.push(link);
+        continue;
+      }
+      if (turn.kind === "RELEASE") {
+        // ⛔⛔ THE BODY IS NOT MOVED, so it is NOT a changed Pioneer for anything aligned to
+        // IT. ⭐ That is exactly the owner's second clause: *"if P1 is blue, P2 rotation shall
+        // release the alignment of P1 with P2 but not the alignment of F1 with P1."* ⚠ It falls
+        // out of the geometry rather than needing a rule — F1's baseline for P1 still holds,
+        // because P1 never turned.
+        steps.push({ kind: "RELEASE", follower: link.follower });
+        // ⚠ NOT pushed to survivors, and NOT baselined: the link is about to cease to exist.
+        moved = true;
+        continue;
+      }
+      // ⭐ `FOLLOW`. The delta is a WORLD rotation, so it composes on the left.
+      // ⚠ `PioneerTurn.delta` is typed `Quat | null` across all three verdicts, so it is
+      // CHECKED rather than asserted — a `!` here would be an assertion about another
+      // module's invariant, and this file would not notice if that invariant changed.
+      if (turn.delta === null) {
+        survivors.push(link);
+        continue;
+      }
+      steps.push({ kind: "ROTATE", follower: link.follower, delta: turn.delta });
+      const before = now(link.follower);
+      if (before !== null) pose.set(link.follower, qmul(turn.delta, before));
+      // ⛔⛔ RE-BASELINED IMMEDIATELY, inside the pass. ⚠ Without this the same turn would be
+      // re-applied on every subsequent pass and the body would spin away — the fixed point
+      // would never be reached and the cap would silently truncate it.
+      survivors.push({ ...link, baseline: pioneerNow });
+      baselines.set(link.follower, pioneerNow);
+      // ⭐ THIS is what makes it cascade: `link.follower` has moved, so anything aligned to it
+      // sees a changed Pioneer on the next pass.
+      moved = true;
+    }
+    pending = survivors;
+    if (!moved) break;
+  }
+
+  // ⭐ Everything still pending is baselined against what its Pioneer looks like now, so a turn
+  // is never counted twice. ⚠ Including the `NONE` cases, where it is a no-op by construction.
+  for (const link of pending) {
+    const pioneerNow = now(link.pioneer);
+    if (pioneerNow !== null) baselines.set(link.follower, pioneerNow);
+  }
+  return { steps, baselines };
+}

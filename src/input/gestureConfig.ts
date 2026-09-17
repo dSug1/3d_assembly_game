@@ -399,6 +399,49 @@ export interface GestureConfig {
   /** Residual at which a mate breaks — metres and radians, judged separately. */
   mateBreakLinear: number;
   mateBreakAngular: number;
+
+  // ── `A16` — THE HIGHLIGHT CONDITION ───────────────────────────────────
+  // Design of record: `Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md` §1, §12.
+  // ⚠⚠ **BOTH ARE FLAGGED FOR FINE-TUNING** (the owner: *"to be finetuned later"*).
+  // ⛔ NEITHER GETS A SLIDER: the owner's standing instruction is not to inflate the
+  // tuning menu, and both are reachable from the URL (`?snapRadiusFactor=1.5`) like
+  // any other field here.
+  // ⚠ `MinDistanceBeforeSnapIsConfirmed` is deliberately ABSENT — the hold-off is not
+  // built in this slice, and `config_debt.test.ts` refuses a tunable nothing reads.
+
+  /**
+   * `SnapIsPossibleRadius`, in multiples of the scene's base module **`L`**.
+   *
+   * ⚠ **4 since 2026-09-17** (*"set capture radius at 4L"*) — **320 mm** with `L` = 80 mm.
+   * ⛔⛔ IT IS NO LONGER PER-OBJECT. It was `candidate.span × factor`, which was scale-free;
+   * one absolute distance gives that up so that *"4L"* means one number a hand can compare with
+   * the bodies (`L × 2L × 3L`) and their spacing (`3L`). ⭐ `core/proximity.ts` records the
+   * trade, and `objectSpan` was deleted with the rule rather than left dormant.
+   * ⚠ History: 1.25 × span → 1.0 × span (withdrawn: 80 mm is exactly where two cubes touch)
+   * → 2.0 × span → **4 × L**.
+   * ⚠⚠ A radius below the bodies' LARGEST extent (`3L`) cannot capture two of them meeting
+   * along their long axes before they interpenetrate — not encoded here, because the body
+   * dimensions are a scene fact and this file is engine- and scene-free.
+   */
+  snapRadiusFactor: number;
+  /**
+   * Degrees. How near parallel the alignment axis must be to one of the target's face
+   * normals for `A16`'s condition 1 to hold.
+   * ⚠ A DIFFERENT QUESTION from the (unbuilt) snap threshold even though both are angular
+   * slack: this asks *have we entered the mechanism*, that asks *may an irreversible move
+   * fire*. Coupling them would make tuning one silently move the other.
+   */
+  alignMatchDeg: number;
+
+  /**
+   * ⭐⭐ The seed for the boot scene's three random orientations.
+   *
+   * ⛔ SEEDED so the scene is REPRODUCIBLE — `?sceneSeed=7` rolls a new one, and the one that
+   * showed a defect can always be reloaded. ⚠ Not a gesture tunable and not a slider; it lives
+   * here only because this is where URL overrides are parsed and validated.
+   * ⛔ `core/random_pose.ts` argues the case.
+   */
+  sceneSeed: number;
 }
 
 export const DEFAULT_CONFIG: GestureConfig = {
@@ -668,6 +711,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   mateFacingCos: -0.85,
   mateBreakLinear: 0.02,
   mateBreakAngular: 0.35,
+
+  // ⚠ The owner's number, verbatim: *"set capture radius at 4L"* — 320 mm between centres.
+  snapRadiusFactor: 4,
+  // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
+  // really did align against this thing.
+  alignMatchDeg: 15,
+  // ⚠ Arbitrary, and that is the point: any fixed value gives three arbitrary poses. Changed
+  // by the URL when a different scene is wanted.
+  sceneSeed: 20260917,
 };
 
 /**
@@ -807,6 +859,32 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "motion buffer has already discarded.",
     );
   }
+  // ── `A16`'s two, and each one can really fail ───────────────────────────
+  //
+  // ⭐ `METHOD`: *a guard that cannot fail is not a guard.* Both configurations below are
+  // reachable from the URL and both leave every individual function CORRECT while making the
+  // mechanism unusable — the class a green suite cannot see.
+  // ⚠⚠ THIS RULE WAS REWRITTEN 2026-09-17 AND THE OLD VERSION IS THE INTERESTING PART: it
+  // said `> 1`, reasoning that 1.0 × an object's span is exactly where two CUBES touch. ⛔ That
+  // reasoning died with the per-object radius — the factor now multiplies the scene's module
+  // `L`, not a body's span, so "1" no longer names contact and the old bound was arithmetic
+  // about a quantity this field no longer holds. ⭐ A stale guard that still passes is worse
+  // than none: it looks like the number has been thought about.
+  if (!(cfg.snapRadiusFactor > 0)) {
+    throw new Error(
+      `snapRadiusFactor (${cfg.snapRadiusFactor}) is not positive: a zero or negative capture ` +
+        "radius makes every distance test fail, so no pair could ever be highlighted and the " +
+        "whole mechanism would be silently unreachable with nothing on the glass to say why.",
+    );
+  }
+  if (!(cfg.alignMatchDeg > 0 && cfg.alignMatchDeg < 90)) {
+    throw new Error(
+      `alignMatchDeg (${cfg.alignMatchDeg}°) is outside (0, 90): at 0 no alignment could ever ` +
+        "match and the highlights would never appear; at 90 every orientation matches and " +
+        "condition 1 stops meaning anything — a whole condition deleted by a number.",
+    );
+  }
+
   // ⛔⛔ THE SAGITTA CRITERION WAS DELETED HERE, 2026-09-16, WITH THE GESTURE IT GUARDED.
   //
   // ⭐ It was the one rule in this validator derived from physics rather than chosen: a
