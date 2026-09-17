@@ -139,3 +139,12 @@ the list would be re-taken.
 ## `D36` — ✅ IN FORCE
 
 | `D36` | ⭐⭐⭐ **§1.3's PROVISIONAL-MOTION ROLLBACK IS RETIRED** | 2026-09-16 | *"A rotation followed by a flick was previously resetting the quaternion of the object: get rid of that if this conflicts with the alignment by flick."* ⭐⭐⭐ **A ROLLBACK IS ONLY HONEST WHILE THE MOTION IT UNDOES WAS PROVISIONAL** — §1.3 was written when a drag and a flick were RIVAL readings of one gesture, so the loser's effect was unwanted. `A16` made rotation a mode a hand CHOOSES and `D33` made the flick readable at the end of a drag, so *drag-then-snap* is now the normal gesture and restoring the press pose throws away deliberate work. ⚠ Moot for the anchored axis anyway: 2ter re-solves from the CURRENT orientation, so only the free DOF differs. ⛔ `snapshot` stays for `IN6`'s undo and is now READ (`pressSnapshot`), and the HUD's `ROLLED BACK` line is deleted — a readout that cannot fire is the dead instrument shape, met three times on this same day |
+
+## `D34` — ✅ IN FORCE
+
+| `D34` | ⭐⭐⭐ **2sexte IS WIRED — and `A3`'s handover was never a decision** | 2026-09-16 | *"A flick immediately remove two DOF now and I cannot rotate the aligned object around the alignment axis."* ⭐⭐⭐ The report dissolved its own blocker: `A3` framed drag-vs-roll as two charts over one DOF needing a handover constant, and `A12` had already made them two **CHANNELS** (drag = one touchpoint, roll = the second's x). *A handover between rules became a handover between fingers.* ⛔ Degenerate cases REFUSE rather than turn arbitrarily → [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+
+
+## `D35` — ✅ IN FORCE
+
+| `D35` | ⭐⭐ **THE FACE HIGHLIGHT OUTLIVES THE GESTURE AND DIES WITH THE ALIGNMENT** | 2026-09-16 | *"Keep the face highlighted when the object is aligned, until the shaking releases the alignment."* ⭐⭐ Amends §3 rule 3, and the argument is that **the highlight is no longer a selection indicator — it is the alignment's only visible state**. ⛔ It dies with the CONSTRAINT, not the finger: a marker outliving the stack would report something untrue. ⚠ §3 still governs an unaligned object → [`queue_notes/IN3.md`](queue_notes/IN3.md) |
