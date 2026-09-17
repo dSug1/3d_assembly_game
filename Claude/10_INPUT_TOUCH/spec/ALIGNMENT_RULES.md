@@ -6,15 +6,20 @@ that says *fork C* when no forks exist is the same lie as a type called `OWNER_T
 rules — and this one was reached by 21 links. ⭐ The text below keeps every mention of *fork
 C* that is HISTORY; what changed is the name of the thing a session opens.
 
-> **STATUS** · 🔨 **STAGE 1 BUILT, NO DEVICE LOOK YET** (dictated + built 2026-09-16, `1.0.8-`) · **OWNS** ·
+> **STATUS** · ✅ **STAGE 1 CLOSED BY A DEVICE LOOK (2026-09-17)** · 🔨 stage 2 unbuilt (dictated + built 2026-09-16, `1.0.8-`) · **OWNS** ·
 > the rule set behind `?anchorRules=2`
 > **READ IF** · you are building or judging fork C
 > **LAST VERIFIED** · 2026-09-16
 
-✅ **STAGE 1 IS BUILT** behind `?anchorRules=2` — the alignment, its cap, the highlight, the
-mode switch, the shake release, the rotation reset and the twist about the aligned normal.
-⛔ **NO HAND HAS TOUCHED IT.** Rule 5: a look on a real device closes a change and nothing
-else does. ⚠ `TargetPosition`, the gizmo, the orbit and the approach (§2's last four bullets)
+✅✅ **STAGE 1 IS CLOSED BY A DEVICE LOOK** — *"device pass ok, except these modifications"*
+(owner, 2026-09-17), and all five modifications are built: everything simultaneous (`D43`),
+the tap aligning in either movement mode (`D44`), the sway restored on an aligned rotation
+(defect 47), the snap played as a slerp (`D45`), and the twist no longer killing it (defect
+48). ⭐ Both undos are kept — the shake AND the re-tap.
+⚠⚠ **WHAT THE CLOSE DOES NOT COVER, STATED**: the five corrections have **not themselves been
+re-judged** by a hand, except the slerp's speed, which the owner tuned three times in a few
+minutes. ⛔ The close is only as strong as the phrase that gave it — this project already
+learned that from `A15`'s *"everything is working ok"*. ⚠ `TargetPosition`, the gizmo, the orbit and the approach (§2's last four bullets)
 are **NOT built** — §7's remaining questions gate them.
 ⭐ The conflict check the owner asked for, before any building, is §4–§6.
 

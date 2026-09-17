@@ -778,6 +778,27 @@ suppressing every post-reversal flick was recoverable by nothing.
 
 ---
 
+### ✅✅ THE FIRST DEVICE PASS CLOSED THE ALIGNMENT MODEL — 2026-09-17
+
+> *"1- device pass ok, except these modifications to be done … 4- keep both shake and re-tap"*
+
+⭐ Five corrections, all built the same day: **everything simultaneous** (`D43`, which deleted
+`A10`'s gate — six models of depth behind it), **the tap aligning in either movement mode**
+(`D44`, which overturned a condition I had called load-bearing), **the sway restored** on an
+aligned rotation (defect 47, an early `return`), **the snap played as a slerp** (`D45`), and
+**the twist no longer killing that slerp** (defect 48, a guard for a conflict that was not
+real). ⚠ Both undos kept, so the shake's four tunables still matter.
+
+⚠⚠ **WHAT THE CLOSE DOES NOT COVER**: the corrections have not themselves been re-judged,
+except the slerp's SPEED — tuned three times in a few minutes (twice faster → 1/3 → 2/7 of the
+camera reset). ⭐ That sweeping is the argument for a URL-overridable field, offered and not
+taken; the ratio stays a constant until it moves again.
+
+⛔ **WHAT REMAINS IS NOT IN THIS ROW'S CONTROL**: stage 2 and the mate, each blocked on one
+owner decision — the approach mapping at contact, and which gesture asserts a mate.
+
+---
+
 ### ✅ THE PIONEER-TURN RULE, AND A FLAG THAT LIVED FOUR HOURS — `D41` → `D42`, 2026-09-17
 
 ⛔⛔ **THE CASE HAD NO RULE AND ITS ABSENCE WAS INVISIBLE**: an alignment stores a FROZEN world

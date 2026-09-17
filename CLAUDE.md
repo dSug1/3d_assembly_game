@@ -68,7 +68,12 @@ world direction stays frozen while the face it came from turns away.
 ⭐⭐ **THE CAP IS WHY THERE IS NO DEAD END**: one alignment leaves the spin about its normal
 free, and a second one cannot be stacked — so zero-DOF, which froze an object in fork B, is
 now unreachable **by construction** rather than by a guard.
-⛔⛔ **NO HAND HAS JUDGED ANY OF IT**, and rule 5 says that is what closes a change.
+✅✅ **CLOSED BY A DEVICE LOOK, 2026-09-17** — *"device pass ok, except these modifications"*,
+and all five are built (`D43`–`D45`, defects 47–48). ⚠ The corrections themselves have not
+been re-judged, except the slerp's speed. ⛔ **NEXT: `1.0.11-Approach-and-Mate-v0`** — the
+approach (`TargetPosition`, its gizmo, the orbit) and the **MATE**, which the game still
+cannot do at all: the alignment is PARALLEL, an orienting rule, and the only rule that pushes
+a `MATE` is flick-based. ⚠ Both are blocked on one owner decision each.
 ⭐ Rules, the conflict check against every earlier rule, the decisions and ⭐⭐ **an ordered
 list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §9–§10.
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
