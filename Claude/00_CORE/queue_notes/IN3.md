@@ -778,6 +778,32 @@ suppressing every post-reversal flick was recoverable by nothing.
 
 ---
 
+### ✅ THE PIONEER-TURN RULE, AND A FLAG THAT LIVED FOUR HOURS — `D41` → `D42`, 2026-09-17
+
+⛔⛔ **THE CASE HAD NO RULE AND ITS ABSENCE WAS INVISIBLE**: an alignment stores a FROZEN world
+direction (§1.4, deliberately, so a camera orbit cannot redefine it), so turning the object
+that direction was READ FROM leaves the Follower obeying a target nothing on the glass matches
+— with both highlights still claiming the relationship holds.
+
+⭐ Built first as a flag (`D41`, C1 = release, C2 = follow), then **merged into the gesture**
+four hours later (`D42`): a **single tap** makes a `SNAPSHOT`, a **double tap** a `FOLLOW`.
+
+⭐⭐ **WHY THE SECOND SHAPE IS BETTER, AND IT GENERALISES**: a flag is one answer for a whole
+session; a gesture is an answer **per alignment**, and it can be SEEN — two colours for a
+snapshot, one for a relationship. ⛔ The same argument retired `D26`'s assignment flag and
+`D29`'s anchor flag: *a flag is how you COMPARE two rules; it is not how you ship one.*
+
+⚠ What the merge cost, stated: each gesture is its own toggle, so leaving `FOLLOW` with
+single taps takes two — one to switch, one to release. And because `D27` makes every tap act
+immediately, a double tap on a face that is already a `SNAPSHOT` releases on the first tap and
+re-aligns as `FOLLOW` on the second: the end state is right, with one frame between.
+
+⚠ A naming lesson paid for by a failing vector: the MODE is `SNAPSHOT`/`FOLLOW` and the
+VERDICT is `RELEASE`/`FOLLOW`/`NONE`. A blanket rename swept one vector into asserting the mode
+where it meant the verdict. ⭐ **Name a decision and its consequence differently.**
+
+---
+
 ### ✅✅ FORKS A AND B DELETED, AND THE SANITY SWEEP THAT CAME WITH IT — `D40`, 2026-09-17
 
 > *"Remove the fork A and the Fork B and set the fork C as the unique default. Remove the
@@ -891,7 +917,7 @@ gesture must be performed to a threshold specification instead of simply chosen.
 ⭐⭐⭐ **SO FORK C's TRIGGER COMPLETES MID-GESTURE: hold one object, TAP a face on another.**
 The held object makes the minimal turn that points its own face **the same way** as the
 tapped one. Rules, conflict check, transitions and the open questions are in
-[`../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md);
+[`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md);
 what follows is only what a session needs about the BUILD.
 
 #### What is built (15 vectors, 3 mutants, no device look)

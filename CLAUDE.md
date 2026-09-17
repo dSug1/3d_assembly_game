@@ -70,7 +70,7 @@ free, and a second one cannot be stacked — so zero-DOF, which froze an object 
 now unreachable **by construction** rather than by a guard.
 ⛔⛔ **NO HAND HAS JUDGED ANY OF IT**, and rule 5 says that is what closes a change.
 ⭐ Rules, the conflict check against every earlier rule, the decisions and ⭐⭐ **an ordered
-list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md) §9–§10.
+list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §9–§10.
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
 2026-09-16 a confirmed fix was reported broken from Pages on a tablet running an **old
 bundle**: `index.html` is served `max-age=600` and the assets are content-hashed, so a

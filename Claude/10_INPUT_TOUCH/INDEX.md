@@ -44,7 +44,7 @@ B are **deleted** — with `anchor_fork.ts`, `align_flick.ts`, `drag_rule.ts`, t
 slider and 41 vectors. ⚠ Everything closed by a hand below was closed under fork A's rules,
 which this model inherits everywhere it does not override them. ⛔ **No device look on the
 alignment rules yet**; the ordered test list is §10 of
-[`spec/FORK_C_ANCHOR_RULES.md`](spec/FORK_C_ANCHOR_RULES.md).
+[`spec/ALIGNMENT_RULES.md`](spec/ALIGNMENT_RULES.md).
 ⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
 longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
 protect anything — it certifies a module nothing calls, which is exactly how the roll

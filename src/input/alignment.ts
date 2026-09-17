@@ -1,7 +1,7 @@
 /**
  * ⭐⭐⭐ **THE ALIGNMENT RULES — the owner's, as pure decisions.**
  *
- * Design of record: [`Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`] — dictated
+ * Design of record: [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`] — dictated
  * 2026-09-16, with §7 recording which readings the owner confirmed and §10 what a device pass
  * should ask.
  *
@@ -30,14 +30,14 @@ import { qconj, qmul, type Quat, type Vec3 } from "../core/vec";
 import type { Behaviour } from "./mode_toggle";
 
 /**
- * ⭐⭐ The alignment fork C pushes — *"FollowerFace normal aligns with PioneerFace normal"*.
+ * ⭐⭐ The alignment a tap pushes — *"FollowerFace normal aligns with PioneerFace normal"*.
  *
  * ⛔⛔ **PARALLEL, NOT ANTI-PARALLEL, AND THE OWNER CHOSE THAT KNOWING THE CONSEQUENCE.** A
  * mate is anti-parallel (`CLAUDE.md` rule 4, §4's `6quater`): two faces that meet flush point
  * *at* each other. Parallel is the CAD **align** operation — same facing, as in levelling two
  * top faces — so after this rule the held object presents its *opposite* side toward the
  * face that was tapped. ⚠ It is therefore an ORIENTING rule, not a joining one; how a mate is
- * ever asserted in fork C is open (`FORK_C_ANCHOR_RULES.md` §7.12).
+ * ever asserted at all is open (`ALIGNMENT_RULES.md` §7.12).
  *
  * ⛔ The target is the Pioneer normal **in world, frozen at the tap** — §1.4's doctrine, and
  * the owner's own *"then the PioneerFace resets as null"* says the same thing: there is no
@@ -119,7 +119,7 @@ export interface TapContext {
  * ⭐⭐ THEY DO NOT ACTUALLY CONTRADICT, WHICH IS WHY BOTH CAN STAND: the alignment fires only
  * while the mode is `ROTATE`, and it **ends by switching to `TRANSLATE`** — which is exactly
  * the flip the toggle would have produced. A hand that taps in `ROTATE` gets `TRANSLATE`
- * either way; in fork C it also gets an alignment.
+ * either way; here it also gets an alignment.
  *
  * ⛔ THE `ROTATE` CONDITION IS LOAD-BEARING, not decoration. In `TRANSLATE` the same tap must
  * still toggle — otherwise the only way back to `ROTATE` is gone, and the fork becomes a trap
@@ -199,8 +199,9 @@ export interface ResetPlan {
  * that is the same case, not a third one.
  *
  * ⚠ `D36` deleted this rollback GLOBALLY at the owner's instruction because it fought fork B's
- * flick-to-align. Fork C has no flick alignment, so the conflict does not exist here — and it
- * returns **as a fork C rule**, not as a restored global behaviour. Fork A shipped without it.
+ * flick-to-align. ⛔ This model has **no flick alignment at all**, so that conflict cannot
+ * arise — which is why the reset came back with it (`D37`) and why the flick now means one
+ * thing only. Forks A and B are deleted (`D40`); what is left is not a fork.
  */
 export function flickResetPlan(alignmentTouchedThisGesture: boolean): ResetPlan {
   return {

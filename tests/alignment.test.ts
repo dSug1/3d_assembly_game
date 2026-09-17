@@ -1,7 +1,7 @@
 /**
  * GOLDEN VECTORS — **FORK C**, the owner's anchor and alignment rules.
  *
- * Design of record: `Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`.
+ * Design of record: `Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`.
  *
  * ⭐⭐⭐ THE VECTOR THAT MATTERS IS THE COMPOSITION, and it is written before the unit ones on
  * purpose: *hold an object, tap a face on another, and the held object's own face ends up

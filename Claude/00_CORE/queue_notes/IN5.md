@@ -19,7 +19,7 @@ by nothing, which is a shape that will recur.
 shake's window to **300 ms**, its leg to **6 mm** and its straightness to **0.45** (mine were
 600 / 8 / 0.4). ⚠ Chosen from the rules rather than from a hand on the glass — the device
 pass that judges them is §10 of
-[`../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md)
+[`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md)
 — so they are **owner's judgements, not measurements**, and the fourth (`reversals` = 2) is
 still mine. ⛔ `evictShakeLegMm` still clears the validator's floor of 3× the measured noise.
 

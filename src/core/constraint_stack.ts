@@ -23,7 +23,7 @@ import type { Quat, Vec3 } from "./vec";
 import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, shortestArc } from "./vec";
 
 /**
- * ⚠ `FACE_ALIGN` is **fork C's** (`FORK_C_ANCHOR_RULES.md`): the owner's *"FollowerFace
+ * ⚠ `FACE_ALIGN` is the input model's (`ALIGNMENT_RULES.md`): the owner's *"FollowerFace
  * normal aligns with PioneerFace normal"*, frozen to a world direction at the tap.
  * ⛔ It is deliberately NOT spelled as a `WORLD_AXIS_ALIGN` even though the solver treats
  * the two identically — the kind is what the readout and `evict` name, and a constraint that
@@ -176,9 +176,9 @@ export interface EvictResult {
  * against fork B (*"the second flick completely freezes the rotation"*).
  *
  * ⛔ A `MATE` on the stack is REFUSED rather than silently dropped or joined: fork C has no
- * rule that pushes one (§4's `6quater` is flick-based and fork C has no flick), so this cannot
+ * rule that pushes one (§4's `6quater` is flick-based and no flick aligns anything now), so this cannot
  * happen today — and the day it can, whether an alignment may override an assembly
- * relationship is the owner's call, not a default. `FORK_C_ANCHOR_RULES.md` §7.12.
+ * relationship is the owner's call, not a default. `ALIGNMENT_RULES.md` §7.12.
  */
 export function singleAlignment(
   stack: readonly Constraint[],

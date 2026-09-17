@@ -94,7 +94,7 @@ change (`D38` retired that clause). Everywhere else the tap keeps exactly this m
 
 ### ⭐⭐⭐ FORK C (`?anchorRules=2`) — the owner's TAP-TO-ALIGN set (`D37`)
 
-⭐ Rules, conflict check and the open questions: [`FORK_C_ANCHOR_RULES.md`](FORK_C_ANCHOR_RULES.md).
+⭐ Rules, conflict check and the open questions: [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md).
 ⛔ **Everything not listed here behaves as fork A**, which is what *"fork C branches from
 fork A"* means. ⛔ **NO HAND HAS TOUCHED ANY OF IT** — rule 5 is unpaid for this whole column.
 
@@ -148,7 +148,7 @@ it to the object model and gives it the precondition it is missing.
 | §2 **2ter** | vertical flick → `GRAVITY_ALIGN` onto the constraint stack | `3D1` (faces), `IN3` |
 | §2 **2quater** | horizontal flick → `WORLD_AXIS_ALIGN` | `3D1`, `IN3` |
 | §2 **2sexte** | constrained rotation about the remaining free DOF | `3D1`, `IN3` · ✅ **BUILT 2026-09-16** in forks B and C |
-| ⛔ **fork C's approach** | `TargetPosition`, the cross-quad gizmo, the orbit about it, and the two-object approach along centre→target | ⚠ **not in revision 5 at all** — the owner's own rules, [`FORK_C_ANCHOR_RULES.md`](FORK_C_ANCHOR_RULES.md) §2. Four owner decisions gate them (§7.6–§7.10) |
+| ⛔ **fork C's approach** | `TargetPosition`, the cross-quad gizmo, the orbit about it, and the two-object approach along centre→target | ⚠ **not in revision 5 at all** — the owner's own rules, [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) §2. Four owner decisions gate them (§7.6–§7.10) |
 | §2 **2septies** | ⭐ **SUPERSEDED by amendment A1** — eviction is a full **360° roll**, not a double-tap | `IN3` · ✅ the camera-reset collision is resolved; ⛔ A1 also amends **2quinte**, shares a context with **2sexte**, and leaves ONE open owner question: does a full turn break MATES too? |
 | §3 **3** | release unselects object and face, stack preserved | `3D1` |
 | §4 **5** | two objects and two faces selected | `3D1` |

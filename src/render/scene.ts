@@ -333,7 +333,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
-   * ⭐⭐⭐ **FORK C's ALIGNMENT** — *"first object minimally rotates ... so that FollowerFace
+   * ⭐⭐⭐ **THE ALIGNMENT** — *"first object minimally rotates ... so that FollowerFace
    * normal aligns with PioneerFace normal"*.
    *
    * ⭐⭐ THE TRIGGER IS A **TAP BY A SECOND HOLDER**, which is why this is reached from a
@@ -349,7 +349,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * @returns true when an alignment was applied — the caller then skips the mode toggle,
    *   because the alignment's own mode switch replaces it.
    */
-  const forkCAlign = (pioneerPointerId: number, pioneerGrip: Held, mode: AlignMode): boolean => {
+  const alignFollowerToPioneer = (pioneerPointerId: number, pioneerGrip: Held, mode: AlignMode): boolean => {
     const pioneerId = idOf.get(pioneerGrip.mesh);
     if (pioneerId === undefined || pioneerGrip.pressFace === null) {
       lastVerdict = "align: tap resolved no face — toggled instead";
@@ -1805,7 +1805,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * direction** (§1.4): moving the Pioneer's object afterwards does not drag the alignment
    * with it. What is remembered is the face's IDENTITY, for drawing and for the undo.
    * ⛔ ONE pair is visualised, so two objects aligned at once show only the latest — stated
-   * rather than hidden, and a device question (`FORK_C_ANCHOR_RULES.md` §7).
+   * rather than hidden, and a device question (`ALIGNMENT_RULES.md` §7).
    */
   let pioneerFace: { objectId: string; faceId: string } | null = null;
 
@@ -2238,7 +2238,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // free: shaking while rotating turns the object, and in C1 a turn releases.
           // ⚠⚠ **THE GAP THAT LEAVES, STATED**: in C1, a shake on the Pioneer *while the mode
           // is `TRANSLATE`* turns nothing, so it releases nothing. Dictated that way; whether
-          // C1 wants it too is a question for the device pass (`FORK_C_ANCHOR_RULES.md` §7).
+          // C1 wants it too is a question for the device pass (`ALIGNMENT_RULES.md` §7).
           if (
             alignMode === "FOLLOW" &&
             pioneerFace?.objectId === sid &&
@@ -2493,7 +2493,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         };
         const meaning = tapMeaning(ctx);
         if (meaning.action === "ALIGN" && meaning.mode !== null) {
-          alignedByThisTap = forkCAlign(e.pointerId, grip, meaning.mode);
+          alignedByThisTap = alignFollowerToPioneer(e.pointerId, grip, meaning.mode);
         } else if (meaning.action === "SWITCH" && meaning.mode !== null) {
           // ⭐⭐ *"A single tap on PioneerFace can follow a double tap … and therefore toggle
           // to behaviors accordingly"* — the owner. ⛔ NOTHING MOVES: the constraint, the

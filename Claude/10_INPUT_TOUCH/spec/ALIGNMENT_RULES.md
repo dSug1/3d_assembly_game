@@ -1,4 +1,10 @@
-# FORK C — the owner's anchor and alignment rules
+# THE ALIGNMENT RULES — the owner's, and the only input model
+
+⚠ **It was `FORK_C_ANCHOR_RULES.md` until 2026-09-17**, when forks A and B were deleted
+(`D40`) and this set became the model rather than one of three. ⛔ Renamed because a filename
+that says *fork C* when no forks exist is the same lie as a type called `OWNER_TBD` that runs
+rules — and this one was reached by 21 links. ⭐ The text below keeps every mention of *fork
+C* that is HISTORY; what changed is the name of the thing a session opens.
 
 > **STATUS** · 🔨 **STAGE 1 BUILT, NO DEVICE LOOK YET** (dictated + built 2026-09-16, `1.0.8-`) · **OWNS** ·
 > the rule set behind `?anchorRules=2`
@@ -126,7 +132,7 @@ himself** (the automatic switch to translation), which is why §2's text keeps i
 block overrides it: *the later text wins, and the superseded one explains why the current one
 exists.*
 
-### ⭐⭐⭐ THE PIONEER'S OBJECT IS TURNED — C1 / C2, a flag (owner, 2026-09-17), verbatim
+### ⭐⭐⭐ THE PIONEER'S OBJECT IS TURNED — dictated as a flag, **merged into the GESTURE**
 
 > *"Now create a flag with two forks for the case in which the second object with PioneerFace
 > is rotated while the first object is aligned:*
@@ -191,7 +197,7 @@ written; whether C1 wants the clause too is a question for the device pass.
 |---|---|---|---|
 | **C0** | nothing held | — | camera: orbit (§2 r1), pinch (§4 r4), double-tap home |
 | **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | **tap on obj 2's face ⇒ ALIGN** (→ C2). Pressed-and-held: ⚠ §7.5 |
-| **C2** | obj 1 aligned, `FollowerFace` **filled** + `PioneerFace` **contour** drawn, ⛔ mode **unchanged — stays `ROTATE`** | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
+| **C2** | obj 1 aligned in `SNAPSHOT` (cyan+amber) or `FOLLOW` (both amber), ⛔ movement mode **unchanged — stays `ROTATE`** | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
 | **C3** | aligned + `TargetPosition` live | `ROTATE`: orbit obj 1 about the target. `TRANSLATE`: move obj 1 along centre→target | its own delta moves **obj 2** along target→centre |
 | — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null | ⭐ and in **C2**, a shake on **obj 2** does the same (`D41`) |
 | — | flick (any state) | **orientation restored to the press pose** (the reinstated reset) | |
@@ -283,7 +289,7 @@ design** — obj 1 travels along the line to the target, so it leaves the finger
 `FollowerFace` stays highlighted *"until un-highlight occurs"* (a shake). Those two cannot
 both be true → §7.7.
 
-### 4.5 ⛔ THE REINSTATED FLICK RESET FIGHTS THE ALIGNMENT IT SHARES A FORK WITH
+### 4.5 ⛔ THE REINSTATED FLICK RESET FIGHTS THE ALIGNMENT IT SHARES A BUILD WITH
 
 A flick restores the orientation captured **at the press**. In C2/C3 the press snapshot is
 from *before* the alignment, so a flick would rotate obj 1 off its aligned direction **while
@@ -394,7 +400,7 @@ depth away. → §7.10.
 
 ---
 
-## 6. TRANSITIONS — in and out of fork C's rules
+## 6. TRANSITIONS — in and out of the alignment rules
 
 ⭐ What the owner asked for: *"how to transition back and forth from these rules to the other
 inputs rules"*. Every fork C state is **entered and left on a discrete event**, which is the
