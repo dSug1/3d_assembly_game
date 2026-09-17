@@ -132,7 +132,7 @@ import {
   faceWorld,
   pushObjectConstraint,
 } from "../core/object_model";
-import { qSlerp, qmul } from "../core/vec";
+import { IDENTITY, qSlerp, qmul } from "../core/vec";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -143,6 +143,19 @@ import { createMenu, type MenuSlider } from "./menu";
  * in the parent's frame now, where a bare `0.0015` would look like a UV or an alpha.
  */
 const MARKER_LIFT_M = 0.0015;
+
+/**
+ * ⭐⭐ **THE ALIGNMENT SNAP RUNS AT HALF THE CAMERA RESET'S TIME** — owner, 2026-09-17: *"the
+ * slerp during translation is too slow: make it twice faster."*
+ *
+ * ⛔ A RATIO RATHER THAN A SECOND TUNABLE, because the instruction that introduced the
+ * sharing still stands: *"use the available sliders so we do not inflate the numbers of tuning
+ * parameters sliders."* ⭐ One slider still governs both animations; what differs is a
+ * constant a hand cannot reach — and if the two ever want independent times, this is the line
+ * that becomes a field.
+ * ⚠ At 450 ms of camera reset the snap takes **225 ms**.
+ */
+const ALIGN_SNAP_FRACTION = 0.5;
 
 /** ⭐ The two marker colours, named once: cyan marks what MOVED, amber what it was aimed at. */
 const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
@@ -444,7 +457,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // knob; splitting them later is one field and one line.
     // ⚠ At `0` the slider means *no animation*, exactly as it does for the camera.
     const target = qmul(solved.rotation, before);
-    if (cfg.cameraResetMs > 0) {
+    const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+    if (snapMs > 0) {
       alignAnim = { objectId: followerId, from: before, to: target, t0: performance.now() };
     } else {
       setModelOrientation(followerGrip.mesh, target);
@@ -1895,14 +1909,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (alignAnim?.objectId === objectId) alignAnim = null;
   };
 
-  /** ⭐ Land it now. ⛔ Called by every rule that writes the same orientation — the hand wins
-   * over an animation it has already overtaken, and the object must not jump back afterwards. */
-  const settleAlignAnim = (): void => {
-    if (!alignAnim) return;
-    const mesh = meshOf.get(alignAnim.objectId);
-    if (mesh) setModelOrientation(mesh, alignAnim.to);
-    alignAnim = null;
-  };
+  // ⛔⛔ **`settleAlignAnim` WAS DELETED HERE, 2026-09-17, AND ITS ABSENCE IS THE FIX.** It
+  // landed an in-flight snap so a rule could write the orientation itself — and the twist
+  // called it, which is why a hand saw no slerp at all in `ROTATE`: the first movement past the
+  // deadband ended the animation. ⭐ Every path now does one of two honest things instead:
+  // **rides along** (the twist, C2's follow — compose the world rotation onto both ends) or
+  // **cancels** (every release, and the rotation reset, which writes its own pose). ⚠ Nothing
+  // needs to land a snap early any more, so the function that did is gone rather than kept for
+  // a caller that might return.
+
 
 
   /**
@@ -2419,13 +2434,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             if (twist === null) {
               lastVerdict = "align: twist degenerate — the aligned normal points at the camera";
             } else if (twist !== 0) {
-              // ⛔ THE HAND WINS: land the snap before turning, or the animation would write
-              // over the twist next frame and the object would fight the finger.
-              settleAlignAnim();
               setModelOrientation(
                 grip.mesh,
                 rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
               );
+              // ⛔⛔ **DEVICE-REPORTED 2026-09-17: *"there is no slerp during rotation: did you
+              // wire it?"*** ⭐ It was wired, in both modes — and this line used to SETTLE the
+              // snap, so the first finger movement past the deadband landed it instantly. In
+              // `TRANSLATE` the holder writes only POSITION, so the animation survived and the
+              // slerp was visible; in `ROTATE` the twist wrote the orientation and killed it.
+              // That is why it looked wired in one mode and missing in the other.
+              // ✅ NOW IT RIDES ALONG: the twist is a WORLD rotation about the aligned axis, so
+              // composing it onto both ends of the animation keeps the snap travelling AND
+              // accumulates the turn — the same trick C2's follow uses. ⚠ Not a compromise: a
+              // hand twisting while the object swings into place gets both, which is what both
+              // gestures asked for.
+              if (alignAnim !== null && alignAnim.objectId === fid) {
+                // ⛔ ONE definition of the world rotation, borrowed from the rule that applies
+                // it — a second `qFromAxisAngle` here would be free to disagree with it.
+                const rode = rotateAboutAxis(IDENTITY, axis, twist);
+                alignAnim = {
+                  ...alignAnim,
+                  from: qmul(rode, alignAnim.from),
+                  to: qmul(rode, alignAnim.to),
+                };
+              }
               lastVerdict = `align: twist ${((twist * 180) / Math.PI).toFixed(1)}° about the alignment`;
               // ⭐⭐ THE SWAY — the line whose absence the owner spotted. An aligned object
               // turning is still an object turning, and the scene reacts to it.
@@ -2525,8 +2558,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         const plan = flickResetPlan(grip.alignmentTouched);
         const snap = grip.rec.pressSnapshot;
         const rid = idOf.get(grip.mesh);
-        // ⛔ The reset restores the PRESS pose, so an alignment snap still in flight is over.
-        settleAlignAnim();
+        // ⛔ The reset writes the PRESS pose itself, so a snap in flight is simply dropped —
+        // landing it first would be a rotation the reset is about to undo anyway.
+        if (rid !== undefined) cancelAlignAnim(rid);
         if (plan.restoreOrientation && snap !== null) {
           // ⚠ ORIENTATION ONLY — the snapshot never carried a position, which is what makes
           // *"rotation reset"* the literal description of this rule rather than an analogy.
@@ -2819,7 +2853,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (!mesh) {
         alignAnim = null;
       } else {
-        const u = cfg.cameraResetMs > 0 ? (now - alignAnim.t0) / cfg.cameraResetMs : 1;
+        const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+        const u = snapMs > 0 ? (now - alignAnim.t0) / snapMs : 1;
         if (u >= 1) {
           // ⛔ LAND EXACTLY on the solved orientation, never on `slerp(…, 0.999)`: the
           // constraint has been true since the tap, and the pose must agree with it exactly.

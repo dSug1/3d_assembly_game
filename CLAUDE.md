@@ -142,7 +142,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Forty-seven defects, forty-six of them BY FINGER, and none visible to a green
+⛔⛔ **Forty-eight defects, forty-seven of them BY FINGER, and none visible to a green
 suite.** ⭐⭐ Number 40 is the one to read if you read one: `A12` retired the one-touchpoint
 roll and left its detector **fed**, and its `ROLL_KEPT` verdict silently vetoed `IN3`'s
 flick — *a retired gesture that still owns a verdict is not inert*. ⭐ The one exception is worth knowing: §1.1's unreachable STATIONARY was found by

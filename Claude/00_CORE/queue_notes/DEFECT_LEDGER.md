@@ -94,3 +94,24 @@ it is invisible to vectors for the same reason as the others.
 ✅ Fixed by making the consequence a **named function** — `noteSpin` — called by all three
 paths that turn a held object: free rotation, the aligned twist, and the second finger's roll.
 ⭐ A fourth path is likely (a mate), and it cannot forget what it has to call by name.
+
+---
+
+## 48 — the twist killed the alignment snap, so `ROTATE` looked unwired *(2026-09-17)*
+
+> *"There is no slerp during rotation: did you wire it?"*
+
+⭐ Wired, in both modes — and killed by a line I wrote in the same commit. The twist path
+called `settleAlignAnim()` before turning, on the reasoning that *the hand wins over an
+animation it has overtaken*. ⛔ So the first finger movement past the deadband landed the snap
+instantly, and since `TRANSLATE` writes only POSITION, the animation survived there. **One
+feature, visible in one mode, invisible in the other, for one line.**
+
+⚠⚠ THE SHAPE: *a guard written for a conflict that was not real.* The twist and the snap do
+not actually fight — both are world rotations, so they COMPOSE. ✅ The twist now rides along
+(compose onto both ends of the animation), exactly as C2's follow already did, and
+`settleAlignAnim` is deleted because nothing needs to land a snap early any more.
+
+⭐ Worth carrying: when two rules seem to need arbitration, check whether they compose first.
+The arbitration I reached for cost a visible feature and hid it in a way that looked like it
+had never been built.
