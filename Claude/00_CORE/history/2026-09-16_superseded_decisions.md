@@ -148,3 +148,12 @@ the list would be re-taken.
 ## `D35` — ✅ IN FORCE
 
 | `D35` | ⭐⭐ **THE FACE HIGHLIGHT OUTLIVES THE GESTURE AND DIES WITH THE ALIGNMENT** | 2026-09-16 | *"Keep the face highlighted when the object is aligned, until the shaking releases the alignment."* ⭐⭐ Amends §3 rule 3, and the argument is that **the highlight is no longer a selection indicator — it is the alignment's only visible state**. ⛔ It dies with the CONSTRAINT, not the finger: a marker outliving the stack would report something untrue. ⚠ §3 still governs an unaligned object → [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+
+## `D32` — ✅ IN FORCE
+
+| `D32` | ⭐⭐ **A SHAKE EVICTS ONLY WHILE `ROTATE`, and it is fed BEFORE the refusal** | 2026-09-16 | ⛔ Mine, on `D30`'s precedent — flagged, not assumed. The **mode** half is `D30`'s argument reused. ⭐⭐ The **order** half is the fix for defect 41: a full stack makes `dragRule` refuse and the handler return early, so a detector fed after that gate would never see the gesture that escapes the state — **the escape has to work where nothing else does.** ⚠ It also pays `A4`'s owed half (the flick is skipped from the FIRST reversal, announced in the readout). 12 vectors → [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+
+
+## `D33` — ✅ IN FORCE
+
+| `D33` | ⭐⭐⭐ **A FLICK IS READ OVER ITS TAIL, NOT THE WHOLE WINDOW** | 2026-09-16 | *"The flick should be triggerable during an ongoing rotation."* ⛔⛔ Travel and purity were measured from the oldest sample in `flickWindow`, and a flick that REVERSES the drag cancels to ≈ 0 net travel. ⭐ The window becomes a MAXIMUM extent; the longest passing tail wins, with a minimum span of `flickLiftWindow`. ⚠⚠ It retracted `A4`'s flick skip the same hour — *a guard sized against one reading of a signal is not still the right size when the reading changes.* Mine, flagged → [`queue_notes/IN3.md`](queue_notes/IN3.md) |

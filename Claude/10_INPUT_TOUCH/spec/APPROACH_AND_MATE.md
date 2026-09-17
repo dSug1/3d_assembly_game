@@ -83,6 +83,29 @@ slider** — the owner's standing instruction is not to inflate the slider count
 >   the TargetObject. If this angle is lower or higher than a threshold, boolean
 >   SnapIsAuthorized is toggled.
 
+### ✅ THE OWNER'S ANSWERS TO THE FIRST ANALYSIS — verbatim, 2026-09-17
+
+> - *A mate is a second stack entry ("while maintaining the alignment"): record that for
+>   resolving this issue later on when we start building more complex geometries. For the
+>   moment, we proceed with cubes so it is OK.*
+> - *D13: break of mate can be done only if two fingers are touching the respective two objects
+>   to be un-mated && two finger opposite movements aligned within an angle threshold with the
+>   direction of the centers of the mated objects (= same as zooming out but zooming out
+>   movement shall be aligned with the centers direction within a tolerance) && movement
+>   amplitude shall be bigger than a BreakThreshold (subject to slider for manual tuning of
+>   this threshold)*
+> - *Geometry, not code: anti-aligning a second pair of normals while keeping the first
+>   alignment needs two DOF and there is one: same as first line.*
+> - *Inside condition B the movement mode stops deciding: that's OK, and user shall expect that
+>   since the objects are highlighted in write, correct?*
+> - *camera axis degeneracy: fair enough, but I expect the user will not want to mate two
+>   objects which are aligned with the vision axis (a child would not do it anyway) because of
+>   occlusion*
+> - *earlier TargetPosition + gizmo + orbit half: indeed, this is superseded.*
+
+⭐ So: §8 is the **break** gesture, §9 the **reset conditions**, §10 what is **deferred to
+complex geometry**, and §6 keeps only what is still open — which is now two things.
+
 ⚠ **MARKED FOR LATER, as instructed**: distances and directions use **object CENTRES** today
 and **faces** later (§3's note and 4b.1's). ⭐ Both places are tagged `CENTRES-FOR-NOW` in the
 code so the change is one search.
@@ -122,7 +145,20 @@ cannot slide the object sideways while you are near a target and aligned.
 out-of-angle case rotates, which is the `ROTATE` behaviour, in what §2 calls translation mode.
 ⚠ But it is a real override of the mode model and it should be intended, not discovered. §6.3.
 
-### 4.2 ⛔⛔ THE MATE MAKES A **SECOND** STACK ENTRY, AND TWO RULES ASSUME THERE IS ONLY ONE
+### 4.2 ⛔⛔ THE MATE MAKES A **SECOND** STACK ENTRY — ⚠ AND THE TWO HALVES HAVE DIFFERENT FATES
+
+✅ **DEFERRED (the owner's call): the GEOMETRY.** *"Record that for resolving this issue later
+on when we start building more complex geometries. For the moment, we proceed with cubes so it
+is OK."* ⭐ Correct for cubes — see §5.2: the anti-align is EXACT when the mating faces are
+perpendicular to the alignment axis, which is every side face of an axis-aligned cube. §10.
+
+⛔⛔ **NOT DEFERRABLE: the CODE.** The same sentence hides a second problem that cube-ness does
+not fix — today's twist rule reads `stack.length === 1` and **otherwise falls through to FREE
+rotation**. ⚠ So the moment a cube is mated (align + mate = two entries) a drag would rotate it
+freely and break both constraints, on the most ordinary gesture there is. ⭐ It is one line when
+the mate is built: **two entries ⇒ zero free DOF ⇒ the drag is refused**, and the escape is
+§8's break rather than a fall-through. ⛔ Recorded here because the fix belongs to the day the
+mate lands, and because *"it is OK for cubes"* is true of the geometry and false of this.
 
 *"while maintaining the alignment of first object"* means the object ends with **`FACE_ALIGN` +
 `MATE`** — two constraints. Today:
@@ -191,42 +227,69 @@ when a mate breaks, so the quantity is wanted anyway.
 
 ---
 
-## 6. ⚠ WHAT IS MISSING — the decisions the build needs
+## 6. ✅ DECIDED, AND ⚠ WHAT IS STILL OPEN
 
-⭐ Each carries my recommendation, so a *yes* is enough.
+### ✅ Answered by the owner or adopted with their agreement
 
-1. **Two candidates in range.** Take the **nearest centre**; re-evaluate every frame, so the
-   target can change as the hand moves. ⚠ With a tie, keep the current one (hysteresis by
-   memory, not by a second threshold).
-2. **"Closest face" (both objects).** Define as *the face whose CENTRE is nearest the other
-   object's centre*. ⭐ Cheap, stable, and it agrees with intuition on a cube. ⚠ The alternative
-   — *the face whose normal most nearly points at the other object* — differs on flat parts,
-   and is the one to switch to when faces replace centres (§2's note).
-3. **Does the mode really stop deciding inside condition B?** (§4.1) My reading: **yes**, that
-   is what docking means. ⚠ Confirm.
-4. **The second finger in condition B**: keep roll/depth live, or suspend them while docking?
-   ⭐ Recommend **suspend depth** (it fights the approach along a different axis) and **keep
-   roll** (it is the twist by another channel).
-5. **Is the mate's motion animated?** ⭐ Recommend **yes** — the `D45` slerp for the rotation
-   and the same eased ratio for the translation, because the object is being moved by a rule
-   rather than by the finger, which is exactly when a jump reads as a glitch.
-6. **After the mate**: is the part still selected, still held, still highlighted? ⭐ Recommend
-   the white contours go (the owner's 4a already says so), the FollowerFace highlight goes with
-   the gesture, and the selection follows `A15` as usual.
-7. **The camera-axis case** (§5.1): refuse, or fall back? ⭐ Recommend **refuse** — every delta
-   reads as 4b.2's rotation — because the alternative is a silent approach in a direction the
-   hand cannot see.
-8. **`SnapIsAuthorized`: a toggle or a reading?** The word *toggled* implies memory. ⭐ Recommend
-   a **pure reading of the current angle**, re-evaluated per frame: a remembered boolean can
-   disagree with the geometry after any rotation, and this one authorises a destructive move.
-9. **The threshold angles.** Two are needed: 4b.1's *travel within the approach direction*
-   (⭐ recommend **±30°**) and 4c's *faces near-anti-parallel* (⭐ recommend **> 150°** between
-   normals). ⚠ Both are guesses and both ship as URL-overridable fields, per `IN5`.
-10. **Undoing a mate.** `D13` says eviction spares mates, so neither the shake nor the re-tap
-    can unseat a part. ⛔ Either a rule here or `3D3`'s break-on-residual has to give the hand a
-    way out — and until one exists, **a mate is permanent**, which is worse than a dead end.
+| | decision |
+|---|---|
+| the mode inside condition B | ✅ **it stops deciding** — *"that's OK"*. ⚠ See §6.1: the SIGNAL for it needs one word of care |
+| the camera-axis degeneracy | ✅ **accepted as unlikely** — *"a child would not mate two objects aligned with the vision axis because of occlusion"*. ⛔ Behaviour still has to be deterministic: **treat every delta as outside the angle**, so it rotates. A silent approach along an axis the hand cannot see is the alternative |
+| the old `TargetPosition` half | ✅ **superseded** — the owner's word. ⛔ `ALIGNMENT_RULES.md` §2's last four bullets are marked, not deleted: they are the owner's text and the record of why this design exists |
+| undoing a mate | ✅ **§8's two-handed pull** |
+| the second stack entry, and the anti-align's missing DOF | ✅ **deferred to complex geometry** (§10) — ⚠ except the CODE half of the first, which cannot wait (§4.2) |
+| two candidates in range | ✅ nearest centre, re-evaluated per frame, ties keep the current target |
+| *closest face* | ✅ the face whose CENTRE is nearest the other object's centre |
+| `SnapIsAuthorized` | ✅ a **derived reading**, never a remembered toggle (§9) |
+| is the mate's motion animated | ✅ yes — `D45`'s slerp for the rotation, the same eased ratio for the translation |
+| the thresholds | ✅ docking angle **±30°**, faces anti-parallel **> 150°**, both URL-overridable; `BreakThreshold` gets a **slider**, at the owner's request |
 
----
+### ⚠ 6.1 THE ONE THING THE OWNER'S ANSWER LEAVES OPEN — *"the user shall expect that since the objects are highlighted in white, correct?"*
+
+⭐ **Almost.** The white contours come up at **condition A** (proximity), and the drag only
+changes meaning at **condition B** (A *and* aligned). ⛔ So there is a band where the hand sees
+white and the mode still decides — a signal that runs ahead of the rule it is supposed to
+announce, which is the *readout that describes something other than what is happening* shape.
+
+✅ **It is already distinguishable, though, and that may be enough**: condition B requires an
+alignment, and an alignment is **already drawn** — the Follower's fill and the Pioneer's
+contour. So *white contours alone* = captured, *white contours **plus** a face highlight* =
+docking. ⚠ Two states told apart by the presence of a third marker is a legend a hand has to
+learn, so if it reads badly on the glass the cheap fix is to make the white **brighter or
+thicker in B**. ⛔ One line either way; a device look decides it.
+
+### ⚠ 6.2 THE SECOND FINGER IN CONDITION B — *"detail what is the issue. I did not understand"*
+
+⭐ **The issue is that two rules would move the same object along two different axes at once,
+and one of them ignores the hold-off.** In detail:
+
+1. Since `D43` the **second finger runs simultaneously** with the first — that is the
+   simultaneity you asked for. Its channel is picked by the **movement mode**: `TRANSLATE` →
+   **depth** (its y pushes the object along the flattened view direction), `ROTATE` → **roll**.
+2. Inside condition B, the **first** finger no longer obeys the mode (§4b): it approaches or
+   twists by ANGLE. ⛔ But the second finger's channel is still chosen by that same mode —
+   which now decides nothing for the first finger. **So the mode means one thing for one finger
+   and nothing for the other**, which is hard to explain and harder to predict.
+3. ⛔⛔ **And DEPTH specifically bypasses the docking rule.** 4b.1 says *"if `SnapIsAuthorized`
+   is false, the first object cannot be closer than `MinDistanceBeforeSnapIsConfirmed`"* — that
+   clamp lives in the approach. Depth moves the object along a **different** axis, so a second
+   finger can push it straight through the 8 mm hold-off and into (or through) the target
+   without the snap ever being authorised. ⚠ The clamp would be a rule one finger obeys and the
+   other does not.
+
+⭐ **RECOMMENDATION**: while condition B holds, **suspend depth** and **keep roll**.
+⛔ Depth is the one that fights the approach and evades the clamp; roll is the twist reached by
+another channel, which is exactly what 4b.2 already allows the first finger to do.
+⚠ The alternative — keep both and apply the hold-off clamp to **every** rule that moves the
+object, not just the approach — is more honest but larger, and it would let a hand push a part
+sideways into a seat it never aimed at.
+
+### ⚠ 6.3 AFTER THE MATE — still unstated
+
+⛔ The owner's 4a says the white contours go when the two objects mate, *"this condition to be
+defined later on"*. ⭐ What else the seat implies is open: is the part still **selected**, does
+its **alignment** survive, and does the pair now **move together** when either is dragged?
+⚠ The last one is `3D2`'s *seat* and §8 depends on it — see the gap named there.
 
 ## 7. ⭐ IS THE LOGIC SOUND? — the verdict asked for
 
@@ -246,3 +309,96 @@ contours make A and B legible without a legend.
 ⛔ **And one thing is geometry, not code**: anti-aligning a second pair of normals while
 keeping the first alignment is exact only when the mating faces are perpendicular to the
 alignment axis (§5.2). ⭐ Everywhere else the build can only do its best, and it must say so.
+
+---
+
+## 8. ⭐⭐⭐ BREAKING A MATE — the owner's gesture (2026-09-17)
+
+> *"Break of mate can be done only if two fingers are touching the respective two objects to be
+> un-mated && two finger opposite movements aligned within an angle threshold with the direction
+> of the centers of the mated objects (= same as zooming out but zooming out movement shall be
+> aligned with the centers direction within a tolerance) && movement amplitude shall be bigger
+> than a BreakThreshold (subject to slider for manual tuning of this threshold)."*
+
+⭐⭐ **IT ANSWERS THE WORST THING IN THE FIRST ANALYSIS.** `D13` makes eviction spare mates, so
+neither the shake nor the re-tap could unseat a part — a mate was **permanent**, which is worse
+than a dead end. ✅ Now it has an undo, and the undo is *the physical gesture*: take one part in
+each hand and pull.
+
+### The three conditions, and what each one is for
+
+| | condition | what it rules out |
+|---|---|---|
+| 1 | **one finger on each of the two mated objects** | a one-handed drag, and any gesture that does not name BOTH parts |
+| 2 | the two travels are **opposite** and within an angle of the **centre→centre** direction | a pinch that happens to be near the parts, and a two-handed rotation |
+| 3 | the amplitude exceeds **`BreakThreshold`** | a nudge, a grip adjustment, and the jitter of two resting fingers |
+
+⭐ *"Same as zooming out"* is the right analogy and the right warning: **rule 4's pinch is
+exactly this gesture with both fingers OUTSIDE any object.** ⛔ The two cannot collide — the
+router latches roles at press, and a pinch requires two `OUTSIDE` touchpoints while this
+requires two `OBJECT` ones — but they are the same hand shape, so the readout must name which
+one fired or a device report will not be attributable.
+
+### ⚠⚠ WHAT THIS EXPOSES, AND IT IS A REAL GAP
+
+⛔⛔ **A MATE DOES NOT HOLD POSITION TODAY.** §1.4's constraint stack solves **orientation**:
+a `MATE` entry carries a normal and a target direction, and `solve` returns a rotation. ⭐ So
+two mated cubes are held *facing* each other and **nothing stops either one being translated
+away by an ordinary one-finger drag** — which means *breaking* would be indistinguishable from
+*moving*, and this gesture would have nothing to undo.
+
+✅ That is `3D2`'s *seat*: the mate has to bind the pair's relative **placement**, not just
+their facings. ⛔ Until it does, §8 cannot be judged — so the build order is **seat first,
+break second**, and the break's vectors will assert that an ordinary drag does NOT separate a
+seated pair.
+
+### The numbers
+
+* **`BreakThreshold`** — the owner asked for a **slider**, so it gets one (the standing *no new
+  sliders* rule is set aside where a hand says it wants to tune). ⚠ It is an **amplitude**, so
+  millimetres on the glass, and it must clear `A11`'s deadband by a margin or a resting pair of
+  fingers could break a seat.
+* **The angle tolerance** — ⭐ recommend **reusing §4b.1's docking angle** rather than adding a
+  second one: both ask *"is this travel along the centre→centre line?"*, and two numbers for
+  one question drift apart.
+
+---
+
+## 9. ⭐⭐⭐ RESET CONDITIONS — what each piece of state is, and exactly when it goes
+
+⛔ The owner asked for this to be precise. ⭐ Every row is a rule the build has to implement;
+where a cell says *derived*, there is **no state at all**, which is the safest kind.
+
+| state | set when | cleared when | note |
+|---|---|---|---|
+| **`TargetObject`** | a held object comes within `SnapIsPossibleRadius` of another — **the nearest** one | the distance exceeds the radius · **the holder is released** · the pair mates · the object is deleted | ⭐ Re-evaluated **every frame**, so the target follows the hand. ⚠ On a tie, the current target is kept — hysteresis by memory rather than a second threshold |
+| **white contours** | exactly while `TargetObject` exists | with it | ⛔ They ARE the state, drawn; no separate lifetime |
+| **condition B** | `TargetObject` **and** the held object's alignment normal matches one of its face normals | *derived* | ⚠ Not stored — it is a test, and a stored copy could disagree with the stack after any tap |
+| **`FirstClosestFace` / `TargetClosestFace`** | *derived* while B holds | — | ⭐ Recomputed per frame: the face whose CENTRE is nearest the other object's centre. ⚠ They are named because the readout and the mate both need to say WHICH faces |
+| **`SnapIsAuthorized`** | *derived* from §4c's angle, per frame | — | ⛔ **Not a toggle with memory**: it authorises a destructive move, and a remembered `true` would survive a rotation that made it false |
+| **the alignment** | a tap (`D37`–`D42`) | shake · re-tap · rotation reset made in the same gesture · the Pioneer turns in `SNAPSHOT` mode | unchanged by this file |
+| **the MATE** | §4b.1.bis fires | ⛔ **only §8's two-handed pull** — `D13` spares mates from eviction | ⚠ Until §8 exists, a mate cannot be undone at all |
+| **`alignAnim` / any snap animation** | the mate's move | on completion · cancelled by a release of the alignment | `D45`'s rule: a release **stops** a snap, it does not finish it |
+
+⚠⚠ **THE ONE RESET THAT IS A JUDGEMENT, NOT A MECHANISM**: the holder's release clearing
+`TargetObject`. ⭐ The objects are still near each other, so *capture* is arguably a property of
+the SCENE rather than of the gesture. ⛔ Recommend clearing it: white contours with nothing
+held would advertise a docking state no finger is in, and this project has paid for readouts
+that describe something other than what is happening.
+
+---
+
+## 10. ⚠ DEFERRED TO COMPLEX GEOMETRY — the owner's call, recorded so it is not lost
+
+⭐ Both are true for **cubes** and both come back the day a part is not one:
+
+1. **A mate is a second stack entry**, so a mated + aligned part has **zero** free rotational
+   DOF. ⛔ Correct for a seated cube; for a part that wants to pivot in its seat (a hinge, a
+   sliding mate) §1.4 needs kinds of constraint it does not have.
+2. **The anti-align needs two DOF and has one** (§5.2). ⛔ Exact while the mating faces are
+   perpendicular to the alignment axis — every side face of an axis-aligned cube — and
+   best-effort otherwise, leaving a residual tilt.
+
+⛔⛔ **WHAT MUST HAPPEN ANYWAY, AND SOON**: the day the build meets a part where either bites,
+the residual is the quantity to REPORT — `3D3` already reads it to decide when a mate breaks.
+⭐ So the deferral is *do not solve it yet*, not *do not measure it*.

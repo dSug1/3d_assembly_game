@@ -44,13 +44,16 @@ the first keeps its object.
 
 ---
 
-⚠⚠ **AND THE SECOND HALF OF §2 MAY BE SUPERSEDED.** On 2026-09-17 the owner specified a
+✅✅ **AND THE SECOND HALF OF §2 IS SUPERSEDED — the owner's word, 2026-09-17: *"indeed, this
+is superseded."*** On 2026-09-17 the owner specified a
 different **Approach & Mate** mechanism — centre-to-centre, with a capture radius, a docking
 angle and a snap — which needs **no `TargetPosition` and no cross-quad gizmo** and says so:
 *"nothing to be specifically built as everything is available with current build."*
-⛔ [`APPROACH_AND_MATE.md`](APPROACH_AND_MATE.md) is the live design; §2's last four bullets
-below are kept because they are the owner's text and because the ORBIT they describe has no
-equivalent in the new one — whether it is still wanted is §6 of that file.
+⛔ [`APPROACH_AND_MATE.md`](APPROACH_AND_MATE.md) is the live design. §2's last four bullets
+below are **kept, not deleted**: they are the owner's text, and `METHOD` — *when two sections
+conflict, the later one wins, and the superseded one explains why the current one exists*.
+⚠ One thing genuinely died with them: the **orbit about a target point** has no equivalent in
+the new mechanism. ⭐ Nothing asked for it back, and the approach it belonged to is gone.
 
 ## 2. THE RULES — ⚠ THE OWNER'S TEXT, verbatim
 
