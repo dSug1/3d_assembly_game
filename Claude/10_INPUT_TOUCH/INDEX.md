@@ -35,12 +35,15 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**619 golden vectors, all passing** (37 → 632 → 574 → 619).
+**568 golden vectors, all passing** (37 → 632 → 574 → 619 → **568**).
+⭐ The count going DOWN is the shape to expect when a fork is chosen: 41 vectors described rules that no longer exist, and 10 more described orphans.
 
-⭐⭐⭐ **THE SHIPPED DEFAULT IS NOW FORK C** (`D37`–`D39`, 2026-09-16): tap a face on another
-object to align the held one, parallel, one alignment at a time, undone by a shake **or** a
-re-tap. ⚠ Fork A — everything closed by a hand below — is `?anchorRules=0`. ⛔ **No device
-look on fork C yet**; the ordered test list is §10 of
+⭐⭐⭐ **ONE INPUT MODEL SINCE `D40` (2026-09-17)**: tap a face on another object to align the
+held one, parallel, one alignment at a time, undone by a shake **or** a re-tap. ⛔ Forks A and
+B are **deleted** — with `anchor_fork.ts`, `align_flick.ts`, `drag_rule.ts`, the flag, the
+slider and 41 vectors. ⚠ Everything closed by a hand below was closed under fork A's rules,
+which this model inherits everywhere it does not override them. ⛔ **No device look on the
+alignment rules yet**; the ordered test list is §10 of
 [`spec/FORK_C_ANCHOR_RULES.md`](spec/FORK_C_ANCHOR_RULES.md).
 ⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
 longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
@@ -300,7 +303,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
 | `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⛔ One exception since `A15`: `relatchOnOrphan`, on a discrete event only |
 | ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ The superseded text, kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
-| **the `D29` forks** — `anchor_fork.ts` · `face_pick.ts` · `drag_rule.ts` · `align_flick.ts` (B) · `fork_c.ts` (C) | which anchor/alignment rule set is in force, and one file per fork's own decisions. ⭐ Fork C's whole rule set is `fork_c.ts`: the **parallel** face align, the tap's two meanings, the reset scoped by *when* the alignment happened. ⛔ One file per fork so choosing one makes deleting the others a `rm` — `D28` cost 44 vectors across four modules |
+| `alignment.ts` · `face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`, and it was `fork_c.ts` until the forks were deleted): the **parallel** face align frozen to a world direction, the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⭐ Keeping the set in one file is what made deleting the other two forks a `rm` plus a barrel line |
 | `holder_binding.ts` | ⭐⭐⭐ `A15` — is the object still UNDER the finger carrying it? A raycast at the second touchpoint's lift, and the unselect **deferred** to the next input event. ⚠ Reachable only because depth moves the object while the holder holds still |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |

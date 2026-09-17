@@ -20,7 +20,7 @@ import {
   flickResetPlan,
   tapMeaning,
   type TapContext,
-} from "@input/fork_c";
+} from "@input/alignment";
 import { singleAlignment, solve, type Constraint } from "@core/constraint_stack";
 import {
   faceWorld,
@@ -319,5 +319,45 @@ describe("⭐⭐ AND THE FREE SPIN IS DRIVEABLE — 2sexte, on fork C's own alig
     expect(
       Math.hypot(spun[0] - still[0], spun[1] - still[1], spun[2] - still[2]),
     ).toBeGreaterThan(0.05);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐ PORTED FROM `in3_align_wiring.test.ts` when forks A and B were deleted, 2026-09-17
+// ════════════════════════════════════════════════════════════════════════════
+//
+// ⚠ That file tested fork B's flick-to-align composition, which is deleted with fork B. ⛔ Two
+// of its vectors had a DIFFERENT subject — the twist about a constraint axis — and that
+// subject is alive: fork C reuses `anchor_rotate.ts` unchanged, because the geometry of *one
+// constraint, one free DOF* does not care which rule created the constraint.
+// ⭐ So they are ported rather than deleted, with the constraint built fork C's way.
+
+describe("⭐⭐ THE TWIST, PORTED — it must not drift, and it must refuse where it is undefined", () => {
+  const FRAME = { right: [1, 0, 0] as Vec3, up: [0, 1, 0] as Vec3, viewAxis: [0, 0, -1] as Vec3 };
+
+  it("⛔ FORTY HUNDRED twists do not drift the anchor — the case an INCREMENT is exposed to", () => {
+    // ⭐⭐ The drag is applied as a per-frame increment, so the question is not whether ONE
+    // twist is exact but whether four hundred are. ⚠ `faceMarkerOrientation`'s defect was
+    // found by exactly this shape, and it is cheap to ask.
+    const r = tapAndAlign(IDENTITY, "+x", IDENTITY, "+y");
+    const axis = r.stack[0]!.targetWorld;
+    let q = r.world.objects.get("follower")!.local.orientation;
+    for (let i = 0; i < 400; i++) {
+      q = rotateAboutAxis(q, axis, constrainedDragAngle(FRAME, axis, mmToPx(3), 0, 0.07)!);
+    }
+    const world = setWorldPlacement(r.world, "follower", { position: [0, 0, 0], orientation: q });
+    faceWorld(world, "follower", "+x")!.normal.forEach((v, i) =>
+      expect(v).toBeCloseTo(r.pioneerWorld[i]!, 8),
+    );
+  });
+
+  it("⛔⛔ AND THE DEGENERATE CAMERA REFUSES rather than turning by an arbitrary amount", () => {
+    // ⭐ Looking ALONG the axis, it projects to a POINT: every screen direction is equally
+    // perpendicular, so there is no angle to compute. ⛔ `null` is the honest answer, and the
+    // second touchpoint's roll is the chart that works there.
+    const along = { right: [1, 0, 0] as Vec3, up: [0, 0, -1] as Vec3, viewAxis: [0, 1, 0] as Vec3 };
+    expect(constrainedDragAngle(along, [0, 1, 0], mmToPx(20), 0, 0.07)).toBeNull();
+    // ⭐ and the counter-example, so the refusal is about the geometry and not the fixture
+    expect(constrainedDragAngle(FRAME, [0, 1, 0], mmToPx(20), 0, 0.07)).not.toBeNull();
   });
 });

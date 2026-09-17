@@ -7,7 +7,7 @@
  * gain to fix; it is a basis that is not a basis, and no amount of tuning recovers it.
  */
 import { describe, expect, it } from "vitest";
-import { gravityFrame, verticalVisibility } from "../src/input/gravity_frame";
+import { gravityFrame } from "../src/input/gravity_frame";
 import { cross, dot, length, normalize, type Vec3 } from "../src/core/vec";
 
 const DOWN: Vec3 = [0, -1, 0];
@@ -117,19 +117,11 @@ describe("⛔ where it goes quiet, and where it refuses", () => {
     expect(gravityFrame([0, 0, 1], [0, 0, 0])).toBeNull();
   });
 
-  it("⚠ vertical motion GOES QUIET before it fails — the third time this shape has appeared", () => {
-    // ⭐ Published so the weakening is measurable rather than reported as "it stopped
-    // working". 1 looking level, → 0 looking straight down.
-    expect(verticalVisibility(FORWARDS[0]!, DOWN)!).toBeCloseTo(1, 9);
-    expect(verticalVisibility(FORWARDS[4]!, DOWN)!).toBeLessThan(0.35);
-    expect(verticalVisibility([0, -1, 0], DOWN)!).toBeCloseTo(0, 9);
-  });
-
-  it("⭐ and DEPTH is strongest exactly where the vertical is weakest, and the reverse", () => {
-    // ⚠ The two rules cover each other: A6's depth scales with the camera's horizontal
-    // distance, which grows as the camera levels out — the opposite of this.
-    const level = verticalVisibility(FORWARDS[0]!, DOWN)!;
-    const steep = verticalVisibility(FORWARDS[4]!, DOWN)!;
-    expect(level).toBeGreaterThan(steep);
-  });
+  // ⛔⛔ **TWO VECTORS WERE DELETED HERE, 2026-09-17, WITH `verticalVisibility` ITSELF.**
+  // ⭐ They measured how the vertical weakens as the camera tilts down — 1 looking level,
+  // under 0.35 at the steepest ring, 0 looking straight down — and the function existed only
+  // to be measured: **nothing in the product ever called it.**
+  // ✅ The lesson is not lost; it moved into `gravity_frame.ts`'s header, where a session
+  // reading the frame will meet it. ⚠ What is gone is code that looked like a control and
+  // was not — the orphan scan of 2026-09-17 found it.
 });

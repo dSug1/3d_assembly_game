@@ -133,14 +133,6 @@ export function advanceFollow(
   };
 }
 
-/**
- * Is the follower close enough to stop integrating?
- * ⭐ Purely an optimisation hint for the caller — the maths converges on its own, and
- * nothing depends on the exact threshold.
- */
-export function isSettled(state: FollowState, target: number, epsilon: number): boolean {
-  return Math.abs(state.x - target) < epsilon && Math.abs(state.v) < epsilon;
-}
 
 /**
  * The velocity kick that makes a follower at rest swing out to `peak` and come back.

@@ -10,15 +10,19 @@
  * VIEW axis, which is what free rotation and 2quinte both do — is written out below and
  * asserted to BREAK the anchor. `METHOD`: *a test that cannot fail is not a test*, and
  * this is the exact mistake amendment A3's wording exists to prevent.
+ *
+ * ⛔⛔ **THE HANDOVER'S VECTORS WERE DELETED 2026-09-17**, with `resolveAnchorDriver` and
+ * `viewAxisAlignment` themselves. ⭐ `D34` retired the DECISION they served: `A12` had already
+ * made the drag and the roll two CHANNELS, so nothing chooses between them and the constant is
+ * never written. ⚠ A vector whose subject no longer exists certifies a module nothing calls —
+ * which is how the roll detector survived long enough to veto a live rule (defect 40).
  */
 import { describe, expect, it } from "vitest";
 import {
   constrainedDragAngle,
   constrainedRollAngle,
   nearSideScreenDirection,
-  resolveAnchorDriver,
   rotateAboutAxis,
-  viewAxisAlignment,
 } from "../src/input/anchor_rotate";
 import type { ScreenFrame } from "../src/input/screen_rotate";
 import { IDENTITY, dot, normalize, qRotate, type Vec3 } from "../src/core/vec";
@@ -213,52 +217,3 @@ describe("the A3 roll mapping", () => {
   });
 });
 
-describe("⛔ the handover — ONE constant, with hysteresis", () => {
-  const COS = 0.8;
-  const HYST = 0.1; // band 0.75 … 0.85
-
-  it("roll drives when the camera looks along the axis", () => {
-    expect(resolveAnchorDriver(0.99, COS, HYST, null)).toBe("ROLL");
-  });
-
-  it("the drag drives when the axis lies across the screen", () => {
-    expect(resolveAnchorDriver(0.1, COS, HYST, null)).toBe("DRAG");
-  });
-
-  it("⭐ inside the band the PREVIOUS driver is kept — both ways", () => {
-    expect(resolveAnchorDriver(0.8, COS, HYST, "ROLL")).toBe("ROLL");
-    expect(resolveAnchorDriver(0.8, COS, HYST, "DRAG")).toBe("DRAG");
-  });
-
-  it("⛔ and leaving the band overrides it — hysteresis must not become a latch for ever", () => {
-    expect(resolveAnchorDriver(0.99, COS, HYST, "DRAG")).toBe("ROLL");
-    expect(resolveAnchorDriver(0.1, COS, HYST, "ROLL")).toBe("DRAG");
-  });
-
-  it("⛔⛔ THERE IS NO DEAD BAND: every alignment has exactly one driver", () => {
-    // The failure two independent thresholds would give — a camera angle at which the
-    // free DOF has NO driver and the control silently stops working.
-    for (let i = 0; i <= 100; i++) {
-      const c = i / 100;
-      const d = resolveAnchorDriver(c, COS, HYST, null);
-      expect(d === "ROLL" || d === "DRAG", `alignment ${c}`).toBe(true);
-    }
-  });
-
-  it("⭐ with no previous choice it still decides, rather than inventing a preference", () => {
-    expect(resolveAnchorDriver(0.82, COS, HYST, null)).toBe("ROLL");
-    expect(resolveAnchorDriver(0.78, COS, HYST, null)).toBe("DRAG");
-  });
-
-  it("⭐ the driver it picks is the one that is WELL-CONDITIONED there", () => {
-    // Where roll drives, the drag is degenerate or nearly so; where the drag drives, it
-    // is not. This is the claim A3 makes, checked rather than asserted.
-    expect(viewAxisAlignment(TOP, GRAVITY)).toBeCloseTo(1, 12);
-    expect(resolveAnchorDriver(viewAxisAlignment(TOP, GRAVITY)!, COS, HYST, null)).toBe("ROLL");
-    expect(nearSideScreenDirection(TOP, GRAVITY)).toBeNull();
-
-    expect(viewAxisAlignment(FRONT, GRAVITY)).toBeCloseTo(0, 12);
-    expect(resolveAnchorDriver(viewAxisAlignment(FRONT, GRAVITY)!, COS, HYST, null)).toBe("DRAG");
-    expect(nearSideScreenDirection(FRONT, GRAVITY)).not.toBeNull();
-  });
-});

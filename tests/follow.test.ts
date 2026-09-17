@@ -10,7 +10,6 @@ import { describe, expect, it } from "vitest";
 import {
   advanceFollow,
   impulseForPeak,
-  isSettled,
   type FollowState,
 } from "../src/input/follow";
 
@@ -110,12 +109,6 @@ describe("inertia — the follower", () => {
     const rate = 1.2;
     const dt = 1 / 120;
     expect(target - s.x).toBeCloseTo(2 * 0.09 * rate - (rate * dt) / 2, 6);
-  });
-
-  it("isSettled reports arrival", () => {
-    expect(isSettled({ x: 1.0001, v: 0.0001 }, 1, 0.01)).toBe(true);
-    expect(isSettled({ x: 1.5, v: 0 }, 1, 0.01)).toBe(false);
-    expect(isSettled({ x: 1, v: 5 }, 1, 0.01)).toBe(false);
   });
 });
 

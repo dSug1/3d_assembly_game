@@ -81,27 +81,6 @@ export function depthLimits(cfg: GestureConfig): { minM: number; maxM: number } 
   return { minM: 2 * CAMERA_NEAR_PLANE_M, maxM: cfg.cameraRadiusMaxM };
 }
 
-/**
- * The direction depth runs along: the camera's view direction with its gravity component
- * removed, normalised. `null` when there is none.
- *
- * ⛔⛔ HORIZONTAL, NOT ALONG THE VIEW AXIS — the owner's correction, and the reason is that
- * **gravity is the primary constraint in this game**. §2 rule 2ter anchors a face to it and
- * parts are assembled on a working plane, so a camera looking down would make "away" point
- * into the FLOOR. A gesture meaning *"put this further away"* must not change an object's
- * HEIGHT.
- *
- * ⛔ It vanishes when the camera looks straight down, and the orbit surface's top ring is a
- * steep look-down. ⚠ The MECHANISM of the weakening is the camera's POSITION, not its
- * angle: flattening does not turn the view direction, so what shrinks is the horizontal
- * distance as the camera climbs overhead.
- */
-export function depthPushDirection(viewAxis: Vec3, gravityDown: Vec3): Vec3 | null {
-  const g = normalize(gravityDown);
-  const v = normalize(viewAxis);
-  if (!g || !v) return null;
-  return normalize(sub(v, scale(g, dot(v, g))));
-}
 
 /**
  * ⭐⭐ **A10's GATE.** Is this hand asking for depth?

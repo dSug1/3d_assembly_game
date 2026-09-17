@@ -70,6 +70,20 @@ export interface GestureConfig {
    * `render/scene.ts` reads this, so tuning it by hand tunes the real thing.
    */
   gainRotateFree: number;
+  /**
+   * ⭐⭐ 2sexte's gain — **radians of twist per MILLIMETRE** of finger travel along the
+   * direction the anchored object's near side would move (`A3`).
+   * ⛔ A GAIN, not a tracking factor: `anchor_rotate.ts` explains why the honest tracking
+   * mapping (`1/(r·sin α)`) cannot be used — it diverges as the constraint axis swings toward
+   * the camera, so the drag *goes quiet* over a range before it degenerates, which is what
+   * the second touchpoint's roll chart is for.
+   *
+   * ⛔⛔ **IT WAS DECLARED TWICE, UNDER TWO NAMES, FOR A DAY** — this one (the spec's own, in
+   * §2 2sexte) sat unread in `config_debt`'s PENDING list while I wired a `gainAnchorDrag` I
+   * had invented. ⭐ One number, one name, and the SPEC's name wins: the other was mine and
+   * newer. ⚠ Found by the orphan scan of 2026-09-17, not by a hand and not by the guard —
+   * `config_debt` cannot see a duplicate, only a dead one.
+   */
   gainRotateConstrained: number;
   /**
    * §2quinte roll: a dimensionless multiplier on the swept angle.
@@ -229,17 +243,6 @@ export interface GestureConfig {
   // back-and-forth, and no simulation can say where the boundary sits.
 
   /** Reversals required to evict. A4: 2 — out, back, out. */
-  /**
-   * ⭐⭐ 2sexte's gain — **radians of twist per MILLIMETRE** of finger travel along the
-   * direction the anchored object's near side would move (`A3`).
-   * ⛔ A GAIN, not a tracking factor, and `anchor_rotate.ts`'s header says why the honest
-   * tracking mapping (`1/(r·sin α)`) cannot be used: it diverges as the constraint axis
-   * swings toward the camera. ⚠ So the drag *goes quiet* over a range before it degenerates
-   * — which is what the second touchpoint's roll chart is for.
-   * ⭐ Defaulted to `gainRotateFree` so a constrained object feels like a free one until a
-   * hand says otherwise; it has its own slider because it may well need to differ.
-   */
-  gainAnchorDrag: number;
   evictShakeReversals: number;
   /**
    * They must all fall inside this window, in milliseconds.
@@ -296,32 +299,6 @@ export interface GestureConfig {
    * `MultiTapInteraction.tapDelay` to 2 × the tap time; ours is 300 ms against a 250 ms tap.
    */
   doubleTapWindow: number;
-  /**
-   * ⭐⭐⭐ **WHICH ANCHOR / ALIGNMENT RULE SET IS IN FORCE** (`D29`, `IN3`).
-   *
-   * * `0` — **fork A, `NONE`**: no constraint is created, consulted or cleared — the
-   *   behaviour `1.0.4`–`1.0.7` shipped. ⚠ **No longer the default** (owner, 2026-09-16);
-   *   reach it with `?anchorRules=0`.
-   * * `1` — **fork B, `IN3`**: §2 rules 1–3 — face selection, 2bis's empty-stack
-   *   precondition, 2ter/2quater on a flick, 2sexte about the remaining DOF, eviction by a
-   *   shake. ⚠ Under construction; `queue_notes/IN3.md` lists what is wired.
-   * * `2` — **fork C**: the owner's set, specified 2026-09-16 (`spec/FORK_C_ANCHOR_RULES.md`)
-   *   — hold an object, **tap** a face on another, and the held one turns the minimum amount
-   *   that makes its own face point the same way. **Parallel** (the CAD *align* sense, not a
-   *   mate), **one** alignment at a time, a shake releases it, a flick resets the rotation.
-   *   ⛔ **No flick alignment anywhere**: the owner left fork B because a release-time
-   *   trigger *"releases the finger from the object it is tracking"*.
-   *   ⭐⭐ **AND IT IS THE DEFAULT SINCE 2026-09-16** — *"the game shall start by default to
-   *   fork C, not fork A"*. ⚠ That overrules my own reasoning, which was that the default
-   *   must be the only set a hand had closed; the owner is the hand, and fork C is what is
-   *   being judged now.
-   *
-   * ⚠ Numeric so the URL override and the menu slider reach it with no new machinery:
-   * `?anchorRules=1`. ⛔ It latches only while nothing touches the glass — switching into or
-   * out of `IN3` mid-drag would change whether a flick pushes a constraint, and a pushed
-   * constraint is not something the user can un-mean. See `input/anchor_fork.ts`.
-   */
-  anchorRules: number;
   /** mm between the two taps' press points. */
   doubleTapSlop: number;
 
@@ -482,7 +459,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // config. ⭐ A hand says the object should turn more than twice as fast as the
   // number nobody had ever chosen — which is the whole argument for the slider.
   gainRotateFree: 0.07,
-  gainRotateConstrained: 0.6,
+  // ⚠ A GUESS, equal to `gainRotateFree` on purpose: one free DOF should not feel like a
+  // different control from three. ⛔ It carries the value the wired gain had (0.07), NOT the
+  // 0.6 this name was declared with and nobody ever ran — keeping the number that has at
+  // least been through a build, rather than the one that was pure paper.
+  gainRotateConstrained: 0.07,
   // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
@@ -580,10 +561,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
 
   // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
-  // ⚠ A GUESS, equal to `gainRotateFree` on purpose: one free DOF should not feel like a
-  // different control from three. ⛔ Kept as a LITERAL rather than a reference to the other
-  // field — `IN5` overrides them independently, and a hand tuning one must not move both.
-  gainAnchorDrag: 0.07,
   evictShakeReversals: 2,
   // ⭐⭐ **300 ms — THE OWNER'S NUMBER, 2026-09-17**, and the first of these four a hand has
   // chosen. ⚠ It replaces my 600 ms, which was *"roughly three unhurried legs"* and untested.
@@ -628,9 +605,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   doubleTapSlop: 8,
   // ⛔ Fork A — today's behaviour, the only set a hand has closed. 1 = `IN3`,
   // 2 = the owner's third set (inert until specified). See `input/anchor_fork.ts`.
-  // ⭐⭐ **FORK C**, at the owner's instruction 2026-09-16 — *"the game shall start by
-  // default to fork C, not fork A"*. ⚠ Fork A is `?anchorRules=0`, fork B is `1`.
-  anchorRules: 2,
 
   evictOnOverflow: false,
   matePriorityOverAnchor: false,
@@ -719,17 +693,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
-  // ⛔⛔ THE ANCHOR FORK IS A CHOICE OF THREE, NOT A RANGE. `anchorForkOf` reads anything it
-  // does not recognise as fork A — so `0.5` or `3` would LOOK like today's behaviour while
-  // the person who set it believed a whole rule set had changed. ⭐ Refused loudly instead:
-  // the reader and this guard are a pair, and neither is sufficient alone.
-  if (![0, 1, 2].includes(cfg.anchorRules)) {
-    throw new Error(
-      `anchorRules (${cfg.anchorRules}) must be 0 (fork A: no anchor rules), 1 (fork B: ` +
-        "IN3) or 2 (fork C: the owner's set, inert). It selects a rule set, so there is no " +
-        "meaning between the three.",
-    );
-  }
   // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
   // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
   // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The

@@ -105,14 +105,3 @@ export function displayPose(
   };
 }
 
-/**
- * ⭐ The pose the object would be drawn at with the decoration removed — what anything
- * that MEANS something must read.
- *
- * ⛔ It is not `displayPose` with the sway zeroed: the follower has its own lag, and a
- * barycentre computed from a lagging position would still move because an object was
- * mid-drag. This returns the MODEL's placement, which is the only thing that is true.
- */
-export function meaningfulPose(modelWorld: Placed): Placed {
-  return modelWorld;
-}

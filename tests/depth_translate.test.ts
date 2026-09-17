@@ -23,14 +23,19 @@
  *
  * ⭐ HEIGHT NEVER CHANGES is carried over from A5 and still asserted: the push direction is
  * perpendicular to gravity by construction, and gravity is the primary constraint here.
+ *
+ * ⭐⭐ **THE PUSH DIRECTION NOW COMES FROM `gravityFrame`, 2026-09-17**, where it used to come
+ * from `depthPushDirection` — a second computation of the same flattening, which the product
+ * never called (it reads `frame.depth`). ⛔ Deleting it made these vectors BETTER, not just
+ * shorter: they now exercise the mapping the scene actually uses.
  */
+import { gravityFrame } from "../src/input/gravity_frame";
 import { describe, expect, it } from "vitest";
 import {
   depthGate,
   rollDragDeg,
   secondFingerDrive,
   depthLimits,
-  depthPushDirection,
   depthTranslate,
 } from "../src/input/depth_translate";
 import { MotionTracker, type MotionState, type Sample } from "../src/input/motion";
@@ -47,7 +52,7 @@ const OBJ: Vec3 = [0.15, 0.1, 0.1];
 const { minM, maxM } = depthLimits(DEFAULT_CONFIG);
 const PER_PX = 0.002; // rule 6's computed factor, at some camera distance
 
-const push = depthPushDirection(VIEW, DOWN)!;
+const push = gravityFrame(VIEW, DOWN)!.depth!;
 const depthOf = (p: Vec3) => dot(sub(p, CAM), push);
 /** ⭐ +1: this fixture's camera looks DOWN on the scene, so "away" rises on screen. */
 const AWAY = Math.sign(dot(VIEW, DOWN));
@@ -204,7 +209,7 @@ describe("⭐⭐ HEIGHT NEVER CHANGES — gravity is the primary constraint", ()
   it("at every camera elevation", () => {
     for (const tilt of [0.1, 0.5, 1.5, 4]) {
       const view = normalize([0, -tilt, 1])!;
-      const out = depthTranslate(CAM, OBJ, depthPushDirection(view, DOWN)!, Math.sign(dot(view, DOWN)), mmToPx(-20), PER_PX, 1, minM, maxM);
+      const out = depthTranslate(CAM, OBJ, gravityFrame(view, DOWN)!.depth!, Math.sign(dot(view, DOWN)), mmToPx(-20), PER_PX, 1, minM, maxM);
       expect(out[1], `tilt ${tilt}`).toBeCloseTo(OBJ[1], 12);
     }
   });
@@ -264,7 +269,7 @@ describe("⛔⛔ WHICH WAY IS AWAY depends on the camera's side of the horizon",
   // the bottom one. ⭐ A hand correcting a backwards control produces exactly that chaos.
 
   const UP_VIEW: Vec3 = normalize([0, 0.7, 0.7])!; // a camera below, looking up
-  const upPush = depthPushDirection(UP_VIEW, DOWN)!;
+  const upPush = gravityFrame(UP_VIEW, DOWN)!.depth!;
   const upDepthOf = (q: Vec3) => dot(sub(q, CAM), upPush);
 
   it("⭐ looking DOWN on the scene, fingers UP push the object away", () => {
@@ -296,7 +301,7 @@ describe("⛔⛔ WHICH WAY IS AWAY depends on the camera's side of the horizon",
     const level: Vec3 = normalize([0, 0, 1])!;
     expect(Math.sign(dot(level, DOWN))).toBe(0);
     const out = depthTranslate(
-      CAM, OBJ, depthPushDirection(level, DOWN)!, 0, mmToPx(-20), PER_PX, 1, minM, maxM,
+      CAM, OBJ, gravityFrame(level, DOWN)!.depth!, 0, mmToPx(-20), PER_PX, 1, minM, maxM,
     );
     expect(out).toEqual(OBJ);
   });
@@ -318,7 +323,11 @@ describe("⛔ the clamps and the degenerate cases", () => {
   });
 
   it("⛔ a camera looking STRAIGHT DOWN has no depth direction", () => {
-    expect(depthPushDirection([0, -1, 0], DOWN)).toBeNull();
+    // ⭐⭐ THE FRAME ITSELF REFUSES, which is a STRONGER statement than the one this vector
+    // used to make. `depthPushDirection` returned a null *direction*; `gravityFrame` returns
+    // **no frame at all** — looking straight down there is no horizontal view axis to flatten,
+    // so neither depth NOR the roll axis exists, and the caller cannot get half an answer.
+    expect(gravityFrame([0, -1, 0], DOWN)).toBeNull();
     expect(depthTranslate(CAM, OBJ, [0, 0, 0], 1, mmToPx(-20), PER_PX, 1, minM, maxM)).toEqual(
       OBJ,
     );

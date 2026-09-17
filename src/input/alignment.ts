@@ -1,15 +1,16 @@
 /**
- * ⭐⭐⭐ **FORK C — the owner's anchor and alignment rules, as pure decisions.**
+ * ⭐⭐⭐ **THE ALIGNMENT RULES — the owner's, as pure decisions.**
  *
- * Design of record: [`Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`] — the rules are the
- * owner's, dictated 2026-09-16, and §7 there records which readings they confirmed.
+ * Design of record: [`Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`] — dictated
+ * 2026-09-16, with §7 recording which readings the owner confirmed and §10 what a device pass
+ * should ask.
  *
- * ⛔⛔ **EVERY RULE OF THIS FORK THAT IS A DECISION LIVES IN THIS ONE FILE, ON PURPOSE.** `D28`
- * is the precedent: the day one fork is chosen the others are **deleted**, and the last
- * deletion cost 44 vectors spread across four modules. ⭐ One file per fork means the
- * deletion is a `rm` and a barrel line, not an archaeology exercise.
+ * ⭐⭐ **IT WAS `fork_c.ts` UNTIL 2026-09-17**, when forks A and B were deleted and this became
+ * the input model rather than one of three. ⭐ Keeping every decision of the set in ONE file
+ * is what made that deletion a `rm` plus a barrel line — `D28`'s previous fork removal cost 44
+ * vectors spread over four modules — and the file keeps that shape now that it has won.
  *
- * ⭐⭐ WHAT FORK C IS, IN ONE SENTENCE: *hold one object, **TAP** a face on another, and the
+ * ⭐⭐ WHAT IT IS, IN ONE SENTENCE: *hold one object, **TAP** a face on another, and the
  * held object turns the minimum amount that makes its own face point the same way.* No
  * flick anywhere — which is the whole reason the owner left fork B:
  *

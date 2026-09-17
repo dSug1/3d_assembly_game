@@ -778,6 +778,50 @@ suppressing every post-reversal flick was recoverable by nothing.
 
 ---
 
+### ✅✅ FORKS A AND B DELETED, AND THE SANITY SWEEP THAT CAME WITH IT — `D40`, 2026-09-17
+
+> *"Remove the fork A and the Fork B and set the fork C as the unique default. Remove the
+> slider for the forks accordingly. Clean the code, and do a sanity check for stale, orphan,
+> skeleton parts of script following all the changes which occurred so far."*
+
+⛔ **DELETED, NOT DISABLED** (`D28`'s precedent, and its reason: *a dormant fork is a trap*):
+`anchor_fork.ts`, `align_flick.ts` (fork B's flick-to-align), `drag_rule.ts`, the `anchorRules`
+flag, its validator rule, the menu slider, the HUD's fork line, and **41 vectors**.
+
+⭐⭐ **AND A WHOLE CLASS OF CODE WENT WITH THEM, WHICH IS THE INTERESTING PART.** The cap of
+one alignment makes `ROTATE_REFUSED` unreachable — so `dragRule`'s third and fourth cases
+cannot occur, and eviction's *escape from a full stack* vectors describe a state that can no
+longer exist. ⚠ They are deleted rather than kept green: **a vector whose subject cannot occur
+is a claim about a world that is gone.** What protects against the freeze now is the cap's own
+vectors, and they protect against it being BUILT rather than survived.
+
+#### ⭐ THE SWEEP — what a scan found that reading had not
+
+⚠ Written as a script (`orphans2.py`, in the session scratchpad) rather than by eye, and
+**its first version was wrong in two ways worth naming**: a function's own DEFINITION matched
+the call pattern, so every orphan looked used; and `new Foo<T>()` did not match it, so a used
+class looked dead. ⛔ A scanner that cannot fail is worse than no scanner.
+
+| found | what it was | done |
+|---|---|---|
+| `resolveAnchorDriver`, `viewAxisAlignment`, `AnchorDriver` | `A3`'s handover constant — machinery for a decision **`D34` retired** when `A12` made the drag and the roll two CHANNELS | deleted, with 15 vectors |
+| `gainAnchorDrag` **and** `gainRotateConstrained` | ⛔⛔ **ONE NUMBER UNDER TWO NAMES for a day** — the spec's own name sat unread in `config_debt`'s PENDING list while I wired one I had invented | merged; the SPEC's name wins |
+| `meaningfulPose` | a **skeleton**: `(p) => p`, no test, no caller | deleted |
+| `depthPushDirection` | a second computation of the view axis flattened onto the ground, while the scene reads `frame.depth` | deleted — and the depth vectors now use `gravityFrame`, so they exercise the mapping the product uses |
+| `verticalVisibility` | measured how the vertical weakens as the camera tilts; **nothing called it** | deleted, ⭐ its LESSON carried into `gravity_frame.ts`'s header with the numbers |
+| `isSettled` | a leftover predicate from the follower work | deleted |
+| `matePriorityOverAnchor` | became unread the moment fork B's 2ter went | ⭐ declared PENDING with the row that will wire it (`3D2`/`6quater`) — **not fake-wired**: the cap makes the ordering irrelevant, so reading it would change nothing, which is the slider-that-does-nothing shape |
+| `fork_c.ts` | a name that says *fork* when there are no forks | renamed `alignment.ts`; the HUD's `forkC:` prefix became `align:` |
+
+⚠⚠ **WHAT THE SCAN LEAVES, AND WHY IT IS NOT THE SAME THING**: seven exported functions of
+`3D1`'s object model (`attach`, `detach`, `reroot`, `connectorWorldPose`, `testMate`,
+`mateResidual`, `qAngle`) are called by nothing and **kept**. ⭐ The distinction this project
+paid for: *kept is safe when nothing CALLS it; dangerous when something still OBEYS it.* The
+roll detector was fed and its verdict was honoured (defect 40); these are pure functions built
+ahead of `3D2`, with vectors, that cannot veto anything. ⛔ If `3D2` is abandoned they go.
+
+---
+
 ### ✅ FORK C's AMENDMENT — both faces marked, and a second undo (`D39`, 2026-09-16)
 
 ⭐ *"When an object is aligned, the FollowerFace shall be highlighted and the PioneerFace

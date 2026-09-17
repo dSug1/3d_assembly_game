@@ -48,39 +48,15 @@ import { cross, dot, normalize, qFromAxisAngle, qmul, type Quat, type Vec3 } fro
 import { pxToMm } from "../core/units";
 import type { ScreenFrame } from "./screen_rotate";
 
-/** Which input owns the single free DOF of a one-constraint object. */
-export type AnchorDriver = "ROLL" | "DRAG";
-
-/**
- * Pick the driver from the camera/constraint geometry.
- *
- * @param cosAbs      `|dot(viewAxis, constraintAxis)|` — 1 looking along the axis, 0 across it.
- * @param handoverCos the single constant. Above it roll drives, below it the drag does.
- * @param hysteresis  the total width of the band in which the PREVIOUS choice is kept.
- * @param previous    what drove last time, or `null` on a first decision.
- *
- * ⚠ **The caller latches this at PRESS** and does not revisit it for the life of the
- * gesture — the same discipline as §4's roles and the screen axes. A camera that moves
- * mid-gesture must not change which rule is driving a finger already down.
- *
- * ⭐ The hysteresis is what makes SUCCESSIVE gestures near the boundary stable: without
- * it, a camera parked at the crossover would hand the DOF back and forth between two
- * mappings with different gains, and the control would feel like it was being taken away.
- * Same reasoning as §1.1's `moveEnterDistance` > `moveExitDistance`.
- */
-export function resolveAnchorDriver(
-  cosAbs: number,
-  handoverCos: number,
-  hysteresis: number,
-  previous: AnchorDriver | null,
-): AnchorDriver {
-  const half = hysteresis / 2;
-  if (cosAbs >= handoverCos + half) return "ROLL";
-  if (cosAbs <= handoverCos - half) return "DRAG";
-  // ⭐ Inside the band: keep what was already driving. With nothing to keep, fall to the
-  // plain comparison rather than inventing a preference.
-  return previous ?? (cosAbs >= handoverCos ? "ROLL" : "DRAG");
-}
+// ⛔⛔ **`AnchorDriver`, `resolveAnchorDriver` AND `viewAxisAlignment` WERE DELETED HERE**
+// (2026-09-17). ⭐ They implemented `A3`'s handover: ONE constant with hysteresis, latched at
+// press, choosing between the drag chart and the roll chart for the single free DOF.
+// ✅ `D34` retired the DECISION itself — `A12` had already moved roll to the SECOND
+// touchpoint, so the two charts are two **CHANNELS**, both live, each reached by a different
+// hand shape. Nothing chooses; there is no dead band to size and no constant to write.
+// ⚠ *A handover between rules became a handover between fingers, and stopped being a
+// decision* — and machinery kept for a decision that no longer exists is the shape that
+// produced defect 40. It is deleted rather than parked.
 
 /**
  * The screen direction the object's NEAR SIDE travels in when it rotates by a positive
@@ -177,14 +153,3 @@ export function rotateAboutAxis(base: Quat, axisWorld: Vec3, radians: number): Q
   return qmul(qFromAxisAngle(axisWorld, radians), base);
 }
 
-/**
- * ⭐ `|cos α|` for a gesture — the one quantity the handover is decided on.
- * ⚠ Absolute, because an axis pointing at the camera and one pointing away are the same
- * geometry for this purpose; only the roll's SIGN cares which.
- */
-export function viewAxisAlignment(frame: ScreenFrame, axisWorld: Vec3): number | null {
-  const a = normalize(axisWorld);
-  const v = normalize(frame.viewAxis);
-  if (!a || !v) return null;
-  return Math.abs(dot(a, v));
-}

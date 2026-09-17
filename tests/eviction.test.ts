@@ -18,14 +18,13 @@
  * **What nothing asserted was that the two meet.**
  */
 import { describe, expect, it } from "vitest";
-import { evict, solve, type Constraint } from "../src/core/constraint_stack";
+import { evict, type Constraint } from "../src/core/constraint_stack";
 import {
   evictObjectConstraints,
   makeWorld,
   pushObjectConstraint,
   type SceneObject,
 } from "../src/core/object_model";
-import { dragRule, isDriven } from "../src/input/drag_rule";
 import { ShakeDetector, type ShakeParams } from "../src/input/shake";
 import type { Sample } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
@@ -83,47 +82,15 @@ function shakePath(ampMm: number, stepMs = 8): Sample[] {
 // ⭐⭐⭐ THE COMPOSITION — the reason this file exists
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("⛔⛔ THE ESCAPE FROM A FULL STACK — the exact state defect 41 reported", () => {
-  it("⭐⭐⭐ a frozen object is rotatable again after a shake, and that is the whole fix", () => {
-    // The dead end, reached the way a hand reaches it: two flicks, two alignments.
-    let world = makeWorld([BOX]);
-    world = pushObjectConstraint(world, "box", GRAVITY, false);
-    world = pushObjectConstraint(world, "box", AXIS, false);
-    const frozen = world.objects.get("box")!.constraints;
-    expect(dragRule("ROTATE", frozen)).toBe("ROTATE_REFUSED");
-    expect(isDriven(dragRule("ROTATE", frozen))).toBe(false);
-
-    // ⭐ The gesture, recognised by the SHIPPED detector rather than asserted into being.
-    const d = new ShakeDetector(PARAMS, NOISE_MM);
-    let fired = null as ReturnType<ShakeDetector["push"]>;
-    for (const s of shakePath(12)) fired = d.push(s) ?? fired;
-    expect(fired).not.toBeNull();
-
-    const after = evictObjectConstraints(world, "box");
-    expect(after.result.refused).toBe(false);
-    expect(after.result.removed).toBe(2);
-    // ⛔⛔ THE ASSERTION THE DEFECT ASKED FOR, in the words the report used.
-    expect(dragRule("ROTATE", after.world.objects.get("box")!.constraints)).toBe("FREE_ROTATE");
-    expect(isDriven(dragRule("ROTATE", after.world.objects.get("box")!.constraints))).toBe(true);
-  });
-
-  it("⛔ and it is REACHABLE from the refused state, not only from a driveable one", () => {
-    // ⚠ The trap was that the escape had to work where nothing else did. A guard that only
-    // fed the detector on a DRIVEN drag would leave the dead end exactly as it was — so the
-    // vector states that the frozen stack is what the eviction is applied to.
-    let world = makeWorld([BOX]);
-    world = pushObjectConstraint(world, "box", GRAVITY, false);
-    world = pushObjectConstraint(world, "box", AXIS, false);
-    const stack = world.objects.get("box")!.constraints;
-    // the object refuses to rotate, and the solver refuses the third entry too
-    expect(solve([...stack, AXIS], IDENTITY, { evictOnOverflow: false }).rejected).toBe(true);
-    expect(evict(stack).removed).toBe(2);
-  });
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ⛔ WHAT EVICTION MUST NOT TAKE — `D13`, and it is the half a filter gets wrong
-// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔ **THE "ESCAPE FROM A FULL STACK" VECTORS ARE DELETED, AND THE REASON IS A BETTER FIX.**
+//
+// ⭐ They asserted that a shake makes a FROZEN object (two alignments, `ROTATE_REFUSED`)
+// rotatable again — defect 41's cure. ⛔ That state is now **unreachable by construction**:
+// fork C caps the stack at ONE alignment (`singleAlignment`), so no object can reach zero free
+// DOF, and `dragRule` — whose `ROTATE_REFUSED` was the thing being escaped — is deleted with
+// fork B. ⭐⭐ A vector whose subject cannot occur is not a safety net, it is a claim about a
+// world that no longer exists; the CAP's own vectors in `fork_c.test.ts` are what protect
+// against the freeze now, and they protect against it being BUILT rather than survived.
 
 describe("⛔⛔ THE ALIGNMENTS GO, THE MATES STAY (`A4`/`D13`)", () => {
   it("⛔⛔ A MATE SURVIVES A SHAKE — an assembly relationship is not a gesture's decision", () => {

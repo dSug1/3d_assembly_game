@@ -69,26 +69,15 @@ import {
   isTapRelease,
   toggleBehaviour,
   type Behaviour,
-  adoptAnchorFork,
-  anchorForkLabel,
-  anchorForkOf,
-  anchorForkPending,
-  runsIn3,
-  runsForkC,
-  selectsFaces,
   faceAlignConstraint,
   tapMeaning,
   flickResetPlan,
   type TapContext,
-  dragRule,
-  isDriven,
   ShakeDetector,
   shakeParamsFrom,
   constrainedDragAngle,
   constrainedRollAngle,
   rotateAboutAxis,
-  alignFromFlick,
-  type AnchorFork,
   type HolderBinding,
   type InputEvent,
   displayPose,
@@ -346,7 +335,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const forkCAlign = (pioneerPointerId: number, pioneerGrip: Held): boolean => {
     const pioneerId = idOf.get(pioneerGrip.mesh);
     if (pioneerId === undefined || pioneerGrip.pressFace === null) {
-      lastVerdict = "forkC: tap resolved no face — toggled instead";
+      lastVerdict = "align: tap resolved no face — toggled instead";
       return false;
     }
     // ⛔⛔ EXACTLY ONE OTHER HOLDER. The rule names a *first* and a *second* object; with
@@ -357,14 +346,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (others.length !== 1) {
       lastVerdict =
         others.length === 0
-          ? "forkC: nothing held — the tap toggled the mode"
-          : `forkC: ${others.length} objects held — no Follower can be chosen, toggled instead`;
+          ? "align: nothing held — the tap toggled the mode"
+          : `align: ${others.length} objects held — no Follower can be chosen, toggled instead`;
       return false;
     }
     const followerGrip = others[0]![1];
     const followerId = idOf.get(followerGrip.mesh);
     if (followerId === undefined || followerGrip.pressFace === null) {
-      lastVerdict = "forkC: the held object has no resolved face — toggled instead";
+      lastVerdict = "align: the held object has no resolved face — toggled instead";
       return false;
     }
 
@@ -376,7 +365,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       .get(followerId)
       ?.faces.find((f) => f.id === followerGrip.pressFace!.faceId)?.normal;
     if (!pioneerWorld || !followerLocal) {
-      lastVerdict = "forkC: face lookup failed — toggled instead";
+      lastVerdict = "align: face lookup failed — toggled instead";
       return false;
     }
 
@@ -387,7 +376,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (capped.refused) {
       // ⛔ A `MATE` holds the stack. Unreachable today (§4's `6quater` is the only rule that
       // pushes one and fork C has no flick), and reported rather than silently overridden.
-      lastVerdict = "forkC: REFUSED — a MATE holds the stack";
+      lastVerdict = "align: REFUSED — a MATE holds the stack";
       return false;
     }
     // ⚠ `clear` then `push` IS the setter, and it is safe *because* of the refusal above:
@@ -400,7 +389,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const before = modelOrientation(followerGrip.mesh);
     const solved = solve(capped.stack, before, { evictOnOverflow: cfg.evictOnOverflow });
     if (solved.rejected) {
-      lastVerdict = "forkC: solver refused the alignment";
+      lastVerdict = "align: solver refused the alignment";
       return false;
     }
     // ⭐ ONE alignment, so this is §1.4's entry 1: the MINIMAL swing — *"rotation on the
@@ -438,7 +427,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // so `TRANSLATE` is one tap away — and staying in `ROTATE` is what makes the rotation
     // reset testable straight after an alignment.
     lastVerdict =
-      `forkC: ALIGNED ${followerId}/${followerGrip.pressFace.faceId} → ` +
+      `align: ALIGNED ${followerId}/${followerGrip.pressFace.faceId} → ` +
       `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${behaviour}`;
     return true;
   };
@@ -1150,21 +1139,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // device pass can tell *"the toggle did not fire"* from *"I toggled twice"*.
             // ⚠ Shown even with nothing held: the mode is the state the next press inherits.
             `  [${behaviour}]` +
-            // ⭐⭐⭐ WHICH ANCHOR RULE SET IS LIVE, and it must be on the glass: fork A creates
-            // no constraints and fork C creates none YET, so *"nothing happened"* is the
-            // expected outcome in two of the three — and indistinguishable from a defect
-            // without a readout. ⛔ `D28` is the precedent: a device report that does not name
-            // the fork is unattributable.
-            `  ${anchorForkLabel(anchorFork)}` +
-            // ⛔ THE SELECTED FACE, because §2 rule 2 has no other visible effect yet: without
-            // this, *"did it select the face I aimed at?"* is unanswerable on the glass, and
-            // every rule built on top of it would inherit that doubt.
-            (selectedFace === null
-              ? ""
-              : `  face=${selectedFace.faceId}·${selectedFace.cos.toFixed(2)}`) +
-            (anchorForkPending(anchorFork, anchorForkOf(cfg.anchorRules))
-              ? `→${anchorForkLabel(anchorForkOf(cfg.anchorRules))}⛔PENDING`
-              : "") +
             // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
             // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
             // the other two sliders moves, so a written-down number would go stale the
@@ -1234,7 +1208,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
         // gain so one DOF does not feel like a different control from three — a guess, and
         // the range is the same as the free gain's so a hand can compare them directly.
-        tunable("anchored twist gain (rad/mm)", "gainAnchorDrag", 0.005, 0.15, 0.005),
+        tunable("anchored twist gain (rad/mm)", "gainRotateConstrained", 0.005, 0.15, 0.005),
         // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
         // object's centre when it starts turning or turns the other way.
         tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
@@ -1257,18 +1231,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("window (ms)", "evictShakeWindowMs", 200, 1200, 50),
         tunable("leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
         tunable("straightness (0=strict, 1=any)", "evictShakeStraightness", 0.1, 0.9, 0.05),
-      ],
-    },
-    {
-      // ⭐⭐⭐ NOT A TUNABLE: it selects which RULE SET is in force (`D29`), where every other
-      // slider changes a number. ⚠ 0 = today's behaviour, 1 = `IN3` (flick-to-align),
-      // 2 = **fork C** — hold an object, TAP a face on another, the held one aligns to it.
-      // ⛔ The label was *"owner's set (inert)"* until 2026-09-16 and is not any more: a
-      // readout that calls a live rule set inert is the dead-instrument shape pointing the
-      // other way — it would have a session report *"fork C does nothing"* as expected.
-      title: "⭐ ANCHOR RULES (IN3 fork)",
-      sliders: [
-        tunable("0=none  1=IN3  2=fork C (tap-to-align)", "anchorRules", 0, 2, 1),
       ],
     },
     {
@@ -1630,7 +1592,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // component to give: nothing happens, and the drag chart is the one that works there.
       const rollId = idOf.get(grip.mesh);
       const rollStack = rollId === undefined ? [] : (world.objects.get(rollId)?.constraints ?? []);
-      if (runsIn3(anchorFork) && rollStack.length === 1) {
+      if (rollStack.length === 1) {
         const axis = rollStack[0]!.targetWorld;
         const twist = constrainedRollAngle(
           screenFrame(),
@@ -1640,12 +1602,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         if (twist !== null) {
           setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
         }
-      } else if (runsIn3(anchorFork) && rollStack.length > 1) {
-        // ⛔ A full stack has NO free rotational DOF, so a roll must refuse exactly as the
-        // drag does — otherwise the second touchpoint becomes a way to break an anchor that
-        // the one-finger rule correctly refuses. ⭐ `D32`'s shake is the way out of both.
-        lastVerdict = `IN3: roll refused — stack ${rollStack.length}, shake to clear`;
       } else {
+        // ⚠ **NO REFUSAL BRANCH ANY MORE**, and that is the CAP doing its work: an object
+        // can hold at most ONE alignment (`singleAlignment`), so *"the stack is full and the
+        // roll must refuse"* is unreachable by construction rather than by a test. ⛔ The
+        // branch that used to say so is deleted with fork B — an unreachable guard is a trap,
+        // and this project has paid for two of them.
       setModelOrientation(
         grip.mesh,
         screenRollRotation(
@@ -1778,24 +1740,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⭐ Which also retired the cost I had stated against this model — rotation no longer
    * costs a tap every time, only when switching.
    */
-  // ⭐⭐ *"Default start: rotation mode and fork C"* (owner, 2026-09-16), and since the same
-  // day **fork C is the default fork**, so this is the shipped start. ⛔ The mode default is
-  // still applied **inside fork C only**: fork A's `TRANSLATE` start was closed by a hand and
-  // `?anchorRules=0` must reproduce it exactly.
-  // ⚠ Read at BOOT; `syncAnchorFork` covers the case of ENTERING fork C from the slider.
-  let behaviour: Behaviour = runsForkC(anchorForkOf(cfg.anchorRules))
-    ? "ROTATE"
-    : initialBehaviour();
+  // ⭐⭐ *"Default start: rotation mode"* (owner, 2026-09-16). ⛔ There is one rule set now,
+  // so this is simply the start: `initialBehaviour()` returns `ROTATE`.
+  let behaviour: Behaviour = initialBehaviour();
 
-  /**
-   * ⭐⭐⭐ WHICH ANCHOR / ALIGNMENT RULE SET IS LIVE (`D29`) — latched.
-   *
-   * ⛔ It may change **only while nothing is touching the glass**, the same rule the movement
-   * mode follows and for a stronger reason: switching into or out of `IN3` mid-drag would
-   * change whether the release pushes a constraint. ⚠ A flip made mid-gesture is deferred,
-   * not dropped, and the readout says so.
-   */
-  let anchorFork: AnchorFork = anchorForkOf(cfg.anchorRules);
 
   /**
    * ⭐⭐⭐ `IN3`'s SELECTED FACE — §2 rule 2's other half, and the input every remaining
@@ -1825,20 +1773,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let pioneerFace: { objectId: string; faceId: string } | null = null;
 
-  /** ⭐ Adopt a pending fork if the glass is empty. Called on every pointer event AND every
-   * frame — a flip made while idle produces no pointer event, and the readout must not lag
-   * the person who just made it. ⛔ `router.size`, not `activeCount`: an ignored finger is
-   * still a finger on the glass. */
-  const syncAnchorFork = (): void => {
-    const next = adoptAnchorFork(anchorFork, anchorForkOf(cfg.anchorRules), router.size);
-    // ⭐⭐ *"Fork C shall start by default in rotation mode"* — and **entering** fork C is a
-    // start. ⛔ On the TRANSITION only, never while it is merely in force: re-asserting the
-    // mode every frame would nail it to `ROTATE` and the toggle would look broken.
-    // ⚠ The boot case is handled where `behaviour` is declared; this covers the slider, which
-    // is how a device session actually reaches another fork.
-    if (next !== anchorFork && runsForkC(next)) behaviour = "ROTATE";
-    anchorFork = next;
-  };
 
   /**
    * ⭐⭐ Judge one release as a tap, keep §1.3's history, and toggle the mode **immediately**.
@@ -1906,7 +1840,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
     // ⭐ The anchor fork latches here, before anything is dispatched, so one event cannot be
     // judged half under one rule set and half under another.
-    syncAnchorFork();
 
     // ⭐⭐⭐ A15 — AN ORPHANED SELECTION IS COLLECTED HERE, AT THE NEXT INPUT EVENT, and
     // before anything is dispatched. ⛔ The owner's requirement: the lift itself changes
@@ -1989,38 +1922,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐ `core/face_pick.ts` owns the mapping and carries the frame — the pick arrives in
       // world, face normals are stored local, and getting that direction backwards is the
       // silent error that only shows once an object has been turned.
-      // ⚠ GATED ON THE FORK: fork A selects no face at all, so nothing downstream can
-      // depend on a selection the shipped default does not make. ⛔ `getNormal(true)` asks
-      // Babylon for the WORLD-space normal at the hit.
-      // ⭐⭐ BOTH `IN3` AND FORK C PICK, FOR DIFFERENT RULES — `selectsFaces` is the one
-      // spelling of that question. ⛔ Where they differ is WHAT THE PICK IS FOR: `IN3` keeps
-      // ONE global selection (the face a flick will align), while fork C needs the face of
-      // EVERY held object at once, because its trigger names two of them.
-      let pressFace: { faceId: string; cos: number } | null = null;
-      if (selectsFaces(anchorFork)) {
-        const n = pick?.getNormal(true);
-        const id = idOf.get(mesh);
-        const hit =
-          n && id !== undefined
-            ? faceFromPickedNormal(world, id, [n.x, n.y, n.z] as Vec3)
-            : null;
-        pressFace = hit ? { faceId: hit.faceId, cos: hit.cos } : null;
-        if (runsIn3(anchorFork)) {
-          selectedFace = hit ? { objectId: id!, faceId: hit.faceId, cos: hit.cos } : null;
-          lastVerdict = hit
-            ? `IN3: selected ${id}/${hit.faceId} (cos ${hit.cos.toFixed(2)})`
-            : "IN3: no face resolved";
-        } else {
-          // ⛔ FORK C DOES **NOT** HIGHLIGHT AT THE PRESS. The owner's rule highlights the
-          // FollowerFace as a consequence of the ALIGNMENT — *"the FollowerFace shall remain
-          // highlighted until un-highlight occurs"* is the alignment's clause, not the press's.
-          // ⭐ So the highlight means *this object is aligned on this face*, one meaning, and
-          // a press that aligns nothing draws nothing.
-          lastVerdict = hit
-            ? `forkC: ${id}/${hit.faceId} under the finger (cos ${hit.cos.toFixed(2)})`
-            : "forkC: no face resolved";
-        }
-      }
+      // ⭐⭐ EVERY PRESS ON AN OBJECT RESOLVES ITS FACE, from the picked **NORMAL**.
+      // ⛔ `getNormal(true)` asks Babylon for the WORLD-space normal at the hit; the mapping
+      // to a face lives in `core/face_pick.ts`, which carries the frame — the pick arrives in
+      // world, face normals are stored local, and getting that direction backwards is the
+      // silent error that only shows once an object has been turned.
+      // ⚠ PER GRIP: the alignment's trigger names TWO faces on two objects at once, so one
+      // global selection cannot express it.
+      // ⛔ A PRESS DOES **NOT** HIGHLIGHT. The highlight is the ALIGNMENT's state — *"the
+      // FollowerFace shall remain highlighted until un-highlight occurs"* is the alignment's
+      // clause — so a press that aligns nothing draws nothing.
+      const faceNormal = pick?.getNormal(true);
+      const pickedId = idOf.get(mesh);
+      // ⚠ `faceHit`, not `hit`: `hit` is the picked MESH a few lines above, and two different
+      // things called the same name in one scope is how the wrong one gets used.
+      const faceHit =
+        faceNormal && pickedId !== undefined
+          ? faceFromPickedNormal(world, pickedId, [faceNormal.x, faceNormal.y, faceNormal.z] as Vec3)
+          : null;
+      const pressFace = faceHit ? { faceId: faceHit.faceId, cos: faceHit.cos } : null;
+      lastVerdict = faceHit
+        ? `${pickedId}/${faceHit.faceId} under the finger (cos ${faceHit.cos.toFixed(2)})`
+        : "no face resolved";
       const rec = new Recognizer(cfg, poseOf(mesh), taps);
       rec.press(s);
       held.set(e.pointerId, {
@@ -2222,11 +2145,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // > *"Shaking of one object releases the alignment constraints on that object and
       // > un-highlight the FollowerFace and then nullify the FollowerFace."*
       //
-      // ⛔⛔ `D32` restricted fork B's shake to `ROTATE`, reasoning that a back-and-forth
-      // while translating is a hand moving a part around. ⭐ Fork C does not: the owner's
-      // sentence carries no mode condition, and said so again when it failed — *"the shake is
-      // not working in translation mode, contradicting what you have written above: correct
-      // this bug."*
+      // ⛔⛔ NOT GATED ON THE MODE, and `D32` (which gated fork B's) is deleted with fork B.
+      // The owner's sentence carries no mode condition, and said so again when it failed —
+      // *"the shake is not working in translation mode, contradicting what you have written
+      // above: correct this bug."*
       // ⚠⚠ IT WAS NOT THIS GATE THAT FAILED THEM. The block already ran in both modes; what
       // failed was the detector, which claimed its axis ONCE at the start of the gesture — so
       // after an alignment (which takes a hold and a tap, i.e. time) no later shake could
@@ -2234,14 +2156,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⚠ The cost of having no mode gate is accepted and named: in fork C a vigorous
       // repositioning can evict, and the four shake tunables are the only defence. Their
       // sliders ship with the rule.
-      if (runsForkC(anchorFork)) {
+      {
         const fired = grip.shake.push(s);
         const sid = idOf.get(grip.mesh);
         if (fired && sid !== undefined) {
           const ev = evictObjectConstraints(world, sid);
           world = ev.world;
           if (ev.result.refused) {
-            lastVerdict = "forkC: shake — nothing to release";
+            lastVerdict = "align: shake — nothing to release";
           } else {
             // ⭐ *"un-highlight the FollowerFace and then nullify the FollowerFace"* — the
             // highlight IS the alignment's state, so it goes with it (`D35`).
@@ -2250,7 +2172,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             if (selectedFace?.objectId === sid) selectedFace = null;
             if (selectedFace === null) pioneerFace = null;
             grip.alignmentTouched = false;
-            lastVerdict = `forkC: SHAKE released the alignment on ${sid}`;
+            lastVerdict = `align: SHAKE released the alignment on ${sid}`;
           }
         }
       }
@@ -2322,7 +2244,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // never reach two constraints (the cap), so there is no refusal branch here.
         // ⛔ It REFUSES where the axis points at the camera — the projection has no direction
         // there — and says so, rather than turning the object by an arbitrary amount.
-        if (runsForkC(anchorFork)) {
+        {
           const fid = idOf.get(grip.mesh);
           const fstack = fid === undefined ? [] : (world.objects.get(fid)?.constraints ?? []);
           if (fstack.length === 1) {
@@ -2332,16 +2254,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
               axis,
               grip.rec.step.dx,
               grip.rec.step.dy,
-              cfg.gainAnchorDrag,
+              cfg.gainRotateConstrained,
             );
             if (twist === null) {
-              lastVerdict = "forkC: twist degenerate — the aligned normal points at the camera";
+              lastVerdict = "align: twist degenerate — the aligned normal points at the camera";
             } else if (twist !== 0) {
               setModelOrientation(
                 grip.mesh,
                 rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
               );
-              lastVerdict = `forkC: twist ${((twist * 180) / Math.PI).toFixed(1)}° about the alignment`;
+              lastVerdict = `align: twist ${((twist * 180) / Math.PI).toFixed(1)}° about the alignment`;
             }
             grip.prev = s;
             paint();
@@ -2350,90 +2272,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // ⚠ An UNALIGNED object in fork C rotates freely — fork A's 2bis, which is what
           // *"fork C branches from fork A"* means when no alignment exists. It also matches
           // 2bis's own precondition (*an empty constraint stack*), so nothing is special-cased.
-        }
-        if (runsIn3(anchorFork)) {
-          const id = idOf.get(grip.mesh);
-          // ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, AND IT IS FED **BEFORE** THE REFUSAL GATE.
-          //
-          // ⛔⛔ THAT ORDER IS THE ENTIRE FIX FOR DEFECT 41 (*"the second flick completely
-          // freezes the rotation"*). With two alignments on the stack `dragRule` returns
-          // `ROTATE_REFUSED` and this handler returns early — so a detector fed after the
-          // gate would never see the gesture that exists to escape that state. ⭐ **The
-          // escape has to work where nothing else does**, which is easy to state and easy
-          // to wire the other way round.
-          // ⚠ NOT COVERED BY A VECTOR, AND SAID SO: the ordering lives in this file, where
-          // no golden vector reaches — the same blind spot as `3D1`'s follower defect and
-          // the face marker's roll. `tests/eviction.test.ts` asserts that a REFUSED stack is
-          // what eviction is applied to; that it is reached from here is a device question.
-          if (id !== undefined) {
-            const fired = grip.shake.push(s);
-            if (fired) {
-              const ev = evictObjectConstraints(world, id);
-              world = ev.world;
-              const left = ev.world.objects.get(id)?.constraints.length ?? 0;
-              lastVerdict = ev.result.refused
-                ? `IN3: shake — nothing to evict (mates stay, §D13)`
-                : `IN3: SHAKE EVICTED ${ev.result.removed} — stack ${left}`;
-              // ⭐⭐ *"...until the shaking releases the alignment"* — the owner's own words, and
-              // this is the half that makes the persistence honest. ⛔ A highlight that
-              // outlived the constraint would be reporting something that is no longer true,
-              // which is worse than not reporting it: the readout-that-lies shape.
-              // ⚠ Only when the stack is EMPTY. A surviving mate (`D13`) is still an
-              // alignment the object is holding, and the face that carries it stays marked.
-              if (left === 0 && selectedFace?.objectId === id) selectedFace = null;
-            }
-          }
-          const stack = id === undefined ? [] : (world.objects.get(id)?.constraints ?? []);
-          const rule = dragRule("ROTATE", stack);
-          if (!isDriven(rule)) {
-            lastVerdict = `IN3: ${rule} (stack ${stack.length}) — shake to clear`;
-            grip.prev = s;
-            paint();
-            return;
-          }
-          // ⭐⭐⭐ RULE 2sexte — AN ANCHORED OBJECT TURNS ABOUT **THE CONSTRAINT'S OWN AXIS**.
-          //
-          // ⛔⛔ DEVICE-REPORTED: *"a flick immediately remove two DOF now and I cannot rotate
-          // the aligned object around the alignment axis."* ⭐ Both halves are right: §1.4's
-          // entry 1 is HARD and consumes two of three DOF, and the third — the twist about
-          // the axis the face was driven onto — had no driver, because `anchor_rotate.ts` was
-          // built and unwired.
-          //
-          // ⭐⭐ AND THE REPORT DISSOLVED THE DECISION IT WAS WAITING ON. `A3` framed the
-          // handover as a choice between two charts over one circle — the drag (good across
-          // the screen) and the roll (good along the view axis) — governed by one constant,
-          // `anchorHandoverCos`. ⛔ `A12` had already made the choice unnecessary by moving
-          // roll to the SECOND touchpoint: the two charts are now two **channels**, both live,
-          // each reached by a different hand shape. ⭐ So there is no dead band and no overlap
-          // to size, and the constant is never written. *A handover between rules became a
-          // handover between fingers, and stopped being a decision.*
-          //
-          // ⚠ The axis is the constraint's `targetWorld` — a WORLD vector by construction
-          // (§1.4), so it does not move when the camera orbits, and a rotation about it
-          // preserves the constraint EXACTLY. No re-solve is needed or wanted here.
-          // ⛔ `constrainedDragAngle` returns `null` where the axis projects to a point: the
-          // rule does NOTHING there rather than turning the object by an arbitrary amount,
-          // and the readout says so. That is the case the second touchpoint's roll covers.
-          if (rule === "CONSTRAINED_ROTATE" && id !== undefined) {
-            const axis = stack[0]!.targetWorld;
-            const angle = constrainedDragAngle(
-              screenFrame(),
-              axis,
-              grip.rec.step.dx,
-              grip.rec.step.dy,
-              cfg.gainAnchorDrag,
-            );
-            if (angle === null) {
-              lastVerdict =
-                "IN3: 2sexte degenerate — the axis points at the camera; roll with a second finger";
-            } else if (angle !== 0) {
-              setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, angle));
-              lastVerdict = `IN3: 2sexte twist ${((angle * 180) / Math.PI).toFixed(1)}° about the anchor`;
-            }
-            grip.prev = s;
-            paint();
-            return;
-          }
         }
         //
         // ⭐ APPLIED AS A PER-FRAME INCREMENT onto the pose the object already has,
@@ -2504,66 +2342,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const verdict = grip.rec.release(s);
       lastVerdict = describe(verdict);
 
-      // ⭐⭐⭐ `IN3` RULES 2ter / 2quater — A FLICK PUSHES AN ALIGNMENT, and **only while the
-      // mode is `ROTATE`** (owner, 2026-09-16). ⛔ Read literally the spec anchors whatever
-      // the drag was doing, so a brisk vertical TRANSLATE would move a part and then spin it
-      // to align a face with gravity. In `ROTATE` the hand is already turning the object, so
-      // completing that with an alignment is the same intention.
-      //
-      // ⛔⛔ THE WORLD VECTOR IS RESOLVED **NOW**, from the gravity frame latched at press —
-      // never stored as a screen axis. §1.4: *storing a screen axis meant that rule 1's
-      // camera orbit invalidated the constraint, and the next snap would silently re-solve
-      // against a different axis and rotate the object.*
-      //
-      // ✅✅ AND THE FLICK SKIP IS PAID, NOT OWED — `grip.shake.suppressesFlick`.
-      // ⛔⛔ A SHAKE IS LITERALLY TWO FLICKS IN OPPOSITE DIRECTIONS, so every leg matches the
-      // flick signature (fast, straight, far) **by construction**. Without the skip, a hand
-      // that shakes to REMOVE a constraint releases mid-shake at speed, the flick test
-      // passes, and 2ter pushes one instead — which is defect 41 arriving through its own
-      // escape hatch. ⭐ It keys on ONE reversal, not on a completed shake: the release can
-      // come before the second.
-      if (
-        runsIn3(anchorFork) &&
-        verdict.kind === "FLICK" &&
-        selectedFace !== null &&
-        !grip.shake.suppressesFlick
-      ) {
-        const id = idOf.get(grip.mesh);
-        const face = id === undefined
-          ? undefined
-          : world.objects.get(id)?.faces.find((f) => f.id === selectedFace!.faceId);
-        const c =
-          face === undefined
-            ? null
-            : alignFromFlick(behaviour, verdict.flick, face.normal, grip.frame.up, grip.frame.right);
-        if (c !== null && id !== undefined) {
-          // ⭐ Push, then RE-SOLVE, then apply — §1.4's order. The solver is pure: it returns
-          // a rotation to compose onto the object's current orientation and never mutates.
-          world = pushObjectConstraint(world, id, c, cfg.matePriorityOverAnchor);
-          const stack = world.objects.get(id)?.constraints ?? [];
-          const solved = solve(stack, modelOrientation(grip.mesh), {
-            evictOnOverflow: cfg.evictOnOverflow,
-          });
-          if (solved.rejected) {
-            // ⛔⛔ REFUSED, AND IT MUST BE AUDIBLE-OR-VISIBLE RATHER THAN SILENT. §1.4 asks for
-            // a short negative haptic (`IN7`, and iOS Safari has no Vibration API at all), so
-            // until that exists the readout is the whole of the feedback. ⚠ A gesture that was
-            // aimed at something and did nothing reads as a broken control and gets repeated.
-            lastVerdict = `IN3: ${c.kind} REFUSED — stack full (${stack.length})`;
-          } else {
-            setModelOrientation(grip.mesh, qmul(solved.rotation, modelOrientation(grip.mesh)));
-            lastVerdict =
-              `IN3: ${c.kind} pushed — stack ${solved.applied.length}, ` +
-              `${solved.freeDof} DOF free`;
-          }
-        }
-      }
-      if (runsIn3(anchorFork) && verdict.kind === "FLICK" && grip.shake.suppressesFlick) {
-        // ⚠ A SKIP MUST BE ANNOUNCED — `METHOD`, in those words. A flick that was recognised
-        // and deliberately ignored looks exactly like a flick that failed, and the readout is
-        // the only place the difference exists until `IN7`'s haptic.
-        lastVerdict = "IN3: flick skipped — the gesture reversed (A4: a shake is two flicks)";
-      }
+      // ⛔⛔ **FORK B's FLICK-TO-ALIGN IS DELETED HERE** (2026-09-17, with forks A and B).
+      // ⭐ What stood in this place pushed a `GRAVITY_ALIGN` or `WORLD_AXIS_ALIGN` at the
+      // release of a flick, re-solved, and unselected. The owner left it because a
+      // release-time trigger *"releases the finger from the object it is tracking"* — and
+      // fork C's tap does the same work mid-gesture. ⚠ `A4`'s flick SKIP went with it: there
+      // is no flick-driven constraint left for a shake's last leg to push, and the flick now
+      // means one thing only, which is the rotation reset below.
       // ⭐⭐⭐ **FORK C: THE ROTATION RESET, REINSTATED** (owner, 2026-09-16).
       //
       // ⛔ `D36` deleted §1.3's rollback GLOBALLY the same day, because it fought fork B's
@@ -2575,7 +2360,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐⭐ THE OWNER SCOPED IT BY **WHEN THE ALIGNMENT HAPPENED**, not by whether one
       // exists — see `flickResetPlan`. Only the gesture can tell those apart, and
       // `grip.alignmentTouched` is that fact.
-      if (runsForkC(anchorFork) && verdict.kind === "FLICK") {
+      if (verdict.kind === "FLICK") {
         const plan = flickResetPlan(grip.alignmentTouched);
         const snap = grip.rec.pressSnapshot;
         const rid = idOf.get(grip.mesh);
@@ -2591,9 +2376,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             selectedFace = null;
             pioneerFace = null;
           }
-          lastVerdict = `forkC: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
+          lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
         } else {
-          lastVerdict = "forkC: rotation reset — alignment older than the press, conserved";
+          lastVerdict = "align: rotation reset — alignment older than the press, conserved";
         }
       }
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
@@ -2620,7 +2405,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // the first tap of the pair already did, and aligning twice to one Pioneer is a no-op
       // that would only muddy the readout.
       let alignedByThisTap = false;
-      if (runsForkC(anchorFork) && verdict.kind === "TAP") {
+      if (verdict.kind === "TAP") {
         const others = [...held.entries()].filter(([pid]) => pid !== e.pointerId);
         const heldId = others.length === 1 ? (idOf.get(others[0]![1].mesh) ?? null) : null;
         const ctx: TapContext = {
@@ -2650,8 +2435,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           others[0]![1].alignmentTouched = false;
           alignedByThisTap = true; // ⛔ the tap is CONSUMED: it must not also flip the mode
           lastVerdict = ev.result.refused
-            ? `forkC: re-tap — nothing to release on ${heldId}`
-            : `forkC: RE-TAP released the alignment on ${heldId}`;
+            ? `align: re-tap — nothing to release on ${heldId}`
+            : `align: RE-TAP released the alignment on ${heldId}`;
         }
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
@@ -2694,7 +2479,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // condition about the GESTURE standing in for a fact about the MODEL, which is the
       // shape `METHOD` calls a substituted quantity.
       const highlightedStillAligned =
-        selectsFaces(anchorFork) &&
         selectedFace !== null &&
         (world.objects.get(selectedFace.objectId)?.constraints.length ?? 0) > 0;
       if (!highlightedStillAligned) {
@@ -2718,7 +2502,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const now = performance.now();
 
     // ⭐ And on idle frames too: a flip made with an empty glass produces no pointer event.
-    syncAnchorFork();
     const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
     lastFrameMs = now;
 

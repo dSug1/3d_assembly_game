@@ -41,13 +41,17 @@ import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
  * waste a device session measuring.
  */
 const PENDING: Readonly<Record<string, string>> = {
+  // ⛔⛔ UNREADABLE UNTIL MATES EXIST, and NOT fake-wired to keep this list short. §1.4's
+  // ordering only matters with TWO entries on a stack, and the alignment is capped at one —
+  // so passing this flag today would be a read that changes nothing, which is the
+  // slider-that-does-nothing shape this project has already paid for once.
+  matePriorityOverAnchor: "3D2 / §4 6quater — the first rule that pushes a MATE",
   // §1.2 — gains for rules that are not built.
   // ⚠ NOT rule 6 any more. Rule 6 computes the exact tracking factor from the camera's
   // field of view, distance and viewport height (`input/translate.ts`), which subsumes
   // this ratio AND removes its device dependence. It survives for 6bis/6ter/6quater,
   // and if those compute their factors the same way it should be DELETED, not kept.
   referenceCameraDistance: "IN4 — rules 6bis/6ter/6quater, if they still want a ratio",
-  gainRotateConstrained: "IN3 — rule 2sexte, constrained rotation",
   gainTranslateAxis: "IN4 — rule 6bis",
   gainTranslateMutual: "IN4 — rule 6ter",
   // ⭐ `matePriorityOverAnchor` LEFT THIS LIST on 2026-09-16: `IN3`'s 2ter/2quater now pass

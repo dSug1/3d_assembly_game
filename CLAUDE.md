@@ -46,20 +46,21 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-16)
 
-✅ Green: TypeScript + Babylon + Vite, **619 golden vectors passing** (632 − 58 + 45: ⭐ the roll
+✅ Green: TypeScript + Babylon + Vite, **568 golden vectors passing** (⚠ 619 − 51 — forks A and B, and the orphans, took their vectors with them: ⭐ the roll
 channel and its vectors were **deleted together**, 2026-09-16).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
-⭐⭐⭐ **AND WHAT THE PLAIN URL NOW RUNS IS FORK C** (`D37`–`D39`, 2026-09-16) — the owner's
-anchor rules, **not** the behaviour `1.0.4`–`1.0.7` shipped. Hold an object, **TAP a face on
-another**, and the held one makes the minimal turn that points its own face **the same way**
-(parallel — the CAD *align* sense, chosen over a mate). One alignment at a time, replaced by
-the next; the Follower face is **filled** and the Pioneer face **outlined** until it breaks;
-a **shake** or a **second tap on that same face** breaks it; a **flick** resets the rotation.
-⛔ The session starts in **`ROTATE`** here. ⚠ Fork A — every earlier device close — is
-`?anchorRules=0`, and `?anchorRules=1` is fork B, **parked**: the owner left it because a
-release-time trigger *"releases the finger from the object it is tracking"*.
-⛔⛔ **NO HAND HAS JUDGED FORK C YET**, and rule 5 says that is what closes a change.
+⭐⭐⭐ **THE INPUT MODEL IS THE OWNER'S TAP-TO-ALIGN SET** (`D37`–`D40`) — and since
+2026-09-17 it is the **only** one: forks A and B are **deleted**, with the flag, the slider
+and 41 vectors. Hold an object, **TAP a face on another**, and the held one makes the minimal
+turn that points its own face **the same way** (parallel — the CAD *align* sense, chosen over
+a mate). One alignment at a time, replaced by the next; the Follower face is **filled** and
+the Pioneer face **outlined** until it breaks; a **shake** or a **second tap on that same
+face** breaks it; a **flick** resets the rotation. ⛔ The session starts in **`ROTATE`**.
+⭐⭐ **THE CAP IS WHY THERE IS NO DEAD END**: one alignment leaves the spin about its normal
+free, and a second one cannot be stacked — so zero-DOF, which froze an object in fork B, is
+now unreachable **by construction** rather than by a guard.
+⛔⛔ **NO HAND HAS JUDGED ANY OF IT**, and rule 5 says that is what closes a change.
 ⭐ Rules, the conflict check against every earlier rule, the decisions and ⭐⭐ **an ordered
 list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md) §9–§10.
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On

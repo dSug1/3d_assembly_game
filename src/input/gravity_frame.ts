@@ -67,6 +67,14 @@
  * than a coincidence: **every rule referenced to a world axis weakens as the camera lines
  * up with that axis.** Expect it, and check for it in the next one.
  *
+ * ⚠⚠ **AND THE VERTICAL GOES QUIET BEFORE IT FAILS** — carried here on 2026-09-17 from
+ * `verticalVisibility`, a helper that measured it and which nothing ever called. Looking
+ * level the vertical is fully available (1); at the steepest orbit ring it is under **0.35**;
+ * looking straight down it is **0**. ⭐ The third time this shape has appeared on this
+ * project: *a control weakens over a range before it degenerates*, so a hand reports "it
+ * stopped working" long after the number started shrinking. ⛔ `A6`'s depth covers exactly
+ * where this is weakest, which is why the two rules are a pair.
+ *
  * ⛔ ENGINE-FREE.
  */
 import { cross, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
@@ -136,18 +144,3 @@ export function gravityFrame(viewAxis: Vec3, gravityDown: Vec3): GravityFrame | 
   return { right, up, depth, towardGravity: dot(v, g) };
 }
 
-/**
- * ⭐ How well the camera can SHOW a motion along the world vertical — `|sin| of the angle
- * between the view axis and gravity`, 1 looking level and 0 looking straight down.
- *
- * ⛔ Published so the weakening is measurable rather than a thing users report as "it
- * stopped working". ⚠ It is the same quantity A6's depth is scaled by, from the other side:
- * where vertical translation goes quiet, depth is at its strongest, and the reverse.
- */
-export function verticalVisibility(viewAxis: Vec3, gravityDown: Vec3): number | null {
-  const g = normalize(gravityDown);
-  const v = normalize(viewAxis);
-  if (!g || !v) return null;
-  const along = dot(v, g);
-  return Math.sqrt(Math.max(0, 1 - along * along));
-}
