@@ -15,6 +15,14 @@ proof that claim can have. ⚠ One number they warned about SURVIVES and still w
 ⛔ The text below is kept unrewritten: it is the record of *how* six tunables came to be read
 by nothing, which is a shape that will recur.
 
+⭐⭐ **THREE MORE NUMBERS LEFT THE PLACEHOLDER COLUMN ON 2026-09-17** — the owner set the
+shake's window to **300 ms**, its leg to **6 mm** and its straightness to **0.45** (mine were
+600 / 8 / 0.4). ⚠ Chosen from the rules rather than from a hand on the glass — the device
+pass that judges them is §10 of
+[`../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](../../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md)
+— so they are **owner's judgements, not measurements**, and the fourth (`reversals` = 2) is
+still mine. ⛔ `evictShakeLegMm` still clears the validator's floor of 3× the measured noise.
+
 ---
 
 ## ⭐ CARRIED FROM THE QUEUE ROW, 2026-09-16 — verbatim

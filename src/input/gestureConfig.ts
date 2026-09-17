@@ -585,14 +585,22 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // field — `IN5` overrides them independently, and a hand tuning one must not move both.
   gainAnchorDrag: 0.07,
   evictShakeReversals: 2,
-  // ⚠ 600 ms is roughly three unhurried legs. Untested by any hand.
-  evictShakeWindowMs: 600,
-  // ⚠ 8 mm is ~10× the measured 0.761 mm noise floor — chosen to be obviously clear of
-  // jitter, NOT because 8 is known to be the boundary with a corrective nudge.
-  evictShakeLegMm: 8,
-  // ⚠ 0.4 admits a hand's natural bow and refuses a circle. ⛔ The gap between those two
-  // is the whole question, and it is a finger's to answer.
-  evictShakeStraightness: 0.4,
+  // ⭐⭐ **300 ms — THE OWNER'S NUMBER, 2026-09-17**, and the first of these four a hand has
+  // chosen. ⚠ It replaces my 600 ms, which was *"roughly three unhurried legs"* and untested.
+  // ⛔ Halving it makes the gesture CRISPER and harder to reach by accident: two reversals now
+  // have to fall inside 300 ms, so a leisurely reposition cannot accumulate into an eviction.
+  evictShakeWindowMs: 300,
+  // ⭐ **6 mm — the owner's, 2026-09-17.** ⚠ Mine was 8 mm, *"~10× the measured 0.761 mm
+  // noise floor"*, and admittedly not known to be the boundary with a corrective nudge.
+  // ⛔ It still clears the validator's floor (3× the measured noise = 2.28 mm) with room, so a
+  // reversal cannot be jitter — and a shorter leg pairs with the shorter window: the gesture
+  // gets smaller and faster rather than smaller and slower.
+  evictShakeLegMm: 6,
+  // ⭐ **0.45 — the owner's, 2026-09-17**, slightly looser than my 0.4. ⚠ It admits a hand's
+  // natural bow and must still refuse a circle; ⛔ the gap between those two is the whole
+  // question, and it is a finger's to answer. `shake.test.ts` keeps the circle counter-example
+  // at its own fixture values, so the refusal is still proven whatever this number becomes.
+  evictShakeStraightness: 0.45,
   // ⭐⭐ SHIPPED AS `beta = 0` ON DEVICE EVIDENCE, AGAINST MY OWN MEASUREMENT.
   // A/B'd by finger on 2026-09-14 (`?rollFilterBeta=0` vs the default) and the
   // filtered version was judged better. ⛔ My metric said the opposite — it scored

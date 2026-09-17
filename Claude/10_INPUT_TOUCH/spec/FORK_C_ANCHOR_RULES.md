@@ -529,9 +529,13 @@ refusal below names itself there, so *"nothing happened"* is never the only evid
 
 9. **Can an ordinary reposition evict by accident?** Fine-position an aligned object in
    `TRANSLATE` with small corrective back-and-forths. The alignment should survive.
-   ⚠ If it does not, the knobs are in the **EVICTION SHAKE** menu group — `legMm` first (how
-   far back a leg must come to count), then `reversals`. ⛔ This is the one place where a
-   guessed number can destroy deliberate work, which is why it has four sliders.
+   ⭐⭐ **THE OWNER SET THREE OF THE FOUR NUMBERS ON 2026-09-17, BEFORE THE PASS**: window
+   **300 ms** (was 600), leg **6 mm** (was 8), straightness **0.45** (was 0.4) — so the
+   gesture is now *smaller and faster* rather than smaller and slower, and two reversals must
+   fall inside 300 ms. ⚠ That makes an accidental eviction harder and a deliberate one
+   brisker; whether it is now too brisk to perform is exactly what this item asks.
+   ⛔ The knobs are in the **EVICTION SHAKE** menu group, and this is the one place where a
+   guessed number can destroy deliberate work.
 
 ### E. Fork A must be untouched — `?anchorRules=0`
 

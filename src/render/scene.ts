@@ -83,6 +83,7 @@ import {
   dragRule,
   isDriven,
   ShakeDetector,
+  shakeParamsFrom,
   constrainedDragAngle,
   constrainedRollAngle,
   rotateAboutAxis,
@@ -2034,17 +2035,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         anchorMotion: new Map(),
         binding: "BOUND",
         // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
-        // `SwayWatcher` takes it. ⚠ All four are `IN5` placeholders with sliders: the whole
-        // safety of this gesture is the gap between a shake and a corrective nudge.
-        shake: new ShakeDetector(
-          {
-            reversals: cfg.evictShakeReversals,
-            windowMs: cfg.evictShakeWindowMs,
-            legMm: cfg.evictShakeLegMm,
-            straightness: cfg.evictShakeStraightness,
-          },
-          cfg.pointerNoiseMm,
-        ),
+        // `SwayWatcher` takes it.
+        // ⛔⛔ THROUGH `shakeParamsFrom`, AND THAT IS A FIX: this file built the same four
+        // fields inline while `shake.ts` exported the function for it — two copies of one
+        // mapping, which is precisely what `CONSTRAINTS` §4 forbids (*a tuning value needed in
+        // two places is IMPORTED, never copied*). ⚠ Nothing had drifted yet; the point is that
+        // nothing now can.
+        shake: new ShakeDetector(shakeParamsFrom(cfg), cfg.pointerNoiseMm),
         depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
