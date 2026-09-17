@@ -19,7 +19,7 @@ import {
   faceAlignConstraint,
   flickResetPlan,
   pioneerTurned,
-  pioneerTurnRuleOf,
+  modeForTap,
   retargetAlignment,
   tapMeaning,
   type TapContext,
@@ -208,64 +208,96 @@ describe("⛔⛔ THE CAP OF ONE — a second alignment REPLACES, and never freez
   });
 });
 
-describe("⛔⛔ THE TAP'S THREE MEANINGS — `D28`'s toggle, fork C's align, and its UNDO", () => {
+describe("⛔⛔ THE TAP'S FOUR MEANINGS — and the GESTURE chooses what an alignment IS", () => {
   const ctx = (over: Partial<TapContext> = {}): TapContext => ({
     mode: "ROTATE",
+    kind: "TAP",
+    alignMode: null,
     tappedObject: "objectB",
     tappedFace: "+x",
     heldObject: "objectA",
     pioneer: null,
     ...over,
   });
+  const PIONEER = { objectId: "objectB", faceId: "+x" };
 
-  it("⭐⭐ holding an object in ROTATE and tapping ANOTHER object's face ⇒ ALIGN", () => {
-    expect(tapMeaning(ctx())).toBe("ALIGN");
+  it("⭐⭐ a SINGLE tap on another object's face aligns as a SNAPSHOT (the old C1)", () => {
+    expect(tapMeaning(ctx())).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
   });
 
-  it("⭐⭐⭐ TAPPING THE SAME PIONEER FACE AGAIN ⇒ UNALIGN — the owner's amendment", () => {
-    // > *"in addition to the shake, the alignment can be toggled off by taping another time
-    // > to the same PioneerFace."* ⭐ The gesture becomes a TOGGLE rather than a second
-    // command to remember, which is also why the owner expects to drop the shake later:
-    // *"this is a complicated movement to execute by the user."*
-    expect(tapMeaning(ctx({ pioneer: { objectId: "objectB", faceId: "+x" } }))).toBe("UNALIGN");
+  it("⭐⭐ a DOUBLE tap on another object's face aligns as a FOLLOW (the old C2)", () => {
+    // ⛔⛔ THE FLAG BECAME A GESTURE, 2026-09-17. `?pioneerTurnRule` chose the reading for a
+    // whole session; the owner replaced it with *"one single tap … as fork C1; one double tap
+    // … as fork C2"*, so the reading is a property of EACH alignment — and the highlight
+    // colours report which one, because nothing else could.
+    expect(tapMeaning(ctx({ kind: "DOUBLE_TAP" }))).toEqual({ action: "ALIGN", mode: "FOLLOW" });
+  });
+
+  it("⭐⭐⭐ THE SAME GESTURE ON THE SAME FACE LETS GO; THE OTHER ONE SWITCHES MODE", () => {
+    // ⭐ `D39`'s toggle-off is preserved, and the owner's *"a single tap can follow a double
+    // tap … and therefore toggle to behaviors accordingly"* is the other half. ⛔ Together they
+    // make each gesture its own toggle, which is why neither needs a mode to be remembered by
+    // the hand: whatever you tap with is what you get.
+    expect(tapMeaning(ctx({ pioneer: PIONEER, alignMode: "SNAPSHOT" })).action).toBe("UNALIGN");
+    expect(tapMeaning(ctx({ kind: "DOUBLE_TAP", pioneer: PIONEER, alignMode: "FOLLOW" })).action).toBe(
+      "UNALIGN",
+    );
+    expect(tapMeaning(ctx({ kind: "DOUBLE_TAP", pioneer: PIONEER, alignMode: "SNAPSHOT" }))).toEqual({
+      action: "SWITCH",
+      mode: "FOLLOW",
+    });
+    expect(tapMeaning(ctx({ pioneer: PIONEER, alignMode: "FOLLOW" }))).toEqual({
+      action: "SWITCH",
+      mode: "SNAPSHOT",
+    });
   });
 
   it("⛔ a DIFFERENT face of the same Pioneer object still ALIGNS — and replaces", () => {
-    // ⭐ The face is the whole test, not the object. ⚠ Otherwise re-aiming at the next face of
-    // the same part would silently UNDO instead of re-aligning, which is the opposite of what
-    // the hand asked for — and the cap makes the replacement safe.
-    expect(tapMeaning(ctx({ pioneer: { objectId: "objectB", faceId: "-y" } }))).toBe("ALIGN");
+    // ⭐ The face is the whole test, not the object — otherwise re-aiming at the next face of
+    // the same part would UNDO instead of re-aligning. ⚠ True for both gestures.
+    const other = { objectId: "objectB", faceId: "-y" };
+    expect(tapMeaning(ctx({ pioneer: other, alignMode: "SNAPSHOT" }))).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
+    expect(
+      tapMeaning(ctx({ kind: "DOUBLE_TAP", pioneer: other, alignMode: "FOLLOW" })),
+    ).toEqual({ action: "ALIGN", mode: "FOLLOW" });
   });
 
-  it("⛔ and a tap on a THIRD object aligns to it, whatever the current Pioneer is", () => {
-    expect(
-      tapMeaning(ctx({ tappedObject: "objectC", pioneer: { objectId: "objectB", faceId: "+x" } })),
-    ).toBe("ALIGN");
+  it("⚠ an unresolved face cannot act on an alignment — `null` must not match a face", () => {
+    // ⛔ A grazing pick that resolves no face would otherwise compare `null === null` if this
+    // were written carelessly, and a tap that hit nothing would destroy an alignment.
+    expect(tapMeaning(ctx({ tappedFace: null, pioneer: PIONEER, alignMode: "SNAPSHOT" }))).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
   });
 
-  it("⚠ an unresolved face cannot UNALIGN — `null` must not match a remembered face", () => {
-    // ⛔ A grazing pick that resolves no face would otherwise compare `null === null` if the
-    // test were written carelessly, and a tap that hit nothing would destroy an alignment.
+  it("⛔⛔ in TRANSLATE every tap is a TOGGLE — or the way back to ROTATE is gone", () => {
+    // ⭐ Load-bearing, not decoration, and it covers BOTH gestures: a double tap in TRANSLATE
+    // keeps its old meanings (flip twice, fly the camera home).
+    expect(tapMeaning(ctx({ mode: "TRANSLATE" })).action).toBe("TOGGLE");
+    expect(tapMeaning(ctx({ mode: "TRANSLATE", kind: "DOUBLE_TAP" })).action).toBe("TOGGLE");
     expect(
-      tapMeaning(ctx({ tappedFace: null, pioneer: { objectId: "objectB", faceId: "+x" } })),
-    ).toBe("ALIGN");
-  });
-
-  it("⛔⛔ in TRANSLATE it is always a TOGGLE — or the way back to ROTATE is gone", () => {
-    // ⭐ Load-bearing, not decoration. ⚠ It also means the re-tap UNDO is a `ROTATE` gesture:
-    // the shake is what undoes an alignment while translating, which is exactly why the owner
-    // keeps the shake *for the moment*.
-    expect(tapMeaning(ctx({ mode: "TRANSLATE" }))).toBe("TOGGLE");
-    expect(
-      tapMeaning(ctx({ mode: "TRANSLATE", pioneer: { objectId: "objectB", faceId: "+x" } })),
+      tapMeaning(ctx({ mode: "TRANSLATE", pioneer: PIONEER, alignMode: "FOLLOW" })).action,
     ).toBe("TOGGLE");
   });
 
   it("⛔ a tap with nothing held, or on empty space, or on the held object ⇒ TOGGLE", () => {
-    expect(tapMeaning(ctx({ heldObject: null }))).toBe("TOGGLE");
-    expect(tapMeaning(ctx({ tappedObject: null }))).toBe("TOGGLE");
-    // ⚠ A Pioneer and a Follower on ONE object is not a relation.
-    expect(tapMeaning(ctx({ tappedObject: "objectA" }))).toBe("TOGGLE");
+    for (const kind of ["TAP", "DOUBLE_TAP"] as const) {
+      expect(tapMeaning(ctx({ kind, heldObject: null })).action).toBe("TOGGLE");
+      expect(tapMeaning(ctx({ kind, tappedObject: null })).action).toBe("TOGGLE");
+      // ⚠ A Pioneer and a Follower on ONE object is not a relation.
+      expect(tapMeaning(ctx({ kind, tappedObject: "objectA" })).action).toBe("TOGGLE");
+    }
+  });
+
+  it("⭐ `modeForTap` is the ONE place the gesture→mode mapping lives", () => {
+    // ⛔ Two copies of it — one here, one in the scene — is how a single tap starts meaning
+    // FOLLOW in one file and SNAPSHOT in another. `CONSTRAINTS` §4.
+    expect(modeForTap("TAP")).toBe("SNAPSHOT");
+    expect(modeForTap("DOUBLE_TAP")).toBe("FOLLOW");
   });
 });
 
@@ -375,17 +407,21 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     // destructive is to let arithmetic noise count as a hand. ⭐ 1e-4 rad is ~0.006°: four
     // orders under the smallest deliberate twist, and well above quaternion round-off.
     const q = qFromAxisAngle([0.3, 0.8, -0.5], 1.1);
-    expect(pioneerTurned(q, q, "RELEASE").kind).toBe("NONE");
+    expect(pioneerTurned(q, q, "SNAPSHOT").kind).toBe("NONE");
     expect(pioneerTurned(q, qmul(qFromAxisAngle([0, 1, 0], 1e-6), q), "FOLLOW").kind).toBe("NONE");
   });
 
-  it("⭐ C1 RELEASES, and reports no rotation to apply — the Follower must not move", () => {
+  it("⭐ A SNAPSHOT RELEASES, and reports no rotation to apply — the Follower must not move", () => {
     // ⛔ The owner's words: *"this case releases the first object alignment (but not rotate
     // the first object)"*. ⚠ `delta: null` is how that is said in a type rather than in a
     // comment — a caller cannot accidentally apply a rotation that does not exist.
+    // ⚠⚠ AND THE TWO VOCABULARIES ARE DELIBERATELY DIFFERENT: the MODE is `SNAPSHOT`, the
+    // VERDICT is `RELEASE`. A rename of the modes swept this vector into asserting the mode
+    // where it means the verdict, and it failed — which is the whole argument for naming a
+    // decision and its consequence differently.
     const before = IDENTITY;
     const now = qFromAxisAngle([0, 1, 0], 0.5);
-    const t = pioneerTurned(before, now, "RELEASE");
+    const t = pioneerTurned(before, now, "SNAPSHOT");
     expect(t.kind).toBe("RELEASE");
     expect(t.delta).toBeNull();
   });
@@ -455,12 +491,13 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     expect(after(qmul(qconj(pBefore), pNow))).toBeLessThan(0);
   });
 
-  it("⭐ the flag reads as the owner's two forks, and anything else is C1", () => {
-    // ⛔ Same discipline as every other numeric flag: an unrecognised value must not look like
-    // a rule set nobody chose. ⚠ C1 is the conservative one — it moves nothing on its own.
-    expect(pioneerTurnRuleOf(0)).toBe("RELEASE");
-    expect(pioneerTurnRuleOf(1)).toBe("FOLLOW");
-    expect(pioneerTurnRuleOf(7)).toBe("RELEASE");
+  it("⛔⛔ THE MODE COMES FROM THE GESTURE NOW — there is no flag to read", () => {
+    // ⭐ `pioneerTurnRuleOf` and `?pioneerTurnRule` lived for a few hours on 2026-09-17. The
+    // owner replaced the SETTING with the GESTURE, which is better than a flag in the way that
+    // matters: two alignments can differ, and a hand can see which is which from the colours
+    // rather than remembering what a slider was left on.
+    expect(modeForTap("TAP")).toBe("SNAPSHOT");
+    expect(modeForTap("DOUBLE_TAP")).toBe("FOLLOW");
   });
 
   it("⭐ retargeting rewrites the DIRECTION and nothing else about the constraint", () => {

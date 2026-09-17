@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-16)
 
-✅ Green: TypeScript + Babylon + Vite, **574 golden vectors passing** (⚠ 619 − 51 — forks A and B, and the orphans, took their vectors with them: ⭐ the roll
+✅ Green: TypeScript + Babylon + Vite, **575 golden vectors passing** (⚠ 619 − 51 — forks A and B, and the orphans, took their vectors with them: ⭐ the roll
 channel and its vectors were **deleted together**, 2026-09-16).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
@@ -57,11 +57,14 @@ turn that points its own face **the same way** (parallel — the CAD *align* sen
 a mate). One alignment at a time, replaced by the next; the Follower face is **filled** and
 the Pioneer face **outlined** until it breaks; a **shake** or a **second tap on that same
 face** breaks it; a **flick** resets the rotation. ⛔ The session starts in **`ROTATE`**.
-⭐⭐ **ONE FLAG REMAINS, AND IT IS A QUESTION RATHER THAN A SETTING** (`D41`): when the
-**Pioneer's** object is turned while the Follower is aligned, does the alignment RELEASE (C1,
-the default) or does the Follower take the **same rotation** and keep it (C2)?
-`?pioneerTurnRule=0|1`. ⛔ The case had no rule at all until 2026-09-17, and its absence was
-invisible — a frozen world direction stays frozen while the face it came from turns away.
+⭐⭐ **THERE ARE NO FLAGS LEFT.** What a turned **Pioneer** costs the Follower was a flag for
+four hours (`D41`) and is now a **GESTURE** (`D42`): a **single tap** makes a `SNAPSHOT` —
+turning the Pioneer releases the alignment, the Follower does not move — and a **double tap**
+makes a `FOLLOW`, where the Follower takes the Pioneer's rotation and keeps the alignment.
+⛔ The **colours** report which: cyan + amber for a snapshot, **both amber** for a
+relationship. ⭐ Each gesture is its own toggle, so nothing has to be remembered.
+⚠ The case had no rule at all until 2026-09-17, and its absence was invisible — a frozen
+world direction stays frozen while the face it came from turns away.
 ⭐⭐ **THE CAP IS WHY THERE IS NO DEAD END**: one alignment leaves the spin about its normal
 free, and a second one cannot be stacked — so zero-DOF, which froze an object in fork B, is
 now unreachable **by construction** rather than by a guard.

@@ -59,8 +59,25 @@ export function faceAlignConstraint(
   };
 }
 
-/** What a tap means in fork C. ⭐ **Three** meanings, one gesture — see `tapMeaning`. */
-export type TapMeaning = "ALIGN" | "UNALIGN" | "TOGGLE";
+/**
+ * What a tap means. ⭐ **Four** actions now, and each alignment one carries the MODE it asks
+ * for — see `tapMeaning`.
+ */
+export type TapAction =
+  /** Align these two faces, in `mode`. ⚠ Replaces any existing alignment (the cap of one). */
+  | "ALIGN"
+  /** Keep the alignment, change only its MODE — the other gesture on the same face. */
+  | "SWITCH"
+  /** Let it go: the same gesture again on the same face. */
+  | "UNALIGN"
+  /** `D28`'s movement-mode toggle, which every other tap still means. */
+  | "TOGGLE";
+
+/** What a tap decided. ⛔ `mode` is `null` for `UNALIGN` and `TOGGLE`, which need none. */
+export interface TapMeaning {
+  readonly action: TapAction;
+  readonly mode: AlignMode | null;
+}
 
 /**
  * Everything the tap's meaning depends on. ⛔ An object rather than five positional
@@ -76,6 +93,11 @@ export interface TapContext {
   readonly tappedFace: string | null;
   /** The object another touchpoint is carrying, or `null` if none. */
   readonly heldObject: string | null;
+  /** ⭐ Which gesture this was. `D28`'s toggle is unchanged for every tap that is not an
+   * alignment; what a DOUBLE tap means on another object's face is new (2026-09-17). */
+  readonly kind: "TAP" | "DOUBLE_TAP";
+  /** The live alignment's mode, or `null` when the held object is not aligned. */
+  readonly alignMode: AlignMode | null;
   /**
    * ⭐⭐ The face whose tap CREATED the held object's current alignment — remembered, not
    * discarded. ⚠ The owner's first dictation said *"the PioneerFace resets as null"*; the
@@ -120,18 +142,27 @@ export interface TapContext {
  * the user; for the moment, we keep it."*
  */
 export function tapMeaning(ctx: TapContext): TapMeaning {
-  if (ctx.mode !== "ROTATE") return "TOGGLE";
-  if (ctx.heldObject === null || ctx.tappedObject === null) return "TOGGLE";
-  if (ctx.tappedObject === ctx.heldObject) return "TOGGLE";
-  if (
+  const toggle: TapMeaning = { action: "TOGGLE", mode: null };
+  if (ctx.mode !== "ROTATE") return toggle;
+  if (ctx.heldObject === null || ctx.tappedObject === null) return toggle;
+  if (ctx.tappedObject === ctx.heldObject) return toggle;
+
+  const asked = modeForTap(ctx.kind);
+  const sameFace =
     ctx.pioneer !== null &&
     ctx.tappedObject === ctx.pioneer.objectId &&
     ctx.tappedFace !== null &&
-    ctx.tappedFace === ctx.pioneer.faceId
-  ) {
-    return "UNALIGN";
-  }
-  return "ALIGN";
+    ctx.tappedFace === ctx.pioneer.faceId;
+
+  if (!sameFace) return { action: "ALIGN", mode: asked };
+  // ⭐⭐ THE SAME FACE AGAIN, AND THE GESTURE DECIDES WHICH OF TWO THINGS IT MEANS:
+  // ⛔ the SAME gesture that made this alignment lets it go — `D39`'s toggle-off, preserved;
+  // ⭐ the OTHER gesture switches the mode, which is the owner's *"toggle to behaviors
+  // accordingly"*. ⚠ Switching keeps the constraint and moves nothing: only what the
+  // alignment MEANS changes, and the colours say so.
+  return ctx.alignMode === asked
+    ? { action: "UNALIGN", mode: null }
+    : { action: "SWITCH", mode: asked };
 }
 
 /** What a flick must do to the object it was made on. ⭐ Both fields, always both. */
@@ -191,24 +222,35 @@ export function flickResetPlan(alignmentTouchedThisGesture: boolean): ResetPlan 
 // ⭐ The owner's two readings, behind one flag, because they are opposite answers to *what
 // does an alignment MEAN* — a snapshot of a direction, or a relationship between two faces:
 
-/** Which rule is in force when the Pioneer's object turns. */
-export type PioneerTurnRule =
+/**
+ * ⭐⭐⭐ **WHAT AN ALIGNMENT *IS* — and since 2026-09-17 the GESTURE says which, not a flag.**
+ *
+ * ⛔⛔ THESE WERE `D41`'s FORKS C1 AND C2, chosen by `?pioneerTurnRule`. The owner merged them
+ * the same day: *"one single tap on the second object PioneerFace: the logic is as fork C1 …
+ * one double tap … the logic is as fork C2"*. ⭐⭐ So the reading is no longer a setting a
+ * session picks — it is **a property of each alignment**, chosen when it is made and readable
+ * on the glass, because the two modes are drawn in different colours.
+ */
+export type AlignMode =
   /**
-   * **C1 — the alignment is a SNAPSHOT.** Turning the Pioneer invalidates it, so it is
-   * released: the Follower keeps its pose (it is *not* rotated) and both highlights go.
-   * ⭐ Nothing moves that the hand did not touch, which is the conservative reading.
+   * ⭐ **SNAPSHOT — made by a SINGLE TAP.** The alignment is a snapshot of a direction:
+   * turning the Pioneer invalidates it, so it is released, the Follower is **not** rotated,
+   * and both highlights go. ⚠ Drawn in **two colours** — the two faces are related only by
+   * the moment the tap happened.
    */
-  | "RELEASE"
+  | "SNAPSHOT"
   /**
-   * **C2 — the alignment is a RELATIONSHIP.** Turning the Pioneer turns the Follower by the
-   * same rotation, the target is re-read from the Pioneer's face every frame, and the
-   * highlights stay. ⭐ The two faces keep pointing the same way *by construction*.
+   * ⭐ **FOLLOW — made by a DOUBLE TAP.** The alignment is a relationship: turning the
+   * Pioneer turns the Follower by the same rotation, the target is re-read from the Pioneer's
+   * face every frame, and the highlights stay. ⚠ Drawn in **one colour**, because the two
+   * faces are now one thing — the owner's own instruction, and the only way a hand can tell
+   * which mode an alignment is in.
    */
   | "FOLLOW";
 
-/** Read the flag. ⚠ Numeric so the URL override and the menu slider reach it unchanged. */
-export function pioneerTurnRuleOf(flag: number): PioneerTurnRule {
-  return flag === 1 ? "FOLLOW" : "RELEASE";
+/** ⭐ Which mode a tap of this kind asks for. ⛔ One place, so the mapping cannot drift. */
+export function modeForTap(kind: "TAP" | "DOUBLE_TAP"): AlignMode {
+  return kind === "DOUBLE_TAP" ? "FOLLOW" : "SNAPSHOT";
 }
 
 /** What the Pioneer's turn costs the Follower. ⭐ A decision; the caller acts. */
@@ -246,14 +288,14 @@ export const PIONEER_TURN_EPSILON_RAD = 1e-4;
 export function pioneerTurned(
   before: Quat,
   now: Quat,
-  rule: PioneerTurnRule,
+  mode: AlignMode,
 ): PioneerTurn {
   const delta = qmul(now, qconj(before));
   // ⭐ The turn angle of a unit quaternion is `2·acos|w|`; the absolute value folds the
   // double cover, so `q` and `−q` — the same rotation — cannot read as 360° apart.
   const angle = 2 * Math.acos(Math.min(1, Math.abs(delta[0])));
   if (angle < PIONEER_TURN_EPSILON_RAD) return { kind: "NONE", delta: null };
-  return rule === "RELEASE" ? { kind: "RELEASE", delta: null } : { kind: "FOLLOW", delta };
+  return mode === "SNAPSHOT" ? { kind: "RELEASE", delta: null } : { kind: "FOLLOW", delta };
 }
 
 /**

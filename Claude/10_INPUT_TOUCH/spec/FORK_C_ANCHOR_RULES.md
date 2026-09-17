@@ -138,8 +138,30 @@ exists.*
 >   highlights. Also, the release of first object's alignment and un-highlights also applies if
 >   the shake is performed on the second object (the one with PioneerFace)"*
 
-✅ **BUILT** (`D41`, `?pioneerTurnRule=0|1`, slider shipped, **C1 default**). ⚠ The default is
-mine — the owner named neither — chosen because C1 moves nothing the hand did not touch.
+⛔⛔ **AND THE FLAG WAS DELETED THE SAME DAY — `D42`, four hours later:**
+
+> *"Remove the two forks and slider. We will merge the logic as follows: one single tap on the
+> second object PioneerFace: the logic is as fork C1 … one double tap on the second object
+> PioneerFace: the logic is as fork C2 but the FollowerFace is highlighted in the same color as
+> the PioneerFace. Note that a single tap on PioneerFace can follow a double tap on PioneerFace
+> or a double tap can follow a single tap and therefore toggle to behaviors accordingly."*
+> — and, immediately after: *"the double tap in such case shall not trigger the camera orbit
+> reset."*
+
+✅ **BOTH READINGS SURVIVE; THE FLAG DOES NOT.** A **single tap** makes a `SNAPSHOT`
+(`D41`'s C1), a **double tap** makes a `FOLLOW` (C2), and the mode belongs to the ALIGNMENT
+rather than to the session. ⭐⭐ Which is better than a flag in the way that matters: two
+alignments can differ, and the **colours say which is which** — cyan Follower + amber Pioneer
+for a snapshot, **both amber** for a relationship.
+
+⭐ **EACH GESTURE IS ITS OWN TOGGLE**, so nothing has to be remembered: the same gesture on the
+same face lets the alignment go (`D39`), the other gesture switches the mode without moving
+anything. ⚠ Leaving `FOLLOW` by single taps therefore takes two — one to switch, one to
+release — which is the price of one gesture carrying two jobs, and a device question.
+
+⚠⚠ **A DOUBLE TAP THAT ALIGNS NO LONGER FLIES THE CAMERA HOME** (the owner's second
+message). ⛔ Everywhere else — empty space, the held object, a second touchpoint — the double
+tap keeps every meaning it had. Only this configuration is claimed.
 
 ⛔⛔ **THE CASE HAD NO RULE AT ALL, AND ITS ABSENCE WAS INVISIBLE.** §1.4 stores an alignment
 as a **frozen world direction**, deliberately, so a later camera orbit cannot redefine it.
@@ -567,15 +589,20 @@ refusal below names itself there, so *"nothing happened"* is never the only evid
 ⚠ Both are built and neither is right by argument: the flag exists because *what an alignment
 means* is a question about assembling parts, and only a hand answers it.
 
-8-bis. **C1 (the default, or `?pioneerTurnRule=0`).** Align obj 1 to a face of obj 2, then turn
-   **obj 2**. ⛔ The alignment should release, **obj 1 must not move**, and both highlights go.
-   ⭐ *Falsified by* obj 1 rotating, or by a highlight surviving.
-8-ter. **C2 (`?pioneerTurnRule=1`).** Same setup, then turn **obj 2**. ⛔ Obj 1 should take the
-   same rotation and keep both its highlight and its alignment. ⭐ *Falsified by* the two faces
-   drifting out of parallel as you keep turning — which is what the per-frame retarget exists
-   to prevent. ⚠ Then **shake obj 2**: the alignment should release. ⛔ In C1 that shake
-   releases only while you are in `ROTATE`; in `TRANSLATE` it does nothing, which is the gap
-   §2 flags.
+8-bis. **SNAPSHOT — align with a SINGLE tap**, then turn **obj 2**. ⛔ The alignment should
+   release, **obj 1 must not move**, and both highlights go. ⭐ *Falsified by* obj 1 rotating,
+   or by a highlight surviving. ⚠ The colours while it holds: **cyan** Follower, **amber**
+   Pioneer.
+8-ter. **FOLLOW — align with a DOUBLE tap**, then turn **obj 2**. ⛔ Obj 1 should take the same
+   rotation and keep its alignment; the Follower is **amber too**, which is how you can tell
+   the mode at a glance. ⭐ *Falsified by* the faces drifting out of parallel as you keep
+   turning (the per-frame retarget exists to prevent it), or by the **camera flying home** on
+   the double tap — that meaning is suppressed for this gesture only.
+8-quater. **The toggles.** On the same face: the SAME gesture again releases; the OTHER gesture
+   switches mode and **moves nothing** — only the colours change. ⚠ So leaving `FOLLOW` with
+   single taps takes two. ⭐ Then **shake obj 2** while in `FOLLOW`: the alignment releases.
+   ⛔ In `SNAPSHOT` that shake releases only while the mode is `ROTATE` (it releases by turning
+   the object); in `TRANSLATE` it does nothing, which is the gap §2 flags.
 
 ### D. The safety question I cannot answer without a hand
 

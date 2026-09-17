@@ -71,7 +71,7 @@ import {
   type Behaviour,
   faceAlignConstraint,
   pioneerTurned,
-  pioneerTurnRuleOf,
+  type AlignMode,
   retargetAlignment,
   tapMeaning,
   flickResetPlan,
@@ -142,6 +142,10 @@ import { createMenu, type MenuSlider } from "./menu";
  * in the parent's frame now, where a bare `0.0015` would look like a UV or an alpha.
  */
 const MARKER_LIFT_M = 0.0015;
+
+/** ⭐ The two marker colours, named once: cyan marks what MOVED, amber what it was aimed at. */
+const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
+const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
 const OBJECT_SIZE_M = 0.08;
@@ -345,7 +349,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * @returns true when an alignment was applied — the caller then skips the mode toggle,
    *   because the alignment's own mode switch replaces it.
    */
-  const forkCAlign = (pioneerPointerId: number, pioneerGrip: Held): boolean => {
+  const forkCAlign = (pioneerPointerId: number, pioneerGrip: Held, mode: AlignMode): boolean => {
     const pioneerId = idOf.get(pioneerGrip.mesh);
     if (pioneerId === undefined || pioneerGrip.pressFace === null) {
       lastVerdict = "align: tap resolved no face — toggled instead";
@@ -426,6 +430,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     pioneerGrip.pressFace = null;
     pioneerFace = { objectId: pioneerId, faceId: pioneerFaceId };
     pioneerOrientation = world.objects.get(pioneerId)?.local.orientation ?? null;
+    alignMode = mode;
+    paintHighlightColours();
     // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
     //
     // > *"the mode shall not switch automatically to translation mode after an alignment in
@@ -441,7 +447,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // so `TRANSLATE` is one tap away — and staying in `ROTATE` is what makes the rotation
     // reset testable straight after an alignment.
     lastVerdict =
-      `align: ALIGNED ${followerId}/${followerGrip.pressFace.faceId} → ` +
+      `align: ${mode} ${followerId}/${followerGrip.pressFace.faceId} → ` +
       `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${behaviour}`;
     return true;
   };
@@ -465,7 +471,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     scene,
   );
   const faceQuadMat = new StandardMaterial("selected-face-mat", scene);
-  faceQuadMat.emissiveColor = new Color3(0.2, 0.9, 1);
+  faceQuadMat.emissiveColor = FOLLOWER_COLOUR.clone();
   faceQuadMat.disableLighting = true;
   faceQuadMat.alpha = 0.35;
   faceQuad.material = faceQuadMat;
@@ -494,6 +500,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * an instrument must not intercept the picks it describes, nor move the barycentre it is
    * drawn near.
    */
+  /**
+   * ⭐⭐⭐ **THE COLOURS ARE THE READOUT FOR THE MODE** — the owner's instruction, and the only
+   * way a hand can see which of the two an alignment is.
+   *
+   * ⛔ `SNAPSHOT` (single tap): the Follower is **cyan** and the Pioneer **amber** — two
+   * colours, because the two faces are related only by the instant the tap happened.
+   * ⛔ `FOLLOW` (double tap): the Follower takes the Pioneer's **amber** — one colour, because
+   * they now move as one thing.
+   * ⚠ Called wherever the mode changes, never per frame: a material write every frame would
+   * be a second writer for a value that changes on a gesture.
+   */
+  const paintHighlightColours = (): void => {
+    const follower = alignMode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
+    faceQuadMat.emissiveColor.copyFrom(follower);
+  };
+
   const faceContour = CreateLines(
     "pioneer-face-contour",
     {
@@ -507,7 +529,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     },
     scene,
   );
-  faceContour.color = new Color3(1, 0.62, 0.1);
+  faceContour.color = PIONEER_COLOUR.clone();
   faceContour.scaling = new Vector3(OBJECT_SIZE_M, OBJECT_SIZE_M, 1);
   faceContour.rotationQuaternion = Quaternion.Identity();
   faceContour.isPickable = false;
@@ -1232,13 +1254,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       ],
     },
     {
-      // ⭐⭐⭐ NOT A TUNABLE: it chooses a RULE (`D41`), where every other slider changes a
-      // number. ⚠ 0 = C1, turning the Pioneer releases the alignment; 1 = C2, the Follower
-      // takes the same rotation and the target is re-read every frame.
-      title: "⭐ PIONEER TURNED (C1/C2)",
-      sliders: [tunable("0=release  1=follow", "pioneerTurnRule", 0, 1, 1)],
-    },
-    {
       // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
       // number has been wrong every single time*, and all four of these are guesses.
       // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
@@ -1803,6 +1818,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let pioneerOrientation: Quat | null = null;
 
+  /**
+   * ⭐⭐⭐ **WHAT THE LIVE ALIGNMENT MEANS** — `SNAPSHOT` (a single tap made it) or `FOLLOW`
+   * (a double tap did). ⛔ It was `?pioneerTurnRule` for a few hours on 2026-09-17 and the
+   * owner replaced the flag with the GESTURE: *"one single tap … the logic is as fork C1; one
+   * double tap … as fork C2"*. ⭐ So it is per-alignment state rather than a session setting,
+   * and the highlight COLOURS report it — two colours for a snapshot, one for a relationship.
+   * ⚠ `null` exactly when nothing is aligned.
+   */
+  let alignMode: AlignMode | null = null;
+
 
   /**
    * ⭐⭐ Judge one release as a tap, keep §1.3's history, and toggle the mode **immediately**.
@@ -2203,6 +2228,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             if (selectedFace === null) {
               pioneerFace = null;
               pioneerOrientation = null;
+              alignMode = null;
             }
             grip.alignmentTouched = false;
             lastVerdict = `align: SHAKE released the alignment on ${sid}`;
@@ -2214,7 +2240,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // is `TRANSLATE`* turns nothing, so it releases nothing. Dictated that way; whether
           // C1 wants it too is a question for the device pass (`FORK_C_ANCHOR_RULES.md` §7).
           if (
-            pioneerTurnRuleOf(cfg.pioneerTurnRule) === "FOLLOW" &&
+            alignMode === "FOLLOW" &&
             pioneerFace?.objectId === sid &&
             selectedFace !== null
           ) {
@@ -2224,7 +2250,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             selectedFace = null;
             pioneerFace = null;
             pioneerOrientation = null;
-            lastVerdict = `align: C2 — shake on the Pioneer released the alignment on ${fId}`;
+            alignMode = null;
+            lastVerdict = `align: FOLLOW — shake on the Pioneer released the alignment on ${fId}`;
           }
         }
       }
@@ -2428,70 +2455,86 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             selectedFace = null;
             pioneerFace = null;
             pioneerOrientation = null;
+            alignMode = null;
           }
           lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
         } else {
           lastVerdict = "align: rotation reset — alignment older than the press, conserved";
         }
       }
-      // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
-      // orbit can get stuck close in with an object filling the view, and then every tap
-      // lands ON something — a reset that only listened to empty space would be
-      // unreachable precisely when it is wanted.
-      // ⚠⚠ THIS COLLIDES WITH §1.4, and the collision is real rather than hypothetical:
-      // the spec makes a double-tap the ONLY way a constraint is ever evicted, and that
-      // is `IN3`'s job. When `IN3` lands, one of the two has to give — either the same
-      // double-tap does both, or the reset moves to a gesture of its own. Recorded here
-      // and in `queue_notes/IN3.md` so it is decided rather than discovered.
-      if (verdict.kind === "DOUBLE_TAP") {
-        resetCamera();
-        lastVerdict = "DOUBLE_TAP → camera reset";
-      }
-      // ⭐⭐⭐ **FORK C: THE TAP HAS TWO MEANINGS, AND `tapMeaning` OWNS THE CHOICE.**
+      // ⭐⭐⭐ **THE TAP'S FOUR MEANINGS, AND `tapMeaning` OWNS THE CHOICE.**
       //
-      // ⛔⛔ `D27`/`D28` MADE EVERY TAP FLIP THE MODE, and fork C's alignment trigger IS a tap
-      // — so the two rules want the same gesture. ⭐ They do not contradict: the alignment
-      // fires only in `ROTATE` and ENDS in `TRANSLATE`, which is exactly the flip the toggle
-      // would have made. A hand that taps in `ROTATE` reaches `TRANSLATE` either way.
-      // ⚠ A `DOUBLE_TAP` keeps every meaning it has — the second tap of a pair toggles back
-      // and flies the camera home, the owner's accepted trade since `A16`. It does NOT align:
-      // the first tap of the pair already did, and aligning twice to one Pioneer is a no-op
-      // that would only muddy the readout.
+      // ⛔⛔ `D27`/`D28` MADE EVERY TAP FLIP THE MOVEMENT MODE, and the alignment trigger IS a
+      // tap — so the two rules want the same gesture, and the alignment CONSUMES it when it
+      // fires (`D38`). ⭐ Since 2026-09-17 the GESTURE also chooses what the alignment means:
+      // a single tap makes a `SNAPSHOT`, a double tap makes a `FOLLOW`, and either one on the
+      // face that is already the Pioneer switches the mode or lets it go.
+      //
+      // ⚠⚠ **AND A DOUBLE TAP ON ANOTHER OBJECT'S FACE NO LONGER FLIES THE CAMERA HOME.**
+      // That meaning survives everywhere else — empty space, the held object — but here it
+      // would make every `FOLLOW` alignment reset the view, which is unusable. ⛔ The camera
+      // reset is therefore evaluated AFTER the alignment decision and skipped when the tap
+      // aligned; this block used to run first, which is why it moved.
       let alignedByThisTap = false;
-      if (verdict.kind === "TAP") {
+      if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") {
         const others = [...held.entries()].filter(([pid]) => pid !== e.pointerId);
         const heldId = others.length === 1 ? (idOf.get(others[0]![1].mesh) ?? null) : null;
         const ctx: TapContext = {
           mode: behaviour,
+          kind: verdict.kind,
+          alignMode,
           tappedObject: idOf.get(grip.mesh) ?? null,
           tappedFace: grip.pressFace?.faceId ?? null,
           heldObject: heldId,
-          // ⚠ The Pioneer counts only for the object THIS tap could undo — the one being
+          // ⚠ The Pioneer counts only for the object THIS tap could act on — the one being
           // held. A remembered Pioneer belonging to some other object's alignment must not
           // make this tap an undo.
-          pioneer:
-            heldId !== null && selectedFace?.objectId === heldId ? pioneerFace : null,
+          pioneer: heldId !== null && selectedFace?.objectId === heldId ? pioneerFace : null,
         };
         const meaning = tapMeaning(ctx);
-        if (meaning === "ALIGN") {
-          alignedByThisTap = forkCAlign(e.pointerId, grip);
-        } else if (meaning === "UNALIGN" && heldId !== null) {
+        if (meaning.action === "ALIGN" && meaning.mode !== null) {
+          alignedByThisTap = forkCAlign(e.pointerId, grip, meaning.mode);
+        } else if (meaning.action === "SWITCH" && meaning.mode !== null) {
+          // ⭐⭐ *"A single tap on PioneerFace can follow a double tap … and therefore toggle
+          // to behaviors accordingly"* — the owner. ⛔ NOTHING MOVES: the constraint, the
+          // faces and the poses are untouched, and only what the alignment MEANS changes.
+          // ⭐ The colours are how a hand sees that it worked.
+          alignMode = meaning.mode;
+          paintHighlightColours();
+          alignedByThisTap = true; // ⛔ consumed: it must not also flip the movement mode
+          lastVerdict = `align: now ${meaning.mode} (the other gesture on the same face)`;
+        } else if (meaning.action === "UNALIGN" && heldId !== null) {
           // ⭐⭐⭐ *"The alignment can be toggled off by taping another time to the same
-          // PioneerFace"* (owner, 2026-09-16) — the same undo the shake performs, on a
-          // gesture a hand can actually make. ⚠ The owner expects to judge the shake against
-          // it: *"we will later see if we keep the shake, as this is a complicated movement
-          // to execute by the user."*
+          // PioneerFace"* (`D39`) — and since the modes were merged, by **the same gesture
+          // that made it**: a single tap releases a `SNAPSHOT`, a double tap releases a
+          // `FOLLOW`. ⚠ So leaving `FOLLOW` by single taps takes two — one to switch, one to
+          // release — which is the cost of one gesture carrying two jobs.
           const ev = evictObjectConstraints(world, heldId);
           world = ev.world;
           selectedFace = null;
           pioneerFace = null;
           pioneerOrientation = null;
+          alignMode = null;
           others[0]![1].alignmentTouched = false;
-          alignedByThisTap = true; // ⛔ the tap is CONSUMED: it must not also flip the mode
+          alignedByThisTap = true;
           lastVerdict = ev.result.refused
             ? `align: re-tap — nothing to release on ${heldId}`
             : `align: RE-TAP released the alignment on ${heldId}`;
         }
+      }
+      // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
+      // orbit can get stuck close in with an object filling the view, and then every tap
+      // lands ON something — a reset that only listened to empty space would be
+      // unreachable precisely when it is wanted.
+      // ⚠⚠ UNLESS THE TAP ALIGNED — **the owner's rule, 2026-09-17**: *"the double tap in such
+      // case shall not trigger the camera orbit reset."* ⭐ A double tap on another object's
+      // face now makes a `FOLLOW` alignment, and flying the camera home on top of it would
+      // make the gesture unusable. ⛔ One gesture, one consequence.
+      // ⚠ Everywhere else the double tap keeps the camera reset: empty space, the held
+      // object, a second touchpoint. Only this one configuration is claimed.
+      if (verdict.kind === "DOUBLE_TAP" && !alignedByThisTap) {
+        resetCamera();
+        lastVerdict = "DOUBLE_TAP → camera reset";
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
       // *anywhere* includes the object the touchpoint was carrying, which is this branch.
@@ -2540,6 +2583,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⭐ The Pioneer's contour reports the same alignment, so it goes at the same moment.
         pioneerFace = null;
         pioneerOrientation = null;
+        alignMode = null;
       }
       forgetAnchor(routed.seq);
       router.release(e.pointerId);
@@ -2701,11 +2745,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         pioneerFace = null;
         pioneerOrientation = null;
       } else {
-        const turn = pioneerTurned(
-          pioneerOrientation,
-          pObj.local.orientation,
-          pioneerTurnRuleOf(cfg.pioneerTurnRule),
-        );
+        const turn = pioneerTurned(pioneerOrientation, pObj.local.orientation, alignMode ?? "SNAPSHOT");
         if (turn.kind === "RELEASE") {
           // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* —
           // so the pose is left exactly as the hand left it, and only the RULE goes.
@@ -2714,7 +2754,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           selectedFace = null;
           pioneerFace = null;
           pioneerOrientation = null;
-          lastVerdict = `align: C1 — the Pioneer turned, alignment released on ${fId}`;
+          alignMode = null;
+          lastVerdict = `align: SNAPSHOT — the Pioneer turned, alignment released on ${fId}`;
         } else if (turn.kind === "FOLLOW" && turn.delta !== null) {
           // ⭐⭐ C2: the Follower takes the SAME WORLD ROTATION, which keeps the two normals
           // parallel by construction — no solve, and no chance of the solver adding a twist.
@@ -2732,7 +2773,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             world = clearObjectConstraints(world, fId);
             world = pushObjectConstraint(world, fId, retargetAlignment(stack[0]!, pn), false);
           }
-          lastVerdict = `align: C2 — the Follower took the Pioneer's turn`;
+          lastVerdict = `align: FOLLOW — the Follower took the Pioneer's turn`;
         }
         if (pioneerOrientation !== null) pioneerOrientation = pObj.local.orientation;
       }
