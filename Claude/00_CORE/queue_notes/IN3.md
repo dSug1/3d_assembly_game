@@ -483,9 +483,9 @@ the same defect one layer up: `rollAppliedDeg` was current and `lastRollDeg` was
 
 | flag | fork | what it does |
 |---|---|---|
-| `0` | **A — `NONE`** | today's behaviour. No constraint created, consulted or cleared. ⭐ **The default** |
-| `1` | **B — `IN3`** | §2 rules 1–3, under construction. What is wired is below |
-| `2` | **C — `OWNER_TBD`** | ⛔ **inert**, and labelled inert on the HUD, until the owner specifies it |
+| `0` | **A — `NONE`** | the behaviour `1.0.4`–`1.0.7` shipped. No constraint created, consulted or cleared. ⚠ **Was the default until 2026-09-16** |
+| `1` | **B — `IN3`** | §2 rules 1–3, flick-to-align. ⚠ **Parked by the owner**; what is wired is below |
+| `2` | **C — `FORK_C`** | ✅ the owner's tap-to-align set (`D37`–`D39`) — **and the shipped DEFAULT** since 2026-09-16. ⛔ It was `OWNER_TBD` and *inert* while unspecified; a name that says *to be defined* while the thing runs rules is a lie the compiler cannot catch |
 
 ⛔⛔ **IT IS A GATE, NOT AN INVERSION, AND THAT CHANGES THE FAILURE MODE.** `D26`'s flag had
 two live paths differing by one inversion; here two of three forks create nothing, so
@@ -775,6 +775,30 @@ has just cleared its alignments and the release would push a new one).
 ⚠ The exposure left, stated: an ABANDONED shake can still end in a flick and push an
 alignment. It is reversible — one constraint rotates, and a shake removes it — while
 suppressing every post-reversal flick was recoverable by nothing.
+
+---
+
+### ✅ FORK C's AMENDMENT — both faces marked, and a second undo (`D39`, 2026-09-16)
+
+⭐ *"When an object is aligned, the FollowerFace shall be highlighted and the PioneerFace
+contour shall be highlighted, until the alignment is broken"*, and *"the alignment can be
+toggled off by taping another time to the same PioneerFace."*
+
+⛔⛔ **BOTH RETIRE THE OWNER'S OWN *"the PioneerFace resets as null"***: its identity has to
+survive, because the contour is drawn on it and the re-tap must recognise it. ⭐ What does NOT
+change is the **constraint** — still a frozen world direction, so moving the Pioneer's object
+afterwards still does not drag the alignment with it. ⚠ What IS still discarded is the tapping
+grip's own `pressFace`: a stale face on a dead grip is what a later rule picks up by accident.
+
+⭐⭐ **A FILL FOR WHAT MOVED, A CONTOUR FOR WHAT IT WAS AIMED AT** — the two faces are not
+the same kind of thing, and that difference should not need a legend. ⛔ Both go through ONE
+`placeFaceMarker`: a second copy of that geometry would be a second implementation of it,
+which `METHOD` warns can silently disagree while both look right. ⚠ And the pair is
+**atomic** — a contour without its fill would claim a relationship that is gone.
+
+⭐ The re-tap is a `ROTATE` gesture (a tap in `TRANSLATE` keeps `D28`'s toggle), so the shake
+remains the only undo while translating — which is exactly why the owner keeps it *for the
+moment*. ⚠⚠ **That comparison is now the most useful thing a device pass can produce.**
 
 ---
 

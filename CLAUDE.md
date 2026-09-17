@@ -49,6 +49,19 @@ npm run build       # production bundle into dist/
 ✅ Green: TypeScript + Babylon + Vite, **619 golden vectors passing** (632 − 58 + 45: ⭐ the roll
 channel and its vectors were **deleted together**, 2026-09-16).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
+
+⭐⭐⭐ **AND WHAT THE PLAIN URL NOW RUNS IS FORK C** (`D37`–`D39`, 2026-09-16) — the owner's
+anchor rules, **not** the behaviour `1.0.4`–`1.0.7` shipped. Hold an object, **TAP a face on
+another**, and the held one makes the minimal turn that points its own face **the same way**
+(parallel — the CAD *align* sense, chosen over a mate). One alignment at a time, replaced by
+the next; the Follower face is **filled** and the Pioneer face **outlined** until it breaks;
+a **shake** or a **second tap on that same face** breaks it; a **flick** resets the rotation.
+⛔ The session starts in **`ROTATE`** here. ⚠ Fork A — every earlier device close — is
+`?anchorRules=0`, and `?anchorRules=1` is fork B, **parked**: the owner left it because a
+release-time trigger *"releases the finger from the object it is tracking"*.
+⛔⛔ **NO HAND HAS JUDGED FORK C YET**, and rule 5 says that is what closes a change.
+⭐ Rules, the conflict check against every earlier rule, the decisions and ⭐⭐ **an ordered
+list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](Claude/10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md) §9–§10.
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
 2026-09-16 a confirmed fix was reported broken from Pages on a tablet running an **old
 bundle**: `index.html` is served `max-age=600` and the assets are content-hashed, so a

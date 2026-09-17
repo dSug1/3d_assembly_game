@@ -36,6 +36,12 @@ model and so did not wait on `3D1`:
   fixed, including a **composition nobody had computed**.
 
 **619 golden vectors, all passing** (37 → 632 → 574 → 619).
+
+⭐⭐⭐ **THE SHIPPED DEFAULT IS NOW FORK C** (`D37`–`D39`, 2026-09-16): tap a face on another
+object to align the held one, parallel, one alignment at a time, undone by a shake **or** a
+re-tap. ⚠ Fork A — everything closed by a hand below — is `?anchorRules=0`. ⛔ **No device
+look on fork C yet**; the ordered test list is §10 of
+[`spec/FORK_C_ANCHOR_RULES.md`](spec/FORK_C_ANCHOR_RULES.md).
 ⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
 longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
 protect anything — it certifies a module nothing calls, which is exactly how the roll

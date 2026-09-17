@@ -241,7 +241,14 @@ two different undos on gestures that look alike. ⭐ The suppression should stay
 `D33`'s narrowing (it arms once the shake **fires**) is what keeps an abandoned shake from
 also resetting the rotation.
 
-### 4.6 ⚠ THE DEFAULTS CHANGE TWO THINGS, ONE OF THEM SHIPPED
+### 4.6 ⚠ THE DEFAULTS — ✅ **AND MY PROPOSAL HERE WAS OVERRULED, 2026-09-16**
+
+✅ **`D38`: FORK C IS THE DEFAULT FORK, NOW.** *"The game shall start by default to fork C,
+not fork A."* ⛔ The sequencing I proposed below — ship fork A as the default until a hand
+closes fork C — was sound about risk and wrong about whose loop this is: the owner IS the
+hand, and fork C is what they are judging. ⚠ Fork A stays one flag away (`?anchorRules=0`),
+which is what keeps the earlier closes reproducible. ⭐ The text below is kept because it
+records the reasoning that was overruled, not because it is current.
 
 *"Default start: rotation mode and fork C"* means `initialBehaviour()` (today `TRANSLATE`)
 and `anchorRules` (today `0`). ⛔ Making fork C the **default flag** ships an unjudged rule
@@ -422,33 +429,123 @@ constraint stack, which is fork-agnostic core. What it does **not** take from fo
 
 ---
 
-## 9. WHAT STAGE 1 BUILT — 2026-09-16
+## 9. WHAT IS BUILT — as of `1ebcad7`, 2026-09-16, **619 vectors, no device look**
 
-✅ **Engine-free, 15 vectors, 3 mutants** (`src/input/fork_c.ts`, `tests/fork_c.test.ts`):
-`faceAlignConstraint` (the parallel align, world-frozen), `tapMeaning` (the tap's two
-meanings), `flickResetPlan` (the owner's *when*-scoping), and `singleAlignment` in
-`core/constraint_stack.ts` (the cap of one, with a `MATE` on the stack refusing).
-⭐ The mutants: anti-parallel reddens 5 including the composition, append-instead-of-replace
-reddens the cap, and a reset that never drops reddens the *during-the-gesture* case.
+⛔ Rule 5 is unpaid for every line of this section: *a look on a REAL DEVICE closes a change
+and nothing else does.* ⭐ The three decisions it rests on are `D37` (the tap trigger), `D38`
+(fork C is the default; no mode switch) and `D39` (both faces marked; the re-tap undo).
 
-✅ **Wired** (`src/render/scene.ts`): the Pioneer tap on a second holder's `TAP` verdict, the
-alignment applied through `solve`, the highlight raised **at the alignment** and dropped with
-the constraint, the mode switch to `TRANSLATE`, the shake release **in either mode** (see
-below), the rotation reset, and the twist about the aligned normal in `ROTATE`.
+### The gestures, and where each one lives
 
-⚠⚠ **THREE PLACES FORK C DELIBERATELY DIVERGES FROM A DECISION ALREADY TAKEN**, each recorded
-where it is written:
+| what a hand does | what happens | code |
+|---|---|---|
+| boot | fork C is **the default fork**, and the session starts in **`ROTATE`** | `gestureConfig.anchorRules = 2`, `scene.ts` |
+| hold an object, **TAP a face on another** | the held object makes the **minimal** turn so its held face's normal is **PARALLEL** to the tapped one's; one alignment at a time, replaced by the next | `fork_c.faceAlignConstraint`, `constraint_stack.singleAlignment`, `scene.forkCAlign` |
+| — and afterwards | the FollowerFace is **filled**, the PioneerFace gets a **contour**, both until the alignment breaks. ⛔ The mode does **not** change: the tap is consumed | `scene.placeFaceMarker`, `faceQuad` + `faceContour` |
+| drag an **aligned** object in `ROTATE` | it **twists about the aligned normal** — the one surviving DOF | `anchor_rotate.constrainedDragAngle`, reused from `A3` |
+| **flick** an object | the **rotation resets** to the press orientation. The alignment is **conserved** if older than the press, **dropped** if made during this gesture | `fork_c.flickResetPlan` |
+| **shake** an object | the alignment and both highlights go — in **either** mode, and **at any moment** in a gesture | `shake.ts` (a windowed reading), `evict` |
+| **TAP the same PioneerFace again** | the alignment and both highlights go — the same undo, on an easier gesture | `fork_c.tapMeaning` → `UNALIGN` |
+| any other tap | `D28`'s mode toggle, unchanged | `mode_toggle.ts` |
 
-1. **`D32`'s shake is `ROTATE`-only; fork C's is not.** Fork C's alignment *ends* in
-   `TRANSLATE`, so a mode-gated shake would force a toggle before the hand could undo — and
-   the owner's sentence carries no mode condition. ⚠ The cost: in fork C a vigorous
-   repositioning can evict. The four shake tunables are the only defence and have sliders.
-2. **`D36` deleted the rotation reset globally; fork C reinstates it** — as a fork rule, not a
-   restored global behaviour. Fork A shipped without it and still does.
-3. **The mode default is `ROTATE` inside fork C only** — fork A's `TRANSLATE` default has been
-   closed by a hand, and the flag's own default stays `0` until fork C is closed too (§4.6).
+### ⭐ What was built ENGINE-FREE, with its mutants
 
-⛔ **What a device look should ask first**, in order: does the tap reach the alignment at all
-(the HUD prints `forkC: ALIGNED …` or the refusal); is *parallel* what the hand expected once
-it sees it; does the twist feel like a control or like a dead axis; and can an ordinary
-reposition shake the alignment away by accident.
+`src/input/fork_c.ts` + `tests/fork_c.test.ts` (19 vectors) — `faceAlignConstraint`,
+`tapMeaning` (three meanings), `flickResetPlan`; `singleAlignment` in
+`core/constraint_stack.ts`; the rewritten `shake.ts`.
+⛔ **Every one of them was shown to fail against the old code before it was trusted**:
+anti-parallel instead of parallel reddens five including the composition; append instead of
+replace reddens the cap; a reset that never drops reddens the *during-the-gesture* case; and
+the old once-claimed shake axis reddens the drag-then-shake vector.
+
+### ⚠⚠ THREE PLACES FORK C DELIBERATELY CONTRADICTS A DECISION ALREADY TAKEN
+
+⛔ Each is written at its site in the code as well as here — a divergence nobody can find is
+indistinguishable from a bug.
+
+1. **`D32`'s shake is `ROTATE`-only; fork C's is not.** The owner's sentence carries no mode
+   condition, and said so again when it failed. ⚠ The cost: in fork C a vigorous reposition
+   can evict an alignment. The four shake tunables are the only defence, and they have
+   sliders. ⭐ The re-tap (`D39`) now offers an easier undo, which is what will decide whether
+   the shake survives at all.
+2. **`D36` deleted the rotation reset globally; fork C reinstates it** — as a fork rule. Fork A
+   shipped without it and still does.
+3. **The session starts in `ROTATE` inside fork C only.** ⚠ Fork A's `TRANSLATE` start was
+   closed by a hand, so `?anchorRules=0` must still reproduce it exactly.
+
+---
+
+## 10. ⭐⭐⭐ WHAT TO TEST NEXT — in order, and what would falsify each
+
+⭐ The plain URL is enough: **https://dsug1.github.io/3d_assembly_game/**
+⛔⛔ **CHECK THE HUD's `build` LINE FIRST.** It must read `1ebcad7` or later; on 2026-09-16 a
+confirmed fix was reported broken from a tablet running a cached bundle.
+⭐ The HUD also prints the live fork, the mode, the selected face and the last verdict — every
+refusal below names itself there, so *"nothing happened"* is never the only evidence.
+
+### A. Does the fork run at all
+
+1. **Boot.** The HUD reads `anchor=forkC` and `[ROTATE]`.
+   ⛔ *Falsified by* `anchor=none` (the default did not take) or `[TRANSLATE]`.
+2. **The alignment.** Hold one cube; **tap** a face on another. The held cube turns so its held
+   face points **the same way** as the tapped one, and the HUD says
+   `forkC: ALIGNED … · 1 DOF free · stays ROTATE`.
+   ⛔ *Falsified by* the mode flipping to `TRANSLATE`, or by a refusal message — read it: it
+   names which of the four preconditions failed.
+   ⚠ **Parallel is deliberate** (`§5.2`): the held cube presents its **opposite** side toward
+   the face you tapped. If that is not what you want, that is the sign to change, and it is
+   one line.
+3. **Both highlights, and their lifetime.** The Follower face is **filled**, the Pioneer face
+   is **outlined**; lift every finger — both stay.
+   ⛔ *Falsified by* either vanishing on release, or by the contour outliving the alignment.
+   ⚠ The outline is one pixel wide by WebGL's rule; if it is too faint to judge, say so and it
+   becomes a `GreasedLine`.
+
+### B. What the alignment is FOR
+
+4. **The surviving DOF.** With the cube aligned, drag it (one finger, `ROTATE`). It should
+   twist **about the aligned normal only**, and the aligned face should keep pointing where
+   you put it.
+   ⛔ *Falsified by* free rotation (the alignment breaks) or by nothing moving. ⚠ If the HUD
+   says *degenerate*, that is correct and not a bug: the aligned normal points at the camera,
+   so orbit a little and try again — the projection has no direction there.
+5. **The rotation reset, both cases.** (a) Align, then **flick** in the same gesture → the
+   rotation resets **and the alignment drops**. (b) Align, lift, press again, rotate, then
+   flick → the rotation resets **and the alignment survives**.
+   ⛔ *Falsified by* the two cases behaving alike — that is the whole of your *when*-scoping.
+
+### C. The two undos, which is the comparison you asked for
+
+6. **Re-tap.** Tap the **same** PioneerFace again → the alignment and both highlights go.
+   ⚠ A **different** face of the same object re-aligns instead, by design.
+7. **Shake, and specifically LATE in a gesture.** Press an aligned object, drag it somewhere
+   **first**, and only then shake → the alignment releases. Then repeat in `TRANSLATE`.
+   ⛔ *Falsified by* it working only when the shake starts at the press — that was defect 45,
+   and this is the check that it is gone.
+8. ⭐⭐ **THE VERDICT WORTH FORMING**: with the re-tap in hand, is the shake still worth
+   keeping? Your words: *"this is a complicated movement to execute by the user."*
+
+### D. The safety question I cannot answer without a hand
+
+9. **Can an ordinary reposition evict by accident?** Fine-position an aligned object in
+   `TRANSLATE` with small corrective back-and-forths. The alignment should survive.
+   ⚠ If it does not, the knobs are in the **EVICTION SHAKE** menu group — `legMm` first (how
+   far back a leg must come to count), then `reversals`. ⛔ This is the one place where a
+   guessed number can destroy deliberate work, which is why it has four sliders.
+
+### E. Fork A must be untouched — `?anchorRules=0`
+
+10. No highlight, no alignment on a tap, the session starts in **`TRANSLATE`**, and a flick
+    does **not** reset the rotation.
+    ⛔ *Falsified by* any fork C behaviour appearing — which would mean the gate leaks, and
+    every earlier device close (`A10`–`A15`, rule 6) would be in doubt.
+
+### ⚠ Known gaps — do not report these as defects
+
+* **Only one pair of highlights is drawn.** Two objects can each hold an alignment; the
+  markers show the latest.
+* **The whole second half of §2 is unbuilt** — `TargetPosition`, the cross-quad gizmo, the
+  orbit about it and the approach translation. §7 asks the four questions that gate them.
+* **The third cube** — *"nothing works on the third brown cube"* was reported on 2026-09-16
+  and never diagnosed; it is registered identically to the other two. ⛔ If it recurs, the HUD
+  line while pressing it (`face=…` and the verdict) is what settles it in one look.

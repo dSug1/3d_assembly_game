@@ -23,6 +23,24 @@ all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel �
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
+### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
+
+1. ⛔⛔ **A DEVICE LOOK ON FORK C** — it is the shipped default and **no hand has judged any of
+   it**. The ordered list, with what would falsify each item, is §10 of
+   [`../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md).
+   ⭐ Two questions in it are the owner's to answer by hand and cannot be answered here:
+   **is *parallel* the sense a hand expects**, and **can an ordinary reposition shake an
+   alignment away by accident**.
+2. ⭐ **The verdict between the two undos** — the shake and `D39`'s re-tap do the same thing,
+   and the owner expects to drop one: *"this is a complicated movement to execute by the
+   user."*
+3. ⛔ **Four owner decisions gate fork C's second half** (`§7`) — and one is a real design
+   problem, not a preference: the approach mapping has **no direction** when the
+   centre→target line faces the camera and **shrinks to noise at contact**, with roll and
+   depth displaced in that state so nothing can take over.
+4. ⚠ **`A3`'s handover constant was never needed** and `IN3`'s remaining unwired piece is
+   gone, so this row's only blocker is now the owner, not the build.
+
 ### What works, by finger, on a real device
 
 ✅ **`IN1` CLOSED** — the recognizer: commit point, provisional motion with rollback,
@@ -300,7 +318,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN0 | Units, motion states, flick test | IN | feature | ✅ **CLOSED**, and §1.1 has had **FOUR formulations** — the first three all broke on a real pointer. ⭐ Now a **per-axis position deadband** (`A11`): time-free, exact, and robust by construction rather than by a threshold above a measurement. ⚠ `motionDeadbandMm` is the most load-bearing number in the input layer. ⭐⭐ **The most instructive file in the project** → [`queue_notes/IN0.md`](queue_notes/IN0.md) | — |
 | IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ✅ **CLOSED 2026-09-14.** 109 new vectors. **7 device passes, 14 defects none of which a green suite could see.** ⛔⛔ Its rule **2quinte** roll detector, *"built early and hardened"*, is **DELETED** (`D31`) — it had had no channel since `A12` and its retired verdict vetoed `IN3`'s flick. → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | ✅✅ **CLOSED 2026-09-14**, 22 + 8 vectors, confirmed by finger — `src/input/router.ts`, engine-free and generic over an opaque object handle. Three roles latched at press for the touchpoint's lifetime; §0 order-independence keyed by pointer id. ⛔⛔ **ITS LATCH HAS EXACTLY ONE EXCEPTION** (`A15`/`D25`): `relatchOnOrphan`, on a **discrete** event only. ⭐ What the latch protects against is a role recomputed from a CONTINUOUS reading, frame after frame — so the header was REWORDED, not deleted. ⭐ A vector pass found **two vectors that could not fail** → [`queue_notes/IN2.md`](queue_notes/IN2.md) | IN1, IN8 |
-| IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | 🔨 **TWO LIVE FORKS** (`D29`; fork A = today's behaviour, the default). ⚠ **Fork B (`=1`) is PARKED BY THE OWNER** — *"not satisfied with the flick mechanism"*: face selection, 2bis's precondition, 2ter/2quater, 2sexte and eviction are all built and wired there. ✅ **Fork C (`=2`) is `D37` — stage 1 BUILT 2026-09-16**: hold an object, **TAP** a face on another and the held one turns minimally so its face points the **same way** (parallel); one alignment, replaced not stacked; a shake releases it; a flick resets the rotation; the free spin twists about the aligned normal. ⛔ **NOT built**: `TargetPosition`, its gizmo, the orbit and the approach — **four owner decisions gate them**, one of them a real problem (the approach mapping degenerates AT CONTACT). ⛔ No device look on any of fork C → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
+| IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | 🔨 **TWO LIVE FORKS** (`D29`). ⚠ **Fork B (`=1`) is PARKED BY THE OWNER** — *"not satisfied with the flick mechanism"*; face selection, 2bis's precondition, 2ter/2quater, 2sexte and eviction are all wired there. ✅✅ **FORK C (`=2`) IS THE SHIPPED DEFAULT AND STAGE 1 IS BUILT** (`D37`–`D39`): tap-to-align, parallel, one alignment; both faces marked; shake **or** a re-tap on the Pioneer undoes it; a flick resets the rotation; the free spin twists about the aligned normal. ⛔ **NOT built**: `TargetPosition`, its gizmo, the orbit and the approach — **four owner decisions gate them**, one a real problem (the approach mapping degenerates AT CONTACT). ⛔⛔ **NO DEVICE LOOK ON ANY OF FORK C** — the ordered test list is §10 of [`../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md`](../10_INPUT_TOUCH/spec/FORK_C_ANCHOR_RULES.md) → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | ✅✅ **RULE 6 CLOSED 2026-09-15** — confirmed by finger in ordinary play, not only in a tuning session. ⭐ It has mass: a critically/under-damped follower plus a phantom lead, and its gain was **computed** (1.0 puts the object exactly under the finger). ⛔ **6bis / 6ter / 6quater wait on face centres** — now unblocked by `3D1`. ⚠ Rotation has **no inertia**: built and rejected on the device → [`queue_notes/IN4.md`](queue_notes/IN4.md) | IN2, 3D1 (6bis onward only) |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued, and ⭐⭐ **practical without a rebuild**: every tunable overrides from the URL and the menu validates refusals. ✅ `pointerNoiseMm` = **0.761 mm** is the one number MEASURED (2026-09-14) — and measuring it exposed a defect eight device passes had accepted. ⛔⛔ **A TRAP TO READ BEFORE BOOKING A SESSION**: several tunables are still READ but sit OFF the gesture path, so `config_debt` sees them used while they change nothing → [`queue_notes/IN5.md`](queue_notes/IN5.md) | IN3 |
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
