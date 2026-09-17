@@ -90,8 +90,8 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Forty-five defects have been found **by finger** (forty-four of them; one by composing a measurement with a threshold), and **not one was visible to a green
-suite**. They are **five** shapes, not forty-five problems — the fifth is below, and it is
+Forty-six defects have been found **by finger** (forty-five of them; one by composing a measurement with a threshold), and **not one was visible to a green
+suite**. They are **five** shapes, not forty-six problems — the fifth is below, and it is
 the one that costs a correct implementation rather than a broken one:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
@@ -123,7 +123,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | **`IN3`** — the flick's BASELINE | **1** |
 | **fork C** — the highlight, wiped one event later | **1** |
 | **fork C** — the shake's stale axis | **1** |
-| ⭐⭐ **THE TOTAL** | **= 45** |
+| the face markers lagged a frame | **1** |
+| ⭐⭐ **THE TOTAL** | **= 46** |
 
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16). Each defect's account —
 what was reported, what the cause turned out to be, which mistake shape it was — is in

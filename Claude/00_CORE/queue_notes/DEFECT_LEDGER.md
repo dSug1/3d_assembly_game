@@ -47,3 +47,31 @@ quantity** — a question that is easy to ask standing in for the one that matte
 | **fork C** — the highlight, wiped one event later | **1** — *"the aligned face shall continue to be highlighted... or if you built it, I can't see it."* ⛔⛔ It WAS built; the release handler destroyed it immediately, because its persistence test asked *"is the object being RELEASED the highlighted one?"* — and in fork C it never is: the highlight names the **Follower** while the release is the **Pioneer's** tap. ⭐ Mistake shape 2: a condition about the GESTURE standing in for a fact about the MODEL | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
 | **fork C** — the shake's stale axis | **1** — *"triggered only if the touchpoint is pressed and the shake immediately follows... not working in translation mode."* ⛔⛔ ONE defect, not two: the detector claimed its axis **once**, from the gesture's first leg, so a shake after any other motion was measured against an axis pointing elsewhere — and an alignment takes time, so no post-alignment shake could ever fire. ⭐⭐ **`D33`'s mistake in a second gesture the same week**: a quantity measured from the OLDEST sample instead of the recent motion. Fixed the same way — a trailing window, longest sub-window first | [`queue_notes/IN3.md`](queue_notes/IN3.md) |
 | | **= 45** | |
+
+---
+
+## 46 — the face markers lagged the faces by one frame *(2026-09-17)*
+
+> *"The highlighted quads always lag the movements of the faces they highlight. This is not
+> nice to see."*
+
+⛔⛔ **NOT THE ARITHMETIC — THE ORDER, AND A CACHE.** The render loop wrote every mesh's pose
+and then placed the markers from `mesh.getWorldMatrix()`. ⭐ That call returns Babylon's
+**cached** matrix, which is recomputed inside `scene.render()` — i.e. *after* the block that
+read it. So each marker was placed from the pose its object had **last** frame, every frame.
+
+⚠ And the halves disagreed, which is why it read as a *slide* rather than as a delay: the
+POSITION came from the stale matrix while the ORIENTATION came from `rotationQuaternion`,
+which was current.
+
+✅ **FIXED BY PARENTING the markers to the object mesh.** A child's world transform is
+composed from its parent's at render time, so there is no matrix to read and no ordering to
+get right. ⛔ `computeWorldMatrix(true)` would also have worked and would have left the next
+writer one reordering away from the same defect. ⭐ `METHOD`: *prefer the structure that
+cannot express the defect.*
+
+⚠⚠ **THE COST, STATED**: *the marker turns with its face* is now the scene graph's doing, and
+no golden vector reaches `src/render`. `face_pick.test.ts` pins the composition the graph
+performs — the constant per-face offset under the object's orientation — which is the closest
+a vector gets. ⛔ The same blind spot as `3D1`'s follower, the marker's roll, and the flick's
+veto: **this layer has now produced four of the project's defects.**

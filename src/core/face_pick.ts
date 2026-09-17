@@ -30,7 +30,7 @@
 import type { FaceId, ObjectId, World } from "./object_model";
 import { worldPlacementOf } from "./object_model";
 import type { Vec3 } from "./vec";
-import { dot, normalize, qRotate, qconj, qmul, shortestArc } from "./vec";
+import { dot, normalize, qRotate, qconj, shortestArc } from "./vec";
 import type { Quat } from "./vec";
 
 /**
@@ -79,36 +79,23 @@ export function faceFromPickedNormal(
 }
 
 /**
- * ⭐⭐⭐ **THE ORIENTATION A FACE MARKER MUST TAKE — and the defect it was written for.**
+ * ⭐⭐⭐ **THE MARKER'S ORIENTATION *WITHIN* ITS OBJECT** — one constant rotation per face,
+ * taking the marker's `+z` onto that face's LOCAL normal.
  *
- * ⛔⛔ **DEVICE-REPORTED, 2026-09-16**: *"the highlighted face does not rotate as the cube's
- * face: consequently, there is a growing mismatch between their respective quaternion."*
+ * ⛔⛔ IT USED TO COMPOSE THE OBJECT'S ORIENTATION IN, and that half moved to the SCENE GRAPH
+ * on 2026-09-17: the markers are **parented to the mesh**, so Babylon composes parent × child
+ * every frame and the marker cannot be anywhere but on its face. ⭐ What is left here is the
+ * part that is genuinely a computation, and it depends on the face alone.
  *
- * ⭐⭐ THE CAUSE IS WORTH MORE THAN THE FIX. The first version aligned the marker's facing
- * with the face's world **normal** — `shortestArc([0,0,1], worldNormal)`. That is correct
- * about *where the marker points* and says **nothing about its spin**: the shortest arc
- * fixes ONE axis and leaves the roll about it free. ⛔ So when the object turns **about that
- * face's own normal**, the normal does not change, the marker does not follow, and the
- * mismatch accumulates exactly as the owner described.
- *
- * ⭐⭐⭐ **A DIRECTION TEST CANNOT SEE A ROLL.** It is the same family as `METHOD`'s *a sign
- * is not tested by any amount of testing the magnitude*: the quantity I checked (does the
- * marker face the right way?) was true in every frame while the quantity that mattered (is
- * it oriented like the face?) was drifting.
- *
- * ⭐ So the marker does not derive an orientation at all: it **inherits the object's**, and
- * adds the ONE constant rotation that takes the marker's `+z` onto that face's LOCAL normal.
- * ⛔ Constant per face, so nothing can drift — the object's own spin is carried verbatim.
- *
- * @param objectOrientation the object's orientation as DRAWN. ⚠ The mesh's, not the model's:
- *   what the eye sees is `SWAY ∘ FOLLOW ∘ model`, and a marker that took the model's
- *   orientation would lag the face it marks by the follower's time constant.
- * @param faceNormalLocal the face's outward normal in the object's LOCAL frame.
+ * ⚠⚠ **THE DEFECT THIS SHAPE EXISTS TO PREVENT, KEPT ON THE RECORD**: the first version
+ * aligned the marker's facing with the face's **world normal**, via `shortestArc`. That fixes
+ * ONE axis and leaves the spin about it FREE — so turning the object about that face's own
+ * normal moved the face and not the marker, device-reported as *"a growing mismatch between
+ * their respective quaternion"*. ⭐⭐ *A DIRECTION TEST CANNOT SEE A ROLL*: the quantity I
+ * checked (does it face the right way?) stayed true while the one that mattered drifted.
+ * ✅ A constant offset under the object's own orientation cannot drift, by construction —
+ * first by composing it here, and now by letting the graph compose it.
  */
-export function faceMarkerOrientation(objectOrientation: Quat, faceNormalLocal: Vec3): Quat {
-  // ⛔ `qmul(b, a)` applies `a` first: the constant local alignment, then the object's own
-  // orientation. The other order would rotate the offset by nothing and the object by the
-  // offset — right only when the object is unrotated, which is the state every naive test
-  // starts in.
-  return qmul(objectOrientation, shortestArc([0, 0, 1], faceNormalLocal));
+export function faceMarkerLocalOrientation(faceNormalLocal: Vec3): Quat {
+  return shortestArc([0, 0, 1], faceNormalLocal);
 }

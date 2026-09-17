@@ -120,7 +120,7 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
-import { faceFromPickedNormal, faceMarkerOrientation } from "../core/face_pick";
+import { faceFromPickedNormal, faceMarkerLocalOrientation } from "../core/face_pick";
 import { singleAlignment, solve } from "../core/constraint_stack";
 import {
   clearObjectConstraints,
@@ -132,6 +132,13 @@ import { qmul } from "../core/vec";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
+
+/**
+ * ⭐ How far a face marker floats off the surface it marks, in METRES. ⛔ Enough to beat
+ * z-fighting and small enough not to read as a gap — and a named constant because it is used
+ * in the parent's frame now, where a bare `0.0015` would look like a UV or an alpha.
+ */
+const MARKER_LIFT_M = 0.0015;
 
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
 const OBJECT_SIZE_M = 0.08;
@@ -273,44 +280,47 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
-   * ⭐⭐ Put a marker ON a face: lifted off the surface, and INHERITING the object's
-   * orientation plus one constant per-face rotation.
+   * ⭐⭐⭐ Put a marker ON a face — **by PARENTING it to the object**, not by positioning it.
    *
-   * ⛔⛔ ONE PATH FOR BOTH MARKERS, because the second one would be a second implementation
-   * of the same geometry — and `METHOD` is explicit that a recomputation can silently
-   * disagree with the original while both look right. ⭐ The fill and the contour now differ
-   * in colour and in nothing else.
-   * ⚠ The MESH's orientation, not the model's: the eye sees `SWAY ∘ FOLLOW ∘ model`, and a
-   * marker must lag its face by nothing.
+   * ⛔⛔ **DEVICE-REPORTED 2026-09-17: *"the highlighted quads always lag the movements of the
+   * faces they highlight."*** ⭐ Exactly one frame of lag, every frame, and the cause was not
+   * the arithmetic: this ran AFTER the meshes were written but read `mesh.getWorldMatrix()`,
+   * which is Babylon's **cached** matrix — recomputed during `scene.render()`, i.e. after this
+   * block. So every marker was placed from the pose the object had **last** frame, while its
+   * orientation came from `rotationQuaternion` and was current: the two disagreed, which is
+   * why it read as a slide rather than as a delay.
+   *
+   * ⭐⭐ **PARENTING MAKES IT UNREACHABLE RATHER THAN FIXED.** A child's world transform is
+   * composed from its parent's at render time, so there is no stale matrix to read and no
+   * ordering to get right — the marker is *on* the face in the same sense a decal is.
+   * ⛔ `computeWorldMatrix(true)` here would also have worked, and would have left the next
+   * writer one reordering away from the same bug. `METHOD`: prefer the structure that cannot
+   * express the defect.
+   *
+   * ⚠⚠ **AND IT MOVES A GUARANTEE OUT OF REACH OF A VECTOR, WHICH IS WORTH SAYING**: that the
+   * marker turns WITH its face is now the scene graph's doing, and no golden vector reaches
+   * `src/render`. `face_pick.test.ts` still pins the composition that the graph performs —
+   * the constant offset under the object's orientation — which is the closest a test can get.
+   *
+   * ⚠ The local face centre and normal come from the MODEL, which is where faces live; the
+   * sway and the follower reach the marker through the parent, so what the eye sees still
+   * agrees by construction.
    *
    * @returns false when the object or face no longer exists — the caller hides the marker.
    */
-  const placeFaceMarker = (
-    marker: { position: Vector3; rotationQuaternion: Quaternion | null },
-    objectId: ObjectId,
-    faceId: string,
-  ): boolean => {
+  const placeFaceMarker = (marker: AbstractMesh, objectId: ObjectId, faceId: string): boolean => {
     const m = meshOf.get(objectId);
     const face = world.objects.get(objectId)?.faces.find((f) => f.id === faceId);
     if (!m || !face) return false;
-    const wm = m.getWorldMatrix();
-    const centre = Vector3.TransformCoordinates(
-      new Vector3(face.centre[0], face.centre[1], face.centre[2]),
-      wm,
+    if (marker.parent !== m) marker.parent = m;
+    // ⭐ Lifted off the surface by a hair, or it z-fights with the face it marks. ⚠ In METRES,
+    // in the PARENT's frame — the objects are unscaled, so a local millimetre is a world one.
+    marker.position.set(
+      face.centre[0] + face.normal[0] * MARKER_LIFT_M,
+      face.centre[1] + face.normal[1] * MARKER_LIFT_M,
+      face.centre[2] + face.normal[2] * MARKER_LIFT_M,
     );
-    const normal = Vector3.TransformNormal(
-      new Vector3(face.normal[0], face.normal[1], face.normal[2]),
-      wm,
-    ).normalize();
-    // ⭐ Lifted off the surface by a hair, or it z-fights with the face it marks.
-    // ⚠ In METRES like everything else in this scene — `CAMERA_NEAR_PLANE_M`'s lesson.
-    marker.position.copyFrom(centre.add(normal.scale(0.0015)));
-    // ⛔⛔ THE MARKER **INHERITS THE OBJECT'S ORIENTATION**, and does not derive one.
-    // Device-reported: aligning a marker's facing with the world normal left its SPIN free, so
-    // turning the cube about that face's own normal moved the face and not the marker — *"a
-    // growing mismatch between their respective quaternion."*
-    const mq = m.rotationQuaternion ?? Quaternion.Identity();
-    const q = faceMarkerOrientation([mq.w, mq.x, mq.y, mq.z], face.normal);
+    const q = faceMarkerLocalOrientation(face.normal);
     marker.rotationQuaternion?.set(q[1], q[2], q[3], q[0]);
     return true;
   };

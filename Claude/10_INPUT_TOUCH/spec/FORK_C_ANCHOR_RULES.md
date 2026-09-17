@@ -500,6 +500,10 @@ refusal below names itself there, so *"nothing happened"* is never the only evid
    ⛔ *Falsified by* either vanishing on release, or by the contour outliving the alignment.
    ⚠ The outline is one pixel wide by WebGL's rule; if it is too faint to judge, say so and it
    becomes a `GreasedLine`.
+   ✅ **AND THEY MUST NOT LAG** — defect 46 (2026-09-17) was exactly one frame of it, every
+   frame, because the markers were placed from a cached world matrix. ⛔ They are **parented**
+   now, so drag or spin the object hard: a marker that still trails its face would mean the
+   parenting is not doing what this claims.
 
 ### B. What the alignment is FOR
 

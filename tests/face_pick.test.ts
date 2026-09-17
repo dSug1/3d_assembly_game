@@ -17,9 +17,9 @@
  * and the way to find out which guard is which is to break the product and watch.
  */
 import { describe, expect, it } from "vitest";
-import { faceFromPickedNormal, faceMarkerOrientation } from "@core/face_pick";
+import { faceFromPickedNormal, faceMarkerLocalOrientation } from "@core/face_pick";
 import { makeWorld, type SceneObject } from "@core/object_model";
-import { qFromAxisAngle, type Vec3 } from "@core/vec";
+import { qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
 
 /** A unit box with the six faces `3D1` already gives every object. */
 const BOX: SceneObject = {
@@ -153,7 +153,18 @@ function qRotateForTest(o: SceneObject, v: Vec3): Vec3 {
   ];
 }
 
-describe("⛔⛔ faceMarkerOrientation — THE DEFECT A DIRECTION TEST COULD NOT SEE", () => {
+/**
+ * ⭐⭐ **WHAT THESE NOW MODEL: WHAT THE SCENE GRAPH DOES.** The markers are **parented** to the
+ * object since 2026-09-17 (they lagged a frame when the scene placed them from a cached world
+ * matrix), so the object's orientation is composed by Babylon, not by a function here.
+ * ⛔ `marker(q, n)` below is that composition written out — `qmul(objectOrientation,
+ * faceMarkerLocalOrientation(n))` — so the property the defect broke is still pinned by a
+ * vector, at the closest point a vector can reach `src/render`.
+ */
+const marker = (objectOrientation: Quat, faceNormalLocal: Vec3): Quat =>
+  qmul(objectOrientation, faceMarkerLocalOrientation(faceNormalLocal));
+
+describe("⛔⛔ the face marker's orientation — THE DEFECT A DIRECTION TEST COULD NOT SEE", () => {
   // ⭐⭐ DEVICE-REPORTED, 2026-09-16: *"the highlighted face does not rotate as the cube's
   // face: consequently, there is a growing mismatch between their respective quaternion."*
   // ⛔ The first version aligned the marker's facing with the face's world NORMAL, which
@@ -167,7 +178,7 @@ describe("⛔⛔ faceMarkerOrientation — THE DEFECT A DIRECTION TEST COULD NOT
 
   it("⭐ the marker's +z lands on the face's WORLD normal — the old claim, still true", () => {
     // ⚠ This is what the broken version got right, kept so the fix is not a regression.
-    const q = faceMarkerOrientation(qz(0.9), [0, 0, 1]);
+    const q = marker(qz(0.9), [0, 0, 1]);
     const facing = rotateByTest(q, [0, 0, 1]);
     const worldNormal = rotateByTest(qz(0.9), [0, 0, 1]);
     facing.forEach((v, i) => expect(v).toBeCloseTo(worldNormal[i]!, 12));
@@ -179,7 +190,7 @@ describe("⛔⛔ faceMarkerOrientation — THE DEFECT A DIRECTION TEST COULD NOT
     // move either — while the face plainly does. ⛔ Here the marker's own +x must rotate
     // with the object, quarter turn for quarter turn.
     const spin = Math.PI / 2;
-    const q = faceMarkerOrientation(qz(spin), [0, 0, 1]);
+    const q = marker(qz(spin), [0, 0, 1]);
     const markerX = rotateByTest(q, [1, 0, 0]);
     // a quarter turn about +z takes +x to +y
     expect(markerX[0]).toBeCloseTo(0, 12);
@@ -191,7 +202,7 @@ describe("⛔⛔ faceMarkerOrientation — THE DEFECT A DIRECTION TEST COULD NOT
     // cannot. ⚠ The reported symptom was a GROWING mismatch, so accumulation is the test.
     let total = 0;
     for (let i = 0; i < 40; i++) total += 0.1;
-    const q = faceMarkerOrientation(qz(total), [0, 0, 1]);
+    const q = marker(qz(total), [0, 0, 1]);
     const markerX = rotateByTest(q, [1, 0, 0]);
     expect(markerX[0]).toBeCloseTo(Math.cos(total), 10);
     expect(markerX[1]).toBeCloseTo(Math.sin(total), 10);
@@ -200,7 +211,7 @@ describe("⛔⛔ faceMarkerOrientation — THE DEFECT A DIRECTION TEST COULD NOT
   it("⭐ a side face works the same way", () => {
     // ⚠ +z is the marker's own axis, so it is the one face where the offset is identity —
     // exactly the fixture that would hide an order-of-multiplication error.
-    const q = faceMarkerOrientation(qz(0.4), [1, 0, 0]);
+    const q = marker(qz(0.4), [1, 0, 0]);
     const facing = rotateByTest(q, [0, 0, 1]);
     const worldNormal = rotateByTest(qz(0.4), [1, 0, 0]);
     facing.forEach((v, i) => expect(v).toBeCloseTo(worldNormal[i]!, 12));

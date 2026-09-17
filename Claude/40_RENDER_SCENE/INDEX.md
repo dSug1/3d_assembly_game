@@ -163,6 +163,12 @@ get *found*, and deleting them quietly would cost the next device session.
 * **`Held.pressFace`** — per grip: the trigger names **two** faces on two objects at once,
   which one `selectedFace` cannot express. **`Held.alignmentTouched`** — *made during THIS
   gesture?*, which no look at the state can answer.
+* ⛔⛔ **THE MARKERS ARE PARENTED TO THE OBJECT** (defect 46, 2026-09-17). They used to be
+  positioned from `mesh.getWorldMatrix()` — Babylon's **cached** matrix, recomputed inside
+  `scene.render()`, i.e. AFTER the block that read it — so every marker drew the pose its
+  object had last frame. ⭐ Parenting makes the lag **unreachable** rather than corrected;
+  `computeWorldMatrix(true)` would have fixed this frame and left the trap for the next
+  writer. ⚠ It also moves *the marker turns with its face* out of reach of any vector.
 * The highlight is raised **at the alignment**, not at the press (`D35`), and ⛔ **every
   refusal is printed**: this gesture's failure mode is *nothing visibly happened*.
 * **TWO markers since `D39`** — a filled quad on the Follower (what moved) and a **line
