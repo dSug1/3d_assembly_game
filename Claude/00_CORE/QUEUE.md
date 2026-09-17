@@ -25,13 +25,18 @@ all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel �
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
 
-1. ⛔⛔ **A DEVICE LOOK ON THE ALIGNMENT MODEL** — it is now the ONLY model (`D40`) and **no
+1. ✅✅ **APPROACH & MATE IS FULLY SPECIFIED AND READY TO BUILD** (`D46`/`D47`, every question
+   answered 2026-09-17). ⛔ Order: `3D2`'s **seat** first — §1.4's stack solves ORIENTATION, so
+   a mate does not hold POSITION and breaking would be indistinguishable from moving — then
+   `D47`'s two-handed break. ⭐ The engine-free half (capture, closest faces, the docking angle,
+   `SnapIsAuthorized`) is pure functions and can land first with its vectors.
+2. ⛔⛔ **A DEVICE LOOK ON THE ALIGNMENT MODEL** — it is now the ONLY model (`D40`) and **no
    hand has judged any of it**. The ordered list, with what would falsify each item, is §10 of
    [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md).
    ⭐ Two questions in it are the owner's to answer by hand and cannot be answered here:
    **is *parallel* the sense a hand expects**, and **can an ordinary reposition shake an
    alignment away by accident**.
-2. ⭐ **The verdict between the two undos** — the shake and `D39`'s re-tap do the same thing,
+3. ⭐ **The verdict between the two undos** — the shake and `D39`'s re-tap do the same thing,
    and the owner expects to drop one: *"this is a complicated movement to execute by the
    user."*
 3. ✅ **THE APPROACH IS RE-SPECIFIED** (`D46`) and the old second half may be retired with it —

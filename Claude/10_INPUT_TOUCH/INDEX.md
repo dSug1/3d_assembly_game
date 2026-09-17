@@ -46,8 +46,9 @@ anti-align's missing DOF are **deferred to complex geometry** (true for cubes), 
 fingers** (`D47`). ⭐⭐ The **fine approach is two-handed** — a finger on each object, moving together along their
 centre line — which is the break gesture with the sign reversed, and which makes roll/depth
 irrelevant while docking because a finger on the other object is a second HOLDER, not a
-`SECOND`. ⛔ One thing still open: whether the white contours should differ between *captured*
-and *docking*.
+`SECOND`. ✅ **Every question is answered** (2026-09-17) — one white marks both capture and docking for
+now, and §11 keeps the parked improvements on the record. ⛔ The build order is `3D2`'s **seat
+before the break**, because a mate must hold POSITION or breaking is just moving.
 
 ⭐⭐⭐ **ONE INPUT MODEL SINCE `D40` (2026-09-17)**: tap a face on another object to align the
 held one, parallel, one alignment at a time, undone by a shake **or** a re-tap. ⛔ Forks A and

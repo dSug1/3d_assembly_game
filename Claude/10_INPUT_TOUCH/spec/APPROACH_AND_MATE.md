@@ -245,19 +245,17 @@ when a mate breaks, so the quantity is wanted anyway.
 | is the mate's motion animated | ✅ yes — `D45`'s slerp for the rotation, the same eased ratio for the translation |
 | the thresholds | ✅ docking angle **±30°**, faces anti-parallel **> 150°**, both URL-overridable; `BreakThreshold` gets a **slider**, at the owner's request |
 
-### ⚠ 6.1 THE ONE THING THE OWNER'S ANSWER LEAVES OPEN — *"the user shall expect that since the objects are highlighted in white, correct?"*
+### ✅ 6.1 ONE WHITE FOR BOTH STATES — answered: *"make the white contours not differ for the moment"*
 
-⭐ **Almost.** The white contours come up at **condition A** (proximity), and the drag only
-changes meaning at **condition B** (A *and* aligned). ⛔ So there is a band where the hand sees
-white and the mode still decides — a signal that runs ahead of the rule it is supposed to
-announce, which is the *readout that describes something other than what is happening* shape.
+⭐ The contours come up at **condition A** (proximity) and the drag only changes meaning at
+**condition B** (A *and* aligned), so for a moment the hand sees white while the movement mode
+still decides. ⛔ The owner's call: **do not distinguish them yet.**
 
-✅ **It is already distinguishable, though, and that may be enough**: condition B requires an
-alignment, and an alignment is **already drawn** — the Follower's fill and the Pioneer's
-contour. So *white contours alone* = captured, *white contours **plus** a face highlight* =
-docking. ⚠ Two states told apart by the presence of a third marker is a legend a hand has to
-learn, so if it reads badly on the glass the cheap fix is to make the white **brighter or
-thicker in B**. ⛔ One line either way; a device look decides it.
+✅ **AND THE STATES ARE STILL TELLABLE APART WITHOUT A SECOND COLOUR**, which is why the call
+is cheap: condition B needs an alignment, and an alignment is **already drawn** — the
+Follower's fill and the Pioneer's contour. So *white alone* reads as **captured**, and *white
+plus a face highlight* as **docking**. ⚠ That is a legend of sorts, and a device pass may find
+it too subtle; §11 keeps the improvement on the record rather than in the build.
 
 ### ✅ 6.2 THE SECOND FINGER IN CONDITION B — ANSWERED, and my question was the wrong one
 
@@ -430,3 +428,23 @@ that describe something other than what is happening.
 ⛔⛔ **WHAT MUST HAPPEN ANYWAY, AND SOON**: the day the build meets a part where either bites,
 the residual is the quantity to REPORT — `3D3` already reads it to decide when a mate breaks.
 ⭐ So the deferral is *do not solve it yet*, not *do not measure it*.
+
+---
+
+## 11. ⭐ CAPTURED, NOT CHOSEN — improvements the owner parked
+
+⚠ Neither is a defect and neither blocks the build. ⛔ They are here so that a later session
+finds a **decision** rather than an omission — the difference between *we thought about it* and
+*nobody noticed*.
+
+1. **A second white for the docking state** (§6.1, 2026-09-17). Today one white marks both
+   *captured* and *docking*, and the presence of a face highlight is what separates them.
+   ⭐ If a hand finds that too subtle, the fix is a **brighter or thicker white in condition
+   B** — one line, because both contours already run through one code path.
+   ⚠ The thing to watch for on the glass: a drag that stops translating the way the mode says,
+   with nothing on screen having visibly changed at that instant.
+2. **Distances and directions by FACE rather than by CENTRE** (the owner's own note in §2 and
+   4b.1). ⛔ Centres are what makes the approach direction stable at contact (§5.1's degeneracy
+   is gone *because* of them), so this is not a straight upgrade: **face distances reintroduce
+   the quantity that collapses.** ⭐ Whatever replaces it will need the hold-off to keep the
+   direction alive, exactly as the centres do now.
