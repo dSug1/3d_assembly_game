@@ -6,10 +6,10 @@ that says *fork C* when no forks exist is the same lie as a type called `OWNER_T
 rules — and this one was reached by 21 links. ⭐ The text below keeps every mention of *fork
 C* that is HISTORY; what changed is the name of the thing a session opens.
 
-> **STATUS** · ✅ **STAGE 1 CLOSED BY A DEVICE LOOK (2026-09-17)** · 🔨 stage 2 unbuilt (dictated + built 2026-09-16, `1.0.8-`) · **OWNS** ·
-> the rule set behind `?anchorRules=2`
-> **READ IF** · you are building or judging fork C
-> **LAST VERIFIED** · 2026-09-16
+> **STATUS** · ✅ **STAGE 1 CLOSED BY A DEVICE LOOK (2026-09-17)** · 🔨 stage 2 superseded by `APPROACH_AND_MATE.md` · **OWNS** ·
+> the alignment rules — the tap, the twist, the undos, and what a turned Pioneer costs
+> **READ IF** · you are building or judging the ALIGNMENT (the tap-to-align model)
+> **LAST VERIFIED** · 2026-09-17
 
 ✅✅ **STAGE 1 IS CLOSED BY A DEVICE LOOK** — *"device pass ok, except these modifications"*
 (owner, 2026-09-17), and all five modifications are built: everything simultaneous (`D43`),
@@ -354,9 +354,14 @@ also resetting the rotation.
 ✅ **`D38`: FORK C IS THE DEFAULT FORK, NOW.** *"The game shall start by default to fork C,
 not fork A."* ⛔ The sequencing I proposed below — ship fork A as the default until a hand
 closes fork C — was sound about risk and wrong about whose loop this is: the owner IS the
-hand, and fork C is what they are judging. ⚠ Fork A stays one flag away (`?anchorRules=0`),
-which is what keeps the earlier closes reproducible. ⭐ The text below is kept because it
-records the reasoning that was overruled, not because it is current.
+hand, and fork C is what they are judging.
+⛔⛔ **AND A SENTENCE HERE HAS SINCE GONE STALE, CORRECTED 2026-09-17**: it said *"fork A stays
+one flag away (`?anchorRules=0`), which is what keeps the earlier closes reproducible."*
+⚠ `D40` then **deleted** forks A and B, the `anchorRules` flag, its validator rule, the slider
+and 41 vectors. ⭐ So the earlier closes are **no longer reproducible by a flag** — they are
+reproducible only from git history, and that is a real cost `D40` accepted knowingly (*a
+dormant fork is a trap*). ⛔ Everything below this line is the reasoning that was overruled,
+kept as a record; the `anchorRules` numbers in it describe a flag that no longer exists.
 
 *"Default start: rotation mode and fork C"* means `initialBehaviour()` (today `TRANSLATE`)
 and `anchorRules` (today `0`). ⛔ Making fork C the **default flag** ships an unjudged rule
@@ -548,12 +553,12 @@ and nothing else does.* ⭐ The three decisions it rests on are `D37` (the tap t
 | what a hand does | what happens | code |
 |---|---|---|
 | boot | fork C is **the default fork**, and the session starts in **`ROTATE`** | `gestureConfig.anchorRules = 2`, `scene.ts` |
-| hold an object, **TAP a face on another** | the held object makes the **minimal** turn so its held face's normal is **PARALLEL** to the tapped one's; one alignment at a time, replaced by the next | `fork_c.faceAlignConstraint`, `constraint_stack.singleAlignment`, `scene.forkCAlign` |
-| — and afterwards | the FollowerFace is **filled**, the PioneerFace gets a **contour**, both until the alignment breaks. ⛔ The mode does **not** change: the tap is consumed | `scene.placeFaceMarker`, `faceQuad` + `faceContour` |
+| hold an object, **TAP a face on another** | the held object makes the **minimal** turn so its held face's normal is **PARALLEL** to the tapped one's; one alignment at a time, replaced by the next | `alignment.faceAlignConstraint`, `constraint_stack.singleAlignment`, `scene.alignFollowerToPioneer` |
+| — and afterwards | the FollowerFace is **filled**, the PioneerFace gets a **contour**, both until the alignment breaks. ⛔ The mode does **not** change: the tap is consumed | `scene.placeFaceMarker`, `followerQuads` + `pioneerContours` (one per body/face since `A17`) |
 | drag an **aligned** object in `ROTATE` | it **twists about the aligned normal** — the one surviving DOF | `anchor_rotate.constrainedDragAngle`, reused from `A3` |
-| **flick** an object | the **rotation resets** to the press orientation. The alignment is **conserved** if older than the press, **dropped** if made during this gesture | `fork_c.flickResetPlan` |
+| **flick** an object | the **rotation resets** to the press orientation. The alignment is **conserved** if older than the press, **dropped** if made during this gesture | `alignment.flickResetPlan` |
 | **shake** an object | the alignment and both highlights go — in **either** mode, and **at any moment** in a gesture | `shake.ts` (a windowed reading), `evict` |
-| **TAP the same PioneerFace again** | the alignment and both highlights go — the same undo, on an easier gesture | `fork_c.tapMeaning` → `UNALIGN` |
+| **TAP the same PioneerFace again** | the alignment and both highlights go — the same undo, on an easier gesture | `alignment.tapMeaning` → `UNALIGN` |
 | any other tap | `D28`'s mode toggle, unchanged | `mode_toggle.ts` |
 | ⭐ **in EITHER movement mode** | the tap rules above do not read the movement mode at all (`D44`) | `alignment.tapMeaning` |
 | ⭐ **the snap is a SLERP** | over `cameraResetMs`, eased; a release mid-flight stops it where it is (`D45`) | `core/vec.qSlerp`, `scene.alignAnim` |
@@ -561,7 +566,7 @@ and nothing else does.* ⭐ The three decisions it rests on are `D37` (the tap t
 
 ### ⭐ What was built ENGINE-FREE, with its mutants
 
-`src/input/fork_c.ts` + `tests/fork_c.test.ts` (19 vectors) — `faceAlignConstraint`,
+`src/input/alignment.ts` + `tests/alignment.test.ts` (19 vectors) — `faceAlignConstraint`,
 `tapMeaning` (three meanings), `flickResetPlan`; `singleAlignment` in
 `core/constraint_stack.ts`; the rewritten `shake.ts`.
 ⛔ **Every one of them was shown to fail against the old code before it was trusted**:
@@ -591,18 +596,31 @@ indistinguishable from a bug.
 ⭐ The plain URL is enough: **https://dsug1.github.io/3d_assembly_game/**
 ⛔⛔ **CHECK THE HUD's `build` LINE FIRST.** It must read `1ebcad7` or later; on 2026-09-16 a
 confirmed fix was reported broken from a tablet running a cached bundle.
-⭐ The HUD also prints the live fork, the mode, the selected face and the last verdict — every
-refusal below names itself there, so *"nothing happened"* is never the only evidence.
+⭐ The HUD also prints the mode, the selected face, the last verdict and — since `A17` — the
+**alignment link table**, so *"nothing happened"* is never the only evidence.
 
-### A. Does the fork run at all
+⚠⚠ **CORRECTED 2026-09-17: THIS LIST USED TO TELL A TESTER TO LOOK FOR HUD TEXT THAT NO LONGER
+EXISTS** (`anchor=forkC`, `forkC: ALIGNED …`). ⛔ The fork selector was deleted with forks A
+and B, so a tester following the old wording would have found the strings missing and concluded
+the build was broken. ⭐ A stale test instruction is worse than a stale comment: it manufactures
+a defect report. What the HUD prints NOW:
 
-1. **Boot.** The HUD reads `anchor=forkC` and `[ROTATE]`.
-   ⛔ *Falsified by* `anchor=none` (the default did not take) or `[TRANSLATE]`.
-2. **The alignment.** Hold one cube; **tap** a face on another. The held cube turns so its held
-   face points **the same way** as the tapped one, and the HUD says
-   `forkC: ALIGNED … · 1 DOF free · stays ROTATE`.
-   ⛔ *Falsified by* the mode flipping to `TRANSLATE`, or by a refusal message — read it: it
-   names which of the four preconditions failed.
+| readout | means |
+|---|---|
+| `[ROTATE]` / `[TRANSLATE]` | the movement mode — one latch for the session |
+| `⭭ f>p/face:C` | one entry per alignment: follower, Pioneer, Pioneer FACE, and `C` cyan / `F` orange |
+| `◆TR a↔b` / `◇tR` | `A16`'s white-contour verdict and its two reasons (**T**ranslating, **R**ange) |
+| `align: …` | the last alignment verdict, including every refusal, by name |
+
+### A. Does the alignment model run at all
+
+1. **Boot.** The HUD reads `[ROTATE]`, and the link table is **absent** (nothing is aligned).
+   ⛔ *Falsified by* `[TRANSLATE]` at boot, or by any `⭭` entry before a tap.
+2. **The alignment.** Hold one part; **tap** a face on another. The held part turns so its held
+   face points **the same way** as the tapped one, the HUD gains a `⭭` entry naming both
+   bodies, and the mode **stays** `ROTATE`.
+   ⛔ *Falsified by* the mode flipping to `TRANSLATE`, by no `⭭` entry appearing, or by a
+   refusal message — read it: it names which precondition failed.
    ⚠ **Parallel is deliberate** (`§5.2`): the held cube presents its **opposite** side toward
    the face you tapped. If that is not what you want, that is the sign to change, and it is
    one line.
