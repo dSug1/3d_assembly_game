@@ -38,6 +38,12 @@ model and so did not wait on `3D1`:
 **574 golden vectors, all passing** (37 → 632 → 574 → 619 → **568** → 575 → 567 → 572).
 ⭐ The count going DOWN is the shape to expect when a fork is chosen: 41 vectors described rules that no longer exist, and 10 more described orphans.
 
+⭐⭐ **APPROACH & MATE IS SPECIFIED, NOT BUILT** (`D46`,
+[`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md)): capture radius 1.25× the object,
+hold-off 1.1×, white contours, docking by angle, anti-align + translate-snap. ⛔ Ten decisions
+gate it, two of which would bite: a mate is a SECOND stack entry, and eviction spares mates so
+nothing can unseat one.
+
 ⭐⭐⭐ **ONE INPUT MODEL SINCE `D40` (2026-09-17)**: tap a face on another object to align the
 held one, parallel, one alignment at a time, undone by a shake **or** a re-tap. ⛔ Forks A and
 B are **deleted** — with `anchor_fork.ts`, `align_flick.ts`, `drag_rule.ts`, the flag, the

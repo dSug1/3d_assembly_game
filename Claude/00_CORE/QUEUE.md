@@ -34,7 +34,9 @@ all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel �
 2. ⭐ **The verdict between the two undos** — the shake and `D39`'s re-tap do the same thing,
    and the owner expects to drop one: *"this is a complicated movement to execute by the
    user."*
-3. ⛔⛔ **STAGE 2 — `1.0.11`'s OTHER HALF — IS THE SECOND HALF OF THE OWNER'S RULES** — `TargetPosition`, its
+3. ✅ **THE APPROACH IS RE-SPECIFIED** (`D46`) and the old second half may be retired with it —
+   §6.0 of [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) asks. ⛔⛔ **STAGE 2 — the OLD reading — was the second half of the
+   owner's earlier rules** — `TargetPosition`, its
    cross-quad gizmo, the orbit about it and the two-object approach (`§2`). **Four owner
    decisions gate it** (`§7`), and one is a real design problem rather than a preference: the
    approach mapping has **no direction** when the centre→target line faces the camera and
@@ -343,7 +345,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 |---|---|---|---|---|---|
 | 3D0 | Mate connectors + residual; constraint stack + solver | 3D | feature | ✅ **built 2026-09-13**, carried and covered | — |
 | 3D1 | The object model: id, placement, connectors, assembly tree (parent ≠ root) | 3D | feature | ✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `src/core/object_model.ts`, 42 vectors, engine-free: placement, faces, connectors, the assembly tree and the constraint stack. ⭐⭐ The vectors were written FIRST and **falsified on purpose** — breaking the composition turns 14 of 42 red. ⭐ `reroot` implements **parent ≠ root** and moves nothing. ⛔ The pass found one wiring defect: the render loop drew only objects that HAPPENED to have a follower → [`queue_notes/3D1.md`](queue_notes/3D1.md) | 3D0 |
-| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT, WITH THE APPROACH — branch `1.0.11-Approach-and-Mate-v0`.** ⛔⛔ **The game cannot assemble anything today**: the alignment is PARALLEL (an orienting rule), and §4's `6quater` — the only rule that pushes a `MATE` — is flick-based, which this model does not have. ⚠ **Blocked on ONE owner decision: which gesture asserts a mate.** ⭐ `core/mate_connector.ts` is built and vectored (`testMate`, `mateResidual`), so what is missing is the gesture and the wiring, not the geometry | 3D1 |
+| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT — `1.0.11`, and the mechanism is SPECIFIED** (`D46`, [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)): capture radius **1.25×** the object, hold-off **1.1×**, white contours, docking by ANGLE, then anti-align + translate-snap. ⛔⛔ **The game cannot assemble anything today**: the alignment is PARALLEL (an orienting rule), and §4's `6quater` — the only rule that pushes a `MATE` — is flick-based, which this model does not have. ⚠ **Blocked on ONE owner decision: which gesture asserts a mate.** ⭐ `core/mate_connector.ts` is built and vectored (`testMate`, `mateResidual`), so what is missing is the gesture and the wiring, not the geometry | 3D1 |
 | 3D3 | Break on residual, and re-arm on exit | 3D | feature | queued | 3D2 |
 | 3D4 | Real 3D file import (glTF) | 3D | feature | queued | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |

@@ -44,6 +44,14 @@ the first keeps its object.
 
 ---
 
+⚠⚠ **AND THE SECOND HALF OF §2 MAY BE SUPERSEDED.** On 2026-09-17 the owner specified a
+different **Approach & Mate** mechanism — centre-to-centre, with a capture radius, a docking
+angle and a snap — which needs **no `TargetPosition` and no cross-quad gizmo** and says so:
+*"nothing to be specifically built as everything is available with current build."*
+⛔ [`APPROACH_AND_MATE.md`](APPROACH_AND_MATE.md) is the live design; §2's last four bullets
+below are kept because they are the owner's text and because the ORBIT they describe has no
+equivalent in the new one — whether it is still wanted is §6 of that file.
+
 ## 2. THE RULES — ⚠ THE OWNER'S TEXT, verbatim
 
 > **Fork C rules**
