@@ -82,40 +82,27 @@ export function depthLimits(cfg: GestureConfig): { minM: number; maxM: number } 
 }
 
 
-/**
- * ⭐⭐ **A10's GATE.** Is this hand asking for depth?
- *
- * @param holder the motion state of the touchpoint **on the object** — the one whose
- *   raycast hit it.
- * @param anchor the motion state of the touchpoint **outside every object**.
- *
- * ⛔⛔ THE HOLDER'S STILLNESS IS THE WHOLE DISCRIMINATOR, AND IT IS THE ONLY QUESTION
- * ASKED. A6 asked whether the two fingers were travelling *together*, which is a question
- * with **no answer** for a window at the start of every gesture and again at every
- * reversal, where both travels pass through zero and the ratio becomes jitter ÷ jitter.
- * ⭐ *"Is that finger still?"* is answerable at every instant, including those two.
- *
- * ⭐ It is also §1.1's own vocabulary: *"every 'delta position' in the spec means MOVING;
- * every 'no delta position' means STATIONARY."* ⛔ So the gate takes MOTION STATES, never
- * a speed or a delta of its own — a second definition of *moving* would be free to
- * disagree with the one every other rule uses.
- *
- * ⚠ **A hysteretic state is what makes this safe, and an instantaneous one would not be.**
- * A resting finger jitters over the measured 0.761 mm, and a finger can CREEP below any
- * speed threshold indefinitely. §1.1 answers both: `moveEnterDistance` is net displacement
- * from an anchor, and `moveExitDistance` bounds the excursion during settle candidacy. The
- * gate inherits both by reading the state rather than the samples.
- *
- * ⛔ THE HOLDER WINS EVERY TIE. If both fingers move, it is rule 6 — the object follows
- * the finger touching it. That is not a tie-break invented here; it is what makes the two
- * rules a partition instead of an overlap.
- */
-export function depthGate(holder: MotionState, anchor: MotionState): DepthVerdict {
-  return holder === "STATIONARY" && anchor === "MOVING" ? "DEPTH" : "IDLE";
-}
-
-/** What the gate decided. ⭐ Two states, because there is nothing to be undecided about. */
-export type DepthVerdict = "DEPTH" | "IDLE";
+// ⛔⛔⛔ **`A10`'s DEPTH GATE WAS DELETED HERE — 2026-09-17, ON A DEVICE REPORT.**
+//
+// > *"When the second touchpoint provides input for depth or roll, it does not integrate
+// > simultaneously with the x and y inputs of the first touchpoint (each touchpoint have to
+// > wait that the other idle for its input to get integrated). I want everything
+// > simultaneous."*
+//
+// ⭐ What stood here was `depthGate(holder, anchor)`, which returned `DEPTH` only while the
+// finger ON the object was `STATIONARY`. ⛔⛔ That was not an accident and not a bug: it made
+// rule 6 and depth a **partition** of the two-finger configuration rather than an overlap,
+// and it replaced `A6`'s unanswerable question (*are these two travels equal?*) with one that
+// has an answer at every instant (*is that finger still?*). Six models and five device passes
+// are behind it — `queue_notes/IN8.md`.
+//
+// ⚠⚠ **THE OWNER HAS NOW REJECTED THE PARTITION ITSELF**, which is a different thing from
+// rejecting its implementation. The new reading is simpler: **each finger owns its own
+// channel** — the holder's x/y, the second finger's single axis — and they SUM, exactly as the
+// holder's own x and y already sum. ⭐ Nothing is left to discriminate, so there is no gate: a
+// question that does not have to be asked cannot be asked wrongly.
+// ⛔ What is lost with it, stated: a hand can no longer move one finger and be certain only
+// one rule ran. That was the partition's whole value, and it is the owner's to trade away.
 
 /**
  * Move an object in horizontal depth by one frame's common travel.
@@ -188,20 +175,24 @@ export function depthTranslate(
  * mostly-vertical one is pure depth. ⛔ With one shared MOVING flag — or a radial band —
  * every diagonal would do both, and the object would creep away while you rolled it.
  *
- * ⛔ THE HOLDER WINS EVERY TIE, as in A10: while the finger on the object is moving this
- * returns nothing at all, because that is rule 6.
+ * ✅ **BOTH FINGERS DRIVE AT ONCE SINCE 2026-09-17** (owner: *"I want everything
+ * simultaneous"*). ⛔ The holder's stillness is not consulted: its x/y run rule 6 (or 2bis)
+ * while this axis runs depth (or roll), and the two SUM — exactly as the holder's own x and y
+ * already sum. ⚠ The old *"holder wins every tie"* partition is gone with `A10`'s gate.
  *
  * ⛔ It DECIDES; it does not scale. A gate that also applied a gain would be a second gain,
  * free to disagree with the one in the config.
  */
 export function secondFingerDrive(
-  holder: MotionState,
   secondAxes: { readonly x: MotionState; readonly y: MotionState },
   secondStep: { readonly dx: number; readonly dy: number },
   toggled: Behaviour,
 ): { readonly rollDxPx: number; readonly depthDyPx: number } {
-  // ⭐ A10's gate, asked per axis — the second finger drives only while the HOLDER is still.
-  const gate = (axis: MotionState): boolean => depthGate(holder, axis) === "DEPTH";
+  // ⭐⭐ ONE QUESTION PER AXIS, AND IT IS ONLY ABOUT THIS FINGER: *is this axis moving?*
+  // ⛔ The holder is not consulted at all since 2026-09-17 — see the note where `A10`'s gate
+  // used to be. ⚠ `MOVING` is §1.1's hysteretic state, never a speed of our own: a second
+  // definition of *moving* would be free to disagree with the one every other rule uses.
+  const gate = (axis: MotionState): boolean => axis === "MOVING";
   // ⛔⛔ ONE AXIS, NEVER BOTH, AND THE MODE PICKS IT (`A16`): *"depending on which is
   // toggled, the second touchpoint shall only control depth translation by delta position y
   // or roll by delta position x (not both). Switching between the two shall indeed require

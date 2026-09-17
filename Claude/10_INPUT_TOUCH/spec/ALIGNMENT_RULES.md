@@ -587,8 +587,9 @@ refusal below names itself there, so *"nothing happened"* is never the only evid
    **first**, and only then shake → the alignment releases. Then repeat in `TRANSLATE`.
    ⛔ *Falsified by* it working only when the shake starts at the press — that was defect 45,
    and this is the check that it is gone.
-8. ⭐⭐ **THE VERDICT WORTH FORMING**: with the re-tap in hand, is the shake still worth
-   keeping? Your words: *"this is a complicated movement to execute by the user."*
+8. ✅ **ANSWERED 2026-09-17: BOTH ARE KEPT.** The shake and the re-tap both undo an
+   alignment, and the owner kept both rather than dropping either. ⚠ So the shake's four
+   tunables still matter, and item 9 below is still the safety question.
 
 ### C-bis. ⭐⭐ THE NEW FLAG — C1 against C2 (`D41`), a JUDGEMENT rather than a check
 

@@ -32,18 +32,14 @@
 import { gravityFrame } from "../src/input/gravity_frame";
 import { describe, expect, it } from "vitest";
 import {
-  depthGate,
   rollDragDeg,
   secondFingerDrive,
   depthLimits,
   depthTranslate,
 } from "../src/input/depth_translate";
-import { MotionTracker, type MotionState, type Sample } from "../src/input/motion";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
 import { dot, length, normalize, scale, sub, type Vec3 } from "../src/core/vec";
 import { mmToPx } from "../src/core/units";
-
-const NOISE_MM = 0.761; // ⭐ MEASURED, 2026-09-14.
 
 const DOWN: Vec3 = [0, -1, 0];
 const CAM: Vec3 = [0, 0.8, -1.2];
@@ -63,147 +59,26 @@ const move = (dyPx: number, gain = 1, obj: Vec3 = OBJ) =>
 // ⭐⭐ THE GATE, COMPOSED WITH THE REAL MOTION STATE
 // ══════════════════════════════════════════════════════════════════════════════
 
-/** A finger, tracked exactly as the scene tracks one. */
-class Finger {
-  readonly tracker = new MotionTracker(DEFAULT_CONFIG);
-  private seed: number;
-  state: MotionState = "STATIONARY";
-  constructor(
-    public x: number,
-    public y: number,
-    seed: number,
-  ) {
-    this.seed = seed;
-  }
-  /** ⭐ The MEASURED pointer noise, on every sample. A noiseless fixture proves nothing. */
-  private jitterPx(): number {
-    this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff;
-    return mmToPx(((this.seed / 0x7fffffff) * 2 - 1) * NOISE_MM);
-  }
-  push(t: number, dyMm = 0): MotionState {
-    this.y += mmToPx(dyMm);
-    const s: Sample = { x: this.x + this.jitterPx(), y: this.y + this.jitterPx(), t };
-    this.state = this.tracker.push(s);
-    return this.state;
-  }
-}
+// ⚠ The `Finger` harness went with `A10`'s gate suite (2026-09-17): it drove two
+// `MotionTracker`s with MEASURED jitter so the gate could be exercised against §1.1's real
+// hysteresis. ⛔ Nothing left in this file needs two fingers simulated — `secondFingerDrive`
+// takes motion STATES now, not samples — and a harness nothing uses is the next thing to rot.
+// ⭐ `tests/motion_flick.test.ts` still drives trackers with the same noise, if one is needed.
 
-/** Run `n` samples 8 ms apart, returning the gate verdict at each one. */
-const run = (
-  holder: Finger,
-  anchor: Finger,
-  n: number,
-  step: (i: number) => readonly [number, number],
-  t0 = 0,
-) => {
-  const out: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const [holderDyMm, anchorDyMm] = step(i);
-    const t = t0 + i * 8;
-    holder.push(t, holderDyMm);
-    anchor.push(t, anchorDyMm);
-    out.push(depthGate(holder.state, anchor.state));
-  }
-  return out;
-};
 
-const STILL = () => [0, 0] as const;
 
-describe("⭐⭐ A10 — the gate is the HOLDER's stillness, and nothing else", () => {
-  it("⭐⭐ a STILL holder and a MOVING anchor is DEPTH", () => {
-    const holder = new Finger(400, 400, 11);
-    const anchor = new Finger(200, 600, 97);
-    const v = run(holder, anchor, 40, () => [0, -1.2] as const);
-    // ⛔ It need not open on the FIRST sample — §1.1's MOVING transition takes
-    // `moveEnterDistance` of net travel, which is the same threshold every other rule
-    // waits for. What matters is that it opens and then STAYS open.
-    expect(v).toContain("DEPTH");
-    expect(v.slice(20).every((g) => g === "DEPTH")).toBe(true);
-  });
-
-  it("⛔⛔ a MOVING holder is RULE 6, whatever the anchor does — the holder wins", () => {
-    // ⚠ This is the case A6 could not answer without a window: both fingers travelling.
-    const holder = new Finger(400, 400, 5);
-    const anchor = new Finger(200, 600, 31);
-    const v = run(holder, anchor, 40, () => [-1.2, -1.2] as const);
-    expect(v.slice(20).every((g) => g === "IDLE")).toBe(true);
-  });
-
-  it("⛔ a still hand is neither", () => {
-    const holder = new Finger(400, 400, 7);
-    const anchor = new Finger(200, 600, 13);
-    expect(run(holder, anchor, 40, STILL).every((g) => g === "IDLE")).toBe(true);
-  });
-
-  it("⭐⭐ THROUGH A REVERSAL THE GATE NEVER BLAMES THE HOLDER — A6's ambiguity is GONE", () => {
-    // ⛔⛔ The owner named this against A6: *"at the moment of direction reversion, both
-    // delta position y converge to zero before changing sign (maybe one before the other):
-    // this is the moment an ambiguity can occur."* ⭐ Under A10 the reversal is a property
-    // of the ANCHOR alone, and the holder — the thing actually being asked about — never
-    // moved, so there is nothing to misread.
-    const holder = new Finger(400, 400, 17);
-    const anchor = new Finger(200, 600, 23);
-    run(holder, anchor, 30, () => [0, -1.5] as const);
-    // …and back, through a genuine dwell at the turn.
-    const back = run(holder, anchor, 60, (i) => [0, i < 10 ? 0 : 1.5] as const, 240);
-    // ⚠ The anchor genuinely stops at the turn, so the gate genuinely closes — that is
-    // CORRECT, not a flicker: a still anchor is not a depth drag. ⭐ What must not happen
-    // is the holder being blamed for it, and the gate must be DEPTH again as soon as the
-    // anchor moves, with no second wait.
-    expect(back.slice(-15).every((g) => g === "DEPTH")).toBe(true);
-    expect(holder.state).toBe("STATIONARY");
-  });
-
-  it("⭐⭐ A LATE-STARTING ANCHOR COSTS NOTHING — A6's second ambiguity is GONE", () => {
-    // ⛔ Under A6 a lagging second finger looked like rule 6, so the vertical had to be
-    // WITHHELD for up to two windows and that travel was DISCARDED. Here the holder is
-    // still, so there is no vertical to withhold and nothing to discard.
-    const holder = new Finger(400, 400, 41);
-    const anchor = new Finger(200, 600, 59);
-    const idle = run(holder, anchor, 25, STILL);
-    expect(idle.every((g) => g === "IDLE")).toBe(true);
-    const going = run(holder, anchor, 40, () => [0, -1.2] as const, 200);
-    expect(going.slice(20).every((g) => g === "DEPTH")).toBe(true);
-  });
-
-  it("⛔⛔ A SLOW PERSISTENT CREEP OF THE HOLDER CLOSES THE GATE", () => {
-    // ⚠⚠ THE ONE THING THAT COULD MAKE THIS RULE LIE. A holder that creeps below
-    // `stillSpeed` is never *at rest*, and an instantaneous speed test would call it still
-    // for ever — so the object would be pushed in depth while the hand was, in fact,
-    // dragging it. ⭐ §1.1's settle-excursion bound (`moveExitDistance`) is exactly the
-    // guard for that, and composing the two is what proves the gate inherits it.
-    const holder = new Finger(400, 400, 71);
-    const anchor = new Finger(200, 600, 83);
-    const v = run(holder, anchor, 60, () => [0.25, -1.2] as const);
-    expect(v.slice(-20).every((g) => g === "IDLE")).toBe(true);
-    expect(holder.state).toBe("MOVING");
-  });
-
-  it("⛔⛔ COUNTER-EXAMPLE: 'both fingers moving' would call the rule-6 drag DEPTH", () => {
-    // ⭐ The discriminator stated as a number, so *"the gate is the holder's stillness"* is
-    // a checkable claim rather than a description. A gate defined the naive way — both
-    // fingers in motion — inverts the second vector above.
-    const holder = new Finger(400, 400, 5);
-    const anchor = new Finger(200, 600, 31);
-    const naive: string[] = [];
-    for (let i = 0; i < 40; i++) {
-      holder.push(i * 8, -1.2);
-      anchor.push(i * 8, -1.2);
-      naive.push(holder.state === "MOVING" && anchor.state === "MOVING" ? "DEPTH" : "IDLE");
-    }
-    expect(naive.slice(20).every((g) => g === "DEPTH")).toBe(true);
-    expect(depthGate(holder.state, anchor.state)).toBe("IDLE");
-  });
-
-  it("⛔ the gate is a PURE function of the two states — all four cases", () => {
-    expect(depthGate("STATIONARY", "MOVING")).toBe("DEPTH");
-    expect(depthGate("STATIONARY", "STATIONARY")).toBe("IDLE");
-    expect(depthGate("MOVING", "MOVING")).toBe("IDLE");
-    expect(depthGate("MOVING", "STATIONARY")).toBe("IDLE");
-  });
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔⛔ **`A10`'s GATE SUITE WAS DELETED HERE — 2026-09-17, WITH THE GATE.**
+//
+// ⭐ It was one of the most instructive suites in the project: the gate read §1.1's
+// HYSTERETIC states rather than speeds, and a vector compared it against the naive
+// *both-fingers-moving* test to show that a common vertical drag reads DEPTH for twenty
+// samples under the naive rule and `IDLE` under this one. ⛔ Its subject is gone: the owner
+// wants both fingers integrated simultaneously, so there is nothing to discriminate.
+//
+// ⚠ The LESSON survives where it can still be acted on — `depth_translate.ts` carries the
+// note about what the partition bought, and `queue_notes/IN8.md` holds the six models. ⭐ A
+// vector whose subject cannot occur is not a safety net; these certified a function that no
+// longer exists.
 
 describe("⭐⭐ HEIGHT NEVER CHANGES — gravity is the primary constraint", () => {
   it("at every camera elevation", () => {
@@ -378,40 +253,49 @@ describe("⭐⭐⭐ A12 — the second finger's axis, as `A16` narrowed it", () 
   // diagonal drag doing both. ⭐ `A16` narrowed it to ONE axis chosen by the mode, and with
   // forks A and B deleted that narrowing is the only behaviour left, so those assertions
   // would now be false. ⚠ What survives unchanged is everything `A12` was really about:
-  // the per-axis GATE, the travel passing through unscaled, and rule 6 winning while the
-  // holder moves.
+  // the per-axis TEST and the travel passing through unscaled. ⛔ *Rule 6 winning while the
+  // holder moves* did NOT survive — see the vector below; the owner wanted both at once.
 
   it("⭐⭐ in ROTATE the x axis rolls, and y is suppressed", () => {
-    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, "ROTATE");
+    const d = secondFingerDrive({ x: MOV, y: MOV }, { dx: 12, dy: -7 }, "ROTATE");
     expect(d.rollDxPx).toBe(12);
     expect(d.depthDyPx).toBe(0);
   });
 
   it("⭐⭐ in TRANSLATE the y axis pushes depth, and x is suppressed", () => {
-    const d = secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, "TRANSLATE");
+    const d = secondFingerDrive({ x: MOV, y: MOV }, { dx: 12, dy: -7 }, "TRANSLATE");
     expect(d.depthDyPx).toBe(-7);
     expect(d.rollDxPx).toBe(0);
   });
 
-  it("⛔ THE PER-AXIS GATE STILL DECIDES: a still axis contributes nothing", () => {
+  it("⛔ THE PER-AXIS TEST STILL DECIDES: a still axis contributes nothing", () => {
     // ⭐ `A11`'s bands are what make this possible — the chosen axis must break out of its
     // own corridor, so a mostly-vertical drag in ROTATE mode still rolls nothing.
-    expect(secondFingerDrive(STI, { x: STI, y: MOV }, { dx: 0, dy: -9 }, "ROTATE").rollDxPx).toBe(0);
-    expect(secondFingerDrive(STI, { x: MOV, y: STI }, { dx: 12, dy: 0 }, "TRANSLATE").depthDyPx).toBe(0);
+    // ⚠⚠ AND THIS IS THE ONE GUARD LEFT now that the holder is not consulted: without it a
+    // resting second finger would roll the object with its jitter, which is what `A11`'s
+    // per-axis deadband exists to prevent. ⛔ It is why *"simultaneous"* is safe at all.
+    expect(secondFingerDrive({ x: STI, y: MOV }, { dx: 0, dy: -9 }, "ROTATE").rollDxPx).toBe(0);
+    expect(secondFingerDrive({ x: MOV, y: STI }, { dx: 12, dy: 0 }, "TRANSLATE").depthDyPx).toBe(0);
   });
 
-  it("⛔⛔ NOTHING happens while the finger ON THE OBJECT is moving — that is rule 6", () => {
-    // ⚠ A10's gate comes FIRST, in every mode. The narrowing is a mask on top of it, not a
-    // replacement — otherwise a second finger could move the object during an ordinary drag.
+  it("✅✅ BOTH FINGERS DRIVE AT ONCE — the holder's motion is not consulted at all", () => {
+    // ⛔⛔ THIS VECTOR ASSERTED THE OPPOSITE UNTIL 2026-09-17, and the retraction is the
+    // record: *"NOTHING happens while the finger ON THE OBJECT is moving — that is rule 6"*,
+    // because `A10`'s gate made the two rules a PARTITION of the two-finger configuration.
+    //
+    // ⭐ The owner rejected the partition itself: *"each touchpoint have to wait that the
+    // other idle for its input to get integrated. I want everything simultaneous."*
+    // ✅ So each finger owns its own channel and they SUM — the same way the holder's own x
+    // and y already do. ⚠ `secondFingerDrive` no longer takes the holder's state, which is
+    // the strongest form the change can take: the question cannot be asked at all.
     for (const t of ["TRANSLATE", "ROTATE"] as const) {
-      const d = secondFingerDrive(MOV, { x: MOV, y: MOV }, { dx: 12, dy: -7 }, t);
-      expect(d.rollDxPx).toBe(0);
-      expect(d.depthDyPx).toBe(0);
+      const d = secondFingerDrive({ x: MOV, y: MOV }, { dx: 12, dy: -7 }, t);
+      expect(t === "ROTATE" ? d.rollDxPx : d.depthDyPx).not.toBe(0);
     }
   });
 
   it("⛔ a still hand does nothing", () => {
-    const d = secondFingerDrive(STI, { x: STI, y: STI }, { dx: 0, dy: 0 }, "TRANSLATE");
+    const d = secondFingerDrive({ x: STI, y: STI }, { dx: 0, dy: 0 }, "TRANSLATE");
     expect(d.rollDxPx).toBe(0);
     expect(d.depthDyPx).toBe(0);
   });
@@ -419,10 +303,10 @@ describe("⭐⭐⭐ A12 — the second finger's axis, as `A16` narrowed it", () 
   it("⭐ it passes the travel through UNCHANGED — the gate decides, it does not scale", () => {
     for (const v of [0.4, 1, 7.5, -3.2, 120]) {
       expect(
-        secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }, "ROTATE").rollDxPx,
+        secondFingerDrive({ x: MOV, y: MOV }, { dx: v, dy: v }, "ROTATE").rollDxPx,
       ).toBe(v);
       expect(
-        secondFingerDrive(STI, { x: MOV, y: MOV }, { dx: v, dy: v }, "TRANSLATE").depthDyPx,
+        secondFingerDrive({ x: MOV, y: MOV }, { dx: v, dy: v }, "TRANSLATE").depthDyPx,
       ).toBe(v);
     }
   });
@@ -537,13 +421,13 @@ describe("⭐⭐⭐ A16 — the mode picks DEPTH or ROLL for the second finger, 
   it("⭐⭐ TRANSLATE keeps DEPTH and suppresses roll", () => {
     // ⭐ The pairing is by KIND: the holder's screen-plane drag and the second finger's
     // depth are both translations, so one toggle answers for both fingers.
-    const d = secondFingerDrive(STI2, both, step, "TRANSLATE");
+    const d = secondFingerDrive(both, step, "TRANSLATE");
     expect(d.depthDyPx).toBe(-7);
     expect(d.rollDxPx).toBe(0);
   });
 
   it("⭐⭐ ROTATE keeps ROLL and suppresses depth", () => {
-    const d = secondFingerDrive(STI2, both, step, "ROTATE");
+    const d = secondFingerDrive(both, step, "ROTATE");
     expect(d.rollDxPx).toBe(12);
     expect(d.depthDyPx).toBe(0);
   });
@@ -553,7 +437,7 @@ describe("⭐⭐⭐ A16 — the mode picks DEPTH or ROLL for the second finger, 
     // do exactly one, so half a roll cannot arrive by accident during a depth push.
     for (const axes of [both, { x: MOV2, y: STI2 }, { x: STI2, y: MOV2 }]) {
       for (const t of ["TRANSLATE", "ROTATE"] as const) {
-        const d = secondFingerDrive(STI2, axes, { dx: 5, dy: 5 }, t);
+        const d = secondFingerDrive(axes, { dx: 5, dy: 5 }, t);
         expect(d.rollDxPx === 0 || d.depthDyPx === 0).toBe(true);
       }
     }
@@ -570,19 +454,21 @@ describe("⭐⭐⭐ A16 — the mode picks DEPTH or ROLL for the second finger, 
     // point, and it was closed on the glass.
     for (const t of ["TRANSLATE", "ROTATE"] as const) {
       for (const axes of [both, { x: MOV2, y: STI2 }, { x: STI2, y: MOV2 }]) {
-        const d = secondFingerDrive(STI2, axes, { dx: 9, dy: 9 }, t);
+        const d = secondFingerDrive(axes, { dx: 9, dy: 9 }, t);
         expect(d.rollDxPx === 0 || d.depthDyPx === 0).toBe(true);
       }
     }
   });
 
   it("⛔ the A10 GATE still comes first — a moving holder drives neither, in every fork", () => {
-    // ⚠ The narrowing is a MASK on top of A10's gate, not a replacement for it: with the
-    // holder moving this is rule 6, and the second finger contributes nothing at all.
+    // ✅✅ RETRACTED 2026-09-17, like its twin above: the narrowing is not a mask on a gate,
+    // because there is no gate. ⛔ The owner wants both fingers integrated at once, so with
+    // the holder moving the second finger STILL contributes its axis — and the mode still
+    // picks which axis that is, which is all `A16` ever claimed.
     for (const t of ["TRANSLATE", "ROTATE"] as const) {
-      const d = secondFingerDrive(MOV2, both, step, t);
-      expect(d.rollDxPx).toBe(0);
-      expect(d.depthDyPx).toBe(0);
+      const d = secondFingerDrive(both, step, t);
+      expect(t === "ROTATE" ? d.rollDxPx : d.depthDyPx).not.toBe(0);
+      expect(t === "ROTATE" ? d.depthDyPx : d.rollDxPx).toBe(0);
     }
   });
 });

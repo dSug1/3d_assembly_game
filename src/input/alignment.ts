@@ -27,7 +27,6 @@
  */
 import type { Constraint } from "../core/constraint_stack";
 import { qconj, qmul, type Quat, type Vec3 } from "../core/vec";
-import type { Behaviour } from "./mode_toggle";
 
 /**
  * ⭐⭐ The alignment a tap pushes — *"FollowerFace normal aligns with PioneerFace normal"*.
@@ -85,8 +84,6 @@ export interface TapMeaning {
  * how a caller swaps two of them silently.
  */
 export interface TapContext {
-  /** The live movement mode. */
-  readonly mode: Behaviour;
   /** The object the tap's PRESS hit, or `null` for empty space. */
   readonly tappedObject: string | null;
   /** The face that press resolved, or `null` if none did. */
@@ -121,9 +118,10 @@ export interface TapContext {
  * the flip the toggle would have produced. A hand that taps in `ROTATE` gets `TRANSLATE`
  * either way; here it also gets an alignment.
  *
- * ⛔ THE `ROTATE` CONDITION IS LOAD-BEARING, not decoration. In `TRANSLATE` the same tap must
- * still toggle — otherwise the only way back to `ROTATE` is gone, and the fork becomes a trap
- * after its first alignment.
+ * ✅ **AND IT WORKS IN BOTH MOVEMENT MODES SINCE 2026-09-17** (owner). ⚠ What still protects
+ * `D28`'s toggle from being unreachable is narrower than the condition I first wrote: a tap on
+ * **empty space or on the held object** toggles, in every mode. Only a tap on another object's
+ * face is claimed — so `ROTATE` is always one tap away.
  *
  * ⚠ A tap on the held object itself, or on empty space, is a plain toggle: the rule needs
  * *another* object's face, because a Pioneer and a Follower on one object is not a relation.
@@ -143,7 +141,14 @@ export interface TapContext {
  */
 export function tapMeaning(ctx: TapContext): TapMeaning {
   const toggle: TapMeaning = { action: "TOGGLE", mode: null };
-  if (ctx.mode !== "ROTATE") return toggle;
+  // ✅✅ **THE MOVEMENT MODE NO LONGER GATES THIS — owner, 2026-09-17**: *"in translation
+  // mode, a tap or a double tap on the second object PioneerFace also toggles the alignment
+  // logic (same as for rotation)."*
+  // ⛔⛔ I HAD CALLED THE `ROTATE` CONDITION *LOAD-BEARING*, AND IT WAS OVER-BROAD. The real
+  // requirement is that **some** tap still reaches `D28`'s toggle, or `ROTATE` becomes
+  // unreachable — and that holds: a tap on empty space, or on the held object, still toggles.
+  // ⭐ Only a tap on ANOTHER OBJECT'S FACE is claimed, in either mode, which is a much smaller
+  // claim than the one I was defending.
   if (ctx.heldObject === null || ctx.tappedObject === null) return toggle;
   if (ctx.tappedObject === ctx.heldObject) return toggle;
 

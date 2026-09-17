@@ -287,6 +287,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
+   * ⭐⭐⭐ **THE ROTATIONAL SWAY, FOR EVERY PATH THAT TURNS A HELD OBJECT.**
+   *
+   * ⛔⛔ DEVICE-REPORTED 2026-09-17: *"when the object is aligned and rotates, you lost the
+   * sway in the other objects."* ⭐ Exactly right, and the cause was an early `return`: the
+   * aligned twist (2sexte) applied its rotation and returned from the handler, so the sway
+   * block at the END of the rotate branch never ran. The free rotation kept its sway, which
+   * is why only ALIGNED objects lost it.
+   *
+   * ⚠⚠ THE SHAPE, AND IT IS WHY THIS IS A FUNCTION AND NOT A FIX IN TWO PLACES: a rule
+   * added later took a shortcut past a consequence that an earlier rule reached by falling
+   * through. ⛔ Three paths now turn a held object — free rotation, the aligned twist, and the
+   * second finger's roll — and a fourth is likely. Each calls this; none can forget it.
+   *
+   * ⭐ It also keeps the held object's follower `qHome` in step, which the render loop needs
+   * or it would fight the rotation rule.
+   */
+  const noteSpin = (grip: Held, t: number): void => {
+    const home = modelOrientation(grip.mesh);
+    followerFor(grip.mesh).qHome = home;
+    const spin = grip.spinSway.push(home, t, true);
+    if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
+  };
+
+  /**
    * ⭐⭐⭐ Put a marker ON a face — **by PARENTING it to the object**, not by positioning it.
    *
    * ⛔⛔ **DEVICE-REPORTED 2026-09-17: *"the highlighted quads always lag the movements of the
@@ -1601,7 +1625,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⛔ The live mode is handed over so the choice is made inside the vectored rule, not
     // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
     const drive = secondFingerDrive(
-      grip.rec.motionState,
       tracker.axes,
       tracker.step,
       behaviour,
@@ -1655,10 +1678,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       }
       grip.mode = "ROTATE";
       // ⭐ The rotational sway answers a driven roll too — same watcher, same tunables.
-      const home = modelOrientation(grip.mesh);
-      followerFor(grip.mesh).qHome = home;
-      const spin = grip.spinSway.push(home, anchorSample.t, true);
-      if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
+      noteSpin(grip, anchorSample.t);
     }
     // ⛔⛔ AND THE HOLDER'S GESTURE IS NO LONGER A TAP. It is being held STILL on the
     // object, which is a tap's exact shape — and a DOUBLE_TAP resolves to 2septies
@@ -2087,10 +2107,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
-        // ⭐⭐ A10: THIS IS THE FINGER THAT DRIVES DEPTH, and this branch is the only
-        // place depth is applied. ⛔ The gate opens only while the finger ON the object is
-        // STILL — so an anchor moving during an ordinary rule 6 drag does nothing at all,
-        // and the two rules partition the configuration instead of competing for it.
+        // ⭐⭐ THIS IS THE FINGER THAT DRIVES DEPTH OR ROLL, and this branch is the only place
+        // either is applied. ✅ **SIMULTANEOUS SINCE 2026-09-17** (owner): the holder's own
+        // x/y keep running in their own handler while this one adds its axis, and the two SUM.
+        // ⛔ `A10`'s gate — which required the holder to be STILL — is deleted, and
+        // `depth_translate.ts` carries the note: what it protected is worth knowing first.
         const holder = router.objects()[0];
         const grip = holder ? held.get(holder.id) : undefined;
         if (grip && applyDepthDrag(grip, routed.seq, s)) {
@@ -2343,6 +2364,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
                 rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
               );
               lastVerdict = `align: twist ${((twist * 180) / Math.PI).toFixed(1)}° about the alignment`;
+              // ⭐⭐ THE SWAY — the line whose absence the owner spotted. An aligned object
+              // turning is still an object turning, and the scene reacts to it.
+              noteSpin(grip, s.t);
             }
             grip.prev = s;
             paint();
@@ -2386,12 +2410,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // object STARTS turning and whenever the turn AXIS swings by more than
       // `rotateSwayTurnDeg` — a reversal being a 180° axis change.
       if (grip.mode === "ROTATE") {
-        const home = modelOrientation(grip.mesh);
-        // ⛔ The held object's own pose is the truth here, so its follower's `qHome` has
-        // to track it — otherwise the render loop would fight the rotation rule.
-        followerFor(grip.mesh).qHome = home;
-        const spin = grip.spinSway.push(home, s.t, true);
-        if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
+        noteSpin(grip, s.t);
       } else {
         grip.spinSway.push(modelOrientation(grip.mesh), s.t, false);
       }
@@ -2480,7 +2499,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         const others = [...held.entries()].filter(([pid]) => pid !== e.pointerId);
         const heldId = others.length === 1 ? (idOf.get(others[0]![1].mesh) ?? null) : null;
         const ctx: TapContext = {
-          mode: behaviour,
           kind: verdict.kind,
           alignMode,
           tappedObject: idOf.get(grip.mesh) ?? null,

@@ -446,3 +446,32 @@ nothing to align or evict. ⛔ None was reported on individually.
 a change, and the owner has driven the build — **and** the weakness of the evidence is
 written down rather than rounded up. ⚠ If a later session finds a defect on one of those
 three paths, this note is why it will not be a surprise.
+
+---
+
+## ⛔⛔⛔ `D43` — THE GATE IS DELETED, AND THE PARTITION WITH IT *(2026-09-17)*
+
+> *"When the second touchpoint provides input for depth or roll, it does not integrate
+> simultaneously with the x and y inputs of the first touchpoint (each touchpoint have to wait
+> that the other idle for its input to get integrated). I want everything simultaneous."*
+
+⚠⚠ **THE OWNER REJECTED THE PARTITION ITSELF, WHICH IS NOT THE SAME AS REJECTING ITS
+IMPLEMENTATION** — and that distinction is why this row's whole history stands: `A10`'s gate
+was the SIXTH model of depth and the first that a hand accepted, precisely because it replaced
+`A6`'s unanswerable question (*are these two travels equal?*, which has no answer at a
+reversal or a late start) with one answerable at every instant (*is that finger still?*).
+
+⭐⭐ What replaces it is simpler than either: **each finger owns its own channel** — the
+holder's x/y, the second finger's single axis — and the two SUM, exactly as the holder's own x
+and y already sum. ⛔ There is nothing left to discriminate, so there is no question to get
+wrong. That is a better answer than either of mine, and it took a hand to see it.
+
+⚠ What it trades away, stated so nobody rediscovers it as a defect: **a hand can no longer
+move one finger and be certain only one rule ran.** The gate's whole value was that guarantee.
+⛔ And `A11`'s per-axis deadband is now the ONLY thing stopping a resting second finger from
+rolling the object with its jitter — which is why *simultaneous* is safe at all, and why
+`motionDeadbandMm` matters more today than it did yesterday.
+
+✅ Deleted with it: `depthGate`, `DepthVerdict`, the `holder` parameter of
+`secondFingerDrive`, and eight vectors — including the one that compared the gate against the
+naive *both-fingers-moving* test. ⛔ A vector whose subject cannot occur certifies nothing.

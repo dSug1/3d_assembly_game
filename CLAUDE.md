@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-16)
 
-✅ Green: TypeScript + Babylon + Vite, **575 golden vectors passing** (⚠ 619 − 51 — forks A and B, and the orphans, took their vectors with them: ⭐ the roll
+✅ Green: TypeScript + Babylon + Vite, **567 golden vectors passing** (⚠ 619 − 51 — forks A and B, and the orphans, took their vectors with them: ⭐ the roll
 channel and its vectors were **deleted together**, 2026-09-16).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
@@ -137,7 +137,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Forty-six defects, forty-five of them BY FINGER, and none visible to a green
+⛔⛔ **Forty-seven defects, forty-six of them BY FINGER, and none visible to a green
 suite.** ⭐⭐ Number 40 is the one to read if you read one: `A12` retired the one-touchpoint
 roll and left its detector **fed**, and its `ROLL_KEPT` verdict silently vetoed `IN3`'s
 flick — *a retired gesture that still owns a verdict is not inert*. ⭐ The one exception is worth knowing: §1.1's unreachable STATIONARY was found by

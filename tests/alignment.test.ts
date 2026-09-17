@@ -210,7 +210,6 @@ describe("⛔⛔ THE CAP OF ONE — a second alignment REPLACES, and never freez
 
 describe("⛔⛔ THE TAP'S FOUR MEANINGS — and the GESTURE chooses what an alignment IS", () => {
   const ctx = (over: Partial<TapContext> = {}): TapContext => ({
-    mode: "ROTATE",
     kind: "TAP",
     alignMode: null,
     tappedObject: "objectB",
@@ -274,14 +273,19 @@ describe("⛔⛔ THE TAP'S FOUR MEANINGS — and the GESTURE chooses what an ali
     });
   });
 
-  it("⛔⛔ in TRANSLATE every tap is a TOGGLE — or the way back to ROTATE is gone", () => {
-    // ⭐ Load-bearing, not decoration, and it covers BOTH gestures: a double tap in TRANSLATE
-    // keeps its old meanings (flip twice, fly the camera home).
-    expect(tapMeaning(ctx({ mode: "TRANSLATE" })).action).toBe("TOGGLE");
-    expect(tapMeaning(ctx({ mode: "TRANSLATE", kind: "DOUBLE_TAP" })).action).toBe("TOGGLE");
-    expect(
-      tapMeaning(ctx({ mode: "TRANSLATE", pioneer: PIONEER, alignMode: "FOLLOW" })).action,
-    ).toBe("TOGGLE");
+  it("✅✅ THE MOVEMENT MODE NO LONGER GATES IT — owner, 2026-09-17", () => {
+    // ⛔⛔ THIS VECTOR ASSERTED THE OPPOSITE, and I had called the condition *load-bearing*:
+    // *"in TRANSLATE the same tap must still toggle — otherwise the only way back to ROTATE
+    // is gone."* ⭐ The requirement was real and my condition was OVER-BROAD: what keeps
+    // `ROTATE` reachable is that a tap on **empty space or on the held object** still toggles,
+    // which the vectors below assert. ⚠ Only a tap on ANOTHER object's face is claimed — a
+    // far smaller claim than the one I was defending — and `TapContext` no longer carries the
+    // movement mode at all, which is the strongest way to say the rule does not read it.
+    // > *"In translation mode, a tap or a double tap on the second object PioneerFace also
+    // > toggles the alignment logic (same as for rotation)."*
+    expect(tapMeaning(ctx())).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
+    expect(tapMeaning(ctx({ kind: "DOUBLE_TAP" }))).toEqual({ action: "ALIGN", mode: "FOLLOW" });
+    expect(tapMeaning(ctx({ pioneer: PIONEER, alignMode: "SNAPSHOT" })).action).toBe("UNALIGN");
   });
 
   it("⛔ a tap with nothing held, or on empty space, or on the held object ⇒ TOGGLE", () => {

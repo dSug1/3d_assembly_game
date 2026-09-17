@@ -75,3 +75,22 @@ no golden vector reaches `src/render`. `face_pick.test.ts` pins the composition 
 performs — the constant per-face offset under the object's orientation — which is the closest
 a vector gets. ⛔ The same blind spot as `3D1`'s follower, the marker's roll, and the flick's
 veto: **this layer has now produced four of the project's defects.**
+
+---
+
+## 47 — an ALIGNED object's rotation lost the sympathetic sway *(2026-09-17)*
+
+> *"When the object is aligned and rotates, you lost the sway in the other objects."*
+
+⭐ Exactly right, and the cause is one word: **`return`**. The aligned twist (2sexte) applied
+its rotation and returned from the pointer handler, so the sway block at the END of the rotate
+branch never ran. ⛔ Free rotation kept its sway by falling through to it, which is why only
+ALIGNED objects lost it — and why nothing looked broken until an alignment existed.
+
+⚠⚠ **THE SHAPE: a rule added later took a shortcut past a consequence an earlier rule reached
+by falling through.** ⛔ It is the render layer again (five of the project's defects now), and
+it is invisible to vectors for the same reason as the others.
+
+✅ Fixed by making the consequence a **named function** — `noteSpin` — called by all three
+paths that turn a held object: free rotation, the aligned twist, and the second finger's roll.
+⭐ A fourth path is likely (a mate), and it cannot forget what it has to call by name.
