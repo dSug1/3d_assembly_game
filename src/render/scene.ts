@@ -70,6 +70,9 @@ import {
   toggleBehaviour,
   type Behaviour,
   faceAlignConstraint,
+  pioneerTurned,
+  pioneerTurnRuleOf,
+  retargetAlignment,
   tapMeaning,
   flickResetPlan,
   type TapContext,
@@ -422,6 +425,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const pioneerFaceId = pioneerGrip.pressFace.faceId;
     pioneerGrip.pressFace = null;
     pioneerFace = { objectId: pioneerId, faceId: pioneerFaceId };
+    pioneerOrientation = world.objects.get(pioneerId)?.local.orientation ?? null;
     // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
     //
     // > *"the mode shall not switch automatically to translation mode after an alignment in
@@ -1228,6 +1232,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       ],
     },
     {
+      // ⭐⭐⭐ NOT A TUNABLE: it chooses a RULE (`D41`), where every other slider changes a
+      // number. ⚠ 0 = C1, turning the Pioneer releases the alignment; 1 = C2, the Follower
+      // takes the same rotation and the target is re-read every frame.
+      title: "⭐ PIONEER TURNED (C1/C2)",
+      sliders: [tunable("0=release  1=follow", "pioneerTurnRule", 0, 1, 1)],
+    },
+    {
       // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
       // number has been wrong every single time*, and all four of these are guesses.
       // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
@@ -1783,6 +1794,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let pioneerFace: { objectId: string; faceId: string } | null = null;
 
+  /**
+   * ⭐⭐ The Pioneer object's orientation as of the last frame that looked at it — the
+   * baseline `pioneerTurned` compares against.
+   * ⛔ Captured when the alignment is made and refreshed every frame after, so it is *the
+   * previous frame's* pose and never the alignment's. ⚠ A stale baseline would make one
+   * turn fire the rule for ever.
+   */
+  let pioneerOrientation: Quat | null = null;
+
 
   /**
    * ⭐⭐ Judge one release as a tap, keep §1.3's history, and toggle the mode **immediately**.
@@ -2180,9 +2200,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // ⭐ *"un-highlight the FollowerFace"* — and the Pioneer's contour with it: both
             // report the same alignment, so neither may outlive it (the owner's amendment).
             if (selectedFace?.objectId === sid) selectedFace = null;
-            if (selectedFace === null) pioneerFace = null;
+            if (selectedFace === null) {
+              pioneerFace = null;
+              pioneerOrientation = null;
+            }
             grip.alignmentTouched = false;
             lastVerdict = `align: SHAKE released the alignment on ${sid}`;
+          }
+          // ⭐⭐⭐ **C2 ONLY: A SHAKE ON THE *PIONEER* RELEASES THE FOLLOWER'S ALIGNMENT** —
+          // the owner's clause, and it belongs to C2 because C1 gets the same outcome for
+          // free: shaking while rotating turns the object, and in C1 a turn releases.
+          // ⚠⚠ **THE GAP THAT LEAVES, STATED**: in C1, a shake on the Pioneer *while the mode
+          // is `TRANSLATE`* turns nothing, so it releases nothing. Dictated that way; whether
+          // C1 wants it too is a question for the device pass (`FORK_C_ANCHOR_RULES.md` §7).
+          if (
+            pioneerTurnRuleOf(cfg.pioneerTurnRule) === "FOLLOW" &&
+            pioneerFace?.objectId === sid &&
+            selectedFace !== null
+          ) {
+            const fId = selectedFace.objectId;
+            const ev2 = evictObjectConstraints(world, fId);
+            world = ev2.world;
+            selectedFace = null;
+            pioneerFace = null;
+            pioneerOrientation = null;
+            lastVerdict = `align: C2 — shake on the Pioneer released the alignment on ${fId}`;
           }
         }
       }
@@ -2385,6 +2427,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           if (selectedFace?.objectId === rid) {
             selectedFace = null;
             pioneerFace = null;
+            pioneerOrientation = null;
           }
           lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
         } else {
@@ -2442,6 +2485,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           world = ev.world;
           selectedFace = null;
           pioneerFace = null;
+          pioneerOrientation = null;
           others[0]![1].alignmentTouched = false;
           alignedByThisTap = true; // ⛔ the tap is CONSUMED: it must not also flip the mode
           lastVerdict = ev.result.refused
@@ -2495,6 +2539,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         selectedFace = null;
         // ⭐ The Pioneer's contour reports the same alignment, so it goes at the same moment.
         pioneerFace = null;
+        pioneerOrientation = null;
       }
       forgetAnchor(routed.seq);
       router.release(e.pointerId);
@@ -2635,6 +2680,62 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // fewer to be wrong about.
       writePose(mesh, pose.orientation);
       mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
+    }
+
+    // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1/C2, checked once per frame.
+    //
+    // ⛔⛔ THE CASE HAD NO RULE AT ALL UNTIL 2026-09-17, AND ITS ABSENCE WAS INVISIBLE: an
+    // alignment stores a FROZEN world direction, so turning the object that direction was read
+    // FROM leaves the Follower obeying a target nothing on the glass corresponds to — and
+    // both highlights keep saying it is fine. ⭐ Two readings, behind one flag, because *what
+    // an alignment means* is the owner's question and not mine.
+    //
+    // ⚠ CHECKED HERE, AGAINST THE MODEL, and not at a pointer event: the Pioneer can be turned
+    // by any rule — a drag, a twist, a rotation reset — and watching the ORIENTATION catches
+    // every one of them without enumerating them. ⛔ The same discipline as `A15`'s raycast:
+    // ask the state, not the gesture.
+    if (pioneerFace !== null && pioneerOrientation !== null && selectedFace !== null) {
+      const pObj = world.objects.get(pioneerFace.objectId);
+      const fId = selectedFace.objectId;
+      if (!pObj) {
+        pioneerFace = null;
+        pioneerOrientation = null;
+      } else {
+        const turn = pioneerTurned(
+          pioneerOrientation,
+          pObj.local.orientation,
+          pioneerTurnRuleOf(cfg.pioneerTurnRule),
+        );
+        if (turn.kind === "RELEASE") {
+          // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* —
+          // so the pose is left exactly as the hand left it, and only the RULE goes.
+          const ev = evictObjectConstraints(world, fId);
+          world = ev.world;
+          selectedFace = null;
+          pioneerFace = null;
+          pioneerOrientation = null;
+          lastVerdict = `align: C1 — the Pioneer turned, alignment released on ${fId}`;
+        } else if (turn.kind === "FOLLOW" && turn.delta !== null) {
+          // ⭐⭐ C2: the Follower takes the SAME WORLD ROTATION, which keeps the two normals
+          // parallel by construction — no solve, and no chance of the solver adding a twist.
+          const followerMesh = meshOf.get(fId);
+          if (followerMesh) {
+            setModelOrientation(followerMesh, qmul(turn.delta, modelOrientation(followerMesh)));
+          }
+          // ⭐ *"the alignment is updated per frame to match the second object's PioneerFace
+          // normal"* — bookkeeping that keeps the CONSTRAINT truthful; the geometry above
+          // already holds. ⚠ Without it the stack would still name the old direction, and the
+          // next rule to read it (a twist, a reset) would act on a stale target.
+          const pn = faceWorld(world, pioneerFace.objectId, pioneerFace.faceId)?.normal;
+          const stack = world.objects.get(fId)?.constraints ?? [];
+          if (pn && stack.length === 1) {
+            world = clearObjectConstraints(world, fId);
+            world = pushObjectConstraint(world, fId, retargetAlignment(stack[0]!, pn), false);
+          }
+          lastVerdict = `align: C2 — the Follower took the Pioneer's turn`;
+        }
+        if (pioneerOrientation !== null) pioneerOrientation = pObj.local.orientation;
+      }
     }
 
     // ⭐⭐⭐ THE FACE HIGHLIGHT, placed from the MESH's world matrix — not from the model.

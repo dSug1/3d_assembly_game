@@ -18,6 +18,9 @@ import { describe, expect, it } from "vitest";
 import {
   faceAlignConstraint,
   flickResetPlan,
+  pioneerTurned,
+  pioneerTurnRuleOf,
+  retargetAlignment,
   tapMeaning,
   type TapContext,
 } from "@input/alignment";
@@ -30,7 +33,7 @@ import {
 } from "@core/object_model";
 import { constrainedDragAngle, rotateAboutAxis } from "@input/anchor_rotate";
 import { mmToPx } from "@core/units";
-import { IDENTITY, qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
+import { IDENTITY, qconj, qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
 
 const BOX = (id: string): SceneObject => ({
   id,
@@ -359,5 +362,115 @@ describe("⭐⭐ THE TWIST, PORTED — it must not drift, and it must refuse whe
     expect(constrainedDragAngle(along, [0, 1, 0], mmToPx(20), 0, 0.07)).toBeNull();
     // ⭐ and the counter-example, so the refusal is about the geometry and not the fixture
     expect(constrainedDragAngle(FRAME, [0, 1, 0], mmToPx(20), 0, 0.07)).not.toBeNull();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ THE PIONEER'S OBJECT IS TURNED WHILE THE FOLLOWER IS ALIGNED — C1 vs C2
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS", () => {
+  it("⚠ a turn under the epsilon is NOT a turn — float noise must not release an alignment", () => {
+    // ⛔ The rule fires on a comparison that runs every frame, so the cheapest way to make it
+    // destructive is to let arithmetic noise count as a hand. ⭐ 1e-4 rad is ~0.006°: four
+    // orders under the smallest deliberate twist, and well above quaternion round-off.
+    const q = qFromAxisAngle([0.3, 0.8, -0.5], 1.1);
+    expect(pioneerTurned(q, q, "RELEASE").kind).toBe("NONE");
+    expect(pioneerTurned(q, qmul(qFromAxisAngle([0, 1, 0], 1e-6), q), "FOLLOW").kind).toBe("NONE");
+  });
+
+  it("⭐ C1 RELEASES, and reports no rotation to apply — the Follower must not move", () => {
+    // ⛔ The owner's words: *"this case releases the first object alignment (but not rotate
+    // the first object)"*. ⚠ `delta: null` is how that is said in a type rather than in a
+    // comment — a caller cannot accidentally apply a rotation that does not exist.
+    const before = IDENTITY;
+    const now = qFromAxisAngle([0, 1, 0], 0.5);
+    const t = pioneerTurned(before, now, "RELEASE");
+    expect(t.kind).toBe("RELEASE");
+    expect(t.delta).toBeNull();
+  });
+
+  it("⭐⭐⭐ C2's delta keeps the two faces PARALLEL — the composition, not the claim", () => {
+    // ⛔⛔ THE VECTOR THIS PAIR EXISTS FOR. `FOLLOW` is only worth having if applying its
+    // delta leaves the Follower's aligned face pointing exactly where the Pioneer's face now
+    // points. ⭐ Every piece is tested elsewhere; this asserts the chain.
+    const r = tapAndAlign(qFromAxisAngle([0.2, 0.7, -0.3], 0.9), "+x", IDENTITY, "+y");
+    const pioneerBefore = r.world.objects.get("pioneer")!.local.orientation;
+
+    // the hand turns the PIONEER
+    const turn = qFromAxisAngle([0.4, 0.2, 0.9], 0.8);
+    const pioneerNow = qmul(turn, pioneerBefore);
+    let world = setWorldPlacement(r.world, "pioneer", {
+      position: [0.3, 0, 0],
+      orientation: pioneerNow,
+    });
+
+    const t = pioneerTurned(pioneerBefore, pioneerNow, "FOLLOW");
+    expect(t.kind).toBe("FOLLOW");
+    // apply it to the FOLLOWER, exactly as the scene does
+    const follower = world.objects.get("follower")!.local.orientation;
+    world = setWorldPlacement(world, "follower", {
+      position: [0, 0, 0],
+      orientation: qmul(t.delta!, follower),
+    });
+
+    const pioneerNormal = faceWorld(world, "pioneer", "+y")!.normal;
+    const followerNormal = faceWorld(world, "follower", "+x")!.normal;
+    followerNormal.forEach((v, i) => expect(v).toBeCloseTo(pioneerNormal[i]!, 10));
+  });
+
+  it("⛔⛔ AND THE OTHER COMPOSITION ORDER BREAKS IT — both measured, in one vector", () => {
+    // ⭐ `now ∘ before⁻¹` is the rotation in WORLD; `before⁻¹ ∘ now` is the same rotation
+    // expressed in the object's OWN frame. ⚠ They agree when `before` is the identity — which
+    // is exactly why a fixture at the identity would certify the wrong one.
+    //
+    // ⛔⛔ MY FIRST VERSION OF THIS VECTOR WAS TOO WEAK TO MEAN ANYTHING: with a mild fixture
+    // the wrong order still left the faces 8° apart (dot 0.990) and the threshold was 0.99, so
+    // it passed by 0.0003. ⭐ Mistake shape 5 again — my own fixture — and the cure was to
+    // MEASURE candidate fixtures instead of choosing one by eye: the pair below puts the
+    // faces nearly opposite. ⚠ Both orders are now asserted in the same vector, so it cannot
+    // pass by the correct one being wrong too.
+    const r = tapAndAlign(IDENTITY, "+x", qFromAxisAngle([1, 1, 0], 2.4), "+y");
+    const pBefore = r.world.objects.get("pioneer")!.local.orientation;
+    const pNow = qmul(qFromAxisAngle([0, 0, 1], 2.0), pBefore);
+    const world0 = setWorldPlacement(r.world, "pioneer", {
+      position: [0.3, 0, 0],
+      orientation: pNow,
+    });
+    const pn = faceWorld(world0, "pioneer", "+y")!.normal;
+    const follower = world0.objects.get("follower")!.local.orientation;
+
+    const after = (delta: Quat) => {
+      const w = setWorldPlacement(world0, "follower", {
+        position: [0, 0, 0],
+        orientation: qmul(delta, follower),
+      });
+      const fn = faceWorld(w, "follower", "+x")!.normal;
+      return fn[0]! * pn[0]! + fn[1]! * pn[1]! + fn[2]! * pn[2]!;
+    };
+
+    // ✅ the world delta — what `pioneerTurned` returns — is EXACT
+    expect(after(pioneerTurned(pBefore, pNow, "FOLLOW").delta!)).toBeCloseTo(1, 10);
+    // ⛔ the object-frame delta leaves the faces nearly opposite
+    expect(after(qmul(qconj(pBefore), pNow))).toBeLessThan(0);
+  });
+
+  it("⭐ the flag reads as the owner's two forks, and anything else is C1", () => {
+    // ⛔ Same discipline as every other numeric flag: an unrecognised value must not look like
+    // a rule set nobody chose. ⚠ C1 is the conservative one — it moves nothing on its own.
+    expect(pioneerTurnRuleOf(0)).toBe("RELEASE");
+    expect(pioneerTurnRuleOf(1)).toBe("FOLLOW");
+    expect(pioneerTurnRuleOf(7)).toBe("RELEASE");
+  });
+
+  it("⭐ retargeting rewrites the DIRECTION and nothing else about the constraint", () => {
+    // ⚠ §1.4's doctrine survives: the constraint still holds a WORLD direction, so a camera
+    // orbit still cannot redefine it. ⛔ What C2 changes is only where that direction is
+    // re-read from, every frame — the face it was taken from.
+    const c = faceAlignConstraint([0, 0, 1], [0, 1, 0]);
+    const r = retargetAlignment(c, [1, 0, 0]);
+    expect(r.targetWorld).toEqual([1, 0, 0]);
+    expect(r.kind).toBe(c.kind);
+    expect(r.localNormal).toEqual(c.localNormal);
   });
 });

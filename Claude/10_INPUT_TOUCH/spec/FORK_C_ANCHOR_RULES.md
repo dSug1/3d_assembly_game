@@ -126,6 +126,39 @@ himself** (the automatic switch to translation), which is why §2's text keeps i
 block overrides it: *the later text wins, and the superseded one explains why the current one
 exists.*
 
+### ⭐⭐⭐ THE PIONEER'S OBJECT IS TURNED — C1 / C2, a flag (owner, 2026-09-17), verbatim
+
+> *"Now create a flag with two forks for the case in which the second object with PioneerFace
+> is rotated while the first object is aligned:*
+> * *fork C1: in this fork, this case releases the first object alignment (but not rotate the
+>   first object) and un-highlight PioneerFace and FollowerFace.*
+> * *fork C2: in this fork, the rotation of the second object triggers the same rotation of the
+>   first object: therefore the first object keeps its alignment (and the alignment is updated
+>   per frame to match the second object's PioneerFace normal) and no action for faces
+>   highlights. Also, the release of first object's alignment and un-highlights also applies if
+>   the shake is performed on the second object (the one with PioneerFace)"*
+
+✅ **BUILT** (`D41`, `?pioneerTurnRule=0|1`, slider shipped, **C1 default**). ⚠ The default is
+mine — the owner named neither — chosen because C1 moves nothing the hand did not touch.
+
+⛔⛔ **THE CASE HAD NO RULE AT ALL, AND ITS ABSENCE WAS INVISIBLE.** §1.4 stores an alignment
+as a **frozen world direction**, deliberately, so a later camera orbit cannot redefine it.
+⚠ The price, never stated until now: turning the object that direction was READ FROM leaves
+the Follower obeying a target nothing on the glass corresponds to — and both highlights keep
+saying the relationship holds. ⭐ C1 and C2 are opposite answers to *what an alignment IS*: a
+snapshot of a direction, or a relationship between two faces.
+
+⭐⭐ **WHAT MAKES C2 EXACT**: the Follower takes the **same WORLD rotation** (`now ∘ before⁻¹`),
+and applying one world rotation to both objects preserves the angle between any two of their
+directions — so the faces stay parallel *by construction*, with no solve and no chance of the
+solver adding a twist. ⛔ The object-frame composition (`before⁻¹ ∘ now`) is the plausible
+error, it agrees with the right one at the identity, and a vector measures both.
+
+⚠⚠ **ONE GAP, DICTATED AND KEPT**: the shake-on-the-Pioneer clause is **C2's**. In C1 it is
+usually free — shaking while rotating turns the object, and a turn releases — but **in
+`TRANSLATE` a shake on the Pioneer turns nothing, so C1 releases nothing**. ⛔ Left as
+written; whether C1 wants the clause too is a question for the device pass.
+
 ---
 
 ## 3. MY READING — the rules as a state machine
@@ -138,7 +171,7 @@ exists.*
 | **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | **tap on obj 2's face ⇒ ALIGN** (→ C2). Pressed-and-held: ⚠ §7.5 |
 | **C2** | obj 1 aligned, `FollowerFace` **filled** + `PioneerFace` **contour** drawn, ⛔ mode **unchanged — stays `ROTATE`** | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
 | **C3** | aligned + `TargetPosition` live | `ROTATE`: orbit obj 1 about the target. `TRANSLATE`: move obj 1 along centre→target | its own delta moves **obj 2** along target→centre |
-| — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null (→ C1) | |
+| — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null | ⭐ and in **C2**, a shake on **obj 2** does the same (`D41`) |
 | — | flick (any state) | **orientation restored to the press pose** (the reinstated reset) | |
 
 ⭐⭐ **THE DESIGN HAS A SHAPE WORTH NAMING**: in C3 the two modes are **angle** and
@@ -528,6 +561,21 @@ refusal below names itself there, so *"nothing happened"* is never the only evid
    and this is the check that it is gone.
 8. ⭐⭐ **THE VERDICT WORTH FORMING**: with the re-tap in hand, is the shake still worth
    keeping? Your words: *"this is a complicated movement to execute by the user."*
+
+### C-bis. ⭐⭐ THE NEW FLAG — C1 against C2 (`D41`), a JUDGEMENT rather than a check
+
+⚠ Both are built and neither is right by argument: the flag exists because *what an alignment
+means* is a question about assembling parts, and only a hand answers it.
+
+8-bis. **C1 (the default, or `?pioneerTurnRule=0`).** Align obj 1 to a face of obj 2, then turn
+   **obj 2**. ⛔ The alignment should release, **obj 1 must not move**, and both highlights go.
+   ⭐ *Falsified by* obj 1 rotating, or by a highlight surviving.
+8-ter. **C2 (`?pioneerTurnRule=1`).** Same setup, then turn **obj 2**. ⛔ Obj 1 should take the
+   same rotation and keep both its highlight and its alignment. ⭐ *Falsified by* the two faces
+   drifting out of parallel as you keep turning — which is what the per-frame retarget exists
+   to prevent. ⚠ Then **shake obj 2**: the alignment should release. ⛔ In C1 that shake
+   releases only while you are in `ROTATE`; in `TRANSLATE` it does nothing, which is the gap
+   §2 flags.
 
 ### D. The safety question I cannot answer without a hand
 

@@ -243,6 +243,24 @@ export interface GestureConfig {
   // back-and-forth, and no simulation can say where the boundary sits.
 
   /** Reversals required to evict. A4: 2 — out, back, out. */
+  /**
+   * ⭐⭐⭐ **WHAT HAPPENS WHEN THE PIONEER'S OBJECT IS TURNED while the Follower is aligned**
+   * (owner, 2026-09-17). Two readings of what an alignment MEANS, and the flag exists because
+   * only a hand can say which one a part-assembly wants:
+   *
+   * * `0` — **C1, `RELEASE`**: the alignment is a SNAPSHOT of a direction. Turning the Pioneer
+   *   invalidates it, so it is released — the Follower is **not** rotated — and both
+   *   highlights go. ⭐ The default: nothing moves that the hand did not touch.
+   * * `1` — **C2, `FOLLOW`**: the alignment is a RELATIONSHIP. The Follower takes the SAME
+   *   world rotation, the target is re-read from the Pioneer's face every frame, and the
+   *   highlights stay. ⛔ In this fork a **shake on the PIONEER** also releases the Follower's
+   *   alignment — in C1 that case is already covered, because shaking while rotating turns
+   *   the object.
+   *
+   * ⚠ The default is MINE, not the owner's: C1 is the conservative reading and the owner did
+   * not name one. One slider switches it.
+   */
+  pioneerTurnRule: number;
   evictShakeReversals: number;
   /**
    * They must all fall inside this window, in milliseconds.
@@ -561,6 +579,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
 
   // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
+  // ⚠ C1 by default — see the field's note; the owner named neither as the default.
+  pioneerTurnRule: 0,
   evictShakeReversals: 2,
   // ⭐⭐ **300 ms — THE OWNER'S NUMBER, 2026-09-17**, and the first of these four a hand has
   // chosen. ⚠ It replaces my 600 ms, which was *"roughly three unhurried legs"* and untested.
@@ -693,6 +713,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔ A CHOICE OF TWO, NOT A RANGE — `pioneerTurnRuleOf` reads anything it does not
+  // recognise as C1, so `2` would LOOK like the conservative rule while the person who set it
+  // believed they were testing the other one. ⭐ The reader and this guard are a pair.
+  if (cfg.pioneerTurnRule !== 0 && cfg.pioneerTurnRule !== 1) {
+    throw new Error(
+      `pioneerTurnRule (${cfg.pioneerTurnRule}) must be 0 (C1: turning the Pioneer RELEASES ` +
+        "the alignment) or 1 (C2: the Follower takes the same rotation).",
+    );
+  }
+
   // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
   // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
   // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The

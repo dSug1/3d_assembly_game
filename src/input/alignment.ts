@@ -26,7 +26,7 @@
  * applies, exactly as `drag_rule.ts` and `mode_toggle.ts` are shaped.
  */
 import type { Constraint } from "../core/constraint_stack";
-import type { Vec3 } from "../core/vec";
+import { qconj, qmul, type Quat, type Vec3 } from "../core/vec";
 import type { Behaviour } from "./mode_toggle";
 
 /**
@@ -176,4 +176,94 @@ export function flickResetPlan(alignmentTouchedThisGesture: boolean): ResetPlan 
     restoreOrientation: true,
     dropAlignment: alignmentTouchedThisGesture,
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ WHEN THE **PIONEER'S** OBJECT IS TURNED WHILE THE FOLLOWER IS ALIGNED
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// ⛔⛔ THE CASE HAD NO RULE AT ALL UNTIL 2026-09-17, AND ITS ABSENCE WAS NOT VISIBLE. An
+// alignment stores a **frozen world direction** (§1.4) — deliberately, so a later camera orbit
+// cannot redefine it. ⚠ The price is that turning the object the direction was READ FROM
+// leaves the constraint pointing where that face *used to* look: the Follower still obeys a
+// target nothing on the glass corresponds to any more, and neither highlight says so.
+//
+// ⭐ The owner's two readings, behind one flag, because they are opposite answers to *what
+// does an alignment MEAN* — a snapshot of a direction, or a relationship between two faces:
+
+/** Which rule is in force when the Pioneer's object turns. */
+export type PioneerTurnRule =
+  /**
+   * **C1 — the alignment is a SNAPSHOT.** Turning the Pioneer invalidates it, so it is
+   * released: the Follower keeps its pose (it is *not* rotated) and both highlights go.
+   * ⭐ Nothing moves that the hand did not touch, which is the conservative reading.
+   */
+  | "RELEASE"
+  /**
+   * **C2 — the alignment is a RELATIONSHIP.** Turning the Pioneer turns the Follower by the
+   * same rotation, the target is re-read from the Pioneer's face every frame, and the
+   * highlights stay. ⭐ The two faces keep pointing the same way *by construction*.
+   */
+  | "FOLLOW";
+
+/** Read the flag. ⚠ Numeric so the URL override and the menu slider reach it unchanged. */
+export function pioneerTurnRuleOf(flag: number): PioneerTurnRule {
+  return flag === 1 ? "FOLLOW" : "RELEASE";
+}
+
+/** What the Pioneer's turn costs the Follower. ⭐ A decision; the caller acts. */
+export interface PioneerTurn {
+  readonly kind: "NONE" | "RELEASE" | "FOLLOW";
+  /**
+   * `FOLLOW` only: the **world** rotation to apply to the Follower, and the one to compose
+   * onto its orientation — `qmul(delta, follower)`, never the other order.
+   */
+  readonly delta: Quat | null;
+}
+
+/**
+ * ⚠ Below this, a difference is float noise rather than a hand: ~0.006°, which is four orders
+ * of magnitude under the smallest deliberate twist and well above the error of composing
+ * quaternions. ⛔ NOT a tunable — it guards arithmetic, not feel, and a slider on it would
+ * invite someone to tune away a rule instead of a threshold.
+ */
+export const PIONEER_TURN_EPSILON_RAD = 1e-4;
+
+/**
+ * Did the Pioneer's object turn, and what follows from it?
+ *
+ * ⭐⭐ THE DELTA IS A **WORLD** ROTATION — `now ∘ before⁻¹` — which is what makes `FOLLOW`
+ * exact rather than approximate: applying the same world rotation to both objects preserves
+ * the angle between any two of their directions, so the Follower's aligned normal stays
+ * parallel to the Pioneer's face normal without solving anything.
+ * ⛔ The opposite composition (`before⁻¹ ∘ now`) is the rotation expressed in the OBJECT's
+ * own frame, and using it here would turn the Follower about the Pioneer's axes — a sign
+ * error with no symptom at the identity, which is `METHOD`'s favourite shape.
+ *
+ * @param before the Pioneer's orientation when it was last observed.
+ * @param now its orientation this frame.
+ */
+export function pioneerTurned(
+  before: Quat,
+  now: Quat,
+  rule: PioneerTurnRule,
+): PioneerTurn {
+  const delta = qmul(now, qconj(before));
+  // ⭐ The turn angle of a unit quaternion is `2·acos|w|`; the absolute value folds the
+  // double cover, so `q` and `−q` — the same rotation — cannot read as 360° apart.
+  const angle = 2 * Math.acos(Math.min(1, Math.abs(delta[0])));
+  if (angle < PIONEER_TURN_EPSILON_RAD) return { kind: "NONE", delta: null };
+  return rule === "RELEASE" ? { kind: "RELEASE", delta: null } : { kind: "FOLLOW", delta };
+}
+
+/**
+ * ⭐ Re-read an alignment's target from where the Pioneer's face points **now** (`FOLLOW`).
+ *
+ * ⚠ It keeps §1.4's doctrine rather than breaking it: the constraint still holds a WORLD
+ * direction, and a camera orbit still cannot redefine it. What changes is that the direction
+ * is refreshed from the face it was taken from — which is the whole difference between the
+ * owner's two readings, expressed as one field.
+ */
+export function retargetAlignment(c: Constraint, targetWorld: Vec3): Constraint {
+  return { ...c, targetWorld };
 }
