@@ -2144,67 +2144,30 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   });
 
   createMenu([
+    // ⚠ **SECTION ORDER IS THE OWNER'S, 2026-09-18** — camera, translation, rotation,
+    // eviction, capture. ⛔ It is a reading order, not a grouping: the camera frames what the
+    // other four act on, and the two destructive ones sit last. ⭐ The panel remembers which
+    // sections are open by TITLE (`localStorage`), so reordering costs a hand nothing.
     {
-      title: "OBJECT ROTATION",
+      title: "CAMERA ORBIT",
       sliders: [
-        // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
-        // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
-        tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
-        // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
-        // gain so one DOF does not feel like a different control from three — a guess, and
-        // the range is the same as the free gain's so a hand can compare them directly.
-        tunable("anchored twist gain (rad/mm)", "gainRotateConstrained", 0.005, 0.15, 0.005),
-        // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
-        // object's centre when it starts turning or turns the other way.
-        tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
-        tunable("sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
-        tunable("sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
-        tunable("sway reference turn (deg/s)", "rotateSwayReferenceDegPerS", 20, 400, 10),
-      ],
-    },
-    {
-      // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
-      // number has been wrong every single time*, and all four of these are guesses.
-      // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
-      // between a shake and a **corrective nudge** during fine positioning, because eviction
-      // destroys alignments the user set deliberately. ⚠ `evictShakeLegMm` has a validator
-      // rule under it (3× the measured noise), so the slider cannot reach a value where a
-      // reversal could be jitter.
-      title: "⭐ EVICTION SHAKE (A4)",
-      sliders: [
-        tunable("reversals to evict", "evictShakeReversals", 2, 5, 1),
-        tunable("window (ms)", "evictShakeWindowMs", 200, 1200, 50),
-        tunable("leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
-        tunable("straightness (0=strict, 1=any)", "evictShakeStraightness", 0.1, 0.9, 0.05),
-      ],
-    },
-    {
-      // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
-      // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
-      // is set aside where a hand says it wants to tune something — the same exception §8 of the
-      // spec grants `BreakThreshold`.
-      // ⚠⚠ IT IS MILLIMETRES ON THE GLASS, NOT IN THE WORLD. The world gap it authorises grows
-      // with the camera distance, so the same slider value means the same APPARENT clearance at
-      // every zoom — which is what the owner asked for and what the HUD's `gap=…/…mm` shows.
-      title: "⭐ CAPTURE (D49)",
-      sliders: [
-        // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
-        // above ~40 mm the whole scene captures at the boot zoom. ⛔ A range chosen to make both
-        // ends visibly WRONG on the glass, because a slider whose every value looks plausible
-        // teaches a hand nothing.
-        tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
-        // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
-        // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
-        // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
-        // its finger drives the Follower's roll AND depth together.
-        // ⚠ A 0/1 slider because the menu has no other kind of control — the fork selector took
-        // the same shape (`D26`) — and `validateGestureConfig` refuses anything between, so a
-        // half-set flag cannot masquerade as the default.
-        tunable("PIONEER translates (0=pinned)", "pioneerTranslates", 0, 1, 1),
-        // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
-        // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
-        // one pixel — so a width tunable would be a slider that does nothing, which is the
-        // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
+        tunable("top radius (m)", "orbitTopRadiusM", 0, 1.5, 0.01),
+        tunable("top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
+        tunable("middle radius (m)", "orbitMiddleRadiusM", 0, 1.5, 0.01),
+        tunable("middle height (m)", "orbitMiddleHeightM", -1.5, 1.5, 0.01),
+        tunable("bottom radius (m)", "orbitBottomRadiusM", 0, 1.5, 0.01),
+        tunable("bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
+        // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
+        tunable("centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
+        // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
+        // whether this is an orbit or the start of a pinch. 0 commits immediately.
+        tunable("centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
+        // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
+        tunable("reset time (ms)", "cameraResetMs", 0, 2000, 50),
+        // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
+        // per pixel — a pixel means something different on a phone and a tablet.
+        tunable("yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
+        tunable("elevation gain ↑↓ (/mm)", "gainOrbitElevation", 0.002, 0.05, 0.002),
       ],
     },
     {
@@ -2274,25 +2237,66 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       ],
     },
     {
-      title: "CAMERA ORBIT",
+      title: "OBJECT ROTATION",
       sliders: [
-        tunable("top radius (m)", "orbitTopRadiusM", 0, 1.5, 0.01),
-        tunable("top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
-        tunable("middle radius (m)", "orbitMiddleRadiusM", 0, 1.5, 0.01),
-        tunable("middle height (m)", "orbitMiddleHeightM", -1.5, 1.5, 0.01),
-        tunable("bottom radius (m)", "orbitBottomRadiusM", 0, 1.5, 0.01),
-        tunable("bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
-        // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
-        tunable("centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
-        // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
-        // whether this is an orbit or the start of a pinch. 0 commits immediately.
-        tunable("centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
-        // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
-        tunable("reset time (ms)", "cameraResetMs", 0, 2000, 50),
-        // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
-        // per pixel — a pixel means something different on a phone and a tablet.
-        tunable("yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
-        tunable("elevation gain ↑↓ (/mm)", "gainOrbitElevation", 0.002, 0.05, 0.002),
+        // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
+        // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
+        tunable("yaw/pitch gain (rad/mm)", "gainRotateFree", 0.005, 0.15, 0.005),
+        // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
+        // gain so one DOF does not feel like a different control from three — a guess, and
+        // the range is the same as the free gain's so a hand can compare them directly.
+        tunable("anchored twist gain (rad/mm)", "gainRotateConstrained", 0.005, 0.15, 0.005),
+        // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
+        // object's centre when it starts turning or turns the other way.
+        tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
+        tunable("sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
+        tunable("sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
+        tunable("sway reference turn (deg/s)", "rotateSwayReferenceDegPerS", 20, 400, 10),
+      ],
+    },
+    {
+      // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
+      // number has been wrong every single time*, and all four of these are guesses.
+      // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
+      // between a shake and a **corrective nudge** during fine positioning, because eviction
+      // destroys alignments the user set deliberately. ⚠ `evictShakeLegMm` has a validator
+      // rule under it (3× the measured noise), so the slider cannot reach a value where a
+      // reversal could be jitter.
+      title: "⭐ EVICTION SHAKE (A4)",
+      sliders: [
+        tunable("reversals to evict", "evictShakeReversals", 2, 5, 1),
+        tunable("window (ms)", "evictShakeWindowMs", 200, 1200, 50),
+        tunable("leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
+        tunable("straightness (0=strict, 1=any)", "evictShakeStraightness", 0.1, 0.9, 0.05),
+      ],
+    },
+    {
+      // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
+      // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
+      // is set aside where a hand says it wants to tune something — the same exception §8 of the
+      // spec grants `BreakThreshold`.
+      // ⚠⚠ IT IS MILLIMETRES ON THE GLASS, NOT IN THE WORLD. The world gap it authorises grows
+      // with the camera distance, so the same slider value means the same APPARENT clearance at
+      // every zoom — which is what the owner asked for and what the HUD's `gap=…/…mm` shows.
+      title: "⭐ CAPTURE (D49)",
+      sliders: [
+        // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
+        // above ~40 mm the whole scene captures at the boot zoom. ⛔ A range chosen to make both
+        // ends visibly WRONG on the glass, because a slider whose every value looks plausible
+        // teaches a hand nothing.
+        tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
+        // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
+        // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
+        // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
+        // its finger drives the Follower's roll AND depth together.
+        // ⚠ A 0/1 slider because the menu has no other kind of control — the fork selector took
+        // the same shape (`D26`) — and `validateGestureConfig` refuses anything between, so a
+        // half-set flag cannot masquerade as the default.
+        tunable("PIONEER translates (0=pinned)", "pioneerTranslates", 0, 1, 1),
+        // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
+        // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
+        // one pixel — so a width tunable would be a slider that does nothing, which is the
+        // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
       ],
     },
   ]);
