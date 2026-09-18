@@ -13,9 +13,18 @@ import { initialBehaviour, isTapRelease, toggleBehaviour } from "@input/mode_tog
 import * as modeToggle from "@input/mode_toggle";
 
 describe("the mode a session starts in", () => {
-  it("⭐ TRANSLATE, because it is the commonest gesture", () => {
-    // ⚠ The one part of `D23` this model kept: the commonest gesture on the cheapest input.
-    expect(initialBehaviour()).toBe("TRANSLATE");
+  it("⭐⭐ ROTATE — the owner's default, confirmed twice", () => {
+    // ⛔⛔ **THIS VECTOR PINNED THE WRONG VALUE FOR A DAY, AND THAT IS WHY IT IS WORTH A
+    // COMMENT.** The owner said *"Default start: rotation mode"* on 2026-09-16; `CLAUDE.md`
+    // and `scene.ts`'s comment both recorded `ROTATE`; the function returned `TRANSLATE` and
+    // **this vector asserted the returned value rather than the decision**. ⭐ So the suite
+    // was green, the documents were right, and the product booted in the other mode — the
+    // *fix beside the defect* shape, in its purest form: nothing was ever fixed here at all,
+    // the COMMENT moved and the code did not.
+    // ⭐⭐ `METHOD`: *a vector that is written from the code it tests cannot contradict it.*
+    // Re-confirmed by the owner 2026-09-17: *"I confirm the scene shall boot in rotation
+    // mode, not translation mode."*
+    expect(initialBehaviour()).toBe("ROTATE");
   });
 });
 
@@ -74,9 +83,16 @@ describe("⛔⛔ THE MODE IS STICKY — it survives a release", () => {
     // ⛔ The latch lives in `scene.ts`, initialised once per session — no vector here can
     // reach that. ⭐ What is true and checkable: the only mutator is the toggle, and
     // `initialBehaviour` is the one place a mode is imposed.
-    let mode = initialBehaviour();
-    mode = toggleBehaviour(mode);
-    expect(mode).toBe("ROTATE");
+    // ⛔⛔ **AND IT IS ASSERTED AS A *FLIP*, NOT AS A LITERAL** (2026-09-17). This vector used
+    // to read `expect(mode).toBe("ROTATE")` after one toggle — which silently encoded the
+    // boot value a second time, so correcting `initialBehaviour` reddened a vector that is
+    // not about the boot value at all. ⭐ `METHOD`: *a vector states the property it names;
+    // a literal borrowed from somewhere else makes it a second, hidden assertion about that
+    // somewhere else.*
+    const boot = initialBehaviour();
+    const once = toggleBehaviour(boot);
+    expect(once).not.toBe(boot);
+    expect(toggleBehaviour(once)).toBe(boot);
   });
 });
 

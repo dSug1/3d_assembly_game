@@ -284,14 +284,60 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     expect(new AlignmentLinks().wouldCycle("a", "a")).toBe(true);
   });
 
-  it("⛔⛔ A PRE-EXISTING CYCLE DOES NOT HANG THE GUARD ITSELF", () => {
-    // ⭐⭐ The guard cannot assume the invariant it exists to maintain. ⚠ If a cycle ever got in
-    // — through a path added later, or a bug — a walk that trusted acyclicity would spin for
-    // ever, and the freeze would happen inside the very check meant to prevent it.
+  it("⛔⛔ A CYCLE CANNOT BE CONSTRUCTED THROUGH `link` AT ALL", () => {
+    // ⛔⛔⛔ **THIS VECTOR USED TO BUILD THE CYCLE IT WAS GUARDING AGAINST.** It read
+    // `link("a","b")` then `link("b","a")` and checked that `wouldCycle` did not hang — which
+    // was true, and which quietly demonstrated that **the illegal state was constructible**.
+    // ⚠ The class header claimed the opposite: *"this method makes the state
+    // unrepresentable."* ⭐ It did not. It made the state DETECTABLE, and only for a caller
+    // that remembered to ask — the same call-site-rule shape `object_model.ts` rejects for
+    // `frozen`: *a constraint enforced at the one place the quantity is stored is an
+    // invariant; anywhere else it is a convention.*
+    // ⭐⭐ Now `link` itself refuses, so the walk's own `seen` set is defence in depth rather
+    // than the only defence — kept deliberately, because two guards against a frozen glass is
+    // not one too many.
     const links = new AlignmentLinks();
-    links.link("a", "b", "+x", IDENTITY);
-    links.link("b", "a", "+x", IDENTITY);
+    expect(links.link("a", "b", "+x", IDENTITY)).toBe(true);
+    expect(links.link("b", "a", "+x", IDENTITY), "the closing edge is REFUSED").toBe(false);
+    // ⛔ And the index is untouched by the refusal — not half-written.
+    expect(links.pioneerFor("a")?.objectId).toBe("b");
+    expect(links.pioneerFor("b")).toBeNull();
+    expect(links.followersOf("a")).toEqual([]);
+    expect(links.followersOf("b")).toEqual(["a"]);
+    expect(links.size).toBe(1);
     expect(() => links.wouldCycle("c", "a")).not.toThrow();
-    expect(links.wouldCycle("c", "a")).toBe(false);
+  });
+
+  it("⛔ a body cannot be linked to ITSELF either", () => {
+    const links = new AlignmentLinks();
+    expect(links.link("a", "a", "+x", IDENTITY)).toBe(false);
+    expect(links.size).toBe(0);
+    expect(links.followersOf("a")).toEqual([]);
+  });
+
+  it("⛔⛔ a THREE-BODY ring is refused at its closing edge, not at the first two", () => {
+    // ⚠ The owner named the two-body case; a longer ring is the same defect one link out, and
+    // the first two edges must still be allowed or ordinary chains would break.
+    const links = new AlignmentLinks();
+    expect(links.link("f", "p1", "+x", IDENTITY)).toBe(true);
+    expect(links.link("p1", "p2", "+x", IDENTITY)).toBe(true);
+    expect(links.link("p2", "f", "+x", IDENTITY)).toBe(false);
+    expect(links.size).toBe(2);
+  });
+
+  it("⭐ and a REFUSED link does not disturb the one it would have replaced", () => {
+    // ⛔⛔ `link` begins by unlinking the follower — that is how re-aligning MOVES a link
+    // rather than adding one. ⚠ So a refusal that ran that unlink first would destroy a
+    // perfectly good alignment as a side effect of rejecting a different one. ⭐ The check
+    // therefore comes BEFORE the unlink, and this is the vector that says so.
+    const links = new AlignmentLinks();
+    links.link("f", "p1", "+x", IDENTITY);
+    links.link("p1", "p2", "+x", IDENTITY);
+    // ⚠ `p2` asking to follow `f` would close the ring; `p2` currently follows nothing.
+    expect(links.link("p2", "f", "+y", IDENTITY)).toBe(false);
+    // ⭐ Every pre-existing link survives, intact and on the same face.
+    expect(links.pioneerFor("f")?.objectId).toBe("p1");
+    expect(links.pioneerFor("f")?.faceId).toBe("+x");
+    expect(links.pioneerFor("p1")?.objectId).toBe("p2");
   });
 });

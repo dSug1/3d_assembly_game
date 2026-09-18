@@ -91,6 +91,7 @@ import {
   trackingMetresPerPx,
   SwayWatcher,
   swayScale,
+  receivesSway,
   swayWorldDirection,
   SpinSwayWatcher,
   CameraResetAnimation,
@@ -130,17 +131,18 @@ import {
   faceMarkerExtent,
   faceMarkerLocalOrientation,
 } from "../core/face_pick";
-import { singleAlignment, solve } from "../core/constraint_stack";
+import { hasAlignment, rotationChannel, singleAlignment, solve } from "../core/constraint_stack";
 import {
   clearObjectConstraints,
   evictObjectConstraints,
   faceWorld,
   pushObjectConstraint,
 } from "../core/object_model";
-import { IDENTITY, qSlerp, qmul } from "../core/vec";
+import { IDENTITY, qmul } from "../core/vec";
 import { seededRotations } from "../core/random_pose";
 import { AlignmentLinks } from "../core/alignment_links";
-import { resolvePioneerTurns } from "../input/pioneer_cascade";
+import { AlignSnaps } from "../input/align_snap";
+import { followerLinksFrom, resolvePioneerTurns } from "../input/pioneer_cascade";
 // ⭐⭐ `A16`. ⛔ Both are ENGINE-FREE and answer questions; nothing in them moves or draws.
 import { captureRadiusM } from "../core/proximity";
 import { highlightedPair, translatesOnDrag, type HighlightVerdict } from "../input/highlight";
@@ -338,11 +340,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // √((5L)² − (2.5L)² − (2L)²) = 0.307246. ⛔ A guessed y would leave the three distances
   // unequal, and *"increase their distances"* would then be true of one pair and not the others.
   //
-  // ✅✅ AND AT 5L NOTHING IS IN RANGE AT REST, WHICH IS THE POINT: the capture radius is `4L`
-  // (320 mm), so 400 mm spacing finally puts `A16`'s distance condition back to work — a hand
-  // has to bring two bodies together before anything can highlight. ⚠ At the previous 3L
-  // spacing every pair was already inside the radius, so that condition could never be seen to
-  // do anything on the glass.
+  // ⛔⛔⛔ **THIS COMMENT SAID *"AND AT 5L NOTHING IS IN RANGE AT REST, WHICH IS THE POINT"*
+  // AND IT WAS FALSE — corrected by audit, 2026-09-17.**
+  //
+  // ⭐ The reasoning held for the three PARTS: 400 mm apart against a `4L` = 320 mm capture
+  // radius, so no pair of parts is in range at rest and `A16`'s distance condition finally does
+  // something on the glass. ⚠ **The base plate arrived afterwards and nobody re-ran the
+  // arithmetic.** It sits `3L` below the parts' centres, which puts its CENTRE
+  // √((2.5L)² + (3L)²) = **312.4 mm** from `objectA` and `objectB` — inside the radius. So
+  // dragging either of them at boot raises the white capture pair on the plate at once, which
+  // is the opposite of what this comment promised a device pass would see.
+  // ⚠ `objectD` is clear: 570 mm to the plate, 400 mm to each part.
+  //
+  // ⛔⛔ **AND IT IS NOT A NUMBER TO NUDGE.** The radius is centre-to-centre
+  // (`CENTRES-FOR-NOW`) and the plate is `6L × 9L`, so a part resting ON the plate near its
+  // edge is FURTHER from its centre than one hovering high above the middle: any radius is
+  // wrong for a body of that shape. ⭐ The fix is the face-distance rule the owner has already
+  // named (*"later we will use distances between faces"*), which `3D2` owes.
+  // ⭐⭐ `METHOD`: *a claim about a composition expires when any part of it changes* — the
+  // spacing was re-derived when it moved, and the claim ABOUT the spacing was not.
+  // The vector that states it: `tests/highlight.test.ts`, *"AT BOOT THE PARTS ARE CLEAR OF
+  // EACH OTHER AND NOT CLEAR OF THE PLATE"*.
   //
   // ⛔⛔ THE ROTATIONS ARE **SEEDED**, not per-boot random — `core/random_pose.ts` argues why,
   // and `?sceneSeed=N` rolls a new scene. ⚠ Three arbitrary orientations mean **no two bodies
@@ -409,6 +427,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   const idOf = new Map<AbstractMesh, ObjectId>();
+  /**
+   * ⭐ The MODEL's record for a mesh, or `null` for a mesh the model does not know — a
+   * marker, a contour, a highlight. ⚠ It reads `world` live, so a rule asking it cannot be
+   * looking at a body that has since changed.
+   */
+  const bodyOf = (mesh: AbstractMesh): { readonly id: ObjectId; readonly frozen?: boolean } | null => {
+    const id = idOf.get(mesh);
+    return id === undefined ? null : (world.objects.get(id) ?? null);
+  };
   const meshOf = new Map<ObjectId, AbstractMesh>();
   /**
    * ⛔ PER-AXIS half-extents, and now per BODY. ⚠ A single `half` was a cube's privilege; a
@@ -487,6 +514,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const setModelPose = (mesh: AbstractMesh, placed: Placed): void => {
     const id = idOf.get(mesh);
     if (id === undefined) return;
+    // ⛔⛔⛔ **A FROZEN BODY REFUSES *AUDIBLY*** — audit fix, 2026-09-17.
+    //
+    // ⚠ `setWorldPlacement` returns the world unchanged for a frozen body, which is the right
+    // INVARIANT and, on its own, a silent one: a finger dragging the base plate got no motion
+    // and no message. ⛔ *"Dragging the plate does nothing"* is precisely the shape this file
+    // has been burned by — the alignment path already says *"is FROZEN — it cannot be a
+    // follower"* out loud, and the placement path said nothing at all.
+    // ⭐ The model still refuses in `object_model.ts`; this only makes the refusal VISIBLE.
+    // The readout is not the enforcement, and must never become it.
+    if (world.objects.get(id)?.frozen === true) {
+      lastVerdict = `${id} is FROZEN — its transform cannot be modified`;
+      hudDirty = true;
+      return;
+    }
     world = setWorldPlacement(world, id, placed);
   };
 
@@ -705,10 +746,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const target = qmul(solved.rotation, before);
     const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
     if (snapMs > 0) {
-      alignAnim = { objectId: followerId, from: before, to: target, t0: performance.now() };
+      alignSnaps.start(followerId, before, target, performance.now());
     } else {
       setModelOrientation(followerGrip.mesh, target);
-      alignAnim = null;
+      alignSnaps.cancel(followerId);
     }
     followerGrip.alignmentTouched = true;
     // ⭐⭐ THE HIGHLIGHT IS THE ALIGNMENT'S STATE, not the press's: it appears HERE and dies
@@ -726,20 +767,37 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // picks up by accident.
     const pioneerFaceId = pioneerGrip.pressFace.faceId;
     pioneerGrip.pressFace = null;
-    pioneerFace = { objectId: pioneerId, faceId: pioneerFaceId };
-    alignMode = mode;
     // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
     // ACTIVE alignment's mode and would recolour an older object's highlight.
     alignModeOf.set(followerId, mode);
     // ⛔ And WHO it was aligned to, which the constraint itself does not record.
     // ⚠ `link` MOVES an existing link rather than adding a second — a body has one alignment,
     // so re-aligning it must remove it from its previous Pioneer's set.
-    links.link(
+    // ⛔⛔⛔ **THE BASELINE IS A *WORLD* ORIENTATION — AUDIT FIX, 2026-09-17.**
+    //
+    // ⚠⚠ It stored `local.orientation` and the cascade compares it against
+    // `worldPlacementOf(…).orientation`. ⭐ The two are IDENTICAL while every body has
+    // `parent === null`, which is the whole scene today — so the mismatch is invisible and
+    // waits for `3D2`. ⛔ The first PARENTED Pioneer then reads as *turned* on frame one, by
+    // its parent's entire orientation: every `SNAPSHOT` follower releases itself and every
+    // `FOLLOW` follower spins, with nothing having moved.
+    // ⭐⭐ `METHOD`: *a quantity measured in someone else's frame is a different quantity.*
+    // The parameter now says which frame it wants, in `AlignmentLinks` as well as here.
+    // ⚠ `link` now REFUSES a cycle itself (audit, 2026-09-17), so the verdict is checked
+    // rather than discarded. ⛔ It cannot fire here — `wouldCycle` was asked above and acted on
+    // with the owner's *"break the initial alignment instead"* policy — which is exactly why a
+    // silent `false` would be the worst outcome: the constraint would be pushed and the body
+    // would have no link, so nothing would ever release it and `prune` would not know.
+    const linked = links.link(
       followerId,
       pioneerId,
       pioneerFaceId,
-      world.objects.get(pioneerId)?.local.orientation ?? IDENTITY,
+      worldPlacementOf(world, pioneerId)?.orientation ?? IDENTITY,
     );
+    if (!linked) {
+      lastVerdict = `align: REFUSED — ${followerId}→${pioneerId} would close a cycle`;
+      hudDirty = true;
+    }
     paintHighlightColours();
     // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
     //
@@ -896,6 +954,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const links = new AlignmentLinks();
 
   const releaseAlignmentOf = (followerId: ObjectId): void => {
+    // ⚠ A release can be decided by the render loop (a turned Pioneer, a prune), where no
+    // pointer event follows to repaint the HUD. See `hudDirty`.
+    hudDirty = true;
     const ev = evictObjectConstraints(world, followerId);
     world = ev.world;
     cancelAlignAnim(followerId);
@@ -906,8 +967,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // the next gesture on the ACTIVE follower behave as though nothing were aligned.
     if (selectedFace?.objectId === followerId) {
       selectedFace = null;
-      pioneerFace = null;
-      alignMode = null;
     }
   };
 
@@ -935,8 +994,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * colours, because the two faces are related only by the instant the tap happened.
    * ⛔ `FOLLOW` (double tap): the Follower takes the Pioneer's **amber** — one colour, because
    * they now move as one thing.
-   * ⚠ Called wherever the mode changes, never per frame: a material write every frame would
-   * be a second writer for a value that changes on a gesture.
+   * ⚠⚠ **THIS COMMENT SAID *"never per frame"* AND THE RENDER LOOP HAS DONE EXACTLY THAT
+   * SINCE `A18`** — corrected by audit, 2026-09-17. The per-frame pass covers every aligned
+   * body and writes only on CHANGE, so it is not a second unguarded writer; but *never per
+   * frame* was simply false, and a reader trusting it would conclude this function is the only
+   * thing keeping the colours right.
+   * ⭐ What it is actually FOR: making a `SWITCH` visible in the same event that caused it,
+   * rather than one frame later. ⚠ The two agree by construction because they compute `want`
+   * the same way, from `alignModeOf`.
    */
   const paintHighlightColours = (): void => {
     // ⚠ EVERY aligned object, not just the active one: a body aligned in `FOLLOW` earlier must
@@ -1349,6 +1414,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return f;
   };
   let lastVerdict = "—";
+
+  /**
+   * ⭐⭐ **SOMETHING THE RENDER LOOP DECIDED NEEDS TO REACH THE READOUT.**
+   *
+   * ⛔ Set by `markHudDirty`, which every writer of `lastVerdict` goes through, and consumed
+   * once at the end of the frame. ⚠ It exists because the loop is a rule-runner as well as a
+   * renderer — the cascade, the prune and the snaps all reach verdicts with no pointer event
+   * behind them, and before 2026-09-17 those verdicts waited for the next touch to be shown.
+   */
+  let hudDirty = false;
 
   // ─────────────────────────────────────────────────────────────────
   // §2 RULE 4 — PINCH ZOOM, for touchpoints that hit NOTHING.
@@ -2042,12 +2117,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const impulse = impulseForPeak(peakM, cfg.translateSwayTauMs / 1000);
     if (!(impulse > 0)) return;
 
+    const heldId = idOf.get(heldMesh) ?? null;
     for (const mesh of scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
       // marker cannot sway — a readout that moved with the scene would be describing
       // itself. And the held object is excluded: it is already going that way.
       if (mesh.metadata?.orbitCandidate !== true) continue;
       if (mesh === heldMesh) continue;
+      // ⛔⛔ **AND A FROZEN BODY DOES NOT WOBBLE** — the owner, 2026-09-17. ⚠ The model was
+      // frozen and the PICTURE was not: the sway is a display offset added after the model is
+      // read, so the base plate rocked while its placement could not change. ⭐ One predicate,
+      // shared with `spinOthers` and vectored in `tests/sway.test.ts`.
+      if (!receivesSway(bodyOf(mesh), heldId)) continue;
       const f = followerFor(mesh);
       f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
       f.swayY = { x: f.swayY.x, v: f.swayY.v + dir[1] * impulse };
@@ -2085,9 +2166,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (!(impulse > 0)) return;
 
     const pivot = grip.mesh.position;
+    const heldId = idOf.get(grip.mesh) ?? null;
     for (const mesh of scene.meshes) {
       if (mesh.metadata?.orbitCandidate !== true) continue;
       if (mesh === grip.mesh) continue;
+      // ⛔⛔ A frozen body does not swing about the held one either — the same rule, the same
+      // predicate. ⚠ This is the writer that made the base plate SWING rather than rock, which
+      // is the more obvious of the two on the glass.
+      if (!receivesSway(bodyOf(mesh), heldId)) continue;
       const f = followerFor(mesh);
       // ⚠ The pivot is captured per kick and shared by the block. A kick arriving while
       // an older one is still decaying moves the pivot; for the sub-degree swings this
@@ -2256,8 +2342,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // component to give: nothing happens, and the drag chart is the one that works there.
       const rollId = idOf.get(grip.mesh);
       const rollStack = rollId === undefined ? [] : (world.objects.get(rollId)?.constraints ?? []);
-      if (rollStack.length === 1) {
-        const axis = rollStack[0]!.targetWorld;
+      // ⛔⛔ The same audit fix as the one-finger twist, at the second finger's channel: a
+      // COUNT stood in for *"is this body aligned?"* and sent a mated body to free roll.
+      const rollChannel = rotationChannel(rollStack);
+      if (rollChannel.kind === "REFUSED") {
+        // ⛔ Same as the one-finger twist: a refusal that fell through to the free roll below
+        // would break the mate while the HUD reported that it had not.
+        lastVerdict = `align: roll refused — ${rollChannel.why}`;
+      } else if (rollChannel.kind === "TWIST") {
+        const axis = rollChannel.axis;
         const twist = constrainedRollAngle(
           screenFrame(),
           axis,
@@ -2265,13 +2358,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         );
         if (twist !== null) {
           setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
+          // ⛔⛔⛔ **AND IT RIDES THE SNAP — AUDIT FIX, 2026-09-17.** The one-finger twist has
+          // composed onto both ends of a travelling snap since `D45`; this channel never did.
+          // ⚠ So a roll made during the 129 ms snap was written to the model and then
+          // **overwritten** by the slerp on the very next frame: the body landed on `to` and
+          // the hand movement vanished. ⭐ Exactly the shape of the device report that bought
+          // the ride-along in the first place (*"there is no slerp during rotation"*), one
+          // channel over — a fix that landed on one path and not on its twin.
+          // ⛔ `METHOD`: *when a rule has two channels, the correction belongs to the RULE.*
+          if (rollId !== undefined) {
+            alignSnaps.ride(rollId, rotateAboutAxis(IDENTITY, axis, twist));
+          }
         }
       } else {
-        // ⚠ **NO REFUSAL BRANCH ANY MORE**, and that is the CAP doing its work: an object
-        // can hold at most ONE alignment (`singleAlignment`), so *"the stack is full and the
-        // roll must refuse"* is unreachable by construction rather than by a test. ⛔ The
-        // branch that used to say so is deleted with fork B — an unreachable guard is a trap,
-        // and this project has paid for two of them.
+        // ⭐ `FREE`: no constraint at all, so the roll is the screen-plane one.
+        // ⚠⚠ **THIS COMMENT USED TO SAY THERE WAS NO REFUSAL BRANCH**, on the argument that the
+        // cap of one makes *"the stack is full"* unreachable. ⛔ That was true of two
+        // ALIGNMENTS and said nothing about a **MATE**, which is the second entry `3D2` adds —
+        // so the `else` silently covered a case nobody had considered. ⭐ `rotationChannel`
+        // now names all three outcomes, and the refusal is the branch above.
       setModelOrientation(
         grip.mesh,
         screenRollRotation(
@@ -2432,7 +2537,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⛔ ONE pair is visualised, so two objects aligned at once show only the latest — stated
    * rather than hidden, and a device question (`ALIGNMENT_RULES.md` §7).
    */
-  let pioneerFace: { objectId: string; faceId: string } | null = null;
+  // ⛔⛔⛔ **`pioneerFace` AND `alignMode` WERE DELETED HERE, 2026-09-17 — AND DELETED, NOT
+  // LEFT.** They were the ACTIVE alignment's Pioneer face and its mode: one of each, for the
+  // whole scene. ⚠ The per-body truth has lived in `links` and `alignModeOf` since `A18`, and
+  // an audit found the tap rule still reading these — so re-tapping the FIRST of two aligned
+  // bodies was read as a fresh alignment and could never release it.
+  // ⭐ Once the tap read the body instead, TypeScript reported both as written-but-never-read,
+  // which is the whole argument: a scene-wide record that nothing consumes is exactly defect
+  // 40's shape (`A12`'s retired roll detector, still fed, still holding a veto).
+  // ⚠ `selectedFace` survives because the follower HIGHLIGHT still has one active record,
+  // which is a stated device question (`ALIGNMENT_RULES.md` §7).
 
   /**
    * ⛔⛔⛔ **`pioneerOrientation` WAS DELETED HERE, 2026-09-17 — AND DELETED, NOT LEFT.**
@@ -2457,7 +2571,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * and the highlight COLOURS report it — two colours for a snapshot, one for a relationship.
    * ⚠ `null` exactly when nothing is aligned.
    */
-  let alignMode: AlignMode | null = null;
 
   /**
    * ⭐⭐⭐ **THE ALIGNMENT'S SNAP, ANIMATED** — owner, 2026-09-17: *"make the rotation a slerp
@@ -2475,7 +2588,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * rule reads, and a stack that lags the gesture would make the twist, the readout and the
    * re-tap all briefly wrong. The pose catches up and lands EXACTLY on the solved orientation.
    */
-  let alignAnim: { objectId: ObjectId; from: Quat; to: Quat; t0: number } | null = null;
+  // ⛔⛔⛔ **ONE SNAP PER BODY — IT WAS A SINGLE GLOBAL SLOT UNTIL 2026-09-17.** An audit
+  // found that a second alignment on ANY body overwrote the slot and abandoned the first body
+  // **mid-arc**, keeping its constraint, its marker and its outline while its face was not on
+  // the target and nothing would ever re-solve it. ⚠ The window is 129 ms at the shipped
+  // numbers and 571 ms at the slider maximum, and two-handed play is the owner own model for
+  // the fine approach — so a tap inside another body snap is the intended posture.
+  // ⭐⭐ The bookkeeping moved to `input/align_snap.ts` so it can be INTERROGATED: the
+  // ride-along, the cancel and the landing were three scattered statements in this frame
+  // handler, and `pioneer_cascade.ts` already paid for that lesson.
+  const alignSnaps = new AlignSnaps<ObjectId>();
 
   /**
    * ⭐⭐ **DROP IT WHERE IT IS** — for every rule that RELEASES the alignment.
@@ -2489,7 +2611,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the hand can see and undo, which is honest; a jump back to the press pose would not be.
    */
   const cancelAlignAnim = (objectId: ObjectId): void => {
-    if (alignAnim?.objectId === objectId) alignAnim = null;
+    alignSnaps.cancel(objectId);
   };
 
   // ⛔⛔ **`settleAlignAnim` WAS DELETED HERE, 2026-09-17, AND ITS ABSENCE IS THE FIX.** It
@@ -2578,6 +2700,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // in its branch, where the §1.3 verdict has to be SKIPPED rather than re-resolved.
     if (info.type === PointerEventTypes.POINTERDOWN) collectOrphans("PRESS");
     else if (info.type === PointerEventTypes.POINTERMOVE) collectOrphans("MOVE");
+
+    // ⛔⛔⛔ **A PRESS FOR AN ID THAT NEVER RELEASED TAKES ITS OLD GRIP WITH IT** — audit fix,
+    // 2026-09-17.
+    //
+    // ⚠⚠ `router.press` already drops its own record for an id that is pressed while still
+    // down. ⛔ This file did not: it overwrites `held` only on the `OBJECT` branch, and the
+    // `SECOND` and `IGNORED` branches `return` before reaching it. So a re-press that resolved
+    // to either of those left the PREVIOUS grip in `held` — ticked every frame, holding a
+    // recognizer and a mesh, and never deleted, because the branch that would have deleted it
+    // belongs to a release that has already happened.
+    // ⭐⭐ That is **defect 40's shape and `A13`'s at once**: *a tracker that outlived its
+    // finger*, which this project has already paid for twice. ⚠ It needs a lost `pointerup`
+    // plus a reused pointer id — rare, real (Firefox reuses ids), and impossible to reproduce
+    // deliberately, which is exactly the kind of report that costs a day.
+    // ⭐ The anchors go with it: `anchorMotion` lives on the grip, so dropping the grip drops
+    // the trackers that would otherwise answer §1.1's question about a previous gesture's
+    // travel.
+    if (info.type === PointerEventTypes.POINTERDOWN && held.has(e.pointerId)) {
+      held.get(e.pointerId)!.anchorMotion.clear();
+      held.delete(e.pointerId);
+      lastVerdict = `pressed an id that never released — dropped its stale grip`;
+    }
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
       // ⛔ A NEW TOUCH CANCELS A RESET IN FLIGHT. The animation writes the whole camera
@@ -2906,8 +3050,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
               selectedFace = null;
             }
             if (selectedFace === null) {
-              pioneerFace = null;
-              alignMode = null;
             }
             grip.alignmentTouched = false;
             lastVerdict = `align: SHAKE released the alignment on ${sid}`;
@@ -3011,8 +3153,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         {
           const fid = idOf.get(grip.mesh);
           const fstack = fid === undefined ? [] : (world.objects.get(fid)?.constraints ?? []);
-          if (fstack.length === 1) {
-            const axis = fstack[0]!.targetWorld;
+          // ⛔⛔ **`rotationChannel`, NOT `fstack.length === 1`** — audit, 2026-09-17. The count
+          // asked the wrong question: it meant *"is this body aligned?"* and answered *"does it
+          // hold exactly one thing?"*, so a body holding a MATE plus an alignment fell through
+          // to the FREE rotation below and broke both. ⚠ Unreachable under the cap, armed by
+          // `3D2`. ⭐ The REFUSED verdict is the honest third answer, and it is reported.
+          const channel = rotationChannel(fstack);
+          if (channel.kind === "REFUSED") {
+            lastVerdict = `align: rotation refused — ${channel.why}`;
+            // ⛔⛔⛔ **AND IT RETURNS, WHICH IS THE ENTIRE POINT OF THE FIX.** Setting a verdict
+            // and falling through would leave the body FREE-ROTATING under the refusal — the
+            // very behaviour this branch exists to prevent, with a readout that says the
+            // opposite. ⚠ That is the readout-that-lies shape, and it would have been worse
+            // than the defect it replaced: the HUD would have reported the refusal while the
+            // mate broke.
+            grip.prev = s;
+            paint();
+            return;
+          } else if (channel.kind === "TWIST") {
+            const axis = channel.axis;
             const twist = constrainedDragAngle(
               screenFrame(),
               axis,
@@ -3038,15 +3197,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
               // accumulates the turn — the same trick C2's follow uses. ⚠ Not a compromise: a
               // hand twisting while the object swings into place gets both, which is what both
               // gestures asked for.
-              if (alignAnim !== null && alignAnim.objectId === fid) {
+              if (fid !== undefined) {
                 // ⛔ ONE definition of the world rotation, borrowed from the rule that applies
                 // it — a second `qFromAxisAngle` here would be free to disagree with it.
-                const rode = rotateAboutAxis(IDENTITY, axis, twist);
-                alignAnim = {
-                  ...alignAnim,
-                  from: qmul(rode, alignAnim.from),
-                  to: qmul(rode, alignAnim.to),
-                };
+                // ⚠ `ride` ignores a body with no snap in flight, so no guard is needed here.
+                alignSnaps.ride(fid, rotateAboutAxis(IDENTITY, axis, twist));
               }
               lastVerdict = `align: twist ${((twist * 180) / Math.PI).toFixed(1)}° about the alignment`;
               // ⭐⭐ THE SWAY — the line whose absence the owner spotted. An aligned object
@@ -3160,8 +3315,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           world = ev.world;
           if (selectedFace?.objectId === rid) {
             selectedFace = null;
-            pioneerFace = null;
-            alignMode = null;
           }
           lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
         } else {
@@ -3185,16 +3338,36 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") {
         const others = [...held.entries()].filter(([pid]) => pid !== e.pointerId);
         const heldId = others.length === 1 ? (idOf.get(others[0]![1].mesh) ?? null) : null;
+        // ⛔⛔⛔ **THE TAP READS THE *HELD BODY's OWN* ALIGNMENT, NOT THE ACTIVE RECORD** —
+        // audit fix, 2026-09-17.
+        //
+        // ⚠⚠ This block used to build its context from the three GLOBALS (`alignMode`,
+        // `pioneerFace`, and `selectedFace` as the guard), which name **the most recent
+        // alignment in the scene**. ⭐ The per-body truth has lived in `links` and `alignModeOf`
+        // since `A18`, and they disagree the moment a second body is aligned:
+        //
+        //   hold A, tap P.+x   → A follows P, and the globals name A
+        //   hold B, tap Q.+y   → B follows Q, and the globals now name B
+        //   hold A, tap P.+x   → `pioneer` reads `null`, so the re-tap is read as a fresh
+        //                        ALIGN and **A can never be released by re-tapping** — only by
+        //                        a shake, which is the undo the owner called *"a complicated
+        //                        movement to execute by the user."*
+        //
+        // ⛔ The old comment was right about the DANGER (*"a remembered Pioneer belonging to
+        // some other object's alignment must not make this tap an undo"*) and fixed it with the
+        // wrong instrument: it filtered a scene-wide record instead of asking the body.
+        // ⭐⭐ `METHOD`: *a substituted quantity* — *"is the active alignment on the held
+        // body?"* stood in for *"what is the held body aligned to?"*, and the two agree only
+        // while exactly one body is aligned.
+        const heldRef = heldId === null ? null : links.pioneerFor(heldId);
         const ctx: TapContext = {
           kind: verdict.kind,
-          alignMode,
+          alignMode: heldId === null ? null : (alignModeOf.get(heldId) ?? null),
           tappedObject: idOf.get(grip.mesh) ?? null,
           tappedFace: grip.pressFace?.faceId ?? null,
           heldObject: heldId,
-          // ⚠ The Pioneer counts only for the object THIS tap could act on — the one being
-          // held. A remembered Pioneer belonging to some other object's alignment must not
-          // make this tap an undo.
-          pioneer: heldId !== null && selectedFace?.objectId === heldId ? pioneerFace : null,
+          pioneer:
+            heldRef === null ? null : { objectId: heldRef.objectId, faceId: heldRef.faceId },
         };
         const meaning = tapMeaning(ctx);
         if (meaning.action === "ALIGN" && meaning.mode !== null) {
@@ -3204,9 +3377,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // to behaviors accordingly"* — the owner. ⛔ NOTHING MOVES: the constraint, the
           // faces and the poses are untouched, and only what the alignment MEANS changes.
           // ⭐ The colours are how a hand sees that it worked.
-          alignMode = meaning.mode;
-          // ⚠ The SWITCH applies to the object whose face was tapped — `selectedFace` names it.
-          if (selectedFace !== null) alignModeOf.set(selectedFace.objectId, meaning.mode);
+          // ⛔⛔ **THE SWITCH APPLIES TO THE HELD BODY** — audit fix, 2026-09-17. It used to
+          // write `alignModeOf.set(selectedFace.objectId, …)`, which is the ACTIVE alignment's
+          // follower and not necessarily the one this tap acted on. ⚠ With two bodies aligned
+          // it switched the mode, and therefore the colour, of **the wrong one**.
+          // ⭐ `heldId` is non-null here by construction: `tapMeaning` only returns `SWITCH`
+          // when a body is held and the tap landed on another body's face.
+          if (heldId !== null) alignModeOf.set(heldId, meaning.mode);
+          // ⚠ The active-record copy is updated only when it names this body, exactly as
+          // `releaseAlignmentOf` does — same rule, same reason.
           paintHighlightColours();
           alignedByThisTap = true; // ⛔ consumed: it must not also flip the movement mode
           lastVerdict = `align: now ${meaning.mode} (the other gesture on the same face)`;
@@ -3216,17 +3395,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // that made it**: a single tap releases a `SNAPSHOT`, a double tap releases a
           // `FOLLOW`. ⚠ So leaving `FOLLOW` by single taps takes two — one to switch, one to
           // release — which is the cost of one gesture carrying two jobs.
-          const ev = evictObjectConstraints(world, heldId);
-          world = ev.world;
-          cancelAlignAnim(heldId);
-          selectedFace = null;
-          pioneerFace = null;
-          alignMode = null;
+          // ⛔⛔ **THROUGH `releaseAlignmentOf`, WHICH IS THE ONE RELEASE PATH** — audit fix,
+          // 2026-09-17. This branch used to evict inline and then wipe the three globals
+          // UNCONDITIONALLY, so re-tapping body A tore down the highlight records of body B
+          // and left A's entry in the two-way link index behind for `prune` to find a frame
+          // later. ⭐ `releaseAlignmentOf` unlinks, forgets the mode, cancels the snap and
+          // clears the active records only when they name this body.
+          const hadAlignment = links.pioneerFor(heldId) !== null;
+          releaseAlignmentOf(heldId);
           others[0]![1].alignmentTouched = false;
           alignedByThisTap = true;
-          lastVerdict = ev.result.refused
-            ? `align: re-tap — nothing to release on ${heldId}`
-            : `align: RE-TAP released the alignment on ${heldId}`;
+          lastVerdict = hadAlignment
+            ? `align: RE-TAP released the alignment on ${heldId}`
+            : `align: re-tap — nothing to release on ${heldId}`;
         }
       }
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
@@ -3282,14 +3463,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // alignment does — **whichever** object is being released. ⛔ The old form was a
       // condition about the GESTURE standing in for a fact about the MODEL, which is the
       // shape `METHOD` calls a substituted quantity.
+      // ⛔⛔ `hasAlignment`, NOT `length > 0` — audit, 2026-09-17: a MATE is not an alignment,
+      // and `evict` deliberately never removes one, so a mated body would keep its follower
+      // marker for ever. ⚠ A stale highlight is what produced TWO false device reports on
+      // 2026-09-17; this is the same shape one constraint-kind further on.
       const highlightedStillAligned =
         selectedFace !== null &&
-        (world.objects.get(selectedFace.objectId)?.constraints.length ?? 0) > 0;
+        hasAlignment(world.objects.get(selectedFace.objectId)?.constraints ?? []);
       if (!highlightedStillAligned) {
         selectedFace = null;
-        // ⭐ The Pioneer's contour reports the same alignment, so it goes at the same moment.
-        pioneerFace = null;
-        alignMode = null;
       }
       forgetAnchor(routed.seq);
       router.release(e.pointerId);
@@ -3353,6 +3535,130 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (router.outside().length === 1 && router.objects().length === 0) {
         recomputeOrbitCentre({ clientX: p.x, clientY: p.y });
       }
+    }
+
+    // ⛔⛔⛔ **THE MODEL WRITERS RUN BEFORE THE VIEW READS THE MODEL — reordered by audit,
+    // 2026-09-17.** The alignment slerp and the Pioneer cascade both WRITE orientations, and
+    // they used to run AFTER the follower loop below, which READS the model and sets every
+    // mesh transform. ⚠ So a snapping or a cascading body was drawn one frame behind its own
+    // model, for the whole length of the animation.
+    // ⭐ The slerp's own comment claimed it ran *"before anything reads an orientation this
+    // frame"* — true of the Pioneer watch and the markers that followed it, and false of the
+    // loop that actually draws the scene.
+    // ⭐⭐ `METHOD`: *a claim about ORDER has to name what it is ordered against.*
+
+    // ⭐⭐ THE ALIGNMENT'S SLERP, ADVANCED BEFORE ANYTHING READS AN ORIENTATION this frame —
+    // the Pioneer watch below compares orientations, the markers are drawn from them, and
+    // since 2026-09-17 the follower loop that writes every mesh runs after it too.
+    // ⚠ `easeInOut` is the camera reset's own easing, imported rather than re-derived: two
+    // eased snaps in one product should not accelerate differently for no reason.
+    // ⚠ EVERY live snap, not one: see `alignSnaps` where it is declared.
+    for (const step of alignSnaps.advance(
+      now,
+      cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
+      easeInOut,
+      (id) => meshOf.has(id),
+    )) {
+      const mesh = meshOf.get(step.id);
+      if (mesh) setModelOrientation(mesh, step.orientation);
+    }
+
+    // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1/C2, checked once per frame.
+    //
+    // ⛔⛔ THE CASE HAD NO RULE AT ALL UNTIL 2026-09-17, AND ITS ABSENCE WAS INVISIBLE: an
+    // alignment stores a FROZEN world direction, so turning the object that direction was read
+    // FROM leaves the Follower obeying a target nothing on the glass corresponds to — and
+    // both highlights keep saying it is fine. ⭐ Two readings, behind one flag, because *what
+    // an alignment means* is the owner's question and not mine.
+    //
+    // ⚠ CHECKED HERE, AGAINST THE MODEL, and not at a pointer event: the Pioneer can be turned
+    // by any rule — a drag, a twist, a rotation reset — and watching the ORIENTATION catches
+    // every one of them without enumerating them. ⛔ The same discipline as `A15`'s raycast:
+    // ask the state, not the gesture.
+    // ⭐⭐⭐ **EVERY FOLLOWER WATCHES ITS OWN PIONEER, EVERY FRAME.**
+    //
+    // The owner, 2026-09-17: *"while the initial follower object is blue, if the pioneer object
+    // is rotated because it is aligned with another object, the alignment of the initial
+    // follower object shall be released"*, and *"the tracking shall enable a pioneer object to
+    // rotate all its follower objects which are orange"*.
+    //
+    // ⛔⛔ **BOTH OF THOSE ARE ONE GENERALISATION, NOT TWO RULES.** `pioneerTurned` already
+    // returns `RELEASE` for a `SNAPSHOT` (cyan) follower and `FOLLOW` for an orange one; it was
+    // simply being asked **once**, about the single active alignment. ⭐ Asked per LINK it
+    // covers every follower of every Pioneer, and chains fall out for free: an orange body
+    // rotates when its own Pioneer turns, and anything cyan aligned to THAT body then sees its
+    // baseline break and releases.
+    //
+    // ⚠ CHECKED AGAINST THE MODEL, never at a pointer event: a Pioneer can be turned by a drag,
+    // a twist, a rotation reset, a slerp, or another alignment's `FOLLOW`. ⭐ Comparing poses
+    // catches all of them without enumerating any — `A15`'s discipline, *ask the state, not the
+    // gesture.*
+    //
+    // ⚠⚠ ONE FRAME OF LAG IS POSSIBLE IN A CHAIN AND IS ACCEPTED: the links are visited in
+    // insertion order, so a follower processed before its Pioneer rotates sees the turn on the
+    // next frame instead. ⛔ It cannot be MISSED, because the baseline is only re-set after the
+    // turn has been accounted for — which is why this loop compares against a remembered pose
+    // rather than a per-frame delta.
+    // ⭐⭐ THE PLAN COMES FROM `input/pioneer_cascade.ts`, WHICH HAS VECTORS. ⛔ This block used
+    // to BE the rule, inside the render loop, where nothing could interrogate it — and when a
+    // hand reported the release *"not working"* there was no way to ask the code what it
+    // believed. ⚠ Now the rule is a pure function with 14 vectors and this is only the part
+    // that reads the world and applies the result.
+    // ⚠ The ASSEMBLY moved out too, 2026-09-17: it was an inline `flatMap` here, so the wiring
+    // test had to re-type it and its copy used one mode for every link. See `followerLinksFrom`.
+    const cascade = resolvePioneerTurns(
+      followerLinksFrom(
+        links.alignedObjects(),
+        (f) => links.pioneerFor(f),
+        (f) => alignModeOf.get(f),
+      ),
+      // ⚠ WORLD orientation, through the parent chain — never `local`, which is measured in
+      // someone else's frame the moment an assembly exists.
+      (id) => worldPlacementOf(world, id)?.orientation ?? null,
+    );
+
+    // ⚠ Anything the cascade decides must reach the readout in the SAME frame — see `hudDirty`.
+    if (cascade.steps.length > 0) hudDirty = true;
+    for (const step of cascade.steps) {
+      if (step.kind === "RELEASE") {
+        // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* — the
+        // pose is left exactly as the hand left it, and only the RULE goes.
+        const ref = links.pioneerFor(step.follower);
+        releaseAlignmentOf(step.follower);
+        lastVerdict =
+          `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} turned, ` +
+          `alignment released on ${step.follower}`;
+        continue;
+      }
+      // ⭐⭐ C2: the follower takes the SAME WORLD ROTATION, which keeps the two normals
+      // parallel by construction — no solve, and no chance of the solver adding a twist.
+      const followerMesh = meshOf.get(step.follower);
+      if (followerMesh) {
+        setModelOrientation(followerMesh, qmul(step.delta, modelOrientation(followerMesh)));
+      }
+      // ⭐⭐ AN ANIMATION IN FLIGHT RIDES ALONG: both ends take the same world rotation, so the
+      // snap keeps travelling toward a target that has moved with the Pioneer. ⛔ Without this
+      // the slerp would drag the body back toward where the Pioneer USED to point.
+      alignSnaps.ride(step.follower, step.delta);
+      // ⭐ Keep the CONSTRAINT truthful — the geometry above already holds. ⚠ Without this the
+      // stack would still name the old world direction, and the next rule to read it (a twist,
+      // a reset) would act on a stale target.
+      const ref = links.pioneerFor(step.follower);
+      const pn = ref === null ? null : faceWorld(world, ref.objectId, ref.faceId)?.normal;
+      const stack = world.objects.get(step.follower)?.constraints ?? [];
+      // ⛔⛔ Audit, 2026-09-17: the count again. ⚠ Here the fall-through was SILENT rather than
+      // destructive — the constraint simply kept naming the Pioneer's OLD world direction, and
+      // the next twist or reset acted on a stale target with nothing to say so.
+      if (pn && rotationChannel(stack).kind === "TWIST") {
+        world = clearObjectConstraints(world, step.follower);
+        world = pushObjectConstraint(world, step.follower, retargetAlignment(stack[0]!, pn), false);
+      }
+      lastVerdict = `align: FOLLOW — ${step.follower} took ${ref?.objectId ?? "pioneer"}'s turn`;
+    }
+    // ⛔ RE-BASELINE LAST, from the plan. ⚠ A released follower is deliberately absent from
+    // `baselines`, so this cannot resurrect a link `releaseAlignmentOf` has just removed.
+    for (const [follower, orientation] of cascade.baselines) {
+      links.noteOrientation(follower, orientation);
     }
 
     const tauSec = cfg.translateInertiaMs / 1000;
@@ -3435,132 +3741,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
     }
 
-    // ⭐⭐ THE ALIGNMENT'S SLERP, ADVANCED BEFORE ANYTHING READS AN ORIENTATION this frame —
-    // the Pioneer watch below compares orientations, and the markers are drawn from them.
-    // ⚠ `easeInOut` is the camera reset's own easing, imported rather than re-derived: two
-    // eased snaps in one product should not accelerate differently for no reason.
-    if (alignAnim !== null) {
-      const mesh = meshOf.get(alignAnim.objectId);
-      if (!mesh) {
-        alignAnim = null;
-      } else {
-        const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
-        const u = snapMs > 0 ? (now - alignAnim.t0) / snapMs : 1;
-        if (u >= 1) {
-          // ⛔ LAND EXACTLY on the solved orientation, never on `slerp(…, 0.999)`: the
-          // constraint has been true since the tap, and the pose must agree with it exactly.
-          setModelOrientation(mesh, alignAnim.to);
-          alignAnim = null;
-        } else {
-          setModelOrientation(mesh, qSlerp(alignAnim.from, alignAnim.to, easeInOut(u)));
-        }
-      }
-    }
-
-    // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1/C2, checked once per frame.
-    //
-    // ⛔⛔ THE CASE HAD NO RULE AT ALL UNTIL 2026-09-17, AND ITS ABSENCE WAS INVISIBLE: an
-    // alignment stores a FROZEN world direction, so turning the object that direction was read
-    // FROM leaves the Follower obeying a target nothing on the glass corresponds to — and
-    // both highlights keep saying it is fine. ⭐ Two readings, behind one flag, because *what
-    // an alignment means* is the owner's question and not mine.
-    //
-    // ⚠ CHECKED HERE, AGAINST THE MODEL, and not at a pointer event: the Pioneer can be turned
-    // by any rule — a drag, a twist, a rotation reset — and watching the ORIENTATION catches
-    // every one of them without enumerating them. ⛔ The same discipline as `A15`'s raycast:
-    // ask the state, not the gesture.
-    // ⭐⭐⭐ **EVERY FOLLOWER WATCHES ITS OWN PIONEER, EVERY FRAME.**
-    //
-    // The owner, 2026-09-17: *"while the initial follower object is blue, if the pioneer object
-    // is rotated because it is aligned with another object, the alignment of the initial
-    // follower object shall be released"*, and *"the tracking shall enable a pioneer object to
-    // rotate all its follower objects which are orange"*.
-    //
-    // ⛔⛔ **BOTH OF THOSE ARE ONE GENERALISATION, NOT TWO RULES.** `pioneerTurned` already
-    // returns `RELEASE` for a `SNAPSHOT` (cyan) follower and `FOLLOW` for an orange one; it was
-    // simply being asked **once**, about the single active alignment. ⭐ Asked per LINK it
-    // covers every follower of every Pioneer, and chains fall out for free: an orange body
-    // rotates when its own Pioneer turns, and anything cyan aligned to THAT body then sees its
-    // baseline break and releases.
-    //
-    // ⚠ CHECKED AGAINST THE MODEL, never at a pointer event: a Pioneer can be turned by a drag,
-    // a twist, a rotation reset, a slerp, or another alignment's `FOLLOW`. ⭐ Comparing poses
-    // catches all of them without enumerating any — `A15`'s discipline, *ask the state, not the
-    // gesture.*
-    //
-    // ⚠⚠ ONE FRAME OF LAG IS POSSIBLE IN A CHAIN AND IS ACCEPTED: the links are visited in
-    // insertion order, so a follower processed before its Pioneer rotates sees the turn on the
-    // next frame instead. ⛔ It cannot be MISSED, because the baseline is only re-set after the
-    // turn has been accounted for — which is why this loop compares against a remembered pose
-    // rather than a per-frame delta.
-    // ⭐⭐ THE PLAN COMES FROM `input/pioneer_cascade.ts`, WHICH HAS VECTORS. ⛔ This block used
-    // to BE the rule, inside the render loop, where nothing could interrogate it — and when a
-    // hand reported the release *"not working"* there was no way to ask the code what it
-    // believed. ⚠ Now the rule is a pure function with 14 vectors and this is only the part
-    // that reads the world and applies the result.
-    const cascade = resolvePioneerTurns(
-      links.alignedObjects().flatMap((follower) => {
-        const ref = links.pioneerFor(follower);
-        if (ref === null) return [];
-        return [
-          {
-            follower,
-            pioneer: ref.objectId,
-            baseline: ref.orientation,
-            mode: alignModeOf.get(follower) ?? ("SNAPSHOT" as AlignMode),
-          },
-        ];
-      }),
-      // ⚠ WORLD orientation, through the parent chain — never `local`, which is measured in
-      // someone else's frame the moment an assembly exists.
-      (id) => worldPlacementOf(world, id)?.orientation ?? null,
-    );
-
-    for (const step of cascade.steps) {
-      if (step.kind === "RELEASE") {
-        // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* — the
-        // pose is left exactly as the hand left it, and only the RULE goes.
-        const ref = links.pioneerFor(step.follower);
-        releaseAlignmentOf(step.follower);
-        lastVerdict =
-          `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} turned, ` +
-          `alignment released on ${step.follower}`;
-        continue;
-      }
-      // ⭐⭐ C2: the follower takes the SAME WORLD ROTATION, which keeps the two normals
-      // parallel by construction — no solve, and no chance of the solver adding a twist.
-      const followerMesh = meshOf.get(step.follower);
-      if (followerMesh) {
-        setModelOrientation(followerMesh, qmul(step.delta, modelOrientation(followerMesh)));
-      }
-      // ⭐⭐ AN ANIMATION IN FLIGHT RIDES ALONG: both ends take the same world rotation, so the
-      // snap keeps travelling toward a target that has moved with the Pioneer. ⛔ Without this
-      // the slerp would drag the body back toward where the Pioneer USED to point.
-      if (alignAnim !== null && alignAnim.objectId === step.follower) {
-        alignAnim = {
-          ...alignAnim,
-          from: qmul(step.delta, alignAnim.from),
-          to: qmul(step.delta, alignAnim.to),
-        };
-      }
-      // ⭐ Keep the CONSTRAINT truthful — the geometry above already holds. ⚠ Without this the
-      // stack would still name the old world direction, and the next rule to read it (a twist,
-      // a reset) would act on a stale target.
-      const ref = links.pioneerFor(step.follower);
-      const pn = ref === null ? null : faceWorld(world, ref.objectId, ref.faceId)?.normal;
-      const stack = world.objects.get(step.follower)?.constraints ?? [];
-      if (pn && stack.length === 1) {
-        world = clearObjectConstraints(world, step.follower);
-        world = pushObjectConstraint(world, step.follower, retargetAlignment(stack[0]!, pn), false);
-      }
-      lastVerdict = `align: FOLLOW — ${step.follower} took ${ref?.objectId ?? "pioneer"}'s turn`;
-    }
-    // ⛔ RE-BASELINE LAST, from the plan. ⚠ A released follower is deliberately absent from
-    // `baselines`, so this cannot resurrect a link `releaseAlignmentOf` has just removed.
-    for (const [follower, orientation] of cascade.baselines) {
-      links.noteOrientation(follower, orientation);
-    }
-
     // ⭐⭐⭐ THE FACE HIGHLIGHT, placed from the MESH's world matrix — not from the model.
     //
     // ⛔⛔ THAT CHOICE IS THE WHOLE CORRECTNESS OF IT. What the eye sees is
@@ -3587,6 +3767,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // value is deliberately NOT used to decide what to hide; see below.
     for (const id of links.prune((f) => alignedFaceOf(world, f) !== null)) {
       alignModeOf.delete(id);
+      // ⚠ A pruned link is a state change with no pointer event behind it. See `hudDirty`.
+      hudDirty = true;
     }
 
     // ⛔⛔⛔ **HIDE BY SET MEMBERSHIP, NEVER BY WHAT `prune` HAPPENED TO DROP — DEVICE BUG,
@@ -3663,6 +3845,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // face seconds later, and churning meshes per gesture is how a render loop acquires a stall.
     for (const [key, m] of pioneerContours) {
       if (!wantedPioneerKeys.has(key)) m.isVisible = false;
+    }
+
+    // ⛔⛔⛔ **THE HUD IS REPAINTED WHEN THE *LOOP* CHANGES SOMETHING** — audit fix, 2026-09-17.
+    //
+    // ⚠⚠ `paint()` ran on pointer events and slider changes only. ⛔ But the cascade, the
+    // prune and the snap all decide things HERE, with no event behind them — and the move
+    // handler paints BEFORE this loop runs them. So the readout built to diagnose *"the release
+    // is not working"* showed the state as of the previous event, one step behind the rule it
+    // was reporting on. ⭐ That is not a cosmetic lag: on 2026-09-17 two false device reports
+    // came from a stale marker, and the instrument for telling a stale marker from a broken
+    // rule was itself stale.
+    // ⚠ Guarded by a DIRTY FLAG rather than painted every frame: the HUD writes text into the
+    // DOM, and 60 unconditional layout-invalidating writes a second is a cost with no reader.
+    if (hudDirty) {
+      hudDirty = false;
+      paint();
     }
 
     scene.render();

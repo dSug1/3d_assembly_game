@@ -27,8 +27,19 @@ export type Behaviour = "TRANSLATE" | "ROTATE";
 /**
  * ⭐⭐⭐ What the session starts as, **once**.
  *
- * ⛔ `TRANSLATE`, because it is the commonest gesture — which is `D23`'s whole argument,
- * and the one part of that decision this model kept.
+ * ⛔⛔ **`ROTATE` — the owner's *"Default start: rotation mode"* (2026-09-16), re-confirmed
+ * 2026-09-17: *"I confirm the scene shall boot in rotation mode, not translation mode."***
+ *
+ * ⛔⛔ **IT RETURNED `TRANSLATE` UNTIL 2026-09-17 AND EVERY DOCUMENT SAID OTHERWISE.**
+ * `CLAUDE.md`, this file's own neighbouring comment and `scene.ts`'s call site all recorded
+ * `ROTATE`; the code returned `TRANSLATE`; and `tests/mode_toggle.test.ts` asserted the
+ * RETURNED value, so the suite defended the defect. ⚠ `git log -S` finds no commit that ever
+ * returned `ROTATE` — nothing regressed, the decision simply never reached the code.
+ * ⭐⭐ `METHOD`: *a vector written from the code it tests cannot contradict that code* — which
+ * is the same shape as `A7`'s composition, one layer lower: a correct decision, recorded
+ * everywhere except in the one place that runs.
+ * ⚠ `D23`'s argument for `TRANSLATE` (*the commonest gesture on the cheapest input*) is kept
+ * here as the record of what was NOT chosen; it lost to the owner's hand.
  *
  * ⚠ **AND IT IS THE *SESSION'S* DEFAULT, NOT EVERY GESTURE'S** — corrected by a device look
  * on 2026-09-16. I first read the owner's *"for one single ongoing touchpoint"* as *the
@@ -38,7 +49,7 @@ export type Behaviour = "TRANSLATE" | "ROTATE";
  * release."* ⭐ So it is a MODE, and rotation costs a tap only when **switching**.
  */
 export function initialBehaviour(): Behaviour {
-  return "TRANSLATE";
+  return "ROTATE";
 }
 
 /**

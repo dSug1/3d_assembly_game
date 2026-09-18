@@ -209,6 +209,47 @@ describe("the A3 roll mapping", () => {
     expect(constrainedRollAngle(FRONT, GRAVITY, 90)).toBeNull();
   });
 
+  it("⛔⛔ and it is SQUARE TO WITHIN ARITHMETIC, not square to the bit", () => {
+    // ⛔⛔⛔ **THE GUARD READ `c === 0`** — an exact float comparison on a dot product of two
+    // normalised vectors that have each been through a cross product and a division. ⚠ An
+    // exactly-zero dot is measure-zero: the axis the camera actually reaches is square to
+    // within 1e-17 and the guard waves it through, at FULL rate, with a sign taken from
+    // whichever way that last bit fell. ⭐ So the branch documented as *"square to the view: no
+    // component to roll about"* could essentially never run.
+    // ⚠ The epsilon is the one its own sibling already uses — `nearSideScreenDirection` guards
+    // `len > 1e-9` — so this is one arithmetic tolerance, not a new tunable.
+    // ⭐⭐ `METHOD`: *a guard that cannot fire is not a guard.*
+    // ⚠ `FRONT` looks along −z and `GRAVITY` is +y, so the two are square and the dot is
+    // exactly 0. ⭐ Tilt the camera by 1e-12 radians — far below anything a hand or a float can
+    // resolve — and the dot becomes 1e-12 rather than 0.
+    const eps = 1e-12;
+    const n = Math.hypot(eps, 1);
+    const frame: ScreenFrame = { ...FRONT, viewAxis: [0, eps / n, -1 / n] };
+    expect(constrainedRollAngle(frame, GRAVITY, 90)).toBeNull();
+  });
+
+  it("⚠ AND THE SIGN STILL FLIPS ACROSS SQUARE — stated, not fixed", () => {
+    // ⛔⛔ **THIS IS A DEVICE QUESTION, AND THE VECTOR EXISTS TO SAY SO RATHER THAN TO BLESS
+    // IT.** The magnitude does not depend on how square the axis is — only the SIGN does — so
+    // as the camera crosses the square plane the roll reverses at full rate. ⭐ Making it fade
+    // with `|c|` would remove the discontinuity and would also change the FEEL everywhere else,
+    // and *"the object must follow the finger"* at full rate was a deliberate choice.
+    // ⚠ `IN5`: a hand decides feel. This pins the current behaviour so a change to it is
+    // visible rather than accidental.
+    const tilt = (eps: number) => {
+      const n = Math.hypot(eps, 1);
+      const frame: ScreenFrame = { ...FRONT, viewAxis: [0, eps / n, -1 / n] };
+      return constrainedRollAngle(frame, GRAVITY, 90);
+    };
+    const a = tilt(0.001);
+    const b = tilt(-0.001);
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    // ⛔ Equal in size, opposite in direction, for a 0.1° change of camera tilt.
+    expect(Math.abs(a!)).toBeCloseTo(Math.abs(b!), 12);
+    expect(Math.sign(a!)).toBe(-Math.sign(b!));
+  });
+
   it("is linear in the swept angle", () => {
     expect(constrainedRollAngle(TOP, GRAVITY, 120)!).toBeCloseTo(
       3 * constrainedRollAngle(TOP, GRAVITY, 40)!,

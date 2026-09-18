@@ -46,8 +46,26 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-17)
 
-✅ Green: TypeScript + Babylon + Vite, **656 golden vectors passing** (572 + 84 — ⭐ `A16`–`A20`, the approach & mate HIGHLIGHTS and alignment tracking; ⚠ before that 619 − 51, forks A and B and the orphans taking their vectors with them: ⭐ the roll
-channel and its vectors were **deleted together**, 2026-09-16).
+✅ Green: TypeScript + Babylon + Vite, **773 golden vectors passing** (656 + 117 — ⭐⭐ the
+**2026-09-17 AUDIT**, the first pass to find defects by READING the source rather than by a
+finger; before that 572 + 84 for `A16`–`A20`, and 619 − 51 when forks A and B were deleted with
+their vectors).
+⛔⛔⛔ **READ [`Claude/00_CORE/queue_notes/AUDIT_2026-09-17.md`](Claude/00_CORE/queue_notes/AUDIT_2026-09-17.md)
+BEFORE TOUCHING THE ALIGNMENT LAYER, §1.1, THE CONSTRAINT STACK, THE URL OVERRIDES OR THE TREE
+OPERATIONS.** ⭐ Its largest single finding is **ten vectors that could not fail** — among them
+the cascade's composition ORDER, `towardGravity`'s sign, `bestTwist` (a sign flip AND
+`return IDENTITY` both survived) and `worldPose`'s tangent, which nothing caught. ⚠ One shape
+runs through all of them: *a fixture chosen because it is easy to reason about is usually chosen
+from the set where the quantity under test is ZERO.*
+⛔ **What it did NOT fix, deliberately**: "millimetres" are CSS-reference mm and **not physical**
+(so rule 3 is not what is being computed — it needs an owner calibration, and numbers tuned on
+one device will not transfer to another density); the roll's direction flips at full rate across
+square to the alignment axis (feel, a hand decides); and the `4L` capture radius is
+centre-to-centre, so at boot the base plate is **312.4 mm** from two parts against a 320 mm
+radius — the scene's claim that *"at 5L nothing is in range"* was false.
+⛔⛔ **A DEVICE LOOK IS OWED ON THE WHOLE PASS.** Rule 5 is not suspended because the findings
+came from a read: the boot mode, the twist and roll channels, the deadband's emission and the
+render order all changed.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⭐⭐⭐ **THE INPUT MODEL IS THE OWNER'S TAP-TO-ALIGN SET** (`D37`–`D40`) — and since
@@ -56,7 +74,13 @@ and 41 vectors. Hold an object, **TAP a face on another**, and the held one make
 turn that points its own face **the same way** (parallel — the CAD *align* sense, chosen over
 a mate). One alignment at a time, replaced by the next; the Follower face is **filled** and
 the Pioneer face **outlined** until it breaks; a **shake** or a **second tap on that same
-face** breaks it; a **flick** resets the rotation. ⛔ The session starts in **`ROTATE`**.
+face** breaks it; a **flick** resets the rotation.
+⛔⛔ **THE SESSION STARTS IN `ROTATE` — AND IT DID NOT UNTIL 2026-09-17.** `initialBehaviour()`
+returned `TRANSLATE` while this file, the spec and the call site's own comment all said
+`ROTATE`, and `git log -S` finds no commit that ever returned it: the owner's decision never
+reached the code, and the vector asserted the value the function RETURNED rather than the
+decision made. ⭐ `METHOD`: *a vector written from the code it tests cannot contradict that
+code.* ✅ Owner re-confirmed 2026-09-17 and fixed.
 ⭐⭐ **THERE ARE NO FLAGS LEFT.** What a turned **Pioneer** costs the Follower was a flag for
 four hours (`D41`) and is now a **GESTURE** (`D42`): a **single tap** makes a `SNAPSHOT` —
 turning the Pioneer releases the alignment, the Follower does not move — and a **double tap**
@@ -169,7 +193,10 @@ first candidates if anything feels wrong later. ⛔ It has **no inertia**: that 
 block before rebuilding either that or `targetVelocity`.
 
 ⛔⛔ **Forty-eight defects, forty-seven of them BY FINGER, and none visible to a green
-suite.** ⭐⭐ Number 40 is the one to read if you read one: `A12` retired the one-touchpoint
+suite.** ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
+total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
+project's argument for device passes. ⭐ The two do not compete: **the device finds what is
+wrong now; a read finds what is wrong on the day something else changes.** ⭐⭐ Number 40 is the one to read if you read one: `A12` retired the one-touchpoint
 roll and left its detector **fed**, and its `ROLL_KEPT` verdict silently vetoed `IN3`'s
 flick — *a retired gesture that still owns a verdict is not inert*. ⭐ The one exception is worth knowing: §1.1's unreachable STATIONARY was found by
 **composing a measurement with a threshold**, not by a hand — and no hand could have found

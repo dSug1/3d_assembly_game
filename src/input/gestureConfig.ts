@@ -746,6 +746,61 @@ export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
 
+  // ⛔⛔⛔ **THE PLAIN RANGES — ADDED BY AUDIT, 2026-09-17.**
+  //
+  // ⚠⚠ **EVERY RULE BELOW THIS BLOCK IS A *RELATION* BETWEEN TWO TUNABLES**, and that is
+  // exactly how the gap survived: the validator was written to catch the subtle
+  // configurations (a deadband under the noise floor, rings that fold, a lift window wider
+  // than the buffer) and never asked whether a duration was a duration at all. ⭐ So
+  // `?tapMaxDuration=-1` passed every check in this function and made **every tap a HOLD**,
+  // which makes `D28`'s mode toggle unreachable — the whole input model, disabled by one URL
+  // parameter, with a green suite and nothing on the glass.
+  //
+  // ⛔⛔ **AND `pointerNoiseMm` IS THE LOAD-BEARING ONE.** Three rules here are MULTIPLES of
+  // it, so `pointerNoiseMm=0` does not merely set a number to zero — it silently satisfies
+  // `evictShakeLegMm ≥ 3×0` and `motionDeadbandMm ≥ 3×0`, disabling two guards that exist to
+  // protect the user's work from jitter. ⭐ `METHOD`: *a threshold defined as a multiple of a
+  // measurement inherits that measurement's failure modes* — including zero.
+  const positiveMs: ReadonlyArray<readonly [string, number]> = [
+    ["tapMaxDuration", cfg.tapMaxDuration],
+    ["flickWindow", cfg.flickWindow],
+    ["flickLiftWindow", cfg.flickLiftWindow],
+  ];
+  for (const [name, ms] of positiveMs) {
+    if (!(ms > 0)) {
+      throw new Error(
+        `${name} (${ms} ms) must be POSITIVE: a window of zero or less can never contain a ` +
+          "sample, so the gesture it measures becomes unrecognisable rather than strict.",
+      );
+    }
+  }
+  const nonNegativeMs: ReadonlyArray<readonly [string, number]> = [
+    ["doubleTapWindow", cfg.doubleTapWindow],
+    ["restConfirmMs", cfg.restConfirmMs],
+  ];
+  for (const [name, ms] of nonNegativeMs) {
+    if (!(ms >= 0)) {
+      throw new Error(
+        `${name} (${ms} ms) cannot be NEGATIVE: a duration below zero compares as already ` +
+          "elapsed, so the rule it gates fires on the first sample it ever sees.",
+      );
+    }
+  }
+  if (!(cfg.pointerNoiseMm > 0)) {
+    throw new Error(
+      `pointerNoiseMm (${cfg.pointerNoiseMm} mm) must be POSITIVE — it is a MEASURED floor ` +
+        "(0.761 mm on the reference tablet, 2026-09-14) and three rules in this validator are " +
+        "multiples of it. At zero they all pass trivially, so one URL parameter would disable " +
+        "the shake's noise guard and the deadband's floor at the same time.",
+    );
+  }
+  if (!(cfg.motionDeadbandMm > 0)) {
+    throw new Error(
+      `motionDeadbandMm (${cfg.motionDeadbandMm} mm) must be POSITIVE: at zero every rule ` +
+        "reads raw pointer noise, which is the defect §1.1 exists to prevent.",
+    );
+  }
+
   // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
   // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
   // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The
@@ -823,13 +878,33 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
-  // ⚠ A radius of 0 is legal (directly overhead); a negative one is not a radius.
+  // ⛔⛔⛔ **A RING RADIUS MUST BE POSITIVE, AND THE OLD RULE SAID `>= 0`** — audit, 2026-09-17.
+  //
+  // ⚠⚠ **TWO COMPONENTS ASSERTED OPPOSITE INVARIANTS ABOUT THE SAME CONFIGURATION.** This
+  // rule admitted a radius of zero, and `tests/orbit.test.ts` pinned that as deliberate:
+  // *"ACCEPTS a top radius of zero — directly overhead is a legal orbit."* ⛔ Meanwhile
+  // `render/scene.ts`'s `requireGestureFrame` THROWS when the view runs along gravity, with
+  // the comment *"the orbit surface is supposed to make this unreachable — see A7."*
+  // ⭐⭐ Both were reasonable in isolation and they cannot both be true: `?orbitTopRadiusM=0`
+  // plus a drag to the top ring puts the camera exactly overhead, `gravityFrame` returns
+  // `null`, and **every press throws** — one of two components had to yield.
+  // ⭐ The FRAME wins, because the degeneracy is real: directly overhead, the view axis is the
+  // world vertical, the roll axis *"flattened onto the ground"* is the zero vector, and there
+  // is no horizontal heading to call depth. No gain can repair a basis that does not exist.
+  // ⚠ So the surface is kept away from the pole instead, which is what `A7` already claimed.
   for (const [name, r] of [
     ["orbitBottomRadiusM", cfg.orbitBottomRadiusM],
     ["orbitMiddleRadiusM", cfg.orbitMiddleRadiusM],
     ["orbitTopRadiusM", cfg.orbitTopRadiusM],
   ] as const) {
-    if (!(r >= 0)) throw new Error(`${name} (${r} m) cannot be negative.`);
+    if (!(r > 0)) {
+      throw new Error(
+        `${name} (${r} m) must be POSITIVE: a ring of radius zero sits on the vertical axis ` +
+          "through the target, where the camera looks exactly along gravity. There the " +
+          "gesture frame has no roll axis and no depth heading, so gravityFrame returns null " +
+          "and every press throws — see A7.",
+      );
+    }
   }
   if (cfg.cameraRadiusMinM >= cfg.cameraRadiusMaxM) {
     throw new Error(

@@ -63,8 +63,17 @@ storing the screen axis meant a later camera orbit silently redefined the constr
 ⭐ `bestTwist` is closed-form, not a search: a numeric sweep would introduce a step
 size, and a step size is a threshold nobody measured.
 
+## ⛔⛔ THE 2026-09-17 AUDIT — what it changed here
+
+⭐ **`frozen` and the tree — parent yes, child never** (owner). A base plate may be a PARENT,
+never a child: `attach` and `reroot` refuse it. ⛔ The hole wrote nothing to the frozen body —
+attaching it under a part moved it the next time THAT part moved.
+⭐ **`rotationChannel`** replaced three `stack.length === 1` guards meaning *"is this body
+aligned?"*: a body holding a MATE fell through to FREE rotation and would have broken both
+constraints on the first seated drag. Its third verdict is **REFUSED**.
+→ [`../00_CORE/queue_notes/AUDIT_2026-09-17.md`](../00_CORE/queue_notes/AUDIT_2026-09-17.md)
+
 ## ⚠ Carried forward unclosed
 
 * **The assembly tree has never held more than two objects** (`3D5`).
-* **The capture/preview radius has no measured floor** — it was the predecessor's
-  last unmeasured constant too.
+* **The capture radius is centre-to-centre** — wrong for a `6L×9L` plate, and unmeasured.

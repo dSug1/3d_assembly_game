@@ -82,11 +82,27 @@ export function solve(
       // Drop the OLDEST until two remain. Spec §1.4.
       effective = stack.slice(stack.length - 2);
     } else {
-      return { rotation: IDENTITY, applied: stack.slice(0, 2), rejected: true, freeDof: 0 };
+      // ⛔⛔ **`applied` IS EMPTY, AND IT SAID `stack.slice(0, 2)` UNTIL 2026-09-17** — audit.
+      // ⚠ The rotation returned is IDENTITY, so **nothing** is in force; reporting two
+      // constraints as *applied* was the result contradicting itself in two fields. ⭐ A caller
+      // rendering the stack from `applied` would have drawn two glyphs for constraints the
+      // solver had just refused to honour.
+      return { rotation: IDENTITY, applied: [], rejected: true, freeDof: 3 };
     }
   }
 
   const first = effective[0]!;
+  // ⛔⛔⛔ **A DEGENERATE ENTRY 1 IS REFUSED, NOT SILENTLY SATISFIED** — audit, 2026-09-17.
+  //
+  // ⚠ `shortestArc` returns IDENTITY for a zero-length normal or target — correctly, since
+  // there is no direction to swing onto. ⛔ But `solve` then reported `rejected: false` and
+  // `freeDof: 1`: *two degrees of freedom have been consumed and the object is where it should
+  // be*, when in fact nothing was constrained and nothing moved. ⭐ `LESSONS_CARRIED` §6 — a
+  // degenerate input returns a refusal, never a plausible default — and this one was plausible
+  // in three fields at once, which is what made it invisible.
+  if (!normalize(first.localNormal) || !normalize(first.targetWorld)) {
+    return { rotation: IDENTITY, applied: [], rejected: true, freeDof: 3 };
+  }
   // ── Entry 1: hard, 2 DOF. The minimal swing onto the target axis.
   const n0World = qRotate(current, first.localNormal);
   const swing = shortestArc(n0World, first.targetWorld);
@@ -220,4 +236,78 @@ export function push(
   matePriorityOverAnchor: boolean,
 ): readonly Constraint[] {
   return matePriorityOverAnchor ? [c, ...stack] : [...stack, c];
+}
+
+/**
+ * ⭐⭐⭐ **WHAT A DRAG MAY DO TO THIS BODY'S ROTATION.**
+ *
+ * ⛔⛔⛔ **IT REPLACES THREE COPIES OF `stack.length === 1` IN `render/scene.ts`** — the
+ * one-finger twist, the second finger's roll, and the `FOLLOW` retarget — found by audit on
+ * 2026-09-17. Each of them read *"is there exactly ONE constraint?"*, meant *"is this body
+ * ALIGNED?"*, and fell through to **FREE ROTATION** for every other count.
+ *
+ * ⚠⚠ **UNREACHABLE TODAY, ARMED THE MOMENT `3D2` LANDS.** `singleAlignment`'s cap makes a
+ * two-entry stack impossible right now — and a mate is the second entry. So the first seated
+ * body to be dragged would rotate FREELY and break its mate and its alignment together, with a
+ * green suite: `QUEUE.md` already carries the warning, and this is the structure that removes
+ * it rather than restating it.
+ *
+ * ⭐⭐ **THE THIRD VERDICT IS THE WHOLE POINT.** For a mated body the honest answer is
+ * neither *free* nor *twist*: what a drag should do to a SEATED body is `3D2`/`3D3`'s decision
+ * and has not been made. ⛔ `LESSONS_CARRIED` §6 — *a degenerate input returns null, never a
+ * default* — and a length test silently chose the most destructive default there was.
+ *
+ * ⚠ A `MATE` anywhere on the stack refuses, because the twist would have to respect it and
+ * nothing here knows how. ⭐ The refusal carries its reason so the HUD can say why the body did
+ * not move; an absent readout is its own defect, and this file's neighbours have paid for it.
+ */
+export type RotationChannel =
+  /** ⭐ No constraint at all: §2bis's free yaw/pitch, whose precondition is an EMPTY stack. */
+  | { readonly kind: "FREE" }
+  /** ⭐ One alignment: the spin about its world target is the only DOF left. */
+  | { readonly kind: "TWIST"; readonly axis: Vec3; readonly constraint: Constraint }
+  /** ⛔ Anything else. ⚠ `why` reaches the readout; it is not decoration. */
+  | { readonly kind: "REFUSED"; readonly why: string };
+
+export function rotationChannel(stack: readonly Constraint[]): RotationChannel {
+  if (stack.length === 0) return { kind: "FREE" };
+  if (stack.some((c) => c.kind === "MATE")) {
+    return {
+      kind: "REFUSED",
+      why:
+        "a MATE holds this body: what a drag does to a seated body is 3D2/3D3's rule and " +
+        "is not decided yet. Rotating freely would break the mate and the alignment at once.",
+    };
+  }
+  if (stack.length > 1) {
+    // ⚠ `singleAlignment` caps the stack at one, so reaching here means that cap has been
+    // broken somewhere else. ⭐ Refusing makes it visible instead of quietly choosing an axis.
+    return {
+      kind: "REFUSED",
+      why: `${stack.length} alignments on one body: the cap of one has been broken.`,
+    };
+  }
+  const only = stack[0]!;
+  const axis = normalize(only.targetWorld);
+  if (!axis) {
+    // ⛔ `shortestArc` and `bestTwist` both return IDENTITY for a zero axis, so a twist about
+    // it would silently do NOTHING while the readout claimed a rotation.
+    return { kind: "REFUSED", why: "the alignment's target direction is degenerate." };
+  }
+  // ⚠ The STORED target is handed back, not the normalised copy: it is what the constraint
+  // says, and every other reader uses it unchanged.
+  return { kind: "TWIST", axis: only.targetWorld, constraint: only };
+}
+
+/**
+ * ⭐⭐ **DOES THIS BODY CARRY AN ALIGNMENT?** — what the follower highlight and the link index
+ * actually want to know.
+ *
+ * ⛔ `render/scene.ts` asked `constraints.length > 0`, which counts a **MATE** as an
+ * alignment. ⚠ `evict` deliberately never removes a mate, so a mated body would keep its
+ * follower marker and its entry in the two-way index for ever — a stale highlight, which is
+ * the exact failure that produced two false device reports on 2026-09-17.
+ */
+export function hasAlignment(stack: readonly Constraint[]): boolean {
+  return stack.some((c) => c.kind !== "MATE");
 }

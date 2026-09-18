@@ -291,6 +291,22 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
   });
 
   it("⛔ a DRAG between two taps breaks the chain", () => {
+    // ⛔⛔⛔ **THIS VECTOR COULD NOT FAIL UNTIL 2026-09-17.** It is repaired in place rather
+    // than replaced, because the trap is the more useful record.
+    //
+    // ⚠ THE OLD FIXTURE: first tap released at t = 60, second tap pressed at t = **400** —
+    // 340 ms later, against a `doubleTapWindow` of **300 ms**. So the second press was
+    // outside the window and `TapHistory` would have called it a TAP *whatever the drag
+    // did*. ⭐ Deleting `this.taps.reset()` from the commit point in `recognizer.ts` left
+    // this vector, and the whole file, green — the assertion was true for a reason that had
+    // nothing to do with its name.
+    // ⭐⭐ `METHOD`: *a vector whose fixture sits outside the threshold it is testing is
+    // measuring the threshold, not the rule.* The drag was decoration.
+    //
+    // ⭐ THE REPAIR PUTS THE SECOND PRESS **INSIDE** THE WINDOW — 240 ms after the first
+    // release — so the ONLY thing that can stop it being a DOUBLE_TAP is the drag having
+    // broken the chain. ⚠ And the drag is asserted to have COMMITTED, because a "drag" that
+    // never crossed `motionDeadbandMm` would restore the same false pass by another route.
     const pose = recordingPose();
     const taps = new TapHistory(cfg);
     expect(
@@ -299,13 +315,107 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
         { x: 100, y: 100, t: 60 },
       ]).kind,
     ).toBe("TAP");
-    gesture(new Recognizer(cfg, pose.port, taps), run({ speedMmPerS: 40, ms: 200, t0: 100 }));
+    // A real drag, pressed and released between the two taps: 200 mm/s for 120 ms = 24 mm,
+    // far past the 3.5 mm deadband. ⛔ It must land as a COMMITTED gesture, never as a tap.
+    const dragged = gesture(
+      new Recognizer(cfg, pose.port, taps),
+      run({ speedMmPerS: 200, ms: 120, t0: 80 }),
+    );
+    expect(["CONTINUOUS_KEPT", "FLICK"]).toContain(dragged.kind);
+    // ⭐ 300 − 60 = 240 ms after the first tap's release, and on the same point: inside BOTH
+    // `doubleTapWindow` (300 ms) and `doubleTapSlop` (8 mm). Without the chain break this is
+    // a DOUBLE_TAP, and `resolveDiscreteRule` maps that to **2septies** — an eviction fired
+    // by a hand that merely tapped, dragged, and tapped again.
+    const third = gesture(new Recognizer(cfg, pose.port, taps), [
+      { x: 100, y: 100, t: 300 },
+      { x: 100, y: 100, t: 360 },
+    ]);
+    expect(third.kind).toBe("TAP");
+    expect(third.rule).toBe("NONE");
+  });
+
+  it("⭐⭐ a HOLD breaks the chain too — and the harm is 2septies, not a wrong label", () => {
+    // ⛔⛔ NOTHING TESTED THIS BEFORE 2026-09-17: deleting `if (kind === "HOLD")
+    // this.taps.reset();` from `release` left every vector in this file green. ⚠ The
+    // mechanism was described in three comments and asserted by none — which is exactly the
+    // predecessor's failure mode, a claim living in prose instead of in a test.
+    //
+    // ⭐ THE RULE: a touchpoint that went down, stayed down and fired nothing is not half of
+    // a double tap. Without the reset, a tap, a pause, and a tap become a DOUBLE_TAP as
+    // though the pause had not happened — and a DOUBLE_TAP is **eviction**.
+    // ⛔ THE FIXTURE IS TIMED SO THAT THE RESET IS THE ONLY DEFENCE: the last press lands
+    // 140 ms after the FIRST tap's release, well inside `doubleTapWindow`, on the same point.
+    // ⚠ Both ways of becoming a HOLD are covered, because they are different code paths:
+    // a press held past `tapMaxDuration`, and a press ANOTHER RULE consumed (A10's depth).
+    for (const holdVia of ["LONG_PRESS", "CONSUMED"] as const) {
+      const pose = recordingPose();
+      const taps = new TapHistory(cfg);
+      const mk = () => new Recognizer(cfg, pose.port, taps);
+      expect(
+        gesture(mk(), [
+          { x: 100, y: 100, t: 0 },
+          { x: 100, y: 100, t: 60 },
+        ]).kind,
+        holdVia,
+      ).toBe("TAP");
+
+      const held = mk();
+      if (holdVia === "CONSUMED") {
+        held.press({ x: 300, y: 300, t: 100 });
+        held.consumeAsMotion();
+        expect(held.release({ x: 300, y: 300, t: 140 }).kind, holdVia).toBe("HOLD");
+      } else {
+        expect(
+          gesture(held, [
+            { x: 300, y: 300, t: 100 },
+            { x: 300, y: 300, t: 500 }, // 400 ms > tapMaxDuration (250 ms)
+          ]).kind,
+          holdVia,
+        ).toBe("HOLD");
+      }
+
+      const after = gesture(mk(), [
+        { x: 100, y: 100, t: 200 },
+        { x: 100, y: 100, t: 260 },
+      ]);
+      expect(after.kind, holdVia).toBe("TAP");
+      expect(after.rule, holdVia).toBe("NONE");
+    }
+  });
+
+  it("⭐⭐ the double-tap window is measured RELEASE-to-PRESS, never release-to-release", () => {
+    // ⛔⛔ `TapHistory.record` stores the first tap's RELEASE time and compares it against the
+    // second tap's PRESS time. ⚠ That choice was documented in a `@param` note and pinned by
+    // nothing: swapping `press.t` for `releaseT` in the comparison left every vector green,
+    // because every fixture in this file used 60 ms taps, where the two readings differ by
+    // less than the slack in the window.
+    //
+    // ⭐⭐⭐ WHY IT IS THE RIGHT CHOICE, which is what makes the vector worth having: the
+    // window bounds *how long the user waited between taps*, and the wait ends when the
+    // second finger lands. ⛔ Release-to-release adds the SECOND TAP'S OWN DURATION to the
+    // measurement, so a deliberate double tap whose second press is slow to lift — a
+    // heavier finger, a thicker glove, a tablet under load — silently stops evicting. ⭐ The
+    // user's gesture would be correct and the product would simply not answer, which is the
+    // hardest kind of defect to report from a device.
+    //
+    // ⭐ THE FIXTURE SPLITS THE TWO READINGS ON PURPOSE: press at 300 (240 ms after the
+    // first release — inside the 300 ms window) and release at 500, so release-to-release is
+    // **440 ms** and outside it. ⚠ 200 ms of press is still inside `tapMaxDuration` (250 ms),
+    // so the second gesture is genuinely a tap and not a HOLD.
+    const pose = recordingPose();
+    const taps = new TapHistory(cfg);
     expect(
       gesture(new Recognizer(cfg, pose.port, taps), [
-        { x: 100, y: 100, t: 400 },
-        { x: 100, y: 100, t: 460 },
+        { x: 100, y: 100, t: 0 },
+        { x: 100, y: 100, t: 60 },
       ]).kind,
     ).toBe("TAP");
+    const second = gesture(new Recognizer(cfg, pose.port, taps), [
+      { x: 100, y: 100, t: 300 },
+      { x: 100, y: 100, t: 500 },
+    ]);
+    expect(second.kind).toBe("DOUBLE_TAP");
+    expect(second.rule).toBe("2septies");
   });
 });
 
@@ -531,14 +641,54 @@ describe("⛔⛔ a gesture ANOTHER RULE consumed is never a tap", () => {
   });
 
   it("⛔⛔ two consumed pushes are NOT a DOUBLE_TAP — so they cannot evict", () => {
-    // ⭐ The consequence that matters. `taps.reset()` on the HOLD path is what makes a
-    // consumed gesture unable to be the FIRST half of a double-tap either.
-    const a = fresh().rec;
-    expect(pressAndLift(a, 0, true).kind).toBe("HOLD");
-    const b = fresh().rec;
-    const second = pressAndLift(b, 120, true);
+    // ⛔⛔⛔ **THIS VECTOR TESTED NOTHING UNTIL 2026-09-17, AND THE REASON IS ONE WORD.** It
+    // is repaired in place; the trap is the record.
+    //
+    // ⚠ IT CALLED `fresh()` TWICE — and `fresh()` builds a recognizer **and its own
+    // `TapHistory`**. So the second push was asked whether it was the second half of a
+    // double tap using a history that had never seen the first one. ⛔⛔ THE SUBJECT OF THIS
+    // VECTOR IS THE SHARED HISTORY: `TapHistory` exists precisely because two taps are two
+    // pointer ids, and handing each push a private one removes the only thing under test.
+    // ⭐ It could not have gone red for any change to the tap chain, because there was no
+    // chain — a second-half assertion against an empty history is `expect(true)`.
+    //
+    // ⭐⭐ `METHOD`: *a fixture that isolates the component also isolates the bug.* This is
+    // mistake shape 5 — my own fixtures — in its quietest form: nothing about the code was
+    // idealised, the WIRING was.
+    //
+    // ⭐ REPAIRED: ONE history, three recognizers, exactly as the product wires them — one
+    // `TapHistory` shared across every touchpoint. ⚠ And `rule` is asserted as well as
+    // `kind`, because the harm is not a mislabelled verdict, it is **2septies eviction**:
+    // a hand that nudged an object closer twice would lose the alignments it just built.
+    //
+    // ⭐⭐ A GENUINE TAP OPENS THE SEQUENCE AND A GENUINE TAP CLOSES IT, which is what gives
+    // the shared history something to carry. ⛔ Two depth pushes cannot evict *by
+    // themselves*; the case that bites is the one where a real tap is already on the chain
+    // when the pushes happen, and the tap that follows them inherits it. With the histories
+    // private that sequence was unrepresentable. Deleting `if (kind === "HOLD")
+    // this.taps.reset();` now turns this red.
+    const pose = recordingPose();
+    const taps = new TapHistory(cfg);
+    const mk = () => new Recognizer(cfg, pose.port, taps);
+    expect(
+      gesture(mk(), [
+        { x: 100, y: 100, t: 0 },
+        { x: 100, y: 100, t: 60 },
+      ]).kind,
+    ).toBe("TAP");
+    expect(pressAndLift(mk(), 100, true).kind).toBe("HOLD");
+    const second = pressAndLift(mk(), 200, true);
     expect(second.kind).toBe("HOLD");
     expect(second.rule).toBe("NONE");
+    // ⭐ ...and the chain the two pushes passed through is BROKEN, so the next real tap is a
+    // first tap. ⚠ 300 − 60 = 240 ms: inside `doubleTapWindow`, on the same point, so only
+    // the reset stands between this and an eviction nobody asked for.
+    const later = gesture(mk(), [
+      { x: 100, y: 100, t: 300 },
+      { x: 100, y: 100, t: 360 },
+    ]);
+    expect(later.kind).toBe("TAP");
+    expect(later.rule).toBe("NONE");
   });
 
   it("⭐ it does NOT commit the gesture — the finger may still drag afterwards", () => {

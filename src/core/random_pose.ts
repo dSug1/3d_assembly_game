@@ -18,7 +18,7 @@
  *
  * ⛔ ENGINE-FREE.
  */
-import type { Quat } from "./vec";
+import { canon, type Quat } from "./vec";
 
 /**
  * ⭐ `mulberry32` — a small, well-distributed 32-bit PRNG.
@@ -56,12 +56,18 @@ function randomQuat(rnd: () => number): Quat {
   const u3 = rnd();
   const a = Math.sqrt(1 - u1);
   const b = Math.sqrt(u1);
-  return [
+  // ⛔⛔ **CANONICALISED, LIKE EVERY OTHER QUATERNION IN THE PROJECT** — audit, 2026-09-17.
+  // ⚠ `vec.ts` states the contract in capitals: *every quaternion leaving this module is
+  // canonicalised to `w >= 0`*, because `q` and `−q` are the same rotation and the previous
+  // project lost a day to the difference. ⛔ This module sat outside that guarantee and handed
+  // out negative-`w` orientations. ⭐ It changes no DISTRIBUTION — Shoemake is symmetric in the
+  // sign, and `q` and `−q` are the same rotation — only the representation.
+  return canon([
     a * Math.sin(2 * Math.PI * u2),
     a * Math.cos(2 * Math.PI * u2),
     b * Math.sin(2 * Math.PI * u3),
     b * Math.cos(2 * Math.PI * u3),
-  ];
+  ]);
 }
 
 /**

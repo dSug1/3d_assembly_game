@@ -74,8 +74,15 @@ export interface SceneObject {
    * ⭐⭐⭐ **FROZEN — THE TRANSFORM CANNOT BE MODIFIED AND THE BODY CANNOT BE A FOLLOWER**
    * (the owner, 2026-09-17, for the base plate).
    *
-   * ⛔⛔ **IT IS ENFORCED IN THIS FILE, AT THE TWO WRITERS, AND NOT AT THE CALL SITES.**
-   * `setWorldPlacement` refuses to move it and `pushObjectConstraint` refuses to constrain it.
+   * ⛔⛔ **IT IS ENFORCED IN THIS FILE, AT ITS WRITERS, AND NOT AT THE CALL SITES.**
+   * `setWorldPlacement` refuses to move it, `pushObjectConstraint` refuses to constrain it, and
+   * — since 2026-09-17 — `attach` and `reroot` refuse to make it a **CHILD**.
+   * ⚠⚠ **THAT THIRD CLAUSE WAS MISSING AND THE HEADER SAID OTHERWISE.** It claimed two writers
+   * and named the guarantee as holding *"for rules that do not exist yet"*; `local` in fact has
+   * five writers, and the three tree operations were not covered. ⛔ The hole wrote nothing to
+   * the frozen body: attaching it under a part moved it the next time THAT part moved, because a
+   * child's placement is relative. ⭐ The owner's rule is **parent yes, child never** — a base
+   * plate is the thing others mount onto.
    * ⚠ That is the difference between a rule and an invariant: a dozen things move an object
    * here — rule 6, depth, the approach, a snap, the sway, an alignment slerp, a `FOLLOW`
    * cascade — and asking each of them to check a flag means the next one added will not.
@@ -248,6 +255,16 @@ export function reroot(world: World, id: ObjectId): World {
   const held = worldPlacementOf(world, id);
   if (!held) return world;
 
+  // ⛔⛔⛔ **A FROZEN BODY MAY NOT BECOME A CHILD** — the owner, 2026-09-17, after an audit:
+  // *"parent yes, child never"*. ⚠ `reroot` inverts every edge on the path to the old root, so
+  // re-rooting onto a part mounted on the base plate would make the PLATE a child of that part
+  // — the forbidden state reached by a different door, and `plate.local` rewritten on the way.
+  // ⭐ Everything from index 1 up becomes a child; index 0 becomes the root, which is harmless.
+  // ⚠ Refused whole, never half: a partially re-pointed tree is worse than an un-rerooted one.
+  for (let i = 1; i < chain.length; i++) {
+    if (chain[i]!.frozen === true) return world;
+  }
+
   const updated: SceneObject[] = [{ ...chain[0]!, parent: null, local: held }];
   for (let i = 1; i < chain.length; i++) {
     updated.push({
@@ -292,6 +309,17 @@ export function attach(world: World, childId: ObjectId, parentId: ObjectId): Wor
   const child = world.objects.get(childId);
   const parent = world.objects.get(parentId);
   if (!child || !parent) return world;
+  // ⛔⛔⛔ **A FROZEN BODY MAY NOT BE A CHILD** — the owner, 2026-09-17: *"parent yes, child
+  // never"*, after an audit found the guarantee stopped at the tree operations.
+  //
+  // ⚠⚠ **THE DEFECT THIS CLOSES WROTE NOTHING TO THE FROZEN BODY AT ALL.** `attach` moves
+  // nothing, so attaching the plate under a part looked harmless — and the next time that PART
+  // moved, the plate went with it, because a child's placement is relative. Measured: the plate
+  // reached `[5, −1, 0]` with no rule ever touching `plate.local`.
+  // ⭐ A frozen body remains a perfectly good PARENT, which is the whole point of a base plate:
+  // parts mount ONTO it. ⚠ Exactly the distinction `frozen` already draws for alignments —
+  // *a frozen body may still be a PIONEER* — and for the same reason.
+  if (child.frozen === true) return world;
   if (isAncestorOrSelf(world, childId, parentId)) return world; // ⛔ would close a loop
 
   const parentDepth = depthOf(world, parentId);

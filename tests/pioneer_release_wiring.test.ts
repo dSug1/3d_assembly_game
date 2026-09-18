@@ -19,6 +19,7 @@ import {
   evictObjectConstraints,
   faceWorld,
   makeWorld,
+  pushObjectConstraint,
   setWorldPlacement,
   worldPlacementOf,
   type SceneObject,
@@ -28,7 +29,8 @@ import { alignedFaceOf } from "@core/face_pick";
 import { AlignmentLinks } from "@core/alignment_links";
 import { faceAlignConstraint } from "@input/alignment";
 import { singleAlignment } from "@core/constraint_stack";
-import { resolvePioneerTurns, type FollowerLink } from "@input/pioneer_cascade";
+import { followerLinksFrom, resolvePioneerTurns } from "@input/pioneer_cascade";
+import type { AlignMode } from "@input/alignment";
 import { IDENTITY, qFromAxisAngle, type Quat, type Vec3 } from "@core/vec";
 
 const L = 0.08;
@@ -81,15 +83,32 @@ function aligned(
   return { world, links };
 }
 
-/** The render loop's own inputs, assembled the way `scene.ts` assembles them. */
-const plan = (world: World, links: AlignmentLinks, mode: "SNAPSHOT" | "FOLLOW") =>
+/**
+ * The render loop's own inputs — assembled by **the function `scene.ts` calls**, not by a copy.
+ *
+ * ⛔⛔⛔ **THIS HELPER USED TO RE-TYPE THE ASSEMBLY, AND THAT MADE THE WIRING TEST BLIND TO THE
+ * WIRING.** It rebuilt the `flatMap` from `scene.ts` by hand and gave **one mode to every
+ * link**, while the product reads `alignModeOf` per follower. ⚠ So the one field this test
+ * exists to exercise — which reading each alignment carries — was the one field the harness
+ * could not get wrong. ⭐ Found by audit 2026-09-17; `followerLinksFrom` was extracted from
+ * `scene.ts` so that both sides now run the same code.
+ * ⛔ `METHOD`: *a harness that recomputes what the product computed is a second implementation
+ * that can silently disagree* — stated in `object_model.ts` about a caller, and true of a test.
+ *
+ * @param modeOf per FOLLOWER, exactly as the product supplies it. ⚠ A plain mode is accepted
+ *   for the single-follower vectors, but it is passed through the real per-link door.
+ */
+const plan = (
+  world: World,
+  links: AlignmentLinks,
+  modeOf: AlignMode | ((f: string) => AlignMode | undefined),
+) =>
   resolvePioneerTurns(
-    links.alignedObjects().flatMap((follower): FollowerLink[] => {
-      const ref = links.pioneerFor(follower);
-      return ref === null
-        ? []
-        : [{ follower, pioneer: ref.objectId, baseline: ref.orientation, mode }];
-    }),
+    followerLinksFrom(
+      links.alignedObjects(),
+      (f) => links.pioneerFor(f),
+      typeof modeOf === "function" ? modeOf : () => modeOf,
+    ),
     (id) => worldPlacementOf(world, id)?.orientation ?? null,
   );
 
@@ -202,5 +221,68 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
     expect(plan(turned, links, "SNAPSHOT").steps).toEqual([
       { kind: "RELEASE", follower: "f" },
     ]);
+  });
+});
+
+/**
+ * ⭐⭐⭐ **THE FIELD THE OLD HARNESS COULD NOT GET WRONG — the PER-LINK mode.**
+ *
+ * ⛔⛔ The previous `plan` helper handed the SAME mode to every link, so a chain with one cyan
+ * body and one orange one was unrepresentable in this file. ⚠ That is the exact configuration
+ * the owner described — *"if P1 is orange … if P1 is blue …"* — and the wiring test for it was
+ * structurally incapable of building it.
+ */
+describe("⛔⛔ each link carries its OWN reading, and the assembly is what supplies it", () => {
+  it("⭐⭐ two followers of one Pioneer, one SNAPSHOT and one FOLLOW", () => {
+    // ⚠ Built through `pushObjectConstraint`, not by writing the map — so the frozen guard and
+    // the ordering rule are exercised rather than bypassed, which `aligned()` above does not do.
+    let world = makeWorld([body("f"), body("g"), body("p")]);
+    world = setWorldPlacement(world, "p", { position: [0.2, 0, 0], orientation: IDENTITY });
+    const links = new AlignmentLinks();
+    for (const [follower, face] of [
+      ["f", "+x"],
+      ["g", "+y"],
+    ] as const) {
+      const pioneerWorld = faceWorld(world, "p", face)!.normal;
+      const followerLocal = world.objects.get(follower)!.faces.find((x) => x.id === face)!.normal;
+      world = pushObjectConstraint(
+        world,
+        follower,
+        faceAlignConstraint(followerLocal, pioneerWorld),
+        false,
+      );
+      links.link(follower, "p", face, worldPlacementOf(world, "p")!.orientation);
+    }
+    const turned = setWorldPlacement(world, "p", {
+      position: worldPlacementOf(world, "p")!.position,
+      orientation: qFromAxisAngle([0, 1, 0], 0.3),
+    });
+
+    const steps = plan(turned, links, (f) => (f === "f" ? "SNAPSHOT" : "FOLLOW")).steps;
+    // ⛔ ONE of each, decided per body — which the old helper could not express at all.
+    expect(steps.find((s) => s.follower === "f")?.kind).toBe("RELEASE");
+    expect(steps.find((s) => s.follower === "g")?.kind).toBe("ROTATE");
+  });
+
+  it("⛔⛔ a follower whose mode has been FORGOTTEN releases rather than rotates", () => {
+    // ⭐ The default is stated in `followerLinksFrom` and asserted here: a lost mode must fail
+    // safe toward *let go*, never toward *keep turning something*. ⚠ `alignModeOf` is a Map
+    // that `prune` and every release delete from, so `undefined` is a reachable state.
+    const { world, links } = aligned("+x", "+x");
+    const turned = setWorldPlacement(world, "p", {
+      position: worldPlacementOf(world, "p")!.position,
+      orientation: qFromAxisAngle([0, 1, 0], 0.3),
+    });
+    expect(plan(turned, links, () => undefined).steps).toEqual([{ kind: "RELEASE", follower: "f" }]);
+  });
+
+  it("⛔ a body listed as aligned whose LINK has gone is skipped, not defaulted", () => {
+    // ⚠ The index and the model are reconciled every frame by `prune`; between those two facts
+    // a body can be listed without a link. ⭐ Inventing a Pioneer for it would outlive the
+    // alignment that justified it — the leak this whole two-way index exists to avoid.
+    const { world, links } = aligned("+x", "+x");
+    const built = followerLinksFrom(["f", "ghost"], (f) => links.pioneerFor(f), () => "FOLLOW");
+    expect(built.map((l) => l.follower)).toEqual(["f"]);
+    expect(worldPlacementOf(world, "f")).not.toBeNull();
   });
 });

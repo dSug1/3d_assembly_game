@@ -31,11 +31,25 @@ const DEG = Math.PI / 180;
 /** ⭐ `4L` = 320 mm, the owner's radius. */
 const N: HighlightNumbers = { snapRadiusM: 4 * SIZE, alignMatchRad: 15 * DEG };
 
-/** ⭐ The scene's actual boot positions — three lengths apart, brown cube two lengths back. */
+/**
+ * ⭐⭐ **THE SCENE's ACTUAL BOOT POSITIONS** — three parts `5L` apart pairwise, and the frozen
+ * base plate `3L` below them.
+ *
+ * ⛔⛔ **THIS FIXTURE PINNED A LAYOUT THE PRODUCT HAD ABANDONED.** It carried the pre-plate
+ * scene (±0.12, i.e. `3L` apart, and no plate at all) and called itself *"the scene's actual
+ * boot positions"*, so every vector built on it certified a world that no longer booted.
+ * ⚠ Found by audit 2026-09-17, together with the false claim in `render/scene.ts` that the
+ * `5L` spacing puts nothing in range.
+ * ⭐ `METHOD`: *a fixture that names itself after the product is a claim about the product*,
+ * and it goes stale silently — the suite stays green while it describes something else.
+ */
 const BOOT: readonly (readonly [string, Vec3])[] = [
-  ["objectA", [-0.12, 0, 0]],
-  ["objectB", [0.12, 0, 0]],
-  ["objectC", [0, 0.132665, 0.16]],
+  ["objectA", [-0.2, 0, 0]],
+  ["objectB", [0.2, 0, 0]],
+  // ⚠ The pink part, whose height is DERIVED so all three pairs come out at exactly `5L`.
+  ["objectD", [0, 0.307246, 0.16]],
+  // ⛔ The frozen base plate, `3L` below the parts' centres.
+  ["objectC", [0, -3 * SIZE, 0]],
 ];
 
 const cube = (id: string, constraints: readonly Constraint[] = []): SceneObject => ({
@@ -76,19 +90,18 @@ describe("⭐⭐ the amended numbers, on the real scene", () => {
     expect(N.snapRadiusM).toBeCloseTo(0.32, 12);
   });
 
-  it("⭐⭐ THE BOOT LAYOUT IS 3L APART — all three pairs, exactly 240 mm", () => {
-    // ⭐ *"three lengths apart"* has to hold for all THREE pairs, not just A↔B — `objectC`'s
-    // height is derived for exactly that (√(3L² − (1.5L)² − (2L)²)), so a regression in it
-    // would otherwise pass unnoticed. ⚠ Whether that is inside the capture radius is the NEXT
-    // vector's business, and at 4L it is.
+  it("⭐⭐ THE THREE PARTS BOOT 5L APART — all three pairs, exactly 400 mm", () => {
+    // ⭐ *"increase their distances between each other by 2L"* has to hold for all THREE pairs,
+    // not just A↔B — `objectD`'s height is derived for exactly that, so a regression in it
+    // would otherwise pass unnoticed. ⚠ Whether that is inside the capture radius is the next
+    // vector's business.
     const w = scene(...BOOT.map(([id, p]) => [id, p] as const));
-    // ⚠ 7 dp = 0.1 µm. ⛔ My first version asked for 9 and FAILED, because the scene's `y` was
-    // rounded to 0.1327 and the diagonals came out 240.019 mm. ⭐ The fix was the LITERAL, not
-    // the tolerance: loosening it to 4 dp would have passed while no longer proving that
-    // `objectC`'s height was derived at all.
-    expect(centreDistance(w, "objectA", "objectB")).toBeCloseTo(0.24, 7);
-    expect(centreDistance(w, "objectA", "objectC")).toBeCloseTo(0.24, 7);
-    expect(centreDistance(w, "objectB", "objectC")).toBeCloseTo(0.24, 7);
+    // ⚠ 6 dp = 1 µm. ⛔ The scene's `y` is the rounded literal `0.307246`, so the diagonals
+    // land a shade off 400 mm. ⭐ The tolerance states that rounding; loosening it further would
+    // pass while no longer proving that the height was derived at all.
+    expect(centreDistance(w, "objectA", "objectB")).toBeCloseTo(0.4, 6);
+    expect(centreDistance(w, "objectA", "objectD")).toBeCloseTo(0.4, 6);
+    expect(centreDistance(w, "objectB", "objectD")).toBeCloseTo(0.4, 6);
   });
 
   // ⛔⛔ TWO VECTORS WERE **DELETED HERE** WITH THE RULE THEY DESCRIBED (2026-09-17).
@@ -105,16 +118,53 @@ describe("⭐⭐ the amended numbers, on the real scene", () => {
     expect(nearestCapture(at(0.325), "a", N.snapRadiusM, null)).toBeNull();
   });
 
-  it("⛔⛔ AND AT 4L THE BOOT LAYOUT **IS** IN RANGE — 3L apart is inside a 4L radius", () => {
-    // ⚠⚠ STATED AS A VECTOR BECAUSE IT IS A CONSEQUENCE, NOT AN ACCIDENT. The bodies boot
-    // **3L** apart (240 mm) and the radius is **4L** (320 mm), so condition 3 is satisfied for
-    // every pair at rest. ⭐ Nothing is highlighted anyway — `A16` also needs an alignment and a
-    // translation, and at rest neither holds — but it means **the distance is not what will
-    // block a highlight in this scene**, and a device pass cannot judge the threshold without
-    // first dragging a body well clear of the others.
+  it("⛔ EXACTLY on the radius still captures — the boundary belongs to the inside", () => {
+    // ⚠ The rule is `d > radiusM` → out, so equality is IN. ⛔ Untested until 2026-09-17: the
+    // audit found `>` → `>=` survives every other vector, because no fixture lands on the line.
+    // ⭐ Which way it falls matters less than it being STATED: an unpinned boundary is a
+    // free variable the next reader may flip while tidying.
+    const at = (x: number) => scene(["a", [0, 0, 0]], ["b", [x, 0, 0]]);
+    expect(nearestCapture(at(N.snapRadiusM), "a", N.snapRadiusM, null)).toBe("b");
+  });
+
+  it("⚠ an EXACT tie keeps the incumbent — and only an exact one", () => {
+    // ⛔⛔ `proximity.ts` called this *"hysteresis by MEMORY"*. It is not: the comparison is
+    // `===`, so it holds the incumbent only when the two distances are bit-for-bit equal.
+    // ⭐ Both halves are pinned here so the limitation is visible rather than assumed away.
+    const tied = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1, 0, 0]]);
+    expect(nearestCapture(tied, "h", N.snapRadiusM, "b")).toBe("b");
+    expect(nearestCapture(tied, "h", N.snapRadiusM, "a")).toBe("a");
+    // ⚠ One part in 1e12 nearer, and the incumbent loses. That is the overclaim, measured.
+    const nudged = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1 - 1e-13, 0, 0]]);
+    expect(nearestCapture(nudged, "h", N.snapRadiusM, "b")).toBe("a");
+  });
+
+  it("⛔⛔⛔ AT BOOT THE PARTS ARE CLEAR OF EACH OTHER AND **NOT** CLEAR OF THE PLATE", () => {
+    // ⛔⛔⛔ **THE AUDIT FINDING OF 2026-09-17, AS A NUMBER.** `render/scene.ts` claimed
+    // *"AND AT 5L NOTHING IS IN RANGE AT REST, WHICH IS THE POINT"* — and that reasoning
+    // considered only the three PARTS. ⚠ The base plate landed `3L` below them afterwards, and
+    // its CENTRE is 312.4 mm from A and from B, inside the 320 mm capture radius. ⭐ So dragging
+    // either part at boot raises the white pair on the plate immediately, which is the opposite
+    // of what the comment promised a device pass would see.
+    //
+    // ⚠⚠ **AND IT IS NOT A NUMBER TO NUDGE.** The radius is centre-to-centre
+    // (`CENTRES-FOR-NOW`, the owner: *"later we will use distances between faces"*), and the
+    // plate is `6L × 9L` — so a part resting ON the plate near its edge is FURTHER from its
+    // centre than one hovering high above the middle. ⛔ Moving the radius trades one wrong
+    // answer for another; the fix is the face-distance rule `3D2` already owes.
+    // ⭐ This vector exists to make the current answer VISIBLE rather than to bless it.
     const w = scene(...BOOT.map(([id, p]) => [id, p] as const));
-    expect(centreDistance(w, "objectA", "objectB")).toBeCloseTo(3 * SIZE, 7);
-    expect(nearestCapture(w, "objectA", N.snapRadiusM, null)).not.toBeNull();
+    // ⭐ Part to part: clear, by 80 mm.
+    expect(centreDistance(w, "objectA", "objectB")).toBeGreaterThan(N.snapRadiusM);
+    expect(centreDistance(w, "objectA", "objectD")).toBeGreaterThan(N.snapRadiusM);
+    // ⛔ Part to plate: INSIDE the radius, by about 8 mm.
+    expect(centreDistance(w, "objectA", "objectC")).toBeCloseTo(0.31241, 4);
+    expect(centreDistance(w, "objectA", "objectC")).toBeLessThan(N.snapRadiusM);
+    expect(nearestCapture(w, "objectA", N.snapRadiusM, null)).toBe("objectC");
+    expect(nearestCapture(w, "objectB", N.snapRadiusM, null)).toBe("objectC");
+    // ⚠ The pink part sits higher, and IS clear of everything — 570 mm to the plate.
+    expect(centreDistance(w, "objectD", "objectC")).toBeGreaterThan(N.snapRadiusM);
+    expect(nearestCapture(w, "objectD", N.snapRadiusM, null)).toBeNull();
   });
 });
 

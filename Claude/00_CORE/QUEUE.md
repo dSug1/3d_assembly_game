@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **656 golden vectors,
-all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel — → 619 → **568** — ⭐ the drop being forks A and B deleted — → 575 → 567 → 572 → **656**, ⭐ the last rise being `D46`/`A16`–`A20`; ⚠ an earlier 640 was rolled back with two commits the owner reverted). ✅ The engine boundary is enforced by a test.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **773 golden vectors,
+all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 656 → **773**; ⭐ the drops are DELETIONS — the roll channel, then forks A and B — and the last rise is the **2026-09-17 AUDIT**). ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
@@ -29,7 +29,7 @@ all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel �
    ⭐ New engine-free modules: `core/proximity.ts`, `core/alignment_links.ts`, `core/random_pose.ts`, `input/highlight.ts`, `input/pioneer_cascade.ts`, plus `frozen` in `core/object_model.ts`. **Suite 656.**
    ⛔⛔ **THREE DEVICE REPORTS, EACH FINDING SOMETHING NO TEST HERE COULD**, and `METHOD` gained a shape from each: *a fix that lands beside the defect leaves a green suite and a broken product*; *when two readings fit one device report, name both*; *a second symptom that contradicts your theory is worth more than a third that confirms it.* → spec §14 and [`../10_INPUT_TOUCH/INDEX.md`](../10_INPUT_TOUCH/INDEX.md).
    ⭐ Scene: three `L × 2L × 3L` parts `5L` apart at seeded random orientations (`?sceneSeed=N`), a **frozen** `6L × 0.3L × 9L` base plate `3L` below, camera at half max zoom-out. Ordered device lists: §12–§18 of [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md).
-   ⛔ **Next**: the approach itself (4b.1), then `3D2`'s seat + the mate, then `D47`'s break. ⛔⛔ **A live defect arms itself the moment a mate lands**: the twist reads `stack.length === 1` and otherwise falls through to FREE rotation, so a seated (2-entry) body rotates freely and breaks both constraints.
+   ⛔ **Next**: the approach itself (4b.1), then `3D2`'s seat + the mate, then `D47`'s break. ✅✅ **THE LATENT DEFECT THAT WOULD HAVE ARMED WITH THE FIRST MATE IS CLOSED** (audit, 2026-09-17): three guards read `stack.length === 1`, meant *"is this body aligned?"*, and fell through to FREE rotation for any other count — so a seated body would have broken its mate and its alignment together. ⭐ `rotationChannel` now answers `FREE` / `TWIST` / **`REFUSED`**, and what a drag does to a seated body is `3D2`'s decision to make rather than a length test's.
 2. ⛔⛔ **A DEVICE LOOK ON THE ALIGNMENT MODEL** — it is now the ONLY model (`D40`) and **no
    hand has judged any of it**. The ordered list, with what would falsify each item, is §10 of
    [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md).
@@ -51,6 +51,16 @@ all passing** (37 → 632 → **574** — ⭐ 58 DELETED with the roll channel �
    rule, not a joining one — and §4's `6quater`, the only rule that pushes a `MATE`, is
    flick-based, which this model does not have. ⛔ So the game can orient parts and bring them
    close, and **cannot assemble them**. That is the gap between here and `3D2`.
+
+### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed
+
+⭐⭐ The whole record, with what is **not** fixed and why: [`queue_notes/AUDIT_2026-09-17.md`](queue_notes/AUDIT_2026-09-17.md).
+⛔⛔ **THE ONE TO KNOW: the game booted in `TRANSLATE` while every document said `ROTATE`** — and `git log -S` finds no commit that ever returned `ROTATE`. Nothing regressed; the owner's decision never reached the code, and the vector asserted the value the function RETURNED rather than the decision made. ⭐ `METHOD`: *a vector written from the code it tests cannot contradict that code.* ✅ Owner re-confirmed and fixed.
+⚠ Also live on the glass: §1.1 **destroyed up to 7 mm** of travel on the one sample that confirmed rest; the re-tap undo worked only on the most recent alignment in the scene; a roll during a snap was discarded; the frozen plate wobbled; a bad URL tunable threw on **every press** with a silent HUD.
+⭐⭐ **`frozen` AND THE TREE — the owner's call: PARENT YES, CHILD NEVER.** `attach`/`reroot` were uncovered, so attaching the plate under a part and moving that part put the plate at `[5, −1, 0]` with nothing ever writing its placement.
+⛔⛔ **TEN VECTORS COULD NOT FAIL**, including the cascade's composition ORDER, `towardGravity`'s sign, `bestTwist` (both a sign flip and `return IDENTITY` survived) and `worldPose`'s tangent (caught by nothing). ⭐ One shape: *a fixture chosen because it is easy to reason about is usually chosen from the set where the quantity under test is ZERO.*
+⛔ **NOT fixed, deliberately**: "millimetres" are CSS-reference mm, not physical (rule 3 is not what is computed — needs an owner calibration); the roll's sign flips at full rate across square (feel, a hand decides); the `4L` capture radius is centre-to-centre and wrong for a `6L×9L` plate — at boot the plate is **312.4 mm** from two parts against a 320 mm radius, so `scene.ts`'s *"at 5L nothing is in range"* was false.
+⛔⛔ **A DEVICE LOOK IS OWED.** Rule 5 is not suspended because the findings came from a read: the boot mode, the twist and roll channels, the deadband's emission and the render order all changed.
 
 ### What works, by finger, on a real device
 
@@ -139,22 +149,17 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | the twist killed the alignment snap | **1** |
 | ⭐⭐ **THE TOTAL** | **= 48** |
 
-⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16). Each defect's account —
-what was reported, what the cause turned out to be, which mistake shape it was — is in
-[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), unrewritten. ⭐ The table above
-stays HERE because the doctrine's point is that the NUMBER has one home; a 7 KB table of
-stories in a front door was never that number's requirement. ⚠ A row's count changes here
-**and** in that file, or in neither.
+⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16). Each defect's account is in
+[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), unrewritten; the table above
+stays HERE because the doctrine's point is that the NUMBER has one home. ⚠ A row's count
+changes in both places or in neither.
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
-entry.** *"You destroyed the rotation around the gravity axis... it came back to the axis of
-the screen view plane"* — withdrawn by the owner (*"it's alright: the logic is right"*) after
-`tests/a7_wiring.test.ts` composed the gravity frame with the rotation and asserted the axis
-that comes out, at four tilts including the bottom ring. ⛔ Every part of A7 already had
-green vectors and **the composition had none** — mistake shape 4 pointing the other way, at a
-correct piece of work. ⭐ `METHOD`: *a composition is a thing to MEASURE, not an emergent
-property* — and measuring it is what separated a real defect from an impression, in both
-directions at once.
+entry**: *"you destroyed the rotation around the gravity axis"*, withdrawn by the owner after
+`tests/a7_wiring.test.ts` composed the frame with the rotation and asserted the axis that comes
+out, at four tilts. ⛔ Every part of `A7` had green vectors and **the composition had none** —
+mistake shape 4 pointing at a CORRECT piece of work. ⭐ `METHOD`: *a composition is a thing to
+MEASURE, not an emergent property.*
 
 ⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.**
 *"When I test it on github page, I still see the issue with transition from translation to
@@ -224,12 +229,9 @@ thresholds are only defensible relative to it. ⛔ **Reading it is the owner's s
 nothing in a suite can hold a finger on glass. ✅ **DONE 2026-09-14: 0.761 mm**, five
 times the placeholder. ⚠ A resting-finger floor is not gameplay; it is used for the
 sagitta rule only, where over-estimating is the safe direction.
-⛔ ⭐ **The meter's own vectors found a hole in the meter's own vectors.** Three of four
-naive alternatives failed as designed; the fourth — a window that only ever GROWS —
-passed everything, because the minimum is taken while the window is still short. It
-would have pinned the answer in the first 0.3 s, so a finger still settling as it lands
-could never improve its reading. A fifth vector now covers it. ⚠ Mistake shape 1 again:
-a statistic taken over the shortest available baseline.
+⛔ ⭐ **The meter's own vectors found a hole in the meter's own vectors** — a window that only
+ever GROWS passed every counter-example, because the minimum is taken while the window is still
+short. Mistake shape 1 again → [`queue_notes/IN5.md`](queue_notes/IN5.md).
 ⛔ `tests/config_debt.test.ts` now refuses any tunable nothing reads — after three
 orphans (`moveExitDistance`, `tiltDeadband`, `gainRoll`).
 
@@ -241,60 +243,29 @@ orphans (`moveExitDistance`, `tiltDeadband`, `gainRoll`).
 ✅✅ **`IN12` IS CLOSED** — `A11` put the deadband in §1.1 itself rather than in each rule,
 so every rule reads the same side of it and none consumes a raw delta.
 
-### ⭐⭐ WHAT THE 2026-09-15 SESSION SETTLED, beyond the rows
+### ⭐ THE FOUR AMENDMENTS OF 2026-09-15
 
-⭐ Four amendments, each now carrying its own account: **`A7`** every object gesture stands
-on a **gravity frame** (the argument is orthogonality, not tidiness); **`A8`** a roll rebases
-to the start of its circle; **`A6`/`A10`** depth is a **driver and a validator**, after five
-models a hand rejected — *a blend has seams*, and *when a rule needs a WINDOW to decide,
-suspect the QUESTION*; **`A9`/`A11`** §1.1 becomes a position deadband.
-⛔ Full text in [`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md),
-the device narratives in the dossiers each one names. ⚠ Moved out of this file 2026-09-16:
-it is narrative, and this is a front door.
+⭐ `A7` the gravity frame, `A8` the roll's rebase, `A6`/`A10` depth, `A9`/`A11` §1.1 as a
+position deadband — each with its own account in
+[`../10_INPUT_TOUCH/AMENDMENTS_R5.md`](../10_INPUT_TOUCH/AMENDMENTS_R5.md) and the device
+narratives in the dossiers they name. ⚠ Distilled to one line 2026-09-17: it is narrative,
+and this is a front door.
 
-### ⭐⭐ THE SYMPATHETIC SWAY and the CAMERA GUARDS — built 2026-09-14
+### ⭐ THE SYMPATHETIC SWAY and the CAMERA GUARDS
 
-⭐ The scene reacts to what the held object does instead of standing frozen around it, and
-the camera has three guards (a deferred orbit centre, suppression while an object is held, a
-double-tap fly home). ⛔ Both are **decoration and camera policy rather than queue state**,
-and both are kept out of everything that MEANS something — the barycentre reads home
-positions with the sway subtracted.
-⭐⭐ **Moved to [`../40_RENDER_SCENE/INDEX.md`](../40_RENDER_SCENE/INDEX.md) on 2026-09-16**,
-with their tunables and the measured false-kick rates, when this file passed its cap. ⚠ The
-sway's re-trigger on a CHANGE OF DIRECTION was found by finger and is counted in the ledger
-above.
+⭐ Decoration and camera policy rather than queue state, and both are kept out of everything
+that MEANS something — tunables, measured false-kick rates and the whole account are in
+[`../40_RENDER_SCENE/INDEX.md`](../40_RENDER_SCENE/INDEX.md). ⛔ Since 2026-09-17 neither the
+sway nor the spin moves a **frozen** body: the model was frozen and the picture was not.
 
-### ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD
+### ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD, and a number that came out of them
 
-Both were built, MEASURED, and taken out. They are recorded because the ideas are
-attractive and will occur to anyone reading this code.
-
-1. **Inertia and a phantom lead on the object's ROTATION.** Built 2026-09-14 as
-   `src/input/spin.ts` — a critically/under-damped follower on the rotation vector of the
-   error, with the branch cut handled and 12 vectors green. ⛔ **The owner rejected it on
-   the device: *"I did not like the rotation inertia and slerp implementation."*** Rotation
-   stays direct. ⚠ Do not re-derive it because translation has it: they were judged
-   separately and came out differently.
-2. **Telling the follower how fast the TARGET is moving** (`targetVelocity` in
-   `follow.ts`). Arithmetically right — it makes a dragged object's trail frame-rate
-   exact, 0.32 mm instead of 0.74 mm at 120 Hz. ⛔ **It made everything visibly jitter and
-   was reverted.** Pointer events and render frames are not locked, so the per-frame target
-   delta alternates (a frame with no event sees 0, the next sees double) and the lag term
-   writes that beat into the position: frame-to-frame step change went from 1.12 mm to
-   3.25 mm at 90 Hz pointer / 60 Hz frame, and 1.63 → 4.58 at 60/120.
-   ⚠ **Mistake shape 1, committed in the file that warns about it.** Smoothing the
-   estimate does not rescue it — the estimate is not the problem, the BEAT is. And the
-   thing it bought was invisible: both trails are under the measured 0.761 mm pointer
-   noise. ⭐ *An invisible 0.4 mm of trail is not worth a visible 2 mm of jitter.*
-
-### ⭐ AND A NUMBER THAT CAME OUT OF THAT: the inertia has a FLOOR
-
-The target only moves when a pointer event lands, so it arrives as a staircase of about
-`speed ÷ pointer rate` — ~1.1 mm at 100 mm/s. **The mass is what smooths it**, which
-means `translateInertiaMs` must be at least about one pointer interval (**8–12 ms**) or
-the beat between the pointer clock and the frame clock is visible as jitter, whatever
-else is tuned. Measured: 1.0–1.6 mm of wobble at τ = 1 ms against 0.43–0.69 mm at τ = 8 ms.
-⚠ That is why the shipped τ is 7.6 ms and not lower.
+⛔ **Rotation inertia** (`spin.ts`) and **`targetVelocity`** were both BUILT, MEASURED and
+removed — the first rejected on the device by the owner, the second because it made everything
+visibly jitter. ⚠ Both ideas are attractive and will occur to anyone reading this code; the
+measurements, and why `translateInertiaMs` has a **floor of one pointer interval** (the shipped
+7.6 ms), are in [`queue_notes/REJECTED_AND_MEASURED.md`](queue_notes/REJECTED_AND_MEASURED.md).
+⭐ *An invisible 0.4 mm of trail is not worth a visible 2 mm of jitter.*
 
 ### ⭐⭐ THE ORDER, and why `3D1` is not next after all
 

@@ -15,7 +15,8 @@
  * false alarms in one session, one of them a float loop taking an extra step.
  */
 import { describe, expect, it } from "vitest";
-import { ShakeDetector, type ShakeParams } from "../src/input/shake";
+import { ShakeDetector, shakeParamsFrom, type ShakeParams } from "../src/input/shake";
+import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { Sample } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
 
@@ -27,6 +28,22 @@ const PARAMS: ShakeParams = {
   legMm: 8,
   straightness: 0.4,
 };
+
+/**
+ * ⭐⭐⭐ **THE NUMBERS THE PRODUCT ACTUALLY SHIPS** — `legMm` 6, `windowMs` 300,
+ * `straightness` 0.45, against the MEASURED `pointerNoiseMm`.
+ *
+ * ⛔⛔ AN AUDIT FOUND THAT NOT ONE VECTOR IN THIS FILE RAN AGAINST THEM. Every fixture
+ * above uses the local `PARAMS` (8 / 600 / 0.4), which is a *different detector tuning* —
+ * so the whole suite could stay green while the shipped `evictShake*` values drifted to
+ * anything at all. ⭐ That is mistake shape 5 in its purest form — *my own fixtures* —
+ * with the twist that the fixture was not merely idealised, it was **measuring a config
+ * nobody runs**. ⚠ The local `PARAMS` are KEPT (a detector must be right at more than one
+ * tuning, and the vectors above are honest about that tuning) and the shipped set is now
+ * exercised alongside them, at the bottom of the file.
+ */
+const SHIPPED: ShakeParams = shakeParamsFrom(DEFAULT_CONFIG);
+const SHIPPED_NOISE_MM = DEFAULT_CONFIG.pointerNoiseMm;
 
 /** Feed a whole path and return the first verdict, or null. */
 function run(path: readonly Sample[], params: ShakeParams = PARAMS, noise = NOISE_MM) {
@@ -58,6 +75,46 @@ function leg(
   return out;
 }
 
+/**
+ * ⭐⭐⭐ **A BACK-AND-FORTH THAT BOWS** — three legs of `alongMm` along +x, each one
+ * arcing `bowMm` off the axis in y and returning to it: `y = bow · sin(π x / along)`.
+ *
+ * ⭐ WHY THIS EXACT SHAPE, AND NOT AN EASIER ONE. The detector derives its axis from the
+ * **principal eigenvector of the windowed covariance**, so a fixture only isolates
+ * straightness if it leaves that axis alone. Two properties of this path do that, and both
+ * were computed before the fixture was written rather than discovered by tuning:
+ *
+ *   1. `cov(x, y) = 0` **exactly** — the legs sweep x uniformly over `[0, along]` and
+ *      `E[x·sin(πx/along)] = E[x]·E[sin(πx/along)]` on that interval. So the principal axis
+ *      is +x or +y, never a diagonal, and the along-amplitude is exactly `alongMm`.
+ *   2. `var(y) = bow²(½ − 4/π²) ≈ 0.095·bow²` stays under `var(x) = along²/12`, so the
+ *      axis stays **x**. ⚠ It flips at `bow ≳ 0.9·along`, and then amplitude and
+ *      perpendicular excursion swap meaning — which is why nothing here bows past 17 mm
+ *      on a 20 mm leg.
+ *
+ * ⭐ The perpendicular excursion the detector will measure is therefore
+ * `maxPerp = bow · (2/π) ≈ 0.637·bow` — the distance from the mean `ȳ = 2·bow/π` down to
+ * the endpoints at `y = 0`, which is larger than the distance up to the crest. ⛔ So the
+ * straightness ratio is `0.637·bow / along`, a number this file can put either side of the
+ * bound ON PURPOSE, which is the whole point of the helper.
+ */
+function bowedShake(alongMm: number, bowMm: number, perLeg: number, stepMs = 8): Sample[] {
+  const out: Sample[] = [{ x: 0, y: 0, t: 0 }];
+  let t = 0;
+  for (const [from, to] of [
+    [0, alongMm],
+    [alongMm, 0],
+    [0, alongMm],
+  ] as const) {
+    for (let i = 1; i <= perLeg; i++) {
+      const along = from + ((to - from) * i) / perLeg;
+      t += stepMs;
+      out.push({ x: mmToPx(along), y: mmToPx(bowMm * Math.sin((Math.PI * along) / alongMm)), t });
+    }
+  }
+  return out;
+}
+
 /** out → back → out, each leg `ampMm` long. The canonical shake. */
 function shakePath(ampMm: number, stepMs = 8, dir: readonly [number, number] = [1, 0]): Sample[] {
   return [
@@ -76,6 +133,15 @@ describe("⛔ what must NOT be a shake", () => {
   it("⛔⛔ A CIRCLE does not evict — it oscillates on every axis, and roll is now legal", () => {
     // 40 mm diameter, two full turns, 8 ms apart: exactly what rolling an anchored
     // object looks like after `D14`.
+    // ⚠⚠ **WHAT REFUSES IT IS NOT STRAIGHTNESS**, and the header of `shake.ts` reads as
+    // though it were. An EXACT circle over whole turns has an **isotropic** covariance —
+    // `sxx = syy`, `sxy = 0` — so `read` finds no eigenvector at all and returns `null`
+    // before any ratio is computed (`shake.ts`, the `len > 1e-12` branch). ⭐ The outcome
+    // is right and the ATTRIBUTION was wrong, which is why deleting the straightness test
+    // left this vector green. ⛔ The pair at the bottom of this block is the one that
+    // actually holds the straightness guard down; this one holds the isotropy branch down.
+    // ⭐ `METHOD`: *when one vector is green for two different reasons, it is guarding one
+    // of them and merely accompanying the other.*
     const path: Sample[] = [];
     const steps = 96;
     for (let i = 0; i <= steps * 2; i++) {
@@ -125,16 +191,54 @@ describe("⛔ what must NOT be a shake", () => {
   });
 
   it("⛔ A BOWED back-and-forth is refused — straightness is part of the definition", () => {
-    // Out and back along x, but bowing 12 mm in y: amplitude 40 mm, so the bow is 0.3 of
-    // it before the return doubles the excursion. Sits the wrong side of `straightness`.
-    const path: Sample[] = [{ x: 0, y: 0, t: 0 }];
-    const steps = 60;
-    for (let i = 1; i <= steps * 3; i++) {
-      const phase = (i / steps) % 2;
-      const along = phase < 1 ? phase * 40 : (2 - phase) * 40;
-      path.push({ x: mmToPx(along), y: mmToPx(20 * Math.sin((Math.PI * along) / 40)), t: i * 8 });
-    }
-    expect(run(path).verdict).toBeNull();
+    // ⛔⛔⛔ **THIS VECTOR COULD NOT FAIL UNTIL 2026-09-17, AND THE TRAP IS WORTH MORE THAN
+    // THE ASSERTION.** It is kept in place, repaired, rather than quietly replaced.
+    //
+    // ⚠ THE OLD FIXTURE: three legs of 40 mm, each bowing 20 mm — and each leg sampled 60
+    // times at 8 ms, so **one leg took 480 ms inside a 600 ms window**. No trailing
+    // sub-window ever held three legs, so no reading ever reached two reversals, and the
+    // path was refused by the REVERSAL COUNT before straightness was consulted at all.
+    // Deleting the straightness test from `shake.ts` left this vector — and the whole file
+    // — green. ⭐ Mistake shape 5 with a sting: the fixture LOOKED like the thing it named,
+    // and its name is what stopped anyone reading the timing.
+    //
+    // ⭐⭐ THE REPAIR IS A FIXTURE WHOSE TIMING FITS: three 160 ms legs, 480 ms end to end,
+    // comfortably inside the 600 ms window, so two reversals are genuinely available and
+    // **straightness is the only thing left that can refuse it**. The next vector proves
+    // that claim instead of asserting it.
+    //
+    // ⭐ 15 mm of bow on a 20 mm leg ⇒ `maxPerp = 9.37 mm` at 20 samples a leg (the
+    // continuum value is `0.637 × 15 = 9.55`; discrete sampling misses the crest) against an
+    // amplitude of 20 mm — a ratio of **0.469**, the wrong side of `straightness` 0.4.
+    expect(run(bowedShake(20, 15, 20)).verdict).toBeNull();
+  });
+
+  it("⭐⭐ ...and STRAIGHTNESS is the ONLY reason — relax that one number and it fires", () => {
+    // ⛔⛔ `METHOD`: *a guard is only proven by a specimen that nothing else refuses.* The
+    // vector above says "null"; a null can come from six places in `read` — too few
+    // reversals, an amplitude under the noise floor, an isotropic covariance, a window
+    // shorter than three samples. ⭐ So the SAME path is fed a second time with nothing
+    // changed but `straightness`, and it must fire. That pins the refusal on the one test
+    // this fixture exists for, and it is what makes deleting the guard turn this file red.
+    const bowed = bowedShake(20, 15, 20);
+    expect(run(bowed, PARAMS).verdict).toBeNull();
+    expect(run(bowed, { ...PARAMS, straightness: 0.9 }).verdict).not.toBeNull();
+  });
+
+  it("✅ THE NEAR-TWIN, bowed just UNDER the bound, still evicts", () => {
+    // ⭐ The other half of the pair, and the half that keeps the guard from being sized as
+    // "refuse everything": the identical path with 12 mm of bow instead of 15 gives
+    // `maxPerp = 7.50 mm` on a 20 mm amplitude — a ratio of **0.375**, just inside 0.4.
+    // ⛔ A hand does not shake in a straight line, and a straightness test tight enough to
+    // refuse an ordinary human back-and-forth would make eviction unreachable — which is
+    // the failure mode nobody reports, because it looks like "I must have done it wrong".
+    const { verdict } = run(bowedShake(20, 12, 20));
+    expect(verdict).not.toBeNull();
+    expect(verdict!.reversals).toBeGreaterThanOrEqual(2);
+    // ⚠ And the axis really is x, so the amplitude is the along-axis one and not a
+    // diagonal's: 20 mm peak to peak. If this ever reads ~15 mm the eigenvector flipped and
+    // the pair above stopped measuring straightness. See `bowedShake`'s header.
+    expect(verdict!.amplitudeMm).toBeCloseTo(20, 1);
   });
 });
 
@@ -309,5 +413,72 @@ describe("⛔⛔ A SHAKE AFTER A LONG DRAG — *\"only if the shake immediately 
       from = to;
     }
     expect(run([...drag, ...slow]).verdict).toBeNull();
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ THE SHIPPED NUMBERS — `shakeParamsFrom(DEFAULT_CONFIG)`, not a local tuning
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("⛔⛔ the SHIPPED evictShake* values, which nothing exercised until 2026-09-17", () => {
+  // ⛔⛔ EVERY VECTOR ABOVE RUNS THE LOCAL `PARAMS` — 8 mm legs, a 600 ms window, 0.4 of
+  // straightness. ⭐ THE PRODUCT SHIPS 6 / 300 / 0.45. So the suite proved a detector that
+  // is correct at a tuning **no hand has ever touched**, and `evictShakeLegMm` could have
+  // been edited to 60 mm or `evictShakeWindowMs` to 30 ms without one vector going red.
+  // ⚠ `CONSTRAINTS` §4 already says a tuning value is IMPORTED and never copied; this is
+  // the same rule applied to the FIXTURES, which had quietly grown a second copy.
+  // ⭐ `shakeParamsFrom` is the one reader, so these vectors follow the config wherever a
+  // slider moves it — they assert the SHAPE of the behaviour at the shipped numbers, never
+  // the numbers themselves, which is `IN5`'s whole premise.
+
+  it("✅ a canonical 20 mm shake fires at the shipped tuning", () => {
+    // ⭐ 8 ms a sample: the three legs span 400 ms, longer than the shipped 300 ms window,
+    // and it still fires — because the shake is read in every trailing SUB-window, so the
+    // last two legs alone carry the two reversals. ⛔ That is the `D33` lesson, and at 600 ms
+    // the fixture could never have exercised it.
+    const { verdict } = run(shakePath(20), SHIPPED, SHIPPED_NOISE_MM);
+    expect(verdict).not.toBeNull();
+    expect(verdict!.reversals).toBeGreaterThanOrEqual(SHIPPED.reversals);
+  });
+
+  it("⛔ a CORRECTIVE NUDGE is still refused at the shipped `legMm`", () => {
+    // ⭐ ±3 mm — the same nudge as the local counter-example — but stepped at **5 ms**, so
+    // all three legs fit inside the shipped 300 ms window. ⛔⛔ THE TIMING IS THE WHOLE
+    // POINT: at 8 ms the three legs span 400 ms and the WINDOW refuses the path before
+    // `legMm` is ever reached, which would make this vector green for the wrong reason —
+    // exactly the trap the repaired BOWED fixture above was caught in. ⭐ Fast and small is
+    // the hostile case: it is what the leg threshold, and nothing else, has to refuse.
+    // ⚠ The margin is thin by design — a 3 mm excursion against a 6 mm leg — because that
+    // margin IS the safety of the gesture. Drop `evictShakeLegMm` to 3 and this goes red,
+    // which is the warning a hand would otherwise get by losing its alignments.
+    expect(run(shakePath(3, 5), SHIPPED, SHIPPED_NOISE_MM).verdict).toBeNull();
+  });
+
+  it("⛔ a LEISURELY reposition is refused at the shipped `windowMs` — the owner's argument", () => {
+    // ⭐⭐ THE FIXTURE IS SIZED TO THE DECISION, not to the guard. `evictShakeWindowMs` was
+    // halved from my 600 ms to the owner's 300 ms on 2026-09-17 with a stated reason: *"a
+    // leisurely reposition cannot accumulate into an eviction."* ⛔ 20 ms a sample ⇒ 400 ms
+    // a leg — a reposition that IS leisurely, and which the 600 ms window would have
+    // accepted as an eviction. So this vector goes red if the window is ever widened back,
+    // which the local `PARAMS` suite (running 600 ms itself) structurally cannot say.
+    // ⚠ The local 50 ms fixture is refused at BOTH tunings, so it pins nothing here.
+    expect(run(shakePath(20, 20), SHIPPED, SHIPPED_NOISE_MM).verdict).toBeNull();
+  });
+
+  it("⛔⛔ and STRAIGHTNESS holds at the shipped 0.45 — the bowed pair, re-measured", () => {
+    // ⭐ The same fixture as the repaired pair above, re-timed for the 300 ms window: three
+    // 96 ms legs, 288 ms end to end. ⛔ The BOUND MOVED with the config — 0.45 rather than
+    // 0.4 — so the bow that refuses had to move with it, and that is exactly the point of
+    // running the shipped numbers: 17 mm of bow measures **0.496**, refused, while 14 mm
+    // measures **0.409**, just inside 0.45 and accepted. ⚠ Twelve samples a leg, so both sit
+    // a little under the continuum `0.637 × bow / 20`; the fixture is sized to what the
+    // detector MEASURES, not to the closed form.
+    // ⚠ A detector tuned to 0.4 would refuse BOTH, and the suite above could not tell.
+    const bowed = bowedShake(20, 17, 12);
+    expect(run(bowed, SHIPPED, SHIPPED_NOISE_MM).verdict).toBeNull();
+    // ⭐ ...and straightness is the only reason, by the same substitution as above.
+    expect(run(bowed, { ...SHIPPED, straightness: 0.9 }, SHIPPED_NOISE_MM).verdict).not.toBeNull();
+    // ✅ The near-twin, just inside the shipped bound, still evicts.
+    expect(run(bowedShake(20, 14, 12), SHIPPED, SHIPPED_NOISE_MM).verdict).not.toBeNull();
   });
 });

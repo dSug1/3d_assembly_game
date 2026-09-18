@@ -322,3 +322,39 @@ export function turnDegrees3(a: Vec3, b: Vec3): number {
   const cos = Math.min(1, Math.max(-1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb)));
   return (Math.acos(cos) * 180) / Math.PI;
 }
+
+/**
+ * ⭐⭐⭐ **WHO THE SYMPATHETIC SWAY MAY MOVE — one predicate, both writers.**
+ *
+ * > *"The frozen objects should not wobble."* — the owner, 2026-09-17
+ *
+ * ⛔⛔ **THE MODEL WAS FROZEN AND THE PICTURE WAS NOT.** `object_model.ts` enforces `frozen` at
+ * its two writers, so a base plate's placement can never change — and the plate still rocked
+ * and swung on the glass, because the sway is a DISPLAY offset added *after* the model is
+ * read. ⚠ The guarantee stopped exactly at the boundary between the data and the picture, and
+ * nothing in either file said so. ⭐ Every argument for `frozen` applies to what a hand can
+ * SEE: a base plate that rocks when a part is dragged beside it is not a base plate.
+ *
+ * ⛔ **AND IT IS A FUNCTION RATHER THAN TWO `continue`s IN A RENDER LOOP.**
+ * `pioneer_cascade.ts` paid for that lesson already — *a RULE in a render file is a rule
+ * nothing can interrogate*. The same decision was written inline in `nudgeOthersWorld` and in
+ * `spinOthers`, so a third sway writer would have grown a third copy, and the day one of them
+ * was corrected the other would have stayed wrong. ⭐ `CONSTRAINTS` §4, the same reason
+ * `shakeParamsFrom` exists.
+ *
+ * @param body the candidate, or `null` for a mesh the object model does not know — a marker,
+ *   a contour, a highlight. ⚠ Those are tagged out of the sway anyway; refusing `null` here
+ *   means the rule does not depend on that tagging staying correct.
+ * @param heldId the body the finger is carrying, or `null` when a pinch or a rotation kicked
+ *   the sway with no holder at all.
+ */
+export function receivesSway(
+  body: { readonly id: string; readonly frozen?: boolean } | null,
+  heldId: string | null,
+): boolean {
+  if (body === null) return false;
+  // ⚠ The held body is excluded because it is already going that way — the sway is what the
+  // REST of the scene does about it.
+  if (heldId !== null && body.id === heldId) return false;
+  return body.frozen !== true;
+}

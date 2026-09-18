@@ -139,3 +139,47 @@ export function resolvePioneerTurns(
   }
   return { steps, baselines };
 }
+
+/**
+ * ⭐⭐⭐ **THE LINK LIST THE RESOLVER EATS, BUILT FROM THE INDEX.**
+ *
+ * ⛔⛔ **IT WAS AN INLINE `flatMap` IN `render/scene.ts` UNTIL 2026-09-17**, and an audit found
+ * what that cost: `tests/pioneer_release_wiring.test.ts` had to RE-TYPE the assembly to test it,
+ * and its copy gave **one mode to every link** while the product reads `alignModeOf` per link.
+ * ⚠ So the test that existed to prove the wiring could not have caught a wiring defect in the
+ * one field the wiring is about — a harness that recomputes what the product computed is a
+ * second implementation that can silently disagree.
+ *
+ * ⭐ `METHOD`, and this module's own header: *a RULE in a render file is a rule nothing can
+ * interrogate.* The resolver was extracted for that reason; the thing that FEEDS it had stayed
+ * behind.
+ *
+ * ⛔ The default matters and is stated here rather than at the call site: a body whose mode has
+ * been forgotten is treated as **`SNAPSHOT`**, the reading that RELEASES rather than the one
+ * that keeps rotating something. ⚠ A lost mode must fail safe toward *let go*.
+ *
+ * @param aligned every body that carries an alignment — `AlignmentLinks.alignedObjects()`.
+ * @param pioneerOf that body's Pioneer and the baseline it was last seen at. ⚠ The orientation
+ *   is a WORLD one; see `PioneerRef.orientation`.
+ * @param modeOf what the alignment MEANS for that body, or `undefined` if it is not known.
+ */
+export function followerLinksFrom(
+  aligned: readonly ObjectId[],
+  pioneerOf: (follower: ObjectId) => { readonly objectId: ObjectId; readonly orientation: Quat } | null,
+  modeOf: (follower: ObjectId) => AlignMode | undefined,
+): FollowerLink[] {
+  const out: FollowerLink[] = [];
+  for (const follower of aligned) {
+    const ref = pioneerOf(follower);
+    // ⚠ A body listed as aligned whose link has gone is skipped, not defaulted: the two are
+    // reconciled every frame by `prune`, and inventing a Pioneer here would outlive it.
+    if (ref === null) continue;
+    out.push({
+      follower,
+      pioneer: ref.objectId,
+      baseline: ref.orientation,
+      mode: modeOf(follower) ?? "SNAPSHOT",
+    });
+  }
+  return out;
+}

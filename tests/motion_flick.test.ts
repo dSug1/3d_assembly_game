@@ -1086,3 +1086,108 @@ describe("⛔⛔ stopping ON the boundary still counts as rest", () => {
     }
   });
 });
+
+// ⭐⭐⭐ ═══════════════════════════════════════════════════════════════════════════════════
+// ⛔⛔ THE SAMPLE THAT CONFIRMS REST IS STILL A SAMPLE — its travel is REAL and is emitted.
+// ═══════════════════════════════════════════════════════════════════════════════════════
+//
+// ⛔⛔ **FOUND BY AUDIT 2026-09-17, AND IT IS §1.1's FIFTH CORRECTION.** The `MOVING` branch
+// inside the band emitted raw travel on every sample — except the one on which the rest
+// clock happened to expire, which returned **zero** and re-centred the band. ⚠ That sample's
+// travel was not deferred, it was **destroyed**: up to two whole bands (7 mm at the shipped
+// 3.5 mm) of finger motion vanished from the gesture.
+//
+// ⭐⭐ **WHY NO HAND EVER REPORTED IT AND NO VECTOR EVER SAW IT**: the branch needs a
+// `pointermove` that lands after `restConfirmMs` (30 ms) of quiet but BEFORE the frame `tick`
+// that would have confirmed rest with no sample at all — a window at most one frame wide.
+// ⚠ So it is intermittent by construction: the same gesture, made twice, loses the travel
+// once. That is the report a hand cannot reproduce and a suite cannot schedule.
+//
+// ⭐⭐ THE FIX SEPARATES TWO THINGS THAT WERE ONE STATEMENT: *where the band now sits*
+// (`offset = 0`, re-centred — correct, and kept) and *what this sample travelled* (emitted,
+// because it was measured while the axis was MOVING). ⛔ `METHOD`: *a state transition and a
+// measurement are different quantities; a branch that returns one while deciding the other
+// will eventually drop it.*
+describe("⛔⛔ the rest-confirming sample's travel is EMITTED, not swallowed", () => {
+  const BAND = cfg.motionDeadbandMm;
+
+  /**
+   * Drive one axis out of the band, let it rest for just under `restConfirmMs`, then deliver
+   * ONE sample that both carries `reverseMm` of travel and lands after the clock expires.
+   */
+  const reversalOnTheConfirmingSample = (reverseMm: number) => {
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let t = 0;
+    m.push({ x, y: 400, t });
+    // ⭐ Out of the band, so the axis is MOVING and has paid its one band.
+    for (let i = 0; i < 4; i++) {
+      x += mmToPx(BAND);
+      t += 8;
+      m.push({ x, y: 400, t });
+    }
+    expect(m.current).toBe("MOVING");
+    // ⭐ Quiet samples INSIDE the band, stopping one sample short of `restConfirmMs`.
+    const anchor = x;
+    for (t += 8; t < cfg.restConfirmMs + 32; t += 8) m.push({ x: anchor, y: 400, t });
+    expect(m.current, "rest must not be confirmed yet").toBe("MOVING");
+    // ⛔ THE SAMPLE: a real reversal that arrives once the rest clock has expired.
+    m.push({ x: anchor - mmToPx(reverseMm), y: 400, t: t + 8 });
+    return pxToMm(m.step.dx);
+  };
+
+  it("⛔⛔ a reversal on that exact sample used to lose up to TWO BANDS of travel", () => {
+    // ⚠ 1.9 bands: large enough to be a deliberate flick of the finger, small enough that the
+    // offset still lands INSIDE the band and so takes the swallowing branch.
+    const emitted = reversalOnTheConfirmingSample(BAND * 1.9);
+    expect(emitted).toBeCloseTo(-BAND * 1.9, 6);
+  });
+
+  it("⭐ and the ordinary quiet sample is emitted too — the same branch, no special case", () => {
+    // ⚠ Noise-sized travel, which is what the branch sees in ordinary play. It is emitted
+    // for the same reason: every other sample of this drag was.
+    const emitted = reversalOnTheConfirmingSample(cfg.pointerNoiseMm);
+    expect(emitted).toBeCloseTo(-cfg.pointerNoiseMm, 6);
+  });
+
+  it("⛔⛔ a sample carrying more than a WHOLE BAND does not confirm rest at all", () => {
+    // ⭐⭐ THE SECOND HALF, AND IT IS THE ONE THAT KEEPS A DRAG ALIVE. Emitting the travel
+    // and still latching `STATIONARY` would stall the drag: the axis would have to re-earn
+    // its band before the next sample emitted anything. ⛔ A sample that moved further than
+    // one whole deadband IS motion, whatever the clock says — so the rest clock restarts
+    // instead. ⚠ No new tunable: it is the band, compared against itself.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let t = 0;
+    m.push({ x, y: 400, t });
+    for (let i = 0; i < 4; i++) {
+      x += mmToPx(BAND);
+      t += 8;
+      m.push({ x, y: 400, t });
+    }
+    const anchor = x;
+    for (t += 8; t < cfg.restConfirmMs + 32; t += 8) m.push({ x: anchor, y: 400, t });
+    m.push({ x: anchor - mmToPx(BAND * 1.9), y: 400, t: t + 8 });
+    expect(m.current, "a 6.65 mm sample is not a resting finger").toBe("MOVING");
+    // ⭐ And the drag continues at full rate, with no band re-paid.
+    m.push({ x: anchor - mmToPx(BAND * 1.9) - mmToPx(0.4), y: 400, t: t + 16 });
+    expect(pxToMm(m.step.dx)).toBeCloseTo(-0.4, 6);
+  });
+
+  it("⭐ rest is still reachable the ordinary way — by SILENCE", () => {
+    // ⚠ The guard above must not make `STATIONARY` unreachable: a finger that stops emits
+    // nothing, and `tick` is what confirms it. That is §1.1's own defect from 2026-09-16.
+    const m = new MotionTracker(cfg);
+    let x = 500;
+    let t = 0;
+    m.push({ x, y: 400, t });
+    for (let i = 0; i < 4; i++) {
+      x += mmToPx(BAND);
+      t += 8;
+      m.push({ x, y: 400, t });
+    }
+    expect(m.current).toBe("MOVING");
+    m.tick(t + cfg.restConfirmMs + 1);
+    expect(m.current).toBe("STATIONARY");
+  });
+});

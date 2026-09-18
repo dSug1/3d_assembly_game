@@ -198,15 +198,28 @@ class AxisBand {
       // would travel for ever and emit nothing.
       this.restingSinceMs ??= t;
       if (this.state === "MOVING") {
-        if (t - this.restingSinceMs >= restConfirmMs) {
+        // ⛔⛔ **A SAMPLE THAT CARRIES MORE THAN A WHOLE BAND IS MOTION, WHATEVER THE CLOCK
+        // SAYS.** ⭐ The rest clock measures how long this axis has been *inside* the band, and
+        // a finger can sit still for 30 ms and then whip back across the band in one sample:
+        // that sample satisfies the clock and is plainly not rest. ⚠ No new tunable — the
+        // band is compared against itself, which is the only length §1.1 has.
+        if (Math.abs(travel) > bandPx) {
+          this.restingSinceMs = t;
+        } else if (t - this.restingSinceMs >= restConfirmMs) {
           this.state = "STATIONARY";
           // ⭐ Re-centre where it came to rest, so the band is centred on the finger again
           // and the boundary chatter this confirmation absorbs cannot restart.
           this.offset = 0;
-          return 0;
         }
+        // ⛔⛔ **AND THE TRAVEL IS EMITTED EITHER WAY — AUDIT FIX, 2026-09-17.** This line
+        // used to be inside the `else`, so the one sample on which the rest clock happened to
+        // expire returned **zero** and its travel was destroyed rather than deferred: up to
+        // two bands, 7 mm at the shipped 3.5 mm, gone from the gesture.
         // ⚠ An axis already MOVING keeps emitting its raw travel even inside the band: it
         // has proven it is moving, and a wobble smaller than the band mid-drag is real.
+        // ⭐⭐ `METHOD`: *a state transition and a measurement are different quantities.* The
+        // branch decided WHERE THE BAND SITS and answered WHAT THIS SAMPLE TRAVELLED with the
+        // same `return`, so one of the two was always going to be wrong.
         return travel;
       }
       return 0;

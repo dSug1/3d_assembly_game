@@ -67,6 +67,15 @@ export interface PioneerRef {
    * alignment's `FOLLOW` all move the Pioneer, and comparing poses catches every one without
    * enumerating them. ⛔ The same discipline as `A15`'s raycast: *ask the state, not the
    * gesture.*
+   *
+   * ⛔⛔ **IT IS A *WORLD* ORIENTATION, THROUGH THE PARENT CHAIN — NOT `local`.** An audit on
+   * 2026-09-17 found the scene writing `local.orientation` here while `resolvePioneerTurns`
+   * compared it against `worldPlacementOf(…).orientation`. ⚠ The two agree exactly while every
+   * body is unparented, which is the whole scene before `3D2` — so the defect is silent today
+   * and fires on the first assembly: a parented Pioneer reads as *turned* by its parent's whole
+   * orientation on the very first frame, releasing every `SNAPSHOT` follower and spinning every
+   * `FOLLOW` one, with nothing having moved. ⭐ Said in the type, because *"an orientation"* is
+   * not one quantity.
    */
   readonly orientation: Quat;
 }
@@ -89,8 +98,34 @@ export class AlignmentLinks {
     follower: ObjectId,
     pioneer: ObjectId,
     pioneerFace: FaceId,
+    /** ⛔ The Pioneer's **WORLD** orientation — see `PioneerRef.orientation`. Never `local`. */
     pioneerOrientation: Quat,
-  ): void {
+  ): boolean {
+    // ⛔⛔⛔ **THE CYCLE CHECK LIVES HERE, NOT AT THE CALL SITE — AUDIT, 2026-09-17.**
+    //
+    // ⚠⚠ This class's header claimed `wouldCycle` *"makes the state unrepresentable"*. It did
+    // not: it made the state DETECTABLE, and only for a caller that remembered to ask. ⛔ The
+    // proof was in this module's own suite, where a vector built `a→b` then `b→a` through the
+    // public API to check the walk did not hang — constructing the illegal state to test the
+    // detector for it.
+    // ⭐⭐ `object_model.ts` already argues the general form for `frozen`: *a constraint
+    // enforced at the one place the quantity is stored is an INVARIANT; enforced anywhere else
+    // it is a convention, and the next caller added will not know about it.* A cycle here is
+    // worse than a wrong pose — `resolvePioneerTurns` is a fixed point over these links, so a
+    // ring of `FOLLOW` bodies takes each other's rotation for ever and the glass FREEZES.
+    // ⚠ The resolver's cap and the walk's own `seen` set both stay: they are now defence in
+    // depth rather than the only defence.
+    //
+    // ⛔ **BEFORE `unlink`, which is the whole subtlety.** `link` MOVES a link rather than
+    // adding one, so it begins by unlinking the follower — and a refusal that had already run
+    // that unlink would destroy a perfectly good alignment as a side effect of rejecting a
+    // different one. ⭐ Refused means *nothing happened*, not *nearly happened*.
+    //
+    // ⚠ The POLICY for what a cycling tap should do instead — the owner's *"the tap shall
+    // instead break the initial alignment"* — is the caller's, and `render/scene.ts` still asks
+    // `wouldCycle` first to carry it out. This is the floor under that policy, not a
+    // replacement for it.
+    if (this.wouldCycle(follower, pioneer)) return false;
     this.unlink(follower);
     this.forward.set(follower, {
       objectId: pioneer,
@@ -103,6 +138,7 @@ export class AlignmentLinks {
       this.reverse.set(pioneer, set);
     }
     set.add(follower);
+    return true;
   }
 
   /** ⭐ Forget a follower's alignment. ⚠ Safe to call for a body that has none. */
@@ -193,6 +229,12 @@ export class AlignmentLinks {
    * ⭐ This method makes the state **unrepresentable** instead, which is the better half of the
    * defence: `METHOD`'s *prefer the structure that cannot express the defect.* ⚠ The cap stays
    * anyway — two guards against a frozen screen is not one too many.
+   *
+   * ⛔⛔ **AND SINCE 2026-09-17 `link` CALLS THIS ITSELF, WHICH IS WHAT MAKES THE SENTENCE
+   * ABOVE TRUE.** It was written when the only caller was `render/scene.ts`, so the guarantee
+   * was really *"unrepresentable, provided every caller remembers to ask"* — a convention, not
+   * an invariant. ⚠ An audit found this module's own suite building `a→b→a` through the public
+   * API to test that the walk does not hang.
    *
    * ⚠ `follower === pioneer` answers `true`: a body aligned to itself is the degenerate cycle.
    */

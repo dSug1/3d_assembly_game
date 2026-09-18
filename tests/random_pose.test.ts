@@ -46,18 +46,51 @@ describe("⛔⛔ seededRotations — arbitrary, but recoverable", () => {
     }
   });
 
-  it("⛔⛔ AND THE DISTRIBUTION COVERS THE SPHERE — three Euler angles would NOT", () => {
-    // ⭐⭐ THE VECTOR THAT CATCHES THE PLAUSIBLE-BUT-WRONG IMPLEMENTATION. Three random Euler
-    // angles look random and cluster toward the poles of whichever axis is applied last, so a
-    // whole family of orientations would never appear in a debug scene — and a mechanism that
-    // failed only there would never be exercised.
-    // ⚠ Measured as coverage of the SIGN OCTANTS of a rotated axis: a clustered distribution
-    // misses octants; a uniform one reaches all eight in a few hundred draws.
-    const octants = new Set<string>();
-    for (const q of seededRotations(4242, 400)) {
+  it("⛔⛔ AND THE DISTRIBUTION IS UNIFORM — three Euler angles are NOT", () => {
+    // ⛔⛔⛔ **THIS VECTOR USED TO MEASURE SOMETHING THAT CANNOT TELL THE TWO APART.** It
+    // claimed to *"catch the plausible-but-wrong implementation"* by counting how many SIGN
+    // OCTANTS a rotated axis reached in 400 draws, and asserting all eight.
+    // ⚠ Measured 2026-09-17: three uniform Euler angles reach all eight octants too, easily.
+    // ⭐ Of course they do — clustering toward the poles of the last axis still scatters points
+    // across every octant; what changes is the DENSITY, and a set of visited octants throws
+    // exactly that away. ⛔ So the vector was green against both the right answer and the wrong
+    // one it named.
+    //
+    // ⭐⭐ **THE STATISTIC THAT DOES SEPARATE THEM IS ARCHIMEDES'.** If the rotation is uniform
+    // on SO(3), the image of a fixed unit vector is uniform on the SPHERE, and the `z` component
+    // of a uniform point on a sphere is uniform on [−1, 1] — equal-width bands of `z` have
+    // equal area. ⚠ That is the property the Euler construction breaks, and it breaks it
+    // loudly. Measured over 4000 seeded draws, eight equal bands:
+    //
+    //   Shoemake (this code)  476 485 476 564 481 483 501 534   — flat
+    //   three Euler angles    941 412 358 340 318 324 419 888   — the poles carry twice
+    //
+    // ⚠ A MEAN ROTATION ANGLE was tried first and rejected: 125.8° against 128.1° is well
+    // inside the noise of any fixture this size. ⭐ `METHOD`: *state the statistic and check it
+    // separates the answers BEFORE writing the threshold* — mistake shape 1, in a test.
+    const BINS = 8;
+    const DRAWS = 4000;
+    const counts = new Array<number>(BINS).fill(0);
+    for (const q of seededRotations(4242, DRAWS)) {
       const v = qRotate(q, [0, 0, 1] as Vec3);
-      octants.add(`${v[0] > 0}${v[1] > 0}${v[2] > 0}`);
+      const z = Math.max(-1, Math.min(1, v[2]));
+      counts[Math.min(BINS - 1, Math.floor(((z + 1) / 2) * BINS))]! += 1;
     }
-    expect(octants.size).toBe(8);
+    const expected = DRAWS / BINS;
+    for (const [i, c] of counts.entries()) {
+      // ⚠ ±25 % of the expected count. ⛔ Wide enough that the seed is not load-bearing, and
+      // far tighter than the 1.9× and 0.64× the Euler construction produces at the ends.
+      expect(c, `band ${i} of ${counts.join(",")}`).toBeGreaterThan(expected * 0.75);
+      expect(c, `band ${i} of ${counts.join(",")}`).toBeLessThan(expected * 1.25);
+    }
+  });
+
+  it("⚠ and every quaternion is CANONICAL, like everything else in the project", () => {
+    // ⛔ `vec.ts` states the contract in capitals — *every quaternion leaving this module is
+    // canonicalised to `w >= 0`* — because `q` and `−q` are the same rotation and the previous
+    // project lost a day to the difference. ⚠ This module was outside that guarantee until
+    // 2026-09-17. Harmless in practice, and precisely the kind of exception that stops being
+    // harmless when a later reader trusts the contract.
+    for (const q of seededRotations(7, 64)) expect(q[0]).toBeGreaterThanOrEqual(0);
   });
 });

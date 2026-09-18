@@ -33,7 +33,11 @@ import {
   type Vec3,
 } from "../src/core/vec";
 import type { Placed } from "../src/core/mate_connector";
-import { worldPose } from "../src/core/mate_connector";
+// ⛔ `worldPose` is deliberately NOT imported here any more. It was imported to BUILD the
+// expectation of the connector vector below, which made that vector unable to fail; the
+// repair computes the transform by hand instead, and `worldPose` itself is now pinned
+// against hand-written literals in `tests/mate_connector.test.ts`. ⚠ Re-importing it into
+// an expectation is the mistake this line exists to make visible.
 import {
   MAX_TREE_DEPTH,
   attach,
@@ -206,6 +210,25 @@ describe("worldPlacementOf — the chain, computed independently", () => {
     expectPlaced(worldPlacementOf(world, "root")!, root.local);
   });
 
+  // ⛔⛔ **REPAIRED 2026-09-17: THIS VECTOR COULD NOT FAIL.** It built its expectation by
+  // calling `worldPose(connector, chainPose)` — the very function `connectorWorldPose`
+  // delegates to — so the product was judging itself.
+  //
+  // ⭐⭐ THE TRAP, WRITTEN OUT, because it is a named mistake shape on this project and it
+  // looks RIGHT: the two sides were genuinely different code paths (`connectorWorldPose`
+  // walks the tree; the expectation composed the chain by hand), so the vector really did
+  // test the LOOKUP. What it could not test was the TRANSFORM, because both paths ended in
+  // the same call — and an audit proved it by deleting the rotation of `c.position` inside
+  // `worldPose`. Both sides moved together. The whole 716-vector suite stayed green.
+  // ⛔ A tautological vector is not one that looks circular; it is one where the expected
+  // side and the actual side share a line of code that can be wrong.
+  //
+  // ✅ THE REPAIR: the expectation is now the transform written out — `owner.position +
+  // R(local)` for the point, `R(local)` for the two directions — exactly as the FACE vector
+  // immediately below already did it. ⭐ That neighbour is the reason the face path had no
+  // hole and the connector path did; the difference was never deliberate.
+  // ⚠ `composePlacement` on the expected side is fine and stays: it is pinned by its own
+  // vectors against literals AND against three named wrong compositions, above.
   it("a connector on a LEAF lands where the composed chain puts it", () => {
     const { root, mid, leaf } = chainOfThree();
     const connector = {
@@ -219,11 +242,17 @@ describe("worldPlacementOf — the chain, computed independently", () => {
     };
     const w = makeWorld([root, mid, { ...leaf, connectors: [connector] }]);
     const chainPose = composePlacement(composePlacement(root.local, mid.local), leaf.local);
-    const expected = worldPose(connector, chainPose);
     const actual = connectorWorldPose(w, "leaf", "c1")!;
-    expectVec(actual.position, expected.position);
-    expectVec(actual.normal, expected.normal);
-    expectVec(actual.tangent, expected.tangent);
+    // ⭐ A POINT: rotated into the chain's frame, THEN translated.
+    expectVec(actual.position, add(chainPose.position, qRotate(chainPose.orientation, connector.position)));
+    // ⭐ DIRECTIONS: rotated and NOT translated.
+    expectVec(actual.normal, qRotate(chainPose.orientation, connector.normal));
+    expectVec(actual.tangent, qRotate(chainPose.orientation, connector.tangent));
+    // ⚠ And the position must NOT be the un-rotated sum — the exact mutation that survived.
+    // Asserted as a live counter-example rather than trusted to the assertions above, because
+    // "it would have failed" is precisely the claim the old vector got wrong.
+    const dropped = add(chainPose.position, connector.position);
+    expect(Math.hypot(...[0, 1, 2].map((i) => actual.position[i]! - dropped[i]!))).toBeGreaterThan(0.05);
   });
 
   it("a FACE CENTRE on a leaf composes through the chain — this is what 6bis reads", () => {
@@ -561,5 +590,103 @@ describe("⛔⛔ frozen — an invariant at the writers, not a rule at the call 
     const w = makeWorld([loose]);
     const after = setWorldPlacement(w, "plate", { position: [0.5, 0, 0], orientation: IDENTITY });
     expect(worldPlacementOf(after, "plate")!.position).toEqual([0.5, 0, 0]);
+  });
+});
+
+/**
+ * ⭐⭐⭐ **FROZEN AND THE ASSEMBLY TREE — the owner's rule, 2026-09-17: PARENT YES, CHILD NEVER.**
+ *
+ * ⛔⛔⛔ **AN AUDIT FOUND THE GUARANTEE STOPPED AT THE TREE OPERATIONS.** `object_model.ts`'s
+ * header claims `frozen` is enforced *"at the two writers"* so that it *"holds for rules that
+ * do not exist yet"* — and `attach`, `reroot` and `detach` are three more writers of a body's
+ * `local` that it did not cover. ⚠ Measured before the fix: attaching the plate under a part
+ * and then moving that part moved the plate to `[5, −1, 0]`. The plate's own placement was
+ * never written; its PARENT's was, and a child's placement is relative.
+ *
+ * ⭐⭐ **WHY *PARENT YES, CHILD NEVER* IS THE RIGHT SHAPE AND NOT JUST THE STRICT ONE.** A base
+ * plate is the thing other parts mount ONTO — so it must be able to be a parent, or `3D2` could
+ * not assemble anything to it. ⛔ What must never happen is the plate hanging off something that
+ * moves. ⚠ The distinction is exactly the one the `frozen` doc already draws for alignments:
+ * *a frozen body may still be a PIONEER* — everything aligns to it, and nothing aligns it.
+ *
+ * ⭐ `METHOD`: *a constraint enforced at the one place the quantity is stored is an invariant.*
+ * The quantity here is `local`, and it has five writers, not two.
+ */
+describe("⛔⛔ frozen and the tree — a frozen body is a PARENT, never a CHILD", () => {
+  const frozenPlate = (): SceneObject => ({
+    id: "plate",
+    local: { position: [0, -0.24, 0], orientation: IDENTITY },
+    parent: null,
+    faces: [{ id: "+y", centre: [0, 0.012, 0], normal: [0, 1, 0] }],
+    connectors: [],
+    constraints: [],
+    frozen: true,
+  });
+  const part = (id: string, at: Vec3): SceneObject => ({
+    id,
+    local: { position: at, orientation: IDENTITY },
+    parent: null,
+    faces: [{ id: "+y", centre: [0, 0.04, 0], normal: [0, 1, 0] }],
+    connectors: [],
+    constraints: [],
+  });
+
+  it("⛔⛔⛔ ATTACHING A FROZEN BODY AS A CHILD IS REFUSED", () => {
+    const w = makeWorld([frozenPlate(), part("p", [0, 0, 0])]);
+    const after = attach(w, "plate", "p");
+    expect(after.objects.get("plate")!.parent, "the plate hangs off nothing").toBeNull();
+    expect(after).toBe(w); // ⭐ the world is returned UNCHANGED, not rebuilt identically
+  });
+
+  it("⛔⛔⛔ AND THAT IS WHAT STOPS A MOVING PARENT FROM CARRYING IT", () => {
+    // ⭐⭐ THE DEFECT, MEASURED. Before the fix this sequence put the plate at `[5, −1, 0]`
+    // without one line ever writing the plate's placement.
+    let w = makeWorld([frozenPlate(), part("p", [0, -1, 0])]);
+    w = attach(w, "plate", "p");
+    w = setWorldPlacement(w, "p", { position: [5, -1, 0], orientation: IDENTITY });
+    expect(worldPlacementOf(w, "plate")!.position).toEqual([0, -0.24, 0]);
+  });
+
+  it("⭐⭐ but a frozen body IS allowed to be a PARENT — a base plate is for mounting on", () => {
+    // ⛔ The half that must NOT be refused, or `3D2` could never assemble anything to the plate.
+    const w = makeWorld([frozenPlate(), part("p", [0, 0, 0])]);
+    const after = attach(w, "p", "plate");
+    expect(after.objects.get("p")!.parent).toBe("plate");
+    // ⚠ And attaching moved nothing, as `attach` promises.
+    expect(worldPlacementOf(after, "p")!.position).toEqual([0, 0, 0]);
+  });
+
+  it("⛔⛔ REROOTING ONTO A CHILD OF A FROZEN BODY IS REFUSED", () => {
+    // ⭐⭐ THE SUBTLER HALF. `reroot` inverts every edge on the path to the old root, so
+    // re-rooting onto a part mounted on the plate would make the PLATE a child of that part —
+    // reaching the forbidden state by a different door, and rewriting `plate.local` on the way.
+    let w = makeWorld([frozenPlate(), part("p", [0, 0, 0])]);
+    w = attach(w, "p", "plate");
+    const after = reroot(w, "p");
+    expect(after.objects.get("plate")!.parent, "the plate must not become a child").toBeNull();
+    expect(after.objects.get("p")!.parent).toBe("plate");
+    expect(after.objects.get("plate")!.local.position).toEqual([0, -0.24, 0]);
+  });
+
+  it("⭐ rerooting that does NOT involve a frozen body still works", () => {
+    // ⚠ The guard must be narrow: `reroot` is called every frame for the held object, and a
+    // blanket refusal would silently break `parent ≠ root` for the whole game.
+    let w = makeWorld([part("a", [0, 0, 0]), part("b", [1, 0, 0])]);
+    w = attach(w, "b", "a");
+    const after = reroot(w, "b");
+    expect(after.objects.get("b")!.parent).toBeNull();
+    expect(after.objects.get("a")!.parent).toBe("b");
+    // ⛔ And it moved nothing, which is reroot's whole correctness argument.
+    expect(worldPlacementOf(after, "a")!.position).toEqual([0, 0, 0]);
+    expect(worldPlacementOf(after, "b")!.position).toEqual([1, 0, 0]);
+  });
+
+  it("⛔ DETACHING a frozen body is allowed — it removes a link, it does not move anything", () => {
+    // ⚠ Stated rather than assumed. `detach` writes `local` too, but only to the body's own
+    // CURRENT world placement, so a frozen body comes out exactly where it was. ⭐ Refusing it
+    // would be a guard that protects nothing and blocks a cleanup path.
+    const w = makeWorld([frozenPlate()]);
+    const after = detach(w, "plate");
+    expect(worldPlacementOf(after, "plate")!.position).toEqual([0, -0.24, 0]);
   });
 });

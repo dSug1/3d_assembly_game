@@ -23,6 +23,8 @@ import {
 import { MotionTracker } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
 import type { Vec3 } from "../src/core/vec";
+import { gravityFrame } from "../src/input/gravity_frame";
+import { WORLD_DOWN } from "../src/core/object_model";
 
 const cfg = DEFAULT_CONFIG;
 
@@ -138,16 +140,71 @@ describe("⛔ the ring config is validated", () => {
   });
 
   it("REFUSES a negative radius", () => {
-    expect(() => new MotionTracker({ ...cfg, orbitTopRadiusM: -0.1 })).toThrow(/negative/);
+    expect(() => new MotionTracker({ ...cfg, orbitTopRadiusM: -0.1 })).toThrow(/POSITIVE/);
   });
 
-  it("⭐ ACCEPTS a top radius of zero — directly overhead is a legal orbit", () => {
-    const c = { ...cfg, orbitTopRadiusM: 0 };
-    expect(() => new MotionTracker(c)).not.toThrow();
-    const pose = orbitOffset(c, 0, 1, 1);
-    expect(Math.hypot(pose.offsetM[0], pose.offsetM[2])).toBeCloseTo(0, 9);
-    // ⚠ And the camera is still a real distance away, because the HEIGHT carries it.
-    expect(pose.radiusM).toBeGreaterThan(0.1);
+  it("⛔⛔ REFUSES a radius of ZERO — and this vector used to assert the opposite", () => {
+    // ⛔⛔⛔ **THE MOST INSTRUCTIVE VECTOR IN THIS FILE, BECAUSE IT WAS WRONG AND GREEN.**
+    // It read *"⭐ ACCEPTS a top radius of zero — directly overhead is a legal orbit"*, and
+    // every word of its reasoning was defensible **about the orbit surface alone**: the ring
+    // collapses to the vertical axis, the height still carries the camera a real distance
+    // away, and nothing in `orbit.ts` divides by the radius.
+    //
+    // ⛔⛔ **MEANWHILE `render/scene.ts` ASSERTED THE OPPOSITE, IN A THROW**:
+    // `requireGestureFrame` raises *"the camera is looking exactly along gravity ... the
+    // orbit surface is supposed to make this unreachable — see A7."* ⚠ Two components, two
+    // invariants, pointing in opposite directions, each with a comment explaining itself.
+    // ⭐⭐ Composed — which nobody had done — `?orbitTopRadiusM=0` plus a drag to the top ring
+    // makes **every press throw**: `gravityFrame` returns `null` there, because the roll axis
+    // is *the view direction flattened onto the ground* and that is the zero vector.
+    // ⛔ `METHOD`: *a composition is a thing to MEASURE, not an emergent property* — mistake
+    // shape 4, found by audit rather than by a hand, in a pair of files that never met.
+    expect(() => new MotionTracker({ ...cfg, orbitTopRadiusM: 0 })).toThrow(/POSITIVE/);
+    expect(() => new MotionTracker({ ...cfg, orbitBottomRadiusM: 0 })).toThrow(/POSITIVE/);
+    expect(() => new MotionTracker({ ...cfg, orbitMiddleRadiusM: 0 })).toThrow(/POSITIVE/);
+  });
+});
+
+/**
+ * ⭐⭐⭐ **THE COMPOSITION `requireGestureFrame` HAS ALWAYS CLAIMED, NOW MEASURED.**
+ *
+ * ⛔⛔ `scene.ts` throws if the camera ever looks along gravity and says the orbit surface
+ * makes that *"unreachable"*. ⚠ That claim spans two modules and was asserted in prose in one
+ * of them, which is exactly the shape `A7` was withdrawn over: *every part had green vectors
+ * and the composition had none.* ⭐ This sweeps the whole reachable surface and asks the
+ * gravity frame directly.
+ */
+describe("⭐⭐ the orbit surface NEVER reaches a pole — the frame exists everywhere on it", () => {
+  it("⛔ gravityFrame is non-null at every (yaw, elevation, zoom) the surface can produce", () => {
+    for (let yawStep = 0; yawStep < 12; yawStep++) {
+      const yaw = (yawStep / 12) * 2 * Math.PI;
+      for (let vStep = 0; vStep <= 40; vStep++) {
+        // ⚠ Deliberately driven OUTSIDE [0, 1] as well: the clamp is part of what is claimed.
+        const v = -0.25 + (vStep / 40) * 1.5;
+        for (const zoom of [0.5, 1, 2]) {
+          const pose = orbitOffset(cfg, yaw, v, zoom);
+          // ⭐ The camera sits at `offsetM` from the target and looks back at it.
+          const viewAxis: [number, number, number] = [
+            -pose.offsetM[0],
+            -pose.offsetM[1],
+            -pose.offsetM[2],
+          ];
+          const frame = gravityFrame(viewAxis, WORLD_DOWN);
+          expect(frame, `yaw=${yaw.toFixed(2)} v=${v.toFixed(3)} zoom=${zoom}`).not.toBeNull();
+        }
+      }
+    }
+  });
+
+  it("⭐ and the horizontal reach never collapses, which is WHY the frame exists", () => {
+    // ⚠ The frame dies when the view axis is vertical, i.e. when the horizontal offset is
+    // zero. ⛔ Stating it as a DISTANCE makes the margin visible instead of binary.
+    let worst = Infinity;
+    for (let vStep = 0; vStep <= 100; vStep++) {
+      const pose = orbitOffset(cfg, 0, vStep / 100, 1);
+      worst = Math.min(worst, Math.hypot(pose.offsetM[0], pose.offsetM[2]));
+    }
+    expect(worst).toBeGreaterThan(0.05);
   });
 });
 

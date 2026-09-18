@@ -55,9 +55,22 @@ export function centreDistance(world: World, a: ObjectId, b: ObjectId): number |
  * ⭐ The Pioneer answers *which way is up*; the target answers *what am I docking with*, and
  * keeping them independent is what lets a hand align against one part and assemble to another.
  *
- * ⚠⚠ **TIES KEEP THE CURRENT TARGET.** Two objects at the same distance would otherwise swap
- * every frame as the last bit of a float wobbled — and the target drives a highlight. ⭐
- * Hysteresis by MEMORY rather than by a second threshold: no number to tune, one sentence.
+ * ⚠⚠ **AN EXACT TIE KEEPS THE CURRENT TARGET, AND THAT IS ALL IT DOES.**
+ *
+ * ⛔⛔ **THIS COMMENT CLAIMED MORE THAN THE CODE DELIVERS AND WAS CORRECTED BY AUDIT,
+ * 2026-09-17.** It said *"two objects at the same distance would otherwise swap every frame as
+ * the last bit of a float wobbled"* and called the rule *"hysteresis by MEMORY rather than by a
+ * second threshold"*. ⚠ The rule compares with `===`, so it holds the incumbent only when the
+ * two distances are bit-for-bit equal: an incumbent at `0.1 + 1e-13` loses to a challenger at
+ * `0.1`, measured. ⭐ So it is a TIE-BREAK, not hysteresis, and it does not do the job the
+ * sentence promised.
+ *
+ * ⚠ **Left as it is, deliberately.** Real hysteresis needs a margin — *how much nearer must a
+ * challenger be to take the target* — and that is a distance in millimetres that no hand has
+ * judged. ⛔ `IN5`: a guessed number has been wrong every single time here. ⭐ The honest state
+ * is a rule that does what it says and a comment that does not oversell it; if a device pass
+ * reports the highlight flickering between two candidates, this is the place, and the fix is a
+ * slider shipped WITH the rule.
  *
  * ⚠ *Nearest* is my choice and not the owner's — `D46` §6.1 records that, and a device pass can
  * overturn it.

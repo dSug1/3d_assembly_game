@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the account of each defect counted in `QUEUE.md`'s ledger
 > **READ IF** · you are about to build anything in the input or render layers
-> **LAST VERIFIED** — 2026-09-16
+> **LAST VERIFIED** — 2026-09-17
 
 ⭐⭐ **WHY THIS FILE EXISTS.** `QUEUE.md` keeps the ledger's **counts**, so the number has one
 home and stops drifting. ⛔ The *stories* grew to 7 KB inside a front door with a byte budget,
@@ -115,3 +115,23 @@ not actually fight — both are world rotations, so they COMPOSE. ✅ The twist 
 ⭐ Worth carrying: when two rules seem to need arbitration, check whether they compose first.
 The arbitration I reached for cost a visible feature and hid it in a way that looked like it
 had never been built.
+
+---
+
+## ⛔⛔ THE AUDIT OF 2026-09-17 IS A SEPARATE COLUMN, AND DELIBERATELY SO
+
+⭐ Twenty-one defects and fragilities were found on 2026-09-17 by **reading the source**, not by
+a finger: the full account is [`AUDIT_2026-09-17.md`](AUDIT_2026-09-17.md).
+
+⛔⛔ **NONE OF THEM IS ADDED TO THE `BY FINGER` TOTAL, WHICH STAYS AT 48.** That number means
+something precise — *found by a hand, invisible to a green suite* — and it is the whole of this
+project's argument for spending sessions on the glass. ⚠ Diluting it with findings of a
+different KIND would destroy the only statistic that argument rests on.
+
+⭐⭐ **AND THE TWO KINDS ARE GENUINELY DIFFERENT, which is the more useful observation.** Every
+audit finding was *latent, silent, or armed for later* — a count that would fall through on the
+first mate, a frame mismatch that fires on the first assembly, a boot mode contradicted by every
+document. ⚠ Not one is something a hand would have reported that day. ⛔ So the two methods do
+not compete: **the device finds what is wrong now; a read finds what is wrong on the day
+something else changes.** ⭐ Ten vectors that *could not fail* were the audit's largest single
+class, and no device pass can ever find those.

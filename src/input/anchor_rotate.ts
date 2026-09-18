@@ -135,7 +135,15 @@ export function constrainedRollAngle(
   const v = normalize(frame.viewAxis);
   if (!a || !v) return null;
   const c = dot(a, v);
-  if (c === 0) return null; // square to the view: no component to roll about
+  // ⛔⛔ **SQUARE TO WITHIN ARITHMETIC, NOT SQUARE TO THE BIT** — audit fix, 2026-09-17. This
+  // read `c === 0`: an exact float comparison on a dot product of two vectors that have each
+  // been normalised by a division. ⚠ An exactly-zero dot is measure-zero, so the axis a camera
+  // actually reaches is square to within 1e-17 and the guard waved it through — at FULL rate,
+  // with the sign taken from whichever way the last bit fell. ⭐ *A guard that cannot fire is
+  // not a guard*, which is this validator's own phrase turned on one of its neighbours.
+  // ⚠ 1e-9 is the epsilon `nearSideScreenDirection` already uses for the same degeneracy, so
+  // this is ONE arithmetic tolerance rather than a new number.
+  if (Math.abs(c) <= 1e-9) return null; // square to the view: no component to roll about
   // ⚠ `screen_rotate.screenRollRotation` turns by `−degClockwise` about the view axis.
   // Matching it keeps ONE definition of which way a circle turns an object.
   return ((-degClockwise * Math.PI) / 180) * Math.sign(c);

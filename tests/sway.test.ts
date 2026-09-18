@@ -12,6 +12,7 @@ import {
   swayScale,
   swayWorldDirection,
   turnDegrees,
+  receivesSway,
   SWAY_SCALE_MIN,
   SWAY_SCALE_MAX,
   SpinSwayWatcher,
@@ -304,5 +305,49 @@ describe("the rotation vector", () => {
     expect(turnDegrees3([1, 0, 0], [1, 0, 0])).toBeCloseTo(0, 9);
     expect(turnDegrees3([1, 0, 0], [-1, 0, 0])).toBeCloseTo(180, 9);
     expect(turnDegrees3([0, 0, 0], [1, 0, 0])).toBe(0);
+  });
+});
+
+/**
+ * ⭐⭐⭐ **WHO THE SWAY IS ALLOWED TO MOVE — the owner's rule, 2026-09-17.**
+ *
+ * > *"The frozen objects should not wobble."*
+ *
+ * ⛔⛔ **THE MODEL WAS FROZEN AND THE PICTURE WAS NOT, WHICH IS A DISTINCTION NOBODY MADE
+ * UNTIL AN AUDIT LOOKED.** `object_model.ts` enforces `frozen` at its two writers, so the base
+ * plate's PLACEMENT could never change — and it visibly wobbled and swung anyway, because the
+ * sympathetic sway is a DISPLAY offset added after the model is read. ⚠ Every reason `frozen`
+ * exists applies to the picture just as much: a base plate that rocks when a part is dragged
+ * is not a base plate, whatever the data says.
+ *
+ * ⭐⭐ **AND THE PREDICATE LIVES HERE RATHER THAN IN THE RENDER LOOP** — `pioneer_cascade.ts`'s
+ * header states the reason in the project's own words: *a RULE in a render file is a rule
+ * nothing can interrogate.* The two sway writers had this decision written twice, inline, as
+ * two `continue` statements; a third writer would have made its own third copy.
+ */
+describe("⛔⛔ the sway moves neither the HELD body nor a FROZEN one", () => {
+  it("⭐ an ordinary body receives the kick", () => {
+    expect(receivesSway({ id: "a" }, "b")).toBe(true);
+    expect(receivesSway({ id: "a", frozen: false }, "b")).toBe(true);
+  });
+
+  it("⛔ the HELD body does not — it is already going that way", () => {
+    expect(receivesSway({ id: "a" }, "a")).toBe(false);
+  });
+
+  it("⛔⛔ a FROZEN body does not — the owner's rule", () => {
+    expect(receivesSway({ id: "plate", frozen: true }, "a")).toBe(false);
+  });
+
+  it("⛔ and it is frozen even when nothing is held", () => {
+    // ⚠ The sway is also kicked by a pinch and by a rotation, where there may be no holder.
+    expect(receivesSway({ id: "plate", frozen: true }, null)).toBe(false);
+    expect(receivesSway({ id: "a" }, null)).toBe(true);
+  });
+
+  it("⛔ a body with no id at all is refused rather than swayed", () => {
+    // ⚠ A mesh the model does not know — a marker, a contour — must not be moved by a rule
+    // written about bodies. ⭐ `null` is the shape `idOf.get(mesh)` returns for exactly those.
+    expect(receivesSway(null, "a")).toBe(false);
   });
 });
