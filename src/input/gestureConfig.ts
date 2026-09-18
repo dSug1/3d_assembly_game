@@ -608,7 +608,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   gainTranslateAxis: 1,
   // ⭐⭐ A6. **1.0 is the COMPUTED value** — it moves the object as far into the scene as
   // rule 6 moves it across, from the same tracking factor pointed along the ground.
-  // ⛔⛔ THE SHIPPED DEFAULT IS 3.0, SET BY A HAND, AND THE GAP IS THE FINDING.
+  // ⛔⛔ THE SHIPPED DEFAULT WAS 3.0, SET BY A HAND — ⚠ REVERSED 2026-09-18, see below.
   // Depth is VISUALLY FORESHORTENED: an object pushed along the ground covers world
   // distance while its picture barely changes, so a world-consistent gain reads as
   // sluggish even though it is, in metres, exactly as strong as a drag. ⭐ Equal WORLD
@@ -618,7 +618,27 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // this is the second time a COMPUTED one has been moved too** — the first was rule 6's
   // phantom lead, cut to a fifteenth of its landmark. A computation tells you where a
   // meaningful zero is; it does not tell you where a hand wants to stand.
-  gainTranslateDepth: 3,
+  // ⭐⭐⭐ **1.17 — THE OWNER'S NUMBER, 2026-09-18**: *"set the default depth gain to 1.17
+  // (same as screen-plane gain)."* ⛔ It REPLACES the 3.0 argued for immediately above, and
+  // the paragraph is kept because a reversed judgement is worth more than a deleted one.
+  //
+  // ⚠⚠ **WHAT PROMPTED IT WAS A REPORT ABOUT FEEL, NOT ABOUT TRAVEL**: *"the depth
+  // translation by the second touchpoint is less lerp and inertia than the translation in x and
+  // y by the first touchpoint — did we wire differently the lerp and inertia for each
+  // touchpoint?"* ✅ **No**: there is ONE follower per body, over all three world axes, with one
+  // set of constants, and it cannot tell which finger moved the target.
+  // ⭐⭐ The asymmetry was the same foreshortening the 3.0 note describes, read the other way
+  // round: depth covers world distance that barely changes the picture, so the follower's lag
+  // is just as real in metres and much smaller on screen — which reads as *less inertia*.
+  // ⚠ Matching the gain does NOT add inertia; it makes a millimetre of finger mean the same
+  // travel either way. If the lag still looks different afterwards, that is the foreshortening
+  // and no gain can equalise it — only a depth-aware lead could, and none is built.
+  //
+  // ⭐ **IT ALSO MAKES `depth_translate.ts`'s HEADER TRUE AGAIN.** That file claims *"a given
+  // finger travel moves the object as far INTO the scene as it would move it ACROSS"* — which
+  // was false by a factor of 2.56 for as long as the two gains differed. ⛔ A comment that
+  // states an invariant the constants break is the shape this project keeps paying for.
+  gainTranslateDepth: 1.17,
   // ⚠ Both placeholders, and a guessed number has been wrong every time on this project.
   // ±35% is a guess at how closely a hand holds two fingers in step.
 
