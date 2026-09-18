@@ -437,6 +437,30 @@ export interface GestureConfig {
    */
   captureOffsetMm: number;
   /**
+   * ⭐⭐⭐ **MAY A HELD **PIONEER** TRANSLATE?** `1` yes (today's behaviour), `0` no (`D51`).
+   *
+   * > *"I want to have a flag to toggle on or off the translation of the Pioneer object in this
+   * > case"* — the owner, 2026-09-18
+   *
+   * ⛔ At `0`, two touchpoints on a Pioneer and its Follower give: the **Follower translates**
+   * exactly as now, whatever the movement mode; the **Pioneer does not move at all**; and the
+   * finger on the Pioneer drives the Follower's **roll (x) and depth (y) together**.
+   * ⚠ Both axes at once is deliberate and is NOT what a second touchpoint on a singly-held body
+   * does — `input/pinned_pioneer.ts` argues why the two configurations differ.
+   *
+   * ⚠⚠ **A NUMBER, NOT A BOOLEAN, AND ONLY BECAUSE OF THE MENU.** Every control in the tuning
+   * panel is a numeric slider, and the fork selector took the same 0/1 shape for the same reason
+   * (`D26`). ⛔ The validator refuses anything between, so a half-set flag cannot masquerade as
+   * the default.
+   *
+   * ⚠⚠ **AND THIS PROJECT HAS DELETED EVERY FLAG IT HAS BUILT** — `D26`→`D28`, `D29`→`D40`,
+   * `D41`→`D42`, each within days, because *a dormant fork is a trap*. ⭐ That is not an argument
+   * against this one: those were built to let a hand COMPARE, and every one was deleted the day
+   * the hand chose. Expect the same here — the flag is how the comparison is made, not a setting
+   * the game ships with two of.
+   */
+  pioneerTranslates: number;
+  /**
    * Degrees. How near parallel the alignment axis must be to one of the target's face
    * normals for `A16`'s condition 1 to hold.
    * ⚠ A DIFFERENT QUESTION from the (unbuilt) snap threshold even though both are angular
@@ -515,9 +539,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // number nobody had ever chosen — which is the whole argument for the slider.
   gainRotateFree: 0.07,
   // ⚠ A GUESS, equal to `gainRotateFree` on purpose: one free DOF should not feel like a
-  // different control from three. ⛔ It carries the value the wired gain had (0.07), NOT the
-  // 0.6 this name was declared with and nobody ever ran — keeping the number that has at
-  // least been through a build, rather than the one that was pure paper.
+  // different control from three. ⛔ It carried the value the wired gain had (0.07), NOT the
+  // 0.6 this name was declared with and nobody ever ran.
+  // ⚠⚠ **400 rad/mm WAS TRIED AND REVERTED THE SAME HOUR, 2026-09-18** — the owner asked for
+  // it as a default with a 0–500 slider, then asked for both back. ⛔ Kept as a one-line record
+  // rather than a dossier: nothing was MEASURED, so it is not a rejected experiment.
+  // ⭐ What the attempt is worth remembering for: the near-side direction is a UNIT screen
+  // vector, so this really is radians per millimetre — 400 would be 63 full turns per
+  // millimetre, which no hand could want. ⚠ If the anchored twist still feels sluggish at 0.07,
+  // the gain is the wrong suspect and the thing to chase is what OVERWRITES the twist
+  // downstream (the alignment solve re-projecting it, as the snap once ate the roll).
   gainRotateConstrained: 0.07,
   // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
@@ -729,6 +760,14 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // and this is a gap between SURFACES, so the old value would be a number answering the old
   // question. See the field's header.
   captureOffsetMm: 15,
+  // ⭐⭐ **0 — PINNED, BY THE OWNER'S CHOICE (2026-09-18)**: *"set the default at boot:
+  // Pioneer translates = 0 (-> pinned)."*
+  // ⚠⚠ **AND IT OVERRULES THE CAUTION I SHIPPED IT WITH.** This read `1` with a comment
+  // saying *a new rule does not become the default before a device pass says so*. ⛔ `D38`
+  // settled that argument once already and the answer has not changed: **the owner IS the
+  // hand**, and a default he has chosen on the glass outranks a default I chose on principle.
+  // ⭐ `?pioneerTranslates=1` restores the old behaviour, and the menu toggles it live.
+  pioneerTranslates: 0,
   // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
   // really did align against this thing.
   alignMatchDeg: 15,
@@ -960,6 +999,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // `L`, not a body's span, so "1" no longer names contact and the old bound was arithmetic
   // about a quantity this field no longer holds. ⭐ A stale guard that still passes is worse
   // than none: it looks like the number has been thought about.
+  if (cfg.pioneerTranslates !== 0 && cfg.pioneerTranslates !== 1) {
+    throw new Error(
+      `pioneerTranslates (${cfg.pioneerTranslates}) must be exactly 0 or 1: it selects a RULE, ` +
+        "not a quantity, and a value in between would read as `truthy` and silently ship one " +
+        "of the two behaviours while the readout claimed a third.",
+    );
+  }
   if (!(cfg.captureOffsetMm > 0)) {
     throw new Error(
       `captureOffsetMm (${cfg.captureOffsetMm}) is not positive: a zero or negative capture ` +

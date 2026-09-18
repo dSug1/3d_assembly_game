@@ -351,3 +351,52 @@ describe("⛔⛔ the sway moves neither the HELD body nor a FROZEN one", () => {
     expect(receivesSway(null, "a")).toBe(false);
   });
 });
+
+/**
+ * ⭐⭐⭐ **`D53` — A BODY UNDER A FINGER IS NOT SWAYED BY ANYTHING.**
+ *
+ * > *"While a touchpoint is pressed on an object, disable its sway: it shall not be swayed by
+ * > the move of any other object."* — the owner, 2026-09-18
+ *
+ * ⛔⛔ **IT IS A SECOND, DIFFERENT EXCLUSION.** `receivesSway` already spared the body that
+ * CAUSED the kick — *it is already going that way*. ⚠ This spares any body a hand is holding,
+ * whether or not it moved, and the two only coincide when exactly one body is held.
+ * ⭐ Two fingers on two bodies is where they part company, and that is the configuration
+ * `D51` has just made central.
+ */
+describe("⭐⭐⭐ D53 — a grasped body receives no sway", () => {
+  const body = (id: string, frozen?: boolean) => ({ id, ...(frozen ? { frozen } : {}) });
+  const grasping = (...ids: string[]) => (id: string) => ids.includes(id);
+
+  it("⭐ ungrasped bodies still sway — the rule must not switch the feature off", () => {
+    expect(receivesSway(body("b"), "a", grasping("a"))).toBe(true);
+    expect(receivesSway(body("b"), "a", grasping())).toBe(true);
+  });
+
+  it("⭐⭐⭐ a body with a finger on it is spared, though ANOTHER body kicked the sway", () => {
+    // ⛔ THE VECTOR THE RULE EXISTS FOR. `b` did not move and is not the mover, so every older
+    // exclusion lets it through; the hand is on it, so it must not be shoved.
+    expect(receivesSway(body("b"), "a", grasping("b"))).toBe(false);
+  });
+
+  it("⭐⭐ TWO HELD BODIES: each is spared from the other's kick", () => {
+    // ⚠ Before this rule only the kicker was spared, so a part held in one hand was nudged by
+    // the part held in the other — the configuration `D51` is built around.
+    const both = grasping("a", "b");
+    expect(receivesSway(body("b"), "a", both)).toBe(false);
+    expect(receivesSway(body("a"), "b", both)).toBe(false);
+  });
+
+  it("⚠ the default argument keeps every existing caller's behaviour", () => {
+    // ⛔ `receivesSway` is called from two writers and from older vectors. A required third
+    // parameter would have changed what those assert without anyone editing them.
+    expect(receivesSway(body("b"), "a")).toBe(true);
+  });
+
+  it("⛔ frozen still wins, and so does the mover exclusion", () => {
+    // ⭐ The three reasons are independent and none may mask another.
+    expect(receivesSway(body("plate", true), "a", grasping())).toBe(false);
+    expect(receivesSway(body("a"), "a", grasping())).toBe(false);
+    expect(receivesSway(null, "a", grasping())).toBe(false);
+  });
+});

@@ -475,3 +475,76 @@ rolling the object with its jitter — which is why *simultaneous* is safe at al
 ✅ Deleted with it: `depthGate`, `DepthVerdict`, the `holder` parameter of
 `secondFingerDrive`, and eight vectors — including the one that compared the gate against the
 naive *both-fingers-moving* test. ⛔ A vector whose subject cannot occur certifies nothing.
+
+---
+
+## ⛔⛔ OPEN — `D51` OPENED A DOOR `A15` DOES NOT WATCH (noted 2026-09-18)
+
+⚠ **NOT FIXED. Captured because it is the hole `A15` exists to close, re-entering through a
+door that did not exist when `A15` was written.**
+
+⭐ `A15`'s question is *is the object still UNDER the finger carrying it?*, asked by a raycast
+at **the second touchpoint's release**, with the consequence deferred to the next input event.
+⛔ It is wired from exactly two release paths — the `SECOND` role (`A12`'s roll/depth finger)
+and the `OUTSIDE` role (`A10`'s depth anchor, the case that motivated the amendment).
+
+⛔⛔ **`D51`'s PINNED PIONEER IS NEITHER.** With `pioneerTranslates = 0` the finger on the
+Pioneer drives the **Follower's depth** — so the Follower slides along the view axis and can
+leave the finger that holds it, which is precisely `A15`'s geometry. ⚠ But both touchpoints are
+latched `OBJECT` holders, and `evaluateBindings()` is not called from the OBJECT release path.
+
+⭐ **The reproduction, for whoever picks this up**: pin a Pioneer, push the Follower away in
+depth until it is no longer under its holder, then lift the **Pioneer's** finger. The holder
+keeps carrying an object it is not touching, and `A15` never asks.
+
+### ⚠ Why it is recorded rather than fixed
+
+⛔ The fix is one line — call `evaluateBindings()` on the OBJECT release path too — and that is
+exactly why it should not be written blind. ⚠ `evaluateBindings` loops **every** holder and
+re-reads its binding; calling it whenever any object finger lifts changes behaviour for the
+ordinary two-holder case as well, which a hand has already closed. ⭐ So it wants either a
+condition (*was this release a pinned Pioneer?*) or a device pass over both configurations —
+and `D51` itself has not been judged by a hand yet.
+
+⚠⚠ **AND IT IS THE SECOND TIME THIS SHAPE HAS APPEARED IN A WEEK**: a rule whose trigger
+enumerates the CONFIGURATIONS that could cause it, rather than asking the STATE. ⭐ `A17.5` chose
+the other way on purpose — *a Pioneer can be turned by a drag, a twist, a reset, a slerp or
+another alignment's `FOLLOW`, and comparing poses catches every one of them without enumerating
+any.* ⛔ `A15` enumerates, so every new way to move an object off its finger is a new hole. The
+durable fix is to ask *is the object under the holder* at every **discrete** input, not to add a
+third release path.
+
+---
+
+## ✅✅ `D54` — THE ORPHAN RULE IS DELETED, AND THE GAP ABOVE IS CLOSED BY CONSTRUCTION
+
+> *"Until first touch is released: 1a- first touch can continue controlling the object (rotation
+> or translation), and 1b- second touchpoint can be pressed again and thus control again the
+> object."* — the owner, 2026-09-18
+
+⛔⛔ **`A15`/`D25` IS REVERSED.** A holder now keeps its object for the touchpoint's **lifetime**,
+which is `IN2`'s §4 latch with no exceptions left. ⭐ Deleted, not disabled:
+`input/holder_binding.ts`, `router.relatchOnOrphan`, `evaluateBindings`, `collectOrphans`,
+`objectUnder`, the HUD's `⛔ORPHANED` line and **16 vectors**.
+
+⚠⚠ **WHAT IS BEING REVERSED IS A VERDICT, NOT A FACT.** The geometry `A15` was written for has
+not changed: depth pushes an object along the view axis while the holder need not move, so the
+object still leaves the finger — the owner's own words in 2026-09-16 were *"the previously
+selected object is no longer under the finger which used to control it."* ⭐ What changed is what
+should FOLLOW from that: **keeping control beats re-resolving**, because a hand that pushed a
+part away still means to be holding it. ⛔ If the original complaint ever returns, it returns as
+a complaint about *this* decision, and the answer is not to re-add the unselect without asking.
+
+⭐ **Requirement 1b needed no code.** With nothing deleting the grip, a second touchpoint pressed
+again finds `router.objects()[0]` and drives the same body exactly as the first one did — it was
+only ever unreachable because the grip had been thrown away.
+
+### ⭐⭐ AND IT ANSWERS THE OPEN GAP RECORDED ABOVE, FROM THE OTHER DIRECTION
+
+⛔ The `D51` note above said a pinned Pioneer could slide the Follower off its holder through a
+release path `A15` never watched, and asked for the durable fix to be *ask the state at every
+discrete input* rather than *add a third release path*. ✅ **There is now no unselect at all**, so
+the hole is unreachable by construction — the strongest version of that fix, and it arrived by
+deleting the rule rather than by extending it.
+⚠ The note above is kept unrewritten: it is the record of a real gap, and of the reasoning that
+said enumerating configurations was the wrong shape.

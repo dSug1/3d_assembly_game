@@ -44,13 +44,11 @@ condition for a few hours as `D48` and the owner **removed it**), every aligned 
 FollowerFace **and** a coloured body outline, and a shake on a Pioneer releasing **all** its
 followers through a two-way index built to scale (`core/alignment_links.ts`).
 ✅ Also built: a turned Pioneer **releases its cyan followers and rotates its orange ones, down a
-chain** (`input/pioneer_cascade.ts`, a fixed point resolved in one frame); **no cycles** — a tap
-that would make a follower its own Pioneer's pioneer breaks the initial alignment instead; and
-**`frozen`**, an attribute enforced at `object_model.ts`'s two writers, carried by the new base
-plate.
-✅✅ **THE CAPTURE IS A SURFACE GAP SINCE 2026-09-18** (`D49`): the white pair is decided by the **gap between the bodies' surfaces**, not their centres, against a threshold in **millimetres on the glass** scaled by camera distance — so it keeps the same apparent size at every zoom. ⭐ Shapes are **computed at spawn** (`core/collision_shape.ts`, a GJK distance over a convex point set) — the owner's preference, and it avoids a second source of truth in Blender. ⛔ The approach DIRECTION stays centre-to-centre. ⭐⭐ The **white contour IS that shell**: body + **half** the offset, per frame, so it tracks camera and slider and **two touching boxes mean capture**. ⚠ `captureOffsetMm` has a **slider**. **Suite 856.**
+chain** (`input/pioneer_cascade.ts`); **no cycles**; and **`frozen`**, enforced at
+`object_model.ts`'s writers and carried by the base plate.
+✅✅ **THE CAPTURE IS A SURFACE GAP SINCE 2026-09-18** (`D49`/`D50`): the white pair is decided by the **gap between the bodies' surfaces**, not their centres, against a threshold in **millimetres on the glass** scaled by camera distance. ⭐ Geometry is **computed at spawn** (`core/collision_shape.ts` for the gap, `core/mesh_topology.ts` for the outlines and face markers) — no bounding boxes, and no second source of truth in Blender. ⛔ The approach DIRECTION stays centre-to-centre. ⚠ `captureOffsetMm` has a **slider** → spec §19–§20.
 ⛔⛔ **NOT built**: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
-⭐ Ordered device lists, with what falsifies each item: §12 and §13 of
+⭐ Ordered device lists, with what falsifies each: §12–§21 of
 [`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md).
 ⛔⛔ **AND THREE DEVICE REPORTS EACH FOUND SOMETHING NO TEST HERE COULD**, all on 2026-09-17, all
 now in `METHOD`: *a fix that lands beside the defect leaves a green suite and a broken product*;
@@ -96,7 +94,7 @@ detector stayed alive long enough to cause defect 40.
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A10` | ⭐⭐ depth — ⛔ **its still-holder GATE is DELETED (`D43`)**, so both fingers integrate at once; rule 6's second touchpoint may be on the object | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?touchpointAssignment=1`, and ⭐ **fork C** (`=2`) makes a TAPPED second touchpoint toggle the ongoing drag — ⛔ which also picks the second finger's axis, **depth or roll, never both** | 🔧 ✅✅ **fork C CLOSED and now the DEFAULT** (2026-09-16) after three formulations of its toggle — the **verdict between the forks** is row `IN13`, not due until the input system can be judged whole |
-| `A15` | ⭐⭐⭐ **a holder no longer UNDER its object gives the selection up** — a raycast at the second touchpoint's lift, and the unselect is DEFERRED to the next input event | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — ⚠ by a general *"everything is working ok"*, not case by case |
+| `A15` | ⚠⚠ **REVERSED BY `D54`** — the orphan unselect, `holder_binding.ts`, `relatchOnOrphan` and 16 vectors are **deleted**; a holder keeps its object for the touchpoint's lifetime and `IN2`'s latch has no exceptions again → [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md) | ⛔ gone |
 
 ⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit,
 a shared minimum, a faded blend, then A6's driver/validator. ⭐⭐ **Two transferable

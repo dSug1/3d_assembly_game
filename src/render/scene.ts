@@ -66,8 +66,6 @@ import {
   type GravityFrame,
   depthLimits,
   depthTranslate,
-  bindingAfterSecondRelease,
-  orphanAction,
   initialBehaviour,
   isTapRelease,
   toggleBehaviour,
@@ -81,10 +79,7 @@ import {
   ShakeDetector,
   shakeParamsFrom,
   constrainedDragAngle,
-  constrainedRollAngle,
   rotateAboutAxis,
-  type HolderBinding,
-  type InputEvent,
   displayPose,
   exponentialSmooth,
   phantomTarget,
@@ -156,6 +151,7 @@ import {
   translatesOnDrag,
   type HighlightVerdict,
 } from "../input/highlight";
+import { pinnedPair, pinnedSecondDrive } from "../input/pinned_pioneer";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -1457,15 +1453,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
      */
     anchorMotion: Map<number, MotionTracker>;
-    /**
-     * ⭐⭐⭐ A15 — is the object still UNDER this finger? Evaluated by a RAYCAST when a
-     * second touchpoint lifts, and by nothing else.
-     * ⛔ `ORPHANED` changes nothing on its own: the selection is dropped at the NEXT input
-     * event, which is the owner's requirement and `METHOD`'s *acting is irreversible*.
-     * ⚠ Depth translation is what makes this reachable — it slides the object along the
-     * view axis while the holder holds still, so the object leaves the finger carrying it.
-     */
-    binding: HolderBinding;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -1992,14 +1979,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // stand-in. ⛔ Printed because it is decided once and cannot be inferred
             // from what the fingers are doing now, which is the whole point of a latch.
             (first?.mode ? `  ${first.mode}` : "") +
-            // ⭐⭐⭐ A15's ORPHANED BINDING, and it MUST be printed. ⛔ It is a state in
-            // which everything looks normal and the very next input does something
-            // different — the object is still drawn where it was, still lit, still
-            // apparently held. Without a readout, *"it deselected by itself"* and *"the
-            // selection was already dead"* are indistinguishable on the glass.
-            ([...held.values()].some((g) => g.binding === "ORPHANED")
-              ? "  ⛔ORPHANED(next input unselects)"
-              : "") +
             // ⭐⭐⭐ THE MOVEMENT MODE, and it is the least guessable state on the glass:
             // nothing VISIBLE says whether the next drag translates or rotates, because
             // presence does not decide it — a tap does. ⛔ So the readout is the only way a
@@ -2214,6 +2193,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ends visibly WRONG on the glass, because a slider whose every value looks plausible
         // teaches a hand nothing.
         tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
+        // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
+        // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
+        // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
+        // its finger drives the Follower's roll AND depth together.
+        // ⚠ A 0/1 slider because the menu has no other kind of control — the fork selector took
+        // the same shape (`D26`) — and `validateGestureConfig` refuses anything between, so a
+        // half-set flag cannot masquerade as the default.
+        tunable("PIONEER translates (0=pinned)", "pioneerTranslates", 0, 1, 1),
         // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
         // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
         // one pixel — so a width tunable would be a slider that does nothing, which is the
@@ -2354,6 +2341,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * ⭐ It reads the SAME four tunables the drag's sway does — amplitude, softness,
    * re-trigger and reference speed — so no new slider appears for a second cause.
    */
+  /**
+   * ⭐⭐ **IS A TOUCHPOINT PRESSED ON THIS BODY?** — `D53`'s sway exclusion.
+   *
+   * ⛔ Read from `held`, which is keyed by pointer id, so it answers *is a finger on it right
+   * now* rather than *did something move it*. ⚠ `A15`'s ORPHANED grip still counts: the finger
+   * is down and the user believes they are holding the part, which is exactly whose placement
+   * the sway must not disturb.
+   */
+  const isGrasped = (id: ObjectId): boolean => {
+    for (const g of held.values()) if (idOf.get(g.mesh) === id) return true;
+    return false;
+  };
+
   const nudgeOthersWorld = (heldMesh: AbstractMesh, dir: Vec3, speedMmPerS: number): void => {
     const perPx = trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight);
     // ⭐ Amplitude × how fast the object set off. Slow, small and slow; fast, bigger AND
@@ -2375,7 +2375,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // frozen and the PICTURE was not: the sway is a display offset added after the model is
       // read, so the base plate rocked while its placement could not change. ⭐ One predicate,
       // shared with `spinOthers` and vectored in `tests/sway.test.ts`.
-      if (!receivesSway(bodyOf(mesh), heldId)) continue;
+      if (!receivesSway(bodyOf(mesh), heldId, isGrasped)) continue;
       const f = followerFor(mesh);
       f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
       f.swayY = { x: f.swayY.x, v: f.swayY.v + dir[1] * impulse };
@@ -2420,7 +2420,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⛔⛔ A frozen body does not swing about the held one either — the same rule, the same
       // predicate. ⚠ This is the writer that made the base plate SWING rather than rock, which
       // is the more obvious of the two on the glass.
-      if (!receivesSway(bodyOf(mesh), heldId)) continue;
+      if (!receivesSway(bodyOf(mesh), heldId, isGrasped)) continue;
       const f = followerFor(mesh);
       // ⚠ The pivot is captured per kick and shared by the block. A kick arriving while
       // an older one is still decaying moves the pivot; for the sub-degree swings this
@@ -2538,7 +2538,42 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     }
   };
 
-  const applyDepthDrag = (grip: Held, anchorSeq: number, anchorSample: Sample) => {
+  /**
+   * @param bothAxes ⭐⭐ `D51`'s PINNED PIONEER: the driving finger gives roll AND depth at
+   *   once, instead of the movement mode picking one. ⛔ Reachable only from the pinned
+   *   configuration — two touchpoints on a Pioneer and its Follower, with the flag off.
+   *   ⚠ The owner named the difference from `A16` himself; `pinned_pioneer.ts` argues it.
+   */
+  /**
+   * ⭐⭐⭐ **`D51` — ARE THE TWO HELD BODIES A PIONEER AND ITS FOLLOWER, WITH THE FLAG OFF?**
+   *
+   * ⛔ `null` whenever the flag is on, so the default path is byte-for-byte what it was and a
+   * device close of the old behaviour still means something.
+   * ⚠ Press order is irrelevant — the hand chooses which body to align, not which to grab
+   * first — so the rule asks the alignment index both ways.
+   */
+  const pinnedNow = (): { follower: ObjectId; pioneer: ObjectId } | null => {
+    if (cfg.pioneerTranslates !== 0) return null;
+    const ids: ObjectId[] = [];
+    for (const q of router.objects()) {
+      const g = held.get(q.id);
+      const id = g === undefined ? undefined : idOf.get(g.mesh);
+      if (id !== undefined && !ids.includes(id)) ids.push(id);
+    }
+    return pinnedPair(ids, (f) => links.pioneerFor(f)?.objectId ?? null);
+  };
+
+  const gripOfObject = (id: ObjectId): Held | undefined => {
+    for (const g of held.values()) if (idOf.get(g.mesh) === id) return g;
+    return undefined;
+  };
+
+  const applyDepthDrag = (
+    grip: Held,
+    anchorSeq: number,
+    anchorSample: Sample,
+    bothAxes = false,
+  ) => {
     // ⭐ The anchor gets a tracker of its own — the SAME §1.1 machine every other rule
     // reads, never a speed invented here. A second definition of "moving" would be free
     // to disagree with the one the holder is judged by.
@@ -2562,11 +2597,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // as rule 6 and 2bis take the holder's.
     // ⛔ The live mode is handed over so the choice is made inside the vectored rule, not
     // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
-    const drive = secondFingerDrive(
-      tracker.axes,
-      tracker.step,
-      behaviour,
-    );
+    const drive = bothAxes
+      ? pinnedSecondDrive(tracker.axes, tracker.step)
+      : secondFingerDrive(tracker.axes, tracker.step, behaviour);
     if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
 
     if (drive.depthDyPx !== 0) {
@@ -2598,10 +2631,34 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         lastVerdict = `align: roll refused — ${rollChannel.why}`;
       } else if (rollChannel.kind === "TWIST") {
         const axis = rollChannel.axis;
-        const twist = constrainedRollAngle(
+        // ⭐⭐⭐ **`D52` — THE SECOND TOUCHPOINT ROLLS THE FOLLOWER THE SAME WAY THE FIRST
+        // DOES.** Device-reported, 2026-09-18: *"the Follower object roll controlled by the
+        // second touchpoint is inverted vs. the roll controlled by the first touchpoint … the
+        // second should be the same as the first touchpoint roll."*
+        //
+        // ⛔⛔ **IT WAS NOT A SIGN, IT WAS A DIFFERENT CHART — measured before changing
+        // anything.** The two channels agreed for some constraint axes and opposed for others:
+        // `constrainedDragAngle` projects the finger's travel onto the **near-side direction**,
+        // while `constrainedRollAngle` mapped a screen roll through `sign(axis·view)`. ⚠ A
+        // blanket sign flip would have fixed the axes that opposed and broken the ones that
+        // agreed — the trap this project names as *a sign is not tested by any amount of
+        // testing the magnitude*, one level up: the two SIGNS were each defensible and their
+        // COMPOSITION was never computed.
+        //
+        // ✅ So the second touchpoint now uses the **same chart**, with its own gain converted
+        // to radians. Measured over two camera frames and six axes, both drag directions: every
+        // case agrees, and two that the roll chart could not serve at all now do.
+        // ⚠⚠ **WHAT IT COSTS, STATED**: `A3`'s second chart covered the configuration where
+        // the drag chart degenerates (the axis square to the view). There the second touchpoint
+        // now does **nothing** — exactly as the first touchpoint already did. ⛔ That is the
+        // price of consistency, and a fallback would have to invent a sign at precisely the
+        // configuration where there is nothing to be consistent WITH.
+        const twist = constrainedDragAngle(
           screenFrame(),
           axis,
-          rollDragDeg(drive.rollDxPx, cfg.gainRollDrag),
+          drive.rollDxPx,
+          0,
+          (cfg.gainRollDrag * Math.PI) / 180,
         );
         if (twist !== null) {
           setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
@@ -2663,18 +2720,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     return true;
   };
 
-  /**
-   * ⭐ What object is under this screen point RIGHT NOW, or `null`.
-   *
-   * ⚠ Built from `createPickingRay` + `pickWithRay` rather than `scene.pick`, to use the
-   * SAME coordinate convention as `recomputeOrbitCentre` — client coordinates straight off
-   * the event, which is what already works on the device. ⛔ The orbit-centre marker is
-   * `isPickable = false`, so an instrument cannot answer a question about the scene.
-   */
-  const objectUnder = (x: number, y: number): AbstractMesh | null => {
-    const hit = scene.pickWithRay(scene.createPickingRay(x, y, null, camera));
-    return hit?.hit === true && hit.pickedMesh ? hit.pickedMesh : null;
-  };
+  // ⛔⛔ **`objectUnder` IS DELETED WITH `D54`.** It raycast at a holder's last position to
+  // ask *is the object still under this finger?* — `A15`'s only question, and nothing else
+  // ever asked it. ⭐ *Deleted, not disabled*: a raycast helper kept "in case" is the shape
+  // `config_debt` and `unwired_debt` both exist to refuse.
+
 
   /**
    * ⭐⭐⭐ A15 — THE RAYCAST AT A SECOND TOUCHPOINT'S LIFT.
@@ -2690,57 +2740,34 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * *"which holder was that finger the partner of?"* has no answer worth trusting, while
    * *"is THIS holder still on its object?"* is well posed for each of them.
    */
-  const evaluateBindings = (): void => {
-    for (const holder of router.objects()) {
-      const grip = held.get(holder.id);
-      if (!grip) continue;
-      // ⚠ The HOLDER's own last position — never the releasing finger's, and never the
-      // live event's, which at a PRESS belongs to a different finger entirely.
-      const under = objectUnder(holder.last.x, holder.last.y);
-      grip.binding = bindingAfterSecondRelease(grip.mesh, under);
-      if (grip.binding === "ORPHANED") {
-        lastVerdict = "second released → object no longer under the finger, pending unselect";
-      }
-    }
-  };
-
   /**
-   * ⭐⭐⭐ A15 — COLLECT AN ORPHANED HOLDER, at the next input event and not before.
+   * ⛔⛔⛔ **`D54` — `A15`'s ORPHAN UNSELECT IS DELETED (2026-09-18, the owner).**
    *
-   * ⛔ The selection is dropped and every live touchpoint is re-latched from what is under
-   * it NOW, so the configuration re-resolves into whatever the hand is actually doing: a
-   * finger over empty space becomes §2 rule 1's orbit, a finger on another object carries
-   * that one. ⭐ None of that is a new rule — it is the rule table, read again.
+   * > *"Until first touch is released: first touch can continue controlling the object
+   * > (rotation or translation), and second touchpoint can be pressed again and thus control
+   * > again the object."*
    *
-   * ⚠ Called BEFORE the event is dispatched, so the event itself falls through to the rule
-   * the new configuration selects rather than being spent on the transition.
+   * ⭐⭐ **SO `IN2`'s LATCH IS PURE AGAIN.** §4 latches a role at press *for the touchpoint's
+   * lifetime*, and `A15` was its single exception: a raycast at the second touchpoint's lift
+   * asked whether the object was still under the holder, and dropped the selection at the next
+   * input event if it was not. ⛔ `evaluateBindings`, `collectOrphans`, `HolderBinding`,
+   * `router.relatchOnOrphan` and the HUD's `⛔ORPHANED` line are all gone with it.
+   *
+   * ⚠⚠ **WHAT IS BEING REVERSED, STATED PLAINLY.** `A15` existed because depth pushes an
+   * object along the view axis while the holder need not move, so the object leaves the finger
+   * — the owner's words then: *"the previously selected object is no longer under the finger
+   * which used to control it."* ⛔ That geometry has not changed. What changed is the verdict
+   * on what should follow: **keeping control beats re-resolving**, because a hand that pushed a
+   * part away still means to be holding it.
+   *
+   * ⭐ Requirement 1b needed no code: with nothing deleting the grip, a second touchpoint
+   * pressed again finds `router.objects()[0]` and drives the same body, exactly as before.
+   *
+   * ⭐⭐ **AND IT CLOSES A HOLE RATHER THAN LEAVING ONE.** `queue_notes/IN8.md` recorded that
+   * `D51`'s pinned Pioneer could slide the Follower off its holder through a release path
+   * `A15` never watched. ⛔ With no unselect anywhere, that hole is unreachable **by
+   * construction** — the durable fix the note asked for, arriving from the other direction.
    */
-  const collectOrphans = (event: InputEvent): void => {
-    for (const [id, grip] of [...held.entries()]) {
-      if (orphanAction(grip.binding, event) !== "UNSELECT_AND_RERESOLVE") continue;
-      // ⛔ THE TRACKERS GO WITH THE SELECTION. They are keyed by `seq` and hold anchor
-      // positions from the gesture that just ended; a surviving one would answer A11's
-      // deadband question about travel that belongs to a different rule.
-      grip.anchorMotion.clear();
-      held.delete(id);
-      // ⚠ The position comes from the ROUTER, which owns `last` — not from the recognizer
-      // and not from the live event, which at a PRESS belongs to the new finger.
-      const where = router.get(id)?.last;
-      const relatched =
-        where === undefined ? null : router.relatchOnOrphan(id, objectUnder(where.x, where.y));
-      lastVerdict = `unselected → ${relatched ? relatched.role : "gone"}`;
-
-      // ⛔⛔ AND §2 RULE 1 KEEPS THE CENTRE IT ALREADY HAS — **the previous yellow point**
-      // (owner, 2026-09-16). ⭐ I had it retarget through the same `orbitCentreGraceMs`
-      // deferral a real press uses, reasoning that rule 1 chooses its centre from the ray
-      // of the finger that STARTS the orbit and this orbit was starting now. The owner
-      // overruled it, and the rule is the one `resetCamera` already states: **home is the
-      // last yellow target, not the origin** — the centre is the thing the user has been
-      // orbiting, and it does not change because a selection ended.
-      // ⚠ So there is deliberately NO centre code here. The marker does not move, and a
-      // gesture that ends cannot retarget the camera.
-    }
-  };
 
   /**
    * ⭐⭐⭐ THE MOVEMENT MODE — one latch for the session, not one per gesture.
@@ -2945,8 +2972,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // which THIS event flows into whatever rule the re-resolved configuration selects.
     // ⚠ A POINTERUP is deliberately absent: the orphaned holder's own release is handled
     // in its branch, where the §1.3 verdict has to be SKIPPED rather than re-resolved.
-    if (info.type === PointerEventTypes.POINTERDOWN) collectOrphans("PRESS");
-    else if (info.type === PointerEventTypes.POINTERMOVE) collectOrphans("MOVE");
 
     // ⛔⛔⛔ **A PRESS FOR AN ID THAT NEVER RELEASED TAKES ITS OLD GRIP WITH IT** — audit fix,
     // 2026-09-17.
@@ -3076,7 +3101,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         alignmentTouched: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
-        binding: "BOUND",
         // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
         // `SwayWatcher` takes it.
         // ⛔⛔ THROUGH `shakeParamsFrom`, AND THAT IS A FIX: this file built the same four
@@ -3117,7 +3141,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         noteTap(routed.pressed, s);
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
-        evaluateBindings();
       } else {
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
         // ⭐⭐⭐ A12: A SECOND FINGER ON THE SAME OBJECT DRIVES IT, exactly as one outside
@@ -3186,7 +3209,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         router.release(e.pointerId);
         // ⭐⭐⭐ A15: this is A10's DEPTH ANCHOR going up — the case that motivated the
         // amendment, because depth is what slides the object off the holder's finger.
-        evaluateBindings();
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         pinch.end();
@@ -3211,6 +3233,36 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⚠ Handed the live hit, which the router discards: a finger that presses on a
       // part and slides off is still holding it (§4).
       router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+
+      // ⭐⭐⭐ **`D51` — A PINNED PIONEER STEERS THE FOLLOWER AND DOES NOT MOVE ITSELF.**
+      //
+      // > *"if it is toggled off … 1) the Pioneer cannot translate and 2) the second touchpoint
+      // > controls both the depth translation and the roll of the Follower object"*
+      //
+      // ⛔ BEFORE the recognizer commits this grip to a continuous rule, because the point is
+      // that this body has **no** continuous rule of its own while pinned. ⚠ Letting it commit
+      // and then suppressing the write would leave the sway, the shake and the mode latch all
+      // running on a gesture that moves nothing — which is how a *retired gesture that still
+      // owns a verdict* happens (defect 40).
+      // ⭐ The drive goes through the SAME path `A10`'s second finger uses, with `bothAxes` — so
+      // the roll's constraint channel, the snap ride-along and the depth clamp are the vetted
+      // ones rather than a second copy. ⛔ `METHOD`: one rule, one implementation.
+      {
+        const pin = pinnedNow();
+        const myId = idOf.get(grip.mesh);
+        if (pin !== null && myId === pin.pioneer && routed !== null) {
+          const target = gripOfObject(pin.follower);
+          if (target !== undefined) applyDepthDrag(target, routed.seq, s, true);
+          // ⚠ The Pioneer's own recognizer is still fed — a shake on it must still release its
+          // followers, and a tap must still be a tap. ⛔ What it does NOT get is a continuous
+          // rule: no translate, no rotate, no sway kick of its own.
+          grip.rec.move(s);
+          grip.shake.push(s);
+          paint();
+          return;
+        }
+      }
+
       if (grip.rec.move(s) === "COMMITTED_CONTINUOUS") {
         // ⭐⭐ PRESENCE, RE-READ EVERY FRAME. A second finger outside any object — no
         // matter what it has done since it went down — means rule 6. Lift it and the
@@ -3513,14 +3565,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // its object; running one here would align — or evict a constraint on — an object the
       // user stopped touching a few hundred milliseconds ago, and never aimed this gesture
       // at. ⚠ The camera reset is refused for the same reason: the press was on an object.
-      if (orphanAction(grip.binding, "RELEASE") === "DROP_WITHOUT_VERDICT") {
-        forgetAnchor(routed.seq);
-        router.release(e.pointerId);
-        held.delete(e.pointerId);
-        lastVerdict = "orphaned holder released — no verdict";
-        paint();
-        return;
-      }
       // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
       // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.

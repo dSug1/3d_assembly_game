@@ -97,3 +97,68 @@ model — see the `IN4` row. ⛔ Rule 6 carries §1.2's distance-scaled gain
 (`cameraDistance / referenceCameraDistance`), so it is `translate × zoom × orbit`:
 **compute what one millimetre of finger does at both zoom extremes BEFORE writing the
 gain.** Mistake shape 4's exact territory.
+
+---
+
+## ⛔⛔⛔ OPEN — A STALE GRIP DISABLES BOTH CAMERA RULES AT ONCE (observed 2026-09-18)
+
+> *"I am in a situation where neither the camera orbit nor the camera zoom work."* — the owner
+
+⚠ **NOT FIXED. Captured so that a recurrence is a KNOWN shape rather than a fresh hunt.**
+
+### What was actually on the glass
+
+⭐ Read live off the tablet (see the CDP technique in
+[`../../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`](../../50_BUILD_DEPLOY/DEVICE_TESTING_USB.md)),
+with no finger on the screen:
+
+```
+pointers  1
+phase     —          motion    —
+last      second touchpoint released
+roles     #149OBJ  active=1  [ROTATE]
+```
+
+⛔ **One touchpoint still latched as `OBJ`, with a blank phase and motion** — a grip whose
+pointer is gone. The previous verdict was *"second touchpoint released"*, so the hand had two
+fingers down, the second lifted, and the **first one's release never ran**.
+
+### ⭐⭐⭐ ONE PHANTOM HOLDER KILLS BOTH RULES, BY TWO DIFFERENT ROUTES
+
+⚠ This is why it reads as *two* broken features and is *one* fault. Neither route is a bug on
+its own — each is a correct rule reading a router that is lying to it:
+
+| rule | why it dies |
+|---|---|
+| **orbit** (§2 rule 1) | its branch needs `outside().length === 1 && objects().length === 0`, and `objects().length` is 1 |
+| **pinch zoom** (§4 rule 4) | it never gets that far — the `OUTSIDE` move handler takes `router.objects()[0]`, feeds the finger to `applyDepthDrag` and **returns before `updatePinch()`**, so the pinch is consumed as a depth/roll drive for a body nobody is holding |
+
+⭐ **The tell, for next time**: *two camera rules dead at once, with `active=` non-zero and no
+finger down.* ⛔ Chasing either rule separately is the wrong end — both are downstream of the
+router's count.
+
+### ⚠ WHAT WAS **NOT** ESTABLISHED
+
+⛔ Why `#149`'s `POINTERUP` never reached the handler. The release path is unconditional
+(`forgetAnchor` then `router.release`), so the event most likely never arrived.
+⚠ Two circumstances were present and neither was ruled out: **two tabs of the app were open**
+(one left by an assistant cache-buster reload), so the page could have been hidden mid-gesture;
+and a `pointercancel` would deliver no `POINTERUP` at all.
+
+### ⭐⭐ THE TWO IMPROVEMENT OPTIONS, IF IT RECURS
+
+1. ⭐⭐⭐ **MAKE IT SELF-HEALING — a grip whose pointer is no longer down is reaped.** Babylon
+   exposes `POINTERCANCEL`, and a grip can be checked against the live pointer set on the next
+   event. ⛔ This is a **robustness gap independent of the cause**: `IN2`'s latch is *for the
+   touchpoint's lifetime*, and nothing today bounds that lifetime by the pointer actually
+   existing. ⚠ It must not become a per-frame role recomputation — that is exactly what the
+   latch exists to prevent (`METHOD`: *a mode may be keyed on PRESENCE, never on MOTION*). A
+   pointer that the browser says is gone is a **discrete** fact, which is the admissible kind,
+   and `A15`'s `relatchOnOrphan` is the precedent for the one legal exception.
+2. ⭐ **MAKE A LOST RELEASE VISIBLE.** The HUD prints latched roles; it does not say whether
+   each one still has a live pointer. ⛔ *An absent readout cannot be caught by looking at the
+   screen* — a grip with a dead pointer should SAY so, or the next occurrence costs another
+   session to find. ⚠ Cheap: the router already knows its pointer ids.
+
+⭐ **The immediate unblock is a reload**, which is why this can sit unfixed — but it is not a
+diagnosis, and a hand that does not know the shape will spend the session on the camera.

@@ -176,36 +176,17 @@ export class PointerRouter<O> {
     return { pointer: p, wasActive: p.role === "OBJECT" || p.role === "OUTSIDE" };
   }
 
-  /**
-   * ⭐⭐⭐ **`A15` — THE ONE EXCEPTION TO THE LATCH.** Re-decide this touchpoint's role from
-   * what is under it NOW, as though it had just pressed there.
-   *
-   * ⛔⛔ CALL IT ON A DISCRETE EVENT ONLY, AND THERE IS EXACTLY ONE: collecting an
-   * ORPHANED holder, after a second touchpoint lifted and a raycast showed the object is
-   * no longer under the finger carrying it. ⚠ Calling this per frame re-creates precisely
-   * the flicker §4's latch exists to prevent — see the header.
-   *
-   * ⭐ `seq` and `pressed` SURVIVE, and both matter:
-   * * `seq` is the key of the caller's motion trackers, and it must never be reused
-   *   (`scene.ts` has been bitten twice by an identity that was);
-   * * `pressed` keeps the ORIGINAL press, so a finger that has been holding an object for
-   *   two seconds cannot lift and read as a TAP — which, outside any object, is half of a
-   *   double-tap camera reset.
-   *
-   * @param hitNow what the caller's raycast found under this finger, or `null`.
-   * @returns the re-latched pointer, or `null` if the id is not down.
-   */
-  relatchOnOrphan(id: number, hitNow: O | null): RoutedPointer<O> | null {
-    const p = this.pointers.get(id);
-    if (!p) return null;
-    // ⚠ Removed BEFORE the decision, so `isHeld`/`isPinched` cannot see this touchpoint's
-    // own stale binding and answer "that object is already held — by me".
-    this.pointers.delete(id);
-    const { role, object } = this.decideRole(hitNow, id);
-    const next: RoutedPointer<O> = { ...p, role, object };
-    this.pointers.set(id, next);
-    return next;
-  }
+  // ⛔⛔⛔ **`relatchOnOrphan` IS DELETED (`D54`, 2026-09-18) AND THE LATCH IS PURE AGAIN.**
+  //
+  // ⚠ It was `IN2`'s **only** exception: `A15` dropped a holder whose object had slid off its
+  // finger, and this re-resolved that pointer's role on the spot. ⭐ The owner retired the
+  // unselect — *"first touch can continue controlling the object"* — so nothing re-latches
+  // any more, and §4's *a role is latched at press for the touchpoint's lifetime* is once
+  // again true without qualification.
+  // ⭐ What the exception was guarded by is worth keeping in mind if one is ever wanted again:
+  // it ran on a **discrete** event only. A role recomputed from a continuous reading is the
+  // defect this class of code exists to prevent, and `METHOD` has that verdict twice.
+
 
   /** ⚠ Everything goes. For a pointercancel storm, or a scene reset. */
   clear(): void {

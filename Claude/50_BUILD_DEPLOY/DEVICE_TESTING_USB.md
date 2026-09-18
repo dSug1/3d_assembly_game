@@ -83,6 +83,53 @@ has open, including the GitHub Pages URL. Real HTTPS *and* a console.
 
 ---
 
+## ⭐⭐⭐ READING THE TABLET'S STATE FROM HERE — the DevTools protocol over the same cable
+
+⛔⛔ **FOR THREE MONTHS THE ONLY CHANNEL OUT OF A DEVICE PASS WAS A HAND TYPING WHAT IT SAW.**
+⚠ That is why the HUD exists, and it is also why a readout that is clipped, mislabelled or
+absent costs a whole session — all three have happened. ⭐ The tablet's Chrome exposes the
+**DevTools protocol** on the same USB cable, so the page's state can be read directly.
+
+```powershell
+adb forward tcp:9222 localabstract:chrome_devtools_remote
+curl -s http://127.0.0.1:9222/json          # list open pages -> webSocketDebuggerUrl
+```
+
+⭐ Then connect to that WebSocket and send one `Runtime.evaluate`; Node 21+ has a built-in
+`WebSocket`, so this needs no dependency:
+
+```js
+ws.send(JSON.stringify({ id: 1, method: "Runtime.evaluate",
+  params: { expression: "document.body.innerText", returnByValue: true } }));
+```
+
+⚠ `document.body.innerText` returns **the whole HUD**, which is usually the entire question.
+
+### ⭐⭐ What it is good for, and what it is not
+
+✅ **It found a defect on 2026-09-18 that a hand could not have described**: two camera rules
+dead at once, and the readout showed `pointers 1` with `#149OBJ active=1` and **no finger on the
+glass** — a stale grip. ⛔ *"Orbit and zoom are broken"* and *"one phantom holder is still
+latched"* are the same observation from the two ends of the cable, and only one of them is
+actionable. → [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md).
+
+⚠⚠ **IT IS NOT A SUBSTITUTE FOR RULE 5, AND MUST NOT BECOME ONE.** It reads STATE; it cannot
+say whether a gesture *feels* right, and every verdict this project trusts came from a hand on
+glass. ⛔ What it replaces is the transcription step — the owner reading numbers aloud — not the
+judgement.
+
+⚠ Two practical notes, both paid for the first time it was used:
+
+* **Close duplicate tabs.** Several pages of the app can be open at once and `/json` lists them
+  all; `document.visibilityState` tells you which one the hand is actually looking at. ⛔ A
+  background tab also loses pointer events mid-gesture, which is one candidate cause of the very
+  defect above — so a stray tab is not only confusing, it is a suspect.
+* `adb forward` is the **opposite direction** to `adb reverse` and does not replace it: the
+  reverse carries the dev server TO the tablet, this brings DevTools BACK. Both can be up at
+  once, and neither survives a replug.
+
+---
+
 ## ⛔ Three traps, all paid for on 2026-09-13
 
 ### 1. `--host localhost` binds IPv6 ONLY, and the tunnel is IPv4

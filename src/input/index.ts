@@ -14,7 +14,6 @@ export * from "./follow";
 export * from "./lead";
 export * from "./anchor_rotate";
 export * from "./depth_translate";
-export * from "./holder_binding";
 export * from "./mode_toggle";
 export * from "./alignment";
 export * from "./display_pose";

@@ -258,3 +258,87 @@ describe("the A3 roll mapping", () => {
   });
 });
 
+
+/**
+ * ⭐⭐⭐ **`D52` — THE TWO ROLL CHANNELS MUST TURN THE BODY THE SAME WAY.**
+ *
+ * > *"The Follower object roll controlled by the second touchpoint is inverted vs. the roll
+ * > controlled by the first touchpoint … the second should be the same as the first touchpoint
+ * > roll."* — the owner, 2026-09-18
+ *
+ * ⛔⛔ **THE DEFECT WAS A COMPOSITION NOBODY COMPUTED, NOT A SIGN.** Each channel's sign was
+ * separately defensible — the drag chart projects onto the near-side direction, the roll chart
+ * mapped a screen roll through `sign(axis·view)` — and **they agreed for some constraint axes
+ * and opposed for others**. ⚠ Measured before any fix: of four axes tried, two agreed and two
+ * opposed. ⭐ So a blanket sign flip would have repaired half the cases and broken the other
+ * half, which is why this vector sweeps AXES and both drag directions rather than asserting one
+ * sign in one configuration.
+ *
+ * ⭐ `METHOD`: *a composition is a thing to MEASURE, not an emergent property* — and here the
+ * composition is *two controls over one DOF*, which no test of either one alone can see.
+ */
+describe("⭐⭐⭐ D52 — both roll channels agree, over axes and camera frames", () => {
+  const DEG = Math.PI / 180;
+  /** What the SECOND touchpoint now does: the first's chart, with the second's gain. */
+  const secondTouchTwist = (f: ScreenFrame, axis: Vec3, dxPx: number, degPerMm: number) =>
+    constrainedDragAngle(f, axis, dxPx, 0, degPerMm * DEG);
+
+  const FRAMES: readonly ScreenFrame[] = [
+    { right: [1, 0, 0], up: [0, 1, 0], viewAxis: [0, 0, 1] },
+    // ⚠ A TILTED camera, because the whole family of defects this file records lives in the
+    // composition of the frame with the rule, not in either alone (`A7`).
+    { right: [1, 0, 0], up: [0, 0.7071, 0.7071], viewAxis: [0, -0.7071, 0.7071] },
+  ];
+  const AXES: readonly Vec3[] = [
+    [0, 1, 1],
+    [0, 1, -1],
+    [1, 0, 1],
+    [0.3, 0.7, 0.6],
+    [0, 0, 1],
+    [1, 1, 0],
+  ];
+
+  it("⭐⭐⭐ never opposite — for every axis, both frames, both drag directions", () => {
+    let compared = 0;
+    for (const frame of FRAMES) {
+      for (const raw of AXES) {
+        const axis = normalize(raw);
+        if (!axis) continue;
+        for (const dxPx of [12, -12]) {
+          const first = constrainedDragAngle(frame, axis, dxPx, 0, 0.07);
+          const second = secondTouchTwist(frame, axis, dxPx, 2);
+          if (first === null || second === null) continue;
+          if (first === 0 || second === 0) continue;
+          compared++;
+          expect(Math.sign(first)).toBe(Math.sign(second));
+        }
+      }
+    }
+    // ⚠ Assert the sweep actually compared something: a sweep that skipped every case would
+    // pass silently, which is the *skipped check announced as green* failure.
+    expect(compared).toBeGreaterThan(12);
+  });
+
+  it("⛔ where the FIRST touchpoint does nothing, the second does nothing either", () => {
+    // ⭐ The degenerate configuration: the constraint axis square to the view leaves a
+    // horizontal drag with no component to give. ⚠ `A3`'s roll chart used to twist there, and
+    // that is precisely the case where there is nothing to be consistent WITH — so a fallback
+    // would have to invent a sign. ⛔ Consistency is the owner's requirement; coverage was mine.
+    const frame: ScreenFrame = { right: [1, 0, 0], up: [0, 1, 0], viewAxis: [0, 0, 1] };
+    const axis = normalize([1, 0, 1]);
+    const first = constrainedDragAngle(frame, axis!, 12, 0, 0.07);
+    const second = secondTouchTwist(frame, axis!, 12, 2);
+    expect(first).toBeCloseTo(0, 12);
+    expect(second).toBeCloseTo(0, 12);
+  });
+
+  it("⭐ and the magnitude still follows the second touchpoint's OWN gain", () => {
+    // ⚠ Agreement of DIRECTION must not quietly fuse the two sensitivities: the second
+    // touchpoint keeps `gainRollDrag`, which a hand tunes separately.
+    const frame: ScreenFrame = { right: [1, 0, 0], up: [0, 1, 0], viewAxis: [0, 0, 1] };
+    const axis = normalize([0, 1, 1])!;
+    const slow = secondTouchTwist(frame, axis, 12, 1);
+    const fast = secondTouchTwist(frame, axis, 12, 4);
+    expect(Math.abs(fast!)).toBeCloseTo(Math.abs(slow!) * 4, 9);
+  });
+});

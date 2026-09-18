@@ -347,14 +347,30 @@ export function turnDegrees3(a: Vec3, b: Vec3): number {
  *   means the rule does not depend on that tagging staying correct.
  * @param heldId the body the finger is carrying, or `null` when a pinch or a rotation kicked
  *   the sway with no holder at all.
+ * @param isGrasped `true` for any body a touchpoint is pressed on — see below.
  */
 export function receivesSway(
   body: { readonly id: string; readonly frozen?: boolean } | null,
   heldId: string | null,
+  isGrasped: (id: string) => boolean = () => false,
 ): boolean {
   if (body === null) return false;
-  // ⚠ The held body is excluded because it is already going that way — the sway is what the
+  // ⚠ The MOVER is excluded because it is already going that way — the sway is what the
   // REST of the scene does about it.
   if (heldId !== null && body.id === heldId) return false;
+  // ⭐⭐⭐ **AND NEITHER IS ANY BODY A FINGER IS ON** — the owner, 2026-09-18: *"while a
+  // touchpoint is pressed on an object, disable its sway: it shall not be swayed by the move
+  // of any other object."*
+  //
+  // ⛔⛔ **IT IS A DIFFERENT EXCLUSION FROM THE ONE ABOVE, AND THE DIFFERENCE IS THE POINT.**
+  // That one is about the body that CAUSED the kick; this one is about any body a hand is
+  // holding, whether or not it moved. ⚠ Two fingers on two bodies means each is the other's
+  // mover, and before this only the kicker was spared — so a held body was shoved by the one
+  // in the user's other hand.
+  // ⭐ The argument is the same one `frozen` won on: **a body under a finger is a thing the
+  // hand is placing**, and decoration that nudges it is fighting the placement. ⚠ The sway is
+  // a DISPLAY offset, so it never moved the model — which makes it worse, not better: the
+  // part would drift back after the finger lifted, with nothing to say why.
+  if (isGrasped(body.id)) return false;
   return body.frozen !== true;
 }

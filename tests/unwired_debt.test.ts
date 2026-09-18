@@ -57,6 +57,16 @@ const PENDING: Record<string, string> = {
     "approach DIRECTION deliberately did not: a face-to-face direction collapses to noise at " +
     "contact, which is the degeneracy the mechanism was redesigned to remove. Centres cannot " +
     "meet, so this is the measure 4b.1 projects the finger onto",
+  // ⛔⛔ **`A3`'s SECOND CHART, RETIRED FROM ITS ONLY CHANNEL BY `D52`** (2026-09-18).
+  constrainedRollAngle:
+    "IN3/A3 — the OTHER chart over an anchored body's one free DOF: it maps a screen roll " +
+    "through `sign(axis·view)` and works where the drag chart degenerates. ⛔ It drove the " +
+    "second touchpoint until a hand reported that channel turning the Follower the WRONG WAY " +
+    "— the two charts agreed for some constraint axes and opposed for others, so the second " +
+    "touchpoint now uses the FIRST's chart and agrees by construction. ⚠ Kept because the " +
+    "coverage argument is still true and unanswered: at an axis square to the view neither " +
+    "channel can twist, and if a hand ever wants motion there this is the only thing that " +
+    "provides it — at the cost of a sign nothing can be consistent with",
   // ⛔⛔ THE TWO SWAPPED PLACES ON 2026-09-18, AND THE SWAP IS THE POINT. `shapeFromVertices`
   // LEFT this list when `scene.ts` started reading real mesh vertices — the guard caught the
   // stale entry the moment it was wired, which is the second direction it checks.
