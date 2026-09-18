@@ -36,16 +36,73 @@ import { faceWorld } from "../core/object_model";
 import type { Constraint } from "../core/constraint_stack";
 import type { Behaviour } from "./mode_toggle";
 import { nearestCapture } from "../core/proximity";
+import type { ObjectId as CaptureId } from "../core/object_model";
+import { mmToPx } from "../core/units";
+import { trackingMetresPerPx } from "./translate";
 import { dot, normalize } from "../core/vec";
+
+/**
+ * ⭐⭐⭐ **THE CAPTURE OFFSET IN WORLD METRES, FROM A DISTANCE ON THE GLASS** (`D49`, the owner:
+ * *"the offset distance shall depend on the camera position and focus … or more or less the
+ * same in pixels although I do not want to use pixel since this may vary depending on device
+ * screens"*).
+ *
+ * ⭐⭐ **THAT REQUEST HAS AN EXACT ANSWER ALREADY IN THIS CODEBASE.** `trackingMetresPerPx` is
+ * the world displacement that keeps an object under a moving finger — computed from the
+ * camera's field of view, its distance and the viewport height. ⛔ Composing it with `mmToPx`
+ * turns *millimetres of finger travel* into *metres of world*, which is precisely
+ * *"the same apparent size at every zoom, authored in millimetres and never in pixels"*:
+ *
+ * * **close camera ⇒ a smaller world offset**, far camera ⇒ larger, proportionally;
+ * * **device-independent**, because the viewport height and field of view are in the formula —
+ *   which is the half of the request raw pixels could not satisfy;
+ * * ⭐ **no new constant.** `referenceCameraDistance`'s ratio form was deliberately superseded
+ *   for rule 6 by this same computation (`translate.ts`), and the sway already scales this way
+ *   so it looks the same size at every zoom. Three rules, one factor.
+ *
+ * ⚠⚠ **THE DISTANCE IS THE CAMERA'S TO ITS FOCUS, NOT TO EACH BODY** — which is what the owner
+ * asked for (*"camera and focus"*) and is one number for the whole scene. ⛔ A per-body distance
+ * would make two bodies at different depths capture at different world gaps, so a pair could be
+ * *in range* measured from one and *out of range* measured from the other — a rule with two
+ * answers. ⭐ Stated because it is a modelling choice, not an approximation.
+ *
+ * ⛔ Returns 0 for a degenerate viewport or camera, which reads as *nothing captures* — the
+ * safe direction, and the same convention `trackingMetresPerPx` already uses.
+ */
+export function captureOffsetM(
+  offsetMm: number,
+  cameraDistanceM: number,
+  fovRad: number,
+  viewportHeightPx: number,
+): number {
+  if (!(offsetMm > 0)) return 0;
+  return mmToPx(offsetMm) * trackingMetresPerPx(cameraDistanceM, fovRad, viewportHeightPx);
+}
+
+/**
+ * ⛔⛔ **`captureShellDims`, `bodyContourDims` AND `MIN_CONTOUR_SCALE` ARE DELETED** (`D50`,
+ * 2026-09-18). They sized a BOX outline: the body's three extents, grown additively for the
+ * shell and by a hair for the body contour.
+ * ⭐ The outlines are the mesh's own edges now, offset by `mesh_topology.offsetPositions` — a
+ * true offset of every face plane, which a box's extents cannot express for any body that is
+ * not a box. ⚠ **The HALF survives**: `scene.ts` offsets each body by `offsetM / 2`, so two
+ * shells still meet exactly at the capture threshold, and a vector in `mesh_topology.test.ts`
+ * asserts that composition against the rule.
+ * ⛔ *Deleted, not disabled* — a vector for a rule that no longer exists passes while
+ * describing the wrong product.
+ */
 
 /** ⚠ Both are `D46` §1 placeholders, flagged for fine-tuning by the owner. */
 export interface HighlightNumbers {
   /**
-   * `SnapIsPossibleRadius` in **METRES** — `4L` = 320 mm on this scene (the owner,
-   * 2026-09-17: *"set capture radius at 4L"*). ⚠ An absolute distance, not a multiple of each
-   * object's own size; `captureRadiusM` records what that gave up.
+   * The capture offset in **METRES**, already converted from the glass by `captureOffsetM`.
+   *
+   * ⛔⛔ **SURFACE TO SURFACE, NOT CENTRE TO CENTRE** (`D49`). ⚠ It replaced `snapRadiusM`, whose
+   * `4L` value carries no information here: that number answered *how far apart may two CENTRES
+   * be*, and this one answers *how far apart may two SURFACES be*. ⭐ A value borrowed from the
+   * old question would be a constant inheriting the wrong question — `METHOD` names that trap.
    */
-  readonly snapRadiusM: number;
+  readonly captureOffsetM: number;
   /**
    * How near parallel the alignment axis must be to a target face normal, in radians.
    * ⚠ NO LONGER READ BY `highlightedPair` — kept because `alignmentMatchesTarget` takes it and
@@ -79,8 +136,22 @@ export interface HighlightVerdict {
   readonly pair: HighlightPair | null;
   /** The TRANSLATION condition. */
   readonly translating: boolean;
-  /** The RANGE condition — another body is within the radius of at least one held body. */
+  /** The RANGE condition — another body is within the offset of at least one held body. */
   readonly inRange: boolean;
+  /**
+   * ⭐⭐ The **measured surface gap** to the nearest candidate, in metres, or `null` when
+   * nothing was measurable (nothing held, or no body has a shape).
+   *
+   * ⛔⛔ **IT IS THE NUMBER THE RULE ACTUALLY COMPARED, CARRIED OUT FOR THE READOUT** — not a
+   * recomputation. ⚠ `A16`'s two flags say *which condition failed*; they cannot say *by how
+   * much*, and with a camera-scaled threshold *"too far"* now depends on the zoom as well as on
+   * the bodies. ⭐ Printing gap against threshold is what turns *"no white contour"* from a
+   * symptom into a reading. ⚠ Reported even when the pair is refused, which is the case a hand
+   * needs it in.
+   */
+  readonly gapM: number | null;
+  /** The threshold `gapM` was compared against, in metres — so the HUD can print both. */
+  readonly offsetM: number;
 }
 
 /**
@@ -182,22 +253,56 @@ export function highlightedPair(
   translating: boolean,
   n: HighlightNumbers,
   current: ObjectId | null,
+  gapOf: (a: CaptureId, b: CaptureId) => number | null,
 ): HighlightVerdict {
   let inRange = false;
   let pair: HighlightPair | null = null;
+  // ⭐ The nearest gap seen across every held body, whether or not it was near enough. ⚠ The
+  // rule needs only the verdict; the READOUT needs the number, and a hand asking *"why is there
+  // no contour"* is usually looking at a pair that is close but not close enough.
+  let gapM: number | null = null;
   for (const subject of heldIds) {
-    // ⛔ THE RANGE CONDITION — distance below the threshold, inside `nearestCapture`.
-    const target = nearestCapture(world, subject, n.snapRadiusM, current);
-    if (target === null) continue;
+    // ⛔ THE RANGE CONDITION — surface gap below the offset, inside `nearestCapture`.
+    const capture = nearestCapture(world, subject, n.captureOffsetM, current, gapOf);
+    if (capture === null) {
+      // ⚠ Out of range is still a measurement, and it is the one worth printing.
+      const nearest = nearestUnboundedGap(world, subject, gapOf);
+      if (nearest !== null && (gapM === null || nearest < gapM)) gapM = nearest;
+      continue;
+    }
     inRange = true;
+    if (gapM === null || capture.gapM < gapM) gapM = capture.gapM;
     // ⛔ THE TRANSLATION CONDITION, checked second so the readout can still report the range
     // while it is false. ⚠ The ORDER does not change the answer — both are necessary — but it
     // changes how much the HUD can say about a rotation-mode drag, which is the state a hand
     // hits most often.
     if (translating) {
-      pair = { subject, target };
+      pair = { subject, target: capture.target };
       break;
     }
   }
-  return { pair, translating, inRange };
+  return { pair, translating, inRange, gapM, offsetM: n.captureOffsetM };
+}
+
+/**
+ * The nearest surface gap to any other body, with **no threshold** — for the readout only.
+ *
+ * ⛔ Deliberately separate from `nearestCapture`, which is the RULE. ⚠ Folding *"and also tell
+ * me the distance when the answer is no"* into the rule would give one function two jobs and
+ * make the threshold easy to drop by accident — and this project has a HUD line that lied for
+ * the whole life of a file because nobody separated the two.
+ */
+function nearestUnboundedGap(
+  world: World,
+  held: ObjectId,
+  gapOf: (a: CaptureId, b: CaptureId) => number | null,
+): number | null {
+  let best: number | null = null;
+  for (const id of world.objects.keys()) {
+    if (id === held) continue;
+    const d = gapOf(held, id);
+    if (d === null) continue;
+    if (best === null || d < best) best = d;
+  }
+  return best;
 }

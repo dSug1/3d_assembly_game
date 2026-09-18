@@ -1,6 +1,6 @@
 # APPROACH & MATE — the owner's mechanism
 
-> **STATUS** · 🔨 **`A16`–`A21` BUILT AND ON THE GLASS** — the highlights, the alignment tracking, the scene and `frozen`; ⛔ the approach, snap and mate are NOT built (2026-09-17, branch `1.0.11-Approach-and-Mate-v0`)
+> **STATUS** · 🔨 **`A16`–`A21` + `D49` BUILT AND ON THE GLASS** — the highlights, the alignment tracking, the scene, `frozen`, and the **surface-gap capture** (§19); ⛔ the approach, snap and mate are NOT built (2026-09-18, branch `1.0.12-Pioneer-and-Follower-logic`)
 > **OWNS** · how a held object approaches another and joins it
 > **READ IF** · you are building or judging the approach, the snap, or the mate
 > **LAST VERIFIED** · 2026-09-17
@@ -943,9 +943,9 @@ green vectors; if absence had read as frozen, every body in the game would have 
 wrong body being highlighted would have been ambiguous between *a bug* and *a design I picked
 without asking*. ✅ It is now decided, and `nearestCapture` already implements it.
 
-⚠⚠ **`CENTRES-FOR-NOW` — MARKED, AS ASKED.** *"this will be later modified with distances
-between faces."* ⛔ Every place that would change carries that exact word, so the switch is one
-search: `core/proximity.ts`'s header, `centreDistance`, and `nearestCapture`.
+✅✅ **`CENTRES-FOR-NOW` IS NOW DONE FOR THE DISTANCE — see §19 (`D49`, 2026-09-18).** The
+capture test measures **surface to surface**; `centreDistance` survives, unwired, for the
+approach DIRECTION, which must stay on centres or it collapses at contact.
 
 ⛔⛔ **AND IT IS NOT A FREE UPGRADE — the note is worth more than the marker.** Face distances
 reintroduce a quantity that **collapses at contact**: the direction between two faces shrinks to
@@ -961,3 +961,282 @@ is the strongest argument yet for the migration, and it arrived with the plate.
 ⚠ Two bodies at the same distance keep the **incumbent** — hysteresis by memory rather than a
 second threshold, so no tunable and one sentence of rule. ⛔ Without it the target would swap
 every frame as the last bit of a float wobbled, and the target drives a highlight.
+
+---
+
+## 19. ⭐⭐⭐ `D49` — THE CAPTURE IS A **SURFACE OFFSET**, COMPUTED AT SPAWN (owner, 2026-09-18)
+
+> *"Currently, the white highlight works on the basis of a distance radius from the object
+> center. I want to modify that to an offset to the faces of the object. When an object will be
+> spawn in the scene, there are two solutions: either the game computes the offset of the faces
+> of the object at the moment it is spawn … or when I import object meshes from Blender, I shall
+> also import a phantom object which will provide the offset around the faces … I would prefer
+> the first one as this avoids to duplicate work in Blender."*
+>
+> and, in the same message:
+>
+> *"I want the offset distance to be manually adjustable by slider, and depend of the camera
+> position and focus (if the camera and focus is close to an object, the offset distance in mm
+> shall be less than if the camera and focus are far from the object, or more or less the same
+> in pixels although I do not want to use pixel since this may vary depending on device
+> screens)."*
+
+### ✅ THE ANSWER: COMPUTED — and the owner's preference is also the better engineering
+
+⭐⭐ **Two of the three worries that prompted the question argue FOR computing it**, which is
+why the preference costs nothing:
+
+| the worry | what is actually true |
+|---|---|
+| **quads** | Cannot reach the game. glTF 2.0 carries **triangles only** and Blender's exporter triangulates on export. A non-issue for either answer. |
+| **inverted normals** | ⭐⭐ **Cannot affect the computation at all.** Nothing in `core/collision_shape.ts` reads a normal — a support function asks only *which vertex is furthest this way*, and a flipped winding does not move a vertex. ⚠ Inverted normals still bite at the **mate** (`mateFacingCos` must be negative), just not here. |
+| **hollows** | ⚠ The one real limit: a convex hull fills a pocket in. ⛔ **But a hand-authored phantom is convex in practice too**, so the true comparison is *computed hull versus hand-authored hull* — and the computed one wins because **it cannot drift from the mesh it describes**. A phantom is a second source of truth for one fact, maintained in another tool, with nothing able to catch it going stale. |
+
+⛔ **THE ESCAPE HATCH IS RECORDED, NOT BUILT.** A part whose **concave pocket** must capture
+something — a socket, a slot — needs convex **decomposition** (several hulls, still computed) or
+an exact triangle BVH. ⭐ Kept here so a later session finds a *decision* rather than an
+omission; §11's two parked improvements are the precedent.
+
+### ⛔⛔ THE DISTANCE MOVED TO SURFACES. THE **DIRECTION** MUST NOT.
+
+⭐⭐⭐ **THIS IS THE LOAD-BEARING HALF OF THE DESIGN.** `D46` replaced the earlier
+`TargetPosition` approach precisely because a finger mapped onto a **face-to-face** direction
+collapses to noise exactly at contact — §1 and §5.1. ⛔ §18 already warned that migrating to
+faces *"is not a free upgrade"* for that reason.
+
+✅ The two quantities are now separated, and that is what makes the migration safe:
+
+| quantity | measured between | why |
+|---|---|---|
+| **the capture test** (`A16`'s range condition) | ⭐ **SURFACES** | a centre is not where a body is — the base plate proved it |
+| **the approach direction** (`4b.1`) | ⛔ **CENTRES**, unchanged | two centres can never meet, so the direction never degenerates |
+
+⚠ `centreDistance` is therefore **kept and unwired**, declared in `tests/unwired_debt.test.ts`
+against `D46` §4b.1 rather than deleted.
+
+### ⭐⭐ WHAT THE PLATE MEASURED, BEFORE AND AFTER
+
+⛔ The 2026-09-17 audit's finding 3 said the `4L` radius *"cannot be right for the base plate"*
+and that **nudging it trades one wrong answer for another**. ✅ Measured, and now vectored:
+
+| | by CENTRES (old) | by SURFACES (`D49`) |
+|---|---|---|
+| a part at rest, plate `3L` below | **312 mm** — *inside* the 320 mm radius, so white appeared at boot | **148 mm** — the real air gap under the parts |
+| a part **resting on** the plate | **228 mm** — reads as FURTHER than one hovering above the middle | ⭐ **0 mm** |
+| two parts `5L` apart | 400 mm | **320 mm** |
+
+⭐⭐ **AND IT RESTORES A PROPERTY THE PLATE HAD BROKEN**: at the boot camera nothing in the
+scene captures at rest. ⛔ `render/scene.ts`'s old claim that *"at 5L nothing is in range"* was
+false from the day the plate arrived; it is true again, and a vector states it.
+
+### ⭐⭐⭐ THE OFFSET SCALES WITH THE CAMERA — and the request has an exact answer already here
+
+⛔ *"The same in pixels, but not in pixels"* is not a contradiction: it is
+**millimetres on the glass**, which is what `CONSTRAINTS` §6 has required since day one.
+
+⭐⭐ `input/translate.ts`'s **`trackingMetresPerPx`** already computes the world displacement
+that keeps an object under a moving finger, from the camera's field of view, its distance and
+the viewport height. Composing it with `mmToPx` converts *millimetres of finger travel* into
+*metres of world*:
+
+```
+captureOffsetM = mmToPx(captureOffsetMm) × trackingMetresPerPx(cameraRadius, fov, viewportHeight)
+```
+
+* **close camera ⇒ smaller world offset**, far camera ⇒ larger, and **proportionally** — not
+  merely monotone, which is the half of the request a bare *"smaller when closer"* misses;
+* **device-independent**, because the viewport height and field of view are in the formula —
+  exactly what raw pixels could not deliver;
+* ⭐ **no new constant.** Rule 6 already computes its gain this way, and the sway already scales
+  this way so it looks the same size at every zoom. Three rules, one factor.
+
+⚠⚠ **THE DISTANCE IS THE CAMERA'S TO ITS FOCUS, NOT TO EACH BODY** — which is what was asked
+(*"camera and focus"*). ⛔ A per-body distance would let a pair be *in range* measured from one
+body and *out of range* measured from the other: a rule with two answers.
+
+### The numbers, and the one that changed meaning
+
+| | value | note |
+|---|---|---|
+| `captureOffsetMm` | **15 mm** on the glass | ⭐ the owner's number, 2026-09-18 (mine was 8 mm). **Slider**, and `?captureOffsetMm=12` |
+| …at the boot camera (radius 1.5 m) | ≈ **60 mm** of world clearance | ¾ of the `L` = 80 mm module, and still inside the **148 mm** of air under the parts |
+| ⛔ `snapRadiusFactor` | **DELETED** | with `captureRadiusM` and its validator rule |
+
+⛔⛔ **`4L` WAS NOT CARRIED ACROSS, DELIBERATELY.** It answered *how far apart may two CENTRES
+be*; the new field answers *how far apart may two SURFACES be*. ⭐ `METHOD`: *a constant
+borrowed from another rule's derivation inherits that rule's QUESTION, not just its number.*
+
+⚠⚠ **AND IT GIVES BACK THE SCALE-FREEDOM `4L` GAVE UP, WHICH REVERSES A DELIBERATE CHOICE.**
+An absolute centre radius meant a big part and a small part captured at the same *centre
+separation*; a surface offset means they capture at the same *clearance*. ⭐ Almost certainly
+what a hand wants — a plate should capture at the same visible gap as a part — but it is stated
+here rather than discovered later.
+
+### ⭐⭐⭐ THE WHITE CONTOUR **IS** THE SHELL (owner, 2026-09-18)
+
+> *"I also want the white highlight to scale to represent the offset properly (currently, the
+> white highlight dimensions do not change neither with camera position nor with the slider)."*
+
+⛔⛔ **THE CAUSE WAS A LIFETIME BUG, NOT AN ARITHMETIC ONE.** The contour was scaled to
+`dims × 1.02` **inside the re-parent branch** — written once when a body was adopted and never
+again. ⚠ Both things that move the offset, the **camera** and the **slider**, change it *without*
+changing which body is highlighted, so the contour was right for one frame and stale afterwards.
+⭐ `METHOD`, one level down from defect 46's marker lag: *a value derived from something that
+changes must be recomputed where that thing is read, not where its owner is assigned.*
+
+✅ The shell is now `captureShellDims(dims, offsetM)` — **additive**, per axis, recomputed every
+frame. ⛔ Additive and never proportional: a `0.3L` plate and a `3L` part must gain the **same**
+clearance, and a scale factor gives the thin one almost none.
+
+⛔⛔ **HALF THE OFFSET PER BODY, AND THE FACTOR OF TWO IS THE DESIGN.** The rule fires when the
+two SURFACES are within `offsetM`. ⚠ Inflating each body by the FULL offset would make the shells
+meet at `2 × offsetM` — the eye seeing them touch while the rule still said *no*.
+⭐⭐ At half each they meet **exactly** at the capture moment, which gives the contour a meaning
+needing no legend: **when the two white boxes touch, the pair captures.**
+
+⚠⚠ **TWO READINGS FITTED THE REQUEST AND BOTH ARE NAMED** (`METHOD`, earned on `D48`). The
+other is *each shell shows its own body's full reach* — true of one body, wrong about the pair.
+⛔ Chosen for the pair because the contours only ever appear in pairs; reversing it is one
+factor in `captureShellDims` and nothing else changes.
+⚠ A `1.02` floor keeps a vanishing shell off the surface it would z-fight; it binds only below
+2 % of an axis, and the HUD's `gap=…/…mm` stays exact at every offset.
+⚠ The alignment contour stays at a fixed `1.06`, so at very small offsets the white shell can
+sit *inside* it — a crossover to judge on the glass rather than to pre-empt.
+
+### ⭐⭐⭐ THE SHAPE IS READ OFF THE MESH — so an import needs no table (owner, 2026-09-18)
+
+> *"Make sure the offset is automatically computed when a new object is imported into the scene."*
+
+⛔⛔ **IT WAS NOT, AND THE FAILURE WOULD HAVE BEEN SILENT.** The shape was
+`boxShape(dimsOf.get(name) ?? OBJECT_DIMS_M)` — a table keyed by the names of the four bodies
+`scene.ts` builds. ⚠ An imported mesh is in no such table, so it would have fallen through to
+`OBJECT_DIMS_M` and been given **a part's dimensions**: a capture volume with no relation to the
+body under it, and nothing on the glass to say so.
+
+✅ `shapeFromMesh` now reads `getVerticesData(PositionKind)` and applies `mesh.scaling`. ⭐ There
+is no table to forget, so an import path inherits a correct shape by doing nothing.
+⚠ Scaling matters on import specifically: the boot boxes bake their size into the geometry and
+scale 1, while a glTF node may carry its size as a **scale** — the same silent failure one layer
+along.
+⛔ A mesh with no position data is **refused and named on the HUD** (`⛔NOSHAPE(objectX)`), never
+given a stand-in. A body that silently never captures is the shape of failure this file has
+already paid for twice.
+
+⛔⛔ **AND EVERY OUTLINE NOW READS THE SHAPE TOO** — `localBounds` gives each body's own box and
+**its centre**. ⚠ The centre is not decoration: every boot body is centred on its origin, and the
+first Blender export whose origin sits at a corner would have hung its outline off to one side,
+wrong in a way that looks deliberate.
+⚠ **`faces` still come from the table, deliberately** — a face is not a triangle (`3D1`), so
+extracting logical faces from an imported mesh is a real design problem and it is `3D4`'s.
+
+### ⭐⭐⭐ A SECOND WHITE HIGHLIGHT — THE MESH'S OWN EDGES (owner, 2026-09-18)
+
+> *"Make a second white highlight which matches the contour of the mesh of the objects (make sure
+> the user can see both this second white highlight as well as the blue or the orange highlight
+> if they are toggled on)."*
+
+✅ Babylon's **edge renderer** on the body itself — not a second box outline. ⭐⭐ The difference
+is the request: a box outline traces a body's bounding box, and for the boot cuboids the two
+coincide while for the first imported bracket they do not. *"The contour of the mesh"* means the
+mesh's edges, and `enableEdgesRendering` draws whatever geometry is actually there — so this one
+is correct on import for the same reason the shape is.
+
+⛔⛔ **WHY IT COULD NOT HAVE BEEN THE ALIGNMENT'S MECHANISM TOO.** Edges live ON the mesh and a
+mesh has exactly **one** `edgesColor`. ⚠ Had the alignment also used edges, the two would have
+fought over that single field and the last writer would win. ⭐ The alignment keeps its own box
+outline, which is precisely what lets all three show at once — the owner's second requirement.
+
+⭐ **They nest, innermost first**: the mesh's white **edges** (on the body) → the alignment's
+cyan/amber box at **1.06** → the white **capture shell** at body + half the offset.
+⚠ At a very small offset the shell can fall inside the alignment box; all three stay visible and
+distinct, and the only coincidence is the single offset value where shell and alignment are
+equal — momentary while a slider moves.
+⚠ Both whites are driven from **one verdict** and appear and vanish together: they are two
+readings of one state, and a pair where only one showed would invent a state the rule has not got.
+
+#### ⛔⛔ THE FIRST DEVICE LOOK FOUND TWO THINGS, AND ONE IS WORTH KEEPING
+
+> *"Make the white mesh contour line thinner (barely more than the cyan/orange line). Also, the
+> corners of the mesh are not contoured, which make the shape of the contour strange."*
+
+✅ **Width**: `edgesWidth` 2 → **1**. The alignment contours are `CreateLines`, which WebGL fixes
+at one pixel, so the edges now sit just above them.
+
+⭐⭐⭐ **THE MISSING CORNERS WERE A SPLIT-VERTEX PROBLEM, AND IT WILL RECUR ON IMPORT.** A box
+mesh has **24 vertices, not 8** — four per face, duplicated so each carries its own normal and
+UV. ⛔ The edge renderer's default adjacency test compares **indices**, and with every face
+owning private copies no two faces share one, so the pairs meeting at a corner are never
+recognised as adjacent and their edges are dropped.
+✅ `enableEdgesRendering(0.95, true)` — the flag compares **positions** instead, and coincident
+duplicates resolve to the same point. ⚠ Documented as the slower path, which is irrelevant here:
+adjacency is computed **once** when a body is first outlined, not per frame.
+⚠⚠ **Worth keeping because every exported mesh splits vertices too** — wherever a normal, a UV
+seam or a material changes. ⛔ So this was not a quirk of `CreateBox`; it is the general case,
+found early because the boot bodies happen to exhibit it.
+⚠ `0.95` is the default epsilon, kept: an edge is drawn when its two faces are angled enough, so
+a box's 90° corners qualify easily while a smooth imported surface is not covered in lines. **That
+is the number to move if an import looks wrong.**
+
+### What was built
+
+⭐ `src/core/collision_shape.ts`, engine-free — a convex point set per body, `boxShape`,
+`shapeFromVertices` (⚠ **`3D4`'s one line**), `supportPoint`, `nearestOnSimplex` and
+**`gapBetween`**, a GJK distance. ⭐ Plus `SceneObject.shape`, `core/proximity.ts`'s
+`surfaceGap`, and `input/highlight.ts`'s `captureOffsetM`. **Suite 773 → 844.**
+
+⛔⛔ **A BOX IS THE ONE SHAPE THAT HIDES THIS ALGORITHM, AND THE FIRST 24 VECTORS WERE ALL
+BOXES.** The Minkowski difference of two boxes is a box, so GJK lands on the answer in one step:
+**three deep branches were unreached by the whole suite**, and deleting each left it green.
+⭐ Found by running the mutants, then by *instrumenting the code to report which branch it
+took* rather than reasoning about it. ⚠ The suite now carries non-box bodies, coplanar and
+collinear ones, a 600-pair sweep, and an **exact** reference (Carathéodory subsets solved by
+Lagrange multipliers — a different method from the product's Voronoi-region tests, so it cannot
+agree with it by construction). ⛔ Nine of ten mutants now redden; the tenth is **measured
+unreachable over 40 000 degenerate triangles** and says so at its site rather than looking
+covered.
+
+### ⚠ WHAT TO LOOK FOR ON THE GLASS
+
+⛔ **Check the HUD's `build` line first.** The readout is `◆TR a↔b gap=12/32mm` — the measured
+surface gap, then the threshold it was compared against.
+
+1. **Drag a part towards another** ⇒ white appears when the **surfaces** are within the offset,
+   not when the centres are. ⛔ *Falsified if* white appears while there is still an obvious
+   gap, or if a long part captures from its middle rather than from its end.
+2. ⭐⭐ **Drag a part down towards the base plate** ⇒ it should capture when it is **near the
+   plate's top face**, at any point across the plate. ⛔ *Falsified if* it captures earlier over
+   the plate's middle than over its edge — that is the centre rule, and it is the case this
+   whole change exists for.
+3. **Nothing captures at rest**, at boot. ⛔ *Falsified if* white appears the instant a part is
+   picked up without being moved near anything.
+4. ⭐⭐⭐ **Zoom in and out and watch `gap=…/…mm` AND the white boxes** ⇒ the second number
+   must **shrink as the camera comes in**, and the contours must visibly shrink with it.
+   ⛔ *Falsified if* either stays fixed — the number staying fixed is the camera scaling not
+   wired; the contour staying fixed while the number moves is the shell not being recomputed,
+   which is exactly the defect reported on 2026-09-18.
+   ⚠ The contour should then appear at roughly the same *apparent* size at every zoom.
+7. ⭐⭐ **THE CLAIM THE SHELL MAKES**: *when the two white boxes touch, the pair captures.*
+   ⛔ Bring two parts together slowly and watch. *Falsified if* white persists after they visibly
+   overlap, or if the pair captures while an obvious gap remains between the boxes — that would
+   mean the half-offset is a full offset, and it is one factor in `captureShellDims`.
+8. ⚠ **Move the slider while a pair is highlighted** ⇒ the boxes must resize under the finger,
+   live. ⛔ *Falsified if* they only resize after releasing and re-grabbing a body.
+9-bis. ⚠ **The mesh edges must close at every CORNER** — a complete outline, not a set of
+    disconnected face borders. ⛔ *Falsified by* gaps at the corners, which would mean the
+    adjacency test is back on indices. ⚠ And the line should be **barely thicker** than the
+    cyan/amber alignment box beside it.
+9. ⭐⭐ **THE TWO WHITES TOGETHER**: the mesh's own edges light up white AND the larger shell box
+   appears, on **both** bodies, at the same instant. ⛔ *Falsified if* only one of them shows, or
+   if they light on different bodies.
+10. ⭐⭐ **ALL THREE AT ONCE**: align a body (cyan or amber), then bring it near another while
+    translating. ⛔ Its white **edges**, its coloured **alignment box** and the white **shell**
+    must all be visible and tellable apart. *Falsified if* any one of them disappears when
+    another appears — that is the case the owner asked for by name.
+11. ⚠ **The plate** is `6L × 0.3L × 9L`: its white edges should trace a **thin wide slab**, not
+    a part-sized box. ⛔ *Falsified if* it is outlined at a part's size — that was the dimensions
+    table, and it is the defect an imported body would have inherited.
+5. **The `⭐ CAPTURE (D49)` slider**, 1–40 mm. ⚠ Both ends should be visibly wrong: at 1 mm the
+   bodies must almost touch, at 40 mm much of the scene captures at once. ⛔ If neither end
+   feels wrong the range is in the wrong place, which is itself a finding.
+6. ⚠ **A turned part** should capture along whichever face it presents — the gap now depends on
+   orientation, and with `L × 2L × 3L` bodies at seeded angles that difference is large.

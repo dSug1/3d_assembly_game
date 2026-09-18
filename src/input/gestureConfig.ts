@@ -401,29 +401,41 @@ export interface GestureConfig {
   mateBreakAngular: number;
 
   // ── `A16` — THE HIGHLIGHT CONDITION ───────────────────────────────────
-  // Design of record: `Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md` §1, §12.
+  // Design of record: `Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md` §1, §12, §19.
   // ⚠⚠ **BOTH ARE FLAGGED FOR FINE-TUNING** (the owner: *"to be finetuned later"*).
-  // ⛔ NEITHER GETS A SLIDER: the owner's standing instruction is not to inflate the
-  // tuning menu, and both are reachable from the URL (`?snapRadiusFactor=1.5`) like
-  // any other field here.
   // ⚠ `MinDistanceBeforeSnapIsConfirmed` is deliberately ABSENT — the hold-off is not
   // built in this slice, and `config_debt.test.ts` refuses a tunable nothing reads.
 
   /**
-   * `SnapIsPossibleRadius`, in multiples of the scene's base module **`L`**.
+   * ⭐⭐⭐ **THE CAPTURE OFFSET, IN MILLIMETRES ON THE GLASS** (`D49`, 2026-09-18).
    *
-   * ⚠ **4 since 2026-09-17** (*"set capture radius at 4L"*) — **320 mm** with `L` = 80 mm.
-   * ⛔⛔ IT IS NO LONGER PER-OBJECT. It was `candidate.span × factor`, which was scale-free;
-   * one absolute distance gives that up so that *"4L"* means one number a hand can compare with
-   * the bodies (`L × 2L × 3L`) and their spacing (`3L`). ⭐ `core/proximity.ts` records the
-   * trade, and `objectSpan` was deleted with the rule rather than left dormant.
-   * ⚠ History: 1.25 × span → 1.0 × span (withdrawn: 80 mm is exactly where two cubes touch)
-   * → 2.0 × span → **4 × L**.
-   * ⚠⚠ A radius below the bodies' LARGEST extent (`3L`) cannot capture two of them meeting
-   * along their long axes before they interpenetrate — not encoded here, because the body
-   * dimensions are a scene fact and this file is engine- and scene-free.
+   * ⛔⛔ **IT REPLACED `snapRadiusFactor`, AND IT ANSWERS A DIFFERENT QUESTION.** That field
+   * asked *how far apart may two CENTRES be*, in multiples of the scene module `L`; this one
+   * asks *how far apart may two SURFACES be*. ⚠ Its `4L` value carries **no information** here
+   * — a constant borrowed across a change of question inherits that question, which `METHOD`
+   * names as a trap — so this starts from a fresh guess and a hand moves it.
+   *
+   * ⭐⭐ **MILLIMETRES ON THE GLASS, NOT IN THE WORLD, and that is the owner's rule**: *"if the
+   * camera and focus is close to an object, the offset distance in mm shall be less than if the
+   * camera and focus are far."* ⛔ `captureOffsetM` converts it per frame through the same
+   * tracking factor rule 6 uses, so the offset keeps a constant APPARENT size while never being
+   * authored in pixels — `CONSTRAINTS` §6 holds, and the device dependence pixels would have
+   * carried is removed by the field of view and viewport height being in the formula.
+   *
+   * ⭐ **IT HAS A SLIDER**, at the owner's request (*"I want the offset distance to be manually
+   * adjustable by slider"*) — the same exception `BreakThreshold` was granted in §8 of the
+   * spec. ⚠ Also on the URL as `?captureOffsetMm=12`.
+   *
+   * ⚠⚠ **15 mm — THE OWNER'S NUMBER, 2026-09-18** (*"set default capture offset to 15mm"*),
+   * replacing my 8 mm placeholder. ⛔ It is a JUDGEMENT, not a measurement: nothing here has been
+   * put under a finger yet, and the slider is how it gets judged.
+   * ⭐ What it means on the glass: at the boot camera (radius 1.5 m) 15 mm works out near **60 mm**
+   * of world clearance — three quarters of the `L` = 80 mm module, and still comfortably inside
+   * the **148 mm** of air under the parts, so nothing captures at rest.
+   * ⚠ A vector asserts that last property against **this** field rather than against a literal,
+   * so raising the default far enough to capture the base plate at boot reddens the suite.
    */
-  snapRadiusFactor: number;
+  captureOffsetMm: number;
   /**
    * Degrees. How near parallel the alignment axis must be to one of the target's face
    * normals for `A16`'s condition 1 to hold.
@@ -712,8 +724,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   mateBreakLinear: 0.02,
   mateBreakAngular: 0.35,
 
-  // ⚠ The owner's number, verbatim: *"set capture radius at 4L"* — 320 mm between centres.
-  snapRadiusFactor: 4,
+  // ⚠ A PLACEHOLDER with a slider — millimetres on the GLASS, converted per frame against the
+  // camera distance. ⛔ Not carried over from `snapRadiusFactor`: that was 4L between CENTRES
+  // and this is a gap between SURFACES, so the old value would be a number answering the old
+  // question. See the field's header.
+  captureOffsetMm: 15,
   // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
   // really did align against this thing.
   alignMatchDeg: 15,
@@ -945,13 +960,21 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // `L`, not a body's span, so "1" no longer names contact and the old bound was arithmetic
   // about a quantity this field no longer holds. ⭐ A stale guard that still passes is worse
   // than none: it looks like the number has been thought about.
-  if (!(cfg.snapRadiusFactor > 0)) {
+  if (!(cfg.captureOffsetMm > 0)) {
     throw new Error(
-      `snapRadiusFactor (${cfg.snapRadiusFactor}) is not positive: a zero or negative capture ` +
-        "radius makes every distance test fail, so no pair could ever be highlighted and the " +
-        "whole mechanism would be silently unreachable with nothing on the glass to say why.",
+      `captureOffsetMm (${cfg.captureOffsetMm}) is not positive: a zero or negative capture ` +
+        "offset makes every gap test fail, so no pair could ever be highlighted and the whole " +
+        "mechanism would be silently unreachable with nothing on the glass to say why.",
     );
   }
+  // ⚠⚠ **AND THERE IS DELIBERATELY NO CROSS-TUNABLE RULE FOR IT YET, WHICH IS WORTH STATING.**
+  // ⭐ The number it will be coupled to is `MinDistanceBeforeSnapIsConfirmed`, the hold-off —
+  // `APPROACH_AND_MATE.md` §1 already records that the two cannot be chosen independently,
+  // because a hold-off outside the capture band means nothing can ever dock. ⛔ That field does
+  // not exist yet, so a rule relating them would be arithmetic about a quantity this config
+  // does not hold. ⚠ The same reasoning retired the old `> 1` bound on `snapRadiusFactor`, and
+  // a stale guard that still passes is worse than none: it looks like the number was thought
+  // about.
   if (!(cfg.alignMatchDeg > 0 && cfg.alignMatchDeg < 90)) {
     throw new Error(
       `alignMatchDeg (${cfg.alignMatchDeg}°) is outside (0, 90): at 0 no alignment could ever ` +

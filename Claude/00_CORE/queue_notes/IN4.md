@@ -591,3 +591,41 @@ second finger was holding a second part.
 ⚠ `QUEUE.md` is a front door and this cell had grown to an essay inside a table. ⛔ Distilled there to state + one lesson + this pointer; the full text is below, unrewritten, per `README.md` rule 2.
 
 > ✅✅ **RULE 6 CLOSED 2026-09-15** — 8 vectors, and confirmed by finger in ORDINARY PLAY, not only in a tuning session (`src/input/translate.ts`). ⭐⭐ **The gain was COMPUTED before it was written**: the honest value spans **20x across the zoom clamp** and another 1.6x across screen sizes, so it is a MULTIPLIER on a computed tracking factor and **1.0 means the object sits exactly under the finger** — the first gain on this project with a correct value rather than a preferred one. ⚠ It **supersedes §1.2's `referenceCameraDistance` ratio** for this rule, and §1.2's stated rationale is backwards (scaling by distance holds the SCREEN displacement constant, not the world one). ⛔⛔ **THE `STATIONARY` LATCH I BUILT WAS WRONG AND THE DEVICE OVERTURNED IT, FIRST TRY**: rule 6 now reads **PRESENCE**, every frame — a second finger outside any object means translate, whatever it has done since it went down. ⭐ The lesson is the distinction between the signals: `MOVING`/`STATIONARY` is noisy and continuous, so §4 latches roles keyed to it; whether a finger is DOWN is discrete, deliberate and VISIBLE, and latching that hides state instead of protecting it. **Do not generalise "latch at press" to every input.** ⭐ Rule 6 also has **INERTIA** now (`src/input/follow.ts`, critically damped, exact analytic step so it is frame-rate independent and cannot diverge on a dropped frame) — `translateInertiaMs`, ⚠ the owner set it to 10 ms because at critical damping every millisecond reads as LAG. ⭐⭐ **So the model now carries a DAMPING RATIO** — Unity's `linearDamping`, dimensionless: below 1 the object **accelerates through the gap** instead of keeping a permanent distance, which is what "catch-up" means. ✅ PhysX (Unity's physics) is **BSD-3 since 4.0**, so `N13` is clear — but only its MODEL is reused, not its arithmetic: PhysX damps by `(1−c·dt)`, which is timestep-DEPENDENT and survivable only behind Unity's fixed 0.02 s step. A vector measures ours against PhysX's at that step and shows the gap is PhysX's discretisation error. ⭐ **TUNED BY FINGER OVER FIVE PASSES AND SETTLED**: gain **1.17**, τ **7.6 ms**, ζ **0.2**, phantom lead **0.2 ms** — ⚠ quote these from `gestureConfig.ts`, which is the one copy; this row carried a stale set (1.15 / 8 ms / 0.5 ms) until 2026-09-15. The object now deviates &lt;0.45 mm from the finger at 300 mm/s — under the measured pointer noise — so the entire feel lives in the **overshoot** (0.3–1.8 mm of follow-through), not in any gap. ⭐⭐ The owner also added a **PHANTOM TARGET** (`src/input/lead.ts`): the object chases a point projected ahead of the finger along the finger's own SMOOTHED velocity — feed-forward, not more feedback, and a vector fails if it is derived from the gap instead (that is just a stiffer spring). ⛔⛔ **Its computed landmark marked the WRONG END of the range**: `lead = 2·ζ·τ` (3.2 ms) makes a steady drag leave no gap at all, and the hand **shipped 0.2 ms — a FIFTEENTH of it** — after narrowing the slider twice to reach the bottom (0.5 ms was an intermediate pass, and the dossier records it as such). **A landmark tells you where a range's zero is; it does not tell you where to stand** → [`queue_notes/IN4.md`](queue_notes/IN4.md). Rule 4 ✅ via `IN9`. 6bis onward wait on `3D1`. ⭐⭐ **THE `3D1` DEPENDENCY IS NOT UNIFORM — rule 6 did NOT need it**, which is why it shipped first: rule 6 reads *the selected object* and a screen frame, while 6bis/6ter/6quater are defined on `AxisBtwFaces`, the axis between two selected FACE centres — exactly what `3D1` owns. ✅ The composition was computed BEFORE the gain, as this row demanded.
+
+---
+
+## ⛔⛔ DISTILLED OUT OF `QUEUE.md` ON 2026-09-18 — the build ORDER, now spent
+
+⭐ It explained why `3D1` was sequenced after rule 6, and the reasoning was right and is now
+**executed**: `3D1` closed 2026-09-15 and rule 6 closed the same day. ⚠ A front door carries
+STATE, and a sequencing argument whose sequence has happened is narrative.
+⛔ Moved rather than deleted, unrewritten, because its second half is a live warning about
+rule 6 being a COMPOSITION — and `D49` has just added a third factor to that composition, so
+it is about to matter again.
+
+### ⭐⭐ THE ORDER, and why `3D1` is not next after all
+
+**`IN2` → rule 6 translate → `3D1` → 6bis onward.**
+
+⭐ **`IN4`'s dependency on `3D1` IS NOT UNIFORM, and that is what reorders the queue.**
+Rule 6 (screen-plane translate) is defined on *the selected object* plus a screen
+frame — no faces, no connectors, no assembly tree. Rules **6bis / 6ter / 6quater** are
+defined on `AxisBtwFaces`, *the axis between the centres of the two selected FACES*,
+and a face centre is exactly what `3D1` owns. ⭐ Same reason `IN9` shipped ahead of
+`3D1`: ask what a rule actually reads, not which phase it is filed under.
+⛔ So translation goes as far as rule 6 **and must stop there**.
+
+⛔⛔ **AND RULE 6 IS A COMPOSITION — mistake shape 4's exact territory.** §1.2 scales
+translation gains by `cameraDistance / referenceCameraDistance`, so rule 6 is
+`translate × zoom × orbit`: one millimetre of finger means a different world
+displacement at every camera distance, and the orbit surface now makes that distance
+**asymmetric** (1.14 m at the top ring against 0.71 m at the bottom).
+⭐ **Compute what ONE MILLIMETRE of finger does at both zoom extremes BEFORE writing
+the gain.** Not after a device session is spent disliking it — and not as a check
+bolted on afterwards, which is how the orbit surface got three segments from three
+rings.
+
+⚠ `3D1` remains the last thing between here and actual assembly, and it is where
+mistake shape 4 is most likely to recur: an assembly tree composes transforms through
+parent-child chains, which is what cost the predecessor a week. ⭐ Write the composite
+check BEFORE the code, not after.

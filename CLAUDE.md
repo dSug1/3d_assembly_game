@@ -44,12 +44,12 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-17)
+## Where it stands (2026-09-18)
 
-✅ Green: TypeScript + Babylon + Vite, **773 golden vectors passing** (656 + 117 — ⭐⭐ the
-**2026-09-17 AUDIT**, the first pass to find defects by READING the source rather than by a
-finger; before that 572 + 84 for `A16`–`A20`, and 619 − 51 when forks A and B were deleted with
-their vectors).
+✅ Green: TypeScript + Babylon + Vite, **856 golden vectors passing** (773 + 83 — ⭐ `D49`'s
+surface gap and its shell; before that 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the first pass to find
+defects by READING the source rather than by a finger; 572 + 84 for `A16`–`A20`, and 619 − 51
+when forks A and B were deleted with their vectors).
 ⛔⛔⛔ **READ [`Claude/00_CORE/queue_notes/AUDIT_2026-09-17.md`](Claude/00_CORE/queue_notes/AUDIT_2026-09-17.md)
 BEFORE TOUCHING THE ALIGNMENT LAYER, §1.1, THE CONSTRAINT STACK, THE URL OVERRIDES OR THE TREE
 OPERATIONS.** ⭐ Its largest single finding is **ten vectors that could not fail** — among them
@@ -106,6 +106,39 @@ two writers) carried by a new base plate. ⛔ The approach, hold-off, snap, mate
 **not built**.
 ⭐ The scene is now a workbench: three `L × 2L × 3L` parts `5L` apart at seeded random
 orientations (`?sceneSeed=N`), a frozen `6L × 0.3L × 9L` plate `3L` below.
+✅✅ **AND THE CAPTURE IS A SURFACE GAP** (`D49`, 2026-09-18, the owner): white is decided by the
+distance between the bodies' **surfaces**, from a convex shape **COMPUTED AT SPAWN**
+(`src/core/collision_shape.ts`, a GJK distance) — which is the owner's preferred answer to
+*compute it or author a phantom in Blender*, and also the better one: nothing there reads a
+normal, so **inverted normals cannot affect it**, glTF has no quads, and a phantom would be a
+second source of truth for one fact. ⛔⛔ **Only the DISTANCE moved to surfaces — the approach
+DIRECTION must not**, because a face-to-face direction collapses to noise at contact, which is
+the whole reason `D46` exists. ⭐⭐ The threshold is **millimetres on the glass**, scaled by
+camera distance through rule 6's own tracking factor — so it shrinks as the camera comes in and
+keeps a constant APPARENT size, never authored in pixels — and it has a **slider**.
+⭐⭐ **AND THE WHITE CONTOUR *IS* THE SHELL** (2026-09-18): the body inflated by **half** the
+offset, recomputed every frame — so it moves with the camera and with the slider, and **two white
+boxes touching means the pair captures**. ⭐⭐ **A SECOND WHITE** marks the mesh's own **edges**
+(Babylon's edge renderer, so it follows real imported geometry rather than a bounding box — ⚠ and
+it needs `checkVerticesInsteadOfIndices`, because a box has **24 vertices not 8** and the default
+index-based adjacency test drops every corner; **every exported mesh splits vertices too**), and
+the three outlines NEST so an aligned body shows all of them: white edges → cyan/amber box → white
+shell. ⛔⛔ **AND THE SHAPE IS NOW READ OFF THE MESH** — it was a `Map<name, dims>` keyed by the
+four boot bodies, so an **imported** body would have been given a part's dimensions silently;
+every outline reads the shape too, including **its centre**, which matters the first time an
+export's origin is not at its middle. ⚠ A body whose geometry cannot be read is named on the HUD
+(`⛔NOSHAPE`), never given a stand-in. ⛔ Half, not the full offset, or the eye would see them
+meet at twice the threshold. ⚠ It was scaled once at adoption before, which is why it changed
+with neither.
+⚠ `snapRadiusFactor` is deleted: `4L` answered *how far apart may two CENTRES be*, a different
+question. ⭐ It also fixes the audit's finding 3, where the plate read **312 mm** by centres
+while a part RESTING on it read **228 mm** — an inversion no radius value could repair.
+⛔⛔ **AND THE LESSON IS ABOUT THE VECTORS, NOT THE GEOMETRY**: the first 24 were all BOXES, and
+the Minkowski difference of two boxes is a box — so GJK converged in ONE step and **three deep
+branches were unreached by the whole suite**, each deletable with everything still green.
+⭐ Found by running mutants and then **instrumenting the code to report which branch it took**
+rather than reasoning about it. *A green suite over the shape the product happens to use today
+is not coverage of the algorithm underneath it.*
 ⛔⛔ **THE EARLIER `TargetPosition` + gizmo + orbit design is SUPERSEDED** — its
 finger-to-face-point direction collapses to noise exactly at contact; centre-to-centre cannot.
 ⚠⚠ **AND THREE LESSONS FROM THIS DAY BIND EVERY ROW STILL TO COME**, each from a device report

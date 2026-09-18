@@ -20,12 +20,10 @@ import { describe, expect, it } from "vitest";
 import {
   alignedFaceOf,
   faceFromPickedNormal,
-  faceMarkerExtent,
-  faceMarkerLocalOrientation,
 } from "@core/face_pick";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import type { Constraint } from "@core/constraint_stack";
-import { qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
+import { qFromAxisAngle, type Vec3 } from "@core/vec";
 
 /** A unit box with the six faces `3D1` already gives every object. */
 const BOX: SceneObject = {
@@ -160,84 +158,20 @@ function qRotateForTest(o: SceneObject, v: Vec3): Vec3 {
 }
 
 /**
- * ⭐⭐ **WHAT THESE NOW MODEL: WHAT THE SCENE GRAPH DOES.** The markers are **parented** to the
- * object since 2026-09-17 (they lagged a frame when the scene placed them from a cached world
- * matrix), so the object's orientation is composed by Babylon, not by a function here.
- * ⛔ `marker(q, n)` below is that composition written out — `qmul(objectOrientation,
- * faceMarkerLocalOrientation(n))` — so the property the defect broke is still pinned by a
- * vector, at the closest point a vector can reach `src/render`.
+ * ⛔⛔ **THE FACE-MARKER ORIENTATION VECTORS ARE DELETED WITH THE RULE THEY DESCRIBED** (`D50`,
+ * 2026-09-18).
+ *
+ * ⚠ They pinned a device-reported defect: a marker aligned only with the face's world NORMAL
+ * fixes one axis and leaves the spin about it free, so turning the object about that face's own
+ * normal moved the face and not the marker. ⭐⭐ The lesson is the one worth carrying — **a
+ * direction test cannot see a roll**, the same family as *a sign is not tested by any amount of
+ * testing the magnitude*.
+ * ⛔ The defect is now **unreachable rather than corrected**: a marker is the face's own
+ * triangles in the body's local frame, so it has no orientation of its own to get wrong. There
+ * is nothing left for these vectors to hold, and a vector whose subject is gone passes while
+ * describing the wrong product.
  */
-const marker = (objectOrientation: Quat, faceNormalLocal: Vec3): Quat =>
-  qmul(objectOrientation, faceMarkerLocalOrientation(faceNormalLocal));
 
-describe("⛔⛔ the face marker's orientation — THE DEFECT A DIRECTION TEST COULD NOT SEE", () => {
-  // ⭐⭐ DEVICE-REPORTED, 2026-09-16: *"the highlighted face does not rotate as the cube's
-  // face: consequently, there is a growing mismatch between their respective quaternion."*
-  // ⛔ The first version aligned the marker's facing with the face's world NORMAL, which
-  // fixes ONE axis and leaves the spin about it free. So turning the object about that
-  // face's own normal moved the face and not the marker.
-  // ⭐⭐⭐ A DIRECTION TEST CANNOT SEE A ROLL — the same family as *a sign is not tested by
-  // any amount of testing the magnitude*. The quantity I checked (does it face the right
-  // way?) stayed true while the quantity that mattered drifted.
-
-  const qz = (radians: number) => qFromAxisAngle([0, 0, 1], radians);
-
-  it("⭐ the marker's +z lands on the face's WORLD normal — the old claim, still true", () => {
-    // ⚠ This is what the broken version got right, kept so the fix is not a regression.
-    const q = marker(qz(0.9), [0, 0, 1]);
-    const facing = rotateByTest(q, [0, 0, 1]);
-    const worldNormal = rotateByTest(qz(0.9), [0, 0, 1]);
-    facing.forEach((v, i) => expect(v).toBeCloseTo(worldNormal[i]!, 12));
-  });
-
-  it("⛔⛔ AND ITS IN-PLANE AXES FOLLOW THE OBJECT — which the old version failed", () => {
-    // ⭐⭐ THE VECTOR THAT WOULD HAVE CAUGHT IT. Spin the object about the very axis the
-    // face points along: the normal does not move, so a normal-aligned marker does not
-    // move either — while the face plainly does. ⛔ Here the marker's own +x must rotate
-    // with the object, quarter turn for quarter turn.
-    const spin = Math.PI / 2;
-    const q = marker(qz(spin), [0, 0, 1]);
-    const markerX = rotateByTest(q, [1, 0, 0]);
-    // a quarter turn about +z takes +x to +y
-    expect(markerX[0]).toBeCloseTo(0, 12);
-    expect(markerX[1]).toBeCloseTo(1, 12);
-  });
-
-  it("⛔ and it keeps following after FORTY spins — not a small-angle accident", () => {
-    // ⭐ `anchor_rotate.ts`'s vectors make the same move: one step can pass by luck, forty
-    // cannot. ⚠ The reported symptom was a GROWING mismatch, so accumulation is the test.
-    let total = 0;
-    for (let i = 0; i < 40; i++) total += 0.1;
-    const q = marker(qz(total), [0, 0, 1]);
-    const markerX = rotateByTest(q, [1, 0, 0]);
-    expect(markerX[0]).toBeCloseTo(Math.cos(total), 10);
-    expect(markerX[1]).toBeCloseTo(Math.sin(total), 10);
-  });
-
-  it("⭐ a side face works the same way", () => {
-    // ⚠ +z is the marker's own axis, so it is the one face where the offset is identity —
-    // exactly the fixture that would hide an order-of-multiplication error.
-    const q = marker(qz(0.4), [1, 0, 0]);
-    const facing = rotateByTest(q, [0, 0, 1]);
-    const worldNormal = rotateByTest(qz(0.4), [1, 0, 0]);
-    facing.forEach((v, i) => expect(v).toBeCloseTo(worldNormal[i]!, 12));
-  });
-});
-
-/** ⚠ The plain quaternion sandwich, written out, so the product cannot judge itself. */
-function rotateByTest(q: readonly [number, number, number, number], v: Vec3): Vec3 {
-  const [w, x, y, z] = q;
-  const t: Vec3 = [
-    2 * (y * v[2] - z * v[1]),
-    2 * (z * v[0] - x * v[2]),
-    2 * (x * v[1] - y * v[0]),
-  ];
-  return [
-    v[0] + w * t[0] + (y * t[2] - z * t[1]),
-    v[1] + w * t[1] + (z * t[0] - x * t[2]),
-    v[2] + w * t[2] + (x * t[1] - y * t[0]),
-  ];
-}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ⭐⭐⭐ THE MARKER'S SIZE ON A NON-CUBE FACE — `L × 2L × 3L`, the owner's scene (2026-09-17).
@@ -247,59 +181,6 @@ function rotateByTest(q: readonly [number, number, number, number], v: Vec3): Ve
 // that are not the normal in ascending order, which swaps `2L` and `3L` on the ±x faces.
 // ⭐ `METHOD`: a composition is a thing to MEASURE.
 // ══════════════════════════════════════════════════════════════════════════════
-describe("⛔⛔ faceMarkerExtent — the marker must be the shape of the face it marks", () => {
-  const L = 0.08;
-  const DIMS: Vec3 = [L, 2 * L, 3 * L];
-  /** The two in-plane dimensions of each face, as a SET — the geometry, order aside. */
-  const expected: Record<string, [number, number]> = {
-    "+x": [2 * L, 3 * L],
-    "-x": [2 * L, 3 * L],
-    "+y": [L, 3 * L],
-    "-y": [L, 3 * L],
-    "+z": [L, 2 * L],
-    "-z": [L, 2 * L],
-  };
-  const normals: Record<string, Vec3> = {
-    "+x": [1, 0, 0],
-    "-x": [-1, 0, 0],
-    "+y": [0, 1, 0],
-    "-y": [0, -1, 0],
-    "+z": [0, 0, 1],
-    "-z": [0, 0, -1],
-  };
-
-  it("⭐⭐ all six faces get the two dimensions that actually lie IN that face", () => {
-    // ⛔ Asserted as a sorted pair, because WHICH of the two is the marker's local x depends on
-    // `shortestArc`'s convention — and that convention is not this function's promise. ⚠ What
-    // IS promised is that the marker covers the face, and a swap would leave it overhanging on
-    // one axis and short on the other.
-    for (const id of Object.keys(expected)) {
-      const { u, v } = faceMarkerExtent(normals[id]!, DIMS);
-      const got = [u, v].sort((a, b) => a - b);
-      const want = [...expected[id]!].sort((a, b) => a - b);
-      expect(got[0]).toBeCloseTo(want[0]!, 12);
-      expect(got[1]).toBeCloseTo(want[1]!, 12);
-    }
-  });
-
-  it("⛔⛔ AND THE ±x FACES ARE 2L × 3L — the pair my first version got BACKWARDS", () => {
-    // ⭐ Kept as its own vector because it is the specific case that was wrong, and because the
-    // sorted-pair check above would also pass for an implementation that happened to be right
-    // only on ±z. ⚠ 3L must appear, and L must NOT — the +x face never sees the body's width.
-    const { u, v } = faceMarkerExtent([1, 0, 0], DIMS);
-    expect(Math.max(u, v)).toBeCloseTo(3 * L, 12);
-    expect(Math.min(u, v)).toBeCloseTo(2 * L, 12);
-    expect(Math.min(u, v)).not.toBeCloseTo(L, 6);
-  });
-
-  it("⭐ a cube gives one square on every face — which is why none of this showed before", () => {
-    for (const id of Object.keys(normals)) {
-      const { u, v } = faceMarkerExtent(normals[id]!, [L, L, L]);
-      expect(u).toBeCloseTo(L, 12);
-      expect(v).toBeCloseTo(L, 12);
-    }
-  });
-});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ⭐⭐⭐ WHICH FACE CARRIES THE ALIGNMENT — the owner, 2026-09-17: *"when an object is aligned,

@@ -32,6 +32,7 @@
  * ⛔ ENGINE-FREE, like the rest of `src/core` (`D6`, `tests/boundary.test.ts`). Plain
  * data and plain functions; every operation returns a NEW world and mutates nothing.
  */
+import type { ConvexShape } from "./collision_shape";
 import type { Constraint, EvictResult } from "./constraint_stack";
 import { cleared, evict, push } from "./constraint_stack";
 import type { MateConnector, Placed } from "./mate_connector";
@@ -98,6 +99,25 @@ export interface SceneObject {
    * everything aligns *to* it, and nothing aligns it.
    */
   readonly frozen?: boolean;
+  /**
+   * ⭐⭐⭐ **THE BODY'S OCCUPIED VOLUME, as a convex point set in the LOCAL frame** (`D49`).
+   *
+   * ⛔⛔ **IT IS WHAT MAKES *NEAR* MEAN `NEAR THE SURFACE` RATHER THAN `NEAR THE CENTRE`.** The
+   * capture test measured centre to centre, and the base plate showed that cannot work: its
+   * centre is `3L` below its own top face, so a part RESTING on it read as far away. ⚠ No radius
+   * value repairs that — see `core/proximity.ts`.
+   *
+   * ⭐ COMPUTED AT SPAWN and never recomputed: the points are local, so a body's motion is
+   * carried by its placement exactly as its faces are. ⛔ `faces` and `shape` describe the same
+   * geometry for different questions — a face is a thing a finger can TAP, a shape is a thing
+   * another body can get NEAR — and neither is derivable from the other for an imported mesh.
+   *
+   * ⚠ **OPTIONAL, and absent means `no capture`, never `capture always`.** `surfaceDistance`
+   * returns `null` for a body without one, which reads as *out of range* everywhere it is used.
+   * ⛔ The other default — treating a missing shape as a point at the origin — would make a body
+   * capture from its centre, silently reintroducing the exact defect this field removes.
+   */
+  readonly shape?: ConvexShape;
 }
 
 export interface World {

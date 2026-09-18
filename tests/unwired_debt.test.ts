@@ -50,6 +50,22 @@ const PENDING: Record<string, string> = {
   alignmentMatchesTarget:
     "the MATE — the owner removed the alignment from the APPROACH (`A16`) and kept it for " +
     "the mate: *'we will see how to handle the alignment for the mate logic later on'*",
+  // ── `D49`: the surface-gap rule. Two halves of it are deliberately ahead. ────
+  // ⛔⛔ BOTH ARE *PENDING*, NOT *STALE*, AND THE DISTINCTION IS THIS FILE'S WHOLE POINT.
+  centreDistance:
+    "the APPROACH (`D46` §4b.1) — the capture DISTANCE moved to surfaces (`D49`) and the " +
+    "approach DIRECTION deliberately did not: a face-to-face direction collapses to noise at " +
+    "contact, which is the degeneracy the mechanism was redesigned to remove. Centres cannot " +
+    "meet, so this is the measure 4b.1 projects the finger onto",
+  // ⛔⛔ THE TWO SWAPPED PLACES ON 2026-09-18, AND THE SWAP IS THE POINT. `shapeFromVertices`
+  // LEFT this list when `scene.ts` started reading real mesh vertices — the guard caught the
+  // stale entry the moment it was wired, which is the second direction it checks.
+  boxShape:
+    "test surface — the EXACT hull of a box, and the fixture builder every geometry vector is " +
+    "written against. ⛔ The product no longer calls it: a body's shape is read off its own " +
+    "mesh (`shapeFromMesh`), so an imported body needs no dimensions table. ⚠ Kept because " +
+    "hand-rolling eight corners in each vector is how fixtures drift, and because `3D4` will " +
+    "want a known-exact hull to check an imported one against",
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
   qAngle: "the turn angle of a quaternion — used by vectors to assert rotations",

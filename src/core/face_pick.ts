@@ -30,8 +30,7 @@
 import type { FaceId, ObjectId, World } from "./object_model";
 import { worldPlacementOf } from "./object_model";
 import type { Vec3 } from "./vec";
-import { dot, normalize, qRotate, qconj, shortestArc } from "./vec";
-import type { Quat } from "./vec";
+import { dot, normalize, qRotate, qconj } from "./vec";
 
 /**
  * The face of `id` whose outward normal best matches a world-space `pickedNormal`.
@@ -79,60 +78,18 @@ export function faceFromPickedNormal(
 }
 
 /**
- * ⭐⭐⭐ **THE MARKER'S ORIENTATION *WITHIN* ITS OBJECT** — one constant rotation per face,
- * taking the marker's `+z` onto that face's LOCAL normal.
+ * ⛔⛔ **`faceMarkerLocalOrientation` AND `faceMarkerExtent` ARE DELETED** (`D50`, 2026-09-18).
  *
- * ⛔⛔ IT USED TO COMPOSE THE OBJECT'S ORIENTATION IN, and that half moved to the SCENE GRAPH
- * on 2026-09-17: the markers are **parented to the mesh**, so Babylon composes parent × child
- * every frame and the marker cannot be anywhere but on its face. ⭐ What is left here is the
- * part that is genuinely a computation, and it depends on the face alone.
- *
- * ⚠⚠ **THE DEFECT THIS SHAPE EXISTS TO PREVENT, KEPT ON THE RECORD**: the first version
- * aligned the marker's facing with the face's **world normal**, via `shortestArc`. That fixes
- * ONE axis and leaves the spin about it FREE — so turning the object about that face's own
- * normal moved the face and not the marker, device-reported as *"a growing mismatch between
- * their respective quaternion"*. ⭐⭐ *A DIRECTION TEST CANNOT SEE A ROLL*: the quantity I
- * checked (does it face the right way?) stayed true while the one that mattered drifted.
- * ✅ A constant offset under the object's own orientation cannot drift, by construction —
- * first by composing it here, and now by letting the graph compose it.
+ * Together they placed a unit RECTANGLE on a face: an orientation from the face normal, and a
+ * width and height read off the body's three dimensions.
+ * ⭐ A face marker is built from the face's **own triangles** and its **own boundary loop** now
+ * (`core/mesh_topology.ts`), so a triangular end or an L-shaped top marks itself correctly
+ * instead of wearing a rectangle that fits neither — and an imported face needs no table entry.
+ * ⚠⚠ **The lesson they cost is kept**: `faceMarkerExtent` was written CORRECTLY in this file
+ * while `scene.ts` went on calling a buggy local copy — *a fix that lands beside the defect
+ * instead of on it leaves a green suite and a broken product* (`METHOD`, 2026-09-17). That is
+ * why the replacement has exactly one implementation and no local helper anywhere.
  */
-export function faceMarkerLocalOrientation(faceNormalLocal: Vec3): Quat {
-  return shortestArc([0, 0, 1], faceNormalLocal);
-}
-
-/**
- * ⭐⭐⭐ **HOW BIG THE MARKER ON A FACE HAS TO BE**, once the objects are not cubes.
- *
- * ⛔⛔ **IT IS DERIVED FROM THE MARKER'S OWN ORIENTATION, NOT GUESSED FROM THE NORMAL** — and
- * that is the whole point of this function existing instead of two lines at the call site.
- * ⚠⚠ I first wrote it as *"the two axes that are not the normal, in ascending order"*, which is
- * **wrong**: `faceMarkerLocalOrientation` is a `shortestArc`, so on a `+x` face the marker's
- * local `x` lands on the object's **−z**, not its `y`. ⭐ On an `L × 2L × 3L` body that swaps
- * `2L` and `3L`, and the marker is visibly the wrong shape on four of the six faces.
- *
- * ⭐⭐ `METHOD`: *a composition is a thing to MEASURE, not an emergent property.* The marker's
- * size depends on the quaternion the marker is actually given, so it is computed **from** that
- * quaternion — and then no convention inside `shortestArc` can make it wrong.
- *
- * @param dims the body's full extents along its own `x`, `y`, `z`.
- * @returns `u` and `v`, the marker's local `x` and `y` extents, in the same units as `dims`.
- */
-export function faceMarkerExtent(
-  faceNormalLocal: Vec3,
-  dims: Vec3,
-): { readonly u: number; readonly v: number } {
-  const q = faceMarkerLocalOrientation(faceNormalLocal);
-  // ⭐ Where the marker's own x and y point, in the BODY's frame.
-  const ux = qRotate(q, [1, 0, 0]);
-  const uy = qRotate(q, [0, 1, 0]);
-  // ⚠ `|component| · dim`, summed: for an axis-aligned face this picks out exactly one
-  // dimension, and for an oblique one it gives the honest projected extent rather than an
-  // arbitrary pick. ⛔ No `Math.round`, no axis index — nothing that could disagree with `q`.
-  const along = (v: Vec3) =>
-    Math.abs(v[0]) * dims[0] + Math.abs(v[1]) * dims[1] + Math.abs(v[2]) * dims[2];
-  return { u: along(ux), v: along(uy) };
-}
-
 /**
  * ⭐⭐⭐ **WHICH FACE CARRIES AN OBJECT'S ALIGNMENT** — derived from the constraint stack, so a
  * highlight built on it cannot outlive the alignment.

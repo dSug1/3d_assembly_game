@@ -7,29 +7,21 @@
 
 ## Where it stands
 
-✅ **`3D0` built and carried**: `src/core/mate_connector.ts` and
-`src/core/constraint_stack.ts`, transliterated from a **shipped, live-confirmed**
-Python implementation that was written dependency-free precisely so it could move.
-Covered by 14 vectors.
+✅ **`3D0` built and carried**: `src/core/mate_connector.ts` and `src/core/constraint_stack.ts`,
+transliterated from a **shipped, live-confirmed** Python implementation written dependency-free
+precisely so it could move. 14 vectors.
 ✅ **`3D1` BUILT 2026-09-15** — `src/core/object_model.ts`, **42 vectors**, engine-free:
 `id`, `local` placement, `parent`, faces (centre + outward normal, what 6bis reads),
 connectors, and the constraint stack attached to the object. ⭐⭐ **`reroot` is rule 3 made
 executable** — it re-points the chain onto the held object while every object's world
 placement stays put, and *grabbing a child moves the whole assembly* is a vector by name.
 ⭐ Every fixture is THREE deep, and the deep-chain vector goes to 16.
-🔌 **WIRED 2026-09-15**: `scene.ts` builds a `World` and **every rule writes the model** —
-rule 6's translate, the rotation rules, §1.3's rollback and §2 rule 1's barycentre. ⭐ The
-render loop is now the SINGLE writer of a mesh transform, which removed the held-mesh
-exception and the barycentre's defensive sway subtraction at the same time.
-✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*, after the pass found **one
-defect, in the wiring**:
-the render loop drew only objects that happened to have a *follower* entry, a map populated
-lazily by the sway and the rotation rule. When the model became authoritative that implicit
-invariant died silently — a translated object was **locked**, then **jumped** once something
-else created its entry. ⭐ Fixed (the loop now iterates the model) and **confirmed by the hand that found it**.
-⛔ 409 vectors passed before and after the fix: the iteration set is in `src/render`, on the
-far side of the boundary, which is why a device look is what closes a change.
-✅ Everything else was clean, which **re-confirms rule 6** after its path was rewired.
+🔌 **WIRED AND CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `scene.ts` builds a
+`World`, **every rule writes the model**, and the render loop is the SINGLE writer of a mesh
+transform. ⛔ The pass found **one defect, in the wiring**, and 409 vectors passed before and
+after the fix because the iteration set lives in `src/render`, on the far side of the boundary —
+which is why a device look is what closes a change.
+⭐ The account: [`../00_CORE/queue_notes/3D1.md`](../00_CORE/queue_notes/3D1.md).
 ⛔ No snapping — that is `3D2`.
 
 ## ⛔⛔ The four rules that must not be rediscovered
@@ -65,13 +57,23 @@ size, and a step size is a threshold nobody measured.
 
 ## ⛔⛔ THE 2026-09-17 AUDIT — what it changed here
 
-⭐ **`frozen` and the tree — parent yes, child never** (owner). A base plate may be a PARENT,
-never a child: `attach` and `reroot` refuse it. ⛔ The hole wrote nothing to the frozen body —
-attaching it under a part moved it the next time THAT part moved.
+⭐ **`frozen` and the tree — parent yes, child never** (owner): `attach` and `reroot` refuse a
+frozen child. ⛔ The hole wrote nothing to the frozen body — attaching it under a part moved it
+the next time THAT part moved.
 ⭐ **`rotationChannel`** replaced three `stack.length === 1` guards meaning *"is this body
 aligned?"*: a body holding a MATE fell through to FREE rotation and would have broken both
 constraints on the first seated drag. Its third verdict is **REFUSED**.
 → [`../00_CORE/queue_notes/AUDIT_2026-09-17.md`](../00_CORE/queue_notes/AUDIT_2026-09-17.md)
+
+## ⭐⭐ `D49` — a body carries its SHAPE as well as its faces
+
+✅ `SceneObject.shape` (2026-09-18): a convex point set in the LOCAL frame, computed at spawn
+(`src/core/collision_shape.ts`). `proximity.surfaceGap` is the GJK distance between two, and
+`null` — **out of range, never in range** — for a body without one.
+⭐ `faces` and `shape` answer different questions: a face is a thing a finger can **TAP**, a
+shape is a thing another body can get **NEAR**. ⛔⛔ It exists because **a centre is not where a
+body is**, which the base plate proved →
+[`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §19.
 
 ## ⚠ Carried forward unclosed
 

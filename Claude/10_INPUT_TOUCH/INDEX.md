@@ -48,23 +48,16 @@ chain** (`input/pioneer_cascade.ts`, a fixed point resolved in one frame); **no 
 that would make a follower its own Pioneer's pioneer breaks the initial alignment instead; and
 **`frozen`**, an attribute enforced at `object_model.ts`'s two writers, carried by the new base
 plate.
+✅✅ **THE CAPTURE IS A SURFACE GAP SINCE 2026-09-18** (`D49`): the white pair is decided by the **gap between the bodies' surfaces**, not their centres, against a threshold in **millimetres on the glass** scaled by camera distance — so it keeps the same apparent size at every zoom. ⭐ Shapes are **computed at spawn** (`core/collision_shape.ts`, a GJK distance over a convex point set) — the owner's preference, and it avoids a second source of truth in Blender. ⛔ The approach DIRECTION stays centre-to-centre. ⭐⭐ The **white contour IS that shell**: body + **half** the offset, per frame, so it tracks camera and slider and **two touching boxes mean capture**. ⚠ `captureOffsetMm` has a **slider**. **Suite 856.**
 ⛔⛔ **NOT built**: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
 ⭐ Ordered device lists, with what falsifies each item: §12 and §13 of
 [`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md).
-⛔⛔ **AND THREE DEVICE REPORTS EACH FOUND SOMETHING NO TEST HERE COULD.** ⭐ The three lessons,
-all earned on 2026-09-17 and all in `METHOD`'s territory:
-* I wrote a corrected `faceMarkerExtent`, vectored it, and left `scene.ts` calling my **buggy
-  local copy** — green suite, broken product. ⭐ *A fix that lands beside the defect instead of
-  on it leaves a green suite and a broken product.*
-* `D48` was recorded and retired within hours: two readings fitted one device report and I chose
-  the stronger **silently**. ⭐ *When two readings fit one device report, name both.*
-* A stale highlight produced **two** false defect reports — *"the release is not working"* and
-  *"the shake is not working"* — while the rule they accused was correct and twice-vectored.
-  ⭐ *A second symptom that contradicts your theory is worth more than a third that confirms
-  it*; the shake report is what inverted the diagnosis. ⚠ And the cause was using the correct
-  retire-by-membership pattern for one marker pool and the wrong one for another, in the same
-  edit.
-
+⛔⛔ **AND THREE DEVICE REPORTS EACH FOUND SOMETHING NO TEST HERE COULD**, all on 2026-09-17, all
+now in `METHOD`: *a fix that lands beside the defect leaves a green suite and a broken product*;
+*when two readings fit one device report, name both*; *a second symptom that contradicts your
+theory is worth more than a third that confirms it.* ⭐ The three accounts, unrewritten, are
+§14 of [`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md) — moved out of this front door
+2026-09-18 when it reached its byte cap.
 ⭐ **The earlier design** (`D46`,
 [`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md)): capture radius 1.25× the object,
 hold-off 1.1×, white contours, docking by angle, anti-align + translate-snap. ✅ The owner answered the ten questions on the same day: the mate's second stack entry and the

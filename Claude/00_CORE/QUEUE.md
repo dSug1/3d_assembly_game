@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **773 golden vectors,
-all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 656 → **773**; ⭐ the drops are DELETIONS — the roll channel, then forks A and B — and the last rise is the **2026-09-17 AUDIT**). ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **856 golden vectors,
+all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 656 → 773 → **856**; ⭐ the drops are DELETIONS — the roll channel, then forks A and B — and the last two rises are the **2026-09-17 AUDIT** and **`D49`**'s surface gap). ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
@@ -28,6 +28,7 @@ all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 65
 1. ⛔⛔ **APPROACH & MATE — THE HIGHLIGHTS AND THE ALIGNMENT TRACKING ARE BUILT; THE APPROACH IS NOT** (`D46`–`D48`, `A16`–`A21`, 2026-09-17). ✅ On the glass: white capture contours on a near pair (**translating + within `4L`**), every aligned body keeping its FollowerFace **and** a coloured body outline, a shake on a Pioneer releasing **all** its followers, a turned Pioneer releasing its cyan followers and rotating its orange ones **down a chain**, no cycles, and a **frozen** base plate. ⛔ NOT built: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
    ⭐ New engine-free modules: `core/proximity.ts`, `core/alignment_links.ts`, `core/random_pose.ts`, `input/highlight.ts`, `input/pioneer_cascade.ts`, plus `frozen` in `core/object_model.ts`. **Suite 656.**
    ⛔⛔ **THREE DEVICE REPORTS, EACH FINDING SOMETHING NO TEST HERE COULD**, and `METHOD` gained a shape from each: *a fix that lands beside the defect leaves a green suite and a broken product*; *when two readings fit one device report, name both*; *a second symptom that contradicts your theory is worth more than a third that confirms it.* → spec §14 and [`../10_INPUT_TOUCH/INDEX.md`](../10_INPUT_TOUCH/INDEX.md).
+   ✅✅ **THE CAPTURE IS A SURFACE GAP** (`D49`, 2026-09-18): white is decided by the distance between the bodies' **surfaces**, from a convex shape **computed at spawn** (`core/collision_shape.ts`, GJK) — which answers the owner's Blender question and fixes the audit's finding 3, where the plate read 312 mm by centres while a part RESTING on it read 228 mm. ⭐ The threshold is **millimetres on the glass**, scaled by camera distance through rule 6's own tracking factor, with a **slider** — and the **white contour IS that shell**, half the offset per body, so two boxes touching means capture. ⛔ The approach DIRECTION stays on centres — face-to-face collapses at contact, which is why `D46` exists. ⚠ `snapRadiusFactor` deleted → spec §19.
    ⭐ Scene: three `L × 2L × 3L` parts `5L` apart at seeded random orientations (`?sceneSeed=N`), a **frozen** `6L × 0.3L × 9L` base plate `3L` below, camera at half max zoom-out. Ordered device lists: §12–§18 of [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md).
    ⛔ **Next**: the approach itself (4b.1), then `3D2`'s seat + the mate, then `D47`'s break. ✅✅ **THE LATENT DEFECT THAT WOULD HAVE ARMED WITH THE FIRST MATE IS CLOSED** (audit, 2026-09-17): three guards read `stack.length === 1`, meant *"is this body aligned?"*, and fell through to FREE rotation for any other count — so a seated body would have broken its mate and its alignment together. ⭐ `rotationChannel` now answers `FREE` / `TWIST` / **`REFUSED`**, and what a drag does to a seated body is `3D2`'s decision to make rather than a length test's.
 2. ⛔⛔ **A DEVICE LOOK ON THE ALIGNMENT MODEL** — it is now the ONLY model (`D40`) and **no
@@ -56,6 +57,7 @@ all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 65
 
 ⭐⭐ The whole record, with what is **not** fixed and why: [`queue_notes/AUDIT_2026-09-17.md`](queue_notes/AUDIT_2026-09-17.md).
 ⛔⛔ **THE ONE TO KNOW: the game booted in `TRANSLATE` while every document said `ROTATE`** — and `git log -S` finds no commit that ever returned `ROTATE`. Nothing regressed; the owner's decision never reached the code, and the vector asserted the value the function RETURNED rather than the decision made. ⭐ `METHOD`: *a vector written from the code it tests cannot contradict that code.* ✅ Owner re-confirmed and fixed.
+✅ **Its finding 3 is now CLOSED by `D49`** — the `4L` centre radius *"cannot be right for the base plate"*, and the fix was the face-distance rule the owner had already named.
 ⚠ Also live on the glass: §1.1 **destroyed up to 7 mm** of travel on the one sample that confirmed rest; the re-tap undo worked only on the most recent alignment in the scene; a roll during a snap was discarded; the frozen plate wobbled; a bad URL tunable threw on **every press** with a silent HUD.
 ⭐⭐ **`frozen` AND THE TREE — the owner's call: PARENT YES, CHILD NEVER.** `attach`/`reroot` were uncovered, so attaching the plate under a part and moving that part put the plate at `[5, −1, 0]` with nothing ever writing its placement.
 ⛔⛔ **TEN VECTORS COULD NOT FAIL**, including the cascade's composition ORDER, `towardGravity`'s sign, `bestTwist` (both a sign flip and `return IDENTITY` survived) and `worldPose`'s tangent (caught by nothing). ⭐ One shape: *a fixture chosen because it is easy to reason about is usually chosen from the set where the quantity under test is ZERO.*
@@ -267,32 +269,13 @@ measurements, and why `translateInertiaMs` has a **floor of one pointer interval
 7.6 ms), are in [`queue_notes/REJECTED_AND_MEASURED.md`](queue_notes/REJECTED_AND_MEASURED.md).
 ⭐ *An invisible 0.4 mm of trail is not worth a visible 2 mm of jitter.*
 
-### ⭐⭐ THE ORDER, and why `3D1` is not next after all
+### ⭐ THE BUILD ORDER — spent, and moved down a tier
 
-**`IN2` → rule 6 translate → `3D1` → 6bis onward.**
-
-⭐ **`IN4`'s dependency on `3D1` IS NOT UNIFORM, and that is what reorders the queue.**
-Rule 6 (screen-plane translate) is defined on *the selected object* plus a screen
-frame — no faces, no connectors, no assembly tree. Rules **6bis / 6ter / 6quater** are
-defined on `AxisBtwFaces`, *the axis between the centres of the two selected FACES*,
-and a face centre is exactly what `3D1` owns. ⭐ Same reason `IN9` shipped ahead of
-`3D1`: ask what a rule actually reads, not which phase it is filed under.
-⛔ So translation goes as far as rule 6 **and must stop there**.
-
-⛔⛔ **AND RULE 6 IS A COMPOSITION — mistake shape 4's exact territory.** §1.2 scales
-translation gains by `cameraDistance / referenceCameraDistance`, so rule 6 is
-`translate × zoom × orbit`: one millimetre of finger means a different world
-displacement at every camera distance, and the orbit surface now makes that distance
-**asymmetric** (1.14 m at the top ring against 0.71 m at the bottom).
-⭐ **Compute what ONE MILLIMETRE of finger does at both zoom extremes BEFORE writing
-the gain.** Not after a device session is spent disliking it — and not as a check
-bolted on afterwards, which is how the orbit surface got three segments from three
-rings.
-
-⚠ `3D1` remains the last thing between here and actual assembly, and it is where
-mistake shape 4 is most likely to recur: an assembly tree composes transforms through
-parent-child chains, which is what cost the predecessor a week. ⭐ Write the composite
-check BEFORE the code, not after.
+✅ **`IN2` → rule 6 translate → `3D1` → 6bis onward**, and all of it up to 6bis is DONE.
+⛔⛔ **The live warning inside it survives**: rule 6 is a **composition** — `translate × zoom ×
+orbit` — and `D49` has just hung the capture offset on the same camera factor, so *compute what
+one millimetre of finger does at BOTH zoom extremes* now binds a second rule.
+⭐ The full argument, unrewritten: [`queue_notes/IN4.md`](queue_notes/IN4.md).
 
 ## Phase IN — the touch input system
 
@@ -321,7 +304,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 |---|---|---|---|---|---|
 | 3D0 | Mate connectors + residual; constraint stack + solver | 3D | feature | ✅ **built 2026-09-13**, carried and covered | — |
 | 3D1 | The object model: id, placement, connectors, assembly tree (parent ≠ root) | 3D | feature | ✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `src/core/object_model.ts`, 42 vectors, engine-free: placement, faces, connectors, the assembly tree and the constraint stack. ⭐⭐ The vectors were written FIRST and **falsified on purpose** — breaking the composition turns 14 of 42 red. ⭐ `reroot` implements **parent ≠ root** and moves nothing. ⛔ The pass found one wiring defect: the render loop drew only objects that HAPPENED to have a follower → [`queue_notes/3D1.md`](queue_notes/3D1.md) | 3D0 |
-| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT — `1.0.11`, and the mechanism is SPECIFIED** (`D46`, [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)): capture radius **1.25×** the object, hold-off **1.1×**, white contours, docking by ANGLE, then anti-align + translate-snap. ⛔⛔ **The game cannot assemble anything today**: the alignment is PARALLEL (an orienting rule), and §4's `6quater` — the only rule that pushes a `MATE` — is flick-based, which this model does not have. ⚠ **Blocked on ONE owner decision: which gesture asserts a mate.** ⭐ `core/mate_connector.ts` is built and vectored (`testMate`, `mateResidual`), so what is missing is the gesture and the wiring, not the geometry | 3D1 |
+| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT — and its CAPTURE half is BUILT** (`D49`, 2026-09-18): surface-to-surface, shapes computed at spawn, offset in mm on the glass scaled by camera distance, on a slider. ⛔ Still owed: the snap, the seat and the mate. ⭐ **`1.0.11`, and the mechanism is SPECIFIED** (`D46`, [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)): capture radius **1.25×** the object, hold-off **1.1×**, white contours, docking by ANGLE, then anti-align + translate-snap. ⛔⛔ **The game cannot assemble anything today**: the alignment is PARALLEL (an orienting rule), and §4's `6quater` — the only rule that pushes a `MATE` — is flick-based, which this model does not have. ⚠ **Blocked on ONE owner decision: which gesture asserts a mate.** ⭐ `core/mate_connector.ts` is built and vectored (`testMate`, `mateResidual`), so what is missing is the gesture and the wiring, not the geometry | 3D1 |
 | 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⭐⭐ **THE BREAK GESTURE IS SPECIFIED** (`D47`): two fingers, one on each mated object, pulling **apart along the centre→centre direction** past a `BreakThreshold` (slider). ⛔⛔ It needs `3D2`'s **seat** first — §1.4's stack solves orientation only, so a mate does not hold POSITION today and *breaking* would be indistinguishable from *moving* → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 | 3D2 |
 | 3D4 | Real 3D file import (glTF) | 3D | feature | queued | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |

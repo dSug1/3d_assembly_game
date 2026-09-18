@@ -38,8 +38,10 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
-import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { CreateLines, CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
@@ -117,7 +119,6 @@ import {
   makeWorld,
   setWorldPlacement,
   worldPlacementOf,
-  type Face,
   WORLD_DOWN,
   type ObjectId,
   type World,
@@ -128,8 +129,6 @@ import { mmToPx } from "../core/units";
 import {
   alignedFaceOf,
   faceFromPickedNormal,
-  faceMarkerExtent,
-  faceMarkerLocalOrientation,
 } from "../core/face_pick";
 import { hasAlignment, rotationChannel, singleAlignment, solve } from "../core/constraint_stack";
 import {
@@ -144,8 +143,19 @@ import { AlignmentLinks } from "../core/alignment_links";
 import { AlignSnaps } from "../input/align_snap";
 import { followerLinksFrom, resolvePioneerTurns } from "../input/pioneer_cascade";
 // ⭐⭐ `A16`. ⛔ Both are ENGINE-FREE and answer questions; nothing in them moves or draws.
-import { captureRadiusM } from "../core/proximity";
-import { highlightedPair, translatesOnDrag, type HighlightVerdict } from "../input/highlight";
+import { surfaceGap } from "../core/proximity";
+import { shapeFromVertices, type ConvexShape } from "../core/collision_shape";
+import {
+  meshTopology,
+  offsetPositions,
+  type MeshTopology,
+} from "../core/mesh_topology";
+import {
+  captureOffsetM,
+  highlightedPair,
+  translatesOnDrag,
+  type HighlightVerdict,
+} from "../input/highlight";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -441,23 +451,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⛔ PER-AXIS half-extents, and now per BODY. ⚠ A single `half` was a cube's privilege; a
    * single set of three was the equal-parts privilege, and the base plate ended that too.
    */
-  const facesFor = (dims: readonly [number, number, number]): Face[] => {
-    const hx = dims[0] / 2;
-    const hy = dims[1] / 2;
-    const hz = dims[2] / 2;
-    return [
-      { id: "+x", centre: [hx, 0, 0], normal: [1, 0, 0] },
-      { id: "-x", centre: [-hx, 0, 0], normal: [-1, 0, 0] },
-      { id: "+y", centre: [0, hy, 0], normal: [0, 1, 0] },
-      { id: "-y", centre: [0, -hy, 0], normal: [0, -1, 0] },
-      { id: "+z", centre: [0, 0, hz], normal: [0, 0, 1] },
-      { id: "-z", centre: [0, 0, -hz], normal: [0, 0, -1] },
-    ];
-  };
-  // ⭐ Six faces, outward normals, LOCAL frame — the same convention `MateConnector`
-  // uses, so a face and a connector never disagree about which way "out" is.
-  // ⚠ Their ids are geometric ("+x"), not indices: a triangle index is an engine detail
-  // and `3D1` is explicit that a face is not a triangle.
+  // ⛔⛔ **`facesFor` IS DELETED** (`D50`, 2026-09-18). It built six axis-aligned faces from
+  // a dimensions table, which is right for a cuboid and meaningless for an imported part.
+  // ⭐ `meshTopology` replaces it: coplanar adjacent triangles are grouped into LOGICAL
+  // faces, so the same code yields six for a box and whatever a bracket actually has.
+  // ⚠ Face ids are now `f0`…`fN` in construction order rather than `"+x"`, because an
+  // imported face has no axis to be named after.
 
   // ⛔⛔⛔ **A LOCAL `faceExtent` LIVED HERE AND IT WAS THE 90° BUG — DEVICE-REPORTED
   // 2026-09-17**: *"the contour highlight quad does not match the faces of the rectangles in
@@ -475,6 +474,122 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // DELETED in the same change, not left for later — which is the same lesson as defect 40
   // (`A12`'s retired roll detector, still fed, still holding a verdict).
   // ✅ The rule now lives in exactly one place, and this file calls it.
+
+  /**
+   * ⭐⭐⭐ **A BODY'S COLLISION SHAPE, READ OFF ITS OWN MESH** (`D49`, and the owner on
+   * 2026-09-18: *"make sure the offset is automatically computed when a new object is imported
+   * into the scene"*).
+   *
+   * ⛔⛔ **THIS REPLACED A LOOKUP AN IMPORTED BODY WOULD HAVE MISSED, SILENTLY.** The shape
+   * used to be `boxShape(dimsOf.get(name) ?? OBJECT_DIMS_M)` — a table keyed by the names of the
+   * four bodies this file happens to build. ⚠ An imported mesh is in no such table, so it would
+   * have fallen through to `OBJECT_DIMS_M` and been given **a part's dimensions**: a capture
+   * volume with no relation to the body under it, and nothing on the glass to say so.
+   * ⭐ Reading the vertices removes the question — there is no table to forget, and an import
+   * path inherits a correct shape by doing nothing at all.
+   *
+   * ⚠ **SCALING IS APPLIED.** `getVerticesData` returns positions BEFORE `mesh.scaling`. The
+   * boot boxes bake their size into the geometry and scale 1, so this is invisible today — and a
+   * glTF node carrying its size as a scale instead would otherwise get a shape of the wrong
+   * size, which is the same silent failure one layer along.
+   *
+   * ⛔ A mesh with no position data yields `null`, and the caller REFUSES out loud rather than
+   * substituting a stand-in that would capture at the wrong distance while looking normal.
+   */
+  const shapeFromMesh = (m: AbstractMesh): ConvexShape | null => {
+    const raw = m.getVerticesData(VertexBuffer.PositionKind);
+    if (raw === null || raw.length < 3) return null;
+    const scaled = new Float32Array(raw.length);
+    for (let i = 0; i + 2 < raw.length; i += 3) {
+      scaled[i] = (raw[i] as number) * m.scaling.x;
+      scaled[i + 1] = (raw[i + 1] as number) * m.scaling.y;
+      scaled[i + 2] = (raw[i + 2] as number) * m.scaling.z;
+    }
+    const shape = shapeFromVertices(scaled);
+    return shape.points.length === 0 ? null : shape;
+  };
+
+  /**
+   * ⚠ Bodies whose geometry could not be read — reported on the HUD, never thrown. ⛔ A throw
+   * in scene construction takes the page down; *this body never captures* is survivable, and an
+   * INVISIBLE failure is not. This project has been burned twice by a readout that was absent.
+   */
+  const shapelessBodies: string[] = [];
+  /**
+   * ⛔⛔ **A THROW INSIDE THE DRAW PATH USED TO BE INVISIBLE, AND THAT COST A DEVICE PASS.**
+   *
+   * ⚠ Babylon swallows an exception thrown from a render observer — the frame simply stops
+   * where it threw. ⭐ So everything BEFORE the failure is drawn and everything after it is not,
+   * which on the glass reads as *"the outlines are gone"* rather than as *"something threw"*.
+   * ⛔ The first message is latched and printed on the HUD; later ones are counted, because a
+   * throw in a render loop repeats sixty times a second and a scrolling readout is unreadable.
+   */
+  let drawFault: string | null = null;
+  let drawFaultCount = 0;
+  const guardDraw = (where: string, fn: () => void): void => {
+    try {
+      fn();
+    } catch (err) {
+      drawFaultCount++;
+      if (drawFault === null) {
+        drawFault = `${where}: ${err instanceof Error ? err.message : String(err)}`;
+        // ⚠ Console too — the HUD has no room for a stack, and over the USB loop a tablet's
+        // console is reachable through `chrome://inspect`.
+        console.error("[draw]", where, err);
+      }
+    }
+  };
+
+  /**
+   * ⭐⭐⭐ **EVERY BODY'S TOPOLOGY, COMPUTED ONCE WHEN IT ENTERS THE SCENE** (`D50`, the owner:
+   * *"the outlines shall be calculated from meshes at the time the object is imported"*).
+   *
+   * ⛔⛔ **IT REPLACES A BOUNDING BOX EVERYWHERE, AND THAT WAS THE REQUIREMENT ALL ALONG.**
+   * Every outline in this file used to be a unit box outline scaled to a dimensions table — the
+   * two whites, the alignment contour and the face markers. ⚠ For the boot cuboids a box and the
+   * mesh coincide, which is exactly why the substitution survived two device passes; for a real
+   * Blender part it is simply the wrong shape.
+   * ⭐ `meshTopology` welds the split vertices, groups coplanar triangles into LOGICAL faces and
+   * hands back each face's boundary loop and area centroid, plus the body's hard edges. Every
+   * outline below is drawn from that, so an imported part is outlined correctly by construction.
+   *
+   * ⚠ Built here, at spawn, and never per frame: it is pure geometry in the body's LOCAL frame,
+   * so the body's own transform carries it.
+   */
+  const topoOf = new Map<ObjectId, MeshTopology>();
+  const topologyFromMesh = (m: AbstractMesh): MeshTopology | null => {
+    const raw = m.getVerticesData(VertexBuffer.PositionKind);
+    const idx = m.getIndices();
+    if (raw === null || idx === null || raw.length < 9) return null;
+    const scaled = new Float32Array(raw.length);
+    for (let i = 0; i + 2 < raw.length; i += 3) {
+      scaled[i] = (raw[i] as number) * m.scaling.x;
+      scaled[i + 1] = (raw[i + 1] as number) * m.scaling.y;
+      scaled[i + 2] = (raw[i + 2] as number) * m.scaling.z;
+    }
+    const t = meshTopology(scaled, idx);
+    return t.faces.length === 0 ? null : t;
+  };
+  const topologyOfBody = (m: AbstractMesh): MeshTopology => {
+    const t = topologyFromMesh(m);
+    if (t !== null) {
+      topoOf.set(m.name, t);
+      return t;
+    }
+    // ⛔ Named on the HUD, never substituted: a body with no topology has no outlines and no
+    // logical faces, and an invisible failure is the one this project has been burned by.
+    if (!shapelessBodies.includes(m.name)) shapelessBodies.push(m.name);
+    const empty: MeshTopology = { positions: [], faces: [], edges: [], vertexPlanes: [] };
+    topoOf.set(m.name, empty);
+    return empty;
+  };
+
+  const shapeOfBody = (m: AbstractMesh): ConvexShape => {
+    const s = shapeFromMesh(m);
+    if (s !== null) return s;
+    shapelessBodies.push(m.name);
+    return { points: [] };
+  };
 
   let world: World = makeWorld(
     scene.meshes
@@ -495,7 +610,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             orientation: quatOf(m),
           },
           parent: null,
-          faces: facesFor(dimsOf.get(m.name) ?? OBJECT_DIMS_M),
+          // ⭐⭐⭐ **FROM THE MESH, NOT FROM A TABLE** (`D50`). ⛔ *A face is not a triangle*
+          // (`3D1`) — and `meshTopology` is where that stops being a blocker: it groups coplanar
+          // adjacent triangles into logical faces, so a cuboid yields six and a bracket yields
+          // whatever it has. ⚠ `facesFor` and its dimensions table are **deleted**.
+          faces: topologyOfBody(m).faces.map((f) => ({
+            id: f.id,
+            centre: f.centre,
+            normal: f.normal,
+          })),
+          // ⭐⭐⭐ **THE COLLISION SHAPE, FROM THE MESH ITSELF** (`D49`) — no table, no name
+          // lookup, nothing for an import path to remember. ⚠ For a box it is EXACT: its
+          // corners ARE its hull.
+          shape: shapeOfBody(m),
           frozen: frozenIds.has(m.name),
           connectors: [],
           // §0's Start condition: every object begins with an EMPTY stack.
@@ -584,33 +711,81 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    *
    * @returns false when the object or face no longer exists — the caller hides the marker.
    */
-  const placeFaceMarker = (marker: AbstractMesh, objectId: ObjectId, faceId: string): boolean => {
-    const m = meshOf.get(objectId);
-    const face = world.objects.get(objectId)?.faces.find((f) => f.id === faceId);
-    if (!m || !face) return false;
-    if (marker.parent !== m) marker.parent = m;
-    // ⭐ Lifted off the surface by a hair, or it z-fights with the face it marks. ⚠ In METRES,
-    // in the PARENT's frame — the objects are unscaled, so a local millimetre is a world one.
-    marker.position.set(
-      face.centre[0] + face.normal[0] * MARKER_LIFT_M,
-      face.centre[1] + face.normal[1] * MARKER_LIFT_M,
-      face.centre[2] + face.normal[2] * MARKER_LIFT_M,
-    );
-    const q = faceMarkerLocalOrientation(face.normal);
-    marker.rotationQuaternion?.set(q[1], q[2], q[3], q[0]);
-    // ⛔⛔ SIZED TO THE FACE IT MARKS. Both markers are authored unit-sized in `x`/`y`, so
-    // one scaling serves the filled quad and the line loop alike. ⚠ `z` stays 1: scaling the
-    // normal direction of a flat marker does nothing visible and would only obscure that the
-    // other two numbers are the ones doing the work.
-    // ⛔ `faceMarkerExtent` derives the size FROM the marker's own quaternion, so no convention
-    // inside `shortestArc` can make it wrong — see its header, and the block above for what
-    // happens when this call points at a local copy instead.
-    const e = faceMarkerExtent(
-      face.normal,
-      (dimsOf.get(objectId) ?? OBJECT_DIMS_M) as unknown as Vec3,
-    );
-    marker.scaling.set(e.u, e.v, 1);
-    return true;
+  /**
+   * ⭐⭐⭐ **A FACE MARKER IS BUILT FROM THE FACE'S OWN TRIANGLES AND ITS OWN BOUNDARY** (`D50`).
+   *
+   * ⛔⛔ **IT WAS A UNIT RECTANGLE SCALED BY A DIMENSIONS TABLE**, oriented to the face normal.
+   * ⚠ That is right for an axis-aligned cuboid and meaningless for anything else: a triangular
+   * end would have worn a rectangle, and an L-shaped face a rectangle covering the notch.
+   * ⭐ Now the fill IS the face's triangles and the contour IS its boundary loop, so a face of
+   * any shape marks itself correctly — including a face nobody wrote a table entry for.
+   *
+   * ⚠ Built once per body-and-face and cached: pure local geometry, carried by the body's own
+   * transform. ⛔ PARENTED, never positioned per frame — defect 46's lesson.
+   * ⚠ Lifted along the face normal by a hair, or it z-fights the surface it marks.
+   */
+  interface FaceMarker {
+    readonly fill: Mesh;
+    readonly mat: StandardMaterial;
+    readonly loop: LinesMesh;
+  }
+  const faceMarkers = new Map<string, FaceMarker>();
+  const faceMarkerFor = (objectId: ObjectId, faceId: string): FaceMarker | null => {
+    const key = `${objectId}/${faceId}`;
+    const hit = faceMarkers.get(key);
+    if (hit !== undefined) return hit;
+    const body = meshOf.get(objectId);
+    const topo = topoOf.get(objectId);
+    const face = topo?.faces.find((f) => f.id === faceId);
+    if (!body || !topo || !face) return null;
+
+    const lift = (v: number, i: number): number => v + (face.normal[i] as number) * MARKER_LIFT_M;
+    // ⭐ A local index space for this face only, so the fill carries just its own vertices.
+    const local = new Map<number, number>();
+    const positions: number[] = [];
+    const indices: number[] = [];
+    for (const vi of face.triangles) {
+      let li = local.get(vi);
+      if (li === undefined) {
+        li = local.size;
+        local.set(vi, li);
+        const p = topo.positions[vi] as Vec3;
+        positions.push(lift(p[0], 0), lift(p[1], 1), lift(p[2], 2));
+      }
+      indices.push(li);
+    }
+    const fill = new Mesh(`follower-face-${key}`, scene);
+    const data = new VertexData();
+    data.positions = positions;
+    // ⚠ DOUBLE-SIDED by duplicating the winding: a face marker must read from either side,
+    // because an aligned body is routinely seen from behind the face that carries the alignment.
+    data.indices = [...indices, ...indices.slice().reverse()];
+    data.applyToMesh(fill, false);
+    const mat = new StandardMaterial(`follower-face-${key}-mat`, scene);
+    mat.emissiveColor = FOLLOWER_COLOUR.clone();
+    mat.disableLighting = true;
+    mat.backFaceCulling = false;
+    fill.material = mat;
+    fill.parent = body;
+    fill.isPickable = false;
+    fill.isVisible = false;
+
+    const loopPts = face.boundary.map((vi) => {
+      const p = topo.positions[vi] as Vec3;
+      return new Vector3(lift(p[0], 0), lift(p[1], 1), lift(p[2], 2));
+    });
+    // ⛔ CLOSED by repeating the first point — an open loop leaves one edge of the face
+    // unmarked, which reads as a defect in the pick rather than in the drawing.
+    if (loopPts.length > 0) loopPts.push(loopPts[0] as Vector3);
+    const loop = CreateLines(`face-loop-${key}`, { points: loopPts }, scene);
+    loop.color = PIONEER_COLOUR.clone();
+    loop.parent = body;
+    loop.isPickable = false;
+    loop.isVisible = false;
+
+    const made: FaceMarker = { fill, mat, loop };
+    faceMarkers.set(key, made);
+    return made;
   };
 
   /**
@@ -866,61 +1041,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * alignment. ⚠ At equal scale the two would z-fight into a dashed mess and neither colour
    * would be legible. ⭐ 1.06 for this one against 1.02 for the white: they nest, and both read.
    */
-  const ALIGN_CONTOUR_SCALE = 1.06;
-
-  const makeAlignContour = (name: string, dims: readonly [number, number, number]) => {
-    const m = CreateLines(name, { points: UNIT_BOX_OUTLINE }, scene);
-    m.color = FOLLOWER_COLOUR.clone();
-    // ⭐ Safe to bake in here, unlike the capture contours: this mesh is created per body and
-    // never adopted by another.
-    m.scaling = new Vector3(
-      dims[0] * ALIGN_CONTOUR_SCALE,
-      dims[1] * ALIGN_CONTOUR_SCALE,
-      dims[2] * ALIGN_CONTOUR_SCALE,
-    );
-    m.rotationQuaternion = Quaternion.Identity();
-    m.isPickable = false;
-    m.isVisible = false;
-    return m;
-  };
-
-  const makeFollowerQuad = (name: string) => {
-    // ⚠ UNIT-sized and SCALED per face by `placeFaceMarker`, because an `L × 2L × 3L` body
-    // has three differently shaped faces. ⛔ A fixed size would fit one pair and not the others.
-    const mesh = CreatePlane(name, { size: 1, sideOrientation: 2 /* DOUBLESIDE */ }, scene);
-    const mat = new StandardMaterial(name + "-mat", scene);
-    mat.emissiveColor = FOLLOWER_COLOUR.clone();
-    mat.disableLighting = true;
-    mat.alpha = 0.35;
-    mesh.material = mat;
-    mesh.rotationQuaternion = Quaternion.Identity();
-    // ⛔⛔ BOTH FLAGS MATTER, and each has a precedent in this file. `isPickable = false` or
-    // the highlight would intercept the very picks that select a face — the second tap would
-    // hit the marker, not the object. ⚠ And it is NOT tagged `orbitCandidate`, so it cannot
-    // become a barycentre: a readout that moved the thing it describes is the trap the orbit
-    // centre marker already documents.
-    mesh.isPickable = false;
-    mesh.isVisible = false;
-    return { mesh, mat };
-  };
-
-  /** Lazily one per object id. ⚠ Three bodies today; created on first alignment, never freed. */
-  const followerQuads = new Map<
-    ObjectId,
-    { mesh: AbstractMesh; mat: StandardMaterial; contour: LinesMesh }
-  >();
-  const followerQuadFor = (id: ObjectId) => {
-    let q = followerQuads.get(id);
-    if (q === undefined) {
-      const made = makeFollowerQuad(`follower-face-${id}`);
-      q = {
-        ...made,
-        contour: makeAlignContour(`align-contour-${id}`, dimsOf.get(id) ?? OBJECT_DIMS_M),
-      };
-      followerQuads.set(id, q);
-    }
-    return q;
-  };
 
   /**
    * ⚠⚠ **THE ONE THING THAT STILL HAS TO BE REMEMBERED: THE MODE.**
@@ -1007,126 +1127,142 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ EVERY aligned object, not just the active one: a body aligned in `FOLLOW` earlier must
     // keep reporting `FOLLOW` after the fingers move on, or the colour would describe the most
     // recent gesture instead of the relationship it names.
-    for (const [id, q] of followerQuads) {
+    for (const [key, q] of faceMarkers) {
+      const id = key.slice(0, key.indexOf("/"));
       const mode = alignModeOf.get(id);
       const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
       q.mat.emissiveColor.copyFrom(want);
-      q.contour.color.copyFrom(want);
+      const o = outlines.get(id);
+      if (o !== undefined) o.align.color.copyFrom(want);
     }
   };
-
-  /** ⭐ The unit square every Pioneer-face contour is built from, scaled per face. */
-  const FACE_SQUARE_OUTLINE = [
-    new Vector3(-0.5, -0.5, 0),
-    new Vector3(0.5, -0.5, 0),
-    new Vector3(0.5, 0.5, 0),
-    new Vector3(-0.5, 0.5, 0),
-    new Vector3(-0.5, -0.5, 0),
-  ];
-
   /**
-   * ⭐⭐⭐ **`A16` — THE TWO WHITE CONTOURS**, one per body of the highlighted pair.
+   * ⭐⭐⭐ **EVERY OUTLINE A BODY CAN WEAR, BUILT FROM ITS OWN MESH EDGES** (`D50`).
    *
-   * ⛔⛔ **PARENTED TO THE MESH, NOT POSITIONED PER FRAME.** Defect 46 was exactly this mistake
-   * for the face markers: *"the highlighted quads always lag the movements of the faces they
-   * highlight."* ⭐ A child transform is resolved by the engine in the same pass that draws the
-   * parent, so no frame can show the outline and its body disagreeing. ⚠ Writing a world
-   * position each frame cannot achieve that — the write lands before the parent's own update,
-   * and the lag is one frame, permanently.
+   * ⛔⛔ **ALL THREE USED TO BE A UNIT BOX SCALED TO A DIMENSIONS TABLE.** For the boot
+   * cuboids that is indistinguishable from the mesh, which is exactly why it survived two device
+   * passes — and for an imported part it is simply the wrong shape. ⭐ Each is now the body's
+   * own hard edges, offset outward by a different amount so the three nest and stay tellable
+   * apart.
    *
-   * ⚠ A single polyline tracing all twelve edges of the unit box; three are drawn twice, which
-   * costs nothing and keeps this to one mesh per body. ⛔ `CreateLines` gives a `color` and no
-   * material, and its one-pixel width is a WebGL limit rather than a choice — if a hand finds
-   * it too faint the answer is `GreasedLine`, as the Pioneer contour already records.
+   * | outline | offset | means |
+   * |---|---|---|
+   * | white **body** | a hair | *this body is in a capturable pair* |
+   * | cyan/amber **alignment** | a little more | *this body is aligned*, and in which mode |
+   * | white **shell** | **half the capture offset** | *another surface this near will capture* |
+   *
+   * ⚠ The two small offsets are fractions of the body's own span, so a plate and a part both
+   * get outlines that read — one absolute lift would vanish on the plate and swamp a part.
    */
-  const UNIT_BOX_OUTLINE = [
-    [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5],
-    [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5],
-    [0.5, 0.5, -0.5], [0.5, -0.5, -0.5],
-    [0.5, -0.5, 0.5], [0.5, 0.5, 0.5],
-    [-0.5, 0.5, 0.5], [-0.5, -0.5, 0.5],
-  ].map(([x, y, z]) => new Vector3(x!, y!, z!));
-
-  const makeCaptureContour = (name: string) => {
-    const m = CreateLines(name, { points: UNIT_BOX_OUTLINE }, scene);
-    m.color = CAPTURE_COLOUR.clone();
-    // ⛔ SCALED TO THE BODY'S THREE DIMENSIONS — the outline is authored as a UNIT box, so a
-    // cuboid needs all three. ⚠ A hair over 1.0 so the lines do not z-fight the surface they
-    // trace. ⭐ One scaling, set once: every body in this scene has the same dimensions.
-    // ⚠ Scaled when PARENTED, not here: the two capture contours are shared meshes that move
-    // between bodies of different sizes, so a size baked in at creation would draw a plate's
-    // outline at a part's size. ⛔ That is the shared-constant bug in its second form.
-    m.scaling = new Vector3(1, 1, 1);
-    m.rotationQuaternion = Quaternion.Identity();
-    // ⛔ Both flags, for the two reasons this file has already paid for: an instrument must not
-    // intercept the picks it describes, and must not become an orbit barycentre.
+  /**
+   * ⭐⭐⭐ **AN OUTLINE BUILT FROM A BODY'S HARD EDGES** — real mesh edges, as a LINE LIST.
+   *
+   * ⛔⛔ **A LINE LIST, NOT A POLYLINE, AND NOT THE EDGE RENDERER.** Babylon's edge renderer
+   * notches at every corner: `createLine` emits one quad per edge and `line.vertex` widens each
+   * quad in screen space, so the wedge where two edges meet is empty — which is exactly what a
+   * hand reported as *"the faces are outlined but the corners are left out"*. ⭐ GL lines have
+   * no width expansion at all, so corners close by construction.
+   * ⚠ The price is that the width is not adjustable, which is why the width slider went with it.
+   *
+   * ⭐ `instance` reuses the buffers when the vertex count is unchanged — always true for one
+   * body — so rebuilding the shell every frame allocates nothing.
+   */
+  const edgeLines = (
+    name: string,
+    topo: MeshTopology,
+    points: readonly Vec3[],
+    colour: Color3,
+    existing: LinesMesh | null,
+  ): LinesMesh => {
+    const lines = topo.edges.map(([a, b]) => {
+      const pa = points[a] ?? ([0, 0, 0] as Vec3);
+      const pb = points[b] ?? ([0, 0, 0] as Vec3);
+      return [new Vector3(pa[0], pa[1], pa[2]), new Vector3(pb[0], pb[1], pb[2])];
+    });
+    if (lines.length === 0) lines.push([Vector3.Zero(), Vector3.Zero()]);
+    const m = CreateLineSystem(
+      name,
+      existing === null
+        ? { lines, updatable: true }
+        : { lines, updatable: true, instance: existing },
+      scene,
+    );
+    m.color = colour.clone();
     m.isPickable = false;
-    m.isVisible = false;
     return m;
   };
-  /**
-   * ⭐⭐⭐ **ONE PIONEER CONTOUR PER DISTINCT PIONEER FACE** (the owner: *"the pioneerFaces and
-   * FollowerFaces tracking shall be scalable"*).
-   *
-   * ⛔⛔ **THE TWO SIDES WERE NOT SYMMETRIC, AND ONLY ONE OF THEM NEEDED WORK.** A
-   * FollowerFace is **derivable** — the constraint stores the face's own `localNormal`, so
-   * `alignedFaceOf` recovers it per body and there was never a single record to outgrow.
-   * ⚠ The Pioneer face is the opposite: like the Pioneer's identity it is absent from the
-   * model, so it lived in one `pioneerFace` variable and **at most one could ever be drawn**.
-   * ⭐ Align two bodies to the same block and only the most recent Pioneer face was outlined.
-   *
-   * ⚠ Keyed by `object/face`, so two followers pointing at the SAME face share one contour
-   * rather than stacking two — invisible at one pixel wide today, and a real artefact the day
-   * these markers gain a width or an alpha.
-   */
-  const pioneerContours = new Map<string, LinesMesh>();
-  const pioneerContourFor = (key: string): LinesMesh => {
-    let m = pioneerContours.get(key);
-    if (m === undefined) {
-      m = CreateLines(`pioneer-face-${key}`, { points: FACE_SQUARE_OUTLINE }, scene);
-      m.color = PIONEER_COLOUR.clone();
-      m.rotationQuaternion = Quaternion.Identity();
-      m.isPickable = false;
+
+  const BODY_OUTLINE_FRACTION = 0.005;
+  const ALIGN_OUTLINE_FRACTION = 0.02;
+  interface BodyOutlines {
+    readonly body: LinesMesh;
+    readonly align: LinesMesh;
+    shell: LinesMesh;
+  }
+  const outlines = new Map<ObjectId, BodyOutlines>();
+  const spanOf = (t: MeshTopology): number => {
+    let span = 0;
+    for (const p of t.positions) {
+      span = Math.max(span, Math.abs(p[0]), Math.abs(p[1]), Math.abs(p[2]));
+    }
+    return span > 0 ? span : 1;
+  };
+  const outlinesFor = (id: ObjectId): BodyOutlines | null => {
+    const hit = outlines.get(id);
+    if (hit !== undefined) return hit;
+    const topo = topoOf.get(id);
+    const body = meshOf.get(id);
+    if (!topo || !body || topo.edges.length === 0) return null;
+    const sp = spanOf(topo);
+    const mk = (name: string, h: number, colour: Color3): LinesMesh => {
+      const m = edgeLines(name, topo, offsetPositions(topo, h), colour, null);
+      m.parent = body;
       m.isVisible = false;
-      pioneerContours.set(key, m);
-    }
-    return m;
+      return m;
+    };
+    const made: BodyOutlines = {
+      body: mk(`body-outline-${id}`, sp * BODY_OUTLINE_FRACTION, CAPTURE_COLOUR),
+      align: mk(`align-outline-${id}`, sp * ALIGN_OUTLINE_FRACTION, FOLLOWER_COLOUR),
+      shell: mk(`shell-outline-${id}`, sp * BODY_OUTLINE_FRACTION, CAPTURE_COLOUR),
+    };
+    outlines.set(id, made);
+    return made;
   };
-
-  const subjectContour = makeCaptureContour("capture-contour-subject");
-  const targetContour = makeCaptureContour("capture-contour-target");
 
   /**
-   * ⭐⭐ Show a contour on a body by PARENTING it; `null` hides it.
-   * ⚠ The guard makes it a write per CHANGE rather than per frame — the same discipline
-   * `paintHighlightColours` follows.
+   * ⭐⭐ **THE SHELL IS REBUILT EVERY FRAME, BECAUSE THE OFFSET MOVES EVERY FRAME.**
+   *
+   * ⛔ It is a true mesh OFFSET, not a scale: every face plane moves out by the same distance,
+   * which is what a capture threshold means. ⚠ A scale moves a far face further than a near one
+   * and a thin axis less than a thick one, and the base plate is `0.3L` on one axis and `9L` on
+   * another. ⭐ `edgeLines` reuses the existing buffers, so this allocates nothing per frame.
    */
-  const showContourOn = (contour: AbstractMesh, objectId: ObjectId | null): void => {
-    // ⚠ Written as an early return on `objectId` itself rather than on the mesh, so the body's
-    // id is NARROWED for the rest of the function. ⛔ The previous form derived `mesh` first and
-    // needed a `!` on `objectId` below — an assertion where a check costs nothing.
-    if (objectId === null) {
-      if (contour.parent !== null) contour.parent = null;
-      contour.isVisible = false;
-      return;
+  const showCaptureOutlines = (pair: readonly (ObjectId | null)[], offsetM: number): void => {
+    const wanted = new Set<ObjectId>();
+    for (const id of pair) if (id !== null) wanted.add(id);
+    for (const id of wanted) {
+      const o = outlinesFor(id);
+      const topo = topoOf.get(id);
+      if (!o || !topo) continue;
+      o.shell = edgeLines(
+        `shell-outline-${id}`,
+        topo,
+        offsetPositions(topo, offsetM / 2),
+        CAPTURE_COLOUR,
+        o.shell,
+      );
+      o.body.isVisible = true;
+      o.shell.isVisible = true;
     }
-    const mesh = meshOf.get(objectId) ?? null;
-    if (mesh === null) {
-      if (contour.parent !== null) contour.parent = null;
-      contour.isVisible = false;
-      return;
+    // ⚠ Retired by SET MEMBERSHIP, whatever stopped wanting them — the stale-highlight bug of
+    // 2026-09-17 was the other pattern, and it produced two false defect reports.
+    for (const [id, o] of outlines) {
+      if (wanted.has(id)) continue;
+      o.body.isVisible = false;
+      o.shell.isVisible = false;
     }
-    if (contour.parent !== mesh) {
-      contour.parent = mesh;
-      contour.position.setAll(0);
-      contour.rotationQuaternion = Quaternion.Identity();
-      // ⛔ THE BODY'S OWN SIZE, read at the moment it is adopted. ⚠ A hair over 1.0 so the
-      // lines do not z-fight the surface they trace.
-      const d = dimsOf.get(objectId) ?? OBJECT_DIMS_M;
-      contour.scaling.set(d[0] * 1.02, d[1] * 1.02, d[2] * 1.02);
-    }
-    contour.isVisible = true;
   };
+
 
   /**
    * ⭐⭐⭐ **`A16`, EVALUATED ONCE PER FRAME.**
@@ -1139,7 +1275,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * because the OTHER body moved (a sway nudge, an animation) with no pointer event at all, and
    * a highlight that only updated on input would then describe a stale scene.
    */
-  let highlighted: HighlightVerdict = { pair: null, translating: false, inRange: false };
+  let highlighted: HighlightVerdict = {
+    pair: null,
+    translating: false,
+    inRange: false,
+    gapM: null,
+    offsetM: 0,
+  };
 
   const refreshHighlight = (): void => {
     // ⭐ Held bodies in PRESS ORDER, de-duplicated — `router.objects()` is ordered by press, and
@@ -1157,15 +1299,38 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⛔ CONDITION 2, from the SAME function `grip.mode` is assigned from — one rule, one place.
       translatesOnDrag(ids.length, behaviour),
       {
-        snapRadiusM: captureRadiusM(OBJECT_SIZE_M, cfg.snapRadiusFactor),
+        // ⭐⭐⭐ **RECOMPUTED EVERY FRAME FROM THE CAMERA** (`D49`, the owner: the offset *"shall
+        // depend on the camera position and focus"*). ⛔ Not a constant and deliberately not
+        // cached: a pinch changes `camera.radius` with no pointer event on any body, and an
+        // offset that only updated on input would describe the zoom the hand had a moment ago.
+        // ⚠ `camera.radius` is the distance to the orbit FOCUS, which is what was asked for.
+        captureOffsetM: captureOffsetM(
+          cfg.captureOffsetMm,
+          camera.radius,
+          camera.fov,
+          canvas.clientHeight,
+        ),
         alignMatchRad: (cfg.alignMatchDeg * Math.PI) / 180,
       },
       highlighted.pair?.target ?? null,
+      // ⛔ SURFACE TO SURFACE. ⚠ It reads the MODEL, not the display pose — the sway is
+      // decoration and a highlight must not flicker with an animation nobody asked it to track.
+      (a, b) => surfaceGap(world, a, b),
     );
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
-    showContourOn(subjectContour, highlighted.pair?.subject ?? null);
-    showContourOn(targetContour, highlighted.pair?.target ?? null);
+    // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
+    // recomputed here, so the contour and the threshold cannot disagree.
+    // ⭐⭐ BOTH WHITES, ON ONE VERDICT AND ONE MACHINERY — the body's own edges at a hair, and
+    // the same edges offset by HALF the capture distance. ⛔ They appear and vanish together:
+    // two readings of ONE state, and a pair where only one showed would invent a state the rule
+    // has not got.
+    guardDraw("captureOutlines", () =>
+      showCaptureOutlines(
+        [highlighted.pair?.subject ?? null, highlighted.pair?.target ?? null],
+        highlighted.offsetM,
+      ),
+    );
   };
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
@@ -1866,6 +2031,67 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             (highlighted.pair === null
               ? ""
               : ` ${highlighted.pair.subject}↔${highlighted.pair.target}`) +
+            // ⭐⭐⭐ **THE GAP AND THE THRESHOLD IT WAS COMPARED AGAINST, BOTH IN MILLIMETRES.**
+            //
+            // ⛔⛔ **THE `R` FLAG ALONE STOPPED BEING ENOUGH THE MOMENT THE THRESHOLD BECAME
+            // CAMERA-DEPENDENT** (`D49`). ⚠ *"Too far"* now has two causes that look identical
+            // on the glass — the bodies really are apart, or the camera is close and the offset
+            // has shrunk with it — and this project has spent whole device passes on one symptom
+            // with two causes. ⭐ With both numbers printed, moving the camera and watching the
+            // threshold move is a one-look confirmation that the rule is doing what was asked.
+            // ⛔ STRAIGHT FROM THE VERDICT. A HUD that measured the gap itself would be a second
+            // implementation, free to disagree with the product while both showed green — which
+            // is the trap `highlight.ts` returns its reasons to avoid.
+            (highlighted.gapM === null
+              ? ""
+              : ` gap=${(highlighted.gapM * 1000).toFixed(0)}/${(
+                  highlighted.offsetM * 1000
+                ).toFixed(0)}mm`) +
+            // ⛔⛔ **A BODY WHOSE GEOMETRY COULD NOT BE READ, NAMED.** It has no shape, so it can
+            // never capture and never be outlined — and every one of those is a SILENCE. ⚠ An
+            // absent readout cannot be caught by looking at the screen (`METHOD`), and *this part
+            // never highlights* would otherwise be indistinguishable from *I am holding it wrong*.
+            // ⭐ Empty in every normal run, so it costs nothing until it matters.
+            (shapelessBodies.length === 0
+              ? ""
+              : `  ⛔NOSHAPE(${shapelessBodies.join(",")})`) +
+            // ⭐⭐⭐ **WHERE THE OUTLINE PIPELINE STOPS** — added 2026-09-18 after a device report
+            // of *"no outline of any sort"*, which four different failures produce identically:
+            // no topology, no outline meshes built, no face markers, or a throw in the draw path.
+            // ⛔ `METHOD`: *an absent readout cannot be caught by looking at the screen* — so this
+            // prints each stage's count rather than leaving one symptom with four causes.
+            // ⛔⛔ **ON ITS OWN LINE, AND THE FIRST VERSION WAS NOT — which is why a hand
+            // reported *"there is no such line"*.** The HUD box is `white-space: pre` with no
+            // wrapping, so everything appended to this already-enormous line is simply CLIPPED at
+            // the panel's right edge. ⚠ It was rendered the whole time and unreadable, which is
+            // the *absent readout* failure wearing a different hat: the check I added to answer a
+            // question could not be read, so it answered nothing.
+            `
+topo      ${[...topoOf.values()]
+              .map((t) => `${t.faces.length}/${t.edges.length}`)
+              .join(" ")}  mk=${faceMarkers.size}` +
+            // ⛔⛔ **`outl=` REPORTED THE CACHE SIZE, WHICH IS NOT THE QUESTION** — a hand read it
+            // as a bug (*"it goes to 2, not to zero"*) and was right to: a number that only ever
+            // grows cannot describe what is on the screen. ⭐ `METHOD`: *audit an instrument
+            // against the QUESTION it is supposed to answer.* The question is **why is nothing
+            // drawn**, so this prints, per body, whether each outline is visible and **how many
+            // vertices it actually has** — an empty buffer and a hidden mesh look identical.
+            `
+outl      ${
+              outlines.size === 0
+                ? "(none built)"
+                : [...outlines.entries()]
+                    .map(([id, o]) => {
+                      const v = (m: LinesMesh): string =>
+                        `${m.isVisible ? "V" : "-"}${m.getTotalVertices()}`;
+                      return `${id}:${v(o.body)}/${v(o.align)}/${v(o.shell)}`;
+                    })
+                    .join(" ")
+            }` +
+            (drawFault === null
+              ? ""
+              : `
+DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             // ⭐⭐⭐ **THE ALIGNMENT LINKS, PRINTED — AND THIS LINE IS OWED TO A DEVICE REPORT.**
             //
             // ⛔⛔ A hand reported *"the release of the cyan follower objects by the rotation of
@@ -1971,6 +2197,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         tunable("window (ms)", "evictShakeWindowMs", 200, 1200, 50),
         tunable("leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
         tunable("straightness (0=strict, 1=any)", "evictShakeStraightness", 0.1, 0.9, 0.05),
+      ],
+    },
+    {
+      // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
+      // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
+      // is set aside where a hand says it wants to tune something — the same exception §8 of the
+      // spec grants `BreakThreshold`.
+      // ⚠⚠ IT IS MILLIMETRES ON THE GLASS, NOT IN THE WORLD. The world gap it authorises grows
+      // with the camera distance, so the same slider value means the same APPARENT clearance at
+      // every zoom — which is what the owner asked for and what the HUD's `gap=…/…mm` shows.
+      title: "⭐ CAPTURE (D49)",
+      sliders: [
+        // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
+        // above ~40 mm the whole scene captures at the boot zoom. ⛔ A range chosen to make both
+        // ends visibly WRONG on the glass, because a slider whose every value looks plausible
+        // teaches a hand nothing.
+        tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
+        // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
+        // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
+        // one pixel — so a width tunable would be a slider that does nothing, which is the
+        // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
       ],
     },
     {
@@ -3795,57 +4042,71 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
     // highlight DID disappear and the follower's did not, the asymmetry the report describes.
     const alignedNow = new Set(links.alignedObjects());
-    for (const [id, q] of followerQuads) {
+    guardDraw("alignmentMarkers", () => {
+
+    // ⛔⛔ **RETIRED BY SET MEMBERSHIP, WHATEVER REMOVED THE LINK.** The 2026-09-17 bug was the
+    // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
+    // behind and produced TWO false defect reports against a rule that was correct.
+    // ⭐ `METHOD`: *prefer the structure that cannot express the defect.*
+    for (const [key, q] of faceMarkers) {
+      const id = key.slice(0, key.indexOf("/"));
+      const faceId = key.slice(key.indexOf("/") + 1);
+      const wanted = alignedNow.has(id) && alignedFaceOf(world, id) === faceId;
+      if (wanted) continue;
+      q.fill.isVisible = false;
+    }
+    for (const [id, o] of outlines) {
       if (alignedNow.has(id)) continue;
-      q.mesh.isVisible = false;
-      // ⛔ THE PAIR IS ATOMIC. A body contour left behind by a released alignment would claim
-      // the body is still aligned — the readout-that-lies shape this file already guards
-      // against for the Pioneer's contour.
-      q.contour.isVisible = false;
+      // ⛔ THE PAIR IS ATOMIC. A body outline left behind by a released alignment would claim
+      // the body is still aligned — the readout-that-lies shape this file guards against.
+      o.align.isVisible = false;
     }
 
     for (const id of alignedNow) {
       const faceId = alignedFaceOf(world, id);
       // ⚠ `prune` just guaranteed this, so the guard is for the types rather than the logic.
       if (faceId === null) continue;
-      const q = followerQuadFor(id);
       const mode = alignModeOf.get(id);
       const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
-      // ⚠ Written only on CHANGE, not blindly per frame — the same discipline the single
-      // material followed, kept now that there are several.
-      if (!q.mat.emissiveColor.equals(want)) q.mat.emissiveColor.copyFrom(want);
-      if (!q.contour.color.equals(want)) q.contour.color.copyFrom(want);
-      q.mesh.isVisible = placeFaceMarker(q.mesh, id, faceId);
-      // ⛔⛔ PARENTED, never positioned per frame — defect 46's lesson, and the same reason
-      // the white capture contours are parented: a child transform resolves in the pass that
-      // draws the parent, so the outline cannot lag the body it wraps.
-      const bodyMesh = meshOf.get(id) ?? null;
-      if (bodyMesh !== null && q.contour.parent !== bodyMesh) {
-        q.contour.parent = bodyMesh;
-        q.contour.position.setAll(0);
-        q.contour.rotationQuaternion = Quaternion.Identity();
+      // ⭐⭐⭐ THE FOLLOWER FACE, DRAWN FROM ITS OWN TRIANGLES (`D50`) — so a triangular or an
+      // L-shaped face marks itself correctly instead of wearing a rectangle.
+      const marker = faceMarkerFor(id, faceId);
+      if (marker !== null) {
+        // ⚠ Written only on CHANGE, not blindly per frame.
+        if (!marker.mat.emissiveColor.equals(want)) marker.mat.emissiveColor.copyFrom(want);
+        marker.fill.isVisible = true;
       }
-      q.contour.isVisible = bodyMesh !== null;
+      // ⭐⭐ AND THE WHOLE BODY, in the alignment's colour — its own mesh edges, offset a
+      // little further out than the white body outline so the two nest rather than z-fight.
+      const o = outlinesFor(id);
+      if (o !== null) {
+        if (!o.align.color.equals(want)) o.align.color.copyFrom(want);
+        o.align.isVisible = true;
+      }
     }
+
     // ⛔⛔ **EVERY PIONEER FACE THAT SOMETHING IS ALIGNED TO**, from the index.
     //
-    // ⭐ THE PAIR IS STILL ATOMIC, but the guarantee now comes from the STRUCTURE rather than
-    // from a conjunction: a Pioneer face is drawn only because a link names it, and a link
-    // exists only while its follower's constraint does (`links.prune`, above). ⚠ The old form
-    // was `selectedFace !== null && pioneerFace !== null && …` — two records that had to be
+    // ⭐ THE PAIR IS ATOMIC BY STRUCTURE: a Pioneer face is drawn only because a link names it,
+    // and a link exists only while its follower's constraint does (`links.prune`, above).
+    // ⚠ The old form was `selectedFace !== null && pioneerFace !== null && …` — two records
     // kept in step by hand, and defect 44 was exactly them falling out of step.
     const wantedPioneerKeys = new Set<string>();
     for (const ref of links.pioneerFaces()) {
-      const key = `${ref.objectId}-${ref.faceId}`;
+      const key = `${ref.objectId}/${ref.faceId}`;
       wantedPioneerKeys.add(key);
-      const m = pioneerContourFor(key);
-      m.isVisible = placeFaceMarker(m, ref.objectId, ref.faceId);
+      const m = faceMarkerFor(ref.objectId, ref.faceId);
+      // ⭐ The Pioneer face is OUTLINED, not filled — *which face it was aimed at*, against the
+      // Follower's fill for *which face moved*. `D39`'s distinction, now on real face boundaries.
+      if (m !== null) m.loop.isVisible = true;
     }
-    // ⚠ Retire the rest. ⛔ Hidden rather than disposed: a body can be re-aligned to the same
-    // face seconds later, and churning meshes per gesture is how a render loop acquires a stall.
-    for (const [key, m] of pioneerContours) {
-      if (!wantedPioneerKeys.has(key)) m.isVisible = false;
+    // ⚠ Hidden rather than disposed: a body can be re-aligned to the same face seconds later,
+    // and churning meshes per gesture is how a render loop acquires a stall.
+    for (const [key, q] of faceMarkers) {
+      if (!wantedPioneerKeys.has(key)) q.loop.isVisible = false;
     }
+
+    });
 
     // ⛔⛔⛔ **THE HUD IS REPAINTED WHEN THE *LOOP* CHANGES SOMETHING** — audit fix, 2026-09-17.
     //
