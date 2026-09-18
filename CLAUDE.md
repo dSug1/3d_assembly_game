@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-18)
 
-✅ Green: TypeScript + Babylon + Vite, **856 golden vectors passing** (773 + 83 — ⭐ `D49`'s
+✅ Green: TypeScript + Babylon + Vite, **861 golden vectors passing** (773 + 83 — ⭐ `D49`'s
 surface gap and its shell; before that 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the first pass to find
 defects by READING the source rather than by a finger; 572 + 84 for `A16`–`A20`, and 619 − 51
 when forks A and B were deleted with their vectors).

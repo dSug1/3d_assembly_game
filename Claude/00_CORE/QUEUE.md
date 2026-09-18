@@ -18,8 +18,8 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **856 golden vectors,
-all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 656 → 773 → **856**; ⭐ the drops are DELETIONS — the roll channel, then forks A and B — and the last two rises are the **2026-09-17 AUDIT** and **`D49`**'s surface gap). ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **861 golden vectors,
+all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 656 → 773 → **861**; ⭐ the last DROP is `D54` deleting `A15`'s 16 vectors; ⭐ the drops are DELETIONS — the roll channel, then forks A and B — and the last two rises are the **2026-09-17 AUDIT** and **`D49`**'s surface gap). ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
 `npm run verify`.
 
