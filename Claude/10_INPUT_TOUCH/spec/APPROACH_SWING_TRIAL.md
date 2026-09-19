@@ -277,6 +277,144 @@ a synthesised drag with two CDP round-trips between moves is not a regular drag,
 measured over the whole series reads the filter's own **transient** (8.9%) instead of its ripple
 (1.1%). ⭐ A settling filter has to be allowed to settle before it is judged.
 
+### ⛔⛔⛔ A ROTATION MUST NOT ORBIT THE CAMERA — device-reported, 2026-09-19
+
+> *"when the follower is orange and the mode is rotation and pioneer and follower objects are
+> within the offset radius, a rotation of the pioneer controls the rotation of the follower (which
+> is normal) but also controls the camera to orbit which is not wanted."*
+
+⭐⭐⭐ **THE CAUSE: `p` IS A FUNCTION OF THE SURFACE GAP, AND ROTATION CHANGES THE GAP.** Turning
+two boxes moves their closest points, so `gapBetween` returns something different and the swing
+advances although **nothing approached**. ⚠ In `FOLLOW` both bodies turn, which is why the report
+names orange. ⛔ The owner's spec is explicit: the swing accompanies *"the translation of the
+Follower"*.
+
+✅ **THE SWING NOW FREEZES UNLESS A TRANSLATING GRIP DRIVES IT.** It holds where it is rather
+than springing home — springing home is also a motion the hand did not ask for.
+
+⚠⚠ **AND FREEZING ALONE WAS NOT ENOUGH.** While frozen, a rotation can move the gap a long way,
+so resuming the drag would **jump** the camera to whatever the new gap implies — trading a
+continuous unwanted orbit for a discontinuous one. ⭐ Cured by re-basing the trigger gap:
+`g0' = gap / (1 − p)` is the `g0` that makes the new geometry mean the angle already on screen, so
+the resumption is exactly continuous.
+
+⛔⛔ **AND THAT RE-BASE FAILED SILENTLY THE FIRST TIME.** Computing `p` from the LIVE gap makes
+it the **identity** — `gap/(1−(g0−gap)/g0) = g0` — so the fix did nothing while looking correct
+and keeping the suite green. ⭐ The frozen progress must be captured **once**, on the frame the
+translation stopped; a vector pins both halves.
+
+### ⚠⚠ AND THE FOURTH RENDER-FILE MUTANT OF THE DAY
+
+Written as a `.find()` and an `if` inside `scene.ts`, **both** fixes could be deleted with the
+whole suite still green — including the deletion that reinstates the exact reported defect.
+✅ `swingDriverIndex` and `freezeProgress` are now in `approach_swing.ts` with vectors.
+⛔⛔ *A RULE IN A RENDER FILE IS A RULE NOTHING CAN INTERROGATE* — four times in one day
+(the TDZ crash, the missing `applyCamera`, the Pioneer capture lookup, and this). ⚠ The standing
+lesson for this branch: **write the decision in `src/input/`, and let `scene.ts` hold only the
+state and the call.**
+
+### ✅ RELEASING MID-APPROACH NO LONGER JUMPS — device-reported, 2026-09-19
+
+> *"if the follower object's touch is released during a translation within the offset radius, the
+> camera shall not jump back to its transform when the pioneer-follower entered the offset radius
+> (this creates an unwanted jump): instead the camera shall keep its current transform."*
+
+⛔⛔ **THE CAUSE**: the capture verdict is computed from the **held** bodies (`refreshHighlight`
+builds its ids from `router.objects()`), so a release empties it, `inRange` goes false, the latch
+drops — and the offset the camera was leaning on vanishes in a single frame.
+
+✅ **THE FIX IS TO ABSORB, NOT TO SUPPRESS.** `OrbitController.absorb` folds the live lean into
+the orbit's own yaw and elevation, so the pose is **identical** and there is nothing left to
+vanish. ⭐ It needs no special case for *which kind of ending this was*: at contact and on a clean
+separation the offset is already zero, so absorbing is a no-op there, and a decision not taken
+cannot be taken wrongly.
+⚠ The elevation is clamped exactly as `orbitOffset` clamps it, so a swing that was saturated
+against a ring absorbs to that ring and the pose still does not move — otherwise releasing near a
+ring would jump by however far the clamp had been hiding.
+
+### ⚠⚠ THE FIFTH RENDER-FILE MUTANT, AND THIS ONE IS **NOT** CLOSED
+
+`absorb` itself has five vectors and four mutants die on it. ⛔ But **deleting the call** in
+`scene.ts` — which reinstates the reported jump exactly — still leaves the whole suite green,
+because the call site is wiring in the render file.
+
+⭐⭐ **THE REMEDY, NOT TAKEN HERE**: move the swing's STATE (`swing`, `swingAmp`,
+`swingFrozenProgress`, `appliedSwingYaw`) into a small `ApproachSwing` object in `src/input/`,
+with `arm`, `advance` and `end` — then `end` cannot forget to absorb, because absorbing is what
+`end` *is*, and the whole state machine becomes vectorable. ⚠ It is a refactor on a **trial
+branch the owner may discard**, so it is offered rather than done. Five instances so far: the TDZ
+crash, the missing `applyCamera`, the Pioneer capture lookup, the freeze/re-base pair (extracted),
+and this.
+
+### ⛔⛔⛔ THE SWING SHIPPED **INVERTED** — device-reported, 2026-09-19
+
+> *"I have seen a case where the follower object was within the offset radius and was translating
+> delta position x negative and the camera orbited to the left and bottom. how is that possible?
+> (i thought delta position x negative would trigger camera orbit to the right and up)."*
+
+⭐⭐⭐ **A DOUBLE NEGATION, AND `orbit.ts` WARNS ABOUT IT BY NAME**: *"`IN1` shipped yaw AND
+pitch inverted for exactly that reason, twice."* ⚠ I read *"opposite to the dx movement"* and
+negated — without checking which way the yaw axis actually points.
+
+✅ **MEASURED THIS TIME, NOT REASONED.** At the boot pose the camera sits on `+z` looking at the
+origin, so `+x` is screen-right:
+
+| | |
+|---|---|
+| yaw **+30°** | `x = −0.667` — camera **LEFT** |
+| yaw **−30°** | `x = +0.667` — camera **RIGHT** |
+| `+v` | `y: 0.686 → 1.452` — camera **UP** |
+| `drag` with a RIGHTWARD finger | yaw **decreases** → camera toward `+x` — **with** the finger |
+
+⛔ So *"opposite to dx"* is `sign(dx)`, the **identity** — not its negation. `dx < 0` → negative
+yaw → camera right, which is what the owner expected.
+
+⚠⚠ **AND THE COMMENT ABOVE `drag` IS WHAT MISLED ME**: *"if fingers move up and right, camera
+orbits down and left"* describes the apparent motion of the **scene**, not the camera's position.
+✅ Three vectors in `tests/orbit.test.ts` now state the axis convention as a MEASUREMENT, so the
+next reader does not have to interpret prose. `METHOD`: *a claim in prose is not a tested claim.*
+
+⭐⭐ **THE PITCH NO LONGER MIRRORS.** It takes the swing angle's MAGNITUDE, so the camera leans
+**up** whichever way the part travels — the owner's sentence names one vertical direction for both
+axes. ⚠ Sharing the signed angle would show `+x` and `−x` approaches from opposite sides
+vertically, and a hand comparing them would be comparing two different views. Mirroring is one
+line if that is preferred.
+
+✅ **AND THE SWING IS NOW ON THE HUD** — `sign`, `p`, `yaw`, `g0`, the latched `dx` and
+driven/FROZEN. ⛔ A trial rule with three latched quantities and an invented sign is one a hand
+cannot debug from outside: this report took two screenshots and a numeric probe to resolve, and
+the readout answers it at a glance.
+
+### ⭐⭐⭐ A SELECTOR: `approachRetargetsOrbit` — added 2026-09-19
+
+> *"make a flag with slider with two selection positions: case 1: current build, case 2: when the
+> pioneer and follower enter the offset radius, the yellow target of the camera orbit shall switch
+> to the barycenter of pioneer-follower objects (same as if the switch of barycenter was triggered
+> by the user input)."* — the owner
+
+⛔ `0` = **case 1**, the current build. `1` = **case 2**. Defaults to `0`, so what boots is what
+was there and case 2 is something a hand turns on to compare — the comparison that settled `D28`
+and `IN13`. ⚠ A **rule selector, not a tunable**, exactly like `pioneerTranslates`, and
+`validateGestureConfig` refuses anything between the two.
+
+⭐ *"Same as if triggered by the user input"* is taken literally: it calls `centreBlend.retarget`
+then `syncCentre` — the same two calls `recomputeOrbitCentre` makes — so the marker jumps at once
+and the camera **migrates**. ⛔ Assigning the centre directly would put back the jump the blend
+exists to remove. A vector pins that `pairBarycentre` is the **same point** the ray machinery
+would have picked for that pair, which is what makes the two paths interchangeable.
+
+⚠⚠ **AND THE FIRST BUILD RETARGETED INVISIBLY.** `centreBlend.advance` is called from the
+**orbit-drag branch only**, so during an object translation the target moved and the camera never
+migrated to it — measured on the tablet as `→0%` forever, with `c=` frozen at `(0,0,0)`.
+✅ The blend is now advanced by the translating finger's own travel, in the same millimetres the
+orbit uses, so the centre arrives *as the gesture progresses*. ⚠ Gated on the selector, so case 1
+is byte-for-byte what it was.
+⭐ Measured after the fix: `(0,0,0) → (−0.10,−0.12,0) → (−0.08, 0.00, 0)` with the blend showing
+`→99%` then `→94%` — the centre tracking the pair.
+
+⚠ **TWO RENDER-WIRING MUTANTS SURVIVE HERE TOO** (the selector test, and case 2 firing when the
+selector is 0). Sixth and seventh instances — see the `ApproachSwing` remedy above.
+
 ## ⚠ What has NOT been judged
 
 ✅ **THE SPEED DIALS HAVE BEEN SET BY A HAND** — the owner, 2026-09-19:

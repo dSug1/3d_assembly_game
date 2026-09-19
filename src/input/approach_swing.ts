@@ -113,19 +113,52 @@ export function swingYawRad(progress: number, amplitudeRad: number, sign: 1 | -1
 }
 
 /**
- * ⭐ Which way the camera swings, from the finger travel that is closing the gap.
+ * ⭐⭐⭐ **WHICH WAY THE CAMERA SWINGS — AND THIS SHIPPED INVERTED.**
  *
- * ⛔ *"the camera orbits OPPOSITE to the dx movement"* — so the sign is negated, and that is the
- * whole of this function. ⚠ It is a separate function because a sign convention stated in prose
- * inside a render file is a sign convention nobody can test; `A7` and `D52` were both sign
- * compositions that nothing measured.
+ * > *"I have seen a case where the follower object was within the offset radius and was
+ * > translating delta position x negative and the camera orbited to the left and bottom. how is
+ * > that possible? (i thought delta position x negative would trigger camera orbit to the right
+ * > and up)."* — the owner, 2026-09-19
+ *
+ * ⛔⛔⛔ **THE DEFECT WAS A DOUBLE NEGATION, AND `orbit.ts` WARNS ABOUT IT BY NAME**: *"`IN1`
+ * shipped yaw AND pitch inverted for exactly that reason, twice."* ⚠ I read the owner's
+ * *"opposite to the dx movement"* and negated — without checking that **the yaw axis is already
+ * opposite**. `OrbitController.drag` does `yawRad -= dxMm · gain` precisely so that the camera
+ * moves against the finger, so a positive yaw is ALREADY the answer to a rightward drag.
+ *
+ * ⭐⭐ **MEASURED, NOT REASONED, THIS TIME.** At the boot pose the camera sits on `+z` looking at
+ * the origin, so `+x` is screen-right; `orbitOffset` then gives
+ *
+ *     yaw +30°  →  x = −0.667   (the camera moves LEFT)
+ *     yaw −30°  →  x = +0.667   (RIGHT)
+ *
+ * ⛔ So **`+yaw` is LEFT**, and *"opposite to dx"* is `yaw = +A·sign(dx)`: a rightward finger
+ * (`dx > 0`) swings the camera left, a leftward finger swings it right. ⚠ That is the identity
+ * on `sign(dx)`, not its negation — the whole defect is one missing insight, and no amount of
+ * internal consistency could have revealed it. `METHOD`: *a sign is not tested by any amount of
+ * testing the magnitude.*
  *
  * ⚠ **A ZERO `dx` FALLS BACK TO `+1`, DECLARED.** The trigger can fire on a frame where the
  * finger happened to be between samples, and `Math.sign(0)` is `0` — which would be *no swing at
  * all*, silently, on a gesture the hand can only repeat by pulling apart and coming back.
  */
 export function swingSignFor(dxPx: number): 1 | -1 {
-  return dxPx > 0 ? -1 : 1;
+  return dxPx < 0 ? -1 : 1;
+}
+
+/**
+ * ⭐⭐ **THE PITCH ALWAYS LEANS THE SAME WAY — UP.**
+ *
+ * ⛔ The owner's expectation names one direction for both axes: *"delta position x negative
+ * would trigger camera orbit to the right **and up**"*. ⚠ Sharing the yaw's signed angle would
+ * make the pitch mirror with the drag direction — right-and-up one way, left-and-**down** the
+ * other — so `+x` and `−x` approaches would be shown from opposite sides vertically, and a hand
+ * comparing them would be comparing two different views.
+ * ⭐ Taking the magnitude keeps the vertical parallax the same whichever way the part travels.
+ * ⚠ Mirroring is one line if a hand prefers it; this is the reading of the owner's sentence.
+ */
+export function pitchAngleFor(yawAngleRad: number): number {
+  return Math.abs(yawAngleRad);
 }
 
 /**
@@ -294,4 +327,86 @@ export function smoothAmplitude(
   // reading of a zero: follow the target exactly.
   if (!(tauMs > 0) || !Number.isFinite(tauMs)) return target;
   return previous + (target - previous) * (1 - Math.exp(-dtMs / tauMs));
+}
+
+/**
+ * ⭐⭐⭐ **RE-BASE THE TRIGGER GAP SO A HELD SWING RESUMES WITHOUT A JUMP.**
+ *
+ * ⛔⛔ DEVICE-REPORTED, 2026-09-19: *"when the follower is orange and the mode is rotation and
+ * pioneer and follower objects are within the offset radius, a rotation of the pioneer controls
+ * the rotation of the follower (which is normal) but also controls the camera to orbit which is
+ * not wanted."*
+ *
+ * ⭐⭐ **THE CAUSE IS THAT `p` IS A FUNCTION OF THE SURFACE GAP, AND ROTATION CHANGES THE GAP.**
+ * Turning two boxes moves their closest points, so `gapBetween` returns something different — and
+ * in `FOLLOW` **both** bodies turn, which is why the report names orange. ⚠ Nothing translated,
+ * so nothing about the APPROACH changed, yet the swing advanced and took the camera with it.
+ * ⛔ The owner's spec is explicit that the swing accompanies *"the translation of the Follower"*.
+ *
+ * ⭐ So the swing **freezes** whenever no translation is driving it. That alone removes the
+ * unwanted orbit — but it leaves a second problem: while frozen, a rotation may have moved the
+ * gap a long way, so resuming the drag would **jump** the camera to whatever the new gap implies.
+ *
+ * ⭐⭐⭐ **THIS IS THE CURE FOR THAT JUMP, AND IT IS ONE LINE OF ALGEBRA.** `p = (g0 − gap)/g0`,
+ * so asking *which `g0` makes the CURRENT gap mean the progress we are already showing* gives
+ *
+ *     g0' = gap / (1 − p)
+ *
+ * ⛔ Re-latching to that makes the resumption **exactly continuous**: the same angle, from the
+ * new geometry, with no motion at the moment the finger starts moving again.
+ *
+ * ⚠ `p ≥ 1` has no solution — the approach is already at contact, and there is no `g0` that
+ * makes a positive gap read as finished. ⛔ Returns `null`, and the caller keeps the latch it
+ * has: a swing that has arrived stays arrived.
+ * ⚠ A non-finite gap or progress returns `null` for the same reason — refuse, never improvise.
+ */
+export function rebaseTriggerGap(currentGapM: number, heldProgress: number): number | null {
+  if (!Number.isFinite(currentGapM) || !Number.isFinite(heldProgress)) return null;
+  if (heldProgress >= 1 || heldProgress < 0) return null;
+  if (!(currentGapM > 0)) return null;
+  const g0 = currentGapM / (1 - heldProgress);
+  return Number.isFinite(g0) && g0 > 0 ? g0 : null;
+}
+
+/**
+ * ⭐⭐⭐ **WHICH HELD BODY, IF ANY, DRIVES THE SWING?** — the index of the first grip that is
+ * TRANSLATING, or `-1`.
+ *
+ * ⛔⛔ **ONLY A TRANSLATION DRIVES IT.** The owner's spec has the swing accompanying *"the
+ * translation of the Follower"*, and the device report is what a rotation costs when it is
+ * allowed to: turning two bodies moves their closest points, so the surface gap changes and the
+ * swing advances although nothing approached.
+ *
+ * ⚠⚠ **IT IS HERE AND NOT IN `scene.ts` BECAUSE A MUTANT PROVED IT HAD TO BE.** Written as a
+ * `.find()` in the render file, deleting the mode test — which reinstates exactly the reported
+ * defect — left the whole suite green. ⭐ `pioneer_cascade.ts`'s standing rule: *a RULE in a
+ * render file is a rule nothing can interrogate.* That is the fourth time in one day.
+ *
+ * ⚠ Takes MODES rather than grips so it stays engine-free: the caller holds the objects, this
+ * holds the decision.
+ */
+export function swingDriverIndex(modes: readonly (string | null)[]): number {
+  return modes.findIndex((m) => m === "TRANSLATE");
+}
+
+/**
+ * ⭐⭐⭐ **THE FROZEN PROGRESS — CAPTURED ONCE, CLEARED WHEN DRIVING RESUMES.**
+ *
+ * ⛔⛔ **THE "ONCE" IS THE WHOLE RULE.** `rebaseTriggerGap(gap, p)` with `p` read from the LIVE
+ * gap is algebraically the identity — `gap/(1−(g0−gap)/g0) = g0` — so recomputing it every frame
+ * makes the re-base do **nothing at all**, and the camera still jumps when the drag resumes.
+ * ⚠ That is how the first build of this fix failed, and it failed SILENTLY: the code looked
+ * right, the suite was green, and the arithmetic quietly cancelled.
+ *
+ * @param current what was already captured, or `null` if nothing is frozen yet.
+ * @param live    the progress the current geometry implies.
+ * @param driven  is a translation driving the swing this frame?
+ */
+export function freezeProgress(
+  current: number | null,
+  live: number,
+  driven: boolean,
+): number | null {
+  if (driven) return null;
+  return current !== null ? current : live;
 }

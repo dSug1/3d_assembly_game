@@ -7,7 +7,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  freezeProgress,
+  pitchAngleFor,
   pitchOffsetV,
+  rebaseTriggerGap,
+  swingDriverIndex,
   smoothAmplitude,
   swingAmplitudeRad,
   swingProgress,
@@ -117,20 +121,51 @@ describe("⛔⛔ THE PROGRESS — clamped at both ends, and degenerate inputs ar
   });
 });
 
-describe("⛔ THE DIRECTION — *opposite to the dx movement*", () => {
-  it("⭐⭐ a finger moving RIGHT swings the camera the other way", () => {
-    // ⛔ THE OWNER'S WORD IS *OPPOSITE*, and this is the only place it is written as arithmetic.
-    // ⚠ `A7` and `D52` were both sign COMPOSITIONS that nothing measured; this is one function
-    // so that it can be.
-    expect(swingSignFor(12)).toBe(-1);
-    expect(swingSignFor(-12)).toBe(1);
+describe("⛔⛔⛔ THE DIRECTION — and it SHIPPED INVERTED (device-reported, 2026-09-19)", () => {
+  // ⛔⛔ THE OWNER: *"the follower … was translating delta position x negative and the camera
+  // orbited to the left and bottom. how is that possible? (i thought delta position x negative
+  // would trigger camera orbit to the right and up)."*
+  //
+  // ⭐⭐⭐ **THE DEFECT WAS A DOUBLE NEGATION.** I read *"opposite to the dx movement"* and
+  // negated — without checking that the yaw axis is **already** opposite. `OrbitController.drag`
+  // does `yawRad -= dxMm · gain` precisely so the camera moves against the finger.
+  //
+  // ⭐⭐ MEASURED, not reasoned, this time. At the boot pose the camera sits on `+z` looking at
+  // the origin, so `+x` is screen-right, and `orbitOffset` gives:
+  //
+  //     yaw +30°  →  x = −0.667   (LEFT)
+  //     yaw −30°  →  x = +0.667   (RIGHT)
+  //
+  // ⛔ So `+yaw` is LEFT, and *"opposite to dx"* is `sign(dx)` — the IDENTITY, not its negation.
+  // ⚠ `orbit.ts` warns about exactly this: *"IN1 shipped yaw AND pitch inverted for exactly that
+  // reason, twice."* `METHOD`: *a sign is not tested by any amount of testing the magnitude.*
+
+  it("⭐⭐⭐ a LEFTWARD finger swings the camera RIGHT — the owner's expectation", () => {
+    // ⛔ `dx < 0` → sign −1 → negative yaw → the camera moves toward `+x` → RIGHT.
+    expect(swingSignFor(-12)).toBe(-1);
+    expect(swingYawRad(0.5, 0.4, swingSignFor(-12))).toBeLessThan(0);
+  });
+
+  it("⭐⭐ and a RIGHTWARD finger swings it LEFT — still *opposite to the dx movement*", () => {
+    expect(swingSignFor(12)).toBe(1);
+    expect(swingYawRad(0.5, 0.4, swingSignFor(12))).toBeGreaterThan(0);
   });
 
   it("⚠ a zero dx falls back to +1 rather than to NO SWING", () => {
     // ⛔ `Math.sign(0)` is `0`, which would multiply the amplitude away — the gesture would
     // silently do nothing, and a hand could only retry by pulling apart and coming back.
-    // ⭐ Declared and arbitrary, exactly like `rollSignFor`'s fallback.
     expect(swingSignFor(0)).toBe(1);
+  });
+
+  it("⛔⛔ THE PITCH DOES NOT MIRROR — it leans the same way whichever way the part travels", () => {
+    // ⭐ The owner's sentence names ONE vertical direction for both axes (*"right and up"*).
+    // ⚠ Sharing the yaw's SIGNED angle would give right-and-up one way and left-and-**down** the
+    // other, so `+x` and `−x` approaches would be shown from opposite sides vertically and a hand
+    // comparing them would be comparing two different views.
+    expect(pitchAngleFor(0.4)).toBeCloseTo(0.4, 12);
+    expect(pitchAngleFor(-0.4)).toBeCloseTo(0.4, 12);
+    // ⛔ And it still vanishes with the swing, so both halves come home together.
+    expect(pitchAngleFor(0)).toBe(0);
   });
 });
 
@@ -373,5 +408,103 @@ describe("⛔⛔⛔ THE AMPLITUDE IS SMOOTHED — device-reported jitter, 2026-0
     // ⛔ τ = 0 is a legitimate request for NO smoothing, and the honest reading is *follow
     // exactly* — not *never move*, which a naive guard would produce.
     expect(smoothAmplitude(0.5, 0.9, 16, 0)).toBe(0.9);
+  });
+});
+
+describe("⛔⛔⛔ THE SWING FREEZES WHEN NO TRANSLATION DRIVES IT — device-reported, 2026-09-19", () => {
+  // ⛔⛔ THE OWNER: *"when the follower is orange and the mode is rotation and pioneer and
+  // follower objects are within the offset radius, a rotation of the pioneer controls the
+  // rotation of the follower (which is normal) but also controls the camera to orbit which is
+  // not wanted."*
+  //
+  // ⭐⭐⭐ THE CAUSE: `p` is a function of the SURFACE GAP, and turning two boxes moves their
+  // closest points — so `gapBetween` changes and the swing advances although **nothing
+  // approached**. ⚠ In `FOLLOW` both bodies turn, which is why the report names orange. The
+  // owner's spec is explicit that the swing accompanies *"the translation of the Follower"*.
+
+  it("⭐⭐⭐ re-basing makes a resumed swing EXACTLY continuous — the same angle, new geometry", () => {
+    // ⚠ Freezing alone is not enough: while frozen a rotation may move the gap a long way, so
+    // the first frame of the resumed drag would JUMP the camera. ⛔ `g0' = gap/(1−p)` is the `g0`
+    // that makes the NEW gap mean the progress already on screen.
+    const before: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07 };
+    const pHeld = swingProgress(0.042, before); // 40% of the way in
+    expect(pHeld).toBeCloseTo(0.4, 12);
+    // ⚠ A rotation now moves the gap from 42 mm to 55 mm without anything approaching.
+    const g0 = rebaseTriggerGap(0.055, pHeld)!;
+    const after: SwingLatch = { ...before, gapAtTriggerM: g0 };
+    // ✅ The resumed progress is the frozen one, so the camera does not move as the drag resumes.
+    expect(swingProgress(0.055, after)).toBeCloseTo(pHeld, 12);
+    expect(swingYawRad(swingProgress(0.055, after), AMP, 1)).toBeCloseTo(
+      swingYawRad(pHeld, AMP, 1),
+      12,
+    );
+  });
+
+  it("⛔⛔ AND RE-BASING FROM THE **LIVE** GAP IS THE IDENTITY — the way this fix first failed", () => {
+    // ⚠⚠ `p = (g0−gap)/g0`, so `gap/(1−p) = gap·g0/gap = g0` — exactly what you started with.
+    // ⛔ The first build recomputed the progress from the live gap each frame, so the re-base
+    // did **nothing at all** and the jump remained. ⭐ The frozen progress has to be captured
+    // ONCE, on the frame the translation stopped. Pinned so it cannot be re-introduced.
+    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07 };
+    for (const gap of [0.06, 0.042, 0.01]) {
+      expect(rebaseTriggerGap(gap, swingProgress(gap, latch))).toBeCloseTo(latch.gapAtTriggerM, 12);
+    }
+  });
+
+  it("⚠ a completed or impossible approach refuses to re-base rather than improvising", () => {
+    // ⛔ `p ≥ 1` has no solution — no `g0` makes a positive gap read as finished. ⭐ `null`, and
+    // the caller keeps the latch it has: a swing that has arrived stays arrived.
+    expect(rebaseTriggerGap(0.05, 1)).toBeNull();
+    expect(rebaseTriggerGap(0.05, 1.2)).toBeNull();
+    expect(rebaseTriggerGap(0.05, -0.1)).toBeNull();
+    // ⚠ And a gap of zero is contact: there is nothing left to re-base against.
+    expect(rebaseTriggerGap(0, 0.4)).toBeNull();
+    expect(rebaseTriggerGap(NaN, 0.4)).toBeNull();
+    expect(rebaseTriggerGap(0.05, NaN)).toBeNull();
+  });
+
+  it("⭐ a progress of ZERO re-bases to the gap itself — the approach starts here", () => {
+    // ⛔ `g0' = gap/(1−0) = gap`, which is exactly what arming at this instant would have done.
+    expect(rebaseTriggerGap(0.05, 0)).toBeCloseTo(0.05, 12);
+  });
+});
+
+describe("⛔⛔ THE TWO DECISIONS THAT WERE HIDING IN `scene.ts`", () => {
+  // ⚠⚠ BOTH OF THESE EXIST BECAUSE MUTANTS SURVIVED. They were a `.find()` and an `if` in the
+  // render file, and reinstating the reported defect in either left the WHOLE suite green.
+  // ⭐ *A rule in a render file is a rule nothing can interrogate* — the fourth time in one day.
+
+  it("⭐⭐⭐ only a TRANSLATING grip drives the swing — a rotation drives nothing", () => {
+    // ⛔ THE REPORTED DEFECT, as a vector: with the mode test gone, a rotating grip would drive
+    // the swing and a turn of the Pioneer would orbit the camera.
+    expect(swingDriverIndex(["ROTATE"])).toBe(-1);
+    expect(swingDriverIndex(["ROTATE", "ROTATE"])).toBe(-1);
+    expect(swingDriverIndex(["TRANSLATE"])).toBe(0);
+    // ⚠ The translating grip is found wherever it sits — press order is not role order.
+    expect(swingDriverIndex(["ROTATE", "TRANSLATE"])).toBe(1);
+    expect(swingDriverIndex(["DEPTH", null, "TRANSLATE"])).toBe(2);
+  });
+
+  it("⚠ nothing held, or nothing with a mode yet, drives nothing", () => {
+    expect(swingDriverIndex([])).toBe(-1);
+    expect(swingDriverIndex([null, null])).toBe(-1);
+  });
+
+  it("⛔⛔⛔ the frozen progress is captured ONCE — the whole of the re-base depends on it", () => {
+    // ⚠⚠ Recomputing it every frame makes `rebaseTriggerGap` the IDENTITY, so the fix does
+    // nothing and the camera still jumps when the drag resumes. ⛔ It failed silently once: the
+    // code looked right, the suite was green, and the arithmetic quietly cancelled.
+    let held: number | null = null;
+    held = freezeProgress(held, 0.4, false); // the frame the translation stopped
+    expect(held).toBeCloseTo(0.4, 12);
+    // ✅ Later frames do NOT overwrite it, however far a rotation moves the geometry.
+    for (const live of [0.1, 0.55, 0.9]) held = freezeProgress(held, live, false);
+    expect(held).toBeCloseTo(0.4, 12);
+  });
+
+  it("⭐ and it is cleared the moment a translation drives again", () => {
+    // ⛔ Otherwise the next pause would re-base against a progress from the previous one.
+    expect(freezeProgress(0.4, 0.9, true)).toBeNull();
+    expect(freezeProgress(null, 0.9, true)).toBeNull();
   });
 });

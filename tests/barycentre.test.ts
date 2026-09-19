@@ -7,7 +7,9 @@
  */
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
-import { barycentreCandidates, distanceToRay, orbitCentre } from "../src/input/barycentre";
+import { barycentreCandidates, distanceToRay, orbitCentre,
+  pairBarycentre,
+} from "../src/input/barycentre";
 import type { Vec3 } from "../src/core/vec";
 
 const cfg = DEFAULT_CONFIG;
@@ -174,5 +176,34 @@ describe("⭐⭐ the three-object scene", () => {
     const withMarker = [...SCENE, [0, 0, 0] as Vec3];
     expect(barycentreCandidates(withMarker, 1000)).toHaveLength(2 ** 4 - 4 - 1);
     expect(barycentreCandidates(SCENE, 1000)).toHaveLength(4);
+  });
+});
+
+describe("⛔⛔ `pairBarycentre` — the orbit target for a captured pair (the owner's case 2)", () => {
+  // ⛔ THE OWNER, 2026-09-19: *"when the pioneer and follower enter the offset radius, the yellow
+  // target of the camera orbit shall switch to the barycenter of pioneer-follower objects (same
+  // as if the switch of barycenter was triggered by the user input)."*
+
+  it("⭐⭐⭐ it is the SAME POINT the ray machinery would have picked for that pair", () => {
+    // ⛔⛔ THE CLAIM THAT MAKES *"same as if triggered by the user input"* TRUE, and it is a
+    // composition: the two must agree, or turning the selector on would move the camera somewhere
+    // a finger could never have sent it. ⚠ `barycentreCandidates` lists pairs FIRST, so for two
+    // bodies its only candidate is that pair.
+    const a: Vec3 = [1, 2, 3];
+    const b: Vec3 = [-3, 6, 1];
+    const viaCandidates = barycentreCandidates([a, b], 8)[0]!;
+    const direct = pairBarycentre(a, b);
+    direct.forEach((v, i) => expect(v).toBeCloseTo(viaCandidates[i]!, 12));
+  });
+
+  it("⭐ it is the midpoint, and it is symmetric in its arguments", () => {
+    // ⚠ Symmetry matters here: which body is the Pioneer and which the Follower is a fact about
+    // the ALIGNMENT, and the camera's target must not depend on it.
+    expect(pairBarycentre([0, 0, 0], [4, 8, -2])).toEqual([2, 4, -1]);
+    expect(pairBarycentre([4, 8, -2], [0, 0, 0])).toEqual([2, 4, -1]);
+  });
+
+  it("⚠ two bodies at the same place give that place — no division surprise", () => {
+    expect(pairBarycentre([5, -1, 2], [5, -1, 2])).toEqual([5, -1, 2]);
   });
 });

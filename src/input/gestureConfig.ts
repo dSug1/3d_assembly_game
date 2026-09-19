@@ -464,6 +464,20 @@ export interface GestureConfig {
    */
   approachSwingSpeedExponent: number;
   /**
+   * ⭐⭐⭐ **NOT A TUNABLE, A RULE SELECTOR** — like `pioneerTranslates`, and for the same
+   * reason: every other control here changes a NUMBER, this one changes what the camera DOES.
+   *
+   * ⛔ `0` = **case 1**, the current build: the orbit centre is whatever rule 1 last chose.
+   * ⛔ `1` = **case 2**: the instant the Pioneer and Follower enter the offset radius, the yellow
+   * target switches to **their** barycentre — through the same `retarget` + blend a finger uses,
+   * so the camera migrates rather than jumping and the marker moves at once.
+   *
+   * ⚠ A 0/1 slider because the menu has no other kind of control (`D26`'s shape), and
+   * `validateGestureConfig` refuses anything between — a half-set selector must not read as
+   * `truthy` and ship one behaviour while the readout claims another.
+   */
+  approachRetargetsOrbit: number;
+  /**
    * ⭐⭐⭐ **MAY A HELD **PIONEER** TRANSLATE?** `1` yes (today's behaviour), `0` no (`D51`).
    *
    * > *"I want to have a flag to toggle on or off the translation of the Pioneer object in this
@@ -817,6 +831,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // twice the knee, where the old pair left a half.
   approachSwingSpeedGain: 0.015,
   approachSwingSpeedExponent: 1.7,
+  // ⚠ `0` = the current build, so the trial's existing behaviour is what boots and case 2 is
+  // something a hand turns on to compare — the comparison that settled `D28` and `IN13`.
+  approachRetargetsOrbit: 0,
   // ⭐⭐ **0 — PINNED, BY THE OWNER'S CHOICE (2026-09-18)**: *"set the default at boot:
   // Pioneer translates = 0 (-> pinned)."*
   // ⚠⚠ **AND IT OVERRULES THE CAUTION I SHIPPED IT WITH.** This read `1` with a comment
@@ -1056,6 +1073,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // `L`, not a body's span, so "1" no longer names contact and the old bound was arithmetic
   // about a quantity this field no longer holds. ⭐ A stale guard that still passes is worse
   // than none: it looks like the number has been thought about.
+  if (cfg.approachRetargetsOrbit !== 0 && cfg.approachRetargetsOrbit !== 1) {
+    throw new Error(
+      `approachRetargetsOrbit (${cfg.approachRetargetsOrbit}) must be exactly 0 or 1: it selects ` +
+        "a RULE, not a quantity, and a value in between would read as `truthy` and silently " +
+        "ship one of the two behaviours while the readout claimed a third.",
+    );
+  }
   if (cfg.pioneerTranslates !== 0 && cfg.pioneerTranslates !== 1) {
     throw new Error(
       `pioneerTranslates (${cfg.pioneerTranslates}) must be exactly 0 or 1: it selects a RULE, ` +

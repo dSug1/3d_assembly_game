@@ -214,6 +214,33 @@ export class OrbitController {
     this.v = Math.min(1, Math.max(0, v));
   }
 
+  /**
+   * ⭐⭐⭐ **TAKE A TEMPORARY OFFSET INTO THE ORBIT ITSELF, WITHOUT MOVING THE CAMERA.**
+   *
+   * ⛔⛔ DEVICE-REPORTED, 2026-09-19: *"if the follower object's touch is released during a
+   * translation within the offset radius, the camera shall not jump back to its transform when
+   * the pioneer-follower entered the offset radius (this creates an unwanted jump): instead the
+   * camera shall keep its current transform."*
+   *
+   * ⭐⭐ **THE APPROACH SWING IS AN OFFSET THAT SOMETHING ELSE OWNS**, and when that something
+   * goes away the offset goes to zero — which is a JUMP, because the camera was leaning on it.
+   * ⚠ The capture verdict is computed from the HELD bodies, so a release empties it, the latch
+   * drops, and the lean vanishes in one frame. ⛔ Absorbing is the answer that needs no special
+   * case anywhere else: the offset becomes part of the orbit, so the pose is **identical** and
+   * there is nothing left to vanish.
+   *
+   * ⭐ It is also correct at the other two exits. At contact and on a clean separation the offset
+   * is already **zero**, so absorbing is a no-op — the caller may do it unconditionally rather
+   * than deciding which kind of ending this was, and a decision not taken cannot be taken wrongly.
+   *
+   * ⚠ The elevation is clamped here exactly as `orbitOffset` clamps `v + vOffset`, so a swing
+   * that was saturated against a ring absorbs to that ring and the pose still does not move.
+   */
+  absorb(yawOffsetRad: number, vOffset: number): void {
+    if (Number.isFinite(yawOffsetRad)) this.yawRad += yawOffsetRad;
+    if (Number.isFinite(vOffset)) this.v = Math.min(1, Math.max(0, this.v + vOffset));
+  }
+
   get yaw(): number {
     return this.yawRad;
   }

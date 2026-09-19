@@ -504,3 +504,114 @@ describe("resetting the orbit", () => {
     expect(b.centreM).toEqual([0, 0, 0]);
   });
 });
+
+describe("⛔⛔⛔ `absorb` — THE POSE MUST NOT MOVE (device-reported, 2026-09-19)", () => {
+  // ⛔⛔ THE OWNER: *"if the follower object's touch is released during a translation within the
+  // offset radius, the camera shall not jump back to its transform when the pioneer-follower
+  // entered the offset radius (this creates an unwanted jump): instead the camera shall keep its
+  // current transform."*
+  //
+  // ⭐⭐ The approach swing is an OFFSET that something else owns, and when that something goes
+  // away the offset goes to zero — a jump, because the camera was leaning on it. ⛔ Absorbing
+  // folds the offset into the orbit, so the pose is identical and there is nothing left to
+  // vanish. **This vector IS that claim**, measured rather than argued.
+  const cfg = DEFAULT_CONFIG;
+  const near = (a: readonly number[], b: readonly number[]) =>
+    a.forEach((v, i) => expect(v).toBeCloseTo(b[i]!, 9));
+
+  it("⭐⭐⭐ the camera sits in EXACTLY the same place before and after", () => {
+    for (const [yaw, v, dy, dv] of [
+      [0, 0.5, 0.4, 0.2],
+      [1.2, 0.62, -0.3, -0.15],
+      [-2.7, 0.2, 0.9, 0.05],
+    ] as const) {
+      const c = new OrbitController(cfg, yaw, v);
+      const leaning = c.pose(1, dy, dv);
+      c.absorb(dy, dv);
+      const absorbed = c.pose(1);
+      near(absorbed.offsetM, leaning.offsetM);
+      expect(absorbed.radiusM).toBeCloseTo(leaning.radiusM, 9);
+    }
+  });
+
+  it("⛔⛔ … including when the swing was SATURATED against a ring", () => {
+    // ⚠ `orbitOffset` clamps `v + vOffset`, so a lean that pushed past the top ring was already
+    // being drawn AT the ring. ⭐ Absorbing clamps identically, so the pose still does not move —
+    // if it did not, releasing near a ring would jump by however far the clamp had been hiding.
+    const c = new OrbitController(cfg, 0.5, 0.9);
+    const leaning = c.pose(1, 0.2, 0.8); // 0.9 + 0.8 clamps to 1
+    c.absorb(0.2, 0.8);
+    expect(c.elevation).toBe(1);
+    near(c.pose(1).offsetM, leaning.offsetM);
+  });
+
+  it("⭐ absorbing ZERO changes nothing — which is why the caller may do it unconditionally", () => {
+    // ⛔ At contact and on a clean separation the offset is already zero. ⚠ That is what removes
+    // the need to decide *which kind of ending this was*, and a decision not taken cannot be
+    // taken wrongly.
+    const c = new OrbitController(cfg, 1.1, 0.4);
+    const before = c.pose(1);
+    c.absorb(0, 0);
+    expect(c.yaw).toBeCloseTo(1.1, 12);
+    expect(c.elevation).toBeCloseTo(0.4, 12);
+    near(c.pose(1).offsetM, before.offsetM);
+  });
+
+  it("⚠ a non-finite offset is IGNORED rather than poisoning the orbit", () => {
+    // ⛔ A NaN would make every later pose NaN and the camera would disappear — a failure with
+    // no readout at all. `LESSONS_CARRIED` §6: refuse, never improvise.
+    const c = new OrbitController(cfg, 0.3, 0.5);
+    c.absorb(NaN, 0.1);
+    expect(c.yaw).toBeCloseTo(0.3, 12);
+    expect(c.elevation).toBeCloseTo(0.6, 12);
+    c.absorb(0.2, NaN);
+    expect(c.yaw).toBeCloseTo(0.5, 12);
+    expect(c.elevation).toBeCloseTo(0.6, 12);
+  });
+});
+
+describe("⛔⛔⛔ WHICH WAY IS `+yaw`? — the fact a sign defect was built on", () => {
+  // ⚠⚠ THIS VECTOR EXISTS BECAUSE ASSUMING THE ANSWER SHIPPED AN INVERTED SWING. The approach
+  // swing negated the drag direction to be *"opposite to the dx movement"*, without checking
+  // that `OrbitController.drag` ALREADY negates (`yawRad -= dxMm · gain`). ⛔ The result was a
+  // double negation and a camera that orbited WITH the finger.
+  // ⭐ `orbit.ts` warns about precisely this: *"IN1 shipped yaw AND pitch inverted for exactly
+  // that reason, twice."* Now the axis convention is a MEASUREMENT rather than an assumption.
+  const cfg = DEFAULT_CONFIG;
+  // ⚠ The boot pose: the camera sits on `+z` looking at the origin, so `+x` is screen-RIGHT.
+  const Y0 = Math.PI / 2;
+
+  it("⭐⭐⭐ `+yaw` moves the camera toward −x — i.e. to the viewer's LEFT", () => {
+    expect(orbitOffset(cfg, Y0, 0.62, 1).offsetM[0]).toBeCloseTo(0, 9);
+    expect(orbitOffset(cfg, Y0 + Math.PI / 6, 0.62, 1).offsetM[0]).toBeLessThan(-0.1);
+    expect(orbitOffset(cfg, Y0 - Math.PI / 6, 0.62, 1).offsetM[0]).toBeGreaterThan(0.1);
+  });
+
+  it("⭐⭐⭐ an ORBIT DRAG moves the camera WITH the finger — measured, not read off a comment", () => {
+    // ⛔⛔ AND THIS IS THE FACT THE SWING'S SIGN DEPENDS ON. `drag` does `yawRad -= dxMm·gain`,
+    // so a RIGHTWARD finger DECREASES the yaw — and decreasing yaw moves the camera toward `+x`,
+    // which is screen-right. ⭐ So an orbit drag carries the camera the SAME way the finger goes.
+    //
+    // ⚠⚠ THE COMMENT ABOVE `drag` READS *"if fingers move up and right, camera orbits down and
+    // left"*, which describes the apparent motion of the SCENE rather than the camera's own
+    // position — and taking it as a statement about the camera is what produced an inverted
+    // approach swing. ⛔ This vector states the geometry, so the next reader measures instead of
+    // interpreting. `METHOD`: *a claim in prose is not a tested claim.*
+    const c = new OrbitController(cfg, Y0, 0.62);
+    const before = c.pose(1).offsetM[0];
+    c.drag(mmToPx(20), 0); // finger RIGHT
+    expect(c.yaw).toBeLessThan(Y0); // the yaw DECREASES …
+    expect(c.pose(1).offsetM[0]).toBeGreaterThan(before); // … and the camera moves toward +x
+    // ⭐ Therefore *"opposite to the dx movement"* for the SWING is the opposite of this: a
+    // rightward finger must lean the camera LEFT, i.e. a POSITIVE yaw offset.
+  });
+
+  it("⭐ `+v` raises the camera — 1 is the top ring", () => {
+    expect(orbitOffset(cfg, Y0, 0.9, 1).offsetM[1]).toBeGreaterThan(
+      orbitOffset(cfg, Y0, 0.62, 1).offsetM[1],
+    );
+    expect(orbitOffset(cfg, Y0, 0.3, 1).offsetM[1]).toBeLessThan(
+      orbitOffset(cfg, Y0, 0.62, 1).offsetM[1],
+    );
+  });
+});

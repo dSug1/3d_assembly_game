@@ -44,12 +44,25 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-18)
+## Where it stands (2026-09-19)
 
-✅ Green: TypeScript + Babylon + Vite, **861 golden vectors passing** (773 + 83 — ⭐ `D49`'s
-surface gap and its shell; before that 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the first pass to find
-defects by READING the source rather than by a finger; 572 + 84 for `A16`–`A20`, and 619 − 51
-when forks A and B were deleted with their vectors).
+✅ Green: TypeScript + Babylon + Vite, **974 golden vectors passing** (861 + 113 — ⭐ the
+2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
+773 + 83 for `D49`'s surface gap and its shell, 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the
+first pass to find defects by READING the source rather than by a finger, and 619 − 51 when forks
+A and B were deleted with their vectors).
+⛔⛔⛔ **THE 2026-09-19 PASS ENDED WITH SEVEN DEVICE REPORTS AND ONE REPEATING CAUSE** — read
+[`Claude/10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](Claude/10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md)
+before touching the swing. ⭐⭐ The cause is one sentence: **a rule written in `scene.ts` is a rule
+nothing can interrogate**, and it cost seven separate mutants that survived the whole suite — a
+TDZ crash at boot, a swing computed every frame and never applied, a Pioneer capture lookup that
+reinstated a reported bug, a freeze and a re-base, an absorb, and two selector guards. ⚠ Each was
+found by a HAND or by a screenshot, never by the 974. ⭐ **Write the decision in `src/input/`; let
+`scene.ts` hold only the state and the call.**
+⚠⚠ **AND TWO OF MY OWN INSTRUMENTS LIED THIS DAY** — a synthesised drag with CDP round-trips
+between moves is not a regular drag, and a filter's ripple measured over the whole series reads
+its TRANSIENT (8.9%) instead of its ripple (1.1%). ⛔ Both nearly set a tunable wrong. *A settling
+filter has to be allowed to settle before it is judged.*
 ⛔⛔⛔ **READ [`Claude/00_CORE/queue_notes/AUDIT_2026-09-17.md`](Claude/00_CORE/queue_notes/AUDIT_2026-09-17.md)
 BEFORE TOUCHING THE ALIGNMENT LAYER, §1.1, THE CONSTRAINT STACK, THE URL OVERRIDES OR THE TREE
 OPERATIONS.** ⭐ Its largest single finding is **ten vectors that could not fail** — among them

@@ -56,6 +56,7 @@ import {
   OrbitController,
   OrbitCentreBlend,
   orbitCentre,
+  pairBarycentre,
   PointerNoiseMeter,
   PointerRouter,
   screenTranslation,
@@ -158,12 +159,16 @@ import {
 import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
 import {
   pitchOffsetV,
+  freezeProgress,
+  rebaseTriggerGap,
   smoothAmplitude,
+  swingDriverIndex,
   swingAmplitudeRad,
   swingProgress,
   swingSignFor,
   swingYawRad,
   type SwingLatch,
+  pitchAngleFor,
 } from "../input/approach_swing";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
@@ -1438,6 +1443,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // driving. ⭐ A yaw-only lean keeps the orbit RADIUS constant so it would not in fact drift
     // today, but the latch means that stays true if the swing ever gains a radial component.
     if (highlighted.inRange && swing === null && highlighted.gapM !== null) {
+      // ⭐⭐⭐ **CASE 2 — THE YELLOW TARGET SWITCHES TO THE PAIR'S BARYCENTRE** (the owner,
+      // 2026-09-19), on the capture's rising edge and once only.
+      // ⛔ *"same as if the switch of barycenter was triggered by the user input"* — so it goes
+      // through `centreBlend.retarget` + `syncCentre`, exactly the two calls
+      // `recomputeOrbitCentre` makes. ⚠ The camera therefore MIGRATES and the marker jumps at
+      // once, which is rule 1's own behaviour; assigning the centre directly would put back the
+      // jump that blend exists to remove.
+      // ⚠⚠ It reads the MODEL, never the display pose — the sway is decoration, and an orbit
+      // centre that moved with a wobble would make the camera chase an animation.
+      if (cfg.approachRetargetsOrbit === 1 && highlighted.pair !== null) {
+        const a = worldPlacementOf(world, highlighted.pair.subject)?.position;
+        const b = worldPlacementOf(world, highlighted.pair.target)?.position;
+        // ⚠ A body without a placement is refused rather than substituted: a barycentre computed
+        // from one of the two would name a point neither body is at.
+        if (a && b) {
+          centreBlend.retarget(pairBarycentre(a, b));
+          syncCentre();
+        }
+      }
       swing = {
         gapAtTriggerM: highlighted.gapM,
         // ⚠ The threshold this capture was judged against, frozen with it — they are one fact.
@@ -1450,9 +1474,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⚠ Pulling apart past the offset ends the approach. ⛔ Nothing has to be restored: the
       // progress is already back at 0 by the time the capture drops, so dropping the latch is
       // continuous rather than a jump. That is the whole argument for an additive offset.
+      // ⭐⭐⭐ **ABSORB THE LEAN BEFORE DROPPING THE LATCH** — device-reported, 2026-09-19:
+      // *"the camera shall not jump back … instead the camera shall keep its current
+      // transform."* ⛔ The capture verdict is computed from the HELD bodies, so releasing the
+      // Follower empties it and the latch drops — and the offset the camera was leaning on
+      // vanished in one frame. ⭐ Absorbing makes the pose IDENTICAL, so there is nothing to
+      // vanish and no special case for *which kind of ending this was*.
+      // ⚠ At contact and on a clean separation the offset is already zero, so this is a no-op
+      // there; doing it unconditionally is what keeps that from being a decision.
+      const rings = orbit.ringElevationRad();
+      orbit.absorb(
+        appliedSwingYaw,
+        pitchOffsetV(pitchAngleFor(appliedSwingYaw), rings.bottom, rings.top),
+      );
+      appliedSwingYaw = 0;
       swing = null;
       // ⚠ Forgotten with the approach, so the next one starts from its own first reading.
       swingAmp = null;
+      swingFrozenProgress = null;
     }
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
@@ -1975,6 +2014,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * than from whatever the last approach happened to end on.
    */
   let swingAmp: { rad: number; atMs: number } | null = null;
+  /**
+   * ⛔⛔ The progress the swing was showing when a translation STOPPED driving it, captured
+   * once. ⚠ It must be remembered rather than recomputed: `rebaseTriggerGap(gap, p)` with `p`
+   * read from the LIVE gap is algebraically the identity — `gap/(1−(g0−gap)/g0) = g0` — so it
+   * would do nothing at all, which is how the first version of this fix failed.
+   */
+  let swingFrozenProgress: number | null = null;
 
   /**
    * ⭐⭐ How far the camera is currently leaning out of its own orbit, in radians.
@@ -1995,8 +2041,41 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // finger, silently, for weeks. ⚠ One definition of *how fast*, shared with the flick.
     // ⚠ With no holder the speed is unknown — `0` reads as *stopped*, which gives the maximum
     // swing and is what a hand that has let go should see: the widest look at the join.
-    const holder = held.size === 1 ? [...held.values()][0] : undefined;
-    const speed = holder?.rec.speedMmPerS ?? 0;
+    // ⭐⭐⭐ **THE SWING IS DRIVEN BY A TRANSLATION, AND BY NOTHING ELSE** — device-reported,
+    // 2026-09-19: *"a rotation of the pioneer controls the rotation of the follower (which is
+    // normal) but also controls the camera to orbit which is not wanted."*
+    //
+    // ⛔⛔ `p` is a function of the SURFACE GAP, and turning two boxes moves their closest
+    // points — so `gapBetween` changes and the swing advanced although nothing approached.
+    // ⚠ In `FOLLOW` both bodies turn, which is why the report names orange. ⭐ The owner's spec
+    // is explicit: the swing accompanies *"the translation of the Follower"*.
+    //
+    // ⛔ So: no translating grip, no advance. The camera holds exactly where it is — it does not
+    // spring home either, because springing home is also a motion the hand did not ask for.
+    // ⛔ THE DECISION IS `swingDriverIndex`'s, not this file's — deleting the mode test here
+    // reinstates the reported defect, and a mutant that did exactly that left the whole suite
+    // green while it lived in a `.find()`.
+    const grips = [...held.values()];
+    const driver = swingDriverIndex(grips.map((g) => g.mode));
+    const translating = driver >= 0 ? grips[driver] : undefined;
+    if (translating === undefined) {
+      // ⭐⭐ **AND THE TRIGGER GAP IS RE-BASED WHILE FROZEN**, so that whatever a rotation does to
+      // the geometry the swing resumes at the angle it is already showing. ⛔ Without it the
+      // first frame of the resumed drag would JUMP the camera to whatever the new gap implies —
+      // trading a continuous unwanted orbit for a discontinuous one.
+      // ⚠ The progress is captured ONCE, on the frame the translation stopped. Recomputing it
+      // from the live gap is the IDENTITY and the fix would silently do nothing.
+      swingFrozenProgress = freezeProgress(
+        swingFrozenProgress,
+        swingProgress(highlighted.gapM ?? 0, swing),
+        false,
+      );
+      const rebased = rebaseTriggerGap(highlighted.gapM ?? 0, swingFrozenProgress ?? 0);
+      if (rebased !== null) swing = { ...swing, gapAtTriggerM: rebased };
+      return appliedSwingYaw;
+    }
+    swingFrozenProgress = freezeProgress(swingFrozenProgress, 0, true);
+    const speed = translating.rec.speedMmPerS;
     const target = swingAmplitudeRad(
       (cfg.approachSwingDeg * Math.PI) / 180,
       speed,
@@ -2036,7 +2115,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const applyCamera = () => {
     const a = swingAngleNow();
     const rings = orbit.ringElevationRad();
-    const pose = orbit.pose(zoom, a, pitchOffsetV(a, rings.bottom, rings.top));
+    // ⛔ THE PITCH TAKES THE MAGNITUDE, NOT THE SIGNED ANGLE — `pitchAngleFor` argues why: the
+    // owner's expectation names ONE vertical direction for both drag directions.
+    const pose = orbit.pose(zoom, a, pitchOffsetV(pitchAngleFor(a), rings.bottom, rings.top));
     // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
     // Clamping the components independently would change the viewing ANGLE, which is
     // not what a near-plane guard is for.
@@ -2349,6 +2430,19 @@ outl      ${
                     })
                     .join(" ")
             }` +
+            // ⭐⭐⭐ **THE SWING, ON THE READOUT** — a trial rule with three latched quantities and
+            // an invented SIGN is exactly the kind a hand cannot debug from the outside.
+            // ⛔ *A dead control must say so*, and so must a control that is alive and going the
+            // wrong way: the sign, the progress and the angle are the three numbers a device
+            // report about direction needs, and without them the only evidence is an impression.
+            (swing === null
+              ? ""
+              : `
+swing     sign${swing.sign > 0 ? "+" : "−"} p=${swingProgress(highlighted.gapM ?? 0, swing).toFixed(2)}` +
+                ` yaw=${((appliedSwingYaw * 180) / Math.PI).toFixed(1)}°` +
+                ` g0=${(swing.gapAtTriggerM * 1000).toFixed(0)}mm` +
+                ` dxLatch=${lastTranslateRightPx.toFixed(4)}` +
+                ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
             (drawFault === null
               ? ""
               : `
@@ -2583,6 +2677,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // finger; `1` makes the camera's angular rate independent of hand speed; above 1 the
         // camera slows as the hand speeds up.
         tunable("swing speed exponent", "approachSwingSpeedExponent", 0, 3, 0.1),
+        // ⭐⭐⭐ **A RULE SELECTOR, NOT A NUMBER** — `0` is the current build; `1` switches the
+        // yellow orbit target to the Pioneer–Follower barycentre the moment they capture.
+        tunable("orbit retargets on capture (0/1)", "approachRetargetsOrbit", 0, 1, 1),
         // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
         // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
         // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
@@ -3992,6 +4089,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // movement"* means the travel this rule actually applied, not a raw pointer delta that
         // `A11`'s deadband may have swallowed.
         if (t.rightM !== 0) lastTranslateRightPx = t.rightM;
+        // ⭐⭐⭐ **CASE 2's BLEND IS DRIVEN BY *THIS* FINGER** — and without it the retarget was
+        // invisible: `centreBlend.advance` is called from the ORBIT branch only, so during an
+        // object drag the target moved and the camera never migrated to it. ⚠ Measured on the
+        // tablet as `→0%` forever.
+        // ⛔ The same quantity the orbit uses — millimetres of finger travel — so the centre
+        // arrives *as the gesture progresses* rather than on a timer, which is the rule
+        // `OrbitCentreBlend` was written for.
+        // ⚠ Gated on the selector so **case 1 is byte-for-byte what it was**.
+        if (cfg.approachRetargetsOrbit === 1 && centreBlend.isBlending) {
+          centreBlend.advance(Math.hypot(grip.rec.step.dx, grip.rec.step.dy) / mmToPx(1));
+          syncCentre();
+        }
         setModelPose(grip.mesh, {
           position: [
             mp.position[0] + r[0] * t.rightM + u[0] * t.upM,

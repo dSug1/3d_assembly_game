@@ -16,12 +16,12 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-16) — the input layer is done bar `IN3`
+## ⭐⭐⭐ YOU ARE HERE (2026-09-19) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **861 golden vectors,
-all passing** (37 → 632 → 574 → 619 → 568 → 575 → 567 → 572 → 656 → 773 → **861**; ⭐ the last DROP is `D54` deleting `A15`'s 16 vectors; ⭐ the drops are DELETIONS — the roll channel, then forks A and B — and the last two rises are the **2026-09-17 AUDIT** and **`D49`**'s surface gap). ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
-✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/ (`DEP1d`), gated on
-`npm run verify`.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **974 golden vectors,
+all passing** (37 → … → 656 → 773 → 861 → **974**; ⭐ the DROPS along the way are `D54` deleting `A15`'s 16 vectors and, earlier, the roll channel and forks A and B — and the last rises are the **2026-09-17 AUDIT**, **`D49`**'s surface gap, and the **2026-09-19 pass**: `D55`–`D62` moved every alignment trigger to the PRESS, `D57` flattened the second touchpoint's roll, and `D63` is the approach-swing TRIAL.)
+⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW STILL TO COME**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`** → [`../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md) ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
+✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
 
@@ -260,14 +260,12 @@ that MEANS something — tunables, measured false-kick rates and the whole accou
 [`../40_RENDER_SCENE/INDEX.md`](../40_RENDER_SCENE/INDEX.md). ⛔ Since 2026-09-17 neither the
 sway nor the spin moves a **frozen** body: the model was frozen and the picture was not.
 
-### ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD, and a number that came out of them
+### ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD
 
-⛔ **Rotation inertia** (`spin.ts`) and **`targetVelocity`** were both BUILT, MEASURED and
-removed — the first rejected on the device by the owner, the second because it made everything
-visibly jitter. ⚠ Both ideas are attractive and will occur to anyone reading this code; the
-measurements, and why `translateInertiaMs` has a **floor of one pointer interval** (the shipped
-7.6 ms), are in [`queue_notes/REJECTED_AND_MEASURED.md`](queue_notes/REJECTED_AND_MEASURED.md).
-⭐ *An invisible 0.4 mm of trail is not worth a visible 2 mm of jitter.*
+⚠ **Rotation inertia** (`src/input/spin.ts`) and **`targetVelocity`** in the follower were
+both built, measured and **rejected by a hand**. ⛔ The full account, with the measurements
+and the numbers that came out of them, is in
+[`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md).
 
 ### ⭐ THE BUILD ORDER — spent, and moved down a tier
 

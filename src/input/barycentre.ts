@@ -130,3 +130,23 @@ export function orbitCentre(
   }
   return best;
 }
+
+/**
+ * ⭐⭐⭐ **THE BARYCENTRE OF ONE NAMED PAIR** — not chosen by a ray, but dictated.
+ *
+ * > *"when the pioneer and follower enter the offset radius, the yellow target of the camera
+ * > orbit shall switch to the barycenter of pioneer-follower objects (same as if the switch of
+ * > barycenter was triggered by the user input)."* — the owner, 2026-09-19
+ *
+ * ⛔⛔ **`barycentreCandidates` ANSWERS A DIFFERENT QUESTION.** It enumerates every subset so a
+ * RAY can pick between them — rule 1's *"what did the finger point at?"*. ⚠ Here the pair is
+ * already known, so there is nothing to choose and nothing for a ray to do; asking the candidate
+ * machinery would mean building a list in order to find the one entry we started with.
+ *
+ * ⭐ It shares `mean` with that machinery, so *"the barycentre of these bodies"* has one
+ * definition — the pair-of-two the ray might have picked and the pair this names are the same
+ * point, which is what *"same as if the switch was triggered by the user input"* requires.
+ */
+export function pairBarycentre(a: Vec3, b: Vec3): Vec3 {
+  return mean([a, b]);
+}

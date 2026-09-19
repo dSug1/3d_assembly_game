@@ -3,7 +3,11 @@
 > **STATUS** · ⭐ active · **OWNS** · everything a finger touches, up to the point an
 > object's transform changes
 > **READ IF** · you are building or debugging any gesture
-> **LAST VERIFIED** · 2026-09-16
+> **LAST VERIFIED** · 2026-09-19
+
+⚠⚠ **A TRIAL IS LIVE**: the **approach swing** (`D63`), with its own boot scene of two square
+pre-aligned parts. ⛔ Read [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md) before
+touching it — it carries the delete list if it is discarded.
 
 ⭐⭐ **Design of record → [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md)**,
 the owner's revision-5 specification. ⛔⛔ **READ [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)

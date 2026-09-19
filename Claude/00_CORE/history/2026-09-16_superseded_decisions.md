@@ -297,3 +297,51 @@ the double-tap (`D12`→`D15`); gating on the mode won because it costs **no new
 **`D39`** — ⚠ The re-tap is a `ROTATE` gesture, so the shake stayed the only undo while
 translating, and the owner said he would judge one against the other. ✅ Superseded in part by
 `D37`→`D55`'s sweep: the re-tap now works in either mode.
+
+## `D63`, `D49`, `D46` — consequence text moved 2026-09-19
+
+**`D63`** (the approach swing, a TRIAL on `1.0.18-`) — the amplitude is **divided by the finger's
+speed**, `(gain × speed)^exponent` with the product GROUPED so the knee stays at `1/gain` for
+every exponent and the two dials are independent; smoothed at τ = 120 ms against the speed
+estimator's own 40 ms-window steps; and **frozen unless a TRANSLATION drives it**, because
+rotation changes the surface gap and would orbit the camera on its own. ⚠ It ships with a
+selector (`approachRetargetsOrbit`) for switching the yellow orbit target to the pair's
+barycentre on capture, and a boot scene of two square pre-aligned parts.
+
+**`D49`** — ⚠ glTF has no quads, and a phantom would be a second source of truth for one fact.
+⭐ The offset is **millimetres on the glass** with a slider, and the white contour **is** that
+shell — the body inflated by HALF the offset, so two touching contours mean the pair captures.
+
+**`D46`** — ⭐ Three visible states: capture (white contours), docking (the drag partitions by
+ANGLE, not by mode) and an authorised MATE — with **one finger on each object** driving the fine
+approach, which is `D47`'s break with the sign reversed. ⚠ The owner answered every question the
+same day.
+
+---
+
+# ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD — moved from `QUEUE.md` 2026-09-19
+
+⚠ Moved to keep the mandatory load inside its byte budget as the 2026-09-19 pass landed.
+### ⛔⛔ TWO THINGS A NEW SESSION MUST NOT REBUILD, and a number that came out of them
+
+⛔ **Rotation inertia** (`spin.ts`) and **`targetVelocity`** were both BUILT, MEASURED and
+removed — the first rejected on the device by the owner, the second because it made everything
+visibly jitter. ⚠ Both ideas are attractive and will occur to anyone reading this code; the
+measurements, and why `translateInertiaMs` has a **floor of one pointer interval** (the shipped
+7.6 ms), are in [`queue_notes/REJECTED_AND_MEASURED.md`](queue_notes/REJECTED_AND_MEASURED.md).
+⭐ *An invisible 0.4 mm of trail is not worth a visible 2 mm of jitter.*
+
+
+## `D58` and `D59` — consequence text moved 2026-09-19
+
+**`D58`** — ⛔ A press on the **held object itself** is deliberately absent from the owner's
+list; a press on **another** object stays `D55`'s align. ⚠ The `A16` collision: the OUTSIDE
+finger is the one that drives depth/roll, so its channel would alternate on every touch instead
+of being chosen — narrowed by `D61`, which makes the FIRST outside press of a hold inert on a
+free body. ⛔ A tap must not toggle twice, and on the PioneerFace the toggle is **rolled back**
+when the release turns out to be `D39`'s re-tap.
+
+**`D59`** — ✅ It settles `D58`'s `A16` collision for aligned bodies; ⚠ the collision survives
+on a **free** one, which is what `D61` then covers. ⚠ `SAME_OBJECT` is untouched: the owner's
+sentence says *outside any object*, and `A12`'s finger shares a body with the holder where a
+diagonal would smear one axis into the other.
