@@ -164,17 +164,48 @@ export class TapHistory {
    * window is measured RELEASE-to-PRESS, and the slop between the two PRESS points.
    */
   record(press: Sample, releaseT: number): "TAP" | "DOUBLE_TAP" {
-    const prev = this.last;
+    const paired = this.pairsWithLast(press);
     this.last = { x: press.x, y: press.y, t: releaseT };
-    if (!prev) return "TAP";
-    const gap = press.t - prev.t;
-    const apart = Math.hypot(press.x - prev.x, press.y - prev.y);
-    if (gap <= this.cfg.doubleTapWindow && apart <= mmToPx(this.cfg.doubleTapSlop)) {
+    if (paired) {
       // ⭐ Clear, so a third tap is a fresh TAP and not a second DOUBLE_TAP.
       this.last = null;
       return "DOUBLE_TAP";
     }
     return "TAP";
+  }
+
+  /**
+   * ⭐⭐⭐ **WOULD THIS PRESS COMPLETE A DOUBLE TAP — asked NOW, on the way down?** (`A22`)
+   *
+   * > *"why a single tap followed by a rapid press (the equivalent of double tap where the
+   * > final release is not done) doesn't trigger a switch to orange?"* — the owner, 2026-09-19
+   *
+   * ⛔⛔ **BECAUSE THE QUESTION WAS ONLY EVER ASKED AT THE RELEASE.** `record` is called with
+   * the release time, so a second touch that is **pressed and held** never asked it at all —
+   * and `D55` had moved the ALIGN to the press while leaving the mode SWITCH behind on the
+   * release. ⚠ That is `D55`'s own rule applied to one half of the gesture and not the other.
+   *
+   * ⭐⭐ **IT IS A PEEK, AND IT MUTATES NOTHING.** The release still runs `record`, which is
+   * what actually consumes the pair and clears the memory — two writers of one fact is the
+   * shape this project forbids. ⛔ And it shares `pairsWithLast` with `record` rather than
+   * restating the window and the slop, so the press and the release **cannot disagree** about
+   * what a double tap is.
+   *
+   * ⚠ The window is measured RELEASE-to-PRESS, so holding the second touch down for a long
+   * time does not change the answer: `record` will still say `DOUBLE_TAP` when it finally
+   * lifts, exactly as this said when it landed.
+   */
+  wouldPair(press: Sample): boolean {
+    return this.pairsWithLast(press);
+  }
+
+  /** ⛔ The one definition of *these two taps are a pair*. Shared, so it cannot drift. */
+  private pairsWithLast(press: Sample): boolean {
+    const prev = this.last;
+    if (!prev) return false;
+    const gap = press.t - prev.t;
+    const apart = Math.hypot(press.x - prev.x, press.y - prev.y);
+    return gap <= this.cfg.doubleTapWindow && apart <= mmToPx(this.cfg.doubleTapSlop);
   }
 }
 

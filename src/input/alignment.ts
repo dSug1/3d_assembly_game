@@ -70,7 +70,13 @@ export type TapAction =
   /** Let it go: the same gesture again on the same face. */
   | "UNALIGN"
   /** `D28`'s movement-mode toggle, which every other tap still means. */
-  | "TOGGLE";
+  | "TOGGLE"
+  /**
+   * ⭐ **DO NOTHING AT ALL** — `D55`'s press verdict when the configuration is not a fresh
+   * relation. ⛔ Distinct from `TOGGLE`: a press must not flip the movement mode, which is a
+   * RELEASE's job, so the two cannot share a name.
+   */
+  | "NOTHING";
 
 /** What a tap decided. ⛔ `mode` is `null` for `UNALIGN` and `TOGGLE`, which need none. */
 export interface TapMeaning {
@@ -168,6 +174,156 @@ export function tapMeaning(ctx: TapContext): TapMeaning {
   return ctx.alignMode === asked
     ? { action: "UNALIGN", mode: null }
     : { action: "SWITCH", mode: asked };
+}
+
+/**
+ * Everything the PRESS's meaning depends on. ⚠ Deliberately NOT `TapContext`: a press has no
+ * tap kind and no `alignMode` to compare against, and reusing that shape would have invited a
+ * caller to pass a `kind` the press cannot know.
+ */
+export interface PressContext {
+  /** The object this press landed on, or `null` for empty space. */
+  readonly pressedObject: string | null;
+  /** The face that press resolved, or `null` if none did. */
+  readonly pressedFace: string | null;
+  /**
+   * The objects OTHER touchpoints are already carrying. ⛔ Every one of them, not a count:
+   * the rule needs to know both *how many* and *which*, and a count cannot answer the second.
+   */
+  readonly heldObjects: readonly string[];
+  /**
+   * What the single held body is currently aligned to — **the object AND the face** — or
+   * `null`. ⚠ It carries the face because `A22` has to ask *is this press on the SAME face?*,
+   * which is the very test `tapMeaning` makes at the release; the two must agree.
+   */
+  readonly pioneerOfHeld: { readonly objectId: string; readonly faceId: string } | null;
+  /**
+   * ⛔⛔ What the **PRESSED** body is aligned to — *the other direction of the same question*,
+   * and leaving it out was a real defect, caught on the glass within minutes of `D55` landing:
+   *
+   * > `align: objectA→objectB would cycle — broke objectB's own alignment instead`
+   *
+   * ⚠ With `A→B` already live, **picking the pair up in the other order** — hold `B`, press
+   * `A` — is not a fresh relation at all, but only `pioneerOfHeld` was consulted, so it read as
+   * one. `wouldCycle` then did exactly its job and **destroyed the alignment the hand was
+   * holding**. ⭐ Before `D55` that took a deliberate tap; a press made it an accident.
+   * ⭐⭐ `METHOD`: *a substituted quantity* — *"is the held body related to the pressed one?"*
+   * stood in for *"are these two bodies related?"*, and the two agree in one direction only.
+   */
+  readonly pioneerOfPressed: string | null;
+  /** The held body's current alignment mode, or `null` when it is not aligned. */
+  readonly alignModeOfHeld: AlignMode | null;
+  /**
+   * ⭐⭐ **WOULD THIS PRESS COMPLETE A DOUBLE TAP?** — `TapHistory.wouldPair`, asked on the way
+   * down. ⛔ A boolean and not a `kind`: the press is not a tap and never will be if the finger
+   * stays down, so naming it `kind: "DOUBLE_TAP"` would claim a verdict that has not happened.
+   */
+  readonly completesDoubleTap: boolean;
+}
+
+/**
+ * ⭐⭐⭐ **THE ALIGNMENT NOW TOGGLES ON AT THE *PRESS*, NOT AT THE TAP** (`D55`).
+ *
+ * > *"when first touch is pressed on first object, as soon as a second touch is pressed on
+ * > second object (= a tap or a continued press), the Pioneer - Follower mechanism toggles on.
+ * > To toggle off, the rule stays unchanged."* — the owner, 2026-09-19
+ *
+ * ⭐⭐ **WHAT IT BUYS: A TWO-HANDED GRAB *IS* THE RELATION.** Until now the relation cost a
+ * deliberate tap, so `D51`'s pinned Pioneer — the posture where the second finger steers the
+ * Follower's depth and roll — was reachable only after one. ⛔ Now picking the second body up
+ * **is** the gesture, and with `pioneerTranslates = 0` at boot that second body stops being
+ * cargo and becomes a control surface the moment it is touched.
+ *
+ * ⛔⛔⛔ **THIS FUNCTION ONLY EVER TURNS THE MECHANISM *ON*, AND THAT IS THE WHOLE DESIGN.**
+ * The owner's second sentence is a constraint on this one: the ways OUT — a shake, or the same
+ * gesture again on the same face — all live on the RELEASE, in `tapMeaning`, untouched. ⚠ So a
+ * press that could *replace* or *break* an alignment must return `NOTHING` and let the release
+ * decide, or the press would silently own a second meaning the owner did not give it.
+ * ⭐ That is why a held body **already aligned to the pressed body** is refused here: grabbing
+ * an aligned pair by its two bodies must not re-point, and must not destroy, the relation the
+ * hand is holding. ⚠ Re-pointing to a DIFFERENT face of the same Pioneer is still reachable —
+ * by the tap, exactly as before.
+ *
+ * ⛔⛔ **AND IT MUST BE `SNAPSHOT`, BECAUSE A PRESS CANNOT KNOW THE TAP COUNT.** `D42` gave
+ * the gesture the choice — a single tap makes a `SNAPSHOT`, a double tap a `FOLLOW` — and the
+ * press happens **before** either is knowable. ⭐ The double tap still lands on `FOLLOW`, by a
+ * route that already existed: press #1 aligns as `SNAPSHOT`, and the second tap's release is a
+ * `DOUBLE_TAP` on the same face, which `tapMeaning` reads as `SWITCH`. ⚠ The visible cost is a
+ * **cyan flash between the two taps** — honest, because for that moment the alignment really is
+ * a snapshot. ⛔ `SNAPSHOT` is also the conservative one to be wrong about: it leaves the
+ * Follower's rotation independent, where a wrong `FOLLOW` would spin a body the hand did not
+ * aim at.
+ *
+ * ⚠ A press that resolves NO face aligns nothing. ⛔ Silence, not a default face: `D49` and
+ * `LESSONS_CARRIED` §6 both say a degenerate input returns nothing rather than a stand-in.
+ *
+ * ⚠ EXACTLY ONE other held body, for the reason `alignFollowerToPioneer` already gives: with
+ * two, *which* is the Follower has no answer worth trusting.
+ *
+ * ⭐⭐⭐ **`A23`, 2026-09-19 — AND A NEW FACE OF THE *CURRENT* PIONEER RE-POINTS ON THE PRESS.**
+ *
+ * > *"currently, a tap on a new face on pioneer object triggers the switch to this new
+ * > PioneerFace and new alignment of the Follower object: add a continued press to also trigger
+ * > this switch"* — the owner
+ *
+ * ⭐ It is `D55` finishing its own sweep: *tap or continued press* now governs the three things
+ * a press can do to an alignment — **make** it (`D55`), **upgrade** it (`A22`), **re-point** it
+ * (`A23`) — while the two ways OUT stay on the release, untouched, exactly as required.
+ *
+ * ⚠⚠ **AND IT REVERSES A GUARD, DELIBERATELY — STATED BECAUSE IT HAS A COST.** Until now a
+ * press on ANY face of the current Pioneer did nothing, so the Pioneer could be picked up
+ * anywhere without disturbing the relation. ⛔ Now only its **aligned face** is a safe handhold:
+ * grabbing it elsewhere re-points the alignment onto the face under the finger. ⭐ That is the
+ * rule as dictated, and the owner has it in writing; it is also recoverable in one gesture,
+ * which the destroyed-alignment case it replaces was not.
+ */
+export function pressMeaning(ctx: PressContext): TapMeaning {
+  const nothing: TapMeaning = { action: "NOTHING", mode: null };
+  if (ctx.pressedObject === null || ctx.pressedFace === null) return nothing;
+  if (ctx.heldObjects.length !== 1) return nothing;
+  const heldObject = ctx.heldObjects[0]!;
+  // ⚠ A press on the body that is ALREADY held is `SECOND`'s configuration, not this one —
+  // and a Pioneer and a Follower on one body is not a relation.
+  if (heldObject === ctx.pressedObject) return nothing;
+  // ⛔⛔ **THE SAME FACE OF THE SAME PIONEER — the one configuration a press does not align.**
+  // ⚠ Narrowed by `A23` (2026-09-19): it used to cover **every** face of the current Pioneer,
+  // to keep an ordinary grab from disturbing the relation. The owner asked for the opposite on
+  // a NEW face — see below — so only the face already aligned is held back, where there is
+  // nothing to re-point to anyway.
+  if (
+    ctx.pioneerOfHeld !== null &&
+    ctx.pioneerOfHeld.objectId === ctx.pressedObject &&
+    ctx.pressedFace === ctx.pioneerOfHeld.faceId
+  ) {
+    // ⭐⭐⭐ **`A22` (amending `D55`) — THE UPGRADE TO `FOLLOW` FIRES ON THE WAY DOWN TOO.**
+    //
+    // > *"why a single tap followed by a rapid press (the equivalent of double tap where the
+    // > final release is not done) doesn't trigger a switch to orange?"* — the owner
+    //
+    // ⛔ It did not, and the answer was simply that `D55` moved half the gesture. The ALIGN
+    // went to the press; the mode SWITCH stayed on the release, where `TapHistory.record` asks
+    // the double-tap question — so a second touch that is **pressed and held** never asked it.
+    // ⭐ Now it does, and the two halves obey one rule: *a tap or a continued press*.
+    //
+    // ⛔⛔ **NARROW ON PURPOSE: ONLY THE SECOND OF A RAPID PAIR, ONLY ONTO `FOLLOW`.**
+    // ⚠ A *plain* press on the Pioneer's aligned face must keep meaning nothing: it is the one
+    // safe handhold left on a Pioneer, and the grab that `D51` makes ordinary.
+    // ⛔ And it never switches BACK to `SNAPSHOT`: `modeForTap("DOUBLE_TAP")` is `FOLLOW`, so
+    // a double tap onto a `FOLLOW` alignment is *the same gesture again*, which is `D39`'s
+    // toggle-OFF — and toggling off stays on the release, unchanged, as the owner required.
+    if (ctx.completesDoubleTap && ctx.alignModeOfHeld !== "FOLLOW") {
+      return { action: "SWITCH", mode: "FOLLOW" };
+    }
+    return nothing;
+  }
+  // ⛔⛔ **THE REVERSE DIRECTION IS STILL REFUSED, AND IT IS NOT THE SAME QUESTION.**
+  // ⚠ Here the **pressed** body follows the **held** one, so aligning held→pressed would close
+  // a cycle — the defect the glass found within minutes of `D55`:
+  // `align: objectA→objectB would cycle — broke objectB's own alignment instead`.
+  // ⛔ `A23` does NOT relax this: re-pointing onto a new face is a request the hand can make
+  // of its own Pioneer, while this configuration has no valid alignment to make at all.
+  if (ctx.pioneerOfPressed === heldObject) return nothing;
+  return { action: "ALIGN", mode: "SNAPSHOT" };
 }
 
 /** What a flick must do to the object it was made on. ⭐ Both fields, always both. */

@@ -28,6 +28,7 @@ belong in a `REJECTED.md` — start one the first time something is measured out
 | `D6` | ⛔ **`src/core` and `src/input` import no engine**, and a test enforces it | 2026-09-13 | The predecessor stated the same contract in prose and it silently became false |
 | `D7` | **Thresholds in millimetres, never pixels** | 2026-09-13 | `src/core/units.ts`; every threshold converts at runtime |
 | `D8` | ⭐ **The constraint stack replaces the three booleans** | 2026-09-13 | Owner's revision-5 spec §1.4, adopted as the design of record |
+| `D55` | ⭐⭐⭐ **THE ALIGNMENT TOGGLES ON AT THE *PRESS* — a continued press counts too** | 2026-09-19 | *"as soon as a second touch is pressed on second object (= a tap or a continued press), the Pioneer - Follower mechanism toggles on. To toggle off, the rule stays unchanged."* ⛔⛔ **The TRIGGER moved; the mechanism did not** — every refusal and both ways OUT (shake, re-tap) are untouched, and a press is never one of them. ⚠ The **reverse** direction stays refused — that one-way guard shipped and the glass broke an alignment in minutes. ⛔ It aligns as `SNAPSHOT` — a press **cannot know the tap count** (`D42`) — so a brief cyan precedes `FOLLOW`. ⛔⛔ The matching release is **spent**, or the `TAP` reads as `UNALIGN` and undoes the gesture 80 ms later. ✅ **`A22`+`A23`, same day**: *tap or continued press* now governs all three — **make** (`D55`), **upgrade** to `FOLLOW` (a rapid press-and-hold goes orange without lifting, via `wouldPair`), **re-point** onto a new Pioneer face. ⚠ Cost: only the Pioneer's **aligned** face is still a safe handhold. ⚠⚠ **It makes `D51` ordinary**: with `pioneerTranslates = 0` the second body is a control surface on contact — owed a device look → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §2 |
 | `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | *"Until first touch is released: first touch can continue controlling the object … and second touchpoint can be pressed again and thus control again the object."* ⛔⛔ It **reverses `D25`** and restores `IN2`'s latch to having **no exceptions**. ⚠ The geometry `A15` was built for is unchanged — depth still slides an object off a still finger — what changed is the verdict on what follows: **keeping control beats re-resolving**. ⭐ Gone with it: `holder_binding.ts`, `relatchOnOrphan`, `evaluateBindings`, `collectOrphans`, `objectUnder`, the HUD's `⛔ORPHANED` line and 16 vectors. ⭐⭐ And it closes `D51`'s recorded hole **by construction**: with no unselect anywhere, a pinned Pioneer cannot orphan its Follower's holder |
 | `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | *"I want to modify that to an offset to the faces… I would prefer [the game computes it] as this avoids to duplicate work in Blender."* ⭐⭐ Computed wins on its own merits: nothing reads a normal, so **inverted normals cannot affect it**, and glTF has no quads — while a phantom is a second source of truth for one fact, maintained in another tool. ⛔⛔ **The DISTANCE moved to surfaces; the approach DIRECTION must NOT** — `D46` exists because a face-to-face direction collapses at contact. ⭐ The offset is **millimetres on the glass**, scaled by camera distance through rule 6's own tracking factor (so: the same apparent size at every zoom, never pixels), with a **slider**. ⭐⭐ And the **white contour IS that shell** — body + **half** the offset, recomputed per frame, so two touching boxes mean capture. ⚠ `snapRadiusFactor` deleted → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §19 |
 | `D47` | ⭐⭐⭐ **A MATE IS BROKEN BY PULLING IT APART WITH TWO FINGERS** | 2026-09-17 | Two fingers, one on each mated object, moving **oppositely along the centre→centre direction** past a `BreakThreshold` (slider, at the owner's request). ⭐⭐ It answers the worst finding of `D46`'s analysis — `D13` spares mates, so a mate was **permanent**. ⛔⛔ It also exposes a gap: §1.4's stack solves ORIENTATION, so a mate does not hold POSITION and *breaking* is today indistinguishable from *moving* — build `3D2`'s **seat first** → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 |
@@ -107,33 +108,15 @@ number in `gestureConfig.ts`:
 ⭐ And the standing rule is unchanged: **`METHOD` closes a change with a device look and
 nothing else**, so every row still to come owes one of its own.
 
-⚠ **Two things have been measured out and REVERTED** — rotation inertia (`src/input/spin.ts`)
-and `targetVelocity` in the follower. The note at the top of this file asks for a
-`REJECTED.md` the first time that happens; both are instead recorded in full, with their
-measurements, under *"TWO THINGS A NEW SESSION MUST NOT REBUILD"* in
-[`QUEUE.md`](QUEUE.md). ⛔ One home, not two — but if a third is measured out, that block
-is the thing to split into `REJECTED.md`, not this file.
-
 ## ⭐⭐ A report the owner WITHDREW — kept, because it is the more useful entry
 
-> *"You destroyed the rotation around the gravity axis and orthogonal to gravity: the
-> rotation came back to the axis of the screen view plane."* — 2026-09-15, then
-> *"it's alright: the logic is right"*.
+> *"You destroyed the rotation around the gravity axis…"* — 2026-09-15, then *"it's alright:
+> the logic is right"*. ⛔⛔ `A7`/`D18` was not the fault; `tests/a7_wiring.test.ts` now MEASURES
+> the composition at four camera tilts. ⭐⭐ The transferable part: mistake shape 4 — *a
+> composition nobody computed* — aims at **correct** work as easily as broken, and costs the
+> same either way until someone measures it. ⚠ A claim tested and not held — full text in
+> [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md).
 
-⛔⛔ **`A7`/`D18` was not the fault, and that is now a MEASURED claim rather than a
-defence.** Every part of the gravity frame already had green vectors — it is orthonormal,
-`up` is the world vertical, the wiring compiled — and ⚠ **none of that is the same claim as
-*a horizontal drag yaws about gravity***, which is what a hand judges.
-`tests/a7_wiring.test.ts` composes the frame with the rotation and asserts the axis that
-comes out the far end, at level, 45° down, 72° down and on the **bottom ring**, with two
-counter-examples so *"it came back to the screen axes"* is distinguishable from *"it did
-not"*: the camera's own up is ≤ 0.4 against the vertical at 72°, and the view axis ≥ 0.9.
-
-⭐⭐ **The transferable part**: mistake shape 4 — *a composition nobody computed* — can
-aim at a **correct** piece of work as easily as a broken one, and it costs the same either
-way until someone measures the composition. ⭐ `METHOD`: *a composition is a thing to
-MEASURE, not an emergent property.* The real defect in the same report (no deadband, `D19`)
-was only separable from the impression once the composition had a number.
-
-⚠ This is not a rejected experiment and does not belong in a `REJECTED.md`: nothing was
-built and nothing was measured out. It is a **claim that was tested and did not hold**.
+⚠ **Two things were measured out and REVERTED** — rotation inertia (`src/input/spin.ts`) and
+`targetVelocity` — recorded in full under *"TWO THINGS A NEW SESSION MUST NOT REBUILD"* in
+[`QUEUE.md`](QUEUE.md). ⛔ One home, not two; a third splits that block into `REJECTED.md`.

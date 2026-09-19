@@ -74,11 +74,13 @@ import {
   type AlignMode,
   retargetAlignment,
   tapMeaning,
+  pressMeaning,
   flickResetPlan,
   type TapContext,
   ShakeDetector,
   shakeParamsFrom,
   constrainedDragAngle,
+  nearSideScreenDirection,
   rotateAboutAxis,
   displayPose,
   exponentialSmooth,
@@ -1420,6 +1422,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      */
     alignmentTouched: boolean;
     /**
+     * ⭐⭐⭐ `D55` — **DID THIS TOUCHPOINT'S OWN *PRESS* MAKE AN ALIGNMENT?**
+     *
+     * ⛔⛔ WITHOUT IT THE GESTURE WOULD UNDO ITSELF. The alignment now fires on the way
+     * DOWN, and the matching release is a `TAP` on the face that alignment names — which
+     * `tapMeaning` reads, correctly and unchanged, as `UNALIGN`. ⚠ So a single tap would
+     * align on the press and break it on the release, ~80 ms apart, and the glass would
+     * show nothing at all having happened.
+     *
+     * ⭐ It also consumes `D28`'s movement-mode toggle, for the reason the tap path has
+     * always consumed it: **one gesture, one consequence.**
+     *
+     * ⚠ Distinct from `alignmentTouched`, which lives on the **Follower's** grip and
+     * answers the flick reset's *"was an alignment made during this gesture?"*. This one
+     * lives on the **Pioneer's** grip and answers *"has this release already been spent?"*.
+     * ⛔ Two questions, two fields — collapsing them would be the substituted-quantity
+     * shape this file has been burned by twice.
+     */
+    pressActed: boolean;
+    /**
      * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
      * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
      * established, and a fresh press is a fresh axis — `shake.ts` says so in its own header.
@@ -2652,11 +2673,28 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ✅ So the second touchpoint now uses the **same chart**, with its own gain converted
         // to radians. Measured over two camera frames and six axes, both drag directions: every
         // case agrees, and two that the roll chart could not serve at all now do.
-        // ⚠⚠ **WHAT IT COSTS, STATED**: `A3`'s second chart covered the configuration where
-        // the drag chart degenerates (the axis square to the view). There the second touchpoint
-        // now does **nothing** — exactly as the first touchpoint already did. ⛔ That is the
-        // price of consistency, and a fallback would have to invent a sign at precisely the
-        // configuration where there is nothing to be consistent WITH.
+        // ⚠⚠ **WHAT IT COSTS — AND THE FIRST STATEMENT OF IT HERE WAS WRONG.** It said the
+        // price was *"the axis square to the view"*. ⛔ Measured 2026-09-19, after the owner
+        // reported *"for some PioneerFaces I lose the roll control of the Follower by the
+        // second touch"*: that is not where this dies, and the real dead zone is far commoner.
+        //
+        // ⛔⛔⛔ **THE ROLL FADES WITH THE AXIS'S *SCREEN ORIENTATION*, NOT WITH ITS ANGLE TO
+        // THE CAMERA.** The near side travels along `axis × (−view)`, which is **perpendicular
+        // to the axis's screen projection** — so the direction the object wants the finger to
+        // go SPINS as the alignment axis does. ⚠ This channel supplies `dx` only (`A16`: *its x
+        // is roll, its y is depth*), so the authority is `dir.x`, and it falls off as a cosine:
+        //
+        //   axis VERTICAL on screen → near side moves horizontally → authority 1.00 (20°/10 mm)
+        //   45°                     →                             → authority 0.71 (14°)
+        //   axis HORIZONTAL          → near side moves VERTICALLY   → authority 0.00 (**dead**)
+        //
+        // ⭐ The first touchpoint never loses it, because it passes `dx` AND `dy` and can always
+        // drag along the near-side direction whatever its screen orientation.
+        // ⛔⛔ AND `constrainedRollAngle` IS NOT A FALLBACK HERE, which is worth stating so the
+        // next session does not try it: an axis horizontal on screen is **square to the view**,
+        // which is exactly where that chart returns `null` too. Both charts are dead in the
+        // same configuration; only the missing `dy` could have served it.
+        const nearSide = nearSideScreenDirection(screenFrame(), axis);
         const twist = constrainedDragAngle(
           screenFrame(),
           axis,
@@ -2664,6 +2702,16 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           0,
           (cfg.gainRollDrag * Math.PI) / 180,
         );
+        // ⛔⛔ **A DEAD CONTROL MUST SAY SO.** `twist` is `0` here, not `null`, so nothing
+        // refused and nothing reported — the hand drags and the object does not move, which is
+        // the readout-that-lies shape this file has been burned by repeatedly. ⚠ The authority
+        // is printed whenever the finger is actually asking for a roll, so a fade is visible
+        // BEFORE it reaches zero.
+        if (nearSide !== null && Math.abs(nearSide.x) < 0.98) {
+          lastVerdict =
+            `align: roll authority ${(Math.abs(nearSide.x) * 100).toFixed(0)}% — ` +
+            `this axis turns the near side ${Math.abs(nearSide.x) < 0.02 ? "VERTICALLY (x drag is dead)" : "off-horizontal"}`;
+        }
         if (twist !== null) {
           setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
           // ⛔⛔⛔ **AND IT RIDES THE SNAP — AUDIT FIX, 2026-09-17.** The one-finger twist has
@@ -3103,6 +3151,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         mode: null,
         pressFace,
         alignmentTouched: false,
+        pressActed: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
         // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
@@ -3125,6 +3174,71 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           3 * cfg.gainRotateFree * cfg.pointerNoiseMm * (180 / Math.PI),
         ),
       });
+      // ⭐⭐⭐ **`D55` — THE PIONEER–FOLLOWER MECHANISM TOGGLES ON *HERE*, ON THE WAY DOWN.**
+      //
+      // > *"when first touch is pressed on first object, as soon as a second touch is pressed
+      // > on second object (= a tap or a continued press), the Pioneer - Follower mechanism
+      // > toggles on. To toggle off, the rule stays unchanged."* — the owner, 2026-09-19
+      //
+      // ⛔⛔ **IT IS THE TRIGGER THAT MOVED, NOT THE MECHANISM.** `alignFollowerToPioneer` is
+      // called unchanged, with all its refusals — frozen Follower, no resolved face, the cycle
+      // undo — and the release path below still owns every way OUT. ⭐ What changed is that a
+      // **continued press** now counts: the old trigger was a release verdict, so a finger that
+      // came down on the second body and stayed there aligned NOTHING until it lifted.
+      //
+      // ⚠⚠ **AND THIS IS WHERE `D51` BECOMES THE ORDINARY POSTURE.** `pinnedPair` needs a live
+      // relation, and the relation used to cost a deliberate tap; now the grab IS it. ⛔ With
+      // `pioneerTranslates = 0` at boot, the second body stops being cargo and becomes a
+      // control surface — its finger drives the Follower's depth and roll — the instant it is
+      // touched. ⭐ That is the owner's intent read plainly, and it is stated rather than
+      // discovered because it changes what two fingers on two bodies do at boot.
+      //
+      // ⛔ THE DECISION IS `pressMeaning`'s, NOT THIS FILE'S — `pioneer_cascade.ts`'s rule: *a
+      // RULE in a render file is a rule nothing can interrogate.* ⚠ Only the WIRING is here.
+      const pressGrip = held.get(e.pointerId)!;
+      const pressOthers = [...held.entries()].filter(([pid]) => pid !== e.pointerId);
+      const pressHeldIds = pressOthers
+        .map(([, g]) => idOf.get(g.mesh))
+        .filter((v): v is string => v !== undefined);
+      // ⚠ Asked only when exactly one other body is held, so `links` is consulted about a body
+      // that unambiguously exists — the same guard `pressMeaning` re-states and refuses on.
+      const pressHeldId = pressHeldIds.length === 1 ? pressHeldIds[0]! : null;
+      const pressPioneerOfHeld = pressHeldId === null ? null : links.pioneerFor(pressHeldId);
+      const pressVerdict = pressMeaning({
+        pressedObject: pickedId ?? null,
+        pressedFace: pressFace?.faceId ?? null,
+        heldObjects: pressHeldIds,
+        pioneerOfHeld:
+          pressPioneerOfHeld === null
+            ? null
+            : { objectId: pressPioneerOfHeld.objectId, faceId: pressPioneerOfHeld.faceId },
+        // ⛔ THE OTHER DIRECTION OF THE SAME QUESTION, and omitting it was a defect the glass
+        // found within minutes: with `A→B` live, holding `B` and pressing `A` is not a fresh
+        // relation, and reading it as one let `wouldCycle` break the pair the hand was holding.
+        pioneerOfPressed:
+          pickedId === undefined ? null : (links.pioneerFor(pickedId)?.objectId ?? null),
+        alignModeOfHeld: pressHeldId === null ? null : (alignModeOf.get(pressHeldId) ?? null),
+        // ⭐⭐ `A22` — A PEEK, NOT A RECORD. The release still consumes the pair through
+        // `TapHistory.record`; this only asks whether it WOULD, so a second touch that is
+        // pressed and held can reach `FOLLOW` without ever lifting.
+        completesDoubleTap: taps.wouldPair(s),
+      });
+      if (pressVerdict.action === "ALIGN" && pressVerdict.mode !== null) {
+        // ⛔ `pressActed` is set from the RETURN VALUE, never from the intent. Every refusal
+        // inside `alignFollowerToPioneer` returns `false` and says why on the HUD, and a press
+        // that aligned nothing must leave its release completely untouched — the tap then means
+        // whatever it has always meant, including `D28`'s toggle.
+        pressGrip.pressActed = alignFollowerToPioneer(e.pointerId, pressGrip, pressVerdict.mode);
+      } else if (pressVerdict.action === "SWITCH" && pressVerdict.mode !== null && pressHeldId) {
+        // ⭐⭐⭐ `A22` — **NOTHING MOVES.** The constraint, the faces and the poses are
+        // untouched; only what the alignment MEANS changes, and the colours are how a hand sees
+        // it. ⛔ Exactly what the release-side `SWITCH` does, which is why it writes through the
+        // same two lines rather than inventing a second path to the same state.
+        alignModeOf.set(pressHeldId, pressVerdict.mode);
+        paintHighlightColours();
+        pressGrip.pressActed = true;
+        lastVerdict = `align: now ${pressVerdict.mode} (the second press of a rapid pair)`;
+      }
       paint();
       return;
     }
@@ -3630,7 +3744,22 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // reset is therefore evaluated AFTER the alignment decision and skipped when the tap
       // aligned; this block used to run first, which is why it moved.
       let alignedByThisTap = false;
-      if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") {
+      // ⛔⛔⛔ **`D55` — A RELEASE WHOSE OWN PRESS ALIGNED IS ALREADY SPENT.**
+      //
+      // ⚠⚠ WITHOUT THIS BRANCH THE GESTURE UNDOES ITSELF, and it would look like the trigger
+      // never worked at all. The press aligns; the release that follows it is a `TAP` on the
+      // very face that alignment names, and `tapMeaning` reads that — correctly, and by a rule
+      // the owner explicitly kept — as `UNALIGN`. ⭐ So align-then-break, ~80 ms apart, with
+      // nothing on the glass to show for it.
+      //
+      // ⭐⭐ **AND IT IS THE *PRESS* THAT IS ASKED, NOT THE STATE.** *"Is the held body aligned
+      // to this one?"* would be the substituted quantity again: it is true for the second tap
+      // of a double tap as well, and that release must NOT be consumed — it is what carries
+      // `SNAPSHOT` → `FOLLOW`. ⛔ Only *"did MY press make it?"* separates the two.
+      if (grip.pressActed) {
+        alignedByThisTap = true;
+        lastVerdict = `${lastVerdict} — release spent (the press aligned)`;
+      } else if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") {
         const others = [...held.entries()].filter(([pid]) => pid !== e.pointerId);
         const heldId = others.length === 1 ? (idOf.get(others[0]![1].mesh) ?? null) : null;
         // ⛔⛔⛔ **THE TAP READS THE *HELD BODY's OWN* ALIGNMENT, NOT THE ACTIVE RECORD** —

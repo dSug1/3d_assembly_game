@@ -253,6 +253,57 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
     expect(v.rule).toBe("2septies");
   });
 
+  it("⭐⭐⭐ `A22` — `wouldPair` ANSWERS ON THE WAY DOWN WHAT `record` ANSWERS ON THE WAY UP", () => {
+    // ⛔⛔ THE OWNER'S QUESTION: *"why a single tap followed by a rapid press (the equivalent
+    // of double tap where the final release is not done) doesn't trigger a switch to orange?"*
+    // ⭐ Because the double-tap question was only ever asked at the RELEASE. This is the peek
+    // that lets a press ask it — and the vector that matters is that the two AGREE, because a
+    // press and a release disagreeing about what a double tap is would be unfixable from the
+    // glass: the alignment would turn orange and then let go of itself.
+    const pose = recordingPose();
+    const taps = new TapHistory(cfg);
+    expect(
+      gesture(new Recognizer(cfg, pose.port, taps), [
+        { x: 100, y: 100, t: 0 },
+        { x: 100, y: 100, t: 80 },
+      ]).kind,
+    ).toBe("TAP");
+
+    // ⭐ The second touch lands 220 ms after the first LIFTED — inside the 300 ms window, and
+    // the peek says so before anything has been released.
+    const secondPress = { x: 100, y: 100, t: 300 };
+    expect(taps.wouldPair(secondPress)).toBe(true);
+    // ⛔⛔ AND ASKING DID NOT CONSUME IT. Two writers of one fact is what this forbids: the
+    // peek is idempotent, and `record` remains the only thing that clears the memory.
+    expect(taps.wouldPair(secondPress)).toBe(true);
+
+    // ⚠ … and when the finger finally lifts — **1200 ms later**, far outside the window — the
+    // release agrees, because the window is measured RELEASE-to-PRESS and not to the lift.
+    // ⛔ This is the vector that pins *holding does not spoil the pair*.
+    expect(taps.record(secondPress, 1500)).toBe("DOUBLE_TAP");
+  });
+
+  it("⛔ `wouldPair` is FALSE where `record` would say TAP — both misses, same numbers", () => {
+    const pose = recordingPose();
+    const taps = new TapHistory(cfg);
+    const arm = () =>
+      gesture(new Recognizer(cfg, pose.port, taps), [
+        { x: 100, y: 100, t: 0 },
+        { x: 100, y: 100, t: 80 },
+      ]);
+    // ⚠ Nothing recorded yet: the very first press of a session must never read as a pair.
+    expect(new TapHistory(cfg).wouldPair({ x: 100, y: 100, t: 0 })).toBe(false);
+
+    arm();
+    // ⛔ TOO LATE — 420 ms after the lift, against a 300 ms window.
+    expect(taps.wouldPair({ x: 100, y: 100, t: 500 })).toBe(false);
+    expect(taps.record({ x: 100, y: 100, t: 500 }, 560)).toBe("TAP");
+
+    // ⛔ TOO FAR — 12 mm apart, against an 8 mm slop, and in time.
+    expect(taps.wouldPair({ x: 100 + mmToPx(12), y: 100, t: 700 })).toBe(false);
+    expect(taps.record({ x: 100 + mmToPx(12), y: 100, t: 700 }, 760)).toBe("TAP");
+  });
+
   it("⛔ a third tap is a fresh TAP, not a second DOUBLE_TAP", () => {
     const pose = recordingPose();
     const taps = new TapHistory(cfg);

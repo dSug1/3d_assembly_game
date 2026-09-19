@@ -342,3 +342,132 @@ describe("⭐⭐⭐ D52 — both roll channels agree, over axes and camera frame
     expect(Math.abs(fast!)).toBeCloseTo(Math.abs(slow!) * 4, 9);
   });
 });
+
+describe("⛔⛔⛔ THE SECOND TOUCHPOINT'S ROLL HAS A DEAD ZONE, AND IT IS THE AXIS'S SCREEN ANGLE", () => {
+  // ⛔⛔ DEVICE-REPORTED, 2026-09-19: *"when I successively align on diverse PioneerFaces, for
+  // some of them I loose the roll control of the Follower object by the second touch."*
+  //
+  // ⭐⭐⭐ **MEASURED, AND IT IS NOT THE DEGENERACY ANYONE HAD WRITTEN DOWN.** `scene.ts`
+  // claimed the price of `D52` was *"the axis square to the view"*, and `constrainedDragAngle`
+  // documents its own `null` at *"the axis points at the camera"*. ⚠ Neither is what a hand
+  // meets. The near side travels along `axis × (−view)`, **perpendicular to the axis's screen
+  // projection** — so the direction the finger must go SPINS with the alignment axis, while
+  // this channel only ever supplies `dx` (`A16`: *its x is roll, its y is depth*).
+  //
+  // ⛔ The authority is therefore `|dir.x|`, a **cosine in the axis's screen orientation**, and
+  // it reaches zero at an ordinary, easily-reached pose rather than at a knife edge.
+  const FRAME: ScreenFrame = { right: [1, 0, 0], up: [0, 1, 0], viewAxis: [0, 0, 1] };
+  const DEG = Math.PI / 180;
+  const DX = mmToPx(10);
+  const secondTouchDeg = (axis: Vec3) =>
+    (constrainedDragAngle(FRAME, axis, DX, 0, 2 * DEG) ?? NaN) / DEG;
+  const firstTouchDeg = (axis: Vec3) =>
+    (constrainedDragAngle(FRAME, axis, DX, DX, 2 * DEG) ?? NaN) / DEG;
+
+  it("⭐ an axis VERTICAL on screen gives the second touchpoint FULL authority", () => {
+    // ⭐ The near side moves horizontally, so a horizontal drag is exactly the right gesture.
+    expect(Math.abs(nearSideScreenDirection(FRAME, [0, 1, 0])!.x)).toBeCloseTo(1, 6);
+    expect(Math.abs(secondTouchDeg([0, 1, 0]))).toBeCloseTo(20, 6);
+  });
+
+  it("⛔⛔⛔ an axis HORIZONTAL on screen gives it **ZERO** — the reported dead control", () => {
+    // ⚠⚠ THE NEAR SIDE MOVES VERTICALLY, and this channel has no `dy` to give it. ⛔ The
+    // result is `0`, **not** `null`: nothing refuses, so before 2026-09-19 nothing reported it
+    // either — the hand dragged and the object sat still with a silent HUD.
+    expect(Math.abs(nearSideScreenDirection(FRAME, [1, 0, 0])!.x)).toBeCloseTo(0, 9);
+    expect(secondTouchDeg([1, 0, 0])).toBe(0);
+    // ⭐⭐ AND THE FIRST TOUCHPOINT IS UNAFFECTED ON THE SAME AXIS — the asymmetry IS the
+    // defect, and a vector that measured only the second finger could not have shown it.
+    // ⛔⛔ SIGNED, NOT `Math.abs`. ⚠ It was written with `Math.abs` and that was mistake shape
+    // 5 — my own fixture — on top of this function's own sign trap: the `−dot(world, up)` that
+    // converts to screen-down. The next vector proves the sign from the geometry.
+    expect(firstTouchDeg([1, 0, 0])).toBeCloseTo(-20, 6);
+  });
+
+  it("⚠ it FADES as a cosine in between — not a cliff, which is why it reads as *losing* control", () => {
+    // ⛔ 30°, 45° and 60° off vertical. ⚠ A hand meets the fade long before the zero, which
+    // is why the report was *"for some of them"* rather than *"it never works"*.
+    const off = (rad: number): Vec3 => [Math.sin(rad), Math.cos(rad), 0];
+    expect(Math.abs(secondTouchDeg(off(30 * DEG)))).toBeCloseTo(20 * Math.cos(30 * DEG), 4);
+    expect(Math.abs(secondTouchDeg(off(45 * DEG)))).toBeCloseTo(20 * Math.SQRT1_2, 4);
+    expect(Math.abs(secondTouchDeg(off(60 * DEG)))).toBeCloseTo(20 * Math.cos(60 * DEG), 4);
+  });
+
+  it("⛔⛔ AND `constrainedRollAngle` IS NOT A FALLBACK THERE — both charts die together", () => {
+    // ⚠ The obvious repair is *hand over to `A3`'s other chart where this one fades*. It does
+    // not work, and stating why saves the next session the experiment: an axis horizontal on
+    // screen is **square to the view**, which is precisely where that chart returns `null`.
+    // ⛔ The two degeneracies were believed complementary; in this configuration they coincide.
+    // ⭐ Only the missing `dy` could serve it — which is a decision about `A16`'s channel split,
+    // not an arithmetic repair.
+    expect(constrainedRollAngle(FRAME, [1, 0, 0], 30)).toBeNull();
+    expect(secondTouchDeg([1, 0, 0])).toBe(0);
+  });
+});
+
+describe("⛔⛔⛔ THE NEAR-SIDE DIRECTION'S **SIGN**, DERIVED FROM THE ROTATION ITSELF", () => {
+  // ⛔⛔⛔ **A SIGN FLIP HERE SURVIVED ALL 880 VECTORS — measured 2026-09-19.** Negating
+  // `sy` in `nearSideScreenDirection` (the `screen y grows DOWNWARD` conversion, which the
+  // function's own comment calls *"the same sign trap `translate.ts` calls the commonest defect
+  // in a drag"*) turned the whole suite green.
+  //
+  // ⭐ WHY NOTHING CAUGHT IT: every consumer that could have is the SECOND touchpoint's chart,
+  // which passes `dx, 0` — so only `dir.x` is ever read, and `dir.y`'s sign is free. ⚠ And the
+  // one vector that read `dir.y` asserted a MAGNITUDE.
+  //
+  // ⭐⭐⭐ **SO THIS DERIVES THE ANSWER INSTEAD OF RESTATING THE CODE.** `METHOD`: *a vector
+  // written from the code it tests cannot contradict that code.* A point on the near side is
+  // ROTATED by a small positive angle about the axis, and its displacement is projected onto
+  // the screen independently — then the claim *the near side follows the finger* becomes a
+  // measurement rather than a promise.
+  const FRAME: ScreenFrame = { right: [1, 0, 0], up: [0, 1, 0], viewAxis: [0, 0, 1] };
+
+  /** Where a near-side point actually GOES, in screen coordinates, for a positive turn. */
+  const measuredNearSideStep = (axis: Vec3): { x: number; y: number } => {
+    // ⚠ The near side faces the viewer, so it sits at −viewAxis from the centre — and the
+    // component along the rotation axis contributes nothing, so any point off the axis serves.
+    const v = normalize(FRAME.viewAxis)!;
+    const p: Vec3 = [-v[0], -v[1], -v[2]];
+    const turned = qRotate(rotateAboutAxis(IDENTITY, axis, 1e-4), p);
+    const d: Vec3 = [turned[0] - p[0], turned[1] - p[1], turned[2] - p[2]];
+    // ⛔ The SAME screen convention the product must obey, written out here so the two are
+    // independent statements of it rather than one statement used twice.
+    return { x: dot(d, FRAME.right), y: -dot(d, FRAME.up) };
+  };
+
+  const AXES: readonly (readonly [string, Vec3])[] = [
+    ["vertical on screen", [0, 1, 0]],
+    ["horizontal on screen", [1, 0, 0]],
+    ["down on screen", [0, -1, 0]],
+    ["left on screen", [-1, 0, 0]],
+    ["diagonal", [1, 1, 0]],
+    ["tilted out of the screen plane", [0.3, 0.7, 0.6]],
+  ];
+
+  for (const [name, axis] of AXES) {
+    it(`the declared direction matches where the near side really goes — ${name}`, () => {
+      const declared = nearSideScreenDirection(FRAME, axis)!;
+      const measured = measuredNearSideStep(axis);
+      const len = Math.hypot(measured.x, measured.y);
+      expect(len).toBeGreaterThan(1e-9);
+      // ⛔ Unit-for-unit, INCLUDING the sign on both components. A dot product of +1 is the
+      // whole claim; −1 would be the flip that the suite could not see.
+      expect(declared.x * (measured.x / len) + declared.y * (measured.y / len)).toBeCloseTo(1, 6);
+    });
+  }
+
+  it("⛔ and the two screen axes are independently pinned — neither sign can hide behind the other", () => {
+    // ⚠ An axis VERTICAL on screen exercises `dir.x` alone; one HORIZONTAL exercises `dir.y`
+    // alone. ⛔ Asserted as signed numbers, so flipping either is red.
+    // ⚠ Component-wise and not `toEqual`: IEEE `-0` and `+0` are distinct to a deep compare
+    // and identical to every use, so deep equality here would assert a fact about the sign of
+    // zero that nothing depends on — a fixture failing for a reason the product does not have.
+    const dir = (a: Vec3) => nearSideScreenDirection(FRAME, a)!;
+    expect(dir([0, 1, 0]).x).toBeCloseTo(-1, 9);
+    expect(dir([0, 1, 0]).y).toBeCloseTo(0, 9);
+    expect(dir([1, 0, 0]).x).toBeCloseTo(0, 9);
+    expect(dir([1, 0, 0]).y).toBeCloseTo(-1, 9);
+    expect(dir([0, -1, 0]).x).toBeCloseTo(1, 9);
+    expect(dir([-1, 0, 0]).y).toBeCloseTo(1, 9);
+  });
+});

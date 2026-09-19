@@ -157,3 +157,33 @@ the list would be re-taken.
 ## `D33` — ✅ IN FORCE
 
 | `D33` | ⭐⭐⭐ **A FLICK IS READ OVER ITS TAIL, NOT THE WHOLE WINDOW** | 2026-09-16 | *"The flick should be triggerable during an ongoing rotation."* ⛔⛔ Travel and purity were measured from the oldest sample in `flickWindow`, and a flick that REVERSES the drag cancels to ≈ 0 net travel. ⭐ The window becomes a MAXIMUM extent; the longest passing tail wins, with a minimum span of `flickLiftWindow`. ⚠⚠ It retracted `A4`'s flick skip the same hour — *a guard sized against one reading of a signal is not still the right size when the reading changes.* Mine, flagged → [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+
+---
+
+# ⭐⭐ A REPORT THE OWNER WITHDREW — moved out of `DECISIONS.md` 2026-09-19
+
+⚠ Moved verbatim to make room for `D55` under the front door's byte budget; the pointer in
+`DECISIONS.md` carries the transferable lesson.
+
+
+> *"You destroyed the rotation around the gravity axis and orthogonal to gravity: the
+> rotation came back to the axis of the screen view plane."* — 2026-09-15, then
+> *"it's alright: the logic is right"*.
+
+⛔⛔ **`A7`/`D18` was not the fault, and that is now a MEASURED claim rather than a
+defence.** Every part of the gravity frame already had green vectors — it is orthonormal,
+`up` is the world vertical, the wiring compiled — and ⚠ **none of that is the same claim as
+*a horizontal drag yaws about gravity***, which is what a hand judges.
+`tests/a7_wiring.test.ts` composes the frame with the rotation and asserts the axis that
+comes out the far end, at level, 45° down, 72° down and on the **bottom ring**, with two
+counter-examples so *"it came back to the screen axes"* is distinguishable from *"it did
+not"*: the camera's own up is ≤ 0.4 against the vertical at 72°, and the view axis ≥ 0.9.
+
+⭐⭐ **The transferable part**: mistake shape 4 — *a composition nobody computed* — can
+aim at a **correct** piece of work as easily as a broken one, and it costs the same either
+way until someone measures the composition. ⭐ `METHOD`: *a composition is a thing to
+MEASURE, not an emergent property.* The real defect in the same report (no deadband, `D19`)
+was only separable from the impression once the composition had a number.
+
+⚠ This is not a rejected experiment and does not belong in a `REJECTED.md`: nothing was
+built and nothing was measured out. It is a **claim that was tested and did not hold**.

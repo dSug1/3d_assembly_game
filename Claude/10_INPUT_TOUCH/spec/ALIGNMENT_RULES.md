@@ -234,6 +234,159 @@ usually free — shaking while rotating turns the object, and a turn releases �
 `TRANSLATE` a shake on the Pioneer turns nothing, so C1 releases nothing**. ⛔ Left as
 written; whether C1 wants the clause too is a question for the device pass.
 
+### ⭐⭐⭐ THE TRIGGER MOVED TO THE **PRESS** — `D55`, 2026-09-19
+
+> *"when first touch is pressed on first object, as soon as a second touch is pressed on second
+> object (= a tap or a continued press), the Pioneer - Follower mechanism toggles on. To toggle
+> off, the rule stays unchanged."* — the owner
+
+⛔⛔ **THE TRIGGER MOVED; THE MECHANISM DID NOT.** `alignFollowerToPioneer` runs unchanged,
+with every refusal it already had — a frozen Follower, a press that resolved no face, the
+cycle undo, the *exactly one other holder* rule. ⭐ What changed is **when** it is called, and
+therefore **what counts as asking for it**: a finger that came down on the second body and
+stayed there used to align nothing at all, because the old trigger was a release verdict.
+
+⭐⭐ **THE PRESS IS AN ON-SWITCH AND NOTHING ELSE** — the owner's second sentence is a
+constraint on the first. Every way OUT stays on the release: the shake, and the same gesture
+again on the same face (`D39`). ⛔ So `pressMeaning` returns `NOTHING` — never `UNALIGN`, never
+`TOGGLE` — whenever the configuration is not a *fresh* relation, and hands the event to
+`tapMeaning`, which is untouched.
+
+⚠⚠ **ONE CASE IS REFUSED ON PURPOSE: THE TWO BODIES ARE ALREADY RELATED — EITHER WAY ROUND.**
+Without it, **picking an aligned pair up by its two bodies** would re-point the relation onto
+whichever face the second finger happened to land on — or, on the same face, destroy it. ⭐ The
+mechanism is already on; *"toggles on"* has nothing left to do. ⚠ Re-pointing to a different
+face of that same Pioneer stays reachable **by the tap**, exactly as before.
+
+⛔⛔⛔ **AND *EITHER WAY ROUND* WAS LEARNED THE HARD WAY, ON THE GLASS, WITHIN MINUTES.** The
+first build of `D55` consulted only `pioneerOfHeld`, and the tablet answered:
+
+> `align: objectA→objectB would cycle — broke objectB's own alignment instead`
+
+⚠ With `A→B` live, picking the pair up in the OTHER order — hold `B`, press `A` — read as a
+**fresh** relation. `wouldCycle` then did exactly its job and **destroyed the alignment the hand
+was holding**. ⭐ Before `D55` that cost a deliberate tap; a press made it an accident.
+⭐⭐ `METHOD`: *a substituted quantity* — *"is the HELD body related to the pressed one?"* stood
+in for *"are these two bodies related?"*, and those two agree in one direction only. ⛔ The
+mutant that reproduces the shipped defect is now a vector.
+
+### ⛔⛔ AND THE PRESS CANNOT KNOW THE TAP COUNT — so it aligns as `SNAPSHOT`
+
+`D42` gave the **gesture** the choice of what an alignment IS: a single tap makes a `SNAPSHOT`,
+a double tap a `FOLLOW`. ⛔ A press precedes both. That is the one real collision in this
+change, and it resolves through a route that already existed:
+
+| | press | release |
+|---|---|---|
+| **single tap** | `ALIGN` as `SNAPSHOT` | ⚠ **spent** — consumed by its own press |
+| **double tap** | #1 `ALIGN` as `SNAPSHOT`; ✅ #2 `SWITCH` → `FOLLOW` (`A22`) | both spent — ⚠ the release no longer has to arrive for the colour to change |
+| **continued press** | `ALIGN` as `SNAPSHOT` | — (the finger is still down, which is the point) |
+| **tap, then rapid press-and-hold** | ✅ `SWITCH` → `FOLLOW` on the way down (`A22`) | — |
+| **press on a NEW face of the current Pioneer** | ✅ `ALIGN` as `SNAPSHOT` — re-points (`A23`) | spent |
+
+⭐⭐ **THE VISIBLE COST IS A CYAN FLASH BETWEEN THE TWO TAPS OF A DOUBLE TAP**, and it is
+honest: for that moment the alignment really is a snapshot. ⚠ It is the first thing to judge on
+the device — if it reads as a glitch rather than as a stage, the fix is to defer the *colour*,
+never the alignment.
+
+### ⭐⭐⭐ `A22` — AND THE UPGRADE TO ORANGE FIRES ON THE WAY DOWN TOO
+
+> *"why a single tap followed by a rapid press (the equivalent of double tap where the final
+> release is not done) doesn't trigger a switch to orange?"* — the owner, 2026-09-19
+
+⛔⛔ **BECAUSE `D55` MOVED HALF THE GESTURE, AND THIS IS THE OTHER HALF.** The ALIGN went to
+the press; the mode SWITCH stayed on the release — where `TapHistory.record` asks the
+double-tap question, because it is called **with the release time**. ⚠ So a second touch that
+is *pressed and held* never asked it, and the alignment stayed cyan for as long as the finger
+was down. ⭐ Nothing was defending that; it was `D55`'s own rule — *a tap **or a continued
+press*** — applied to one half of the gesture and not the other.
+
+⭐⭐ **`TapHistory.wouldPair` IS A PEEK AND MUTATES NOTHING.** The release still runs `record`,
+which is what consumes the pair and clears the memory — two writers of one fact is the shape
+this project forbids. ⛔ And it shares `pairsWithLast` with `record` rather than restating the
+window and the slop, so **the press and the release cannot disagree about what a double tap
+is**. ⚠ A disagreement there would be unfixable from the glass: the alignment would turn orange
+and then let go of itself.
+
+⚠ The window is measured **release-to-press**, so holding the second touch down does not spoil
+the pair — `record` still says `DOUBLE_TAP` when it finally lifts, and a vector holds it for
+1200 ms to pin that.
+
+⛔⛔ **IT IS NARROW ON PURPOSE, IN THREE WAYS**, and each one has a mutant:
+
+1. **Only the second of a rapid pair.** A *plain* press on the Pioneer's face is `D51`'s
+   ordinary two-handed grab — the commonest thing a hand does here. ⚠ If every grab switched
+   the mode, the Pioneer could not be picked up without flipping cyan↔amber under the fingers.
+2. **Only onto `FOLLOW`, never back.** `modeForTap("DOUBLE_TAP")` is `FOLLOW`, so a rapid pair
+   onto an alignment that is already `FOLLOW` is *the same gesture again* — which is `D39`'s
+   toggle-**off**, and toggling off stays on the release, unchanged, as the owner required.
+3. **Only on the same face.** The very test `tapMeaning` makes at the release, which is why
+   `pioneerOfHeld` carries the face. ⚠ A press on a *different* face is `A23`'s re-point, below.
+
+⚠ The release that follows such a press is **spent**, exactly as an aligning press's is —
+otherwise the `DOUBLE_TAP` would arrive, find the mode already `FOLLOW`, and read as `UNALIGN`.
+⛔ `Held.pressActed` is the field, renamed from `pressAligned` because it now answers *did my
+press already act on the alignment?* rather than *did it align?*.
+
+⛔ `SNAPSHOT` is also the conservative one to be wrong about: it leaves the Follower's rotation
+independent, where a wrong `FOLLOW` would spin a body the hand never aimed at.
+
+### ⛔⛔⛔ THE RELEASE THAT FOLLOWS AN ALIGNING PRESS IS **SPENT**, or the gesture undoes itself
+
+⚠⚠ This is the trap the change is built around. The press aligns; the release that follows is
+a `TAP` **on the very face that alignment names**, and `tapMeaning` reads that — correctly, and
+by a rule the owner explicitly kept — as `UNALIGN`. ⭐ Align, then break, ~80 ms apart, with
+nothing on the glass to show for it: the trigger would look simply broken.
+
+⭐⭐ **AND THE QUESTION ASKED IS *"DID MY PRESS MAKE IT?"*, NOT *"IS IT ALIGNED?"*.** The
+second is the substituted quantity again — it is equally true for the second tap of a double
+tap, and **that** release must NOT be spent, because it is what carries `SNAPSHOT` → `FOLLOW`.
+⛔ `Held.pressAligned` records the first question, per touchpoint, and dies with the grip.
+⚠ It is also what consumes `D28`'s movement-mode toggle — one gesture, one consequence.
+
+### ⭐⭐⭐ `A23` — AND A NEW FACE OF THE CURRENT PIONEER RE-POINTS, ALSO ON THE PRESS
+
+> *"currently, a tap on a new face on pioneer object triggers the switch to this new PioneerFace
+> and new alignment of the Follower object: add a continued press to also trigger this switch"*
+> — the owner, 2026-09-19
+
+⭐⭐ **`D55` FINISHING ITS OWN SWEEP.** *Tap or continued press* now governs all three things a
+press can do to an alignment — **make** it (`D55`), **upgrade** it to `FOLLOW` (`A22`),
+**re-point** it onto a new face (`A23`) — while the two ways OUT, the shake and the re-tap, stay
+on the release exactly as required. ⛔ The press is still never a way out.
+
+⚠ The re-point lands on **`SNAPSHOT`**, not on the mode it had, and that is not a new decision:
+it is what a single TAP on a new face has always produced (`modeForTap("TAP")`). ⛔ A vector
+asserts the press path and the release path agree, because two routes to one state that disagree
+is how a colour ends up reporting something that is not true.
+
+⚠⚠ **AND IT REVERSES A GUARD, WITH A COST WORTH NAMING.** Until `A23` a press on **any** face
+of the current Pioneer did nothing, so the Pioneer could be picked up anywhere without
+disturbing the relation. ⛔ Now only its **aligned face** is a safe handhold: grabbing it
+anywhere else re-points the alignment onto the face under the finger — and with `D51` making a
+finger on the Pioneer the ordinary posture, a hand will meet this. ⭐ It is the rule as dictated,
+and it is **recoverable in one gesture**, which the destroyed-alignment case that `D55`'s first
+build produced was not. ⚠ If it fights the hand on the device, the narrowing to try first is
+*re-point only when the press is not part of a `D51` two-handed grab* — not a return to
+refusing, which would take the owner's rule away.
+
+⛔⛔ **WHAT `A23` DOES *NOT* RELAX: THE REVERSE DIRECTION.** When the **pressed** body follows
+the **held** one, aligning held→pressed would close a cycle — the defect the glass found within
+minutes of `D55`. ⚠ That is a different question from re-pointing: a hand may re-aim its own
+Pioneer, while this configuration has no valid alignment to make at all. ⭐ Two vectors and a
+mutant keep the two apart.
+
+### ⚠⚠ WHAT THIS CHANGES AT BOOT — `D51` BECOMES THE ORDINARY POSTURE
+
+⛔ `pinnedPair` needs a **live relation**, and that relation used to cost a deliberate tap. Now
+the grab **is** it. ⚠ With `pioneerTranslates = 0` at boot (the owner, 2026-09-18), the second
+body stops being cargo and becomes a **control surface** the instant it is touched: it will not
+translate, and its finger drives the Follower's **depth and roll** together.
+
+⭐ That is the owner's intent read plainly — two-handed assembly in one motion rather than two.
+⚠ It is stated rather than discovered because **two fingers on two bodies now do something
+different at boot than they did yesterday**, and no test here can judge whether it feels right.
+
 ---
 
 ## 3. MY READING — the rules as a state machine
@@ -243,7 +396,7 @@ written; whether C1 wants the clause too is a question for the device pass.
 | state | what is true | one finger on obj 1 does | second finger does |
 |---|---|---|---|
 | **C0** | nothing held | — | camera: orbit (§2 r1), pinch (§4 r4), double-tap home |
-| **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | **tap on obj 2's face ⇒ ALIGN** (→ C2). Pressed-and-held: ⚠ §7.5 |
+| **C1** | holding obj 1, no alignment | rotate (mode `ROTATE`) or translate (mode `TRANSLATE`), per fork A | ✅ **PRESS on obj 2's face ⇒ ALIGN**, as `SNAPSHOT` (→ C2) — `D55`, 2026-09-19. ⛔ A **continued press** aligns too, which is what §7.5 asked and `D55` answered |
 | **C2** | obj 1 aligned in `SNAPSHOT` (cyan+amber) or `FOLLOW` (both amber), ⛔ movement mode **unchanged — stays `ROTATE`** | ✅ `ROTATE`: **twist about the aligned normal** (owner, §7.3). `TRANSLATE`: fork A's screen-plane drag | press on obj 2 ⇒ `TargetPosition` + gizmo (→ C3) |
 | **C3** | aligned + `TargetPosition` live | `ROTATE`: orbit obj 1 about the target. `TRANSLATE`: move obj 1 along centre→target | its own delta moves **obj 2** along target→centre |
 | — | shake obj 1 (any state) | alignment released, highlight cleared, `FollowerFace` null | ⭐ and in **C2**, a shake on **obj 2** does the same (`D41`) |
@@ -452,6 +605,55 @@ depth away. → §7.10.
 
 ---
 
+### ⛔⛔⛔ 5.5 THE SECOND TOUCHPOINT'S ROLL HAS A DEAD ZONE — device-reported 2026-09-19
+
+> *"when I successively align on diverse PioneerFaces, for some of them I loose the roll control
+> of the Follower object by the second touch."* — the owner
+
+⭐⭐⭐ **MEASURED, AND IT IS NOT THE DEGENERACY ANYONE HAD WRITTEN DOWN.** Two places claimed
+to own this failure and neither is what a hand meets: `constrainedDragAngle` documents its `null`
+at *"the axis points at the camera"* (a knife edge — 20° off it, authority is still full), and
+`scene.ts` claimed `D52`'s price was *"the axis square to the view"* (simply wrong, now corrected).
+
+⛔ **THE REAL CAUSE.** The near side travels along `axis × (−view)`, which is **perpendicular to
+the alignment axis's screen projection** — so the direction the object wants the finger to go
+**spins as the alignment axis does**. `A16` gives this channel `dx` only (*its x is roll, its y is
+depth*), so the authority is `|dir.x|`, a cosine in the axis's screen orientation:
+
+| alignment axis on screen | near side travels | 2nd touch | 1st touch |
+|---|---|---|---|
+| vertical | horizontally | **20.0°** / 10 mm | 20.0° |
+| 45° | diagonally | 14.1° | 28.3° |
+| **horizontal** | **vertically** | **0.00° — dead** | 20.0° |
+
+⭐ The first touchpoint never loses it: it passes `dx` **and** `dy`, so it can always drag along
+the near-side direction whatever its screen orientation. ⚠ The asymmetry IS the defect, and a
+vector measuring only the second finger could not have shown it.
+
+⛔⛔ **AND `constrainedRollAngle` IS NOT A FALLBACK — stated so the next session does not try
+it.** The obvious repair is *hand over to `A3`'s other chart where this one fades*. It does not
+work: an axis horizontal on screen is **square to the view**, precisely where that chart returns
+`null`. The two degeneracies were believed complementary and in this configuration they coincide.
+⚠ Only the missing `dy` could serve it — which is a decision about `A16`'s channel split, not an
+arithmetic repair. **It is the owner's call and is not made here.**
+
+⚠⚠ **IT FAILED SILENTLY UNTIL NOW**, which is why it cost a device report rather than a glance:
+`twist` is `0`, not `null`, so nothing refused and nothing was printed — the hand dragged and the
+body sat still with a clean HUD. ✅ The roll authority is now on the readout whenever it is below
+98%, so the fade is visible *before* it reaches zero.
+
+⛔⛔⛔ **AND CHASING IT FOUND A HOLE IN THE SUITE.** Negating `sy` in `nearSideScreenDirection`
+— the *screen y grows downward* conversion the function's own comment calls *"the same sign trap
+`translate.ts` calls the commonest defect in a drag"* — **survived all 880 vectors.** ⭐ Nothing
+read `dir.y`'s sign: every consumer that could have is the second touchpoint's chart, which
+passes `dx, 0`. ⚠ And the first vector written for this section asserted a **magnitude**, so it
+hid the flip too — mistake shape 5, on top of the very trap the code warned about.
+✅ Closed by DERIVING the direction: a near-side point is rotated by a small positive angle and
+its displacement projected independently, so *the near side follows the finger* is a measurement
+rather than a promise. The flip is now 6 red, and both screen axes are pinned separately.
+
+---
+
 ## 6. TRANSITIONS — in and out of the alignment rules
 
 ⭐ What the owner asked for: *"how to transition back and forth from these rules to the other
@@ -500,6 +702,12 @@ already satisfies the constraint, so restoring it conserves the alignment for fr
 ✅ **5. EACH FINGER MOVES ITS OWN OBJECT** while obj 1 is not aligned — today's behaviour for
 two holders, per the current mode. ⚠ Not roll/depth: that is reserved for a second touchpoint
 on the **same** object, which the router already routes differently (`SECOND` vs `OBJECT`).
+
+⛔⛔ **SUPERSEDED BY `D55`, 2026-09-19 — the premise *"while obj 1 is not aligned"* is now
+almost never true.** A second finger pressed on another body aligns on contact, so the pair
+lands in `D51`'s configuration immediately: with `pioneerTranslates = 0`, obj 2 does **not**
+move and its finger drives obj 1's depth and roll. ⭐ Two holders each moving their own object
+survives only where the alignment is refused — a frozen body, no resolved face, a cycle.
 6. **A second touchpoint outside any object** while aligned — fork A's roll/depth, or
    nothing? (§4.2) ⚠ It is also the only channel that could rescue §5.4's degenerate twist.
 7. **`A15`'s orphan rule in C3**: exempt the holder while a target is live, or let the

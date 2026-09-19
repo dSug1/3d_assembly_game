@@ -22,6 +22,8 @@ import {
   modeForTap,
   retargetAlignment,
   tapMeaning,
+  pressMeaning,
+  type PressContext,
   type TapContext,
 } from "@input/alignment";
 import { singleAlignment, solve, type Constraint } from "@core/constraint_stack";
@@ -302,6 +304,235 @@ describe("⛔⛔ THE TAP'S FOUR MEANINGS — and the GESTURE chooses what an ali
     // FOLLOW in one file and SNAPSHOT in another. `CONSTRAINTS` §4.
     expect(modeForTap("TAP")).toBe("SNAPSHOT");
     expect(modeForTap("DOUBLE_TAP")).toBe("FOLLOW");
+  });
+});
+
+describe("⛔⛔ `D55` — THE PRESS TOGGLES THE MECHANISM **ON**, AND ONLY EVER ON", () => {
+  const ctx = (over: Partial<PressContext> = {}): PressContext => ({
+    pressedObject: "objectB",
+    pressedFace: "+x",
+    heldObjects: ["objectA"],
+    pioneerOfHeld: null,
+    pioneerOfPressed: null,
+    alignModeOfHeld: null,
+    completesDoubleTap: false,
+    ...over,
+  });
+  // ⭐ The held body aligned to `objectB`'s `+x` — the fixture most of these vectors vary.
+  const ON_B = { objectId: "objectB", faceId: "+x" } as const;
+
+  it("⭐⭐⭐ a press on a SECOND object's face aligns immediately — no tap needed", () => {
+    // ⛔ The owner's whole sentence: *"as soon as a second touch is pressed on second object
+    // (= a tap or a continued press), the Pioneer - Follower mechanism toggles on."* ⚠ The
+    // press knows nothing about what the touch will BECOME, which is the point — a continued
+    // press that never releases must align just as a tap does.
+    expect(pressMeaning(ctx())).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
+  });
+
+  it("⛔⛔ AND IT IS `SNAPSHOT`, BECAUSE A PRESS CANNOT KNOW THE TAP COUNT", () => {
+    // ⭐⭐ THE MUTANT THIS KILLS IS `FOLLOW`. `D42` made the tap count choose the mode, and a
+    // press precedes it — so guessing `FOLLOW` would spin a body the hand never aimed at,
+    // while guessing `SNAPSHOT` only leaves it independent. ⚠ The double tap still REACHES
+    // `FOLLOW`, through `tapMeaning`'s `SWITCH`, which the next vector pins as a composition.
+    expect(pressMeaning(ctx()).mode).toBe("SNAPSHOT");
+  });
+
+  it("⭐⭐⭐ THE COMPOSITION: a DOUBLE TAP still ends on `FOLLOW`, in two steps", () => {
+    // ⛔⛔ THIS IS THE VECTOR THAT MATTERS, and it is a COMPOSITION rather than a unit — the
+    // audit's finding 4 and `A7`'s withdrawn report both say a chain nobody computed is where
+    // this project's defects live. ⚠ Neither function below is changed by `D55`; what is new
+    // is that they are now asked to run in sequence.
+    const first = pressMeaning(ctx());
+    expect(first).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
+
+    // ⭐ press #2 lands on the face the alignment now names: the mechanism is already on, so
+    // the press stands aside and leaves the meaning to the release.
+    const second = pressMeaning(ctx({ pioneerOfHeld: ON_B }));
+    expect(second.action).toBe("NOTHING");
+
+    // ⭐ … and that release is a `DOUBLE_TAP` on the same face, which is a mode SWITCH.
+    expect(
+      tapMeaning({
+        kind: "DOUBLE_TAP",
+        alignMode: first.mode,
+        tappedObject: "objectB",
+        tappedFace: "+x",
+        heldObject: "objectA",
+        pioneer: { objectId: "objectB", faceId: "+x" },
+      }),
+    ).toEqual({ action: "SWITCH", mode: "FOLLOW" });
+  });
+
+  it("⛔⛔⛔ A PRESS NEVER **BREAKS** — *'to toggle off, the rule stays unchanged'*", () => {
+    // ⭐⭐ THE ALIGNED FACE IS THE ONE SAFE HANDHOLD ON A PIONEER, and it is what keeps the
+    // press from owning a meaning the owner did not give it: toggling OFF lives on the release.
+    expect(pressMeaning(ctx({ pioneerOfHeld: ON_B })).action).toBe("NOTHING");
+    // ⭐ A press on a THIRD body is a fresh relation and aligns — `D40`'s cap of one means it
+    // REPLACES, which is the release's own long-standing behaviour.
+    expect(pressMeaning(ctx({ pressedObject: "objectC", pioneerOfHeld: ON_B }))).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
+  });
+
+  it("⛔⛔⛔ ALREADY RELATED **IN EITHER DIRECTION** — the defect the glass found in minutes", () => {
+    // ⛔⛔ THIS VECTOR EXISTS BECAUSE THE FIRST VERSION OF `D55` SHIPPED WITHOUT IT, and the
+    // tablet reported it inside ten minutes:
+    //
+    //   `align: objectA→objectB would cycle — broke objectB's own alignment instead`
+    //
+    // ⚠ With `A→B` live, picking the pair up in the OTHER order — hold `B`, press `A` — read
+    // as a fresh relation, because only the held body's pioneer was consulted. `wouldCycle`
+    // then did its job and destroyed the alignment the hand was holding. ⭐ Before `D55` that
+    // needed a deliberate tap; a press turned it into an accident.
+    //
+    // ⭐⭐ `METHOD`: *a substituted quantity* — *"is the HELD body related to the pressed
+    // one?"* stood in for *"are these two bodies related?"*, and those agree in one direction.
+    expect(pressMeaning(ctx({ pioneerOfPressed: "objectA" })).action).toBe("NOTHING");
+    // ⚠ And on any face of it, for the same reason the forward case refuses on any face.
+    expect(pressMeaning(ctx({ pressedFace: "-z", pioneerOfPressed: "objectA" })).action).toBe(
+      "NOTHING",
+    );
+    // ⭐ But a pressed body aligned to somebody ELSE is still a fresh relation for this pair —
+    // the refusal is about *these two*, never about the pressed body being busy.
+    expect(pressMeaning(ctx({ pioneerOfPressed: "objectC" }))).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
+  });
+
+  it("⭐⭐⭐ `A22` — A TAP THEN A RAPID **PRESS-AND-HOLD** GOES ORANGE, WITHOUT A LIFT", () => {
+    // ⛔⛔ THE OWNER'S QUESTION, and it was a gap rather than a design:
+    //
+    // > *"why a single tap followed by a rapid press (the equivalent of double tap where the
+    // > final release is not done) doesn't trigger a switch to orange?"*
+    //
+    // ⭐ `D55` moved the ALIGN to the press and left the mode SWITCH on the release, where the
+    // double-tap question is asked — so a second touch that never lifted never asked it.
+    // ⚠ The whole sequence, as one composition:
+    //
+    //   press #1 on a fresh face  → ALIGN as SNAPSHOT (cyan)
+    //   release #1                → spent
+    //   press #2, same face, fast → SWITCH to FOLLOW (orange) — **with the finger still down**
+    expect(pressMeaning(ctx())).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
+    expect(
+      pressMeaning(ctx({ pioneerOfHeld: ON_B, alignModeOfHeld: "SNAPSHOT", completesDoubleTap: true })),
+    ).toEqual({ action: "SWITCH", mode: "FOLLOW" });
+  });
+
+  it("⛔⛔ BUT AN ORDINARY GRAB OF THE PIONEER MUST NOT RECOLOUR ANYTHING", () => {
+    // ⚠⚠ THE REASON THE RULE IS NARROW. A plain press on the Pioneer's face is `D51`'s
+    // two-handed posture — the commonest thing a hand does here. ⛔ If every grab switched the
+    // mode, the Pioneer could not be picked up without flipping cyan↔amber under the fingers.
+    // ⭐ `completesDoubleTap` is what separates *the second of a rapid pair* from *a grab*.
+    expect(
+      pressMeaning(ctx({ pioneerOfHeld: ON_B, alignModeOfHeld: "SNAPSHOT", completesDoubleTap: false })),
+    ).toEqual({ action: "NOTHING", mode: null });
+  });
+
+  it("⛔⛔⛔ AND IT NEVER SWITCHES **BACK** — toggling off stays on the release, untouched", () => {
+    // ⛔ `modeForTap("DOUBLE_TAP")` is `FOLLOW`, so a rapid pair onto an alignment that is
+    // ALREADY `FOLLOW` is *the same gesture again* — which is `D39`'s toggle-OFF, and the owner
+    // required that *"to toggle off, the rule stays unchanged."* ⚠ So the press stands aside
+    // and `tapMeaning` gets the release, exactly as before.
+    expect(
+      pressMeaning(ctx({ pioneerOfHeld: ON_B, alignModeOfHeld: "FOLLOW", completesDoubleTap: true })),
+    ).toEqual({ action: "NOTHING", mode: null });
+    // ⭐ … and that release is where the UNALIGN lives. The composition, so the pair is read
+    // together rather than each half being trusted on its own.
+    expect(
+      tapMeaning({
+        kind: "DOUBLE_TAP",
+        alignMode: "FOLLOW",
+        tappedObject: "objectB",
+        tappedFace: "+x",
+        heldObject: "objectA",
+        pioneer: { objectId: "objectB", faceId: "+x" },
+      }).action,
+    ).toBe("UNALIGN");
+  });
+
+  it("⭐⭐⭐ `A23` — A PRESS ON A **NEW FACE** OF THE CURRENT PIONEER RE-POINTS THE ALIGNMENT", () => {
+    // ⛔⛔ THE OWNER, 2026-09-19:
+    //
+    // > *"currently, a tap on a new face on pioneer object triggers the switch to this new
+    // > PioneerFace and new alignment of the Follower object: add a continued press to also
+    // > trigger this switch"*
+    //
+    // ⭐ `D55` finishing its own sweep: *tap or continued press* now governs all three things a
+    // press can do to an alignment — **make** it (`D55`), **upgrade** it (`A22`), **re-point**
+    // it (`A23`) — while the two ways OUT stay on the release.
+    //
+    // ⚠⚠ IT REVERSES A GUARD THIS FILE ASSERTED TWO HOURS EARLIER, and the vector that held
+    // the old rule went red rather than sliding — which is the whole reason it was written.
+    expect(pressMeaning(ctx({ pressedFace: "-z", pioneerOfHeld: ON_B }))).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
+    // ⛔ `SNAPSHOT`, not the mode it had: a press cannot know the tap count, and this is
+    // exactly what a single TAP on a new face has always produced — `modeForTap("TAP")`.
+    // ⚠ So re-pointing a `FOLLOW` alignment lands it on `SNAPSHOT`, at the press and at the
+    // release alike. The two paths agree, which is the claim worth pinning.
+    expect(pressMeaning(ctx({ pressedFace: "-z", pioneerOfHeld: ON_B, alignModeOfHeld: "FOLLOW" })).mode)
+      .toBe("SNAPSHOT");
+    expect(
+      tapMeaning({
+        kind: "TAP",
+        alignMode: "FOLLOW",
+        tappedObject: "objectB",
+        tappedFace: "-z",
+        heldObject: "objectA",
+        pioneer: { objectId: "objectB", faceId: "+x" },
+      }),
+    ).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
+  });
+
+  it("⚠⚠ … AND THE COST: only the ALIGNED face is still a safe handhold on the Pioneer", () => {
+    // ⛔ Stated as a vector because it is the price of `A23` and a hand will meet it: with
+    // `D51` making a finger on the Pioneer the ordinary posture, grabbing it anywhere but its
+    // aligned face now re-points the relation onto whatever is under the finger.
+    // ⭐ Recoverable in one gesture — unlike the destroyed alignment this behaviour replaced.
+    expect(pressMeaning(ctx({ pioneerOfHeld: ON_B })).action).toBe("NOTHING");
+    expect(pressMeaning(ctx({ pressedFace: "-z", pioneerOfHeld: ON_B })).action).toBe("ALIGN");
+  });
+
+  it("⛔⛔ BUT THE REVERSE DIRECTION IS STILL REFUSED — `A23` does not relax the cycle guard", () => {
+    // ⚠ Here the PRESSED body follows the HELD one, so held→pressed would close a cycle. That
+    // is the defect the glass found in minutes, and it is a different question from re-pointing:
+    // a hand may re-aim its own Pioneer, but this configuration has no valid alignment to make.
+    expect(pressMeaning(ctx({ pioneerOfPressed: "objectA" })).action).toBe("NOTHING");
+    expect(pressMeaning(ctx({ pressedFace: "-z", pioneerOfPressed: "objectA" })).action).toBe(
+      "NOTHING",
+    );
+  });
+
+  it("⛔ nothing held, two bodies held, the SAME body, or no face — all refuse", () => {
+    // ⚠ Nothing held is the FIRST press of every gesture in the game, so this branch is the
+    // common one, not the exotic one.
+    expect(pressMeaning(ctx({ heldObjects: [] })).action).toBe("NOTHING");
+    // ⛔ Two held bodies: *which* is the Follower has no answer worth trusting — the same
+    // refusal `alignFollowerToPioneer` has always made, now made before it is called.
+    expect(pressMeaning(ctx({ heldObjects: ["objectA", "objectC"] })).action).toBe("NOTHING");
+    // ⚠ A press on the body already held is `SECOND`'s configuration; a Pioneer and a
+    // Follower on ONE body is not a relation.
+    expect(pressMeaning(ctx({ pressedObject: "objectA" })).action).toBe("NOTHING");
+    // ⛔ No face resolved → silence, never a stand-in face.
+    expect(pressMeaning(ctx({ pressedFace: null })).action).toBe("NOTHING");
+    expect(pressMeaning(ctx({ pressedObject: null })).action).toBe("NOTHING");
+  });
+
+  it("⚠ a press NEVER returns `TOGGLE` — the movement mode is a RELEASE's business", () => {
+    // ⛔ `D28` flips translate/rotate on a tap RELEASE. If a press could return `TOGGLE` the
+    // caller would flip the mode on the way down AND on the way up.
+    for (const over of [
+      {},
+      { heldObjects: [] as string[] },
+      { pressedFace: null },
+      { pioneerOfHeld: ON_B },
+      { pressedObject: "objectA" },
+    ]) {
+      expect(pressMeaning(ctx(over)).action).not.toBe("TOGGLE");
+    }
   });
 });
 
