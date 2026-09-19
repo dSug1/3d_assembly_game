@@ -860,8 +860,31 @@ rather than quietly replaced, because the old rule had an argument: *the Pioneer
 is up; the target answers what am I docking with*, and keeping them independent is what let a hand
 align against one part and assemble to another. ✅ That freedom is deliberately given up.
 
-⭐ **A body with NO alignment is untouched** and still sees the whole scene — the restriction is a
-property of **being a Follower**, which is what the owner's sentence says.
+⛔⛔⛔ **WIDENED THE SAME DAY, AFTER THE GLASS SHOWED THE OTHER HALF WAS MISSING:**
+
+> *"I want to do the same with Pioneer: currently, when I second touch an object which becomes
+> Pioneer, it can white highlight if the Pioneer is close to a third object (which could be not
+> the Follower): this should not happen. **the white highlight should be reserved only for
+> Pioneer-Follower duo**."* — the owner
+
+⚠ The first build restricted only the **Follower**, because that is the side named first — and a
+Pioneer has no Pioneer of its own, so it fell through to *the whole scene*. ✅ Both directions now,
+from `AlignmentLinks.partnersOf`: **a Follower's partner is its Pioneer; a Pioneer's are its
+Followers; a body in neither role gets an empty set and captures nothing at all.**
+
+⚠⚠ **THAT LAST CLAUSE IS A CHANGE BEYOND THE PIONEER CASE** — an unaligned body used to
+highlight against anything and now highlights against nothing. It is the owner's *"reserved only
+for Pioneer-Follower duo"* taken at its word, and it is the clause to relax if that reading was
+too strong.
+
+⛔ **A MID-CHAIN BODY FOLLOWS, IT DOES NOT LEAD.** With `f → m → P`, body `m` approaches **`P`**,
+not `f` — the branch is exclusive. ⚠ The union is the plausible reading and would quietly restore
+a third-body capture, so a vector states it.
+
+⛔⛔ **AND THE RULE MOVED OUT OF `scene.ts` BECAUSE A MUTANT PROVED IT HAD TO.** It was a lambda
+in the render file, and reinstating the reported defect left **all 944 vectors green**.
+⭐ `pioneer_cascade.ts`'s standing rule: *a RULE in a render file is a rule nothing can
+interrogate.* Five vectors on `partnersOf` now; the defect is 3 red.
 
 ⛔⛔ **A PIONEER OUT OF RANGE CAPTURES NOTHING; IT DOES NOT FALL BACK TO THE SCENE.** A fallback
 would make the restriction vanish exactly when the state is surprising, and the contour would name

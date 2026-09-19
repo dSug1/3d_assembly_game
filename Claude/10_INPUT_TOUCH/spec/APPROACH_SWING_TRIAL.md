@@ -109,11 +109,183 @@ and two writers would fight, with the reset winning by arriving second.
 ⭐ Done with `?captureOffsetMm=40`, because at the default the trigger is more than a screen-width
 of finger away on this scene — worth knowing before judging by hand.
 
+## ⭐⭐⭐ THE PITCH HALF — added 2026-09-19
+
+> *"add a swing of the camera in the other orthogonal directions … also add a pitch swing of the
+> same value. The idea is that the swing of the camera helps the user visualize the alignment in
+> the directions orthogonal to the translation approach."* — the owner
+
+⛔ **ONE ANGLE, SPENT TWICE.** Both halves are the same `sin(π p)` with the same sign, so the
+camera leaves on a diagonal and comes back along it — one motion, and both halves reach zero
+together, which is what keeps *"back to its original position"* true on both axes.
+
+⛔⛔ **THE YAW IS RADIANS; THE ELEVATION IS NOT.** `v ∈ [0, 1]` runs along a monotone cubic
+through three tuned rings, so *"the same value"* has to be converted before it means anything —
+`pitchOffsetV` divides by the rings' angular span. ⚠ The conversion is linear and the surface is
+not, so equal steps in `v` are equal angles only near the middle ring. Stated, not corrected: the
+amplitude is a slider a hand sets by feel.
+
+⛔⛔⛔ **AND IT MUST STAY IN `v`.** Pitching the camera off the ring surface would let it approach
+the pole, where `requireGestureFrame()` **throws** because `A7`'s basis does not exist. ⚠ That
+throw would land on the next PRESS, so the crash would look like it came from the finger rather
+than from the camera. ⭐ `orbitOffset` clamps `v` itself, so saturating against a ring is the worst
+this can do.
+
+### ⚠⚠ IT ALSO CHANGES THE VIEWING DISTANCE, AND THAT IS INHERENT TO THE RIG
+
+Measured on the tablet: the camera radius went **1.500 m → 3.000 m** at the peak of a 25° swing.
+⛔ The orbit rig's radius VARIES WITH ELEVATION — that is what the three rings are — so a pitch
+is never a pure angular lean here; it dollies as well. ⭐ Arguably that helps: pulling back while
+leaning shows more of both bodies. ⚠ But it is not what *"a pitch swing"* implies, and a hand
+should decide. A constant-distance pitch would mean leaving the ring surface, which is what the
+paragraph above forbids.
+
+### ⛔⛔ AND IT FORCED THE CAPTURE THRESHOLD TO BE FROZEN
+
+`D49` scales the capture offset by camera distance. ⚠ A yaw-only swing kept that distance
+constant; the pitch does not — the printed threshold went **`172mm → 345mm` mid-approach**.
+⛔⛔ **The failure mode is not cosmetic**: where the swing moves the camera CLOSER the threshold
+shrinks, and if it shrinks past the current gap the capture **drops** → the swing disarms → the
+camera snaps back → the threshold is restored → it re-captures. A feedback loop in which the
+camera's own motion decides whether the rule moving it still applies.
+✅ `offsetAtTriggerM` is latched with the gap, and the threshold now holds at `172` throughout.
+⭐ That is also what `D49` MEANT: the offset tracks *the hand's* zoom, and during an approach the
+camera is being driven by the game.
+
+## ⭐⭐⭐ THE AMPLITUDE IS DIVIDED BY THE FINGER'S SPEED — added 2026-09-19
+
+> *"I want to set the maximum approach swing with the slider, and divide it by the speed of the
+> delta position so that there is not a very big camera orbit jump when the delta position is
+> fast."* — the owner
+
+⭐⭐⭐ **AND THE ARITHMETIC SAYS WHY THAT IS EXACTLY RIGHT.** The lean is `θ = A·sin(πp)`, so
+
+```
+dθ/dt = A · π · cos(πp) · dp/dt        and        dp/dt ∝ the finger's speed
+```
+
+⛔ With a FIXED `A` the camera's angular velocity is proportional to how fast the hand moves —
+which is the *"very big camera orbit jump"*, named precisely. ⭐ Setting `A ∝ 1/speed` **cancels
+the term**, and the camera sweeps at the same rate whatever the hand does. The owner asked for it
+by feel; it falls out as the one choice that removes `dp/dt`. A vector measures the cancellation
+across a 4× spread of hand speed (within 1%; a fixed amplitude differs by exactly 4×).
+
+⚠ The slider is therefore a **maximum**, reached when the hand is slow. `min(1, ref/speed)`.
+⛔ The upper clamp is not decoration: `ref/speed` diverges as the finger slows, and without it a
+nearly-still finger asks for an unbounded lean.
+
+⛔⛔ **THE REFERENCE IS `swayReferenceSpeedMmPerS`** — *"the drag speed at which you get the full
+amplitude"* for the sympathetic sway, the same question already tuned on a device at 120 mm/s.
+`D45`: *"use the available sliders so we do not inflate the numbers of tuning parameters sliders."*
+⚠ **Cost**: two unrelated rules share one number, so moving the sway's reference moves the
+swing's. `D45` accepted the identical trade for the slerp's duration; splitting them later is one
+field and one line.
+
+⚠⚠ **WHAT TO WATCH: DECELERATING NOW WIDENS THE SWING.** `A` rises as the hand slows, so easing
+off mid-approach drifts the camera further out though the gap has barely changed. ⛔ A drift, not
+a jump — the estimate is windowed — but a motion the gap did not ask for. ⭐ One-line alternative
+if a hand dislikes it: latch `A` at the trigger from the speed at that instant.
+
+### ⛔⛔⛔ AND IT ALMOST SHIPPED WITH MISTAKE SHAPE 1 IN IT
+
+The new `Recognizer.speedMmPerS` reuses `terminalSpeedPxPerS` — the flick's **windowed**
+estimator — so there is one definition of *how fast is this finger*. ⚠ But nothing vectored it,
+and replacing it with a **one-sample-pair** rate left all 932 vectors green.
+
+⛔⛔ That is not a hypothetical: §1.1 estimated speed over one sample pair, so with the measured
+0.761 mm of pointer noise a RESTING finger read ~95 mm/s and `STATIONARY` was unreachable for any
+real finger, silently, for weeks. ⚠ Here the same arithmetic would make a resting hand look fast
+and **collapse the swing to nothing exactly when a hand holds still to look at the join** — since
+the amplitude now divides by this number.
+✅ Three vectors close it: a still finger jittering by the full measured noise reads under
+40 mm/s, a 100 mm/s drag reads 80–120, and the mutant is now 1 red.
+
+### ✅ MEASURED ON THE TABLET
+
+Same gesture, same gap, only the hand speed differs — camera radius at the half point:
+
+| drag | at `p = 0.5` |
+|---|---|
+| slow (12 px/step) | **r = 3.000 m** — full swing |
+| fast (45 px/step) | **r = 2.381 m** — visibly damped |
+
+### ⚠⚠ AND IT EXPOSED ONE THING A HAND SHOULD RULE ON: RELEASING MID-APPROACH
+
+⛔ The lean is a function of the GAP, so letting go mid-approach freezes it — the camera stays
+leaning until the object is picked up again, reaches contact, or is pulled out of range.
+⚠⚠ **And the speed division makes that louder**: on release the speed falls to zero, so the
+amplitude rises to its maximum and the camera **swings further out as the finger lifts**.
+Measured: a slow drag stopped mid-approach ended at `r = 3.000 m` and stayed there.
+
+⭐ Three defensible answers, and it is the owner's call:
+1. **Leave it** — an approach in progress is a real state, and resuming continues it.
+2. **Return to zero on release** — the camera comes home whenever no finger is carrying the body.
+3. **Hold the amplitude at its last moving value** — removes the lift-swings-out effect without
+   moving the camera at all on release.
+
+### ⛔⛔⛔ THE JITTER, AND WHAT MEASURING IT FOUND — 2026-09-19
+
+> *"when I increase the swing speed gain or the swing speed exponent, the orbit of the camera
+> becomes jittery: there seems to be steps in the orbit and it goes back and forth during the
+> delta position movement. especially the swing speed exponent."* — *"although the delta position
+> movement is quite regular."* — the owner
+
+⭐⭐⭐ **THAT SECOND SENTENCE IS THE DIAGNOSIS.** A steady hand with a stepping camera means the
+steps are in the **estimator**, not the input. `terminalSpeedPxPerS` measures over whatever samples
+fall inside a 40 ms window, so as the boundary crosses a sample the baseline jumps (32 ms ↔ 40 ms)
+and the reading changes **±11% for an input with no variation at all**. ⛔ And
+`dA/A = −n · dspeed/speed` multiplies that by the exponent before it reaches the camera — which
+is *"especially the swing speed exponent"*, named exactly.
+
+✅ **FIXED BY SMOOTHING `A`** with a one-pole filter, `τ = 120 ms` (three estimator windows — the
+standard rule of thumb for swallowing a step of that period, and about a tenth of an approach).
+⛔ It smooths the AMPLITUDE and never the speed: three other rules read that number and there is
+one definition of *how fast is this finger*.
+⚠ Frame-rate independent (`1 − e^(−dt/τ)`), and it **cannot move the endpoints** — `θ = A·sin(πp)`
+is exactly zero at `p = 0` and `p = 1` for any `A`.
+
+Measured steady-state ripple, as a fraction of the maximum swing:
+
+| setting | τ = 0 | τ = 120 |
+|---|---|---|
+| gain 0.02, exp 1 | 16.7% | **1.1%** |
+| gain 0.02, exp 2 | 25.0% | **1.7%** |
+| at or below the knee | 0% | 0% — the clamp holds `A`, which is why the defaults felt fine |
+
+### ⛔⛔⛔ AND THE MEASUREMENT FOUND A SECOND, LARGER FAULT: THE EXPONENT DIAL DID NOT TUNE
+
+⚠⚠ Written as dictated, `gain × speed^exponent`, the knee sits at `(1/gain)^(1/exponent)` — so
+raising the exponent **drags the knee down**: at `gain = 0.0083` from 120 mm/s to **11** at
+`exp = 2` and **5** at `exp = 3`. Every real drag is then far past it and the swing collapses to
+**1–3% of the slider**. ⛔ The dial annihilated the effect instead of tuning it, and near that
+knee is precisely where the noise amplification is steepest — so the two faults had one cause.
+
+✅ **Grouped to `(gain × speed)^exponent`**, the knee is `1/gain` for **every** exponent:
+**gain chooses WHERE damping starts, exponent chooses HOW SHARPLY it bites.** Measured:
+
+| gain 0.0083 (knee 120) | 60 mm/s | 120 | 240 |
+|---|---|---|---|
+| exp 1 | 100% | 100% | 50% |
+| exp 2 | 100% | 100% | 25% |
+| exp 3 | 100% | 100% | 13% |
+
+⚠ **It departs from the literal dictation** (`1/(gain × speed^expon)`) and is reported as such;
+one character of difference, and it is what *"so I can finetune the effect"* asks for.
+
+⚠ **AND MY OWN INSTRUMENT LIED TWICE ON THE WAY** — recorded because it nearly set the τ wrong:
+a synthesised drag with two CDP round-trips between moves is not a regular drag, and a ripple
+measured over the whole series reads the filter's own **transient** (8.9%) instead of its ripple
+(1.1%). ⭐ A settling filter has to be allowed to settle before it is judged.
+
 ## ⚠ What has NOT been judged
 
+✅ **THE SPEED DIALS HAVE BEEN SET BY A HAND** — the owner, 2026-09-19:
+`approachSwingDeg = 30`, `approachSwingSpeedGain = 0.015`, `approachSwingSpeedExponent = 1.7`. ⛔ The knee is `1/gain` =
+**67 mm/s**: the full 30° up to about 40 mm/s, half by 100, and under 5° at 200. ⭐ All three replace my guesses (25° / 0.0083 / 1.0) — the first numbers in this file to be
+judged rather than reasoned.
+
 ⛔⛔ **The swing has had no finger on it.** The boot scene is confirmed by screenshot; the lean
-itself, its amplitude and its feel are entirely unjudged. `approachSwingDeg` defaults to **25°**
-and that is a **guess** — in this project a guessed number has been wrong every single time.
+itself, its amplitude and its feel are entirely unjudged. every number in the swing is now the owner's (30° / 0.015 / 1.7), but they were set from the SLIDERS — what is still unjudged is whether the mechanism HELPS — in this project a guessed number has been wrong every single time.
 ✅ **`0` on the slider disables the whole mechanism**, which is how to A/B it by finger in the same
 minute on the same scene — the comparison that settled `D28` and `IN13`.
 

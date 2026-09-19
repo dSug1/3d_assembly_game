@@ -752,3 +752,57 @@ describe("⛔⛔ a gesture ANOTHER RULE consumed is never a tap", () => {
     expect(rec.currentPhase).toBe("COMMITTED_CONTINUOUS");
   });
 });
+
+describe("⛔⛔⛔ `speedMmPerS` — WINDOWED, and a still finger must not read as fast", () => {
+  // ⛔⛔⛔ THIS VECTOR EXISTS BECAUSE A MUTANT SURVIVED THE WHOLE SUITE. Replacing the windowed
+  // estimate with a ONE-SAMPLE-PAIR rate left all 932 vectors green — and that is not a
+  // hypothetical defect, it is **the** defect this project was burned by:
+  //
+  //   §1.1 estimated speed over one sample pair, so with the measured 0.761 mm of pointer noise
+  //   a RESTING finger read ~95 mm/s and `STATIONARY` was unreachable for any real finger,
+  //   silently, from the day the noise was measured.
+  //
+  // ⭐⭐ `METHOD`'s mistake shape 1: *a rate estimated over too short a baseline.* The approach
+  // swing now divides by this number, so the same arithmetic would make a resting hand look fast
+  // and collapse the swing to nothing at exactly the moment a hand is holding still to look.
+  const pose = recordingPose();
+
+  /** A finger held STILL, jittering by the MEASURED noise at a realistic sample interval. */
+  const stillSpeed = (): number => {
+    const rec = new Recognizer(cfg, pose.port, new TapHistory(cfg));
+    rec.press({ x: 200, y: 200, t: 0 });
+    for (let i = 1; i <= 40; i++) {
+      // ⚠ Alternating by the full measured noise each sample — the worst case, not an average.
+      rec.move({ x: 200 + (i % 2 ? mmToPx(cfg.pointerNoiseMm) : 0), y: 200, t: i * 8 });
+    }
+    return rec.speedMmPerS;
+  };
+
+  it("⛔⛔ a STILL finger with real noise reads slow — a one-pair estimate reads ~95 mm/s", () => {
+    // ⭐ The number that matters: 0.761 mm over one 8 ms pair is 95 mm/s. Over the lift window
+    // the alternating jitter cancels and what is left is a fraction of that.
+    const v = stillSpeed();
+    expect(v).toBeLessThan(40);
+    // ⚠ And well under the sway reference the swing divides by, or a resting hand would be
+    // treated as a moving one.
+    expect(v).toBeLessThan(cfg.swayReferenceSpeedMmPerS / 2);
+  });
+
+  it("⭐⭐ a genuinely moving finger reads about its real speed — the estimate is not just small", () => {
+    // ⛔ THE COUNTER-EXAMPLE, without which the vector above passes by returning 0 for
+    // everything. ⚠ 100 mm/s: 0.8 mm every 8 ms.
+    const rec = new Recognizer(cfg, pose.port, new TapHistory(cfg));
+    rec.press({ x: 200, y: 200, t: 0 });
+    for (let i = 1; i <= 40; i++) rec.move({ x: 200 + mmToPx(0.8 * i), y: 200, t: i * 8 });
+    const v = rec.speedMmPerS;
+    expect(v).toBeGreaterThan(80);
+    expect(v).toBeLessThan(120);
+  });
+
+  it("⚠ before any movement it is 0, and never NaN", () => {
+    const rec = new Recognizer(cfg, pose.port, new TapHistory(cfg));
+    rec.press({ x: 10, y: 10, t: 0 });
+    expect(rec.speedMmPerS).toBe(0);
+    expect(Number.isFinite(rec.speedMmPerS)).toBe(true);
+  });
+});

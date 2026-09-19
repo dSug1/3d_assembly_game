@@ -264,8 +264,30 @@ export class OrbitController {
    *   leaves the camera somewhere nobody chose; an offset cannot.
    *   ⭐ It also rides on top of a hand orbiting meanwhile, instead of fighting it.
    */
-  pose(zoom: number, yawOffsetRad = 0): OrbitPose {
-    return orbitOffset(this.cfg, this.yawRad + yawOffsetRad, this.v, zoom);
+  /**
+   * @param vOffset ⭐⭐ **THE PITCH HALF OF THE APPROACH SWING**, in the ring surface's own `v`
+   *   units. ⛔ Added here and clamped by `orbitOffset`, so the camera cannot leave the ring
+   *   surface however large the swing is — which is what keeps it away from the pole where
+   *   `A7`'s gesture frame does not exist. ⚠ Like `yawOffsetRad` it is a PARAMETER: the
+   *   controller's own elevation is never written, so passing `0` is what *"back where it was"*
+   *   means.
+   */
+  pose(zoom: number, yawOffsetRad = 0, vOffset = 0): OrbitPose {
+    return orbitOffset(this.cfg, this.yawRad + yawOffsetRad, this.v + vOffset, zoom);
+  }
+
+  /**
+   * ⭐ The elevation ANGLES of the bottom and top rings, in radians — what a pitch in degrees
+   * has to be measured against before it can be turned into a `v`.
+   * ⚠ Exposed here rather than recomputed by the caller: `rigsOf` is this file's own mapping
+   * from config to rings, and a second reading of it elsewhere could drift.
+   */
+  ringElevationRad(): { bottom: number; top: number } {
+    const { bottom, top } = rigsOf(this.cfg);
+    return {
+      bottom: Math.atan2(bottom.heightM, bottom.radiusM),
+      top: Math.atan2(top.heightM, top.radiusM),
+    };
   }
 }
 

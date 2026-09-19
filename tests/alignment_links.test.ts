@@ -341,3 +341,60 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     expect(links.pioneerFor("p1")?.objectId).toBe("p2");
   });
 });
+
+describe("⛔⛔⛔ `partnersOf` — WHO MAY THIS BODY APPROACH? (the capture restriction)", () => {
+  // ⛔⛔ THE OWNER, 2026-09-19, after seeing the first build on the glass:
+  //
+  // > *"when I second touch an object which becomes Pioneer, it can white highlight if the
+  // >  Pioneer is close to a third object (which could be not the Follower): this should not
+  // >  happen. **the white highlight should be reserved only for Pioneer-Follower duo**."*
+  //
+  // ⚠⚠ THESE VECTORS EXIST BECAUSE MUTANTS SURVIVED. The lookup was a lambda in `scene.ts`,
+  // and reinstating the reported defect left all 944 vectors green — a rule in a render file is
+  // a rule nothing can interrogate.
+
+  const linked = () => {
+    const l = new AlignmentLinks();
+    l.link("f1", "P", "+x", IDENTITY);
+    l.link("f2", "P", "-z", IDENTITY);
+    return l;
+  };
+
+  it("⭐⭐ a FOLLOWER may approach its Pioneer, and only that", () => {
+    expect(linked().partnersOf("f1")).toEqual(["P"]);
+    expect(linked().partnersOf("f2")).toEqual(["P"]);
+  });
+
+  it("⭐⭐⭐ a PIONEER may approach its FOLLOWERS — the half that was missing", () => {
+    // ⛔ THE REPORTED BUG, as a vector. A Pioneer has no Pioneer of its own, so the first build
+    // returned *nothing to restrict* and the caller fell through to the whole scene.
+    expect(linked().partnersOf("P").sort()).toEqual(["f1", "f2"]);
+  });
+
+  it("⛔⛔ AN UNALIGNED BODY MAY APPROACH **NOTHING**", () => {
+    // ⚠ The empty answer is the rule and not an omission: no duo, nothing to approach. ⭐ It is
+    // also the owner's *"reserved only for Pioneer-Follower duo"* taken at its word.
+    expect(linked().partnersOf("stranger")).toEqual([]);
+    expect(new AlignmentLinks().partnersOf("P")).toEqual([]);
+  });
+
+  it("⚠ the branch is EXCLUSIVE — a body in the middle of a chain follows, it does not lead", () => {
+    // ⛔ `f → m → P`: `m` is both a Follower and a Pioneer. ⭐ It approaches **its own Pioneer**,
+    // not the body that follows it — a body that follows something is approaching that thing,
+    // whatever else happens to follow it. ⚠ Asserted because the alternative (the union) is the
+    // plausible reading and would quietly restore a third-body capture.
+    const l = new AlignmentLinks();
+    l.link("m", "P", "+x", IDENTITY);
+    l.link("f", "m", "+y", IDENTITY);
+    expect(l.partnersOf("m")).toEqual(["P"]);
+    expect(l.partnersOf("f")).toEqual(["m"]);
+    expect(l.partnersOf("P")).toEqual(["m"]);
+  });
+
+  it("⛔ it follows an unlink — the restriction dies with the relation it describes", () => {
+    const l = linked();
+    l.unlink("f1");
+    expect(l.partnersOf("f1")).toEqual([]);
+    expect(l.partnersOf("P")).toEqual(["f2"]);
+  });
+});

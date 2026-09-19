@@ -157,6 +157,9 @@ import {
 } from "../input/highlight";
 import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
 import {
+  pitchOffsetV,
+  smoothAmplitude,
+  swingAmplitudeRad,
   swingProgress,
   swingSignFor,
   swingYawRad,
@@ -1385,7 +1388,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // cached: a pinch changes `camera.radius` with no pointer event on any body, and an
         // offset that only updated on input would describe the zoom the hand had a moment ago.
         // ⚠ `camera.radius` is the distance to the orbit FOCUS, which is what was asked for.
-        captureOffsetM: captureOffsetM(
+        // ⛔⛔ **UNLESS AN APPROACH IS LIVE, IN WHICH CASE IT IS FROZEN** — the pitch half of the
+        // swing moves the camera nearer or further (the ring surface has a different radius at
+        // every elevation), so an offset that kept tracking would be decided by the swing it is
+        // deciding. ⚠ Measured on the tablet: `172mm → 345mm` mid-approach before this.
+        // ⭐ `approach_swing.ts` argues the feedback loop this prevents.
+        captureOffsetM: swing?.offsetAtTriggerM ?? captureOffsetM(
           cfg.captureOffsetMm,
           camera.radius,
           camera.fov,
@@ -1397,11 +1405,26 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⛔ SURFACE TO SURFACE. ⚠ It reads the MODEL, not the display pose — the sway is
       // decoration and a highlight must not flicker with an animation nobody asked it to track.
       (a, b) => surfaceGap(world, a, b),
-      // ⛔⛔ `D62` — **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** (the owner,
-      // 2026-09-19). ⚠ The alignment INDEX lives here, in the render layer, so the lookup is
-      // handed over rather than reached for — `highlight.ts` stays engine-free and link-free.
-      // ⭐ `null` for a body with no alignment, which still sees the whole scene.
-      (id) => links.pioneerFor(id)?.objectId ?? null,
+      // ⛔⛔⛔ `D62` — **A BODY MAY APPROACH ITS ALIGNMENT PARTNERS AND NOTHING ELSE.**
+      //
+      // > *"I want to do the same with Pioneer: currently, when I second touch an object which
+      // > becomes Pioneer, it can white highlight if the Pioneer is close to a third object
+      // > (which could be not the Follower): this should not happen. the white highlight should
+      // > be reserved only for Pioneer-Follower duo."* — the owner, 2026-09-19
+      //
+      // ⚠ The first build restricted only the FOLLOWER, because that is the side the owner
+      // named first — and a Pioneer has no Pioneer of its own, so it fell through to *the whole
+      // scene* and lit up against any third body. ⭐ Both directions now, from the same two-way
+      // index: **a Follower's partner is its Pioneer; a Pioneer's are its Followers.**
+      //
+      // ⛔ A body in neither role answers **empty**, which captures nothing — the owner's
+      // *"reserved only for Pioneer-Follower duo"* taken at its word.
+      // ⚠ The alignment index lives here, in the render layer, so the lookup is handed over
+      // rather than reached for: `highlight.ts` stays engine-free and link-free.
+      // ⛔ THE RULE IS `AlignmentLinks.partnersOf`, NOT A LAMBDA HERE. ⚠ It WAS a lambda, and a
+      // mutant that reinstated the reported bug left all 944 vectors green — because a rule in a
+      // render file is a rule nothing can interrogate.
+      (id) => links.partnersOf(id),
     );
     // ⭐⭐⭐ **THE APPROACH SWING ARMS AND DISARMS ON THE CAPTURE'S OWN EDGES** — the trial on
     // branch `1.0.18-`. ⛔ The owner's trigger is *"when the offset radius is crossed (= white
@@ -1417,6 +1440,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (highlighted.inRange && swing === null && highlighted.gapM !== null) {
       swing = {
         gapAtTriggerM: highlighted.gapM,
+        // ⚠ The threshold this capture was judged against, frozen with it — they are one fact.
+        offsetAtTriggerM: highlighted.offsetM,
         // ⛔ *"opposite to the dx movement"* — `approach_swing.ts` owns that negation, so the
         // one place the word OPPOSITE becomes arithmetic is a function with a vector on it.
         sign: swingSignFor(lastTranslateRightPx),
@@ -1426,6 +1451,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // progress is already back at 0 by the time the capture drops, so dropping the latch is
       // continuous rather than a jump. That is the whole argument for an additive offset.
       swing = null;
+      // ⚠ Forgotten with the approach, so the next one starts from its own first reading.
+      swingAmp = null;
     }
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
@@ -1942,23 +1969,74 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * makes the return to zero a single write rather than a state nobody notices.
    */
   let appliedSwingYaw = 0;
+  /**
+   * ⭐⭐ `D63` — the SMOOTHED swing amplitude, and the clock it was last advanced on.
+   * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
+   * than from whatever the last approach happened to end on.
+   */
+  let swingAmp: { rad: number; atMs: number } | null = null;
 
   /**
    * ⭐⭐ How far the camera is currently leaning out of its own orbit, in radians.
    * ⛔ `0` whenever there is no live approach — and `0` at both ENDS of a live one, which is
    * what makes *"back to its original position"* a fact rather than a restore that has to run.
    */
-  const swingYawNow = (): number =>
-    swing === null
-      ? 0
-      : swingYawRad(
-          swingProgress(highlighted.gapM ?? 0, swing),
-          (cfg.approachSwingDeg * Math.PI) / 180,
-          swing.sign,
-        );
+  /**
+   * ⭐⭐ The swing's angle this frame, in radians — **one number, spent twice**.
+   * ⛔ `0` whenever there is no live approach, and `0` at both ENDS of a live one.
+   */
+  const swingAngleNow = (): number => {
+    if (swing === null) return 0;
+    // ⭐⭐⭐ **DIVIDED BY THE FINGER'S SPEED** (the owner, 2026-09-19) — which cancels the
+    // `dp/dt` in the lean's derivative and makes the camera sweep at the same rate whatever the
+    // hand does. `approach_swing.ts` carries the derivation.
+    // ⛔ THE SPEED IS THE RECOGNIZER'S OWN WINDOWED ESTIMATE, never a per-frame delta: §1.1
+    // estimated a rate over one sample pair and made `STATIONARY` unreachable for every real
+    // finger, silently, for weeks. ⚠ One definition of *how fast*, shared with the flick.
+    // ⚠ With no holder the speed is unknown — `0` reads as *stopped*, which gives the maximum
+    // swing and is what a hand that has let go should see: the widest look at the join.
+    const holder = held.size === 1 ? [...held.values()][0] : undefined;
+    const speed = holder?.rec.speedMmPerS ?? 0;
+    const target = swingAmplitudeRad(
+      (cfg.approachSwingDeg * Math.PI) / 180,
+      speed,
+      cfg.approachSwingSpeedGain,
+      cfg.approachSwingSpeedExponent,
+    );
+    // ⭐⭐⭐ **SMOOTHED — device-reported, 2026-09-19**: *"the orbit of the camera becomes
+    // jittery … especially the swing speed exponent"*, and *"although the delta position movement
+    // is quite regular"*. ⛔ That second sentence is the diagnosis: a steady hand with a stepping
+    // camera means the STEPS ARE IN THE ESTIMATOR, not the input. `approach_swing.ts` carries
+    // the arithmetic — the exponent multiplies the estimator's relative wobble.
+    // ⚠ Smoothing `A` and never the speed: three other rules read that number, and there is one
+    // definition of *how fast is this finger*.
+    const now = performance.now();
+    swingAmp =
+      swingAmp === null
+        ? { rad: target, atMs: now }
+        : { rad: smoothAmplitude(swingAmp.rad, target, now - swingAmp.atMs), atMs: now };
+    return swingYawRad(swingProgress(highlighted.gapM ?? 0, swing), swingAmp.rad, swing.sign);
+  };
 
+  /**
+   * ⭐⭐⭐ **THE SWING IS NOW YAW *AND* PITCH** — the owner, 2026-09-19: *"also add a pitch
+   * swing of the same value … the swing of the camera helps the user visualize the alignment in
+   * the directions orthogonal to the translation approach."*
+   *
+   * ⛔ **ONE ANGLE, APPLIED ON TWO AXES.** *"The same value"* is taken literally: both halves
+   * are the same `sin(π p)`, so the camera leaves on a diagonal and comes back along it — one
+   * motion rather than two that happen to coincide. ⚠ They also therefore reach zero together,
+   * which is what keeps *"back to its original position"* true for both.
+   *
+   * ⭐⭐ **AND THE SAME SIGN.** A dx approach is horizontal, so the two orthogonal directions it
+   * cannot show are DEPTH (which the yaw reveals) and HEIGHT (the pitch). ⚠ Giving them opposite
+   * signs would sweep the camera along the other diagonal — equally defensible, and a hand
+   * decides. This is the one line to try if the motion reads oddly.
+   */
   const applyCamera = () => {
-    const pose = orbit.pose(zoom, swingYawNow());
+    const a = swingAngleNow();
+    const rings = orbit.ringElevationRad();
+    const pose = orbit.pose(zoom, a, pitchOffsetV(a, rings.bottom, rings.top));
     // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
     // Clamping the components independently would change the viewing ANGLE, which is
     // not what a near-plane guard is for.
@@ -2496,6 +2574,15 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ The default 25° is a GUESS, and a guessed number has been wrong every single time
         // in this project. Judge it here, not in the source.
         tunable("approach swing (° of camera yaw)", "approachSwingDeg", 0, 90, 1),
+        // ⭐⭐ **THE SPEED DIVISOR, `gain × speed^exponent`** — the owner's fine-tuning pair.
+        // ⛔ Damping starts where the divisor passes 1, at `(1/gain)^(1/exponent)` mm/s: the
+        // default 0.0083 puts that knee at **120 mm/s**. ⚠ A small range with a fine step,
+        // because the useful values are all near the bottom of it.
+        tunable("swing speed gain", "approachSwingSpeedGain", 0, 0.05, 0.0005),
+        // ⛔ **`0` REMOVES THE SPEED DEPENDENCE ENTIRELY**, which is how to A/B the idea by
+        // finger; `1` makes the camera's angular rate independent of hand speed; above 1 the
+        // camera slows as the hand speeds up.
+        tunable("swing speed exponent", "approachSwingSpeedExponent", 0, 3, 0.1),
         // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
         // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
         // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
@@ -4346,7 +4433,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // arriving second. ⛔ The swing's own return to zero is unaffected: it is a pure function
     // of the gap, so whatever it missed it picks up on the next frame it is allowed to write.
     if (cameraReset === null) {
-      const wantSwing = swingYawNow();
+      const wantSwing = swingAngleNow();
       if (wantSwing !== appliedSwingYaw) {
         appliedSwingYaw = wantSwing;
         applyCamera();

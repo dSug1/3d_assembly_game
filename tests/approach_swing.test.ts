@@ -7,13 +7,16 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  pitchOffsetV,
+  smoothAmplitude,
+  swingAmplitudeRad,
   swingProgress,
   swingSignFor,
   swingYawRad,
   type SwingLatch,
 } from "@input/approach_swing";
 
-const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1 };
+const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07 };
 const AMP = (25 * Math.PI) / 180;
 const yawAt = (gapM: number, latch: SwingLatch = LATCH) =>
   swingYawRad(swingProgress(gapM, latch), AMP, latch.sign);
@@ -69,7 +72,7 @@ describe("⛔⛔⛔ THE ROUND TRIP — out, and exactly back", () => {
   });
 
   it("⛔ the sign is the LATCH's, and reversing it mirrors the whole swing", () => {
-    const other: SwingLatch = { gapAtTriggerM: 0.07, sign: -1 };
+    const other: SwingLatch = { gapAtTriggerM: 0.07, sign: -1, offsetAtTriggerM: 0.07 };
     expect(yawAt(0.035, other)).toBeCloseTo(-yawAt(0.035), 12);
     // ⚠ The reversal at half is NOT a change of sign — both halves are on the same side of the
     // orbit. ⛔ Asserted, because "reverses" in the dictation could be read either way, and the
@@ -106,7 +109,7 @@ describe("⛔⛔ THE PROGRESS — clamped at both ends, and degenerate inputs ar
     // approach left to show. ⭐ `1` puts the swing at home: the one answer that cannot move the
     // camera. `LESSONS_CARRIED` §6 — a degenerate input refuses, it does not improvise.
     for (const g0 of [0, -1, NaN, Infinity]) {
-      const bad: SwingLatch = { gapAtTriggerM: g0, sign: 1 };
+      const bad: SwingLatch = { gapAtTriggerM: g0, sign: 1, offsetAtTriggerM: 0.07 };
       expect(swingProgress(0.03, bad)).toBe(1);
       expect(swingYawRad(swingProgress(0.03, bad), AMP, 1)).toBe(0);
     }
@@ -128,5 +131,247 @@ describe("⛔ THE DIRECTION — *opposite to the dx movement*", () => {
     // silently do nothing, and a hand could only retry by pulling apart and coming back.
     // ⭐ Declared and arbitrary, exactly like `rollSignFor`'s fallback.
     expect(swingSignFor(0)).toBe(1);
+  });
+});
+
+describe("⛔⛔ THE PITCH HALF — the same angle, expressed in the ring surface's units", () => {
+  // ⛔ THE OWNER, 2026-09-19: *"also add a pitch swing of the same value. The idea is that the
+  // swing of the camera helps the user visualize the alignment in the directions orthogonal to
+  // the translation approach."*
+  //
+  // ⭐⭐ THE YAW IS RADIANS AND THE ELEVATION IS NOT. `v ∈ [0, 1]` runs along a monotone cubic
+  // through three tuned rings, so *"the same value"* has to be converted before it means
+  // anything — which is the whole of this function.
+
+  // ⚠ Representative rings: a bottom looking up from near the ground and a top looking down.
+  const BOTTOM = Math.atan2(0.2, 1.4); // ≈ 8.1°
+  const TOP = Math.atan2(1.3, 0.5); // ≈ 69.0°
+  const SPAN = TOP - BOTTOM;
+
+  it("⭐⭐ a pitch of the WHOLE span is exactly one unit of `v`", () => {
+    // ⛔ The definition, stated as its own vector: `v` is a FRACTION of the ring surface, so a
+    // pitch equal to the surface's angular span must be 1.
+    expect(pitchOffsetV(SPAN, BOTTOM, TOP)).toBeCloseTo(1, 12);
+    expect(pitchOffsetV(SPAN / 2, BOTTOM, TOP)).toBeCloseTo(0.5, 12);
+  });
+
+  it("⚠ and a realistic 25° swing is a real but partial move across the rings", () => {
+    // ⭐ The sanity check that the number is USEFUL, not merely well-defined: at the shipped
+    // default the camera crosses about 40% of the ring surface at the peak of the swing.
+    const v = pitchOffsetV((25 * Math.PI) / 180, BOTTOM, TOP);
+    expect(v).toBeGreaterThan(0.3);
+    expect(v).toBeLessThan(0.55);
+  });
+
+  it("⛔⛔ it is ZERO wherever the swing is zero — so both halves come home together", () => {
+    // ⚠⚠ THE PROPERTY THAT KEEPS THE OWNER'S REQUIREMENT TRUE ON BOTH AXES. The yaw returns to
+    // exactly 0 at the trigger and at contact; the pitch must vanish at the same instants or the
+    // camera would come back at the right heading and the wrong height.
+    expect(pitchOffsetV(0, BOTTOM, TOP)).toBe(0);
+    expect(pitchOffsetV(swingYawRad(0, AMP, 1), BOTTOM, TOP)).toBe(0);
+    expect(pitchOffsetV(swingYawRad(1, AMP, 1), BOTTOM, TOP)).toBe(0);
+  });
+
+  it("⭐ it carries the SIGN through — the camera leaves on a diagonal, not on two axes at odds", () => {
+    expect(Math.sign(pitchOffsetV(0.3, BOTTOM, TOP))).toBe(1);
+    expect(Math.sign(pitchOffsetV(-0.3, BOTTOM, TOP))).toBe(-1);
+  });
+
+  it("⛔⛔ DEGENERATE RINGS GIVE **NO** PITCH, never an improvised one", () => {
+    // ⚠ Coincident rings mean the surface has no angular span, so no pitch is expressible.
+    // ⛔ Dividing by it would be ±Infinity — which `orbitOffset` clamps to a RING, silently
+    // slamming the camera to the top or bottom of the world at the first frame of an approach.
+    // ⭐ `LESSONS_CARRIED` §6: a degenerate input returns nothing rather than a default.
+    expect(pitchOffsetV(0.3, 0.5, 0.5)).toBe(0);
+    expect(pitchOffsetV(0.3, 0.5, 0.5 + 1e-9)).toBe(0);
+    expect(pitchOffsetV(0.3, NaN, TOP)).toBe(0);
+    expect(pitchOffsetV(NaN, BOTTOM, TOP)).toBe(0);
+  });
+});
+
+describe("⛔⛔⛔ THE AMPLITUDE IS **DIVIDED** BY THE FINGER'S SPEED", () => {
+  // ⛔⛔ THE OWNER, 2026-09-19: *"I want to set the maximum approach swing with the slider, and
+  // divide it by the speed of the delta position so that there is not a very big camera orbit
+  // jump when the delta position is fast."*
+  //
+  // ⭐⭐⭐ AND THE ARITHMETIC SAYS WHY THAT IS THE RIGHT FORM. The lean is `θ = A·sin(πp)`, so
+  // `dθ/dt = A·π·cos(πp)·dp/dt` and `dp/dt ∝ speed`. With a fixed `A` the camera's angular
+  // velocity is proportional to how fast the hand moves — the *"very big jump"*, named exactly.
+  // ⛔ `A ∝ 1/speed` cancels the term. The last vector here MEASURES that cancellation.
+  // ⚠ The shipped defaults: the knee sits at `(1/0.0083)^1` ≈ 120 mm/s.
+  const GAIN = 0.0083, EXP = 1;
+  const REF = 1 / GAIN;
+  const MAX = (25 * Math.PI) / 180;
+
+  it("⭐⭐ at or below the reference speed the slider's value is what you get", () => {
+    expect(swingAmplitudeRad(MAX, REF, GAIN, EXP)).toBeCloseTo(MAX, 12);
+    expect(swingAmplitudeRad(MAX, 40, GAIN, EXP)).toBeCloseTo(MAX, 12);
+    // ⚠ A STOPPED finger gets the MAXIMUM, which is the clamped limit of `ref/speed` — and is
+    // what a hand that has stopped should see: the widest look at the join.
+    expect(swingAmplitudeRad(MAX, 0, GAIN, EXP)).toBeCloseTo(MAX, 12);
+  });
+
+  it("⛔⛔ above it the swing SHRINKS — twice the speed, half the swing", () => {
+    expect(swingAmplitudeRad(MAX, 2 * REF, GAIN, EXP)).toBeCloseTo(MAX / 2, 12);
+    expect(swingAmplitudeRad(MAX, 4 * REF, GAIN, EXP)).toBeCloseTo(MAX / 4, 12);
+    // ⚠ A FLICK reaches twenty times the reference (`sway.ts` measured it) and asks for almost
+    // nothing — which is the owner's requirement at its extreme.
+    expect(swingAmplitudeRad(MAX, 20 * REF, GAIN, EXP)).toBeLessThan(MAX / 15);
+  });
+
+  it("⛔⛔ the UPPER CLAMP is not decoration — `ref/speed` diverges as the hand slows", () => {
+    // ⚠ Without it a nearly-still finger would ask for an unbounded lean: at 0.001 mm/s the
+    // raw ratio is 120000, which is ~52000 radians of camera yaw.
+    expect(swingAmplitudeRad(MAX, 0.001, GAIN, EXP)).toBeCloseTo(MAX, 12);
+    expect(swingAmplitudeRad(MAX, -5, GAIN, EXP)).toBeCloseTo(MAX, 12);
+  });
+
+  it("⚠ a NEGATIVE or NaN gain or exponent gives NO swing rather than a full one", () => {
+    // ⛔ An unconfigured law is not a reason to move the camera by an amount nobody chose, and
+    // a NEGATIVE divisor would MIRROR the swing mid-approach rather than damp it.
+    for (const bad of [-1, NaN]) expect(swingAmplitudeRad(MAX, 200, bad, EXP)).toBe(0);
+    for (const bad of [-1, NaN]) expect(swingAmplitudeRad(MAX, 200, GAIN, bad)).toBe(0);
+  });
+
+  it("⭐⭐⭐ THE POINT OF IT ALL: the camera's angular RATE is the same at any hand speed", () => {
+    // ⛔⛔ THE COMPOSITION, and the only vector that states the owner's actual GOAL rather than
+    // the mechanism. ⚠ Two approaches over the same gap, one four times faster than the other:
+    // the fast hand covers the gap in a quarter of the time, so a fixed amplitude would sweep
+    // the camera four times as fast. ⭐ Measured here as degrees of camera per millimetre of gap
+    // closed — which is what a hand actually experiences.
+    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07 };
+    const rateAt = (speed: number) => {
+      const A = swingAmplitudeRad(MAX, speed, GAIN, EXP);
+      const g1 = 0.05, g2 = 0.049;
+      const d =
+        swingYawRad(swingProgress(g2, latch), A, 1) - swingYawRad(swingProgress(g1, latch), A, 1);
+      // ⚠ per unit TIME: the faster hand closes that same 1 mm in a quarter of the time.
+      return (d * speed) / REF;
+    };
+    // ⛔ Rates within 1% of each other across a 4x spread of hand speed. With a fixed amplitude
+    // they would differ by exactly 4x — which is the mutant this kills.
+    const slow = rateAt(REF), fast = rateAt(4 * REF);
+    expect(Math.abs(fast - slow) / Math.abs(slow)).toBeLessThan(0.01);
+  });
+});
+
+describe("⛔⛔ THE EXPONENT — the owner's second dial", () => {
+  const MAX = (25 * Math.PI) / 180;
+
+  it("⛔⛔⛔ `exponent = 0` REMOVES THE SPEED DEPENDENCE — the A/B switch", () => {
+    // ⭐ `speed ** 0` is 1 for every speed, so the divisor is just the gain. ⚠ With a gain at or
+    // below 1 the clamp takes over and the swing is simply the slider's value at ANY speed —
+    // which is the build the owner had before asking for the division, reachable by finger.
+    for (const v of [0, 10, 120, 1200, 12000]) {
+      expect(swingAmplitudeRad(MAX, v, 0.0083, 0)).toBeCloseTo(MAX, 12);
+    }
+  });
+
+  it("⭐⭐⭐ THE EXPONENT CHANGES THE SHARPNESS AND **NOT** THE KNEE", () => {
+    // ⛔⛔ THE DIVISOR IS `(gain × speed)^exponent`, GROUPED — and the ungrouped form
+    // `gain × speed^exponent` was what shipped first, measured, and rejected:
+    //
+    //   its knee is `(1/gain)^(1/exponent)`, so at `gain = 0.0083` it falls from 120 mm/s to
+    //   11 at `exp = 2` and 5 at `exp = 3`. Every real drag is then far past it and the swing
+    //   **collapses to 1–3% of the slider** — the dial annihilated the effect instead of
+    //   tuning it, and near that knee is where the noise amplification is steepest.
+    //
+    // ⭐ Grouped, the knee is `1/gain` for EVERY exponent: **gain chooses WHERE damping starts,
+    // exponent chooses HOW SHARPLY it bites.** That is what *"so I can finetune"* asks for.
+    const g = 1 / 120; // knee at 120 mm/s
+    for (const e of [1, 2, 3]) {
+      expect(swingAmplitudeRad(MAX, 60, g, e)).toBeCloseTo(MAX, 12);
+      expect(swingAmplitudeRad(MAX, 120, g, e)).toBeCloseTo(MAX, 12);
+    }
+    // ⚠ Past the knee they separate — at twice it, 1/2, 1/4, 1/8.
+    expect(swingAmplitudeRad(MAX, 240, g, 1)).toBeCloseTo(MAX / 2, 12);
+    expect(swingAmplitudeRad(MAX, 240, g, 2)).toBeCloseTo(MAX / 4, 12);
+    expect(swingAmplitudeRad(MAX, 240, g, 3)).toBeCloseTo(MAX / 8, 12);
+  });
+
+  it("⚠ a HIGHER gain moves the knee DOWN — damping starts at a slower hand", () => {
+    // ⛔ The knee is `1/gain`. ⭐ Doubling the gain halves it, so a speed that sat exactly ON the
+    // knee is now past it and already damped — by the divisor, exactly.
+    expect(swingAmplitudeRad(MAX, 120, 1 / 120, 1)).toBeCloseTo(MAX, 12);
+    expect(swingAmplitudeRad(MAX, 120, 2 / 120, 1)).toBeCloseTo(MAX / 2, 12);
+    expect(swingAmplitudeRad(MAX, 120, 4 / 120, 1)).toBeCloseTo(MAX / 4, 12);
+  });
+});
+
+describe("⛔⛔⛔ THE AMPLITUDE IS SMOOTHED — device-reported jitter, 2026-09-19", () => {
+  // ⛔⛔ THE OWNER: *"when I increase the swing speed gain or the swing speed exponent, the orbit
+  // of the camera becomes jittery: there seems to be steps in the orbit and it goes back and
+  // forth … especially the swing speed exponent"* — and, crucially,
+  // *"although the delta position movement is quite regular."*
+  //
+  // ⭐⭐⭐ THAT LAST SENTENCE IS THE DIAGNOSIS: a steady hand and a stepping camera means the
+  // STEPS ARE IN THE ESTIMATOR. `terminalSpeedPxPerS` measures over whatever samples fall inside
+  // a 40 ms window, so as the boundary crosses a sample the baseline jumps (32 ms ↔ 40 ms) and
+  // the reading changes ±11% for an input with NO variation at all.
+  const MAX = (25 * Math.PI) / 180;
+
+  /** Steady-state peak-to-peak of the amplitude, as a fraction of the maximum swing. */
+  const ripple = (gain: number, exp: number, tau: number): number => {
+    const speedAt = (i: number) => 60 * (i % 2 === 0 ? 1 : 40 / 32);
+    let prev = swingAmplitudeRad(MAX, speedAt(0), gain, exp);
+    const tail: number[] = [];
+    for (let i = 0; i < 400; i++) {
+      prev = smoothAmplitude(prev, swingAmplitudeRad(MAX, speedAt(i), gain, exp), 16, tau);
+      // ⚠ TAIL ONLY. The first probe measured the whole series and read the filter's own
+      // TRANSIENT as ripple — my instrument, not the product, and it said 8.9% where the truth
+      // was 1.1%. A settling filter has to be allowed to settle before it is judged.
+      if (i > 300) tail.push(prev);
+    }
+    return (Math.max(...tail) - Math.min(...tail)) / MAX;
+  };
+
+  it("⭐⭐⭐ it removes the estimator's ripple — measured, ~15×", () => {
+    expect(ripple(0.02, 1, 0)).toBeGreaterThan(0.15);
+    expect(ripple(0.02, 1, 120)).toBeLessThan(0.02);
+    // ⚠ And harder where the owner said it was worst — a higher exponent amplifies the
+    // estimator's RELATIVE wobble by that exponent: `dA/A = −n · dspeed/speed`.
+    expect(ripple(0.02, 2, 0)).toBeGreaterThan(0.2);
+    expect(ripple(0.02, 2, 120)).toBeLessThan(0.02);
+  });
+
+  it("⛔⛔ BELOW THE KNEE there was never any ripple — which is why the defaults felt fine", () => {
+    // ⭐ The clamp holds the amplitude at the slider's value, so speed noise does nothing at all.
+    // ⚠ Worth pinning: it explains why the report only appeared once a dial was RAISED.
+    expect(ripple(1 / 120, 1, 0)).toBeCloseTo(0, 6);
+    expect(ripple(1 / 120, 3, 0)).toBeCloseTo(0, 6);
+  });
+
+  it("⛔⛔⛔ AND SMOOTHING CANNOT MOVE THE ENDPOINTS — which is why it is safe", () => {
+    // ⭐ `θ = A·sin(πp)` is exactly zero at `p = 0` and `p = 1` for ANY `A`, so no amount of
+    // lag can leave the camera off its orbit at the trigger or at contact. ⚠ That is the owner's
+    // one hard requirement, and it survives by construction rather than by care.
+    for (const A of [0, MAX, MAX / 3, 1e-9, 12345]) {
+      expect(swingYawRad(0, A, 1)).toBe(0);
+      expect(swingYawRad(1, A, 1)).toBe(0);
+    }
+  });
+
+  it("⚠ it is FRAME-RATE INDEPENDENT — the same lag at 60 fps and at 120", () => {
+    // ⛔ `1 − e^(−dt/τ)`, never a fixed per-frame fraction: a fixed fraction would smooth twice
+    // as hard at 120 fps, which is the shape that makes a gesture feel different on two devices
+    // for no reason anyone can see.
+    const after = (dt: number, steps: number) => {
+      let v = 0;
+      for (let i = 0; i < steps; i++) v = smoothAmplitude(v, 1, dt, 120);
+      return v;
+    };
+    expect(after(16, 15)).toBeCloseTo(after(8, 30), 3);
+    expect(after(16, 15)).toBeCloseTo(after(4, 60), 3);
+  });
+
+  it("⚠ degenerate inputs hold rather than lurch", () => {
+    expect(smoothAmplitude(0.5, 0.9, 0, 120)).toBe(0.5);
+    expect(smoothAmplitude(0.5, 0.9, -8, 120)).toBe(0.5);
+    expect(smoothAmplitude(0.5, 0.9, NaN, 120)).toBe(0.5);
+    expect(smoothAmplitude(NaN, 0.9, 16, 120)).toBe(0.9);
+    expect(smoothAmplitude(0.5, NaN, 16, 120)).toBe(0.5);
+    // ⛔ τ = 0 is a legitimate request for NO smoothing, and the honest reading is *follow
+    // exactly* — not *never move*, which a naive guard would produce.
+    expect(smoothAmplitude(0.5, 0.9, 16, 0)).toBe(0.9);
   });
 });

@@ -194,6 +194,32 @@ export class AlignmentLinks {
   }
 
   /**
+   * ⭐⭐⭐ **WHO MAY THIS BODY APPROACH?** — the capture restriction, from the index that owns
+   * both directions of the relation.
+   *
+   * > *"the white highlight should be reserved only for Pioneer-Follower duo."*
+   * > — the owner, 2026-09-19
+   *
+   * ⭐⭐ **A FOLLOWER'S ANSWER IS ITS PIONEER; A PIONEER'S IS ITS FOLLOWERS; ANYONE ELSE GETS
+   * NOTHING.** ⛔ The empty answer is the rule, not an omission: an unaligned body has no duo, so
+   * it has nothing to approach.
+   *
+   * ⛔⛔ **IT LIVES HERE BECAUSE IT WAS IN `scene.ts` AND A MUTANT PROVED THAT WAS WRONG.** The
+   * first build restricted only the Follower and let a **Pioneer** fall through to the whole
+   * scene — which is the defect the owner reported — and reintroducing that defect left all 944
+   * vectors green, because the lookup was a lambda in the render file. ⭐ `pioneer_cascade.ts`'s
+   * standing rule: *a RULE in a render file is a rule nothing can interrogate.*
+   *
+   * ⚠ A body cannot be both a Follower and a Pioneer's partner in one answer — the branch is
+   * exclusive, and that is deliberate: a body that follows something is approaching **that**,
+   * whatever else happens to follow it.
+   */
+  partnersOf(id: ObjectId): ObjectId[] {
+    const p = this.pioneerFor(id);
+    return p !== null ? [p.objectId] : this.followersOf(id);
+  }
+
+  /**
    * ⭐⭐⭐ **EVERY FOLLOWER OF THIS PIONEER** — the owner's *"release all the follower objects"*.
    *
    * ⚠ Returned as a NEW array, deliberately: the caller releases these, and releasing mutates

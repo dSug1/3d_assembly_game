@@ -279,10 +279,13 @@ export function alignmentMatchesTarget(
  * @param translating `translatesOnDrag(...)` — condition 2, decided by the caller because only
  *   it knows the session mode.
  * @param current last frame's target, for `nearestCapture`'s tie rule. The ONLY memory.
- * @param pioneerOf ⛔⛔ **`D62`** — *what is this body aligned to?* ⭐ Injected rather than read:
- *   the alignment INDEX lives in the render layer, and `highlight.ts` must not learn to reach
- *   into it. ⚠ Returning `null` means *not a Follower*, and such a body still sees the whole
- *   scene — the restriction is a property of BEING a Follower.
+ * @param partnersOf ⛔⛔ **`D62`** — *which bodies may this one capture?* ⭐ Injected rather than
+ *   read: the alignment INDEX lives in the render layer, and `highlight.ts` must not learn to
+ *   reach into it. ⚠ A Follower's answer is its Pioneer; a **Pioneer's is its Followers**; and a
+ *   body in neither role answers **empty**, which captures nothing.
+ *   ⛔ THE READOUT USES THE SAME ANSWER AS THE RULE. Without that the HUD would print the gap to
+ *   a body the rule has forbidden, and a hand reading *"gap=40/70mm"* with no contour on the
+ *   glass would be looking at a number that describes nothing.
  */
 export function highlightedPair(
   world: World,
@@ -291,7 +294,7 @@ export function highlightedPair(
   n: HighlightNumbers,
   current: ObjectId | null,
   gapOf: (a: CaptureId, b: CaptureId) => number | null,
-  pioneerOf: (id: ObjectId) => ObjectId | null = () => null,
+  partnersOf: (id: ObjectId) => readonly ObjectId[],
 ): HighlightVerdict {
   let inRange = false;
   let pair: HighlightPair | null = null;
@@ -300,10 +303,11 @@ export function highlightedPair(
   // no contour"* is usually looking at a pair that is close but not close enough.
   let gapM: number | null = null;
   for (const subject of heldIds) {
-    // ⛔⛔ `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE (the owner, 2026-09-19).
+    // ⛔⛔ `D62` — A BODY MAY APPROACH ITS ALIGNMENT PARTNERS AND NOTHING ELSE (the owner,
+    // 2026-09-19: *"the white highlight should be reserved only for Pioneer-Follower duo"*).
     // ⚠ Computed ONCE per subject and handed to both the rule and the readout, so the contour and
     // the printed gap can never describe different bodies.
-    const only = pioneerOf(subject);
+    const only = partnersOf(subject);
     // ⛔ THE RANGE CONDITION — surface gap below the offset, inside `nearestCapture`.
     const capture = nearestCapture(world, subject, n.captureOffsetM, current, gapOf, only);
     if (capture === null) {
@@ -338,17 +342,12 @@ function nearestUnboundedGap(
   world: World,
   held: ObjectId,
   gapOf: (a: CaptureId, b: CaptureId) => number | null,
-  only: ObjectId | null = null,
+  allowed: readonly ObjectId[],
 ): number | null {
   let best: number | null = null;
-  for (const id of world.objects.keys()) {
+  for (const id of allowed) {
     if (id === held) continue;
-    // ⛔⛔ `D62` — **THE READOUT OBEYS THE SAME RESTRICTION AS THE RULE.** ⚠ Without this the
-    // HUD would print the gap to some third body the Follower is forbidden to capture, and a
-    // hand reading *"gap=40/70mm"* while no contour appears would be looking at a number that
-    // describes nothing. ⭐ That is the readout-that-lies shape, and it has cost this project a
-    // day more than once.
-    if (only !== null && id !== only) continue;
+    if (!world.objects.has(id)) continue;
     const d = gapOf(held, id);
     if (d === null) continue;
     if (best === null || d < best) best = d;

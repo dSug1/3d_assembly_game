@@ -52,6 +52,26 @@ export interface SwingLatch {
    * whenever the finger paused or jittered across zero, at full amplitude.
    */
   readonly sign: 1 | -1;
+  /**
+   * ⭐⭐⭐ **THE CAPTURE THRESHOLD, FROZEN FOR THE APPROACH** — and the PITCH half is what made
+   * this necessary.
+   *
+   * ⛔⛔ `D49` scales the capture offset by the camera's distance to its focus, deliberately, so
+   * a hand gets the same APPARENT clearance at every zoom. ⚠ A yaw-only swing keeps that
+   * distance constant. **A pitch does not**: the ring surface has a different radius at every
+   * elevation, so leaning the camera up or down moves it nearer or further — measured on the
+   * tablet, the printed threshold went `172mm → 345mm` mid-approach.
+   *
+   * ⛔⛔⛔ **AND THE FAILURE MODE IS NOT COSMETIC.** Where the swing moves the camera CLOSER the
+   * threshold shrinks, and if it shrinks past the current gap the capture **drops** — which
+   * disarms the swing, which snaps the camera back, which restores the threshold, which
+   * re-captures. ⭐ A feedback loop in which the camera's own motion decides whether the rule
+   * that is moving it still applies.
+   *
+   * ⭐ Freezing it is also what `D49` MEANT: the offset tracks *the hand's* zoom, and during an
+   * approach the camera is being driven by the game.
+   */
+  readonly offsetAtTriggerM: number;
 }
 
 /**
@@ -106,4 +126,172 @@ export function swingYawRad(progress: number, amplitudeRad: number, sign: 1 | -1
  */
 export function swingSignFor(dxPx: number): 1 | -1 {
   return dxPx > 0 ? -1 : 1;
+}
+
+/**
+ * ⭐⭐⭐ **THE PITCH HALF OF THE SWING, IN THE RING SURFACE'S OWN UNITS.**
+ *
+ * > *"add a swing of the camera in the other orthogonal directions … also add a pitch swing of
+ * > the same value. The idea is that the swing of the camera helps the user visualize the
+ * > alignment in the directions orthogonal to the translation approach."* — the owner, 2026-09-19
+ *
+ * ⭐⭐ **WHY A CONVERSION EXISTS AT ALL.** The yaw is radians and can be added straight to the
+ * camera's angle. The ELEVATION is not an angle: it is `v ∈ [0, 1]` along a monotone cubic
+ * through three tuned rings (`orbit.ts`), so *"a pitch swing of the same value"* has to be
+ * expressed in `v` before it means anything.
+ *
+ * ⛔⛔⛔ **AND IT MUST STAY IN `v`, NOT BECOME A FREE ROTATION OF THE CAMERA.** Pitching the
+ * camera off the ring surface would let it approach the pole — and `requireGestureFrame()`
+ * **throws** when the view axis lies along gravity, because `A7`'s basis does not exist there.
+ * ⚠ That throw would land on the next PRESS, not on the swing, so the crash would look like it
+ * came from the finger that touched the glass rather than from the camera that moved. ⭐ The ring
+ * surface exists precisely to make that unreachable; `orbitOffset` clamps `v` itself, so
+ * saturating against a ring is the worst this can do.
+ *
+ * ⚠ **THE CONVERSION IS LINEAR AND THE SURFACE IS NOT.** `v` runs through a cubic, so equal
+ * steps in `v` are not equal angles except near the middle ring. ⛔ Stated rather than corrected:
+ * inverting the cubic per frame would buy an exactness the eye cannot see, and the amplitude is a
+ * slider a hand will set by feel anyway.
+ *
+ * @param bottomRad elevation angle of the bottom ring, `atan2(height, radius)`.
+ * @param topRad    the same for the top ring.
+ * @returns the offset to add to `v`. ⛔ `0` when the rings are degenerate or coincident — no
+ *   span means no pitch is expressible, and improvising one would move the camera by an amount
+ *   nothing chose.
+ */
+export function pitchOffsetV(pitchRad: number, bottomRad: number, topRad: number): number {
+  const span = topRad - bottomRad;
+  if (!Number.isFinite(span) || Math.abs(span) < 1e-6 || !Number.isFinite(pitchRad)) return 0;
+  return pitchRad / span;
+}
+
+/**
+ * ⭐⭐⭐ **THE SWING IS DIVIDED BY THE FINGER'S SPEED, WITH A GAIN AND AN EXPONENT.**
+ *
+ * > *"I want to set the maximum approach swing with the slider, and divide it by the speed of the
+ * > delta position so that there is not a very big camera orbit jump when the delta position is
+ * > fast."* — then: *"make it `A ∝ 1/(slider multiple gain × speed^slider expon gain)` so I can
+ * > finetune the effect."* — the owner, 2026-09-19
+ *
+ *     A = maxRad / max(1, gain × speed^exponent)
+ *
+ * ⭐⭐⭐ **WHY DIVIDING IS THE RIGHT SHAPE — AT `exponent = 1` IT MAKES THE CAMERA'S ANGULAR
+ * RATE SPEED-INDEPENDENT.** The lean is `θ = A·sin(πp)`, so
+ *
+ *     dθ/dt = A · π · cos(πp) · dp/dt        and        dp/dt ∝ the finger's speed
+ *
+ * ⛔ With a FIXED `A` the camera's angular velocity is proportional to how fast the hand moves —
+ * which is the *"very big camera orbit jump"*, named precisely. ⭐ `A ∝ 1/speed` cancels the
+ * `dp/dt` exactly. The owner asked for it by feel; it falls out as the one choice that removes
+ * the term, and a vector measures the cancellation across a 4× spread of hand speed.
+ *
+ * ⭐⭐ **SO THE EXPONENT IS A DIAL EITHER SIDE OF THAT.** `1` cancels; **`0` removes the speed
+ * dependence entirely** (the swing becomes a constant `maxRad / max(1, gain)`), which is how to
+ * A/B the whole idea by finger; above `1` the camera *decelerates* as the hand speeds up, which
+ * may read as the scene bracing against a fast shove.
+ *
+ * ⛔⛔ **`max(1, …)` IS WHAT MAKES THE SLIDER A MAXIMUM**, and it is not decoration: the divisor
+ * tends to **zero** as the hand slows, so without it a nearly-still finger would ask for an
+ * unbounded lean. ⚠ It also means the gain has a KNEE rather than a uniform effect — damping
+ * begins only where `(gain × speed)` passes 1, i.e. at **`speed = 1/gain`, whatever the
+ * exponent**.
+ * ⭐ At the shipped defaults the knee is **67 mm/s** (`1/0.015`) with an exponent of **1.7** —
+ * both chosen by the owner on the glass, 2026-09-19, replacing my guesses.
+ *
+ * ⚠⚠ **WHAT TO WATCH ON THE GLASS: DECELERATING WIDENS THE SWING.** `A` rises as the hand
+ * slows, so easing off mid-approach drifts the camera further out even though the gap has barely
+ * changed. ⛔ A drift and not a jump — the speed estimate is windowed — but a motion the gap did
+ * not ask for. ⭐ The one-line alternative if a hand dislikes it: latch `A` at the trigger.
+ *
+ * ⚠ A NEGATIVE or non-finite gain or exponent returns **0** — no swing. An unconfigured law is
+ * not a reason to move the camera by an amount nobody chose (`LESSONS_CARRIED` §6), and a
+ * negative divisor would mirror the swing mid-approach.
+ * ⚠ A speed of zero gives the **maximum**: `0^exponent` is `0` for any positive exponent, the
+ * divisor clamps to 1, and that is also what a stopped hand should see — the widest look.
+ */
+export function swingAmplitudeRad(
+  maxRad: number,
+  speedMmPerS: number,
+  gain: number,
+  exponent: number,
+): number {
+  if (!Number.isFinite(gain) || gain < 0) return 0;
+  if (!Number.isFinite(exponent) || exponent < 0) return 0;
+  if (!Number.isFinite(speedMmPerS) || speedMmPerS <= 0) return maxRad;
+  // ⭐⭐⭐ **`(gain × speed)^exponent`, NOT `gain × speed^exponent` — SO THE TWO DIALS ARE
+  // INDEPENDENT.** ⛔ Written the second way the knee sits at `(1/gain)^(1/exponent)`, so raising
+  // the exponent DRAGS THE KNEE DOWN: measured at `gain = 0.0083` it falls from 120 mm/s to 11
+  // at `exp = 2` and to 5 at `exp = 3`, and every real drag is then far past it — the swing
+  // collapses to **1–3% of the slider** and the dial annihilates the effect instead of tuning it.
+  // ⚠ That is also where `dA/A = −n·dspeed/speed` is steepest, which is what a hand sees as
+  // jitter. ⭐ Grouping the product first pins the knee at `1/gain` for EVERY exponent, so
+  // **gain chooses WHERE damping starts and exponent chooses HOW SHARPLY it bites** — which is
+  // what *"so I can finetune the effect"* asks for.
+  // ⚠ `x ** 0` is `1` for every `x`, so `exponent = 0` still means *no speed dependence at all*.
+  const divisor = (gain * speedMmPerS) ** exponent;
+  return !Number.isFinite(divisor) || divisor <= 1 ? maxRad : maxRad / divisor;
+}
+
+/**
+ * ⭐⭐⭐ **HOW FAST THE SWING'S AMPLITUDE MAY CHASE THE SPEED — a time constant, in ms.**
+ *
+ * ⛔⛔ **DERIVED, NOT CHOSEN, AND NOT A FEEL KNOB.** The speed estimate is windowed over
+ * `flickLiftWindow` (40 ms) while pointer samples arrive every ~8 ms, so it changes in STEPS as
+ * samples enter and leave that window. ⭐ Three window-lengths is the standard rule of thumb for
+ * a one-pole filter to swallow a step of that period — the same *×3 over the noise* reasoning
+ * `scene.ts` uses for the spin-sway floor — which is 120 ms.
+ *
+ * ⚠ And it is small against what it must not blunt: an approach lasts of the order of a second,
+ * so 120 ms is about a tenth of it. ⛔ The amplitude still follows a real change of hand speed
+ * within a fifth of the approach; what it no longer follows is the estimator's own steps.
+ */
+export const SWING_TAU_MS = 120;
+
+/**
+ * ⭐⭐⭐ **SMOOTH THE AMPLITUDE — device-reported, 2026-09-19.**
+ *
+ * > *"when I increase the swing speed gain or the swing speed exponent, the orbit of the camera
+ * > becomes jittery: there seems to be steps in the orbit and it goes back and forth during the
+ * > delta position movement. especially the swing speed exponent."* — the owner
+ *
+ * ⭐⭐⭐ **AND THE ARITHMETIC PREDICTS *"ESPECIALLY THE EXPONENT"* EXACTLY.** Differentiating
+ * `A = max / (gain · speed^n)`:
+ *
+ *     dA/A  =  −n · dspeed/speed
+ *
+ * ⛔ so the estimator's relative wobble is multiplied by the **exponent** before it reaches the
+ * camera: at `n = 2` a 10% flutter in speed becomes 20% of amplitude. ⚠ And raising the GAIN
+ * lowers the knee, which moves more of the drag out of the clamped region where speed changes do
+ * nothing at all — so both dials make it worse, and the exponent makes it worse faster. The
+ * report names the two symptoms a first-order filter is for: **steps** (the window) and **back
+ * and forth** (the wobble, amplified).
+ *
+ * ⛔⛔ **IT SMOOTHS `A`, NOT THE SPEED.** Filtering the speed would put a lag inside a quantity
+ * three other rules read, and `recognizer.ts` is emphatic that there is ONE definition of *how
+ * fast is this finger*. ⭐ The lag belongs to the consumer that cannot tolerate the noise.
+ *
+ * ⚠ **THE ENDPOINTS ARE UNAFFECTED, WHICH IS WHY THIS IS SAFE.** `θ = A·sin(πp)` is exactly
+ * zero at `p = 0` and `p = 1` **whatever `A` is**, so no amount of smoothing can leave the camera
+ * off its orbit at the trigger or at contact.
+ *
+ * ⛔ Frame-rate independent by construction — `1 − e^(−dt/τ)`, not a fixed per-frame fraction. A
+ * fixed fraction would smooth twice as hard at 120 fps as at 60, which is the shape that makes a
+ * gesture feel different on two devices for no reason anyone can see.
+ *
+ * @param dtMs time since the last call. ⚠ Non-positive or non-finite returns `previous`
+ *   unchanged: a frame that took no time cannot have moved anything.
+ */
+export function smoothAmplitude(
+  previous: number,
+  target: number,
+  dtMs: number,
+  tauMs: number = SWING_TAU_MS,
+): number {
+  if (!Number.isFinite(previous)) return target;
+  if (!Number.isFinite(target)) return previous;
+  if (!(dtMs > 0) || !Number.isFinite(dtMs)) return previous;
+  // ⚠ A non-positive τ means *no smoothing*, which is a legitimate request and the honest
+  // reading of a zero: follow the target exactly.
+  if (!(tauMs > 0) || !Number.isFinite(tauMs)) return target;
+  return previous + (target - previous) * (1 - Math.exp(-dtMs / tauMs));
 }

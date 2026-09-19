@@ -115,6 +115,15 @@ const aligned = (targetWorld: Vec3): Constraint[] => [
 /** ⭐ The product's own measure, bound to a world — what `scene.ts` passes in. */
 const gapIn = (w: World) => (a: string, b: string) => surfaceGap(w, a, b);
 
+/**
+ * ⚠ Every OTHER body in the world — what `nearestCapture` used to consider by default.
+ * ⛔ Since `D62` there is no *"whole scene"* value: a caller must NAME its candidates, so the
+ * vectors that predate the restriction say out loud what they are asking about, and the ones
+ * that test the restriction pass a real partner set instead.
+ */
+const others = (w: World, held: string): string[] =>
+  [...w.objects.keys()].filter((id) => id !== held);
+
 describe("THE SURFACE GAP — the measure itself, on the real scene", () => {
   it("two parts side by side: the gap is the centre distance MINUS both half-extents", () => {
     // Hand-computed. `L x 2L x 3L` parts at +/-200 mm are 400 mm apart between centres, and each
@@ -184,7 +193,7 @@ describe("THE SURFACE GAP — the measure itself, on the real scene", () => {
     w = setWorldPlacement(w, "a", { position: [0, 0, 0], orientation: IDENTITY });
     w = setWorldPlacement(w, "b", { position: [0.05, 0, 0], orientation: IDENTITY });
     expect(surfaceGap(w, "a", "b")).toBeNull();
-    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w))).toBeNull();
+    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w), others(w, "a"))).toBeNull();
   });
 });
 
@@ -260,7 +269,7 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
       ["objectC", [0, -3 * SIZE, 0], IDENTITY, [], PLATE],
     );
     for (const id of ["objectA", "objectB", "objectD"]) {
-      expect(nearestCapture(w, id, offset, null, gapIn(w))).toBeNull();
+      expect(nearestCapture(w, id, offset, null, gapIn(w), others(w, id))).toBeNull();
     }
     // The PLATE is what a part is nearest to, by surface \u2014 148 mm, not the 320 mm of air
     // between the two parts. The margin is stated rather than implied: the threshold must sit
@@ -299,31 +308,48 @@ describe("⛔⛔⛔ `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING EL
   it("⭐⭐⭐ with a Pioneer named, every OTHER body is invisible to the capture", () => {
     const w = flanked();
     // ⚠ Both are in range — established first, so the vector cannot pass by nothing being near.
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w))?.target).toBe("a");
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "b")?.target).toBe("b");
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "a")?.target).toBe("a");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), others(w, "h"))?.target).toBe("a");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["b"])?.target).toBe("b");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["a"])?.target).toBe("a");
   });
 
   it("⛔⛔ a Pioneer OUT of range captures nothing — it does not fall back to the scene", () => {
     // ⭐⭐ THE VECTOR THAT MATTERS MOST. A fallback would make the restriction disappear exactly
     // when the state is surprising, and the contour would name a body the owner just forbade.
     const w = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["far", [3, 0, 0]]);
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w))?.target).toBe("a");
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "far")).toBeNull();
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), others(w, "h"))?.target).toBe("a");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["far"])).toBeNull();
   });
 
   it("⚠ a Pioneer that is not in the world captures nothing, and does not throw", () => {
     // ⛔ A stale link is a reason to REFUSE, never to widen. `LESSONS_CARRIED` §6: a degenerate
     // input returns nothing rather than a default.
     const w = flanked();
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "ghost")).toBeNull();
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["ghost"])).toBeNull();
   });
 
-  it("⭐ `null` means NOT a Follower — such a body still sees the whole scene", () => {
-    // ⚠ The restriction is a property of BEING a Follower, which is what the owner's sentence
-    // says. ⛔ This is also what keeps every pre-`D62` vector meaningful.
+  it("⛔⛔⛔ AN **EMPTY** PARTNER SET CAPTURES NOTHING — the owner's rule at its word", () => {
+    // ⛔⛔ WIDENED 2026-09-19. The first build restricted only the FOLLOWER, and a Pioneer —
+    // having no Pioneer of its own — fell through to *the whole scene* and lit up against any
+    // third body. The owner saw it on the glass:
+    //
+    //   *"when I second touch an object which becomes Pioneer, it can white highlight if the
+    //    Pioneer is close to a third object (which could be not the Follower): this should not
+    //    happen. the white highlight should be reserved only for Pioneer-Follower duo."*
+    //
+    // ⭐ So there is no longer ANY *"unrestricted"* value: a body in neither role answers empty,
+    // and empty captures nothing — even with two bodies well inside the band.
     const w = flanked();
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), null)?.target).toBe("a");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), [])).toBeNull();
+  });
+
+  it("⭐⭐ A PIONEER MAY CAPTURE ANY OF ITS FOLLOWERS — the nearest one wins", () => {
+    // ⚠ `A18`'s index is TWO-WAY and a Pioneer may have SEVERAL Followers, which is why the
+    // restriction is a set and not one body. ⛔ Within the set the ordinary *nearest* rule still
+    // decides — the restriction narrows the candidates, it does not replace the comparison.
+    const w = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.06, 0, 0]]);
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["a", "b"])?.target).toBe("b");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["a"])?.target).toBe("a");
   });
 
   it("⛔⛔⛔ AND THE COMPOSITION: `highlightedPair` draws no contour on a forbidden neighbour", () => {
@@ -334,13 +360,13 @@ describe("⛔⛔⛔ `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING EL
     const near = { captureOffsetM: OFFSET, alignMatchRad: 1 };
     const gap = (x: string, y: string) => surfaceGap(w, x, y);
     // ⚠ Without a Pioneer: the nearest neighbour is captured, as it always was.
-    expect(highlightedPair(w, ["h"], true, near, null, gap).pair?.target).toBe("a");
+    expect(highlightedPair(w, ["h"], true, near, null, gap, () => others(w, "h")).pair?.target).toBe("a");
     // ✅ With one: the pair names the Pioneer, whichever side it is on.
-    expect(highlightedPair(w, ["h"], true, near, null, gap, () => "b").pair?.target).toBe("b");
+    expect(highlightedPair(w, ["h"], true, near, null, gap, () => ["b"]).pair?.target).toBe("b");
     // ⛔ And with a Pioneer out of range there is NO pair at all, though `a` is right there.
     const w2 = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["far", [3, 0, 0]]);
     const gap2 = (x: string, y: string) => surfaceGap(w2, x, y);
-    const v = highlightedPair(w2, ["h"], true, near, null, gap2, () => "far");
+    const v = highlightedPair(w2, ["h"], true, near, null, gap2, () => ["far"]);
     expect(v.pair).toBeNull();
     expect(v.inRange).toBe(false);
     // ⚠⚠ AND THE READOUT OBEYS THE RULE: the printed gap describes the PIONEER, not the body
@@ -357,8 +383,8 @@ describe("the capture band, and the tie rule", () => {
   it("the band itself: 95 mm captures, 105 mm does not", () => {
     const near = apart(0.095);
     const far = apart(0.105);
-    expect(nearestCapture(near, "a", OFFSET, null, gapIn(near))?.target).toBe("b");
-    expect(nearestCapture(far, "a", OFFSET, null, gapIn(far))).toBeNull();
+    expect(nearestCapture(near, "a", OFFSET, null, gapIn(near), others(near, "a"))?.target).toBe("b");
+    expect(nearestCapture(far, "a", OFFSET, null, gapIn(far), others(far, "a"))).toBeNull();
   });
 
   it("EXACTLY on the offset still captures — the boundary belongs to the inside", () => {
@@ -368,14 +394,14 @@ describe("the capture band, and the tie rule", () => {
     // free variable the next reader may flip while tidying.
     const w = apart(OFFSET);
     expect(surfaceGap(w, "a", "b")).toBeCloseTo(OFFSET, 9);
-    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w))?.target).toBe("b");
+    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w), others(w, "a"))?.target).toBe("b");
   });
 
   it("the capture carries the MEASURED gap, not just the winner", () => {
     // The HUD prints this number, and it must be the one the rule compared — a readout that
     // measured the gap itself would be a second implementation free to disagree.
     const w = apart(0.05);
-    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w))?.gapM).toBeCloseTo(0.05, 9);
+    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w), others(w, "a"))?.gapM).toBeCloseTo(0.05, 9);
   });
 
   it("an EXACT tie keeps the incumbent — and only an exact one", () => {
@@ -383,11 +409,11 @@ describe("the capture band, and the tie rule", () => {
     // `===`, so it holds the incumbent only when the two gaps are bit-for-bit equal.
     // Both halves are pinned here so the limitation is visible rather than assumed away.
     const tied = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1, 0, 0]]);
-    expect(nearestCapture(tied, "h", OFFSET, "b", gapIn(tied))?.target).toBe("b");
-    expect(nearestCapture(tied, "h", OFFSET, "a", gapIn(tied))?.target).toBe("a");
+    expect(nearestCapture(tied, "h", OFFSET, "b", gapIn(tied), others(tied, "h"))?.target).toBe("b");
+    expect(nearestCapture(tied, "h", OFFSET, "a", gapIn(tied), others(tied, "h"))?.target).toBe("a");
     // One part in 1e12 nearer, and the incumbent loses. That is the overclaim, measured.
     const nudged = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1 - 1e-13, 0, 0]]);
-    expect(nearestCapture(nudged, "h", OFFSET, "b", gapIn(nudged))?.target).toBe("a");
+    expect(nearestCapture(nudged, "h", OFFSET, "b", gapIn(nudged), others(nudged, "h"))?.target).toBe("a");
   });
 });
 
@@ -518,7 +544,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
 
   it("⭐⭐ all three ⇒ the pair is outlined", () => {
     const w = nearAndAligned();
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w));
+    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
     expect(v.pair).toEqual({ subject: "a", target: "b" });
     // ⭐ and both reasons report satisfied, so the HUD cannot contradict the contour
     expect(v.translating && v.inRange).toBe(true);
@@ -531,7 +557,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
     // translation."* ⛔ `translating === false` is a one-finger drag in ROTATE mode, and it must
     // draw nothing even though everything else about the geometry is ready.
     const w = nearAndAligned();
-    const v = highlightedPair(w, ["a"], false, N, null, gapIn(w));
+    const v = highlightedPair(w, ["a"], false, N, null, gapIn(w), (id) => others(w, id));
     expect(v.pair).toBeNull();
     // ⭐⭐ AND THE READOUT MUST BLAME THE RIGHT CONDITION — the range is fine and only the
     // movement mode is wrong, so a verdict claiming otherwise would send a device pass
@@ -554,7 +580,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["a", [0, 0, 0], IDENTITY, [], PART],
       ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
     );
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w));
+    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
     expect(v.pair).toEqual({ subject: "a", target: "b" });
     expect(v.inRange).toBe(true);
     expect(v.translating).toBe(true);
@@ -572,7 +598,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["b", [0.2, 0, 0], IDENTITY, [], PART],
     );
     expect(surfaceGap(w, "a", "b")!).toBeGreaterThan(N.captureOffsetM);
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w));
+    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
     expect(v.pair).toBeNull();
     // ⚠ out of range — and the readout says exactly that, so a hand knows to close the gap
     expect(v.inRange).toBe(false);
@@ -591,13 +617,13 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["a", [0, 0, 0], IDENTITY, [], PART],
       ["b", [SIZE + 0.05, 0, 0], IDENTITY, aligned([1, 0, 0]), PART],
     );
-    expect(highlightedPair(w, ["a", "b"], true, N, null, gapIn(w)).pair).toEqual({ subject: "a", target: "b" });
-    expect(highlightedPair(w, ["b", "a"], true, N, null, gapIn(w)).pair).toEqual({ subject: "b", target: "a" });
+    expect(highlightedPair(w, ["a", "b"], true, N, null, gapIn(w), (id) => others(w, id)).pair).toEqual({ subject: "a", target: "b" });
+    expect(highlightedPair(w, ["b", "a"], true, N, null, gapIn(w), (id) => others(w, id)).pair).toEqual({ subject: "b", target: "a" });
   });
 
   it("⚠ nothing held ⇒ nothing, whatever the geometry says", () => {
     const w = nearAndAligned();
-    const v = highlightedPair(w, [], true, N, null, gapIn(w));
+    const v = highlightedPair(w, [], true, N, null, gapIn(w), (id) => others(w, id));
     expect(v.pair).toBeNull();
     // ⚠ nothing held, so the range was never evaluated
     expect(v.inRange).toBe(false);
@@ -609,8 +635,8 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["b", [0.09, 0, 0]],
       ["c", [-0.09, 0, 0]],
     );
-    expect(highlightedPair(w, ["a"], true, N, "c", gapIn(w)).pair!.target).toBe("c");
-    expect(highlightedPair(w, ["a"], true, N, "b", gapIn(w)).pair!.target).toBe("b");
+    expect(highlightedPair(w, ["a"], true, N, "c", gapIn(w), (id) => others(w, id)).pair!.target).toBe("c");
+    expect(highlightedPair(w, ["a"], true, N, "b", gapIn(w), (id) => others(w, id)).pair!.target).toBe("b");
   });
 });
 

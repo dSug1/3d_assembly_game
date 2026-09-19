@@ -449,6 +449,21 @@ export interface GestureConfig {
    */
   approachSwingDeg: number;
   /**
+   * ⭐⭐ **THE SWING'S SPEED DIVISOR: `gain × speed^exponent`** — the owner, 2026-09-19:
+   * *"make it A ∝ 1/(slider multiple gain × speed^slider expon gain) so I can finetune."*
+   * ⛔ Damping begins at **`speed = 1/gain` mm/s, whatever the exponent** — the product is
+   * grouped before the power so the two dials do not fight.
+   * ⚠ At the defaults that knee is **67 mm/s** (`1/0.015`), chosen by the owner on the glass.
+   */
+  approachSwingSpeedGain: number;
+  /**
+   * ⭐⭐ The exponent in that divisor. ⛔ **`1` makes the camera's angular rate independent of
+   * hand speed** (it cancels `dp/dt` — `approach_swing.ts` derives it); **`0` removes the speed
+   * dependence entirely**, which is how to A/B the idea by finger; above 1 the camera slows as
+   * the hand speeds up.
+   */
+  approachSwingSpeedExponent: number;
+  /**
    * ⭐⭐⭐ **MAY A HELD **PIONEER** TRANSLATE?** `1` yes (today's behaviour), `0` no (`D51`).
    *
    * > *"I want to have a flag to toggle on or off the translation of the Pioneer object in this
@@ -792,9 +807,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // and this is a gap between SURFACES, so the old value would be a number answering the old
   // question. See the field's header.
   captureOffsetMm: 15,
-  // ⚠ A GUESS. 25° is enough parallax to read a join without the scene appearing to lurch —
-  // that sentence is a hypothesis, not a measurement, and the slider is how it gets tested.
-  approachSwingDeg: 25,
+  // ✅ **CHOSEN BY THE OWNER ON THE GLASS, 2026-09-19**, replacing my guess of 25°. ⛔ It is the
+  // swing at or below the knee (67 mm/s); above it the speed divisor takes over.
+  approachSwingDeg: 30,
+  // ✅ **CHOSEN BY THE OWNER ON THE GLASS, 2026-09-19** — and that matters more than where they
+  // came from: the previous pair were my guesses, borrowed from `swayReferenceSpeedMmPerS`.
+  // ⛔ The knee is `1/gain` = **67 mm/s**, so damping now begins at about half the hand speed it
+  // used to, and the 1.7 exponent makes it bite faster above that — a quarter of the swing at
+  // twice the knee, where the old pair left a half.
+  approachSwingSpeedGain: 0.015,
+  approachSwingSpeedExponent: 1.7,
   // ⭐⭐ **0 — PINNED, BY THE OWNER'S CHOICE (2026-09-18)**: *"set the default at boot:
   // Pioneer translates = 0 (-> pinned)."*
   // ⚠⚠ **AND IT OVERRULES THE CAUTION I SHIPPED IT WITH.** This read `1` with a comment
@@ -1044,6 +1066,14 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // ⛔ `0` is MEANINGFUL here (the swing off), so the rule is a range and not a positivity
   // test — the opposite of `captureOffsetMm` below, where zero would mean *nothing ever
   // captures* and is a mistake rather than a setting.
+  if (!(cfg.approachSwingSpeedGain >= 0) || !(cfg.approachSwingSpeedExponent >= 0)) {
+    throw new Error(
+      `approachSwingSpeedGain (${cfg.approachSwingSpeedGain}) and ` +
+        `approachSwingSpeedExponent (${cfg.approachSwingSpeedExponent}) must both be >= 0: ` +
+        "they form a DIVISOR, and a negative one would mirror the swing mid-approach rather " +
+        "than damping it. NaN fails this too — it would silently disable the swing.",
+    );
+  }
   if (!(cfg.approachSwingDeg >= 0) || cfg.approachSwingDeg > 90) {
     throw new Error(
       `approachSwingDeg (${cfg.approachSwingDeg}) is outside 0..90: the approach swing is a ` +

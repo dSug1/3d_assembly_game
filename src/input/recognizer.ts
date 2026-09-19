@@ -262,6 +262,24 @@ export class Recognizer<P> {
     return this.motion.step;
   }
 
+  /**
+   * ⭐⭐⭐ **THE FINGER'S SPEED RIGHT NOW, mm/s — WINDOWED, never a one-sample rate.**
+   *
+   * ⛔⛔ IT IS `terminalSpeedPxPerS`, THE SAME ESTIMATOR THE FLICK USES, and reusing it is the
+   * whole point: a second definition of *how fast is this finger* would be free to disagree with
+   * the one every other rule is judged by — and this project has the scar. §1.1 estimated speed
+   * over **one sample pair**, so with the measured 0.761 mm of pointer noise a resting finger
+   * read ~95 mm/s and `STATIONARY` was **unreachable for any real finger**, silently, from the
+   * day the noise was measured. ⭐ `METHOD`'s mistake shape 1: *a rate estimated over too short
+   * a baseline.*
+   *
+   * ⚠ `trimBuffer` first, so the window is the flick's own and not "whatever samples happen to
+   * be in memory" — which would make the estimate depend on how long the gesture has run.
+   */
+  get speedMmPerS(): number {
+    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg));
+  }
+
   get motionState(): MotionState {
     return this.motion.current;
   }

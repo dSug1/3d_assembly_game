@@ -127,10 +127,20 @@ export interface Capture {
  * @param current last frame's target, for the tie rule. `null` on the first frame.
  * @param gapOf how to measure — `surfaceGap` in the product. ⭐ Injected so the tie rule and the
  *   threshold can be vectored against a stub, without building a world of geometry to do it.
- * @param only ⛔⛔ **`D62`** — the ONE body this one may capture, or `null` for the whole scene.
- *   ⭐ The held body's **Pioneer** in the product. ⚠ An `only` that is not in the world captures
- *   NOTHING rather than falling back to the scene: a missing Pioneer is a reason to refuse, and a
- *   fallback would make the restriction disappear exactly when the state is surprising.
+ * @param allowed ⛔⛔ **`D62`** — the bodies this one may capture, and **nothing else**.
+ *
+ *   ⭐⭐ **A SET, NOT ONE BODY — widened 2026-09-19 when the owner saw a PIONEER capture a third
+ *   object**: *"the white highlight should be reserved only for Pioneer-Follower duo."* A
+ *   Follower's set is its one Pioneer; a **Pioneer's is all of its Followers** (`A18`'s index is
+ *   two-way, so there may be several); a body in neither role has an **empty** set.
+ *
+ *   ⛔ **EMPTY MEANS NO CAPTURE, AND THERE IS DELIBERATELY NO *"UNRESTRICTED"* VALUE.** The
+ *   whole point of the rule is that nothing captures outside its duo, so a caller must not be
+ *   able to express *the whole scene* by omission — which a nullable parameter with a default
+ *   invites, and which is what this signature used to be.
+ *
+ *   ⚠ An entry that is not in the world captures nothing rather than throwing: a stale link is a
+ *   reason to refuse, never to widen.
  */
 export function nearestCapture(
   world: World,
@@ -138,15 +148,16 @@ export function nearestCapture(
   offsetM: number,
   current: ObjectId | null,
   gapOf: (a: ObjectId, b: ObjectId) => number | null,
-  only: ObjectId | null = null,
+  allowed: readonly ObjectId[],
 ): Capture | null {
   let best: Capture | null = null;
   let bestGap = Infinity;
-  for (const id of world.objects.keys()) {
+  // ⛔ ITERATE THE PARTNERS, NOT THE SCENE. ⚠ A scene-wide loop with a membership test would
+  // give the same answer today and would keep a shape that reads as *"nearly everything is a
+  // candidate, minus a filter"* — which is exactly the rule the owner removed.
+  for (const id of allowed) {
     if (id === held) continue;
-    // ⛔ `D62`: a Follower may approach its Pioneer and nothing else. ⚠ The loop is kept rather
-    // than short-circuited on `only` — one code path, and the tie rule below still applies.
-    if (only !== null && id !== only) continue;
+    if (!world.objects.has(id)) continue;
     const d = gapOf(held, id);
     if (d === null || d > offsetM) continue;
     // ⭐ Strictly nearer wins; an exact tie leaves `best` alone unless it is the incumbent.
