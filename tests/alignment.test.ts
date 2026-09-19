@@ -420,6 +420,50 @@ describe("⛔⛔ `D55` — THE PRESS TOGGLES THE MECHANISM **ON**, AND ONLY EVER
     ).toEqual({ action: "SWITCH", mode: "FOLLOW" });
   });
 
+  it("⛔⛔⛔ DEVICE-REPORTED — CYAN + A DOUBLE TAP ON THE SAME PioneerFace ENDS **ORANGE**", () => {
+    // ⛔⛔ THE OWNER, 2026-09-19: *"if the Follower object is cyan highlighted, a new double tap
+    // on the same PioneerFace should toggle follower object to orange highlighted. This is not
+    // the case right now."*
+    //
+    // ⭐⭐⭐ **THE WHOLE FOUR-EVENT SEQUENCE, BECAUSE NO SINGLE STEP IS WRONG ON ITS OWN.** Each
+    // of these was individually correct and vectored; the DEFECT was in their composition, which
+    // is mistake shape 4 and the reason this vector is written as a trace.
+    const ON_B = { objectId: "objectB", faceId: "+x" } as const;
+
+    // press #1 — the face is already the Pioneer's and this is not yet a pair: stand aside.
+    expect(pressMeaning(ctx({ pioneerOfHeld: ON_B, alignModeOfHeld: "SNAPSHOT" })).action).toBe(
+      "NOTHING",
+    );
+    // release #1 — ⛔ `D39`: the same gesture on the same face LETS GO. Correct, and unchanged.
+    // ⚠ **The alignment is gone from here on**, which is the premise every later step needs.
+    expect(
+      tapMeaning({
+        kind: "TAP",
+        alignMode: "SNAPSHOT",
+        tappedObject: "objectB",
+        tappedFace: "+x",
+        heldObject: "objectA",
+        pioneer: ON_B,
+      }).action,
+    ).toBe("UNALIGN");
+    // press #2 — nothing is aligned now, so this makes a FRESH alignment. ⛔⛔ IT MUST READ THE
+    // TAP COUNT. It used to return `SNAPSHOT` on the ground that a press cannot know — and its
+    // release is SPENT by `D55`, so the `DOUBLE_TAP` that used to upgrade it never ran.
+    expect(
+      pressMeaning(ctx({ pioneerOfHeld: null, alignModeOfHeld: null, completesDoubleTap: true })),
+    ).toEqual({ action: "ALIGN", mode: "FOLLOW" });
+  });
+
+  it("⚠ … and a press that is NOT part of a pair still makes a `SNAPSHOT`", () => {
+    // ⛔ THE COUNTER-EXAMPLE, so the fix above is not just *always FOLLOW*. `D42`'s single tap
+    // keeps its meaning, and this is the mutant that would otherwise survive.
+    expect(pressMeaning(ctx({ completesDoubleTap: false }))).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
+    expect(pressMeaning(ctx())).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
+  });
+
   it("⛔⛔ BUT AN ORDINARY GRAB OF THE PIONEER MUST NOT RECOLOUR ANYTHING", () => {
     // ⚠⚠ THE REASON THE RULE IS NARROW. A plain press on the Pioneer's face is `D51`'s
     // two-handed posture — the commonest thing a hand does here. ⛔ If every grab switched the

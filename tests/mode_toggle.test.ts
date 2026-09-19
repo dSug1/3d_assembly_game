@@ -9,7 +9,13 @@
  * ⚠ The forks' account is one tier down, in `Claude/00_CORE/queue_notes/IN13.md`.
  */
 import { describe, expect, it } from "vitest";
-import { initialBehaviour, isTapRelease, toggleBehaviour } from "@input/mode_toggle";
+import {
+  initialBehaviour,
+  isTapRelease,
+  pressTogglesMode,
+  toggleBehaviour,
+  type PressToggleContext,
+} from "@input/mode_toggle";
 import * as modeToggle from "@input/mode_toggle";
 
 describe("the mode a session starts in", () => {
@@ -69,7 +75,15 @@ describe("⛔⛔ THE TOGGLE IS IMMEDIATE, and a double tap simply flips TWICE", 
       expect(surface).not.toContain(gone);
     }
     // ⭐ And what SHOULD be there, so the guard cannot pass by the module being empty.
-    expect(surface.sort()).toEqual(["initialBehaviour", "isTapRelease", "toggleBehaviour"]);
+    // ⚠ `pressTogglesMode` joined it with `D58` (2026-09-19) — an ADDITION, listed here on
+    // purpose: this vector exists so a change to the surface is a decision somebody makes, not
+    // something that happens.
+    expect(surface.sort()).toEqual([
+      "initialBehaviour",
+      "isTapRelease",
+      "pressTogglesMode",
+      "toggleBehaviour",
+    ]);
   });
 });
 
@@ -119,5 +133,119 @@ describe("isTapRelease — §1.3's tap test, in one place", () => {
     expect(isTapRelease(0, 0, 0, DUR, 0, 0, DUR, SLOP)).toBe(true);
     expect(isTapRelease(0, 0, 0, 10, 6, 8, DUR, SLOP)).toBe(true);
     expect(isTapRelease(0, 0, 0, 10, 8, 8, DUR, SLOP)).toBe(false);
+  });
+});
+
+describe("⛔⛔⛔ `D58` — A NEW PRESS TOGGLES THE MODE, IN THE OWNER'S TWO PLACES ONLY", () => {
+  const ctx = (over: Partial<PressToggleContext> = {}): PressToggleContext => ({
+    role: "OUTSIDE",
+    somethingIsHeld: true,
+    pressedTheHeldBodysPioneerFace: false,
+    pressActedOnTheAlignment: false,
+    heldBodyIsAlignedFollower: false,
+    // ⚠ The fixture's default is *not the first* outside press, so every vector written before
+    // `D61` keeps asking the question it was written to ask.
+    firstOutsidePressOfThisHold: false,
+    ...over,
+  });
+
+  it("⭐⭐⭐ a continued press OUTSIDE any object toggles — the owner's second trigger", () => {
+    // ⛔ *"a new continued press (= a tap where there is no release) outside any object"*.
+    // ⚠ Nothing here asks whether the finger will LIFT: a press and a tap are indistinguishable
+    // on the way down, which is the whole reason `D55` exists.
+    expect(pressTogglesMode(ctx())).toBe(true);
+  });
+
+  it("⭐⭐⭐ a continued press on the held body's EXACT PioneerFace toggles — the third", () => {
+    // ⭐ It gives a job to the one press that had none: since `A22` that face returns `NOTHING`
+    // unless the press completes a rapid pair. ⚠ BOTH halves are required — right object AND
+    // right face — which is what `pressedTheHeldBodysPioneerFace` carries.
+    expect(pressTogglesMode(ctx({ role: "OBJECT", pressedTheHeldBodysPioneerFace: true }))).toBe(true);
+    // ⛔ Any OTHER object, or any other face of that Pioneer, is an ALIGNMENT gesture — `D55`
+    // makes one, `A23` re-points one — and must not also flip the mode.
+    expect(pressTogglesMode(ctx({ role: "OBJECT", pressedTheHeldBodysPioneerFace: false }))).toBe(false);
+  });
+
+  it("⛔⛔ A PRESS ON THE HELD OBJECT ITSELF DOES NOT — `SECOND` is absent from the list", () => {
+    // ⚠⚠ NOT AN OVERSIGHT, AND THE REASON IS `A16`: that finger's channel is chosen by the very
+    // mode its arrival would flip, so toggling there would make roll-vs-depth alternate on every
+    // touch instead of being chosen. ⛔ The owner's list names outside-any-object and the
+    // PioneerFace; this is neither.
+    expect(pressTogglesMode(ctx({ role: "SECOND" }))).toBe(false);
+  });
+
+  it("⚠ a third touchpoint never toggles — *'wherever a tap triggers the toggle'*, read honestly", () => {
+    // ⛔ `IGNORED` runs NOTHING on release by `IN2`'s design — no verdict, no tap history. So no
+    // tap triggers a toggle there, and a press must not invent one.
+    expect(pressTogglesMode(ctx({ role: "IGNORED" }))).toBe(false);
+  });
+
+  it("⛔⛔⛔ NOTHING HELD, NOTHING TOGGLED — the rule is scoped and deliberately asymmetric", () => {
+    // ⚠ *"while the first touch is pressed on an object"*. A first press on empty space still
+    // toggles only on its RELEASE, exactly as it always has. ⛔ The asymmetry is the owner's.
+    for (const role of ["OUTSIDE", "OBJECT", "SECOND", "IGNORED"] as const) {
+      expect(pressTogglesMode(ctx({ role, somethingIsHeld: false, pressedTheHeldBodysPioneerFace: true }))).toBe(false);
+    }
+  });
+
+  it("⛔⛔ AND THE ALIGNMENT WINS THE GESTURE WHENEVER IT ACTED — one gesture, one consequence", () => {
+    // ⭐ `A22`'s upgrade to `FOLLOW` fires on a press on that same PioneerFace — the very gesture
+    // this rule also claims. ⛔ When it fires, the mode must NOT also flip: the same discipline
+    // that made `alignFollowerToPioneer` consume the tap since `D38`.
+    expect(
+      pressTogglesMode(ctx({ role: "OBJECT", pressedTheHeldBodysPioneerFace: true, pressActedOnTheAlignment: true })),
+    ).toBe(false);
+    expect(pressTogglesMode(ctx({ pressActedOnTheAlignment: true }))).toBe(false);
+  });
+});
+
+describe("⛔⛔⛔ `D61` — ON A FREE BODY THE **FIRST** OUTSIDE PRESS OF A HOLD IS INERT", () => {
+  const ctx = (over: Partial<PressToggleContext> = {}): PressToggleContext => ({
+    role: "OUTSIDE",
+    somethingIsHeld: true,
+    pressedTheHeldBodysPioneerFace: false,
+    pressActedOnTheAlignment: false,
+    heldBodyIsAlignedFollower: false,
+    firstOutsidePressOfThisHold: false,
+    ...over,
+  });
+
+  it("⭐⭐⭐ the press that PLACES the depth/roll finger does not flip the mode", () => {
+    // ⛔⛔ THE OWNER, 2026-09-19: *"when an object is free (not follower), the first time the
+    // second touch is pressed outside any object shall not trigger a toggle."*
+    // ⭐⭐ It closes the `A16` collision `D58` opened, and closes it where `D59` could not: on a
+    // FREE body the mode still picks whether that finger drives roll or depth, so a toggle on
+    // its arrival would change what it is about to do.
+    expect(pressTogglesMode(ctx({ firstOutsidePressOfThisHold: true }))).toBe(false);
+  });
+
+  it("⭐⭐ but a SECOND outside press during the same hold does toggle — switching stays reachable", () => {
+    // ⚠ Without this the mode would be unreachable while holding, and `A16`'s *"switching …
+    // shall require the tap"* would have become *switching is impossible*. ⛔ The cost of a
+    // switch is now a lift and a re-press — a press standing in for the tap, which is the whole
+    // of `D55`'s sweep.
+    expect(pressTogglesMode(ctx({ firstOutsidePressOfThisHold: false }))).toBe(true);
+  });
+
+  it("⛔⛔ A FOLLOWER IS EXEMPT — its first outside press toggles, and that is deliberate", () => {
+    // ⭐ `D59` took the mode out of a Follower's channel selection: the second touch gives roll
+    // AND depth whatever the mode, so there is nothing left for a toggle to disturb.
+    // ⚠ The asymmetry is the owner's own scoping — *"when an object is free (not follower)"*.
+    expect(pressTogglesMode(ctx({ heldBodyIsAlignedFollower: true, firstOutsidePressOfThisHold: true }))).toBe(true);
+  });
+
+  it("⚠ the exemption is OUTSIDE-only — it cannot reach the PioneerFace trigger", () => {
+    // ⛔ `D58`'s third trigger is an `OBJECT` press on the aligned face. `D61` is a rule about
+    // the finger that drives depth/roll, which never lands there.
+    expect(
+      pressTogglesMode(ctx({ role: "OBJECT", pressedTheHeldBodysPioneerFace: true, firstOutsidePressOfThisHold: true })),
+    ).toBe(true);
+  });
+
+  it("⚠ and it never RESURRECTS a toggle the earlier rules refused", () => {
+    // ⛔ Order matters: nothing held, or an alignment that acted, still wins over `D61`.
+    expect(pressTogglesMode(ctx({ somethingIsHeld: false, firstOutsidePressOfThisHold: false }))).toBe(false);
+    expect(pressTogglesMode(ctx({ pressActedOnTheAlignment: true }))).toBe(false);
+    expect(pressTogglesMode(ctx({ role: "SECOND" }))).toBe(false);
   });
 });

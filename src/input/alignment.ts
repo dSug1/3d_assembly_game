@@ -244,9 +244,10 @@ export interface PressContext {
  * hand is holding. ⚠ Re-pointing to a DIFFERENT face of the same Pioneer is still reachable —
  * by the tap, exactly as before.
  *
- * ⛔⛔ **AND IT MUST BE `SNAPSHOT`, BECAUSE A PRESS CANNOT KNOW THE TAP COUNT.** `D42` gave
- * the gesture the choice — a single tap makes a `SNAPSHOT`, a double tap a `FOLLOW` — and the
- * press happens **before** either is knowable. ⭐ The double tap still lands on `FOLLOW`, by a
+ * ⛔⛔ **IT WAS `SNAPSHOT` UNCONDITIONALLY, ON THE GROUND THAT A PRESS CANNOT KNOW THE TAP
+ * COUNT — AND `A22` MADE THAT FALSE FOUR HOURS LATER.** `D42` gave the gesture the choice — a
+ * single tap makes a `SNAPSHOT`, a double tap a `FOLLOW` — and `TapHistory.wouldPair` now answers
+ * it on the way down. ✅ Corrected 2026-09-19 after a device report; see the `ALIGN` return. ⭐ The double tap still lands on `FOLLOW`, by a
  * route that already existed: press #1 aligns as `SNAPSHOT`, and the second tap's release is a
  * `DOUBLE_TAP` on the same face, which `tapMeaning` reads as `SWITCH`. ⚠ The visible cost is a
  * **cyan flash between the two taps** — honest, because for that moment the alignment really is
@@ -323,7 +324,28 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
   // ⛔ `A23` does NOT relax this: re-pointing onto a new face is a request the hand can make
   // of its own Pioneer, while this configuration has no valid alignment to make at all.
   if (ctx.pioneerOfPressed === heldObject) return nothing;
-  return { action: "ALIGN", mode: "SNAPSHOT" };
+  // ⭐⭐⭐ **THE PRESS *CAN* KNOW THE TAP COUNT, AND `D55` SAID IT COULD NOT.**
+  //
+  // ⛔⛔ DEVICE-REPORTED, 2026-09-19: *"if the Follower object is cyan highlighted, a new double
+  // tap on the same PioneerFace should toggle follower object to orange highlighted. This is not
+  // the case right now."* ⚠ Traced, and the fault was this line.
+  //
+  // ⭐ The sequence: tap #1 of the pair lands on the aligned face and `tapMeaning` reads it as
+  // `UNALIGN` — `D39`, correct and unchanged — so the alignment is GONE by press #2. Press #2
+  // therefore makes a **fresh** alignment here, and it used to make a `SNAPSHOT`, while its
+  // release was spent by `D55`. ⛔ So the `DOUBLE_TAP` that used to upgrade it never ran, and the
+  // body stayed cyan. Before `D55` the same gesture worked by a two-step route: tap #1 unaligned
+  // and tap #2 re-aligned with `modeForTap("DOUBLE_TAP")`.
+  //
+  // ⛔⛔⛔ **`D55`'s STATED REASON WAS *"a press cannot know the tap count"*, AND `A22` MADE IT
+  // FALSE FOUR HOURS LATER.** `TapHistory.wouldPair` answers exactly that question on the way
+  // down, and `completesDoubleTap` has been in this context since — used on the SWITCH path and
+  // left unread here. ⭐ `METHOD`: *a premise recorded as a reason has to be re-checked when the
+  // thing it claimed was impossible gets built.* The comment outlived its own truth.
+  //
+  // ⚠ It also removes `D55`'s cyan flash for a double tap on a **fresh** face: press #2 there is
+  // the SWITCH path, which was already immediate, and press #1 is genuinely not a pair yet.
+  return { action: "ALIGN", mode: ctx.completesDoubleTap ? "FOLLOW" : "SNAPSHOT" };
 }
 
 /** What a flick must do to the object it was made on. ⭐ Both fields, always both. */

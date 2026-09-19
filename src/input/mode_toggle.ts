@@ -21,6 +21,106 @@
  * ⛔ ENGINE-FREE, like every file in this folder.
  */
 
+import type { PointerRole } from "./router";
+
+/** Everything `pressTogglesMode` depends on. ⛔ An object, not four positional booleans. */
+export interface PressToggleContext {
+  /** `IN2`'s role for this press, latched by the router. */
+  readonly role: PointerRole;
+  /** Is any touchpoint already carrying an object? ⚠ The owner's *"while the first touch is
+   * pressed on an object"* — nothing held, nothing toggled. */
+  readonly somethingIsHeld: boolean;
+  /**
+   * ⭐ Did this press land on the **exact same PioneerFace** the held body is aligned to?
+   * ⛔ Both halves: the right object AND the right face. A different face of that Pioneer is
+   * `A23`'s re-point, and a different object is a fresh alignment — neither is this.
+   */
+  readonly pressedTheHeldBodysPioneerFace: boolean;
+  /**
+   * Did the press already make, upgrade or re-point an alignment (`D55`/`A22`/`A23`)?
+   * ⛔ **One gesture, one consequence** — the rule the whole alignment path is built on.
+   */
+  readonly pressActedOnTheAlignment: boolean;
+  /**
+   * ⭐ Is the held body an aligned Follower? ⛔ `D61` turns on this: a Follower's channels no
+   * longer depend on the mode (`D59`), so a toggle there costs nothing — on a FREE body it
+   * would change what the very finger being placed is about to drive.
+   */
+  readonly heldBodyIsAlignedFollower: boolean;
+  /**
+   * ⭐⭐ Is this the **first** press outside any object since the holder took the body?
+   * ⚠ *"This first time the second touch is also reset when the first touch releases"* — and it
+   * is reset **by construction**: the fact lives on the holder's grip, and the grip dies with
+   * the finger. ⛔ Nothing calls a reset, so nothing can forget to.
+   */
+  readonly firstOutsidePressOfThisHold: boolean;
+}
+
+/**
+ * ⭐⭐⭐ **`D58` — A NEW PRESS TOGGLES THE MOVEMENT MODE TOO, IN TWO PLACES.**
+ *
+ * > *"while the first touch is pressed on an object (free object or follower object), the toggle
+ * > back and forth between rotation mode and translation mode can be triggered by: a tap outside
+ * > any object (this is currently what is built) — a new continued press (= a tap where there is
+ * > no release) outside any object — if the object is Follower, a new continued press on the
+ * > exact same PioneerFace of the Pioneer object."* — the owner, 2026-09-19
+ *
+ * ⭐⭐ `D55`'s sweep reaching `D28`, the last rule that still demanded a RELEASE. The owner's
+ * reason is the same throughout: *a finger that comes down and stays down is asking for the same
+ * thing as one that comes down and lifts.*
+ *
+ * ⭐⭐⭐ **THE `PioneerFace` CASE GIVES A JOB TO THE ONE PRESS THAT HAD NONE.** Since `A22`, a
+ * press on the face already aligned returns `NOTHING` unless it completes a rapid pair (then it
+ * upgrades to `FOLLOW`). ⚠ That was the only safe handhold left on a Pioneer after `A23`, and it
+ * is now also the mode toggle — so the two rules share one gesture and `pressActedOnTheAlignment`
+ * is what keeps them from both firing.
+ *
+ * ⛔⛔ **A PRESS ON THE HELD OBJECT ITSELF IS *NOT* IN THE OWNER'S LIST, AND THAT MATTERS.**
+ * `SECOND` is excluded. ⚠ Had it been included, the collision below would bite twice as hard:
+ * that finger's channel is chosen by the very mode its arrival would flip.
+ *
+ * ⚠⚠⚠ **AND IT STILL COLLIDES WITH `A16`, WHICH IS THE OWNER'S TOO — FLAGGED, NOT RESOLVED
+ * HERE.** *"Switching between the two shall indeed require the tap."* An `OUTSIDE` finger is
+ * **the** finger that drives depth or roll (`scene.ts`, the only place either is applied), and
+ * `secondFingerDrive` picks which by the mode. ⛔ So placing it flips what it will drive, and the
+ * channel **alternates every time it goes down** rather than being chosen. ⭐ The `PioneerFace`
+ * case is clean: with `pioneerTranslates = 0`, `pinnedSecondDrive` hands over BOTH axes and the
+ * mode does not pick. See `ALIGNMENT_RULES.md` §5.6 for the worked consequence and the
+ * one-line alternative (latch the channel at that finger's press).
+ *
+ * ⚠ `IGNORED` is excluded, and that is not an extra rule — it is *"wherever a tap triggers the
+ * toggle"* read honestly: a third touchpoint runs **nothing** on release by `IN2`'s design, so no
+ * tap triggers a toggle there and no press may either.
+ */
+export function pressTogglesMode(ctx: PressToggleContext): boolean {
+  if (!ctx.somethingIsHeld) return false;
+  // ⛔ The alignment wins the gesture whenever it acted — `D55`, `A22` and `A23` all consume it.
+  if (ctx.pressActedOnTheAlignment) return false;
+  if (ctx.role === "OUTSIDE") {
+    // ⭐⭐⭐ **`D61` — ON A FREE BODY, THE FIRST OUTSIDE PRESS OF A HOLD DOES NOT TOGGLE.**
+    //
+    // > *"when an object is free (not follower), the first time the second touch is pressed
+    // > outside any object shall not trigger a toggle of the translation/rotation mode. This
+    // > first time the second touch is also reset when the first touch releases."*
+    // > — the owner, 2026-09-19
+    //
+    // ⭐⭐ **IT CLOSES THE `A16` COLLISION `D58` OPENED, AND CLOSES IT WHERE `D59` COULD NOT.**
+    // On a free body the mode still picks whether that finger drives roll or depth, so a toggle
+    // on its arrival would change what it is about to do — the channel alternating on every
+    // touch instead of being chosen. ⛔ The press that PLACES the finger is now inert; a
+    // SECOND press during the same hold toggles, so switching costs a lift and a re-press
+    // rather than being unavoidable. ⭐ That is `A16`'s *"switching … shall require the tap"*
+    // with a press standing in for the tap — which is the whole of `D55`'s sweep.
+    //
+    // ⚠ A Follower is exempt because `D59` took the mode out of its channel selection: there is
+    // nothing left for a toggle to disturb, and `D58` applies to it unchanged.
+    if (!ctx.heldBodyIsAlignedFollower && ctx.firstOutsidePressOfThisHold) return false;
+    return true;
+  }
+  if (ctx.role === "OBJECT") return ctx.pressedTheHeldBodysPioneerFace;
+  return false;
+}
+
 /** What a held object's own drag does. ⭐ One latch per SESSION, not per gesture. */
 export type Behaviour = "TRANSLATE" | "ROTATE";
 

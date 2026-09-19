@@ -68,6 +68,7 @@ import {
   depthTranslate,
   initialBehaviour,
   isTapRelease,
+  pressTogglesMode,
   toggleBehaviour,
   type Behaviour,
   faceAlignConstraint,
@@ -154,7 +155,7 @@ import {
   translatesOnDrag,
   type HighlightVerdict,
 } from "../input/highlight";
-import { pinnedPair, pinnedSecondDrive } from "../input/pinned_pioneer";
+import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -1292,11 +1293,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const id = g === undefined ? undefined : idOf.get(g.mesh);
       if (id !== undefined && !ids.includes(id)) ids.push(id);
     }
+    // ⛔⛔ `D60` — THE HIGHLIGHT MUST SEE IT TOO, or the white contours would say the pair is
+    // not being translated while the finger is translating it. ⚠ That is the readout-that-lies
+    // shape, and the comment below is the reason it is passed rather than recomputed.
+    // ⭐ Only meaningful with ONE held body: with two, `translatesOnDrag`'s first line already
+    // fires and this adds nothing.
+    const soleGrip = ids.length === 1 ? gripOfObject(ids[0]!) : undefined;
     highlighted = highlightedPair(
       world,
       ids,
       // ⛔ CONDITION 2, from the SAME function `grip.mode` is assigned from — one rule, one place.
-      translatesOnDrag(ids.length, behaviour),
+      translatesOnDrag(
+        ids.length,
+        behaviour,
+        soleGrip !== undefined && secondTouchOwnsRollAndDepth(soleGrip),
+      ),
       {
         // ⭐⭐⭐ **RECOMPUTED EVERY FRAME FROM THE CAMERA** (`D49`, the owner: the offset *"shall
         // depend on the camera position and focus"*). ⛔ Not a constant and deliberately not
@@ -1441,6 +1452,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * shape this file has been burned by twice.
      */
     pressActed: boolean;
+    /**
+     * ⭐⭐⭐ `D61` — has a second touchpoint been pressed **outside any object** since this
+     * holder took the body?
+     *
+     * ⛔ The owner: *"when an object is free (not follower), the first time the second touch is
+     * pressed outside any object shall not trigger a toggle … This first time the second touch
+     * is also reset when the first touch releases."*
+     * ⚠ **RESET BY CONSTRUCTION**: it lives on the grip, and the grip dies with the finger. No
+     * reset is called, so none can be forgotten — the shape `A13` and defect 40 both punished.
+     */
+    outsidePressSeen: boolean;
     /**
      * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
      * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
@@ -2607,6 +2629,31 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     return pinnedPair(ids, (f) => links.pioneerFor(f)?.objectId ?? null);
   };
 
+  /**
+   * ⭐ `D59` — is the body this grip carries an **aligned Follower**? ⛔ The alignment index is
+   * the one record of that; `alignModeOf` says what an alignment MEANS, never whether one exists.
+   */
+  const gripIsAlignedFollower = (grip: Held): boolean => {
+    const id = idOf.get(grip.mesh);
+    return id !== undefined && links.pioneerFor(id) !== null;
+  };
+
+  /**
+   * ⭐⭐⭐ `D59`/`D60` — **is a second touchpoint currently owning this body's roll AND depth?**
+   *
+   * ⛔ ONE HELPER, READ BY BOTH HALVES OF THE RULE: it decides what that second finger drives
+   * (`D59`) and, because of that, what the FIRST touch does (`D60`). ⚠ Two copies of this
+   * question would be free to disagree, and the pair would then either fight over one DOF or
+   * leave one unreachable — with nothing to catch it.
+   *
+   * ⚠ `router.outside()` is the OUTSIDE case only. The Pioneer case needs no test here: two
+   * held objects already translate on a drag by `translatesOnDrag`'s own first line, which is
+   * exactly why the owner saw the wanted behaviour there and nowhere else.
+   */
+  const secondTouchOwnsRollAndDepth = (grip: Held): boolean =>
+    router.outside().length >= 1 &&
+    secondTouchDrive("OUTSIDE", gripIsAlignedFollower(grip)) === "BOTH";
+
   const gripOfObject = (id: ObjectId): Held | undefined => {
     for (const g of held.values()) if (idOf.get(g.mesh) === id) return g;
     return undefined;
@@ -3002,7 +3049,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * @returns the verdict, or `null` if the release was not a tap at all — a PRESS, which
    *   keeps every meaning it already has.
    */
-  const noteTap = (pressed: Sample, released: Sample): "TAP" | "DOUBLE_TAP" | null => {
+  /**
+   * ⭐⭐ `D58` — touchpoints whose **press** already flipped the movement mode, so their
+   * release must not flip it again. ⛔ Keyed by pointer id and emptied on release; a tap is a
+   * press plus a lift, and without this every tap would toggle twice and change nothing.
+   */
+  const pressToggled = new Set<number>();
+
+  const noteTap = (
+    pressed: Sample,
+    released: Sample,
+    spentByPress = false,
+  ): "TAP" | "DOUBLE_TAP" | null => {
     const wasTap = isTapRelease(
       pressed.t, pressed.x, pressed.y,
       released.t, released.x, released.y,
@@ -3017,6 +3075,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⛔⛔ EVERY tap toggles — *"a single tap by one only touchpoint anywhere"* — with no
     // condition left: not the fork (there is one model now), and not whether anything is
     // held, since the mode is what the NEXT grab inherits.
+    // ⛔⛔⛔ **UNLESS ITS OWN PRESS ALREADY DID IT (`D58`).** ⚠ The history is still recorded
+    // either way — that is what the double tap and the camera reset read, and suppressing it
+    // would break two rules to fix one. ⭐ Only the TOGGLE is spent, or a quick tap would flip
+    // the mode on the way down and flip it straight back on the way up: no change, from a
+    // gesture the owner asked to have an effect.
+    if (spentByPress) return verdict;
     behaviour = toggleBehaviour(behaviour);
     lastVerdict = `tap → ${behaviour}`;
     return verdict;
@@ -3086,6 +3150,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     }
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
+      // ⚠ `D58`'s bookkeeping is cleared for this id BEFORE it can be set again. ⛔ A pointer
+      // id whose release never arrived would otherwise leave a stale entry that spends the
+      // NEXT gesture's toggle — the *tracker that outlived its finger* shape, which this file
+      // has already paid for twice (defect 40, `A13`).
+      pressToggled.delete(e.pointerId);
       // ⛔ A NEW TOUCH CANCELS A RESET IN FLIGHT. The animation writes the whole camera
       // pose every frame, so a drag during one would be overwritten as fast as it was
       // applied — the hand would appear to have no effect at all.
@@ -3094,6 +3163,49 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       const hit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
       const routed = router.press(e.pointerId, s, hit);
+
+      // ⭐⭐⭐ **`D58` — THE MOVEMENT MODE CAN NOW BE FLIPPED ON THE WAY DOWN.**
+      //
+      // > *"while the first touch is pressed on an object (free object or follower object), the
+      // > toggle … can be triggered by: a tap outside any object (this is currently what is
+      // > built) — a new continued press (= a tap where there is no release) outside any object
+      // > — if the object is Follower, a new continued press on the exact same PioneerFace of
+      // > the Pioneer object."* — the owner, 2026-09-19
+      //
+      // ⛔ THE DECISION IS `pressTogglesMode`'s, not this file's. ⚠ Only the FACTS are gathered
+      // here, and only this file can know them: `IN2`'s latched role, whether anything is held,
+      // and which face of which body this press landed on.
+      //
+      // ⚠ The `OBJECT` case is evaluated LATER, after `pressMeaning` has had its turn — an
+      // alignment that acted consumes the gesture, so the toggle cannot be decided before it.
+      // ⛔ `OUTSIDE`, `SECOND` and `IGNORED` reach no alignment at all, so they are decided here.
+      if (routed.role !== "OBJECT") {
+        // ⚠ `D61`'s two facts are about the HELD body, so they need the holder's grip. With more
+        // than one body held the question *"is the held body free?"* has no single answer, and
+        // `translatesOnDrag` has already overridden the mode anyway — so the exemption applies
+        // to the sole-holder case and the toggle is unchanged otherwise.
+        const holdGrip = held.size === 1 ? [...held.values()][0] : undefined;
+        const firstOutside =
+          routed.role === "OUTSIDE" && holdGrip !== undefined && !holdGrip.outsidePressSeen;
+        if (routed.role === "OUTSIDE" && holdGrip !== undefined) {
+          holdGrip.outsidePressSeen = true;
+        }
+        if (
+          pressTogglesMode({
+            role: routed.role,
+            somethingIsHeld: held.size > 0,
+            pressedTheHeldBodysPioneerFace: false,
+            pressActedOnTheAlignment: false,
+            heldBodyIsAlignedFollower:
+              holdGrip !== undefined && gripIsAlignedFollower(holdGrip),
+            firstOutsidePressOfThisHold: firstOutside,
+          })
+        ) {
+          behaviour = toggleBehaviour(behaviour);
+          pressToggled.add(e.pointerId);
+          lastVerdict = `press outside → ${behaviour}`;
+        }
+      }
 
       if (routed.role === "IGNORED") {
         // ⛔ A THIRD touchpoint on an object already held AND already pinched (A5 allows
@@ -3190,6 +3302,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressFace,
         alignmentTouched: false,
         pressActed: false,
+        outsidePressSeen: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
     anchorRollSign: new Map(),
@@ -3278,6 +3391,32 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressGrip.pressActed = true;
         lastVerdict = `align: now ${pressVerdict.mode} (the second press of a rapid pair)`;
       }
+      // ⭐⭐⭐ `D58`'s THIRD TRIGGER — a continued press on the held body's EXACT PioneerFace.
+      // ⛔⛔ ASKED AFTER THE ALIGNMENT, NEVER BEFORE: `A22` claims this same gesture when the
+      // press completes a rapid pair, and one gesture gets one consequence. ⭐ `pressActed` is
+      // that answer, already computed above from the RETURN VALUE rather than from the intent.
+      // ⚠ BOTH halves of the face test, exactly as `pressMeaning` makes it: the right object
+      // AND the right face. A different face is `A23`'s re-point; a different object is a fresh
+      // alignment; neither is this.
+      if (
+        pressTogglesMode({
+          role: "OBJECT",
+          somethingIsHeld: pressHeldId !== null,
+          pressedTheHeldBodysPioneerFace:
+            pressPioneerOfHeld !== null &&
+            pressPioneerOfHeld.objectId === pickedId &&
+            pressPioneerOfHeld.faceId === pressFace?.faceId,
+          pressActedOnTheAlignment: pressGrip.pressActed,
+          // ⚠ `D61` is an OUTSIDE rule; neither field reaches the `OBJECT` branch, and the
+          // values are stated rather than defaulted so the call site cannot look like it forgot.
+          heldBodyIsAlignedFollower: pressPioneerOfHeld !== null,
+          firstOutsidePressOfThisHold: false,
+        })
+      ) {
+        behaviour = toggleBehaviour(behaviour);
+        pressToggled.add(e.pointerId);
+        lastVerdict = `press on the PioneerFace → ${behaviour}`;
+      }
       paint();
       return;
     }
@@ -3295,7 +3434,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐⭐⭐ *"Tapped ANYWHERE"* includes the held object itself.
         // ⚠ A `SECOND` release never fed §1.3's tap history before the toggle existed. It
         // does now, and that is deliberate: a tap on the held object is a tap *anywhere*.
-        noteTap(routed.pressed, s);
+        noteTap(routed.pressed, s, pressToggled.delete(e.pointerId));
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
       } else {
@@ -3307,7 +3446,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // / 6bis / 6ter's configuration and must stay reachable.
         const holder2 = router.objects().find((q) => q.object === routed.object);
         const grip2 = holder2 ? held.get(holder2.id) : undefined;
-        if (grip2) applyDepthDrag(grip2, routed.seq, s);
+        // ⚠ `SAME_OBJECT` is untouched by `D59` — the owner's sentence says *outside any
+        // object* — but it goes through the same table so all three configurations are decided
+        // in one place rather than by three scattered call sites.
+        if (grip2) {
+          applyDepthDrag(
+            grip2,
+            routed.seq,
+            s,
+            secondTouchDrive("SAME_OBJECT", gripIsAlignedFollower(grip2)) === "BOTH",
+          );
+        }
       }
       paint();
       return;
@@ -3339,7 +3488,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // `depth_translate.ts` carries the note: what it protected is worth knowing first.
         const holder = router.objects()[0];
         const grip = holder ? held.get(holder.id) : undefined;
-        if (grip && applyDepthDrag(grip, routed.seq, s)) {
+        // ⭐⭐⭐ **`D59` — AN ALIGNED FOLLOWER GIVES THIS FINGER BOTH AXES**, exactly as a
+        // finger on its Pioneer already did. ⛔ The owner's generalisation: an aligned body has
+        // one rotational DOF left, so there is nothing for the movement mode to choose between.
+        // ⚠ A FREE body still has three, and `A16`'s split still earns its keep there.
+        if (
+          grip &&
+          applyDepthDrag(
+            grip,
+            routed.seq,
+            s,
+            secondTouchDrive("OUTSIDE", gripIsAlignedFollower(grip)) === "BOTH",
+          )
+        ) {
           paint();
           return;
         }
@@ -3374,7 +3535,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // B — the camera reset — and cancels the pending toggle rather than being consumed
         // by it. ⭐ That is what the discrimination bought: the two gestures stopped
         // overlapping, so the special case disappeared instead of growing.
-        if (noteTap(routed.pressed, s) === "DOUBLE_TAP") {
+        if (noteTap(routed.pressed, s, pressToggled.delete(e.pointerId)) === "DOUBLE_TAP") {
           resetCamera();
           lastVerdict = "DOUBLE_TAP → camera reset";
         }
@@ -3409,7 +3570,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         const myId = idOf.get(grip.mesh);
         if (pin !== null && myId === pin.pioneer && routed !== null) {
           const target = gripOfObject(pin.follower);
-          if (target !== undefined) applyDepthDrag(target, routed.seq, s, true);
+          if (target !== undefined) {
+            applyDepthDrag(
+              target,
+              routed.seq,
+              s,
+              secondTouchDrive("PIONEER", gripIsAlignedFollower(target)) === "BOTH",
+            );
+          }
           // ⚠ The Pioneer's own recognizer is still fed — a shake on it must still release its
           // followers, and a tap must still be a tap. ⛔ What it does NOT get is a continuous
           // rule: no translate, no rotate, no sway kick of its own.
@@ -3453,7 +3621,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // inline here as `objects().length === 1 ? behaviour : "TRANSLATE"`, and a second copy
         // in `highlight.ts` would have been two implementations of one rule — free to
         // disagree, with nothing to catch it.
-        grip.mode = translatesOnDrag(router.objects().length, behaviour) ? "TRANSLATE" : "ROTATE";
+        // ⭐⭐⭐ `D60` — **AND A SECOND TOUCH THAT OWNS ROLL + DEPTH TAKES THE MODE'S PLACE.**
+        // ⛔ The owner's completion: *"the first touch shall control the translation with delta
+        // position x and y — which is currently the case in translation mode but not in rotation
+        // mode."* ⚠ Without it the first touch keeps twisting about the very axis the second
+        // touch's `dx` turns, and two fingers drive ONE DOF.
+        grip.mode = translatesOnDrag(
+          router.objects().length,
+          behaviour,
+          secondTouchOwnsRollAndDepth(grip),
+        )
+          ? "TRANSLATE"
+          : "ROTATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,
@@ -3896,7 +4075,29 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // second tap of a pair, so two taps flip the mode twice — back where it started — and
       // also reset the camera, which is the owner's stated worst case and identical to what
       // a second touchpoint's taps do. ⛔ One rule: **one toggle per tap release.**
-      if (!alignedByThisTap && (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP")) {
+      // ⭐⭐⭐ **`D58` — AND A PRESS THAT ALREADY TOGGLED SETTLES UP HERE.** Two cases, and
+      // they are opposite, which is why the flag has to be read before either is decided.
+      const toggledOnTheWayDown = pressToggled.delete(e.pointerId);
+      if (toggledOnTheWayDown && alignedByThisTap) {
+        // ⛔⛔⛔ **THE FINGER LIFTED AS A TAP, AND THE TAP MEANT SOMETHING ELSE — SO UNDO IT.**
+        // ⚠ A press on the held body's PioneerFace toggles the mode (`D58`); a *re-tap* on that
+        // same face RELEASES the alignment (`D39`). They are the same gesture until the finger
+        // lifts, and the owner asked for the press — *a tap where there is no release* — not for
+        // the tap to gain a second consequence.
+        // ⭐⭐ So the toggle is rolled back and `D39` keeps its single meaning: a quick re-tap
+        // breaks the alignment and leaves the mode exactly where it was, as it always has.
+        // ⚠ The cost is ~80 ms of the other mode on the HUD — the same honest flicker `D55`
+        // accepted for the cyan that precedes `FOLLOW`, and for the same reason: nothing can
+        // tell a tap from a press on the way down.
+        behaviour = toggleBehaviour(behaviour);
+        lastVerdict = `re-tap released the alignment — mode back to ${behaviour}`;
+      } else if (
+        !alignedByThisTap &&
+        !toggledOnTheWayDown &&
+        (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP")
+      ) {
+        // ⚠ `!toggledOnTheWayDown` is what stops a tap flipping the mode TWICE — once down,
+        // once up — which would leave it where it started and make the owner's rule a no-op.
         behaviour = toggleBehaviour(behaviour);
         lastVerdict = `tap on the object → ${behaviour}`;
       }

@@ -96,3 +96,50 @@ export function pinnedSecondDrive(
     depthDyPx: axes.y === "MOVING" ? step.dy : 0,
   };
 }
+
+/** Where the driving second touch went down. ⛔ `IN2`'s roles, named for what they MEAN here. */
+export type SecondTouchPlace =
+  /** Outside every object — `A10`'s anchor, and the commonest second finger. */
+  | "OUTSIDE"
+  /** On the very object the first touch is carrying — `A12`'s finger, `IN2`'s `SECOND` role. */
+  | "SAME_OBJECT"
+  /** On the held body's **Pioneer**, with `pioneerTranslates = 0` — `D51`'s pinned pair. */
+  | "PIONEER";
+
+/**
+ * ⭐⭐⭐ **`D59` — DOES THE SECOND TOUCH GIVE BOTH AXES, OR DOES THE MODE PICK ONE?**
+ *
+ * > *"whatever translation mode, when an object is aligned as follower the second touch shall
+ * > control the depth and the roll (as this is currently the case when the second touch hit the
+ * > Pioneer object)"* — the owner, 2026-09-19
+ *
+ * ⛔⛔ **THE RULE IS NOW ABOUT THE BODY, NOT ABOUT WHERE THE FINGER LANDED.** `D51` gave both
+ * axes to a finger on the **Pioneer**; the owner has generalised the reason behind it — *an
+ * aligned Follower has one rotational DOF left, so there is nothing for a mode to choose between.*
+ * ⭐ A free body still has three, and `A16`'s split still earns its keep there.
+ *
+ * ⭐⭐ **AND IT SETTLES THE `A16` COLLISION `D58` OPENED, FOR ALIGNED BODIES.** `D58` flips the
+ * movement mode when a finger presses outside; `secondFingerDrive` used that same mode to pick
+ * roll-or-depth, so the channel alternated on every touch. ⛔ Where the mode no longer picks,
+ * that cannot happen. ⚠ **The collision survives on a FREE body**, which this rule does not
+ * reach — stated because it is the part a device pass must still judge.
+ *
+ * ⚠⚠ **WHAT IT DOES *NOT* FIX, AND THE OWNER NAMED IT**: *"rotation mode: the second touch
+ * drives only the roll … and conflicts with the dx or dy of the first touch."* ⛔ In `ROTATE` an
+ * aligned body's FIRST touch twists about the same constraint axis the second's `dx` turns, so two
+ * fingers drive **one DOF**. ⭐ Matching the Pioneer case preserves that overlap rather than
+ * removing it — it is present there too, and removing it is a separate rule about what the first
+ * touch does while a second is down.
+ *
+ * ⛔ `SAME_OBJECT` is deliberately untouched: the owner's sentence says *outside any object*, and
+ * `A12`'s finger shares a body with the holder where a diagonal would smear one axis into the
+ * other by accident — the argument `pinnedSecondDrive` opens this file with.
+ */
+export function secondTouchDrive(
+  place: SecondTouchPlace,
+  heldIsAlignedFollower: boolean,
+): "BOTH" | "MODE_PICKS" {
+  if (place === "PIONEER") return "BOTH";
+  if (place === "OUTSIDE" && heldIsAlignedFollower) return "BOTH";
+  return "MODE_PICKS";
+}

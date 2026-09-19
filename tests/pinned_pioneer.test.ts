@@ -6,7 +6,9 @@
  * only showed "both axes apply" would pass just as well if the other rule had been changed too.
  */
 import { describe, expect, it } from "vitest";
-import { pinnedPair, pinnedSecondDrive } from "@input/pinned_pioneer";
+import { pinnedPair, pinnedSecondDrive,
+  secondTouchDrive,
+} from "@input/pinned_pioneer";
 import { secondFingerDrive } from "@input/depth_translate";
 import type { MotionState } from "@input/motion";
 
@@ -97,5 +99,45 @@ describe("⭐⭐⭐ pinnedSecondDrive — BOTH axes, which is the whole differen
     // ⭐ There is no mode parameter at all, which is the structural form of *both axes always*.
     // ⛔ A mode-dependent version would reintroduce the tap-to-switch this rule exists to avoid.
     expect(pinnedSecondDrive.length).toBe(2);
+  });
+});
+
+describe("⛔⛔⛔ `D59` — WHEN DOES THE SECOND TOUCH GIVE BOTH AXES?", () => {
+  // ⛔⛔ THE OWNER, 2026-09-19:
+  //
+  // > *"whatever translation mode, when an object is aligned as follower the second touch shall
+  // > control the depth and the roll (as this is currently the case when the second touch hit
+  // > the Pioneer object)"*
+  //
+  // ⭐⭐ THE RULE MOVED FROM *WHERE THE FINGER LANDED* TO *WHAT THE BODY IS*. `D51` gave both
+  // axes to a finger on the Pioneer; the owner generalised the reason — an aligned Follower has
+  // **one rotational DOF left**, so there is nothing for a mode to choose between.
+
+  it("⭐⭐⭐ OUTSIDE any object + an ALIGNED FOLLOWER → BOTH — the owner's change", () => {
+    expect(secondTouchDrive("OUTSIDE", true)).toBe("BOTH");
+  });
+
+  it("⛔⛔ OUTSIDE + a FREE body → the mode still picks — `A16` survives where it earns its keep", () => {
+    // ⚠ A free body has three rotational DOF, so roll-vs-depth is a real choice and `A16`'s
+    // split is not redundant there. ⛔ This is also where `D58`'s `A16` collision SURVIVES —
+    // the channel still alternates as the press toggles the mode. Named, because a device pass
+    // must judge it and a green suite cannot.
+    expect(secondTouchDrive("OUTSIDE", false)).toBe("MODE_PICKS");
+  });
+
+  it("⭐ on the PIONEER → BOTH, aligned or not — `D51` unchanged", () => {
+    // ⚠ `pinnedNow()` already refuses unless the pair is a live Pioneer/Follower with the flag
+    // off, so `heldIsAlignedFollower` is redundant at that call site — and the table must not
+    // start depending on a neighbour's invariant. ⛔ Both values give the same answer.
+    expect(secondTouchDrive("PIONEER", true)).toBe("BOTH");
+    expect(secondTouchDrive("PIONEER", false)).toBe("BOTH");
+  });
+
+  it("⛔⛔ on the SAME object → the mode picks, even for an aligned Follower", () => {
+    // ⚠ DELIBERATELY UNTOUCHED: the owner's sentence says *outside any object*, and `A12`'s
+    // finger shares a body with the holder, where a diagonal would smear one axis into the other
+    // by accident — the argument this file opens with.
+    expect(secondTouchDrive("SAME_OBJECT", true)).toBe("MODE_PICKS");
+    expect(secondTouchDrive("SAME_OBJECT", false)).toBe("MODE_PICKS");
   });
 });

@@ -218,3 +218,72 @@ flip mid-drag — so `rollSignFor` is read once and latched in `Held.anchorRollS
 ⛔⛔ Chasing it found a hole in the suite: a sign flip in `nearSideScreenDirection`'s screen-y
 conversion survived all 880 vectors, because every consumer passed `dx, 0` and never read `dir.y`.
 Closed by deriving the direction from a rotated near-side point.
+
+## `D58` — the mode toggle on a press
+
+⛔ A press on the **held object itself** (`SECOND`) is deliberately absent from the owner's list;
+a press on **another** object stays `D55`'s alignment trigger. `IGNORED` is excluded because a
+third touchpoint runs nothing on release, so no tap triggers a toggle there either.
+⚠⚠ The `A16` collision, worked: boot in `ROTATE`, place a finger outside → flips to `TRANSLATE`
+→ that finger drives **depth**, not roll. Lift (a drag, no tap), place again → flips to `ROTATE`
+→ **roll**. The channel alternates on every touch instead of being chosen, which is what `A16`
+(*"switching shall require the tap"*) reserved a tap for. ⭐ The one-line alternative is to latch
+that finger's channel at its own press, at the cost of the HUD's mode disagreeing with what it
+drives. ✅ The `PioneerFace` case is clean: `pinnedSecondDrive` gives both axes, mode-independent.
+⛔⛔ A tap is a press PLUS a lift, so `pressToggled` spends the release's toggle — otherwise
+every tap would flip down and flip back, a no-op from the gesture the owner asked to have an
+effect. ⭐ On the PioneerFace the toggle is **rolled back** when the release turns out to be
+`D39`'s re-tap, so that gesture keeps its single meaning. Cost: ~80 ms of the other mode on the
+HUD — the same honest flicker `D55` accepted for the cyan that precedes `FOLLOW`.
+
+## `D49` — the surface-gap capture, consequence text moved 2026-09-19
+
+⭐ The offset is scaled by camera distance through rule 6's own tracking factor, so it keeps a
+constant APPARENT size and is never authored in pixels. ⭐⭐ The white contour IS the shell: the
+body inflated by **half** the offset, recomputed every frame — half, not the full offset, or the
+eye would see two boxes meet at twice the threshold. So two touching white boxes mean the pair
+captures. ⚠ `snapRadiusFactor` was deleted with it: `4L` answered *how far apart may two CENTRES
+be*, a different question, and it could not repair the audit's finding 3 where a plate read 312 mm
+by centres while a part RESTING on it read 228 mm.
+
+## `D45` and `D42` — consequence text moved 2026-09-19
+
+### `D45` — the snap's timing
+
+⭐ A gesture in flight must answer the finger instantly; a snap the hand has already asked for may
+take a moment to arrive. ⚠ It runs at **2/7 of** `cameraResetMs` — a ratio, not a second tunable
+(*"twice faster"*, then *"1/3rd"*, then *"2/7th"*, same day) — with the camera's own `easeInOut`,
+so one slider governs both. ⛔ The constraint is pushed IMMEDIATELY while the pose travels, and a
+release mid-flight **stops** the snap rather than finishing it, because releasing must not rotate
+the object.
+
+### `D42` — the gesture that replaced the flag
+
+⚠ Leaving `FOLLOW` by single taps takes two — one to switch, one to release — which is the price
+of one gesture carrying two jobs. ⚠⚠ A double tap that ALIGNS no longer flies the camera home
+(*"the double tap in such case shall not trigger the camera orbit reset"*); everywhere else —
+empty space, the held object, a second touchpoint — the double tap keeps every meaning it had.
+
+## `D54`, `D40`, `D38`, `D37` — consequence text moved 2026-09-19
+
+⚠ Moved to keep `DECISIONS.md` inside its byte budget as `D55`–`D61` landed. The rows there keep
+the owner's words and the pointer; nothing is lost, it is one tier down.
+
+**`D54`** — gone with it: `holder_binding.ts`, `relatchOnOrphan`, `evaluateBindings`,
+`collectOrphans`, `objectUnder`, the HUD's `⛔ORPHANED` line and 16 vectors. ⭐⭐ And it closes
+`D51`'s recorded hole **by construction**: with no unselect anywhere, a pinned Pioneer cannot
+orphan its Follower's holder.
+
+**`D40`** — the deleted modules were `anchor_fork.ts`, `align_flick.ts` (fork B's flick-to-align)
+and `drag_rule.ts`. ⭐⭐ A whole class of code went with them: the CAP of one alignment makes
+`ROTATE_REFUSED` unreachable, so eviction's *escape from a full stack* vectors described a state
+that can no longer exist. ⚠ A sanity sweep went with it — six orphans, one duplicate gain under
+two names, one skeleton function.
+
+**`D38`** — *"The game shall start by default to fork C"* overruled my reasoning that the default
+must be the only set a hand has closed; the owner IS the hand. ⚠ The retirement of the automatic
+mode switch also unblocked testing the rotation reset after an alignment. Two defects of mine came
+with it (ledger 44, 45).
+
+**`D37`** — ⛔ One alignment, replaced not stacked, so fork B's zero-DOF freeze cannot be built.
+⭐ Fork C's alignment completes **mid-gesture**, with the object still held.

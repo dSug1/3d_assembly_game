@@ -280,14 +280,38 @@ change, and it resolves through a route that already existed:
 |---|---|---|
 | **single tap** | `ALIGN` as `SNAPSHOT` | ⚠ **spent** — consumed by its own press |
 | **double tap** | #1 `ALIGN` as `SNAPSHOT`; ✅ #2 `SWITCH` → `FOLLOW` (`A22`) | both spent — ⚠ the release no longer has to arrive for the colour to change |
-| **continued press** | `ALIGN` as `SNAPSHOT` | — (the finger is still down, which is the point) |
+| **continued press** | `ALIGN` as `SNAPSHOT` (or `FOLLOW` if it completes a pair) | — (the finger is still down, which is the point) |
 | **tap, then rapid press-and-hold** | ✅ `SWITCH` → `FOLLOW` on the way down (`A22`) | — |
 | **press on a NEW face of the current Pioneer** | ✅ `ALIGN` as `SNAPSHOT` — re-points (`A23`) | spent |
 
-⭐⭐ **THE VISIBLE COST IS A CYAN FLASH BETWEEN THE TWO TAPS OF A DOUBLE TAP**, and it is
-honest: for that moment the alignment really is a snapshot. ⚠ It is the first thing to judge on
-the device — if it reads as a glitch rather than as a stage, the fix is to defer the *colour*,
-never the alignment.
+⛔⛔⛔ **CORRECTED 2026-09-19 BY A DEVICE REPORT — AND THE STATED REASON HAD EXPIRED.**
+
+> *"if the Follower object is cyan highlighted, a new double tap on the same PioneerFace should
+> toggle follower object to orange highlighted. This is not the case right now."* — the owner
+
+⭐⭐ **NO SINGLE STEP WAS WRONG; THE COMPOSITION WAS.** The four events:
+
+| | | |
+|---|---|---|
+| press #1 | the face is already the Pioneer's, not yet a pair | `NOTHING` — correct |
+| release #1 | `D39`: the same gesture on the same face **lets go** | `UNALIGN` — correct, **and the alignment is now gone** |
+| press #2 | nothing is aligned, so this makes a **fresh** one | ⛔ returned `SNAPSHOT` — **the defect** |
+| release #2 | spent by `D55` | so the `DOUBLE_TAP` that used to upgrade it never ran |
+
+⚠ Before `D55` the same gesture worked by a two-step route: tap #1 unaligned and tap #2 re-aligned
+with `modeForTap("DOUBLE_TAP")`. ⛔ Moving the ALIGN to the press broke that path, and the release
+being spent hid the loss.
+
+⛔⛔ **`D55`'s REASON WAS *"a press cannot know the tap count"*, AND `A22` MADE IT FALSE FOUR
+HOURS LATER.** `TapHistory.wouldPair` answers exactly that on the way down, and
+`completesDoubleTap` had been in `PressContext` ever since — read on the SWITCH path and left
+unread on the ALIGN path. ✅ The `ALIGN` now reads it.
+⭐⭐ `METHOD`: *a premise recorded as a REASON has to be re-checked when the thing it called
+impossible gets built.* The comment outlived its own truth, and a green suite defended it because
+every vector had been written from the same premise.
+
+✅ **AND IT REMOVES THE CYAN FLASH** this section used to warn about for a double tap that lands
+on a fresh face — press #2 there is the SWITCH path, which was already immediate.
 
 ### ⭐⭐⭐ `A22` — AND THE UPGRADE TO ORANGE FIRES ON THE WAY DOWN TOO
 
@@ -682,6 +706,147 @@ hid the flip too — mistake shape 5, on top of the very trap the code warned ab
 ✅ Closed by DERIVING the direction: a near-side point is rotated by a small positive angle and
 its displacement projected independently, so *the near side follows the finger* is a measurement
 rather than a promise. The flip is now 6 red, and both screen axes are pinned separately.
+
+---
+
+### ⭐⭐⭐ 5.6 `D58` — THE MOVEMENT MODE TOGGLES ON A PRESS TOO
+
+> *"while the first touch is pressed on an object (free object or follower object), the toggle
+> back and forth between rotation mode and translation mode can be triggered by:*
+> * *a tap outside any object (this is currently what is built)*
+> * *a new continued press (= a tap where there is no release) outside any object*
+> * *if the object is Follower, a new continued press on the exact same PioneerFace of the
+>   Pioneer object"* — the owner, 2026-09-19
+
+⭐⭐ **`D55`'s SWEEP REACHING `D28`** — the mode toggle was the last rule that still demanded a
+RELEASE. ⛔ The rule is `pressTogglesMode` in `mode_toggle.ts`; `scene.ts` gathers the facts only.
+
+⭐⭐⭐ **THE `PioneerFace` CASE GIVES A JOB TO THE ONE PRESS THAT HAD NONE.** Since `A22` a press
+on the face already aligned returns `NOTHING` unless it completes a rapid pair. ⚠ After `A23` it
+is also the **only safe handhold left on a Pioneer**, so it is now doing two jobs — and
+`pressActedOnTheAlignment` is what stops both firing at once.
+
+⛔⛔ **A PRESS ON THE HELD OBJECT ITSELF IS NOT IN THE LIST, AND THAT IS LOAD-BEARING.** Had
+`SECOND` been included, the collision below would bite twice as hard.
+
+### ⚠⚠⚠ AND IT COLLIDES WITH `A16`, WHICH IS THE OWNER'S TOO — FLAGGED, NOT RESOLVED
+
+> *"Switching between the two shall indeed require the tap."* — `A16`
+
+⛔ An `OUTSIDE` finger is **the** finger that drives depth or roll — `scene.ts`'s `OUTSIDE`
+`POINTERMOVE` branch is *"the only place either is applied"* — and `secondFingerDrive` picks
+which by the mode. ⚠ So placing it flips what it will drive:
+
+| | before `D58` | after |
+|---|---|---|
+| boot in `ROTATE`, place a finger outside | drives **roll** | flips to `TRANSLATE`, drives **depth** |
+| lift (a drag, so no tap), place it again | drives **roll** | flips to `ROTATE`, drives **roll** |
+| … and again | **roll** | **depth** |
+
+⛔⛔ **The channel therefore ALTERNATES every time the finger goes down, instead of being
+chosen** — which is exactly what `A16` reserved a tap for. ⭐ The `PioneerFace` case is clean:
+with `pioneerTranslates = 0`, `pinnedSecondDrive` hands over BOTH axes and the mode does not pick.
+
+⭐ **THE ONE-LINE ALTERNATIVE, IF A HAND REJECTS IT**: latch the second finger's channel at its
+own press, before the toggle. ⚠ It costs a disagreement between the HUD's mode and what that
+finger drives, for the life of the gesture — which is why it was not taken pre-emptively.
+
+### ⛔⛔ THE TAP MUST NOT TOGGLE TWICE, AND ON THE `PioneerFace` IT MUST NOT TOGGLE AT ALL
+
+⚠ A tap is a press **plus** a lift, so without care every tap would flip the mode on the way down
+and flip it back on the way up — no change, from the very gesture the owner asked to have an
+effect. ⛔ `pressToggled` (a set of pointer ids, cleared on release *and* on a re-press) spends
+the release's toggle.
+
+⭐⭐ **AND ON THE `PioneerFace` THE TOGGLE IS ROLLED BACK.** A press there toggles the mode
+(`D58`); a *re-tap* there RELEASES the alignment (`D39`). They are the same gesture until the
+finger lifts. ⛔ So when the release turns out to have acted on the alignment, the press's toggle
+is **undone** and `D39` keeps its single meaning. ⚠ The cost is ~80 ms of the other mode on the
+HUD — the same honest flicker `D55` accepted for the cyan that precedes `FOLLOW`, and for the
+same reason: *nothing can tell a tap from a press on the way down.*
+
+### ⭐⭐⭐ 5.7 `D59` — AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH **BOTH** AXES
+
+> *"when an object is aligned as follower, currently there are two cases when the second touch is
+> pressed outside any object: translation mode — the second touch drives only depth translation;
+> rotation mode — the second touch drives only the roll and conflicts with the dx or dy of the
+> first touch. I want everything to be aligned with what happens when the second touch hits the
+> Pioneer object: whatever translation mode, when an object is aligned as follower the second
+> touch shall control the depth and the roll."* — the owner, 2026-09-19
+
+⛔⛔ **THE RULE MOVED FROM *WHERE THE FINGER LANDED* TO *WHAT THE BODY IS*.** `D51` gave both
+axes to a finger on the **Pioneer**; the owner has generalised the reason behind it — **an aligned
+Follower has one rotational DOF left, so there is nothing for a movement mode to choose between.**
+⭐ A free body still has three, and `A16`'s split still earns its keep there.
+
+| second touch | held body | drives |
+|---|---|---|
+| **outside any object** | **aligned Follower** | ✅ **both** — roll by `dx`, depth by `dy` (`D59`) |
+| outside any object | free | the mode picks one (`A16`) |
+| on the **Pioneer** | aligned Follower | both (`D51`) |
+| on the held object itself | either | the mode picks one — untouched |
+
+⚠ `SAME_OBJECT` is deliberately untouched: the owner's sentence says *outside any object*, and
+`A12`'s finger shares a body with the holder, where a diagonal would smear one axis into the other
+by accident.
+
+✅✅ **AND IT SETTLES THE `A16` COLLISION `D58` OPENED — for aligned bodies.** `D58` flips the
+movement mode when a finger presses outside, and `secondFingerDrive` used that same mode to pick
+roll-or-depth, so the channel alternated on every touch. ⛔ Where the mode no longer picks, that
+cannot happen. ✅✅ **And the residue on a FREE body is closed by `D61`** (§5.9) — the first outside press of a
+hold no longer toggles, so the finger being placed still drives what the mode showed.
+
+✅✅ **AND THE REST OF THAT SENTENCE IS `D60` (§5.8)**: *"… and conflicts with the dx or dy of
+the first touch."* ⛔ In `ROTATE`, an aligned body's FIRST touch twists about
+the same constraint axis the second touch's `dx` turns — so two fingers drive **one DOF**.
+⭐ Matching the Pioneer case **preserves** that overlap rather than removing it: it is present
+there too, and it is what the owner asked to be matched. ⚠ Removing it is a separate rule about
+what the first touch does while a second is down, and it is not made here.
+
+### ⭐⭐⭐ 5.8 `D60` — AND THE FIRST TOUCH THEN TRANSLATES, WHATEVER THE MODE
+
+> *"… and the first touch shall control the translation with delta position x and y (which is
+> currently the case in translation mode but not in rotation mode)."* — the owner, 2026-09-19
+
+⭐⭐ **IT IS `translatesOnDrag`'s OWN RULE WITH ITS REASON GENERALISED**, and that also explains
+the owner's observation exactly. Two held objects translate in either mode because *a pair being
+moved together is a translation by construction* — so with the second touch **on the Pioneer**
+the count is 2 and the wanted behaviour was already there. ⚠ A second touch **outside** leaves the
+count at 1, and the mode decided. That is the case being corrected.
+
+⛔⛔ **THE REAL CONDITION IS A DOF BUDGET.** When the second touch owns roll **and** depth
+(`D59`), the two fingers already cover the body's whole remaining freedom — first touch x/y in
+the screen plane, second touch roll + depth. ⚠ Leaving the first touch on the twist puts **two
+fingers on one DOF**, which is precisely the conflict the owner reported.
+
+⚠ **KEYED ON PRESENCE, NEVER ON MOTION** — `A15`'s rule: the second touchpoint being DOWN is a
+discrete fact, so the first touch's job changes when a finger lands or lifts, never because
+something moved. ✅ The **highlight** reads the same function, so the white contours cannot say
+the pair is not being translated while the finger is translating it.
+
+### ⭐⭐⭐ 5.9 `D61` — ON A FREE BODY THE **FIRST** OUTSIDE PRESS OF A HOLD IS INERT
+
+> *"when an object is free (not follower), the first time the second touch is pressed outside any
+> object shall not trigger a toggle of the translation/rotation mode. This first time the second
+> touch is also reset when the first touch releases."* — the owner, 2026-09-19
+
+✅✅ **IT CLOSES THE `A16` COLLISION `D58` OPENED, WHERE `D59` COULD NOT REACH.** On a free body
+the mode still picks whether that finger drives roll or depth, so a toggle on its arrival changed
+what it was about to do — the channel alternating on every touch instead of being chosen.
+⛔ The press that PLACES the finger is now inert; a **second** press during the same hold toggles.
+⭐ So switching costs a lift and a re-press — `A16`'s *"switching … shall require the tap"* with a
+press standing in for the tap, which is the whole of `D55`'s sweep.
+
+⚠ **A FOLLOWER IS EXEMPT, AND THAT IS THE OWNER'S OWN SCOPING** (*"when an object is free (not
+follower)"*). `D59` took the mode out of a Follower's channel selection, so there is nothing left
+for a toggle to disturb there.
+
+⭐⭐ **RESET BY CONSTRUCTION.** *"… also reset when the first touch releases"* is not a reset
+call: the fact lives on the holder's grip and the grip dies with the finger. ⛔ Nothing calls a
+reset, so nothing can forget to — the shape `A13` and defect 40 both punished.
+
+⚠ With MORE than one body held the exemption does not apply: *"is the held body free?"* has no
+single answer, and `translatesOnDrag` has already overridden the mode anyway.
 
 ---
 

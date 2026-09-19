@@ -330,6 +330,38 @@ describe("⛔⛔ CONDITION 2 — *translation by one touchpoint or two touchpoin
     expect(translatesOnDrag(1, "ROTATE")).toBe(false);
   });
 
+  it("⭐⭐⭐ `D60` — A SECOND TOUCH THAT OWNS ROLL + DEPTH TAKES THE MODE'S PLACE", () => {
+    // ⛔⛔ THE OWNER'S COMPLETION, 2026-09-19:
+    //
+    // > *"… and the first touch shall control the translation with delta position x and y
+    // > (which is currently the case in translation mode but not in rotation mode)."*
+    //
+    // ⭐⭐ IT IS A **DOF BUDGET**. When the second touch owns roll AND depth (`D59`), the two
+    // fingers already cover the body's whole remaining freedom: first touch x/y in the screen
+    // plane, second touch roll + depth. ⛔ Leaving the first touch on the twist would put **two
+    // fingers on one DOF**, which is exactly the conflict the owner reported.
+    expect(translatesOnDrag(1, "ROTATE", true)).toBe(true);
+    expect(translatesOnDrag(1, "TRANSLATE", true)).toBe(true);
+  });
+
+  it("⚠ … and with no such second touch the mode still decides — the default is inert", () => {
+    // ⛔ THE VECTOR THAT PROTECTS EVERY OTHER CALLER. The parameter defaults to `false`, so a
+    // caller that knows nothing about a second touch keeps exactly the behaviour it had — which
+    // is what makes this an ADDITION rather than a change to `A16`'s condition 2.
+    expect(translatesOnDrag(1, "ROTATE", false)).toBe(false);
+    expect(translatesOnDrag(1, "ROTATE")).toBe(false);
+    expect(translatesOnDrag(1, "TRANSLATE", false)).toBe(true);
+  });
+
+  it("⚠ with TWO held objects it changes nothing — the first line already fired", () => {
+    // ⭐⭐ AND THIS IS WHY THE OWNER SAW THE WANTED BEHAVIOUR ONLY ON THE PIONEER: a second
+    // touch THERE is a second held OBJECT, so `heldObjectCount >= 2` already returned true.
+    // ⛔ A second touch OUTSIDE leaves the count at one, and the mode decided — the case `D60`
+    // corrects. The two paths now agree, which is the claim worth pinning.
+    expect(translatesOnDrag(2, "ROTATE", false)).toBe(true);
+    expect(translatesOnDrag(2, "ROTATE", true)).toBe(true);
+  });
+
   it("⭐⭐ TWO HELD OBJECTS TRANSLATE IN **EITHER** MODE", () => {
     // ⛔ The owner's parenthetical, and it is already true of the build: `scene.ts` overrides
     // the mode to `TRANSLATE` whenever more than one object is held, because a pair being moved

@@ -169,8 +169,41 @@ export interface HighlightVerdict {
  * caller must pass DISTINCT objects, which is why this takes a count of objects and not of
  * touchpoints.
  */
-export function translatesOnDrag(heldObjectCount: number, mode: Behaviour): boolean {
+/**
+ * ⭐⭐⭐ **`D60` — AND A SECOND TOUCH THAT OWNS ROLL *AND* DEPTH TAKES THE MODE'S PLACE.**
+ *
+ * > *"whatever translation mode, when an object is aligned as follower the second touch shall
+ * > control the depth and the roll … **and the first touch shall control the translation with
+ * > delta position x and y** (which is currently the case in translation mode but not in rotation
+ * > mode)."* — the owner, 2026-09-19
+ *
+ * ⭐⭐ **IT IS THE SAME RULE THIS FUNCTION ALREADY HAD, WITH ITS REASON GENERALISED.** Two held
+ * objects translate in either mode because *a pair being moved together is a translation by
+ * construction*. ⛔ That is also why the owner saw the behaviour they wanted **only** when the
+ * second touch hit the Pioneer: that is two held objects, so `heldObjectCount >= 2` already fired.
+ * ⚠ A second touch **outside** leaves the count at one, and the mode decided — which is the case
+ * they are correcting.
+ *
+ * ⭐⭐⭐ **THE REAL CONDITION IS A DOF BUDGET, AND NOW IT READS AS ONE.** When the second touch
+ * owns roll **and** depth (`D59`), the two fingers already cover the body's whole remaining
+ * freedom: first touch x/y in the screen plane, second touch roll + depth. ⛔ Leaving the first
+ * touch on the twist would put **two fingers on one DOF**, which is precisely the conflict the
+ * owner reported: *"… and conflicts with the dx or dy of the first touch."*
+ *
+ * ⚠ **KEYED ON PRESENCE, NEVER ON MOTION** — `A15`'s rule, and this obeys it: the second
+ * touchpoint being DOWN is a discrete fact, so the first touch's job changes when a finger lands
+ * or lifts and never because something moved.
+ */
+export function translatesOnDrag(
+  heldObjectCount: number,
+  mode: Behaviour,
+  secondTouchOwnsRollAndDepth = false,
+): boolean {
   if (heldObjectCount >= 2) return true;
+  // ⛔ `D60`: the second touch has taken the rotational freedom, so the first takes translation
+  // — whatever the mode says. ⚠ Defaulted to `false` so every caller that does not know about a
+  // second touch keeps exactly the behaviour it had.
+  if (secondTouchOwnsRollAndDepth) return true;
   return mode === "TRANSLATE";
 }
 
