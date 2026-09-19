@@ -21,7 +21,9 @@ import { describe, expect, it } from "vitest";
 import {
   constrainedDragAngle,
   constrainedRollAngle,
+  flatTwistAngle,
   nearSideScreenDirection,
+  rollSignFor,
   rotateAboutAxis,
 } from "../src/input/anchor_rotate";
 import type { ScreenFrame } from "../src/input/screen_rotate";
@@ -343,7 +345,7 @@ describe("⭐⭐⭐ D52 — both roll channels agree, over axes and camera frame
   });
 });
 
-describe("⛔⛔⛔ THE SECOND TOUCHPOINT'S ROLL HAS A DEAD ZONE, AND IT IS THE AXIS'S SCREEN ANGLE", () => {
+describe("⛔⛔⛔ THE DEAD ZONE `D57` REMOVED — the projection's cosine, kept as the DIAGNOSIS", () => {
   // ⛔⛔ DEVICE-REPORTED, 2026-09-19: *"when I successively align on diverse PioneerFaces, for
   // some of them I loose the roll control of the Follower object by the second touch."*
   //
@@ -359,6 +361,8 @@ describe("⛔⛔⛔ THE SECOND TOUCHPOINT'S ROLL HAS A DEAD ZONE, AND IT IS THE 
   const FRAME: ScreenFrame = { right: [1, 0, 0], up: [0, 1, 0], viewAxis: [0, 0, 1] };
   const DEG = Math.PI / 180;
   const DX = mmToPx(10);
+  /** ⚠ THE OLD SECOND-TOUCHPOINT LAW. `D57` replaced it; these vectors keep the measurement
+   * that diagnosed the report, and the block below pins what replaced it. */
   const secondTouchDeg = (axis: Vec3) =>
     (constrainedDragAngle(FRAME, axis, DX, 0, 2 * DEG) ?? NaN) / DEG;
   const firstTouchDeg = (axis: Vec3) =>
@@ -469,5 +473,81 @@ describe("⛔⛔⛔ THE NEAR-SIDE DIRECTION'S **SIGN**, DERIVED FROM THE ROTATIO
     expect(dir([1, 0, 0]).y).toBeCloseTo(-1, 9);
     expect(dir([0, -1, 0]).x).toBeCloseTo(1, 9);
     expect(dir([-1, 0, 0]).y).toBeCloseTo(1, 9);
+  });
+});
+
+describe("⭐⭐⭐ `D57` — THE SECOND TOUCHPOINT'S ROLL IS FLAT: dx, whatever the orientation", () => {
+  // ⛔⛔ THE OWNER, 2026-09-19, answering the dead-control report:
+  //
+  // > *"the dx on the screen shall drive the roll of the Follower, the dy on the screen shall
+  // > drive the depth translation of the Follower, whatever the orientation of the
+  // > Pioneer-Follower duo. If there are cos or sin projections on axis based on orientation,
+  // > remove those projections."*
+  const FRAME: ScreenFrame = { right: [1, 0, 0], up: [0, 1, 0], viewAxis: [0, 0, 1] };
+  const DEG = Math.PI / 180;
+  const DX = mmToPx(10);
+  const AXES: readonly Vec3[] = [
+    [0, 1, 0],
+    [1, 0, 0],
+    [0, -1, 0],
+    [1, 1, 0],
+    [0.3, 0.7, 0.6],
+    [0, 0.2, 1],
+    [-0.4, 0.1, -0.9],
+  ];
+
+  it("⛔⛔⛔ THE RATE IS THE SAME FOR EVERY AXIS — the cosine is gone", () => {
+    // ⭐ THE VECTOR THE OWNER'S RULE REDUCES TO. ⚠ The old law gave 20° for an axis vertical on
+    // screen and **0°** for one horizontal; every axis now gives the same 20° per 10 mm.
+    for (const axis of AXES) {
+      const twist = flatTwistAngle(DX, rollSignFor(FRAME, axis), 2 * DEG);
+      expect(Math.abs(twist) / DEG).toBeCloseTo(20, 9);
+    }
+    // ⛔ Including the axis that used to be dead — named separately so the regression is
+    // unmistakable if anyone reinstates a projection.
+    expect(Math.abs(flatTwistAngle(DX, rollSignFor(FRAME, [1, 0, 0]), 2 * DEG)) / DEG)
+      .toBeCloseTo(20, 9);
+  });
+
+  it("⛔⛔ AND IT STILL AGREES IN DIRECTION WITH THE FIRST TOUCHPOINT — `D52` PRESERVED", () => {
+    // ⚠⚠ THE CLAIM THAT MADE THE SIGN WORTH KEEPING. `D52` is the owner's own device report
+    // (*"the second touchpoint is inverted vs. the first"*), and a raw `+dx` would have
+    // re-broken it for every axis with `dir.x < 0` — which is the COMMON case, measured at
+    // −1 for an axis vertical on screen.
+    // ⛔ A COMPOSITION, not two unit checks: the two laws are different expressions now, and
+    // only comparing their outputs can say they agree.
+    for (const axis of AXES) {
+      const dir = nearSideScreenDirection(FRAME, axis);
+      if (dir === null || Math.abs(dir.x) <= 1e-9) continue; // no direction to agree ON
+      for (const dx of [DX, -DX]) {
+        const first = constrainedDragAngle(FRAME, axis, dx, 0, 2 * DEG)!;
+        const second = flatTwistAngle(dx, rollSignFor(FRAME, axis), 2 * DEG);
+        expect(Math.sign(second)).toBe(Math.sign(first));
+      }
+    }
+  });
+
+  it("⚠ the fallback where no direction exists is DECLARED — `+1`, not float noise", () => {
+    // ⛔ An axis horizontal on screen has no near-side x to read, and `Math.sign` of a
+    // float-noise value is the audit's *"square to the bit"* trap one module over.
+    // ⭐ `+1` is arbitrary and is the honest residue of an orientation-free rule: at that pose
+    // there is nothing to be consistent WITH. ⚠ What matters is that it is STABLE.
+    expect(rollSignFor(FRAME, [1, 0, 0])).toBe(1);
+    expect(rollSignFor(FRAME, [1, 0, 0])).toBe(1);
+    // ⛔ And the axis pointing at the camera — no near-side direction at all — also rolls now
+    // rather than refusing, which is what *"whatever the orientation"* requires.
+    expect(nearSideScreenDirection(FRAME, [0, 0, 1])).toBeNull();
+    expect(Math.abs(flatTwistAngle(DX, rollSignFor(FRAME, [0, 0, 1]), 2 * DEG)) / DEG)
+      .toBeCloseTo(20, 9);
+  });
+
+  it("⭐ the gain means what it says: degrees per millimetre, linear in the travel", () => {
+    const sign = rollSignFor(FRAME, [0, 1, 0]);
+    expect(Math.abs(flatTwistAngle(mmToPx(5), sign, 2 * DEG)) / DEG).toBeCloseTo(10, 9);
+    expect(Math.abs(flatTwistAngle(mmToPx(20), sign, 2 * DEG)) / DEG).toBeCloseTo(40, 9);
+    // ⚠ `toBeCloseTo`, not `toBe`: `0 * −1` is IEEE `−0`, which is identical to `+0` for
+    // every use and distinct to an identity compare — a fixture failing for a reason the
+    // product does not have. Same trap as the near-side vector above.
+    expect(flatTwistAngle(0, sign, 2 * DEG)).toBeCloseTo(0, 12);
   });
 });

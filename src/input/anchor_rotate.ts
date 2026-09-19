@@ -161,3 +161,45 @@ export function rotateAboutAxis(base: Quat, axisWorld: Vec3, radians: number): Q
   return qmul(qFromAxisAngle(axisWorld, radians), base);
 }
 
+/**
+ * ⭐⭐⭐ **`D57` — WHICH WAY A SECOND TOUCHPOINT'S `dx` TURNS THIS AXIS.** Latched once per
+ * gesture by the caller; never recomputed per frame.
+ *
+ * > *"the dx on the screen shall drive the roll of the Follower … whatever the orientation of
+ * > the Pioneer-Follower duo. If there are cos or sin projections on axis based on orientation,
+ * > remove those projections."* — the owner, 2026-09-19
+ *
+ * ⛔⛔ **THE PROJECTION CARRIED THE RATE *AND* THE DIRECTION, AND ONLY THE RATE COULD GO.**
+ * The rate was the defect — `|dir.x|`, a cosine in the axis's SCREEN orientation, reaching zero
+ * for any alignment whose axis lies horizontally across the glass, which is the dead control the
+ * owner reported. ⚠ A handedness, though, must be relative to something, and the constraint
+ * axis can point at the camera or away from it: a raw `+dx` rolls **opposite to the first
+ * touchpoint** wherever `dir.x < 0` — measured at `−1` for an axis vertical on screen, the
+ * common case — which is `D52`'s device report returning.
+ *
+ * ⭐ So the direction is still read from the geometry, **once**. `+1` where the near side moves
+ * right for a positive turn, `−1` where it moves left.
+ *
+ * ⚠ **THE FALLBACK IS DECLARED, NOT DISCOVERED.** Where the axis is horizontal on screen there
+ * is no near-side x to read, and `Math.sign` on a float-noise value is the audit's *"square to
+ * the bit"* trap. ⛔ Below the module's own `1e-9` it returns `+1` — arbitrary, and the honest
+ * residue of an orientation-free rule: at that pose there is nothing to be consistent WITH.
+ */
+export function rollSignFor(frame: ScreenFrame, axisWorld: Vec3): 1 | -1 {
+  const dir = nearSideScreenDirection(frame, axisWorld);
+  if (dir === null || Math.abs(dir.x) <= 1e-9) return 1;
+  return dir.x > 0 ? 1 : -1;
+}
+
+/**
+ * ⭐⭐ **`D57` — A FLAT TWIST: degrees per millimetre of finger, and nothing else.**
+ *
+ * ⛔ No projection, so no fade and no degeneracy — the same authority for every alignment axis,
+ * which is the whole of the owner's rule. ⚠ `rollSign` is `rollSignFor`'s latched value; passing
+ * it in rather than recomputing here is what stops the direction flipping mid-drag as the axis
+ * swings through horizontal-on-screen, at full rate, which would trade a dead control for an
+ * unpredictable one.
+ */
+export function flatTwistAngle(dxPx: number, rollSign: 1 | -1, radPerMm: number): number {
+  return pxToMm(dxPx) * rollSign * radPerMm;
+}

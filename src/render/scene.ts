@@ -80,7 +80,8 @@ import {
   ShakeDetector,
   shakeParamsFrom,
   constrainedDragAngle,
-  nearSideScreenDirection,
+  flatTwistAngle,
+  rollSignFor,
   rotateAboutAxis,
   displayPose,
   exponentialSmooth,
@@ -1474,6 +1475,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
      */
     anchorMotion: Map<number, MotionTracker>;
+    /**
+     * ⭐⭐⭐ `D57` — **WHICH WAY A SECOND TOUCHPOINT'S `dx` ROLLS THIS BODY, LATCHED AT THE
+     * FIRST ROLL OF THE GESTURE**, keyed by anchor press order exactly as `anchorMotion` is.
+     *
+     * ⛔⛔ THE RATE IS NOW CONSTANT AND THE DIRECTION IS NOT COMPUTED PER FRAME. The owner's
+     * rule is *"dx drives the roll, dy the depth, **whatever the orientation** — remove the
+     * cos/sin projections"*, and the projection carried BOTH. ⚠ Only the rate could be made
+     * orientation-free: a handedness has to be relative to something, and the constraint axis
+     * can point toward the camera or away from it.
+     *
+     * ⭐⭐ **LATCHED, BECAUSE THE ONLY STABLE MOMENT IS THE PRESS.** Recomputed per frame the
+     * sign would flip mid-drag as the axis swung through horizontal-on-screen — turning the
+     * dead control the owner reported into an unpredictable one, which is worse. ⛔ `IN2`
+     * latches every role at press and `A15` allows exceptions only on DISCRETE events; this is
+     * the same doctrine one rule over: *a mode may be keyed on PRESENCE, never on MOTION.*
+     */
+    anchorRollSign: Map<number, 1 | -1>;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -2560,6 +2578,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   const forgetAnchor = (seq: number): void => {
     for (const grip of held.values()) {
       grip.anchorMotion.delete(seq);
+      grip.anchorRollSign.delete(seq);
     }
   };
 
@@ -2694,25 +2713,44 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // next session does not try it: an axis horizontal on screen is **square to the view**,
         // which is exactly where that chart returns `null` too. Both charts are dead in the
         // same configuration; only the missing `dy` could have served it.
-        const nearSide = nearSideScreenDirection(screenFrame(), axis);
-        const twist = constrainedDragAngle(
-          screenFrame(),
-          axis,
-          drive.rollDxPx,
-          0,
-          (cfg.gainRollDrag * Math.PI) / 180,
-        );
-        // ⛔⛔ **A DEAD CONTROL MUST SAY SO.** `twist` is `0` here, not `null`, so nothing
-        // refused and nothing reported — the hand drags and the object does not move, which is
-        // the readout-that-lies shape this file has been burned by repeatedly. ⚠ The authority
-        // is printed whenever the finger is actually asking for a roll, so a fade is visible
-        // BEFORE it reaches zero.
-        if (nearSide !== null && Math.abs(nearSide.x) < 0.98) {
-          lastVerdict =
-            `align: roll authority ${(Math.abs(nearSide.x) * 100).toFixed(0)}% — ` +
-            `this axis turns the near side ${Math.abs(nearSide.x) < 0.02 ? "VERTICALLY (x drag is dead)" : "off-horizontal"}`;
+        // ⭐⭐⭐ **`D57` — CONSTANT RATE. THE PROJECTION IS GONE, AS THE OWNER REQUIRED.**
+        //
+        // > *"for the second touchpoint on the Pioneer, the dx on the screen shall drive the
+        // > roll of the Follower, the dy on the screen shall drive the depth translation of the
+        // > Follower, whatever the orientation of the Pioneer-Follower duo. If there are cos or
+        // > sin projections on axis based on orientation, remove those projections."*
+        // > — the owner, 2026-09-19, answering the dead-control report
+        //
+        // ⛔⛔ **WHAT THE PROJECTION WAS DOING, AND WHY ONLY HALF OF IT COULD GO.** It carried
+        // the RATE *and* the DIRECTION. The rate was the defect — `|dir.x|`, a cosine in the
+        // axis's screen orientation, reaching **zero** for any alignment whose axis lies
+        // horizontally across the glass. ✅ That is deleted: the rate is now flat.
+        // ⚠ The direction has **no orientation-free definition**: a handedness must be relative
+        // to something, and the constraint axis can point at the camera or away from it. A raw
+        // `+dx` would therefore roll *opposite to the first touchpoint* for every alignment with
+        // `dir.x < 0` — measured at **−1.000** for an axis vertical on screen, i.e. the common
+        // case — which is `D52`'s device report returning.
+        //
+        // ⭐⭐ **SO THE SIGN IS TAKEN FROM THE GEOMETRY ONCE AND LATCHED FOR THE GESTURE.**
+        // ⛔ Per frame it would flip mid-drag as the axis swung through horizontal-on-screen,
+        // at full rate — trading a dead control for an unpredictable one. ⚠ At that crossing the
+        // latched sign is arbitrary, and that is the honest residue of the owner's rule: there
+        // is nothing there to be consistent WITH. It is at least **stable for the whole drag**.
+        // ⛔ THE RULE IS IN `anchor_rotate.ts`, NOT HERE — `pioneer_cascade.ts`'s standing rule:
+        // *a RULE in a render file is a rule nothing can interrogate.* ⚠ Only the LATCH is here,
+        // because only this file knows when a gesture began.
+        let rollSign = grip.anchorRollSign.get(anchorSeq);
+        if (rollSign === undefined) {
+          rollSign = rollSignFor(screenFrame(), axis);
+          grip.anchorRollSign.set(anchorSeq, rollSign);
         }
-        if (twist !== null) {
+        // ⭐ `gainRollDrag` keeps its meaning exactly: degrees per millimetre of finger — which
+        // is what it always claimed to be, and only now always is.
+        const twist = flatTwistAngle(drive.rollDxPx, rollSign, (cfg.gainRollDrag * Math.PI) / 180);
+        // ⚠ NO `null` BRANCH ANY MORE, and that is the point: this channel had one because
+        // the projection could fail, and `D57` removed the projection. ⛔ A `twist !== null`
+        // guard left here would be a dead condition implying a refusal that cannot happen.
+        {
           setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
           // ⛔⛔⛔ **AND IT RIDES THE SNAP — AUDIT FIX, 2026-09-17.** The one-finger twist has
           // composed onto both ends of a travelling snap since `D45`; this channel never did.
@@ -3154,6 +3192,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressActed: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
+    anchorRollSign: new Map(),
         // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
         // `SwayWatcher` takes it.
         // ⛔⛔ THROUGH `shakeParamsFrom`, AND THAT IS A FIX: this file built the same four

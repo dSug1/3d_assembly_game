@@ -637,10 +637,41 @@ work: an axis horizontal on screen is **square to the view**, precisely where th
 ⚠ Only the missing `dy` could serve it — which is a decision about `A16`'s channel split, not an
 arithmetic repair. **It is the owner's call and is not made here.**
 
+✅✅ **RESOLVED THE SAME DAY — `D57`: THE SECOND TOUCHPOINT'S ROLL IS NOW FLAT.**
+
+> *"the dx on the screen shall drive the roll of the Follower, the dy on the screen shall drive
+> the depth translation of the Follower, **whatever the orientation of the Pioneer-Follower
+> duo**. If there are cos or sin projections on axis based on orientation, remove those
+> projections."* — the owner
+
+⛔⛔ **THE PROJECTION CARRIED THE RATE *AND* THE DIRECTION, AND ONLY THE RATE COULD GO.** The
+rate is deleted: `flatTwistAngle` is `pxToMm(dx) × gain`, the same 20° per 10 mm for every
+alignment axis, with no degeneracy left — even an axis pointing straight at the camera, which
+used to refuse, now rolls. ⚠ A handedness, though, must be relative to something, and the
+constraint axis can point at the camera or away from it: a raw `+dx` rolls **opposite to the
+first touchpoint** wherever `dir.x < 0`, measured at `−1` for an axis vertical on screen — the
+common case. ⛔ That is `D52`, the owner's own device report, returning.
+
+⭐⭐ **SO THE SIGN IS READ FROM THE GEOMETRY ONCE AND LATCHED AT THE PRESS** (`rollSignFor`,
+held in `Held.anchorRollSign` beside the anchor's motion tracker, dropped with it). ⛔ Per frame
+it would flip mid-drag as the axis swung through horizontal-on-screen, at full rate — trading a
+dead control for an unpredictable one. ⚠ `IN2` latches every role at press and `A15` allows
+exceptions only on DISCRETE events; this is that doctrine one rule over.
+
+⚠ **THE FALLBACK IS DECLARED**: where the axis is horizontal on screen there is no near-side x
+to read, and `Math.sign` on a float-noise value is the audit's *"square to the bit"* trap. Below
+`1e-9` it returns `+1` — arbitrary, stable, and the honest residue of an orientation-free rule.
+⭐ A vector asserts the two laws still agree in DIRECTION for every non-degenerate axis, which is
+`D52` preserved as a measurement rather than a promise.
+
+⚠ **DEPTH NEEDED NO CHANGE**: `dy` already goes straight through. Its one sign,
+`towardGravity`, is keyed on the CAMERA, not on the pair's orientation — it exists because the
+gesture was backwards on the bottom ring — so it is not one of the projections the rule names.
+
 ⚠⚠ **IT FAILED SILENTLY UNTIL NOW**, which is why it cost a device report rather than a glance:
 `twist` is `0`, not `null`, so nothing refused and nothing was printed — the hand dragged and the
-body sat still with a clean HUD. ✅ The roll authority is now on the readout whenever it is below
-98%, so the fade is visible *before* it reaches zero.
+body sat still with a clean HUD. ✅ Moot under `D57`: there is no fade left to report, and the readout added for it was removed
+with the projection rather than left to describe a law the product no longer runs.
 
 ⛔⛔⛔ **AND CHASING IT FOUND A HOLE IN THE SUITE.** Negating `sy` in `nearSideScreenDirection`
 — the *screen y grows downward* conversion the function's own comment calls *"the same sign trap

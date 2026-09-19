@@ -187,3 +187,34 @@ was only separable from the impression once the composition had a number.
 
 ⚠ This is not a rejected experiment and does not belong in a `REJECTED.md`: nothing was
 built and nothing was measured out. It is a **claim that was tested and did not hold**.
+
+---
+
+# ⭐⭐ `D55`/`A22`/`A23` AND `D57` — the consequence text, moved 2026-09-19
+
+⚠ Moved out of `DECISIONS.md` to keep the front door inside its byte budget; the rows there carry
+the owner's words and the pointer. ⛔ The DESIGN of record is
+[`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §2
+and §5.5 — this is the decision-log detail only.
+
+## `D55` — the press trigger
+
+⛔ It aligns as `SNAPSHOT` because a press **cannot know the tap count** (`D42`).
+⛔⛔ Its release is **spent**, or the `TAP` reads as `UNALIGN` and undoes the gesture 80 ms later.
+⚠ The **reverse** direction (the pressed body follows the held one) stays refused — that one-way
+guard shipped and the glass broke an alignment with it within minutes.
+⚠ `A23`'s cost: only the Pioneer's **aligned** face is still a safe handhold; grabbing it elsewhere
+re-points the alignment onto the face under the finger.
+
+## `D57` — the flat roll
+
+⛔ The near side travels perpendicular to the axis's SCREEN projection while the second-touchpoint
+channel supplies `dx` only (`A16`), so the authority was a cosine in the axis's screen orientation.
+⚠ It failed silently: `twist` was `0`, not `null`, so nothing refused and nothing was printed.
+⭐ `flatTwistAngle` now gives one rate for every axis, degenerate cases included.
+⛔ The projection carried the RATE *and* the DIRECTION. A raw `+dx` would re-break `D52` (the
+owner's own report that the second touchpoint was inverted vs the first), and a per-frame sign would
+flip mid-drag — so `rollSignFor` is read once and latched in `Held.anchorRollSign`.
+⛔⛔ Chasing it found a hole in the suite: a sign flip in `nearSideScreenDirection`'s screen-y
+conversion survived all 880 vectors, because every consumer passed `dx, 0` and never read `dir.y`.
+Closed by deriving the direction from a rotated near-side point.
