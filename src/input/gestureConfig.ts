@@ -437,6 +437,18 @@ export interface GestureConfig {
    */
   captureOffsetMm: number;
   /**
+   * ⭐⭐⭐ **THE APPROACH SWING'S AMPLITUDE, IN DEGREES OF CAMERA YAW** — the trial on branch
+   * `1.0.18-`. ⛔ How far the camera leans out at HALF the trigger gap; it is back on its own
+   * orbit at the trigger and at contact, by construction.
+   *
+   * ⚠⚠ **GUESSED, AND THEREFORE SHIPPED WITH A SLIDER** — `METHOD`'s hardest-won rule here:
+   * *a guessed number has been wrong every single time* (four gains raised ×3.4, ×2.3 and ×2 by a
+   * hand; a computed landmark rejected in favour of a fifteenth of it). ⭐ `0` disables the swing
+   * entirely, which is how to A/B the whole mechanism by finger without a rebuild.
+   * ⚠ Also on the URL as `?approachSwingDeg=0`.
+   */
+  approachSwingDeg: number;
+  /**
    * ⭐⭐⭐ **MAY A HELD **PIONEER** TRANSLATE?** `1` yes (today's behaviour), `0` no (`D51`).
    *
    * > *"I want to have a flag to toggle on or off the translation of the Pioneer object in this
@@ -780,6 +792,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // and this is a gap between SURFACES, so the old value would be a number answering the old
   // question. See the field's header.
   captureOffsetMm: 15,
+  // ⚠ A GUESS. 25° is enough parallax to read a join without the scene appearing to lurch —
+  // that sentence is a hypothesis, not a measurement, and the slider is how it gets tested.
+  approachSwingDeg: 25,
   // ⭐⭐ **0 — PINNED, BY THE OWNER'S CHOICE (2026-09-18)**: *"set the default at boot:
   // Pioneer translates = 0 (-> pinned)."*
   // ⚠⚠ **AND IT OVERRULES THE CAUTION I SHIPPED IT WITH.** This read `1` with a comment
@@ -1024,6 +1039,16 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `pioneerTranslates (${cfg.pioneerTranslates}) must be exactly 0 or 1: it selects a RULE, ` +
         "not a quantity, and a value in between would read as `truthy` and silently ship one " +
         "of the two behaviours while the readout claimed a third.",
+    );
+  }
+  // ⛔ `0` is MEANINGFUL here (the swing off), so the rule is a range and not a positivity
+  // test — the opposite of `captureOffsetMm` below, where zero would mean *nothing ever
+  // captures* and is a mistake rather than a setting.
+  if (!(cfg.approachSwingDeg >= 0) || cfg.approachSwingDeg > 90) {
+    throw new Error(
+      `approachSwingDeg (${cfg.approachSwingDeg}) is outside 0..90: the approach swing is a ` +
+        "camera lean, and beyond a quarter turn it swings past the join rather than looking " +
+        "at it. NaN fails this too, which is the point — it would silently disable the swing.",
     );
   }
   if (!(cfg.captureOffsetMm > 0)) {

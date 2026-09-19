@@ -156,6 +156,12 @@ import {
   type HighlightVerdict,
 } from "../input/highlight";
 import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
+import {
+  swingProgress,
+  swingSignFor,
+  swingYawRad,
+  type SwingLatch,
+} from "../input/approach_swing";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
 import { createMenu, type MenuSlider } from "./menu";
@@ -376,8 +382,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // and `?sceneSeed=N` rolls a new scene. ⚠ Three arbitrary orientations mean **no two bodies
   // start aligned**, which is correct: `A16`'s highlight should be something a hand earns.
   const bootRotations = seededRotations(cfg.sceneSeed, 3);
-  make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72], bootRotations[0]);
-  make("objectB", new Vector3(0.2, 0, 0), [0.45, 0.58, 0.72], bootRotations[1]);
+  // ⭐⭐⭐ **THE FORK'S BOOT SCENE (branch `1.0.18-`)** — the owner: *"2 of the 3 non-frozen
+  // objects are aligned on the gravity axis and on the depth axis of the camera at boot. There
+  // is one Pioneer (on the left) and one Follower (on the right)."*
+  //
+  // ✅ The POSITIONS already satisfied it: both sit at `y = 0` (same height — the gravity axis)
+  // and `z = 0` (same depth), differing only along world `x`, which the boot camera shows as
+  // screen-horizontal. ⛔ What changed is the ORIENTATIONS: `bootRotations[0]` and `[1]` are
+  // **not used here any more**, because two arbitrarily turned bodies have no parallel faces and
+  // the pair could not start aligned.
+  // ⚠ `seededRotations` is still asked for three so the plate's unused slot keeps its index —
+  // the same reason the comment below already gives for `bootRotations[2]`.
+  // ⚠⚠ **THIS IS THE LINE TO REVERT FIRST** if the trial is discarded: pass the two rotations
+  // back and delete `bootAlignment` below.
+  make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72]);
+  make("objectB", new Vector3(0.2, 0, 0), [0.45, 0.58, 0.72]);
   // ⭐ A THIRD OBJECT, so the barycentre mechanism has something to choose BETWEEN.
   // ⚠ Deliberately off-axis and off-plane: with three collinear objects every barycentre lies
   // on the same line and the ray could not distinguish them, so the test would look like it
@@ -1073,6 +1092,58 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const links = new AlignmentLinks();
 
+  /**
+   * ⭐⭐⭐ **THE FORK'S BOOT ALIGNMENT (branch `1.0.18-`)** — *"There is one Pioneer (on the
+   * left) and one Follower (on the right). Set that up at boot for this fork."*
+   *
+   * ⛔⛔ **IT CHOOSES FACES THAT ARE ALREADY PARALLEL, SO THE BOOT POSE IS NOT DISTURBED.**
+   * Both bodies boot square, so `objectA`'s `+x` face and `objectB`'s `+x` face already point
+   * the same way — and `D37`'s alignment is PARALLEL, so the solve is the identity. ⚠ Picking
+   * the FACING pair (`+x` and `−x`) would have been the intuitive choice and would have spun
+   * the Follower 180° on frame one, which is §5.2's stated consequence of parallel-over-mate.
+   *
+   * ⛔ **BY NORMAL, NEVER BY FACE ID.** `meshTopology` numbers faces in whatever order the
+   * geometry yields, and `D50` exists because a table keyed on names was silently wrong for an
+   * imported body. ⚠ A hard-coded `"f2"` would be that mistake one layer up.
+   *
+   * ⚠ It writes the SAME three records the tap path writes — constraint, link, mode — and
+   * nothing else: with the faces already parallel there is no rotation to apply and no snap to
+   * play. ⭐ `SNAPSHOT`, so the pair boots **cyan + amber**, which is what a single tap makes.
+   */
+  const bootAlignment = (followerId: ObjectId, pioneerId: ObjectId): void => {
+    const faceByNormalX = (id: ObjectId) =>
+      world.objects.get(id)?.faces.find((f) => f.normal[0] > 0.99) ?? null;
+    const pf = faceByNormalX(pioneerId);
+    const ff = faceByNormalX(followerId);
+    if (!pf || !ff) {
+      // ⚠ Named on the readout rather than thrown: a boot that half-succeeds is worse than one
+      // that says what it could not do, and this whole file is a trial.
+      lastVerdict = `boot: no +x face on ${pf ? followerId : pioneerId} — no boot alignment`;
+      return;
+    }
+    const target = faceWorld(world, pioneerId, pf.id)?.normal;
+    if (!target) return;
+    world = pushObjectConstraint(
+      world,
+      followerId,
+      faceAlignConstraint(ff.normal, target),
+      false,
+    );
+    links.link(
+      followerId,
+      pioneerId,
+      pf.id,
+      worldPlacementOf(world, pioneerId)?.orientation ?? IDENTITY,
+    );
+    alignModeOf.set(followerId, "SNAPSHOT");
+  };
+
+  // ⛔ **`objectB` (right) FOLLOWS `objectA` (left)** — the owner's *"one Pioneer (on the left)
+  // and one Follower (on the right)"*. ⚠ Called once, here, where the model and the index both
+  // exist and before any frame has been drawn; the face markers are driven from the model every
+  // frame, so nothing needs painting by hand.
+  bootAlignment("objectB", "objectA");
+
   const releaseAlignmentOf = (followerId: ObjectId): void => {
     // ⚠ A release can be decided by the render loop (a turned Pioneer, a prune), where no
     // pointer event follows to repaint the HUD. See `hudDirty`.
@@ -1332,6 +1403,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐ `null` for a body with no alignment, which still sees the whole scene.
       (id) => links.pioneerFor(id)?.objectId ?? null,
     );
+    // ⭐⭐⭐ **THE APPROACH SWING ARMS AND DISARMS ON THE CAPTURE'S OWN EDGES** — the trial on
+    // branch `1.0.18-`. ⛔ The owner's trigger is *"when the offset radius is crossed (= white
+    // highlights toggle on)"*, so it is THIS verdict and not a second proximity test: a rule
+    // keyed on its own copy of *near enough* would be free to disagree with the contours a hand
+    // is looking at, and `D62`'s readout lesson is one line old.
+    //
+    // ⚠⚠ **THE TRIGGER GAP IS LATCHED, AND THAT IS LOAD-BEARING.** `captureOffsetM` is
+    // recomputed every frame from the camera distance (`D49`) — and the swing is about to move
+    // the camera. ⛔ A live offset would make the progress depend on the swing the progress is
+    // driving. ⭐ A yaw-only lean keeps the orbit RADIUS constant so it would not in fact drift
+    // today, but the latch means that stays true if the swing ever gains a radial component.
+    if (highlighted.inRange && swing === null && highlighted.gapM !== null) {
+      swing = {
+        gapAtTriggerM: highlighted.gapM,
+        // ⛔ *"opposite to the dx movement"* — `approach_swing.ts` owns that negation, so the
+        // one place the word OPPOSITE becomes arithmetic is a function with a vector on it.
+        sign: swingSignFor(lastTranslateRightPx),
+      };
+    } else if (!highlighted.inRange && swing !== null) {
+      // ⚠ Pulling apart past the offset ends the approach. ⛔ Nothing has to be restored: the
+      // progress is already back at 0 by the time the capture drops, so dropping the latch is
+      // continuous rather than a jump. That is the whole argument for an additive offset.
+      swing = null;
+    }
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -1819,8 +1914,51 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     applyCamera();
   };
 
+  /**
+   * ⭐⭐⭐ **THE APPROACH SWING'S LATCH** — the trial on branch `1.0.18-`, `null` when the
+   * capture is not live. ⛔ Armed on the RISING EDGE of the capture and dropped on the falling
+   * one, so it is a property of the approach rather than of any gesture.
+   * ⚠ It holds only what must NOT be re-read: the gap at the trigger, and which way to lean.
+   */
+  let swing: SwingLatch | null = null;
+  /**
+   * ⚠ The last screen-RIGHT travel a translate applied, in px — the only input the swing's
+   * direction needs (*"opposite to the dx movement"*). ⛔ Read once, at the trigger, and never
+   * after: a live read would flip the lean whenever the finger paused.
+   */
+  let lastTranslateRightPx = 0;
+  /**
+   * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
+   * device report: *"not working. the camera does not orbit."*
+   *
+   * ⚠⚠ `applyCamera()` is called ONLY by camera events — the reset, startup, a pinch, a
+   * slider and the orbit drag. **Nothing calls it while a finger is translating an object**,
+   * which is precisely the whole duration of an approach. ⭐ So the swing was computed
+   * correctly every frame and never reached the glass: the law was right and the WIRING was
+   * missing, with a green suite either way because `scene.ts` has no vectors.
+   *
+   * ⭐⭐ Comparing against the last APPLIED value rather than re-applying unconditionally keeps
+   * the render loop from writing the camera on frames where nothing about it changed — and
+   * makes the return to zero a single write rather than a state nobody notices.
+   */
+  let appliedSwingYaw = 0;
+
+  /**
+   * ⭐⭐ How far the camera is currently leaning out of its own orbit, in radians.
+   * ⛔ `0` whenever there is no live approach — and `0` at both ENDS of a live one, which is
+   * what makes *"back to its original position"* a fact rather than a restore that has to run.
+   */
+  const swingYawNow = (): number =>
+    swing === null
+      ? 0
+      : swingYawRad(
+          swingProgress(highlighted.gapM ?? 0, swing),
+          (cfg.approachSwingDeg * Math.PI) / 180,
+          swing.sign,
+        );
+
   const applyCamera = () => {
-    const pose = orbit.pose(zoom);
+    const pose = orbit.pose(zoom, swingYawNow());
     // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
     // Clamping the components independently would change the viewing ANGLE, which is
     // not what a near-plane guard is for.
@@ -2351,6 +2489,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ends visibly WRONG on the glass, because a slider whose every value looks plausible
         // teaches a hand nothing.
         tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
+        // ⭐⭐⭐ **THE APPROACH SWING (trial, branch `1.0.18-`)** — how far the camera leans out
+        // at HALF the trigger gap, and back to zero at contact.
+        // ⛔ **`0` TURNS THE WHOLE MECHANISM OFF**, which is what makes it A/B-able by finger
+        // in the same minute on the same scene — the comparison that settled `D28` and `IN13`.
+        // ⚠ The default 25° is a GUESS, and a guessed number has been wrong every single time
+        // in this project. Judge it here, not in the source.
+        tunable("approach swing (° of camera yaw)", "approachSwingDeg", 0, 90, 1),
         // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
         // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
         // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
@@ -3756,6 +3901,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         const mp = requirePose(grip.mesh);
         const r = grip.frame.right;
         const u = grip.frame.up;
+        // ⚠ The swing's direction comes from here and nowhere else — *"opposite to the dx
+        // movement"* means the travel this rule actually applied, not a raw pointer delta that
+        // `A11`'s deadband may have swallowed.
+        if (t.rightM !== 0) lastTranslateRightPx = t.rightM;
         setModelPose(grip.mesh, {
           position: [
             mp.position[0] + r[0] * t.rightM + u[0] * t.upM,
@@ -4181,6 +4330,28 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
 
     // ⭐⭐ `A16`: re-derived EVERY FRAME, here, before anything reads it.
     refreshHighlight();
+
+    // ⭐⭐⭐ **AND THE APPROACH SWING IS PUT ON THE CAMERA HERE** — device-reported, 2026-09-19:
+    // *"not working. the camera does not orbit."*
+    //
+    // ⛔⛔ THE LAW WAS RIGHT AND THE WIRING WAS ABSENT. `applyCamera()` is called only by
+    // CAMERA events — reset, startup, pinch, a slider, the orbit drag — and an approach is a
+    // finger translating an OBJECT, during which not one of them fires. ⚠ So the yaw was
+    // recomputed every frame and never written. ⭐ `METHOD`: *a rule that is never called is
+    // indistinguishable from a rule that is wrong*, and only the glass can tell them apart:
+    // `approach_swing.ts` has eleven green vectors and every one of them still passed.
+    //
+    // ⚠ Skipped while the camera reset is flying home — that animation writes the whole pose
+    // every frame, and two writers would fight for the camera with the reset winning by
+    // arriving second. ⛔ The swing's own return to zero is unaffected: it is a pure function
+    // of the gap, so whatever it missed it picks up on the next frame it is allowed to write.
+    if (cameraReset === null) {
+      const wantSwing = swingYawNow();
+      if (wantSwing !== appliedSwingYaw) {
+        appliedSwingYaw = wantSwing;
+        applyCamera();
+      }
+    }
 
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally

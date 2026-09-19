@@ -255,8 +255,17 @@ export class OrbitController {
     this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation));
   }
 
-  pose(zoom: number): OrbitPose {
-    return orbitOffset(this.cfg, this.yawRad, this.v, zoom);
+  /**
+   * @param yawOffsetRad ⭐⭐⭐ **AN ADDITIVE LEAN THAT THE CONTROLLER DOES NOT REMEMBER** — the
+   *   approach swing (branch `1.0.18-`). ⛔ It is a parameter and **not** a field on purpose:
+   *   the camera's own orbit is never written, so *"back to its original position"* is what
+   *   passing `0` means rather than something a restore has to achieve. ⚠ A restore can be
+   *   missed — a dropped frame, an early release, a body that never reaches contact — and
+   *   leaves the camera somewhere nobody chose; an offset cannot.
+   *   ⭐ It also rides on top of a hand orbiting meanwhile, instead of fighting it.
+   */
+  pose(zoom: number, yawOffsetRad = 0): OrbitPose {
+    return orbitOffset(this.cfg, this.yawRad + yawOffsetRad, this.v, zoom);
   }
 }
 
