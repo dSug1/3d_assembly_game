@@ -32,7 +32,7 @@ one-liner.
 ### Every session — two commands
 
 ```powershell
-npm run dev:usb                              # serves on 127.0.0.1:5173
+npm run dev:usb                              # serves on 127.0.0.1:5173 + opens the mirror
 adb reverse tcp:5173 tcp:5173                # device localhost:5173 -> PC localhost:5173
 ```
 
@@ -44,6 +44,38 @@ adb shell am start -a android.intent.action.VIEW -d http://localhost:5173
 
 ⭐ `scripts/device-loop.ps1` does the adb half, finding `adb` even if it is not on
 `PATH`, and refuses to claim success if the tunnel is not actually listed.
+
+## ⭐⭐⭐ THE PC MIRRORS THE TABLET'S TAB — and `dev:usb` opens it
+
+`npm run dev:usb` now starts **two** things: the Vite server, and a window on the PC showing
+**the tablet's own tab**, live (`scripts/mirror.mjs`, the owner's request 2026-09-19 —
+*"this window shall be open when the server is running"*). It appears at
+**`http://127.0.0.1:5199/`** and opens by itself.
+
+⛔⛔ **IT IS A MIRROR, NOT A SECOND BROWSER, AND THE DIFFERENCE IS THE WHOLE POINT.** Opening
+`localhost:5173` in a desktop browser gives a **different client** — its own scene, its own
+camera, its own HUD, its own pointer state — so what it shows is *another run of the same
+code*, not what the hand is holding. ⚠ This project has already been burned by exactly that
+shape twice: a device report judged against a superseded bundle (2026-09-16), and a duplicate
+tab that stole pointer events mid-gesture.
+
+⭐ **HOW**: Chrome's DevTools protocol over the same cable
+(`adb forward tcp:9222 localabstract:chrome_devtools_remote`), `Page.startScreencast`, and the
+JPEG frames relayed to a local page over Server-Sent Events. **No install and no dependency** —
+Node ≥ 21 has a WebSocket client, so this needed neither `scrcpy` nor an npm package. Measured
+**~25 fps** at 848×1178 on 2026-09-19.
+
+⚠ **What it shows is the TAB, not the device**: no status bar, no Android UI, no keyboard. It
+also carries **no touch** — it is a readout, and rule 5 still says a finger on the glass is what
+closes a change.
+
+⚠ The mirror waits rather than fails: no cable, no daemon or no tab is a **status line**, and it
+reconnects on every page reload. ⛔ It can never take the server down. `npm run dev:usb:bare`
+is the same server with no mirror; `npm run mirror` is the mirror on its own.
+
+⛔ **The `Page.screencastFrameAck` is not optional.** Chrome sends the next frame only once the
+last is acknowledged — drop it and the mirror shows one frame and freezes for ever, which looks
+exactly like a hung app.
 
 ## ⭐⭐ Use `adb reverse`, NOT Chrome's port forwarding
 

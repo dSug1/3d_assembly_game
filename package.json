@@ -10,7 +10,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:usb": "vite --host 127.0.0.1",
+    "dev:usb": "node scripts/dev-usb.mjs",
+    "dev:usb:bare": "vite --host 127.0.0.1",
+    "mirror": "node scripts/mirror.mjs",
     "dev:lan": "vite --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
