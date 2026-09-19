@@ -1326,6 +1326,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⛔ SURFACE TO SURFACE. ⚠ It reads the MODEL, not the display pose — the sway is
       // decoration and a highlight must not flicker with an animation nobody asked it to track.
       (a, b) => surfaceGap(world, a, b),
+      // ⛔⛔ `D62` — **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** (the owner,
+      // 2026-09-19). ⚠ The alignment INDEX lives here, in the render layer, so the lookup is
+      // handed over rather than reached for — `highlight.ts` stays engine-free and link-free.
+      // ⭐ `null` for a body with no alignment, which still sees the whole scene.
+      (id) => links.pioneerFor(id)?.objectId ?? null,
     );
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.

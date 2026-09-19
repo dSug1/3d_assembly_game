@@ -848,6 +848,34 @@ reset, so nothing can forget to — the shape `A13` and defect 40 both punished.
 ⚠ With MORE than one body held the exemption does not apply: *"is the held body free?"* has no
 single answer, and `translatesOnDrag` has already overridden the mode anyway.
 
+### ⛔⛔⛔ 5.10 `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE
+
+> *"Currently, a Follower can enter in the offset radius of any object and the white highlights
+> trigger. I want to restrict this strictly to its Pioneer object (= a Follower object cannot
+> approach any other object than its Pioneer)."* — the owner, 2026-09-19
+
+⚠⚠ **IT OVERTURNS `A21`**, which `proximity.ts` quoted verbatim: *"within a SnapIsPossibleRadius
+of **ANY** other object (not necessarily the object with PioneerFace)"*. ⛔ Recorded as a reversal
+rather than quietly replaced, because the old rule had an argument: *the Pioneer answers which way
+is up; the target answers what am I docking with*, and keeping them independent is what let a hand
+align against one part and assemble to another. ✅ That freedom is deliberately given up.
+
+⭐ **A body with NO alignment is untouched** and still sees the whole scene — the restriction is a
+property of **being a Follower**, which is what the owner's sentence says.
+
+⛔⛔ **A PIONEER OUT OF RANGE CAPTURES NOTHING; IT DOES NOT FALL BACK TO THE SCENE.** A fallback
+would make the restriction vanish exactly when the state is surprising, and the contour would name
+a body the owner has just forbidden. ⚠ Same for a **stale** link naming a body no longer in the
+world: refuse, never widen — `LESSONS_CARRIED` §6.
+
+⚠⚠ **AND THE READOUT OBEYS THE SAME RESTRICTION AS THE RULE.** The HUD's `gap=` now measures to
+the **Pioneer**, not to whatever body happens to be nearest. ⛔ Without that a hand would read
+`gap=40/70mm` with no contour on the glass, and the number would describe nothing — the
+readout-that-lies shape, which has cost this project more than a day.
+
+⚠ The lookup is **injected** into `highlightedPair` rather than reached for: the alignment index
+lives in the render layer, and `input/highlight.ts` must not learn to read it.
+
 ---
 
 ## 6. TRANSITIONS — in and out of the alignment rules

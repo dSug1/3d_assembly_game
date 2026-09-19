@@ -287,3 +287,13 @@ with it (ledger 44, 45).
 
 **`D37`** — ⛔ One alignment, replaced not stacked, so fork B's zero-DOF freeze cannot be built.
 ⭐ Fork C's alignment completes **mid-gesture**, with the object still held.
+
+## `D30` and `D39` — consequence text moved 2026-09-19
+
+**`D30`** — ⚠ The alternative was moving anchoring to **its own channel**, as eviction moved off
+the double-tap (`D12`→`D15`); gating on the mode won because it costs **no new gesture**.
+⛔ Nothing was orphaned — `flick.ts` keeps 6quater and the orientation rollback.
+
+**`D39`** — ⚠ The re-tap is a `ROTATE` gesture, so the shake stayed the only undo while
+translating, and the owner said he would judge one against the other. ✅ Superseded in part by
+`D37`→`D55`'s sweep: the re-tap now works in either mode.

@@ -282,6 +282,73 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
   });
 });
 
+describe("⛔⛔⛔ `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE", () => {
+  // ⛔⛔ THE OWNER, 2026-09-19: *"Currently, a Follower can enter in the offset radius of any
+  // object and the white highlights trigger. I want to restrict this strictly to its Pioneer
+  // object (= a Follower object cannot approach any other object than its Pioneer)."*
+  //
+  // ⚠⚠ **IT OVERTURNS `A21`**, which `proximity.ts` quoted verbatim: *"within a
+  // SnapIsPossibleRadius of ANY other object (not necessarily the object with PioneerFace)"*.
+  // ⭐ The old rule had an argument — the Pioneer answers *which way is up*, the target answers
+  // *what am I docking with* — and a hand has overruled it. Vectored as a REVERSAL so the next
+  // reader sees a decision rather than an accident.
+
+  /** `h` in the middle, `a` and `b` both well inside the band on either side. */
+  const flanked = () => scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1, 0, 0]]);
+
+  it("⭐⭐⭐ with a Pioneer named, every OTHER body is invisible to the capture", () => {
+    const w = flanked();
+    // ⚠ Both are in range — established first, so the vector cannot pass by nothing being near.
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w))?.target).toBe("a");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "b")?.target).toBe("b");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "a")?.target).toBe("a");
+  });
+
+  it("⛔⛔ a Pioneer OUT of range captures nothing — it does not fall back to the scene", () => {
+    // ⭐⭐ THE VECTOR THAT MATTERS MOST. A fallback would make the restriction disappear exactly
+    // when the state is surprising, and the contour would name a body the owner just forbade.
+    const w = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["far", [3, 0, 0]]);
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w))?.target).toBe("a");
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "far")).toBeNull();
+  });
+
+  it("⚠ a Pioneer that is not in the world captures nothing, and does not throw", () => {
+    // ⛔ A stale link is a reason to REFUSE, never to widen. `LESSONS_CARRIED` §6: a degenerate
+    // input returns nothing rather than a default.
+    const w = flanked();
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), "ghost")).toBeNull();
+  });
+
+  it("⭐ `null` means NOT a Follower — such a body still sees the whole scene", () => {
+    // ⚠ The restriction is a property of BEING a Follower, which is what the owner's sentence
+    // says. ⛔ This is also what keeps every pre-`D62` vector meaningful.
+    const w = flanked();
+    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), null)?.target).toBe("a");
+  });
+
+  it("⛔⛔⛔ AND THE COMPOSITION: `highlightedPair` draws no contour on a forbidden neighbour", () => {
+    // ⭐⭐ THE RULE AND THE PRODUCT'S ENTRY POINT ARE DIFFERENT FUNCTIONS, and only measuring
+    // the composition says the lookup is actually threaded through — mistake shape 4, which has
+    // caught this file before.
+    const w = flanked();
+    const near = { captureOffsetM: OFFSET, alignMatchRad: 1 };
+    const gap = (x: string, y: string) => surfaceGap(w, x, y);
+    // ⚠ Without a Pioneer: the nearest neighbour is captured, as it always was.
+    expect(highlightedPair(w, ["h"], true, near, null, gap).pair?.target).toBe("a");
+    // ✅ With one: the pair names the Pioneer, whichever side it is on.
+    expect(highlightedPair(w, ["h"], true, near, null, gap, () => "b").pair?.target).toBe("b");
+    // ⛔ And with a Pioneer out of range there is NO pair at all, though `a` is right there.
+    const w2 = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["far", [3, 0, 0]]);
+    const gap2 = (x: string, y: string) => surfaceGap(w2, x, y);
+    const v = highlightedPair(w2, ["h"], true, near, null, gap2, () => "far");
+    expect(v.pair).toBeNull();
+    expect(v.inRange).toBe(false);
+    // ⚠⚠ AND THE READOUT OBEYS THE RULE: the printed gap describes the PIONEER, not the body
+    // the hand can see nearby. A number that describes a forbidden pair is a readout that lies.
+    expect(v.gapM).toBeGreaterThan(1);
+  });
+});
+
 describe("the capture band, and the tie rule", () => {
   /** Two parts on the x axis whose SURFACES are `gap` apart. */
   const apart = (gap: number) =>

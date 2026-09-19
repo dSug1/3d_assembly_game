@@ -95,10 +95,21 @@ export interface Capture {
 /**
  * ⭐⭐⭐ **THE NEAREST OTHER OBJECT WITHIN CAPTURE RANGE**, or `null` — `A16`'s range condition.
  *
- * ⛔ THE OWNER'S RULE IS *"within a SnapIsPossibleRadius of ANY other object (not necessarily
- * the object with PioneerFace)"*, so this looks at the whole scene and not at the alignment.
- * ⭐ The Pioneer answers *which way is up*; the target answers *what am I docking with*, and
- * keeping them independent is what lets a hand align against one part and assemble to another.
+ * ⛔⛔⛔ **REVERSED BY THE OWNER, 2026-09-19 — A FOLLOWER MAY ONLY APPROACH ITS PIONEER.**
+ *
+ * > *"Currently, a Follower can enter in the offset radius of any object and the white highlights
+ * > trigger. I want to restrict this strictly to its Pioneer object (= a Follower object cannot
+ * > approach any other object than its Pioneer)."*
+ *
+ * ⚠⚠ **IT OVERTURNS `A21`, WHICH THIS COMMENT USED TO QUOTE VERBATIM**: *"within a
+ * SnapIsPossibleRadius of ANY other object (not necessarily the object with PioneerFace)"*.
+ * ⛔ Recorded rather than quietly replaced, because the old rule had an argument and a hand has
+ * now overruled it: *the Pioneer answers which way is up; the target answers what am I docking
+ * with* — and keeping them independent was what let a hand align against one part and assemble
+ * to another. ✅ That freedom is deliberately given up.
+ *
+ * ⭐ A body with NO alignment is untouched and still sees the whole scene: the restriction is a
+ * property of BEING a Follower, which is what the owner's sentence says.
  *
  * ⚠⚠ **AN EXACT TIE KEEPS THE CURRENT TARGET, AND THAT IS ALL IT DOES.** ⛔ This comment used
  * to call it *"hysteresis by memory"* and the 2026-09-17 audit corrected it: the comparison is
@@ -116,6 +127,10 @@ export interface Capture {
  * @param current last frame's target, for the tie rule. `null` on the first frame.
  * @param gapOf how to measure — `surfaceGap` in the product. ⭐ Injected so the tie rule and the
  *   threshold can be vectored against a stub, without building a world of geometry to do it.
+ * @param only ⛔⛔ **`D62`** — the ONE body this one may capture, or `null` for the whole scene.
+ *   ⭐ The held body's **Pioneer** in the product. ⚠ An `only` that is not in the world captures
+ *   NOTHING rather than falling back to the scene: a missing Pioneer is a reason to refuse, and a
+ *   fallback would make the restriction disappear exactly when the state is surprising.
  */
 export function nearestCapture(
   world: World,
@@ -123,11 +138,15 @@ export function nearestCapture(
   offsetM: number,
   current: ObjectId | null,
   gapOf: (a: ObjectId, b: ObjectId) => number | null,
+  only: ObjectId | null = null,
 ): Capture | null {
   let best: Capture | null = null;
   let bestGap = Infinity;
   for (const id of world.objects.keys()) {
     if (id === held) continue;
+    // ⛔ `D62`: a Follower may approach its Pioneer and nothing else. ⚠ The loop is kept rather
+    // than short-circuited on `only` — one code path, and the tie rule below still applies.
+    if (only !== null && id !== only) continue;
     const d = gapOf(held, id);
     if (d === null || d > offsetM) continue;
     // ⭐ Strictly nearer wins; an exact tie leaves `best` alone unless it is the incumbent.
