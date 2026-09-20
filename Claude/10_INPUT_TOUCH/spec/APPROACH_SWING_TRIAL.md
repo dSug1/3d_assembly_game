@@ -2,8 +2,9 @@
 
 > **STATUS** · trial, unjudged · **OWNS** · the camera lean during a Follower's approach
 > **READ IF** · you are judging this branch, or deciding whether to keep or discard it
-> **LAST VERIFIED** · 2026-09-19 — boot scene AND the swing confirmed on the tablet by a synthesised
-> drag; ⚠ the FEEL (amplitude, whether it helps) has had no finger
+> **LAST VERIFIED** · 2026-09-20 — the swing's DIRECTION re-reported from Pages and fixed at its
+> source (the sign was read from a travel that was never reset); ⚠ the fix itself is **unjudged**,
+> and so is the FEEL (amplitude, whether it helps at all)
 
 ⚠⚠ **THIS IS A TRIAL AND IT IS MEANT TO BE DISCARDABLE.** The owner: *"Let's try a fork of the
 build here … If the trial is not successful, I will just discard the branch later on."*
@@ -415,6 +416,76 @@ is byte-for-byte what it was.
 ⚠ **TWO RENDER-WIRING MUTANTS SURVIVE HERE TOO** (the selector test, and case 2 firing when the
 selector is 0). Sixth and seventh instances — see the `ApproachSwing` remedy above.
 
+### ⛔⛔⛔ THE DIRECTION WAS STILL WRONG, AND THE SIGN WAS NEVER THE PROBLEM — 2026-09-20
+
+> *"I am referring to the previous issue of camera yaw when follower and pioneer cross offset
+> radius: sometimes the yaw is to the left bottom, sometimes it is to the right up for the same
+> delta position x. We did not solve the issue."* — the owner, against build `001a8a6`
+
+⭐⭐⭐ **THE 2026-09-19 FIX WAS CORRECT AND IT FIXED THE WRONG HALF.** `sign(dx)` *is* the
+answer to *"which way is opposite to this travel"*; what was passed into it was **not this
+approach's travel**. Two independent faults, both in the render file, both invisible to 974
+vectors:
+
+1. ⛔⛔ **`lastTranslateRightPx` was *the last non-zero horizontal travel ever applied*, and
+   NOTHING EVER RESET IT** — not a lift, not a release, not a new gesture, not a different body.
+   It survived whole gestures.
+2. ⛔⛔ **The capture's rising edge needs no motion at all to fire.** `highlightedPair` sets
+   `inRange` **before** it ever consults the movement mode, so an approach arms on a **press
+   inside the band**, on a **rotation** that moved the closest points, or on a **pinch** that
+   rescaled `D49`'s camera-distance threshold. In every one of those the sign came from
+   whatever had moved last — possibly the opposite direction, possibly a different object,
+   possibly minutes earlier.
+
+⚠ The owner's own test loop is the worst case for it: approach → contact → **lift** → press
+again (the pair is still inside the band, so it re-arms **on the press**) → drag. The lean's
+direction is then inherited from the previous drag, and the same `dx` leans either way
+depending only on how the band happened to be entered.
+
+⭐⭐ **MISTAKE SHAPE 2, EXACTLY** — *measuring a DIFFERENT QUANTITY than the one asked for.*
+The question is *which way is this approach travelling*; the answer given was *which way did
+anything last travel*. ⚠ And the declared fallback made it worse: `swingSignFor(0)` returned
+`+1`, so *"I have no idea"* became a confident 30° lean. `LESSONS_CARRIED` §6: **a degenerate
+input returns `null`, never a default.**
+
+✅ **THE FIX, AND IT IS ONE LINE OF LIFETIME.** `frameTravelRightM` accumulates the travel rule
+6 applies and is **consumed and zeroed by `refreshHighlight` every frame**, so the arming edge
+can only ever read *the travel that crossed the threshold*. `swingSignFor` returns
+**`1 | -1 | null`**, `swingYawRad(p, A, null)` is **0**, and the HUD prints **`sign⛔?`** with
+`dxArm=0.00mm` — so *no direction* is distinguishable on the glass from *the wrong direction*,
+which it was not before.
+⛔ **NO MAGNITUDE THRESHOLD, and that is `A11` doing its job**: §1.1's deadband emits the excess
+only, so a resting finger emits exactly zero and any non-zero travel is motion a hand committed
+to. A second threshold here would guard against noise that has already been removed.
+⚠ **THE COST, STATED**: an approach that crosses the threshold **without** a horizontal
+translation — a depth push, a rotation, a press already inside the band — now gets **no swing at
+all**, and a hand has to pull apart past the offset and come back in to arm one. ⭐ That is the
+honest reading of the dictation, which is about *"the translation of the Follower … on the
+camera x horizontal axis"* and nothing else. ⛔ Deliberately **no late adoption**: adopting a
+sign mid-approach would have to re-base `g0` to the remaining gap, and a swing compressed into
+the last millimetre is a 30° jolt.
+
+### ⚠⚠ AND A SECOND MECHANISM IS STILL LIVE — IT IS A FEEL DECISION, NOT A DEFECT
+
+⛔ The lean is a function of the **gap** and of a sign latched at the trigger, so **inside the
+band it does not care which way the finger is going**:
+
+* easing back from `p = 0.8` to `p = 0.5` **increases** the lean — the camera leans further in
+  the same direction while the finger travels the other way;
+* **pulling apart from contact** runs the whole half-sine again, out and back, in the direction
+  of the approach that armed it.
+
+⚠ Both read exactly like the reported symptom, and neither is fixed by the sign. ⛔ They cannot
+both be fixed and the dictation kept: *"the lean is a function of the gap, zero at both ends"*
+and *"the lean always opposes the current dx"* are **incompatible** — making the sign live would
+mirror the lean through `2A` the instant a finger reverses.
+
+⭐ **The one-line option, if a hand dislikes it**: freeze the progress whenever the gap is
+**opening**, exactly as it already freezes when no translation drives it. ✅ Contact still comes
+home (`p = 1`), and separating from contact no longer swings the camera at all. ⚠ The cost: a
+hand that backs off mid-approach and leaves the band keeps the lean it had, absorbed — the
+camera stops coming home on its own. **The owner's call.**
+
 ## ⚠ What has NOT been judged
 
 ✅ **THE SPEED DIALS HAVE BEEN SET BY A HAND** — the owner, 2026-09-19:
@@ -431,6 +502,7 @@ minute on the same scene — the comparison that settled `D28` and `IN13`.
 
 Delete `src/input/approach_swing.ts` and `tests/approach_swing.test.ts`, restore the two
 `bootRotations` arguments in `scene.ts`, delete `bootAlignment` and its one call, the `swing` /
-`lastTranslateRightPx` declarations, `swingYawNow`, the arming block in `refreshHighlight`, the
+`frameTravelRightM` declarations (and the `+=` in rule 6 and the zeroing in `refreshHighlight`),
+`swingYawNow`, the arming block in `refreshHighlight`, the
 `approachSwingDeg` tunable and its slider, and the `yawOffsetRad` parameter on `OrbitController.pose`.
 ⭐ Nothing else depends on any of it.

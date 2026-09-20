@@ -50,8 +50,32 @@ export interface SwingLatch {
    * Which way to swing. ⭐ *"opposite to the dx movement"*, decided once.
    * ⚠ Latched for the same reason `D57`'s roll sign is: recomputed per frame it would flip
    * whenever the finger paused or jittered across zero, at full amplitude.
+   *
+   * ⛔⛔⛔ **`null` MEANS *NO DIRECTION WAS AVAILABLE*, AND THEN THERE IS NO SWING** —
+   * device-reported, 2026-09-20: *"sometimes the yaw is to the left bottom, sometimes it is to
+   * the right up for the same delta position x."*
+   *
+   * ⚠⚠ The first build read the sign from `scene.ts`'s *last non-zero horizontal travel ever
+   * applied*, a module variable that was **never reset** — not per gesture, not per approach,
+   * not per object. ⛔ And the capture's rising edge needs **no motion at all** to fire
+   * (`highlightedPair` sets `inRange` before it ever looks at the movement mode), so an
+   * approach could arm on a PRESS inside the band, on a rotation that moved the closest points,
+   * or on a pinch that rescaled `D49`'s threshold — and take the direction of a drag that
+   * belonged to a different gesture, minutes earlier, in the opposite direction.
+   *
+   * ⭐⭐ So the direction is now **the travel that crossed the threshold**, and nothing else:
+   * zero travel on the crossing frame means `null`, which means the approach runs with no lean.
+   * ⛔ Not a fallback to `+1`, which is what the first build declared — *"suppress, do not
+   * guess"* (`LESSONS_CARRIED` §6). A guessed direction is a 30° camera motion nobody asked
+   * for, and it is indistinguishable on the glass from the rule working.
    */
-  readonly sign: 1 | -1;
+  readonly sign: 1 | -1 | null;
+  /**
+   * ⚠ The horizontal travel the sign was taken from, in metres — **for the READOUT only**, so a
+   * hand can see what the arming frame saw. ⛔ Nothing reads it to decide anything: it is here
+   * because this defect took two screenshots and a numeric probe to resolve without it.
+   */
+  readonly armTravelM: number;
   /**
    * ⭐⭐⭐ **THE CAPTURE THRESHOLD, FROZEN FOR THE APPROACH** — and the PITCH half is what made
    * this necessary.
@@ -106,8 +130,18 @@ export function swingProgress(gapM: number, latch: SwingLatch): number {
  * `1.2246e-16`, not `0`. ⭐ The owner's requirement is *"the camera shall be back to its original
  * position"*, and a residual — however small — makes that a near-miss rather than a fact.
  * `AlignSnaps.advance` lands on its solved orientation for the same reason, and says so.
+ *
+ * ⛔⛔⛔ **AND A `null` SIGN IS ZERO, HERE, RATHER THAN A BRANCH IN `scene.ts`.** An approach
+ * whose threshold was not crossed by a horizontal translation has no direction to lean in, and
+ * *the rule that says so has to be interrogable*: written as an `if` in the render file it would
+ * be the eighth mutant of this trial that the whole suite cannot see.
  */
-export function swingYawRad(progress: number, amplitudeRad: number, sign: 1 | -1): number {
+export function swingYawRad(
+  progress: number,
+  amplitudeRad: number,
+  sign: 1 | -1 | null,
+): number {
+  if (sign === null) return 0;
   if (!(progress > 0) || progress >= 1) return 0;
   return sign * amplitudeRad * Math.sin(Math.PI * progress);
 }
@@ -138,12 +172,41 @@ export function swingYawRad(progress: number, amplitudeRad: number, sign: 1 | -1
  * internal consistency could have revealed it. `METHOD`: *a sign is not tested by any amount of
  * testing the magnitude.*
  *
- * ⚠ **A ZERO `dx` FALLS BACK TO `+1`, DECLARED.** The trigger can fire on a frame where the
- * finger happened to be between samples, and `Math.sign(0)` is `0` — which would be *no swing at
- * all*, silently, on a gesture the hand can only repeat by pulling apart and coming back.
+ * ⛔⛔⛔ **AND IT SHIPPED A SECOND DEFECT UNDER THE FIRST — device-reported, 2026-09-20.**
+ *
+ * > *"sometimes the yaw is to the left bottom, sometimes it is to the right up for the same
+ * > delta position x."* — the owner
+ *
+ * ⚠⚠ **THE ARITHMETIC WAS RIGHT AND THE ARGUMENT WAS WRONG.** `sign(dx)` is the correct answer
+ * to *"which way is opposite to this travel"* — but what was passed in was **not this
+ * approach's travel**. `scene.ts` kept the last non-zero horizontal travel it had ever applied,
+ * in a variable **nothing ever reset**, and the capture's rising edge fires with **no motion at
+ * all** — a press inside the band, a rotation that moved the closest points, a pinch that
+ * rescaled `D49`'s threshold. ⛔ So the lean's direction could be inherited from a previous
+ * gesture, on a different body, in the opposite direction, and the same `dx` then leaned either
+ * way depending on how the band had been entered.
+ *
+ * ⭐⭐ **MISTAKE SHAPE 2, EXACTLY**: *measuring a DIFFERENT QUANTITY than the one asked for.*
+ * The question is *which way is this approach travelling*; the answer given was *which way did
+ * anything last travel*. ⚠ And the zero case made it worse rather than safer: the old
+ * `+1` fallback turned *"I have no idea"* into a confident 30° lean.
+ *
+ * ⭐ So: **`null` when there is no travel to read**, and the caller does not swing.
+ * `LESSONS_CARRIED` §6 — *suppress, do not guess; a degenerate input returns `null`, never a
+ * default.* ⚠ The cost, stated: an approach that crosses the threshold without a horizontal
+ * translation — depth, a rotation, a press already inside the band — gets **no swing at all**,
+ * and a hand has to pull apart past the offset and come back in to arm one. ⛔ That is the
+ * honest reading of the owner's own dictation, which is about *"the translation of the
+ * Follower … on the camera x horizontal axis"* and about nothing else.
+ *
+ * ⛔ **NO MAGNITUDE THRESHOLD, AND THAT IS `A11` DOING ITS JOB.** §1.1's deadband emits the
+ * excess only, so a resting finger emits **exactly zero** and any non-zero travel is already
+ * motion a hand committed to. ⚠ A second threshold here would be a number nobody measured,
+ * guarding against noise that has already been removed.
  */
-export function swingSignFor(dxPx: number): 1 | -1 {
-  return dxPx < 0 ? -1 : 1;
+export function swingSignFor(travelRight: number): 1 | -1 | null {
+  if (!Number.isFinite(travelRight) || travelRight === 0) return null;
+  return travelRight < 0 ? -1 : 1;
 }
 
 /**

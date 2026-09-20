@@ -1468,7 +1468,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         offsetAtTriggerM: highlighted.offsetM,
         // ⛔ *"opposite to the dx movement"* — `approach_swing.ts` owns that negation, so the
         // one place the word OPPOSITE becomes arithmetic is a function with a vector on it.
-        sign: swingSignFor(lastTranslateRightPx),
+        // ⛔⛔⛔ **AND IT IS THE TRAVEL OF *THIS* FRAME** — device-reported, 2026-09-20:
+        // *"sometimes the yaw is to the left bottom, sometimes it is to the right up for the
+        // same delta position x."* ⚠ The threshold can be crossed with no travel at all (a
+        // press inside the band, a rotation moving the closest points, a pinch rescaling
+        // `D49`'s offset), and then this is **zero** — which `swingSignFor` answers with
+        // `null`, and a `null` sign is a swing of zero. ⛔ The old code answered `+1`.
+        sign: swingSignFor(frameTravelRightM),
+        armTravelM: frameTravelRightM,
       };
     } else if (!highlighted.inRange && swing !== null) {
       // ⚠ Pulling apart past the offset ends the approach. ⛔ Nothing has to be restored: the
@@ -1493,6 +1500,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       swingAmp = null;
       swingFrozenProgress = null;
     }
+    // ⛔⛔⛔ **CONSUMED HERE, EVERY FRAME, WHETHER OR NOT ANYTHING ARMED.** This one line is what
+    // keeps the swing's direction a property of the approach: the arming edge above can only
+    // ever see travel applied since the previous frame. ⚠ Zeroing it anywhere else — on a
+    // press, on a release, at the end of the render loop — would leave a window in which a
+    // stale direction is readable, which is the defect of 2026-09-20 in a smaller form.
+    frameTravelRightM = 0;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -1988,11 +2001,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let swing: SwingLatch | null = null;
   /**
-   * ⚠ The last screen-RIGHT travel a translate applied, in px — the only input the swing's
-   * direction needs (*"opposite to the dx movement"*). ⛔ Read once, at the trigger, and never
-   * after: a live read would flip the lean whenever the finger paused.
+   * ⭐⭐⭐ **THE SCREEN-RIGHT TRAVEL APPLIED SINCE THE LAST FRAME**, in metres — and it is
+   * **CONSUMED AND ZEROED BY `refreshHighlight` EVERY FRAME**, which is the whole fix for the
+   * 2026-09-20 report (*"sometimes the yaw is to the left bottom, sometimes it is to the right
+   * up for the same delta position x"*).
+   *
+   * ⛔⛔ It used to be `lastTranslateRightPx`: *the last non-zero travel ever applied*, reset by
+   * **nothing** — not a lift, not a mode flip, not a new gesture. ⚠ And the capture's rising
+   * edge needs no motion to fire, so an approach could arm on a press, a rotation or a pinch and
+   * inherit a direction from a drag that had ended minutes earlier. ⭐ Zeroed every frame, the
+   * only thing the arming edge can read is **the travel that crossed the threshold**.
+   *
+   * ⚠ It sums every translating grip's travel, not just the captured pair's: with two fingers on
+   * two bodies the approach is whatever the pair's gap does, and singling one out would be a
+   * rule this file is not allowed to own.
    */
-  let lastTranslateRightPx = 0;
+  let frameTravelRightM = 0;
   /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
@@ -2438,10 +2462,18 @@ outl      ${
             (swing === null
               ? ""
               : `
-swing     sign${swing.sign > 0 ? "+" : "−"} p=${swingProgress(highlighted.gapM ?? 0, swing).toFixed(2)}` +
+swing     sign${
+                  // ⛔ `?` is *no direction was available at the threshold*, which is a swing of
+                  // ZERO and not a swing going the wrong way — the 2026-09-20 report could not
+                  // distinguish those two from outside, and this is what tells them apart.
+                  swing.sign === null ? "⛔?" : swing.sign > 0 ? "+" : "−"
+                } p=${swingProgress(highlighted.gapM ?? 0, swing).toFixed(2)}` +
                 ` yaw=${((appliedSwingYaw * 180) / Math.PI).toFixed(1)}°` +
                 ` g0=${(swing.gapAtTriggerM * 1000).toFixed(0)}mm` +
-                ` dxLatch=${lastTranslateRightPx.toFixed(4)}` +
+                // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
+                // from"* is the question a direction report asks, and `0.0000` here is the whole
+                // explanation of a `⛔?`.
+                ` dxArm=${(swing.armTravelM * 1000).toFixed(2)}mm` +
                 ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
             (drawFault === null
               ? ""
@@ -4088,7 +4120,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ The swing's direction comes from here and nowhere else — *"opposite to the dx
         // movement"* means the travel this rule actually applied, not a raw pointer delta that
         // `A11`'s deadband may have swallowed.
-        if (t.rightM !== 0) lastTranslateRightPx = t.rightM;
+        // ⛔⛔ **ACCUMULATED, NOT LATCHED.** `refreshHighlight` zeroes this every frame, so the
+        // arming edge can only ever read travel that happened *since the previous frame* — the
+        // travel that crossed the threshold. ⚠ The old form kept the last non-zero value for
+        // ever and handed the swing a direction from a gesture that was already over.
+        frameTravelRightM += t.rightM;
         // ⭐⭐⭐ **CASE 2's BLEND IS DRIVEN BY *THIS* FINGER** — and without it the retarget was
         // invisible: `centreBlend.advance` is called from the ORBIT branch only, so during an
         // object drag the target moved and the camera never migrated to it. ⚠ Measured on the
