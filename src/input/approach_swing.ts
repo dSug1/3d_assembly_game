@@ -262,6 +262,70 @@ export function pitchOffsetV(pitchRad: number, bottomRad: number, topRad: number
 }
 
 /**
+ * ⭐⭐⭐ **WHAT ENDING AN APPROACH OWES — the absorb, and the BASIS the game just invalidated.**
+ *
+ * > *"There can be cases where the follower enters the offset radius with one translation on an
+ * > axis … and then exit the offset radius by another translation on a different axis (for
+ * > example depth): if the camera has significantly orbited already when the follower exits the
+ * > offset radius, the delta position axis ends up being quite off vs the camera axis and
+ * > therefore the user feels a disconnect between the touch input axis and the follower
+ * > translation axis."* — the owner, 2026-09-20
+ *
+ * ⭐⭐⭐ **THE RULE THIS ANSWERS WITH: THE GAME MAY NOT MOVE THE CAMERA UNDER A LIVE GESTURE
+ * WITHOUT TELLING THE GESTURE.** `A7`'s basis is latched at the PRESS, and that latch is
+ * deliberate — *"an orbit that happens mid-drag cannot redefine which way `right` is"*. ⛔ But
+ * it was written against the **HAND's** orbit, which is something the user did on purpose. The
+ * swing is the **GAME's** orbit: the user never asked for it, and while the lean is live it is
+ * bounded and returns to zero, so the mismatch is transient and self-correcting. ⚠⚠ **`absorb`
+ * is what makes it permanent** — it folds the lean into the orbit so the pose does not jump, and
+ * from that instant the camera is somewhere new **for good** while the basis still describes
+ * where it was.
+ *
+ * ⭐ So the ending is the moment to hand the live grips a new basis, and it is the RIGHT moment
+ * on three counts: it is **discrete** (a capture edge, never a continuous reading — `METHOD`),
+ * it is the instant the displacement stops being temporary, and it moves **nothing** — a basis
+ * decides where the NEXT travel goes, so re-deriving it cannot make an object jump.
+ *
+ * ⛔ **AND ONLY WHEN THE ABSORB IS NOT A NO-OP.** At contact and on a clean separation the lean
+ * is already exactly zero, the camera is on its own orbit, and the latched basis is still
+ * correct — re-deriving there would throw away a latch that is doing its job for nothing.
+ *
+ * ⚠ The two halves are computed HERE, together, because they are one fact about one instant:
+ * `scene.ts` used to build the `vOffset` inline at the call site, which is the shape that has
+ * already cost this trial seven mutants nothing in the suite could see.
+ *
+ * @param appliedYawRad the lean actually on the camera at the ending — `0` for a no-op ending.
+ */
+export interface SwingEnding {
+  /** Yaw to fold into the orbit, in radians. */
+  readonly yawRad: number;
+  /** Elevation to fold in, in the ring surface's `v`. ⛔ The MAGNITUDE's — the pitch never mirrors. */
+  readonly vOffset: number;
+  /**
+   * ⭐⭐ Does every live grip owe itself a fresh `A7` basis? ⛔ True exactly when the camera has
+   * been permanently displaced by the game — i.e. when this ending is not a no-op.
+   */
+  readonly rebaseFrames: boolean;
+}
+
+export function endApproach(
+  appliedYawRad: number,
+  bottomRad: number,
+  topRad: number,
+): SwingEnding {
+  // ⚠ A non-finite lean is not a displacement anyone can compensate for: absorb nothing, and
+  // leave the basis alone rather than re-deriving it from a camera nothing moved.
+  if (!Number.isFinite(appliedYawRad) || appliedYawRad === 0) {
+    return { yawRad: 0, vOffset: 0, rebaseFrames: false };
+  }
+  return {
+    yawRad: appliedYawRad,
+    vOffset: pitchOffsetV(pitchAngleFor(appliedYawRad), bottomRad, topRad),
+    rebaseFrames: true,
+  };
+}
+
+/**
  * ⭐⭐⭐ **THE SWING IS DIVIDED BY THE FINGER'S SPEED, WITH A GAIN AND AN EXPONENT.**
  *
  * > *"I want to set the maximum approach swing with the slider, and divide it by the speed of the

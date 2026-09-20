@@ -163,6 +163,7 @@ import {
   rebaseTriggerGap,
   smoothAmplitude,
   swingDriverIndex,
+  endApproach,
   swingAmplitudeRad,
   swingProgress,
   swingSignFor,
@@ -1489,11 +1490,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // vanish and no special case for *which kind of ending this was*.
       // ⚠ At contact and on a clean separation the offset is already zero, so this is a no-op
       // there; doing it unconditionally is what keeps that from being a decision.
+      //
+      // ⭐⭐⭐ **AND THE ENDING ALSO HANDS EVERY LIVE GRIP A NEW BASIS** — the owner,
+      // 2026-09-20: *"the delta position axis ends up being quite off vs the camera axis and
+      // therefore the user feels a disconnect between the touch input axis and the follower
+      // translation axis."* ⛔ `A7`'s frame is latched at the press against the **HAND's**
+      // orbit, which is deliberate. The swing is the **GAME's** orbit, and `absorb` is the
+      // instant that displacement becomes permanent — so it is also the instant the latch
+      // stops protecting anything and starts lying. `approach_swing.ts` owns the decision.
+      // ⚠ It moves nothing: a basis decides where the NEXT travel goes.
       const rings = orbit.ringElevationRad();
-      orbit.absorb(
-        appliedSwingYaw,
-        pitchOffsetV(pitchAngleFor(appliedSwingYaw), rings.bottom, rings.top),
-      );
+      const ending = endApproach(appliedSwingYaw, rings.bottom, rings.top);
+      orbit.absorb(ending.yawRad, ending.vOffset);
+      if (ending.rebaseFrames) rebaseGestureFrames();
       appliedSwingYaw = 0;
       swing = null;
       // ⚠ Forgotten with the approach, so the next one starts from its own first reading.
@@ -2256,6 +2265,26 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       );
     }
     return g;
+  };
+
+  /**
+   * ⭐⭐⭐ **HAND EVERY LIVE GRIP THE BASIS THE CAMERA IS ACTUALLY AT NOW.**
+   *
+   * ⛔ Called on ONE event: the end of an approach that left the camera somewhere new
+   * (`endApproach().rebaseFrames`). ⚠ Not on a timer, not while the swing is live — the
+   * dictation is explicit that the approach axis *"is not updated by the camera orbit"*, and
+   * during the lean the displacement is temporary and returns to zero on its own.
+   *
+   * ⛔⛔ **IT DOES NOT THROW, AND `requireGestureFrame` DOES.** That one is called from a PRESS,
+   * where a refusal is the honest answer and lands on the gesture that asked. This runs inside
+   * the render loop, where a throw would take the whole frame down for a camera the orbit rings
+   * make unreachable anyway. ⭐ So a frame that cannot be built leaves the grip with the basis
+   * it has — the previous behaviour, which is a real answer rather than an improvised one.
+   */
+  const rebaseGestureFrames = (): void => {
+    const g = gravityFrame(screenFrame().viewAxis, WORLD_DOWN);
+    if (!g) return;
+    for (const grip of held.values()) grip.frame = g;
   };
 
   const screenFrame = (): ScreenFrame => ({

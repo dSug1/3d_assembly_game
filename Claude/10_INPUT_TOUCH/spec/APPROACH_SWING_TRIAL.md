@@ -486,6 +486,44 @@ home (`p = 1`), and separating from contact no longer swings the camera at all. 
 hand that backs off mid-approach and leaves the band keeps the lean it had, absorbed — the
 camera stops coming home on its own. **The owner's call.**
 
+### ⭐⭐⭐ THE INPUT AXIS IS HANDED BACK AT THE END OF AN APPROACH — 2026-09-20
+
+> *"There can be cases where the follower enters the offset radius with one translation on an
+> axis (for example delta position x) and then exit the offset radius by another translation on
+> a different axis (for example depth): if the camera has significantly orbited already when the
+> follower exits the offset radius, the delta position axis ends up being quite off vs the camera
+> axis and therefore the user feels a disconnect between the touch input axis and the follower
+> translation axis. Can we remediate? For example realigning the input axis with the camera axis
+> at some point."* — the owner
+
+⭐⭐⭐ **THE RULE ADOPTED: THE GAME MAY NOT MOVE THE CAMERA UNDER A LIVE GESTURE WITHOUT TELLING
+THE GESTURE.** `A7`'s basis is latched at the PRESS and `scene.ts` says why — *"an orbit that
+happens mid-drag cannot redefine which way `right` is"*. ⛔ That latch was written against the
+**HAND's** orbit, which is something the user did deliberately. The swing is the **GAME's**
+orbit. ⚠ And while the lean is live the mismatch is **bounded and self-correcting** — it returns
+to zero at contact — so the dictation's *"the axis is not updated by the camera orbit"* still
+holds throughout the approach. ⛔⛔ **`absorb` is what makes it permanent**, and that is the one
+instant where the latch stops protecting anything and starts lying.
+
+✅ So `endApproach()` now answers the whole ending — the yaw to absorb, the elevation to absorb,
+and **whether the live grips owe themselves a fresh basis** — and `scene.ts` applies it.
+⛔ **Only when the absorb is not a no-op**: at contact and on a clean separation the lean is
+exactly zero, the camera is on its own orbit and the press-time basis is still correct.
+⭐ It is the right moment on three counts: it is **discrete** (a capture edge, never a continuous
+reading), it is the instant the displacement stops being temporary, and **it moves nothing** — a
+basis decides where the NEXT travel goes, so re-deriving one cannot make an object jump.
+
+⚠ **THE COST, STATED**: after the rebase a continuing `dx` sends the body along the NEW
+screen-right, so a part that was travelling straight at its Pioneer changes its world direction
+at that instant. ⭐ That is what *"realigning the input axis with the camera axis"* **is**; the
+alternative is the disconnect. ⛔ What was NOT done: re-deriving the basis continuously (it would
+curve a straight finger path in world space, and the dictation forbids it) or at every pause (a
+rule keyed on MOTION, which `METHOD` refuses by name).
+
+⚠ **AND THE SAME SHAPE EXISTS OUTSIDE THE TRIAL, UNREPORTED AND UNFIXED**: the double-tap camera
+reset flies home *while a grip is live*, which displaces the camera far more than a swing ever
+does and leaves the same stale basis. ⭐ One line with the same helper if a hand wants it.
+
 ## ⚠ What has NOT been judged
 
 ✅ **THE SPEED DIALS HAVE BEEN SET BY A HAND** — the owner, 2026-09-19:

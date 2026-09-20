@@ -12,6 +12,7 @@ import {
   pitchOffsetV,
   rebaseTriggerGap,
   swingDriverIndex,
+  endApproach,
   smoothAmplitude,
   swingAmplitudeRad,
   swingProgress,
@@ -539,5 +540,67 @@ describe("⛔⛔ THE TWO DECISIONS THAT WERE HIDING IN `scene.ts`", () => {
     // ⛔ Otherwise the next pause would re-base against a progress from the previous one.
     expect(freezeProgress(0.4, 0.9, true)).toBeNull();
     expect(freezeProgress(null, 0.9, true)).toBeNull();
+  });
+});
+
+describe("⛔⛔⛔ THE ENDING — what a camera the GAME moved owes a live gesture", () => {
+  // ⛔ THE OWNER, 2026-09-20: *"if the camera has significantly orbited already when the
+  // follower exits the offset radius, the delta position axis ends up being quite off vs the
+  // camera axis and therefore the user feels a disconnect between the touch input axis and the
+  // follower translation axis."*
+  //
+  // ⭐⭐ `A7`'s basis is latched at the PRESS against the **hand's** orbit, deliberately. The
+  // swing is the **game's** orbit, and `absorb` is the instant that displacement stops being
+  // temporary — so that is the instant the latch stops protecting anything.
+  const BOTTOM = Math.atan2(0.2, 1.4);
+  const TOP = Math.atan2(1.3, 0.5);
+
+  it("⭐⭐⭐ a NO-OP ending owes nothing — no absorb, and the latched basis STAYS", () => {
+    // ⛔ At contact and on a clean separation the lean is exactly zero, the camera is on its own
+    // orbit, and the press-time basis is still correct. ⚠ Re-deriving there would throw away a
+    // latch that is doing its job — and it would do it on EVERY capture drop, which is the
+    // common case.
+    expect(endApproach(0, BOTTOM, TOP)).toEqual({ yawRad: 0, vOffset: 0, rebaseFrames: false });
+  });
+
+  it("⛔⛔ an ending that LEANS absorbs both halves and re-bases the frames", () => {
+    const e = endApproach(0.3, BOTTOM, TOP);
+    expect(e.yawRad).toBeCloseTo(0.3, 12);
+    expect(e.rebaseFrames).toBe(true);
+    // ⭐⭐ THE COMPOSITION IS ASSERTED, NOT ASSUMED — `scene.ts` used to build this inline at the
+    // call site, and every rule this trial wrote in the render file became a mutant the suite
+    // could not see. ⚠ `METHOD`: a composition is a thing to MEASURE.
+    expect(e.vOffset).toBeCloseTo(pitchOffsetV(pitchAngleFor(0.3), BOTTOM, TOP), 12);
+    expect(e.vOffset).toBeGreaterThan(0);
+  });
+
+  it("⭐ and the ending's PITCH does not mirror either — a left lean absorbs UP too", () => {
+    // ⚠ The same fact as `pitchAngleFor`, asserted where it is SPENT: an ending that absorbed a
+    // mirrored elevation would leave `+x` and `−x` approaches on opposite sides of the scene
+    // for good, not just during the lean.
+    expect(endApproach(-0.3, BOTTOM, TOP).vOffset).toBeCloseTo(
+      endApproach(0.3, BOTTOM, TOP).vOffset,
+      12,
+    );
+    expect(endApproach(-0.3, BOTTOM, TOP).yawRad).toBeCloseTo(-0.3, 12);
+  });
+
+  it("⚠ a non-finite lean absorbs NOTHING and re-bases nothing", () => {
+    // ⛔ `LESSONS_CARRIED` §6 — a degenerate input is refused, never improvised. Absorbing a NaN
+    // would poison the orbit's own yaw, which nothing downstream could recover from.
+    expect(endApproach(Number.NaN, BOTTOM, TOP)).toEqual({
+      yawRad: 0,
+      vOffset: 0,
+      rebaseFrames: false,
+    });
+  });
+
+  it("⛔ degenerate rings give NO elevation, and the yaw is still absorbed", () => {
+    // ⚠ `pitchOffsetV` answers 0 when the rings have no span — no angle is expressible — and the
+    // ending must not turn that into a refusal of the YAW, which is unaffected by the rings.
+    const e = endApproach(0.3, TOP, TOP);
+    expect(e.vOffset).toBe(0);
+    expect(e.yawRad).toBeCloseTo(0.3, 12);
+    expect(e.rebaseFrames).toBe(true);
   });
 });
