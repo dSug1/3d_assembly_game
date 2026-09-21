@@ -711,6 +711,9 @@ rather than a promise. The flip is now 6 red, and both screen axes are pinned se
 
 ### ⭐⭐⭐ 5.6 `D58` — THE MOVEMENT MODE TOGGLES ON A PRESS TOO
 
+> ⚠⚠ **REPEALED BY §5.13 (`D66`), 2026-09-21 — a press no longer toggles the mode.**
+> The text stands as the record of the decision and of what it cost.
+
 > *"while the first touch is pressed on an object (free object or follower object), the toggle
 > back and forth between rotation mode and translation mode can be triggered by:*
 > * *a tap outside any object (this is currently what is built)*
@@ -826,6 +829,9 @@ the pair is not being translated while the finger is translating it.
 
 ### ⭐⭐⭐ 5.9 `D61` — ON A FREE BODY THE **FIRST** OUTSIDE PRESS OF A HOLD IS INERT
 
+> ⚠⚠ **REPEALED BY §5.13 (`D66`) — and its Follower EXEMPTION is the defect** the two
+> fixes of 2026-09-21 were chasing at the wrong event.
+
 > *"when an object is free (not follower), the first time the second touch is pressed outside any
 > object shall not trigger a toggle of the translation/rotation mode. This first time the second
 > touch is also reset when the first touch releases."* — the owner, 2026-09-19
@@ -901,6 +907,8 @@ lives in the render layer, and `input/highlight.ts` must not learn to read it.
 
 ### ⛔⛔⛔ 5.11 `D64` — DRIVING CONSUMES THE TOGGLE
 
+> ⚠⚠ **SUPERSEDED BY §5.12, THEN REPEALED BY §5.13 (`D66`).**
+
 > *"if the first touch is pressed on follower and then the second touch is pressed, to control the
 > follower (on depth or roll), when the second touch is released the mode toggles: it should
 > not."* — the owner, 2026-09-21
@@ -944,6 +952,9 @@ argument would apply to it; it was not reported, and a rule that grows itself is
 happened.
 
 ### ⛔⛔⛔ 5.12 `D65` — A SECOND TOUCH RELEASES; IT DOES NOT TAP
+
+> ⚠⚠ **REPEALED BY §5.13 (`D66`) THE SAME DAY** — it aimed at the release; the cause was
+> the PRESS.
 
 > *"when I release the second touch (outside of any object), the follower mode changes: fix did
 > not solve that. When I release the second touch from the pioneer, it also toggles the follower
@@ -1278,3 +1289,43 @@ means* is a question about assembling parts, and only a hand answers it.
 * **The third cube** — *"nothing works on the third brown cube"* was reported on 2026-09-16
   and never diagnosed; it is registered identically to the other two. ⛔ If it recurs, the HUD
   line while pressing it (`face=…` and the verdict) is what settles it in one look.
+
+
+### ⛔⛔⛔ 5.13 `D66` — A PRESS DOES NOT TOGGLE THE MODE; ONLY A TAP DOES
+
+> *"i toggle translation mode, i translate follower with first touch then press second touch
+> outside any object then translate in depth with second touch and when i release second touch,
+> follower switches to rotation mode."*
+>
+> *"A press never toggles while a body is held, but a tap by the second touchpoint can (as per
+> present rule for tap)."* — the owner, 2026-09-21
+
+⭐⭐⭐ **THE CAUSE WAS NEVER THE RELEASE.** `D58` (§5.6) made a **press** toggle the mode.
+`D61` (§5.9) narrowed that to contain the `A16` collision — but **exempted an aligned
+Follower**, on the argument that `D59` had left nothing for a toggle to disturb.
+
+⚠⚠ **THE ARGUMENT WAS INCOMPLETE, AND THAT IS THE WHOLE DEFECT.** A toggle on a Follower
+disturbs what the **first** touch does *after the second one lifts* — and `translatesOnDrag`
+returns `true` for the entire two-finger phase (`D59`/`D60`), so the flip is **invisible while
+the gesture lasts**. The mode changed at the press; the hand saw it at the lift.
+
+⛔⛔ **SO TWO FIXES WENT TO THE WRONG EVENT** — `D64` (§5.11) and `D65` (§5.12), each a real
+defect on its own path, neither touching the cause. ⭐⭐ **The lesson is about the REPORT**:
+*when a rule's effect is masked while a gesture is in progress, a hand can only report the moment
+the mask lifts — so the event named in the report is where it became VISIBLE, not where it
+happened.* ⚠ The HUD had printed `press outside → ROTATE` the whole time.
+
+✅ **THE RULE NOW, AND IT IS `D28`'s ORIGINAL**: **only a TAP toggles the movement mode**,
+wherever it lands and whether or not a body is held — including a tap by the second touchpoint,
+*"as per present rule for tap"*. ⛔ A press does nothing to the mode, ever.
+
+⛔⛔ **DELETED, NOT DISABLED**: `pressTogglesMode`, `PressToggleContext`, `D61`'s exemption,
+`Held.outsidePressSeen`, `pressToggled`, the PioneerFace re-tap **rollback**, `releaseTogglesMode`
+and both facts it was tried on — plus 15 vectors whose subject no longer exists.
+⭐ **Everything deleted existed only to contain the press toggle**: the `A16` collision cannot
+recur, because placing a finger now does nothing at all.
+
+⭐⭐ **AND IT RESTORES `A16` IN THE OWNER'S OWN WORDS** — *"switching between the two shall
+indeed require the tap."* ⚠ What is lost is `D55`'s sweep for this one rule: a press and a tap
+are again different things where the movement mode is concerned. ⛔ The alignment's own triggers
+are untouched — `D55`, `A22` and `A23` still act on the PRESS.

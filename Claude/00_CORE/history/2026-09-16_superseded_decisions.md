@@ -374,3 +374,38 @@ own return value, i.e. `A11`'s deadband, so it introduced no new threshold.
 the finding that made the row worth having — **the lift was toggling what `D61`'s inert press had
 refused to**, so `D61` was postponing its own defect rather than closing it. `D65` keeps all of
 that and replaces only the fact it asks for.
+
+
+## `D58`, `D61` and `D65` — ALL REPEALED BY `D66`, 2026-09-21
+
+⭐⭐⭐ **THEY ARE ONE CHAIN, AND THE FIRST LINK IS THE ONLY REAL DECISION IN IT.**
+
+**`D58`** (2026-09-19) made a **press** toggle the movement mode, in two places: a continued
+press outside any object, and one on the held body's exact `PioneerFace`. The owner's reason was
+`D55`'s own: *a finger that comes down and stays down is asking for the same thing as one that
+comes down and lifts.* ⚠ It was flagged in the same change as colliding with `A16` — the OUTSIDE
+finger is the one that drives depth or roll, and the mode picks **which**, so placing that finger
+flipped what it was about to do.
+
+**`D61`** (2026-09-19) narrowed `D58` to contain that collision: the **first** outside press of a
+hold is inert, so placing the finger costs nothing and a *second* press switches. ⛔ It exempted
+an aligned **Follower**, arguing that `D59` had taken the mode out of a Follower's channel choice
+and so *"there is nothing left for a toggle to disturb"*.
+
+⚠⚠ **THAT ARGUMENT WAS INCOMPLETE, AND IT IS THE WHOLE DEFECT.** The toggle disturbs what the
+**first** touch does *after the second one lifts* — and `translatesOnDrag` returns `true` for the
+entire two-finger phase (`D59`/`D60`), so **the change is invisible until exactly that moment**.
+
+**`D64`** and **`D65`** (2026-09-21) were both aimed at the **release**, because that is where a
+hand could see it. Each fixed a real defect on its own path and neither touched the cause.
+
+⭐⭐ **THE TRANSFERABLE LESSON IS ABOUT THE REPORT, NOT THE CODE**: *when a rule's effect is
+masked while a gesture is in progress, a hand can only report the moment the mask lifts — so the
+event named in the report is the one where it BECAME VISIBLE, not the one where it happened.*
+⛔ Two rounds were spent on the wrong event. The HUD had printed `press outside → ROTATE` the
+whole time, in a dump taken from the device the day before.
+
+✅ **`D66` deletes the press toggle**, and with it every guard that existed only to contain it:
+`pressTogglesMode`, `PressToggleContext`, `D61`'s exemption, `Held.outsidePressSeen`,
+`pressToggled`, the PioneerFace re-tap **rollback**, and `releaseTogglesMode` with both facts it
+was tried on. ⭐ The `A16` collision cannot recur, because placing a finger now does nothing.

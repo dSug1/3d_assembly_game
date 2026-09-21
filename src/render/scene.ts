@@ -69,8 +69,8 @@ import {
   depthTranslate,
   initialBehaviour,
   isTapRelease,
-  pressTogglesMode,
-  releaseTogglesMode,
+
+
   toggleBehaviour,
   type Behaviour,
   faceAlignConstraint,
@@ -1641,17 +1641,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * shape this file has been burned by twice.
      */
     pressActed: boolean;
-    /**
-     * ⭐⭐⭐ `D61` — has a second touchpoint been pressed **outside any object** since this
-     * holder took the body?
-     *
-     * ⛔ The owner: *"when an object is free (not follower), the first time the second touch is
-     * pressed outside any object shall not trigger a toggle … This first time the second touch
-     * is also reset when the first touch releases."*
-     * ⚠ **RESET BY CONSTRUCTION**: it lives on the grip, and the grip dies with the finger. No
-     * reset is called, so none can be forgotten — the shape `A13` and defect 40 both punished.
-     */
-    outsidePressSeen: boolean;
     /**
      * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
      * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
@@ -3450,36 +3439,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * release must not flip it again. ⛔ Keyed by pointer id and emptied on release; a tap is a
    * press plus a lift, and without this every tap would toggle twice and change nothing.
    */
-  const pressToggled = new Set<number>();
+  // ⛔⛔ **`pressToggled` AND `secondTouch` ARE DELETED WITH `D66`.** The first existed only
+  // because a press could toggle; the second (`D65`) only because a press toggling made a
+  // second touch's LIFT ambiguous. ⭐ With the press inert, a tap is a tap again — *"as per
+  // present rule for tap"* — and `noteTap` needs no verdict from anyone.
 
-  /**
-   * ⭐⭐⭐ **`D65` — TOUCHPOINTS THAT CAME DOWN WHILE ANOTHER FINGER WAS ALREADY CARRYING A
-   * BODY**, by pointer id. ⛔ Those are SECOND TOUCHES, and a second touch's lift is a RELEASE:
-   * the owner, 2026-09-21, *"Only a tap … shall toggle the mode. Not a release anywhere."*
-   *
-   * ⚠⚠ **IT REPLACES `D64`'s `drove` SET, WHICH SHIPPED AND DID NOT WORK.** *Did this finger
-   * drive* is a per-CHANNEL fact: on a FREE body the mode gives the second finger ONE axis, so a
-   * finger moved along the other applies nothing, the set stayed empty — truthfully — and the
-   * lift toggled. ⭐ *What the touchpoint IS* has no such hole, and it is latched on a discrete
-   * event, which is `IN2`'s own doctrine.
-   *
-   * ⚠ Written at the press BEFORE the new grip is inserted, so `held.size` counts only the
-   * OTHER touchpoints — which is exactly the question. ⛔ Cleared on the way in as well as on
-   * release: a pointer id is the browser's to reuse, and a stale entry would silently eat a
-   * later deliberate tap.
-   */
-  const secondTouch = new Set<number>();
-
-  const noteTap = (
-    pressed: Sample,
-    released: Sample,
-    /**
-     * ⭐ Is this release's TOGGLE already spent? ⛔ `releaseTogglesMode`'s answer, negated by the
-     * caller — the name says *what is true of this release*, not *which rule spent it*, because
-     * since `D64` there are two.
-     */
-    toggleSpent = false,
-  ): "TAP" | "DOUBLE_TAP" | null => {
+  const noteTap = (pressed: Sample, released: Sample): "TAP" | "DOUBLE_TAP" | null => {
     const wasTap = isTapRelease(
       pressed.t, pressed.x, pressed.y,
       released.t, released.x, released.y,
@@ -3494,15 +3459,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⛔⛔ EVERY tap toggles — *"a single tap by one only touchpoint anywhere"* — with no
     // condition left: not the fork (there is one model now), and not whether anything is
     // held, since the mode is what the NEXT grab inherits.
-    // ⛔⛔⛔ **UNLESS THE TOGGLE IS ALREADY SPENT** — its own press did it (`D58`), or this
-    // touchpoint DROVE the held body and its lift is a release rather than a tap (`D64`).
-    // ⛔ Both are `releaseTogglesMode`'s call, made at the call site where the two facts live;
-    // this line only obeys it.
-    // ⚠ The history is still recorded either way — that is what the double tap and the camera
-    // reset read, and suppressing it would break two rules to fix one. ⭐ Only the TOGGLE is
-    // spent, or a quick tap would flip the mode on the way down and flip it straight back on
-    // the way up: no change, from a gesture the owner asked to have an effect.
-    if (toggleSpent) return verdict;
+    // ⛔⛔ **AND NOTHING SPENDS IT ANY MORE** (`D66`). Two rules used to: a press that had
+    // already toggled (`D58`), and a second touch that had driven the body (`D64`). Both are
+    // gone with the press toggle — *"a tap by the second touchpoint can [toggle], as per
+    // present rule for tap"*. ⚠ The history is recorded first, as it always was: it is what the
+    // double tap and the camera reset read.
     behaviour = toggleBehaviour(behaviour);
     lastVerdict = `tap → ${behaviour}`;
     return verdict;
@@ -3572,11 +3533,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     }
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
-      // ⚠ `D58`'s bookkeeping is cleared for this id BEFORE it can be set again. ⛔ A pointer
-      // id whose release never arrived would otherwise leave a stale entry that spends the
-      // NEXT gesture's toggle — the *tracker that outlived its finger* shape, which this file
-      // has already paid for twice (defect 40, `A13`).
-      pressToggled.delete(e.pointerId);
       // ⛔ A NEW TOUCH CANCELS A RESET IN FLIGHT. The animation writes the whole camera
       // pose every frame, so a drag during one would be overwritten as fast as it was
       // applied — the hand would appear to have no effect at all.
@@ -3586,56 +3542,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
       const routed = router.press(e.pointerId, s, hit);
 
-      // ⭐⭐ `D65` — **WHAT KIND OF TOUCH IS THIS**, decided here and never again. ⛔ `held` has
-      // not yet gained this press's own grip, so its size counts only the OTHER touchpoints:
-      // anything down while a body is already carried is a SECOND TOUCH, and its lift is a
-      // release rather than a tap. ⚠ Cleared on the way in too — a reused pointer id must not
-      // inherit the last gesture's answer.
-      if (held.size > 0) secondTouch.add(e.pointerId);
-      else secondTouch.delete(e.pointerId);
 
-      // ⭐⭐⭐ **`D58` — THE MOVEMENT MODE CAN NOW BE FLIPPED ON THE WAY DOWN.**
+      // ⛔⛔⛔ **`D66` — A PRESS NO LONGER TOGGLES THE MOVEMENT MODE, ANYWHERE.**
       //
-      // > *"while the first touch is pressed on an object (free object or follower object), the
-      // > toggle … can be triggered by: a tap outside any object (this is currently what is
-      // > built) — a new continued press (= a tap where there is no release) outside any object
-      // > — if the object is Follower, a new continued press on the exact same PioneerFace of
-      // > the Pioneer object."* — the owner, 2026-09-19
+      // > *"A press never toggles while a body is held, but a tap by the second touchpoint can
+      // > (as per present rule for tap)."* — the owner, 2026-09-21
       //
-      // ⛔ THE DECISION IS `pressTogglesMode`'s, not this file's. ⚠ Only the FACTS are gathered
-      // here, and only this file can know them: `IN2`'s latched role, whether anything is held,
-      // and which face of which body this press landed on.
-      //
-      // ⚠ The `OBJECT` case is evaluated LATER, after `pressMeaning` has had its turn — an
-      // alignment that acted consumes the gesture, so the toggle cannot be decided before it.
-      // ⛔ `OUTSIDE`, `SECOND` and `IGNORED` reach no alignment at all, so they are decided here.
-      if (routed.role !== "OBJECT") {
-        // ⚠ `D61`'s two facts are about the HELD body, so they need the holder's grip. With more
-        // than one body held the question *"is the held body free?"* has no single answer, and
-        // `translatesOnDrag` has already overridden the mode anyway — so the exemption applies
-        // to the sole-holder case and the toggle is unchanged otherwise.
-        const holdGrip = held.size === 1 ? [...held.values()][0] : undefined;
-        const firstOutside =
-          routed.role === "OUTSIDE" && holdGrip !== undefined && !holdGrip.outsidePressSeen;
-        if (routed.role === "OUTSIDE" && holdGrip !== undefined) {
-          holdGrip.outsidePressSeen = true;
-        }
-        if (
-          pressTogglesMode({
-            role: routed.role,
-            somethingIsHeld: held.size > 0,
-            pressedTheHeldBodysPioneerFace: false,
-            pressActedOnTheAlignment: false,
-            heldBodyIsAlignedFollower:
-              holdGrip !== undefined && gripIsAlignedFollower(holdGrip),
-            firstOutsidePressOfThisHold: firstOutside,
-          })
-        ) {
-          behaviour = toggleBehaviour(behaviour);
-          pressToggled.add(e.pointerId);
-          lastVerdict = `press outside → ${behaviour}`;
-        }
-      }
+      // ⭐⭐ `D58`'s two press triggers stood here and are **deleted**, and with them `D61`'s
+      // exemption, `pressToggled` and `Held.outsidePressSeen`. ⚠ Everything they contained was
+      // a consequence of the press toggle itself: the `A16` collision (*placing the control
+      // finger flips what it will drive*) cannot happen once placing a finger does nothing.
+      // ⭐ What is left is `D28`'s original rule, which `A16` asked for in the first place:
+      // **switching the mode requires a TAP.**
 
       if (routed.role === "IGNORED") {
         // ⛔ A THIRD touchpoint on an object already held AND already pinched (A5 allows
@@ -3732,7 +3650,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressFace,
         alignmentTouched: false,
         pressActed: false,
-        outsidePressSeen: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
     anchorRollSign: new Map(),
@@ -3821,32 +3738,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressGrip.pressActed = true;
         lastVerdict = `align: now ${pressVerdict.mode} (the second press of a rapid pair)`;
       }
-      // ⭐⭐⭐ `D58`'s THIRD TRIGGER — a continued press on the held body's EXACT PioneerFace.
-      // ⛔⛔ ASKED AFTER THE ALIGNMENT, NEVER BEFORE: `A22` claims this same gesture when the
-      // press completes a rapid pair, and one gesture gets one consequence. ⭐ `pressActed` is
-      // that answer, already computed above from the RETURN VALUE rather than from the intent.
-      // ⚠ BOTH halves of the face test, exactly as `pressMeaning` makes it: the right object
-      // AND the right face. A different face is `A23`'s re-point; a different object is a fresh
-      // alignment; neither is this.
-      if (
-        pressTogglesMode({
-          role: "OBJECT",
-          somethingIsHeld: pressHeldId !== null,
-          pressedTheHeldBodysPioneerFace:
-            pressPioneerOfHeld !== null &&
-            pressPioneerOfHeld.objectId === pickedId &&
-            pressPioneerOfHeld.faceId === pressFace?.faceId,
-          pressActedOnTheAlignment: pressGrip.pressActed,
-          // ⚠ `D61` is an OUTSIDE rule; neither field reaches the `OBJECT` branch, and the
-          // values are stated rather than defaulted so the call site cannot look like it forgot.
-          heldBodyIsAlignedFollower: pressPioneerOfHeld !== null,
-          firstOutsidePressOfThisHold: false,
-        })
-      ) {
-        behaviour = toggleBehaviour(behaviour);
-        pressToggled.add(e.pointerId);
-        lastVerdict = `press on the PioneerFace → ${behaviour}`;
-      }
+      // ⛔ `D58`'s THIRD TRIGGER — a continued press on the held body's exact PioneerFace —
+      // stood here and is **deleted by `D66`**. ⚠ It was the one press on a Pioneer that had no
+      // other job; it now has none again, and `A22`'s rapid-pair upgrade keeps the gesture.
       paint();
       return;
     }
@@ -3867,14 +3761,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⛔⛔ **`D64` — AND A FINGER THAT DROVE THIS BODY DOES NOT TOGGLE ON THE WAY UP.**
         // ⚠ Both sets are consulted unconditionally, never short-circuited: each owns an entry
         // for this pointer id and leaving one behind would eat the NEXT gesture's tap.
-        noteTap(
-          routed.pressed,
-          s,
-          !releaseTogglesMode({
-            toggledOnPress: pressToggled.delete(e.pointerId),
-            pressedWhileAnotherBodyWasHeld: secondTouch.delete(e.pointerId),
-          }),
-        );
+        noteTap(routed.pressed, s);
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
       } else {
@@ -3984,14 +3871,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // DOUBLE-TAP is untouched: the history is recorded either way, so the camera reset
         // pairs exactly as it always has. Only the toggle is spent.
         if (
-          noteTap(
-            routed.pressed,
-            s,
-            !releaseTogglesMode({
-              toggledOnPress: pressToggled.delete(e.pointerId),
-              pressedWhileAnotherBodyWasHeld: secondTouch.delete(e.pointerId),
-            }),
-          ) === "DOUBLE_TAP"
+          noteTap(routed.pressed, s) === "DOUBLE_TAP"
         ) {
           resetCamera();
           lastVerdict = "DOUBLE_TAP → camera reset";
@@ -4552,45 +4432,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // second tap of a pair, so two taps flip the mode twice — back where it started — and
       // also reset the camera, which is the owner's stated worst case and identical to what
       // a second touchpoint's taps do. ⛔ One rule: **one toggle per tap release.**
-      // ⭐⭐⭐ **`D58` — AND A PRESS THAT ALREADY TOGGLED SETTLES UP HERE.** Two cases, and
-      // they are opposite, which is why the flag has to be read before either is decided.
-      const toggledOnTheWayDown = pressToggled.delete(e.pointerId);
-      // ⭐⭐⭐ **`D65` — AND THIS PATH IS THE SECOND REPORTED DEFECT.** The owner, 2026-09-21:
-      // *"When I release the second touch from the pioneer, it also toggles the follower mode:
-      // this is not what I want."*
-      // ⛔⛔ A finger pressed on ANOTHER body is an `OBJECT` role with a grip of its own, so it
-      // releases **here**, through the recognizer's own `TAP` verdict — and never reached
-      // `noteTap`, where `D64` put its guard. ⚠ This file's own note said the same argument
-      // applied to it and left it alone; a hand found it the same day. ⭐ `METHOD`: *a fix that
-      // lands beside the defect leaves a green suite and a broken product.*
-      // ⚠ Read UNCONDITIONALLY, beside `pressToggled`, so neither set can keep an entry.
-      const wasSecondTouch = secondTouch.delete(e.pointerId);
-      if (toggledOnTheWayDown && alignedByThisTap) {
-        // ⛔⛔⛔ **THE FINGER LIFTED AS A TAP, AND THE TAP MEANT SOMETHING ELSE — SO UNDO IT.**
-        // ⚠ A press on the held body's PioneerFace toggles the mode (`D58`); a *re-tap* on that
-        // same face RELEASES the alignment (`D39`). They are the same gesture until the finger
-        // lifts, and the owner asked for the press — *a tap where there is no release* — not for
-        // the tap to gain a second consequence.
-        // ⭐⭐ So the toggle is rolled back and `D39` keeps its single meaning: a quick re-tap
-        // breaks the alignment and leaves the mode exactly where it was, as it always has.
-        // ⚠ The cost is ~80 ms of the other mode on the HUD — the same honest flicker `D55`
-        // accepted for the cyan that precedes `FOLLOW`, and for the same reason: nothing can
-        // tell a tap from a press on the way down.
-        behaviour = toggleBehaviour(behaviour);
-        lastVerdict = `re-tap released the alignment — mode back to ${behaviour}`;
-      } else if (
+      // ⛔⛔ **`D66` — AND NOTHING SETTLES UP HERE ANY MORE.** `D58`'s press toggle used to
+      // land in this branch twice over: a flag saying *the press already did it*, and a
+      // ROLLBACK for the one gesture where the press's meaning and the tap's disagreed (a
+      // re-tap on the PioneerFace releases the alignment, `D39`). ⭐ Both are deleted with the
+      // press toggle: a rule that cannot fire needs no correction, and `D39` gets its single
+      // meaning back without one.
+      if (
         !alignedByThisTap &&
-        (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") &&
-        // ⛔ THE DECISION IS `releaseTogglesMode`'s, at all three release sites now — the two in
-        // `noteTap` and this one. ⚠ A fourth site that forgets to ask is exactly how the
-        // Pioneer finger kept toggling after `D64` shipped.
-        releaseTogglesMode({
-          toggledOnPress: toggledOnTheWayDown,
-          pressedWhileAnotherBodyWasHeld: wasSecondTouch,
-        })
+        (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP")
       ) {
-        // ⚠ `!toggledOnTheWayDown` is what stops a tap flipping the mode TWICE — once down,
-        // once up — which would leave it where it started and make the owner's rule a no-op.
+        // ⚠ A tap that ALIGNED or released an alignment is excluded, unchanged — *"as per
+        // present rule for tap"*: one gesture, one consequence.
         behaviour = toggleBehaviour(behaviour);
         lastVerdict = `tap on the object → ${behaviour}`;
       }
