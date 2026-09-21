@@ -1329,3 +1329,73 @@ recur, because placing a finger now does nothing at all.
 indeed require the tap."* ⚠ What is lost is `D55`'s sweep for this one rule: a press and a tap
 are again different things where the movement mode is concerned. ⛔ The alignment's own triggers
 are untouched — `D55`, `A22` and `A23` still act on the PRESS.
+
+
+### ⛔⛔⛔ 5.14 `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, SECOND THE FOLLOWER
+
+> *"Currently, the follower face selection comes with the first touch and the pioneer face
+> selection comes with the second touch. Can i invert? First the Pioneer & PioneerFace, second
+> the Follower & the FollowerFace."*
+>
+> *"As a consequence, the following sequence becomes possible: first touch pressed on PioneerFace
+> and remains pressed, second touch is pressed on first Follower object's FollowerFace and then
+> released, second touch is then pressed on second Follower object's FollowerFace, etc. which
+> enables to select several follower objects to the pioneer object in one go."*
+>
+> *"to reach the orange, the first touch shall be double tap without final release [on] the
+> pioneer object and the second touch shall hit follower object's FollowerFace while first touch
+> is still pressed on PioneerFace."* — the owner, 2026-09-21
+
+⭐⭐ **THE SUBSEQUENT TOUCH LOGIC NEEDED NO CHANGE, AND THAT WAS CHECKED RATHER THAN ASSUMED.**
+The owner's own condition — *"there shouldn't be [an impact], if the touches are tracked based on
+the objects which are tracked"* — holds: `pinnedPair` asks the **links index** which of the two
+held bodies follows the other and refuses a cycle, so it never looks at press order;
+`secondTouchDrive("PIONEER", …)` already answers `BOTH`; and the only other inputs
+(`secondTouchOwnsRollAndDepth`, `translatesOnDrag`) are about a **sole** held grip, where order
+cannot enter. ⛔ So after the inversion the Pioneer's finger still drives the Follower's depth and
+roll and the Follower's finger still translates it — the same two channels, reached in the other
+order.
+
+✅ **WHAT ACTUALLY MOVED** — five things, all inside the creation gesture:
+
+| | before | after `D67` |
+|---|---|---|
+| PioneerFace | the SECOND touch's face | the **FIRST** touch's face |
+| FollowerFace | the FIRST touch's face | the **SECOND** touch's face |
+| the frozen refusal | on the held body | on the **pressed** body |
+| the cycle guard | *does the pressed body follow the held one?* | *does the **held** body follow the pressed one?* |
+| `D39`'s undo | a re-tap on the **PioneerFace** | a re-press on the **FollowerFace** |
+
+⭐⭐ **THE MULTI-SELECT NEEDED NO MECHANISM.** `AlignmentLinks` has always been a two-way index
+with a **set** of followers per Pioneer, and the cap of one alignment is per **Follower**, never
+per Pioneer. ⛔ One line had to change and it was already there: `alignFollowerToPioneer` clears
+the **pressing** grip's `pressFace` — the rule being *a transient grip must not leave a stale
+face behind* — and the transient finger is now the Follower's. ⚠ Aimed at the held grip instead,
+the second Follower would have failed with *no resolved PioneerFace*: the same line, the wrong
+finger.
+
+⭐⭐⭐ **ORANGE IS NOW A PROPERTY OF THE PIONEER'S GRIP.** `pressWasDoubleTap` is latched at that
+finger's press (`TapHistory.wouldPair`, a peek and not a record) and read when each Follower is
+chosen. ⛔ So every Follower added during one hold comes out the **same colour**, which is what
+makes *"several follower objects in one go"* coherent — a `SNAPSHOT` hold and a `FOLLOW` hold,
+never a mixture nobody asked for. ⚠ `alignModeFor` is the one place the mapping lives.
+
+⛔⛔ **AND `SWITCH` IS DELETED FROM THE ACTION SET.** It existed because the second touch's tap
+count asked for a mode; no touch on a Follower asks for one any more. ⭐ Deleted rather than left
+unreachable — an action nothing produces is a branch every reader must consider and no hand can
+reach.
+
+⚠⚠ **THE COST A HAND MEETS FIRST, AND IT IS NOT A CORNER CASE**: the base plate is frozen, a
+frozen body can never be a Follower, and the Follower is now the **second** touch. So *align a
+part to the plate* becomes **hold the plate, then press the part** — the reverse of the habit,
+in the scene's commonest gesture. ⭐ The refusal says so out loud
+(`align: <id> is FROZEN — it cannot be a follower`) rather than doing nothing.
+
+⚠ **MORE THAN TWO BODIES**: unchanged and re-checked. `alignFollowerToPioneer` still refuses when
+more than one *other* body is held (*"N objects held — no Pioneer can be chosen"*), chains are
+legal, cycles are refused from the new end, and `D62`'s capture restriction is untouched.
+
+⛔ **WHAT NO VECTOR CAN SEE**: the `pressFace` clearing and the grip flag live in `scene.ts`.
+`pressMeaning`/`tapMeaning` carry the decisions and 11 vectors pin them, but *which grip is
+cleared* is render wiring — the standing lesson of this branch, and the reason the device pass
+must include the owner's exact three-Follower sequence.

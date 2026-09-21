@@ -834,28 +834,38 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * @returns true when an alignment was applied — the caller then skips the mode toggle,
    *   because the alignment's own mode switch replaces it.
    */
-  const alignFollowerToPioneer = (pioneerPointerId: number, pioneerGrip: Held, mode: AlignMode): boolean => {
-    const pioneerId = idOf.get(pioneerGrip.mesh);
-    if (pioneerId === undefined || pioneerGrip.pressFace === null) {
-      lastVerdict = "align: tap resolved no face — toggled instead";
+  // ⭐⭐⭐ **`D67` — THE PRESSING FINGER IS THE FOLLOWER NOW, AND THE HELD ONE IS THE PIONEER.**
+  // ⛔ The owner, 2026-09-21: *"First the Pioneer & PioneerFace, second the Follower & the
+  // FollowerFace."* ⚠ Only the two SIDES swap: every refusal below, the solver, the snap and the
+  // link are unchanged, which is why this is a re-point rather than a rewrite.
+  const alignFollowerToPioneer = (
+    followerPointerId: number,
+    followerGrip: Held,
+    mode: AlignMode,
+  ): boolean => {
+    const followerId = idOf.get(followerGrip.mesh);
+    if (followerId === undefined || followerGrip.pressFace === null) {
+      lastVerdict = "align: press resolved no face — toggled instead";
       return false;
     }
     // ⛔⛔ EXACTLY ONE OTHER HOLDER. The rule names a *first* and a *second* object; with
     // two other objects held, *which* one is the Follower has no answer worth trusting, and
     // guessing would align an object the hand did not mean to move. ⭐ Same discipline as
     // `A15`'s *"every remaining holder is evaluated, not a guessed pairing"*.
-    const others = [...held.entries()].filter(([pid]) => pid !== pioneerPointerId);
+    const others = [...held.entries()].filter(([pid]) => pid !== followerPointerId);
     if (others.length !== 1) {
       lastVerdict =
         others.length === 0
           ? "align: nothing held — the tap toggled the mode"
-          : `align: ${others.length} objects held — no Follower can be chosen, toggled instead`;
+          : `align: ${others.length} objects held — no Pioneer can be chosen, toggled instead`;
       return false;
     }
-    const followerGrip = others[0]![1];
-    const followerId = idOf.get(followerGrip.mesh);
-    if (followerId === undefined || followerGrip.pressFace === null) {
-      lastVerdict = "align: the held object has no resolved face — toggled instead";
+    const pioneerGrip = others[0]![1];
+    const pioneerId = idOf.get(pioneerGrip.mesh);
+    if (pioneerId === undefined || pioneerGrip.pressFace === null) {
+      // ⚠ `D67`: the held body IS the Pioneer, so this is *the first touch never resolved a
+      // PioneerFace* — the one thing the whole gesture stands on.
+      lastVerdict = "align: the held object has no resolved PioneerFace — toggled instead";
       return false;
     }
 
@@ -958,9 +968,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     followerGrip.alignmentTouched = true;
     // ⭐⭐ THE HIGHLIGHT IS THE ALIGNMENT'S STATE, not the press's: it appears HERE and dies
     // with the constraint (`D35`, and the owner's *"until un-highlight occurs"*).
+    // ⚠ Captured BEFORE the grip's face is cleared below — the readout names the face this
+    // alignment was actually made on, and reading it back off a cleared grip is how a verdict
+    // line starts lying.
+    const followerFaceId = followerGrip.pressFace.faceId;
     selectedFace = {
       objectId: followerId,
-      faceId: followerGrip.pressFace.faceId,
+      faceId: followerFaceId,
       cos: followerGrip.pressFace.cos,
     };
     // ⛔⛔ *"THEN THE PIONEERFACE RESETS AS NULL"* WAS AMENDED THE SAME DAY. The owner now
@@ -970,7 +984,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // is being released, and a stale face on a dead grip is the kind of thing a later rule
     // picks up by accident.
     const pioneerFaceId = pioneerGrip.pressFace.faceId;
-    pioneerGrip.pressFace = null;
+    // ⛔⛔⛔ **`D67` — THE FACE CLEARED IS THE *PRESSING* GRIP'S, AND THAT IS WHAT MAKES THE
+    // MULTI-SELECT WORK.** The rule has not changed — *a transient grip must not leave a stale
+    // face behind* — but the transient finger is now the FOLLOWER's. ⭐ The Pioneer's grip keeps
+    // its `pressFace` for the whole hold, so *"second touch pressed on first Follower … then
+    // released, then pressed on second Follower object's FollowerFace"* aligns body after body
+    // against the same held face. ⚠ Clearing the held grip's face instead would make the second
+    // Follower fail with *no resolved PioneerFace* — the same line, aimed at the wrong finger.
+    // ⭐ It also keeps this press's own RELEASE inert: with no face, `tapMeaning` cannot read it
+    // as a fresh alignment on the way up.
+    followerGrip.pressFace = null;
     // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
     // ACTIVE alignment's mode and would recolour an older object's highlight.
     alignModeOf.set(followerId, mode);
@@ -1018,7 +1041,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // so `TRANSLATE` is one tap away — and staying in `ROTATE` is what makes the rotation
     // reset testable straight after an alignment.
     lastVerdict =
-      `align: ${mode} ${followerId}/${followerGrip.pressFace.faceId} → ` +
+      `align: ${mode} ${followerId}/${followerFaceId} → ` +
       `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${behaviour}`;
     return true;
   };
@@ -1581,6 +1604,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     frame: GravityFrame;
     /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
     prev: Sample;
+    /**
+     * ⭐⭐⭐ **`D67` — DID THIS GRIP'S OWN PRESS COMPLETE A DOUBLE TAP?** The owner's route to
+     * orange: *"the first touch shall be double tap without final release [on] the pioneer
+     * object."* ⛔ Latched at the press, because `TapHistory` answers *would this pair* about the
+     * instant the finger landed, and by the time a Follower is chosen the answer has moved on.
+     * ⚠ It is a property of THE PIONEER'S grip; a Follower's own flag is never read.
+     */
+    pressWasDoubleTap: boolean;
     /**
      * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
      *
@@ -3657,6 +3688,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         mesh,
         frame: requireGestureFrame(),
         prev: s,
+        // ⭐ `D67`: asked HERE, once, on the way down — a peek, not a record. The release still
+        // consumes the pair through `TapHistory.record`.
+        pressWasDoubleTap: taps.wouldPair(s),
         mode: null,
         pressFace,
         alignmentTouched: false,
@@ -3713,25 +3747,33 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⚠ Asked only when exactly one other body is held, so `links` is consulted about a body
       // that unambiguously exists — the same guard `pressMeaning` re-states and refuses on.
       const pressHeldId = pressHeldIds.length === 1 ? pressHeldIds[0]! : null;
+      // ⚠ The held GRIP, not just its id: `D67` reads the Pioneer's own press for the mode.
+      const pressHeldGrip = pressOthers.length === 1 ? pressOthers[0]![1] : undefined;
       const pressPioneerOfHeld = pressHeldId === null ? null : links.pioneerFor(pressHeldId);
       const pressVerdict = pressMeaning({
+        // ⭐ `D67`: the body under THIS press is the FOLLOWER, and the held one is the Pioneer.
         pressedObject: pickedId ?? null,
         pressedFace: pressFace?.faceId ?? null,
         heldObjects: pressHeldIds,
-        pioneerOfHeld:
-          pressPioneerOfHeld === null
-            ? null
-            : { objectId: pressPioneerOfHeld.objectId, faceId: pressPioneerOfHeld.faceId },
+        // ⛔ The cycle guard, in the inverted direction: does the PIONEER already follow the
+        // body being pressed?
+        pioneerOfHeld: pressPioneerOfHeld === null ? null : pressPioneerOfHeld.objectId,
         // ⛔ THE OTHER DIRECTION OF THE SAME QUESTION, and omitting it was a defect the glass
         // found within minutes: with `A→B` live, holding `B` and pressing `A` is not a fresh
         // relation, and reading it as one let `wouldCycle` break the pair the hand was holding.
         pioneerOfPressed:
           pickedId === undefined ? null : (links.pioneerFor(pickedId)?.objectId ?? null),
-        alignModeOfHeld: pressHeldId === null ? null : (alignModeOf.get(pressHeldId) ?? null),
-        // ⭐⭐ `A22` — A PEEK, NOT A RECORD. The release still consumes the pair through
-        // `TapHistory.record`; this only asks whether it WOULD, so a second touch that is
-        // pressed and held can reach `FOLLOW` without ever lifting.
-        completesDoubleTap: taps.wouldPair(s),
+        // ⭐⭐ The pressed body's CURRENT FollowerFace, derived from its constraint rather than
+        // remembered — `alignedFaceOf` is the one implementation, and a shadow copy would be a
+        // second source of truth free to disagree after an eviction.
+        alignedFaceOfPressed: pickedId === undefined ? null : alignedFaceOf(world, pickedId),
+        // ⭐⭐⭐ **`D67` — THE MODE COMES FROM THE PIONEER'S PRESS, NOT FROM THIS ONE.**
+        // ⛔ The owner: *"to reach the orange, the first touch shall be double tap without final
+        // release [on] the pioneer object and the second touch shall hit follower object's
+        // FollowerFace while first touch is still pressed on PioneerFace."*
+        // ⚠ So it is read off the HELD grip, which is also what makes every Follower added
+        // during one hold come out the same colour.
+        pioneerPressWasDoubleTap: pressHeldGrip?.pressWasDoubleTap === true,
       });
       if (pressVerdict.action === "ALIGN" && pressVerdict.mode !== null) {
         // ⛔ `pressActed` is set from the RETURN VALUE, never from the intent. Every refusal
@@ -3739,16 +3781,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // that aligned nothing must leave its release completely untouched — the tap then means
         // whatever it has always meant, including `D28`'s toggle.
         pressGrip.pressActed = alignFollowerToPioneer(e.pointerId, pressGrip, pressVerdict.mode);
-      } else if (pressVerdict.action === "SWITCH" && pressVerdict.mode !== null && pressHeldId) {
-        // ⭐⭐⭐ `A22` — **NOTHING MOVES.** The constraint, the faces and the poses are
-        // untouched; only what the alignment MEANS changes, and the colours are how a hand sees
-        // it. ⛔ Exactly what the release-side `SWITCH` does, which is why it writes through the
-        // same two lines rather than inventing a second path to the same state.
-        alignModeOf.set(pressHeldId, pressVerdict.mode);
-        paintHighlightColours();
-        pressGrip.pressActed = true;
-        lastVerdict = `align: now ${pressVerdict.mode} (the second press of a rapid pair)`;
       }
+      // ⛔⛔ `A22`'s **SWITCH** branch stood here and is deleted with `D67`: the upgrade to
+      // `FOLLOW` was the second touch's rapid pair, and the owner has moved that decision to
+      // the PIONEER's own press. ⚠ `pressMeaning` can no longer return `SWITCH` at all.
       // ⛔ `D58`'s THIRD TRIGGER — a continued press on the held body's exact PioneerFace —
       // stood here and is **deleted by `D66`**. ⚠ It was the one press on a Pioneer that had no
       // other job; it now has none again, and `A22`'s rapid-pair upgrade keeps the gesture.
@@ -4370,55 +4406,36 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐⭐ `METHOD`: *a substituted quantity* — *"is the active alignment on the held
         // body?"* stood in for *"what is the held body aligned to?"*, and the two agree only
         // while exactly one body is aligned.
-        const heldRef = heldId === null ? null : links.pioneerFor(heldId);
+        // ⭐⭐⭐ `D67` — the TAPPED body is the Follower and the HELD one is the Pioneer, so
+        // every field is read off the other end than it used to be.
+        const tappedId = idOf.get(grip.mesh) ?? null;
         const ctx: TapContext = {
-          kind: verdict.kind,
-          alignMode: heldId === null ? null : (alignModeOf.get(heldId) ?? null),
-          tappedObject: idOf.get(grip.mesh) ?? null,
+          tappedObject: tappedId,
           tappedFace: grip.pressFace?.faceId ?? null,
           heldObject: heldId,
-          pioneer:
-            heldRef === null ? null : { objectId: heldRef.objectId, faceId: heldRef.faceId },
+          pioneerOfTapped: tappedId === null ? null : (links.pioneerFor(tappedId)?.objectId ?? null),
+          alignedFaceOfTapped: tappedId === null ? null : alignedFaceOf(world, tappedId),
+          pioneerPressWasDoubleTap: others.length === 1 && others[0]![1].pressWasDoubleTap,
         };
         const meaning = tapMeaning(ctx);
         if (meaning.action === "ALIGN" && meaning.mode !== null) {
           alignedByThisTap = alignFollowerToPioneer(e.pointerId, grip, meaning.mode);
-        } else if (meaning.action === "SWITCH" && meaning.mode !== null) {
-          // ⭐⭐ *"A single tap on PioneerFace can follow a double tap … and therefore toggle
-          // to behaviors accordingly"* — the owner. ⛔ NOTHING MOVES: the constraint, the
-          // faces and the poses are untouched, and only what the alignment MEANS changes.
-          // ⭐ The colours are how a hand sees that it worked.
-          // ⛔⛔ **THE SWITCH APPLIES TO THE HELD BODY** — audit fix, 2026-09-17. It used to
-          // write `alignModeOf.set(selectedFace.objectId, …)`, which is the ACTIVE alignment's
-          // follower and not necessarily the one this tap acted on. ⚠ With two bodies aligned
-          // it switched the mode, and therefore the colour, of **the wrong one**.
-          // ⭐ `heldId` is non-null here by construction: `tapMeaning` only returns `SWITCH`
-          // when a body is held and the tap landed on another body's face.
-          if (heldId !== null) alignModeOf.set(heldId, meaning.mode);
-          // ⚠ The active-record copy is updated only when it names this body, exactly as
-          // `releaseAlignmentOf` does — same rule, same reason.
-          paintHighlightColours();
-          alignedByThisTap = true; // ⛔ consumed: it must not also flip the movement mode
-          lastVerdict = `align: now ${meaning.mode} (the other gesture on the same face)`;
-        } else if (meaning.action === "UNALIGN" && heldId !== null) {
-          // ⭐⭐⭐ *"The alignment can be toggled off by taping another time to the same
-          // PioneerFace"* (`D39`) — and since the modes were merged, by **the same gesture
-          // that made it**: a single tap releases a `SNAPSHOT`, a double tap releases a
-          // `FOLLOW`. ⚠ So leaving `FOLLOW` by single taps takes two — one to switch, one to
-          // release — which is the cost of one gesture carrying two jobs.
-          // ⛔⛔ **THROUGH `releaseAlignmentOf`, WHICH IS THE ONE RELEASE PATH** — audit fix,
-          // 2026-09-17. This branch used to evict inline and then wipe the three globals
-          // UNCONDITIONALLY, so re-tapping body A tore down the highlight records of body B
-          // and left A's entry in the two-way link index behind for `prune` to find a frame
-          // later. ⭐ `releaseAlignmentOf` unlinks, forgets the mode, cancels the snap and
-          // clears the active records only when they name this body.
-          const hadAlignment = links.pioneerFor(heldId) !== null;
-          releaseAlignmentOf(heldId);
-          others[0]![1].alignmentTouched = false;
+        } else if (meaning.action === "UNALIGN" && tappedId !== null) {
+          // ⭐⭐⭐ **`D67` — THE BODY RELEASED IS THE TAPPED ONE.** It is the Follower now, and
+          // `D39`'s re-tap lands on its FollowerFace. ⚠ Releasing the HELD body here, as this
+          // branch did before the inversion, would break the PIONEER's own alignment to some
+          // third body — a relation the hand never touched.
+          // ⛔⛔ AND `SWITCH` IS GONE FROM BOTH SIDES: neither `pressMeaning` nor `tapMeaning`
+          // can return it, because no touch on a Follower asks for a mode any more — the
+          // Pioneer's press decides (`alignModeFor`). ⭐ Deleted, not left unreachable: a branch
+          // nothing can enter is the dormant-fork shape `D28` and `D40` refused.
+          const hadAlignment = links.pioneerFor(tappedId) !== null;
+          releaseAlignmentOf(tappedId);
+          grip.alignmentTouched = false;
           alignedByThisTap = true;
           lastVerdict = hadAlignment
-            ? `align: RE-TAP released the alignment on ${heldId}`
-            : `align: re-tap — nothing to release on ${heldId}`;
+            ? `align: RE-PRESS released the alignment on ${tappedId}`
+            : `align: re-press — nothing to release on ${tappedId}`;
         }
       }
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:

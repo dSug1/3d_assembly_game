@@ -409,3 +409,18 @@ whole time, in a dump taken from the device the day before.
 `pressTogglesMode`, `PressToggleContext`, `D61`'s exemption, `Held.outsidePressSeen`,
 `pressToggled`, the PioneerFace re-tap **rollback**, and `releaseTogglesMode` with both facts it
 was tried on. ⭐ The `A16` collision cannot recur, because placing a finger now does nothing.
+
+
+## `D42` — SUPERSEDED IN PART BY `D67`, 2026-09-21
+
+**What it decided** (2026-09-17): the flag that chose what a turned Pioneer costs its Follower
+became a **GESTURE** — a single tap makes a `SNAPSHOT`, a double tap makes a `FOLLOW`. ⭐ Better
+than a flag in the way that matters: two alignments can differ, and the colours say which is
+which — cyan + amber for a snapshot, both amber for a relationship.
+
+✅ **THE TWO MODES AND THEIR COLOURS SURVIVE `D67` UNCHANGED.** What is superseded is *which
+gesture asks for `FOLLOW`*: the owner moved that question from the second touch's tap count to
+the **Pioneer's own press** — *"the first touch shall be double tap without final release [on]
+the pioneer object"*. ⛔ The reason is the multi-select: with several Followers chosen during one
+hold, a per-Follower tap count would let one hold produce a mixture of colours nobody asked for.
+⭐ `alignModeFor` is still the one place the mapping lives; only its input changed.
