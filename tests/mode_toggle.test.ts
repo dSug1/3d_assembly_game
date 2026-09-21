@@ -257,38 +257,51 @@ describe("⛔⛔⛔ `D61` — ON A FREE BODY THE **FIRST** OUTSIDE PRESS OF A HO
   });
 });
 
-describe("⛔⛔⛔ `D64` — DRIVING CONSUMES THE TOGGLE, and a TAP keeps every meaning it has", () => {
-  // ⛔⛔ THE OWNER, 2026-09-21: *"if the first touch is pressed on follower and then the second
-  // touch is pressed, to control the follower (on depth or roll), when the second touch is
-  // released the mode toggles: it should not."* — and, on the fix: *"make sure you discriminate
-  // between a release … and a tap or double-tap (a tap or double-tap is a deliberate action and
-  // should not be modified at this time)."*
+describe("⛔⛔⛔ `D65` — A SECOND TOUCH RELEASES; IT DOES NOT TAP", () => {
+  // ⛔⛔ THE OWNER, 2026-09-21, on `a33b485` — the build that carried `D64`:
+  //
+  //   *"when I release the second touch (outside of any object), the follower mode changes: fix
+  //    did not solve that. When I release the second touch from the pioneer, it also toggles the
+  //    follower mode: this is not what I want. **Only a tap (or double-tap …) shall toggle the
+  //    mode. Not a release anywhere.**"*
+  //
+  // ⭐⭐⭐ `D64` ASKED *DID THIS FINGER DRIVE?* AND THAT FACT HAS A HOLE: on a FREE body the
+  // mode gives the second finger ONE axis, so a finger moved along the other drives nothing,
+  // answers `false` truthfully, and the lift toggled. ⚠ And the Pioneer finger never reached
+  // the rule at all. ⭐ So the question is what the touchpoint **IS**, latched at its press.
   const ctx = (over: Partial<ReleaseToggleContext> = {}): ReleaseToggleContext => ({
     toggledOnPress: false,
-    droveTheHeldBody: false,
+    pressedWhileAnotherBodyWasHeld: false,
     ...over,
   });
 
-  it("⭐⭐⭐ a finger that DROVE the body does not toggle when it lifts", () => {
-    // ⛔ This is the reported defect, and it is the whole row: the lift of a control press is a
-    // RELEASE. ⚠ It reaches this rule only because it already passed §1.3's tap test — the
-    // deadband is 3.5 mm and the tap slop 8 mm, so one lift can be both, and *what the finger
-    // did* is the only discriminator that needs no new number.
-    expect(releaseTogglesMode(ctx({ droveTheHeldBody: true }))).toBe(false);
+  it("⭐⭐⭐ a touchpoint that came down while a body was held NEVER toggles on its lift", () => {
+    // ⛔ Whatever it did or did not drive, and whether it was outside any object or on the
+    // Pioneer: both of the owner's reports are this one line.
+    expect(releaseTogglesMode(ctx({ pressedWhileAnotherBodyWasHeld: true }))).toBe(false);
   });
 
-  it("⭐⭐⭐ a finger that drove NOTHING still toggles — the owner's deliberate tap", () => {
-    // ⛔⛔ THE CONSTRAINT, ASSERTED: *a tap or double-tap … should not be modified at this
-    // time.* ⚠ This is the case where nothing distinguishes a tap from a control press that
-    // achieved nothing, and the owner's instruction says which way it resolves.
+  it("⭐⭐ and with NOTHING held, a tap still toggles — `D27`/`D28` untouched", () => {
+    // ⛔ *"Only a tap … shall toggle the mode"* — this is that tap, and it is the primary way
+    // to flip the mode: one finger, on an object or on empty space, with nothing carried.
     expect(releaseTogglesMode(ctx())).toBe(true);
+  });
+
+  it("⛔⛔ THE HOLE IN `D64` IS THE VECTOR: a second touch that drove NOTHING is still a release", () => {
+    // ⚠⚠ THIS IS THE ONE THAT WOULD HAVE CAUGHT THE FIRST FIX. Under `D64` this case
+    // toggled — truthfully, because the finger really had applied nothing — and it is exactly
+    // what a hand does when it moves the second finger along the axis the mode did not give it.
+    // ⭐ `gainRollDrag` is 2°/mm, so 5 mm of finger is 10° of body: a brief control press and a
+    // deliberate tap are the SAME physical event, well inside the 8 mm tap slop. No geometry
+    // can separate them, which is why the fact had to change rather than the threshold.
+    expect(releaseTogglesMode(ctx({ pressedWhileAnotherBodyWasHeld: true }))).toBe(false);
   });
 
   it("⛔⛔ AND IT IS WHAT MAKES `D61` REAL — press inert, lift inert, re-press toggles", () => {
     // ⭐⭐⭐ THE ARGUMENT FOR THE WHOLE ROW. `D61` makes the first outside press of a hold inert
-    // so that placing the control finger cannot change what it is about to drive. ⚠ Before
-    // `D64` the LIFT toggled what that press had refused to, so the mode had flipped anyway by
-    // the time the finger came back down: `D61` postponed its own defect by one event.
+    // so that placing the control finger cannot change what it is about to drive. ⚠ Before this
+    // the LIFT toggled what that press had refused to, so the mode had flipped anyway by the
+    // time the finger came back down: `D61` postponed its own defect by one event.
     const placing = pressTogglesMode({
       role: "OUTSIDE",
       somethingIsHeld: true,
@@ -298,9 +311,11 @@ describe("⛔⛔⛔ `D64` — DRIVING CONSUMES THE TOGGLE, and a TAP keeps every
       firstOutsidePressOfThisHold: true,
     });
     expect(placing).toBe(false);
-    // ⛔ …and the lift of that same finger, having driven, adds nothing. The composition is the
-    // claim — either half alone reads as correct.
-    expect(releaseTogglesMode(ctx({ droveTheHeldBody: true, toggledOnPress: placing }))).toBe(false);
+    // ⛔ …and the lift of that same finger adds nothing. The composition is the claim — either
+    // half alone reads as correct.
+    expect(
+      releaseTogglesMode(ctx({ pressedWhileAnotherBodyWasHeld: true, toggledOnPress: placing })),
+    ).toBe(false);
   });
 
   it("⚠ a press that already toggled is still spent — `D58` is untouched", () => {
@@ -308,15 +323,19 @@ describe("⛔⛔⛔ `D64` — DRIVING CONSUMES THE TOGGLE, and a TAP keeps every
     // from a gesture the owner asked to have an effect.
     expect(releaseTogglesMode(ctx({ toggledOnPress: true }))).toBe(false);
     // ⚠ And the two reasons do not cancel: both spent is still spent.
-    expect(releaseTogglesMode(ctx({ toggledOnPress: true, droveTheHeldBody: true }))).toBe(false);
+    expect(
+      releaseTogglesMode(ctx({ toggledOnPress: true, pressedWhileAnotherBodyWasHeld: true })),
+    ).toBe(false);
   });
 
   it("⛔⛔ THE TWO FACTS ARE INDEPENDENT — a truth table, because an OR is a composition", () => {
     // ⚠ `METHOD`: a composition is a thing to MEASURE. Four cases, stated, so a mutant that
     // swaps the operator or drops a branch cannot survive.
-    expect(releaseTogglesMode(ctx({ toggledOnPress: false, droveTheHeldBody: false }))).toBe(true);
-    expect(releaseTogglesMode(ctx({ toggledOnPress: true, droveTheHeldBody: false }))).toBe(false);
-    expect(releaseTogglesMode(ctx({ toggledOnPress: false, droveTheHeldBody: true }))).toBe(false);
-    expect(releaseTogglesMode(ctx({ toggledOnPress: true, droveTheHeldBody: true }))).toBe(false);
+    const t = (a: boolean, b: boolean) =>
+      releaseTogglesMode({ toggledOnPress: a, pressedWhileAnotherBodyWasHeld: b });
+    expect(t(false, false)).toBe(true);
+    expect(t(true, false)).toBe(false);
+    expect(t(false, true)).toBe(false);
+    expect(t(true, true)).toBe(false);
   });
 });

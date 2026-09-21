@@ -345,3 +345,32 @@ when the release turns out to be `D39`'s re-tap.
 on a **free** one, which is what `D61` then covers. ⚠ `SAME_OBJECT` is untouched: the owner's
 sentence says *outside any object*, and `A12`'s finger shares a body with the holder where a
 diagonal would smear one axis into the other.
+
+
+## `D64` — SUPERSEDED BY `D65` THE SAME DAY, 2026-09-21
+
+**The decision as taken**: *driving consumes the toggle* — a second touch that applied any roll
+or any depth ended in a RELEASE, and only a touchpoint that had driven **nothing** could still
+toggle the mode on its lift. ⭐ It came from the owner's constraint on the fix — *"make sure you
+discriminate between a release … and a tap or double-tap (a tap or double-tap is a deliberate
+action and should not be modified at this time)"* — and the discriminator was `applyDepthDrag`'s
+own return value, i.e. `A11`'s deadband, so it introduced no new threshold.
+
+⛔⛔ **IT SHIPPED AS `a33b485` AND A HAND REJECTED IT WITHIN THE HOUR**, on two counts:
+
+1. *"when I release the second touch (outside of any object), the follower mode changes: fix did
+   not solve that."* ⚠⚠ **The fact had a hole, and it is arithmetic rather than bad luck**:
+   *drove* is a per-CHANNEL question. On a FREE body the movement mode gives the second finger
+   **one** axis, so a finger moved along the other one applies nothing at all, `applyDepthDrag`
+   answers `false` **truthfully**, and the lift toggled exactly as before.
+2. *"When I release the second touch from the pioneer, it also toggles the follower mode."*
+   ⛔ A finger pressed on **another body** is an `OBJECT` role with a grip of its own and
+   releases through the recognizer's `TAP` verdict — a path `D64` never touched. ⚠ It had been
+   **flagged in the same change** as *"the same argument would apply to it; it was not
+   reported"*. ⭐ `METHOD`: *a fix that lands beside the defect leaves a green suite and a broken
+   product* — and, second lesson, **naming a risk is not the same as not taking it.**
+
+⭐⭐ **WHAT SURVIVES IT**: the `releaseTogglesMode` seam itself, the `toggledOnPress` half, and
+the finding that made the row worth having — **the lift was toggling what `D61`'s inert press had
+refused to**, so `D61` was postponing its own defect rather than closing it. `D65` keeps all of
+that and replaces only the fact it asks for.

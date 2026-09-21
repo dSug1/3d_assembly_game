@@ -943,6 +943,50 @@ pairs exactly as it always has. Only the toggle is spent.
 argument would apply to it; it was not reported, and a rule that grows itself is how `D48`
 happened.
 
+### ⛔⛔⛔ 5.12 `D65` — A SECOND TOUCH RELEASES; IT DOES NOT TAP
+
+> *"when I release the second touch (outside of any object), the follower mode changes: fix did
+> not solve that. When I release the second touch from the pioneer, it also toggles the follower
+> mode: this is not what I want. **Only a tap (or double-tap …) shall toggle the mode. Not a
+> release anywhere.**"* — the owner, 2026-09-21, against `a33b485`
+
+⛔⛔ **`D64` (§5.11) IS SUPERSEDED, AND BOTH OF ITS FAILURES WERE PREDICTABLE FROM ITS OWN TEXT.**
+
+1. ⚠⚠ ***Drove* is a per-CHANNEL fact.** On a FREE body the movement mode gives the second finger
+   **one** axis, so a finger moved along the other applies nothing, `applyDepthDrag` answers
+   `false` **truthfully**, and the lift toggled exactly as before. ⛔ §5.11 called the remaining
+   case *"a second finger that lands, emits nothing and lifts"* and judged it rare; on a hand it
+   is ordinary.
+2. ⛔ **The Pioneer finger was never in the rule.** A press on another body is an `OBJECT` role
+   with a grip of its own and releases through the recognizer's `TAP` verdict — a path §5.11
+   **flagged and left alone** in the same change. ⭐ `METHOD`, twice over: *a fix that lands
+   beside the defect leaves a green suite and a broken product*, and **naming a risk is not the
+   same as not taking it.**
+
+✅ **THE RULE NOW: a touchpoint that came down while another finger was already carrying a body
+is a CONTROL FINGER, and its lift never toggles the mode** — outside any object or on the
+Pioneer, driving or not. ⭐ The fact is *what the touchpoint **is***, latched at its **press**,
+which is `IN2`'s own doctrine: a role is decided once, on a discrete event, for the touchpoint's
+lifetime. ⚠ Asked at the lift instead, the answer would depend on whether the holder happened to
+let go first — the *"differ by timing of the input"* shape `METHOD` names.
+
+⛔⛔ **AND NO GEOMETRY COULD HAVE SEPARATED THEM.** `gainRollDrag` is **2 °/mm**, so **5 mm of
+finger is 10° of body** — an effective control press, comfortably inside the **8 mm** tap slop and
+the 250 ms window. A brief control press and a deliberate tap are the *same physical event*;
+only *which finger this is* tells them apart.
+
+⚠⚠ **THE COST, AND IT GOES BEYOND THE REPORT**: `D58`'s first bullet — *"a tap outside any object
+(this is currently what is built)"* — **no longer toggles while a body is held**. ⭐ The
+capability survives on the PRESS, where `D58` put the rest of it: the second and later outside
+presses of a hold toggle, so switching costs a lift and a re-press (`D61`). ✅ With **nothing
+held**, a tap anywhere toggles exactly as it always has (`D27`/`D28`), and the **double-tap camera
+reset is untouched everywhere** — the tap history is still recorded at every release, so only the
+toggle is spent.
+
+⭐ **Three release sites now ask the same rule** — the two in `noteTap` (`SECOND`, `OUTSIDE`) and
+the recognizer's own (`OBJECT`). ⛔ A fourth that forgets to ask is precisely how the Pioneer
+finger survived `D64`.
+
 ---
 
 ## 6. TRANSITIONS — in and out of the alignment rules

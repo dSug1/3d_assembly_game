@@ -129,15 +129,24 @@ export interface ReleaseToggleContext {
    */
   readonly toggledOnPress: boolean;
   /**
-   * ⭐⭐⭐ **DID THIS TOUCHPOINT DRIVE THE HELD BODY** — any roll or any depth, at any moment
-   * of its life. ⛔ `applyDepthDrag`'s own return value, which is `A11`'s deadband answering
-   * *did this finger really move*; **not** a second opinion and not a new threshold.
+   * ⭐⭐⭐ **WAS ANOTHER TOUCHPOINT ALREADY CARRYING A BODY WHEN THIS ONE PRESSED?**
+   *
+   * ⛔⛔ If it was, this touchpoint is a **SECOND TOUCH** — a control finger, whatever it
+   * later turns out to have done — and its lift is a RELEASE. The owner, 2026-09-21:
+   * *"Only a tap … shall toggle the mode. Not a release anywhere."*
+   *
+   * ⭐ Latched at the PRESS, never re-read: *what kind of touch is this* is `IN2`'s own
+   * doctrine — a role decided once, on a discrete event, for the touchpoint's lifetime.
+   * ⚠ Asking it at the LIFT would make the answer depend on whether the holder happened to
+   * let go first, which is the *"differ by timing of the input"* shape `METHOD` names.
    */
-  readonly droveTheHeldBody: boolean;
+  readonly pressedWhileAnotherBodyWasHeld: boolean;
 }
 
 /**
- * ⭐⭐⭐ **`D64` — DRIVING CONSUMES THE TOGGLE.** Device-reported, 2026-09-21:
+ * ⭐⭐⭐ **`D65` — A SECOND TOUCH RELEASES; IT DOES NOT TAP.** Device-reported, 2026-09-21,
+ * twice: `D64` (*driving consumes the toggle*) is the FIRST answer and it is superseded here.
+ *
  *
  * > *"if the first touch is pressed on follower and then the second touch is pressed, to
  * > control the follower (on depth or roll), when the second touch is released the mode toggles:
@@ -164,18 +173,40 @@ export interface ReleaseToggleContext {
  * by design — the deadband is 3.5 mm and the tap slop 8 mm — so there is a band in which one
  * lift is both.
  *
- * ⭐ So the discriminator is what the touchpoint DID, not how it looked: **a finger that drove
- * the body spent itself driving**, and its lift is a release. `D38`'s shape exactly — *the
- * alignment CONSUMES the tap* — and the same reason: one gesture, one consequence.
+ * ⛔⛔⛔ **AND THE FIRST ANSWER — *did this finger DRIVE the body?* — WAS WRONG ON THE GLASS.**
+ * Shipped as `a33b485`, reported the same day:
  *
- * ⚠ **WHAT STILL TOGGLES, STATED**: a second finger that lands, emits nothing and lifts inside
- * the tap window. ⛔ That is not a residue to be fixed later — it is the case where **nothing
- * distinguishes the two**, and the owner's instruction says which way to resolve it: it is a
- * deliberate tap, and a tap keeps every meaning it has.
+ * > *"when I release the second touch (outside of any object), the follower mode changes: fix
+ * > did not solve that. When I release the second touch from the pioneer, it also toggles the
+ * > follower mode: this is not what I want. **Only a tap (or double-tap …) shall toggle the
+ * > mode. Not a release anywhere.**"* — the owner
+ *
+ * ⚠⚠ **WHY IT LET BOTH THROUGH, AND THE ARITHMETIC IS THE LESSON.** *Drove* is a per-CHANNEL
+ * fact: on a FREE body the mode gives the second finger **one** axis, so a finger moved along
+ * the other one applies nothing at all, `applyDepthDrag` answers `false` — truthfully — and the
+ * lift toggled. ⛔ And the second report was the case this file's own note had *flagged and not
+ * fixed*: a finger on the **Pioneer** releases through the recognizer's `TAP` verdict, which
+ * never reached this rule. ⭐ `METHOD`: *a fix that lands beside the defect instead of on it
+ * leaves a green suite and a broken product* — for the second time on this project.
+ *
+ * ⭐⭐⭐ **SO THE DISCRIMINATOR IS WHAT THE TOUCHPOINT *IS*, NOT WHAT IT DID**: a finger that
+ * came down while another was already carrying a body is a **second touch**, and a second
+ * touch's lift is a release. ⛔ It cannot be otherwise: a brief control press and a deliberate
+ * tap are the same physical event — `gainRollDrag` is 2°/mm, so **5 mm of finger is 10° of
+ * body**, well inside the 8 mm tap slop. ⚠ Any rule that tried to tell them apart by geometry
+ * was always going to fail on a hand.
+ *
+ * ⚠⚠ **WHAT THIS COSTS, AND IT GOES BEYOND THE REPORT**: `D58`'s first bullet — *"a tap outside
+ * any object (this is currently what is built)"* — no longer toggles **while a body is held**,
+ * because that tap and the control lift are indistinguishable. ⭐ The capability survives on the
+ * PRESS, which is where `D58` deliberately put the rest of it: the second and later outside
+ * presses of a hold toggle, so switching costs a lift and a re-press. ⛔ With nothing held, a
+ * tap anywhere toggles exactly as it always has (`D27`/`D28`), and the double-tap camera reset
+ * is untouched everywhere.
  */
 export function releaseTogglesMode(ctx: ReleaseToggleContext): boolean {
   if (ctx.toggledOnPress) return false;
-  if (ctx.droveTheHeldBody) return false;
+  if (ctx.pressedWhileAnotherBodyWasHeld) return false;
   return true;
 }
 
