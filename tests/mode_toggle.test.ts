@@ -13,8 +13,10 @@ import {
   initialBehaviour,
   isTapRelease,
   pressTogglesMode,
+  releaseTogglesMode,
   toggleBehaviour,
   type PressToggleContext,
+  type ReleaseToggleContext,
 } from "@input/mode_toggle";
 import * as modeToggle from "@input/mode_toggle";
 
@@ -78,10 +80,15 @@ describe("⛔⛔ THE TOGGLE IS IMMEDIATE, and a double tap simply flips TWICE", 
     // ⚠ `pressTogglesMode` joined it with `D58` (2026-09-19) — an ADDITION, listed here on
     // purpose: this vector exists so a change to the surface is a decision somebody makes, not
     // something that happens.
+    // ⚠ `releaseTogglesMode` joined it with `D64` (2026-09-21), the same way: the RELEASE side
+    // now has a decision of its own, and listing it here is that decision being made rather
+    // than happening. ⭐ The pair is deliberate — a press rule and a release rule, side by side,
+    // so neither can be extended without the other being looked at.
     expect(surface.sort()).toEqual([
       "initialBehaviour",
       "isTapRelease",
       "pressTogglesMode",
+      "releaseTogglesMode",
       "toggleBehaviour",
     ]);
   });
@@ -247,5 +254,69 @@ describe("⛔⛔⛔ `D61` — ON A FREE BODY THE **FIRST** OUTSIDE PRESS OF A HO
     expect(pressTogglesMode(ctx({ somethingIsHeld: false, firstOutsidePressOfThisHold: false }))).toBe(false);
     expect(pressTogglesMode(ctx({ pressActedOnTheAlignment: true }))).toBe(false);
     expect(pressTogglesMode(ctx({ role: "SECOND" }))).toBe(false);
+  });
+});
+
+describe("⛔⛔⛔ `D64` — DRIVING CONSUMES THE TOGGLE, and a TAP keeps every meaning it has", () => {
+  // ⛔⛔ THE OWNER, 2026-09-21: *"if the first touch is pressed on follower and then the second
+  // touch is pressed, to control the follower (on depth or roll), when the second touch is
+  // released the mode toggles: it should not."* — and, on the fix: *"make sure you discriminate
+  // between a release … and a tap or double-tap (a tap or double-tap is a deliberate action and
+  // should not be modified at this time)."*
+  const ctx = (over: Partial<ReleaseToggleContext> = {}): ReleaseToggleContext => ({
+    toggledOnPress: false,
+    droveTheHeldBody: false,
+    ...over,
+  });
+
+  it("⭐⭐⭐ a finger that DROVE the body does not toggle when it lifts", () => {
+    // ⛔ This is the reported defect, and it is the whole row: the lift of a control press is a
+    // RELEASE. ⚠ It reaches this rule only because it already passed §1.3's tap test — the
+    // deadband is 3.5 mm and the tap slop 8 mm, so one lift can be both, and *what the finger
+    // did* is the only discriminator that needs no new number.
+    expect(releaseTogglesMode(ctx({ droveTheHeldBody: true }))).toBe(false);
+  });
+
+  it("⭐⭐⭐ a finger that drove NOTHING still toggles — the owner's deliberate tap", () => {
+    // ⛔⛔ THE CONSTRAINT, ASSERTED: *a tap or double-tap … should not be modified at this
+    // time.* ⚠ This is the case where nothing distinguishes a tap from a control press that
+    // achieved nothing, and the owner's instruction says which way it resolves.
+    expect(releaseTogglesMode(ctx())).toBe(true);
+  });
+
+  it("⛔⛔ AND IT IS WHAT MAKES `D61` REAL — press inert, lift inert, re-press toggles", () => {
+    // ⭐⭐⭐ THE ARGUMENT FOR THE WHOLE ROW. `D61` makes the first outside press of a hold inert
+    // so that placing the control finger cannot change what it is about to drive. ⚠ Before
+    // `D64` the LIFT toggled what that press had refused to, so the mode had flipped anyway by
+    // the time the finger came back down: `D61` postponed its own defect by one event.
+    const placing = pressTogglesMode({
+      role: "OUTSIDE",
+      somethingIsHeld: true,
+      pressedTheHeldBodysPioneerFace: false,
+      pressActedOnTheAlignment: false,
+      heldBodyIsAlignedFollower: false,
+      firstOutsidePressOfThisHold: true,
+    });
+    expect(placing).toBe(false);
+    // ⛔ …and the lift of that same finger, having driven, adds nothing. The composition is the
+    // claim — either half alone reads as correct.
+    expect(releaseTogglesMode(ctx({ droveTheHeldBody: true, toggledOnPress: placing }))).toBe(false);
+  });
+
+  it("⚠ a press that already toggled is still spent — `D58` is untouched", () => {
+    // ⛔ Otherwise a tap would flip the mode on the way down and back on the way up: no change,
+    // from a gesture the owner asked to have an effect.
+    expect(releaseTogglesMode(ctx({ toggledOnPress: true }))).toBe(false);
+    // ⚠ And the two reasons do not cancel: both spent is still spent.
+    expect(releaseTogglesMode(ctx({ toggledOnPress: true, droveTheHeldBody: true }))).toBe(false);
+  });
+
+  it("⛔⛔ THE TWO FACTS ARE INDEPENDENT — a truth table, because an OR is a composition", () => {
+    // ⚠ `METHOD`: a composition is a thing to MEASURE. Four cases, stated, so a mutant that
+    // swaps the operator or drops a branch cannot survive.
+    expect(releaseTogglesMode(ctx({ toggledOnPress: false, droveTheHeldBody: false }))).toBe(true);
+    expect(releaseTogglesMode(ctx({ toggledOnPress: true, droveTheHeldBody: false }))).toBe(false);
+    expect(releaseTogglesMode(ctx({ toggledOnPress: false, droveTheHeldBody: true }))).toBe(false);
+    expect(releaseTogglesMode(ctx({ toggledOnPress: true, droveTheHeldBody: true }))).toBe(false);
   });
 });

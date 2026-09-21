@@ -899,6 +899,50 @@ readout-that-lies shape, which has cost this project more than a day.
 ⚠ The lookup is **injected** into `highlightedPair` rather than reached for: the alignment index
 lives in the render layer, and `input/highlight.ts` must not learn to read it.
 
+### ⛔⛔⛔ 5.11 `D64` — DRIVING CONSUMES THE TOGGLE
+
+> *"if the first touch is pressed on follower and then the second touch is pressed, to control the
+> follower (on depth or roll), when the second touch is released the mode toggles: it should
+> not."* — the owner, 2026-09-21
+>
+> *"I agree with this recommendation, but make sure you discriminate between a release … and a
+> tap or double-tap (a tap or double-tap is a deliberate action and should not be modified at
+> this time)."* — the owner, on the fix
+
+⛔⛔⛔ **AND THE DECISIVE PART IS THAT IT DEFEATED `D61` (§5.9).** That rule makes the first
+outside press of a hold **inert** precisely so that placing the control finger cannot change what
+the finger is about to drive. ⚠ But the **lift** toggled what the press had refused to, so by the
+time the finger came back down the mode had flipped anyway: *the channel still alternated on
+every touch, one event later.* ⭐ `D61` was postponing its own defect, not closing it.
+
+⚠⚠ **AND THE TOGGLE LIVED ON TWO DIFFERENT EVENTS, CHOSEN BY FACTS A HAND CANNOT SEE** — the
+press for an aligned Follower (`D58`), the release for a free body's first press (`D61`) and for
+any second touch on the held body (`SECOND` never reaches `pressTogglesMode`'s two branches).
+⭐ That is why it read as arbitrary rather than simply wrong.
+
+⛔⛔ **THE §1.3 TAP TEST CANNOT BE THE DISCRIMINATOR, AND THAT IS THE WHOLE DIFFICULTY.** A lift
+only reaches this rule when it has **already passed** that test (≤ `tapMaxDuration` 250 ms,
+≤ `doubleTapSlop` 8 mm), so *"leave taps alone"* taken literally leaves everything alone. ⚠ And
+the two numbers overlap by design — the motion deadband is **3.5 mm** — so one lift can be both a
+tap and a control press that moved the body.
+
+✅ **SO THE DISCRIMINATOR IS WHAT THE TOUCHPOINT DID**: a finger that applied any roll or any
+depth **spent itself driving**, and its lift is a RELEASE. ⭐ `D38`'s shape — *the alignment
+CONSUMES the tap* — and the same reason: one gesture, one consequence. ⛔ The fact is
+`applyDepthDrag`'s own return value, so *did this finger drive* has one definition and it is
+`A11`'s deadband; no new threshold is introduced anywhere.
+
+⚠ **WHAT STILL TOGGLES, STATED**: a second finger that lands, emits nothing and lifts inside the
+tap window. ⛔ Not a residue to be fixed later — it is the case where **nothing distinguishes the
+two**, and the owner's instruction says which way it resolves: it is a deliberate tap.
+✅ **The double tap is untouched**: the tap history is recorded either way, so the camera reset
+pairs exactly as it always has. Only the toggle is spent.
+
+⚠ **NOT EXTENDED TO THE PIONEER-HOLDING FINGER**, which drives a pinned Follower through the same
+`applyDepthDrag` and releases through the recognizer's own `TAP` verdict instead. ⭐ The same
+argument would apply to it; it was not reported, and a rule that grows itself is how `D48`
+happened.
+
 ---
 
 ## 6. TRANSITIONS — in and out of the alignment rules

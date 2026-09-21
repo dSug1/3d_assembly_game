@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · owner decisions and their consequences
 > **READ IF** · you are about to re-open something, or need to know whose call it is
-> **LAST VERIFIED** · 2026-09-16
+> **LAST VERIFIED** · 2026-09-21
 
 ⭐ **TIERED, since 2026-09-16**: a SUPERSEDED row keeps its headline here and its
 consequence text in
@@ -11,7 +11,9 @@ consequence text in
 re-taken — but its essay is not load-bearing at read time, and this file has a byte budget.
 ⚠ A superseded row's consequence cell is therefore just **⚠ Text: → history**. It said so in a
 sentence eleven times over; the sentence is here once instead (compressed 2026-09-18 to make
-room for `D49`, which is what the ratchet is for).
+room for `D49`, which is what the ratchet is for). ⭐ And again 2026-09-21 for `D64`: 26 rows
+carried a full LINK to the file named above. It is here once now. **Both budgets came down
+afterwards** — an addition that does not fit pays for itself.
 
 ⚠ A decision here is **not** a rejected experiment. Things tried and measured out
 belong in a `REJECTED.md` — start one the first time something is measured out.
@@ -28,6 +30,7 @@ belong in a `REJECTED.md` — start one the first time something is measured out
 | `D6` | ⛔ **`src/core` and `src/input` import no engine**, and a test enforces it | 2026-09-13 | The predecessor stated the same contract in prose and it silently became false |
 | `D7` | **Thresholds in millimetres, never pixels** | 2026-09-13 | `src/core/units.ts`; every threshold converts at runtime |
 | `D8` | ⭐ **The constraint stack replaces the three booleans** | 2026-09-13 | Owner's revision-5 spec §1.4, adopted as the design of record |
+| `D64` | ⭐⭐⭐ **DRIVING CONSUMES THE TOGGLE — a second touch that drove the body RELEASES, it does not tap** | 2026-09-21 | *"when the second touch is released the mode toggles: it should not"* + *"discriminate between a release … and a tap or double-tap"*. ⛔⛔ It makes **`D61` real**: the lift toggled what the inert press had refused to, so the channel still alternated on every touch. ⭐ The discriminator is what the finger DID (`A11`'s deadband, via `applyDepthDrag`) — the tap test cannot be it, since a lift only reaches the rule by having passed it → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.11 |
 | `D63` | ⭐⭐⭐ **THE APPROACH SWING — the camera looks around the join and comes back** (TRIAL) | 2026-09-19 | *"the camera orbits opposite to the dx movement … when the offset is null the camera shall be back to its original position."* ⭐⭐ Parallax: a face-to-face approach seen head-on gives a hand almost no depth cue. ⛔⛔ The return is **by construction** — an offset that is exactly zero at both ends — not a snapshot restore → [`../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md) |
 | `D62` | ⭐⭐⭐ **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** | 2026-09-19 | *"a Follower object cannot approach any other object than its Pioneer."* ⚠⚠ **It overturns `A21`** (*"within a SnapIsPossibleRadius of ANY other object"*) — a freedom deliberately given up. ⛔ A Pioneer out of range captures **nothing**; no fallback to the scene → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.10 |
 | `D61` | ⭐⭐⭐ **ON A FREE BODY THE FIRST OUTSIDE PRESS OF A HOLD IS INERT** | 2026-09-19 | *"the first time the second touch is pressed outside any object shall not trigger a toggle … reset when the first touch releases."* ✅✅ It closes `D58`'s `A16` collision where `D59` could not: the press that PLACES the depth/roll finger no longer changes what it is about to drive. ⭐ A second press still toggles, so switching costs a lift and a re-press. ⚠ Reset **by construction** — the fact lives on the grip → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.9 |
@@ -44,38 +47,38 @@ belong in a `REJECTED.md` — start one the first time something is measured out
 | `D44` | ⭐⭐ **A TAP ON ANOTHER OBJECT'S FACE ALIGNS IN **EITHER** MOVEMENT MODE** | 2026-09-17 | *"In translation mode, a tap or a double tap on the second object PioneerFace also toggles the alignment logic (same as for rotation)."* ⛔⛔ It overturns a condition I had called **load-bearing**, and the reasoning was over-broad: what keeps `D28`'s toggle reachable is a tap on **empty space or the held object**, not every tap in `TRANSLATE`. ⭐ `TapContext` no longer carries the movement mode at all → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) |
 | `D43` | ⛔⛔⛔ **`A10`'s DEPTH GATE IS DELETED — both fingers integrate at once** | 2026-09-17 | ⛔⛔ It retires `A10`'s gate — six models and five device passes — so the account lives with the row that owns depth: [`queue_notes/IN8.md`](queue_notes/IN8.md), and the code carries the note where the gate used to be |
 | `D42` | ⭐⭐⭐ **THE FLAG BECAME A GESTURE — a single tap makes a `SNAPSHOT`, a double tap a `FOLLOW`** | 2026-09-17 | *"Remove the two forks and slider … one single tap … as fork C1; one double tap … as fork C2."* ⭐⭐ Better than a flag in the way that matters: two alignments can differ, and the **colours say which** — cyan+amber for a snapshot, both amber for a relationship. ⭐ Each gesture is its own toggle, so nothing has to be remembered → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §2 |
-| `D41` | ⚠ **SUPERSEDED BY `D42` after four hours** — what a turned Pioneer costs the Follower; the two readings survive, the FLAG does not | 2026-09-17 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
+| `D41` | ⚠ **SUPERSEDED BY `D42` after four hours** — what a turned Pioneer costs the Follower; the two readings survive, the FLAG does not | 2026-09-17 | ⚠ Text: → history (linked at the top) |
 | `D40` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap-to-align set is THE input model** | 2026-09-17 | *"Remove the fork A and the Fork B and set the fork C as the unique default."* ⛔ Deleted, not disabled — `D28`'s precedent, and its reason: **a dormant fork is a trap**. Gone: four modules, the flag, its validator rule, the slider, the HUD's fork line and **41 vectors** → [`queue_notes/IN3.md`](queue_notes/IN3.md) |
 | `D39` | ⭐⭐ **BOTH FACES ARE MARKED, AND A RE-TAP ON THE PIONEER BREAKS THE ALIGNMENT** | 2026-09-16 | A **fill** for the face that moved, a **contour** for the one it was aimed at — which says which is which without a legend — and a second tap on that same face lets go. ⛔⛔ Both **retire `D37`'s *"the PioneerFace resets as null"***: its identity survives, though the CONSTRAINT is still a frozen world direction → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) |
 | `D38` | ⭐⭐ **FORK C IS THE DEFAULT, AND ITS ALIGNMENT NO LONGER SWITCHES THE MODE** | 2026-09-16 | Five corrections after the first device pass. ⛔⛔ The automatic switch to translation is **retired, a rule the owner dictated himself**: it *"makes the game too complicated"*. ⭐⭐ So **the alignment CONSUMES the tap** and overrides `D28` for that one gesture — stated, where it used to be a coincidence I leaned on → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) |
 | `D37` | ⭐⭐⭐ **FORK C: THE TRIGGER IS A TAP — no flick anywhere** | 2026-09-16 | Hold an object, **tap a face on another**, and the held one turns the minimum amount that makes its own face point **the same way** (parallel — the CAD *align* sense, chosen over a mate). ⭐⭐ Fork B was left because a release-time trigger *"releases the finger from the object it is tracking"*, and **both of its faults are properties of reading a verdict at the lift** → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) |
-| `D36` | ⭐⭐⭐ **§1.3's PROVISIONAL-MOTION ROLLBACK IS RETIRED** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D35` | ⭐⭐ **THE FACE HIGHLIGHT OUTLIVES THE GESTURE AND DIES WITH THE ALIGNMENT** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D34` | ⭐⭐⭐ **2sexte IS WIRED — and `A3`'s handover was never a decision** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D33` | ⭐⭐⭐ **A FLICK IS READ OVER ITS TAIL, NOT THE WHOLE WINDOW** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D32` | ⭐⭐ **A SHAKE EVICTS ONLY WHILE `ROTATE`, and it is fed BEFORE the refusal** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D31` | ⭐⭐⭐ **THE ONE-TOUCHPOINT ROLL IS DELETED, NOT PARKED** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
+| `D36` | ⭐⭐⭐ **§1.3's PROVISIONAL-MOTION ROLLBACK IS RETIRED** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D35` | ⭐⭐ **THE FACE HIGHLIGHT OUTLIVES THE GESTURE AND DIES WITH THE ALIGNMENT** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D34` | ⭐⭐⭐ **2sexte IS WIRED — and `A3`'s handover was never a decision** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D33` | ⭐⭐⭐ **A FLICK IS READ OVER ITS TAIL, NOT THE WHOLE WINDOW** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D32` | ⭐⭐ **A SHAKE EVICTS ONLY WHILE `ROTATE`, and it is fed BEFORE the refusal** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D31` | ⭐⭐⭐ **THE ONE-TOUCHPOINT ROLL IS DELETED, NOT PARKED** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
 | `D30` | ⭐⭐⭐ **A FLICK PUSHES AN ALIGNMENT ONLY WHILE THE MODE IS `ROTATE`** | 2026-09-16 | §2's 2ter/2quater predate the movement mode, and read literally a flick anchors whatever the drag was doing — so a brisk vertical **translate** would move a part and then spin it to align a face with gravity. ⭐ In `ROTATE` the hand is already turning the object, so an alignment completes the same intention · [`queue_notes/IN3.md`](queue_notes/IN3.md) |
-| `D29` | ⭐⭐⭐ **THREE ANCHOR-RULE FORKS BEHIND ONE FLAG, and `IN3` is built in fork B** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D27` | ⭐⭐⭐ **ANY SINGLE TAP toggles the movement behaviour; a PRESS keeps every meaning it has** | 2026-09-16 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D26` | ⭐⭐ **THE ASSIGNMENTS WERE A FLAG, NOT A FORK** — ⚠ **CLOSED BY `D28`** | 2026-09-16 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D25` | ⚠ **REVERSED BY `D54`** — a holder no longer under its object used to give the selection up | 2026-09-16 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D24` | ⚠ **RETIRED BY `D28`** — a lift-and-replace of the second touchpoint was ONE gesture | 2026-09-16 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D23` | ⚠ **SUPERSEDED BY `D28`** — one touchpoint TRANSLATES; a second held still ROTATES | 2026-09-16 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D22` | ⭐⭐⭐ **Roll moves to the SECOND touchpoint's x** | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D21` | ⭐⭐⭐ **STATIONARY is a POSITION DEADBAND, not a timer** | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D20` | ⭐⭐ **Depth is a STILL HOLDER and a MOVING ANCHOR** | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D19` | ⭐⭐ **A DEADBAND on the pointer delta, per axis, with a slider** | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D18` | ⭐⭐ **Every object gesture stands on a GRAVITY FRAME** | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D17` | ⚠ **SUPERSEDED BY `D20`** — its TRIGGER is gone; the configuration and `A5`'s geometry stand. ⭐ Kept: it is what moved depth off the pinch | 2026-09-15 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** — the pinch trigger is gone; the depth GEOMETRY it established stands | 2026-09-15 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⭐ Binding. Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
-| `D12` | ⚠ **SUPERSEDED BY `D15`** — eviction was a full 360° roll, and is now a back-and-forth. ⭐ Kept: it is what moved eviction off the double-tap, and that half stands | 2026-09-15 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
+| `D29` | ⭐⭐⭐ **THREE ANCHOR-RULE FORKS BEHIND ONE FLAG, and `IN3` is built in fork B** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D27` | ⭐⭐⭐ **ANY SINGLE TAP toggles the movement behaviour; a PRESS keeps every meaning it has** | 2026-09-16 | ⭐ Binding. Text: → history (linked at the top) |
+| `D26` | ⭐⭐ **THE ASSIGNMENTS WERE A FLAG, NOT A FORK** — ⚠ **CLOSED BY `D28`** | 2026-09-16 | ⚠ Text: → history (linked at the top) |
+| `D25` | ⚠ **REVERSED BY `D54`** — a holder no longer under its object used to give the selection up | 2026-09-16 | ⚠ Text: → history (linked at the top) |
+| `D24` | ⚠ **RETIRED BY `D28`** — a lift-and-replace of the second touchpoint was ONE gesture | 2026-09-16 | ⚠ Text: → history (linked at the top) |
+| `D23` | ⚠ **SUPERSEDED BY `D28`** — one touchpoint TRANSLATES; a second held still ROTATES | 2026-09-16 | ⚠ Text: → history (linked at the top) |
+| `D22` | ⭐⭐⭐ **Roll moves to the SECOND touchpoint's x** | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D21` | ⭐⭐⭐ **STATIONARY is a POSITION DEADBAND, not a timer** | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D20` | ⭐⭐ **Depth is a STILL HOLDER and a MOVING ANCHOR** | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D19` | ⭐⭐ **A DEADBAND on the pointer delta, per axis, with a slider** | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D18` | ⭐⭐ **Every object gesture stands on a GRAVITY FRAME** | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D17` | ⚠ **SUPERSEDED BY `D20`** — its TRIGGER is gone; the configuration and `A5`'s geometry stand. ⭐ Kept: it is what moved depth off the pinch | 2026-09-15 | ⚠ Text: → history (linked at the top) |
+| `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** — the pinch trigger is gone; the depth GEOMETRY it established stands | 2026-09-15 | ⚠ Text: → history (linked at the top) |
+| `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⭐ Binding. Text: → history (linked at the top) |
+| `D12` | ⚠ **SUPERSEDED BY `D15`** — eviction was a full 360° roll, and is now a back-and-forth. ⭐ Kept: it is what moved eviction off the double-tap, and that half stands | 2026-09-15 | ⚠ Text: → history (linked at the top) |
 | `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | Every gesture rule carries a prior-art citation, or is marked ⚠ **novel to this project** so it can be assessed separately. Register: [`../10_INPUT_TOUCH/PROVENANCE.md`](../10_INPUT_TOUCH/PROVENANCE.md); binding form: `CONSTRAINTS` §10; review it feeds: `SEC4`. ⭐ Cheap now and expensive to reconstruct later, which is [`LESSONS_CARRIED.md`](LESSONS_CARRIED.md) §7's exact shape. ⚠ Three rules came out NOVEL COMPOSITE: §4's 6bis, 6ter, 6quater |
-| `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is now half of a **depth pinch**. ⭐ Kept: its *ignored* role still governs the THIRD touchpoint and beyond | 2026-09-14 | ⚠ Text: [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md) |
+| `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is now half of a **depth pinch**. ⭐ Kept: its *ignored* role still governs the THIRD touchpoint and beyond | 2026-09-14 | ⚠ Text: → history (linked at the top) |
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | `pickResult.faceId` gives face picking directly, which rule 2 needs; multi-pointer handling is built in. ⚠ Apache-2.0, so the NOTICE must ship. ⭐ Reversible in about a day *because* of `D6` — that is what the boundary buys |
 
 ## ⚠ Still the owner's to make

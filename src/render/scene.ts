@@ -70,6 +70,7 @@ import {
   initialBehaviour,
   isTapRelease,
   pressTogglesMode,
+  releaseTogglesMode,
   toggleBehaviour,
   type Behaviour,
   faceAlignConstraint,
@@ -3451,10 +3452,31 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    */
   const pressToggled = new Set<number>();
 
+  /**
+   * ⭐⭐⭐ **`D64` — TOUCHPOINTS THAT HAVE DRIVEN THE HELD BODY**, by pointer id, so their lift
+   * is judged a RELEASE rather than a tap. The owner, 2026-09-21: *"when the second touch is
+   * released the mode toggles: it should not."*
+   *
+   * ⛔ THE DECISION IS `releaseTogglesMode`'s — this set is only the FACT, and the fact is
+   * `applyDepthDrag`'s own return value, so *did this finger drive* has one definition and it is
+   * `A11`'s deadband. ⚠ A second opinion here (a distance, a duration) would be a threshold
+   * nobody measured, and the two that exist already overlap.
+   *
+   * ⚠ **CLEARED ON PRESS AS WELL AS ON RELEASE.** A pointer id is the browser's to reuse, and a
+   * stale entry would silently eat the NEXT touch's deliberate tap — the quietest kind of defect
+   * this project keeps finding. ⭐ Cleared on the way in, the state cannot outlive a gesture.
+   */
+  const drove = new Set<number>();
+
   const noteTap = (
     pressed: Sample,
     released: Sample,
-    spentByPress = false,
+    /**
+     * ⭐ Is this release's TOGGLE already spent? ⛔ `releaseTogglesMode`'s answer, negated by the
+     * caller — the name says *what is true of this release*, not *which rule spent it*, because
+     * since `D64` there are two.
+     */
+    toggleSpent = false,
   ): "TAP" | "DOUBLE_TAP" | null => {
     const wasTap = isTapRelease(
       pressed.t, pressed.x, pressed.y,
@@ -3470,12 +3492,15 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⛔⛔ EVERY tap toggles — *"a single tap by one only touchpoint anywhere"* — with no
     // condition left: not the fork (there is one model now), and not whether anything is
     // held, since the mode is what the NEXT grab inherits.
-    // ⛔⛔⛔ **UNLESS ITS OWN PRESS ALREADY DID IT (`D58`).** ⚠ The history is still recorded
-    // either way — that is what the double tap and the camera reset read, and suppressing it
-    // would break two rules to fix one. ⭐ Only the TOGGLE is spent, or a quick tap would flip
-    // the mode on the way down and flip it straight back on the way up: no change, from a
-    // gesture the owner asked to have an effect.
-    if (spentByPress) return verdict;
+    // ⛔⛔⛔ **UNLESS THE TOGGLE IS ALREADY SPENT** — its own press did it (`D58`), or this
+    // touchpoint DROVE the held body and its lift is a release rather than a tap (`D64`).
+    // ⛔ Both are `releaseTogglesMode`'s call, made at the call site where the two facts live;
+    // this line only obeys it.
+    // ⚠ The history is still recorded either way — that is what the double tap and the camera
+    // reset read, and suppressing it would break two rules to fix one. ⭐ Only the TOGGLE is
+    // spent, or a quick tap would flip the mode on the way down and flip it straight back on
+    // the way up: no change, from a gesture the owner asked to have an effect.
+    if (toggleSpent) return verdict;
     behaviour = toggleBehaviour(behaviour);
     lastVerdict = `tap → ${behaviour}`;
     return verdict;
@@ -3558,6 +3583,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       const hit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
       const routed = router.press(e.pointerId, s, hit);
+
+      // ⚠ `D64` — a pointer id is the browser's to reuse, so this gesture starts with no drive
+      // recorded against it. ⛔ Cheaper and safer than trusting every release path to clean up:
+      // a stale entry would silently eat a deliberate tap, which is a defect nobody would report
+      // as anything but *"the toggle sometimes does not work"*.
+      drove.delete(e.pointerId);
 
       // ⭐⭐⭐ **`D58` — THE MOVEMENT MODE CAN NOW BE FLIPPED ON THE WAY DOWN.**
       //
@@ -3829,7 +3860,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐⭐⭐ *"Tapped ANYWHERE"* includes the held object itself.
         // ⚠ A `SECOND` release never fed §1.3's tap history before the toggle existed. It
         // does now, and that is deliberate: a tap on the held object is a tap *anywhere*.
-        noteTap(routed.pressed, s, pressToggled.delete(e.pointerId));
+        // ⛔⛔ **`D64` — AND A FINGER THAT DROVE THIS BODY DOES NOT TOGGLE ON THE WAY UP.**
+        // ⚠ Both sets are consulted unconditionally, never short-circuited: each owns an entry
+        // for this pointer id and leaving one behind would eat the NEXT gesture's tap.
+        noteTap(
+          routed.pressed,
+          s,
+          !releaseTogglesMode({
+            toggledOnPress: pressToggled.delete(e.pointerId),
+            droveTheHeldBody: drove.delete(e.pointerId),
+          }),
+        );
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
       } else {
@@ -3844,13 +3885,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ `SAME_OBJECT` is untouched by `D59` — the owner's sentence says *outside any
         // object* — but it goes through the same table so all three configurations are decided
         // in one place rather than by three scattered call sites.
-        if (grip2) {
+        if (
+          grip2 &&
           applyDepthDrag(
             grip2,
             routed.seq,
             s,
             secondTouchDrive("SAME_OBJECT", gripIsAlignedFollower(grip2)) === "BOTH",
-          );
+          )
+        ) {
+          // ⭐ `D64` — it drove, so its lift is a RELEASE and not a tap. ⚠ Recorded from the
+          // RETURN VALUE, never from the intent: `applyDepthDrag` answers `false` when the
+          // deadband swallowed everything, and that finger really has done nothing yet.
+          drove.add(e.pointerId);
         }
       }
       paint();
@@ -3896,6 +3943,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             secondTouchDrive("OUTSIDE", gripIsAlignedFollower(grip)) === "BOTH",
           )
         ) {
+          // ⭐ `D64` — see the `SAME_OBJECT` branch: driving spends this touchpoint's toggle.
+          drove.add(e.pointerId);
           paint();
           return;
         }
@@ -3930,7 +3979,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // B — the camera reset — and cancels the pending toggle rather than being consumed
         // by it. ⭐ That is what the discrimination bought: the two gestures stopped
         // overlapping, so the special case disappeared instead of growing.
-        if (noteTap(routed.pressed, s, pressToggled.delete(e.pointerId)) === "DOUBLE_TAP") {
+        // ⛔⛔ **`D64` — a finger that drove depth or roll releases, it does not tap.** ⚠ The
+        // DOUBLE-TAP is untouched: the history is recorded either way, so the camera reset
+        // pairs exactly as it always has. Only the toggle is spent.
+        if (
+          noteTap(
+            routed.pressed,
+            s,
+            !releaseTogglesMode({
+              toggledOnPress: pressToggled.delete(e.pointerId),
+              droveTheHeldBody: drove.delete(e.pointerId),
+            }),
+          ) === "DOUBLE_TAP"
+        ) {
           resetCamera();
           lastVerdict = "DOUBLE_TAP → camera reset";
         }

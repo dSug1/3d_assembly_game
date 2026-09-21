@@ -121,6 +121,64 @@ export function pressTogglesMode(ctx: PressToggleContext): boolean {
   return false;
 }
 
+/** Everything `releaseTogglesMode` depends on. ⛔ Two facts, both about THIS touchpoint. */
+export interface ReleaseToggleContext {
+  /**
+   * Did this touchpoint's own PRESS already flip the mode (`D58`)? ⛔ Then its lift must not
+   * flip it back: a tap would toggle twice and change nothing.
+   */
+  readonly toggledOnPress: boolean;
+  /**
+   * ⭐⭐⭐ **DID THIS TOUCHPOINT DRIVE THE HELD BODY** — any roll or any depth, at any moment
+   * of its life. ⛔ `applyDepthDrag`'s own return value, which is `A11`'s deadband answering
+   * *did this finger really move*; **not** a second opinion and not a new threshold.
+   */
+  readonly droveTheHeldBody: boolean;
+}
+
+/**
+ * ⭐⭐⭐ **`D64` — DRIVING CONSUMES THE TOGGLE.** Device-reported, 2026-09-21:
+ *
+ * > *"if the first touch is pressed on follower and then the second touch is pressed, to
+ * > control the follower (on depth or roll), when the second touch is released the mode toggles:
+ * > it should not."* — the owner
+ *
+ * ⛔⛔⛔ **AND THE DECISIVE PART IS THAT IT DEFEATED `D61`.** That rule makes the first outside
+ * press of a hold **inert** so that placing the control finger cannot change what that finger is
+ * about to drive — *"the channel alternating on every touch instead of being chosen"*. ⚠ But the
+ * LIFT toggled what the press had refused to, so by the time the finger came back down the mode
+ * had flipped anyway: `D61` postponed the defect it was written to close by exactly one event.
+ *
+ * ⚠⚠ **AND THE TOGGLE LIVED ON TWO DIFFERENT EVENTS, CHOSEN BY FACTS A HAND CANNOT SEE** — the
+ * press for an aligned Follower (`D58`), the release for a free body's first press (`D61`) and
+ * for any second touch on the held object (`SECOND` reaches `pressTogglesMode`'s `false`). That
+ * is why it read as arbitrary rather than simply wrong.
+ *
+ * ⭐⭐⭐ **THE OWNER'S CONSTRAINT IS WHAT MAKES THIS A DISCRIMINATION RATHER THAN A DELETION**:
+ * *"make sure you discriminate between a release … and a tap or double-tap (a tap or double-tap
+ * is a deliberate action and should not be modified at this time)."*
+ *
+ * ⛔⛔ **THE §1.3 TAP TEST CANNOT BE THAT DISCRIMINATOR**, and that is the whole difficulty: a
+ * lift only reaches this rule when it ALREADY passed it (≤ `tapMaxDuration`, ≤ `doubleTapSlop`),
+ * so *"leave taps alone"* taken literally leaves everything alone. ⚠ And the two numbers overlap
+ * by design — the deadband is 3.5 mm and the tap slop 8 mm — so there is a band in which one
+ * lift is both.
+ *
+ * ⭐ So the discriminator is what the touchpoint DID, not how it looked: **a finger that drove
+ * the body spent itself driving**, and its lift is a release. `D38`'s shape exactly — *the
+ * alignment CONSUMES the tap* — and the same reason: one gesture, one consequence.
+ *
+ * ⚠ **WHAT STILL TOGGLES, STATED**: a second finger that lands, emits nothing and lifts inside
+ * the tap window. ⛔ That is not a residue to be fixed later — it is the case where **nothing
+ * distinguishes the two**, and the owner's instruction says which way to resolve it: it is a
+ * deliberate tap, and a tap keeps every meaning it has.
+ */
+export function releaseTogglesMode(ctx: ReleaseToggleContext): boolean {
+  if (ctx.toggledOnPress) return false;
+  if (ctx.droveTheHeldBody) return false;
+  return true;
+}
+
 /** What a held object's own drag does. ⭐ One latch per SESSION, not per gesture. */
 export type Behaviour = "TRANSLATE" | "ROTATE";
 

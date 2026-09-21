@@ -47,7 +47,7 @@ const FRONT_DOORS: readonly (readonly [string, number])[] = [
   ["Claude/00_CORE/GLOSSARY.md", 3_500],
   ["Claude/00_CORE/LESSONS_CARRIED.md", 9_000],
   ["Claude/00_CORE/METHOD.md", 19_000],
-  ["Claude/00_CORE/DECISIONS.md", 25_000],
+  ["Claude/00_CORE/DECISIONS.md", 24_000],
   ["Claude/00_CORE/QUEUE.md", 40_000],
   ["Claude/10_INPUT_TOUCH/INDEX.md", 30_000],
   ["Claude/20_GAME_RULES/INDEX.md", 1_500],
@@ -64,7 +64,7 @@ describe("⛔ the documentation budget — bytes, because a line is not a unit o
     });
   }
 
-  it("⭐⭐ THE MANDATORY LOAD — router + `00_CORE/` + ONE index — stays under 136 KB", () => {
+  it("⭐⭐ THE MANDATORY LOAD — router + `00_CORE/` + ONE index — stays under 135 KB", () => {
     // ⚠⚠ MODELLED THE WAY THE LOAD RECIPE ACTUALLY WORKS, which is not the sum of every
     // file: a session reads the router, all of `00_CORE/`, and **one** subsystem index. So
     // the cost is the core plus the LARGEST index, and measuring the sum of all six would
@@ -72,12 +72,15 @@ describe("⛔ the documentation budget — bytes, because a line is not a unit o
     // ⛔ 162 KB → 140 KB → **134 KB** over two distillation passes on 2026-09-16, and the
     // ceiling has been LOWERED each time. That is the ratchet working: the budget is what
     // forced the second pass, because the alternative was raising it to fit an addition.
+    // ⭐ 2026-09-21: `D64` did not fit, so the 26 superseded rows gave up their repeated link
+    // to the same history file — the convention the preamble already states once — and the
+    // ceiling comes down again. **135 KB.** The addition paid for itself, which is the rule.
     const core = FRONT_DOORS.filter(([f]) => !f.endsWith("/INDEX.md"))
       .reduce((n, [f]) => n + bytesOf(f), 0);
     const largestIndex = Math.max(
       ...FRONT_DOORS.filter(([f]) => f.endsWith("/INDEX.md")).map(([f]) => bytesOf(f)),
     );
-    expect(core + largestIndex).toBeLessThanOrEqual(136_000);
+    expect(core + largestIndex).toBeLessThanOrEqual(135_000);
   });
 });
 
