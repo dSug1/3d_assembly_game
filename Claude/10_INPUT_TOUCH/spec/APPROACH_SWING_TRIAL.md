@@ -465,6 +465,45 @@ camera x horizontal axis"* and nothing else. ⛔ Deliberately **no late adoption
 sign mid-approach would have to re-base `g0` to the remaining gap, and a swing compressed into
 the last millimetre is a 30° jolt.
 
+### ⛔⛔ A VERTICAL APPROACH GOT NO SWING AT ALL — device-reported, 2026-09-21
+
+> *"Sometimes, when the follower enters the offset radius by a vertical translation (delta
+> position dy) the camera orbit swing is not triggered."* — the owner, with the HUD reading
+> `sign⛔? p=0.29 yaw=0.0° g0=192mm dxArm=0.00mm`
+
+⭐⭐ **THE READOUT DIAGNOSED IT BEFORE I DID**, which is the whole reason it exists: `sign⛔?`
+plus `dxArm=0.00mm` says *the capture armed and the arithmetic had no direction to aim with* —
+not *the rule did not run*. ⚠ Without it this would have read exactly like the swing being dead.
+
+⛔ **THE CAUSE IS THE 2026-09-20 FIX, AT ITS STATED BOUNDARY.** That rule took the direction
+from *the travel that crossed the threshold*, and read only its **horizontal** component. A
+vertical drag is a real translation really closing the gap, and it has no `dx` — so the sign was
+`null` and the lean stayed at zero for the whole approach. ⚠⚠ It was listed there as a COST
+(*"an approach that crosses the threshold without a horizontal translation … gets no swing at
+all"*) and a hand has now judged it a **bug**. ⭐ *A cost stated in a doc is still a cost paid by
+the user.*
+
+✅ **THE FIX SPLITS ONE QUESTION INTO TWO**, which is what the first build conflated:
+
+| question | answered by |
+|---|---|
+| **Is a swing earned?** | was there a TRANSLATION at all — either axis |
+| **Which way does it lean?** | the horizontal component, when there is one |
+
+⛔⛔ **AND THE 2026-09-20 DEFECT STAYS FIXED**: a press inside the band, a rotation moving the
+closest points and a pinch rescaling `D49`'s threshold all cross it with **zero travel on both
+axes**, and still get no swing. ⚠ That is the distinction the fix turns on — without it, a
+constant in place of a stale variable would bring *"sometimes left, sometimes right for the same
+dx"* back through the door it just left by.
+
+⭐ **A PURELY VERTICAL APPROACH TAKES A DECLARED `+1`.** The yaw is **symmetric** there: the
+bodies are stacked on the screen axis the swing turns about, so either side shows the join
+equally and the finger holds no answer. ⚠ That is not the guess the 2026-09-20 rule removed —
+there a direction existed and was read from the wrong gesture. ⛔ It is one line to mirror if a
+hand prefers the other side.
+✅ The HUD now prints **`arm=(dx,dy)mm`**, so *no direction* and *no motion* are distinguishable
+at a glance.
+
 ### ⚠⚠ AND A SECOND MECHANISM IS STILL LIVE — IT IS A FEEL DECISION, NOT A DEFECT
 
 ⛔ The lean is a function of the **gap** and of a sign latched at the trigger, so **inside the

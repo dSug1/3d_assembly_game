@@ -21,7 +21,7 @@ import {
   type SwingLatch,
 } from "@input/approach_swing";
 
-const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004 };
+const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
 const AMP = (25 * Math.PI) / 180;
 const yawAt = (gapM: number, latch: SwingLatch = LATCH) =>
   swingYawRad(swingProgress(gapM, latch), AMP, latch.sign);
@@ -77,7 +77,7 @@ describe("⛔⛔⛔ THE ROUND TRIP — out, and exactly back", () => {
   });
 
   it("⛔ the sign is the LATCH's, and reversing it mirrors the whole swing", () => {
-    const other: SwingLatch = { gapAtTriggerM: 0.07, sign: -1, offsetAtTriggerM: 0.07, armTravelM: -0.004 };
+    const other: SwingLatch = { gapAtTriggerM: 0.07, sign: -1, offsetAtTriggerM: 0.07, armTravelM: -0.004, armTravelUpM: 0 };
     expect(yawAt(0.035, other)).toBeCloseTo(-yawAt(0.035), 12);
     // ⚠ The reversal at half is NOT a change of sign — both halves are on the same side of the
     // orbit. ⛔ Asserted, because "reverses" in the dictation could be read either way, and the
@@ -114,7 +114,7 @@ describe("⛔⛔ THE PROGRESS — clamped at both ends, and degenerate inputs ar
     // approach left to show. ⭐ `1` puts the swing at home: the one answer that cannot move the
     // camera. `LESSONS_CARRIED` §6 — a degenerate input refuses, it does not improvise.
     for (const g0 of [0, -1, NaN, Infinity]) {
-      const bad: SwingLatch = { gapAtTriggerM: g0, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004 };
+      const bad: SwingLatch = { gapAtTriggerM: g0, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
       expect(swingProgress(0.03, bad)).toBe(1);
       expect(swingYawRad(swingProgress(0.03, bad), AMP, 1)).toBe(0);
     }
@@ -173,10 +173,45 @@ describe("⛔⛔⛔ THE DIRECTION — and it SHIPPED INVERTED (device-reported, 
     expect(swingYawRad(0.25, 0.4, null)).toBe(0);
   });
 
+  it("⛔⛔⛔ A PURELY VERTICAL APPROACH STILL SWINGS — device-reported, 2026-09-21", () => {
+    // ⛔⛔ THE OWNER, with the HUD showing `sign⛔? p=0.29 yaw=0.0° dxArm=0.00mm`:
+    // *"Sometimes, when the follower enters the offset radius by a vertical translation (delta
+    // position dy) the camera orbit swing is not triggered."*
+    //
+    // ⚠⚠ The 2026-09-20 rule read ONLY `dx`, so a vertical drag — a real translation, really
+    // closing the gap — armed with no direction and the lean stayed at zero. ⭐ It was listed as
+    // a COST when it shipped and judged a BUG by the hand that met it.
+    // ⛔ FAILS against that rule, which returned `null` here.
+    expect(swingSignFor(0, -0.004)).toBe(1);
+    expect(swingSignFor(0, 0.004)).toBe(1);
+    // ⭐⭐ And the consequence is asserted where it is spent: the camera actually leans.
+    expect(swingYawRad(0.5, 0.4, swingSignFor(0, -0.004))).not.toBe(0);
+  });
+
+  it("⭐⭐ a HORIZONTAL component still decides the direction when there is one", () => {
+    // ⚠ The vertical is a FALLBACK, never a vote: a diagonal drag is aimed by its `dx`, so the
+    // owner's *"opposite to the dx movement"* is unchanged wherever it has an answer.
+    expect(swingSignFor(-0.004, 0.02)).toBe(-1);
+    expect(swingSignFor(0.004, -0.02)).toBe(1);
+  });
+
+  it("⛔⛔ AND NO TRAVEL AT ALL IS STILL NO SWING — the 2026-09-20 rule survives intact", () => {
+    // ⭐⭐⭐ THE DISTINCTION THE WHOLE FIX TURNS ON: *was there a translation at all?* A press
+    // inside the band, a rotation moving the closest points, or a pinch rescaling `D49`'s
+    // threshold all cross it with **zero** travel on both axes — and must still lean nothing,
+    // or the 2026-09-20 defect (*"sometimes left, sometimes right for the same dx"*) returns by
+    // the back door with a constant in place of a stale variable.
+    expect(swingSignFor(0, 0)).toBeNull();
+    expect(swingYawRad(0.5, 0.4, swingSignFor(0, 0))).toBe(0);
+  });
+
   it("⚠ and a non-finite travel is refused too, rather than signed", () => {
     // ⚠ `NaN < 0` is false, so the old form answered `+1` for a NaN as confidently as for a
     // zero — the shape `LESSONS_CARRIED` §6 exists to refuse.
     expect(swingSignFor(Number.NaN)).toBeNull();
+    // ⚠ And a non-finite VERTICAL is refused as well — it decides whether a swing happens at
+    // all, so it is not a field the rule may read loosely.
+    expect(swingSignFor(0, Number.NaN)).toBeNull();
     // ⚠ An infinity is refused as well, and it is NOT a sign question: a travel that is not a
     // number is not a travel, and *"lean the camera as far as the slider allows, that way"* is
     // not a safer answer than *"do not lean"*.
@@ -308,7 +343,7 @@ describe("⛔⛔⛔ THE AMPLITUDE IS **DIVIDED** BY THE FINGER'S SPEED", () => {
     // the fast hand covers the gap in a quarter of the time, so a fixed amplitude would sweep
     // the camera four times as fast. ⭐ Measured here as degrees of camera per millimetre of gap
     // closed — which is what a hand actually experiences.
-    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004 };
+    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
     const rateAt = (speed: number) => {
       const A = swingAmplitudeRad(MAX, speed, GAIN, EXP);
       const g1 = 0.05, g2 = 0.049;
@@ -460,7 +495,7 @@ describe("⛔⛔⛔ THE SWING FREEZES WHEN NO TRANSLATION DRIVES IT — device-r
     // ⚠ Freezing alone is not enough: while frozen a rotation may move the gap a long way, so
     // the first frame of the resumed drag would JUMP the camera. ⛔ `g0' = gap/(1−p)` is the `g0`
     // that makes the NEW gap mean the progress already on screen.
-    const before: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004 };
+    const before: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
     const pHeld = swingProgress(0.042, before); // 40% of the way in
     expect(pHeld).toBeCloseTo(0.4, 12);
     // ⚠ A rotation now moves the gap from 42 mm to 55 mm without anything approaching.
@@ -479,7 +514,7 @@ describe("⛔⛔⛔ THE SWING FREEZES WHEN NO TRANSLATION DRIVES IT — device-r
     // ⛔ The first build recomputed the progress from the live gap each frame, so the re-base
     // did **nothing at all** and the jump remained. ⭐ The frozen progress has to be captured
     // ONCE, on the frame the translation stopped. Pinned so it cannot be re-introduced.
-    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004 };
+    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
     for (const gap of [0.06, 0.042, 0.01]) {
       expect(rebaseTriggerGap(gap, swingProgress(gap, latch))).toBeCloseTo(latch.gapAtTriggerM, 12);
     }

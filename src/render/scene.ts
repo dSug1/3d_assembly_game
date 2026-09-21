@@ -1476,8 +1476,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // press inside the band, a rotation moving the closest points, a pinch rescaling
         // `D49`'s offset), and then this is **zero** — which `swingSignFor` answers with
         // `null`, and a `null` sign is a swing of zero. ⛔ The old code answered `+1`.
-        sign: swingSignFor(frameTravelRightM),
+        sign: swingSignFor(frameTravelRightM, frameTravelUpM),
         armTravelM: frameTravelRightM,
+        armTravelUpM: frameTravelUpM,
       };
     } else if (!highlighted.inRange && swing !== null) {
       // ⚠ Pulling apart past the offset ends the approach. ⛔ Nothing has to be restored: the
@@ -1516,6 +1517,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // press, on a release, at the end of the render loop — would leave a window in which a
     // stale direction is readable, which is the defect of 2026-09-20 in a smaller form.
     frameTravelRightM = 0;
+    frameTravelUpM = 0;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -2017,6 +2019,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let frameTravelRightM = 0;
   /**
+   * ⭐⭐ **THE VERTICAL HALF OF THE SAME FRAME'S TRAVEL** — device-reported, 2026-09-21:
+   * *"when the follower enters the offset radius by a vertical translation (delta position dy)
+   * the camera orbit swing is not triggered."*
+   * ⛔ It is not there to AIM the swing — a yaw is symmetric about a vertical approach — but to
+   * answer *was this crossing driven by a translation at all*, which is the question that
+   * separates a vertical drag from a press, a rotation or a pinch.
+   */
+  let frameTravelUpM = 0;
+  /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
    *
@@ -2492,7 +2503,7 @@ swing     sign${
                 // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
                 // from"* is the question a direction report asks, and `0.0000` here is the whole
                 // explanation of a `⛔?`.
-                ` dxArm=${(swing.armTravelM * 1000).toFixed(2)}mm` +
+                ` arm=(${(swing.armTravelM * 1000).toFixed(1)},${(swing.armTravelUpM * 1000).toFixed(1)})mm` +
                 ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
             (drawFault === null
               ? ""
@@ -4096,6 +4107,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // travel that crossed the threshold. ⚠ The old form kept the last non-zero value for
         // ever and handed the swing a direction from a gesture that was already over.
         frameTravelRightM += t.rightM;
+        frameTravelUpM += t.upM;
         // ⭐⭐⭐ **CASE 2's BLEND IS DRIVEN BY *THIS* FINGER** — and without it the retarget was
         // invisible: `centreBlend.advance` is called from the ORBIT branch only, so during an
         // object drag the target moved and the camera never migrated to it. ⚠ Measured on the

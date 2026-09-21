@@ -71,11 +71,16 @@ export interface SwingLatch {
    */
   readonly sign: 1 | -1 | null;
   /**
-   * ⚠ The horizontal travel the sign was taken from, in metres — **for the READOUT only**, so a
-   * hand can see what the arming frame saw. ⛔ Nothing reads it to decide anything: it is here
-   * because this defect took two screenshots and a numeric probe to resolve without it.
+   * ⚠ The travel the sign was taken from, in metres — **for the READOUT only**, so a hand can
+   * see what the arming frame saw. ⛔ Nothing reads it to decide anything: it is here because
+   * this defect took two screenshots and a numeric probe to resolve without it.
+   * ⭐ BOTH components since 2026-09-21: `dx` alone said *"no direction"* without saying whether
+   * the finger had moved at all, which is the difference between *no swing* and *a swing the
+   * arithmetic could not aim*.
    */
   readonly armTravelM: number;
+  /** The vertical half of the same reading, in metres. Readout only. */
+  readonly armTravelUpM: number;
   /**
    * ⭐⭐⭐ **THE CAPTURE THRESHOLD, FROZEN FOR THE APPROACH** — and the PITCH half is what made
    * this necessary.
@@ -203,10 +208,36 @@ export function swingYawRad(
  * excess only, so a resting finger emits **exactly zero** and any non-zero travel is already
  * motion a hand committed to. ⚠ A second threshold here would be a number nobody measured,
  * guarding against noise that has already been removed.
+ *
+ * ⛔⛔⛔ **AND A PURELY VERTICAL APPROACH GETS A SWING — device-reported, 2026-09-21.**
+ *
+ * > *"Sometimes, when the follower enters the offset radius by a vertical translation (delta
+ * > position dy) the camera orbit swing is not triggered."* — the owner, with the HUD showing
+ * > `sign⛔? p=0.29 yaw=0.0° dxArm=0.00mm`
+ *
+ * ⚠⚠ **THE FIRST BUILD READ ONLY `dx`, AND A VERTICAL DRAG HAS NONE.** So the crossing was
+ * driven by a real translation, the progress ran, and the lean stayed at zero — listed as a
+ * *cost* when the rule shipped and judged a **bug** by the hand that met it.
+ *
+ * ⭐⭐ **THE DISTINCTION THAT MATTERS IS NOT *dx OR NOT*, IT IS *WAS THERE A TRANSLATION AT
+ * ALL*.** A press, a rotation or a pinch crossing the threshold still gets **no swing** — that
+ * is the defect of 2026-09-20 and it stays fixed. ⛔ But a finger that really did carry the body
+ * into range has earned the parallax, and only its **aim** is in question.
+ *
+ * ⭐ So: a horizontal component decides the direction when there is one; a purely vertical
+ * travel takes a **declared default**, `+1`. ⚠ That is NOT the guess this function was written
+ * to remove: there, a direction existed and was read from the wrong gesture. Here the yaw is
+ * **symmetric by construction** — the two bodies are stacked on the screen axis the swing turns
+ * about, so either side shows the join equally, and *no* answer is available from the finger.
+ * ⛔ A stated constant is the honest form of that, and it is one line to mirror.
  */
-export function swingSignFor(travelRight: number): 1 | -1 | null {
-  if (!Number.isFinite(travelRight) || travelRight === 0) return null;
-  return travelRight < 0 ? -1 : 1;
+export function swingSignFor(travelRight: number, travelUp = 0): 1 | -1 | null {
+  if (!Number.isFinite(travelRight) || !Number.isFinite(travelUp)) return null;
+  if (travelRight !== 0) return travelRight < 0 ? -1 : 1;
+  // ⭐ A translation with no horizontal component: the swing is earned, the aim is symmetric.
+  if (travelUp !== 0) return 1;
+  // ⛔ No travel at all — a press, a rotation, a pinch. No swing, which is the 2026-09-20 rule.
+  return null;
 }
 
 /**
