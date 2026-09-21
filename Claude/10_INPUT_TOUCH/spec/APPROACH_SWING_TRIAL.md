@@ -1,10 +1,9 @@
 # THE APPROACH SWING — a trial on branch `1.0.18-`
 
-> **STATUS** · trial, unjudged · **OWNS** · the camera lean during a Follower's approach
+> **STATUS** · trial, **FEEL ACCEPTED 2026-09-21** · **OWNS** · the camera lean during a Follower's approach
 > **READ IF** · you are judging this branch, or deciding whether to keep or discard it
-> **LAST VERIFIED** · 2026-09-20 — the swing's DIRECTION re-reported from Pages and fixed at its
-> source (the sign was read from a travel that was never reset); ⚠ the fix itself is **unjudged**,
-> and so is the FEEL (amplitude, whether it helps at all)
+> **LAST VERIFIED** · 2026-09-21 — *"The feel is ok"* (the owner, on `7413c0e`, tuning defaults),
+> after the vertical-approach fix. ⚠ Still unjudged: whether the mechanism HELPS, and case 2
 
 ⚠⚠ **THIS IS A TRIAL AND IT IS MEANT TO BE DISCARDABLE.** The owner: *"Let's try a fork of the
 build here … If the trial is not successful, I will just discard the branch later on."*
@@ -570,8 +569,21 @@ does and leaves the same stale basis. ⭐ One line with the same helper if a han
 **67 mm/s**: the full 30° up to about 40 mm/s, half by 100, and under 5° at 200. ⭐ All three replace my guesses (25° / 0.0083 / 1.0) — the first numbers in this file to be
 judged rather than reasoned.
 
-⛔⛔ **The swing has had no finger on it.** The boot scene is confirmed by screenshot; the lean
-itself, its amplitude and its feel are entirely unjudged. every number in the swing is now the owner's (30° / 0.015 / 1.7), but they were set from the SLIDERS — what is still unjudged is whether the mechanism HELPS — in this project a guessed number has been wrong every single time.
+✅✅ **THE FEEL IS JUDGED — *"The feel is ok"*, the owner, 2026-09-21, on `7413c0e`.** ⭐ That is
+rule 5, and it is the only thing that closes a change here. ⚠ It was given with **`tuning
+defaults`** on the HUD — so `captureOffsetMm = 15`, `approachRetargetsOrbit = 0` (case 1), and
+the owner's own 30° / 0.015 / 1.7 — and it explicitly accepts the one item that was standing
+open: **the lean is a function of the GAP**, so easing back inside the band widens it and pulling
+apart from contact replays the half-sine. ⛔ The one-line *freeze while the gap opens* is
+therefore **not taken**.
+
+⚠⚠ **AND THE CLOSE IS ONLY AS STRONG AS THE PHRASE THAT GAVE IT** — `A15`'s lesson, which this
+project has already paid for once (*"everything is working ok"* closed three cases that were
+never reported on individually). ✅ *"The feel is ok"* covers the lean as a sensation: its
+amplitude, its speed law, the pitch half, the smoothing. ⛔ It does **not** individually confirm
+the release-mid-approach hold, case 2 (`approachRetargetsOrbit = 1`, never switched on by a
+hand), or the trial's own question — **whether the mechanism HELPS a hand line up a join**,
+which is a comparison against `approachSwingDeg = 0` and not a verdict on the motion.
 ✅ **`0` on the slider disables the whole mechanism**, which is how to A/B it by finger in the same
 minute on the same scene — the comparison that settled `D28` and `IN13`.
 

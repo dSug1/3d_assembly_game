@@ -49,7 +49,7 @@ const FRONT_DOORS: readonly (readonly [string, number])[] = [
   ["Claude/00_CORE/METHOD.md", 19_000],
   ["Claude/00_CORE/DECISIONS.md", 24_000],
   ["Claude/00_CORE/QUEUE.md", 40_000],
-  ["Claude/10_INPUT_TOUCH/INDEX.md", 30_000],
+  ["Claude/10_INPUT_TOUCH/INDEX.md", 29_700],
   ["Claude/20_GAME_RULES/INDEX.md", 1_500],
   ["Claude/30_OBJECTS_3D/INDEX.md", 5_000],
   ["Claude/40_RENDER_SCENE/INDEX.md", 16_000],

@@ -6,8 +6,10 @@
 > **LAST VERIFIED** · 2026-09-19
 
 ⚠⚠ **A TRIAL IS LIVE**: the **approach swing** (`D63`), with its own boot scene of two square
-pre-aligned parts. ⛔ Read [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md) before
-touching it — it carries the delete list if it is discarded.
+pre-aligned parts. ✅ **FEEL ACCEPTED** — *"The feel is ok"* (2026-09-21, `7413c0e`,
+defaults), which accepts the gap-parameterised lean too. ⚠ Unjudged: whether it **helps**, and
+`approachRetargetsOrbit`'s case 2. ⛔ Read [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md)
+before touching it — it carries the delete list if it is discarded.
 
 ⭐⭐ **Design of record → [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md)**,
 the owner's revision-5 specification. ⛔⛔ **READ [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)
@@ -39,8 +41,8 @@ model and so did not wait on `3D1`:
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 
-**656 golden vectors, all passing** (37 → 632 → 574 → 619 → **568** → 575 → 567 → 572 → 621 → **656**).
-⭐ The count going DOWN is the shape to expect when a fork is chosen: 41 vectors described rules that no longer exist, and 10 more described orphans.
+⚠ **The vector count lives in [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md)** — this line said
+**656** at a suite of 975, and it goes DOWN whenever a rule is deleted.
 
 ⭐⭐ **APPROACH & MATE — THE HIGHLIGHTS ARE BUILT, THE APPROACH IS NOT** (`A16`/`A17`, 2026-09-17):
 white capture contours on a near pair (**translating + within `4L`** — ⚠ the alignment was a
@@ -100,19 +102,12 @@ detector stayed alive long enough to cause defect 40.
 | `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?touchpointAssignment=1`, and ⭐ **fork C** (`=2`) makes a TAPPED second touchpoint toggle the ongoing drag — ⛔ which also picks the second finger's axis, **depth or roll, never both** | 🔧 ✅✅ **fork C CLOSED and now the DEFAULT** (2026-09-16) after three formulations of its toggle — the **verdict between the forks** is row `IN13`, not due until the input system can be judged whole |
 | `A15` | ⚠⚠ **REVERSED BY `D54`** — the orphan unselect, `holder_binding.ts`, `relatchOnOrphan` and 16 vectors are **deleted**; a holder keeps its object for the touchpoint's lifetime and `IN2`'s latch has no exceptions again → [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md) | ⛔ gone |
 
-⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit,
-a shared minimum, a faded blend, then A6's driver/validator. ⭐⭐ **Two transferable
-lessons came out of it:**
-
-1. **A BLEND HAS SEAMS.** Every version that mixed the two fingers' travel into one number
-   had a discontinuity somewhere, and *"it jumps erratically"* came back within minutes.
-2. ⭐⭐ **WHEN A RULE NEEDS A WINDOW TO DECIDE, SUSPECT THE QUESTION.** A6 was correctly
-   implemented and still failed: *"are these two travels equal?"* has **no answer** at a
-   reversal (both pass through zero) or at a late start (one has not moved), and both
-   happen in every gesture. A window is how you buy an answer to a question that has none
-   at this instant — and the cheaper move is to ask a different question. ⛔ `A10` asks
-   *"is that finger still?"*, which is answerable at every instant, and needs no window,
-   ratio, tolerance or hold.
+⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit, a
+shared minimum, a faded blend, then `A6`'s driver/validator. ⭐⭐ Its two transferable lessons
+are **in [`../00_CORE/METHOD.md`](../00_CORE/METHOD.md) word for word** — *a blend has seams*,
+and *when a rule needs a WINDOW to decide, suspect the QUESTION* — so they live there and not
+here: a front door carries STATE, and `METHOD` is where a lesson binds every row.
+(Distilled 2026-09-21 to pay for the trial's feel verdict; the cap is what forced it.)
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
