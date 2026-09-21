@@ -26,9 +26,9 @@
  */
 import type { ObjectId } from "../core/object_model";
 import type { Quat, Vec3 } from "../core/vec";
-import { qmul, sub } from "../core/vec";
+import { qmul } from "../core/vec";
 import type { AlignMode } from "./alignment";
-import { pioneerTurned } from "./alignment";
+import { pioneerMoved, pioneerTurned } from "./alignment";
 
 /** One follower's link, as this resolver needs it. */
 export interface FollowerLink {
@@ -191,13 +191,18 @@ export interface FollowerMoveLink {
   readonly pioneer: ObjectId;
   /** Where the Pioneer was when this link was last settled. */
   readonly baseline: Vec3;
+  /**
+   * ⭐⭐ `D70` — the MODE, which `D69` deliberately left out and was wrong to. ⛔ A `SNAPSHOT` is
+   * a copy taken once: when the Pioneer's pose changes the copy is stale, whether the change was
+   * a turn or a move.
+   */
+  readonly mode: AlignMode;
 }
 
-/** What a translated Pioneer owes one Follower. */
-export interface MoveStep {
-  readonly follower: ObjectId;
-  readonly delta: Vec3;
-}
+/** What a translated Pioneer owes one Follower. ⭐ `D70`: the same two outcomes a turn has. */
+export type MoveStep =
+  | { readonly kind: "RELEASE"; readonly follower: ObjectId }
+  | { readonly kind: "TRANSLATE"; readonly follower: ObjectId; readonly delta: Vec3 };
 
 export interface MovePlan {
   readonly steps: readonly MoveStep[];
@@ -249,15 +254,23 @@ export function resolvePioneerMoves(
         survivors.push(link);
         continue;
       }
-      const delta = sub(pioneerNow, link.baseline);
-      // ⛔ EXACTLY zero is *nothing happened*, and it must stay cheap: this runs every frame for
-      // every aligned body. ⚠ No epsilon — a threshold here would be a number nobody measured,
-      // and the deadband upstream already decides what counts as motion.
-      if (delta[0] === 0 && delta[1] === 0 && delta[2] === 0) {
+      // ⛔⛔ THE DECISION IS `pioneerMoved`'s, beside `pioneerTurned`, so the two channels of
+      // ONE question — *what does a Pioneer's pose change cost this Follower?* — cannot drift.
+      const move = pioneerMoved(link.baseline, pioneerNow, link.mode);
+      if (move.kind === "NONE") {
         survivors.push(link);
         continue;
       }
-      steps.push({ follower: link.follower, delta });
+      if (move.kind === "RELEASE") {
+        // ⭐ `D70`: a cyan alignment is a copy taken once, and a moved Pioneer makes it stale.
+        // ⚠ No baseline is recorded: the link is about to go, and writing to it would leave the
+        // index describing a relation that no longer exists.
+        steps.push({ kind: "RELEASE", follower: link.follower });
+        moved = true;
+        continue;
+      }
+      const delta = move.delta!;
+      steps.push({ kind: "TRANSLATE", follower: link.follower, delta });
       baselines.set(link.follower, pioneerNow);
       const followerNow = now(link.follower);
       if (followerNow !== null) {
@@ -279,12 +292,20 @@ export function resolvePioneerMoves(
 export function followerMoveLinksFrom(
   aligned: readonly ObjectId[],
   pioneerOf: (follower: ObjectId) => { readonly objectId: ObjectId; readonly position: Vec3 } | null,
+  modeOf: (follower: ObjectId) => AlignMode | undefined,
 ): FollowerMoveLink[] {
   const out: FollowerMoveLink[] = [];
   for (const follower of aligned) {
     const ref = pioneerOf(follower);
     if (ref === null) continue;
-    out.push({ follower, pioneer: ref.objectId, baseline: ref.position });
+    // ⚠ `SNAPSHOT` is the default for a body whose mode was never recorded, exactly as the turn
+    // cascade assumes: the weaker relation is the safe one to assume.
+    out.push({
+      follower,
+      pioneer: ref.objectId,
+      baseline: ref.position,
+      mode: modeOf(follower) ?? "SNAPSHOT",
+    });
   }
   return out;
 }

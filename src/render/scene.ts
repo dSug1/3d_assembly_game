@@ -4781,11 +4781,27 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⛔⛔ THE DECISION IS `resolvePioneerMoves`'s — *a rule in a render file is a rule nothing
     // can interrogate*, which this branch has paid for seven times.
     const moves = resolvePioneerMoves(
-      followerMoveLinksFrom(links.alignedObjects(), (f) => links.pioneerFor(f)),
+      followerMoveLinksFrom(
+        links.alignedObjects(),
+        (f) => links.pioneerFor(f),
+        (f) => alignModeOf.get(f),
+      ),
       (id) => worldPlacementOf(world, id)?.position ?? null,
     );
     if (moves.steps.length > 0) hudDirty = true;
     for (const step of moves.steps) {
+      // ⭐⭐⭐ **`D70` — A MOVED PIONEER RELEASES A CYAN FOLLOWER**, exactly as a turned one does.
+      // ⛔ The owner: *"a translation of the pioneer should break the alignment of the cyan."*
+      // ⚠ Written through the SAME `releaseAlignmentOf` the turn cascade uses, so the two
+      // channels cannot end in different states.
+      if (step.kind === "RELEASE") {
+        const ref = links.pioneerFor(step.follower);
+        releaseAlignmentOf(step.follower);
+        lastVerdict =
+          `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} moved, ` +
+          `alignment released on ${step.follower}`;
+        continue;
+      }
       const followerMesh = meshOf.get(step.follower);
       if (!followerMesh) continue;
       const mp = requirePose(followerMesh);

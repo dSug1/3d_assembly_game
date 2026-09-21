@@ -13,6 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { AlignmentLinks } from "@core/alignment_links";
 import { resolvePioneerMoves } from "@input/pioneer_cascade";
+import type { AlignMode } from "@input/alignment";
 import { IDENTITY, qFromAxisAngle, type Vec3 } from "@core/vec";
 
 /** ⚠ `D69` gave every link a POSITION baseline; these fixtures are about the INDEX, so
@@ -412,61 +413,89 @@ describe("⛔⛔⛔ `partnersOf` — WHO MAY THIS BODY APPROACH? (the capture re
 });
 
 
-describe("⛔⛔⛔ `D69` — A TRANSLATED PIONEER CARRIES EVERY FOLLOWER, DOWN THE CHAIN", () => {
-  // ⛔⛔ THE OWNER, 2026-09-21: *"a rotation of the pioneer controls the same rotation of all
-  // the orange follower objects. Do the same with translation: a translation of pioneer controls
-  // the same translation of all the follower objects."*
+describe("⛔⛔⛔ `D70` — A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES", () => {
+  // ⛔⛔ THE OWNER, 2026-09-21, correcting `D69` the same day:
+  //
+  //   *"in rotation mode, when a follower is cyan, a rotation of the pioneer releases the
+  //    alignment … Any other orange follower instead rotates to follow the pioneer. In
+  //    translation mode, when a follower is cyan, it follows the translation of the pioneer.
+  //    This is not OK: a translation of the pioneer should break the alignment of the cyan."*
+  //
+  // ⭐⭐ `D69` read *"all the follower objects"* literally; the real rule is the one that was
+  // already there — a `SNAPSHOT` is a copy taken ONCE, so any change to the Pioneer's pose makes
+  // it stale, and position and orientation are two components of one pose.
   const at = (x: number): Vec3 => [x, 0, 0];
+  const link = (follower: string, pioneer: string, baseline: Vec3, mode: AlignMode) => ({
+    follower,
+    pioneer,
+    baseline,
+    mode,
+  });
 
-  it("⭐⭐⭐ the Follower takes the Pioneer's world delta, exactly", () => {
-    const plan = resolvePioneerMoves([{ follower: "f", pioneer: "p", baseline: at(0) }], (id) =>
+  it("⛔⛔⛔ a CYAN follower is RELEASED by a translation — the owner's correction", () => {
+    // ⚠ FAILS against `D69`, which emitted a TRANSLATE step here and moved the body instead.
+    const plan = resolvePioneerMoves([link("f", "p", at(0), "SNAPSHOT")], (id) =>
       id === "p" ? at(3) : at(10),
     );
-    expect(plan.steps).toEqual([{ follower: "f", delta: [3, 0, 0] }]);
+    expect(plan.steps).toEqual([{ kind: "RELEASE", follower: "f" }]);
+    // ⛔ And NO baseline is written: the link is about to go, and recording against it would
+    // leave the index describing a relation that no longer exists.
+    expect(plan.baselines.size).toBe(0);
+  });
+
+  it("⭐⭐ an ORANGE follower takes the Pioneer's world delta, exactly", () => {
+    const plan = resolvePioneerMoves([link("f", "p", at(0), "FOLLOW")], (id) =>
+      id === "p" ? at(3) : at(10),
+    );
+    expect(plan.steps).toEqual([{ kind: "TRANSLATE", follower: "f", delta: [3, 0, 0] }]);
     // ⭐ …and the baseline advances, so the NEXT frame sees no motion rather than the same
     // delta again. ⛔ Without this the Follower would run away from a Pioneer standing still.
     expect(plan.baselines.get("f")).toEqual(at(3));
   });
 
-  it("⛔⛔ A CHAIN RESOLVES IN ONE CALL — the passes are what make that true", () => {
+  it("⛔⛔ THE TWO MODES IN ONE PLAN — the composition, not two separate claims", () => {
+    // ⚠ `METHOD`: a composition is a thing to MEASURE. One Pioneer, one move, two Followers,
+    // and the verdicts must differ — which is the whole of the owner's report.
+    const plan = resolvePioneerMoves(
+      [link("cyan", "p", at(0), "SNAPSHOT"), link("amber", "p", at(0), "FOLLOW")],
+      (id) => (id === "p" ? at(1) : at(0)),
+    );
+    expect(plan.steps).toContainEqual({ kind: "RELEASE", follower: "cyan" });
+    expect(plan.steps).toContainEqual({ kind: "TRANSLATE", follower: "amber", delta: [1, 0, 0] });
+  });
+
+  it("⛔⛔ A CHAIN OF ORANGE RESOLVES IN ONE CALL — the passes are what make that true", () => {
     // ⭐ `f2` follows `f1`, which follows `p`. `f1` has not moved yet when the pass begins, so a
     // single sweep would leave `f2` behind by one frame; the second pass sees `f1`'s new pose.
     const plan = resolvePioneerMoves(
-      [
-        { follower: "f2", pioneer: "f1", baseline: at(5) },
-        { follower: "f1", pioneer: "p", baseline: at(0) },
-      ],
+      [link("f2", "f1", at(5), "FOLLOW"), link("f1", "p", at(0), "FOLLOW")],
       (id) => (id === "p" ? at(2) : id === "f1" ? at(5) : at(9)),
     );
-    const deltas = new Map(plan.steps.map((s) => [s.follower, s.delta]));
+    const deltas = new Map(
+      plan.steps.filter((s) => s.kind === "TRANSLATE").map((s) => [s.follower, s.delta]),
+    );
     expect(deltas.get("f1")).toEqual([2, 0, 0]);
     expect(deltas.get("f2")).toEqual([2, 0, 0]);
   });
 
   it("⚠ a Pioneer that has not moved emits NOTHING — this runs every frame", () => {
-    const plan = resolvePioneerMoves([{ follower: "f", pioneer: "p", baseline: at(4) }], () => at(4));
-    expect(plan.steps).toEqual([]);
-    expect(plan.baselines.size).toBe(0);
+    // ⛔ And it matters MORE since `D70`: an epsilon that let float noise through would not
+    // merely nudge a body, it would RELEASE a cyan alignment nobody touched.
+    for (const mode of ["SNAPSHOT", "FOLLOW"] as const) {
+      const plan = resolvePioneerMoves([link("f", "p", at(4), mode)], () => at(4));
+      expect(plan.steps).toEqual([]);
+    }
+    // ⭐ A micron is noise; a tenth of a millimetre is a hand. Both sides of the guard asserted.
+    const noise = resolvePioneerMoves([link("f", "p", [0, 0, 0], "SNAPSHOT")], () => [1e-7, 0, 0]);
+    expect(noise.steps).toEqual([]);
+    const real = resolvePioneerMoves([link("f", "p", [0, 0, 0], "SNAPSHOT")], () => [1e-4, 0, 0]);
+    expect(real.steps).toEqual([{ kind: "RELEASE", follower: "f" }]);
   });
 
   it("⛔ a Pioneer whose position cannot be read leaves its link alone", () => {
     // ⚠ `LESSONS_CARRIED` §6 — suppress, do not guess. Treating a missing body as the origin
-    // would fling every Follower to the world centre.
-    const plan = resolvePioneerMoves([{ follower: "f", pioneer: "gone", baseline: at(1) }], () => null);
+    // would fling every Follower to the world centre, or release every cyan alignment at once.
+    const plan = resolvePioneerMoves([link("f", "gone", at(1), "FOLLOW")], () => null);
     expect(plan.steps).toEqual([]);
-  });
-
-  it("⭐⭐ BOTH COLOURS MOVE — the mode is not consulted at all", () => {
-    // ⛔ The owner's contrast: *"all the ORANGE follower objects"* for the rotation, *"all the
-    // follower objects"* for the translation. ⚠ `FollowerMoveLink` has no `mode` field, so the
-    // distinction is unrepresentable here rather than merely unused.
-    const plan = resolvePioneerMoves(
-      [
-        { follower: "cyan", pioneer: "p", baseline: at(0) },
-        { follower: "amber", pioneer: "p", baseline: at(0) },
-      ],
-      (id) => (id === "p" ? at(1) : at(0)),
-    );
-    expect(plan.steps.map((s) => s.follower).sort()).toEqual(["amber", "cyan"]);
   });
 });

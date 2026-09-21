@@ -360,6 +360,53 @@ export function pioneerTurned(
 }
 
 /**
+ * ⚠ Below this, a difference is float noise rather than a hand: **one micron**, at metre-scale
+ * world coordinates. ⛔ NOT a tunable, for `PIONEER_TURN_EPSILON_RAD`'s reason — it guards
+ * arithmetic, not feel, and a slider on it would invite someone to tune away a rule instead of
+ * a threshold.
+ */
+export const PIONEER_MOVE_EPSILON_M = 1e-6;
+
+/** What a Pioneer's MOVE costs one Follower. ⭐ The mirror of `PioneerTurn`. */
+export interface PioneerMove {
+  readonly kind: "NONE" | "RELEASE" | "FOLLOW";
+  /** `FOLLOW` only: the world translation to add to the Follower's position. */
+  readonly delta: Vec3 | null;
+}
+
+/**
+ * ⭐⭐⭐ **`D70` — A MOVED PIONEER COSTS A FOLLOWER EXACTLY WHAT A TURNED ONE DOES.**
+ *
+ * > *"in rotation mode, when a follower is cyan, a rotation of the pioneer releases the
+ * > alignment … Any other orange follower instead rotates to follow the pioneer. In translation
+ * > mode, when a follower is cyan, it follows the translation of the pioneer. This is not OK: a
+ * > translation of the pioneer should break the alignment of the cyan."* — the owner, 2026-09-21
+ *
+ * ⛔⛔ **`D69` READ *"all the follower objects"* LITERALLY AND THAT WAS THE WRONG READING.** The
+ * owner's sentence contrasted *"all the **orange** follower objects"* with *"all the follower
+ * objects"* one clause apart, and I took the contrast for the rule. ⚠ It was flagged at the time
+ * — *"tell me if you wanted orange only and it comes back"* — and the answer is sharper than
+ * that: cyan does not merely sit still, it **breaks**.
+ *
+ * ⭐⭐ **THE REAL RULE IS THE ONE THAT WAS ALREADY THERE**: `SNAPSHOT` means *I copied your pose
+ * once*, so the moment the Pioneer's pose changes the copy is stale and the relation ends;
+ * `FOLLOW` means *I am tied to you*, so it moves. ⛔ Position and orientation are two components
+ * of one pose, and a rule that answered differently for each was **the asymmetry**, not the fix.
+ * ⭐ `METHOD`: *when two channels exist, the correction belongs to the RULE* — so this function
+ * sits beside `pioneerTurned` and answers in the same three verdicts.
+ *
+ * @param before the Pioneer's position when it was last observed.
+ * @param now its position this frame.
+ */
+export function pioneerMoved(before: Vec3, now: Vec3, mode: AlignMode): PioneerMove {
+  const delta: Vec3 = [now[0] - before[0], now[1] - before[1], now[2] - before[2]];
+  // ⚠ The squared length, so no root is taken 60 times a second for every aligned body.
+  const d2 = delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2];
+  if (d2 < PIONEER_MOVE_EPSILON_M * PIONEER_MOVE_EPSILON_M) return { kind: "NONE", delta: null };
+  return mode === "SNAPSHOT" ? { kind: "RELEASE", delta: null } : { kind: "FOLLOW", delta };
+}
+
+/**
  * ⭐ Re-read an alignment's target from where the Pioneer's face points **now** (`FOLLOW`).
  *
  * ⚠ It keeps §1.4's doctrine rather than breaking it: the constraint still holds a WORLD

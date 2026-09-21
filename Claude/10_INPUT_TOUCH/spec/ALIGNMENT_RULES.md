@@ -1433,6 +1433,9 @@ TOGGLED; this is a press that UNDOES, which is what keeps `D28` true.
 
 ### ⛔⛔⛔ 5.16 `D69` — A TRANSLATED PIONEER CARRIES EVERY FOLLOWER, DOWN THE CHAIN
 
+> ⚠⚠ **CORRECTED BY §5.17 (`D70`) THE SAME DAY** — *"all the follower objects"* was read
+> literally and the real rule is the symmetry with a turn: a **cyan** Follower is RELEASED.
+
 > *"Currently, if in rotation mode, a rotation of the pioneer controls the same rotation of all
 > the orange follower objects. Do the same with translation: a translation of pioneer controls
 > the same translation of all the follower objects."* — the owner, 2026-09-21
@@ -1460,3 +1463,35 @@ there is no Pioneer motion to cascade. ⛔ At `pioneerTranslates = 1` the two wo
 that selector's business and is stated here rather than discovered.
 ⚠ A **frozen** body is refused by `object_model`'s writers, so the plate cannot be dragged along
 even if something linked it — the guarantee is there and not in the render loop.
+
+
+### ⛔⛔⛔ 5.17 `D70` — A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES
+
+> *"there is a difference between modes: in rotation mode, when a follower is cyan, a rotation of
+> the pioneer releases the alignment (the follower ceases to be blue). Any other orange follower
+> instead rotates to follow the pioneer. In translation mode, when a follower is cyan, it follows
+> the translation of the pioneer. This is not OK: a translation of the pioneer should break the
+> alignment of the cyan."* — the owner, 2026-09-21
+
+⛔⛔ **`D69` TOOK A CONTRAST FOR A RULE.** The owner's earlier sentence said *"all the **orange**
+follower objects"* for the rotation and *"all the follower objects"* for the translation, one
+clause apart, and I built the difference. ⚠ It was flagged when it shipped — *"tell me if you
+wanted orange only"* — and the answer is sharper than the question: cyan does not merely sit
+still, it **breaks**.
+
+⭐⭐ **THE REAL RULE WAS ALREADY THERE, AND IT IS ONE SENTENCE**: a `SNAPSHOT` is a copy taken
+**once**, so the moment the Pioneer's pose changes the copy is stale and the relation ends; a
+`FOLLOW` is a tie, so it moves. ⛔ **Position and orientation are two components of one pose**,
+and a rule that answered differently for each was the asymmetry rather than the fix.
+
+✅ So `pioneerMoved` sits **beside `pioneerTurned`**, takes the mode, and answers in the same
+three verdicts — `NONE` / `RELEASE` / `FOLLOW`. ⭐ `METHOD`: *when a rule has two channels, the
+correction belongs to the RULE*, which is why this is not an `if` in the cascade.
+⚠ The release goes through the **same `releaseAlignmentOf`** the turn cascade uses, so the two
+channels cannot leave the index in different states.
+
+⛔ **AND THE EPSILON MATTERS MORE NOW.** `D69` compared positions with `=== 0`, defensibly: the
+worst a float wobble could do was nudge a body. ⚠⚠ Under `D70` it would **release an alignment
+nobody touched**, so the guard is `PIONEER_MOVE_EPSILON_M` — one micron at metre-scale
+coordinates, the mirror of `PIONEER_TURN_EPSILON_RAD`, and NOT a tunable: it guards arithmetic,
+not feel. ⭐ Both sides of it are vectored — `1e-7 m` is noise, `1e-4 m` is a hand.
