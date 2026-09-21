@@ -12,7 +12,12 @@
  */
 import { describe, expect, it } from "vitest";
 import { AlignmentLinks } from "@core/alignment_links";
-import { IDENTITY, qFromAxisAngle } from "@core/vec";
+import { resolvePioneerMoves } from "@input/pioneer_cascade";
+import { IDENTITY, qFromAxisAngle, type Vec3 } from "@core/vec";
+
+/** ⚠ `D69` gave every link a POSITION baseline; these fixtures are about the INDEX, so
+ * they pin it at the origin and say so rather than letting a zero look meaningful. */
+const ORIGIN: Vec3 = [0, 0, 0];
 
 describe("⭐⭐ many followers, one Pioneer — the owner's actual case", () => {
   it("⭐⭐⭐ TWO BODIES ALIGNED TO THE SAME PIONEER, and BOTH come back", () => {
@@ -21,8 +26,8 @@ describe("⭐⭐ many followers, one Pioneer — the owner's actual case", () =>
     // the follower objects."* ⚠ The previous design compared one `pioneerFace` against one
     // `selectedFace`, so at most ONE follower was ever released — it could not express this.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "+x", IDENTITY, ORIGIN);
     expect(links.followersOf("p").sort()).toEqual(["a", "b"]);
     expect(links.pioneerFor("a")?.objectId).toBe("p");
     expect(links.pioneerFor("b")?.objectId).toBe("p");
@@ -43,16 +48,23 @@ describe("⭐⭐ many followers, one Pioneer — the owner's actual case", () =>
     // which face of the PIONEER was tapped, so that has to be remembered or the Pioneer's
     // contour cannot be drawn at all.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+z", IDENTITY);
-    expect(links.pioneerFor("a")).toEqual({ objectId: "p", faceId: "+z", orientation: IDENTITY });
+    links.link("a", "p", "+z", IDENTITY, ORIGIN);
+    // ⚠ `D69` added the POSITION baseline to the same ref — asserted whole, because a
+    // `toEqual` that listed only the fields it knew about would stop noticing new ones.
+    expect(links.pioneerFor("a")).toEqual({
+      objectId: "p",
+      faceId: "+z",
+      orientation: IDENTITY,
+      position: ORIGIN,
+    });
   });
 
   it("⛔⛔ TWO FOLLOWERS ON DIFFERENT FACES OF ONE PIONEER ⇒ TWO CONTOURS", () => {
     // ⭐ And both still belong to the same Pioneer for the shake rule, which is the property
     // that would break if the reverse index were keyed by face instead of by body.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "-y", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "-y", IDENTITY, ORIGIN);
     expect(links.pioneerFaces().length).toBe(2);
     expect(links.followersOf("p").sort()).toEqual(["a", "b"]);
   });
@@ -61,16 +73,16 @@ describe("⭐⭐ many followers, one Pioneer — the owner's actual case", () =>
     // ⚠ Stacking two identical one-pixel outlines is invisible today, so this would ship
     // unnoticed and become a real artefact the day the markers gain a width or an alpha.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "+x", IDENTITY, ORIGIN);
     expect(links.pioneerFaces().map((r) => `${r.objectId}/${r.faceId}`)).toEqual(["p/+x"]);
     expect(links.followersOf("p").sort()).toEqual(["a", "b"]);
   });
 
   it("⭐ releasing the last follower of a face retires its contour", () => {
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "-y", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "-y", IDENTITY, ORIGIN);
     links.unlink("a");
     expect(links.pioneerFaces().map((r) => `${r.objectId}/${r.faceId}`)).toEqual(["p/-y"]);
   });
@@ -84,8 +96,8 @@ describe("⛔⛔ THE REVERSE SIDE — where a two-way index actually breaks", ()
     // `a` in `p`'s set for ever. ⚠ The symptom is delayed and baffling: shaking `p`, a body
     // `a` is no longer aligned to, silently evicts `a`'s alignment to `q`.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("a", "q", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("a", "q", "+x", IDENTITY, ORIGIN);
     expect(links.pioneerFor("a")?.objectId).toBe("q");
     expect(links.followersOf("q")).toEqual(["a"]);
     expect(links.followersOf("p")).toEqual([]); // ⛔ THE ASSERTION THAT BITES
@@ -96,8 +108,8 @@ describe("⛔⛔ THE REVERSE SIDE — where a two-way index actually breaks", ()
 
   it("⛔⛔ UNLINK CLEARS BOTH SIDES", () => {
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "+x", IDENTITY, ORIGIN);
     links.unlink("a");
     expect(links.pioneerFor("a")).toBeNull();
     expect(links.followersOf("p")).toEqual(["b"]); // ⛔ `a` gone, `b` untouched
@@ -107,7 +119,7 @@ describe("⛔⛔ THE REVERSE SIDE — where a two-way index actually breaks", ()
     // ⭐ `prune` and the release path both call it speculatively; a throw here would turn a
     // harmless double-release into a dead render loop.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
     expect(() => links.unlink("nobody")).not.toThrow();
     expect(links.followersOf("p")).toEqual(["a"]);
   });
@@ -119,7 +131,7 @@ describe("⛔⛔ THE REVERSE SIDE — where a two-way index actually breaks", ()
     // that never shows with three bodies and matters with three hundred.
     const links = new AlignmentLinks();
     for (let i = 0; i < 100; i++) {
-      links.link("a", `p${i}`, "+x", IDENTITY);
+      links.link("a", `p${i}`, "+x", IDENTITY, ORIGIN);
     }
     expect(links.size).toBe(1);
     for (let i = 0; i < 99; i++) {
@@ -134,8 +146,8 @@ describe("⛔⛔ THE REVERSE SIDE — where a two-way index actually breaks", ()
     // collection it is iterating, which in JS silently SKIPS entries rather than throwing —
     // so one of two followers would survive a shake, intermittently.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "+x", IDENTITY, ORIGIN);
     const handed = links.followersOf("p");
     for (const f of handed) links.unlink(f);
     expect(handed.length).toBe(2); // ⛔ the snapshot still has both
@@ -149,9 +161,9 @@ describe("⛔⛔ prune — the model is authoritative, so a link cannot outlive 
     // ⭐ The dropped list is what lets the render pass retire the markers it drew, without a
     // second sweep over the scene.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "+x", IDENTITY);
-    links.link("c", "q", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "+x", IDENTITY, ORIGIN);
+    links.link("c", "q", "+x", IDENTITY, ORIGIN);
     const stillAligned = new Set(["b", "c"]);
     expect(links.prune((id) => stillAligned.has(id)).sort()).toEqual(["a"]);
     expect(links.followersOf("p")).toEqual(["b"]);
@@ -161,7 +173,7 @@ describe("⛔⛔ prune — the model is authoritative, so a link cannot outlive 
   it("⛔ pruning clears the REVERSE side too, not just the forward map", () => {
     // ⚠ The same leak as above, arriving through the other entry point.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
     expect(links.prune(() => false)).toEqual(["a"]);
     expect(links.followersOf("p")).toEqual([]);
     expect(links.pioneerFor("a")).toBeNull();
@@ -170,7 +182,7 @@ describe("⛔⛔ prune — the model is authoritative, so a link cannot outlive 
   it("⭐ a prune that drops nothing returns empty and changes nothing", () => {
     // ⛔ This is the EVERY-FRAME case, so it must be both cheap and inert.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
     expect(links.prune(() => true)).toEqual([]);
     expect(links.pioneerFor("a")?.objectId).toBe("p");
   });
@@ -184,8 +196,8 @@ describe("⭐⭐ it scales — the shape the owner asked about", () => {
     // right answer here, so what this vector really pins is that `alignedObjects()` and
     // `followersOf()` stay separate questions with separate costs.
     const links = new AlignmentLinks();
-    for (let i = 0; i < 500; i++) links.link(`f${i}`, "p", "+x", IDENTITY);
-    for (let i = 0; i < 500; i++) links.link(`g${i}`, `q${i}`, "+x", IDENTITY);
+    for (let i = 0; i < 500; i++) links.link(`f${i}`, "p", "+x", IDENTITY, ORIGIN);
+    for (let i = 0; i < 500; i++) links.link(`g${i}`, `q${i}`, "+x", IDENTITY, ORIGIN);
     expect(links.followersOf("p").length).toBe(500);
     expect(links.followersOf("q7")).toEqual(["g7"]);
     expect(links.size).toBe(1000);
@@ -198,8 +210,8 @@ describe("⭐⭐ it scales — the shape the owner asked about", () => {
     // that stops working as the scene grows. ⚠ Two aligned out of a notional thousand bodies
     // must cost two.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "q", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "q", "+x", IDENTITY, ORIGIN);
     expect(links.alignedObjects().sort()).toEqual(["a", "b"]);
   });
 });
@@ -213,8 +225,8 @@ describe("⛔⛔ the per-link orientation baseline — what makes a CHAIN visibl
     // released."* ⚠ With ONE global baseline only the active alignment was watched, so a body
     // whose Pioneer was itself a follower never noticed its Pioneer turning.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "+x", TURNED);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "+x", TURNED, ORIGIN);
     expect(links.pioneerFor("a")?.orientation).toEqual(IDENTITY);
     expect(links.pioneerFor("b")?.orientation).toEqual(TURNED);
   });
@@ -223,8 +235,8 @@ describe("⛔⛔ the per-link orientation baseline — what makes a CHAIN visibl
     // ⚠ Both followers share a Pioneer, so a shared baseline would look correct here and fail
     // the moment the two were aligned a frame apart.
     const links = new AlignmentLinks();
-    links.link("a", "p", "+x", IDENTITY);
-    links.link("b", "p", "+x", IDENTITY);
+    links.link("a", "p", "+x", IDENTITY, ORIGIN);
+    links.link("b", "p", "+x", IDENTITY, ORIGIN);
     links.noteOrientation("a", TURNED);
     expect(links.pioneerFor("a")?.orientation).toEqual(TURNED);
     expect(links.pioneerFor("b")?.orientation).toEqual(IDENTITY);
@@ -232,7 +244,7 @@ describe("⛔⛔ the per-link orientation baseline — what makes a CHAIN visibl
 
   it("⛔ re-baselining does not disturb the object, the face, or the reverse index", () => {
     const links = new AlignmentLinks();
-    links.link("a", "p", "+z", IDENTITY);
+    links.link("a", "p", "+z", IDENTITY, ORIGIN);
     links.noteOrientation("a", TURNED);
     expect(links.pioneerFor("a")?.objectId).toBe("p");
     expect(links.pioneerFor("a")?.faceId).toBe("+z");
@@ -255,7 +267,7 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     // ⛔ *"a follower cannot become the pioneer of its own pioneer."* ⚠ This is the one a hand
     // reaches by accident: align F to P, then pick up P and tap F.
     const links = new AlignmentLinks();
-    links.link("f", "p", "+x", IDENTITY);
+    links.link("f", "p", "+x", IDENTITY, ORIGIN);
     expect(links.wouldCycle("p", "f")).toBe(true);
   });
 
@@ -265,8 +277,8 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     // point over these links — a cycle of orange bodies would each take the other's rotation
     // for ever. ⚠ A one-step test would wave this through.
     const links = new AlignmentLinks();
-    links.link("f", "p1", "+x", IDENTITY);
-    links.link("p1", "p2", "+x", IDENTITY);
+    links.link("f", "p1", "+x", IDENTITY, ORIGIN);
+    links.link("p1", "p2", "+x", IDENTITY, ORIGIN);
     expect(links.wouldCycle("p2", "f")).toBe(true);
   });
 
@@ -274,7 +286,7 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     // ⛔ The guard must not refuse the normal case — two followers on one Pioneer, or a fresh
     // body joining an existing chain at the end.
     const links = new AlignmentLinks();
-    links.link("f", "p", "+x", IDENTITY);
+    links.link("f", "p", "+x", IDENTITY, ORIGIN);
     expect(links.wouldCycle("g", "p")).toBe(false); // a second follower of P
     expect(links.wouldCycle("p", "q")).toBe(false); // P joins a new Pioneer
     expect(links.wouldCycle("f", "q")).toBe(false); // F re-aligns elsewhere
@@ -297,8 +309,8 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     // than the only defence — kept deliberately, because two guards against a frozen glass is
     // not one too many.
     const links = new AlignmentLinks();
-    expect(links.link("a", "b", "+x", IDENTITY)).toBe(true);
-    expect(links.link("b", "a", "+x", IDENTITY), "the closing edge is REFUSED").toBe(false);
+    expect(links.link("a", "b", "+x", IDENTITY, ORIGIN)).toBe(true);
+    expect(links.link("b", "a", "+x", IDENTITY, ORIGIN), "the closing edge is REFUSED").toBe(false);
     // ⛔ And the index is untouched by the refusal — not half-written.
     expect(links.pioneerFor("a")?.objectId).toBe("b");
     expect(links.pioneerFor("b")).toBeNull();
@@ -310,7 +322,7 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
 
   it("⛔ a body cannot be linked to ITSELF either", () => {
     const links = new AlignmentLinks();
-    expect(links.link("a", "a", "+x", IDENTITY)).toBe(false);
+    expect(links.link("a", "a", "+x", IDENTITY, ORIGIN)).toBe(false);
     expect(links.size).toBe(0);
     expect(links.followersOf("a")).toEqual([]);
   });
@@ -319,9 +331,9 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     // ⚠ The owner named the two-body case; a longer ring is the same defect one link out, and
     // the first two edges must still be allowed or ordinary chains would break.
     const links = new AlignmentLinks();
-    expect(links.link("f", "p1", "+x", IDENTITY)).toBe(true);
-    expect(links.link("p1", "p2", "+x", IDENTITY)).toBe(true);
-    expect(links.link("p2", "f", "+x", IDENTITY)).toBe(false);
+    expect(links.link("f", "p1", "+x", IDENTITY, ORIGIN)).toBe(true);
+    expect(links.link("p1", "p2", "+x", IDENTITY, ORIGIN)).toBe(true);
+    expect(links.link("p2", "f", "+x", IDENTITY, ORIGIN)).toBe(false);
     expect(links.size).toBe(2);
   });
 
@@ -331,10 +343,10 @@ describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's p
     // perfectly good alignment as a side effect of rejecting a different one. ⭐ The check
     // therefore comes BEFORE the unlink, and this is the vector that says so.
     const links = new AlignmentLinks();
-    links.link("f", "p1", "+x", IDENTITY);
-    links.link("p1", "p2", "+x", IDENTITY);
+    links.link("f", "p1", "+x", IDENTITY, ORIGIN);
+    links.link("p1", "p2", "+x", IDENTITY, ORIGIN);
     // ⚠ `p2` asking to follow `f` would close the ring; `p2` currently follows nothing.
-    expect(links.link("p2", "f", "+y", IDENTITY)).toBe(false);
+    expect(links.link("p2", "f", "+y", IDENTITY, ORIGIN)).toBe(false);
     // ⭐ Every pre-existing link survives, intact and on the same face.
     expect(links.pioneerFor("f")?.objectId).toBe("p1");
     expect(links.pioneerFor("f")?.faceId).toBe("+x");
@@ -355,8 +367,8 @@ describe("⛔⛔⛔ `partnersOf` — WHO MAY THIS BODY APPROACH? (the capture re
 
   const linked = () => {
     const l = new AlignmentLinks();
-    l.link("f1", "P", "+x", IDENTITY);
-    l.link("f2", "P", "-z", IDENTITY);
+    l.link("f1", "P", "+x", IDENTITY, ORIGIN);
+    l.link("f2", "P", "-z", IDENTITY, ORIGIN);
     return l;
   };
 
@@ -384,8 +396,8 @@ describe("⛔⛔⛔ `partnersOf` — WHO MAY THIS BODY APPROACH? (the capture re
     // whatever else happens to follow it. ⚠ Asserted because the alternative (the union) is the
     // plausible reading and would quietly restore a third-body capture.
     const l = new AlignmentLinks();
-    l.link("m", "P", "+x", IDENTITY);
-    l.link("f", "m", "+y", IDENTITY);
+    l.link("m", "P", "+x", IDENTITY, ORIGIN);
+    l.link("f", "m", "+y", IDENTITY, ORIGIN);
     expect(l.partnersOf("m")).toEqual(["P"]);
     expect(l.partnersOf("f")).toEqual(["m"]);
     expect(l.partnersOf("P")).toEqual(["m"]);
@@ -396,5 +408,65 @@ describe("⛔⛔⛔ `partnersOf` — WHO MAY THIS BODY APPROACH? (the capture re
     l.unlink("f1");
     expect(l.partnersOf("f1")).toEqual([]);
     expect(l.partnersOf("P")).toEqual(["f2"]);
+  });
+});
+
+
+describe("⛔⛔⛔ `D69` — A TRANSLATED PIONEER CARRIES EVERY FOLLOWER, DOWN THE CHAIN", () => {
+  // ⛔⛔ THE OWNER, 2026-09-21: *"a rotation of the pioneer controls the same rotation of all
+  // the orange follower objects. Do the same with translation: a translation of pioneer controls
+  // the same translation of all the follower objects."*
+  const at = (x: number): Vec3 => [x, 0, 0];
+
+  it("⭐⭐⭐ the Follower takes the Pioneer's world delta, exactly", () => {
+    const plan = resolvePioneerMoves([{ follower: "f", pioneer: "p", baseline: at(0) }], (id) =>
+      id === "p" ? at(3) : at(10),
+    );
+    expect(plan.steps).toEqual([{ follower: "f", delta: [3, 0, 0] }]);
+    // ⭐ …and the baseline advances, so the NEXT frame sees no motion rather than the same
+    // delta again. ⛔ Without this the Follower would run away from a Pioneer standing still.
+    expect(plan.baselines.get("f")).toEqual(at(3));
+  });
+
+  it("⛔⛔ A CHAIN RESOLVES IN ONE CALL — the passes are what make that true", () => {
+    // ⭐ `f2` follows `f1`, which follows `p`. `f1` has not moved yet when the pass begins, so a
+    // single sweep would leave `f2` behind by one frame; the second pass sees `f1`'s new pose.
+    const plan = resolvePioneerMoves(
+      [
+        { follower: "f2", pioneer: "f1", baseline: at(5) },
+        { follower: "f1", pioneer: "p", baseline: at(0) },
+      ],
+      (id) => (id === "p" ? at(2) : id === "f1" ? at(5) : at(9)),
+    );
+    const deltas = new Map(plan.steps.map((s) => [s.follower, s.delta]));
+    expect(deltas.get("f1")).toEqual([2, 0, 0]);
+    expect(deltas.get("f2")).toEqual([2, 0, 0]);
+  });
+
+  it("⚠ a Pioneer that has not moved emits NOTHING — this runs every frame", () => {
+    const plan = resolvePioneerMoves([{ follower: "f", pioneer: "p", baseline: at(4) }], () => at(4));
+    expect(plan.steps).toEqual([]);
+    expect(plan.baselines.size).toBe(0);
+  });
+
+  it("⛔ a Pioneer whose position cannot be read leaves its link alone", () => {
+    // ⚠ `LESSONS_CARRIED` §6 — suppress, do not guess. Treating a missing body as the origin
+    // would fling every Follower to the world centre.
+    const plan = resolvePioneerMoves([{ follower: "f", pioneer: "gone", baseline: at(1) }], () => null);
+    expect(plan.steps).toEqual([]);
+  });
+
+  it("⭐⭐ BOTH COLOURS MOVE — the mode is not consulted at all", () => {
+    // ⛔ The owner's contrast: *"all the ORANGE follower objects"* for the rotation, *"all the
+    // follower objects"* for the translation. ⚠ `FollowerMoveLink` has no `mode` field, so the
+    // distinction is unrepresentable here rather than merely unused.
+    const plan = resolvePioneerMoves(
+      [
+        { follower: "cyan", pioneer: "p", baseline: at(0) },
+        { follower: "amber", pioneer: "p", baseline: at(0) },
+      ],
+      (id) => (id === "p" ? at(1) : at(0)),
+    );
+    expect(plan.steps.map((s) => s.follower).sort()).toEqual(["amber", "cyan"]);
   });
 });

@@ -45,7 +45,7 @@
  * piece of lifetime management has no dependency to go stale.
  */
 import type { FaceId, ObjectId } from "./object_model";
-import type { Quat } from "./vec";
+import type { Quat, Vec3 } from "./vec";
 
 /** What a follower's alignment points at. ⚠ None of it is recoverable from the model. */
 export interface PioneerRef {
@@ -78,6 +78,14 @@ export interface PioneerRef {
    * not one quantity.
    */
   readonly orientation: Quat;
+  /**
+   * ⭐⭐⭐ **`D69` — THE PIONEER'S POSITION WHEN THIS LINK WAS LAST SETTLED**, so a translated
+   * Pioneer can carry its Followers. ⛔ The exact mirror of `orientation` above, and kept for the
+   * same reason: the cascade is a **state comparison**, never a delta routed from the gesture
+   * that caused it. ⚠ That is also what makes a CHAIN work — a body moved by the cascade is
+   * itself a Pioneer whose position has changed, and the next pass sees it.
+   */
+  readonly position: Vec3;
 }
 
 export class AlignmentLinks {
@@ -100,6 +108,8 @@ export class AlignmentLinks {
     pioneerFace: FaceId,
     /** ⛔ The Pioneer's **WORLD** orientation — see `PioneerRef.orientation`. Never `local`. */
     pioneerOrientation: Quat,
+    /** ⭐ `D69` — the Pioneer's position at this instant; the move cascade's baseline. */
+    pioneerPosition: Vec3,
   ): boolean {
     // ⛔⛔⛔ **THE CYCLE CHECK LIVES HERE, NOT AT THE CALL SITE — AUDIT, 2026-09-17.**
     //
@@ -131,6 +141,7 @@ export class AlignmentLinks {
       objectId: pioneer,
       faceId: pioneerFace,
       orientation: pioneerOrientation,
+      position: pioneerPosition,
     });
     let set = this.reverse.get(pioneer);
     if (set === undefined) {
@@ -172,6 +183,13 @@ export class AlignmentLinks {
     const ref = this.forward.get(follower);
     if (ref === undefined) return;
     this.forward.set(follower, { ...ref, orientation });
+  }
+
+  /** ⭐ `D69` — the position half of the same bookkeeping. ⚠ Silent when the link is gone. */
+  notePosition(follower: ObjectId, position: Vec3): void {
+    const ref = this.forward.get(follower);
+    if (ref === undefined) return;
+    this.forward.set(follower, { ...ref, position });
   }
 
   /**

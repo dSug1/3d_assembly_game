@@ -79,7 +79,13 @@ function aligned(
   };
 
   const links = new AlignmentLinks();
-  links.link("f", "p", pioneerFace, worldPlacementOf(world, "p")!.orientation);
+  links.link(
+    "f",
+    "p",
+    pioneerFace,
+    worldPlacementOf(world, "p")!.orientation,
+    worldPlacementOf(world, "p")!.position,
+  );
   return { world, links };
 }
 
@@ -211,7 +217,13 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
       }),
     };
     const links = new AlignmentLinks();
-    links.link("f", "p", "+x", worldPlacementOf(world, "p")!.orientation);
+    links.link(
+      "f",
+      "p",
+      "+x",
+      worldPlacementOf(world, "p")!.orientation,
+      worldPlacementOf(world, "p")!.position,
+    );
     // ⭐ quiet while it sits, even though neither body is axis-aligned
     expect(plan(world, links, "SNAPSHOT").steps).toEqual([]);
     const turned = setWorldPlacement(world, "p", {
@@ -251,7 +263,13 @@ describe("⛔⛔ each link carries its OWN reading, and the assembly is what sup
         faceAlignConstraint(followerLocal, pioneerWorld),
         false,
       );
-      links.link(follower, "p", face, worldPlacementOf(world, "p")!.orientation);
+      links.link(
+        follower,
+        "p",
+        face,
+        worldPlacementOf(world, "p")!.orientation,
+        worldPlacementOf(world, "p")!.position,
+      );
     }
     const turned = setWorldPlacement(world, "p", {
       position: worldPlacementOf(world, "p")!.position,

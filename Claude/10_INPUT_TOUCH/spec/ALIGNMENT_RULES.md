@@ -1399,3 +1399,64 @@ legal, cycles are refused from the new end, and `D62`'s capture restriction is u
 `pressMeaning`/`tapMeaning` carry the decisions and 11 vectors pin them, but *which grip is
 cleared* is render wiring — the standing lesson of this branch, and the reason the device pass
 must include the owner's exact three-Follower sequence.
+
+
+### ⛔⛔⛔ 5.15 `D68` — A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS
+
+> *"if i double tap without release the pioneer and press the follower → orange, the
+> translation/rotation mode toggles: it should not toggle. (Note that if I press the pioneer and
+> then press the follower → cyan, the mode does not toggle which is correct)."*
+> — the owner, 2026-09-21
+
+⭐⭐ **AN INVARIANT BREAK, NOT A NEW RULE — AND THE PARENTHESIS IS THE PROOF.** The cyan route
+(press, press) leaves the mode alone, correctly, because neither press toggles anything since
+`D66`. ⛔ The orange route is a **double tap whose second half never lifts**, and `D28`'s *two
+taps revert* was keyed to the second **release** — which never comes. So the pair left the mode
+flipped: half a gesture's worth of state.
+
+✅ **THE COMPLETING PRESS TAKES THE SECOND TOGGLE OVER FROM THE RELEASE.** It undoes what the
+first tap did, and its own release is then spent:
+
+| gesture | before | after |
+|---|---|---|
+| tap | toggles | toggles |
+| tap, tap | reverts | reverts |
+| tap, press-and-hold (`D67`'s orange) | **flipped** ⛔ | reverts ✅ |
+
+⚠⚠ **AND IT ASKS WHETHER THE FIRST TAP ACTUALLY TOGGLED**, which is a different question from
+*was there a first tap*: a tap consumed by an alignment toggles nothing, and undoing it would
+flip the mode the hand had. ⛔ `scene.ts` carries that one fact and clears it at every tap
+release, both paths; `pairPressRevertsToggle` refuses to infer it.
+
+⚠ `pairReverted` is `pressToggled`'s shape and **not** its rule — `D66` deleted a press that
+TOGGLED; this is a press that UNDOES, which is what keeps `D28` true.
+
+### ⛔⛔⛔ 5.16 `D69` — A TRANSLATED PIONEER CARRIES EVERY FOLLOWER, DOWN THE CHAIN
+
+> *"Currently, if in rotation mode, a rotation of the pioneer controls the same rotation of all
+> the orange follower objects. Do the same with translation: a translation of pioneer controls
+> the same translation of all the follower objects."* — the owner, 2026-09-21
+
+⛔⛔ **ALL FOLLOWERS, NOT ONLY THE ORANGE ONES — THE OWNER'S OWN CONTRAST, ONE CLAUSE APART**:
+*"all the **orange** follower objects"* for the rotation, *"all the follower objects"* for the
+translation. ⭐ It is also the reading that makes `D67`'s multi-select worth having: several
+bodies chosen in one hold then **move as a group**.
+⚠ And it costs nothing geometrically — `SNAPSHOT` versus `FOLLOW` is a statement about what a
+**turn** costs, and `FACE_ALIGN` constrains a NORMAL, which no translation can disturb.
+⭐ `FollowerMoveLink` has no `mode` field at all, so the distinction is **unrepresentable** here
+rather than merely unused.
+
+⭐⭐ **A STATE COMPARISON, EXACTLY LIKE THE TURN CASCADE.** Each link remembers where its Pioneer
+was (`PioneerRef.position`, the mirror of `orientation`), and the delta is *where it is now*
+minus that. ⛔ **Not** a delta routed from the gesture: a Pioneer may move by a finger, by depth,
+by a snap or by its own Pioneer, and a rule that listened to one of those would silently miss the
+others — the *substituted quantity* shape this project keeps paying for.
+⭐ Chains fall out of the passes, and a vector pins it: `f2 → f1 → p` resolves in ONE call,
+because the second pass sees the pose the first one gave `f1`.
+
+⚠ **WHAT CANNOT DOUBLE-COUNT, AND WHY**: with both bodies held, `pioneerTranslates = 0` means the
+Pioneer's own finger does not translate it at all — it drives the Follower's depth and roll — so
+there is no Pioneer motion to cascade. ⛔ At `pioneerTranslates = 1` the two would add, which is
+that selector's business and is stated here rather than discovered.
+⚠ A **frozen** body is refused by `object_model`'s writers, so the plate cannot be dragged along
+even if something linked it — the guarantee is there and not in the render loop.

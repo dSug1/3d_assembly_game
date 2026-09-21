@@ -25,8 +25,8 @@
  * ⛔ ENGINE-FREE. It reads orientations through a callback and returns a PLAN; it moves nothing.
  */
 import type { ObjectId } from "../core/object_model";
-import type { Quat } from "../core/vec";
-import { qmul } from "../core/vec";
+import type { Quat, Vec3 } from "../core/vec";
+import { qmul, sub } from "../core/vec";
 import type { AlignMode } from "./alignment";
 import { pioneerTurned } from "./alignment";
 
@@ -180,6 +180,111 @@ export function followerLinksFrom(
       baseline: ref.orientation,
       mode: modeOf(follower) ?? "SNAPSHOT",
     });
+  }
+  return out;
+}
+
+
+/** One body's link, for the TRANSLATION cascade. ⭐ `D69`'s mirror of `FollowerLink`. */
+export interface FollowerMoveLink {
+  readonly follower: ObjectId;
+  readonly pioneer: ObjectId;
+  /** Where the Pioneer was when this link was last settled. */
+  readonly baseline: Vec3;
+}
+
+/** What a translated Pioneer owes one Follower. */
+export interface MoveStep {
+  readonly follower: ObjectId;
+  readonly delta: Vec3;
+}
+
+export interface MovePlan {
+  readonly steps: readonly MoveStep[];
+  readonly baselines: ReadonlyMap<ObjectId, Vec3>;
+}
+
+/**
+ * ⭐⭐⭐ **`D69` — A TRANSLATED PIONEER CARRIES EVERY FOLLOWER, DOWN THE CHAIN.**
+ *
+ * > *"Currently, if in rotation mode, a rotation of the pioneer controls the same rotation of
+ * > all the orange follower objects. Do the same with translation: a translation of pioneer
+ * > controls the same translation of all the follower objects."* — the owner, 2026-09-21
+ *
+ * ⛔⛔ **ALL FOLLOWERS, NOT ONLY THE ORANGE ONES — AND THAT IS THE OWNER'S OWN CONTRAST.** The
+ * sentence names *"all the **orange** follower objects"* for the rotation and *"all the follower
+ * objects"* for the translation, one clause apart. ⭐ It is also the reading that makes `D67`'s
+ * multi-select worth having: several bodies chosen in one hold move as a group.
+ * ⚠ And it costs nothing geometrically — `SNAPSHOT` versus `FOLLOW` is a statement about what a
+ * **turn** costs, and `FACE_ALIGN` constrains a normal, which no translation can disturb.
+ *
+ * ⭐⭐ **A STATE COMPARISON, EXACTLY LIKE `resolvePioneerTurns`.** Each link remembers where its
+ * Pioneer was; the delta is *where it is now* minus that. ⛔ Not a delta routed from the gesture:
+ * a Pioneer may move by a finger, by depth, by a snap or by ITS own Pioneer, and a rule that
+ * listened to one of those would silently miss the others — which is the *substituted quantity*
+ * shape this project keeps paying for.
+ *
+ * ⭐ Chains fall out of the passes: a Follower moved in pass 1 is a Pioneer whose position has
+ * changed, so pass 2 sees it. ⚠ The pass cap is `links + 1`, as the turn cascade's is, so a ring
+ * cannot spin forever — `AlignmentLinks.link` refuses cycles, and this refuses to depend on it.
+ *
+ * ⚠ A Pioneer whose position cannot be read leaves its link untouched: *suppress, do not guess*.
+ */
+export function resolvePioneerMoves(
+  linksIn: readonly FollowerMoveLink[],
+  positionOf: (id: ObjectId) => Vec3 | null,
+): MovePlan {
+  const steps: MoveStep[] = [];
+  const baselines = new Map<ObjectId, Vec3>();
+  const pose = new Map<ObjectId, Vec3>();
+  const now = (id: ObjectId): Vec3 | null => pose.get(id) ?? positionOf(id);
+  let pending = linksIn.map((l) => ({ ...l }));
+  const cap = linksIn.length + 1;
+  for (let pass = 0; pass < cap; pass++) {
+    let moved = false;
+    const survivors: typeof pending = [];
+    for (const link of pending) {
+      const pioneerNow = now(link.pioneer);
+      if (pioneerNow === null) {
+        survivors.push(link);
+        continue;
+      }
+      const delta = sub(pioneerNow, link.baseline);
+      // ⛔ EXACTLY zero is *nothing happened*, and it must stay cheap: this runs every frame for
+      // every aligned body. ⚠ No epsilon — a threshold here would be a number nobody measured,
+      // and the deadband upstream already decides what counts as motion.
+      if (delta[0] === 0 && delta[1] === 0 && delta[2] === 0) {
+        survivors.push(link);
+        continue;
+      }
+      steps.push({ follower: link.follower, delta });
+      baselines.set(link.follower, pioneerNow);
+      const followerNow = now(link.follower);
+      if (followerNow !== null) {
+        pose.set(link.follower, [
+          followerNow[0] + delta[0],
+          followerNow[1] + delta[1],
+          followerNow[2] + delta[2],
+        ]);
+      }
+      moved = true;
+    }
+    pending = survivors;
+    if (!moved || pending.length === 0) break;
+  }
+  return { steps, baselines };
+}
+
+/** ⭐ `D69` — the move cascade's input, built from the same index the turn cascade reads. */
+export function followerMoveLinksFrom(
+  aligned: readonly ObjectId[],
+  pioneerOf: (follower: ObjectId) => { readonly objectId: ObjectId; readonly position: Vec3 } | null,
+): FollowerMoveLink[] {
+  const out: FollowerMoveLink[] = [];
+  for (const follower of aligned) {
+    const ref = pioneerOf(follower);
+    if (ref === null) continue;
+    out.push({ follower, pioneer: ref.objectId, baseline: ref.position });
   }
   return out;
 }

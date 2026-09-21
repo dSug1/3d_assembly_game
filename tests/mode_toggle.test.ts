@@ -9,7 +9,12 @@
  * ⚠ The forks' account is one tier down, in `Claude/00_CORE/queue_notes/IN13.md`.
  */
 import { describe, expect, it } from "vitest";
-import { initialBehaviour, isTapRelease, toggleBehaviour } from "@input/mode_toggle";
+import {
+  initialBehaviour,
+  isTapRelease,
+  pairPressRevertsToggle,
+  toggleBehaviour,
+} from "@input/mode_toggle";
 import * as modeToggle from "@input/mode_toggle";
 
 describe("the mode a session starts in", () => {
@@ -72,7 +77,14 @@ describe("⛔⛔ THE TOGGLE IS IMMEDIATE, and a double tap simply flips TWICE", 
     // ⚠ `pressTogglesMode` joined this list with `D58` and `releaseTogglesMode` with `D64`,
     // each an ADDITION made on purpose. ⛔ Both LEFT it with `D66` on 2026-09-21, which is the
     // same vector doing the same job in the other direction: the surface shrinks by decision.
-    expect(surface.sort()).toEqual(["initialBehaviour", "isTapRelease", "toggleBehaviour"]);
+    // ⚠ `pairPressRevertsToggle` joined it with `D68` (2026-09-21) — an ADDITION made on
+    // purpose, listed so the surface changes by decision and not by accident.
+    expect(surface.sort()).toEqual([
+      "initialBehaviour",
+      "isTapRelease",
+      "pairPressRevertsToggle",
+      "toggleBehaviour",
+    ]);
   });
 });
 
@@ -154,5 +166,46 @@ describe("⛔⛔⛔ `D66` — A PRESS DOES NOT TOGGLE THE MODE, AND THE RULE IS 
     const boot = initialBehaviour();
     expect(toggleBehaviour(boot)).not.toBe(boot);
     expect(toggleBehaviour(toggleBehaviour(boot))).toBe(boot);
+  });
+});
+
+
+describe("⛔⛔⛔ `D68` — A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS", () => {
+  // ⛔⛔ THE OWNER, 2026-09-21: *"if i double tap without release the pioneer and press the
+  // follower → orange, the translation/rotation mode toggles: it should not toggle. (Note that
+  // if I press the pioneer and then press the follower → cyan, the mode does not toggle which is
+  // correct)."*
+  //
+  // ⭐⭐⭐ AN INVARIANT BREAK, NOT A NEW RULE. `D28` accepted *two taps revert* — and `D67`'s
+  // route to orange is a double tap whose second half never lifts, so the second toggle never
+  // happened and the pair left the mode flipped.
+
+  it("⭐⭐⭐ a press that completes a pair undoes the first tap's toggle", () => {
+    expect(pairPressRevertsToggle(true, true)).toBe(true);
+  });
+
+  it("⛔⛔ BUT ONLY IF THAT TAP ACTUALLY TOGGLED — the two facts are not one", () => {
+    // ⚠⚠ *Was there a first tap* and *did it toggle* are different questions: a tap consumed
+    // by an alignment toggles nothing, and undoing it would flip the mode the hand had. ⛔ This
+    // is the vector that keeps the rule from inferring the second from the first.
+    expect(pairPressRevertsToggle(true, false)).toBe(false);
+  });
+
+  it("⚠ and an ordinary press — no pair — never touches the mode (`D66` stands)", () => {
+    expect(pairPressRevertsToggle(false, true)).toBe(false);
+    expect(pairPressRevertsToggle(false, false)).toBe(false);
+  });
+
+  it("⭐⭐ THE COMPOSITION: both readings of the gesture end where they started", () => {
+    // ⛔ A truth table is not enough here — the CLAIM is about the mode after a whole gesture,
+    // so it is composed: a tap toggles, and the completing press undoes exactly that.
+    const boot = initialBehaviour();
+    let mode = boot;
+    // tap #1 — the release toggles
+    mode = toggleBehaviour(mode);
+    expect(mode).not.toBe(boot);
+    // press #2 completes the pair and reverts, and its own release is spent
+    if (pairPressRevertsToggle(true, true)) mode = toggleBehaviour(mode);
+    expect(mode).toBe(boot);
   });
 });

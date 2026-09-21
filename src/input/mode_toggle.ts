@@ -51,6 +51,40 @@
  * TAP** — and a tap is a tap wherever it lands, held or not, which is `D27`/`D28` unchanged.
  */
 
+/**
+ * ⭐⭐⭐ **`D68` — A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS.**
+ *
+ * > *"if i double tap without release the pioneer and press the follower → orange, the
+ * > translation/rotation mode toggles: it should not toggle. (Note that if I press the pioneer
+ * > and then press the follower → cyan, the mode does not toggle which is correct)."*
+ * > — the owner, 2026-09-21
+ *
+ * ⛔⛔ **IT IS AN INVARIANT BREAK, NOT A NEW RULE.** `D28` has always accepted that *two taps
+ * revert* — the owner's own words: *"worst case, a double tap occurs and the behavior and
+ * movement can be reverted back while the camera orbit resets."* ⚠ The first tap of the pair
+ * toggles on its RELEASE; the second is supposed to toggle back on ITS release. ⭐ `D67`'s route
+ * to orange is *a double tap whose second half never lifts*, so the second toggle never happens
+ * and the pair leaves the mode flipped — half a gesture's worth of state.
+ *
+ * ⭐⭐ **SO THE COMPLETING PRESS TAKES THE SECOND TOGGLE OVER FROM THE RELEASE.** It undoes what
+ * the first tap did, and its own release is then spent. Both readings of the gesture end where
+ * they started:
+ *
+ * | gesture | before | after |
+ * |---|---|---|
+ * | tap | toggles | toggles |
+ * | tap, tap | reverts (two toggles) | reverts (toggle + undo, release spent) |
+ * | tap, press-and-hold | **flipped** ⛔ | reverts — the owner's fix |
+ *
+ * ⚠⚠ **AND IT ASKS WHETHER THE FIRST TAP ACTUALLY TOGGLED**, which is not the same question as
+ * *was there a first tap*. ⛔ A tap consumed by something else — an alignment, `D66`'s
+ * second-touch release — toggled nothing, and undoing it would flip the mode the hand had. ⭐ The
+ * caller carries that one fact; this rule refuses to infer it.
+ */
+export function pairPressRevertsToggle(completesPair: boolean, lastTapToggled: boolean): boolean {
+  return completesPair && lastTapToggled;
+}
+
 /** What a held object's own drag does. ⭐ One latch per SESSION, not per gesture. */
 export type Behaviour = "TRANSLATE" | "ROTATE";
 

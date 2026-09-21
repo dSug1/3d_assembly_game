@@ -69,6 +69,7 @@ import {
   depthTranslate,
   initialBehaviour,
   isTapRelease,
+  pairPressRevertsToggle,
 
 
   toggleBehaviour,
@@ -142,7 +143,12 @@ import { IDENTITY, qmul } from "../core/vec";
 import { seededRotations } from "../core/random_pose";
 import { AlignmentLinks } from "../core/alignment_links";
 import { AlignSnaps } from "../input/align_snap";
-import { followerLinksFrom, resolvePioneerTurns } from "../input/pioneer_cascade";
+import {
+  followerLinksFrom,
+  followerMoveLinksFrom,
+  resolvePioneerMoves,
+  resolvePioneerTurns,
+} from "../input/pioneer_cascade";
 // ⭐⭐ `A16`. ⛔ Both are ENGINE-FREE and answer questions; nothing in them moves or draws.
 import { surfaceGap } from "../core/proximity";
 import { shapeFromVertices, type ConvexShape } from "../core/collision_shape";
@@ -1020,6 +1026,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       pioneerId,
       pioneerFaceId,
       worldPlacementOf(world, pioneerId)?.orientation ?? IDENTITY,
+      // ⭐ `D69` — the move cascade's baseline, read at the same instant as the orientation so
+      // the two halves of the link describe ONE moment.
+      worldPlacementOf(world, pioneerId)?.position ?? [0, 0, 0],
     );
     if (!linked) {
       lastVerdict = `align: REFUSED — ${followerId}→${pioneerId} would close a cycle`;
@@ -1167,6 +1176,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       pioneerId,
       pf.id,
       worldPlacementOf(world, pioneerId)?.orientation ?? IDENTITY,
+      // ⭐ `D69` — the move cascade's baseline, read at the same instant as the orientation so
+      // the two halves of the link describe ONE moment.
+      worldPlacementOf(world, pioneerId)?.position ?? [0, 0, 0],
     );
     alignModeOf.set(followerId, "SNAPSHOT");
   };
@@ -3481,6 +3493,21 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * release must not flip it again. ⛔ Keyed by pointer id and emptied on release; a tap is a
    * press plus a lift, and without this every tap would toggle twice and change nothing.
    */
+  /**
+   * ⭐⭐ `D68` — **did the last tap RELEASE actually toggle the mode?** ⛔ Not *was there a tap*:
+   * a tap consumed by an alignment toggled nothing, and undoing it would flip the mode the hand
+   * had. ⚠ Written at every tap release, both paths, so it cannot describe an older gesture.
+   */
+  let lastTapToggled = false;
+  /**
+   * ⭐⭐ `D68` — presses that already spent their toggle by REVERTING the first tap's. ⛔ Their
+   * own release must add nothing, or a full double tap would end up flipped by one.
+   * ⚠ It is `pressToggled`'s shape and NOT its rule: `D66` deleted a press that TOGGLED; this is
+   * a press that UNDOES, which is what keeps `D28`'s *two taps revert* true when the second half
+   * never lifts.
+   */
+  const pairReverted = new Set<number>();
+
   // ⛔⛔ **`pressToggled` AND `secondTouch` ARE DELETED WITH `D66`.** The first existed only
   // because a press could toggle; the second (`D65`) only because a press toggling made a
   // second touch's LIFT ambiguous. ⭐ With the press inert, a tap is a tap again — *"as per
@@ -3507,6 +3534,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // present rule for tap"*. ⚠ The history is recorded first, as it always was: it is what the
     // double tap and the camera reset read.
     behaviour = toggleBehaviour(behaviour);
+    // ⭐ `D68`: this tap DID toggle, so a press that completes the pair may undo it.
+    lastTapToggled = true;
     lastVerdict = `tap → ${behaviour}`;
     return verdict;
   };
@@ -3584,6 +3613,20 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
       const routed = router.press(e.pointerId, s, hit);
 
+
+      // ⭐⭐⭐ **`D68` — A PRESS THAT COMPLETES A DOUBLE TAP UNDOES THE FIRST TAP'S TOGGLE.**
+      // ⛔ The owner: *"if i double tap without release the pioneer and press the follower →
+      // orange, the translation/rotation mode toggles: it should not."* ⚠ `D28`'s *two taps
+      // revert* was keyed to the second RELEASE, and `D67`'s route to orange never lifts.
+      // ⭐ THE DECISION IS `pairPressRevertsToggle`'s; this reads the two facts and obeys.
+      if (pairPressRevertsToggle(taps.wouldPair(s), lastTapToggled)) {
+        behaviour = toggleBehaviour(behaviour);
+        lastTapToggled = false;
+        // ⛔ …and this press's own release must not toggle again, or the full double tap would
+        // end up flipped by one instead of reverting.
+        pairReverted.add(e.pointerId);
+        lastVerdict = `double tap (no release) → mode back to ${behaviour}`;
+      }
 
       // ⛔⛔⛔ **`D66` — A PRESS NO LONGER TOGGLES THE MOVEMENT MODE, ANYWHERE.**
       //
@@ -4367,6 +4410,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // reset is therefore evaluated AFTER the alignment decision and skipped when the tap
       // aligned; this block used to run first, which is why it moved.
       let alignedByThisTap = false;
+      // ⚠⚠ `D68` — THE HONEST HALF. A tap consumed by an alignment toggles NOTHING, so the
+      // fact is cleared before either branch can set it: undoing a toggle that never happened
+      // would flip the mode the hand actually had.
+      lastTapToggled = false;
       // ⛔⛔⛔ **`D55` — A RELEASE WHOSE OWN PRESS ALIGNED IS ALREADY SPENT.**
       //
       // ⚠⚠ WITHOUT THIS BRANCH THE GESTURE UNDOES ITSELF, and it would look like the trigger
@@ -4720,6 +4767,41 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // `baselines`, so this cannot resurrect a link `releaseAlignmentOf` has just removed.
     for (const [follower, orientation] of cascade.baselines) {
       links.noteOrientation(follower, orientation);
+    }
+
+    // ⭐⭐⭐ **`D69` — AND A TRANSLATED PIONEER CARRIES ITS FOLLOWERS, ALL OF THEM.**
+    //
+    // > *"Currently, if in rotation mode, a rotation of the pioneer controls the same rotation
+    // > of all the orange follower objects. Do the same with translation: a translation of
+    // > pioneer controls the same translation of all the follower objects."* — the owner
+    //
+    // ⛔ Run AFTER the turn cascade and read the same index. ⚠ The two cannot fight: a turn is
+    // about a body's orientation and a move about its position, and a rotation about a body's
+    // own centre leaves that position alone.
+    // ⛔⛔ THE DECISION IS `resolvePioneerMoves`'s — *a rule in a render file is a rule nothing
+    // can interrogate*, which this branch has paid for seven times.
+    const moves = resolvePioneerMoves(
+      followerMoveLinksFrom(links.alignedObjects(), (f) => links.pioneerFor(f)),
+      (id) => worldPlacementOf(world, id)?.position ?? null,
+    );
+    if (moves.steps.length > 0) hudDirty = true;
+    for (const step of moves.steps) {
+      const followerMesh = meshOf.get(step.follower);
+      if (!followerMesh) continue;
+      const mp = requirePose(followerMesh);
+      // ⚠ A FROZEN body is refused by `object_model`'s writers, so the plate cannot be dragged
+      // along even if something linked it — the guarantee is there and not here.
+      setModelPose(followerMesh, {
+        position: [
+          mp.position[0] + step.delta[0],
+          mp.position[1] + step.delta[1],
+          mp.position[2] + step.delta[2],
+        ],
+        orientation: mp.orientation,
+      });
+    }
+    for (const [follower, position] of moves.baselines) {
+      links.notePosition(follower, position);
     }
 
     const tauSec = cfg.translateInertiaMs / 1000;

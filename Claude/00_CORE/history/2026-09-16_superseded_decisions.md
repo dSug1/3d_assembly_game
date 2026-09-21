@@ -424,3 +424,29 @@ the **Pioneer's own press** — *"the first touch shall be double tap without fi
 the pioneer object"*. ⛔ The reason is the multi-select: with several Followers chosen during one
 hold, a per-Follower tap count would let one hold produce a mixture of colours nobody asked for.
 ⭐ `alignModeFor` is still the one place the mapping lives; only its input changed.
+
+
+## `D39` and `D55` — SUPERSEDED IN PART BY `D67`, 2026-09-21
+
+**`D39`** (2026-09-16) marked **both** faces — a fill for the face that moved, a contour for the
+one it was aimed at, *"which says which is which without a legend"* — and made a **second tap on
+that same PioneerFace** break the alignment. ✅ The marking survives `D67` untouched. ⛔ What
+moved is the UNDO: the second touch now lands on the **Follower**, so the same-gesture-again is a
+re-press on the **FollowerFace**. ⚠ The rule is unchanged in shape and reversed in target, which
+is the whole of `D67`.
+
+**`D55`** (2026-09-19) moved the alignment's trigger to the **press** — *"as soon as a second
+touch is pressed on second object (= a tap or a continued press), the Pioneer–Follower mechanism
+toggles on. To toggle off, the rule stays unchanged."* ✅ That stands. ⛔ Its amendment **`A22`**
+does not: the rapid-pair upgrade to `FOLLOW` existed because the second touch's tap count chose
+the mode, and `D67` moved that decision to the **Pioneer's own press**. ⚠ `SWITCH` went with it,
+from both the press path and the action set — an action nothing can produce.
+
+
+## `D45` — consequence text moved 2026-09-21 (the decision is LIVE)
+
+*"Make the rotation a slerp instead of instantaneous. Use the available sliders so we do not
+inflate the numbers of tuning parameters sliders."* ⛔⛔ **NOT the rejected rotation inertia**:
+that was a follower on CONTINUOUS rotation and a hand threw it out; this is a **discrete** pose
+change played over time, like the camera's fly-home, and it rides on `cameraResetMs`.
+⚠ Moved here, not superseded — the row stays in `DECISIONS.md` and the rule is in force.
