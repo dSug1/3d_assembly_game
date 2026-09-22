@@ -120,3 +120,25 @@ them out is Henriksen, Sporring & Hornbæk, *Virtual Trackballs Revisited*, IEEE
 ⛔ As written, the entry disqualifies as a default exactly the variant whose property an
 assembly task wants. ⚠ **Verify against the paper before relying on either reading** — this
 note is a flag, not a finding.
+
+---
+
+## ⭐⭐⭐ ROTATION INCREMENTS — registered 2026-09-22 (`D73`), at the moment of adoption
+
+⚠ The owner asked for the check in those words: *"Check state-of-the-art which does not need
+license."* ⛔ This is a register, not an opinion, and **nothing here is legal advice**; it is the
+input `SEC4` reads instead of a codebase.
+
+| the part | verdict | the citation, or the gap |
+|---|---|---|
+| **Snapping a rotation to fixed angular increments** | ✅ **PRIOR ART, and old** | Standard in every CAD and DCC package for decades — AutoCAD polar/snap angle, 3ds Max *Angle Snap Toggle*, and Blender's rotation snapping with the same presets this slider offers (1°/5°/15°/30°/45°/90°). Blender's own implementation is open and its increment work is public: [docs](https://docs.blender.org/manual/en/latest/editors/3dview/controls/snapping.html), [PR 118760](https://projects.blender.org/blender/blender/pulls/118760) |
+| **The idea that a snap has a *strength* / a capture field** | ✅ **PRIOR ART** | Bier & Stone, *Snap-dragging* (SIGGRAPH 1986) and *Snap-dragging in three dimensions* (I3D 1990) — the gravity function. [ACM](https://dl.acm.org/doi/10.1145/91394.91446) |
+| **Reducing the COST of a snap rather than its strength** | ✅ **PRIOR ART** | Baudisch, Cutrell, Hinckley & Eversole, *Snap-and-go: helping users align objects without the modality of traditional snapping*, CHI 2005. [PDF](https://cutrell.org/papers/CHI05-SnapAndGo.pdf) |
+| **A detent as a mechanism that holds a position until deliberately left** | ✅ **PRIOR ART** | Mechanical, and far older than any of this. [Detent](https://en.wikipedia.org/wiki/Detent) |
+| ⚠⚠ **Truncating to the increment when the INPUT SPEED falls below a threshold, with that threshold PROPORTIONAL TO the increment** | ⛔ **NOVEL COMPOSITE — no publication found** | Searched 2026-09-22 across the snapping and snap-strength literature and the CAD/DCC documentation above. Angle snapping is everywhere and is applied **continuously** or at the commit of a transform; making it fire on *the finger slowing down*, and scaling that threshold with the detent, is a composition I could not find described. ⚠ **This is the entry `SEC4` must look at.** ⭐ Its exposure is reduced by the fact that the scaling is a **unit conversion, not an invention**: one increment of rotation IS a fixed amount of finger travel (`increment / gain`), so the threshold is §1.1's existing rest question asked in the detent's own units |
+
+⭐⭐ **AND THE SEARCH'S NEGATIVE RESULT IS RECORDED ON PURPOSE.** `METHOD`: *a negative result
+that cannot be re-run is an assertion, not a finding* — so the queries and the date are here, and
+a later reviewer can re-run them rather than take this on trust. ⛔ Absence of a found
+publication is not absence of prior art, and this note does not claim otherwise.
+

@@ -181,12 +181,17 @@ correct and twice-vectored; the shake report is what inverted the diagnosis, and
 using the correct retire-by-membership pattern for one marker pool and the wrong one for
 another, in the same edit.
 ⭐⭐⭐ **ROTATION INCREMENTS ARE ON TRIAL** (`D73`, 2026-09-22) — `rotationIncrementDeg`
-(0–45, step 5): **0 is the current build**, and above zero a rotation **ENDS** on a multiple,
-slerped into place on the existing snap window. ⛔⛔ **NOTHING IS QUANTISED DURING THE DRAG** —
-the gains, the deadband and the smoothing are untouched. ⚠⚠ The FIRST formulation quantised the
-turn as it happened and was **built, driven and rejected**: the body could only move as fast as
-its queue drained, so *"it creates too much lag in the rotation vs. the finger movement"*.
-⭐ The lag is now unreachable rather than tuned away → `src/input/rotation_increment.ts`.
+(0–45, step 5): **0 is the current build**, and above zero a rotation **truncates back to the
+increment it last passed** whenever the finger comes to REST, smoothly.
+⛔⛔ **THE TRIGGER IS REST, NOT RELEASE**, and it fires as often as the hand pauses — so the
+increments read as detents you can sweep through and settle into. ⭐ The threshold is §1.1's own
+hysteretic still/moving test (`motionDeadbandMm`, `restConfirmMs`), not a new number.
+⛔⛔ **AND IT ONLY EVER GIVES GROUND BACK.** Truncation, never rounding: a rounded correction
+can carry the body FORWARD past where the finger took it, which is the object moving on its own.
+⚠⚠ **TWO EARLIER FORMULATIONS WERE BUILT AND CORRECTED BY A HAND** — quantising the turn *as
+it happened* lagged the finger (*"too much lag in the rotation vs. the finger movement"*), and
+rounding at the release moved the body forward. ⭐ Nothing is quantised DURING the drag: the
+gains, the deadband and the smoothing are untouched → `src/input/rotation_increment.ts`.
 ⛔⛔⛔ **AND DEFECT 49 CAME OUT OF THE SAME PASS**: *"the dx delta position and the yaw rotation
 direction are inverted"*. ⭐⭐ **The report named the wrong rule** — the free yaw was swept over
 408 camera positions and inverted at NONE; the **twist on an aligned body** inverted at **12 of
