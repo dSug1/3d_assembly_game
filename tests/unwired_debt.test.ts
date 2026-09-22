@@ -90,7 +90,10 @@ const PENDING: Record<string, string> = {
     "want a known-exact hull to check an imported one against",
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
-  qAngle: "the turn angle of a quaternion — used by vectors to assert rotations",
+  // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
+  // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
+  // ⭐ That is the second direction the list is asserted in: *a stale allowlist is the same lie
+  // one level up*, and it fired on its own terms without anyone remembering to look.
 };
 
 /** Where DECLARATIONS are looked for. */

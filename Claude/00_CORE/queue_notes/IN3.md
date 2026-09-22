@@ -1037,3 +1037,47 @@ them; whether a joining rule is owed is the owner's call.
 3. **The negative haptic** on a refusal (`IN7`).
 4. ⭐ **A device look**, which is now worth having: with 2ter/2quater wired, fork B finally
    does something a finger can judge — flick a face up and it should end up pointing up.
+
+---
+
+## ⭐⭐⭐ ROTATION INCREMENTS — `D73`, a trial, 2026-09-22
+
+⚠ Recorded here because a queue row's status changes in TWO places or neither.
+
+**What ships**: one slider, `rotationIncrementDeg` (0–45 step 5), **0 = the current build**.
+Above zero the held body is **always on an increment** — it advances a whole one when the drag
+crosses a boundary and otherwise holds, so a weak input simply stops it.
+
+⛔⛔⛔ **FOUR FORMULATIONS, AND THE FIRST THREE WERE EACH REJECTED BY A HAND.** They are kept
+because the shape of the answer is only visible against them:
+
+1. **Quantise the turn as it happens**, playing every increment as its own slerped step.
+   ⛔ The body could only move as fast as the queue drained — *"it creates too much lag in the
+   rotation vs. the finger movement"*.
+2. **Rotate freely; round to the nearest multiple at the RELEASE.** ⛔ Rounding carried the body
+   FORWARD, past where the finger ever took it.
+3. **Rotate freely; truncate back to the last increment when the finger rests.** ⛔ *"The object
+   rotates then rotates back in the reverse direction"* — a correction is a reversal.
+4. ✅ **Never leave an increment in the first place.**
+
+⭐⭐ **THE INSIGHT IS THAT 1–3 ALL LET THE BODY REACH A POSE IT WAS NOT ALLOWED TO HOLD**, then
+argued about how to get it back. Quantise the pose at every instant and there is nothing to get
+back from. ⚠ It is NOT formulation 1 again: that one queued the increments, this one asks
+*which increment is the finger in NOW* and goes straight there, so a backlog is unrepresentable.
+
+⚠ **The cost, inherent and not tunable**: the body advances in visible steps rather than
+tracking the finger. That is what a detent is.
+
+✅ **Two defects came out of the same pass**, both by finger, both in the ledger:
+
+* **49** — *"the dx delta position and the yaw rotation direction are inverted"*. The report
+  named the wrong rule: the free yaw was swept over 400+ camera positions and inverted at NONE,
+  while the **twist on an aligned body** inverted at 12 of 24 alignment orientations. `D57`'s
+  flat, latched sign had been applied to the second touchpoint and not to the first.
+  ⚠ Cost: `dy` no longer twists, and no finger has judged that trade.
+* **50** — *"the sway of other objects is bigger [for] one increment than … two or more"*. The
+  sway was right: a restarted `easeInOut` re-enters at zero velocity, so crossing several
+  detents relaunched the body from a standstill. ✅ Replaced by an exponential approach.
+
+⛔ **A DEVICE LOOK IS OWED ON ALL OF IT.** Nothing here has been judged by a hand since the
+fourth formulation landed.

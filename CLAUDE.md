@@ -46,9 +46,9 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **978 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1017 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and the **974** that stood
-here was stale by four. (861 + 113 — ⭐ the
+here was stale by four; 978 went stale the same way. (861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
 773 + 83 for `D49`'s surface gap and its shell, 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the
 first pass to find defects by READING the source rather than by a finger, and 619 − 51 when forks
@@ -194,6 +194,13 @@ crosses several, so a backlog is unrepresentable. ⚠ The cost, inherent and not
 advances in visible steps rather than tracking the finger → `src/input/rotation_increment.ts`.
 ✅ It also DELETED a novel composite: the speed-threshold version needed one, this does not, so
 ordinary angle snapping (Blender/3ds Max/AutoCAD, decades old) is the whole of its prior art.
+⛔⛔ **AND THE STEP IS AN EXPONENTIAL APPROACH, NOT A TIMED ARC** (defect 50, 2026-09-22):
+*"when I set increment to 45 degree and I rotate by one increment, the sway of other objects
+is bigger than if I move by two or more increments. why?"* ⭐⭐ The sway was RIGHT — an
+`easeInOut` has zero velocity at both ends and every newly crossed increment restarted it at
+`t = 0`, so crossing several detents relaunched the body from a standstill and it never
+reached the fast middle. ✅ `slerp(pose, target, 1 − exp(−dt/τ))` has no clock to restart, so
+retargeting is free and a farther target is covered proportionally faster.
 ⛔⛔⛔ **AND DEFECT 49 CAME OUT OF THE SAME PASS**: *"the dx delta position and the yaw rotation
 direction are inverted"*. ⭐⭐ **The report named the wrong rule** — the free yaw was swept over
 408 camera positions and inverted at NONE; the **twist on an aligned body** inverted at **12 of

@@ -127,7 +127,11 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
-import { RotationTally, incrementRadians } from "../input/rotation_increment";
+import {
+  RotationFollower,
+  RotationTally,
+  incrementRadians,
+} from "../input/rotation_increment";
 import { taperTop } from "../core/frustum";
 import {
   alignedFaceOf,
@@ -3611,7 +3615,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * body stranded mid-arc with its constraint still claiming it had landed.
    */
   const rotationTally = new RotationTally<ObjectId>();
-  const settleSnaps = new AlignSnaps<ObjectId>();
+  /**
+   * ⭐⭐⭐ **THE CHASE TOWARD THE CURRENT DETENT — an exponential approach, not a timed arc.**
+   *
+   * ⛔⛔ **IT REPLACED AN `AlignSnaps` FLIGHT ON 2026-09-22, AND THE REASON WAS A DEVICE
+   * REPORT ABOUT THE SWAY**: *"when I set increment to 45 degree and I rotate by one increment,
+   * the sway of other objects is bigger than if I move by two or more increments."* ⚠ The sway
+   * was right. An `easeInOut` over a fixed window has ZERO velocity at both ends, and every
+   * newly crossed increment restarted it at `t = 0` — so crossing several detents relaunched the
+   * body from a standstill again and again. ⭐ An exponential has no clock to restart.
+   */
+  const rotationFollower = new RotationFollower<ObjectId>();
+
 
   /**
    * ⭐⭐⭐ **ADVANCE THE BODY TO THE INCREMENT THE FINGER IS IN NOW.**
@@ -3631,10 +3646,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * function used to consult is **deleted** rather than retuned: it was answering a question
    * that only existed because the body was allowed to drift off the increment.
    *
-   * ⚠ **THE ANIMATION RETARGETS, IT DOES NOT QUEUE.** `AlignSnaps.start` REPLACES this body's
-   * flight, and it is started from the pose the body actually holds now — so a fast drag that
-   * crosses four boundaries in one frame goes to the fourth, from wherever it had reached.
-   * ⛔ A backlog is unrepresentable, which is exactly what formulation 1 could not say.
+   * ⚠ **THE ANIMATION RETARGETS, IT DOES NOT QUEUE**, and since 2026-09-22 retargeting is
+   * free: the follower is an exponential approach with no start time, so moving the target
+   * neither restarts a curve nor throws away the body's speed. ⛔ A backlog is unrepresentable,
+   * which is exactly what formulation 1 could not say.
    *
    * ⛔ A body whose ALIGNMENT is travelling is skipped: the alignment is landing a constraint
    * the user asked for and must win, and two animations writing one orientation is the fight.
@@ -3646,13 +3661,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     const step = rotationTally.advance(id, inc);
     const mesh = meshOf.get(id);
     if (step === null || !mesh) return;
-    const from = modelOrientation(mesh);
-    const to = qmul(step, from);
-    const stepMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
-    // ⚠ At `0` the slider means *no animation*, exactly as it does for the camera and the
-    // alignment — the body still lands on the increment, it simply arrives at once.
-    if (stepMs > 0) settleSnaps.start(id, from, to, performance.now());
-    else setModelOrientation(mesh, to);
+    // ⭐ The target simply moves. There is no clock to restart, so a body already chasing a
+    // detent keeps every bit of the speed it had — which is the whole point of the change.
+    rotationFollower.push(id, step, modelOrientation(mesh));
   };
 
   /**
@@ -4940,17 +4951,32 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // nothing, so asking every frame costs a comparison and cannot repeat a step.
     for (const g of held.values()) advanceRotation(idOf.get(g.mesh));
 
-    // ⭐⭐ **THE INCREMENT'S STEP**, advanced with the alignment snaps and on the same easing.
-    // ⚠ A body cannot be in both: `settleRotation` refuses to start one while an alignment is
-    // travelling, so these two never write the same orientation in one frame.
-    for (const step of settleSnaps.advance(
-      now,
-      cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
-      easeInOut,
-      (id) => meshOf.has(id),
-    )) {
-      const mesh = meshOf.get(step.id);
-      if (mesh) setModelOrientation(mesh, step.orientation);
+    // ⭐⭐ **THE INCREMENT'S CHASE** — an exponential approach, advanced with the alignment
+    // snaps. ⚠ A body cannot be in both: `advanceRotation` refuses to start one while an
+    // alignment is travelling, so these two never write the same orientation in one frame.
+    //
+    // ⭐⭐⭐ **τ IS THE ALIGNMENT SNAP'S WINDOW OVER THREE**, so *essentially arrived* still takes
+    // about that window — an exponential covers 95% in 3τ. ⛔ Borrowed rather than added, and
+    // borrowable because it is the same KIND of number: how long a discrete, hand-requested
+    // settle should take. ⚠ At `0` the slider means *arrive at once*, as it does everywhere.
+    {
+      // ⛔⛔ **`dtSec` IS THE LOOP'S OWN, NOT A SECOND CLOCK.** The first draft declared its own
+      // `lastFrameMs` here — which the render loop had already advanced sixty lines above, so
+      // `now - lastFrameMs` would have been **zero every frame** and the follower would never
+      // have moved at all. ⚠ A silent freeze, caught by the compiler refusing the redeclaration
+      // rather than by anything looking. ⭐ *One clock, `performance.now()`, as everywhere else.*
+      for (const step of rotationFollower.advance(
+        dtSec * 1000,
+        (cfg.cameraResetMs * ALIGN_SNAP_FRACTION) / 3,
+        (id) => {
+          const m = meshOf.get(id);
+          return m ? modelOrientation(m) : null;
+        },
+        (id) => meshOf.has(id),
+      )) {
+        const mesh = meshOf.get(step.id);
+        if (mesh) setModelOrientation(mesh, step.orientation);
+      }
     }
 
     // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1/C2, checked once per frame.

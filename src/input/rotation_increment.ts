@@ -41,7 +41,15 @@
  * ⛔ ENGINE-FREE, and the decision lives here rather than in `render/scene.ts`: the binding
  * lesson of 2026-09-19 is that *a rule written in `scene.ts` is a rule nothing can interrogate*.
  */
-import { IDENTITY, qFromAxisAngle, qmul, type Quat, type Vec3 } from "../core/vec";
+import {
+  IDENTITY,
+  qAngle,
+  qFromAxisAngle,
+  qSlerp,
+  qmul,
+  type Quat,
+  type Vec3,
+} from "../core/vec";
 
 /**
  * ⭐⭐ The increment in radians, or `null` when the mechanism is **off**.
@@ -167,5 +175,122 @@ export class RotationTally<Id> {
    */
   clear(id: Id): void {
     this.byBody.delete(id);
+  }
+}
+
+/**
+ * ⭐⭐⭐ **HOW MUCH OF THE REMAINING DISTANCE TO COVER THIS FRAME** — an exponential approach.
+ *
+ * `1 − exp(−dt/τ)`, which is the standard smooth-damp and has three properties this needs:
+ *
+ * 1. ⭐⭐ **FRAME-RATE INDEPENDENT.** A bare `lerp(pose, target, 0.2)` per frame moves twice as
+ *    far per second at 120 Hz as at 60. ⚠ This project ships on tablets whose frame rate is not
+ *    a constant, and a feel that changes with it is not a feel anyone can tune.
+ * 2. ⭐⭐⭐ **VELOCITY-CONTINUOUS, WHICH IS THE WHOLE REASON IT IS HERE.** The speed depends only
+ *    on how far away the target is, so **changing the target mid-flight costs nothing** — there
+ *    is no clock to restart and no curve to re-enter.
+ * 3. ⭐ **A FARTHER TARGET MOVES FASTER**, in proportion. Four increments are covered about four
+ *    times as fast as one, which is what a hand expects and what the previous animation got
+ *    exactly backwards.
+ *
+ * ⛔⛔⛔ **THE DEFECT THIS REPLACES, device-reported 2026-09-22**: *"when I set increment to 45
+ * degree and I rotate by one increment, the sway of other objects is bigger than if I move by
+ * two or more increments. why?"* ⚠ The sway was telling the truth. The step used to be an
+ * `easeInOut` over a fixed window, whose velocity is **zero at both ends**; every newly crossed
+ * increment RESTARTED that curve at `t = 0`, so a body crossing several detents was relaunched
+ * from a standstill again and again and never reached the fast middle. ⭐ One increment played
+ * the whole curve and peaked near 525°/s; several kept stalling and crawled. ⛔ So *more*
+ * increments moved the body *less*, and the sway — which scales with measured °/s — reported it
+ * faithfully. ⭐⭐ `METHOD`: *a second symptom that contradicts your theory is worth more than a
+ * third that confirms it.*
+ *
+ * @returns a fraction in `[0, 1]`; `0` when there is nothing to do or the input is unusable.
+ */
+export function approachFraction(dtMs: number, tauMs: number): number {
+  if (!Number.isFinite(dtMs) || dtMs <= 0) return 0;
+  // ⛔ A zero or unusable time constant means *arrive at once*, which is what `0` already means
+  // for the camera reset and the alignment snap. ⚠ Not a refusal: it is a legitimate end of the
+  // slider, and returning 0 instead would freeze the body short of its own detent.
+  if (!Number.isFinite(tauMs) || tauMs <= 0) return 1;
+  return 1 - Math.exp(-dtMs / tauMs);
+}
+
+/** ⚠ Within this of the target, the body is put ON it and the follower forgets it. */
+const ARRIVED_RAD = 1e-4;
+
+/**
+ * ⭐⭐⭐ **THE BODY'S CHASE TOWARD ITS CURRENT DETENT** — one target per body, no clock.
+ *
+ * ⛔⛔ **IT REPLACED AN `AlignSnaps` FLIGHT, AND THE DIFFERENCE IS THE ABSENCE OF `t0`.** A
+ * fixed-window animation has to be restarted to be retargeted, and restarting an eased curve
+ * throws away the speed the body had. ⚠ Here the target is simply a different quaternion on the
+ * next frame; nothing else changes, so nothing stalls.
+ *
+ * ⭐ It also cannot lag: the target is always the increment the finger is in, so a fast drag
+ * that crosses four boundaries sets a target four increments away and the body covers it about
+ * four times as fast. There is no queue to drain.
+ */
+export class RotationFollower<Id> {
+  private readonly target = new Map<Id, Quat>();
+
+  /**
+   * Compose a world-frame `step` onto this body's target, seeding from `current` if the body
+   * was not already chasing one.
+   *
+   * ⛔ Composed on the LEFT, matching every other rotation in this codebase — on the right it
+   * would be the body's own frame and would turn it about the wrong axes.
+   */
+  push(id: Id, step: Quat, current: Quat): void {
+    this.target.set(id, qmul(step, this.target.get(id) ?? current));
+  }
+
+  /** ⚠ Is this body chasing a detent? */
+  has(id: Id): boolean {
+    return this.target.has(id);
+  }
+
+  /** ⚠ Diagnostics and the HUD. */
+  get size(): number {
+    return this.target.size;
+  }
+
+  /** ⭐ Drop this body's chase where it stands — for every rule that takes the body away. */
+  cancel(id: Id): void {
+    this.target.delete(id);
+  }
+
+  /**
+   * ⭐⭐ Advance every body one frame, and report the pose each must be given.
+   *
+   * ⛔ **IT LANDS EXACTLY.** An exponential never mathematically arrives, so within
+   * `ARRIVED_RAD` the body is put ON the target and the entry is forgotten. ⚠ Without that the
+   * follower would run for ever at a micro-radian a frame, and `has()` would never go false —
+   * which other rules read to decide whether this mechanism is busy.
+   */
+  advance(
+    dtMs: number,
+    tauMs: number,
+    current: (id: Id) => Quat | null,
+    isAlive: (id: Id) => boolean = () => true,
+  ): { id: Id; orientation: Quat; done: boolean }[] {
+    const out: { id: Id; orientation: Quat; done: boolean }[] = [];
+    // ⚠ Snapshot the keys: landing deletes, and deleting from a Map while iterating it is the
+    // pattern that silently skips entries.
+    for (const id of [...this.target.keys()]) {
+      if (!isAlive(id)) {
+        this.target.delete(id);
+        continue;
+      }
+      const to = this.target.get(id);
+      const from = current(id);
+      if (to === undefined || from === null) continue;
+      if (qAngle(qmul(to, [from[0], -from[1], -from[2], -from[3]])) <= ARRIVED_RAD) {
+        this.target.delete(id);
+        out.push({ id, orientation: to, done: true });
+        continue;
+      }
+      out.push({ id, orientation: qSlerp(from, to, approachFraction(dtMs, tauMs)), done: false });
+    }
+    return out;
   }
 }

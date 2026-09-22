@@ -18,10 +18,11 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **978 golden vectors,
-all passing** (37 → … → 861 → 974 → **978**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **`974` WAS STALE**: MEASURED 2026-09-22 the suite is **970**, +8 for the new `doc_links` guard — the `D66`–`D70` pass DELETED vectors as well as adding them, and no front door followed it down. ⭐ *Amend the ledger, never a bare number*, aimed at this file.
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1017 golden vectors,
+all passing** (37 → … → 974 → 978 → **1017**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE**, and this one did twice — `974`, then `978`. ⭐ `README.md` points here rather than carrying its own: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW STILL TO COME**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`** → [`../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md) ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — the roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`, repealing `D58`/`D61`/`D64`/`D65`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
+⛔⛔ **ROTATION INCREMENTS ARE ON TRIAL (`D73`), AFTER FOUR FORMULATIONS** — three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ Ships at **0** → [`queue_notes/IN3.md`](queue_notes/IN3.md)
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
@@ -151,7 +152,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | an aligned object's turn lost the sway | **1** |
 | the twist killed the alignment snap | **1** |
 | ⛔ **`IN3`** — the twist's `dx` SIGN, inverted at half of all alignments | **1** |
-| ⭐⭐ **THE TOTAL** | **= 49** |
+| ⛔ **`D73`** — a restarted ease stalled, so MORE increments moved the body LESS | **1** |
+| ⭐⭐ **THE TOTAL** | **= 50** |
 
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16). Each defect's account is in
 [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), unrewritten; the table above

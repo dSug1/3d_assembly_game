@@ -3,13 +3,17 @@
 > **STATUS** · ⭐ active · **OWNS** · everything a finger touches, up to the point an
 > object's transform changes
 > **READ IF** · you are building or debugging any gesture
-> **LAST VERIFIED** · 2026-09-19
+> **LAST VERIFIED** · 2026-09-22
+
+⚠⚠ **A SECOND TRIAL**: **rotation increments** (`D73`) — `rotationIncrementDeg` 0–45/5, at
+**0** = the current build; above zero a held body is **always on an increment**. ⛔ Four
+formulations, three rejected by a hand; defects **49** and **50** came with it, none judged
+→ [`../00_CORE/queue_notes/IN3.md`](../00_CORE/queue_notes/IN3.md).
 
 ⚠⚠ **A TRIAL IS LIVE**: the **approach swing** (`D63`), with its own boot scene of two square
-pre-aligned parts. ✅ **FEEL ACCEPTED** — *"The feel is ok"* (2026-09-21, `7413c0e`,
-defaults), which accepts the gap-parameterised lean too. ⚠ Unjudged: whether it **helps**, and
-`approachRetargetsOrbit`'s case 2. ⛔ Read [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md)
-before touching it — it carries the delete list if it is discarded.
+pre-aligned parts. ✅ **FEEL ACCEPTED** — *"The feel is ok"* (2026-09-21). ⚠ Unjudged: whether
+it **helps**. ⛔ Read [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md) first — it
+carries the delete list.
 
 ⭐⭐ **Design of record → [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md)**,
 the owner's revision-5 specification. ⛔⛔ **READ [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)

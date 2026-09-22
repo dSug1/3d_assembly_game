@@ -12,7 +12,12 @@
  * backwards** — and a fifth formulation that broke either would redden, whatever else it fixed.
  */
 import { describe, expect, it } from "vitest";
-import { RotationTally, incrementRadians } from "../src/input/rotation_increment";
+import {
+  RotationFollower,
+  RotationTally,
+  approachFraction,
+  incrementRadians,
+} from "../src/input/rotation_increment";
 import {
   IDENTITY,
   qAngle,
@@ -219,5 +224,112 @@ describe("⛔⛔ THE SIGNS THE INCREMENT PATH RESTATES", () => {
       -dy * r,
     );
     expect(apart(screenPlaneRotation(base, frame, dx, dy, r), wrongOrder)).toBeGreaterThan(5);
+  });
+});
+
+describe("⭐⭐⭐ THE EXPONENTIAL APPROACH — retargeting costs nothing (2026-09-22)", () => {
+  /**
+   * The owner: *"when I set increment to 45 degree and I rotate by one increment, the sway of
+   * other objects is bigger than if I move by two or more increments. why?"*
+   *
+   * ⛔⛔ **THE SWAY WAS TELLING THE TRUTH.** The step used to be an `easeInOut` over a fixed
+   * window, whose velocity is zero at BOTH ends, and every newly crossed increment restarted
+   * that curve at `t = 0`. ⚠ So a body crossing several detents was relaunched from a standstill
+   * over and over and never reached the fast middle — *more* increments moved it *less*, and the
+   * sway, which scales with measured °/s, reported exactly that.
+   */
+  const TAU = 40;
+  const Q = (deg: number): Quat => qFromAxisAngle(Y, deg * DEG);
+
+  it("⭐ covers more of the gap the longer the frame, and is bounded", () => {
+    expect(approachFraction(0, TAU)).toBe(0);
+    expect(approachFraction(TAU, TAU)).toBeCloseTo(1 - Math.exp(-1), 9);
+    expect(approachFraction(1e6, TAU)).toBeCloseTo(1, 9);
+    expect(approachFraction(10, TAU)).toBeLessThan(approachFraction(20, TAU));
+  });
+
+  it("⭐⭐ IS FRAME-RATE INDEPENDENT — two half-frames equal one whole one", () => {
+    // ⛔ A bare `lerp(pose, target, 0.2)` per frame moves twice as far per second at 120 Hz as
+    // at 60. ⚠ This ships on tablets whose frame rate is not a constant, and a feel that
+    // changes with it is not a feel anyone can tune.
+    const one = approachFraction(16, TAU);
+    const half = approachFraction(8, TAU);
+    // Remaining fractions multiply: (1-a)(1-a) === (1-b).
+    expect((1 - half) * (1 - half)).toBeCloseTo(1 - one, 12);
+  });
+
+  it("⚠ a zero or unusable τ means ARRIVE AT ONCE, not freeze", () => {
+    // ⛔ Returning 0 would strand the body short of its own detent, with the slider at a value
+    // that reads as *no animation* everywhere else in this product.
+    for (const bad of [0, -1, NaN]) expect(approachFraction(16, bad)).toBe(1);
+    for (const bad of [-1, NaN, Infinity]) expect(approachFraction(bad, TAU)).toBe(0);
+  });
+
+  it("⭐⭐⭐ RETARGETING MID-FLIGHT SPEEDS THE BODY UP — the defect, inverted", () => {
+    // ⛔⛔ **THE VECTOR THE OLD ANIMATION WOULD HAVE FAILED.** With a restarted `easeInOut` the
+    // frame after a retarget moved almost NOTHING, because the curve had been re-entered at its
+    // zero-velocity start. ⭐ Here a farther target means a bigger step, always.
+    const f = new RotationFollower<string>();
+    let pose: Quat = IDENTITY;
+    const cur = () => pose;
+
+    f.push("a", Q(45), pose);
+    for (const st of f.advance(16, TAU, cur)) pose = st.orientation;
+    const beforeRetarget = apart(IDENTITY, pose);
+    const stepBefore = beforeRetarget;
+
+    // A second increment arrives while the first is still travelling.
+    const poseAtRetarget = pose;
+    f.push("a", Q(45), pose);
+    for (const st of f.advance(16, TAU, cur)) pose = st.orientation;
+    const stepAfter = apart(poseAtRetarget, pose);
+
+    expect(stepAfter).toBeGreaterThan(stepBefore);
+  });
+
+  it("⭐⭐ a FARTHER target is covered proportionally faster", () => {
+    const near = new RotationFollower<string>();
+    const far = new RotationFollower<string>();
+    let p1: Quat = IDENTITY;
+    let p2: Quat = IDENTITY;
+    near.push("a", Q(45), p1);
+    far.push("a", Q(180), p2);
+    for (const st of near.advance(16, TAU, () => p1)) p1 = st.orientation;
+    for (const st of far.advance(16, TAU, () => p2)) p2 = st.orientation;
+    // ⚠ Four times the distance, four times the first step — which is what a hand expects and
+    // what the fixed-window animation got exactly backwards.
+    expect(apart(IDENTITY, p2) / apart(IDENTITY, p1)).toBeCloseTo(4, 1);
+  });
+
+  it("⛔ LANDS EXACTLY, and stops being busy", () => {
+    // ⚠ An exponential never mathematically arrives. Without an arrival test the follower would
+    // run for ever at a micro-radian a frame and `has()` would never go false — which other
+    // rules read to decide whether this mechanism is busy.
+    const f = new RotationFollower<string>();
+    let pose: Quat = IDENTITY;
+    f.push("a", Q(45), pose);
+    for (let i = 0; i < 400 && f.has("a"); i++) {
+      for (const st of f.advance(16, TAU, () => pose)) pose = st.orientation;
+    }
+    expect(f.has("a")).toBe(false);
+    expect(apart(IDENTITY, pose)).toBeCloseTo(45, 6);
+  });
+
+  it("⭐ `cancel` drops the chase, and a dead body takes its target with it", () => {
+    const f = new RotationFollower<string>();
+    f.push("a", Q(45), IDENTITY);
+    f.cancel("a");
+    expect(f.has("a")).toBe(false);
+
+    f.push("gone", Q(45), IDENTITY);
+    expect(f.advance(16, TAU, () => IDENTITY, () => false)).toEqual([]);
+    expect(f.has("gone")).toBe(false);
+  });
+
+  it("⭐ bodies are independent", () => {
+    const f = new RotationFollower<string>();
+    f.push("a", Q(45), IDENTITY);
+    expect(f.has("b")).toBe(false);
+    expect(f.size).toBe(1);
   });
 });

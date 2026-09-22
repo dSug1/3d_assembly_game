@@ -179,3 +179,41 @@ its ~25 vectors, or reverses it, and it is wired back.
 composition would still have passed with the direction reversed. *A sign is not tested by any
 amount of testing the magnitude*, inside the guard built for it. ✅ A direction sweep is now
 there, and the old mapping's inversion is kept as a counter-example in `anchor_rotate.test.ts`.
+
+## 50 — a restarted ease stalled, so MORE increments moved the body LESS *(2026-09-22)*
+
+> *"when I set increment to 45 degree and I rotate by one increment, the sway of other objects
+> is bigger than if I move by two or more increments. why?"* — the owner
+
+⭐⭐⭐ **THE REPORT WAS ABOUT THE SWAY AND THE SWAY WAS CORRECT** — which is the whole value of
+the entry. The sympathetic sway scales with the held body's measured °/s, so it was reporting,
+accurately, that the body turns **slower when it crosses several detents than when it crosses
+one**. ⚠ Nothing in the sway's own tunables was wrong, and a session that went looking there
+would have found nothing and tuned something that was right.
+
+⛔⛔ **THE CAUSE: AN EASED ANIMATION THAT IS RESTARTED NEVER DELIVERS ITS MIDDLE.** The
+increment step was an `easeInOut` over a fixed window — `t²(3−2t)`, whose velocity `6t(1−t)` is
+**zero at both ends** and peaks at 1.5× the average halfway through. Every newly crossed
+increment called `AlignSnaps.start`, which replaces the flight and resets `t0`. ⭐ So:
+
+* **one 45° increment, then a stop** — the curve ran to completion: average 350°/s, peak
+  ≈ **525°/s** against a 90°/s sway reference, so the sway saturated;
+* **two or more in quick succession** — each crossing re-entered the curve at `t = 0`, where the
+  velocity is **zero**, so the body was relaunched from a standstill over and over and never
+  reached the fast middle.
+
+✅ **FIXED BY REMOVING THE CLOCK.** `RotationFollower` is an exponential approach —
+`slerp(pose, target, 1 − exp(−dt/τ))` — whose speed depends only on how far the target is. There
+is no curve to re-enter and no `t0` to reset, so retargeting mid-flight costs nothing and a
+target four increments away is covered about four times as fast. ⚠ τ is the alignment snap's own
+window over three, borrowed rather than added: an exponential covers 95% in 3τ.
+
+⭐⭐ `METHOD`: *a second symptom that contradicts your theory is worth more than a third that
+confirms it.* The rotation itself looked right to me, and it was the SWAY — a decorative rule
+three steps downstream — that carried the measurement proving it was not.
+
+⚠⚠ **AND THE FIX ALMOST SHIPPED AS A SILENT FREEZE.** The first wiring declared its own
+`lastFrameMs` in the render loop, which already had one and had already advanced it earlier in
+the same frame — so `now - lastFrameMs` would have been **zero every frame** and the follower
+would never have moved at all. ⭐ Caught by the compiler refusing the redeclaration, not by
+anything looking at the screen: *one clock, `performance.now()`, as everywhere else in the file.*
