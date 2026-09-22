@@ -123,7 +123,8 @@ had never been built.
 ⭐ Twenty-one defects and fragilities were found on 2026-09-17 by **reading the source**, not by
 a finger: the full account is [`AUDIT_2026-09-17.md`](AUDIT_2026-09-17.md).
 
-⛔⛔ **NONE OF THEM IS ADDED TO THE `BY FINGER` TOTAL, WHICH STAYS AT 48.** That number means
+⛔⛔ **NONE OF THEM IS ADDED TO THE `BY FINGER` TOTAL, WHICH STANDS AT 50** — 49 by finger, one by
+composing a measurement with a threshold. That number means
 something precise — *found by a hand, invisible to a green suite* — and it is the whole of this
 project's argument for spending sessions on the glass. ⚠ Diluting it with findings of a
 different KIND would destroy the only statistic that argument rests on.

@@ -5,9 +5,11 @@
 > **READ IF** · you are building or debugging any gesture
 > **LAST VERIFIED** · 2026-09-22
 
-⚠⚠ **A SECOND TRIAL**: **rotation increments** (`D73`) — `rotationIncrementDeg` 0–45/5, at
-**0** = the current build; above zero a held body is **always on an increment**. ⛔ Four
-formulations, three rejected by a hand; defects **49** and **50** came with it, none judged
+✅✅ **ROTATION INCREMENTS ARE JUDGED AND ACCEPTED** (`D73`, 2026-09-22) — *"the rotation
+increments are judged and this is ok"*. Above zero a held body is **always on an increment**.
+⛔ Four formulations, three rejected by a hand; defects **49** and **50** came with it and the
+look covers both. ⚠ Two things it does not cover: **`dy` no longer twists**, and which increment
+should be the DEFAULT — `rotationIncrementDeg` still ships at **0**
 → [`../00_CORE/queue_notes/IN3.md`](../00_CORE/queue_notes/IN3.md).
 
 ⚠⚠ **A TRIAL IS LIVE**: the **approach swing** (`D63`), with its own boot scene of two square
@@ -49,34 +51,27 @@ model and so did not wait on `3D1`:
 **656** at a suite of 975, and it goes DOWN whenever a rule is deleted.
 
 ⭐⭐ **APPROACH & MATE — THE HIGHLIGHTS ARE BUILT, THE APPROACH IS NOT** (`A16`/`A17`, 2026-09-17):
-white capture contours on a near pair (**translating + within `4L`** — ⚠ the alignment was a
-condition for a few hours as `D48` and the owner **removed it**), every aligned body keeping its
-FollowerFace **and** a coloured body outline, and a shake on a Pioneer releasing **all** its
-followers through a two-way index built to scale (`core/alignment_links.ts`).
-✅ Also built: a turned Pioneer **releases its cyan followers and rotates its orange ones, down a
-chain** (`input/pioneer_cascade.ts`); **no cycles**; and **`frozen`**, enforced at
+white capture contours on a near pair (**translating**, and ⚠ the alignment was a condition for a
+few hours as `D48` before the owner **removed it**), every aligned body keeping its FollowerFace
+**and** a coloured body outline, a shake on a Pioneer releasing **all** its followers through a
+two-way index (`core/alignment_links.ts`), a turned Pioneer releasing its cyan followers and
+rotating its orange ones **down a chain**, **no cycles**, and **`frozen`**, enforced at
 `object_model.ts`'s writers and carried by the base plate.
-✅✅ **THE CAPTURE IS A SURFACE GAP SINCE 2026-09-18** (`D49`/`D50`): the white pair is decided by the **gap between the bodies' surfaces**, not their centres, against a threshold in **millimetres on the glass** scaled by camera distance. ⭐ Geometry is **computed at spawn** (`core/collision_shape.ts` for the gap, `core/mesh_topology.ts` for the outlines and face markers) — no bounding boxes, and no second source of truth in Blender. ⛔ The approach DIRECTION stays centre-to-centre. ⚠ `captureOffsetMm` has a **slider** → spec §19–§20.
+✅✅ **THE CAPTURE IS A SURFACE GAP SINCE 2026-09-18** (`D49`/`D50`): white is decided by the **gap
+between the bodies' surfaces**, not their centres, against a threshold in **millimetres on the
+glass** scaled by camera distance, on a slider. ⭐ Geometry is **computed at spawn** — no bounding
+boxes, and no second source of truth in Blender. ⛔ The approach DIRECTION stays centre-to-centre,
+because face-to-face collapses at contact → spec §19–§20.
 ⛔⛔ **NOT built**: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
-⭐ Ordered device lists, with what falsifies each: §12–§21 of
-[`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md).
-⛔⛔ **AND THREE DEVICE REPORTS EACH FOUND SOMETHING NO TEST HERE COULD**, all on 2026-09-17, all
-now in `METHOD`: *a fix that lands beside the defect leaves a green suite and a broken product*;
-*when two readings fit one device report, name both*; *a second symptom that contradicts your
-theory is worth more than a third that confirms it.* ⭐ The three accounts, unrewritten, are
-§14 of [`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md) — moved out of this front door
-2026-09-18 when it reached its byte cap.
-⭐ **The earlier design** (`D46`,
-[`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md)): capture radius 1.25× the object,
-hold-off 1.1×, white contours, docking by angle, anti-align + translate-snap. ✅ The owner answered the ten questions on the same day: the mate's second stack entry and the
-anti-align's missing DOF are **deferred to complex geometry** (true for cubes), the old
-`TargetPosition` half is **superseded**, and a mate is broken by **pulling it apart with two
-fingers** (`D47`). ⭐⭐ The **fine approach is two-handed** — a finger on each object, moving together along their
-centre line — which is the break gesture with the sign reversed, and which makes roll/depth
-irrelevant while docking because a finger on the other object is a second HOLDER, not a
-`SECOND`. ✅ **Every question is answered** (2026-09-17) — one white marks both capture and docking for
-now, and §11 keeps the parked improvements on the record. ⛔ The build order is `3D2`'s **seat
-before the break**, because a mate must hold POSITION or breaking is just moving.
+⭐ The design (`D46`), the ten owner answers it settled, and ordered device lists with what
+falsifies each: §11–§21 of [`spec/APPROACH_AND_MATE.md`](spec/APPROACH_AND_MATE.md).
+⭐⭐ The one to carry here: **the fine approach is TWO-HANDED** — a finger on each object, moving
+together along their centre line — which is the break gesture with its sign reversed, and which
+makes roll and depth irrelevant while docking, because a finger on the other body is a second
+HOLDER and not a `SECOND`. ⛔ The build order is `3D2`'s **seat before the break**: a mate must
+hold POSITION, or breaking is just moving.
+⛔⛔ **AND THREE DEVICE REPORTS EACH FOUND SOMETHING NO TEST HERE COULD**, all on 2026-09-17 and
+all now in `METHOD`; the accounts, unrewritten, are §14 of that spec.
 
 ⭐⭐⭐ **ONE INPUT MODEL SINCE `D40` (2026-09-17)**: tap a face on another object to align the
 held one, parallel, one alignment at a time, undone by a shake **or** a re-tap. ⛔ Forks A and
@@ -145,35 +140,24 @@ that row that waits. `IN5` (measurement), `IN6` undo, `IN7` haptics.
 ⭐ `IN11` (is 2bis path-dependent?) is unblocked too and needs no device.
 
 ⛔⛔ **THE OWNER'S LATER DECISIONS SUPERSEDE THE SPEC, AND THEY LIVE IN
-[`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)** — read it BEFORE the spec. ⭐ **A1 → A4**: constraint
-eviction left the double-tap (which is now purely the camera fly) and, after `D14` gave the
-roll channel back to a real control, left the roll too — it is a **quick BACK-AND-FORTH**,
-one touchpoint, ≥2 reversals in a window, reusing the sway's MEASURED reversal detector.
-⛔ The flick test must be skipped once one reversal is seen, or an abandoned shake ADDS a
-constraint instead of removing one. ⭐ **A1 §4 (`D13`)**: eviction **spares `MATE` entries** — *one gesture, one
-intention*. ⭐ **A2**: the scene holds THREE objects, not two. ⭐⭐ **A7 (`D18`)**: **every object gesture stands on a GRAVITY FRAME** —
-yaw about the world vertical, pitch about the horizontal screen-x, roll and depth about the
-flattened view direction, and translation's dy is a true vertical. ⛔ The argument is
-**orthogonality**: about the camera's axes, roll stops being independent of yaw as the
-camera tilts, and no gain fixes a basis that is not a basis. ⭐ One basis for translation
-AND rotation.
-⭐⭐ **A6 (`D17`)**: **depth is a COMMON VERTICAL DRAG** — one finger on the object, one
-ANYWHERE, both travelling in y together. ⛔ It replaced A5’s pinch because a hand found the
-hole: two fingers will not fit on a SMALL object, and pushing a part away shrinks it, so the
-pinch **destroyed its own affordance as it succeeded**. ⭐⭐ It shares rule 6’s configuration:
-**common mode is depth, differential mode is rule 6**.
-⚠ **A5 (`D16`)**, its geometry still standing: **two touchpoints on
-the SAME object are a DEPTH PINCH** — it supersedes `D10`, closes §5's last undefined
-configuration, and came from a HAND rather than a document. ⛔⛔ **Depth is HORIZONTAL** —
-the view axis flattened onto the ground plane — so **an object's height never changes**:
-gravity is the primary constraint here, and a camera looking down makes the camera ray point
-into the floor. Its gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD
-touchpoint. ⛔⛔ **A3**: roll **drives the free DOF of
-an ANCHORED object** — the spec forbade it on a reason that is conditional on camera pose
-and false when the camera looks along the constraint axis, which is exactly where 2sexte's
-own screen mapping DEGENERATES. The two are complementary charts over one DOF, not rivals.
-⚠ A3 puts the **eviction gesture back under review**: roll is now a legitimate control on
-precisely the objects eviction applies to.
+[`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)** — read it BEFORE the spec. ⚠ The table above says what
+each one decided; what follows is only what a later rule gets **wrong** if it is not carried.
+
+* ⭐ **`A4`** — the flick test is **skipped once one reversal is seen**, or an abandoned shake ADDS
+  a constraint instead of removing one. ⭐ **`A1` §4 (`D13`)**: eviction **spares `MATE` entries**,
+  *one gesture, one intention*. ⭐ **`A2`**: the scene holds THREE objects, not two.
+* ⭐⭐ **`A7` (`D18`)** — the argument for the gravity frame is **orthogonality**, not tidiness:
+  about the camera's own axes roll stops being independent of yaw as the camera tilts, and **no
+  gain fixes a basis that is not a basis**. ⭐ One basis for translation AND rotation.
+* ⛔⛔ **`A5` (`D16`)** — **depth is HORIZONTAL**, the view axis flattened onto the ground, so **an
+  object's height never changes**: gravity is the primary constraint, and a camera looking down
+  would send the ray into the floor. ⚠ `IN2`'s `IGNORED` role moved to the THIRD touchpoint here.
+  ⛔ Its pinch trigger died because **two fingers will not fit on a SMALL object, and pushing a
+  part away shrinks it** — the gesture destroyed its own affordance as it succeeded.
+* ⛔⛔ **`A3`** — roll drives the free DOF of an ANCHORED object. The spec forbade it for a reason
+  that is false exactly where 2sexte's own screen mapping degenerates: **complementary charts over
+  one DOF, not rivals.** ⚠ It puts the eviction gesture back under review, roll now being a
+  legitimate control on precisely the objects eviction applies to.
 
 ⭐⭐ **EVERY GESTURE IS NOW TAGGED WITH ITS PROVENANCE** (2026-09-15, `D11`,
 `CONSTRAINTS` §10) — prior art with a dated citation, an internal composition, or ⚠ novel
@@ -336,8 +320,16 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
 | `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⛔ One exception since `A15`: `relatchOnOrphan`, on a discrete event only |
 | ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ The superseded text, kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
-| `alignment.ts` · `face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`, and it was `fork_c.ts` until the forks were deleted): the **parallel** face align frozen to a world direction, the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⭐ Keeping the set in one file is what made deleting the other two forks a `rm` plus a barrel line |
-| `holder_binding.ts` | ⭐⭐⭐ `A15` — is the object still UNDER the finger carrying it? A raycast at the second touchpoint's lift, and the unselect **deferred** to the next input event. ⚠ Reachable only because depth moves the object while the holder holds still |
+| `alignment.ts` · ⚠ `core/face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`, and it was `fork_c.ts` until the forks were deleted): the **parallel** face align frozen to a world direction, the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⭐ Keeping the set in one file is what made deleting the other two forks a `rm` plus a barrel line |
+| ⛔ ~~`holder_binding.ts`~~ | **DELETED 2026-09-18** (`D54`) — `A15`'s *is the object still UNDER the finger?* raycast. ⭐ `IN2`'s latch has no exceptions again |
+| `align_snap.ts` | `D45`'s eased slerp into the aligned pose — ⛔⛔ **one snap PER BODY**, not one slot for the scene: the audit found a second alignment abandoning the first **mid-arc**, still wearing its constraint and its markers |
+| `rotation_increment.ts` | ⭐⭐⭐ `D73` — a held body is **always ON an increment**, jumping several at once so a backlog cannot exist. ⚠ Its step is an **exponential approach**: no clock to restart (defect 50) |
+| `pinned_pioneer.ts` | ⭐⭐ `D51` — a held **Pioneer** that steers instead of being carried: at `pioneerTranslates = 0` its finger gives the Follower **both** depth and roll, breaking `A16`'s one-axis rule on purpose |
+| `pioneer_cascade.ts` | a turned Pioneer **releases its cyan followers and rotates its orange ones, down a chain** (`D42`/`D70`), with **no cycles**. ⛔ It states this layer's rule: *a RULE in a render file is one nothing can interrogate* |
+| `highlight.ts` | the white **capture** contours — the pair's SURFACE gap (`D49`) in mm on the glass, and the shell that IS that threshold, inflated by **half** it so two whites touching means capture |
+| `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **two** exclusions: the body that CAUSED the kick, and (`D53`) any body with a finger on it |
+| `approach_swing.ts` | ⚠ **A TRIAL** (`D63`) — the camera leans around the join and returns **by construction**, an offset exactly zero at both ends → [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md), which carries its delete list |
+| `camera_reset.ts` | the double-tap's flight home, and the clock `align_snap` borrows a fraction of |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |
 | `orbit.ts` | rule 1's three-ring surface, monotone and bounded by the rings |

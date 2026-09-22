@@ -47,8 +47,8 @@ npm run build       # production bundle into dist/
 ## Where it stands (2026-09-22)
 
 ✅ Green: TypeScript + Babylon + Vite, **1017 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
-count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and the **974** that stood
-here was stale by four; 978 went stale the same way. (861 + 113 — ⭐ the
+count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
+both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
 773 + 83 for `D49`'s surface gap and its shell, 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the
 first pass to find defects by READING the source rather than by a finger, and 619 − 51 when forks
@@ -112,7 +112,7 @@ free, and a second one cannot be stacked — so zero-DOF, which froze an object 
 now unreachable **by construction** rather than by a guard.
 ✅✅ **CLOSED BY A DEVICE LOOK, 2026-09-17** — *"device pass ok, except these modifications"*,
 and all five are built (`D43`–`D45`, defects 47–48). ⚠ The corrections themselves have not
-been re-judged, except the slerp's speed. ⛔ **NOW ON `1.0.11-Approach-and-Mate-v0`**, and the game still
+been re-judged, except the slerp's speed. ⛔ **NOW ON `1.0.22-`**, and the game still
 cannot assemble anything: the alignment is PARALLEL, an orienting rule, and nothing pushes a
 `MATE`. ✅ **BUILT SO FAR — the HIGHLIGHTS ONLY** (`A16`/`A17`,
 [`Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)
@@ -180,9 +180,10 @@ is worth more than a third that confirms it* — a stale highlight produced TWO 
 correct and twice-vectored; the shake report is what inverted the diagnosis, and the cause was
 using the correct retire-by-membership pattern for one marker pool and the wrong one for
 another, in the same edit.
-⭐⭐⭐ **ROTATION INCREMENTS ARE ON TRIAL** (`D73`, 2026-09-22) — `rotationIncrementDeg`
-(0–45, step 5): **0 is the current build**, and above zero **the body is always ON an
-increment**. It advances a whole increment when the drag crosses a boundary and otherwise holds,
+✅✅ **ROTATION INCREMENTS ARE JUDGED AND ACCEPTED** (`D73`, 2026-09-22) — *"the rotation
+increments are judged and this is ok"*, which is rule 5 and the only thing that closes a change
+here. `rotationIncrementDeg` (0–45, step 5) **ships at 0**, and above zero **the body is always
+ON an increment**. It advances a whole increment when the drag crosses a boundary and otherwise holds,
 so a weak input simply stops it — there is nothing to correct and nothing to reverse.
 ⛔⛔ **FOUR FORMULATIONS, THREE REJECTED BY A HAND, AND THE REASONS BIND ANY FIFTH**: quantising
 the turn *as it happened* QUEUED the steps and lagged the finger (*"too much lag in the rotation
@@ -191,7 +192,10 @@ went; truncating back when the finger RESTED made it *"rotate back in the revers
 ⭐⭐ All three let the body reach a pose it was not allowed to hold and then argued about the way
 back — the fourth never leaves the increment, and **jumps several at once** when a fast drag
 crosses several, so a backlog is unrepresentable. ⚠ The cost, inherent and not tunable: the body
-advances in visible steps rather than tracking the finger → `src/input/rotation_increment.ts`.
+advances in visible steps rather than tracking the finger — ✅ judged and accepted
+→ `src/input/rotation_increment.ts`. ⚠ **What the look did NOT report on is `dy` no longer
+twisting** (defect 49's cost) and which increment should be the DEFAULT, the build still
+shipping the trial at **0**.
 ✅ It also DELETED a novel composite: the speed-threshold version needed one, this does not, so
 ordinary angle snapping (Blender/3ds Max/AutoCAD, decades old) is the whole of its prior art.
 ⛔⛔ **AND THE STEP IS AN EXPONENTIAL APPROACH, NOT A TIMED ARC** (defect 50, 2026-09-22):
@@ -280,7 +284,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Forty-eight defects, forty-seven of them BY FINGER, and none visible to a green
+⛔⛔ **Fifty defects, forty-nine of them BY FINGER, and none visible to a green
 suite.** ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
 total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
 project's argument for device passes. ⭐ The two do not compete: **the device finds what is

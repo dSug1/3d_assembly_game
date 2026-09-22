@@ -42,7 +42,7 @@ three-ring surface; pointer plumbing), and **`IN4`'s rule 6** translates a held 
 the screen plane — all closed by device look. ✅✅ **And the whole two-touchpoint set
 (`A10`–`A14`) closed 2026-09-16** — depth, the per-axis deadband, roll on the second
 touchpoint, **one touchpoint translating** while a second held still rotates.
-⛔ **`A15` owes its device look**; `IN3` is the only input row with unbuilt work left.
+⛔ **`A15` is DELETED** (`D54`): a holder keeps its object for its touchpoint's lifetime, so `IN2`'s latch has no exceptions again. `IN3` is the only input row with unbuilt work left.
 ✅✅ **`IN13` CLOSED** — three readings of the touchpoint assignment ran from ONE build across
 `1.0.5`–`1.0.7`, a hand chose the **tap toggle**, and the other two are deleted (`D28`).
 ⛔⛔ **Every one of those defects was found BY FINGER, and none was visible to a green

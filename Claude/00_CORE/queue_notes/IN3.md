@@ -1079,5 +1079,20 @@ tracking the finger. That is what a detent is.
   sway was right: a restarted `easeInOut` re-enters at zero velocity, so crossing several
   detents relaunched the body from a standstill. ✅ Replaced by an exponential approach.
 
-⛔ **A DEVICE LOOK IS OWED ON ALL OF IT.** Nothing here has been judged by a hand since the
-fourth formulation landed.
+⛔ ~~**A DEVICE LOOK IS OWED ON ALL OF IT.**~~ ✅✅ **CLOSED BY A DEVICE LOOK, 2026-09-22** —
+*"the build is working ok now"*, the owner, on the branch that carries the fourth formulation
+and both fixes. ⭐ It is the fourth formulation, defect **49**'s latched sign and defect
+**50**'s exponential step that a hand has now judged together.
+
+⭐⭐ **AND THE INCREMENTS THEMSELVES WERE NAMED**, asked for and given: *"the rotation increments
+are judged and this is ok"*. ⛔ That matters because this project has been caught by a general
+phrase before — `A15` was closed by *"everything is working ok"* and its three specific cases
+were never reported on individually. Here the feature under trial is named in the verdict.
+
+⚠ **TWO THINGS THE LOOK STILL DOES NOT COVER**, kept so nobody reads more into it than it says:
+
+* **`dy` no longer twists** — the channel the fourth formulation took away (defect 49's cost),
+  not reported on by name;
+* **which increment should be the DEFAULT.** `rotationIncrementDeg` still ships at **0**, so the
+  detents are reachable only from the slider or the URL. ⭐ A judged-good feature that is off by
+  default is a decision nobody has made yet, not a closed one — it is the owner's.
