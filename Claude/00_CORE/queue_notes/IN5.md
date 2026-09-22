@@ -105,6 +105,6 @@ wired). ⭐ It proved itself the same day: wiring `gainRoll` made the allowlist 
 and the guard failed until the entry was removed — the second direction it checks.
 
 ⭐ The narrative of every device pass is in
-[`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_IN1_device_passes.md);
-the rows' dossiers are [`../00_CORE/queue_notes/IN1.md`](../00_CORE/queue_notes/IN1.md)
-and [`../00_CORE/queue_notes/IN9.md`](../00_CORE/queue_notes/IN9.md).
+[`../../10_INPUT_TOUCH/history/2026-09-13_IN1_device_passes.md`](../../10_INPUT_TOUCH/history/2026-09-13_IN1_device_passes.md);
+the rows' dossiers are [`./IN1.md`](./IN1.md)
+and [`./IN9.md`](./IN9.md).

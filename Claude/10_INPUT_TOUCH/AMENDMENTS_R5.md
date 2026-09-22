@@ -404,7 +404,7 @@ every rule reads the same excess-only travel and nothing consumes a raw delta.
 reachability validator rule and `A9`'s separate band — four thresholds chosen to sit above a
 measurement, replaced by one radius.
 ⭐⭐ **The three tables — the costs, the application points and the deletions with their
-reasons — are in [`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)**,
+reasons — are in [`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md)**,
 moved 2026-09-16.
 
 ### ⛔⛔⛔ THE BAND GATES **ENTRY INTO MOTION**, NOT THE MOTION ITSELF
@@ -418,7 +418,7 @@ costs one sample. ⛔ The STATE machine is untouched, so A10's depth gate reads 
 before.
 ⭐ `METHOD`: *a threshold that guards a transition must not also tax the steady state.*
 ⭐⭐ **The report, the measurements and the before/after tables are in
-[`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)** — moved there
+[`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md)** — moved there
 2026-09-16 when this file hit its cap. ⚠ The tell was a complaint about **fluidity** rather
 than about speed or distance.
 
@@ -432,7 +432,7 @@ decides a STATE and emits no travel, ever, or a dropped frame could move an obje
 and *an asymmetry between two directions of the same test is about the EVIDENCE.*
 ⭐⭐ **The three device reports, the two wrong fixes that preceded it, and the boundary
 round-trip defect are in
-[`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)** — moved 2026-09-16.
+[`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md)** — moved 2026-09-16.
 
 ### ⚠ The one time term that survives, and exactly why
 
@@ -454,7 +454,7 @@ speed over one sample pair (~95 mm/s at rest, so STATIONARY was unreachable). �
 made the NUMBER better without making the SHAPE right; a displacement deadband needs no
 threshold chosen above a measurement.
 ⭐⭐ **The full table and the sequence are in
-[`../../00_CORE/queue_notes/IN0.md`](../../00_CORE/queue_notes/IN0.md)**, which is the most
+[`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md)**, which is the most
 instructive file in the project.
 
 ## A12 — ⭐⭐⭐ ROLL MOVES TO THE **SECOND TOUCHPOINT'S x** *(owner, 2026-09-15)*

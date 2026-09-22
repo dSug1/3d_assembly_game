@@ -44,9 +44,11 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-19)
+## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **974 golden vectors passing** (861 + 113 — ⭐ the
+✅ Green: TypeScript + Babylon + Vite, **978 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and the **974** that stood
+here was stale by four. (861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
 773 + 83 for `D49`'s surface gap and its shell, 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the
 first pass to find defects by READING the source rather than by a finger, and 619 − 51 when forks

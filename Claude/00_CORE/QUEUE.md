@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · what gets built next, for the whole project
 > **READ IF** · you are starting any build, or wondering where an item stands
-> **LAST VERIFIED** · 2026-09-16
+> **LAST VERIFIED** · 2026-09-22
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list, in a subsystem folder or
 anywhere else. Do not reorder it to be helpful.
@@ -16,11 +16,12 @@ pointer, not the record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-19) — the input layer is done bar `IN3`
+## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **974 golden vectors,
-all passing** (37 → … → 656 → 773 → 861 → **974**; ⭐ the DROPS along the way are `D54` deleting `A15`'s 16 vectors and, earlier, the roll channel and forks A and B — and the last rises are the **2026-09-17 AUDIT**, **`D49`**'s surface gap, and the **2026-09-19 pass**: `D55`–`D62` moved every alignment trigger to the PRESS, `D57` flattened the second touchpoint's roll, and `D63` is the approach-swing TRIAL.)
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **978 golden vectors,
+all passing** (37 → … → 861 → 974 → **978**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **`974` WAS STALE**: MEASURED 2026-09-22 the suite is **970**, +8 for the new `doc_links` guard — the `D66`–`D70` pass DELETED vectors as well as adding them, and no front door followed it down. ⭐ *Amend the ledger, never a bare number*, aimed at this file.
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW STILL TO COME**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`** → [`../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md) ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
+⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — the roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`, repealing `D58`/`D61`/`D64`/`D65`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
@@ -157,30 +158,23 @@ stays HERE because the doctrine's point is that the NUMBER has one home. ⚠ A r
 changes in both places or in neither.
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
-entry**: *"you destroyed the rotation around the gravity axis"*, withdrawn by the owner after
-`tests/a7_wiring.test.ts` composed the frame with the rotation and asserted the axis that comes
-out, at four tilts. ⛔ Every part of `A7` had green vectors and **the composition had none** —
-mistake shape 4 pointing at a CORRECT piece of work. ⭐ `METHOD`: *a composition is a thing to
-MEASURE, not an emergent property.*
+entry**: *"you destroyed the rotation around the gravity axis"*, withdrawn after
+`tests/a7_wiring.test.ts` measured the composition at four camera tilts. ⛔ Every part of `A7`
+had green vectors and **the composition had none** — mistake shape 4 pointing at a CORRECT
+piece of work. ⭐ `METHOD`: *a composition is a thing to MEASURE.*
 
 ⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.**
-*"When I test it on github page, I still see the issue with transition from translation to
-rotation lagging"*, hours after the fix for it had been confirmed by finger over USB.
-⛔ The gesture code was **identical on both surfaces**: the Actions history shows the fix
-deployed at 05:28, two minutes *before* the USB session, and there is no dev/prod gating
-anywhere in `src/`. ⭐ The tablet was running an **old bundle** — Pages serves `index.html`
-with `Cache-Control: max-age=600` and the assets are content-hashed, so a cached index keeps
-loading a superseded hash *indefinitely*. ⭐⭐ **So it is the withdrawn-`A7` shape one layer
-lower**: the report was truthful, the reasoning from it was sound, and the unchecked premise
-was *"both surfaces run the same code"*. ⚠ **Not counted as a gesture defect** — `A13`/`A14`
-were right — but it is a real defect of the **deploy surface**, and it is fixed in the
-product rather than in a procedure: `src/core/build_gate.ts` (16 vectors) plus a build stamp
-on the HUD — ✅✅ **closed on the glass the same day** (*"working on device"*), and the full
-account is [`queue_notes/DEP1d.md`](queue_notes/DEP1d.md). ⭐ `METHOD`: *a device report is evidence about the code the device was running.*
-⚠ It also exposed a second thing, and this one was never a report at all: the HUD's
-**overridden-tunables line has never been rendered**, for the whole life of the file, while
-`40_RENDER_SCENE/INDEX.md` said it was. ⛔ An absent readout cannot be caught by looking at
-the screen. Both are in `METHOD` now.
+A gesture fix confirmed by finger over USB was reported broken from Pages hours later. ⛔ The
+code was **identical on both surfaces**: the tablet held a cached `index.html` still pointing
+at a superseded content-hashed bundle, so a stale page is stale until something replaces the
+index. ⭐⭐ **The withdrawn-`A7` shape one layer lower** — the report was truthful, the
+reasoning sound, and the unchecked premise was *"both surfaces run the same code"*.
+⚠ **Not counted as a gesture defect**, but a real one of the **deploy surface**, fixed in the
+product rather than in a procedure (`src/core/build_gate.ts`, 16 vectors, plus a build stamp on
+the HUD) — ✅✅ closed on the glass the same day. ⚠ It exposed a second thing that was never a
+report at all: the HUD's **overridden-tunables line had never been rendered**, for the whole
+life of the file. ⭐ Both lessons are in `METHOD`; the account is
+[`queue_notes/DEP1d.md`](queue_notes/DEP1d.md).
 
 ⛔ **Amend the ledger, never a bare number written somewhere else.** That is exactly how
 this drifted: `README.md` said *seventeen* (the total before rule 6 and the sway) and

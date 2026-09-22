@@ -66,4 +66,4 @@ lag, and an error-against-ground-truth metric cannot score *"feels steady"*.
 ⚠ **Licence note for the three-ring orbit**, since it is the same idea as Unity
 Cinemachine's FreeLook: ✅ no patent found, but ⛔ **Cinemachine's CODE is under the
 Unity Companion License**, usable only in Unity-engine-dependent applications. Ours is
-written from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md).
+written from the geometry. See [`../../../THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md).

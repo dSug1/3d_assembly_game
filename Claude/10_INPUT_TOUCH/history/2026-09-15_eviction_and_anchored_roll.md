@@ -108,7 +108,7 @@ A1 made a full 360° roll the eviction gesture. ⚠ **A3 makes roll a legitimate
 control on exactly the objects eviction applies to** — so the two now share a channel, and
 "spin the part round to look at it" becomes a path to accidental eviction rather than a
 hypothetical. ⭐ **The eviction gesture is under review for this reason**; see
-[`../00_CORE/queue_notes/IN3.md`](../../00_CORE/queue_notes/IN3.md).
+[`../../00_CORE/queue_notes/IN3.md`](../../00_CORE/queue_notes/IN3.md).
 
 ---
 

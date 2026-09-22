@@ -802,7 +802,7 @@ landing and the mode followed it. Nothing about the gesture differed; only the l
 ⛔⛔ And `IN4` had recorded the identical verdict on 2026-09-14, which this amendment had
 already FLAGGED as a resemblance to watch — *naming a risk is not the same as not taking it.*
 ⭐⭐ **Both blocks, with the reasoning as it stood before and after, are in
-[`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md)**, moved there 2026-09-16.
+[`../../00_CORE/queue_notes/IN4.md`](../../00_CORE/queue_notes/IN4.md)**, moved there 2026-09-16.
 `METHOD` carries the rule: *a mode may be keyed on PRESENCE; never on MOTION.*
 
 ### ⭐ Two rules, two signals
@@ -849,7 +849,7 @@ VISIBLE when the holder happens to be moving through it.
 ⭐⭐⭐ **So the RULE was right and the GESTURE MODEL was wrong**: a lift-and-replace is ONE
 intention, and dropping to one-touchpoint behaviour mid-swap is the artefact.
 ⭐ The three cases, the timing signature and the full reasoning are in
-[`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
+[`../../00_CORE/queue_notes/IN4.md`](../../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
 
 ### ⚠ THE COST, STATED
 
@@ -867,5 +867,5 @@ rebuild. Default **250 ms** — a guess, with a slider.
 HUD could not answer *"what does the build think is down right now?"* — and `METHOD` is
 explicit that an instrument is judged against the question it exists to answer. ⭐ The depth
 readout now prints the mode, the touchpoint counts and the grace remaining; the examples are
-in [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
+in [`../../00_CORE/queue_notes/IN4.md`](../../00_CORE/queue_notes/IN4.md), moved there 2026-09-16.
 
