@@ -83,7 +83,6 @@ import {
   type TapContext,
   ShakeDetector,
   shakeParamsFrom,
-  constrainedDragAngle,
   flatTwistAngle,
   rollSignFor,
   rotateAboutAxis,
@@ -128,6 +127,7 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
+import { RotationTally, incrementRadians } from "../input/rotation_increment";
 import { taperTop } from "../core/frustum";
 import {
   alignedFaceOf,
@@ -1845,6 +1845,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * the same doctrine one rule over: *a mode may be keyed on PRESENCE, never on MOTION.*
      */
     anchorRollSign: Map<number, 1 | -1>;
+    /**
+     * ⭐⭐ **WHICH WAY `dx` TWISTS AN ALIGNED BODY -- latched once per grip** (2026-09-22).
+     * ⛔ The same doctrine as `anchorRollSign` one channel over: recomputed per frame the sign
+     * flips mid-drag as the alignment axis swings through horizontal-on-screen.
+     */
+    twistSign?: 1 | -1;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -2843,6 +2849,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // gain so one DOF does not feel like a different control from three — a guess, and
         // the range is the same as the free gain's so a hand can compare them directly.
         tunable("anchored twist gain (rad/mm)", "gainRotateConstrained", 0.005, 0.15, 0.005),
+        // ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — a turn ENDS on a multiple of
+        // this, slerped into place. ⛔ **`0` is the current build, no change.** ⚠ Only the END
+        // is quantised: the drag itself keeps every gain, deadband and smoothing it has now,
+        // because the earlier formulation that quantised the turn as it happened was rejected
+        // on the device for lagging the finger.
+        tunable("rotation increment (deg, 0=off)", "rotationIncrementDeg", 0, 45, 5),
         // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
         // object's centre when it starts turning or turns the other way.
         tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
@@ -3354,6 +3366,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // guard left here would be a dead condition implying a refusal that cannot happen.
         {
           setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
+          // ⭐ TALLIED, NOT CHANGED. The rotation above is the current build exactly; this only
+          // records what was asked for, so the gesture can END on a multiple.
+          if (rollId !== undefined) rotationTally.add(rollId, "roll", axis, twist);
           // ⛔⛔⛔ **AND IT RIDES THE SNAP — AUDIT FIX, 2026-09-17.** The one-finger twist has
           // composed onto both ends of a travelling snap since `D45`; this channel never did.
           // ⚠ So a roll made during the 129 ms snap was written to the model and then
@@ -3373,14 +3388,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ALIGNMENTS and said nothing about a **MATE**, which is the second entry `3D2` adds —
         // so the `else` silently covered a case nobody had considered. ⭐ `rotationChannel`
         // now names all three outcomes, and the refusal is the branch above.
-      setModelOrientation(
-        grip.mesh,
-        screenRollRotation(
-          modelOrientation(grip.mesh),
-          grip.frame,
-          rollDragDeg(drive.rollDxPx, cfg.gainRollDrag),
-        ),
-      );
+      {
+        const rollDeg = rollDragDeg(drive.rollDxPx, cfg.gainRollDrag);
+        setModelOrientation(
+          grip.mesh,
+          screenRollRotation(modelOrientation(grip.mesh), grip.frame, rollDeg),
+        );
+        // ⚠ `screenRollRotation` turns by MINUS deg about `frame.depth`; the tally states the
+        // SAME axis and sign, or the settle would correct a turn it had mis-measured.
+        // ⛔ *A sign is not tested by any amount of testing the magnitude.*
+        if (rollId !== undefined) {
+          rotationTally.add(rollId, "roll", grip.frame.depth, (-rollDeg * Math.PI) / 180);
+        }
+      }
       }
       grip.mode = "ROTATE";
       // ⭐ The rotational sway answers a driven roll too — same watcher, same tunables.
@@ -3564,6 +3584,52 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // ride-along, the cancel and the landing were three scattered statements in this frame
   // handler, and `pioneer_cascade.ts` already paid for that lesson.
   const alignSnaps = new AlignSnaps<ObjectId>();
+  /**
+   * ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — what this gesture has demanded per
+   * axis, and the slerp that lands it on a multiple when the gesture ends.
+   *
+   * ⛔⛔ **THE RULES ARE IN `input/rotation_increment.ts`, NOT HERE.** This file holds the
+   * state and the call — 2026-09-19's binding lesson: *a rule written in `scene.ts` is a rule
+   * nothing can interrogate*, which cost seven mutants in one day.
+   *
+   * ⚠ **A SEPARATE `AlignSnaps` FROM THE ALIGNMENT'S**, deliberately. They are two animations
+   * with different owners, and sharing one instance is the single-slot defect `align_snap.ts`
+   * was written to fix: a settle would silently overwrite a travelling alignment and leave that
+   * body stranded mid-arc with its constraint still claiming it had landed.
+   */
+  const rotationTally = new RotationTally<ObjectId>();
+  const settleSnaps = new AlignSnaps<ObjectId>();
+
+  /**
+   * ⭐⭐ **END THE GESTURE'S ROTATION ON A MULTIPLE OF THE INCREMENT.**
+   *
+   * ⛔ Called on the holder's RELEASE — a DISCRETE event, never on *the finger stopped moving*.
+   * `METHOD`: *a mode may be keyed on PRESENCE, never on MOTION*, and this project has shipped
+   * the motion-keyed version twice and had a hand find it within minutes both times. ⚠ Snapping
+   * while the finger is still down would also fight the drag it is trying to finish.
+   *
+   * ⚠ If an ALIGNMENT is travelling on this body, the settle is skipped: the alignment is
+   * landing a constraint the user asked for and must win. ⛔ Two animations writing one
+   * orientation is the fight, not the fix.
+   */
+  const settleRotation = (id: ObjectId | undefined): void => {
+    if (id === undefined) return;
+    const inc = incrementRadians(cfg.rotationIncrementDeg);
+    if (inc !== null && !alignSnaps.has(id)) {
+      const correction = rotationTally.correction(id, inc);
+      const mesh = meshOf.get(id);
+      if (correction !== null && mesh) {
+        const from = modelOrientation(mesh);
+        const to = qmul(correction, from);
+        const settleMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+        // ⚠ At `0` the slider means *no animation*, exactly as it does for the camera and the
+        // alignment — the increment still applies, it simply arrives at once.
+        if (settleMs > 0) settleSnaps.start(id, from, to, performance.now());
+        else setModelOrientation(mesh, to);
+      }
+    }
+    rotationTally.clear(id);
+  };
 
   /**
    * ⭐⭐ **DROP IT WHERE IT IS** — for every rule that RELEASES the alignment.
@@ -4371,20 +4437,47 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             return;
           } else if (channel.kind === "TWIST") {
             const axis = channel.axis;
-            const twist = constrainedDragAngle(
-              screenFrame(),
-              axis,
+            // ⛔⛔⛔ **D57 REACHES THE FIRST TOUCHPOINT AT LAST** -- device-reported 2026-09-22:
+            // *"there are some cases where the dx delta position and the yaw rotation direction
+            // are inverted."*
+            //
+            // ⛔⛔ **MEASURED, NOT REASONED.** A sweep of the FREE yaw over 408 camera positions
+            // found **zero** inversions -- it turns about the world vertical and cannot reverse.
+            // A sweep of THIS channel over alignment orientations found **12 of 24**, exactly the
+            // half a cosine predicts. ⭐ *"Same symptom" never means "same cause"*: the report
+            // said *yaw*, and the culprit was the twist.
+            //
+            // ⭐⭐ **THE CAUSE IS THE PROJECTION D57 ALREADY DELETED FROM THE OTHER CHANNEL.**
+            // `constrainedDragAngle` maps the drag onto the NEAR-SIDE screen direction, whose
+            // x component reverses as the alignment axis swings past horizontal-on-screen. The
+            // second touchpoint had exactly this, and the owner dictated the cure in 2026-09-19's
+            // own words: *"If there are cos or sin projections on axis based on orientation,
+            // remove those projections."* ⚠ It was applied to one channel and not its twin --
+            // `METHOD`: *when a rule has two channels, the correction belongs to the RULE.*
+            //
+            // ⚠⚠ **WHAT IT COSTS, STATED**: `dy` no longer contributes. The old mapping let a
+            // hand drag ALONG the near-side direction whatever its screen orientation; now a
+            // vertical drag does not twist. ⛔ That is the trade D57 already made once, and it
+            // buys the property the owner asked for: `dx` and the turn always agree.
+            let twistSign = grip.twistSign;
+            if (twistSign === undefined) {
+              // ⭐ LATCHED AT FIRST USE, exactly as the second touchpoint latches its own --
+              // recomputed per frame it would flip mid-drag as the axis swung through
+              // horizontal-on-screen, which is worse than being inverted consistently.
+              twistSign = rollSignFor(screenFrame(), axis);
+              grip.twistSign = twistSign;
+            }
+            const twist = flatTwistAngle(
               grip.rec.step.dx,
-              grip.rec.step.dy,
+              twistSign,
               cfg.gainRotateConstrained,
             );
-            if (twist === null) {
-              lastVerdict = "align: twist degenerate — the aligned normal points at the camera";
-            } else if (twist !== 0) {
+            if (twist !== 0) {
               setModelOrientation(
                 grip.mesh,
                 rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
               );
+              if (fid !== undefined) rotationTally.add(fid, "twist", axis, twist);
               // ⛔⛔ **DEVICE-REPORTED 2026-09-17: *"there is no slerp during rotation: did you
               // wire it?"*** ⭐ It was wired, in both modes — and this line used to SETTLE the
               // snap, so the first finger movement past the deadband landed it instantly. In
@@ -4427,6 +4520,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // yaw/pitch, A8's rebase to the circle's start, and the jump all of it produced.
         // ⚠ `roll.ts` still exists with its 40 vectors and is no longer on the gesture
         // path — the same status as `shake.ts` and `anchor_rotate.ts`.
+        // ⭐ TALLIED PER AXIS, and the angles restated here are `screenPlaneRotation`'s own,
+        // negation and all. ⛔ The settle corrects what the gesture DEMANDED, so a sign that
+        // disagreed with the rule would land the body on a multiple of the wrong quantity.
+        {
+          const radPerPx = cfg.gainRotateFree / mmToPx(1);
+          const freeId = idOf.get(grip.mesh);
+          if (freeId !== undefined) {
+            rotationTally.add(freeId, "yaw", grip.frame.up, -grip.rec.step.dx * radPerPx);
+            rotationTally.add(freeId, "pitch", grip.frame.right, -grip.rec.step.dy * radPerPx);
+          }
+        }
         setModelOrientation(
           grip.mesh,
           screenPlaneRotation(
@@ -4676,6 +4780,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         selectedFace = null;
       }
       forgetAnchor(routed.seq);
+      // ⭐⭐⭐ **THE GESTURE ENDS -- LAND ITS ROTATION ON A MULTIPLE.** A discrete event, which
+      // is the only kind a mode may be keyed on.
+      settleRotation(idOf.get(grip.mesh));
       router.release(e.pointerId);
       held.delete(e.pointerId);
       paint();
@@ -4778,6 +4885,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // eased snaps in one product should not accelerate differently for no reason.
     // ⚠ EVERY live snap, not one: see `alignSnaps` where it is declared.
     for (const step of alignSnaps.advance(
+      now,
+      cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
+      easeInOut,
+      (id) => meshOf.has(id),
+    )) {
+      const mesh = meshOf.get(step.id);
+      if (mesh) setModelOrientation(mesh, step.orientation);
+    }
+
+    // ⭐⭐ **THE INCREMENT'S SETTLE**, advanced with the alignment snaps and on the same easing.
+    // ⚠ A body cannot be in both: `settleRotation` refuses to start one while an alignment is
+    // travelling, so these two never write the same orientation in one frame.
+    for (const step of settleSnaps.advance(
       now,
       cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
       easeInOut,

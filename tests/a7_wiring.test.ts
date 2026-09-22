@@ -14,7 +14,7 @@
 import { describe, expect, it } from "vitest";
 import { gravityFrame } from "../src/input/gravity_frame";
 import { screenPlaneRotation, screenRollRotation } from "../src/input/screen_rotate";
-import { IDENTITY, dot, normalize, type Quat, type Vec3 } from "../src/core/vec";
+import { IDENTITY, dot, normalize, qRotate, type Quat, type Vec3 } from "../src/core/vec";
 
 const DOWN: Vec3 = [0, -1, 0];
 const UP: Vec3 = [0, 1, 0];
@@ -55,6 +55,61 @@ describe("⭐⭐ a HORIZONTAL drag yaws about GRAVITY, at every tilt", () => {
       expect(Math.abs(dot(axis, UP))).toBeCloseTo(1, 9);
     });
   }
+
+  /**
+   * ⭐⭐⭐ **AND THE SIGN, WHICH EVERY VECTOR ABOVE DELIBERATELY DOES NOT TEST.**
+   *
+   * ⛔⛔ `Math.abs(dot(axis, UP))` asserts the axis IS the vertical **up to sign** — so all of
+   * them would still pass if a horizontal drag yawed the object BACKWARDS at some camera
+   * positions and not others. ⚠ That is *a sign is not tested by any amount of testing the
+   * magnitude*, sitting inside the very file written to measure this composition.
+   *
+   * ⭐⭐ **ADDED 2026-09-22, AFTER A DEVICE REPORT**: *"there are some cases where the dx delta
+   * position and the yaw rotation direction are inverted."* ⛔ This sweep answers it for the
+   * FREE yaw, and the answer is **no**: 400+ camera positions, none inverted. ⭐ Which is what
+   * made the report's real subject findable — the CONSTRAINED twist on an aligned body, whose
+   * near-side mapping reversed with the alignment axis. *"Same symptom" never means "same
+   * cause"*, and the way to tell them apart was to measure both.
+   */
+  it("⭐⭐⭐ a rightward drag yaws the NEAR FACE rightward — at every camera on the sphere", () => {
+    let checked = 0;
+    const inverted: string[] = [];
+    for (let az = 0; az < 360; az += 15) {
+      for (let el = -80; el <= 80; el += 10) {
+        const a = (az * Math.PI) / 180;
+        const e = (el * Math.PI) / 180;
+        const fwd = normalize([
+          Math.sin(a) * Math.cos(e),
+          Math.sin(e),
+          Math.cos(a) * Math.cos(e),
+        ]);
+        if (!fwd) continue;
+        const frame = gravityFrame(fwd, DOWN);
+        if (!frame) continue;
+        // ⚠ The CAMERA's own right, built the way Babylon builds it — NOT the gravity frame's,
+        // or the vector would be checking the rule against itself (`METHOD` §2).
+        const camRight = normalize([
+          UP[1] * fwd[2] - UP[2] * fwd[1],
+          UP[2] * fwd[0] - UP[0] * fwd[2],
+          UP[0] * fwd[1] - UP[1] * fwd[0],
+        ]);
+        if (!camRight) continue;
+        const q = screenPlaneRotation(IDENTITY, frame, +100, 0, 0.0005);
+        // A probe on the side of the body FACING the camera — what a hand actually watches.
+        const near: Vec3 = [-fwd[0], -fwd[1], -fwd[2]];
+        const moved = qRotate(q, near);
+        const drift = dot(
+          [moved[0] - near[0], moved[1] - near[1], moved[2] - near[2]],
+          camRight,
+        );
+        checked++;
+        if (drift <= 0) inverted.push(`az=${az} el=${el} drift=${drift.toFixed(6)}`);
+      }
+    }
+    // ⚠ The COUNT is asserted too: a sweep that silently checked nothing would pass.
+    expect(checked).toBeGreaterThan(300);
+    expect(inverted).toEqual([]);
+  });
 
   it("⛔⛔ COUNTER-EXAMPLE: the CAMERA's up is NOT the vertical once it tilts", () => {
     // ⚠ The thing A7 changed, stated as a number so "it came back to the screen axes" is a

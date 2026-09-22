@@ -38,6 +38,18 @@ import { join } from "node:path";
  * up, which is `config_debt.test.ts`'s own warning about itself.
  */
 const PENDING: Record<string, string> = {
+  // ── Retired 2026-09-22, and KEPT until a hand judges the change that retired it. ─────
+  // ⛔⛔ A THIRD CATEGORY THIS FILE'S HEADER DOES NOT NAME, and it is worth naming: not
+  // *pending* a row, not *stale* from a settled deletion, but **superseded by a change that
+  // rule 5 has not closed yet**. The near-side mapping was the first touchpoint's twist until
+  // the owner reported *"the dx delta position and the yaw rotation direction are inverted"*;
+  // a sweep put the inversion at 12 of 24 alignment orientations and `D57`'s flat, latched
+  // sign replaced it. ⚠ That trade gives up `dy`'s contribution, and no finger has judged it.
+  // ⭐ So the implementation stays until the device pass says which way it goes — then it is
+  // deleted with its ~25 vectors, or it is wired back.
+  constrainedDragAngle:
+    "retired 2026-09-22 by D57 reaching the first touchpoint; awaiting the device verdict on " +
+    "the dy trade, then delete with its vectors or restore",
   // ── `3D2`: the seat. The assembly tree exists; nothing is assembled yet. ──────
   attach: "3D2 — parenting a seated part is what a mate does",
   detach: "3D2/3D3 — breaking a mate un-parents it",

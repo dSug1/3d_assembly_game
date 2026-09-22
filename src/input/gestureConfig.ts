@@ -86,6 +86,21 @@ export interface GestureConfig {
    */
   gainRotateConstrained: number;
   /**
+   * ⭐⭐⭐ **A ROTATION ENDS ON A MULTIPLE OF THIS** (the owner, 2026-09-22): *"any rotation
+   * stops at a degree which is a multiple of the incrmt … the equivalent of the mathematical
+   * modulo function"*, with the landing slerped so there is no hard stop.
+   *
+   * ⛔⛔ **`0` IS THE CURRENT BUILD, NO CHANGE.** One slider carries the flag and the angle,
+   * which is this project's idiom for a trial — the approach swing and the orbit centre blend
+   * both work that way, and it is what lets a hand compare the two modes in the same minute.
+   *
+   * ⚠⚠ **AND ONLY THE END IS QUANTISED.** An earlier formulation quantised the turn *as it
+   * happened* and was rejected on the device — *"it creates too much lag in the rotation vs. the
+   * finger movement"*. ⭐ Nothing here touches the gains, the deadband or the smoothing: the drag
+   * is the current build exactly, and the increment is a single correction at the gesture's end.
+   */
+  rotationIncrementDeg: number;
+  /**
    * §2quinte roll: a dimensionless multiplier on the swept angle.
    * ⛔ It scales what the object is TURNED BY, never what the commit threshold reads —
    * scaling the latter would silently move `rollAngle` as well. See `roll.ts`.
@@ -591,6 +606,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // the gain is the wrong suspect and the thing to chase is what OVERWRITES the twist
   // downstream (the alignment solve re-projecting it, as the snap once ate the roll).
   gainRotateConstrained: 0.07,
+  // ⛔ OFF by default — a trial ships off, so what it is compared against is what a hand knows.
+  rotationIncrementDeg: 0,
   // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
@@ -1103,6 +1120,15 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `approachSwingDeg (${cfg.approachSwingDeg}) is outside 0..90: the approach swing is a ` +
         "camera lean, and beyond a quarter turn it swings past the join rather than looking " +
         "at it. NaN fails this too, which is the point — it would silently disable the swing.",
+    );
+  }
+  // ⛔ `0` is legal and means OFF, so this is a RANGE and not a positivity test. ⚠ NaN fails
+  // it too, which is the point: a bad URL override must be refused out loud rather than quietly
+  // turning the mechanism off and looking exactly like the current build.
+  if (!(cfg.rotationIncrementDeg >= 0) || cfg.rotationIncrementDeg > 45) {
+    throw new Error(
+      `rotationIncrementDeg (${cfg.rotationIncrementDeg}) is outside 0..45: 0 is OFF (the ` +
+        "unquantised build) and 45 is the coarsest increment the owner asked for.",
     );
   }
   if (!(cfg.captureOffsetMm > 0)) {

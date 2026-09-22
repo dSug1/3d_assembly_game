@@ -135,3 +135,47 @@ document. ⚠ Not one is something a hand would have reported that day. ⛔ So t
 not compete: **the device finds what is wrong now; a read finds what is wrong on the day
 something else changes.** ⭐ Ten vectors that *could not fail* were the audit's largest single
 class, and no device pass can ever find those.
+
+## 49 — the twist's `dx` ran BACKWARDS for half of all alignments *(2026-09-22)*
+
+> *"there are some cases where the dx delta position and the yaw rotation direction are
+> inverted."* — the owner
+
+⛔⛔⛔ **THE REPORT NAMED THE WRONG RULE, AND MEASURING BOTH IS WHAT FOUND THE RIGHT ONE.**
+*Yaw* is the one-finger horizontal drag, so the free rotation was the obvious suspect. It was
+swept over **408 camera positions** — every azimuth, every elevation the orbit rings reach — by
+rotating a probe on the body's camera-facing side and projecting its motion onto the camera's
+own right. ⭐ **Zero inversions.** A yaw turns about the world vertical, and that cannot reverse
+with the camera.
+
+⭐⭐ **THE CULPRIT WAS THE TWIST ON AN *ALIGNED* BODY**, which is also a one-finger horizontal
+drag and so indistinguishable from the yaw in a report. The same sweep over alignment
+orientations found it inverted at **12 of 24** — exactly the half a cosine predicts.
+⚠ *"Same symptom" never means "same cause."*
+
+⛔⛔ **AND THE CAUSE WAS A FIX THAT HAD ALREADY BEEN MADE, ON THE OTHER CHANNEL.**
+`constrainedDragAngle` projected the finger's travel onto the **near-side screen direction**,
+whose `x` component reverses as the alignment axis swings past horizontal-on-screen. ⭐ `D57`
+had deleted exactly that projection from the SECOND touchpoint on 2026-09-19, in the owner's own
+words — *"If there are cos or sin projections on axis based on orientation, remove those
+projections"* — and the FIRST touchpoint kept it. The scene's own comment even explained why the
+first touchpoint was fine: *"it passes `dx` AND `dy` and can always drag along the near-side
+direction whatever its screen orientation."* ⚠ True about **losing** control, and silent about
+**inverting** it.
+
+⭐⭐⭐ `METHOD`: *when a rule has two channels, the correction belongs to the RULE.* This is the
+second time that shape has been recorded — the first was the ride-along landing on the
+one-finger twist and not on the second touchpoint's roll (defect 48, the entry above).
+
+⚠⚠ **WHAT THE FIX COSTS, AND IT IS NOT CLOSED**: `dy` no longer contributes to the twist, so a
+vertical drag on an aligned body does nothing. That is the trade `D57` already made once, but no
+finger has judged it here. `constrainedDragAngle` is declared in `unwired_debt` rather than
+deleted for exactly that reason — the device pass either confirms the trade, and it goes with
+its ~25 vectors, or reverses it, and it is wired back.
+
+⛔ **THE VECTOR THAT WOULD HAVE CAUGHT IT DID NOT, AND THE REASON IS IN ITS OWN FILE.**
+`tests/a7_wiring.test.ts` composes the frame with the rotation at four camera tilts and asserts
+`Math.abs(dot(axis, UP))` — *up to sign*. ⭐ So every vector in the file written to measure this
+composition would still have passed with the direction reversed. *A sign is not tested by any
+amount of testing the magnitude*, inside the guard built for it. ✅ A direction sweep is now
+there, and the old mapping's inversion is kept as a counter-example in `anchor_rotate.test.ts`.

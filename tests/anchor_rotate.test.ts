@@ -27,7 +27,14 @@ import {
   rotateAboutAxis,
 } from "../src/input/anchor_rotate";
 import type { ScreenFrame } from "../src/input/screen_rotate";
-import { IDENTITY, dot, normalize, qRotate, type Vec3 } from "../src/core/vec";
+import {
+  IDENTITY,
+  dot,
+  normalize,
+  qFromAxisAngle,
+  qRotate,
+  type Vec3,
+} from "../src/core/vec";
 import { mmToPx } from "../src/core/units";
 
 const GAIN = 0.02; // radians per mm — `gainRotateConstrained`-shaped, not its value.
@@ -549,5 +556,125 @@ describe("⭐⭐⭐ `D57` — THE SECOND TOUCHPOINT'S ROLL IS FLAT: dx, whatever
     // every use and distinct to an identity compare — a fixture failing for a reason the
     // product does not have. Same trap as the near-side vector above.
     expect(flatTwistAngle(0, sign, 2 * DEG)).toBeCloseTo(0, 12);
+  });
+});
+
+describe("⛔⛔⛔ `dx` AND THE TURN AGREE — at every alignment orientation (2026-09-22)", () => {
+  /**
+   * The owner, 2026-09-22: *"there are some cases where the dx delta position and the yaw
+   * rotation direction are inverted."*
+   *
+   * ⛔⛔ **MEASURED BEFORE IT WAS FIXED, AND THE MEASUREMENT IS THE FINDING.** The FREE yaw
+   * was swept over 400+ camera positions and inverted at **none** of them (`a7_wiring.test.ts`)
+   * — it turns about the world vertical and cannot reverse. This channel, the twist on an
+   * ALIGNED body, inverted at **12 of 24** alignment orientations: exactly the half a cosine
+   * predicts, because `constrainedDragAngle` projected the drag onto the near-side screen
+   * direction whose `x` reverses as the axis swings past horizontal-on-screen.
+   *
+   * ⭐⭐ **THE CURE IS `D57`'s, AND IT ALREADY EXISTED ON THE OTHER CHANNEL** — a flat rate on
+   * `dx` with the sign latched from the geometry once. ⚠ It had been applied to the second
+   * touchpoint and not to the first: *when a rule has two channels, the correction belongs to
+   * the RULE.*
+   */
+  const FRAME_: ScreenFrame = {
+    right: [1, 0, 0],
+    up: [0, 1, 0],
+    viewAxis: [0, 0, 1],
+  };
+  const GAIN_ = 2 * (Math.PI / 180);
+
+  it("⭐⭐⭐ a rightward drag moves the body's NEAR SIDE rightward, at every orientation", () => {
+    // ⛔⛔⛔ **MEASURED GEOMETRICALLY, AND TWO DRAFTS OF THIS VECTOR WERE WRONG BEFORE THIS ONE.**
+    //
+    // ① The first asserted `rollSign * flatTwistAngle(dx, rollSign, gain) > 0` — but
+    // `flatTwistAngle` multiplies by that very sign, so the product is `sign²` and the whole
+    // assertion reduced to `pxToMm(dx) * gain > 0`: an arithmetic identity wearing the clothes
+    // of a device report. ⭐ *A test that cannot FAIL is not a test*, and *a metric must not
+    // share an expression with the thing it judges*.
+    //
+    // ② The second drove **100 px at 2°/mm** — tens of degrees of turn — and then measured the
+    // chord of that arc. A probe swung that far comes back round, so 16 orientations reported a
+    // NEGATIVE drift that was nothing but the far side of a large circle. ⭐ The question is
+    // *which way does it set off*, so the drag must be small enough to be a DIRECTION and not a
+    // journey. ⚠ `METHOD`'s fifth shape twice in one vector: my own fixtures.
+    //
+    // ⭐⭐ What is measured now: the point of the body nearest the camera in the plane of
+    // rotation, turned by the angle the rule produces, projected onto the camera's own right.
+    // ⛔ Nothing here reads `nearSideScreenDirection`, which is what `rollSignFor` is built
+    // from — so the two can disagree, and a wrong sign convention would show up as a red.
+    const wrongWay: string[] = [];
+    let dead = 0;
+    let checked = 0;
+    // ⚠ SMALL: two pixels, so the turn is a fraction of a degree and the drift is a direction.
+    const DX_ = 2;
+    for (let t = 0; t < 360; t += 5) {
+      for (const tilt of [-0.6, -0.2, 0.2, 0.6]) {
+        const r = (t * Math.PI) / 180;
+        const axis = normalize([Math.cos(r), Math.sin(r), tilt]);
+        if (!axis) continue;
+
+        // The near side, in the plane of rotation: the camera-facing direction with everything
+        // along the axis removed. ⚠ It collapses when the axis points at the camera — the
+        // degeneracy `rollSignFor` answers with a fallback — so it is skipped, not asserted.
+        const toCam: Vec3 = [-FRAME_.viewAxis[0], -FRAME_.viewAxis[1], -FRAME_.viewAxis[2]];
+        const along = dot(toCam, axis);
+        const near = normalize([
+          toCam[0] - along * axis[0],
+          toCam[1] - along * axis[1],
+          toCam[2] - along * axis[2],
+        ]);
+        if (!near) continue;
+
+        const sign = rollSignFor(FRAME_, axis);
+        const turn = flatTwistAngle(DX_, sign, GAIN_);
+        const moved = qRotate(qFromAxisAngle(axis, turn), near);
+        const drift = dot(
+          [moved[0] - near[0], moved[1] - near[1], moved[2] - near[2]],
+          FRAME_.right,
+        );
+        checked++;
+        // ⛔⛔ **THE DEAD ZONE IS `D57`'s, AND IT IS COUNTED RATHER THAN ASSERTED ON.** Where the
+        // alignment axis lies horizontally across the glass the near side travels almost
+        // straight up or down, so there is no horizontal authority to have a sign — *"axis
+        // HORIZONTAL → near side moves VERTICALLY → authority 0.00"*. ⚠ That is a documented
+        // property of the geometry, not an inversion, and pretending to test it would be the
+        // idealised-fixture mistake. ⭐ The floor is relative to the turn, so it scales with the
+        // gain instead of being a magic number.
+        if (Math.abs(drift) < Math.abs(turn) * 0.02) {
+          dead++;
+          continue;
+        }
+        if (drift < 0) wrongWay.push(`axis@${t}deg tilt=${tilt} drift=${drift.toFixed(6)}`);
+      }
+    }
+    expect(checked).toBeGreaterThan(200);
+    // ⚠ The dead zone must be a NARROW band, or the "authority" this channel has is a fiction.
+    expect(dead).toBeLessThan(checked / 5);
+    expect(wrongWay).toEqual([]);
+  });
+
+  it("⛔ and a LEFTWARD drag moves it the other way — the guard's own counter-example", () => {
+    // ⚠ Without this, a rule that returned a positive drift for EVERY input would pass above.
+    const axis = normalize([Math.cos(0.7), Math.sin(0.7), 0.3])!;
+    const sign = rollSignFor(FRAME_, axis);
+    expect(Math.sign(flatTwistAngle(+100, sign, GAIN_))).toBe(
+      -Math.sign(flatTwistAngle(-100, sign, GAIN_)),
+    );
+  });
+
+  it("⛔⛔ THE COUNTER-EXAMPLE: the mapping it replaced DID invert, and here it is", () => {
+    // ⭐ Kept as the record of the defect, so *"the twist inverted"* is a measurement in this
+    // repository rather than a claim in a commit message. ⚠ If this ever comes back empty, the
+    // old mapping was not the cause and the diagnosis above needs re-opening.
+    const inverted: number[] = [];
+    for (let t = 0; t < 360; t += 15) {
+      const r = (t * Math.PI) / 180;
+      const axis = normalize([Math.cos(r), Math.sin(r), 0.35]);
+      if (!axis) continue;
+      const angle = constrainedDragAngle(FRAME_, axis, +100, 0, 0.07);
+      if (angle !== null && angle < 0) inverted.push(t);
+    }
+    // ⚠ Half of them, which is what a cosine in the axis's screen orientation does.
+    expect(inverted.length).toBeGreaterThan(8);
   });
 });

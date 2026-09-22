@@ -150,7 +150,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | the face markers lagged a frame | **1** |
 | an aligned object's turn lost the sway | **1** |
 | the twist killed the alignment snap | **1** |
-| ⭐⭐ **THE TOTAL** | **= 48** |
+| ⛔ **`IN3`** — the twist's `dx` SIGN, inverted at half of all alignments | **1** |
+| ⭐⭐ **THE TOTAL** | **= 49** |
 
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16). Each defect's account is in
 [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), unrewritten; the table above

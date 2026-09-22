@@ -180,6 +180,19 @@ is worth more than a third that confirms it* — a stale highlight produced TWO 
 correct and twice-vectored; the shake report is what inverted the diagnosis, and the cause was
 using the correct retire-by-membership pattern for one marker pool and the wrong one for
 another, in the same edit.
+⭐⭐⭐ **ROTATION INCREMENTS ARE ON TRIAL** (`D73`, 2026-09-22) — `rotationIncrementDeg`
+(0–45, step 5): **0 is the current build**, and above zero a rotation **ENDS** on a multiple,
+slerped into place on the existing snap window. ⛔⛔ **NOTHING IS QUANTISED DURING THE DRAG** —
+the gains, the deadband and the smoothing are untouched. ⚠⚠ The FIRST formulation quantised the
+turn as it happened and was **built, driven and rejected**: the body could only move as fast as
+its queue drained, so *"it creates too much lag in the rotation vs. the finger movement"*.
+⭐ The lag is now unreachable rather than tuned away → `src/input/rotation_increment.ts`.
+⛔⛔⛔ **AND DEFECT 49 CAME OUT OF THE SAME PASS**: *"the dx delta position and the yaw rotation
+direction are inverted"*. ⭐⭐ **The report named the wrong rule** — the free yaw was swept over
+408 camera positions and inverted at NONE; the **twist on an aligned body** inverted at **12 of
+24** alignment orientations. ⛔ The cause was the near-side projection `D57` had already deleted
+from the second touchpoint and not from the first: *when a rule has two channels, the correction
+belongs to the RULE*. ⚠⚠ **Cost, unjudged**: `dy` no longer twists.
 ⭐ Rules, the conflict check against every earlier rule, the decisions and ⭐⭐ **an ordered
 list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §9–§10.
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
