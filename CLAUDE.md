@@ -336,19 +336,23 @@ mode read second-touchpoint presence, and two-axes-at-once is unreachable once t
 one axis. ⭐ The whole comparison: [`Claude/00_CORE/queue_notes/IN13.md`](Claude/00_CORE/queue_notes/IN13.md).
 
 
-✅✅ **`A15` IS CLOSED by the same look** — ⚠ and the close is only as strong as the phrase
-that gave it: *"everything is working ok"* was general, and `A15`'s three specific cases were
-not reported on individually.
-⭐ **What it does**: A
-holder that is **no longer under its object** gives the selection up: depth moves the object
-along the view axis *while the holder need not move at all*, so it leaves the finger carrying it, and
-§4's latch kept that finger holding it anyway. ⭐ A **raycast at the second touchpoint's
-lift**; if the object is not there the selection drops **at the next input event** and the
-§4 table re-resolves — orbit for a finger over empty space, ⛔ **keeping the previous yellow
-centre** (a gesture that ENDS must not retarget the camera). ⭐ First and only exception to
-`IN2`'s latch, on a **discrete** event only: *a mode may be keyed on PRESENCE, never on
-MOTION.* ⚠ 16 vectors, no new tunable, and the ray/deferral/re-resolution are all in
-`src/render` where none of them reach. `D25`, amendment `A15`.
+⛔⛔ **`A15` IS DELETED, AND THE CLOSE IT ONCE HAD IS THE RETRACTION WORTH KEEPING** (`D54`,
+2026-09-18): *"Until first touch is released: first touch can continue controlling the object …
+and second touchpoint can be pressed again and thus control again the object."* ⭐ **A holder
+keeps its object for its touchpoint's lifetime**, so `IN2`'s latch has **no exceptions** again
+— `holder_binding.ts`, `relatchOnOrphan` and its 16 vectors are gone.
+⚠ **What it used to do**, kept because the reversal is the more useful entry: a holder **no
+longer under its object** gave the selection up — depth moves the object along the view axis
+*while the holder need not move at all*, so it leaves the finger carrying it, and §4's latch
+kept that finger holding it anyway. ⭐ A **raycast at the second touchpoint's lift**; if the
+object was not there the selection dropped **at the next input event** and the §4 table
+re-resolved, ⛔ **keeping the previous yellow centre** (a gesture that ENDS must not retarget
+the camera). ⚠⚠ **It was reported CLOSED by a device look and it was not**: *"everything is
+working ok"* was general, and `A15`'s three specific cases were never reported on
+individually — ⭐ *a close is only as strong as the phrase that gave it.*
+⛔ **The geometry was never the fault.** The owner's verdict is a preference between two
+correct behaviours: **keeping control beats re-resolving**. `D25`, reversed by `D54`
+→ [`Claude/00_CORE/queue_notes/IN8.md`](Claude/00_CORE/queue_notes/IN8.md).
 ⭐⭐ **A REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
 entry**: *"you destroyed the rotation around the gravity axis… it came back to the axis of
 the screen view plane"* — withdrawn by the owner after `tests/a7_wiring.test.ts` composed
