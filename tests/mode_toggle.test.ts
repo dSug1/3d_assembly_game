@@ -18,18 +18,27 @@ import {
 import * as modeToggle from "@input/mode_toggle";
 
 describe("the mode a session starts in", () => {
-  it("⭐⭐ ROTATE — the owner's default, confirmed twice", () => {
-    // ⛔⛔ **THIS VECTOR PINNED THE WRONG VALUE FOR A DAY, AND THAT IS WHY IT IS WORTH A
-    // COMMENT.** The owner said *"Default start: rotation mode"* on 2026-09-16; `CLAUDE.md`
-    // and `scene.ts`'s comment both recorded `ROTATE`; the function returned `TRANSLATE` and
-    // **this vector asserted the returned value rather than the decision**. ⭐ So the suite
-    // was green, the documents were right, and the product booted in the other mode — the
-    // *fix beside the defect* shape, in its purest form: nothing was ever fixed here at all,
-    // the COMMENT moved and the code did not.
+  it("⭐⭐ TRANSLATE — `D71`, the owner's instruction of 2026-09-22", () => {
+    // ⭐⭐⭐ **THE QUOTE IS THE ASSERTION.** *"Set the default to translation mode at scene
+    // boot."* ⛔ This line exists to state the DECISION, and it is written from that sentence
+    // rather than from `initialBehaviour`'s body — which is the whole lesson of the day this
+    // vector got it wrong.
+    //
+    // ⛔⛔ **THIS VECTOR PINNED THE WRONG VALUE FOR A DAY, AND THE ACCOUNT IS KEPT.** The owner
+    // said *"Default start: rotation mode"* on 2026-09-16; `CLAUDE.md` and `scene.ts`'s comment
+    // both recorded `ROTATE`; the function returned `TRANSLATE` and **this vector asserted the
+    // returned value rather than the decision**. ⭐ So the suite was green, the documents were
+    // right, and the product booted in the other mode — the *fix beside the defect* shape, in
+    // its purest form: nothing was ever fixed here at all, the COMMENT moved and the code did
+    // not. Re-confirmed 2026-09-17: *"I confirm the scene shall boot in rotation mode."*
     // ⭐⭐ `METHOD`: *a vector that is written from the code it tests cannot contradict it.*
-    // Re-confirmed by the owner 2026-09-17: *"I confirm the scene shall boot in rotation
-    // mode, not translation mode."*
-    expect(initialBehaviour()).toBe("ROTATE");
+    //
+    // ⚠⚠ **AND THE VALUE IS NOW THE ONE THE DEFECT USED TO RETURN, WHICH IS WORTH SAYING OUT
+    // LOUD.** A reader who finds `TRANSLATE` here and remembers the audit will suspect a
+    // regression. ⛔ It is not one: the 2026-09-17 defect was a DISAGREEMENT between a human
+    // sentence and the code, and the test for it is not the value but whether any instruction
+    // still asks for the other mode. None does — `D71` supersedes both earlier ones.
+    expect(initialBehaviour()).toBe("TRANSLATE");
   });
 });
 

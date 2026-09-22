@@ -64,7 +64,10 @@ release. ⚠ The comparison's record is in
 ⚠ The mode starts at `TRANSLATE` and flips on **every** tap of any touchpoint, anywhere,
 immediately — including with nothing carried, since it is what the next grab inherits.
 ⛔ **In fork C the session starts in `ROTATE`** (`D37`, the owner's *"default start: rotation
-mode"*) — and **fork C is the default fork** since `D38`, so that is the shipped start. ⚠ A tap
+mode"*) — and **fork C is the default fork** since `D38`, so that is the shipped start.
+⛔⛔ **SUPERSEDED BY `D71` (2026-09-22)**: the shipped start is `TRANSLATE` again — *"Set the
+default to translation mode at scene boot."* ⚠ The sentence above is kept as the record.
+⭐ Note that the line before it — *"the mode starts at `TRANSLATE`"* — is true once more. ⚠ A tap
 on **another object's face while one is held** aligns and is **consumed**: the mode does NOT
 change (`D38` retired that clause). Everywhere else the tap keeps exactly this meaning.
 

@@ -91,8 +91,19 @@ export type Behaviour = "TRANSLATE" | "ROTATE";
 /**
  * ⭐⭐⭐ What the session starts as, **once**.
  *
- * ⛔⛔ **`ROTATE` — the owner's *"Default start: rotation mode"* (2026-09-16), re-confirmed
- * 2026-09-17: *"I confirm the scene shall boot in rotation mode, not translation mode."***
+ * ⛔⛔⛔ **`TRANSLATE` — the owner, 2026-09-22: *"Set the default to translation mode at scene
+ * boot."*** ⭐ `D71`.
+ *
+ * ⚠⚠ **IT REVERSES A DECISION THIS COMMENT ARGUED FOR TWICE, AND BOTH ARE KEPT** — *"Default
+ * start: rotation mode"* (2026-09-16), re-confirmed *"I confirm the scene shall boot in
+ * rotation mode, not translation mode"* (2026-09-17). ⛔ `METHOD`: *retractions are kept on
+ * purpose; a claim that was overturned is more useful than one silently deleted*, and *when
+ * two sections conflict, the later one wins.*
+ * ⭐⭐ **AND IT IS NOT THE 2026-09-17 DEFECT COMING BACK.** That defect was a DISAGREEMENT:
+ * every document said `ROTATE` and the code said `TRANSLATE`, so nobody could tell which was
+ * the decision. ⛔ This is the opposite — the owner's instruction and the code now agree, and
+ * the vector below is written from the INSTRUCTION. ⚠ The tell that distinguishes them is not
+ * the value returned; it is whether a human sentence anywhere asks for the other one.
  *
  * ⛔⛔ **IT RETURNED `TRANSLATE` UNTIL 2026-09-17 AND EVERY DOCUMENT SAID OTHERWISE.**
  * `CLAUDE.md`, this file's own neighbouring comment and `scene.ts`'s call site all recorded
@@ -102,8 +113,9 @@ export type Behaviour = "TRANSLATE" | "ROTATE";
  * ⭐⭐ `METHOD`: *a vector written from the code it tests cannot contradict that code* — which
  * is the same shape as `A7`'s composition, one layer lower: a correct decision, recorded
  * everywhere except in the one place that runs.
- * ⚠ `D23`'s argument for `TRANSLATE` (*the commonest gesture on the cheapest input*) is kept
- * here as the record of what was NOT chosen; it lost to the owner's hand.
+ * ⚠ `D23`'s argument for `TRANSLATE` — *the commonest gesture on the cheapest input* — was
+ * kept here for a year as the record of what was NOT chosen. ⭐ `D71` chooses it; the argument
+ * is unchanged and it is the hand that moved.
  *
  * ⚠ **AND IT IS THE *SESSION'S* DEFAULT, NOT EVERY GESTURE'S** — corrected by a device look
  * on 2026-09-16. I first read the owner's *"for one single ongoing touchpoint"* as *the
@@ -113,7 +125,7 @@ export type Behaviour = "TRANSLATE" | "ROTATE";
  * release."* ⭐ So it is a MODE, and rotation costs a tap only when **switching**.
  */
 export function initialBehaviour(): Behaviour {
-  return "ROTATE";
+  return "TRANSLATE";
 }
 
 /**

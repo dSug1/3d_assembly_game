@@ -1142,6 +1142,10 @@ indistinguishable from a bug.
    shipped without it and still does.
 3. **The session starts in `ROTATE` inside fork C only.** ⚠ Fork A's `TRANSLATE` start was
    closed by a hand, so `?anchorRules=0` must still reproduce it exactly.
+   ⛔⛔ **SUPERSEDED BY `D71` (2026-09-22)** — *"Set the default to translation mode at scene
+   boot."* The session now boots in `TRANSLATE`. ⚠ Kept rather than rewritten: this is the
+   record of what was decided, and `METHOD` says a claim that was overturned is more useful
+   than one silently deleted.
 
 ---
 

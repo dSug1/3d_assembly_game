@@ -40,6 +40,18 @@ const DEG = Math.PI / 180;
 /** The scene's real body dimensions, in metres — parts, and the base plate. */
 const PART: [number, number, number] = [SIZE, 2 * SIZE, 3 * SIZE];
 const PLATE: [number, number, number] = [6 * SIZE, 0.3 * SIZE, 9 * SIZE];
+/**
+ * ⭐⭐ **`objectB` IS NOT A PART ANY MORE** — it is a trapezoidal pyramid, half again as thick
+ * in `x` (the owner, 2026-09-22). ⚠ Only the BOOT-SCENE vector below uses it; the abstract
+ * `a`/`b` fixtures elsewhere in this file are about the mechanism and stay cuboid.
+ *
+ * ⛔ A BOX of the pyramid's dimensions is the right stand-in for a CLEARANCE question and the
+ * wrong one for a shape question: the frustum tapers upward, so its widest section is its base
+ * and the nearest points between it and `objectA` lie exactly there — where it is as wide as
+ * this box. ⭐ `tests/frustum.test.ts` measures the same gap through the REAL tapered hull, so
+ * the equivalence is checked rather than assumed.
+ */
+const PYRAMID: [number, number, number] = [1.5 * SIZE, 2 * SIZE, 3 * SIZE];
 
 /**
  * ⭐⭐ **A 100 mm SURFACE OFFSET — chosen for the vectors, not shipped.**
@@ -264,7 +276,7 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     const offset = captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH);
     const w = scene(
       ["objectA", [-0.2, 0, 0], IDENTITY, [], PART],
-      ["objectB", [0.2, 0, 0], IDENTITY, [], PART],
+      ["objectB", [0.2, 0, 0], IDENTITY, [], PYRAMID],
       ["objectD", [0, 0.307246, 0.16], IDENTITY, [], PART],
       ["objectC", [0, -3 * SIZE, 0], IDENTITY, [], PLATE],
     );
@@ -275,7 +287,12 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     // between the two parts. The margin is stated rather than implied: the threshold must sit
     // clear of it by a real factor, not by a millimetre.
     expect(surfaceGap(w, "objectA", "objectC")).toBeCloseTo(0.148, 9);
-    expect(surfaceGap(w, "objectA", "objectB")).toBeCloseTo(0.32, 9);
+    // ⛔⛔ **300 mm, AND IT WAS 320 UNTIL THE PYRAMID WAS THICKENED** (2026-09-22). The centres
+    // are still `5L` apart; `objectB`'s base grew by `0.5L`, so the surfaces are `400 − 40 − 60`
+    // apart. ⭐ This line is why the fixture above had to follow the product: a fixture still
+    // holding `PART` here would have kept asserting 320 mm of a scene nobody builds, and the
+    // margin below — which is the property that matters — would have been measured against it.
+    expect(surfaceGap(w, "objectA", "objectB")).toBeCloseTo(0.3, 9);
     expect(offset).toBeLessThan(0.148 / 2);
     // And it must stay big enough to be usable: an offset under 5 mm of world would mean two
     // parts had to nearly touch before anything showed, which is a different failure.

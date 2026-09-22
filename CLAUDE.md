@@ -90,12 +90,15 @@ turn that points its own face **the same way** (parallel — the CAD *align* sen
 a mate). One alignment at a time, replaced by the next; the Follower face is **filled** and
 the Pioneer face **outlined** until it breaks; a **shake** or a **second tap on that same
 face** breaks it; a **flick** resets the rotation.
-⛔⛔ **THE SESSION STARTS IN `ROTATE` — AND IT DID NOT UNTIL 2026-09-17.** `initialBehaviour()`
-returned `TRANSLATE` while this file, the spec and the call site's own comment all said
-`ROTATE`, and `git log -S` finds no commit that ever returned it: the owner's decision never
+⛔⛔ **THE SESSION BOOTS IN `TRANSLATE` — `D71`, 2026-09-22**: *"Set the default to translation
+mode at scene boot."* ⚠⚠ It REVERSES the twice-confirmed `ROTATE` start, and both are kept.
+⛔⛔ **DO NOT READ IT AS THE 2026-09-17 DEFECT RETURNING.** That defect was a DISAGREEMENT:
+`initialBehaviour()` returned `TRANSLATE` while this file, the spec and the call site all said
+`ROTATE`, and `git log -S` found no commit that ever returned it — the owner's decision never
 reached the code, and the vector asserted the value the function RETURNED rather than the
 decision made. ⭐ `METHOD`: *a vector written from the code it tests cannot contradict that
-code.* ✅ Owner re-confirmed 2026-09-17 and fixed.
+code.* ⭐⭐ **The tell is not the VALUE but whether any human sentence still asks for the other
+mode.** None does, and the vector now quotes the instruction.
 ⭐⭐ **THERE ARE NO FLAGS LEFT.** What a turned **Pioneer** costs the Follower was a flag for
 four hours (`D41`) and is now a **GESTURE** (`D42`): a **single tap** makes a `SNAPSHOT` —
 turning the Pioneer releases the alignment, the Follower does not move — and a **double tap**
@@ -119,8 +122,18 @@ via a two-way index, a turned Pioneer releasing its cyan followers and rotating 
 **down a chain**, **no cycles**, and a **`frozen`** attribute (enforced at `object_model.ts`'s
 two writers) carried by a new base plate. ⛔ The approach, hold-off, snap, mate and break are
 **not built**.
-⭐ The scene is now a workbench: three `L × 2L × 3L` parts `5L` apart at seeded random
+⭐ The scene is now a workbench: three parts `5L` apart at seeded random
 orientations (`?sceneSeed=N`), a frozen `6L × 0.3L × 9L` plate `3L` below.
+⭐⭐ **AND THE RIGHT-HAND BODY IS NO LONGER A BOX** (`D72`, 2026-09-22): `objectB` is a
+**trapezoidal pyramid**, `1.5L × 2L × 3L` with its top tapered to half its base — built by
+MOVING a Babylon box's vertices (`src/core/frustum.ts`), so the builder's winding survives.
+⭐ Everything downstream inherited it for free, because `D49`/`D50` had already made the
+collision hull and the logical faces **mesh-derived**: the first non-box body is what proves
+those two paid. ⛔⛔ Three consequences worth knowing: the boot clearance between the two parts
+moved **320 → 300 mm** (and the fixtures followed the product, which is the point); the boot
+Pioneer/Follower pair now aligns on the flat **±y** faces, because a frustum has no exact `+x`
+face and the old lookup demanded one; and it is the **first body that can reach GJK's deep
+branches**, which `QUEUE.md` records as unreached because every earlier shape was a box.
 ✅✅ **AND THE CAPTURE IS A SURFACE GAP** (`D49`, 2026-09-18, the owner): white is decided by the
 distance between the bodies' **surfaces**, from a convex shape **COMPUTED AT SPAWN**
 (`src/core/collision_shape.ts`, a GJK distance) — which is the owner's preferred answer to

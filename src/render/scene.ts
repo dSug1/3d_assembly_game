@@ -128,6 +128,7 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
+import { taperTop } from "../core/frustum";
 import {
   alignedFaceOf,
   faceFromPickedNormal,
@@ -253,6 +254,45 @@ const PLATE_DIMS_M: readonly [number, number, number] = [
   OBJECT_SIZE_M * 0.3,
   OBJECT_SIZE_M * 9,
 ];
+/**
+ * ⭐⭐⭐ **THE RIGHT-HAND PART IS A TRAPEZOIDAL PYRAMID** (the owner, 2026-09-22: *"modify the
+ * rectangle on the right to be a trapezoidal pyramid"*).
+ *
+ * The fraction of its base that the top face keeps. `1` would be the original box; `0` a true
+ * pyramid with a point for a top. ⭐ **0.5** is a taper a hand can see at the boot camera
+ * without the body becoming a spike — the four side faces stay large enough to tap, which
+ * matters because tapping a face is how every alignment in this game starts.
+ *
+ * ⛔⛔ **IT TAPERS UPWARD, AND THE BASE IS LEFT AT FULL SIZE ON PURPOSE.** The boot clearance
+ * between the two parts is measured surface-to-surface (`D49`) and asserted at 320 mm by
+ * `tests/highlight.test.ts`, which also requires the capture threshold to sit clear of it by a
+ * real factor. ⭐ Tapering upward leaves the widest section exactly where the box's was, so
+ * that distance does not move; `tests/frustum.test.ts` measures it through the real hull rather
+ * than trusting the argument.
+ */
+/**
+ * ⭐⭐⭐ **AND IT IS HALF AGAIN AS THICK AS A PART** (the owner, 2026-09-22: *"increase 50%
+ * the thickness of the pyramid (in the x axis direction)"*).
+ *
+ * `1.5L × 2L × 3L`, where a part is `L × 2L × 3L`. ⚠ `x` is the part's THINNEST axis, which
+ * is what *thickness* names here, and only that axis moves: the body keeps its height and its
+ * depth, so it reads as the same part made chunkier rather than as a different object.
+ *
+ * ⛔⛔ **IT MOVES THE BOOT CLEARANCE, AND THAT NUMBER IS LOAD-BEARING.** The parts' centres are
+ * `5L` = 400 mm apart and the gap is measured surface-to-surface (`D49`), so widening this base
+ * by `0.5L` takes the rest gap between `objectA` and `objectB` from **320 mm to 300 mm**:
+ * `400 − 40 − 60`. ⭐ Still an order above the ~60 mm capture offset, so nothing captures at
+ * rest — which is the property `tests/highlight.test.ts` guards, and it is re-measured there
+ * against these dimensions rather than left to this comment.
+ */
+const PYRAMID_DIMS_M: readonly [number, number, number] = [
+  OBJECT_SIZE_M * 1.5,
+  OBJECT_SIZE_M * 2,
+  OBJECT_SIZE_M * 3,
+];
+
+const OBJECT_TOP_SCALE = 0.5;
+
 const CAMERA_RADIUS_M = 0.6;
 
 
@@ -324,6 +364,41 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   /** ⚠ Which bodies boot FROZEN. ⛔ The model is what enforces it; this is only the intent. */
   const frozenIds = new Set<ObjectId>();
 
+  /**
+   * ⭐⭐ **TURN A BUILT BOX INTO A TRUNCATED PYRAMID BY MOVING ITS VERTICES.**
+   *
+   * ⛔⛔ **THE POINT IS THAT BABYLON'S OWN WINDING AND INDEX LIST SURVIVE.** Authoring a mesh
+   * by hand means authoring a winding, and `mesh_topology.ts`'s header records what a wrong
+   * winding assumption cost: every normal in the scene inverted. ⭐ Moving the points the box
+   * builder already produced changes where the body is and nothing about how it is described.
+   *
+   * ⚠ **THREE THINGS MUST FOLLOW THE POSITIONS, AND THE THIRD IS THE ONE THAT HIDES.**
+   * Normals are recomputed (the sides are no longer axis-aligned, so lighting would be wrong);
+   * and `refreshBoundingInfo` is not optional — Babylon cached the BOX's bounds at build time
+   * and picking tests them first, so a stale bound would make the pyramid pickable in the air
+   * above its own slope while the face under the finger reported correctly. ⛔ That is a
+   * defect a hand would read as *"the tap is offset"*, never as *"the bounds are stale"*.
+   *
+   * ⛔ Returns false rather than throwing: this file's own rule is that a body which cannot be
+   * built is NAMED on the readout, because scene construction that half-succeeds is worse than
+   * one that says what it could not do.
+   */
+  const taperMesh = (m: Mesh, topScale: number): boolean => {
+    const pos = m.getVerticesData(VertexBuffer.PositionKind);
+    const idx = m.getIndices();
+    if (pos === null || idx === null) return false;
+    const tapered = taperTop(pos, topScale);
+    if (tapered === null) return false;
+    m.setVerticesData(VertexBuffer.PositionKind, tapered);
+    const normals: number[] = [];
+    VertexData.ComputeNormals(tapered, idx, normals);
+    m.setVerticesData(VertexBuffer.NormalKind, normals);
+    m.refreshBoundingInfo();
+    return true;
+  };
+  /** ⚠ Bodies whose taper was refused — reported on the HUD, never silently a box. */
+  const untaperedBodies: string[] = [];
+
   const make = (
     name: string,
     at: Vector3,
@@ -338,11 +413,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * here: this only records the intent.
      */
     frozen = false,
+    /**
+     * ⭐ The fraction of the base the TOP face keeps — `1` leaves the body a box. ⚠ The
+     * body's own local `y` is the taper axis, which for a part booting square is world up.
+     */
+    topScale = 1,
   ) => {
     dimsOf.set(name, dims);
     if (frozen) frozenIds.add(name);
     // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
     const mesh = CreateBox(name, { width: dims[0], height: dims[1], depth: dims[2] }, scene);
+    // ⛔ BEFORE the collision hull and the topology are read off it, which both happen later
+    // and both read the mesh rather than any table (`D49`, `D50`) — so they inherit the
+    // tapered geometry by doing nothing at all.
+    if (topScale !== 1 && !taperMesh(mesh, topScale)) untaperedBodies.push(name);
     mesh.position = at;
     // ⛔ Quaternion mode. While `rotationQuaternion` is null Babylon uses the Euler
     // `rotation` instead, which is the frame-mixing defect above.
@@ -412,7 +496,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⚠⚠ **THIS IS THE LINE TO REVERT FIRST** if the trial is discarded: pass the two rotations
   // back and delete `bootAlignment` below.
   make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72]);
-  make("objectB", new Vector3(0.2, 0, 0), [0.45, 0.58, 0.72]);
+  // ⭐⭐⭐ **THE RIGHT-HAND BODY IS THE TRAPEZOIDAL PYRAMID** — *"modify the rectangle on the
+  // right to be a trapezoidal pyramid"* (the owner, 2026-09-22). ⚠ `objectB` is the one on the
+  // right: it sits at `+x`, and it is the FOLLOWER of the boot pair a few hundred lines below.
+  make(
+    "objectB",
+    new Vector3(0.2, 0, 0),
+    [0.45, 0.58, 0.72],
+    undefined,
+    PYRAMID_DIMS_M,
+    false,
+    OBJECT_TOP_SCALE,
+  );
   // ⭐ A THIRD OBJECT, so the barycentre mechanism has something to choose BETWEEN.
   // ⚠ Deliberately off-axis and off-plane: with three collinear objects every barycentre lies
   // on the same line and the ray could not distinguish them, so the test would look like it
@@ -1139,10 +1234,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * left) and one Follower (on the right). Set that up at boot for this fork."*
    *
    * ⛔⛔ **IT CHOOSES FACES THAT ARE ALREADY PARALLEL, SO THE BOOT POSE IS NOT DISTURBED.**
-   * Both bodies boot square, so `objectA`'s `+x` face and `objectB`'s `+x` face already point
-   * the same way — and `D37`'s alignment is PARALLEL, so the solve is the identity. ⚠ Picking
-   * the FACING pair (`+x` and `−x`) would have been the intuitive choice and would have spun
-   * the Follower 180° on frame one, which is §5.2's stated consequence of parallel-over-mate.
+   * Both bodies boot square, so `objectA`'s bottom and `objectB`'s bottom already point the
+   * same way — and `D37`'s alignment is PARALLEL, so the solve is the identity. ⚠ Picking
+   * the FACING pair would have been the intuitive choice and would have spun the Follower
+   * 180° on frame one, which is §5.2's stated consequence of parallel-over-mate.
+   *
+   * ⛔⛔⛔ **IT READ `+x` UNTIL 2026-09-22, AND THE PYRAMID IS WHY IT NO LONGER CAN.** When
+   * `objectB` became a trapezoidal pyramid its four side faces tilted, so **no face of it is
+   * within 0.01 of `+x` any more** and this lookup would have failed — printing its verdict and
+   * quietly booting with no Pioneer/Follower pair at all. ⭐⭐ The bottom faces are the answer
+   * the shape hands you: a taper about the body's own vertical leaves `±y` EXACTLY flat on both
+   * bodies, so the pair is still parallel by construction and the identity solve survives.
+   * ⚠ The owner chose this over relaxing the lookup to *the most `+x`-facing face*, which would
+   * have tilted the Follower by the taper angle on frame one.
+   * ⛔ `tests/frustum.test.ts` asserts the exact `±y` normals beside the shape itself, so a
+   * future taper that tilted them reddens there rather than silently dropping the boot pair.
    *
    * ⛔ **BY NORMAL, NEVER BY FACE ID.** `meshTopology` numbers faces in whatever order the
    * geometry yields, and `D50` exists because a table keyed on names was silently wrong for an
@@ -1153,14 +1259,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * play. ⭐ `SNAPSHOT`, so the pair boots **cyan + amber**, which is what a single tap makes.
    */
   const bootAlignment = (followerId: ObjectId, pioneerId: ObjectId): void => {
-    const faceByNormalX = (id: ObjectId) =>
-      world.objects.get(id)?.faces.find((f) => f.normal[0] > 0.99) ?? null;
-    const pf = faceByNormalX(pioneerId);
-    const ff = faceByNormalX(followerId);
+    // ⛔ The DOWNWARD face — flat on a box and on a pyramid alike. See the header for why it
+    // is no longer `+x`.
+    const bottomFace = (id: ObjectId) =>
+      world.objects.get(id)?.faces.find((f) => f.normal[1] < -0.99) ?? null;
+    const pf = bottomFace(pioneerId);
+    const ff = bottomFace(followerId);
     if (!pf || !ff) {
       // ⚠ Named on the readout rather than thrown: a boot that half-succeeds is worse than one
       // that says what it could not do, and this whole file is a trial.
-      lastVerdict = `boot: no +x face on ${pf ? followerId : pioneerId} — no boot alignment`;
+      lastVerdict = `boot: no bottom face on ${pf ? followerId : pioneerId} — no boot alignment`;
       return;
     }
     const target = faceWorld(world, pioneerId, pf.id)?.normal;
@@ -2494,6 +2602,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             (shapelessBodies.length === 0
               ? ""
               : `  ⛔NOSHAPE(${shapelessBodies.join(",")})`) +
+            // ⛔⛔ **A BODY WHOSE TAPER WAS REFUSED, NAMED, for the same reason one sentence up.**
+            // `taperTop` returns null rather than substituting a shape (`LESSONS_CARRIED` §6), so
+            // the body is still on the glass — as a BOX. ⚠ *The pyramid is a rectangle again* is
+            // a thing a hand would notice and have no way to explain, and a silent fallback is
+            // exactly the class this readout exists to close.
+            (untaperedBodies.length === 0
+              ? ""
+              : `  ⛔NOTAPER(${untaperedBodies.join(",")})`) +
             // ⭐⭐⭐ **WHERE THE OUTLINE PIPELINE STOPS** — added 2026-09-18 after a device report
             // of *"no outline of any sort"*, which four different failures produce identically:
             // no topology, no outline meshes built, no face markers, or a throw in the draw path.
