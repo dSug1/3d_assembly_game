@@ -1,24 +1,18 @@
 /**
- * ⭐⭐⭐ **A ROTATION ENDS ON A MULTIPLE** — the owner, 2026-09-22, second formulation:
- * *"any rotation stops at a degree which is a multiple of the incrmt … Just make sure the end
- * of the rotation is by increment."*
+ * ⭐⭐⭐ **THE BODY IS ALWAYS ON AN INCREMENT** — the owner, 2026-09-22, rejecting the third
+ * formulation: *"the object rotates then rotates back in the reverse direction to snap the
+ * increment. This is not what I want: I want the object to stop to an increment and not rotate
+ * further if the delta position input becomes too weak."*
  *
- * ⛔⛔ **THE FIRST FORMULATION WAS BUILT AND REJECTED**, and these vectors are shaped by why:
- * it quantised the turn *as it happened*, so the body could only move as fast as its queue
- * drained and a brisk drag outran it. ⭐ The property that replaces it is not *the steps are
- * smaller* — it is that **nothing is quantised during the drag at all**. So what is tested here
- * is a single END correction, and the vectors say out loud that the correction is at most half
- * an increment, which is what keeps the settle short.
+ * ⛔⛔ **FOUR FORMULATIONS, AND THESE VECTORS ARE SHAPED BY WHY THE FIRST THREE FAILED.**
+ * Quantising the turn as it happened queued the increments and lagged the finger; rounding at
+ * the release carried the body forward of it; truncating back when the finger rested made it
+ * reverse. ⭐ All three let the body reach a pose it was not allowed to hold, then argued about
+ * how to get it back. So the properties tested here are **never past the demand** and **never
+ * backwards** — and a fifth formulation that broke either would redden, whatever else it fixed.
  */
 import { describe, expect, it } from "vitest";
-import {
-  RotationTally,
-  incrementRadians,
-  REST_WINDOW_MS,
-  RotationSpeed,
-  restThresholdRadPerS,
-  truncateCorrection,
-} from "../src/input/rotation_increment";
+import { RotationTally, incrementRadians } from "../src/input/rotation_increment";
 import {
   IDENTITY,
   qAngle,
@@ -28,6 +22,9 @@ import {
   type Quat,
   type Vec3,
 } from "../src/core/vec";
+import { screenPlaneRotation } from "../src/input/screen_rotate";
+import { rotateAboutAxis } from "../src/input/anchor_rotate";
+import { gravityFrame } from "../src/input/gravity_frame";
 
 const DEG = Math.PI / 180;
 const Y: Vec3 = [0, 1, 0];
@@ -56,127 +53,108 @@ describe("⭐ incrementRadians — the flag and the angle in one slider", () => 
   });
 });
 
-describe("⭐⭐⭐ truncateCorrection — back to the increment the turn already passed", () => {
+describe("⭐⭐⭐ advance — the body steps to the increment the finger is in", () => {
   const INC = 5 * DEG;
 
-  it("is ZERO when the turn already landed on a multiple", () => {
-    for (const deg of [0, 5, -5, 45, -120]) {
-      expect(truncateCorrection(deg * DEG, INC)).toBeCloseTo(0, 12);
-    }
-  });
-
-  it("⭐⭐⭐ gives BACK the remainder — 23° returns to 20°, never on to 25°", () => {
-    // ⛔⛔ **THE CORRECTION THE FIRST BUILD GOT WRONG.** It ROUNDED, so 23° went forward to
-    // 25° — carrying the body somewhere the finger never took it. ⭐ The owner: *"smoothly
-    // truncated to the nearest past increment"*.
-    expect(truncateCorrection(23 * DEG, INC) / DEG).toBeCloseTo(-3, 9);
-    expect(truncateCorrection(21 * DEG, INC) / DEG).toBeCloseTo(-1, 9);
-    // ⚠ 44° with a 45° increment gives the whole gesture back. That IS the rule: nothing
-    // past the first increment was ever reached.
-    expect(truncateCorrection(44 * DEG, 45 * DEG) / DEG).toBeCloseTo(-44, 9);
-  });
-
-  it("⛔⛔ TRUNCATES TOWARD THE START, so a NEGATIVE turn behaves like a positive one", () => {
-    // ⭐ `Math.trunc`, not `Math.floor`. Flooring sends −23° to −25° — FURTHER than the finger
-    // went, and inverted relative to the positive case. ⚠ *An invariant tested on one axis is
-    // not tested*: this is the same shape, one sign over.
-    expect(truncateCorrection(-23 * DEG, INC) / DEG).toBeCloseTo(+3, 9);
-    expect(truncateCorrection(-21 * DEG, INC) / DEG).toBeCloseTo(+1, 9);
-  });
-
-  it("⭐⭐ NEVER carries the body FORWARD — the property the whole rule is about", () => {
-    // ⛔ The correction always opposes the turn, and the truncated total is never larger in
-    // magnitude than the demanded one. A rounding rule fails both of these for half its inputs.
-    const inc = 15 * DEG;
-    for (let d = -400; d <= 400; d += 0.37) {
-      const total = d * DEG;
-      const c = truncateCorrection(total, inc);
-      if (Math.abs(c) < 1e-12) continue;
-      expect(Math.sign(c)).toBe(-Math.sign(total));
-      expect(Math.abs(total + c)).toBeLessThanOrEqual(Math.abs(total) + 1e-12);
-      expect(Math.abs(c)).toBeLessThan(inc);
-    }
-  });
-
-  it("⭐ lands exactly on a multiple, for any starting angle", () => {
-    const inc = 15 * DEG;
-    for (let d = -200; d <= 200; d += 1.3) {
-      const total = d * DEG;
-      const landed = (total + truncateCorrection(total, inc)) / inc;
-      expect(landed - Math.round(landed)).toBeCloseTo(0, 9);
-    }
-  });
-
-  it("⛔ refuses rather than dividing by a bad increment", () => {
-    for (const bad of [0, -5, NaN, Infinity]) expect(truncateCorrection(1, bad)).toBe(0);
-    for (const bad of [NaN, Infinity]) expect(truncateCorrection(bad, INC)).toBe(0);
-  });
-});
-
-describe("⭐⭐ the TALLY — what one gesture asked for, and the retreat it owes", () => {
-  const INC = 5 * DEG;
-
-  it("accumulates one axis across many frames", () => {
+  it("does NOTHING until a boundary is crossed — *not rotate further if the input is weak*", () => {
+    // ⛔ THE OWNER'S SENTENCE, as a vector. 4° of demand at a 5° detent moves nothing at all;
+    // the body holds exactly where it is, with no correction to make because it never left.
     const t = new RotationTally<string>();
-    for (let i = 0; i < 12; i++) t.add("a", "yaw", Y, 1 * DEG);
-    expect(t.total("a", "yaw") / DEG).toBeCloseTo(12, 9);
+    t.add("a", "yaw", Y, 4 * DEG);
+    expect(t.advance("a", INC)).toBeNull();
+    expect(t.applied("a", "yaw")).toBe(0);
   });
 
-  it("⭐ keeps axes INDEPENDENT", () => {
+  it("⭐⭐ steps EXACTLY one increment when one boundary is crossed", () => {
+    const t = new RotationTally<string>();
+    t.add("a", "yaw", Y, 6 * DEG);
+    expect(qAngle(t.advance("a", INC) as Quat) / DEG).toBeCloseTo(5, 6);
+    expect(t.applied("a", "yaw") / DEG).toBeCloseTo(5, 6);
+    // ⚠ And the 1° left over is kept, so the next boundary arrives on time.
+    expect(t.demanded("a", "yaw") / DEG).toBeCloseTo(6, 6);
+  });
+
+  it("⭐⭐⭐ NEVER goes past the demand, and NEVER backwards — over a whole sweep", () => {
+    // ⛔⛔ **THE TWO PROPERTIES THE FIRST THREE FORMULATIONS BROKE**, stated as one loop.
+    // Rounding at the release broke the first; truncating back on rest broke the second.
+    // ⭐ A fifth formulation that reintroduced either would redden here.
+    for (const sign of [+1, -1]) {
+      const t = new RotationTally<string>();
+      let applied = 0;
+      for (let i = 1; i <= 200; i++) {
+        t.add("a", "yaw", Y, sign * 0.37 * DEG);
+        t.advance("a", INC);
+        const now = t.applied("a", "yaw");
+        const demanded = t.demanded("a", "yaw");
+        // never past the demand
+        expect(Math.abs(now)).toBeLessThanOrEqual(Math.abs(demanded) + 1e-12);
+        // never backwards
+        expect(Math.abs(now)).toBeGreaterThanOrEqual(Math.abs(applied) - 1e-12);
+        // always ON an increment
+        const k = now / INC;
+        expect(k - Math.round(k)).toBeCloseTo(0, 9);
+        applied = now;
+      }
+    }
+  });
+
+  it("⭐⭐ JUMPS SEVERAL INCREMENTS AT ONCE — which is why it cannot build a backlog", () => {
+    // ⛔ THE DIFFERENCE FROM FORMULATION 1, as a number. A frame whose demand crossed four
+    // boundaries advances FOUR at once. The queue that played them one at a time is what
+    // lagged the finger, and there is no queue here to grow.
+    const t = new RotationTally<string>();
+    t.add("a", "yaw", Y, 23 * DEG);
+    expect(qAngle(t.advance("a", INC) as Quat) / DEG).toBeCloseTo(20, 6);
+    expect(t.applied("a", "yaw") / DEG).toBeCloseTo(20, 6);
+  });
+
+  it("⛔ is symmetric in sign — `trunc`, not `floor`", () => {
+    // ⚠ `Math.floor` sends −23° to −25°, PAST the demand and inverted relative to the positive
+    // case. *An invariant tested on one axis is not tested*, one sign over.
+    const t = new RotationTally<string>();
+    t.add("a", "yaw", Y, -23 * DEG);
+    expect(qAngle(t.advance("a", INC) as Quat) / DEG).toBeCloseTo(20, 6);
+    expect(t.applied("a", "yaw") / DEG).toBeCloseTo(-20, 6);
+  });
+
+  it("⭐ a REVERSAL steps back down through the detents, never past the demand", () => {
+    // ⚠ Turning back is the user's own doing, not a correction: the demand itself fell.
+    const t = new RotationTally<string>();
+    t.add("a", "yaw", Y, 23 * DEG);
+    t.advance("a", INC); // at 20°
+    t.add("a", "yaw", Y, -10 * DEG); // demand now 13°
+    t.advance("a", INC);
+    expect(t.applied("a", "yaw") / DEG).toBeCloseTo(10, 6);
+  });
+
+  it("⛔ NULL when nothing was crossed, not an identity quaternion", () => {
+    // ⚠ The caller must tell *nothing to do* from *a tiny step*: starting an animation to where
+    // the body already is would still cancel whatever else was in flight.
+    const t = new RotationTally<string>();
+    expect(t.advance("never-touched", INC)).toBeNull();
+    t.add("a", "yaw", Y, 12 * DEG);
+    expect(t.advance("a", INC)).not.toBeNull();
+    expect(t.advance("a", INC)).toBeNull(); // asked twice, nothing new crossed
+  });
+
+  it("⛔ refuses a bad increment rather than dividing by it", () => {
+    const t = new RotationTally<string>();
+    t.add("a", "yaw", Y, 23 * DEG);
+    for (const bad of [0, -5, NaN, Infinity]) expect(t.advance("a", bad)).toBeNull();
+  });
+
+  it("⭐ keeps axes INDEPENDENT, and latches each axis on first contact", () => {
+    // ⚠ A camera orbit mid-drag would otherwise redefine what *this rotation* was about.
     const t = new RotationTally<string>();
     t.add("a", "yaw", Y, 12 * DEG);
-    t.add("a", "pitch", X, 7 * DEG);
-    expect(t.total("a", "yaw") / DEG).toBeCloseTo(12, 9);
-    expect(t.total("a", "pitch") / DEG).toBeCloseTo(7, 9);
-  });
-
-  it("⛔⛔ LATCHES the axis on first contact and never re-reads it", () => {
-    // ⚠ A camera orbit mid-drag would otherwise redefine what "this rotation" was about.
-    const t = new RotationTally<string>();
-    t.add("a", "yaw", Y, 10 * DEG);
     t.add("a", "yaw", X, 13 * DEG); // a DIFFERENT axis under the same name
-    const q = t.truncate("a", INC) as Quat;
+    t.add("a", "pitch", X, 4 * DEG);
+    const q = t.advance("a", INC) as Quat;
     expect(q).not.toBeNull();
-    // ⭐ The retreat turns about Y — the axis the gesture STARTED about — not about X.
+    // ⭐ The pitch crossed nothing, so it contributes nothing; the yaw turns about Y.
+    expect(t.applied("a", "pitch")).toBe(0);
     const moved = qRotate(q, [0, 0, 1]);
     expect(Math.abs(moved[1])).toBeCloseTo(0, 9);
-  });
-
-  it("⭐⭐ the retreat is the remainder, turned the other way", () => {
-    const t = new RotationTally<string>();
-    t.add("a", "yaw", Y, 23 * DEG);
-    expect(qAngle(t.truncate("a", INC) as Quat) / DEG).toBeCloseTo(3, 6);
-  });
-
-  it("⭐⭐⭐ REBASES, so a drag that rests three times does not drift", () => {
-    // ⛔⛔ THE PROPERTY THAT MAKES A REPEATED REST SAFE, and the one a bookkeeping slip would
-    // lose. After truncating, the gesture really HAS turned the truncated amount — so the next
-    // rest must measure from there. ⚠ Left un-rebased, each of three pauses would give back its
-    // own remainder again and the body would walk backwards.
-    const t = new RotationTally<string>();
-    t.add("a", "yaw", Y, 23 * DEG);
-    t.truncate("a", INC);
-    expect(t.total("a", "yaw") / DEG).toBeCloseTo(20, 6);
-    // ⭐ Resting again with nothing new demanded gives back NOTHING.
-    expect(t.truncate("a", INC)).toBeNull();
-    // ⭐ And the drag carries on from the increment: +7° more reaches 27°, back to 25°.
-    t.add("a", "yaw", Y, 7 * DEG);
-    expect(t.total("a", "yaw") / DEG).toBeCloseTo(27, 6);
-    t.truncate("a", INC);
-    expect(t.total("a", "yaw") / DEG).toBeCloseTo(25, 6);
-  });
-
-  it("⛔ NULL when there is nothing to give back, not an identity quaternion", () => {
-    const t = new RotationTally<string>();
-    expect(t.truncate("never-touched", INC)).toBeNull();
-    t.add("a", "yaw", Y, 10 * DEG); // already a multiple of 5°
-    expect(t.truncate("a", INC)).toBeNull();
-  });
-
-  it("⛔ an increment of zero is refused rather than divided by", () => {
-    const t = new RotationTally<string>();
-    t.add("a", "yaw", Y, 23 * DEG);
-    expect(t.truncate("a", 0)).toBeNull();
   });
 
   it("`clear` forgets the gesture", () => {
@@ -185,105 +163,61 @@ describe("⭐⭐ the TALLY — what one gesture asked for, and the retreat it ow
     expect(t.touched("a")).toBe(true);
     t.clear("a");
     expect(t.touched("a")).toBe(false);
-    expect(t.truncate("a", INC)).toBeNull();
+    expect(t.advance("a", INC)).toBeNull();
   });
 
-  it("⭐⭐⭐ COMPOSED, ONE AXIS: the body's NET turn is exactly the past increment", () => {
-    // ⛔ Measured on the body rather than on the arithmetic: turn 23°, rest, and the body has
-    // turned 20° — not 23° and, crucially, not 25°.
+  it("⭐⭐⭐ COMPOSED: the body's NET turn is the increment, measured on the body", () => {
+    // ⛔ Not the arithmetic — the pose. Demand 23°, step, and the body has turned 20°.
     const t = new RotationTally<string>();
     t.add("a", "yaw", Y, 23 * DEG);
-    const landed = qmul(t.truncate("a", INC) as Quat, qFromAxisAngle(Y, 23 * DEG));
+    const landed = qmul(t.advance("a", INC) as Quat, IDENTITY);
     expect(apart(IDENTITY, landed)).toBeCloseTo(20, 6);
   });
 });
 
-describe("⭐⭐⭐ THE REST THRESHOLD SCALES WITH THE DETENT (2026-09-22)", () => {
+describe("⛔⛔ THE SIGNS THE INCREMENT PATH RESTATES", () => {
   /**
-   * The owner: *"The threshold shall probably depend on the increment value (harder to move 45
-   * degree increment than 1 degree increment)."*
-   *
-   * ⛔⛔ **AND THE ARITHMETIC SAYS BY HOW MUCH.** One detent is `increment / gain` of finger
-   * travel — at `gainRotateFree` 0.07 rad/mm that is **1.25 mm** at 5° and **11.2 mm** at 45°.
-   * Against §1.1's flat 3.5 mm band the detent is three bands wide at one end of the slider and
-   * a third of a band at the other, so the SAME pause gives back 4° or **44°**. ⭐ A threshold
-   * in increments per second cannot have that failure.
+   * ⚠⚠ **WHY THIS BLOCK EXISTS.** With increments ON, `scene.ts` does not call
+   * `screenPlaneRotation` — a tally needs the AXIS and the ANGLE, not their product — so it
+   * restates both. ⛔ That is a duplicated definition, and two definitions of one fact drift.
+   * ⭐ `METHOD`: *a sign is not tested by any amount of testing the magnitude.*
    */
-  it("⭐⭐ a 45° detent tolerates NINE TIMES the speed of a 5° one", () => {
-    // ⛔ THE RATIO IS THE ASSERTION. A fixed threshold gives 1 here, and that is the defect.
-    const slow = restThresholdRadPerS(5 * DEG, 1);
-    const fast = restThresholdRadPerS(45 * DEG, 1);
-    expect(fast / slow).toBeCloseTo(9, 9);
-  });
+  const frame = gravityFrame([0, 0, 1], [0, -1, 0]);
+  if (frame === null) throw new Error("the fixture's own frame is degenerate");
+  // ⚠ NOT the identity: a sign error vanishes there.
+  const base = qFromAxisAngle([0.3, 0.5, 0.8], 0.7);
 
-  it("is linear in the fraction, so the slider means what it says", () => {
-    expect(restThresholdRadPerS(5 * DEG, 2) / restThresholdRadPerS(5 * DEG, 1)).toBeCloseTo(2, 9);
-    // ⚠ `1` is literally *one increment per second*.
-    expect(restThresholdRadPerS(5 * DEG, 1)).toBeCloseTo(5 * DEG, 12);
-  });
-
-  it("⛔ refuses what it cannot vouch for, rather than returning a usable-looking number", () => {
-    for (const bad of [0, -1, NaN, Infinity]) {
-      expect(restThresholdRadPerS(bad, 1)).toBe(0);
-      expect(restThresholdRadPerS(5 * DEG, bad)).toBe(0);
+  it("the free YAW/PITCH tally states `screenPlaneRotation`'s own angles", () => {
+    const r = 0.004;
+    for (const [dx, dy] of [
+      [30, 12],
+      [-30, 12],
+      [30, -12],
+      [200, 150],
+    ] as const) {
+      const viaProduct = screenPlaneRotation(base, frame, dx, dy, r);
+      // ⭐ base, then PITCH about `right`, then YAW about `up` — the order matters and is
+      // asserted, because swapping it is wrong only away from the identity.
+      const viaTally = rotateAboutAxis(
+        rotateAboutAxis(base, frame.right, -dy * r),
+        frame.up,
+        -dx * r,
+      );
+      expect(apart(viaProduct, viaTally)).toBeCloseTo(0, 9);
     }
   });
-});
 
-describe("⭐⭐ RotationSpeed — the demand over a stated window", () => {
-  it("reports demand per second over the window", () => {
-    const v = new RotationSpeed<string>();
-    // Six samples of 1° inside one window = 6° per window = 60°/s at a 100 ms window.
-    for (let i = 0; i < 6; i++) v.add("a", i * 10, 1 * DEG);
-    expect((v.speed("a", 50) / DEG) * (REST_WINDOW_MS / 1000)).toBeCloseTo(6, 6);
-  });
-
-  it("⛔⛔⛔ A SILENT WINDOW READS ZERO — the defect §1.1 shipped twice", () => {
-    // ⛔⛔ **THE ONE THAT MATTERS.** If the rate were divided by the span between surviving
-    // samples rather than by the WINDOW, then as the finger stops and samples stop arriving the
-    // span would collapse and the computed rate would RISE — so rest becomes unreachable exactly
-    // when it is true. ⚠ That is `QUEUE`'s first mistake shape, and §1.1 met it twice: once as
-    // *"STATIONARY was unreachable for any real finger"*, once as a tracker advanced only by
-    // `pointermove` that froze at MOVING. ⭐ A fixed divisor makes silence read as stillness.
-    const v = new RotationSpeed<string>();
-    v.add("a", 0, 10 * DEG);
-    expect(v.speed("a", 0)).toBeGreaterThan(0);
-    // … and now nothing arrives for longer than the window.
-    expect(v.speed("a", REST_WINDOW_MS + 1)).toBe(0);
-  });
-
-  it("drops samples older than the window, and keeps the ones inside it", () => {
-    const v = new RotationSpeed<string>();
-    v.add("a", 0, 10 * DEG); // will fall out
-    v.add("a", REST_WINDOW_MS - 10, 2 * DEG); // will survive
-    const kept = (v.speed("a", REST_WINDOW_MS) * REST_WINDOW_MS) / 1000;
-    expect(kept / DEG).toBeCloseTo(2, 6);
-  });
-
-  it("⚠ counts a REVERSAL as motion — the sign is dropped", () => {
-    // ⛔ A hand shaking the object back and forth is not at rest, and a signed sum would cancel
-    // to zero and truncate in the middle of the shake.
-    const v = new RotationSpeed<string>();
-    v.add("a", 0, +5 * DEG);
-    v.add("a", 10, -5 * DEG);
-    expect(v.speed("a", 20)).toBeGreaterThan(0);
-  });
-
-  it("ignores what it cannot use, and forgets on `clear`", () => {
-    const v = new RotationSpeed<string>();
-    v.add("a", 0, NaN);
-    v.add("a", NaN, 5 * DEG);
-    v.add("a", 0, 0);
-    expect(v.speed("a", 0)).toBe(0);
-    v.add("a", 0, 5 * DEG);
-    expect(v.speed("a", 0)).toBeGreaterThan(0);
-    v.clear("a");
-    expect(v.speed("a", 0)).toBe(0);
-  });
-
-  it("⭐ bodies are independent", () => {
-    const v = new RotationSpeed<string>();
-    v.add("a", 0, 5 * DEG);
-    expect(v.speed("b", 0)).toBe(0);
+  it("⛔ and the ORDER is what makes the vector above bite", () => {
+    // ⚠ Driven hard on purpose: two rotations commute to first order, so at a realistic frame's
+    // few degrees the disagreement is a third of a degree and a threshold picked by eye lands
+    // on the wrong side of it.
+    const r = 0.004;
+    const [dx, dy] = [200, 150];
+    const wrongOrder = rotateAboutAxis(
+      rotateAboutAxis(base, frame.up, -dx * r),
+      frame.right,
+      -dy * r,
+    );
+    expect(apart(screenPlaneRotation(base, frame, dx, dy, r), wrongOrder)).toBeGreaterThan(5);
   });
 });

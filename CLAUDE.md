@@ -181,17 +181,19 @@ correct and twice-vectored; the shake report is what inverted the diagnosis, and
 using the correct retire-by-membership pattern for one marker pool and the wrong one for
 another, in the same edit.
 ⭐⭐⭐ **ROTATION INCREMENTS ARE ON TRIAL** (`D73`, 2026-09-22) — `rotationIncrementDeg`
-(0–45, step 5): **0 is the current build**, and above zero a rotation **truncates back to the
-increment it last passed** whenever the finger comes to REST, smoothly.
-⛔⛔ **THE TRIGGER IS REST, NOT RELEASE**, and it fires as often as the hand pauses — so the
-increments read as detents you can sweep through and settle into. ⭐ The threshold is §1.1's own
-hysteretic still/moving test (`motionDeadbandMm`, `restConfirmMs`), not a new number.
-⛔⛔ **AND IT ONLY EVER GIVES GROUND BACK.** Truncation, never rounding: a rounded correction
-can carry the body FORWARD past where the finger took it, which is the object moving on its own.
-⚠⚠ **TWO EARLIER FORMULATIONS WERE BUILT AND CORRECTED BY A HAND** — quantising the turn *as
-it happened* lagged the finger (*"too much lag in the rotation vs. the finger movement"*), and
-rounding at the release moved the body forward. ⭐ Nothing is quantised DURING the drag: the
-gains, the deadband and the smoothing are untouched → `src/input/rotation_increment.ts`.
+(0–45, step 5): **0 is the current build**, and above zero **the body is always ON an
+increment**. It advances a whole increment when the drag crosses a boundary and otherwise holds,
+so a weak input simply stops it — there is nothing to correct and nothing to reverse.
+⛔⛔ **FOUR FORMULATIONS, THREE REJECTED BY A HAND, AND THE REASONS BIND ANY FIFTH**: quantising
+the turn *as it happened* QUEUED the steps and lagged the finger (*"too much lag in the rotation
+vs. the finger movement"*); rounding at the RELEASE carried the body FORWARD of where the finger
+went; truncating back when the finger RESTED made it *"rotate back in the reverse direction"*.
+⭐⭐ All three let the body reach a pose it was not allowed to hold and then argued about the way
+back — the fourth never leaves the increment, and **jumps several at once** when a fast drag
+crosses several, so a backlog is unrepresentable. ⚠ The cost, inherent and not tunable: the body
+advances in visible steps rather than tracking the finger → `src/input/rotation_increment.ts`.
+✅ It also DELETED a novel composite: the speed-threshold version needed one, this does not, so
+ordinary angle snapping (Blender/3ds Max/AutoCAD, decades old) is the whole of its prior art.
 ⛔⛔⛔ **AND DEFECT 49 CAME OUT OF THE SAME PASS**: *"the dx delta position and the yaw rotation
 direction are inverted"*. ⭐⭐ **The report named the wrong rule** — the free yaw was swept over
 408 camera positions and inverted at NONE; the **twist on an aligned body** inverted at **12 of

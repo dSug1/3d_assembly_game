@@ -101,21 +101,6 @@ export interface GestureConfig {
    */
   rotationIncrementDeg: number;
   /**
-   * ⭐⭐⭐ **HOW SLOW COUNTS AS AT REST — in increments per second** (the owner, 2026-09-22:
-   * *"The threshold shall probably depend on the increment value (harder to move 45 degree
-   * increment than 1 degree increment)"*).
-   *
-   * ⛔⛔ A FIXED threshold is wrong by the ratio of the increments. One detent is
-   * `increment / gain` of finger travel — 1.25 mm at 5°, 11.2 mm at 45° — so §1.1's flat 3.5 mm
-   * band is three detents wide at one end of the slider and a third of one at the other, and a
-   * pause gives back 4° or **44°** depending only on where the slider sits. ⭐ Expressed in
-   * increments per second the threshold scales by construction.
-   *
-   * ⚠ `1` means *slower than one increment a second*. Measured over a stated 100 ms window on
-   * the DEMANDED rotation, which §1.1 has already deadbanded.
-   */
-  rotationRestIncrementsPerS: number;
-  /**
    * §2quinte roll: a dimensionless multiplier on the swept angle.
    * ⛔ It scales what the object is TURNED BY, never what the commit threshold reads —
    * scaling the latter would silently move `rollAngle` as well. See `roll.ts`.
@@ -623,9 +608,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   gainRotateConstrained: 0.07,
   // ⛔ OFF by default — a trial ships off, so what it is compared against is what a hand knows.
   rotationIncrementDeg: 0,
-  // ⚠⚠ A GUESS, and this project's record on guessed numbers is that they have been wrong
-  // every single time. ⭐ Ship the slider WITH the rule and let a hand pick it.
-  rotationRestIncrementsPerS: 1,
   // ⭐ 1 is DIRECT MANIPULATION: the cube turns exactly as far as the finger swept,
   // and it is what shipped up to now. ⚠ Anything else means the object stops tracking
   // the fingertip — a real trade, and the owner's to make on the glass. `IN5`.
@@ -1147,15 +1129,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     throw new Error(
       `rotationIncrementDeg (${cfg.rotationIncrementDeg}) is outside 0..45: 0 is OFF (the ` +
         "unquantised build) and 45 is the coarsest increment the owner asked for.",
-    );
-  }
-  // ⛔ Strictly positive: zero would make rest unreachable, so the truncation could never
-  // fire and the whole mechanism would be silently dead with nothing on the glass to say so.
-  if (!(cfg.rotationRestIncrementsPerS > 0) || cfg.rotationRestIncrementsPerS > 20) {
-    throw new Error(
-      `rotationRestIncrementsPerS (${cfg.rotationRestIncrementsPerS}) is outside (0, 20]: at ` +
-        "zero the rotation could never come to rest and the increment would never apply; " +
-        "beyond 20 increments a second every ordinary drag reads as stopped.",
     );
   }
   if (!(cfg.captureOffsetMm > 0)) {

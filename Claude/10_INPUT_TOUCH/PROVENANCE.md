@@ -135,10 +135,27 @@ input `SEC4` reads instead of a codebase.
 | **The idea that a snap has a *strength* / a capture field** | ✅ **PRIOR ART** | Bier & Stone, *Snap-dragging* (SIGGRAPH 1986) and *Snap-dragging in three dimensions* (I3D 1990) — the gravity function. [ACM](https://dl.acm.org/doi/10.1145/91394.91446) |
 | **Reducing the COST of a snap rather than its strength** | ✅ **PRIOR ART** | Baudisch, Cutrell, Hinckley & Eversole, *Snap-and-go: helping users align objects without the modality of traditional snapping*, CHI 2005. [PDF](https://cutrell.org/papers/CHI05-SnapAndGo.pdf) |
 | **A detent as a mechanism that holds a position until deliberately left** | ✅ **PRIOR ART** | Mechanical, and far older than any of this. [Detent](https://en.wikipedia.org/wiki/Detent) |
-| ⚠⚠ **Truncating to the increment when the INPUT SPEED falls below a threshold, with that threshold PROPORTIONAL TO the increment** | ⛔ **NOVEL COMPOSITE — no publication found** | Searched 2026-09-22 across the snapping and snap-strength literature and the CAD/DCC documentation above. Angle snapping is everywhere and is applied **continuously** or at the commit of a transform; making it fire on *the finger slowing down*, and scaling that threshold with the detent, is a composition I could not find described. ⚠ **This is the entry `SEC4` must look at.** ⭐ Its exposure is reduced by the fact that the scaling is a **unit conversion, not an invention**: one increment of rotation IS a fixed amount of finger travel (`increment / gain`), so the threshold is §1.1's existing rest question asked in the detent's own units |
+| ⚠⚠ ~~Truncating to the increment when the INPUT SPEED falls below a threshold, with that threshold PROPORTIONAL TO the increment~~ | ✅ **RETIRED THE SAME DAY — the exposure is gone** | Searched 2026-09-22 across the snapping and snap-strength literature and the CAD/DCC documentation above. Angle snapping is everywhere and is applied **continuously** or at the commit of a transform; making it fire on *the finger slowing down*, and scaling that threshold with the detent, is a composition I could not find described. ⚠ **This is the entry `SEC4` must look at.** ⭐ Its exposure is reduced by the fact that the scaling is a **unit conversion, not an invention**: one increment of rotation IS a fixed amount of finger travel (`increment / gain`), so the threshold is §1.1's existing rest question asked in the detent's own units |
 
 ⭐⭐ **AND THE SEARCH'S NEGATIVE RESULT IS RECORDED ON PURPOSE.** `METHOD`: *a negative result
 that cannot be re-run is an assertion, not a finding* — so the queries and the date are here, and
 a later reviewer can re-run them rather than take this on trust. ⛔ Absence of a found
 publication is not absence of prior art, and this note does not claim otherwise.
 
+### ✅✅ **AND THE NOVEL COMPOSITE WAS DESIGNED OUT, hours after it was registered**
+
+⛔⛔ The rule above never shipped. The owner rejected the behaviour it produced — *"the object
+rotates then rotates back in the reverse direction"* — and the replacement does not have a speed
+threshold at all: **the body's rotation is quantised at every instant**, so it advances a whole
+increment when the demand crosses a boundary and otherwise holds. A weak input crosses nothing.
+
+⭐⭐⭐ **THAT IS ORDINARY ANGLE SNAPPING, AND ORDINARY ANGLE SNAPPING IS DECADES OF PRIOR ART.**
+Blender, 3ds Max and AutoCAD all quantise a rotation continuously while the transform is being
+dragged; this is the same technique with the same presets, applied to a touch drag instead of a
+mouse one. ⚠ The novelty that `SEC4` was going to have to weigh **is no longer in the product**,
+and this entry is kept so the review can see that it was considered and removed rather than
+overlooked.
+
+⭐ `METHOD`: *retractions are kept on purpose.* ⚠ And the more useful lesson is that the
+formulation a hand preferred turned out to be the one with **less** exposure, not more — the
+novelty had been bought to solve a problem the fourth formulation simply does not have.

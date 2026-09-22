@@ -127,12 +127,7 @@ import {
 import type { Placed } from "../core/mate_connector";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { mmToPx } from "../core/units";
-import {
-  RotationSpeed,
-  RotationTally,
-  incrementRadians,
-  restThresholdRadPerS,
-} from "../input/rotation_increment";
+import { RotationTally, incrementRadians } from "../input/rotation_increment";
 import { taperTop } from "../core/frustum";
 import {
   alignedFaceOf,
@@ -1856,11 +1851,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * flips mid-drag as the alignment axis swings through horizontal-on-screen.
      */
     twistSign?: 1 | -1;
-    /**
-     * ⭐ Has this grip's rotation already been truncated since the finger last MOVED?
-     * ⚠ The edge, so a resting finger truncates once rather than once per frame.
-     */
-    restTruncated?: boolean;
     /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
     depthSway: SwayWatcher;
 
@@ -2865,11 +2855,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // because the earlier formulation that quantised the turn as it happened was rejected
         // on the device for lagging the finger.
         tunable("rotation increment (deg, 0=off)", "rotationIncrementDeg", 0, 45, 5),
-        // ⭐⭐ **HOW SLOW IS AT REST, IN INCREMENTS PER SECOND** — so the threshold scales
-        // with the detent instead of being nine times too tight at one end of the slider
-        // above. ⚠ Lower = the hand must stop more convincingly before the turn is
-        // truncated; higher = it settles more eagerly.
-        tunable("rest speed (increments/s)", "rotationRestIncrementsPerS", 0.1, 8, 0.1),
         // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
         // object's centre when it starts turning or turns the other way.
         tunable("sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
@@ -3380,12 +3365,16 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // the projection could fail, and `D57` removed the projection. ⛔ A `twist !== null`
         // guard left here would be a dead condition implying a refusal that cannot happen.
         {
-          setModelOrientation(grip.mesh, rotateAboutAxis(modelOrientation(grip.mesh), axis, twist));
-          // ⭐ TALLIED, NOT CHANGED. The rotation above is the current build exactly; this only
-          // records what was asked for, so the gesture can END on a multiple.
-          if (rollId !== undefined) {
+          // ⛔⛔ **WITH INCREMENTS ON, THE POSE IS NOT WRITTEN HERE.** The demand is tallied and
+          // the body is advanced a whole increment at a time in the render loop — which is what
+          // stops it ever sitting between two and having to come back.
+          if (incrementRadians(cfg.rotationIncrementDeg) !== null && rollId !== undefined) {
             rotationTally.add(rollId, "roll", axis, twist);
-            rotationSpeed.add(rollId, anchorSample.t, twist);
+          } else {
+            setModelOrientation(
+              grip.mesh,
+              rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
+            );
           }
           // ⛔⛔⛔ **AND IT RIDES THE SNAP — AUDIT FIX, 2026-09-17.** The one-finger twist has
           // composed onto both ends of a travelling snap since `D45`; this channel never did.
@@ -3408,17 +3397,21 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // now names all three outcomes, and the refusal is the branch above.
       {
         const rollDeg = rollDragDeg(drive.rollDxPx, cfg.gainRollDrag);
-        setModelOrientation(
-          grip.mesh,
-          screenRollRotation(modelOrientation(grip.mesh), grip.frame, rollDeg),
-        );
+        const incOn = incrementRadians(cfg.rotationIncrementDeg) !== null && rollId !== undefined;
+        if (!incOn) {
+          setModelOrientation(
+            grip.mesh,
+            screenRollRotation(modelOrientation(grip.mesh), grip.frame, rollDeg),
+          );
+        }
         // ⚠ `screenRollRotation` turns by MINUS deg about `frame.depth`; the tally states the
         // SAME axis and sign, or the settle would correct a turn it had mis-measured.
         // ⛔ *A sign is not tested by any amount of testing the magnitude.*
+        // ⚠ `screenRollRotation` turns by MINUS deg about `frame.depth`; the tally states the
+        // SAME axis and sign, or the detents would be counted on a quantity the body is not
+        // turning. ⛔ *A sign is not tested by any amount of testing the magnitude.*
         if (rollId !== undefined) {
-          const rad = (-rollDeg * Math.PI) / 180;
-          rotationTally.add(rollId, "roll", grip.frame.depth, rad);
-          rotationSpeed.add(rollId, anchorSample.t, rad);
+          rotationTally.add(rollId, "roll", grip.frame.depth, (-rollDeg * Math.PI) / 180);
         }
       }
       }
@@ -3618,45 +3611,47 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * body stranded mid-arc with its constraint still claiming it had landed.
    */
   const rotationTally = new RotationTally<ObjectId>();
-  const rotationSpeed = new RotationSpeed<ObjectId>();
   const settleSnaps = new AlignSnaps<ObjectId>();
 
   /**
-   * ⭐⭐⭐ **GIVE BACK THE PART OF THE TURN THAT DID NOT REACH THE NEXT INCREMENT.**
+   * ⭐⭐⭐ **ADVANCE THE BODY TO THE INCREMENT THE FINGER IS IN NOW.**
    *
-   * The owner, 2026-09-22: *"if the delta position speed diminishes below a certain threshold,
-   * the quaternion is not rotated any further than the previous increment. The rotation shall
-   * be smoothly truncated to the nearest past increment, not slerp rotated towards an increment
-   * at the end of the rotation motion."*
+   * The owner, 2026-09-22: *"I want the object to stop to an increment and not rotate further
+   * if the delta position input becomes too weak."*
    *
-   * ⛔⛔ **IT IS KEYED ON THE FINGER COMING TO REST, NOT ON THE RELEASE** — which is what the
-   * first build got wrong. ⭐ The threshold is §1.1's own hysteretic still/moving test
-   * (`motionDeadbandMm`, `restConfirmMs`), already on the glass and already judged by a hand,
-   * so no second speed threshold is invented for one rule.
+   * ⛔⛔ **IT NEVER REVERSES, BECAUSE IT NEVER OVERSHOOTS.** The target is the last boundary
+   * the demand has CROSSED, so the step is always in the direction of travel and the body is
+   * always on an increment. ⚠ The three formulations before this one all let the body reach a
+   * pose it was not allowed to hold and then argued about how to bring it back; the owner's
+   * objection to the last of them — *"the object rotates then rotates back in the reverse
+   * direction"* — is an objection to that whole family, not to one correction.
    *
-   * ⚠⚠ **AND `METHOD`'s *a mode may be keyed on PRESENCE, never on MOTION* IS NOT BEING
-   * BROKEN HERE, which is worth stating because it looks as though it is.** That rule is about
-   * choosing WHICH RULE RUNS from a noisy signal. This chooses nothing — the rule is already
-   * running — it asks *has this rotation come to rest*, which `METHOD` names in the same
-   * breath as the right use of the motion state and which `A6`'s depth gate asks verbatim.
+   * ⭐⭐ **AND WEAK INPUT NEEDS NO RULE OF ITS OWN.** A demand that crosses no boundary advances
+   * nothing, so the body simply stops where it is. ⛔ That is why the rest-speed detector this
+   * function used to consult is **deleted** rather than retuned: it was answering a question
+   * that only existed because the body was allowed to drift off the increment.
    *
-   * ⛔ A rest that happens while an ALIGNMENT is travelling is skipped: the alignment is landing
-   * a constraint the user asked for and must win, and two animations writing one orientation is
-   * the fight, not the fix.
+   * ⚠ **THE ANIMATION RETARGETS, IT DOES NOT QUEUE.** `AlignSnaps.start` REPLACES this body's
+   * flight, and it is started from the pose the body actually holds now — so a fast drag that
+   * crosses four boundaries in one frame goes to the fourth, from wherever it had reached.
+   * ⛔ A backlog is unrepresentable, which is exactly what formulation 1 could not say.
+   *
+   * ⛔ A body whose ALIGNMENT is travelling is skipped: the alignment is landing a constraint
+   * the user asked for and must win, and two animations writing one orientation is the fight.
    */
-  const truncateRotation = (id: ObjectId | undefined): void => {
+  const advanceRotation = (id: ObjectId | undefined): void => {
     if (id === undefined) return;
     const inc = incrementRadians(cfg.rotationIncrementDeg);
     if (inc === null || alignSnaps.has(id)) return;
-    const correction = rotationTally.truncate(id, inc);
+    const step = rotationTally.advance(id, inc);
     const mesh = meshOf.get(id);
-    if (correction === null || !mesh) return;
+    if (step === null || !mesh) return;
     const from = modelOrientation(mesh);
-    const to = qmul(correction, from);
-    const settleMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+    const to = qmul(step, from);
+    const stepMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
     // ⚠ At `0` the slider means *no animation*, exactly as it does for the camera and the
-    // alignment — the truncation still happens, it simply arrives at once.
-    if (settleMs > 0) settleSnaps.start(id, from, to, performance.now());
+    // alignment — the body still lands on the increment, it simply arrives at once.
+    if (stepMs > 0) settleSnaps.start(id, from, to, performance.now());
     else setModelOrientation(mesh, to);
   };
 
@@ -4502,13 +4497,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
               cfg.gainRotateConstrained,
             );
             if (twist !== 0) {
-              setModelOrientation(
-                grip.mesh,
-                rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
-              );
-              if (fid !== undefined) {
+              if (incrementRadians(cfg.rotationIncrementDeg) !== null && fid !== undefined) {
                 rotationTally.add(fid, "twist", axis, twist);
-                rotationSpeed.add(fid, s.t, twist);
+              } else {
+                setModelOrientation(
+                  grip.mesh,
+                  rotateAboutAxis(modelOrientation(grip.mesh), axis, twist),
+                );
               }
               // ⛔⛔ **DEVICE-REPORTED 2026-09-17: *"there is no slerp during rotation: did you
               // wire it?"*** ⭐ It was wired, in both modes — and this line used to SETTLE the
@@ -4555,19 +4550,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐ TALLIED PER AXIS, and the angles restated here are `screenPlaneRotation`'s own,
         // negation and all. ⛔ The settle corrects what the gesture DEMANDED, so a sign that
         // disagreed with the rule would land the body on a multiple of the wrong quantity.
-        {
-          const radPerPx = cfg.gainRotateFree / mmToPx(1);
-          const freeId = idOf.get(grip.mesh);
-          if (freeId !== undefined) {
-            const yaw = -grip.rec.step.dx * radPerPx;
-            const pitch = -grip.rec.step.dy * radPerPx;
-            rotationTally.add(freeId, "yaw", grip.frame.up, yaw);
-            rotationTally.add(freeId, "pitch", grip.frame.right, pitch);
-            // ⚠ BOTH axes feed one speed: the question is *is this rotation slowing down*, and
-            // a diagonal drag that split its travel between two axes is not at rest.
-            rotationSpeed.add(freeId, s.t, Math.abs(yaw) + Math.abs(pitch));
-          }
-        }
+        const radPerPx = cfg.gainRotateFree / mmToPx(1);
+        const freeId = idOf.get(grip.mesh);
+        const incOnFree =
+          incrementRadians(cfg.rotationIncrementDeg) !== null && freeId !== undefined;
+        if (incOnFree) {
+          // ⭐ The angles restated here are `screenPlaneRotation`'s own, negation and all, about
+          // the same two frame axes — pinned to the real function by
+          // `tests/rotation_increment.test.ts`, because this is a place a sign is restated.
+          rotationTally.add(freeId, "yaw", grip.frame.up, -grip.rec.step.dx * radPerPx);
+          rotationTally.add(freeId, "pitch", grip.frame.right, -grip.rec.step.dy * radPerPx);
+        } else
         setModelOrientation(
           grip.mesh,
           screenPlaneRotation(
@@ -4817,17 +4810,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         selectedFace = null;
       }
       forgetAnchor(routed.seq);
-      // ⭐⭐ **A RELEASE IS ALSO A REST**, and the last one. ⛔ Without this a finger lifted
-      // while still moving would leave the body between increments for good, which the rule
-      // plainly does not intend — *"any rotation stops at a degree which is a multiple"*.
-      // ⚠ It truncates BACKWARD like every other rest, never forward to the nearer multiple.
+      // ⭐⭐ **THE GESTURE ENDS, AND THERE IS NOTHING TO TIDY UP.** The body is already on an
+      // increment — it has never been anywhere else — so a release needs no correction of its
+      // own. ⛔ That is the whole difference from the three formulations before this one, each
+      // of which had to decide what to do about a pose it should not have allowed.
       {
         const endId = idOf.get(grip.mesh);
-        truncateRotation(endId);
-        if (endId !== undefined) {
-          rotationTally.clear(endId);
-          rotationSpeed.clear(endId);
-        }
+        if (endId !== undefined) rotationTally.clear(endId);
       }
       router.release(e.pointerId);
       held.delete(e.pointerId);
@@ -4940,39 +4929,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       if (mesh) setModelOrientation(mesh, step.orientation);
     }
 
-    // ⭐⭐⭐ **HAS A ROTATING FINGER COME TO REST?** Asked once per frame, for every live grip.
+    // ⭐⭐⭐ **WHICH INCREMENT IS EACH HELD BODY IN NOW?** Asked once per frame, per grip.
     //
     // ⛔ HERE RATHER THAN IN THE POINTER HANDLER, deliberately: the rotation paths return early
     // in four places (the refusal, the twist, the roll, the free drag), and a check bolted to
     // each of them is four chances to forget one. ⭐ The render loop sees every grip, every
     // frame, whatever the gesture did — `A15`'s discipline: *ask the state, not the gesture.*
     //
-    // ⚠ EDGE-TRIGGERED. Firing every frame the finger rests would restart the animation sixty
-    // times a second and the body would never actually arrive.
-    {
-      const incRad = incrementRadians(cfg.rotationIncrementDeg);
-      const restRad = restThresholdRadPerS(incRad ?? 0, cfg.rotationRestIncrementsPerS);
-      for (const g of held.values()) {
-        const gid = idOf.get(g.mesh);
-        if (gid === undefined || incRad === null) continue;
-        // ⭐⭐⭐ **THE THRESHOLD IS IN INCREMENTS PER SECOND, SO IT SCALES WITH THE DETENT.**
-        // ⛔ A flat one is wrong by the ratio of the increments: a pause costs at most 4° at a
-        // 5° detent and up to 44° at a 45° one, from the same finger.
-        // ⚠ §1.1's own STATIONARY still counts — a finger inside the deadband emits nothing, so
-        // it is at rest by any measure, and keeping it makes a genuinely still hand immediate.
-        const moving =
-          g.rec.motionState !== "STATIONARY" && rotationSpeed.speed(gid, now) > restRad;
-        if (moving) {
-          g.restTruncated = false;
-          continue;
-        }
-        if (g.restTruncated === true) continue;
-        g.restTruncated = true;
-        truncateRotation(gid);
-      }
-    }
+    // ⚠ No edge-trigger and no rest test. A frame in which nothing crossed a boundary advances
+    // nothing, so asking every frame costs a comparison and cannot repeat a step.
+    for (const g of held.values()) advanceRotation(idOf.get(g.mesh));
 
-    // ⭐⭐ **THE INCREMENT'S RETREAT**, advanced with the alignment snaps and on the same easing.
+    // ⭐⭐ **THE INCREMENT'S STEP**, advanced with the alignment snaps and on the same easing.
     // ⚠ A body cannot be in both: `settleRotation` refuses to start one while an alignment is
     // travelling, so these two never write the same orientation in one frame.
     for (const step of settleSnaps.advance(
