@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1049 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1056 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -83,7 +83,21 @@ came from a read: the boot mode, the twist and roll channels, the deadband's emi
 render order all changed.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
-⛔⛔⛔ **THE NEWEST RULE IS THE OBJECT AXES, AND NO HAND HAS TOUCHED IT** (`D74`/`D75`, 2026-09-22).
+⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
+ARITHMETIC** (`D76`, 2026-09-23): the mapping multiplied each input **by** its axis's screen
+foreshortening — *"the input seems very weak"*, *"the input axis and movements axis seem inverted"*,
+*"the holder's dy is dead at a level camera"*. ⭐⭐ **BLENDER ANSWERS ALL THREE AND SAYS *NO* TO THE
+PAIRING**: it never binds screen-x to a world axis — a free move follows the mouse in the view plane,
+a constrained one maps the WHOLE delta onto the axis the USER chose and still **tracks** it, with no
+cosine loss. ✅ Now the finger's delta is **solved onto both horizontal axes** so the body follows it
+exactly (`translatePairing=1`; `0` is the dictated channels, also tracking now), all three channels
+share one gain, and **Blender's own 5° cone** hands the edge-on case to `depthTranslate`'s judged
+fixed rate instead of letting it die. ⚠⚠ **AND THE SOLVE MAKES `D74`'s IN-ZONE BASIS INERT** — an
+orthogonalised face basis spans the same horizontal plane, so nothing changes at the zone edge.
+⛔ **That is an owner decision**, and the choices are in
+[`Claude/00_CORE/queue_notes/IN4.md`](Claude/00_CORE/queue_notes/IN4.md).
+
+⛔⛔ **THE OBJECT AXES THEMSELVES** (`D74`/`D75`, 2026-09-22).
 A body is translated along **its own axes**: fixed at scene boot from the boot camera and frozen for
 the scene (`worldAxisB=1`, **the default, the owner's choice**), or following the live camera at `0`
 — and **inside the capture zone** the basis becomes the **LeadingFace normal, gravity and their

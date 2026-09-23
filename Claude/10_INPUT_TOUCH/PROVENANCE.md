@@ -180,3 +180,11 @@ absence of prior art. ⭐ Note also what this change **removed** from the exposu
 rejected Blender-exact normalisation would have needed a cutoff rule of our own, and the chosen
 form has none.
 
+### ⭐⭐ Amended 2026-09-23 — exact tracking and the cone (`D76`)
+
+| the part | verdict | the citation |
+|---|---|---|
+| **Mapping a pointer delta onto an axis so the object TRACKS the pointer** (dividing by the foreshortening rather than multiplying by it) | ✅ **PRIOR ART** | Blender's `transform` constraint code intersects the mouse ray with the axis line for exactly this; the behaviour is documented and decades old in CAD. ⚠ Read for its behaviour only — Blender's source is GPL and nothing here is copied from it |
+| **Decomposing a 2D pointer delta onto two axes of a plane** (the 2×2 solve) | ✅ **PRIOR ART** | The standard "move in the ground/construction plane" of every DCC and CAD package; mathematically a change of basis, which is not claimable |
+| **A cone around the view direction where the exact mapping is abandoned** | ✅ **PRIOR ART, with a number** | Blender's `axisProjection()` switches below **5°**. ⭐ We adopt the angle and depart from what it does inside it — Blender lets the object nearly stop, we fall back to a fixed-rate push |
+

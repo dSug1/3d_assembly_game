@@ -562,6 +562,38 @@ export interface GestureConfig {
    */
   cameraOffsetZoneEnterSetupB: number;
   /**
+   * ⭐⭐⭐ **WHAT THE HOLDER'S TWO NUMBERS DRIVE** — a RULE SELECTOR, after the device look of
+   * 2026-09-23: *"the dx continues to move on the x world axis and dy on the world depth axis,
+   * which feels strange … the input axis and movements axis seem inverted."*
+   *
+   * ⛔ `1` = **`PLANE`** (the default): the 2D delta is decomposed onto BOTH horizontal axes, so
+   * the body moves inside its own horizontal plane and its image follows the finger exactly.
+   * Nothing can feel inverted, because the body goes where the finger goes.
+   * ⛔ `0` = **`CHANNELS`**: the dictation's literal pairing, `dx`→x and `dy`→depth, each now
+   * tracking exactly along its own axis (which is Blender's `G X`, applied twice).
+   *
+   * ⭐⭐ **BLENDER MAKES NO SUCH PAIRING AT ALL** — an unconstrained move follows the mouse in
+   * the view plane, and a constrained one maps the WHOLE mouse delta onto the one axis the user
+   * chose. ⚠ So this flag is where the comparison is made, not a setting the game ships two of.
+   */
+  translatePairing: number;
+  /**
+   * ⭐⭐⭐ **HOW NEAR THE VIEW DIRECTION AN AXIS MAY COME BEFORE EXACT TRACKING IS ABANDONED**,
+   * in degrees.
+   *
+   * ⛔⛔ Tracking the finger exactly means dividing by the axis's screen foreshortening, and that
+   * **explodes** as the axis turns to face the camera — for the horizontal plane that is an
+   * ordinary **level camera**. ⭐ **5° IS BLENDER'S OWN NUMBER** (`axisProjection`, which switches
+   * to a plain projection below it), adopted rather than guessed — ⚠ and where Blender then lets
+   * the object nearly STOP, this falls back to `depthTranslate`'s fixed-rate push, which a device
+   * look closed on 2026-09-16. That is the owner's report 3: *"I would expect the object to
+   * continue translating with dy input."*
+   *
+   * ⚠ `0` disables the fallback, which is how to see the runaway a hand is being protected from.
+   * ⭐ A slider, and on the URL as `?axisTrackingConeDeg=10`.
+   */
+  axisTrackingConeDeg: number;
+  /**
    * Degrees. How near parallel the alignment axis must be to one of the target's face
    * normals for `A16`'s condition 1 to hold.
    * ⚠ A DIFFERENT QUESTION from the (unbuilt) snap threshold even though both are angular
@@ -913,6 +945,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // nothing except what the HUD says, and shipping it on would be a slider that does nothing —
   // the exact shape `config_debt.test.ts` exists to refuse.
   cameraOffsetZoneEnterSetupB: 0,
+  // ⭐⭐ `1` = PLANE, and it is the DEFAULT because a hand reported the other one as inverted
+  // (2026-09-23). ⚠ `?translatePairing=0` is the way back to the dictated channels, now that
+  // they track exactly — the comparison the owner should make with a finger.
+  translatePairing: 1,
+  // ⭐ Blender's number, not mine.
+  axisTrackingConeDeg: 5,
   // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
   // really did align against this thing.
   alignMatchDeg: 15,
@@ -1164,6 +1202,23 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "translated along (the boot camera's, frozen, or the live camera's), not a quantity — " +
         "and a value in between would read as `truthy` and freeze the axes while the readout " +
         "claimed the camera was still steering them.",
+    );
+  }
+  if (cfg.translatePairing !== 0 && cfg.translatePairing !== 1) {
+    throw new Error(
+      `translatePairing (${cfg.translatePairing}) must be exactly 0 or 1: it selects WHICH RULE ` +
+        "maps the holder's two numbers onto the object axes (the plane solve or the dictated " +
+        "channels), not a quantity.",
+    );
+  }
+  // ⛔ A cone wider than 90° would swallow every axis and leave nothing but the fixed-rate push,
+  // which is a state no slider should be able to reach by accident. ⚠ `0` is meaningful (no
+  // fallback at all), so this is a RANGE and not a positivity test.
+  if (!(cfg.axisTrackingConeDeg >= 0) || !(cfg.axisTrackingConeDeg < 90)) {
+    throw new Error(
+      `axisTrackingConeDeg (${cfg.axisTrackingConeDeg}) must be in [0, 90): it is a half-angle ` +
+        "around the view direction, and at 90 every axis is inside it — exact tracking would be " +
+        "unreachable and every translation would run at the fallback rate. NaN fails this too.",
     );
   }
   if (cfg.cameraOffsetZoneEnterSetupB !== 0 && cfg.cameraOffsetZoneEnterSetupB !== 1) {

@@ -1,50 +1,76 @@
 /**
- * ⭐⭐⭐ **AXIS TRANSLATION — the delta position projected onto the object axes.**
+ * ⭐⭐⭐ **AXIS TRANSLATION — the delta position mapped onto the object axes.**
  *
- * > *"for all these three delta position inputs, the delta position inputs (dx and dy from
- * > first touch, ddepth from second touch) are projected onto the object axis and the object
- * > is translated along these axis according to these projected values (same as what Blender
- * > does for translation of an object)."* — the owner, 2026-09-22
+ * > *"the delta position inputs … are projected onto the object axis and the object is
+ * > translated along these axis according to these projected values (same as what Blender does
+ * > for translation of an object)."* — the owner, 2026-09-22
  *
- * ## ⭐⭐ THE PROJECTION IS ONTO THE AXIS'S **SCREEN SHADOW**
+ * ## ⛔⛔ REWRITTEN 2026-09-23, AFTER A DEVICE LOOK, AND THE OLD RULE IS THE LESSON
  *
- * An axis is a world direction; a delta position is two numbers on the glass. The thing they
- * can be compared in is the screen, so each channel asks **how much of that axis runs along
- * the direction this finger pushed**:
+ * The first build projected each input onto its axis **without normalising** — the rate was
+ * `cos(foreshortening)`. Three reports came back from the glass, and all three are the same
+ * quantity seen from different sides:
  *
- * ```
- *   travel along axis = (finger travel, px) · (axis projected on screen) × metresPerPx × gain
- * ```
+ * 1. *"the dx continues to move on the x world axis and dy on the world depth axis, which feels
+ *    strange … the input axis and movements axis seem inverted"*;
+ * 2. *"the gain drops for dx and dy due to projection of input on world axis … the input seems
+ *    very weak and not the same as the gravity axis input which is right"*;
+ * 3. *"the holder's dy is dead at a level camera … I would expect the object to continue
+ *    translating."*
  *
- * ⛔⛔ **AND IT IS NOT NORMALISED — THE OWNER'S CHOICE, 2026-09-22.** Blender divides by the
- * axis's on-screen length so the object keeps up with the mouse *along that axis*, which is
- * exact right up to the moment the axis turns to face the camera and then divides by zero.
- * ⭐ Leaving the division out makes a foreshortened axis go QUIET instead of running away:
- * full rate square to the view, 71% at 45°, **0 pointing at the camera**. ⚠ It costs exact
- * tracking on a foreshortened axis and it buys no new threshold — and *a guessed number has
- * been wrong every single time on this project*, so the cutoff that Blender's form would need
- * is a number this rule now never has to have.
+ * ⭐⭐⭐ **AND THE OWNER'S QUESTION — *is that what Blender does?* — HAS A DEFINITE ANSWER, AND
+ * IT IS NO.** Blender never binds screen-x to a world axis. It does one of two things:
  *
- * ⭐ It is the sixth appearance of **goes quiet before it fails** (A3's handover, A6's depth,
- * A7's vertical and roll, `towardGravity` at a level camera). ⚠ Expect it, say it on the HUD,
- * and do not read it as a defect the first time a hand meets it.
+ * * **unconstrained** (`G`): the object moves in the **view plane** and follows the mouse
+ *   exactly — one screen pixel of mouse is one screen pixel of object;
+ * * **axis-constrained** (`G X`): the **whole** mouse delta is mapped onto the chosen axis by
+ *   intersecting the mouse ray with the axis line, so the object still **tracks the mouse**
+ *   along that axis. ⛔ There is no cosine loss: Blender solves for the travel that puts the
+ *   object under the pointer, it does not scale the input by the axis's foreshortening.
  *
- * ## ⭐⭐⭐ THE SIGNS FALL OUT — INCLUDING THE ONE THAT WAS A DEFECT FOUND BY FINGER
+ * ⚠ So report 2 is a defect of ours, not a property of the technique — and report 1 is a
+ * pairing Blender does not make at all: *the user* picks the axis there, and the mapping is
+ * from the whole pointer motion, never from one of its components.
  *
- * ⛔ `depthTranslate` needs `awaySign = sign(towardGravity)` because *fingers-up means away*
- * is true looking DOWN on the scene and **backwards from the bottom ring**, and assuming it
- * was a constant produced *"the depth translation is chaotic"*. ⭐⭐ Here that sign is not
- * assumed and not passed in: `dot(depthAxis, cameraUp)` is positive looking down, negative
- * looking up, and **zero at a level camera** — the same three answers, arrived at by the
- * projection rather than by a rule about it. ⚠ One less quantity to get wrong, and the
- * degenerate case is the quiet one rather than a wrong direction.
+ * ## ⭐⭐ WHAT THIS FILE DOES NOW
  *
- * ## ⛔ IT TAKES THE **TRUE** CAMERA AXES, NOT THE GRAVITY FRAME
+ * **`PLANE` (the default).** The holder's 2D delta is **decomposed onto the two horizontal
+ * axes' screen shadows** — a 2×2 solve — so the body moves inside its own horizontal plane and
+ * its image follows the finger **exactly**. ⭐ Nothing can feel inverted, because the body goes
+ * where the finger goes; and the gain is 1 by construction, which is report 2's answer.
+ * ⛔ It is Blender's *unconstrained* move with the view plane replaced by the body's horizontal
+ * plane — the nearest thing in Blender to what this product is doing.
  *
- * The question is *what does this axis look like on the glass*, and the glass is the camera's
- * own right and up — `ScreenFrame`, not `A7`'s flattened basis. ⚠ Handing it the gravity
- * frame would make `dot(depthAxis, up)` identically zero and the depth channel dead at every
- * camera angle: the two frames answer different questions, which is why they are two types.
+ * **`CHANNELS`.** The dictated pairing, `dx`→x and `dy`→depth, each **normalised** — Blender's
+ * `G X` applied twice, once per channel. ⚠ Kept as a selector so a hand can compare the two
+ * rather than take my word for which answers report 1.
+ *
+ * **Gravity** is always its own channel, normalised the same way.
+ *
+ * ## ⛔⛔ THE EDGE-ON CASE, AND WHERE WE DEPART FROM BLENDER ON PURPOSE
+ *
+ * Exact tracking divides by the axis's screen shadow, so it **explodes** as an axis turns to
+ * face the camera — and the body's horizontal plane is edge-on at a **level camera**, which is
+ * an ordinary place to be.
+ *
+ * ⭐ **Blender's own answer is a cone**: `axisProjection()` takes the angle between the axis and
+ * the view direction and, **below 5°**, abandons the exact mapping for a plain projection —
+ * which means the object very nearly **stops**. ⚠ That is a guard against `NaN`, not a feature,
+ * and it is exactly the behaviour the owner rejected in report 3.
+ *
+ * ⛔⛔ **SO INSIDE THE CONE WE USE THE RULE A HAND HAS ALREADY JUDGED**: `depthTranslate`'s
+ * fixed-rate push — `dy × trackingFactor × gain`, with `sign(towardGravity)` deciding whether
+ * fingers-up means *away* or *towards*. ⭐ That rule was closed by a device look on 2026-09-16
+ * and its sign was itself a defect found by finger, so the degenerate branch is the
+ * best-attested mapping in the file rather than an improvisation.
+ * ⚠ **At an exactly level camera `towardGravity` is 0 and the picture is genuinely symmetric** —
+ * a body pushed away produces no screen motion at all — so the convention there is
+ * *fingers-up = away*, continuous with the camera looking even slightly down.
+ *
+ * ⚠ **The cost of the cone, stated**: the rate is capped at `1/sin(cone)` just outside it and
+ * drops to the fixed rate inside, so there is a step in world speed at the boundary. ⛔ Both
+ * sides produce nearly no SCREEN motion there, which is why the step is not what a hand feels —
+ * but it is real, it is on the HUD as `⛔EDGE-ON`, and `axisTrackingConeDeg` is a slider.
  *
  * ⛔ ENGINE-FREE.
  */
@@ -59,16 +85,25 @@ export interface CameraScreenAxes {
 
 /** One frame's finger travel, CSS pixels. ⭐ **Deadbanded** travel (`A11`), never a raw delta. */
 export interface AxisInputsPx {
-  /** The holder's horizontal travel → the object's **x** axis. */
+  /** The holder's horizontal travel. */
   readonly holderDxPx: number;
-  /** The holder's vertical travel → the object's **depth** axis. ⚠ Screen y grows DOWNWARD. */
+  /** The holder's vertical travel. ⚠ Screen y grows DOWNWARD. */
   readonly holderDyPx: number;
   /** The second touchpoint's vertical travel → the object's **gravity** axis. */
   readonly secondDyPx: number;
 }
 
-/** Metres along each object axis this frame. ⭐ Reported per axis so the HUD prints what the
- * rule computed rather than a recomputation of it, and so a vector can pin one channel. */
+/**
+ * ⭐⭐⭐ **WHICH MAPPING THE HOLDER'S TWO NUMBERS GET** — a RULE SELECTOR, not a tunable.
+ *
+ * ⛔ `PLANE`: the 2D delta is decomposed onto both horizontal axes, so the body follows the
+ * finger inside its own horizontal plane.
+ * ⛔ `CHANNELS`: the dictation's literal pairing, `dx`→x and `dy`→depth, each tracking exactly
+ * along its own axis — Blender's `G X`, twice.
+ */
+export type TranslatePairing = "PLANE" | "CHANNELS";
+
+/** Metres along each object axis this frame. */
 export interface AxisTravelM {
   readonly xM: number;
   readonly gravityM: number;
@@ -76,15 +111,63 @@ export interface AxisTravelM {
 }
 
 /**
- * The three channels, each projected onto its own axis.
+ * What the mapping did, for the readout. ⛔ Returned rather than recomputed by the HUD: *a
+ * readout that derives its own answer is a second implementation* (`METHOD`), and the whole
+ * point of `edgeOn` is to tell *"the rule refused"* from *"I pushed the wrong way"*.
+ */
+export interface AxisTravel extends AxisTravelM {
+  /** True while the horizontal plane is edge-on and the fixed-rate fallback is driving. */
+  readonly edgeOn: boolean;
+  /**
+   * ⭐⭐ **THE LEVERAGE** — world travel per unit of finger travel, both in tracking-factor
+   * units. ⛔ It is NOT 1 when the body is under the finger: a foreshortened plane needs MORE
+   * world travel to produce the same screen travel, so `1` is a plane square to the view and a
+   * large number means the plane is nearly edge-on and a small push is going a long way.
+   * ⚠ Stated carefully because the first draft of this comment claimed the opposite and the
+   * round-trip vector caught it — the body being under the finger is the ROUND TRIP's claim,
+   * which is a different quantity from this one.
+   */
+  readonly trackGain: number;
+}
+
+/**
+ * An axis's SCREEN SHADOW: where one metre along it goes on the glass, in screen units
+ * (x right, **y down** — the browser's convention, and the opposite of the camera's up).
  *
- * @param metresPerPx `trackingMetresPerPx` for this camera — rule 6's computed factor, so a
- *   given finger travel moves the body as far along any axis as it would across the screen.
- * @param holderGain `gainTranslateScreen` — the holder's two channels. ⭐ Unchanged from rule
- *   6, so the feel a hand already accepted is the feel this inherits for `dx`.
+ * ⭐ Its LENGTH is the foreshortening (1 square to the view, 0 pointing at the camera) and its
+ * DIRECTION is the line the body slides along on screen. ⛔ Both are needed, and the length
+ * going to zero is exactly where the direction stops meaning anything — which is why the cone
+ * below is on the length.
+ */
+export function screenShadow(
+  axis: Vec3,
+  camera: CameraScreenAxes,
+): readonly [number, number] | null {
+  const right = normalize(camera.right);
+  const up = normalize(camera.up);
+  const a = normalize(axis);
+  if (!right || !up || !a) return null;
+  return [dot(a, right), -dot(a, up)];
+}
+
+const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
+
+/**
+ * The three channels.
+ *
+ * @param metresPerPx `trackingMetresPerPx` for this camera — rule 6's computed factor. ⭐ With
+ *   exact tracking this is the whole of the scale: the gains below multiply it, and `1.0` puts
+ *   the body under the finger.
+ * @param holderGain `gainTranslateScreen`.
  * @param secondGain `gainTranslateDepth` — the second touchpoint's channel. ⚠ It has kept its
- *   name and its number while its AXIS moved from depth to gravity: it is *the second finger's
- *   translate gain*, and renaming a tuned number is how a device session loses its baseline.
+ *   name and its number while its AXIS moved to gravity; renaming a tuned number is how a
+ *   device session loses its baseline.
+ * @param coneDeg `axisTrackingConeDeg` — how near the view direction an axis may come before
+ *   the exact mapping is abandoned for the fixed-rate push. ⭐ **5° is Blender's own number**
+ *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
+ *   is how to see the runaway a hand is being protected from.
+ * @param towardGravity `GravityFrame.towardGravity` — +1 looking down on the scene, −1 looking
+ *   up at it. ⛔ Only read inside the cone, where it is the sign `depthTranslate` needed.
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -93,23 +176,94 @@ export function axisTravel(
   metresPerPx: number,
   holderGain: number,
   secondGain: number,
-): AxisTravelM {
-  const right = normalize(camera.right);
-  const up = normalize(camera.up);
+  pairing: TranslatePairing,
+  coneDeg: number,
+  towardGravity: number,
+): AxisTravel {
+  const sx = screenShadow(axes.x, camera);
+  const sd = screenShadow(axes.depth, camera);
+  const sg = screenShadow(axes.gravity, camera);
   // ⛔ A camera with no basis moves nothing, rather than moving by NaN. One NaN written into a
   // placement is permanent — it never washes out of a position.
-  if (!right || !up || !Number.isFinite(metresPerPx)) {
-    return { xM: 0, gravityM: 0, depthM: 0 };
+  if (!sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
+    return { xM: 0, gravityM: 0, depthM: 0, edgeOn: false, trackGain: 0 };
   }
-  const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
+  const dx = finite(input.holderDxPx) * metresPerPx;
+  const dy = finite(input.holderDyPx) * metresPerPx;
+  const dy2 = finite(input.secondDyPx) * metresPerPx;
+  const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
+
+  /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
+  const along = (s: readonly [number, number], mx: number, my: number): number | null => {
+    const len = Math.hypot(s[0], s[1]);
+    if (!(len > coneSin) || !(len > 0)) return null;
+    // ⭐ `(m · ŝ) / |s|` — project onto the axis's screen LINE, then undo the foreshortening.
+    // ⛔ The division is the whole of report 2's fix, and it is what Blender's ray/line
+    // intersection amounts to for a straight drag.
+    return (mx * s[0] + my * s[1]) / (len * len);
+  };
+
+  // ⭐⭐ THE FIXED-RATE PUSH, for a plane that is edge-on. ⛔ `depthTranslate`'s mapping, which
+  // a device look closed on 2026-09-16 — including its sign, which was itself a defect found by
+  // finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the picture is
+  // symmetric and no sign is derivable; *fingers-up = away* is the convention, continuous with
+  // the camera looking even slightly down.
+  const awaySign = Math.sign(finite(towardGravity)) || 1;
+  const fallbackDepth = -dy * holderGain * awaySign;
+
+  let xM = 0;
+  let depthM = 0;
+  let edgeOn = false;
+
+  if (pairing === "PLANE") {
+    // ⭐⭐⭐ **THE 2×2 SOLVE.** Find the travels along x and depth whose SCREEN motion adds up to
+    // the finger's. ⛔ Solving beats projecting onto each axis separately: the two shadows are
+    // not perpendicular on screen in general, so independent projections would double-count the
+    // overlap and the body would outrun the finger on a diagonal drag.
+    const det = sx[0] * sd[1] - sx[1] * sd[0];
+    // ⚠ `|det|` is the area the two shadows span — it goes to zero when the plane is EDGE-ON,
+    // which is the level camera, and that is the only degeneracy the pair has: two
+    // perpendicular world axes cannot both point at the camera.
+    if (Math.abs(det) > coneSin) {
+      xM = ((dx * sd[1] - dy * sd[0]) / det) * holderGain;
+      depthM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
+    } else {
+      edgeOn = true;
+      // ⭐ x is still healthy here — it is the axis lying across the screen — so it keeps exact
+      // tracking, and only depth falls back to the judged fixed rate.
+      // ⚠ `fallbackDepth` carries `holderGain` already; applying it twice is the kind of
+      // arithmetic that reads as *"depth feels wrong in one camera pose"* and nowhere else.
+      xM = (along(sx, dx, dy) ?? 0) * holderGain;
+      depthM = fallbackDepth;
+    }
+  } else {
+    // ⭐ CHANNELS: Blender's `G X`, once per channel — the whole delta is not used, only the
+    // component the dictation assigns to that axis.
+    const x = along(sx, dx, 0);
+    const d = along(sd, 0, dy);
+    xM = (x ?? 0) * holderGain;
+    if (d === null) {
+      edgeOn = true;
+      depthM = fallbackDepth;
+    } else {
+      depthM = d * holderGain;
+    }
+  }
+
+  // ⭐ Gravity, always its own channel and always tracking exactly. ⚠ Its shadow shrinks as the
+  // camera looks down and vanishes at the pole, which the orbit rings make unreachable — the
+  // fallback is there because *unreachable* is a property of today's camera, not of the rule.
+  const g = along(sg, 0, dy2);
+  const gravityM = g === null ? -dy2 * secondGain : g * secondGain;
+
+  const asked = Math.hypot(dx, dy);
   return {
-    // ⭐ `+dx` is rightwards on the glass and the axis's shadow carries the sign.
-    xM: finite(input.holderDxPx) * dot(axes.x, right) * metresPerPx * holderGain,
-    // ⛔ NEGATED, both of them: screen y grows downwards and the camera's up grows upwards.
-    // ⚠ A missing sign here reads as *"the controls are inverted"* rather than as a bug, and
-    // it is the single most common defect in a drag.
-    depthM: -finite(input.holderDyPx) * dot(axes.depth, up) * metresPerPx * holderGain,
-    gravityM: -finite(input.secondDyPx) * dot(axes.gravity, up) * metresPerPx * secondGain,
+    xM,
+    depthM,
+    gravityM,
+    edgeOn,
+    // ⭐ What one pixel bought, as a multiple of the tracking factor: 1 is under the finger.
+    trackGain: asked > 0 ? Math.hypot(xM, depthM) / asked : 0,
   };
 }
 
@@ -136,8 +290,8 @@ export function axisDisplacement(travel: AxisTravelM, axes: ObjectAxes): Vec3 {
  * ⛔⛔ **IT IS CARRIED OVER DELIBERATELY, BECAUSE THE CHANNEL MOVED AND THE HAZARD DID NOT.**
  * `depthTranslate` clamped the along-push distance so an object could not be driven through
  * the near plane (*a black page with no error at all*) or past the camera's maximum orbit
- * radius, where it cannot be brought back. ⚠ The holder's `dy` now drives depth, so the same
- * clamp belongs on the same quantity, or a bound that was derived would be lost in a remap.
+ * radius, where it cannot be brought back. ⚠ Exact tracking makes this MORE load-bearing, not
+ * less: near the cone a small push buys a long way, and the clamp is what bounds it.
  *
  * @param pushDir the horizontal depth direction the range is measured along — `A7`'s
  *   `GravityFrame.depth`, which is what the limits were derived against.

@@ -1568,6 +1568,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * gizmo where it was rather than losing it for a frame of stillness.
    */
   const lastTravelDir = new Map<ObjectId, Vec3>();
+  /**
+   * ⭐⭐ WHAT THE LAST TRANSLATION ACTUALLY BOUGHT — reported by the rule, never recomputed
+   * here. ⛔ `1.0` means the body is exactly under the finger; a large number means the plane is
+   * nearly edge-on and a small push is going a long way; `EDGE-ON` means the exact mapping was
+   * abandoned for the fixed-rate push. ⚠ Without these, *"it went much too far"* and *"it barely
+   * moved"* are one symptom with two causes, and the camera pose is what separates them.
+   */
+  let lastTrackGain = 0;
+  let lastEdgeOn = false;
 
   /**
    * ⛔⛔ **`CameraOffsetZoneEnter` — DECLARED, CALLED, AND EMPTY BY INSTRUCTION.**
@@ -2886,6 +2895,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // amount of watching the body can attribute.
             `
 axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot)" : "WorldAxisA(live camera)"}` +
+            ` ${cfg.translatePairing === 1 ? "PLANE" : "CHANNELS"}` +
+            ` track=${lastTrackGain.toFixed(2)}×${lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
             ` zone=${highlighted.inRange ? "IN" : "out"}` +
             (zonePair.length === 0 ? "" : `(${zonePair.join("↔")})`) +
             (cfg.cameraOffsetZoneEnterSetupB === 1 ? ` enterHook=${zoneEnterCalls}(no-op)` : "") +
@@ -3217,6 +3228,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
         // ships at 0 and turning it on changes only what the HUD reports.
         tunable("zone ENTER calls CameraOffsetZoneEnter (0/1)", "cameraOffsetZoneEnterSetupB", 0, 1, 1),
+        // ⭐⭐ 1 = the body follows the finger in its own horizontal plane; 0 = the dictated
+        // dx→x / dy→depth channels. ⛔ A RULE, not a number — the device report of 2026-09-23.
+        tunable("translate: 1=plane, 0=channels", "translatePairing", 0, 1, 1),
+        // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
+        // there is no fallback and a level camera sends the body a very long way.
+        tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
         // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
         // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
         // one pixel — so a width tunable would be a slider that does nothing, which is the
@@ -3416,6 +3433,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
       cfg.gainTranslateScreen,
       cfg.gainTranslateDepth,
+      cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
+      cfg.axisTrackingConeDeg,
+      grip.frame.towardGravity,
     );
     const step = axisDisplacement(travel, axes);
     {
@@ -4720,7 +4740,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
           cfg.gainTranslateScreen,
           cfg.gainTranslateDepth,
+          cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
+          cfg.axisTrackingConeDeg,
+          // ⭐ Read ONLY inside the cone, where it is the sign `depthTranslate` needed: +1
+          // looking down on the scene, −1 looking up at it.
+          grip.frame.towardGravity,
         );
+        lastTrackGain = travel.trackGain;
+        lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);
         // ⭐⭐ THE DIRECTION THE BODY ACTUALLY WENT — what the LeadingFace ray is fired along,
         // and the owner's choice over the finger's own direction. ⛔ Kept only when it is a

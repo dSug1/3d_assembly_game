@@ -16,16 +16,19 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1049 golden vectors,
-all passing** (37 → … → 978 → 1017 → **1049**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1056 golden vectors,
+all passing** (37 → … → 1017 → 1049 → **1056**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW STILL TO COME**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`** → [`../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md) ✅ The engine boundary is enforced by a test — ⛔ and since the audit it walks the import **graph**, because it checked only direct imports and `src/core → ../main → @render/scene` passed.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three of them rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⭐ The increments themselves are named in the verdict, not just the build. ⚠ It still ships at **0** — a judged-good feature that is OFF by default — and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
-⛔⛔⛔ **THE OBJECT AXES ARE BUILT AND NO HAND HAS TOUCHED THEM** (`D74`/`D75`, 2026-09-22): a body is
-translated along **its own axes** — the boot camera's, frozen (`worldAxisB=1`, the default), or the
-LeadingFace basis inside the capture zone — and the channels are remapped, `dy` to DEPTH and the second
-finger to GRAVITY. ⚠ `screenTranslation` and `depthTranslate` are off the call path, declared in
-`unwired_debt` until rule 5 judges the remap. ⭐ 32 vectors, three mutants caught → [`queue_notes/IN4.md`](queue_notes/IN4.md)
+⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`, 2026-09-22/23):
+a body translates along **its own axes** — the boot camera's, frozen (`worldAxisB=1`), or the LeadingFace
+basis in the capture zone. ⛔ The first mapping lost the cosine and a hand felt all of it: *inverted*,
+*very weak*, *dead at a level camera*. ⭐⭐ **Blender answers all three and says NO to the pairing** — it
+never binds screen-x to a world axis. Now the finger's delta is **solved onto both horizontal axes**
+(tracking exactly, `translatePairing=1`), with **Blender's 5° cone** falling back to `depthTranslate`'s
+judged rate. ⚠⚠ **AND THE SOLVE MAKES `D74`'s IN-ZONE BASIS INERT — an owner decision is owed.**
+⭐ 38 vectors, six mutants caught → [`queue_notes/IN4.md`](queue_notes/IN4.md)
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
@@ -158,16 +161,14 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | ⛔ **`D73`** — a restarted ease stalled, so MORE increments moved the body LESS | **1** |
 | ⭐⭐ **THE TOTAL** | **= 50** |
 
-⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16). Each defect's account is in
-[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), unrewritten; the table above
-stays HERE because the doctrine's point is that the NUMBER has one home. ⚠ A row's count
+⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16): each account is in
+[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), the table stays here, and a row's count
 changes in both places or in neither.
 
-⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION, kept because it is the more useful
-entry**: *"you destroyed the rotation around the gravity axis"*, withdrawn after
-`tests/a7_wiring.test.ts` measured the composition at four camera tilts. ⛔ Every part of `A7`
-had green vectors and **the composition had none** — mistake shape 4 pointing at a CORRECT
-piece of work. ⭐ `METHOD`: *a composition is a thing to MEASURE.*
+⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION**: *"you destroyed the rotation around the
+gravity axis"*, withdrawn after `tests/a7_wiring.test.ts` measured the composition at four camera tilts.
+⛔ Every part of `A7` had green vectors and **the composition had none** — mistake shape 4 pointing at
+CORRECT work.
 
 ⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.**
 A gesture fix confirmed by finger over USB was reported broken from Pages hours later. ⛔ The
@@ -278,7 +279,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ✅ **CLOSED 2026-09-14.** 109 new vectors. **7 device passes, 14 defects none of which a green suite could see.** ⛔⛔ Its rule **2quinte** roll detector, *"built early and hardened"*, is **DELETED** (`D31`) — it had had no channel since `A12` and its retired verdict vetoed `IN3`'s flick. → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | ✅✅ **CLOSED 2026-09-14**, 22 + 8 vectors, confirmed by finger — `src/input/router.ts`, engine-free and generic over an opaque object handle. Three roles latched at press for the touchpoint's lifetime; §0 order-independence keyed by pointer id. ⛔⛔ **ITS LATCH HAS EXACTLY ONE EXCEPTION** (`A15`/`D25`): `relatchOnOrphan`, on a **discrete** event only. ⭐ What the latch protects against is a role recomputed from a CONTINUOUS reading, frame after frame — so the header was REWORDED, not deleted. ⭐ A vector pass found **two vectors that could not fail**. ⛔⛔ **OPEN RISK, 2026-09-18**: a **stale grip** kills orbit AND zoom together — tell: *both camera rules dead, `active=` non-zero, no finger down*. ⚠ Unfixed, reload clears it → [`queue_notes/IN2.md`](queue_notes/IN2.md) | IN1, IN8 |
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | ✅✅ **THE ALIGNMENT MODEL IS CLOSED BY A DEVICE LOOK (2026-09-17)** — *"device pass ok, except these modifications"*, and all five modifications are built (`D43`–`D45`, defects 47–48). ⭐ Tap-to-align (parallel, capped at one, `SNAPSHOT` or `FOLLOW` by single/double tap), both faces marked, the twist about the aligned normal, shake **and** re-tap as undos, the rotation reset, and an eased **slerp** into place. ⚠ **The corrections themselves have not been re-judged** — only the slerp's speed, which a hand tuned three times. ⛔ **NOT built**: `TargetPosition`, its gizmo, the orbit and the approach — `1.0.22`. ✅✅ **AND `D73`'s ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (2026-09-22)**, shipping at **0** → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
-| IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | ✅✅ **RULE 6 CLOSED 2026-09-15** — by finger in ordinary play. ⭐ Its gain was **computed** (1.0 puts the object under the finger). ⛔⛔ **AND ITS SCREEN-PLANE FORM IS SUPERSEDED, 2026-09-22** (`D75`): a body is translated along **its own axes**, `dx`→x, `dy`→depth, second finger→gravity, each projected onto the axis's screen shadow — ⚠ **unjudged, and it reverses a closed row**, which is why `screenTranslation` and `depthTranslate` are kept as declared debt rather than deleted. ⛔ 6bis/6ter/6quater still wait on face centres → [`queue_notes/IN4.md`](queue_notes/IN4.md) | IN2, 3D1 (6bis onward only) |
+| IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | ✅✅ **RULE 6 CLOSED 2026-09-15** — by finger, its gain **computed**. ⛔⛔ **ITS SCREEN-PLANE FORM IS SUPERSEDED** (`D75`/`D76`): a body translates along **its own axes**, the finger's delta **solved onto both horizontal ones** so it tracks exactly, with Blender's 5° cone at the edge-on case. ⚠ One device look, three reports, three fixes — **unjudged again**, and `screenTranslation`/`depthTranslate` stay as declared debt. ⛔ 6bis/6ter/6quater still wait on face centres → [`queue_notes/IN4.md`](queue_notes/IN4.md) | IN2, 3D1 (6bis onward only) |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued, and ⭐⭐ **practical without a rebuild**: every tunable overrides from the URL and the menu validates refusals. ✅ `pointerNoiseMm` = **0.761 mm** is the one number MEASURED (2026-09-14) — and measuring it exposed a defect eight device passes had accepted. ⛔⛔ **A TRAP TO READ BEFORE BOOKING A SESSION**: several tunables are still READ but sit OFF the gesture path, so `config_debt` sees them used while they change nothing → [`queue_notes/IN5.md`](queue_notes/IN5.md) | IN3 |
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | queued. ⭐ `IN1`'s rollback snapshot is the same object — `PosePort<P>` in `recognizer.ts` is the seam | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |

@@ -702,3 +702,73 @@ whole signature.
 ⛔⛔ **A DEVICE LOOK IS OWED ON ALL OF IT**, and there is no way around it: nothing here can be judged
 headlessly, the default is the NEW rule (the owner's choice), and the one thing a suite cannot answer
 is whether a body that moves in its own horizontal plane feels like a body you are pushing.
+
+
+---
+
+## 2026-09-23 — ⭐⭐⭐ THE FIRST DEVICE LOOK AT THE OBJECT AXES: THREE REPORTS, ONE CAUSE (`D76`)
+
+> 1. *"the dx continues to move on the x world axis and dy on the world depth axis, which feels
+>    strange for the user as the input axis and movements axis seem inverted. Is it the way Blender
+>    translation is behaving in the same configuration?"*
+> 2. *"the gain drops for dx and dy due to projection of input on world axis and as a consequence
+>    the input seems very weak and not the same as the gravity axis input which is right."*
+> 3. *"The holder's dy is dead at a level camera. … I would expect the object to continue
+>    translating with dy input."*
+
+⭐⭐ **THE OWNER NAMED THE COST I HAD WRITTEN DOWN AS ACCEPTABLE, AND HE WAS RIGHT.** All three are
+the same arithmetic seen from three sides: the mapping multiplied each input **by** the axis's
+screen foreshortening. ⛔ At 45° that is 71% of the finger; at a level camera the depth axis's
+shadow is 0 and the channel is dead; and the direction the body takes is the axis's screen line,
+which in a skew camera pose is nowhere near the finger's. ⚠ I had chosen that form deliberately
+(2026-09-22) as *the stable option*, offered it against Blender's division, and the owner picked
+it — **on my description of the alternative as needing a guessed cutoff.** ⭐ `METHOD`: *a
+simulation narrows the range; it does not pick the number* — and a description of an alternative
+is not the alternative.
+
+### ⭐⭐⭐ WHAT BLENDER ACTUALLY DOES — the question, answered
+
+| | Blender | us, before | us, now |
+|---|---|---|---|
+| free move (`G`) | follows the mouse **in the view plane**, exactly | — | — |
+| axis move (`G X`) | the **whole** mouse delta is mapped onto the chosen axis by intersecting the mouse ray with the axis line — **it tracks the mouse**, no cosine loss | each input **scaled by** its axis's cosine | divided by it |
+| who picks the axis | **the user**, by pressing X/Y/Z | a fixed `dx`→x / `dy`→depth pairing | the solve makes the question moot |
+| axis pointing at the camera | inside a **5° cone** it abandons the exact mapping for a plain projection, so the object nearly **stops** | dead at exactly 0 | falls back to `depthTranslate`'s **judged** fixed rate |
+
+⛔⛔ **SO THE PAIRING IN REPORT 1 IS OURS, NOT BLENDER'S.** Blender never binds screen-x to a world
+axis; the closest thing to what this product needs is its FREE move, with the view plane replaced
+by the body's own horizontal plane.
+
+### What is built
+
+⭐ **`PLANE` (`translatePairing=1`, the default)** — the holder's 2D delta is **decomposed onto the
+two horizontal axes' screen shadows**, a 2×2 solve, so the body's image follows the finger exactly.
+⛔ Solving, not projecting onto each axis in turn: the two shadows are not perpendicular on screen,
+and independent projections would double-count the overlap and outrun the finger on a diagonal.
+⭐ **`CHANNELS` (`=0`)** — the dictated pairing, each axis now tracking exactly: Blender's `G X`,
+twice. ⚠ Kept so a hand can judge report 1 rather than take my word for the fix.
+⭐ **Gravity** is unchanged in kind and now tracks exactly too, so all three channels have the
+**same** gain — which is report 2's actual complaint, stated as an equality and vectored as one.
+⭐ **The cone** (`axisTrackingConeDeg`, **5°, Blender's own number**) bounds the runaway that
+exact tracking buys, and inside it the fixed-rate push takes over — ⛔ *not* Blender's near-stop,
+because report 3 rejects exactly that. ⚠ Its sign still comes from `towardGravity`, so the
+bottom-ring defect cannot come back through the new branch.
+
+### ⛔⛔⛔ THE FINDING NOBODY ASKED FOR, AND IT IS AN OWNER DECISION
+
+**Under `PLANE`, `D74`'s in-zone basis changes NOTHING.** The in-zone axes are *LeadingFace normal,
+gravity, orthogonal* — **orthogonalised on the owner's own instruction**, which flattens the normal
+onto the ground. ⚠ So both horizontal axes are horizontal, the holder's plane is the same
+horizontal plane as outside, and rotating a basis *within* a plane cannot change a rule that reads
+only the plane. ⛔ The dictation's *"therefore the translation direction differs when the object is
+inside the offset radius zone"* is **inert**, and a vector says so out loud.
+
+⭐⭐ **The two choices interact, and neither of us saw it when they were taken an hour apart.** The
+orthogonalisation was chosen because *independent channels* would otherwise overlap — and under
+`PLANE` there are no independent channels, so the premise is gone. ⚠ Three ways out, and it is the
+owner's call: keep `PLANE` and accept that the zone changes nothing; go back to `CHANNELS`, where
+the zone basis bites; or let the in-zone plane **tilt with the face** (the literal reading, rejected
+on my advice) so that inside the zone a body slides along the surface it is approaching.
+
+⚠ **Still unjudged**: everything above, plus `gainTranslateScreen` = 1.17, which was tuned for a
+screen-plane drag and now multiplies an exact-tracking mapping.
