@@ -251,8 +251,9 @@ const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
  *   the exact mapping is abandoned for the fixed-rate push. ⭐ **5° is Blender's own number**
  *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
  *   is how to see the runaway a hand is being protected from.
- * @param towardGravity `GravityFrame.towardGravity` — +1 looking down on the scene, −1 looking
- *   up at it. ⛔ Only read inside the cone, where it is the sign `depthTranslate` needed.
+ * ⛔⛔ **`towardGravity` WAS A PARAMETER HERE AND IS GONE** (defect 63): it was the fixed rate's
+ * sign, and a camera ELEVATION cannot aim an arbitrary world axis. ⚠ Deleted rather than left
+ * unread — an argument nothing consults is the shape `unwired_debt.test.ts` exists to refuse.
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -263,7 +264,6 @@ export function axisTravel(
   secondGain: number,
   pairing: TranslatePairing,
   coneDeg: number,
-  towardGravity: number,
 ): AxisTravel {
   const right = normalize(camera.right);
   const up = normalize(camera.up);
@@ -285,6 +285,12 @@ export function axisTravel(
       trackGain: 0,
     };
   }
+  // ⭐ The view direction, for the one convention the glass cannot supply (see `sense`).
+  const view = normalize([
+    right[1] * up[2] - right[2] * up[1],
+    right[2] * up[0] - right[0] * up[2],
+    right[0] * up[1] - right[1] * up[0],
+  ]);
   const dx = finite(input.holderDxPx) * metresPerPx;
   const dy = finite(input.holderDyPx) * metresPerPx;
   const dy2 = finite(input.secondDyPx) * metresPerPx;
@@ -330,8 +336,46 @@ export function axisTravel(
   //
   // ⭐⭐⭐ **SINCE THE SWAP IT BELONGS TO THE SECOND TOUCHPOINT**, which is where it came from:
   // `depth` is the axis that turns to face the camera, and the second finger drives it now.
-  const awaySign = Math.sign(finite(towardGravity)) || 1;
-  const fallbackDepth = -dy2 * secondGain * awaySign;
+  // ⛔⛔⛔ **ONE FALLBACK, AND IT KEEPS THE DIRECTION THE EXACT MAPPING WOULD HAVE TAKEN —
+  // defect 63, 2026-09-23.**
+  //
+  // > *"inversion of dy input direction"* — the owner, crossing into the capture zone
+  //
+  // ⚠⚠ The three channels had three UNRELATED sign rules: the exact branch's direction comes
+  // from the axis's screen shadow, `depth`'s fixed rate came from `sign(towardGravity)` (a camera
+  // ELEVATION), and `x`'s came from the axis against the view direction. ⛔ Nothing made them
+  // agree, so crossing the cone — which happens exactly where a basis switches — could reverse
+  // the body for the same finger movement.
+  //
+  // ⭐⭐ So the fallback now replaces only the RATE. The sense is `sign(m · s)`: the way the body
+  // would have gone had the exact mapping still been trusted. ⛔ **It cannot invert at the
+  // boundary**, by construction, because both sides read the same quantity — only the magnitude
+  // steps.
+  //
+  // ⭐ `towardGravity` is no longer consulted, and that is a correction rather than a loss: it was
+  // the right quantity while `depth` WAS the camera's own away-axis, and `worldAxisB` froze the
+  // axes at boot while `D74` gave the zone a basis of its own. A camera-elevation sign says
+  // nothing about an arbitrary world direction.
+  const sense = (s: readonly [number, number], mx: number, my: number, axis: Vec3): number => {
+    const proj = mx * s[0] + my * s[1];
+    if (proj !== 0) return Math.sign(proj);
+    // ⚠⚠ **EXACTLY EDGE-ON OR EXACTLY SQUARE: the glass says nothing, and the two answers are
+    // mirror images.** The convention is *finger right, or finger up, pushes the body AWAY from
+    // the camera along its axis* — which is what `sign(towardGravity)` encoded for the one axis
+    // it was ever correct for, so the judged behaviour is preserved where it was judged.
+    const forward = mx !== 0 ? Math.sign(mx) : Math.sign(-my);
+    const away = view === null ? 1 : Math.sign(dot(axis, view)) || 1;
+    return (forward || 1) * away;
+  };
+  /** The judged fixed rate — one finger-travel maps to one tracking unit — aimed by `sense`. */
+  const fixedAlong = (
+    s: readonly [number, number],
+    mx: number,
+    my: number,
+    axis: Vec3,
+  ): number => Math.hypot(mx, my) * sense(s, mx, my, axis);
+
+  const fallbackDepth = fixedAlong(sd, 0, dy2, axes.depth) * secondGain;
 
   // ⭐⭐⭐ **THE HOLDER'S OWN TWO FIXED RATES** (defect 58) — same shape as the depth channel's,
   // which a device look closed on 2026-09-16, and each one on the axis the owner DICTATED for it.
@@ -346,15 +390,8 @@ export function axisTravel(
   // exact mapping just outside the cone is right-is-away on one side and right-is-towards on the
   // other, and no convention can bridge that, because the two are mirror images. ⭐ It is the
   // same symmetry the depth channel meets at a level camera, where `towardGravity` is 0.
-  const view = normalize([
-    right[1] * up[2] - right[2] * up[1],
-    right[2] * up[0] - right[0] * up[2],
-    right[0] * up[1] - right[1] * up[0],
-  ]);
-  const xAwaySign = view === null ? 1 : Math.sign(dot(axes.x, view)) || 1;
-  const fallbackX = dx * xAwaySign;
-  // ⭐ Screen y grows DOWNWARD and `axes.gravity` is up, so the minus is *fingers-up lifts it*.
-  const fallbackGravity = -dy;
+  const fallbackX = fixedAlong(sx, dx, 0, axes.x);
+  const fallbackGravity = fixedAlong(sg, 0, dy, axes.gravity);
 
   let xM = 0;
   let gravityM = 0;

@@ -715,7 +715,6 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
       1,
       "PLANE",
       5,
-      c.gravity.towardGravity,
     );
     const step = axisDisplacement(travel, axes);
     // ⭐ What the scene now accumulates: the applied displacement projected onto the gravity frame.

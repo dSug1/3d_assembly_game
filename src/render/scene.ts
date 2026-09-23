@@ -3566,7 +3566,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       cfg.gainTranslateDepth,
       cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
       cfg.axisTrackingConeDeg,
-      grip.frame.towardGravity,
     );
     // ⭐ ONE writer, so this channel now feeds the swing exactly as the holder's does.
     applyWorldStep(grip, axisDisplacement(travel, axes));
@@ -4921,9 +4920,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           cfg.gainTranslateDepth,
           cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
           cfg.axisTrackingConeDeg,
-          // ⭐ Read ONLY inside the cone, where it is the sign `depthTranslate` needed: +1
-          // looking down on the scene, −1 looking up at it.
-          grip.frame.towardGravity,
         );
         lastTrackGain = travel.trackGain;
         lastAxisMode = travel.mode;

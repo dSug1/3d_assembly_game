@@ -595,3 +595,74 @@ untouched. ⚠⚠ The decision is asked through Vite's own `command`, never snif
 `process.argv`, because the failure is **asymmetric**: stamping `dev-server` into a production
 bundle would have `build_gate` compare an id against itself and **never refresh**, reinstating the
 very failure it exists to prevent. ⭐ A vector pins that direction.
+
+
+
+---
+
+## 62 — ⭐⭐⭐ **THE ZONE EDGE TOOK THE APPROACH OFF THE FINGER THAT WAS DOING IT**
+
+**2026-09-23, by finger.** *"The behavior is absolutely erratic when the follower enters the offset
+radius zone with the dy input of the second touch (blocked on white highlight border, change of
+directions, inversion of dy input direction, etc.). This is not good. I asked you to do a full
+check and you failed."*
+
+⛔⛔⛔ **THE EDGE REPLACED THE BASIS WITHOUT LOOKING AT THE OLD ONE.** `updatedObjectAxes` takes
+`previous` and used it only as a REFUSAL — for a missing or horizontal leading face. So at the
+crossing the mate basis was adopted in its CANONICAL orientation, and every channel's axis could
+turn up to 90°, or reverse, mid-push.
+
+⭐⭐ **AND THE WORST CASE IS THE COMMON ONE.** A hand pushes a body at another one; whichever
+channel drives that motion is by definition driving the direction that is about to become the face
+normal — and a fixed name-to-axis map hands the normal to whichever channel the DICTATION names,
+which is usually the other one. ⛔ The body stops at the white contour because the finger that was
+advancing it is now driving sideways. *"Blocked on white highlight border."*
+
+✅ **FIXED**: `nearestOrientation` — the mate GEOMETRY is not negotiable, its ORIENTATION is.
+`{approach, sideways}`, their negatives and the two swaps all describe the same pair of lines; the
+zone now adopts the one whose `x` is nearest the `x` the body already had, and derives `depth` from
+it so the frame stays right-handed. ⭐ No axis turns more than 45° and none reverses, so **the
+channel that was doing the approach keeps doing it** — whichever finger that was, which is why it
+answers this report AND defect 59's one-finger version of it.
+⚠ What it gives up, stated: the in-zone assignment is no longer a fixed map. The same face can put
+the approach on `x` for one approach and on `depth` for the next, depending on how the body
+arrived. ⭐ That IS the rule: *differs as little as it can.*
+
+⚠⚠ **AND DEFECT 59's PREMISE IS DEMOTED BY THIS.** I read the dictation's ordering — *"LeadingFace
+normal direction, gravity direction and direction orthogonal"* — as naming which channel gets
+which axis. It names three DIRECTIONS; the assignment was my inference. ⭐ Continuity is a better
+rule than either reading, and it makes the canonical order almost irrelevant.
+
+
+---
+
+## 63 — ⛔⛔ **THE FALLBACK AIMED ITSELF BY A DIFFERENT QUANTITY THAN THE RULE IT REPLACED**
+
+**2026-09-23, by finger**, in the same report: *"inversion of dy input direction."*
+
+⛔ Exact tracking goes where `sign(m · s)` says — the axis's own screen shadow. The fixed rate
+aimed itself by **`sign(towardGravity)`**, a camera ELEVATION, for `depth`, and by the axis against
+the view direction for `x`. ⚠ Nothing made the three agree, so crossing the cone — which happens
+exactly where a basis switches — could **reverse the body for the same finger movement**.
+
+⭐⭐ `towardGravity` was the right quantity while `depth` **was the camera's own away-axis**. Then
+`worldAxisB` froze the axes at boot and `D74` gave the zone a basis of its own, and a camera
+elevation stopped saying anything about an arbitrary world direction. ⚠ Nobody re-derived the sign
+when the axis stopped being the camera's; the parameter simply stayed.
+
+✅ **FIXED**: the fallback replaces only the **RATE**. Its sense is `sign(m · s)` — the way the
+body would have gone had the exact mapping still been trusted — so **it cannot invert at the
+boundary, by construction**, because both sides read one quantity. ⛔ `towardGravity` is deleted
+from the signature rather than left unread.
+⚠ The genuinely ambiguous case keeps a stated convention: an axis EXACTLY at the camera has two
+mirror-image answers, and *finger right, or finger up, pushes the body away*.
+
+⭐⭐⭐ **AND A VECTOR ALREADY CLAIMED THIS PROPERTY AND COULD NOT FAIL.** *"the SIGN is continuous
+through the cone — the defect that was found by finger"* has stood since the rule shipped — built
+on `axesFromFrame(camera(0, 30).gravity)`, the CAMERA's own axes, at the same azimuth as the
+cameras it then swept. ⛔ For a camera-derived axis `towardGravity` and the screen shadow agree by
+construction, so the vector tested a set in which the two sign sources are the same number.
+⚠ **The audit's own shape, the fifth time**: *a fixture chosen because it is easy to reason about
+is usually chosen from the set where the quantity under test is ZERO.* ⭐ The replacement sweeps
+60 camera poses against a WORLD-fixed basis and asserts the two branches agree — and counts how
+many times the fallback actually ran, so a sweep that never reached it cannot pass for free.

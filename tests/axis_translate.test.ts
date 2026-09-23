@@ -87,7 +87,6 @@ const run = (
     gain,
     pairing,
     cone,
-    c.gravity.towardGravity,
   );
 
 describe("⭐⭐⭐ PLANE — the body follows the finger inside its own VERTICAL plane", () => {
@@ -355,7 +354,6 @@ describe("degenerate inputs never reach a placement", () => {
       1,
       "PLANE",
       CONE,
-      0,
     );
     expect(t.xM).toBe(0);
     expect(t.gravityM).toBe(0);
@@ -546,5 +544,71 @@ describe("⭐ the shadow readout — WHICH axis is edge-on, not merely that one 
     expect(sd).toBeGreaterThan(0.9);
     // ⭐ And it agrees with `screenShadow`, which is the quantity it claims to report.
     expect(sx).toBeCloseTo(Math.hypot(...screenShadow(axes.x, c.screen)!), 12);
+  });
+});
+
+/**
+ * ⭐⭐⭐ **DEFECT 63 — THE FALLBACK USED TO AIM ITSELF BY A DIFFERENT QUANTITY THAN THE RULE.**
+ *
+ * > *"inversion of dy input direction"* — the owner, 2026-09-23, crossing into the capture zone
+ *
+ * ⛔ The exact branch's direction is `sign(m · s)`, from the axis's screen shadow. The fixed rate
+ * aimed itself by `sign(towardGravity)` — a camera ELEVATION — for depth, and by the axis against
+ * the view direction for x. ⚠ Nothing made the three agree, so crossing the cone could reverse
+ * the body for the same finger movement. ⭐ The fallback now replaces only the RATE.
+ */
+describe("⛔⛔⛔ defect 63 — crossing the cone may change the RATE, never the DIRECTION", () => {
+  it("⭐⭐⭐ swept across every camera: the two branches agree on the sense, always", () => {
+    // ⛔⛔ THE PROPERTY, AND IT IS THE ONE A HAND FEELS. For each pose the same finger travel is
+    // mapped twice — once with a cone that permits exact tracking, once with a cone so wide that
+    // the fallback is forced — and the two must never point the body opposite ways.
+    const axes: ObjectAxes = { x: [1, 0, 0], gravity: [0, 1, 0], depth: [0, 0, 1] };
+    let forced = 0;
+    for (const az of [0, 17, 35, 67, 90, 123, 180, 217, 271, 313]) {
+      for (const el of [0, 8, 25, 47, 66, 84]) {
+        const c = camera(az, el);
+        for (const input of [
+          { holderDxPx: 60 },
+          { holderDxPx: -60 },
+          { holderDyPx: 60 },
+          { holderDyPx: -60 },
+          { secondDyPx: 55 },
+          { secondDyPx: -55 },
+        ]) {
+          const exact = run(input, c, axes, "PLANE", 1, 0.5);
+          const fixed = run(input, c, axes, "PLANE", 1, 89);
+          for (const k of ["xM", "gravityM", "depthM"] as const) {
+            if (Math.abs(exact[k]) < 1e-12 || Math.abs(fixed[k]) < 1e-12) continue;
+            forced++;
+            expect(Math.sign(exact[k])).toBe(Math.sign(fixed[k]));
+          }
+        }
+      }
+    }
+    // ⚠ MISTAKE SHAPE 5: a sweep that never reached the fallback would pass for free.
+    expect(forced).toBeGreaterThan(200);
+  });
+
+  it("⛔ and the JUDGED conventions survive where they were judged", () => {
+    // ⭐ `depthTranslate`'s rule, closed by a device look 2026-09-16: looking DOWN on the scene,
+    // fingers-up pushes the body AWAY. ⚠ It used to come from `sign(towardGravity)`; it now comes
+    // from the axis's own shadow, and the answer at that pose is the same.
+    const axes: ObjectAxes = { x: [1, 0, 0], gravity: [0, 1, 0], depth: [0, 0, 1] };
+    const down = camera(90, 35); // the depth axis square-on, camera looking down
+    expect(run({ secondDyPx: -40 }, down, axes).depthM).toBeGreaterThan(0);
+    // ⭐ And fingers-up still LIFTS on the gravity channel, at every camera.
+    for (const el of [5, 30, 70]) {
+      expect(run({ holderDyPx: -40 }, camera(23, el), axes).gravityM).toBeGreaterThan(0);
+    }
+  });
+
+  it("⛔ an axis EXACTLY at the camera keeps the mirror-image convention: away", () => {
+    // ⚠ `sign(m · s)` is 0 there and the glass genuinely cannot answer — the two senses are
+    // mirror images. ⭐ *Finger right, or finger up, pushes the body away from the camera.*
+    const axes: ObjectAxes = { x: [1, 0, 0], gravity: [0, 1, 0], depth: [0, 0, 1] };
+    const along = camera(0, 0); // looking straight down +x
+    const t = run({ holderDxPx: 50 }, along, axes);
+    expect(t.xM).toBeGreaterThan(0); // +x points away from this camera
+    expect(t.shadowLens[0]).toBeCloseTo(0, 9);
   });
 });

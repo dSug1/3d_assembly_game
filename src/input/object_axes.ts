@@ -144,6 +144,61 @@ export function axesFromLeadingFace(normal: Vec3, up: Vec3): ObjectAxes | null {
   return { x: approach, gravity: g, depth: sideways };
 }
 
+/**
+ * ⭐⭐⭐ **ADOPT THE MATE BASIS IN THE ORIENTATION NEAREST THE ONE THE BODY ALREADY HAD.**
+ *
+ * > *"the behavior is absolutely erratic when the follower enters the offset radius zone with the
+ * > dy input of the second touch (blocked on white highlight border, change of directions,
+ * > inversion of dy input direction)"* — the owner, 2026-09-23 (defect 62)
+ *
+ * ⛔⛔⛔ **THE ZONE EDGE USED TO REPLACE THE BASIS WITHOUT LOOKING AT THE OLD ONE** — `previous`
+ * was passed into `updatedObjectAxes` and only ever used as a REFUSAL. So at the crossing every
+ * channel's axis could jump by up to 90°, or reverse outright, mid-push.
+ *
+ * ⭐⭐ **AND THE WORST CASE IS THE COMMON ONE: THE CHANNEL DOING THE APPROACH LOSES IT.** A hand
+ * pushes a body at another one; whichever channel was driving that motion is, by definition,
+ * driving the direction that is about to become the face normal — and a fixed assignment hands
+ * the normal to whichever channel the DICTATION names, which is usually the other one. ⛔ The body
+ * stops at the white contour, because the finger that was advancing it is now driving sideways.
+ *
+ * ⭐⭐⭐ **THE RULE: the mate geometry is not negotiable, its ORIENTATION is.** `{approach,
+ * sideways}` and `{-approach, -sideways}` and the two swaps all describe the same pair of lines;
+ * this picks the one whose `x` is nearest the `x` the body had, and derives `depth` from it so
+ * the frame stays right-handed. ⛔ No axis turns more than 45° at the crossing and none reverses,
+ * so **the channel that was doing the approach keeps doing it** — whichever finger that was.
+ *
+ * ⭐ It needs no camera test, no tunable and no state: it is a function of the two bases, decided
+ * once, at the edge where the basis is decided.
+ * ⚠ What it gives up, stated: the in-zone assignment is no longer a fixed name-to-axis map — the
+ * same face can put the approach on `x` for one approach and on `depth` for the next, depending
+ * on how the body arrived. That is the point, and it is why `D74`'s *"the translation direction
+ * differs inside the zone"* now reads as *differs as little as it can*.
+ */
+export function nearestOrientation(zone: ObjectAxes, previous: ObjectAxes): ObjectAxes {
+  const g = zone.gravity;
+  const candidates: readonly Vec3[] = [
+    zone.x,
+    [-zone.x[0], -zone.x[1], -zone.x[2]],
+    zone.depth,
+    [-zone.depth[0], -zone.depth[1], -zone.depth[2]],
+  ];
+  let x = candidates[0]!;
+  let best = -Infinity;
+  for (const c of candidates) {
+    const d = dot(c, previous.x);
+    if (d > best) {
+      best = d;
+      x = c;
+    }
+  }
+  // ⭐ `x = g × depth` is the handedness every other basis here obeys, so `depth = x × g` is the
+  // one choice that keeps it — and because both frames share `gravity` and both are right-handed,
+  // a `depth` derived this way is automatically within 45° of the old one too.
+  const depth = normalize(cross(x, g));
+  if (!depth) return zone;
+  return { x, gravity: g, depth };
+}
+
 /** Which way the offset radius zone was crossed this frame, or `null` for no crossing. */
 export type ZoneEdge = "ENTER" | "EXIT" | null;
 
@@ -190,7 +245,10 @@ export interface AxesInputs {
 export function updatedObjectAxes(i: AxesInputs): ObjectAxes {
   if (i.inZone) {
     if (i.leadingNormal === null) return i.previous;
-    return axesFromLeadingFace(i.leadingNormal, i.up) ?? i.previous;
+    const zone = axesFromLeadingFace(i.leadingNormal, i.up);
+    // ⛔⛔ **IN THE ORIENTATION NEAREST THE BASIS THE BODY ALREADY HAS** (defect 62). Taking the
+    // canonical one is what let a channel lose the approach at the white contour.
+    return zone === null ? i.previous : nearestOrientation(zone, i.previous);
   }
   // ⭐⭐ OUTSIDE THE ZONE THE FLAG DECIDES, AND THE DIFFERENCE IS ONLY *WHICH CAMERA*.
   // `WorldAxisB` is the boot camera's basis, frozen for the scene; `WorldAxisA` is the camera

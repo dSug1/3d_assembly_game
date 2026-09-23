@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import {
   axesFromFrame,
   axesFromLeadingFace,
+  nearestOrientation,
   updatedObjectAxes,
   zoneEdge,
   type ObjectAxes,
@@ -175,8 +176,11 @@ describe("inside the zone — the leading face decides, and the flag is not cons
     const on = updatedObjectAxes({ ...base, worldAxisB: true, leadingNormal: n });
     const off = updatedObjectAxes({ ...base, worldAxisB: false, leadingNormal: n });
     expect(on).toEqual(off);
-    expect(on.x[0]).toBeCloseTo(Math.SQRT1_2, 12);
-    expect(on.x[2]).toBeCloseTo(Math.SQRT1_2, 12);
+    // ⛔⛔ **THE LINES ARE THE MATE'S; THE ORIENTATION IS THE ONE NEAREST `previous`** — defect
+    // 62, and this vector was RED for the sign. ⭐ The approach still lies on an axis of the
+    // basis; which SENSE it takes is decided by the basis the body arrived with.
+    expect(Math.abs(dot(on.x, n))).toBeCloseTo(1, 12);
+    expect(dot(on.x, BOOT.x)).toBeGreaterThanOrEqual(0);
     orthonormal(on);
     // ⛔ And it is NOT either of the outside-zone answers — the dictation's *"therefore the
     // translation direction differs when the object is inside the offset radius zone"*.
@@ -225,9 +229,77 @@ describe("⛔⛔ the zone is entered by PROXIMITY; the duo is nameable only whil
       up: UP,
       previous: BOOT,
     });
-    expect(late).toEqual(axesFromLeadingFace(n, UP));
+    // ⚠ Nearest-orientation (defect 62), so it is the mate basis turned to agree with `previous`
+    // rather than the canonical one — same two lines, one of four possible framings.
+    expect(late).toEqual(nearestOrientation(axesFromLeadingFace(n, UP)!, BOOT));
     // ⛔ And it is NOT the boot basis, which is what a rule keyed on `edge === "ENTER"` would
     // have left the body with — the defect this vector exists to pin.
     expect(late).not.toEqual(BOOT);
+  });
+});
+
+describe("⛔⛔⛔ defect 62 — the zone edge must not take the approach off the finger doing it", () => {
+  // > *"the behavior is absolutely erratic when the follower enters the offset radius zone with
+  // > the dy input of the second touch (blocked on white highlight border, change of directions,
+  // > inversion of dy input direction)"* — the owner, 2026-09-23
+
+  it("⭐⭐⭐ THE CHANNEL DRIVING THE APPROACH KEEPS IT, whichever channel that is", () => {
+    // ⛔ A hand pushes a body at another one. Whatever axis that motion was on is the one about
+    // to become the face normal — and it must still be under the SAME finger afterwards.
+    const normal: Vec3 = normalize([1, 0, 0.35])!;
+    const zone = axesFromLeadingFace(normal, UP)!;
+    // (a) approaching on the HOLDER's dx: `previous.x` already points that way.
+    // ⚠ FIXTURE: `depth = x × g`, which is the right-handed partner of `x = g × depth`. My first
+    // draft wrote `g × x` and built a LEFT-handed `previous` — mistake shape 5, and it made the
+    // 45° property below look false when the code was right.
+    const holder: ObjectAxes = { x: normalize([1, 0, 0.35])!, gravity: UP, depth: normalize([-0.35, 0, 1])! };
+    const afterHolder = nearestOrientation(zone, holder);
+    expect(dot(afterHolder.x, holder.x)).toBeGreaterThan(0.7);
+    // (b) approaching on the SECOND finger: the approach was on `previous.depth`, and it stays
+    // there — the case the owner reported, where it used to jump to the other channel.
+    const second: ObjectAxes = { x: normalize([0.35, 0, -1])!, gravity: UP, depth: normalize([1, 0, 0.35])! };
+    const afterSecond = nearestOrientation(zone, second);
+    expect(dot(afterSecond.depth, second.depth)).toBeGreaterThan(0.7);
+    expect(Math.abs(dot(afterSecond.depth, normal))).toBeGreaterThan(0.9);
+  });
+
+  it("⛔ no axis turns more than 45° and none reverses, for ANY previous basis", () => {
+    const zone = axesFromLeadingFace(normalize([1, 0, 1])!, UP)!;
+    for (const deg of [0, 10, 44, 46, 89, 91, 134, 179, 181, 271, 359]) {
+      const a = deg * DEG;
+      const prev: ObjectAxes = {
+        x: [Math.cos(a), 0, Math.sin(a)],
+        gravity: UP,
+        // ⚠ `x × g`, so `previous` is RIGHT-handed like every basis the product builds.
+        depth: [-Math.sin(a), 0, Math.cos(a)],
+      };
+      const got = nearestOrientation(zone, prev);
+      // ⭐ Within 45° of where each channel already pointed — `cos 45°`, with a rounding margin.
+      expect(dot(got.x, prev.x)).toBeGreaterThan(Math.SQRT1_2 - 1e-9);
+      expect(dot(got.depth, prev.depth)).toBeGreaterThan(Math.SQRT1_2 - 1e-9);
+      orthonormal(got);
+      // ⛔ And the handedness every other basis here obeys survives the choice.
+      const byHand = normalize(cross(UP, got.depth))!;
+      for (let i = 0; i < 3; i++) expect(got.x[i]).toBeCloseTo(byHand[i]!, 12);
+    }
+  });
+
+  it("⭐ the GEOMETRY is untouched — only which end of each line is which", () => {
+    const n: Vec3 = normalize([2, 0, -1])!;
+    const zone = axesFromLeadingFace(n, UP)!;
+    for (const deg of [0, 97, 203]) {
+      const a = deg * DEG;
+      const prev: ObjectAxes = {
+        x: [Math.cos(a), 0, Math.sin(a)],
+        gravity: UP,
+        depth: [-Math.sin(a), 0, Math.cos(a)],
+      };
+      const got = nearestOrientation(zone, prev);
+      // ⛔ Still the mate's own two lines: the approach is on one axis or the other, exactly.
+      const onX = Math.abs(dot(got.x, zone.x));
+      const onD = Math.abs(dot(got.depth, zone.x));
+      expect(Math.max(onX, onD)).toBeCloseTo(1, 12);
+      expect(Math.min(onX, onD)).toBeCloseTo(0, 12);
+    }
   });
 });
