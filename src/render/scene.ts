@@ -183,6 +183,7 @@ import { pressHit } from "../input/frozen_pick";
 import {
   axesFromFrame,
   updatedObjectAxes,
+  rotationFrame,
   zoneEdge,
   type ObjectAxes,
 } from "../input/object_axes";
@@ -1643,6 +1644,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * than a stand-in: *all* object axes are the boot camera's until something moves them.
    */
   let bootObjectAxes: ObjectAxes | null = null;
+  /**
+   * ⭐ The gravity frame at scene boot — what a FREE body is turned about while `worldAxisB` is on.
+   * ⚠ Filled beside `bootObjectAxes`, at the very bottom of this file, for the same reason.
+   */
+  let bootGestureFrame: GravityFrame | null = null;
+  /** ⭐ The decision is `rotationFrame`'s, in `src/input`; this only supplies the two candidates. */
+  const rotationFrameOf = (live: GravityFrame): GravityFrame =>
+    rotationFrame({
+      worldAxisB: cfg.worldAxisB === 1,
+      bootFrame: bootGestureFrame,
+      liveFrame: live,
+    });
 
   // ⚠ `WORLD_UP` stood here and had exactly one reader: the in-zone basis, which `D82` deleted.
   /**
@@ -3464,7 +3477,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // rule's whole failure mode is *the body went somewhere I did not expect*, which no
             // amount of watching the body can attribute.
             `
-axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot)" : "WorldAxisA(live camera)"}` +
+axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldAxisA(live camera: move+turn)"}` +
             ` ${cfg.translatePairing === 1 ? "PLANE" : "CHANNELS"}` +
             ` track=${lastTrackGain.toFixed(2)}×${lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
             ` zone=${highlighted.inRange ? "IN" : "out"}` +
@@ -4479,7 +4492,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         {
           // ⭐ A FREE body rolls about the gravity frame's own depth — `screenRollRotation`'s axis,
           // stated here so the grey line cannot disagree with the turn it describes.
-          noteTurnAxis(rollId, TURN_ROLL, grip.frame.depth);
+          // ⛔⛔ **AND *WHICH* GRAVITY FRAME IS `worldAxisB`'s ANSWER SINCE 2026-09-23** — the boot
+          // camera's while it is on. ⚠ Taken ONCE and handed to all three readers below (the grey
+          // line, the turn, the tally), because two of them restate the other's axis and sign.
+          const rollFrame = rotationFrameOf(grip.frame);
+          noteTurnAxis(rollId, TURN_ROLL, rollFrame.depth);
           const rollDeg = rollDragDeg(drive.rollDxPx, cfg.gainRollDrag);
           const incOn =
             incrementRadians(cfg.rotationIncrementDeg) !== null &&
@@ -4489,7 +4506,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
               grip.mesh,
               screenRollRotation(
                 modelOrientation(grip.mesh),
-                grip.frame,
+                rollFrame,
                 rollDeg,
               ),
             );
@@ -4504,7 +4521,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             rotationTally.add(
               rollId,
               "roll",
-              grip.frame.depth,
+              rollFrame.depth,
               (-rollDeg * Math.PI) / 180,
             );
           }
@@ -5788,10 +5805,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐ The axes are `screenPlaneRotation`'s own — the gravity frame's `up` and `right` — taken
         // from the same `grip.frame` the rotation below is handed, so the line cannot disagree with
         // the turn it describes.
+        // ⛔⛔ **`worldAxisB` PICKS THE FRAME HERE TOO** (the owner, 2026-09-23). ⚠ ONE lookup for
+        // the lines, the tally and the turn — they restate each other's axes, so two calls could
+        // hand them different ones on the very frame the flag is toggled.
+        const turnFrame = rotationFrameOf(grip.frame);
         if (grip.rec.step.dx !== 0)
-          noteTurnAxis(freeId, TURN_YAW, grip.frame.up);
+          noteTurnAxis(freeId, TURN_YAW, turnFrame.up);
         if (grip.rec.step.dy !== 0)
-          noteTurnAxis(freeId, TURN_PITCH, grip.frame.right);
+          noteTurnAxis(freeId, TURN_PITCH, turnFrame.right);
         const incOnFree =
           incrementRadians(cfg.rotationIncrementDeg) !== null &&
           freeId !== undefined;
@@ -5802,13 +5823,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           rotationTally.add(
             freeId,
             "yaw",
-            grip.frame.up,
+            turnFrame.up,
             -grip.rec.step.dx * radPerPx,
           );
           rotationTally.add(
             freeId,
             "pitch",
-            grip.frame.right,
+            turnFrame.right,
             -grip.rec.step.dy * radPerPx,
           );
         } else
@@ -5816,7 +5837,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             grip.mesh,
             screenPlaneRotation(
               cur,
-              grip.frame,
+              turnFrame,
               // ⭐⭐ Deadbanded (A11) — the raw delta is what made a held object turn
               // while the hand was still.
               grip.rec.step.dx,
@@ -6108,6 +6129,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // the scene: a body created later (an import, a spawn) then gets the same answer, where a
   // one-time loop would leave it with none.
   bootObjectAxes = axesFromFrame(requireGestureFrame());
+  bootGestureFrame = requireGestureFrame();
 
   engine.runRenderLoop(() => {
     const now = performance.now();

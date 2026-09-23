@@ -16,6 +16,7 @@
 import { describe, expect, it } from "vitest";
 import {
   axesFromFrame,
+  rotationFrame,
   updatedObjectAxes,
   zoneEdge,
   type ObjectAxes,
@@ -31,14 +32,19 @@ const DEG = Math.PI / 180;
 const frameAt = (azimuthDeg: number, elevationDeg: number): GravityFrame => {
   const a = azimuthDeg * DEG;
   const e = elevationDeg * DEG;
-  const view: Vec3 = [Math.cos(a) * Math.cos(e), -Math.sin(e), Math.sin(a) * Math.cos(e)];
+  const view: Vec3 = [
+    Math.cos(a) * Math.cos(e),
+    -Math.sin(e),
+    Math.sin(a) * Math.cos(e),
+  ];
   const g = gravityFrame(view, DOWN);
   if (!g) throw new Error("fixture camera has no gravity frame");
   return g;
 };
 
 const orthonormal = (a: ObjectAxes): void => {
-  for (const v of [a.x, a.gravity, a.depth]) expect(Math.hypot(...v)).toBeCloseTo(1, 12);
+  for (const v of [a.x, a.gravity, a.depth])
+    expect(Math.hypot(...v)).toBeCloseTo(1, 12);
   expect(dot(a.x, a.gravity)).toBeCloseTo(0, 12);
   expect(dot(a.x, a.depth)).toBeCloseTo(0, 12);
   expect(dot(a.gravity, a.depth)).toBeCloseTo(0, 12);
@@ -87,7 +93,11 @@ describe("the flag chooses WHICH camera — and that is the whole rule since D82
   });
 
   it("⛔ a camera with no frame keeps the basis the body has, rather than guessing", () => {
-    const axes = updatedObjectAxes({ ...base, worldAxisB: false, liveFrame: null });
+    const axes = updatedObjectAxes({
+      ...base,
+      worldAxisB: false,
+      liveFrame: null,
+    });
     expect(axes).toEqual(base.previous);
   });
 });
@@ -127,9 +137,86 @@ describe("⛔⛔ the zone is entered by PROXIMITY, and it no longer moves the ba
       previous: axesFromFrame(LIVE),
     };
     expect(updatedObjectAxes(anywhere)).toEqual(BOOT);
-    expect(updatedObjectAxes({ ...anywhere, worldAxisB: false })).toEqual(axesFromFrame(LIVE));
+    expect(updatedObjectAxes({ ...anywhere, worldAxisB: false })).toEqual(
+      axesFromFrame(LIVE),
+    );
     // ⭐ And whichever it answers is still a basis a body can be translated along.
     orthonormal(updatedObjectAxes(anywhere));
     orthonormal(updatedObjectAxes({ ...anywhere, worldAxisB: false }));
+  });
+});
+
+/**
+ * GOLDEN VECTORS — **A FREE BODY'S ROTATION BASIS FOLLOWS `worldAxisB` TOO** (the owner,
+ * 2026-09-23: *"do the change"*).
+ *
+ * ⛔ The two fixtures are a quarter turn apart on purpose: a boot camera equal to the live one
+ * satisfies every claim here by accident, which is the 2026-09-17 audit's one repeating shape.
+ */
+describe("⭐⭐ rotationFrame — which camera a free body turns about", () => {
+  const BOOT_FRAME = frameAt(0, 30);
+  const LIVE_FRAME = frameAt(90, 30);
+
+  it("⭐⭐⭐ THE PREMISE, MEASURED: freezing moves PITCH and ROLL and leaves YAW alone", () => {
+    // ⛔⛔ This is the claim the whole answer to the owner rests on, so it is MEASURED rather than
+    // asserted in prose. A gravity frame's `up` is the world vertical BY DEFINITION, so the yaw
+    // axis cannot depend on the camera and this flag cannot touch it.
+    expect(BOOT_FRAME.up).toEqual(LIVE_FRAME.up);
+    // ⚠ And the other two genuinely differ, or every vector below would pass against any rule.
+    expect(dot(BOOT_FRAME.right, LIVE_FRAME.right)).toBeCloseTo(0, 12);
+    expect(dot(BOOT_FRAME.depth, LIVE_FRAME.depth)).toBeCloseTo(0, 12);
+  });
+
+  it("⭐⭐⭐ `worldAxisB` ON turns the body about the BOOT camera's frame", () => {
+    expect(
+      rotationFrame({
+        worldAxisB: true,
+        bootFrame: BOOT_FRAME,
+        liveFrame: LIVE_FRAME,
+      }),
+    ).toBe(BOOT_FRAME);
+  });
+
+  it("⭐⭐⭐ RED AGAINST THE OLD BEHAVIOUR: OFF is the live frame, which is what shipped", () => {
+    // ⛔ Before this change BOTH settings returned the live frame — this is the vector that
+    // separates the new rule from the code it replaces.
+    expect(
+      rotationFrame({
+        worldAxisB: false,
+        bootFrame: BOOT_FRAME,
+        liveFrame: LIVE_FRAME,
+      }),
+    ).toBe(LIVE_FRAME);
+  });
+
+  it("⛔ before boot has filled the frame it falls back to the live one, never to nothing", () => {
+    // ⚠ The TDZ shape that crashed the 2026-09-19 build: this is read on the gesture path, and a
+    // body mid-turn has to be turned about something.
+    expect(
+      rotationFrame({
+        worldAxisB: true,
+        bootFrame: null,
+        liveFrame: LIVE_FRAME,
+      }),
+    ).toBe(LIVE_FRAME);
+  });
+
+  it("⭐ and it agrees with the TRANSLATION basis at the same flag — one flag, one camera", () => {
+    // ⛔ The whole point of the change: with the flag on, the axes a body moves along and the axes
+    // it turns about come from the SAME camera. ⚠ A rule that read the flag backwards passes every
+    // vector above and fails this one.
+    const moving = updatedObjectAxes({
+      worldAxisB: true,
+      bootAxes: axesFromFrame(BOOT_FRAME),
+      liveFrame: LIVE_FRAME,
+      previous: axesFromFrame(LIVE_FRAME),
+    });
+    const turning = rotationFrame({
+      worldAxisB: true,
+      bootFrame: BOOT_FRAME,
+      liveFrame: LIVE_FRAME,
+    });
+    expect(moving.x).toEqual(turning.right);
+    expect(moving.depth).toEqual(turning.depth);
   });
 });

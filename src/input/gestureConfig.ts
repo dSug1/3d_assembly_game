@@ -538,8 +538,16 @@ export interface GestureConfig {
    * ⚠⚠ **IT DOES NOT SELECT THE *REMAP*.** The holder's `dy` drives the object's DEPTH axis
    * and the second touchpoint's `dy` drives its GRAVITY axis in **both** settings — that part
    * of the dictation is unconditional. This flag chooses only which triple of world directions
-   * the three channels are projected onto. ⛔ Nor does it reach inside the capture zone, where
-   * the leading face decides and neither setting is consulted.
+   * the channels are projected onto.
+   *
+   * ⭐⭐⭐ **AND SINCE 2026-09-23 IT GOVERNS THE *ROTATION* BASIS OF A FREE BODY TOO** — the owner
+   * asked why translation followed the world axes while rotation followed the camera, and the
+   * answer was that the dictation had simply never reached the rotation. ⛔ *"Do the change"*: at
+   * `1` an unaligned body PITCHES and ROLLS about the boot camera's frame as well, so one flag
+   * answers *which camera does this body obey* for both gestures. ⚠ The YAW is unaffected either
+   * way — a gravity frame's `up` is the world vertical by definition. ⭐ The rule and its cost are
+   * `rotationFrame` in `object_axes.ts`; a TWIST on an ALIGNED body is untouched, because it turns
+   * about the constraint and never read a camera frame.
    *
    * ⚠ A 0/1 slider because the menu has no other kind of control (`D26`'s shape), and the
    * validator refuses anything between: a half-set selector must not read as `truthy` and ship
@@ -1009,8 +1017,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
-
-
   // ⛔⛔⛔ **THE PLAIN RANGES — ADDED BY AUDIT, 2026-09-17.**
   //
   // ⚠⚠ **EVERY RULE BELOW THIS BLOCK IS A *RELATION* BETWEEN TWO TUNABLES**, and that is
@@ -1117,10 +1123,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // the surface folds back through itself, and the elevation parameter stops meaning
   // "how high the camera is" — it would move the camera DOWN over part of its range,
   // which no amount of gain tuning can fix because the geometry is wrong.
-  if (
-    !(cfg.orbitBottomHeightM < cfg.orbitMiddleHeightM &&
-      cfg.orbitMiddleHeightM < cfg.orbitTopHeightM)
-  ) {
+  if (!(
+    cfg.orbitBottomHeightM < cfg.orbitMiddleHeightM &&
+    cfg.orbitMiddleHeightM < cfg.orbitTopHeightM
+  )) {
     throw new Error(
       `orbit ring heights must increase bottom → middle → top, got ` +
         `${cfg.orbitBottomHeightM} / ${cfg.orbitMiddleHeightM} / ${cfg.orbitTopHeightM} m: ` +
@@ -1259,7 +1265,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "unreachable and every translation would run at the fallback rate. NaN fails this too.",
     );
   }
-  if (cfg.cameraOffsetZoneEnterSetupB !== 0 && cfg.cameraOffsetZoneEnterSetupB !== 1) {
+  if (
+    cfg.cameraOffsetZoneEnterSetupB !== 0 &&
+    cfg.cameraOffsetZoneEnterSetupB !== 1
+  ) {
     throw new Error(
       `cameraOffsetZoneEnterSetupB (${cfg.cameraOffsetZoneEnterSetupB}) must be exactly 0 or 1: ` +
         "it selects whether the zone's ENTER edge calls CameraOffsetZoneEnter, which is a RULE " +
@@ -1269,7 +1278,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // ⛔ `0` is MEANINGFUL here (the swing off), so the rule is a range and not a positivity
   // test — the opposite of `captureOffsetMm` below, where zero would mean *nothing ever
   // captures* and is a mistake rather than a setting.
-  if (!(cfg.approachSwingSpeedGain >= 0) || !(cfg.approachSwingSpeedExponent >= 0)) {
+  if (
+    !(cfg.approachSwingSpeedGain >= 0) ||
+    !(cfg.approachSwingSpeedExponent >= 0)
+  ) {
     throw new Error(
       `approachSwingSpeedGain (${cfg.approachSwingSpeedGain}) and ` +
         `approachSwingSpeedExponent (${cfg.approachSwingSpeedExponent}) must both be >= 0: ` +

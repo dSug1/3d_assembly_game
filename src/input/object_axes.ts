@@ -154,3 +154,59 @@ export function updatedObjectAxes(i: AxesInputs): ObjectAxes {
   if (i.worldAxisB) return i.bootAxes;
   return i.liveFrame === null ? i.previous : axesFromFrame(i.liveFrame);
 }
+
+/** Everything the rotation basis needs. ⭐ Plain data, so this decision is vectorable too. */
+export interface RotationFrameInputs {
+  /** `worldAxisB` as a boolean — the SAME flag the translation basis reads. */
+  readonly worldAxisB: boolean;
+  /** ⭐ The gravity frame built at scene boot. ⚠ `null` before boot has filled it. */
+  readonly bootFrame: GravityFrame | null;
+  /** The gravity frame this grip carries now — latched at press, re-based after a camera move. */
+  readonly liveFrame: GravityFrame;
+}
+
+/**
+ * ⭐⭐⭐ **THE BASIS A FREE BODY IS *TURNED* ABOUT — and it now follows `worldAxisB` too.**
+ *
+ * > *"why for an unaligned object when world axis is toggled on, the translation is done along
+ * > world axis but the rotation is done along screen axis? is it on purpose or was it a miss when
+ * > we built world axis?"* … *"do the change."* — the owner, 2026-09-23
+ *
+ * ⛔⛔⛔ **THE HONEST ANSWER WAS: NEITHER.** The `D74`/`D75` dictation named only translation
+ * channels — *x is the holder's dx, depth its dy, gravity the second finger's dy* — and nothing in
+ * it, or in `IN4.md`, ever reached the rotation. ⭐ So rotation went on standing on `A7`'s LIVE
+ * gravity frame, not by decision but because no decision was made.
+ * ⭐⭐ `METHOD`: *a scope that was never stated is not a scope that was chosen, and the difference
+ * is invisible in the code that results.*
+ *
+ * ## ⭐⭐ WHAT ACTUALLY CHANGES, WHICH IS LESS THAN THE QUESTION IMPLIES
+ *
+ * ⛔ A gravity frame's `up` is the **world vertical by definition**, at every camera. So the YAW
+ * axis was ALREADY world-fixed and this cannot touch it. What freezes is:
+ *
+ * ```
+ *   pitch — about the frame's `right`  (the camera's right, always horizontal)
+ *   roll  — about the frame's `depth`  (the view direction flattened onto the ground)
+ * ```
+ *
+ * ⚠ Vectored below as an equality that would otherwise just be assumed: two frames a quarter turn
+ * apart share `up` EXACTLY and are orthogonal in the other two.
+ *
+ * ## ⚠⚠ THE COST, STATED BEFORE A HAND MEETS IT
+ *
+ * ⛔ Frozen, the pitch axis points at the camera after a quarter orbit, so a vertical finger sweep
+ * there reads as a ROLL rather than a tip. ⭐ That is exactly the property the owner ASKED FOR on
+ * the translation side — *a push that went "right" before an orbit still goes the same way in the
+ * world afterwards* — carried over to the turn, and it is the thing to judge by finger.
+ * ⚠ `?worldAxisB=0` restores the live frame for both at once.
+ *
+ * ⛔ It does NOT touch a TWIST on an aligned body: that turns about the constraint's own axis and
+ * never consulted a camera frame at all. The owner's question was about the UNALIGNED case.
+ */
+export function rotationFrame(i: RotationFrameInputs): GravityFrame {
+  // ⛔ The fallback is the live frame, never a throw and never a stand-in basis: this is read on
+  // the gesture path, and a body mid-turn has to be turned about something. ⚠ It is reachable only
+  // before boot fills the frame — the TDZ shape that crashed the 2026-09-19 build.
+  if (i.worldAxisB && i.bootFrame !== null) return i.bootFrame;
+  return i.liveFrame;
+}
