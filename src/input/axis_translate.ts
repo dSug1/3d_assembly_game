@@ -85,20 +85,28 @@ export interface CameraScreenAxes {
 
 /** One frame's finger travel, CSS pixels. ⭐ **Deadbanded** travel (`A11`), never a raw delta. */
 export interface AxisInputsPx {
-  /** The holder's horizontal travel. */
+  /** The holder's horizontal travel → the object's **x** axis. */
   readonly holderDxPx: number;
-  /** The holder's vertical travel. ⚠ Screen y grows DOWNWARD. */
+  /**
+   * The holder's vertical travel → the object's **GRAVITY** axis. ⚠ Screen y grows DOWNWARD.
+   *
+   * ⛔⛔ **SWAPPED WITH `secondDyPx` — `D83`, 2026-09-23**, the owner: *"dx and dy from touch on
+   * the object control the translation on object x axis and object gravity axis, and dy from
+   * second touch control the translation on object depth axis."* ⭐ So the holder now moves the
+   * body in a **VERTICAL** plane and the second finger pushes it away, where `D75` had the holder
+   * on the horizontal plane and the second finger lifting.
+   */
   readonly holderDyPx: number;
-  /** The second touchpoint's vertical travel → the object's **gravity** axis. */
+  /** The second touchpoint's vertical travel → the object's **DEPTH** axis (`D83`). */
   readonly secondDyPx: number;
 }
 
 /**
  * ⭐⭐⭐ **WHICH MAPPING THE HOLDER'S TWO NUMBERS GET** — a RULE SELECTOR, not a tunable.
  *
- * ⛔ `PLANE`: the 2D delta is decomposed onto both horizontal axes, so the body follows the
- * finger inside its own horizontal plane.
- * ⛔ `CHANNELS`: the dictation's literal pairing, `dx`→x and `dy`→depth, each tracking exactly
+ * ⛔ `PLANE`: the 2D delta is decomposed onto the holder's two axes, so the body follows the
+ * finger inside its own `{x, gravity}` plane (`D83`; it was `{x, depth}` until the swap).
+ * ⛔ `CHANNELS`: the dictation's literal pairing, `dx`→x and `dy`→gravity, each tracking exactly
  * along its own axis — Blender's `G X`, twice.
  */
 export type TranslatePairing = "PLANE" | "CHANNELS";
@@ -159,9 +167,8 @@ const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
  *   exact tracking this is the whole of the scale: the gains below multiply it, and `1.0` puts
  *   the body under the finger.
  * @param holderGain `gainTranslateScreen`.
- * @param secondGain `gainTranslateDepth` — the second touchpoint's channel. ⚠ It has kept its
- *   name and its number while its AXIS moved to gravity; renaming a tuned number is how a
- *   device session loses its baseline.
+ * @param secondGain `gainTranslateDepth` — the second touchpoint's channel. ⭐ Since `D83` its
+ *   axis is **depth** again, which is the axis it was named and tuned for.
  * @param coneDeg `axisTrackingConeDeg` — how near the view direction an axis may come before
  *   the exact mapping is abandoned for the fixed-rate push. ⭐ **5° is Blender's own number**
  *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
@@ -180,12 +187,14 @@ export function axisTravel(
   coneDeg: number,
   towardGravity: number,
 ): AxisTravel {
+  const right = normalize(camera.right);
+  const up = normalize(camera.up);
   const sx = screenShadow(axes.x, camera);
   const sd = screenShadow(axes.depth, camera);
   const sg = screenShadow(axes.gravity, camera);
   // ⛔ A camera with no basis moves nothing, rather than moving by NaN. One NaN written into a
   // placement is permanent — it never washes out of a position.
-  if (!sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
+  if (!right || !up || !sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
     return { xM: 0, gravityM: 0, depthM: 0, edgeOn: false, trackGain: 0 };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
@@ -193,68 +202,108 @@ export function axisTravel(
   const dy2 = finite(input.secondDyPx) * metresPerPx;
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
 
-  /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
+  /**
+   * Exact tracking along ONE axis: the travel that keeps the body under the finger.
+   *
+   * ⛔⛔ **THE GUARD IS ON THE PROJECTED SHADOW `|s · m̂|`, NOT ON `|s|`.** The travel is
+   * `|m| · cosθ / |s|`, so the mapping fails in TWO directions: `|s| → 0` (the axis points at the
+   * camera) makes it **explode**, and `cosθ → 0` (the finger's direction square to the axis's
+   * screen line) makes it **vanish** — with a full-length shadow, so a test on `|s|` sees nothing
+   * wrong. ⭐ One test covers both, and it bounds the gain from both sides: at most `1/sin(cone)`
+   * and at least `sin(cone)`. *A channel may be weak; it may never be dead.*
+   */
   const along = (s: readonly [number, number], mx: number, my: number): number | null => {
     const len = Math.hypot(s[0], s[1]);
-    if (!(len > coneSin) || !(len > 0)) return null;
+    const askedPx = Math.hypot(mx, my);
+    if (!(len > 0) || !(askedPx > 0)) return null;
+    if (!(Math.abs((mx * s[0] + my * s[1]) / askedPx) > coneSin)) return null;
     // ⭐ `(m · ŝ) / |s|` — project onto the axis's screen LINE, then undo the foreshortening.
     // ⛔ The division is the whole of report 2's fix, and it is what Blender's ray/line
     // intersection amounts to for a straight drag.
     return (mx * s[0] + my * s[1]) / (len * len);
   };
 
-  // ⭐⭐ THE FIXED-RATE PUSH, for a plane that is edge-on. ⛔ `depthTranslate`'s mapping, which
-  // a device look closed on 2026-09-16 — including its sign, which was itself a defect found by
-  // finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the picture is
-  // symmetric and no sign is derivable; *fingers-up = away* is the convention, continuous with
-  // the camera looking even slightly down.
+  // ⭐⭐ THE FIXED-RATE PUSH, for an axis the glass cannot track. ⛔ `depthTranslate`'s mapping,
+  // which a device look closed on 2026-09-16 — including its sign, which was itself a defect
+  // found by finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the
+  // picture is symmetric and no sign is derivable; *fingers-up = away* is the convention,
+  // continuous with the camera looking even slightly down.
+  //
+  // ⭐⭐⭐ **SINCE `D83` IT BELONGS TO THE SECOND TOUCHPOINT AGAIN**, which is where it was
+  // judged: `depth` is the axis that turns to face the camera, and the second finger drives it.
   const awaySign = Math.sign(finite(towardGravity)) || 1;
-  const fallbackDepth = -dy * holderGain * awaySign;
+
+  // ⛔⛔ **THE HOLDER'S OWN FIXED RATES KEEP THE SENSE THE EXACT MAPPING WOULD HAVE TAKEN.** The
+  // two branches must not disagree about DIRECTION, or crossing the cone reverses the body for
+  // the same finger movement. ⭐ `sign(m · s)` is that sense; where it is exactly zero the glass
+  // says nothing and the two answers are mirror images, so the convention is *finger right, or
+  // finger up, pushes the body AWAY from the camera along its axis* — the same convention
+  // `towardGravity` encodes for the one axis it was ever correct for.
+  const view = normalize([
+    right[1] * up[2] - right[2] * up[1],
+    right[2] * up[0] - right[0] * up[2],
+    right[0] * up[1] - right[1] * up[0],
+  ]);
+  const fixedAlong = (
+    s: readonly [number, number],
+    mx: number,
+    my: number,
+    axis: Vec3,
+  ): number => {
+    const proj = mx * s[0] + my * s[1];
+    const away = view === null ? 1 : Math.sign(dot(axis, view)) || 1;
+    const sense = proj !== 0 ? Math.sign(proj) : (Math.sign(mx !== 0 ? mx : -my) || 1) * away;
+    return Math.hypot(mx, my) * sense;
+  };
 
   let xM = 0;
-  let depthM = 0;
+  let gravityM = 0;
   let edgeOn = false;
 
   if (pairing === "PLANE") {
-    // ⭐⭐⭐ **THE 2×2 SOLVE.** Find the travels along x and depth whose SCREEN motion adds up to
-    // the finger's. ⛔ Solving beats projecting onto each axis separately: the two shadows are
-    // not perpendicular on screen in general, so independent projections would double-count the
-    // overlap and the body would outrun the finger on a diagonal drag.
-    const det = sx[0] * sd[1] - sx[1] * sd[0];
-    // ⚠ `|det|` is the area the two shadows span — it goes to zero when the plane is EDGE-ON,
-    // which is the level camera, and that is the only degeneracy the pair has: two
-    // perpendicular world axes cannot both point at the camera.
+    // ⭐⭐⭐ **THE 2×2 SOLVE, ON `{x, gravity}` SINCE `D83`.** Find the travels whose SCREEN
+    // motion adds up to the finger's. ⛔ Solving beats projecting onto each axis separately: the
+    // two shadows are not perpendicular on screen in general, so independent projections would
+    // double-count the overlap and the body would outrun the finger on a diagonal drag.
+    const det = sx[0] * sg[1] - sx[1] * sg[0];
+    // ⚠⚠ **AND THE DEGENERACY MOVED WITH THE PLANE.** `{x, depth}` went edge-on at a LEVEL
+    // camera; `{x, gravity}` goes edge-on when **x points at the camera** — which `worldAxisB`
+    // makes reachable by orbiting a quarter turn, since the axes are frozen at boot.
+    // ⛔ So the old fallback's premise (*"x is still healthy, it lies across the screen"*) is
+    // exactly inverted here, and keeping it would have tracked the SICK axis and fixed-rated the
+    // healthy one.
     if (Math.abs(det) > coneSin) {
-      xM = ((dx * sd[1] - dy * sd[0]) / det) * holderGain;
-      depthM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
+      xM = ((dx * sg[1] - dy * sg[0]) / det) * holderGain;
+      gravityM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
     } else {
       edgeOn = true;
-      // ⭐ x is still healthy here — it is the axis lying across the screen — so it keeps exact
-      // tracking, and only depth falls back to the judged fixed rate.
-      // ⚠ `fallbackDepth` carries `holderGain` already; applying it twice is the kind of
-      // arithmetic that reads as *"depth feels wrong in one camera pose"* and nowhere else.
-      xM = (along(sx, dx, dy) ?? 0) * holderGain;
-      depthM = fallbackDepth;
+      // ⭐⭐ **PER AXIS, AND EACH INPUT KEEPS ITS OWN.** Tracking where the axis is presented well
+      // enough to track, a fixed rate where it is not, and **never another axis**: the owner's
+      // report 3 for `D76` said a channel whose axis points at the camera should *"translate the
+      // object towards or away from the camera"*, not be re-pointed somewhere more photogenic.
+      // ⛔ Nothing is suppressed, so this branch cannot freeze the body.
+      xM = (along(sx, dx, 0) ?? fixedAlong(sx, dx, 0, axes.x)) * holderGain;
+      gravityM = (along(sg, 0, dy) ?? fixedAlong(sg, 0, dy, axes.gravity)) * holderGain;
     }
   } else {
     // ⭐ CHANNELS: Blender's `G X`, once per channel — the whole delta is not used, only the
-    // component the dictation assigns to that axis.
-    const x = along(sx, dx, 0);
-    const d = along(sd, 0, dy);
-    xM = (x ?? 0) * holderGain;
-    if (d === null) {
-      edgeOn = true;
-      depthM = fallbackDepth;
-    } else {
-      depthM = d * holderGain;
-    }
+    // component the dictation assigns to that axis. ⛔ Same fixed rates, for the same reason.
+    xM = (along(sx, dx, 0) ?? fixedAlong(sx, dx, 0, axes.x)) * holderGain;
+    gravityM = (along(sg, 0, dy) ?? fixedAlong(sg, 0, dy, axes.gravity)) * holderGain;
   }
 
-  // ⭐ Gravity, always its own channel and always tracking exactly. ⚠ Its shadow shrinks as the
-  // camera looks down and vanishes at the pole, which the orbit rings make unreachable — the
-  // fallback is there because *unreachable* is a property of today's camera, not of the rule.
-  const g = along(sg, 0, dy2);
-  const gravityM = g === null ? -dy2 * secondGain : g * secondGain;
+  // ⭐ Depth, the second touchpoint's channel since `D83`, tracking exactly where it can.
+  // ⛔ It is the axis that turns to face the camera, so it is the one that most needs the judged
+  // fixed rate — and it now has it, which is where `depthTranslate` put it in the first place.
+  const d = along(sd, 0, dy2);
+  let depthM: number;
+  if (d === null) {
+    // ⚠ `edgeOn` reports a fallback that a real input asked for, never one that would have been.
+    if (dy2 !== 0) edgeOn = true;
+    depthM = -dy2 * secondGain * awaySign;
+  } else {
+    depthM = d * secondGain;
+  }
 
   const asked = Math.hypot(dx, dy);
   return {
@@ -263,7 +312,9 @@ export function axisTravel(
     gravityM,
     edgeOn,
     // ⭐ What one pixel bought, as a multiple of the tracking factor: 1 is under the finger.
-    trackGain: asked > 0 ? Math.hypot(xM, depthM) / asked : 0,
+    // ⚠ The HOLDER's pair — `{x, gravity}` since `D83`. ⛔ Measuring `depth` here would read 0 for
+    // every drag, because the holder does not drive that channel any more.
+    trackGain: asked > 0 ? Math.hypot(xM, gravityM) / asked : 0,
   };
 }
 

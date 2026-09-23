@@ -207,6 +207,7 @@ describe("⛔⛔⛔ THE DIRECTION — and it SHIPPED INVERTED (device-reported, 
     // or the 2026-09-20 defect (*"sometimes left, sometimes right for the same dx"*) returns by
     // the back door with a constant in place of a stale variable.
     expect(swingSignFor(0, 0)).toBeNull();
+    expect(swingSignFor(0, 0, 0)).toBeNull();
     expect(swingYawRad(0.5, 0.4, swingSignFor(0, 0))).toBe(0);
   });
 
@@ -699,12 +700,16 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     return { gravity: g, screen: { right, up } };
   };
 
-  it("⭐⭐⭐ a SECOND-touchpoint push along gravity produces up-travel, and the swing takes a sign", () => {
+  it("⭐⭐⭐ a HOLDER push along gravity produces up-travel, and the swing takes a sign", () => {
     const c = camera(30);
     const axes = axesFromFrame(c.gravity);
-    // ⛔ The gravity channel ONLY — no holder motion at all, which is the reported gesture.
+    // ⚠⚠ **THE CHANNEL MOVED WITH `D83`, THE SUBJECT DID NOT.** The gravity axis is the HOLDER's
+    // `dy` since the swap; it was the second touchpoint's until 2026-09-23. ⭐ The vector follows
+    // the AXIS, because its claim is *a gravity-axis approach arms the swing* and not *which
+    // finger drives gravity*.
+    // ⛔ The gravity channel ONLY — no other motion at all, which is the reported gesture.
     const travel = axisTravel(
-      { holderDxPx: 0, holderDyPx: 0, secondDyPx: -40 },
+      { holderDxPx: 0, holderDyPx: -40, secondDyPx: 0 },
       c.screen,
       axes,
       PER_PX,
@@ -726,9 +731,42 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     expect(swingSignFor(travelRight, travelUp)).not.toBeNull();
   });
 
+  it("⭐⭐⭐ `D83`: a DEPTH push leaves no screen travel at all, and still arms", () => {
+    // ⛔⛔ **THE CONSEQUENCE OF THE SWAP THAT HAD TO BE PAID FOR.** The second touchpoint drives
+    // `depth` now — the gravity frame's own view direction — and `right`/`up` span the SCREEN, so
+    // the body's travel projects onto **neither**. ⚠ Before the swap that finger drove gravity,
+    // whose travel is vertical on screen, so this case was unreachable and the two-component sign
+    // rule was sufficient. ⭐ It is `D46`'s degeneracy, which is the case the swing exists for.
+    const c = camera(30);
+    const axes = axesFromFrame(c.gravity);
+    const travel = axisTravel(
+      { holderDxPx: 0, holderDyPx: 0, secondDyPx: -40 },
+      c.screen,
+      axes,
+      PER_PX,
+      1,
+      1,
+      "PLANE",
+      5,
+      c.gravity.towardGravity,
+    );
+    const step = axisDisplacement(travel, axes);
+    const travelRight = dot(step, c.gravity.right);
+    const travelUp = dot(step, c.gravity.up);
+    const travelDepth = dot(step, c.gravity.depth);
+    // ⚠ The premise, measured rather than assumed: the screen sees nothing of this push.
+    expect(Math.abs(travelRight)).toBeLessThan(1e-9);
+    expect(Math.abs(travelUp)).toBeLessThan(1e-9);
+    expect(Math.abs(travelDepth)).toBeGreaterThan(1e-6);
+    // ⛔ THE ASSERTION THE TWO-COMPONENT RULE FAILS.
+    expect(swingSignFor(travelRight, travelUp)).toBeNull();
+    expect(swingSignFor(travelRight, travelUp, travelDepth)).not.toBeNull();
+  });
+
   it("⛔ and with NOTHING accumulated it does not arm — the state the defect left behind", () => {
     // ⭐ The counter-example, which is what the product did until this fix: the holder's branch
     // fed the accumulator and the gravity channel did not, so the arming call saw zero.
     expect(swingSignFor(0, 0)).toBeNull();
+    expect(swingSignFor(0, 0, 0)).toBeNull();
   });
 });

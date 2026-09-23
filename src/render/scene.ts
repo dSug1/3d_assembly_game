@@ -1927,7 +1927,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // press inside the band, a rotation moving the closest points, a pinch rescaling
         // `D49`'s offset), and then this is **zero** — which `swingSignFor` answers with
         // `null`, and a `null` sign is a swing of zero. ⛔ The old code answered `+1`.
-        sign: swingSignFor(frameTravelRightM, frameTravelUpM),
+        sign: swingSignFor(frameTravelRightM, frameTravelUpM, frameTravelDepthM),
         armTravelM: frameTravelRightM,
         armTravelUpM: frameTravelUpM,
       };
@@ -1969,6 +1969,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // stale direction is readable, which is the defect of 2026-09-20 in a smaller form.
     frameTravelRightM = 0;
     frameTravelUpM = 0;
+    frameTravelDepthM = 0;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -2492,6 +2493,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * separates a vertical drag from a press, a rotation or a pinch.
    */
   let frameTravelUpM = 0;
+  /**
+   * ⭐⭐ The ALONG-VIEW component of the body's travel (`D83`). ⛔ `right` and `up` span the
+   * screen, so the second touchpoint's own axis leaves no trace in either.
+   */
+  let frameTravelDepthM = 0;
   /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
@@ -3492,6 +3498,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // crossed the threshold.
     frameTravelRightM += dot(step, grip.frame.right);
     frameTravelUpM += dot(step, grip.frame.up);
+    // ⛔⛔ **THE THIRD AXIS, AND `D83` IS WHY.** `right` and `up` span the screen; the second
+    // touchpoint now drives **depth**, orthogonal to both, so an approach pushed straight away
+    // from the camera would feed this pair exactly zero and the swing would never find a
+    // direction. ⚠ Before the swap that finger drove gravity, which shows on screen.
+    frameTravelDepthM += dot(step, grip.frame.depth);
     const mp = requirePose(grip.mesh);
     // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
     // camera's own maximum orbit radius. A body through the near plane renders *a black page with

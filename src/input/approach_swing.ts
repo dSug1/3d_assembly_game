@@ -231,11 +231,23 @@ export function swingYawRad(
  * about, so either side shows the join equally, and *no* answer is available from the finger.
  * ⛔ A stated constant is the honest form of that, and it is one line to mirror.
  */
-export function swingSignFor(travelRight: number, travelUp = 0): 1 | -1 | null {
+export function swingSignFor(travelRight: number, travelUp = 0, travelDepth = 0): 1 | -1 | null {
   if (!Number.isFinite(travelRight) || !Number.isFinite(travelUp)) return null;
+  if (!Number.isFinite(travelDepth)) return null;
   if (travelRight !== 0) return travelRight < 0 ? -1 : 1;
   // ⭐ A translation with no horizontal component: the swing is earned, the aim is symmetric.
   if (travelUp !== 0) return 1;
+  // ⛔⛔⛔ **AND A TRAVEL STRAIGHT ALONG THE VIEW EARNS ONE TOO — `D83` REQUIRES IT.**
+  //
+  // ⚠⚠ `right` and `up` span the SCREEN, and since the swap the second touchpoint drives
+  // **depth**, which is orthogonal to both: a body pushed straight away from the camera reports
+  // **exactly zero** in the two components above, every frame. ⛔ Before the swap that finger
+  // drove GRAVITY, whose travel is vertical on screen, so this was never reachable.
+  // ⭐⭐ And it is the case the swing exists FOR: a head-on approach is `D46`'s degeneracy, where
+  // a hand has least depth cue — so answering `null` there would disable it exactly where it is
+  // most wanted. ⭐ Same answer as the vertical case, on the same argument: the swing is earned
+  // and the aim is symmetric.
+  if (travelDepth !== 0) return 1;
   // ⛔ No travel at all — a press, a rotation, a pinch. No swing, which is the 2026-09-20 rule.
   return null;
 }

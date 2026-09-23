@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1069 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1071 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -107,9 +107,14 @@ outside. I think this is polluting the approach movement."* ⭐⭐ The zone EDGE
 translation directions changed under a MOVING finger — the basis was re-decided at the one moment
 the body was already being driven. ⭐ `METHOD`: *a rule whose every defect is about the MOMENT it
 takes effect is a rule about the wrong thing.* ⚠ `leadingFace` and its gizmo survive, and the edge
-still names the pair and fires the hook. ⛔ The channels are unchanged: the holder's
-`dx`→**x**, its `dy`→**depth**, the second touchpoint's `dy`→**gravity**. So **one finger slides a
-body about its own horizontal plane and a second finger lifts it.** ⭐⭐ Each input is projected onto
+still names the pair and fires the hook. ⛔⛔ **AND THE TWO `dy` CHANNELS ARE SWAPPED** (`D83`, 2026-09-23): the holder's `dx`→**x**, its
+`dy`→**gravity**, the second touchpoint's `dy`→**depth**. So **one finger slides a body about its
+own VERTICAL plane and a second finger pushes it away**, reversing `D75`. ⭐⭐ Two things follow
+NECESSARILY and shipped with it: the holder plane's degeneracy moves from *a level camera* to
+*x pointing at the camera* — so the old fallback's premise inverts, and each channel now keeps its
+OWN axis instead — and the **swing goes blind**, because `right`/`up` span the screen while depth
+lies along the view, so a head-on approach fed it exactly zero travel.
+⭐ `depthTranslate`'s judged `awaySign` returns to the channel it was judged on. ⭐⭐ Each input is projected onto
 its axis's screen shadow and **NOT normalised** (the owner's choice over Blender's division), so a
 foreshortened axis **goes quiet** instead of running away and the rule needs no cutoff — ⭐ and the
 sign `depthTranslate` needed `awaySign` for **falls out of the projection** instead of being asserted.
