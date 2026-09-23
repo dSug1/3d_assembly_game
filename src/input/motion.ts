@@ -124,7 +124,8 @@
  * a threshold chosen to sit above a measurement. A displacement deadband needs no such
  * choice: the *shape* is right, not the number.
  */
-import { mmToPx } from "../core/units";
+import { mmToPx, pxToMm } from "../core/units";
+import { terminalSpeedPxPerS, trimBuffer } from "./flick";
 import { validateGestureConfig, type GestureConfig } from "./gestureConfig";
 
 export type MotionState = "STATIONARY" | "MOVING";
@@ -257,6 +258,12 @@ export class MotionTracker {
   private readonly ax = new AxisBand();
   private readonly ay = new AxisBand();
   private lastStep: { dx: number; dy: number } = ZERO_STEP;
+  /**
+   * ⭐⭐ The recent samples, for the speeds below. ⚠ Trimmed on every push, so it is the flick's
+   * own window and not *"whatever samples happen to be in memory"* — which would make the
+   * estimate depend on how long the finger has been down.
+   */
+  private buffer: Sample[] = [];
 
   constructor(private readonly cfg: GestureConfig) {
     // ⭐ Every cross-tunable consistency rule lives in ONE place, and every
@@ -267,6 +274,30 @@ export class MotionTracker {
   /** ⭐ `MOVING` if EITHER axis is. */
   get current(): MotionState {
     return this.ax.state === "MOVING" || this.ay.state === "MOVING" ? "MOVING" : "STATIONARY";
+  }
+
+  /**
+   * ⭐⭐⭐ **THIS FINGER'S SPEED, mm/s — THE SAME ESTIMATOR THE RECOGNIZER AND THE FLICK USE.**
+   *
+   * ⛔⛔ `terminalSpeedPxPerS(trimBuffer(…))`, called and not re-implemented: *there is one
+   * definition of how fast is this finger*, and this project has the scar for the alternative —
+   * §1.1 once estimated speed over ONE sample pair, and with the measured 0.761 mm of pointer
+   * noise `STATIONARY` became unreachable for any real finger.
+   *
+   * ⚠ It exists because the SECOND touchpoint has no `Recognizer` — only this tracker — and a
+   * rule that needed its speed was reading the HOLDER's instead (defect 64).
+   */
+  get speedMmPerS(): number {
+    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg));
+  }
+
+  /**
+   * ⭐⭐ **THE SPEED AS OF `nowMs`** — zero once this finger has been quiet for one window
+   * (defect 70). ⛔ The getter above ends its window at the LAST SAMPLE, which is right at a
+   * release and stale for anything asking while nothing is arriving.
+   */
+  speedMmPerSAt(nowMs: number): number {
+    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg));
   }
 
   /** ⭐ The per-axis state, so a readout can show which corridor is open. */
@@ -290,6 +321,7 @@ export class MotionTracker {
     this.ax.reset();
     this.ay.reset();
     this.lastStep = ZERO_STEP;
+    this.buffer = [];
   }
 
   /**
@@ -314,6 +346,9 @@ export class MotionTracker {
     const dx = this.ax.push(s.x, s.t, band, this.cfg.restConfirmMs);
     const dy = this.ay.push(s.y, s.t, band, this.cfg.restConfirmMs);
     this.lastStep = { dx, dy };
+    // ⭐ The RAW sample feeds the speed window — the deadband is a travel rule, and subtracting
+    // it here would make this finger read slower than the same finger on a Recognizer.
+    this.buffer = trimBuffer([...this.buffer, s], this.cfg);
     return this.current;
   }
 }

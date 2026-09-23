@@ -188,6 +188,8 @@ import {
   smoothAmplitude,
   swingDriverIndex,
   endApproach,
+  acquireSwingSign,
+  approachSpeedMmPerS,
   swingAmplitudeRad,
   swingProgress,
   swingSignFor,
@@ -1927,7 +1929,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // press inside the band, a rotation moving the closest points, a pinch rescaling
         // `D49`'s offset), and then this is **zero** — which `swingSignFor` answers with
         // `null`, and a `null` sign is a swing of zero. ⛔ The old code answered `+1`.
-        sign: swingSignFor(frameTravelRightM, frameTravelUpM),
+        sign: swingSignFor(frameTravelRightM, frameTravelUpM, frameTravelDepthM),
         armTravelM: frameTravelRightM,
         armTravelUpM: frameTravelUpM,
       };
@@ -1967,8 +1969,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ever see travel applied since the previous frame. ⚠ Zeroing it anywhere else — on a
     // press, on a release, at the end of the render loop — would leave a window in which a
     // stale direction is readable, which is the defect of 2026-09-20 in a smaller form.
+    // ⭐⭐⭐ **A SWING THAT ARMED WITHOUT A DIRECTION TAKES THE FIRST ONE THAT ARRIVES** (defect
+    // 65). ⛔ It must run BEFORE the accumulators are consumed below, and it reads the same travel
+    // the arming edge would have read had it landed on this frame.
+    if (swing !== null && swing.sign === null && highlighted.gapM !== null) {
+      const signed = acquireSwingSign(
+        swing,
+        frameTravelRightM,
+        frameTravelUpM,
+        highlighted.gapM,
+        frameTravelDepthM,
+      );
+      if (signed !== null) swing = signed;
+    }
     frameTravelRightM = 0;
     frameTravelUpM = 0;
+    frameTravelDepthM = 0;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -2492,6 +2508,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * separates a vertical drag from a press, a rotation or a pinch.
    */
   let frameTravelUpM = 0;
+  /** ⭐⭐ The ALONG-VIEW component of the body's travel — invisible on screen, and still travel. */
+  let frameTravelDepthM = 0;
   /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
@@ -2574,7 +2592,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       return appliedSwingYaw;
     }
     swingFrozenProgress = freezeProgress(swingFrozenProgress, 0, true);
-    const speed = translating.rec.speedMmPerS;
+    // ⛔⛔ **EVERY FINGER DRIVING THIS BODY, AS OF NOW** (defects 64 and 70). The holder's own
+    // recognizer was the only speed consulted, so a second-finger push read `0` — which the
+    // amplitude law answers with the WIDEST swing, bypassing both tuned dials. ⚠ And the window
+    // used to end at each finger's last event, so a push that had already finished kept answering
+    // *"fast"*. ⭐ The choice is `approach_swing.ts`'s, not this file's.
+    const nowSpeedMs = performance.now();
+    const speed = approachSpeedMmPerS([
+      translating.rec.speedMmPerSAt(nowSpeedMs),
+      ...[...translating.anchorMotion.values()].map((t) => t.speedMmPerSAt(nowSpeedMs)),
+    ]);
     const target = swingAmplitudeRad(
       (cfg.approachSwingDeg * Math.PI) / 180,
       speed,
@@ -3492,6 +3519,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // crossed the threshold.
     frameTravelRightM += dot(step, grip.frame.right);
     frameTravelUpM += dot(step, grip.frame.up);
+    // ⛔⛔ **AND THE ALONG-VIEW COMPONENT.** `right` and `up` span the SCREEN, so a body pushed
+    // along the gravity frame's own depth leaves no trace in either — which is what the holder's
+    // `dy` does at a LEVEL camera, where its plane is edge-on and the judged fixed rate drives.
+    // ⚠ Without it the swing has no direction to find there, however long it waits.
+    frameTravelDepthM += dot(step, grip.frame.depth);
     const mp = requirePose(grip.mesh);
     // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
     // camera's own maximum orbit radius. A body through the near plane renders *a black page with

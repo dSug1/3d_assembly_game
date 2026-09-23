@@ -393,3 +393,112 @@ translate, so a channel added later is a decision rather than a silent omission.
 pinned to `2` — the `DEPTH` grip in slot 0 deliberately skipped. ⭐ It is inverted now and carries
 its own retraction: *a green suite defended this for four days.*
 
+
+
+
+---
+
+## 56 — ⭐⭐⭐ **THE SWING'S AMPLITUDE READ THE HOLDER'S SPEED WHILE THE OTHER FINGER PUSHED**
+
+**Diagnosed 2026-09-23 by finger** on `1.0.24-Swapped-inputs-Discarded` (*"the swing of the camera
+at entrance of offset radius zone is not happening correctly"*, with two HUD shots reading
+`motion STATIONARY`), **confirmed by reading on this branch, and ported here.**
+
+⛔⛔⛔ `swingAmplitudeRad` was fed **`grip.rec.speedMmPerS` — the HOLDER's finger** — while the body
+could be translated by the SECOND touchpoint. ⚠ The holder is then genuinely still, so the law read
+`speed = 0`, **which it answers with the widest look**: `0` is its documented maximum, and correct
+for a stopped hand. ⭐ So a second-finger approach swung at **full amplitude whatever the push**,
+and the two dials the owner tuned on the glass on 2026-09-19 — the 67 mm/s knee and the 1.7
+exponent — **never ran at all** for that gesture.
+
+⚠⚠ **IT DOES NOT DEPEND ON THE `dy` SWAP**, which is why it is here: the second touchpoint drives a
+TRANSLATION channel in either mapping (gravity here, depth there), and `grip.mode` becomes
+`"DEPTH"` either way, so the swing finds its driver and then misreads its speed.
+
+⭐⭐ **THE SHAPE IS DEFECT 55's, ONE LEVEL OVER**: *a rule that names ONE finger inherits every later
+arrangement in which a different finger does the work.* `A10` gave the second touchpoint a
+translation channel after this law was written, and nobody re-read the law.
+
+✅ **FIXED**: `approachSpeedMmPerS` — the fastest finger driving this body — in `approach_swing.ts`
+with the decision, not in the render file. ⚠ `max` and not a sum: the channels do sum (`D43`), but
+the knee was tuned against *a finger's* speed and summing would double the reading when two fingers
+move together.
+
+⚠⚠ **AND THE SECOND TOUCHPOINT HAD NO SPEED TO READ**, which is why the wrong one was read: only a
+holder grip carries a `Recognizer`. ⭐ `MotionTracker` now exposes `speedMmPerS` by **calling the
+same `terminalSpeedPxPerS(trimBuffer(…))`** the Recognizer and the flick use — *one definition of
+how fast is this finger*, and §1.1's unreachable `STATIONARY` is the scar from the alternative.
+⛔ The RAW sample feeds that window, not the deadbanded travel, or the same finger would read
+slower here than on a Recognizer.
+
+
+---
+
+## 57 — ⭐⭐⭐ **THE SWING'S DIRECTION WAS A ONE-FRAME LOTTERY, AND A LOST FRAME KILLED IT**
+
+**Diagnosed 2026-09-23 by finger** on the discarded branch (`sign⛔? p=0.33 yaw=0.0°
+arm=(0.0,0.0)mm`), **structural, and present here unchanged.**
+
+⛔⛔⛔ `frameTravelRightM/UpM` are **consumed every frame**, so the arming edge sees only the travel
+applied since the previous frame. ⚠ Cross the capture threshold on a frame that carried none — no
+pointer event landed in that interval, or the deadband emitted nothing — and `swingSignFor` answers
+`null`, correctly. ⭐⭐ **But that answer was latched for the whole approach**: the progress climbed
+while the yaw stayed at `0.0°`. The swing ran, and pointed nowhere.
+
+✅ **FIXED**: a `null` sign is **provisional**. The first frame that carries travel while the swing
+is armed fills it in — `acquireSwingSign`. ⛔⛔ **AND IT RE-BASES THE TRIGGER GAP**, which is the
+half that keeps it honest: the gap has closed meanwhile, so adopting the sign alone would jump the
+camera to `yaw(p)`, and *"the camera shall not jump"* is a device report already paid for.
+⚠ Cost, stated: a swing that finds its direction late completes its out-and-back in less distance,
+so it is faster. That beats a jump, and it beats no swing.
+⛔ It never re-signs a swing that HAS a direction — latching that is what fixed *"sometimes the yaw
+is to the left bottom, sometimes to the right up for the same delta position x"* (2026-09-20).
+
+⭐⭐ The 2026-09-20 rule was not wrong, it was **answering a different question**: *no travel, no
+swing* is right for *"is there a direction?"*, and it was being asked *"was there one at that
+instant?"* — which a 16 ms window decides by luck.
+
+⚠ **AND IT NEEDED A THIRD TRAVEL COMPONENT TO BE EFFECTIVE.** `right` and `up` span the SCREEN, so
+a body pushed along the gravity frame's own **depth** leaves no trace in either — which is exactly
+what the holder's `dy` does at a **level camera**, where its plane is edge-on and `depthTranslate`'s
+judged fixed rate drives. ⛔ There the backfill would wait for a travel that never arrives, so
+`swingSignFor` now takes the along-view component too and answers `1` for it, on the same argument
+as the vertical case: the swing is earned and the aim is symmetric.
+
+
+---
+
+## 58 — ⭐⭐⭐ **A SPEED THAT NEVER DECAYED — "I NEED TO WAIT A LITTLE AND THEN IT WORKS AGAIN"**
+
+**Diagnosed 2026-09-23 by finger** on the discarded branch, **and the sentence is the diagnosis.**
+
+⛔⛔⛔ `trimBuffer` ends the speed window at the **last sample**, not at now — so a finger that stops
+emitting events keeps reporting the speed of a burst that has **already finished**, indefinitely.
+⚠ Harmless where it was written: the flick asks at the release, where *now* and the last sample are
+the same instant.
+
+⭐⭐ The approach swing asks **mid-gesture**, and the amplitude law turns a stale-high reading into
+nothing:
+
+| finger speed | swing |
+|---|---|
+| 0–67 mm/s | 30° (the maximum) |
+| 120 mm/s | 11° |
+| 200 mm/s | **4.6°** |
+| 350 mm/s | **1.8°** |
+
+⭐ So an immediate second push inherits the first one's speed and barely swings; pause longer than
+one window and the reading is honest again — which is precisely what the owner described.
+
+✅ **FIXED**: `trimBuffer` takes an optional `nowMs`, and `speedMmPerSAt(now)` is what the swing
+asks. ⛔ The default is unchanged, so the flick's release-time reading is exactly what it always was
+— a window that ends at the last sample is right there and wrong here.
+⭐ `METHOD`: *an estimator is only as fresh as the question's clock.* §1.1 learned the same thing
+about `STATIONARY`, which is why `MotionTracker.tick()` exists — the SPEED was never given the same
+treatment.
+
+⚠⚠ **AND THE DAMPING LAW ITSELF IS WORTH A HAND'S JUDGEMENT, unchanged here**: the knee is
+`1/gain` = 67 mm/s and an ordinary drag is several hundred, so the shipped dials put most real
+approaches at **1–5°** of swing whatever the staleness does. ⭐ `?approachSwingSpeedGain=0` removes
+the damping and pins the swing at `approachSwingDeg` — **one URL parameter, and it discriminates**
+code from tuning.

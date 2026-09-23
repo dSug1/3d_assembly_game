@@ -231,13 +231,99 @@ export function swingYawRad(
  * about, so either side shows the join equally, and *no* answer is available from the finger.
  * ⛔ A stated constant is the honest form of that, and it is one line to mirror.
  */
-export function swingSignFor(travelRight: number, travelUp = 0): 1 | -1 | null {
+export function swingSignFor(travelRight: number, travelUp = 0, travelDepth = 0): 1 | -1 | null {
   if (!Number.isFinite(travelRight) || !Number.isFinite(travelUp)) return null;
+  if (!Number.isFinite(travelDepth)) return null;
   if (travelRight !== 0) return travelRight < 0 ? -1 : 1;
   // ⭐ A translation with no horizontal component: the swing is earned, the aim is symmetric.
   if (travelUp !== 0) return 1;
+  // ⛔⛔ **AND A TRAVEL STRAIGHT ALONG THE VIEW EARNS ONE TOO.** `right` and `up` span the
+  // SCREEN, so a body pushed along the gravity frame's own DEPTH leaves no trace in either —
+  // which is what the holder's `dy` does at a LEVEL camera, where its plane is edge-on and the
+  // judged fixed rate takes over. ⭐ Without this, defect 65's backfill has nothing to read there
+  // and the swing stays signless for the whole approach. ⛔ Same answer as the vertical case, on
+  // the same argument: the swing is earned and the aim is symmetric.
+  if (travelDepth !== 0) return 1;
   // ⛔ No travel at all — a press, a rotation, a pinch. No swing, which is the 2026-09-20 rule.
   return null;
+}
+
+/**
+ * ⭐⭐⭐ **HOW FAST THE APPROACH IS — the fastest finger DRIVING this body, not the holder's.**
+ *
+ * ⛔⛔⛔ `swingAmplitudeRad` was fed `grip.rec.speedMmPerS` — **the HOLDER's finger** — while the
+ * body could be translated by the SECOND touchpoint. ⚠ The holder is then genuinely still, so the
+ * law read `speed = 0`, which it answers with *the widest look* (`0` is its documented maximum,
+ * and correct for a stopped hand). ⭐ So a second-finger approach swung at **full amplitude
+ * regardless of how fast it was pushed**, and the two dials a hand tuned on the glass —
+ * `approachSwingSpeedGain` and `…Exponent` — were bypassed entirely.
+ *
+ * ⭐⭐ **THE SHAPE IS DEFECT 55's**: a rule that names ONE finger inherits every later arrangement
+ * in which a different finger does the work. `A10` gave the second touchpoint a translation
+ * channel after this law was written, and nobody re-read the law.
+ *
+ * ⚠ **`max`, and the reason is stated**: the channels SUM (`D43`), so a body driven by both
+ * fingers moves faster than either — but the amplitude law's knee was tuned against *a finger's*
+ * speed, and the fastest finger is the one a hand would name if asked how fast it was pushing.
+ * ⛔ Summing would double the reading whenever two fingers move together.
+ *
+ * ⭐ All-still still means `0` → the maximum, which is the judged behaviour for a stopped hand.
+ */
+export function approachSpeedMmPerS(speeds: readonly number[]): number {
+  let fastest = 0;
+  for (const s of speeds) {
+    if (Number.isFinite(s) && s > fastest) fastest = s;
+  }
+  return fastest;
+}
+
+/**
+ * ⭐⭐⭐ **A SWING THAT ARMED WITHOUT A DIRECTION ACQUIRES ONE LATER — defect 65.**
+ *
+ * ⛔⛔⛔ **THE SIGN WAS A ONE-FRAME LOTTERY.** `frameTravelRightM/UpM` are consumed every frame,
+ * so the arming edge sees only the travel applied since the previous frame — and if the capture
+ * crosses on a frame that carried none (no pointer event landed in that interval, or the deadband
+ * emitted nothing), `swingSignFor` answers `null`, correctly. ⚠ That answer was then **latched
+ * for the whole approach**: the progress climbed while the yaw stayed at zero. The swing ran, and
+ * pointed nowhere.
+ *
+ * ⭐⭐ **A `null` SIGN IS NOW PROVISIONAL, NOT PERMANENT.** The 2026-09-20 rule it comes from is
+ * still right — *the threshold can be crossed with no travel at all, and then there is no swing* —
+ * but it answers *"is there a direction YET"*, not *"was there one at that instant"*.
+ *
+ * ⛔⛔ **AND IT RE-BASES WHEN THE DIRECTION ARRIVES**, which is the half that keeps it honest: the
+ * gap has closed meanwhile, so adopting the sign without re-basing would jump the camera straight
+ * to `yaw(p)` — and *"the camera shall not jump"* is a device report already paid for.
+ * ⭐ Re-basing the trigger gap to the CURRENT gap restarts the lean at zero and grows it from
+ * there, over whatever gap is left.
+ * ⚠ The cost, stated: a swing that finds its direction late completes its out-and-back in less
+ * distance, so it is faster. That beats both alternatives — a jump, or no swing at all.
+ *
+ * @returns the replacement latch, or `null` when nothing should change — already signed, or still
+ *   no travel to read. ⛔ Never re-signs a swing that HAS a direction: latching it for the
+ *   approach is what fixed *"sometimes the yaw is to the left bottom, sometimes to the right up
+ *   for the same delta position x"* (2026-09-20), and this must not undo it.
+ */
+export function acquireSwingSign(
+  latch: SwingLatch,
+  travelRightM: number,
+  travelUpM: number,
+  gapNowM: number,
+  travelDepthM = 0,
+): SwingLatch | null {
+  if (latch.sign !== null) return null;
+  const sign = swingSignFor(travelRightM, travelUpM, travelDepthM);
+  if (sign === null) return null;
+  // ⚠ A gap that is not a positive number leaves the latch alone rather than re-basing to it:
+  // `gapAtTriggerM` divides the progress, and a zero there is an infinity on the camera.
+  if (!Number.isFinite(gapNowM) || !(gapNowM > 0)) return null;
+  return {
+    ...latch,
+    sign,
+    gapAtTriggerM: gapNowM,
+    armTravelM: travelRightM,
+    armTravelUpM: travelUpM,
+  };
 }
 
 /**

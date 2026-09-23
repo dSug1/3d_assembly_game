@@ -24,6 +24,8 @@ import {
   swingSignFor,
   swingYawRad,
   type SwingLatch,
+  approachSpeedMmPerS,
+  acquireSwingSign,
 } from "@input/approach_swing";
 
 const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
@@ -730,5 +732,87 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     // ⭐ The counter-example, which is what the product did until this fix: the holder's branch
     // fed the accumulator and the gravity channel did not, so the arming call saw zero.
     expect(swingSignFor(0, 0)).toBeNull();
+  });
+});
+
+/**
+ * ⭐⭐⭐ **DEFECTS 64, 65 AND 67 — DIAGNOSED ON THE DISCARDED BRANCH, CONFIRMED HERE, PORTED.**
+ *
+ * ⚠ All three were found on `1.0.24-Swapped-inputs-Discarded` while the `dy` channels were
+ * swapped, and none of them depends on that swap: the second touchpoint drives a TRANSLATION
+ * channel in either mapping, so every condition is reachable on this branch too. ⛔ Checked
+ * against the code before porting, not assumed.
+ */
+describe("⛔⛔⛔ defect 64 — the approach's speed is the fastest finger DRIVING it", () => {
+  it("⭐⭐⭐ a still holder with a fast second finger is a FAST approach, not a stopped one", () => {
+    // ⛔ THE ASSERTION THE SHIPPED BUILD FAILS: it passed the holder's `0` and got the maximum.
+    expect(approachSpeedMmPerS([0, 180])).toBe(180);
+    const maxRad = (40 * Math.PI) / 180;
+    const wrong = swingAmplitudeRad(maxRad, 0, 0.015, 1.7);
+    const right = swingAmplitudeRad(maxRad, approachSpeedMmPerS([0, 180]), 0.015, 1.7);
+    expect(wrong).toBe(maxRad); // ⚠ the documented answer for a stopped hand…
+    expect(right).toBeLessThan(maxRad * 0.7); // ⭐ …and a 180 mm/s push is not one.
+  });
+
+  it("⛔ the holder still counts when IT is the one driving, and all-still is still zero", () => {
+    expect(approachSpeedMmPerS([210, 0])).toBe(210);
+    expect(approachSpeedMmPerS([210, 40, 15])).toBe(210);
+    expect(approachSpeedMmPerS([0, 0])).toBe(0);
+    expect(approachSpeedMmPerS([])).toBe(0);
+  });
+
+  it("⛔ a non-finite reading cannot poison the answer, nor hide a real finger beside it", () => {
+    expect(approachSpeedMmPerS([NaN, 90])).toBe(90);
+    expect(approachSpeedMmPerS([Infinity, 90])).toBe(90);
+    expect(approachSpeedMmPerS([NaN])).toBe(0);
+  });
+});
+
+describe("⛔⛔⛔ defect 65 — a null sign is PROVISIONAL, and re-bases when it is filled", () => {
+  const armed = (sign: 1 | -1 | null): SwingLatch => ({
+    gapAtTriggerM: 0.064,
+    offsetAtTriggerM: 0.065,
+    sign,
+    armTravelM: 0,
+    armTravelUpM: 0,
+  });
+
+  it("⭐⭐⭐ RED AGAINST THE SHIPPED BUILD: the first travel that arrives gives it a direction", () => {
+    const got = acquireSwingSign(armed(null), -0.004, 0, 0.043);
+    expect(got).not.toBeNull();
+    expect(got!.sign).toBe(-1);
+  });
+
+  it("⛔⛔ and the trigger gap RE-BASES, so the lean starts at zero instead of jumping", () => {
+    const got = acquireSwingSign(armed(null), 0.004, 0, 0.043)!;
+    expect(got.gapAtTriggerM).toBeCloseTo(0.043, 12);
+    expect(swingProgress(0.043, got)).toBeCloseTo(0, 12);
+    expect(swingYawRad(swingProgress(0.043, got), 0.7, got.sign)).toBeCloseTo(0, 12);
+    // ⭐ And it grows from there over whatever gap is left.
+    expect(swingYawRad(swingProgress(0.03, got), 0.7, got.sign)).toBeGreaterThan(0);
+  });
+
+  it("⛔ it NEVER re-signs a swing that already has a direction", () => {
+    expect(acquireSwingSign(armed(1), -0.01, 0, 0.04)).toBeNull();
+    expect(acquireSwingSign(armed(-1), 0.01, 0, 0.04)).toBeNull();
+  });
+
+  it("⛔ no travel is still no direction, and a bad gap leaves the latch alone", () => {
+    expect(acquireSwingSign(armed(null), 0, 0, 0.04)).toBeNull();
+    expect(acquireSwingSign(armed(null), NaN, 0, 0.04)).toBeNull();
+    expect(acquireSwingSign(armed(null), 0.004, 0, 0)).toBeNull();
+    expect(acquireSwingSign(armed(null), 0.004, 0, NaN)).toBeNull();
+  });
+
+  it("⭐⭐ and a travel the SCREEN cannot see still earns a sign — what 65 needs at a level camera", () => {
+    // ⛔ The holder's `dy` drives DEPTH here, and at a level camera its plane is edge-on, so the
+    // judged fixed rate pushes the body straight along the view: `right` and `up` both read zero.
+    // ⚠ Without the third component, 65's backfill would wait for a travel that never comes.
+    expect(swingSignFor(0, 0)).toBeNull();
+    expect(swingSignFor(0, 0, 0.004)).toBe(1);
+    expect(swingSignFor(0, 0, 0)).toBeNull();
+    const got = acquireSwingSign(armed(null), 0, 0, 0.04, 0.006);
+    expect(got).not.toBeNull();
+    expect(got!.sign).toBe(1);
   });
 });
