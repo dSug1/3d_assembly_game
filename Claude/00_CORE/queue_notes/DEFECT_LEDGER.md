@@ -502,3 +502,69 @@ treatment.
 approaches at **1–5°** of swing whatever the staleness does. ⭐ `?approachSwingSpeedGain=0` removes
 the damping and pins the swing at `approachSwingDeg` — **one URL parameter, and it discriminates**
 code from tuning.
+
+
+
+---
+
+## 59 — ⭐⭐ **THE GIZMO FLARED: A LENGTH TIED TO AN EXIT DISTANCE THAT GOES TO INFINITY**
+
+**2026-09-23, by finger.** *"why do the gizmo sometimes flare to big dimensions and then goes back
+to normal dimensions?"*
+
+⛔⛔ The axis lines were `1.5 ×` the body's **exit distance** to its leading face, and that distance
+is `t = (centre − origin)·n / (n·d)`. ⭐ As the travel direction `d` turns **parallel** to the face,
+`n·d → 0` and `t → ∞`. ⚠ `D54` made the leading face **sticky** — it is kept for as long as the
+body advances on it AT ALL — so a grazing direction holds a face whose exit distance is enormous,
+and the snap back is the instant `n·d` finally crosses zero and another face takes over.
+
+⭐ For the NON-sticky path this cannot happen: for a convex body the nearest exit is bounded by its
+own extent. **The stickiness is what made an unbounded quantity reachable**, and sizing a visual
+from it is what made that visible.
+
+✅ **FIXED by removing the coupling**, which the owner's own change asked for anyway: the lines are
+now sized from the **camera distance** and span the screen. ⭐ The gizmo's job is to point; its
+length was never information. ⚠ `distanceM` still exists and is still reported on the HUD — it is
+the measurement, and it is honest. Nothing else read it.
+
+
+---
+
+## 60 — ⭐⭐⭐ **A MODE NAMED AFTER AN AXIS: `"DEPTH"` HAD BEEN LYING SINCE `D75`**
+
+**2026-09-23, by finger, and the owner named the cause himself.** *"Make sure the delta position on
+the second touch triggers the gizmo in the same way as the delta positions of the first touch on
+the object. It seems sometimes the gizmo does not show when the second touch is driving the
+translation."* … *"the second finger should not set mode to depth since it is driving the
+translation along gravity axis, not depth"* … *"or the name of the mode 'depth' is ill chosen."*
+
+⛔ `refreshAxisGizmo` skipped every grip whose mode was not literally `"TRANSLATE"`, so the gizmo
+vanished for exactly as long as the second finger was moving the body — **the moment a hand most
+wants to see which way it is going**.
+
+⭐⭐⭐ **AND THE NAME IS THE ROOT.** `"DEPTH"` was minted by `A10`, when that finger DID drive the
+depth axis. `D75` moved it to **gravity** and the name stayed — so the mode announced the wrong
+axis on the HUD and in every rule that read it, for a day. ⚠ It is the same root as **defect 55**
+(the swing hunting for `"TRANSLATE"` and never finding a driver): *a rule keyed on a NAME inherits
+every later meaning of that name*, and a name that states an AXIS goes stale the moment the
+channels move.
+
+✅ **FIXED twice over**: the mode is `"TRANSLATE_2ND"` — named for what it IS, a translation driven
+by the second touchpoint, so it cannot go stale the next time the channels move — and the SET of
+translating modes lives once in `src/input/grip_mode.ts`, which both the gizmo and the swing read.
+⛔ A mode added later is now a decision in that file rather than a silent omission in two others.
+
+
+---
+
+## ⭐⭐ AND THE GIZMO NOW ANSWERS THE QUESTION A HAND IS ASKING (2026-09-23, the owner)
+
+> *"the directions show full screen"* … *"the direction is shown only if the delta position
+> triggers a translation in this direction. Therefore, for example, for a pure translation in the
+> gravity axis only the green line would show. For a translation in the horizontal plane, both blue
+> and red lines would show but not the green line."*
+
+⭐ It used to draw all three axes always, which says *here is the basis* when the question is
+**where will this push go**. ⛔ `displayedAxes` (in `src/input`) answers the second, and it keeps
+the last non-empty answer so that a pause — or `A11`'s deadband emitting nothing on one axis —
+does not blank the gizmo.

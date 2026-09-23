@@ -179,7 +179,14 @@ import {
   zoneEdge,
   type ObjectAxes,
 } from "../input/object_axes";
-import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
+import {
+  axisDisplacement,
+  axisTravel,
+  clampDepthRange,
+  displayedAxes,
+  type AxisTravelM,
+} from "../input/axis_translate";
+import { isTranslatingMode } from "../input/grip_mode";
 import { leadingFace, type LeadingFace } from "../core/leading_face";
 import {
   pitchOffsetV,
@@ -1620,6 +1627,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const lastTravelDir = new Map<ObjectId, Vec3>();
   /**
+   * ⭐⭐ **WHICH AXES THE GIZMO IS SHOWING** — the owner, 2026-09-23: *"the direction is shown only
+   * if the delta position triggers a translation in this direction."* ⛔ The decision is
+   * `displayedAxes`'s; this only remembers its answer, so a pause does not blank the gizmo.
+   */
+  const gizmoAxes = new Map<ObjectId, readonly [boolean, boolean, boolean]>();
+  /** ⚠ THIS FRAME's travel per body, summed over both fingers' channels. Consumed by the gizmo. */
+  const frameAxisTravel = new Map<ObjectId, AxisTravelM>();
+  /**
+   * ⭐ ONE place both `axisTravel` call sites report to — the holder's drag and the second
+   * touchpoint's push. ⛔ The owner, 2026-09-23: *"make sure the delta position on the second
+   * touch triggers the gizmo in the same way as the delta positions of the first touch."*
+   */
+  const noteAxisTravel = (id: ObjectId | undefined, t: AxisTravelM): void => {
+    if (id === undefined) return;
+    const p = frameAxisTravel.get(id) ?? { xM: 0, gravityM: 0, depthM: 0 };
+    frameAxisTravel.set(id, {
+      xM: p.xM + t.xM,
+      gravityM: p.gravityM + t.gravityM,
+      depthM: p.depthM + t.depthM,
+    });
+  };
+  /**
    * ⭐⭐ WHAT THE LAST TRANSLATION ACTUALLY BOUGHT — reported by the rule, never recomputed
    * here. ⛔ `1.0` means the body is exactly under the finger; a large number means the plane is
    * nearly edge-on and a small push is going a long way; `EDGE-ON` means the exact mapping was
@@ -1724,7 +1753,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const refreshAxisGizmo = (): void => {
     const live = new Set<ObjectId>();
     for (const grip of held.values()) {
-      if (grip.mode !== "TRANSLATE") continue;
+      // ⛔⛔ **THE SECOND TOUCHPOINT'S MODE IS A TRANSLATION, AND THIS ASKED BY NAME** — the
+      // owner, 2026-09-23: *"sometimes the gizmo does not show when the second touch is driving
+      // the translation."* ⚠ The gizmo vanished for exactly as long as the body was being pushed
+      // by that finger. ⭐ Same shape as defect 55, which is why the set lives in
+      // `input/grip_mode.ts` — and why the mode itself is no longer named after an axis.
+      if (!isTranslatingMode(grip.mode)) continue;
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
       const dir = lastTravelDir.get(id);
@@ -1739,23 +1773,56 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       leading.set(id, hit);
       live.add(id);
       const axes = axesOf();
-      // ⭐ Sized from the body's own reach to that face, so it reads the same on a part and on
-      // the base plate. ⚠ A fixed metre length would be invisible on one and enormous on the
-      // other, which is the `Map<name, dims>` mistake `D50` deleted, one layer up.
-      const len = Math.max(hit.distanceM, 0.01) * 1.5;
+      // ⭐⭐⭐ **WHICH DIRECTIONS TO SHOW** — the owner, 2026-09-23: *"the direction is shown only
+      // if the delta position triggers a translation in this direction."* ⛔ The rule is
+      // `displayedAxes`'s, in `src/input`, and it keeps the last non-empty answer so that a pause
+      // — or `A11`'s deadband emitting nothing on one axis — does not blank the gizmo.
+      const shown = displayedAxes(
+        gizmoAxes.get(id) ?? null,
+        frameAxisTravel.get(id) ?? { xM: 0, gravityM: 0, depthM: 0 },
+      );
+      if (shown === null) continue;
+      gizmoAxes.set(id, shown);
+      // ⭐⭐⭐ **FULL-SCREEN LINES** — the owner: *"the blue, green and red lines shall extend the
+      // full screen when they are shown."* ⛔ Drawn BOTH ways from the face centre, so each axis
+      // is a line across the glass rather than a ray out of the body.
+      //
+      // ⚠⚠ **AND THIS IS ALSO WHY THE GIZMO USED TO FLARE.** The length was `1.5 ×` the exit
+      // distance to the leading face, and that distance is `(centre − origin)·n / (n·d)` — which
+      // goes to INFINITY as the travel direction turns parallel to the face it is held on.
+      // ⛔ `D54`'s stickiness keeps that face for as long as the body advances on it AT ALL, so a
+      // grazing direction produced an enormous length, and the snap back was the moment the face
+      // was finally dropped. ⭐ Sizing from the CAMERA removes the coupling: the gizmo's job is to
+      // point, and its length was never information.
+      const span =
+        Math.max(
+          Vector3.Distance(
+            camera.position,
+            new Vector3(hit.centre[0], hit.centre[1], hit.centre[2]),
+          ),
+          0.05,
+        ) * 20;
       const g = gizmoFor(id);
       const dirs = [axes.x, axes.gravity, axes.depth] as const;
       for (let i = 0; i < 3; i++) {
+        if (!shown[i]) {
+          g.lines[i]!.isVisible = false;
+          continue;
+        }
         const a = dirs[i]!;
         const line = CreateLines(
           `axis-gizmo-${id}-${i}`,
           {
             points: [
-              new Vector3(hit.centre[0], hit.centre[1], hit.centre[2]),
               new Vector3(
-                hit.centre[0] + a[0] * len,
-                hit.centre[1] + a[1] * len,
-                hit.centre[2] + a[2] * len,
+                hit.centre[0] - a[0] * span,
+                hit.centre[1] - a[1] * span,
+                hit.centre[2] - a[2] * span,
+              ),
+              new Vector3(
+                hit.centre[0] + a[0] * span,
+                hit.centre[1] + a[1] * span,
+                hit.centre[2] + a[2] * span,
               ),
             ],
             instance: g.lines[i]!,
@@ -1769,6 +1836,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (live.has(id)) continue;
       for (const line of g.lines) line.isVisible = false;
     }
+    // ⛔ CONSUMED HERE, every frame, exactly as the swing's travel accumulators are: the gizmo
+    // must read the travel of THIS frame and never a stale one.
+    frameAxisTravel.clear();
   };
 
   const refreshHighlight = (): void => {
@@ -2072,7 +2142,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * protecting it. ⚠ Do not generalise "latch at press" to every input.
      * ⚠ `null` only before the gesture commits.
      */
-    mode: "ROTATE" | "TRANSLATE" | "DEPTH" | null;
+    /**
+     * ⭐⭐⭐ **`"TRANSLATE_2ND"` WAS `"DEPTH"` UNTIL 2026-09-23**, and the rename is the owner's:
+     * *"the second finger should not set mode to depth since it is driving the translation along
+     * gravity axis, not depth"* … *"or the name of the mode 'depth' is ill chosen."*
+     *
+     * ⛔⛔ It was named in `A10`, when that finger DID drive depth. `D75` moved it to **gravity**
+     * and the name stayed — so the mode has been announcing the wrong axis ever since, on the HUD
+     * and in every rule that read it. ⭐ The new name says what the mode IS (a translation, driven
+     * by the second touchpoint) rather than which axis it happened to drive on the day it was
+     * written, so it cannot go stale the next time the channels move.
+     * ⚠ That staleness is not cosmetic: it cost **defect 55** (the swing hunting for
+     * `"TRANSLATE"`) and the gizmo vanishing under the finger that was moving the body.
+     */
+    mode: "ROTATE" | "TRANSLATE" | "TRANSLATE_2ND" | null;
     /**
      * ⭐⭐ **FORK C** — the face THIS touchpoint's press landed on, in the object it carries.
      *
@@ -3557,6 +3640,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       cfg.axisTrackingConeDeg,
       grip.frame.towardGravity,
     );
+    // ⭐ The gizmo hears this finger exactly as it hears the holder's — same function, same frame.
+    noteAxisTravel(gid, travel);
     // ⭐ ONE writer, so this channel now feeds the swing exactly as the holder's does.
     applyWorldStep(grip, axisDisplacement(travel, axes));
   };
@@ -3710,7 +3795,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
 
     if (drive.depthDyPx !== 0) {
       applyDepthStep(grip, drive.depthDyPx);
-      grip.mode = "DEPTH";
+      grip.mode = "TRANSLATE_2ND";
     }
     if (drive.rollDxPx !== 0) {
       // ⭐⭐ ROLL AS AN INCREMENT, about the gravity frame's horizontal depth axis (A7).
@@ -4914,6 +4999,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // looking down on the scene, −1 looking up at it.
           grip.frame.towardGravity,
         );
+        noteAxisTravel(tid, travel);
         lastTrackGain = travel.trackGain;
         lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);

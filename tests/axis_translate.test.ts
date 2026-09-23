@@ -21,6 +21,7 @@ import {
   type AxisInputsPx,
   type CameraScreenAxes,
   type TranslatePairing,
+  displayedAxes,
 } from "@input/axis_translate";
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
@@ -305,5 +306,47 @@ describe("degenerate inputs never reach a placement", () => {
     expect(t.gravityM).toBe(0);
     expect(t.depthM).toBe(0);
     expect(screenShadow([0, 0, 0], c.screen)).toBeNull();
+  });
+});
+
+/**
+ * ⭐⭐⭐ **THE GIZMO SHOWS THE DIRECTIONS THIS PUSH ACTUALLY TRANSLATES ALONG.**
+ *
+ * > *"the direction is shown only if the delta position triggers a translation in this direction.
+ * > Therefore, for example, for a pure translation in the gravity axis only the green line would
+ * > show. For a translation in the horizontal plane, both blue and red lines would show but not
+ * > the green line."* — the owner, 2026-09-23
+ */
+describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
+  const T = (xM: number, gravityM: number, depthM: number) => ({ xM, gravityM, depthM });
+
+  it("⭐⭐⭐ a pure GRAVITY push shows the green line alone — the owner's own example", () => {
+    expect(displayedAxes(null, T(0, 0.004, 0))).toEqual([false, true, false]);
+  });
+
+  it("⭐⭐⭐ a push in the HORIZONTAL plane shows red and blue, never green — his second example", () => {
+    expect(displayedAxes(null, T(0.004, 0, 0.002))).toEqual([true, false, true]);
+  });
+
+  it("⛔ a pause does NOT blank the gizmo — the last non-empty answer stands", () => {
+    // ⚠ A finger that stops emits nothing, and `A11`'s deadband emits nothing on an axis inside
+    // its band, so the instantaneous answer is *no axes* many frames per second.
+    const shown = displayedAxes(null, T(0.004, 0, 0))!;
+    expect(shown).toEqual([true, false, false]);
+    expect(displayedAxes(shown, T(0, 0, 0))).toBe(shown);
+  });
+
+  it("⛔ before the body has ever been translated there is nothing to show", () => {
+    expect(displayedAxes(null, T(0, 0, 0))).toBeNull();
+  });
+
+  it("⛔ a NaN component is not a direction — it cannot light a line", () => {
+    expect(displayedAxes(null, T(Number.NaN, 0, 0))).toBeNull();
+    expect(displayedAxes(null, T(Number.NaN, 0.004, 0))).toEqual([false, true, false]);
+  });
+
+  it("⭐ and a diagonal push lights exactly the axes it uses", () => {
+    expect(displayedAxes(null, T(0.001, -0.002, 0.003))).toEqual([true, true, true]);
+    expect(displayedAxes(null, T(-0.001, 0, 0))).toEqual([true, false, false]);
   });
 });

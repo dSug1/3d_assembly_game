@@ -561,23 +561,23 @@ describe("⛔⛔ THE TWO DECISIONS THAT WERE HIDING IN `scene.ts`", () => {
   });
 
   it("⛔⛔⛔ `DEPTH` IS A TRANSLATION TOO — and this vector used to assert the opposite", () => {
-    // ⚠⚠ **THE LINE THAT STOOD HERE WAS THE DEFECT, WRITTEN DOWN**: `swingDriverIndex(["DEPTH",
+    // ⚠⚠ **THE LINE THAT STOOD HERE WAS THE DEFECT, WRITTEN DOWN**: `swingDriverIndex(["TRANSLATE_2ND",
     // null, "TRANSLATE"])` was asserted to be `2` — i.e. the `DEPTH` grip in slot 0 was NOT a
     // driver. ⛔ Device-reported three times on 2026-09-23: *"still no swing of camera when
     // follower enters offset radius zone from translation along gravity axis towards bottom."*
     //
-    // ⭐⭐ `scene.ts` sets a holder's mode to `"DEPTH"` the moment the SECOND touchpoint drives
+    // ⭐⭐ `scene.ts` sets a holder's mode to `"TRANSLATE_2ND"` the moment the SECOND touchpoint drives
     // its axis — which is exactly that gesture — so pushing a body along gravity **renamed the
     // grip the swing was looking for**. The driver came back `-1`, the swing froze at `p=0.00`,
     // and `gapAtTriggerM` rebased to the live gap every frame.
     //
-    // ⭐ `METHOD`: *a rule keyed on a NAME inherits every later meaning of that name.* `"DEPTH"`
+    // ⭐ `METHOD`: *a rule keyed on a NAME inherits every later meaning of that name.* `"TRANSLATE_2ND"`
     // did not exist as a mode when the test was written; `A10` added it and quietly took a
     // translation out of the set.
-    expect(swingDriverIndex(["DEPTH"])).toBe(0);
-    expect(swingDriverIndex(["DEPTH", null, "TRANSLATE"])).toBe(0);
+    expect(swingDriverIndex(["TRANSLATE_2ND"])).toBe(0);
+    expect(swingDriverIndex(["TRANSLATE_2ND", null, "TRANSLATE"])).toBe(0);
     // ⛔ And the exclusions are unchanged, which is what keeps the 2026-09-19 report fixed.
-    expect(swingDriverIndex(["ROTATE", "DEPTH"])).toBe(1);
+    expect(swingDriverIndex(["ROTATE", "TRANSLATE_2ND"])).toBe(1);
     expect(swingDriverIndex(["ROTATE", null])).toBe(-1);
   });
 
