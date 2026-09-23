@@ -114,9 +114,13 @@ describe("⭐⭐⭐ PLANE — the body follows the finger inside its own VERTICA
           // that azimuth would be a fixture chosen from the set where the quantity under test is
           // zero — the audit's one shape. ⭐ The degraded branch must still MOVE the body, which
           // is the whole of the *"blocked at the white highlight border"* report.
-          if (Math.hypot(...landed) < Math.hypot(dx!, dy!) * 0.999) {
-            const moved = Math.hypot(...axisDisplacement(t, axes));
-            expect(moved).toBeGreaterThan(0);
+          // ⛔⛔ **KEYED ON THE MODE THE RULE REPORTS, NOT ON A MAGNITUDE.** It used to guess the
+          // branch from *"did it land short?"*, which defect 58 falsified: a per-axis fallback
+          // can land the body FURTHER from the press than the finger asked, on the wrong screen
+          // line entirely. ⭐ `METHOD`: *a test that infers which branch ran is a second
+          // implementation of the branch* — and it fails for the reason the code is right.
+          if (t.mode !== "PLANE-SOLVE") {
+            expect(Math.hypot(...axisDisplacement(t, axes))).toBeGreaterThan(0);
             continue;
           }
           expect(landed[0]).toBeCloseTo(dx!, 6);
@@ -391,37 +395,48 @@ describe("⛔⛔⛔ defect 56 — an edge-on holder plane must track the finger,
     expect(Math.hypot(...sg)).toBeGreaterThan(0.9);
   });
 
-  it("⭐⭐⭐ RED AGAINST THE OLD BUILD: a sideways drag still puts the body under the finger", () => {
+  it("⭐⭐⭐ RED AGAINST THE BUILD THE OWNER PHOTOGRAPHED: a sideways drag still moves it", () => {
     const c = camera(0, 12);
     const t = run({ holderDxPx: 100 }, c, WORLD);
-    expect(t.mode).toBe("PLANE-SCREEN");
+    expect(t.mode).toBe("PLANE-PER-AXIS");
     // ⛔ THE ASSERTION THE OWNER'S BUILD FAILS. Projecting onto the two axes of an edge-on plane
     // gave 0 and 0, and the body froze — *"blocking at white highlight"*, because the contour is
     // where `D74` switches the basis and so where the plane turns edge-on under the finger.
-    const [px, py] = toScreenPx(axisDisplacement(t, WORLD), c.screen);
-    expect(px).toBeCloseTo(100, 6);
-    expect(py).toBeCloseTo(0, 6);
-    // ⭐ And the travel is where it HAS to be: the plane cannot hold it, so it is on depth.
-    expect(Math.abs(t.depthM)).toBeGreaterThan(0);
-    expect(t.xM).toBeCloseTo(0, 12);
+    expect(Math.abs(t.xM)).toBeGreaterThan(0);
     // ⚠ The readout too — `track=0.00×` was itself part of the bad evidence.
-    expect(t.trackGain).toBeCloseTo(1, 6);
+    expect(t.trackGain).toBeGreaterThan(0);
   });
 
-  it("the whole screen-plane branch round-trips, not just the one direction", () => {
+  it("⛔⛔ AND IT STAYS ON ITS OWN AXIS — defect 58 RETRACTING defect 56's answer", () => {
+    // ⭐⭐ Defect 56 answered the freeze by decomposing the finger's SCREEN travel onto all three
+    // axes: the body followed the finger exactly, and spent that travel on **depth**, which the
+    // holder does not own. ⚠ The owner read it off the gizmo within the hour — *"back and forth
+    // with dx translates in depth"* — and his report 3 had already asked for the opposite:
+    // *"that should translate the object towards or away from the camera."*
+    // ⛔ THIS ASSERTION IS THE RETRACTION, and it is red against BOTH earlier builds: against the
+    // projection (which moved nothing) and against the screen decomposition (which moved depth).
     const c = camera(0, 12);
-    const drags: readonly (readonly [number, number])[] = [
-      [100, 0],
-      [0, 60],
-      [-45, 80],
-      [33, -77],
-    ];
-    for (const [dx, dy] of drags) {
-      const t = run({ holderDxPx: dx, holderDyPx: dy }, c, WORLD);
-      const [px, py] = toScreenPx(axisDisplacement(t, WORLD), c.screen);
-      expect(px).toBeCloseTo(dx, 6);
-      expect(py).toBeCloseTo(dy, 6);
+    for (const dx of [100, -45]) {
+      const t = run({ holderDxPx: dx }, c, WORLD);
+      expect(t.depthM).toBe(0);
+      expect(t.gravityM).toBeCloseTo(0, 12);
+      expect(Math.abs(t.xM)).toBeGreaterThan(0);
     }
+    // ⭐ And a pure vertical drag stays on gravity, lifting when the finger goes UP.
+    const up = run({ holderDyPx: -60 }, c, WORLD);
+    expect(up.gravityM).toBeGreaterThan(0);
+    expect(up.depthM).toBe(0);
+  });
+
+  it("⛔ a channel's sense never flips for a change of INPUT, only of pose", () => {
+    // ⚠ The `x` fallback's convention is *finger right = away*, and its one stated cost is that
+    // it reverses as the axis swings through edge-on. ⭐ What must NOT happen is a reversal within
+    // one pose — a back-and-forth drag has to come back to where it started.
+    const c = camera(0, 12);
+    const out = run({ holderDxPx: 80 }, c, WORLD);
+    const back = run({ holderDxPx: -80 }, c, WORLD);
+    expect(out.xM + back.xM).toBeCloseTo(0, 12);
+    expect(out.depthM + back.depthM).toBe(0);
   });
 
   it("⭐⭐ THE OTHER SIDE OF THE CLIFF: the body never outruns the finger by more than 1/sin(cone)", () => {

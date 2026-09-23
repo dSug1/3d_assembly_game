@@ -34,9 +34,9 @@
  *
  * ## ⭐⭐ WHAT THIS FILE DOES NOW
  *
- * **`PLANE` (the default).** The holder's 2D delta is **decomposed onto the two horizontal
- * axes' screen shadows** — a 2×2 solve — so the body moves inside its own horizontal plane and
- * its image follows the finger **exactly**. ⭐ Nothing can feel inverted, because the body goes
+ * **`PLANE` (the default).** The holder's 2D delta is **decomposed onto the two axes' screen
+ * shadows** — a 2×2 solve — so the body moves inside its own `{x, gravity}` plane and its image
+ * follows the finger **exactly**, for as long as that plane is presented well enough to solve. ⭐ Nothing can feel inverted, because the body goes
  * where the finger goes; and the gain is 1 by construction, which is report 2's answer.
  * ⛔ It is Blender's *unconstrained* move with the view plane replaced by the body's horizontal
  * plane — the nearest thing in Blender to what this product is doing.
@@ -84,19 +84,35 @@
  * conditioning is a MEASUREMENT* — one `|det|` sweep would have refused the swap's justification
  * the day it was written.
  *
- * ⭐⭐ **THE FIX IS THAT THE DEGENERATE BRANCH IS NO LONGER A DIFFERENT KIND OF ANSWER.** The
- * finger's screen-plane travel is decomposed onto **all three** object axes — they are
- * orthonormal, so the sum reproduces it **exactly** and the body follows the finger on the glass
- * with a gain of 1. ⛔ Nothing is suppressed (so it cannot block) and nothing is divided (so it
- * cannot run away). ⭐ It is Blender's unconstrained `G`, and it is rule 6, which a hand closed
- * in 2026-09-15: the degenerate case falls back to **the best-attested rule in the product**.
- * ⚠ Its one cost, stated: the holder briefly moves the body in DEPTH, which is the second
- * finger's axis — unavoidable, because a plane that is edge-on cannot represent the drag.
- *
  * ⭐ **And the cone is now a LEVERAGE BOUND, not a `NaN` guard** — `1/sin(cone)` is the fastest
  * the body may outrun the finger, so 20° reads *"never more than 2.9×"*. That is why the default
  * moved off Blender's 5°: Blender is protecting a division, this is protecting a hand.
  * ⚠ It is a judgement, it has a slider, and no hand has judged it yet.
+ *
+ * ⛔⛔ **DEFECT 56's OWN ANSWER WAS RETRACTED THE SAME DAY, AND BOTH ARE KEPT.** It decomposed
+ * the finger's screen travel onto **all three** axes, so the body followed the finger exactly —
+ * and paid for it by travelling along **depth**, which the holder does not own. ⭐ The owner read
+ * it off the gizmo within the hour: *"back and forth with dx translates in depth"*.
+ *
+ * ## ⭐⭐⭐ THE RULE THAT REPLACED IT — AN INPUT KEEPS ITS AXIS (defect 58)
+ *
+ * > *"I would expect the object to continue translating with dy input (that should translate the
+ * > object **towards or away from the camera**)"* — the owner, 2026-09-23, report 3
+ *
+ * ⭐⭐ **That sentence decides it, and it was already on file.** A channel whose axis points at
+ * the camera is expected to push the body **along that axis**, toward or away — not to be
+ * re-pointed at a more photogenic axis so the image keeps up with the finger. ⛔ So when the
+ * plane degenerates it stops being a plane: **each channel falls back to its own dictated axis**,
+ * tracking where the axis is presented well enough to track and a fixed rate where it is not.
+ *
+ * ⭐ **Three fixed rates, one shape**, all of them `depthTranslate`'s — the rule a device look
+ * closed on 2026-09-16: `gravity` needs no convention (it is `up`, so fingers-up lifts), `depth`
+ * keeps `sign(towardGravity)`, and `x` takes *finger right = away from the camera*.
+ * ⚠⚠ **`x`'s sense REVERSES as the axis swings through edge-on** and no convention can bridge
+ * it, because the two sides are mirror images — the same symmetry `towardGravity = 0` already has.
+ *
+ * ⛔ **What is given up, stated: the body no longer stays under the finger in that pose.** It
+ * cannot — the finger is asking for a travel the dictated axes cannot show.
  *
  * ⛔ ENGINE-FREE.
  */
@@ -162,7 +178,7 @@ export interface AxisTravel extends AxisTravelM {
    * which was the whole of the evidence: it did not say which plane, how near degenerate, or
    * whether the depth channel was involved at all. ⛔ Named, not inferred.
    */
-  readonly mode: "PLANE-SOLVE" | "PLANE-SCREEN" | "CHANNELS";
+  readonly mode: "PLANE-SOLVE" | "PLANE-PER-AXIS" | "CHANNELS";
   /**
    * ⭐⭐ **THE HOLDER PLANE'S CONDITIONING**, `|det|` of the two axes' screen shadows — 1 when the
    * plane is square to the view, 0 when it is edge-on, and the solve's rate is its reciprocal.
@@ -305,12 +321,36 @@ export function axisTravel(
   const awaySign = Math.sign(finite(towardGravity)) || 1;
   const fallbackDepth = -dy2 * secondGain * awaySign;
 
+  // ⭐⭐⭐ **THE HOLDER'S OWN TWO FIXED RATES** (defect 58) — same shape as the depth channel's,
+  // which a device look closed on 2026-09-16, and each one on the axis the owner DICTATED for it.
+  //
+  // ⛔ **Gravity needs no convention at all**: it is `frame.up`, so fingers-up is up. That is the
+  // one channel where the picture can never be symmetric, which is why it gets the plain rate.
+  //
+  // ⚠⚠ **x DOES need one, and it is a genuine ambiguity rather than a choice I am ducking.** An
+  // axis pointing at the camera has no left or right on the glass, so the convention is
+  // *finger right = away from the camera*, continuous with the depth channel's *fingers-up =
+  // away*. ⛔ **Its cost, stated: the sense REVERSES as the axis swings through edge-on** — the
+  // exact mapping just outside the cone is right-is-away on one side and right-is-towards on the
+  // other, and no convention can bridge that, because the two are mirror images. ⭐ It is the
+  // same symmetry the depth channel meets at a level camera, where `towardGravity` is 0.
+  const view = normalize([
+    right[1] * up[2] - right[2] * up[1],
+    right[2] * up[0] - right[0] * up[2],
+    right[0] * up[1] - right[1] * up[0],
+  ]);
+  const xAwaySign = view === null ? 1 : Math.sign(dot(axes.x, view)) || 1;
+  const fallbackX = dx * xAwaySign;
+  // ⭐ Screen y grows DOWNWARD and `axes.gravity` is up, so the minus is *fingers-up lifts it*.
+  const fallbackGravity = -dy;
+
   let xM = 0;
   let gravityM = 0;
-  // ⭐⭐ THE HOLDER'S OWN depth contribution, separate from the second finger's. ⛔ It is
-  // non-zero only in the screen-plane branch, and it is kept apart so `trackGain` measures what
-  // the HOLDER bought — mixing the two would make the readout depend on the other finger.
-  let holderDepthM = 0;
+  // ⭐⭐ THE HOLDER'S OWN depth contribution. ⛔⛔ **IT IS NOW ALWAYS ZERO, AND THAT IS THE
+  // POINT OF DEFECT 58** — the holder owns `x` and `gravity`, and nothing may quietly spend its
+  // travel on the second finger's axis. ⚠ Kept as a named zero rather than deleted so
+  // `trackGain` keeps measuring the same quantity across the retraction.
+  const holderDepthM = 0;
   let depthM = 0;
   let mode: AxisTravel["mode"] = "CHANNELS";
   let planeDet = 0;
@@ -333,34 +373,36 @@ export function axisTravel(
       xM = ((dx * sg[1] - dy * sg[0]) / det) * holderGain;
       gravityM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
     } else {
-      mode = "PLANE-SCREEN";
-      // ⛔⛔⛔ **A DEGENERATE PLANE MUST NOT STOP THE BODY — AND PROJECTING ONTO IT STOPS THE
-      // BODY.** ⚠ Two builds have now tried to answer an edge-on plane while staying inside it:
-      // suppressing the foreshortened axis (froze it) and projecting onto the two axes (froze it
-      // almost as hard, because a drag ACROSS an edge-on plane has almost no component in it).
-      // ⭐⭐⭐ The plane is the wrong place to look for the answer: when it cannot represent the
-      // drag, the body **leaves it**. The screen-plane displacement is decomposed onto all THREE
-      // axes — orthonormal, so the three components reproduce it exactly — and the body follows
-      // the finger on the glass with a gain of 1.
-      // ⭐ That is rule 6, closed by a device look 2026-09-15, and Blender's unconstrained `G`.
-      // ⛔ Nothing suppressed, nothing divided: it can neither block nor run away.
-      const wx = right[0] * dx - up[0] * dy;
-      const wy = right[1] * dx - up[1] * dy;
-      const wz = right[2] * dx - up[2] * dy;
-      xM = (wx * axes.x[0] + wy * axes.x[1] + wz * axes.x[2]) * holderGain;
-      gravityM =
-        (wx * axes.gravity[0] + wy * axes.gravity[1] + wz * axes.gravity[2]) * holderGain;
-      // ⭐⭐ **THE THIRD COMPONENT IS THE WHOLE OF THE FIX.** It is what the two previous builds
-      // threw away, and it is exactly the part of the finger's travel that an edge-on plane
-      // cannot hold. ⚠ Yes, the holder moves the body in the second finger's axis while this
-      // branch runs — that is the cost, and the alternative is a dead finger.
-      holderDepthM = (wx * axes.depth[0] + wy * axes.depth[1] + wz * axes.depth[2]) * holderGain;
+      mode = "PLANE-PER-AXIS";
+      // ⛔⛔⛔ **A DEGENERATE PLANE MUST NOT STOP THE BODY, AND IT MUST NOT RE-POINT THE INPUT
+      // EITHER — defect 58, and it RETRACTS defect 56's answer hours after it shipped.**
+      //
+      // > *"back and forth with dx translates in depth"* — the owner, 2026-09-23
+      //
+      // ⭐ Defect 56 decomposed the finger's screen travel onto all THREE axes, so the body
+      // followed the finger exactly — and paid for it by moving along **depth**, an axis the
+      // holder does not own. ⚠ The owner saw it on the gizmo within the hour.
+      // ⭐⭐⭐ **AND HIS OWN EARLIER SENTENCE IS THE RULE**: *"I would expect the object to
+      // continue translating with dy input (that should translate the object **towards or away
+      // from the camera**)"*. ⛔ So an input whose axis points at the camera keeps that axis and
+      // pushes the body along it — it is NOT re-pointed to keep the image under the finger.
+      //
+      // ⭐⭐ So the degenerate plane simply stops being a plane: each channel falls back to its
+      // OWN dictated axis, exactly as the `CHANNELS` pairing and the second finger's depth
+      // channel already do. ⛔ Tracking where the axis is presented well enough to track, a fixed
+      // rate where it is not, and **never another axis**.
+      xM = (along(sx, dx, 0) ?? fallbackX) * holderGain;
+      gravityM = (along(sg, 0, dy) ?? fallbackGravity) * holderGain;
     }
   } else {
     // ⭐ CHANNELS: Blender's `G X`, once per channel — the whole delta is not used, only the
     // component assigned to that axis.
-    xM = (along(sx, dx, 0) ?? 0) * holderGain;
-    gravityM = (along(sg, 0, dy) ?? 0) * holderGain;
+    // ⛔ **AND IT GETS THE SAME FIXED RATES SINCE DEFECT 58**, which it should have had from the
+    // start: it used to return 0 for a foreshortened axis, which is the dead channel the owner
+    // rejected in report 3. ⚠ The two pairings now differ ONLY in whether the two channels are
+    // solved together, which is the comparison this selector exists to make.
+    xM = (along(sx, dx, 0) ?? fallbackX) * holderGain;
+    gravityM = (along(sg, 0, dy) ?? fallbackGravity) * holderGain;
   }
 
   // ⭐⭐⭐ **DEPTH IS THE SECOND TOUCHPOINT'S CHANNEL SINCE THE SWAP.** ⛔ It is the axis that
@@ -385,7 +427,7 @@ export function axisTravel(
     xM,
     depthM,
     gravityM,
-    edgeOn: mode === "PLANE-SCREEN" || depthFallback,
+    edgeOn: mode === "PLANE-PER-AXIS" || depthFallback,
     mode,
     planeDet,
     depthFallback,

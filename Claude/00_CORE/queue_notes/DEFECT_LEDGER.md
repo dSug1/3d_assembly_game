@@ -469,3 +469,42 @@ divides was the projection. ⚠ `METHOD`: **guard the quantity that is actually 
 that is easy to name.** ⛔ Both survived a green suite because every fixture happened to drag along
 an axis that was well presented — mistake shape 5 again, from the other side: *a fixture chosen to
 exercise the rule is usually chosen where the rule works.*
+
+
+
+---
+
+## 58 — ⭐⭐⭐ **AN INPUT KEEPS ITS AXIS: DEFECT 56's ANSWER, RETRACTED THE SAME DAY**
+
+**2026-09-23, by finger, build `dbca35d`.** *"back and forth with dx translates in depth."*
+
+⛔⛔ Defect 56 answered a frozen body by decomposing the finger's **screen** travel onto all
+three object axes: the body followed the finger exactly, and paid for it by spending that travel
+on **depth** — an axis the holder does not own. ⭐ The owner read it off the gizmo within the hour.
+
+⭐⭐⭐ **AND HIS OWN EARLIER SENTENCE DECIDED IT, HOURS BEFORE I WROTE THE WRONG ANSWER.** Report
+3, the same day: *"I would expect the object to continue translating with dy input (that should
+translate the object **towards or away from the camera**, if the first point above is coherent)."*
+⛔ A channel whose axis points at the camera is expected to push the body **along that axis** — not
+to be re-pointed at a more photogenic one so the image keeps up with the finger. ⚠ I had read that
+sentence as *"do not let it go dead"* and stopped there; it also says **which axis**.
+
+✅ **FIXED**: a degenerate plane stops being a plane. Each channel falls back to **its own dictated
+axis**, tracking where the axis is presented well enough to track and a fixed rate where it is not
+— the same shape as the second finger's depth channel, which a device look closed on 2026-09-16.
+⛔ `CHANNELS` got the fixed rates too; it could return 0 for a foreshortened axis, which is
+precisely the dead channel report 3 rejected.
+
+⚠⚠ **THE `x` CONVENTION IS AN AMBIGUITY, NOT A CHOICE I AM DUCKING**: an axis pointing at the
+camera has no left or right on the glass. *Finger right = away* is continuous with the depth
+channel's *fingers-up = away* — and **its sense reverses as the axis swings through edge-on**,
+which no convention can bridge, because the two sides are mirror images. ⭐ A vector pins the part
+that must hold anyway: within one pose, a back-and-forth drag returns the body exactly.
+
+⛔ **What is given up, stated: in that pose the body no longer stays under the finger.** It cannot
+— the finger is asking for a travel the dictated axes cannot show.
+
+⭐⭐ **THE SHAPE WORTH CARRYING: I ANSWERED THE SYMPTOM THE OWNER NAMED AND NOT THE RULE HE HAD
+ALREADY GIVEN.** *"Blocked"* has two fixes — *make it move* and *make it move where he said* — and
+only the second survives contact with a hand. ⚠ It is the third time in two days that a sentence
+already in the transcript would have settled a question I answered from first principles.
