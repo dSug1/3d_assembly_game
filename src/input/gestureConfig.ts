@@ -234,6 +234,31 @@ export interface GestureConfig {
 
   // ── §1.3 the recognizer ─────────────────────────────────────────────────
   /** ms of motion buffer the flick test reads. */
+  /**
+   * ⭐⭐⭐ **HOW LONG THE LEADING FACE REMEMBERS WHICH WAY THE BODY IS GOING**, milliseconds.
+   *
+   * ⛔ The face is the exit the body is advancing on, and the direction it is chosen from is the
+   * body's recent travel SUMMED and faded with this time constant. ⚠ It exists because one
+   * frame's step is not a direction: `A11`'s per-axis deadband emits the excess on one axis and
+   * nothing on the other, so a straight drag alternates — which is what made the gizmo chatter
+   * (`D54`), and what `D54` wrongly answered by latching the face instead.
+   *
+   * ⭐⭐ **IT IS A TRADE, AND BOTH ENDS HAVE BEEN FELT BY A HAND**:
+   *
+   * * too LONG and a change of direction drags the old face along — the owner, 2026-09-23: *"when
+   *   I transition fast from horizontal movement to vertical movement, there is a slight moment
+   *   when the green line passes through the left face and then relocate to the blue face"*;
+   * * too SHORT and the chatter comes back, which is the report `D54` was built for.
+   *
+   * ⚠ The first value shipped was **120 ms**, and that was not measured — it was `flickWindow`
+   * reused because it was to hand. ⭐ At the owner's speed the face flips when the new travel
+   * overtakes the fading old one, which is roughly `τ/2`, so 120 ms is the *"slight moment"* he
+   * saw. ⭐ **50 ms is a few frames**, which is what averaging a frame-to-frame alternation needs.
+   * ⛔ `0` means *one frame*, which is the pre-`D54` behaviour, chatter included — the slider
+   * reaches it on purpose, so a hand can see what the memory is buying.
+   * ⚠ **NO HAND HAS JUDGED 50.** It is a slider and a URL override: `?leadingFaceMemoryMs=80`.
+   */
+  leadingFaceMemoryMs: number;
   flickWindow: number;
   /** mm/s at lift, below which it is a drag that stopped — never a flick. */
   flickLiftSpeed: number;
@@ -800,6 +825,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   gainTranslateMutual: 0.5,
 
+  // ⭐ A few frames — enough to average the deadband's alternation, short enough that a change of
+  // direction moves the face while the hand is still moving. ⚠ Unjudged; it has a slider.
+  leadingFaceMemoryMs: 50,
   flickWindow: 120,
   flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
@@ -1009,6 +1037,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔ A negative or non-finite memory would make the decay grow the accumulator instead of
+  // fading it, which aims the gizmo by a number nobody chose. ⭐ `0` is meaningful (one frame).
+  if (!(cfg.leadingFaceMemoryMs >= 0) || !Number.isFinite(cfg.leadingFaceMemoryMs)) {
+    throw new Error(
+      `leadingFaceMemoryMs (${cfg.leadingFaceMemoryMs}) must be a finite number >= 0: it is the ` +
+        "time constant of the travel direction the LEADING FACE is chosen from, and 0 means one " +
+        "frame, which is the behaviour that chattered before D54.",
+    );
+  }
+
 
   // ⛔⛔⛔ **THE PLAIN RANGES — ADDED BY AUDIT, 2026-09-17.**
   //

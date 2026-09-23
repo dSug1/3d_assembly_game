@@ -1708,6 +1708,33 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     readonly lines: readonly [LinesMesh, LinesMesh, LinesMesh];
   }
   const axisGizmos = new Map<ObjectId, AxisGizmo>();
+  /**
+   * ⭐⭐ **THE WHITE CIRCLE AT THE GIZMO'S CENTRE** — the owner, 2026-09-23: *"add a white circle
+   * at the gizmo center so I can identify the leadingface easily."*
+   *
+   * ⛔ A SPHERE rather than a disc, so it reads as a circle from every camera without being
+   * billboarded, and it is sized in PIXELS through rule 6's own tracking factor — the same way the
+   * capture offset is — so it keeps a constant apparent size as the camera comes in.
+   * ⚠ Unlit and in the gizmo's own rendering group, because a marker that says *"this is the face
+   * you are advancing on"* must not be shaded or occluded by the body it is describing.
+   */
+  const GIZMO_DOT_PX = 9;
+  const gizmoDotMat = new StandardMaterial("gizmo-dot-mat", scene);
+  gizmoDotMat.emissiveColor = new Color3(1, 1, 1);
+  gizmoDotMat.disableLighting = true;
+  const gizmoDots = new Map<ObjectId, Mesh>();
+  const gizmoDotFor = (id: ObjectId): Mesh => {
+    const existing = gizmoDots.get(id);
+    if (existing) return existing;
+    const m = CreateSphere(`gizmo-dot-${id}`, { diameter: 1, segments: 10 }, scene);
+    m.material = gizmoDotMat;
+    m.isPickable = false;
+    m.renderingGroupId = 2;
+    m.isVisible = false;
+    gizmoDots.set(id, m);
+    return m;
+  };
+
   const gizmoFor = (id: ObjectId): AxisGizmo => {
     const existing = axisGizmos.get(id);
     if (existing) return existing;
@@ -1805,6 +1832,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           ),
           0.05,
         ) * 20;
+      // ⭐ The white circle marks the face the body is advancing on, at the gizmo's own centre.
+      const dot = gizmoDotFor(id);
+      const dotM = trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight) *
+        GIZMO_DOT_PX;
+      dot.scaling.set(dotM, dotM, dotM);
+      dot.position.set(hit.centre[0], hit.centre[1], hit.centre[2]);
+      dot.isVisible = true;
       const g = gizmoFor(id);
       const dirs = [axes.x, axes.gravity, axes.depth] as const;
       for (let i = 0; i < 3; i++) {
@@ -1839,6 +1873,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (live.has(id)) continue;
       for (const line of g.lines) line.isVisible = false;
     }
+    // ⚠ The circle goes with them: two readings of one state must appear and vanish together.
+    for (const [id, d] of gizmoDots) if (!live.has(id)) d.isVisible = false;
     // ⛔ CONSUMED HERE, every frame, exactly as the swing's travel accumulators are: the gizmo
     // must read the travel of THIS frame and never a stale one.
     frameAxisDriven.clear();
@@ -3389,6 +3425,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
         // there is no fallback and a level camera sends the body a very long way.
         tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
+        // ⭐⭐ How long the LEADING FACE remembers the travel direction. ⚠ Long: the face lags a
+        // change of direction. Short: the gizmo chatters, which is `D54`'s report. `0` = one frame.
+        tunable("leading face memory (ms)", "leadingFaceMemoryMs", 0, 200, 10),
         // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
         // the flag; anything above draws an x-ray twin at that opacity.
         tunable("FollowerFace x-ray opacity (0=off)", "followerFaceXrayAlpha", 0, 1, 0.05),
@@ -5499,10 +5538,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // re-decided the axes, and the gizmo is documented to point along them. ⚠ A gizmo drawn
     // first would show the previous basis for one frame, at exactly the moment a hand is
     // looking at it to see what changed.
-    // ⭐ Age the travel accumulators before the gizmo reads their direction — `e^(−dt/τ)`, with
-    // `flickWindow` as τ because it is this project's existing definition of *the recent past*.
+    // ⭐ Age the travel accumulators before the gizmo reads their direction — `e^(−dt/τ)`.
+    // ⚠ τ is `leadingFaceMemoryMs`, its own slider since 2026-09-23: it was `flickWindow` (120 ms)
+    // for an hour, and a hand felt the face lag a fast change of direction by that much.
     for (const [id, acc] of travelAccum) {
-      const faded = decayTravel(acc, dtSec * 1000, cfg.flickWindow);
+      const faded = decayTravel(acc, dtSec * 1000, cfg.leadingFaceMemoryMs);
       if (faded) travelAccum.set(id, faded);
     }
     refreshAxisGizmo();

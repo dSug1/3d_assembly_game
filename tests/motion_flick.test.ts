@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "../src/input/motion";
 import { detectFlick, terminalSpeedPxPerS, trimBuffer } from "../src/input/flick";
+import { decayTravel } from "../src/core/leading_face";
 import { mmToPx, pxToMm } from "../src/core/units";
 
 const cfg = DEFAULT_CONFIG;
@@ -1242,5 +1243,41 @@ describe("⛔⛔⛔ defect 70 — the speed window may end NOW instead of at the
     // ⭐ And a reset forgets the samples with the bands.
     t.reset();
     expect(t.speedMmPerS).toBe(0);
+  });
+});
+
+/**
+ * ⭐⭐ **THE LEADING FACE'S MEMORY — a trade a hand has felt from BOTH ends.**
+ *
+ * > *"when I transition fast from horizontal movement to vertical movement, there is a slight
+ * > moment when the green line passes through the left face and then relocate to the blue
+ * > face."* — the owner, 2026-09-23
+ *
+ * ⛔ Too long and the face lags a change of direction; too short and the gizmo chatters, which is
+ * the report `D54` was built for. ⚠ The first value shipped was `flickWindow` (120 ms) reused
+ * because it was to hand — not measured, and long enough for a hand to see.
+ */
+describe("⛔ leadingFaceMemoryMs — the direction's time constant", () => {
+  it("⭐ the shipped default is a few frames, not the flick window it borrowed", () => {
+    expect(DEFAULT_CONFIG.leadingFaceMemoryMs).toBe(50);
+    expect(DEFAULT_CONFIG.leadingFaceMemoryMs).toBeLessThan(DEFAULT_CONFIG.flickWindow);
+  });
+
+  it("⛔ a negative or non-finite memory is refused — it would GROW the accumulator", () => {
+    // ⚠ `decayTravel` multiplies by `e^(−dt/τ)`; a negative τ makes that an exponential GAIN, and
+    // the gizmo would then be aimed by a number nobody chose.
+    for (const bad of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, leadingFaceMemoryMs: bad })).toThrow(
+        /leadingFaceMemoryMs/,
+      );
+    }
+  });
+
+  it("⭐ zero is legal and means ONE FRAME — the pre-D54 behaviour, chatter included", () => {
+    expect(() =>
+      validateGestureConfig({ ...DEFAULT_CONFIG, leadingFaceMemoryMs: 0 }),
+    ).not.toThrow();
+    // ⛔ And the arithmetic agrees: no memory at all.
+    expect(decayTravel([1, 2, 3], 16, 0)).toEqual([0, 0, 0]);
   });
 });

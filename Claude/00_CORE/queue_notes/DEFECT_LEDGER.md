@@ -625,3 +625,34 @@ without acting on it.
 ⚠ Two vectors of `D54`'s are RETRACTED here, with their retraction on them: they pinned *"a face
 the body is still advancing on is kept, even when another is a nearer exit"*, which is the sentence
 the owner rejected.
+
+
+
+---
+
+## ⚠⚠ **THE LEADING FACE'S MEMORY IS NOW A DIAL** (2026-09-23, and the question was the useful part)
+
+> *"when I transition fast from horizontal movement to vertical movement, there is a slight moment
+> when the green line passes through the left face and then relocate to the blue face. This is
+> annoying. **Is that due to the inertia and lerp we have added to the translation movement?**"*
+
+⭐⭐ **THE QUESTION WAS ANSWERABLE BY MEASUREMENT, AND THE ANSWER IS NO.** `translateInertiaMs` is
+**7.6 ms** — half a frame — and the follower is critically damped. ⛔ The lag is the **direction
+memory added an hour earlier** (defect 61), which was `flickWindow` at **120 ms**, reused because it
+was to hand rather than measured. ⚠ After a change of direction the old travel fades as
+`e^(−t/τ)` while the new grows, so the face flips when the new overtakes the old — roughly `τ/2`,
+which at 120 ms is 3–4 frames. *That is the "slight moment".*
+
+⭐ **`leadingFaceMemoryMs` is its own tunable now, default 50 ms**, with a slider and a URL
+override. ⛔ Both ends have been felt by a hand: too long lags a change of direction (this report),
+too short brings back the chatter (`D54`'s). ⚠ **50 has not been judged** — it is *a few frames*,
+which is what averaging a frame-to-frame alternation needs, and `0` means one frame, which is the
+pre-`D54` behaviour with its chatter. ⭐ The slider reaches both ends on purpose.
+
+⭐⭐ `METHOD`: *a number borrowed because it was to hand is a guess wearing another rule's
+authority.* `flickWindow` was judged for the FLICK; nothing about it was ever about a gizmo.
+
+✅ **AND THE GIZMO GAINED A WHITE CIRCLE AT ITS CENTRE** — the owner: *"so I can identify the
+leadingface easily."* ⛔ A sphere rather than a disc, so it reads as a circle from every camera
+without billboarding, sized in PIXELS through rule 6's tracking factor so it keeps a constant
+apparent size as the camera comes in, unlit and in the gizmo's own rendering group.
