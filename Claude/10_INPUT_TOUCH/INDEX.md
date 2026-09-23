@@ -12,6 +12,17 @@ look covers both. ⚠ Two things it does not cover: **`dy` no longer twists**, a
 should be the DEFAULT — `rotationIncrementDeg` still ships at **0**
 → [`../00_CORE/queue_notes/IN3.md`](../00_CORE/queue_notes/IN3.md).
 
+⛔⛔⛔ **THE OBJECT AXES ARE THE NEWEST RULE AND NO HAND HAS TOUCHED THEM** (`D74`/`D75`, 2026-09-22).
+A body is translated along **its own axes**: the boot camera's, **frozen for the scene**
+(`worldAxisB=1`, the default) — or the live camera's at `0` — and inside the capture zone the
+**LeadingFace normal, gravity and their orthogonal** instead, re-decided on the zone's **EDGE**.
+⛔ The channels moved with it: the holder's `dx`→**x**, its `dy`→**depth**, the second touchpoint's
+`dy`→**gravity**, each projected onto the axis's screen shadow and **not normalised**, so a
+foreshortened axis goes quiet instead of running away. ⭐ A **LeadingFace** gizmo marks the exit face
+along the direction the body actually goes. ⚠ Costs: the holder's `dy` is **dead at a level camera**,
+`screenTranslation` and `depthTranslate` are unwired debt, and a closed row (`IN4`'s rule 6) is
+reopened → [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md).
+
 ⚠⚠ **A TRIAL IS LIVE**: the **approach swing** (`D63`), with its own boot scene of two square
 pre-aligned parts. ✅ **FEEL ACCEPTED** — *"The feel is ok"* (2026-09-21). ⚠ Unjudged: whether
 it **helps**. ⛔ Read [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md) first — it
@@ -80,10 +91,9 @@ slider and 41 vectors. ⚠ Everything closed by a hand below was closed under fo
 which this model inherits everywhere it does not override them. ⛔ **No device look on the
 alignment rules yet**; the ordered test list is §10 of
 [`spec/ALIGNMENT_RULES.md`](spec/ALIGNMENT_RULES.md).
-⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no
-longer exists were **deleted, not kept green**. ⛔ A vector whose subject is gone does not
-protect anything — it certifies a module nothing calls, which is exactly how the roll
-detector stayed alive long enough to cause defect 40.
+⭐⭐ **THE COUNT WENT DOWN, AND THAT IS THE POINT**: 58 vectors describing a gesture that no longer
+exists were **deleted, not kept green** — a vector whose subject is gone certifies a module nothing
+calls, which is how the roll detector survived to cause defect 40.
 
 ### ⭐⭐ The amendments, and what of them is on the glass
 
@@ -101,22 +111,18 @@ detector stayed alive long enough to cause defect 40.
 | `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?touchpointAssignment=1`, and ⭐ **fork C** (`=2`) makes a TAPPED second touchpoint toggle the ongoing drag — ⛔ which also picks the second finger's axis, **depth or roll, never both** | 🔧 ✅✅ **fork C CLOSED and now the DEFAULT** (2026-09-16) after three formulations of its toggle — the **verdict between the forks** is row `IN13`, not due until the input system can be judged whole |
 | `A15` | ⚠⚠ **REVERSED BY `D54`** — the orphan unselect, `holder_binding.ts`, `relatchOnOrphan` and 16 vectors are **deleted**; a holder keeps its object for the touchpoint's lifetime and `IN2`'s latch has no exceptions again → [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md) | ⛔ gone |
 
-⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH** — a mean, a latch, a cumulative exit, a
-shared minimum, a faded blend, then `A6`'s driver/validator. ⭐⭐ Its two transferable lessons
-are **in [`../00_CORE/METHOD.md`](../00_CORE/METHOD.md) word for word** — *a blend has seams*,
-and *when a rule needs a WINDOW to decide, suspect the QUESTION* — so they live there and not
-here: a front door carries STATE, and `METHOD` is where a lesson binds every row.
-(Distilled 2026-09-21 to pay for the trial's feel verdict; the cap is what forced it.)
+⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH.** ⭐⭐ Its two transferable lessons are in
+[`../00_CORE/METHOD.md`](../00_CORE/METHOD.md) word for word — *a blend has seams*, and *when a rule
+needs a WINDOW to decide, suspect the QUESTION*.
 
 ✅✅ **`IN2` is CLOSED** (2026-09-14, 22 vectors, `src/input/router.ts`, confirmed by
 finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at press for the
 touchpoint's lifetime** (§4), bindings keyed by pointer id so §0's order-independence
 holds in both release orders, and `activeCount` excludes ignored touchpoints because
 that is the count the §4 rule table is written against.
-✅ **Its visible consequence was judged by finger and accepted**: lift the finger holding a
-part while a second finger rests on that same part and **the part stops responding** —
-the second was ignored at press and stays ignored until it lifts. The HUD prints the
-latched roles (`#1OBJ #2IGN  active=1`) so that is distinguishable from a bug.
+✅ **Its visible consequence was judged by finger and accepted**: lift the finger holding a part
+while a second rests on that same part and **the part stops responding** — the second was ignored at
+press. The HUD prints the latched roles (`#1OBJ #2IGN active=1`), so it is not a bug.
 → [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
 
 🔨 **`IN3` IS IN PROGRESS**, 40 vectors of logic standing ahead of any renderer.
@@ -179,44 +185,23 @@ gains, rule 6's four feel numbers and the two sway sets — all chosen by a hand
 
 ## ⛔⛔ Where the build already had to DEPART from the spec
 
-**§1.1's `MOVING` condition is unusable as written.** The spec enters `MOVING` when
-*"accumulated travel since the last `STATIONARY` frame exceeds `moveEnterDistance`"*.
-Accumulated travel is **path length**, and the path length of a resting finger is a
-**random walk: it grows without bound.** Every stationary touchpoint therefore reads
-`MOVING` after a few seconds, and every rule keyed on *"the other touchpoint is
-still"* — 6, 6bis, 6ter, 6quater — silently stops working.
-
-⭐ **Measured on the first test run**: ±0.5 px of jitter crossed the 1.5 mm threshold
-in **under half a second**.
-
-✅ **The build uses NET DISPLACEMENT FROM AN ANCHOR** (the point where the finger last
-came to rest), re-anchored on each return to `STATIONARY`. Jitter is bounded; a real
-drag is not. Both halves are pinned by vectors. → [`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md)
-
-⚠ **This is a spec amendment and it is the owner's to ratify.** It is recorded here
-rather than edited into the spec, per the tiered rules.
+**§1.1's `MOVING` condition is unusable as written.** Accumulated travel is **path length**, and a
+resting finger's path length is a **random walk that grows without bound** — so every stationary
+touchpoint eventually reads `MOVING` (measured: ±0.5 px of jitter crossed 1.5 mm in under half a
+second) and every rule keyed on *"the other touchpoint is still"* silently stops working.
+✅ The build uses **NET DISPLACEMENT FROM AN ANCHOR**, re-anchored on each return to `STATIONARY`.
+⚠ A spec amendment, the owner's to ratify → [`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md)
 
 ---
 
 **§1.3's state machine has no DOUBLE-TAP, and §1.4 cannot work without one.**
 `IN1`, 2026-09-13.
 
-§1.4 and rule 2septies make a **double-tap the ONLY way a constraint is ever
-evicted** — `clearStack` in `core/constraint_stack.ts` exists for exactly that, and
-no drag clears constraints by design. But §1.3's state machine stops at `TAP`, and
-`gestureConfig.ts` carried **no tap tunable at all**. So the constraint stack was
-write-only: a user who anchored a face wrongly had no way back.
-
-✅ Added, and they are placeholders like everything else: `tapMaxDuration`,
-`doubleTapWindow`, `doubleTapSlop`.
-
-⭐ **And `TAP` needed a time bound it did not have.** §1.3 reads
-`PRESSED -> (release before moveEnterDistance) -> TAP`, with no duration. Taken
-literally, a finger resting for ten seconds and lifted without moving is a `TAP`, and
-two of those clear a constraint stack the user spent a gesture building. The build
-adds a **`HOLD`** outcome — commits to nothing, fires no rule — for a press held
-longer than `tapMaxDuration`. ⚠ `HOLD` is deliberately inert; if it should do
-something, that is a new rule and the owner's to write.
+§1.4 and rule 2septies make a **double-tap the only way a constraint is evicted**, but §1.3's state
+machine stopped at `TAP` and the config carried no tap tunable — so the stack was write-only.
+✅ Added as placeholders: `tapMaxDuration`, `doubleTapWindow`, `doubleTapSlop`. ⭐ And `TAP` needed a
+time bound it did not have: taken literally a ten-second press lifted without moving is a `TAP`, so
+the build adds a deliberately inert **`HOLD`** outcome above `tapMaxDuration`.
 
 ⛔ **Double-tap memory cannot live in the per-touchpoint recognizer.** Two taps are
 two different pointer ids, so the recognizer that saw the first is already gone when
@@ -235,16 +220,10 @@ this front door: [`history/2026-09-13_IN1_device_passes.md`](history/2026-09-13_
 
 **⛔⛔ `moveExitDistance` — AND EVERY OTHER §1.1 THRESHOLD — IS GONE.** `A11`, 2026-09-15.
 
-This section used to describe the excursion bound being wired in `IN1`, and the
-`stillSpeed × stillTime > moveExitDistance` consistency rule that made it reachable. ⭐ All
-of it was correct and all of it is retired: the owner replaced §1.1 with a **per-axis
-position deadband**, and `stillSpeed`, `stillTime`, `moveEnterDistance` and
-`moveExitDistance` were deleted together with the rule that related them.
-
-⚠ **What replaced the reasoning, not just the numbers**: those four were each a threshold
-chosen to sit ABOVE a measurement, and §1.1 broke on a real pointer **three times** that
-way — accumulated travel, instantaneous speed, and speed over one sample pair. ⭐ A
-displacement deadband needs no such choice.
+⭐ The owner replaced §1.1 with a **per-axis position deadband**, and `stillSpeed`, `stillTime`,
+`moveEnterDistance` and `moveExitDistance` went with the rule that related them. ⚠ What replaced the
+REASONING, not just the numbers: each was a threshold chosen to sit ABOVE a measurement, and §1.1
+broke on a real pointer **three times** that way. A displacement deadband needs no such choice.
 
 ⭐⭐ **The full sequence, and it is the most instructive file in the project:**
 [`../00_CORE/queue_notes/IN0.md`](../00_CORE/queue_notes/IN0.md).
@@ -324,6 +303,8 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | ⛔ ~~`holder_binding.ts`~~ | **DELETED 2026-09-18** (`D54`) — `A15`'s *is the object still UNDER the finger?* raycast. ⭐ `IN2`'s latch has no exceptions again |
 | `align_snap.ts` | `D45`'s eased slerp into the aligned pose — ⛔⛔ **one snap PER BODY**, not one slot for the scene: the audit found a second alignment abandoning the first **mid-arc**, still wearing its constraint and its markers |
 | `rotation_increment.ts` | ⭐⭐⭐ `D73` — a held body is **always ON an increment**, jumping several at once so a backlog cannot exist. ⚠ Its step is an **exponential approach**: no clock to restart (defect 50) |
+| `object_axes.ts` | ⭐⭐⭐ `D74` — which basis a body is translated along: the boot camera's (frozen), the live camera's, or the LeadingFace's inside the capture zone. ⛔ Re-decided on the zone EDGE, which is what breaks the circularity |
+| `axis_translate.ts` | ⭐⭐⭐ `D75` — the three channels projected onto those axes, **not normalised**, and `A5`'s depth clamp carried over with the channel. ⭐ The depth sign falls out of the projection instead of being asserted |
 | `pinned_pioneer.ts` | ⭐⭐ `D51` — a held **Pioneer** that steers instead of being carried: at `pioneerTranslates = 0` its finger gives the Follower **both** depth and roll, breaking `A16`'s one-axis rule on purpose |
 | `pioneer_cascade.ts` | a turned Pioneer **releases its cyan followers and rotates its orange ones, down a chain** (`D42`/`D70`), with **no cycles**. ⛔ It states this layer's rule: *a RULE in a render file is one nothing can interrogate* |
 | `highlight.ts` | the white **capture** contours — the pair's SURFACE gap (`D49`) in mm on the glass, and the shell that IS that threshold, inflated by **half** it so two whites touching means capture |

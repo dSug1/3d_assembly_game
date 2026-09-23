@@ -159,3 +159,24 @@ overlooked.
 ⭐ `METHOD`: *retractions are kept on purpose.* ⚠ And the more useful lesson is that the
 formulation a hand preferred turned out to be the one with **less** exposure, not more — the
 novelty had been bought to solve a problem the fourth formulation simply does not have.
+
+
+## ⭐⭐⭐ THE OBJECT AXES AND THE AXIS PROJECTION — registered 2026-09-22 (`D74`/`D75`)
+
+⚠ Registered **at the moment of adoption**, per `CONSTRAINTS` §10, and before a hand has judged
+any of it. ⛔ A register, not an opinion, and nothing here is legal advice.
+
+| the part | verdict | the citation, or the gap |
+|---|---|---|
+| **Translating along a body's own axes rather than the screen plane** | ✅ **PRIOR ART, and universal** | Every CAD and DCC package: Blender's `G X/Y/Z` with *Global / Local / View* transform orientations, Maya's object-vs-world move handles, AutoCAD's UCS. Decades old. [Blender manual](https://docs.blender.org/manual/en/latest/scene_layout/object/editing/transform/control/orientations.html) |
+| **Projecting a pointer delta onto an axis's SCREEN projection to drive motion along it** | ✅ **PRIOR ART** | This is how an axis-constrained drag has always been mapped in a 2D-input 3D editor; Blender's `transform` module does exactly this, and its source is public (GPL — read, never copied). ⭐ Ours is written from the geometry, as the three-ring orbit was |
+| **A 3-axis gizmo drawn at a point on the body** | ✅ **PRIOR ART** | The transform manipulator, conventional since the 1990s; Conner et al., *Three-dimensional widgets*, I3D 1992. [ACM](https://dl.acm.org/doi/10.1145/147156.147199) |
+| **Freezing the reference frame at scene boot (`WorldAxisB`)** | ✅ **PRIOR ART** | A world/global transform orientation is the DEFAULT in every package above. ⚠ What is unusual here is only that the "world" is defined by the boot camera rather than by the scene's axes — a choice of basis, not a technique |
+| ⚠ **Choosing the axis basis from the face the body is ADVANCING ON, and swapping it on entering a proximity zone** | ⚠ **INTERNAL COMPOSITION, and the entry a review should look at** | Searched 2026-09-22 across the transform-orientation and snapping literature. Face-normal orientations exist (Blender's *Normal* orientation, snapping to face normals since 2.8) and proximity-triggered docking aids exist (`D46`'s own anchors); **a basis that switches automatically at a capture threshold, built from the exit face of a motion ray**, is a composition I could not find described. ⛔ Its parts are each prior art; the assembly is ours |
+
+⭐⭐ **THE NEGATIVE RESULT IS RECORDED WITH ITS DATE ON PURPOSE** — `METHOD`: *a negative result
+that cannot be re-run is an assertion, not a finding*. ⚠ Absence of a found publication is not
+absence of prior art. ⭐ Note also what this change **removed** from the exposure surface: the
+rejected Blender-exact normalisation would have needed a cutoff rule of our own, and the chosen
+form has none.
+

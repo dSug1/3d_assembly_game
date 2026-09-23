@@ -450,3 +450,26 @@ inflate the numbers of tuning parameters sliders."* ⛔⛔ **NOT the rejected ro
 that was a follower on CONTINUOUS rotation and a hand threw it out; this is a **discrete** pose
 change played over time, like the camera's fly-home, and it rides on `cameraResetMs`.
 ⚠ Moved here, not superseded — the row stays in `DECISIONS.md` and the rule is in force.
+
+
+## Moved 2026-09-22 to pay for `D74`/`D75` — all three decisions are LIVE
+
+⚠ Consequence text only. The rows stay in `DECISIONS.md`, marked **⭐ Binding**, and the rules
+are in force. ⛔ Moved because the addition had to pay for itself, which is the ratchet working.
+
+| `D73` | ⭐⭐⭐ **A ROTATION IS ALWAYS ON AN INCREMENT** — ✅✅ **CLOSED BY A DEVICE LOOK** | 2026-09-22 | *"stop to an increment and not rotate further if the delta position input becomes too weak"*, then *"the rotation increments are judged and this is ok"*. ⭐ `rotationIncrementDeg` 0–45/5. ⛔⛔ **FOUR FORMULATIONS, THREE REJECTED BY A HAND**: quantising live LAGGED, rounding at the release went FORWARD, truncating on rest REVERSED — each let the body hold a pose it was not allowed and then argued about the way back. The fourth never leaves one. ⚠ Covers defects 49–50. ⛔ It still **ships at 0**, and **`dy` no longer twisting is the unjudged cost** |
+
+| `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | *"modify the rectangle on the right to be a trapezoidal pyramid"*, then *"increase 50% the thickness (in the x axis direction)"*. ⭐⭐ Built by MOVING a Babylon box's vertices (`core/frustum.ts`), so the builder's winding survives. ⛔ Everything downstream inherited it free — `D49`/`D50` had already made the hull and the faces MESH-derived, and this is the body that proves they paid. ⛔⛔ **The boot clearance moved 320 → 300 mm** and the fixtures followed the product. ⚠ The boot pair aligns on the flat **±y** faces — a frustum has no exact `+x` one |
+
+| `D63` | ⭐⭐⭐ **THE APPROACH SWING — the camera looks around the join and comes back** (TRIAL) | 2026-09-19 | *"the camera orbits opposite to the dx movement … when the offset is null the camera shall be back to its original position."* ⭐⭐ Parallax: an approach seen head-on gives a hand almost no depth cue. ⛔⛔ The return is **by construction** — an offset that is exactly zero at both ends — not a snapshot restore → [`../../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md) |
+
+
+## Also moved 2026-09-22 — three LIVE rows whose full text is in the alignment spec
+
+| `D60` | ⭐⭐⭐ **AND THE FIRST TOUCH THEN TRANSLATES, WHATEVER THE MODE** | 2026-09-19 | *"… and the first touch shall control the translation with delta position x and y (which is currently the case in translation mode but not in rotation mode)."* ⛔⛔ A **DOF budget**: once the second touch owns roll + depth, leaving the first on the twist puts two fingers on ONE DOF. ⭐ It is `translatesOnDrag`'s own two-object rule generalised — which is why the owner saw it already working on the Pioneer → §5.8 |
+
+| `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | *"if i double tap without release the pioneer and press the follower → orange, the translation/rotation mode toggles: it should not."* ⭐ An invariant break, not a new rule: `D28`'s *two taps revert* was keyed to the second RELEASE, which `D67`'s orange never makes. ⛔ The completing PRESS takes that toggle over, and its own release is spent → §5.15 |
+
+| `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | *"… whatever the orientation of the duo. If there are cos or sin projections on axis based on orientation, remove those projections."* ⛔⛔ Device-reported, and not the degeneracy anyone had written down: authority was `|dir.x|`, **zero** for an axis horizontal on screen — and **silent**. ⛔ Only the RATE could go; the sign is latched at the press → §5.5 |
+
+| `D44` | ⭐⭐ **A TAP ON ANOTHER OBJECT'S FACE ALIGNS IN **EITHER** MOVEMENT MODE** | 2026-09-17 | *"In translation mode, a tap or a double tap on the second object PioneerFace also toggles the alignment logic (same as for rotation)."* ⛔⛔ It overturns a condition I had called **load-bearing** on over-broad reasoning: what keeps `D28`'s toggle reachable is a tap on **empty space or the held object**, not every tap in `TRANSLATE`. ⭐ `TapContext` no longer carries the mode → the alignment spec |

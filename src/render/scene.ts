@@ -59,14 +59,12 @@ import {
   pairBarycentre,
   PointerNoiseMeter,
   PointerRouter,
-  screenTranslation,
   advanceFollow,
   rollDragDeg,
   secondFingerDrive,
   gravityFrame,
   type GravityFrame,
   depthLimits,
-  depthTranslate,
   initialBehaviour,
   isTapRelease,
   pairPressRevertsToggle,
@@ -144,7 +142,7 @@ import {
   faceWorld,
   pushObjectConstraint,
 } from "../core/object_model";
-import { IDENTITY, qmul } from "../core/vec";
+import { IDENTITY, dot, normalize, qmul } from "../core/vec";
 import { seededRotations } from "../core/random_pose";
 import { AlignmentLinks } from "../core/alignment_links";
 import { AlignSnaps } from "../input/align_snap";
@@ -169,6 +167,18 @@ import {
   type HighlightVerdict,
 } from "../input/highlight";
 import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
+// ⭐⭐⭐ **THE OBJECT AXES AND THE PROJECTION ONTO THEM** (the owner, 2026-09-22). ⛔ Every
+// DECISION is in `src/input`; this file holds the state and the call. That is the 2026-09-19
+// lesson, and it cost seven surviving mutants to learn: *a rule written in `scene.ts` is a rule
+// nothing can interrogate*.
+import {
+  axesFromFrame,
+  updatedObjectAxes,
+  zoneEdge,
+  type ObjectAxes,
+} from "../input/object_axes";
+import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
+import { leadingFace, type LeadingFace } from "../core/leading_face";
 import {
   pitchOffsetV,
   freezeProgress,
@@ -1511,6 +1521,180 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     offsetM: 0,
   };
 
+  /**
+   * ⭐⭐⭐ **THE OBJECT AXES — STATE ONLY. THE RULE IS `input/object_axes.ts`.**
+   *
+   * The owner, 2026-09-22: *"at scene boot, all object axis are updated based on camera
+   * quaternion at scene boot"*, and thereafter they are re-decided **on a zone edge**.
+   *
+   * ⛔⛔ **WHY A MAP HERE AND NOT A FIELD ON `SceneObject`**: the axes are an INPUT-layer
+   * concept — which way a finger pushes a body — and the model is the geometry every rule
+   * agrees on. ⚠ Putting them on the model would give `frozen`, `attach` and the placement
+   * writers a fourth thing to carry, for a quantity none of them reads.
+   *
+   * ⭐ A body with no entry uses the BOOT axes, which is the dictation's own default rather
+   * than a stand-in: *all* object axes are the boot camera's until something moves them.
+   */
+  let bootObjectAxes: ObjectAxes | null = null;
+  const objectAxes = new Map<ObjectId, ObjectAxes>();
+  /** The world vertical, from the model's own `down`. ⛔ Never a second opinion about up. */
+  const WORLD_UP: Vec3 = [-WORLD_DOWN[0], -WORLD_DOWN[1], -WORLD_DOWN[2]];
+  /**
+   * ⛔ `bootObjectAxes` is filled at boot, below the last `const` this file declares — a
+   * lazily built one would capture *the camera at first drag*, which is not what was asked
+   * for. ⚠ The final fallback exists only so a call before that point cannot read `null`;
+   * `METHOD` — a guard that turns a broken state into silence is worse than a failure, and
+   * this one at least returns a real basis.
+   */
+  const axesOf = (id: ObjectId): ObjectAxes =>
+    objectAxes.get(id) ?? bootObjectAxes ?? axesFromFrame(requireGestureFrame());
+  /** ⚠ Last frame's range verdict. The EDGE is what moves the axes, never the level. */
+  let zoneWas = false;
+  /**
+   * ⛔ The pair that was in range when the zone was ENTERED, so the EXIT edge can reach the
+   * same two bodies. ⚠ At the exit `highlighted.pair` is already `null` — the verdict that
+   * tells you a body has left is the one that no longer names it.
+   */
+  let zonePair: readonly ObjectId[] = [];
+  /**
+   * The face each body is advancing on, recomputed every frame it moves. ⭐ The gizmo is
+   * drawn from this, and the in-zone basis is built from it at the edge.
+   */
+  const leading = new Map<ObjectId, LeadingFace>();
+  /**
+   * ⭐⭐ The world direction a body was last translated in — **the direction it ACTUALLY
+   * went**, after the projection, which is the owner's choice for the ray (2026-09-22) over
+   * the finger's own screen direction. ⛔ Zeroed by nothing: a body that stops keeps its
+   * gizmo where it was rather than losing it for a frame of stillness.
+   */
+  const lastTravelDir = new Map<ObjectId, Vec3>();
+
+  /**
+   * ⛔⛔ **`CameraOffsetZoneEnter` — DECLARED, CALLED, AND EMPTY BY INSTRUCTION.**
+   *
+   * > *"if CameraOffsetZoneEnterSetupB is toggled on - launch the CameraOffsetZoneEnter
+   * > method (we will define it later on)."* — the owner, 2026-09-22
+   *
+   * ⚠ It is here so that the behaviour lands in ONE named place when it is dictated, and so
+   * the flag that gates it is genuinely read rather than declared debt. ⛔ It does nothing
+   * today and the HUD says so — an empty method that pretended to act would be the dead
+   * instrument shape this project met three times on 2026-09-16 alone.
+   */
+  let zoneEnterCalls = 0;
+  const cameraOffsetZoneEnter = (): void => {
+    zoneEnterCalls += 1;
+  };
+
+  /**
+   * ⭐⭐⭐ **THE LEADING-FACE GIZMO** — *"Add a 3-axis gizmo on the center of the LeadingFace.
+   * Update the gizmo position to follow the object translation. Update the gizmo directions to
+   * align with object axis directions."* (the owner, 2026-09-22).
+   *
+   * ⛔⛔ **POSITIONED FROM THE MODEL, NOT FROM THE MESH, AND NOT PARENTED.** Two traps meet
+   * here and they pull opposite ways:
+   *
+   *  * reading `mesh.getWorldMatrix()` gives Babylon's CACHED matrix, recomputed inside
+   *    `scene.render()` — i.e. AFTER this — so every marker drew its object's PREVIOUS pose
+   *    (defect 46, found by a hand);
+   *  * parenting to the body fixes that for a POSITION, and would be wrong here for the
+   *    DIRECTIONS: the object axes are WORLD directions, and a parented gizmo would turn with
+   *    the body and stop pointing along them.
+   *
+   * ⭐ Reading the face centre out of the model (`core/leading_face.ts` → `faceWorld`) escapes
+   * both: the model is what every rule wrote this frame, and the axes are applied in world
+   * space with no parent to rotate them.
+   *
+   * ⚠ **THREE SEPARATE LINE MESHES, ONE PER AXIS**, because `CreateLines` carries ONE colour —
+   * and the colours are the channels: x, gravity, depth, in that order.
+   */
+  const GIZMO_AXIS_COLOURS = [
+    new Color3(1, 0.35, 0.35),
+    new Color3(0.4, 1, 0.45),
+    new Color3(0.45, 0.6, 1),
+  ] as const;
+  interface AxisGizmo {
+    readonly lines: readonly [LinesMesh, LinesMesh, LinesMesh];
+  }
+  const axisGizmos = new Map<ObjectId, AxisGizmo>();
+  const gizmoFor = (id: ObjectId): AxisGizmo => {
+    const existing = axisGizmos.get(id);
+    if (existing) return existing;
+    const mk = (i: number): LinesMesh => {
+      // ⚠ Two points, updatable: the geometry is rewritten every frame rather than the mesh
+      // being disposed and rebuilt, which would churn a buffer per axis per frame.
+      const m = CreateLines(
+        `axis-gizmo-${id}-${i}`,
+        { points: [Vector3.Zero(), Vector3.Zero()], updatable: true },
+        scene,
+      );
+      m.color = GIZMO_AXIS_COLOURS[i]!.clone();
+      m.isPickable = false;
+      m.isVisible = false;
+      // ⛔ OUT of the barycentre candidate set, exactly as the orbit marker is: an instrument
+      // that became a candidate would move the very centre it is drawn to describe.
+      m.metadata = { orbitCandidate: false };
+      return m;
+    };
+    const made: AxisGizmo = { lines: [mk(0), mk(1), mk(2)] };
+    axisGizmos.set(id, made);
+    return made;
+  };
+
+  /**
+   * Redraw every live gizmo, and hide the rest.
+   *
+   * ⛔ **WHILE THE DELTA POSITION IS NOT ZERO** is the owner's condition, and `A11`'s deadband
+   * is what answers it: `step` is the travel that SURVIVED the dead radius, so a resting finger
+   * emits nothing and the gizmo simply stops updating. ⚠ It is not hidden on a still frame —
+   * a gizmo that blinked out whenever the hand paused would be unreadable.
+   */
+  const refreshAxisGizmo = (): void => {
+    const live = new Set<ObjectId>();
+    for (const grip of held.values()) {
+      if (grip.mode !== "TRANSLATE") continue;
+      const id = idOf.get(grip.mesh);
+      if (id === undefined) continue;
+      const dir = lastTravelDir.get(id);
+      if (!dir) continue;
+      const hit = leadingFace(world, id, dir);
+      // ⛔ NO STAND-IN. A body whose geometry cannot answer shows no gizmo, exactly as
+      // `⛔NOSHAPE` shows no capture shell — suppress rather than substitute.
+      if (!hit) continue;
+      leading.set(id, hit);
+      live.add(id);
+      const axes = axesOf(id);
+      // ⭐ Sized from the body's own reach to that face, so it reads the same on a part and on
+      // the base plate. ⚠ A fixed metre length would be invisible on one and enormous on the
+      // other, which is the `Map<name, dims>` mistake `D50` deleted, one layer up.
+      const len = Math.max(hit.distanceM, 0.01) * 1.5;
+      const g = gizmoFor(id);
+      const dirs = [axes.x, axes.gravity, axes.depth] as const;
+      for (let i = 0; i < 3; i++) {
+        const a = dirs[i]!;
+        const line = CreateLines(
+          `axis-gizmo-${id}-${i}`,
+          {
+            points: [
+              new Vector3(hit.centre[0], hit.centre[1], hit.centre[2]),
+              new Vector3(
+                hit.centre[0] + a[0] * len,
+                hit.centre[1] + a[1] * len,
+                hit.centre[2] + a[2] * len,
+              ),
+            ],
+            instance: g.lines[i]!,
+          },
+          scene,
+        );
+        line.isVisible = true;
+      }
+    }
+    for (const [id, g] of axisGizmos) {
+      if (live.has(id)) continue;
+      for (const line of g.lines) line.isVisible = false;
+    }
+  };
+
   const refreshHighlight = (): void => {
     // ⭐ Held bodies in PRESS ORDER, de-duplicated — `router.objects()` is ordered by press, and
     // press order is the only ordering a hand controls. ⚠ Two fingers on the SAME body collapse
@@ -1580,6 +1764,75 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // render file is a rule nothing can interrogate.
       (id) => links.partnersOf(id),
     );
+    // ⭐⭐⭐ **THE OFFSET RADIUS ZONE'S OWN EDGE — WHERE THE OBJECT AXES ARE RE-DECIDED.**
+    //
+    // > *"If the object has entered or exited an offset radius zone, Update the object axis
+    // > directions as per below method and — if CameraOffsetZoneEnterSetupB is toggled on —
+    // > launch the CameraOffsetZoneEnter method"* — the owner, 2026-09-22
+    //
+    // ⛔⛔ **IT IS THE SAME VERDICT THE WHITE CONTOURS ARE DRAWN FROM.** A second proximity
+    // test of its own would be free to disagree with the contours a hand is looking at —
+    // `D62`'s readout lesson, and the swing three lines below already obeys it.
+    //
+    // ⭐⭐ **ON AN EDGE, NEVER ON THE LEVEL, AND THAT IS WHAT BREAKS A CIRCULARITY**: in the
+    // zone the basis comes from the leading face, the leading face comes from the travel
+    // direction, and the travel direction comes from the basis. ⚠ Latching at the crossing
+    // resolves it, and `object_axes.ts` argues why that is also the right feel — a basis
+    // re-derived every frame would swing through 90° mid-push as the drag crossed a face.
+    {
+      const edge = zoneEdge(zoneWas, highlighted.inRange);
+      zoneWas = highlighted.inRange;
+      // ⛔⛔ **THE ZONE IS ENTERED BY PROXIMITY; THE DUO IS NAMEABLE ONLY WHILE A DRAG
+      // TRANSLATES.** `inRange` is a distance and `pair` additionally requires condition 2, so a
+      // hand can drift into range in ROTATE mode — the crossing happens, and there is nobody to
+      // apply it to. ⚠ Without this the body would then be dragged on the OUTSIDE basis while
+      // sitting inside the zone, and the edge that would have fixed it is already spent.
+      // ⭐ So the pair is latched the moment it becomes nameable, and that counts as the entry.
+      const named =
+        highlighted.pair === null
+          ? null
+          : [highlighted.pair.subject, highlighted.pair.target];
+      const becameNameable = highlighted.inRange && named !== null && zonePair.length === 0;
+      if (named !== null && (edge === "ENTER" || becameNameable)) zonePair = named;
+      if (edge !== null || becameNameable) {
+        // ⚠ Both bodies of the duo, because the dictation's condition names both: *"if
+        // pioneer and follower objects are inside the offset radius zone"*.
+        for (const id of zonePair) {
+          objectAxes.set(
+            id,
+            updatedObjectAxes({
+              // ⚠ THE STATE, not the edge's name: a late naming inside the zone is an entry too,
+              // and an EXIT is the only way this is false.
+              inZone: highlighted.inRange,
+              worldAxisB: cfg.worldAxisB === 1,
+              // ⛔ THE BOOT CAMERA'S BASIS, not this body's current one: `WorldAxisB`'s whole
+              // claim is that the axes are *"fixed forever for this scene"*, and feeding it
+              // the body's own axes would make it a no-op that looked like a rule.
+              bootAxes: bootObjectAxes ?? axesOf(id),
+              // ⛔ `gravityFrame`, not `requireGestureFrame`: this runs in the render loop,
+              // where a throw would take the whole frame down for a camera the orbit rings
+              // make unreachable anyway. ⭐ `rebaseGestureFrames` makes the same choice, for
+              // the same reason, and a `null` here keeps the basis the body has.
+              liveFrame: gravityFrame(screenFrame().viewAxis, WORLD_DOWN),
+              leadingNormal: leading.get(id)?.normal ?? null,
+              up: WORLD_UP,
+              previous: axesOf(id),
+            }),
+          );
+        }
+        // ⛔ The HOOK fires on the CROSSING only, never on the late naming: the owner's trigger is
+        // *"has entered … an offset radius zone"*, and a body that was already inside has not.
+        if (edge === "ENTER" && cfg.cameraOffsetZoneEnterSetupB === 1) cameraOffsetZoneEnter();
+        lastVerdict =
+          `axes: zone ${edge ?? "IN(named)"} → ${zonePair.length} body basis re-decided` +
+          (edge === "ENTER" && cfg.cameraOffsetZoneEnterSetupB === 1
+            ? `, CameraOffsetZoneEnter #${zoneEnterCalls} (no behaviour yet)`
+            : "");
+        // ⚠ Cleared AFTER the readout, or the line would report zero bodies on every exit.
+        if (edge === "EXIT") zonePair = [];
+      }
+    }
+
     // ⭐⭐⭐ **THE APPROACH SWING ARMS AND DISARMS ON THE CAPTURE'S OWN EDGES** — the trial on
     // branch `1.0.18-`. ⛔ The owner's trigger is *"when the offset radius is crossed (= white
     // highlights toggle on)"*, so it is THIS verdict and not a second proximity test: a rule
@@ -2620,6 +2873,37 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             (untaperedBodies.length === 0
               ? ""
               : `  ⛔NOTAPER(${untaperedBodies.join(",")})`) +
+            // ⭐⭐⭐ **THE OBJECT AXES, ON THEIR OWN LINE** (2026-09-22). ⛔ Three things a hand
+            // cannot see and would otherwise have to infer from how the body moved:
+            //
+            //  * **which rule is in force** — `WorldAxisB` frozen at boot, or the live camera;
+            //  * **whether this body is in the zone**, because the basis SWAPS there and *the
+            //    controls changed direction* is exactly what that feels like;
+            //  * **which face is leading**, since the in-zone basis is built from its normal.
+            //
+            // ⚠ `METHOD`: an absent readout cannot be caught by looking at the screen — and this
+            // rule's whole failure mode is *the body went somewhere I did not expect*, which no
+            // amount of watching the body can attribute.
+            `
+axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot)" : "WorldAxisA(live camera)"}` +
+            ` zone=${highlighted.inRange ? "IN" : "out"}` +
+            (zonePair.length === 0 ? "" : `(${zonePair.join("↔")})`) +
+            (cfg.cameraOffsetZoneEnterSetupB === 1 ? ` enterHook=${zoneEnterCalls}(no-op)` : "") +
+            // ⛔ Per HELD body, because that is the one whose axes are being used right now.
+            [...held.values()]
+              .map((g) => idOf.get(g.mesh))
+              .filter((id): id is ObjectId => id !== undefined)
+              .map((id) => {
+                const a = axesOf(id);
+                const f = leading.get(id);
+                const v = (x: readonly number[]): string =>
+                  `${x[0]!.toFixed(2)},${x[1]!.toFixed(2)},${x[2]!.toFixed(2)}`;
+                return (
+                  `  ${id} x=(${v(a.x)}) g=(${v(a.gravity)}) d=(${v(a.depth)})` +
+                  ` lead=${f === undefined ? "—" : `${f.faceId}@${(f.distanceM * 1000).toFixed(0)}mm`}`
+                );
+              })
+              .join("") +
             // ⭐⭐⭐ **WHERE THE OUTLINE PIPELINE STOPS** — added 2026-09-18 after a device report
             // of *"no outline of any sort"*, which four different failures produce identically:
             // no topology, no outline meshes built, no face markers, or a throw in the draw path.
@@ -2925,6 +3209,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // the same shape (`D26`) — and `validateGestureConfig` refuses anything between, so a
         // half-set flag cannot masquerade as the default.
         tunable("PIONEER translates (0=pinned)", "pioneerTranslates", 0, 1, 1),
+        // ⭐⭐⭐ **THE OWNER'S FLAG OF 2026-09-22 — `WorldAxisA` / `WorldAxisB`.** `1` (the
+        // default) fixes the object axes to the BOOT camera for the whole scene; `0` lets them
+        // follow the camera, which is the build before this. ⛔ It does NOT select the channel
+        // remap — `dy` drives depth and the second finger drives gravity either way.
+        tunable("WorldAxisB: axes fixed at boot (0/1)", "worldAxisB", 0, 1, 1),
+        // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
+        // ships at 0 and turning it on changes only what the HUD reports.
+        tunable("zone ENTER calls CameraOffsetZoneEnter (0/1)", "cameraOffsetZoneEnterSetupB", 0, 1, 1),
         // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
         // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
         // one pixel — so a width tunable would be a slider that does nothing, which is the
@@ -3098,31 +3390,56 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * earlier versions of this blended the two fingers' travel (a mean, a minimum, a faded
    * mean) and a hand felt every one of them: a blend has seams.
    */
+  /**
+   * ⭐⭐⭐ **THE SECOND TOUCHPOINT'S `dy` NOW DRIVES THE BODY'S *GRAVITY* AXIS** (the owner,
+   * 2026-09-22) — it drove the depth axis until then, and the holder's own `dy` has taken
+   * that over. ⛔ The channel moved; the plumbing did not. `secondFingerDrive` still decides
+   * WHETHER this finger is translating, `gainTranslateDepth` is still the gain, and the name
+   * of that tunable is deliberately unchanged: it is *the second finger's translate gain*,
+   * and renaming a number a hand has tuned is how a device session loses its baseline.
+   *
+   * ⚠⚠ **`depthTranslate` IS NOT CALLED ANY MORE**, and it is declared as such in
+   * `tests/unwired_debt.test.ts` rather than deleted: six models and five device passes are
+   * behind it, and rule 5 has not judged the remap that replaced it.
+   */
   const applyDepthStep = (grip: Held, dyPx: number): void => {
     const mp = requirePose(grip.mesh);
     const { minM, maxM } = depthLimits(cfg);
+    const gid = idOf.get(grip.mesh);
+    const axes = gid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf(gid);
+    const travel = axisTravel(
+      { holderDxPx: 0, holderDyPx: 0, secondDyPx: dyPx },
+      screenFrame(),
+      axes,
+      // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object as far
+      // along this axis as it would move it across the screen.
+      trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
+      cfg.gainTranslateScreen,
+      cfg.gainTranslateDepth,
+    );
+    const step = axisDisplacement(travel, axes);
+    {
+      const dir = normalize(step);
+      if (dir && gid !== undefined) lastTravelDir.set(gid, dir);
+    }
     setModelPose(grip.mesh, {
-      position: depthTranslate(
+      position: clampDepthRange(
         asVec3(camera.position),
-        mp.position,
-        // ⭐ Both latched at press with the rest of the frame. `towardGravity` is what
-        // says whether "away" rises or sinks on screen — it is +1 looking down on the
-        // scene and −1 looking up at it, and assuming +1 made the gesture backwards on the
-        // bottom ring.
+        [mp.position[0] + step[0], mp.position[1] + step[1], mp.position[2] + step[2]],
         grip.frame.depth,
-        Math.sign(grip.frame.towardGravity),
-        dyPx,
-        // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object
-        // as far INTO the scene as it would move it ACROSS. One hand's-worth of motion
-        // means the same amount of movement whichever way it is going.
-        trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
-        cfg.gainTranslateDepth,
         minM,
         maxM,
       ),
       orientation: mp.orientation,
     });
   };
+
+  // ⛔⛔ **THE OLD DEPTH RULE STOOD HERE UNTIL 2026-09-22.** `depthTranslate` moved the body
+  // along `GravityFrame.depth` with an `awaySign` of its own; the second touchpoint now drives
+  // the body's GRAVITY axis instead, and the projection supplies that sign. ⭐ Deleted from the
+  // call path rather than parked here: *a dormant fork is a trap* (`D28`), and the module itself
+  // survives with its vectors, declared in `tests/unwired_debt.test.ts` until rule 5 judges the
+  // remap that replaced it.
 
   /**
    * Feed the gate and, if this is a common drag, move the object. ⭐ Called from BOTH
@@ -4362,7 +4679,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         }
       }
       if (grip.mode === "TRANSLATE") {
-        // §4 RULE 6 — the object translates in the screen view plane.
+        // §4 RULE 6 — ⛔⛔ **NO LONGER THE SCREEN VIEW PLANE** (`D75`, 2026-09-22): the body is
+        // translated along ITS OWN AXES, and the two comments below about the gain and the
+        // deadband are the parts of rule 6 that survive unchanged.
         // ⛔ The gain is a MULTIPLIER on a COMPUTED tracking factor, not a number: at
         // 1.0 the object stays exactly under the finger at every camera distance. The
         // whole derivation, and the 20× spread that forced it, is in input/translate.ts.
@@ -4377,24 +4696,53 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // applied once in §1.1 and every rule reads the same side of it — so a still
         // finger moves nothing, and a drag leaves rest continuously rather than stepping
         // by the radius. ⛔ This is also amendment A9, met at the source.
-        const t = screenTranslation(
-          grip.rec.step.dx,
-          grip.rec.step.dy,
-          camera.radius,
-          camera.fov,
-          canvas.clientHeight,
+        // ⭐⭐⭐ **THE CHANNELS ARE REMAPPED (the owner, 2026-09-22)**: `dx` drives the body's
+        // **x** axis and `dy` drives its **depth** axis — both horizontal outside the zone — and
+        // the SECOND touchpoint's `dy` drives its **gravity** axis (`applyDepthStep`).
+        // ⛔⛔ It is unconditional: `worldAxisB` chooses WHICH axes, never whether the remap
+        // applies. ⚠ What it costs, and it is inherent rather than tunable: the holder's `dy`
+        // goes quiet at a level camera, where a depth change produces no screen motion at all.
+        // ⭐ `axis_translate.ts` derives it, and the sign `depthTranslate` needed `awaySign`
+        // for falls out of the projection instead of being asserted.
+        // ⚠ `sid` above is scoped to the shake block; this branch asks for its own. ⛔ A body
+        // the model does not know is given the boot basis rather than no basis — it is still
+        // being dragged, and the alternative is a frame in which the finger does nothing.
+        const tid = idOf.get(grip.mesh);
+        const axes =
+          tid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf(tid);
+        const travel = axisTravel(
+          { holderDxPx: grip.rec.step.dx, holderDyPx: grip.rec.step.dy, secondDyPx: 0 },
+          // ⛔ THE TRUE CAMERA AXES, not the gravity frame: the question is what the axis looks
+          // like ON THE GLASS. ⚠ Handing it `grip.frame` would make the depth channel's
+          // projection identically zero at every camera angle.
+          screenFrame(),
+          axes,
+          trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
           cfg.gainTranslateScreen,
+          cfg.gainTranslateDepth,
         );
-        // ⭐ The screen axes LATCHED AT PRESS, exactly as the rotation uses — so an
-        // orbit that happens mid-drag cannot redefine which way "right" is.
+        const step = axisDisplacement(travel, axes);
+        // ⭐⭐ THE DIRECTION THE BODY ACTUALLY WENT — what the LeadingFace ray is fired along,
+        // and the owner's choice over the finger's own direction. ⛔ Kept only when it is a
+        // real move: a frame of stillness must not erase the gizmo, and `normalize` of a zero
+        // vector is `null` rather than a guess.
+        {
+          const dir = normalize(step);
+          if (dir && tid !== undefined) lastTravelDir.set(tid, dir);
+        }
+        // ⚠ The swing still reads SCREEN travel (*"opposite to the dx movement"*), so the
+        // applied displacement is projected back onto the gravity frame rather than recomputed
+        // from the pointer — one computation, read two ways.
+        const t = { rightM: dot(step, grip.frame.right), upM: dot(step, grip.frame.up) };
+        // ⭐ `grip.frame` is still the basis LATCHED AT PRESS, and it is used here for the
+        // swing's readout and the depth clamp only — the body's own axes decide the motion, and
+        // with `worldAxisB` they were latched at BOOT rather than at this press.
         // ⛔ THE FINGER MOVES THE TARGET, NOT THE MESH. The mesh chases it in the render
         // loop. With `translateInertiaMs` at 0 the two are the same thing.
         // ⛔ THE FINGER MOVES THE MODEL. The follower's target is re-read from it every
         // frame, so the inertia stays exactly what it was — a filter on the way to the
         // screen, and no longer the place the object's position is kept.
         const mp = requirePose(grip.mesh);
-        const r = grip.frame.right;
-        const u = grip.frame.up;
         // ⚠ The swing's direction comes from here and nowhere else — *"opposite to the dx
         // movement"* means the travel this rule actually applied, not a raw pointer delta that
         // `A11`'s deadband may have swallowed.
@@ -4416,12 +4764,24 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           centreBlend.advance(Math.hypot(grip.rec.step.dx, grip.rec.step.dy) / mmToPx(1));
           syncCentre();
         }
+        // ⛔⛔ THE DEPTH RANGE STILL BINDS. `A5`'s bounds were derived — twice the near plane,
+        // and the camera's own maximum orbit radius — and the hazard did not move when the
+        // channel did: a body driven through the near plane renders *a black page with no
+        // error at all*, and one past the ceiling cannot be brought back by any zoom.
+        const wanted: Vec3 = [
+          mp.position[0] + step[0],
+          mp.position[1] + step[1],
+          mp.position[2] + step[2],
+        ];
+        const limits = depthLimits(cfg);
         setModelPose(grip.mesh, {
-          position: [
-            mp.position[0] + r[0] * t.rightM + u[0] * t.upM,
-            mp.position[1] + r[1] * t.rightM + u[1] * t.upM,
-            mp.position[2] + r[2] * t.rightM + u[2] * t.upM,
-          ],
+          position: clampDepthRange(
+            asVec3(camera.position),
+            wanted,
+            grip.frame.depth,
+            limits.minM,
+            limits.maxM,
+          ),
           orientation: mp.orientation,
         });
       } else if (grip.mode === "ROTATE") {
@@ -4840,6 +5200,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   let frames = 0;
   /** ⚠ One clock, `performance.now()`, as everywhere else in this file. */
   let lastFrameMs: number | null = null;
+  // ⭐⭐⭐ **THE AXES ARE BORN HERE, AT BOOT, FROM THE BOOT CAMERA** — *"at scene boot, all
+  // object axis are updated based on camera quaternion at scene boot"* (the owner, 2026-09-22),
+  // and with `worldAxisB` on they are *"fixed forever for this scene"*.
+  //
+  // ⛔⛔ **AT THE FOOT OF THE FACTORY AND NOT AT THE TOP, DELIBERATELY.** `requireGestureFrame`
+  // is a `const` declared half way down this file; reading it from an initialiser above its
+  // declaration is a TEMPORAL DEAD ZONE crash at boot — which this project has already shipped
+  // once, on 2026-09-19, and which takes the whole page down with a blank screen.
+  // ⚠ Every body inherits this basis through `axesOf`'s fallback rather than by a loop over
+  // the scene: a body created later (an import, a spawn) then gets the same answer, where a
+  // one-time loop would leave it with none.
+  bootObjectAxes = axesFromFrame(requireGestureFrame());
+
   engine.runRenderLoop(() => {
     const now = performance.now();
 
@@ -4867,6 +5240,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
 
     // ⭐⭐ `A16`: re-derived EVERY FRAME, here, before anything reads it.
     refreshHighlight();
+
+    // ⭐ The leading face and its gizmo, AFTER the highlight — the zone edge may have just
+    // re-decided the axes, and the gizmo is documented to point along them. ⚠ A gizmo drawn
+    // first would show the previous basis for one frame, at exactly the moment a hand is
+    // looking at it to see what changed.
+    refreshAxisGizmo();
 
     // ⭐⭐⭐ **AND THE APPROACH SWING IS PUT ON THE CAMERA HERE** — device-reported, 2026-09-19:
     // *"not working. the camera does not orbit."*

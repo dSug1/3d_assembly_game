@@ -629,3 +629,76 @@ rings.
 mistake shape 4 is most likely to recur: an assembly tree composes transforms through
 parent-child chains, which is what cost the predecessor a week. ⭐ Write the composite
 check BEFORE the code, not after.
+
+---
+
+## 2026-09-22 — ⭐⭐⭐ THE OBJECT AXES (`D74`) AND THE CHANNEL REMAP (`D75`)
+
+⚠⚠ **THIS REOPENS A ROW THAT WAS CLOSED BY A DEVICE LOOK.** Rule 6 was closed 2026-09-15 —
+*"confirmed by finger in ordinary play"* — and its screen-plane form is now off the call path. ⛔ The
+row's status says so in both directions, because a closed row that quietly changed is the worst kind
+of stale: the next reader would trust a verdict that was given about different code.
+
+### What the owner asked for, in three parts
+
+**A — a flag.** `WorldAxisB` (default **1**): the world x / gravity / depth axes are built **at scene
+boot from the boot camera and fixed forever for this scene**. At `0` they follow the camera, which is
+the build up to today. ⭐ At boot, every body's axes are the boot camera's either way.
+
+**B — the channels move onto those axes.** The holder's `dx` drives the body's **x**, its `dy` drives
+the body's **depth**, and the SECOND touchpoint's `dy` drives its **gravity** — each input projected
+onto its axis, *"same as what Blender does"*. ⛔ So one finger slides a body about its own horizontal
+plane and a second finger lifts it: `dy` and the second finger swapped jobs. ⭐ While a body is
+moving, a ray from its centre along the direction it is **actually going** names the **LeadingFace**,
+which carries a 3-axis gizmo.
+
+**C — the capture zone overrides the basis.** Inside the offset radius the axes are the LeadingFace
+normal, gravity, and their orthogonal — *"therefore the translation direction differs when the object
+is inside the offset radius zone"*.
+
+### The three questions the dictation did not settle, and the owner's answers
+
+| question | answer, 2026-09-22 | why it mattered |
+|---|---|---|
+| the in-zone triple is not orthogonal on a sloped face | **orthogonalise** — gravity exact, the normal flattened | `A7`'s argument again: *there is no gain that fixes a basis that is not a basis*, and depth/gravity would otherwise overlap by `cos(slope)` |
+| which direction does the LeadingFace ray follow | **where the body actually goes**, after projection | the finger's own direction names a face the body never advances on the moment the axes stop matching the screen — which is what this whole change does |
+| Blender divides by the axis's screen foreshortening | **do not divide** | dividing tracks the finger exactly and goes to infinity as an axis turns to face the camera, so it needs a cutoff — *a guessed number has been wrong every single time here*. Not dividing makes a foreshortened axis go QUIET |
+
+### ⭐⭐ What came out of it that was not asked for
+
+⛔⛔ **THE DEPTH SIGN STOPPED BEING A RULE AND BECAME ARITHMETIC.** `depthTranslate` needs
+`awaySign = sign(towardGravity)` because *fingers-up means away* is true looking down on the scene and
+**backwards from the bottom ring** — a defect found by finger (*"the depth translation is chaotic"*).
+⭐ In the projection that sign is `dot(depthAxis, cameraUp)`: positive looking down, negative looking
+up, **zero at a level camera**. The same three answers, none of them asserted. ⚠ One fewer quantity
+that can be wrong, and the degenerate case is the quiet one rather than the reversed one.
+
+### ⚠ What it costs, stated rather than discovered
+
+* **The holder's `dy` is dead at a level camera.** A depth change produces no screen motion there, so
+  there is nothing for the finger to follow — the **sixth** appearance of *goes quiet before it
+  fails* on this project. ⛔ Inherent to the mapping, not tunable, and on the HUD.
+* **A closed rule's feel is unjudged.** `gainTranslateScreen` = 1.17 was tuned for a screen-plane
+  drag; nothing says it is right for two horizontal channels.
+* **`screenTranslation` and `depthTranslate` are unwired**, declared in `tests/unwired_debt.test.ts`
+  rather than deleted — six models and five device passes are behind the second one, and rule 5 has
+  not judged what replaced it.
+* **`cameraOffsetZoneEnterSetupB` gates a method that does not exist.** It ships at `0`, the hook is
+  named and empty, and the HUD says `(no-op)` when it is on.
+
+### The build
+
+⭐ Engine-free: `core/leading_face.ts` (the exit face of a convex body, from the LOGICAL faces — no
+triangles, no picking), `input/object_axes.ts` (the basis rule and the zone edge), `input/axis_translate.ts`
+(the projection, the composition and `A5`'s depth clamp, carried over with the channel).
+⛔ `scene.ts` holds **state and calls only** — the 2026-09-19 lesson, seven surviving mutants deep.
+✅ **32 vectors**, and three deliberate mutants — a dropped negation on the depth channel, a flipped
+in-zone handedness, the FARTHEST exit instead of the nearest — each caught by the vector written for it.
+⚠⚠ **MISTAKE SHAPE 5 AGAIN, INSIDE THE HOUR**: the first fixture built the camera's `up` as
+`right × view` instead of `view × right`, which inverted two channels and read exactly like a sign
+defect in the product. ⭐ The fixture was wrong and the code was right, which is the fifth shape's
+whole signature.
+
+⛔⛔ **A DEVICE LOOK IS OWED ON ALL OF IT**, and there is no way around it: nothing here can be judged
+headlessly, the default is the NEW rule (the owner's choice), and the one thing a suite cannot answer
+is whether a body that moves in its own horizontal plane feels like a body you are pushing.

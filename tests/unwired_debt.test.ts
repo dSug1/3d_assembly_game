@@ -47,6 +47,21 @@ const PENDING: Record<string, string> = {
   // sign replaced it. ⚠ That trade gives up `dy`'s contribution, and no finger has judged it.
   // ⭐ So the implementation stays until the device pass says which way it goes — then it is
   // deleted with its ~25 vectors, or it is wired back.
+  // ── Superseded 2026-09-22 by the OBJECT AXES, and kept for the same reason. ──────────
+  // ⛔⛔ The owner's remap sends the holder's `dy` to the body's DEPTH axis and the second
+  // touchpoint's `dy` to its GRAVITY axis, both through `axis_translate.ts` — so rule 6's
+  // screen-plane form and `A5`/`A10`'s depth rule are off the call path together. ⚠ Neither is
+  // stale: **six models and five device passes** are behind `depthTranslate`, rule 6's gain is
+  // the one computed number on this project, and **no hand has judged the remap**. ⭐ They go
+  // when rule 5 says the new mapping stands, and come back if it does not.
+  // ⚠ `trackingMetresPerPx` and `depthLimits` are still WIRED — the factor and the bounds were
+  // always the derived parts, and the new rule reads both.
+  screenTranslation:
+    "retired 2026-09-22 by the object-axis remap; delete with its vectors once a device look " +
+    "accepts dx→x / dy→depth, or restore",
+  depthTranslate:
+    "retired 2026-09-22 by the object-axis remap (the second touchpoint now drives the GRAVITY " +
+    "axis); delete with its vectors once a device look accepts it, or restore",
   constrainedDragAngle:
     "retired 2026-09-22 by D57 reaching the first touchpoint; awaiting the device verdict on " +
     "the dy trade, then delete with its vectors or restore",

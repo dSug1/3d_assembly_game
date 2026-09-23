@@ -517,6 +517,51 @@ export interface GestureConfig {
    */
   pioneerTranslates: number;
   /**
+   * ⭐⭐⭐ **WHERE THE OBJECT AXES COME FROM OUTSIDE THE CAPTURE ZONE** — `NOT A TUNABLE, A
+   * RULE SELECTOR`, the third of them, and the owner's flag of 2026-09-22.
+   *
+   * > *"WorldAxisA — toggle off: current build (no change). WorldAxisB — toggle on: the world
+   * > x, world gravity and world depth axis are created at scene boot as per camera position
+   * > at scene boot and are fixed forever for this scene."*
+   *
+   * ⛔ `0` = **WorldAxisA**: the axes are the camera's, recomputed as it orbits — today's
+   * build, where a drag is always referred to the screen in front of you.
+   * ⛔ `1` = **WorldAxisB**: the axes are the boot camera's, **frozen for the whole scene** —
+   * so a body keeps moving along the same world directions however the camera is flown, and a
+   * push that went "right" before an orbit still goes the same way in the world afterwards.
+   *
+   * ⭐⭐ **DEFAULT `1`, THE OWNER'S CHOICE** (*"Default at scene boot: WorldAxisB is toggled
+   * on"*). ⚠ That makes the NEW rule the one that boots, which is the opposite of how the
+   * swing and `approachRetargetsOrbit` shipped — recorded because it is deliberate, and
+   * `?worldAxisB=0` is the A/B a hand needs to judge it.
+   *
+   * ⚠⚠ **IT DOES NOT SELECT THE *REMAP*.** The holder's `dy` drives the object's DEPTH axis
+   * and the second touchpoint's `dy` drives its GRAVITY axis in **both** settings — that part
+   * of the dictation is unconditional. This flag chooses only which triple of world directions
+   * the three channels are projected onto. ⛔ Nor does it reach inside the capture zone, where
+   * the leading face decides and neither setting is consulted.
+   *
+   * ⚠ A 0/1 slider because the menu has no other kind of control (`D26`'s shape), and the
+   * validator refuses anything between: a half-set selector must not read as `truthy` and ship
+   * one behaviour while the readout claims another.
+   */
+  worldAxisB: number;
+  /**
+   * ⭐⭐⭐ **DOES CROSSING INTO THE OFFSET RADIUS ZONE CALL `CameraOffsetZoneEnter`?** —
+   * the owner, 2026-09-22: *"if CameraOffsetZoneEnterSetupB is toggled on — launch the
+   * CameraOffsetZoneEnter method (we will define it later on)."*
+   *
+   * ⛔⛔ **THE METHOD IS NOT DEFINED YET, SO THE DEFAULT IS `0` AND THE HOOK DOES NOTHING.**
+   * ⚠ That is the honest state and it is written here rather than left to be inferred: the
+   * flag, its slider and its call site exist so that the behaviour can be dropped into one
+   * place when it is dictated — and until then, turning it on changes nothing but the HUD.
+   * ⭐ `zoneEdge`'s ENTER is the event; `object_axes.ts` owns it, and the axes update on the
+   * same edge whether or not this is on.
+   *
+   * ⛔ A 0/1 selector, refused in between, exactly as `worldAxisB`.
+   */
+  cameraOffsetZoneEnterSetupB: number;
+  /**
    * Degrees. How near parallel the alignment axis must be to one of the target's face
    * normals for `A16`'s condition 1 to hold.
    * ⚠ A DIFFERENT QUESTION from the (unbuilt) snap threshold even though both are angular
@@ -859,6 +904,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // hand**, and a default he has chosen on the glass outranks a default I chose on principle.
   // ⭐ `?pioneerTranslates=1` restores the old behaviour, and the menu toggles it live.
   pioneerTranslates: 0,
+  // ⭐⭐ **1 — THE OWNER'S CHOICE AT BOOT** (*"Default at scene boot: WorldAxisB is toggled
+  // on"*), so the world-fixed axes are what a hand meets first and `?worldAxisB=0` is the way
+  // back to the camera-referred build. ⚠ The reverse of how a trial normally ships here, and
+  // deliberate: it is a dictated default, not a caution I chose.
+  worldAxisB: 1,
+  // ⛔ `0` because `CameraOffsetZoneEnter` HAS NO DEFINITION YET. Turning it on today changes
+  // nothing except what the HUD says, and shipping it on would be a slider that does nothing —
+  // the exact shape `config_debt.test.ts` exists to refuse.
+  cameraOffsetZoneEnterSetupB: 0,
   // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
   // really did align against this thing.
   alignMatchDeg: 15,
@@ -1102,6 +1156,21 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `pioneerTranslates (${cfg.pioneerTranslates}) must be exactly 0 or 1: it selects a RULE, ` +
         "not a quantity, and a value in between would read as `truthy` and silently ship one " +
         "of the two behaviours while the readout claimed a third.",
+    );
+  }
+  if (cfg.worldAxisB !== 0 && cfg.worldAxisB !== 1) {
+    throw new Error(
+      `worldAxisB (${cfg.worldAxisB}) must be exactly 0 or 1: it selects WHICH BASIS a body is ` +
+        "translated along (the boot camera's, frozen, or the live camera's), not a quantity — " +
+        "and a value in between would read as `truthy` and freeze the axes while the readout " +
+        "claimed the camera was still steering them.",
+    );
+  }
+  if (cfg.cameraOffsetZoneEnterSetupB !== 0 && cfg.cameraOffsetZoneEnterSetupB !== 1) {
+    throw new Error(
+      `cameraOffsetZoneEnterSetupB (${cfg.cameraOffsetZoneEnterSetupB}) must be exactly 0 or 1: ` +
+        "it selects whether the zone's ENTER edge calls CameraOffsetZoneEnter, which is a RULE " +
+        "and not a quantity.",
     );
   }
   // ⛔ `0` is MEANINGFUL here (the swing off), so the rule is a range and not a positivity

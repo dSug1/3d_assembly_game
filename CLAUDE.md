@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1017 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1049 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -82,6 +82,25 @@ radius — the scene's claim that *"at 5L nothing is in range"* was false.
 came from a read: the boot mode, the twist and roll channels, the deadband's emission and the
 render order all changed.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
+
+⛔⛔⛔ **THE NEWEST RULE IS THE OBJECT AXES, AND NO HAND HAS TOUCHED IT** (`D74`/`D75`, 2026-09-22).
+A body is translated along **its own axes**: fixed at scene boot from the boot camera and frozen for
+the scene (`worldAxisB=1`, **the default, the owner's choice**), or following the live camera at `0`
+— and **inside the capture zone** the basis becomes the **LeadingFace normal, gravity and their
+orthogonal** instead, re-decided on the zone's **EDGE**. ⛔ The channels moved with it: the holder's
+`dx`→**x**, its `dy`→**depth**, the second touchpoint's `dy`→**gravity**. So **one finger slides a
+body about its own horizontal plane and a second finger lifts it.** ⭐⭐ Each input is projected onto
+its axis's screen shadow and **NOT normalised** (the owner's choice over Blender's division), so a
+foreshortened axis **goes quiet** instead of running away and the rule needs no cutoff — ⭐ and the
+sign `depthTranslate` needed `awaySign` for **falls out of the projection** instead of being asserted.
+⚠⚠ Costs, stated: the holder's `dy` is **dead at a level camera**; `gainTranslateScreen` was tuned for
+a screen-plane drag and is unjudged for two horizontal channels; `screenTranslation` and
+`depthTranslate` are **unwired debt**; and this **reopens `IN4`'s rule 6, a row closed by a hand**.
+⭐ A **LeadingFace** — the exit face along the direction the body ACTUALLY goes — carries a 3-axis
+gizmo. ⛔ `cameraOffsetZoneEnterSetupB` gates a method **the owner has not defined yet**: it ships at
+`0` and the hook is empty. 32 vectors, three mutants caught, engine-free in `core/leading_face.ts`,
+`input/object_axes.ts` and `input/axis_translate.ts` →
+[`Claude/00_CORE/queue_notes/IN4.md`](Claude/00_CORE/queue_notes/IN4.md).
 
 ⭐⭐⭐ **THE INPUT MODEL IS THE OWNER'S TAP-TO-ALIGN SET** (`D37`–`D40`) — and since
 2026-09-17 it is the **only** one: forks A and B are **deleted**, with the flag, the slider
