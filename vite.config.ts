@@ -42,20 +42,34 @@ function buildId(): string {
   }
 }
 
-const BUILD_ID = buildId();
 const BUILT_AT = new Date().toISOString().replace("T", " ").slice(0, 16) + "Z";
-const VERSION_JSON = JSON.stringify({ build: BUILD_ID, builtAt: BUILT_AT }) + "\n";
+
+/**
+ * ⛔⛔ **ASKED THROUGH VITE'S OWN `command`, NEVER SNIFFED FROM `process.argv`.** A wrong
+ * answer here has asymmetric costs: calling a dev server a build only misleads the HUD, while
+ * calling a BUILD a dev server would stamp `dev-server` into the Pages bundle, where
+ * `build_gate` would then compare it against itself and **never refresh** — reinstating the
+ * exact stale-bundle failure the gate was written for. ⭐ So it uses the supported API, and a
+ * vector pins the production side of it.
+ */
+export function stampFor(command: "build" | "serve"): { build: string; builtAt: string } {
+  return { build: command === "build" ? buildId() : "dev-server", builtAt: BUILT_AT };
+}
 
 // ⭐ `base: "./"` so a build works from a file:// path and from a Capacitor
 // webview, not only from a web-server root. The previous project's browser dry
 // run existed to surface exactly this class of problem early.
-export default defineConfig({
+export default defineConfig(({ command }) => {
+  const stamp = stampFor(command);
+  const VERSION_JSON = JSON.stringify(stamp) + "\n";
+  const BUILD_ID = stamp.build;
+  return {
   base: "./",
   // ⭐ Compiled into the bundle, so the page can say what it IS. Declared for the
   // typechecker in `src/globals.d.ts`.
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),
-    __BUILT_AT__: JSON.stringify(BUILT_AT),
+    __BUILT_AT__: JSON.stringify(stamp.builtAt),
   },
   plugins: [
     {
@@ -99,4 +113,5 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
   },
+  };
 });

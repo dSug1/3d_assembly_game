@@ -193,6 +193,17 @@ export interface AxisTravel extends AxisTravelM {
    */
   readonly depthFallback: boolean;
   /**
+   * ⭐⭐⭐ **HOW LONG EACH AXIS LOOKS ON THE GLASS — `[x, gravity, depth]`, 1 square to the
+   * view and 0 pointing straight at the camera.**
+   *
+   * ⛔⛔ Added 2026-09-23 because `det=0.000` says the plane is degenerate and NOT WHICH AXIS
+   * did it — and the difference is the difference between two defects. I had to read it off the
+   * gizmo in a photograph of the tablet: a stub of red told me `x` was edge-on, which is what
+   * made defect 59 findable. ⚠ A readout that requires a photograph of another readout is not
+   * an instrument.
+   */
+  readonly shadowLens: readonly [number, number, number];
+  /**
    * ⭐⭐ **THE LEVERAGE** — world travel per unit of finger travel, both in tracking-factor
    * units. ⛔ It is NOT 1 when the body is under the finger: a foreshortened plane needs MORE
    * world travel to produce the same screen travel, so `1` is a plane square to the view and a
@@ -270,6 +281,7 @@ export function axisTravel(
       mode: "PLANE-SOLVE",
       planeDet: 0,
       depthFallback: false,
+      shadowLens: [0, 0, 0],
       trackGain: 0,
     };
   }
@@ -431,6 +443,7 @@ export function axisTravel(
     mode,
     planeDet,
     depthFallback,
+    shadowLens: [Math.hypot(...sx), Math.hypot(...sg), Math.hypot(...sd)],
     // ⭐ What one pixel bought, as a multiple of the tracking factor: 1 is under the finger.
     // ⛔ THE HOLDER'S THREE COMPONENTS, including the depth one — in the screen-plane branch that
     // component carries most of the travel, and leaving it out is what made the owner's HUD read

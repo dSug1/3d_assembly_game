@@ -49,11 +49,25 @@ const BOOT = axesFromFrame(frameAt(0, 30));
 const LIVE = frameAt(90, 30);
 
 describe("the in-zone basis — LeadingFace normal, gravity, and their orthogonal", () => {
-  it("a VERTICAL leading face gives the normal back exactly", () => {
+  // ⛔⛔⛔ **THESE FOUR WERE RED ON 2026-09-23 AND THE CODE WAS WHAT CHANGED — defect 59.**
+  // They pinned the approach onto `depth`; the dictation puts it on **x**:
+  //
+  // > *"object axis shall be aligned with LeadingFace normal direction, gravity direction and
+  // > direction orthogonal to LeadingFace normal & gravity directions."*
+  //
+  // ⭐ Three directions, in the order `(x, gravity, depth)` this project names them in
+  // everywhere else. ⚠ The retraction is kept here rather than tidied away, because the reason
+  // the error survived is the interesting part: while the holder owned `{x, depth}` — the whole
+  // horizontal plane — the 2×2 solve mixed the two, and NO test of the product could tell them
+  // apart. The `dy` swap split that plane, and the mistake surfaced as a blocked body.
+
+  it("a VERTICAL leading face gives the normal back exactly, ON x", () => {
     const axes = axesFromLeadingFace([0, 0, 1], UP)!;
-    expect(axes.depth[0]).toBeCloseTo(0, 12);
-    expect(axes.depth[2]).toBeCloseTo(1, 12);
+    expect(axes.x[0]).toBeCloseTo(0, 12);
+    expect(axes.x[2]).toBeCloseTo(1, 12);
     expect(axes.gravity).toEqual([0, 1, 0]);
+    // ⭐ And the third axis is the orthogonal, which is what the second finger now drives.
+    expect(Math.abs(dot(axes.depth, [0, 0, 1]))).toBeCloseTo(0, 12);
     orthonormal(axes);
   });
 
@@ -61,9 +75,9 @@ describe("the in-zone basis — LeadingFace normal, gravity, and their orthogona
     // A 45° face: its normal has as much vertical in it as horizontal.
     const n: Vec3 = normalize([0, 1, 1])!;
     const axes = axesFromLeadingFace(n, UP)!;
-    // ⛔ THE CLAIM: depth is the normal's HORIZONTAL SHADOW, and gravity is untouched.
-    expect(axes.depth[1]).toBeCloseTo(0, 12);
-    expect(axes.depth[2]).toBeCloseTo(1, 12);
+    // ⛔ THE CLAIM: x is the normal's HORIZONTAL SHADOW, and gravity is untouched.
+    expect(axes.x[1]).toBeCloseTo(0, 12);
+    expect(axes.x[2]).toBeCloseTo(1, 12);
     expect(axes.gravity).toEqual([0, 1, 0]);
     orthonormal(axes);
     // ⭐ THE COUNTER-EXAMPLE, asserted to be WRONG: the literal reading keeps the normal as
@@ -79,16 +93,32 @@ describe("the in-zone basis — LeadingFace normal, gravity, and their orthogona
     expect(axesFromLeadingFace([0, 0, 0], UP)).toBeNull();
   });
 
-  it("⛔⛔ ITS HANDEDNESS MATCHES THE CAMERA BASIS — `up × depth`, not `depth × up`", () => {
-    // ⚠ If these two disagreed, every horizontal push would REVERSE at the moment a body
-    // crossed into the zone, mid-drag, and a hand would read it as the controls inverting.
-    // ⭐ `gravityFrame` records this exact sign trap; the check is that both bases build
-    // `x` the same way, with the leading face standing in for the view direction.
+  it("⛔⛔ ITS HANDEDNESS SURVIVED THE RE-ASSIGNMENT — `x = up × depth` still holds", () => {
+    // ⚠ If this disagreed with the camera basis, every horizontal push would REVERSE at the
+    // moment a body crossed into the zone, mid-drag, and a hand would read it as the controls
+    // inverting themselves. ⭐ `gravityFrame` records this exact sign trap.
+    // ⛔⛔ **IT IS THE ONE THING DEFECT 59 HAD TO NOT BREAK**, and it is why the sideways axis is
+    // `approach × g` rather than `g × approach`: `g × (approach × g) = approach`, so the
+    // invariant is KEPT rather than traded away for the re-assignment.
     const f = frameAt(37, 20);
     const inZone = axesFromLeadingFace(f.depth, UP)!;
-    for (let i = 0; i < 3; i++) expect(inZone.x[i]).toBeCloseTo(f.right[i]!, 12);
-    const byHand = normalize(cross(UP, f.depth))!;
+    const byHand = normalize(cross(UP, inZone.depth))!;
     for (let i = 0; i < 3; i++) expect(inZone.x[i]).toBeCloseTo(byHand[i]!, 12);
+    // ⭐ And the approach itself is the face normal, flattened — the camera's own `depth` here.
+    for (let i = 0; i < 3; i++) expect(inZone.x[i]).toBeCloseTo(f.depth[i]!, 12);
+  });
+  it("⭐⭐⭐ THE POINT OF THE ZONE: the HOLDER can advance the body along the approach", () => {
+    // ⛔⛔ THE DEVICE REPORT, AS A PROPERTY. *"In attached situation, the translation is
+    // blocked"*, `det=0.000`, one finger, `zone=IN`. The holder drives `x` and `gravity`; if the
+    // approach is on neither, a one-finger drag cannot close the gap at all — inside the zone
+    // that exists FOR closing the gap.
+    for (const n of [[0, 0, 1], [1, 0, 0], [1, 0, 1], [-2, 1, 0.5]] as Vec3[]) {
+      const axes = axesFromLeadingFace(n, UP)!;
+      const approach = normalize([n[0], 0, n[2]])!;
+      // ⭐ The approach lies ENTIRELY in the holder's pair, and entirely on its dx channel.
+      expect(Math.abs(dot(axes.x, approach))).toBeCloseTo(1, 12);
+      expect(Math.abs(dot(axes.depth, approach))).toBeCloseTo(0, 12);
+    }
   });
 });
 
@@ -145,8 +175,8 @@ describe("inside the zone — the leading face decides, and the flag is not cons
     const on = updatedObjectAxes({ ...base, worldAxisB: true, leadingNormal: n });
     const off = updatedObjectAxes({ ...base, worldAxisB: false, leadingNormal: n });
     expect(on).toEqual(off);
-    expect(on.depth[0]).toBeCloseTo(Math.SQRT1_2, 12);
-    expect(on.depth[2]).toBeCloseTo(Math.SQRT1_2, 12);
+    expect(on.x[0]).toBeCloseTo(Math.SQRT1_2, 12);
+    expect(on.x[2]).toBeCloseTo(Math.SQRT1_2, 12);
     orthonormal(on);
     // ⛔ And it is NOT either of the outside-zone answers — the dictation's *"therefore the
     // translation direction differs when the object is inside the offset radius zone"*.

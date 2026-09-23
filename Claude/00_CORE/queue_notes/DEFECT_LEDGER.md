@@ -508,3 +508,90 @@ that must hold anyway: within one pose, a back-and-forth drag returns the body e
 ALREADY GIVEN.** *"Blocked"* has two fixes — *make it move* and *make it move where he said* — and
 only the second survives contact with a hand. ⚠ It is the third time in two days that a sentence
 already in the transcript would have settled a question I answered from first principles.
+
+
+
+---
+
+## 59 — ⭐⭐⭐ **THE ZONE'S APPROACH AXIS WAS ON THE WRONG CHANNEL, AND A SWAP MADE IT VISIBLE**
+
+**2026-09-23, by finger.** *"There are still issues when the follower enters the offset radius
+zone. In attached situation, the translation is blocked. I do not understand why a simple swap of
+inputs has created so many issues."*
+
+⛔⛔⛔ **THE DICTATION, AND I BUILT IT BACKWARDS.** *"object axis shall be aligned with LeadingFace
+normal direction, gravity direction and direction orthogonal to LeadingFace normal & gravity
+directions."* ⭐ Three directions, in the order `(x, gravity, depth)` this project names them in
+everywhere else — so **x is the normal**. `axesFromLeadingFace` returned the normal as `depth` and
+the orthogonal as `x`.
+
+⭐⭐⭐ **AND THAT ANSWERS THE OWNER'S QUESTION, WHICH IS THE MORE USEFUL PART.** Until the `dy`
+swap the holder owned `{x, depth}` — the WHOLE horizontal plane — and the 2×2 solve mixed the two
+axes, so which of them was the normal **could not be observed**: no gesture, no vector and no
+reading of the product could tell the two assignments apart. ⚠ The swap split that plane into
+`{x, gravity}`, `x` became the body's only horizontal channel, and it was the one that does not
+approach anything. ⛔ With the approach on the second finger, a one-finger drag inside the zone
+could not close the gap at all — and `x` pointing at the camera in the broadside view a hand
+orbits to made `det` read **0.000**, so what was left did nothing visible either. *Blocked.*
+
+⭐⭐ `METHOD`: **a rule that COMPOSES two things cannot see a mistake about which of them is
+which — and the day something stops composing them, every such mistake surfaces at once.** ⚠ That
+is the honest answer to *"why has a simple swap created so many issues"*: it created almost none.
+It **separated** two axes that had been travelling together, and the separation is what made a
+day-old mis-assignment observable.
+
+✅ **FIXED** in the definition, not at the point of use: `x` is the flattened normal, `depth` the
+orthogonal, and the handedness invariant `x = up × depth` is KEPT (`g × (approach × g) = approach`)
+so nothing reverses at the zone edge. ⭐ Inside the zone the holder's `dx` now drives the approach,
+and the solved pair is `{approach, gravity}` — well presented in exactly the view a hand judges a
+join from, so the degeneracy goes away by construction rather than by a fallback.
+
+⚠ Four vectors were RED and the CODE is what changed; they are rewritten with the retraction on
+them, plus one new property: *the approach lies entirely on the holder's `dx` channel.*
+
+
+---
+
+## 60 — ⛔⛔ **`"DEPTH"` IS A TRANSLATION — THE THIRD TIME, AND NOW IT IS A SET**
+
+**2026-09-23, found by reading**, during the audit the owner asked for after defect 59.
+
+⛔ The axis gizmo hid itself whenever `grip.mode !== "TRANSLATE"` — and `scene.ts` sets a holder's
+mode to `"DEPTH"` the instant the second touchpoint drives its axis. ⭐ So the LeadingFace marker
+vanished for exactly as long as the second finger was advancing the body, which is when a hand
+most wants to see which face is leading. ⚠ The sway asks the same question one line after the
+mode has been re-decided, and is therefore right **by an accident of ordering**.
+
+⭐⭐ **SAME SHAPE AS DEFECT 55, IN A SECOND PLACE** — *a rule keyed on a NAME inherits every later
+meaning of that name.* `"DEPTH"` did not exist as a mode when either test was written; `A10` added
+it and quietly took a translation out of every set that had been spelled out by hand.
+
+✅ **FIXED**: `src/input/grip_mode.ts` holds the set ONCE, as data, and both callers read it.
+⛔ A mode added later is now a decision taken in that file rather than a silent omission in three
+others. ⚠ It is in `src/input` and not in the render file for the reason defect 55 proved with a
+mutant: *a rule in `scene.ts` is a rule nothing can interrogate.*
+
+
+---
+
+## 61 — ⭐⭐⭐ **THE BUILD LINE LIED ON THE USB LOOP — THE INSTRUMENT RULE 5 LEANS ON**
+
+**2026-09-23**, on the device report for defect 59: the HUD read `build 9b2b049 2026-09-22 13:48Z`
+— a commit from the previous day — while Vite was hot-serving the current source.
+
+⛔⛔ `BUILD_ID` and `BUILT_AT` are computed **once, when the dev server starts**, and the dev
+middleware serves that same frozen constant. ⭐ So both halves agree, nothing reloads, and both are
+wrong after the first edit. ⚠ The code WAS current — the HUD printed `PLANE-PER-AXIS`, a string
+that did not exist in `9b2b049` — which is the only reason the report was still usable.
+
+⭐⭐ **AND THIS IS THE EXACT TRAP `build_gate` WAS WRITTEN FOR**, one surface over: on 2026-09-16
+a stale Pages bundle indicted a correct fix for a morning, and the lesson recorded then was *check
+the HUD's build line before judging any gesture*. ⛔ On the USB loop that line was answering a
+question it cannot answer — worse than not answering, because it looks like information.
+
+✅ **FIXED**: in `serve` the stamp reads **`dev-server`** and carries no commit id at all —
+*suppress, do not guess*. A `build` keeps the real sha, so Pages and the staleness gate are
+untouched. ⚠⚠ The decision is asked through Vite's own `command`, never sniffed from
+`process.argv`, because the failure is **asymmetric**: stamping `dev-server` into a production
+bundle would have `build_gate` compare an id against itself and **never refresh**, reinstating the
+very failure it exists to prevent. ⭐ A vector pins that direction.

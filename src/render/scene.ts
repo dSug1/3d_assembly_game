@@ -186,6 +186,7 @@ import {
   clampDepthRange,
 } from "../input/axis_translate";
 import { leadingFace, type LeadingFace } from "../core/leading_face";
+import { isTranslatingMode } from "../input/grip_mode";
 import {
   pitchOffsetV,
   freezeProgress,
@@ -1632,6 +1633,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   let lastAxisMode: AxisTravel["mode"] = "PLANE-SOLVE";
   let lastPlaneDet = 1;
   let lastDepthFallback = false;
+  /** ⭐ `[x, gravity, depth]` screen shadow lengths — WHICH axis is edge-on, not just that one is. */
+  let lastShadows: readonly [number, number, number] = [1, 1, 1];
 
   /**
    * ⛔⛔ **`CameraOffsetZoneEnter` — DECLARED, CALLED, AND EMPTY BY INSTRUCTION.**
@@ -1728,7 +1731,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const refreshAxisGizmo = (): void => {
     const live = new Set<ObjectId>();
     for (const grip of held.values()) {
-      if (grip.mode !== "TRANSLATE") continue;
+      // ⛔⛔ **DEFECT 60, 2026-09-23: `"DEPTH"` IS A TRANSLATION, AND THIS ASKED BY NAME.** The
+      // gizmo vanished for exactly as long as the SECOND touchpoint was advancing the body — the
+      // moment a hand most wants to see which face is leading. ⭐ Same shape as defect 55, in a
+      // second place, which is why the set now lives in `input/grip_mode.ts`.
+      if (!isTranslatingMode(grip.mode)) continue;
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
       const dir = lastTravelDir.get(id);
@@ -2973,6 +2980,8 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot)" : "WorldAxisA(live c
             ` ${lastAxisMode}` +
             ` det=${lastPlaneDet.toFixed(3)}/${Math.sin((cfg.axisTrackingConeDeg * Math.PI) / 180).toFixed(3)}` +
             ` track=${lastTrackGain.toFixed(2)}×${lastDepthFallback ? " depth→fixed" : ""}` +
+            // ⭐⭐ WHICH axis is edge-on — `det` says the plane is degenerate, these say who did it.
+            ` shadow x/g/d=${lastShadows.map((n) => n.toFixed(2)).join("/")}` +
             ` zone=${highlighted.inRange ? "IN" : "out"}` +
             (zonePair.length === 0 ? "" : `(${zonePair.join("↔")})`) +
             (cfg.cameraOffsetZoneEnterSetupB === 1 ? ` enterHook=${zoneEnterCalls}(no-op)` : "") +
@@ -4920,6 +4929,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         lastAxisMode = travel.mode;
         lastPlaneDet = travel.planeDet;
         lastDepthFallback = travel.depthFallback;
+        lastShadows = travel.shadowLens;
         const step = axisDisplacement(travel, axes);
         // ⭐ `grip.frame` is the basis LATCHED AT PRESS, and `applyWorldStep` uses it for the
         // swing's screen travel and the depth clamp only — the body's own axes decide the

@@ -38,6 +38,8 @@
  */
 
 /** What the swing remembers, latched when the capture first triggers. */
+import { isTranslatingMode } from "./grip_mode";
+
 export interface SwingLatch {
   /**
    * The surface gap at the instant the capture triggered, in metres — the swing's whole
@@ -562,9 +564,9 @@ export function rebaseTriggerGap(currentGapM: number, heldProgress: number): num
  */
 export function swingDriverIndex(modes: readonly (string | null)[]): number {
   // ⛔ `ROTATE` and `null` are the exclusions, and they are the ones the device report of
-  // 2026-09-19 asked for. ⭐ Written as a SET of the motions that translate, so a channel added
-  // later is a decision here rather than a silent omission.
-  return modes.findIndex((m) => m === "TRANSLATE" || m === "DEPTH");
+  // 2026-09-19 asked for. ⭐⭐ **THE SET LIVES IN `grip_mode.ts` SINCE DEFECT 60**, because
+  // spelling it out here is what let the gizmo spell it out differently — one fact, one home.
+  return modes.findIndex((m) => isTranslatingMode(m));
 }
 
 /**

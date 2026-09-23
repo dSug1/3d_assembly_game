@@ -108,17 +108,40 @@ export function axesFromLeadingFace(normal: Vec3, up: Vec3): ObjectAxes | null {
   const g = normalize(up);
   const n = normalize(normal);
   if (!g || !n) return null;
-  // ⭐ The normal with everything vertical removed — `gravityFrame`'s own construction for
-  // `depth`, so the two bases are built the same way and cannot drift apart in convention.
-  const depth = normalize(sub(n, scale(g, dot(n, g))));
-  if (!depth) return null;
-  // ⚠⚠ `up × depth`, NOT `depth × up`, and it is the same sign trap `gravityFrame` records:
-  // the camera builds its right as `worldUp × forward`, so a basis that flipped this would
-  // send every horizontal push BACKWARDS relative to the one used outside the zone — and the
-  // switch happens mid-drag, where a hand would read it as the controls inverting themselves.
-  const x = normalize(cross(g, depth));
-  if (!x) return null;
-  return { x, gravity: g, depth };
+  // ⭐ The normal with everything vertical removed — `gravityFrame`'s own construction for a
+  // horizontal direction, so the two bases are built the same way and cannot drift apart.
+  const approach = normalize(sub(n, scale(g, dot(n, g))));
+  if (!approach) return null;
+  // ⚠⚠ The handedness is `x = up × depth`, NOT `depth × up` — the sign trap `gravityFrame`
+  // records: the camera builds its right as `worldUp × forward`, so a basis that flipped this
+  // would send every horizontal push BACKWARDS relative to the one used outside the zone, and
+  // the switch happens mid-drag, where a hand reads it as the controls inverting themselves.
+  // ⭐ `g × (approach × g) = approach`, so assigning `depth` the sideways direction KEEPS that
+  // invariant rather than trading it away.
+  const sideways = normalize(cross(approach, g));
+  if (!sideways) return null;
+  // ⛔⛔⛔ **THE APPROACH IS `x`, AND IT WAS `depth` UNTIL DEFECT 59 (2026-09-23).**
+  //
+  // > *"object axis shall be aligned with LeadingFace normal direction, gravity direction and
+  // > direction orthogonal to LeadingFace normal & gravity directions."* — the owner, 2026-09-22
+  //
+  // ⭐⭐⭐ Three directions in the order `(x, gravity, depth)`, which is the order this project
+  // names them in everywhere else — so **x is the normal** and `depth` is the orthogonal. I built
+  // it the other way round, and for a day nothing could see it: before the `dy` swap the holder
+  // owned `{x, depth}`, the WHOLE horizontal plane, and the 2×2 solve mixed the two axes anyway.
+  // ⚠⚠ The swap split that plane into `{x, gravity}` — and then `x` was the body's ONLY
+  // horizontal channel, and it had been given the direction that does not approach anything.
+  //
+  // ⛔⛔ **THAT IS WHY A SWAP OF TWO INPUTS COST A DAY**: it did not break these rules, it
+  // **separated** two axes that a mis-assignment had been free to confuse while they travelled
+  // together. ⭐ `METHOD`: *a rule that composes two things cannot see a mistake about WHICH of
+  // them is which — the day something stops composing them, every such mistake surfaces at once.*
+  //
+  // ⭐ What it fixes on the glass: inside the zone the holder's `dx` now drives the **approach**,
+  // so the finger doing the approaching is the one that can advance the body — and the solved
+  // pair becomes `{approach, gravity}`, which is well presented in exactly the broadside view a
+  // hand orbits to when judging a join. ⛔ The body was BLOCKED there: `det` read 0.000.
+  return { x: approach, gravity: g, depth: sideways };
 }
 
 /** Which way the offset radius zone was crossed this frame, or `null` for no crossing. */

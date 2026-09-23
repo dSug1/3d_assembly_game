@@ -533,3 +533,18 @@ describe("⛔⛔⛔ defect 57 — a channel square to its own input must not go 
     expect(t.depthFallback).toBe(true);
   });
 });
+
+describe("⭐ the shadow readout — WHICH axis is edge-on, not merely that one is", () => {
+  it("names the foreshortened axis, at a pose where only ONE of the three is", () => {
+    // ⚠ I had to read this off the gizmo in a photograph of the tablet to find defect 59.
+    const c = camera(0, 12);
+    const axes: ObjectAxes = { x: [1, 0, 0], gravity: [0, 1, 0], depth: [0, 0, 1] };
+    const t = run({ holderDxPx: 30 }, c, axes);
+    const [sx, sg, sd] = t.shadowLens;
+    expect(sx).toBeLessThan(0.3); // ⛔ x points at the camera — the stub of red
+    expect(sg).toBeGreaterThan(0.9);
+    expect(sd).toBeGreaterThan(0.9);
+    // ⭐ And it agrees with `screenShadow`, which is the quantity it claims to report.
+    expect(sx).toBeCloseTo(Math.hypot(...screenShadow(axes.x, c.screen)!), 12);
+  });
+});
