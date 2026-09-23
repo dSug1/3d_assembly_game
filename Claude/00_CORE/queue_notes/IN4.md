@@ -791,3 +791,16 @@ by the hand it was built for.
 
 ⭐ And `followerFaceXrayAlpha` is **0.05** — the owner's number, a tenth of my guess.
 
+⛔⛔ **2026-09-23 — THE SWING NEVER SAW A VERTICAL APPROACH (defect 53).** *"When the object
+approaches another one from the gravity axis, sometimes there is no swing of the camera when the
+object enters the offset radius zone."* ⭐ `swingSignFor` has always answered `1` for a purely
+vertical travel; what it received was `swingSignFor(0, 0)`. ⚠ The accumulator it reads had **two
+writers** and the second touchpoint's channel — which since `D75` is the **gravity axis**, i.e.
+exactly the approach reported — applied its displacement and recorded nothing. ⛔ *"Sometimes"* is
+precise: it armed only when the holder moved on the same frame.
+✅ **Fixed structurally**: `applyWorldStep` is the one function that applies a translation — it moves
+the body, feeds the swing's direction and records the LeadingFace ray direction, all three or none.
+⚠⚠ **It is defect 52's shape twelve hours later, in another file** — *one fact, two writers, one of
+which forgot* — which makes it a pattern rather than an accident, and both times the missing line was
+the symptom while the duplication was the cause.
+

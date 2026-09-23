@@ -6,6 +6,11 @@
  * property here is a detail of how it gets there; that one is the owner's requirement.
  */
 import { describe, expect, it } from "vitest";
+import { axisDisplacement, axisTravel } from "@input/axis_translate";
+import { axesFromFrame } from "@input/object_axes";
+import { gravityFrame } from "@input/gravity_frame";
+import { trackingMetresPerPx } from "@input/translate";
+import { dot, normalize, type Vec3 } from "@core/vec";
 import {
   freezeProgress,
   pitchAngleFor,
@@ -637,5 +642,72 @@ describe("⛔⛔⛔ THE ENDING — what a camera the GAME moved owes a live gest
     expect(e.vOffset).toBe(0);
     expect(e.yawRad).toBeCloseTo(0.3, 12);
     expect(e.rebaseFrames).toBe(true);
+  });
+});
+
+describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 device report", () => {
+  /**
+   * ⚠⚠ *"When the object approaches another one from the gravity axis, sometimes there is no swing
+   * of the camera when the object enters the offset radius zone."*
+   *
+   * ⛔⛔ **THE RULE WAS NEVER WRONG — IT WAS NEVER FED.** `swingSignFor` has always answered `1`
+   * for a purely vertical travel; the scene accumulated the travel in the HOLDER's branch only,
+   * and since `D75` a gravity-axis push is the SECOND touchpoint's channel, which added nothing.
+   * ⭐ So the arming call was `swingSignFor(0, 0)` — `null`, no swing — and *"sometimes"* was
+   * exactly the frames where the holder happened to be still.
+   *
+   * ⚠ These vectors compose the chain the scene threads: a gravity-channel displacement,
+   * projected onto the gravity frame, must produce travel the swing can take a sign from.
+   * ⛔ What they cannot prove is that `scene.ts` threads it — that is now structural, one
+   * function applying the step AND recording it, because the missing line was the symptom and
+   * two writers were the cause.
+   */
+  const FOV = 0.8;
+  const H = 800;
+  const PER_PX = trackingMetresPerPx(1.5, FOV, H);
+  const camera = (elevationDeg: number) => {
+    const e = (elevationDeg * Math.PI) / 180;
+    const view: Vec3 = [Math.cos(e), -Math.sin(e), 0];
+    const g = gravityFrame(view, [0, -1, 0])!;
+    const right = g.right;
+    const up = normalize([
+      view[1] * right[2] - view[2] * right[1],
+      view[2] * right[0] - view[0] * right[2],
+      view[0] * right[1] - view[1] * right[0],
+    ])!;
+    return { gravity: g, screen: { right, up } };
+  };
+
+  it("⭐⭐⭐ a SECOND-touchpoint push along gravity produces up-travel, and the swing takes a sign", () => {
+    const c = camera(30);
+    const axes = axesFromFrame(c.gravity);
+    // ⛔ The gravity channel ONLY — no holder motion at all, which is the reported gesture.
+    const travel = axisTravel(
+      { holderDxPx: 0, holderDyPx: 0, secondDyPx: -40 },
+      c.screen,
+      axes,
+      PER_PX,
+      1,
+      1,
+      "PLANE",
+      5,
+      c.gravity.towardGravity,
+    );
+    const step = axisDisplacement(travel, axes);
+    // ⭐ What the scene now accumulates: the applied displacement projected onto the gravity frame.
+    const travelRight = dot(step, c.gravity.right);
+    const travelUp = dot(step, c.gravity.up);
+    expect(Math.abs(travelUp)).toBeGreaterThan(1e-6);
+    // ⚠ And the horizontal component really is ~zero, so this fixture is the degenerate case the
+    // report describes rather than one that arms by accident.
+    expect(Math.abs(travelRight)).toBeLessThan(1e-9);
+    // ⛔⛔ THE CLAIM: a vertical approach arms.
+    expect(swingSignFor(travelRight, travelUp)).not.toBeNull();
+  });
+
+  it("⛔ and with NOTHING accumulated it does not arm — the state the defect left behind", () => {
+    // ⭐ The counter-example, which is what the product did until 2026-09-23: the holder's branch
+    // fed the accumulator and the gravity channel did not, so the arming call saw zero.
+    expect(swingSignFor(0, 0)).toBeNull();
   });
 });

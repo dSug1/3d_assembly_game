@@ -3504,9 +3504,52 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * `tests/unwired_debt.test.ts` rather than deleted: six models and five device passes are
    * behind it, and rule 5 has not judged the remap that replaced it.
    */
-  const applyDepthStep = (grip: Held, dyPx: number): void => {
+  /**
+   * ⭐⭐⭐ **APPLY A WORLD TRANSLATION STEP — the ONE place a translation lands on a body.**
+   *
+   * ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"when the object approaches another one from the
+   * gravity axis, sometimes there is no swing of the camera when the object enters the offset
+   * radius zone."* ⚠ The swing picks its direction from `frameTravel*`, and **only the holder's
+   * branch fed it** — the second touchpoint's channel, which since `D75` is the GRAVITY axis,
+   * added nothing. ⭐ So an approach driven along gravity armed with `swingSignFor(0, 0)`, which
+   * is `null`, and the swing never started. *"Sometimes"* is exactly the frames where the holder
+   * happened to be still.
+   *
+   * ⭐⭐ **IT IS THE `D68` SHAPE AGAIN, TWELVE HOURS LATER: one fact, two writers, one of which
+   * forgot.** ⛔ So the fix is not the missing line — it is that applying a step and recording
+   * what it did are now the same function, and a third channel cannot be added without both.
+   */
+  const applyWorldStep = (grip: Held, step: Vec3): void => {
+    const id = idOf.get(grip.mesh);
+    // ⭐ The direction the body ACTUALLY went — what the LeadingFace ray is fired along. ⛔ Kept
+    // only when it is a real move: a frame of stillness must not erase the gizmo.
+    const dir = normalize(step);
+    if (dir && id !== undefined) lastTravelDir.set(id, dir);
+    // ⚠ The swing reads SCREEN travel (*"opposite to the dx movement"*), so the applied
+    // displacement is projected back onto the gravity frame rather than recomputed from a
+    // pointer delta that `A11`'s deadband may have swallowed. ⛔⛔ ACCUMULATED, NOT LATCHED:
+    // `refreshHighlight` zeroes it every frame, so the arming edge reads only the travel that
+    // crossed the threshold.
+    frameTravelRightM += dot(step, grip.frame.right);
+    frameTravelUpM += dot(step, grip.frame.up);
     const mp = requirePose(grip.mesh);
-    const { minM, maxM } = depthLimits(cfg);
+    // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
+    // camera's own maximum orbit radius. A body through the near plane renders *a black page with
+    // no error at all*, and one past the ceiling cannot be brought back by any zoom.
+    const limits = depthLimits(cfg);
+    setModelPose(grip.mesh, {
+      position: clampDepthRange(
+        asVec3(camera.position),
+        [mp.position[0] + step[0], mp.position[1] + step[1], mp.position[2] + step[2]],
+        grip.frame.depth,
+        limits.minM,
+        limits.maxM,
+      ),
+      orientation: mp.orientation,
+    });
+  };
+
+  const applyDepthStep = (grip: Held, dyPx: number): void => {
     const gid = idOf.get(grip.mesh);
     const axes = gid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf(gid);
     const travel = axisTravel(
@@ -3522,21 +3565,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       cfg.axisTrackingConeDeg,
       grip.frame.towardGravity,
     );
-    const step = axisDisplacement(travel, axes);
-    {
-      const dir = normalize(step);
-      if (dir && gid !== undefined) lastTravelDir.set(gid, dir);
-    }
-    setModelPose(grip.mesh, {
-      position: clampDepthRange(
-        asVec3(camera.position),
-        [mp.position[0] + step[0], mp.position[1] + step[1], mp.position[2] + step[2]],
-        grip.frame.depth,
-        minM,
-        maxM,
-      ),
-      orientation: mp.orientation,
-    });
+    // ⭐ ONE writer, so this channel now feeds the swing exactly as the holder's does.
+    applyWorldStep(grip, axisDisplacement(travel, axes));
   };
 
   // ⛔⛔ **THE OLD DEPTH RULE STOOD HERE UNTIL 2026-09-22.** `depthTranslate` moved the body
@@ -4895,68 +4925,21 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         lastTrackGain = travel.trackGain;
         lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);
-        // ⭐⭐ THE DIRECTION THE BODY ACTUALLY WENT — what the LeadingFace ray is fired along,
-        // and the owner's choice over the finger's own direction. ⛔ Kept only when it is a
-        // real move: a frame of stillness must not erase the gizmo, and `normalize` of a zero
-        // vector is `null` rather than a guess.
-        {
-          const dir = normalize(step);
-          if (dir && tid !== undefined) lastTravelDir.set(tid, dir);
-        }
-        // ⚠ The swing still reads SCREEN travel (*"opposite to the dx movement"*), so the
-        // applied displacement is projected back onto the gravity frame rather than recomputed
-        // from the pointer — one computation, read two ways.
-        const t = { rightM: dot(step, grip.frame.right), upM: dot(step, grip.frame.up) };
-        // ⭐ `grip.frame` is still the basis LATCHED AT PRESS, and it is used here for the
-        // swing's readout and the depth clamp only — the body's own axes decide the motion, and
-        // with `worldAxisB` they were latched at BOOT rather than at this press.
-        // ⛔ THE FINGER MOVES THE TARGET, NOT THE MESH. The mesh chases it in the render
-        // loop. With `translateInertiaMs` at 0 the two are the same thing.
-        // ⛔ THE FINGER MOVES THE MODEL. The follower's target is re-read from it every
-        // frame, so the inertia stays exactly what it was — a filter on the way to the
-        // screen, and no longer the place the object's position is kept.
-        const mp = requirePose(grip.mesh);
-        // ⚠ The swing's direction comes from here and nowhere else — *"opposite to the dx
-        // movement"* means the travel this rule actually applied, not a raw pointer delta that
-        // `A11`'s deadband may have swallowed.
-        // ⛔⛔ **ACCUMULATED, NOT LATCHED.** `refreshHighlight` zeroes this every frame, so the
-        // arming edge can only ever read travel that happened *since the previous frame* — the
-        // travel that crossed the threshold. ⚠ The old form kept the last non-zero value for
-        // ever and handed the swing a direction from a gesture that was already over.
-        frameTravelRightM += t.rightM;
-        frameTravelUpM += t.upM;
-        // ⭐⭐⭐ **CASE 2's BLEND IS DRIVEN BY *THIS* FINGER** — and without it the retarget was
+        // ⭐⭐⭐ **CASE 2's BLEND IS DRIVEN BY *THIS* FINGER** — without it the retarget was
         // invisible: `centreBlend.advance` is called from the ORBIT branch only, so during an
-        // object drag the target moved and the camera never migrated to it. ⚠ Measured on the
-        // tablet as `→0%` forever.
-        // ⛔ The same quantity the orbit uses — millimetres of finger travel — so the centre
-        // arrives *as the gesture progresses* rather than on a timer, which is the rule
-        // `OrbitCentreBlend` was written for.
+        // object drag the target moved and the camera never migrated to it (measured on the
+        // tablet as `→0%` forever). ⛔ The same quantity the orbit uses — millimetres of finger
+        // travel — so the centre arrives as the gesture progresses rather than on a timer.
         // ⚠ Gated on the selector so **case 1 is byte-for-byte what it was**.
         if (cfg.approachRetargetsOrbit === 1 && centreBlend.isBlending) {
           centreBlend.advance(Math.hypot(grip.rec.step.dx, grip.rec.step.dy) / mmToPx(1));
           syncCentre();
         }
-        // ⛔⛔ THE DEPTH RANGE STILL BINDS. `A5`'s bounds were derived — twice the near plane,
-        // and the camera's own maximum orbit radius — and the hazard did not move when the
-        // channel did: a body driven through the near plane renders *a black page with no
-        // error at all*, and one past the ceiling cannot be brought back by any zoom.
-        const wanted: Vec3 = [
-          mp.position[0] + step[0],
-          mp.position[1] + step[1],
-          mp.position[2] + step[2],
-        ];
-        const limits = depthLimits(cfg);
-        setModelPose(grip.mesh, {
-          position: clampDepthRange(
-            asVec3(camera.position),
-            wanted,
-            grip.frame.depth,
-            limits.minM,
-            limits.maxM,
-          ),
-          orientation: mp.orientation,
-        });
+        // ⭐ ONE writer for an applied step: it moves the body, feeds the swing's direction and
+        // records the travel direction the LeadingFace ray is fired along. ⛔ THE FINGER MOVES
+        // THE MODEL — the follower re-reads it every frame, so the inertia stays a filter on
+        // the way to the screen rather than the place the position is kept.
+        applyWorldStep(grip, step);
       } else if (grip.mode === "ROTATE") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release.

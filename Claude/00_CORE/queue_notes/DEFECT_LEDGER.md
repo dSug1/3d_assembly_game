@@ -293,3 +293,33 @@ the **sequence** — *tap, press that pairs, release* — and what it must come 
 state the net mode after a whole gesture, which is the only thing a hand can see; they are a model
 of the wiring and say so, because the alternative was no statement at all.
 
+
+---
+
+## 53 — ⭐⭐ THE SWING NEVER SAW A VERTICAL APPROACH: ONE ACCUMULATOR, TWO WRITERS, ONE FED IT
+
+**2026-09-23, by finger.** *"When the object approaches another one from the gravity axis,
+sometimes there is no swing of the camera when the object enters the offset radius zone."*
+
+⛔⛔ **THE RULE WAS NEVER WRONG — IT WAS NEVER FED.** `swingSignFor(right, up)` has always
+answered `1` for a purely vertical travel, with a comment saying so: *"a translation with no
+horizontal component: the swing is earned, the aim is symmetric."* ⚠ What it received was
+`swingSignFor(0, 0)`, which is `null`.
+
+⭐ **The accumulator had two writers and only one fed it.** `frameTravelRightM/UpM` were
+incremented in the HOLDER's translate branch; the second touchpoint's channel — which since
+`D75` is the **gravity axis**, i.e. exactly the approach the owner described — applied its
+displacement and recorded nothing. ⛔ *"Sometimes"* is the tell and it is precise: the swing armed
+whenever the holder happened to be moving on the same frame, and not otherwise.
+
+⭐⭐⭐ **IT IS DEFECT 52's SHAPE, TWELVE HOURS LATER**, in a different file: *one fact, two
+writers, one of which forgot*. ⚠ That is now twice in one day, which makes it a pattern rather
+than an accident — and both times the missing line was the symptom while the duplication was the
+cause.
+
+✅ **FIXED STRUCTURALLY**: `applyWorldStep` is the one function that applies a translation to a
+body, and it moves the body, feeds the swing's direction and records the travel direction the
+LeadingFace ray is fired along — all three, or none. ⛔ A third channel cannot be added without
+them. ⭐ 2 vectors compose the chain the scene threads (a gravity-channel displacement projected
+onto the gravity frame arms the swing) and carry the counter-example the product actually shipped.
+

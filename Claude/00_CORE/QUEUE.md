@@ -16,8 +16,8 @@ changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1078 golden vectors,
-all passing** (37 → … → 1071 → 1076 → **1078**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1080 golden vectors,
+all passing** (37 → … → 1076 → 1078 → **1080**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
@@ -126,9 +126,10 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Fifty-two defects, **fifty-one by finger** (the other by composing a measurement with a threshold),
-and **not one was visible to a green suite**. They are **five** shapes — the fifth is below, and it
-costs a correct implementation rather than a broken one:
+Fifty-three defects, **fifty-two by finger** (the other by composing a measurement with a threshold),
+and **not one was visible to a green suite**. ⚠⚠ **AND TWICE IN ONE DAY THE CAUSE WAS *ONE FACT, TWO
+WRITERS, ONE OF WHICH FORGOT*** — defects 52 and 53, in different files. They are **five** shapes —
+the fifth is below, and it costs a correct implementation rather than a broken one:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
 the sum of the rows' dossiers — not a figure anyone restates from memory:
@@ -166,22 +167,21 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | ⛔ **`D73`** — a restarted ease stalled, so MORE increments moved the body LESS | **1** |
 | ⛔ **`D76`** — the axis mapping lost the cosine; only the gravity channel kept up | **1** |
 | ⛔⛔ **`D68`** — its guard was WRITTEN AND NEVER READ, and its flag had two writers | **1** |
-| ⭐⭐ **THE TOTAL** | **= 52** |
+| ⛔⛔ **the swing** — a vertical approach never fed the travel it signs from | **1** |
+| ⭐⭐ **THE TOTAL** | **= 53** |
 
-⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16): each account is in
-[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), the table stays here, and a row's count
-changes in both places or in neither.
+⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT**: each account is in
+[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), and a row's count changes in both
+places or in neither.
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION**: *"you destroyed the rotation around the
-gravity axis"*, withdrawn after `tests/a7_wiring.test.ts` measured the composition at four camera tilts.
-⛔ Every part of `A7` had green vectors and **the composition had none** — mistake shape 4 pointing at
-CORRECT work.
+gravity axis"*, withdrawn after `tests/a7_wiring.test.ts` measured the composition at four tilts.
+⛔ Every part of `A7` had green vectors and **the composition had none**.
 
-⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.** A
-gesture fix confirmed over USB was reported broken from Pages hours later; the code was **identical**
-and the tablet held a cached `index.html` pointing at a superseded bundle. ⭐⭐ **The withdrawn-`A7`
-shape one layer lower** — truthful report, sound reasoning, and the unchecked premise was *"both
-surfaces run the same code"*.
+⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.** The code
+was **identical** on both surfaces; the tablet held a cached `index.html` pointing at a superseded
+bundle. ⭐⭐ **The withdrawn-`A7` shape one layer lower** — truthful report, sound reasoning, and the
+unchecked premise was *"both surfaces run the same code"*.
 ⚠ **Not counted as a gesture defect**, but a real one of the **deploy surface**, fixed in the
 product rather than in a procedure (`src/core/build_gate.ts`, 16 vectors, plus a build stamp on
 the HUD) — ✅✅ closed on the glass the same day. ⚠ It exposed a second thing that was never a
@@ -189,10 +189,10 @@ report at all: the HUD's **overridden-tunables line had never been rendered**, f
 life of the file. ⭐ Both lessons are in `METHOD`; the account is
 [`queue_notes/DEP1d.md`](queue_notes/DEP1d.md).
 
-⛔ **Amend the ledger, never a bare number elsewhere.** `README.md` said *seventeen* and
-`40_RENDER_SCENE/INDEX.md` *sixteen*, both frozen snapshots of a number that had moved on.
-⚠ **Tuning judgements are NOT counted**: an owner raising a gain, rejecting inertia, or declining a
-cost that shipped named, is the loop working, not a fault found.
+⛔ **Amend the ledger, never a bare number elsewhere.** `README.md` once said *seventeen* and
+`40_RENDER_SCENE/INDEX.md` *sixteen* — frozen snapshots of a number that had moved on.
+⚠ **Tuning judgements are NOT counted**: a raised gain, a rejected inertia, or a declined cost that
+shipped named, is the loop working.
 
 1. **A rate estimated over the shortest available baseline.** Flick lift speed, roll
    direction, roll curvature. ⭐ *State the window, and check the signal clears the
