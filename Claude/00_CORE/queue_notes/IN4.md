@@ -893,3 +893,59 @@ the branch as `swingSignFor`'s third argument.
 sweep of camera poses and printed what a hand would see; both of my own explanations before that
 probe were incomplete, and the second one was wrong about WHERE the degeneracy lies.
 ⚠ The branch still exists: check it out, copy the old rule beside the new one, and print the table.
+
+---
+
+## ⭐⭐⭐ `D84` — **THE ROTATION BASIS FOLLOWS `worldAxisB` TOO** (2026-09-23)
+
+> *"remind me why for an unaligned object when world axis is toggled on, the translation is done
+> along world axis but the rotation is done along screen axis? is it on purpose or was it a miss
+> when we built world axis?"* … *"do the change."* — the owner
+
+### ⛔⛔⛔ The answer was NEITHER, and that is the entry worth keeping
+
+`D74`/`D75` dictated three TRANSLATION channels — *x is the holder's `dx`, depth its `dy`, gravity
+the second finger's `dy`* — and **nothing in the dictation, and nothing in this dossier, ever reached
+the rotation.** ⭐ So rotation went on standing on `A7`'s LIVE gravity frame: not a decision to leave
+it there, and not an oversight in implementing what was asked. It was never in scope.
+
+⭐⭐ `METHOD`: *a scope that was never stated is not a scope that was chosen, and the difference is
+invisible in the code that results.* ⚠ Both produce the same source. The only way to tell them apart
+is to go back to the human sentences and find that none of them mentions the case — which is the
+same test `D71` used for the boot mode (*the tell is not the VALUE but whether any human sentence
+still asks for the other*).
+
+### ⭐⭐ What actually changes — measured, not assumed
+
+⛔ A `GravityFrame`'s `up` is the **world vertical by definition**, at every camera elevation. So:
+
+| channel | axis | does `worldAxisB` move it? |
+|---|---|---|
+| yaw | `up` | **no** — it was already world-fixed |
+| pitch | `right` (camera's, always horizontal) | **yes** |
+| roll | `depth` (view direction flattened) | **yes** |
+
+⚠ The first vector asserts this rather than the prose claiming it: two frames a quarter turn apart
+share `up` EXACTLY and are orthogonal in the other two. ⭐ Without that fixture the remaining vectors
+would pass against a rule that did nothing.
+
+### ⚠⚠ The cost, stated before a hand meets it
+
+⛔ Frozen, the pitch axis points at the camera after a quarter orbit — a vertical finger sweep there
+reads as a **roll** rather than a tip. ⭐ That is precisely the property the owner ASKED FOR on the
+translation side (*a push that went "right" before an orbit still goes the same way in the world
+afterwards*), carried across to the turn. ⚠ It is the thing to judge by finger, and
+`?worldAxisB=0` restores the live frame for **both** at once.
+
+⛔ A **TWIST on an aligned body is untouched**: it turns about the constraint's own axis and never
+consulted a camera frame. The owner's question was about the UNALIGNED case, and the change is
+scoped to it.
+
+### ⭐ Where it lives
+
+`rotationFrame` in `input/object_axes.ts` — engine-free, beside `updatedObjectAxes` so the two
+readings of one flag sit together. ⛔ `scene.ts` supplies the two candidates and nothing else; the
+three free-rotation call sites (roll, yaw, pitch) each take the frame **once** and hand it to all
+their readers, because the grey gizmo line, the turn itself and the increment tally restate each
+other's axes and signs — two lookups could disagree on the frame the flag is toggled.
+✅ 5 vectors; the old behaviour (always the live frame) run as a mutant reddens 2 of them.

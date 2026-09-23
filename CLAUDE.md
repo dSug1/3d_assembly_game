@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1105 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1096 golden vectors passing** — ⚠ MEASURED 2026-09-23; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -121,6 +121,25 @@ gizmo. ⛔ `cameraOffsetZoneEnterSetupB` gates a method **the owner has not defi
 `0` and the hook is empty. 32 vectors, three mutants caught, engine-free in `core/leading_face.ts`,
 `input/object_axes.ts` and `input/axis_translate.ts` →
 [`Claude/00_CORE/queue_notes/IN4.md`](Claude/00_CORE/queue_notes/IN4.md).
+
+⭐⭐⭐ **AND `worldAxisB` NOW GOVERNS A FREE BODY'S ROTATION TOO** (`D84`, 2026-09-23). The owner
+asked *"why is the translation done along world axis but the rotation along screen axis — is it on
+purpose or was it a miss?"* ⛔⛔ **The honest answer was NEITHER**: `D74`/`D75` named only translation
+channels and `IN4.md` never reached the rotation, so `A7`'s LIVE frame went on standing — not by
+decision but because none was made. ⭐ `METHOD`: *a scope never stated is not a scope chosen, and the
+difference is invisible in the code that results.* ⭐⭐ **Less moves than the question implies**: a
+gravity frame's `up` IS the world vertical, so **YAW was already world-fixed**; only PITCH and ROLL
+freeze. ⚠⚠ **Cost, unjudged**: a quarter-orbit on, the frozen pitch axis points at the camera and a
+vertical sweep reads as a ROLL — the same property the owner ASKED for on the translation side.
+⛔ A TWIST on an ALIGNED body is untouched: it turns about the constraint and never read a camera
+frame. `?worldAxisB=0` restores the live frame for both → `rotationFrame` in `input/object_axes.ts`,
+5 vectors, the old behaviour shown RED.
+
+⚠⚠ **AND A RULE LAPSED WITHOUT ANYTHING GOING RED** (found by a read, 2026-09-23): `D77`'s *no gizmo
+on a frozen body* was enforced INSIDE `leadingFace`, and `core/leading_face.ts` was deleted the same
+day — so the plate, which `D67` says to hold FIRST, was drawing a full set of axes for a body whose
+transform is refused. ⭐ *Deleting the file a rule lived in deletes the rule*: a definition-site
+guarantee is only as durable as the definition, and only a TEST is durable.
 
 ⭐⭐⭐ **THE INPUT MODEL IS THE OWNER'S TAP-TO-ALIGN SET** (`D37`–`D40`) — and since
 2026-09-17 it is the **only** one: forks A and B are **deleted**, with the flag, the slider

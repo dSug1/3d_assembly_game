@@ -1790,7 +1790,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    *    DIRECTIONS: the object axes are WORLD directions, and a parented gizmo would turn with
    *    the body and stop pointing along them.
    *
-   * ⭐ Reading the face centre out of the model (`core/leading_face.ts` → `faceWorld`) escapes
+   * ⭐ Reading the face centre out of the model (`object_model.ts` → `faceWorld`) escapes
    * both: the model is what every rule wrote this frame, and the axes are applied in world
    * space with no parent to rotate them.
    *
@@ -2005,6 +2005,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     for (const grip of held.values()) {
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
+      // ⛔⛔⛔ **NO GIZMO ON A FROZEN BODY — `D77`, AND IT HAD SILENTLY LAPSED.** The owner made
+      // that a rule on 2026-09-23, enforced at a DEFINITION: `leadingFace` refused a frozen body,
+      // because *the face a body is advancing on* presumes it advances. ⚠ `core/leading_face.ts`
+      // was deleted the same day at his request, and the guarantee went with it — with **nothing
+      // going red**, because the enforcement lived in the deleted file rather than in a test.
+      // ⛔ The plate can still be HELD by a first touch (`D67`), so the gizmo was drawing a full
+      // set of axes for a body whose transform `setWorldPlacement` refuses to change.
+      // ⭐ `METHOD`: *deleting the file a rule lived in deletes the rule* — a definition-site
+      // guarantee is only as durable as the definition.
+      if (world.objects.get(id)?.frozen === true) continue;
       if (!isTranslatingMode(grip.mode) && !frameTurnAxes.has(id)) continue;
       if (candidates.some((c) => c.id === id)) continue;
       candidates.push({
