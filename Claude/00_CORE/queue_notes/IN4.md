@@ -779,3 +779,15 @@ never advances — rather than by a guard in the renderer, which the next reader
 have had to repeat. ⚠ It also removes the in-zone basis for a frozen body, which is right for the same
 reason: `object_model.ts` will not move it.
 
+⛔⛔ **2026-09-23 — THE GIZMO WAS INVISIBLE ON EXACTLY THE FACE THAT MATTERS.** *"When the follower
+is translating and followerface is the leadingface, the gizmo does not show."* ⭐ Two things drawn on
+the SAME face: the marker floats `MARKER_LIFT_M` (1.5 mm) **above** the surface and the gizmo starts
+**on** it, both in rendering group 0 — and the axis lengths are `1.5 ×` the body's own reach to that
+face, so a gizmo sitting inside a large face was hidden **entirely**, not partly. ⚠ The x-ray twin
+(group 1) then made it certain rather than likely. ✅ The gizmo is drawn in **group 2**, above both:
+*an instrument that says which way a push will go must not be occludable by the thing it describes.*
+⚠ Not counted as a defect: it is the cost of a decoration I added the same day, found within the hour
+by the hand it was built for.
+
+⭐ And `followerFaceXrayAlpha` is **0.05** — the owner's number, a tenth of my guess.
+

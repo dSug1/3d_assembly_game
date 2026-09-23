@@ -1676,6 +1676,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         scene,
       );
       m.color = GIZMO_AXIS_COLOURS[i]!.clone();
+      // ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"when the follower is translating and followerface
+      // is the leadingface, the gizmo does not show."* ⚠ Both are drawn on the SAME face, and the
+      // face marker floats `MARKER_LIFT_M` (1.5 mm) ABOVE the surface while the gizmo starts ON
+      // it — so the marker's filled quad covered it, and the two in-plane axes are exactly the
+      // ones that vanish. ⛔ The x-ray twin made it certain rather than likely: group 1 draws
+      // over everything in group 0 by construction.
+      // ⭐⭐ **SO THE GIZMO GOES ABOVE BOTH, IN GROUP 2.** An instrument that says which way a
+      // push will go must not be occludable by the thing it is describing — the same argument
+      // the HUD rests on, and the CAD convention for a transform gizmo.
+      // ⚠ The axis lengths are `1.5 ×` the body's own reach to that face, so a gizmo that sat
+      // inside a large face was hidden ENTIRELY, which is why the report says *does not show*
+      // rather than *is partly hidden*.
+      m.renderingGroupId = 2;
       m.isPickable = false;
       m.isVisible = false;
       // ⛔ OUT of the barycentre candidate set, exactly as the orbit marker is: an instrument

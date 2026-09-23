@@ -972,10 +972,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   translatePairing: 1,
   // ⭐ Blender's number, not mine.
   axisTrackingConeDeg: 5,
-  // ⚠ A GUESS, shipped ON because the owner asked for the feature rather than for a comparison.
-  // ⭐ `0` restores the build before it, which is the A/B, and any value between is a judgement
-  // a hand makes on the glass without a rebuild.
-  followerFaceXrayAlpha: 0.45,
+  // ✅ **0.05 — THE OWNER'S NUMBER, 2026-09-23** (*"Set the default transparency to 0.05"*),
+  // replacing my guess of 0.45 on the first look at it. ⚠ It is a JUDGEMENT, not a measurement,
+  // and it is a tenth of what I shipped — ⭐ the sixth time a guessed number has been corrected
+  // by a hand on this project, and the first that was too STRONG rather than too weak.
+  // ⛔ `0` still restores the build before the flag, which is the A/B.
+  followerFaceXrayAlpha: 0.05,
   // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
   // really did align against this thing.
   alignMatchDeg: 15,

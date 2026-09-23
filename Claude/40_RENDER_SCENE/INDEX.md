@@ -45,14 +45,12 @@ something else created one — and then **JUMPED** to where it should have been 
 ⚠ **Still a stand-in**: rule 2bis runs without its PRECONDITION (§1.4's empty constraint stack),
 which `IN3` adds. The gesture, its axes and its gain are real.
 
-⭐⭐ **`requireGestureFrame()` THROWS rather than guessing.** `A7`'s frame is undefined when the camera
-looks exactly along gravity, and a silent fallback would turn *"the axes are wrong at the pole"* into a
-defect a hand has to find. ⚠ The orbit rings make the pole unreachable, so it guards an invariant
-rather than a live failure mode.
+⭐⭐ **`requireGestureFrame()` THROWS rather than guessing.** `A7`'s frame is undefined looking exactly
+along gravity, and a silent fallback would turn *"the axes are wrong at the pole"* into a defect a hand
+has to find. ⚠ The orbit rings make the pole unreachable, so it guards an invariant.
 
-⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`), because
-*"I can't see the object hitting any wall"* — a claim a device cannot check is an
-assertion, not a finding.
+⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`): a claim a device
+cannot check is an assertion, not a finding.
 
 ### ⛔⛔ Two traps this folder exists to remember
 
@@ -64,9 +62,8 @@ camera must set it too.
 the config **validator** needs it to refuse a zoom range that would clip the scene,
 and the camera is the only thing that can apply it. One constant, one place.
 
-**`camera.detachControl()` is deliberate.** Rules 1 and 4 drive the camera through the
-gesture layer; letting Babylon's own controls attach as well means two things claim
-the same touch and the winner depends on event order.
+**`camera.detachControl()` is deliberate.** Rules 1 and 4 drive the camera through the gesture layer;
+letting Babylon's controls attach too means two things claim one touch and event order decides.
 
 ⭐ Face picking is *why* Babylon is here: rule 2 selects a **face**, and `pickResult.faceId` gives
 it directly — also the seam to a mate connector.
@@ -97,16 +94,14 @@ same sha deployed, which is exactly the comparison that went wrong.
 own answer can disagree with the product while both show green. ⛔ `pointer-events: none`: it must
 never eat a touch it exists to describe.
 
-**The LEADING-FACE GIZMO** (`refreshAxisGizmo` in `scene.ts`, `core/leading_face.ts`) — three
-coloured lines at the centre of the face a held body is **advancing on**, pointing along that body's
-object axes: **x red, gravity green, depth blue**. ⭐ It is the only thing on the glass that says
-which basis a drag is using, and the basis is now the thing that decides where a body goes.
-⛔⛔ **POSITIONED FROM THE MODEL AND NOT PARENTED, AND THE TWO TRAPS PULL OPPOSITE WAYS.** Reading
-`mesh.getWorldMatrix()` gives Babylon's **cached** matrix, recomputed inside `scene.render()` — i.e.
-after the block that reads it — which is defect 46, every marker drawing last frame's pose. ⚠ Parenting
-fixes that for a POSITION and would be wrong for these DIRECTIONS: the object axes are WORLD
-directions, and a parented gizmo would turn with the body and stop pointing along them. ⭐ Reading the
-face centre out of the model escapes both.
+**The LEADING-FACE GIZMO** (`refreshAxisGizmo`, `core/leading_face.ts`) — three coloured lines at the
+centre of the face a held body is **advancing on**, along that body's object axes: **x red, gravity
+green, depth blue**. ⭐ The only thing on the glass that says which basis a drag is using.
+⛔⛔ **POSITIONED FROM THE MODEL AND NOT PARENTED, AND THE TWO TRAPS PULL OPPOSITE WAYS.**
+`mesh.getWorldMatrix()` is Babylon's **cached** matrix, recomputed inside `scene.render()` — after the
+block that reads it — which is defect 46. ⚠ Parenting fixes that for a POSITION and is wrong for these
+DIRECTIONS: the object axes are WORLD directions, and a parented gizmo would turn with the body.
+⭐ Reading the face centre out of the model escapes both.
 ⭐⭐ **THE FOLLOWERFACE CAN BE SEEN THROUGH ITS OWN BODY** (2026-09-23): `followerFaceXrayAlpha`
 draws an **X-RAY TWIN** in **rendering group 1**, after everything and with the depth buffer cleared
 first, so nothing can hide it. ⛔ A SECOND MESH: the visible marker stays opaque and the twin adds
@@ -114,6 +109,11 @@ only what the body hid — one draw at a lowered alpha would have made a visible
 ⚠ `0` is OFF, and the value is a guess with a slider. ⭐ Retired by the **same membership test, in
 the same loop** as the fill: a twin outliving its marker is the stale-highlight shape that cost two
 false device reports.
+
+⛔⛔ **THE GIZMO IS DRAWN IN GROUP 2, ABOVE BOTH** — device-reported 2026-09-23: *"the gizmo does
+not show"* when the FollowerFace IS the LeadingFace. ⚠ Same face, and the marker floats 1.5 mm above
+the surface while the gizmo starts ON it, so a gizmo inside a large face was hidden **entirely**.
+⭐ An instrument must not be occludable by the thing it describes.
 
 ⚠ **A body whose geometry cannot answer shows no gizmo** — never a stand-in, exactly as `⛔NOSHAPE`
 shows no capture shell. ⛔ **Nor does a FROZEN body** (the owner, 2026-09-23): a gizmo on something
