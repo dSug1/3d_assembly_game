@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1078 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1069 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -102,8 +102,12 @@ orthogonalised face basis spans the same horizontal plane, so nothing changes at
 ⛔⛔ **THE OBJECT AXES THEMSELVES** (`D74`/`D75`, 2026-09-22).
 A body is translated along **its own axes**: fixed at scene boot from the boot camera and frozen for
 the scene (`worldAxisB=1`, **the default, the owner's choice**), or following the live camera at `0`
-— and **inside the capture zone** the basis becomes the **LeadingFace normal, gravity and their
-orthogonal** instead, re-decided on the zone's **EDGE**. ⛔ The channels moved with it: the holder's
+⛔⛔⛔ **AND THE IN-ZONE BASIS IS DELETED** (`D82`, 2026-09-23): *"Inside shall be the same as
+outside. I think this is polluting the approach movement."* ⭐⭐ The zone EDGE is where the
+translation directions changed under a MOVING finger — the basis was re-decided at the one moment
+the body was already being driven. ⭐ `METHOD`: *a rule whose every defect is about the MOMENT it
+takes effect is a rule about the wrong thing.* ⚠ `leadingFace` and its gizmo survive, and the edge
+still names the pair and fires the hook. ⛔ The channels are unchanged: the holder's
 `dx`→**x**, its `dy`→**depth**, the second touchpoint's `dy`→**gravity**. So **one finger slides a
 body about its own horizontal plane and a second finger lifts it.** ⭐⭐ Each input is projected onto
 its axis's screen shadow and **NOT normalised** (the owner's choice over Blender's division), so a
