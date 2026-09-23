@@ -183,6 +183,7 @@ import {
   axisDisplacement,
   axisTravel,
   clampDepthRange,
+  activeChannels,
   aimDirection,
   displayedAxes,
   type AxisTravel,
@@ -1640,8 +1641,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * `displayedAxes`'s; this only remembers its answer, so a pause does not blank the gizmo.
    */
   const gizmoAxes = new Map<ObjectId, readonly [boolean, boolean, boolean]>();
-  /** ⚠ WHICH CHANNELS pushed this body THIS FRAME, over both fingers. Consumed by the gizmo. */
-  const frameAxisDriven = new Map<ObjectId, [boolean, boolean, boolean]>();
   /**
    * ⭐ ONE place both `axisTravel` call sites report to — the holder's drag and the second
    * touchpoint's push. ⛔ The owner, 2026-09-23: *"make sure the delta position on the second
@@ -1649,8 +1648,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const noteAxisTravel = (id: ObjectId | undefined, t: AxisTravel): void => {
     if (id === undefined) return;
-    const p = frameAxisDriven.get(id) ?? [false, false, false];
-    frameAxisDriven.set(id, [p[0] || t.driven[0], p[1] || t.driven[1], p[2] || t.driven[2]]);
     // ⭐⭐ AND THE SENSE EACH AXIS IS BEING PUSHED IN, which is what aims the LeadingFace ray.
     // ⛔ Senses, never magnitudes: two events reach one body in a frame and the deadband emits in
     // bursts, so a comparison of magnitudes is what made the gizmo jitter between faces.
@@ -1826,9 +1823,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // position triggers a translation in this direction."* ⛔ The rule is `displayedAxes`'s, in
       // `src/input`, and it keeps the last non-empty answer so that a pause — or `A11`'s deadband
       // emitting nothing on one axis — does not blank the gizmo.
+      // ⭐⭐⭐ **THE SAME DEADBAND THE TRANSLATION USES** — the owner, 2026-09-23: *"I suppose there
+      // is a deadband for the object translation: use the same deadband for the gizmo
+      // repositioning."* ⛔ §1.1's per-axis MOTION STATES, not its emissions: the emissions come in
+      // bursts over the dead radius and made this set flicker, which is the jitter he reported.
       const shown = displayedAxes(
         gizmoAxes.get(id) ?? null,
-        frameAxisDriven.get(id) ?? [false, false, false],
+        activeChannels(grip.rec.motionAxes, [...grip.anchorMotion.values()].map((t) => t.axes)),
       );
       if (shown === null) continue;
       gizmoAxes.set(id, shown);
@@ -1918,7 +1919,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     for (const [id, r] of gizmoRings) if (!live.has(id)) r.isVisible = false;
     // ⛔ CONSUMED HERE, every frame, exactly as the swing's travel accumulators are: the gizmo
     // must read the travel of THIS frame and never a stale one.
-    frameAxisDriven.clear();
     frameSigns.clear();
   };
 

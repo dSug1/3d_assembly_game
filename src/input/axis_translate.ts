@@ -75,6 +75,7 @@
  * ⛔ ENGINE-FREE.
  */
 import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
+import type { MotionState } from "./motion";
 import type { ObjectAxes } from "./object_axes";
 
 /** The camera's own axes — `ScreenFrame`'s `right` and `up`. ⚠ Never the gravity frame. */
@@ -128,14 +129,6 @@ export interface AxisTravel extends AxisTravelM {
    * which is a different quantity from this one.
    */
   readonly trackGain: number;
-  /**
-   * ⭐⭐⭐ **WHICH CHANNELS PUSHED THIS FRAME**, as `[x, gravity, depth]`. The gizmo's rule reads
-   * this and not the travel, because under `PLANE` a pure `dx` moves the body along BOTH
-   * horizontal axes and the owner asked for the line of the channel he pushed.
-   * ⛔ Returned rather than recomputed by the caller: *a readout that derives its own answer is a
-   * second implementation*, and the channel map has one home — the line that fills this.
-   */
-  readonly driven: readonly [boolean, boolean, boolean];
   /**
    * ⭐⭐⭐ **WHICH WAY EACH AXIS IS BEING PUSHED, as `[x, gravity, depth]`** — `+1`, `-1`, or `0`
    * for a channel that moved nothing this frame.
@@ -215,17 +208,12 @@ export function axisTravel(
       depthM: 0,
       edgeOn: false,
       trackGain: 0,
-      driven: [false, false, false],
       signs: [0, 0, 0],
     };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
   const dy = finite(input.holderDyPx) * metresPerPx;
   const dy2 = finite(input.secondDyPx) * metresPerPx;
-  // ⭐⭐⭐ **THE CHANNEL MAP, STATED ONCE AND READ TWICE.** `dx` drives x, the holder's `dy` drives
-  // depth, and the second touchpoint's `dy` drives gravity (`D75`). ⛔ The gizmo asks THIS rather
-  // than inspecting the travel, because the `PLANE` solve spreads one channel across two axes.
-  const driven: readonly [boolean, boolean, boolean] = [dx !== 0, dy2 !== 0, dy !== 0];
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
 
   /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
@@ -292,7 +280,7 @@ export function axisTravel(
   const gravityM = g === null ? -dy2 * secondGain : g * secondGain;
 
   // ⭐⭐ **THE SENSE EACH AXIS IS BEING PUSHED IN** — the ray is aimed from these and from
-  // `driven`, never from the magnitudes. ⛔ The sign comes from the TRAVEL, which is where the
+  // `activeChannels`, never from the magnitudes. ⛔ The sign comes from the TRAVEL, which is where the
   // camera's geometry has already been resolved; the magnitude is discarded on purpose.
   const signs: readonly [number, number, number] = [
     Math.sign(xM) || 0,
@@ -302,7 +290,6 @@ export function axisTravel(
 
   const asked = Math.hypot(dx, dy);
   return {
-    driven,
     signs,
     xM,
     depthM,
@@ -328,6 +315,34 @@ export function axisDisplacement(travel: AxisTravelM, axes: ObjectAxes): Vec3 {
     axes.x[1] * travel.xM + axes.gravity[1] * travel.gravityM + axes.depth[1] * travel.depthM,
     axes.x[2] * travel.xM + axes.gravity[2] * travel.gravityM + axes.depth[2] * travel.depthM,
   ];
+}
+
+/**
+ * ⭐⭐⭐ **WHICH CHANNELS ARE ACTIVE — from §1.1's OWN MOTION STATES, deadband and all.**
+ *
+ * > *"add a slight deadband on the delta position input so that there is no gizmo jitter. I
+ * > suppose there is a deadband for the object translation: use the same deadband for the gizmo
+ * > repositioning."* — the owner, 2026-09-23
+ *
+ * ⛔⛔⛔ **THE DEADBAND WAS ALREADY THERE, AND THE GIZMO WAS READING THE WRONG SIDE OF IT.** `A11`
+ * emits the EXCESS over a dead radius, on whichever axis has crossed it — so *"did this channel
+ * emit this frame"* flickers in bursts even while a hand pushes both fingers steadily, and the
+ * gizmo's set of lines flickered with it. ⭐ The same machine also keeps a per-axis **STATE**:
+ * `MOVING` until that axis has been at rest for `restConfirmMs`. ⚠ That is the stable form of the
+ * same fact, and it is the owner's *"same deadband"* read properly — one dead radius, one rest
+ * time, shared with the translation rather than copied.
+ *
+ * ⭐⭐ So the channel map is applied to the STATES: the holder's screen `x` drives the body's `x`,
+ * its screen `y` drives `depth`, and any second touchpoint's `y` drives `gravity`.
+ *
+ * @param holder the holder's per-axis motion — `Recognizer.motionAxes`.
+ * @param seconds every second touchpoint's per-axis motion — `MotionTracker.axes`.
+ */
+export function activeChannels(
+  holder: { readonly x: MotionState; readonly y: MotionState } | null,
+  seconds: readonly { readonly x: MotionState; readonly y: MotionState }[],
+): readonly [boolean, boolean, boolean] {
+  return [holder?.x === "MOVING", seconds.some((s) => s.y === "MOVING"), holder?.y === "MOVING"];
 }
 
 /**

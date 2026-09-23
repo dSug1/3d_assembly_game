@@ -22,6 +22,7 @@ import {
   type CameraScreenAxes,
   type TranslatePairing,
   aimDirection,
+  activeChannels,
   displayedAxes,
 } from "@input/axis_translate";
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
@@ -330,8 +331,15 @@ describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
   // ⭐ The gizmo draws `[x, gravity, depth]` in that order — **red, green, blue**.
   const c = camera(35, 30);
   const axes = axesFromFrame(camera(0, 30).gravity);
-  const shownFor = (input: Partial<AxisInputsPx>) =>
-    displayedAxes(null, run(input, c, axes).driven);
+  /**
+   * ⭐⭐ The channel set comes from §1.1's per-axis MOTION STATES now, which is the owner's *"same
+   * deadband"* (2026-09-23) — `A11`'s emissions come in bursts and made the set flicker.
+   * ⚠ The fixture states them directly, which is what the render loop reads off the live trackers.
+   */
+  const moving = (x: boolean, y: boolean) =>
+    ({ x: x ? "MOVING" : "STATIONARY", y: y ? "MOVING" : "STATIONARY" }) as const;
+  const shownFor = (dx: boolean, holderDy: boolean, secondDy: boolean) =>
+    displayedAxes(null, activeChannels(moving(dx, holderDy), secondDy ? [moving(false, true)] : []));
 
   it("⭐⭐⭐ RED AGAINST THE FIRST BUILD OF THIS RULE: a pure `dx` lights RED ALONE", () => {
     // ⛔⛔ **THE PREMISE, MEASURED FIRST**: under `PLANE` a pure `dx` genuinely moves the body
@@ -341,25 +349,25 @@ describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
     expect(Math.abs(t.xM)).toBeGreaterThan(1e-6);
     expect(Math.abs(t.depthM)).toBeGreaterThan(1e-6);
     // ⛔ THE ASSERTION: the line belongs to the CHANNEL that was pushed.
-    expect(shownFor({ holderDxPx: 50 })).toEqual([true, false, false]);
+    expect(shownFor(true, false, false)).toEqual([true, false, false]);
   });
 
   it("⭐⭐⭐ a pure holder `dy` lights BLUE alone", () => {
     const t = run({ holderDyPx: -40 }, c, axes);
     expect(Math.abs(t.xM)).toBeGreaterThan(1e-6); // ⚠ again, the travel is spread
-    expect(shownFor({ holderDyPx: -40 })).toEqual([false, false, true]);
+    expect(shownFor(false, true, false)).toEqual([false, false, true]);
   });
 
   it("⭐⭐ both RED and BLUE only when both `dx` and `dy` are non-null — the owner's words", () => {
-    expect(shownFor({ holderDxPx: 50, holderDyPx: -40 })).toEqual([true, false, true]);
-    expect(shownFor({ holderDxPx: 50, holderDyPx: 0 })).toEqual([true, false, false]);
-    expect(shownFor({ holderDxPx: 0, holderDyPx: -40 })).toEqual([false, false, true]);
+    expect(shownFor(true, true, false)).toEqual([true, false, true]);
+    expect(shownFor(true, false, false)).toEqual([true, false, false]);
+    expect(shownFor(false, true, false)).toEqual([false, false, true]);
   });
 
   it("⭐⭐⭐ a pure SECOND-touch push lights GREEN alone — his first example", () => {
-    expect(shownFor({ secondDyPx: 30 })).toEqual([false, true, false]);
+    expect(shownFor(false, false, true)).toEqual([false, true, false]);
     // ⭐ And all three when all three channels are pushed at once.
-    expect(shownFor({ holderDxPx: 10, holderDyPx: -10, secondDyPx: 10 })).toEqual([
+    expect(shownFor(true, true, true)).toEqual([
       true,
       true,
       true,
@@ -369,19 +377,22 @@ describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
   it("⛔ a pause does NOT blank the gizmo — the last non-empty answer stands", () => {
     // ⚠ A finger that stops emits nothing, and `A11`'s deadband emits nothing on an axis inside
     // its band, so the instantaneous answer is *no axes* many frames per second.
-    const shown = shownFor({ holderDxPx: 50 })!;
+    const shown = shownFor(true, false, false)!;
     expect(shown).toEqual([true, false, false]);
     expect(displayedAxes(shown, [false, false, false])).toBe(shown);
   });
 
   it("⛔ before anything has been pushed there is nothing to show", () => {
     expect(displayedAxes(null, [false, false, false])).toBeNull();
-    expect(shownFor({})).toBeNull();
+    expect(shownFor(false, false, false)).toBeNull();
   });
 
-  it("⚠ a NaN channel is not a push — it cannot light a line", () => {
-    expect(shownFor({ holderDxPx: Number.NaN })).toBeNull();
-    expect(shownFor({ holderDxPx: Number.NaN, secondDyPx: 30 })).toEqual([false, true, false]);
+  it("⛔ an axis at REST is not a push — the deadband's own hysteresis decides", () => {
+    // ⚠ The set no longer asks *"did this channel emit this frame"*: `A11` emits the excess over
+    // a dead radius in BURSTS, and reading those made the gizmo flicker. ⭐ It asks §1.1's per-axis
+    // STATE, which stays `MOVING` until that axis has been at rest for `restConfirmMs`.
+    expect(shownFor(false, false, false)).toBeNull();
+    expect(shownFor(false, false, true)).toEqual([false, true, false]);
   });
 });
 
@@ -422,7 +433,7 @@ describe("⭐⭐⭐ the ray's aim — the SET of channels, never their magnitude
     let signs: [number, number, number] = [0, 0, 0];
     const aims = frames.map((f) => {
       const t = run(f, c, axes);
-      shown = displayedAxes(shown, t.driven);
+      shown = displayedAxes(shown, [true, true, false]);
       signs = [t.signs[0] || signs[0], t.signs[1] || signs[1], t.signs[2] || signs[2]];
       return aimDirection(shown!, signs, axes)!;
     });
@@ -441,7 +452,12 @@ describe("⭐⭐⭐ the ray's aim — the SET of channels, never their magnitude
   it("⭐⭐ one channel aims at its own axis — no lag, and no mixing", () => {
     const only = (input: Partial<AxisInputsPx>) => {
       const t = run(input, c, axes);
-      return aimDirection(displayedAxes(null, t.driven)!, t.signs, axes)!;
+      const set: readonly [boolean, boolean, boolean] = [
+        input.holderDxPx !== undefined,
+        input.secondDyPx !== undefined,
+        input.holderDyPx !== undefined,
+      ];
+      return aimDirection(set, t.signs, axes)!;
     };
     // ⛔ A pure `dx` points along ±x, whatever the solve spent on depth to keep the finger.
     expect(Math.abs(dot(only({ holderDxPx: 50 }), axes.x))).toBeCloseTo(1, 12);
@@ -508,16 +524,64 @@ describe("⛔⛔ the gizmo chain is cold-startable", () => {
       { holderDxPx: 20, secondDyPx: 20 },
     ]) {
       const t = run(input, c, axes);
-      const shown = displayedAxes(null, t.driven);
+      const set: readonly [boolean, boolean, boolean] = [
+        input.holderDxPx !== undefined,
+        input.secondDyPx !== undefined,
+        input.holderDyPx !== undefined,
+      ];
+      const shown = displayedAxes(null, set);
       expect(shown).not.toBeNull();
       expect(aimDirection(shown!, t.signs, axes)).not.toBeNull();
     }
   });
 
   it("⛔ and a body that has been pushed NOTHING yields nothing — no stand-in direction", () => {
-    const c = camera(35, 30);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({}, c, axes);
-    expect(displayedAxes(null, t.driven)).toBeNull();
+    const still = { x: "STATIONARY", y: "STATIONARY" } as const;
+    expect(displayedAxes(null, activeChannels(still, []))).toBeNull();
+    expect(displayedAxes(null, activeChannels(null, []))).toBeNull();
+  });
+});
+
+/**
+ * ⭐⭐⭐ **THE GIZMO USES THE TRANSLATION'S OWN DEADBAND** — the owner, 2026-09-23: *"add a slight
+ * deadband on the delta position input so that there is no gizmo jitter. I suppose there is a
+ * deadband for the object translation: use the same deadband for the gizmo repositioning."*
+ */
+describe("⛔⛔ activeChannels — §1.1's states, not its emissions", () => {
+  const M = { x: "MOVING", y: "MOVING" } as const;
+  const S = { x: "STATIONARY", y: "STATIONARY" } as const;
+  const MX = { x: "MOVING", y: "STATIONARY" } as const;
+  const MY = { x: "STATIONARY", y: "MOVING" } as const;
+
+  it("⭐⭐ the holder's two screen axes drive x and depth; the second touch's y drives gravity", () => {
+    expect(activeChannels(MX, [])).toEqual([true, false, false]);
+    expect(activeChannels(MY, [])).toEqual([false, false, true]);
+    expect(activeChannels(S, [MY])).toEqual([false, true, false]);
+    expect(activeChannels(M, [MY])).toEqual([true, true, true]);
+  });
+
+  it("⛔ a second touchpoint moving only SIDEWAYS drives nothing — its x is the roll's", () => {
+    // ⚠ The second finger owns ONE axis, and which one the mode picks. Its `x` never translates.
+    expect(activeChannels(S, [MX])).toEqual([false, false, false]);
+  });
+
+  it("⭐ ANY second touchpoint counts, because they all drive the same channel", () => {
+    expect(activeChannels(S, [S, MY])).toEqual([false, true, false]);
+    expect(activeChannels(S, [S, S])).toEqual([false, false, false]);
+  });
+
+  it("⛔ no holder at all is no holder channels, rather than a throw", () => {
+    expect(activeChannels(null, [])).toEqual([false, false, false]);
+    expect(activeChannels(null, [MY])).toEqual([false, true, false]);
+  });
+
+  it("⭐⭐⭐ THE JITTER, AS ARITHMETIC: a bursty emission cannot change this answer", () => {
+    // ⛔ `A11` emits the excess over the dead radius, so a steady push produces travel on one axis
+    // and nothing on the other from frame to frame. ⚠ The STATE does not follow those bursts: it
+    // stays `MOVING` until the axis has rested for `restConfirmMs`, so the set is the same on
+    // every frame of the push — which is the whole of what the owner asked for.
+    const frames = [M, M, M, M];
+    const sets = frames.map((f) => activeChannels(f, [MY]));
+    for (const s of sets) expect(s).toEqual(sets[0]);
   });
 });
