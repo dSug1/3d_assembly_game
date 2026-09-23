@@ -1620,13 +1620,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * drawn from this, and the in-zone basis is built from it at the edge.
    */
   const leading = new Map<ObjectId, LeadingFace>();
-  /**
-   * ⭐⭐ The world direction a body was last translated in — **the direction it ACTUALLY
-   * went**, after the projection, which is the owner's choice for the ray (2026-09-22) over
-   * the finger's own screen direction. ⛔ Zeroed by nothing: a body that stops keeps its
-   * gizmo where it was rather than losing it for a frame of stillness.
-   */
-  const lastTravelDir = new Map<ObjectId, Vec3>();
+  // ⚠ `lastTravelDir` stood here — the direction a body last ACTUALLY went. ⛔ The ray is aimed by
+  // the INPUT now (the owner, 2026-09-23), so what persists between frames is the SHOWN axes and
+  // their senses, which is state the aim is derived from rather than the aim itself.
   /**
    * ⭐⭐⭐ **WHAT THE CHANNELS ASKED FOR THIS FRAME**, per body — the direction the LeadingFace ray
    * is fired along. ⛔ The owner, 2026-09-23: *"You can lag the travel, but the input itself has
@@ -1819,40 +1815,45 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (!isTranslatingMode(grip.mode)) continue;
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
-      // ⭐⭐⭐ **AIMED BY THE AXES BEING SHOWN, EACH IN ITS OWN SENSE** — the same set that decides
-      // the lines, so the face and the lines are one fact. ⛔ No magnitudes: the deadband emits
-      // them in bursts, and both rules that used them (the vector sum, then the dominant channel)
-      // made the gizmo jitter between faces.
-      // ⚠ `lastTravelDir` keeps the last non-zero answer, so a pause does not erase the gizmo.
-      const dir = lastTravelDir.get(id);
-      if (!dir) continue;
-      // ⭐ THE CURRENT FACE IS HANDED BACK, which is what makes the choice sticky: a face the
-      // body is still advancing on stays the leading one, so a direction that jitters between
-      // two near-tied faces cannot make the gizmo chatter.
-      const hit = leadingFace(world, id, dir, leading.get(id)?.faceId ?? null);
-      // ⛔ NO STAND-IN. A body whose geometry cannot answer shows no gizmo, exactly as
-      // `⛔NOSHAPE` shows no capture shell — suppress rather than substitute.
-      if (!hit) continue;
-      leading.set(id, hit);
-      live.add(id);
-      const axes = axesOf();
-      // ⭐⭐⭐ **WHICH DIRECTIONS TO SHOW** — the owner, 2026-09-23: *"the direction is shown only
-      // if the delta position triggers a translation in this direction."* ⛔ The rule is
-      // `displayedAxes`'s, in `src/input`, and it keeps the last non-empty answer so that a pause
-      // — or `A11`'s deadband emitting nothing on one axis — does not blank the gizmo.
+      // ⛔⛔⛔ **THE ORDER IS THE RULE HERE, AND GETTING IT WRONG DELETED THE GIZMO ENTIRELY.**
+      // The direction used to be written in `applyWorldStep` and read here; when the aim moved
+      // into this function it landed BELOW the guard that reads it, so on the first push the map
+      // was empty, `continue` fired, and the only writer was unreachable — for ever.
+      // ⚠ *"the gizmo disappeared entirely"*, device-reported within the minute.
+      // ⭐ So the chain runs in the order it depends on: **what is shown → which way → which face**.
+      //
+      // ⭐⭐⭐ **WHICH DIRECTIONS TO SHOW** — the owner: *"the direction is shown only if the delta
+      // position triggers a translation in this direction."* ⛔ The rule is `displayedAxes`'s, in
+      // `src/input`, and it keeps the last non-empty answer so that a pause — or `A11`'s deadband
+      // emitting nothing on one axis — does not blank the gizmo.
       const shown = displayedAxes(
         gizmoAxes.get(id) ?? null,
         frameAxisDriven.get(id) ?? [false, false, false],
       );
       if (shown === null) continue;
       gizmoAxes.set(id, shown);
+      // ⭐ The sense each axis was last pushed in, remembered for the same reason.
       const senses = frameSigns.get(id);
       if (senses) {
         const kept = gizmoSigns.get(id) ?? [0, 0, 0];
         gizmoSigns.set(id, [senses[0] || kept[0], senses[1] || kept[1], senses[2] || kept[2]]);
       }
-      const aimed = aimDirection(shown, gizmoSigns.get(id) ?? [0, 0, 0], axesOf());
-      if (aimed) lastTravelDir.set(id, aimed);
+      const axes = axesOf();
+      // ⭐⭐⭐ **AIMED BY THE AXES BEING SHOWN, EACH IN ITS OWN SENSE** — the same set that decides
+      // the lines, so the face and the lines are one fact. ⛔ No magnitudes: the deadband emits
+      // them in bursts, and both rules that used them (the vector sum, then the dominant channel)
+      // made the gizmo jitter between faces.
+      const dir = aimDirection(shown, gizmoSigns.get(id) ?? [0, 0, 0], axes);
+      if (!dir) continue;
+      // ⭐ THE CURRENT FACE IS SEEDED INTO THE SEARCH: it wins an exact tie and loses to any
+      // strictly nearer exit, so a direction that sits between two near-tied faces does not
+      // chatter, and a grazing face is never held (defect 61).
+      const hit = leadingFace(world, id, dir, leading.get(id)?.faceId ?? null);
+      // ⛔ NO STAND-IN. A body whose geometry cannot answer shows no gizmo, exactly as
+      // `⛔NOSHAPE` shows no capture shell — suppress rather than substitute.
+      if (!hit) continue;
+      leading.set(id, hit);
+      live.add(id);
       // ⭐⭐⭐ **FULL-SCREEN LINES** — the owner: *"the blue, green and red lines shall extend the
       // full screen when they are shown."* ⛔ Drawn BOTH ways from the face centre, so each axis
       // is a line across the glass rather than a ray out of the body.
