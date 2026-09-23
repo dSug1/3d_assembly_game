@@ -179,7 +179,12 @@ import {
   zoneEdge,
   type ObjectAxes,
 } from "../input/object_axes";
-import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
+import {
+  axisDisplacement,
+  axisTravel,
+  type AxisTravel,
+  clampDepthRange,
+} from "../input/axis_translate";
 import { leadingFace, type LeadingFace } from "../core/leading_face";
 import {
   pitchOffsetV,
@@ -1615,7 +1620,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * moved"* are one symptom with two causes, and the camera pose is what separates them.
    */
   let lastTrackGain = 0;
-  let lastEdgeOn = false;
+  /**
+   * ⭐⭐⭐ **WHICH BRANCH, AND HOW NEAR THE CLIFF** — added 2026-09-23 with defect 56, whose
+   * evidence was `PLANE track=0.00× ⛔EDGE-ON` at **one pointer** and nothing else. ⛔ That flag
+   * could not say which plane had degenerated, how close to degenerate it was, or whether the
+   * second finger's channel was involved — so the report said *"erratic"* and *"blocked"* and I
+   * had to measure the mapping offline to find they were two sides of one number.
+   * ⚠ `METHOD`: *a readout that reports a VERDICT and not the QUANTITY makes the next report
+   * unfalsifiable.*
+   */
+  let lastAxisMode: AxisTravel["mode"] = "PLANE-SOLVE";
+  let lastPlaneDet = 1;
+  let lastDepthFallback = false;
 
   /**
    * ⛔⛔ **`CameraOffsetZoneEnter` — DECLARED, CALLED, AND EMPTY BY INSTRUCTION.**
@@ -2951,7 +2967,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             `
 axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot)" : "WorldAxisA(live camera)"}` +
             ` ${cfg.translatePairing === 1 ? "PLANE" : "CHANNELS"}` +
-            ` track=${lastTrackGain.toFixed(2)}×${lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
+            // ⭐⭐ THE BRANCH, THE CONDITIONING AND THE BOUND, all three — `det` is what decides
+            // the branch and `1/sin(cone)` is the most the body may outrun the finger, so a
+            // report can now say *"det 0.04, screen branch"* instead of *"it felt wrong"*.
+            ` ${lastAxisMode}` +
+            ` det=${lastPlaneDet.toFixed(3)}/${Math.sin((cfg.axisTrackingConeDeg * Math.PI) / 180).toFixed(3)}` +
+            ` track=${lastTrackGain.toFixed(2)}×${lastDepthFallback ? " depth→fixed" : ""}` +
             ` zone=${highlighted.inRange ? "IN" : "out"}` +
             (zonePair.length === 0 ? "" : `(${zonePair.join("↔")})`) +
             (cfg.cameraOffsetZoneEnterSetupB === 1 ? ` enterHook=${zoneEnterCalls}(no-op)` : "") +
@@ -4896,7 +4917,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           grip.frame.towardGravity,
         );
         lastTrackGain = travel.trackGain;
-        lastEdgeOn = travel.edgeOn;
+        lastAxisMode = travel.mode;
+        lastPlaneDet = travel.planeDet;
+        lastDepthFallback = travel.depthFallback;
         const step = axisDisplacement(travel, axes);
         // ⭐ `grip.frame` is the basis LATCHED AT PRESS, and `applyWorldStep` uses it for the
         // swing's screen travel and the depth clamp only — the body's own axes decide the

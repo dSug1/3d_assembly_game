@@ -582,12 +582,17 @@ export interface GestureConfig {
    * in degrees.
    *
    * ⛔⛔ Tracking the finger exactly means dividing by the axis's screen foreshortening, and that
-   * **explodes** as the axis turns to face the camera — for the horizontal plane that is an
-   * ordinary **level camera**. ⭐ **5° IS BLENDER'S OWN NUMBER** (`axisProjection`, which switches
-   * to a plain projection below it), adopted rather than guessed — ⚠ and where Blender then lets
-   * the object nearly STOP, this falls back to `depthTranslate`'s fixed-rate push, which a device
-   * look closed on 2026-09-16. That is the owner's report 3: *"I would expect the object to
-   * continue translating with dy input."*
+   * **explodes** as the axis turns to face the camera. ⭐ Below the cone the holder falls back to
+   * the screen plane (rule 6) and the second touchpoint to `depthTranslate`'s fixed-rate push,
+   * both of them rules a device look has closed. That is the owner's report 3: *"I would expect
+   * the object to continue translating with dy input."*
+   *
+   * ⭐⭐⭐ **READ IT AS A LEVERAGE BOUND: the body may outrun the finger by at most `1/sin(cone)`**
+   * — 2.9× at 20°, and **11.5× at Blender's 5°**, which is what *"erratic movement"* was
+   * (2026-09-23, defect 56). ⚠⚠ It shipped at 5° *because Blender uses 5°*, and that was a bad
+   * adoption: Blender's cone protects a DIVISION from `NaN`, this one protects a HAND from a
+   * body that leaps. ⛔ Same mechanism, different question — and the number belongs to the
+   * question, not to the mechanism.
    *
    * ⚠ `0` disables the fallback, which is how to see the runaway a hand is being protected from.
    * ⭐ A slider, and on the URL as `?axisTrackingConeDeg=10`.
@@ -970,8 +975,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // (2026-09-23). ⚠ `?translatePairing=0` is the way back to the dictated channels, now that
   // they track exactly — the comparison the owner should make with a finger.
   translatePairing: 1,
-  // ⭐ Blender's number, not mine.
-  axisTrackingConeDeg: 5,
+  // ⛔⛔ **20°, AND IT WAS 5° UNTIL DEFECT 56 (2026-09-23).** 5° is Blender's, and adopting it
+  // carried its question over too: it bounds the solve at **11.5× the finger**, which a hand
+  // reported as *"erratic movement"*. ⭐ 20° bounds it at 2.9×. ⚠ Computed from the bound, not
+  // guessed — but WHICH bound a hand wants is a judgement no hand has made yet, and it is a
+  // slider precisely because of that.
+  axisTrackingConeDeg: 20,
   // ✅ **0.05 — THE OWNER'S NUMBER, 2026-09-23** (*"Set the default transparency to 0.05"*),
   // replacing my guess of 0.45 on the first look at it. ⚠ It is a JUDGEMENT, not a measurement,
   // and it is a tenth of what I shipped — ⭐ the sixth time a guessed number has been corrected

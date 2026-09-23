@@ -393,3 +393,50 @@ translate, so a channel added later is a decision rather than a silent omission.
 pinned to `2` — the `DEPTH` grip in slot 0 deliberately skipped. ⭐ It is inverted now and carries
 its own retraction: *a green suite defended this for four days.*
 
+
+
+---
+
+## 56 — ⭐⭐⭐ **A CLIFF AT THE CONE: "BLOCKED" AND "ERRATIC" WERE THE TWO SIDES OF ONE NUMBER**
+
+**2026-09-23, by finger, with a HUD.** *"There are still issues with blocking at white highlight
+and erratic movement. **Debug better**, For example here"* — `PLANE track=0.00× ⛔EDGE-ON`, at
+**one pointer**.
+
+⛔⛔⛔ **THE TWO SYMPTOMS ARE ONE QUANTITY.** Exact tracking on a plane solves a 2×2 system, so the
+body's world travel per unit of finger travel is **`1/|det|`** of the two axes' screen shadows. At
+the shipped 5° cone that is **11.5× the finger** just outside the boundary — *erratic* — and the
+degenerate branch below it projected the drag onto the two axes of a plane that is edge-on, which
+returns ≈0 — *blocked*. ⚠ And the white contour is where `D74` **switches the basis**, so it is
+precisely where a drag crosses the boundary: the two reports even shared a location.
+
+⭐⭐⭐ **THE INSTRUMENT WAS THE DEFECT'S ACCOMPLICE.** `⛔EDGE-ON` was one boolean for two
+different fallbacks, and `track=` measured only the two channels the *healthy* branch uses — so
+the branch that had actually run reported `0.00×` while the body was being moved. ⚠ `METHOD`: *a
+readout that reports a VERDICT and not the QUANTITY makes the next report unfalsifiable.* The HUD
+now prints the branch by name, `|det|` **against the threshold it is compared to**, and the depth
+channel's fallback separately.
+
+⛔⛔ **AND I HAD ASSERTED THE CONDITIONING INSTEAD OF MEASURING IT.** The `D79` swap moved the
+holder onto the `{x, gravity}` plane and I justified it in the commit message with *"a vertical
+plane faces the camera at every ordinary pose"*. It does not: with `worldAxisB` the axes are frozen
+at **boot**, so a quarter turn of orbit puts `x` along the view and `|det|` → 0 at a perfectly
+ordinary camera — the pose in the owner's screenshot. ⭐ One sweep of `|det|` over azimuth would
+have refused that sentence the day it was written. **A claim about conditioning is a measurement.**
+
+✅ **FIXED, and the fix is that the degenerate branch stops being a different KIND of answer.**
+Two builds tried to answer an edge-on plane while staying inside it — suppress the foreshortened
+axis, then project onto both axes — and both froze the body, because a drag *across* an edge-on
+plane has almost no component *in* it. ⭐⭐ When the plane cannot represent the drag, the body
+**leaves it**: the screen-plane travel is decomposed onto all **three** object axes, which are
+orthonormal, so the sum reproduces it exactly and the body follows the finger with a gain of 1.
+⛔ Nothing suppressed (cannot block), nothing divided (cannot run away) — and it is **rule 6**,
+closed by a device look on 2026-09-15, so the fallback is the best-attested rule in the product.
+⚠ Its cost, stated: while that branch runs the holder moves the body along the second finger's
+axis. Unavoidable — that is the component the plane cannot hold.
+
+⭐ **`axisTrackingConeDeg` is 5 → 20**, and it is re-read as a **leverage bound**: `1/sin(cone)` is
+the most the body may outrun the finger, 2.9× at 20°. ⛔⛔ 5° was **Blender's** number, adopted
+with its question attached: Blender's cone protects a division from `NaN`, this one protects a
+hand from a body that leaps. *Same mechanism, different question — and the number belongs to the
+question.* ⚠ It is a judgement, it has a slider, and **no hand has judged it yet**.

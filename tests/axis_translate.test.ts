@@ -26,6 +26,7 @@ import { axesFromFrame, axesFromLeadingFace, type ObjectAxes } from "@input/obje
 import { gravityFrame } from "@input/gravity_frame";
 import { trackingMetresPerPx } from "@input/translate";
 import { dot, normalize, type Vec3 } from "@core/vec";
+import { DEFAULT_CONFIG } from "@input/gestureConfig";
 
 const DEG = Math.PI / 180;
 const DOWN: Vec3 = [0, -1, 0];
@@ -356,5 +357,110 @@ describe("degenerate inputs never reach a placement", () => {
     expect(t.gravityM).toBe(0);
     expect(t.depthM).toBe(0);
     expect(screenShadow([0, 0, 0], c.screen)).toBeNull();
+  });
+});
+
+/**
+ * ⭐⭐⭐ **DEFECT 56 — THE CLIFF AT THE CONE, MEASURED.**
+ *
+ * > *"There are still issues with blocking at white highlight and erratic movement. **Debug
+ * > better**, For example here"* — the owner, 2026-09-23, with `PLANE track=0.00× ⛔EDGE-ON`
+ * > showing at **one pointer**
+ *
+ * ⛔⛔ Two adjectives, one number: the solve's rate is `1/|det|`, so at the shipped 5° cone the
+ * body moved **11.5× the finger** just outside the boundary and **~0** just inside it. ⭐ These
+ * vectors pin both sides — the inside must still track the finger, and the outside must be
+ * bounded — and the first of them is RED against the build the owner photographed.
+ */
+describe("⛔⛔⛔ defect 56 — an edge-on holder plane must track the finger, not stop", () => {
+  // ⭐⭐ THE OWNER'S POSE, CONSTRUCTED RATHER THAN GUESSED AT: world-fixed axes (`worldAxisB`)
+  // and a camera orbited until `x` points at it, which is a quarter turn from boot and nothing
+  // unusual. ⛔ Both shadows are then VERTICAL on the glass and the plane cannot represent a
+  // sideways drag at all — `|det|` is exactly 0, not merely small.
+  const WORLD: ObjectAxes = { x: [1, 0, 0], gravity: [0, 1, 0], depth: [0, 0, 1] };
+
+  it("the plane really is degenerate at that pose — the premise, checked before it is used", () => {
+    const c = camera(0, 12);
+    const sx = screenShadow(WORLD.x, c.screen)!;
+    const sg = screenShadow(WORLD.gravity, c.screen)!;
+    expect(Math.abs(sx[0] * sg[1] - sx[1] * sg[0])).toBeCloseTo(0, 12);
+    // ⚠ And it is not a fixture that merely zeroed everything: both axes are still VISIBLE,
+    // they are just parallel on screen. ⭐ MISTAKE SHAPE 5 — *a fixture chosen because it is
+    // easy to reason about is usually chosen from the set where the quantity under test is 0*.
+    expect(Math.hypot(...sx)).toBeGreaterThan(0.2);
+    expect(Math.hypot(...sg)).toBeGreaterThan(0.9);
+  });
+
+  it("⭐⭐⭐ RED AGAINST THE OLD BUILD: a sideways drag still puts the body under the finger", () => {
+    const c = camera(0, 12);
+    const t = run({ holderDxPx: 100 }, c, WORLD);
+    expect(t.mode).toBe("PLANE-SCREEN");
+    // ⛔ THE ASSERTION THE OWNER'S BUILD FAILS. Projecting onto the two axes of an edge-on plane
+    // gave 0 and 0, and the body froze — *"blocking at white highlight"*, because the contour is
+    // where `D74` switches the basis and so where the plane turns edge-on under the finger.
+    const [px, py] = toScreenPx(axisDisplacement(t, WORLD), c.screen);
+    expect(px).toBeCloseTo(100, 6);
+    expect(py).toBeCloseTo(0, 6);
+    // ⭐ And the travel is where it HAS to be: the plane cannot hold it, so it is on depth.
+    expect(Math.abs(t.depthM)).toBeGreaterThan(0);
+    expect(t.xM).toBeCloseTo(0, 12);
+    // ⚠ The readout too — `track=0.00×` was itself part of the bad evidence.
+    expect(t.trackGain).toBeCloseTo(1, 6);
+  });
+
+  it("the whole screen-plane branch round-trips, not just the one direction", () => {
+    const c = camera(0, 12);
+    const drags: readonly (readonly [number, number])[] = [
+      [100, 0],
+      [0, 60],
+      [-45, 80],
+      [33, -77],
+    ];
+    for (const [dx, dy] of drags) {
+      const t = run({ holderDxPx: dx, holderDyPx: dy }, c, WORLD);
+      const [px, py] = toScreenPx(axisDisplacement(t, WORLD), c.screen);
+      expect(px).toBeCloseTo(dx, 6);
+      expect(py).toBeCloseTo(dy, 6);
+    }
+  });
+
+  it("⭐⭐ THE OTHER SIDE OF THE CLIFF: the body never outruns the finger by more than 1/sin(cone)", () => {
+    // ⛔ *"erratic movement"*. The bound holds for the solve because `|det| = σ1σ2` and `σ1 ≤ 1`,
+    // so the amplification `1/σ2` is at most `1/|det|` — and the branch below the cone has a
+    // gain of exactly 1. ⚠ Swept where it actually bites: azimuths NEAR the degenerate one.
+    for (const cone of [5, 20]) {
+      const bound = 1 / Math.sin(cone * DEG);
+      for (const az of [0, 1, 3, 6, 12, 25, 60, 91, 179]) {
+        for (const el of [0, 5, 25, 55, 80]) {
+          const c = camera(az, el);
+          const t = run({ holderDxPx: 70, holderDyPx: 40 }, c, WORLD, "PLANE", 1, cone);
+          expect(t.trackGain).toBeLessThanOrEqual(bound + 1e-9);
+        }
+      }
+    }
+  });
+
+  it("⛔ and the SHIPPED cone is what bounds it — the number, not the mechanism", () => {
+    // ⭐ 5° was adopted because Blender uses 5°, and Blender's cone guards a division while this
+    // one guards a hand. ⚠ RED against the old default: 1/sin(5°) = 11.5.
+    expect(1 / Math.sin(DEFAULT_CONFIG.axisTrackingConeDeg * DEG)).toBeLessThanOrEqual(3);
+  });
+
+  it("the two fallbacks are reported SEPARATELY — they degenerate at different poses", () => {
+    const c = camera(45, 30);
+    const holder = run({ holderDxPx: 50 }, c, WORLD);
+    expect(holder.mode).toBe("PLANE-SOLVE");
+    expect(holder.depthFallback).toBe(false);
+    expect(holder.planeDet).toBeGreaterThan(Math.sin(CONE * DEG));
+    // ⚠ A second finger on an edge-on DEPTH axis is a different event from an edge-on plane, and
+    // `⛔EDGE-ON` used to be the same flag for both — which is why one pointer could light it.
+    // ⚠ FIXTURE, CORRECTED: my first draft used a camera looking straight DOWN, where `depth`
+    // lies flat ACROSS the glass and is perfectly visible. ⛔ `depth` is edge-on when the camera
+    // looks ALONG it — azimuth 90, level — which is also where the {x, gravity} plane is at its
+    // healthiest, so the pose separates the two fallbacks as cleanly as it can be done.
+    const depthOn = camera(90, 0);
+    const t = run({ secondDyPx: 30 }, depthOn, WORLD);
+    expect(t.depthFallback).toBe(true);
+    expect(t.mode).toBe("PLANE-SOLVE");
   });
 });

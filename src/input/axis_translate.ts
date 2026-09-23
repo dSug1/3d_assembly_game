@@ -58,19 +58,45 @@
  * which means the object very nearly **stops**. ⚠ That is a guard against `NaN`, not a feature,
  * and it is exactly the behaviour the owner rejected in report 3.
  *
- * ⛔⛔ **SO INSIDE THE CONE WE USE THE RULE A HAND HAS ALREADY JUDGED**: `depthTranslate`'s
- * fixed-rate push — `dy × trackingFactor × gain`, with `sign(towardGravity)` deciding whether
- * fingers-up means *away* or *towards*. ⭐ That rule was closed by a device look on 2026-09-16
- * and its sign was itself a defect found by finger, so the degenerate branch is the
- * best-attested mapping in the file rather than an improvisation.
+ * ⛔⛔ **SO INSIDE THE CONE THE SECOND TOUCHPOINT USES THE RULE A HAND HAS ALREADY JUDGED**:
+ * `depthTranslate`'s fixed-rate push — `dy × trackingFactor × gain`, with `sign(towardGravity)`
+ * deciding whether fingers-up means *away* or *towards*. ⭐ That rule was closed by a device look
+ * on 2026-09-16 and its sign was itself a defect found by finger.
  * ⚠ **At an exactly level camera `towardGravity` is 0 and the picture is genuinely symmetric** —
  * a body pushed away produces no screen motion at all — so the convention there is
  * *fingers-up = away*, continuous with the camera looking even slightly down.
  *
- * ⚠ **The cost of the cone, stated**: the rate is capped at `1/sin(cone)` just outside it and
- * drops to the fixed rate inside, so there is a step in world speed at the boundary. ⛔ Both
- * sides produce nearly no SCREEN motion there, which is why the step is not what a hand feels —
- * but it is real, it is on the HUD as `⛔EDGE-ON`, and `axisTrackingConeDeg` is a slider.
+ * ## ⛔⛔⛔ THE HOLDER'S DEGENERATE BRANCH — REWRITTEN 2026-09-23 (defect 56)
+ *
+ * > *"There are still issues with blocking at white highlight and erratic movement. **Debug
+ * > better.**"* — the owner, with a HUD showing `PLANE track=0.00× ⛔EDGE-ON` at **one pointer**
+ *
+ * ⭐⭐⭐ **BOTH SYMPTOMS ARE ONE CLIFF, AND IT WAS MEASURED RATHER THAN REASONED ABOUT.** The
+ * solve's rate is `1/|det|`, so at a 5° cone the body moves **11.5× the finger** just outside
+ * the boundary and **~0** just inside it. *Erratic* is the outside; *blocked* is the inside;
+ * the white contour is where a basis SWITCHES (`D74`) and therefore where the boundary is
+ * crossed most often. ⛔ Two reports, one number.
+ *
+ * ⚠⚠ **AND THE COMMENT THAT STOOD HERE WAS FALSE.** It claimed the `{x, gravity}` plane *"faces
+ * the camera at every ordinary pose"*. With `worldAxisB` the axes are frozen at BOOT, so a
+ * quarter-turn of orbit puts `x` along the view and the plane is edge-on with a perfectly
+ * ordinary camera — which is the pose in the owner's screenshot. ⭐ `METHOD`: *a claim about
+ * conditioning is a MEASUREMENT* — one `|det|` sweep would have refused the swap's justification
+ * the day it was written.
+ *
+ * ⭐⭐ **THE FIX IS THAT THE DEGENERATE BRANCH IS NO LONGER A DIFFERENT KIND OF ANSWER.** The
+ * finger's screen-plane travel is decomposed onto **all three** object axes — they are
+ * orthonormal, so the sum reproduces it **exactly** and the body follows the finger on the glass
+ * with a gain of 1. ⛔ Nothing is suppressed (so it cannot block) and nothing is divided (so it
+ * cannot run away). ⭐ It is Blender's unconstrained `G`, and it is rule 6, which a hand closed
+ * in 2026-09-15: the degenerate case falls back to **the best-attested rule in the product**.
+ * ⚠ Its one cost, stated: the holder briefly moves the body in DEPTH, which is the second
+ * finger's axis — unavoidable, because a plane that is edge-on cannot represent the drag.
+ *
+ * ⭐ **And the cone is now a LEVERAGE BOUND, not a `NaN` guard** — `1/sin(cone)` is the fastest
+ * the body may outrun the finger, so 20° reads *"never more than 2.9×"*. That is why the default
+ * moved off Blender's 5°: Blender is protecting a division, this is protecting a hand.
+ * ⚠ It is a judgement, it has a slider, and no hand has judged it yet.
  *
  * ⛔ ENGINE-FREE.
  */
@@ -124,8 +150,32 @@ export interface AxisTravelM {
  * point of `edgeOn` is to tell *"the rule refused"* from *"I pushed the wrong way"*.
  */
 export interface AxisTravel extends AxisTravelM {
-  /** True while the horizontal plane is edge-on and the fixed-rate fallback is driving. */
+  /**
+   * True while **either** fallback is driving. ⚠ Kept for the call sites that only ask *did the
+   * exact mapping hold?*; `mode` and `planeDet` are what a device report needs.
+   */
   readonly edgeOn: boolean;
+  /**
+   * ⭐⭐⭐ **WHICH BRANCH RAN — because *"it moved strangely"* has three causes and the HUD could
+   * not tell them apart.** The owner's 2026-09-23 report (*"blocking at white highlight and
+   * erratic movement — debug better"*) arrived with `⛔EDGE-ON` lit and **one pointer** down,
+   * which was the whole of the evidence: it did not say which plane, how near degenerate, or
+   * whether the depth channel was involved at all. ⛔ Named, not inferred.
+   */
+  readonly mode: "PLANE-SOLVE" | "PLANE-SCREEN" | "CHANNELS";
+  /**
+   * ⭐⭐ **THE HOLDER PLANE'S CONDITIONING**, `|det|` of the two axes' screen shadows — 1 when the
+   * plane is square to the view, 0 when it is edge-on, and the solve's rate is its reciprocal.
+   * ⛔ This is the number that decides everything above, so it is REPORTED: the cliff stood for
+   * a day because nobody could see how close to it a drag was running.
+   */
+  readonly planeDet: number;
+  /**
+   * The second touchpoint's channel fell back to the fixed-rate push. ⚠ Separate from the
+   * holder's branch: they degenerate at different camera poses and conflating them is what made
+   * `⛔EDGE-ON` with one finger unreadable.
+   */
+  readonly depthFallback: boolean;
   /**
    * ⭐⭐ **THE LEVERAGE** — world travel per unit of finger travel, both in tracking-factor
    * units. ⛔ It is NOT 1 when the body is under the finger: a foreshortened plane needs MORE
@@ -196,7 +246,16 @@ export function axisTravel(
   // ⛔ A camera with no basis moves nothing, rather than moving by NaN. One NaN written into a
   // placement is permanent — it never washes out of a position.
   if (!right || !up || !sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
-    return { xM: 0, gravityM: 0, depthM: 0, edgeOn: false, trackGain: 0 };
+    return {
+      xM: 0,
+      gravityM: 0,
+      depthM: 0,
+      edgeOn: false,
+      mode: "PLANE-SOLVE",
+      planeDet: 0,
+      depthFallback: false,
+      trackGain: 0,
+    };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
   const dy = finite(input.holderDyPx) * metresPerPx;
@@ -226,8 +285,13 @@ export function axisTravel(
 
   let xM = 0;
   let gravityM = 0;
+  // ⭐⭐ THE HOLDER'S OWN depth contribution, separate from the second finger's. ⛔ It is
+  // non-zero only in the screen-plane branch, and it is kept apart so `trackGain` measures what
+  // the HOLDER bought — mixing the two would make the readout depend on the other finger.
+  let holderDepthM = 0;
   let depthM = 0;
-  let edgeOn = false;
+  let mode: AxisTravel["mode"] = "CHANNELS";
+  let planeDet = 0;
 
   if (pairing === "PLANE") {
     // ⭐⭐⭐ **THE 2×2 SOLVE, ON THE {x, gravity} PLANE SINCE THE SWAP** (the owner, 2026-09-23:
@@ -236,31 +300,39 @@ export function axisTravel(
     // separately: the two shadows are not perpendicular on screen in general, so independent
     // projections would double-count the overlap and the body would outrun the finger.
     //
-    // ⭐⭐ **AND IT IS A BETTER-CONDITIONED PLANE THAN {x, depth} WAS.** A vertical plane faces
-    // the camera at every ordinary pose; the horizontal one it replaced went edge-on at a LEVEL
-    // camera, where a hand spends much of its time.
+    // ⛔⛔ **AND THE CLAIM THAT USED TO STAND HERE — *"a vertical plane faces the camera at
+    // every ordinary pose"* — WAS FALSE, AND UNMEASURED.** With `worldAxisB` the axes are frozen
+    // at boot: orbit a quarter turn and `x` points at the camera, `|det|` → 0, at a camera pose
+    // nobody would call unusual. See the header.
     const det = sx[0] * sg[1] - sx[1] * sg[0];
-    if (Math.abs(det) > coneSin) {
+    planeDet = Math.abs(det);
+    if (planeDet > coneSin) {
+      mode = "PLANE-SOLVE";
       xM = ((dx * sg[1] - dy * sg[0]) / det) * holderGain;
       gravityM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
     } else {
-      edgeOn = true;
-      // ⛔⛔⛔ **A DEGENERATE PLANE MUST NOT STOP THE BODY.** ⚠ The first build of this swap
-      // suppressed the foreshortened axis, and the zone edge is exactly where a basis SWITCHES
-      // (`D74`) — so a body dragged up to the white contour could have its plane turn edge-on
-      // under it and **freeze on the boundary**, which is what a device look reported.
-      // ⭐⭐ So it degrades to the STABLE PROJECTION instead of refusing: the finger's own
-      // screen-plane displacement, decomposed onto the two axes. ⛔ It cannot freeze (every
-      // direction keeps some component) and it cannot run away (no division) — and it is the
-      // mapping this rule shipped with on 2026-09-22, so the degenerate case falls back to a
-      // behaviour that has been on the glass rather than to a new one.
-      // ⚠ What it gives up is exact tracking, precisely where exact tracking is undefined.
+      mode = "PLANE-SCREEN";
+      // ⛔⛔⛔ **A DEGENERATE PLANE MUST NOT STOP THE BODY — AND PROJECTING ONTO IT STOPS THE
+      // BODY.** ⚠ Two builds have now tried to answer an edge-on plane while staying inside it:
+      // suppressing the foreshortened axis (froze it) and projecting onto the two axes (froze it
+      // almost as hard, because a drag ACROSS an edge-on plane has almost no component in it).
+      // ⭐⭐⭐ The plane is the wrong place to look for the answer: when it cannot represent the
+      // drag, the body **leaves it**. The screen-plane displacement is decomposed onto all THREE
+      // axes — orthonormal, so the three components reproduce it exactly — and the body follows
+      // the finger on the glass with a gain of 1.
+      // ⭐ That is rule 6, closed by a device look 2026-09-15, and Blender's unconstrained `G`.
+      // ⛔ Nothing suppressed, nothing divided: it can neither block nor run away.
       const wx = right[0] * dx - up[0] * dy;
       const wy = right[1] * dx - up[1] * dy;
       const wz = right[2] * dx - up[2] * dy;
       xM = (wx * axes.x[0] + wy * axes.x[1] + wz * axes.x[2]) * holderGain;
       gravityM =
         (wx * axes.gravity[0] + wy * axes.gravity[1] + wz * axes.gravity[2]) * holderGain;
+      // ⭐⭐ **THE THIRD COMPONENT IS THE WHOLE OF THE FIX.** It is what the two previous builds
+      // threw away, and it is exactly the part of the finger's travel that an edge-on plane
+      // cannot hold. ⚠ Yes, the holder moves the body in the second finger's axis while this
+      // branch runs — that is the cost, and the alternative is a dead finger.
+      holderDepthM = (wx * axes.depth[0] + wy * axes.depth[1] + wz * axes.depth[2]) * holderGain;
     }
   } else {
     // ⭐ CHANNELS: Blender's `G X`, once per channel — the whole delta is not used, only the
@@ -273,26 +345,34 @@ export function axisTravel(
   // turns to face the camera, so it is the one that needs the judged fixed-rate fallback — and
   // it now has it, which is where `depthTranslate` put it in the first place.
   const d = along(sd, 0, dy2);
+  let depthFallback = false;
   if (d === null) {
-    // ⚠ `edgeOn` means **the exact mapping was abandoned for an input that existed**, not that
-    // it would have been. ⛔ Reporting it for an idle channel would light `⛔EDGE-ON` through
-    // every ordinary drag at a level camera, and a readout that cries wolf is worse than none.
-    if (dy2 !== 0) edgeOn = true;
+    // ⚠ Reported only when **an input existed**, not whenever it would have. ⛔ Lighting it for
+    // an idle channel would flag every ordinary drag at a level camera, and a readout that cries
+    // wolf is worse than none.
+    if (dy2 !== 0) depthFallback = true;
     depthM = fallbackDepth;
   } else {
     depthM = d * secondGain;
   }
+  // ⭐ The two channels SUM on this axis, exactly as `D43` made every other pair of channels sum.
+  depthM += holderDepthM;
 
   const asked = Math.hypot(dx, dy);
   return {
     xM,
     depthM,
     gravityM,
-    edgeOn,
+    edgeOn: mode === "PLANE-SCREEN" || depthFallback,
+    mode,
+    planeDet,
+    depthFallback,
     // ⭐ What one pixel bought, as a multiple of the tracking factor: 1 is under the finger.
-    // ⚠ The HOLDER's plane — {x, gravity} since the swap. ⛔ Measuring `depth` here would read 0
-    // for every drag, because the holder does not drive that channel any more.
-    trackGain: asked > 0 ? Math.hypot(xM, gravityM) / asked : 0,
+    // ⛔ THE HOLDER'S THREE COMPONENTS, including the depth one — in the screen-plane branch that
+    // component carries most of the travel, and leaving it out is what made the owner's HUD read
+    // `track=0.00×` while the body was in fact being moved. ⚠ A readout that measures only the
+    // channels the healthy branch uses cannot describe the branch that replaces it.
+    trackGain: asked > 0 ? Math.hypot(xM, gravityM, holderDepthM) / asked : 0,
   };
 }
 
