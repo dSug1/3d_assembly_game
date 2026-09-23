@@ -1581,9 +1581,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * than a stand-in: *all* object axes are the boot camera's until something moves them.
    */
   let bootObjectAxes: ObjectAxes | null = null;
-  const objectAxes = new Map<ObjectId, ObjectAxes>();
-  /** The world vertical, from the model's own `down`. ⛔ Never a second opinion about up. */
-  const WORLD_UP: Vec3 = [-WORLD_DOWN[0], -WORLD_DOWN[1], -WORLD_DOWN[2]];
+  // ⚠ `WORLD_UP` stood here and had exactly one reader: the in-zone basis, which `D82` deleted.
   /**
    * ⛔ `bootObjectAxes` is filled at boot, below the last `const` this file declares — a
    * lazily built one would capture *the camera at first drag*, which is not what was asked
@@ -1591,8 +1589,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * `METHOD` — a guard that turns a broken state into silence is worse than a failure, and
    * this one at least returns a real basis.
    */
-  const axesOf = (id: ObjectId): ObjectAxes =>
-    objectAxes.get(id) ?? bootObjectAxes ?? axesFromFrame(requireGestureFrame());
+  // ⛔⛔ **ONE BASIS FOR EVERY BODY, INSIDE THE CAPTURE ZONE AND OUTSIDE IT** — `D82`, the
+  // owner: *"Inside shall be the same as outside."* ⚠ There used to be a `Map<ObjectId,
+  // ObjectAxes>` here, written only at the zone's edges; with the in-zone basis deleted nothing
+  // writes it, so it is gone rather than left to look like state.
+  // ⭐ The decision stays in `input/object_axes.ts` — this asks it, per call, so `worldAxisA`
+  // now follows the live camera every frame instead of only at a crossing.
+  const axesOf = (): ObjectAxes =>
+    updatedObjectAxes({
+      worldAxisB: cfg.worldAxisB === 1,
+      bootAxes: bootObjectAxes ?? axesFromFrame(requireGestureFrame()),
+      liveFrame: gravityFrame(screenFrame().viewAxis, WORLD_DOWN),
+      previous: bootObjectAxes ?? axesFromFrame(requireGestureFrame()),
+    });
   /** ⚠ Last frame's range verdict. The EDGE is what moves the axes, never the level. */
   let zoneWas = false;
   /**
@@ -1749,7 +1758,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (!hit) continue;
       leading.set(id, hit);
       live.add(id);
-      const axes = axesOf(id);
+      const axes = axesOf();
       // ⭐ Sized from the body's own reach to that face, so it reads the same on a part and on
       // the base plate. ⚠ A fixed metre length would be invisible on one and enormous on the
       // other, which is the `Map<name, dims>` mistake `D50` deleted, one layer up.
@@ -1869,49 +1878,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     {
       const edge = zoneEdge(zoneWas, highlighted.inRange);
       zoneWas = highlighted.inRange;
-      // ⛔⛔ **THE ZONE IS ENTERED BY PROXIMITY; THE DUO IS NAMEABLE ONLY WHILE A DRAG
-      // TRANSLATES.** `inRange` is a distance and `pair` additionally requires condition 2, so a
-      // hand can drift into range in ROTATE mode — the crossing happens, and there is nobody to
-      // apply it to. ⚠ Without this the body would then be dragged on the OUTSIDE basis while
-      // sitting inside the zone, and the edge that would have fixed it is already spent.
-      // ⭐ So the pair is latched the moment it becomes nameable, and that counts as the entry.
+      // ⛔⛔⛔ **THE BASIS NO LONGER MOVES HERE** — `D82`, 2026-09-23, the owner: *"eliminate
+      // this rule: Inside the offset radius the axes are the LeadingFace normal, gravity, and
+      // their orthogonal. Inside shall be the same as outside."* ⭐ What remains on the edge is
+      // the pair's identity, for the readout, and the owner's own hook.
       const named =
-        highlighted.pair === null
-          ? null
-          : [highlighted.pair.subject, highlighted.pair.target];
+        highlighted.pair === null ? null : [highlighted.pair.subject, highlighted.pair.target];
       const becameNameable = highlighted.inRange && named !== null && zonePair.length === 0;
       if (named !== null && (edge === "ENTER" || becameNameable)) zonePair = named;
       if (edge !== null || becameNameable) {
-        // ⚠ Both bodies of the duo, because the dictation's condition names both: *"if
-        // pioneer and follower objects are inside the offset radius zone"*.
-        for (const id of zonePair) {
-          objectAxes.set(
-            id,
-            updatedObjectAxes({
-              // ⚠ THE STATE, not the edge's name: a late naming inside the zone is an entry too,
-              // and an EXIT is the only way this is false.
-              inZone: highlighted.inRange,
-              worldAxisB: cfg.worldAxisB === 1,
-              // ⛔ THE BOOT CAMERA'S BASIS, not this body's current one: `WorldAxisB`'s whole
-              // claim is that the axes are *"fixed forever for this scene"*, and feeding it
-              // the body's own axes would make it a no-op that looked like a rule.
-              bootAxes: bootObjectAxes ?? axesOf(id),
-              // ⛔ `gravityFrame`, not `requireGestureFrame`: this runs in the render loop,
-              // where a throw would take the whole frame down for a camera the orbit rings
-              // make unreachable anyway. ⭐ `rebaseGestureFrames` makes the same choice, for
-              // the same reason, and a `null` here keeps the basis the body has.
-              liveFrame: gravityFrame(screenFrame().viewAxis, WORLD_DOWN),
-              leadingNormal: leading.get(id)?.normal ?? null,
-              up: WORLD_UP,
-              previous: axesOf(id),
-            }),
-          );
-        }
         // ⛔ The HOOK fires on the CROSSING only, never on the late naming: the owner's trigger is
         // *"has entered … an offset radius zone"*, and a body that was already inside has not.
         if (edge === "ENTER" && cfg.cameraOffsetZoneEnterSetupB === 1) cameraOffsetZoneEnter();
         lastVerdict =
-          `axes: zone ${edge ?? "IN(named)"} → ${zonePair.length} body basis re-decided` +
+          `zone ${edge ?? "IN(named)"} — ${zonePair.length} body pair, axes UNCHANGED (D82)` +
           (edge === "ENTER" && cfg.cameraOffsetZoneEnterSetupB === 1
             ? `, CameraOffsetZoneEnter #${zoneEnterCalls} (no behaviour yet)`
             : "");
@@ -2990,7 +2970,7 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot)" : "WorldAxisA(live c
               .map((g) => idOf.get(g.mesh))
               .filter((id): id is ObjectId => id !== undefined)
               .map((id) => {
-                const a = axesOf(id);
+                const a = axesOf();
                 const f = leading.get(id);
                 const v = (x: readonly number[]): string =>
                   `${x[0]!.toFixed(2)},${x[1]!.toFixed(2)},${x[2]!.toFixed(2)}`;
@@ -3554,7 +3534,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
 
   const applyDepthStep = (grip: Held, dyPx: number): void => {
     const gid = idOf.get(grip.mesh);
-    const axes = gid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf(gid);
+    const axes = gid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf();
     const travel = axisTravel(
       { holderDxPx: 0, holderDyPx: 0, secondDyPx: dyPx },
       screenFrame(),
@@ -4907,7 +4887,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // being dragged, and the alternative is a frame in which the finger does nothing.
         const tid = idOf.get(grip.mesh);
         const axes =
-          tid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf(tid);
+          tid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf();
         const travel = axisTravel(
           { holderDxPx: grip.rec.step.dx, holderDyPx: grip.rec.step.dy, secondDyPx: 0 },
           // ⛔ THE TRUE CAMERA AXES, not the gravity frame: the question is what the axis looks

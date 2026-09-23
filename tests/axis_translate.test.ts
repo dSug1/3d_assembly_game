@@ -22,7 +22,7 @@ import {
   type CameraScreenAxes,
   type TranslatePairing,
 } from "@input/axis_translate";
-import { axesFromFrame, axesFromLeadingFace, type ObjectAxes } from "@input/object_axes";
+import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
 import { trackingMetresPerPx } from "@input/translate";
 import { dot, normalize, type Vec3 } from "@core/vec";
@@ -30,7 +30,6 @@ import { DEFAULT_CONFIG } from "@input/gestureConfig";
 
 const DEG = Math.PI / 180;
 const DOWN: Vec3 = [0, -1, 0];
-const UP: Vec3 = [0, 1, 0];
 const FOV = 0.8;
 const H = 800;
 const CONE = 5;
@@ -290,27 +289,11 @@ describe("⛔⛔ EDGE-ON — the DEPTH axis facing the camera, and the judged fa
   });
 });
 
-describe("⭐⭐⭐ THE IN-ZONE BASIS BITES AGAIN — a finding the swap resolved", () => {
-  it("under PLANE the in-zone basis now CHANGES the translation", () => {
-    // ⛔⛔ **THIS VECTOR ASSERTED THE OPPOSITE BEFORE THE SWAP**: *"under PLANE the in-zone basis
-    // changes NOTHING, and that contradicts rule C"*. It was right — the holder's plane was
-    // {x, depth}, both horizontal, and the orthogonalised in-zone basis spans the same plane.
-    // ⭐⭐⭐ The swap resolved it without anyone aiming at it: the plane is {x, **gravity**} now,
-    // a VERTICAL one containing `x`, and the in-zone basis rotates `x` — so the plane tilts.
-    const c = camera(0, 30);
-    const outside = axesFromFrame(c.gravity);
-    const inside = axesFromLeadingFace(normalize([1, 0, 1])!, UP)!;
-    const push = { holderDxPx: 50, holderDyPx: -30 };
-    const a = axisDisplacement(run(push, c, outside), outside);
-    const b = axisDisplacement(run(push, c, inside), inside);
-    expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeGreaterThan(1e-4);
-    for (const v of [a, b]) {
-      const landed = toScreenPx(v, c.screen);
-      expect(landed[0]).toBeCloseTo(50, 6);
-      expect(landed[1]).toBeCloseTo(-30, 6);
-    }
-  });
-});
+// ⛔⛔⛔ **A DESCRIBE STOOD HERE AND ITS SUBJECT IS DELETED** — `D82`, 2026-09-23.
+// *"⭐⭐⭐ THE IN-ZONE BASIS BITES AGAIN"* pinned that the capture zone's basis CHANGED what a
+// given drag did, which was rule C's whole claim. ⚠ The owner has removed rule C: *"Inside shall
+// be the same as outside."* ⭐ Kept as a note rather than as a skipped test, because the property
+// is not merely unasserted now — it is false by instruction.
 
 describe("the depth range clamp — A5's bounds, carried over with the channel", () => {
   it("holds a body inside [min, max] along the push direction and moves nothing else", () => {

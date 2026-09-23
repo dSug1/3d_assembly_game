@@ -666,3 +666,27 @@ construction, so the vector tested a set in which the two sign sources are the s
 is usually chosen from the set where the quantity under test is ZERO.* ⭐ The replacement sweeps
 60 camera poses against a WORLD-fixed basis and asserts the two branches agree — and counts how
 many times the fallback actually ran, so a sweep that never reached it cannot pass for free.
+
+
+
+---
+
+## ⛔⛔⛔ A NOTE ON 59, 62 AND 63 — **THE RULE THEY FIXED WAS DELETED HOURS LATER** (`D82`)
+
+**2026-09-23, the owner:** *"eliminate this rule: Inside the offset radius the axes are the
+LeadingFace normal, gravity, and their orthogonal. Inside shall be the same as outside. I think
+this is polluting the approach movement."*
+
+⭐⭐ **THEY ARE KEPT IN FULL, AND NOT ONLY OUT OF TIDINESS.** Three of the four reports that day
+were about a basis SWITCH: which channel owned the approach (59), what the crossing did to it
+(62), and a fallback sign that did not match the rule it replaced (63). ⛔ Each fix was correct
+about its own mechanism and none of them answered the owner's actual objection, which is that the
+switch is felt at all.
+
+⚠⚠ **WHAT SURVIVES THE DELETION IS DEFECT 63**, because its subject was never the zone: the
+fixed-rate fallback's sense now follows `sign(m · s)` instead of a camera elevation, everywhere.
+⛔ 59 and 62 are now unreachable — there is no in-zone basis to assign or to re-orient.
+
+⭐⭐⭐ `METHOD`, and it is the entry worth carrying: **a rule whose every defect is about the
+MOMENT it takes effect is a rule about the wrong thing.** ⚠ I fixed three mechanisms in a row
+without once asking whether the mechanism should exist — the owner asked on the fourth report.
