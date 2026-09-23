@@ -67,6 +67,7 @@ import {
   depthLimits,
   initialBehaviour,
   isTapRelease,
+  tapReleaseToggles,
   pairPressRevertsToggle,
 
 
@@ -4070,12 +4071,59 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    */
   const pairReverted = new Set<number>();
 
+  /**
+   * ⭐⭐⭐ **THE ONE PLACE A TAP FLIPS THE MODE — and it records the fact `D68` reads.**
+   *
+   * ⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"When i double tap on the pioneer to change
+   * followerface, the translation/rotation mode also toggles."* ⚠ `D68` is the rule that stops
+   * exactly that, and it was **dead for this gesture**: the revert fires only when
+   * `lastTapToggled` says the first tap flipped something, and there were **two** places that
+   * flipped it — `noteTap`, for a touchpoint routed `OUTSIDE` or `SECOND`, which set the flag,
+   * and the OBJECT release below, which did not.
+   *
+   * ⭐⭐ A double tap on the **Pioneer** is a tap on an OBJECT by definition, so it took the one
+   * path that forgot to arm: tap 1 flipped the mode, the press completing the pair found
+   * `lastTapToggled === false` and reverted nothing, and the gesture ended one toggle out.
+   * ⛔ Every earlier double tap in the input model went through `noteTap`, which is why `D68`
+   * looked correct on the glass for two days.
+   *
+   * ⭐⭐⭐ `METHOD`: *a composition is a thing to MEASURE* — and the composition here is **two
+   * writers of one fact**, which is the same shape as the render loop drawing only the objects
+   * that happened to have a follower. ⚠ The fix is not the missing line; it is that there is
+   * now one writer and a second cannot be added by accident.
+   */
+  const toggleByTap = (why: string, pointerId: number): void => {
+    // ⛔⛔⛔ **AND THE OTHER HALF OF `D68` WAS DEAD TOO — `pairReverted` WAS WRITTEN AND NEVER
+    // READ.** Its own comment says *"their own release must add nothing, or a full double tap
+    // would end up flipped by one"*, and nothing consulted the set: a **completed** double tap
+    // therefore went toggle → revert → **toggle**, and finished one out. ⚠ That is the DEAD
+    // INSTRUMENT shape at its purest — a guard that cannot fire, described in prose as though
+    // it does — and it is the third time on this project (`METHOD`).
+    // ⭐ Consumed with `delete`, so the entry cannot survive into the next gesture and eat a
+    // tap that has nothing to do with it.
+    // ⭐ THE DECISION IS `tapReleaseToggles`'s; this reads the two facts and obeys. ⚠ The
+    // alignment's own consumption is applied by its caller (`alignedByThisTap`), which is why
+    // `false` is passed here — this helper is only ever reached when the tap was not spent that
+    // way, and threading it twice would give the rule two masters.
+    if (!tapReleaseToggles(pairReverted.delete(pointerId), false)) {
+      lastVerdict = `${why} — release spent (its press reverted the pair)`;
+      return;
+    }
+    behaviour = toggleBehaviour(behaviour);
+    lastTapToggled = true;
+    lastVerdict = `${why} → ${behaviour}`;
+  };
+
   // ⛔⛔ **`pressToggled` AND `secondTouch` ARE DELETED WITH `D66`.** The first existed only
   // because a press could toggle; the second (`D65`) only because a press toggling made a
   // second touch's LIFT ambiguous. ⭐ With the press inert, a tap is a tap again — *"as per
   // present rule for tap"* — and `noteTap` needs no verdict from anyone.
 
-  const noteTap = (pressed: Sample, released: Sample): "TAP" | "DOUBLE_TAP" | null => {
+  const noteTap = (
+    pressed: Sample,
+    released: Sample,
+    pointerId: number,
+  ): "TAP" | "DOUBLE_TAP" | null => {
     const wasTap = isTapRelease(
       pressed.t, pressed.x, pressed.y,
       released.t, released.x, released.y,
@@ -4095,10 +4143,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // gone with the press toggle — *"a tap by the second touchpoint can [toggle], as per
     // present rule for tap"*. ⚠ The history is recorded first, as it always was: it is what the
     // double tap and the camera reset read.
-    behaviour = toggleBehaviour(behaviour);
-    // ⭐ `D68`: this tap DID toggle, so a press that completes the pair may undo it.
-    lastTapToggled = true;
-    lastVerdict = `tap → ${behaviour}`;
+    // ⭐ `D68`: this tap DID toggle, so a press that completes the pair may undo it — and the
+    // arming is `toggleByTap`'s, not this function's, so the OBJECT path cannot disagree.
+    toggleByTap("tap", pointerId);
     return verdict;
   };
 
@@ -4428,7 +4475,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⛔⛔ **`D64` — AND A FINGER THAT DROVE THIS BODY DOES NOT TOGGLE ON THE WAY UP.**
         // ⚠ Both sets are consulted unconditionally, never short-circuited: each owns an entry
         // for this pointer id and leaving one behind would eat the NEXT gesture's tap.
-        noteTap(routed.pressed, s);
+        noteTap(routed.pressed, s, e.pointerId);
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
       } else {
@@ -4538,7 +4585,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // DOUBLE-TAP is untouched: the history is recorded either way, so the camera reset
         // pairs exactly as it always has. Only the toggle is spent.
         if (
-          noteTap(routed.pressed, s) === "DOUBLE_TAP"
+          noteTap(routed.pressed, s, e.pointerId) === "DOUBLE_TAP"
         ) {
           resetCamera();
           lastVerdict = "DOUBLE_TAP → camera reset";
@@ -5191,8 +5238,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       ) {
         // ⚠ A tap that ALIGNED or released an alignment is excluded, unchanged — *"as per
         // present rule for tap"*: one gesture, one consequence.
-        behaviour = toggleBehaviour(behaviour);
-        lastVerdict = `tap on the object → ${behaviour}`;
+        // ⛔⛔ **THIS LINE USED TO FLIP THE MODE WITHOUT ARMING `D68`'s REVERT**, which is the
+        // 2026-09-23 device report: a double tap on the Pioneer left the session one toggle out.
+        toggleByTap("tap on the object", e.pointerId);
       }
       // ⭐ §3 rule 3 — *"release unselects object and face, stack preserved."* ⛔ The stack
       // lives on the OBJECT, so preserving it is not an action: it is what NOT clearing the

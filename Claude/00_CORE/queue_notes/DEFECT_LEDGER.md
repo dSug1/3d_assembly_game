@@ -255,3 +255,41 @@ whether the cost is actually paid by prior art before letting the rejection stan
 ✅ **FIXED**: the finger's delta is SOLVED onto both horizontal axes (exact tracking, one gain across
 all three channels), with Blender's 5° cone falling back to `depthTranslate`'s judged fixed rate
 instead of Blender's near-stop. 38 vectors, six mutants caught → [`IN4.md`](IN4.md).
+
+
+---
+
+## 52 — ⭐⭐⭐ `D68` DESCRIBED A GUARD IT DID NOT HAVE, TWICE OVER
+
+**2026-09-23, by finger.** *"When i double tap on the pioneer to change followerface, the
+translation/rotation mode also toggles."*
+
+⛔⛔ **THE RULE WAS RIGHT AND HALF OF IT WAS NOT WIRED — and it was wrong in two independent
+ways, either of which alone leaves the session one toggle out.**
+
+**One: the flag the revert reads had TWO writers, and the Pioneer takes the one that forgot.**
+`D68` undoes the first tap's toggle when a press completes the pair, but only *"if the first tap
+actually toggled"* — a fact the caller carries. ⚠ Two places flip the mode: `noteTap`, for a
+touchpoint routed `OUTSIDE` or `SECOND`, which set the flag; and the OBJECT release, which did
+not. ⭐ A double tap on the **Pioneer** is a tap on an object by definition, so it took the path
+that never armed the revert, and the revert silently did nothing. ⛔ Every double tap tried
+before this went through `noteTap`, which is why `D68` looked correct on the glass for two days.
+
+**Two: the *release is spent* half was a `Set` that was written and never read.** `pairReverted`
+had a doc comment saying *"their own release must add nothing, or a full double tap would end up
+flipped by one"*, and nothing in 5,000 lines consulted it. ⚠ So a **completed** double tap went
+toggle → revert → **toggle**.
+
+⭐⭐⭐ **BOTH ARE THE SAME SHAPE, AND IT IS NOT A MISSING LINE.** A rule whose STATE lives in the
+render layer has as many writers as someone remembers to update, and a guard nothing reads is
+indistinguishable from a guard that works — *an absent readout cannot be caught by looking at
+the screen*, one level down. ⛔ The fix is structural: `tapReleaseToggles` joins
+`pairPressRevertsToggle` in `mode_toggle.ts`, both halves of `D68` are predicates over facts
+rather than bookkeeping, and `scene.ts` has **one** function that flips the mode.
+
+⚠⚠ **AND THE VECTORS COULD NOT HAVE CAUGHT IT, WHICH IS THE PART TO CARRY.** `pairPressRevertsToggle`
+had green vectors for every combination of its two arguments. What nobody had written down was
+the **sequence** — *tap, press that pairs, release* — and what it must come to. ⭐ The new vectors
+state the net mode after a whole gesture, which is the only thing a hand can see; they are a model
+of the wiring and say so, because the alternative was no statement at all.
+

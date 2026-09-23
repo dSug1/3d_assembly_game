@@ -16,8 +16,8 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1063 golden vectors,
-all passing** (37 → … → 1049 → 1056 → **1063**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1068 golden vectors,
+all passing** (37 → … → 1056 → 1063 → **1068**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three of them rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⭐ The increments themselves are named in the verdict, not just the build. ⚠ It still ships at **0** — a judged-good feature that is OFF by default — and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
@@ -120,9 +120,9 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Fifty-one defects, **fifty of them by finger** (the other by composing a measurement with a
-threshold), and **not one was visible to a green suite**. They are **five** shapes, not fifty-one
-problems — the fifth is below, and it costs a correct implementation rather than a broken one:
+Fifty-two defects, **fifty-one by finger** (the other by composing a measurement with a threshold),
+and **not one was visible to a green suite**. They are **five** shapes — the fifth is below, and it
+costs a correct implementation rather than a broken one:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
 the sum of the rows' dossiers — not a figure anyone restates from memory:
@@ -159,7 +159,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | ⛔ **`IN3`** — the twist's `dx` SIGN, inverted at half of all alignments | **1** |
 | ⛔ **`D73`** — a restarted ease stalled, so MORE increments moved the body LESS | **1** |
 | ⛔ **`D76`** — the axis mapping lost the cosine; only the gravity channel kept up | **1** |
-| ⭐⭐ **THE TOTAL** | **= 51** |
+| ⛔⛔ **`D68`** — its guard was WRITTEN AND NEVER READ, and its flag had two writers | **1** |
+| ⭐⭐ **THE TOTAL** | **= 52** |
 
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16): each account is in
 [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), the table stays here, and a row's count
@@ -170,12 +171,11 @@ gravity axis"*, withdrawn after `tests/a7_wiring.test.ts` measured the compositi
 ⛔ Every part of `A7` had green vectors and **the composition had none** — mistake shape 4 pointing at
 CORRECT work.
 
-⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.**
-A gesture fix confirmed by finger over USB was reported broken from Pages hours later. ⛔ The
-code was **identical on both surfaces**: the tablet held a cached `index.html` still pointing
-at a superseded content-hashed bundle, so a stale page is stale until something replaces the
-index. ⭐⭐ **The withdrawn-`A7` shape one layer lower** — the report was truthful, the
-reasoning sound, and the unchecked premise was *"both surfaces run the same code"*.
+⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.** A
+gesture fix confirmed over USB was reported broken from Pages hours later; the code was **identical**
+and the tablet held a cached `index.html` pointing at a superseded bundle. ⭐⭐ **The withdrawn-`A7`
+shape one layer lower** — truthful report, sound reasoning, and the unchecked premise was *"both
+surfaces run the same code"*.
 ⚠ **Not counted as a gesture defect**, but a real one of the **deploy surface**, fixed in the
 product rather than in a procedure (`src/core/build_gate.ts`, 16 vectors, plus a build stamp on
 the HUD) — ✅✅ closed on the glass the same day. ⚠ It exposed a second thing that was never a

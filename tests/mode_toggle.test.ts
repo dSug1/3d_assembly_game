@@ -13,7 +13,9 @@ import {
   initialBehaviour,
   isTapRelease,
   pairPressRevertsToggle,
+  tapReleaseToggles,
   toggleBehaviour,
+  type Behaviour,
 } from "@input/mode_toggle";
 import * as modeToggle from "@input/mode_toggle";
 
@@ -88,10 +90,15 @@ describe("⛔⛔ THE TOGGLE IS IMMEDIATE, and a double tap simply flips TWICE", 
     // same vector doing the same job in the other direction: the surface shrinks by decision.
     // ⚠ `pairPressRevertsToggle` joined it with `D68` (2026-09-21) — an ADDITION made on
     // purpose, listed so the surface changes by decision and not by accident.
+    // ⚠⚠ `tapReleaseToggles` joined it on **2026-09-23**, and it is the other half of that same
+    // decision: `D68` said a reverting press spends its own release, and the fact lived in a
+    // `Set` in `scene.ts` that nothing read. ⛔ It is here now because a rule in a render file
+    // is a rule nothing can interrogate — including this vector.
     expect(surface.sort()).toEqual([
       "initialBehaviour",
       "isTapRelease",
       "pairPressRevertsToggle",
+      "tapReleaseToggles",
       "toggleBehaviour",
     ]);
   });
@@ -216,5 +223,75 @@ describe("⛔⛔⛔ `D68` — A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND
     // press #2 completes the pair and reverts, and its own release is spent
     if (pairPressRevertsToggle(true, true)) mode = toggleBehaviour(mode);
     expect(mode).toBe(boot);
+  });
+});
+
+describe("⛔⛔⛔ `D68` WHOLE — the two halves, and the SEQUENCES a hand actually performs", () => {
+  /**
+   * ⭐⭐ **A MODEL OF THE SCENE'S THREADING, AND IT SAYS SO.** These vectors drive the two pure
+   * rules in the order `scene.ts` drives them. ⚠ That makes them a *second implementation* of
+   * the wiring — the risk `METHOD` names — so they are written to assert the NET MODE after a
+   * whole gesture, which is the only thing a hand can see, and never the intermediate flags.
+   * ⛔ What they cannot prove is that the render layer threads it this way; what they CAN do is
+   * state what the sequence must come to, which is what nobody wrote down for two days.
+   */
+  const run = (
+    events: readonly ("tap" | "press-pairs" | "release-after-pair" | "align-tap")[],
+  ): Behaviour => {
+    let behaviour: Behaviour = "TRANSLATE";
+    let lastTapToggled = false;
+    let spent = false;
+    for (const e of events) {
+      if (e === "press-pairs") {
+        if (pairPressRevertsToggle(true, lastTapToggled)) {
+          behaviour = toggleBehaviour(behaviour);
+          lastTapToggled = false;
+          spent = true;
+        }
+      } else if (e === "align-tap") {
+        // ⭐ A tap consumed by an alignment: it toggles nothing and arms nothing.
+        if (tapReleaseToggles(spent, true)) throw new Error("an aligned tap must not toggle");
+        spent = false;
+      } else {
+        // a tap RELEASE — `tap` is a plain one, `release-after-pair` follows a reverting press
+        if (tapReleaseToggles(spent, false)) {
+          behaviour = toggleBehaviour(behaviour);
+          lastTapToggled = true;
+        }
+        spent = false;
+      }
+    }
+    return behaviour;
+  };
+
+  it("⭐ one tap flips the mode", () => {
+    expect(run(["tap"])).toBe("ROTATE");
+  });
+
+  it("⭐⭐⭐ A COMPLETED DOUBLE TAP ENDS WHERE IT STARTED — the second half of the defect", () => {
+    // ⛔ toggle → the press reverts → **the release is spent**. ⚠ Until 2026-09-23 the last step
+    // toggled again, because the `Set` recording *spent* was written and never read, so this
+    // sequence finished on `ROTATE` and a hand saw the mode flip after a double tap.
+    expect(run(["tap", "press-pairs", "release-after-pair"])).toBe("TRANSLATE");
+  });
+
+  it("⭐⭐⭐ A DOUBLE TAP WHOSE SECOND HALF NEVER LIFTS ALSO ENDS WHERE IT STARTED", () => {
+    // ⛔ `D67`'s route to orange, and the gesture the owner reported: the second press is still
+    // down when the Follower is touched. ⚠ It only works because the FIRST tap armed the
+    // revert — and a tap on the **Pioneer** is a tap on an OBJECT, which was the path that did
+    // not arm it.
+    expect(run(["tap", "press-pairs"])).toBe("TRANSLATE");
+  });
+
+  it("⛔ a tap CONSUMED BY AN ALIGNMENT toggles nothing, and leaves nothing to revert", () => {
+    expect(run(["align-tap"])).toBe("TRANSLATE");
+    expect(run(["align-tap", "press-pairs"])).toBe("TRANSLATE");
+  });
+
+  it("⛔ the predicate itself — all four combinations, since neither flag alone decides", () => {
+    expect(tapReleaseToggles(false, false)).toBe(true);
+    expect(tapReleaseToggles(true, false)).toBe(false);
+    expect(tapReleaseToggles(false, true)).toBe(false);
+    expect(tapReleaseToggles(true, true)).toBe(false);
   });
 });

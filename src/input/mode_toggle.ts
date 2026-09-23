@@ -85,6 +85,37 @@ export function pairPressRevertsToggle(completesPair: boolean, lastTapToggled: b
   return completesPair && lastTapToggled;
 }
 
+/**
+ * ⭐⭐⭐ **THE OTHER HALF OF `D68` — does THIS tap release flip the mode at all?**
+ *
+ * ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"When i double tap on the pioneer to change
+ * followerface, the translation/rotation mode also toggles."* ⚠ `D68` was correct and **half of
+ * it was not wired**, in two separate ways, and each alone was enough to leave the session one
+ * toggle out:
+ *
+ * 1. the flag the revert reads (*did the first tap toggle?*) was set by **one** of the two
+ *    places that flip the mode — and a tap on the **Pioneer** takes the other one;
+ * 2. the *release is spent* half was a `Set` that `scene.ts` **wrote and never read**, so a
+ *    completed double tap went toggle → revert → **toggle**.
+ *
+ * ⭐⭐ **SO THE WHOLE RULE IS HERE NOW, AS TWO PREDICATES OVER THREE FACTS**, and the caller
+ * keeps no bookkeeping it could forget to update. ⛔ `METHOD`: *a rule written in `scene.ts` is
+ * a rule nothing can interrogate* — this one described its own guard in prose for two days
+ * while the guard could not fire.
+ *
+ * @param pressRevertedThisPair did the press that began THIS touchpoint already undo the pair's
+ *   first toggle? Then its release is spent.
+ * @param consumedByAlignment did this tap do something else instead — align, unalign? ⭐ *One
+ *   gesture, one consequence* (`D38`), and it is the caller's fact because only the caller
+ *   knows what the press did.
+ */
+export function tapReleaseToggles(
+  pressRevertedThisPair: boolean,
+  consumedByAlignment: boolean,
+): boolean {
+  return !pressRevertedThisPair && !consumedByAlignment;
+}
+
 /** What a held object's own drag does. ⭐ One latch per SESSION, not per gesture. */
 export type Behaviour = "TRANSLATE" | "ROTATE";
 
