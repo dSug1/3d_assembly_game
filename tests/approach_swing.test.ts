@@ -25,6 +25,7 @@ import {
   swingYawRad,
   type SwingLatch,
   approachSpeedMmPerS,
+  acquireSwingSign,
 } from "@input/approach_swing";
 
 const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
@@ -776,5 +777,61 @@ describe("⛔⛔⛔ defect 64 — the approach's speed is the fastest finger DRI
     expect(approachSpeedMmPerS([NaN, 90])).toBe(90);
     expect(approachSpeedMmPerS([Infinity, 90])).toBe(90);
     expect(approachSpeedMmPerS([NaN])).toBe(0);
+  });
+});
+
+/**
+ * ⭐⭐⭐ **DEFECT 65 — THE SIGN WAS A ONE-FRAME LOTTERY, AND A LOST FRAME KILLED THE SWING.**
+ *
+ * > *"camera swing still not working"* — the owner, 2026-09-23, HUD: `sign⛔? p=0.33 yaw=0.0°
+ * > g0=64mm arm=(0.0,0.0)mm driven`
+ *
+ * ⛔ `frameTravelRightM/UpM` are consumed every frame, so the arming edge sees only the travel of
+ * that one frame. Cross on a frame that carried none and the sign is `null` — and it was latched
+ * `null` for the whole approach: `p` reached 0.33 with `yaw` at `0.0°`.
+ */
+describe("⛔⛔⛔ defect 65 — a null sign is PROVISIONAL, and re-bases when it is filled", () => {
+  const armed = (sign: 1 | -1 | null): SwingLatch => ({
+    gapAtTriggerM: 0.064,
+    offsetAtTriggerM: 0.065,
+    sign,
+    armTravelM: 0,
+    armTravelUpM: 0,
+  });
+
+  it("⭐⭐⭐ RED AGAINST THE SHIPPED BUILD: the first travel that arrives gives it a direction", () => {
+    const got = acquireSwingSign(armed(null), -0.004, 0, 0.043);
+    expect(got).not.toBeNull();
+    expect(got!.sign).toBe(-1);
+  });
+
+  it("⛔⛔ and the trigger gap RE-BASES, so the lean starts at zero instead of jumping", () => {
+    // ⚠ The gap has closed from 64 mm to 43 mm while the swing had no direction. Adopting the
+    // sign without re-basing would put the camera straight at `yaw(p = 0.33)`.
+    const got = acquireSwingSign(armed(null), 0.004, 0, 0.043)!;
+    expect(got.gapAtTriggerM).toBeCloseTo(0.043, 12);
+    expect(swingProgress(0.043, got)).toBeCloseTo(0, 12);
+    expect(swingYawRad(swingProgress(0.043, got), 0.7, got.sign)).toBeCloseTo(0, 12);
+    // ⭐ And it grows from there over whatever gap is left.
+    expect(swingYawRad(swingProgress(0.03, got), 0.7, got.sign)).toBeGreaterThan(0);
+  });
+
+  it("⛔ it NEVER re-signs a swing that already has a direction", () => {
+    // ⚠ Latching the sign for the approach is what fixed *"sometimes the yaw is to the left
+    // bottom, sometimes it is to the right up for the same delta position x"* (2026-09-20).
+    expect(acquireSwingSign(armed(1), -0.01, 0, 0.04)).toBeNull();
+    expect(acquireSwingSign(armed(-1), 0.01, 0, 0.04)).toBeNull();
+  });
+
+  it("⛔ no travel still means no direction — the 2026-09-20 rule is unchanged", () => {
+    expect(acquireSwingSign(armed(null), 0, 0, 0.04)).toBeNull();
+    expect(acquireSwingSign(armed(null), NaN, 0, 0.04)).toBeNull();
+  });
+
+  it("⛔ a non-positive or non-finite gap leaves the latch alone rather than re-basing to it", () => {
+    // ⚠ `gapAtTriggerM` divides the progress: a zero there is an infinity on the camera.
+    expect(acquireSwingSign(armed(null), 0.004, 0, 0)).toBeNull();
+    expect(acquireSwingSign(armed(null), 0.004, 0, NaN)).toBeNull();
+    expect(acquireSwingSign(armed(null), 0.004, 0, -0.01)).toBeNull();
   });
 });

@@ -243,6 +243,57 @@ export function swingSignFor(travelRight: number, travelUp = 0): 1 | -1 | null {
 }
 
 /**
+ * ⭐⭐⭐ **A SWING THAT ARMED WITHOUT A DIRECTION ACQUIRES ONE LATER — defect 65, 2026-09-23.**
+ *
+ * > *"camera swing still not working. do a better job at debugging"* — with a HUD reading
+ * > `sign⛔? p=0.33 yaw=0.0° g0=64mm arm=(0.0,0.0)mm driven`
+ *
+ * ⛔⛔⛔ **THE SIGN WAS A ONE-FRAME LOTTERY.** `frameTravelRightM/UpM` are consumed every frame,
+ * so the arming edge sees only the travel applied since the previous frame — and if the capture
+ * happens to cross on a frame that carried none (no pointer event landed, or the deadband emitted
+ * nothing), `swingSignFor` answers `null`. ⚠ That answer was then **latched for the whole
+ * approach**: `p` advanced to 0.33 while `yaw` stayed at `0.0°`. The swing ran, and pointed
+ * nowhere.
+ *
+ * ⭐⭐ **A `null` SIGN IS NOW PROVISIONAL, NOT PERMANENT.** The 2026-09-20 rule it comes from is
+ * still right — *the threshold can be crossed with no travel at all, and then there is no swing*
+ * — but it answers *"is there a direction YET"*, not *"was there one at that instant"*.
+ *
+ * ⛔⛔ **AND IT RE-BASES WHEN THE DIRECTION ARRIVES**, which is the half that keeps it honest: the
+ * gap has closed meanwhile, so adopting the sign without re-basing would jump the camera straight
+ * to `yaw(p)` — and *"the camera shall not jump"* is a device report already paid for.
+ * ⭐ Re-basing the trigger gap to the CURRENT gap restarts the lean at zero and grows it from
+ * there, over whatever gap is left. ⚠ The cost, stated: a swing that acquires its direction late
+ * completes its out-and-back in less distance, so it is faster. That is the honest consequence of
+ * starting late, and it beats both alternatives — a jump, or no swing at all.
+ *
+ * @returns the replacement latch, or `null` when nothing should change — already signed, or still
+ *   no travel to read. ⛔ Never re-signs a swing that HAS a direction: latching it for the
+ *   approach is what fixed *"sometimes the yaw is to the left bottom, sometimes to the right up
+ *   for the same delta position x"* (2026-09-20), and this must not undo it.
+ */
+export function acquireSwingSign(
+  latch: SwingLatch,
+  travelRightM: number,
+  travelUpM: number,
+  gapNowM: number,
+): SwingLatch | null {
+  if (latch.sign !== null) return null;
+  const sign = swingSignFor(travelRightM, travelUpM);
+  if (sign === null) return null;
+  // ⚠ A gap that is not a positive number leaves the latch alone rather than re-basing to it:
+  // `gapAtTriggerM` divides the progress, and a zero there is an infinity on the camera.
+  if (!Number.isFinite(gapNowM) || !(gapNowM > 0)) return null;
+  return {
+    ...latch,
+    sign,
+    gapAtTriggerM: gapNowM,
+    armTravelM: travelRightM,
+    armTravelUpM: travelUpM,
+  };
+}
+
+/**
  * ⭐⭐ **THE PITCH ALWAYS LEANS THE SAME WAY — UP.**
  *
  * ⛔ The owner's expectation names one direction for both axes: *"delta position x negative

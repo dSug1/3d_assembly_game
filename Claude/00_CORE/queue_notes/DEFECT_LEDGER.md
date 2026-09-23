@@ -732,3 +732,64 @@ can be ~14 mm past the contour before the swing arms (`g0=115mm` against a `129m
 owner's shot). ⛔ Frame quantisation, not a rule — recorded because it makes the swing's
 parameterisation start slightly inside the zone, and because a future report about *"the swing
 starts late"* should find this line rather than re-derive it.
+
+
+
+---
+
+## 65 — ⭐⭐⭐ **THE SWING'S DIRECTION WAS A ONE-FRAME LOTTERY, AND A LOST FRAME KILLED IT**
+
+**2026-09-23, by finger.** *"camera swing still not working. do a better job at debugging"* — HUD:
+`sign⛔? p=0.33 yaw=0.0° g0=64mm arm=(0.0,0.0)mm driven`.
+
+⛔⛔⛔ `frameTravelRightM/UpM` are **consumed every frame**, so the arming edge sees only the travel
+applied since the previous frame. ⚠ Cross on a frame that carried none — no pointer event landed
+in that interval — and `swingSignFor` answers `null`, correctly. ⭐⭐ **But that answer was latched
+for the whole approach**: `p` climbed to 0.33 while `yaw` stayed at `0.0°`. The swing ran, and
+pointed nowhere. ⛔ `g0=64mm` against a `65mm` offset says the crossing itself was clean — the
+arming was right and only the direction was missing, which is why the readout mattered.
+
+✅ **FIXED**: a `null` sign is **provisional**. The first frame that carries travel while the swing
+is armed fills it in — `acquireSwingSign`, in `approach_swing.ts` with the decision.
+⛔⛔ **AND IT RE-BASES THE TRIGGER GAP WHEN IT DOES**, which is the half that keeps it honest: the
+gap has closed meanwhile, so adopting the sign alone would jump the camera to `yaw(p)`, and *"the
+camera shall not jump"* is a device report already paid for. ⭐ Re-basing restarts the lean at zero
+and grows it over whatever gap is left.
+⚠ The cost, stated: a swing that finds its direction late completes its out-and-back in less
+distance, so it is faster. That beats both alternatives — a jump, or no swing at all.
+⛔ It never re-signs a swing that HAS a direction: latching it is what fixed *"sometimes the yaw is
+to the left bottom, sometimes to the right up for the same delta position x"* (2026-09-20).
+
+⭐⭐ **THE 2026-09-20 RULE WAS NOT WRONG, IT WAS ANSWERING A DIFFERENT QUESTION.** *No travel, no
+swing* is right for *"is there a direction?"*; it was being asked *"was there one at that
+instant?"*, which a 16 ms window decides by luck.
+
+
+---
+
+## 66 — ⚠⚠ **OPEN: A SWING ARMED AT 8 mm WITH A 129 mm OFFSET** (instrumented, not yet fixed)
+
+**2026-09-23, by finger**, third shot of the same session: *"also not working in this
+configuration"* — `sign- p=1.00 yaw=0.0° g0=8mm arm=(-37.5,0.0)mm driven`, `gap=0/129mm`.
+
+⛔ The sign is present and the travel is large, so this is **not** defect 65. The swing armed with
+**8 mm** of approach left against a **129 mm** capture offset: an out-and-back compressed into
+8 mm is over before a hand can see it, and `p=1.00 yaw=0.0°` is the CORRECT reading of a swing
+that has already returned to zero.
+
+⚠⚠ **TWO MECHANISMS PRODUCE THAT AND ONE FRAME CANNOT TELL THEM APART**, which is exactly why
+this entry exists rather than a fix:
+
+1. **It re-armed mid-approach.** `inRange` flickers → the latch drops on the false frame and takes
+   the CURRENT gap on the true one. Anything that moves the verdict does it: the pair lock, the
+   alignment partners the verdict is keyed on (`D62`), or the offset itself, which `D49`
+   recomputes every frame from the camera distance.
+2. **It became true for the first time already deep inside.** The verdict only considers a body's
+   ALIGNMENT PARTNERS, so a pair that becomes one late enters the zone at whatever gap it is at —
+   and a rotation can collapse the surface gap between two hulls within a frame.
+
+✅ **INSTRUMENTED**: the HUD now prints `arms=8←132 44←46 129←131` — the last three armings, newest
+first, each with **the gap on the frame before it**. ⭐ One entry with a clean predecessor is a
+normal crossing; a jump is mechanism 2; several entries is mechanism 1, settled at a glance.
+⛔ No fix is guessed here: both candidates would take a threshold, and *a guessed number has been
+wrong every single time on this project.*

@@ -195,6 +195,7 @@ import {
   swingDriverIndex,
   endApproach,
   approachSpeedMmPerS,
+  acquireSwingSign,
   swingAmplitudeRad,
   swingProgress,
   swingSignFor,
@@ -1932,6 +1933,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           syncCentre();
         }
       }
+      swingArms.unshift({
+        g0Mm: highlighted.gapM * 1000,
+        prevMm: gapPrevM === null ? Number.NaN : gapPrevM * 1000,
+      });
+      if (swingArms.length > 3) swingArms.length = 3;
       swing = {
         gapAtTriggerM: highlighted.gapM,
         // ⚠ The threshold this capture was judged against, frozen with it — they are one fact.
@@ -1979,6 +1985,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       swingAmp = null;
       swingFrozenProgress = null;
     }
+    // ⭐⭐⭐ **A SWING THAT ARMED WITHOUT A DIRECTION TAKES THE FIRST ONE THAT ARRIVES** (defect
+    // 65). ⛔ It must run BEFORE the accumulators are consumed two lines below, and it is the
+    // same travel the arming edge would have read had it landed on this frame.
+    if (swing !== null && swing.sign === null && highlighted.gapM !== null) {
+      const signed = acquireSwingSign(swing, frameTravelRightM, frameTravelUpM, highlighted.gapM);
+      if (signed !== null) swing = signed;
+    }
     // ⛔⛔⛔ **CONSUMED HERE, EVERY FRAME, WHETHER OR NOT ANYTHING ARMED.** This one line is what
     // keeps the swing's direction a property of the approach: the arming edge above can only
     // ever see travel applied since the previous frame. ⚠ Zeroing it anywhere else — on a
@@ -1986,6 +1999,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // stale direction is readable, which is the defect of 2026-09-20 in a smaller form.
     frameTravelRightM = 0;
     frameTravelUpM = 0;
+    // ⭐ One frame of memory, for the arming history above. ⛔ After the arming, never before.
+    gapPrevM = highlighted.gapM;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -2537,6 +2552,29 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * would do nothing at all, which is how the first version of this fix failed.
    */
   let swingFrozenProgress: number | null = null;
+  /**
+   * ⭐⭐⭐ **THE LAST FEW ARMINGS, WITH THE GAP ON THE FRAME BEFORE EACH — defect 66's instrument.**
+   *
+   * > *"also not working in this configuration"* — the owner, 2026-09-23, HUD: `p=1.00 yaw=0.0°
+   * > g0=8mm` with a capture offset of **129 mm**
+   *
+   * ⛔⛔ A swing that arms at 8 mm has 8 mm to complete an out-and-back in, so it is over before
+   * it is visible. ⚠ Two mechanisms produce that and ONE FRAME CANNOT TELL THEM APART:
+   *
+   * * the capture **re-armed** mid-approach — `inRange` flickered, the latch dropped on the
+   *   false frame and took the current gap on the true one;
+   * * the capture became true **for the first time** already deep inside, because the verdict is
+   *   keyed on the body's ALIGNMENT PARTNERS (`D62`) and the pair only became one late, or a
+   *   rotation collapsed the surface gap in a frame.
+   *
+   * ⭐ `129←131` reads *armed at 129 with 131 the frame before* — a clean crossing. `8←132` is a
+   * jump. And several entries mean it re-armed, which is the first hypothesis, settled.
+   * ⚠ `METHOD`: *a readout that reports a VERDICT and not the QUANTITY makes the next report
+   * unfalsifiable* — this is the third instrument added for that reason in two days.
+   */
+  const swingArms: { g0Mm: number; prevMm: number }[] = [];
+  /** The capture gap on the PREVIOUS frame, for the line above. ⚠ `null` before the first. */
+  let gapPrevM: number | null = null;
 
   /**
    * ⭐⭐ How far the camera is currently leaning out of its own orbit, in radians.
@@ -3040,7 +3078,13 @@ swing     sign${
                 // from"* is the question a direction report asks, and `0.0000` here is the whole
                 // explanation of a `⛔?`.
                 ` arm=(${(swing.armTravelM * 1000).toFixed(1)},${(swing.armTravelUpM * 1000).toFixed(1)})mm` +
-                ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
+                ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}` +
+                // ⭐⭐ WHERE EACH ARMING HAPPENED, newest first: `g0←gap the frame before`.
+                // ⛔ Several entries = it RE-ARMED mid-approach, which is one whole hypothesis
+                // settled at a glance rather than by another round trip to the glass.
+                ` arms=${swingArms
+                  .map((a) => `${a.g0Mm.toFixed(0)}←${Number.isFinite(a.prevMm) ? a.prevMm.toFixed(0) : "?"}`)
+                  .join(" ")}`) +
             (drawFault === null
               ? ""
               : `
