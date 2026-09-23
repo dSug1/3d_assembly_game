@@ -36,16 +36,13 @@ predecessor's rotation stack was defensible at every layer and a **reflection** 
 whole, because nobody had ever computed the composite. **Ask what the whole chain
 does, in one expression, and check it.**
 
-⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.**
-*(2026-09-15.)* A gravity-referenced rotation was reported from the device as having
-regressed to the screen axes. Every part of it had green vectors — the frame is
-orthonormal, its `up` is the world vertical, the wiring compiled — and ⚠ **none of that
-is the same claim as *a horizontal drag yaws about gravity***, which is what a hand
-judges. Fourteen vectors composing the frame with the rotation, at four camera tilts,
-showed the composition was right; the report was withdrawn, and the real defect beside it
-(a missing deadband) became separable from the impression. ⭐ **Write the composite check
-even when you believe the pieces — especially then**: it is the only thing that can tell
-a defect from an impression, in either direction.
+⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.** *(2026-09-15.)*
+A gravity-referenced rotation was reported as having regressed to the screen axes. Every part had
+green vectors — ⚠ none of which is the same claim as *a horizontal drag yaws about gravity*, which is
+what a hand judges. Fourteen vectors composing the frame with the rotation at four camera tilts showed
+it was right; the report was withdrawn, and the real defect beside it (a missing deadband) became
+separable from the impression. ⭐ **Write the composite check even when you believe the pieces** — it
+is the only thing that tells a defect from an impression, in either direction.
 
 ## ⭐⭐ A BLEND HAS SEAMS
 
@@ -61,9 +58,8 @@ the **DRIVER** and the other a **VALIDATOR**: the driver supplies all the motion
 validator only authorises it by agreeing within a ratio. Nothing is mixed, so nothing can
 be discontinuous.
 
-⭐ And where the validator's agreement is **undefined** — at a reversal both travels pass
-through zero; at a late start one has not moved yet — **HOLD the last verdict**. A ratio
-of two numbers passing through zero is garbage however carefully it is computed.
+⭐ And where the validator's agreement is **undefined** — at a reversal, at a late start — **HOLD the
+last verdict**: a ratio of two numbers passing through zero is garbage however carefully computed.
 
 ## ⭐⭐ A GESTURE spans the moments between its touchpoints
 
@@ -71,14 +67,14 @@ of two numbers passing through zero is garbage however carefully it is computed.
 not work that way: **lifting a finger and putting it down again is one intention**, and for
 the 150–300 ms in between, the literal truth is a configuration the user never asked for.
 
-⚠ The instance: a rule table said *one touchpoint translates, two rotate*. Swap the second
-finger from one place to another, and the object translated through the middle of the swap —
-correctly, by the table, and wrongly by any account of what the hand was doing.
+⚠ The instance: a rule table said *one touchpoint translates, two rotate*. Swap the second finger from
+one place to another and the object translated through the middle of the swap — correctly by the
+table, wrongly by any account of what the hand was doing.
 
-⭐⭐ **The tell was the owner's own observation**: two cases that *"differ by timing of the
-input"*. When two runs of the same gesture differ only by WHEN the user moved, the rule is
-reading a momentary state that the gesture spans. ⚠ It is the same shape as *a mode keyed on
-motion*, one level up: there, the state was noisy; here, it is briefly and genuinely wrong.
+⭐⭐ **The tell was the owner's own observation**: two cases that *"differ by timing of the input"*.
+When two runs of one gesture differ only by WHEN the user moved, the rule is reading a momentary state
+the gesture spans. ⚠ Same shape as *a mode keyed on motion*, one level up: there the state was noisy,
+here it is briefly and genuinely wrong.
 
 ⭐ The fix is a grace on the DISCRETE event — a lift — never on a continuous reading. ⛔ And
 it has a real cost that must be stated rather than hidden: going back to the one-touchpoint
@@ -99,18 +95,16 @@ touchpoint and they are not interchangeable:
 of the sensor: this project shipped it twice, and both times a hand found it within minutes.
 
 ⚠ The second time, the tell was a **timing signature**: *"if I transition quickly there is a
-translation then a rotation, if I transition slowly there is directly a rotation."* ⭐⭐ **A
-behaviour that depends on how BRISKLY a finger arrives is not about the gesture at all** — a
-finger placed quickly skids as it lands, because the reported centroid slides while the
-contact area grows. Nothing about the user's intent differed between the two transitions.
+translation then a rotation, if I transition slowly there is directly a rotation."* ⭐⭐ **A behaviour
+that depends on how BRISKLY a finger arrives is not about the gesture at all** — a finger placed
+quickly skids as it lands, the centroid sliding while the contact area grows.
 
 ⭐ The motion state is still the right input for deciding **what a moving finger drives**.
 It is the wrong input for deciding **which rule is running**.
 
 ⚠⚠ And a note on process: the amendment that shipped this defect **had already flagged the
-resemblance** to the 2026-09-14 verdict and told the device pass to watch for it. ⛔ Naming
-a risk is not the same as not taking it. If the reasoning for a choice has to explain away a
-verdict a hand already gave, the verdict is the stronger evidence.
+resemblance** to the 2026-09-14 verdict. ⛔ Naming a risk is not the same as not taking it — if the
+reasoning for a choice has to explain away a verdict a hand already gave, the verdict wins.
 
 ## ⭐⭐ A threshold the state machine PARKS ON will be compared at its exact value
 
@@ -119,18 +113,15 @@ verdict a hand already gave, the verdict is the stronger evidence.
 edge, and the instant that thing stops, the comparison is made at the boundary value — on
 every sample, for as long as it rests.
 
-⚠ So never compute that value by a **round trip**. Storing a centre as `p − band` and
-re-deriving `p − centre` returns about `1e-14` too much at ordinary screen coordinates,
-which is on the wrong side of `<=`. ⭐ Carry the quantity the comparison is actually
-about — here the signed offset, accumulated by `+= (p − prev)` and clamped — so a still
-input adds exactly zero and stays exactly on the boundary.
+⚠ So never compute that value by a **round trip**: storing a centre as `p − band` and re-deriving
+`p − centre` returns about `1e-14` too much at ordinary screen coordinates, on the wrong side of `<=`.
+⭐ Carry the quantity the comparison is about — the signed offset, accumulated and clamped — so a
+still input adds exactly zero.
 
-⭐⭐ **And the tell that separates a defect from a stale fixture**: a fixture goes stale
-against a number it HARD-CODES; a defect changes behaviour when a number the PRODUCT uses
-moves. This one was invisible at one band size and appeared at another, so it was never the
-fixture. ⚠ Sweep the magnitudes a defect could hide behind — here five screen positions and
-five band sizes — because a fixture at one convenient coordinate passes while the product
-fails.
+⭐⭐ **And the tell that separates a defect from a stale fixture**: a fixture goes stale against a
+number it HARD-CODES; a defect changes behaviour when a number the PRODUCT uses moves. ⚠ Sweep the
+magnitudes a defect could hide behind — here five screen positions and five band sizes — because a
+fixture at one convenient coordinate passes while the product fails.
 
 ## ⭐⭐ A threshold has a SHAPE as well as a size
 
@@ -138,11 +129,11 @@ fails.
 reasoning, the one that prompted it. ⛔ But its shape decides other things, and those
 decisions are made whether or not anyone noticed making them.
 
-⚠ The instance: a position deadband, argued as **radial** because a circle is the natural
-shape for rejecting isotropic noise — which it is. ⛔⛔ What nobody asked was what else the
-shape chooses: a **square** band gives a corridor along each axis in which the other axis
-emits *nothing*, so a nearly-axial drag becomes a *purely* axial one. A radial band cannot
-provide that **at any radius**. The owner asked for per-axis and named that reason.
+⚠ The instance: a position deadband, argued as **radial** because a circle is the natural shape for
+rejecting isotropic noise — which it is. ⛔⛔ Nobody asked what else the shape chooses: a **square**
+band gives a corridor along each axis in which the other emits *nothing*, so a nearly-axial drag
+becomes a *purely* axial one, which no radius can provide. The owner asked for per-axis and named
+that reason.
 
 ⭐ **Ask what else a threshold is choosing before defending it on the axis you happened to
 be thinking about** — and notice that the cost I had raised against the square (a diagonal
@@ -155,11 +146,10 @@ drag travels 1.41× further) was real, small, and about entry only.
 mid-gesture, it stops being a guard and becomes a tax, and what it costs is **dead time**,
 which no gain or damping value downstream can hide.
 
-⚠ The instance: a position deadband whose anchor trails one radius behind. Entering a drag
-cost one radius, which is correct. **Reversing cost two** — the far side of the circle —
-measured at 5.0 mm and 88 ms, against a follower whose entire time constant is 7.6 ms.
-⭐ The fix is a distinction, not a number: *a finger that has already proven it is moving
-needs no further proof.*
+⚠ The instance: a position deadband whose anchor trails one radius behind. Entering a drag cost one
+radius, correctly; **reversing cost two** — 5.0 mm and 88 ms, against a follower whose whole time
+constant is 7.6 ms. ⭐ The fix is a distinction, not a number: *a finger that has already proven it is
+moving needs no further proof.*
 
 ⭐⭐ **The tell is a complaint about FLUIDITY rather than about speed or distance.** Dead
 time feels different from lag, and it points at a threshold being re-charged somewhere it
@@ -172,10 +162,9 @@ condition must be **driven by something that runs when the condition holds**. �
 driven by the very signal whose ABSENCE it is trying to detect, no threshold can ever be
 right, and every fix will look like a tuning problem.
 
-⚠ The instance: *"is this finger still?"* was answered by a tracker advanced only by
-`pointermove`. A still finger emits none, so the tracker froze at MOVING — and the state
-could only be reached by a stray jitter sample arriving at random. ⭐ Two rounds of fixing
-the THRESHOLD changed nothing, because the threshold was never the problem.
+⚠ The instance: *"is this finger still?"* was answered by a tracker advanced only by `pointermove`.
+A still finger emits none, so the tracker froze at MOVING, reachable only by a stray jitter sample.
+⭐ Two rounds of fixing the THRESHOLD changed nothing: the threshold was never the problem.
 
 ⭐⭐ **The tell, and it was in the first report**: one direction of the transition was
 instant and the other was erratic. **An asymmetry between two directions of the same test
@@ -193,15 +182,28 @@ hold are how you buy an answer to a question that **has no answer at this instan
 a rule needs them, the cheapest fix is usually not a better window — it is a **different
 question**.
 
-⚠ The instance: *"are these two fingers travelling by the same amount?"* is undefined at a
-reversal (both travels pass through zero) and at a late start (one has not moved yet), and
-both happen in **every** gesture. So the rule waited two windows and withheld a whole axis
-meanwhile, and a hand felt the hesitation at each end of every drag. ⭐ Replacing it with
-*"is that finger still?"* — answerable at every instant, including those two — removed the
-window, the ratio, the tolerance and the hold **together**.
+⚠ The instance: *"are these two fingers travelling by the same amount?"* is undefined at a reversal
+and at a late start, both of which happen in **every** gesture — so the rule waited two windows,
+withheld a whole axis meanwhile, and a hand felt the hesitation at each end of every drag.
+⭐ Replacing it with *"is that finger still?"* removed the window, the ratio, the tolerance and the
+hold **together**.
 
 ⛔ The tell: a correctly implemented rule that still feels wrong, and a tuning parameter
 whose value nobody can defend. ⭐ Ask what question the parameter is buying an answer to.
+
+## ⭐⭐ AN OPTION REJECTED FOR A COST — CHECK WHO PAYS IT FIRST
+
+*(2026-09-23.)* When a choice is put to the owner, the DESCRIPTION of each option is evidence, and a
+wrong one decides the choice as surely as a wrong measurement.
+
+⚠ The instance: *stable projection* against *Blender-exact tracking*, the second described as needing
+**"a refusal threshold (a guessed number)"** — true, and false where it mattered: the threshold is
+**5°, Blender's, and published**. ⛔ The cost that decided the rejection was already paid by prior
+art, and the mapping that shipped instead produced three device reports in one look.
+
+⭐⭐ **Before offering a cost as a reason to reject something, ask whether the field has already paid
+it.** *A guessed number has been wrong every single time here* — but a number with a citation is not
+a guess, and treating the two alike throws away the option that has the answer.
 
 ## ⭐ Acting is irreversible; not knowing is not a reason to act
 
@@ -216,13 +218,11 @@ in one step — releasing it is exactly the jump being complained about.
 **identity of the build under the finger** part of every verdict this project records — and
 for three days nothing on the glass could name it.
 
-⚠ The instance: a gesture fix was judged correct over the USB loop and **wrong on GitHub
-Pages**, and the natural reading was that the fix was incomplete. The gesture code was
-identical — the deploy history showed the fix live two minutes *before* the USB session, and
-there is no dev/prod gating anywhere in `src/`. ⭐ What differed was the bundle the tablet
-had: Pages serves `index.html` with `Cache-Control: max-age=600` and the assets are
-**content-hashed**, so a cached index keeps loading an old bundle *indefinitely* — a stale
-page is not stale for ten minutes, it is stale until something replaces the index.
+⚠ The instance: a gesture fix was judged correct over USB and **wrong on GitHub Pages**, and the
+natural reading was that the fix was incomplete. The code was identical. ⭐ What differed was the
+bundle the tablet had: Pages serves `index.html` with `max-age=600` and the assets are
+**content-hashed**, so a cached index loads an old bundle *indefinitely* — stale until something
+replaces the index, not for ten minutes.
 
 ⛔⛔ **So a deployment can indict correct work exactly as an unmeasured composition can.**
 It is the withdrawn-`A7` shape aimed one layer lower: the report was truthful, the reasoning
@@ -244,11 +244,10 @@ quantity gets caught eventually: someone reads it and it disagrees with the worl
 that prints **nothing at all** is invisible by construction — there is no wrong number to
 notice, and the documentation describing it reads exactly as it would if it worked.
 
-⚠ The instance: `scene.ts` has always computed which tunables the URL overrode, handed them
-to the HUD, and the HUD has **never rendered them** — for the whole life of the file.
-`40_RENDER_SCENE/INDEX.md` told a reader the line existed, and the field's own comment said
-*"never guess what is in force"*. ⭐ It would have gone unnoticed until an `IN5` session
-spent an hour measuring a default while believing it was measuring an override.
+⚠ The instance: `scene.ts` has always computed which tunables the URL overrode and handed them to the
+HUD, which **never rendered them** — for the whole life of the file, while the docs told a reader it
+did. ⭐ It would have gone unnoticed until an `IN5` session spent an hour measuring a default while
+believing it was measuring an override.
 
 ⭐⭐ **So audit an instrument against the QUESTIONS it is supposed to answer, not against
 the lines it happens to print.** The check is cheap and it is a different check: *for each

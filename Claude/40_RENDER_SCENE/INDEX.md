@@ -48,12 +48,10 @@ something else created one — and then **JUMPED** to where it should have been 
 PRECONDITION (§1.4's empty constraint stack), which `IN3` adds. The gesture, its axes and
 its gain are real.
 
-⭐⭐ **`requireGestureFrame()` THROWS rather than guessing.** Every object gesture stands
-on a gravity frame (`A7`), and that frame is undefined when the camera looks exactly along
-gravity. ⛔ The scene refuses to build one there instead of substituting an arbitrary
-basis — a silent fallback would turn *"the axes are wrong at the pole"* into a defect a
-hand has to find. ⚠ The three-ring orbit surface means the pole is not reachable, so the
-throw is a guard on an invariant, not a live failure mode.
+⭐⭐ **`requireGestureFrame()` THROWS rather than guessing.** `A7`'s frame is undefined when the camera
+looks exactly along gravity, and a silent fallback would turn *"the axes are wrong at the pole"* into a
+defect a hand has to find. ⚠ The orbit rings make the pole unreachable, so it guards an invariant
+rather than a live failure mode.
 
 ⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`), because
 *"I can't see the object hitting any wall"* — a claim a device cannot check is an
@@ -98,10 +96,22 @@ measuring an override, with a typo'd key reported to nobody.
 ⭐ **And the build stamp answers the question that cost a morning**: *which code did I just
 judge?* ⛔ `+dirty` is load-bearing — it is what distinguishes the USB dev loop from the
 same sha deployed, which is exactly the comparison that went wrong.
-⛔ It prints what the recognizer **reported**, never a recomputation: a readout that
-derives its own answer is a second implementation, and it can disagree with the
-product while showing green.
-⛔ `pointer-events: none` — it must never eat a touch it exists to describe.
+⛔ It prints what the recognizer **reported**, never a recomputation — a readout that derives its
+own answer can disagree with the product while both show green. ⛔ `pointer-events: none`: it must
+never eat a touch it exists to describe.
+
+**The LEADING-FACE GIZMO** (`refreshAxisGizmo` in `scene.ts`, `core/leading_face.ts`) — three
+coloured lines at the centre of the face a held body is **advancing on**, pointing along that body's
+object axes: **x red, gravity green, depth blue**. ⭐ It is the only thing on the glass that says
+which basis a drag is using, and the basis is now the thing that decides where a body goes.
+⛔⛔ **POSITIONED FROM THE MODEL AND NOT PARENTED, AND THE TWO TRAPS PULL OPPOSITE WAYS.** Reading
+`mesh.getWorldMatrix()` gives Babylon's **cached** matrix, recomputed inside `scene.render()` — i.e.
+after the block that reads it — which is defect 46, every marker drawing last frame's pose. ⚠ Parenting
+fixes that for a POSITION and would be wrong for these DIRECTIONS: the object axes are WORLD
+directions, and a parented gizmo would turn with the body and stop pointing along them. ⭐ Reading the
+face centre out of the model escapes both.
+⚠ **A body whose geometry cannot answer shows no gizmo** — never a stand-in, exactly as `⛔NOSHAPE`
+shows no capture shell.
 
 **`menu.ts`** — a collapsible panel of sliders for tuning by hand on the glass.
 ⛔ **Every change is validated on a COPY before it is applied, and refusals are shown.**
@@ -134,6 +144,16 @@ falsified on purpose.
 ⚠ The decision is in `src/core` and not in the wiring on purpose: `D23` recorded what it
 costs to leave one in `scene.ts`, where no vector can reach it.
 
+⭐⭐ **AND THE HUD'S `axes` LINE IS THE INSTRUMENT FOR THE WHOLE OBJECT-AXIS RULE** (2026-09-22/23):
+the flag in force (`WorldAxisB(fixed@boot)` / `WorldAxisA(live camera)`), the mapping
+(`PLANE` / `CHANNELS`), **`track=1.15×`** — the leverage, world travel per unit of finger travel —
+**`⛔EDGE-ON`** when the plane is within Blender's 5° cone and the fixed-rate push has taken over, the
+zone state with the duo that is in it, and per held body its three axes and its leading face.
+⛔⛔ **EVERY ONE OF THOSE IS A QUESTION A HAND CANNOT ANSWER BY LOOKING AT THE BODY.** *"It went much
+too far"* and *"it barely moved"* are one symptom with two causes, and the camera pose is what
+separates them — which is exactly how the three reports of 2026-09-23 arrived: as three descriptions
+of one arithmetic. ⚠ The numbers are **returned by the rule**, never recomputed here.
+
 **`noise_meter.ts`** (in `src/input`, engine-free) — the `pointerNoiseMm` instrument,
 reported on the HUD. ⛔ Fed by **one** touchpoint, the first down, and reset when that
 hold begins: interleaving two fingers would measure the distance *between* them.
@@ -148,8 +168,8 @@ that became a candidate would move the very centre it is drawn to show.
 toward it. ⚠ An instrument is judged against the question it exists to answer — here
 *"which barycentre was selected?"* — not against the quantity it happens to be nearest.
 
-⚠ All three are diagnostic. They are listed here because they are the reason defects
-get *found*, and deleting them quietly would cost the next device session.
+⚠ All are diagnostic, and listed here because they are the reason defects get *found*: deleting one
+quietly would cost the next device session.
 
 ## ⭐⭐ FORK C's WIRING — what `scene.ts` owns of `D37` (2026-09-16)
 

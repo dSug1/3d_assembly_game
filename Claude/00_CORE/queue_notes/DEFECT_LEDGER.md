@@ -218,3 +218,40 @@ three steps downstream — that carried the measurement proving it was not.
 the same frame — so `now - lastFrameMs` would have been **zero every frame** and the follower
 would never have moved at all. ⭐ Caught by the compiler refusing the redeclaration, not by
 anything looking at the screen: *one clock, `performance.now()`, as everywhere else in the file.*
+
+
+---
+
+## 51 — ⭐⭐⭐ THE AXIS MAPPING LOST THE COSINE, AND ONLY THE GRAVITY CHANNEL KEPT UP
+
+**2026-09-23, the first device look at the object axes (`D76`).** The report came in three pieces:
+
+> *"the dx continues to move on the x world axis and dy on the world depth axis, which feels strange
+> for the user as the input axis and movements axis seem inverted."*
+> *"the gain drops for dx and dy due to projection of input on world axis and as a consequence the
+> input seems very weak and not the same as the gravity axis input which is right."*
+> *"The holder's dy is dead at a level camera."*
+
+⛔⛔ **ONE DEFECT, AND THE OTHER TWO ARE THE LOOP WORKING — the distinction is the ledger's own
+rule.** The defect is the middle one: a translation rule on this project is supposed to put the body
+**under the finger** (`gainTranslateScreen` = 1 means exactly that, and it is the one COMPUTED number
+here), and this mapping multiplied each input **by** the axis's screen foreshortening instead of
+dividing by it. ⭐ So the gravity channel — whose axis is nearly square to the view — kept up, and the
+other two silently did not. ⚠ *"Not the same as the gravity axis"* is the tell, and it is an
+**inconsistency between two channels of one rule**, which is a correctness claim rather than a taste.
+
+⚠ The other two are **stated costs that a hand rejected**, which this ledger does not count: the
+pairing was the dictation implemented literally, and the dead `dy` was written down as *inherent, not
+tunable* the day it shipped. ⭐ A design I shipped with its cost named, and an owner who declined the
+cost, is the loop doing its job — `QUEUE.md`: *tuning judgements are NOT defects.*
+
+⭐⭐⭐ **WHAT MAKES IT INSTRUCTIVE IS THAT I OFFERED THE RIGHT ANSWER AND TALKED HIM OUT OF IT.** The
+choice was put to the owner on 2026-09-22 as *stable projection* against *Blender-exact tracking*, and
+the second was described as needing *"a refusal threshold (a guessed number)"* — true, but it is
+**5°, and it is Blender's, published and unguessed**. ⚠ The owner chose from my description, and the
+description was the weak part. ⭐ `METHOD` gains a line: *when an option is rejected for a cost, check
+whether the cost is actually paid by prior art before letting the rejection stand.*
+
+✅ **FIXED**: the finger's delta is SOLVED onto both horizontal axes (exact tracking, one gain across
+all three channels), with Blender's 5° cone falling back to `depthTranslate`'s judged fixed rate
+instead of Blender's near-stop. 38 vectors, six mutants caught → [`IN4.md`](IN4.md).

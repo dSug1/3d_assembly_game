@@ -492,3 +492,19 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D40` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap-to-align set is THE input model** | 2026-09-17 | *"Remove the fork A and the Fork B and set the fork C as the unique default."* ⛔ Deleted, not disabled — `D28`'s precedent, and its reason: **a dormant fork is a trap**. Gone: four modules, the flag, its validator rule, the slider, the HUD's fork line and **41 vectors** → [`../queue_notes/IN3.md`](../queue_notes/IN3.md) |
 
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | `pickResult.faceId` gives face picking directly, which rule 2 needs; multi-pointer handling is built in. ⚠ Apache-2.0, so the NOTICE must ship. ⭐ Reversible in about a day *because* of `D6` — that is what the boundary buys |
+
+| `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | *"A press never toggles while a body is held, but a tap by the second touchpoint can (as per present rule for tap)."* ⛔⛔ It repeals `D58`, `D61`, `D64` and `D65` — one chain whose first link was the only decision in it. ⚠ *When a rule's effect is masked during a gesture, the reported event is where it became VISIBLE, not where it happened.* ⭐ Restores `A16` → §5.13 |
+
+| `D46` | ⭐⭐⭐ **APPROACH & MATE — the owner's mechanism, measured between CENTRES** | 2026-09-17 | ⭐⭐ It removes the blocker that stopped the previous approach: that one mapped a finger onto the direction to a point ON a face, which **collapses at contact**; centres cannot meet. ⚠ Specified, not built → the approach spec |
+
+| `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | *"I want to modify that to an offset to the faces… I would prefer [the game computes it] as this avoids to duplicate work in Blender."* ⭐⭐ Computed wins on its own merits: nothing reads a normal, so **inverted normals cannot affect it**. ⛔⛔ **The DISTANCE moved to surfaces; the approach DIRECTION must NOT** → §19 |
+
+| `D50` | ⭐⭐⭐ **EVERY OUTLINE AND FACE MARKER IS READ OFF THE MESH** | 2026-09-18 | *"the outlines shall be calculated from meshes at the time the object is imported"*. ⛔⛔ It deleted a `Map<name, dims>`: for a cuboid a box and the mesh coincide, which is why it survived two device passes — for an imported part it is the wrong shape. ⭐ Why `D72`'s frustum cost nothing → §20 (approach) |
+
+| `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers, not carries** | 2026-09-18 | *"a flag to toggle on or off the translation of the Pioneer … the second touchpoint controls both the depth translation and the roll of the Follower."* ⛔ `pioneerTranslates` is a **rule selector, not a tunable**, and breaks `A16`'s one-axis rule on purpose → §21 (approach) |
+
+| `D59` | ⭐⭐⭐ **AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH BOTH AXES** | 2026-09-19 | *"whatever translation mode, when an object is aligned as follower the second touch shall control the depth and the roll."* ⛔⛔ The rule moved from *where the finger landed* to *what the body is*: an aligned body has **one rotational DOF left** → §5.7 |
+
+| `D62` | ⭐⭐⭐ **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** | 2026-09-19 | *"a Follower object cannot approach any other object than its Pioneer."* ⚠⚠ **It overturns `A21`** (*"within a SnapIsPossibleRadius of ANY other object"*) — a freedom deliberately given up. ⛔ A Pioneer out of range captures **nothing**; no fallback to the scene → §5.10 |
+
+| `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | *"a translation of the pioneer should break the alignment of the cyan."* ⛔⛔ It corrects `D69`. ⭐⭐ **Position and orientation are two components of one pose**; answering differently for each WAS the asymmetry → §5.17 |

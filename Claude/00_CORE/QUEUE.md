@@ -121,9 +121,9 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Fifty defects have been found **by finger** (forty-nine of them; one by composing a measurement with a threshold), and **not one was visible to a green
-suite**. They are **five** shapes, not fifty problems — the fifth is below, and it is
-the one that costs a correct implementation rather than a broken one:
+Fifty-one defects, **fifty of them by finger** (the other by composing a measurement with a
+threshold), and **not one was visible to a green suite**. They are **five** shapes, not fifty-one
+problems — the fifth is below, and it costs a correct implementation rather than a broken one:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
 the sum of the rows' dossiers — not a figure anyone restates from memory:
@@ -159,7 +159,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | the twist killed the alignment snap | **1** |
 | ⛔ **`IN3`** — the twist's `dx` SIGN, inverted at half of all alignments | **1** |
 | ⛔ **`D73`** — a restarted ease stalled, so MORE increments moved the body LESS | **1** |
-| ⭐⭐ **THE TOTAL** | **= 50** |
+| ⛔ **`D76`** — the axis mapping lost the cosine; only the gravity channel kept up | **1** |
+| ⭐⭐ **THE TOTAL** | **= 51** |
 
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16): each account is in
 [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), the table stays here, and a row's count
@@ -183,11 +184,10 @@ report at all: the HUD's **overridden-tunables line had never been rendered**, f
 life of the file. ⭐ Both lessons are in `METHOD`; the account is
 [`queue_notes/DEP1d.md`](queue_notes/DEP1d.md).
 
-⛔ **Amend the ledger, never a bare number written somewhere else.** `README.md` said *seventeen*
-and `40_RENDER_SCENE/INDEX.md` *sixteen*, both frozen snapshots of a number that had moved on; both
-now point here instead of carrying a count.
-⚠ **Tuning judgements are NOT defects and are not counted** — the owner raising a gain, or
-rejecting rotation inertia, is the loop working, not a fault found.
+⛔ **Amend the ledger, never a bare number elsewhere.** `README.md` said *seventeen* and
+`40_RENDER_SCENE/INDEX.md` *sixteen*, both frozen snapshots of a number that had moved on.
+⚠ **Tuning judgements are NOT counted**: an owner raising a gain, rejecting inertia, or declining a
+cost that shipped named, is the loop working, not a fault found.
 
 1. **A rate estimated over the shortest available baseline.** Flick lift speed, roll
    direction, roll curvature. ⭐ *State the window, and check the signal clears the
@@ -214,10 +214,9 @@ rejecting rotation inertia, is the loop working, not a fault found.
 
 ⭐⭐ **AND A FIFTH SHAPE EMERGED ON 2026-09-14: MY OWN FIXTURES.** Four false alarms in one session, every one of them a measurement bug rather than a code bug — comparing the object AFTER a step against the finger BEFORE it; a float loop taking one extra step; a window opened before two transients had finished; two frame rates given unequal total durations. ⚠ Each looked exactly like a real defect and one of them nearly got a correct implementation "fixed". ⭐ *State the instant each quantity is evaluated at, and step fixtures with integers.* ⛔ The tell for an unfinished transient versus a discretisation error: halve the timestep. Discretisation shrinks; a transient does not.
 
-⭐ And **three times** a **device judgement overturned a confident synthetic
-measurement**. When they disagree, suspect the metric. ⛔ The third: measuring
-`pointerNoiseMm` (0.15 → **0.761 mm**) made the sagitta guard reject a configuration
-seven device passes had already accepted. The finger was right and the guard was wrong.
+⭐ And **three times** a **device judgement overturned a confident synthetic measurement**; when they
+disagree, suspect the metric. ⛔ The third: measuring `pointerNoiseMm` (0.15 → **0.761 mm**) made the
+sagitta guard reject a configuration seven device passes had accepted.
 
 ### ⭐⭐ `IN5` is now practical, and mostly unblocked
 
