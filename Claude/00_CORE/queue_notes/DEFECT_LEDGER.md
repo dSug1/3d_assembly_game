@@ -723,3 +723,36 @@ one compared channels at a camera where the two candidate rules happen to agree,
 `Math.sign` on both sides of the boundary it was testing, so each half covered for the other.
 ⭐ The first was fixed by SWEEPING for a camera where the rules disagree; the second by handing
 the rule raw magnitudes and demanding the same answer.
+
+
+
+---
+
+## ⛔⛔⛔ **THE GIZMO USES THE TRANSLATION'S OWN DEADBAND — and the owner found the fix**
+
+> *"add a slight deadband on the delta position input so that there is no gizmo jitter. I suppose
+> there is a deadband for the object translation: **use the same deadband for the gizmo
+> repositioning**."* — the owner, 2026-09-23
+
+⭐⭐⭐ **THE DEADBAND WAS ALREADY THERE, AND THE GIZMO WAS READING THE WRONG SIDE OF IT.** `A11`
+emits the **excess** over its dead radius, on whichever axis has crossed it — so *"did this channel
+emit this frame"* flickers in bursts even while a hand pushes both fingers steadily. ⛔ The gizmo's
+set of lines followed those bursts, and the face followed the set.
+
+⭐ The same machine also keeps a per-axis **STATE**: `MOVING` until that axis has rested for
+`restConfirmMs`. ⚠ That is the stable form of the same fact — one dead radius, one rest time,
+**shared with the translation rather than copied**, which is exactly what the owner asked for.
+
+✅ `activeChannels(holderAxes, secondAxes)` applies the channel map to those states:
+the holder's screen `x` → the body's `x`, its screen `y` → `depth`, any second touchpoint's `y` →
+`gravity`. ⛔ `Recognizer.motionAxes` is exposed for it rather than a second definition of *moving*
+being written, and `AxisTravel.driven` — the per-frame emission test — is **deleted**, because it
+had exactly one reader and this replaces it.
+
+⭐⭐ **THE ARC OF THIS ONE IS THE LESSON.** Four rules were tried for the gizmo's direction — a
+120 ms memory, the vector sum, the dominant channel, the channel set — and the first three failed
+on the same quantity: a per-frame magnitude. ⚠ The fourth held, and its remaining flicker came
+from the same place one level down: a per-frame BOOLEAN, *did it emit*. ⛔ The owner named the
+answer in one sentence, and it was to reuse a number the product already had.
+⭐ `METHOD`: *when a rule needs to know whether an input is active, ask the state machine that
+already decides it — do not re-derive it from what the input emitted this frame.*
