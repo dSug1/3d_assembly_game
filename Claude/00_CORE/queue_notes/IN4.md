@@ -804,3 +804,29 @@ the body, feeds the swing's direction and records the LeadingFace ray direction,
 which forgot* — which makes it a pattern rather than an accident, and both times the missing line was
 the symptom while the duplication was the cause.
 
+⭐⭐⭐ **2026-09-23 — THE TWO `dy` CHANNELS ARE SWAPPED (`D80`)**: *"for translation the gravity input
+comes from the dy of the second touch and the depth input comes from dy of first touch. Swap."*
+⭐ It restores the pairing rule 6 and `A10` had **before** `D75` — the holder moves the body in a
+vertical plane, the second finger pushes it away — now expressed in object axes rather than the
+camera's. ⛔⛔ Three consequences, none of them asked for and all of them improvements:
+
+* the holder's plane is **{x, gravity}**, which faces the camera at every ordinary pose; the
+  horizontal plane it replaced went **edge-on at a LEVEL camera**, where a hand spends much of its
+  time;
+* the degenerate axis is now **depth** — which is where `depthTranslate`'s judged fixed-rate fallback
+  came from, so the degeneracy and its answer are back on the same channel;
+* ✅ **`D74`'s in-zone basis STOPS BEING INERT.** The holder's plane contains `x`, and the leading
+  face rotates `x` within the horizontal plane, so the plane tilts with it. ⚠ The open decision the
+  morning's finding raised is answered **by arithmetic rather than by a choice**, which is the best
+  way an open question can close.
+
+⚠ **And one claim had to be restated**: *"the gain is the same on all three channels"* was only true
+because the third channel was GRAVITY, whose screen shadow is exactly vertical. ⛔ Depth's is oblique,
+so the single-axis channel moves the body by the PROJECTION of the input onto its own screen line —
+which is Blender's `G Z`, and the honest form of the claim.
+
+⛔⛔ **AND THE SECOND SWING REPORT CAME IN THE SAME HOUR** (defect 54): the swing was ARMED — the HUD
+proved it — and its PITCH was clamped away on the top ring, because `pitchAngleFor` always leaned UP.
+⭐ `pitchSignFor` now leans toward the headroom, and the HUD prints `pitchV=…@elev` so a clamp can
+never be silent again.
+

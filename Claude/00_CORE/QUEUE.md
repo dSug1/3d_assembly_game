@@ -16,19 +16,18 @@ changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1080 golden vectors,
-all passing** (37 → … → 1076 → 1078 → **1080**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1081 golden vectors,
+all passing** (37 → … → 1078 → 1080 → **1081**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
-⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`, 2026-09-22/23):
-a body translates along **its own axes** — the boot camera's, frozen (`worldAxisB=1`), or the LeadingFace
-basis in the capture zone. ⛔ The first mapping lost the cosine and a hand felt all of it: *inverted*,
-*very weak*, *dead at a level camera*. ⭐⭐ **Blender answers all three and says NO to the pairing** — it
-never binds screen-x to a world axis. Now the finger's delta is **solved onto both horizontal axes**
-(tracking exactly, `translatePairing=1`), with **Blender's 5° cone** falling back to `depthTranslate`'s
-judged rate. ⚠⚠ **AND THE SOLVE MAKES `D74`'s IN-ZONE BASIS INERT — an owner decision is owed.**
-⭐ 38 vectors, six mutants caught. ⭐ Two owner refinements, 2026-09-23: **no gizmo on a frozen body** (refused by `leadingFace` itself — a frozen body never *advances*) and **a second touch on a frozen body is a MISS**, so it can drive another → [`queue_notes/IN4.md`](queue_notes/IN4.md)
+⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`): a body
+translates along **its own axes** — the boot camera's, frozen (`worldAxisB=1`), or the LeadingFace
+basis in the zone. ⛔ The first mapping lost the cosine: *inverted*, *very weak*, *dead at a level
+camera*. ⭐⭐ **Blender answers all three and says NO to the pairing.** The delta is **solved onto a
+plane** (tracking exactly), with **Blender's 5° cone** falling back to `depthTranslate`'s judged rate.
+✅ **AND THE 2026-09-23 SWAP PUT THE PLANE ON {x, gravity}** — the holder lifts, the second finger
+pushes away — which also **un-inerts `D74`'s in-zone basis** → [`queue_notes/IN4.md`](queue_notes/IN4.md)
 ⛔⛔ **AND THE CAPTURE ZONE IS SCENE-WIDE AGAIN** (`D79`, 2026-09-23): a body **under a finger** may
 hold the zone with any other, **one at a time**, **locked** until it leaves — and a **pressed pair
 outranks every distance**. ⚠ Corrected the same hour: *"when no object is touched, there cannot be
@@ -126,7 +125,7 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Fifty-three defects, **fifty-two by finger** (the other by composing a measurement with a threshold),
+Fifty-four defects, **fifty-three by finger** (the other by composing a measurement with a threshold),
 and **not one was visible to a green suite**. ⚠⚠ **AND TWICE IN ONE DAY THE CAUSE WAS *ONE FACT, TWO
 WRITERS, ONE OF WHICH FORGOT*** — defects 52 and 53, in different files. They are **five** shapes —
 the fifth is below, and it costs a correct implementation rather than a broken one:
@@ -168,7 +167,8 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | ⛔ **`D76`** — the axis mapping lost the cosine; only the gravity channel kept up | **1** |
 | ⛔⛔ **`D68`** — its guard was WRITTEN AND NEVER READ, and its flag had two writers | **1** |
 | ⛔⛔ **the swing** — a vertical approach never fed the travel it signs from | **1** |
-| ⭐⭐ **THE TOTAL** | **= 53** |
+| ⛔⛔ **the swing's pitch** — always UP, and clamped away on the top ring | **1** |
+| ⭐⭐ **THE TOTAL** | **= 54** |
 
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT**: each account is in
 [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), and a row's count changes in both

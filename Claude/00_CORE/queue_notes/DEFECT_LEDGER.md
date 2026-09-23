@@ -323,3 +323,35 @@ LeadingFace ray is fired along — all three, or none. ⛔ A third channel canno
 them. ⭐ 2 vectors compose the chain the scene threads (a gravity-channel displacement projected
 onto the gravity frame arms the swing) and carry the counter-example the product actually shipped.
 
+
+---
+
+## 54 — ⭐⭐ THE SWING'S PITCH ALWAYS LEANED **UP**, AND ON THE TOP RING THERE IS NO UP LEFT
+
+**2026-09-23, by finger, and the second report of the same gesture.** *"Camera swing still not
+working on this configuration (follower object translating on gravity axis towards bottom)"* —
+with a screenshot of the HUD.
+
+⭐⭐⭐ **THE READOUT IS WHAT MADE THIS DIAGNOSABLE, AND IT SAID THE OPPOSITE OF THE REPORT.**
+`swing sign+ p=0.03 yaw=3.0° g0=65mm arm=(0.0,-12.2)mm` — the swing was **armed**, with the
+vertical arm travel that defect 53 had been missing, and a yaw was being computed. ⛔ So the
+arming was fixed and the fault was downstream, which no amount of looking at the camera could
+have told apart from *it never armed*.
+
+⛔⛔ **THE CAUSE IS ONE WORD IN A RULE THAT WAS RIGHT.** `pitchAngleFor` takes the **magnitude** of
+the yaw, on the owner's own expectation — *"delta position x negative would trigger camera orbit
+to the right **and up**"* — so the pitch always leans UP. ⚠ The same screenshot reads
+**`elev=1.0`**: the camera was on the **top ring**, the offset was clamped away, and the pitch
+contributed exactly nothing. ⭐ That is the half of the swing that shows a **vertical** gap, and a
+body approaching along gravity is precisely what a hand watches from overhead — so the swing lost
+its useful component exactly where it was needed.
+
+✅ **FIXED BY GIVING THE RULE SOMEWHERE TO GO**: `pitchSignFor(elevationV)` leans DOWN above the
+middle of the ring surface and UP below it. ⛔ The owner's rule is kept — one vertical direction
+per approach, independent of which way the body travels — and only *which* direction is now
+chosen by headroom. ⚠ `0.5` is the midpoint of a normalised range, not a tuned number.
+
+⭐⭐ **AND THE HUD NOW PRINTS `pitchV=…@elev`**, because the clamp was silent for two reports:
+*an absent readout cannot be caught by looking at the screen*, and this one was a number that
+existed, was computed correctly, and went nowhere.
+

@@ -251,6 +251,35 @@ export function swingSignFor(travelRight: number, travelUp = 0): 1 | -1 | null {
  * ⭐ Taking the magnitude keeps the vertical parallax the same whichever way the part travels.
  * ⚠ Mirroring is one line if a hand prefers it; this is the reading of the owner's sentence.
  */
+/**
+ * ⭐⭐⭐ **WHICH WAY THE PITCH LEANS — toward the room it has.**
+ *
+ * ⛔⛔⛔ **DEVICE-REPORTED TWICE, 2026-09-23**: *"camera swing still not working on this
+ * configuration (follower object translating on gravity axis towards bottom)"* — with a HUD
+ * showing `sign+ p=0.03 yaw=3.0° arm=(0.0,-12.2)mm` and `elev=1.0`.
+ *
+ * ⭐⭐ **THE READOUT SAID THE SWING WAS ARMED, SO THE FAULT WAS DOWNSTREAM.** `pitchAngleFor`
+ * takes the MAGNITUDE — *"the owner's expectation names one direction for both axes … right and
+ * **up**"* — so the pitch always leans UP. ⚠ At `elev = 1.0` the camera is **on the top ring**
+ * and there is no up left: the offset is clamped away and the pitch contributes exactly nothing.
+ * ⛔ That is the half of the swing that shows a VERTICAL gap, and a body approaching along
+ * gravity is precisely the case a hand watches from overhead — so the swing lost its useful
+ * component exactly where it was needed.
+ *
+ * ⭐ **THE FIX KEEPS THE OWNER'S RULE AND GIVES IT SOMEWHERE TO GO**: one vertical direction per
+ * approach, still independent of which way the body travels — but chosen by **headroom** rather
+ * than fixed at *up*. ⚠ `0.5` is the midpoint of a normalised `[0, 1]` range, not a tuned
+ * number: there is nothing here to measure and nothing to put on a slider.
+ *
+ * @param elevationV where the camera sits on the ring surface, `0` bottom … `1` top.
+ */
+export function pitchSignFor(elevationV: number): 1 | -1 {
+  if (!Number.isFinite(elevationV)) return 1;
+  // ⛔ Above the middle the camera leans DOWN, below it UP. ⚠ At exactly 0.5 either is equally
+  // good and `up` keeps the behaviour a hand has already seen.
+  return elevationV > 0.5 ? -1 : 1;
+}
+
 export function pitchAngleFor(yawAngleRad: number): number {
   return Math.abs(yawAngleRad);
 }

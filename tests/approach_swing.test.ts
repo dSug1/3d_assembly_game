@@ -15,6 +15,7 @@ import {
   freezeProgress,
   pitchAngleFor,
   pitchOffsetV,
+  pitchSignFor,
   rebaseTriggerGap,
   swingDriverIndex,
   endApproach,
@@ -678,12 +679,15 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     return { gravity: g, screen: { right, up } };
   };
 
-  it("⭐⭐⭐ a SECOND-touchpoint push along gravity produces up-travel, and the swing takes a sign", () => {
+  it("⭐⭐⭐ a push along gravity produces up-travel, and the swing takes a sign", () => {
     const c = camera(30);
     const axes = axesFromFrame(c.gravity);
-    // ⛔ The gravity channel ONLY — no holder motion at all, which is the reported gesture.
+    // ⛔ The gravity channel ONLY — a purely vertical push, which is the reported gesture.
+    // ⚠⚠ It was `secondDyPx` until the owner **swapped** the two `dy` channels hours later
+    // (2026-09-23); the vector follows the channel, because its subject is *a gravity-axis
+    // approach arms the swing* and not *which finger drives gravity*.
     const travel = axisTravel(
-      { holderDxPx: 0, holderDyPx: 0, secondDyPx: -40 },
+      { holderDxPx: 0, holderDyPx: -40, secondDyPx: 0 },
       c.screen,
       axes,
       PER_PX,
@@ -699,8 +703,10 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     const travelUp = dot(step, c.gravity.up);
     expect(Math.abs(travelUp)).toBeGreaterThan(1e-6);
     // ⚠ And the horizontal component really is ~zero, so this fixture is the degenerate case the
-    // report describes rather than one that arms by accident.
-    expect(Math.abs(travelRight)).toBeLessThan(1e-9);
+    // report describes rather than one that arms by accident. ⛔ The plane solve gives `dy` a
+    // little `x` when the two shadows are not perpendicular, so the bound is a hair rather than
+    // an exact zero — stated, because a fixture that needed exactness would be the wrong fixture.
+    expect(Math.abs(travelRight)).toBeLessThan(1e-3 * Math.abs(travelUp));
     // ⛔⛔ THE CLAIM: a vertical approach arms.
     expect(swingSignFor(travelRight, travelUp)).not.toBeNull();
   });
@@ -709,5 +715,42 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     // ⭐ The counter-example, which is what the product did until 2026-09-23: the holder's branch
     // fed the accumulator and the gravity channel did not, so the arming call saw zero.
     expect(swingSignFor(0, 0)).toBeNull();
+  });
+});
+
+describe("⛔⛔⛔ THE PITCH LEANS TOWARD THE ROOM IT HAS — the second report of 2026-09-23", () => {
+  it("⭐⭐ DOWN from the top ring, UP from the bottom — and `up` keeps the middle", () => {
+    // ⛔⛔ *"camera swing still not working on this configuration (follower object translating on
+    // gravity axis towards bottom)"*, with a HUD reading `sign+ p=0.03 yaw=3.0°
+    // arm=(0.0,-12.2)mm` and **`elev=1.0`**. ⭐ The readout proved the swing was ARMED — the
+    // vertical arm travel is there, which is the defect-53 fix working — so the fault was
+    // downstream: `pitchAngleFor` takes the MAGNITUDE, so the pitch always leaned UP, and on the
+    // top ring there is no up left. ⚠ It was clamped away, silently, and the half of the swing
+    // that shows a VERTICAL gap contributed nothing — in exactly the case that needs it.
+    expect(pitchSignFor(1)).toBe(-1);
+    expect(pitchSignFor(0.9)).toBe(-1);
+    expect(pitchSignFor(0)).toBe(1);
+    expect(pitchSignFor(0.2)).toBe(1);
+    // ⚠ At the midpoint either is equally good, and `up` keeps the behaviour a hand has seen.
+    expect(pitchSignFor(0.5)).toBe(1);
+  });
+
+  it("⭐ the MAGNITUDE is still the owner's rule — one vertical direction per approach", () => {
+    // ⛔ `pitchAngleFor` is untouched: the pitch does not mirror with the drag direction, so a
+    // `+x` and a `−x` approach are still shown from the same side vertically. ⚠ What changed is
+    // which side that is, and it is chosen by the rings rather than fixed at *up*.
+    expect(pitchAngleFor(0.3)).toBeCloseTo(0.3, 12);
+    expect(pitchAngleFor(-0.3)).toBeCloseTo(0.3, 12);
+    // ⭐ And the composition: at the top the offset is negative, at the bottom positive, and the
+    // SIZE is the same — the parallax a hand sees does not depend on where it started.
+    const top = pitchOffsetV(pitchAngleFor(0.3), 0, 1) * pitchSignFor(1);
+    const bottom = pitchOffsetV(pitchAngleFor(0.3), 0, 1) * pitchSignFor(0);
+    expect(top).toBeLessThan(0);
+    expect(bottom).toBeGreaterThan(0);
+    expect(Math.abs(top)).toBeCloseTo(Math.abs(bottom), 12);
+  });
+
+  it("⛔ a nonsense elevation leans UP rather than throwing", () => {
+    expect(pitchSignFor(Number.NaN)).toBe(1);
   });
 });

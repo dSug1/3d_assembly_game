@@ -184,6 +184,7 @@ import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_tra
 import { leadingFace, type LeadingFace } from "../core/leading_face";
 import {
   pitchOffsetV,
+  pitchSignFor,
   freezeProgress,
   rebaseTriggerGap,
   smoothAmplitude,
@@ -2538,6 +2539,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let appliedSwingYaw = 0;
   /**
+   * ⭐ The pitch offset the swing last asked for, in the ring surface's own `v` units — printed,
+   * because it was silently clamped to nothing at the top ring for two device reports and the
+   * HUD had no way to say so. ⛔ *An absent readout cannot be caught by looking at the screen.*
+   */
+  let lastPitchV = 0;
+  /**
    * ⭐⭐ `D63` — the SMOOTHED swing amplitude, and the clock it was last advanced on.
    * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
    * than from whatever the last approach happened to end on.
@@ -2646,7 +2653,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const rings = orbit.ringElevationRad();
     // ⛔ THE PITCH TAKES THE MAGNITUDE, NOT THE SIGNED ANGLE — `pitchAngleFor` argues why: the
     // owner's expectation names ONE vertical direction for both drag directions.
-    const pose = orbit.pose(zoom, a, pitchOffsetV(pitchAngleFor(a), rings.bottom, rings.top));
+    // ⛔⛔ **THE PITCH LEANS TOWARD THE ROOM IT HAS** (device-reported twice, 2026-09-23). It
+    // always leaned UP, and at `elev = 1.0` — the top ring — there is no up left, so the offset
+    // was clamped away and the half of the swing that shows a VERTICAL gap contributed nothing.
+    // ⚠ Exactly the case the report describes: a body approaching along gravity, watched from
+    // overhead. ⭐ `pitchSignFor` owns the choice; this reads the elevation and obeys.
+    const pitchV =
+      pitchOffsetV(pitchAngleFor(a), rings.bottom, rings.top) * pitchSignFor(orbit.elevation);
+    lastPitchV = pitchV;
+    const pose = orbit.pose(zoom, a, pitchV);
     // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
     // Clamping the components independently would change the viewing ANGLE, which is
     // not what a near-plane guard is for.
@@ -3045,6 +3060,9 @@ swing     sign${
                   swing.sign === null ? "⛔?" : swing.sign > 0 ? "+" : "−"
                 } p=${swingProgress(highlighted.gapM ?? 0, swing).toFixed(2)}` +
                 ` yaw=${((appliedSwingYaw * 180) / Math.PI).toFixed(1)}°` +
+                // ⭐ The pitch in `v`, and where the camera sits on the rings — the two numbers
+                // that say whether the vertical half of the swing has anywhere to go.
+                ` pitchV=${lastPitchV.toFixed(3)}@${orbit.elevation.toFixed(2)}` +
                 ` g0=${(swing.gapAtTriggerM * 1000).toFixed(0)}mm` +
                 // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
                 // from"* is the question a direction report asks, and `0.0000` here is the whole
