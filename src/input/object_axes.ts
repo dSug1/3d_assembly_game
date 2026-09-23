@@ -16,6 +16,24 @@
  * > aligned with LeadingFace normal direction, gravity direction and direction orthogonal to
  * > LeadingFace normal & gravity directions."*
  *
+ * ## ⛔⛔⛔ THAT THIRD PART IS **DELETED** — `D82`, 2026-09-23, the owner
+ *
+ * > *"eliminate this rule: Inside the offset radius the axes are the LeadingFace normal, gravity,
+ * > and their orthogonal. Inside shall be the same as outside. I think this is polluting the
+ * > approach movement."*
+ *
+ * ⚠ It is kept quoted above because a reversal is only legible beside what it reverses. ⭐ What
+ * remains is the flag: the boot camera's basis frozen for the scene, or the live camera's — and
+ * a body's axes no longer change because it came near another body.
+ *
+ * ⭐⭐ **WHAT THE BASIS SWITCH COST, WHICH IS THE ARGUMENT FOR DELETING IT**: the zone edge is
+ * where the translation directions changed under a moving finger, so every defect it produced was
+ * about the MOMENT it took effect rather than about the geometry. ⛔ `METHOD`: *a rule whose every
+ * defect is about the moment it takes effect is a rule about the wrong thing.*
+ *
+ * ⚠ `leadingFace` and its gizmo SURVIVE — they were never part of this rule: the owner asked for
+ * the marker in the same dictation and has not asked for it to go.
+ *
  * ## ⭐⭐ THREE NAMED AXES, AND THE NAMES ARE THE CHANNELS
  *
  * ```
@@ -59,7 +77,7 @@
  *
  * ⛔ ENGINE-FREE.
  */
-import { cross, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
+import type { Vec3 } from "../core/vec";
 import type { GravityFrame } from "./gravity_frame";
 
 /**
@@ -91,36 +109,6 @@ export function axesFromFrame(frame: GravityFrame): ObjectAxes {
   return { x: frame.right, gravity: frame.up, depth: frame.depth };
 }
 
-/**
- * ⭐⭐⭐ **THE IN-ZONE BASIS** — built from the leading face's normal and gravity.
- *
- * @param normal the LeadingFace's TRUE OUTWARD normal, world.
- * @param up     the world vertical. ⚠ Passed in, never assumed: `WORLD_DOWN` is the object
- *   model's, and a second opinion about down would let a body be lifted along one vertical
- *   and pushed along another.
- *
- * ⛔ Returns `null` when the leading face is HORIZONTAL — its normal is then parallel to
- * gravity, it has no horizontal shadow, and every direction across the ground would be equally
- * entitled to be called depth. ⭐ The same refusal `gravityFrame` makes at the pole, and the
- * caller's answer is the same: keep the basis the body already has. Suppress, do not guess.
- */
-export function axesFromLeadingFace(normal: Vec3, up: Vec3): ObjectAxes | null {
-  const g = normalize(up);
-  const n = normalize(normal);
-  if (!g || !n) return null;
-  // ⭐ The normal with everything vertical removed — `gravityFrame`'s own construction for
-  // `depth`, so the two bases are built the same way and cannot drift apart in convention.
-  const depth = normalize(sub(n, scale(g, dot(n, g))));
-  if (!depth) return null;
-  // ⚠⚠ `up × depth`, NOT `depth × up`, and it is the same sign trap `gravityFrame` records:
-  // the camera builds its right as `worldUp × forward`, so a basis that flipped this would
-  // send every horizontal push BACKWARDS relative to the one used outside the zone — and the
-  // switch happens mid-drag, where a hand would read it as the controls inverting themselves.
-  const x = normalize(cross(g, depth));
-  if (!x) return null;
-  return { x, gravity: g, depth };
-}
-
 /** Which way the offset radius zone was crossed this frame, or `null` for no crossing. */
 export type ZoneEdge = "ENTER" | "EXIT" | null;
 
@@ -139,18 +127,12 @@ export function zoneEdge(was: boolean, now: boolean): ZoneEdge {
 
 /** Everything the axes rule needs to answer. ⭐ Plain data, so the decision is vectorable. */
 export interface AxesInputs {
-  /** Is this body's Pioneer/Follower pair inside the offset radius zone? */
-  readonly inZone: boolean;
   /** `worldAxisB` as a boolean — the flag the owner asked for. */
   readonly worldAxisB: boolean;
   /** ⭐ The axes built at scene boot from the boot camera, fixed for the whole scene. */
   readonly bootAxes: ObjectAxes;
   /** The camera's basis NOW. ⚠ `null` only where `gravityFrame` refuses. */
   readonly liveFrame: GravityFrame | null;
-  /** The leading face's world normal, or `null` if the body is not advancing on one. */
-  readonly leadingNormal: Vec3 | null;
-  /** The world vertical. */
-  readonly up: Vec3;
   /** What this body is using now — the answer when nothing better can be built. */
   readonly previous: ObjectAxes;
 }
@@ -165,14 +147,10 @@ export interface AxesInputs {
  * honest answer: a body mid-drag has to be translated along something.
  */
 export function updatedObjectAxes(i: AxesInputs): ObjectAxes {
-  if (i.inZone) {
-    if (i.leadingNormal === null) return i.previous;
-    return axesFromLeadingFace(i.leadingNormal, i.up) ?? i.previous;
-  }
-  // ⭐⭐ OUTSIDE THE ZONE THE FLAG DECIDES, AND THE DIFFERENCE IS ONLY *WHICH CAMERA*.
-  // `WorldAxisB` is the boot camera's basis, frozen for the scene; `WorldAxisA` is the camera
-  // as it is now, which is today's build. ⛔ Both are `axesFromFrame` of a gravity frame — one
-  // latched, one live — so there is exactly one construction of a basis in this file.
+  // ⭐⭐ THE FLAG DECIDES, AND THE DIFFERENCE IS ONLY *WHICH CAMERA*. `WorldAxisB` is the boot
+  // camera's basis, frozen for the scene; `WorldAxisA` is the camera as it is now. ⛔ Both are
+  // `axesFromFrame` of a gravity frame — one latched, one live — so there is exactly one
+  // construction of a basis in this file.
   if (i.worldAxisB) return i.bootAxes;
   return i.liveFrame === null ? i.previous : axesFromFrame(i.liveFrame);
 }

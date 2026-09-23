@@ -765,10 +765,20 @@ inside the offset radius zone"* is **inert**, and a vector says so out loud.
 
 ⭐⭐ **The two choices interact, and neither of us saw it when they were taken an hour apart.** The
 orthogonalisation was chosen because *independent channels* would otherwise overlap — and under
-`PLANE` there are no independent channels, so the premise is gone. ⚠ Three ways out, and it is the
-owner's call: keep `PLANE` and accept that the zone changes nothing; go back to `CHANNELS`, where
-the zone basis bites; or let the in-zone plane **tilt with the face** (the literal reading, rejected
-on my advice) so that inside the zone a body slides along the surface it is approaching.
+`PLANE` there are no independent channels, so the premise is gone. ⚠ Three ways out were offered:
+keep `PLANE` and accept that the zone changes nothing; go back to `CHANNELS`, where the zone basis
+bites; or let the in-zone plane **tilt with the face**.
+
+✅✅ **ANSWERED 2026-09-23, AND WITH A FOURTH: DELETE THE RULE** (`D82`). The owner: *"eliminate
+this rule: Inside the offset radius the axes are the LeadingFace normal, gravity, and their
+orthogonal. Inside shall be the same as outside. I think this is polluting the approach movement."*
+⛔ So `axesFromLeadingFace` is gone, `updatedObjectAxes` has no zone input at all, and the per-body
+basis map in `scene.ts` went with it — nothing wrote it once the zone stopped.
+⭐⭐ **The argument, in one line**: every defect the switch produced was about the MOMENT it took
+effect — the zone edge is where the translation directions changed under a moving finger — and *a
+rule whose every defect is about the moment it takes effect is a rule about the wrong thing.*
+⚠ `leadingFace` and its gizmo survive: the owner asked for the marker in the same dictation and
+has not asked for it to go, and the zone edge still names the pair and fires the hook.
 
 ⚠ **Still unjudged**: everything above, plus `gainTranslateScreen` = 1.17, which was tuned for a
 screen-plane drag and now multiplies an exact-tracking mapping.

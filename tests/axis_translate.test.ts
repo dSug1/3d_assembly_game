@@ -22,14 +22,13 @@ import {
   type CameraScreenAxes,
   type TranslatePairing,
 } from "@input/axis_translate";
-import { axesFromFrame, axesFromLeadingFace, type ObjectAxes } from "@input/object_axes";
+import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
 import { trackingMetresPerPx } from "@input/translate";
 import { dot, normalize, type Vec3 } from "@core/vec";
 
 const DEG = Math.PI / 180;
 const DOWN: Vec3 = [0, -1, 0];
-const UP: Vec3 = [0, 1, 0];
 const FOV = 0.8;
 const H = 800;
 const CONE = 5;
@@ -254,51 +253,13 @@ describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
   });
 });
 
-describe("⛔⛔⛔ THE IN-ZONE BASIS AND `PLANE` — a finding, not a feature", () => {
-  it("under PLANE the in-zone basis changes NOTHING, and that contradicts rule C", () => {
-    // ⛔⛔ **THE INTERACTION NOBODY SAW WHEN THE TWO DECISIONS WERE TAKEN SEPARATELY.**
-    // The in-zone basis is *LeadingFace normal, gravity, orthogonal* — ORTHOGONALISED on the
-    // owner's instruction (2026-09-22), which flattens the normal onto the ground. ⚠ So both
-    // its horizontal axes are horizontal, and the holder's plane is the SAME horizontal plane
-    // as outside the zone: rotating a basis WITHIN a plane cannot change a rule that only reads
-    // the plane. ⭐ The dictation's *"therefore the translation direction differs when the object
-    // is inside the offset radius zone"* is therefore INERT under `PLANE`.
-    // ⚠ Recorded as a vector rather than a comment so that the day it stops being true — a
-    // tilted in-zone plane, or a return to CHANNELS — this file says so out loud.
-    const c = camera(0, 30);
-    const outside = axesFromFrame(c.gravity);
-    const inside = axesFromLeadingFace(normalize([1, 0, 1])!, UP)!;
-    const push = { holderDxPx: 50, holderDyPx: -30 };
-    const a = axisDisplacement(run(push, c, outside), outside);
-    const b = axisDisplacement(run(push, c, inside), inside);
-    for (let i = 0; i < 3; i++) expect(a[i]!).toBeCloseTo(b[i]!, 12);
-  });
-
-  it("⭐ under CHANNELS it DOES change the direction — which is what rule C asked for", () => {
-    const c = camera(0, 30);
-    const outside = axesFromFrame(c.gravity);
-    const inside = axesFromLeadingFace(normalize([1, 0, 1])!, UP)!;
-    const push = { holderDxPx: 50, holderDyPx: -30 };
-    const a = axisDisplacement(run(push, c, outside, "CHANNELS"), outside);
-    const b = axisDisplacement(run(push, c, inside, "CHANNELS"), inside);
-    expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeGreaterThan(1e-4);
-  });
-
-  it("⭐ and under PLANE the body is under the finger with EITHER basis", () => {
-    const c = camera(0, 30);
-    for (const axes of [
-      axesFromFrame(c.gravity),
-      axesFromLeadingFace(normalize([1, 0, 1])!, UP)!,
-    ]) {
-      const landed = toScreenPx(
-        axisDisplacement(run({ holderDxPx: 50, holderDyPx: -30 }, c, axes), axes),
-        c.screen,
-      );
-      expect(landed[0]).toBeCloseTo(50, 6);
-      expect(landed[1]).toBeCloseTo(-30, 6);
-    }
-  });
-});
+// ⛔⛔⛔ **A DESCRIBE STOOD HERE AND ITS SUBJECT IS DELETED** — `D82`, 2026-09-23.
+// *"THE IN-ZONE BASIS AND `PLANE` — a finding, not a feature"* measured what the CAPTURE ZONE's
+// basis did to a given drag: inert under `PLANE` (both bases span the same horizontal plane) and
+// a real change of direction under `CHANNELS`. ⚠ The owner has removed that basis — *"Inside
+// shall be the same as outside. I think this is polluting the approach movement."*
+// ⭐ Kept as a note, because that measurement is the reason the rule looked harmless under
+// `PLANE` while it was not.
 
 describe("the depth range clamp — A5's bounds, carried over with the channel", () => {
   it("holds a body inside [min, max] along the push direction and moves nothing else", () => {

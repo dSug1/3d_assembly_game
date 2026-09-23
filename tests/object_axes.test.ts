@@ -16,13 +16,12 @@
 import { describe, expect, it } from "vitest";
 import {
   axesFromFrame,
-  axesFromLeadingFace,
   updatedObjectAxes,
   zoneEdge,
   type ObjectAxes,
 } from "@input/object_axes";
 import { gravityFrame, type GravityFrame } from "@input/gravity_frame";
-import { cross, dot, normalize, type Vec3 } from "@core/vec";
+import { dot, type Vec3 } from "@core/vec";
 
 const UP: Vec3 = [0, 1, 0];
 const DOWN: Vec3 = [0, -1, 0];
@@ -48,51 +47,13 @@ const orthonormal = (a: ObjectAxes): void => {
 const BOOT = axesFromFrame(frameAt(0, 30));
 const LIVE = frameAt(90, 30);
 
-describe("the in-zone basis — LeadingFace normal, gravity, and their orthogonal", () => {
-  it("a VERTICAL leading face gives the normal back exactly", () => {
-    const axes = axesFromLeadingFace([0, 0, 1], UP)!;
-    expect(axes.depth[0]).toBeCloseTo(0, 12);
-    expect(axes.depth[2]).toBeCloseTo(1, 12);
-    expect(axes.gravity).toEqual([0, 1, 0]);
-    orthonormal(axes);
-  });
+// ⛔⛔⛔ **TWO DESCRIBES STOOD HERE AND THEIR SUBJECT IS DELETED** — `D82`, 2026-09-23.
+// *"the in-zone basis"* and *"inside the zone — the leading face decides"* pinned a rule the
+// owner has removed: *"Inside shall be the same as outside. I think this is polluting the approach
+// movement."* ⭐ Kept as a note rather than as skipped tests, because the property is not merely
+// unasserted now — it is false by instruction.
 
-  it("⭐⭐ A SLOPED FACE IS ORTHOGONALISED — the owner's choice, 2026-09-22", () => {
-    // A 45° face: its normal has as much vertical in it as horizontal.
-    const n: Vec3 = normalize([0, 1, 1])!;
-    const axes = axesFromLeadingFace(n, UP)!;
-    // ⛔ THE CLAIM: depth is the normal's HORIZONTAL SHADOW, and gravity is untouched.
-    expect(axes.depth[1]).toBeCloseTo(0, 12);
-    expect(axes.depth[2]).toBeCloseTo(1, 12);
-    expect(axes.gravity).toEqual([0, 1, 0]);
-    orthonormal(axes);
-    // ⭐ THE COUNTER-EXAMPLE, asserted to be WRONG: the literal reading keeps the normal as
-    // the depth axis, and then `depth · gravity` is 0.707 rather than 0 — the two channels
-    // overlap and a push along one partly does the other. A vector that cannot fail is not
-    // a test, and this is the alternative the owner rejected.
-    expect(dot(n, UP)).toBeCloseTo(Math.SQRT1_2, 12);
-  });
-
-  it("⛔ a HORIZONTAL leading face REFUSES — it has no horizontal shadow", () => {
-    expect(axesFromLeadingFace([0, 1, 0], UP)).toBeNull();
-    expect(axesFromLeadingFace([0, -1, 0], UP)).toBeNull();
-    expect(axesFromLeadingFace([0, 0, 0], UP)).toBeNull();
-  });
-
-  it("⛔⛔ ITS HANDEDNESS MATCHES THE CAMERA BASIS — `up × depth`, not `depth × up`", () => {
-    // ⚠ If these two disagreed, every horizontal push would REVERSE at the moment a body
-    // crossed into the zone, mid-drag, and a hand would read it as the controls inverting.
-    // ⭐ `gravityFrame` records this exact sign trap; the check is that both bases build
-    // `x` the same way, with the leading face standing in for the view direction.
-    const f = frameAt(37, 20);
-    const inZone = axesFromLeadingFace(f.depth, UP)!;
-    for (let i = 0; i < 3; i++) expect(inZone.x[i]).toBeCloseTo(f.right[i]!, 12);
-    const byHand = normalize(cross(UP, f.depth))!;
-    for (let i = 0; i < 3; i++) expect(inZone.x[i]).toBeCloseTo(byHand[i]!, 12);
-  });
-});
-
-describe("outside the zone — the flag chooses WHICH camera", () => {
+describe("the flag chooses WHICH camera — and that is the whole rule since D82", () => {
   const base = {
     inZone: false,
     bootAxes: BOOT,
@@ -131,37 +92,6 @@ describe("outside the zone — the flag chooses WHICH camera", () => {
   });
 });
 
-describe("inside the zone — the leading face decides, and the flag is not consulted", () => {
-  const base = {
-    inZone: true,
-    bootAxes: BOOT,
-    liveFrame: LIVE,
-    up: UP,
-    previous: BOOT,
-  };
-
-  it("⭐⭐ the basis comes from the LEADING FACE, with either flag setting", () => {
-    const n: Vec3 = normalize([1, 0, 1])!;
-    const on = updatedObjectAxes({ ...base, worldAxisB: true, leadingNormal: n });
-    const off = updatedObjectAxes({ ...base, worldAxisB: false, leadingNormal: n });
-    expect(on).toEqual(off);
-    expect(on.depth[0]).toBeCloseTo(Math.SQRT1_2, 12);
-    expect(on.depth[2]).toBeCloseTo(Math.SQRT1_2, 12);
-    orthonormal(on);
-    // ⛔ And it is NOT either of the outside-zone answers — the dictation's *"therefore the
-    // translation direction differs when the object is inside the offset radius zone"*.
-    expect(on).not.toEqual(BOOT);
-    expect(on).not.toEqual(axesFromFrame(LIVE));
-  });
-
-  it("⛔ no leading face, or a horizontal one, KEEPS the basis the body has", () => {
-    expect(updatedObjectAxes({ ...base, worldAxisB: true, leadingNormal: null })).toEqual(BOOT);
-    expect(updatedObjectAxes({ ...base, worldAxisB: true, leadingNormal: [0, 1, 0] })).toEqual(
-      BOOT,
-    );
-  });
-});
-
 describe("the zone edge", () => {
   it("fires once on each crossing and never in between", () => {
     expect(zoneEdge(false, true)).toBe("ENTER");
@@ -180,24 +110,26 @@ describe("the zone edge", () => {
   });
 });
 
-describe("⛔⛔ the zone is entered by PROXIMITY; the duo is nameable only while a drag translates", () => {
-  it("⭐ a late naming inside the zone still yields the IN-zone basis", () => {
-    // ⚠ The sequence a hand produces: drift into range in ROTATE mode (the crossing happens, with
-    // no pair to apply it to), then start translating — at which point the duo is named and the
-    // basis must already be the leading face's. ⛔ Keyed on the STATE, not on the edge's name.
-    const n: Vec3 = normalize([1, 0, 1])!;
-    const late = updatedObjectAxes({
-      inZone: true,
+describe("⛔⛔ the zone is entered by PROXIMITY, and it no longer moves the basis", () => {
+  it("⛔⛔⛔ `D82`: being inside the zone changes NOTHING about the basis", () => {
+    // > *"eliminate this rule: Inside the offset radius the axes are the LeadingFace normal,
+    // > gravity, and their orthogonal. Inside shall be the same as outside. I think this is
+    // > polluting the approach movement."* — the owner, 2026-09-23
+    //
+    // ⚠ The vector that stood here asserted the DELETED rule — that a late naming inside the
+    // zone still yielded the leading face's basis. ⭐ The rule has no input for the zone at all
+    // now, which is the strongest form of *inside is the same as outside*: there is nothing to
+    // pass. ⛔ What remains is the flag, and it answers the same way at every distance.
+    const anywhere = {
       worldAxisB: true,
       bootAxes: BOOT,
       liveFrame: LIVE,
-      leadingNormal: n,
-      up: UP,
-      previous: BOOT,
-    });
-    expect(late).toEqual(axesFromLeadingFace(n, UP));
-    // ⛔ And it is NOT the boot basis, which is what a rule keyed on `edge === "ENTER"` would
-    // have left the body with — the defect this vector exists to pin.
-    expect(late).not.toEqual(BOOT);
+      previous: axesFromFrame(LIVE),
+    };
+    expect(updatedObjectAxes(anywhere)).toEqual(BOOT);
+    expect(updatedObjectAxes({ ...anywhere, worldAxisB: false })).toEqual(axesFromFrame(LIVE));
+    // ⭐ And whichever it answers is still a basis a body can be translated along.
+    orthonormal(updatedObjectAxes(anywhere));
+    orthonormal(updatedObjectAxes({ ...anywhere, worldAxisB: false }));
   });
 });
