@@ -482,3 +482,42 @@ describe("⭐⭐⭐ the ray's aim — the SET of channels, never their magnitude
     expect(aimDirection([true, false, false], [0, 0, 0], axes)).toBeNull();
   });
 });
+
+/**
+ * ⭐⭐⭐ **THE CHAIN NEEDS NO PREVIOUS FRAME — the contract the render loop's ORDER rests on.**
+ *
+ * > *"the gizmo disappeared entirely"* — the owner, 2026-09-23, one minute after a deploy
+ *
+ * ⛔⛔ The direction had been written in `applyWorldStep` and read in the gizmo; when the aim moved
+ * into the gizmo it landed BELOW the guard that read it, so on the first push the map was empty,
+ * the loop skipped, and the only writer was unreachable — for ever. ⚠ Every unit vector passed:
+ * each function was right, and the COMPOSITION was the defect.
+ *
+ * ⭐ What is testable here is the contract that makes a correct order possible: **nothing in
+ * `driven → shown → signs → aim` needs an earlier frame.** The render loop must then run it in
+ * that order, which its own comment now says out loud.
+ */
+describe("⛔⛔ the gizmo chain is cold-startable", () => {
+  it("⭐⭐⭐ a body's FIRST push already yields a direction, from no prior state", () => {
+    const c = camera(35, 30);
+    const axes = axesFromFrame(camera(0, 30).gravity);
+    for (const input of [
+      { holderDxPx: 50 },
+      { holderDyPx: -40 },
+      { secondDyPx: 30 },
+      { holderDxPx: 20, secondDyPx: 20 },
+    ]) {
+      const t = run(input, c, axes);
+      const shown = displayedAxes(null, t.driven);
+      expect(shown).not.toBeNull();
+      expect(aimDirection(shown!, t.signs, axes)).not.toBeNull();
+    }
+  });
+
+  it("⛔ and a body that has been pushed NOTHING yields nothing — no stand-in direction", () => {
+    const c = camera(35, 30);
+    const axes = axesFromFrame(camera(0, 30).gravity);
+    const t = run({}, c, axes);
+    expect(displayedAxes(null, t.driven)).toBeNull();
+  });
+});
