@@ -17,17 +17,15 @@ what cannot be measured gets shipped on hope.
 
 ⭐ It is also what makes `D9` (Babylon over three.js) **reversible in about a day**.
 
-⭐⭐ **The boundary has paid for itself repeatedly.** Every gesture defect found by
-finger — ⭐ counted, with its ledger, in [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md) and
-not restated here, because the figure this line used to carry went stale — was reproduced
-*headlessly* before it was fixed, because the recognizer, the roll estimator, the pinch and the orbit surface are
-all plain code. `src/render/` holds only what genuinely needs the engine.
+⭐⭐ **The boundary has paid for itself repeatedly.** Every gesture defect found by finger —
+counted in [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md), never here — was reproduced
+**headlessly** before it was fixed. `src/render/` holds only what needs the engine.
 
 ## Where it stands
 
-✅ **Scene**: a camera and **three** objects. ⚠ The third is deliberately **off-axis
-and off-plane** — with three collinear objects every barycentre lies on one line, no
-ray could distinguish them, and §2 rule 1 would look correct while exercising nothing.
+✅ **Scene**: a camera and **three** objects. ⚠ The third is deliberately **off-axis and
+off-plane** — three collinear objects put every barycentre on one line, where no ray can tell
+them apart and §2 rule 1 would look correct while exercising nothing.
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.
@@ -44,9 +42,8 @@ objects that HAPPENED to have a follower, so a translated object was **LOCKED** 
 something else created one — and then **JUMPED** to where it should have been all along.
 ⭐ *Draw from the model, never from whatever bookkeeping a rule left behind.*
 
-⚠ **What is still a stand-in is narrower than it was**: rule 2bis runs without its
-PRECONDITION (§1.4's empty constraint stack), which `IN3` adds. The gesture, its axes and
-its gain are real.
+⚠ **Still a stand-in**: rule 2bis runs without its PRECONDITION (§1.4's empty constraint stack),
+which `IN3` adds. The gesture, its axes and its gain are real.
 
 ⭐⭐ **`requireGestureFrame()` THROWS rather than guessing.** `A7`'s frame is undefined when the camera
 looks exactly along gravity, and a silent fallback would turn *"the axes are wrong at the pole"* into a
@@ -71,8 +68,8 @@ and the camera is the only thing that can apply it. One constant, one place.
 gesture layer; letting Babylon's own controls attach as well means two things claim
 the same touch and the winner depends on event order.
 
-⭐ Face picking is *why* Babylon is here: rule 2 selects a **face**, not an object, and
-`pickResult.faceId` gives it directly. That is also the seam to a mate connector.
+⭐ Face picking is *why* Babylon is here: rule 2 selects a **face**, and `pickResult.faceId` gives
+it directly — also the seam to a mate connector.
 
 ## ⭐⭐ The instruments — and why they are not optional
 
@@ -110,15 +107,23 @@ after the block that reads it — which is defect 46, every marker drawing last 
 fixes that for a POSITION and would be wrong for these DIRECTIONS: the object axes are WORLD
 directions, and a parented gizmo would turn with the body and stop pointing along them. ⭐ Reading the
 face centre out of the model escapes both.
+⭐⭐ **THE FOLLOWERFACE CAN BE SEEN THROUGH ITS OWN BODY** (2026-09-23): `followerFaceXrayAlpha`
+draws an **X-RAY TWIN** in **rendering group 1**, after everything and with the depth buffer cleared
+first, so nothing can hide it. ⛔ A SECOND MESH: the visible marker stays opaque and the twin adds
+only what the body hid — one draw at a lowered alpha would have made a visible face *worse*.
+⚠ `0` is OFF, and the value is a guess with a slider. ⭐ Retired by the **same membership test, in
+the same loop** as the fill: a twin outliving its marker is the stale-highlight shape that cost two
+false device reports.
+
 ⚠ **A body whose geometry cannot answer shows no gizmo** — never a stand-in, exactly as `⛔NOSHAPE`
 shows no capture shell. ⛔ **Nor does a FROZEN body** (the owner, 2026-09-23): a gizmo on something
 that cannot move is a readout that lies, and `leadingFace` refuses one by definition rather than the
 renderer guarding for it.
 
 **`menu.ts`** — a collapsible panel of sliders for tuning by hand on the glass.
-⛔ **Every change is validated on a COPY before it is applied, and refusals are shown.**
-`validateGestureConfig` otherwise runs once at startup, so a slider would bypass every
-cross-tunable rule — and those are exactly the numbers only meaningful in combination.
+⛔ **Every change is validated on a COPY before it is applied, and refusals are shown.** Otherwise
+`validateGestureConfig` runs once at startup and a slider bypasses every cross-tunable rule —
+exactly the numbers only meaningful in combination.
 ⚠ Sliders **and** step buttons: the page sets `touch-action: none` so the browser
 cannot claim the gestures, which can stop a native range input dragging. Buttons are
 plain taps and always work.
@@ -141,15 +146,13 @@ build still refreshes. 16 vectors, both guards falsified on purpose.
 ⚠ The decision is in `src/core` and not in the wiring on purpose: `D23` recorded what it
 costs to leave one in `scene.ts`, where no vector can reach it.
 
-⭐⭐ **AND THE HUD'S `axes` LINE IS THE INSTRUMENT FOR THE WHOLE OBJECT-AXIS RULE** (2026-09-22/23):
-the flag in force (`WorldAxisB(fixed@boot)` / `WorldAxisA(live camera)`), the mapping
-(`PLANE` / `CHANNELS`), **`track=1.15×`** — the leverage, world travel per unit of finger travel —
-**`⛔EDGE-ON`** when the plane is within Blender's 5° cone and the fixed-rate push has taken over, the
-zone state with the duo that is in it, and per held body its three axes and its leading face.
-⛔⛔ **EVERY ONE OF THOSE IS A QUESTION A HAND CANNOT ANSWER BY LOOKING AT THE BODY.** *"It went much
-too far"* and *"it barely moved"* are one symptom with two causes, and the camera pose is what
-separates them — which is exactly how the three reports of 2026-09-23 arrived: as three descriptions
-of one arithmetic. ⚠ The numbers are **returned by the rule**, never recomputed here.
+⭐⭐ **THE HUD'S `axes` LINE IS THE INSTRUMENT FOR THE WHOLE OBJECT-AXIS RULE** (2026-09-22/23): the
+flag in force, the mapping (`PLANE` / `CHANNELS`), **`track=`** the leverage, **`⛔EDGE-ON`** when the
+fixed-rate push has taken over, the zone state with its duo, and per held body its three axes and
+leading face. ⛔⛔ **NONE OF THOSE CAN BE ANSWERED BY LOOKING AT THE BODY**: *"it went much too far"*
+and *"it barely moved"* are one symptom with two causes, and the camera pose separates them — which
+is how the three reports of 2026-09-23 arrived, as three descriptions of one arithmetic. ⚠ The
+numbers are **returned by the rule**, never recomputed here.
 
 **`noise_meter.ts`** (in `src/input`, engine-free) — the `pointerNoiseMm` instrument,
 reported on the HUD. ⛔ Fed by **one** touchpoint, the first down, and reset when that
@@ -158,12 +161,10 @@ hold begins: interleaving two fingers would measure the distance *between* them.
 `POINTERTAP` carrying the *same* event, and a duplicated sample pulls the RMS down.
 An instrument that flatters itself is worse than none.
 
-**The orbit-centre marker** — a small emissive sphere at whatever §2 rule 1 chose.
-⛔ Tagged **out** of the barycentre candidate set (`metadata.orbitCandidate`): a marker
-that became a candidate would move the very centre it is drawn to show.
-⭐ It sits at the **CHOSEN** centre, not the blended one, so the camera visibly travels
-toward it. ⚠ An instrument is judged against the question it exists to answer — here
-*"which barycentre was selected?"* — not against the quantity it happens to be nearest.
+**The orbit-centre marker** — a small emissive sphere at whatever §2 rule 1 chose. ⛔ Tagged **out**
+of the barycentre candidate set (`metadata.orbitCandidate`): a marker that became a candidate would
+move the centre it is drawn to show. ⭐ It sits at the **CHOSEN** centre, not the blended one, so the
+camera visibly travels toward it.
 
 ⚠ All are diagnostic, and listed here because they are the reason defects get *found*: deleting one
 quietly would cost the next device session.

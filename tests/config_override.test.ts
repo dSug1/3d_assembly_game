@@ -11,7 +11,7 @@
  * recording the result as a measurement.
  */
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
+import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { parseConfigOverrides } from "../src/input/config_override";
 import { MotionTracker } from "../src/input/motion";
 
@@ -174,4 +174,37 @@ describe("⛔⛔ durations and noise cannot be negative or zero", () => {
       expect(() => new MotionTracker(r.config)).not.toThrow();
     });
   }
+});
+
+describe("⭐⭐ the FollowerFace x-ray — a flag and its number in ONE control", () => {
+  // ⛔ The owner, 2026-09-23: *"Add a flag to see the followerface through the object even if it
+  // is occluded."* ⚠ `0` is the OFF position and the build before the flag, so the range check is
+  // what keeps *off* reachable and *broken* unreachable.
+  it("accepts the whole range, including the OFF end", () => {
+    for (const v of [0, 0.01, 0.45, 1]) {
+      expect(() =>
+        validateGestureConfig({ ...DEFAULT_CONFIG, followerFaceXrayAlpha: v }),
+      ).not.toThrow();
+    }
+  });
+
+  it("⛔ refuses a value outside [0, 1], and NaN with it", () => {
+    // ⚠ Above 1 Babylon clamps and the mesh stops blending altogether, which reads as *the flag
+    // stopped working* rather than as a bad number — the failure this rule exists to prevent.
+    for (const v of [-0.1, 1.5, Number.NaN]) {
+      expect(() =>
+        validateGestureConfig({ ...DEFAULT_CONFIG, followerFaceXrayAlpha: v }),
+      ).toThrow(/followerFaceXrayAlpha/);
+    }
+  });
+
+  it("⭐ it is reachable from the URL, which is how a hand judges it without a rebuild", () => {
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?followerFaceXrayAlpha=0.2");
+    expect(r.config.followerFaceXrayAlpha).toBe(0.2);
+    expect(r.rejected).toEqual([]);
+    // ⛔ And a bad one is REPORTED, never silently ignored.
+    const bad = parseConfigOverrides(DEFAULT_CONFIG, "?followerFaceXrayAlpha=3");
+    expect(bad.config.followerFaceXrayAlpha).toBe(DEFAULT_CONFIG.followerFaceXrayAlpha);
+    expect(bad.rejected.join(" ")).toContain("followerFaceXrayAlpha");
+  });
 });

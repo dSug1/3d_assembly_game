@@ -1134,3 +1134,12 @@ through its partner, and §4's `6quater` is still the only rule that would push 
 buys is that the ORIENTATION a mate needs is now the one the alignment produces, so the gap to `3D2`
 is a **position and a gesture** rather than geometry → `ALIGNMENT_RULES.md` §5.18.
 
+⭐ **2026-09-23, same pass**: *"Add a flag to see the followerface through the object even if it is
+occluded by the object."* ✅ `followerFaceXrayAlpha` — an **x-ray twin** of the FollowerFace marker
+in rendering group 1, drawn after everything with the depth buffer cleared first, so no geometry can
+hide it. ⛔ A **second mesh**, not a lowered alpha on the first: a face you can already see must not
+get worse to make an occluded one visible. ⚠ `0` is off and is the build before the flag; the value
+is a guess and therefore a slider. ⭐ The twin is retired by the **same membership test in the same
+loop** as the fill — a marker pool that retires by what CHANGED instead of by what is WANTED is the
+2026-09-17 stale-highlight defect, and it produced two false reports in a day.
+

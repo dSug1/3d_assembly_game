@@ -874,6 +874,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     readonly fill: Mesh;
     readonly mat: StandardMaterial;
     readonly loop: LinesMesh;
+    /**
+     * ⭐⭐ **THE X-RAY TWIN** — the same triangles, drawn in rendering group 1 so that nothing in
+     * the scene can occlude it (the owner, 2026-09-23). ⛔ A SECOND MESH rather than a change to
+     * the first: the marker you can already see stays opaque and exactly as it was, and this
+     * only adds what the body was hiding.
+     */
+    readonly xray: Mesh;
+    readonly xrayMat: StandardMaterial;
   }
   const faceMarkers = new Map<string, FaceMarker>();
   const faceMarkerFor = (objectId: ObjectId, faceId: string): FaceMarker | null => {
@@ -929,7 +937,29 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     loop.isPickable = false;
     loop.isVisible = false;
 
-    const made: FaceMarker = { fill, mat, loop };
+    // ⭐⭐⭐ **THE X-RAY TWIN.** Same vertex data, drawn LAST and with the depth buffer cleared
+    // before it — Babylon's rendering groups do that by default — so no geometry can hide it.
+    // ⚠ `renderingGroupId = 1` and not a depth-function trick: the group boundary is a property
+    // of the scene's draw order, where a per-material `ALWAYS` would still lose to anything
+    // drawn after it in the same group. ⛔ One mechanism, not two that can disagree.
+    const xray = new Mesh(`follower-face-xray-${key}`, scene);
+    const xrayData = new VertexData();
+    xrayData.positions = positions;
+    xrayData.indices = [...indices, ...indices.slice().reverse()];
+    xrayData.applyToMesh(xray, false);
+    const xrayMat = new StandardMaterial(`follower-face-xray-${key}-mat`, scene);
+    xrayMat.emissiveColor = FOLLOWER_COLOUR.clone();
+    xrayMat.disableLighting = true;
+    xrayMat.backFaceCulling = false;
+    xray.material = xrayMat;
+    xray.renderingGroupId = 1;
+    // ⛔ PARENTED, exactly as the fill is — defect 46: a marker positioned from Babylon's cached
+    // world matrix draws the pose its object had LAST frame.
+    xray.parent = body;
+    xray.isPickable = false;
+    xray.isVisible = false;
+
+    const made: FaceMarker = { fill, mat, loop, xray, xrayMat };
     faceMarkers.set(key, made);
     return made;
   };
@@ -3243,6 +3273,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
         // there is no fallback and a level camera sends the body a very long way.
         tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
+        // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
+        // the flag; anything above draws an x-ray twin at that opacity.
+        tunable("FollowerFace x-ray opacity (0=off)", "followerFaceXrayAlpha", 0, 1, 0.05),
         // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
         // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
         // one pixel — so a width tunable would be a slider that does nothing, which is the
@@ -5751,6 +5784,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       const wanted = alignedNow.has(id) && alignedFaceOf(world, id) === faceId;
       if (wanted) continue;
       q.fill.isVisible = false;
+      // ⛔⛔ **RETIRED BY THE SAME MEMBERSHIP TEST, IN THE SAME LOOP.** The twin must not outlive
+      // the marker it doubles: a stale highlight produced TWO false device reports in one day
+      // (*"the release is not working"*, *"the shake is not working"*) against rules that were
+      // correct, and the cause was one pool retired by membership and another by what changed.
+      q.xray.isVisible = false;
     }
     for (const [id, o] of outlines) {
       if (alignedNow.has(id)) continue;
@@ -5772,6 +5810,16 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Written only on CHANGE, not blindly per frame.
         if (!marker.mat.emissiveColor.equals(want)) marker.mat.emissiveColor.copyFrom(want);
         marker.fill.isVisible = true;
+        // ⭐ `0` means the twin is not drawn AT ALL, which is the build before this flag — not an
+        // invisible mesh still costing a draw call and still able to come back wrong.
+        const xrayOn = cfg.followerFaceXrayAlpha > 0;
+        if (xrayOn) {
+          if (!marker.xrayMat.emissiveColor.equals(want)) marker.xrayMat.emissiveColor.copyFrom(want);
+          // ⚠ Written every frame because it is a SLIDER: a hand turning it must see the overlay
+          // change under the finger, which is the whole point of shipping the number with the rule.
+          marker.xrayMat.alpha = cfg.followerFaceXrayAlpha;
+        }
+        marker.xray.isVisible = xrayOn;
       }
       // ⭐⭐ AND THE WHOLE BODY, in the alignment's colour — its own mesh edges, offset a
       // little further out than the white body outline so the two nest rather than z-fight.

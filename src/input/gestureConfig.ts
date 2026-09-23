@@ -594,6 +594,27 @@ export interface GestureConfig {
    */
   axisTrackingConeDeg: number;
   /**
+   * ⭐⭐⭐ **SEE THE FOLLOWERFACE THROUGH ITS OWN BODY** — the owner, 2026-09-23: *"Add a flag to
+   * see the followerface through the object even if it is occluded by the object (transparent
+   * overlay or other solution)."*
+   *
+   * ⛔ The opacity of an **X-RAY TWIN** of the FollowerFace marker, drawn after everything else
+   * so no geometry can hide it. ⚠ `0` is OFF and is today's build exactly — the twin is not
+   * drawn at all, not drawn invisibly — which is what makes this one control both the flag the
+   * owner asked for and the number a hand judges it by. ⭐ The same shape as `approachSwingDeg`,
+   * where `0` disables the swing outright.
+   *
+   * ⭐⭐ **THE ORIGINAL MARKER IS UNTOUCHED AND STILL OPAQUE.** Where the face is in plain sight
+   * you see it as you always did, with the twin blending over it; where the body occludes it,
+   * the twin is all there is. ⛔ One draw at a lowered alpha would have made a face you can
+   * already see *worse*, which is the cost a hand would have reported next.
+   *
+   * ⚠⚠ **THE VALUE IS A GUESS AND THEREFORE A SLIDER** — `METHOD`'s hardest-won rule here: *a
+   * guessed number has been wrong every single time on this project*. ⭐ Also on the URL as
+   * `?followerFaceXrayAlpha=0.3`.
+   */
+  followerFaceXrayAlpha: number;
+  /**
    * Degrees. How near parallel the alignment axis must be to one of the target's face
    * normals for `A16`'s condition 1 to hold.
    * ⚠ A DIFFERENT QUESTION from the (unbuilt) snap threshold even though both are angular
@@ -951,6 +972,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   translatePairing: 1,
   // ⭐ Blender's number, not mine.
   axisTrackingConeDeg: 5,
+  // ⚠ A GUESS, shipped ON because the owner asked for the feature rather than for a comparison.
+  // ⭐ `0` restores the build before it, which is the A/B, and any value between is a judgement
+  // a hand makes on the glass without a rebuild.
+  followerFaceXrayAlpha: 0.45,
   // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
   // really did align against this thing.
   alignMatchDeg: 15,
@@ -1202,6 +1227,16 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "translated along (the boot camera's, frozen, or the live camera's), not a quantity — " +
         "and a value in between would read as `truthy` and freeze the axes while the readout " +
         "claimed the camera was still steering them.",
+    );
+  }
+  // ⛔ An alpha outside [0, 1] is not a stronger overlay: above 1 Babylon clamps and the mesh
+  // stops blending, which reads as *the flag stopped working* rather than as a bad number.
+  // ⚠ `0` is meaningful (the twin is not drawn), so this is a RANGE and not a positivity test.
+  if (!(cfg.followerFaceXrayAlpha >= 0) || !(cfg.followerFaceXrayAlpha <= 1)) {
+    throw new Error(
+      `followerFaceXrayAlpha (${cfg.followerFaceXrayAlpha}) must be in [0, 1]: it is an OPACITY ` +
+        "for the x-ray twin of the FollowerFace marker, 0 being off. NaN fails this too — it " +
+        "would silently disable the overlay while the readout claimed a value.",
     );
   }
   if (cfg.translatePairing !== 0 && cfg.translatePairing !== 1) {
