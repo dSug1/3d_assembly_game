@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1081 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1091 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -334,7 +334,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Fifty-eight defects, fifty-seven of them BY FINGER, and none visible to a green
+⛔⛔ **Sixty defects, fifty-nine of them BY FINGER, and none visible to a green
 suite.** ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
 total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
 project's argument for device passes. ⭐ The two do not compete: **the device finds what is

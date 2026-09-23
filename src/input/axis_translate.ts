@@ -285,6 +285,40 @@ export function axisDisplacement(travel: AxisTravelM, axes: ObjectAxes): Vec3 {
 }
 
 /**
+ * ⭐⭐⭐ **WHICH AXES THE GIZMO SHOWS — the ones this delta position actually translates along.**
+ *
+ * > *"the direction is shown only if the delta position triggers a translation in this direction.
+ * > Therefore, for example, for a pure translation in the gravity axis only the green line would
+ * > show. For a translation in the horizontal plane, both blue and red lines would show but not
+ * > the green line."* — the owner, 2026-09-23
+ *
+ * ⛔ The gizmo used to draw all three axes always, so it said *"here is the basis"* when the
+ * question a hand is asking is *"where will this push go"*. ⭐ Now it answers the second.
+ *
+ * ⚠⚠ **AND A PAUSE MUST NOT BLANK IT.** A finger that stops emits nothing, and `A11`'s deadband
+ * emits nothing on an axis inside its band — so the instantaneous answer is *no axes at all* many
+ * frames per second. ⛔ A gizmo that blinked out whenever the hand paused would be unreadable,
+ * which is the same argument `lastTravelDir` already carries. ⭐ So the last NON-EMPTY answer
+ * stands until the body is translated again.
+ *
+ * @param previous what is showing now, or `null` before the body has ever been translated.
+ * @returns the triple `[x, gravity, depth]`, or `previous` when this frame moved nothing —
+ *   which is `null` only until the first translation, where showing nothing is correct.
+ */
+export function displayedAxes(
+  previous: readonly [boolean, boolean, boolean] | null,
+  travel: AxisTravelM,
+): readonly [boolean, boolean, boolean] | null {
+  const on = (n: number): boolean => Number.isFinite(n) && n !== 0;
+  const next: readonly [boolean, boolean, boolean] = [
+    on(travel.xM),
+    on(travel.gravityM),
+    on(travel.depthM),
+  ];
+  return next[0] || next[1] || next[2] ? next : previous;
+}
+
+/**
  * ⭐ Keep a body inside the depth range a gesture may drive it to — `A5`'s bounds, unchanged.
  *
  * ⛔⛔ **IT IS CARRIED OVER DELIBERATELY, BECAUSE THE CHANNEL MOVED AND THE HAZARD DID NOT.**

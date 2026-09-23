@@ -38,6 +38,8 @@
  */
 
 /** What the swing remembers, latched when the capture first triggers. */
+import { isTranslatingMode } from "./grip_mode";
+
 export interface SwingLatch {
   /**
    * The surface gap at the instant the capture triggered, in metres — the swing's whole
@@ -624,7 +626,8 @@ export function rebaseTriggerGap(currentGapM: number, heldProgress: number): num
  * ⛔⛔⛔ **AND `"DEPTH"` IS A TRANSLATION — DEVICE-REPORTED THREE TIMES, 2026-09-23.** *"Still no
  * swing of camera when follower enters offset radius zone from translation along gravity axis
  * towards bottom."* ⚠ This test named the **mode** rather than the **kind of motion**, and
- * `scene.ts` sets a holder's mode to `"DEPTH"` the moment the SECOND touchpoint drives its axis
+ * `scene.ts` set a holder's mode to `"DEPTH"` the moment the SECOND touchpoint drove its axis
+ * (renamed `"TRANSLATE_2ND"` on 2026-09-23, because the name was the trap)
  * — which is exactly the gesture the report describes. ⭐ So pushing a body along gravity
  * renamed the very grip the swing was looking for, the driver came back `-1`, and the swing
  * froze: `p` stuck at `0.00`, `yaw` at `0.0°`, and `gapAtTriggerM` **rebased to the live gap
@@ -650,7 +653,9 @@ export function swingDriverIndex(modes: readonly (string | null)[]): number {
   // ⛔ `ROTATE` and `null` are the exclusions, and they are the ones the device report of
   // 2026-09-19 asked for. ⭐ Written as a SET of the motions that translate, so a channel added
   // later is a decision here rather than a silent omission.
-  return modes.findIndex((m) => m === "TRANSLATE" || m === "DEPTH");
+  // ⭐⭐ **THE SET LIVES IN `grip_mode.ts`**, because spelling it out here is what let the gizmo
+  // spell it out differently — one fact, one home.
+  return modes.findIndex((m) => isTranslatingMode(m));
 }
 
 /**
