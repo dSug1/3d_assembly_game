@@ -185,14 +185,10 @@ import {
   clampDepthRange,
   displayedAxes,
   type AxisTravel,
+  type AxisTravelM,
 } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
-import {
-  accumulateTravel,
-  decayTravel,
-  leadingFace,
-  type LeadingFace,
-} from "../core/leading_face";
+import { leadingFace, type LeadingFace } from "../core/leading_face";
 import {
   pitchOffsetV,
   freezeProgress,
@@ -1631,8 +1627,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * gizmo where it was rather than losing it for a frame of stillness.
    */
   const lastTravelDir = new Map<ObjectId, Vec3>();
-  /** ⭐ The decaying sum of a body's recent world steps — `lastTravelDir` is its direction. */
-  const travelAccum = new Map<ObjectId, Vec3>();
+  /**
+   * ⭐⭐⭐ **WHAT THE CHANNELS ASKED FOR THIS FRAME**, per body — the direction the LeadingFace ray
+   * is fired along. ⛔ The owner, 2026-09-23: *"You can lag the travel, but the input itself has
+   * no lag. The gizmo repositioning should match the input, not the travel and its lag."*
+   * ⚠ So it is the mapped INPUT, summed over both fingers' channels and consumed every frame —
+   * never a memory of where the body has been.
+   */
+  const frameAskedM = new Map<ObjectId, AxisTravelM>();
   /**
    * ⭐⭐ **WHICH AXES THE GIZMO IS SHOWING** — the owner, 2026-09-23: *"the direction is shown only
    * if the delta position triggers a translation in this direction."* ⛔ The decision is
@@ -1650,6 +1652,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (id === undefined) return;
     const p = frameAxisDriven.get(id) ?? [false, false, false];
     frameAxisDriven.set(id, [p[0] || t.driven[0], p[1] || t.driven[1], p[2] || t.driven[2]]);
+    // ⭐⭐ AND WHAT IT ASKED FOR, which is what aims the LeadingFace ray. ⛔ Summed over both
+    // fingers because they translate the same body, and consumed at the end of the frame.
+    const a = frameAskedM.get(id) ?? { xM: 0, gravityM: 0, depthM: 0 };
+    frameAskedM.set(id, {
+      xM: a.xM + t.xM,
+      gravityM: a.gravityM + t.gravityM,
+      depthM: a.depthM + t.depthM,
+    });
   };
   /**
    * ⭐⭐ WHAT THE LAST TRANSLATION ACTUALLY BOUGHT — reported by the rule, never recomputed
@@ -1718,20 +1728,34 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⚠ Unlit and in the gizmo's own rendering group, because a marker that says *"this is the face
    * you are advancing on"* must not be shaded or occluded by the body it is describing.
    */
-  const GIZMO_DOT_PX = 9;
-  const gizmoDotMat = new StandardMaterial("gizmo-dot-mat", scene);
-  gizmoDotMat.emissiveColor = new Color3(1, 1, 1);
-  gizmoDotMat.disableLighting = true;
-  const gizmoDots = new Map<ObjectId, Mesh>();
-  const gizmoDotFor = (id: ObjectId): Mesh => {
-    const existing = gizmoDots.get(id);
+  const GIZMO_RING_PX = 11;
+  /**
+   * ⛔⛔ **A CIRCLE, NOT A DISC** — the owner, 2026-09-23: *"I asked you to insert a white circle
+   * at the center of the gizmo, not a white disc."* ⚠ The first build was a small SPHERE, which
+   * reads as a filled disc from every angle; this is an OUTLINE of 48 segments.
+   *
+   * ⭐⭐ **BILLBOARDED**, so it is a circle from every camera rather than an ellipse: a ring drawn
+   * in a fixed plane would foreshorten to a line edge-on, which is exactly the pose a hand is in
+   * when it is judging an approach. ⛔ Sized in PIXELS through rule 6's tracking factor, like the
+   * capture offset, so it keeps a constant apparent size as the camera comes in — and in the
+   * gizmo's own rendering group, because a marker that says *"this is the face you are advancing
+   * on"* must not be occluded by the body it is describing.
+   */
+  const RING_POINTS: Vector3[] = Array.from({ length: 49 }, (_, i) => {
+    const a = (i / 48) * Math.PI * 2;
+    return new Vector3(Math.cos(a) * 0.5, Math.sin(a) * 0.5, 0);
+  });
+  const gizmoRings = new Map<ObjectId, LinesMesh>();
+  const gizmoRingFor = (id: ObjectId): LinesMesh => {
+    const existing = gizmoRings.get(id);
     if (existing) return existing;
-    const m = CreateSphere(`gizmo-dot-${id}`, { diameter: 1, segments: 10 }, scene);
-    m.material = gizmoDotMat;
+    const m = CreateLines(`gizmo-ring-${id}`, { points: RING_POINTS }, scene);
+    m.color = new Color3(1, 1, 1);
     m.isPickable = false;
     m.renderingGroupId = 2;
+    m.billboardMode = Mesh.BILLBOARDMODE_ALL;
     m.isVisible = false;
-    gizmoDots.set(id, m);
+    gizmoRings.set(id, m);
     return m;
   };
 
@@ -1791,6 +1815,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (!isTranslatingMode(grip.mode)) continue;
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
+      // ⭐⭐⭐ **AIMED BY THE INPUT, NOT BY THE BODY'S HISTORY.** The asked-for travel of THIS frame,
+      // mapped onto the body's axes — no memory, so a change of direction moves the face on the
+      // very frame the hand changes it. ⚠ `lastTravelDir` keeps the last non-zero answer, so a
+      // pause does not erase the gizmo; it is never older than the last thing the hand asked for.
+      const asked = frameAskedM.get(id);
+      if (asked) {
+        const aim = normalize(axisDisplacement(asked, axesOf()));
+        if (aim) lastTravelDir.set(id, aim);
+      }
       const dir = lastTravelDir.get(id);
       if (!dir) continue;
       // ⭐ THE CURRENT FACE IS HANDED BACK, which is what makes the choice sticky: a face the
@@ -1833,12 +1866,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           0.05,
         ) * 20;
       // ⭐ The white circle marks the face the body is advancing on, at the gizmo's own centre.
-      const dot = gizmoDotFor(id);
-      const dotM = trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight) *
-        GIZMO_DOT_PX;
-      dot.scaling.set(dotM, dotM, dotM);
-      dot.position.set(hit.centre[0], hit.centre[1], hit.centre[2]);
-      dot.isVisible = true;
+      const ring = gizmoRingFor(id);
+      const ringM =
+        trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight) * GIZMO_RING_PX;
+      ring.scaling.set(ringM, ringM, ringM);
+      ring.position.set(hit.centre[0], hit.centre[1], hit.centre[2]);
+      ring.isVisible = true;
       const g = gizmoFor(id);
       const dirs = [axes.x, axes.gravity, axes.depth] as const;
       for (let i = 0; i < 3; i++) {
@@ -1874,10 +1907,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       for (const line of g.lines) line.isVisible = false;
     }
     // ⚠ The circle goes with them: two readings of one state must appear and vanish together.
-    for (const [id, d] of gizmoDots) if (!live.has(id)) d.isVisible = false;
+    for (const [id, r] of gizmoRings) if (!live.has(id)) r.isVisible = false;
     // ⛔ CONSUMED HERE, every frame, exactly as the swing's travel accumulators are: the gizmo
     // must read the travel of THIS frame and never a stale one.
     frameAxisDriven.clear();
+    frameAskedM.clear();
   };
 
   const refreshHighlight = (): void => {
@@ -3425,9 +3459,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
         // there is no fallback and a level camera sends the body a very long way.
         tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
-        // ⭐⭐ How long the LEADING FACE remembers the travel direction. ⚠ Long: the face lags a
-        // change of direction. Short: the gizmo chatters, which is `D54`'s report. `0` = one frame.
-        tunable("leading face memory (ms)", "leadingFaceMemoryMs", 0, 200, 10),
         // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
         // the flag; anything above draws an x-ray twin at that opacity.
         tunable("FollowerFace x-ray opacity (0=off)", "followerFaceXrayAlpha", 0, 1, 0.05),
@@ -3632,19 +3663,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * are now the same function, and a third channel cannot be added without both.
    */
   const applyWorldStep = (grip: Held, step: Vec3): void => {
-    const id = idOf.get(grip.mesh);
-    // ⭐⭐ The direction the body ACTUALLY went — what the LeadingFace ray is fired along.
-    // ⛔⛔ **ACCUMULATED OVER A WINDOW, NOT ONE FRAME** (2026-09-23): `A11`'s deadband emits the
-    // excess on one axis and nothing on the other, so a single step's direction alternates during
-    // a straight drag — which is what made the gizmo chatter, and what `D54` answered by latching
-    // the face instead of fixing the direction. ⚠ `lastTravelDir` keeps the last GOOD direction,
-    // so a frame of stillness does not erase the gizmo.
-    if (id !== undefined) {
-      const acc = accumulateTravel(travelAccum.get(id) ?? null, step);
-      travelAccum.set(id, acc);
-      const dir = normalize(acc);
-      if (dir) lastTravelDir.set(id, dir);
-    }
+    // ⚠ The LeadingFace ray is NOT aimed from here any more — it follows what the channels asked
+    // for (`frameAskedM`), which has no lag, rather than what the body did. See `noteAxisTravel`.
     // ⚠ The swing reads SCREEN travel (*"opposite to the dx movement"*), so the applied
     // displacement is projected back onto the gravity frame rather than recomputed from a pointer
     // delta that `A11`'s deadband may have swallowed. ⛔⛔ ACCUMULATED, NOT LATCHED:
@@ -5538,13 +5558,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // re-decided the axes, and the gizmo is documented to point along them. ⚠ A gizmo drawn
     // first would show the previous basis for one frame, at exactly the moment a hand is
     // looking at it to see what changed.
-    // ⭐ Age the travel accumulators before the gizmo reads their direction — `e^(−dt/τ)`.
-    // ⚠ τ is `leadingFaceMemoryMs`, its own slider since 2026-09-23: it was `flickWindow` (120 ms)
-    // for an hour, and a hand felt the face lag a fast change of direction by that much.
-    for (const [id, acc] of travelAccum) {
-      const faded = decayTravel(acc, dtSec * 1000, cfg.leadingFaceMemoryMs);
-      if (faded) travelAccum.set(id, faded);
-    }
     refreshAxisGizmo();
 
     // ⭐⭐⭐ **AND THE APPROACH SWING IS PUT ON THE CAMERA HERE** — device-reported, 2026-09-19:

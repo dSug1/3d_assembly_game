@@ -630,29 +630,42 @@ the owner rejected.
 
 ---
 
-## ⚠⚠ **THE LEADING FACE'S MEMORY IS NOW A DIAL** (2026-09-23, and the question was the useful part)
+## ⛔⛔⛔ **THE LEADING FACE FOLLOWS THE INPUT — and the memory I proposed was REJECTED**
 
 > *"when I transition fast from horizontal movement to vertical movement, there is a slight moment
 > when the green line passes through the left face and then relocate to the blue face. This is
-> annoying. **Is that due to the inertia and lerp we have added to the translation movement?**"*
+> annoying. Is that due to the inertia and lerp we have added to the translation movement?"*
+>
+> *"I am not satisfied by your solution, so I discarded the commit. **You can lag the travel, but
+> the input itself has no lag. The gizmo repositioning should match the input, not the travel and
+> its lag.**"* — the owner, 2026-09-23
 
-⭐⭐ **THE QUESTION WAS ANSWERABLE BY MEASUREMENT, AND THE ANSWER IS NO.** `translateInertiaMs` is
-**7.6 ms** — half a frame — and the follower is critically damped. ⛔ The lag is the **direction
-memory added an hour earlier** (defect 61), which was `flickWindow` at **120 ms**, reused because it
-was to hand rather than measured. ⚠ After a change of direction the old travel fades as
-`e^(−t/τ)` while the new grows, so the face flips when the new overtakes the old — roughly `τ/2`,
-which at 120 ms is 3–4 frames. *That is the "slight moment".*
+⭐⭐ **THE QUESTION HAD A MEASURABLE ANSWER AND IT WAS NO**: `translateInertiaMs` is **7.6 ms**,
+half a frame, critically damped. ⛔ The lag was the **direction memory I had added an hour earlier**
+(defect 61) — `flickWindow` at 120 ms, reused because it was to hand rather than measured. After a
+change of direction the old travel fades as `e^(−t/τ)` while the new grows, so the face flips at
+roughly `τ/2`: 3–4 frames.
 
-⭐ **`leadingFaceMemoryMs` is its own tunable now, default 50 ms**, with a slider and a URL
-override. ⛔ Both ends have been felt by a hand: too long lags a change of direction (this report),
-too short brings back the chatter (`D54`'s). ⚠ **50 has not been judged** — it is *a few frames*,
-which is what averaging a frame-to-frame alternation needs, and `0` means one frame, which is the
-pre-`D54` behaviour with its chatter. ⭐ The slider reaches both ends on purpose.
+⛔⛔ **AND MY FIRST ANSWER TO THAT WAS A DIAL, WHICH THE OWNER REFUSED.** Making the memory tunable
+kept the lag and handed the trade to a hand. ⭐ His correction is a rule, not a number: *the gizmo
+follows the INPUT*, which cannot lag. ⚠ `leadingFaceMemoryMs`, `accumulateTravel` and `decayTravel`
+are **deleted** with their vectors.
 
-⭐⭐ `METHOD`: *a number borrowed because it was to hand is a guess wearing another rule's
-authority.* `flickWindow` was judged for the FLICK; nothing about it was ever about a gizmo.
+✅ **SO THE RAY IS AIMED BY WHAT THE CHANNELS ASK FOR ON THE FRAME THEY ASK IT** — the mapped
+input, summed over both fingers, consumed every frame. ⛔ No accumulator, no time constant, and a
+change of direction moves the face on the very frame the hand changes it.
+⚠⚠ **WHAT IT GIVES UP, STATED**: `D54`'s chatter had two answers — the latch (defect 61 removed it)
+and the memory (this removes it). ⭐ What is left against chatter is the SEED: the held face wins an
+exact tie. If the gizmo flickers between two nearly-tied faces on a slow drag, that is this trade,
+and by the owner's own rule the fix belongs to the direction rather than to a latch.
 
-✅ **AND THE GIZMO GAINED A WHITE CIRCLE AT ITS CENTRE** — the owner: *"so I can identify the
-leadingface easily."* ⛔ A sphere rather than a disc, so it reads as a circle from every camera
-without billboarding, sized in PIXELS through rule 6's tracking factor so it keeps a constant
-apparent size as the camera comes in, unlit and in the gizmo's own rendering group.
+⭐⭐⭐ `METHOD`, twice over: *a number borrowed because it was to hand is a guess wearing another
+rule's authority* — and *when a hand rejects a solution, the useful part is which PROPERTY it
+violated.* Here it was **latency**, and no value of a time constant could have satisfied it.
+
+✅ **AND THE MARKER IS A CIRCLE, NOT A DISC** — *"I asked you to insert a white circle at the
+center of the gizmo, not a white disc."* ⚠ The first build was a small SPHERE, which reads as a
+filled disc from every angle. ⭐ It is now a 48-segment OUTLINE, **billboarded** so it stays a
+circle rather than foreshortening to a line edge-on — which is exactly the pose a hand judges an
+approach from — sized in pixels through rule 6's tracking factor, and in the gizmo's own rendering
+group so the body cannot occlude it.
