@@ -801,3 +801,95 @@ by the hand it was built for.
 
 ⭐ And `followerFaceXrayAlpha` is **0.05** — the owner's number, a tenth of my guess.
 
+
+---
+
+## ⛔⛔⛔ THE `dy` SWAP — BUILT ON A BRANCH, **MEASURED**, AND REJECTED (2026-09-23)
+
+> *"dx and dy from touch on the object control the translation on object x axis and object gravity
+> axis, and dy from second touch control the translation on object depth axis."* — the owner,
+> asking for the swap
+>
+> *"I will discard it. I will stick with 1.0.22- input configuration from now onwards."* — the
+> owner, after the comparison below
+
+⚠ Built as `D83` on **`1.0.24-Swapped-inputs-Discarded`**, with vectors and mutants. ⛔ Nothing of
+it is in the keeper branch, and the branch is kept so the measurement can be re-run rather than
+re-argued.
+
+### The two configurations
+
+| | holder `dx` | holder `dy` | second touch `dy` |
+|---|---|---|---|
+| **kept** (`D75`) | `x` | `depth` | `gravity` |
+| swapped (`D83`) | `x` | `gravity` | `depth` |
+
+### ⭐⭐⭐ THE MEASUREMENT — what 50 px of finger actually MOVES on the glass
+
+⚠ Both rules run from the same fixture: axes frozen at boot (`worldAxisB`, boot camera azimuth 0,
+elevation 30°), camera at 1.5 m, `PLANE` pairing, the shipped 5° cone. ⛔ The number is the body's
+**screen** travel in pixels — what a hand sees, and what the approach swing reads.
+
+```
+az  el │ KEPT   dx→x  dy→depth  2nd→gravity │ SWAPPED  dx→x  dy→gravity  2nd→depth
+  0  0 │  50.0     0.0     50.0             │  50.0     50.0      0.0
+ 45  0 │  50.0    35.4     50.0             │  50.0     50.0     35.4
+ 90  0 │   0.0    50.0     50.0             │   0.0     50.0     50.0
+  0 12 │  50.0    50.0     50.0             │  50.0     50.0     50.0
+ 45 12 │  50.0    50.0     50.0             │  50.0     50.0     10.2   ←
+ 90 12 │  50.0    50.0     50.0             │  10.4     50.0     50.0   ←
+ 45 40 │  50.0    50.0     50.0             │  50.0     50.0     27.0
+ 90 40 │  50.0    50.0     50.0             │  32.1     50.0     50.0
+ 45 70 │  50.0    50.0     50.0             │  50.0     50.0     34.2
+ 90 70 │  50.0    50.0     50.0             │  47.0     50.0     50.0
+```
+
+⭐⭐ **The kept configuration is EXACT at every pose except an exactly level camera. The swapped one
+degrades across a broad band of ordinary poses** — down to a fifth of the finger at `az 45–135,
+el 12`, which is an ordinary place to stand.
+
+### ⭐⭐⭐ WHY — and it is one sentence about pairs
+
+**A PAIR of axes can cover for one of its members; a SINGLE axis cannot.**
+
+* The kept holder owns `x` **and** `depth` — the two horizontal directions, which together span the
+  whole ground plane. Whichever way the finger drags, some combination produces exactly that screen
+  motion: when `x` turns to face the camera, `depth` takes up the slack. ⛔ They fail only together,
+  at an exactly level camera, where the ground plane collapses to the horizon line.
+* The swapped holder owns `x` **and** `gravity` — one horizontal, one vertical: a thin vertical
+  slice, not a plane. When `x` faces the camera **nothing can cover for it**, because gravity only
+  ever moves a body up and down the glass. ⚠ And `worldAxisB` freezes `x` at boot, so a quarter
+  turn of orbit reaches that pose deliberately.
+* The kept second touch owns **gravity**, which draws a VERTICAL line on the glass at every camera
+  angle — perfectly matched to a vertical finger, so it gives its full rate everywhere.
+* The swapped second touch owns **depth**, which draws a SLANTED line that turns with the camera. A
+  vertical finger only contributes the part of itself lying along that line. ⛔ No partner, no
+  compensation, and the response depends on where the camera happens to be.
+
+⚠⚠ **AND THAT WEAKNESS IS A COMPLAINT THE OWNER HAS ALREADY MADE ONCE**: *"the input seems very
+weak and not the same as the gravity axis input which is right"* (2026-09-23, `D76`). ⭐ Gravity
+felt right **because it is always vertical on the glass** — the swap would have moved that property
+off the finger that had it.
+
+### ⚠ The one thing the swap FIXED, and it is real
+
+At an exactly level camera the kept `dy`→`depth` is **dead** (`0.0` in the table) — the cost this
+dossier already records as *"the holder's dy is dead at a level camera"*. ⭐ The swapped `dy`→
+`gravity` works at every elevation. ⛔ One pose against a band of poses: the trade was refused.
+
+### ⛔⛔ AND A SECOND CONSEQUENCE NOBODY WOULD HAVE PREDICTED FROM THE DICTATION
+
+**The approach swing goes blind.** It decides which way to lean from the body's travel projected
+onto the camera's `right` and `up` — the two directions that span the SCREEN. ⭐ `depth` is by
+definition the direction that produces the least screen motion, so a body pushed straight away from
+the camera fed the swing **exactly zero on both**, every frame, and it never found a direction.
+⚠ In the kept configuration that finger drives `gravity`, whose travel is vertical on the glass, so
+the case is unreachable. ⛔ `D83` had to add a third travel component to pay for it — visible in
+the branch as `swingSignFor`'s third argument.
+
+### ⭐ What a future session should take from this
+
+⛔ **Do not re-derive this by argument.** The comparison took one probe that ran both rules over a
+sweep of camera poses and printed what a hand would see; both of my own explanations before that
+probe were incomplete, and the second one was wrong about WHERE the degeneracy lies.
+⚠ The branch still exists: check it out, copy the old rule beside the new one, and print the table.

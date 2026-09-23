@@ -20,6 +20,9 @@ operating rule set.
 4. **One constant, one place.**
 5. **Check the licence before proposing any library**, and state it.
 6. **Thresholds in millimetres.**
+7. **A pair of axes covers for a foreshortened member; a single axis cannot.** Ask what a
+   finger's pair SPANS and how a lone axis LOOKS on the glass, not which axis it *should*
+   drive. Measured, 2026-09-23 - [`queue_notes/IN4.md`](queue_notes/IN4.md).
 
 ## No heuristic pile-up
 
