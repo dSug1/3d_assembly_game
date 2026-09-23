@@ -21,6 +21,7 @@ import {
   type AxisInputsPx,
   type CameraScreenAxes,
   type TranslatePairing,
+  aimDirection,
   displayedAxes,
 } from "@input/axis_translate";
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
@@ -381,5 +382,103 @@ describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
   it("⚠ a NaN channel is not a push — it cannot light a line", () => {
     expect(shownFor({ holderDxPx: Number.NaN })).toBeNull();
     expect(shownFor({ holderDxPx: Number.NaN, secondDyPx: 30 })).toEqual([false, true, false]);
+  });
+});
+
+/**
+ * ⭐⭐⭐ **THE LEADING-FACE RAY IS AIMED BY THE CHANNEL PUSHED HARDEST.**
+ *
+ * > *"still, there is a slight lag for the repositioning of the green line to the leadingface."*
+ * > — the owner, 2026-09-23, after the direction's time memory had already been deleted
+ *
+ * ⛔⛔ The residue was not time: aimed by the vector SUM of the channels, the ray only reaches
+ * `objectB`'s top face inside **29.4°** of vertical (half-extents `0.75 × 1.0 × 1.5 L`, sides
+ * leaning in) — so any residual horizontal travel above ~56% of the vertical kept it on the side,
+ * where the side genuinely IS the nearer exit.
+ */
+describe("⭐⭐⭐ the ray's aim — the SET of channels, never their magnitudes", () => {
+  // > *"the gizmo repositioning should match the input, not the travel and its lag"*
+  //
+  // > *"when I translate any object with a combination of dx on first touch and dy on second
+  // > touch (both not zero), the gizmo jitters position between faces."*
+  //
+  // ⛔⛔ Two earlier rules aimed the ray with per-frame MAGNITUDES — the vector sum, then the
+  // dominant channel — and both jitter, because `A11`'s deadband emits an axis's travel in BURSTS
+  // and so which one is larger changes frame to frame under a steady hand.
+  const c = camera(35, 30);
+  const axes = axesFromFrame(camera(0, 30).gravity);
+
+  it("⭐⭐⭐ THE JITTER, AS ARITHMETIC: bursty magnitudes cannot move the ray", () => {
+    // ⛔ Four frames of a steady two-finger push, as `A11` actually emits them: each channel goes
+    // quiet on some frames while the other carries. ⚠ The SHOWN set is what `displayedAxes` keeps,
+    // and the senses are remembered — so the aim is the SAME direction on all four.
+    const frames = [
+      { holderDxPx: 30, secondDyPx: 2 },
+      { holderDxPx: 1, secondDyPx: 25 },
+      { holderDxPx: 28, secondDyPx: 3 },
+      { holderDxPx: 2, secondDyPx: 26 },
+    ];
+    let shown: readonly [boolean, boolean, boolean] | null = null;
+    let signs: [number, number, number] = [0, 0, 0];
+    const aims = frames.map((f) => {
+      const t = run(f, c, axes);
+      shown = displayedAxes(shown, t.driven);
+      signs = [t.signs[0] || signs[0], t.signs[1] || signs[1], t.signs[2] || signs[2]];
+      return aimDirection(shown!, signs, axes)!;
+    });
+    for (const a of aims) {
+      for (let i = 0; i < 3; i++) expect(a[i]).toBeCloseTo(aims[0]![i]!, 12);
+    }
+    // ⚠ And the premise: the per-frame magnitudes really do swap which channel is larger, so a
+    // rule reading them would have moved the ray on every frame.
+    const mags = frames.map((f) => {
+      const t = run(f, c, axes);
+      return Math.abs(t.xM) > Math.abs(t.gravityM) ? "x" : "gravity";
+    });
+    expect(new Set(mags).size).toBe(2);
+  });
+
+  it("⭐⭐ one channel aims at its own axis — no lag, and no mixing", () => {
+    const only = (input: Partial<AxisInputsPx>) => {
+      const t = run(input, c, axes);
+      return aimDirection(displayedAxes(null, t.driven)!, t.signs, axes)!;
+    };
+    // ⛔ A pure `dx` points along ±x, whatever the solve spent on depth to keep the finger.
+    expect(Math.abs(dot(only({ holderDxPx: 50 }), axes.x))).toBeCloseTo(1, 12);
+    expect(Math.abs(dot(only({ secondDyPx: 50 }), axes.gravity))).toBeCloseTo(1, 12);
+    expect(Math.abs(dot(only({ holderDyPx: 50 }), axes.depth))).toBeCloseTo(1, 12);
+  });
+
+  it("⛔ the SENSE is the travel's, so the ray points where the body actually goes", () => {
+    const up = run({ secondDyPx: -40 }, c, axes);
+    const down = run({ secondDyPx: 40 }, c, axes);
+    expect(Math.sign(up.signs[1]!)).toBe(Math.sign(up.gravityM));
+    expect(Math.sign(down.signs[1]!)).not.toBe(Math.sign(up.signs[1]!));
+    const aUp = aimDirection([false, true, false], up.signs, axes)!;
+    expect(dot(aUp, axes.gravity)).toBeCloseTo(Math.sign(up.gravityM), 12);
+  });
+
+  it("⭐ two channels give the diagonal between them, equally weighted", () => {
+    const t = run({ holderDxPx: 50, secondDyPx: 5 }, c, axes);
+    const aim = aimDirection([true, true, false], t.signs, axes)!;
+    // ⚠ Equal weight on purpose: a 50:5 push and a 5:50 push aim the SAME way, which is what
+    // makes the ray immune to the burstiness.
+    const t2 = run({ holderDxPx: 5, secondDyPx: 50 }, c, axes);
+    const aim2 = aimDirection([true, true, false], t2.signs, axes)!;
+    for (let i = 0; i < 3; i++) expect(aim[i]).toBeCloseTo(aim2[i]!, 12);
+    // ⛔⛔ **AND MAGNITUDES ARE IGNORED EVEN IF ONE REACHES THIS RULE.** Handed raw travels rather
+    // than senses, it must still answer the diagonal — otherwise the burstiness reaches the ray
+    // through the back door, which is the jitter the owner reported.
+    const lopsided = aimDirection([true, true, false], [10, 1, 0], axes)!;
+    const other = aimDirection([true, true, false], [1, 10, 0], axes)!;
+    for (let i = 0; i < 3; i++) expect(lopsided[i]).toBeCloseTo(other[i]!, 12);
+    expect(Math.abs(dot(lopsided, axes.x))).toBeCloseTo(Math.SQRT1_2, 12);
+    expect(Math.abs(dot(aim, axes.x))).toBeCloseTo(Math.SQRT1_2, 12);
+    expect(Math.abs(dot(aim, axes.gravity))).toBeCloseTo(Math.SQRT1_2, 12);
+  });
+
+  it("⛔ nothing shown, or senses that cancel, aims nothing", () => {
+    expect(aimDirection([false, false, false], [1, 1, 1], axes)).toBeNull();
+    expect(aimDirection([true, false, false], [0, 0, 0], axes)).toBeNull();
   });
 });

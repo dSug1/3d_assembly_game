@@ -143,7 +143,7 @@ import {
   faceWorld,
   pushObjectConstraint,
 } from "../core/object_model";
-import { IDENTITY, dot, normalize, qmul } from "../core/vec";
+import { IDENTITY, dot, qmul } from "../core/vec";
 import { seededRotations } from "../core/random_pose";
 import { AlignmentLinks } from "../core/alignment_links";
 import { AlignSnaps } from "../input/align_snap";
@@ -183,9 +183,9 @@ import {
   axisDisplacement,
   axisTravel,
   clampDepthRange,
+  aimDirection,
   displayedAxes,
   type AxisTravel,
-  type AxisTravelM,
 } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
 import { leadingFace, type LeadingFace } from "../core/leading_face";
@@ -1631,10 +1631,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⭐⭐⭐ **WHAT THE CHANNELS ASKED FOR THIS FRAME**, per body — the direction the LeadingFace ray
    * is fired along. ⛔ The owner, 2026-09-23: *"You can lag the travel, but the input itself has
    * no lag. The gizmo repositioning should match the input, not the travel and its lag."*
-   * ⚠ So it is the mapped INPUT, summed over both fingers' channels and consumed every frame —
-   * never a memory of where the body has been.
+   * ⚠ So it is the axis of the channel pushed HARDEST this frame — not a sum, which only reaches
+   * the top face inside 29.4° of vertical on `objectB`, and not a memory of where the body has
+   * been. ⛔ Consumed every frame.
    */
-  const frameAskedM = new Map<ObjectId, AxisTravelM>();
+  const frameSigns = new Map<ObjectId, [number, number, number]>();
+  /** ⭐ The last known sense of each axis, per body — so a pause does not unaim the ray. */
+  const gizmoSigns = new Map<ObjectId, [number, number, number]>();
   /**
    * ⭐⭐ **WHICH AXES THE GIZMO IS SHOWING** — the owner, 2026-09-23: *"the direction is shown only
    * if the delta position triggers a translation in this direction."* ⛔ The decision is
@@ -1652,14 +1655,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     if (id === undefined) return;
     const p = frameAxisDriven.get(id) ?? [false, false, false];
     frameAxisDriven.set(id, [p[0] || t.driven[0], p[1] || t.driven[1], p[2] || t.driven[2]]);
-    // ⭐⭐ AND WHAT IT ASKED FOR, which is what aims the LeadingFace ray. ⛔ Summed over both
-    // fingers because they translate the same body, and consumed at the end of the frame.
-    const a = frameAskedM.get(id) ?? { xM: 0, gravityM: 0, depthM: 0 };
-    frameAskedM.set(id, {
-      xM: a.xM + t.xM,
-      gravityM: a.gravityM + t.gravityM,
-      depthM: a.depthM + t.depthM,
-    });
+    // ⭐⭐ AND THE SENSE EACH AXIS IS BEING PUSHED IN, which is what aims the LeadingFace ray.
+    // ⛔ Senses, never magnitudes: two events reach one body in a frame and the deadband emits in
+    // bursts, so a comparison of magnitudes is what made the gizmo jitter between faces.
+    const sg = frameSigns.get(id) ?? [0, 0, 0];
+    frameSigns.set(id, [
+      t.signs[0] || sg[0],
+      t.signs[1] || sg[1],
+      t.signs[2] || sg[2],
+    ]);
   };
   /**
    * ⭐⭐ WHAT THE LAST TRANSLATION ACTUALLY BOUGHT — reported by the rule, never recomputed
@@ -1815,15 +1819,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (!isTranslatingMode(grip.mode)) continue;
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
-      // ⭐⭐⭐ **AIMED BY THE INPUT, NOT BY THE BODY'S HISTORY.** The asked-for travel of THIS frame,
-      // mapped onto the body's axes — no memory, so a change of direction moves the face on the
-      // very frame the hand changes it. ⚠ `lastTravelDir` keeps the last non-zero answer, so a
-      // pause does not erase the gizmo; it is never older than the last thing the hand asked for.
-      const asked = frameAskedM.get(id);
-      if (asked) {
-        const aim = normalize(axisDisplacement(asked, axesOf()));
-        if (aim) lastTravelDir.set(id, aim);
-      }
+      // ⭐⭐⭐ **AIMED BY THE AXES BEING SHOWN, EACH IN ITS OWN SENSE** — the same set that decides
+      // the lines, so the face and the lines are one fact. ⛔ No magnitudes: the deadband emits
+      // them in bursts, and both rules that used them (the vector sum, then the dominant channel)
+      // made the gizmo jitter between faces.
+      // ⚠ `lastTravelDir` keeps the last non-zero answer, so a pause does not erase the gizmo.
       const dir = lastTravelDir.get(id);
       if (!dir) continue;
       // ⭐ THE CURRENT FACE IS HANDED BACK, which is what makes the choice sticky: a face the
@@ -1846,6 +1846,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       );
       if (shown === null) continue;
       gizmoAxes.set(id, shown);
+      const senses = frameSigns.get(id);
+      if (senses) {
+        const kept = gizmoSigns.get(id) ?? [0, 0, 0];
+        gizmoSigns.set(id, [senses[0] || kept[0], senses[1] || kept[1], senses[2] || kept[2]]);
+      }
+      const aimed = aimDirection(shown, gizmoSigns.get(id) ?? [0, 0, 0], axesOf());
+      if (aimed) lastTravelDir.set(id, aimed);
       // ⭐⭐⭐ **FULL-SCREEN LINES** — the owner: *"the blue, green and red lines shall extend the
       // full screen when they are shown."* ⛔ Drawn BOTH ways from the face centre, so each axis
       // is a line across the glass rather than a ray out of the body.
@@ -1911,7 +1918,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⛔ CONSUMED HERE, every frame, exactly as the swing's travel accumulators are: the gizmo
     // must read the travel of THIS frame and never a stale one.
     frameAxisDriven.clear();
-    frameAskedM.clear();
+    frameSigns.clear();
   };
 
   const refreshHighlight = (): void => {
