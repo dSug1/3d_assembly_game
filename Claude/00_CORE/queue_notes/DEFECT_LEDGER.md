@@ -669,3 +669,57 @@ filled disc from every angle. ⭐ It is now a 48-segment OUTLINE, **billboarded*
 circle rather than foreshortening to a line edge-on — which is exactly the pose a hand judges an
 approach from — sized in pixels through rule 6's tracking factor, and in the gizmo's own rendering
 group so the body cannot occlude it.
+
+
+
+---
+
+## ⭐⭐⭐ **THE GIZMO'S RAY: THREE RULES, TWO REJECTED BY A HAND, AND ONE QUANTITY TO BLAME**
+
+**2026-09-23, three device reports in a row**, each rejecting the rule that answered the one before:
+
+1. *"there is a slight moment when the green line passes through the left face and then relocate
+   to the blue face"* — against a direction with **120 ms of memory**;
+2. *"still, there is a slight lag for the repositioning of the green line to the leadingface"* —
+   against the memory-free **vector SUM** of the channels;
+3. *"when I translate any object with a combination of dx on first touch and dy on second touch
+   (both not zero), the gizmo jitters position between faces. This occurs for rectangle as well as
+   for pyramid."* — against the **dominant channel**.
+
+⛔⛔⛔ **ALL THREE FAILURES ARE ONE QUANTITY: A PER-FRAME MAGNITUDE.** `A11`'s deadband emits an
+axis's travel in **bursts** — the excess over a dead radius, on whichever axis has crossed it — so
+under a perfectly steady two-finger push the channels take turns being the larger. ⭐ A sum built
+from those magnitudes wobbles; a winner chosen from them alternates; a memory that smooths them
+lags. ⚠ Each rule failed differently and none of them was about geometry.
+
+⭐⭐ **AND THE GEOMETRY MATTERED ONCE, WHICH IS WHY REPORT 2 WAS NOT TIMING.** Measured for
+`objectB` (half-extents `0.75 × 1.0 × 1.5 L`, sides leaning in by `0.1875`), the TOP face is the
+nearest exit only within **29.4°** of vertical:
+
+```
+ 0deg off vertical -> top 1.00L  side 4.00L  => TOP
+20deg               -> top 1.06L  side 1.45L  => TOP
+29deg               -> top 1.14L  side 1.16L  => TOP
+30deg               -> top 1.15L  side 1.13L  => SIDE
+45deg               -> top 1.41L  side 0.89L  => SIDE
+```
+
+⚠ So any residual horizontal travel above ~56% of the vertical kept the summed ray on the side,
+where the side genuinely IS the nearer exit. The gizmo was right and looked wrong.
+
+✅ **THE RULE THAT STANDS: the ray is the sum of the axes BEING SHOWN, each with its own sense and
+EQUAL weight.** ⛔ The SET is stable — it is the same `displayedAxes` answer that decides which
+lines are drawn, so the face and the lines are one fact — and nothing in the ray depends on how
+much either channel emitted this frame. ⭐ One channel aims along its own axis with no lag; two aim
+at the diagonal between them and stay there.
+
+⭐⭐⭐ `METHOD`: **when three different rules over one quantity all fail differently, the quantity
+is the defect.** ⚠ I answered each report by changing the rule — memory, then sum, then dominance
+— and the owner had to report three times before I stopped and asked what they had in common.
+⛔ They read a magnitude that `A11` was never going to deliver smoothly.
+
+⚠⚠ **AND TWO OF MY VECTORS COULD NOT FAIL**, caught by running mutants rather than by reading:
+one compared channels at a camera where the two candidate rules happen to agree, and one applied
+`Math.sign` on both sides of the boundary it was testing, so each half covered for the other.
+⭐ The first was fixed by SWEEPING for a camera where the rules disagree; the second by handing
+the rule raw magnitudes and demanding the same answer.

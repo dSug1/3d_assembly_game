@@ -136,6 +136,21 @@ export interface AxisTravel extends AxisTravelM {
    * second implementation*, and the channel map has one home — the line that fills this.
    */
   readonly driven: readonly [boolean, boolean, boolean];
+  /**
+   * ⭐⭐⭐ **WHICH WAY EACH AXIS IS BEING PUSHED, as `[x, gravity, depth]`** — `+1`, `-1`, or `0`
+   * for a channel that moved nothing this frame.
+   *
+   * ⛔⛔ It is the SENSE only, and that is the point. The leading-face ray is aimed by the SET of
+   * channels being pushed and their senses — never by their magnitudes, because a magnitude is a
+   * per-frame quantity and `A11`'s deadband emits it in bursts:
+   *
+   * > *"when I translate any object with a combination of dx on first touch and dy on second
+   * > touch (both not zero), the gizmo jitters position between faces."* — the owner, 2026-09-23
+   *
+   * ⭐ Two rules had already been tried on the magnitudes and both jittered for that reason — the
+   * vector SUM of the channels, and the single DOMINANT channel. The set does not.
+   */
+  readonly signs: readonly [number, number, number];
 }
 
 /**
@@ -194,7 +209,15 @@ export function axisTravel(
   // ⛔ A camera with no basis moves nothing, rather than moving by NaN. One NaN written into a
   // placement is permanent — it never washes out of a position.
   if (!sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
-    return { xM: 0, gravityM: 0, depthM: 0, edgeOn: false, trackGain: 0, driven: [false, false, false] };
+    return {
+      xM: 0,
+      gravityM: 0,
+      depthM: 0,
+      edgeOn: false,
+      trackGain: 0,
+      driven: [false, false, false],
+      signs: [0, 0, 0],
+    };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
   const dy = finite(input.holderDyPx) * metresPerPx;
@@ -268,9 +291,19 @@ export function axisTravel(
   const g = along(sg, 0, dy2);
   const gravityM = g === null ? -dy2 * secondGain : g * secondGain;
 
+  // ⭐⭐ **THE SENSE EACH AXIS IS BEING PUSHED IN** — the ray is aimed from these and from
+  // `driven`, never from the magnitudes. ⛔ The sign comes from the TRAVEL, which is where the
+  // camera's geometry has already been resolved; the magnitude is discarded on purpose.
+  const signs: readonly [number, number, number] = [
+    Math.sign(xM) || 0,
+    Math.sign(gravityM) || 0,
+    Math.sign(depthM) || 0,
+  ];
+
   const asked = Math.hypot(dx, dy);
   return {
     driven,
+    signs,
     xM,
     depthM,
     gravityM,
@@ -335,6 +368,54 @@ export function displayedAxes(
   driven: readonly [boolean, boolean, boolean],
 ): readonly [boolean, boolean, boolean] | null {
   return driven[0] || driven[1] || driven[2] ? driven : previous;
+}
+
+/**
+ * ⭐⭐⭐ **WHERE THE LEADING-FACE RAY POINTS — the axes being shown, each in its own sense.**
+ *
+ * > *"the gizmo repositioning should match the input, not the travel and its lag"* — the owner
+ *
+ * > *"when I translate any object with a combination of dx on first touch and dy on second touch
+ * > (both not zero), the gizmo jitters position between faces."* — the owner, the same day
+ *
+ * ⛔⛔⛔ **THE SECOND REPORT IS WHAT SETTLES THE FORM OF THIS RULE.** Two earlier versions aimed
+ * the ray with per-frame MAGNITUDES — the vector sum of the channels, then the single dominant
+ * channel — and both jitter for the same reason: `A11`'s deadband emits an axis's travel in
+ * BURSTS, so which channel is larger changes frame to frame even while a hand pushes both
+ * steadily. ⭐ Crossing a face boundary then flips the gizmo back and forth.
+ *
+ * ⭐⭐ **THE SET IS STABLE; THE MAGNITUDES ARE NOT.** So the ray is the sum of the SHOWN axes,
+ * each contributing its own sense and **equal weight**. Push `dx` alone and it points along x;
+ * push the second finger alone and it points along gravity; push both and it points at the
+ * diagonal between them — and it stays there, because nothing in it depends on how much either
+ * channel emitted this frame.
+ *
+ * ⛔ It is the SAME set that decides which lines are drawn (`displayedAxes`), so the face the
+ * gizmo sits on and the lines it draws are one fact rather than two.
+ *
+ * @param shown which axes are being displayed — `displayedAxes`'s answer.
+ * @param signs the sense each axis is being pushed in — `AxisTravel.signs`, remembered per body.
+ * @returns the ray, in the body's own axes, or `null` when nothing is shown or the senses cancel.
+ */
+export function aimDirection(
+  shown: readonly [boolean, boolean, boolean],
+  signs: readonly [number, number, number],
+  axes: ObjectAxes,
+): Vec3 | null {
+  const basis: readonly Vec3[] = [axes.x, axes.gravity, axes.depth];
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  for (let i = 0; i < 3; i++) {
+    if (!shown[i]) continue;
+    const s = Math.sign(signs[i] ?? 0);
+    if (s === 0) continue;
+    const a = basis[i]!;
+    x += a[0] * s;
+    y += a[1] * s;
+    z += a[2] * s;
+  }
+  return normalize([x, y, z]);
 }
 
 /**
