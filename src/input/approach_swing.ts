@@ -528,23 +528,43 @@ export function rebaseTriggerGap(currentGapM: number, heldProgress: number): num
 
 /**
  * ⭐⭐⭐ **WHICH HELD BODY, IF ANY, DRIVES THE SWING?** — the index of the first grip that is
- * TRANSLATING, or `-1`.
+ * TRANSLATING it, by **either channel**, or `-1`.
  *
  * ⛔⛔ **ONLY A TRANSLATION DRIVES IT.** The owner's spec has the swing accompanying *"the
  * translation of the Follower"*, and the device report is what a rotation costs when it is
  * allowed to: turning two bodies moves their closest points, so the surface gap changes and the
  * swing advances although nothing approached.
  *
+ * ⛔⛔⛔ **AND `"DEPTH"` IS A TRANSLATION — DEVICE-REPORTED THREE TIMES, 2026-09-23.** *"Still no
+ * swing of camera when follower enters offset radius zone from translation along gravity axis
+ * towards bottom."* ⚠ This test named the **mode** rather than the **kind of motion**, and
+ * `scene.ts` sets a holder's mode to `"DEPTH"` the moment the SECOND touchpoint drives its axis
+ * — which is exactly the gesture the report describes. ⭐ So pushing a body along gravity
+ * renamed the very grip the swing was looking for, the driver came back `-1`, and the swing
+ * froze: `p` stuck at `0.00`, `yaw` at `0.0°`, and `gapAtTriggerM` **rebased to the live gap
+ * every frame**, which is why the HUD showed `g0` tracking the approach down.
+ *
+ * ⭐⭐ **THE THREE HUD LINES THE OWNER SENT ARE THE WHOLE PROOF**, and they arrived in the right
+ * order: `arm=(0.0,0.0)` said the travel was never fed (defect 53); `arm=(0.0,-11.6)` with
+ * `p=0.00` said the travel was fed and the progress was frozen — one report, two different
+ * causes, told apart by one number.
+ *
+ * ⚠ `METHOD`: *a rule keyed on a NAME inherits every later meaning of that name.* `"DEPTH"` did
+ * not exist as a mode when this test was written; it arrived with `A10` and quietly took a
+ * translation out of the set.
+ *
  * ⚠⚠ **IT IS HERE AND NOT IN `scene.ts` BECAUSE A MUTANT PROVED IT HAD TO BE.** Written as a
- * `.find()` in the render file, deleting the mode test — which reinstates exactly the reported
- * defect — left the whole suite green. ⭐ `pioneer_cascade.ts`'s standing rule: *a RULE in a
- * render file is a rule nothing can interrogate.* That is the fourth time in one day.
+ * `.find()` in the render file, deleting the mode test — which reinstates the rotation defect —
+ * left the whole suite green. ⭐ *A RULE in a render file is a rule nothing can interrogate.*
  *
  * ⚠ Takes MODES rather than grips so it stays engine-free: the caller holds the objects, this
  * holds the decision.
  */
 export function swingDriverIndex(modes: readonly (string | null)[]): number {
-  return modes.findIndex((m) => m === "TRANSLATE");
+  // ⛔ `ROTATE` and `null` are the exclusions, and they are the ones the device report of
+  // 2026-09-19 asked for. ⭐ Written as a SET of the motions that translate, so a channel added
+  // later is a decision here rather than a silent omission.
+  return modes.findIndex((m) => m === "TRANSLATE" || m === "DEPTH");
 }
 
 /**

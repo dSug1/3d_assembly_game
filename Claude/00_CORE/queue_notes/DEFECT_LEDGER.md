@@ -355,3 +355,41 @@ there is no number to guess and no slider to ship.
 longer the NEAREST exit until the body stops advancing on it. ⭐ That is still a face the body is
 genuinely advancing on, which is all the gizmo claims.
 
+
+---
+
+## 55 — ⭐⭐⭐ A RULE KEYED ON A **NAME**: `"DEPTH"` IS A TRANSLATION, AND THE SWING DID NOT KNOW
+
+**2026-09-23, by finger, the third report of one gesture.** *"Still no swing of camera when
+follower enters offset radius zone from translation along gravity axis towards bottom."*
+
+⛔⛔⛔ **ONE REPORT, TWO DIFFERENT CAUSES, TOLD APART BY ONE NUMBER ON THE HUD.** The owner sent
+three screenshots and they arrived in the right order:
+
+* `arm=(0.0,0.0)mm  sign⛔?` — the travel was never fed. That is **defect 53**, and fixing it
+  changed the readout;
+* `arm=(0.0,-11.6)mm  sign+  p=0.00  yaw=0.0°` — the travel **is** fed, a sign **is** derived, and
+  the progress is frozen. ⭐ A different defect wearing the same symptom, and nothing but the
+  instrument could have separated them.
+
+⛔⛔ **THE CAUSE**: `swingDriverIndex` asked *is any grip's mode `"TRANSLATE"`*, and `scene.ts`
+sets a holder's mode to **`"DEPTH"`** the instant the SECOND touchpoint drives its axis — which is
+exactly the gesture reported. ⚠ So pushing a body along gravity **renamed the grip the swing was
+looking for**: the driver came back `-1`, the swing took its *not driven* branch, froze the
+progress, and **rebased `gapAtTriggerM` to the live gap every frame** — which is why `g0` on the
+HUD tracked the approach down (64 mm, 102 mm, 148 mm) while `p` never left `0.00`.
+
+⭐⭐⭐ **THE TRANSFERABLE SHAPE: *a rule keyed on a NAME inherits every later meaning of that
+name.*** `"DEPTH"` did not exist as a mode when that test was written — `A10` added it — and it
+quietly took a translation out of the set the swing accepts. ⚠ The rule was never edited and never
+wrong on the day it was written, which is what makes this class invisible to review.
+
+✅ **FIXED**: the driver is *a grip translating by **either** channel* — `"TRANSLATE"` or
+`"DEPTH"` — with `"ROTATE"` and `null` still excluded, which is what keeps the 2026-09-19 report
+(*a turn of the Pioneer orbited the camera*) fixed. ⛔ Written as a SET of the motions that
+translate, so a channel added later is a decision rather than a silent omission.
+
+⚠⚠ **AND A VECTOR ASSERTED THE DEFECT.** `swingDriverIndex(["DEPTH", null, "TRANSLATE"])` was
+pinned to `2` — the `DEPTH` grip in slot 0 deliberately skipped. ⭐ It is inverted now and carries
+its own retraction: *a green suite defended this for four days.*
+
