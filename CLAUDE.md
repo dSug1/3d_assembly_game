@@ -121,8 +121,8 @@ gizmo. ⛔ `cameraOffsetZoneEnterSetupB` gates a method **the owner has not defi
 ⭐⭐⭐ **THE INPUT MODEL IS THE OWNER'S TAP-TO-ALIGN SET** (`D37`–`D40`) — and since
 2026-09-17 it is the **only** one: forks A and B are **deleted**, with the flag, the slider
 and 41 vectors. Hold an object, **TAP a face on another**, and the held one makes the minimal
-turn that points its own face **the same way** (parallel — the CAD *align* sense, chosen over
-a mate). One alignment at a time, replaced by the next; the Follower face is **filled** and
+turn that points its own face **AT** the tapped one (**anti-parallel** since `D78`, 2026-09-23 —
+it reverses `D37`'s parallel *align* sense, and both texts stand). One alignment at a time, replaced by the next; the Follower face is **filled** and
 the Pioneer face **outlined** until it breaks; a **shake** or a **second tap on that same
 face** breaks it; a **flick** resets the rotation.
 ⛔⛔ **THE SESSION BOOTS IN `TRANSLATE` — `D71`, 2026-09-22**: *"Set the default to translation
@@ -148,8 +148,8 @@ now unreachable **by construction** rather than by a guard.
 ✅✅ **CLOSED BY A DEVICE LOOK, 2026-09-17** — *"device pass ok, except these modifications"*,
 and all five are built (`D43`–`D45`, defects 47–48). ⚠ The corrections themselves have not
 been re-judged, except the slerp's speed. ⛔ **NOW ON `1.0.22-`**, and the game still
-cannot assemble anything: the alignment is PARALLEL, an orienting rule, and nothing pushes a
-`MATE`. ✅ **BUILT SO FAR — the HIGHLIGHTS ONLY** (`A16`/`A17`,
+cannot assemble anything: the alignment now has a **mate's ORIENTATION** (`D78`) but nothing is
+seated and nothing pushes a `MATE`. ✅ **BUILT SO FAR — the HIGHLIGHTS ONLY** (`A16`/`A17`,
 [`Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)
 §12–§17): white contours on a near pair while it is being TRANSLATED, every aligned body keeping
 its FollowerFace and a coloured body outline, a shake on a Pioneer releasing ALL its followers

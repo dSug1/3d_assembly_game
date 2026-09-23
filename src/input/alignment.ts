@@ -29,14 +29,35 @@ import type { Constraint } from "../core/constraint_stack";
 import { qconj, qmul, type Quat, type Vec3 } from "../core/vec";
 
 /**
- * ⭐⭐ The alignment a tap pushes — *"FollowerFace normal aligns with PioneerFace normal"*.
+ * ⭐⭐⭐ **THE DIRECTION AN ALIGNED FOLLOWER FACE MUST END UP POINTING** — and the ONE place
+ * that knows the sign.
  *
- * ⛔⛔ **PARALLEL, NOT ANTI-PARALLEL, AND THE OWNER CHOSE THAT KNOWING THE CONSEQUENCE.** A
- * mate is anti-parallel (`CLAUDE.md` rule 4, §4's `6quater`): two faces that meet flush point
- * *at* each other. Parallel is the CAD **align** operation — same facing, as in levelling two
- * top faces — so after this rule the held object presents its *opposite* side toward the
- * face that was tapped. ⚠ It is therefore an ORIENTING rule, not a joining one; how a mate is
- * ever asserted at all is open (`ALIGNMENT_RULES.md` §7.12).
+ * > *"when the user aligns a follower object, the direction of the FollowerFace shall be
+ * > anti-normal to the direction of the PioneerFace"* — the owner, 2026-09-23
+ *
+ * ⛔⛔⛔ **THIS REVERSES `D37`, AND THE REVERSED TEXT IS KEPT BECAUSE IT IS THE MORE USEFUL
+ * ENTRY.** The rule was **PARALLEL** — the CAD *align* sense, *"chosen over a mate"* — and its
+ * consequence was written down here for a week: *the held object presents its opposite side
+ * toward the face that was tapped*, which makes it an ORIENTING rule that can never join
+ * anything. ⭐ Anti-parallel is the MATE sense: two faces that meet flush point **at** each
+ * other, which is `CONSTRAINTS` §7 and the geometry `mate_connector.ts` has held since day one.
+ *
+ * ⭐⭐ **SO THE SIGN LIVES HERE AND NOWHERE ELSE**, which is §7's own instruction — *a
+ * connector stores the TRUE OUTWARD NORMAL, and one place knows that sign*. ⛔ Both entry
+ * points below take **the Pioneer's normal** and negate it themselves; neither can be handed a
+ * ready-made target. ⚠ That is deliberate: a caller that could pass a direction could pass the
+ * un-negated one, and a mate's sign error *"cost a live session in the predecessor"*.
+ *
+ * ⚠ **What it does NOT do**: it does not make a mate. Nothing is seated, no position is held,
+ * and `3D2`'s seat is still what a joint needs — this only changes which way the body faces.
+ */
+export function alignTargetFor(pioneerWorldNormal: Vec3): Vec3 {
+  return [-pioneerWorldNormal[0], -pioneerWorldNormal[1], -pioneerWorldNormal[2]];
+}
+
+/**
+ * ⭐⭐ The alignment a tap pushes — the Follower's face turned **anti-normal** to the tapped
+ * one (the owner, 2026-09-23; it was parallel until then — see `alignTargetFor`).
  *
  * ⛔ The target is the Pioneer normal **in world, frozen at the tap** — §1.4's doctrine, and
  * the owner's own *"then the PioneerFace resets as null"* says the same thing: there is no
@@ -46,6 +67,7 @@ import { qconj, qmul, type Quat, type Vec3 } from "../core/vec";
  * @param followerLocalNormal the held object's tapped-face normal, in its LOCAL frame — the
  *   quantity `core/face_pick.ts` returns, never a world normal.
  * @param pioneerWorldNormal the other object's face normal, in WORLD, at the moment of the tap.
+ *   ⛔ **THE FACE'S OWN NORMAL, NOT A TARGET** — the negation is this module's, once.
  */
 export function faceAlignConstraint(
   followerLocalNormal: Vec3,
@@ -54,7 +76,7 @@ export function faceAlignConstraint(
   return {
     kind: "FACE_ALIGN",
     localNormal: followerLocalNormal,
-    targetWorld: pioneerWorldNormal,
+    targetWorld: alignTargetFor(pioneerWorldNormal),
   };
 }
 
@@ -337,8 +359,8 @@ export const PIONEER_TURN_EPSILON_RAD = 1e-4;
  *
  * ⭐⭐ THE DELTA IS A **WORLD** ROTATION — `now ∘ before⁻¹` — which is what makes `FOLLOW`
  * exact rather than approximate: applying the same world rotation to both objects preserves
- * the angle between any two of their directions, so the Follower's aligned normal stays
- * parallel to the Pioneer's face normal without solving anything.
+ * the angle between any two of their directions, so the Follower's aligned normal keeps its
+ * **anti-parallel** relation to the Pioneer's face normal without solving anything.
  * ⛔ The opposite composition (`before⁻¹ ∘ now`) is the rotation expressed in the OBJECT's
  * own frame, and using it here would turn the Follower about the Pioneer's axes — a sign
  * error with no symptom at the identity, which is `METHOD`'s favourite shape.
@@ -413,7 +435,13 @@ export function pioneerMoved(before: Vec3, now: Vec3, mode: AlignMode): PioneerM
  * direction, and a camera orbit still cannot redefine it. What changes is that the direction
  * is refreshed from the face it was taken from — which is the whole difference between the
  * owner's two readings, expressed as one field.
+ *
+ * @param pioneerWorldNormal ⛔⛔ **THE PIONEER'S FACE NORMAL, NOT A TARGET.** It goes through
+ *   `alignTargetFor` exactly as the tap does, so the anti-parallel sign is applied in ONE place
+ *   for both paths. ⚠ It took a `targetWorld` until 2026-09-23, and leaving it that way would
+ *   have meant a `FOLLOW` cascade quietly re-aligning its followers PARALLEL one frame after a
+ *   tap aligned them anti-parallel — a sign error with no symptom until the Pioneer moves.
  */
-export function retargetAlignment(c: Constraint, targetWorld: Vec3): Constraint {
-  return { ...c, targetWorld };
+export function retargetAlignment(c: Constraint, pioneerWorldNormal: Vec3): Constraint {
+  return { ...c, targetWorld: alignTargetFor(pioneerWorldNormal) };
 }

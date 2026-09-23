@@ -1096,3 +1096,41 @@ were never reported on individually. Here the feature under trial is named in th
 * **which increment should be the DEFAULT.** `rotationIncrementDeg` still ships at **0**, so the
   detents are reachable only from the slider or the URL. ⭐ A judged-good feature that is off by
   default is a decision nobody has made yet, not a closed one — it is the owner's.
+
+
+---
+
+## 2026-09-23 — ⭐⭐⭐ THE ALIGNMENT IS ANTI-PARALLEL (`D78`)
+
+> *"Modify the rule: when the user aligns a follower object, the direction of the FollowerFace shall
+> be anti-normal to the direction of the PioneerFace"*
+
+⛔⛔ **IT REVERSES `D37`, WHICH CHOSE PARALLEL AND ARGUED FOR IT.** *"The CAD *align* sense, chosen
+over a mate"* — and the consequence was written down and carried for a week: the held body presented
+its **opposite** side toward the tapped face, which made the rule an orienting one that could never
+join anything. ⭐ Both texts stand; the old one explains why the code had the sign it had.
+
+⭐⭐ **THE WHOLE CHANGE IS ONE FUNCTION, AND THAT IS THE POINT.** `alignTargetFor` negates, and the
+two entry points — `faceAlignConstraint` at the tap, `retargetAlignment` in the `FOLLOW` cascade —
+both take **the Pioneer's own normal** and call it. ⛔ Neither can be handed a ready-made target any
+more, which is `CONSTRAINTS` §7 (*one place knows that sign*) applied to a second sign.
+⚠⚠ **The hazard was real before the change**: `retargetAlignment` took a `targetWorld`, so a
+`FOLLOW` cascade would have re-aligned its followers **parallel** one frame after a tap aligned them
+anti-parallel — a sign error with no symptom until the Pioneer moved, which is `METHOD`'s favourite
+shape.
+
+⭐ **Nine vectors moved with the rule, and they are the evidence it is real.** They asserted the
+parallel sense, including one whose title was *"PARALLEL, NOT ANTI-PARALLEL — the owner's choice,
+pinned as a SIGN"* and whose comment said it existed to fail *"if anyone corrects fork C into a
+mate"*. ⚠ That is exactly what was asked for, and the vector now points the other way with its own
+retraction in place. ⛔ A mutant that drops the negation turns all nine red.
+
+⚠ **One fixture followed the product**: the approach-swing trial's boot scene aligned bottom face to
+bottom face, which under the new sense would stand the second part on its head. It uses the
+follower's **top** face now — `anti(−y)` is `+y`, the same physical scene the trial has always had.
+
+⛔ **What it does NOT do**: it does not make a mate. Nothing is seated, a body can still be dragged
+through its partner, and §4's `6quater` is still the only rule that would push a `MATE`. ⭐ What it
+buys is that the ORIENTATION a mate needs is now the one the alignment produces, so the gap to `3D2`
+is a **position and a gesture** rather than geometry → `ALIGNMENT_RULES.md` §5.18.
+

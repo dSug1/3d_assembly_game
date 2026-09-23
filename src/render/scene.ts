@@ -1279,7 +1279,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const bottomFace = (id: ObjectId) =>
       world.objects.get(id)?.faces.find((f) => f.normal[1] < -0.99) ?? null;
     const pf = bottomFace(pioneerId);
-    const ff = bottomFace(followerId);
+    // ⛔⛔ **THE FOLLOWER'S *TOP* FACE SINCE 2026-09-23, AND ONLY TO KEEP THIS SCENE UNCHANGED.**
+    // The alignment is **anti-parallel** now, so a bottom-to-bottom pair would stand the trial's
+    // second part on its head at boot. ⭐ Top-to-bottom is the same physical result the trial has
+    // always had — two upright parts — expressed in the new sense: anti(−y) is +y.
+    // ⚠ It is a FIXTURE following the product, not a rule: the trial's boot scene is a jig, and a
+    // jig that silently changed shape would make the swing's device verdicts incomparable.
+    const ff =
+      world.objects.get(followerId)?.faces.find((f) => f.normal[1] > 0.99) ?? null;
     if (!pf || !ff) {
       // ⚠ Named on the readout rather than thrown: a boot that half-succeeds is worse than one
       // that says what it could not do, and this whole file is a trial.

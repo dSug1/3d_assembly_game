@@ -83,7 +83,7 @@ hold POSITION, or breaking is just moving.
 all now in `METHOD`; the accounts, unrewritten, are §14 of that spec.
 
 ⭐⭐⭐ **ONE INPUT MODEL SINCE `D40` (2026-09-17)**: tap a face on another object to align the
-held one, parallel, one alignment at a time, undone by a shake **or** a re-tap. ⛔ Forks A and
+held one **anti-parallel** (`D78`, reversing `D37`), one at a time, undone by a shake **or** a re-tap. ⛔ Forks A and
 B are **deleted** — with `anchor_fork.ts`, `align_flick.ts`, `drag_rule.ts`, the flag, the
 slider and 41 vectors. ⚠ Everything closed by a hand below was closed under fork A's rules,
 which this model inherits everywhere it does not override them. ⛔ **No device look on the
@@ -293,7 +293,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⭐ **No exceptions** since `D54` deleted `A15`'s orphan unselect |
 | `frozen_pick.ts` | ⭐⭐ `D77` — **a second touch on a FROZEN body is handed to the router as a MISS**, so the finger becomes a working `OUTSIDE` touchpoint and can drive another body. ⛔ Filtered BEFORE the latch, so the router still knows nothing about the model; the FIRST touch is untouched, because a plate must still be holdable as a Pioneer |
 | ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ The superseded text, kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
-| `alignment.ts` · ⚠ `core/face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`, and it was `fork_c.ts` until the forks were deleted): the **parallel** face align frozen to a world direction, the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⭐ Keeping the set in one file is what made deleting the other two forks a `rm` plus a barrel line |
+| `alignment.ts` · ⚠ `core/face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`, and it was `fork_c.ts` until the forks were deleted): the **anti-parallel** face align frozen to a world direction (`D78`; the sign lives in `alignTargetFor` alone), the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⭐ Keeping the set in one file is what made deleting the other two forks a `rm` plus a barrel line |
 | ⛔ ~~`holder_binding.ts`~~ | **DELETED 2026-09-18** (`D54`) — `A15`'s *is the object still UNDER the finger?* raycast. ⭐ `IN2`'s latch has no exceptions again |
 | `align_snap.ts` | `D45`'s eased slerp into the aligned pose — ⛔⛔ **one snap PER BODY**, not one slot for the scene: the audit found a second alignment abandoning the first **mid-arc**, still wearing its constraint and its markers |
 | `rotation_increment.ts` | ⭐⭐⭐ `D73` — a held body is **always ON an increment**, jumping several at once so a backlog cannot exist. ⚠ Its step is an **exponential approach**: no clock to restart (defect 50) |

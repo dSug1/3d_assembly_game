@@ -100,7 +100,16 @@ function tapAndAlign(
   };
 }
 
-describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE SAME WAY as the tapped one", () => {
+/**
+ * ⭐⭐⭐ **WHERE AN ALIGNED FACE MUST END UP: the ANTI-NORMAL of the tapped one** (the owner,
+ * 2026-09-23). ⛔ Written out here once, as arithmetic, so that every vector below states the
+ * same claim and a reversal cannot be half-applied across the file.
+ * ⚠ It negates by hand rather than importing `alignTargetFor`: *a vector built from the code it
+ * tests cannot contradict that code*, which the 2026-09-17 audit found ten times over.
+ */
+const anti = (n: readonly number[]): number[] => [-n[0]!, -n[1]!, -n[2]!];
+
+describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE OPPOSITE WAY to the tapped one", () => {
   it("⭐⭐⭐ from two rotated objects — the case a hand actually makes", () => {
     // ⚠ Nobody taps two pristine cubes: the rotate mode exists to turn them first, and an
     // orientation-handling error is invisible at the identity.
@@ -110,7 +119,7 @@ describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE SAME WAY a
       qFromAxisAngle([-0.6, 0.2, 0.7], 2.0),
       "-y",
     );
-    r.followerWorld.forEach((v, i) => expect(v).toBeCloseTo(r.pioneerWorld[i]!, 10));
+    r.followerWorld.forEach((v, i) => expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10));
   });
 
   it("⭐ for EVERY follower face — whichever face is held is the one that turns", () => {
@@ -119,20 +128,21 @@ describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE SAME WAY a
     const pq = qFromAxisAngle([0.5, 0.5, 0.2], 0.8);
     for (const f of BOX("x").faces) {
       const r = tapAndAlign(fq, f.id, pq, "+x");
-      r.followerWorld.forEach((v, i) => expect(v).toBeCloseTo(r.pioneerWorld[i]!, 10));
+      r.followerWorld.forEach((v, i) => expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10));
     }
   });
 
-  it("⛔⛔ PARALLEL, NOT ANTI-PARALLEL — the owner's choice, pinned as a SIGN", () => {
-    // ⚠ The two answers differ by one sign and nothing else, so this is the vector that
-    // fails if anyone "corrects" fork C into a mate. ⭐ A mate is anti-parallel
-    // (`CLAUDE.md` rule 4, §4 6quater) and fork C is deliberately NOT a mate: the owner
-    // chose the CAD *align* sense, with the consequence recorded in the spec (§5.2) — the
-    // held object presents its opposite side toward the tapped face.
+  it("⛔⛔ ANTI-PARALLEL, NOT PARALLEL — the owner's REVERSAL, pinned as a SIGN", () => {
+    // ⛔⛔ **THIS VECTOR ASSERTED THE OPPOSITE UNTIL 2026-09-23**, and the retraction is the
+    // useful part: it read *"PARALLEL, NOT ANTI-PARALLEL — the owner's choice"* and existed to
+    // fail *"if anyone corrects fork C into a mate"*. ⚠ The owner has now asked for exactly
+    // that: *"the direction of the FollowerFace shall be anti-normal to the direction of the
+    // PioneerFace"*. ⭐ A sign is not tested by any amount of testing the magnitude, so the
+    // claim is still a whole vector of its own — pointing the other way.
     const r = tapAndAlign(IDENTITY, "+x", IDENTITY, "-x");
-    // pioneer's −x points along world −x; the follower's +x must too, NOT toward it
+    // the pioneer's −x points along world −x; the follower's +x must now point AT it, i.e. +x
     expect(r.pioneerWorld[0]).toBeCloseTo(-1, 10);
-    expect(r.followerWorld[0]).toBeCloseTo(-1, 10);
+    expect(r.followerWorld[0]).toBeCloseTo(1, 10);
   });
 
   it("⭐⭐ it is the MINIMAL rotation — *'rotation on the minimum number of axis'*", () => {
@@ -148,13 +158,13 @@ describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE SAME WAY a
     // turn LARGER, and nothing else does.
     const q = qFromAxisAngle([0, 1, 0], 0.7);
     const r = tapAndAlign(q, "+z", qFromAxisAngle([0.2, 0.3, 0.9], 1.3), "-x");
+    // ⚠ Against the ANTI-normal since 2026-09-23 — the target the rule actually solves for.
+    const t = anti(r.pioneerWorld);
     const dot = Math.max(
       -1,
       Math.min(
         1,
-        r.beforeWorld[0]! * r.pioneerWorld[0]! +
-          r.beforeWorld[1]! * r.pioneerWorld[1]! +
-          r.beforeWorld[2]! * r.pioneerWorld[2]!,
+        r.beforeWorld[0]! * t[0]! + r.beforeWorld[1]! * t[1]! + r.beforeWorld[2]! * t[2]!,
       ),
     );
     const arc = Math.acos(dot);
@@ -375,7 +385,7 @@ describe("⭐⭐ AND THE FREE SPIN IS DRIVEABLE — 2sexte, on fork C's own alig
       orientation: rotateAboutAxis(q, axis, angle),
     });
     const after = faceWorld(world, "follower", "+x")!.normal;
-    after.forEach((v, i) => expect(v).toBeCloseTo(r.pioneerWorld[i]!, 10));
+    after.forEach((v, i) => expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10));
     // ⛔ and the object really moved: another face went somewhere
     const spun = faceWorld(world, "follower", "+z")!.normal;
     const still = faceWorld(r.world, "follower", "+z")!.normal;
@@ -410,7 +420,7 @@ describe("⭐⭐ THE TWIST, PORTED — it must not drift, and it must refuse whe
     }
     const world = setWorldPlacement(r.world, "follower", { position: [0, 0, 0], orientation: q });
     faceWorld(world, "follower", "+x")!.normal.forEach((v, i) =>
-      expect(v).toBeCloseTo(r.pioneerWorld[i]!, 8),
+      expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 8),
     );
   });
 
@@ -454,7 +464,7 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     expect(t.delta).toBeNull();
   });
 
-  it("⭐⭐⭐ C2's delta keeps the two faces PARALLEL — the composition, not the claim", () => {
+  it("⭐⭐⭐ C2's delta keeps the two faces ANTI-PARALLEL — the composition, not the claim", () => {
     // ⛔⛔ THE VECTOR THIS PAIR EXISTS FOR. `FOLLOW` is only worth having if applying its
     // delta leaves the Follower's aligned face pointing exactly where the Pioneer's face now
     // points. ⭐ Every piece is tested elsewhere; this asserts the chain.
@@ -480,7 +490,7 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
 
     const pioneerNormal = faceWorld(world, "pioneer", "+y")!.normal;
     const followerNormal = faceWorld(world, "follower", "+x")!.normal;
-    followerNormal.forEach((v, i) => expect(v).toBeCloseTo(pioneerNormal[i]!, 10));
+    followerNormal.forEach((v, i) => expect(v).toBeCloseTo(anti(pioneerNormal)[i]!, 10));
   });
 
   it("⛔⛔ AND THE OTHER COMPOSITION ORDER BREAKS IT — both measured, in one vector", () => {
@@ -513,10 +523,11 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
       return fn[0]! * pn[0]! + fn[1]! * pn[1]! + fn[2]! * pn[2]!;
     };
 
-    // ✅ the world delta — what `pioneerTurned` returns — is EXACT
-    expect(after(pioneerTurned(pBefore, pNow, "FOLLOW").delta!)).toBeCloseTo(1, 10);
-    // ⛔ the object-frame delta leaves the faces nearly opposite
-    expect(after(qmul(qconj(pBefore), pNow))).toBeLessThan(0);
+    // ✅ the world delta — what `pioneerTurned` returns — is EXACT. ⚠ `−1` since 2026-09-23:
+    // the faces are held ANTI-parallel, so exactness is a dot of −1 rather than +1.
+    expect(after(pioneerTurned(pBefore, pNow, "FOLLOW").delta!)).toBeCloseTo(-1, 10);
+    // ⛔ the object-frame delta leaves them nowhere near it — measured, not assumed
+    expect(after(qmul(qconj(pBefore), pNow))).toBeGreaterThan(-0.9);
   });
 
   it("⛔⛔ THE MODE COMES FROM THE GESTURE NOW — there is no flag to read", () => {
@@ -532,9 +543,13 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     // ⚠ §1.4's doctrine survives: the constraint still holds a WORLD direction, so a camera
     // orbit still cannot redefine it. ⛔ What C2 changes is only where that direction is
     // re-read from, every frame — the face it was taken from.
+    // ⛔⛔ BOTH take the PIONEER'S NORMAL and negate it themselves (2026-09-23), so the
+    // anti-parallel sign lives in one place and a `FOLLOW` cascade cannot re-align its
+    // followers the other way one frame after a tap.
     const c = faceAlignConstraint([0, 0, 1], [0, 1, 0]);
+    expect(c.targetWorld).toEqual([-0, -1, -0]);
     const r = retargetAlignment(c, [1, 0, 0]);
-    expect(r.targetWorld).toEqual([1, 0, 0]);
+    expect(r.targetWorld).toEqual([-1, -0, -0]);
     expect(r.kind).toBe(c.kind);
     expect(r.localNormal).toEqual(c.localNormal);
   });

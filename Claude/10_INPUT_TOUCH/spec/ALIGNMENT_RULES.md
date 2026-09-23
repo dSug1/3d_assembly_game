@@ -1499,3 +1499,55 @@ worst a float wobble could do was nudge a body. ⚠⚠ Under `D70` it would **re
 nobody touched**, so the guard is `PIONEER_MOVE_EPSILON_M` — one micron at metre-scale
 coordinates, the mirror of `PIONEER_TURN_EPSILON_RAD`, and NOT a tunable: it guards arithmetic,
 not feel. ⭐ Both sides of it are vectored — `1e-7 m` is noise, `1e-4 m` is a hand.
+
+
+---
+
+## §5.18 — ⭐⭐⭐ THE ALIGNMENT IS **ANTI-PARALLEL** (`D78`, 2026-09-23)
+
+> *"Modify the rule: when the user aligns a follower object, the direction of the FollowerFace
+> shall be anti-normal to the direction of the PioneerFace"* — the owner, 2026-09-23
+
+⛔⛔⛔ **IT REVERSES `D37`, WHICH CHOSE PARALLEL DELIBERATELY AND SAID SO.** That decision read
+*"the held one makes the minimal turn that points its own face **the same way** (parallel — the
+CAD *align* sense, **chosen over a mate**)"*, and this file has carried its consequence ever
+since: *the held object presents its opposite side toward the face that was tapped*. ⚠ Both
+texts stand. `METHOD`: *a claim that was overturned is more useful than one silently deleted*,
+and the earlier one is what explains why the code had the sign it had.
+
+### ⭐⭐ WHAT CHANGES, AND WHAT DOES NOT
+
+| | before | now |
+|---|---|---|
+| the target direction | the Pioneer's face normal | **its negation** |
+| where the follower's face ends up | pointing the same way as the tapped face | pointing **at** it |
+| the minimal turn, the cap of one, the free spin | unchanged | unchanged |
+| `SNAPSHOT` / `FOLLOW`, the colours, the two undos | unchanged | unchanged |
+| the twist about the aligned normal | about the follower's own aligned face normal | the same rule; the body is simply oriented the other way |
+
+⭐⭐⭐ **THE SIGN LIVES IN ONE PLACE — `alignTargetFor`** — and both entry points (`faceAlignConstraint`
+at the tap, `retargetAlignment` in the `FOLLOW` cascade) take **the Pioneer's own normal** and
+negate it themselves. ⛔ Neither can be handed a ready-made target any more. ⚠ That is
+`CONSTRAINTS` §7's instruction applied to a second sign: *a connector stores the TRUE OUTWARD
+NORMAL, and one place knows that sign*, because a mate's sign error **cost a live session in the
+predecessor**. ⭐ The hazard here is specific and was real before the change: `retargetAlignment`
+took a `targetWorld`, so a `FOLLOW` cascade would have re-aligned its followers **parallel** one
+frame after a tap aligned them anti-parallel — a sign error with no symptom until the Pioneer
+moved.
+
+### ⚠ WHAT IT DOES **NOT** DO
+
+⛔ **It does not make a mate.** Nothing is seated, no position is held, and a body can still be
+dragged straight through its partner: `3D2`'s **seat** is what a joint needs, and §4's `6quater`
+is still the only rule that would push a `MATE`. ⭐ What the change buys is that the ORIENTATION a
+mate needs is now the one the alignment produces — the two faces point at each other — so the
+remaining gap is position and a gesture, not geometry.
+
+### ⚠ THE ONE FIXTURE THAT FOLLOWED THE PRODUCT
+
+The approach-swing trial boots with two **pre-aligned** parts, built by aligning the follower's
+bottom face to the pioneer's bottom face. ⛔ Under the new sense that would stand the second part
+**on its head**, so the boot alignment now uses the follower's **top** face: `anti(−y)` is `+y`,
+which is the same physical scene the trial has always had. ⚠ A jig that silently changed shape
+would make the swing's device verdicts incomparable with the ones already recorded.
+
