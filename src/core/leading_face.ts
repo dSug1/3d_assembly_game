@@ -97,18 +97,34 @@ export function leadingFace(
   // ⚠ What it costs, stated: after a direction change the gizmo can sit on a face that is no
   // longer the NEAREST exit, until the body stops advancing on it. ⭐ That is a face the body
   // genuinely is advancing on, which is what the gizmo claims.
+  // ⛔⛔⛔ **THE STICKINESS IS A SEED, NOT A LATCH — corrected 2026-09-23, device-reported.**
+  //
+  // > *"how is it possible that the green axis passes through this face, instead of the blue
+  // > face? … a vertical translation along gravity axis should immediately select the blue face,
+  // > not the left face."* — the owner
+  //
+  // ⚠⚠ It used to RETURN the held face whenever `n·d > 0` — *any* positive value, however
+  // grazing. ⛔ And `objectB` is a **frustum**: its sides slant inward going up, so their outward
+  // normals have an UPWARD component, and an upward push therefore *"advances on"* a side face by
+  // a hair for ever. ⭐ The body rose and the gizmo stayed on the left side, with an exit distance
+  // of metres — which is also what made it FLARE before the lines were sized from the camera.
+  //
+  // ⭐⭐ **SO THE HELD FACE IS SEEDED INTO THE SEARCH INSTEAD.** It wins a tie and loses to
+  // anything strictly nearer, which keeps `D54`'s promise (a face the body is genuinely advancing
+  // on does not flicker away on a hair) without the pathology (a grazing face held against a face
+  // the body is about to leave through). ⛔ No threshold, no tunable: `<` does the whole job.
+  let best: LeadingFace | null = null;
   if (current !== null) {
     const held = body.faces.find((f) => f.id === current);
     const w = held === undefined ? null : faceWorld(world, id, current);
     if (w && dot(w.normal, d) > 0) {
       const t = dot(sub(w.centre, here.position), w.normal) / dot(w.normal, d);
       if (t > 0 && Number.isFinite(t)) {
-        return { faceId: current, centre: w.centre, normal: w.normal, distanceM: t };
+        best = { faceId: current, centre: w.centre, normal: w.normal, distanceM: t };
       }
     }
   }
 
-  let best: LeadingFace | null = null;
   for (const face of body.faces) {
     const w = faceWorld(world, id, face.id);
     if (!w) continue;
@@ -131,4 +147,44 @@ export function leadingFace(
     }
   }
   return best;
+}
+
+/**
+ * ⭐⭐⭐ **THE TRAVEL DIRECTION, OVER A BASELINE THAT IS NOT ONE FRAME.**
+ *
+ * ⛔⛔⛔ **`D54` TREATED THE SYMPTOM AND THIS IS THE CAUSE.** The gizmo chattered because the
+ * leading face was chosen from the direction of **one applied step** — and `A11`'s per-axis
+ * deadband emits the excess on one axis and nothing on the other, so during a straight drag the
+ * step's DIRECTION alternates between the two axes even while the hand moves in a line.
+ * ⭐ `QUEUE.md`'s **mistake shape 1**, *a rate estimated over the shortest available baseline*, and
+ * a direction is such a rate. ⚠ I answered it by LATCHING the face, which held a grazing face for
+ * ever; the honest fix is to stop reading a one-frame direction.
+ *
+ * ⭐⭐ So the steps accumulate and the sum decays, and the direction is the sum's. A steady push
+ * gives a steady direction however the deadband splits it, and a genuine change of direction turns
+ * the sum within one window instead of waiting for the body to stop advancing on a face.
+ *
+ * ⚠ `tauMs` is **`flickWindow`**, reused rather than invented: it is this project's existing
+ * definition of *the recent past* for a finger, and a second one would be free to disagree with it.
+ */
+export function accumulateTravel(previous: Vec3 | null, step: Vec3): Vec3 {
+  const p = previous ?? [0, 0, 0];
+  const next: Vec3 = [p[0] + step[0], p[1] + step[1], p[2] + step[2]];
+  return next.every((n) => Number.isFinite(n)) ? next : p;
+}
+
+/**
+ * ⭐ Fade the accumulated travel, frame-rate independently — `e^(−dt/τ)`, never a fixed per-frame
+ * fraction, which would fade twice as fast at 120 fps as at 60.
+ *
+ * ⚠ A non-positive or non-finite `dtMs` returns the accumulator unchanged: a frame that took no
+ * time cannot have aged anything. ⛔ A non-positive `τ` means *no memory*, which is the honest
+ * reading of a zero — the direction is then one frame's, which is what this exists to avoid.
+ */
+export function decayTravel(accum: Vec3 | null, dtMs: number, tauMs: number): Vec3 | null {
+  if (accum === null) return null;
+  if (!(dtMs > 0) || !Number.isFinite(dtMs)) return accum;
+  if (!(tauMs > 0) || !Number.isFinite(tauMs)) return [0, 0, 0];
+  const k = Math.exp(-dtMs / tauMs);
+  return [accum[0] * k, accum[1] * k, accum[2] * k];
 }
