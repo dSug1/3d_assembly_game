@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1071 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1076 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -96,6 +96,8 @@ fixed rate instead of letting it die. ⚠⚠ **AND THE SOLVE MAKES `D74`'s IN-ZO
 orthogonalised face basis spans the same horizontal plane, so nothing changes at the zone edge.
 ⛔ **That is an owner decision**, and the choices are in
 [`Claude/00_CORE/queue_notes/IN4.md`](Claude/00_CORE/queue_notes/IN4.md).
+
+⛔⛔⛔ **AND THE CAPTURE ZONE IS DECOUPLED FROM THE ALIGNMENT** (`D79`, 2026-09-23): **any body may hold the zone with any other**, one at a time, and it is **LOCKED** until the pair leaves the offset — so a nearer third body cannot steal it. ⭐⭐ **A PRESSED PAIR OUTRANKS EVERY DISTANCE**, which is `D67`'s two-finger gesture kept as a DESIGNATOR while it stops being a REQUIREMENT. ⚠⚠ It **reverses `D62`**, which itself reversed `A21`, so the rule has been round the loop — and what is new is the lock: `D62` was fixing a pair that kept re-choosing itself. ⛔ The threshold is still `D49`'s HULL gap (nothing in it reads a normal); the **face twins** are computed for the named pair and printed, as the mate's seed. ✅ It is what makes assembling onto the **frozen plate** reachable at all → the approach spec §22.
 
 ⭐⭐ **AND TWO REFINEMENTS ABOUT THE FROZEN PLATE** (`D77`, 2026-09-23), both enforced at a DEFINITION rather than by a guard at the point of use: **no gizmo on a frozen body** — `leadingFace` refuses one, because *the face a body is advancing on* presumes it advances — and **a second touch on a frozen body is handed to the router as a MISS**, so that finger becomes a working `OUTSIDE` touchpoint and can drive another body. ⛔ The FIRST touch is untouched: `D67` makes *hold the plate FIRST* the way to align a part to it.
 

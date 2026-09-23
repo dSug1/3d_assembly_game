@@ -169,6 +169,7 @@ import {
 } from "../input/highlight";
 import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
 import { pressHit } from "../input/frozen_pick";
+import { closestFaceTwins, type FaceTwins } from "../core/proximity";
 // ⭐⭐⭐ **THE OBJECT AXES AND THE PROJECTION ONTO THEM** (the owner, 2026-09-22). ⛔ Every
 // DECISION is in `src/input`; this file holds the state and the call. That is the 2026-09-19
 // lesson, and it cost seven surviving mutants to learn: *a rule written in `scene.ts` is a rule
@@ -1554,6 +1555,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let highlighted: HighlightVerdict = {
     pair: null,
+    zone: null,
     translating: false,
     inRange: false,
     gapM: null,
@@ -1589,6 +1591,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     objectAxes.get(id) ?? bootObjectAxes ?? axesFromFrame(requireGestureFrame());
   /** ⚠ Last frame's range verdict. The EDGE is what moves the axes, never the level. */
   let zoneWas = false;
+  /**
+   * ⭐⭐ **THE ZONE'S FACE TWINS** — *"based on closest faces twins"* (the owner, 2026-09-23).
+   * ⛔ Computed for the pair the zone NAMES, never used to choose it: the threshold is still
+   * `D49`'s hull gap, because nothing in that reads a normal. ⚠ Reported on the HUD, and it is
+   * what `3D2`'s mate will start from — which is why it is computed now rather than when the
+   * mate needs it: a quantity nobody can see is a quantity nobody can judge.
+   */
+  let zoneTwins: FaceTwins | null = null;
   /**
    * ⛔ The pair that was in range when the zone was ENTERED, so the EXIT edge can reach the
    * same two bodies. ⚠ At the exit `highlighted.pair` is already `null` — the verdict that
@@ -1772,9 +1782,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐ Only meaningful with ONE held body: with two, `translatesOnDrag`'s first line already
     // fires and this adds nothing.
     const soleGrip = ids.length === 1 ? gripOfObject(ids[0]!) : undefined;
+    // ⛔⛔⛔ **`D79` — ANY BODY MAY HOLD THE ZONE WITH ANY OTHER, AND THE SUBJECT SET IS THE
+    // WHOLE SCENE** (the owner, 2026-09-23: *"any object can enter the offset radius of any
+    // other object"*). ⚠ `ids` used to be the HELD bodies and the targets came from the
+    // alignment index; both restrictions are gone, and the lock is what keeps one zone at a time.
+    const sceneIds = [...world.objects.keys()];
+    // ⭐⭐ **THE PRESSED PAIR — what the hand NAMED, which outranks every distance.** Two grips
+    // on two different bodies, in press order. ⛔ It is `D67`'s Pioneer/Follower gesture kept as
+    // a DESIGNATOR while it stops being a REQUIREMENT, and it is the escape hatch from a lock
+    // held by two bodies nobody is touching.
+    const pressedPair = ids.length >= 2 ? { a: ids[0]!, b: ids[1]! } : null;
     highlighted = highlightedPair(
-      world,
-      ids,
+      highlighted.zone,
+      pressedPair,
+      sceneIds,
       // ⛔ CONDITION 2, from the SAME function `grip.mode` is assigned from — one rule, one place.
       translatesOnDrag(
         ids.length,
@@ -1800,31 +1821,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         ),
         alignMatchRad: (cfg.alignMatchDeg * Math.PI) / 180,
       },
-      highlighted.pair?.target ?? null,
-      // ⛔ SURFACE TO SURFACE. ⚠ It reads the MODEL, not the display pose — the sway is
+      // ⛔ SURFACE TO SURFACE, and a HULL distance (`D49`): nothing here reads a normal, so an
+      // inverted one cannot affect it. ⚠ It reads the MODEL, not the display pose — the sway is
       // decoration and a highlight must not flicker with an animation nobody asked it to track.
       (a, b) => surfaceGap(world, a, b),
-      // ⛔⛔⛔ `D62` — **A BODY MAY APPROACH ITS ALIGNMENT PARTNERS AND NOTHING ELSE.**
-      //
-      // > *"I want to do the same with Pioneer: currently, when I second touch an object which
-      // > becomes Pioneer, it can white highlight if the Pioneer is close to a third object
-      // > (which could be not the Follower): this should not happen. the white highlight should
-      // > be reserved only for Pioneer-Follower duo."* — the owner, 2026-09-19
-      //
-      // ⚠ The first build restricted only the FOLLOWER, because that is the side the owner
-      // named first — and a Pioneer has no Pioneer of its own, so it fell through to *the whole
-      // scene* and lit up against any third body. ⭐ Both directions now, from the same two-way
-      // index: **a Follower's partner is its Pioneer; a Pioneer's are its Followers.**
-      //
-      // ⛔ A body in neither role answers **empty**, which captures nothing — the owner's
-      // *"reserved only for Pioneer-Follower duo"* taken at its word.
-      // ⚠ The alignment index lives here, in the render layer, so the lookup is handed over
-      // rather than reached for: `highlight.ts` stays engine-free and link-free.
-      // ⛔ THE RULE IS `AlignmentLinks.partnersOf`, NOT A LAMBDA HERE. ⚠ It WAS a lambda, and a
-      // mutant that reinstated the reported bug left all 944 vectors green — because a rule in a
-      // render file is a rule nothing can interrogate.
-      (id) => links.partnersOf(id),
+      // ⛔⛔⛔ **`D62`'s `partnersOf` ARGUMENT IS GONE — `D79` DECOUPLED THE ZONE FROM THE
+      // ALIGNMENT.** ⚠ Its text and its reason are kept in `DECISIONS.md` and the spec: it came
+      // from a device report (*"the white highlight should be reserved only for Pioneer-Follower
+      // duo"*) and it itself overturned `A21`'s *any other object*. ⭐ What makes the round trip
+      // safe is the LOCK: `D62` was fixing a pair that kept re-choosing itself, and a locked pair
+      // cannot. ⛔ `links` still owns the alignment; it simply no longer owns the capture.
     );
+    // ⭐ THE TWINS, for the pair the zone named. ⛔ `null` when there is no zone, rather than a
+    // stale pair kept from the last one — the marker-pool lesson, one quantity down.
+    zoneTwins =
+      highlighted.zone === null
+        ? null
+        : closestFaceTwins(world, highlighted.zone.a, highlighted.zone.b);
+
     // ⭐⭐⭐ **THE OFFSET RADIUS ZONE'S OWN EDGE — WHERE THE OBJECT AXES ARE RE-DECIDED.**
     //
     // > *"If the object has entered or exited an offset radius zone, Update the object axis
@@ -2918,6 +2932,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
               : ` gap=${(highlighted.gapM * 1000).toFixed(0)}/${(
                   highlighted.offsetM * 1000
                 ).toFixed(0)}mm`) +
+            // ⭐⭐ **THE ZONE, ITS LOCK AND ITS FACE TWINS** (`D79`). ⛔ Three questions a hand
+            // cannot answer by looking: WHICH pair holds the zone (it need not be the pair being
+            // dragged any more), whether it was NAMED by two fingers or taken by proximity, and
+            // WHICH two faces are the candidates a mate would use. ⚠ `LOCK` is the answer to
+            // *"why did the contour not move to the body I just came near"*, which is the one
+            // question the lock rule creates.
+            (highlighted.zone === null
+              ? ""
+              : `  ${highlighted.zone.pressed ? "NAMED" : "LOCK"}(${highlighted.zone.a}↔${highlighted.zone.b})` +
+                (zoneTwins === null ? "" : ` twins=${zoneTwins.faceA}/${zoneTwins.faceB}`)) +
             // ⛔⛔ **A BODY WHOSE GEOMETRY COULD NOT BE READ, NAMED.** It has no shape, so it can
             // never capture and never be outlined — and every one of those is a SILENCE. ⚠ An
             // absent readout cannot be caught by looking at the screen (`METHOD`), and *this part

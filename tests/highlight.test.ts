@@ -26,7 +26,7 @@ import {
   translatesOnDrag,
   type HighlightNumbers,
 } from "@input/highlight";
-import { centreDistance, nearestCapture, surfaceGap } from "@core/proximity";
+import { centreDistance, closestFaceTwins, nearestCapture, surfaceGap } from "@core/proximity";
 import { boxShape } from "@core/collision_shape";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import { makeWorld, setWorldPlacement, type SceneObject, type World } from "@core/object_model";
@@ -79,6 +79,9 @@ const N: HighlightNumbers = { captureOffsetM: OFFSET, alignMatchRad: 15 * DEG };
  * it is the kind of claim nothing checks. The one vector that genuinely needs the boot layout
  * builds it inline and says so.
  */
+
+/** Every body in the world — `D79`'s candidate set, and the product passes exactly this. */
+const idsOf = (w: World): string[] => [...w.objects.keys()];
 
 const cube = (
   id: string,
@@ -369,26 +372,24 @@ describe("⛔⛔⛔ `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING EL
     expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["a"])?.target).toBe("a");
   });
 
-  it("⛔⛔⛔ AND THE COMPOSITION: `highlightedPair` draws no contour on a forbidden neighbour", () => {
-    // ⭐⭐ THE RULE AND THE PRODUCT'S ENTRY POINT ARE DIFFERENT FUNCTIONS, and only measuring
-    // the composition says the lookup is actually threaded through — mistake shape 4, which has
-    // caught this file before.
+  it("⛔⛔⛔ AND THE COMPOSITION, INVERTED BY `D79`: the contour names ANY near neighbour", () => {
+    // ⛔⛔ **THIS VECTOR ASSERTED THE OPPOSITE UNTIL 2026-09-23**, and the retraction is the
+    // record: it read *"`highlightedPair` draws no contour on a forbidden neighbour"* and pinned
+    // `D62`'s restriction through the composition. ⚠ The owner has now decoupled the zone from
+    // the alignment — *"any object can enter the offset radius of any other object"* — so the
+    // restriction is gone from the rule, and what bounds the pair instead is the **LOCK**.
+    // ⭐ `D62`'s own vectors above still stand: `nearestCapture` keeps its contract and is
+    // declared debt, because a device look has not judged `D79` yet.
     const w = flanked();
     const near = { captureOffsetM: OFFSET, alignMatchRad: 1 };
     const gap = (x: string, y: string) => surfaceGap(w, x, y);
-    // ⚠ Without a Pioneer: the nearest neighbour is captured, as it always was.
-    expect(highlightedPair(w, ["h"], true, near, null, gap, () => others(w, "h")).pair?.target).toBe("a");
-    // ✅ With one: the pair names the Pioneer, whichever side it is on.
-    expect(highlightedPair(w, ["h"], true, near, null, gap, () => ["b"]).pair?.target).toBe("b");
-    // ⛔ And with a Pioneer out of range there is NO pair at all, though `a` is right there.
-    const w2 = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["far", [3, 0, 0]]);
-    const gap2 = (x: string, y: string) => surfaceGap(w2, x, y);
-    const v = highlightedPair(w2, ["h"], true, near, null, gap2, () => ["far"]);
-    expect(v.pair).toBeNull();
-    expect(v.inRange).toBe(false);
-    // ⚠⚠ AND THE READOUT OBEYS THE RULE: the printed gap describes the PIONEER, not the body
-    // the hand can see nearby. A number that describes a forbidden pair is a readout that lies.
-    expect(v.gapM).toBeGreaterThan(1);
+    // ⚠ `h` is flanked by `a` and `b`; with no alignment anywhere the nearest still wins.
+    expect(highlightedPair(null, null, idsOf(w), true, near, gap).pair?.target).toBe("a");
+    // ⭐⭐ AND A BODY IN NO ROLE AT ALL NOW CAPTURES — which is the whole of `D79`. ⛔ Under
+    // `D62` this scene produced NOTHING, because neither body was the other's Pioneer.
+    const v = highlightedPair(null, null, idsOf(w), true, near, gap);
+    expect(v.pair).not.toBeNull();
+    expect(v.inRange).toBe(true);
   });
 });
 
@@ -561,7 +562,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
 
   it("⭐⭐ all three ⇒ the pair is outlined", () => {
     const w = nearAndAligned();
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
+    const v = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
     expect(v.pair).toEqual({ subject: "a", target: "b" });
     // ⭐ and both reasons report satisfied, so the HUD cannot contradict the contour
     expect(v.translating && v.inRange).toBe(true);
@@ -574,7 +575,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
     // translation."* ⛔ `translating === false` is a one-finger drag in ROTATE mode, and it must
     // draw nothing even though everything else about the geometry is ready.
     const w = nearAndAligned();
-    const v = highlightedPair(w, ["a"], false, N, null, gapIn(w), (id) => others(w, id));
+    const v = highlightedPair(null, null, idsOf(w), false, N, gapIn(w));
     expect(v.pair).toBeNull();
     // ⭐⭐ AND THE READOUT MUST BLAME THE RIGHT CONDITION — the range is fine and only the
     // movement mode is wrong, so a verdict claiming otherwise would send a device pass
@@ -597,7 +598,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["a", [0, 0, 0], IDENTITY, [], PART],
       ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
     );
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
+    const v = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
     expect(v.pair).toEqual({ subject: "a", target: "b" });
     expect(v.inRange).toBe(true);
     expect(v.translating).toBe(true);
@@ -615,46 +616,134 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["b", [0.2, 0, 0], IDENTITY, [], PART],
     );
     expect(surfaceGap(w, "a", "b")!).toBeGreaterThan(N.captureOffsetM);
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
+    const v = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
     expect(v.pair).toBeNull();
     // ⚠ out of range — and the readout says exactly that, so a hand knows to close the gap
     expect(v.inRange).toBe(false);
   });
 
-  it("⚠⚠ two held objects: PRESS ORDER decides the subject now, and that is a real loss", () => {
-    // ⛔⛔ THIS VECTOR USED TO ASSERT THAT THE **ALIGNED** BODY WON, WHICHEVER WAS PRESSED
-    // FIRST. ⚠ Removing the alignment from the approach removed the only asymmetry the pair
-    // had, so the subject is now simply the first-pressed body — and with a symmetric pair it
-    // genuinely does not matter WHICH is called the subject: the same two bodies are outlined
-    // either way, which is all the white contours claim.
-    // ⭐ Recorded because it stops being harmless the moment the approach does something
-    // DIRECTIONAL with the subject (slice 3's snap moves *the first object*). At that point the
-    // pair needs an asymmetry again, and the alignment is the obvious candidate.
+  it("⭐⭐⭐ TWO BODIES PRESSED: the PAIR THEY NAME WINS, at any distance (`D79`)", () => {
+    // ⛔⛔ THIS VECTOR HAS BEEN INVERTED TWICE AND BOTH TEXTS ARE THE RECORD. It first asserted
+    // that the **aligned** body won whichever was pressed first; then, when the alignment left
+    // the approach, that PRESS ORDER decided and *"that is a real loss"*. ⭐ `D79` gives the
+    // asymmetry back, and from the hand rather than from the geometry: *"if a second object is
+    // pressed upon, it takes precedence to any other object, whatever the distance of the face
+    // and gets locked."*
     const w = scene(
       ["a", [0, 0, 0], IDENTITY, [], PART],
-      ["b", [SIZE + 0.05, 0, 0], IDENTITY, aligned([1, 0, 0]), PART],
+      ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
+      ["far", [3, 0, 0], IDENTITY, [], PART],
     );
-    expect(highlightedPair(w, ["a", "b"], true, N, null, gapIn(w), (id) => others(w, id)).pair).toEqual({ subject: "a", target: "b" });
-    expect(highlightedPair(w, ["b", "a"], true, N, null, gapIn(w), (id) => others(w, id)).pair).toEqual({ subject: "b", target: "a" });
+    // ⚠ `far` is nowhere near, and it is named anyway — *whatever the distance*.
+    const named = highlightedPair({ a: "a", b: "far" }, { a: "a", b: "far" }, idsOf(w), true, N, gapIn(w));
+    expect(named.zone).toEqual({ a: "a", b: "far", gapM: expect.any(Number), pressed: true });
+    // ⛔ …but a pair the hand named is not a pair that is NEAR: no contour until it closes.
+    expect(named.inRange).toBe(false);
+    expect(named.pair).toBeNull();
+    // ⭐ And the same press on the near pair does draw.
+    const near = highlightedPair(null, { a: "a", b: "b" }, idsOf(w), true, N, gapIn(w));
+    expect(near.pair).toEqual({ subject: "a", target: "b" });
   });
 
-  it("⚠ nothing held ⇒ nothing, whatever the geometry says", () => {
+  it("⚠ NOTHING HELD: the zone still forms — only the CONTOUR waits for a drag (`D79`)", () => {
+    // ⛔⛔ **INVERTED BY `D79`.** This read *"nothing held ⇒ nothing, whatever the geometry
+    // says"*, because the subjects were the held bodies. ⚠ The owner's answer to *who can be a
+    // subject* was **any object**, so proximity alone forms the zone — and the translation
+    // condition is what keeps a resting scene from drawing contours.
     const w = nearAndAligned();
-    const v = highlightedPair(w, [], true, N, null, gapIn(w), (id) => others(w, id));
-    expect(v.pair).toBeNull();
-    // ⚠ nothing held, so the range was never evaluated
-    expect(v.inRange).toBe(false);
+    const idle = highlightedPair(null, null, idsOf(w), false, N, gapIn(w));
+    expect(idle.zone).not.toBeNull();
+    expect(idle.inRange).toBe(true);
+    // ⛔ …and nothing is DRAWN, which is the half of `A16` that survived `D48`.
+    expect(idle.pair).toBeNull();
   });
 
-  it("⭐ the tie rule reaches through the conjunction", () => {
+  it("⭐⭐⭐ THE LOCK: a third body coming nearer does NOT steal the zone (`D79`)", () => {
+    // ⛔⛔ **IT REPLACES THE TIE RULE.** `nearestCapture` broke an exact tie in favour of the
+    // incumbent and the 2026-09-17 audit corrected the comment that called it *hysteresis*: it
+    // was a TIE-BREAK, and an incumbent at `0.1 + 1e-13` lost to a challenger at `0.1`. ⭐ The
+    // owner's lock is the real thing: *"if the object has already entered the offset radius zone
+    // with another object, it cannot enter the offset radius zone with a third object even if
+    // the third object comes closer at one point."* ⚠ And it costs no threshold — the lock IS
+    // the hysteresis, which is why none had to be guessed.
     const w = scene(
-      ["a", [0, 0, 0], IDENTITY, aligned([1, 0, 0])],
-      ["b", [0.09, 0, 0]],
-      ["c", [-0.09, 0, 0]],
+      ["a", [0, 0, 0], IDENTITY, [], PART],
+      ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
+      ["c", [-(SIZE + 0.01), 0, 0], IDENTITY, [], PART],
     );
-    expect(highlightedPair(w, ["a"], true, N, "c", gapIn(w), (id) => others(w, id)).pair!.target).toBe("c");
-    expect(highlightedPair(w, ["a"], true, N, "b", gapIn(w), (id) => others(w, id)).pair!.target).toBe("b");
+    // ⚠ `c` is strictly nearer than `b`, established first so the vector cannot pass by accident.
+    expect(surfaceGap(w, "a", "c")!).toBeLessThan(surfaceGap(w, "a", "b")!);
+    // ⭐ With `a↔b` already locked, the nearer `c` does not take it.
+    const held = highlightedPair({ a: "a", b: "b" }, null, idsOf(w), true, N, gapIn(w));
+    expect(held.zone?.a).toBe("a");
+    expect(held.zone?.b).toBe("b");
+    // ⛔ And with NO lock, the nearest wins — so the vector above is about the lock and not
+    // about `b` being special.
+    const fresh = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
+    expect([fresh.zone?.a, fresh.zone?.b].sort()).toEqual(["a", "c"]);
   });
+
+  it("⛔ THE LOCK RELEASES when the pair leaves the offset — and then the scene re-decides", () => {
+    const w = scene(
+      ["a", [0, 0, 0], IDENTITY, [], PART],
+      ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
+      ["gone", [3, 0, 0], IDENTITY, [], PART],
+    );
+    // ⚠ A lock naming a pair that is now far apart is dropped, and the nearest eligible pair
+    // takes over in the SAME frame — a zone that emptied for one frame would make the contour
+    // blink on every hand-over.
+    const v = highlightedPair({ a: "a", b: "gone" }, null, idsOf(w), true, N, gapIn(w));
+    expect([v.zone?.a, v.zone?.b].sort()).toEqual(["a", "b"]);
+  });
+
 });
 
+describe("⭐⭐⭐ THE CLOSEST FACE TWINS — which two faces the zone is between (`D79`)", () => {
+  it("names the facing pair for two bodies side by side", () => {
+    // ⛔ `a` is at the origin and `b` sits to its `+x`, so the twins are `a.+x` and `b.−x`.
+    const w = scene(["a", [0, 0, 0], IDENTITY, [], PART], ["b", [0.2, 0, 0], IDENTITY, [], PART]);
+    const t = closestFaceTwins(w, "a", "b")!;
+    expect(t.faceA).toBe("+x");
+    expect(t.faceB).toBe("-x");
+    // ⚠ The gap is CENTRE to CENTRE between the two faces, and it is stated as such: the bodies
+    // are 0.2 m apart and each face centre sits half a span in from its body's middle.
+    expect(t.centreGapM).toBeCloseTo(0.2 - PART[0] / 2 - PART[0] / 2, 9);
+  });
 
+  it("⭐ it follows the bodies — a TURNED body names a different face", () => {
+    // ⛔ The case a placement-blind implementation passes by accident, and the shape the audit
+    // found ten times over: a fixture at the identity where the quantity under test is zero.
+    const w = scene(
+      ["a", [0, 0, 0], qFromAxisAngle([0, 1, 0], Math.PI / 2), [], PART],
+      ["b", [0.3, 0, 0], IDENTITY, [], PART],
+    );
+    const t = closestFaceTwins(w, "a", "b")!;
+    // ⚠ `a` turned +90° about `+y`, so its local `+z` points along world `+x` — `z → +x` by the
+    // right-hand rule. ⛔ My first draft wrote `−z` and the vector caught it: MISTAKE SHAPE 5,
+    // my own fixture, and the third time in this session. The code was right.
+    expect(t.faceA).toBe("+z");
+    expect(t.faceB).toBe("-x");
+  });
+
+  it("⛔ it REFUSES rather than guessing: an unknown body, or one with no faces", () => {
+    const w = scene(["a", [0, 0, 0], IDENTITY, [], PART], ["b", [0.2, 0, 0], IDENTITY, [], PART]);
+    expect(closestFaceTwins(w, "a", "ghost")).toBeNull();
+    expect(closestFaceTwins(w, "ghost", "b")).toBeNull();
+  });
+
+  it("⚠ IT IS NOT THE CAPTURE TEST — the threshold is still the HULL gap (`D49`)", () => {
+    // ⛔⛔ The split the owner approved. Two large faces can be nearer as SURFACES than their
+    // centres suggest, so a face-centre distance would answer a slightly different question from
+    // the one the contour asks — and `D49`'s reason for the hull gap was that **nothing in it
+    // reads a normal**, which face data would hand back.
+    // ⚠⚠ THE FIXTURE HAS TO BE OFF-AXIS TO SHOW IT. Two cubes flush face to face give the SAME
+    // number both ways — which my first draft used, and the vector was therefore asserting a
+    // difference that fixture cannot produce. ⭐ Offset them in `y` and the hull gap finds the
+    // nearest EDGES while the face centres stay where they are.
+    const w = scene(["a", [0, 0, 0], IDENTITY, [], PART], ["b", [0.2, 0.1, 0], IDENTITY, [], PART]);
+    const twins = closestFaceTwins(w, "a", "b")!;
+    const hull = surfaceGap(w, "a", "b")!;
+    // ⭐ DIFFERENT numbers about the same pair, which is the whole point of keeping both.
+    expect(twins.centreGapM).toBeGreaterThan(hull);
+  });
+});

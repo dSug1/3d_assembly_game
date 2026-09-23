@@ -1143,3 +1143,35 @@ is a guess and therefore a slider. ⭐ The twin is retired by the **same members
 loop** as the fill — a marker pool that retires by what CHANGED instead of by what is WANTED is the
 2026-09-17 stale-highlight defect, and it produced two false reports in a day.
 
+---
+
+## 2026-09-23 — ⭐⭐⭐ THE ZONE LEAVES THE ALIGNMENT BEHIND (`D79`)
+
+⚠ The owner asked for the conflicts **before** the build, which is why this entry can name them
+rather than discover them: it reverses `D62` (*"reserved only for Pioneer-Follower duo"*), which had
+itself reversed `A21` (*"within a radius of ANY other object"*). ⭐⭐ The rule has been round the loop
+once, and the thing that is new is the **LOCK** — `D62` was fixing a pair that kept **re-choosing
+itself** every frame, and a locked pair cannot.
+
+⭐ **Four answers settled the design**: subjects are **any object** (not just held ones, so proximity
+alone forms a zone); the **translation condition survives** (`A16`'s half that outlived `D48`, so a
+resting scene draws nothing); the **globally nearest** pair wins and then **locks**; and the threshold
+stays `D49`'s hull gap with the **face twins computed for the named pair** — the split the owner
+approved, keeping *nothing here reads a normal* true.
+
+⛔⛔ **THE ESCAPE HATCH IS THE PRESS**, and it is the owner's own: *"if a second object is pressed
+upon, it takes precedence to any other object, whatever the distance."* ⚠ Without it, two bodies
+resting near each other would hold the zone against the pair a hand is actually dragging — the lock's
+one real cost, answered before it was built.
+
+⚠ **What now fires for any pair**: the approach swing (on), the orbit retarget (off), the object-axis
+edge (`D74`, inert under `D76`) and the `CameraOffsetZoneEnter` hook (off). ⛔ So the visible change
+is contours plus the camera swing.
+
+✅ **What it unblocks**: `D67` made a frozen body unable to be a Follower, so a part could never
+capture against the base plate unless the plate was its Pioneer — assembling onto the plate was
+unreachable. ⚠ Boot is unaffected: ~60 mm of offset against **148 mm** of air under the parts.
+
+⭐ 9 vectors, two mutants caught (the lock removed, the press precedence removed), and three older
+vectors inverted with their retractions kept — one of them for the second time.
+
