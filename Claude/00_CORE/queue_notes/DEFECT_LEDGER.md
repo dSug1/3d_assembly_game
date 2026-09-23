@@ -690,3 +690,45 @@ fixed-rate fallback's sense now follows `sign(m · s)` instead of a camera eleva
 ⭐⭐⭐ `METHOD`, and it is the entry worth carrying: **a rule whose every defect is about the
 MOMENT it takes effect is a rule about the wrong thing.** ⚠ I fixed three mechanisms in a row
 without once asking whether the mechanism should exist — the owner asked on the fourth report.
+
+
+
+---
+
+## 64 — ⭐⭐⭐ **THE SWING'S AMPLITUDE READ THE HOLDER'S SPEED WHILE THE OTHER FINGER PUSHED**
+
+**2026-09-23, by finger, with two HUD shots.** *"in this situation (translation with dy second
+touch), the swing of the camera at entrance of offset radius zone is not happening correctly."*
+
+⛔⛔⛔ `swingAmplitudeRad` was fed **`grip.rec.speedMmPerS` — the HOLDER's finger** — while the
+body was being translated by the SECOND touchpoint's `dy`. ⚠ The holder is then genuinely still
+(both screenshots say `motion STATIONARY`), so the law read `speed = 0`, **which it answers with
+the widest look** — `0` is its documented maximum, and correct for a stopped hand.
+
+⭐⭐ So a second-finger approach swung at **full amplitude whatever the push**, and the two dials
+the owner tuned on the glass on 2026-09-19 — `approachSwingSpeedGain` (the 67 mm/s knee) and
+`approachSwingSpeedExponent` — were **bypassed entirely** for that gesture. ⚠ Not a small
+mis-scaling: the damping law simply never ran.
+
+⭐⭐⭐ **THE SHAPE IS DEFECT 55's, ONE MORE TIME**: *a rule that names ONE finger inherits every
+later arrangement in which a different finger does the work.* `A10` gave the second touchpoint a
+translation channel after this law was written, and nobody re-read the law. ⛔ 55 was the mode
+NAME, this is the finger — the same class, and the third in two days.
+
+✅ **FIXED**: `approachSpeedMmPerS` — the fastest finger driving this body — in `approach_swing.ts`
+with the decision, not in the render file. ⚠ `max` and not a sum: the channels do sum (`D43`), but
+the knee was tuned against *a finger's* speed, and summing would double the reading whenever two
+fingers move together.
+
+⚠⚠ **AND THE SECOND TOUCHPOINT HAD NO SPEED TO READ**, which is why the wrong one was read: only
+a holder grip carries a `Recognizer`. ⭐ `MotionTracker` now exposes `speedMmPerS` by **calling the
+same `terminalSpeedPxPerS(trimBuffer(…))`** the Recognizer and the flick use — *there is one
+definition of how fast is this finger*, and §1.1's unreachable `STATIONARY` is the scar from the
+alternative. ⛔ The RAW sample feeds that window, not the deadbanded travel, or the same finger
+would read slower here than on a Recognizer.
+
+⚠ **Noticed and NOT changed**: `g0` latches at the first frame inside the zone, so a fast push
+can be ~14 mm past the contour before the swing arms (`g0=115mm` against a `129mm` offset in the
+owner's shot). ⛔ Frame quantisation, not a rule — recorded because it makes the swing's
+parameterisation start slightly inside the zone, and because a future report about *"the swing
+starts late"* should find this line rather than re-derive it.

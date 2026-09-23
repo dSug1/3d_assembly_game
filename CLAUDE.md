@@ -46,13 +46,14 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1092 golden vectors passing** — ⚠ MEASURED 2026-09-23; the
+✅ Green: TypeScript + Babylon + Vite, **1096 golden vectors passing** — ⚠ MEASURED 2026-09-23; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
 773 + 83 for `D49`'s surface gap and its shell, 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the
 first pass to find defects by READING the source rather than by a finger, and 619 − 51 when forks
 A and B were deleted with their vectors).
+⛔⛔ **AND THE SWING'S AMPLITUDE READ THE WRONG FINGER** (defect 64, 2026-09-23): it was fed the HOLDER's speed while the SECOND touchpoint pushed the body, and a still holder reads `0`, which the law answers with **the widest look**. ⭐ So a second-finger approach swung at full amplitude whatever the push, and both dials a hand tuned on the glass were bypassed. ⭐⭐ *A rule that names ONE finger inherits every later arrangement in which a different finger does the work* — defect 55's shape, third in two days. ⚠ It also gave `MotionTracker` a `speedMmPerS`, by CALLING the Recognizer's own estimator: the second touchpoint had no speed to read, which is why the wrong one was read.
 ⛔⛔⛔ **THE 2026-09-19 PASS ENDED WITH SEVEN DEVICE REPORTS AND ONE REPEATING CAUSE** — read
 [`Claude/10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](Claude/10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md)
 before touching the swing. ⭐⭐ The cause is one sentence: **a rule written in `scene.ts` is a rule
@@ -326,7 +327,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Sixty-three defects, sixty of them BY FINGER, and none visible to a green
+⛔⛔ **Sixty-four defects, sixty-one of them BY FINGER, and none visible to a green
 suite.** ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
 total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
 project's argument for device passes. ⭐ The two do not compete: **the device finds what is

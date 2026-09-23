@@ -24,6 +24,7 @@ import {
   swingSignFor,
   swingYawRad,
   type SwingLatch,
+  approachSpeedMmPerS,
 } from "@input/approach_swing";
 
 const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
@@ -735,5 +736,45 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     // ⭐ The counter-example, which is what the product did until this fix: the holder's branch
     // fed the accumulator and the gravity channel did not, so the arming call saw zero.
     expect(swingSignFor(0, 0)).toBeNull();
+  });
+});
+
+/**
+ * ⭐⭐⭐ **DEFECT 64 — THE AMPLITUDE READ THE WRONG FINGER'S SPEED.**
+ *
+ * > *"in this situation (translation with dy second touch), the swing of the camera at entrance
+ * > of offset radius zone is not happening correctly"* — the owner, 2026-09-23
+ *
+ * ⛔ `swingAmplitudeRad` was fed the HOLDER's speed while the SECOND touchpoint translated the
+ * body. A still holder reads `0`, which the law answers with the widest look — so the swing ran
+ * at full amplitude whatever the push, and both tuned dials were bypassed.
+ */
+describe("⛔⛔⛔ defect 64 — the approach's speed is the fastest finger DRIVING it", () => {
+  it("⭐⭐⭐ a still holder with a fast second finger is a FAST approach, not a stopped one", () => {
+    // ⛔ THE ASSERTION THE OWNER'S BUILD FAILS: it passed 0 and got the maximum.
+    expect(approachSpeedMmPerS([0, 180])).toBe(180);
+    const maxRad = (40 * Math.PI) / 180;
+    const wrong = swingAmplitudeRad(maxRad, 0, 0.015, 1.7);
+    const right = swingAmplitudeRad(maxRad, approachSpeedMmPerS([0, 180]), 0.015, 1.7);
+    expect(wrong).toBe(maxRad); // the documented answer for a stopped hand…
+    expect(right).toBeLessThan(maxRad * 0.7); // …and a 180 mm/s push is not one.
+  });
+
+  it("⛔ the holder still counts when IT is the one driving", () => {
+    expect(approachSpeedMmPerS([210, 0])).toBe(210);
+    expect(approachSpeedMmPerS([210, 40, 15])).toBe(210);
+  });
+
+  it("⭐ all still is still ZERO — the judged behaviour for a stopped hand is untouched", () => {
+    expect(approachSpeedMmPerS([0, 0])).toBe(0);
+    expect(approachSpeedMmPerS([])).toBe(0);
+  });
+
+  it("⛔ a NaN finger cannot poison the reading", () => {
+    // ⚠ A tracker with too few samples returns a non-finite rate; it must not become the answer,
+    // and it must not hide a real finger beside it.
+    expect(approachSpeedMmPerS([NaN, 90])).toBe(90);
+    expect(approachSpeedMmPerS([Infinity, 90])).toBe(90);
+    expect(approachSpeedMmPerS([NaN])).toBe(0);
   });
 });

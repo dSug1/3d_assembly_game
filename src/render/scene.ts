@@ -194,6 +194,7 @@ import {
   smoothAmplitude,
   swingDriverIndex,
   endApproach,
+  approachSpeedMmPerS,
   swingAmplitudeRad,
   swingProgress,
   swingSignFor,
@@ -2590,7 +2591,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       return appliedSwingYaw;
     }
     swingFrozenProgress = freezeProgress(swingFrozenProgress, 0, true);
-    const speed = translating.rec.speedMmPerS;
+    // ⛔⛔ **EVERY FINGER DRIVING THIS BODY, NOT JUST THE HOLDER** (defect 64): with the second
+    // touchpoint pushing, the holder is genuinely still and the law read `0`, which it answers
+    // with the WIDEST swing. ⭐ The choice is `approach_swing.ts`'s, not this file's.
+    const speed = approachSpeedMmPerS([
+      translating.rec.speedMmPerS,
+      ...[...translating.anchorMotion.values()].map((t) => t.speedMmPerS),
+    ]);
     const target = swingAmplitudeRad(
       (cfg.approachSwingDeg * Math.PI) / 180,
       speed,

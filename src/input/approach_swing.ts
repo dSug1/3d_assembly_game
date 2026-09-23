@@ -402,6 +402,39 @@ export function endApproach(
  * ⚠ A speed of zero gives the **maximum**: `0^exponent` is `0` for any positive exponent, the
  * divisor clamps to 1, and that is also what a stopped hand should see — the widest look.
  */
+/**
+ * ⭐⭐⭐ **HOW FAST THE APPROACH IS — the fastest finger DRIVING this body, not the holder's.**
+ *
+ * > *"in this situation (translation with dy second touch), the swing of the camera at entrance
+ * > of offset radius zone is not happening correctly"* — the owner, 2026-09-23 (defect 64)
+ *
+ * ⛔⛔⛔ `swingAmplitudeRad` was fed `grip.rec.speedMmPerS` — **the HOLDER's finger** — while the
+ * body was being translated by the SECOND touchpoint's `dy`. ⚠ The holder is then genuinely
+ * still, so the law read `speed = 0`, which it answers with *the widest look* (`0` is the
+ * documented maximum, and correct for a stopped hand). ⭐ So a second-finger approach swung at
+ * **full amplitude regardless of how fast it was pushed**, and the two dials a hand tuned on the
+ * glass — `approachSwingSpeedGain` and `…Exponent` — were bypassed entirely.
+ *
+ * ⭐⭐ **THE SHAPE, AND IT IS DEFECT 55's ONE MORE TIME**: a rule that names ONE finger inherits
+ * every later arrangement in which a different finger does the work. `A10` gave the second
+ * touchpoint a translation channel; this law was written before that and never re-read.
+ *
+ * ⚠ **`max`, and the reason is stated**: the channels SUM (`D43`), so a body driven by both
+ * fingers moves faster than either — but the amplitude law's knee was tuned against *a finger's*
+ * speed, and the fastest finger is the one a hand would name if asked how fast it was pushing.
+ * ⛔ Summing the speeds would double the reading when two fingers move together, which is a
+ * different number from the one the owner tuned on the glass.
+ *
+ * ⭐ All-still still means `0` → the maximum, which is the judged behaviour for a stopped hand.
+ */
+export function approachSpeedMmPerS(speeds: readonly number[]): number {
+  let fastest = 0;
+  for (const s of speeds) {
+    if (Number.isFinite(s) && s > fastest) fastest = s;
+  }
+  return fastest;
+}
+
 export function swingAmplitudeRad(
   maxRad: number,
   speedMmPerS: number,
