@@ -84,6 +84,11 @@ export interface SwingLatch {
   /** The vertical half of the same reading, in metres. Readout only. */
   readonly armTravelUpM: number;
   /**
+   * ⭐⭐ The ALONG-VIEW travel at the arming edge, metres (defect 67). ⛔ Diagnostic, like the
+   * other two — and the one whose absence made `arm=(0.0,0.0)` a readout that lied by omission.
+   */
+  readonly armTravelDepthM: number;
+  /**
    * ⭐⭐⭐ **THE CAPTURE THRESHOLD, FROZEN FOR THE APPROACH** — and the PITCH half is what made
    * this necessary.
    *
@@ -233,11 +238,26 @@ export function swingYawRad(
  * about, so either side shows the join equally, and *no* answer is available from the finger.
  * ⛔ A stated constant is the honest form of that, and it is one line to mirror.
  */
-export function swingSignFor(travelRight: number, travelUp = 0): 1 | -1 | null {
+export function swingSignFor(travelRight: number, travelUp = 0, travelDepth = 0): 1 | -1 | null {
   if (!Number.isFinite(travelRight) || !Number.isFinite(travelUp)) return null;
+  if (!Number.isFinite(travelDepth)) return null;
   if (travelRight !== 0) return travelRight < 0 ? -1 : 1;
   // ⭐ A translation with no horizontal component: the swing is earned, the aim is symmetric.
   if (travelUp !== 0) return 1;
+  // ⛔⛔⛔ **AND A TRAVEL STRAIGHT ALONG THE VIEW EARNS ONE TOO — defect 67, 2026-09-23.**
+  //
+  // > *"camera swing still not working in this configuration"* — with `arm=(0.0,0.0)mm` while
+  // > the gap closed from 104 mm to 40 mm
+  //
+  // ⚠⚠ The caller measured the body's travel on `right` and `up` ONLY, and the second
+  // touchpoint's channel is the gravity frame's **depth** — which is orthogonal to both. ⛔ So a
+  // body pushed straight away from the camera reported **exactly zero travel in both**, every
+  // frame, and this function answered `null` — correctly, on the evidence it was given.
+  // ⭐⭐ The rule's own words are *"opposite to the dx movement"*, and a head-on approach HAS no
+  // dx: the same argument as the vertical case above, which is why it takes the same answer.
+  // ⭐⭐⭐ And it is the case the swing exists FOR — `D46`'s degeneracy, the one where a hand has
+  // least depth cue — so answering `null` there disabled it exactly where it was most wanted.
+  if (travelDepth !== 0) return 1;
   // ⛔ No travel at all — a press, a rotation, a pinch. No swing, which is the 2026-09-20 rule.
   return null;
 }
@@ -277,9 +297,10 @@ export function acquireSwingSign(
   travelRightM: number,
   travelUpM: number,
   gapNowM: number,
+  travelDepthM = 0,
 ): SwingLatch | null {
   if (latch.sign !== null) return null;
-  const sign = swingSignFor(travelRightM, travelUpM);
+  const sign = swingSignFor(travelRightM, travelUpM, travelDepthM);
   if (sign === null) return null;
   // ⚠ A gap that is not a positive number leaves the latch alone rather than re-basing to it:
   // `gapAtTriggerM` divides the progress, and a zero there is an infinity on the camera.
@@ -510,68 +531,42 @@ export function swingAmplitudeRad(
 }
 
 /**
- * ⭐⭐⭐ **HOW FAST THE SWING'S AMPLITUDE MAY CHASE THE SPEED — a time constant, in ms.**
+ * ⭐⭐⭐ **THE AMPLITUDE IS LATCHED FOR THE APPROACH — defect 68, 2026-09-23.**
  *
- * ⛔⛔ **DERIVED, NOT CHOSEN, AND NOT A FEEL KNOB.** The speed estimate is windowed over
- * `flickLiftWindow` (40 ms) while pointer samples arrive every ~8 ms, so it changes in STEPS as
- * samples enter and leave that window. ⭐ Three window-lengths is the standard rule of thumb for
- * a one-pole filter to swallow a step of that period — the same *×3 over the noise* reasoning
- * `scene.ts` uses for the spin-sway floor — which is 120 ms.
+ * > *"camera swing jitters and does not work when I retract the follower from the offset radius
+ * > area in this configuration (dy with second touch to move the object towards the right)"*
  *
- * ⚠ And it is small against what it must not blunt: an approach lasts of the order of a second,
- * so 120 ms is about a tenth of it. ⛔ The amplitude still follows a real change of hand speed
- * within a fifth of the approach; what it no longer follows is the estimator's own steps.
+ * ⛔⛔ `swingAmplitudeRad` reads the driving finger's SPEED, live, every frame — and a retraction
+ * is where speed does its worst: the hand slows, stops, reverses. ⚠ The law answers a slow hand
+ * with a WIDE swing (`speed = 0` is its documented maximum), so the lean **breathes in and out**
+ * while the gap barely moves. ⭐ That is the jitter, and it is not the estimator: it is the law.
+ *
+ * ⭐⭐⭐ **AND THIS FIX WAS PRE-REGISTERED IN THE FUNCTION IT FIXES.** `swingAmplitudeRad`'s own
+ * comment has carried it since 2026-09-19: *"⚠⚠ WHAT TO WATCH ON THE GLASS: DECELERATING WIDENS
+ * THE SWING … a motion the gap did not ask for. ⭐ The one-line alternative if a hand dislikes it:
+ * latch `A` at the trigger."* ⚠ A hand disliked it, four days later.
+ * ⛔ `METHOD`: *a cost that is written down is not thereby paid.*
+ *
+ * ⭐ So the width is decided ONCE, from the speed at the moment the swing has both a direction and
+ * a driver, and held for the approach. ⛔ After that the GAP alone moves the camera, which is what
+ * the owner's spec describes: *"when the offset is half what it initially was, the camera orbit
+ * reverses."*
+ * ⚠ What it gives up, stated: a hand can no longer widen or narrow the look by changing pace
+ * mid-approach. That was never asked for, and it is the thing being reported as jitter.
  */
-export const SWING_TAU_MS = 120;
-
-/**
- * ⭐⭐⭐ **SMOOTH THE AMPLITUDE — device-reported, 2026-09-19.**
- *
- * > *"when I increase the swing speed gain or the swing speed exponent, the orbit of the camera
- * > becomes jittery: there seems to be steps in the orbit and it goes back and forth during the
- * > delta position movement. especially the swing speed exponent."* — the owner
- *
- * ⭐⭐⭐ **AND THE ARITHMETIC PREDICTS *"ESPECIALLY THE EXPONENT"* EXACTLY.** Differentiating
- * `A = max / (gain · speed^n)`:
- *
- *     dA/A  =  −n · dspeed/speed
- *
- * ⛔ so the estimator's relative wobble is multiplied by the **exponent** before it reaches the
- * camera: at `n = 2` a 10% flutter in speed becomes 20% of amplitude. ⚠ And raising the GAIN
- * lowers the knee, which moves more of the drag out of the clamped region where speed changes do
- * nothing at all — so both dials make it worse, and the exponent makes it worse faster. The
- * report names the two symptoms a first-order filter is for: **steps** (the window) and **back
- * and forth** (the wobble, amplified).
- *
- * ⛔⛔ **IT SMOOTHS `A`, NOT THE SPEED.** Filtering the speed would put a lag inside a quantity
- * three other rules read, and `recognizer.ts` is emphatic that there is ONE definition of *how
- * fast is this finger*. ⭐ The lag belongs to the consumer that cannot tolerate the noise.
- *
- * ⚠ **THE ENDPOINTS ARE UNAFFECTED, WHICH IS WHY THIS IS SAFE.** `θ = A·sin(πp)` is exactly
- * zero at `p = 0` and `p = 1` **whatever `A` is**, so no amount of smoothing can leave the camera
- * off its orbit at the trigger or at contact.
- *
- * ⛔ Frame-rate independent by construction — `1 − e^(−dt/τ)`, not a fixed per-frame fraction. A
- * fixed fraction would smooth twice as hard at 120 fps as at 60, which is the shape that makes a
- * gesture feel different on two devices for no reason anyone can see.
- *
- * @param dtMs time since the last call. ⚠ Non-positive or non-finite returns `previous`
- *   unchanged: a frame that took no time cannot have moved anything.
- */
-export function smoothAmplitude(
-  previous: number,
-  target: number,
-  dtMs: number,
-  tauMs: number = SWING_TAU_MS,
-): number {
-  if (!Number.isFinite(previous)) return target;
-  if (!Number.isFinite(target)) return previous;
-  if (!(dtMs > 0) || !Number.isFinite(dtMs)) return previous;
-  // ⚠ A non-positive τ means *no smoothing*, which is a legitimate request and the honest
-  // reading of a zero: follow the target exactly.
-  if (!(tauMs > 0) || !Number.isFinite(tauMs)) return target;
-  return previous + (target - previous) * (1 - Math.exp(-dtMs / tauMs));
+export function latchAmplitude(latched: number | null, target: number): number {
+  if (latched !== null && Number.isFinite(latched)) return latched;
+  return Number.isFinite(target) ? target : 0;
 }
+
+// ⛔⛔ **`SWING_TAU_MS` AND `smoothAmplitude` STOOD HERE AND ARE DELETED** — defect 68,
+// 2026-09-23. They filtered an amplitude that followed the finger's speed every frame; the width
+// is now LATCHED for the approach, so there is nothing left to filter. ⭐ Deleted rather than
+// parked: *a dormant fork is a trap* (`D28`), and `unwired_debt.test.ts` is what noticed.
+// ⚠ The 2026-09-19 report they answered was real — `terminalSpeedPxPerS`'s window makes the
+// estimate step, and the exponent multiplies that — so a session reaching for a filter here
+// should know the wobble was removed at its SOURCE instead.
+
 
 /**
  * ⭐⭐⭐ **RE-BASE THE TRIGGER GAP SO A HELD SWING RESUMES WITHOUT A JUMP.**

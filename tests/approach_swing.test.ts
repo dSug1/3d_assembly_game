@@ -18,7 +18,7 @@ import {
   rebaseTriggerGap,
   swingDriverIndex,
   endApproach,
-  smoothAmplitude,
+  latchAmplitude,
   swingAmplitudeRad,
   swingProgress,
   swingSignFor,
@@ -28,7 +28,7 @@ import {
   acquireSwingSign,
 } from "@input/approach_swing";
 
-const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
+const LATCH: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0, armTravelDepthM: 0 };
 const AMP = (25 * Math.PI) / 180;
 const yawAt = (gapM: number, latch: SwingLatch = LATCH) =>
   swingYawRad(swingProgress(gapM, latch), AMP, latch.sign);
@@ -84,7 +84,7 @@ describe("⛔⛔⛔ THE ROUND TRIP — out, and exactly back", () => {
   });
 
   it("⛔ the sign is the LATCH's, and reversing it mirrors the whole swing", () => {
-    const other: SwingLatch = { gapAtTriggerM: 0.07, sign: -1, offsetAtTriggerM: 0.07, armTravelM: -0.004, armTravelUpM: 0 };
+    const other: SwingLatch = { gapAtTriggerM: 0.07, sign: -1, offsetAtTriggerM: 0.07, armTravelM: -0.004, armTravelUpM: 0, armTravelDepthM: 0 };
     expect(yawAt(0.035, other)).toBeCloseTo(-yawAt(0.035), 12);
     // ⚠ The reversal at half is NOT a change of sign — both halves are on the same side of the
     // orbit. ⛔ Asserted, because "reverses" in the dictation could be read either way, and the
@@ -121,7 +121,7 @@ describe("⛔⛔ THE PROGRESS — clamped at both ends, and degenerate inputs ar
     // approach left to show. ⭐ `1` puts the swing at home: the one answer that cannot move the
     // camera. `LESSONS_CARRIED` §6 — a degenerate input refuses, it does not improvise.
     for (const g0 of [0, -1, NaN, Infinity]) {
-      const bad: SwingLatch = { gapAtTriggerM: g0, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
+      const bad: SwingLatch = { gapAtTriggerM: g0, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0, armTravelDepthM: 0 };
       expect(swingProgress(0.03, bad)).toBe(1);
       expect(swingYawRad(swingProgress(0.03, bad), AMP, 1)).toBe(0);
     }
@@ -350,7 +350,7 @@ describe("⛔⛔⛔ THE AMPLITUDE IS **DIVIDED** BY THE FINGER'S SPEED", () => {
     // the fast hand covers the gap in a quarter of the time, so a fixed amplitude would sweep
     // the camera four times as fast. ⭐ Measured here as degrees of camera per millimetre of gap
     // closed — which is what a hand actually experiences.
-    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
+    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0, armTravelDepthM: 0 };
     const rateAt = (speed: number) => {
       const A = swingAmplitudeRad(MAX, speed, GAIN, EXP);
       const g1 = 0.05, g2 = 0.049;
@@ -409,81 +409,49 @@ describe("⛔⛔ THE EXPONENT — the owner's second dial", () => {
   });
 });
 
-describe("⛔⛔⛔ THE AMPLITUDE IS SMOOTHED — device-reported jitter, 2026-09-19", () => {
-  // ⛔⛔ THE OWNER: *"when I increase the swing speed gain or the swing speed exponent, the orbit
-  // of the camera becomes jittery: there seems to be steps in the orbit and it goes back and
-  // forth … especially the swing speed exponent"* — and, crucially,
-  // *"although the delta position movement is quite regular."*
+// ⛔⛔⛔ **A DESCRIBE STOOD HERE AND ITS SUBJECT IS DELETED** — defect 68, 2026-09-23.
+// *"THE AMPLITUDE IS SMOOTHED — device-reported jitter, 2026-09-19"* filtered a width that
+// followed the finger's speed every frame. ⭐ The width is now LATCHED for the approach, so there
+// is no fluctuation left to filter: `smoothAmplitude` and `SWING_TAU_MS` are gone with it.
+// ⚠ Kept as a note because the 2026-09-19 report it answered was real — the estimator's wobble
+// IS multiplied by the exponent — and a future session reaching for a filter here should know
+// that the wobble was removed at its source instead.
+
+describe("⭐⭐ THE AMPLITUDE IS LATCHED FOR THE APPROACH — defect 68, 2026-09-23", () => {
+  // > *"camera swing jitters and does not work when I retract the follower from the offset radius
+  // > area … (dy with second touch to move the object towards the right)"*
   //
-  // ⭐⭐⭐ THAT LAST SENTENCE IS THE DIAGNOSIS: a steady hand and a stepping camera means the
-  // STEPS ARE IN THE ESTIMATOR. `terminalSpeedPxPerS` measures over whatever samples fall inside
-  // a 40 ms window, so as the boundary crosses a sample the baseline jumps (32 ms ↔ 40 ms) and
-  // the reading changes ±11% for an input with NO variation at all.
-  const MAX = (25 * Math.PI) / 180;
-
-  /** Steady-state peak-to-peak of the amplitude, as a fraction of the maximum swing. */
-  const ripple = (gain: number, exp: number, tau: number): number => {
-    const speedAt = (i: number) => 60 * (i % 2 === 0 ? 1 : 40 / 32);
-    let prev = swingAmplitudeRad(MAX, speedAt(0), gain, exp);
-    const tail: number[] = [];
-    for (let i = 0; i < 400; i++) {
-      prev = smoothAmplitude(prev, swingAmplitudeRad(MAX, speedAt(i), gain, exp), 16, tau);
-      // ⚠ TAIL ONLY. The first probe measured the whole series and read the filter's own
-      // TRANSIENT as ripple — my instrument, not the product, and it said 8.9% where the truth
-      // was 1.1%. A settling filter has to be allowed to settle before it is judged.
-      if (i > 300) tail.push(prev);
+  // ⛔ A retraction is where speed does its worst: the hand slows, stops, reverses. The law
+  // answers a slow hand with a WIDE swing, so the lean breathed in and out while the gap barely
+  // moved. ⭐ The fix was pre-registered in `swingAmplitudeRad`'s own comment four days earlier.
+  it("⭐⭐⭐ once decided, the width does not move again — whatever the hand does", () => {
+    const first = swingAmplitudeRad(0.7, 140, 0.015, 1.7);
+    let latched: number | null = null;
+    latched = latchAmplitude(latched, first);
+    expect(latched).toBeCloseTo(first, 12);
+    // ⛔ THE ASSERTION THE SHIPPED BUILD FAILS: stopping mid-approach used to widen the swing
+    // towards the maximum, which is a camera motion the gap did not ask for.
+    for (const speed of [0, 5, 400, 0]) {
+      latched = latchAmplitude(latched, swingAmplitudeRad(0.7, speed, 0.015, 1.7));
+      expect(latched).toBeCloseTo(first, 12);
     }
-    return (Math.max(...tail) - Math.min(...tail)) / MAX;
-  };
-
-  it("⭐⭐⭐ it removes the estimator's ripple — measured, ~15×", () => {
-    expect(ripple(0.02, 1, 0)).toBeGreaterThan(0.15);
-    expect(ripple(0.02, 1, 120)).toBeLessThan(0.02);
-    // ⚠ And harder where the owner said it was worst — a higher exponent amplifies the
-    // estimator's RELATIVE wobble by that exponent: `dA/A = −n · dspeed/speed`.
-    expect(ripple(0.02, 2, 0)).toBeGreaterThan(0.2);
-    expect(ripple(0.02, 2, 120)).toBeLessThan(0.02);
+    expect(latched).toBeLessThan(0.7); // ⚠ and it is the DAMPED width, not the maximum
   });
 
-  it("⛔⛔ BELOW THE KNEE there was never any ripple — which is why the defaults felt fine", () => {
-    // ⭐ The clamp holds the amplitude at the slider's value, so speed noise does nothing at all.
-    // ⚠ Worth pinning: it explains why the report only appeared once a dial was RAISED.
-    expect(ripple(1 / 120, 1, 0)).toBeCloseTo(0, 6);
-    expect(ripple(1 / 120, 3, 0)).toBeCloseTo(0, 6);
+  it("⛔ the first call decides, and a non-finite target cannot latch a NaN onto the camera", () => {
+    expect(latchAmplitude(null, 0.42)).toBeCloseTo(0.42, 12);
+    expect(latchAmplitude(null, Number.NaN)).toBe(0);
+    expect(latchAmplitude(0.3, Number.NaN)).toBeCloseTo(0.3, 12);
+    expect(latchAmplitude(Number.NaN, 0.42)).toBeCloseTo(0.42, 12);
   });
 
-  it("⛔⛔⛔ AND SMOOTHING CANNOT MOVE THE ENDPOINTS — which is why it is safe", () => {
-    // ⭐ `θ = A·sin(πp)` is exactly zero at `p = 0` and `p = 1` for ANY `A`, so no amount of
-    // lag can leave the camera off its orbit at the trigger or at contact. ⚠ That is the owner's
-    // one hard requirement, and it survives by construction rather than by care.
-    for (const A of [0, MAX, MAX / 3, 1e-9, 12345]) {
-      expect(swingYawRad(0, A, 1)).toBe(0);
-      expect(swingYawRad(1, A, 1)).toBe(0);
+  it("⭐ the endpoints are untouched, which is why latching is safe", () => {
+    // ⚠ `θ = A·sin(πp)` is zero at `p = 0` and `p = 1` whatever `A` is, so no choice of width can
+    // leave the camera off its orbit at the trigger or at contact.
+    for (const a of [0.1, 0.7, 1.4]) {
+      expect(swingYawRad(0, a, 1)).toBe(0);
+      expect(swingYawRad(1, a, 1)).toBe(0);
     }
-  });
-
-  it("⚠ it is FRAME-RATE INDEPENDENT — the same lag at 60 fps and at 120", () => {
-    // ⛔ `1 − e^(−dt/τ)`, never a fixed per-frame fraction: a fixed fraction would smooth twice
-    // as hard at 120 fps, which is the shape that makes a gesture feel different on two devices
-    // for no reason anyone can see.
-    const after = (dt: number, steps: number) => {
-      let v = 0;
-      for (let i = 0; i < steps; i++) v = smoothAmplitude(v, 1, dt, 120);
-      return v;
-    };
-    expect(after(16, 15)).toBeCloseTo(after(8, 30), 3);
-    expect(after(16, 15)).toBeCloseTo(after(4, 60), 3);
-  });
-
-  it("⚠ degenerate inputs hold rather than lurch", () => {
-    expect(smoothAmplitude(0.5, 0.9, 0, 120)).toBe(0.5);
-    expect(smoothAmplitude(0.5, 0.9, -8, 120)).toBe(0.5);
-    expect(smoothAmplitude(0.5, 0.9, NaN, 120)).toBe(0.5);
-    expect(smoothAmplitude(NaN, 0.9, 16, 120)).toBe(0.9);
-    expect(smoothAmplitude(0.5, NaN, 16, 120)).toBe(0.5);
-    // ⛔ τ = 0 is a legitimate request for NO smoothing, and the honest reading is *follow
-    // exactly* — not *never move*, which a naive guard would produce.
-    expect(smoothAmplitude(0.5, 0.9, 16, 0)).toBe(0.9);
   });
 });
 
@@ -502,7 +470,7 @@ describe("⛔⛔⛔ THE SWING FREEZES WHEN NO TRANSLATION DRIVES IT — device-r
     // ⚠ Freezing alone is not enough: while frozen a rotation may move the gap a long way, so
     // the first frame of the resumed drag would JUMP the camera. ⛔ `g0' = gap/(1−p)` is the `g0`
     // that makes the NEW gap mean the progress already on screen.
-    const before: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
+    const before: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0, armTravelDepthM: 0 };
     const pHeld = swingProgress(0.042, before); // 40% of the way in
     expect(pHeld).toBeCloseTo(0.4, 12);
     // ⚠ A rotation now moves the gap from 42 mm to 55 mm without anything approaching.
@@ -521,7 +489,7 @@ describe("⛔⛔⛔ THE SWING FREEZES WHEN NO TRANSLATION DRIVES IT — device-r
     // ⛔ The first build recomputed the progress from the live gap each frame, so the re-base
     // did **nothing at all** and the jump remained. ⭐ The frozen progress has to be captured
     // ONCE, on the frame the translation stopped. Pinned so it cannot be re-introduced.
-    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0 };
+    const latch: SwingLatch = { gapAtTriggerM: 0.07, sign: 1, offsetAtTriggerM: 0.07, armTravelM: 0.004, armTravelUpM: 0, armTravelDepthM: 0 };
     for (const gap of [0.06, 0.042, 0.01]) {
       expect(rebaseTriggerGap(gap, swingProgress(gap, latch))).toBeCloseTo(latch.gapAtTriggerM, 12);
     }
@@ -797,6 +765,7 @@ describe("⛔⛔⛔ defect 65 — a null sign is PROVISIONAL, and re-bases when 
     sign,
     armTravelM: 0,
     armTravelUpM: 0,
+    armTravelDepthM: 0,
   });
 
   it("⭐⭐⭐ RED AGAINST THE SHIPPED BUILD: the first travel that arrives gives it a direction", () => {
@@ -833,5 +802,56 @@ describe("⛔⛔⛔ defect 65 — a null sign is PROVISIONAL, and re-bases when 
     expect(acquireSwingSign(armed(null), 0.004, 0, 0)).toBeNull();
     expect(acquireSwingSign(armed(null), 0.004, 0, NaN)).toBeNull();
     expect(acquireSwingSign(armed(null), 0.004, 0, -0.01)).toBeNull();
+  });
+});
+
+/**
+ * ⭐⭐⭐ **DEFECT 67 — A HEAD-ON APPROACH FED THE SWING NOTHING, AND IT IS THE CASE IT EXISTS FOR.**
+ *
+ * > *"camera swing still not working in this configuration"* — the owner, 2026-09-23, with
+ * > `arm=(0.0,0.0)mm` on the HUD **while the gap closed from 104 mm to 40 mm**
+ *
+ * ⛔⛔ `applyWorldStep` accumulated the body's travel on the gravity frame's `right` and `up`
+ * only — and those two span the SCREEN. The second touchpoint's channel is `depth`, orthogonal to
+ * both, so a body pushed straight away from the camera reported **exactly zero in both**, every
+ * frame. ⚠ `swingSignFor` then answered `null`, correctly, on the evidence it was given.
+ *
+ * ⭐⭐ It is `D46`'s degeneracy: a head-on approach is where a hand has least depth cue, which is
+ * the whole reason the swing was built — so the rule was silent exactly where it was wanted.
+ */
+describe("⛔⛔⛔ defect 67 — travel along the view axis earns a swing", () => {
+  it("⭐⭐⭐ RED AGAINST THE SHIPPED BUILD: a pure depth approach has a direction", () => {
+    expect(swingSignFor(0, 0, 0.004)).toBe(1);
+    expect(swingSignFor(0, 0, -0.004)).toBe(1); // ⭐ towards or away, the aim is symmetric
+  });
+
+  it("⛔ the horizontal travel still wins when there IS one — the owner's own words", () => {
+    // ⚠ *"the camera orbits opposite to the dx movement"*: a real `dx` decides, and the other
+    // two are only consulted when it is absent.
+    expect(swingSignFor(-0.01, 0.02, 0.03)).toBe(-1);
+    expect(swingSignFor(0.01, -0.02, -0.03)).toBe(1);
+    expect(swingSignFor(0, 0.02, -0.03)).toBe(1);
+  });
+
+  it("⛔ no travel in ANY of the three is still no swing — the 2026-09-20 rule survives", () => {
+    expect(swingSignFor(0, 0, 0)).toBeNull();
+    expect(swingSignFor(0, 0, NaN)).toBeNull();
+  });
+
+  it("⭐ and a late direction can now be acquired from the depth channel too", () => {
+    const armed: SwingLatch = {
+      gapAtTriggerM: 0.059,
+      offsetAtTriggerM: 0.065,
+      sign: null,
+      armTravelM: 0,
+      armTravelUpM: 0,
+      armTravelDepthM: 0,
+    };
+    // ⛔ The owner's exact state: armed with no direction, gap closing by a depth push alone.
+    expect(acquireSwingSign(armed, 0, 0, 0.04)).toBeNull();
+    const got = acquireSwingSign(armed, 0, 0, 0.04, 0.006);
+    expect(got).not.toBeNull();
+    expect(got!.sign).toBe(1);
+    expect(got!.gapAtTriggerM).toBeCloseTo(0.04, 12);
   });
 });

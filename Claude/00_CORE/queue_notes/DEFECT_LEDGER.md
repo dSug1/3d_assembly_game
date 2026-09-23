@@ -793,3 +793,61 @@ first, each with **the gap on the frame before it**. ⭐ One entry with a clean 
 normal crossing; a jump is mechanism 2; several entries is mechanism 1, settled at a glance.
 ⛔ No fix is guessed here: both candidates would take a threshold, and *a guessed number has been
 wrong every single time on this project.*
+
+
+
+---
+
+## 67 — ⭐⭐⭐ **A HEAD-ON APPROACH FED THE SWING NOTHING — THE CASE IT EXISTS FOR**
+
+**2026-09-23, by finger.** *"camera swing still not working in this configuration"* — HUD:
+`sign⛔? p=0.33 yaw=0.0° g0=59mm arm=(0.0,0.0)mm` **while the gap closed from 104 mm to 40 mm**.
+
+⛔⛔⛔ `applyWorldStep` accumulated the body's travel on the gravity frame's **`right` and `up`
+only** — and those two span the SCREEN. The second touchpoint's channel is `depth`, which is
+orthogonal to both, so a body pushed straight away from the camera reported **exactly zero in
+both, every frame**. ⚠ `swingSignFor` answered `null` — correctly, on the evidence it was given —
+and defect 65's new backfill could not help, because there was no travel for it to read either.
+
+⭐⭐ **IT IS `D46`'s DEGENERACY, AND THE SWING WAS BUILT FOR IT.** A head-on approach is where a
+hand has least depth cue; the parallax swing exists to supply it. ⛔ So the rule was silent
+exactly where it was most wanted, for as long as the second finger was the one pushing.
+
+✅ **FIXED**: `frameTravelDepthM` is accumulated beside the other two, and `swingSignFor` takes a
+third component — the same answer as the vertical case, `+1`, on the same argument: *the swing is
+earned, the aim is symmetric.* ⭐ A real `dx` still decides when there is one, which is the
+owner's own wording.
+
+⭐⭐ **AND THE READOUT WAS COMPLICIT, THE THIRD TIME IN TWO DAYS.** `arm=(0.0,0.0)` cannot tell
+*nothing moved* from *it moved along the axis I do not measure* — it now prints all three.
+⚠ `METHOD`: **a readout that reports only the components the rule uses cannot distinguish "nothing
+happened" from "something happened where I do not look."** Defect 56's `track=0.00×` was the same
+sentence about a different number.
+
+
+---
+
+## 68 — ⭐⭐ **THE SWING'S WIDTH FOLLOWED THE FINGER'S SPEED, AND A RETRACTION MADE IT BREATHE**
+
+**2026-09-23, by finger.** *"camera swing jitters and does not work when I retract the follower
+from the offset radius area in this configuration (dy with second touch to move the object towards
+the right)."*
+
+⛔ `swingAmplitudeRad` reads the driving finger's speed **live, every frame**, and a retraction is
+where speed does its worst: the hand slows, stops, reverses. ⚠ The law answers a slow hand with a
+WIDE swing — `speed = 0` is its documented maximum — so the lean breathes in and out while the gap
+barely moves. ⭐ That is the jitter, and it is not the estimator: it is the law.
+
+⭐⭐⭐ **THE FIX WAS PRE-REGISTERED IN THE FUNCTION IT FIXES.** `swingAmplitudeRad`'s comment has
+carried it since 2026-09-19: *"⚠⚠ WHAT TO WATCH ON THE GLASS: DECELERATING WIDENS THE SWING … a
+motion the gap did not ask for. ⭐ The one-line alternative if a hand dislikes it: latch `A` at the
+trigger."* ⚠ A hand disliked it, four days later. ⛔ `METHOD`: **a cost that is written down is not
+thereby paid** — writing it down bought the diagnosis in one read, and nothing else.
+
+✅ **FIXED**: the width is latched once, from the speed at the moment the swing has both a
+direction and a driver, and held for the approach. ⛔ After that the GAP alone moves the camera,
+which is the owner's own spec.
+⚠ Given up, stated: a hand can no longer widen the look by changing pace mid-approach.
+⛔ `smoothAmplitude` and `SWING_TAU_MS` are **deleted** with their vectors — they filtered a
+fluctuation that no longer exists, and `unwired_debt.test.ts` is what noticed they had become
+inert. ⭐ The 2026-09-19 report they answered was real; the wobble is now removed at its source.

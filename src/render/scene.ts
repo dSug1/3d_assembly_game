@@ -191,7 +191,7 @@ import {
   pitchOffsetV,
   freezeProgress,
   rebaseTriggerGap,
-  smoothAmplitude,
+  latchAmplitude,
   swingDriverIndex,
   endApproach,
   approachSpeedMmPerS,
@@ -1950,9 +1950,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // press inside the band, a rotation moving the closest points, a pinch rescaling
         // `D49`'s offset), and then this is **zero** — which `swingSignFor` answers with
         // `null`, and a `null` sign is a swing of zero. ⛔ The old code answered `+1`.
-        sign: swingSignFor(frameTravelRightM, frameTravelUpM),
+        sign: swingSignFor(frameTravelRightM, frameTravelUpM, frameTravelDepthM),
         armTravelM: frameTravelRightM,
         armTravelUpM: frameTravelUpM,
+        armTravelDepthM: frameTravelDepthM,
       };
     } else if (!highlighted.inRange && swing !== null) {
       // ⚠ Pulling apart past the offset ends the approach. ⛔ Nothing has to be restored: the
@@ -1989,7 +1990,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // 65). ⛔ It must run BEFORE the accumulators are consumed two lines below, and it is the
     // same travel the arming edge would have read had it landed on this frame.
     if (swing !== null && swing.sign === null && highlighted.gapM !== null) {
-      const signed = acquireSwingSign(swing, frameTravelRightM, frameTravelUpM, highlighted.gapM);
+      const signed = acquireSwingSign(
+        swing,
+        frameTravelRightM,
+        frameTravelUpM,
+        highlighted.gapM,
+        frameTravelDepthM,
+      );
       if (signed !== null) swing = signed;
     }
     // ⛔⛔⛔ **CONSUMED HERE, EVERY FRAME, WHETHER OR NOT ANYTHING ARMED.** This one line is what
@@ -1999,6 +2006,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // stale direction is readable, which is the defect of 2026-09-20 in a smaller form.
     frameTravelRightM = 0;
     frameTravelUpM = 0;
+    frameTravelDepthM = 0;
     // ⭐ One frame of memory, for the arming history above. ⛔ After the arming, never before.
     gapPrevM = highlighted.gapM;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
@@ -2525,6 +2533,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let frameTravelUpM = 0;
   /**
+   * ⭐⭐⭐ **THE ALONG-VIEW COMPONENT — defect 67.** `right` and `up` span the screen, so a body
+   * pushed straight away from the camera showed up in NEITHER, and the swing read *"no travel"*
+   * for the one approach geometry it was built for.
+   */
+  let frameTravelDepthM = 0;
+  /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
    *
@@ -2544,7 +2558,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
    * than from whatever the last approach happened to end on.
    */
-  let swingAmp: { rad: number; atMs: number } | null = null;
+  /** ⭐ The LATCHED swing width for this approach, radians (defect 68). ⛔ Decided once. */
+  let swingAmp: number | null = null;
   /**
    * ⛔⛔ The progress the swing was showing when a translation STOPPED driving it, captured
    * once. ⚠ It must be remembered rather than recomputed: `rebaseTriggerGap(gap, p)` with `p`
@@ -2649,12 +2664,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // the arithmetic — the exponent multiplies the estimator's relative wobble.
     // ⚠ Smoothing `A` and never the speed: three other rules read that number, and there is one
     // definition of *how fast is this finger*.
-    const now = performance.now();
-    swingAmp =
-      swingAmp === null
-        ? { rad: target, atMs: now }
-        : { rad: smoothAmplitude(swingAmp.rad, target, now - swingAmp.atMs), atMs: now };
-    return swingYawRad(swingProgress(highlighted.gapM ?? 0, swing), swingAmp.rad, swing.sign);
+    // ⛔⛔ **LATCHED, NOT SMOOTHED** (defect 68): the amplitude used to follow the finger's speed
+    // every frame through a first-order filter, and a RETRACTION — slow, stop, reverse — made it
+    // breathe. ⭐ The gap alone moves the camera once the width is decided.
+    // ⚠ Latched on the first frame that has a DIRECTION as well as a driver, so it cannot be
+    // decided by a frame in which nothing had moved yet (defect 65's shape).
+    if (swing.sign !== null) swingAmp = latchAmplitude(swingAmp, target);
+    return swingYawRad(
+      swingProgress(highlighted.gapM ?? 0, swing),
+      swingAmp ?? target,
+      swing.sign,
+    );
   };
 
   /**
@@ -3077,7 +3097,9 @@ swing     sign${
                 // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
                 // from"* is the question a direction report asks, and `0.0000` here is the whole
                 // explanation of a `⛔?`.
-                ` arm=(${(swing.armTravelM * 1000).toFixed(1)},${(swing.armTravelUpM * 1000).toFixed(1)})mm` +
+                // ⭐⭐ ALL THREE COMPONENTS (defect 67): `arm=(0.0,0.0)` could not tell *nothing
+                // moved* from *it moved along the axis I do not measure*, and it was the second.
+                ` arm=(${(swing.armTravelM * 1000).toFixed(1)},${(swing.armTravelUpM * 1000).toFixed(1)},${(swing.armTravelDepthM * 1000).toFixed(1)})mm` +
                 ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}` +
                 // ⭐⭐ WHERE EACH ARMING HAPPENED, newest first: `g0←gap the frame before`.
                 // ⛔ Several entries = it RE-ARMED mid-approach, which is one whole hypothesis
@@ -3566,6 +3588,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // crossed the threshold.
     frameTravelRightM += dot(step, grip.frame.right);
     frameTravelUpM += dot(step, grip.frame.up);
+    // ⛔⛔⛔ **AND THE THIRD AXIS — defect 67, 2026-09-23.** `right` and `up` span the SCREEN, and
+    // the second touchpoint's channel is `depth`, which is orthogonal to both: a body pushed
+    // straight away from the camera fed this pair **exactly zero**, every frame, so the swing
+    // could never find a direction for the very approach it exists to help.
+    // ⚠ `METHOD`: *a readout that reports only the components the rule uses cannot tell
+    // "nothing happened" from "something happened where I do not look."*
+    frameTravelDepthM += dot(step, grip.frame.depth);
     const mp = requirePose(grip.mesh);
     // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
     // camera's own maximum orbit radius. A body through the near plane renders *a black page with
