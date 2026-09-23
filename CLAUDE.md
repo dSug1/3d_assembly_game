@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1069 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1081 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -252,6 +252,17 @@ from the second touchpoint and not from the first: *when a rule has two channels
 belongs to the RULE*. ⚠⚠ **Cost, unjudged**: `dy` no longer twists.
 ⭐ Rules, the conflict check against every earlier rule, the decisions and ⭐⭐ **an ordered
 list of what to test next, with what would falsify each** → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §9–§10.
+⛔⛔ **THREE SWING DEFECTS WERE DIAGNOSED ON A DISCARDED BRANCH AND PORTED HERE** (56–58, 2026-09-23), none of
+them dependent on the mapping that branch was testing. ⭐⭐ The **amplitude read the HOLDER's speed** while the
+second touchpoint pushed — a still holder reads `0`, which the law answers with the WIDEST look, so both tuned
+dials were bypassed; the second touchpoint had **no speed to read at all**, which is why the wrong one was read.
+⭐ The **direction was a one-frame lottery**: an arming that landed on a frame with no pointer event latched *no
+direction* for the whole approach, and a `null` sign is provisional now, re-basing the trigger gap when it fills.
+⭐ And the **speed estimate never decayed** — `trimBuffer` ended its window at the last SAMPLE, so a push that had
+already finished kept answering *"fast"*: *an estimator is only as fresh as the question's clock.*
+⚠⚠ **STILL UNJUDGED BY A HAND**: the damping law puts most real approaches at **1–5°** of swing (the knee is
+67 mm/s, an ordinary drag is several hundred). ⭐ `?approachSwingSpeedGain=0` pins it at the full
+`approachSwingDeg` — one URL parameter that separates code from tuning.
 ⛔⛔ **AND CHECK THE HUD'S `build` LINE BEFORE JUDGING ANY GESTURE ON A DEVICE.** On
 2026-09-16 a confirmed fix was reported broken from Pages on a tablet running an **old
 bundle**: `index.html` is served `max-age=600` and the assets are content-hashed, so a
@@ -323,7 +334,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Fifty-five defects, fifty-four of them BY FINGER, and none visible to a green
+⛔⛔ **Fifty-eight defects, fifty-seven of them BY FINGER, and none visible to a green
 suite.** ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
 total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
 project's argument for device passes. ⭐ The two do not compete: **the device finds what is

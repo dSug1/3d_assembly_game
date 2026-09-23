@@ -280,6 +280,15 @@ export class Recognizer<P> {
     return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg));
   }
 
+  /**
+   * ⭐⭐ **THE SPEED AS OF `nowMs`**, zero once this finger has been quiet for one window.
+   * ⛔ The getter above ends its window at the LAST SAMPLE — correct at a release, and stale for
+   * anything asking mid-gesture while nothing arrives (defect 70).
+   */
+  speedMmPerSAt(nowMs: number): number {
+    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg));
+  }
+
   get motionState(): MotionState {
     return this.motion.current;
   }

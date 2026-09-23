@@ -1191,3 +1191,56 @@ describe("⛔⛔ the rest-confirming sample's travel is EMITTED, not swallowed",
     expect(m.current).toBe("STATIONARY");
   });
 });
+
+/**
+ * ⭐⭐⭐ **DEFECT 70 — A SPEED THAT NEVER DECAYS.**
+ *
+ * > *"sometimes, it seems I need to wait a little before redoing the same translation movement,
+ * > and then the camera swing works again"* — the owner, 2026-09-23
+ *
+ * ⛔⛔ `trimBuffer` ended its window at the **last sample**, so a finger that stops emitting keeps
+ * reporting the speed of a burst that has already finished — indefinitely. ⚠ Harmless where it
+ * was written (the flick reads at the release, where *now* IS the last sample) and wrong for the
+ * approach swing, which asks mid-gesture: an immediate second push inherits the first one's speed
+ * and the amplitude law damps the swing to a degree or two.
+ */
+describe("⛔⛔⛔ defect 70 — the speed window may end NOW instead of at the last sample", () => {
+  const cfg = DEFAULT_CONFIG;
+  const fast: Sample[] = [
+    { x: 0, y: 0, t: 1000 },
+    { x: 40, y: 0, t: 1016 },
+    { x: 80, y: 0, t: 1032 },
+  ];
+
+  it("⭐⭐⭐ a finger that stopped a second ago reads ZERO, not its old burst", () => {
+    // ⛔ THE ASSERTION THE SHIPPED BUILD FAILS: without a `now`, the window follows the samples.
+    expect(terminalSpeedPxPerS(trimBuffer(fast, cfg), cfg)).toBeGreaterThan(0);
+    expect(terminalSpeedPxPerS(trimBuffer(fast, cfg, 2000), cfg)).toBe(0);
+  });
+
+  it("⛔ and the RELEASE reading is untouched — the default is the old behaviour exactly", () => {
+    expect(terminalSpeedPxPerS(trimBuffer(fast, cfg, 1032), cfg)).toBe(
+      terminalSpeedPxPerS(trimBuffer(fast, cfg), cfg),
+    );
+    expect(trimBuffer(fast, cfg, 1040).length).toBe(trimBuffer(fast, cfg).length);
+  });
+
+  it("⛔ a non-finite `now` falls back to the last sample rather than emptying the window", () => {
+    expect(trimBuffer(fast, cfg, Number.NaN)).toEqual(trimBuffer(fast, cfg));
+    expect(trimBuffer([], cfg, 5000)).toEqual([]);
+  });
+
+  it("⭐⭐ and the SECOND touchpoint now has a speed at all — defect 64's other half", () => {
+    // ⚠ Only a holder grip carries a `Recognizer`; the second touchpoint has this tracker, which
+    // had no speed — which is WHY the swing's amplitude was reading the holder's.
+    // ⛔ One definition of *how fast is this finger*: it calls the same estimator.
+    const t = new MotionTracker(cfg);
+    for (const s of fast) t.push(s);
+    expect(t.speedMmPerS).toBeGreaterThan(0);
+    expect(t.speedMmPerSAt(1032)).toBeCloseTo(t.speedMmPerS, 12);
+    expect(t.speedMmPerSAt(5000)).toBe(0);
+    // ⭐ And a reset forgets the samples with the bands.
+    t.reset();
+    expect(t.speedMmPerS).toBe(0);
+  });
+});
