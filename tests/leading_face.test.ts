@@ -171,3 +171,68 @@ describe("the leading face is the face the ray LEAVES through", () => {
     }
   });
 });
+
+describe("⛔⛔⛔ STICKY — the leading face changes only when the body stops advancing on it", () => {
+  /**
+   * ⚠⚠ *"In this situation (ongoing translation = dx towards left) the gizmo keeps swapping
+   * between the face and the center of the object."* — the owner, 2026-09-23, with two
+   * screenshots one drag apart showing the gizmo on two different faces.
+   *
+   * ⛔⛔ **THE FACE WAS RE-CHOSEN EVERY FRAME FROM ONE FRAME'S APPLIED STEP**, which is
+   * `QUEUE.md`'s **mistake shape 1** — *a rate estimated over the shortest available baseline* —
+   * in its purest form. ⭐ `A11`'s per-axis deadband emits the excess on one axis and nothing on
+   * the other, so a straight, slow drag produces a step whose DIRECTION alternates, and two faces
+   * with close exit distances swap the gizmo back and forth.
+   */
+  it("⭐⭐⭐ a face the body is STILL ADVANCING ON is kept, even when another is a nearer exit", () => {
+    // ⛔ An oblong body: pushed 40° off its long axis the nearest exit is `+x` (the side), but if
+    // the gizmo is already on `+z` — which the body is still advancing on — it stays there.
+    const w = scene([0.1, 0.1, 1.5]);
+    const d: Vec3 = [Math.sin(40 * DEG), 0, Math.cos(40 * DEG)];
+    expect(leadingFace(w, "a", d)?.faceId).toBe("+x");
+    expect(leadingFace(w, "a", d, "+z")?.faceId).toBe("+z");
+    // ⭐ And the distance reported is the one to the face it KEPT, not to the one it refused.
+    const kept = leadingFace(w, "a", d, "+z")!;
+    expect(kept.distanceM).toBeCloseTo(1.5 / Math.cos(40 * DEG), 9);
+  });
+
+  it("⛔ it SWITCHES the moment the body stops advancing on that face", () => {
+    // ⚠ `n·d > 0` is the whole test, and it is a geometric boundary rather than a tuned one.
+    const w = scene([0.5, 0.5, 0.5]);
+    // Travelling along `+x`, the body is not advancing on `−x` at all, so the stale face goes.
+    expect(leadingFace(w, "a", [1, 0, 0], "-x")?.faceId).toBe("+x");
+    // ⚠ And exactly square to it is NOT advancing either — the ray is parallel to that face.
+    expect(leadingFace(w, "a", [1, 0, 0], "+y")?.faceId).toBe("+x");
+  });
+
+  it("⭐ an unknown or stale face id falls back to the ordinary choice rather than refusing", () => {
+    const w = scene([0.5, 0.5, 0.5]);
+    expect(leadingFace(w, "a", [1, 0, 0], "no-such-face")?.faceId).toBe("+x");
+  });
+
+  it("⛔⛔ THE CHATTER, AS ARITHMETIC: a jittering direction cannot move a sticky face", () => {
+    // ⭐⭐ THE VECTOR THE REPORT ASKED FOR. A direction wobbling either side of the diagonal
+    // between two faces flips the un-sticky answer every sample; the sticky one does not move.
+    const w = scene([0.5, 0.5, 0.5]);
+    const jitter: readonly Vec3[] = [
+      [1, 0.001, 0],
+      [1, -0.001, 0],
+      [0.999, 0.002, 0],
+      [1, -0.002, 0],
+    ];
+    const free = jitter.map((d) => leadingFace(w, "a", d)?.faceId);
+    const sticky = jitter.map((d) => leadingFace(w, "a", d, "+x")?.faceId);
+    // ⚠ The free answers are all `+x` here because a cube's faces are far from tied — the point
+    // is the STICKY one is invariant BY CONSTRUCTION, which is what the fixture below shows.
+    expect(new Set(sticky).size).toBe(1);
+    expect(free.every((f) => f !== undefined)).toBe(true);
+    // ⛔ The genuinely tied case: a ray at exactly 45° between `+x` and `+z` on a cube. Either
+    // answer is defensible frame to frame, and that is precisely the chatter a hand saw.
+    const tied: readonly Vec3[] = [
+      [1, 0, 0.9999],
+      [1, 0, 1.0001],
+    ];
+    expect(new Set(tied.map((d) => leadingFace(w, "a", d)?.faceId)).size).toBe(2);
+    expect(new Set(tied.map((d) => leadingFace(w, "a", d, "+x")?.faceId)).size).toBe(1);
+  });
+});

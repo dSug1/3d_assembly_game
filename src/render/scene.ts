@@ -1717,7 +1717,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (id === undefined) continue;
       const dir = lastTravelDir.get(id);
       if (!dir) continue;
-      const hit = leadingFace(world, id, dir);
+      // ⭐ THE CURRENT FACE IS HANDED BACK, which is what makes the choice sticky: a face the
+      // body is still advancing on stays the leading one, so a direction that jitters between
+      // two near-tied faces cannot make the gizmo chatter.
+      const hit = leadingFace(world, id, dir, leading.get(id)?.faceId ?? null);
       // ⛔ NO STAND-IN. A body whose geometry cannot answer shows no gizmo, exactly as
       // `⛔NOSHAPE` shows no capture shell — suppress rather than substitute.
       if (!hit) continue;

@@ -329,3 +329,29 @@ read from the live elevation, which the swing moves) and a body freezing at the 
 degenerate holder plane suppressing its channels) — so it is re-applied alone, which is what
 reverting a BUNDLE of changes is supposed to make possible.
 
+
+---
+
+## 54 — ⭐⭐ THE GIZMO CHATTERED BETWEEN TWO FACES: A DIRECTION READ FROM ONE FRAME'S STEP
+
+**2026-09-23, by finger, with two screenshots one drag apart.** *"In this situation (ongoing
+translation = dx towards left) the gizmo keeps swapping between the face and the center of the
+object."*
+
+⛔⛔ **THE LEADING FACE WAS RE-CHOSEN FROM SCRATCH EVERY FRAME, FROM THE DIRECTION OF ONE FRAME'S
+APPLIED STEP** — which is `QUEUE.md`'s **mistake shape 1**, *a rate estimated over the shortest
+available baseline*, in its purest form. ⚠ `A11`'s deadband is **per axis**, so a slow, straight
+drag emits the excess on one axis and nothing on the other: the step's magnitude is honest and its
+**direction** alternates. ⭐ Two faces whose exit distances are close then swap the gizmo back and
+forth, which is exactly what the two screenshots show.
+
+⭐⭐ **THE CURE IS THE ONE THIS PROJECT HAS ALREADY USED TWICE** — the flick's travel (`D33`) and
+the shake's axis (defect 45) were both fixed by reading over a **window** rather than by moving a
+threshold. ⛔ Here a window is unnecessary: *a face the body is still advancing on stays the
+leading one*, and `n·d > 0` is the whole test — a geometric boundary rather than a tuned one, so
+there is no number to guess and no slider to ship.
+
+⚠ **What it costs, stated**: after a direction change the gizmo can sit on a face that is no
+longer the NEAREST exit until the body stops advancing on it. ⭐ That is still a face the body is
+genuinely advancing on, which is all the gizmo claims.
+

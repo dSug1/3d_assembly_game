@@ -55,7 +55,12 @@ export interface LeadingFace {
  * body whose geometry cannot answer must show no gizmo at all, exactly as `⛔NOSHAPE` does
  * for the capture shell — `LESSONS_CARRIED` §6, suppress rather than substitute.
  */
-export function leadingFace(world: World, id: ObjectId, direction: Vec3): LeadingFace | null {
+export function leadingFace(
+  world: World,
+  id: ObjectId,
+  direction: Vec3,
+  current: FaceId | null = null,
+): LeadingFace | null {
   const d = normalize(direction);
   if (!d) return null;
   const here = worldPlacementOf(world, id);
@@ -71,6 +76,37 @@ export function leadingFace(world: World, id: ObjectId, direction: Vec3): Leadin
   // repeated by the next reader of this function, which is the shape `frozen` itself was fixed in
   // (the audit's *parent yes, child never*).
   if (body.frozen === true) return null;
+
+  // ⭐⭐⭐ **STICKY: THE LEADING FACE CHANGES ONLY WHEN THE BODY STOPS ADVANCING ON IT.**
+  //
+  // ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"in this situation (ongoing translation = dx towards
+  // left) the gizmo keeps swapping between the face and the center of the object."* ⚠ The face
+  // was re-chosen from scratch every frame, from the direction of **one frame's applied step** —
+  // and that is `QUEUE.md`'s **mistake shape 1**, *a rate estimated over the shortest available
+  // baseline*, in its purest form. ⭐ During a slow drag `A11`'s per-axis deadband emits the
+  // excess on one axis and nothing on the other, so the step's DIRECTION alternates even while
+  // the hand moves in a straight line — and two faces whose exit distances are close then swap
+  // the gizmo back and forth.
+  //
+  // ⭐⭐ **THE CURE IS THE ONE THIS PROJECT HAS USED TWICE** — the flick's travel (`D33`) and the
+  // shake's axis (defect 45) were both fixed by reading over a window rather than by a threshold.
+  // ⛔ Here the window is unnecessary: the honest rule is that a face a body is **still advancing
+  // on** stays the leading one. ⚠ `n·d > 0` is the whole test, and it is a geometric boundary
+  // rather than a tuned one — there is no number to guess and no slider to ship.
+  //
+  // ⚠ What it costs, stated: after a direction change the gizmo can sit on a face that is no
+  // longer the NEAREST exit, until the body stops advancing on it. ⭐ That is a face the body
+  // genuinely is advancing on, which is what the gizmo claims.
+  if (current !== null) {
+    const held = body.faces.find((f) => f.id === current);
+    const w = held === undefined ? null : faceWorld(world, id, current);
+    if (w && dot(w.normal, d) > 0) {
+      const t = dot(sub(w.centre, here.position), w.normal) / dot(w.normal, d);
+      if (t > 0 && Number.isFinite(t)) {
+        return { faceId: current, centre: w.centre, normal: w.normal, distanceM: t };
+      }
+    }
+  }
 
   let best: LeadingFace | null = null;
   for (const face of body.faces) {
