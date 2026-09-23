@@ -384,10 +384,10 @@ describe("⛔⛔⛔ `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING EL
     const near = { captureOffsetM: OFFSET, alignMatchRad: 1 };
     const gap = (x: string, y: string) => surfaceGap(w, x, y);
     // ⚠ `h` is flanked by `a` and `b`; with no alignment anywhere the nearest still wins.
-    expect(highlightedPair(null, null, idsOf(w), true, near, gap).pair?.target).toBe("a");
+    expect(highlightedPair(null, null, ["h"], idsOf(w), true, near, gap).pair?.target).toBe("a");
     // ⭐⭐ AND A BODY IN NO ROLE AT ALL NOW CAPTURES — which is the whole of `D79`. ⛔ Under
     // `D62` this scene produced NOTHING, because neither body was the other's Pioneer.
-    const v = highlightedPair(null, null, idsOf(w), true, near, gap);
+    const v = highlightedPair(null, null, ["h"], idsOf(w), true, near, gap);
     expect(v.pair).not.toBeNull();
     expect(v.inRange).toBe(true);
   });
@@ -562,7 +562,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
 
   it("⭐⭐ all three ⇒ the pair is outlined", () => {
     const w = nearAndAligned();
-    const v = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
+    const v = highlightedPair(null, null, ["a"], idsOf(w), true, N, gapIn(w));
     expect(v.pair).toEqual({ subject: "a", target: "b" });
     // ⭐ and both reasons report satisfied, so the HUD cannot contradict the contour
     expect(v.translating && v.inRange).toBe(true);
@@ -575,7 +575,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
     // translation."* ⛔ `translating === false` is a one-finger drag in ROTATE mode, and it must
     // draw nothing even though everything else about the geometry is ready.
     const w = nearAndAligned();
-    const v = highlightedPair(null, null, idsOf(w), false, N, gapIn(w));
+    const v = highlightedPair(null, null, ["a"], idsOf(w), false, N, gapIn(w));
     expect(v.pair).toBeNull();
     // ⭐⭐ AND THE READOUT MUST BLAME THE RIGHT CONDITION — the range is fine and only the
     // movement mode is wrong, so a verdict claiming otherwise would send a device pass
@@ -598,7 +598,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["a", [0, 0, 0], IDENTITY, [], PART],
       ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
     );
-    const v = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
+    const v = highlightedPair(null, null, ["a"], idsOf(w), true, N, gapIn(w));
     expect(v.pair).toEqual({ subject: "a", target: "b" });
     expect(v.inRange).toBe(true);
     expect(v.translating).toBe(true);
@@ -616,7 +616,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["b", [0.2, 0, 0], IDENTITY, [], PART],
     );
     expect(surfaceGap(w, "a", "b")!).toBeGreaterThan(N.captureOffsetM);
-    const v = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
+    const v = highlightedPair(null, null, ["a"], idsOf(w), true, N, gapIn(w));
     expect(v.pair).toBeNull();
     // ⚠ out of range — and the readout says exactly that, so a hand knows to close the gap
     expect(v.inRange).toBe(false);
@@ -635,27 +635,56 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
       ["far", [3, 0, 0], IDENTITY, [], PART],
     );
     // ⚠ `far` is nowhere near, and it is named anyway — *whatever the distance*.
-    const named = highlightedPair({ a: "a", b: "far" }, { a: "a", b: "far" }, idsOf(w), true, N, gapIn(w));
+    const named = highlightedPair({ a: "a", b: "far" }, { a: "a", b: "far" }, ["a"], idsOf(w), true, N, gapIn(w));
     expect(named.zone).toEqual({ a: "a", b: "far", gapM: expect.any(Number), pressed: true });
     // ⛔ …but a pair the hand named is not a pair that is NEAR: no contour until it closes.
     expect(named.inRange).toBe(false);
     expect(named.pair).toBeNull();
     // ⭐ And the same press on the near pair does draw.
-    const near = highlightedPair(null, { a: "a", b: "b" }, idsOf(w), true, N, gapIn(w));
+    const near = highlightedPair(null, { a: "a", b: "b" }, ["a", "b"], idsOf(w), true, N, gapIn(w));
     expect(near.pair).toEqual({ subject: "a", target: "b" });
   });
 
-  it("⚠ NOTHING HELD: the zone still forms — only the CONTOUR waits for a drag (`D79`)", () => {
-    // ⛔⛔ **INVERTED BY `D79`.** This read *"nothing held ⇒ nothing, whatever the geometry
-    // says"*, because the subjects were the held bodies. ⚠ The owner's answer to *who can be a
-    // subject* was **any object**, so proximity alone forms the zone — and the translation
-    // condition is what keeps a resting scene from drawing contours.
+  it("⛔⛔⛔ NOTHING TOUCHED ⇒ NO ZONE AND NO CONTOUR — the owner's correction to `D79`", () => {
+    // ⛔⛔⛔ **THIS VECTOR HAS BEEN INVERTED TWICE IN ONE DAY, AND BOTH TEXTS ARE THE RECORD.**
+    // It read *"nothing held ⇒ nothing, whatever the geometry says"*; `D79`'s *any object* turned
+    // it into *"the zone still forms, only the contour waits for a drag"*; and the owner then
+    // corrected the reading within the hour: *"the offset radius zone and white highlight apply
+    // to the object which is TRANSLATED and the other object it gets near to. Consequently, when
+    // no object is touched, there cannot be any white highlight."*
+    // ⭐⭐ `METHOD`: *when two readings fit one sentence, name both* — *any object* answered *may
+    // a body pair with a non-Pioneer*, and I read it as *may two untouched bodies pair*. The
+    // second reading was mine, and it was the wrong one.
     const w = nearAndAligned();
-    const idle = highlightedPair(null, null, idsOf(w), false, N, gapIn(w));
-    expect(idle.zone).not.toBeNull();
-    expect(idle.inRange).toBe(true);
-    // ⛔ …and nothing is DRAWN, which is the half of `A16` that survived `D48`.
+    const idle = highlightedPair(null, null, [], idsOf(w), true, N, gapIn(w));
+    // ⚠ `translating` is passed TRUE on purpose: the refusal must come from *nothing is touched*
+    // and not from the condition that happens to sit beside it.
+    expect(idle.zone).toBeNull();
+    expect(idle.inRange).toBe(false);
     expect(idle.pair).toBeNull();
+    // ⭐ And the same geometry WITH a subject does form a zone, so the vector is about the
+    // subject set and not about the bodies being too far apart.
+    expect(highlightedPair(null, null, ["a"], idsOf(w), true, N, gapIn(w)).zone).not.toBeNull();
+  });
+
+  it("⛔⛔ NOR DOES A **PRESSED** PAIR SURVIVE WITH NOTHING TOUCHED — the guard, made reachable", () => {
+    // ⚠⚠ **FOUND BY MUTATING MY OWN GUARD.** Removing `subjects.length === 0` left the suite
+    // GREEN, because the lock branch and the nearest-pair scan both iterate the subjects and
+    // return nothing on their own. ⛔ Only the PRESSED branch can produce a zone without one —
+    // it is the one rule that reads no distance and no subject list — so it is the only case
+    // that makes the guard a guard. ⭐ `METHOD`: *keep an explicit counter-example beside each
+    // guard, and check the guard fires on it.*
+    const w = nearAndAligned();
+    const v = highlightedPair(null, { a: "a", b: "b" }, [], idsOf(w), true, N, gapIn(w));
+    expect(v.zone).toBeNull();
+    expect(v.pair).toBeNull();
+  });
+
+  it("⛔ A LOCK DOES NOT OUTLIVE THE FINGER THAT MADE IT", () => {
+    // ⚠ The other half of the correction: a pair locked during one drag must not hold the zone
+    // once nothing is touching it, or the next drag would inherit a zone nobody asked for.
+    const w = nearAndAligned();
+    expect(highlightedPair({ a: "a", b: "b" }, null, [], idsOf(w), true, N, gapIn(w)).zone).toBeNull();
   });
 
   it("⭐⭐⭐ THE LOCK: a third body coming nearer does NOT steal the zone (`D79`)", () => {
@@ -674,12 +703,12 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
     // ⚠ `c` is strictly nearer than `b`, established first so the vector cannot pass by accident.
     expect(surfaceGap(w, "a", "c")!).toBeLessThan(surfaceGap(w, "a", "b")!);
     // ⭐ With `a↔b` already locked, the nearer `c` does not take it.
-    const held = highlightedPair({ a: "a", b: "b" }, null, idsOf(w), true, N, gapIn(w));
+    const held = highlightedPair({ a: "a", b: "b" }, null, ["a"], idsOf(w), true, N, gapIn(w));
     expect(held.zone?.a).toBe("a");
     expect(held.zone?.b).toBe("b");
     // ⛔ And with NO lock, the nearest wins — so the vector above is about the lock and not
     // about `b` being special.
-    const fresh = highlightedPair(null, null, idsOf(w), true, N, gapIn(w));
+    const fresh = highlightedPair(null, null, ["a"], idsOf(w), true, N, gapIn(w));
     expect([fresh.zone?.a, fresh.zone?.b].sort()).toEqual(["a", "c"]);
   });
 
@@ -692,7 +721,7 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
     // ⚠ A lock naming a pair that is now far apart is dropped, and the nearest eligible pair
     // takes over in the SAME frame — a zone that emptied for one frame would make the contour
     // blink on every hand-over.
-    const v = highlightedPair({ a: "a", b: "gone" }, null, idsOf(w), true, N, gapIn(w));
+    const v = highlightedPair({ a: "a", b: "gone" }, null, ["a"], idsOf(w), true, N, gapIn(w));
     expect([v.zone?.a, v.zone?.b].sort()).toEqual(["a", "b"]);
   });
 

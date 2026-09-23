@@ -6,8 +6,8 @@
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list anywhere else, and do not reorder it.
 
-⭐ Each row's full history goes in `queue_notes/<ID>.md`; the `Notes` column is a pointer, not the
-record. **A status changes in BOTH places or neither.**
+⭐ Each row's history goes in `queue_notes/<ID>.md`; the `Notes` column is a pointer. **A status
+changes in BOTH places or neither.**
 
 `Sub`: `IN` = 10_INPUT_TOUCH · `GAME` = 20_GAME_RULES · `3D` = 30_OBJECTS_3D · `RND` =
 40_RENDER_SCENE · `DEP` = 50_BUILD_DEPLOY · `SEC` = 60_SECURITY_COMPLIANCE · `CORE` = cross-cutting.
@@ -16,11 +16,11 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1076 golden vectors,
-all passing** (37 → … → 1068 → 1071 → **1076**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1078 golden vectors,
+all passing** (37 → … → 1071 → 1076 → **1078**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
-⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
-✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three of them rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⭐ The increments themselves are named in the verdict, not just the build. ⚠ It still ships at **0** — a judged-good feature that is OFF by default — and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
+⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
+✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
 ⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`, 2026-09-22/23):
 a body translates along **its own axes** — the boot camera's, frozen (`worldAxisB=1`), or the LeadingFace
 basis in the capture zone. ⛔ The first mapping lost the cosine and a hand felt all of it: *inverted*,
@@ -29,9 +29,10 @@ never binds screen-x to a world axis. Now the finger's delta is **solved onto bo
 (tracking exactly, `translatePairing=1`), with **Blender's 5° cone** falling back to `depthTranslate`'s
 judged rate. ⚠⚠ **AND THE SOLVE MAKES `D74`'s IN-ZONE BASIS INERT — an owner decision is owed.**
 ⭐ 38 vectors, six mutants caught. ⭐ Two owner refinements, 2026-09-23: **no gizmo on a frozen body** (refused by `leadingFace` itself — a frozen body never *advances*) and **a second touch on a frozen body is a MISS**, so it can drive another → [`queue_notes/IN4.md`](queue_notes/IN4.md)
-⛔⛔ **AND THE CAPTURE ZONE IS SCENE-WIDE AGAIN** (`D79`, 2026-09-23): any body may hold the zone with
-any other, **one at a time**, **locked** until it leaves — and a **pressed pair outranks every
-distance**. ⚠ It reverses `D62`, which reversed `A21`, so the rule has been round the loop; what is
+⛔⛔ **AND THE CAPTURE ZONE IS SCENE-WIDE AGAIN** (`D79`, 2026-09-23): a body **under a finger** may
+hold the zone with any other, **one at a time**, **locked** until it leaves — and a **pressed pair
+outranks every distance**. ⚠ Corrected the same hour: *"when no object is touched, there cannot be
+any white highlight"* — I had read *any object* as *any two untouched bodies*. ⚠ It reverses `D62`, which reversed `A21`, so the rule has been round the loop; what is
 new is the lock, and `D62` was fixing a pair that kept re-choosing itself. ⭐ It is what makes
 assembling onto the **frozen plate** reachable at all → the approach spec §22.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.

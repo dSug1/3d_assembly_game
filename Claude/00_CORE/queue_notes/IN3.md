@@ -1175,3 +1175,13 @@ unreachable. ⚠ Boot is unaffected: ~60 mm of offset against **148 mm** of air 
 ⭐ 9 vectors, two mutants caught (the lock removed, the press precedence removed), and three older
 vectors inverted with their retractions kept — one of them for the second time.
 
+⛔⛔ **AND THE OWNER CORRECTED IT WITHIN THE HOUR**: *"the offset radius zone and white highlight apply
+to the object which is TRANSLATED and the other object it gets near to. Consequently, when no object
+is touched, there cannot be any white highlight."* ⭐ *Any object* answered *may a body pair with a
+non-Pioneer*; I also read it as *may two untouched bodies pair*, and that second reading was mine.
+⚠ `METHOD`'s *name both readings* again, and the second time this week it was the owner who supplied
+the one I missed rather than a device pass. ✅ Subject × scene now, and it **deletes the lock's one
+real cost**: two resting parts can no longer squat on the zone, so the state is unreachable rather
+than escapable. ⭐ Two vectors carry it — one inverted **twice in one day**, and one written because
+mutating my own guard left the suite green.
+

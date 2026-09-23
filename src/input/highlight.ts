@@ -327,10 +327,26 @@ export interface CaptureZone extends ZonePair {
 export function nextCaptureZone(
   previous: ZonePair | null,
   pressedPair: ZonePair | null,
+  subjects: readonly ObjectId[],
   ids: readonly ObjectId[],
   offsetM: number,
   gapOf: (a: ObjectId, b: ObjectId) => number | null,
 ): CaptureZone | null {
+  // ⛔⛔⛔ **A ZONE BELONGS TO A BODY A HAND IS HOLDING** — the owner's correction, 2026-09-23:
+  // *"the offset radius zone and white highlight apply to the object which is translated and the
+  // other object it gets near to. Consequently, when no object is touched, there cannot be any
+  // white highlight."*
+  //
+  // ⚠⚠ **IT NARROWS `D79` BY HALF, HOURS AFTER IT SHIPPED.** *"Any object"* answered *may a body
+  // pair with something that is not its Pioneer* — it did not mean *two bodies nobody is touching
+  // may form a zone between them*, which is what I built. ⭐ `METHOD`: *when two readings fit one
+  // sentence, name both* — I named only one, and this is the other.
+  //
+  // ⭐⭐ **AND IT DELETES THE ONE REAL COST THE LOCK HAD.** With untouched pairs eligible, two
+  // parts resting near each other could hold the zone against the pair a hand was dragging, and
+  // the press was the escape hatch. ⛔ A subject must now be held, so that state is unreachable
+  // rather than escapable — *prefer the structure that cannot express the defect*.
+  if (subjects.length === 0) return null;
   // ⭐ RULE 1 — what the hand named. ⛔ No gap test at all: *"whatever the distance of the face"*.
   if (pressedPair !== null && pressedPair.a !== pressedPair.b) {
     return {
@@ -341,7 +357,9 @@ export function nextCaptureZone(
     };
   }
   // ⭐ RULE 2 — the lock, which survives a nearer third body.
-  if (previous !== null) {
+  // ⚠ It must still name a HELD body, or a lock made during one drag would outlive the finger
+  // that made it and hold the zone against the next one.
+  if (previous !== null && (subjects.includes(previous.a) || subjects.includes(previous.b))) {
     const held = gapOf(previous.a, previous.b);
     if (held !== null && held <= offsetM) {
       return { a: previous.a, b: previous.b, gapM: held, pressed: false };
@@ -350,11 +368,12 @@ export function nextCaptureZone(
   // ⭐ RULE 3 — the globally nearest pair inside the offset. ⚠ Every unordered pair once: a
   // scene-wide scan is what *"any object … of any other object"* means, and the cost is
   // `n(n−1)/2` gaps on a four-body scene.
+  // ⚠ SUBJECT × SCENE, not scene × scene: the subject is a body under a finger, and the target is
+  // any other body — which is the half of `D79` the correction keeps.
   let best: CaptureZone | null = null;
-  for (let i = 0; i < ids.length; i++) {
-    for (let j = i + 1; j < ids.length; j++) {
-      const a = ids[i]!;
-      const b = ids[j]!;
+  for (const a of subjects) {
+    for (const b of ids) {
+      if (b === a || subjects.includes(b)) continue;
       const d = gapOf(a, b);
       if (d === null || d > offsetM) continue;
       if (best === null || d < (best.gapM ?? Infinity)) best = { a, b, gapM: d, pressed: false };
@@ -390,6 +409,7 @@ export function nextCaptureZone(
 export function highlightedPair(
   previous: ZonePair | null,
   pressedPair: ZonePair | null,
+  subjects: readonly ObjectId[],
   ids: readonly ObjectId[],
   translating: boolean,
   n: HighlightNumbers,
@@ -398,7 +418,7 @@ export function highlightedPair(
   // ⛔⛔ **`D79` — THE PAIR NO LONGER READS THE ALIGNMENT INDEX.** `partnersOf` was this
   // function's third argument and it is gone: any body may hold the zone with any other, and
   // which pair holds it is `nextCaptureZone`'s decision alone.
-  const zone = nextCaptureZone(previous, pressedPair, ids, n.captureOffsetM, gapOf);
+  const zone = nextCaptureZone(previous, pressedPair, subjects, ids, n.captureOffsetM, gapOf);
   // ⭐ IN RANGE is a measurement about the zone's pair, not the reason the pair was chosen — so
   // a PRESSED pair that is still far away holds the zone and shows no contour, which is what
   // *"whatever the distance"* has to mean for a rule whose contour means *near enough*.
@@ -410,7 +430,10 @@ export function highlightedPair(
     inRange && translating && zone !== null ? { subject: zone.a, target: zone.b } : null;
   // ⚠ The number the readout needs when the answer is NO: the nearest gap anywhere in the
   // scene, so *"why is there no contour"* has an answer rather than a silence.
-  const gapM = zone?.gapM ?? nearestUnboundedGap(ids, gapOf);
+  // ⚠ The readout's fallback: the nearest gap from a HELD body to anything, so *"why is there no
+  // contour"* still has a number — and nothing at all when nothing is held, which is the honest
+  // answer once a zone needs a finger.
+  const gapM = zone?.gapM ?? nearestUnboundedGap(subjects, ids, gapOf);
   return { pair, zone, translating, inRange, gapM, offsetM: n.captureOffsetM };
 }
 
@@ -423,13 +446,15 @@ export function highlightedPair(
  * the whole life of a file because nobody separated the two.
  */
 function nearestUnboundedGap(
+  subjects: readonly ObjectId[],
   ids: readonly ObjectId[],
   gapOf: (a: CaptureId, b: CaptureId) => number | null,
 ): number | null {
   let best: number | null = null;
-  for (let i = 0; i < ids.length; i++) {
-    for (let j = i + 1; j < ids.length; j++) {
-      const d = gapOf(ids[i]!, ids[j]!);
+  for (const a of subjects) {
+    for (const b of ids) {
+      if (b === a) continue;
+      const d = gapOf(a, b);
       if (d === null) continue;
       if (best === null || d < best) best = d;
     }

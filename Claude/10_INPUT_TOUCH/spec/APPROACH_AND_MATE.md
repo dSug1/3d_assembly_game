@@ -1314,3 +1314,30 @@ unreachable; it is not any more, and that is the motivation.
 ⚠ **Boot is unaffected**: ~60 mm of offset at the boot camera against **148 mm** of air under the
 parts, so nothing captures at rest even with the whole scene eligible.
 
+### ⛔⛔⛔ §22bis — THE CORRECTION, WITHIN THE HOUR: a zone belongs to a body under a finger
+
+> *"Correction: the offset radius zone and white highlight apply to the object which is translated
+> and the other object it gets near to. Consequently, when no object is touched, there cannot be any
+> white highlight."* — the owner, 2026-09-23
+
+⚠⚠ **`D79` HAD TWO READINGS AND I BUILT THE WRONG ONE.** *"Any object can enter the offset radius of
+any other object"* answers *may a body pair with something that is not its Pioneer* — and I also read
+it as *may two bodies nobody is touching pair with each other*. ⭐ `METHOD`: *when two readings fit
+one sentence, name both*; I named one, and the owner supplied the other before a device look had to.
+
+✅ **THE SUBJECT IS A HELD BODY; THE TARGET IS ANY OTHER.** That is the half of `D79` that stands —
+the alignment restriction is still gone — and the scene-wide scan becomes **subject × scene** rather
+than scene × scene. ⛔ Nothing touched ⇒ no zone, no `inRange`, no contour, and no axis edge.
+
+⭐⭐ **IT DELETES THE LOCK'S ONE REAL COST.** With untouched pairs eligible, two parts resting near
+each other could hold the zone against the pair a hand was dragging, and the press was the escape
+hatch. ⚠ Now that state is **unreachable** rather than escapable — *prefer the structure that cannot
+express the defect* — and the press keeps its other job, naming a partner at any distance.
+
+⛔ **And a lock does not outlive the finger that made it**: it must still name a held body, or the
+next drag would inherit a zone nobody asked for.
+
+⚠ **Two vectors record the reversal** — one has now been inverted **twice in one day** and carries
+both texts, and one was written because mutating my own guard left the suite green: only the PRESSED
+branch can produce a zone with no subject, so it is the only case that makes the guard a guard.
+

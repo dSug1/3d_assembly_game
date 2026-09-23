@@ -1795,6 +1795,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     highlighted = highlightedPair(
       highlighted.zone,
       pressedPair,
+      // ⛔⛔ **THE SUBJECTS ARE THE HELD BODIES** — the owner's correction, 2026-09-23: *"the
+      // offset radius zone and white highlight apply to the object which is TRANSLATED and the
+      // other object it gets near to. Consequently, when no object is touched, there cannot be
+      // any white highlight."* ⚠ `D79` opened the TARGET set to the whole scene; it did not make
+      // two untouched bodies a pair, which is the half I built and the half this takes back.
+      ids,
       sceneIds,
       // ⛔ CONDITION 2, from the SAME function `grip.mode` is assigned from — one rule, one place.
       translatesOnDrag(
