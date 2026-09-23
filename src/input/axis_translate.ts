@@ -262,11 +262,33 @@ export function axisTravel(
   const dy2 = finite(input.secondDyPx) * metresPerPx;
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
 
-  /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
+  /**
+   * Exact tracking along ONE axis: the travel that keeps the body under the finger.
+   *
+   * ⛔⛔⛔ **THE GUARD IS ON THE PROJECTED SHADOW `|s · m̂|`, NOT ON `|s|` — defect 57,
+   * 2026-09-23.** The travel is `|m| · cosθ / |s|`, so the exact mapping fails in **two**
+   * directions and the old test caught only one:
+   *
+   * * `|s| → 0`, the axis pointing at the camera — it **explodes**;
+   * * `cosθ → 0`, the finger's direction square to the axis's screen line — it **vanishes**.
+   *
+   * ⭐⭐ The owner met the second: *"The second touch is losing its input"*, at a camera where
+   * the depth axis lies **horizontal on the glass** while that finger's travel is purely
+   * **vertical**. ⚠ The shadow was FULL LENGTH (1.000) there, so the cone passed and the channel
+   * returned **exactly zero** — a dead finger with every guard satisfied.
+   *
+   * ⭐⭐⭐ **ONE TEST COVERS BOTH, because `|s · m̂| = |s|·cosθ` is small in either case** — and it
+   * bounds the gain from both sides: at most `1/sin(cone)` (defect 56's leverage bound) and at
+   * least `sin(cone)`, so a channel may be weak but never dead.
+   * ⚠ `METHOD`: *guard the quantity that is actually divided, not the one that is easy to name.*
+   */
   const along = (s: readonly [number, number], mx: number, my: number): number | null => {
     const len = Math.hypot(s[0], s[1]);
-    if (!(len > coneSin) || !(len > 0)) return null;
-    // ⭐ `(m · ŝ) / |s|` — project onto the axis's screen LINE, then undo the foreshortening.
+    const askedPx = Math.hypot(mx, my);
+    if (!(len > 0) || !(askedPx > 0)) return null;
+    // ⭐ How much of the axis's screen LINE this particular travel actually runs along.
+    if (!(Math.abs((mx * s[0] + my * s[1]) / askedPx) > coneSin)) return null;
+    // ⭐ `(m · s) / |s|²` — project onto the axis's screen LINE, then undo the foreshortening.
     // ⛔ The division is the whole of report 2's fix, and it is what Blender's ray/line
     // intersection amounts to for a straight drag.
     return (mx * s[0] + my * s[1]) / (len * len);

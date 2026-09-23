@@ -16,8 +16,8 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1083 golden vectors,
-all passing** (37 → … → 1073 → 1078 → **1083**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1087 golden vectors,
+all passing** (37 → … → 1078 → 1083 → **1087**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three of them rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⭐ The increments themselves are named in the verdict, not just the build. ⚠ It still ships at **0** — a judged-good feature that is OFF by default — and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)

@@ -440,3 +440,32 @@ the most the body may outrun the finger, 2.9× at 20°. ⛔⛔ 5° was **Blender
 with its question attached: Blender's cone protects a division from `NaN`, this one protects a
 hand from a body that leaps. *Same mechanism, different question — and the number belongs to the
 question.* ⚠ It is a judgement, it has a slider, and **no hand has judged it yet**.
+
+
+---
+
+## 57 — ⭐⭐⭐ **A DEAD FINGER WITH EVERY GUARD SATISFIED: THE TEST WAS ON THE WRONG QUANTITY**
+
+**2026-09-23, by finger, build `dbca35d`.** *"The second touch is losing its input."*
+
+⛔⛔⛔ Exact tracking along one axis is `travel = |m| · cosθ / |s|`, where `s` is the axis's screen
+shadow and `θ` the angle between it and the finger's direction. **It fails in two directions:**
+
+* `|s| → 0` — the axis points at the camera, and the travel **explodes** (defect 56);
+* `cosθ → 0` — the finger's travel is square to the axis's screen line, and it **vanishes**.
+
+⚠ The guard only ever asked about `|s|`. At the owner's camera the **depth axis lies horizontal on
+the glass** while the second finger's travel is purely **vertical**: shadow length **1.000**, so
+the cone passed without complaint, and the channel returned **exactly zero**. ⭐ The screenshot
+carries the proof — the gizmo's blue axis runs across the screen and the red one is a stub.
+
+⭐⭐⭐ **THE FIX IS ONE TEST FOR BOTH FAILURES**, because `|s · m̂| = |s|·cosθ` is small in either
+case. It bounds the channel's gain from **both** sides: at most `1/sin(cone)` and at least
+`sin(cone)` — *a channel may be weak; it may never be dead.*
+
+⭐⭐ **THE SHAPE, AND IT IS THE SECOND TIME IN ONE DAY**: defect 56 guarded `|det|` when the
+quantity that divides was the plane's conditioning; this guarded `|s|` when the quantity that
+divides was the projection. ⚠ `METHOD`: **guard the quantity that is actually DIVIDED, not the one
+that is easy to name.** ⛔ Both survived a green suite because every fixture happened to drag along
+an axis that was well presented — mistake shape 5 again, from the other side: *a fixture chosen to
+exercise the rule is usually chosen where the rule works.*

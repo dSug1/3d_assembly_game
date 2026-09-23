@@ -464,3 +464,57 @@ describe("⛔⛔⛔ defect 56 — an edge-on holder plane must track the finger,
     expect(t.mode).toBe("PLANE-SOLVE");
   });
 });
+
+/**
+ * ⭐⭐⭐ **DEFECT 57 — A DEAD FINGER WITH EVERY GUARD SATISFIED.**
+ *
+ * > *"The second touch is losing its input."* — the owner, 2026-09-23, build `dbca35d`
+ *
+ * ⛔⛔ The travel is `|m| · cosθ / |s|`, and the guard only ever asked about `|s|`. At azimuth 0
+ * the depth axis lies **exactly horizontal** on the glass — shadow length **1.000**, so the cone
+ * passes — while the second finger's travel is purely **vertical**: `cosθ = 0`, and the channel
+ * returns **exactly zero**. ⭐ The screenshot shows it: the gizmo's blue axis runs across the
+ * screen and its red axis is a stub.
+ */
+describe("⛔⛔⛔ defect 57 — a channel square to its own input must not go silent", () => {
+  const WORLD2: ObjectAxes = { x: [1, 0, 0], gravity: [0, 1, 0], depth: [0, 0, 1] };
+
+  it("the premise: the depth axis is FULL LENGTH on screen and exactly horizontal", () => {
+    const s = screenShadow(WORLD2.depth, camera(0, 30).screen)!;
+    expect(Math.hypot(...s)).toBeCloseTo(1, 9); // ⛔ the cone sees nothing wrong…
+    expect(s[1]).toBeCloseTo(0, 9); // ⚠ …and a vertical finger projects onto it as 0.
+  });
+
+  it("⭐⭐⭐ RED AGAINST dbca35d: the second finger still moves the body", () => {
+    for (const el of [12, 30, 60]) {
+      const c = camera(0, el);
+      const t = run({ secondDyPx: 40 }, c, WORLD2);
+      // ⛔ THE ASSERTION THE OWNER'S BUILD FAILS — it returned 0 and the finger did nothing.
+      expect(Math.abs(t.depthM)).toBeGreaterThan(0);
+      expect(t.depthFallback).toBe(true);
+    }
+  });
+
+  it("⭐⭐ the gain is bounded from BOTH sides — weak is allowed, dead is not", () => {
+    // ⭐ `|s·m̂| > sin(cone)` bounds the leverage above by `1/sin(cone)` (defect 56) and below by
+    // `sin(cone)`. ⚠ Swept over the whole orbit, at the shipped cone.
+    const cone = DEFAULT_CONFIG.axisTrackingConeDeg;
+    for (const az of [0, 5, 23, 47, 90, 133, 271]) {
+      for (const el of [0, 15, 40, 75]) {
+        const c = camera(az, el);
+        const t = run({ secondDyPx: 40 }, c, WORLD2, "PLANE", 1, cone);
+        const gain = Math.abs(t.depthM) / (40 * PER_PX);
+        expect(gain).toBeGreaterThan(0);
+        expect(gain).toBeLessThanOrEqual(1 / Math.sin(cone * DEG) + 1e-9);
+      }
+    }
+  });
+
+  it("⛔ and the EXPLODE side of the same guard still holds — one test, two failures", () => {
+    // ⚠ The axis pointing at the camera: `|s|` → 0, which is what the old guard did catch. ⭐ It
+    // must still be caught now that the test is written on a different quantity.
+    const c = camera(90, 2);
+    const t = run({ secondDyPx: 40 }, c, WORLD2);
+    expect(t.depthFallback).toBe(true);
+  });
+});
