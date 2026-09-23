@@ -169,7 +169,6 @@ import {
 } from "../input/highlight";
 import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
 import { pressHit } from "../input/frozen_pick";
-import { closestFaceTwins, type FaceTwins } from "../core/proximity";
 // ⭐⭐⭐ **THE OBJECT AXES AND THE PROJECTION ONTO THEM** (the owner, 2026-09-22). ⛔ Every
 // DECISION is in `src/input`; this file holds the state and the call. That is the 2026-09-19
 // lesson, and it cost seven surviving mutants to learn: *a rule written in `scene.ts` is a rule
@@ -184,7 +183,6 @@ import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_tra
 import { leadingFace, type LeadingFace } from "../core/leading_face";
 import {
   pitchOffsetV,
-  pitchSignFor,
   freezeProgress,
   rebaseTriggerGap,
   smoothAmplitude,
@@ -1556,7 +1554,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let highlighted: HighlightVerdict = {
     pair: null,
-    zone: null,
     translating: false,
     inRange: false,
     gapM: null,
@@ -1592,14 +1589,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     objectAxes.get(id) ?? bootObjectAxes ?? axesFromFrame(requireGestureFrame());
   /** ⚠ Last frame's range verdict. The EDGE is what moves the axes, never the level. */
   let zoneWas = false;
-  /**
-   * ⭐⭐ **THE ZONE'S FACE TWINS** — *"based on closest faces twins"* (the owner, 2026-09-23).
-   * ⛔ Computed for the pair the zone NAMES, never used to choose it: the threshold is still
-   * `D49`'s hull gap, because nothing in that reads a normal. ⚠ Reported on the HUD, and it is
-   * what `3D2`'s mate will start from — which is why it is computed now rather than when the
-   * mate needs it: a quantity nobody can see is a quantity nobody can judge.
-   */
-  let zoneTwins: FaceTwins | null = null;
   /**
    * ⛔ The pair that was in range when the zone was ENTERED, so the EXIT edge can reach the
    * same two bodies. ⚠ At the exit `highlighted.pair` is already `null` — the verdict that
@@ -1783,26 +1772,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐ Only meaningful with ONE held body: with two, `translatesOnDrag`'s first line already
     // fires and this adds nothing.
     const soleGrip = ids.length === 1 ? gripOfObject(ids[0]!) : undefined;
-    // ⛔⛔⛔ **`D79` — ANY BODY MAY HOLD THE ZONE WITH ANY OTHER, AND THE SUBJECT SET IS THE
-    // WHOLE SCENE** (the owner, 2026-09-23: *"any object can enter the offset radius of any
-    // other object"*). ⚠ `ids` used to be the HELD bodies and the targets came from the
-    // alignment index; both restrictions are gone, and the lock is what keeps one zone at a time.
-    const sceneIds = [...world.objects.keys()];
-    // ⭐⭐ **THE PRESSED PAIR — what the hand NAMED, which outranks every distance.** Two grips
-    // on two different bodies, in press order. ⛔ It is `D67`'s Pioneer/Follower gesture kept as
-    // a DESIGNATOR while it stops being a REQUIREMENT, and it is the escape hatch from a lock
-    // held by two bodies nobody is touching.
-    const pressedPair = ids.length >= 2 ? { a: ids[0]!, b: ids[1]! } : null;
     highlighted = highlightedPair(
-      highlighted.zone,
-      pressedPair,
-      // ⛔⛔ **THE SUBJECTS ARE THE HELD BODIES** — the owner's correction, 2026-09-23: *"the
-      // offset radius zone and white highlight apply to the object which is TRANSLATED and the
-      // other object it gets near to. Consequently, when no object is touched, there cannot be
-      // any white highlight."* ⚠ `D79` opened the TARGET set to the whole scene; it did not make
-      // two untouched bodies a pair, which is the half I built and the half this takes back.
+      world,
       ids,
-      sceneIds,
       // ⛔ CONDITION 2, from the SAME function `grip.mode` is assigned from — one rule, one place.
       translatesOnDrag(
         ids.length,
@@ -1828,24 +1800,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         ),
         alignMatchRad: (cfg.alignMatchDeg * Math.PI) / 180,
       },
-      // ⛔ SURFACE TO SURFACE, and a HULL distance (`D49`): nothing here reads a normal, so an
-      // inverted one cannot affect it. ⚠ It reads the MODEL, not the display pose — the sway is
+      highlighted.pair?.target ?? null,
+      // ⛔ SURFACE TO SURFACE. ⚠ It reads the MODEL, not the display pose — the sway is
       // decoration and a highlight must not flicker with an animation nobody asked it to track.
       (a, b) => surfaceGap(world, a, b),
-      // ⛔⛔⛔ **`D62`'s `partnersOf` ARGUMENT IS GONE — `D79` DECOUPLED THE ZONE FROM THE
-      // ALIGNMENT.** ⚠ Its text and its reason are kept in `DECISIONS.md` and the spec: it came
-      // from a device report (*"the white highlight should be reserved only for Pioneer-Follower
-      // duo"*) and it itself overturned `A21`'s *any other object*. ⭐ What makes the round trip
-      // safe is the LOCK: `D62` was fixing a pair that kept re-choosing itself, and a locked pair
-      // cannot. ⛔ `links` still owns the alignment; it simply no longer owns the capture.
+      // ⛔⛔⛔ `D62` — **A BODY MAY APPROACH ITS ALIGNMENT PARTNERS AND NOTHING ELSE.**
+      //
+      // > *"I want to do the same with Pioneer: currently, when I second touch an object which
+      // > becomes Pioneer, it can white highlight if the Pioneer is close to a third object
+      // > (which could be not the Follower): this should not happen. the white highlight should
+      // > be reserved only for Pioneer-Follower duo."* — the owner, 2026-09-19
+      //
+      // ⚠ The first build restricted only the FOLLOWER, because that is the side the owner
+      // named first — and a Pioneer has no Pioneer of its own, so it fell through to *the whole
+      // scene* and lit up against any third body. ⭐ Both directions now, from the same two-way
+      // index: **a Follower's partner is its Pioneer; a Pioneer's are its Followers.**
+      //
+      // ⛔ A body in neither role answers **empty**, which captures nothing — the owner's
+      // *"reserved only for Pioneer-Follower duo"* taken at its word.
+      // ⚠ The alignment index lives here, in the render layer, so the lookup is handed over
+      // rather than reached for: `highlight.ts` stays engine-free and link-free.
+      // ⛔ THE RULE IS `AlignmentLinks.partnersOf`, NOT A LAMBDA HERE. ⚠ It WAS a lambda, and a
+      // mutant that reinstated the reported bug left all 944 vectors green — because a rule in a
+      // render file is a rule nothing can interrogate.
+      (id) => links.partnersOf(id),
     );
-    // ⭐ THE TWINS, for the pair the zone named. ⛔ `null` when there is no zone, rather than a
-    // stale pair kept from the last one — the marker-pool lesson, one quantity down.
-    zoneTwins =
-      highlighted.zone === null
-        ? null
-        : closestFaceTwins(world, highlighted.zone.a, highlighted.zone.b);
-
     // ⭐⭐⭐ **THE OFFSET RADIUS ZONE'S OWN EDGE — WHERE THE OBJECT AXES ARE RE-DECIDED.**
     //
     // > *"If the object has entered or exited an offset radius zone, Update the object axis
@@ -2539,12 +2518,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let appliedSwingYaw = 0;
   /**
-   * ⭐ The pitch offset the swing last asked for, in the ring surface's own `v` units — printed,
-   * because it was silently clamped to nothing at the top ring for two device reports and the
-   * HUD had no way to say so. ⛔ *An absent readout cannot be caught by looking at the screen.*
-   */
-  let lastPitchV = 0;
-  /**
    * ⭐⭐ `D63` — the SMOOTHED swing amplitude, and the clock it was last advanced on.
    * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
    * than from whatever the last approach happened to end on.
@@ -2653,15 +2626,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const rings = orbit.ringElevationRad();
     // ⛔ THE PITCH TAKES THE MAGNITUDE, NOT THE SIGNED ANGLE — `pitchAngleFor` argues why: the
     // owner's expectation names ONE vertical direction for both drag directions.
-    // ⛔⛔ **THE PITCH LEANS TOWARD THE ROOM IT HAS** (device-reported twice, 2026-09-23). It
-    // always leaned UP, and at `elev = 1.0` — the top ring — there is no up left, so the offset
-    // was clamped away and the half of the swing that shows a VERTICAL gap contributed nothing.
-    // ⚠ Exactly the case the report describes: a body approaching along gravity, watched from
-    // overhead. ⭐ `pitchSignFor` owns the choice; this reads the elevation and obeys.
-    const pitchV =
-      pitchOffsetV(pitchAngleFor(a), rings.bottom, rings.top) * pitchSignFor(orbit.elevation);
-    lastPitchV = pitchV;
-    const pose = orbit.pose(zoom, a, pitchV);
+    const pose = orbit.pose(zoom, a, pitchOffsetV(pitchAngleFor(a), rings.bottom, rings.top));
     // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
     // Clamping the components independently would change the viewing ANGLE, which is
     // not what a near-plane guard is for.
@@ -2953,16 +2918,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
               : ` gap=${(highlighted.gapM * 1000).toFixed(0)}/${(
                   highlighted.offsetM * 1000
                 ).toFixed(0)}mm`) +
-            // ⭐⭐ **THE ZONE, ITS LOCK AND ITS FACE TWINS** (`D79`). ⛔ Three questions a hand
-            // cannot answer by looking: WHICH pair holds the zone (it need not be the pair being
-            // dragged any more), whether it was NAMED by two fingers or taken by proximity, and
-            // WHICH two faces are the candidates a mate would use. ⚠ `LOCK` is the answer to
-            // *"why did the contour not move to the body I just came near"*, which is the one
-            // question the lock rule creates.
-            (highlighted.zone === null
-              ? ""
-              : `  ${highlighted.zone.pressed ? "NAMED" : "LOCK"}(${highlighted.zone.a}↔${highlighted.zone.b})` +
-                (zoneTwins === null ? "" : ` twins=${zoneTwins.faceA}/${zoneTwins.faceB}`)) +
             // ⛔⛔ **A BODY WHOSE GEOMETRY COULD NOT BE READ, NAMED.** It has no shape, so it can
             // never capture and never be outlined — and every one of those is a SILENCE. ⚠ An
             // absent readout cannot be caught by looking at the screen (`METHOD`), and *this part
@@ -3060,9 +3015,6 @@ swing     sign${
                   swing.sign === null ? "⛔?" : swing.sign > 0 ? "+" : "−"
                 } p=${swingProgress(highlighted.gapM ?? 0, swing).toFixed(2)}` +
                 ` yaw=${((appliedSwingYaw * 180) / Math.PI).toFixed(1)}°` +
-                // ⭐ The pitch in `v`, and where the camera sits on the rings — the two numbers
-                // that say whether the vertical half of the swing has anywhere to go.
-                ` pitchV=${lastPitchV.toFixed(3)}@${orbit.elevation.toFixed(2)}` +
                 ` g0=${(swing.gapAtTriggerM * 1000).toFixed(0)}mm` +
                 // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
                 // from"* is the question a direction report asks, and `0.0000` here is the whole
@@ -3522,52 +3474,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * `tests/unwired_debt.test.ts` rather than deleted: six models and five device passes are
    * behind it, and rule 5 has not judged the remap that replaced it.
    */
-  /**
-   * ⭐⭐⭐ **APPLY A WORLD TRANSLATION STEP — the ONE place a translation lands on a body.**
-   *
-   * ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"when the object approaches another one from the
-   * gravity axis, sometimes there is no swing of the camera when the object enters the offset
-   * radius zone."* ⚠ The swing picks its direction from `frameTravel*`, and **only the holder's
-   * branch fed it** — the second touchpoint's channel, which since `D75` is the GRAVITY axis,
-   * added nothing. ⭐ So an approach driven along gravity armed with `swingSignFor(0, 0)`, which
-   * is `null`, and the swing never started. *"Sometimes"* is exactly the frames where the holder
-   * happened to be still.
-   *
-   * ⭐⭐ **IT IS THE `D68` SHAPE AGAIN, TWELVE HOURS LATER: one fact, two writers, one of which
-   * forgot.** ⛔ So the fix is not the missing line — it is that applying a step and recording
-   * what it did are now the same function, and a third channel cannot be added without both.
-   */
-  const applyWorldStep = (grip: Held, step: Vec3): void => {
-    const id = idOf.get(grip.mesh);
-    // ⭐ The direction the body ACTUALLY went — what the LeadingFace ray is fired along. ⛔ Kept
-    // only when it is a real move: a frame of stillness must not erase the gizmo.
-    const dir = normalize(step);
-    if (dir && id !== undefined) lastTravelDir.set(id, dir);
-    // ⚠ The swing reads SCREEN travel (*"opposite to the dx movement"*), so the applied
-    // displacement is projected back onto the gravity frame rather than recomputed from a
-    // pointer delta that `A11`'s deadband may have swallowed. ⛔⛔ ACCUMULATED, NOT LATCHED:
-    // `refreshHighlight` zeroes it every frame, so the arming edge reads only the travel that
-    // crossed the threshold.
-    frameTravelRightM += dot(step, grip.frame.right);
-    frameTravelUpM += dot(step, grip.frame.up);
-    const mp = requirePose(grip.mesh);
-    // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
-    // camera's own maximum orbit radius. A body through the near plane renders *a black page with
-    // no error at all*, and one past the ceiling cannot be brought back by any zoom.
-    const limits = depthLimits(cfg);
-    setModelPose(grip.mesh, {
-      position: clampDepthRange(
-        asVec3(camera.position),
-        [mp.position[0] + step[0], mp.position[1] + step[1], mp.position[2] + step[2]],
-        grip.frame.depth,
-        limits.minM,
-        limits.maxM,
-      ),
-      orientation: mp.orientation,
-    });
-  };
-
   const applyDepthStep = (grip: Held, dyPx: number): void => {
+    const mp = requirePose(grip.mesh);
+    const { minM, maxM } = depthLimits(cfg);
     const gid = idOf.get(grip.mesh);
     const axes = gid === undefined ? (bootObjectAxes ?? axesFromFrame(grip.frame)) : axesOf(gid);
     const travel = axisTravel(
@@ -3583,8 +3492,21 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       cfg.axisTrackingConeDeg,
       grip.frame.towardGravity,
     );
-    // ⭐ ONE writer, so this channel now feeds the swing exactly as the holder's does.
-    applyWorldStep(grip, axisDisplacement(travel, axes));
+    const step = axisDisplacement(travel, axes);
+    {
+      const dir = normalize(step);
+      if (dir && gid !== undefined) lastTravelDir.set(gid, dir);
+    }
+    setModelPose(grip.mesh, {
+      position: clampDepthRange(
+        asVec3(camera.position),
+        [mp.position[0] + step[0], mp.position[1] + step[1], mp.position[2] + step[2]],
+        grip.frame.depth,
+        minM,
+        maxM,
+      ),
+      orientation: mp.orientation,
+    });
   };
 
   // ⛔⛔ **THE OLD DEPTH RULE STOOD HERE UNTIL 2026-09-22.** `depthTranslate` moved the body
@@ -4943,21 +4865,68 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         lastTrackGain = travel.trackGain;
         lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);
-        // ⭐⭐⭐ **CASE 2's BLEND IS DRIVEN BY *THIS* FINGER** — without it the retarget was
+        // ⭐⭐ THE DIRECTION THE BODY ACTUALLY WENT — what the LeadingFace ray is fired along,
+        // and the owner's choice over the finger's own direction. ⛔ Kept only when it is a
+        // real move: a frame of stillness must not erase the gizmo, and `normalize` of a zero
+        // vector is `null` rather than a guess.
+        {
+          const dir = normalize(step);
+          if (dir && tid !== undefined) lastTravelDir.set(tid, dir);
+        }
+        // ⚠ The swing still reads SCREEN travel (*"opposite to the dx movement"*), so the
+        // applied displacement is projected back onto the gravity frame rather than recomputed
+        // from the pointer — one computation, read two ways.
+        const t = { rightM: dot(step, grip.frame.right), upM: dot(step, grip.frame.up) };
+        // ⭐ `grip.frame` is still the basis LATCHED AT PRESS, and it is used here for the
+        // swing's readout and the depth clamp only — the body's own axes decide the motion, and
+        // with `worldAxisB` they were latched at BOOT rather than at this press.
+        // ⛔ THE FINGER MOVES THE TARGET, NOT THE MESH. The mesh chases it in the render
+        // loop. With `translateInertiaMs` at 0 the two are the same thing.
+        // ⛔ THE FINGER MOVES THE MODEL. The follower's target is re-read from it every
+        // frame, so the inertia stays exactly what it was — a filter on the way to the
+        // screen, and no longer the place the object's position is kept.
+        const mp = requirePose(grip.mesh);
+        // ⚠ The swing's direction comes from here and nowhere else — *"opposite to the dx
+        // movement"* means the travel this rule actually applied, not a raw pointer delta that
+        // `A11`'s deadband may have swallowed.
+        // ⛔⛔ **ACCUMULATED, NOT LATCHED.** `refreshHighlight` zeroes this every frame, so the
+        // arming edge can only ever read travel that happened *since the previous frame* — the
+        // travel that crossed the threshold. ⚠ The old form kept the last non-zero value for
+        // ever and handed the swing a direction from a gesture that was already over.
+        frameTravelRightM += t.rightM;
+        frameTravelUpM += t.upM;
+        // ⭐⭐⭐ **CASE 2's BLEND IS DRIVEN BY *THIS* FINGER** — and without it the retarget was
         // invisible: `centreBlend.advance` is called from the ORBIT branch only, so during an
-        // object drag the target moved and the camera never migrated to it (measured on the
-        // tablet as `→0%` forever). ⛔ The same quantity the orbit uses — millimetres of finger
-        // travel — so the centre arrives as the gesture progresses rather than on a timer.
+        // object drag the target moved and the camera never migrated to it. ⚠ Measured on the
+        // tablet as `→0%` forever.
+        // ⛔ The same quantity the orbit uses — millimetres of finger travel — so the centre
+        // arrives *as the gesture progresses* rather than on a timer, which is the rule
+        // `OrbitCentreBlend` was written for.
         // ⚠ Gated on the selector so **case 1 is byte-for-byte what it was**.
         if (cfg.approachRetargetsOrbit === 1 && centreBlend.isBlending) {
           centreBlend.advance(Math.hypot(grip.rec.step.dx, grip.rec.step.dy) / mmToPx(1));
           syncCentre();
         }
-        // ⭐ ONE writer for an applied step: it moves the body, feeds the swing's direction and
-        // records the travel direction the LeadingFace ray is fired along. ⛔ THE FINGER MOVES
-        // THE MODEL — the follower re-reads it every frame, so the inertia stays a filter on
-        // the way to the screen rather than the place the position is kept.
-        applyWorldStep(grip, step);
+        // ⛔⛔ THE DEPTH RANGE STILL BINDS. `A5`'s bounds were derived — twice the near plane,
+        // and the camera's own maximum orbit radius — and the hazard did not move when the
+        // channel did: a body driven through the near plane renders *a black page with no
+        // error at all*, and one past the ceiling cannot be brought back by any zoom.
+        const wanted: Vec3 = [
+          mp.position[0] + step[0],
+          mp.position[1] + step[1],
+          mp.position[2] + step[2],
+        ];
+        const limits = depthLimits(cfg);
+        setModelPose(grip.mesh, {
+          position: clampDepthRange(
+            asVec3(camera.position),
+            wanted,
+            grip.frame.depth,
+            limits.minM,
+            limits.maxM,
+          ),
+          orientation: mp.orientation,
+        });
       } else if (grip.mode === "ROTATE") {
         // The provisional motion — applied LIVE, and undone by the recognizer itself
         // if the flick test passes at release.

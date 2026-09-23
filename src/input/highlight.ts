@@ -35,6 +35,7 @@ import type { ObjectId, World } from "../core/object_model";
 import { faceWorld } from "../core/object_model";
 import type { Constraint } from "../core/constraint_stack";
 import type { Behaviour } from "./mode_toggle";
+import { nearestCapture } from "../core/proximity";
 import type { ObjectId as CaptureId } from "../core/object_model";
 import { mmToPx } from "../core/units";
 import { trackingMetresPerPx } from "./translate";
@@ -133,12 +134,6 @@ export interface HighlightPair {
 export interface HighlightVerdict {
   /** The pair to outline, or `null`. ⭐ This is what is DRAWN. */
   readonly pair: HighlightPair | null;
-  /**
-   * ⭐⭐ **THE ZONE ITSELF — the locked pair, whether or not anything is drawn** (`D79`).
-   * ⛔ Returned so the caller can hand it back as `previous` next frame: the LOCK is state, and
-   * the rule that reads it must be the rule that produces it, or the two drift.
-   */
-  readonly zone: CaptureZone | null;
   /** The TRANSLATION condition. */
   readonly translating: boolean;
   /** The RANGE condition — another body is within the offset of at least one held body. */
@@ -268,120 +263,6 @@ export function alignmentMatchesTarget(
   return false;
 }
 
-/** A pair of bodies, unordered in meaning but ordered so a readout is stable. */
-export interface ZonePair {
-  readonly a: ObjectId;
-  readonly b: ObjectId;
-}
-
-/** The zone a body pair holds, and why it holds it. */
-export interface CaptureZone extends ZonePair {
-  /** Surface gap when it was last measured, metres. ⚠ May EXCEED the offset for a pressed pair. */
-  readonly gapM: number | null;
-  /** ⭐ True when two touchpoints name this pair, which outranks every distance. */
-  readonly pressed: boolean;
-}
-
-/**
- * ⭐⭐⭐ **WHICH TWO BODIES HOLD THE OFFSET RADIUS ZONE — decoupled from the alignment**
- * (`D79`, the owner, 2026-09-23).
- *
- * > *"Decouple the offset radius zone and the consequent white highlight from the
- * > pioneer-follower alignment. No need for a pioneer-follower relationship: any object can
- * > enter the offset radius of any other object (one offset radius zone at a time, based on
- * > closest faces twins)."*
- *
- * > *"The global nearest face, and it gets locked until the object exit again the offset radius
- * > zone or the mate happens … if the object has already entered the offset radius zone with
- * > another object, it cannot enter the offset radius zone with a third object even if the third
- * > object comes closer at one point. However, if a second object is pressed upon, it takes
- * > precedence to any other object, whatever the distance of the face and gets locked."*
- *
- * ⛔⛔⛔ **IT OVERTURNS `D62`, AND `D62` CAME FROM A DEVICE REPORT OF EXACTLY THIS.** *"The white
- * highlight should be reserved only for Pioneer-Follower duo"* (2026-09-19) — which itself
- * overturned `A21`'s *"within a radius of ANY other object"*. ⚠ So this restores `A21`, and all
- * three texts stand: the rule has now been round the loop once, and what changed between them is
- * that a **LOCK** exists. ⭐ `D62` was fixing a pair that kept re-choosing itself; a locked pair
- * cannot.
- *
- * ## ⭐⭐ THE THREE RULES, IN PRECEDENCE ORDER
- *
- * 1. **A PRESSED PAIR WINS, at any distance.** Two touchpoints on two bodies NAME the pair, and
- *    nothing measured can outrank a thing the hand said. ⚠ It is `D67`'s Pioneer/Follower
- *    gesture kept as a *designator* while it stops being a *requirement*.
- * 2. **A LOCK HOLDS while the pair stays within the offset.** A third body coming nearer does
- *    not steal it — the owner's sentence, and the property `D62` was reaching for.
- * 3. **OTHERWISE the globally nearest eligible pair takes it**, over every body in the scene.
- *
- * ⛔ Release is *exiting the offset* (or a mate, which does not exist yet and is `3D2`'s to
- * wire). ⚠ There is no timer and no hysteresis margin: the lock IS the hysteresis, which is why
- * none had to be guessed.
- *
- * @param previous last frame's zone, or `null`.
- * @param pressedPair the two bodies two touchpoints are holding, or `null`.
- * @param ids every body in the scene. ⛔ **The whole scene, explicitly** — `nearestCapture`'s
- *   contract refuses an *unrestricted* value by omission, and `D79` removes the restriction from
- *   the RULE rather than from the signature.
- * @param gapOf the surface gap — `surfaceGap` in the product, a hull distance (`D49`).
- */
-export function nextCaptureZone(
-  previous: ZonePair | null,
-  pressedPair: ZonePair | null,
-  subjects: readonly ObjectId[],
-  ids: readonly ObjectId[],
-  offsetM: number,
-  gapOf: (a: ObjectId, b: ObjectId) => number | null,
-): CaptureZone | null {
-  // ⛔⛔⛔ **A ZONE BELONGS TO A BODY A HAND IS HOLDING** — the owner's correction, 2026-09-23:
-  // *"the offset radius zone and white highlight apply to the object which is translated and the
-  // other object it gets near to. Consequently, when no object is touched, there cannot be any
-  // white highlight."*
-  //
-  // ⚠⚠ **IT NARROWS `D79` BY HALF, HOURS AFTER IT SHIPPED.** *"Any object"* answered *may a body
-  // pair with something that is not its Pioneer* — it did not mean *two bodies nobody is touching
-  // may form a zone between them*, which is what I built. ⭐ `METHOD`: *when two readings fit one
-  // sentence, name both* — I named only one, and this is the other.
-  //
-  // ⭐⭐ **AND IT DELETES THE ONE REAL COST THE LOCK HAD.** With untouched pairs eligible, two
-  // parts resting near each other could hold the zone against the pair a hand was dragging, and
-  // the press was the escape hatch. ⛔ A subject must now be held, so that state is unreachable
-  // rather than escapable — *prefer the structure that cannot express the defect*.
-  if (subjects.length === 0) return null;
-  // ⭐ RULE 1 — what the hand named. ⛔ No gap test at all: *"whatever the distance of the face"*.
-  if (pressedPair !== null && pressedPair.a !== pressedPair.b) {
-    return {
-      a: pressedPair.a,
-      b: pressedPair.b,
-      gapM: gapOf(pressedPair.a, pressedPair.b),
-      pressed: true,
-    };
-  }
-  // ⭐ RULE 2 — the lock, which survives a nearer third body.
-  // ⚠ It must still name a HELD body, or a lock made during one drag would outlive the finger
-  // that made it and hold the zone against the next one.
-  if (previous !== null && (subjects.includes(previous.a) || subjects.includes(previous.b))) {
-    const held = gapOf(previous.a, previous.b);
-    if (held !== null && held <= offsetM) {
-      return { a: previous.a, b: previous.b, gapM: held, pressed: false };
-    }
-  }
-  // ⭐ RULE 3 — the globally nearest pair inside the offset. ⚠ Every unordered pair once: a
-  // scene-wide scan is what *"any object … of any other object"* means, and the cost is
-  // `n(n−1)/2` gaps on a four-body scene.
-  // ⚠ SUBJECT × SCENE, not scene × scene: the subject is a body under a finger, and the target is
-  // any other body — which is the half of `D79` the correction keeps.
-  let best: CaptureZone | null = null;
-  for (const a of subjects) {
-    for (const b of ids) {
-      if (b === a || subjects.includes(b)) continue;
-      const d = gapOf(a, b);
-      if (d === null || d > offsetM) continue;
-      if (best === null || d < (best.gapM ?? Infinity)) best = { a, b, gapM: d, pressed: false };
-    }
-  }
-  return best;
-}
-
 /**
  * ⭐⭐⭐ **THE WHOLE OF `A16`, AS ONE ANSWER** — the pair to outline, or `null`.
  *
@@ -407,34 +288,46 @@ export function nextCaptureZone(
  *   glass would be looking at a number that describes nothing.
  */
 export function highlightedPair(
-  previous: ZonePair | null,
-  pressedPair: ZonePair | null,
-  subjects: readonly ObjectId[],
-  ids: readonly ObjectId[],
+  world: World,
+  heldIds: readonly ObjectId[],
   translating: boolean,
   n: HighlightNumbers,
+  current: ObjectId | null,
   gapOf: (a: CaptureId, b: CaptureId) => number | null,
+  partnersOf: (id: ObjectId) => readonly ObjectId[],
 ): HighlightVerdict {
-  // ⛔⛔ **`D79` — THE PAIR NO LONGER READS THE ALIGNMENT INDEX.** `partnersOf` was this
-  // function's third argument and it is gone: any body may hold the zone with any other, and
-  // which pair holds it is `nextCaptureZone`'s decision alone.
-  const zone = nextCaptureZone(previous, pressedPair, subjects, ids, n.captureOffsetM, gapOf);
-  // ⭐ IN RANGE is a measurement about the zone's pair, not the reason the pair was chosen — so
-  // a PRESSED pair that is still far away holds the zone and shows no contour, which is what
-  // *"whatever the distance"* has to mean for a rule whose contour means *near enough*.
-  const inRange = zone !== null && zone.gapM !== null && zone.gapM <= n.captureOffsetM;
-  // ⛔ THE TRANSLATION CONDITION SURVIVES `D79` UNTOUCHED — the half of `A16` the owner kept
-  // when `D48` removed the alignment one. ⚠ Checked after the range so the readout can still
-  // report a gap during a rotation-mode drag, which is the state a hand hits most often.
-  const pair =
-    inRange && translating && zone !== null ? { subject: zone.a, target: zone.b } : null;
-  // ⚠ The number the readout needs when the answer is NO: the nearest gap anywhere in the
-  // scene, so *"why is there no contour"* has an answer rather than a silence.
-  // ⚠ The readout's fallback: the nearest gap from a HELD body to anything, so *"why is there no
-  // contour"* still has a number — and nothing at all when nothing is held, which is the honest
-  // answer once a zone needs a finger.
-  const gapM = zone?.gapM ?? nearestUnboundedGap(subjects, ids, gapOf);
-  return { pair, zone, translating, inRange, gapM, offsetM: n.captureOffsetM };
+  let inRange = false;
+  let pair: HighlightPair | null = null;
+  // ⭐ The nearest gap seen across every held body, whether or not it was near enough. ⚠ The
+  // rule needs only the verdict; the READOUT needs the number, and a hand asking *"why is there
+  // no contour"* is usually looking at a pair that is close but not close enough.
+  let gapM: number | null = null;
+  for (const subject of heldIds) {
+    // ⛔⛔ `D62` — A BODY MAY APPROACH ITS ALIGNMENT PARTNERS AND NOTHING ELSE (the owner,
+    // 2026-09-19: *"the white highlight should be reserved only for Pioneer-Follower duo"*).
+    // ⚠ Computed ONCE per subject and handed to both the rule and the readout, so the contour and
+    // the printed gap can never describe different bodies.
+    const only = partnersOf(subject);
+    // ⛔ THE RANGE CONDITION — surface gap below the offset, inside `nearestCapture`.
+    const capture = nearestCapture(world, subject, n.captureOffsetM, current, gapOf, only);
+    if (capture === null) {
+      // ⚠ Out of range is still a measurement, and it is the one worth printing.
+      const nearest = nearestUnboundedGap(world, subject, gapOf, only);
+      if (nearest !== null && (gapM === null || nearest < gapM)) gapM = nearest;
+      continue;
+    }
+    inRange = true;
+    if (gapM === null || capture.gapM < gapM) gapM = capture.gapM;
+    // ⛔ THE TRANSLATION CONDITION, checked second so the readout can still report the range
+    // while it is false. ⚠ The ORDER does not change the answer — both are necessary — but it
+    // changes how much the HUD can say about a rotation-mode drag, which is the state a hand
+    // hits most often.
+    if (translating) {
+      pair = { subject, target: capture.target };
+      break;
+    }
+  }
+  return { pair, translating, inRange, gapM, offsetM: n.captureOffsetM };
 }
 
 /**
@@ -446,18 +339,18 @@ export function highlightedPair(
  * the whole life of a file because nobody separated the two.
  */
 function nearestUnboundedGap(
-  subjects: readonly ObjectId[],
-  ids: readonly ObjectId[],
+  world: World,
+  held: ObjectId,
   gapOf: (a: CaptureId, b: CaptureId) => number | null,
+  allowed: readonly ObjectId[],
 ): number | null {
   let best: number | null = null;
-  for (const a of subjects) {
-    for (const b of ids) {
-      if (b === a) continue;
-      const d = gapOf(a, b);
-      if (d === null) continue;
-      if (best === null || d < best) best = d;
-    }
+  for (const id of allowed) {
+    if (id === held) continue;
+    if (!world.objects.has(id)) continue;
+    const d = gapOf(held, id);
+    if (d === null) continue;
+    if (best === null || d < best) best = d;
   }
   return best;
 }

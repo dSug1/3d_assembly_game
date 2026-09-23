@@ -28,8 +28,8 @@
  * ⛔ ENGINE-FREE, and every function is a QUESTION about the world rather than a change to it.
  */
 import { gapBetween } from "./collision_shape";
-import type { FaceId, ObjectId, World } from "./object_model";
-import { faceWorld, worldPlacementOf } from "./object_model";
+import type { ObjectId, World } from "./object_model";
+import { worldPlacementOf } from "./object_model";
 import type { Vec3 } from "./vec";
 import { add, qRotate, sub } from "./vec";
 
@@ -167,63 +167,6 @@ export function nearestCapture(
       bestGap = d;
     } else if (d === bestGap && id === current) {
       best = { target: id, gapM: d };
-    }
-  }
-  return best;
-}
-
-/** The two faces that are nearest each other across a pair of bodies, and how far apart. */
-export interface FaceTwins {
-  readonly faceA: FaceId;
-  readonly faceB: FaceId;
-  /** Between the two face CENTRES, in metres, world. */
-  readonly centreGapM: number;
-}
-
-/**
- * ⭐⭐⭐ **THE CLOSEST FACE TWINS** — *"based on closest faces twins"* (the owner, 2026-09-23).
- *
- * ⛔⛔ **IT IS NOT THE CAPTURE TEST, AND THAT SPLIT IS THE WHOLE POINT.** `D49` made the zone a
- * **GJK distance between convex hulls** on the owner's own argument that *nothing there reads a
- * normal, so inverted normals cannot affect it* — and glTF has no quads, so an imported body's
- * faces are whatever the exporter made of it. ⚠ Deciding the THRESHOLD by faces would hand that
- * property back. ⭐ So `surfaceGap` still says *are they near enough*, and this says *which two
- * faces are the ones involved* — one quantity per question, the split the owner approved.
- *
- * ⚠⚠ **CENTRE TO CENTRE, BETWEEN FACES, AND IT IS A PROXY.** Two large faces that overlap
- * edge-on can be nearer as surfaces than their centres suggest. ⛔ Stated rather than hidden
- * because this project has paid for the centre-vs-surface confusion once already, one level up:
- * the base plate read as *far* while a part rested on it. ⭐ At the face level the error is
- * bounded by the face's own half-extent rather than the body's, which is why the proxy is
- * defensible here and was not there — and the mate will need the exact pair anyway, at which
- * point this becomes its seed rather than its answer.
- *
- * ⚠ **NO NORMAL TEST, DELIBERATELY.** A mate is anti-parallel (`D78`), so the twin of a face is
- * arguably one pointing BACK at it — but filtering on that here would make a missing white
- * contour have a second invisible cause, and *"nothing visibly happened"* is this mechanism's
- * whole failure mode. ⭐ The pair is reported; whether the mate demands opposition is `3D2`'s
- * decision to take, with both faces already on the HUD to judge it by.
- *
- * ⛔ `null` when either body is gone or has no faces.
- */
-export function closestFaceTwins(world: World, a: ObjectId, b: ObjectId): FaceTwins | null {
-  const oa = world.objects.get(a);
-  const ob = world.objects.get(b);
-  if (!oa || !ob) return null;
-  let best: FaceTwins | null = null;
-  for (const fa of oa.faces) {
-    const wa = faceWorld(world, a, fa.id);
-    if (!wa) continue;
-    for (const fb of ob.faces) {
-      const wb = faceWorld(world, b, fb.id);
-      if (!wb) continue;
-      const d = sub(wa.centre, wb.centre);
-      const gap = Math.hypot(d[0], d[1], d[2]);
-      // ⚠ `<` and not `<=`: a tie keeps the first in `faces` order, which is the mesh's own and
-      // is stable across frames. An alternating tie would make the HUD's face names flicker.
-      if (best === null || gap < best.centreGapM) {
-        best = { faceA: fa.id, faceB: fb.id, centreGapM: gap };
-      }
     }
   }
   return best;

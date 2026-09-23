@@ -67,11 +67,8 @@ two-way index (`core/alignment_links.ts`), a turned Pioneer releasing its cyan f
 rotating its orange ones **down a chain**, **no cycles**, and **`frozen`**, enforced at
 `object_model.ts`'s writers and carried by the base plate.
 ✅✅ **THE CAPTURE IS A SURFACE GAP SINCE 2026-09-18** (`D49`/`D50`): white is decided by the **gap
-between the bodies' surfaces**, not their centres, against a threshold in **millimetres on the glass**
-scaled by camera distance, on a slider. ⛔⛔ **AND IT IS DECOUPLED FROM THE ALIGNMENT SINCE `D79`**
-(2026-09-23): any body, any other body, **one zone at a time and LOCKED** until it leaves — a pressed
-pair outranks every distance, and the **face twins** are reported as the mate's seed. ⚠ It reverses
-`D62` and restores `A21`; the lock is what is new → the approach spec §22. ⭐ Geometry is **computed at spawn** — no bounding
+between the bodies' surfaces**, not their centres, against a threshold in **millimetres on the
+glass** scaled by camera distance, on a slider. ⭐ Geometry is **computed at spawn** — no bounding
 boxes, and no second source of truth in Blender. ⛔ The approach DIRECTION stays centre-to-centre,
 because face-to-face collapses at contact → spec §19–§20.
 ⛔⛔ **NOT built**: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.

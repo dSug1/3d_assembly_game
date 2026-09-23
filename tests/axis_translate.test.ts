@@ -89,7 +89,7 @@ const run = (
     c.gravity.towardGravity,
   );
 
-describe("⭐⭐⭐ PLANE — the body follows the finger inside its own VERTICAL plane", () => {
+describe("⭐⭐⭐ PLANE — the body follows the finger inside its own horizontal plane", () => {
   it("ROUND TRIP: at gain 1 the body lands exactly under the finger, at every camera pose", () => {
     // ⛔ THE ANSWER TO REPORTS 1 AND 2 IN ONE PROPERTY. Every camera the orbit rings can reach,
     // and azimuths deliberately NOT square to the world axes — the configuration the owner
@@ -107,17 +107,9 @@ describe("⭐⭐⭐ PLANE — the body follows the finger inside its own VERTICA
         ]) {
           const t = run({ holderDxPx: dx!, holderDyPx: dy! }, c, axes);
           const landed = toScreenPx(axisDisplacement(t, axes), c.screen);
-          // ⛔⛔ **EXACT, OR EDGE-ON — and the vector asserts BOTH branches** (2026-09-23). The
-          // holder's plane is {x, gravity} since the swap, and it goes edge-on when the camera
-          // looks along the body's own `x`, which this sweep reaches at 90°. ⚠ A sweep that
-          // simply excluded that azimuth would be a fixture chosen from the set where the
-          // quantity under test is zero — the audit's one shape.
-          if (t.edgeOn) {
-            expect(Math.abs(landed[0])).toBeLessThanOrEqual(Math.abs(dx!) + 1e-6);
-            continue;
-          }
           expect(landed[0]).toBeCloseTo(dx!, 6);
           expect(landed[1]).toBeCloseTo(dy!, 6);
+          expect(t.edgeOn).toBe(false);
           // ⚠ The LEVERAGE, not the tracking: a foreshortened plane needs MORE world travel to
           // put the body under the finger, so this is >= 1 and grows as the plane tilts away.
           expect(t.trackGain).toBeGreaterThanOrEqual(0.999);
@@ -153,33 +145,23 @@ describe("⭐⭐⭐ PLANE — the body follows the finger inside its own VERTICA
     const landed = toScreenPx(axisDisplacement(t, axes), c.screen);
     expect(landed[0]).toBeCloseTo(50, 6);
     expect(landed[1]).toBeCloseTo(0, 6);
-    // ⭐ And it genuinely used BOTH axes of the plane to do it — {x, gravity} since the swap —
-    // otherwise this fixture would be in the set where the pairing question does not arise.
+    // ⭐ And it genuinely used BOTH world axes to do it — otherwise this fixture would be in the
+    // set where the pairing question does not arise.
     expect(Math.abs(t.xM)).toBeGreaterThan(1e-6);
-    expect(Math.abs(t.gravityM)).toBeGreaterThan(1e-6);
-    // ⛔ …and the second touchpoint's channel is untouched by a holder drag.
-    expect(t.depthM).toBe(0);
+    expect(Math.abs(t.depthM)).toBeGreaterThan(1e-6);
   });
 
-  it("⭐⭐ THE PLANE CHANNELS LAND EXACTLY; the SINGLE-axis one tracks along its OWN line", () => {
-    // ⚠⚠ **THE CLAIM CHANGED WITH THE SWAP, AND THE OLD ONE IS THE RECORD.** It read *"the gain
-    // is the SAME on all three channels"* and passed because the third channel was GRAVITY, whose
-    // screen shadow is exactly vertical (the camera carries no roll) — so a vertical finger move
-    // landed 1:1 by coincidence of geometry, not by the rule.
-    // ⭐⭐ Since 2026-09-23 the third channel is **depth**, whose shadow is oblique, and
-    // single-axis tracking moves the body by the PROJECTION of the input onto that line — which
-    // is exactly Blender's `G Z`. ⛔ So the honest claim is: the two PLANE channels put the body
-    // under the finger, and the depth channel puts it under the finger *along its own axis*.
+  it("⭐ the gain is the SAME on all three channels — report 2's actual complaint", () => {
+    // ⚠ *"the input seems very weak and not the same as the gravity axis input which is right"*.
+    // ⛔ So the check is an EQUALITY between channels, not a value: 30 px of finger buys the same
+    // 30 px of body motion whichever channel carries it.
     const c = camera(35, 30);
     const axes = axesFromFrame(camera(0, 30).gravity);
     const px = (t: ReturnType<typeof run>) =>
       Math.hypot(...toScreenPx(axisDisplacement(t, axes), c.screen));
     expect(px(run({ holderDxPx: 30 }, c, axes))).toBeCloseTo(30, 6);
     expect(px(run({ holderDyPx: 30 }, c, axes))).toBeCloseTo(30, 6);
-    // ⚠ The depth channel: less than the finger, and never more — a projection cannot exceed it.
-    const d = px(run({ secondDyPx: 30 }, c, axes));
-    expect(d).toBeGreaterThan(0);
-    expect(d).toBeLessThan(30);
+    expect(px(run({ secondDyPx: 30 }, c, axes))).toBeCloseTo(30, 6);
   });
 
   it("⭐ the gains multiply the tracking factor, and 1.0 is 'under the finger'", () => {
@@ -213,41 +195,34 @@ describe("CHANNELS — the dictated pairing, each axis tracking exactly", () => 
     const axes = axesFromFrame(camera(0, 30).gravity);
     const plane = run({ holderDxPx: 50 }, c, axes, "PLANE");
     const chan = run({ holderDxPx: 50 }, c, axes, "CHANNELS");
-    // ⚠ The plane's second axis is GRAVITY since the swap, so that is where the two disagree:
-    // the solve gives `dx` a vertical component to keep the body under the finger, and the
-    // channel mapping does not.
-    expect(Math.abs(plane.gravityM - chan.gravityM)).toBeGreaterThan(1e-4);
+    expect(Math.abs(plane.depthM - chan.depthM)).toBeGreaterThan(1e-4);
   });
 });
 
-describe("⛔⛔ EDGE-ON — the DEPTH axis facing the camera, and the judged fallback", () => {
+describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
   it("the body KEEPS MOVING in depth, at the judged fixed rate, instead of going dead", () => {
-    // ⚠⚠ **THE CHANNEL MOVED ON 2026-09-23 AND THE RULE DID NOT.** This was the HOLDER's `dy`
-    // until the owner swapped the two; it is the SECOND touchpoint's now, which is where
-    // `depthTranslate`'s fixed-rate push came from in the first place. ⭐ So the degenerate axis
-    // and its judged fallback are back on the same finger.
+    // ⚠ The old rule returned exactly 0 here and a hand called it out. ⛔ Blender goes quiet too
+    // (`axisProjection` switches to a plain projection inside 5°); this deliberately does not.
     const c = camera(0, 0);
     const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({ secondDyPx: -50 }, c, axes);
+    const t = run({ holderDyPx: -50 }, c, axes);
     expect(t.edgeOn).toBe(true);
     // ⭐ FINGERS-UP IS AWAY at a level camera — the convention, since the picture is symmetric
     // there and no sign is derivable from it.
     expect(t.depthM).toBeGreaterThan(0);
     // ⭐ At the fixed rate: one pixel of finger buys one tracking factor of world travel.
     expect(t.depthM).toBeCloseTo(50 * PER_PX, 9);
-    // ⚠ And the holder's own plane is untouched by that degeneracy — {x, gravity} faces the
-    // camera at a level pose, which is the pairing's whole advantage over {x, depth}.
-    const holder = run({ holderDxPx: 30, holderDyPx: -30 }, c, axes);
-    expect(holder.edgeOn).toBe(false);
-    expect(Math.abs(holder.xM)).toBeGreaterThan(1e-6);
-    expect(Math.abs(holder.gravityM)).toBeGreaterThan(1e-6);
+    // ⚠ And `x` is untouched by the degeneracy — it is the axis lying across the screen.
+    expect(run({ holderDxPx: 30 }, c, axes).xM).not.toBe(0);
   });
 
   it("⭐⭐ the SIGN is continuous through the cone — the defect that was found by finger", () => {
     // ⛔ *"when the camera is on the bottom ring facing upwards, the depth translation is
-    // chaotic"* — fingers-up means AWAY seen from above and TOWARDS seen from below.
+    // chaotic"* — fingers-up means AWAY seen from above and TOWARDS seen from below. ⚠ Inside
+    // the cone the sign is still read from `towardGravity`, so entering the cone from either
+    // side flips nothing.
     const axes = axesFromFrame(camera(0, 30).gravity);
-    const push = { secondDyPx: -50 };
+    const push = { holderDyPx: -50 };
     const aboveOutside = run(push, camera(0, 20), axes).depthM;
     const aboveInside = run(push, camera(0, 2), axes).depthM;
     const belowInside = run(push, camera(0, -2), axes).depthM;
@@ -258,9 +233,12 @@ describe("⛔⛔ EDGE-ON — the DEPTH axis facing the camera, and the judged fa
   });
 
   it("⚠ the RATE steps at the boundary, and the step is stated rather than hidden", () => {
+    // ⛔ Just outside the cone the exact mapping is buying `1/sin(5°)` ≈ 11× the tracking factor;
+    // inside it the fallback buys 1×. ⭐ Neither produces visible SCREEN motion there, which is
+    // why this is a cost and not a defect — but a vector says the number out loud.
     const axes = axesFromFrame(camera(0, 30).gravity);
-    const justOutside = run({ secondDyPx: -50 }, camera(0, 5.5), axes);
-    const justInside = run({ secondDyPx: -50 }, camera(0, 4.5), axes);
+    const justOutside = run({ holderDyPx: -50 }, camera(0, 5.5), axes);
+    const justInside = run({ holderDyPx: -50 }, camera(0, 4.5), axes);
     expect(justOutside.edgeOn).toBe(false);
     expect(justInside.edgeOn).toBe(true);
     expect(Math.abs(justOutside.depthM / justInside.depthM)).toBeGreaterThan(5);
@@ -269,34 +247,53 @@ describe("⛔⛔ EDGE-ON — the DEPTH axis facing the camera, and the judged fa
 
   it("⛔ cone = 0 disables the fallback — the runaway a hand is being protected from", () => {
     const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({ secondDyPx: -50 }, camera(0, 0.05), axes, "PLANE", 1, 0);
+    const t = run({ holderDyPx: -50 }, camera(0, 0.05), axes, "PLANE", 1, 0);
     expect(t.edgeOn).toBe(false);
+    // ⚠ 50 px of finger, and the body has gone a hundred times further than it would flat on.
     expect(Math.abs(t.depthM)).toBeGreaterThan(100 * 50 * PER_PX);
   });
 });
 
-describe("⭐⭐⭐ THE IN-ZONE BASIS BITES AGAIN — the swap resolved an open decision", () => {
-  it("under PLANE the in-zone basis now CHANGES the translation", () => {
-    // ⛔⛔ **THIS VECTOR ASSERTED THE OPPOSITE THIS MORNING.** It read *"under PLANE the in-zone
-    // basis changes NOTHING, and that contradicts rule C"*, and it was right: the holder's plane
-    // was {x, depth}, both horizontal, and the orthogonalised in-zone basis spans the same
-    // horizontal plane — so rotating within it changed nothing.
-    // ⭐⭐⭐ **THE 2026-09-23 SWAP RESOLVED IT WITHOUT ANYONE AIMING AT IT.** The holder's plane is
-    // {x, **gravity**} now, a VERTICAL plane containing `x` — and the in-zone basis rotates `x`
-    // within the horizontal plane, so the plane itself tilts. ⚠ `D74`'s *"the translation
-    // direction differs when the object is inside the offset radius zone"* is in force again, and
-    // the open decision it raised is answered by arithmetic rather than by a choice.
+describe("⛔⛔⛔ THE IN-ZONE BASIS AND `PLANE` — a finding, not a feature", () => {
+  it("under PLANE the in-zone basis changes NOTHING, and that contradicts rule C", () => {
+    // ⛔⛔ **THE INTERACTION NOBODY SAW WHEN THE TWO DECISIONS WERE TAKEN SEPARATELY.**
+    // The in-zone basis is *LeadingFace normal, gravity, orthogonal* — ORTHOGONALISED on the
+    // owner's instruction (2026-09-22), which flattens the normal onto the ground. ⚠ So both
+    // its horizontal axes are horizontal, and the holder's plane is the SAME horizontal plane
+    // as outside the zone: rotating a basis WITHIN a plane cannot change a rule that only reads
+    // the plane. ⭐ The dictation's *"therefore the translation direction differs when the object
+    // is inside the offset radius zone"* is therefore INERT under `PLANE`.
+    // ⚠ Recorded as a vector rather than a comment so that the day it stops being true — a
+    // tilted in-zone plane, or a return to CHANNELS — this file says so out loud.
     const c = camera(0, 30);
     const outside = axesFromFrame(c.gravity);
     const inside = axesFromLeadingFace(normalize([1, 0, 1])!, UP)!;
     const push = { holderDxPx: 50, holderDyPx: -30 };
     const a = axisDisplacement(run(push, c, outside), outside);
     const b = axisDisplacement(run(push, c, inside), inside);
+    for (let i = 0; i < 3; i++) expect(a[i]!).toBeCloseTo(b[i]!, 12);
+  });
+
+  it("⭐ under CHANNELS it DOES change the direction — which is what rule C asked for", () => {
+    const c = camera(0, 30);
+    const outside = axesFromFrame(c.gravity);
+    const inside = axesFromLeadingFace(normalize([1, 0, 1])!, UP)!;
+    const push = { holderDxPx: 50, holderDyPx: -30 };
+    const a = axisDisplacement(run(push, c, outside, "CHANNELS"), outside);
+    const b = axisDisplacement(run(push, c, inside, "CHANNELS"), inside);
     expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeGreaterThan(1e-4);
-    // ⚠ And BOTH still land under the finger — the basis chooses the world direction, never
-    // whether the body keeps up.
-    for (const v of [a, b]) {
-      const landed = toScreenPx(v, c.screen);
+  });
+
+  it("⭐ and under PLANE the body is under the finger with EITHER basis", () => {
+    const c = camera(0, 30);
+    for (const axes of [
+      axesFromFrame(c.gravity),
+      axesFromLeadingFace(normalize([1, 0, 1])!, UP)!,
+    ]) {
+      const landed = toScreenPx(
+        axisDisplacement(run({ holderDxPx: 50, holderDyPx: -30 }, c, axes), axes),
+        c.screen,
+      );
       expect(landed[0]).toBeCloseTo(50, 6);
       expect(landed[1]).toBeCloseTo(-30, 6);
     }
@@ -324,12 +321,8 @@ describe("degenerate inputs never reach a placement", () => {
     const axes = axesFromFrame(c.gravity);
     const t = run({ holderDxPx: NaN, holderDyPx: Infinity, secondDyPx: 5 }, c, axes);
     for (const n of [t.xM, t.depthM, t.gravityM]) expect(Number.isFinite(n)).toBe(true);
-    // ⛔ The two poisoned channels contribute nothing…
     expect(t.xM).toBeCloseTo(0, 15);
-    expect(t.gravityM).toBeCloseTo(0, 15);
-    // ⭐ …and the FINITE one still moves the body, which is what makes this a sanitiser rather
-    // than a mute: one bad number must not cost the channel beside it.
-    expect(Math.abs(t.depthM)).toBeGreaterThan(0);
+    expect(t.depthM).toBeCloseTo(0, 15);
     for (const n of axisDisplacement(t, axes)) expect(Number.isFinite(n)).toBe(true);
   });
 

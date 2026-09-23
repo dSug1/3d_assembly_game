@@ -56,16 +56,6 @@ const PENDING: Record<string, string> = {
   // when rule 5 says the new mapping stands, and come back if it does not.
   // ⚠ `trackingMetresPerPx` and `depthLimits` are still WIRED — the factor and the bounds were
   // always the derived parts, and the new rule reads both.
-  // ── Superseded 2026-09-23 by `D79`, and kept for the same reason as the two below. ──────
-  // ⛔⛔ The owner decoupled the capture zone from the alignment — *"any object can enter the
-  // offset radius of any other object"* — so the candidate set is the whole scene and
-  // `nextCaptureZone`'s lock replaces the *nearest partner* question this answered. ⚠ It is NOT
-  // stale: `D62` is a decision a hand made from the glass (*"reserved only for Pioneer-Follower
-  // duo"*), `D79` reverses it, and **no hand has judged the reversal**. ⭐ It goes when a device
-  // look accepts `D79`, or it comes back if the reversal does not survive contact.
-  nearestCapture:
-    "retired 2026-09-23 by D79's scene-wide zone; delete with its vectors once a device look " +
-    "accepts the decoupling, or restore",
   screenTranslation:
     "retired 2026-09-22 by the object-axis remap; delete with its vectors once a device look " +
     "accepts dx→x / dy→depth, or restore",

@@ -6,8 +6,8 @@
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list anywhere else, and do not reorder it.
 
-⭐ Each row's history goes in `queue_notes/<ID>.md`; the `Notes` column is a pointer. **A status
-changes in BOTH places or neither.**
+⭐ Each row's full history goes in `queue_notes/<ID>.md`; the `Notes` column is a pointer, not the
+record. **A status changes in BOTH places or neither.**
 
 `Sub`: `IN` = 10_INPUT_TOUCH · `GAME` = 20_GAME_RULES · `3D` = 30_OBJECTS_3D · `RND` =
 40_RENDER_SCENE · `DEP` = 50_BUILD_DEPLOY · `SEC` = 60_SECURITY_COMPLIANCE · `CORE` = cross-cutting.
@@ -16,33 +16,28 @@ changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1081 golden vectors,
-all passing** (37 → … → 1078 → 1080 → **1081**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1071 golden vectors,
+all passing** (37 → … → 1063 → 1068 → **1071**; ⭐ the DROPS are `D54`, the roll channel and forks A and B). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
-⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
-✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
-⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`): a body
-translates along **its own axes** — the boot camera's, frozen (`worldAxisB=1`), or the LeadingFace
-basis in the zone. ⛔ The first mapping lost the cosine: *inverted*, *very weak*, *dead at a level
-camera*. ⭐⭐ **Blender answers all three and says NO to the pairing.** The delta is **solved onto a
-plane** (tracking exactly), with **Blender's 5° cone** falling back to `depthTranslate`'s judged rate.
-✅ **AND THE 2026-09-23 SWAP PUT THE PLANE ON {x, gravity}** — the holder lifts, the second finger
-pushes away — which also **un-inerts `D74`'s in-zone basis** → [`queue_notes/IN4.md`](queue_notes/IN4.md)
-⛔⛔ **AND THE CAPTURE ZONE IS SCENE-WIDE AGAIN** (`D79`, 2026-09-23): a body **under a finger** may
-hold the zone with any other, **one at a time**, **locked** until it leaves — and a **pressed pair
-outranks every distance**. ⚠ Corrected the same hour: *"when no object is touched, there cannot be
-any white highlight"* — I had read *any object* as *any two untouched bodies*. ⚠ It reverses `D62`, which reversed `A21`, so the rule has been round the loop; what is
-new is the lock, and `D62` was fixing a pair that kept re-choosing itself. ⭐ It is what makes
-assembling onto the **frozen plate** reachable at all → the approach spec §22.
+⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** — roles INVERTED (`D67`), a PRESS no longer toggles the mode (`D66`), a MOVED Pioneer costs a Follower what a turned one does (`D70`) → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
+✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three of them rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⭐ The increments themselves are named in the verdict, not just the build. ⚠ It still ships at **0** — a judged-good feature that is OFF by default — and **`dy` no longer twists** is the cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
+⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`, 2026-09-22/23):
+a body translates along **its own axes** — the boot camera's, frozen (`worldAxisB=1`), or the LeadingFace
+basis in the capture zone. ⛔ The first mapping lost the cosine and a hand felt all of it: *inverted*,
+*very weak*, *dead at a level camera*. ⭐⭐ **Blender answers all three and says NO to the pairing** — it
+never binds screen-x to a world axis. Now the finger's delta is **solved onto both horizontal axes**
+(tracking exactly, `translatePairing=1`), with **Blender's 5° cone** falling back to `depthTranslate`'s
+judged rate. ⚠⚠ **AND THE SOLVE MAKES `D74`'s IN-ZONE BASIS INERT — an owner decision is owed.**
+⭐ 38 vectors, six mutants caught. ⭐ Two owner refinements, 2026-09-23: **no gizmo on a frozen body** (refused by `leadingFace` itself — a frozen body never *advances*) and **a second touch on a frozen body is a MISS**, so it can drive another → [`queue_notes/IN4.md`](queue_notes/IN4.md)
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
 
-1. ⛔⛔ **APPROACH & MATE — THE HIGHLIGHTS AND THE ALIGNMENT TRACKING ARE BUILT; THE APPROACH IS NOT** (`D46`–`D48`, `A16`–`A21`, 2026-09-17). ✅ On the glass: white capture contours on a near pair (**translating**, scene-wide and locked since `D79`), every aligned body keeping its FollowerFace **and** a coloured body outline, a shake on a Pioneer releasing **all** its followers, a turned Pioneer releasing its cyan followers and rotating its orange ones **down a chain**, no cycles, and a **frozen** base plate. ⛔ NOT built: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
+1. ⛔⛔ **APPROACH & MATE — THE HIGHLIGHTS AND THE ALIGNMENT TRACKING ARE BUILT; THE APPROACH IS NOT** (`D46`–`D48`, `A16`–`A21`, 2026-09-17). ✅ On the glass: white capture contours on a near pair (**translating + within `4L`**), every aligned body keeping its FollowerFace **and** a coloured body outline, a shake on a Pioneer releasing **all** its followers, a turned Pioneer releasing its cyan followers and rotating its orange ones **down a chain**, no cycles, and a **frozen** base plate. ⛔ NOT built: the approach, the hold-off, `SnapIsAuthorized`, the snap, the mate, the break.
    ⭐ New engine-free modules: `core/proximity.ts`, `core/alignment_links.ts`, `core/random_pose.ts`, `input/highlight.ts`, `input/pioneer_cascade.ts`, plus `frozen` in `core/object_model.ts`.
-   ⛔⛔ **THREE DEVICE REPORTS, EACH FINDING SOMETHING NO TEST HERE COULD**, and `METHOD` gained a shape from each: *a fix that lands beside the defect leaves a green suite and a broken product*; *when two readings fit one report, name both*; *a second symptom that contradicts your theory beats a third that confirms it.* → spec §14.
-   ✅✅ **THE CAPTURE IS A SURFACE GAP** (`D49`/`D50`): white is decided by the gap between the bodies' **surfaces**, from geometry **computed at spawn**, in **millimetres on the glass** scaled by camera distance; every outline and marker is built from the **mesh topology**. ⛔ The approach DIRECTION stays on centres → spec §19–§20.
-   ⭐ Scene: three `L × 2L × 3L` parts `5L` apart at seeded random orientations (`?sceneSeed=N`), a **frozen** `6L × 0.3L × 9L` base plate `3L` below. Ordered device lists: §12–§18 of [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md).
+   ⛔⛔ **THREE DEVICE REPORTS, EACH FINDING SOMETHING NO TEST HERE COULD**, and `METHOD` gained a shape from each: *a fix that lands beside the defect leaves a green suite and a broken product*; *when two readings fit one device report, name both*; *a second symptom that contradicts your theory is worth more than a third that confirms it.* → spec §14 and [`../10_INPUT_TOUCH/INDEX.md`](../10_INPUT_TOUCH/INDEX.md).
+   ✅✅ **THE CAPTURE IS A SURFACE GAP** (`D49`/`D50`, 2026-09-18): white is decided by the gap between the bodies' **surfaces**, from geometry **computed at spawn**; the threshold is **millimetres on the glass** scaled by camera distance, on a slider; and every outline and face marker is built from the **mesh topology**, not a bounding box. ⛔ The approach DIRECTION stays on centres — face-to-face collapses at contact → spec §19–§20.
+   ⭐ Scene: three `L × 2L × 3L` parts `5L` apart at seeded random orientations (`?sceneSeed=N`), a **frozen** `6L × 0.3L × 9L` base plate `3L` below, camera at half max zoom-out. Ordered device lists: §12–§18 of [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md).
    ⛔ **Next**: the approach itself (4b.1), then `3D2`'s seat + the mate, then `D47`'s break. ✅✅ **THE LATENT DEFECT THAT WOULD HAVE ARMED WITH THE FIRST MATE IS CLOSED** (audit, 2026-09-17): three guards read `stack.length === 1`, meant *"is this body aligned?"*, and fell through to FREE rotation for any other count — so a seated body would have broken its mate and its alignment together. ⭐ `rotationChannel` now answers `FREE` / `TWIST` / **`REFUSED`**, and what a drag does to a seated body is `3D2`'s decision to make rather than a length test's.
 2. ⛔⛔ **A DEVICE LOOK ON THE ALIGNMENT MODEL** — the ONLY model (`D40`), and **no hand has judged
    any of it**. The ordered list, with what falsifies each item, is §10 of
@@ -125,10 +120,9 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Fifty-four defects, **fifty-three by finger** (the other by composing a measurement with a threshold),
-and **not one was visible to a green suite**. ⚠⚠ **AND TWICE IN ONE DAY THE CAUSE WAS *ONE FACT, TWO
-WRITERS, ONE OF WHICH FORGOT*** — defects 52 and 53, in different files. They are **five** shapes —
-the fifth is below, and it costs a correct implementation rather than a broken one:
+Fifty-two defects, **fifty-one by finger** (the other by composing a measurement with a threshold),
+and **not one was visible to a green suite**. They are **five** shapes — the fifth is below, and it
+costs a correct implementation rather than a broken one:
 
 ⭐⭐ **THE LEDGER, so the number stops drifting.** It is one count, kept HERE, and it is
 the sum of the rows' dossiers — not a figure anyone restates from memory:
@@ -166,22 +160,22 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | ⛔ **`D73`** — a restarted ease stalled, so MORE increments moved the body LESS | **1** |
 | ⛔ **`D76`** — the axis mapping lost the cosine; only the gravity channel kept up | **1** |
 | ⛔⛔ **`D68`** — its guard was WRITTEN AND NEVER READ, and its flag had two writers | **1** |
-| ⛔⛔ **the swing** — a vertical approach never fed the travel it signs from | **1** |
-| ⛔⛔ **the swing's pitch** — always UP, and clamped away on the top ring | **1** |
-| ⭐⭐ **THE TOTAL** | **= 54** |
+| ⭐⭐ **THE TOTAL** | **= 52** |
 
-⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT**: each account is in
-[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), and a row's count changes in both
-places or in neither.
+⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT** (2026-09-16): each account is in
+[`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md), the table stays here, and a row's count
+changes in both places or in neither.
 
 ⭐⭐ **AND ONE REPORT THAT DID NOT SURVIVE INVESTIGATION**: *"you destroyed the rotation around the
-gravity axis"*, withdrawn after `tests/a7_wiring.test.ts` measured the composition at four tilts.
-⛔ Every part of `A7` had green vectors and **the composition had none**.
+gravity axis"*, withdrawn after `tests/a7_wiring.test.ts` measured the composition at four camera tilts.
+⛔ Every part of `A7` had green vectors and **the composition had none** — mistake shape 4 pointing at
+CORRECT work.
 
-⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.** The code
-was **identical** on both surfaces; the tablet held a cached `index.html` pointing at a superseded
-bundle. ⭐⭐ **The withdrawn-`A7` shape one layer lower** — truthful report, sound reasoning, and the
-unchecked premise was *"both surfaces run the same code"*.
+⭐⭐ **AND A SECOND ONE, 2026-09-16 — A REPORT AGAINST A BUILD THE DEVICE WAS NOT RUNNING.** A
+gesture fix confirmed over USB was reported broken from Pages hours later; the code was **identical**
+and the tablet held a cached `index.html` pointing at a superseded bundle. ⭐⭐ **The withdrawn-`A7`
+shape one layer lower** — truthful report, sound reasoning, and the unchecked premise was *"both
+surfaces run the same code"*.
 ⚠ **Not counted as a gesture defect**, but a real one of the **deploy surface**, fixed in the
 product rather than in a procedure (`src/core/build_gate.ts`, 16 vectors, plus a build stamp on
 the HUD) — ✅✅ closed on the glass the same day. ⚠ It exposed a second thing that was never a
@@ -189,10 +183,10 @@ report at all: the HUD's **overridden-tunables line had never been rendered**, f
 life of the file. ⭐ Both lessons are in `METHOD`; the account is
 [`queue_notes/DEP1d.md`](queue_notes/DEP1d.md).
 
-⛔ **Amend the ledger, never a bare number elsewhere.** `README.md` once said *seventeen* and
-`40_RENDER_SCENE/INDEX.md` *sixteen* — frozen snapshots of a number that had moved on.
-⚠ **Tuning judgements are NOT counted**: a raised gain, a rejected inertia, or a declined cost that
-shipped named, is the loop working.
+⛔ **Amend the ledger, never a bare number elsewhere.** `README.md` said *seventeen* and
+`40_RENDER_SCENE/INDEX.md` *sixteen*, both frozen snapshots of a number that had moved on.
+⚠ **Tuning judgements are NOT counted**: an owner raising a gain, rejecting inertia, or declining a
+cost that shipped named, is the loop working, not a fault found.
 
 1. **A rate estimated over the shortest available baseline.** Flick lift speed, roll
    direction, roll curvature. ⭐ *State the window, and check the signal clears the
@@ -299,7 +293,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 |---|---|---|---|---|---|
 | 3D0 | Mate connectors + residual; constraint stack + solver | 3D | feature | ✅ **built 2026-09-13**, carried and covered | — |
 | 3D1 | The object model: id, placement, connectors, assembly tree (parent ≠ root) | 3D | feature | ✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `src/core/object_model.ts`, 42 vectors, engine-free: placement, faces, connectors, the assembly tree and the constraint stack. ⭐⭐ The vectors were written FIRST and **falsified on purpose** — breaking the composition turns 14 of 42 red. ⭐ `reroot` implements **parent ≠ root** and moves nothing. ⛔ The pass found one wiring defect: the render loop drew only objects that HAPPENED to have a follower → [`queue_notes/3D1.md`](queue_notes/3D1.md) | 3D0 |
-| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT — and its CAPTURE half is BUILT** (`D49`): surface-to-surface, shapes computed at spawn, offset in mm on the glass scaled by camera distance, on a slider. ⛔⛔ **AND THE ZONE IS SCENE-WIDE SINCE `D79`** (2026-09-23): any body may hold it with any other, ONE at a time, **locked** until it leaves — a pressed pair outranks every distance, and the **face twins** are computed and on the HUD as the mate's seed. ⛔ Still owed: the snap, the seat and the mate. ⚠ **Blocked on ONE owner decision: which gesture asserts a mate.** ⭐ The ORIENTATION is a mate's since `D78`; `core/mate_connector.ts` is built and vectored, so what is missing is the gesture and the seat, not the geometry | 3D1 |
+| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT — and its CAPTURE half is BUILT** (`D49`, 2026-09-18): surface-to-surface, shapes computed at spawn, offset in mm on the glass scaled by camera distance, on a slider. ⛔ Still owed: the snap, the seat and the mate. ⭐ **`1.0.22`, and the mechanism is SPECIFIED** (`D46`, [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)): capture radius **1.25×** the object, hold-off **1.1×**, white contours, docking by ANGLE, then anti-align + translate-snap. ⛔⛔ **The game cannot assemble anything today**: nothing is SEATED (the ORIENTATION is a mate's since `D78`), and §4's `6quater` — the only rule that pushes a `MATE` — is flick-based, which this model does not have. ⚠ **Blocked on ONE owner decision: which gesture asserts a mate.** ⭐ `core/mate_connector.ts` is built and vectored (`testMate`, `mateResidual`), so what is missing is the gesture and the wiring, not the geometry | 3D1 |
 | 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⭐⭐ **THE BREAK GESTURE IS SPECIFIED** (`D47`): two fingers, one on each mated object, pulling **apart along the centre→centre direction** past a `BreakThreshold` (slider). ⛔⛔ It needs `3D2`'s **seat** first — §1.4's stack solves orientation only, so a mate does not hold POSITION today and *breaking* would be indistinguishable from *moving* → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 | 3D2 |
 | 3D4 | Real 3D file import (glTF) | 3D | feature | queued | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |
