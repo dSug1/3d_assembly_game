@@ -62,6 +62,15 @@ export function leadingFace(world: World, id: ObjectId, direction: Vec3): Leadin
   if (!here) return null;
   const body = world.objects.get(id);
   if (!body) return null;
+  // ⛔⛔ **A FROZEN BODY HAS NO LEADING FACE** (the owner, 2026-09-23: *"don't show the gizmo for the
+  // frozen objects"*), and it is refused HERE rather than at the draw site. ⭐ The definition is what
+  // settles it: the leading face is the face a body is **advancing on**, and a frozen body never
+  // advances — `object_model.ts` refuses to move it at the one place its placement is stored.
+  // ⚠ So the gizmo does not appear on the base plate **by construction**, and neither does the
+  // in-zone basis it would otherwise have built: a guard at the renderer would have had to be
+  // repeated by the next reader of this function, which is the shape `frozen` itself was fixed in
+  // (the audit's *parent yes, child never*).
+  if (body.frozen === true) return null;
 
   let best: LeadingFace | null = null;
   for (const face of body.faces) {

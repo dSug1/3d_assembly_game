@@ -167,6 +167,7 @@ import {
   type HighlightVerdict,
 } from "../input/highlight";
 import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
+import { pressHit } from "../input/frozen_pick";
 // ⭐⭐⭐ **THE OBJECT AXES AND THE PROJECTION ONTO THEM** (the owner, 2026-09-22). ⛔ Every
 // DECISION is in `src/input`; this file holds the state and the call. That is the 2026-09-19
 // lesson, and it cost seven surviving mutants to learn: *a rule written in `scene.ts` is a rule
@@ -4163,9 +4164,24 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // applied — the hand would appear to have no effect at all.
       cameraReset = null;
       const pick = info.pickInfo;
-      const hit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
+      const rayHit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
+      // ⭐⭐⭐ **A SECOND TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (the owner, 2026-09-23:
+      // *"therefore, this second touch could for example move another object"*). ⛔ Filtered on
+      // the way IN, before the latch, so every rule downstream sees a touchpoint that landed on
+      // nothing — which is what makes it a working second finger for the body in the OTHER hand.
+      // ⚠ The DECISION is `frozen_pick.ts`'s; this reads the two facts and obeys.
+      const hitId = rayHit === null ? undefined : idOf.get(rayHit);
+      const hit = pressHit(
+        rayHit,
+        hitId !== undefined && world.objects.get(hitId)?.frozen === true,
+        // ⛔ The count BEFORE this press is registered: `router.press` has not run yet.
+        router.size,
+      );
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
       const routed = router.press(e.pointerId, s, hit);
+      if (rayHit !== null && hit === null) {
+        lastVerdict = `frozen ${hitId ?? "?"} — second touch routed as a MISS`;
+      }
 
 
       // ⭐⭐⭐ **`D68` — A PRESS THAT COMPLETES A DOUBLE TAP UNDOES THE FIRST TAP'S TOGGLE.**

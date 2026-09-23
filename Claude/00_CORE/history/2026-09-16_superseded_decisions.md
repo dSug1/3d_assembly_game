@@ -508,3 +508,17 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D62` | ⭐⭐⭐ **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** | 2026-09-19 | *"a Follower object cannot approach any other object than its Pioneer."* ⚠⚠ **It overturns `A21`** (*"within a SnapIsPossibleRadius of ANY other object"*) — a freedom deliberately given up. ⛔ A Pioneer out of range captures **nothing**; no fallback to the scene → §5.10 |
 
 | `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | *"a translation of the pioneer should break the alignment of the cyan."* ⛔⛔ It corrects `D69`. ⭐⭐ **Position and orientation are two components of one pose**; answering differently for each WAS the asymmetry → §5.17 |
+
+| `D43` | ⛔⛔⛔ **`A10`'s DEPTH GATE IS DELETED — both fingers integrate at once** | 2026-09-17 | ⛔⛔ It retires `A10`'s gate — six models and five device passes — so the account lives with the row that owns depth: [`../queue_notes/IN8.md`](../queue_notes/IN8.md), and the code carries the note where the gate used to be |
+
+| `D67` | ⭐⭐⭐ **THE ROLES ARE INVERTED — FIRST TOUCH THE PIONEER, SECOND THE FOLLOWER** | 2026-09-21 | *"First the Pioneer & PioneerFace, second the Follower & the FollowerFace"*. ⭐⭐ It buys **several Followers in one hold**. ⚠⚠ **Cost**: a frozen body can never be a Follower, so *align a part to the plate* is now *hold the plate FIRST* → §5.14 |
+
+| `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | *"While a touchpoint is pressed on an object, disable its sway."* ⛔ A **second** exclusion — `receivesSway` already spared the body that CAUSED the kick. ⚠ They coincide only while one body is held; two fingers on two bodies is where they part — the posture `D51` made central |
+
+| `D48` | ⚠ **RETIRED WITHIN THE DAY, KEPT AS THE RECORD** — white contours required the alignment; the owner removed it, keeping the TRANSLATION condition | 2026-09-17 | ⚠ *both readings fit the evidence — name both* → §13 (approach) |
+
+| `D44` | ⭐⭐ **A TAP ON ANOTHER OBJECT'S FACE ALIGNS IN **EITHER** MOVEMENT MODE** | 2026-09-17 | ⭐ Binding — it overturned a condition I had called load-bearing; what keeps `D28`'s toggle reachable is a tap on **empty space or the held object** → the alignment spec |
+
+| `D2` | ⛔⛔ **Audience is ALL PUBLIC, INCLUDING YOUTH** | 2026-09-13 | Carried from the predecessor. COPPA / GDPR-K live → no analytics or ads SDKs; local-only is load-bearing; Play Families + Apple Kids rules apply |
+
+| `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | *"dx and dy from touch on the object control the translation on object x axis and object depth axis, and dy from second touch control the translation on object gravity axis … projected onto the object axis (same as what Blender does)"*. ⛔⛔ One finger now slides a body about its own HORIZONTAL plane and a second finger LIFTS it — `dy` and the second touch swapped jobs. ⭐⭐ **The projection is NOT normalised** (the owner's choice over Blender's division): a foreshortened axis goes QUIET instead of running away, so the rule needs no cutoff — and the sign `depthTranslate` needed `awaySign` for **falls out of it**. ⚠ Cost, inherent: the holder's `dy` is dead at a level camera. ⭐ A **LeadingFace** (the exit face along the direction the body ACTUALLY goes) carries a 3-axis gizmo → `input/axis_translate.ts`, `core/leading_face.ts` |

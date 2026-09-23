@@ -125,6 +125,19 @@ describe("the leading face is the face the ray LEAVES through", () => {
     expect(at([7, -3, 11])?.distanceM).toBeCloseTo(0.5, 12);
   });
 
+  it("⛔⛔ A FROZEN BODY HAS NO LEADING FACE — it never advances on one", () => {
+    // ⚠ The base plate is frozen, and a gizmo on a body that cannot move is a readout that lies:
+    // *"don't show the gizmo for the frozen objects"* (the owner, 2026-09-23).
+    // ⭐ Refused by the DEFINITION rather than by a guard in the renderer — the same reasoning
+    // `object_model.ts` uses to enforce `frozen` at its writers instead of at its callers.
+    const w = makeWorld([{ ...box("a", [0.5, 0.5, 0.5]), frozen: true }]);
+    expect(leadingFace(w, "a", [1, 0, 0])).toBeNull();
+    // ⛔ And the SAME body unfrozen still answers — otherwise this vector would pass against an
+    // implementation that had simply stopped working.
+    const live = makeWorld([box("a", [0.5, 0.5, 0.5])]);
+    expect(leadingFace(live, "a", [1, 0, 0])?.faceId).toBe("+x");
+  });
+
   it("⛔ it REFUSES rather than guessing: zero direction, unknown body, no faces", () => {
     const w = scene([0.5, 0.5, 0.5]);
     expect(leadingFace(w, "a", [0, 0, 0])).toBeNull();

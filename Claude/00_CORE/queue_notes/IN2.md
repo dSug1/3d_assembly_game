@@ -162,3 +162,27 @@ and a `pointercancel` would deliver no `POINTERUP` at all.
 
 ⭐ **The immediate unblock is a reload**, which is why this can sit unfixed — but it is not a
 diagnosis, and a hand that does not know the shape will spend the session on the camera.
+
+
+---
+
+## 2026-09-23 — ⭐⭐ A SECOND TOUCH ON A FROZEN BODY IS FILTERED TO A MISS (`D77`)
+
+> *"If any frozen object receives a second touch, treat this second touch as if it was not raycast
+> hitting any object (therefore, this second touch could for example move another object)."*
+
+⛔⛔ **IT IS NOT AN EXCEPTION TO THE LATCH, AND THE DIFFERENCE MATTERS.** `A15`/`D25` was one — a role
+recomputed after the press — and `D54` deleted it, restoring *a role is latched at press for the
+touchpoint's lifetime* with no holes. ⭐ This changes **what the ray reports**, upstream of the latch:
+the router is handed `null` and then does exactly what it has always done with a miss. ⚠ So the
+property `IN2` closed on is untouched, and no vector in `router.test.ts` needed changing.
+
+⭐ **Why the base plate is worth a rule of its own**: it is the largest thing on the glass and the one
+a hand is most likely to rest a finger on. Before this, that finger was a touch on a BODY — it tried
+to become a Follower, which `frozen` refuses, and its channel was lost for the whole hold. ⛔ Now it
+is an `OUTSIDE` touchpoint: roll or depth by the mode, exactly as a finger on the background.
+
+⚠ **The FIRST touch is deliberately untouched.** `D67` makes *hold the plate FIRST* the way to align
+a part to it, so filtering that one would delete the plate from the alignment model.
+⭐ `input/frozen_pick.ts`, 6 vectors, and the rule was mutated to confirm they fail without it.
+

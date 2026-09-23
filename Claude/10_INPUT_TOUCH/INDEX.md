@@ -118,10 +118,9 @@ finger): three roles — `OBJECT` / `OUTSIDE` / `IGNORED` — each **latched at 
 touchpoint's lifetime** (§4), bindings keyed by pointer id so §0's order-independence
 holds in both release orders, and `activeCount` excludes ignored touchpoints because
 that is the count the §4 rule table is written against.
-✅ **Its visible consequence was judged by finger and accepted**: lift the finger holding a part
-while a second rests on that same part and **the part stops responding** — the second was ignored at
-press. The HUD prints the latched roles (`#1OBJ #2IGN active=1`), so it is not a bug.
-→ [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
+✅ **Judged by finger and accepted**: lift the finger holding a part while a second rests on that same
+part and **the part stops responding** — the second was ignored at press, and the HUD says so
+(`#1OBJ #2IGN active=1`) → [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
 
 🔨 **`IN3` IS IN PROGRESS**, 40 vectors of logic standing ahead of any renderer.
 ⭐ **2sexte + A3's handover BUILT** (`src/input/anchor_rotate.ts`, 25 vectors) — every
@@ -143,32 +142,28 @@ centres 6bis needs, and the constraint stack rule 2bis must consult all exist.
 that row that waits. `IN5` (measurement), `IN6` undo, `IN7` haptics.
 ⭐ `IN11` (is 2bis path-dependent?) is unblocked too and needs no device.
 
-⛔⛔ **THE OWNER'S LATER DECISIONS SUPERSEDE THE SPEC, AND THEY LIVE IN
-[`AMENDMENTS_R5.md`](AMENDMENTS_R5.md)** — read it BEFORE the spec. ⚠ The table above says what
-each one decided; what follows is only what a later rule gets **wrong** if it is not carried.
+⛔⛔ **THE OWNER'S LATER DECISIONS SUPERSEDE THE SPEC** — [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md),
+read BEFORE the spec. ⚠ What follows is only what a later rule gets **wrong** if it is not carried.
 
 * ⭐ **`A4`** — the flick test is **skipped once one reversal is seen**, or an abandoned shake ADDS
   a constraint instead of removing one. ⭐ **`A1` §4 (`D13`)**: eviction **spares `MATE` entries**,
   *one gesture, one intention*. ⭐ **`A2`**: the scene holds THREE objects, not two.
-* ⭐⭐ **`A7` (`D18`)** — the argument for the gravity frame is **orthogonality**, not tidiness:
-  about the camera's own axes roll stops being independent of yaw as the camera tilts, and **no
-  gain fixes a basis that is not a basis**. ⭐ One basis for translation AND rotation.
-* ⛔⛔ **`A5` (`D16`)** — **depth is HORIZONTAL**, the view axis flattened onto the ground, so **an
-  object's height never changes**: gravity is the primary constraint, and a camera looking down
-  would send the ray into the floor. ⚠ `IN2`'s `IGNORED` role moved to the THIRD touchpoint here.
-  ⛔ Its pinch trigger died because **two fingers will not fit on a SMALL object, and pushing a
-  part away shrinks it** — the gesture destroyed its own affordance as it succeeded.
+* ⭐⭐ **`A7` (`D18`)** — the gravity frame's argument is **orthogonality**, not tidiness: about the
+  camera's own axes roll stops being independent of yaw as it tilts, and **no gain fixes a basis that
+  is not a basis**.
+* ⛔⛔ **`A5` (`D16`)** — **depth is HORIZONTAL**, the view axis flattened onto the ground, so an
+  object's height never changes. ⚠ `IN2`'s `IGNORED` role moved to the THIRD touchpoint here. ⛔ Its
+  pinch trigger died because **two fingers will not fit on a SMALL object, and pushing a part away
+  shrinks it** — the gesture destroyed its own affordance as it succeeded.
 * ⛔⛔ **`A3`** — roll drives the free DOF of an ANCHORED object. The spec forbade it for a reason
   that is false exactly where 2sexte's own screen mapping degenerates: **complementary charts over
   one DOF, not rivals.** ⚠ It puts the eviction gesture back under review, roll now being a
   legitimate control on precisely the objects eviction applies to.
 
-⭐⭐ **EVERY GESTURE IS NOW TAGGED WITH ITS PROVENANCE** (2026-09-15, `D11`,
-`CONSTRAINTS` §10) — prior art with a dated citation, an internal composition, or ⚠ novel
-to this project. Register: [`PROVENANCE.md`](PROVENANCE.md). ⛔ Three rules came out **NOVEL
-COMPOSITE** — §4's **6bis, 6ter and 6quater** — which is the catalog's caution zone and the
-reason `SEC4` exists. ⭐ It also records what was DECLINED and why, so a later session does
-not re-derive the assessment.
+⭐⭐ **EVERY GESTURE IS TAGGED WITH ITS PROVENANCE** (`D11`, `CONSTRAINTS` §10) — prior art with a
+dated citation, an internal composition, or ⚠ novel. Register: [`PROVENANCE.md`](PROVENANCE.md).
+⛔ Three rules came out **NOVEL COMPOSITE** — §4's **6bis, 6ter and 6quater** — the catalog's caution
+zone and the reason `SEC4` exists. ⭐ It records what was DECLINED too.
 
 ⭐⭐ **`IN5` IS NOW PRACTICAL** — tunables override from the **URL**
 (`?motionDeadbandMm=3.5&gainRollDrag=3`) and an on-screen **menu** carries sliders, so a
@@ -295,7 +290,8 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `shake.ts` | `A4`'s eviction detector — oscillation **along an axis**, because a circle projects to a back-and-forth on every axis. ⚠ Built, not wired |
 | `anchor_rotate.ts` | 2sexte and `A3`'s handover, about the CONSTRAINT axis. ⚠ Built, not wired — and it wants the TRUE view axis, not the gravity frame |
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
-| `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⛔ One exception since `A15`: `relatchOnOrphan`, on a discrete event only |
+| `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⭐ **No exceptions** since `D54` deleted `A15`'s orphan unselect |
+| `frozen_pick.ts` | ⭐⭐ `D77` — **a second touch on a FROZEN body is handed to the router as a MISS**, so the finger becomes a working `OUTSIDE` touchpoint and can drive another body. ⛔ Filtered BEFORE the latch, so the router still knows nothing about the model; the FIRST touch is untouched, because a plate must still be holdable as a Pioneer |
 | ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ The superseded text, kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
 | `alignment.ts` · ⚠ `core/face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`, and it was `fork_c.ts` until the forks were deleted): the **parallel** face align frozen to a world direction, the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⭐ Keeping the set in one file is what made deleting the other two forks a `rm` plus a barrel line |
 | ⛔ ~~`holder_binding.ts`~~ | **DELETED 2026-09-18** (`D54`) — `A15`'s *is the object still UNDER the finger?* raycast. ⭐ `IN2`'s latch has no exceptions again |

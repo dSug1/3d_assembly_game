@@ -772,3 +772,10 @@ on my advice) so that inside the zone a body slides along the surface it is appr
 
 ⚠ **Still unjudged**: everything above, plus `gainTranslateScreen` = 1.17, which was tuned for a
 screen-plane drag and now multiplies an exact-tracking mapping.
+
+⭐ **2026-09-23, same loop**: *"don't show the gizmo for the frozen objects."* ⛔ Refused in
+`core/leading_face.ts` by the definition — *the face a body is **advancing on***, and a frozen body
+never advances — rather than by a guard in the renderer, which the next reader of that function would
+have had to repeat. ⚠ It also removes the in-zone basis for a frozen body, which is right for the same
+reason: `object_model.ts` will not move it.
+

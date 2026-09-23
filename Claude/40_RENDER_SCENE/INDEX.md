@@ -111,7 +111,9 @@ fixes that for a POSITION and would be wrong for these DIRECTIONS: the object ax
 directions, and a parented gizmo would turn with the body and stop pointing along them. ⭐ Reading the
 face centre out of the model escapes both.
 ⚠ **A body whose geometry cannot answer shows no gizmo** — never a stand-in, exactly as `⛔NOSHAPE`
-shows no capture shell.
+shows no capture shell. ⛔ **Nor does a FROZEN body** (the owner, 2026-09-23): a gizmo on something
+that cannot move is a readout that lies, and `leadingFace` refuses one by definition rather than the
+renderer guarding for it.
 
 **`menu.ts`** — a collapsible panel of sliders for tuning by hand on the glass.
 ⛔ **Every change is validated on a COPY before it is applied, and refusals are shown.**
@@ -128,19 +130,14 @@ sliders actually being tuned. ⚠ Every `localStorage` access is wrapped: it thr
 outright in some private-browsing modes, and a tuning panel must not take the scene
 down with it.
 
-**The staleness gate** (`src/core/build_gate.ts` + the boot check in `src/main.ts`, ✅✅ closed
-by a device look 2026-09-16) —
-⛔ **not an instrument, a correction.** The page asks the origin for `version.json` with
-`cache: "no-store"` and **replaces itself once** if the served build id is not the one
-compiled in. ⭐ It is why the plain URL
-**https://dsug1.github.io/3d_assembly_game/** can be trusted for a device pass without a
-hand-typed cache-buster.
-⛔ Every branch fails **safe** — towards *carry on with what is loaded*: an absent or
-unparseable `version.json` (`file://`, a Capacitor webview, offline, a 404 in dev) is *no
-information*, never a mismatch, because the alternative to a stale page is a page that
-reloads for ever. ⭐ The one attempt is keyed on the **served** id, so a URL pinned to an
-old build still refreshes instead of being stranded. 16 vectors, and the two guards were
-falsified on purpose.
+**The staleness gate** (`src/core/build_gate.ts` + the boot check in `src/main.ts`, ✅✅ closed by a
+device look 2026-09-16) — ⛔ **not an instrument, a correction.** The page asks the origin for
+`version.json` with `cache: "no-store"` and **replaces itself once** if the served build id is not the
+one compiled in, which is why the plain URL can be trusted for a device pass.
+⛔ Every branch fails **safe** — towards *carry on with what is loaded*: an absent or unparseable
+`version.json` is *no information*, never a mismatch, because the alternative to a stale page is one
+that reloads for ever. ⭐ The one attempt is keyed on the **served** id, so a URL pinned to an old
+build still refreshes. 16 vectors, both guards falsified on purpose.
 ⚠ The decision is in `src/core` and not in the wiring on purpose: `D23` recorded what it
 costs to leave one in `scene.ts`, where no vector can reach it.
 
