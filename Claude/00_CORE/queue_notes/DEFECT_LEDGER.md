@@ -293,3 +293,39 @@ the **sequence** — *tap, press that pairs, release* — and what it must come 
 state the net mode after a whole gesture, which is the only thing a hand can see; they are a model
 of the wiring and say so, because the alternative was no statement at all.
 
+
+---
+
+## 53 — ⭐⭐ THE SWING NEVER SAW A VERTICAL APPROACH: ONE ACCUMULATOR, TWO WRITERS, ONE FED IT
+
+**2026-09-23, by finger.** *"The swing of camera [is] missing at offset radius zone enter
+sometimes when the follower approaches the pioneer from the gravity axis direction."*
+
+⛔⛔ **THE RULE WAS NEVER WRONG — IT WAS NEVER FED.** `swingSignFor(right, up)` has always
+answered `1` for a purely vertical travel, with a comment saying so: *"a translation with no
+horizontal component: the swing is earned, the aim is symmetric."* ⚠ What it received was
+`swingSignFor(0, 0)`, which is `null`.
+
+⭐ **The accumulator had two writers and only one fed it.** `frameTravelRightM/UpM` were
+incremented in the HOLDER's translate branch; the **second touchpoint's channel — which is the
+gravity axis, i.e. exactly the approach the owner described** — applied its displacement and
+recorded nothing. ⛔ *"Sometimes"* is the tell and it is precise: the swing armed whenever the
+holder happened to be moving on the same frame, and not otherwise.
+
+⭐⭐⭐ **IT IS DEFECT 52's SHAPE IN ANOTHER FILE**: *one fact, two writers, one of which forgot*.
+⚠ Twice in one day makes it a pattern rather than an accident, and both times the missing line
+was the symptom while the duplication was the cause.
+
+✅ **FIXED STRUCTURALLY**: `applyWorldStep` is the one function that applies a translation to a
+body, and it moves the body, feeds the swing's direction and records the travel direction the
+LeadingFace ray is fired along — all three, or none. ⛔ A third channel cannot be added without
+them. ⭐ 2 vectors compose the chain the scene threads and carry the counter-example the product
+actually shipped.
+
+⚠⚠ **THIS FIX SHIPPED ONCE BEFORE AND WAS REVERTED WITH WORK AROUND IT** (2026-09-23): it rode
+in beside the zone decoupling and the `dy` swap, both of which the owner cancelled after a device
+look. ⭐ The fix itself was never implicated — the regressions were an erratic swing (a pitch sign
+read from the live elevation, which the swing moves) and a body freezing at the white contour (a
+degenerate holder plane suppressing its channels) — so it is re-applied alone, which is what
+reverting a BUNDLE of changes is supposed to make possible.
+
