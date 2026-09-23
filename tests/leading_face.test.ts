@@ -13,7 +13,7 @@
  * parts are.
  */
 import { describe, expect, it } from "vitest";
-import { accumulateTravel, decayTravel, leadingFace } from "@core/leading_face";
+import { leadingFace } from "@core/leading_face";
 import {
   makeWorld,
   setWorldPlacement,
@@ -260,41 +260,13 @@ describe("⛔⛔⛔ STICKY — the leading face changes only when the body stops
     expect(leadingFace(w, "a", [1, 0, 0], "no-such-face")?.faceId).toBe("+x");
   });
 
-  it("⛔⛔ THE CHATTER IS ANSWERED BY THE DIRECTION NOW, NOT BY HOLDING THE FACE", () => {
-    // ⭐⭐ `D54` blamed the face and latched it; the cause was the DIRECTION, read from one
-    // frame's step while `A11`'s deadband alternated which axis emitted. ⛔ `accumulateTravel`
-    // sums the recent steps, so a straight drag gives a steady direction and the nearest-exit rule
-    // needs no latch — which is what let the latch be weakened to a seed.
-    const alternating: readonly Vec3[] = [
-      [0.02, 0, 0],
-      [0, 0.0004, 0],
-      [0.02, 0, 0],
-      [0, -0.0004, 0],
-    ];
-    let acc: Vec3 | null = null;
-    for (const step of alternating) acc = accumulateTravel(acc, step);
-    const dir = normalize(acc!)!;
-    // ⚠ One frame's step points straight up the y axis on two of those four frames; the SUM does
-    // not wobble at all.
-    expect(dir[0]).toBeGreaterThan(0.999);
-    expect(Math.abs(dir[1])).toBeLessThan(0.02);
-    const w = scene([0.5, 0.5, 0.5]);
-    expect(leadingFace(w, "a", dir)?.faceId).toBe("+x");
-  });
-
-  it("⭐ the accumulator fades frame-rate independently, and a still body keeps its direction", () => {
-    const acc = accumulateTravel(null, [0.03, 0, 0])!;
-    const oneStep = decayTravel(acc, 120, 120)!;
-    const twoHalves = decayTravel(decayTravel(acc, 60, 120)!, 60, 120)!;
-    for (let i = 0; i < 3; i++) expect(oneStep[i]).toBeCloseTo(twoHalves[i]!, 12);
-    // ⚠ A frame that took no time ages nothing, and τ = 0 means no memory at all.
-    expect(decayTravel(acc, 0, 120)).toEqual(acc);
-    expect(decayTravel(acc, -5, 120)).toEqual(acc);
-    expect(decayTravel(acc, 16, 0)).toEqual([0, 0, 0]);
-    expect(decayTravel(null, 16, 120)).toBeNull();
-    // ⛔ A NaN step cannot poison an accumulator a gizmo is aimed by.
-    expect(accumulateTravel(acc, [Number.NaN, 0, 0])).toEqual(acc);
-  });
+  // ⛔⛔⛔ **TWO VECTORS STOOD HERE AND THEIR SUBJECT IS DELETED** — 2026-09-23. They pinned an
+  // accumulated, fading travel direction, and the owner rejected the idea outright: *"You can lag
+  // the travel, but the input itself has no lag. The gizmo repositioning should match the input,
+  // not the travel and its lag."* ⭐ The face is aimed by what the channels ASK for on the frame
+  // they ask it, so there is no accumulator and no time constant to vector.
+  // ⚠⚠ What that gives up is stated in `leading_face.ts`: `D54`'s chatter had two answers, the
+  // latch and the memory, and both are gone. The seed below is what is left against it.
 
   it("⚠ RETIRED: the sticky-face arithmetic this replaced", () => {
     // ⭐⭐ THE VECTOR THE REPORT ASKED FOR. A direction wobbling either side of the diagonal

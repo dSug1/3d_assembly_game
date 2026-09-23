@@ -149,42 +149,19 @@ export function leadingFace(
   return best;
 }
 
-/**
- * ⭐⭐⭐ **THE TRAVEL DIRECTION, OVER A BASELINE THAT IS NOT ONE FRAME.**
- *
- * ⛔⛔⛔ **`D54` TREATED THE SYMPTOM AND THIS IS THE CAUSE.** The gizmo chattered because the
- * leading face was chosen from the direction of **one applied step** — and `A11`'s per-axis
- * deadband emits the excess on one axis and nothing on the other, so during a straight drag the
- * step's DIRECTION alternates between the two axes even while the hand moves in a line.
- * ⭐ `QUEUE.md`'s **mistake shape 1**, *a rate estimated over the shortest available baseline*, and
- * a direction is such a rate. ⚠ I answered it by LATCHING the face, which held a grazing face for
- * ever; the honest fix is to stop reading a one-frame direction.
- *
- * ⭐⭐ So the steps accumulate and the sum decays, and the direction is the sum's. A steady push
- * gives a steady direction however the deadband splits it, and a genuine change of direction turns
- * the sum within one window instead of waiting for the body to stop advancing on a face.
- *
- * ⚠ `tauMs` is **`flickWindow`**, reused rather than invented: it is this project's existing
- * definition of *the recent past* for a finger, and a second one would be free to disagree with it.
- */
-export function accumulateTravel(previous: Vec3 | null, step: Vec3): Vec3 {
-  const p = previous ?? [0, 0, 0];
-  const next: Vec3 = [p[0] + step[0], p[1] + step[1], p[2] + step[2]];
-  return next.every((n) => Number.isFinite(n)) ? next : p;
-}
-
-/**
- * ⭐ Fade the accumulated travel, frame-rate independently — `e^(−dt/τ)`, never a fixed per-frame
- * fraction, which would fade twice as fast at 120 fps as at 60.
- *
- * ⚠ A non-positive or non-finite `dtMs` returns the accumulator unchanged: a frame that took no
- * time cannot have aged anything. ⛔ A non-positive `τ` means *no memory*, which is the honest
- * reading of a zero — the direction is then one frame's, which is what this exists to avoid.
- */
-export function decayTravel(accum: Vec3 | null, dtMs: number, tauMs: number): Vec3 | null {
-  if (accum === null) return null;
-  if (!(dtMs > 0) || !Number.isFinite(dtMs)) return accum;
-  if (!(tauMs > 0) || !Number.isFinite(tauMs)) return [0, 0, 0];
-  const k = Math.exp(-dtMs / tauMs);
-  return [accum[0] * k, accum[1] * k, accum[2] * k];
-}
+// ⛔⛔⛔ **`accumulateTravel` AND `decayTravel` STOOD HERE AND ARE DELETED** — 2026-09-23, the
+// owner, rejecting the solution they served:
+//
+// > *"You can lag the travel, but the input itself has no lag. The gizmo repositioning should
+// > match the input, not the travel and its lag."*
+//
+// ⚠ They summed the body's recent steps and faded them, so the direction the leading face is
+// chosen from carried `τ/2` of memory — a visible lag when a hand changed direction. ⭐ The face
+// is now aimed by **what the channels are asking for this frame**, which cannot lag by
+// construction, and `leadingFaceMemoryMs` went with them.
+//
+// ⚠⚠ **WHAT THIS GIVES UP, STATED**: `D54`'s chatter report was answered by the memory and by the
+// latch, and both are now gone. ⛔ What remains against it is the SEED above — the held face wins
+// an exact tie — and the fact that the asked-for direction does not alternate the way an applied
+// step does. ⭐ If the gizmo flickers between two nearly-tied faces on a slow drag, that is this
+// trade, and the fix belongs to the direction and not to a latch.
