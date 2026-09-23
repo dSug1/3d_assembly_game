@@ -289,17 +289,6 @@ export class Recognizer<P> {
     return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg));
   }
 
-  /**
-   * ⭐⭐ **THE PER-AXIS MOTION STATE** — §1.1's own answer to *is this axis moving*, with its dead
-   * radius and its `restConfirmMs` hysteresis. ⛔ `motionState` below is the two axes ORed; the
-   * gizmo needs them apart, because each screen axis drives a different object axis.
-   * ⚠ Exposed rather than recomputed: a second definition of *moving* would be free to disagree
-   * with the one every rule in the input layer is judged by.
-   */
-  get motionAxes(): { readonly x: MotionState; readonly y: MotionState } {
-    return this.motion.axes;
-  }
-
   get motionState(): MotionState {
     return this.motion.current;
   }
