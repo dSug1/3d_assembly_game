@@ -187,7 +187,12 @@ import {
   type AxisTravel,
 } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
-import { leadingFace, type LeadingFace } from "../core/leading_face";
+import {
+  accumulateTravel,
+  decayTravel,
+  leadingFace,
+  type LeadingFace,
+} from "../core/leading_face";
 import {
   pitchOffsetV,
   freezeProgress,
@@ -1626,6 +1631,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * gizmo where it was rather than losing it for a frame of stillness.
    */
   const lastTravelDir = new Map<ObjectId, Vec3>();
+  /** ⭐ The decaying sum of a body's recent world steps — `lastTravelDir` is its direction. */
+  const travelAccum = new Map<ObjectId, Vec3>();
   /**
    * ⭐⭐ **WHICH AXES THE GIZMO IS SHOWING** — the owner, 2026-09-23: *"the direction is shown only
    * if the delta position triggers a translation in this direction."* ⛔ The decision is
@@ -3587,10 +3594,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    */
   const applyWorldStep = (grip: Held, step: Vec3): void => {
     const id = idOf.get(grip.mesh);
-    // ⭐ The direction the body ACTUALLY went — what the LeadingFace ray is fired along. ⛔ Kept
-    // only when it is a real move: a frame of stillness must not erase the gizmo.
-    const dir = normalize(step);
-    if (dir && id !== undefined) lastTravelDir.set(id, dir);
+    // ⭐⭐ The direction the body ACTUALLY went — what the LeadingFace ray is fired along.
+    // ⛔⛔ **ACCUMULATED OVER A WINDOW, NOT ONE FRAME** (2026-09-23): `A11`'s deadband emits the
+    // excess on one axis and nothing on the other, so a single step's direction alternates during
+    // a straight drag — which is what made the gizmo chatter, and what `D54` answered by latching
+    // the face instead of fixing the direction. ⚠ `lastTravelDir` keeps the last GOOD direction,
+    // so a frame of stillness does not erase the gizmo.
+    if (id !== undefined) {
+      const acc = accumulateTravel(travelAccum.get(id) ?? null, step);
+      travelAccum.set(id, acc);
+      const dir = normalize(acc);
+      if (dir) lastTravelDir.set(id, dir);
+    }
     // ⚠ The swing reads SCREEN travel (*"opposite to the dx movement"*), so the applied
     // displacement is projected back onto the gravity frame rather than recomputed from a pointer
     // delta that `A11`'s deadband may have swallowed. ⛔⛔ ACCUMULATED, NOT LATCHED:
@@ -5484,6 +5499,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // re-decided the axes, and the gizmo is documented to point along them. ⚠ A gizmo drawn
     // first would show the previous basis for one frame, at exactly the moment a hand is
     // looking at it to see what changed.
+    // ⭐ Age the travel accumulators before the gizmo reads their direction — `e^(−dt/τ)`, with
+    // `flickWindow` as τ because it is this project's existing definition of *the recent past*.
+    for (const [id, acc] of travelAccum) {
+      const faded = decayTravel(acc, dtSec * 1000, cfg.flickWindow);
+      if (faded) travelAccum.set(id, faded);
+    }
     refreshAxisGizmo();
 
     // ⭐⭐⭐ **AND THE APPROACH SWING IS PUT ON THE CAMERA HERE** — device-reported, 2026-09-19:

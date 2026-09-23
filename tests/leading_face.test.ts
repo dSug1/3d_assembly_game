@@ -13,7 +13,7 @@
  * parts are.
  */
 import { describe, expect, it } from "vitest";
-import { leadingFace } from "@core/leading_face";
+import { accumulateTravel, decayTravel, leadingFace } from "@core/leading_face";
 import {
   makeWorld,
   setWorldPlacement,
@@ -44,6 +44,30 @@ const scene = (
   position: Vec3 = [0, 0, 0],
   orientation: Quat = IDENTITY,
 ): World => setWorldPlacement(makeWorld([box("a", h)]), "a", { position, orientation });
+
+/**
+ * ⭐⭐⭐ **A FRUSTUM — and its side faces SLANT, which is the whole of the 2026-09-23 report.**
+ *
+ * ⚠ `objectB` in the scene is a trapezoidal pyramid (`D72`), so its sides lean inward going up
+ * and their outward normals have an **upward component**. ⛔ A box cannot show this: its side
+ * normals are exactly horizontal, so `n·up` is 0 and the old latch let go of them by itself.
+ * ⭐ `slant` is the tangent of the lean — 0 is a box.
+ */
+const frustum = (id: string, h: readonly [number, number, number], slant: number): SceneObject => ({
+  id,
+  local: { position: [0, 0, 0], orientation: IDENTITY },
+  parent: null,
+  faces: [
+    { id: "+x", centre: [h[0], 0, 0], normal: normalize([1, slant, 0])! },
+    { id: "-x", centre: [-h[0], 0, 0], normal: normalize([-1, slant, 0])! },
+    { id: "+y", centre: [0, h[1], 0], normal: [0, 1, 0] },
+    { id: "-y", centre: [0, -h[1], 0], normal: [0, -1, 0] },
+    { id: "+z", centre: [0, 0, h[2]], normal: normalize([0, slant, 1])! },
+    { id: "-z", centre: [0, 0, -h[2]], normal: normalize([0, slant, -1])! },
+  ],
+  connectors: [],
+  constraints: [],
+});
 
 /**
  * ⛔ THE COUNTER-EXAMPLE: *the face whose normal is most nearly along the ray*. It is the rule
@@ -184,16 +208,42 @@ describe("⛔⛔⛔ STICKY — the leading face changes only when the body stops
    * the other, so a straight, slow drag produces a step whose DIRECTION alternates, and two faces
    * with close exit distances swap the gizmo back and forth.
    */
-  it("⭐⭐⭐ a face the body is STILL ADVANCING ON is kept, even when another is a nearer exit", () => {
-    // ⛔ An oblong body: pushed 40° off its long axis the nearest exit is `+x` (the side), but if
-    // the gizmo is already on `+z` — which the body is still advancing on — it stays there.
+  it("⛔⛔⛔ RETRACTED 2026-09-23: the held face is a SEED, and loses to a nearer exit", () => {
+    // ⚠⚠ **THIS VECTOR PINNED THE OPPOSITE UNTIL A HAND REPORTED IT.** It asserted that a face
+    // the body is still advancing on is KEPT *even when another is a nearer exit* — which is what
+    // `D54` built, and what the owner rejected:
+    //
+    // > *"how is it possible that the green axis passes through this face, instead of the blue
+    // > face? … a vertical translation along gravity axis should immediately select the blue
+    // > face, not the left face."*
+    //
+    // ⭐ The held face is now seeded into the search: it wins a TIE and loses to anything strictly
+    // nearer. ⛔ No threshold — `<` does the whole job.
     const w = scene([0.1, 0.1, 1.5]);
     const d: Vec3 = [Math.sin(40 * DEG), 0, Math.cos(40 * DEG)];
     expect(leadingFace(w, "a", d)?.faceId).toBe("+x");
-    expect(leadingFace(w, "a", d, "+z")?.faceId).toBe("+z");
-    // ⭐ And the distance reported is the one to the face it KEPT, not to the one it refused.
-    const kept = leadingFace(w, "a", d, "+z")!;
-    expect(kept.distanceM).toBeCloseTo(1.5 / Math.cos(40 * DEG), 9);
+    expect(leadingFace(w, "a", d, "+z")?.faceId).toBe("+x");
+  });
+
+  it("⭐⭐⭐ THE DEVICE REPORT: a FRUSTUM pushed straight up takes its TOP face", () => {
+    // ⛔⛔ **THE CASE A BOX CANNOT PRODUCE.** A frustum's sides lean, so their normals point
+    // outward AND up: `n·up > 0` for every one of them, and the old latch therefore held whichever
+    // side was current for as long as the body rose. ⭐ The exit it reported was metres away, which
+    // is also what made the gizmo FLARE before its lines were sized from the camera.
+    const w = setWorldPlacement(
+      makeWorld([frustum("a", [0.5, 0.5, 0.5], 0.35)]),
+      "a",
+      { position: [0, 0, 0], orientation: IDENTITY },
+    );
+    const up: Vec3 = [0, 1, 0];
+    // ⚠ The premise, measured: the slanted side really does face an upward push.
+    expect(dot(w.objects.get("a")!.faces[0]!.normal, up)).toBeGreaterThan(0);
+    // ⛔ THE ASSERTION THE SHIPPED BUILD FAILS — it answered `+x`, the left face.
+    expect(leadingFace(w, "a", up, "+x")?.faceId).toBe("+y");
+    expect(leadingFace(w, "a", up, "+z")?.faceId).toBe("+y");
+    expect(leadingFace(w, "a", up)?.faceId).toBe("+y");
+    // ⭐ And the exit it reports is the body's own half-height, not a grazing distance.
+    expect(leadingFace(w, "a", up, "+x")!.distanceM).toBeCloseTo(0.5, 9);
   });
 
   it("⛔ it SWITCHES the moment the body stops advancing on that face", () => {
@@ -210,7 +260,43 @@ describe("⛔⛔⛔ STICKY — the leading face changes only when the body stops
     expect(leadingFace(w, "a", [1, 0, 0], "no-such-face")?.faceId).toBe("+x");
   });
 
-  it("⛔⛔ THE CHATTER, AS ARITHMETIC: a jittering direction cannot move a sticky face", () => {
+  it("⛔⛔ THE CHATTER IS ANSWERED BY THE DIRECTION NOW, NOT BY HOLDING THE FACE", () => {
+    // ⭐⭐ `D54` blamed the face and latched it; the cause was the DIRECTION, read from one
+    // frame's step while `A11`'s deadband alternated which axis emitted. ⛔ `accumulateTravel`
+    // sums the recent steps, so a straight drag gives a steady direction and the nearest-exit rule
+    // needs no latch — which is what let the latch be weakened to a seed.
+    const alternating: readonly Vec3[] = [
+      [0.02, 0, 0],
+      [0, 0.0004, 0],
+      [0.02, 0, 0],
+      [0, -0.0004, 0],
+    ];
+    let acc: Vec3 | null = null;
+    for (const step of alternating) acc = accumulateTravel(acc, step);
+    const dir = normalize(acc!)!;
+    // ⚠ One frame's step points straight up the y axis on two of those four frames; the SUM does
+    // not wobble at all.
+    expect(dir[0]).toBeGreaterThan(0.999);
+    expect(Math.abs(dir[1])).toBeLessThan(0.02);
+    const w = scene([0.5, 0.5, 0.5]);
+    expect(leadingFace(w, "a", dir)?.faceId).toBe("+x");
+  });
+
+  it("⭐ the accumulator fades frame-rate independently, and a still body keeps its direction", () => {
+    const acc = accumulateTravel(null, [0.03, 0, 0])!;
+    const oneStep = decayTravel(acc, 120, 120)!;
+    const twoHalves = decayTravel(decayTravel(acc, 60, 120)!, 60, 120)!;
+    for (let i = 0; i < 3; i++) expect(oneStep[i]).toBeCloseTo(twoHalves[i]!, 12);
+    // ⚠ A frame that took no time ages nothing, and τ = 0 means no memory at all.
+    expect(decayTravel(acc, 0, 120)).toEqual(acc);
+    expect(decayTravel(acc, -5, 120)).toEqual(acc);
+    expect(decayTravel(acc, 16, 0)).toEqual([0, 0, 0]);
+    expect(decayTravel(null, 16, 120)).toBeNull();
+    // ⛔ A NaN step cannot poison an accumulator a gizmo is aimed by.
+    expect(accumulateTravel(acc, [Number.NaN, 0, 0])).toEqual(acc);
+  });
+
+  it("⚠ RETIRED: the sticky-face arithmetic this replaced", () => {
     // ⭐⭐ THE VECTOR THE REPORT ASKED FOR. A direction wobbling either side of the diagonal
     // between two faces flips the un-sticky answer every sample; the sticky one does not move.
     const w = scene([0.5, 0.5, 0.5]);
@@ -233,6 +319,14 @@ describe("⛔⛔⛔ STICKY — the leading face changes only when the body stops
       [1, 0, 1.0001],
     ];
     expect(new Set(tied.map((d) => leadingFace(w, "a", d)?.faceId)).size).toBe(2);
-    expect(new Set(tied.map((d) => leadingFace(w, "a", d, "+x")?.faceId)).size).toBe(1);
+    // ⚠⚠ **AND HERE IS WHAT THE SEED DOES AND DOES NOT DO.** The latch answered `+x` for both,
+    // because it never let go while the body advanced at all. ⭐ The seed answers each ray on its
+    // own merits — `+x` then `+z` — and holds the current face only at an EXACT tie.
+    expect(new Set(tied.map((d) => leadingFace(w, "a", d, "+x")?.faceId)).size).toBe(2);
+    const exact: Vec3 = [1, 0, 1];
+    expect(leadingFace(w, "a", exact, "+x")?.faceId).toBe("+x");
+    expect(leadingFace(w, "a", exact, "+z")?.faceId).toBe("+z");
+    // ⛔ That is the whole of the anti-chatter guarantee that survives here; the rest of it moved
+    // to the DIRECTION, which no longer alternates for a straight drag.
   });
 });

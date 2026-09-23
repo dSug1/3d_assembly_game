@@ -582,3 +582,46 @@ is asking. ⛔ It now reads the **channel that was pushed**, computed where the 
 applied (`AxisTravel.driven`) so that the map keeps ONE home and the readout cannot drift from it.
 ⭐ `METHOD`: *a readout that derives its own answer is a second implementation* — and here the two
 implementations were both right about different quantities.
+
+
+
+---
+
+## 61 — ⭐⭐⭐ **A LATCH THAT NEVER LET GO: A FRUSTUM'S SIDES FACE AN UPWARD PUSH**
+
+**2026-09-23, by finger, with a screenshot.** *"How is it possible that the green axis passes
+through this face, instead of the blue face? I thought the delta direction would be taken from the
+center of the object to identify the leading face and place the gizmo on the leading face: a
+vertical translation along gravity axis should immediately select the blue face, not the left
+face."*
+
+⛔⛔⛔ **THE EXPECTATION WAS RIGHT AND THE RULE HAD A LATCH IN IT.** `D54` made the leading face
+**sticky**: it was RETURNED whenever `n·d > 0` — any positive value, however grazing. ⭐ And
+`objectB` is a **frustum** (`D72`): its sides lean inward going up, so their outward normals have an
+UPWARD component. ⚠ An upward push therefore *"advances on"* a side face by a hair **for ever**, and
+the gizmo stayed on the left side while the body rose.
+
+⭐⭐ **IT IS ALSO DEFECT 59's CAUSE, ONE LAYER DOWN.** The exit distance the latch reported is
+`(centre − origin)·n / (n·d)`, which is metres when `n·d` is a hair — that is what made the gizmo
+FLARE before its lines were sized from the camera. ⛔ One latch, two device reports.
+
+✅ **FIXED IN TWO PLACES, AND THE SECOND IS THE REAL ONE:**
+
+* **the held face is a SEED, not a latch** — it is entered into the nearest-exit search, so it wins
+  an exact TIE and loses to anything strictly nearer. ⭐ No threshold: `<` does the whole job.
+* **the DIRECTION is accumulated over a window instead of read from one frame.** ⛔⛔ That was
+  `D54`'s actual cause, and I had treated the symptom: `A11`'s per-axis deadband emits the excess on
+  one axis and nothing on the other, so a straight drag produces a step whose DIRECTION alternates.
+  ⭐ `accumulateTravel` sums the recent steps and `decayTravel` fades them with `τ = flickWindow` —
+  this project's existing definition of *the recent past*, reused rather than invented.
+
+⭐⭐⭐ **THE SHAPE, AND IT IS WORTH THE WHOLE ENTRY**: *when a rule reads a noisy quantity, the
+fix belongs to the QUANTITY and not to the rule.* ⚠ Latching the face made the noise unobservable
+instead of absent, and the hidden cost was a face that could never be given up — which is exactly
+the report above. ⛔ `QUEUE.md`'s **mistake shape 1** (*a rate estimated over the shortest available
+baseline*) is what a direction read from one frame IS, and the ledger named it in `D54`'s own entry
+without acting on it.
+
+⚠ Two vectors of `D54`'s are RETRACTED here, with their retraction on them: they pinned *"a face
+the body is still advancing on is kept, even when another is a nearer exit"*, which is the sentence
+the owner rejected.
