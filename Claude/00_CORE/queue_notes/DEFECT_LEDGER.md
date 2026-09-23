@@ -568,3 +568,17 @@ translating modes lives once in `src/input/grip_mode.ts`, which both the gizmo a
 **where will this push go**. ⛔ `displayedAxes` (in `src/input`) answers the second, and it keeps
 the last non-empty answer so that a pause — or `A11`'s deadband emitting nothing on one axis —
 does not blank the gizmo.
+
+⛔⛔⛔ **AND THE FIRST BUILD OF IT READ THE WRONG END OF THE RULE**, which the owner caught within
+the hour:
+
+> *"on first touch, if there is only dx or only dy, the other gizmo line should not appear. Both
+> red and blue gizmo lines should appear only if both dx and dy are not null."*
+
+⚠⚠ It read the **travel** — and under `PLANE` a pure `dx` genuinely produces travel on BOTH
+horizontal axes, because that is how the 2×2 solve keeps the body under the finger. ⭐ So a
+single-axis drag lit red *and* blue, correctly by the arithmetic and wrongly by the question a hand
+is asking. ⛔ It now reads the **channel that was pushed**, computed where the channel map is
+applied (`AxisTravel.driven`) so that the map keeps ONE home and the readout cannot drift from it.
+⭐ `METHOD`: *a readout that derives its own answer is a second implementation* — and here the two
+implementations were both right about different quantities.

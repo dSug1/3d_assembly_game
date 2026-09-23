@@ -128,6 +128,14 @@ export interface AxisTravel extends AxisTravelM {
    * which is a different quantity from this one.
    */
   readonly trackGain: number;
+  /**
+   * ⭐⭐⭐ **WHICH CHANNELS PUSHED THIS FRAME**, as `[x, gravity, depth]`. The gizmo's rule reads
+   * this and not the travel, because under `PLANE` a pure `dx` moves the body along BOTH
+   * horizontal axes and the owner asked for the line of the channel he pushed.
+   * ⛔ Returned rather than recomputed by the caller: *a readout that derives its own answer is a
+   * second implementation*, and the channel map has one home — the line that fills this.
+   */
+  readonly driven: readonly [boolean, boolean, boolean];
 }
 
 /**
@@ -186,11 +194,15 @@ export function axisTravel(
   // ⛔ A camera with no basis moves nothing, rather than moving by NaN. One NaN written into a
   // placement is permanent — it never washes out of a position.
   if (!sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
-    return { xM: 0, gravityM: 0, depthM: 0, edgeOn: false, trackGain: 0 };
+    return { xM: 0, gravityM: 0, depthM: 0, edgeOn: false, trackGain: 0, driven: [false, false, false] };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
   const dy = finite(input.holderDyPx) * metresPerPx;
   const dy2 = finite(input.secondDyPx) * metresPerPx;
+  // ⭐⭐⭐ **THE CHANNEL MAP, STATED ONCE AND READ TWICE.** `dx` drives x, the holder's `dy` drives
+  // depth, and the second touchpoint's `dy` drives gravity (`D75`). ⛔ The gizmo asks THIS rather
+  // than inspecting the travel, because the `PLANE` solve spreads one channel across two axes.
+  const driven: readonly [boolean, boolean, boolean] = [dx !== 0, dy2 !== 0, dy !== 0];
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
 
   /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
@@ -258,6 +270,7 @@ export function axisTravel(
 
   const asked = Math.hypot(dx, dy);
   return {
+    driven,
     xM,
     depthM,
     gravityM,
@@ -292,8 +305,18 @@ export function axisDisplacement(travel: AxisTravelM, axes: ObjectAxes): Vec3 {
  * > show. For a translation in the horizontal plane, both blue and red lines would show but not
  * > the green line."* — the owner, 2026-09-23
  *
+ * > *"on first touch, if there is only dx or only dy, the other gizmo line should not appear.
+ * > Both red and blue gizmo lines should appear only if both dx and dy are not null."* — the
+ * > owner, clarifying it the same day
+ *
  * ⛔ The gizmo used to draw all three axes always, so it said *"here is the basis"* when the
  * question a hand is asking is *"where will this push go"*. ⭐ Now it answers the second.
+ *
+ * ⛔⛔⛔ **AND THAT CLARIFICATION IS WHY THIS READS THE *INPUT* AND NOT THE TRAVEL.** Under
+ * `PLANE` a pure `dx` produces travel on **both** horizontal axes — that is exactly how the 2×2
+ * solve keeps the body under the finger — so a rule reading the OUTPUT lights both lines for a
+ * single-axis drag, which is what the owner rejected. ⭐ Read from the channel that was pushed,
+ * the answer is the one a hand can act on: *this finger is driving that line.*
  *
  * ⚠⚠ **AND A PAUSE MUST NOT BLANK IT.** A finger that stops emits nothing, and `A11`'s deadband
  * emits nothing on an axis inside its band — so the instantaneous answer is *no axes at all* many
@@ -301,21 +324,17 @@ export function axisDisplacement(travel: AxisTravelM, axes: ObjectAxes): Vec3 {
  * which is the same argument `lastTravelDir` already carries. ⭐ So the last NON-EMPTY answer
  * stands until the body is translated again.
  *
- * @param previous what is showing now, or `null` before the body has ever been translated.
- * @returns the triple `[x, gravity, depth]`, or `previous` when this frame moved nothing —
- *   which is `null` only until the first translation, where showing nothing is correct.
+ * @param previous what is showing now, or `null` before the body has ever been driven.
+ * @param driven which channels pushed — `AxisTravel.driven`, computed where the channel map is
+ *   applied so that the map has ONE home.
+ * @returns the triple `[x, gravity, depth]`, or `previous` when nothing was pushed — which is
+ *   `null` only until the first push, where showing nothing is correct.
  */
 export function displayedAxes(
   previous: readonly [boolean, boolean, boolean] | null,
-  travel: AxisTravelM,
+  driven: readonly [boolean, boolean, boolean],
 ): readonly [boolean, boolean, boolean] | null {
-  const on = (n: number): boolean => Number.isFinite(n) && n !== 0;
-  const next: readonly [boolean, boolean, boolean] = [
-    on(travel.xM),
-    on(travel.gravityM),
-    on(travel.depthM),
-  ];
-  return next[0] || next[1] || next[2] ? next : previous;
+  return driven[0] || driven[1] || driven[2] ? driven : previous;
 }
 
 /**
