@@ -46,13 +46,14 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1103 golden vectors passing** — ⚠ MEASURED 2026-09-23; the
+✅ Green: TypeScript + Babylon + Vite, **1106 golden vectors passing** — ⚠ MEASURED 2026-09-23; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
 773 + 83 for `D49`'s surface gap and its shell, 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the
 first pass to find defects by READING the source rather than by a finger, and 619 − 51 when forks
 A and B were deleted with their vectors).
+⛔⛔⛔ **AND THE SPEED ESTIMATE NEVER DECAYED** (defect 70, 2026-09-23) — *"sometimes I need to wait a little before redoing the same translation movement, and then the camera swing works again"*, which is the diagnosis: `trimBuffer` ends its window at the **last sample**, so a finger that stops emitting keeps reporting a burst that has already finished. ⚠ Harmless at a flick's release, where *now* IS the last sample; wrong for the swing, which reads at the START of an approach and LATCHES it. ⭐ `speedMmPerSAt(now)`, default unchanged. ⚠⚠ **AND THE DAMPING LAW ITSELF IS NOW SUSPECT**: the knee is 67 mm/s and a real drag is several hundred, so the shipped dials put most approaches at **1–5°** of swing. ⭐ `?approachSwingSpeedGain=0` pins it at the full `approachSwingDeg` — one URL parameter that discriminates code from tuning.
 ⛔⛔⛔ **AND A HEAD-ON APPROACH FED THE SWING NOTHING** (defect 67, 2026-09-23) — the body's travel was accumulated on the gravity frame's `right` and `up` ONLY, which span the SCREEN, while the second touchpoint's channel is **depth**, orthogonal to both: a body pushed straight away from the camera reported **exactly zero travel**, every frame, so the swing had no direction. ⭐⭐ It is `D46`'s degeneracy — the case the swing was BUILT for. ⚠ `METHOD`: *a readout that reports only the components the rule uses cannot tell "nothing happened" from "something happened where I do not look"* — `arm=` now prints all three. ⭐⭐ **AND THE SWING'S WIDTH IS NOW LATCHED** (defect 68): it followed the finger's speed live, and a RETRACTION — slow, stop, reverse — made the lean breathe. ⛔⛔ The fix was **pre-registered in the function it fixes** four days earlier (*"the one-line alternative if a hand dislikes it: latch A at the trigger"*): *a cost that is written down is not thereby paid.*
 ⛔⛔⛔ **AND THE SWING'S DIRECTION WAS A ONE-FRAME LOTTERY** (defect 65, 2026-09-23): the travel accumulators are consumed every frame, so an arming that landed on a frame with no pointer event read **no direction at all** — and that `null` was latched for the whole approach (`p=0.33`, `yaw=0.0°`). ⭐ A null sign is now PROVISIONAL: the first travel that arrives fills it in **and re-bases the trigger gap**, so the lean starts at zero instead of jumping. ⚠⚠ **AND ONE IS STILL OPEN** (defect 66): a swing armed with **8 mm** left against a **129 mm** offset, which is over before it is visible — either it re-armed mid-approach or the pair entered the zone deep inside, and one frame cannot tell those apart, so the HUD now prints `arms=` (the last three armings, each with the gap on the frame before). ⛔ No threshold guessed: *a guessed number has been wrong every single time here.*
 ⛔⛔ **AND THE SWING'S AMPLITUDE READ THE WRONG FINGER** (defect 64, 2026-09-23): it was fed the HOLDER's speed while the SECOND touchpoint pushed the body, and a still holder reads `0`, which the law answers with **the widest look**. ⭐ So a second-finger approach swung at full amplitude whatever the push, and both dials a hand tuned on the glass were bypassed. ⭐⭐ *A rule that names ONE finger inherits every later arrangement in which a different finger does the work* — defect 55's shape, third in two days. ⚠ It also gave `MotionTracker` a `speedMmPerS`, by CALLING the Recognizer's own estimator: the second touchpoint had no speed to read, which is why the wrong one was read.
@@ -329,7 +330,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Sixty-eight defects, sixty-five of them BY FINGER, and none visible to a green
+⛔⛔ **Seventy defects, sixty-seven of them BY FINGER, and none visible to a green
 suite.** ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
 total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
 project's argument for device passes. ⭐ The two do not compete: **the device finds what is

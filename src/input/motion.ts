@@ -291,6 +291,18 @@ export class MotionTracker {
     return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg));
   }
 
+  /**
+   * ⭐⭐⭐ **THE SPEED AS OF `nowMs`** — zero once the finger has stopped emitting for one window.
+   *
+   * ⛔ `speedMmPerS` measures over a window ending at the LAST SAMPLE, so a finger that stops
+   * keeps reporting the speed of the burst that has already finished (defect 70). ⚠ That is
+   * harmless for the flick, which reads at the release, and wrong for anything that asks *"how
+   * fast is this finger right now"* while nothing is arriving.
+   */
+  speedMmPerSAt(nowMs: number): number {
+    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg));
+  }
+
   /** ⭐ The per-axis state, so a readout can show which corridor is open. */
   get axes(): { readonly x: MotionState; readonly y: MotionState } {
     return { x: this.ax.state, y: this.ay.state };

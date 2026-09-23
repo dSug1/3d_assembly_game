@@ -851,3 +851,59 @@ which is the owner's own spec.
 ⛔ `smoothAmplitude` and `SWING_TAU_MS` are **deleted** with their vectors — they filtered a
 fluctuation that no longer exists, and `unwired_debt.test.ts` is what noticed they had become
 inert. ⭐ The 2026-09-19 report they answered was real; the wobble is now removed at its source.
+
+
+
+---
+
+## 69 — ⚠ **THE SWING SAID NOTHING WHEN IT WAS NOT ARMED** (an instrument, not a rule)
+
+**2026-09-23.** Two device reports — *"camera swing still not working in this configuration"* —
+arrived with HUDs taken **out of range** (`gap=85/79mm`, `gap=183/129mm`), where no swing is the
+correct behaviour. ⛔ And the readout printed **nothing at all** about the swing, because the whole
+line was suppressed while the latch was `null`.
+
+⭐⭐ *"Not working"* and *"not armed yet, and here is the number that decides it"* are different
+reports, and only the second can be acted on. ✅ The line now always prints: the reason it is not
+armed (out of range with the gap and the offset, not translating, no pair) **and the arming
+history**, so an approach that failed to swing can still be read after it has ended.
+
+
+---
+
+## 70 — ⭐⭐⭐ **A SPEED THAT NEVER DECAYED — "I NEED TO WAIT A LITTLE AND THEN IT WORKS AGAIN"**
+
+**2026-09-23, by finger.** *"sometimes, it seems I need to wait a little before redoing the same
+translation movement, and then the camera swing works again."*
+
+⛔⛔⛔ **THAT SENTENCE IS THE DIAGNOSIS, AND IT NAMES A STALE QUANTITY.** `trimBuffer` ends the
+speed window at the **last sample**, not at now — so a finger that stops emitting events keeps
+reporting the speed of a burst that has **already finished**, indefinitely. ⚠ Harmless where it
+was written: the flick asks at the release, where *now* and the last sample are the same instant.
+
+⭐⭐ The swing asks at the **start of an approach** — the moment most likely to sit in the shadow
+of the previous push — and since defect 68 it **latches** the answer for the whole approach. ⛔ So
+an immediate second push inherits the first one's speed, and the amplitude law turns that into
+nothing:
+
+| finger speed | swing |
+|---|---|
+| 0–67 mm/s | 30° (the maximum) |
+| 120 mm/s | 11° |
+| 200 mm/s | **4.6°** |
+| 350 mm/s | **1.8°** |
+| 500 mm/s | 1.0° |
+
+⚠⚠ **SO THE WHOLE DAMPING LAW IS WORTH A SECOND LOOK ON THE GLASS.** The knee is `1/gain` =
+67 mm/s and an ordinary drag is several hundred, so the shipped dials put most real approaches
+into the 1–5° range whatever the staleness does. ⭐ `?approachSwingSpeedGain=0` removes the
+damping entirely and pins the swing at `approachSwingDeg` — **one URL parameter, and it
+discriminates**: if the swing then works in every configuration, the law is the remaining problem
+and the dials need re-judging, not the code.
+
+✅ **FIXED** (the staleness): `trimBuffer` takes an optional `nowMs`, and `speedMmPerSAt(now)` is
+what the swing asks. ⛔ The default is unchanged, so the flick's release-time reading is exactly
+what it always was — a window that ends at the last sample is right there and wrong here.
+⭐ `METHOD`: *an estimator is only as fresh as the question's clock.* §1.1 learned the same thing
+about `STATIONARY`, which is why `MotionTracker.tick()` exists — and the SPEED was never given the
+same treatment.

@@ -2647,9 +2647,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⛔⛔ **EVERY FINGER DRIVING THIS BODY, NOT JUST THE HOLDER** (defect 64): with the second
     // touchpoint pushing, the holder is genuinely still and the law read `0`, which it answers
     // with the WIDEST swing. ⭐ The choice is `approach_swing.ts`'s, not this file's.
+    // ⛔⛔ **AS OF NOW, NOT AS OF THE LAST SAMPLE** (defect 70): the window used to end at each
+    // finger's last event, so a push that had already finished kept answering *"fast"* — and the
+    // amplitude is LATCHED from this reading, so one stale frame decided the whole approach.
+    // ⚠ That is the owner's *"wait a little and it works again"*, exactly.
+    const nowSpeedMs = performance.now();
     const speed = approachSpeedMmPerS([
-      translating.rec.speedMmPerS,
-      ...[...translating.anchorMotion.values()].map((t) => t.speedMmPerS),
+      translating.rec.speedMmPerSAt(nowSpeedMs),
+      ...[...translating.anchorMotion.values()].map((t) => t.speedMmPerSAt(nowSpeedMs)),
     ]);
     const target = swingAmplitudeRad(
       (cfg.approachSwingDeg * Math.PI) / 180,
@@ -3083,8 +3088,28 @@ outl      ${
             // ⛔ *A dead control must say so*, and so must a control that is alive and going the
             // wrong way: the sign, the progress and the angle are the three numbers a device
             // report about direction needs, and without them the only evidence is an impression.
+            // ⛔⛔⛔ **AND IT PRINTS WHEN IT IS *NOT* ARMED TOO — defect 69, 2026-09-23.** The
+            // owner sent `camera swing still not working` with a HUD that said **nothing at all**
+            // about the swing, because the whole line was suppressed while `swing === null`.
+            // ⚠ That is the silence a dead control must not keep: *"not working"* and *"not armed
+            // yet, and here is the number that decides it"* are different reports, and only the
+            // second can be acted on. ⭐ The arming HISTORY is printed either way, so an approach
+            // that failed to swing can still be read AFTER it ended.
             (swing === null
-              ? ""
+              ? `
+swing     not armed — ${
+                  highlighted.inRange
+                    ? "IN range, awaiting the edge"
+                    : `out of range (gap ${((highlighted.gapM ?? 0) * 1000).toFixed(0)} > ${(highlighted.offsetM * 1000).toFixed(0)}mm)`
+                }${highlighted.translating ? "" : ", NOT translating"}${
+                  highlighted.pair === null ? ", no pair" : ""
+                }${
+                  swingArms.length === 0
+                    ? ""
+                    : ` | last arms=${swingArms
+                        .map((a) => `${a.g0Mm.toFixed(0)}←${Number.isFinite(a.prevMm) ? a.prevMm.toFixed(0) : "?"}`)
+                        .join(" ")}`
+                }`
               : `
 swing     sign${
                   // ⛔ `?` is *no direction was available at the threshold*, which is a swing of
