@@ -179,23 +179,15 @@ import {
   zoneEdge,
   type ObjectAxes,
 } from "../input/object_axes";
-import {
-  axisDisplacement,
-  axisTravel,
-  type AxisTravel,
-  clampDepthRange,
-} from "../input/axis_translate";
+import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
 import { leadingFace, type LeadingFace } from "../core/leading_face";
-import { isTranslatingMode } from "../input/grip_mode";
 import {
   pitchOffsetV,
   freezeProgress,
   rebaseTriggerGap,
-  latchAmplitude,
+  smoothAmplitude,
   swingDriverIndex,
   endApproach,
-  approachSpeedMmPerS,
-  acquireSwingSign,
   swingAmplitudeRad,
   swingProgress,
   swingSignFor,
@@ -1583,6 +1575,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * than a stand-in: *all* object axes are the boot camera's until something moves them.
    */
   let bootObjectAxes: ObjectAxes | null = null;
+
   // ⚠ `WORLD_UP` stood here and had exactly one reader: the in-zone basis, which `D82` deleted.
   /**
    * ⛔ `bootObjectAxes` is filled at boot, below the last `const` this file declares — a
@@ -1595,8 +1588,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // owner: *"Inside shall be the same as outside."* ⚠ There used to be a `Map<ObjectId,
   // ObjectAxes>` here, written only at the zone's edges; with the in-zone basis deleted nothing
   // writes it, so it is gone rather than left to look like state.
-  // ⭐ The decision stays in `input/object_axes.ts` — this asks it, per call, so `worldAxisA`
-  // now follows the live camera every frame instead of only at a crossing.
+  // ⭐ The decision stays in `input/object_axes.ts` — this asks it, per call, so `worldAxisA` now
+  // follows the live camera every frame instead of only at a crossing.
   const axesOf = (): ObjectAxes =>
     updatedObjectAxes({
       worldAxisB: cfg.worldAxisB === 1,
@@ -1632,20 +1625,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * moved"* are one symptom with two causes, and the camera pose is what separates them.
    */
   let lastTrackGain = 0;
-  /**
-   * ⭐⭐⭐ **WHICH BRANCH, AND HOW NEAR THE CLIFF** — added 2026-09-23 with defect 56, whose
-   * evidence was `PLANE track=0.00× ⛔EDGE-ON` at **one pointer** and nothing else. ⛔ That flag
-   * could not say which plane had degenerated, how close to degenerate it was, or whether the
-   * second finger's channel was involved — so the report said *"erratic"* and *"blocked"* and I
-   * had to measure the mapping offline to find they were two sides of one number.
-   * ⚠ `METHOD`: *a readout that reports a VERDICT and not the QUANTITY makes the next report
-   * unfalsifiable.*
-   */
-  let lastAxisMode: AxisTravel["mode"] = "PLANE-SOLVE";
-  let lastPlaneDet = 1;
-  let lastDepthFallback = false;
-  /** ⭐ `[x, gravity, depth]` screen shadow lengths — WHICH axis is edge-on, not just that one is. */
-  let lastShadows: readonly [number, number, number] = [1, 1, 1];
+  let lastEdgeOn = false;
 
   /**
    * ⛔⛔ **`CameraOffsetZoneEnter` — DECLARED, CALLED, AND EMPTY BY INSTRUCTION.**
@@ -1742,11 +1722,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const refreshAxisGizmo = (): void => {
     const live = new Set<ObjectId>();
     for (const grip of held.values()) {
-      // ⛔⛔ **DEFECT 60, 2026-09-23: `"DEPTH"` IS A TRANSLATION, AND THIS ASKED BY NAME.** The
-      // gizmo vanished for exactly as long as the SECOND touchpoint was advancing the body — the
-      // moment a hand most wants to see which face is leading. ⭐ Same shape as defect 55, in a
-      // second place, which is why the set now lives in `input/grip_mode.ts`.
-      if (!isTranslatingMode(grip.mode)) continue;
+      if (grip.mode !== "TRANSLATE") continue;
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
       const dir = lastTravelDir.get(id);
@@ -1880,15 +1856,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     {
       const edge = zoneEdge(zoneWas, highlighted.inRange);
       zoneWas = highlighted.inRange;
-      // ⛔⛔⛔ **THE BASIS NO LONGER MOVES HERE** — `D82`, 2026-09-23, the owner: *"eliminate
-      // this rule: Inside the offset radius the axes are the LeadingFace normal, gravity, and
-      // their orthogonal. Inside shall be the same as outside."* ⭐ What remains on the edge is
-      // the pair's identity, for the readout, and the owner's own hook.
+      // ⛔⛔ **THE ZONE IS ENTERED BY PROXIMITY; THE DUO IS NAMEABLE ONLY WHILE A DRAG
+      // TRANSLATES.** `inRange` is a distance and `pair` additionally requires condition 2, so a
+      // hand can drift into range in ROTATE mode — the crossing happens, and there is nobody to
+      // apply it to. ⚠ Without this the body would then be dragged on the OUTSIDE basis while
+      // sitting inside the zone, and the edge that would have fixed it is already spent.
+      // ⭐ So the pair is latched the moment it becomes nameable, and that counts as the entry.
       const named =
         highlighted.pair === null ? null : [highlighted.pair.subject, highlighted.pair.target];
       const becameNameable = highlighted.inRange && named !== null && zonePair.length === 0;
       if (named !== null && (edge === "ENTER" || becameNameable)) zonePair = named;
       if (edge !== null || becameNameable) {
+        // ⛔⛔⛔ **THE BASIS NO LONGER MOVES HERE** — `D82`, 2026-09-23, the owner: *"eliminate
+        // this rule: Inside the offset radius the axes are the LeadingFace normal, gravity, and
+        // their orthogonal. Inside shall be the same as outside."* ⭐ What remains on the edge is
+        // the pair's identity, for the readout, and the owner's own hook.
         // ⛔ The HOOK fires on the CROSSING only, never on the late naming: the owner's trigger is
         // *"has entered … an offset radius zone"*, and a body that was already inside has not.
         if (edge === "ENTER" && cfg.cameraOffsetZoneEnterSetupB === 1) cameraOffsetZoneEnter();
@@ -1933,11 +1915,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           syncCentre();
         }
       }
-      swingArms.unshift({
-        g0Mm: highlighted.gapM * 1000,
-        prevMm: gapPrevM === null ? Number.NaN : gapPrevM * 1000,
-      });
-      if (swingArms.length > 3) swingArms.length = 3;
       swing = {
         gapAtTriggerM: highlighted.gapM,
         // ⚠ The threshold this capture was judged against, frozen with it — they are one fact.
@@ -1950,10 +1927,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // press inside the band, a rotation moving the closest points, a pinch rescaling
         // `D49`'s offset), and then this is **zero** — which `swingSignFor` answers with
         // `null`, and a `null` sign is a swing of zero. ⛔ The old code answered `+1`.
-        sign: swingSignFor(frameTravelRightM, frameTravelUpM, frameTravelDepthM),
+        sign: swingSignFor(frameTravelRightM, frameTravelUpM),
         armTravelM: frameTravelRightM,
         armTravelUpM: frameTravelUpM,
-        armTravelDepthM: frameTravelDepthM,
       };
     } else if (!highlighted.inRange && swing !== null) {
       // ⚠ Pulling apart past the offset ends the approach. ⛔ Nothing has to be restored: the
@@ -1986,19 +1962,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       swingAmp = null;
       swingFrozenProgress = null;
     }
-    // ⭐⭐⭐ **A SWING THAT ARMED WITHOUT A DIRECTION TAKES THE FIRST ONE THAT ARRIVES** (defect
-    // 65). ⛔ It must run BEFORE the accumulators are consumed two lines below, and it is the
-    // same travel the arming edge would have read had it landed on this frame.
-    if (swing !== null && swing.sign === null && highlighted.gapM !== null) {
-      const signed = acquireSwingSign(
-        swing,
-        frameTravelRightM,
-        frameTravelUpM,
-        highlighted.gapM,
-        frameTravelDepthM,
-      );
-      if (signed !== null) swing = signed;
-    }
     // ⛔⛔⛔ **CONSUMED HERE, EVERY FRAME, WHETHER OR NOT ANYTHING ARMED.** This one line is what
     // keeps the swing's direction a property of the approach: the arming edge above can only
     // ever see travel applied since the previous frame. ⚠ Zeroing it anywhere else — on a
@@ -2006,9 +1969,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // stale direction is readable, which is the defect of 2026-09-20 in a smaller form.
     frameTravelRightM = 0;
     frameTravelUpM = 0;
-    frameTravelDepthM = 0;
-    // ⭐ One frame of memory, for the arming history above. ⛔ After the arming, never before.
-    gapPrevM = highlighted.gapM;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -2533,12 +2493,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   let frameTravelUpM = 0;
   /**
-   * ⭐⭐⭐ **THE ALONG-VIEW COMPONENT — defect 67.** `right` and `up` span the screen, so a body
-   * pushed straight away from the camera showed up in NEITHER, and the swing read *"no travel"*
-   * for the one approach geometry it was built for.
-   */
-  let frameTravelDepthM = 0;
-  /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
    *
@@ -2558,8 +2512,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
    * than from whatever the last approach happened to end on.
    */
-  /** ⭐ The LATCHED swing width for this approach, radians (defect 68). ⛔ Decided once. */
-  let swingAmp: number | null = null;
+  let swingAmp: { rad: number; atMs: number } | null = null;
   /**
    * ⛔⛔ The progress the swing was showing when a translation STOPPED driving it, captured
    * once. ⚠ It must be remembered rather than recomputed: `rebaseTriggerGap(gap, p)` with `p`
@@ -2567,29 +2520,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * would do nothing at all, which is how the first version of this fix failed.
    */
   let swingFrozenProgress: number | null = null;
-  /**
-   * ⭐⭐⭐ **THE LAST FEW ARMINGS, WITH THE GAP ON THE FRAME BEFORE EACH — defect 66's instrument.**
-   *
-   * > *"also not working in this configuration"* — the owner, 2026-09-23, HUD: `p=1.00 yaw=0.0°
-   * > g0=8mm` with a capture offset of **129 mm**
-   *
-   * ⛔⛔ A swing that arms at 8 mm has 8 mm to complete an out-and-back in, so it is over before
-   * it is visible. ⚠ Two mechanisms produce that and ONE FRAME CANNOT TELL THEM APART:
-   *
-   * * the capture **re-armed** mid-approach — `inRange` flickered, the latch dropped on the
-   *   false frame and took the current gap on the true one;
-   * * the capture became true **for the first time** already deep inside, because the verdict is
-   *   keyed on the body's ALIGNMENT PARTNERS (`D62`) and the pair only became one late, or a
-   *   rotation collapsed the surface gap in a frame.
-   *
-   * ⭐ `129←131` reads *armed at 129 with 131 the frame before* — a clean crossing. `8←132` is a
-   * jump. And several entries mean it re-armed, which is the first hypothesis, settled.
-   * ⚠ `METHOD`: *a readout that reports a VERDICT and not the QUANTITY makes the next report
-   * unfalsifiable* — this is the third instrument added for that reason in two days.
-   */
-  const swingArms: { g0Mm: number; prevMm: number }[] = [];
-  /** The capture gap on the PREVIOUS frame, for the line above. ⚠ `null` before the first. */
-  let gapPrevM: number | null = null;
 
   /**
    * ⭐⭐ How far the camera is currently leaning out of its own orbit, in radians.
@@ -2644,18 +2574,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       return appliedSwingYaw;
     }
     swingFrozenProgress = freezeProgress(swingFrozenProgress, 0, true);
-    // ⛔⛔ **EVERY FINGER DRIVING THIS BODY, NOT JUST THE HOLDER** (defect 64): with the second
-    // touchpoint pushing, the holder is genuinely still and the law read `0`, which it answers
-    // with the WIDEST swing. ⭐ The choice is `approach_swing.ts`'s, not this file's.
-    // ⛔⛔ **AS OF NOW, NOT AS OF THE LAST SAMPLE** (defect 70): the window used to end at each
-    // finger's last event, so a push that had already finished kept answering *"fast"* — and the
-    // amplitude is LATCHED from this reading, so one stale frame decided the whole approach.
-    // ⚠ That is the owner's *"wait a little and it works again"*, exactly.
-    const nowSpeedMs = performance.now();
-    const speed = approachSpeedMmPerS([
-      translating.rec.speedMmPerSAt(nowSpeedMs),
-      ...[...translating.anchorMotion.values()].map((t) => t.speedMmPerSAt(nowSpeedMs)),
-    ]);
+    const speed = translating.rec.speedMmPerS;
     const target = swingAmplitudeRad(
       (cfg.approachSwingDeg * Math.PI) / 180,
       speed,
@@ -2669,17 +2588,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // the arithmetic — the exponent multiplies the estimator's relative wobble.
     // ⚠ Smoothing `A` and never the speed: three other rules read that number, and there is one
     // definition of *how fast is this finger*.
-    // ⛔⛔ **LATCHED, NOT SMOOTHED** (defect 68): the amplitude used to follow the finger's speed
-    // every frame through a first-order filter, and a RETRACTION — slow, stop, reverse — made it
-    // breathe. ⭐ The gap alone moves the camera once the width is decided.
-    // ⚠ Latched on the first frame that has a DIRECTION as well as a driver, so it cannot be
-    // decided by a frame in which nothing had moved yet (defect 65's shape).
-    if (swing.sign !== null) swingAmp = latchAmplitude(swingAmp, target);
-    return swingYawRad(
-      swingProgress(highlighted.gapM ?? 0, swing),
-      swingAmp ?? target,
-      swing.sign,
-    );
+    const now = performance.now();
+    swingAmp =
+      swingAmp === null
+        ? { rad: target, atMs: now }
+        : { rad: smoothAmplitude(swingAmp.rad, target, now - swingAmp.atMs), atMs: now };
+    return swingYawRad(swingProgress(highlighted.gapM ?? 0, swing), swingAmp.rad, swing.sign);
   };
 
   /**
@@ -3024,14 +2938,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             `
 axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot)" : "WorldAxisA(live camera)"}` +
             ` ${cfg.translatePairing === 1 ? "PLANE" : "CHANNELS"}` +
-            // ⭐⭐ THE BRANCH, THE CONDITIONING AND THE BOUND, all three — `det` is what decides
-            // the branch and `1/sin(cone)` is the most the body may outrun the finger, so a
-            // report can now say *"det 0.04, screen branch"* instead of *"it felt wrong"*.
-            ` ${lastAxisMode}` +
-            ` det=${lastPlaneDet.toFixed(3)}/${Math.sin((cfg.axisTrackingConeDeg * Math.PI) / 180).toFixed(3)}` +
-            ` track=${lastTrackGain.toFixed(2)}×${lastDepthFallback ? " depth→fixed" : ""}` +
-            // ⭐⭐ WHICH axis is edge-on — `det` says the plane is degenerate, these say who did it.
-            ` shadow x/g/d=${lastShadows.map((n) => n.toFixed(2)).join("/")}` +
+            ` track=${lastTrackGain.toFixed(2)}×${lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
             ` zone=${highlighted.inRange ? "IN" : "out"}` +
             (zonePair.length === 0 ? "" : `(${zonePair.join("↔")})`) +
             (cfg.cameraOffsetZoneEnterSetupB === 1 ? ` enterHook=${zoneEnterCalls}(no-op)` : "") +
@@ -3088,28 +2995,8 @@ outl      ${
             // ⛔ *A dead control must say so*, and so must a control that is alive and going the
             // wrong way: the sign, the progress and the angle are the three numbers a device
             // report about direction needs, and without them the only evidence is an impression.
-            // ⛔⛔⛔ **AND IT PRINTS WHEN IT IS *NOT* ARMED TOO — defect 69, 2026-09-23.** The
-            // owner sent `camera swing still not working` with a HUD that said **nothing at all**
-            // about the swing, because the whole line was suppressed while `swing === null`.
-            // ⚠ That is the silence a dead control must not keep: *"not working"* and *"not armed
-            // yet, and here is the number that decides it"* are different reports, and only the
-            // second can be acted on. ⭐ The arming HISTORY is printed either way, so an approach
-            // that failed to swing can still be read AFTER it ended.
             (swing === null
-              ? `
-swing     not armed — ${
-                  highlighted.inRange
-                    ? "IN range, awaiting the edge"
-                    : `out of range (gap ${((highlighted.gapM ?? 0) * 1000).toFixed(0)} > ${(highlighted.offsetM * 1000).toFixed(0)}mm)`
-                }${highlighted.translating ? "" : ", NOT translating"}${
-                  highlighted.pair === null ? ", no pair" : ""
-                }${
-                  swingArms.length === 0
-                    ? ""
-                    : ` | last arms=${swingArms
-                        .map((a) => `${a.g0Mm.toFixed(0)}←${Number.isFinite(a.prevMm) ? a.prevMm.toFixed(0) : "?"}`)
-                        .join(" ")}`
-                }`
+              ? ""
               : `
 swing     sign${
                   // ⛔ `?` is *no direction was available at the threshold*, which is a swing of
@@ -3122,16 +3009,8 @@ swing     sign${
                 // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
                 // from"* is the question a direction report asks, and `0.0000` here is the whole
                 // explanation of a `⛔?`.
-                // ⭐⭐ ALL THREE COMPONENTS (defect 67): `arm=(0.0,0.0)` could not tell *nothing
-                // moved* from *it moved along the axis I do not measure*, and it was the second.
-                ` arm=(${(swing.armTravelM * 1000).toFixed(1)},${(swing.armTravelUpM * 1000).toFixed(1)},${(swing.armTravelDepthM * 1000).toFixed(1)})mm` +
-                ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}` +
-                // ⭐⭐ WHERE EACH ARMING HAPPENED, newest first: `g0←gap the frame before`.
-                // ⛔ Several entries = it RE-ARMED mid-approach, which is one whole hypothesis
-                // settled at a glance rather than by another round trip to the glass.
-                ` arms=${swingArms
-                  .map((a) => `${a.g0Mm.toFixed(0)}←${Number.isFinite(a.prevMm) ? a.prevMm.toFixed(0) : "?"}`)
-                  .join(" ")}`) +
+                ` arm=(${(swing.armTravelM * 1000).toFixed(1)},${(swing.armTravelUpM * 1000).toFixed(1)})mm` +
+                ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
             (drawFault === null
               ? ""
               : `
@@ -3613,13 +3492,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // crossed the threshold.
     frameTravelRightM += dot(step, grip.frame.right);
     frameTravelUpM += dot(step, grip.frame.up);
-    // ⛔⛔⛔ **AND THE THIRD AXIS — defect 67, 2026-09-23.** `right` and `up` span the SCREEN, and
-    // the second touchpoint's channel is `depth`, which is orthogonal to both: a body pushed
-    // straight away from the camera fed this pair **exactly zero**, every frame, so the swing
-    // could never find a direction for the very approach it exists to help.
-    // ⚠ `METHOD`: *a readout that reports only the components the rule uses cannot tell
-    // "nothing happened" from "something happened where I do not look."*
-    frameTravelDepthM += dot(step, grip.frame.depth);
     const mp = requirePose(grip.mesh);
     // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
     // camera's own maximum orbit radius. A body through the near plane renders *a black page with
@@ -3651,6 +3523,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       cfg.gainTranslateDepth,
       cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
       cfg.axisTrackingConeDeg,
+      grip.frame.towardGravity,
     );
     // ⭐ ONE writer, so this channel now feeds the swing exactly as the holder's does.
     applyWorldStep(grip, axisDisplacement(travel, axes));
@@ -5005,12 +4878,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           cfg.gainTranslateDepth,
           cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
           cfg.axisTrackingConeDeg,
+          // ⭐ Read ONLY inside the cone, where it is the sign `depthTranslate` needed: +1
+          // looking down on the scene, −1 looking up at it.
+          grip.frame.towardGravity,
         );
         lastTrackGain = travel.trackGain;
-        lastAxisMode = travel.mode;
-        lastPlaneDet = travel.planeDet;
-        lastDepthFallback = travel.depthFallback;
-        lastShadows = travel.shadowLens;
+        lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);
         // ⭐ `grip.frame` is the basis LATCHED AT PRESS, and `applyWorldStep` uses it for the
         // swing's screen travel and the depth clamp only — the body's own axes decide the

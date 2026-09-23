@@ -23,6 +23,7 @@ import {
 import { gravityFrame, type GravityFrame } from "@input/gravity_frame";
 import { dot, type Vec3 } from "@core/vec";
 
+const UP: Vec3 = [0, 1, 0];
 const DOWN: Vec3 = [0, -1, 0];
 const DEG = Math.PI / 180;
 
@@ -46,14 +47,19 @@ const orthonormal = (a: ObjectAxes): void => {
 const BOOT = axesFromFrame(frameAt(0, 30));
 const LIVE = frameAt(90, 30);
 
+// ⛔⛔⛔ **TWO DESCRIBES STOOD HERE AND THEIR SUBJECT IS DELETED** — `D82`, 2026-09-23.
+// *"the in-zone basis"* and *"inside the zone — the leading face decides"* pinned a rule the
+// owner has removed: *"Inside shall be the same as outside. I think this is polluting the approach
+// movement."* ⭐ Kept as a note rather than as skipped tests, because the property is not merely
+// unasserted now — it is false by instruction.
+
 describe("the flag chooses WHICH camera — and that is the whole rule since D82", () => {
-  // ⚠ This described the OUTSIDE-the-zone case until 2026-09-23; there is no other case now.
-  // ⛔ `inZone`, `leadingNormal` and `up` were still sitting in this fixture after the rule was
-  // deleted — TS accepts extra properties through a spread, so nothing objected. A fixture that
-  // passes arguments the rule no longer has is a reader's trap, which is why they are gone.
   const base = {
+    inZone: false,
     bootAxes: BOOT,
     liveFrame: LIVE,
+    leadingNormal: null,
+    up: UP,
     previous: BOOT,
   };
 
@@ -104,7 +110,7 @@ describe("the zone edge", () => {
   });
 });
 
-describe("⛔⛔ the zone is entered by PROXIMITY; the duo is nameable only while a drag translates", () => {
+describe("⛔⛔ the zone is entered by PROXIMITY, and it no longer moves the basis", () => {
   it("⛔⛔⛔ `D82`: being inside the zone changes NOTHING about the basis", () => {
     // > *"eliminate this rule: Inside the offset radius the axes are the LeadingFace normal,
     // > gravity, and their orthogonal. Inside shall be the same as outside. I think this is

@@ -1,38 +1,79 @@
 /**
- * ⭐⭐⭐ **THE OBJECT AXES — the basis a body is translated along.**
+ * ⭐⭐⭐ **THE OBJECT AXES — the basis a body is translated along, and when it changes.**
  *
- * > *"The world x, world gravity and world depth axis are created at scene boot as per camera
- * > position at scene boot and are fixed forever for this scene."* — the owner, `D74`
+ * The owner, 2026-09-22, in three parts:
  *
- * ⛔ `worldAxisB` (the default) freezes them at boot; `worldAxisA` follows the live camera.
- * That is the whole of the rule.
+ * > *"A flag with a slider … WorldAxisB toggle on: the world x, world gravity and world depth
+ * > axis are created at scene boot as per camera position at scene boot and are fixed forever
+ * > for this scene. … For both, at scene boot, all object axis are updated based on camera
+ * > quaternion at scene boot."*
  *
- * ## ⛔⛔⛔ THE IN-ZONE BASIS IS **DELETED** — `D82`, 2026-09-23, the owner
+ * > *"If pioneer and follower objects are outside the offset radius zone: object axis shall be
+ * > aligned with world axis if the flag WorldAxisB is toggled on, or with camera screen and
+ * > depth axis if the flag WorldAxisB is toggled off."*
+ *
+ * > *"If pioneer and follower objects are inside the offset radius zone: object axis shall be
+ * > aligned with LeadingFace normal direction, gravity direction and direction orthogonal to
+ * > LeadingFace normal & gravity directions."*
+ *
+ * ## ⛔⛔⛔ THAT THIRD PART IS **DELETED** — `D82`, 2026-09-23, the owner
  *
  * > *"eliminate this rule: Inside the offset radius the axes are the LeadingFace normal, gravity,
  * > and their orthogonal. Inside shall be the same as outside. I think this is polluting the
  * > approach movement."*
  *
- * ⚠ It was `D74`'s part C, dictated the day before: inside the capture zone the basis became the
- * leading face's normal, gravity and their orthogonal, re-decided on the zone's EDGE — *"therefore
- * the translation direction differs when the object is inside the offset radius zone"*.
+ * ⚠ It is kept quoted above because a reversal is only legible beside what it reverses. ⭐ What
+ * remains is the flag: the boot camera's basis frozen for the scene, or the live camera's — and
+ * a body's axes no longer change because it came near another body.
  *
- * ⭐⭐ **WHAT IT COST, KEPT HERE BECAUSE IT IS THE ARGUMENT FOR THE DELETION.** Four device
- * reports in one day, and all four were the SWITCH rather than the geometry:
- *
- * * *"the translation is blocked"* with `det=0.000` — the in-zone `x` pointed at the camera in
- *   the broadside view a hand orbits to for a join (defect 59);
- * * *"blocked on white highlight border, change of directions"* — the crossing handed the
- *   approach to a different channel (defect 62);
- * * *"inversion of dy input direction"* — compounded by a fallback sign that did not match the
- *   rule it replaced (defect 63).
- *
- * ⛔ Each fix made the switch better behaved and none of them made it invisible, which is what a
- * hand actually asks of it. ⭐ `METHOD`: *a rule whose every defect is about the MOMENT it takes
- * effect is a rule about the wrong thing.*
+ * ⭐⭐ **WHAT THE BASIS SWITCH COST, WHICH IS THE ARGUMENT FOR DELETING IT**: the zone edge is
+ * where the translation directions changed under a moving finger, so every defect it produced was
+ * about the MOMENT it took effect rather than about the geometry. ⛔ `METHOD`: *a rule whose every
+ * defect is about the moment it takes effect is a rule about the wrong thing.*
  *
  * ⚠ `leadingFace` and its gizmo SURVIVE — they were never part of this rule: the owner asked for
  * the marker in the same dictation and has not asked for it to go.
+ *
+ * ## ⭐⭐ THREE NAMED AXES, AND THE NAMES ARE THE CHANNELS
+ *
+ * ```
+ *   x        — the holder's dx
+ *   depth    — the holder's dy      ⚠ HORIZONTAL, not the screen's vertical
+ *   gravity  — the SECOND finger's dy
+ * ```
+ *
+ * ⛔⛔ **THAT IS A REMAP OF RULE 6, NOT A RE-BASIS OF IT.** Before this, the holder's dy moved
+ * the body UP and the second finger's dy moved it AWAY. They are now swapped: one finger
+ * slides the body about its own horizontal plane, a second finger lifts it. ⚠ It is the
+ * owner's dictation and it is unconditional — the `worldAxisB` flag chooses which axes, never
+ * whether the remap applies.
+ *
+ * ## ⭐⭐⭐ WHY THE IN-ZONE BASIS IS ORTHOGONALISED
+ *
+ * The dictation names *the LeadingFace normal, gravity, and their orthogonal*. ⚠ Those three
+ * are only a BASIS when the leading face is vertical: on a sloped face the normal has a
+ * vertical component, so *push along depth* and *push along gravity* would partly do the same
+ * thing, by `cos(slope)`. ⛔ That is `A7`'s own argument, met again — *the argument is
+ * ORTHOGONALITY, not tidiness; there is no gain that fixes a basis that is not a basis* — and
+ * the owner chose to orthogonalise (2026-09-22).
+ *
+ * ⭐ So gravity is kept EXACT and the normal is flattened onto the horizontal plane, which is
+ * the same construction `gravityFrame` uses for its own `depth`. ⚠ What it costs, stated: on a
+ * 45° face the depth axis runs along the face's horizontal shadow rather than up its slope.
+ *
+ * ## ⚠ THE AXES CHANGE ON AN EDGE, NEVER CONTINUOUSLY
+ *
+ * ⛔⛔ **AND THAT IS WHAT BREAKS A CIRCULARITY.** The leading face is chosen by the direction
+ * the body is travelling; in the zone the travel direction is chosen by the axes; the axes are
+ * built from the leading face. ⭐ The owner's own sequencing resolves it: *"If the object has
+ * entered or exited an offset radius zone, update the object axis directions"* — so the axes
+ * are latched at the TRANSITION, from the leading face at that instant, and the leading face
+ * goes on being recomputed every frame for the gizmo only.
+ *
+ * ⚠ It also means a body that turns while inside the zone keeps the basis it entered with. A
+ * basis that re-derived itself every frame would swing through 90° the moment the drag crossed
+ * a face boundary, mid-push — which is `METHOD`'s *a mode may be keyed on PRESENCE, never on
+ * MOTION*, one level up: the zone is discrete and deliberate, the leading face is not.
  *
  * ⛔ ENGINE-FREE.
  */
@@ -92,10 +133,19 @@ export interface AxesInputs {
   readonly bootAxes: ObjectAxes;
   /** The camera's basis NOW. ⚠ `null` only where `gravityFrame` refuses. */
   readonly liveFrame: GravityFrame | null;
-  /** The basis this body already has — kept when the live frame is unavailable. */
+  /** What this body is using now — the answer when nothing better can be built. */
   readonly previous: ObjectAxes;
 }
 
+/**
+ * ⭐⭐⭐ **THE RULE ITSELF — what a body's axes become.** Section C of the dictation, whole.
+ *
+ * ⛔⛔ **IT IS TOTAL: every branch returns a basis, and the fallback is always `previous`.**
+ * The alternative — returning `null` and letting the caller decide — puts the decision back in
+ * `scene.ts`, and *a rule written in `scene.ts` is a rule nothing can interrogate* (the
+ * 2026-09-19 lesson, seven surviving mutants). ⚠ Keeping a working basis is also the only
+ * honest answer: a body mid-drag has to be translated along something.
+ */
 export function updatedObjectAxes(i: AxesInputs): ObjectAxes {
   // ⭐⭐ THE FLAG DECIDES, AND THE DIFFERENCE IS ONLY *WHICH CAMERA*. `WorldAxisB` is the boot
   // camera's basis, frozen for the scene; `WorldAxisA` is the camera as it is now. ⛔ Both are

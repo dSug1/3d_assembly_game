@@ -139,27 +139,8 @@ export function terminalSpeedPxPerS(
 }
 
 /** Keep only the samples inside `flickWindow` of the newest one. */
-export function trimBuffer(
-  buffer: readonly Sample[],
-  cfg: GestureConfig,
-  nowMs?: number,
-): Sample[] {
+export function trimBuffer(buffer: readonly Sample[], cfg: GestureConfig): Sample[] {
   if (buffer.length === 0) return [];
-  // ⛔⛔⛔ **THE WINDOW MAY END *NOW* RATHER THAN AT THE LAST SAMPLE — defect 70, 2026-09-23.**
-  //
-  // > *"sometimes, it seems I need to wait a little before redoing the same translation movement,
-  // > and then the camera swing works again"* — the owner
-  //
-  // ⚠⚠ Trimmed against the last SAMPLE, a buffer that stops receiving events keeps its window
-  // frozen around the last burst — so *"how fast is this finger"* answers with the speed of a
-  // gesture that **has already finished**, indefinitely. ⭐ The flick reads it at the release,
-  // where `now` and the last sample are the same instant, which is why it never showed there.
-  // ⛔ The swing reads it at the START of an approach, which is the moment most likely to sit in
-  // the shadow of the previous push — and it LATCHES the answer (defect 68).
-  //
-  // ⚠ The default keeps the old behaviour exactly: a caller that does not say when *now* is gets
-  // the release-time reading it has always had.
-  const end = nowMs !== undefined && Number.isFinite(nowMs) ? nowMs : buffer[buffer.length - 1]!.t;
-  const cutoff = end - cfg.flickWindow;
+  const cutoff = buffer[buffer.length - 1]!.t - cfg.flickWindow;
   return buffer.filter((s) => s.t >= cutoff);
 }

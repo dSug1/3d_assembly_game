@@ -765,10 +765,20 @@ inside the offset radius zone"* is **inert**, and a vector says so out loud.
 
 ⭐⭐ **The two choices interact, and neither of us saw it when they were taken an hour apart.** The
 orthogonalisation was chosen because *independent channels* would otherwise overlap — and under
-`PLANE` there are no independent channels, so the premise is gone. ⚠ Three ways out, and it is the
-owner's call: keep `PLANE` and accept that the zone changes nothing; go back to `CHANNELS`, where
-the zone basis bites; or let the in-zone plane **tilt with the face** (the literal reading, rejected
-on my advice) so that inside the zone a body slides along the surface it is approaching.
+`PLANE` there are no independent channels, so the premise is gone. ⚠ Three ways out were offered:
+keep `PLANE` and accept that the zone changes nothing; go back to `CHANNELS`, where the zone basis
+bites; or let the in-zone plane **tilt with the face**.
+
+✅✅ **ANSWERED 2026-09-23, AND WITH A FOURTH: DELETE THE RULE** (`D82`). The owner: *"eliminate
+this rule: Inside the offset radius the axes are the LeadingFace normal, gravity, and their
+orthogonal. Inside shall be the same as outside. I think this is polluting the approach movement."*
+⛔ So `axesFromLeadingFace` is gone, `updatedObjectAxes` has no zone input at all, and the per-body
+basis map in `scene.ts` went with it — nothing wrote it once the zone stopped.
+⭐⭐ **The argument, in one line**: every defect the switch produced was about the MOMENT it took
+effect — the zone edge is where the translation directions changed under a moving finger — and *a
+rule whose every defect is about the moment it takes effect is a rule about the wrong thing.*
+⚠ `leadingFace` and its gizmo survive: the owner asked for the marker in the same dictation and
+has not asked for it to go, and the zone edge still names the pair and fires the hook.
 
 ⚠ **Still unjudged**: everything above, plus `gainTranslateScreen` = 1.17, which was tuned for a
 screen-plane drag and now multiplies an exact-tracking mapping.
@@ -791,28 +801,95 @@ by the hand it was built for.
 
 ⭐ And `followerFaceXrayAlpha` is **0.05** — the owner's number, a tenth of my guess.
 
-⭐⭐⭐ **2026-09-23 — THE TWO `dy` CHANNELS ARE SWAPPED (`D79`)**: *"When in translation mode and when
-in rotation mode with two touches pressed with object aligned: swap the inputs dy of second touch and
-dy of first touch."* ⭐ Those are exactly the configurations in which the holder's `dy` translates at
-all — one finger in `TRANSLATE`, and `D60`'s *the first touch translates whatever the mode* once an
-aligned Follower gives the second touch both axes (`D59`) — so the remap is unconditional in the rule
-and observable only there.
 
-⛔⛔ **THREE CONSEQUENCES, NONE ASKED FOR AND ALL IMPROVEMENTS**: the holder's plane is **{x, gravity}**,
-which faces the camera at every ordinary pose where the horizontal plane went edge-on at a LEVEL
-camera; the degenerate axis is now **depth**, which is where `depthTranslate`'s judged fixed-rate
-fallback came from; and **`D74`'s in-zone basis stops being inert**, because the plane contains `x`
-and the leading face rotates it.
+---
 
-⚠⚠ **AND THE REGRESSION THIS SWAP CAUSED THE FIRST TIME IT SHIPPED IS FIXED WITH IT.** *"Object cannot
-enter offset radius zone sometimes (blocked at white highlight border)"* — the degenerate-plane branch
-SUPPRESSED the foreshortened axis, and the zone edge is exactly where `D74` switches the basis, so a
-body could freeze on the contour. ⭐ It degrades to the **stable projection** now: it cannot freeze
-(every direction keeps a component) and cannot run away (no division), and it is the mapping this rule
-shipped with on 2026-09-22 — a behaviour that has been on the glass rather than a new one.
+## ⛔⛔⛔ THE `dy` SWAP — BUILT ON A BRANCH, **MEASURED**, AND REJECTED (2026-09-23)
 
-⚠ **One claim had to be restated**: *"the gain is the same on all three channels"* was true only
-because the third channel was GRAVITY, whose screen shadow is exactly vertical. ⛔ Depth's is oblique,
-so that channel moves the body by the PROJECTION of the input onto its own screen line — Blender's
-`G Z`, and the honest form of the claim.
+> *"dx and dy from touch on the object control the translation on object x axis and object gravity
+> axis, and dy from second touch control the translation on object depth axis."* — the owner,
+> asking for the swap
+>
+> *"I will discard it. I will stick with 1.0.22- input configuration from now onwards."* — the
+> owner, after the comparison below
 
+⚠ Built as `D83` on **`1.0.24-Swapped-inputs-Discarded`**, with vectors and mutants. ⛔ Nothing of
+it is in the keeper branch, and the branch is kept so the measurement can be re-run rather than
+re-argued.
+
+### The two configurations
+
+| | holder `dx` | holder `dy` | second touch `dy` |
+|---|---|---|---|
+| **kept** (`D75`) | `x` | `depth` | `gravity` |
+| swapped (`D83`) | `x` | `gravity` | `depth` |
+
+### ⭐⭐⭐ THE MEASUREMENT — what 50 px of finger actually MOVES on the glass
+
+⚠ Both rules run from the same fixture: axes frozen at boot (`worldAxisB`, boot camera azimuth 0,
+elevation 30°), camera at 1.5 m, `PLANE` pairing, the shipped 5° cone. ⛔ The number is the body's
+**screen** travel in pixels — what a hand sees, and what the approach swing reads.
+
+```
+az  el │ KEPT   dx→x  dy→depth  2nd→gravity │ SWAPPED  dx→x  dy→gravity  2nd→depth
+  0  0 │  50.0     0.0     50.0             │  50.0     50.0      0.0
+ 45  0 │  50.0    35.4     50.0             │  50.0     50.0     35.4
+ 90  0 │   0.0    50.0     50.0             │   0.0     50.0     50.0
+  0 12 │  50.0    50.0     50.0             │  50.0     50.0     50.0
+ 45 12 │  50.0    50.0     50.0             │  50.0     50.0     10.2   ←
+ 90 12 │  50.0    50.0     50.0             │  10.4     50.0     50.0   ←
+ 45 40 │  50.0    50.0     50.0             │  50.0     50.0     27.0
+ 90 40 │  50.0    50.0     50.0             │  32.1     50.0     50.0
+ 45 70 │  50.0    50.0     50.0             │  50.0     50.0     34.2
+ 90 70 │  50.0    50.0     50.0             │  47.0     50.0     50.0
+```
+
+⭐⭐ **The kept configuration is EXACT at every pose except an exactly level camera. The swapped one
+degrades across a broad band of ordinary poses** — down to a fifth of the finger at `az 45–135,
+el 12`, which is an ordinary place to stand.
+
+### ⭐⭐⭐ WHY — and it is one sentence about pairs
+
+**A PAIR of axes can cover for one of its members; a SINGLE axis cannot.**
+
+* The kept holder owns `x` **and** `depth` — the two horizontal directions, which together span the
+  whole ground plane. Whichever way the finger drags, some combination produces exactly that screen
+  motion: when `x` turns to face the camera, `depth` takes up the slack. ⛔ They fail only together,
+  at an exactly level camera, where the ground plane collapses to the horizon line.
+* The swapped holder owns `x` **and** `gravity` — one horizontal, one vertical: a thin vertical
+  slice, not a plane. When `x` faces the camera **nothing can cover for it**, because gravity only
+  ever moves a body up and down the glass. ⚠ And `worldAxisB` freezes `x` at boot, so a quarter
+  turn of orbit reaches that pose deliberately.
+* The kept second touch owns **gravity**, which draws a VERTICAL line on the glass at every camera
+  angle — perfectly matched to a vertical finger, so it gives its full rate everywhere.
+* The swapped second touch owns **depth**, which draws a SLANTED line that turns with the camera. A
+  vertical finger only contributes the part of itself lying along that line. ⛔ No partner, no
+  compensation, and the response depends on where the camera happens to be.
+
+⚠⚠ **AND THAT WEAKNESS IS A COMPLAINT THE OWNER HAS ALREADY MADE ONCE**: *"the input seems very
+weak and not the same as the gravity axis input which is right"* (2026-09-23, `D76`). ⭐ Gravity
+felt right **because it is always vertical on the glass** — the swap would have moved that property
+off the finger that had it.
+
+### ⚠ The one thing the swap FIXED, and it is real
+
+At an exactly level camera the kept `dy`→`depth` is **dead** (`0.0` in the table) — the cost this
+dossier already records as *"the holder's dy is dead at a level camera"*. ⭐ The swapped `dy`→
+`gravity` works at every elevation. ⛔ One pose against a band of poses: the trade was refused.
+
+### ⛔⛔ AND A SECOND CONSEQUENCE NOBODY WOULD HAVE PREDICTED FROM THE DICTATION
+
+**The approach swing goes blind.** It decides which way to lean from the body's travel projected
+onto the camera's `right` and `up` — the two directions that span the SCREEN. ⭐ `depth` is by
+definition the direction that produces the least screen motion, so a body pushed straight away from
+the camera fed the swing **exactly zero on both**, every frame, and it never found a direction.
+⚠ In the kept configuration that finger drives `gravity`, whose travel is vertical on the glass, so
+the case is unreachable. ⛔ `D83` had to add a third travel component to pay for it — visible in
+the branch as `swingSignFor`'s third argument.
+
+### ⭐ What a future session should take from this
+
+⛔ **Do not re-derive this by argument.** The comparison took one probe that ran both rules over a
+sweep of camera poses and printed what a hand would see; both of my own explanations before that
+probe were incomplete, and the second one was wrong about WHERE the degeneracy lies.
+⚠ The branch still exists: check it out, copy the old rule beside the new one, and print the table.
