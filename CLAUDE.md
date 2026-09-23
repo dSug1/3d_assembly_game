@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1078 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1083 golden vectors passing** — ⚠ MEASURED 2026-09-23; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -96,6 +96,7 @@ fixed rate instead of letting it die. ⚠⚠ **AND THE SOLVE MAKES `D74`'s IN-ZO
 orthogonalised face basis spans the same horizontal plane, so nothing changes at the zone edge.
 ⛔ **That is an owner decision**, and the choices are in
 [`Claude/00_CORE/queue_notes/IN4.md`](Claude/00_CORE/queue_notes/IN4.md).
+⛔⛔⛔ **AND THE SOLVE CAME BACK WITH A CLIFF** (defect 56, 2026-09-23): *"blocking at white highlight and erratic movement"* are **two sides of one number** — the solve's rate is `1/|det|`, so at the adopted 5° cone the body ran **11.5× the finger** just outside it and **≈0** just inside, and the white contour is where `D74` **switches the basis**, which is where that boundary is crossed. ⭐⭐ The degenerate branch no longer answers *inside* the plane: the finger's screen travel is decomposed onto all **three** axes, which are orthonormal, so the body follows the finger exactly — **rule 6**, the best-attested rule in the product. ⚠ Cost: the holder briefly moves the body along the second finger's axis, which is the component an edge-on plane cannot hold. ⭐ The cone is **5° → 20°** and is now read as a **leverage bound** (`1/sin`, 2.9×) — ⛔⛔ 5° was *Blender's* number and carried Blender's QUESTION with it: theirs guards a division from `NaN`, this one guards a hand. ⚠⚠ **And I had ASSERTED the conditioning instead of measuring it** — *"a vertical plane faces the camera at every ordinary pose"* is false once `worldAxisB` freezes the axes at boot. *A claim about conditioning is a measurement.*
 
 ⭐⭐ **AND TWO REFINEMENTS ABOUT THE FROZEN PLATE** (`D77`, 2026-09-23), both enforced at a DEFINITION rather than by a guard at the point of use: **no gizmo on a frozen body** — `leadingFace` refuses one, because *the face a body is advancing on* presumes it advances — and **a second touch on a frozen body is handed to the router as a MISS**, so that finger becomes a working `OUTSIDE` touchpoint and can drive another body. ⛔ The FIRST touch is untouched: `D67` makes *hold the plate FIRST* the way to align a part to it.
 
@@ -319,7 +320,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Fifty-five defects, fifty-four of them BY FINGER, and none visible to a green
+⛔⛔ **Fifty-six defects, fifty-five of them BY FINGER, and none visible to a green
 suite.** ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
 total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
 project's argument for device passes. ⭐ The two do not compete: **the device finds what is
