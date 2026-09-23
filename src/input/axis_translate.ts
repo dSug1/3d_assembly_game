@@ -85,11 +85,19 @@ export interface CameraScreenAxes {
 
 /** One frame's finger travel, CSS pixels. ⭐ **Deadbanded** travel (`A11`), never a raw delta. */
 export interface AxisInputsPx {
-  /** The holder's horizontal travel. */
+  /** The holder's horizontal travel → the object's **x** axis. */
   readonly holderDxPx: number;
-  /** The holder's vertical travel. ⚠ Screen y grows DOWNWARD. */
+  /**
+   * The holder's vertical travel → the object's **GRAVITY** axis. ⚠ Screen y grows DOWNWARD.
+   * ⛔⛔ **SWAPPED WITH `secondDyPx` ON 2026-09-23**, the owner: *"when in translation mode and
+   * when in rotation mode with two touches pressed with object aligned: swap the inputs dy of
+   * second touch and dy of first touch."* ⭐ Those are exactly the configurations in which the
+   * holder's `dy` translates at all, so the swap is unconditional here and observable only
+   * there. ⚠ It restores the pairing rule 6 and `A10` had before the object axes existed — the
+   * holder moves the body in a VERTICAL plane and the second finger pushes it away.
+   */
   readonly holderDyPx: number;
-  /** The second touchpoint's vertical travel → the object's **gravity** axis. */
+  /** The second touchpoint's vertical travel → the object's **DEPTH** axis (swapped, 2026-09-23). */
   readonly secondDyPx: number;
 }
 
@@ -180,12 +188,14 @@ export function axisTravel(
   coneDeg: number,
   towardGravity: number,
 ): AxisTravel {
+  const right = normalize(camera.right);
+  const up = normalize(camera.up);
   const sx = screenShadow(axes.x, camera);
   const sd = screenShadow(axes.depth, camera);
   const sg = screenShadow(axes.gravity, camera);
   // ⛔ A camera with no basis moves nothing, rather than moving by NaN. One NaN written into a
   // placement is permanent — it never washes out of a position.
-  if (!sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
+  if (!right || !up || !sx || !sd || !sg || !Number.isFinite(metresPerPx)) {
     return { xM: 0, gravityM: 0, depthM: 0, edgeOn: false, trackGain: 0 };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
@@ -203,58 +213,75 @@ export function axisTravel(
     return (mx * s[0] + my * s[1]) / (len * len);
   };
 
-  // ⭐⭐ THE FIXED-RATE PUSH, for a plane that is edge-on. ⛔ `depthTranslate`'s mapping, which
-  // a device look closed on 2026-09-16 — including its sign, which was itself a defect found by
-  // finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the picture is
-  // symmetric and no sign is derivable; *fingers-up = away* is the convention, continuous with
-  // the camera looking even slightly down.
+  // ⭐⭐ THE FIXED-RATE PUSH, for an axis that points at the camera. ⛔ `depthTranslate`'s
+  // mapping, which a device look closed on 2026-09-16 — including its sign, which was itself a
+  // defect found by finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where
+  // the picture is symmetric and no sign is derivable; *fingers-up = away* is the convention,
+  // continuous with the camera looking even slightly down.
+  //
+  // ⭐⭐⭐ **SINCE THE SWAP IT BELONGS TO THE SECOND TOUCHPOINT**, which is where it came from:
+  // `depth` is the axis that turns to face the camera, and the second finger drives it now.
   const awaySign = Math.sign(finite(towardGravity)) || 1;
-  const fallbackDepth = -dy * holderGain * awaySign;
+  const fallbackDepth = -dy2 * secondGain * awaySign;
 
   let xM = 0;
+  let gravityM = 0;
   let depthM = 0;
   let edgeOn = false;
 
   if (pairing === "PLANE") {
-    // ⭐⭐⭐ **THE 2×2 SOLVE.** Find the travels along x and depth whose SCREEN motion adds up to
-    // the finger's. ⛔ Solving beats projecting onto each axis separately: the two shadows are
-    // not perpendicular on screen in general, so independent projections would double-count the
-    // overlap and the body would outrun the finger on a diagonal drag.
-    const det = sx[0] * sd[1] - sx[1] * sd[0];
-    // ⚠ `|det|` is the area the two shadows span — it goes to zero when the plane is EDGE-ON,
-    // which is the level camera, and that is the only degeneracy the pair has: two
-    // perpendicular world axes cannot both point at the camera.
+    // ⭐⭐⭐ **THE 2×2 SOLVE, ON THE {x, gravity} PLANE SINCE THE SWAP** (the owner, 2026-09-23:
+    // *"swap the inputs dy of second touch and dy of first touch"*). Find the travels whose
+    // SCREEN motion adds up to the finger's. ⛔ Solving beats projecting onto each axis
+    // separately: the two shadows are not perpendicular on screen in general, so independent
+    // projections would double-count the overlap and the body would outrun the finger.
+    //
+    // ⭐⭐ **AND IT IS A BETTER-CONDITIONED PLANE THAN {x, depth} WAS.** A vertical plane faces
+    // the camera at every ordinary pose; the horizontal one it replaced went edge-on at a LEVEL
+    // camera, where a hand spends much of its time.
+    const det = sx[0] * sg[1] - sx[1] * sg[0];
     if (Math.abs(det) > coneSin) {
-      xM = ((dx * sd[1] - dy * sd[0]) / det) * holderGain;
-      depthM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
+      xM = ((dx * sg[1] - dy * sg[0]) / det) * holderGain;
+      gravityM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
     } else {
       edgeOn = true;
-      // ⭐ x is still healthy here — it is the axis lying across the screen — so it keeps exact
-      // tracking, and only depth falls back to the judged fixed rate.
-      // ⚠ `fallbackDepth` carries `holderGain` already; applying it twice is the kind of
-      // arithmetic that reads as *"depth feels wrong in one camera pose"* and nowhere else.
-      xM = (along(sx, dx, dy) ?? 0) * holderGain;
-      depthM = fallbackDepth;
+      // ⛔⛔⛔ **A DEGENERATE PLANE MUST NOT STOP THE BODY.** ⚠ The first build of this swap
+      // suppressed the foreshortened axis, and the zone edge is exactly where a basis SWITCHES
+      // (`D74`) — so a body dragged up to the white contour could have its plane turn edge-on
+      // under it and **freeze on the boundary**, which is what a device look reported.
+      // ⭐⭐ So it degrades to the STABLE PROJECTION instead of refusing: the finger's own
+      // screen-plane displacement, decomposed onto the two axes. ⛔ It cannot freeze (every
+      // direction keeps some component) and it cannot run away (no division) — and it is the
+      // mapping this rule shipped with on 2026-09-22, so the degenerate case falls back to a
+      // behaviour that has been on the glass rather than to a new one.
+      // ⚠ What it gives up is exact tracking, precisely where exact tracking is undefined.
+      const wx = right[0] * dx - up[0] * dy;
+      const wy = right[1] * dx - up[1] * dy;
+      const wz = right[2] * dx - up[2] * dy;
+      xM = (wx * axes.x[0] + wy * axes.x[1] + wz * axes.x[2]) * holderGain;
+      gravityM =
+        (wx * axes.gravity[0] + wy * axes.gravity[1] + wz * axes.gravity[2]) * holderGain;
     }
   } else {
     // ⭐ CHANNELS: Blender's `G X`, once per channel — the whole delta is not used, only the
-    // component the dictation assigns to that axis.
-    const x = along(sx, dx, 0);
-    const d = along(sd, 0, dy);
-    xM = (x ?? 0) * holderGain;
-    if (d === null) {
-      edgeOn = true;
-      depthM = fallbackDepth;
-    } else {
-      depthM = d * holderGain;
-    }
+    // component assigned to that axis.
+    xM = (along(sx, dx, 0) ?? 0) * holderGain;
+    gravityM = (along(sg, 0, dy) ?? 0) * holderGain;
   }
 
-  // ⭐ Gravity, always its own channel and always tracking exactly. ⚠ Its shadow shrinks as the
-  // camera looks down and vanishes at the pole, which the orbit rings make unreachable — the
-  // fallback is there because *unreachable* is a property of today's camera, not of the rule.
-  const g = along(sg, 0, dy2);
-  const gravityM = g === null ? -dy2 * secondGain : g * secondGain;
+  // ⭐⭐⭐ **DEPTH IS THE SECOND TOUCHPOINT'S CHANNEL SINCE THE SWAP.** ⛔ It is the axis that
+  // turns to face the camera, so it is the one that needs the judged fixed-rate fallback — and
+  // it now has it, which is where `depthTranslate` put it in the first place.
+  const d = along(sd, 0, dy2);
+  if (d === null) {
+    // ⚠ `edgeOn` means **the exact mapping was abandoned for an input that existed**, not that
+    // it would have been. ⛔ Reporting it for an idle channel would light `⛔EDGE-ON` through
+    // every ordinary drag at a level camera, and a readout that cries wolf is worse than none.
+    if (dy2 !== 0) edgeOn = true;
+    depthM = fallbackDepth;
+  } else {
+    depthM = d * secondGain;
+  }
 
   const asked = Math.hypot(dx, dy);
   return {
@@ -263,7 +290,9 @@ export function axisTravel(
     gravityM,
     edgeOn,
     // ⭐ What one pixel bought, as a multiple of the tracking factor: 1 is under the finger.
-    trackGain: asked > 0 ? Math.hypot(xM, depthM) / asked : 0,
+    // ⚠ The HOLDER's plane — {x, gravity} since the swap. ⛔ Measuring `depth` here would read 0
+    // for every drag, because the holder does not drive that channel any more.
+    trackGain: asked > 0 ? Math.hypot(xM, gravityM) / asked : 0,
   };
 }
 

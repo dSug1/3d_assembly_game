@@ -699,12 +699,15 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     return { gravity: g, screen: { right, up } };
   };
 
-  it("⭐⭐⭐ a SECOND-touchpoint push along gravity produces up-travel, and the swing takes a sign", () => {
+  it("⭐⭐⭐ a push along gravity produces up-travel, and the swing takes a sign", () => {
     const c = camera(30);
     const axes = axesFromFrame(c.gravity);
-    // ⛔ The gravity channel ONLY — no holder motion at all, which is the reported gesture.
+    // ⛔ The gravity channel ONLY — a purely vertical push, which is the reported gesture.
+    // ⚠⚠ It was `secondDyPx` until the owner **swapped** the two `dy` channels (2026-09-23); the
+    // vector follows the channel, because its subject is *a gravity-axis approach arms the swing*
+    // and not *which finger drives gravity*.
     const travel = axisTravel(
-      { holderDxPx: 0, holderDyPx: 0, secondDyPx: -40 },
+      { holderDxPx: 0, holderDyPx: -40, secondDyPx: 0 },
       c.screen,
       axes,
       PER_PX,
@@ -721,7 +724,10 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
     expect(Math.abs(travelUp)).toBeGreaterThan(1e-6);
     // ⚠ And the horizontal component really is ~zero, so this fixture is the degenerate case the
     // report describes rather than one that arms by accident.
-    expect(Math.abs(travelRight)).toBeLessThan(1e-3 * Math.abs(travelUp));
+    // ⚠ The plane solve gives `dy` a little `x` when the two shadows are not perpendicular, so
+    // the bound is a hair rather than an exact zero — stated, because a fixture that needed
+    // exactness would be the wrong fixture.
+    expect(Math.abs(travelRight)).toBeLessThan(1e-2 * Math.abs(travelUp));
     // ⛔⛔ THE CLAIM: a vertical approach arms.
     expect(swingSignFor(travelRight, travelUp)).not.toBeNull();
   });

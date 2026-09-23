@@ -791,3 +791,28 @@ by the hand it was built for.
 
 ⭐ And `followerFaceXrayAlpha` is **0.05** — the owner's number, a tenth of my guess.
 
+⭐⭐⭐ **2026-09-23 — THE TWO `dy` CHANNELS ARE SWAPPED (`D79`)**: *"When in translation mode and when
+in rotation mode with two touches pressed with object aligned: swap the inputs dy of second touch and
+dy of first touch."* ⭐ Those are exactly the configurations in which the holder's `dy` translates at
+all — one finger in `TRANSLATE`, and `D60`'s *the first touch translates whatever the mode* once an
+aligned Follower gives the second touch both axes (`D59`) — so the remap is unconditional in the rule
+and observable only there.
+
+⛔⛔ **THREE CONSEQUENCES, NONE ASKED FOR AND ALL IMPROVEMENTS**: the holder's plane is **{x, gravity}**,
+which faces the camera at every ordinary pose where the horizontal plane went edge-on at a LEVEL
+camera; the degenerate axis is now **depth**, which is where `depthTranslate`'s judged fixed-rate
+fallback came from; and **`D74`'s in-zone basis stops being inert**, because the plane contains `x`
+and the leading face rotates it.
+
+⚠⚠ **AND THE REGRESSION THIS SWAP CAUSED THE FIRST TIME IT SHIPPED IS FIXED WITH IT.** *"Object cannot
+enter offset radius zone sometimes (blocked at white highlight border)"* — the degenerate-plane branch
+SUPPRESSED the foreshortened axis, and the zone edge is exactly where `D74` switches the basis, so a
+body could freeze on the contour. ⭐ It degrades to the **stable projection** now: it cannot freeze
+(every direction keeps a component) and cannot run away (no division), and it is the mapping this rule
+shipped with on 2026-09-22 — a behaviour that has been on the glass rather than a new one.
+
+⚠ **One claim had to be restated**: *"the gain is the same on all three channels"* was true only
+because the third channel was GRAVITY, whose screen shadow is exactly vertical. ⛔ Depth's is oblique,
+so that channel moves the body by the PROJECTION of the input onto its own screen line — Blender's
+`G Z`, and the honest form of the claim.
+
