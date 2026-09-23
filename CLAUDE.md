@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-22)
 
-✅ Green: TypeScript + Babylon + Vite, **1091 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
+✅ Green: TypeScript + Babylon + Vite, **1092 golden vectors passing** — ⚠ MEASURED 2026-09-22; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

@@ -184,7 +184,7 @@ import {
   axisTravel,
   clampDepthRange,
   displayedAxes,
-  type AxisTravelM,
+  type AxisTravel,
 } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
 import { leadingFace, type LeadingFace } from "../core/leading_face";
@@ -1632,21 +1632,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * `displayedAxes`'s; this only remembers its answer, so a pause does not blank the gizmo.
    */
   const gizmoAxes = new Map<ObjectId, readonly [boolean, boolean, boolean]>();
-  /** ⚠ THIS FRAME's travel per body, summed over both fingers' channels. Consumed by the gizmo. */
-  const frameAxisTravel = new Map<ObjectId, AxisTravelM>();
+  /** ⚠ WHICH CHANNELS pushed this body THIS FRAME, over both fingers. Consumed by the gizmo. */
+  const frameAxisDriven = new Map<ObjectId, [boolean, boolean, boolean]>();
   /**
    * ⭐ ONE place both `axisTravel` call sites report to — the holder's drag and the second
    * touchpoint's push. ⛔ The owner, 2026-09-23: *"make sure the delta position on the second
    * touch triggers the gizmo in the same way as the delta positions of the first touch."*
    */
-  const noteAxisTravel = (id: ObjectId | undefined, t: AxisTravelM): void => {
+  const noteAxisTravel = (id: ObjectId | undefined, t: AxisTravel): void => {
     if (id === undefined) return;
-    const p = frameAxisTravel.get(id) ?? { xM: 0, gravityM: 0, depthM: 0 };
-    frameAxisTravel.set(id, {
-      xM: p.xM + t.xM,
-      gravityM: p.gravityM + t.gravityM,
-      depthM: p.depthM + t.depthM,
-    });
+    const p = frameAxisDriven.get(id) ?? [false, false, false];
+    frameAxisDriven.set(id, [p[0] || t.driven[0], p[1] || t.driven[1], p[2] || t.driven[2]]);
   };
   /**
    * ⭐⭐ WHAT THE LAST TRANSLATION ACTUALLY BOUGHT — reported by the rule, never recomputed
@@ -1779,7 +1775,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // — or `A11`'s deadband emitting nothing on one axis — does not blank the gizmo.
       const shown = displayedAxes(
         gizmoAxes.get(id) ?? null,
-        frameAxisTravel.get(id) ?? { xM: 0, gravityM: 0, depthM: 0 },
+        frameAxisDriven.get(id) ?? [false, false, false],
       );
       if (shown === null) continue;
       gizmoAxes.set(id, shown);
@@ -1838,7 +1834,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
     // ⛔ CONSUMED HERE, every frame, exactly as the swing's travel accumulators are: the gizmo
     // must read the travel of THIS frame and never a stale one.
-    frameAxisTravel.clear();
+    frameAxisDriven.clear();
   };
 
   const refreshHighlight = (): void => {

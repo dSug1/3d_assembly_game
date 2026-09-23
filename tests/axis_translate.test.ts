@@ -318,35 +318,68 @@ describe("degenerate inputs never reach a placement", () => {
  * > the green line."* — the owner, 2026-09-23
  */
 describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
-  const T = (xM: number, gravityM: number, depthM: number) => ({ xM, gravityM, depthM });
+  // > *"the direction is shown only if the delta position triggers a translation in this
+  // > direction. Therefore, for example, for a pure translation in the gravity axis only the
+  // > green line would show. For a translation in the horizontal plane, both blue and red lines
+  // > would show but not the green line."*
+  //
+  // > *"on first touch, if there is only dx or only dy, the other gizmo line should not appear.
+  // > Both red and blue gizmo lines should appear only if both dx and dy are not null."*
+  //
+  // ⭐ The gizmo draws `[x, gravity, depth]` in that order — **red, green, blue**.
+  const c = camera(35, 30);
+  const axes = axesFromFrame(camera(0, 30).gravity);
+  const shownFor = (input: Partial<AxisInputsPx>) =>
+    displayedAxes(null, run(input, c, axes).driven);
 
-  it("⭐⭐⭐ a pure GRAVITY push shows the green line alone — the owner's own example", () => {
-    expect(displayedAxes(null, T(0, 0.004, 0))).toEqual([false, true, false]);
+  it("⭐⭐⭐ RED AGAINST THE FIRST BUILD OF THIS RULE: a pure `dx` lights RED ALONE", () => {
+    // ⛔⛔ **THE PREMISE, MEASURED FIRST**: under `PLANE` a pure `dx` genuinely moves the body
+    // along BOTH horizontal axes — that is how the 2×2 solve keeps it under the finger. ⭐ So a
+    // rule reading the TRAVEL lights red and blue here, which is exactly what the owner rejected.
+    const t = run({ holderDxPx: 50 }, c, axes);
+    expect(Math.abs(t.xM)).toBeGreaterThan(1e-6);
+    expect(Math.abs(t.depthM)).toBeGreaterThan(1e-6);
+    // ⛔ THE ASSERTION: the line belongs to the CHANNEL that was pushed.
+    expect(shownFor({ holderDxPx: 50 })).toEqual([true, false, false]);
   });
 
-  it("⭐⭐⭐ a push in the HORIZONTAL plane shows red and blue, never green — his second example", () => {
-    expect(displayedAxes(null, T(0.004, 0, 0.002))).toEqual([true, false, true]);
+  it("⭐⭐⭐ a pure holder `dy` lights BLUE alone", () => {
+    const t = run({ holderDyPx: -40 }, c, axes);
+    expect(Math.abs(t.xM)).toBeGreaterThan(1e-6); // ⚠ again, the travel is spread
+    expect(shownFor({ holderDyPx: -40 })).toEqual([false, false, true]);
+  });
+
+  it("⭐⭐ both RED and BLUE only when both `dx` and `dy` are non-null — the owner's words", () => {
+    expect(shownFor({ holderDxPx: 50, holderDyPx: -40 })).toEqual([true, false, true]);
+    expect(shownFor({ holderDxPx: 50, holderDyPx: 0 })).toEqual([true, false, false]);
+    expect(shownFor({ holderDxPx: 0, holderDyPx: -40 })).toEqual([false, false, true]);
+  });
+
+  it("⭐⭐⭐ a pure SECOND-touch push lights GREEN alone — his first example", () => {
+    expect(shownFor({ secondDyPx: 30 })).toEqual([false, true, false]);
+    // ⭐ And all three when all three channels are pushed at once.
+    expect(shownFor({ holderDxPx: 10, holderDyPx: -10, secondDyPx: 10 })).toEqual([
+      true,
+      true,
+      true,
+    ]);
   });
 
   it("⛔ a pause does NOT blank the gizmo — the last non-empty answer stands", () => {
     // ⚠ A finger that stops emits nothing, and `A11`'s deadband emits nothing on an axis inside
     // its band, so the instantaneous answer is *no axes* many frames per second.
-    const shown = displayedAxes(null, T(0.004, 0, 0))!;
+    const shown = shownFor({ holderDxPx: 50 })!;
     expect(shown).toEqual([true, false, false]);
-    expect(displayedAxes(shown, T(0, 0, 0))).toBe(shown);
+    expect(displayedAxes(shown, [false, false, false])).toBe(shown);
   });
 
-  it("⛔ before the body has ever been translated there is nothing to show", () => {
-    expect(displayedAxes(null, T(0, 0, 0))).toBeNull();
+  it("⛔ before anything has been pushed there is nothing to show", () => {
+    expect(displayedAxes(null, [false, false, false])).toBeNull();
+    expect(shownFor({})).toBeNull();
   });
 
-  it("⛔ a NaN component is not a direction — it cannot light a line", () => {
-    expect(displayedAxes(null, T(Number.NaN, 0, 0))).toBeNull();
-    expect(displayedAxes(null, T(Number.NaN, 0.004, 0))).toEqual([false, true, false]);
-  });
-
-  it("⭐ and a diagonal push lights exactly the axes it uses", () => {
-    expect(displayedAxes(null, T(0.001, -0.002, 0.003))).toEqual([true, true, true]);
-    expect(displayedAxes(null, T(-0.001, 0, 0))).toEqual([true, false, false]);
+  it("⚠ a NaN channel is not a push — it cannot light a line", () => {
+    expect(shownFor({ holderDxPx: Number.NaN })).toBeNull();
+    expect(shownFor({ holderDxPx: Number.NaN, secondDyPx: 30 })).toEqual([false, true, false]);
   });
 });
