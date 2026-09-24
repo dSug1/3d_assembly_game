@@ -97,7 +97,7 @@ orthogonalised face basis spans the same horizontal plane, so nothing changes at
 ⛔ **That is an owner decision**, and the choices are in
 [`Claude/00_CORE/queue_notes/IN4.md`](Claude/00_CORE/queue_notes/IN4.md).
 
-⭐⭐ **AND TWO REFINEMENTS ABOUT THE FROZEN PLATE** (`D77`, 2026-09-23), both enforced at a DEFINITION rather than by a guard at the point of use: **no gizmo on a frozen body** — `leadingFace` refuses one, because *the face a body is advancing on* presumes it advances — and **a second touch on a frozen body is handed to the router as a MISS**, so that finger becomes a working `OUTSIDE` touchpoint and can drive another body. ⛔ The FIRST touch is untouched: `D67` makes *hold the plate FIRST* the way to align a part to it.
+⭐⭐ **AND TWO REFINEMENTS ABOUT THE FROZEN PLATE** (`D77`, 2026-09-23), both enforced at a DEFINITION rather than by a guard at the point of use: **no gizmo on a frozen body** — ⚠ enforced inside `leadingFace`, which was later deleted, so it is a GUARD now — and **a second touch on a frozen body is handed to the router as a MISS**, so that finger becomes a working `OUTSIDE` touchpoint and can drive another body. ⛔ The FIRST touch is untouched: `D67` makes *hold the plate FIRST* the way to align a part to it.
 
 ⛔⛔ **THE OBJECT AXES THEMSELVES** (`D74`/`D75`, 2026-09-22).
 A body is translated along **its own axes**: fixed at scene boot from the boot camera and frozen for
@@ -106,7 +106,7 @@ the scene (`worldAxisB=1`, **the default, the owner's choice**), or following th
 outside. I think this is polluting the approach movement."* ⭐⭐ The zone EDGE is where the
 translation directions changed under a MOVING finger — the basis was re-decided at the one moment
 the body was already being driven. ⭐ `METHOD`: *a rule whose every defect is about the MOMENT it
-takes effect is a rule about the wrong thing.* ⚠ `leadingFace` and its gizmo survive, and the edge
+takes effect is a rule about the wrong thing.* ⚠ The gizmo survives, and the edge
 still names the pair and fires the hook. ⛔ The channels are unchanged: the holder's
 `dx`→**x**, its `dy`→**depth**, the second touchpoint's `dy`→**gravity**. So **one finger slides a
 body about its own horizontal plane and a second finger lifts it.** ⭐⭐ Each input is projected onto
@@ -116,9 +116,9 @@ sign `depthTranslate` needed `awaySign` for **falls out of the projection** inst
 ⚠⚠ Costs, stated: the holder's `dy` is **dead at a level camera**; `gainTranslateScreen` was tuned for
 a screen-plane drag and is unjudged for two horizontal channels; `screenTranslation` and
 `depthTranslate` are **unwired debt**; and this **reopens `IN4`'s rule 6, a row closed by a hand**.
-⭐ A **LeadingFace** — the exit face along the direction the body ACTUALLY goes — carries a 3-axis
-gizmo. ⛔ `cameraOffsetZoneEnterSetupB` gates a method **the owner has not defined yet**: it ships at
-`0` and the hook is empty. 32 vectors, three mutants caught, engine-free in `core/leading_face.ts`,
+⛔ The **LeadingFace** raycast is **DELETED** with `core/leading_face.ts` — the gizmo sits at the
+FollowerFace centre, else the body's own. ⛔ `cameraOffsetZoneEnterSetupB` gates a method **the owner
+has not defined yet**: it ships at `0` and the hook is empty. Engine-free in
 `input/object_axes.ts` and `input/axis_translate.ts` →
 [`Claude/00_CORE/queue_notes/IN4.md`](Claude/00_CORE/queue_notes/IN4.md).
 
@@ -140,6 +140,20 @@ on a frozen body* was enforced INSIDE `leadingFace`, and `core/leading_face.ts` 
 day — so the plate, which `D67` says to hold FIRST, was drawing a full set of axes for a body whose
 transform is refused. ⭐ *Deleting the file a rule lived in deletes the rule*: a definition-site
 guarantee is only as durable as the definition, and only a TEST is durable.
+
+⭐⭐⭐ **§1.1's REST WINDOW IS DERIVED FROM THE DEVICE NOW** (`D86`, 2026-09-24) — ✅✅ **JUDGED:
+*"working well"***. ⛔⛔ `restConfirmMs` was **30 ms**, and browsers dispatch pointer input **once per
+frame per pointer**, so that interval IS the frame interval: **47–68 ms one finger, 57–87 ms two**,
+measured on the tablet's PRODUCTION build. ⚠ The threshold was below even the one-finger gap, so a
+steadily moving finger was declared STOPPED, over and over, on every device since the day it was
+written. ⭐ `restMs = clamp(2.5 × median(that pointer's intervals), 50, 250)` — the **MEDIAN**,
+because the long gaps are REVERSALS where the finger genuinely stops and the browser dispatches
+nothing. Tablet ~150 ms, a 120 Hz phone 50 ms.
+⛔⛔⛔ **AND IT TOOK NINE WRONG ANALYSES**, every one reasoned from the code and every one killed by
+one sentence of device evidence. ⭐⭐ What found it was the owner reading a HUD field — *"the motion
+keeps toggling between MOVING and STATIONARY"*. `METHOD`: *a threshold in milliseconds is a claim
+about the hardware*, and *when a defect resists several correct-looking analyses, stop modelling the
+code and ask which READOUT moves.*
 
 ⭐⭐⭐ **THE INPUT MODEL IS THE OWNER'S TAP-TO-ALIGN SET** (`D37`–`D40`) — and since
 2026-09-17 it is the **only** one: forks A and B are **deleted**, with the flag, the slider

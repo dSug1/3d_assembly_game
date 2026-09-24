@@ -626,133 +626,63 @@ without acting on it.
 the body is still advancing on is kept, even when another is a nearer exit"*, which is the sentence
 the owner rejected.
 
-
-
 ---
 
-## ⛔⛔⛔ **THE LEADING FACE FOLLOWS THE INPUT — and the memory I proposed was REJECTED**
+# ⭐⭐⭐ 62 — **THE GIZMO JITTER: §1.1's REST WINDOW WAS SHORTER THAN THE DEVICE'S EVENT INTERVAL**
 
-> *"when I transition fast from horizontal movement to vertical movement, there is a slight moment
-> when the green line passes through the left face and then relocate to the blue face. This is
-> annoying. Is that due to the inertia and lerp we have added to the translation movement?"*
->
-> *"I am not satisfied by your solution, so I discarded the commit. **You can lag the travel, but
-> the input itself has no lag. The gizmo repositioning should match the input, not the travel and
-> its lag.**"* — the owner, 2026-09-23
+*(2026-09-24. Found by the owner's HUD reading, after NINE wrong analyses of mine.)*
 
-⭐⭐ **THE QUESTION HAD A MEASURABLE ANSWER AND IT WAS NO**: `translateInertiaMs` is **7.6 ms**,
-half a frame, critically damped. ⛔ The lag was the **direction memory I had added an hour earlier**
-(defect 61) — `flickWindow` at 120 ms, reused because it was to hand rather than measured. After a
-change of direction the old travel fades as `e^(−t/τ)` while the new grows, so the face flips at
-roughly `τ/2`: 3–4 frames.
+> *"the motion keeps toggling back and forth very rapidly between MOVING and STATIONARY … When the
+> jitter does not happen, the motion is stable at MOVING."* — the owner
 
-⛔⛔ **AND MY FIRST ANSWER TO THAT WAS A DIAL, WHICH THE OWNER REFUSED.** Making the memory tunable
-kept the lag and handed the trade to a hand. ⭐ His correction is a rule, not a number: *the gizmo
-follows the INPUT*, which cannot lag. ⚠ `leadingFaceMemoryMs`, `accumulateTravel` and `decayTravel`
-are **deleted** with their vectors.
+## ⛔⛔⛔ THE CAUSE, IN ONE LINE
 
-✅ **SO THE RAY IS AIMED BY WHAT THE CHANNELS ASK FOR ON THE FRAME THEY ASK IT** — the mapped
-input, summed over both fingers, consumed every frame. ⛔ No accumulator, no time constant, and a
-change of direction moves the face on the very frame the hand changes it.
-⚠⚠ **WHAT IT GIVES UP, STATED**: `D54`'s chatter had two answers — the latch (defect 61 removed it)
-and the memory (this removes it). ⭐ What is left against chatter is the SEED: the held face wins an
-exact tie. If the gizmo flickers between two nearly-tied faces on a slow drag, that is this trade,
-and by the owner's own rule the fix belongs to the direction rather than to a latch.
+`AxisBand` declares an axis at rest after `restConfirmMs` of **silence**. Browsers dispatch pointer
+input **once per frame per pointer** — which is why `getCoalescedEvents()` exists in the W3C
+Pointer Events spec. ⚠ So the interval between a pointer's events IS the frame interval, and a rest
+timeout shorter than it declares a **steadily moving finger STOPPED**, over and over.
 
-⭐⭐⭐ `METHOD`, twice over: *a number borrowed because it was to hand is a guess wearing another
-rule's authority* — and *when a hand rejects a solution, the useful part is which PROPERTY it
-violated.* Here it was **latency**, and no value of a time constant could have satisfied it.
-
-✅ **AND THE MARKER IS A CIRCLE, NOT A DISC** — *"I asked you to insert a white circle at the
-center of the gizmo, not a white disc."* ⚠ The first build was a small SPHERE, which reads as a
-filled disc from every angle. ⭐ It is now a 48-segment OUTLINE, **billboarded** so it stays a
-circle rather than foreshortening to a line edge-on — which is exactly the pose a hand judges an
-approach from — sized in pixels through rule 6's tracking factor, and in the gizmo's own rendering
-group so the body cannot occlude it.
-
-
-
----
-
-## ⭐⭐⭐ **THE GIZMO'S RAY: THREE RULES, TWO REJECTED BY A HAND, AND ONE QUANTITY TO BLAME**
-
-**2026-09-23, three device reports in a row**, each rejecting the rule that answered the one before:
-
-1. *"there is a slight moment when the green line passes through the left face and then relocate
-   to the blue face"* — against a direction with **120 ms of memory**;
-2. *"still, there is a slight lag for the repositioning of the green line to the leadingface"* —
-   against the memory-free **vector SUM** of the channels;
-3. *"when I translate any object with a combination of dx on first touch and dy on second touch
-   (both not zero), the gizmo jitters position between faces. This occurs for rectangle as well as
-   for pyramid."* — against the **dominant channel**.
-
-⛔⛔⛔ **ALL THREE FAILURES ARE ONE QUANTITY: A PER-FRAME MAGNITUDE.** `A11`'s deadband emits an
-axis's travel in **bursts** — the excess over a dead radius, on whichever axis has crossed it — so
-under a perfectly steady two-finger push the channels take turns being the larger. ⭐ A sum built
-from those magnitudes wobbles; a winner chosen from them alternates; a memory that smooths them
-lags. ⚠ Each rule failed differently and none of them was about geometry.
-
-⭐⭐ **AND THE GEOMETRY MATTERED ONCE, WHICH IS WHY REPORT 2 WAS NOT TIMING.** Measured for
-`objectB` (half-extents `0.75 × 1.0 × 1.5 L`, sides leaning in by `0.1875`), the TOP face is the
-nearest exit only within **29.4°** of vertical:
+⭐ Measured on the owner's tablet, PRODUCTION build:
 
 ```
- 0deg off vertical -> top 1.00L  side 4.00L  => TOP
-20deg               -> top 1.06L  side 1.45L  => TOP
-29deg               -> top 1.14L  side 1.16L  => TOP
-30deg               -> top 1.15L  side 1.13L  => SIDE
-45deg               -> top 1.41L  side 0.89L  => SIDE
+  one finger   47–68 ms between that pointer's events
+  two fingers  57–87 ms          (a 120 Hz phone would be ~8 ms)
 ```
 
-⚠ So any residual horizontal travel above ~56% of the vertical kept the summed ray on the side,
-where the side genuinely IS the nearer exit. The gizmo was right and looked wrong.
+⛔ The shipped **30 ms was below even the one-finger gap.** Every axis had been toggling mid-drag
+since the day it was set; it only became visible when both fingers moved on straight diagonals, so
+each finger's `x` and `y` reversed together and both axes stopped at the same instant.
 
-✅ **THE RULE THAT STANDS: the ray is the sum of the axes BEING SHOWN, each with its own sense and
-EQUAL weight.** ⛔ The SET is stable — it is the same `displayedAxes` answer that decides which
-lines are drawn, so the face and the lines are one fact — and nothing in the ray depends on how
-much either channel emitted this frame. ⭐ One channel aims along its own axis with no lag; two aim
-at the diagonal between them and stay there.
+## ✅ THE FIX: THE WINDOW IS DERIVED FROM THE DEVICE
 
-⭐⭐⭐ `METHOD`: **when three different rules over one quantity all fail differently, the quantity
-is the defect.** ⚠ I answered each report by changing the rule — memory, then sum, then dominance
-— and the owner had to report three times before I stopped and asked what they had in common.
-⛔ They read a magnitude that `A11` was never going to deliver smoothly.
+```
+restMs(pointer) = clamp(restGapFactor × median(that pointer's recent event intervals), floor, 250)
+```
 
-⚠⚠ **AND TWO OF MY VECTORS COULD NOT FAIL**, caught by running mutants rather than by reading:
-one compared channels at a camera where the two candidate rules happen to agree, and one applied
-`Math.sign` on both sides of the boundary it was testing, so each half covered for the other.
-⭐ The first was fixed by SWEEPING for a camera where the rules disagree; the second by handing
-the rule raw magnitudes and demanding the same answer.
+⭐⭐ **The MEDIAN, not the worst gap** — the longest gaps are REVERSALS, where the finger genuinely
+stops and the browser dispatches nothing; feeding those in would inflate the window and defeat it.
+⚠ `restConfirmMs` is now the **floor and the seed** (50 ms), never the threshold. Tablet → ~150 ms;
+120 Hz phone → floors at 50 ms. Same meaning everywhere, timing following the hardware.
+✅ 10 vectors, four mutants, judged on the glass: *"working well."*
 
+## ⛔⛔⛔ NINE WRONG ANALYSES — READ THIS BEFORE PROPOSING A TENTH
 
+The gizmo's marker position, its existence gate, its channel set, a memory, a bounded hold, the
+device's event rate read as a channel decay, the anchor's orbit under rotation, sideways noise
+waking the roll, and press order. ⚠ **Every one was reasoned from the code and every one died to a
+single sentence of device evidence.** Several were shipped.
 
----
+⭐⭐ **THE TWO LESSONS, AND THEY COST A WEEK:**
 
-## ⛔⛔⛔ **THE GIZMO USES THE TRANSLATION'S OWN DEADBAND — and the owner found the fix**
+1. ⛔ *When a defect resists several correct-looking analyses, stop modelling the code and ask what
+   the HAND is doing — and ask which HUD FIELD moves.* The owner's *"motion keeps toggling"* named
+   the mechanism in one line after nine of my hypotheses had missed it. I was modelling the layer
+   that DISPLAYED the defect instead of measuring the layer that produced it.
+2. ⛔ *A threshold in milliseconds is a claim about the hardware.* 30 ms sat 3 ms below two frames
+   at 60 Hz — it was never safe on any device that drops a frame, and no amount of reasoning about
+   the rules above it could have been right.
 
-> *"add a slight deadband on the delta position input so that there is no gizmo jitter. I suppose
-> there is a deadband for the object translation: **use the same deadband for the gizmo
-> repositioning**."* — the owner, 2026-09-23
-
-⭐⭐⭐ **THE DEADBAND WAS ALREADY THERE, AND THE GIZMO WAS READING THE WRONG SIDE OF IT.** `A11`
-emits the **excess** over its dead radius, on whichever axis has crossed it — so *"did this channel
-emit this frame"* flickers in bursts even while a hand pushes both fingers steadily. ⛔ The gizmo's
-set of lines followed those bursts, and the face followed the set.
-
-⭐ The same machine also keeps a per-axis **STATE**: `MOVING` until that axis has rested for
-`restConfirmMs`. ⚠ That is the stable form of the same fact — one dead radius, one rest time,
-**shared with the translation rather than copied**, which is exactly what the owner asked for.
-
-✅ `activeChannels(holderAxes, secondAxes)` applies the channel map to those states:
-the holder's screen `x` → the body's `x`, its screen `y` → `depth`, any second touchpoint's `y` →
-`gravity`. ⛔ `Recognizer.motionAxes` is exposed for it rather than a second definition of *moving*
-being written, and `AxisTravel.driven` — the per-frame emission test — is **deleted**, because it
-had exactly one reader and this replaces it.
-
-⭐⭐ **THE ARC OF THIS ONE IS THE LESSON.** Four rules were tried for the gizmo's direction — a
-120 ms memory, the vector sum, the dominant channel, the channel set — and the first three failed
-on the same quantity: a per-frame magnitude. ⚠ The fourth held, and its remaining flicker came
-from the same place one level down: a per-frame BOOLEAN, *did it emit*. ⛔ The owner named the
-answer in one sentence, and it was to reuse a number the product already had.
-⭐ `METHOD`: *when a rule needs to know whether an input is active, ask the state machine that
-already decides it — do not re-derive it from what the input emitted this frame.*
+⚠ **Everything the earlier attempts produced is DELETED**, not archived: the case-A-vs-case-B
+distinction (false — both jitter), the noise-floor theory, the press-order theory, the
+roll-riding-on-translation rule, the leading-face ray and its memory, and the bounded hold. ⛔ They
+were wrong, and a wrong analysis kept "for the record" is a trap for the next reader.

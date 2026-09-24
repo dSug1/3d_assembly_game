@@ -17,15 +17,13 @@ orthogonal*) is **DELETED** — `D82`, the owner: *"inside shall be the same as 
 ⭐⭐ **AND `D84` EXTENDS THE FLAG TO THE ROTATION**: a free body PITCHES and ROLLS about the same
 camera it translates along. ⚠ Its YAW never moved — a gravity frame's `up` is the world vertical by
 definition — and a TWIST on an aligned body turns about its constraint, untouched.
-⛔⛔ The first mapping scaled each input BY
-its axis's foreshortening and a hand rejected all of it: *inverted*, *very weak*, *dead at a level
-camera*. ⭐⭐ **Blender answers all three, and says NO to the pairing** — it never binds screen-x to a
-world axis. ✅ The finger's delta is now **solved onto both horizontal axes** (exact tracking, one gain
+⛔⛔ The first mapping scaled each input BY its axis's
+foreshortening and a hand rejected all of it. ⭐⭐ **Blender says NO to the pairing** — it never binds
+screen-x to a world axis. ✅ The finger's delta is now **solved onto both horizontal axes** (exact tracking, one gain
 for all three channels), with **Blender's 5° cone** handing the edge-on case to `depthTranslate`'s
 judged rate. ⚠⚠ The solve made the in-zone basis INERT, and the owner answered by deleting it (`D82`).
 ⭐ The gizmo sits at the **FollowerFace centre, else the body's own** — ⛔ the travel-direction
-raycast that once chose a LeadingFace is **deleted**: a marker whose POSITION came from a per-frame
-quantity inherited that quantity's noise, and it cost seven reports in one evening
+raycast that once chose a LeadingFace is **deleted** with `core/leading_face.ts`
 → [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md).
 
 ⚠⚠ **A TRIAL IS LIVE**: the **approach swing** (`D63`). ✅ **FEEL ACCEPTED** (2026-09-21); ⚠ whether
@@ -303,7 +301,7 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | ⛔ ~~`holder_binding.ts`~~ | **DELETED 2026-09-18** (`D54`) — `A15`'s *is the object still UNDER the finger?* raycast. ⭐ `IN2`'s latch has no exceptions again |
 | `align_snap.ts` | `D45`'s eased slerp into the aligned pose — ⛔⛔ **one snap PER BODY**, not one slot for the scene: the audit found a second alignment abandoning the first **mid-arc**, still wearing its constraint and its markers |
 | `rotation_increment.ts` | ⭐⭐⭐ `D73` — a held body is **always ON an increment**, jumping several at once so a backlog cannot exist. ⚠ Its step is an **exponential approach**: no clock to restart (defect 50) |
-| `object_axes.ts` | ⭐⭐⭐ `D74` — which basis a body is translated along: the boot camera's (frozen), the live camera's, or the LeadingFace's inside the capture zone. ⛔ Re-decided on the zone EDGE, which is what breaks the circularity |
+| `object_axes.ts` | ⭐⭐⭐ `D74` — which basis a body is translated along: the boot camera's (frozen) or the live camera's. ⭐ `D84` — and a free body's ROTATION basis follows the same flag |
 | `axis_translate.ts` | ⭐⭐⭐ `D75`/`D76` — the finger's delta **solved onto the two horizontal axes** so the body tracks it exactly, Blender's 5° cone at the edge-on case, and `A5`'s depth clamp carried over with the channel |
 | `pinned_pioneer.ts` | ⭐⭐ `D51` — a held **Pioneer** that steers instead of being carried: at `pioneerTranslates = 0` its finger gives the Follower **both** depth and roll, breaking `A16`'s one-axis rule on purpose |
 | `pioneer_cascade.ts` | a turned Pioneer **releases its cyan followers and rotates its orange ones, down a chain** (`D42`/`D70`), with **no cycles**. ⛔ It states this layer's rule: *a RULE in a render file is one nothing can interrogate* |
