@@ -188,19 +188,15 @@ import {
   type ObjectAxes,
 } from "../input/object_axes";
 import {
-  gizmoState,
-  TURN_PITCH,
-  TURN_ROLL,
-  TURN_YAW,
-  type GizmoBody,
-  type GizmoSecond,
-  type TurnDriver,
-} from "../input/gizmo_state";
-import {
   axisDisplacement,
   axisTravel,
   clampDepthRange,
+  displayedAxes,
+  soleGizmoBody,
+  type GizmoChannels,
+  type AxisTravel,
 } from "../input/axis_translate";
+import { isTranslatingMode } from "../input/grip_mode";
 import {
   pitchOffsetV,
   freezeProgress,
@@ -1698,53 +1694,53 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * if the delta position triggers a translation in this direction."* ⛔ The decision is
    * `displayedAxes`'s; this only remembers its answer, so a pause does not blank the gizmo.
    */
+  const gizmoAxes = new Map<ObjectId, GizmoChannels>();
   /**
    * ⭐ ONE place both `axisTravel` call sites report to — the holder's drag and the second
    * touchpoint's push. ⛔ The owner, 2026-09-23: *"make sure the delta position on the second
    * touch triggers the gizmo in the same way as the delta positions of the first touch."*
    */
-  /**
-   * ⭐⭐⭐ **WHAT THE GIZMO REMEMBERS — an AXIS and its DRIVER, per turn channel, per body.**
-   *
-   * ⛔⛔ **AND IT IS NOT A PER-FRAME MAP.** The four accumulators this replaces
-   * (`frameAxisDriven`, `frameTurnAxes`, `gizmoAxes`, `gizmoTurnAxes`) were filled by pointer
-   * events and consumed once per frame — so a finger that sent no event in a frame dropped its
-   * line, and the memory added to steady that could not go out when the gesture stopped.
-   * ⭐ What is kept here is only what CANNOT be re-derived: which world axis this gesture turns the
-   * body about, and which pointer/screen-axis pair drives it. ⚠ Whether it is lit is asked of §1.1
-   * every frame, so nothing here has to be cleared for a line to go out.
-   */
-  interface TurnRecord {
-    readonly axis: Vec3;
-    /** The anchor's press-order seq, or `null` for the holder itself. */
-    readonly seq: number | null;
-    readonly screen: "x" | "y";
-  }
-  type TurnRecords = [TurnRecord | null, TurnRecord | null, TurnRecord | null];
-  const turnRecords = new Map<ObjectId, TurnRecords>();
+  /** ⚠ WHICH CHANNELS pushed this body THIS FRAME, over both fingers. Consumed by the gizmo. */
+  const frameAxisDriven = new Map<ObjectId, [boolean, boolean, boolean]>();
   /**
    * ⭐⭐⭐ **THE THREE TURN CHANNELS**, in the gizmo's own order after the translation axes:
-   * `ROLL` grey, `YAW` purple, `PITCH` maroon — the indices are `gizmo_state.ts`'s own, imported
-   * rather than restated, so the drawing order and the rule cannot drift apart.
+   * `ROLL` grey, `YAW` purple, `PITCH` maroon.
    */
+  const TURN_ROLL = 0;
+  const TURN_YAW = 1;
+  const TURN_PITCH = 2;
+  type TurnAxes = [Vec3 | null, Vec3 | null, Vec3 | null];
   /**
-   * ⭐ Record what one turn channel would turn this body about, and WHO drives it.
-   * ⛔ Called where the turn is APPLIED, unconditionally — whether the finger moved this frame is
-   * not this function's business, and asking it here is the mistake that flickered.
+   * ⭐⭐ **THE AXES THE BODY IS BEING TURNED ABOUT**, world, this frame, one slot per turn channel.
+   *
+   * ⛔⛔ **RECORDED WHERE THE TURN IS APPLIED, NEVER RE-DERIVED HERE.** An aligned body twists
+   * about its constraint axis, a free one rolls about the gravity frame's depth and yaws and
+   * pitches about that frame's up and right — four rules in three places. ⚠ A second opinion
+   * computed at the gizmo would be free to draw a line the body is **not** turning about, which is
+   * exactly the class of defect `scene.ts`-resident rules keep producing.
    */
+  const frameTurnAxes = new Map<ObjectId, TurnAxes>();
+  /** ⭐ The last axis each channel turned about — kept so a pause does not blank its line. */
+  const gizmoTurnAxes = new Map<ObjectId, TurnAxes>();
   const noteTurnAxis = (
     id: ObjectId | undefined,
     kind: 0 | 1 | 2,
     axis: Vec3,
-    seq: number | null,
-    screen: "x" | "y",
   ): void => {
     if (id === undefined) return;
-    const cur = turnRecords.get(id) ?? ([null, null, null] as TurnRecords);
-    cur[kind] = { axis, seq, screen };
-    turnRecords.set(id, cur);
+    const cur = frameTurnAxes.get(id) ?? ([null, null, null] as TurnAxes);
+    cur[kind] = axis;
+    frameTurnAxes.set(id, cur);
   };
-
+  const noteAxisTravel = (id: ObjectId | undefined, t: AxisTravel): void => {
+    if (id === undefined) return;
+    const p = frameAxisDriven.get(id) ?? [false, false, false];
+    frameAxisDriven.set(id, [
+      p[0] || t.driven[0],
+      p[1] || t.driven[1],
+      p[2] || t.driven[2],
+    ]);
+  };
   /**
    * ⭐⭐ WHAT THE LAST TRANSLATION ACTUALLY BOUGHT — reported by the rule, never recomputed
    * here. ⛔ `1.0` means the body is exactly under the finger; a large number means the plane is
@@ -1998,97 +1994,78 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * emits nothing and the gizmo simply stops updating. ⚠ It is not hidden on a still frame —
    * a gizmo that blinked out whenever the hand paused would be unreadable.
    */
-  /**
-   * ⭐⭐⭐ **HOW OFTEN EACH GIZMO CHANNEL HAS CHANGED STATE IN THE LAST SECOND.**
-   *
-   * > *"the first double touch has jittering gizmo while a second double touch removes the
-   * > jitter"* — the owner, 2026-09-23
-   *
-   * ⛔⛔⛔ **A STILL PHOTOGRAPH CANNOT SHOW A FLICKER**, and two rounds of photographs have now
-   * gone by with every printed fact CORRECT and the glass still wrong. ⚠ So the instrument counts
-   * the thing being reported instead of depicting the state it reports: a channel that toggles
-   * shows a high count, a steady one shows zero, and *which* channel it is stops being a guess.
-   * ⭐ `METHOD`: *when two rounds of reading the state have not found it, measure the TRANSITION.*
-   */
-  const gizmoFlips: number[][] = [[], [], [], [], [], []];
-  let gizmoWas: readonly boolean[] = [false, false, false, false, false, false];
-  const noteGizmoFlips = (now: number, shown: readonly boolean[]): void => {
-    for (let i = 0; i < 6; i++) {
-      if (shown[i] !== gizmoWas[i]) gizmoFlips[i]!.push(now);
-      // ⚠ A one-second window, trimmed here rather than on read, so the readout cannot report a
-      // rate over a window that has quietly grown.
-      const w = gizmoFlips[i]!;
-      while (w.length > 0 && now - w[0]! > 1000) w.shift();
-    }
-    gizmoWas = shown;
-  };
-
   const refreshAxisGizmo = (): void => {
     const live = new Set<ObjectId>();
-    // ⭐⭐⭐ **THE WHOLE DECISION IS `gizmoState`'s, IN `src/input` — this only gathers and draws.**
-    //
-    // ⛔⛔⛔ **SEVEN DEVICE REPORTS CAME OUT OF DECIDING IT HERE.** Position from a per-frame
-    // travel; existence from a per-frame mode and a per-frame map; channels from a per-frame
-    // emission; then a memory to steady that, which could not go out when the gesture stopped or
-    // when the finger driving it lifted. ⚠ Each fix was another `scene.ts` rule, so **nothing
-    // could go red** and every one was found by a hand. ⭐ `tests/gizmo_state.test.ts` now holds
-    // the matrix that arrangement made unwritable.
-    const bodies: GizmoBody<ObjectId>[] = [];
+    // ⛔⛔⛔ **ONE GIZMO ON THE SCREEN, NEVER TWO** — the owner, 2026-09-23: *"the gizmo shall not
+    // be applied to a second object (pioneer object for example) as this confuses the reading on
+    // the screen."* ⚠ The translation lines are FULL-SCREEN, so a second set crosses the first
+    // everywhere and neither can be read back to its body. ⭐ Which body wins is `soleGizmoBody`'s, in
+    // `src/input` — and the gizmo follows the finger that is actually pushing.
+    const candidates: { id: ObjectId; driven: boolean }[] = [];
     for (const grip of held.values()) {
       const id = idOf.get(grip.mesh);
       if (id === undefined) continue;
-      if (bodies.some((b) => b.id === id)) continue;
-      // ⚠ The array index is what a `TurnDriver` names, so the seq → index map is built with it
-      // and in the same order. ⛔ A record naming a seq that is gone resolves to `-1`, and the
-      // rule reads no state for it — which is how a lifted finger's line goes out with no
-      // clear-on-lift rule existing anywhere.
-      const seqs: number[] = [];
-      const seconds: GizmoSecond[] = [];
-      for (const [seq, tracker] of grip.anchorMotion) {
-        seqs.push(seq);
-        seconds.push({
-          axes: tracker.axes,
-          lifts: grip.anchorLifts.get(seq) === true,
-        });
-      }
-      const rec = turnRecords.get(id) ?? ([null, null, null] as TurnRecords);
-      const driverOf = (r: TurnRecord | null): TurnDriver | null =>
-        r === null
-          ? null
-          : {
-              driver: r.seq === null ? "HOLDER" : seqs.indexOf(r.seq),
-              screen: r.screen,
-            };
-      bodies.push({
+      // ⛔⛔⛔ **NO GIZMO ON A FROZEN BODY — `D77`, AND IT HAD SILENTLY LAPSED.** The owner made
+      // that a rule on 2026-09-23, enforced at a DEFINITION: `leadingFace` refused a frozen body,
+      // because *the face a body is advancing on* presumes it advances. ⚠ `core/leading_face.ts`
+      // was deleted the same day at his request, and the guarantee went with it — with **nothing
+      // going red**, because the enforcement lived in the deleted file rather than in a test.
+      // ⛔ The plate can still be HELD by a first touch (`D67`), so the gizmo was drawing a full
+      // set of axes for a body whose transform `setWorldPlacement` refuses to change.
+      // ⭐ `METHOD`: *deleting the file a rule lived in deletes the rule* — a definition-site
+      // guarantee is only as durable as the definition.
+      if (world.objects.get(id)?.frozen === true) continue;
+      if (!isTranslatingMode(grip.mode) && !frameTurnAxes.has(id)) continue;
+      if (candidates.some((c) => c.id === id)) continue;
+      candidates.push({
+        // ⚠ DRIVEN means a channel moved it this frame, not merely that a rule ran: the
+        // translation path records a set every frame a finger is down, zeros included.
         id,
-        frozen: world.objects.get(id)?.frozen === true,
-        holder: grip.rec.axes,
-        seconds,
-        holderTranslates: grip.holderTranslates,
-        turns: [
-          driverOf(rec[TURN_ROLL]),
-          driverOf(rec[TURN_YAW]),
-          driverOf(rec[TURN_PITCH]),
-        ],
+        driven:
+          (frameAxisDriven.get(id)?.some(Boolean) ?? false) ||
+          frameTurnAxes.has(id),
       });
     }
-    const decided = gizmoState(bodies);
-    noteGizmoFlips(
-      performance.now(),
-      decided?.channels ?? [false, false, false, false, false, false],
-    );
-    // ⛔ A body nobody holds keeps no record: the next press starts clean, and a gesture cannot
-    // inherit an axis from the one before it. ⚠ This is housekeeping, not a rule — nothing the
-    // gizmo SHOWS depends on it, because a dead driver already reads as unlit.
-    const heldIds = new Set(bodies.map((b) => b.id));
-    for (const id of [...turnRecords.keys()])
-      if (!heldIds.has(id)) turnRecords.delete(id);
+    const owner = soleGizmoBody(candidates);
     for (const grip of held.values()) {
+      // ⛔⛔ **THE SECOND TOUCHPOINT'S MODE IS A TRANSLATION, AND THIS ASKED BY NAME** — the
+      // owner, 2026-09-23: *"sometimes the gizmo does not show when the second touch is driving
+      // the translation."* ⭐ The set lives in `input/grip_mode.ts`, and the mode itself is no
+      // longer named after an axis.
       const id = idOf.get(grip.mesh);
-      if (id === undefined || decided === null || id !== decided.owner)
-        continue;
-      const shown = decided.channels;
-      if (!shown.some((c) => c)) continue;
+      if (id === undefined) continue;
+      // ⛔⛔ **A ROTATION SHOWS THE GIZMO TOO** — the owner, 2026-09-23: *"the gizmo does not exist
+      // in rotation mode on aligned follower object. It may need to be created."* ⚠ Every turn
+      // gesture happens in ROTATE mode, where the translating-mode gate hid the gizmo entirely and
+      // the turn lines with it.
+      if (!isTranslatingMode(grip.mode) && !frameTurnAxes.has(id)) continue;
+      // ⛔ Every other eligible body is skipped here rather than hidden later: `live` then holds
+      // one id at most, and the sweep below blanks all the rest with nothing added for it.
+      if (id !== owner) continue;
+      // ⭐⭐⭐ **WHICH DIRECTIONS TO SHOW** — the owner: *"the direction is shown only if the delta
+      // position triggers a translation in this direction."* ⛔ The rule is `displayedAxes`'s, in
+      // `src/input`, and it keeps the last non-empty answer so a pause does not blank the gizmo.
+      const turning = frameTurnAxes.get(id) ?? null;
+      // ⚠ Remembered PER CHANNEL: a body that yawed and then rolled keeps both lines aimed the way
+      // each gesture actually turned it, and a pause blanks neither.
+      const remembered =
+        gizmoTurnAxes.get(id) ?? ([null, null, null] as TurnAxes);
+      if (turning) {
+        for (let k = 0; k < 3; k++)
+          remembered[k] = turning[k] ?? remembered[k] ?? null;
+        gizmoTurnAxes.set(id, remembered);
+      }
+      const channels = frameAxisDriven.get(id) ?? [false, false, false];
+      const shown = displayedAxes(gizmoAxes.get(id) ?? null, [
+        channels[0],
+        channels[1],
+        channels[2],
+        turning?.[TURN_ROLL] != null,
+        turning?.[TURN_YAW] != null,
+        turning?.[TURN_PITCH] != null,
+      ]);
+      if (shown === null) continue;
+      gizmoAxes.set(id, shown);
       // ⭐⭐⭐ **WHERE THE GIZMO SITS — THE FOLLOWERFACE'S CENTRE, ELSE THE BODY'S OWN** — the
       // owner, 2026-09-23: *"Remove the rule of the raycast of the delta position direction from
       // the object center to identify the leadingface, and keep the gizmo always positioned at the
@@ -2183,14 +2160,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐ The last three directions are the axes the body is being TURNED about, not ones it is
       // being moved along. ⚠ `null` until that channel has turned it, and a `null` hides its line
       // however the channel set reads — a line needs a direction, and there is no stand-in.
-      const rec = turnRecords.get(id) ?? ([null, null, null] as TurnRecords);
       const dirs = [
         axes.x,
         axes.gravity,
         axes.depth,
-        rec[TURN_ROLL]?.axis ?? null,
-        rec[TURN_YAW]?.axis ?? null,
-        rec[TURN_PITCH]?.axis ?? null,
+        remembered[TURN_ROLL],
+        remembered[TURN_YAW],
+        remembered[TURN_PITCH],
       ] as const;
       for (let i = 0; i < 6; i++) {
         const a = dirs[i];
@@ -2234,8 +2210,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     for (const [id, r] of gizmoRings) if (!live.has(id)) r.isVisible = false;
     for (const [id, r] of gizmoTurnRings)
       if (!live.has(id)) r.isVisible = false;
-    // ⭐⭐ NOTHING IS CONSUMED HERE. This function is IDEMPOTENT: calling it twice in one frame
-    // gives the same answer, which the per-frame accumulators it replaced could not do.
+    // ⛔ CONSUMED HERE, every frame: the gizmo must read the channels of THIS frame.
+    frameAxisDriven.clear();
+    frameTurnAxes.clear();
   };
 
   const refreshHighlight = (): void => {
@@ -2647,24 +2624,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
      */
     anchorMotion: Map<number, MotionTracker>;
-    /**
-     * ⭐⭐⭐ **DOES THIS SECOND TOUCHPOINT'S `dy` LIFT THE BODY?**, by press order.
-     *
-     * > *"regression: there cannot be green axis in rotation mode for unaligned object"* — the
-     * > owner, 2026-09-23
-     *
-     * ⛔⛔ Per-frame EMISSION encoded this for free — a channel that drives nothing emits nothing —
-     * and a motion STATE does not. ⚠ So it is recorded where `secondFingerDrive` /
-     * `pinnedSecondDrive` is chosen between, never re-derived at the gizmo: a second opinion about
-     * what a finger drives could disagree with the rule that actually ran.
-     */
-    anchorLifts: Map<number, boolean>;
-    /**
-     * ⭐ Does the HOLDER's drag translate this body? ⛔ `translatesOnDrag`'s own answer, stored
-     * where it is computed. ⚠ In `ROTATE` the holder turns the body, and red and blue would be
-     * claiming a push nobody is making.
-     */
-    holderTranslates: boolean;
     /**
      * ⭐⭐⭐ `D57` — **WHICH WAY A SECOND TOUCHPOINT'S `dx` ROLLS THIS BODY, LATCHED AT THE
      * FIRST ROLL OF THE GESTURE**, keyed by anchor press order exactly as `anchorMotion` is.
@@ -3438,48 +3397,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       tuningRejected: tuning.rejected,
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
       // ⛔ `IGN` is the one that matters: it is the visible form of the IN8 decision.
-      // ⛔⛔⛔ **THE GIZMO'S OWN INPUTS** — the owner, 2026-09-23: *"the first double touch has
-      // jittering gizmo while a second double touch removes the jitter."* ⚠ Five fixes have been
-      // aimed at this by READING the code and the last one missed, so this prints every fact
-      // `gizmoState` is handed. ⭐ `xlat` is `holderTranslates`; `h` is the holder's per-axis motion
-      // state (`X`/`Y` when MOVING); each `s<seq>` is a second touchpoint with its two states and
-      // `:L` when its `dy` LIFTS; `turn` is each recorded channel as `R|Y|P` + driver (`H` = the
-      // holder, else the seq) + screen axis. ⛔ On its OWN line: appended to `axes` it ran off the
-      // edge of the glass and three photographs came back with it cut off.
-      gizmo: (() => {
-        const st = (m: { x: string; y: string } | undefined): string =>
-          m === undefined
-            ? "--"
-            : `${m.x === "MOVING" ? "X" : "."}${m.y === "MOVING" ? "Y" : "."}`;
-        const rows: string[] = [];
-        for (const g of held.values()) {
-          const id = idOf.get(g.mesh);
-          if (id === undefined) continue;
-          const secs = [...g.anchorMotion.entries()]
-            .map(
-              ([seq, t]) =>
-                ` s${seq}:${st(t.axes)}${g.anchorLifts.get(seq) === true ? ":L" : ""}`,
-            )
-            .join("");
-          const rec = turnRecords.get(id);
-          const turn =
-            rec === undefined
-              ? " turn=-"
-              : ` turn=${rec
-                  .map((r, k) =>
-                    r === null
-                      ? "-"
-                      : `${"RYP"[k]}${r.seq === null ? "H" : r.seq}${r.screen}`,
-                  )
-                  .join("")}`;
-          rows.push(
-            `${id} xlat=${g.holderTranslates ? 1 : 0} h=${st(g.rec.axes)}${secs}${turn}`,
-          );
-        }
-        // ⭐ The flip counts last, because they are the measurement the other fields explain.
-        const flips = ` flips/s=${gizmoFlips.map((w) => w.length).join(",")}`;
-        return (rows.length === 0 ? "—" : rows.join("  ")) + flips;
-      })(),
       roles:
         router.size === 0
           ? "—"
@@ -4282,6 +4199,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       cfg.axisTrackingConeDeg,
       grip.frame.towardGravity,
     );
+    // ⭐ The gizmo hears this finger exactly as it hears the holder's — same function, same frame.
+    noteAxisTravel(gid, travel);
     // ⭐ ONE writer, so this channel now feeds the swing exactly as the holder's does.
     applyWorldStep(grip, axisDisplacement(travel, axes));
   };
@@ -4340,7 +4259,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   const forgetAnchor = (seq: number): void => {
     for (const grip of held.values()) {
       grip.anchorMotion.delete(seq);
-      grip.anchorLifts.delete(seq);
       grip.anchorRollSign.delete(seq);
     }
   };
@@ -4429,8 +4347,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // as rule 6 and 2bis take the holder's.
     // ⛔ The live mode is handed over so the choice is made inside the vectored rule, not
     // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
-    // ⭐ The GREEN line's precondition, recorded beside the choice it belongs to.
-    grip.anchorLifts.set(anchorSeq, bothAxes || behaviour === "TRANSLATE");
     const drive = bothAxes
       ? pinnedSecondDrive(tracker.axes, tracker.step)
       : secondFingerDrive(tracker.axes, tracker.step, behaviour);
@@ -4469,7 +4385,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       } else if (rollChannel.kind === "TWIST") {
         const axis = rollChannel.axis;
         // ⭐ The grey line's axis, recorded where the turn is applied (the owner, 2026-09-23).
-        noteTurnAxis(rollId, TURN_ROLL, axis, anchorSeq, "x");
+        noteTurnAxis(rollId, TURN_ROLL, axis);
         // ⭐⭐⭐ **`D52` — THE SECOND TOUCHPOINT ROLLS THE FOLLOWER THE SAME WAY THE FIRST
         // DOES.** Device-reported, 2026-09-18: *"the Follower object roll controlled by the
         // second touchpoint is inverted vs. the roll controlled by the first touchpoint … the
@@ -4590,7 +4506,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // camera's while it is on. ⚠ Taken ONCE and handed to all three readers below (the grey
           // line, the turn, the tally), because two of them restate the other's axis and sign.
           const rollFrame = rotationFrameOf(grip.frame);
-          noteTurnAxis(rollId, TURN_ROLL, rollFrame.depth, anchorSeq, "x");
+          noteTurnAxis(rollId, TURN_ROLL, rollFrame.depth);
           const rollDeg = rollDragDeg(drive.rollDxPx, cfg.gainRollDrag);
           const incOn =
             incrementRadians(cfg.rotationIncrementDeg) !== null &&
@@ -5072,7 +4988,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // travel.
     if (info.type === PointerEventTypes.POINTERDOWN && held.has(e.pointerId)) {
       held.get(e.pointerId)!.anchorMotion.clear();
-      held.get(e.pointerId)!.anchorLifts.clear();
       held.delete(e.pointerId);
       lastVerdict = `pressed an id that never released — dropped its stale grip`;
     }
@@ -5236,9 +5151,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressActed: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
         anchorMotion: new Map(),
-        anchorLifts: new Map(),
-        // ⚠ The session latch is the honest starting value: it is what the first drag will do.
-        holderTranslates: behaviour === "TRANSLATE",
         anchorRollSign: new Map(),
         // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
         // `SwayWatcher` takes it.
@@ -5569,12 +5481,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // position x and y — which is currently the case in translation mode but not in rotation
         // mode."* ⚠ Without it the first touch keeps twisting about the very axis the second
         // touch's `dx` turns, and two fingers drive ONE DOF.
-        grip.holderTranslates = translatesOnDrag(
+        grip.mode = translatesOnDrag(
           router.objects().length,
           behaviour,
           secondTouchOwnsRollAndDepth(grip),
-        );
-        grip.mode = grip.holderTranslates ? "TRANSLATE" : "ROTATE";
+        )
+          ? "TRANSLATE"
+          : "ROTATE";
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,
@@ -5713,6 +5626,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // looking down on the scene, −1 looking up at it.
           grip.frame.towardGravity,
         );
+        noteAxisTravel(tid, travel);
         lastTrackGain = travel.trackGain;
         lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);
@@ -5797,7 +5711,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             // follower object)."* ⛔ Recorded where the turn is APPLIED, exactly as the second
             // touchpoint's roll is: both channels twist about the SAME constraint axis, and a
             // gizmo that learned it from only one of them would go blank on the other.
-            noteTurnAxis(idOf.get(grip.mesh), TURN_ROLL, axis, null, "x");
+            noteTurnAxis(idOf.get(grip.mesh), TURN_ROLL, axis);
             // ⛔⛔⛔ **D57 REACHES THE FIRST TOUCHPOINT AT LAST** -- device-reported 2026-09-22:
             // *"there are some cases where the dx delta position and the yaw rotation direction
             // are inverted."*
@@ -5905,13 +5819,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // the lines, the tally and the turn — they restate each other's axes, so two calls could
         // hand them different ones on the very frame the flag is toggled.
         const turnFrame = rotationFrameOf(grip.frame);
-        // ⛔⛔ **UNCONDITIONAL, AND THAT IS THE FIX.** These say *what this gesture turns the body
-        // about*, which is true whether or not the finger moved in this frame. ⚠ Guarding them on
-        // the per-frame step is what dropped the line on any frame the pointer sent no event —
-        // and the translation lines never did, because they came from a tracker. ⭐ Whether each
-        // one is LIT is `gizmoState`'s answer, from §1.1's state.
-        noteTurnAxis(freeId, TURN_YAW, turnFrame.up, null, "x");
-        noteTurnAxis(freeId, TURN_PITCH, turnFrame.right, null, "y");
+        if (grip.rec.step.dx !== 0)
+          noteTurnAxis(freeId, TURN_YAW, turnFrame.up);
+        if (grip.rec.step.dy !== 0)
+          noteTurnAxis(freeId, TURN_PITCH, turnFrame.right);
         const incOnFree =
           incrementRadians(cfg.rotationIncrementDeg) !== null &&
           freeId !== undefined;
