@@ -103,30 +103,6 @@ export interface AxisInputsPx {
  */
 export type TranslatePairing = "PLANE" | "CHANNELS";
 
-/**
- * ⭐ The gizmo's six channels: `[x, gravity, depth, roll, yaw, pitch]`.
- *
- * ⛔⛔ **THE FIRST THREE ARE DIRECTIONS THE BODY IS MOVED ALONG; THE LAST THREE ARE AXES IT IS
- * TURNED ABOUT** — a different kind of fact, which is why they carry a different family of
- * colours (grey, purple, maroon) rather than a fourth, fifth and sixth shade of the first three.
- *
- * ⭐⭐ **AND THEY ARE ONE SET, NOT TWO** — the owner, 2026-09-23: *"add a grey axis … also when
- * there is rotation with the dx of the first touch … create purple and marron axis for yaw and
- * pitch rotation on unaligned object in rotation mode."* ⛔ Keeping translation and rotation in the
- * SAME set is what makes starting to translate put the rotation lines away, and starting to turn
- * put the translation lines away, **with no rule written for either**: `displayedAxes` replaces a
- * non-empty set wholesale. ⚠ A second, independent set would have needed a rule to clear the
- * first, and that rule is exactly the sort nothing can interrogate.
- */
-export type GizmoChannels = readonly [
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-];
-
 /** Metres along each object axis this frame. */
 export interface AxisTravelM {
   readonly xM: number;
@@ -152,15 +128,6 @@ export interface AxisTravel extends AxisTravelM {
    * which is a different quantity from this one.
    */
   readonly trackGain: number;
-  /**
-   * ⭐⭐⭐ **WHICH CHANNELS PUSHED THIS FRAME**, as `[x, gravity, depth]`.
-   *
-   * ⛔ The gizmo's rule reads this and not the travel, because under `PLANE` a pure `dx` moves the
-   * body along BOTH horizontal axes and the owner asked for the line of the channel he pushed.
-   * ⚠ Returned rather than recomputed by the caller: the channel map has one home, the line that
-   * fills this.
-   */
-  readonly driven: readonly [boolean, boolean, boolean];
 }
 
 /**
@@ -225,20 +192,11 @@ export function axisTravel(
       depthM: 0,
       edgeOn: false,
       trackGain: 0,
-      driven: [false, false, false],
     };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
   const dy = finite(input.holderDyPx) * metresPerPx;
   const dy2 = finite(input.secondDyPx) * metresPerPx;
-  // ⭐⭐⭐ **THE CHANNEL MAP, STATED ONCE AND READ TWICE.** `dx` drives x, the holder's `dy` drives
-  // depth, and the second touchpoint's `dy` drives gravity (`D75`). ⛔ The gizmo asks THIS rather
-  // than inspecting the travel, because the `PLANE` solve spreads one channel across two axes.
-  const driven: readonly [boolean, boolean, boolean] = [
-    dx !== 0,
-    dy2 !== 0,
-    dy !== 0,
-  ];
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
 
   /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
@@ -310,7 +268,6 @@ export function axisTravel(
 
   const asked = Math.hypot(dx, dy);
   return {
-    driven,
     xM,
     depthM,
     gravityM,
@@ -341,81 +298,6 @@ export function axisDisplacement(travel: AxisTravelM, axes: ObjectAxes): Vec3 {
       axes.gravity[2] * travel.gravityM +
       axes.depth[2] * travel.depthM,
   ];
-}
-
-/**
- * ⭐⭐⭐ **WHICH BODY CARRIES THE GIZMO — EXACTLY ONE, EVER.**
- *
- * > *"the gizmo shall not be applied to a second object (pioneer object for example) as this
- * > confuses the reading on the screen"* — the owner, 2026-09-23
- *
- * ⛔⛔ **THE GIZMO IS SIX FULL-SCREEN LINES**, and two sets of them cross each other everywhere.
- * ⚠ That is why this is not a matter of taste: a second gizmo does not add information, it
- * removes it, because no line can then be read back to the body it belongs to.
- *
- * ⭐⭐ **THE DRIVEN ONE WINS.** Two fingers can hold two bodies — a held part and the Pioneer it
- * is being aligned to — and only one of them is being pushed at a time. ⛔ Preferring the driven
- * candidate means the gizmo follows the GESTURE rather than the press order, so picking up a
- * second body to steady it never takes the instrument away from the one under the moving finger.
- * ⚠ With none driven (every finger resting), the FIRST candidate keeps it — press order, so a
- * pause does not hand the gizmo about between fingers that are both still.
- *
- * @param candidates every body eligible for a gizmo this frame, in press order.
- * @returns the one body to draw it on, or `null` when there are none.
- */
-export function soleGizmoBody<T>(
-  candidates: readonly { readonly id: T; readonly driven: boolean }[],
-): T | null {
-  const driving = candidates.find((c) => c.driven);
-  if (driving) return driving.id;
-  return candidates.length > 0 ? candidates[0]!.id : null;
-}
-
-/**
- * ⭐⭐⭐ **WHICH AXES THE GIZMO SHOWS — the ones this delta position actually translates along.**
- *
- * > *"the direction is shown only if the delta position triggers a translation in this direction.
- * > Therefore, for example, for a pure translation in the gravity axis only the green line would
- * > show. For a translation in the horizontal plane, both blue and red lines would show but not
- * > the green line."* — the owner, 2026-09-23
- *
- * > *"on first touch, if there is only dx or only dy, the other gizmo line should not appear.
- * > Both red and blue gizmo lines should appear only if both dx and dy are not null."* — the
- * > owner, clarifying it the same day
- *
- * ⛔ The gizmo used to draw all three axes always, so it said *"here is the basis"* when the
- * question a hand is asking is *"where will this push go"*. ⭐ Now it answers the second.
- *
- * ⛔⛔⛔ **AND THAT CLARIFICATION IS WHY THIS READS THE *INPUT* AND NOT THE TRAVEL.** Under
- * `PLANE` a pure `dx` produces travel on **both** horizontal axes — that is exactly how the 2×2
- * solve keeps the body under the finger — so a rule reading the OUTPUT lights both lines for a
- * single-axis drag, which is what the owner rejected. ⭐ Read from the channel that was pushed,
- * the answer is the one a hand can act on: *this finger is driving that line.*
- *
- * ⚠⚠ **AND A PAUSE MUST NOT BLANK IT.** A finger that stops emits nothing, and `A11`'s deadband
- * emits nothing on an axis inside its band — so the instantaneous answer is *no axes at all* many
- * frames per second. ⛔ A gizmo that blinked out whenever the hand paused would be unreadable,
- * which is the same argument `lastTravelDir` already carries. ⭐ So the last NON-EMPTY answer
- * stands until the body is translated again.
- *
- * ⭐⭐ **THE LAST THREE CHANNELS ARE ROTATIONS** — the owner, 2026-09-23: *"add a grey axis to the
- * gizmo to show the rotation axis when there is rotation with the second touch dx"*, then *"create
- * purple and marron axis for yaw and pitch rotation on unaligned object in rotation mode."* ⛔ They
- * are channels like the first three, so they obey the same rule: one lights when it is driven, and
- * a new non-empty set replaces the old one. ⚠ That is why a translation puts the turn lines away
- * by itself, and a turn puts the translation lines away — nothing had to be written for either.
- *
- * @param previous what is showing now, or `null` before the body has ever been driven.
- * @param driven which channels pushed — `AxisTravel.driven`, computed where the channel map is
- *   applied so that the map has ONE home.
- * @returns the triple `[x, gravity, depth]`, or `previous` when nothing was pushed — which is
- *   `null` only until the first push, where showing nothing is correct.
- */
-export function displayedAxes(
-  previous: GizmoChannels | null,
-  driven: GizmoChannels,
-): GizmoChannels | null {
-  return driven.some((d) => d) ? driven : previous;
 }
 
 /**

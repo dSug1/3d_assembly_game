@@ -39,13 +39,11 @@ predecessor's rotation stack was defensible at every layer and a **reflection** 
 whole, because nobody had ever computed the composite. **Ask what the whole chain
 does, in one expression, and check it.**
 
-⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.** *(2026-09-15.)*
-A gravity-referenced rotation was reported as having regressed to the screen axes. Every part had
-green vectors — ⚠ none of which is the same claim as *a horizontal drag yaws about gravity*, which is
-what a hand judges. Fourteen vectors composing the frame with the rotation at four camera tilts showed
-it was right; the report was withdrawn, and the real defect beside it (a missing deadband) became
-separable from the impression. ⭐ **Write the composite check even when you believe the pieces** — it
-is the only thing that tells a defect from an impression, in either direction.
+⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.** *(2026-09-15:
+a report that the gravity frame had regressed.)* Every part had green vectors, ⚠ none of which is the
+same claim as *a horizontal drag yaws about gravity* — which is what a hand judges. Composing the
+frame with the rotation at four camera tilts showed it was right, and separated the real defect
+beside it from the impression. ⭐ **Write the composite check even when you believe the pieces.**
 
 ## ⭐⭐ A BLEND HAS SEAMS
 
@@ -108,6 +106,17 @@ It is the wrong input for deciding **which rule is running**.
 ⚠⚠ And a note on process: the amendment that shipped this defect **had already flagged the
 resemblance** to the 2026-09-14 verdict. ⛔ Naming a risk is not the same as not taking it — if the
 reasoning for a choice has to explain away a verdict a hand already gave, the verdict wins.
+
+## ⭐⭐⭐ AN INSTRUMENT READS STATE, NEVER THE ARRIVAL OF AN EVENT
+
+*(2026-09-23, the gizmo: seven device reports, one shape.)* A readout keyed on a per-frame
+quantity inherits its noise — ⛔ *the absence of an event is not the absence of the gesture.*
+⛔⛔ **MEMORY IS NOT THE FIX**: it trades a false negative for a false positive that lasts longer —
+two further reports, a line that would not go out and one that outlived the finger driving it.
+⭐ Read the state machine that already decides the fact, and keep nothing. ⚠ Emission has one
+property a state lacks — *a channel that drives nothing emits nothing* — so moving to state needs an
+explicit membership rule, which is where the regression came from.
+→ [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md)
 
 ## ⭐⭐ A threshold the state machine PARKS ON will be compared at its exact value
 
@@ -247,55 +256,46 @@ quantity gets caught eventually: someone reads it and it disagrees with the worl
 that prints **nothing at all** is invisible by construction — there is no wrong number to
 notice, and the documentation describing it reads exactly as it would if it worked.
 
-⚠ The instance: `scene.ts` has always computed which tunables the URL overrode and handed them to the
-HUD, which **never rendered them** — for the whole life of the file, while the docs told a reader it
-did. ⭐ It would have gone unnoticed until an `IN5` session spent an hour measuring a default while
-believing it was measuring an override.
+⚠ The instance: `scene.ts` computed which tunables the URL overrode and handed them to a HUD that
+**never rendered them**, for the whole life of the file, while the docs said it did — it would have
+cost an `IN5` session an hour measuring a default it believed was an override.
 
-⭐⭐ **So audit an instrument against the QUESTIONS it is supposed to answer, not against
-the lines it happens to print.** The check is cheap and it is a different check: *for each
-thing this readout is documented to tell me, point at the code that emits it.*
+⭐⭐ **So audit an instrument against the QUESTIONS it is supposed to answer, not against the lines
+it happens to print**: *for each thing this readout is documented to tell me, point at the code that
+emits it.*
 ⚠ A field passed into a readout and never read is the exact shape `tests/config_debt.test.ts`
 already refuses for tunables — and the HUD had no equivalent guard.
 
 ## ⛔⛔ The instrument is a suspect, always
 
-**This is the most expensive lesson carried over.** In one session, four harnesses
-reported CLEAN on takes the owner had just watched fail. Every time, the instrument
-was wrong and the owner was right.
+**The most expensive lesson carried over.** In one session four harnesses reported CLEAN on takes
+the owner had just watched fail — every time the instrument was wrong and the owner was right.
 
-* **Record the value the product ACTUALLY USED**, never a harness recomputing it. A
-  recomputation is a second implementation that can silently disagree.
-* **Print the aggregation, not just the value.** Two harnesses aggregating
-  differently under one name reported an axis as broken when it was fine.
+* **Record the value the product ACTUALLY USED**, never a harness recomputing it: a recomputation
+  is a second implementation, free to disagree.
+* **Print the aggregation, not just the value.** Two harnesses aggregating differently under one
+  name reported a sound axis as broken.
 * ⭐⭐⭐ **A SIGN IS NOT TESTED BY ANY AMOUNT OF TESTING THE MAGNITUDE.** Four defects
   in one day shared that shape and not one was caught by a suite. Assert signs
   against declared truth.
-* ⭐⭐⭐ **AN INVARIANT TESTED ON ONE AXIS IS NOT TESTED.** A suite checked
-  chirality-evenness on the one axis that never had the problem, and certified the
-  two that did.
-* ⭐⭐⭐ **A GOLDEN VECTOR'S FIXTURE MUST BE A SPECIMEN THE PRODUCT WOULD ACCEPT.** A
-  suite built its synthetic input in an idealised form the real code rightly refuses,
-  so every vector exercised a case that cannot occur.
-* ⭐⭐⭐ **A SKIPPED CHECK MUST BE ANNOUNCED.** A suite fed the wrong-shaped data to a
-  loader, got nothing, skipped on a `continue`, and printed ALL CHECKS PASSED. A
-  guard that turns missing data into silence is worse than a failure.
-* ⭐⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT.** A detector whose
-  channel had been taken away was left **fed** and called *unused* in its own comment; it
-  still held the top rung of the release ladder and silently vetoed the rule that replaced
-  it. ⛔ *Unwired* means **nothing calls it** — not that nothing reads its output. The three
-  dead instruments of 2026-09-16 rank by verb: a HUD line was *read*, a slider was *read*,
-  this one was **obeyed**.
+* ⭐⭐⭐ **AN INVARIANT TESTED ON ONE AXIS IS NOT TESTED.** A suite checked chirality on the one
+  axis that never had the problem, certifying the two that did.
+* ⭐⭐⭐ **A GOLDEN VECTOR'S FIXTURE MUST BE A SPECIMEN THE PRODUCT WOULD ACCEPT.** A suite built
+  its input in an idealised form the real code refuses, so every vector exercised an impossible case.
+* ⭐⭐⭐ **A SKIPPED CHECK MUST BE ANNOUNCED.** A suite fed a loader the wrong-shaped data, got
+  nothing, skipped on a `continue`, and printed ALL CHECKS PASSED. *A guard that turns missing data
+  into silence is worse than a failure.*
+* ⭐⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT.** A detector left **fed**
+  after its channel was taken away still held the top rung of the release ladder and vetoed the
+  rule that replaced it. ⛔ *Unwired* means **nothing calls it**, not that nothing reads it.
 * ⭐⭐ **A test that cannot FAIL is not a test.** Keep an explicit counter-example
   beside each guard, and check the guard fires on it.
-* ⭐⭐ **Independence has to be ARGUED, not inferred from numbers agreeing.** Three
-  measures derived from the same source degrade together and agree on a wrong answer.
-* ⚠ **A statistic pooled across a region cannot answer a question about that
-  region.**
+* ⭐⭐ **Independence has to be ARGUED, not inferred from agreement.** Measures from one source
+  degrade together and agree on a wrong answer.
+* ⚠ **A statistic pooled across a region cannot answer a question about it.**
 
-⚠ **Automated green is necessary, not sufficient. A look on a REAL DEVICE is what
-closes a change** — nothing else does. ⛔ And touch gestures cannot be honestly
-tested with a mouse: one pointer, no DPI, no tilt, no haptics.
+⚠ **Automated green is necessary, not sufficient. A look on a REAL DEVICE closes a change** —
+nothing else does, and touch cannot be honestly tested with a mouse: one pointer, no DPI, no tilt.
 
 ⛔ If a baseline does not reproduce before you change anything, **stop**.
 
