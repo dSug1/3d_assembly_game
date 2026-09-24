@@ -302,18 +302,6 @@ export class Recognizer<P> {
     );
   }
 
-  /**
-   * ⭐⭐ **THE HOLDER'S PER-AXIS MOTION STATE** — §1.1's own answer to *is this axis being pushed*,
-   * with its dead radius and its `restConfirmMs` hysteresis.
-   * ⛔ `motionState` below is the two axes ORed; the gizmo needs them apart, because each screen
-   * axis drives a different object axis and a different line.
-   * ⚠ EXPOSED rather than recomputed: a second definition of *moving* would be free to disagree
-   * with the one every rule in the input layer is judged by.
-   */
-  get axes(): { readonly x: MotionState; readonly y: MotionState } {
-    return this.motion.axes;
-  }
-
   get motionState(): MotionState {
     return this.motion.current;
   }
