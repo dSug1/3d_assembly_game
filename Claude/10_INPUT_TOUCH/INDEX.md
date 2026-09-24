@@ -12,18 +12,16 @@
 
 ⛔⛔⛔ **THE OBJECT AXES, AND THEIR FIRST DEVICE LOOK** (`D74`–`D76`, 2026-09-22/23). A body is
 translated along **its own axes**: the boot camera's, **frozen for the scene** (`worldAxisB=1`, the
-default) — or the live camera's at `0`. ⛔ The in-zone basis is **DELETED** (`D82`): *"inside shall be the same as outside."*
-⭐⭐ **`D84` EXTENDS THE FLAG TO THE ROTATION**: a free body PITCHES and ROLLS about the camera it
-translates along. ⚠ YAW never moved (`up` IS the world vertical); a TWIST is untouched.
-⛔⛔ The first mapping scaled each input BY
-its axis's foreshortening and a hand rejected all of it: *inverted*, *very weak*, *dead at a level
-camera*. ⭐⭐ **Blender answers all three, and says NO to the pairing** — it never binds screen-x to a
-world axis. ✅ The finger's delta is now **solved onto both horizontal axes** (exact tracking, one gain
-for all three channels), with **Blender's 5° cone** handing the edge-on case to `depthTranslate`'s
-judged rate. ⚠⚠ The solve made the in-zone basis INERT, and the owner answered by deleting it (`D82`).
+default) — or the live camera's at `0`. ⛔ The in-zone basis is **DELETED** (`D82`).
+⭐⭐ **`D84`**: a free body PITCHES and ROLLS about the camera it translates along; YAW never moved
+(`up` IS the vertical), and a TWIST is untouched.
+⛔⛔ The first mapping scaled each input BY its axis's
+foreshortening and a hand rejected all of it. ⭐⭐ **Blender says NO to the pairing** — it never binds
+screen-x to a world axis. ✅ The finger's delta is **solved onto both horizontal axes** (exact tracking, one gain for all three
+channels), with **Blender's 5° cone** handing the edge-on case to `depthTranslate`'s judged rate. ⚠⚠ The solve made the in-zone basis inert; the owner deleted it (`D82`).
 ⭐ The gizmo sits at the **FollowerFace centre, else the body's own**, and its whole decision is one
-pure rule (`input/gizmo_state.ts`) — ⛔ the travel-direction raycast is **deleted**: a marker built
-on per-frame quantities inherits their noise, and it cost seven reports
+pure rule (`input/gizmo_state.ts`) — ⛔ the travel-direction raycast is **deleted**: a marker built on
+per-frame quantities inherits their noise, at a cost of seven reports
 → [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md).
 
 ⚠⚠ **A TRIAL IS LIVE**: the **approach swing** (`D63`). ✅ **FEEL ACCEPTED** (2026-09-21); ⚠ whether

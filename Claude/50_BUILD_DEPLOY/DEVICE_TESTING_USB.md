@@ -271,3 +271,65 @@ Stop-Process -Id (Get-NetTCPConnection -State Listen -LocalPort 5173).OwningProc
 **https://dsug1.github.io/3d_assembly_game/** — real HTTPS, any device, no cable.
 Slow loop (1–3 min) but it is how you check the production bundle and reach a device
 you cannot plug in. See [`DEPLOY_GITHUB_PAGES.md`](DEPLOY_GITHUB_PAGES.md).
+
+---
+
+# ⛔⛔⛔ OWED ON USB: **THE GIZMO FLICKER — confirm or kill hypothesis 6** (opened 2026-09-24)
+
+⚠ The owner reports the flicker on the **tablet over USB** and **cannot reproduce it on an iPhone
+against Pages**. ⛔ That comparison changes **device AND build** at once, so it attributes nothing
+on its own. The hypothesis and its arithmetic are in
+[`../00_CORE/queue_notes/DEFECT_LEDGER.md`](../00_CORE/queue_notes/DEFECT_LEDGER.md) — *the motion
+state decays to `STATIONARY` after `restConfirmMs` (30 ms) of silence, so a pointer whose events
+arrive more than 30 ms apart blinks while the finger is still moving.*
+
+⛔ **Five hypotheses have already been wrong here. Bring numbers back, not impressions.**
+
+## ⭐ What the HUD now prints (the `gizmo` row)
+
+```
+gizmo  objectB xlat=1 h=X. s0:.Y:L turn=R0x--  flips/s=0,7,0,11,0,0  rest=30ms p2:34ms! p3:17ms
+```
+
+| field | meaning |
+|---|---|
+| `xlat` | does the holder's drag translate this body |
+| `h` | the holder's per-axis motion state — `X`/`Y` when `MOVING` |
+| `s<seq>` | a second touchpoint: its two axis states, `:L` when its `dy` LIFTS |
+| `turn` | each turn channel: `R`/`Y`/`P` + driver (`H` = holder, else seq) + screen axis |
+| `flips/s` | **how many times each of the six lines switched lit↔dark in the last second**, in drawing order `x, gravity, depth, roll, yaw, pitch` = red, green, blue, grey, purple, maroon |
+| `rest` | `restConfirmMs` in force |
+| `p<id>` | **the WORST gap between two move events for that pointer in the last second**; a trailing `!` means it exceeds `restConfirmMs` |
+
+⭐ `!` on a pointer **is** the flicker's precondition. No `!` anywhere while the lines are visibly
+flickering **kills the hypothesis**.
+
+## ⭐⭐⭐ THE PROTOCOL — five runs, in this order
+
+⚠ Photograph the `gizmo` row **during** each gesture, not after.
+
+1. **Case A, the reported one.** Aligned body, hold it, add a second finger OUTSIDE, move **both**
+   at once. → Expect `flips/s` non-zero and `!` on at least one pointer.
+2. **Case B with ONE finger.** Free body, translate mode, drag with the holder only.
+   → Expect `flips/s` all `0`, no `!`.
+3. ⛔⛔ **CASE B WITH *BOTH* FINGERS MOVING — THE KILLER EXPERIMENT.** Free body, translate mode,
+   holder dragging **and** the second finger moving in `y` throughout.
+   * flicker **and** `!` → hypothesis holds, and *"case B never flickers"* was a one-finger
+     observation;
+   * **no flicker and no `!`** → the rate does not split, and **hypothesis 6 is dead** — say so and
+     start again from the numbers.
+4. **The threshold, by URL, no rebuild.** Repeat run 1 at `?restConfirmMs=50`, then `=80`.
+   → If the flicker goes and `flips/s` falls to `0` while the gaps are unchanged, the mechanism is
+   proven and the fix is a **number**. ⚠ Also report what the longer rest time COSTS: a slower
+   rest test touches every rule, not just the gizmo.
+5. ⭐⭐ **PRODUCTION BUILD OVER USB — separates device from build.** `npm run build` then serve
+   `dist/` over the same cable (`npx vite preview --host 127.0.0.1 --port 5173`), and repeat run 1.
+   * flicker gone → it is the **dev bundle / DevTools frame rate**, not the digitizer;
+   * flicker stays → it is the **device**, and the iPhone comparison was about the panel.
+
+## ⚠ What NOT to conclude
+
+⛔ *"It works on the iPhone"* does not mean the code is right. ⭐ It means the interval on that
+device stayed under the threshold — which is a statement about **margin**, and a threshold whose
+margin is 3 ms at 60 Hz will fail on some other device, on a slower frame, or in a heavier scene.
+⛔ The number needs a floor argued from the sampling rate, not a value that happens to pass here.

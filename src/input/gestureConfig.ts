@@ -234,6 +234,30 @@ export interface GestureConfig {
 
   // ── §1.3 the recognizer ─────────────────────────────────────────────────
   /** ms of motion buffer the flick test reads. */
+  /**
+   * ⭐⭐⭐ **HOW LONG A GIZMO LINE STAYS LIT AFTER ITS CHANNEL LAST EMITTED**, in milliseconds.
+   *
+   * > *"flips/s varies from 0,0,0,0,0,0 to x,y,z,w,0,0 with x, y, z, w somewhere between 0 and 4"*
+   * > — the owner, 2026-09-24, measuring the flicker at last
+   *
+   * ⛔⛔⛔ **THE SOURCE IS INTERMITTENT BY DESIGN, AND NO REPORTING RULE CAN FIX THAT.** `A11`
+   * clamps an axis's offset to **exactly** the band boundary while it is moving, so **any reversal
+   * at all puts it back inside the band** — and `restConfirmMs` (30 ms) later that axis reads
+   * `STATIONARY`. ⚠ A real drag curves, so each screen axis reverses **1–4 times a second**, which
+   * is precisely the rate measured. The channel was never wrong; the quantity blinks.
+   *
+   * ⭐⭐ **SO THE READOUT NEEDS A HOLD, AND A HOLD IS NOT THE MEMORY THAT WAS REJECTED.** The
+   * memory that produced *"persistence of the grey axis"* and *"the axis do not disappear if the
+   * second touch is released"* was **unbounded** — it lasted until release, or until another
+   * family was driven. ⛔ This has a defined lifetime AND is cancelled structurally: a channel
+   * whose driver is gone (a lifted touchpoint, a rule that no longer drives it) goes dark at once,
+   * whatever the clock says. ⚠ So a release is still instant; only a REVERSAL is bridged.
+   *
+   * ⭐ `200` bridges a 30–100 ms reversal with margin and is short enough to read as *the line went
+   * out when I stopped*. ⚠ A GUESS with a slider — no hand has judged it, and this project has
+   * never once guessed a number right. `0` disables the hold and restores the raw blink.
+   */
+  gizmoHoldMs: number;
   flickWindow: number;
   /** mm/s at lift, below which it is a drag that stopped — never a flick. */
   flickLiftSpeed: number;
@@ -808,6 +832,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   gainTranslateMutual: 0.5,
 
+  // ⚠ A guess with a slider (see the field). Long enough to bridge a drag's reversals, short
+  // enough that a line still goes out when the finger stops.
+  gizmoHoldMs: 200,
   flickWindow: 120,
   flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
@@ -1017,6 +1044,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔ A negative hold is meaningless and would read as *lit for ever* if it were applied as an
+  // expiry. ⭐ `0` is legal and is the honest OFF: the raw, blinking quantity.
+  if (!(cfg.gizmoHoldMs >= 0) || !Number.isFinite(cfg.gizmoHoldMs)) {
+    throw new Error(
+      `gizmoHoldMs (${cfg.gizmoHoldMs}) must be a finite number >= 0: it is how long a gizmo ` +
+        "line stays lit after its channel last emitted, and 0 means no hold at all.",
+    );
+  }
+
   // ⛔⛔⛔ **THE PLAIN RANGES — ADDED BY AUDIT, 2026-09-17.**
   //
   // ⚠⚠ **EVERY RULE BELOW THIS BLOCK IS A *RELATION* BETWEEN TWO TUNABLES**, and that is

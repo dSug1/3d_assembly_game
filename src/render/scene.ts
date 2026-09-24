@@ -2010,6 +2010,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * shows a high count, a steady one shows zero, and *which* channel it is stops being a guess.
    * ⭐ `METHOD`: *when two rounds of reading the state have not found it, measure the TRANSITION.*
    */
+  /** ⚠ Per pointer id: the last event's clock, and every inter-event gap in the last second. */
+  const eventGaps = new Map<
+    number,
+    { last: number; gaps: { t: number; ms: number }[] }
+  >();
+  /**
+   * ⭐ When each channel of a body was last INSTANTANEOUSLY lit — the hold's only state.
+   * ⚠ Dropped with the body's turn records, so a new gesture starts with no hold to inherit.
+   */
+  const EMPTY_LAST_LIT: readonly number[] = [
+    -Infinity,
+    -Infinity,
+    -Infinity,
+    -Infinity,
+    -Infinity,
+    -Infinity,
+  ];
+  const gizmoLastLit = new Map<ObjectId, number[]>();
   const gizmoFlips: number[][] = [[], [], [], [], [], []];
   let gizmoWas: readonly boolean[] = [false, false, false, false, false, false];
   const noteGizmoFlips = (now: number, shown: readonly boolean[]): void => {
@@ -2072,7 +2090,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         ],
       });
     }
-    const decided = gizmoState(bodies);
+    // ⭐⭐⭐ **THE HOLD'S STATE LIVES HERE AND ITS RULE LIVES IN `src/input`.** ⛔ Stamped from
+    // `instant`, never from what is DRAWN, or a held line would renew its own hold for ever.
+    const nowMs = performance.now();
+    const decided = gizmoState(bodies, (id) => ({
+      nowMs,
+      holdMs: cfg.gizmoHoldMs,
+      lastLitMs: gizmoLastLit.get(id) ?? EMPTY_LAST_LIT,
+    }));
+    if (decided !== null) {
+      const stamp = gizmoLastLit.get(decided.owner) ?? [...EMPTY_LAST_LIT];
+      for (let i = 0; i < 6; i++) if (decided.instant[i]) stamp[i] = nowMs;
+      gizmoLastLit.set(decided.owner, stamp);
+    }
     noteGizmoFlips(
       performance.now(),
       decided?.channels ?? [false, false, false, false, false, false],
@@ -2083,6 +2113,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const heldIds = new Set(bodies.map((b) => b.id));
     for (const id of [...turnRecords.keys()])
       if (!heldIds.has(id)) turnRecords.delete(id);
+    for (const id of [...gizmoLastLit.keys()])
+      if (!heldIds.has(id)) gizmoLastLit.delete(id);
     for (const grip of held.values()) {
       const id = idOf.get(grip.mesh);
       if (id === undefined || decided === null || id !== decided.owner)
@@ -3478,7 +3510,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         }
         // ⭐ The flip counts last, because they are the measurement the other fields explain.
         const flips = ` flips/s=${gizmoFlips.map((w) => w.length).join(",")}`;
-        return (rows.length === 0 ? "—" : rows.join("  ")) + flips;
+        // ⭐⭐⭐ **THE DECISIVE NUMBER**: the worst gap between two move events, per pointer, in
+        // the last second — against `restConfirmMs`, which is what it has to beat. ⛔ A `!`
+        // marks a pointer whose worst gap EXCEEDS the threshold, which is the flicker's
+        // precondition stated as a fact rather than as a theory.
+        const gaps = [...eventGaps.entries()]
+          .map(([pid, v]) => {
+            const worst = v.gaps.reduce((m, g) => Math.max(m, g.ms), 0);
+            return `p${pid}:${worst.toFixed(0)}ms${worst > cfg.restConfirmMs ? "!" : ""}`;
+          })
+          .join(" ");
+        const rest = ` rest=${cfg.restConfirmMs}ms ${gaps || "—"}`;
+        return (rows.length === 0 ? "—" : rows.join("  ")) + flips + rest;
       })(),
       roles:
         router.size === 0
@@ -4000,6 +4043,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
         // there is no fallback and a level camera sends the body a very long way.
         tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
+        // ⭐⭐ How long a gizmo line stays lit after its channel stops emitting. ⚠ `0` restores
+        // the raw, blinking quantity; the default bridges a drag's own reversals.
+        tunable("gizmo hold (ms)", "gizmoHoldMs", 0, 600, 25),
         // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
         // the flag; anything above draws an x-ray twin at that opacity.
         tunable(
@@ -5043,6 +5089,32 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         noise.push(s);
       }
     }
+
+    // ⛔⛔⛔ **THE PER-POINTER EVENT INTERVAL — the number the flicker hypothesis stands or falls
+    // on.** §1.1 decays an axis to `STATIONARY` when it has seen no sample for `restConfirmMs`
+    // (30 ms), *timed from the last sample that axis saw*. ⚠ So any pointer whose move events
+    // arrive more than 30 ms apart reads STATIONARY **between events while the finger is still
+    // moving** — on, off, on, off. ⭐ Measured PER POINTER, because the hypothesis is that a
+    // capacitive controller splits its report rate across contacts, so the interval doubles the
+    // moment a second finger is also moving. ⛔ Reported as the WORST interval in the last second:
+    // a mean would hide exactly the excursions that cause this.
+    if (
+      info.type === PointerEventTypes.POINTERDOWN ||
+      info.type === PointerEventTypes.POINTERMOVE
+    ) {
+      const seen = eventGaps.get(e.pointerId);
+      if (seen !== undefined && info.type === PointerEventTypes.POINTERMOVE) {
+        seen.gaps.push({ t: s.t, ms: s.t - seen.last });
+        while (seen.gaps.length > 0 && s.t - seen.gaps[0]!.t > 1000)
+          seen.gaps.shift();
+      }
+      eventGaps.set(e.pointerId, {
+        last: s.t,
+        gaps: seen?.gaps ?? [],
+      });
+    }
+    if (info.type === PointerEventTypes.POINTERUP)
+      eventGaps.delete(e.pointerId);
 
     // ⭐ The anchor fork latches here, before anything is dispatched, so one event cannot be
     // judged half under one rule set and half under another.

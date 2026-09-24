@@ -11,7 +11,9 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  channelAvailability,
   gizmoChannels,
+  heldChannels,
   gizmoState,
   TURN_PITCH,
   TURN_ROLL,
@@ -48,6 +50,12 @@ const body = (o: {
   holderTranslates: o.holderTranslates ?? false,
   turns: o.turns ?? [null, null, null],
 });
+
+/**
+ * ⭐ NO HOLD: every vector written before 2026-09-24 tests the INSTANTANEOUS set, and keeps doing
+ * so. ⛔ The hold is exercised by its own describe, against a clock it controls.
+ */
+const noHold = () => ({ nowMs: 0, holdMs: 0, lastLitMs: [] as number[] });
 
 /** ⭐ The three configurations the product actually reaches, named once. */
 const HOLDER_ROLL: TurnDriver = { driver: "HOLDER", screen: "x" };
@@ -266,14 +274,14 @@ describe("⭐⭐ gizmoState — which body carries it, and D77's frozen rule", (
       holder: REST,
     });
     const part = body({ id: "part", holderTranslates: true, holder: MOVE_X });
-    expect(gizmoState([pioneer, part])?.owner).toBe("part");
-    expect(gizmoState([part, pioneer])?.owner).toBe("part");
+    expect(gizmoState([pioneer, part], noHold)?.owner).toBe("part");
+    expect(gizmoState([part, pioneer], noHold)?.owner).toBe("part");
   });
 
   it("⭐ with none driven the first body keeps it, showing nothing", () => {
     const a = body({ id: "a" });
     const b = body({ id: "b" });
-    const s = gizmoState([a, b]);
+    const s = gizmoState([a, b], noHold);
     expect(s?.owner).toBe("a");
     expect(s?.channels.some((c) => c)).toBe(false);
   });
@@ -289,14 +297,14 @@ describe("⭐⭐ gizmoState — which body carries it, and D77's frozen rule", (
       holderTranslates: true,
       holder: MOVE_XY,
     });
-    expect(gizmoState([plate])).toBeNull();
+    expect(gizmoState([plate], noHold)).toBeNull();
     // ⭐ And it does not merely lose the gizmo — it cannot take it from a body that should have it.
     const part = body({ id: "part", holderTranslates: true, holder: MOVE_X });
-    expect(gizmoState([plate, part])?.owner).toBe("part");
+    expect(gizmoState([plate, part], noHold)?.owner).toBe("part");
   });
 
   it("⛔ no held bodies at all means no gizmo — nothing stands in", () => {
-    expect(gizmoState([])).toBeNull();
+    expect(gizmoState([], noHold)).toBeNull();
   });
 });
 
@@ -314,7 +322,7 @@ describe("⭐⭐⭐ THE INVARIANTS — the properties that make this robust rath
     // empty gizmo. ⚠ Nothing depended on that today, and anything that did would have failed in a
     // way no one could have reproduced.
     expect(gizmoChannels(busy)).toEqual(gizmoChannels(busy));
-    expect(gizmoState([busy])).toEqual(gizmoState([busy]));
+    expect(gizmoState([busy], noHold)).toEqual(gizmoState([busy], noHold));
   });
 
   it("⭐⭐ PURE — the same inputs give the same answer with no history between them", () => {
@@ -355,5 +363,192 @@ describe("⭐⭐⭐ THE INVARIANTS — the properties that make this robust rath
               }
     // ⚠ The count is asserted so that a builder loop quietly collapsing to one case is visible.
     expect(n).toBe(4 * 4 * 2 * 2 * 4 * 2);
+  });
+});
+
+/**
+ * GOLDEN VECTORS — **THE BOUNDED HOLD**, and the measurement that forced it.
+ *
+ * > *"flips/s varies from 0,0,0,0,0,0 to x,y,z,w,0,0 with x, y, z, w somewhere between 0 and 4"*
+ * > … *"Case B with double touch actively translating the object: flips/s up to x,y,z,0,0,0 and
+ * > same range as before"* — the owner, 2026-09-24
+ *
+ * ⛔⛔⛔ **THE MEASUREMENT KILLED THE CASE A / CASE B DISTINCTION.** Both flip at the same rate on
+ * the channels the hand is driving; case A merely adds grey. ⭐ So the cause is not in any rule
+ * that tells the two cases apart — it is `A11` itself: the offset is clamped to the band boundary
+ * while moving, **any reversal puts it back inside**, and `restConfirmMs` later the axis is
+ * `STATIONARY`. A drag curves, so each axis reverses 1–4 times a second.
+ */
+describe("⭐⭐⭐ the bounded hold — bridging a reversal without becoming a memory", () => {
+  const ALL_OFF = [false, false, false, false, false, false] as const;
+  const RED_ON = [true, false, false, false, false, false] as const;
+  const AVAIL = [true, true, true, true, true, true] as const;
+
+  it("⭐⭐⭐ A REVERSAL DOES NOT BLANK THE LINE — the defect, as a vector", () => {
+    // ⚠ 40 ms after the last emission, inside a 200 ms hold: the line stays lit.
+    expect(
+      heldChannels(ALL_OFF, AVAIL, {
+        nowMs: 1040,
+        holdMs: 200,
+        lastLitMs: [
+          1000,
+          -Infinity,
+          -Infinity,
+          -Infinity,
+          -Infinity,
+          -Infinity,
+        ],
+      })[0],
+    ).toBe(true);
+  });
+
+  it("⛔ and it IS bounded — past the hold the line goes out", () => {
+    // ⭐ THE LINE THIS MUST NOT CROSS: the memory that produced *"persistence of the grey axis"*
+    // had no expiry at all. This one does, and the vector pins it either side of the boundary.
+    expect(
+      heldChannels(ALL_OFF, AVAIL, {
+        nowMs: 1200,
+        holdMs: 200,
+        lastLitMs: [
+          1000,
+          -Infinity,
+          -Infinity,
+          -Infinity,
+          -Infinity,
+          -Infinity,
+        ],
+      })[0],
+    ).toBe(false);
+  });
+
+  it("⛔⛔⛔ A LIFTED DRIVER GOES DARK AT ONCE, however recently it was lit", () => {
+    // > *"if the second touch is released, the axis do not disappear immediately"*
+    // ⭐⭐ THE HOLD IS CANCELLED BY AVAILABILITY, NOT BY THE CLOCK. 1 ms into a 200 ms hold, with
+    // the driver gone, the line is out. ⚠ RED against a hold that expired only on time.
+    expect(
+      heldChannels(ALL_OFF, [false, false, false, false, false, false], {
+        nowMs: 1001,
+        holdMs: 200,
+        lastLitMs: [1000, 1000, 1000, 1000, 1000, 1000],
+      }),
+    ).toEqual([false, false, false, false, false, false]);
+  });
+
+  it("⛔ `holdMs = 0` is the honest OFF — the raw, blinking quantity", () => {
+    expect(
+      heldChannels(ALL_OFF, AVAIL, {
+        nowMs: 1001,
+        holdMs: 0,
+        lastLitMs: [1000, 1000, 1000, 1000, 1000, 1000],
+      }),
+    ).toEqual([false, false, false, false, false, false]);
+  });
+
+  it("⭐ a channel being pushed is lit whatever the clock and whatever the availability say", () => {
+    expect(
+      heldChannels(RED_ON, [false, false, false, false, false, false], {
+        nowMs: 9e9,
+        holdMs: 0,
+        lastLitMs: [],
+      })[0],
+    ).toBe(true);
+  });
+
+  it("⛔ a channel never lit has nothing to hold — `-Infinity` is not 'recently'", () => {
+    expect(
+      heldChannels(ALL_OFF, AVAIL, {
+        nowMs: 1000,
+        holdMs: 200,
+        lastLitMs: [...ALL_OFF].map(() => -Infinity),
+      }),
+    ).toEqual([false, false, false, false, false, false]);
+  });
+});
+
+describe("⭐⭐ channelAvailability — a live driver, as distinct from a live push", () => {
+  it("⭐⭐⭐ the second touchpoint's channels die with the touchpoint", () => {
+    const withFinger = body({
+      seconds: [second(REST, true)],
+      turns: [SECOND_ROLL(0), null, null],
+    });
+    expect(channelAvailability(withFinger)[1]).toBe(true);
+    expect(channelAvailability(withFinger)[3]).toBe(true);
+    // ⚠ Same body, same turn record, finger gone: the record now names a touchpoint that is not
+    // there, and both of its channels are unavailable.
+    const lifted = { ...withFinger, seconds: [] };
+    expect(channelAvailability(lifted)[1]).toBe(false);
+    expect(channelAvailability(lifted)[3]).toBe(false);
+  });
+
+  it("⛔ red and blue are available only while the holder translates", () => {
+    expect(channelAvailability(body({ holderTranslates: true }))).toEqual([
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(channelAvailability(body({ holderTranslates: false }))).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it("⛔ and a HOLDER-driven turn stays available — the holder cannot lift mid-gesture", () => {
+    expect(
+      channelAvailability(body({ turns: [HOLDER_ROLL, null, null] }))[3],
+    ).toBe(true);
+  });
+});
+
+describe("⭐⭐ gizmoState with a hold — ownership must follow the PUSH, not the glow", () => {
+  const holdFor =
+    (lastLitMs: readonly number[], nowMs: number, holdMs = 200) =>
+    () => ({ nowMs, holdMs, lastLitMs });
+
+  it("⭐⭐⭐ A BODY BEING PUSHED TAKES THE GIZMO FROM ONE THAT IS MERELY STILL GLOWING", () => {
+    // ⛔ Otherwise picking up a second body during another's hold would leave the instrument on
+    // the one nobody is touching — the `soleGizmoBody` lesson, one mechanism further on.
+    const glowing = body({ id: "glow", holderTranslates: true, holder: REST });
+    const pushed = body({
+      id: "pushed",
+      holderTranslates: true,
+      holder: MOVE_X,
+    });
+    const s = gizmoState(
+      [glowing, pushed],
+      holdFor([1000, 1000, 1000, 1000, 1000, 1000], 1050),
+    );
+    expect(s?.owner).toBe("pushed");
+  });
+
+  it("⭐ with nothing pushed, a body still glowing keeps it over one showing nothing", () => {
+    const dark = body({ id: "dark", holderTranslates: true, holder: REST });
+    const glowing = body({ id: "glow", holderTranslates: true, holder: REST });
+    const s = gizmoState([dark, glowing], (id) => ({
+      nowMs: 1050,
+      holdMs: 200,
+      lastLitMs:
+        id === "glow"
+          ? [1000, 1000, 1000, 1000, 1000, 1000]
+          : [-Infinity, -Infinity, -Infinity, -Infinity, -Infinity, -Infinity],
+    }));
+    expect(s?.owner).toBe("glow");
+  });
+
+  it("⛔ `instant` is reported separately, so the caller cannot stamp its own hold", () => {
+    // ⭐⭐ THE ONE-WAY RULE: the clock is stamped from `instant`. Stamping it from `channels`
+    // would make every held line renew its own hold, and the bound would be infinite again.
+    const s = gizmoState(
+      [body({ holderTranslates: true, holder: REST })],
+      holdFor([1000, 1000, 1000, 1000, 1000, 1000], 1050),
+    );
+    expect(s?.channels.some((c) => c)).toBe(true);
+    expect(s?.instant.some((c) => c)).toBe(false);
   });
 });
