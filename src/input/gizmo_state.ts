@@ -131,21 +131,7 @@ export interface GizmoBody<T> {
 /** ⭐ The answer: which body carries the gizmo, and which of its six lines are lit. */
 export interface GizmoState<T> {
   readonly owner: T;
-  /** ⭐ What is DRAWN — the instantaneous set, widened by the hold. */
   readonly channels: GizmoChannels;
-  /**
-   * ⚠ What is being pushed RIGHT NOW, before the hold. ⛔ The caller stamps its clock from this,
-   * never from `channels`, or a held line would keep renewing its own hold for ever.
-   */
-  readonly instant: GizmoChannels;
-}
-
-/** ⭐ The clock and the lifetime the hold needs. ⚠ `holdMs = 0` disables it entirely. */
-export interface HoldInputs {
-  readonly nowMs: number;
-  readonly holdMs: number;
-  /** When each channel was last INSTANTANEOUSLY lit. `-Infinity` for never. */
-  readonly lastLitMs: readonly number[];
 }
 
 const moving = (m: AxisMotion | undefined, screen: "x" | "y"): boolean =>
@@ -171,58 +157,6 @@ const turnLit = <T>(b: GizmoBody<T>, d: TurnDriver | null): boolean => {
  * and any second touchpoint's `dy` → **gravity**. ⚠ Each is gated by whether that axis drives
  * anything in THIS configuration, because a state cannot tell you that and an emission could.
  */
-/**
- * ⭐⭐⭐ **IS THIS CHANNEL *AVAILABLE* — does it have a live driver at all?** — as distinct from
- * *is it being pushed this instant*.
- *
- * ⛔⛔ **THIS IS WHAT MAKES THE HOLD SAFE.** A hold that expired only on a clock would keep a line
- * lit after the finger driving it had LIFTED — which is one of the two reports the previous,
- * unbounded memory produced. ⚠ A channel whose driver is gone is **not available**, so it goes
- * dark at once however recently it was lit. ⭐ Only a REVERSAL is bridged; a release is instant.
- */
-export function channelAvailability<T>(b: GizmoBody<T>): GizmoChannels {
-  const turnLive = (d: TurnDriver | null): boolean => {
-    if (d === null) return false;
-    if (d.driver === "HOLDER") return true;
-    return b.seconds[d.driver] !== undefined;
-  };
-  return [
-    b.holderTranslates,
-    b.seconds.some((s) => s.lifts),
-    b.holderTranslates,
-    turnLive(b.turns[TURN_ROLL]),
-    turnLive(b.turns[TURN_YAW]),
-    turnLive(b.turns[TURN_PITCH]),
-  ];
-}
-
-/**
- * ⭐⭐⭐ **THE DISPLAYED SET — the instantaneous one, widened by a BOUNDED hold.**
- *
- * ⛔⛔⛔ **WHY A HOLD IS NEEDED AT ALL, AND IT IS NOT A CHOICE OF MINE**: `A11` clamps an axis's
- * offset to exactly the band boundary while it moves, so **any reversal puts it back inside the
- * band** and `restConfirmMs` later the axis reads `STATIONARY`. ⚠ A real drag curves, so each
- * screen axis reverses 1–4 times a second — measured on the glass as `flips/s` on exactly the
- * channels the hand was driving, in BOTH the aligned and the free case. ⭐ The channel is right;
- * the quantity blinks, and a readout of it must not.
- *
- * ⛔ A channel is lit when it is being pushed, or when it was pushed within `holdMs` **and its
- * driver still exists**. ⚠ Three ways for a line to go dark, and only one of them is the clock.
- */
-export function heldChannels(
-  instant: GizmoChannels,
-  available: GizmoChannels,
-  hold: HoldInputs,
-): GizmoChannels {
-  const lit = (i: number): boolean => {
-    if (instant[i]) return true;
-    if (!available[i] || hold.holdMs <= 0) return false;
-    const last = hold.lastLitMs[i];
-    return last !== undefined && hold.nowMs - last < hold.holdMs;
-  };
-  return [lit(0), lit(1), lit(2), lit(3), lit(4), lit(5)];
-}
-
 export function gizmoChannels<T>(b: GizmoBody<T>): GizmoChannels {
   return [
     b.holderTranslates && moving(b.holder, "x"),
@@ -263,20 +197,13 @@ export function gizmoChannels<T>(b: GizmoBody<T>): GizmoChannels {
  */
 export function gizmoState<T>(
   bodies: readonly GizmoBody<T>[],
-  hold: (id: T) => HoldInputs,
 ): GizmoState<T> | null {
-  let firstLit: GizmoState<T> | null = null;
   let first: GizmoState<T> | null = null;
   for (const b of bodies) {
     if (b.frozen) continue;
-    const instant = gizmoChannels(b);
-    const channels = heldChannels(instant, channelAvailability(b), hold(b.id));
-    // ⛔ THE DRIVEN BODY WINS OUTRIGHT: a body being pushed right now takes the gizmo from one
-    // that is merely still showing a held line, so picking a second body up never steals it.
-    if (instant.some((c) => c)) return { owner: b.id, channels, instant };
-    if (firstLit === null && channels.some((c) => c))
-      firstLit = { owner: b.id, channels, instant };
-    if (first === null) first = { owner: b.id, channels, instant };
+    const channels = gizmoChannels(b);
+    if (channels.some((c) => c)) return { owner: b.id, channels };
+    if (first === null) first = { owner: b.id, channels };
   }
-  return firstLit ?? first;
+  return first;
 }

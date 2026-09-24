@@ -26,15 +26,18 @@ operating rule set.
 
 ## No heuristic pile-up
 
-If something misbehaves, the fix is **better data covering that failure as its own case**, or **a
-reconsidered model with literature backing** — *never* a special-case rule bolted onto the output.
+If something misbehaves, the fix is **better data covering that failure as its own
+case**, or **a reconsidered model with literature backing** — *never* a special-case
+rule bolted onto the output to patch one observed failure.
 
-⭐ The corollary the predecessor kept re-learning: **a trigger cannot enforce an invariant.** Two
-trigger-shaped fixes were built and reverted before a positional clamp shipped.
+⭐ The corollary the predecessor kept re-learning: **a trigger cannot enforce an
+invariant.** Two trigger-shaped fixes were built and reverted before a positional
+clamp shipped.
 
-⭐⭐ **A COMPOSITION IS A THING TO MEASURE, NOT AN EMERGENT PROPERTY.** The predecessor's rotation
-stack was defensible at every layer and a **reflection** as a whole, because nobody had computed the
-composite. **Ask what the whole chain does, in one expression, and check it.**
+⭐⭐ **A COMPOSITION IS A THING TO MEASURE, NOT AN EMERGENT PROPERTY.** The
+predecessor's rotation stack was defensible at every layer and a **reflection** as a
+whole, because nobody had ever computed the composite. **Ask what the whole chain
+does, in one expression, and check it.**
 
 ⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.** *(2026-09-15:
 a report that the gravity frame had regressed.)* Every part had green vectors, ⚠ none of which is the
@@ -61,18 +64,18 @@ last verdict**: a ratio of two numbers passing through zero is garbage however c
 
 ## ⭐⭐ A GESTURE spans the moments between its touchpoints
 
-*(2026-09-16.)* A rule table maps *what is down right now* to *what happens*. ⛔ A hand does not:
-**lifting a finger and putting it down again is one intention**, and for the 150–300 ms in between
-the literal truth is a configuration the user never asked for.
+*(2026-09-16.)* A rule table maps *what is down right now* to *what happens*. ⛔ A hand does
+not work that way: **lifting a finger and putting it down again is one intention**, and for
+the 150–300 ms in between, the literal truth is a configuration the user never asked for.
 
-⚠ The instance: a rule table said *one touchpoint translates, two rotate*. Swap the second finger and
-the object translated through the middle of the swap — correct by the table, wrong by any account of
-what the hand was doing.
+⚠ The instance: a rule table said *one touchpoint translates, two rotate*. Swap the second finger from
+one place to another and the object translated through the middle of the swap — correctly by the
+table, wrongly by any account of what the hand was doing.
 
-⭐⭐ **The tell was the owner's own words**: two cases that *"differ by timing of the input"*. When
-two runs of one gesture differ only by WHEN the user moved, the rule is reading a momentary state the
-gesture spans. ⚠ Same shape as *a mode keyed on motion*: there the state was noisy, here it is
-briefly and genuinely wrong.
+⭐⭐ **The tell was the owner's own observation**: two cases that *"differ by timing of the input"*.
+When two runs of one gesture differ only by WHEN the user moved, the rule is reading a momentary state
+the gesture spans. ⚠ Same shape as *a mode keyed on motion*, one level up: there the state was noisy,
+here it is briefly and genuinely wrong.
 
 ⭐ The fix is a grace on the DISCRETE event — a lift — never on a continuous reading. ⛔ And
 it has a real cost that must be stated rather than hidden: going back to the one-touchpoint
@@ -106,17 +109,13 @@ reasoning for a choice has to explain away a verdict a hand already gave, the ve
 
 ## ⭐⭐⭐ AN INSTRUMENT READS STATE, NEVER THE ARRIVAL OF AN EVENT
 
-*(2026-09-23/24, the gizmo: eight reports, one shape.)* A readout keyed on a per-frame quantity
-inherits its noise — ⛔ *the absence of an event is not the absence of the gesture.*
-⛔⛔ **AN UNBOUNDED MEMORY IS NOT THE FIX**: it trades a false negative for a false positive that
-lasts longer — two reports, a line that would not go out and one that outlived its finger.
-⭐ Read the state machine that already decides the fact. ⚠ Emission has one property a state lacks
-— *a channel that drives nothing emits nothing* — so moving to state needs an explicit membership
-rule. ⛔⛔⛔ **BUT DO NOT THEN REMOVE ALL SMOOTHING WITHOUT MEASURING THE SIGNAL UNDER IT.** §1.1's
-band is pinned to its boundary while moving, so **any reversal re-enters it** and 30 ms later the
-axis reads rest: a curving drag blinks 1–4×/s, measured. ⭐ A readout of a blinking quantity needs a
-**bounded** hold — expiring on a clock AND cancelled when its driver is gone, which is what
-separates it from the unbounded memory that made lines outlive the finger driving them.
+*(2026-09-23, the gizmo: seven device reports, one shape.)* A readout keyed on a per-frame
+quantity inherits its noise — ⛔ *the absence of an event is not the absence of the gesture.*
+⛔⛔ **MEMORY IS NOT THE FIX**: it trades a false negative for a false positive that lasts longer —
+two further reports, a line that would not go out and one that outlived the finger driving it.
+⭐ Read the state machine that already decides the fact, and keep nothing. ⚠ Emission has one
+property a state lacks — *a channel that drives nothing emits nothing* — so moving to state needs an
+explicit membership rule, which is where the regression came from.
 → [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md)
 
 ## ⭐⭐ A threshold the state machine PARKS ON will be compared at its exact value
@@ -170,20 +169,23 @@ should not be.
 
 ## ⭐⭐ A threshold is only half a rule — the other half is what advances the clock
 
-*(2026-09-15, after three device reports of one defect.)* A state machine that waits for a condition
-must be **driven by something that runs when the condition holds**. ⛔ Driven by the very signal
-whose ABSENCE it detects, no threshold can be right and every fix looks like tuning.
+*(2026-09-15, after three device reports of one defect.)* A state machine that waits for a
+condition must be **driven by something that runs when the condition holds**. ⛔ If it is
+driven by the very signal whose ABSENCE it is trying to detect, no threshold can ever be
+right, and every fix will look like a tuning problem.
 
 ⚠ The instance: *"is this finger still?"* was answered by a tracker advanced only by `pointermove`.
-A still finger emits none, so it froze at MOVING. ⭐ Two rounds of fixing the THRESHOLD changed
-nothing: the threshold was never the problem.
+A still finger emits none, so the tracker froze at MOVING, reachable only by a stray jitter sample.
+⭐ Two rounds of fixing the THRESHOLD changed nothing: the threshold was never the problem.
 
-⭐⭐ **The tell was in the first report**: one direction of the transition was instant and the other
-erratic. **An asymmetry between two directions of one test is about the EVIDENCE, not the
-threshold** — entering MOVING is witnessed by an event that must exist; leaving it is not.
+⭐⭐ **The tell, and it was in the first report**: one direction of the transition was
+instant and the other was erratic. **An asymmetry between two directions of the same test
+is about the EVIDENCE, not the threshold** — entering MOVING is witnessed by an event that
+necessarily exists; leaving it is not.
 
-⭐ *Elapsed time with no sample* is the stronger evidence of stillness: a sample inside a dead
-radius is still a report of motion, and silence is not.
+⭐ And the fix's quantity was the better one all along: *elapsed time with no sample* is
+stronger evidence of stillness than any sample inside a dead radius, because a sample is
+still a report of motion and silence is not.
 
 ## ⭐⭐ When a rule needs a WINDOW to decide, suspect the QUESTION
 
@@ -249,12 +251,14 @@ memory.
 
 ## ⛔⛔ AN ABSENT READOUT CANNOT BE CAUGHT BY LOOKING AT THE SCREEN
 
-*(2026-09-16.)* A dead instrument that **prints** a stale quantity gets caught eventually: someone
-reads it and it disagrees with the world. ⛔ One that prints **nothing at all** is invisible by
-construction — no wrong number to notice, and the docs read as they would if it worked.
+*(2026-09-16, found while fixing the above.)* A dead instrument that **prints** a stale
+quantity gets caught eventually: someone reads it and it disagrees with the world. ⛔ One
+that prints **nothing at all** is invisible by construction — there is no wrong number to
+notice, and the documentation describing it reads exactly as it would if it worked.
 
 ⚠ The instance: `scene.ts` computed which tunables the URL overrode and handed them to a HUD that
-**never rendered them**, for the file's whole life, while the docs said it did.
+**never rendered them**, for the whole life of the file, while the docs said it did — it would have
+cost an `IN5` session an hour measuring a default it believed was an override.
 
 ⭐⭐ **So audit an instrument against the QUESTIONS it is supposed to answer, not against the lines
 it happens to print**: *for each thing this readout is documented to tell me, point at the code that
@@ -271,8 +275,9 @@ the owner had just watched fail — every time the instrument was wrong and the 
   is a second implementation, free to disagree.
 * **Print the aggregation, not just the value.** Two harnesses aggregating differently under one
   name reported a sound axis as broken.
-* ⭐⭐⭐ **A SIGN IS NOT TESTED BY ANY AMOUNT OF TESTING THE MAGNITUDE.** Four defects in one day
-  shared that shape, none caught by a suite. Assert signs against declared truth.
+* ⭐⭐⭐ **A SIGN IS NOT TESTED BY ANY AMOUNT OF TESTING THE MAGNITUDE.** Four defects
+  in one day shared that shape and not one was caught by a suite. Assert signs
+  against declared truth.
 * ⭐⭐⭐ **AN INVARIANT TESTED ON ONE AXIS IS NOT TESTED.** A suite checked chirality on the one
   axis that never had the problem, certifying the two that did.
 * ⭐⭐⭐ **A GOLDEN VECTOR'S FIXTURE MUST BE A SPECIMEN THE PRODUCT WOULD ACCEPT.** A suite built
@@ -283,8 +288,8 @@ the owner had just watched fail — every time the instrument was wrong and the 
 * ⭐⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT.** A detector left **fed**
   after its channel was taken away still held the top rung of the release ladder and vetoed the
   rule that replaced it. ⛔ *Unwired* means **nothing calls it**, not that nothing reads it.
-* ⭐⭐ **A test that cannot FAIL is not a test.** Keep a counter-example beside each guard and check
-  the guard fires on it.
+* ⭐⭐ **A test that cannot FAIL is not a test.** Keep an explicit counter-example
+  beside each guard, and check the guard fires on it.
 * ⭐⭐ **Independence has to be ARGUED, not inferred from agreement.** Measures from one source
   degrade together and agree on a wrong answer.
 * ⚠ **A statistic pooled across a region cannot answer a question about it.**

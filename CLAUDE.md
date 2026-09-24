@@ -125,8 +125,8 @@ gizmo. ⛔ `cameraOffsetZoneEnterSetupB` gates a method **the owner has not defi
 ⭐⭐⭐ **AND `worldAxisB` NOW GOVERNS A FREE BODY'S ROTATION TOO** (`D84`, 2026-09-23). The owner
 asked *"why is the translation done along world axis but the rotation along screen axis — is it on
 purpose or was it a miss?"* ⛔⛔ **The honest answer was NEITHER**: `D74`/`D75` named only translation
-channels and `IN4.md` never reached the rotation, so `A7`'s LIVE frame stood on — not by decision
-but because none was made. ⭐ `METHOD`: *a scope never stated is not a scope chosen, and the
+channels and `IN4.md` never reached the rotation, so `A7`'s LIVE frame went on standing — not by
+decision but because none was made. ⭐ `METHOD`: *a scope never stated is not a scope chosen, and the
 difference is invisible in the code that results.* ⭐⭐ **Less moves than the question implies**: a
 gravity frame's `up` IS the world vertical, so **YAW was already world-fixed**; only PITCH and ROLL
 freeze. ⚠⚠ **Cost, unjudged**: a quarter-orbit on, the frozen pitch axis points at the camera and a
