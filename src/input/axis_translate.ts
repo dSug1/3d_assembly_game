@@ -75,7 +75,6 @@
  * ⛔ ENGINE-FREE.
  */
 import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
-import type { MotionState } from "./motion";
 import type { ObjectAxes } from "./object_axes";
 
 /** The camera's own axes — `ScreenFrame`'s `right` and `up`. ⚠ Never the gravity frame. */
@@ -129,21 +128,6 @@ export interface AxisTravel extends AxisTravelM {
    * which is a different quantity from this one.
    */
   readonly trackGain: number;
-  /**
-   * ⭐⭐⭐ **WHICH WAY EACH AXIS IS BEING PUSHED, as `[x, gravity, depth]`** — `+1`, `-1`, or `0`
-   * for a channel that moved nothing this frame.
-   *
-   * ⛔⛔ It is the SENSE only, and that is the point. The leading-face ray is aimed by the SET of
-   * channels being pushed and their senses — never by their magnitudes, because a magnitude is a
-   * per-frame quantity and `A11`'s deadband emits it in bursts:
-   *
-   * > *"when I translate any object with a combination of dx on first touch and dy on second
-   * > touch (both not zero), the gizmo jitters position between faces."* — the owner, 2026-09-23
-   *
-   * ⭐ Two rules had already been tried on the magnitudes and both jittered for that reason — the
-   * vector SUM of the channels, and the single DOMINANT channel. The set does not.
-   */
-  readonly signs: readonly [number, number, number];
 }
 
 /**
@@ -208,7 +192,6 @@ export function axisTravel(
       depthM: 0,
       edgeOn: false,
       trackGain: 0,
-      signs: [0, 0, 0],
     };
   }
   const dx = finite(input.holderDxPx) * metresPerPx;
@@ -217,7 +200,11 @@ export function axisTravel(
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
 
   /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
-  const along = (s: readonly [number, number], mx: number, my: number): number | null => {
+  const along = (
+    s: readonly [number, number],
+    mx: number,
+    my: number,
+  ): number | null => {
     const len = Math.hypot(s[0], s[1]);
     if (!(len > coneSin) || !(len > 0)) return null;
     // ⭐ `(m · ŝ) / |s|` — project onto the axis's screen LINE, then undo the foreshortening.
@@ -279,18 +266,8 @@ export function axisTravel(
   const g = along(sg, 0, dy2);
   const gravityM = g === null ? -dy2 * secondGain : g * secondGain;
 
-  // ⭐⭐ **THE SENSE EACH AXIS IS BEING PUSHED IN** — the ray is aimed from these and from
-  // `activeChannels`, never from the magnitudes. ⛔ The sign comes from the TRAVEL, which is where the
-  // camera's geometry has already been resolved; the magnitude is discarded on purpose.
-  const signs: readonly [number, number, number] = [
-    Math.sign(xM) || 0,
-    Math.sign(gravityM) || 0,
-    Math.sign(depthM) || 0,
-  ];
-
   const asked = Math.hypot(dx, dy);
   return {
-    signs,
     xM,
     depthM,
     gravityM,
@@ -311,126 +288,16 @@ export function axisTravel(
  */
 export function axisDisplacement(travel: AxisTravelM, axes: ObjectAxes): Vec3 {
   return [
-    axes.x[0] * travel.xM + axes.gravity[0] * travel.gravityM + axes.depth[0] * travel.depthM,
-    axes.x[1] * travel.xM + axes.gravity[1] * travel.gravityM + axes.depth[1] * travel.depthM,
-    axes.x[2] * travel.xM + axes.gravity[2] * travel.gravityM + axes.depth[2] * travel.depthM,
+    axes.x[0] * travel.xM +
+      axes.gravity[0] * travel.gravityM +
+      axes.depth[0] * travel.depthM,
+    axes.x[1] * travel.xM +
+      axes.gravity[1] * travel.gravityM +
+      axes.depth[1] * travel.depthM,
+    axes.x[2] * travel.xM +
+      axes.gravity[2] * travel.gravityM +
+      axes.depth[2] * travel.depthM,
   ];
-}
-
-/**
- * ⭐⭐⭐ **WHICH CHANNELS ARE ACTIVE — from §1.1's OWN MOTION STATES, deadband and all.**
- *
- * > *"add a slight deadband on the delta position input so that there is no gizmo jitter. I
- * > suppose there is a deadband for the object translation: use the same deadband for the gizmo
- * > repositioning."* — the owner, 2026-09-23
- *
- * ⛔⛔⛔ **THE DEADBAND WAS ALREADY THERE, AND THE GIZMO WAS READING THE WRONG SIDE OF IT.** `A11`
- * emits the EXCESS over a dead radius, on whichever axis has crossed it — so *"did this channel
- * emit this frame"* flickers in bursts even while a hand pushes both fingers steadily, and the
- * gizmo's set of lines flickered with it. ⭐ The same machine also keeps a per-axis **STATE**:
- * `MOVING` until that axis has been at rest for `restConfirmMs`. ⚠ That is the stable form of the
- * same fact, and it is the owner's *"same deadband"* read properly — one dead radius, one rest
- * time, shared with the translation rather than copied.
- *
- * ⭐⭐ So the channel map is applied to the STATES: the holder's screen `x` drives the body's `x`,
- * its screen `y` drives `depth`, and any second touchpoint's `y` drives `gravity`.
- *
- * @param holder the holder's per-axis motion — `Recognizer.motionAxes`.
- * @param seconds every second touchpoint's per-axis motion — `MotionTracker.axes`.
- */
-export function activeChannels(
-  holder: { readonly x: MotionState; readonly y: MotionState } | null,
-  seconds: readonly { readonly x: MotionState; readonly y: MotionState }[],
-): readonly [boolean, boolean, boolean] {
-  return [holder?.x === "MOVING", seconds.some((s) => s.y === "MOVING"), holder?.y === "MOVING"];
-}
-
-/**
- * ⭐⭐⭐ **WHICH AXES THE GIZMO SHOWS — the ones this delta position actually translates along.**
- *
- * > *"the direction is shown only if the delta position triggers a translation in this direction.
- * > Therefore, for example, for a pure translation in the gravity axis only the green line would
- * > show. For a translation in the horizontal plane, both blue and red lines would show but not
- * > the green line."* — the owner, 2026-09-23
- *
- * > *"on first touch, if there is only dx or only dy, the other gizmo line should not appear.
- * > Both red and blue gizmo lines should appear only if both dx and dy are not null."* — the
- * > owner, clarifying it the same day
- *
- * ⛔ The gizmo used to draw all three axes always, so it said *"here is the basis"* when the
- * question a hand is asking is *"where will this push go"*. ⭐ Now it answers the second.
- *
- * ⛔⛔⛔ **AND THAT CLARIFICATION IS WHY THIS READS THE *INPUT* AND NOT THE TRAVEL.** Under
- * `PLANE` a pure `dx` produces travel on **both** horizontal axes — that is exactly how the 2×2
- * solve keeps the body under the finger — so a rule reading the OUTPUT lights both lines for a
- * single-axis drag, which is what the owner rejected. ⭐ Read from the channel that was pushed,
- * the answer is the one a hand can act on: *this finger is driving that line.*
- *
- * ⚠⚠ **AND A PAUSE MUST NOT BLANK IT.** A finger that stops emits nothing, and `A11`'s deadband
- * emits nothing on an axis inside its band — so the instantaneous answer is *no axes at all* many
- * frames per second. ⛔ A gizmo that blinked out whenever the hand paused would be unreadable,
- * which is the same argument `lastTravelDir` already carries. ⭐ So the last NON-EMPTY answer
- * stands until the body is translated again.
- *
- * @param previous what is showing now, or `null` before the body has ever been driven.
- * @param driven which channels pushed — `AxisTravel.driven`, computed where the channel map is
- *   applied so that the map has ONE home.
- * @returns the triple `[x, gravity, depth]`, or `previous` when nothing was pushed — which is
- *   `null` only until the first push, where showing nothing is correct.
- */
-export function displayedAxes(
-  previous: readonly [boolean, boolean, boolean] | null,
-  driven: readonly [boolean, boolean, boolean],
-): readonly [boolean, boolean, boolean] | null {
-  return driven[0] || driven[1] || driven[2] ? driven : previous;
-}
-
-/**
- * ⭐⭐⭐ **WHERE THE LEADING-FACE RAY POINTS — the axes being shown, each in its own sense.**
- *
- * > *"the gizmo repositioning should match the input, not the travel and its lag"* — the owner
- *
- * > *"when I translate any object with a combination of dx on first touch and dy on second touch
- * > (both not zero), the gizmo jitters position between faces."* — the owner, the same day
- *
- * ⛔⛔⛔ **THE SECOND REPORT IS WHAT SETTLES THE FORM OF THIS RULE.** Two earlier versions aimed
- * the ray with per-frame MAGNITUDES — the vector sum of the channels, then the single dominant
- * channel — and both jitter for the same reason: `A11`'s deadband emits an axis's travel in
- * BURSTS, so which channel is larger changes frame to frame even while a hand pushes both
- * steadily. ⭐ Crossing a face boundary then flips the gizmo back and forth.
- *
- * ⭐⭐ **THE SET IS STABLE; THE MAGNITUDES ARE NOT.** So the ray is the sum of the SHOWN axes,
- * each contributing its own sense and **equal weight**. Push `dx` alone and it points along x;
- * push the second finger alone and it points along gravity; push both and it points at the
- * diagonal between them — and it stays there, because nothing in it depends on how much either
- * channel emitted this frame.
- *
- * ⛔ It is the SAME set that decides which lines are drawn (`displayedAxes`), so the face the
- * gizmo sits on and the lines it draws are one fact rather than two.
- *
- * @param shown which axes are being displayed — `displayedAxes`'s answer.
- * @param signs the sense each axis is being pushed in — `AxisTravel.signs`, remembered per body.
- * @returns the ray, in the body's own axes, or `null` when nothing is shown or the senses cancel.
- */
-export function aimDirection(
-  shown: readonly [boolean, boolean, boolean],
-  signs: readonly [number, number, number],
-  axes: ObjectAxes,
-): Vec3 | null {
-  const basis: readonly Vec3[] = [axes.x, axes.gravity, axes.depth];
-  let x = 0;
-  let y = 0;
-  let z = 0;
-  for (let i = 0; i < 3; i++) {
-    if (!shown[i]) continue;
-    const s = Math.sign(signs[i] ?? 0);
-    if (s === 0) continue;
-    const a = basis[i]!;
-    x += a[0] * s;
-    y += a[1] * s;
-    z += a[2] * s;
-  }
-  return normalize([x, y, z]);
 }
 
 /**

@@ -7,7 +7,7 @@
  * predicates, and since EVERY drag ends in a release, every drag could satisfy a
  * flick rule. They competed for the same gesture and the winner was arbitrary.
  *
- *     PRESSED ──(travel > moveEnterDistance)──> COMMITTED_CONTINUOUS ──> RELEASED
+ *     PRESSED ──(MotionTracker says MOVING)──> COMMITTED_CONTINUOUS ──> RELEASED
  *     PRESSED ──(release before that)──────────> TAP | DOUBLE_TAP | HOLD
  *
  * ⭐ PROVISIONAL MOTION AND ROLLBACK. The pose is snapshotted at press. While
@@ -25,11 +25,18 @@
  * before every committed drag). Same object, different owner. Not wired here.
  *
  * ⛔ AND THE COMMIT THRESHOLD IS `MotionTracker`'s OWN `MOVING` TRANSITION, not a
- * second comparison against `moveEnterDistance`. One constant, one place — and more
+ * second comparison of its own. ⚠ The diagram above said `moveEnterDistance` until
+ * 2026-09-23 — a constant `A11` **deleted**, two lines above the sentence saying so.
+ * ⭐ One constant, one place — and more
  * than that, one IMPLEMENTATION: a re-derived commit test is a second opinion that
  * can silently disagree with the first.
  */
-import { detectFlick, terminalSpeedPxPerS, trimBuffer, type Flick } from "./flick";
+import {
+  detectFlick,
+  terminalSpeedPxPerS,
+  trimBuffer,
+  type Flick,
+} from "./flick";
 import type { GestureConfig } from "./gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "./motion";
 import { mmToPx, pxToMm } from "../core/units";
@@ -205,7 +212,9 @@ export class TapHistory {
     if (!prev) return false;
     const gap = press.t - prev.t;
     const apart = Math.hypot(press.x - prev.x, press.y - prev.y);
-    return gap <= this.cfg.doubleTapWindow && apart <= mmToPx(this.cfg.doubleTapSlop);
+    return (
+      gap <= this.cfg.doubleTapWindow && apart <= mmToPx(this.cfg.doubleTapSlop)
+    );
   }
 }
 
@@ -277,7 +286,9 @@ export class Recognizer<P> {
    * be in memory" — which would make the estimate depend on how long the gesture has run.
    */
   get speedMmPerS(): number {
-    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg));
+    return pxToMm(
+      terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg),
+    );
   }
 
   /**
@@ -286,26 +297,26 @@ export class Recognizer<P> {
    * anything asking mid-gesture while nothing arrives (defect 70).
    */
   speedMmPerSAt(nowMs: number): number {
-    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg));
+    return pxToMm(
+      terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg),
+    );
   }
 
   /**
-   * ⭐⭐ **THE PER-AXIS MOTION STATE** — §1.1's own answer to *is this axis moving*, with its dead
-   * radius and its `restConfirmMs` hysteresis. ⛔ `motionState` below is the two axes ORed; the
-   * gizmo needs them apart, because each screen axis drives a different object axis.
-   * ⚠ Exposed rather than recomputed: a second definition of *moving* would be free to disagree
+   * ⭐⭐ **THE HOLDER'S PER-AXIS MOTION STATE** — §1.1's own answer to *is this axis being pushed*,
+   * with its dead radius and its `restConfirmMs` hysteresis.
+   * ⛔ `motionState` below is the two axes ORed; the gizmo needs them apart, because each screen
+   * axis drives a different object axis and a different line.
+   * ⚠ EXPOSED rather than recomputed: a second definition of *moving* would be free to disagree
    * with the one every rule in the input layer is judged by.
    */
-  get motionAxes(): { readonly x: MotionState; readonly y: MotionState } {
+  get axes(): { readonly x: MotionState; readonly y: MotionState } {
     return this.motion.axes;
   }
 
   get motionState(): MotionState {
     return this.motion.current;
   }
-
-
-
 
   press(s: Sample): void {
     this.phase = "PRESSED";
@@ -382,7 +393,6 @@ export class Recognizer<P> {
    * then applies from the rebased pose. That is not a glitch: it replaces exactly as much
    * unasked-for yaw/pitch with the roll the finger actually drew.
    */
-
 
   /**
    * ⭐⭐ ANOTHER RULE MOVED THIS OBJECT WHILE THIS TOUCHPOINT HELD IT STILL.

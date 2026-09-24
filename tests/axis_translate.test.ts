@@ -21,9 +21,6 @@ import {
   type AxisInputsPx,
   type CameraScreenAxes,
   type TranslatePairing,
-  aimDirection,
-  activeChannels,
-  displayedAxes,
 } from "@input/axis_translate";
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
@@ -48,7 +45,11 @@ const CONE = 5;
 function camera(azimuthDeg: number, elevationDeg: number) {
   const a = azimuthDeg * DEG;
   const e = elevationDeg * DEG;
-  const view: Vec3 = [Math.cos(a) * Math.cos(e), -Math.sin(e), Math.sin(a) * Math.cos(e)];
+  const view: Vec3 = [
+    Math.cos(a) * Math.cos(e),
+    -Math.sin(e),
+    Math.sin(a) * Math.cos(e),
+  ];
   const g = gravityFrame(view, DOWN)!;
   const right = g.right;
   const up = normalize([
@@ -66,7 +67,10 @@ const PER_PX = trackingMetresPerPx(1.5, FOV, H);
  * ⛔ Derived from the camera basis independently of the rule under test, so the round trip is a
  * check and not a restatement of the same arithmetic.
  */
-const toScreenPx = (v: Vec3, c: CameraScreenAxes): readonly [number, number] => [
+const toScreenPx = (
+  v: Vec3,
+  c: CameraScreenAxes,
+): readonly [number, number] => [
   dot(v, c.right) / PER_PX,
   -dot(v, c.up) / PER_PX,
 ];
@@ -270,12 +274,18 @@ describe("the depth range clamp — A5's bounds, carried over with the channel",
     const cam: Vec3 = [0, 0, 0];
     expect(clampDepthRange(cam, [1, 2, 3], push, 0.1, 10)).toEqual([1, 2, 3]);
     expect(clampDepthRange(cam, [1, 2, 30], push, 0.1, 10)).toEqual([1, 2, 10]);
-    expect(clampDepthRange(cam, [1, 2, 0.05], push, 0.1, 10)).toEqual([1, 2, 0.1]);
+    expect(clampDepthRange(cam, [1, 2, 0.05], push, 0.1, 10)).toEqual([
+      1, 2, 0.1,
+    ]);
   });
 
   it("⛔ a body BEHIND the camera is left alone rather than teleported in front of it", () => {
-    expect(clampDepthRange([0, 0, 0], [1, 2, -5], [0, 0, 1], 0.1, 10)).toEqual([1, 2, -5]);
-    expect(clampDepthRange([0, 0, 0], [1, 2, 3], [0, 0, 0], 0.1, 10)).toEqual([1, 2, 3]);
+    expect(clampDepthRange([0, 0, 0], [1, 2, -5], [0, 0, 1], 0.1, 10)).toEqual([
+      1, 2, -5,
+    ]);
+    expect(clampDepthRange([0, 0, 0], [1, 2, 3], [0, 0, 0], 0.1, 10)).toEqual([
+      1, 2, 3,
+    ]);
   });
 });
 
@@ -283,11 +293,17 @@ describe("degenerate inputs never reach a placement", () => {
   it("⛔ a NaN in, zeros out — one NaN in a position is permanent", () => {
     const c = camera(20, 20);
     const axes = axesFromFrame(c.gravity);
-    const t = run({ holderDxPx: NaN, holderDyPx: Infinity, secondDyPx: 5 }, c, axes);
-    for (const n of [t.xM, t.depthM, t.gravityM]) expect(Number.isFinite(n)).toBe(true);
+    const t = run(
+      { holderDxPx: NaN, holderDyPx: Infinity, secondDyPx: 5 },
+      c,
+      axes,
+    );
+    for (const n of [t.xM, t.depthM, t.gravityM])
+      expect(Number.isFinite(n)).toBe(true);
     expect(t.xM).toBeCloseTo(0, 15);
     expect(t.depthM).toBeCloseTo(0, 15);
-    for (const n of axisDisplacement(t, axes)) expect(Number.isFinite(n)).toBe(true);
+    for (const n of axisDisplacement(t, axes))
+      expect(Number.isFinite(n)).toBe(true);
   });
 
   it("⛔ a camera with no basis moves nothing", () => {
@@ -312,276 +328,10 @@ describe("degenerate inputs never reach a placement", () => {
 });
 
 /**
- * ⭐⭐⭐ **THE GIZMO SHOWS THE DIRECTIONS THIS PUSH ACTUALLY TRANSLATES ALONG.**
+ * ⛔⛔⛔ **THE GIZMO'S VECTORS MOVED WHOLE TO `tests/gizmo_state.test.ts` (2026-09-23).**
  *
- * > *"the direction is shown only if the delta position triggers a translation in this direction.
- * > Therefore, for example, for a pure translation in the gravity axis only the green line would
- * > show. For a translation in the horizontal plane, both blue and red lines would show but not
- * > the green line."* — the owner, 2026-09-23
+ * ⚠ `displayedAxes`, `soleGizmoBody` and `AxisTravel.driven` are **deleted**, not relocated: each
+ * answered one slice of *what does the gizmo show*, from a per-frame quantity, and the four device
+ * reports they produced were all seams between them. ⭐ One pure rule replaces all three, and the
+ * matrix it made writable is the point — see that file's header.
  */
-describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
-  // > *"the direction is shown only if the delta position triggers a translation in this
-  // > direction. Therefore, for example, for a pure translation in the gravity axis only the
-  // > green line would show. For a translation in the horizontal plane, both blue and red lines
-  // > would show but not the green line."*
-  //
-  // > *"on first touch, if there is only dx or only dy, the other gizmo line should not appear.
-  // > Both red and blue gizmo lines should appear only if both dx and dy are not null."*
-  //
-  // ⭐ The gizmo draws `[x, gravity, depth]` in that order — **red, green, blue**.
-  const c = camera(35, 30);
-  const axes = axesFromFrame(camera(0, 30).gravity);
-  /**
-   * ⭐⭐ The channel set comes from §1.1's per-axis MOTION STATES now, which is the owner's *"same
-   * deadband"* (2026-09-23) — `A11`'s emissions come in bursts and made the set flicker.
-   * ⚠ The fixture states them directly, which is what the render loop reads off the live trackers.
-   */
-  const moving = (x: boolean, y: boolean) =>
-    ({ x: x ? "MOVING" : "STATIONARY", y: y ? "MOVING" : "STATIONARY" }) as const;
-  const shownFor = (dx: boolean, holderDy: boolean, secondDy: boolean) =>
-    displayedAxes(null, activeChannels(moving(dx, holderDy), secondDy ? [moving(false, true)] : []));
-
-  it("⭐⭐⭐ RED AGAINST THE FIRST BUILD OF THIS RULE: a pure `dx` lights RED ALONE", () => {
-    // ⛔⛔ **THE PREMISE, MEASURED FIRST**: under `PLANE` a pure `dx` genuinely moves the body
-    // along BOTH horizontal axes — that is how the 2×2 solve keeps it under the finger. ⭐ So a
-    // rule reading the TRAVEL lights red and blue here, which is exactly what the owner rejected.
-    const t = run({ holderDxPx: 50 }, c, axes);
-    expect(Math.abs(t.xM)).toBeGreaterThan(1e-6);
-    expect(Math.abs(t.depthM)).toBeGreaterThan(1e-6);
-    // ⛔ THE ASSERTION: the line belongs to the CHANNEL that was pushed.
-    expect(shownFor(true, false, false)).toEqual([true, false, false]);
-  });
-
-  it("⭐⭐⭐ a pure holder `dy` lights BLUE alone", () => {
-    const t = run({ holderDyPx: -40 }, c, axes);
-    expect(Math.abs(t.xM)).toBeGreaterThan(1e-6); // ⚠ again, the travel is spread
-    expect(shownFor(false, true, false)).toEqual([false, false, true]);
-  });
-
-  it("⭐⭐ both RED and BLUE only when both `dx` and `dy` are non-null — the owner's words", () => {
-    expect(shownFor(true, true, false)).toEqual([true, false, true]);
-    expect(shownFor(true, false, false)).toEqual([true, false, false]);
-    expect(shownFor(false, true, false)).toEqual([false, false, true]);
-  });
-
-  it("⭐⭐⭐ a pure SECOND-touch push lights GREEN alone — his first example", () => {
-    expect(shownFor(false, false, true)).toEqual([false, true, false]);
-    // ⭐ And all three when all three channels are pushed at once.
-    expect(shownFor(true, true, true)).toEqual([
-      true,
-      true,
-      true,
-    ]);
-  });
-
-  it("⛔ a pause does NOT blank the gizmo — the last non-empty answer stands", () => {
-    // ⚠ A finger that stops emits nothing, and `A11`'s deadband emits nothing on an axis inside
-    // its band, so the instantaneous answer is *no axes* many frames per second.
-    const shown = shownFor(true, false, false)!;
-    expect(shown).toEqual([true, false, false]);
-    expect(displayedAxes(shown, [false, false, false])).toBe(shown);
-  });
-
-  it("⛔ before anything has been pushed there is nothing to show", () => {
-    expect(displayedAxes(null, [false, false, false])).toBeNull();
-    expect(shownFor(false, false, false)).toBeNull();
-  });
-
-  it("⛔ an axis at REST is not a push — the deadband's own hysteresis decides", () => {
-    // ⚠ The set no longer asks *"did this channel emit this frame"*: `A11` emits the excess over
-    // a dead radius in BURSTS, and reading those made the gizmo flicker. ⭐ It asks §1.1's per-axis
-    // STATE, which stays `MOVING` until that axis has been at rest for `restConfirmMs`.
-    expect(shownFor(false, false, false)).toBeNull();
-    expect(shownFor(false, false, true)).toEqual([false, true, false]);
-  });
-});
-
-/**
- * ⭐⭐⭐ **THE LEADING-FACE RAY IS AIMED BY THE CHANNEL PUSHED HARDEST.**
- *
- * > *"still, there is a slight lag for the repositioning of the green line to the leadingface."*
- * > — the owner, 2026-09-23, after the direction's time memory had already been deleted
- *
- * ⛔⛔ The residue was not time: aimed by the vector SUM of the channels, the ray only reaches
- * `objectB`'s top face inside **29.4°** of vertical (half-extents `0.75 × 1.0 × 1.5 L`, sides
- * leaning in) — so any residual horizontal travel above ~56% of the vertical kept it on the side,
- * where the side genuinely IS the nearer exit.
- */
-describe("⭐⭐⭐ the ray's aim — the SET of channels, never their magnitudes", () => {
-  // > *"the gizmo repositioning should match the input, not the travel and its lag"*
-  //
-  // > *"when I translate any object with a combination of dx on first touch and dy on second
-  // > touch (both not zero), the gizmo jitters position between faces."*
-  //
-  // ⛔⛔ Two earlier rules aimed the ray with per-frame MAGNITUDES — the vector sum, then the
-  // dominant channel — and both jitter, because `A11`'s deadband emits an axis's travel in BURSTS
-  // and so which one is larger changes frame to frame under a steady hand.
-  const c = camera(35, 30);
-  const axes = axesFromFrame(camera(0, 30).gravity);
-
-  it("⭐⭐⭐ THE JITTER, AS ARITHMETIC: bursty magnitudes cannot move the ray", () => {
-    // ⛔ Four frames of a steady two-finger push, as `A11` actually emits them: each channel goes
-    // quiet on some frames while the other carries. ⚠ The SHOWN set is what `displayedAxes` keeps,
-    // and the senses are remembered — so the aim is the SAME direction on all four.
-    const frames = [
-      { holderDxPx: 30, secondDyPx: 2 },
-      { holderDxPx: 1, secondDyPx: 25 },
-      { holderDxPx: 28, secondDyPx: 3 },
-      { holderDxPx: 2, secondDyPx: 26 },
-    ];
-    let shown: readonly [boolean, boolean, boolean] | null = null;
-    let signs: [number, number, number] = [0, 0, 0];
-    const aims = frames.map((f) => {
-      const t = run(f, c, axes);
-      shown = displayedAxes(shown, [true, true, false]);
-      signs = [t.signs[0] || signs[0], t.signs[1] || signs[1], t.signs[2] || signs[2]];
-      return aimDirection(shown!, signs, axes)!;
-    });
-    for (const a of aims) {
-      for (let i = 0; i < 3; i++) expect(a[i]).toBeCloseTo(aims[0]![i]!, 12);
-    }
-    // ⚠ And the premise: the per-frame magnitudes really do swap which channel is larger, so a
-    // rule reading them would have moved the ray on every frame.
-    const mags = frames.map((f) => {
-      const t = run(f, c, axes);
-      return Math.abs(t.xM) > Math.abs(t.gravityM) ? "x" : "gravity";
-    });
-    expect(new Set(mags).size).toBe(2);
-  });
-
-  it("⭐⭐ one channel aims at its own axis — no lag, and no mixing", () => {
-    const only = (input: Partial<AxisInputsPx>) => {
-      const t = run(input, c, axes);
-      const set: readonly [boolean, boolean, boolean] = [
-        input.holderDxPx !== undefined,
-        input.secondDyPx !== undefined,
-        input.holderDyPx !== undefined,
-      ];
-      return aimDirection(set, t.signs, axes)!;
-    };
-    // ⛔ A pure `dx` points along ±x, whatever the solve spent on depth to keep the finger.
-    expect(Math.abs(dot(only({ holderDxPx: 50 }), axes.x))).toBeCloseTo(1, 12);
-    expect(Math.abs(dot(only({ secondDyPx: 50 }), axes.gravity))).toBeCloseTo(1, 12);
-    expect(Math.abs(dot(only({ holderDyPx: 50 }), axes.depth))).toBeCloseTo(1, 12);
-  });
-
-  it("⛔ the SENSE is the travel's, so the ray points where the body actually goes", () => {
-    const up = run({ secondDyPx: -40 }, c, axes);
-    const down = run({ secondDyPx: 40 }, c, axes);
-    expect(Math.sign(up.signs[1]!)).toBe(Math.sign(up.gravityM));
-    expect(Math.sign(down.signs[1]!)).not.toBe(Math.sign(up.signs[1]!));
-    const aUp = aimDirection([false, true, false], up.signs, axes)!;
-    expect(dot(aUp, axes.gravity)).toBeCloseTo(Math.sign(up.gravityM), 12);
-  });
-
-  it("⭐ two channels give the diagonal between them, equally weighted", () => {
-    const t = run({ holderDxPx: 50, secondDyPx: 5 }, c, axes);
-    const aim = aimDirection([true, true, false], t.signs, axes)!;
-    // ⚠ Equal weight on purpose: a 50:5 push and a 5:50 push aim the SAME way, which is what
-    // makes the ray immune to the burstiness.
-    const t2 = run({ holderDxPx: 5, secondDyPx: 50 }, c, axes);
-    const aim2 = aimDirection([true, true, false], t2.signs, axes)!;
-    for (let i = 0; i < 3; i++) expect(aim[i]).toBeCloseTo(aim2[i]!, 12);
-    // ⛔⛔ **AND MAGNITUDES ARE IGNORED EVEN IF ONE REACHES THIS RULE.** Handed raw travels rather
-    // than senses, it must still answer the diagonal — otherwise the burstiness reaches the ray
-    // through the back door, which is the jitter the owner reported.
-    const lopsided = aimDirection([true, true, false], [10, 1, 0], axes)!;
-    const other = aimDirection([true, true, false], [1, 10, 0], axes)!;
-    for (let i = 0; i < 3; i++) expect(lopsided[i]).toBeCloseTo(other[i]!, 12);
-    expect(Math.abs(dot(lopsided, axes.x))).toBeCloseTo(Math.SQRT1_2, 12);
-    expect(Math.abs(dot(aim, axes.x))).toBeCloseTo(Math.SQRT1_2, 12);
-    expect(Math.abs(dot(aim, axes.gravity))).toBeCloseTo(Math.SQRT1_2, 12);
-  });
-
-  it("⛔ nothing shown, or senses that cancel, aims nothing", () => {
-    expect(aimDirection([false, false, false], [1, 1, 1], axes)).toBeNull();
-    expect(aimDirection([true, false, false], [0, 0, 0], axes)).toBeNull();
-  });
-});
-
-/**
- * ⭐⭐⭐ **THE CHAIN NEEDS NO PREVIOUS FRAME — the contract the render loop's ORDER rests on.**
- *
- * > *"the gizmo disappeared entirely"* — the owner, 2026-09-23, one minute after a deploy
- *
- * ⛔⛔ The direction had been written in `applyWorldStep` and read in the gizmo; when the aim moved
- * into the gizmo it landed BELOW the guard that read it, so on the first push the map was empty,
- * the loop skipped, and the only writer was unreachable — for ever. ⚠ Every unit vector passed:
- * each function was right, and the COMPOSITION was the defect.
- *
- * ⭐ What is testable here is the contract that makes a correct order possible: **nothing in
- * `driven → shown → signs → aim` needs an earlier frame.** The render loop must then run it in
- * that order, which its own comment now says out loud.
- */
-describe("⛔⛔ the gizmo chain is cold-startable", () => {
-  it("⭐⭐⭐ a body's FIRST push already yields a direction, from no prior state", () => {
-    const c = camera(35, 30);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    for (const input of [
-      { holderDxPx: 50 },
-      { holderDyPx: -40 },
-      { secondDyPx: 30 },
-      { holderDxPx: 20, secondDyPx: 20 },
-    ]) {
-      const t = run(input, c, axes);
-      const set: readonly [boolean, boolean, boolean] = [
-        input.holderDxPx !== undefined,
-        input.secondDyPx !== undefined,
-        input.holderDyPx !== undefined,
-      ];
-      const shown = displayedAxes(null, set);
-      expect(shown).not.toBeNull();
-      expect(aimDirection(shown!, t.signs, axes)).not.toBeNull();
-    }
-  });
-
-  it("⛔ and a body that has been pushed NOTHING yields nothing — no stand-in direction", () => {
-    const still = { x: "STATIONARY", y: "STATIONARY" } as const;
-    expect(displayedAxes(null, activeChannels(still, []))).toBeNull();
-    expect(displayedAxes(null, activeChannels(null, []))).toBeNull();
-  });
-});
-
-/**
- * ⭐⭐⭐ **THE GIZMO USES THE TRANSLATION'S OWN DEADBAND** — the owner, 2026-09-23: *"add a slight
- * deadband on the delta position input so that there is no gizmo jitter. I suppose there is a
- * deadband for the object translation: use the same deadband for the gizmo repositioning."*
- */
-describe("⛔⛔ activeChannels — §1.1's states, not its emissions", () => {
-  const M = { x: "MOVING", y: "MOVING" } as const;
-  const S = { x: "STATIONARY", y: "STATIONARY" } as const;
-  const MX = { x: "MOVING", y: "STATIONARY" } as const;
-  const MY = { x: "STATIONARY", y: "MOVING" } as const;
-
-  it("⭐⭐ the holder's two screen axes drive x and depth; the second touch's y drives gravity", () => {
-    expect(activeChannels(MX, [])).toEqual([true, false, false]);
-    expect(activeChannels(MY, [])).toEqual([false, false, true]);
-    expect(activeChannels(S, [MY])).toEqual([false, true, false]);
-    expect(activeChannels(M, [MY])).toEqual([true, true, true]);
-  });
-
-  it("⛔ a second touchpoint moving only SIDEWAYS drives nothing — its x is the roll's", () => {
-    // ⚠ The second finger owns ONE axis, and which one the mode picks. Its `x` never translates.
-    expect(activeChannels(S, [MX])).toEqual([false, false, false]);
-  });
-
-  it("⭐ ANY second touchpoint counts, because they all drive the same channel", () => {
-    expect(activeChannels(S, [S, MY])).toEqual([false, true, false]);
-    expect(activeChannels(S, [S, S])).toEqual([false, false, false]);
-  });
-
-  it("⛔ no holder at all is no holder channels, rather than a throw", () => {
-    expect(activeChannels(null, [])).toEqual([false, false, false]);
-    expect(activeChannels(null, [MY])).toEqual([false, true, false]);
-  });
-
-  it("⭐⭐⭐ THE JITTER, AS ARITHMETIC: a bursty emission cannot change this answer", () => {
-    // ⛔ `A11` emits the excess over the dead radius, so a steady push produces travel on one axis
-    // and nothing on the other from frame to frame. ⚠ The STATE does not follow those bursts: it
-    // stays `MOVING` until the axis has rested for `restConfirmMs`, so the set is the same on
-    // every frame of the push — which is the whole of what the owner asked for.
-    const frames = [M, M, M, M];
-    const sets = frames.map((f) => activeChannels(f, [MY]));
-    for (const s of sets) expect(s).toEqual(sets[0]);
-  });
-});

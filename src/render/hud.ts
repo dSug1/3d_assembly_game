@@ -44,6 +44,16 @@ export interface HudFields {
    * printed rather than reasoned about.
    */
   readonly roles: string;
+  /**
+   * ⭐⭐⭐ **EVERY FACT `gizmoState` IS HANDED**, on a line of its own.
+   *
+   * ⛔⛔ **IT WAS APPENDED TO `axes` FIRST AND THE GLASS CUT IT OFF** — three device photographs
+   * came back with the new fields off the right-hand edge, so the instrument reported nothing and
+   * the round was wasted. ⚠ *An instrument that does not fit on the screen it is read from has not
+   * been built yet* — the same family as `METHOD`'s *an absent readout cannot be caught by looking
+   * at the screen*, one step further along: this one was present and unreadable.
+   */
+  readonly gizmo: string;
 }
 
 export interface Hud {
@@ -100,6 +110,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         `last      ${f.lastVerdict}`,
         `camera    ${f.camera}`,
         `roles     ${f.roles}`,
+        `gizmo     ${f.gizmo}`,
         `noise     ${f.noise}`,
         // ⛔⛔ THIS LINE WAS COMPUTED, HANDED OVER AND DROPPED — for the whole life of
         // the file. `scene.ts` has always filled `tuning` and `tuningRejected`, the

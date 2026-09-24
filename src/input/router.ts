@@ -12,16 +12,16 @@
  * silently switch between two different translation mappings mid-gesture — which is
  * unfixable from the user's side, because nothing on screen says it happened.
  *
- * ⛔⛔ **AND THERE IS NOW EXACTLY ONE EXCEPTION: `relatchOnOrphan` (`A15`, 2026-09-16).**
- * ⚠ This header said *"never revisited"* until then, and that is why the sentence is
- * reworded rather than deleted — what the latch protects against is a role recomputed from
- * a CONTINUOUS reading, frame after frame. `A15` recomputes one, ONCE, on a **discrete**
- * event the user performed: depth translation slides an object out from under the finger
- * carrying it, so when the second touchpoint lifts, the caller raycasts and a holder that
- * is no longer on its object gives the selection up.
- * ⭐ The distinction is `METHOD`'s, and this project has paid for it twice: *a mode may be
- * keyed on PRESENCE; never on MOTION.* A lift is presence. ⛔ Anything that calls
- * `relatchOnOrphan` per frame has re-broken the latch, whatever the comment above it says.
+ * ⛔⛔ **AND THERE ARE NO EXCEPTIONS — `A15`'s `relatchOnOrphan` IS DELETED (`D54`,
+ * 2026-09-18).** ⚠⚠ This header claimed *"exactly one exception"* for five days AFTER the
+ * deletion, while the body of this file said the opposite eighty lines down: *the latch is pure
+ * again*. ⛔ Two sentences in one file, disagreeing about the rule the file exists to enforce —
+ * which is precisely what rule 1 says prose will do if nothing tests it.
+ * ⭐ The distinction `A15` rested on is still worth keeping, because the next exception will be
+ * argued the same way: *a mode may be keyed on PRESENCE; never on MOTION* — a lift is presence, a
+ * per-frame raycast is motion. ⛔ Anything that recomputes a role per frame has broken the latch,
+ * whatever a comment says. ⚠ The owner's reason for the reversal was neither: he preferred
+ * **keeping control** over re-resolving, between two correct behaviours.
  *
  * ⛔⛔ THE SECOND HIT ON A HELD OBJECT IS `SECOND`, NOT `IGNORED` — `D16`/A5, which
  * SUPERSEDED `D10`. Two touchpoints on the same object were *undefined and reachable*
@@ -173,7 +173,10 @@ export class PointerRouter<O> {
     const p = this.pointers.get(id);
     if (!p) return null;
     this.pointers.delete(id);
-    return { pointer: p, wasActive: p.role === "OBJECT" || p.role === "OUTSIDE" };
+    return {
+      pointer: p,
+      wasActive: p.role === "OBJECT" || p.role === "OUTSIDE",
+    };
   }
 
   // ⛔⛔⛔ **`relatchOnOrphan` IS DELETED (`D54`, 2026-09-18) AND THE LATCH IS PURE AGAIN.**
@@ -186,7 +189,6 @@ export class PointerRouter<O> {
   // ⭐ What the exception was guarded by is worth keeping in mind if one is ever wanted again:
   // it ran on a **discrete** event only. A role recomputed from a continuous reading is the
   // defect this class of code exists to prevent, and `METHOD` has that verdict twice.
-
 
   /** ⚠ Everything goes. For a pointercancel storm, or a scene reset. */
   clear(): void {
@@ -233,7 +235,8 @@ export class PointerRouter<O> {
    * index-based lookup would creep back in.
    */
   secondTouchOn(o: O): RoutedPointer<O> | null {
-    for (const p of this.all()) if (p.role === "SECOND" && p.object === o) return p;
+    for (const p of this.all())
+      if (p.role === "SECOND" && p.object === o) return p;
     return null;
   }
 
@@ -255,13 +258,17 @@ export class PointerRouter<O> {
   /**
    * §4's role decision, in ONE place.
    *
-   * ⛔ Shared by `press` and `A15`'s `relatchOnOrphan` on purpose: two copies of this
-   * ladder would be two definitions of what a touchpoint IS, free to disagree — and the
-   * disagreement would appear only in the rare configuration that reaches the second copy.
+   * ⛔ It had a second caller — `A15`'s `relatchOnOrphan` — until `D54` deleted it, and the
+   * argument for one ladder outlives that: two copies would be two definitions of what a
+   * touchpoint IS, free to disagree, and the disagreement would appear only in the rare
+   * configuration that reached the second copy.
    * ⚠ `id` is unused by the decision and taken anyway, so the signature says the answer is
    * about a specific touchpoint rather than a global.
    */
-  private decideRole(hit: O | null, id: number): { role: PointerRole; object: O | null } {
+  private decideRole(
+    hit: O | null,
+    id: number,
+  ): { role: PointerRole; object: O | null } {
     void id;
     if (hit === null) return { role: "OUTSIDE", object: null };
     if (!this.isHeld(hit)) return { role: "OBJECT", object: hit };

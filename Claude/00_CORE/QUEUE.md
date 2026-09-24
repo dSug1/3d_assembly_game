@@ -16,8 +16,8 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1105 golden vectors,
-all passing** (37 → … → 1093 → 1098 → **1105**; ⭐ the DROPS are `D54`, the roll channel, forks A and B, and **`D82`'s in-zone basis**). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1097 golden vectors,
+all passing** (37 → … → 1105 → **1097**; ⭐ the DROPS are `D54`, forks A and B, `D82`'s in-zone basis, and the three gizmo rules one pure rule replaced). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE** — `974`, then `978`: *amend the ledger, never a bare number written somewhere else.*
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is a cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
@@ -27,7 +27,7 @@ lost the cosine and a hand felt all of it: *inverted*, *very weak*, *dead at a l
 ⭐⭐ **Blender answers all three and says NO to the pairing** — it never binds screen-x to a world axis.
 Now the delta is **solved onto both horizontal axes** (`translatePairing=1`), with **Blender's 5° cone**
 falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **deleted** (`D82`).
-⭐ 38 vectors, six mutants. ⭐ `D77`: **no gizmo on a frozen body**, and **a second touch on one is a MISS** so it can drive another → [`queue_notes/IN4.md`](queue_notes/IN4.md)
+⭐ 38 vectors, six mutants. ⭐ `D77`: **no gizmo on a frozen body** — ⚠ lapsed with `leading_face.ts`, now a guard — and **a second touch on one is a MISS** so it can drive another → [`queue_notes/IN4.md`](queue_notes/IN4.md)
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
