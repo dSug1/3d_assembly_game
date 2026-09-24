@@ -58,6 +58,23 @@ export interface GestureConfig {
    * ⚠ Small on purpose: a tenth of the settle timer it replaced. `IN5`, by slider.
    */
   restConfirmMs: number;
+  /**
+   * ⭐⭐⭐ **HOW MANY OF A POINTER'S OWN EVENT INTERVALS OF SILENCE MEAN IT HAS STOPPED.**
+   *
+   * > *"Make sure we pick a ms number which will be OK for all the mobile devices when I deploy my
+   * > game, not only for my tablet today."* — the owner, 2026-09-24
+   *
+   * ⛔⛔ **A FIXED MILLISECOND THRESHOLD CANNOT BE RIGHT FOR BOTH ENDS OF THE MOBILE RANGE.**
+   * Browsers dispatch pointer input once per frame per pointer, so the interval between a
+   * pointer's events is the FRAME interval: ~8 ms on a 120 Hz phone, **47–87 ms measured on the
+   * owner's tablet** (production build, one and two fingers). ⚠ Any constant is either unsafe
+   * there or sluggish on the phone. ⭐ So the rest window is `factor × this pointer's median
+   * interval`, floored at `restConfirmMs` and capped at `REST_CEIL_MS`.
+   *
+   * ⚠ `2.5` survives one or two missed dispatches. ⛔ Below `2` a single dropped frame reads as a
+   * stop, which is the defect this replaces; the validator refuses it.
+   */
+  restGapFactor: number;
 
   // ── §1.2 gains ──────────────────────────────────────────────────────────
   /** Metres. Translation gains scale by cameraDistance / this. */
@@ -662,7 +679,28 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // as the finger stops. ⛔ Low enough that boundary chatter is the thing to watch for on
   // the next device pass: if depth flickers on and off while the holder rests, this is the
   // number that is too small.
-  restConfirmMs: 30,
+  // ⚠⚠ TRIAL, 2026-09-24. ⭐⭐ DOSE-RESPONSE CONFIRMED on the tablet: 10 ms = rapid toggle and
+  // worse jitter, 30 ms = the reported jitter, 50 and 80 ms = holds at MOVING, clean.
+  //
+  // ⛔⛔⛔ **THE BOUND IS THE FRAME RATE, NOT THE TOUCH PANEL.** Browsers coalesce pointer input
+  // and dispatch it ONCE PER FRAME PER POINTER — which is why `getCoalescedEvents()` exists in
+  // the W3C Pointer Events spec at all. ⚠ So the interval between two of a pointer's events is
+  // the FRAME interval, and a rest timeout shorter than that declares a moving finger still.
+  //
+  //   60 fps -> 16.7 ms   30 fps -> 33.3 ms   20 fps -> 50 ms   + a dropped frame doubles it
+  //
+  // ⭐ 100 ms is three frames at 30 fps, or two at 20 fps — a 3D scene on a mid-range phone or a
+  // thermally throttled tablet lives in that range, and one hitch must not read as a stop.
+  // ⭐⭐⭐ **THE FLOOR AND THE SEED, NOT THE THRESHOLD** (2026-09-24). The rest window is now
+  // derived per pointer from its own dispatch interval — see `restGapFactor`. ⚠ This value is
+  // what a pointer gets before it has any history, and the shortest window any device may use.
+  // ⛔ It was **30 ms** and that was below even a ONE-finger dispatch gap on the owner's tablet
+  // (47–68 ms measured), so a steadily moving finger was being declared STOPPED mid-drag.
+  // ⭐ 50 ms is three frames at 60 Hz — crisp on a fast phone, and the floor never binds on a
+  // slow one because the derived value is larger there.
+  restConfirmMs: 50,
+  // ⚠ A judgement, with a slider: 2.5 intervals of silence. ⛔ No hand has judged it yet.
+  restGapFactor: 2.5,
   // ⚠ A guess, with a slider. Long enough for a deliberate lift-and-replace, short enough
   // that a genuine lift to one finger does not feel stuck. IN5.
 
@@ -1017,6 +1055,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔ Below 2 intervals, a single dropped frame reads as a stop — the exact defect the adaptive
+  // window replaces. ⭐ The floor is a design bound, not a taste, so the validator holds it.
+  if (!(cfg.restGapFactor >= 2) || !Number.isFinite(cfg.restGapFactor)) {
+    throw new Error(
+      `restGapFactor (${cfg.restGapFactor}) must be a finite number >= 2: it multiplies a ` +
+        "pointer's median event interval to decide how much silence means rest, and below two " +
+        "intervals one missed dispatch is indistinguishable from a finger stopping.",
+    );
+  }
+
   // ⛔⛔⛔ **THE PLAIN RANGES — ADDED BY AUDIT, 2026-09-17.**
   //
   // ⚠⚠ **EVERY RULE BELOW THIS BLOCK IS A *RELATION* BETWEEN TWO TUNABLES**, and that is

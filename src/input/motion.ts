@@ -138,6 +138,12 @@ export interface Sample {
   readonly t: number;
 }
 
+/**
+ * ⭐ How many of a pointer's intervals the median is taken over. ⚠ Long enough to be robust to a
+ * single hitch, short enough to follow a device that starts throttling mid-gesture.
+ */
+const GAP_WINDOW = 16;
+
 const ZERO_STEP = { dx: 0, dy: 0 } as const;
 
 /**
@@ -254,6 +260,64 @@ class AxisBand {
   }
 }
 
+/**
+ * ⭐⭐⭐ **HOW LONG SILENCE MUST LAST BEFORE IT MEANS REST — DERIVED FROM THE DEVICE.**
+ *
+ * > *"Make sure we pick a ms number which will be OK for all the mobile devices when I deploy my
+ * > game, not only for my tablet today."* … *"I would prefer to derive the ms from the device
+ * > fps."* — the owner, 2026-09-24
+ *
+ * ⛔⛔⛔ **A FIXED THRESHOLD CANNOT SERVE BOTH ENDS OF THE MOBILE RANGE, AND THIS WAS MEASURED.**
+ * Browsers coalesce pointer input and dispatch it **once per frame per pointer** — which is why
+ * `getCoalescedEvents()` exists in the W3C Pointer Events spec at all. ⚠ So the interval between
+ * two of a pointer's events IS the frame interval, and a rest timeout shorter than it declares a
+ * steadily moving finger STOPPED. On the owner's tablet, measured on the production build:
+ *
+ * ```
+ *   one finger   47–68 ms      two fingers  57–87 ms      (~15–20 dispatches/s)
+ *   a 120 Hz phone would be ~8 ms
+ * ```
+ *
+ * ⛔ The shipped 30 ms was below even the ONE-finger gap. Every axis was toggling MOVING/
+ * STATIONARY mid-drag; it only became visible when both fingers moved on straight diagonals, so
+ * their `x` and `y` reversed together and the two axes stopped at the same instant.
+ *
+ * ## ⭐⭐ WHY THE MEDIAN, AND NOT THE WORST GAP
+ *
+ * ⚠⚠ The longest gaps are REVERSALS — at a turning point the finger genuinely stops, a browser
+ * only dispatches `pointermove` when the position CHANGES, and the silence is real. ⛔ Feeding
+ * those into the estimate would inflate it and defeat it. ⭐ The median tracks the dispatch rate
+ * and treats a reversal as the outlier it is.
+ *
+ * ## ⚠ THE FLOOR AND THE CEILING ARE SAFETY, NOT FEEL
+ *
+ * ⛔ On a 120 Hz phone `2.5 × 8 ms` is 20 ms, which a single dropped frame would trip — hence the
+ * floor. ⛔ And one pathological gap must not make rest UNREACHABLE — hence the ceiling.
+ *
+ * @param medianGapMs the median interval between this pointer's recent events. `0` before enough
+ *   have arrived, which returns the floor — the safe seed for a finger that has just landed.
+ */
+export const REST_CEIL_MS = 250;
+
+export function restWindowMs(
+  medianGapMs: number,
+  floorMs: number,
+  factor: number,
+): number {
+  if (!Number.isFinite(medianGapMs) || medianGapMs <= 0) return floorMs;
+  const derived = medianGapMs * factor;
+  if (!Number.isFinite(derived)) return floorMs;
+  return Math.min(REST_CEIL_MS, Math.max(floorMs, derived));
+}
+
+/** ⭐ The median of a small sample, without sorting the caller's array. */
+export function medianOf(xs: readonly number[]): number {
+  if (xs.length === 0) return 0;
+  const a = [...xs].sort((p, q) => p - q);
+  const mid = a.length >> 1;
+  return a.length % 2 === 1 ? a[mid]! : (a[mid - 1]! + a[mid]!) / 2;
+}
+
 export class MotionTracker {
   private readonly ax = new AxisBand();
   private readonly ay = new AxisBand();
@@ -264,6 +328,13 @@ export class MotionTracker {
    * estimate depend on how long the finger has been down.
    */
   private buffer: Sample[] = [];
+  /**
+   * ⭐⭐ **THE INTERVALS BETWEEN THIS POINTER'S OWN EVENTS**, newest last, at most `GAP_WINDOW`.
+   * ⛔ Per tracker, because each finger is dispatched separately and they differ — measured at
+   * 47–68 ms and 57–87 ms for two fingers of one hand on the same device.
+   */
+  private gaps: number[] = [];
+  private lastPushT: number | null = null;
 
   constructor(private readonly cfg: GestureConfig) {
     // ⭐ Every cross-tunable consistency rule lives in ONE place, and every
@@ -273,7 +344,9 @@ export class MotionTracker {
 
   /** ⭐ `MOVING` if EITHER axis is. */
   get current(): MotionState {
-    return this.ax.state === "MOVING" || this.ay.state === "MOVING" ? "MOVING" : "STATIONARY";
+    return this.ax.state === "MOVING" || this.ay.state === "MOVING"
+      ? "MOVING"
+      : "STATIONARY";
   }
 
   /**
@@ -288,7 +361,9 @@ export class MotionTracker {
    * rule that needed its speed was reading the HOLDER's instead (defect 64).
    */
   get speedMmPerS(): number {
-    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg));
+    return pxToMm(
+      terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg), this.cfg),
+    );
   }
 
   /**
@@ -297,7 +372,9 @@ export class MotionTracker {
    * release and stale for anything asking while nothing is arriving.
    */
   speedMmPerSAt(nowMs: number): number {
-    return pxToMm(terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg));
+    return pxToMm(
+      terminalSpeedPxPerS(trimBuffer(this.buffer, this.cfg, nowMs), this.cfg),
+    );
   }
 
   /** ⭐ The per-axis state, so a readout can show which corridor is open. */
@@ -317,11 +394,32 @@ export class MotionTracker {
     return this.lastStep;
   }
 
+  /**
+   * ⭐⭐⭐ **THE REST WINDOW IN FORCE FOR THIS POINTER**, derived from its own dispatch interval.
+   * ⚠ Exposed so a readout can print it: an adaptive threshold that cannot be seen is exactly the
+   * instrument this project has been burned by. ⛔ `restConfirmMs` is the FLOOR and the seed now,
+   * no longer the threshold.
+   */
+  get restMs(): number {
+    return restWindowMs(
+      medianOf(this.gaps),
+      this.cfg.restConfirmMs,
+      this.cfg.restGapFactor,
+    );
+  }
+
+  /** ⭐ The measured median interval between this pointer's events, ms. `0` until it has some. */
+  get gapMedianMs(): number {
+    return medianOf(this.gaps);
+  }
+
   reset(): void {
     this.ax.reset();
     this.ay.reset();
     this.lastStep = ZERO_STEP;
     this.buffer = [];
+    this.gaps = [];
+    this.lastPushT = null;
   }
 
   /**
@@ -336,15 +434,28 @@ export class MotionTracker {
     // vector: without this, `step` still held the last push's delta, and a caller that read
     // it after a frame with no pointer events would apply that travel a second time.
     this.lastStep = ZERO_STEP;
-    this.ax.tick(nowMs, this.cfg.restConfirmMs);
-    this.ay.tick(nowMs, this.cfg.restConfirmMs);
+    const rest = this.restMs;
+    this.ax.tick(nowMs, rest);
+    this.ay.tick(nowMs, rest);
     return this.current;
   }
 
   push(s: Sample): MotionState {
+    // ⭐ Record this pointer's own dispatch interval BEFORE the bands read the derived window, so
+    // a tracker adapts on the sample that proves the rate rather than one late.
+    if (this.lastPushT !== null) {
+      const gap = s.t - this.lastPushT;
+      // ⛔ A non-positive gap is a duplicate or a clock stutter and carries no rate information.
+      if (gap > 0) {
+        this.gaps.push(gap);
+        if (this.gaps.length > GAP_WINDOW) this.gaps.shift();
+      }
+    }
+    this.lastPushT = s.t;
+    const rest = this.restMs;
     const band = mmToPx(this.cfg.motionDeadbandMm);
-    const dx = this.ax.push(s.x, s.t, band, this.cfg.restConfirmMs);
-    const dy = this.ay.push(s.y, s.t, band, this.cfg.restConfirmMs);
+    const dx = this.ax.push(s.x, s.t, band, rest);
+    const dy = this.ay.push(s.y, s.t, band, rest);
     this.lastStep = { dx, dy };
     // ⭐ The RAW sample feeds the speed window — the deadband is a travel rule, and subtracting
     // it here would make this finger read slower than the same finger on a Recognizer.

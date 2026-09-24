@@ -302,6 +302,16 @@ export class Recognizer<P> {
     );
   }
 
+  /** ⭐ The adaptive rest window this pointer derived, ms — for the readout. */
+  get restMs(): number {
+    return this.motion.restMs;
+  }
+
+  /** ⭐ The measured median interval between this pointer's events, ms. */
+  get gapMedianMs(): number {
+    return this.motion.gapMedianMs;
+  }
+
   get motionState(): MotionState {
     return this.motion.current;
   }

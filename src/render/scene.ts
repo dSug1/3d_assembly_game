@@ -3750,7 +3750,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // by finger, and every gain a hand has set was raised from my guess.
         tunable("roll drag gain (deg/mm)", "gainRollDrag", 0.25, 12, 0.25),
         tunable("motion DEADBAND (mm)", "motionDeadbandMm", 0.5, 8, 0.1),
-        tunable("rest confirm (ms)", "restConfirmMs", 0, 400, 10),
+        tunable("rest floor (ms)", "restConfirmMs", 0, 400, 10),
+        // ⭐ How many of a pointer's own event intervals of silence mean it has stopped.
+        tunable("rest = N x event gap", "restGapFactor", 2, 6, 0.5),
         // ⭐⭐⭐ A14: how long a lift-and-replace of the second touchpoint stays ONE
         // gesture. ⛔ 0 restores the old behaviour exactly, which is how to A/B it.
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
@@ -3945,6 +3947,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * ⚠ The reading survives the lift on purpose: a person cannot read a number off the
    * glass while their finger is covering it.
    */
+  /** ⚠ Per pointer id: the last event's clock, and every inter-event gap in the last second. */
+  const eventGaps = new Map<
+    number,
+    { last: number; gaps: { t: number; ms: number }[] }
+  >();
   const noise = new PointerNoiseMeter();
   let noisePointer: number | null = null;
 
@@ -3955,7 +3962,28 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⭐ Printed against the value currently IN FORCE, because the reading is only
     // ever interesting as a comparison — and a config the sagitta rule is judged by
     // must not be compared against a half-remembered number.
-    return `floor=${floor.toFixed(3)}mm now=${noise.rmsMm.toFixed(3)} n=${noise.samples} cfg=${cfg.pointerNoiseMm}`;
+    // ⭐⭐ AND THE EVENT GAPS, against the threshold they have to beat. ⛔ A `!` marks a pointer
+    // whose worst gap EXCEEDS `restConfirmMs` — the flicker's precondition, as a measured fact.
+    const gaps = [...eventGaps.entries()]
+      .map(([pid, v]) => {
+        const worst = v.gaps.reduce((m, g) => Math.max(m, g.ms), 0);
+        return `p${pid}:${worst.toFixed(0)}${worst > cfg.restConfirmMs ? "!" : ""}`;
+      })
+      .join(" ");
+    // ⭐⭐⭐ **THE ADAPTIVE REST WINDOW, ON THE GLASS.** ⛔ A threshold that MOVES and cannot be
+    // seen is the instrument this project has been burned by most. ⚠ `rest` is what each held
+    // pointer's tracker actually derived, beside the raw gaps it derived it from.
+    const rests = [...held.values()]
+      .map(
+        (g) =>
+          `${g.rec.restMs.toFixed(0)}(med ${g.rec.gapMedianMs.toFixed(0)})`,
+      )
+      .join(" ");
+    return (
+      `floor=${floor.toFixed(3)}mm n=${noise.samples}` +
+      ` | rest ${rests || `${cfg.restConfirmMs}(seed)`}` +
+      ` x${cfg.restGapFactor} | gaps ${gaps || "—"}`
+    );
   };
 
   /**
@@ -4959,6 +4987,26 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         noise.push(s);
       }
     }
+
+    // ⛔⛔⛔ **THE NUMBER THE WHOLE DEFECT TURNS ON**: the gap between two consecutive move events
+    // FOR ONE POINTER. §1.1 rests an axis after `restConfirmMs` of silence, so a pointer whose
+    // events arrive slower than that reads STATIONARY *between events while the finger is still
+    // moving*. ⭐ Measured per pointer and reported as the WORST gap in the last second — a mean
+    // would hide exactly the excursions that cause it.
+    if (
+      info.type === PointerEventTypes.POINTERDOWN ||
+      info.type === PointerEventTypes.POINTERMOVE
+    ) {
+      const seen = eventGaps.get(e.pointerId);
+      if (seen !== undefined && info.type === PointerEventTypes.POINTERMOVE) {
+        seen.gaps.push({ t: s.t, ms: s.t - seen.last });
+        while (seen.gaps.length > 0 && s.t - seen.gaps[0]!.t > 1000)
+          seen.gaps.shift();
+      }
+      eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
+    }
+    if (info.type === PointerEventTypes.POINTERUP)
+      eventGaps.delete(e.pointerId);
 
     // ⭐ The anchor fork latches here, before anything is dispatched, so one event cannot be
     // judged half under one rule set and half under another.

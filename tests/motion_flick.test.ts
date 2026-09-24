@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
-import { MotionTracker, type MotionState, type Sample } from "../src/input/motion";
-import { detectFlick, terminalSpeedPxPerS, trimBuffer } from "../src/input/flick";
+import {
+  DEFAULT_CONFIG,
+  validateGestureConfig,
+} from "../src/input/gestureConfig";
+import {
+  MotionTracker,
+  medianOf,
+  restWindowMs,
+  REST_CEIL_MS,
+  type MotionState,
+  type Sample,
+} from "../src/input/motion";
+import {
+  detectFlick,
+  terminalSpeedPxPerS,
+  trimBuffer,
+} from "../src/input/flick";
 import { mmToPx, pxToMm } from "../src/core/units";
 
 const cfg = DEFAULT_CONFIG;
@@ -16,7 +30,13 @@ const OLD_STILL_TIME_MS = 450;
 const OLD_MOVE_EXIT_MM = 2.4;
 
 /** A straight run of samples at a constant speed, in mm/s along +x. */
-function run(speedMmPerS: number, ms: number, stepMs = 10, x0 = 0, t0 = 0): Sample[] {
+function run(
+  speedMmPerS: number,
+  ms: number,
+  stepMs = 10,
+  x0 = 0,
+  t0 = 0,
+): Sample[] {
   const out: Sample[] = [];
   for (let t = 0; t <= ms; t += stepMs) {
     out.push({ x: x0 + mmToPx((speedMmPerS * t) / 1000), y: 0, t: t0 + t });
@@ -124,17 +144,26 @@ describe("flick test", () => {
     // was. ⭐ That is why the report said *"only if the touchpoint presses and directly do a
     // flick"*: only then is there nothing in the window to cancel against.
     const rotate: Sample[] = [];
-    for (let t = 0; t <= 200; t += 10) rotate.push({ x: 0, y: mmToPx((400 * t) / 1000), t });
+    for (let t = 0; t <= 200; t += 10)
+      rotate.push({ x: 0, y: mmToPx((400 * t) / 1000), t });
     const last = rotate[rotate.length - 1]!;
     const lastY = last.y;
     const flick: Sample[] = [];
     for (let k = 1; k <= 6; k++) {
-      flick.push({ x: 0, y: lastY - mmToPx((400 * (k * 10)) / 1000), t: last.t + k * 10 });
+      flick.push({
+        x: 0,
+        y: lastY - mmToPx((400 * (k * 10)) / 1000),
+        t: last.t + k * 10,
+      });
     }
     const buf = trimBuffer([...rotate, ...flick], cfg);
     // ⚠ STATE THE CANCELLATION, so the vector shows WHY the old baseline failed rather than
     // asserting the outcome alone: the window's net travel is under the 6 mm bar.
-    const netMm = Math.hypot(buf[buf.length - 1]!.x - buf[0]!.x, buf[buf.length - 1]!.y - buf[0]!.y) / mmToPx(1);
+    const netMm =
+      Math.hypot(
+        buf[buf.length - 1]!.x - buf[0]!.x,
+        buf[buf.length - 1]!.y - buf[0]!.y,
+      ) / mmToPx(1);
     expect(netMm).toBeLessThan(cfg.flickDistance);
     const f = detectFlick(buf, cfg);
     expect(f).not.toBeNull();
@@ -150,10 +179,11 @@ describe("flick test", () => {
     // ⭐ On a wholly straight stroke the answer must be the whole window, which is also the
     // proof that the scan did not stop early.
     const buf = trimBuffer(run(400, 120), cfg);
-    const whole = Math.hypot(
-      buf[buf.length - 1]!.x - buf[0]!.x,
-      buf[buf.length - 1]!.y - buf[0]!.y,
-    ) / mmToPx(1);
+    const whole =
+      Math.hypot(
+        buf[buf.length - 1]!.x - buf[0]!.x,
+        buf[buf.length - 1]!.y - buf[0]!.y,
+      ) / mmToPx(1);
     expect(detectFlick(buf, cfg)!.travelMm).toBeCloseTo(whole, 6);
   });
 
@@ -183,7 +213,8 @@ describe("flick test", () => {
     // EASIER to reach, so the vector that shows the speed test still refuses is what keeps
     // the change honest — the scan does not run at all below the lift threshold.
     const slow: Sample[] = [];
-    for (let t = 0; t <= 400; t += 10) slow.push({ x: mmToPx((30 * t) / 1000), y: 0, t });
+    for (let t = 0; t <= 400; t += 10)
+      slow.push({ x: mmToPx((30 * t) / 1000), y: 0, t });
     expect(detectFlick(trimBuffer(slow, cfg), cfg)).toBeNull();
   });
 
@@ -218,7 +249,8 @@ class SpeedOnlyExit {
     this.last = s;
     if (!prev || this.state === "STATIONARY") return this.state;
     const dt = s.t - prev.t;
-    const speedPxPerS = dt > 0 ? (Math.hypot(s.x - prev.x, s.y - prev.y) / dt) * 1000 : 0;
+    const speedPxPerS =
+      dt > 0 ? (Math.hypot(s.x - prev.x, s.y - prev.y) / dt) * 1000 : 0;
     // ⚠ The DEFECT, pinned: an instantaneous speed test with no excursion term. Its
     // thresholds are the pre-A11 shipped ones, hard-coded here because the config no
     // longer carries them — the counter-example must not drift with the product.
@@ -234,12 +266,19 @@ class SpeedOnlyExit {
 
 describe("moveExitDistance — the slow creep an instantaneous speed test cannot see", () => {
   /** Fast enough to be MOVING, then a creep that never exceeds `stillSpeed`. */
-  function dragThenCreep(creepMmPerS: number): { drag: Sample[]; creep: Sample[] } {
+  function dragThenCreep(creepMmPerS: number): {
+    drag: Sample[];
+    creep: Sample[];
+  } {
     const drag = run(100, 100);
     const last = drag[drag.length - 1]!;
     const creep: Sample[] = [];
     for (let t = 10; t <= 600; t += 10) {
-      creep.push({ x: last.x + mmToPx((creepMmPerS * t) / 1000), y: 0, t: last.t + t });
+      creep.push({
+        x: last.x + mmToPx((creepMmPerS * t) / 1000),
+        y: 0,
+        t: last.t + t,
+      });
     }
     return { drag, creep };
   }
@@ -279,7 +318,8 @@ describe("moveExitDistance — the slow creep an instantaneous speed test cannot
     // ⚠ DERIVED from the config, not a literal — a literal went stale twice already.
     // ⭐ Under A11 this is fast: leaving MOVING costs one `restConfirmMs`, not a settle.
     const restMs = 4 * cfg.restConfirmMs;
-    for (let t = 10; t <= restMs; t += 10) m.push({ x: last.x, y: 0, t: last.t + t });
+    for (let t = 10; t <= restMs; t += 10)
+      m.push({ x: last.x, y: 0, t: last.t + t });
     expect(m.current).toBe("STATIONARY");
   });
 
@@ -320,8 +360,10 @@ describe("flick lift speed — the same gesture must survive any lift event", ()
   function stroke(lift: "clean" | "repeated-coords" | "tiny-step"): Sample[] {
     const b = run(400, 120);
     const last = b[b.length - 1]!;
-    if (lift === "repeated-coords") b.push({ x: last.x, y: last.y, t: last.t + 8 });
-    if (lift === "tiny-step") b.push({ x: last.x + 0.3, y: last.y, t: last.t + 1 });
+    if (lift === "repeated-coords")
+      b.push({ x: last.x, y: last.y, t: last.t + 8 });
+    if (lift === "tiny-step")
+      b.push({ x: last.x + 0.3, y: last.y, t: last.t + 1 });
     return b;
   }
 
@@ -335,19 +377,26 @@ describe("flick lift speed — the same gesture must survive any lift event", ()
     // The defect, pinned. Revert the window and this vector goes red with the
     // reason on it: the finger did the same thing all three times.
     const threshold = mmToPx(cfg.flickLiftSpeed);
-    expect(lastPairLiftPxPerS(trimBuffer(stroke("clean"), cfg))).toBeGreaterThan(threshold);
-    expect(lastPairLiftPxPerS(trimBuffer(stroke("repeated-coords"), cfg))).toBe(0);
-    expect(lastPairLiftPxPerS(trimBuffer(stroke("tiny-step"), cfg))).toBeLessThan(threshold);
+    expect(
+      lastPairLiftPxPerS(trimBuffer(stroke("clean"), cfg)),
+    ).toBeGreaterThan(threshold);
+    expect(lastPairLiftPxPerS(trimBuffer(stroke("repeated-coords"), cfg))).toBe(
+      0,
+    );
+    expect(
+      lastPairLiftPxPerS(trimBuffer(stroke("tiny-step"), cfg)),
+    ).toBeLessThan(threshold);
   });
 
   it("⭐ the three lifts now agree to within a few percent", () => {
     // Not just "all three pass" — a discriminator whose VALUE swings wildly while
     // happening to stay one side of a threshold is still fragile, and the next
     // config change would expose it. Assert the spread, not the verdict.
-    const speeds = (["clean", "repeated-coords", "tiny-step"] as const).map((l) =>
-      terminalSpeedPxPerS(trimBuffer(stroke(l), cfg), cfg),
+    const speeds = (["clean", "repeated-coords", "tiny-step"] as const).map(
+      (l) => terminalSpeedPxPerS(trimBuffer(stroke(l), cfg), cfg),
     );
-    const spread = (Math.max(...speeds) - Math.min(...speeds)) / Math.max(...speeds);
+    const spread =
+      (Math.max(...speeds) - Math.min(...speeds)) / Math.max(...speeds);
     expect(spread).toBeLessThan(0.25);
   });
 
@@ -357,7 +406,8 @@ describe("flick lift speed — the same gesture must survive any lift event", ()
     const fast = run(400, 100);
     const last = fast[fast.length - 1]!;
     const settled: Sample[] = [];
-    for (let i = 1; i <= 6; i++) settled.push({ x: last.x + i * 0.3, y: 0, t: last.t + i * 10 });
+    for (let i = 1; i <= 6; i++)
+      settled.push({ x: last.x + i * 0.3, y: 0, t: last.t + i * 10 });
     expect(detectFlick(trimBuffer([...fast, ...settled], cfg), cfg)).toBeNull();
   });
 
@@ -403,13 +453,15 @@ describe("⛔⛔ a finger AT REST returns to STATIONARY — with the MEASURED no
   const dragThenRest = (restMs: number, seed: number) => {
     const jit = resting(seed);
     const m = new MotionTracker(cfg);
-    for (let i = 0; i < 40; i++) m.push({ x: 400 + mmToPx(i * 2), y: 400, t: i * 8 });
+    for (let i = 0; i < 40; i++)
+      m.push({ x: 400 + mmToPx(i * 2), y: 400, t: i * 8 });
     const movingAfterDrag = m.current;
     let firstStationaryAtMs: number | null = null;
     for (let i = 0; i * 8 < restMs; i++) {
       const t = 320 + i * 8;
       const st = m.push({ x: 400 + mmToPx(80) + jit(), y: 400 + jit(), t });
-      if (st === "STATIONARY" && firstStationaryAtMs === null) firstStationaryAtMs = i * 8;
+      if (st === "STATIONARY" && firstStationaryAtMs === null)
+        firstStationaryAtMs = i * 8;
     }
     return { movingAfterDrag, firstStationaryAtMs, final: m.current };
   };
@@ -441,7 +493,11 @@ describe("⛔⛔ a finger AT REST returns to STATIONARY — with the MEASURED no
     let stillSince: number | null = null;
     let cameBack = false;
     for (let i = 1; i < 500; i++) {
-      const s: Sample = { x: 400 + mmToPx(80) + jit(), y: 400 + jit(), t: 320 + i * 8 };
+      const s: Sample = {
+        x: 400 + mmToPx(80) + jit(),
+        y: 400 + jit(),
+        t: 320 + i * 8,
+      };
       const dt = s.t - prev.t;
       const speed = (Math.hypot(s.x - prev.x, s.y - prev.y) / dt) * 1000;
       if (speed <= mmToPx(OLD_STILL_SPEED_MM_PER_S)) {
@@ -463,15 +519,18 @@ describe("⛔⛔ a finger AT REST returns to STATIONARY — with the MEASURED no
       }
       prev = s;
     }
-    expect(cameBack, "the old estimate must NOT come back — that is the defect").toBe(false);
+    expect(
+      cameBack,
+      "the old estimate must NOT come back — that is the defect",
+    ).toBe(false);
     expect(state).toBe("MOVING");
   });
 
   it("⛔ and the config now REFUSES a settle bound the noise cannot fit inside", () => {
     // ⭐ The guard, so this cannot regress by someone lowering one number.
-    expect(() => validateGestureConfig({ ...cfg, motionDeadbandMm: 0.8 })).toThrow(
-      /STATIONARY is unreachable/,
-    );
+    expect(() =>
+      validateGestureConfig({ ...cfg, motionDeadbandMm: 0.8 }),
+    ).toThrow(/STATIONARY is unreachable/);
   });
 });
 
@@ -552,7 +611,9 @@ describe("⭐⭐ the position deadband emits the EXCESS, and emits it exactly", 
     let seed = 4242;
     const jit = () => {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return mmToPx(((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)));
+      return mmToPx(
+        ((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)),
+      );
     };
     const m = new MotionTracker(cfg);
     m.push({ x: 500, y: 400, t: 0 });
@@ -590,7 +651,8 @@ describe("⭐⭐ the position deadband emits the EXCESS, and emits it exactly", 
     let restoredAt: number | null = null;
     for (let i = 1; i <= 200; i++) {
       const t = stoppedAt + i * 8;
-      if (m.push({ x, y: 400, t }) === "STATIONARY" && restoredAt === null) restoredAt = t - stoppedAt;
+      if (m.push({ x, y: 400, t }) === "STATIONARY" && restoredAt === null)
+        restoredAt = t - stoppedAt;
     }
     expect(restoredAt).not.toBeNull();
     expect(restoredAt!).toBeLessThanOrEqual(cfg.restConfirmMs + 16);
@@ -690,7 +752,11 @@ describe("⛔⛔ rest must be reachable WITHOUT further events", () => {
     const end = drag(m);
     m.tick(end.t + cfg.restConfirmMs + 1);
     expect(m.current).toBe("STATIONARY");
-    m.push({ x: end.x + mmToPx(cfg.motionDeadbandMm + 1), y: 400, t: end.t + 1000 });
+    m.push({
+      x: end.x + mmToPx(cfg.motionDeadbandMm + 1),
+      y: 400,
+      t: end.t + 1000,
+    });
     expect(m.current).toBe("MOVING");
   });
 });
@@ -773,7 +839,9 @@ describe("⭐⭐ once MOVING, travel passes through undiminished", () => {
     let seed = 90210;
     const jit = () => {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return mmToPx(((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)));
+      return mmToPx(
+        ((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)),
+      );
     };
     const m = new MotionTracker(cfg);
     m.push({ x: 500, y: 400, t: 0 });
@@ -940,7 +1008,9 @@ describe("⭐⭐⭐ a deadband PER AXIS — a nearly-horizontal drag is purely h
     let seed = 31337;
     const jit = () => {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return mmToPx(((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)));
+      return mmToPx(
+        ((seed / 0x7fffffff) * 2 - 1) * (cfg.pointerNoiseMm / Math.sqrt(2 / 3)),
+      );
     };
     const m = new MotionTracker(cfg);
     m.push({ x: 500, y: 400, t: 0 });
@@ -1070,7 +1140,11 @@ describe("⛔⛔ stopping ON the boundary still counts as rest", () => {
     // ⚠ The defect was invisible at 2.3 mm and appeared at 3.5 mm — the comparison landed
     // on the lucky side for one value and not the other. Sweep the slider's range.
     for (const band of [0.9, 2.3, 3.5, 5.0, 7.75]) {
-      const c = { ...cfg, motionDeadbandMm: band, pointerNoiseMm: Math.min(cfg.pointerNoiseMm, band / 3) };
+      const c = {
+        ...cfg,
+        motionDeadbandMm: band,
+        pointerNoiseMm: Math.min(cfg.pointerNoiseMm, band / 3),
+      };
       const m = new MotionTracker(c);
       let x = 400;
       let t = 0;
@@ -1129,7 +1203,8 @@ describe("⛔⛔ the rest-confirming sample's travel is EMITTED, not swallowed",
     expect(m.current).toBe("MOVING");
     // ⭐ Quiet samples INSIDE the band, stopping one sample short of `restConfirmMs`.
     const anchor = x;
-    for (t += 8; t < cfg.restConfirmMs + 32; t += 8) m.push({ x: anchor, y: 400, t });
+    for (t += 8; t < cfg.restConfirmMs + 32; t += 8)
+      m.push({ x: anchor, y: 400, t });
     expect(m.current, "rest must not be confirmed yet").toBe("MOVING");
     // ⛔ THE SAMPLE: a real reversal that arrives once the rest clock has expired.
     m.push({ x: anchor - mmToPx(reverseMm), y: 400, t: t + 8 });
@@ -1166,9 +1241,12 @@ describe("⛔⛔ the rest-confirming sample's travel is EMITTED, not swallowed",
       m.push({ x, y: 400, t });
     }
     const anchor = x;
-    for (t += 8; t < cfg.restConfirmMs + 32; t += 8) m.push({ x: anchor, y: 400, t });
+    for (t += 8; t < cfg.restConfirmMs + 32; t += 8)
+      m.push({ x: anchor, y: 400, t });
     m.push({ x: anchor - mmToPx(BAND * 1.9), y: 400, t: t + 8 });
-    expect(m.current, "a 6.65 mm sample is not a resting finger").toBe("MOVING");
+    expect(m.current, "a 6.65 mm sample is not a resting finger").toBe(
+      "MOVING",
+    );
     // ⭐ And the drag continues at full rate, with no band re-paid.
     m.push({ x: anchor - mmToPx(BAND * 1.9) - mmToPx(0.4), y: 400, t: t + 16 });
     expect(pxToMm(m.step.dx)).toBeCloseTo(-0.4, 6);
@@ -1222,7 +1300,9 @@ describe("⛔⛔⛔ defect 70 — the speed window may end NOW instead of at the
     expect(terminalSpeedPxPerS(trimBuffer(fast, cfg, 1032), cfg)).toBe(
       terminalSpeedPxPerS(trimBuffer(fast, cfg), cfg),
     );
-    expect(trimBuffer(fast, cfg, 1040).length).toBe(trimBuffer(fast, cfg).length);
+    expect(trimBuffer(fast, cfg, 1040).length).toBe(
+      trimBuffer(fast, cfg).length,
+    );
   });
 
   it("⛔ a non-finite `now` falls back to the last sample rather than emptying the window", () => {
@@ -1250,3 +1330,113 @@ describe("⛔⛔⛔ defect 70 — the speed window may end NOW instead of at the
 // idea: *"You can lag the travel, but the input itself has no lag. The gizmo repositioning should
 // match the input, not the travel and its lag."* ⭐ The face is aimed by what the channels ask for
 // on the frame they ask it, so there is no time constant left to tune.
+
+/**
+ * GOLDEN VECTORS — **THE REST WINDOW IS DERIVED FROM THE DEVICE, NOT FIXED** (2026-09-24).
+ *
+ * > *"Make sure we pick a ms number which will be OK for all the mobile devices when I deploy my
+ * > game, not only for my tablet today."* … *"I would prefer to derive the ms from the device
+ * > fps."* — the owner
+ *
+ * ⛔⛔ Measured on the owner's tablet, PRODUCTION build: one finger **47–68 ms** between that
+ * pointer's events, two fingers **57–87 ms**. A 120 Hz phone is ~8 ms. The shipped 30 ms was
+ * below even the one-finger gap, so a steadily moving finger was declared STOPPED mid-drag.
+ */
+describe("⭐⭐⭐ restWindowMs — the adaptive rest window", () => {
+  it("⭐⭐⭐ THE OWNER'S TABLET: a 60 ms median gives a window ABOVE its worst measured gap", () => {
+    // ⛔ The whole point: 2.5 × 60 = 150 ms, comfortably past the 87 ms worst steady-motion gap.
+    expect(restWindowMs(60, 50, 2.5)).toBe(150);
+    expect(restWindowMs(60, 50, 2.5)).toBeGreaterThan(87);
+  });
+
+  it("⭐⭐⭐ A FAST PHONE FLOORS INSTEAD: 2.5 × 8 ms would be 20 ms, which one dropped frame trips", () => {
+    // ⚠ RED against *just multiply* — the derived value alone is unsafe at the fast end.
+    expect(restWindowMs(8, 50, 2.5)).toBe(50);
+  });
+
+  it("⛔ and one pathological gap cannot make rest UNREACHABLE — the ceiling holds", () => {
+    expect(restWindowMs(10_000, 50, 2.5)).toBe(REST_CEIL_MS);
+  });
+
+  it("⛔ a pointer with no history yet gets the floor — the safe seed, never zero", () => {
+    // ⚠ Zero would declare rest on the very first tick, for every finger that has just landed.
+    expect(restWindowMs(0, 50, 2.5)).toBe(50);
+    expect(restWindowMs(Number.NaN, 50, 2.5)).toBe(50);
+    expect(restWindowMs(-5, 50, 2.5)).toBe(50);
+  });
+
+  it("⭐⭐ THE MEDIAN IGNORES REVERSALS, AND THAT IS WHY IT IS THE MEDIAN", () => {
+    // ⛔⛔ The longest gaps ARE the reversals: at a turning point the finger genuinely stops and a
+    // browser dispatches no `pointermove` at all. ⚠ Feeding those into the estimate would inflate
+    // it and defeat it. ⭐ RED against using the MAX.
+    const steady = [60, 58, 62, 61, 59, 60];
+    const withReversals = [...steady, 400, 380];
+    expect(medianOf(withReversals)).toBeCloseTo(60.5, 1);
+    expect(Math.max(...withReversals)).toBe(400);
+    // The median moves by under 1 ms; a max-based rule would have tripled the window.
+    expect(restWindowMs(medianOf(withReversals), 50, 2.5)).toBeLessThan(160);
+  });
+
+  it("⛔ medianOf does not mutate its input, and handles an even count", () => {
+    const xs = [30, 10, 20, 40];
+    expect(medianOf(xs)).toBe(25);
+    expect(xs).toEqual([30, 10, 20, 40]);
+    expect(medianOf([])).toBe(0);
+  });
+});
+
+describe("⭐⭐ the tracker measures its OWN dispatch interval", () => {
+  const cfg = DEFAULT_CONFIG;
+
+  it("⭐⭐⭐ A STEADILY MOVING FINGER STAYS MOVING AT THE TABLET'S MEASURED RATE", () => {
+    // ⛔⛔ THE DEFECT, AS A VECTOR: events 60 ms apart — the owner's measured interval — with the
+    // clock ticked between them. ⚠ Under the old fixed 30 ms this went STATIONARY on every gap.
+    const t = new MotionTracker(cfg);
+    let x = 0;
+    for (let i = 0; i < 20; i++) {
+      x += mmToPx(6);
+      t.push({ x, y: 0, t: i * 60 });
+      // ⛔⛔ **THE TICK MUST LAND BEYOND THE FLOOR AND INSIDE THE DERIVED WINDOW**, or this vector
+      // cannot fail: at 45 ms the fixed 50 ms floor would pass too, and the mutant that reverts
+      // the bands to the fixed value survived exactly that fixture. ⭐ 55 ms is past the 50 ms
+      // floor and well inside the 150 ms this pointer derives.
+      t.tick(i * 60 + 55);
+    }
+    expect(t.current).toBe("MOVING");
+    expect(t.restMs).toBeGreaterThan(87);
+  });
+
+  it("⛔ and a finger that genuinely stops is still declared at rest", () => {
+    // ⚠ The window adapts; it does not disable the test. A silence of several intervals still
+    // means rest, which is what every gesture rule downstream depends on.
+    const t = new MotionTracker(cfg);
+    let x = 0;
+    for (let i = 0; i < 20; i++) {
+      x += mmToPx(6);
+      t.push({ x, y: 0, t: i * 60 });
+    }
+    expect(t.current).toBe("MOVING");
+    t.tick(20 * 60 + t.restMs + 1);
+    expect(t.current).toBe("STATIONARY");
+  });
+
+  it("⭐ a fast device derives a SHORT window from the same rule", () => {
+    const t = new MotionTracker(cfg);
+    let x = 0;
+    for (let i = 0; i < 20; i++) {
+      x += mmToPx(2);
+      t.push({ x, y: 0, t: i * 8 });
+    }
+    expect(t.gapMedianMs).toBeCloseTo(8, 1);
+    expect(t.restMs).toBe(cfg.restConfirmMs);
+  });
+
+  it("⛔ a reset drops the history — a new finger must not inherit the last one's rate", () => {
+    const t = new MotionTracker(cfg);
+    for (let i = 0; i < 20; i++) t.push({ x: mmToPx(6 * i), y: 0, t: i * 60 });
+    expect(t.gapMedianMs).toBeGreaterThan(0);
+    t.reset();
+    expect(t.gapMedianMs).toBe(0);
+    expect(t.restMs).toBe(cfg.restConfirmMs);
+  });
+});
