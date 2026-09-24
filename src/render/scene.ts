@@ -79,6 +79,7 @@ import {
   retargetAlignment,
   tapMeaning,
   pressMeaning,
+  alignModeFor,
   flickResetPlan,
   type TapContext,
   ShakeDetector,
@@ -134,6 +135,8 @@ import {
 } from "../input/rotation_increment";
 import { taperTop } from "../core/frustum";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
+import { mateCandidateFaces, type FaceRef } from "../core/face_candidates";
+
 import {
   hasAlignment,
   rotationChannel,
@@ -245,6 +248,12 @@ const ALIGN_SNAP_FRACTION = 2 / 7;
 /** ⭐ The two marker colours, named once: cyan marks what MOVED, amber what it was aimed at. */
 const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
 const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
+/**
+ * ⭐⭐⭐ **FUCHSIA — A FACE THE HELD BODY IS NEARLY READY TO MATE WITH** (the owner, 2026-09-24).
+ * ⛔ A third colour and not a shade of the other two: cyan and amber say *this pair IS aligned*,
+ * and this one says *this pair COULD be* — an offer, not a state.
+ */
+const CANDIDATE_COLOUR = new Color3(1, 0.1, 0.8);
 /**
  * ⭐⭐ `A16`'s **WHITE** — the capture contour, on BOTH bodies of the pair.
  *
@@ -1027,6 +1036,89 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⛔ The owner, 2026-09-21: *"First the Pioneer & PioneerFace, second the Follower & the
   // FollowerFace."* ⚠ Only the two SIDES swap: every refusal below, the solver, the snap and the
   // link are unchanged, which is why this is a re-point rather than a rewrite.
+  /**
+   * ⭐⭐⭐ **THE HITFACE — the face the FIRST touch's raycast hit at press.**
+   *
+   * > *"in rotation mode, when object is not aligned: track the object's face which first touch
+   * > raycast hit at press = HitFace."* — the owner, 2026-09-24
+   *
+   * ⛔ Three preconditions, all read live rather than latched: the session is in `ROTATE`, a first
+   * touch is holding a body, and that body is **not aligned**. ⚠ An aligned body already has a
+   * FollowerFace and its own highlight; offering it a second one would put two meanings on one
+   * body. ⭐ `grip.pressFace` is the raycast's own answer, resolved once at the press — never
+   * recomputed here, because a second opinion about *which face* would be free to disagree.
+   */
+  const hitFaceNow = (): FaceRef | null => {
+    if (behaviour !== "ROTATE") return null;
+    const holder = router.objects()[0];
+    const grip = holder === undefined ? undefined : held.get(holder.id);
+    if (grip === undefined || grip.pressFace === null) return null;
+    const objectId = idOf.get(grip.mesh);
+    if (objectId === undefined) return null;
+    if (alignedFaceOf(world, objectId) !== null) return null;
+    return { objectId, faceId: grip.pressFace.faceId };
+  };
+
+  /**
+   * ⭐⭐ The white ring that marks a fuchsia face's centre, one per candidate face.
+   *
+   * ⛔⛔ **PARENTED TO THE BODY AND PLACED IN ITS LOCAL FRAME** — defect 46's lesson, the same one
+   * the face markers rest on: *a marker positioned from Babylon's cached world matrix draws the
+   * pose its object had LAST frame*, which is exactly the lag the owner asked us to avoid here.
+   * ⚠ Only the SCALE is written per frame, to hold a constant apparent size.
+   */
+  const candidateRings = new Map<string, LinesMesh>();
+  const candidateRingFor = (
+    objectId: ObjectId,
+    faceId: string,
+  ): LinesMesh | null => {
+    const key = `${objectId}/${faceId}`;
+    const hit = candidateRings.get(key);
+    if (hit !== undefined) return hit;
+    const body = meshOf.get(objectId);
+    const face = world.objects
+      .get(objectId)
+      ?.faces.find((f) => f.id === faceId);
+    if (!body || !face) return null;
+    const m = CreateLines(
+      `candidate-ring-${key}`,
+      { points: RING_POINTS },
+      scene,
+    );
+    m.color = new Color3(1, 1, 1);
+    m.isPickable = false;
+    // ⭐ Above the body and above the face marker it sits on, for the same reason the gizmo is:
+    // an instrument that says *here is the offer* must not be occluded by the thing it marks.
+    m.renderingGroupId = 2;
+    m.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    m.isVisible = false;
+    m.metadata = { orbitCandidate: false };
+    m.parent = body;
+    // ⚠ Lifted off the surface by the same hair the face marker uses, or it z-fights the fill.
+    m.position.set(
+      face.centre[0] + face.normal[0] * MARKER_LIFT_M * 2,
+      face.centre[1] + face.normal[1] * MARKER_LIFT_M * 2,
+      face.centre[2] + face.normal[2] * MARKER_LIFT_M * 2,
+    );
+    candidateRings.set(key, m);
+    return m;
+  };
+
+  /**
+   * ⭐ The fuchsia set, as the PRESS path needs it. ⛔ Computed from the model on demand rather
+   * than read off a variable the render loop happens to have left behind: a press and a frame are
+   * different moments, and a set cached by the draw would answer for the wrong one.
+   */
+  const candidateKeysNow = (): Set<string> => {
+    const hit = hitFaceNow();
+    if (hit === null) return new Set();
+    return new Set(
+      mateCandidateFaces(world, hit, cfg.pioneerCandidateConeDeg).map(
+        (c) => `${c.objectId}/${c.faceId}`,
+      ),
+    );
+  };
+
   const alignFollowerToPioneer = (
     followerPointerId: number,
     followerGrip: Held,
@@ -3512,6 +3604,20 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldA
                 );
               })
               .join("") +
+            // ⭐⭐⭐ **THE HITFACE AND ITS OFFERS, ON THE GLASS** (the owner, 2026-09-24). ⛔ The
+            // rule is invisible otherwise: a hand that sees no fuchsia cannot tell whether the
+            // cone is too tight, the body is aligned already, or the mode is wrong.
+            (() => {
+              const hf = hitFaceNow();
+              if (hf === null)
+                return `  hit=— (needs ROTATE + an unaligned held body)`;
+              const n = mateCandidateFaces(
+                world,
+                hf,
+                cfg.pioneerCandidateConeDeg,
+              ).length;
+              return `  hit=${hf.objectId}/${hf.faceId} cone=${cfg.pioneerCandidateConeDeg}° fuchsia=${n}`;
+            })() +
             // ⭐⭐⭐ **WHERE THE OUTLINE PIPELINE STOPS** — added 2026-09-18 after a device report
             // of *"no outline of any sort"*, which four different failures produce identically:
             // no topology, no outline meshes built, no face markers, or a throw in the draw path.
@@ -3919,6 +4025,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
         // there is no fallback and a level camera sends the body a very long way.
         tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
+        // ⭐⭐ How close to MATING a face must be before it lights fuchsia. ⛔ `0` is the honest
+        // OFF: only an exactly opposed face. The owner asked for 0–45 in steps of 5.
+        tunable("fuchsia cone (deg)", "pioneerCandidateConeDeg", 0, 45, 5),
         // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
         // the flag; anything above draws an x-ray twin at that opacity.
         tunable(
@@ -5053,11 +5162,27 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // nothing — which is what makes it a working second finger for the body in the OTHER hand.
       // ⚠ The DECISION is `frozen_pick.ts`'s; this reads the two facts and obeys.
       const hitId = rayHit === null ? undefined : idOf.get(rayHit);
+      // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
+      // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
+      //
+      // ⛔⛔ **RESOLVED BEFORE THE FROZEN FILTER**, because the filter's whole question is whether
+      // this press was invited. ⚠ From the RAW pick: `hit` does not exist yet, and by the time it
+      // does the frozen body has already been turned into a miss. ⭐ `faceFromPickedNormal` is the
+      // one implementation of *which face is this*, called here and again for the grip below.
+      const pressOfferedFace = (() => {
+        if (hitId === undefined) return false;
+        const n = pick?.getNormal(true);
+        if (!n) return false;
+        const f = faceFromPickedNormal(world, hitId, [n.x, n.y, n.z] as Vec3);
+        if (f === null) return false;
+        return candidateKeysNow().has(`${hitId}/${f.faceId}`);
+      })();
       const hit = pressHit(
         rayHit,
         hitId !== undefined && world.objects.get(hitId)?.frozen === true,
         // ⛔ The count BEFORE this press is registered: `router.press` has not run yet.
         router.size,
+        pressOfferedFace,
       );
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
       const routed = router.press(e.pointerId, s, hit);
@@ -5256,6 +5381,74 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressOthers.length === 1 ? pressOthers[0]![1] : undefined;
       const pressPioneerOfHeld =
         pressHeldId === null ? null : links.pioneerFor(pressHeldId);
+      // ⭐⭐⭐ **A FUCHSIA FACE PRESSED BY THE SECOND TOUCH BECOMES THE PIONEERFACE.**
+      //
+      // > *"if one fuchsia highlighted face is pressed by second touch, it becomes PioneerFace and
+      // > the object becomes Pioneer object and the highlight switches to the pioneer highlight
+      // > and the object with HitFace becomes aligned Follower object and the HitFace becomes
+      // > FollowerFace."* — the owner, 2026-09-24
+      //
+      // ⛔⛔ **THE ROLES ARE THE INVERSE OF `D67`'s**, which is why this cannot be folded into
+      // `pressMeaning`: there the PRESSED body is the Follower and the HELD one the Pioneer,
+      // because the hand reaches out to the part it wants to move. ⚠ Here the hand is already
+      // holding the part and reaching out to the thing it wants to align TO — the fuchsia
+      // highlight is what makes the intent unambiguous, and it only exists in this configuration.
+      //
+      // ⭐ It tails into what is already built: `alignFollowerToPioneer` is called with the HELD
+      // grip as the Follower, so it finds the freshly pressed body as its one other holder and
+      // every downstream rule — the colours, the two-way index, the cascade — is the vetted one.
+      // ⛔ `pressActed` from the RETURN VALUE, as `D67`'s branch does: a refusal must leave the
+      // release untouched so the tap still means what it always meant.
+      const pressedIsCandidate =
+        pickedId !== undefined &&
+        pressFace !== null &&
+        candidateKeysNow().has(`${pickedId}/${pressFace.faceId}`);
+      // ⭐⭐⭐ **THE SECOND PRESS OF A DOUBLE TAP UPGRADES THE RELATION TO `FOLLOW`.**
+      //
+      // > *"rapid double tap on fuchsia face does not trigger the amber mode"* — the owner
+      //
+      // ⛔⛔ **THE FIRST PRESS CONSUMES THE OFFER, WHICH IS WHY THE SECOND ONE MISSED IT.** After
+      // it aligns, the held body IS aligned — so `hitFaceNow`'s *not aligned* precondition fails,
+      // the fuchsia set is empty, and the second press of the pair fell through to `D67`'s rule.
+      // ⭐ So the pair is recognised on the LINK that already exists rather than on the offer that
+      // no longer does: same two bodies, same face, and this press pairs with the last.
+      // ⚠ Waiting out the double-tap window before aligning was the other way to fix it, and it
+      // would put the whole gesture behind a timer — `D73`'s lesson about lag, one rule over.
+      const heldPioneer =
+        pressHeldId === null ? null : links.pioneerFor(pressHeldId);
+      if (
+        pressGrip.pressWasDoubleTap === true &&
+        pressHeldId !== null &&
+        pickedId !== undefined &&
+        pressFace !== null &&
+        heldPioneer !== null &&
+        heldPioneer.objectId === pickedId &&
+        heldPioneer.faceId === pressFace.faceId
+      ) {
+        alignModeOf.set(pressHeldId, "FOLLOW");
+        lastVerdict = `align: ${pressHeldId} → FOLLOW (double tap on its Pioneer face)`;
+        pressGrip.pressActed = true;
+        paint();
+        return;
+      }
+      if (
+        pressedIsCandidate &&
+        pressHeldGrip !== undefined &&
+        pressHeldId !== null
+      ) {
+        const heldPointerId = pressOthers[0]![0];
+        pressGrip.pressActed = alignFollowerToPioneer(
+          heldPointerId,
+          pressHeldGrip,
+          // ⚠ A FIRST press is always a `SNAPSHOT`: a pair is only knowable on the SECOND press,
+          // and the upgrade above is what carries it to `FOLLOW`.
+          alignModeFor(pressGrip.pressWasDoubleTap === true),
+        );
+        if (pressGrip.pressActed) {
+          paint();
+          return;
+        }
+      }
       const pressVerdict = pressMeaning({
         // ⭐ `D67`: the body under THIS press is the FOLLOWER, and the held one is the Pioneer.
         pressedObject: pickedId ?? null,
@@ -6664,6 +6857,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
     // highlight DID disappear and the follower's did not, the asymmetry the report describes.
     const alignedNow = new Set(links.alignedObjects());
+    // ⭐⭐⭐ **THE FUCHSIA CANDIDATES** — every face on another body that the HitFace is within
+    // `pioneerCandidateConeDeg` of mating with (the owner, 2026-09-24). ⛔ Recomputed every frame
+    // from the MODEL, never remembered: *during the rotation* means the set follows the pose, and
+    // a remembered set is the shape that produced eight reports on the gizmo.
+    const hitFace = hitFaceNow();
+    const candidates =
+      hitFace === null
+        ? []
+        : mateCandidateFaces(world, hitFace, cfg.pioneerCandidateConeDeg);
+    const candidateKeys = new Set(
+      candidates.map((c) => `${c.objectId}/${c.faceId}`),
+    );
     guardDraw("alignmentMarkers", () => {
       // ⛔⛔ **RETIRED BY SET MEMBERSHIP, WHATEVER REMOVED THE LINK.** The 2026-09-17 bug was the
       // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
@@ -6672,8 +6877,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       for (const [key, q] of faceMarkers) {
         const id = key.slice(0, key.indexOf("/"));
         const faceId = key.slice(key.indexOf("/") + 1);
+        // ⛔⛔ **ONE POOL, ONE MEMBERSHIP TEST.** The fuchsia faces join the same retire loop
+        // rather than getting a pool of their own: on 2026-09-17 two marker pools retired by two
+        // different rules in one edit, and the asymmetry produced TWO false device reports.
         const wanted =
-          alignedNow.has(id) && alignedFaceOf(world, id) === faceId;
+          (alignedNow.has(id) && alignedFaceOf(world, id) === faceId) ||
+          candidateKeys.has(key);
         if (wanted) continue;
         q.fill.isVisible = false;
         // ⛔⛔ **RETIRED BY THE SAME MEMBERSHIP TEST, IN THE SAME LOOP.** The twin must not outlive
@@ -6687,6 +6896,42 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⛔ THE PAIR IS ATOMIC. A body outline left behind by a released alignment would claim
         // the body is still aligned — the readout-that-lies shape this file guards against.
         o.align.isVisible = false;
+      }
+
+      // ⭐⭐ **THE FUCHSIA FILL AND ITS WHITE RING**, drawn BEFORE the alignment colours so that a
+      // face which is both a candidate and a live Follower/Pioneer keeps its established meaning.
+      for (const c of candidates) {
+        const marker = faceMarkerFor(c.objectId, c.faceId);
+        if (marker !== null) {
+          if (!marker.mat.emissiveColor.equals(CANDIDATE_COLOUR))
+            marker.mat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
+          marker.fill.isVisible = true;
+          const xrayOn = cfg.followerFaceXrayAlpha > 0;
+          if (xrayOn) {
+            if (!marker.xrayMat.emissiveColor.equals(CANDIDATE_COLOUR))
+              marker.xrayMat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
+            marker.xrayMat.alpha = cfg.followerFaceXrayAlpha;
+          }
+          marker.xray.isVisible = xrayOn;
+        }
+        // ⚠ The ring is PARENTED, so only its scale is written here — it keeps a constant
+        // apparent size as the camera moves, the same conversion the capture shell uses.
+        const ring = candidateRingFor(c.objectId, c.faceId);
+        if (ring !== null) {
+          const m =
+            trackingMetresPerPx(
+              camera.radius,
+              camera.fov,
+              canvas.clientHeight,
+            ) * GIZMO_RING_PX;
+          ring.scaling.set(m, m, m);
+          ring.isVisible = true;
+        }
+      }
+      // ⛔ RETIRED BY THE SAME MEMBERSHIP TEST as the fills above — a ring that outlived its
+      // fuchsia face would claim an offer the rule has withdrawn.
+      for (const [key, r] of candidateRings) {
+        if (!candidateKeys.has(key)) r.isVisible = false;
       }
 
       for (const id of alignedNow) {

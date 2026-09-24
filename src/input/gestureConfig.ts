@@ -251,6 +251,20 @@ export interface GestureConfig {
 
   // ── §1.3 the recognizer ─────────────────────────────────────────────────
   /** ms of motion buffer the flick test reads. */
+  /**
+   * ⭐⭐⭐ **HOW CLOSE TO MATING A FACE MUST BE BEFORE IT LIGHTS FUCHSIA**, in degrees.
+   *
+   * > *"highlight in fuchsia any face of any other object which normal is aligned within xx
+   * > degrees of the normal of the HitFace. Make xx a slider between 0 and 45 degrees with 5
+   * > degrees increment."* — the owner, 2026-09-24
+   *
+   * ⛔⛔ *ALIGNED* IS READ AS **ANTI-PARALLEL** — the mate sense, `D78`'s. The argument, and the
+   * one line to change if that reading is wrong, are in `core/face_candidates.ts`.
+   *
+   * ⭐ `0` is the honest OFF: only an exactly opposed face lights. ⚠ A GUESS at `15`, with the
+   * slider the owner asked for; no hand has judged it.
+   */
+  pioneerCandidateConeDeg: number;
   flickWindow: number;
   /** mm/s at lift, below which it is a drag that stopped — never a flick. */
   flickLiftSpeed: number;
@@ -846,6 +860,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   gainTranslateMutual: 0.5,
 
+  // ⚠ A guess with a slider — the owner asked for 0–45 in steps of 5 and has not judged a value.
+  pioneerCandidateConeDeg: 15,
   flickWindow: 120,
   flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
@@ -1055,6 +1071,20 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔ The owner's slider is 0–45. Outside it the highlight stops meaning *nearly ready to mate*:
+  // past 90° a face pointing the SAME way would light, which is the reading this rule rejects.
+  if (
+    !Number.isFinite(cfg.pioneerCandidateConeDeg) ||
+    cfg.pioneerCandidateConeDeg < 0 ||
+    cfg.pioneerCandidateConeDeg > 45
+  ) {
+    throw new Error(
+      `pioneerCandidateConeDeg (${cfg.pioneerCandidateConeDeg}) must be between 0 and 45 ` +
+        "degrees: it is how far from ANTI-PARALLEL a face may be and still be offered as a " +
+        "Pioneer candidate, and past 90 the test would admit faces pointing the same way.",
+    );
+  }
+
   // ⛔ Below 2 intervals, a single dropped frame reads as a stop — the exact defect the adaptive
   // window replaces. ⭐ The floor is a design bound, not a taste, so the validator holds it.
   if (!(cfg.restGapFactor >= 2) || !Number.isFinite(cfg.restGapFactor)) {

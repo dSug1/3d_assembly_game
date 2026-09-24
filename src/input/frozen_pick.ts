@@ -51,8 +51,19 @@ export function pressHit<O>(
   hit: O | null,
   isFrozen: boolean,
   touchpointsAlreadyDown: number,
+  offeredFace = false,
 ): O | null {
   if (hit === null) return null;
+  // ⭐⭐⭐ **AN OFFER THAT CANNOT BE ACCEPTED IS WORSE THAN NO OFFER** — the owner, 2026-09-24:
+  // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
+  //
+  // ⛔⛔ `D77` makes a second touch on a frozen body a MISS so that finger can drive another
+  // body. ⚠ That rule was written before anything ever INVITED a press onto a frozen face. The
+  // base plate is the thing most parts are aligned to, so the exception is not a special case —
+  // it is the main use of the feature. ⭐ Narrow by construction: only a face the product is
+  // currently highlighting can take the press, so a finger landing anywhere else on the plate
+  // still behaves exactly as `D77` says.
+  if (offeredFace) return hit;
   if (!isFrozen) return hit;
   // ⚠ `> 0` — the first touch keeps its hit, so a frozen body can still be held as a Pioneer.
   // ⛔ A negative or non-finite count is treated as *first touch*: the conservative direction is

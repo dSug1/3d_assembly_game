@@ -49,3 +49,40 @@ describe("the pick handed to the router", () => {
     expect(pressHit(BODY, false, 0)).toBe(BODY);
   });
 });
+
+/**
+ * GOLDEN VECTORS — **AN OFFERED FACE IS PRESSABLE, EVEN ON A FROZEN BODY** (2026-09-24).
+ *
+ * > *"frozen object fuchsia face is not responsive to touch and nothing happens"* — the owner
+ */
+describe("⭐⭐⭐ pressHit — the fuchsia exception to `D77`", () => {
+  it("⛔⛔⛔ AN OFFERED FACE KEEPS THE PICK, where `D77` alone would drop it", () => {
+    // ⭐ THE VECTOR THE FIX EXISTS FOR: frozen body, second touch — a miss under `D77`, a hit
+    // when the product is currently highlighting that face as a Pioneer candidate.
+    expect(pressHit("plate", true, 1, true)).toBe("plate");
+    expect(pressHit("plate", true, 1, false)).toBeNull();
+  });
+
+  it("⛔⛔ AND `D77` IS OTHERWISE UNTOUCHED — a finger landing anywhere else still misses", () => {
+    // ⚠ RED against *frozen bodies are now pressable*: the exception must be as narrow as the
+    // offer, or the owner's *"this second touch could move another object"* is silently deleted.
+    expect(pressHit("plate", true, 1)).toBeNull();
+    expect(pressHit("plate", true, 3)).toBeNull();
+  });
+
+  it("⭐ the FIRST touch on a frozen body is unaffected either way — it always kept its hit", () => {
+    expect(pressHit("plate", true, 0, false)).toBe("plate");
+    expect(pressHit("plate", true, 0, true)).toBe("plate");
+  });
+
+  it("⛔ and an offer cannot conjure a hit out of nothing", () => {
+    // ⚠ The flag widens which HITS survive; it must never invent one where the ray found none.
+    expect(pressHit(null, true, 1, true)).toBeNull();
+    expect(pressHit(null, false, 0, true)).toBeNull();
+  });
+
+  it("⭐ a body that is not frozen is unchanged by the flag", () => {
+    expect(pressHit("part", false, 2, false)).toBe("part");
+    expect(pressHit("part", false, 2, true)).toBe("part");
+  });
+});
