@@ -999,3 +999,17 @@ second touch, **anchor-only** (delivered with no pick, always routed `OUTSIDE`),
 Shift move so a Shift tapped in place is never a tap. It parks when Shift is released, lives for the
 left button's hold, and lifts just before it. ⚠ The right button stays the way to press a Pioneer
 face; a right press replaces a Shift-made second touch.
+
+### ⭐⭐ AND AN ALIGNED BODY TRANSLATES UNDER THE LEFT BUTTON, WHATEVER THE MODE
+
+> *"In rotation mode, when an object is aligned, to translate it in the horizontal plane I need to
+> perform: left click + shift, vertical drag, remove the shift — then left click gives me access to
+> the horizontal movement. This is not mirroring the input setup for mobile."*
+
+⭐ `D60` already says it: when a second touch owns roll + gravity (an aligned body), the first
+touch takes translation whatever the mode. ⛔ On the glass that second touch exists the moment a
+finger lands; on a mouse it existed only after the first Shift move — so a plain left drag in
+`ROTATE` twisted the body until a Shift-drag had created it. ✅ A mouse's second touch is always
+one Shift away, which is the availability a resting finger has: `secondTouchAlwaysAvailable` in
+the desktop module, read by `secondTouchOwnsRollAndDepth` — the one rule both call sites share.
+⚠ Unaligned bodies are untouched: their second touch owns one axis, so the mode still decides.

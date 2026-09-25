@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   MouseSecondTouch,
   MOUSE_SECOND_ID,
+  secondTouchAlwaysAvailable,
   type MouseAction,
   type MouseInput,
 } from "@input/mouse_second_touch";
@@ -353,6 +354,19 @@ describe("⛔⛔⛔ THE MASK IS READ EVERY TIME — a missed release never stick
       emit: [{ target: "SECOND", kind: "UP", x: 1, y: 2 }],
     });
     expect(m.step(ev({ type: "CANCEL" }))).toEqual({ skip: false, emit: [] });
+  });
+});
+
+describe("⭐⭐⭐ ON A MOUSE THE SECOND TOUCH IS ALWAYS AVAILABLE — `D60` for an aligned body", () => {
+  it("⭐⭐ a mouse holder counts it as present; a finger and a pen do not", () => {
+    // > *"When an object is aligned, whatever the mode, the left click shall give access to
+    // > horizontal translation … This shall be immediate."*
+    // ⛔ RED against `false` for a mouse, which is what shipped: in ROTATE a plain left drag on an
+    // aligned body twisted it until a Shift-drag had brought the second touch into being.
+    // ⚠ RED against `true` for touch — a finger's second touch exists only when it lands.
+    expect(secondTouchAlwaysAvailable("mouse")).toBe(true);
+    expect(secondTouchAlwaysAvailable("touch")).toBe(false);
+    expect(secondTouchAlwaysAvailable("pen")).toBe(false);
   });
 });
 
