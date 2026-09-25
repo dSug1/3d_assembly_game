@@ -26,26 +26,19 @@ operating rule set.
 
 ## No heuristic pile-up
 
-If something misbehaves, the fix is **better data covering that failure as its own
-case**, or **a reconsidered model with literature backing** — *never* a special-case
-rule bolted onto the output to patch one observed failure.
+If something misbehaves, the fix is **better data covering that failure as its own case**, or **a
+reconsidered model with literature backing** — *never* a special-case rule bolted onto the output.
+⭐ The corollary the predecessor kept re-learning: **a trigger cannot enforce an invariant.**
 
-⭐ The corollary the predecessor kept re-learning: **a trigger cannot enforce an
-invariant.** Two trigger-shaped fixes were built and reverted before a positional
-clamp shipped.
+⭐⭐ **A COMPOSITION IS A THING TO MEASURE, NOT AN EMERGENT PROPERTY.** The predecessor's rotation
+stack was defensible at every layer and a **reflection** as a whole, because nobody had computed the
+composite. **Ask what the whole chain does, in one expression, and check it.**
 
-⭐⭐ **A COMPOSITION IS A THING TO MEASURE, NOT AN EMERGENT PROPERTY.** The
-predecessor's rotation stack was defensible at every layer and a **reflection** as a
-whole, because nobody had ever computed the composite. **Ask what the whole chain
-does, in one expression, and check it.**
-
-⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.** *(2026-09-15.)*
-A gravity-referenced rotation was reported as having regressed to the screen axes. Every part had
-green vectors — ⚠ none of which is the same claim as *a horizontal drag yaws about gravity*, which is
-what a hand judges. Fourteen vectors composing the frame with the rotation at four camera tilts showed
-it was right; the report was withdrawn, and the real defect beside it (a missing deadband) became
-separable from the impression. ⭐ **Write the composite check even when you believe the pieces** — it
-is the only thing that tells a defect from an impression, in either direction.
+⛔⛔ **AND IT CUTS BOTH WAYS — an unmeasured composition indicts CORRECT work too.** *(2026-09-15:
+a report that the gravity frame had regressed.)* Every part had green vectors, ⚠ none of which is the
+same claim as *a horizontal drag yaws about gravity* — which is what a hand judges. Composing the
+frame with the rotation at four tilts showed it was right, and separated the real defect beside it
+from the impression. ⭐ **Write the composite check even when you believe the pieces.**
 
 ## ⭐⭐ A BLEND HAS SEAMS
 
@@ -66,13 +59,10 @@ last verdict**: a ratio of two numbers passing through zero is garbage however c
 
 ## ⭐⭐ A GESTURE spans the moments between its touchpoints
 
-*(2026-09-16.)* A rule table maps *what is down right now* to *what happens*. ⛔ A hand does
-not work that way: **lifting a finger and putting it down again is one intention**, and for
-the 150–300 ms in between, the literal truth is a configuration the user never asked for.
-
-⚠ The instance: a rule table said *one touchpoint translates, two rotate*. Swap the second finger from
-one place to another and the object translated through the middle of the swap — correctly by the
-table, wrongly by any account of what the hand was doing.
+*(2026-09-16.)* A rule table maps *what is down right now* to *what happens*. ⛔ A hand does not:
+**lifting a finger and putting it down again is one intention**, and for the 150–300 ms in between
+the literal truth is a configuration the user never asked for. ⚠ A table saying *one touchpoint
+translates, two rotate* translated the object through the middle of every finger swap.
 
 ⭐⭐ **The tell was the owner's own observation**: two cases that *"differ by timing of the input"*.
 When two runs of one gesture differ only by WHEN the user moved, the rule is reading a momentary state
@@ -158,25 +148,34 @@ moving needs no further proof.*
 time feels different from lag, and it points at a threshold being re-charged somewhere it
 should not be.
 
-## ⭐⭐ A threshold is only half a rule — the other half is what advances the clock
+## ⭐⭐⭐ SILENCE AS EVIDENCE — the clock that advances it, and the hardware that sets its scale
 
-*(2026-09-15, after three device reports of one defect.)* A state machine that waits for a
-condition must be **driven by something that runs when the condition holds**. ⛔ If it is
-driven by the very signal whose ABSENCE it is trying to detect, no threshold can ever be
-right, and every fix will look like a tuning problem.
+*(2026-09-15 and 2026-09-24: two defects, one shape.)*
 
-⚠ The instance: *"is this finger still?"* was answered by a tracker advanced only by `pointermove`.
-A still finger emits none, so the tracker froze at MOVING, reachable only by a stray jitter sample.
-⭐ Two rounds of fixing the THRESHOLD changed nothing: the threshold was never the problem.
+**① A state machine that waits for a condition must be driven by something that runs when the
+condition HOLDS.** ⛔ Driven by the very signal whose ABSENCE it detects, no threshold can be right
+and every fix looks like tuning. ⚠ *"Is this finger still?"* was answered by a tracker advanced only
+by `pointermove`; a still finger emits none, so it froze at MOVING, and two rounds of fixing the
+THRESHOLD changed nothing. ⭐⭐ **The tell was an asymmetry**: one direction of the transition
+instant, the other erratic — *an asymmetry between two directions of one test is about the EVIDENCE,
+not the threshold*. Entering MOVING is witnessed by an event that must exist; leaving it is not.
+⭐ So *elapsed time with no sample* is the stronger evidence of stillness: a sample inside a dead
+radius is still a report of motion, and silence is not.
 
-⭐⭐ **The tell, and it was in the first report**: one direction of the transition was
-instant and the other was erratic. **An asymmetry between two directions of the same test
-is about the EVIDENCE, not the threshold** — entering MOVING is witnessed by an event that
-necessarily exists; leaving it is not.
+**② But silence only means rest at the scale the DEVICE speaks at.** A browser dispatches pointer
+input **once per frame per pointer** — `getCoalescedEvents()` exists because of it — so a rule
+waiting for silence is comparing against the **frame interval**. ⚠ Measured: **47–87 ms** on a mid-range tablet,
+**~8 ms** on a 120 Hz phone; `restConfirmMs` was **30 ms**, below even the one-finger gap. *A
+threshold in milliseconds is a claim about the hardware*, and this one was false on every device
+from the day it was written. ⭐⭐ **A constant cannot serve both ends of the mobile range — derive it from the
+measured interval**, not from *fps*, which the interval already absorbs along with panel behaviour
+and throttling. ⚠ Take the **median**: the longest gaps are REVERSALS, where the finger genuinely
+stops, and feeding those in defeats the estimate.
 
-⭐ And the fix's quantity was the better one all along: *elapsed time with no sample* is
-stronger evidence of stillness than any sample inside a dead radius, because a sample is
-still a report of motion and silence is not.
+⛔⛔ **AND THE DIAGNOSIS IS THE LESSON.** NINE analyses of the layer that DISPLAYED the second defect
+all died to one sentence of device evidence. What found it was the owner reading a HUD field: *"the
+motion keeps toggling between MOVING and STATIONARY."* ⭐ *When a defect resists several
+correct-looking analyses, stop modelling the code and ask which READOUT moves.*
 
 ## ⭐⭐ When a rule needs a WINDOW to decide, suspect the QUESTION
 
@@ -186,10 +185,8 @@ a rule needs them, the cheapest fix is usually not a better window — it is a *
 question**.
 
 ⚠ The instance: *"are these two fingers travelling by the same amount?"* is undefined at a reversal
-and at a late start, both of which happen in **every** gesture — so the rule waited two windows,
-withheld a whole axis meanwhile, and a hand felt the hesitation at each end of every drag.
-⭐ Replacing it with *"is that finger still?"* removed the window, the ratio, the tolerance and the
-hold **together**.
+and at a late start, both of which happen in **every** gesture. ⭐ Replacing it with *"is that
+finger still?"* removed the window, the ratio, the tolerance and the hold **together**.
 
 ⛔ The tell: a correctly implemented rule that still feels wrong, and a tuning parameter
 whose value nobody can defend. ⭐ Ask what question the parameter is buying an answer to.
@@ -200,102 +197,97 @@ whose value nobody can defend. ⭐ Ask what question the parameter is buying an 
 wrong one decides the choice as surely as a wrong measurement.
 
 ⚠ The instance: *stable projection* against *Blender-exact tracking*, the second described as needing
-**"a refusal threshold (a guessed number)"** — true, and false where it mattered: the threshold is
-**5°, Blender's, and published**. ⛔ The cost that decided the rejection was already paid by prior
-art, and the mapping that shipped instead produced three device reports in one look.
+**"a refusal threshold (a guessed number)"** — false where it mattered: the threshold is **5°,
+Blender's, and published**. ⛔ The mapping that shipped instead produced three device reports.
 
 ⭐⭐ **Before offering a cost as a reason to reject something, ask whether the field has already paid
 it.** *A guessed number has been wrong every single time here* — but a number with a citation is not
 a guess, and treating the two alike throws away the option that has the answer.
 
+## ⭐⭐⭐ AN ID UNIQUE ONLY WITHIN A SCOPE IS A DEFECT THE MOMENT A RULE REACHES ACROSS SCOPES
+
+*(2026-09-25, defect 63.)* Face ids are generated per body (`f0…fN`). A rule comparing a face of the
+HELD body against one of the PRESSED body matched whenever the two shared an index — and **both
+sides are typed `string`**, so neither the compiler nor the eye could see the reach.
+
+⛔⛔ It arrived by **inversion, not by writing**: under the old role order both terms named the same
+body, and the test was carried over unchanged when the roles swapped. ⭐ *Swapping which role a
+finger plays changes which scope each side of a predicate is drawn from, without touching the
+predicate.* ⚠ And it was **unreachable by the suite**, because every fixture naturally used distinct
+ids — the vector that pins it sets them **equal on purpose**.
+
 ## ⭐ Acting is irreversible; not knowing is not a reason to act
 
-When a gesture is genuinely ambiguous for a window, the choice is not *"which rule"* but
-*"whether to move at all"*. ⛔ Apply the unambiguous part and **withhold** the rest until
-the verdict arrives. ⚠ **State the cost**: the withheld travel is DISCARDED, not released
-in one step — releasing it is exactly the jump being complained about.
+When a gesture is genuinely ambiguous for a window, the choice is not *"which rule"* but *"whether
+to move at all"*. ⛔ Apply the unambiguous part and **withhold** the rest. ⚠ **State the cost**: the
+withheld travel is DISCARDED, not released in one step — releasing it is the jump being complained
+about.
 
 ## ⭐⭐⭐ A DEVICE REPORT IS EVIDENCE ABOUT THE CODE THE DEVICE WAS RUNNING
 
-*(2026-09-16.)* `METHOD` closes a change on a look at a real device. ⛔ That makes the
-**identity of the build under the finger** part of every verdict this project records — and
-for three days nothing on the glass could name it.
+*(2026-09-16.)* Rule 5 closes a change on a look at a real device — which makes the **identity of
+the build under the finger** part of every verdict this project records, and for three days nothing
+on the glass could name it.
 
 ⚠ The instance: a gesture fix was judged correct over USB and **wrong on GitHub Pages**, and the
 natural reading was that the fix was incomplete. The code was identical. ⭐ What differed was the
-bundle the tablet had: Pages serves `index.html` with `max-age=600` and the assets are
-**content-hashed**, so a cached index loads an old bundle *indefinitely* — stale until something
-replaces the index, not for ten minutes.
+bundle: Pages serves `index.html` with `max-age=600` and the assets are **content-hashed**, so a
+cached index loads an old bundle *indefinitely*.
 
-⛔⛔ **So a deployment can indict correct work exactly as an unmeasured composition can.**
-It is the withdrawn-`A7` shape aimed one layer lower: the report was truthful, the reasoning
-from it was sound, and the premise — *"both surfaces are running the same code"* — was the
-thing nobody had checked. ⭐ The tell is **the same gesture behaving differently on two
-surfaces**: suspect the artefact before the algorithm, because code cannot be
+⛔⛔ **So a deployment can indict correct work exactly as an unmeasured composition can.** The
+report was truthful, the reasoning from it was sound, and the premise — *"both surfaces are running
+the same code"* — was the thing nobody had checked. ⭐ The tell is **the same gesture behaving
+differently on two surfaces**: suspect the artefact before the algorithm, because code cannot be
 surface-dependent unless something makes it so.
 
-⭐ **The fix is identity, not discipline.** The page now stamps its build id on the HUD and
-asks the origin whether it is current, refreshing itself once if not
-(`src/core/build_gate.ts`). ⚠ A procedure — *"always hard-reload before judging"* — would
-have been a rule a tired hand skips, and it is the one moment nobody should be relying on
-memory.
+⭐ **The fix is identity, not discipline.** The page stamps its build id on the HUD and asks the
+origin whether it is current, refreshing once if not (`src/core/build_gate.ts`). ⚠ A procedure —
+*"always hard-reload before judging"* — is a rule a tired hand skips.
 
 ## ⛔⛔ AN ABSENT READOUT CANNOT BE CAUGHT BY LOOKING AT THE SCREEN
 
-*(2026-09-16, found while fixing the above.)* A dead instrument that **prints** a stale
-quantity gets caught eventually: someone reads it and it disagrees with the world. ⛔ One
-that prints **nothing at all** is invisible by construction — there is no wrong number to
-notice, and the documentation describing it reads exactly as it would if it worked.
+*(2026-09-16, found while fixing the above.)* A dead instrument that **prints** a stale quantity
+gets caught eventually. ⛔ One that prints **nothing at all** is invisible by construction — there
+is no wrong number to notice, and the documentation reads exactly as it would if it worked.
 
-⚠ The instance: `scene.ts` has always computed which tunables the URL overrode and handed them to the
-HUD, which **never rendered them** — for the whole life of the file, while the docs told a reader it
-did. ⭐ It would have gone unnoticed until an `IN5` session spent an hour measuring a default while
-believing it was measuring an override.
+⚠ The instance: `scene.ts` computed which tunables the URL overrode and handed them to a HUD that
+**never rendered them**, for the file's whole life, while the docs said it did.
 
-⭐⭐ **So audit an instrument against the QUESTIONS it is supposed to answer, not against
-the lines it happens to print.** The check is cheap and it is a different check: *for each
-thing this readout is documented to tell me, point at the code that emits it.*
-⚠ A field passed into a readout and never read is the exact shape `tests/config_debt.test.ts`
-already refuses for tunables — and the HUD had no equivalent guard.
+⭐⭐ **So audit an instrument against the QUESTIONS it is supposed to answer, not against the lines
+it happens to print**: *for each thing this readout is documented to tell me, point at the code
+that emits it.*
 
 ## ⛔⛔ The instrument is a suspect, always
 
-**This is the most expensive lesson carried over.** In one session, four harnesses
-reported CLEAN on takes the owner had just watched fail. Every time, the instrument
-was wrong and the owner was right.
+**The most expensive lesson carried over.** In one session four harnesses reported CLEAN on takes
+the owner had watched fail — every time the instrument was wrong and the owner was right.
 
-* **Record the value the product ACTUALLY USED**, never a harness recomputing it. A
-  recomputation is a second implementation that can silently disagree.
-* **Print the aggregation, not just the value.** Two harnesses aggregating
-  differently under one name reported an axis as broken when it was fine.
-* ⭐⭐⭐ **A SIGN IS NOT TESTED BY ANY AMOUNT OF TESTING THE MAGNITUDE.** Four defects
-  in one day shared that shape and not one was caught by a suite. Assert signs
-  against declared truth.
-* ⭐⭐⭐ **AN INVARIANT TESTED ON ONE AXIS IS NOT TESTED.** A suite checked
-  chirality-evenness on the one axis that never had the problem, and certified the
-  two that did.
-* ⭐⭐⭐ **A GOLDEN VECTOR'S FIXTURE MUST BE A SPECIMEN THE PRODUCT WOULD ACCEPT.** A
-  suite built its synthetic input in an idealised form the real code rightly refuses,
-  so every vector exercised a case that cannot occur.
-* ⭐⭐⭐ **A SKIPPED CHECK MUST BE ANNOUNCED.** A suite fed the wrong-shaped data to a
-  loader, got nothing, skipped on a `continue`, and printed ALL CHECKS PASSED. A
-  guard that turns missing data into silence is worse than a failure.
-* ⭐⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT.** A detector whose
-  channel had been taken away was left **fed** and called *unused* in its own comment; it
-  still held the top rung of the release ladder and silently vetoed the rule that replaced
-  it. ⛔ *Unwired* means **nothing calls it** — not that nothing reads its output. The three
-  dead instruments of 2026-09-16 rank by verb: a HUD line was *read*, a slider was *read*,
-  this one was **obeyed**.
-* ⭐⭐ **A test that cannot FAIL is not a test.** Keep an explicit counter-example
-  beside each guard, and check the guard fires on it.
-* ⭐⭐ **Independence has to be ARGUED, not inferred from numbers agreeing.** Three
-  measures derived from the same source degrade together and agree on a wrong answer.
-* ⚠ **A statistic pooled across a region cannot answer a question about that
-  region.**
+* **Record the value the product ACTUALLY USED**, never a harness recomputing it: a recomputation
+  is a second implementation that can silently disagree.
+* **Print the aggregation, not just the value.** Two harnesses aggregating differently under one
+  name reported an axis as broken when it was fine.
+* ⭐⭐⭐ **A SIGN IS NOT TESTED BY ANY AMOUNT OF TESTING THE MAGNITUDE.** Four defects in one day
+  shared that shape and none was caught by a suite. Assert signs against declared truth.
+* ⭐⭐⭐ **AN INVARIANT TESTED ON ONE AXIS IS NOT TESTED.** A suite checked chirality-evenness on
+  the one axis that never had the problem, and certified the two that did.
+* ⭐⭐⭐ **A GOLDEN VECTOR'S FIXTURE MUST BE A SPECIMEN THE PRODUCT WOULD ACCEPT.** A suite built
+  its input in an idealised form the real code rightly refuses, so every vector exercised a case
+  that cannot occur.
+* ⭐⭐⭐ **A SKIPPED CHECK MUST BE ANNOUNCED.** A suite fed wrong-shaped data to a loader, got
+  nothing, skipped on a `continue`, and printed ALL CHECKS PASSED. A guard that turns missing data
+  into silence is worse than a failure.
+* ⭐⭐⭐ **A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT.** A detector left **fed** after
+  its channel was taken away still held the top rung of the release ladder and vetoed its
+  replacement. ⛔ *Unwired* means **nothing calls it**, not that nothing reads it.
+* ⭐⭐ **A test that cannot FAIL is not a test.** Keep a counter-example beside each guard and check
+  the guard fires on it.
+* ⭐⭐ **Independence has to be ARGUED, not inferred from agreement.** Measures from one source
+  degrade together.
+* ⚠ **A statistic pooled across a region cannot answer a question about it.**
 
-⚠ **Automated green is necessary, not sufficient. A look on a REAL DEVICE is what
-closes a change** — nothing else does. ⛔ And touch gestures cannot be honestly
-tested with a mouse: one pointer, no DPI, no tilt, no haptics.
+⚠ **Automated green is necessary, not sufficient. A look on a REAL DEVICE is what closes a
+change** — nothing else does. ⛔ And touch gestures cannot be honestly tested with a mouse: one
+pointer, no DPI, no tilt, no haptics.
 
 ⛔ If a baseline does not reproduce before you change anything, **stop**.
 

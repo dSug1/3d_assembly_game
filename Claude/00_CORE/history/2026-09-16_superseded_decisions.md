@@ -536,3 +536,29 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D73` | ⭐⭐⭐ **A ROTATION IS ALWAYS ON AN INCREMENT** — ✅✅ **CLOSED BY A DEVICE LOOK** | 2026-09-22 | ⭐ Binding. `rotationIncrementDeg` 0–45/5, **ships at 0**; four formulations, three rejected by a hand. ⚠ `dy` no longer twisting is the unjudged cost |
 
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND A SECOND TOUCH ON ONE IS A MISS** | 2026-09-23 | *"Don't show the gizmo for the frozen objects"* and *"treat this second touch as if it was not raycast hitting any object (therefore, this second touch could for example move another object)"*. ⭐⭐ Both are enforced at a DEFINITION rather than by a guard at the draw or route site: `leadingFace` refuses a frozen body because *the face a body is advancing on* presumes it advances, and the pick is filtered **before** `IN2`'s latch so the router still knows nothing about the model. ⛔ The FIRST touch is untouched — `D67` makes *hold the plate FIRST* the way to align to it → `core/leading_face.ts`, `input/frozen_pick.ts` |
+
+---
+
+## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-25 — live rows, essays only
+
+⛔ Each row below is **still binding**; only its consequence cell left `DECISIONS.md`, to pay for
+`D87`–`D92`. ⭐ The row itself never leaves that file.
+
+| # | decision | date | consequence |
+|---|---|---|---|
+| `D71` | ⭐⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** | 2026-09-22 | ⭐ Binding — it reverses *"Default start: rotation mode"* and its re-confirmation, **both kept**. ⛔⛔ **NOT the audit's defect returning**: that was a DISAGREEMENT between every document and the code, and the tell is whether any instruction still asks for the other mode |
+| `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding — it repeals `D58`, `D61`, `D64` and `D65`, one chain whose first link was the only decision in it. ⚠ *When a rule's effect is masked during a gesture, the reported event is where it became VISIBLE* → §5.13 |
+| `D63` | ⭐⭐⭐ **THE APPROACH SWING — the camera looks around the join and comes back** (TRIAL) | 2026-09-19 | ⭐ Binding; the trial's whole record, with its delete list, is [`../../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md) |
+| `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding — it REVERSES `D25`, and `IN2`'s latch has no exceptions again. ⚠ **keeping control beats re-resolving** → [`../queue_notes/IN8.md`](../queue_notes/IN8.md) |
+| `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | ⭐ Binding — computed wins on its merits: nothing reads a normal, so **inverted normals cannot affect it**. ⛔⛔ The DISTANCE moved to surfaces; the approach DIRECTION must NOT → §19 |
+| `D47` | ⭐⭐⭐ **A MATE IS BROKEN BY PULLING IT APART WITH TWO FINGERS** | 2026-09-17 | ⭐ Binding — one finger on each mated body, moving oppositely along the centre→centre direction past a `BreakThreshold` (slider). ⛔ It needs `3D2`'s **seat** first, or *breaking* is indistinguishable from *moving* → §8 (approach) |
+| `D46` | ⭐⭐⭐ **APPROACH & MATE — the owner's mechanism, measured between CENTRES** | 2026-09-17 | ⭐ Binding — the previous approach mapped a finger onto the direction to a point ON a face, which **collapses at contact**. ⚠ Specified, not built → the approach spec |
+| `D40` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap-to-align set is THE input model** | 2026-09-17 | ⭐ Binding — deleted, not disabled (`D28`: *a dormant fork is a trap*): four modules, the flag, its validator rule, the slider and **41 vectors** → [`../queue_notes/IN3.md`](../queue_notes/IN3.md) |
+| `D37` | ⭐⭐⭐ **FORK C: THE TRIGGER IS A TAP — no flick anywhere** | 2026-09-16 | ⭐ Binding — hold an object, **tap a face on another**, and the held one makes the minimal turn onto it. ⛔ Fork B died because a release-time trigger *"releases the finger from the object it is tracking"* → the alignment spec |
+| `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | ⭐ Binding — every gesture rule carries a dated prior-art citation or is marked ⚠ novel. Register: [`../../10_INPUT_TOUCH/PROVENANCE.md`](../../10_INPUT_TOUCH/PROVENANCE.md); binding form: `CONSTRAINTS` §10 |
+
+| # | decision | date | consequence |
+|---|---|---|---|
+| `D78` | ⭐⭐⭐ **THE ALIGNMENT IS ANTI-PARALLEL — a FollowerFace points AT the PioneerFace** | 2026-09-23 | *"the direction of the FollowerFace shall be anti-normal to the direction of the PioneerFace"*. ⛔⛔ **It reverses `D37`**, which chose parallel *"over a mate"* — both texts stand. ⭐⭐ The sign lives in **one place** (`alignTargetFor`), so a `FOLLOW` cascade cannot re-align parallel one frame after a tap aligned anti-parallel → §5.18 |
+| `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside the capture zone is the same as outside** | 2026-09-23 | *"Inside shall be the same as outside. I think this is polluting the approach movement."* ⛔ It reverses `D74`'s part C, dictated the day before. ⭐ `METHOD`: *a rule whose every defect is about the MOMENT it takes effect is a rule about the wrong thing* |
+| `D74` | ⭐⭐⭐ **`WorldAxisB` — THE OBJECT AXES ARE FIXED AT SCENE BOOT** | 2026-09-22 | ⭐ Binding, **default ON**; `0` restores the camera-referred build. ⛔⛔ Its part C — the capture zone overriding the basis — is **DELETED by `D82`** → `input/object_axes.ts` |

@@ -263,6 +263,77 @@ describe("⛔⛔ the per-link orientation baseline — what makes a CHAIN visibl
   });
 });
 
+describe("⛔⛔⛔ `D90` — `cycleBreaker`: WHOSE alignment pays for a swap", () => {
+  it("⭐⭐⭐ THE TWO-BODY SWAP: `A→B` live, now `B→A` — the price is A's own link", () => {
+    // > *"I first press the pioneer and second press the follower … why is there no swap?"*
+    // ⛔ RED against the rule this replaces, which REFUSED this configuration outright and left
+    // the pair untouched — the owner's report, exactly.
+    const links = new AlignmentLinks();
+    links.link("a", "b", "+x", IDENTITY, ORIGIN);
+    expect(links.cycleBreaker("b", "a")).toBe("a");
+  });
+
+  it("⛔⛔ A LEGAL LINK COSTS NOTHING — the query must not volunteer a victim", () => {
+    // ⚠ The vector that stops *release the Pioneer's alignment* becoming unconditional: every
+    // ordinary alignment goes through this call, and a stray non-null here would silently
+    // destroy a relation on every press.
+    const links = new AlignmentLinks();
+    links.link("a", "b", "+x", IDENTITY, ORIGIN);
+    expect(links.cycleBreaker("c", "b")).toBeNull(); // a second follower of B
+    expect(links.cycleBreaker("b", "c")).toBeNull(); // B joins a new Pioneer
+    expect(links.cycleBreaker("a", "c")).toBeNull(); // A re-aligns elsewhere
+    expect(new AlignmentLinks().cycleBreaker("a", "b")).toBeNull();
+  });
+
+  it("⛔⛔⛔ A CHAIN COSTS NOTHING EITHER — joining a Pioneer that is itself a Follower", () => {
+    // ⚠⚠ **THE VECTOR THAT CAUGHT A SURVIVING MUTANT**, and it is the 2026-09-17 audit's shape:
+    // every *legal* fixture above happens to use a Pioneer with NO Pioneer of its own, so the
+    // quantity under test — *does this body have an outgoing link?* — is ZERO in all of them.
+    // ⭐ A breaker that skipped the cycle test entirely stayed green against the lot.
+    // ⛔ `a→b→c` is the ordinary assembly chain; aligning `d` to `b` closes nothing and must not
+    // cost `b` its link to `c`.
+    const links = new AlignmentLinks();
+    links.link("a", "b", "+x", IDENTITY, ORIGIN);
+    links.link("b", "c", "+x", IDENTITY, ORIGIN);
+    expect(links.cycleBreaker("d", "b")).toBeNull();
+    expect(links.cycleBreaker("d", "a")).toBeNull();
+    // ⭐ And the cycle through the SAME chain still names its price.
+    expect(links.cycleBreaker("c", "a")).toBe("a");
+  });
+
+  it("⭐⭐ A LONGER CHAIN PAYS THE SAME PRICE — one edge, and it is always the Pioneer's own", () => {
+    // ⚠ `F → P1 → P2`, then `P2 → F`. ⛔ Cutting `F → P1` severs it, and one cut always suffices
+    // because a body has at most ONE Pioneer, so the chain leaving F is unique.
+    const links = new AlignmentLinks();
+    links.link("f", "p1", "+x", IDENTITY, ORIGIN);
+    links.link("p1", "p2", "+x", IDENTITY, ORIGIN);
+    expect(links.cycleBreaker("p2", "f")).toBe("f");
+  });
+
+  it("⛔⛔⛔ AND THE CUT IS ENOUGH — the link is legal once the breaker is paid", () => {
+    // ⭐ The claim the whole rule rests on, MEASURED rather than argued: sever, then ask again.
+    // ⚠ RED against a breaker that names the wrong body — the follower, say, whose own link is
+    // not on the offending chain at all.
+    const links = new AlignmentLinks();
+    links.link("f", "p1", "+x", IDENTITY, ORIGIN);
+    links.link("p1", "p2", "+x", IDENTITY, ORIGIN);
+    const victim = links.cycleBreaker("p2", "f")!;
+    links.unlink(victim);
+    expect(links.cycleBreaker("p2", "f")).toBeNull();
+    expect(links.link("p2", "f", "+x", IDENTITY, ORIGIN)).toBe(true);
+  });
+
+  it("⚠ A BODY TO ITSELF ANSWERS null — no release can help, and `link` refuses it anyway", () => {
+    // ⛔ RED against the naive `wouldCycle ? pioneer : null`, which would offer up a body's own
+    // alignment to buy a link that is going to be refused regardless. ⭐ *A rule that says what
+    // to BREAK must not say it where breaking cannot help.*
+    const links = new AlignmentLinks();
+    links.link("a", "b", "+x", IDENTITY, ORIGIN);
+    expect(links.cycleBreaker("a", "a")).toBeNull();
+    expect(links.link("a", "a", "+x", IDENTITY, ORIGIN)).toBe(false);
+  });
+});
+
 describe("⛔⛔⛔ wouldCycle — a follower may not become its own Pioneer's pioneer", () => {
   it("⭐⭐⭐ THE OWNER'S CASE: F is aligned to P, so P may not align to F", () => {
     // ⛔ *"a follower cannot become the pioneer of its own pioneer."* ⚠ This is the one a hand

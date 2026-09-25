@@ -4,52 +4,59 @@
 > **READ IF** · you are about to re-open something, or need to know whose call it is
 > **LAST VERIFIED** · 2026-09-21
 
-⭐ **TIERED, since 2026-09-16**: a SUPERSEDED row keeps its headline here and its consequence
-text in [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md).
-⛔ The row never leaves this file — a decision that vanished from the list would be re-taken —
-but its essay is not load-bearing at read time, and this file has a byte budget.
+⭐ **TIERED, since 2026-09-16**: a SUPERSEDED row keeps its headline here and its consequence text
+in [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md).
+⛔ The row never leaves this file — a decision that vanished would be re-taken — but its essay is
+not load-bearing at read time, and this file has a byte budget.
 
 ⭐⭐ **SO A CONSEQUENCE CELL IS SHORTHAND, AND THE KEY IS HERE ONCE**: **⚠ → history** is a
 superseded row whose essay is in that file; **⭐ Binding** is a live row whose text went there
 too; a bare **§N** points at
 [`../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) and
-**§N (approach)** at the approach spec. ⚠ Each was written out in full a dozen times or
-more and is collapsed to its key here, every collapse paying for an addition — `D49`, `D64`,
-`D71`/`D72`, and now `D48`–`D53`. **An addition that does not fit pays for itself.**
+**§N (approach)** at the approach spec. ⛔ **An addition that does not fit pays for itself**, and
+every row below has been collapsed to its key at least once to pay for a later one.
 
-⚠ A decision here is **not** a rejected experiment; things measured out are named at the foot
-of this file.
+⚠ A decision here is **not** a rejected experiment; things measured out are at the foot of this
+file.
 
 ## Taken and binding
 
 | # | decision | date | consequence |
 |---|---|---|---|
-| `D1` | ⭐⭐⭐ **TypeScript + Babylon.js, web-first, Capacitor for stores** | 2026-09-13 | Made on **day one**, deliberately, because the predecessor's deferred platform decision blocked four rows and the whole game layer. One codebase for web + iOS + Android + desktop |
-| `D2` | ⛔⛔ **Audience is ALL PUBLIC, INCLUDING YOUTH** | 2026-09-13 | Carried. COPPA / GDPR-K live → no analytics or ads SDKs; local-only is load-bearing; Play Families + Apple Kids rules apply |
+| `D1` | ⭐⭐⭐ **TypeScript + Babylon.js, web-first, Capacitor for stores** | 2026-09-13 | Made on **day one**, because the predecessor's deferred platform decision blocked four rows and the whole game layer. One codebase for web + iOS + Android + desktop |
+| `D2` | ⛔⛔ **Audience is ALL PUBLIC, INCLUDING YOUTH** | 2026-09-13 | Carried. COPPA / GDPR-K live → no analytics or ads SDKs; local-only is load-bearing; Play Families + Apple Kids apply |
 | `D3` | **The game will be commercialised** | carried | `N13` binding: no non-commercially-licensed dependency |
 | `D4` | ⭐ **Manipulation is direct and kinematic, not physics-driven** | carried | The transform is driven straight from input. Never regretted in the predecessor |
 | `D5` | ⭐⭐ **Assembly is by MATE CONNECTORS** (Onshape's model) | carried | `src/core/mate_connector.ts`, and the four rules in `LESSONS_CARRIED.md` |
 | `D6` | ⛔ **`src/core` and `src/input` import no engine**, and a test enforces it | 2026-09-13 | The predecessor stated the same contract in prose and it silently became false |
 | `D7` | **Thresholds in millimetres, never pixels** | 2026-09-13 | `src/core/units.ts`; every threshold converts at runtime |
 | `D8` | ⭐ **The constraint stack replaces the three booleans** | 2026-09-13 | Owner's revision-5 spec §1.4, adopted as the design of record |
-| `D78` | ⭐⭐⭐ **THE ALIGNMENT IS ANTI-PARALLEL — a FollowerFace points AT the PioneerFace** | 2026-09-23 | *"the direction of the FollowerFace shall be anti-normal to the direction of the PioneerFace"*. ⛔⛔ **It reverses `D37`**, which chose parallel *"over a mate"* — both texts stand. ⭐⭐ The sign lives in **one place** (`alignTargetFor`), and both entry points take the Pioneer's own normal, so a `FOLLOW` cascade cannot re-align parallel one frame after a tap aligned anti-parallel — `CONSTRAINTS` §7's instruction applied to a second sign. ⚠ It does **not** make a mate: nothing is seated, and `3D2`'s seat plus a gesture are still owed. ⭐ What it buys is that the ORIENTATION a mate needs is now the one the alignment produces → §5.18 |
-| `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND A SECOND TOUCH ON ONE IS A MISS** | 2026-09-23 | ⭐ Binding. The pick is filtered **before** `IN2`'s latch; the FIRST touch is untouched. ⛔⛔ Its *no gizmo* half was enforced INSIDE `leadingFace`, which was deleted on 2026-09-23 — the rule lapsed with **nothing going red**, and is now a guard in the gizmo. ⭐ *Deleting the file a rule lived in deletes the rule* → `input/frozen_pick.ts` |
-| `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | Three device reports: the channels *"seem inverted"*, *"the input seems very weak"*, and *"the holder's dy is dead at a level camera"*. ⭐⭐ **BLENDER ANSWERS ALL THREE, AND IT ANSWERS *NO* TO THE FIRST**: it never binds screen-x to a world axis — unconstrained it follows the mouse in the view plane, constrained it maps the WHOLE delta onto the chosen axis with **no cosine loss**. ⛔ So the rate is now DIVIDED by the foreshortening, and the holder's 2D delta is **solved onto both horizontal axes** so the body follows the finger (`translatePairing=1`, default; `0` is the dictated channels, now tracking too). ⚠⚠ It also made `D74`'s in-zone basis **INERT**, answered by deleting it — `D82`. ⭐ Edge-on falls back to the judged fixed rate inside **Blender's own 5° cone** (`axisTrackingConeDeg`) |
-| `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | *"dx and dy from touch … control the translation on object x axis and object depth axis, and dy from second touch … on object gravity axis"*. ⛔⛔ One finger slides a body about its own HORIZONTAL plane and a second finger LIFTS it. ⚠⚠ **Its MAPPING is superseded by `D76`** — the unnormalised projection lost the cosine — but the channels stand → `input/axis_translate.ts` |
-| `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside the capture zone is the same as outside** | 2026-09-23 | *"Inside shall be the same as outside. I think this is polluting the approach movement."* ⛔ It reverses `D74`'s part C, dictated the day before. ⭐⭐ The zone EDGE is where the translation directions changed under a moving finger — the basis was re-decided at the one moment the body was already being driven. ⭐ `METHOD`: *a rule whose every defect is about the MOMENT it takes effect is a rule about the wrong thing.* ⚠ The gizmo SURVIVES — never part of this rule. ✅ −9 vectors |
-| `D84` | ⭐⭐⭐ **`WorldAxisB` NOW GOVERNS A FREE BODY'S *ROTATION* BASIS TOO** | 2026-09-23 | *"is it on purpose or was it a miss?"* → *"do the change."* ⛔⛔ **NEITHER**: `D74`/`D75` named only TRANSLATION channels and `IN4.md` never reached the rotation, so `A7`'s LIVE frame stood on — not by decision but because none was made. ⭐ `METHOD`: *a scope never stated is not a scope chosen, and the difference is invisible in the code.* ⭐⭐ **YAW WAS ALREADY WORLD-FIXED** (a gravity frame's `up` IS the vertical); only PITCH and ROLL freeze. ⚠⚠ **Cost, unjudged**: a quarter-orbit on, the frozen pitch axis points at the camera and a vertical sweep reads as a ROLL. ⛔ A TWIST on an ALIGNED body is untouched → `rotationFrame`, 5 vectors, the old behaviour shown RED |
-| `D74` | ⭐⭐⭐ **`WorldAxisB` — THE OBJECT AXES ARE FIXED AT SCENE BOOT** | 2026-09-22 | ⭐ Binding, **default ON**; `0` restores the camera-referred build. ⛔⛔ Its part C — the capture zone overriding the basis — is **DELETED by `D82`** → `input/object_axes.ts` |
+| `D78` | ⭐⭐⭐ **THE ALIGNMENT IS ANTI-PARALLEL — a FollowerFace points AT the PioneerFace** | 2026-09-23 | ⭐ Binding, ⚠ → history |
+| `D86` | ⭐⭐⭐ **THE REST WINDOW IS DERIVED FROM THE DEVICE, NOT FIXED** | 2026-09-24 | *"I would prefer to derive the ms from the device fps."* ⛔⛔ Browsers dispatch pointer input **once per frame per pointer**, so §1.1's silence interval IS the frame interval — and **30 ms** sat below even the measured one-finger gap (**47–68 ms**). ✅ `restMs = clamp(2.5 × median(gaps), 50, 250)`. ✅✅ **JUDGED: *"working well"*** → defect 62 |
+| `D87` | ⛔⛔⛔ **THE ROLES ARE INVERTED AGAIN: FIRST TOUCH THE FOLLOWER, SECOND THE PIONEER** | 2026-09-25 | *"the pioneer is pressed first and the follower is pressed second. Invert that order. That will allow to align a hitface with a pioneer face."* ⛔ It reverses `D67`, four days old; both texts stand. ⭐⭐ It makes `D88`'s offer and this press ONE gesture. ⚠⚠ Cost, and `D67` was chosen for it: several Followers can no longer be aligned to one Pioneer in a single hold. ⛔⛔ It also aimed three other rules at the wrong finger → `D89`, `D90`, defects 63–64 |
+| `D88` | ⭐⭐⭐ **THE FUCHSIA OFFER — every face the held body is nearly ready to MATE with** | 2026-09-24 | *"highlight in fuchsia any face of any other object which normal is aligned within xx degrees of the normal of the HitFace."* ⭐⭐ ***Aligned* is ANTI-PARALLEL** (`D78`'s sense): the other reading lights the faces a press is about to turn the body AWAY from. ⚠ **OFF by default** → `core/face_candidates.ts`, §11 |
+| `D89` | ⛔⛔⛔ **`D77`'s CARVE-OUT FOLLOWS THE ROLE: THE **FIRST** TOUCH ON A FROZEN BODY IS THE MISS NOW** | 2026-09-25 | ⛔⛔ `D87` moved the Pioneer onto the **second** touch — the one `D77` discarded — putting the plate out of reach. ⭐⭐ The FIRST touch is the useless one now: a held body is the FOLLOWER, and a frozen body is refused that role. ⚠⚠ **Cost, named and chosen**: a finger resting on the plate selects it as a Pioneer. ⭐⭐⭐ `METHOD`: *a guard written in terms of WHICH FINGER is one a role inversion silently aims at the wrong one* → §11.7 |
+| `D90` | ⭐⭐⭐ **A PRESS ON THE HELD BODY'S OWN FOLLOWER IS A *SWAP*, AND THE RELEASE PATH STOPS ALIGNING** | 2026-09-25 | *"why is there no swap between the pioneer and the follower?"* ⛔⛔ A guard refused it — correctly under `D67`, where *hold B, press A* named the relation that already EXISTED; inverted, the same fingers name the opposite one. ⭐⭐ A swap cannot close a loop (a Follower is capped at one alignment): `cycleBreaker` names the prospective Pioneer's own link and `scene.ts` severs it. ⛔ It reverses the owner's 2026-09-17 *"instead break the initial alignment"*; both stand. ⛔⛔ And `tapMeaning` — **the last rule speaking `D67`** — loses its `ALIGN` → §11.8 |
+| `D91` | ⭐⭐ **THE PYRAMID'S SMALL FACE IS A PART'S SMALL FACE, AND IT IS A QUARTER SHORTER** | 2026-09-25 | *"scale the pyramid so that the small rectangular face has the same dimensions as the small rectangular face of the grey rectangle"*, then *"reduce the height by 25%"*. ⭐⭐ **The scale is UNIFORM in `x` and `z` and that is not a choice — it falls out**: both ratios are **4/3**. ⛔ The height's extra 0.75 cannot touch the top face, because `y` IS the taper axis — `2L × 2L × 4L`. ⛔ Boot clearance **300 → 280 mm** |
+| `D92` | ⚠⚠ **REVERSED THE SAME DAY — `objectD` IS A CUBOID AGAIN** | 2026-09-25 | *"remove the hollow cylinder and reinstate the previous rectangle."* ⛔ `core/ring.ts` and its 10 vectors are **deleted, not parked** (`D28`/`D40`). ⭐ Kept for what the hour bought — **defect 68**: the mesh was correct and the body still read as a doughnut, because the wall and the end face share their rim vertices and `ComputeNormals` blends across them. ⭐⭐⭐ *A vector suite that reads the geometry cannot see the SHADING, and the shading is what a hand judges* — ten green vectors on a body rejected on sight |
+| `D93` | ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, WITH THE TWO PARTS TILTED 30°** | 2026-09-25 | *"boot the scene with no aligned object, translation mode"*, then *"rotate the grey rectangle 30 degrees roll and 30 pitch. Same for the pyramid, in opposite senses."* ⛔ `bootAlignment` is deleted — it never ROTATED anything, so removing it changed STATE, not a pixel. ⭐⭐ Roll and pitch are **`A7`'s**, so at the boot camera roll is world `z` and pitch world `x`; roll first. ⚠⚠ **And the tilt has a visible cost, MEASURED**: `objectB`'s gap to the plate closes to **53 mm** against a **60 mm** capture band, so the pyramid and the plate show a white capture pair at boot. ⚠ `D63`'s pre-aligned jig is gone with the alignment |
+| `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ Binding, ⚠⚠ **but `D89` SWAPPED WHICH TOUCH**. ⛔⛔ Its *no gizmo* half lapsed when `leadingFace` was deleted, with **nothing going red**; it is a guard now. ⭐ *Deleting the file a rule lived in deletes the rule* |
+| `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | Three device reports: the channels *"seem inverted"*, *"very weak"*, *"dead at a level camera"*. ⭐⭐ **BLENDER SAYS *NO* TO THE PAIRING**: a constrained move maps the WHOLE delta onto the chosen axis, with **no cosine loss**. ⛔ So the holder's 2D delta is **solved** onto both horizontal axes (`translatePairing=1`), and edge-on falls back to the judged fixed rate inside Blender's own 5° cone. ⚠⚠ It made `D74`'s in-zone basis INERT — answered by `D82` → `queue_notes/IN4.md` |
+| `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⛔⛔ One finger slides a body about its own HORIZONTAL plane (`dx`→x, `dy`→depth) and a second finger LIFTS it. ⚠⚠ Its MAPPING is superseded by `D76`; the channels stand |
+| `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside the capture zone is the same as outside** | 2026-09-23 | ⭐ Binding, ⚠ → history |
+| `D84` | ⭐⭐⭐ **`WorldAxisB` NOW GOVERNS A FREE BODY'S *ROTATION* BASIS TOO** | 2026-09-23 | *"was it a miss?"* → *"do the change."* ⛔⛔ **NEITHER**: `D74`/`D75` named only TRANSLATION channels, so `A7`'s LIVE frame stood on — not by decision but because none was made. ⭐ `METHOD`: *a scope never stated is not a scope chosen.* ⭐⭐ **YAW WAS ALREADY WORLD-FIXED**; only PITCH and ROLL freeze |
+| `D74` | ⭐⭐⭐ **`WorldAxisB` — THE OBJECT AXES ARE FIXED AT SCENE BOOT** | 2026-09-22 | ⭐ Binding, ⚠ → history |
 | `D73` | ⭐⭐⭐ **A ROTATION IS ALWAYS ON AN INCREMENT** — ✅✅ **CLOSED BY A DEVICE LOOK** | 2026-09-22 | ⭐ Binding. `rotationIncrementDeg` 0–45/5, **ships at 0**; four formulations, three rejected by a hand. ⚠ `dy` no longer twisting is the unjudged cost |
-| `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | ⭐ Binding — built by MOVING a box's vertices; the hull and the faces were already mesh-derived, so it cost nothing downstream |
-| `D71` | ⭐⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** | 2026-09-22 | ⭐ Binding — it reverses *"Default start: rotation mode"* and its re-confirmation, **both kept**. ⛔⛔ **NOT the audit's defect returning**: that was a DISAGREEMENT between every document and the code, and the tell is not the VALUE but whether any instruction still asks for the other mode |
-| `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | ⭐ Binding, and it corrects `D69`. ⭐⭐ **Position and orientation are two components of one pose**; answering differently for each WAS the asymmetry → §5.17 |
+| `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | ⭐ Binding — built by MOVING a box's vertices; the hull and faces were already mesh-derived, so it cost nothing downstream |
+| `D71` | ⭐⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** | 2026-09-22 | ⭐ Binding, re-confirmed by `D93`. ⛔⛔ **NOT the audit's defect returning**: that was a DISAGREEMENT between every document and the code, and the tell is whether any instruction still asks for the other mode. ⚠ A stale `scene.ts` comment claimed `ROTATE` until 2026-09-25 — the same shape, one layer down |
+| `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | ⭐ Binding, and it corrects `D69`. ⭐⭐ **Position and orientation are two components of one pose** → §5.17 |
 | `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** — a translated Pioneer carried EVERY Follower; cyan should break instead | 2026-09-21 | ⚠ → §5.16 |
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding — the completing PRESS takes the toggle over, and its own release is spent → §5.15 |
-| `D67` | ⭐⭐⭐ **THE ROLES ARE INVERTED — FIRST TOUCH THE PIONEER, SECOND THE FOLLOWER** | 2026-09-21 | ⭐ Binding — it buys **several Followers in one hold**. ⚠⚠ **Cost**: a frozen body can never be a Follower, so *align a part to the plate* is now *hold the plate FIRST* → §5.14 |
-| `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding — it repeals `D58`, `D61`, `D64` and `D65`, one chain whose first link was the only decision in it. ⚠ *When a rule's effect is masked during a gesture, the reported event is where it became VISIBLE, not where it happened* → §5.13 |
+| `D67` | ⚠ **REVERSED BY `D87`** — first touch the PIONEER, second the Follower. ⭐ Kept: it bought **several Followers in one hold**, which is exactly what the reversal costs | 2026-09-21 | ⚠ → §5.14 |
+| `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D65` | ⚠ **REPEALED BY `D66` the same day** — a second touch's release never toggled; the cause was the PRESS all along | 2026-09-21 | ⚠ → history |
 | `D64` | ⚠ **SUPERSEDED BY `D65`, THEN REPEALED WITH IT** — *driving consumes the toggle* | 2026-09-21 | ⚠ → history |
-| `D63` | ⭐⭐⭐ **THE APPROACH SWING — the camera looks around the join and comes back** (TRIAL) | 2026-09-19 | ⭐ Binding, and the trial's whole record is [`../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md`](../10_INPUT_TOUCH/spec/APPROACH_SWING_TRIAL.md), which carries its delete list |
+| `D63` | ⭐⭐⭐ **THE APPROACH SWING — the camera looks around the join and comes back** (TRIAL) | 2026-09-19 | ⭐ Binding, ⚠ → history |
 | `D62` | ⭐⭐⭐ **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** | 2026-09-19 | ⭐ Binding — it overturns `A21` (*within a radius of ANY other object*), a freedom deliberately given up. ⛔ A Pioneer out of range captures **nothing** → §5.10 |
 | `D61` | ⚠ **REPEALED BY `D66`** — the first outside press of a hold was inert, exempting a Follower | 2026-09-19 | ⚠ → history |
 | `D60` | ⭐⭐⭐ **AND THE FIRST TOUCH THEN TRANSLATES, WHATEVER THE MODE** | 2026-09-19 | ⭐ Binding — a **DOF budget**: once the second touch owns roll + depth, leaving the first on the twist puts two fingers on ONE DOF → §5.8 |
@@ -57,24 +64,24 @@ of this file.
 | `D58` | ⚠ **REPEALED BY `D66`** — a PRESS toggled the movement mode, in two places | 2026-09-19 | ⚠ → history |
 | `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | ⭐ Binding — authority was `|dir.x|`, **zero** for an axis horizontal on screen, and **silent**. Only the RATE could go; the sign is latched at the press → §5.5 |
 | `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** — the alignment still toggles ON at the PRESS; `A22`'s rapid-pair upgrade is gone with the second touch's tap count | 2026-09-19 | ⚠ → history |
-| `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding — it REVERSES `D25` and restores `IN2`'s latch to having no exceptions. ⚠ The geometry was never the fault: **keeping control beats re-resolving** → [`queue_notes/IN8.md`](queue_notes/IN8.md) |
-| `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding — a **second** exclusion; `receivesSway` already spared the body that CAUSED the kick. ⚠ They coincide only while one body is held |
+| `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding, ⚠ → history |
+| `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding — the hand's own body must not wobble under it. ⚠ Two exclusions now: the body that CAUSED the kick, and any body being held |
 | `D52` | ⚠ **RESOLVED BY `D57` THE SAME DAY** — the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it | 2026-09-19 | ⚠ → §5.5 |
-| `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers, not carries** | 2026-09-18 | ⭐ Binding — `pioneerTranslates` is a **rule selector, not a tunable**, and it breaks `A16`'s one-axis rule on purpose → §21 (approach) |
+| `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers instead of being carried** | 2026-09-18 | ⭐ Binding — at `pioneerTranslates = 0` its finger gives the Follower **both** depth and roll, breaking `A16`'s one-axis rule on purpose |
 | `D50` | ⭐⭐⭐ **EVERY OUTLINE AND FACE MARKER IS READ OFF THE MESH** | 2026-09-18 | ⭐ Binding — it deleted a `Map<name, dims>`, which for a cuboid coincides with the mesh and for an imported part is the wrong shape. ⭐ Why `D72`'s frustum cost nothing → §20 (approach) |
-| `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | ⭐ Binding — computed wins on its own merits: nothing reads a normal, so **inverted normals cannot affect it**. ⛔⛔ The DISTANCE moved to surfaces; the approach DIRECTION must NOT → §19 |
+| `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D48` | ⚠ **RETIRED WITHIN THE DAY, KEPT AS THE RECORD** — white contours required the alignment; the owner removed it, keeping the TRANSLATION condition | 2026-09-17 | ⚠ *both readings fit the evidence — name both* → §13 (approach) |
-| `D47` | ⭐⭐⭐ **A MATE IS BROKEN BY PULLING IT APART WITH TWO FINGERS** | 2026-09-17 | ⭐ Binding — one finger on each mated body, moving oppositely along the centre→centre direction past a `BreakThreshold` (slider). ⛔ It needs `3D2`'s **seat** first, or *breaking* is indistinguishable from *moving* → §8 (approach) |
-| `D46` | ⭐⭐⭐ **APPROACH & MATE — the owner's mechanism, measured between CENTRES** | 2026-09-17 | ⭐ Binding — it removes the blocker that stopped the previous approach: that one mapped a finger onto the direction to a point ON a face, which **collapses at contact**; centres cannot meet. ⚠ Specified, not built → the approach spec |
+| `D47` | ⭐⭐⭐ **A MATE IS BROKEN BY PULLING IT APART WITH TWO FINGERS** | 2026-09-17 | ⭐ Binding, ⚠ → history |
+| `D46` | ⭐⭐⭐ **APPROACH & MATE — the owner's mechanism, measured between CENTRES** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D45` | ⭐⭐ **THE ALIGNMENT SNAP IS A SLERP, ON THE CAMERA RESET'S SLIDER** — binding; ⛔ NOT the rejected rotation inertia | 2026-09-17 | ⚠ → history |
 | `D44` | ⭐⭐ **A TAP ON ANOTHER OBJECT'S FACE ALIGNS IN **EITHER** MOVEMENT MODE** | 2026-09-17 | ⭐ Binding — what keeps `D28`'s toggle reachable is a tap on **empty space or the held object**, not every tap in `TRANSLATE` → the alignment spec |
 | `D43` | ⛔⛔⛔ **`A10`'s DEPTH GATE IS DELETED — both fingers integrate at once** | 2026-09-17 | ⭐ Binding — it retires a gate that cost six models and five device passes, so the account lives with the row that owns depth: [`queue_notes/IN8.md`](queue_notes/IN8.md) |
 | `D42` | ⚠ **SUPERSEDED IN PART BY `D67`** — the flag became a GESTURE; which GESTURE asks for `FOLLOW` has now moved to the Pioneer's press | 2026-09-17 | ⚠ → history |
 | `D41` | ⚠ **SUPERSEDED BY `D42` after four hours** — what a turned Pioneer costs the Follower; the two readings survive, the FLAG does not | 2026-09-17 | ⚠ → history |
-| `D40` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap-to-align set is THE input model** | 2026-09-17 | ⭐ Binding — deleted, not disabled (`D28`'s precedent: *a dormant fork is a trap*). Gone: four modules, the flag, its validator rule, the slider, the HUD's fork line and **41 vectors** → [`queue_notes/IN3.md`](queue_notes/IN3.md) |
+| `D40` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap-to-align set is THE input model** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D39` | ⚠ **SUPERSEDED IN PART BY `D67`** — both faces are still marked; the re-tap UNDO moved onto the **FollowerFace** | 2026-09-16 | ⚠ → history |
 | `D38` | ⭐⭐ **FORK C IS THE DEFAULT, AND ITS ALIGNMENT NO LONGER SWITCHES THE MODE** | 2026-09-16 | ⭐ Binding — the automatic switch to translation is retired, *a rule the owner dictated himself*: it *"makes the game too complicated"*. ⭐⭐ So **the alignment CONSUMES the tap** |
-| `D37` | ⭐⭐⭐ **FORK C: THE TRIGGER IS A TAP — no flick anywhere** | 2026-09-16 | ⭐ Binding — hold an object, **tap a face on another**, and the held one turns the minimum that makes its own face point the same way. ⛔ Fork B died because a release-time trigger *"releases the finger from the object it is tracking"* → the alignment spec |
+| `D37` | ⭐⭐⭐ **FORK C: THE TRIGGER IS A TAP — no flick anywhere** | 2026-09-16 | ⭐ Binding, ⚠ → history |
 | `D36` | ⭐⭐⭐ **§1.3's PROVISIONAL-MOTION ROLLBACK IS RETIRED** | 2026-09-16 | ⭐ Binding |
 | `D35` | ⭐⭐ **THE FACE HIGHLIGHT OUTLIVES THE GESTURE AND DIES WITH THE ALIGNMENT** | 2026-09-16 | ⭐ Binding |
 | `D34` | ⭐⭐⭐ **2sexte IS WIRED — and `A3`'s handover was never a decision** | 2026-09-16 | ⭐ Binding |
@@ -99,18 +106,18 @@ of this file.
 | `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⭐ Binding |
 | `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding |
 | `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⭐ Binding |
-| `D12` | ⚠ **SUPERSEDED BY `D15`** — eviction was a full 360° roll, and is now a back-and-forth. ⭐ Kept: it is what moved eviction off the double-tap, and that half stands | 2026-09-15 | ⚠ → history |
-| `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | ⭐ Binding — every gesture rule carries a dated prior-art citation or is marked ⚠ novel. Register: [`../10_INPUT_TOUCH/PROVENANCE.md`](../10_INPUT_TOUCH/PROVENANCE.md); binding form: `CONSTRAINTS` §10; the review it feeds is `SEC4` |
-| `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is now half of a **depth pinch**. ⭐ Kept: its *ignored* role still governs the THIRD touchpoint and beyond | 2026-09-14 | ⚠ → history |
+| `D12` | ⚠ **SUPERSEDED BY `D15`** — eviction was a full 360° roll, now a back-and-forth. ⭐ Kept: it moved eviction off the double-tap, and that half stands | 2026-09-15 | ⚠ → history |
+| `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | ⭐ Binding, ⚠ → history |
+| `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is half of a **depth pinch** now. ⭐ Kept: *ignored* still governs the THIRD touchpoint on | 2026-09-14 | ⚠ → history |
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | ⭐ Binding — `pickResult.faceId` gives face picking directly, which rule 2 needs. ⚠ Apache-2.0, so the NOTICE must ship. ⭐ Reversible in about a day *because* of `D6` |
 
 ## ⚠ Still the owner's to make
 
 | | what is blocked on it |
 |---|---|
-| **Un-snap: what breaks a mate on a touchscreen?** | the predecessor settled on *"un-snapping needs two hands"*. The touch equivalent is not obvious and `3D3` waits on it. ⚠ **`D12` did NOT answer it**: `D13` (2026-09-15) decided eviction spares mates, precisely because clearing an alignment and detaching an assembly are different intentions. This row stays open |
-| ✅ **~~WHICH TOUCHPOINT ASSIGNMENT SHIPS~~** — **ANSWERED by `D28`** | ⛔ One line kept as a correction: it read *"deliberately not due yet"* until the owner judged three readings from one build and chose the tap toggle. `IN13` closed, the other two deleted |
-| ⭐⭐ **FORK C's SECOND HALF — what is left of it** | `TargetPosition`, its gizmo and the orbit about it are specified and **not built**. ⛔⛔ Its approach is **superseded by `D46`**: projecting onto `centre → target` has no direction when that line faces the camera and shrinks to noise at contact. ⚠ Still owed: a second touchpoint outside any object while aligned is undefined, and whether the orbit is position-only. ⭐ And the standing one, now half-answered by `D78`: the align is ANTI-PARALLEL, so the ORIENTATION is a mate's — **which gesture asserts one, and what seats it?** → §7 |
+| **Un-snap: what breaks a mate on a touchscreen?** | the predecessor settled on *"un-snapping needs two hands"*; the touch equivalent is not obvious and `3D3` waits on it. ⚠ **`D12` did NOT answer it** — `D13` decided eviction SPARES mates, because clearing an alignment and detaching an assembly are different intentions |
+| ✅ **~~WHICH TOUCHPOINT ASSIGNMENT SHIPS~~** — **ANSWERED by `D28`** | ⛔ Kept as a correction: it read *"deliberately not due yet"* until the owner judged three readings from one build and chose the tap toggle |
+| ⭐⭐ **FORK C's SECOND HALF — what is left of it** | `TargetPosition`, its gizmo and the orbit about it are specified and **not built**; the approach is **superseded by `D46`** — projecting onto `centre → target` has no direction when that line faces the camera |
 | **`axisMappingMode`: `rotated` vs `direct`** (§6bis) | build both, A/B on a device. The spec asks for the comparison rather than assuming |
 | **`matePriorityOverAnchor`** (§1.4) | default is anchor-wins. The opposite reading exists as a flag for A/B |
 | **Landmark registration, contact search, longest-axis alignment** | spec §5 lists them as deliberately deferred, so the gaps are explicit rather than implicit |
@@ -122,27 +129,23 @@ read *"nothing in this repository has been touched by a finger … the recognize
 yet"* — true on day one, false since 2026-09-13.
 
 ✅ **The device look is no longer owed — it is the loop.** `IN1` (**seven** passes), `IN9`, `IN2`
-and `IN4`'s rule 6 (**five**) were each closed by finger. ⛔ The defects they found are counted
-in ONE place, the ledger in [`QUEUE.md`](QUEUE.md)'s YOU-ARE-HERE block; this file deliberately
-does not restate the total.
+and `IN4`'s rule 6 (**five**) were each closed by finger. ⛔ The defects they found are counted in
+ONE place, the ledger in [`QUEUE.md`](QUEUE.md)'s YOU-ARE-HERE block.
 
 ⛔ **What IS still owed is MEASUREMENT, a different thing** (`IN5`). Of every number in
-`gestureConfig.ts`: **one is MEASURED** — `pointerNoiseMm` = 0.761 mm, and measuring it exposed
-a defect in the sagitta guard eight device passes had accepted; **four groups are JUDGEMENTS** —
-the six orbit rings, the four gains, rule 6's four feel numbers and the two sway sets, chosen by
-a hand, so real but not derived (⚠ read the count off `gestureConfig.ts`, not off this
-sentence); **the rest are PLACEHOLDERS** and must not be quoted as though anything supports them.
+`gestureConfig.ts`: **one is MEASURED** — `pointerNoiseMm` = 0.761 mm, and measuring it exposed a
+defect in the sagitta guard eight device passes had accepted; **four groups are JUDGEMENTS** — the
+orbit rings, the gains, rule 6's feel numbers and the sway sets, chosen by a hand, so real but not
+derived; **the rest are PLACEHOLDERS** and must not be quoted as though anything supports them.
 
-⭐ And the standing rule is unchanged: **`METHOD` closes a change with a device look and
-nothing else**, so every row still to come owes one of its own.
+⭐ And the standing rule is unchanged: **a device look closes a change and nothing else**, so
+every row still to come owes one of its own.
 
 ## ⭐⭐ Two entries that are not decisions, kept as pointers
 
-⭐ **A report the owner WITHDREW** (*"you destroyed the rotation around the gravity axis…"*,
-2026-09-15, then *"it's alright"*) — `A7`/`D18` was not the fault, and `tests/a7_wiring.test.ts`
-measures the composition at four camera tilts. ⭐⭐ Mistake shape 4, *a composition nobody
-computed*, aims at **correct** work as easily as broken → history.
+⭐ **A report the owner WITHDREW** (2026-09-15) — `A7`/`D18` was not the fault, and
+`tests/a7_wiring.test.ts` measures the composition at four tilts. ⭐⭐ Mistake shape 4 aims at
+**correct** work as easily as at broken work.
 
 ⚠ **Two things were measured out and REVERTED** — rotation inertia and `targetVelocity` → the
-*"TWO THINGS A NEW SESSION MUST NOT REBUILD"* block in [`QUEUE.md`](QUEUE.md). ⛔ One home, not
-two; a third splits that block into `REJECTED.md`.
+*"TWO THINGS A NEW SESSION MUST NOT REBUILD"* block in [`QUEUE.md`](QUEUE.md).

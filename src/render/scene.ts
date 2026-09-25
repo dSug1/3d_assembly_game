@@ -133,7 +133,17 @@ import {
   incrementRadians,
 } from "../input/rotation_increment";
 import { taperTop } from "../core/frustum";
+import {
+  OBJECT_DIMS_M,
+  OBJECT_SIZE_M,
+  OBJECT_TOP_SCALE,
+  PLATE_DIMS_M,
+  PYRAMID_DIMS_M,
+  bootTilt,
+} from "../core/scene_dims";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
+import { mateCandidateFaces, type FaceRef } from "../core/face_candidates";
+
 import {
   hasAlignment,
   rotationChannel,
@@ -187,6 +197,7 @@ import {
   zoneEdge,
   type ObjectAxes,
 } from "../input/object_axes";
+import { JumpWatch, type Jump } from "../input/jump_watch";
 import {
   axisDisplacement,
   axisTravel,
@@ -246,6 +257,12 @@ const ALIGN_SNAP_FRACTION = 2 / 7;
 const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
 const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
 /**
+ * ⭐⭐⭐ **FUCHSIA — A FACE THE HELD BODY IS NEARLY READY TO MATE WITH** (the owner, 2026-09-24).
+ * ⛔ A third colour and not a shade of the other two: cyan and amber say *this pair IS aligned*,
+ * and this one says *this pair COULD be* — an offer, not a state.
+ */
+const CANDIDATE_COLOUR = new Color3(1, 0.1, 0.8);
+/**
  * ⭐⭐ `A16`'s **WHITE** — the capture contour, on BOTH bodies of the pair.
  *
  * ⛔ ONE WHITE FOR BOTH, by the owner's decision: *"make the white contours not differ for the
@@ -253,79 +270,11 @@ const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
  */
 const CAPTURE_COLOUR = new Color3(1, 1, 1);
 
-/** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
-const OBJECT_SIZE_M = 0.08;
-/**
- * ⭐⭐⭐ **THE OBJECTS ARE CUBOIDS, `L × 2L × 3L`** (the owner, 2026-09-17: *"instead of three
- * cubes, make the scene with three rectangles, each with dimensions L, 2L, 3L"*).
- *
- * ⛔⛔ **AND IT IS A BETTER TEST SCENE THAN CUBES, WHICH IS WORTH SAYING.** Two rules in this
- * mechanism are **invisible with cubes** and a mutation run proved it: `objectSpan` returning
- * the LARGEST extent rather than the mean, and the capture radius belonging to the CANDIDATE
- * rather than the holder. ⭐ Both needed synthetic non-cube fixtures in `highlight.test.ts` to
- * be pinned at all; with `L × 2L × 3L` on the glass they become things a hand can see.
- * ⚠ A cube also hides every sign error in a face pair, because it has an opposite face for
- * every face — which is exactly what made two of my own vectors hollow.
- */
-const OBJECT_DIMS_M: readonly [number, number, number] = [
-  OBJECT_SIZE_M,
-  OBJECT_SIZE_M * 2,
-  OBJECT_SIZE_M * 3,
-];
-/**
- * ⭐⭐⭐ **THE BASE PLATE** (the owner, 2026-09-17: *"make the orange rectangle with the following
- * dimensions: 6L, 9L, 0.3L … this shall simulate the base plate of the scene"*).
- *
- * ⛔⛔ **`6L × 0.3L × 9L` IN WORLD `(x, y, z)`, AND THE ORDER IS A DELIBERATE READING.** The
- * owner wrote *"respectively in the world X, Y and gravity axis"* — but `WORLD_DOWN` is
- * `[0, −1, 0]`, so **the gravity axis IS world Y** and that sentence names Y twice. ⭐ Only one
- * reading yields a *base plate*: `0.3L` is the THICKNESS, which must lie along gravity, leaving
- * the `6L × 9L` footprint on the two HORIZONTAL axes — X and Z. ⚠ Taken literally the plate
- * would be a 9L-tall wall 0.3L deep, which is not a base plate at all.
- */
-const PLATE_DIMS_M: readonly [number, number, number] = [
-  OBJECT_SIZE_M * 6,
-  OBJECT_SIZE_M * 0.3,
-  OBJECT_SIZE_M * 9,
-];
-/**
- * ⭐⭐⭐ **THE RIGHT-HAND PART IS A TRAPEZOIDAL PYRAMID** (the owner, 2026-09-22: *"modify the
- * rectangle on the right to be a trapezoidal pyramid"*).
- *
- * The fraction of its base that the top face keeps. `1` would be the original box; `0` a true
- * pyramid with a point for a top. ⭐ **0.5** is a taper a hand can see at the boot camera
- * without the body becoming a spike — the four side faces stay large enough to tap, which
- * matters because tapping a face is how every alignment in this game starts.
- *
- * ⛔⛔ **IT TAPERS UPWARD, AND THE BASE IS LEFT AT FULL SIZE ON PURPOSE.** The boot clearance
- * between the two parts is measured surface-to-surface (`D49`) and asserted at 320 mm by
- * `tests/highlight.test.ts`, which also requires the capture threshold to sit clear of it by a
- * real factor. ⭐ Tapering upward leaves the widest section exactly where the box's was, so
- * that distance does not move; `tests/frustum.test.ts` measures it through the real hull rather
- * than trusting the argument.
- */
-/**
- * ⭐⭐⭐ **AND IT IS HALF AGAIN AS THICK AS A PART** (the owner, 2026-09-22: *"increase 50%
- * the thickness of the pyramid (in the x axis direction)"*).
- *
- * `1.5L × 2L × 3L`, where a part is `L × 2L × 3L`. ⚠ `x` is the part's THINNEST axis, which
- * is what *thickness* names here, and only that axis moves: the body keeps its height and its
- * depth, so it reads as the same part made chunkier rather than as a different object.
- *
- * ⛔⛔ **IT MOVES THE BOOT CLEARANCE, AND THAT NUMBER IS LOAD-BEARING.** The parts' centres are
- * `5L` = 400 mm apart and the gap is measured surface-to-surface (`D49`), so widening this base
- * by `0.5L` takes the rest gap between `objectA` and `objectB` from **320 mm to 300 mm**:
- * `400 − 40 − 60`. ⭐ Still an order above the ~60 mm capture offset, so nothing captures at
- * rest — which is the property `tests/highlight.test.ts` guards, and it is re-measured there
- * against these dimensions rather than left to this comment.
- */
-const PYRAMID_DIMS_M: readonly [number, number, number] = [
-  OBJECT_SIZE_M * 1.5,
-  OBJECT_SIZE_M * 2,
-  OBJECT_SIZE_M * 3,
-];
-
-const OBJECT_TOP_SCALE = 0.5;
+// ⛔⛔⛔ **THE BOOT SCENE'S DIMENSIONS LIVE IN `core/scene_dims.ts`**, not here. ⚠ They were
+// declared in this file and MIRRORED in two test files, so scaling the pyramid on 2026-09-25 left
+// 1125 vectors green against the old body — including the one guarding the boot clearance.
+// ⭐ *A fixture that mirrors a constant is a second implementation of it, and it disagrees exactly
+// when the constant is the thing being changed.*
 
 const CAMERA_RADIUS_M = 0.6;
 
@@ -394,8 +343,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * parts' size on a plate seventy times their volume.
    */
   const dimsOf = new Map<ObjectId, readonly [number, number, number]>();
-  /** ⚠ Which bodies boot FROZEN. ⛔ The model is what enforces it; this is only the intent. */
-  const frozenIds = new Set<ObjectId>();
 
   /**
    * ⭐⭐ **TURN A BUILT BOX INTO A TRUNCATED PYRAMID BY MOVING ITS VERTICES.**
@@ -453,7 +400,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     topScale = 1,
   ) => {
     dimsOf.set(name, dims);
-    if (frozen) frozenIds.add(name);
     // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
     const mesh = CreateBox(
       name,
@@ -463,8 +409,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⛔ BEFORE the collision hull and the topology are read off it, which both happen later
     // and both read the mesh rather than any table (`D49`, `D50`) — so they inherit the
     // tapered geometry by doing nothing at all.
-    if (topScale !== 1 && !taperMesh(mesh, topScale))
-      untaperedBodies.push(name);
+    if (topScale !== 1 && !taperMesh(mesh, topScale)) untaperedBodies.push(name);
     mesh.position = at;
     // ⛔ Quaternion mode. While `rotationQuaternion` is null Babylon uses the Euler
     // `rotation` instead, which is the frame-mixing defect above.
@@ -479,7 +424,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // diagnostic marker below is a mesh too, and a marker that became a barycentre
     // candidate would move the very centre it is drawn to show — a readout that
     // changes what it measures, which `METHOD` warns about in those words.
-    mesh.metadata = { orbitCandidate: true };
+    // ⭐⭐ **`frozen` RIDES ON THE MESH UNTIL THE MODEL EXISTS**, and is read exactly once, to
+    // build it. ⛔ It used to live in a module-scope set that outlived its purpose — a second
+    // place a body's frozen-ness was written down, and this project's own scar is that *a shadow
+    // copy is free to disagree with the thing it copies*. ⚠ Nothing may read this after
+    // `makeWorld`: `world.objects.get(id)?.frozen` is the one answer from then on.
+    mesh.metadata = { orbitCandidate: true, frozen };
     return mesh;
   };
   // ⭐⭐⭐ **THE BOOT LAYOUT — `5L` APART, PAIRWISE, AT THREE RANDOM ORIENTATIONS.**
@@ -521,20 +471,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // and `?sceneSeed=N` rolls a new scene. ⚠ Three arbitrary orientations mean **no two bodies
   // start aligned**, which is correct: `A16`'s highlight should be something a hand earns.
   const bootRotations = seededRotations(cfg.sceneSeed, 3);
-  // ⭐⭐⭐ **THE FORK'S BOOT SCENE (branch `1.0.18-`)** — the owner: *"2 of the 3 non-frozen
-  // objects are aligned on the gravity axis and on the depth axis of the camera at boot. There
-  // is one Pioneer (on the left) and one Follower (on the right)."*
+  // ⭐⭐⭐ **THE TWO PARTS BOOT SQUARE AND UNALIGNED** — the owner, 2026-09-25: *"boot the scene
+  // with no aligned object, translation mode. Use current rectangles transforms as displayed on
+  // the usb tablet to boot the scene as default."*
   //
-  // ✅ The POSITIONS already satisfied it: both sit at `y = 0` (same height — the gravity axis)
-  // and `z = 0` (same depth), differing only along world `x`, which the boot camera shows as
-  // screen-horizontal. ⛔ What changed is the ORIENTATIONS: `bootRotations[0]` and `[1]` are
-  // **not used here any more**, because two arbitrarily turned bodies have no parallel faces and
-  // the pair could not start aligned.
+  // ⭐⭐ **AND THE SECOND SENTENCE IS WHY `bootRotations[0]` AND `[1]` STAY UNUSED.** The revert
+  // note that stood here said to pass them back when the trial was discarded — and that would
+  // have changed what the glass shows, which is precisely what the owner ruled out. ⛔ The boot
+  // alignment was **satisfied at identity** (`A`'s bottom is `−y`, `B`'s top is `+y`, and the
+  // alignment is anti-parallel), so it never rotated anything: deleting it changes the scene's
+  // STATE and not one pixel of its pose. ⭐ Square is the current transform.
+  //
   // ⚠ `seededRotations` is still asked for three so the plate's unused slot keeps its index —
   // the same reason the comment below already gives for `bootRotations[2]`.
-  // ⚠⚠ **THIS IS THE LINE TO REVERT FIRST** if the trial is discarded: pass the two rotations
-  // back and delete `bootAlignment` below.
-  make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72]);
+  //
+  // ⛔⛔ **WHAT IT COSTS IS `D63`'s JIG.** The approach-swing trial booted with a **pre-aligned**
+  // pair so the swing had something to act on the moment the page loaded. ⚠ A hand must now make
+  // that alignment first, and the trial's earlier device verdicts are not comparable with any
+  // taken after this — *a jig that silently changed shape* is the thing `D78`'s note warned
+  // about, and this change makes it loudly instead.
+  // ⭐ `+30°` roll and `+30°` pitch about the BOOT CAMERA's axes (`z` and `x`) — the owner,
+  // 2026-09-25. ⛔ The pyramid takes `−30°`: *"same for the pyramid, in opposite senses."*
+  make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72], bootTilt(1));
   // ⭐⭐⭐ **THE RIGHT-HAND BODY IS THE TRAPEZOIDAL PYRAMID** — *"modify the rectangle on the
   // right to be a trapezoidal pyramid"* (the owner, 2026-09-22). ⚠ `objectB` is the one on the
   // right: it sits at `+x`, and it is the FOLLOWER of the boot pair a few hundred lines below.
@@ -542,7 +500,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     "objectB",
     new Vector3(0.2, 0, 0),
     [0.45, 0.58, 0.72],
-    undefined,
+    bootTilt(-1),
     PYRAMID_DIMS_M,
     false,
     OBJECT_TOP_SCALE,
@@ -572,13 +530,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     true,
   );
   // ⭐⭐ **A FOURTH PART, PINK** — *"a fourth pink rectangle replicate of the blue rectangle and
-  // place it where the orange rectangle previously was"*.
+  // place it where the orange rectangle previously was"*. ⭐ *Replicate* is about the SIZE: the
+  // same `L × 2L × 3L` as the other parts, which is why it takes the default dims.
   //
-  // ⭐ *Replicate* is about the SIZE: the same `L × 2L × 3L` as the other two parts, which is
-  // why it takes the default dims rather than naming them. ⚠ Its POSE is the third seeded
-  // rotation — the one the base plate stopped using when it was told to sit square with the
-  // world. ⛔ That keeps `seededRotations(seed, 3)` answering for exactly three parts, so
-  // objectA's and objectB's orientations do not shift because a fourth body arrived.
+  // ⛔⛔ **IT WAS A BEVELLED HOLLOW CYLINDER FOR AN HOUR, AND THE OWNER REMOVED IT** (`D92`,
+  // reversed 2026-09-25). ⚠ `core/ring.ts` and its 10 vectors are **deleted, not parked** —
+  // `D28`'s and `D40`'s rule, *a dormant fork is a trap*. ⭐ What the hour is worth keeping for is
+  // defect 68: the mesh was correct and the body still looked like a doughnut, because the rim
+  // vertices are shared and `ComputeNormals` blends across them. *A vector suite that reads the
+  // geometry cannot see the shading, and the shading is what a hand judges.*
+  //
+  // ⚠ Its POSE is the third seeded rotation — the one the base plate stopped using when it was
+  // told to sit square with the world. ⛔ That keeps `seededRotations(seed, 3)` answering for
+  // exactly three parts, so objectA's and objectB's orientations do not shift.
   //
   // ⚠ `(0, 0.307246, 0.16)` is where the orange body sat when all three parts formed a 5L
   // triangle — so the three PARTS are still 5L apart pairwise, and the plate is the only body
@@ -804,7 +768,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // lookup, nothing for an import path to remember. ⚠ For a box it is EXACT: its
           // corners ARE its hull.
           shape: shapeOfBody(m),
-          frozen: frozenIds.has(m.name),
+          frozen: m.metadata?.frozen === true,
           connectors: [],
           // §0's Start condition: every object begins with an EMPTY stack.
           constraints: [],
@@ -1027,10 +991,118 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⛔ The owner, 2026-09-21: *"First the Pioneer & PioneerFace, second the Follower & the
   // FollowerFace."* ⚠ Only the two SIDES swap: every refusal below, the solver, the snap and the
   // link are unchanged, which is why this is a re-point rather than a rewrite.
+  /**
+   * ⭐⭐⭐ **THE HITFACE — the face the FIRST touch's raycast hit at press.**
+   *
+   * > *"in rotation mode, when object is not aligned: track the object's face which first touch
+   * > raycast hit at press = HitFace."* — the owner, 2026-09-24
+   *
+   * ⛔ Three preconditions, all read live rather than latched: the session is in `ROTATE`, a first
+   * touch is holding a body, and that body is **not aligned**. ⚠ An aligned body already has a
+   * FollowerFace and its own highlight; offering it a second one would put two meanings on one
+   * body. ⭐ `grip.pressFace` is the raycast's own answer, resolved once at the press — never
+   * recomputed here, because a second opinion about *which face* would be free to disagree.
+   */
+  const hitFaceNow = (): FaceRef | null => {
+    // ⛔⛔ **THE `ROTATE` PRECONDITION IS DELETED** — the owner, 2026-09-25: *"no need to be in
+    // ROTATE for hitFaceNow()."* ⚠ It was MINE, not his: the first dictation opened *"in rotation
+    // mode, when object is not aligned"*, and I read the mode as a condition of the RULE rather
+    // than as the setting he happened to be describing it in. ⭐ The offer is about geometry —
+    // this face against those faces — and a body being TRANSLATED into place wants it as much.
+    const holder = router.objects()[0];
+    const grip = holder === undefined ? undefined : held.get(holder.id);
+    if (grip === undefined || grip.pressFace === null) return null;
+    const objectId = idOf.get(grip.mesh);
+    if (objectId === undefined) return null;
+    if (alignedFaceOf(world, objectId) !== null) return null;
+    return { objectId, faceId: grip.pressFace.faceId };
+  };
+
+  /**
+   * ⭐⭐ The white ring that marks a fuchsia face's centre, one per candidate face.
+   *
+   * ⛔⛔ **PARENTED TO THE BODY AND PLACED IN ITS LOCAL FRAME** — defect 46's lesson, the same one
+   * the face markers rest on: *a marker positioned from Babylon's cached world matrix draws the
+   * pose its object had LAST frame*, which is exactly the lag the owner asked us to avoid here.
+   * ⚠ Only the SCALE is written per frame, to hold a constant apparent size.
+   */
+  const candidateRings = new Map<string, LinesMesh>();
+  const candidateRingFor = (
+    objectId: ObjectId,
+    faceId: string,
+  ): LinesMesh | null => {
+    const key = `${objectId}/${faceId}`;
+    const hit = candidateRings.get(key);
+    if (hit !== undefined) return hit;
+    const body = meshOf.get(objectId);
+    const face = world.objects
+      .get(objectId)
+      ?.faces.find((f) => f.id === faceId);
+    if (!body || !face) return null;
+    const m = CreateLines(
+      `candidate-ring-${key}`,
+      { points: RING_POINTS },
+      scene,
+    );
+    m.color = new Color3(1, 1, 1);
+    m.isPickable = false;
+    // ⭐ Above the body and above the face marker it sits on, for the same reason the gizmo is:
+    // an instrument that says *here is the offer* must not be occluded by the thing it marks.
+    m.renderingGroupId = 2;
+    m.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    m.isVisible = false;
+    m.metadata = { orbitCandidate: false };
+    m.parent = body;
+    // ⚠ Lifted off the surface by the same hair the face marker uses, or it z-fights the fill.
+    m.position.set(
+      face.centre[0] + face.normal[0] * MARKER_LIFT_M * 2,
+      face.centre[1] + face.normal[1] * MARKER_LIFT_M * 2,
+      face.centre[2] + face.normal[2] * MARKER_LIFT_M * 2,
+    );
+    candidateRings.set(key, m);
+    return m;
+  };
+
+  /**
+   * ⭐ The fuchsia set, as the PRESS path needs it. ⛔ Computed from the model on demand rather
+   * than read off a variable the render loop happens to have left behind: a press and a frame are
+   * different moments, and a set cached by the draw would answer for the wrong one.
+   */
+  /**
+   * ⭐⭐⭐ **THE OFFER — and the ONE place `pioneerCandidates` switches it off.**
+   *
+   * > *"create a toggle slider to enable or disable the above rules"* — the owner, 2026-09-25,
+   * naming exactly two: the fuchsia highlight of OTHER bodies' faces, and the press on one.
+   *
+   * ⛔⛔ **THE HITFACE IS NOT GATED HERE, AND THAT IS THE POINT.** It and its fuchsia contour are a
+   * separate instruction and stay live at `0` — the owner: *"I did not tell to disable the
+   * hitFaceNow."* ⚠ I gated the source first and took both with it; the switch belongs on the
+   * ACTIONS the offer drives, not on the fact it is computed from.
+   */
+  const candidateFacesNow = (): FaceRef[] => {
+    if (cfg.pioneerCandidates !== 1) return [];
+    const hit = hitFaceNow();
+    if (hit === null) return [];
+    return mateCandidateFaces(world, hit, cfg.pioneerCandidateConeDeg);
+  };
+
+  /** ⭐ The same offer as keys, as the PRESS path needs it (the frozen-face exception). */
+
   const alignFollowerToPioneer = (
     followerPointerId: number,
     followerGrip: Held,
     mode: AlignMode,
+    /**
+     * ⭐⭐⭐ **THE FINGER THAT IS ABOUT TO GO AWAY**, named by the caller because only the caller
+     * knows. ⛔ Its `pressFace` is wiped at the end; the other grip's is left alone.
+     *
+     * ⚠⚠ It was `followerGrip`, hard-coded, and that was true only of `D67`'s press path. The two
+     * call sites disagree about which finger is transient — on a PRESS the Pioneer's touch is the
+     * new one, on a RELEASE the follower's is the one lifting — so a fixed answer is wrong for one
+     * of them whichever way it points. ⭐ `METHOD`: *when two callers disagree about a fact, the
+     * fact is an argument, not a constant.*
+     */
+    transientGrip: Held,
   ): boolean => {
     const followerId = idOf.get(followerGrip.mesh);
     if (followerId === undefined || followerGrip.pressFace === null) {
@@ -1075,34 +1147,39 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       return false;
     }
 
-    // ⭐⭐⭐ **A FOLLOWER MAY NOT BECOME ITS OWN PIONEER'S PIONEER — AND THE TAP UNDOES INSTEAD.**
+    // ⭐⭐⭐ **A LOOP IS SEVERED AND THE ALIGNMENT IS THEN MADE — `D90`, THE SWAP.**
     //
     // > *"a follower cannot become the pioneer of its own pioneer. in such case, the tap
-    // > triggering this configuration shall instead break the initial alignment"* — the owner
+    // > triggering this configuration shall instead break the initial alignment"* — the owner,
+    // > 2026-09-17, and it said BREAK and stop
     //
-    // ⛔⛔ **REFUSING WOULD HAVE BEEN THE WRONG ANSWER, AND THE OWNER SAID SO.** A tap that
-    // did nothing would leave a hand pressing the same face again and again with no feedback —
-    // and this file already knows that shape: `A15`'s orphaned binding was *"everything looks
-    // normal and the very next input does something different"*. ⭐ Breaking the initial
-    // alignment gives the gesture a visible, reversible consequence: the highlights drop.
+    // > *"I first press the pioneer and second press the follower … why is there no swap between
+    // > the pioneer and the follower? This conflicts with the rule I set."* — the owner,
+    // > 2026-09-25, choosing break **and re-make**
     //
-    // ⚠ IT IS THE **WHOLE CHAIN**, not one step: `F → P1 → P2` then a tap making `P2` follow
-    // `F` is the same cycle one link further out. ⛔ And a cycle is not cosmetic —
-    // `resolvePioneerTurns` is a fixed point over these links, so a ring of orange bodies would
-    // each take the other's rotation for ever. Its cap exists to stop that FREEZING the glass;
-    // this makes the state unrepresentable instead.
-    if (links.wouldCycle(followerId, pioneerId)) {
-      // ⭐ *"the initial alignment"* is the prospective PIONEER's own — the first edge of the
-      // offending chain, and in the two-body case exactly the `F → P` the hand made first.
-      releaseAlignmentOf(pioneerId);
-      lastVerdict =
-        `align: ${followerId}→${pioneerId} would cycle — ` +
-        `broke ${pioneerId}'s own alignment instead`;
-      // ⛔ `true`: the tap is CONSUMED. ⚠ Returning false would let it fall through to `D28`'s
-      // mode toggle as well, so one tap would both break an alignment and flip translate/rotate
-      // — two consequences for one gesture, which is exactly what the owner rejected when the
-      // automatic mode switch was removed.
-      return true;
+    // ⛔⛔ **BOTH TEXTS STAND, AND THE SECOND IS IN FORCE.** The first was written under `D67`,
+    // where the held body was the PIONEER, so *hold B, press A* named the relation that already
+    // existed; inverted, the same fingers name the OPPOSITE one, which is a swap the hand asked
+    // for explicitly. ⭐ `METHOD`: *a ruling is made about a gesture, and an inversion changes
+    // what the gesture says — so the ruling has to be asked again, not carried.*
+    //
+    // ⭐⭐ **ONE RELEASE ALWAYS SUFFICES**, and that is why this is not a loop: a body has at most
+    // one Pioneer, so the chain leaving the prospective Pioneer is unique and cutting its first
+    // edge severs every cycle through it. ⚠ `F → P1 → P2` then making `P2` follow `F` drops
+    // `F → P1`, exactly as the two-body case drops `A → B`.
+    //
+    // ⛔ A cycle is not cosmetic — `resolvePioneerTurns` is a fixed point over these links, so a
+    // ring of orange bodies would take each other's rotation for ever. ⭐ Severing first makes the
+    // state unrepresentable rather than capped.
+    // ⭐⭐ THE DECISION IS `cycleBreaker`'s, in `core/alignment_links.ts`, where a vector reaches
+    // it. ⛔ This file holds the CALL and nothing else — the 2026-09-19 lesson, which cost seven
+    // mutants that survived the whole suite.
+    const swapped = links.cycleBreaker(followerId, pioneerId);
+    if (swapped !== null) {
+      // ⛔⛔ **AND THEN IT FALLS THROUGH.** ⚠ It used to `return true` here, which is the *break
+      // only* reading — the owner's 2026-09-17 sentence — and it left the hand repeating the
+      // gesture to get the relation it had just asked for.
+      releaseAlignmentOf(swapped);
     }
 
     // ⭐ The Pioneer normal is read in WORLD **now** and then frozen — §1.4's doctrine, and
@@ -1163,6 +1240,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       setModelOrientation(followerGrip.mesh, target);
       alignSnaps.cancel(followerId);
     }
+    if (swapped !== null) {
+      lastVerdict = `align: SWAP — released ${swapped}'s own alignment, ${followerId}→${pioneerId}`;
+    }
     followerGrip.alignmentTouched = true;
     // ⭐⭐ THE HIGHLIGHT IS THE ALIGNMENT'S STATE, not the press's: it appears HERE and dies
     // with the constraint (`D35`, and the owner's *"until un-highlight occurs"*).
@@ -1182,16 +1262,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // is being released, and a stale face on a dead grip is the kind of thing a later rule
     // picks up by accident.
     const pioneerFaceId = pioneerGrip.pressFace.faceId;
-    // ⛔⛔⛔ **`D67` — THE FACE CLEARED IS THE *PRESSING* GRIP'S, AND THAT IS WHAT MAKES THE
-    // MULTI-SELECT WORK.** The rule has not changed — *a transient grip must not leave a stale
-    // face behind* — but the transient finger is now the FOLLOWER's. ⭐ The Pioneer's grip keeps
-    // its `pressFace` for the whole hold, so *"second touch pressed on first Follower … then
-    // released, then pressed on second Follower object's FollowerFace"* aligns body after body
-    // against the same held face. ⚠ Clearing the held grip's face instead would make the second
-    // Follower fail with *no resolved PioneerFace* — the same line, aimed at the wrong finger.
-    // ⭐ It also keeps this press's own RELEASE inert: with no face, `tapMeaning` cannot read it
-    // as a fresh alignment on the way up.
-    followerGrip.pressFace = null;
+    // ⛔⛔⛔ **THE FACE CLEARED IS THE *TRANSIENT* GRIP'S — AND `D87` MOVED WHICH FINGER THAT IS.**
+    //
+    // ⭐ The rule has never changed: *a transient grip must not leave a stale face behind.* ⛔ Under
+    // `D67` the transient finger was the FOLLOWER's second touch, so this line cleared
+    // `followerGrip`. Inverted, the transient finger is the **PIONEER's** — and the line went on
+    // clearing the follower, which is now the finger that must KEEP its face for the whole hold.
+    //
+    // ⚠⚠ **IT COST THE UNDO** (the owner, 2026-09-25: *"if I press again a followerFace and its
+    // pioneerface, the follower simply rotates"*). With the held grip's face wiped, `pressMeaning`
+    // read `heldPressFace = null` against a live `alignedFaceOfHeld`, so *this body already
+    // follows this face* could never be true and `D39`'s re-press never undid anything — and the
+    // NEXT press on the same hold died at `align: press resolved no face` instead.
+    //
+    // ⭐⭐ `METHOD`: **the comment right above this line already warned about it, aimed the other
+    // way** — *"clearing the held grip's face instead would make the second Follower fail"*. An
+    // inversion does not have to touch a line to break it; it only has to change which finger the
+    // line names. ⛔ Nothing here can go red, which is why it reached the glass.
+    transientGrip.pressFace = null;
     // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
     // ACTIVE alignment's mode and would recolour an older object's highlight.
     alignModeOf.set(followerId, mode);
@@ -1326,81 +1414,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const links = new AlignmentLinks();
 
-  /**
-   * ⭐⭐⭐ **THE FORK'S BOOT ALIGNMENT (branch `1.0.18-`)** — *"There is one Pioneer (on the
-   * left) and one Follower (on the right). Set that up at boot for this fork."*
-   *
-   * ⛔⛔ **IT CHOOSES FACES THAT ARE ALREADY PARALLEL, SO THE BOOT POSE IS NOT DISTURBED.**
-   * Both bodies boot square, so `objectA`'s bottom and `objectB`'s bottom already point the
-   * same way — and `D37`'s alignment is PARALLEL, so the solve is the identity. ⚠ Picking
-   * the FACING pair would have been the intuitive choice and would have spun the Follower
-   * 180° on frame one, which is §5.2's stated consequence of parallel-over-mate.
-   *
-   * ⛔⛔⛔ **IT READ `+x` UNTIL 2026-09-22, AND THE PYRAMID IS WHY IT NO LONGER CAN.** When
-   * `objectB` became a trapezoidal pyramid its four side faces tilted, so **no face of it is
-   * within 0.01 of `+x` any more** and this lookup would have failed — printing its verdict and
-   * quietly booting with no Pioneer/Follower pair at all. ⭐⭐ The bottom faces are the answer
-   * the shape hands you: a taper about the body's own vertical leaves `±y` EXACTLY flat on both
-   * bodies, so the pair is still parallel by construction and the identity solve survives.
-   * ⚠ The owner chose this over relaxing the lookup to *the most `+x`-facing face*, which would
-   * have tilted the Follower by the taper angle on frame one.
-   * ⛔ `tests/frustum.test.ts` asserts the exact `±y` normals beside the shape itself, so a
-   * future taper that tilted them reddens there rather than silently dropping the boot pair.
-   *
-   * ⛔ **BY NORMAL, NEVER BY FACE ID.** `meshTopology` numbers faces in whatever order the
-   * geometry yields, and `D50` exists because a table keyed on names was silently wrong for an
-   * imported body. ⚠ A hard-coded `"f2"` would be that mistake one layer up.
-   *
-   * ⚠ It writes the SAME three records the tap path writes — constraint, link, mode — and
-   * nothing else: with the faces already parallel there is no rotation to apply and no snap to
-   * play. ⭐ `SNAPSHOT`, so the pair boots **cyan + amber**, which is what a single tap makes.
-   */
-  const bootAlignment = (followerId: ObjectId, pioneerId: ObjectId): void => {
-    // ⛔ The DOWNWARD face — flat on a box and on a pyramid alike. See the header for why it
-    // is no longer `+x`.
-    const bottomFace = (id: ObjectId) =>
-      world.objects.get(id)?.faces.find((f) => f.normal[1] < -0.99) ?? null;
-    const pf = bottomFace(pioneerId);
-    // ⛔⛔ **THE FOLLOWER'S *TOP* FACE SINCE 2026-09-23, AND ONLY TO KEEP THIS SCENE UNCHANGED.**
-    // The alignment is **anti-parallel** now, so a bottom-to-bottom pair would stand the trial's
-    // second part on its head at boot. ⭐ Top-to-bottom is the same physical result the trial has
-    // always had — two upright parts — expressed in the new sense: anti(−y) is +y.
-    // ⚠ It is a FIXTURE following the product, not a rule: the trial's boot scene is a jig, and a
-    // jig that silently changed shape would make the swing's device verdicts incomparable.
-    const ff =
-      world.objects.get(followerId)?.faces.find((f) => f.normal[1] > 0.99) ??
-      null;
-    if (!pf || !ff) {
-      // ⚠ Named on the readout rather than thrown: a boot that half-succeeds is worse than one
-      // that says what it could not do, and this whole file is a trial.
-      lastVerdict = `boot: no bottom face on ${pf ? followerId : pioneerId} — no boot alignment`;
-      return;
-    }
-    const target = faceWorld(world, pioneerId, pf.id)?.normal;
-    if (!target) return;
-    world = pushObjectConstraint(
-      world,
-      followerId,
-      faceAlignConstraint(ff.normal, target),
-      false,
-    );
-    links.link(
-      followerId,
-      pioneerId,
-      pf.id,
-      worldPlacementOf(world, pioneerId)?.orientation ?? IDENTITY,
-      // ⭐ `D69` — the move cascade's baseline, read at the same instant as the orientation so
-      // the two halves of the link describe ONE moment.
-      worldPlacementOf(world, pioneerId)?.position ?? [0, 0, 0],
-    );
-    alignModeOf.set(followerId, "SNAPSHOT");
-  };
+  // ⛔⛔⛔ **`bootAlignment` STOOD HERE AND IS DELETED** — the owner, 2026-09-25: *"boot the scene
+  // with no aligned object."* ⚠ It pushed a `FACE_ALIGN` on `objectB` toward `objectA`'s bottom
+  // face and linked the pair as `SNAPSHOT`, so the scene opened with a cyan/amber pair already on
+  // the glass. ⭐ Deleted, not disabled (`D28`/`D40`: *a dormant fork is a trap*).
+  //
+  // ⭐⭐ **IT NEVER MOVED ANYTHING**, which is what makes this a state change and not a visual one:
+  // both parts boot square, `A`'s bottom is `−y`, `B`'s top is `+y`, and the alignment is
+  // anti-parallel — so the constraint was satisfied the instant it was pushed.
 
-  // ⛔ **`objectB` (right) FOLLOWS `objectA` (left)** — the owner's *"one Pioneer (on the left)
-  // and one Follower (on the right)"*. ⚠ Called once, here, where the model and the index both
-  // exist and before any frame has been drawn; the face markers are driven from the model every
-  // frame, so nothing needs painting by hand.
-  bootAlignment("objectB", "objectA");
 
   const releaseAlignmentOf = (followerId: ObjectId): void => {
     // ⚠ A release can be decided by the render loop (a turned Pioneer, a prune), where no
@@ -3397,6 +3419,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       tuningRejected: tuning.rejected,
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
       // ⛔ `IGN` is the one that matters: it is the visible form of the IN8 decision.
+      jump:
+        lastJump === null
+          ? "—"
+          : `${lastJump.id} ${lastJump.mm.toFixed(0)}mm/${lastJump.deg.toFixed(0)}° ` +
+            `(usual ${lastJump.usualMm.toFixed(1)}mm/${lastJump.usualDeg.toFixed(1)}°) ` +
+            `${((performance.now() - lastJumpAt) / 1000).toFixed(0)}s ago — ${lastJumpVerdict}`,
       roles:
         router.size === 0
           ? "—"
@@ -3512,6 +3540,18 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldA
                 );
               })
               .join("") +
+            // ⭐⭐⭐ **THE HITFACE AND ITS OFFERS, ON THE GLASS** (the owner, 2026-09-24). ⛔ The
+            // rule is invisible otherwise: a hand that sees no fuchsia cannot tell whether the
+            // cone is too tight, the body is aligned already, or the mode is wrong.
+            (() => {
+              const hf = hitFaceNow();
+              if (hf === null)
+                return `  hit=— (needs an UNALIGNED held body with a resolved face)`;
+              const n = candidateFacesNow().length;
+              return cfg.pioneerCandidates !== 1
+                ? `  hit=${hf.objectId}/${hf.faceId} fuchsia=OFF`
+                : `  hit=${hf.objectId}/${hf.faceId} cone=${cfg.pioneerCandidateConeDeg}° fuchsia=${n}`;
+            })() +
             // ⭐⭐⭐ **WHERE THE OUTLINE PIPELINE STOPS** — added 2026-09-18 after a device report
             // of *"no outline of any sort"*, which four different failures produce identically:
             // no topology, no outline meshes built, no face markers, or a throw in the draw path.
@@ -3750,7 +3790,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // by finger, and every gain a hand has set was raised from my guess.
         tunable("roll drag gain (deg/mm)", "gainRollDrag", 0.25, 12, 0.25),
         tunable("motion DEADBAND (mm)", "motionDeadbandMm", 0.5, 8, 0.1),
-        tunable("rest confirm (ms)", "restConfirmMs", 0, 400, 10),
+        tunable("rest floor (ms)", "restConfirmMs", 0, 400, 10),
+        // ⭐ How many of a pointer's own event intervals of silence mean it has stopped.
+        tunable("rest = N x event gap", "restGapFactor", 2, 6, 0.5),
         // ⭐⭐⭐ A14: how long a lift-and-replace of the second touchpoint stays ONE
         // gesture. ⛔ 0 restores the old behaviour exactly, which is how to A/B it.
         tunable("sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
@@ -3917,6 +3959,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
         // there is no fallback and a level camera sends the body a very long way.
         tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
+        // ⭐⭐⭐ THE FEATURE'S OWN SWITCH, directly above its cone — the owner, 2026-09-25.
+        // ⚠ `0` also retires the exception that lets a press reach a FROZEN body's offered face.
+        tunable("fuchsia offer on/off", "pioneerCandidates", 0, 1, 1),
+        // ⭐⭐ How close to MATING a face must be before it lights fuchsia. ⛔ `0` is the honest
+        // OFF for the cone: only an exactly opposed face. The owner asked for 0–45 in steps of 5.
+        tunable("fuchsia cone (deg)", "pioneerCandidateConeDeg", 0, 45, 5),
         // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
         // the flag; anything above draws an x-ray twin at that opacity.
         tunable(
@@ -3945,6 +3993,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * ⚠ The reading survives the lift on purpose: a person cannot read a number off the
    * glass while their finger is covering it.
    */
+  /** ⚠ Per pointer id: the last event's clock, and every inter-event gap in the last second. */
+  const eventGaps = new Map<
+    number,
+    { last: number; gaps: { t: number; ms: number }[] }
+  >();
   const noise = new PointerNoiseMeter();
   let noisePointer: number | null = null;
 
@@ -3955,7 +4008,28 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⭐ Printed against the value currently IN FORCE, because the reading is only
     // ever interesting as a comparison — and a config the sagitta rule is judged by
     // must not be compared against a half-remembered number.
-    return `floor=${floor.toFixed(3)}mm now=${noise.rmsMm.toFixed(3)} n=${noise.samples} cfg=${cfg.pointerNoiseMm}`;
+    // ⭐⭐ AND THE EVENT GAPS, against the threshold they have to beat. ⛔ A `!` marks a pointer
+    // whose worst gap EXCEEDS `restConfirmMs` — the flicker's precondition, as a measured fact.
+    const gaps = [...eventGaps.entries()]
+      .map(([pid, v]) => {
+        const worst = v.gaps.reduce((m, g) => Math.max(m, g.ms), 0);
+        return `p${pid}:${worst.toFixed(0)}${worst > cfg.restConfirmMs ? "!" : ""}`;
+      })
+      .join(" ");
+    // ⭐⭐⭐ **THE ADAPTIVE REST WINDOW, ON THE GLASS.** ⛔ A threshold that MOVES and cannot be
+    // seen is the instrument this project has been burned by most. ⚠ `rest` is what each held
+    // pointer's tracker actually derived, beside the raw gaps it derived it from.
+    const rests = [...held.values()]
+      .map(
+        (g) =>
+          `${g.rec.restMs.toFixed(0)}(med ${g.rec.gapMedianMs.toFixed(0)})`,
+      )
+      .join(" ");
+    return (
+      `floor=${floor.toFixed(3)}mm n=${noise.samples}` +
+      ` | rest ${rests || `${cfg.restConfirmMs}(seed)`}` +
+      ` x${cfg.restGapFactor} | gaps ${gaps || "—"}`
+    );
   };
 
   /**
@@ -4634,8 +4708,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * ⭐ Which also retired the cost I had stated against this model — rotation no longer
    * costs a tap every time, only when switching.
    */
-  // ⭐⭐ *"Default start: rotation mode"* (owner, 2026-09-16). ⛔ There is one rule set now,
-  // so this is simply the start: `initialBehaviour()` returns `ROTATE`.
+  // ⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** (`D71`, 2026-09-22: *"set the default to translation
+  // mode at scene boot"*, and re-confirmed 2026-09-25 with the boot alignment's removal).
+  // ⛔⛔ **THIS COMMENT SAID `initialBehaviour()` RETURNS `ROTATE` UNTIL 2026-09-25, AND IT HAD
+  // BEEN FALSE SINCE `D71`.** ⚠ That is the exact shape the 2026-09-17 audit found and named: a
+  // DISAGREEMENT between a human sentence and the code, where the tell is *whether any instruction
+  // still asks for the other mode*. ⭐ None does — so the comment was the thing that was wrong,
+  // and it is the comment that moved.
   let behaviour: Behaviour = initialBehaviour();
 
   /**
@@ -4726,6 +4805,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // ride-along, the cancel and the landing were three scattered statements in this frame
   // handler, and `pioneer_cascade.ts` already paid for that lesson.
   const alignSnaps = new AlignSnaps<ObjectId>();
+  // ⚠ LATCHED, not per-frame: a jump is over in one frame and a hand cannot look up in time.
+  // ⭐ The verdict in force when it happened is captured with it — that is the half that says
+  // WHICH rule was running, which is what the owner could not see.
+  const jumpWatch = new JumpWatch<ObjectId>();
+  let lastJump: Jump<ObjectId> | null = null;
+  let lastJumpVerdict = "";
+  let lastJumpAt = 0;
   /**
    * ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — what this gesture has demanded per
    * axis, and the slerp that lands it on a multiple when the gesture ends.
@@ -4960,6 +5046,26 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       }
     }
 
+    // ⛔⛔⛔ **THE NUMBER THE WHOLE DEFECT TURNS ON**: the gap between two consecutive move events
+    // FOR ONE POINTER. §1.1 rests an axis after `restConfirmMs` of silence, so a pointer whose
+    // events arrive slower than that reads STATIONARY *between events while the finger is still
+    // moving*. ⭐ Measured per pointer and reported as the WORST gap in the last second — a mean
+    // would hide exactly the excursions that cause it.
+    if (
+      info.type === PointerEventTypes.POINTERDOWN ||
+      info.type === PointerEventTypes.POINTERMOVE
+    ) {
+      const seen = eventGaps.get(e.pointerId);
+      if (seen !== undefined && info.type === PointerEventTypes.POINTERMOVE) {
+        seen.gaps.push({ t: s.t, ms: s.t - seen.last });
+        while (seen.gaps.length > 0 && s.t - seen.gaps[0]!.t > 1000)
+          seen.gaps.shift();
+      }
+      eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
+    }
+    if (info.type === PointerEventTypes.POINTERUP)
+      eventGaps.delete(e.pointerId);
+
     // ⭐ The anchor fork latches here, before anything is dispatched, so one event cannot be
     // judged half under one rule set and half under another.
 
@@ -5005,6 +5111,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // nothing — which is what makes it a working second finger for the body in the OTHER hand.
       // ⚠ The DECISION is `frozen_pick.ts`'s; this reads the two facts and obeys.
       const hitId = rayHit === null ? undefined : idOf.get(rayHit);
+      // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
+      // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
+      //
       const hit = pressHit(
         rayHit,
         hitId !== undefined && world.objects.get(hitId)?.frozen === true,
@@ -5208,6 +5317,57 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pressOthers.length === 1 ? pressOthers[0]![1] : undefined;
       const pressPioneerOfHeld =
         pressHeldId === null ? null : links.pioneerFor(pressHeldId);
+      // ⭐⭐⭐ **A FUCHSIA FACE PRESSED BY THE SECOND TOUCH BECOMES THE PIONEERFACE.**
+      //
+      // > *"if one fuchsia highlighted face is pressed by second touch, it becomes PioneerFace and
+      // > the object becomes Pioneer object and the highlight switches to the pioneer highlight
+      // > and the object with HitFace becomes aligned Follower object and the HitFace becomes
+      // > FollowerFace."* — the owner, 2026-09-24
+      //
+      // ⛔⛔ **THE ROLES ARE THE INVERSE OF `D67`'s**, which is why this cannot be folded into
+      // `pressMeaning`: there the PRESSED body is the Follower and the HELD one the Pioneer,
+      // because the hand reaches out to the part it wants to move. ⚠ Here the hand is already
+      // holding the part and reaching out to the thing it wants to align TO — the fuchsia
+      // highlight is what makes the intent unambiguous, and it only exists in this configuration.
+      //
+      // ⭐ It tails into what is already built: `alignFollowerToPioneer` is called with the HELD
+      // grip as the Follower, so it finds the freshly pressed body as its one other holder and
+      // every downstream rule — the colours, the two-way index, the cascade — is the vetted one.
+      // ⛔ `pressActed` from the RETURN VALUE, as `D67`'s branch does: a refusal must leave the
+      // release untouched so the tap still means what it always meant.
+      // ⭐⭐⭐ **THE SECOND PRESS OF A DOUBLE TAP UPGRADES THE RELATION TO `FOLLOW`.**
+      //
+      // > *"rapid double tap on fuchsia face does not trigger the amber mode"* — the owner
+      //
+      // ⛔⛔ **THE FIRST PRESS CONSUMES THE OFFER, WHICH IS WHY THE SECOND ONE MISSES IT.** Once
+      // it aligns, the held body IS aligned — and `pressMeaning` answers `NOTHING` for a press on
+      // the very face it now follows (`D39`'s rule, so a press-and-hold does not silently undo).
+      // ⭐ So the pair is recognised on the LINK that already exists rather than on an offer that
+      // no longer does: same two bodies, same face, and this press pairs with the last.
+      // ⚠ Waiting out the double-tap window before aligning was the other way to fix it, and it
+      // would put the whole gesture behind a timer — `D73`'s lesson about lag, one rule over.
+      //
+      // ⛔ The ALIGN half of this branch is **deleted by `D87`**: with the roles inverted,
+      // `pressMeaning` aligns the held body to the pressed one for ANY face, so a separate rule
+      // for fuchsia ones would be a second decision about the same gesture. ⭐ The highlight is
+      // what it always was — guidance — and no longer a precondition for acting.
+      const heldPioneer =
+        pressHeldId === null ? null : links.pioneerFor(pressHeldId);
+      if (
+        pressGrip.pressWasDoubleTap === true &&
+        pressHeldId !== null &&
+        pickedId !== undefined &&
+        pressFace !== null &&
+        heldPioneer !== null &&
+        heldPioneer.objectId === pickedId &&
+        heldPioneer.faceId === pressFace.faceId
+      ) {
+        alignModeOf.set(pressHeldId, "FOLLOW");
+        lastVerdict = `align: ${pressHeldId} → FOLLOW (double tap on its Pioneer face)`;
+        pressGrip.pressActed = true;
+        paint();
+        return;
+      }
       const pressVerdict = pressMeaning({
         // ⭐ `D67`: the body under THIS press is the FOLLOWER, and the held one is the Pioneer.
         pressedObject: pickedId ?? null,
@@ -5217,35 +5377,43 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // body being pressed?
         pioneerOfHeld:
           pressPioneerOfHeld === null ? null : pressPioneerOfHeld.objectId,
-        // ⛔ THE OTHER DIRECTION OF THE SAME QUESTION, and omitting it was a defect the glass
-        // found within minutes: with `A→B` live, holding `B` and pressing `A` is not a fresh
-        // relation, and reading it as one let `wouldCycle` break the pair the hand was holding.
-        pioneerOfPressed:
-          pickedId === undefined
-            ? null
-            : (links.pioneerFor(pickedId)?.objectId ?? null),
-        // ⭐⭐ The pressed body's CURRENT FollowerFace, derived from its constraint rather than
-        // remembered — `alignedFaceOf` is the one implementation, and a shadow copy would be a
+        // ⭐⭐ The HELD body's CURRENT FollowerFace — it is the FOLLOWER under `D87`, so *already
+        // aligned to this very face* is a question about IT. ⛔ Derived from its constraint rather
+        // than remembered: `alignedFaceOf` is the one implementation, and a shadow copy would be a
         // second source of truth free to disagree after an eviction.
-        alignedFaceOfPressed:
-          pickedId === undefined ? null : alignedFaceOf(world, pickedId),
-        // ⭐⭐⭐ **`D67` — THE MODE COMES FROM THE PIONEER'S PRESS, NOT FROM THIS ONE.**
-        // ⛔ The owner: *"to reach the orange, the first touch shall be double tap without final
-        // release [on] the pioneer object and the second touch shall hit follower object's
-        // FollowerFace while first touch is still pressed on PioneerFace."*
-        // ⚠ So it is read off the HELD grip, which is also what makes every Follower added
-        // during one hold come out the same colour.
-        pioneerPressWasDoubleTap: pressHeldGrip?.pressWasDoubleTap === true,
+        alignedFaceOfHeld:
+          pressHeldId === null ? null : alignedFaceOf(world, pressHeldId),
+        // ⭐⭐ The PIONEERFACE the held body follows — a face of the PRESSED body, and the only
+        // thing `pressedFace` may be compared against. ⛔ Straight off the link, not remembered.
+        pioneerFaceOfHeld: pressPioneerOfHeld?.faceId ?? null,
+        // ⭐ The held body's HitFace: the FollowerFace this press WOULD use. ⚠ A different one
+        // makes the press a RE-POINT rather than a no-op.
+        heldPressFace: pressHeldGrip?.pressFace?.faceId ?? null,
+        // ⭐⭐⭐ **`D87` — THE MODE COMES FROM *THIS* PRESS.** ⛔ `D67` read it off the held grip
+        // because the held body was the Pioneer; inverted, the Pioneer is the body being pressed,
+        // so the touch that selects it is the one that says which relation is wanted.
+        pressWasDoubleTap: pressGrip.pressWasDoubleTap === true,
       });
-      if (pressVerdict.action === "ALIGN" && pressVerdict.mode !== null) {
+      if (
+        pressVerdict.action === "ALIGN" &&
+        pressVerdict.mode !== null &&
+        pressHeldGrip !== undefined
+      ) {
+        // ⭐⭐⭐ **`D87` — THE HELD BODY IS THE FOLLOWER NOW.** ⛔ So the call is made with the
+        // HELD pointer and grip, and `alignFollowerToPioneer` finds the freshly pressed body as
+        // its one other holder — the Pioneer. ⚠ Under `D67` these two arguments were this press's
+        // own, which is the whole of the inversion at the wiring level.
         // ⛔ `pressActed` is set from the RETURN VALUE, never from the intent. Every refusal
         // inside `alignFollowerToPioneer` returns `false` and says why on the HUD, and a press
         // that aligned nothing must leave its release completely untouched — the tap then means
         // whatever it has always meant, including `D28`'s toggle.
         pressGrip.pressActed = alignFollowerToPioneer(
-          e.pointerId,
-          pressGrip,
+          pressOthers[0]![0],
+          pressHeldGrip,
           pressVerdict.mode,
+          // ⭐ THIS press's finger is the transient one: it selected the Pioneer and will lift.
+          // ⛔ The held grip keeps its HitFace, which is what `D39`'s re-press compares against.
+          pressGrip,
         );
       }
       // ⛔⛔ `A22`'s **SWITCH** branch stood here and is deleted with `D67`: the upgrade to
@@ -5974,60 +6142,44 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠⚠ This block used to build its context from the three GLOBALS (`alignMode`,
         // `pioneerFace`, and `selectedFace` as the guard), which name **the most recent
         // alignment in the scene**. ⭐ The per-body truth has lived in `links` and `alignModeOf`
-        // since `A18`, and they disagree the moment a second body is aligned:
+        // since `A18`, and they disagree the moment a second body is aligned.
+        // ⭐⭐ `METHOD`: *a substituted quantity* — *"is the active alignment on the held body?"*
+        // stood in for *"what is the held body aligned to?"*, and the two agree only while
+        // exactly one body is aligned.
         //
-        //   hold A, tap P.+x   → A follows P, and the globals name A
-        //   hold B, tap Q.+y   → B follows Q, and the globals now name B
-        //   hold A, tap P.+x   → `pioneer` reads `null`, so the re-tap is read as a fresh
-        //                        ALIGN and **A can never be released by re-tapping** — only by
-        //                        a shake, which is the undo the owner called *"a complicated
-        //                        movement to execute by the user."*
-        //
-        // ⛔ The old comment was right about the DANGER (*"a remembered Pioneer belonging to
-        // some other object's alignment must not make this tap an undo"*) and fixed it with the
-        // wrong instrument: it filtered a scene-wide record instead of asking the body.
-        // ⭐⭐ `METHOD`: *a substituted quantity* — *"is the active alignment on the held
-        // body?"* stood in for *"what is the held body aligned to?"*, and the two agree only
-        // while exactly one body is aligned.
-        // ⭐⭐⭐ `D67` — the TAPPED body is the Follower and the HELD one is the Pioneer, so
-        // every field is read off the other end than it used to be.
+        // ⭐⭐⭐ **`D90` — EVERY FIELD IS READ OFF THE OTHER END AGAIN.** The tapped body is the
+        // PIONEER now and the held one the FOLLOWER, so the questions are all about the held
+        // body. ⛔ This is `D87` reaching the release path, four defects after it reached the
+        // press — see `tapMeaning`.
         const tappedId = idOf.get(grip.mesh) ?? null;
+        const heldGrip = others.length === 1 ? others[0]![1] : null;
+        const heldPioneer = heldId === null ? null : links.pioneerFor(heldId);
         const ctx: TapContext = {
           tappedObject: tappedId,
           tappedFace: grip.pressFace?.faceId ?? null,
           heldObject: heldId,
-          pioneerOfTapped:
-            tappedId === null
-              ? null
-              : (links.pioneerFor(tappedId)?.objectId ?? null),
-          alignedFaceOfTapped:
-            tappedId === null ? null : alignedFaceOf(world, tappedId),
-          pioneerPressWasDoubleTap:
-            others.length === 1 && others[0]![1].pressWasDoubleTap,
+          pioneerOfHeld: heldPioneer?.objectId ?? null,
+          pioneerFaceOfHeld: heldPioneer?.faceId ?? null,
+          alignedFaceOfHeld:
+            heldId === null ? null : alignedFaceOf(world, heldId),
+          heldPressFace: heldGrip?.pressFace?.faceId ?? null,
         };
         const meaning = tapMeaning(ctx);
-        if (meaning.action === "ALIGN" && meaning.mode !== null) {
-          alignedByThisTap = alignFollowerToPioneer(
-            e.pointerId,
-            grip,
-            meaning.mode,
-          );
-        } else if (meaning.action === "UNALIGN" && tappedId !== null) {
-          // ⭐⭐⭐ **`D67` — THE BODY RELEASED IS THE TAPPED ONE.** It is the Follower now, and
-          // `D39`'s re-tap lands on its FollowerFace. ⚠ Releasing the HELD body here, as this
-          // branch did before the inversion, would break the PIONEER's own alignment to some
-          // third body — a relation the hand never touched.
-          // ⛔⛔ AND `SWITCH` IS GONE FROM BOTH SIDES: neither `pressMeaning` nor `tapMeaning`
-          // can return it, because no touch on a Follower asks for a mode any more — the
-          // Pioneer's press decides (`alignModeFor`). ⭐ Deleted, not left unreachable: a branch
-          // nothing can enter is the dormant-fork shape `D28` and `D40` refused.
-          const hadAlignment = links.pioneerFor(tappedId) !== null;
-          releaseAlignmentOf(tappedId);
-          grip.alignmentTouched = false;
+        // ⛔⛔ **`tapMeaning` CAN NO LONGER ALIGN** (`D90`): the press owns that, and this path's
+        // own `ALIGN` was `D67`'s trigger left running — it is what silently re-pointed an
+        // alignment when the owner expected a swap. ⭐ Deleted, not left unreachable.
+        if (meaning.action === "UNALIGN" && heldId !== null) {
+          // ⭐⭐⭐ **THE BODY RELEASED IS THE HELD ONE.** It is the FOLLOWER since `D87`, and it is
+          // the body that owns the alignment. ⚠ Releasing the TAPPED body — which this branch
+          // did until `D90` — broke the PIONEER's relation to some third body, one the hand
+          // never touched.
+          const hadAlignment = links.pioneerFor(heldId) !== null;
+          releaseAlignmentOf(heldId);
+          if (heldGrip !== null) heldGrip.alignmentTouched = false;
           alignedByThisTap = true;
           lastVerdict = hadAlignment
-            ? `align: RE-PRESS released the alignment on ${tappedId}`
-            : `align: re-press — nothing to release on ${tappedId}`;
+            ? `align: RE-PRESS released the alignment on ${heldId}`
+            : `align: re-press — nothing to release on ${heldId}`;
         }
       }
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
@@ -6469,6 +6621,24 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⭐⭐ The lesson is the shape, not the line: **an implicit invariant died when the
     // authority moved.** "Everything that needs drawing has a follower" was true by
     // construction and became false silently, because nothing stated it.
+    // ⭐⭐⭐ **THE DISCONTINUITY WATCH** — the owner, 2026-09-25: *"at one point, one of the
+    // objects has made a big jump (I could not see if it was the pioneer or the follower)."*
+    //
+    // ⛔⛔ Read off the **MODEL**, here, after every rule has written and before the follower and
+    // the sway bend it. ⚠ A jump the eye sees that the model did not make is a different defect,
+    // and one readout for both would report neither. ⭐ The decision is `jump_watch.ts`'s; this
+    // holds the call, which is the 2026-09-19 lesson.
+    for (const [jid, jmesh] of meshOf) {
+      const jp = modelPose(jmesh);
+      if (!jp) continue;
+      const j = jumpWatch.note(jid, jp.position, jp.orientation);
+      if (j !== null) {
+        lastJump = j;
+        lastJumpVerdict = lastVerdict;
+        lastJumpAt = performance.now();
+        hudDirty = true;
+      }
+    }
     for (const mesh of meshOf.values()) {
       const f = followerFor(mesh);
       // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather
@@ -6616,6 +6786,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
     // highlight DID disappear and the follower's did not, the asymmetry the report describes.
     const alignedNow = new Set(links.alignedObjects());
+    // ⭐⭐⭐ **THE FUCHSIA CANDIDATES** — every face on another body that the HitFace is within
+    // `pioneerCandidateConeDeg` of mating with (the owner, 2026-09-24). ⛔ Recomputed every frame
+    // from the MODEL, never remembered: *during the rotation* means the set follows the pose, and
+    // a remembered set is the shape that produced eight reports on the gizmo.
+    const hitFace = hitFaceNow();
+    // ⚠ `candidateFacesNow` is the gated source; `hitFace` is NOT gated, so the HitFace contour
+    // below survives with the offer switched off.
+    const candidates = candidateFacesNow();
+    const candidateKeys = new Set(
+      candidates.map((c) => `${c.objectId}/${c.faceId}`),
+    );
     guardDraw("alignmentMarkers", () => {
       // ⛔⛔ **RETIRED BY SET MEMBERSHIP, WHATEVER REMOVED THE LINK.** The 2026-09-17 bug was the
       // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
@@ -6624,8 +6805,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       for (const [key, q] of faceMarkers) {
         const id = key.slice(0, key.indexOf("/"));
         const faceId = key.slice(key.indexOf("/") + 1);
+        // ⛔⛔ **ONE POOL, ONE MEMBERSHIP TEST.** The fuchsia faces join the same retire loop
+        // rather than getting a pool of their own: on 2026-09-17 two marker pools retired by two
+        // different rules in one edit, and the asymmetry produced TWO false device reports.
         const wanted =
-          alignedNow.has(id) && alignedFaceOf(world, id) === faceId;
+          (alignedNow.has(id) && alignedFaceOf(world, id) === faceId) ||
+          candidateKeys.has(key);
+        // ⛔⛔ **THE RING IS RETIRED IN THE SAME PASS, ON THE SAME KEY.** ⚠ It had a loop of its
+        // own and its own (correct) test, which is one edit away from the 2026-09-17 defect: two
+        // marker pools retired by two rules, and the asymmetry produced two false device reports.
+        // ⭐ One pass cannot drift, whatever a later change does to the membership test above.
+        const ring = candidateRings.get(key);
+        if (ring !== undefined && !candidateKeys.has(key))
+          ring.isVisible = false;
         if (wanted) continue;
         q.fill.isVisible = false;
         // ⛔⛔ **RETIRED BY THE SAME MEMBERSHIP TEST, IN THE SAME LOOP.** The twin must not outlive
@@ -6639,6 +6831,37 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⛔ THE PAIR IS ATOMIC. A body outline left behind by a released alignment would claim
         // the body is still aligned — the readout-that-lies shape this file guards against.
         o.align.isVisible = false;
+      }
+
+      // ⭐⭐ **THE FUCHSIA FILL AND ITS WHITE RING**, drawn BEFORE the alignment colours so that a
+      // face which is both a candidate and a live Follower/Pioneer keeps its established meaning.
+      for (const c of candidates) {
+        const marker = faceMarkerFor(c.objectId, c.faceId);
+        if (marker !== null) {
+          if (!marker.mat.emissiveColor.equals(CANDIDATE_COLOUR))
+            marker.mat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
+          marker.fill.isVisible = true;
+          const xrayOn = cfg.followerFaceXrayAlpha > 0;
+          if (xrayOn) {
+            if (!marker.xrayMat.emissiveColor.equals(CANDIDATE_COLOUR))
+              marker.xrayMat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
+            marker.xrayMat.alpha = cfg.followerFaceXrayAlpha;
+          }
+          marker.xray.isVisible = xrayOn;
+        }
+        // ⚠ The ring is PARENTED, so only its scale is written here — it keeps a constant
+        // apparent size as the camera moves, the same conversion the capture shell uses.
+        const ring = candidateRingFor(c.objectId, c.faceId);
+        if (ring !== null) {
+          const m =
+            trackingMetresPerPx(
+              camera.radius,
+              camera.fov,
+              canvas.clientHeight,
+            ) * GIZMO_RING_PX;
+          ring.scaling.set(m, m, m);
+          ring.isVisible = true;
+        }
       }
 
       for (const id of alignedNow) {
@@ -6689,7 +6912,34 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         const m = faceMarkerFor(ref.objectId, ref.faceId);
         // ⭐ The Pioneer face is OUTLINED, not filled — *which face it was aimed at*, against the
         // Follower's fill for *which face moved*. `D39`'s distinction, now on real face boundaries.
-        if (m !== null) m.loop.isVisible = true;
+        if (m !== null) {
+          if (!m.loop.color.equals(PIONEER_COLOUR))
+            m.loop.color.copyFrom(PIONEER_COLOUR);
+          m.loop.isVisible = true;
+        }
+      }
+      // ⭐⭐⭐ **THE HITFACE WEARS A FUCHSIA CONTOUR WHILE IT IS ACTIVE** — the owner, 2026-09-25:
+      // *"when active, highlight the contour of the hitface in fuchsia."*
+      //
+      // ⭐ OUTLINED, not filled, and that is the existing grammar rather than a new one: a FILL
+      // says *this face moved* (the Follower) or *this face is on offer* (a candidate); a CONTOUR
+      // says *this face is the one being aimed*. ⚠ So the HitFace and the candidates share a
+      // colour and differ in form, which is exactly the pair they are.
+      // ⛔ It joins `wantedPioneerKeys` rather than getting a pool of its own: one set, one retire,
+      // the same discipline the fills and the rings are now under.
+      if (hitFace !== null) {
+        const key = `${hitFace.objectId}/${hitFace.faceId}`;
+        const m = faceMarkerFor(hitFace.objectId, hitFace.faceId);
+        if (m !== null) {
+          // ⚠ A Pioneer contour on the same face KEEPS its amber: an established relation outranks
+          // an offer, which is the order the fills already use.
+          if (!wantedPioneerKeys.has(key)) {
+            if (!m.loop.color.equals(CANDIDATE_COLOUR))
+              m.loop.color.copyFrom(CANDIDATE_COLOUR);
+            m.loop.isVisible = true;
+          }
+          wantedPioneerKeys.add(key);
+        }
       }
       // ⚠ Hidden rather than disposed: a body can be re-aligned to the same face seconds later,
       // and churning meshes per gesture is how a render loop acquires a stall.

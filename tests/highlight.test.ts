@@ -29,21 +29,31 @@ import {
 import { centreDistance, nearestCapture, surfaceGap } from "@core/proximity";
 import { boxShape } from "@core/collision_shape";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
+import {
+  OBJECT_DIMS_M,
+  OBJECT_SIZE_M,
+  PLATE_DIMS_M,
+  PYRAMID_DIMS_M,
+  bootTilt,
+} from "@core/scene_dims";
 import { makeWorld, setWorldPlacement, type SceneObject, type World } from "@core/object_model";
 import type { Constraint } from "@core/constraint_stack";
 import { IDENTITY, qFromAxisAngle, type Quat, type Vec3 } from "@core/vec";
 
-const SIZE = 0.08; // ⭐ the scene's cube, in metres
+// ⛔⛔⛔ **READ FROM THE PRODUCT, NOT RETYPED** (2026-09-25). ⚠ These three were local copies, and
+// when the owner scaled the pyramid the whole suite stayed green against the old body — including
+// the boot-clearance vector below, whose entire job is to notice exactly that.
+const SIZE = OBJECT_SIZE_M; // ⭐ the scene's L, in metres
 const H = SIZE / 2;
 const DEG = Math.PI / 180;
 
 /** The scene's real body dimensions, in metres — parts, and the base plate. */
-const PART: [number, number, number] = [SIZE, 2 * SIZE, 3 * SIZE];
-const PLATE: [number, number, number] = [6 * SIZE, 0.3 * SIZE, 9 * SIZE];
+const PART = OBJECT_DIMS_M as unknown as [number, number, number];
+const PLATE = PLATE_DIMS_M as unknown as [number, number, number];
 /**
- * ⭐⭐ **`objectB` IS NOT A PART ANY MORE** — it is a trapezoidal pyramid, half again as thick
- * in `x` (the owner, 2026-09-22). ⚠ Only the BOOT-SCENE vector below uses it; the abstract
- * `a`/`b` fixtures elsewhere in this file are about the mechanism and stay cuboid.
+ * ⭐⭐ **`objectB` IS NOT A PART ANY MORE** — it is a trapezoidal pyramid, scaled so its top face
+ * is a part's small face (the owner, 2026-09-25). ⚠ Only the BOOT-SCENE vector below uses it; the
+ * abstract `a`/`b` fixtures elsewhere in this file are about the mechanism and stay cuboid.
  *
  * ⛔ A BOX of the pyramid's dimensions is the right stand-in for a CLEARANCE question and the
  * wrong one for a shape question: the frustum tapers upward, so its widest section is its base
@@ -51,7 +61,7 @@ const PLATE: [number, number, number] = [6 * SIZE, 0.3 * SIZE, 9 * SIZE];
  * this box. ⭐ `tests/frustum.test.ts` measures the same gap through the REAL tapered hull, so
  * the equivalence is checked rather than assumed.
  */
-const PYRAMID: [number, number, number] = [1.5 * SIZE, 2 * SIZE, 3 * SIZE];
+const PYRAMID = PYRAMID_DIMS_M as unknown as [number, number, number];
 
 /**
  * ⭐⭐ **A 100 mm SURFACE OFFSET — chosen for the vectors, not shipped.**
@@ -262,41 +272,47 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     expect(captureOffsetM(-3, 1.5, FOV, VH)).toBe(0);
   });
 
-  it("AT THE BOOT CAMERA, NOTHING CAPTURES AT REST \u2014 against the SHIPPED default", () => {
-    // **THIS PROPERTY WAS TRUE OF THE PARTS, FALSE OF THE PLATE, AND IS NOW TRUE AGAIN.**
-    // `render/scene.ts` claimed *"at 5L nothing is in range at rest"*; the audit measured the
-    // plate at 312 mm against a 320 mm radius and showed the claim false.
+  it("⛔⛔⛔ AT THE BOOT CAMERA THE **PYRAMID CAPTURES THE PLATE** — and it did not before the tilt", () => {
+    // ⭐⭐ **THIS VECTOR USED TO ASSERT THE OPPOSITE, AND THE CHANGE IS THE OWNER'S**: *"rotate the
+    // grey rectangle 30 degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*
+    // (2026-09-25). ⛔ Tilting `objectB` swings a corner down, and the surface gap to the base
+    // plate closes from clear air to **53 mm** against a **60 mm** capture offset.
     //
-    // **IT READS `DEFAULT_CONFIG`, NOT A LITERAL, AND THAT IS THE VALUE OF IT.** The audit's
-    // sharpest finding was a vector asserting the value a function RETURNED rather than the
-    // decision the owner MADE \u2014 it defended the boot-mode defect for a day. A hard-coded 8 or
-    // 15 here would certify a configuration nobody ships the moment the number moves. So this
-    // is a live guard on the shipped number: raise the default far enough to capture the base
-    // plate at boot and the suite reddens.
+    // ⚠⚠ **IT IS PINNED RATHER THAN RELAXED.** The property *"at boot nothing captures at rest"*
+    // is the audit's own — `scene.ts` once claimed it and the audit measured it false — so a
+    // vector that quietly stopped asking would put the project back where it started. ⭐ The fact
+    // is asserted in both directions instead: which pair captures, and that the others do not.
+    //
+    // ⛔ **IT READS `DEFAULT_CONFIG`, NOT A LITERAL**, so raising the shipped offset reddens this.
     const offset = captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH);
     const w = scene(
-      ["objectA", [-0.2, 0, 0], IDENTITY, [], PART],
-      ["objectB", [0.2, 0, 0], IDENTITY, [], PYRAMID],
+      // ⛔⛔ **THE BOOT ORIENTATIONS COME FROM THE PRODUCT** (`bootTilt`), not from `IDENTITY`.
+      // ⚠ They were `IDENTITY` here until the tilt, which is defect 66's shape a second time: a
+      // fixture that mirrors the product goes stale in silence at the moment the product changes.
+      ["objectA", [-0.2, 0, 0], bootTilt(1), [], PART],
+      ["objectB", [0.2, 0, 0], bootTilt(-1), [], PYRAMID],
       ["objectD", [0, 0.307246, 0.16], IDENTITY, [], PART],
       ["objectC", [0, -3 * SIZE, 0], IDENTITY, [], PLATE],
     );
-    for (const id of ["objectA", "objectB", "objectD"]) {
+    // ⭐ The two that are still clear at rest.
+    for (const id of ["objectA", "objectD"]) {
       expect(nearestCapture(w, id, offset, null, gapIn(w), others(w, id))).toBeNull();
     }
-    // The PLATE is what a part is nearest to, by surface \u2014 148 mm, not the 320 mm of air
-    // between the two parts. The margin is stated rather than implied: the threshold must sit
-    // clear of it by a real factor, not by a millimetre.
-    expect(surfaceGap(w, "objectA", "objectC")).toBeCloseTo(0.148, 9);
-    // ⛔⛔ **300 mm, AND IT WAS 320 UNTIL THE PYRAMID WAS THICKENED** (2026-09-22). The centres
-    // are still `5L` apart; `objectB`'s base grew by `0.5L`, so the surfaces are `400 − 40 − 60`
-    // apart. ⭐ This line is why the fixture above had to follow the product: a fixture still
-    // holding `PART` here would have kept asserting 320 mm of a scene nobody builds, and the
-    // margin below — which is the property that matters — would have been measured against it.
-    expect(surfaceGap(w, "objectA", "objectB")).toBeCloseTo(0.3, 9);
-    expect(offset).toBeLessThan(0.148 / 2);
-    // And it must stay big enough to be usable: an offset under 5 mm of world would mean two
-    // parts had to nearly touch before anything showed, which is a different failure.
-    expect(offset).toBeGreaterThan(0.005);
+    // ⛔⛔ AND THE ONE THAT IS NOT — named, so a hand seeing a white pair on the pyramid and the
+    // plate the instant it drags knows it is the scene and not a defect.
+    expect(
+      nearestCapture(w, "objectB", offset, null, gapIn(w), others(w, "objectB"))
+        ?.target,
+    ).toBe("objectC");
+    // ⚠ The measured numbers, so the margin is visible rather than implied: 53 mm of gap against
+    // a 60 mm band, where the grey part still has 91 mm.
+    expect(surfaceGap(w, "objectB", "objectC")! * 1000).toBeCloseTo(53.4, 1);
+    expect(surfaceGap(w, "objectA", "objectC")! * 1000).toBeCloseTo(90.7, 1);
+    expect(offset * 1000).toBeCloseTo(59.9, 1);
+    // ⛔⛔ **216 mm BETWEEN THE PARTS, AND IT HAS BEEN 320, 300 AND 280 BEFORE IT** — once per time
+    // `objectB` changed shape or pose. ⭐ The number moving is the vector working; it stopped
+    // moving once, in silence, and that was defect 66.
+    expect(surfaceGap(w, "objectA", "objectB")! * 1000).toBeCloseTo(216.1, 1);
   });
 
   it("the shipped default is 15 mm on the glass \u2014 the owner's number", () => {

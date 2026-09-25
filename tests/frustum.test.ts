@@ -15,18 +15,23 @@ import { taperTop } from "../src/core/frustum";
 import { meshTopology } from "../src/core/mesh_topology";
 import { gapBetween, shapeFromVertices } from "../src/core/collision_shape";
 import type { Vec3 } from "../src/core/vec";
+import {
+  BOOT_TILT_DEG,
+  bootTilt,
+  OBJECT_DIMS_M,
+  OBJECT_TOP_SCALE,
+  PYRAMID_DIMS_M,
+} from "../src/core/scene_dims";
+import { qFromAxisAngle, qmul } from "../src/core/vec";
 
 /** The scene's module, in metres. ⚠ Mirrors `render/scene.ts`'s `OBJECT_SIZE_M`. */
-const L = 0.08;
+// ⛔⛔⛔ **READ FROM THE PRODUCT, NOT RETYPED** (2026-09-25) — these mirrored `scene.ts` and went
+// stale the moment the owner scaled the pyramid, with nothing going red.
 /** ⭐ The part the product builds: `L × 2L × 3L`. */
-const PART: readonly [number, number, number] = [L, 2 * L, 3 * L];
-/**
- * ⭐ The pyramid: half again as thick in `x` (the owner, 2026-09-22), same height and depth.
- * ⚠ Mirrors `render/scene.ts`'s `PYRAMID_DIMS_M`.
- */
-const PYRAMID: readonly [number, number, number] = [1.5 * L, 2 * L, 3 * L];
-/** ⚠ The shipped taper. Stated once here; `scene.ts` owns the constant. */
-const TAPER = 0.5;
+const PART = OBJECT_DIMS_M;
+/** ⭐ The pyramid, whose TOP face is a part's small face (the owner, 2026-09-25). */
+const PYRAMID = PYRAMID_DIMS_M;
+const TAPER = OBJECT_TOP_SCALE;
 
 /**
  * A box with **split vertices** — four per face, 24 in all — which is what Babylon's builder
@@ -139,11 +144,33 @@ describe("⭐ taperTop — the arithmetic, and what it deliberately leaves alone
     expect(e.base[2]).toBeCloseTo(PYRAMID[2], 7);
     expect(e.top[0]).toBeCloseTo(PYRAMID[0] * TAPER, 7);
     expect(e.top[2]).toBeCloseTo(PYRAMID[2] * TAPER, 7);
-    // ⚠ The height is untouched — a taper is not a squash, and the 50% thickening was `x`
-    // ALONE: `y` and `z` are still a part's.
+    // ⚠ The height is untouched — a taper is not a squash.
     expect(e.base[1]).toBeCloseTo(PYRAMID[1], 7);
-    expect(e.base[0]).toBeCloseTo(PART[0] * 1.5, 7);
-    expect(e.base[2]).toBeCloseTo(PART[2], 7);
+  });
+
+  it("⭐⭐⭐ THE OWNER'S RULE: THE SMALL FACE **IS** A PART'S SMALL FACE", () => {
+    // > *"scale the pyramid so that the small rectangular face has the same dimensions as the
+    // > small rectangular face of the grey rectangle"* — the owner, 2026-09-25
+    //
+    // ⭐ A part is `L × 2L × 3L`, so its small rectangular face is `L × 2L`. The frustum's small
+    // face is its TOP. ⚠ RED against the `1.5L × 2L × 3L` body this scaled from, whose top was
+    // `0.75L × 1.5L` — and red against ANY non-uniform rescale, because both axes are asserted.
+    const { positions } = splitBox(PYRAMID);
+    const e = extentsOf(taperTop(positions, TAPER) as Float32Array);
+    expect(e.top[0]).toBeCloseTo(PART[0], 7);
+    expect(e.top[2]).toBeCloseTo(PART[1], 7);
+    // ⛔⛔ THE SCALE IS UNIFORM **IN THE TWO AXES THE SMALL FACE LIVES IN**, which is the property
+    // that lets one factor satisfy both. ⚠ Stated as a ratio against the part rather than as
+    // literals, so it cannot be satisfied by a fixture retyped from the product.
+    const k = e.base[0] / (PART[0] * 1.5);
+    expect(e.base[2] / PART[2]).toBeCloseTo(k, 6);
+    expect(k).toBeCloseTo(4 / 3, 6);
+    // ⭐⭐ **AND THE HEIGHT CARRIES A QUARTER OFF ON TOP** — the owner, 2026-09-25: *"reduce the
+    // height of the pyramid by 25%."* ⛔ `y` is the TAPER axis, so shortening it cannot touch the
+    // top face: the two assertions above are the proof, not the argument.
+    expect(e.base[1] / PART[1]).toBeCloseTo(k * 0.75, 6);
+    // ⚠ `(8/3)L × 0.75` is exactly `2L` — the body is back on whole units.
+    expect(e.base[1]).toBeCloseTo(PART[1], 6);
   });
 
   it("`topScale` of 0 gives a true pyramid — the top collapses to a point", () => {
@@ -244,7 +271,7 @@ describe("⭐⭐⭐ THE COMPOSITION — what the tapered body presents to the re
     }
   });
 
-  it("⭐⭐⭐ PRESERVES THE BOOT CLEARANCE — 320 mm between the two parts, by surface", () => {
+  it("⭐⭐⭐ THE BOOT CLEARANCE, MEASURED THROUGH THE REAL TAPERED HULL", () => {
     // ⛔⛔ THE REASON THE TAPER GOES UPWARD RATHER THAN ABOUT THE CENTRE. `tests/highlight.test.ts`
     // asserts 0.32 between `objectA` and `objectB` at rest and requires the capture threshold to
     // sit clear of it by a real factor. ⚠ That fixture models both parts as BOXES; this one runs
@@ -254,11 +281,20 @@ describe("⭐⭐⭐ THE COMPOSITION — what the tapered body presents to the re
     const b = shapeFromVertices(tapered);
     const gap = gapBetween(at(a.points, -0.2), at(b.points, +0.2));
     expect(gap).not.toBeNull();
-    // ⛔⛔ **300 mm, NOT THE 320 THIS VECTOR ASSERTED AN HOUR EARLIER.** The owner thickened
-    // the pyramid by `0.5L` in `x` on 2026-09-22, and the gap is `400 − 40 − 60`. ⭐ The number
-    // moved because the BODY moved, which is the vector working: a fixture that had kept 320
-    // would have gone on certifying a scene the product no longer builds.
-    expect(gap as number).toBeCloseTo(0.3, 7); // ⚠ float32, as above
+    // ⛔⛔ **280 mm, AND IT HAS NOW BEEN 320, 300, 281 AND 280 — ONCE PER TIME THE BODY MOVED.**
+    // `0.5L` thicker (2026-09-22), scaled 4/3, then a quarter off its height (2026-09-25). ⭐ The
+    // number moving is the vector working. ⚠⚠ **AND ONE OF THOSE MOVES DID NOT MOVE IT**: this
+    // file kept a RETYPED copy of the dimensions, so the product changed and the whole suite
+    // stayed green (defect 66). It reads `PYRAMID_DIMS_M` now.
+    //
+    // ⭐⭐ **AND IT AGREES WITH THE BOX MODEL EXACTLY AGAIN, WHICH IT DID NOT AN HOUR AGO.** The
+    // taper goes upward, so the frustum is narrower the higher you sample it. At `(8/3)L` tall its
+    // base sat BELOW `objectA`'s bottom, and the nearest material was a cross-section a little
+    // narrower than the base — 281 mm. ⛔ At `2L` the two bodies span the same `y`, so the base
+    // corner itself is the nearest point and the gap is `400 − 40 − 80` on the nose.
+    // ⚠ Worth stating rather than just re-baselining: the 1.3 mm was never slop, and a later
+    // height change will move it back.
+    expect(gap as number).toBeCloseTo(0.28, 6);
     // ⚠ And the margin is what the property is really about — the capture offset is ~60 mm of
     // world at the boot camera, so 300 mm is still five times clear of it.
     expect(gap as number).toBeGreaterThan(0.06 * 3);
@@ -279,5 +315,53 @@ describe("⭐⭐⭐ THE COMPOSITION — what the tapered body presents to the re
     expect(pts.length).toBe(24);
     const distinct = new Set(pts.map((q) => q.map((v) => v.toFixed(6)).join(",")));
     expect(distinct.size).toBe(8);
+  });
+});
+
+describe("⭐⭐⭐ `bootTilt` — the two parts' boot pose (the owner, 2026-09-25)", () => {
+  const deg = (q: readonly number[]) => (2 * Math.acos(Math.min(1, Math.abs(q[0]!))) * 180) / Math.PI;
+
+  it("⭐⭐ ROLL ABOUT z AND PITCH ABOUT x — the BOOT CAMERA's axes, not the body's", () => {
+    // ⛔⛔ THE READING THE WHOLE THING TURNS ON. `A7`'s gravity frame puts pitch on the horizontal
+    // screen axis and roll on the view direction flattened onto the ground; the camera boots on
+    // `−z` looking toward `+z` with `+x` to the right, so pitch is world `x` and roll world `z`.
+    // ⚠ RED against reading them as the body's own axes, which for a square body agree on the
+    // first rotation and diverge on the second.
+    const q = bootTilt(1);
+    const a = (BOOT_TILT_DEG * Math.PI) / 180;
+    const expected = qmul(qFromAxisAngle([1, 0, 0], a), qFromAxisAngle([0, 0, 1], a));
+    for (let i = 0; i < 4; i++)
+      expect(q[i]).toBeCloseTo(expected[i] as number, 12);
+  });
+
+  it("⛔⛔ THE TWO SENSES ARE OPPOSITE, AND THAT IS NOT THE SAME AS THE INVERSE", () => {
+    // ⭐ *"Same for the pyramid, in opposite senses"* — both angles negated, which for a
+    // composition of two rotations about DIFFERENT axes is not `conjugate(q)`.
+    // ⚠ RED against `bootTilt(-1) = qConj(bootTilt(1))`, which is the obvious wrong answer and
+    // agrees with the right one whenever the two axes are parallel — so a fixture built from one
+    // axis could not tell them apart.
+    const a = (BOOT_TILT_DEG * Math.PI) / 180;
+    const negated = qmul(
+      qFromAxisAngle([1, 0, 0], -a),
+      qFromAxisAngle([0, 0, 1], -a),
+    );
+    const conj = bootTilt(1);
+    const inverse = [conj[0], -conj[1], -conj[2], -conj[3]];
+    for (let i = 0; i < 4; i++)
+      expect(bootTilt(-1)[i]).toBeCloseTo(negated[i] as number, 12);
+    expect(
+      Math.abs(bootTilt(-1)[1] - (inverse[1] as number)) +
+        Math.abs(bootTilt(-1)[2] - (inverse[2] as number)) +
+        Math.abs(bootTilt(-1)[3] - (inverse[3] as number)),
+    ).toBeGreaterThan(1e-3);
+  });
+
+  it("⭐ the total swing is more than one 30° step and less than two", () => {
+    // ⚠ A cheap sanity assertion on the COMPOSITION rather than on its parts — `METHOD`: *a
+    // composition is a thing to MEASURE, not an emergent property.* Two 30° turns about
+    // perpendicular axes compose to about 42°.
+    expect(deg(bootTilt(1))).toBeGreaterThan(BOOT_TILT_DEG);
+    expect(deg(bootTilt(1))).toBeLessThan(2 * BOOT_TILT_DEG);
+    expect(deg(bootTilt(1))).toBeCloseTo(deg(bootTilt(-1)), 9);
   });
 });

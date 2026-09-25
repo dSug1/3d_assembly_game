@@ -626,133 +626,291 @@ without acting on it.
 the body is still advancing on is kept, even when another is a nearer exit"*, which is the sentence
 the owner rejected.
 
-
-
 ---
 
-## ⛔⛔⛔ **THE LEADING FACE FOLLOWS THE INPUT — and the memory I proposed was REJECTED**
+# ⭐⭐⭐ 62 — **THE GIZMO JITTER: §1.1's REST WINDOW WAS SHORTER THAN THE DEVICE'S EVENT INTERVAL**
 
-> *"when I transition fast from horizontal movement to vertical movement, there is a slight moment
-> when the green line passes through the left face and then relocate to the blue face. This is
-> annoying. Is that due to the inertia and lerp we have added to the translation movement?"*
->
-> *"I am not satisfied by your solution, so I discarded the commit. **You can lag the travel, but
-> the input itself has no lag. The gizmo repositioning should match the input, not the travel and
-> its lag.**"* — the owner, 2026-09-23
+*(2026-09-24. Found by the owner's HUD reading, after NINE wrong analyses of mine.)*
 
-⭐⭐ **THE QUESTION HAD A MEASURABLE ANSWER AND IT WAS NO**: `translateInertiaMs` is **7.6 ms**,
-half a frame, critically damped. ⛔ The lag was the **direction memory I had added an hour earlier**
-(defect 61) — `flickWindow` at 120 ms, reused because it was to hand rather than measured. After a
-change of direction the old travel fades as `e^(−t/τ)` while the new grows, so the face flips at
-roughly `τ/2`: 3–4 frames.
+> *"the motion keeps toggling back and forth very rapidly between MOVING and STATIONARY … When the
+> jitter does not happen, the motion is stable at MOVING."* — the owner
 
-⛔⛔ **AND MY FIRST ANSWER TO THAT WAS A DIAL, WHICH THE OWNER REFUSED.** Making the memory tunable
-kept the lag and handed the trade to a hand. ⭐ His correction is a rule, not a number: *the gizmo
-follows the INPUT*, which cannot lag. ⚠ `leadingFaceMemoryMs`, `accumulateTravel` and `decayTravel`
-are **deleted** with their vectors.
+## ⛔⛔⛔ THE CAUSE, IN ONE LINE
 
-✅ **SO THE RAY IS AIMED BY WHAT THE CHANNELS ASK FOR ON THE FRAME THEY ASK IT** — the mapped
-input, summed over both fingers, consumed every frame. ⛔ No accumulator, no time constant, and a
-change of direction moves the face on the very frame the hand changes it.
-⚠⚠ **WHAT IT GIVES UP, STATED**: `D54`'s chatter had two answers — the latch (defect 61 removed it)
-and the memory (this removes it). ⭐ What is left against chatter is the SEED: the held face wins an
-exact tie. If the gizmo flickers between two nearly-tied faces on a slow drag, that is this trade,
-and by the owner's own rule the fix belongs to the direction rather than to a latch.
+`AxisBand` declares an axis at rest after `restConfirmMs` of **silence**. Browsers dispatch pointer
+input **once per frame per pointer** — which is why `getCoalescedEvents()` exists in the W3C
+Pointer Events spec. ⚠ So the interval between a pointer's events IS the frame interval, and a rest
+timeout shorter than it declares a **steadily moving finger STOPPED**, over and over.
 
-⭐⭐⭐ `METHOD`, twice over: *a number borrowed because it was to hand is a guess wearing another
-rule's authority* — and *when a hand rejects a solution, the useful part is which PROPERTY it
-violated.* Here it was **latency**, and no value of a time constant could have satisfied it.
-
-✅ **AND THE MARKER IS A CIRCLE, NOT A DISC** — *"I asked you to insert a white circle at the
-center of the gizmo, not a white disc."* ⚠ The first build was a small SPHERE, which reads as a
-filled disc from every angle. ⭐ It is now a 48-segment OUTLINE, **billboarded** so it stays a
-circle rather than foreshortening to a line edge-on — which is exactly the pose a hand judges an
-approach from — sized in pixels through rule 6's tracking factor, and in the gizmo's own rendering
-group so the body cannot occlude it.
-
-
-
----
-
-## ⭐⭐⭐ **THE GIZMO'S RAY: THREE RULES, TWO REJECTED BY A HAND, AND ONE QUANTITY TO BLAME**
-
-**2026-09-23, three device reports in a row**, each rejecting the rule that answered the one before:
-
-1. *"there is a slight moment when the green line passes through the left face and then relocate
-   to the blue face"* — against a direction with **120 ms of memory**;
-2. *"still, there is a slight lag for the repositioning of the green line to the leadingface"* —
-   against the memory-free **vector SUM** of the channels;
-3. *"when I translate any object with a combination of dx on first touch and dy on second touch
-   (both not zero), the gizmo jitters position between faces. This occurs for rectangle as well as
-   for pyramid."* — against the **dominant channel**.
-
-⛔⛔⛔ **ALL THREE FAILURES ARE ONE QUANTITY: A PER-FRAME MAGNITUDE.** `A11`'s deadband emits an
-axis's travel in **bursts** — the excess over a dead radius, on whichever axis has crossed it — so
-under a perfectly steady two-finger push the channels take turns being the larger. ⭐ A sum built
-from those magnitudes wobbles; a winner chosen from them alternates; a memory that smooths them
-lags. ⚠ Each rule failed differently and none of them was about geometry.
-
-⭐⭐ **AND THE GEOMETRY MATTERED ONCE, WHICH IS WHY REPORT 2 WAS NOT TIMING.** Measured for
-`objectB` (half-extents `0.75 × 1.0 × 1.5 L`, sides leaning in by `0.1875`), the TOP face is the
-nearest exit only within **29.4°** of vertical:
+⭐ Measured on the owner's tablet, PRODUCTION build:
 
 ```
- 0deg off vertical -> top 1.00L  side 4.00L  => TOP
-20deg               -> top 1.06L  side 1.45L  => TOP
-29deg               -> top 1.14L  side 1.16L  => TOP
-30deg               -> top 1.15L  side 1.13L  => SIDE
-45deg               -> top 1.41L  side 0.89L  => SIDE
+  one finger   47–68 ms between that pointer's events
+  two fingers  57–87 ms          (a 120 Hz phone would be ~8 ms)
 ```
 
-⚠ So any residual horizontal travel above ~56% of the vertical kept the summed ray on the side,
-where the side genuinely IS the nearer exit. The gizmo was right and looked wrong.
+⛔ The shipped **30 ms was below even the one-finger gap.** Every axis had been toggling mid-drag
+since the day it was set; it only became visible when both fingers moved on straight diagonals, so
+each finger's `x` and `y` reversed together and both axes stopped at the same instant.
 
-✅ **THE RULE THAT STANDS: the ray is the sum of the axes BEING SHOWN, each with its own sense and
-EQUAL weight.** ⛔ The SET is stable — it is the same `displayedAxes` answer that decides which
-lines are drawn, so the face and the lines are one fact — and nothing in the ray depends on how
-much either channel emitted this frame. ⭐ One channel aims along its own axis with no lag; two aim
-at the diagonal between them and stay there.
+## ✅ THE FIX: THE WINDOW IS DERIVED FROM THE DEVICE
 
-⭐⭐⭐ `METHOD`: **when three different rules over one quantity all fail differently, the quantity
-is the defect.** ⚠ I answered each report by changing the rule — memory, then sum, then dominance
-— and the owner had to report three times before I stopped and asked what they had in common.
-⛔ They read a magnitude that `A11` was never going to deliver smoothly.
+```
+restMs(pointer) = clamp(restGapFactor × median(that pointer's recent event intervals), floor, 250)
+```
 
-⚠⚠ **AND TWO OF MY VECTORS COULD NOT FAIL**, caught by running mutants rather than by reading:
-one compared channels at a camera where the two candidate rules happen to agree, and one applied
-`Math.sign` on both sides of the boundary it was testing, so each half covered for the other.
-⭐ The first was fixed by SWEEPING for a camera where the rules disagree; the second by handing
-the rule raw magnitudes and demanding the same answer.
+⭐⭐ **The MEDIAN, not the worst gap** — the longest gaps are REVERSALS, where the finger genuinely
+stops and the browser dispatches nothing; feeding those in would inflate the window and defeat it.
+⚠ `restConfirmMs` is now the **floor and the seed** (50 ms), never the threshold. Tablet → ~150 ms;
+120 Hz phone → floors at 50 ms. Same meaning everywhere, timing following the hardware.
+✅ 10 vectors, four mutants, judged on the glass: *"working well."*
 
+## ⛔⛔⛔ NINE WRONG ANALYSES — READ THIS BEFORE PROPOSING A TENTH
 
+The gizmo's marker position, its existence gate, its channel set, a memory, a bounded hold, the
+device's event rate read as a channel decay, the anchor's orbit under rotation, sideways noise
+waking the roll, and press order. ⚠ **Every one was reasoned from the code and every one died to a
+single sentence of device evidence.** Several were shipped.
+
+⭐⭐ **THE TWO LESSONS, AND THEY COST A WEEK:**
+
+1. ⛔ *When a defect resists several correct-looking analyses, stop modelling the code and ask what
+   the HAND is doing — and ask which HUD FIELD moves.* The owner's *"motion keeps toggling"* named
+   the mechanism in one line after nine of my hypotheses had missed it. I was modelling the layer
+   that DISPLAYED the defect instead of measuring the layer that produced it.
+2. ⛔ *A threshold in milliseconds is a claim about the hardware.* 30 ms sat 3 ms below two frames
+   at 60 Hz — it was never safe on any device that drops a frame, and no amount of reasoning about
+   the rules above it could have been right.
+
+⚠ **Everything the earlier attempts produced is DELETED**, not archived: the case-A-vs-case-B
+distinction (false — both jitter), the noise-floor theory, the press-order theory, the
+roll-riding-on-translation rule, the leading-face ray and its memory, and the bounded hold. ⛔ They
+were wrong, and a wrong analysis kept "for the record" is a trap for the next reader.
 
 ---
 
-## ⛔⛔⛔ **THE GIZMO USES THE TRANSLATION'S OWN DEADBAND — and the owner found the fix**
+## 63 — ⭐⭐⭐ **TWO FACE NAMESPACES, AND A NO-OP THAT BROKE AN ALIGNMENT** (2026-09-25, the owner)
 
-> *"add a slight deadband on the delta position input so that there is no gizmo jitter. I suppose
-> there is a deadband for the object translation: **use the same deadband for the gizmo
-> repositioning**."* — the owner, 2026-09-23
+> *"I hitface face1, I align face1 with pioneerface (OK), I hit face2, I align face2 with
+> pioneerface (OK), I hit face1 again, I align face1 with pioneerface → in this last case, instead
+> of aligning, it disengages the alignment and it goes back to face1 fuchsia highlight. Why? I
+> would expect to continue the alignment logic instead."*
 
-⭐⭐⭐ **THE DEADBAND WAS ALREADY THERE, AND THE GIZMO WAS READING THE WRONG SIDE OF IT.** `A11`
-emits the **excess** over its dead radius, on whichever axis has crossed it — so *"did this channel
-emit this frame"* flickers in bursts even while a hand pushes both fingers steadily. ⛔ The gizmo's
-set of lines followed those bursts, and the face followed the set.
+⭐ **The report is three presses long, and only the third misbehaves** — which is what makes it
+worth reading twice. Nothing about the third press is different in kind; what differs is the
+*state* the first two left behind.
 
-⭐ The same machine also keeps a per-axis **STATE**: `MOVING` until that axis has rested for
-`restConfirmMs`. ⚠ That is the stable form of the same fact — one dead radius, one rest time,
-**shared with the translation rather than copied**, which is exactly what the owner asked for.
+### ⛔⛔⛔ THE CAUSE
 
-✅ `activeChannels(holderAxes, secondAxes)` applies the channel map to those states:
-the holder's screen `x` → the body's `x`, its screen `y` → `depth`, any second touchpoint's `y` →
-`gravity`. ⛔ `Recognizer.motionAxes` is exposed for it rather than a second definition of *moving*
-being written, and `AxisTravel.driven` — the per-frame emission test — is **deleted**, because it
-had exactly one reader and this replaces it.
+`pressMeaning` has exactly one configuration that deliberately does **nothing**: *this held body
+already follows this pressed body, on this very face.* The press does nothing, and the RELEASE
+undoes the alignment (`D39`) — so a hand that presses and holds has not silently lost the
+alignment it is looking at.
 
-⭐⭐ **THE ARC OF THIS ONE IS THE LESSON.** Four rules were tried for the gizmo's direction — a
-120 ms memory, the vector sum, the dominant channel, the channel set — and the first three failed
-on the same quantity: a per-frame magnitude. ⚠ The fourth held, and its remaining flicker came
-from the same place one level down: a per-frame BOOLEAN, *did it emit*. ⛔ The owner named the
-answer in one sentence, and it was to reuse a number the product already had.
-⭐ `METHOD`: *when a rule needs to know whether an input is active, ask the state machine that
-already decides it — do not re-derive it from what the input emitted this frame.*
+⛔ Under `D67` that test's two terms named faces of the **same** body. `D87` inverted the roles and
+the test was carried over unchanged, so it then compared
+
+* `alignedFaceOfHeld` — a face of the **held/Follower** body, against
+* `pressedFace` — a face of the **pressed/Pioneer** body.
+
+⚠ Face ids are generated **per body** (`f0…fN`, `mesh_topology.ts`), so `objectA/f4` and
+`objectB/f4` are different faces carrying the same string. The third press hit the collision,
+returned `NOTHING`, fell through to `D39`'s release — and **broke** the alignment the hand had
+just made. ⭐ The fuchsia highlight coming back is the *symptom of the break*, not a second bug:
+`hitFaceNow` refuses an aligned body, so the offer reappears the instant the alignment goes.
+
+### ✅ THE FIX
+
+⭐ The no-op now requires **three** terms, none of them compared across a namespace: same Pioneer
+**body**, same Pioneer **face**, and the same **HitFace** on the held body. ⛔ `PressContext`
+gained `pioneerFaceOfHeld` and `heldPressFace` to carry the two halves separately — the fix is
+in the *shape of the question*, not in a guard added beside it.
+
+### ⭐⭐ THE SHAPE, AND IT IS A NEW ONE
+
+*An identifier that is unique only within a scope becomes a defect the moment a rule reaches
+across scopes — and the reach is invisible, because both sides are typed `string`.*
+
+⚠ This is what made it survive the inversion's own vectors: every fixture used distinct face ids,
+so the collision was **unreachable by the suite** while being ordinary on the glass. ⭐ The vector
+that pins it now sets the two ids **equal on purpose**, which is the same discipline the
+2026-09-17 audit asked for — *a fixture chosen because it is easy to reason about is usually
+chosen from the set where the quantity under test is ZERO.*
+
+---
+
+## 64 — ⭐⭐⭐ **THE UNDO DIED BECAUSE A LINE KEPT NAMING THE FINGER IT USED TO MEAN** (2026-09-25, the owner)
+
+> *"Re-press the same pair on the same faces … this does not work: if I press again a followerFace
+> and its pioneerface, the follower simply rotates to send the followerface 180 degrees out."*
+
+### ⛔⛔⛔ THE CAUSE
+
+`alignFollowerToPioneer` ends by wiping `pressFace` on the grip that is about to lift — *a
+transient grip must not leave a stale face behind*, which is a good rule. ⛔ Under `D67` the
+transient finger was the **Follower's** second touch, so the line read `followerGrip.pressFace =
+null`. ⚠⚠ `D87` made the Follower the **held** body, and the line went on clearing it: the one
+finger that has to keep its face for the whole hold.
+
+⭐ Downstream, `pressMeaning` compared a live `alignedFaceOfHeld` against a `heldPressFace` that
+was now always `null`, so *this body already follows this face* could never be true and `D39`'s
+re-press had nothing to fire. The **next** press on the same hold then died earlier still, at
+`align: press resolved no face`.
+
+### ⭐⭐ THE COMMENT ABOVE THE LINE HAD ALREADY WARNED ABOUT IT, AIMED THE OTHER WAY
+
+> *"Clearing the held grip's face instead would make the second Follower fail with no resolved
+> PioneerFace — the same line, aimed at the wrong finger."*
+
+⛔⛔ **An inversion does not have to touch a line to break it; it only has to change which finger
+the line names.** ⚠ That is the same shape as defect 63 one layer up, and the same shape as `D89`
+one layer down — three in one day, all from `D87`, none of them able to go red.
+
+### ✅ THE FIX
+
+⭐ The transient grip is an **argument** now, because the two call sites genuinely disagree: on a
+PRESS the Pioneer's touch is the new one, on a RELEASE the follower's is the one lifting. ⛔ A
+fixed answer is wrong for one of them whichever way it points. `METHOD`: *when two callers
+disagree about a fact, the fact is an argument, not a constant.*
+
+⚠ **Still open, and reported with the fix**: the RELEASE path's `tapMeaning` is still written in
+`D67`'s direction, so the undo arrives through the cycle guard and the HUD says *"would cycle —
+broke X's own alignment instead"*. Right outcome, lying readout.
+
+⚠⚠ **And a second reading of the report survives**: if the holder is LIFTED and re-pressed before
+the PioneerFace is pressed, what happens is a genuine re-point — after `D78` the FollowerFace
+points **at** the Pioneer, so the face a finger can reach is usually the opposite one, and aligning
+that one swings the body ~180°. ⭐ *When two readings fit one device report, name both* — the
+2026-09-17 lesson, applied to the same file that earned it.
+
+---
+
+## 65 — ⭐⭐ **A FIXTURE SET WHERE THE QUANTITY UNDER TEST WAS ZERO, CAUGHT BY A MUTANT** (2026-09-25)
+
+⭐ Not a device defect — a **vector** defect, found while proving `D90`'s new rule could fail.
+
+`cycleBreaker` answers *whose alignment must be released for this link to be legal*. A mutant that
+**deleted its cycle test entirely** — `if (false) return null` — stayed green against the whole
+first fixture set.
+
+⛔⛔ The reason is the 2026-09-17 audit's own shape. Every *legal link* fixture happened to use a
+prospective Pioneer with **no Pioneer of its own**, so the mutant's fallback (`does this body have
+an outgoing link?`) was `null` in all of them. ⚠ The quantity that separated the real rule from the
+mutant was **zero in every case chosen to be easy to reason about**.
+
+✅ The vector added is the ordinary assembly chain — `a→b→c`, then aligning `d` to `b`, which closes
+nothing and must not cost `b` its link. ⭐ *A fixture chosen because it is easy to reason about is
+usually chosen from the set where the quantity under test is ZERO* — and the only reliable way to
+find out is to run the mutant.
+
+---
+
+## 66 — ⭐⭐⭐ **THE PRODUCT CHANGED SHAPE AND 1125 VECTORS STAYED GREEN** (2026-09-25)
+
+⭐ Found by changing something, not by a finger — and the change was the owner's, so the vector
+that should have caught it was under a hand at the time.
+
+The owner scaled the pyramid. `render/scene.ts` owned `PYRAMID_DIMS_M`, and
+`tests/highlight.test.ts` and `tests/frustum.test.ts` each kept **their own retyped copy**:
+
+```ts
+const PYRAMID: [number, number, number] = [1.5 * SIZE, 2 * SIZE, 3 * SIZE];
+```
+
+⛔⛔ So the product's body moved and the fixtures' body did not. The whole suite passed, including
+the vector whose entire stated job is to guard the boot clearance — *"a fixture that had kept 320
+would have gone on certifying a scene the product no longer builds"*, which is a sentence that was
+sitting inside the very test that then did exactly that.
+
+### ⭐⭐⭐ THE SHAPE
+
+*A fixture that mirrors a constant is a second implementation of that constant, and it disagrees
+exactly when the constant is the thing being changed* — the one moment the vector existed to
+cover. ⚠ It is this project's own *shadow copy* scar (`frozenIds`, the `Map<name, dims>`, the
+three globals the 2026-09-17 audit found) aimed one layer out, at the suite instead of the code.
+
+⛔ **The tell is not visible in a review**, because both copies are correct on the day they are
+written. It becomes visible only when one of them is edited, and then it presents as *everything
+is green*, which is the one signal nobody investigates.
+
+### ✅ THE FIX
+
+`src/core/scene_dims.ts` — one home, engine-free, read by `scene.ts` and by both suites. ⭐ Three
+assertions went **red the moment they were wired to it**, which is the proof they can.
+
+⚠ And the numbers themselves are now stated as relations rather than literals wherever the
+instruction was a relation: the pyramid's top face is asserted equal to `OBJECT_DIMS_M`, not to
+`0.08`, so a fixture cannot be satisfied by retyping the answer.
+
+---
+
+## 67 — ⚠ **FOUR FIXTURE ERRORS IN ONE FILE, AND TWO WERE THE SAME OLD ONE** (2026-09-25)
+
+⭐ Not product defects — `tests/ring.test.ts`'s first draft, kept because `METHOD`'s fifth shape is
+*my own fixtures* and this is what it looks like in practice.
+
+* **Two float32 traps.** Positions are a `Float32Array` all the way to the collision hull, so
+  `0.32` is held as `0.31999999`. ⚠ `toBeCloseTo(…, 9)` demands `5e-10` of a representation whose
+  own step there is `3e-8`. ⛔ `tests/frustum.test.ts` **already documents this exact trap**, and
+  I walked into it again in a file written an hour later.
+* **A flat quad's centroid is on the chord, not the arc** — `radius · cos(π/n)`, 0.9914 of the
+  radius at 24 segments. The vector asserted the radius and failed by 1.4 mm.
+* **An edge count guessed at `4N` when it is `6N`.** Counted afterwards: each annulus gives its
+  outer rim and its hole's rim, and each wall's axial edges are boundary edges of two different
+  logical faces. ⭐ Same shape `frustum.test.ts` records: *a vector written from an assumption
+  about the code is not a vector about the code.*
+
+⛔ All four looked exactly like real defects for as long as it took to read them.
+
+---
+
+## 68 — ⭐⭐⭐ **A CORRECT MESH THAT LOOKED LIKE A TORUS** (2026-09-25, the owner)
+
+> *"you did not do a cylinder, you did a doughnut. add bevels on the sharp edges to keep them
+> sharp. reduce both radius by half."*
+
+⛔⛔ **THE GEOMETRY WAS RIGHT.** A hollow cylinder, flat annular ends, correct outward normals, ten
+green vectors including one that asserts every face looks the way the profile says. ⚠ What was
+wrong was the **shading**: the wall and the end face **share their rim vertices**, so
+`VertexData.ComputeNormals` averaged across the rim and blended one surface into the other over the
+whole face.
+
+⭐⭐⭐ *A hard edge shaded as a soft one is a torus to the eye, whatever the vertices say.*
+
+### ⭐⭐ THE OWNER NAMED THE FIX, AND IT IS THE MODELLER'S ONE
+
+*Add bevels on the sharp edges to keep them sharp* sounds self-contradictory and is not: a narrow
+chamfer confines the whole normal transition to a band a millimetre wide, so the rim reads as a
+crisp line **and the curved wall stays smooth**. ⛔ The fix I would have reached for — splitting the
+rim vertices so each face carries its own normal — keeps the rim sharp by facetting the cylinder
+into 24 visible flats, which is a second defect.
+
+### ⛔ WHAT IT COST, STATED
+
+`146` logical faces on one body, against a cuboid's 6: four chamfer bands at `N` faces each, on top
+of the two walls. ⚠ Every one is separately tappable, highlightable and mate-able.
+
+### ⭐ THE SHAPE
+
+*A vector suite that reads the geometry cannot see the shading, and the shading is what a hand
+judges.* ⛔ Ten vectors passed on a body the owner rejected on sight — and they were not weak
+vectors, they were vectors about the wrong layer. ⚠ This is rule 5 doing the only job it can do.
+
+---
+
+## 69 — ⚠ **A MUTANT FOUND AN ARM NOTHING COULD ENTER** (2026-09-25)
+
+`addQuad` took the direction a face **looks** and derived the corner order from it — a guard that
+reads as careful. ⛔ A mutant that deleted the derivation entirely left the mesh **byte-identical**:
+all eight bands hand their corners over in the same rotational order, so one arm was never taken.
+
+⚠ *A branch nothing can enter is the dormant-fork shape* `D28` and `D40` refused, and a safety net
+nothing can fall into is not a safety net. ✅ Deleted.
+
+⭐⭐ **AND TWO MORE MUTANTS HAD SURVIVED FOR A DEEPER REASON**: inverting the profile normal, and
+ignoring the stated outward, both flip the winding **globally** — and `meshTopology` decides outward
+by **signed volume**, so it silently corrects them and every normal assertion passes. ⛔ What it
+cannot correct is the RENDERER: a globally reversed mesh is culled inside-out on the glass, with a
+green suite. ✅ The suite now pins the **sign of the signed volume** as well, which is the half the
+topology layer cannot recover — `mesh_topology`'s own *"no outline of any sort"* scar, aimed at the
+other layer.

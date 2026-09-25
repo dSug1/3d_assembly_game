@@ -186,3 +186,10 @@ is an `OUTSIDE` touchpoint: roll or depth by the mode, exactly as a finger on th
 a part to it, so filtering that one would delete the plate from the alignment model.
 ⭐ `input/frozen_pick.ts`, 6 vectors, and the rule was mutated to confirm they fail without it.
 
+---
+
+## ⭐ STATUS TEXT MOVED DOWN FROM `QUEUE.md`, 2026-09-25
+
+⛔ The row stays in the queue; only its essay came here, to pay for `D87`–`D92`.
+
+✅✅ **CLOSED 2026-09-14**, 22 + 8 vectors, confirmed by finger — `src/input/router.ts`, engine-free and generic over an opaque object handle. Three roles latched at press for the touchpoint's lifetime; §0 order-independence keyed by pointer id. ⭐⭐ **ITS LATCH HAS NO EXCEPTIONS AGAIN** since `D54` deleted `A15`'s orphan unselect. ⭐ **A second touch on a FROZEN body is filtered to a MISS before the latch** (`input/frozen_pick.ts`, 2026-09-23) — the router still knows nothing about the model, and the finger becomes a working `OUTSIDE` touchpoint. ⛔⛔ **OPEN RISK, 2026-09-18**: a **stale grip** kills orbit AND zoom together — tell: *both camera rules dead, `active=` non-zero, no finger down*. ⚠ Unfixed, reload clears it (this file)
