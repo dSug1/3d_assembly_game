@@ -35,8 +35,8 @@ import {
 import {
   MouseSecondTouch,
   MOUSE_SECOND_ID,
+  type MouseAction,
   type MouseInput,
-  type SecondTouchAction,
 } from "../input/mouse_second_touch";
 
 export interface MouseSecondTouchHandle {
@@ -52,9 +52,12 @@ export function attachMouseSecondTouch(
   let seen = 0;
   let sent = 0;
   let last = "—";
+  // ⭐ The mouse's own pointer id, read off every real event — a `REAL` action re-issues THAT
+  // pointer at its own position, so it must carry the same id the scene latched a role for.
+  let realId = 1;
 
-  /** Deliver one synthetic action for touchpoint #2 straight to the scene's handler. */
-  const deliver = (a: SecondTouchAction): void => {
+  /** Deliver one synthetic action straight to the scene's handler. */
+  const deliver = (a: MouseAction): void => {
     const type =
       a.kind === "DOWN"
         ? PointerEventTypes.POINTERDOWN
@@ -64,10 +67,10 @@ export function attachMouseSecondTouch(
     const evt = new PointerEvent(
       a.kind === "DOWN" ? "pointerdown" : a.kind === "MOVE" ? "pointermove" : "pointerup",
       {
-        pointerId: MOUSE_SECOND_ID,
-        // ⭐ `touch`, so anything downstream that ever distinguishes sees ONE kind of input —
-        // and so this adapter's own pre-observer ignores it.
-        pointerType: "touch",
+        pointerId: a.target === "SECOND" ? MOUSE_SECOND_ID : realId,
+        // ⭐ #2 is `touch`; a re-issued real pointer stays `mouse`. ⚠ Neither passes through the
+        // pre-observer — `notifyObservers` goes straight to the scene's handler.
+        pointerType: a.target === "SECOND" ? "touch" : "mouse",
         clientX: a.x,
         clientY: a.y,
         buttons: a.kind === "UP" ? 0 : 1,
@@ -79,7 +82,7 @@ export function attachMouseSecondTouch(
     const pick = scene.pick(a.x - rect.left, a.y - rect.top);
     scene.onPointerObservable.notifyObservers(new PointerInfo(type, evt, pick), type);
     sent++;
-    last = `${a.kind}@${a.x.toFixed(0)},${a.y.toFixed(0)}`;
+    last = `${a.target}.${a.kind}@${a.x.toFixed(0)},${a.y.toFixed(0)}`;
   };
 
   const apply = (input: MouseInput, pi?: { skipOnPointerObservable: boolean }): void => {
@@ -103,6 +106,7 @@ export function attachMouseSecondTouch(
             : null;
     if (type === null) return;
     seen++;
+    realId = e.pointerId;
     apply(
       {
         type,

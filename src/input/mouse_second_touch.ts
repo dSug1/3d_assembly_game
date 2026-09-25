@@ -7,35 +7,44 @@
  * ## ⛔⛔⛔ WHAT THE PREVIOUS BUILD GOT WRONG, NAMED SO THIS ONE CANNOT
  *
  * Four rounds on the glass, four regressions, and every one was a **premise**, not a bug in a
- * gesture rule: that the desktop did not already work (it did — a mouse was touchpoint #1 with
- * no layer at all); that a synthetic DOM `PointerEvent` would be delivered (Babylon's device
- * layer swallowed it); that a hand presses the left button first; and that a latch remembering
- * the buttons could stand in for the buttons.
+ * gesture rule: that the desktop did not already work (a mouse was touchpoint #1 with no layer at
+ * all); that a synthetic DOM `PointerEvent` would be delivered (Babylon's device layer swallowed
+ * it); that a hand presses the left button first; and that a latch remembering the buttons could
+ * stand in for the buttons. ⭐ This module reads `buttons` on every event and never touches a DOM
+ * pointer event — see `render/mouse_adapter.ts`.
  *
- * ⭐⭐ **SO THIS MODULE HAS EXACTLY ONE JOB AND MODELS EXACTLY ONE THING.** It decides what the
- * RIGHT button means, and it models the second touchpoint — nothing else. ⛔ The first touchpoint
- * is the browser's own mouse pointer and is never represented here, because representing it is
- * what broke it.
+ * ## ⛔⛔⛔ AND WHAT ITS OWN FIRST VERSION GOT WRONG: ONE CURSOR, TWO ABSOLUTE POINTERS
+ *
+ * > *"To reach the gravity axis translation I need to press first left click and hold and then
+ * > press right click. It does not work in the other order. Also, when I release the right click,
+ * > the object jumps to another position which is probably the accumulated value of the left
+ * > click."* — the owner, 2026-09-25
+ *
+ * ⛔ **The jump:** while Shift drove #2, the real pointer's moves were skipped, so the scene's #1
+ * stood still while the cursor wandered — and the next move it received arrived at the cursor's
+ * CURRENT position, delivering the whole wander as one step. ⭐⭐ **One cursor cannot drive two
+ * pointers at absolute positions.** Once two exist, the cursor must act RELATIVELY, like a
+ * trackpad: each pointer keeps its own position, and the cursor's DELTA goes to whichever one it
+ * drives. So the real pointer's position is tracked here too — but only its position, only while
+ * it is down, and it is reconciled against `buttons` like everything else.
+ *
+ * ⛔ **The order dependence:** Shift meant *drive the synthetic pointer*, but the synthetic
+ * pointer's ROLE depends on press order — `IN2` latches roles by arrival. Right-first makes #2 the
+ * HOLDER, so Shift drove the holder. ⭐⭐ Shift now means **drive the pointer pressed SECOND**,
+ * whichever button that was. Without Shift the cursor drives the one pressed FIRST.
  *
  * ## ⭐ THE RULES, ALL OF THEM
  *
- * | event | verdict |
+ * | situation | the cursor drives |
  * |---|---|
- * | right button DOWN | #2 presses at the cursor; the real event is **skipped** |
- * | right button UP | #2 lifts **where it was parked**; skipped |
- * | MOVE, #2 down, and (`Shift` held OR the left button is up) | #2 moves; skipped |
- * | MOVE otherwise | untouched — the cursor drives the real pointer |
- * | anything else | untouched |
+ * | only one pointer down | that pointer |
+ * | both down, no Shift | the pointer pressed **first** |
+ * | both down, Shift | the pointer pressed **second** |
  *
- * ⛔⛔ **`buttons` IS READ ON EVERY EVENT, AND NOTHING IS REMEMBERED ABOUT THE REAL POINTER.**
- * `PointerEvent.buttons` is the browser's own mask of what is down right now, maintained from the
- * OS. ⚠ The one piece of state here — is #2 down, and where — is **reconciled** against bit 2 on
- * every event: a clear bit while #2 is down means its release was never seen (off the page, or a
- * cancel), and #2 lifts at once.
- *
- * ⭐ **A LONE RIGHT PRESS IS NOT REFUSED.** It is a second touch with no first one — the model has
- * no relation for it (`D87`), but it is a valid press of a pointer, and the cursor drives it while
- * it is the only thing down, so nothing is ever *held by a finger the cursor cannot move*.
+ * ⭐⭐ **AND WHEN NO POINTER HAS BEEN OFFSET, EVERY REAL EVENT PASSES UNTOUCHED** — byte-identical to
+ * `6a28e62`, where a mouse already was touchpoint #1. An offset exists only after the cursor has
+ * driven #2 while the real pointer was down; from then until the real pointer lifts, its moves
+ * and its release are re-issued at its own position instead of the cursor's.
  *
  * ⛔ ENGINE-FREE and DOM-free. Plain records in, a plain verdict out.
  */
@@ -43,14 +52,14 @@
 /** ⚠ Well clear of any real `pointerId`, which browsers hand out as small integers. */
 export const MOUSE_SECOND_ID = 9002;
 
-/** ⚠ DOM numbering: `0` left, `1` middle, `2` right, `-1` for a move or a cancel. */
-export const RIGHT_BUTTON = 2;
+const LEFT_BUTTON = 0;
+const RIGHT_BUTTON = 2;
 const LEFT_BIT = 1;
 const RIGHT_BIT = 2;
 
 export interface MouseInput {
   readonly type: "DOWN" | "MOVE" | "UP" | "CANCEL";
-  /** `PointerEvent.button`. Ignored for `MOVE` and `CANCEL`. */
+  /** `PointerEvent.button` — `0` left, `2` right, `-1` for a move or a cancel. */
   readonly button: number;
   /** `PointerEvent.buttons` — the browser's mask AFTER this event. */
   readonly buttons: number;
@@ -59,8 +68,12 @@ export interface MouseInput {
   readonly y: number;
 }
 
-/** One synthetic action for touchpoint #2. The id is always `MOUSE_SECOND_ID`. */
-export interface SecondTouchAction {
+/**
+ * One synthetic action. ⚠ `REAL` re-issues the mouse's own pointer at its own position — the
+ * adapter fills in the real `pointerId`. `SECOND` is touchpoint #2, id `MOUSE_SECOND_ID`.
+ */
+export interface MouseAction {
+  readonly target: "REAL" | "SECOND";
   readonly kind: "DOWN" | "MOVE" | "UP";
   readonly x: number;
   readonly y: number;
@@ -68,87 +81,162 @@ export interface SecondTouchAction {
 
 export interface Verdict {
   /**
-   * ⛔ `true` = the REAL event must not reach the scene. ⚠ This is the layer's whole blast radius,
-   * and it is `true` only when the right button, or a move that belongs to #2, is standing in for
-   * a touchpoint the mouse does not have.
+   * ⛔ `true` = the REAL event must not reach the scene. ⚠ The layer's whole blast radius: `true`
+   * only for the right button, for a move the cursor gives to another pointer, and for a real
+   * event that has to be re-issued at an offset position.
    */
   readonly skip: boolean;
-  /** Synthetic actions for #2, to be delivered BEFORE the real event is processed. */
-  readonly emit: readonly SecondTouchAction[];
+  /** Synthetic actions, delivered BEFORE the real event is processed. */
+  readonly emit: readonly MouseAction[];
 }
 
 const PASS: Verdict = { skip: false, emit: [] };
 
-export class MouseSecondTouch {
-  /** Where #2 is parked, or `null` when it is up. The only state. */
-  private parked: { x: number; y: number } | null = null;
+interface Pt {
+  x: number;
+  y: number;
+}
 
-  get isDown(): boolean {
-    return this.parked !== null;
+export class MouseSecondTouch {
+  /** #2: where it is, and whether it was pressed BEFORE the real pointer. */
+  private second: (Pt & { first: boolean }) | null = null;
+  /** The real pointer's position AS THE SCENE KNOWS IT, while the left button holds it down. */
+  private real: Pt | null = null;
+  /** The last cursor position, for the delta. */
+  private cursor: Pt | null = null;
+
+  get isSecondDown(): boolean {
+    return this.second !== null;
+  }
+
+  /** ⚠ Diagnostics: is the real pointer currently re-issued away from the cursor? */
+  get isOffset(): boolean {
+    return this.real !== null && this.cursor !== null && !same(this.real, this.cursor);
   }
 
   step(ev: MouseInput): Verdict {
-    const emit: SecondTouchAction[] = [];
+    const emit: MouseAction[] = [];
     let skip = false;
+    const dx = this.cursor === null ? 0 : ev.x - this.cursor.x;
+    const dy = this.cursor === null ? 0 : ev.y - this.cursor.y;
+    const here: Pt = { x: ev.x, y: ev.y };
 
     switch (ev.type) {
       case "DOWN":
+        // ⛔ RECONCILED FIRST for a press too: #2's press order is recorded from `real`, and a
+        // left release the window missed must not make a right press think it came second.
+        this.reconcile(ev, emit);
         if (ev.button === RIGHT_BUTTON) {
-          // ⚠ A second DOWN for a button already down is not a second touchpoint.
-          if (this.parked === null) {
-            this.parked = { x: ev.x, y: ev.y };
-            emit.push({ kind: "DOWN", x: ev.x, y: ev.y });
+          if (this.second === null) {
+            // ⭐ `first` is a fact about #2's OWN press, recorded once — `IN2` latches the role
+            // at the same instant, so the two cannot disagree.
+            this.second = { x: ev.x, y: ev.y, first: this.real === null };
+            emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
           }
           skip = true;
+        } else if (ev.button === LEFT_BUTTON && this.real === null) {
+          // ⭐ The real pointer presses where the cursor IS, so it starts with no offset and the
+          // event passes untouched.
+          this.real = { ...here };
         }
         break;
 
       case "UP":
         if (ev.button === RIGHT_BUTTON) {
-          // ⛔ Skipped even with nothing to lift: a right-button UP reaching Babylon is an UP of the
-          // mouse's ONE pointer, which would release touchpoint #1 while the left is still held.
+          // ⛔ Skipped even with nothing to lift: a right-button UP reaching Babylon is an UP of
+          // the mouse's ONE pointer, which would release touchpoint #1 while the left is held.
           skip = true;
-          if (this.parked !== null) {
-            // ⛔⛔ Lifted WHERE IT WAS PARKED, never at the cursor — a parked pointer's last
-            // position is its own, and a lift elsewhere is one enormous step to `A11`'s deadband.
-            emit.push({ kind: "UP", x: this.parked.x, y: this.parked.y });
-            this.parked = null;
+          if (this.second !== null) {
+            // ⛔⛔ Lifted WHERE IT IS, never at the cursor — a lift elsewhere is one enormous step.
+            emit.push({ target: "SECOND", kind: "UP", x: this.second.x, y: this.second.y });
+            this.second = null;
           }
+        } else if (ev.button === LEFT_BUTTON && this.real !== null) {
+          const at = this.real;
+          this.real = null;
+          // ⭐⭐ THE JUMP'S OTHER HALF: an offset pointer is released where the SCENE has it.
+          if (!same(at, here)) {
+            emit.push({ target: "REAL", kind: "UP", x: at.x, y: at.y });
+            skip = true;
+          }
+        } else if (ev.button !== LEFT_BUTTON && ev.button !== RIGHT_BUTTON) {
+          // ⚠ A cancel (`button` −1) passes through: Babylon releases the real pointer itself.
+          if ((ev.buttons & LEFT_BIT) === 0) this.real = null;
         }
         break;
 
-      case "MOVE":
-        if (this.parked !== null) {
-          const leftDown = (ev.buttons & LEFT_BIT) !== 0;
-          // ⭐⭐ THE CURSOR DRIVES #2 WHEN IT IS THE ONLY POINTER DOWN, OR WHEN SHIFT SAYS SO.
-          // Otherwise it drives the real pointer and #2 stays parked — which is exact: `A11`'s
-          // position deadband makes a still pointer emit nothing, and `D43` says channels SUM.
-          if (ev.shift || !leftDown) {
-            this.parked.x = ev.x;
-            this.parked.y = ev.y;
-            emit.push({ kind: "MOVE", x: ev.x, y: ev.y });
+      case "MOVE": {
+        // ⛔ RECONCILED FIRST for a move: a pointer whose button the mask says is up must not
+        // receive one last move before it is lifted.
+        this.reconcile(ev, emit);
+        const moved = dx !== 0 || dy !== 0;
+        const driven = this.drivenBy(ev.shift);
+        if (driven === "SECOND" && this.second !== null) {
+          this.second.x += dx;
+          this.second.y += dy;
+          if (moved)
+            emit.push({ target: "SECOND", kind: "MOVE", x: this.second.x, y: this.second.y });
+          // ⚠ Skipped even when still: the real event would move #1, which the cursor is not driving.
+          skip = true;
+        } else if (driven === "REAL" && this.real !== null) {
+          this.real.x += dx;
+          this.real.y += dy;
+          // ⭐⭐ UNTOUCHED WHILE THERE IS NO OFFSET — the path `6a28e62` proved.
+          if (!same(this.real, here)) {
+            if (moved)
+              emit.push({ target: "REAL", kind: "MOVE", x: this.real.x, y: this.real.y });
             skip = true;
           }
         }
         break;
+      }
 
       case "CANCEL":
-        if (this.parked !== null) {
-          emit.push({ kind: "UP", x: this.parked.x, y: this.parked.y });
-          this.parked = null;
+        if (this.second !== null) {
+          emit.push({ target: "SECOND", kind: "UP", x: this.second.x, y: this.second.y });
+          this.second = null;
         }
         break;
     }
 
-    // ⭐⭐⭐ RECONCILE AGAINST THE BROWSER'S MASK, LAST, ON EVERY POINTER EVENT. ⛔ If bit 2 is
-    // clear and #2 is still down, its release was never delivered — and #2 lifts now, before the
-    // rules act on whatever this event is. ⚠ The right button's own UP has already cleared
-    // `parked` above, so this cannot lift it twice.
-    if (ev.type !== "CANCEL" && this.parked !== null && (ev.buttons & RIGHT_BIT) === 0) {
-      emit.push({ kind: "UP", x: this.parked.x, y: this.parked.y });
-      this.parked = null;
-    }
+    // ⭐ A RELEASE is reconciled LAST: the explicit branches above have already cleared the
+    // state for an ordinary release, so nothing is lifted twice.
+    if (ev.type === "UP") this.reconcile(ev, emit);
 
+    this.cursor = here;
     return emit.length === 0 && !skip ? PASS : { skip, emit };
   }
+
+  /**
+   * ⭐⭐⭐ **RECONCILE AGAINST THE BROWSER'S MASK.** ⛔ A clear bit while this module still holds that
+   * pointer down means its release was never delivered — off the page, or a cancel. Lifted where
+   * it is, before the rules act on anything else. ⚠ This is why nothing here is a latch: every
+   * piece of state is re-checked against the mask the OS maintains, on every event.
+   */
+  private reconcile(ev: MouseInput, emit: MouseAction[]): void {
+    if (this.second !== null && (ev.buttons & RIGHT_BIT) === 0) {
+      emit.push({ target: "SECOND", kind: "UP", x: this.second.x, y: this.second.y });
+      this.second = null;
+    }
+    if (this.real !== null && (ev.buttons & LEFT_BIT) === 0) {
+      emit.push({ target: "REAL", kind: "UP", x: this.real.x, y: this.real.y });
+      this.real = null;
+    }
+  }
+
+  /**
+   * ⭐⭐ WHICH POINTER THE CURSOR DRIVES. Alone, the one that is down. Both down: the one pressed
+   * FIRST, or with Shift the one pressed SECOND — whichever button each was.
+   */
+  private drivenBy(shift: boolean): "REAL" | "SECOND" | null {
+    if (this.second === null) return this.real === null ? null : "REAL";
+    if (this.real === null) return "SECOND";
+    const secondIsFirst = this.second.first;
+    // no Shift → the first-pressed pointer; Shift → the second-pressed one
+    return shift !== secondIsFirst ? "SECOND" : "REAL";
+  }
+}
+
+function same(a: Pt, b: Pt): boolean {
+  return a.x === b.x && a.y === b.y;
 }

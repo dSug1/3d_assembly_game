@@ -961,3 +961,23 @@ failed hardest. ⚠ Six mutants, six red — each one a failure mode of the prev
 
 ⭐⭐⭐ `METHOD`: *an input mapping's failure modes live in its premises about the hand, not in its
 code — and the only instrument that reads a premise about a hand is a hand.*
+
+### ⛔⛔ AND THE REBUILD'S OWN FIRST VERSION: ONE CURSOR, TWO ABSOLUTE POINTERS
+
+> *"To reach the gravity axis translation I need to press first left click and hold and then press
+> right click. It does not work in the other order. Also, when I release the right click, the
+> object jumps to another position which is probably the accumulated value of the left click."*
+
+⭐ One mechanism behind both. ⛔ **The jump**: while Shift drove #2, the real pointer's moves were
+skipped, so the scene's #1 stood still while the cursor wandered — and the next move it received
+arrived at the cursor's CURRENT position, delivering the whole wander as one step. ⭐⭐ One cursor
+cannot drive two pointers at absolute positions: once two exist it must act RELATIVELY, like a
+trackpad, each pointer keeping its own position and the cursor's DELTA going to the one it drives.
+⛔ **The order**: Shift meant *drive the synthetic pointer*, but right-first makes #2 the HOLDER
+(`IN2` latches roles by arrival), so Shift drove the holder. ✅ Shift now means *drive the pointer
+pressed second*, whichever button that was.
+
+⚠ With no offset every real event still passes untouched — the `6a28e62` path. An offset exists
+only after the cursor drove #2 while the real pointer was down; until that pointer lifts, its moves
+and release are re-issued at its own position. ⭐ Eight mutants red, two of them the reports as
+shipped.
