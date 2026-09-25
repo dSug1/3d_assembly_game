@@ -4150,6 +4150,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // section order above is the owner's, and a new section does not reorder it.
       title: "FACE",
       sliders: [
+        // ⭐⭐ The owner's toggle, directly above the sensitivity it makes meaningful. ⚠ `0` keeps
+        // the ring drawn and hands every press on it back to the ordinary rules.
+        tunable("PioneerFaceCursor drag on/off", "pioneerCursorDrag", 0, 1, 1),
         // ⭐⭐ The owner's 1–10 ring radii a TOUCH may press from the ring and still grab it.
         // ⚠ Touch only: the mouse must click INSIDE the ring, whatever this says.
         tunable(
@@ -5292,6 +5295,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         onScreen,
         PIONEER_CURSOR_PX / 2,
         cfg.pioneerCursorGrabRadii,
+        cfg.pioneerCursorDrag === 1,
       );
       if (key === null) return false;
       const at = onScreen.find((c) => c.key === key);

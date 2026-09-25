@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1196 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1198 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -166,6 +166,7 @@ within `pioneerCursorGrabRadii` (1-10 ring radii, the **FACE** menu's *PioneerFa
 so it drives nothing else. The ring rides the face's own TRIANGLES (`core/face_surface.ts`): under
 the finger when the ray hits, else the nearest surface point - bounded by the edges, and on the
 surface when it is not flat. Grab offset kept, so it never jumps under the finger.
+⭐ **FACE › *PioneerFaceCursor drag on/off*** (`pioneerCursorDrag`, ships `1`): at `0` nothing grabs the ring.
 ⛔⛔ **A BILLBOARD MUST NOT BE PARENTED TO A BODY**: Babylon keeps a billboarded child's parent
 SCALE and TRANSLATION and drops its ROTATION, so the ring sat off its face — or off the body —
 on any turned Pioneer (and the white fuchsia-face ring with it). Both are now placed in WORLD

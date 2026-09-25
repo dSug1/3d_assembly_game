@@ -295,6 +295,12 @@ export interface GestureConfig {
    * this radius"*. ⛔ The mouse ignores it: the left button must land INSIDE the ring.
    */
   pioneerCursorGrabRadii: number;
+  /**
+   * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
+   * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between
+   * like `pioneerCandidates`. `0` leaves the ring drawn and every press to the ordinary rules.
+   */
+  pioneerCursorDrag: number;
   flickWindow: number;
   /** mm/s at lift, below which it is a drag that stopped — never a flick. */
   flickLiftSpeed: number;
@@ -900,6 +906,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pioneerCandidateConeDeg: 15,
   // ⚠ A guess inside the owner's 1–10: a fingertip is wider than the 16 px ring it aims at.
   pioneerCursorGrabRadii: 3,
+  // ⭐ ON: the drag is what the owner built the cursor for; `0` hands the ring's press back.
+  pioneerCursorDrag: 1,
   flickWindow: 120,
   flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
@@ -1115,6 +1123,14 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `pioneerCandidates (${cfg.pioneerCandidates}) must be exactly 0 or 1: it switches the ` +
         "fuchsia Pioneer-candidate offer on and off, and a half-set flag would read as truthy " +
         "while the readout claimed otherwise.",
+    );
+  }
+
+  if (cfg.pioneerCursorDrag !== 0 && cfg.pioneerCursorDrag !== 1) {
+    throw new Error(
+      `pioneerCursorDrag (${cfg.pioneerCursorDrag}) must be exactly 0 or 1: it switches the ` +
+        "PioneerFaceCursor drag on and off, and a half-set flag would read as truthy while the " +
+        "readout claimed otherwise.",
     );
   }
 

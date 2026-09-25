@@ -59,6 +59,19 @@ describe("⭐⭐⭐ mobile: within the slider's number of radii", () => {
   });
 });
 
+describe("⭐⭐ the owner's toggle", () => {
+  it("⛔⛔ switched OFF, nothing is grabbed — not even a click dead centre", () => {
+    // ⛔ RED against ignoring the toggle.
+    expect(grabbedCursor(mouse(100, 100), ONE, R, 10, false)).toBeNull();
+    expect(grabbedCursor(touch(100, 100), ONE, R, 10, false)).toBeNull();
+  });
+
+  it("⭐ switched ON, the same presses grab", () => {
+    expect(grabbedCursor(mouse(100, 100), ONE, R, 10, true)).toBe("k");
+    expect(grabbedCursor(touch(100, 100), ONE, R, 10, true)).toBe("k");
+  });
+});
+
 describe("⭐ several cursors", () => {
   it("⭐⭐ the NEAREST in reach wins", () => {
     const two = [

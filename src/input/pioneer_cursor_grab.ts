@@ -9,6 +9,9 @@
  * the owner's `1…10`. ⭐ The NEAREST cursor in reach wins; coincident cursors (two Followers on one
  * PioneerFace) resolve to the first listed, and dragging it off separates them.
  *
+ * ⛔⛔ **AND NOTHING AT ALL WHILE THE DRAG IS SWITCHED OFF** (`pioneerCursorDrag = 0`, the owner's
+ * toggle): the press then goes on to the ordinary rules as though no ring were there.
+ *
  * ⛔ Never the mouse's synthesised second touch (`MOUSE_SECOND_ID`, the Shift / right-button
  * touchpoint), and never a mouse button other than the LEFT — *"left button clicked"*.
  * ⚠ The radius is the ring's, in CSS px, because the ring is DRAWN at a constant pixel size; the
@@ -46,7 +49,9 @@ export function grabbedCursor(
   cursors: readonly CursorOnScreen[],
   radiusPx: number,
   grabRadii: number,
+  dragEnabled = true,
 ): string | null {
+  if (!dragEnabled) return null;
   if (press.pointerId === MOUSE_SECOND_ID) return null;
   const mouse = press.pointerType === "mouse";
   if (mouse && press.button !== 0) return null;
