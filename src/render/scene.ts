@@ -229,6 +229,7 @@ import { createHud } from "./hud";
 // ⛔ THE DESKTOP SECOND TOUCH IS THIS IMPORT AND ONE CALL, AND NOTHING ELSE. Delete both and the
 // touch build is byte-identical — `mouse_adapter.ts` says why that is the whole point.
 import { attachMouseSecondTouch } from "./mouse_adapter";
+import { secondTouchAlwaysAvailable } from "../input/mouse_second_touch";
 import { createMenu, type MenuSlider } from "./menu";
 
 /**
@@ -2545,6 +2546,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      */
     pressWasDoubleTap: boolean;
     /**
+     * ⭐ The pointer type that PRESSED this grip. ⛔ Read by one rule only —
+     * `secondTouchOwnsRollAndDepth` — to learn that a mouse holder's second touch is always one
+     * Shift away (`secondTouchAlwaysAvailable`).
+     */
+    pointerType: string;
+    /**
      * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
      *
      * ⛔⛔ THE OWNER OVERTURNED THE LATCH, 2026-09-14, and was right. I first gated rule 6
@@ -4390,8 +4397,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * held objects already translate on a drag by `translatesOnDrag`'s own first line, which is
    * exactly why the owner saw the wanted behaviour there and nowhere else.
    */
+  // ⭐⭐ A MOUSE HOLDER'S SECOND TOUCH IS ALWAYS AVAILABLE (`secondTouchAlwaysAvailable`, the
+  // owner 2026-09-25): an aligned body under the left button translates at once, whatever the mode,
+  // exactly as it does on the glass once a second finger is down. ⛔ The desktop fact lives in the
+  // desktop module; this rule only reads it.
   const secondTouchOwnsRollAndDepth = (grip: Held): boolean =>
-    router.outside().length >= 1 &&
+    (router.outside().length >= 1 || secondTouchAlwaysAvailable(grip.pointerType)) &&
     secondTouchDrive("OUTSIDE", gripIsAlignedFollower(grip)) === "BOTH";
 
   const gripOfObject = (id: ObjectId): Held | undefined => {
@@ -5261,6 +5272,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐ `D67`: asked HERE, once, on the way down — a peek, not a record. The release still
         // consumes the pair through `TapHistory.record`.
         pressWasDoubleTap: taps.wouldPair(s),
+        pointerType: e.pointerType,
         mode: null,
         pressFace,
         alignmentTouched: false,

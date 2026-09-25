@@ -278,3 +278,25 @@ export class MouseSecondTouch {
 function same(a: Pt, b: Pt): boolean {
   return a.x === b.x && a.y === b.y;
 }
+
+/**
+ * ⭐⭐⭐ **ON A MOUSE, THE SECOND TOUCH IS ALWAYS AVAILABLE** — so `D60` treats it as present.
+ *
+ * > *"When an object is aligned, whatever the mode, the left click shall give access to horizontal
+ * > translation and left click + shift shall give access to gravity translation and roll. This
+ * > shall be immediate."* — the owner, 2026-09-25
+ *
+ * ⭐⭐ `D60` already states the rule: when a second touch owns roll + gravity (an aligned body), the
+ * first touch takes translation *whatever the mode says*. ⛔ On the glass that second touch exists
+ * the moment a finger lands. On a mouse it existed only after the first Shift move — so in
+ * `ROTATE` a plain left drag on an aligned body TWISTED it, and horizontal translation needed a
+ * Shift-drag first to bring the second touch into being. ⭐ But a mouse's second touch is always
+ * one Shift away, which is exactly the availability a resting finger has — so for a mouse holder
+ * it counts as present from the start.
+ *
+ * ⚠ Unaligned bodies are untouched: `D60` asks the drive table first, and a free body's second
+ * touch owns one axis, not both, so the mode still decides.
+ */
+export function secondTouchAlwaysAvailable(holderPointerType: string): boolean {
+  return holderPointerType === "mouse";
+}
