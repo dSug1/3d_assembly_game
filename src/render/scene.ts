@@ -38,6 +38,7 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
+import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import {
   CreateLines,
   CreateLineSystem,
@@ -160,6 +161,10 @@ import {
 import { IDENTITY, dot, qmul } from "../core/vec";
 import { seededRotations } from "../core/random_pose";
 import { AlignmentLinks } from "../core/alignment_links";
+import {
+  PioneerFaceCursors,
+  type AlignmentCouple,
+} from "../core/pioneer_face_cursors";
 import { AlignSnaps } from "../input/align_snap";
 import {
   followerLinksFrom,
@@ -271,6 +276,11 @@ const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
  * and this one says *this pair COULD be* — an offer, not a state.
  */
 const CANDIDATE_COLOUR = new Color3(1, 0.1, 0.8);
+/**
+ * ⭐ The PioneerFaceCursor is AMBER — the Pioneer's own colour (the owner, 2026-09-25: *"the ring
+ * shall be amber instead of green"*, correcting the first dictation).
+ */
+const PIONEER_CURSOR_COLOUR = PIONEER_COLOUR;
 /**
  * ⭐⭐ `A16`'s **WHITE** — the capture contour, on BOTH bodies of the pair.
  *
@@ -1072,6 +1082,90 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     );
     candidateRings.set(key, m);
     return m;
+  };
+
+  /**
+   * ⭐⭐⭐ **THE PIONEERFACECURSORS** — the owner, 2026-09-25: an amber ring at the PioneerFace
+   * centre for every live alignment, destroyed with it (`core/pioneer_face_cursors.ts`).
+   *
+   * ⛔⛔ **ONE PER COUPLE, NOT ONE PER FACE**: two Followers on one PioneerFace own two rings at one
+   * position, and a Follower re-aligned on another face (either side) gets a NEW ring — the tracker
+   * keys by follower + FollowerFace + pioneer + PioneerFace. ⭐ Reconciled against the model every
+   * frame, so no release path has to remember it — retired by membership, the 2026-09-17 lesson.
+   *
+   * ⭐ DISPOSED, not hidden, unlike the face markers: a cursor is a per-alignment OBJECT that may
+   * later carry state of its own, and a hidden pool keyed by a couple would grow with every couple
+   * ever made. ⚠ The material is SHARED and survives, so a dispose frees the mesh's buffers only.
+   * ⛔ PARENTED to the Pioneer (defect 46), so only its scale is written per frame.
+   */
+  const pioneerCursors = new PioneerFaceCursors();
+  const pioneerCursorMeshes = new Map<string, Mesh>();
+  const pioneerCursorMat = new StandardMaterial("pioneer-cursor-mat", scene);
+  pioneerCursorMat.emissiveColor = PIONEER_CURSOR_COLOUR.clone();
+  pioneerCursorMat.disableLighting = true;
+  pioneerCursorMat.backFaceCulling = false;
+  /** ⚠ A little larger than the white candidate ring (`GIZMO_RING_PX`), so the two can nest. */
+  const PIONEER_CURSOR_PX = 16;
+  const syncPioneerCursors = (): void => {
+    const couples: AlignmentCouple[] = [];
+    for (const followerId of links.alignedObjects()) {
+      const followerFaceId = alignedFaceOf(world, followerId);
+      const p = links.pioneerFor(followerId);
+      if (followerFaceId === null || p === null) continue;
+      couples.push({
+        followerId,
+        followerFaceId,
+        pioneerId: p.objectId,
+        pioneerFaceId: p.faceId,
+      });
+    }
+    const { created, destroyed } = pioneerCursors.reconcile(couples, (o, f) => {
+      const face = world.objects.get(o)?.faces.find((x) => x.id === f);
+      return face === undefined ? null : face;
+    });
+    for (const cur of destroyed) {
+      // ⭐ `dispose(false, false)`: the shared material is kept; the mesh and its buffers go.
+      pioneerCursorMeshes.get(cur.key)?.dispose(false, false);
+      pioneerCursorMeshes.delete(cur.key);
+    }
+    for (const cur of created) {
+      const body = meshOf.get(cur.pioneerId);
+      if (!body) continue;
+      const m = CreateTorus(
+        `pioneer-cursor-${cur.key.replaceAll("\u0000", "|")}`,
+        { diameter: 1, thickness: 0.14, tessellation: 32 },
+        scene,
+      );
+      m.material = pioneerCursorMat;
+      m.isPickable = false;
+      m.metadata = { orbitCandidate: false };
+      // ⭐ Above the body, like every instrument ring: a cursor must not be hidden by what it marks.
+      m.renderingGroupId = 2;
+      m.parent = body;
+      const n = new Vector3(cur.normal[0], cur.normal[1], cur.normal[2]);
+      // ⭐ The torus lies in its local XZ plane, so +Y is turned onto the face normal.
+      m.rotationQuaternion = Quaternion.FromUnitVectorsToRef(
+        Vector3.Up(),
+        n,
+        new Quaternion(),
+      );
+      pioneerCursorMeshes.set(cur.key, m);
+    }
+    const scale =
+      trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight) *
+      PIONEER_CURSOR_PX;
+    for (const cur of pioneerCursors.all()) {
+      const m = pioneerCursorMeshes.get(cur.key);
+      if (m === undefined) continue;
+      // ⚠ Written every frame from the cursor's own position, so a later rule that MOVES a cursor
+      // needs no second path; lifted off the face like the rings, or it z-fights the fill.
+      m.position.set(
+        cur.position[0] + cur.normal[0] * MARKER_LIFT_M * 3,
+        cur.position[1] + cur.normal[1] * MARKER_LIFT_M * 3,
+        cur.position[2] + cur.normal[2] * MARKER_LIFT_M * 3,
+      );
+      m.scaling.set(scale, scale, scale);
+    }
   };
 
   /**
@@ -3601,7 +3695,7 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldA
             `
 topo      ${[...topoOf.values()]
               .map((t) => `${t.faces.length}/${t.edges.length}`)
-              .join(" ")}  mk=${faceMarkers.size}` +
+              .join(" ")}  mk=${faceMarkers.size}  pfc=${pioneerCursors.size}` +
             // ⛔⛔ **`outl=` REPORTED THE CACHE SIZE, WHICH IS NOT THE QUESTION** — a hand read it
             // as a bug (*"it goes to 2, not to zero"*) and was right to: a number that only ever
             // grows cannot describe what is on the screen. ⭐ `METHOD`: *audit an instrument
@@ -7018,6 +7112,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       for (const [key, q] of faceMarkers) {
         if (!wantedPioneerKeys.has(key)) q.loop.isVisible = false;
       }
+      // ⭐⭐⭐ THE PIONEERFACECURSORS, reconciled against the same links the contours read.
+      syncPioneerCursors();
     });
 
     // ⛔⛔⛔ **THE HUD IS REPAINTED WHEN THE *LOOP* CHANGES SOMETHING** — audit fix, 2026-09-17.
