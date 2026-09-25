@@ -987,3 +987,27 @@ button, which is precisely what shipped, goes **RED**.
 
 ⛔ And the readout that was built to diagnose this stays: `seen → sent → got` on the HUD, counted at
 opposite ends of the chain.
+
+### ⚠⚠ AND THE SECOND TOUCHPOINT STILL DID NOT ARRIVE — a second cause, on the same report
+
+> *"Right click as second touch is not working: I cannot toggle the vertical translation - roll, I
+> cannot select pioneerface."*
+
+⭐⭐ **THAT IS AN A/B INSIDE ONE BUILD, AND IT IS WORTH MORE THAN ANY ANALYSIS.** With the left
+button passing through and working, and the right button — the only synthetic one — producing
+nothing at all, the broken link is named without a theory: **the real stream arrives and the
+synthetic one does not.**
+
+⛔ The first version dispatched synthetic `PointerEvent`s on the canvas and let Babylon's
+`WebDeviceInputSystem` raise the notification. ⚠ I could not name the mechanism that swallowed
+them, and three plausible ones had already been killed by reading — so the fix **removes the
+dependency instead of guessing at it**: the synthetic pointer now goes straight to
+`scene.onPointerObservable.notifyObservers`, with the pick computed by `scene.pick`.
+
+⭐ Safe here for a stated reason, not a hopeful one: `scene.ts` calls **`camera.detachControl()`**,
+so the scene's own handler is the only consumer of that observable and nothing can react twice.
+
+⚠⚠ **THE MECHANISM IS STILL UNKNOWN**, and that is recorded rather than dressed up. ⭐ What the
+change buys is that it no longer matters: one fewer layer between the mapping and the rule. ⛔ And
+the readout still earns its keep — `got` must now rise by construction, so if the second touchpoint
+is *still* inert, the fault is the rules refusing it and not delivery.
