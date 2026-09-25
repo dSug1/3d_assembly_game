@@ -548,3 +548,9 @@ the hole is unreachable by construction — the strongest version of that fix, a
 deleting the rule rather than by extending it.
 ⚠ The note above is kept unrewritten: it is the record of a real gap, and of the reasoning that
 said enumerating configurations was the wrong shape.
+
+---
+
+## ⭐ STATUS TEXT MOVED DOWN FROM `QUEUE.md`, 2026-09-25 (second pass)
+
+🔧 **ANSWERED THREE TIMES AND BUILT.** ⭐ The second touchpoint — inside **or** outside any object — drives **roll by its x** and **depth by its y** (`D22`/`A12`, `A10`). ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16**, which also closed the small-object hole owed since `A5`. ⛔⛔ **`A15`/`D25`'s orphan unselect is DELETED** (`D54`) (this file)

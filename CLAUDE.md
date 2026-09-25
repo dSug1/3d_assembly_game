@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1140 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1158 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -126,6 +126,17 @@ radius — the scene's claim that *"at 5L nothing is in range"* was false.
 ⛔⛔ **A DEVICE LOOK IS OWED ON THE WHOLE PASS.** Rule 5 is not suspended because the findings
 came from a read: the boot mode, the twist and roll channels, the deadband's emission and the
 render order all changed.
+⭐⭐ **AND A MOUSE IS TWO TOUCHPOINTS** (`D94`, 2026-09-25): **LMB = #1, RMB = #2**, the cursor
+drives the most recently pressed and the other **parks**, the wheel synthesises a real pinch, Esc
+lifts everything. ⛔⛔ **TWO BUTTONS AND NOT A MODIFIER**, because `Shift`+LMB cannot hold two
+pointers down — pressing it requires LMB to be up — and #1 staying down while #2 presses IS the
+alignment gesture. ⭐ Parking is exact rather than approximate: `A11`'s position deadband makes a
+still pointer emit **nothing**, and `D43` says the channels SUM, so a zero summand is the same rule.
+⛔ **A TRANSLATION, NOT A SECOND INPUT PATH**: `src/input/desktop_pointers.ts` is pure and no
+gesture rule knows it exists, so deleting one import and one call in `scene.ts` leaves the touch
+build identical; only `pointerType === "mouse"` is intercepted, so no flag is needed.
+⚠⚠ **PLAYABLE, NEVER TESTABLE** — rule 5 needs a finger, and every threshold it drives was judged
+by one (`motionDeadbandMm` 3.5 mm is ~13 px of desktop dead zone). ⭐ 18 vectors, 7 mutants.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
