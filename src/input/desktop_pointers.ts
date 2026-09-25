@@ -36,6 +36,10 @@
  * | **wheel** | two `OUTSIDE` pointers symmetric about the cursor, separation scaled | ⛔ yes |
  * | **CANCEL** (Esc, blur) | lifts every SYNTHETIC pointer | — |
  *
+ * ⛔⛔ **THE RIGHT BUTTON DOES NOTHING UNLESS THE LEFT IS ALREADY DOWN.** A second touchpoint with
+ * no first one has no relation to make (`D87`), and it would latch a role on the body it hit —
+ * leaving it held by a finger the cursor never drives.
+ *
  * ⚠ **#2 PARKS UNLESS SHIFT IS HELD**, so an ordinary drag with both buttons down moves the held
  * body and nothing else. ⭐ Parking is exact rather than approximate: `A11` made §1.1 a POSITION
  * deadband, so a still pointer emits **nothing at all**, and `D43` says the channels SUM.
@@ -99,6 +103,18 @@ export interface DesktopEvent {
   readonly shift?: boolean;
   /** ⭐ Signed notches. POSITIVE zooms IN, so the caller negates `deltaY`. */
   readonly wheel?: number;
+  /**
+   * ⭐⭐⭐ **IS THE LEFT BUTTON DOWN?** — i.e. does touchpoint #1 exist right now.
+   *
+   * ⛔⛔ **THE SECOND TOUCHPOINT IS MEANINGLESS WITHOUT THE FIRST, AND A LONE ONE IS A TRAP.**
+   * `D87` makes the held body the FOLLOWER and the pressed one the PIONEER, so a press with
+   * nothing held has no relation to make. ⚠ Worse, it *latches a role*: the pressed body becomes
+   * a HOLDER carried by a finger the cursor never drives, so it shows its HitFace contour and
+   * then cannot be moved by anything. ⭐ That is exactly what the owner saw — *"right button press
+   * just hits face and does nothing more than highlight the face contours in fuchsia. No
+   * movement, no selection."*
+   */
+  readonly primaryDown?: boolean;
 }
 
 export interface SyntheticAction {
@@ -160,6 +176,12 @@ export class DesktopPointers {
     // ⭐⭐⭐ **THE LEFT BUTTON IS NOT OURS.** It already drives touchpoint #1 through the
     // browser's own pointer, and it did so correctly before this file existed.
     if (ev.button !== 2) return PASS;
+    // ⛔⛔ **REFUSED WITH NOTHING HELD — but still SWALLOWED.** ⚠ Letting it through would hand
+    // Babylon a press on the mouse's own pointer id, which is touchpoint #1 arriving by the wrong
+    // button. ⭐ So the event is consumed and nothing is emitted: the right button simply does
+    // nothing until a part is held, which is what `D87` means by *hold the part, press what you
+    // want it aligned to*.
+    if (ev.primaryDown !== true) return { actions: [], suppress: true };
     if (this.second !== null) return { actions: [], suppress: true };
     // ⛔ A press ends a zoom: §4's role table counts touchpoints, and leaving the pinch pair down
     // would make this press a third finger, which is `IGNORED`.
