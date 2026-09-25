@@ -44,11 +44,56 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-22)
+## Where it stands (2026-09-25)
 
-✅ Green: TypeScript + Babylon + Vite, **1096 golden vectors passing** — ⚠ MEASURED 2026-09-23; the
+⭐⭐⭐ **THE FUCHSIA OFFER, AND THE ROLES INVERTED A SECOND TIME** (`D88`/`D87`, 2026-09-24/25).
+⛔ **NO DEVICE LOOK HAS CLOSED ANY OF IT.** The held body's **HitFace** — the first touch's own
+raycast answer, latched at press — lights every face on every other body whose normal is within
+`pioneerCandidateConeDeg` of **MATING** with it. ⚠⚠ *Aligned within xx degrees* is read as
+**ANTI-PARALLEL** (`D78`'s sense, so the highlight marks the faces a press is about to turn the
+body TOWARD); it is one sign in `facesMate` if the owner meant the other, and it is the first thing
+a hand should falsify. ⛔⛔ Pressing a fuchsia face promotes it to PioneerFace, which forced `D87`:
+**first touch the FOLLOWER, second the PIONEER** — the reverse of `D67`, four days old, and it
+makes the offer and its acceptance ONE gesture (*hold the part, press what you want it aligned to*).
+⚠⚠ Cost, and `D67` was chosen for exactly it: several Followers can no longer be aligned to one
+Pioneer in a single hold. ⭐ It ships **OFF** (`?pioneerCandidates=1` turns it on) and disables the fuchsia FILLS
+only — never the HitFace or its own fuchsia contour.
+⛔⛔⛔ **AND IT COST FOUR DEFECTS IN ONE DAY, ALL FROM THE SAME INVERSION AND NONE ABLE TO GO
+RED** (63, 64, `D89`, `D90`). ⭐⭐⭐ **ONE SHAPE RUNS THROUGH ALL THREE**: *an inversion does not have to
+touch a line to break it; it only has to change which finger the line names.*
+⭐ **64** — the line that wipes a lifting finger's `pressFace` went on wiping the **held** grip's,
+so `pressMeaning` read a `null` HitFace against a live FollowerFace and **`D39`'s re-press undo
+could never fire** (*"if I press again a followerFace and its pioneerface, the follower simply
+rotates"*). ⚠ The comment directly above that line had already warned about it, aimed the other
+way. ✅ The transient grip is an **argument** now: *when two callers disagree about a fact, the
+fact is an argument, not a constant.*
+⭐ **`D89`** — `D77` makes a touch on a frozen body a MISS, and it spared the FIRST touch only
+because `D67` had put the Pioneer there. `D87` moved the Pioneer to the **second** touch, so the
+base plate became unreachable as a Pioneer. ✅ **The two touches swap**: the FIRST touch on a
+frozen body is the miss now (a held body is the Follower, and a frozen body is refused that role,
+so holding the plate cannot align anything). ⚠⚠ **Cost, named and chosen**: a finger resting on
+the plate while a part is held now selects it as a Pioneer instead of driving the part.
+⭐ **`D90`** — *"I first press the pioneer and second press the follower … why is there no swap?"*
+A guard refused that configuration, correctly under `D67`, where *hold B, press A* named the
+relation that ALREADY existed; inverted, the same fingers name the opposite one. ⭐⭐ **A swap
+cannot close a loop**, because a Follower is capped at one alignment — so `cycleBreaker` names the
+prospective Pioneer's own link, `scene.ts` severs it, and the alignment is then made. ⛔ It
+reverses the owner's own *"instead break the initial alignment"*; both stand. ⛔⛔ And `tapMeaning`
+— **the last rule still speaking `D67`** — loses its `ALIGN` entirely: the press owns aligning
+since `D87`, and that second path is what silently re-pointed instead of swapping.
+⛔ **63 — TWO FACE NAMESPACES** (2026-09-25): *"I hit face1 again, I
+align face1 with pioneerface → instead of aligning, it disengages."* ⭐⭐ Face ids are generated
+**per body** (`f0…fN`), so `objectA/f4` and `objectB/f4` are different faces with the same string —
+and `pressMeaning`'s one deliberate no-op compared a face of the HELD body against a face of the
+PRESSED one. It returned `NOTHING`, fell through to `D39`'s release and **broke** the alignment.
+⭐ `METHOD`: *an id unique only within a scope becomes a defect the moment a rule reaches across
+scopes, and the reach is invisible because both sides are typed `string`.* ⚠ It arrived by
+**inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
+terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
+
+✅ Green: TypeScript + Babylon + Vite, **1136 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
-both went stale standing here. (974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
+both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
 773 + 83 for `D49`'s surface gap and its shell, 656 + 117 for the ⭐⭐ **2026-09-17 AUDIT**, the
 first pass to find defects by READING the source rather than by a finger, and 619 − 51 when forks
@@ -196,6 +241,28 @@ two writers) carried by a new base plate. ⛔ The approach, hold-off, snap, mate
 **not built**.
 ⭐ The scene is now a workbench: three parts `5L` apart at seeded random
 orientations (`?sceneSeed=N`), a frozen `6L × 0.3L × 9L` plate `3L` below.
+⛔⛔⛔ **THE SCENE'S DIMENSIONS HAVE ONE HOME NOW, AND IT COST A DEFECT TO LEARN** (66,
+2026-09-25). The owner scaled the pyramid (`D91`: uniform **4/3** in `x` and `z`, so its small face
+is a part's `L × 2L`, then a quarter off its height — `2L × 2L × 4L`) — and **1125 vectors stayed green**, because `highlight.test.ts` and `frustum.test.ts`
+each kept their own **retyped copy** of the body dimensions, including the vector whose stated job
+is the boot clearance. ⭐⭐⭐ *A fixture that mirrors a constant is a second implementation of it,
+and it disagrees exactly when the constant is the thing being changed.* ✅
+`src/core/scene_dims.ts` is the one home, read by `scene.ts` and by both suites; three assertions
+went RED the moment they were wired to it (clearance **300 → 280 mm**).
+⭐⭐ **AND `objectD` IS A BEVELLED HOLLOW CYLINDER** (`D92`, 2026-09-25): `L` thick about its own
+**z** — the parts' long axis — outer radius `L`, hole `L/2`. ⭐⭐⭐ **THE FIRST BUILD CAME BACK AS
+*"you did not do a cylinder, you did a doughnut"*, AND THE GEOMETRY WAS CORRECT** — the wall and
+the end face share their rim vertices, so `ComputeNormals` averaged across the rim and blended one
+into the other. ⛔ *A hard edge shaded as a soft one is a torus to the eye, whatever the vertices
+say.* ⭐ The owner named the modeller's fix — *add bevels on the sharp edges to keep them sharp* —
+and it is the right one for a reason worth keeping: a narrow chamfer confines the whole normal
+transition to a band, so the rim reads crisp **while the wall stays smooth**, which the obvious fix
+(splitting the rim vertices) would have destroyed by facetting the cylinder into 24 flats.
+⛔ **The first curved body**, and that reaches further than it looks: `mesh_topology` groups at
+**1°** so a cylinder does not collapse into one face, giving it **146** logical faces against a
+cuboid's 6, each separately tappable — and the hole's wall is the first outward normal that is not
+*away from the centre*. ⚠⚠ **The hole is invisible to the capture**, which is a CONVEX hull
+(`D49`); non-convex is `3D2`'s. Engine-free in `src/core/ring.ts`, 10 vectors, 6 mutants.
 ⭐⭐ **AND THE RIGHT-HAND BODY IS NO LONGER A BOX** (`D72`, 2026-09-22): `objectB` is a
 **trapezoidal pyramid**, `1.5L × 2L × 3L` with its top tapered to half its base — built by
 MOVING a Babylon box's vertices (`src/core/frustum.ts`), so the builder's winding survives.

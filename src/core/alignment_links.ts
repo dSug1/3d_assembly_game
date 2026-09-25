@@ -296,6 +296,32 @@ export class AlignmentLinks {
     return false;
   }
 
+  /**
+   * ⭐⭐⭐ **WHOSE ALIGNMENT MUST BE RELEASED FOR `follower → pioneer` TO BE LEGAL** — `D90`.
+   *
+   * > *"why is there no swap between the pioneer and the follower? This conflicts with the rule
+   * > I set."* — the owner, 2026-09-25
+   *
+   * ⭐ `null` when the link is already legal. Otherwise the **prospective Pioneer's own**
+   * alignment: cutting the first edge of the chain that leaves it severs every cycle through it,
+   * because a body has at most one Pioneer, so that chain is unique. ⛔ One release always
+   * suffices, and that is why the caller does not loop.
+   *
+   * ⚠ **It answers `null` for `follower === pioneer` as well**, where no release can help — the
+   * degenerate cycle is `link`'s to refuse, and offering a body's own alignment as the price of a
+   * link that is going to be refused anyway would destroy a good relation for nothing. ⭐ *A rule
+   * that says what to BREAK must not say it where breaking cannot help.*
+   *
+   * ⛔⛔ It is a QUERY: it changes nothing, so a caller that asks and then declines has done no
+   * damage. ⭐ `render/scene.ts` holds only the two calls — the policy lives here, where a vector
+   * can reach it, which is the 2026-09-19 lesson.
+   */
+  cycleBreaker(follower: ObjectId, pioneer: ObjectId): ObjectId | null {
+    if (follower === pioneer) return null;
+    if (!this.wouldCycle(follower, pioneer)) return null;
+    return this.pioneerFor(pioneer) === null ? null : pioneer;
+  }
+
   /** ⚠ Diagnostics only — how many links are held. */
   get size(): number {
     return this.forward.size;

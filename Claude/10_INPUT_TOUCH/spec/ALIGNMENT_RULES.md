@@ -1551,3 +1551,188 @@ bottom face to the pioneer's bottom face. ⛔ Under the new sense that would sta
 which is the same physical scene the trial has always had. ⚠ A jig that silently changed shape
 would make the swing's device verdicts incomparable with the ones already recorded.
 
+
+---
+
+## §11 — ⭐⭐⭐ THE FUCHSIA OFFER (`D88`) AND THE SECOND INVERSION (`D87`), 2026-09-24/25
+
+### 11.1 The dictation
+
+> *"in rotation mode, when object is not aligned: track the object's face which first touch
+> raycast hit at press = HitFace. During the rotation of the object, highlight in fuchsia any
+> face of any other object which normal is aligned within xx degrees of the normal of the
+> HitFace. Make xx a slider between 0 and 45 degrees with 5 degrees increment … Add a white ring
+> at the center of the fuchsia highlighted face … if one fuchsia highlighted face is pressed by
+> second touch, it becomes PioneerFace and the object becomes Pioneer object … and the object
+> with HitFace becomes aligned Follower object and the HitFace becomes FollowerFace."*
+
+### 11.2 ⛔⛔⛔ *ALIGNED WITHIN xx DEGREES* IS READ AS **ANTI-PARALLEL**
+
+⚠ The word admits two readings 180° apart, and this is the one thing to check with a hand. The
+build implements the **mate** sense — the candidate face pointing back **at** the HitFace —
+because `D78` made the alignment itself anti-parallel, so the parallel reading would light the
+faces a press is about to turn the body **away** from. ⭐ If the owner meant the other one it is a
+single sign in `facesMate`, and every other vector in `tests/face_candidates.test.ts` survives it.
+
+### 11.3 What the HitFace is, and what it is not
+
+⭐ It is **the first touch's own raycast answer**, latched at the press (`grip.pressFace`) and
+never recomputed — a second opinion about *which face* would be free to disagree with the one the
+press already recorded. ⛔ Three refusals, all read live: no holder, no raycast hit, or **the body
+is already aligned** (it owns a FollowerFace and a highlight; a second meaning on one body is what
+`D42`'s colours exist to avoid). ⛔⛔ The `ROTATE` precondition of the dictation is **deleted** —
+the owner, 2026-09-25: *"no need to be in ROTATE for hitFaceNow()."* It was mine, not his: I read
+the mode he happened to be describing it in as a condition of the rule.
+
+### 11.4 `D87` — THE SECOND INVERSION, AND WHY THE FEATURE FORCED IT
+
+> *"currently, the pioneer is pressed first and the follower is pressed second. Invert that order.
+> That will allow to align a hitface with a pioneer face."*
+
+⭐⭐ **The offer and the press that accepts it are now ONE gesture.** The fuchsia set is defined on
+the **held** body's HitFace and lights faces on **other** bodies; under `D67`'s ordering the press
+that accepted an offer had to mean the opposite of the press that made it — the held body was the
+Pioneer, so pressing a fuchsia face would have made the OFFERING body the Follower of the face it
+was being offered. ⚠ One ordering, one meaning: *hold the part, press what you want it aligned to.*
+
+⚠⚠ **Cost, and `D67` was chosen for exactly it**: several Followers could be aligned to one
+Pioneer **in one hold**. Inverted, the single held body is the Follower and a Follower is capped at
+one alignment, so each pair needs its own hold. ⛔ The pairs are all still reachable.
+
+⚠ **The frozen plate changes sides too.** Under `D67` it was HELD, and `D77` leaves the first touch
+alone. Inverted it is PRESSED — and `D77` turns a second touch on a frozen body into a MISS. ⭐ So
+`pressHit` takes an `offeredFace` argument: a face the product is currently OFFERING in fuchsia is
+admitted. Aligning to the plate now reads *turn the part until the plate's face lights, then press
+it*, and `D67`'s *hold the plate FIRST* is superseded.
+
+### 11.5 ⛔⛔⛔ THE FIRST DEFECT OF THE INVERSION — **TWO FACE NAMESPACES**
+
+> *"I hitface face1, I align face1 with pioneerface (OK), I hit face2, I align face2 with
+> pioneerface (OK), I hit face1 again, I align face1 with pioneerface → in this last case, instead
+> of aligning, it disengages the alignment and it goes back to face1 fuchsia highlight. Why?"*
+> — the owner, 2026-09-25
+
+⭐ `pressMeaning` has one configuration that deliberately does **nothing**: *this held body already
+follows this pressed body, on this very face* — the press does nothing and the RELEASE undoes it
+(`D39`), so a hand that presses and holds has not silently lost the alignment it is looking at.
+
+⛔⛔ Under `D67` its two terms named faces of the **same** body. Inverted, they name faces of **two
+different bodies** — and face ids are per body (`f0…fN`, `mesh_topology.ts`), so `objectA/f4` and
+`objectB/f4` are different faces with the same string. The third press in the owner's sequence hit
+that collision, returned `NOTHING`, fell through to `D39`'s release and **broke** the alignment.
+
+✅ The test now requires **three** terms — same Pioneer body, same Pioneer face, **and** same
+HitFace on the held body — so nothing is compared across namespaces. ⭐ `METHOD`: *an identifier
+that is only unique within a scope becomes a defect the moment a rule reaches across scopes, and
+the reach is invisible because both sides are typed `string`.* Two vectors, both shown RED against
+the two-term rule.
+
+### 11.6 The toggle, and what it does **not** disable
+
+⭐ `?pioneerCandidates=0` switches off **the two downstream actions only** — the fuchsia
+highlights on other bodies and the press that promotes one to PioneerFace. ⛔ The owner, on my
+first over-reach: *"I did not tell to disable the hitFaceNow and I still need the hitface and the
+fuchsia contour."* The HitFace and its own fuchsia contour are unconditional.
+
+### 11.7 — ⛔⛔⛔ `D89`: `D77`'s CARVE-OUT FOLLOWS THE **ROLE**, NOT THE FINGER
+
+> *"why I cannot select frozen object as a pioneer?"* — the owner, 2026-09-25
+
+⭐ Two rules, neither of which mentions the other, composed into a third behaviour that neither
+names:
+
+* `D77` — *a **second** touch on a frozen body is a MISS*, so a finger resting on the plate drives
+  the held part instead of being wasted. ⚠ It spared the **first** touch for exactly one reason,
+  stated in its own text: `D67` had put the **Pioneer** on the first touch, so the plate had to
+  stay holdable or it would have left the alignment model entirely.
+* `D87` — the Pioneer is the body being **pressed**, i.e. the second touch.
+
+⛔⛔ So `D77` went on guarding the finger the Pioneer had **left**. The plate was reachable only
+through `D88`'s fuchsia exception, and turning the offer off (2026-09-25) removed even that.
+
+#### ✅ The owner's choice, of three
+
+⭐⭐ **The two touches swap.** A **first** touch on a frozen body is the useless one now — a held
+body is the FOLLOWER, and a frozen body is refused that role, so holding the plate cannot produce
+any alignment at all. It becomes the miss, and that finger goes to work as an `OUTSIDE` touchpoint,
+which is the whole of `D77`'s intent aimed at the finger that now qualifies. ⛔ Every **later**
+touch keeps its hit — the third and fourth as well, because those are presses that can name a
+Pioneer, and refusing them would put the plate out of reach for any hand already using two fingers.
+
+⚠⚠ **The cost, named before it was chosen**: a finger resting on the plate while a part is held now
+latches the plate (role `OBJECT`) and selects it as a Pioneer, instead of driving the held part's
+roll or depth. ⛔ That is `D77`'s original complaint, in the one configuration that matters. The
+owner took it against the two alternatives — gating on the mate GEOMETRY, or leaving the fuchsia
+fill as the only way in.
+
+✅ `D88`'s `offeredFace` parameter is **deleted** with it: it only ever widened the second touch,
+which is admitted outright now, and a parameter nothing can reach is the dormant-fork shape.
+
+#### ⭐⭐⭐ THE SHAPE
+
+*A guard written in terms of WHICH FINGER is a guard that a role inversion silently aims at the
+wrong one.* ⛔ Nothing could go red: `D77` stayed exactly as true as the day it was written, about
+a finger that had stopped mattering. ⚠ The tell was a question from a hand — *why can I not select
+the frozen object* — not a failing test, and no test in this repository could have asked it.
+
+### 11.8 — ⭐⭐⭐ `D90`: THE SWAP, AND THE LAST RULE STILL SPEAKING `D67`
+
+> *"I align follower to pioneer, I release both touches, I then first press the pioneer and second
+> press the follower (different faces): the pioneer and the follower remain unchanged and the
+> follower updates the followerface. Why? Why is there no swap between the pioneer and the
+> follower? This conflicts with the rule I set."* — the owner, 2026-09-25
+
+⭐ Two rules produced that between them, and both were `D67`-shaped.
+
+#### 11.8.1 The press refused it
+
+`pressMeaning` ended with *the body being pressed already follows the held one, so aligning the
+held one to it would close a loop* — `A` follows `B`, the hand holds `B` and presses `A`, so the
+verdict was `NOTHING`.
+
+⛔⛔ **That guard was right under `D67`, and only under `D67`.** There the held body was the
+**Pioneer**, so *hold B, press A* meant **`A→B`** — the relation that already existed. Not fresh,
+and letting `wouldCycle` fire on it broke the pair the hand was holding, which is a defect the
+glass reported within minutes. ⚠ Inverted, the identical finger pattern means **`B→A`**: the
+opposite relation, and a legitimate swap.
+
+⭐⭐ **A SWAP CANNOT CLOSE A LOOP**, because a Follower is capped at one alignment and `link`
+*moves* rather than adds: the ring needs `A→B` to survive `B→A`, and it does not. ✅ So
+`AlignmentLinks.cycleBreaker` names **whose alignment must be released** for the link to be legal —
+the prospective Pioneer's own — and `scene.ts` severs it and then makes the alignment.
+
+⛔ **One release always suffices**, and that is why there is no loop: a body has at most one
+Pioneer, so the chain leaving the prospective Pioneer is unique and cutting its first edge severs
+every cycle through it. `F → P1 → P2` then `P2 → F` drops `F → P1`, exactly as the two-body case
+drops `A → B`.
+
+⚠ **It reverses the owner's own earlier sentence** — *"a follower cannot become the pioneer of its
+own pioneer; in such case, the tap shall instead break the initial alignment"* (2026-09-17), which
+said break and **stop**. ⭐ Both texts stand. `METHOD`: *a ruling is made about a gesture, and an
+inversion changes what the gesture says — so the ruling has to be asked again, not carried.*
+
+#### 11.8.2 And the release then did `D67`'s job
+
+With the press declining, `tapMeaning` ran on the lift — still written the old way round, reading
+the **tapped** body as the Follower and the **held** one as the Pioneer. It saw `A` already
+following `B` but on a different face, called that a fresh alignment, and re-pointed `A` onto the
+face just pressed. ⭐ That is the *"the follower updates the followerface"* in the report: not a
+rule about faces, but the old trigger still running.
+
+✅ **Its `ALIGN` is DELETED, not inverted.** Since `D87` the **press** aligns, on the way down, and
+`pressActed` spends the release (`D55`). The only press that declines and still wants a consequence
+is the one that would change **nothing** — and that one wants `D39`'s undo. ⛔ A second alignment
+path was never a feature; it was `D67`'s trigger left running, and it is what made this report look
+like a rule about faces.
+
+⭐ What `tapMeaning` is now: `D28`'s mode toggle, except for the exact-match no-op, where it
+releases **the held body** — the Follower, which is the body that owns the alignment. ⚠ It released
+the *tapped* body until `D90`, which under `D87` would break the Pioneer's own relation to some
+third body, one the hand never touched.
+
+#### 11.8.3 ⭐⭐ WHERE THE DECISION LIVES
+
+`cycleBreaker` is in `core/alignment_links.ts` and `scene.ts` holds only the two calls. ⛔ The
+policy used to be four lines of render code, which is the 2026-09-19 shape exactly: *a rule written
+in `scene.ts` is a rule nothing can interrogate.* ⭐ Four mutants now go red on it, including one
+that survived the first fixtures — see the ledger.

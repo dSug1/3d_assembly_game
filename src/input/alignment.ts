@@ -52,7 +52,11 @@ import { qconj, qmul, type Quat, type Vec3 } from "../core/vec";
  * and `3D2`'s seat is still what a joint needs — this only changes which way the body faces.
  */
 export function alignTargetFor(pioneerWorldNormal: Vec3): Vec3 {
-  return [-pioneerWorldNormal[0], -pioneerWorldNormal[1], -pioneerWorldNormal[2]];
+  return [
+    -pioneerWorldNormal[0],
+    -pioneerWorldNormal[1],
+    -pioneerWorldNormal[2],
+  ];
 }
 
 /**
@@ -117,56 +121,68 @@ export interface TapMeaning {
  * how a caller swaps two of them silently.
  */
 export interface TapContext {
-  /** The body the finger tapped — the **FOLLOWER** since `D67`; its face is the FollowerFace. */
+  /**
+   * ⛔⛔⛔ **`D90` — THE TAPPED BODY IS THE *PIONEER* NOW, AND ITS FACE IS THE PIONEERFACE.**
+   * ⚠ Every field below is read off the other end than it was: this interface is `D87` arriving
+   * at the RELEASE path, four days and four defects after it arrived at the press.
+   */
   readonly tappedObject: string | null;
   readonly tappedFace: string | null;
-  /** The body the OTHER finger is carrying — the **PIONEER**. */
+  /** The body the OTHER finger is carrying — the **FOLLOWER** since `D87`. */
   readonly heldObject: string | null;
-  /** The tapped body's current Pioneer, if it has one. */
-  readonly pioneerOfTapped: string | null;
-  /** The tapped body's current FollowerFace, derived from its constraint (`alignedFaceOf`). */
-  readonly alignedFaceOfTapped: string | null;
-  /**
-   * ⭐⭐⭐ **DID THE PIONEER'S OWN PRESS COMPLETE A DOUBLE TAP?** — the owner, 2026-09-21:
-   * *"to reach the orange, the first touch shall be double tap without final release [on] the
-   * pioneer object and the second touch shall hit follower object's FollowerFace while first
-   * touch is still pressed on PioneerFace."*
-   * ⛔ So the MODE is a property of the PIONEER's grip, not of this tap. ⚠ That is also what
-   * lets several Followers be added in one hold and all come out the same colour.
-   */
-  readonly pioneerPressWasDoubleTap: boolean;
+  /** The held body's current Pioneer, if it has one. */
+  readonly pioneerOfHeld: string | null;
+  /** The PioneerFace the held body follows — a face of the TAPPED body. */
+  readonly pioneerFaceOfHeld: string | null;
+  /** The held body's current FollowerFace, derived from its constraint (`alignedFaceOf`). */
+  readonly alignedFaceOfHeld: string | null;
+  /** The held body's HitFace — the FollowerFace a press would use. */
+  readonly heldPressFace: string | null;
 }
 
+
+
 /**
- * ⭐⭐⭐ **WHAT A TAP ON A SECOND BODY MEANS, WITH THE ROLES INVERTED (`D67`).**
+ * ⭐⭐⭐ **WHAT THE SECOND TOUCH'S RELEASE MEANS — `D90`, AND IT NO LONGER ALIGNS ANYTHING.**
  *
- * > *"Currently, the follower face selection comes with the first touch and the pioneer face
- * > selection comes with the second touch. Can i invert? First the Pioneer & PioneerFace, second
- * > the Follower & the FollowerFace."* — the owner, 2026-09-21
+ * ⛔⛔⛔ **THIS FUNCTION WAS THE LAST RULE STILL SPEAKING `D67`.** It read the tapped body as the
+ * Follower and the held one as the Pioneer, and it kept an `ALIGN` of its own — so every press
+ * that DECLINED handed the gesture to a rule that meant the opposite. ⚠ The owner found it by
+ * gesture, 2026-09-25: *"I first press the pioneer and second press the follower … the pioneer and
+ * the follower remain unchanged and the follower updates the followerface."* That update was this
+ * function, quietly doing `D67`'s job on the way up.
  *
- * ⛔⛔ **THE HELD BODY IS THE PIONEER AND THE TAPPED ONE IS THE FOLLOWER**, the mirror of every
- * version before it. ⭐ The release still owns the way OUT: a tap on the **FollowerFace of a
- * body already following this Pioneer** breaks that alignment — `D39`'s re-tap, moved onto the
- * face the second touch now selects.
+ * ⭐⭐ **SO THE ALIGN IS DELETED, NOT INVERTED.** Since `D87` the PRESS aligns, on the way down,
+ * and `pressActed` spends the release (`D55`). The only press that declines and still wants a
+ * consequence is the one that would change **nothing** — and that one wants `D39`'s undo. ⛔ A
+ * second alignment path was never a feature; it was `D67`'s trigger left running.
  *
- * ⚠ Everything else is unchanged: nothing held, nothing tapped, or a tap on the held body
- * itself is `TOGGLE`, which is `D28`'s mode flip and `D66`'s only remaining trigger.
+ * ⭐ Everything else is `D28`'s mode flip, which is what a tap has meant since the forks died.
  */
 export function tapMeaning(ctx: TapContext): TapMeaning {
   const toggle: TapMeaning = { action: "TOGGLE", mode: null };
   if (ctx.heldObject === null || ctx.tappedObject === null) return toggle;
   if (ctx.tappedObject === ctx.heldObject) return toggle;
-  // ⛔ THE UNDO, ON THE FACE THE SECOND TOUCH NOW SELECTS: this body already follows this
-  // Pioneer, on this very face, so the same gesture again lets it go (`D39`).
-  const sameRelationSameFace =
-    ctx.pioneerOfTapped === ctx.heldObject &&
-    ctx.tappedFace !== null &&
-    ctx.alignedFaceOfTapped === ctx.tappedFace;
-  if (sameRelationSameFace) return { action: "UNALIGN", mode: null };
-  // ⭐ Any other face, or any other body, is a fresh alignment — and `A23`'s re-point falls out
-  // of it: a different face of a body already aligned simply re-aligns on that face.
-  return { action: "ALIGN", mode: alignModeFor(ctx.pioneerPressWasDoubleTap) };
+  // ⛔⛔ **THE UNDO, AND ITS THREE TERMS ARE `pressMeaning`'s EXACTLY** — deliberately, because it
+  // exists to complete that function's one deliberate no-op. ⭐ The press saw an alignment it
+  // would not change and did nothing; the release lets it go (`D39`), so pressing and HOLDING
+  // never silently destroys the alignment a hand is looking at.
+  // ⚠ Two of the three name faces of DIFFERENT bodies (defect 63), which is why the comparison is
+  // written out rather than shortened.
+  if (
+    ctx.pioneerOfHeld === ctx.tappedObject &&
+    ctx.pioneerFaceOfHeld === ctx.tappedFace &&
+    ctx.alignedFaceOfHeld === ctx.heldPressFace
+  ) {
+    // ⭐⭐⭐ **THE BODY RELEASED IS THE HELD ONE.** It is the Follower under `D87`, and it owns the
+    // alignment. ⛔ Releasing the TAPPED body — which this branch did until `D90` — broke the
+    // PIONEER's own relation to some third body, one the hand never touched.
+    return { action: "UNALIGN", mode: null };
+  }
+  return toggle;
 }
+
+
 
 /**
  * Everything the PRESS's meaning depends on. ⚠ Deliberately NOT `TapContext`: a press has no
@@ -185,16 +201,54 @@ export interface PressContext {
    * puts it: if the Pioneer already follows the body being pressed, this would close a loop.
    */
   readonly pioneerOfHeld: string | null;
-  /** The PRESSED body's current Pioneer, if any. */
-  readonly pioneerOfPressed: string | null;
   /** The PRESSED body's current FollowerFace (`alignedFaceOf`), if any. */
-  readonly alignedFaceOfPressed: string | null;
+  /**
+   * ⭐ The HELD body's current FollowerFace — it is the FOLLOWER now, so *already aligned to this
+   * very face* is a question about IT, not about the body under the finger.
+   */
+  readonly alignedFaceOfHeld: string | null;
+  /**
+   * ⭐⭐ **THE PIONEERFACE THE HELD BODY CURRENTLY FOLLOWS** — a face of the PRESSED body, so it is
+   * the only thing `pressedFace` may be compared against. ⛔ `alignedFaceOfHeld` is a face of the
+   * HELD body and lives in a different namespace; comparing the two was `D87`'s first defect.
+   */
+  readonly pioneerFaceOfHeld: string | null;
+  /**
+   * ⭐ The HELD body's HITFACE — the FollowerFace this press would use. ⚠ If it differs from
+   * `alignedFaceOfHeld`, the press RE-POINTS the alignment onto it rather than doing nothing.
+   */
+  readonly heldPressFace: string | null;
   /** ⭐ The mode comes from the PIONEER's press — see `TapContext`. */
-  readonly pioneerPressWasDoubleTap: boolean;
+  /**
+   * ⭐⭐ **THIS PRESS'S OWN double tap.** ⛔ `D67` read it off the HELD grip because the held body
+   * was the Pioneer; with `D87`'s inversion the Pioneer is the body being pressed, so the mode
+   * comes from the touch that selects it.
+   */
+  readonly pressWasDoubleTap: boolean;
 }
 
 /**
- * ⭐⭐⭐ **`D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, SECOND THE FOLLOWER.**
+ * ⛔⛔⛔ **`D87` REVERSES `D67`: FIRST TOUCH THE **FOLLOWER**, SECOND THE **PIONEER**.**
+ *
+ * > *"currently, the pioneer is pressed first and the follower is pressed second. Invert that
+ * > order. That will allow to align a hitface with a pioneer face."* — the owner, 2026-09-25
+ *
+ * ⭐⭐ **IT MAKES THE HITFACE GESTURE AND THIS ONE THE SAME RULE.** The fuchsia offer is defined
+ * on the HELD body's HitFace and lights faces on other bodies; under `D67`'s ordering the press
+ * that accepted an offer had to mean the opposite of the press that made it. ⚠ One ordering, one
+ * meaning: *hold the part, press what you want it aligned to.*
+ *
+ * ⚠⚠ **WHAT IT COSTS, AND `D67` WAS CHOSEN FOR EXACTLY THIS**: several Followers could be aligned
+ * to one Pioneer **in one hold** — press one Follower's face, release, press the next. Inverted,
+ * each alignment needs its own hold, because the single held body is now the Follower and a
+ * Follower is capped at one alignment. ⛔ The pairs are still reachable, just not in one gesture.
+ *
+ * ⚠ **AND THE FROZEN GUARD CHANGES SIDES AGAIN.** Under `D67` the plate was HELD (`D77` leaves the
+ * first touch alone). Inverted, the plate is PRESSED — and `D77` turns a second touch on a frozen
+ * body into a MISS unless that face is one the product is currently OFFERING. ⭐ So aligning to
+ * the plate now reads: turn the part until the plate's face lights fuchsia, then press it.
+ *
+ * ⭐ `D67`'s own text, kept because a reversal is only legible beside what it reverses:
  *
  * > *"First the Pioneer & PioneerFace, second the Follower & the FollowerFace … the following
  * > sequence becomes possible: first touch pressed on PioneerFace and remains pressed, second
@@ -219,23 +273,53 @@ export interface PressContext {
  */
 export function pressMeaning(ctx: PressContext): TapMeaning {
   const nothing: TapMeaning = { action: "NOTHING", mode: null };
+  // ⚠ The PRESSED body supplies the PioneerFace, so without one there is nothing to aim at.
   if (ctx.pressedObject === null || ctx.pressedFace === null) return nothing;
-  // ⛔ Exactly one held body, or *which Pioneer?* has no answer.
+  // ⛔ Exactly one held body, or *which Follower?* has no answer.
   if (ctx.heldObjects.length !== 1) return nothing;
-  const pioneer = ctx.heldObjects[0]!;
+  const follower = ctx.heldObjects[0]!;
   // ⚠ A press on the body that is already held is `SECOND`'s configuration, not this one — and
   // a Pioneer and a Follower on one body is not a relation.
-  if (pioneer === ctx.pressedObject) return nothing;
-  // ⛔⛔ **THE ONE CONFIGURATION A PRESS DOES NOT ALIGN**: this body already follows this
-  // Pioneer, on this very face. ⭐ The press does nothing and the RELEASE undoes it (`D39`), so
-  // a hand that presses and holds has not silently lost the alignment it is looking at.
-  if (ctx.pioneerOfPressed === pioneer && ctx.alignedFaceOfPressed === ctx.pressedFace) {
+  if (follower === ctx.pressedObject) return nothing;
+  // ⛔⛔ **THE ONE CONFIGURATION A PRESS DOES NOT ALIGN**: the press would produce EXACTLY the
+  // alignment that already exists — same Pioneer, same PioneerFace, same FollowerFace. ⭐ Then it
+  // does nothing and the RELEASE undoes it (`D39`), so a hand that presses and holds has not
+  // silently lost the alignment it is looking at.
+  //
+  // ⛔⛔⛔ **ALL THREE, AND THE MISSING TWO WERE A REAL DEFECT** (the owner, 2026-09-25: *"instead
+  // of aligning, it disengages the alignment"*). `D87`'s first build compared
+  // `alignedFaceOfHeld` — the FOLLOWER's face — against `pressedFace`, the PIONEER's. ⚠ Under
+  // `D67` both named faces of the SAME body; inverted, they name faces of two different bodies,
+  // and face ids are per-body (`f0…fN`), so `objectB/f4` and `objectA/f4` collide as strings.
+  // ⭐ `METHOD`: *inverting a rule's roles re-points every field in it — a comparison that
+  // survives the edit unchanged is the one to distrust.*
+  //
+  // ⚠ And the THIRD term is what the owner asked for: with a NEW HitFace the press re-points the
+  // alignment onto it, because the result would differ. Only an identical outcome is a no-op.
+  if (
+    ctx.pioneerOfHeld === ctx.pressedObject &&
+    ctx.pioneerFaceOfHeld === ctx.pressedFace &&
+    ctx.alignedFaceOfHeld === ctx.heldPressFace
+  ) {
     return nothing;
   }
-  // ⛔ THE CYCLE, in the direction the inversion puts it: the Pioneer already follows the body
-  // being pressed, so aligning it back would close a loop. `scene.ts` handles deeper ones.
-  if (ctx.pioneerOfHeld === ctx.pressedObject) return nothing;
-  return { action: "ALIGN", mode: alignModeFor(ctx.pioneerPressWasDoubleTap) };
+  // ⭐⭐⭐ **`D90` — THE PRESSED BODY ALREADY FOLLOWS THE HELD ONE: THAT IS A *SWAP*, NOT A CYCLE.**
+  //
+  // > *"I first press the pioneer and second press the follower … why is there no swap between
+  // > the pioneer and the follower? This conflicts with the rule I set."* — the owner, 2026-09-25
+  //
+  // ⛔⛔ A guard stood here and **refused** this configuration. It was right under `D67`, where
+  // the held body was the PIONEER: *hold B, press A* then meant `A→B`, the relation that already
+  // existed, and letting `wouldCycle` fire on it broke the pair the hand was holding. ⚠ Inverted,
+  // the identical finger pattern means `B→A` — the OPPOSITE relation, and a fresh one.
+  //
+  // ⭐⭐ **A SWAP CANNOT CLOSE A LOOP, BECAUSE A FOLLOWER IS CAPPED AT ONE ALIGNMENT**: `B→A` only
+  // makes a ring if `A→B` survives it, and the rule replaces rather than adds. ⛔ `scene.ts`
+  // releases the prospective Pioneer's own link and then makes the new one — one gesture, one net
+  // relation, the roles exchanged. ⭐ That is the owner's *"the first touch is on the hitface which
+  // potentially becomes a followerface"* holding **without an exception**, which is the whole
+  // argument: a rule with one configuration it silently refuses is a rule a hand cannot trust.
+  return { action: "ALIGN", mode: alignModeFor(ctx.pressWasDoubleTap) };
 }
 
 /** What a flick must do to the object it was made on. ⭐ Both fields, always both. */
@@ -276,7 +360,9 @@ export interface ResetPlan {
  * arise — which is why the reset came back with it (`D37`) and why the flick now means one
  * thing only. Forks A and B are deleted (`D40`); what is left is not a fork.
  */
-export function flickResetPlan(alignmentTouchedThisGesture: boolean): ResetPlan {
+export function flickResetPlan(
+  alignmentTouchedThisGesture: boolean,
+): ResetPlan {
   return {
     restoreOrientation: true,
     dropAlignment: alignmentTouchedThisGesture,
@@ -378,7 +464,9 @@ export function pioneerTurned(
   // double cover, so `q` and `−q` — the same rotation — cannot read as 360° apart.
   const angle = 2 * Math.acos(Math.min(1, Math.abs(delta[0])));
   if (angle < PIONEER_TURN_EPSILON_RAD) return { kind: "NONE", delta: null };
-  return mode === "SNAPSHOT" ? { kind: "RELEASE", delta: null } : { kind: "FOLLOW", delta };
+  return mode === "SNAPSHOT"
+    ? { kind: "RELEASE", delta: null }
+    : { kind: "FOLLOW", delta };
 }
 
 /**
@@ -420,12 +508,23 @@ export interface PioneerMove {
  * @param before the Pioneer's position when it was last observed.
  * @param now its position this frame.
  */
-export function pioneerMoved(before: Vec3, now: Vec3, mode: AlignMode): PioneerMove {
-  const delta: Vec3 = [now[0] - before[0], now[1] - before[1], now[2] - before[2]];
+export function pioneerMoved(
+  before: Vec3,
+  now: Vec3,
+  mode: AlignMode,
+): PioneerMove {
+  const delta: Vec3 = [
+    now[0] - before[0],
+    now[1] - before[1],
+    now[2] - before[2],
+  ];
   // ⚠ The squared length, so no root is taken 60 times a second for every aligned body.
   const d2 = delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2];
-  if (d2 < PIONEER_MOVE_EPSILON_M * PIONEER_MOVE_EPSILON_M) return { kind: "NONE", delta: null };
-  return mode === "SNAPSHOT" ? { kind: "RELEASE", delta: null } : { kind: "FOLLOW", delta };
+  if (d2 < PIONEER_MOVE_EPSILON_M * PIONEER_MOVE_EPSILON_M)
+    return { kind: "NONE", delta: null };
+  return mode === "SNAPSHOT"
+    ? { kind: "RELEASE", delta: null }
+    : { kind: "FOLLOW", delta };
 }
 
 /**
@@ -442,6 +541,9 @@ export function pioneerMoved(before: Vec3, now: Vec3, mode: AlignMode): PioneerM
  *   have meant a `FOLLOW` cascade quietly re-aligning its followers PARALLEL one frame after a
  *   tap aligned them anti-parallel — a sign error with no symptom until the Pioneer moves.
  */
-export function retargetAlignment(c: Constraint, pioneerWorldNormal: Vec3): Constraint {
+export function retargetAlignment(
+  c: Constraint,
+  pioneerWorldNormal: Vec3,
+): Constraint {
   return { ...c, targetWorld: alignTargetFor(pioneerWorldNormal) };
 }

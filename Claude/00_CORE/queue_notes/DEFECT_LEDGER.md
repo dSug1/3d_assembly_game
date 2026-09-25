@@ -686,3 +686,231 @@ single sentence of device evidence.** Several were shipped.
 distinction (false — both jitter), the noise-floor theory, the press-order theory, the
 roll-riding-on-translation rule, the leading-face ray and its memory, and the bounded hold. ⛔ They
 were wrong, and a wrong analysis kept "for the record" is a trap for the next reader.
+
+---
+
+## 63 — ⭐⭐⭐ **TWO FACE NAMESPACES, AND A NO-OP THAT BROKE AN ALIGNMENT** (2026-09-25, the owner)
+
+> *"I hitface face1, I align face1 with pioneerface (OK), I hit face2, I align face2 with
+> pioneerface (OK), I hit face1 again, I align face1 with pioneerface → in this last case, instead
+> of aligning, it disengages the alignment and it goes back to face1 fuchsia highlight. Why? I
+> would expect to continue the alignment logic instead."*
+
+⭐ **The report is three presses long, and only the third misbehaves** — which is what makes it
+worth reading twice. Nothing about the third press is different in kind; what differs is the
+*state* the first two left behind.
+
+### ⛔⛔⛔ THE CAUSE
+
+`pressMeaning` has exactly one configuration that deliberately does **nothing**: *this held body
+already follows this pressed body, on this very face.* The press does nothing, and the RELEASE
+undoes the alignment (`D39`) — so a hand that presses and holds has not silently lost the
+alignment it is looking at.
+
+⛔ Under `D67` that test's two terms named faces of the **same** body. `D87` inverted the roles and
+the test was carried over unchanged, so it then compared
+
+* `alignedFaceOfHeld` — a face of the **held/Follower** body, against
+* `pressedFace` — a face of the **pressed/Pioneer** body.
+
+⚠ Face ids are generated **per body** (`f0…fN`, `mesh_topology.ts`), so `objectA/f4` and
+`objectB/f4` are different faces carrying the same string. The third press hit the collision,
+returned `NOTHING`, fell through to `D39`'s release — and **broke** the alignment the hand had
+just made. ⭐ The fuchsia highlight coming back is the *symptom of the break*, not a second bug:
+`hitFaceNow` refuses an aligned body, so the offer reappears the instant the alignment goes.
+
+### ✅ THE FIX
+
+⭐ The no-op now requires **three** terms, none of them compared across a namespace: same Pioneer
+**body**, same Pioneer **face**, and the same **HitFace** on the held body. ⛔ `PressContext`
+gained `pioneerFaceOfHeld` and `heldPressFace` to carry the two halves separately — the fix is
+in the *shape of the question*, not in a guard added beside it.
+
+### ⭐⭐ THE SHAPE, AND IT IS A NEW ONE
+
+*An identifier that is unique only within a scope becomes a defect the moment a rule reaches
+across scopes — and the reach is invisible, because both sides are typed `string`.*
+
+⚠ This is what made it survive the inversion's own vectors: every fixture used distinct face ids,
+so the collision was **unreachable by the suite** while being ordinary on the glass. ⭐ The vector
+that pins it now sets the two ids **equal on purpose**, which is the same discipline the
+2026-09-17 audit asked for — *a fixture chosen because it is easy to reason about is usually
+chosen from the set where the quantity under test is ZERO.*
+
+---
+
+## 64 — ⭐⭐⭐ **THE UNDO DIED BECAUSE A LINE KEPT NAMING THE FINGER IT USED TO MEAN** (2026-09-25, the owner)
+
+> *"Re-press the same pair on the same faces … this does not work: if I press again a followerFace
+> and its pioneerface, the follower simply rotates to send the followerface 180 degrees out."*
+
+### ⛔⛔⛔ THE CAUSE
+
+`alignFollowerToPioneer` ends by wiping `pressFace` on the grip that is about to lift — *a
+transient grip must not leave a stale face behind*, which is a good rule. ⛔ Under `D67` the
+transient finger was the **Follower's** second touch, so the line read `followerGrip.pressFace =
+null`. ⚠⚠ `D87` made the Follower the **held** body, and the line went on clearing it: the one
+finger that has to keep its face for the whole hold.
+
+⭐ Downstream, `pressMeaning` compared a live `alignedFaceOfHeld` against a `heldPressFace` that
+was now always `null`, so *this body already follows this face* could never be true and `D39`'s
+re-press had nothing to fire. The **next** press on the same hold then died earlier still, at
+`align: press resolved no face`.
+
+### ⭐⭐ THE COMMENT ABOVE THE LINE HAD ALREADY WARNED ABOUT IT, AIMED THE OTHER WAY
+
+> *"Clearing the held grip's face instead would make the second Follower fail with no resolved
+> PioneerFace — the same line, aimed at the wrong finger."*
+
+⛔⛔ **An inversion does not have to touch a line to break it; it only has to change which finger
+the line names.** ⚠ That is the same shape as defect 63 one layer up, and the same shape as `D89`
+one layer down — three in one day, all from `D87`, none of them able to go red.
+
+### ✅ THE FIX
+
+⭐ The transient grip is an **argument** now, because the two call sites genuinely disagree: on a
+PRESS the Pioneer's touch is the new one, on a RELEASE the follower's is the one lifting. ⛔ A
+fixed answer is wrong for one of them whichever way it points. `METHOD`: *when two callers
+disagree about a fact, the fact is an argument, not a constant.*
+
+⚠ **Still open, and reported with the fix**: the RELEASE path's `tapMeaning` is still written in
+`D67`'s direction, so the undo arrives through the cycle guard and the HUD says *"would cycle —
+broke X's own alignment instead"*. Right outcome, lying readout.
+
+⚠⚠ **And a second reading of the report survives**: if the holder is LIFTED and re-pressed before
+the PioneerFace is pressed, what happens is a genuine re-point — after `D78` the FollowerFace
+points **at** the Pioneer, so the face a finger can reach is usually the opposite one, and aligning
+that one swings the body ~180°. ⭐ *When two readings fit one device report, name both* — the
+2026-09-17 lesson, applied to the same file that earned it.
+
+---
+
+## 65 — ⭐⭐ **A FIXTURE SET WHERE THE QUANTITY UNDER TEST WAS ZERO, CAUGHT BY A MUTANT** (2026-09-25)
+
+⭐ Not a device defect — a **vector** defect, found while proving `D90`'s new rule could fail.
+
+`cycleBreaker` answers *whose alignment must be released for this link to be legal*. A mutant that
+**deleted its cycle test entirely** — `if (false) return null` — stayed green against the whole
+first fixture set.
+
+⛔⛔ The reason is the 2026-09-17 audit's own shape. Every *legal link* fixture happened to use a
+prospective Pioneer with **no Pioneer of its own**, so the mutant's fallback (`does this body have
+an outgoing link?`) was `null` in all of them. ⚠ The quantity that separated the real rule from the
+mutant was **zero in every case chosen to be easy to reason about**.
+
+✅ The vector added is the ordinary assembly chain — `a→b→c`, then aligning `d` to `b`, which closes
+nothing and must not cost `b` its link. ⭐ *A fixture chosen because it is easy to reason about is
+usually chosen from the set where the quantity under test is ZERO* — and the only reliable way to
+find out is to run the mutant.
+
+---
+
+## 66 — ⭐⭐⭐ **THE PRODUCT CHANGED SHAPE AND 1125 VECTORS STAYED GREEN** (2026-09-25)
+
+⭐ Found by changing something, not by a finger — and the change was the owner's, so the vector
+that should have caught it was under a hand at the time.
+
+The owner scaled the pyramid. `render/scene.ts` owned `PYRAMID_DIMS_M`, and
+`tests/highlight.test.ts` and `tests/frustum.test.ts` each kept **their own retyped copy**:
+
+```ts
+const PYRAMID: [number, number, number] = [1.5 * SIZE, 2 * SIZE, 3 * SIZE];
+```
+
+⛔⛔ So the product's body moved and the fixtures' body did not. The whole suite passed, including
+the vector whose entire stated job is to guard the boot clearance — *"a fixture that had kept 320
+would have gone on certifying a scene the product no longer builds"*, which is a sentence that was
+sitting inside the very test that then did exactly that.
+
+### ⭐⭐⭐ THE SHAPE
+
+*A fixture that mirrors a constant is a second implementation of that constant, and it disagrees
+exactly when the constant is the thing being changed* — the one moment the vector existed to
+cover. ⚠ It is this project's own *shadow copy* scar (`frozenIds`, the `Map<name, dims>`, the
+three globals the 2026-09-17 audit found) aimed one layer out, at the suite instead of the code.
+
+⛔ **The tell is not visible in a review**, because both copies are correct on the day they are
+written. It becomes visible only when one of them is edited, and then it presents as *everything
+is green*, which is the one signal nobody investigates.
+
+### ✅ THE FIX
+
+`src/core/scene_dims.ts` — one home, engine-free, read by `scene.ts` and by both suites. ⭐ Three
+assertions went **red the moment they were wired to it**, which is the proof they can.
+
+⚠ And the numbers themselves are now stated as relations rather than literals wherever the
+instruction was a relation: the pyramid's top face is asserted equal to `OBJECT_DIMS_M`, not to
+`0.08`, so a fixture cannot be satisfied by retyping the answer.
+
+---
+
+## 67 — ⚠ **FOUR FIXTURE ERRORS IN ONE FILE, AND TWO WERE THE SAME OLD ONE** (2026-09-25)
+
+⭐ Not product defects — `tests/ring.test.ts`'s first draft, kept because `METHOD`'s fifth shape is
+*my own fixtures* and this is what it looks like in practice.
+
+* **Two float32 traps.** Positions are a `Float32Array` all the way to the collision hull, so
+  `0.32` is held as `0.31999999`. ⚠ `toBeCloseTo(…, 9)` demands `5e-10` of a representation whose
+  own step there is `3e-8`. ⛔ `tests/frustum.test.ts` **already documents this exact trap**, and
+  I walked into it again in a file written an hour later.
+* **A flat quad's centroid is on the chord, not the arc** — `radius · cos(π/n)`, 0.9914 of the
+  radius at 24 segments. The vector asserted the radius and failed by 1.4 mm.
+* **An edge count guessed at `4N` when it is `6N`.** Counted afterwards: each annulus gives its
+  outer rim and its hole's rim, and each wall's axial edges are boundary edges of two different
+  logical faces. ⭐ Same shape `frustum.test.ts` records: *a vector written from an assumption
+  about the code is not a vector about the code.*
+
+⛔ All four looked exactly like real defects for as long as it took to read them.
+
+---
+
+## 68 — ⭐⭐⭐ **A CORRECT MESH THAT LOOKED LIKE A TORUS** (2026-09-25, the owner)
+
+> *"you did not do a cylinder, you did a doughnut. add bevels on the sharp edges to keep them
+> sharp. reduce both radius by half."*
+
+⛔⛔ **THE GEOMETRY WAS RIGHT.** A hollow cylinder, flat annular ends, correct outward normals, ten
+green vectors including one that asserts every face looks the way the profile says. ⚠ What was
+wrong was the **shading**: the wall and the end face **share their rim vertices**, so
+`VertexData.ComputeNormals` averaged across the rim and blended one surface into the other over the
+whole face.
+
+⭐⭐⭐ *A hard edge shaded as a soft one is a torus to the eye, whatever the vertices say.*
+
+### ⭐⭐ THE OWNER NAMED THE FIX, AND IT IS THE MODELLER'S ONE
+
+*Add bevels on the sharp edges to keep them sharp* sounds self-contradictory and is not: a narrow
+chamfer confines the whole normal transition to a band a millimetre wide, so the rim reads as a
+crisp line **and the curved wall stays smooth**. ⛔ The fix I would have reached for — splitting the
+rim vertices so each face carries its own normal — keeps the rim sharp by facetting the cylinder
+into 24 visible flats, which is a second defect.
+
+### ⛔ WHAT IT COST, STATED
+
+`146` logical faces on one body, against a cuboid's 6: four chamfer bands at `N` faces each, on top
+of the two walls. ⚠ Every one is separately tappable, highlightable and mate-able.
+
+### ⭐ THE SHAPE
+
+*A vector suite that reads the geometry cannot see the shading, and the shading is what a hand
+judges.* ⛔ Ten vectors passed on a body the owner rejected on sight — and they were not weak
+vectors, they were vectors about the wrong layer. ⚠ This is rule 5 doing the only job it can do.
+
+---
+
+## 69 — ⚠ **A MUTANT FOUND AN ARM NOTHING COULD ENTER** (2026-09-25)
+
+`addQuad` took the direction a face **looks** and derived the corner order from it — a guard that
+reads as careful. ⛔ A mutant that deleted the derivation entirely left the mesh **byte-identical**:
+all eight bands hand their corners over in the same rotational order, so one arm was never taken.
+
+⚠ *A branch nothing can enter is the dormant-fork shape* `D28` and `D40` refused, and a safety net
+nothing can fall into is not a safety net. ✅ Deleted.
+
+⭐⭐ **AND TWO MORE MUTANTS HAD SURVIVED FOR A DEEPER REASON**: inverting the profile normal, and
+ignoring the stated outward, both flip the winding **globally** — and `meshTopology` decides outward
+by **signed volume**, so it silently corrects them and every normal assertion passes. ⛔ What it
+cannot correct is the RENDERER: a globally reversed mesh is culled inside-out on the glass, with a
+green suite. ✅ The suite now pins the **sign of the signed volume** as well, which is the half the
+topology layer cannot recover — `mesh_topology`'s own *"no outline of any sort"* scar, aimed at the
+other layer.

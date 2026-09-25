@@ -110,7 +110,7 @@ calls, which is how the roll detector survived to cause defect 40.
 | `A13` | ⭐⭐⭐ **one touchpoint TRANSLATES; a second held STILL ROTATES**. Whichever finger moves acts; the other one's state picks the rule | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A9` → `A11` | ⭐⭐⭐ **§1.1 IS A POSITION DEADBAND** — an anchor trailing at one dead radius, emitting the excess only. Time-free, exact, and it absorbs A9 | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
 | `A10` | ⭐⭐ depth — ⛔ **its still-holder GATE is DELETED (`D43`)**, so both fingers integrate at once; rule 6's second touchpoint may be on the object | ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16** — *"everything is working"* |
-| `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings now run from ONE BUILD** (`D26`, `1.0.5`): one-finger translate is the default, two-finger is `?touchpointAssignment=1`, and ⭐ **fork C** (`=2`) makes a TAPPED second touchpoint toggle the ongoing drag — ⛔ which also picks the second finger's axis, **depth or roll, never both** | 🔧 ✅✅ **fork C CLOSED and now the DEFAULT** (2026-09-16) after three formulations of its toggle — the **verdict between the forks** is row `IN13`, not due until the input system can be judged whole |
+| `A13` ↔ the spec ↔ `A16` | ⭐⭐⭐ **THREE readings ran from ONE BUILD** (`D26`) so a hand could judge them in the same minute — ⛔ then forks A and B were **deleted** (`D40`) and fork C is the only model: a tap toggles the mode, which also picks the second finger's axis, **depth or roll, never both** | ✅✅ **CLOSED** (`D28`, `IN13`) |
 | `A15` | ⚠⚠ **REVERSED BY `D54`** — the orphan unselect, `holder_binding.ts`, `relatchOnOrphan` and 16 vectors are **deleted**; a holder keeps its object for the touchpoint's lifetime and `IN2`'s latch has no exceptions again → [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md) | ⛔ gone |
 
 ⛔⛔ **DEPTH COST SIX MODELS AND A DEVICE PASS EACH.** ⭐⭐ Its two transferable lessons are in
@@ -126,24 +126,16 @@ that is the count the §4 rule table is written against.
 part and **the part stops responding** — the second was ignored at press, and the HUD says so
 (`#1OBJ #2IGN active=1`) → [`../00_CORE/queue_notes/IN2.md`](../00_CORE/queue_notes/IN2.md)
 
-🔨 **`IN3` IS IN PROGRESS**, 40 vectors of logic standing ahead of any renderer.
-⭐ **2sexte + A3's handover BUILT** (`src/input/anchor_rotate.ts`, 25 vectors) — every
-rotation is about the CONSTRAINT axis and *the anchor survives* is asserted directly, with
-rotating about the VIEW axis kept as the counter-example. ⭐⭐ The near side's excursion is
-`r·sin α`, so the drag **goes quiet over a range before it becomes undefined** — which is
-where `anchorHandoverCos` has to hand over, and a device question.
-⭐ **The eviction shake detector is BUILT** (`src/input/shake.ts`,
-15 vectors) — ⛔ defined as oscillation ALONG AN AXIS, because **a circle projects to a
-back-and-forth on every axis** and `A3` made circles legal on constrained objects.
-⭐ `suppressesFlick` arms on the first reversal, which is A4's mandatory flick guard.
-⛔ Not built: the rest of `IN3` (2bis's precondition, 2sexte + A3's handover, roll on an
-anchored object, 2ter/2quater, the triangle→`FaceId` mapping, the `scene.ts` wiring that
-CLOSES `3D1`) and `IN4`'s **6bis / 6ter / 6quater**.
-⭐⭐ **BOTH ARE NOW UNBLOCKED** — `3D1` was built 2026-09-15, so the object model, the face
-centres 6bis needs, and the constraint stack rule 2bis must consult all exist.
-⭐ **`IN3` is NEXT**, and it also CLOSES `3D1`, which cannot be closed on its own.
-⚠ `IN4`'s **rule 6 is CLOSED** (2026-09-15, confirmed in ordinary play); it is the rest of
-that row that waits. `IN5` (measurement), `IN6` undo, `IN7` haptics.
+🔨 **`IN3` IS THE LAST INPUT ROW WITH UNBUILT WORK.** ⭐ **2sexte + `A3`'s handover are BUILT**
+(`src/input/anchor_rotate.ts`, 25 vectors, ⚠ not wired) — every rotation about the CONSTRAINT axis,
+with rotating about the VIEW axis kept as the counter-example. ⭐⭐ The near side's excursion is
+`r·sin α`, so the drag **goes quiet over a range before it becomes undefined** — where
+`anchorHandoverCos` has to hand over, and a device question.
+⭐ **The eviction shake detector is BUILT** (`src/input/shake.ts`, 15 vectors) — ⛔ oscillation
+ALONG AN AXIS, because **a circle projects to a back-and-forth on every axis** and `A3` made
+circles legal on constrained objects. ⭐ `suppressesFlick` arms on the first reversal (`A4`).
+⛔ Not built: 2bis's precondition, the handover's wiring, roll on an anchored object,
+2ter/2quater, and `IN4`'s **6bis / 6ter / 6quater**.
 ⭐ `IN11` (is 2bis path-dependent?) is unblocked too and needs no device.
 
 ⛔⛔ **THE OWNER'S LATER DECISIONS SUPERSEDE THE SPEC** — [`AMENDMENTS_R5.md`](AMENDMENTS_R5.md),
@@ -228,8 +220,7 @@ broke on a real pointer **three times** that way. A displacement deadband needs 
 ## ⭐ Amendments the OWNER made on the device, 2026-09-14
 
 ⭐ **Five decisions, with their reasons, are in**
-[`history/2026-09-14_owner_device_decisions.md`](history/2026-09-14_owner_device_decisions.md)
-— moved there 2026-09-15 when this file reached its 400-line cap. In force, in one line each:
+[`history/2026-09-14_owner_device_decisions.md`](history/2026-09-14_owner_device_decisions.md). In force, one line each:
 
 * **§2 rule 1 is DRAG-ORBIT, not tilt-orbit** — driven by delta position; `DeviceOrientation`
   left the critical path entirely and `tiltDeadband` was deleted.
@@ -240,13 +231,13 @@ broke on a real pointer **three times** that way. A displacement deadband needs 
   `validateGestureConfig`.
 * **Orbit directions are INVERTED** — the finger pushes the world. ⛔ Both readings are
   internally consistent, so no sign-checking can tell you which a hand expects.
-* **Roll smoothing ships ENGAGED, against the measurement** — ⭐ the metric was what was
-  wrong: an error-against-ground-truth metric cannot score *"feels steady"*.
+* ⚠ **~~Roll smoothing ships ENGAGED, against the measurement~~** — the filter and the roll
+  recogniser were both deleted 2026-09-16. ⭐ Its lesson stands: an error-against-ground-truth
+  metric cannot score *"feels steady"*.
 
-⚠ **Licence note for the three-ring orbit**, since it is the same idea as Unity
-Cinemachine's FreeLook: ✅ no patent found, but ⛔ **Cinemachine's CODE is under the Unity
-Companion License**, usable only in Unity-engine-dependent applications. Ours is written
-from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
+⚠ **Licence note for the three-ring orbit** (the same idea as Cinemachine's FreeLook): ✅ no
+patent found, ⛔ but Cinemachine's **CODE** is Unity-Companion-licensed. Ours is written from the
+geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 
 ## ⚠ Open questions the spec itself flags
 
@@ -295,9 +286,10 @@ from the geometry. See [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICE
 | `anchor_rotate.ts` | 2sexte and `A3`'s handover, about the CONSTRAINT axis. ⚠ Built, not wired — and it wants the TRUE view axis, not the gravity frame |
 | `display_pose.ts` | `SWAY ∘ FOLLOW ∘ model` as ONE expression — what the eye sees, never where the object IS |
 | `router.ts` | §4's roles, latched at press: `OBJECT` / `OUTSIDE` / `SECOND` / `IGNORED`. ⭐ **No exceptions** since `D54` deleted `A15`'s orphan unselect |
-| `frozen_pick.ts` | ⭐⭐ `D77` — **a second touch on a FROZEN body is handed to the router as a MISS**, so the finger becomes a working `OUTSIDE` touchpoint and can drive another body. ⛔ Filtered BEFORE the latch, so the router still knows nothing about the model; the FIRST touch is untouched, because a plate must still be holdable as a Pioneer |
-| ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ The superseded text, kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork, plus fork C's per-gesture toggle and §1.3's tap test. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
-| `alignment.ts` · ⚠ `core/face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`, and it was `fork_c.ts` until the forks were deleted): the **anti-parallel** face align frozen to a world direction (`D78`; the sign lives in `alignTargetFor` alone), the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⭐ Keeping the set in one file is what made deleting the other two forks a `rm` plus a barrel line |
+| `frozen_pick.ts` | ⭐⭐ `D77`/`D89` — **the FIRST touch on a FROZEN body is handed to the router as a MISS**, so that finger becomes a working `OUTSIDE` touchpoint. ⛔ Filtered BEFORE the latch, so the router still knows nothing about the model. ⚠⚠ `D89` SWAPPED the two touches: `D77` dropped the second, and `D87` moved the Pioneer onto it. ⭐ Holding a frozen body cannot align anything now, so that is the useless finger |
+| ⛔ ~~`assignment.ts`~~ → `mode_toggle.ts` | ⭐⭐⭐ `D28` COLLAPSED IT into one input model — the mode flipped by **any single tap**, surviving a release: `initialBehaviour` / `toggleBehaviour` / `isTapRelease`, and nothing else. ⚠ Kept as the record of `D26`/`D27`: **which rule table is in force**, as a flag rather than a fork. ⛔ It latches only while **nothing touches the glass**, and a mid-gesture flip is deferred, not dropped |
+| `alignment.ts` · ⚠ `core/face_pick.ts` | ⭐⭐ **THE ALIGNMENT RULES, WHOLE** (`D37`–`D40`): the **anti-parallel** face align frozen to a world direction (`D78`; the sign lives in `alignTargetFor` alone), the tap's THREE meanings (align / unalign / toggle), and the rotation reset scoped by *when* the alignment happened. ⛔⛔ **`D87` INVERTED THE ROLES BACK**: the HELD body is the **Follower**, the PRESSED one the **Pioneer**. ⚠ Its one *do nothing* configuration now needs **three** terms — same Pioneer body, same Pioneer face, same HitFace — because face ids are per body and two of those live in DIFFERENT namespaces (spec §11.5) |
+| `core/face_candidates.ts` | ⭐⭐⭐ `D88` — **the fuchsia offer**: every face, on every other body, within `pioneerCandidateConeDeg` of **mating** with the held body's HitFace. ⛔ *Aligned* is read **ANTI-PARALLEL** (`D78`'s sense) and that is the one thing a hand should falsify. ⭐ A FROZEN body IS a candidate; only the Follower role is refused |
 | ⛔ ~~`holder_binding.ts`~~ | **DELETED 2026-09-18** (`D54`) — `A15`'s *is the object still UNDER the finger?* raycast. ⭐ `IN2`'s latch has no exceptions again |
 | `align_snap.ts` | `D45`'s eased slerp into the aligned pose — ⛔⛔ **one snap PER BODY**, not one slot for the scene: the audit found a second alignment abandoning the first **mid-arc**, still wearing its constraint and its markers |
 | `rotation_increment.ts` | ⭐⭐⭐ `D73` — a held body is **always ON an increment**, jumping several at once so a backlog cannot exist. ⚠ Its step is an **exponential approach**: no clock to restart (defect 50) |

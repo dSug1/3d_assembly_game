@@ -29,21 +29,30 @@ import {
 import { centreDistance, nearestCapture, surfaceGap } from "@core/proximity";
 import { boxShape } from "@core/collision_shape";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
+import {
+  OBJECT_DIMS_M,
+  OBJECT_SIZE_M,
+  PLATE_DIMS_M,
+  PYRAMID_DIMS_M,
+} from "@core/scene_dims";
 import { makeWorld, setWorldPlacement, type SceneObject, type World } from "@core/object_model";
 import type { Constraint } from "@core/constraint_stack";
 import { IDENTITY, qFromAxisAngle, type Quat, type Vec3 } from "@core/vec";
 
-const SIZE = 0.08; // ⭐ the scene's cube, in metres
+// ⛔⛔⛔ **READ FROM THE PRODUCT, NOT RETYPED** (2026-09-25). ⚠ These three were local copies, and
+// when the owner scaled the pyramid the whole suite stayed green against the old body — including
+// the boot-clearance vector below, whose entire job is to notice exactly that.
+const SIZE = OBJECT_SIZE_M; // ⭐ the scene's L, in metres
 const H = SIZE / 2;
 const DEG = Math.PI / 180;
 
 /** The scene's real body dimensions, in metres — parts, and the base plate. */
-const PART: [number, number, number] = [SIZE, 2 * SIZE, 3 * SIZE];
-const PLATE: [number, number, number] = [6 * SIZE, 0.3 * SIZE, 9 * SIZE];
+const PART = OBJECT_DIMS_M as unknown as [number, number, number];
+const PLATE = PLATE_DIMS_M as unknown as [number, number, number];
 /**
- * ⭐⭐ **`objectB` IS NOT A PART ANY MORE** — it is a trapezoidal pyramid, half again as thick
- * in `x` (the owner, 2026-09-22). ⚠ Only the BOOT-SCENE vector below uses it; the abstract
- * `a`/`b` fixtures elsewhere in this file are about the mechanism and stay cuboid.
+ * ⭐⭐ **`objectB` IS NOT A PART ANY MORE** — it is a trapezoidal pyramid, scaled so its top face
+ * is a part's small face (the owner, 2026-09-25). ⚠ Only the BOOT-SCENE vector below uses it; the
+ * abstract `a`/`b` fixtures elsewhere in this file are about the mechanism and stay cuboid.
  *
  * ⛔ A BOX of the pyramid's dimensions is the right stand-in for a CLEARANCE question and the
  * wrong one for a shape question: the frustum tapers upward, so its widest section is its base
@@ -51,7 +60,7 @@ const PLATE: [number, number, number] = [6 * SIZE, 0.3 * SIZE, 9 * SIZE];
  * this box. ⭐ `tests/frustum.test.ts` measures the same gap through the REAL tapered hull, so
  * the equivalence is checked rather than assumed.
  */
-const PYRAMID: [number, number, number] = [1.5 * SIZE, 2 * SIZE, 3 * SIZE];
+const PYRAMID = PYRAMID_DIMS_M as unknown as [number, number, number];
 
 /**
  * ⭐⭐ **A 100 mm SURFACE OFFSET — chosen for the vectors, not shipped.**
@@ -283,16 +292,15 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     for (const id of ["objectA", "objectB", "objectD"]) {
       expect(nearestCapture(w, id, offset, null, gapIn(w), others(w, id))).toBeNull();
     }
-    // The PLATE is what a part is nearest to, by surface \u2014 148 mm, not the 320 mm of air
-    // between the two parts. The margin is stated rather than implied: the threshold must sit
-    // clear of it by a real factor, not by a millimetre.
-    expect(surfaceGap(w, "objectA", "objectC")).toBeCloseTo(0.148, 9);
-    // ⛔⛔ **300 mm, AND IT WAS 320 UNTIL THE PYRAMID WAS THICKENED** (2026-09-22). The centres
-    // are still `5L` apart; `objectB`'s base grew by `0.5L`, so the surfaces are `400 − 40 − 60`
-    // apart. ⭐ This line is why the fixture above had to follow the product: a fixture still
-    // holding `PART` here would have kept asserting 320 mm of a scene nobody builds, and the
-    // margin below — which is the property that matters — would have been measured against it.
-    expect(surfaceGap(w, "objectA", "objectB")).toBeCloseTo(0.3, 9);
+    // The PLATE is what a part is nearest to, by surface — 148 mm, not the 320 mm of air
+    // between the parts that this vector used to be about.
+    // ⛔⛔ **280 mm BETWEEN THE PARTS, AND IT HAS BEEN 320 AND 300 BEFORE IT** — once per time
+    // `objectB` changed shape: thickened `0.5L` in `x` (2026-09-22), then scaled by 4/3 so its
+    // top face is a part's small face (2026-09-25). `400 − 40 − 80`.
+    // ⚠⚠ **AND THE 2026-09-25 CHANGE DID NOT MOVE IT — because this file had RETYPED the
+    // dimensions.** The product scaled, the copy did not, and the vector whose whole job is to
+    // notice that stayed green. ⭐ It reads `PYRAMID_DIMS_M` now.
+    expect(surfaceGap(w, "objectA", "objectB")).toBeCloseTo(0.28, 9);
     expect(offset).toBeLessThan(0.148 / 2);
     // And it must stay big enough to be usable: an offset under 5 mm of world would mean two
     // parts had to nearly touch before anything showed, which is a different failure.

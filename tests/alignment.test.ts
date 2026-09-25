@@ -26,7 +26,11 @@ import {
   type PressContext,
   type TapContext,
 } from "@input/alignment";
-import { singleAlignment, solve, type Constraint } from "@core/constraint_stack";
+import {
+  singleAlignment,
+  solve,
+  type Constraint,
+} from "@core/constraint_stack";
 import {
   faceWorld,
   makeWorld,
@@ -35,7 +39,14 @@ import {
 } from "@core/object_model";
 import { constrainedDragAngle, rotateAboutAxis } from "@input/anchor_rotate";
 import { mmToPx } from "@core/units";
-import { IDENTITY, qconj, qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
+import {
+  IDENTITY,
+  qconj,
+  qFromAxisAngle,
+  qmul,
+  type Quat,
+  type Vec3,
+} from "@core/vec";
 
 const BOX = (id: string): SceneObject => ({
   id,
@@ -76,14 +87,18 @@ function tapAndAlign(
 
   // the Pioneer's normal is read in WORLD, at the tap, and then frozen
   const pioneerWorld = faceWorld(world, "pioneer", pioneerFaceId)!.normal;
-  const followerLocal = BOX("follower").faces.find((f) => f.id === followerFaceId)!.normal;
+  const followerLocal = BOX("follower").faces.find(
+    (f) => f.id === followerFaceId,
+  )!.normal;
   // ⚠ Where the held face pointed BEFORE the alignment — the minimality test needs it.
   const beforeWorld = faceWorld(world, "follower", followerFaceId)!.normal;
 
   const c = faceAlignConstraint(followerLocal, pioneerWorld);
   const capped = singleAlignment(world.objects.get("follower")!.constraints, c);
   expect(capped.refused).toBe(false);
-  const solved = solve(capped.stack, followerOrientation, { evictOnOverflow: false });
+  const solved = solve(capped.stack, followerOrientation, {
+    evictOnOverflow: false,
+  });
   expect(solved.rejected).toBe(false);
   world = setWorldPlacement(world, "follower", {
     position: [0, 0, 0],
@@ -119,7 +134,9 @@ describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE OPPOSITE W
       qFromAxisAngle([-0.6, 0.2, 0.7], 2.0),
       "-y",
     );
-    r.followerWorld.forEach((v, i) => expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10));
+    r.followerWorld.forEach((v, i) =>
+      expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10),
+    );
   });
 
   it("⭐ for EVERY follower face — whichever face is held is the one that turns", () => {
@@ -128,7 +145,9 @@ describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE OPPOSITE W
     const pq = qFromAxisAngle([0.5, 0.5, 0.2], 0.8);
     for (const f of BOX("x").faces) {
       const r = tapAndAlign(fq, f.id, pq, "+x");
-      r.followerWorld.forEach((v, i) => expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10));
+      r.followerWorld.forEach((v, i) =>
+        expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10),
+      );
     }
   });
 
@@ -164,7 +183,9 @@ describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE OPPOSITE W
       -1,
       Math.min(
         1,
-        r.beforeWorld[0]! * t[0]! + r.beforeWorld[1]! * t[1]! + r.beforeWorld[2]! * t[2]!,
+        r.beforeWorld[0]! * t[0]! +
+          r.beforeWorld[1]! * t[1]! +
+          r.beforeWorld[2]! * t[2]!,
       ),
     );
     const arc = Math.acos(dot);
@@ -185,8 +206,16 @@ describe("⛔⛔ THE ALIGNMENT — the held face ends up pointing THE OPPOSITE W
 });
 
 describe("⛔⛔ THE CAP OF ONE — a second alignment REPLACES, and never freezes the object", () => {
-  const A: Constraint = { kind: "FACE_ALIGN", localNormal: [0, 0, 1], targetWorld: [0, 1, 0] };
-  const B: Constraint = { kind: "FACE_ALIGN", localNormal: [1, 0, 0], targetWorld: [1, 0, 0] };
+  const A: Constraint = {
+    kind: "FACE_ALIGN",
+    localNormal: [0, 0, 1],
+    targetWorld: [0, 1, 0],
+  };
+  const B: Constraint = {
+    kind: "FACE_ALIGN",
+    localNormal: [1, 0, 0],
+    targetWorld: [1, 0, 0],
+  };
 
   it("⭐⭐⭐ the second tap replaces the first — the fork B freeze is unreachable", () => {
     // ⛔ Appending is what fork B did, and the owner's report on it was *"the second flick
@@ -195,7 +224,9 @@ describe("⛔⛔ THE CAP OF ONE — a second alignment REPLACES, and never freez
     const r = singleAlignment([A], B);
     expect(r.stack).toEqual([B]);
     expect(r.refused).toBe(false);
-    expect(solve(r.stack, IDENTITY, { evictOnOverflow: false }).freeDof).toBe(1);
+    expect(solve(r.stack, IDENTITY, { evictOnOverflow: false }).freeDof).toBe(
+      1,
+    );
   });
 
   it("⛔ and it is a REPLACEMENT, not an append — asserted as the DOF that survives", () => {
@@ -229,105 +260,194 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
   // Pioneer and the TAPPED/PRESSED one is the Follower. ⚠ The old ones are deleted rather than
   // kept green — a vector whose subject is gone certifies nothing, which is the same rule that
   // deleted 41 fork vectors and 15 with `D66`.
+  // ⭐ `D90`: the TAPPED body is the PIONEER and the HELD body is the FOLLOWER, on the release
+  // path too — every field is a question about the HELD body now.
   const tap = (over: Partial<TapContext> = {}): TapContext => ({
     tappedObject: "objectB",
     tappedFace: "+x",
     heldObject: "objectA",
-    pioneerOfTapped: null,
-    alignedFaceOfTapped: null,
-    pioneerPressWasDoubleTap: false,
+    pioneerOfHeld: null,
+    pioneerFaceOfHeld: null,
+    alignedFaceOfHeld: null,
+    heldPressFace: null,
     ...over,
   });
 
   const press = (over: Partial<PressContext> = {}): PressContext => ({
+    // ⭐ `D87`: the PRESSED body is the PIONEER and the HELD body is the FOLLOWER.
     pressedObject: "objectB",
     pressedFace: "+x",
     heldObjects: ["objectA"],
     pioneerOfHeld: null,
-    pioneerOfPressed: null,
-    alignedFaceOfPressed: null,
-    pioneerPressWasDoubleTap: false,
+    alignedFaceOfHeld: null,
+    // ⛔⛔ THE TWO FIELDS `D87`'s FIRST BUILD DID NOT HAVE, and their absence is the defect of
+    // 2026-09-25: the *already aligned* test needs the PIONEER's face and the HELD body's face
+    // SEPARATELY, because face ids are per body and `objectA/f4` ≠ `objectB/f4`.
+    pioneerFaceOfHeld: null,
+    heldPressFace: null,
+    pressWasDoubleTap: false,
     ...over,
   });
 
-  it("⭐⭐⭐ pressing a SECOND body's face aligns it TO the held one — the inversion itself", () => {
-    // ⛔ The held body supplies the PioneerFace; the pressed body is the Follower. Before `D67`
-    // this same call meant the opposite pairing.
-    expect(pressMeaning(press())).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
-    expect(tapMeaning(tap())).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
+  it("⛔⛔⛔ `D87` REVERSES `D67`: the HELD body is the FOLLOWER, the PRESSED one the PIONEER", () => {
+    // > *"currently, the pioneer is pressed first and the follower is pressed second. Invert that
+    // > order. That will allow to align a hitface with a pioneer face."* — the owner, 2026-09-25
+    //
+    // ⛔⛔ **THIS BLOCK ASSERTED THE OPPOSITE PAIRING UNTIL 2026-09-25**, and `D67` was closed by a
+    // hand. ⭐ Kept as a reversal rather than rewritten in place: a vector that once asserted the
+    // other direction is the only record that the direction was CHOSEN, twice.
+    // ⚠ The verdict shape is unchanged; what changed is which body each field describes, so this
+    // vector cannot fail on its own — the ones below carry the discrimination.
+    expect(pressMeaning(press())).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
+    // ⛔⛔ AND THE RELEASE NO LONGER ALIGNS AT ALL (`D90`): the press owns that since `D87`, so
+    // an ordinary tap on another body is `D28`'s mode toggle and nothing else.
+    // ⚠ RED against `D67`'s `tapMeaning`, which answered `ALIGN` here — and that answer is what
+    // silently re-pointed an alignment when the owner expected a swap.
+    expect(tapMeaning(tap())).toEqual({ action: "TOGGLE", mode: null });
   });
 
-  it("⭐⭐⭐ ORANGE COMES FROM THE PIONEER'S OWN PRESS, not from this touch", () => {
-    // ⛔⛔ THE OWNER: *"to reach the orange, the first touch shall be double tap without final
-    // release [on] the pioneer object and the second touch shall hit follower object's
-    // FollowerFace while first touch is still pressed on PioneerFace."*
-    // ⚠ FAILS against every earlier build, where the mode came from THIS touch's tap count.
-    expect(pressMeaning(press({ pioneerPressWasDoubleTap: true }))).toEqual({
+  it("⭐⭐⭐ THE MODE COMES FROM *THIS* PRESS NOW, not from the held grip", () => {
+    // ⛔⛔ RED AGAINST `D67`: there the flag was the HELD body's, because the held body was the
+    // Pioneer. ⚠ Inverted, the Pioneer is the body under this finger, so its own double tap is
+    // what asks for `FOLLOW`.
+    expect(pressMeaning(press({ pressWasDoubleTap: true }))).toEqual({
       action: "ALIGN",
       mode: "FOLLOW",
     });
-    expect(tapMeaning(tap({ pioneerPressWasDoubleTap: true }))).toEqual({
-      action: "ALIGN",
-      mode: "FOLLOW",
-    });
   });
 
-  it("⭐⭐⭐ SEVERAL FOLLOWERS IN ONE HOLD — the flag is the Pioneer's, so they agree", () => {
-    // ⛔ The owner's sequence: *"second touch is pressed on first Follower object's FollowerFace
-    // and then released, second touch is then pressed on second Follower object's FollowerFace,
-    // etc."* ⭐ Nothing in the rule counts Followers, and `AlignmentLinks` keeps a SET of them
-    // per Pioneer — so the second and third presses are simply the first one again, with a
-    // different `pressedObject` and the SAME held Pioneer.
-    for (const follower of ["objectB", "objectC", "plate2"]) {
-      expect(pressMeaning(press({ pressedObject: follower }))).toEqual({
-        action: "ALIGN",
-        mode: "SNAPSHOT",
-      });
-      expect(pressMeaning(press({ pressedObject: follower, pioneerPressWasDoubleTap: true }))).toEqual(
-        { action: "ALIGN", mode: "FOLLOW" },
-      );
-    }
-  });
-
-  it("⭐⭐ a body ALREADY following this Pioneer on this FACE: the press does nothing…", () => {
-    // ⚠ …and the RELEASE lets it go (`D39`'s re-tap, moved onto the face the second touch now
-    // selects). ⛔ The press must not undo: a hand that presses and holds would otherwise lose
-    // the alignment it is looking at, silently.
-    const same = { pioneerOfPressed: "objectA", alignedFaceOfPressed: "+x" };
-    expect(pressMeaning(press(same))).toEqual({ action: "NOTHING", mode: null });
-    expect(
-      tapMeaning(tap({ pioneerOfTapped: "objectA", alignedFaceOfTapped: "+x" })),
-    ).toEqual({ action: "UNALIGN", mode: null });
-  });
-
-  it("⭐⭐ a DIFFERENT face of the same Follower RE-POINTS it — `A23`'s shape, mirrored", () => {
-    // ⭐ It needs no rule of its own: the same-face test fails, so it is a fresh alignment that
-    // replaces the old one — which is exactly what re-pointing is.
-    expect(
-      pressMeaning(press({ pressedFace: "-z", pioneerOfPressed: "objectA", alignedFaceOfPressed: "+x" })),
-    ).toEqual({ action: "ALIGN", mode: "SNAPSHOT" });
-  });
-
-  it("⛔⛔ THE CYCLE IS REFUSED FROM THE OTHER END NOW", () => {
-    // ⚠ Before `D67` the guard asked *does the PRESSED body follow the held one?*; inverted, it
-    // asks *does the HELD body follow the pressed one?* ⛔ Both fields were already in the
-    // context, which is why this is a re-point and not new logic.
-    expect(pressMeaning(press({ pioneerOfHeld: "objectB" }))).toEqual({
+  it("⛔⛔ NOTHING ONLY WHEN THE PRESS WOULD CHANGE NOTHING — all three must match", () => {
+    // ⛔ `D39`: then the press does nothing and the RELEASE undoes it, so a hand that presses and
+    // holds has not silently lost the alignment it is looking at.
+    const same = {
+      pioneerOfHeld: "objectB",
+      pioneerFaceOfHeld: "+x",
+      alignedFaceOfHeld: "f5",
+      heldPressFace: "f5",
+    };
+    expect(pressMeaning(press(same))).toEqual({
       action: "NOTHING",
       mode: null,
     });
-    // ⭐ And a Pioneer that follows some THIRD body is not a cycle at all — chains are legal.
-    expect(pressMeaning(press({ pioneerOfHeld: "objectC" })).action).toBe("ALIGN");
+    // ⭐ A different PIONEER face re-points it.
+    expect(pressMeaning(press({ ...same, pressedFace: "-z" })).action).toBe(
+      "ALIGN",
+    );
+    // ⭐⭐ And a different HITFACE re-points it too — the owner, 2026-09-25: *"I hit face1 again,
+    // I align face1 with pioneerface → instead of aligning, it disengages."*
+    expect(pressMeaning(press({ ...same, heldPressFace: "f2" })).action).toBe(
+      "ALIGN",
+    );
   });
 
-  it("⛔ the four refusals, each read from the other end", () => {
+  it("⛔⛔⛔ THE FACE NAMESPACES ARE DIFFERENT BODIES — `D87`'s first defect, as a vector", () => {
+    // ⛔⛔ Face ids are per body (`f0…fN`), so `objectB/f4` and `objectA/f4` are DIFFERENT faces
+    // with the same string. ⚠ The first build compared `alignedFaceOfHeld` (a face of the HELD
+    // body) against `pressedFace` (a face of the PRESSED one) and no-op'd on the collision — the
+    // press then fell through to `D39`'s release, which BROKE the alignment the hand had made.
+    // ⭐ Here the ids collide on purpose and the verdict must still be ALIGN.
+    expect(
+      pressMeaning(
+        press({
+          pressedFace: "f4",
+          pioneerOfHeld: "objectB",
+          pioneerFaceOfHeld: "f1",
+          alignedFaceOfHeld: "f4",
+          heldPressFace: "f5",
+        }),
+      ).action,
+    ).toBe("ALIGN");
+  });
+
+  it("⛔⛔⛔ `D90` — THE PRESSED BODY ALREADY FOLLOWS THE HELD ONE: THAT IS A **SWAP**", () => {
+    // > *"I first press the pioneer and second press the follower … why is there no swap between
+    // > the pioneer and the follower? This conflicts with the rule I set."* — the owner
+    //
+    // ⛔⛔ A guard here answered `NOTHING` for exactly this, and it was right under `D67`: there
+    // the held body was the PIONEER, so *hold B, press A* named the relation that ALREADY
+    // existed. ⚠ Inverted, the same fingers name the opposite one — a fresh relation, with the
+    // roles exchanged. ⭐ RED against that guard, which is the whole point of the vector.
+    //
+    // ⚠ `scene.ts` severs the old link first: a swap cannot close a loop, because a Follower is
+    // capped at one alignment and the ring needs `A→B` to survive, which it does not.
+    expect(pressMeaning(press())).toEqual({
+      action: "ALIGN",
+      mode: "SNAPSHOT",
+    });
+    // ⭐ And the held body ALREADY following the pressed one, on a DIFFERENT PioneerFace, is a
+    // re-point rather than a refusal — the same verdict, from the other side of the pair.
+    expect(
+      pressMeaning(press({ pioneerOfHeld: "objectB", pioneerFaceOfHeld: "-z" }))
+        .action,
+    ).toBe("ALIGN");
+  });
+
+  it("⭐⭐ THE UNDO MOVED TO THE RELEASE, AND IT RELEASES THE **HELD** BODY", () => {
+    // ⛔⛔ `D39`, and its three terms are `pressMeaning`'s exactly: the press saw an alignment it
+    // would not change and did nothing, so the release lets it go. ⚠ `D67` released the TAPPED
+    // body here, which under `D87` would break the PIONEER's own relation to a third body.
+    const same = {
+      pioneerOfHeld: "objectB",
+      pioneerFaceOfHeld: "+x",
+      alignedFaceOfHeld: "f5",
+      heldPressFace: "f5",
+    };
+    expect(tapMeaning(tap(same))).toEqual({ action: "UNALIGN", mode: null });
+    // ⭐ A different PIONEER face, or a different HitFace, is a re-point the PRESS already made —
+    // so the release must NOT also undo it. ⚠ RED against a two-term undo.
+    expect(tapMeaning(tap({ ...same, tappedFace: "-z" })).action).toBe(
+      "TOGGLE",
+    );
+    expect(tapMeaning(tap({ ...same, heldPressFace: "f2" })).action).toBe(
+      "TOGGLE",
+    );
+    // ⛔ And the namespace collision again (defect 63): `alignedFaceOfHeld` must be compared with
+    // `heldPressFace`, never with `tappedFace` — they belong to different bodies.
+    expect(
+      tapMeaning(
+        tap({
+          tappedFace: "f5",
+          pioneerOfHeld: "objectB",
+          pioneerFaceOfHeld: "f5",
+          alignedFaceOfHeld: "f5",
+          heldPressFace: "f9",
+        }),
+      ).action,
+    ).toBe("TOGGLE");
+  });
+
+  it("⚠⚠ AND THE MULTI-SELECT `D67` WAS CHOSEN FOR IS GONE — the cost, as a vector", () => {
+    // ⛔⛔ `D67`'s own reason: *"which enables to select several follower objects to the pioneer
+    // object in one go."* ⚠ Inverted, the single HELD body is the Follower, and a Follower is
+    // capped at ONE alignment — so pressing a second Pioneer REPLACES the first rather than
+    // adding to a set. ⭐ Recorded here so the loss is a decision and not a discovery.
+    const first = pressMeaning(press({ pressedObject: "objectB" }));
+    const second = pressMeaning(
+      press({
+        pressedObject: "objectC",
+        pioneerOfHeld: "objectB",
+        alignedFaceOfHeld: "+x",
+      }),
+    );
+    expect(first.action).toBe("ALIGN");
+    expect(second.action).toBe("ALIGN"); // ⚠ a REPLACEMENT, not a second relation
+  });
+
+  it("⛔ the four refusals, each read from the new end", () => {
     expect(pressMeaning(press({ pressedObject: null })).action).toBe("NOTHING");
     expect(pressMeaning(press({ pressedFace: null })).action).toBe("NOTHING");
-    // ⛔ Not exactly one held body: *which Pioneer?* has no answer worth guessing.
+    // ⛔ Not exactly one held body: *which Follower?* has no answer worth guessing.
     expect(pressMeaning(press({ heldObjects: [] })).action).toBe("NOTHING");
-    expect(pressMeaning(press({ heldObjects: ["objectA", "objectC"] })).action).toBe("NOTHING");
+    expect(
+      pressMeaning(press({ heldObjects: ["objectA", "objectC"] })).action,
+    ).toBe("NOTHING");
     // ⚠ The same body twice is `SECOND`'s configuration, not a relation.
-    expect(pressMeaning(press({ pressedObject: "objectA" })).action).toBe("NOTHING");
+    expect(pressMeaning(press({ pressedObject: "objectA" })).action).toBe(
+      "NOTHING",
+    );
   });
 
   it("⭐ a tap with nothing held, or on the held body itself, still TOGGLES the mode", () => {
@@ -345,7 +465,10 @@ describe("⭐⭐⭐ THE ROTATION RESET — scoped by WHEN the alignment happened
     // > looses the alignment)."* ⭐ Because the snapshot PREDATES the alignment, so restoring
     // it would leave the object disagreeing with its own constraint — the one state §1.4
     // exists to prevent.
-    expect(flickResetPlan(true)).toEqual({ restoreOrientation: true, dropAlignment: true });
+    expect(flickResetPlan(true)).toEqual({
+      restoreOrientation: true,
+      dropAlignment: true,
+    });
   });
 
   it("⛔⛔ an alignment that PREDATES the press survives the reset", () => {
@@ -355,7 +478,10 @@ describe("⭐⭐⭐ THE ROTATION RESET — scoped by WHEN the alignment happened
     // satisfies the constraint. No re-solve, no special case — which is what makes the
     // owner's framing better than mine. I had asked the question about the STATE; the answer
     // is about the GESTURE, and only the gesture can tell these two cases apart.
-    expect(flickResetPlan(false)).toEqual({ restoreOrientation: true, dropAlignment: false });
+    expect(flickResetPlan(false)).toEqual({
+      restoreOrientation: true,
+      dropAlignment: false,
+    });
   });
 
   it("⚠ the orientation is restored in BOTH cases — the reset is never refused", () => {
@@ -368,14 +494,23 @@ describe("⭐⭐⭐ THE ROTATION RESET — scoped by WHEN the alignment happened
 });
 
 describe("⭐⭐ AND THE FREE SPIN IS DRIVEABLE — 2sexte, on fork C's own alignment", () => {
-  const FRAME = { right: [1, 0, 0] as Vec3, up: [0, 1, 0] as Vec3, viewAxis: [0, 0, -1] as Vec3 };
+  const FRAME = {
+    right: [1, 0, 0] as Vec3,
+    up: [0, 1, 0] as Vec3,
+    viewAxis: [0, 0, -1] as Vec3,
+  };
 
   it("⛔⛔ a drag twists about the aligned normal and the alignment SURVIVES", () => {
     // ⭐ The owner's answer to *'an aligned object, one finger, no target'*: **twist about the
     // aligned normal**. ⚠ `anchor_rotate.ts` was built for `A3` and is reused unchanged — the
     // composition is what is new, and it is the assertion that matters: the object turns AND
     // the face keeps pointing where it was aligned.
-    const r = tapAndAlign(qFromAxisAngle([0.2, 0.7, -0.3], 0.9), "+x", IDENTITY, "+y");
+    const r = tapAndAlign(
+      qFromAxisAngle([0.2, 0.7, -0.3], 0.9),
+      "+x",
+      IDENTITY,
+      "+y",
+    );
     const axis = r.stack[0]!.targetWorld;
     const angle = constrainedDragAngle(FRAME, axis, mmToPx(20), 0, 0.07)!;
     expect(Math.abs(angle)).toBeGreaterThan(0.1);
@@ -385,7 +520,9 @@ describe("⭐⭐ AND THE FREE SPIN IS DRIVEABLE — 2sexte, on fork C's own alig
       orientation: rotateAboutAxis(q, axis, angle),
     });
     const after = faceWorld(world, "follower", "+x")!.normal;
-    after.forEach((v, i) => expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10));
+    after.forEach((v, i) =>
+      expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 10),
+    );
     // ⛔ and the object really moved: another face went somewhere
     const spun = faceWorld(world, "follower", "+z")!.normal;
     const still = faceWorld(r.world, "follower", "+z")!.normal;
@@ -406,7 +543,11 @@ describe("⭐⭐ AND THE FREE SPIN IS DRIVEABLE — 2sexte, on fork C's own alig
 // ⭐ So they are ported rather than deleted, with the constraint built fork C's way.
 
 describe("⭐⭐ THE TWIST, PORTED — it must not drift, and it must refuse where it is undefined", () => {
-  const FRAME = { right: [1, 0, 0] as Vec3, up: [0, 1, 0] as Vec3, viewAxis: [0, 0, -1] as Vec3 };
+  const FRAME = {
+    right: [1, 0, 0] as Vec3,
+    up: [0, 1, 0] as Vec3,
+    viewAxis: [0, 0, -1] as Vec3,
+  };
 
   it("⛔ FORTY HUNDRED twists do not drift the anchor — the case an INCREMENT is exposed to", () => {
     // ⭐⭐ The drag is applied as a per-frame increment, so the question is not whether ONE
@@ -416,9 +557,16 @@ describe("⭐⭐ THE TWIST, PORTED — it must not drift, and it must refuse whe
     const axis = r.stack[0]!.targetWorld;
     let q = r.world.objects.get("follower")!.local.orientation;
     for (let i = 0; i < 400; i++) {
-      q = rotateAboutAxis(q, axis, constrainedDragAngle(FRAME, axis, mmToPx(3), 0, 0.07)!);
+      q = rotateAboutAxis(
+        q,
+        axis,
+        constrainedDragAngle(FRAME, axis, mmToPx(3), 0, 0.07)!,
+      );
     }
-    const world = setWorldPlacement(r.world, "follower", { position: [0, 0, 0], orientation: q });
+    const world = setWorldPlacement(r.world, "follower", {
+      position: [0, 0, 0],
+      orientation: q,
+    });
     faceWorld(world, "follower", "+x")!.normal.forEach((v, i) =>
       expect(v).toBeCloseTo(anti(r.pioneerWorld)[i]!, 8),
     );
@@ -428,10 +576,18 @@ describe("⭐⭐ THE TWIST, PORTED — it must not drift, and it must refuse whe
     // ⭐ Looking ALONG the axis, it projects to a POINT: every screen direction is equally
     // perpendicular, so there is no angle to compute. ⛔ `null` is the honest answer, and the
     // second touchpoint's roll is the chart that works there.
-    const along = { right: [1, 0, 0] as Vec3, up: [0, 0, -1] as Vec3, viewAxis: [0, 1, 0] as Vec3 };
-    expect(constrainedDragAngle(along, [0, 1, 0], mmToPx(20), 0, 0.07)).toBeNull();
+    const along = {
+      right: [1, 0, 0] as Vec3,
+      up: [0, 0, -1] as Vec3,
+      viewAxis: [0, 1, 0] as Vec3,
+    };
+    expect(
+      constrainedDragAngle(along, [0, 1, 0], mmToPx(20), 0, 0.07),
+    ).toBeNull();
     // ⭐ and the counter-example, so the refusal is about the geometry and not the fixture
-    expect(constrainedDragAngle(FRAME, [0, 1, 0], mmToPx(20), 0, 0.07)).not.toBeNull();
+    expect(
+      constrainedDragAngle(FRAME, [0, 1, 0], mmToPx(20), 0, 0.07),
+    ).not.toBeNull();
   });
 });
 
@@ -446,7 +602,9 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     // orders under the smallest deliberate twist, and well above quaternion round-off.
     const q = qFromAxisAngle([0.3, 0.8, -0.5], 1.1);
     expect(pioneerTurned(q, q, "SNAPSHOT").kind).toBe("NONE");
-    expect(pioneerTurned(q, qmul(qFromAxisAngle([0, 1, 0], 1e-6), q), "FOLLOW").kind).toBe("NONE");
+    expect(
+      pioneerTurned(q, qmul(qFromAxisAngle([0, 1, 0], 1e-6), q), "FOLLOW").kind,
+    ).toBe("NONE");
   });
 
   it("⭐ A SNAPSHOT RELEASES, and reports no rotation to apply — the Follower must not move", () => {
@@ -468,7 +626,12 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     // ⛔⛔ THE VECTOR THIS PAIR EXISTS FOR. `FOLLOW` is only worth having if applying its
     // delta leaves the Follower's aligned face pointing exactly where the Pioneer's face now
     // points. ⭐ Every piece is tested elsewhere; this asserts the chain.
-    const r = tapAndAlign(qFromAxisAngle([0.2, 0.7, -0.3], 0.9), "+x", IDENTITY, "+y");
+    const r = tapAndAlign(
+      qFromAxisAngle([0.2, 0.7, -0.3], 0.9),
+      "+x",
+      IDENTITY,
+      "+y",
+    );
     const pioneerBefore = r.world.objects.get("pioneer")!.local.orientation;
 
     // the hand turns the PIONEER
@@ -490,7 +653,9 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
 
     const pioneerNormal = faceWorld(world, "pioneer", "+y")!.normal;
     const followerNormal = faceWorld(world, "follower", "+x")!.normal;
-    followerNormal.forEach((v, i) => expect(v).toBeCloseTo(anti(pioneerNormal)[i]!, 10));
+    followerNormal.forEach((v, i) =>
+      expect(v).toBeCloseTo(anti(pioneerNormal)[i]!, 10),
+    );
   });
 
   it("⛔⛔ AND THE OTHER COMPOSITION ORDER BREAKS IT — both measured, in one vector", () => {
@@ -525,7 +690,10 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
 
     // ✅ the world delta — what `pioneerTurned` returns — is EXACT. ⚠ `−1` since 2026-09-23:
     // the faces are held ANTI-parallel, so exactness is a dot of −1 rather than +1.
-    expect(after(pioneerTurned(pBefore, pNow, "FOLLOW").delta!)).toBeCloseTo(-1, 10);
+    expect(after(pioneerTurned(pBefore, pNow, "FOLLOW").delta!)).toBeCloseTo(
+      -1,
+      10,
+    );
     // ⛔ the object-frame delta leaves them nowhere near it — measured, not assumed
     expect(after(qmul(qconj(pBefore), pNow))).toBeGreaterThan(-0.9);
   });

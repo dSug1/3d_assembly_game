@@ -264,6 +264,30 @@ export interface GestureConfig {
    * ⭐ `0` is the honest OFF: only an exactly opposed face lights. ⚠ A GUESS at `15`, with the
    * slider the owner asked for; no hand has judged it.
    */
+  /**
+   * ⭐⭐⭐ **IS THE FUCHSIA OFFER ON AT ALL?** `1` on, `0` off — the owner, 2026-09-25:
+   * *"create a toggle slider to enable or disable the above rules."*
+   *
+   * ⛔ What `0` switches off — the ACTIONS the owner named, and only those: the fuchsia FILLS on
+   * other bodies' faces, and their white centre rings.
+   *
+   * ⚠ It used to switch off a second thing — the exception that let a press through onto a FROZEN
+   * body's offered face. ⭐ `D89` admits every press but the first on a frozen body outright, so
+   * that exception is deleted and this flag no longer decides whether the plate is reachable.
+   *
+   * ⛔⛔ **THE HITFACE AND ITS FUCHSIA CONTOUR STAY LIVE AT `0`.** They are a separate instruction
+   * and not one of the two rules this flag names. ⚠ My first build gated `hitFaceNow` itself and
+   * took them with it — the owner: *"I did not tell to disable the hitFaceNow."* ⭐ `METHOD`:
+   * *a switch belongs on the ACTIONS a fact drives, not on the fact.*
+   *
+   * ⚠⚠ **IT DOES NOT SWITCH OFF ALIGNING.** Since `D87` the press rule is `pressMeaning`'s and is
+   * not fuchsia-specific: hold a body, press another's face, and it aligns whether or not anything
+   * was highlighted. ⭐ The offer is guidance, and this turns the guidance off.
+   *
+   * ⚠ A 0/1 selector, refused in between exactly as `worldAxisB` is: a half-set flag must not read
+   * as `truthy` and ship one behaviour while the readout claims another.
+   */
+  pioneerCandidates: number;
   pioneerCandidateConeDeg: number;
   flickWindow: number;
   /** mm/s at lift, below which it is a drag that stopped — never a flick. */
@@ -861,6 +885,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   gainTranslateMutual: 0.5,
 
   // ⚠ A guess with a slider — the owner asked for 0–45 in steps of 5 and has not judged a value.
+  // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"set default fuchsia offer = off."* ⚠ It
+  // shipped ON for one day, on my argument that a hand judges a new feature fastest with it
+  // visible. ⭐ `?pioneerCandidates=1` is the whole of turning it back on.
+  // ⭐ It no longer decides whether the plate can be a Pioneer: `D89` moved `D77`'s carve-out onto
+  // the FIRST touch, so a press on a frozen body is admitted with the offer off or on.
+  pioneerCandidates: 0,
   pioneerCandidateConeDeg: 15,
   flickWindow: 120,
   flickLiftSpeed: 250,
@@ -1071,6 +1101,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  // ⛔ 0 or 1, never in between — the same discipline `worldAxisB` is held to.
+  if (cfg.pioneerCandidates !== 0 && cfg.pioneerCandidates !== 1) {
+    throw new Error(
+      `pioneerCandidates (${cfg.pioneerCandidates}) must be exactly 0 or 1: it switches the ` +
+        "fuchsia Pioneer-candidate offer on and off, and a half-set flag would read as truthy " +
+        "while the readout claimed otherwise.",
+    );
+  }
+
   // ⛔ The owner's slider is 0–45. Outside it the highlight stops meaning *nearly ready to mate*:
   // past 90° a face pointing the SAME way would light, which is the reading this rule rejects.
   if (

@@ -114,3 +114,11 @@ at boot. Close the tab or pull to refresh, then read the stamp.
 rules**, and this was not one: `A13` and `A14` were correct. It is recorded there as the
 **second report that did not survive investigation**, beside the withdrawn `A7` report, and
 as a real defect of the deploy surface here.
+
+---
+
+## ⭐ STATUS TEXT MOVED DOWN FROM `QUEUE.md`, 2026-09-25
+
+⛔ The row stays in the queue; only its essay came here, to pay for `D87`–`D92`.
+
+✅ **LIVE 2026-09-13** — https://dsug1.github.io/3d_assembly_game/ . Procedure: `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`. ⛔⛔ **AND IT SERVED A STALE BUILD FOR A MORNING (2026-09-16)**: `max-age=600` on `index.html` plus content-hashed assets means a cached index loads a superseded bundle **indefinitely**, and a confirmed gesture fix was reported broken on a tablet that had never fetched it. ✅✅ **FIXED AND CLOSED BY A DEVICE LOOK 2026-09-16** — *"working on device"*. The page checks `version.json` on boot and replaces itself once (`src/core/build_gate.ts`, 16 vectors), and the HUD prints the build id. ⭐ The plain URL is trustworthy again; a `?v=` is the refresh's marker, not something to type. (this file)
