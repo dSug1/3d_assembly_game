@@ -1757,3 +1757,38 @@ the mouse needs no rule of its own — `outsideTapReleases` in `input/alignment.
 shake the Follower; shake the Pioneer (all its followers); turn or move the Pioneer of a cyan
 follower; flick the Follower within the gesture that aligned it; align it to something else; and
 **a tap on empty space while holding it** (`D95`).
+
+### 11.10 — ⭐⭐⭐ `D96`: THE PIONEERFACECURSOR
+
+> *"When aligning, create an object PioneerFaceCursor: it shall be a green ring and it shall be
+> placed at the center of the PioneerFace by default. Destroy it … when un-alignment occurs and
+> this PioneerFace is cancelled. … there can be several PioneerFaceCursors … and they can also have
+> the same position … implement a proper tracking."* — the owner, 2026-09-25, then *"the ring shall
+> be amber instead of green"* and *"the ring shall always be in the screen view plane"*.
+
+⭐⭐ **ONE CURSOR PER ALIGNMENT, KEYED BY THE WHOLE COUPLE** — follower + FollowerFace + pioneer +
+PioneerFace (`core/pioneer_face_cursors.ts`). ⛔ Not one per Pioneer face: `pioneerFaces()`
+de-duplicates, which is right for a contour and wrong here — two Followers on one face own two
+rings at one position. ⭐ A Follower re-aligned on ANOTHER face (either side) is a different couple,
+so its old ring is destroyed and a new one made at the new face.
+⭐ **Reconciled against the links every frame** and **disposed** when its couple goes, whatever
+removed it — retired by membership, the 2026-09-17 lesson. ⚠ A surviving cursor is the SAME object
+frame to frame, so a moved position persists.
+
+**The drag** (the owner, same day): *"when left button clicked inside the PioneerFaceCursor
+(desktop) or first or second touch pressed within a certain distance from the PioneerFaceCursor
+(mobile) … translate the PioneerFaceCursor on top of the PioneerFace surface … it cannot exit an
+edge … if the surface is not flat, the PioneerFaceCursor position shall follow the surface."*
+
+| | rule | where |
+|---|---|---|
+| grab | mouse: LEFT button INSIDE the ring (radius 8 px); touch: within `pioneerCursorGrabRadii` × radius (1–10); nearest wins; never the synthesised second touch | `input/pioneer_cursor_grab.ts` |
+| claim | the pointer is taken **before the router** — it selects, orbits, taps and counts as nothing else, until it lifts | `scene.ts` `cursorPointer` |
+| move | RELATIVE: the grab offset is kept, so a press several radii away does not jump the ring | `scene.ts` |
+| place | the ray's nearest hit on the face's TRIANGLES (two-sided); on a miss, the plane through the cursor, pulled back to the nearest surface point — bounded by the edges, on the surface when it is not flat | `core/face_surface.ts` |
+| toggle | **FACE › *PioneerFaceCursor drag on/off*** (`pioneerCursorDrag`) — ⛔ **ships OFF**, the owner's *"default is cursor drag off"*; at 0 nothing grabs | FACE menu |
+
+⚠ Costs, unjudged: the ring sits at the face CENTRE, so with the drag ON a press meant for that
+face's centre grabs the ring instead — wider reach, more often; and 8 px is a small mouse target.
+⛔⛔ **AND THE RING IS NOT PARENTED** — a billboard parented to a body loses the body's ROTATION
+(defect 71), so it is placed in world space every frame.

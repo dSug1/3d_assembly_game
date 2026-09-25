@@ -307,5 +307,6 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `barycentre.ts` | rule 1's orbit **centre** — what the camera orbits around |
 | `recognizer.ts` | §1.3 itself: the state machine, rollback, and the release-time priority ladder |
 | `mouse_second_touch.ts` · ⚠ `render/mouse_adapter.ts` | ⭐⭐ `D94` — **a mouse as two touches**: left = the browser's own pointer; **Shift + left drag** = an anchor-only second touch; **right-press and hold** = the HitFace (never driven), then a **left click** presses the Pioneer. ⛔ Never touches a DOM event, models only #2, reads `buttons` every event. `hitFaceAllowed`: only the right button sets a HitFace; `secondTouchAlwaysAvailable`: `D60` translates an aligned body under the left button in any mode |
+| `pioneer_cursor_grab.ts` · `mouse_wheel_zoom.ts` | `D96`: which PioneerFaceCursor a press grabs (mouse inside the ring, touch within 1–10 radii; OFF by default) · the wheel's notches onto pinch's `zoom` |
 
 ---

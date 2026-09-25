@@ -34,6 +34,7 @@ falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **d
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
 ⭐⭐ **THE SCENE BOOTS UNALIGNED AND IN `TRANSLATE`** (`D93`, 2026-09-25): *"boot the scene with no aligned object … use current rectangles transforms as displayed on the usb tablet."* ⛔ `bootAlignment` is **deleted** — it never rotated anything, so only the STATE changed. ⚠⚠ **`D63`'s jig goes with it**: the swing trial opened pre-aligned, a hand must make that alignment now, and its earlier verdicts are not comparable with later ones. ⭐⭐ **AND THE TWO PARTS BOOT TILTED 30° in opposite senses** — roll about world `z`, pitch about world `x` (`A7`'s axes at the boot camera), roll first. ⚠⚠ **Measured cost**: the pyramid's gap to the plate closes to **53 mm** against a **60 mm** band, so **that pair shows a white capture contour at boot**; the parts' mutual gap moved 280 → 216 mm.
 ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch, **Shift + left drag = the second** (gravity + roll; an aligned body's left drag translates in any mode); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align. ⛔ The right button never moves anything → defect 70.
+⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
 ### ⭐⭐⭐ WHAT IS OWED NEXT, IN ORDER (2026-09-17)
