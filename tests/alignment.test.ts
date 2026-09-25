@@ -25,6 +25,7 @@ import {
   pressMeaning,
   type PressContext,
   type TapContext,
+  outsideTapReleases,
 } from "@input/alignment";
 import {
   singleAlignment,
@@ -720,5 +721,26 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     expect(r.targetWorld).toEqual([-1, -0, -0]);
     expect(r.kind).toBe(c.kind);
     expect(r.localNormal).toEqual(c.localNormal);
+  });
+});
+
+describe("⭐⭐⭐ `D95` — a tap on empty space while holding an aligned body releases it", () => {
+  it("⭐⭐ one held body, aligned → the tap releases it", () => {
+    // > *"first touch pressed on aligned object and single tap with second touch not raycast
+    // > hitting any object"* — and the desktop's right-hold + left click on empty space is the
+    // > same configuration, so it needs no rule of its own.
+    expect(outsideTapReleases(1, true)).toBe(true);
+  });
+
+  it("⛔⛔ a FREE held body keeps the old meaning — the mode toggle", () => {
+    // ⚠ RED against releasing on any held body: the tap would stop toggling the mode for a
+    // configuration that has no alignment to give up.
+    expect(outsideTapReleases(1, false)).toBe(false);
+  });
+
+  it("⛔ nothing held, or two held, is not this rule", () => {
+    expect(outsideTapReleases(0, false)).toBe(false);
+    // ⚠ *which one?* has no answer with two
+    expect(outsideTapReleases(2, true)).toBe(false);
   });
 });

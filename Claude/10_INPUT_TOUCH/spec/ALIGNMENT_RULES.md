@@ -1736,3 +1736,24 @@ third body, one the hand never touched.
 policy used to be four lines of render code, which is the 2026-09-19 shape exactly: *a rule written
 in `scene.ts` is a rule nothing can interrogate.* ⭐ Four mutants now go red on it, including one
 that survived the first fixtures — see the ledger.
+
+### 11.9 — ⭐⭐ `D95`: A TAP ON EMPTY SPACE RELEASES THE HELD BODY'S ALIGNMENT
+
+> *"Add the following conditions to unalign an aligned object (in addition to existing conditions):
+> first touch pressed on aligned object and single tap with second touch not raycast hitting any
+> object (for mobile device); right button clicked and hold on aligned object and then left click
+> not raycast hitting any object (for desktop)."* — the owner, 2026-09-25
+
+⭐⭐ **ONE RULE, BECAUSE THE TWO ARE ONE CONFIGURATION.** On the desktop the right button's hold IS
+the first touch (`D94`), and a left click that hits nothing IS a second touch routed `OUTSIDE`. So
+the mouse needs no rule of its own — `outsideTapReleases` in `input/alignment.ts`, called from the
+`OUTSIDE` release in `scene.ts`.
+
+⛔ Exactly one held body, and it must be aligned. ⚠ With a free body the tap keeps its old meaning,
+`D28`'s mode toggle. ⭐ The tap is CONSUMED — it releases and does not also toggle the mode (`D38`'s
+*one gesture, one consequence*); the tap history is still recorded, so a double tap still pairs.
+
+⭐ **The unalign gestures now**, all of them: re-press the same pair on the same faces (`D39`);
+shake the Follower; shake the Pioneer (all its followers); turn or move the Pioneer of a cyan
+follower; flick the Follower within the gesture that aligned it; align it to something else; and
+**a tap on empty space while holding it** (`D95`).
