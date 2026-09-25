@@ -15,9 +15,20 @@
  * is standing in for the touchpoint a mouse does not have; everything else reaches the rules
  * exactly as it did before this file existed.
  *
- * ⭐ What IS intercepted becomes a synthetic `touch` pointer event dispatched on the canvas, so
- * Babylon's own input manager produces the ordinary `onPointerObservable` notifications and
- * `scene.ts`'s gesture code cannot tell the difference.
+ * ## ⛔⛔ THE SYNTHETIC POINTER GOES STRAIGHT TO THE OBSERVABLE, NOT THROUGH THE DOM
+ *
+ * ⚠⚠ **THE FIRST VERSION DISPATCHED SYNTHETIC `PointerEvent`s ON THE CANVAS** and let Babylon's
+ * device layer raise the notification. ⛔ The owner: *"right click as second touch is not working:
+ * I cannot toggle the vertical translation - roll, I cannot select pioneerface."* ⭐ With the left
+ * button passing through and working, and the right button — the only synthetic one — producing
+ * nothing, that is an A/B inside one build: **the real stream arrives and the synthetic one does
+ * not.** ⚠ I could not name the mechanism inside Babylon's `WebDeviceInputSystem`, so the fix
+ * removes the dependency rather than guessing at it.
+ *
+ * ⭐⭐ `scene.onPointerObservable.notifyObservers` is safe here for a reason worth stating:
+ * `scene.ts` calls **`camera.detachControl()`**, so the scene's own handler is the only consumer
+ * and nothing else can react twice. ⛔ The pick is computed with `scene.pick`, because the press
+ * path reads `info.pickInfo` to resolve the face.
  *
  * ⚠ Checked rather than hoped: Babylon calls `setPointerCapture` for touch pointers inside a
  * `try/catch` (`webDeviceInputSystem.js`), so an id that belongs to no real pointer is safe.
@@ -37,6 +48,10 @@
  * file deliberately contains no numbers of its own to blur that line.
  */
 import type { Scene } from "@babylonjs/core/scene";
+import {
+  PointerEventTypes,
+  PointerInfo,
+} from "@babylonjs/core/Events/pointerEvents";
 import {
   DesktopPointers,
   type DesktopEvent,
@@ -88,43 +103,45 @@ export function attachDesktopInput(
   let seen = 0;
   let sent = 0;
   let last = "—";
-  // ⛔ Guards the re-entry: a synthetic event dispatched ON the canvas still travels the capture
-  // path from `window`, so without this the adapter would translate its own output for ever.
-  let emitting = false;
 
   const emit = (actions: readonly SyntheticAction[]): void => {
     if (actions.length === 0) return;
     sent += actions.length;
     const a0 = actions[actions.length - 1]!;
     last = `${a0.kind}${a0.id}@${a0.x.toFixed(0)},${a0.y.toFixed(0)}`;
-    emitting = true;
-    try {
-      for (const a of actions) {
-        const type =
-          a.kind === "DOWN"
-            ? "pointerdown"
-            : a.kind === "MOVE"
-              ? "pointermove"
-              : "pointerup";
-        canvas.dispatchEvent(
-          new PointerEvent(type, {
-            pointerId: a.id,
-            // ⭐ `touch`, so anything downstream that ever distinguishes sees ONE kind of input —
-            // and so Babylon takes its try/catch'd capture path rather than the mouse one.
-            pointerType: "touch",
-            isPrimary: false,
-            clientX: a.x,
-            clientY: a.y,
-            // ⚠ A `pointerup` carries no buttons; a down or a move carries the left one, because
-            // that is what a held finger looks like.
-            buttons: a.kind === "UP" ? 0 : 1,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
-      }
-    } finally {
-      emitting = false;
+    const rect = canvas.getBoundingClientRect();
+    for (const a of actions) {
+      const type =
+        a.kind === "DOWN"
+          ? PointerEventTypes.POINTERDOWN
+          : a.kind === "MOVE"
+            ? PointerEventTypes.POINTERMOVE
+            : PointerEventTypes.POINTERUP;
+      const evt = new PointerEvent(
+        a.kind === "DOWN"
+          ? "pointerdown"
+          : a.kind === "MOVE"
+            ? "pointermove"
+            : "pointerup",
+        {
+          pointerId: a.id,
+          // ⭐ `touch`, so anything downstream that ever distinguishes sees ONE kind of input.
+          pointerType: "touch",
+          clientX: a.x,
+          clientY: a.y,
+          // ⚠ A `pointerup` carries no buttons; a down or a move carries the left one, which is
+          // what a held finger looks like.
+          buttons: a.kind === "UP" ? 0 : 1,
+        },
+      );
+      // ⛔ Canvas-relative, because `scene.pick` works in the engine's own coordinates while the
+      // event carries client ones. ⚠ They agree only while the canvas sits at the viewport origin,
+      // which is true today and is exactly the kind of premise that goes stale in silence.
+      const pick = scene.pick(a.x - rect.left, a.y - rect.top);
+      scene.onPointerObservable.notifyObservers(
+        new PointerInfo(type, evt, pick),
+        type,
+      );
     }
   };
 
@@ -141,12 +158,14 @@ export function attachDesktopInput(
   });
 
   /**
-   * ⛔⛔ **CAPTURE PHASE ON `window`, SO THE REAL EVENT NEVER REACHES THE CANVAS.** ⚠ Both a
-   * `stopPropagation` and the `emitting` guard are needed: the first keeps the mouse out of the
-   * rules, the second keeps our own output out of this handler.
+   * ⛔⛔ **CAPTURE PHASE ON `window`, SO A SUPPRESSED EVENT NEVER REACHES THE CANVAS.** ⚠ Only the
+   * suppressed ones are stopped; everything else continues to Babylon untouched, which is the
+   * whole of defect 71's fix.
    */
   const intercept = (e: PointerEvent, type: DesktopEvent["type"]): void => {
-    if (emitting || e.pointerType !== "mouse") return;
+    // ⚠ Only a MOUSE is ours. ⛔ A finger is untouched, which is why this needs no flag — and the
+    // synthetic pointers never come back through here, because they no longer touch the DOM.
+    if (e.pointerType !== "mouse") return;
     seen++;
     const v = map.step(fromPointer(e, type));
     // ⭐⭐⭐ **PASS THROUGH UNLESS THE MAPPING ASKS FOR THE EVENT.** ⛔ The first build stopped
