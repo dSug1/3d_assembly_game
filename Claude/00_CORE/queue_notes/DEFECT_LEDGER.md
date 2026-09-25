@@ -914,3 +914,50 @@ cannot correct is the RENDERER: a globally reversed mesh is culled inside-out on
 green suite. ✅ The suite now pins the **sign of the signed volume** as well, which is the half the
 topology layer cannot recover — `mesh_topology`'s own *"no outline of any sort"* scar, aimed at the
 other layer.
+
+---
+
+## 70 — ⛔⛔⛔ **FOUR ROUNDS OF A DESKTOP INPUT LAYER, ALL WRONG IN THEIR PREMISES** (2026-09-25, the owner)
+
+> *"I reverted to commit `6a28e62`. Create a desktop version of the input system. The second touch
+> shall be done with right click. Make the build modular. Do not repeat the previous build as it
+> has continuously failed to work. Build from scratch with robust logic."*
+
+⭐ The previous build is gone with the revert; this entry is what it cost and why the rebuild is
+shaped the way it is. ⛔ **Not one of the four failures was in a gesture rule.** Each was a
+premise about the real mouse pointer:
+
+| round | premise | what the glass said |
+|---|---|---|
+| 1 | desktop did not work yet, so intercept every mouse event and replace it | *"everything is almost frozen"* — a mouse was already touchpoint #1 with no layer at all |
+| 2 | a synthetic DOM `PointerEvent` dispatched on the canvas will be delivered | *"right click does nothing"* — Babylon's device layer swallowed it |
+| 3 | a hand presses the left button first | *"erratic … selection of pioneer never works"* — the owner presses right first |
+| 4 | a latch remembering *is the left button down* can stand in for the buttons | *"some clicks land, some do not"* — stale on a missed `pointerup` and every `pointercancel` |
+
+### ⭐⭐⭐ THE THREE RULES THE REBUILD IS BUILT ON, EACH THE NEGATION OF A ROUND
+
+1. **Never touch a DOM pointer event — not to stop one, not to create one.** The layer works at
+   `scene.onPrePointerObservable`, Babylon's documented hook that runs before the scene's handler
+   and whose `skipOnPointerObservable` makes `InputManager` return before processing — so a
+   skipped event never reaches `scene.ts`, with no `stopPropagation` anywhere. Synthetic #2 goes
+   straight to `scene.onPointerObservable.notifyObservers`, the path PROVEN on the glass when a
+   synthetic press resolved a face. ⭐ `scene.ts` calls `camera.detachControl()`, so the scene is
+   that observable's only consumer.
+2. **Model only the touchpoint the mouse lacks.** The first touchpoint is the browser's own
+   pointer and is not represented; representing it is what broke it. `mouse_second_touch.ts` has
+   one piece of state — is #2 down, and where.
+3. **Read `buttons` on every event; remember nothing about the real pointer.** The one state is
+   reconciled against bit 2 every time: a clear bit while #2 is down means its release was never
+   seen, and it lifts at once, before the rules act on that event.
+
+⭐ And a lone right press is neither a trap nor refused: it is a valid press, and the cursor drives
+#2 whenever it is the only pointer down.
+
+### ⚠ WHAT IS DELIBERATELY NOT IN IT
+
+⛔ No wheel zoom. The previous pinch synthesis added two more synthetic pointers whose lifetime
+interacted with every press; the owner asked for the second touch, and breadth was the thing that
+failed hardest. ⚠ Six mutants, six red — each one a failure mode of the previous build.
+
+⭐⭐⭐ `METHOD`: *an input mapping's failure modes live in its premises about the hand, not in its
+code — and the only instrument that reads a premise about a hand is a hand.*

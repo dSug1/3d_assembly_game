@@ -226,6 +226,9 @@ import {
 } from "../input/approach_swing";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
+// ⛔ THE DESKTOP SECOND TOUCH IS THIS IMPORT AND ONE CALL, AND NOTHING ELSE. Delete both and the
+// touch build is byte-identical — `mouse_adapter.ts` says why that is the whole point.
+import { attachMouseSecondTouch } from "./mouse_adapter";
 import { createMenu, type MenuSlider } from "./menu";
 
 /**
@@ -2499,6 +2502,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
   const hud = createHud();
+  // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
+  // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
+  // "mouse"` is looked at, and the scene's gesture code below is untouched.
+  attachMouseSecondTouch(canvas, scene);
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
