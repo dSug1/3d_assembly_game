@@ -104,17 +104,21 @@ export interface DesktopEvent {
   /** ⭐ Signed notches. POSITIVE zooms IN, so the caller negates `deltaY`. */
   readonly wheel?: number;
   /**
-   * ⭐⭐⭐ **IS THE LEFT BUTTON DOWN?** — i.e. does touchpoint #1 exist right now.
+   * ⭐⭐⭐ **THE BROWSER'S OWN BITMASK OF BUTTONS DOWN, AFTER THIS EVENT** — `PointerEvent.buttons`:
+   * bit 1 = left, bit 2 = right, bit 4 = middle.
    *
-   * ⛔⛔ **THE SECOND TOUCHPOINT IS MEANINGLESS WITHOUT THE FIRST, AND A LONE ONE IS A TRAP.**
-   * `D87` makes the held body the FOLLOWER and the pressed one the PIONEER, so a press with
-   * nothing held has no relation to make. ⚠ Worse, it *latches a role*: the pressed body becomes
-   * a HOLDER carried by a finger the cursor never drives, so it shows its HitFace contour and
-   * then cannot be moved by anything. ⭐ That is exactly what the owner saw — *"right button press
-   * just hits face and does nothing more than highlight the face contours in fuchsia. No
-   * movement, no selection."*
+   * ⛔⛔⛔ **THIS REPLACES A LATCH, AND THE LATCH WAS THE DEFECT.** The adapter used to remember
+   * *is the left button down* from the downs and ups it had seen — and a `pointerup` the window
+   * never sees (released off the page) or a `pointercancel` (whose `button` is `-1`) left it
+   * stuck, so the NEXT press was judged against a hand that no longer existed. ⚠ The owner,
+   * 2026-09-25: *"some mouse clicks and delta position land, some mouse clicks and delta position
+   * do not."* ⭐ `METHOD`: *a substituted quantity* — a memory of the buttons stood in for the
+   * buttons, and the two agree only while no event is missed.
+   *
+   * ⭐⭐ The browser maintains this mask itself, on every event, from the OS. It cannot go stale
+   * the way a latch can, and it is what every decision below reads.
    */
-  readonly primaryDown?: boolean;
+  readonly buttons?: number;
 }
 
 export interface SyntheticAction {
@@ -172,40 +176,69 @@ export class DesktopPointers {
     }
   }
 
+  /** ⚠ Bit 1 of `buttons`: is the left button — touchpoint #1 — down right now? */
+  private static leftHeld(ev: DesktopEvent): boolean {
+    return ((ev.buttons ?? 0) & 1) !== 0;
+  }
+
+  /**
+   * ⭐⭐ **RECONCILE THE SYNTHETIC STATE AGAINST THE BROWSER'S MASK.** ⛔ If the right button is
+   * up in `buttons` and #2 is still down here, its release was never seen — off the page, or a
+   * cancel. ⚠ Lifted at once, or the next right press is refused as a repeat and every event in
+   * between is judged against a finger that is not there.
+   */
+  private reconcile(ev: DesktopEvent, out: SyntheticAction[]): void {
+    if (ev.buttons === undefined || this.second === null) return;
+    if ((ev.buttons & 2) !== 0) return;
+    out.push({ kind: "UP", id: DESKTOP_IDS.second, x: this.second.x, y: this.second.y });
+    this.second = null;
+  }
+
   private onDown(ev: DesktopEvent): DesktopVerdict {
+    // ⛔⛔ **ANY PRESS ENDS A ZOOM — not only the right button's.** ⚠ The synthetic pair lifts on a
+    // clock, and a LEFT press inside that window (180 ms, longer under inertial scrolling) used to
+    // arrive as a THIRD touchpoint beside two `OUTSIDE` ones — a configuration §4 has no row for.
+    // ⭐ Emitted BEFORE the real press reaches Babylon: this runs in the capture phase, so the
+    // scene sees the pair lift, then the press.
+    const actions = this.closePinch();
+    this.reconcile(ev, actions);
     // ⭐⭐⭐ **THE LEFT BUTTON IS NOT OURS.** It already drives touchpoint #1 through the
     // browser's own pointer, and it did so correctly before this file existed.
-    if (ev.button !== 2) return PASS;
+    if (ev.button !== 2) return { actions, suppress: false };
     // ⛔⛔ **REFUSED WITH NOTHING HELD — but still SWALLOWED.** ⚠ Letting it through would hand
     // Babylon a press on the mouse's own pointer id, which is touchpoint #1 arriving by the wrong
-    // button. ⭐ So the event is consumed and nothing is emitted: the right button simply does
-    // nothing until a part is held, which is what `D87` means by *hold the part, press what you
-    // want it aligned to*.
-    if (ev.primaryDown !== true) return { actions: [], suppress: true };
-    if (this.second !== null) return { actions: [], suppress: true };
-    // ⛔ A press ends a zoom: §4's role table counts touchpoints, and leaving the pinch pair down
-    // would make this press a third finger, which is `IGNORED`.
-    const actions = this.closePinch();
+    // button. ⭐ Read off `buttons`, never remembered: a memory of the left button is exactly
+    // what went stale.
+    if (!DesktopPointers.leftHeld(ev)) return { actions, suppress: true };
+    if (this.second !== null) return { actions, suppress: true };
     this.second = { x: ev.x, y: ev.y };
     actions.push({ kind: "DOWN", id: DESKTOP_IDS.second, x: ev.x, y: ev.y });
     return { actions, suppress: true };
   }
 
   private onMove(ev: DesktopEvent): DesktopVerdict {
+    const actions: SyntheticAction[] = [];
+    this.reconcile(ev, actions);
     // ⭐⭐ **SHIFT IS THE ONLY THING THAT TAKES A MOVE FROM THE REAL POINTER**, and only while the
     // second touchpoint is actually down. ⚠ Otherwise the cursor drives #1, exactly as it always
     // has — including while #2 is parked, which is what makes a two-finger hold feel ordinary.
-    if (ev.shift !== true || this.second === null) return PASS;
+    if (ev.shift !== true || this.second === null)
+      return actions.length === 0 ? PASS : { actions, suppress: false };
     this.second.x = ev.x;
     this.second.y = ev.y;
-    return {
-      actions: [{ kind: "MOVE", id: DESKTOP_IDS.second, x: ev.x, y: ev.y }],
-      suppress: true,
-    };
+    actions.push({ kind: "MOVE", id: DESKTOP_IDS.second, x: ev.x, y: ev.y });
+    return { actions, suppress: true };
   }
 
   private onUp(ev: DesktopEvent): DesktopVerdict {
-    if (ev.button !== 2) return PASS;
+    if (ev.button !== 2) {
+      // ⭐ The left button's release, or a `pointercancel` (whose `button` is `-1`): the browser's
+      // business, and it must reach Babylon or the real pointer is never released. ⚠ Anything the
+      // mask says is gone is lifted alongside — which is how a cancel takes #2 with it.
+      const actions: SyntheticAction[] = [];
+      this.reconcile(ev, actions);
+      return actions.length === 0 ? PASS : { actions, suppress: false };
+    }
     const p = this.second;
     // ⚠ Suppressed even with nothing to lift: its DOWN was swallowed, so letting the UP through
     // would hand the rules a release for a press they never saw.

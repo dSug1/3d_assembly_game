@@ -1033,3 +1033,49 @@ made unmissable instead of merely documented.
 
 ⭐ *A mapping is not finished when every event is accounted for; it is finished when the gestures it
 cannot complete refuse instead of half-happening.*
+
+---
+
+## 72 — ⛔⛔⛔ **A LATCH STOOD IN FOR THE BROWSER'S OWN BUTTON MASK** (2026-09-25, the owner)
+
+> *"Verify the scripts. There is something wrong with the desktop version of the input system: some
+> mouse clicks and delta position land, some mouse clicks and delta position do not."*
+
+⭐ *Some land, some do not* is the signature of a **desynchronised latch**, not of a delivery fault
+— and the owner had by then reverted the press-order commit, so the verification ran against the
+left-hard-wired mapping. ⚠ Read end to end, that version had three holes, and all three were one
+thing.
+
+### ⛔⛔⛔ THE THREE HOLES
+
+1. **`primaryDown` never cleared on a `pointercancel`.** Only `button === 0` cleared it, and a
+   cancel's `button` is `-1`. ⚠ Stuck at `true`, the next right press made a synthetic holder with
+   no real one under it — the fuchsia trap again.
+2. **A `pointerup` the window never sees left it stuck for good** — a drag released off the page.
+   ⛔ And a #2 whose right release was missed stayed down for ever, so every later right press was
+   refused as a repeat.
+3. **A LEFT press did not end the wheel's synthetic pinch.** The pair lifts on a 180 ms clock,
+   longer under inertial scrolling; a click inside that window arrived beside two `OUTSIDE`
+   pointers as a **third** touchpoint, a configuration §4's table has no row for.
+
+⭐ And one more outside the module: the OS context menu was prevented on the **canvas only**, while
+the HUD and the tuning menu sit over it — a right click there opened the menu, and the click that
+dismissed it did not land.
+
+### ⭐⭐⭐ ONE CAUSE: STATE I REMEMBERED INSTEAD OF STATE THE BROWSER TELLS ME
+
+`PointerEvent.buttons` is the browser's own bitmask of what is down **right now**, maintained by
+the OS on every event. ⛔ A latch that records downs and ups is a **substituted quantity** for it —
+`METHOD`'s shape — and the two agree only while no event is missed. ✅ The module now reads the mask
+on every event and **reconciles** its one piece of synthetic state (#2) against it: a right bit
+that is clear while #2 is down means the release was missed, and #2 lifts where it was parked.
+
+✅ Any press ends the zoom, and the verdict can now carry synthetic lifts **and** pass the real event
+through — emitted first, in the capture phase, so the scene sees the pair lift and then the press.
+
+### ⚠ WHAT THIS DOES NOT CLAIM
+
+⛔ I cannot say which of the four the owner's clicks fell into, and I did not try to: the fix
+removes the **class**, and the four vectors that pin it were each shown RED against the shipped
+code. ⭐ Four mutants, four red — including *"the left button is assumed held"*, which is what a
+latch that never clears amounts to.
