@@ -1013,3 +1013,19 @@ finger lands; on a mouse it existed only after the first Shift move — so a pla
 one Shift away, which is the availability a resting finger has: `secondTouchAlwaysAvailable` in
 the desktop module, read by `secondTouchOwnsRollAndDepth` — the one rule both call sites share.
 ⚠ Unaligned bodies are untouched: their second touch owns one axis, so the mode still decides.
+
+### ⭐⭐ AND THE RIGHT BUTTON BECAME THE HITFACE — the owner's final desktop gesture
+
+> *"Right button click does not translate nor rotate any object. Hitface triggered only by right
+> click, not by left click."* — then: *"right click hits hitface and hold, mouse move to pioneer
+> face and single left click sets pioneer face and aligns (cyan highlight) or double left click
+> (amber)."*
+
+⭐ It is `D87`'s gesture with the buttons assigned: the **right press** is the first touch — the
+held body, whose raycast face is the HitFace and becomes the FollowerFace — and the **left click**
+is the second touch pressing the Pioneer. ⭐ Nothing new was needed in the scene's alignment rules.
+✅ Three changes in the desktop module: the right-button pointer is **never driven** by the
+cursor, so it cannot translate or rotate; a right press while the left is down is **refused**
+(it would arrive second and mean a Pioneer); and `hitFaceAllowed` hides the HitFace for a
+mouse-pressed holder, which the scene's `hitFaceNow` reads. ⚠ A quick right click on its own is
+still a tap on a body, which toggles the mode as any tap does.

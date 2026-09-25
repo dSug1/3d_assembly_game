@@ -74,6 +74,8 @@ A gesture recognizer is **invisible**. `METHOD` closes a change only on a look a
 real device, and *"the cube moved"* says nothing about whether a gesture committed,
 whether a flick rolled the pose back, or which rule won at release.
 
+**`mouse_adapter.ts`** — `D94`'s desktop seam, and the only render file that knows a mouse exists. ⛔ It never stops or creates a DOM event: it skips at `onPrePointerObservable`.
+
 **`hud.ts`** — phase, motion state, the release verdict, the camera state and depth
 readout, the latched roles, the live noise floor, **which tunables the URL overrode**, and
 ⭐⭐ **the BUILD ID this bundle IS** (`build b1ce845+dirty  2026-09-16 04:52Z`).
