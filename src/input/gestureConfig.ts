@@ -289,6 +289,12 @@ export interface GestureConfig {
    */
   pioneerCandidates: number;
   pioneerCandidateConeDeg: number;
+  /**
+   * ⭐⭐ How far from a PioneerFaceCursor a TOUCH may press and still grab it, in RING RADII — the
+   * owner, 2026-09-25: *"a slider starting from the radius of the PioneerFaceCursor up to 10 times
+   * this radius"*. ⛔ The mouse ignores it: the left button must land INSIDE the ring.
+   */
+  pioneerCursorGrabRadii: number;
   flickWindow: number;
   /** mm/s at lift, below which it is a drag that stopped — never a flick. */
   flickLiftSpeed: number;
@@ -892,6 +898,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // the FIRST touch, so a press on a frozen body is admitted with the offer off or on.
   pioneerCandidates: 0,
   pioneerCandidateConeDeg: 15,
+  // ⚠ A guess inside the owner's 1–10: a fingertip is wider than the 16 px ring it aims at.
+  pioneerCursorGrabRadii: 3,
   flickWindow: 120,
   flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
@@ -1107,6 +1115,19 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `pioneerCandidates (${cfg.pioneerCandidates}) must be exactly 0 or 1: it switches the ` +
         "fuchsia Pioneer-candidate offer on and off, and a half-set flag would read as truthy " +
         "while the readout claimed otherwise.",
+    );
+  }
+
+  // ⛔ The owner's range, and `grabbedCursor` clamps to it as well — a validator catches a URL typo
+  // at boot instead of letting it ship as a silently different reach.
+  if (
+    !Number.isFinite(cfg.pioneerCursorGrabRadii) ||
+    cfg.pioneerCursorGrabRadii < 1 ||
+    cfg.pioneerCursorGrabRadii > 10
+  ) {
+    throw new Error(
+      `pioneerCursorGrabRadii (${cfg.pioneerCursorGrabRadii}) must be between 1 and 10: it is ` +
+        "how many PioneerFaceCursor radii a touch may press from the ring and still grab it.",
     );
   }
 

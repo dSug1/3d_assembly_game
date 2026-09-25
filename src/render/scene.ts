@@ -35,7 +35,7 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
-import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
@@ -164,7 +164,14 @@ import { AlignmentLinks } from "../core/alignment_links";
 import {
   PioneerFaceCursors,
   type AlignmentCouple,
+  type PioneerFaceCursor,
 } from "../core/pioneer_face_cursors";
+import { pointOnFace } from "../core/face_surface";
+import {
+  grabbedCursor,
+  PIONEER_CURSOR_PX,
+  type CursorOnScreen,
+} from "../input/pioneer_cursor_grab";
 import { AlignSnaps } from "../input/align_snap";
 import {
   followerLinksFrom,
@@ -1096,7 +1103,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⭐ DISPOSED, not hidden, unlike the face markers: a cursor is a per-alignment OBJECT that may
    * later carry state of its own, and a hidden pool keyed by a couple would grow with every couple
    * ever made. ⚠ The material is SHARED and survives, so a dispose frees the mesh's buffers only.
-   * ⛔ PARENTED to the Pioneer (defect 46), so only its scale is written per frame.
+   * ⛔ PARENTED to the Pioneer (defect 46) and BILLBOARDED — always in the screen view plane.
    */
   const pioneerCursors = new PioneerFaceCursors();
   const pioneerCursorMeshes = new Map<string, Mesh>();
@@ -1104,8 +1111,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   pioneerCursorMat.emissiveColor = PIONEER_CURSOR_COLOUR.clone();
   pioneerCursorMat.disableLighting = true;
   pioneerCursorMat.backFaceCulling = false;
-  /** ⚠ A little larger than the white candidate ring (`GIZMO_RING_PX`), so the two can nest. */
-  const PIONEER_CURSOR_PX = 16;
+  // ⚠ `PIONEER_CURSOR_PX` (16) lives in `input/pioneer_cursor_grab.ts`, because the grab reach is
+  // built on it — a little larger than the white candidate ring (`GIZMO_RING_PX`), so they nest.
   const syncPioneerCursors = (): void => {
     const couples: AlignmentCouple[] = [];
     for (const followerId of links.alignedObjects()) {
@@ -1141,14 +1148,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       m.metadata = { orbitCandidate: false };
       // ⭐ Above the body, like every instrument ring: a cursor must not be hidden by what it marks.
       m.renderingGroupId = 2;
+      // ⭐⭐ **ALWAYS IN THE SCREEN VIEW PLANE** — the owner, 2026-09-25: *"the ring shall always be
+      // in the screen view plane (not in the plane of the PioneerFace)"*. ⚠ The torus is built in
+      // its local XZ plane, so it is turned into XY ONCE and baked, then billboarded exactly as the
+      // candidate ring is: a billboard presents the local XY plane to the camera. ⛔ Laid in the
+      // face plane it went edge-on — and invisible — whenever the face turned away from the view.
+      m.rotation.x = Math.PI / 2;
+      m.bakeCurrentTransformIntoVertices();
+      m.billboardMode = Mesh.BILLBOARDMODE_ALL;
       m.parent = body;
-      const n = new Vector3(cur.normal[0], cur.normal[1], cur.normal[2]);
-      // ⭐ The torus lies in its local XZ plane, so +Y is turned onto the face normal.
-      m.rotationQuaternion = Quaternion.FromUnitVectorsToRef(
-        Vector3.Up(),
-        n,
-        new Quaternion(),
-      );
       pioneerCursorMeshes.set(cur.key, m);
     }
     const scale =
@@ -4094,6 +4102,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐⭐ How close to MATING a face must be before it lights fuchsia. ⛔ `0` is the honest
         // OFF for the cone: only an exactly opposed face. The owner asked for 0–45 in steps of 5.
         tunable("fuchsia cone (deg)", "pioneerCandidateConeDeg", 0, 45, 5),
+        // ⭐⭐ The owner's 1–10 ring radii. ⚠ Touch only: the mouse must click INSIDE the ring.
+        tunable(
+          "PioneerFaceCursor touch reach (radii)",
+          "pioneerCursorGrabRadii",
+          1,
+          10,
+          0.5,
+        ),
         // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
         // the flag; anything above draws an x-ray twin at that opacity.
         tunable(
@@ -5154,6 +5170,113 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     t: performance.now(),
   });
 
+  /**
+   * ⭐⭐⭐ **A PIONEERFACECURSOR IS DRAGGED ALONG ITS PIONEERFACE** — the owner, 2026-09-25:
+   * *"when left button clicked inside the PioneerFaceCursor (desktop) or first or second touch
+   * pressed within a certain distance from the PioneerFaceCursor (mobile) … and the
+   * PioneerFaceCursor is dragged … translate the PioneerFaceCursor on top of the PioneerFace
+   * surface."*
+   *
+   * ⭐⭐ **THE POINTER IS CLAIMED AT PRESS AND NEVER REACHES THE ROUTER.** So it selects nothing,
+   * orbits nothing, counts as no touchpoint and is no tap — a grab is its own gesture, not an
+   * extra channel on someone else's. ⚠ Every later event of that pointer is swallowed too, until
+   * its release; if the alignment ends mid-drag the finger simply stops moving anything.
+   *
+   * ⭐ The DECISIONS are pure: which cursor a press grabs (`grabbedCursor`) and where on the face
+   * a ray puts it (`pointOnFace`: under the finger, bounded by the edges, on the surface when it is
+   * not flat). ⚠ The drag is RELATIVE — the grab offset is kept — so a touch pressed several radii
+   * away moves the ring without making it jump under the finger.
+   */
+  const cursorDrags = new Map<number, { key: string; dx: number; dy: number }>();
+  const cursorScreen = (
+    cur: PioneerFaceCursor,
+  ): { x: number; y: number } | null => {
+    const body = meshOf.get(cur.pioneerId);
+    if (!body) return null;
+    const w = Vector3.TransformCoordinates(
+      new Vector3(cur.position[0], cur.position[1], cur.position[2]),
+      body.computeWorldMatrix(true),
+    );
+    const rw = engine.getRenderWidth();
+    const rh = engine.getRenderHeight();
+    const p = Vector3.Project(
+      w,
+      Matrix.IdentityReadOnly,
+      scene.getTransformMatrix(),
+      camera.viewport.toGlobal(rw, rh),
+    );
+    // ⚠ Behind the camera or past the far plane: not on screen, so not grabbable.
+    if (!(p.z >= 0 && p.z <= 1)) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: rect.left + (p.x * rect.width) / rw,
+      y: rect.top + (p.y * rect.height) / rh,
+    };
+  };
+  const dragCursorTo = (key: string, x: number, y: number): void => {
+    const cur = pioneerCursors.get(key);
+    if (cur === null) return;
+    const body = meshOf.get(cur.pioneerId);
+    const topo = topoOf.get(cur.pioneerId);
+    const face = topo?.faces.find((f) => f.id === cur.pioneerFaceId);
+    if (!body || !topo || !face) return;
+    // ⭐ Into the Pioneer's LOCAL frame, where the cursor and the face's triangles both live.
+    const ray = scene.createPickingRay(x, y, null, camera);
+    const inv = body.computeWorldMatrix(true).clone().invert();
+    const o = Vector3.TransformCoordinates(ray.origin, inv);
+    const d = Vector3.TransformNormal(ray.direction, inv).normalize();
+    const p = pointOnFace(
+      [o.x, o.y, o.z],
+      [d.x, d.y, d.z],
+      topo.positions,
+      face.triangles,
+      cur.position,
+      face.normal,
+    );
+    if (p !== null) cur.position = p;
+  };
+  /** ⭐ `true` when this event belongs to a cursor drag and must go no further. */
+  const cursorPointer = (type: number, e: PointerEvent): boolean => {
+    if (type === PointerEventTypes.POINTERDOWN) {
+      cursorDrags.delete(e.pointerId);
+      if (pioneerCursors.size === 0) return false;
+      const onScreen: CursorOnScreen[] = [];
+      for (const cur of pioneerCursors.all()) {
+        const p = cursorScreen(cur);
+        if (p !== null) onScreen.push({ key: cur.key, x: p.x, y: p.y });
+      }
+      const key = grabbedCursor(
+        {
+          x: e.clientX,
+          y: e.clientY,
+          pointerType: e.pointerType,
+          pointerId: e.pointerId,
+          button: e.button,
+        },
+        onScreen,
+        PIONEER_CURSOR_PX / 2,
+        cfg.pioneerCursorGrabRadii,
+      );
+      if (key === null) return false;
+      const at = onScreen.find((c) => c.key === key);
+      if (at === undefined) return false;
+      cursorDrags.set(e.pointerId, {
+        key,
+        dx: e.clientX - at.x,
+        dy: e.clientY - at.y,
+      });
+      const cur = pioneerCursors.get(key);
+      lastVerdict = `cursor: grabbed ${cur?.followerId ?? "?"} → ${cur?.pioneerId ?? "?"}/${cur?.pioneerFaceId ?? "?"}`;
+      return true;
+    }
+    const d = cursorDrags.get(e.pointerId);
+    if (d === undefined) return false;
+    if (type === PointerEventTypes.POINTERMOVE)
+      dragCursorTo(d.key, e.clientX - d.dx, e.clientY - d.dy);
+    else if (type === PointerEventTypes.POINTERUP) cursorDrags.delete(e.pointerId);
+    return true;
+  };
+
   scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
@@ -5198,6 +5321,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     }
     if (info.type === PointerEventTypes.POINTERUP)
       eventGaps.delete(e.pointerId);
+
+    // ⭐⭐⭐ A PIONEERFACECURSOR GRAB OWNS ITS POINTER — before the router can latch a role for it.
+    if (cursorPointer(info.type, e)) {
+      paint();
+      return;
+    }
 
     // ⭐ The anchor fork latches here, before anything is dispatched, so one event cannot be
     // judged half under one rule set and half under another.
