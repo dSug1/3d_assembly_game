@@ -30,21 +30,15 @@
  *
  * | input | touchpoint | intercepted? |
  * |---|---|---|
- * | **the FIRST button down** — either one | #1 — the browser's own pointer, untouched | ⭐ **no** |
- * | **the OTHER button**, while #1 is held | #2 — the alignment press (`D87`) | ⛔ yes |
+ * | **LMB** down / drag / up | #1 — the browser's own mouse pointer, untouched | ⭐ **no** |
+ * | **RMB** down / up | #2 — the alignment press (`D87`) | ⛔ yes |
  * | **Shift** + drag | moves #2 instead of #1 — depth and roll | ⛔ yes, only while held |
  * | **wheel** | two `OUTSIDE` pointers symmetric about the cursor, separation scaled | ⛔ yes |
  * | **CANCEL** (Esc, blur) | lifts every SYNTHETIC pointer | — |
  *
- * ⛔⛔⛔ **PRESS ORDER DECIDES THE SLOT, NOT WHICH BUTTON IT IS**, and hard-wiring LEFT to #1 cost
- * two rounds on the glass. ⚠ `IN2` latches a role by the order touchpoints ARRIVE, and a hand
- * thinks *first* and *second*, not *left* and *right*: the owner, pressing right first, got
- * *"erratic results … sometimes the green or grey axis engage, sometimes they do not. Selection of
- * pioneer object never works"*, and then *"right click does not fuchsia highlight any longer."*
- *
- * ⭐⭐ **SO WHICHEVER BUTTON GOES DOWN FIRST IS #1**, and it stays the browser's own pointer —
- * Babylon already raises `POINTERDOWN` for a right click, so nothing has to be synthesised for it.
- * ⛔ The other button, pressed while the first is held, is #2.
+ * ⛔⛔ **THE RIGHT BUTTON DOES NOTHING UNLESS THE LEFT IS ALREADY DOWN.** A second touchpoint with
+ * no first one has no relation to make (`D87`), and it would latch a role on the body it hit —
+ * leaving it held by a finger the cursor never drives.
  *
  * ⚠ **#2 PARKS UNLESS SHIFT IS HELD**, so an ordinary drag with both buttons down moves the held
  * body and nothing else. ⭐ Parking is exact rather than approximate: `A11` made §1.1 a POSITION
@@ -110,14 +104,17 @@ export interface DesktopEvent {
   /** ⭐ Signed notches. POSITIVE zooms IN, so the caller negates `deltaY`. */
   readonly wheel?: number;
   /**
-   * ⭐⭐⭐ **WHICH BUTTON OPENED THE REAL POINTER, OR `null` IF NONE IS DOWN.**
+   * ⭐⭐⭐ **IS THE LEFT BUTTON DOWN?** — i.e. does touchpoint #1 exist right now.
    *
-   * ⛔ Press ORDER decides the slot — see the header. ⚠ A lone second touchpoint is still refused:
-   * `D87` gives it no relation to make, and it would latch a role on the body it hit, leaving it
-   * held by a finger the cursor never drives — *"right button press just hits face and does
-   * nothing more than highlight the face contours in fuchsia."*
+   * ⛔⛔ **THE SECOND TOUCHPOINT IS MEANINGLESS WITHOUT THE FIRST, AND A LONE ONE IS A TRAP.**
+   * `D87` makes the held body the FOLLOWER and the pressed one the PIONEER, so a press with
+   * nothing held has no relation to make. ⚠ Worse, it *latches a role*: the pressed body becomes
+   * a HOLDER carried by a finger the cursor never drives, so it shows its HitFace contour and
+   * then cannot be moved by anything. ⭐ That is exactly what the owner saw — *"right button press
+   * just hits face and does nothing more than highlight the face contours in fuchsia. No
+   * movement, no selection."*
    */
-  readonly primaryButton?: number | null;
+  readonly primaryDown?: boolean;
 }
 
 export interface SyntheticAction {
@@ -176,13 +173,15 @@ export class DesktopPointers {
   }
 
   private onDown(ev: DesktopEvent): DesktopVerdict {
-    // ⭐⭐⭐ **THE FIRST BUTTON DOWN IS TOUCHPOINT #1, AND IT IS NOT OURS.** Whichever button it
-    // is, the browser's own pointer carries it and Babylon raises the press — which it already did
-    // for a right click long before this file existed.
-    const primary = ev.primaryButton ?? null;
-    if (primary === null) return PASS;
-    // ⚠ The same button again is not a second touchpoint.
-    if (ev.button === primary) return { actions: [], suppress: true };
+    // ⭐⭐⭐ **THE LEFT BUTTON IS NOT OURS.** It already drives touchpoint #1 through the
+    // browser's own pointer, and it did so correctly before this file existed.
+    if (ev.button !== 2) return PASS;
+    // ⛔⛔ **REFUSED WITH NOTHING HELD — but still SWALLOWED.** ⚠ Letting it through would hand
+    // Babylon a press on the mouse's own pointer id, which is touchpoint #1 arriving by the wrong
+    // button. ⭐ So the event is consumed and nothing is emitted: the right button simply does
+    // nothing until a part is held, which is what `D87` means by *hold the part, press what you
+    // want it aligned to*.
+    if (ev.primaryDown !== true) return { actions: [], suppress: true };
     if (this.second !== null) return { actions: [], suppress: true };
     // ⛔ A press ends a zoom: §4's role table counts touchpoints, and leaving the pinch pair down
     // would make this press a third finger, which is `IGNORED`.
@@ -206,8 +205,7 @@ export class DesktopPointers {
   }
 
   private onUp(ev: DesktopEvent): DesktopVerdict {
-    // ⭐ The button that opened the pointer closes it, through the browser, exactly as it opened.
-    if (ev.button === (ev.primaryButton ?? null)) return PASS;
+    if (ev.button !== 2) return PASS;
     const p = this.second;
     // ⚠ Suppressed even with nothing to lift: its DOWN was swallowed, so letting the UP through
     // would hand the rules a release for a press they never saw.

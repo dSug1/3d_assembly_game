@@ -1033,34 +1033,3 @@ made unmissable instead of merely documented.
 
 ⭐ *A mapping is not finished when every event is accounted for; it is finished when the gestures it
 cannot complete refuse instead of half-happening.*
-
-### ⛔⛔⛔ AND THE FOURTH ROUND: PRESS ORDER, NOT WHICH BUTTON
-
-> *"If I right click and then left click while right click is still pressed, sometimes the green or
-> grey axis engage, sometimes they do not. Selection of pioneer object never works."* … *"Right
-> click does not fuchsia highlight any longer."*
-
-⭐ Both sentences are one cause. The mapping hard-wired **LEFT → touchpoint #1**, so a right press
-with nothing held was refused; the left press that followed then became the holder, and whether the
-gizmo appeared depended only on whether that left click happened to land on a body. ⚠ *Erratic* was
-the correct word for it, and the erraticism was mine.
-
-⛔⛔ **`IN2` LATCHES A ROLE BY THE ORDER TOUCHPOINTS ARRIVE, AND A HAND THINKS *FIRST* AND *SECOND*,
-NOT *LEFT* AND *RIGHT*.** ✅ So press order decides the slot: whichever button goes down first is #1
-and stays the browser's own pointer — Babylon already raises `POINTERDOWN` for a right click, so
-nothing needs synthesising for it — and the other button, pressed while the first is held, is #2.
-
-⭐⭐ It also makes the lone-second-touchpoint trap **unreachable by construction** rather than
-refused by a guard, which is `D40`'s own preference and one fewer rule.
-
-### ⚠⚠ THE COUNT IS THE POINT: FOUR ROUNDS, THREE REGRESSIONS, ONE FEATURE
-
-⛔ Every round was deployed and every round was wrong on the glass in a new way. ⭐ What the four
-have in common is that **none of the wrongness was in the gesture rules** — it was all in the
-premises of the adapter: that desktop did not already work; that a synthetic DOM event would be
-delivered; that a hand would press the left button first.
-
-⭐⭐⭐ `METHOD`, and it is the entry to read if one is read: *an input mapping's failure modes live
-in its premises about the hand, not in its code — and the only instrument that reads a premise
-about a hand is a hand.* ⚠ A mouse cannot close rule 5, and it could not close this either: each
-round needed the owner.
