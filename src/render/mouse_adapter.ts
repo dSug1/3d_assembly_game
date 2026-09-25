@@ -79,7 +79,9 @@ export function attachMouseSecondTouch(
     // ⛔ Canvas-relative for `scene.pick`, which works in the engine's coordinates while the event
     // carries client ones. ⚠ The press path reads `info.pickInfo` to resolve the face.
     const rect = canvas.getBoundingClientRect();
-    const pick = scene.pick(a.x - rect.left, a.y - rect.top);
+    // ⛔ An anchor-only action is delivered with NO pick, so the scene routes it `OUTSIDE` — a
+    // Shift-made second touch must never become the holder of whatever lies under the cursor.
+    const pick = a.anchorOnly === true ? null : scene.pick(a.x - rect.left, a.y - rect.top);
     scene.onPointerObservable.notifyObservers(new PointerInfo(type, evt, pick), type);
     sent++;
     last = `${a.target}.${a.kind}@${a.x.toFixed(0)},${a.y.toFixed(0)}`;

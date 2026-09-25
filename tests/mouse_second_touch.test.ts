@@ -159,6 +159,124 @@ describe("⭐⭐⭐ THE OWNER'S SECOND REPORT: THE JUMP ON RELEASE", () => {
   });
 });
 
+describe("⭐⭐⭐ SHIFT + LEFT DRAG IS A SECOND TOUCH OF ITS OWN — no right button needed", () => {
+  // > *"left button drag without shift = translation in horizontal plane, left button drag with
+  // > shift: translation in gravity axis with dy and roll with dx"* — the owner, 2026-09-25
+  //
+  // ⭐ Nothing here chooses gravity or roll: that is the scene's existing second-touch rule, which
+  // already gives gravity to a free body in translation, both to an aligned one, roll in rotation.
+
+  it("⭐⭐⭐ the first Shift move creates an ANCHOR-ONLY #2 where the cursor was, and drives it", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 10, y: 10 }));
+    const v = m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 10, y: 25 }));
+    expect(v.skip).toBe(true);
+    expect(v.emit).toEqual([
+      { target: "SECOND", kind: "DOWN", x: 10, y: 10, anchorOnly: true },
+      { target: "SECOND", kind: "MOVE", x: 10, y: 25, anchorOnly: true },
+    ]);
+  });
+
+  it("⛔⛔⛔ IT IS NEVER PICKED — so it can never become the holder of another body", () => {
+    // > *"it says ready X->roll but the roll does not appear and the object cannot roll.
+    // > Sometimes it rolls, though."*
+    // ⛔ A second touch that raycasts takes its ROLE from what lies under the cursor: over empty
+    // space it drives roll, over ANOTHER body it becomes that body's holder and drives nothing
+    // here. ⭐ Every action of a Shift-made #2 is anchor-only, down to its lift.
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    const all = [
+      ...m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 5, y: 0 })).emit,
+      ...m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 9, y: 3 })).emit,
+      ...m.step(ev({ type: "UP", button: LEFT, buttons: 0, x: 9, y: 3 })).emit,
+    ].filter((a) => a.target === "SECOND");
+    expect(all.length).toBe(4);
+    expect(all.every((a) => a.anchorOnly === true)).toBe(true);
+  });
+
+  it("⭐⭐ releasing Shift hands the cursor back to the holder — with NO jump", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 0, y: 50 }));
+    // ⭐ #1 is still at (0,0) in the scene; +4 in x must put it at (4,0), never (4,50)
+    expect(m.step(ev({ type: "MOVE", buttons: L, x: 4, y: 50 }))).toEqual({
+      skip: true,
+      emit: [{ target: "REAL", kind: "MOVE", x: 4, y: 0 }],
+    });
+  });
+
+  it("⭐⭐ the left release lifts the Shift-made #2 FIRST, then #1 where the scene has it", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 0, y: 20 }));
+    expect(m.step(ev({ type: "UP", button: LEFT, buttons: 0, shift: true, x: 0, y: 20 }))).toEqual({
+      skip: true,
+      emit: [
+        { target: "SECOND", kind: "UP", x: 0, y: 20, anchorOnly: true },
+        { target: "REAL", kind: "UP", x: 0, y: 0 },
+      ],
+    });
+    expect(m.isSecondDown).toBe(false);
+  });
+
+  it("⛔ Shift with no drag creates nothing — so it can never register as a TAP", () => {
+    // ⚠ A second touch pressed and released in place is a tap, and a tap toggles the mode.
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    expect(m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 0, y: 0 }))).toEqual({
+      skip: false,
+      emit: [],
+    });
+    expect(m.isSecondDown).toBe(false);
+  });
+
+  it("⛔ Shift while hovering creates nothing — there is no holder to drive", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "MOVE", x: 0, y: 0 }));
+    expect(m.step(ev({ type: "MOVE", shift: true, x: 5, y: 5 }))).toEqual({ skip: false, emit: [] });
+  });
+
+  it("⭐ a right press REPLACES a Shift-made #2 — one second touch at a time", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 0, y: 10 }));
+    const v = m.step(ev({ type: "DOWN", button: RIGHT, buttons: L | R, x: 0, y: 10 }));
+    expect(v.emit).toEqual([
+      { target: "SECOND", kind: "UP", x: 0, y: 10, anchorOnly: true },
+      { target: "SECOND", kind: "DOWN", x: 0, y: 10 },
+    ]);
+  });
+
+  it("⛔ a stray right release (its press was missed) does not lift the Shift-made #2", () => {
+    // ⚠ The Shift-made #2 belongs to the LEFT button's hold. A right-button UP whose DOWN happened
+    // outside the window is still swallowed — but it must not take the channel away mid-drag.
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 0, y: 10 }));
+    expect(m.step(ev({ type: "UP", button: RIGHT, buttons: L, x: 0, y: 10 }))).toEqual({
+      skip: true,
+      emit: [],
+    });
+    expect(m.isSecondDown).toBe(true);
+  });
+
+  it("⛔⛔ the mask keeps a Shift-made #2 alive with the LEFT bit, not the right one", () => {
+    // ⚠ RED against reconciling it on bit 2, which is clear the whole time it exists — it would be
+    // lifted on the very next event and the channel would never run.
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 0, y: 10 }));
+    expect(tag(m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 0, y: 20 })).emit)).toEqual([
+      "SECOND.MOVE",
+    ]);
+    // ⭐ and a missed LEFT release takes it with the holder
+    expect(tag(m.step(ev({ type: "MOVE", buttons: 0, x: 0, y: 20 })).emit)).toEqual([
+      "SECOND.UP",
+      "REAL.UP",
+    ]);
+  });
+});
+
 describe("⭐⭐ the right button is touchpoint #2", () => {
   it("⭐ a lone right press is a press, and the cursor drives it", () => {
     const m = new MouseSecondTouch();

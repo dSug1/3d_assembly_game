@@ -77,6 +77,13 @@ export interface MouseAction {
   readonly kind: "DOWN" | "MOVE" | "UP";
   readonly x: number;
   readonly y: number;
+  /**
+   * ⭐⭐ `true` = deliver WITHOUT a raycast, so the scene routes it `OUTSIDE`. ⛔ Set for the
+   * Shift-made second touch, which is a pure channel driver: a pick there would let the cursor's
+   * position decide its role, and over ANOTHER body it became that body's holder — the owner's
+   * *"it says ready X->roll but the roll does not appear. Sometimes it rolls, though."*
+   */
+  readonly anchorOnly?: boolean;
 }
 
 export interface Verdict {
@@ -98,8 +105,11 @@ interface Pt {
 }
 
 export class MouseSecondTouch {
-  /** #2: where it is, and whether it was pressed BEFORE the real pointer. */
-  private second: (Pt & { first: boolean }) | null = null;
+  /**
+   * #2: where it is, whether it was pressed BEFORE the real pointer, and whether SHIFT made it
+   * (an anchor-only channel driver that lives for the left button's hold) or the RIGHT button did.
+   */
+  private second: (Pt & { first: boolean; shiftMade: boolean }) | null = null;
   /** The real pointer's position AS THE SCENE KNOWS IT, while the left button holds it down. */
   private real: Pt | null = null;
   /** The last cursor position, for the delta. */
@@ -127,10 +137,12 @@ export class MouseSecondTouch {
         // left release the window missed must not make a right press think it came second.
         this.reconcile(ev, emit);
         if (ev.button === RIGHT_BUTTON) {
+          // ⚠ A Shift-made #2 gives way to a real right press — one second touch at a time.
+          if (this.second !== null && this.second.shiftMade) this.liftSecond(emit);
           if (this.second === null) {
             // ⭐ `first` is a fact about #2's OWN press, recorded once — `IN2` latches the role
             // at the same instant, so the two cannot disagree.
-            this.second = { x: ev.x, y: ev.y, first: this.real === null };
+            this.second = { x: ev.x, y: ev.y, first: this.real === null, shiftMade: false };
             emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
           }
           skip = true;
@@ -146,12 +158,11 @@ export class MouseSecondTouch {
           // ⛔ Skipped even with nothing to lift: a right-button UP reaching Babylon is an UP of
           // the mouse's ONE pointer, which would release touchpoint #1 while the left is held.
           skip = true;
-          if (this.second !== null) {
-            // ⛔⛔ Lifted WHERE IT IS, never at the cursor — a lift elsewhere is one enormous step.
-            emit.push({ target: "SECOND", kind: "UP", x: this.second.x, y: this.second.y });
-            this.second = null;
-          }
+          // ⛔⛔ Lifted WHERE IT IS, never at the cursor — a lift elsewhere is one enormous step.
+          if (this.second !== null && !this.second.shiftMade) this.liftSecond(emit);
         } else if (ev.button === LEFT_BUTTON && this.real !== null) {
+          // ⭐ A Shift-made #2 lives for the left button's hold, and lifts just BEFORE it.
+          if (this.second !== null && this.second.shiftMade) this.liftSecond(emit);
           const at = this.real;
           this.real = null;
           // ⭐⭐ THE JUMP'S OTHER HALF: an offset pointer is released where the SCENE has it.
@@ -170,12 +181,21 @@ export class MouseSecondTouch {
         // receive one last move before it is lifted.
         this.reconcile(ev, emit);
         const moved = dx !== 0 || dy !== 0;
+        // ⭐⭐⭐ **SHIFT + LEFT DRAG DRIVES A SECOND TOUCH OF ITS OWN** (the owner, 2026-09-25):
+        // *"left button drag with shift = translation in gravity axis with dy and roll with dx"* —
+        // for an aligned body; gravity only for a free one in translation; roll with dx in
+        // rotation. ⭐ That is EXACTLY what the scene already does with a second touchpoint that
+        // is not on another body (`A16`'s mode pick, `D59`'s both-axes for an aligned follower),
+        // so nothing here chooses a channel. ⚠ Made LAZILY, on the first Shift move — so a Shift
+        // tapped without a drag creates no pointer and cannot register as a tap.
+        if (ev.shift && moved && this.real !== null && this.second === null && this.cursor !== null)
+          this.pressShiftSecond(emit);
         const driven = this.drivenBy(ev.shift);
         if (driven === "SECOND" && this.second !== null) {
           this.second.x += dx;
           this.second.y += dy;
           if (moved)
-            emit.push({ target: "SECOND", kind: "MOVE", x: this.second.x, y: this.second.y });
+            emit.push(this.secondAction("MOVE"));
           // ⚠ Skipped even when still: the real event would move #1, which the cursor is not driving.
           skip = true;
         } else if (driven === "REAL" && this.real !== null) {
@@ -192,10 +212,7 @@ export class MouseSecondTouch {
       }
 
       case "CANCEL":
-        if (this.second !== null) {
-          emit.push({ target: "SECOND", kind: "UP", x: this.second.x, y: this.second.y });
-          this.second = null;
-        }
+        if (this.second !== null) this.liftSecond(emit);
         break;
     }
 
@@ -214,14 +231,35 @@ export class MouseSecondTouch {
    * piece of state is re-checked against the mask the OS maintains, on every event.
    */
   private reconcile(ev: MouseInput, emit: MouseAction[]): void {
-    if (this.second !== null && (ev.buttons & RIGHT_BIT) === 0) {
-      emit.push({ target: "SECOND", kind: "UP", x: this.second.x, y: this.second.y });
-      this.second = null;
+    // ⚠ A Shift-made #2 belongs to the LEFT button's hold, a right-made one to the right button.
+    if (this.second !== null) {
+      const bit = this.second.shiftMade ? LEFT_BIT : RIGHT_BIT;
+      if ((ev.buttons & bit) === 0) this.liftSecond(emit);
     }
     if (this.real !== null && (ev.buttons & LEFT_BIT) === 0) {
       emit.push({ target: "REAL", kind: "UP", x: this.real.x, y: this.real.y });
       this.real = null;
     }
+  }
+
+  private secondAction(kind: "DOWN" | "MOVE" | "UP"): MouseAction {
+    const s = this.second!;
+    return s.shiftMade
+      ? { target: "SECOND", kind, x: s.x, y: s.y, anchorOnly: true }
+      : { target: "SECOND", kind, x: s.x, y: s.y };
+  }
+
+  private liftSecond(emit: MouseAction[]): void {
+    if (this.second === null) return;
+    emit.push(this.secondAction("UP"));
+    this.second = null;
+  }
+
+  /** ⭐ The Shift-made #2 presses where the cursor WAS, so its first move is this event's delta. */
+  private pressShiftSecond(emit: MouseAction[]): void {
+    const c = this.cursor!;
+    this.second = { x: c.x, y: c.y, first: false, shiftMade: true };
+    emit.push(this.secondAction("DOWN"));
   }
 
   /**

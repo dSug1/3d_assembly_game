@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1158 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1167 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -131,8 +131,9 @@ four deployed rounds that were each wrong in a PREMISE about the real pointer, n
 rule (defect 70). ⛔⛔ Three rules, each the negation of a round: **never touch a DOM pointer event**
 (the layer works at Babylon's `onPrePointerObservable` seam and delivers #2 straight to the
 observable); **model only the touchpoint the mouse lacks** (`src/input/mouse_second_touch.ts` has
-one piece of state); **read `buttons` on every event, remember nothing**. ⭐ Hold the left button on
-a part, right-click a face on another body; `Shift`+drag moves the second touch. ⚠ No wheel zoom on
+one piece of state); **read `buttons` on every event, remember nothing**. ⭐ Left drag = horizontal
+translation (yaw/pitch in rotation); **`Shift`+left drag = gravity + roll** through an anchor-only
+second touch; hold left and right-click another body's face to align. ⚠ No wheel zoom on
 purpose. ⚠⚠ Playable, never testable — rule 5 needs a finger.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
