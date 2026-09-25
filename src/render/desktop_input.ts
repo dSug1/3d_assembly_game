@@ -46,22 +46,51 @@ function notchesOf(e: WheelEvent): number {
 }
 
 /**
- * ⭐⭐ **ATTACH, AND HAND BACK THE DETACH.** ⚠ The caller owns the lifetime; nothing here is a
- * module-level singleton, so two scenes in one page cannot fight over the window.
+ * ⭐⭐ **ATTACH, AND CLEAN UP WITH THE SCENE.** ⚠ Nothing here is a module-level singleton, so two
+ * scenes in one page cannot fight over the window.
  *
- * @returns a function that removes every listener and lifts every synthetic pointer.
+ * ⛔ The teardown hangs off `scene.onDisposeObservable` rather than being handed back: `SceneHandle`
+ * has no `dispose`, so a returned teardown would be an API for a lifetime the product does not
+ * have — which `tests/unwired_debt.test.ts` said out loud the moment it was written.
+ *
+ * @returns the readout, which is the only thing a caller needs.
  */
+export interface DesktopStats {
+  /** Raw MOUSE events this adapter intercepted. */
+  readonly seen: number;
+  /** Synthetic touchpoint actions it dispatched. */
+  readonly sent: number;
+  /** The last action, as `DOWN9001@120,340`. */
+  readonly last: string;
+}
+
+export interface DesktopInput {
+  stats(): DesktopStats;
+}
+
 export function attachDesktopInput(
   canvas: HTMLCanvasElement,
   scene: Scene,
-): () => void {
+): DesktopInput {
   const map = new DesktopPointers();
+  // ⭐⭐⭐ **A READOUT ON BOTH ENDS OF THE CHAIN**, added 2026-09-25 when the owner reported
+  // *"not working. Delta position not working"* and four analyses in a row were plausible.
+  // ⛔ `D86` cost NINE such analyses and was found by reading a HUD field — *when a defect
+  // resists several correct-looking analyses, stop modelling the code and ask which READOUT
+  // moves.* ⚠ This counts what went IN; `scene.ts` counts what came back out of Babylon, and
+  // the pair says which link is broken rather than which is suspected.
+  let seen = 0;
+  let sent = 0;
+  let last = "—";
   // ⛔ Guards the re-entry: a synthetic event dispatched ON the canvas still travels the capture
   // path from `window`, so without this the adapter would translate its own output for ever.
   let emitting = false;
 
   const emit = (actions: readonly SyntheticAction[]): void => {
     if (actions.length === 0) return;
+    sent += actions.length;
+    const a0 = actions[actions.length - 1]!;
+    last = `${a0.kind}${a0.id}@${a0.x.toFixed(0)},${a0.y.toFixed(0)}`;
     emitting = true;
     try {
       for (const a of actions) {
@@ -112,6 +141,7 @@ export function attachDesktopInput(
    */
   const intercept = (e: PointerEvent, type: DesktopEvent["type"]): void => {
     if (emitting || e.pointerType !== "mouse") return;
+    seen++;
     e.stopPropagation();
     e.preventDefault();
     emit(map.step(fromPointer(e, type)));
@@ -155,7 +185,11 @@ export function attachDesktopInput(
   window.addEventListener("blur", onBlur);
   const observer = scene.onBeforeRenderObservable.add(onFrame);
 
-  return () => {
+  // ⚠⚠ **NOT NAMED `detach`, AND THAT IS NOT A STYLE CHOICE.** `tests/unwired_debt.test.ts`
+  // counts references by IDENTIFIER, so a local called `detach` reads as a use of
+  // `object_model.ts`'s declared-debt `detach` and quietly marks it wired — removing a real
+  // entry from the debt list. ⛔ The dangerous direction: it HIDES debt rather than inventing it.
+  const teardown = () => {
     window.removeEventListener("pointerdown", onDown, { capture: true });
     window.removeEventListener("pointermove", onMove, { capture: true });
     window.removeEventListener("pointerup", onUp, { capture: true });
@@ -167,4 +201,6 @@ export function attachDesktopInput(
     scene.onBeforeRenderObservable.remove(observer);
     emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }));
   };
+  scene.onDisposeObservable.add(teardown);
+  return { stats: () => ({ seen, sent, last }) };
 }

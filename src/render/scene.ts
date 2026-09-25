@@ -2507,7 +2507,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // synthetic touchpoints the rules already speak, so nothing below this line changes.
   // ⚠ Only `pointerType === "mouse"` is intercepted, so a finger is untouched and no flag is
   // needed. ⛔ It makes the game PLAYABLE on desktop, never TESTABLE — rule 5 needs a finger.
-  attachDesktopInput(canvas, scene);
+  const desktopInput = attachDesktopInput(canvas, scene);
+  // ⭐ Counted HERE, at the far end of the chain: how many of the adapter's synthetic pointers
+  // actually came back out of Babylon as observable notifications. ⛔ The adapter cannot know.
+  let desktopDelivered = 0;
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
@@ -3428,6 +3431,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       tuningRejected: tuning.rejected,
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
       // ⛔ `IGN` is the one that matters: it is the visible form of the IN8 decision.
+      // ⭐⭐ `seen → sent → got`. ⚠ `got` is counted in THIS file's own observable, so the two
+      // halves of the line are measured at opposite ends and cannot agree by construction.
+      desktop: (() => {
+        const d = desktopInput.stats();
+        return d.seen === 0 && desktopDelivered === 0
+          ? "—"
+          : `seen ${d.seen} → sent ${d.sent} → got ${desktopDelivered}  ${d.last}`;
+      })(),
       jump:
         lastJump === null
           ? "—"
@@ -5033,6 +5044,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
+    // ⭐ The far end of the desktop chain — see the `desktop` HUD field.
+    if (e.pointerId >= 9000) desktopDelivered++;
 
     // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
     // see the raw stream whatever rule the touchpoint turns out to belong to, and it

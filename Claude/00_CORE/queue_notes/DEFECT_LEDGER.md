@@ -914,3 +914,36 @@ cannot correct is the RENDERER: a globally reversed mesh is culled inside-out on
 green suite. ✅ The suite now pins the **sign of the signed volume** as well, which is the half the
 topology layer cannot recover — `mesh_topology`'s own *"no outline of any sort"* scar, aimed at the
 other layer.
+
+---
+
+## 70 — ⛔⛔⛔ **A GUARD THAT HID DEBT, BECAUSE IT COUNTED NAMES AND NOT BINDINGS** (2026-09-25)
+
+⭐ Not a product defect — a defect in `tests/unwired_debt.test.ts`, which is worse in one specific
+way: it is the file whose whole job is to notice things nobody calls.
+
+`productionRefs(name)` counts matches of `\bname\b` across `src`. ⛔ So a **local variable**
+anywhere in the tree that happens to share a declared export's identifier reads as a use of it.
+
+⚠ The instance: `render/desktop_input.ts` gained a local `const detach = () => {…}` for its
+teardown. `core/object_model.ts` exports an assembly-tree `detach(world, id)` which is **declared
+debt** — pending the row that will use it. The local made the word appear in production code, the
+counter went non-zero, and the guard concluded the core export was now **wired**. ✅ Renamed to
+`teardown`.
+
+### ⭐⭐⭐ THE DIRECTION IS WHAT MAKES IT WORTH AN ENTRY
+
+It does not invent debt, it **hides** it — a real unwired export drops off the list because
+something unrelated borrowed its name. ⛔ A guard whose failure mode is silence is the shape
+`METHOD` already names twice: *a skipped check must be announced*, and *an absent readout cannot be
+caught by looking at the screen*.
+
+⭐⭐ **AND IT SURFACED ONLY BECAUSE THE LIST IS ASSERTED IN BOTH DIRECTIONS.** `expect(unwired)
+.toEqual(Object.keys(PENDING).sort())` fails when an entry *leaves* the set as well as when one
+joins it. ⚠ A one-way check — *nothing unwired is undeclared* — would have passed in silence, and
+the debt would have been quietly discharged by a rename. ⭐ *A test that can only fail in one
+direction is half a test.*
+
+⛔ **NOT FIXED, DELIBERATELY**: making the counter binding-aware means parsing TypeScript, which is
+a great deal of machinery for a guard that works. ⚠ The weakness is written into the test's own
+header instead, so the next reader meets it before it costs anything.

@@ -54,6 +54,14 @@ export interface HudFields {
    * force — and it LATCHES, because a jump is over before a hand can look up.
    */
   readonly jump: string;
+  /**
+   * ⭐⭐⭐ **BOTH ENDS OF THE DESKTOP CHAIN** — raw mouse events in, synthetic actions out, and
+   * what Babylon delivered back. ⛔ Added because *"not working"* had four plausible causes and
+   * no way to tell them apart: if `sent` climbs and `got` does not, delivery is broken; if both
+   * climb and nothing moves, the gesture layer is refusing the deltas.
+   * ⚠ `—` on a touch device, where nothing is intercepted.
+   */
+  readonly desktop: string;
 }
 
 export interface Hud {
@@ -112,6 +120,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         `roles     ${f.roles}`,
         // ⭐ Sticky by design: it reports the last one seen, not the current frame's.
         `jump      ${f.jump}`,
+        `desktop   ${f.desktop}`,
         `noise     ${f.noise}`,
         // ⛔⛔ THIS LINE WAS COMPUTED, HANDED OVER AND DROPPED — for the whole life of
         // the file. `scene.ts` has always filled `tuning` and `tuningRejected`, the
