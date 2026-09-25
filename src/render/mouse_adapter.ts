@@ -38,6 +38,7 @@ import {
   type MouseAction,
   type MouseInput,
 } from "../input/mouse_second_touch";
+import { wheelNotches } from "../input/mouse_wheel_zoom";
 
 export interface MouseSecondTouchHandle {
   /** ⚠ Diagnostics: real mouse events seen, synthetic actions delivered, the last one. */
@@ -47,6 +48,11 @@ export interface MouseSecondTouchHandle {
 export function attachMouseSecondTouch(
   canvas: HTMLCanvasElement,
   scene: Scene,
+  /**
+   * ⭐ The scene's zoom, handed signed wheel notches (positive = in). ⛔ The scene owns `zoom` and
+   * `applyCamera()`; this file only translates the wheel into notches — `input/mouse_wheel_zoom.ts`.
+   */
+  onWheelNotches?: (notches: number) => void,
 ): MouseSecondTouchHandle {
   const model = new MouseSecondTouch();
   let seen = 0;
@@ -131,6 +137,15 @@ export function attachMouseSecondTouch(
     if (e.key === "Escape") cancel();
   };
   const onMenu = (e: Event) => e.preventDefault();
+  // ⭐⭐ THE WHEEL ZOOMS (the owner, 2026-09-25). ⚠ A `wheel` event, not a pointer event, so the
+  // rule above is untouched. ⛔ `passive: false` and `preventDefault`, or the page scrolls instead.
+  const onWheel = (e: WheelEvent) => {
+    if (onWheelNotches === undefined) return;
+    e.preventDefault();
+    const n = wheelNotches(e.deltaY, e.deltaMode);
+    if (n !== 0) onWheelNotches(n);
+  };
+  canvas.addEventListener("wheel", onWheel, { passive: false });
   window.addEventListener("keydown", onKey);
   window.addEventListener("blur", cancel);
   window.addEventListener("contextmenu", onMenu);
@@ -138,6 +153,7 @@ export function attachMouseSecondTouch(
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("blur", cancel);
     window.removeEventListener("contextmenu", onMenu);
+    canvas.removeEventListener("wheel", onWheel);
     cancel();
   });
 
