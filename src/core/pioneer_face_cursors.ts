@@ -117,6 +117,11 @@ export class PioneerFaceCursors {
     return [...this.byKey.values()];
   }
 
+  /** ⭐ One cursor by its couple key, or `null` once its alignment is gone. */
+  get(key: string): PioneerFaceCursor | null {
+    return this.byKey.get(key) ?? null;
+  }
+
   /** ⭐ The cursor of one follower's alignment, or `null` — a follower has at most one. */
   ofFollower(followerId: ObjectId): PioneerFaceCursor | null {
     for (const cur of this.byKey.values())

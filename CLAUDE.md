@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1176 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1196 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -161,6 +161,11 @@ plane), parented to the Pioneer and **disposed** with its alignment. ⛔ Keyed b
 the whole **follower + FollowerFace + pioneer + PioneerFace** couple, so two Followers on one face
 own two rings at one position and a re-align on another face makes a new ring →
 `core/pioneer_face_cursors.ts`, reconciled every frame (retired by membership), HUD `pfc=`.
+⭐⭐ **AND IT IS DRAGGED ALONG ITS FACE**: the left button INSIDE the ring (desktop), or any touch
+within `pioneerCursorGrabRadii` (1-10 ring radii, slider) - the pointer is claimed before the router,
+so it drives nothing else. The ring rides the face's own TRIANGLES (`core/face_surface.ts`): under
+the finger when the ray hits, else the nearest surface point - bounded by the edges, and on the
+surface when it is not flat. Grab offset kept, so it never jumps under the finger.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
