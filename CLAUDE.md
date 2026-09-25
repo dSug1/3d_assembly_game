@@ -137,6 +137,18 @@ gesture rule knows it exists, so deleting one import and one call in `scene.ts` 
 build identical; only `pointerType === "mouse"` is intercepted, so no flag is needed.
 ⚠⚠ **PLAYABLE, NEVER TESTABLE** — rule 5 needs a finger, and every threshold it drives was judged
 by one (`motionDeadbandMm` 3.5 mm is ~13 px of desktop dead zone). ⭐ 18 vectors, 7 mutants.
+⛔⛔⛔ **AND IT CAME BACK *"not working. Delta position not working"*, WITH FOUR PLAUSIBLE CAUSES.**
+Three died to a read — the deadband is only ~13 px, `sampleOf` takes `clientX/clientY` which the
+synthetic events carry, and Babylon falls back to `maxTouchPoints || 2` so the touch slots exist.
+⚠ A fourth analysis would have been `D86`'s shape, which cost nine. ✅ So there is a **HUD `desktop`
+line** instead: `seen → sent → got`, the first two counted in the adapter and the third at the far
+end in `scene.ts`'s own observable — measured at opposite ends, so they cannot agree by
+construction. ⛔ **THE CAUSE IS STILL UNKNOWN** and that line is what will name it.
+⚠⚠ **AND BUILDING THE READOUT FOUND A DEFECT IN A GUARD** (70): `unwired_debt.test.ts` counts
+references by **identifier, not by binding**, so a local `const detach` marked `object_model.ts`'s
+declared-debt `detach` as WIRED and took it off the list. ⛔ It **hides** debt rather than inventing
+it, and it surfaced only because the list is asserted in **both** directions — *a test that can
+only fail in one direction is half a test.*
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
