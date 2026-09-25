@@ -108,9 +108,3 @@ and the guard failed until the entry was removed — the second direction it che
 [`../../10_INPUT_TOUCH/history/2026-09-13_IN1_device_passes.md`](../../10_INPUT_TOUCH/history/2026-09-13_IN1_device_passes.md);
 the rows' dossiers are [`./IN1.md`](./IN1.md)
 and [`./IN9.md`](./IN9.md).
-
----
-
-## ⭐ STATUS TEXT MOVED DOWN FROM `QUEUE.md`, 2026-09-25 (second pass)
-
-queued, ⭐⭐ **practical without a rebuild**: every tunable overrides from the URL. ✅ `pointerNoiseMm` = **0.761 mm** is the one number MEASURED, and measuring it exposed a defect eight device passes had accepted. ⛔⛔ **A TRAP TO READ BEFORE BOOKING A SESSION**: several tunables are READ but sit OFF the gesture path, so `config_debt` sees them used while they change nothing (this file)

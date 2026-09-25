@@ -664,9 +664,3 @@ a slider when it is wired, not after a device session is spent disliking it.**
 
 ⚠ `gainOrbitElevation` is still a guess (a full sweep in ~100 mm). On this evidence it
 is probably slow too; its slider is already beside the yaw one.
-
----
-
-## ⭐ STATUS TEXT MOVED DOWN FROM `QUEUE.md`, 2026-09-25 (second pass)
-
-✅✅ **CLOSED 2026-09-14**, both rules working by finger. Rule 1 cost **three** defects no green suite could see — including a **composition nobody had computed** and a scheme **reversed on measurement**. ⭐ *"Three rigs, therefore two transitions"* is enforced by `validateGestureConfig` (this file)

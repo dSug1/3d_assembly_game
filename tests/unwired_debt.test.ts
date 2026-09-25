@@ -10,14 +10,6 @@
  *   * a corrected `faceMarkerExtent` was written **beside** the broken local copy that stayed
  *     wired, so the suite went green on the fix while the product kept the defect (2026-09-17).
  *
- * ⚠⚠ **A KNOWN WEAKNESS, FOUND 2026-09-25 AND WORTH KNOWING BEFORE IT COSTS SOMETHING.** This
- * counts references by **identifier**, not by binding — so a LOCAL variable anywhere in `src`
- * that happens to share a declared export's name reads as a use of it. ⛔ A local `const detach`
- * in `render/desktop_input.ts` marked `object_model.ts`'s declared-debt `detach` as wired and
- * took it off the list. ⚠ The direction matters: it **hides** debt rather than inventing it, which
- * is the failure a guard must not have. ⭐ It surfaced only because the list is asserted in BOTH
- * directions; a one-way check would have said nothing.
- *
  * ⭐⭐ THE DIFFERENCE BETWEEN *STALE* AND *PENDING* IS THE WHOLE POINT OF THE LIST BELOW.
  * Geometry built ahead of the row that will use it is **pending** and belongs here with its
  * queue row. Code left behind by a deleted rule is **stale** and must be removed with its

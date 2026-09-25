@@ -917,165 +917,47 @@ other layer.
 
 ---
 
-## 70 — ⛔⛔⛔ **A GUARD THAT HID DEBT, BECAUSE IT COUNTED NAMES AND NOT BINDINGS** (2026-09-25)
+## 70 — ⛔⛔⛔ **FOUR ROUNDS OF A DESKTOP INPUT LAYER, ALL WRONG IN THEIR PREMISES** (2026-09-25, the owner)
 
-⭐ Not a product defect — a defect in `tests/unwired_debt.test.ts`, which is worse in one specific
-way: it is the file whose whole job is to notice things nobody calls.
+> *"I reverted to commit `6a28e62`. Create a desktop version of the input system. The second touch
+> shall be done with right click. Make the build modular. Do not repeat the previous build as it
+> has continuously failed to work. Build from scratch with robust logic."*
 
-`productionRefs(name)` counts matches of `\bname\b` across `src`. ⛔ So a **local variable**
-anywhere in the tree that happens to share a declared export's identifier reads as a use of it.
+⭐ The previous build is gone with the revert; this entry is what it cost and why the rebuild is
+shaped the way it is. ⛔ **Not one of the four failures was in a gesture rule.** Each was a
+premise about the real mouse pointer:
 
-⚠ The instance: `render/desktop_input.ts` gained a local `const detach = () => {…}` for its
-teardown. `core/object_model.ts` exports an assembly-tree `detach(world, id)` which is **declared
-debt** — pending the row that will use it. The local made the word appear in production code, the
-counter went non-zero, and the guard concluded the core export was now **wired**. ✅ Renamed to
-`teardown`.
+| round | premise | what the glass said |
+|---|---|---|
+| 1 | desktop did not work yet, so intercept every mouse event and replace it | *"everything is almost frozen"* — a mouse was already touchpoint #1 with no layer at all |
+| 2 | a synthetic DOM `PointerEvent` dispatched on the canvas will be delivered | *"right click does nothing"* — Babylon's device layer swallowed it |
+| 3 | a hand presses the left button first | *"erratic … selection of pioneer never works"* — the owner presses right first |
+| 4 | a latch remembering *is the left button down* can stand in for the buttons | *"some clicks land, some do not"* — stale on a missed `pointerup` and every `pointercancel` |
 
-### ⭐⭐⭐ THE DIRECTION IS WHAT MAKES IT WORTH AN ENTRY
+### ⭐⭐⭐ THE THREE RULES THE REBUILD IS BUILT ON, EACH THE NEGATION OF A ROUND
 
-It does not invent debt, it **hides** it — a real unwired export drops off the list because
-something unrelated borrowed its name. ⛔ A guard whose failure mode is silence is the shape
-`METHOD` already names twice: *a skipped check must be announced*, and *an absent readout cannot be
-caught by looking at the screen*.
+1. **Never touch a DOM pointer event — not to stop one, not to create one.** The layer works at
+   `scene.onPrePointerObservable`, Babylon's documented hook that runs before the scene's handler
+   and whose `skipOnPointerObservable` makes `InputManager` return before processing — so a
+   skipped event never reaches `scene.ts`, with no `stopPropagation` anywhere. Synthetic #2 goes
+   straight to `scene.onPointerObservable.notifyObservers`, the path PROVEN on the glass when a
+   synthetic press resolved a face. ⭐ `scene.ts` calls `camera.detachControl()`, so the scene is
+   that observable's only consumer.
+2. **Model only the touchpoint the mouse lacks.** The first touchpoint is the browser's own
+   pointer and is not represented; representing it is what broke it. `mouse_second_touch.ts` has
+   one piece of state — is #2 down, and where.
+3. **Read `buttons` on every event; remember nothing about the real pointer.** The one state is
+   reconciled against bit 2 every time: a clear bit while #2 is down means its release was never
+   seen, and it lifts at once, before the rules act on that event.
 
-⭐⭐ **AND IT SURFACED ONLY BECAUSE THE LIST IS ASSERTED IN BOTH DIRECTIONS.** `expect(unwired)
-.toEqual(Object.keys(PENDING).sort())` fails when an entry *leaves* the set as well as when one
-joins it. ⚠ A one-way check — *nothing unwired is undeclared* — would have passed in silence, and
-the debt would have been quietly discharged by a rename. ⭐ *A test that can only fail in one
-direction is half a test.*
+⭐ And a lone right press is neither a trap nor refused: it is a valid press, and the cursor drives
+#2 whenever it is the only pointer down.
 
-⛔ **NOT FIXED, DELIBERATELY**: making the counter binding-aware means parsing TypeScript, which is
-a great deal of machinery for a guard that works. ⚠ The weakness is written into the test's own
-header instead, so the next reader meets it before it costs anything.
+### ⚠ WHAT IS DELIBERATELY NOT IN IT
 
----
+⛔ No wheel zoom. The previous pinch synthesis added two more synthetic pointers whose lifetime
+interacted with every press; the owner asked for the second touch, and breadth was the thing that
+failed hardest. ⚠ Six mutants, six red — each one a failure mode of the previous build.
 
-## 71 — ⛔⛔⛔ **A LAYER THAT REPLACED A WORKING STREAM INSTEAD OF ADDING TO IT** (2026-09-25, the owner)
-
-> *"Not working. Delta position not working."* … *"In the commit `6a28e62` the desktop was working:
-> left click of mouse was working as first touch and translation and rotation was possible. In the
-> current commit, everything is almost frozen (for example, the camera orbits by one increment as
-> if delta does not accumulate, no rotation or translation)."*
-
-⛔⛔ **THE PREMISE I NEVER CHECKED WAS THAT DESKTOP DID NOT WORK.** Nothing in this project filters
-on `pointerType`, and a move for a pointer that never pressed is already dropped — so a mouse had
-been touchpoint #1 all along. ⚠ `D94` was written to *add* the second touchpoint and instead
-**intercepted every mouse event and replaced it**, which took the working one away.
-
-### ⭐⭐⭐ WHAT FOUND IT, AND IT WAS NOT AN ANALYSIS
-
-Four causes were plausible and three died to a read (the deadband is ~13 px; `sampleOf` takes
-`clientX/clientY`, which the synthetic events carry; Babylon falls back to `maxTouchPoints || 2`).
-⭐ What settled it was the owner naming **a commit where it worked** — and a gap analysis showing
-this layer was the **only functional change** between the two: `scene.ts` +22 lines, everything
-else new files.
-
-⚠⚠ `METHOD` already has the sentence and I did not apply it: *a device report is evidence about the
-code the device was running.* ⛔ **Its converse is the one this cost**: a report that something is
-broken is evidence about a CHANGE, and the fastest question is not *why is it broken* but *what did
-it work at last*.
-
-### ✅ THE FIX, AND THE RULE IT LEAVES BEHIND
-
-**Pass through by default, intercept by exception.** The mapping now returns a `suppress` flag with
-every verdict, and only three things are taken: the right button, `Shift`+drag, and the wheel.
-⭐ Every other mouse event reaches the rules exactly as it did before the file existed.
-
-⭐⭐⭐ **THE BLAST RADIUS OF A LAYER IS THE SET OF EVENTS IT SWALLOWS**, and it belongs in the
-vectors. ⚠ The suite now asserts `suppress` on every path — a mutant that intercepts the left
-button, which is precisely what shipped, goes **RED**.
-
-⛔ And the readout that was built to diagnose this stays: `seen → sent → got` on the HUD, counted at
-opposite ends of the chain.
-
-### ⚠⚠ AND THE SECOND TOUCHPOINT STILL DID NOT ARRIVE — a second cause, on the same report
-
-> *"Right click as second touch is not working: I cannot toggle the vertical translation - roll, I
-> cannot select pioneerface."*
-
-⭐⭐ **THAT IS AN A/B INSIDE ONE BUILD, AND IT IS WORTH MORE THAN ANY ANALYSIS.** With the left
-button passing through and working, and the right button — the only synthetic one — producing
-nothing at all, the broken link is named without a theory: **the real stream arrives and the
-synthetic one does not.**
-
-⛔ The first version dispatched synthetic `PointerEvent`s on the canvas and let Babylon's
-`WebDeviceInputSystem` raise the notification. ⚠ I could not name the mechanism that swallowed
-them, and three plausible ones had already been killed by reading — so the fix **removes the
-dependency instead of guessing at it**: the synthetic pointer now goes straight to
-`scene.onPointerObservable.notifyObservers`, with the pick computed by `scene.pick`.
-
-⭐ Safe here for a stated reason, not a hopeful one: `scene.ts` calls **`camera.detachControl()`**,
-so the scene's own handler is the only consumer of that observable and nothing can react twice.
-
-⚠⚠ **THE MECHANISM IS STILL UNKNOWN**, and that is recorded rather than dressed up. ⭐ What the
-change buys is that it no longer matters: one fewer layer between the mapping and the rule. ⛔ And
-the readout still earns its keep — `got` must now rise by construction, so if the second touchpoint
-is *still* inert, the fault is the rules refusing it and not delivery.
-
-### ⭐⭐⭐ AND THE THIRD REPORT DIAGNOSED ITSELF, FROM ONE DETAIL
-
-> *"Right button press just hits face and does nothing more than highlight the face contours in
-> fuchsia. No movement, no selection."*
-
-⭐⭐ **THE FUCHSIA CONTOUR IS THE *HELD* BODY'S HitFace.** So seeing it appear on the face the right
-button hit says the synthetic pointer **arrived, resolved a face and latched a role** — as the
-HOLDER. ⛔ Which means there was no first touch: the right button was pressed alone.
-
-⚠ Delivery was never the problem by then; the precondition was. ⭐ `METHOD`: *a symptom that names
-which rule ran is worth more than one that says it did not work* — one word, *fuchsia*, separated
-three hypotheses that a fourth analysis would not have.
-
-⛔⛔ **AND A LONE SECOND TOUCHPOINT WAS A REAL TRAP, NOT JUST A MISUSE.** `D87` gives it no relation
-to make, and it latches a role on the body it hit — leaving that body **held by a finger the cursor
-never drives**: highlighted, and unmovable until the button is released. ✅ The right button is now
-refused (and still swallowed) unless the left is already down, which is `D87`'s own precondition
-made unmissable instead of merely documented.
-
-⭐ *A mapping is not finished when every event is accounted for; it is finished when the gestures it
-cannot complete refuse instead of half-happening.*
-
----
-
-## 72 — ⛔⛔⛔ **A LATCH STOOD IN FOR THE BROWSER'S OWN BUTTON MASK** (2026-09-25, the owner)
-
-> *"Verify the scripts. There is something wrong with the desktop version of the input system: some
-> mouse clicks and delta position land, some mouse clicks and delta position do not."*
-
-⭐ *Some land, some do not* is the signature of a **desynchronised latch**, not of a delivery fault
-— and the owner had by then reverted the press-order commit, so the verification ran against the
-left-hard-wired mapping. ⚠ Read end to end, that version had three holes, and all three were one
-thing.
-
-### ⛔⛔⛔ THE THREE HOLES
-
-1. **`primaryDown` never cleared on a `pointercancel`.** Only `button === 0` cleared it, and a
-   cancel's `button` is `-1`. ⚠ Stuck at `true`, the next right press made a synthetic holder with
-   no real one under it — the fuchsia trap again.
-2. **A `pointerup` the window never sees left it stuck for good** — a drag released off the page.
-   ⛔ And a #2 whose right release was missed stayed down for ever, so every later right press was
-   refused as a repeat.
-3. **A LEFT press did not end the wheel's synthetic pinch.** The pair lifts on a 180 ms clock,
-   longer under inertial scrolling; a click inside that window arrived beside two `OUTSIDE`
-   pointers as a **third** touchpoint, a configuration §4's table has no row for.
-
-⭐ And one more outside the module: the OS context menu was prevented on the **canvas only**, while
-the HUD and the tuning menu sit over it — a right click there opened the menu, and the click that
-dismissed it did not land.
-
-### ⭐⭐⭐ ONE CAUSE: STATE I REMEMBERED INSTEAD OF STATE THE BROWSER TELLS ME
-
-`PointerEvent.buttons` is the browser's own bitmask of what is down **right now**, maintained by
-the OS on every event. ⛔ A latch that records downs and ups is a **substituted quantity** for it —
-`METHOD`'s shape — and the two agree only while no event is missed. ✅ The module now reads the mask
-on every event and **reconciles** its one piece of synthetic state (#2) against it: a right bit
-that is clear while #2 is down means the release was missed, and #2 lifts where it was parked.
-
-✅ Any press ends the zoom, and the verdict can now carry synthetic lifts **and** pass the real event
-through — emitted first, in the capture phase, so the scene sees the pair lift and then the press.
-
-### ⚠ WHAT THIS DOES NOT CLAIM
-
-⛔ I cannot say which of the four the owner's clicks fell into, and I did not try to: the fix
-removes the **class**, and the four vectors that pin it were each shown RED against the shipped
-code. ⭐ Four mutants, four red — including *"the left button is assumed held"*, which is what a
-latch that never clears amounts to.
+⭐⭐⭐ `METHOD`: *an input mapping's failure modes live in its premises about the hand, not in its
+code — and the only instrument that reads a premise about a hand is a hand.*

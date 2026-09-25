@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1160 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1154 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -126,41 +126,14 @@ radius — the scene's claim that *"at 5L nothing is in range"* was false.
 ⛔⛔ **A DEVICE LOOK IS OWED ON THE WHOLE PASS.** Rule 5 is not suspended because the findings
 came from a read: the boot mode, the twist and roll channels, the deadband's emission and the
 render order all changed.
-⭐⭐ **AND A MOUSE IS TWO TOUCHPOINTS** (`D94`, 2026-09-25): **LMB = #1, RMB = #2**, the cursor
-drives the most recently pressed and the other **parks**, the wheel synthesises a real pinch, Esc
-lifts everything. ⛔⛔ **TWO BUTTONS AND NOT A MODIFIER**, because `Shift`+LMB cannot hold two
-pointers down — pressing it requires LMB to be up — and #1 staying down while #2 presses IS the
-alignment gesture. ⭐ Parking is exact rather than approximate: `A11`'s position deadband makes a
-still pointer emit **nothing**, and `D43` says the channels SUM, so a zero summand is the same rule.
-⛔ **A TRANSLATION, NOT A SECOND INPUT PATH**: `src/input/desktop_pointers.ts` is pure and no
-gesture rule knows it exists, so deleting one import and one call in `scene.ts` leaves the touch
-build identical; only `pointerType === "mouse"` is intercepted, so no flag is needed.
-⚠⚠ **PLAYABLE, NEVER TESTABLE** — rule 5 needs a finger, and every threshold it drives was judged
-by one (`motionDeadbandMm` 3.5 mm is ~13 px of desktop dead zone). ⭐ 18 vectors, 7 mutants.
-⛔⛔⛔ **AND THE FIRST BUILD FROZE THE DESKTOP, BECAUSE IT REPLACED A STREAM THAT ALREADY WORKED**
-(defect 71). ⚠⚠ **THE PREMISE I NEVER CHECKED WAS THAT DESKTOP DID NOT WORK**: nothing filters on
-`pointerType`, so a mouse had been touchpoint #1 all along — and a layer written to ADD the second
-touchpoint intercepted **every** mouse event and took the first one away. ⭐⭐⭐ The fix is a rule:
-**pass through by default, intercept by exception** — only the right button, `Shift`+drag and the
-wheel are taken, and `suppress` is asserted on every path, so the mutant that intercepts the left
-button goes RED. ⭐⭐ **The blast radius of a layer is the set of events it swallows**, and it
-belongs in the vectors.
-⚠⚠ **AND WHAT FOUND IT WAS NOT AN ANALYSIS** — the owner named *a commit where it worked*, and a
-gap analysis showed this layer was the only functional change between the two. ⭐ `METHOD` has the
-sentence and I did not apply its converse: *a report that something is broken is evidence about a
-CHANGE*, and the fastest question is not *why is it broken* but *what did it work at last*.
-⛔ **AND IT CAME BACK *"not working"* WITH FOUR PLAUSIBLE CAUSES.**
-Three died to a read — the deadband is only ~13 px, `sampleOf` takes `clientX/clientY` which the
-synthetic events carry, and Babylon falls back to `maxTouchPoints || 2` so the touch slots exist.
-⚠ A fourth analysis would have been `D86`'s shape, which cost nine. ✅ So there is a **HUD `desktop`
-line** instead: `seen → sent → got`, the first two counted in the adapter and the third at the far
-end in `scene.ts`'s own observable — measured at opposite ends, so they cannot agree by
-construction. ⛔ **THE CAUSE IS STILL UNKNOWN** and that line is what will name it.
-⚠⚠ **AND BUILDING THE READOUT FOUND A DEFECT IN A GUARD** (70): `unwired_debt.test.ts` counts
-references by **identifier, not by binding**, so a local `const detach` marked `object_model.ts`'s
-declared-debt `detach` as WIRED and took it off the list. ⛔ It **hides** debt rather than inventing
-it, and it surfaced only because the list is asserted in **both** directions — *a test that can
-only fail in one direction is half a test.*
+⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (`D94`, 2026-09-25) — rebuilt from scratch after
+four deployed rounds that were each wrong in a PREMISE about the real pointer, never in a gesture
+rule (defect 70). ⛔⛔ Three rules, each the negation of a round: **never touch a DOM pointer event**
+(the layer works at Babylon's `onPrePointerObservable` seam and delivers #2 straight to the
+observable); **model only the touchpoint the mouse lacks** (`src/input/mouse_second_touch.ts` has
+one piece of state); **read `buttons` on every event, remember nothing**. ⭐ Hold the left button on
+a part, right-click a face on another body; `Shift`+drag moves the second touch. ⚠ No wheel zoom on
+purpose. ⚠⚠ Playable, never testable — rule 5 needs a finger.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE

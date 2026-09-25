@@ -226,9 +226,9 @@ import {
 } from "../input/approach_swing";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
-// ⛔ THE DESKTOP MAPPING IS THESE TWO LINES AND NOTHING ELSE. Delete them and the import below
-// and the product is exactly what it was — see `desktop_input.ts` for why that is the whole point.
-import { attachDesktopInput } from "./desktop_input";
+// ⛔ THE DESKTOP SECOND TOUCH IS THIS IMPORT AND ONE CALL, AND NOTHING ELSE. Delete both and the
+// touch build is byte-identical — `mouse_adapter.ts` says why that is the whole point.
+import { attachMouseSecondTouch } from "./mouse_adapter";
 import { createMenu, type MenuSlider } from "./menu";
 
 /**
@@ -2502,15 +2502,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
   const hud = createHud();
-  // ⭐⭐⭐ **A MOUSE, AS TWO TOUCHPOINTS** (the owner, 2026-09-25). ⛔ One call, and the only line in
-  // this file that knows a desktop exists: `desktop_input.ts` translates mouse events into the
-  // synthetic touchpoints the rules already speak, so nothing below this line changes.
-  // ⚠ Only `pointerType === "mouse"` is intercepted, so a finger is untouched and no flag is
-  // needed. ⛔ It makes the game PLAYABLE on desktop, never TESTABLE — rule 5 needs a finger.
-  const desktopInput = attachDesktopInput(canvas, scene);
-  // ⭐ Counted HERE, at the far end of the chain: how many of the adapter's synthetic pointers
-  // actually came back out of Babylon as observable notifications. ⛔ The adapter cannot know.
-  let desktopDelivered = 0;
+  // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
+  // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
+  // "mouse"` is looked at, and the scene's gesture code below is untouched.
+  attachMouseSecondTouch(canvas, scene);
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
@@ -3431,14 +3426,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       tuningRejected: tuning.rejected,
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
       // ⛔ `IGN` is the one that matters: it is the visible form of the IN8 decision.
-      // ⭐⭐ `seen → sent → got`. ⚠ `got` is counted in THIS file's own observable, so the two
-      // halves of the line are measured at opposite ends and cannot agree by construction.
-      desktop: (() => {
-        const d = desktopInput.stats();
-        return d.seen === 0 && desktopDelivered === 0
-          ? "—"
-          : `seen ${d.seen} → sent ${d.sent} → got ${desktopDelivered}  ${d.last}`;
-      })(),
       jump:
         lastJump === null
           ? "—"
@@ -5044,8 +5031,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
-    // ⭐ The far end of the desktop chain — see the `desktop` HUD field.
-    if (e.pointerId >= 9000) desktopDelivered++;
 
     // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
     // see the raw stream whatever rule the touchpoint turns out to belong to, and it

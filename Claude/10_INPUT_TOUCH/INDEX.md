@@ -306,6 +306,5 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `orbit.ts` | rule 1's three-ring surface, monotone and bounded by the rings |
 | `barycentre.ts` | rule 1's orbit **centre** — what the camera orbits around |
 | `recognizer.ts` | §1.3 itself: the state machine, rollback, and the release-time priority ladder |
-| `desktop_pointers.ts` · ⚠ `render/desktop_input.ts` | ⭐⭐ `D94` — **a mouse as two touchpoints**: LMB is #1, RMB is #2, the cursor drives the most recently pressed and the other PARKS, the wheel is a synthesised pinch. ⛔ A TRANSLATION into the existing model, with no rule of its own — delete one import and one call and the touch build is identical. ⚠⚠ Playable, never testable |
 
 ---
