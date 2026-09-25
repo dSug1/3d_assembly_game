@@ -145,10 +145,10 @@ export function attachDesktopInput(
     }
   };
 
-  // ⭐ Whether touchpoint #1 exists, tracked from the events this adapter lets THROUGH. ⛔ It
-  // cannot be asked of the router, which is on the other side of the engine boundary — and
-  // `e.buttons` is unreliable here because a suppressed right press carries both bits.
-  let primaryDown = false;
+  // ⭐⭐ WHICH button opened the real pointer, or `null`. ⛔ Not *is the left button down*: press
+  // ORDER decides the slot, and hard-wiring the left button cost two rounds on the glass.
+  // ⚠ Tracked here rather than read from `e.buttons`, which cannot say which press came first.
+  let primaryButton: number | null = null;
 
   const fromPointer = (
     e: PointerEvent,
@@ -160,7 +160,7 @@ export function attachDesktopInput(
     y: e.clientY,
     button: e.button,
     shift: e.shiftKey,
-    primaryDown,
+    primaryButton,
   });
 
   /**
@@ -174,12 +174,10 @@ export function attachDesktopInput(
     if (e.pointerType !== "mouse") return;
     seen++;
     const v = map.step(fromPointer(e, type));
-    // ⚠ AFTER the verdict, so a right press is judged against the state the hand was in when it
+    // ⚠ AFTER the verdict, so a press is judged against the state the hand was in when it
     // pressed — not the one this event is about to create.
-    if (e.button === 0) {
-      if (type === "DOWN") primaryDown = true;
-      else if (type === "UP") primaryDown = false;
-    }
+    if (type === "DOWN" && primaryButton === null) primaryButton = e.button;
+    else if (type === "UP" && e.button === primaryButton) primaryButton = null;
     // ⭐⭐⭐ **PASS THROUGH UNLESS THE MAPPING ASKS FOR THE EVENT.** ⛔ The first build stopped
     // every mouse event and replaced it, which froze a stream that already worked — the owner's
     // *"everything is almost frozen"*, and a gap analysis against `6a28e62` showed this layer was
@@ -213,7 +211,7 @@ export function attachDesktopInput(
       emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
   };
   const onBlur = () => {
-    primaryDown = false;
+    primaryButton = null;
     emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
   };
   // ⛔ The right button is a touchpoint here, so its menu must not open. ⚠ On the canvas only —
