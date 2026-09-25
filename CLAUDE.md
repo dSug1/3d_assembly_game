@@ -162,7 +162,7 @@ the whole **follower + FollowerFace + pioneer + PioneerFace** couple, so two Fol
 own two rings at one position and a re-align on another face makes a new ring →
 `core/pioneer_face_cursors.ts`, reconciled every frame (retired by membership), HUD `pfc=`.
 ⭐⭐ **AND IT IS DRAGGED ALONG ITS FACE**: the left button INSIDE the ring (desktop), or any touch
-within `pioneerCursorGrabRadii` (1-10 ring radii, slider) - the pointer is claimed before the router,
+within `pioneerCursorGrabRadii` (1-10 ring radii, the **FACE** menu's *PioneerFaceCursor sensitivity*) - the pointer is claimed before the router,
 so it drives nothing else. The ring rides the face's own TRIANGLES (`core/face_surface.ts`): under
 the finger when the ray hits, else the nearest surface point - bounded by the edges, and on the
 surface when it is not flat. Grab offset kept, so it never jumps under the finger.

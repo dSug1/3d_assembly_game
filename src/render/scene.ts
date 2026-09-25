@@ -4102,14 +4102,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐⭐ How close to MATING a face must be before it lights fuchsia. ⛔ `0` is the honest
         // OFF for the cone: only an exactly opposed face. The owner asked for 0–45 in steps of 5.
         tunable("fuchsia cone (deg)", "pioneerCandidateConeDeg", 0, 45, 5),
-        // ⭐⭐ The owner's 1–10 ring radii. ⚠ Touch only: the mouse must click INSIDE the ring.
-        tunable(
-          "PioneerFaceCursor touch reach (radii)",
-          "pioneerCursorGrabRadii",
-          1,
-          10,
-          0.5,
-        ),
         // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
         // the flag; anything above draws an x-ray twin at that opacity.
         tunable(
@@ -4123,6 +4115,23 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
         // one pixel — so a width tunable would be a slider that does nothing, which is the
         // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
+      ],
+    },
+    {
+      // ⭐⭐ **THE FACE SUBMENU** — the owner, 2026-09-25: *"create a Face submenu and place the
+      // slider as PioneerFaceCursor sensitivity inside this submenu"*. ⚠ Last, after CAPTURE: the
+      // section order above is the owner's, and a new section does not reorder it.
+      title: "FACE",
+      sliders: [
+        // ⭐⭐ The owner's 1–10 ring radii a TOUCH may press from the ring and still grab it.
+        // ⚠ Touch only: the mouse must click INSIDE the ring, whatever this says.
+        tunable(
+          "PioneerFaceCursor sensitivity (radii)",
+          "pioneerCursorGrabRadii",
+          1,
+          10,
+          0.5,
+        ),
       ],
     },
   ]);
