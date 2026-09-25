@@ -166,6 +166,11 @@ within `pioneerCursorGrabRadii` (1-10 ring radii, the **FACE** menu's *PioneerFa
 so it drives nothing else. The ring rides the face's own TRIANGLES (`core/face_surface.ts`): under
 the finger when the ray hits, else the nearest surface point - bounded by the edges, and on the
 surface when it is not flat. Grab offset kept, so it never jumps under the finger.
+⛔⛔ **A BILLBOARD MUST NOT BE PARENTED TO A BODY**: Babylon keeps a billboarded child's parent
+SCALE and TRANSLATION and drops its ROTATION, so the ring sat off its face — or off the body —
+on any turned Pioneer (and the white fuchsia-face ring with it). Both are now placed in WORLD
+space every frame from `computeWorldMatrix(true)`, as the gizmo rings always were. ⭐ Measured
+in a `NullEngine`: parented `[3,0,0]` against the true `[2,0,-1]`.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE

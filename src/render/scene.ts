@@ -1047,14 +1047,38 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   /**
+   * ⛔⛔⛔ **A BILLBOARD MUST NOT BE PARENTED TO A BODY** — device report, 2026-09-25: *"the
+   * PioneerFaceCursor position is not correct … it can fall outside the PioneerFace, or even
+   * outside the Pioneer object."*
+   *
+   * ⚠⚠ Babylon composes a billboarded child with its parent's SCALE AND TRANSLATION ONLY — the
+   * parent's ROTATION is discarded (`TransformNode.computeWorldMatrix`, unless the global
+   * `BillboardUseParentOrientation` is set). So a local offset such as a face centre was applied
+   * UNROTATED: right for a square body, and anywhere at all for a turned one. ⭐ Both face rings
+   * were built that way, because defect 46 taught *parent, never position* — true for a mesh
+   * that turns with its body, and false for one that must face the camera.
+   * ⭐ So these rings are placed in WORLD space every frame, from the body's world matrix
+   * recomputed NOW (`computeWorldMatrix(true)`), which is defect 46's other cure: the draw pass
+   * runs after the poses are written, so there is no stale matrix to read. ⚠ The gizmo rings
+   * have always been placed this way.
+   */
+  const worldPointOn = (objectId: ObjectId, local: Vec3): Vector3 | null => {
+    const body = meshOf.get(objectId);
+    if (!body) return null;
+    return Vector3.TransformCoordinates(
+      new Vector3(local[0], local[1], local[2]),
+      body.computeWorldMatrix(true),
+    );
+  };
+
+  /**
    * ⭐⭐ The white ring that marks a fuchsia face's centre, one per candidate face.
    *
-   * ⛔⛔ **PARENTED TO THE BODY AND PLACED IN ITS LOCAL FRAME** — defect 46's lesson, the same one
-   * the face markers rest on: *a marker positioned from Babylon's cached world matrix draws the
-   * pose its object had LAST frame*, which is exactly the lag the owner asked us to avoid here.
-   * ⚠ Only the SCALE is written per frame, to hold a constant apparent size.
+   * ⛔ NOT parented — see `worldPointOn`. Its position AND scale are written every frame.
    */
   const candidateRings = new Map<string, LinesMesh>();
+  /** ⭐ Each candidate ring's point, in its body's LOCAL frame, lifted off the face. */
+  const candidateRingLocal = new Map<string, Vec3>();
   const candidateRingFor = (
     objectId: ObjectId,
     faceId: string,
@@ -1080,13 +1104,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     m.billboardMode = Mesh.BILLBOARDMODE_ALL;
     m.isVisible = false;
     m.metadata = { orbitCandidate: false };
-    m.parent = body;
     // ⚠ Lifted off the surface by the same hair the face marker uses, or it z-fights the fill.
-    m.position.set(
+    candidateRingLocal.set(key, [
       face.centre[0] + face.normal[0] * MARKER_LIFT_M * 2,
       face.centre[1] + face.normal[1] * MARKER_LIFT_M * 2,
       face.centre[2] + face.normal[2] * MARKER_LIFT_M * 2,
-    );
+    ]);
     candidateRings.set(key, m);
     return m;
   };
@@ -1156,7 +1179,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       m.rotation.x = Math.PI / 2;
       m.bakeCurrentTransformIntoVertices();
       m.billboardMode = Mesh.BILLBOARDMODE_ALL;
-      m.parent = body;
+      // ⛔⛔ NOT PARENTED — a billboarded child loses its parent's rotation (`worldPointOn`).
       pioneerCursorMeshes.set(cur.key, m);
     }
     const scale =
@@ -1165,13 +1188,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     for (const cur of pioneerCursors.all()) {
       const m = pioneerCursorMeshes.get(cur.key);
       if (m === undefined) continue;
-      // ⚠ Written every frame from the cursor's own position, so a later rule that MOVES a cursor
-      // needs no second path; lifted off the face like the rings, or it z-fights the fill.
-      m.position.set(
+      // ⚠ Written every frame from the cursor's own LOCAL position through the Pioneer's world
+      // matrix, so a drag and a turned Pioneer both land where the face is; lifted off the face
+      // like the rings, or it z-fights the fill.
+      const w = worldPointOn(cur.pioneerId, [
         cur.position[0] + cur.normal[0] * MARKER_LIFT_M * 3,
         cur.position[1] + cur.normal[1] * MARKER_LIFT_M * 3,
         cur.position[2] + cur.normal[2] * MARKER_LIFT_M * 3,
-      );
+      ]);
+      m.isVisible = w !== null;
+      if (w === null) continue;
+      m.position.copyFrom(w);
       m.scaling.set(scale, scale, scale);
     }
   };
@@ -7153,10 +7180,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           }
           marker.xray.isVisible = xrayOn;
         }
-        // ⚠ The ring is PARENTED, so only its scale is written here — it keeps a constant
-        // apparent size as the camera moves, the same conversion the capture shell uses.
+        // ⚠ Position AND scale written here — NOT parented (`worldPointOn`); the scale keeps a
+        // constant apparent size as the camera moves, the same conversion the capture shell uses.
         const ring = candidateRingFor(c.objectId, c.faceId);
-        if (ring !== null) {
+        const ringLocal = candidateRingLocal.get(`${c.objectId}/${c.faceId}`);
+        const ringAt =
+          ringLocal === undefined ? null : worldPointOn(c.objectId, ringLocal);
+        if (ring !== null && ringAt !== null) {
+          ring.position.copyFrom(ringAt);
           const m =
             trackingMetresPerPx(
               camera.radius,
