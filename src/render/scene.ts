@@ -79,6 +79,7 @@ import {
   retargetAlignment,
   tapMeaning,
   pressMeaning,
+  outsideTapReleases,
   flickResetPlan,
   type TapContext,
   ShakeDetector,
@@ -5581,7 +5582,39 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⛔⛔ **`D64` — a finger that drove depth or roll releases, it does not tap.** ⚠ The
         // DOUBLE-TAP is untouched: the history is recorded either way, so the camera reset
         // pairs exactly as it always has. Only the toggle is spent.
-        if (noteTap(routed.pressed, s, e.pointerId) === "DOUBLE_TAP") {
+        // ⭐⭐⭐ **`D95` — A TAP HERE WHILE HOLDING AN ALIGNED BODY RELEASES ITS ALIGNMENT**, and is
+        // consumed rather than also toggling the mode. ⛔ Judged with the SAME tap test `noteTap`
+        // uses, and asked BEFORE it, because `noteTap` toggles. ⭐ The desktop's right-hold + left
+        // click on empty space arrives here as exactly this configuration (`D94`).
+        const soleHolder =
+          router.objects().length === 1 ? router.objects()[0] : undefined;
+        const heldGrip = soleHolder ? held.get(soleHolder.id) : undefined;
+        const heldId = heldGrip ? idOf.get(heldGrip.mesh) : undefined;
+        const isTap = isTapRelease(
+          routed.pressed.t,
+          routed.pressed.x,
+          routed.pressed.y,
+          s.t,
+          s.x,
+          s.y,
+          cfg.tapMaxDuration,
+          mmToPx(cfg.doubleTapSlop),
+        );
+        if (
+          isTap &&
+          heldGrip !== undefined &&
+          heldId !== undefined &&
+          outsideTapReleases(
+            router.objects().length,
+            alignedFaceOf(world, heldId) !== null,
+          )
+        ) {
+          // ⚠ The history is still recorded, so a double tap keeps pairing exactly as it did.
+          taps.record(routed.pressed, s.t);
+          releaseAlignmentOf(heldId);
+          heldGrip.alignmentTouched = false;
+          lastVerdict = `align: TAP on empty space released the alignment on ${heldId}`;
+        } else if (noteTap(routed.pressed, s, e.pointerId) === "DOUBLE_TAP") {
           resetCamera();
           lastVerdict = "DOUBLE_TAP → camera reset";
         }

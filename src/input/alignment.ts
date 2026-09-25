@@ -547,3 +547,30 @@ export function retargetAlignment(
 ): Constraint {
   return { ...c, targetWorld: alignTargetFor(pioneerWorldNormal) };
 }
+
+/**
+ * ⭐⭐⭐ **A TAP ON EMPTY SPACE WHILE HOLDING AN ALIGNED BODY RELEASES ITS ALIGNMENT** — `D95`.
+ *
+ * > *"Add the following conditions to unalign an aligned object: first touch pressed on aligned
+ * > object and single tap with second touch not raycast hitting any object (for mobile device);
+ * > right button clicked and hold on aligned object and then left click not raycast hitting any
+ * > object (for desktop)."* — the owner, 2026-09-25
+ *
+ * ⭐⭐ **ONE RULE SERVES BOTH, BECAUSE THEY ARE ONE CONFIGURATION.** On the desktop the right button's
+ * hold IS the first touch (`D94`) and a left click that hits nothing IS a second touch routed
+ * `OUTSIDE` — so the mouse needs no rule of its own. ⛔ A second, desktop-only copy would be two
+ * implementations of one gesture, free to disagree.
+ *
+ * ⛔ Exactly ONE held body, and it must be ALIGNED. ⚠ With nothing aligned the tap keeps its old
+ * meaning — `D28`'s mode toggle — so this adds an unalign without taking a toggle away from any
+ * configuration that had one to spare. ⚠ With two held bodies *which one?* has no answer.
+ *
+ * ⚠ The tap is CONSUMED: it releases the alignment and does NOT also toggle the mode — one gesture,
+ * one consequence, the rule `D38` set for the alignment tap.
+ */
+export function outsideTapReleases(
+  heldObjectCount: number,
+  heldIsAligned: boolean,
+): boolean {
+  return heldObjectCount === 1 && heldIsAligned;
+}
