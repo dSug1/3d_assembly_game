@@ -1096,7 +1096,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⭐ DISPOSED, not hidden, unlike the face markers: a cursor is a per-alignment OBJECT that may
    * later carry state of its own, and a hidden pool keyed by a couple would grow with every couple
    * ever made. ⚠ The material is SHARED and survives, so a dispose frees the mesh's buffers only.
-   * ⛔ PARENTED to the Pioneer (defect 46), so only its scale is written per frame.
+   * ⛔ PARENTED to the Pioneer (defect 46) and BILLBOARDED — always in the screen view plane.
    */
   const pioneerCursors = new PioneerFaceCursors();
   const pioneerCursorMeshes = new Map<string, Mesh>();
@@ -1141,14 +1141,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       m.metadata = { orbitCandidate: false };
       // ⭐ Above the body, like every instrument ring: a cursor must not be hidden by what it marks.
       m.renderingGroupId = 2;
+      // ⭐⭐ **ALWAYS IN THE SCREEN VIEW PLANE** — the owner, 2026-09-25: *"the ring shall always be
+      // in the screen view plane (not in the plane of the PioneerFace)"*. ⚠ The torus is built in
+      // its local XZ plane, so it is turned into XY ONCE and baked, then billboarded exactly as the
+      // candidate ring is: a billboard presents the local XY plane to the camera. ⛔ Laid in the
+      // face plane it went edge-on — and invisible — whenever the face turned away from the view.
+      m.rotation.x = Math.PI / 2;
+      m.bakeCurrentTransformIntoVertices();
+      m.billboardMode = Mesh.BILLBOARDMODE_ALL;
       m.parent = body;
-      const n = new Vector3(cur.normal[0], cur.normal[1], cur.normal[2]);
-      // ⭐ The torus lies in its local XZ plane, so +Y is turned onto the face normal.
-      m.rotationQuaternion = Quaternion.FromUnitVectorsToRef(
-        Vector3.Up(),
-        n,
-        new Quaternion(),
-      );
       pioneerCursorMeshes.set(cur.key, m);
     }
     const scale =

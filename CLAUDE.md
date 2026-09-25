@@ -156,7 +156,8 @@ translates an aligned body under the left button in any mode. ⭐ **The wheel zo
 multiplier so scrolling past a limit stores nothing.
 ⚠⚠ Playable, never testable — rule 5 needs a finger.
 ⭐⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (2026-09-25): an **amber ring** (first dictated green)
-at the PioneerFace centre, parented to the Pioneer and **disposed** with its alignment. ⛔ Keyed by
+at the PioneerFace centre, **always in the screen view plane** (a billboard, never the face's
+plane), parented to the Pioneer and **disposed** with its alignment. ⛔ Keyed by
 the whole **follower + FollowerFace + pioneer + PioneerFace** couple, so two Followers on one face
 own two rings at one position and a re-align on another face makes a new ring →
 `core/pioneer_face_cursors.ts`, reconciled every frame (retired by membership), HUD `pfc=`.
