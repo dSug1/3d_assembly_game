@@ -145,10 +145,6 @@ export function attachDesktopInput(
     }
   };
 
-  // ⭐⭐ WHICH button opened the real pointer, or `null`. ⛔ Not *is the left button down*: press
-  // ORDER decides the slot, and hard-wiring the left button cost two rounds on the glass.
-  // ⚠ Tracked here rather than read from `e.buttons`, which cannot say which press came first.
-  let primaryButton: number | null = null;
 
   const fromPointer = (
     e: PointerEvent,
@@ -160,7 +156,10 @@ export function attachDesktopInput(
     y: e.clientY,
     button: e.button,
     shift: e.shiftKey,
-    primaryButton,
+    // ⭐⭐ THE BROWSER'S OWN MASK, not a memory of it. ⛔ A latch here went stale on a missed
+    // `pointerup` and on every `pointercancel`, and judged the next press against a hand that no
+    // longer existed — *"some mouse clicks … land, some … do not."*
+    buttons: e.buttons,
   });
 
   /**
@@ -174,10 +173,11 @@ export function attachDesktopInput(
     if (e.pointerType !== "mouse") return;
     seen++;
     const v = map.step(fromPointer(e, type));
-    // ⚠ AFTER the verdict, so a press is judged against the state the hand was in when it
-    // pressed — not the one this event is about to create.
-    if (type === "DOWN" && primaryButton === null) primaryButton = e.button;
-    else if (type === "UP" && e.button === primaryButton) primaryButton = null;
+    // ⭐ EMITTED FIRST, whatever the verdict: this runs in the capture phase, so a synthetic lift the
+    // mapping owes (the wheel's pair, a #2 whose release was missed) reaches the scene BEFORE the
+    // real event does. ⚠ Order is the whole point — a real press that arrived beside two synthetic
+    // `OUTSIDE` pointers was a third touchpoint §4 has no row for.
+    emit(v.actions);
     // ⭐⭐⭐ **PASS THROUGH UNLESS THE MAPPING ASKS FOR THE EVENT.** ⛔ The first build stopped
     // every mouse event and replaced it, which froze a stream that already worked — the owner's
     // *"everything is almost frozen"*, and a gap analysis against `6a28e62` showed this layer was
@@ -186,7 +186,6 @@ export function attachDesktopInput(
     if (!v.suppress) return;
     e.stopPropagation();
     e.preventDefault();
-    emit(v.actions);
   };
 
   const onDown = (e: PointerEvent) => intercept(e, "DOWN");
@@ -210,12 +209,11 @@ export function attachDesktopInput(
     if (e.key === "Escape")
       emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
   };
-  const onBlur = () => {
-    primaryButton = null;
-    emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
-  };
-  // ⛔ The right button is a touchpoint here, so its menu must not open. ⚠ On the canvas only —
-  // taking it from the whole page would be rude on a HUD a hand wants to copy from.
+  const onBlur = () => emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
+  // ⛔ The right button is a touchpoint here, so its menu must not open — ANYWHERE on the page.
+  // ⚠ It was canvas-only, on the argument that a HUD is something a hand copies from. ⛔ But the
+  // HUD and the menu sit OVER the canvas, and an OS context menu that opens there swallows the
+  // click that dismisses it: one more way a click did not land.
   const onMenu = (e: Event) => e.preventDefault();
   // ⭐ The wheel's synthetic fingers lift on a clock, so something has to turn it.
   const onFrame = () =>
@@ -226,7 +224,7 @@ export function attachDesktopInput(
   window.addEventListener("pointerup", onUp, { capture: true });
   window.addEventListener("pointercancel", onUp, { capture: true });
   canvas.addEventListener("wheel", onWheel, { passive: false });
-  canvas.addEventListener("contextmenu", onMenu);
+  window.addEventListener("contextmenu", onMenu);
   window.addEventListener("keydown", onKey);
   window.addEventListener("blur", onBlur);
   const observer = scene.onBeforeRenderObservable.add(onFrame);
@@ -241,7 +239,7 @@ export function attachDesktopInput(
     window.removeEventListener("pointerup", onUp, { capture: true });
     window.removeEventListener("pointercancel", onUp, { capture: true });
     canvas.removeEventListener("wheel", onWheel);
-    canvas.removeEventListener("contextmenu", onMenu);
+    window.removeEventListener("contextmenu", onMenu);
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("blur", onBlur);
     scene.onBeforeRenderObservable.remove(observer);
