@@ -1011,3 +1011,25 @@ so the scene's own handler is the only consumer of that observable and nothing c
 change buys is that it no longer matters: one fewer layer between the mapping and the rule. ⛔ And
 the readout still earns its keep — `got` must now rise by construction, so if the second touchpoint
 is *still* inert, the fault is the rules refusing it and not delivery.
+
+### ⭐⭐⭐ AND THE THIRD REPORT DIAGNOSED ITSELF, FROM ONE DETAIL
+
+> *"Right button press just hits face and does nothing more than highlight the face contours in
+> fuchsia. No movement, no selection."*
+
+⭐⭐ **THE FUCHSIA CONTOUR IS THE *HELD* BODY'S HitFace.** So seeing it appear on the face the right
+button hit says the synthetic pointer **arrived, resolved a face and latched a role** — as the
+HOLDER. ⛔ Which means there was no first touch: the right button was pressed alone.
+
+⚠ Delivery was never the problem by then; the precondition was. ⭐ `METHOD`: *a symptom that names
+which rule ran is worth more than one that says it did not work* — one word, *fuchsia*, separated
+three hypotheses that a fourth analysis would not have.
+
+⛔⛔ **AND A LONE SECOND TOUCHPOINT WAS A REAL TRAP, NOT JUST A MISUSE.** `D87` gives it no relation
+to make, and it latches a role on the body it hit — leaving that body **held by a finger the cursor
+never drives**: highlighted, and unmovable until the button is released. ✅ The right button is now
+refused (and still swallowed) unless the left is already down, which is `D87`'s own precondition
+made unmissable instead of merely documented.
+
+⭐ *A mapping is not finished when every event is accounted for; it is finished when the gestures it
+cannot complete refuse instead of half-happening.*
