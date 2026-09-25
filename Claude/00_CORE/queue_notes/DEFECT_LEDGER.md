@@ -981,3 +981,21 @@ pressed second*, whichever button that was.
 only after the cursor drove #2 while the real pointer was down; until that pointer lifts, its moves
 and release are re-issued at its own position. ⭐ Eight mutants red, two of them the reports as
 shipped.
+
+### ⭐⭐ AND SHIFT + LEFT DRAG BECAME A SECOND TOUCH OF ITS OWN
+
+> *"Most of the time, when I drag with shift with both buttons down, it says ready X->roll but the
+> roll does not appear. Sometimes it rolls, though."* — and the owner's simplification: *left drag =
+> horizontal translation (or yaw/pitch in rotation); Shift + left drag = gravity with dy and roll with
+> dx for an aligned body, gravity only for a free body in translation, roll with dx in rotation.*
+
+⛔ *Sometimes* was the ROLE. A right-pressed second touch raycasts, so the cursor's position at the
+press decided what it was: over empty space an `OUTSIDE` anchor that drives roll, over ANOTHER body
+that body's HOLDER, which drives nothing on the held one.
+
+⭐⭐ The simplification needed no new channel logic at all — it is exactly what the scene already
+does with a second touchpoint that is not on another body. ✅ So Shift + left drag creates its own
+second touch, **anchor-only** (delivered with no pick, always routed `OUTSIDE`), lazily on the first
+Shift move so a Shift tapped in place is never a tap. It parks when Shift is released, lives for the
+left button's hold, and lifts just before it. ⚠ The right button stays the way to press a Pioneer
+face; a right press replaces a Shift-made second touch.
