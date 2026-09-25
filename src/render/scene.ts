@@ -196,6 +196,7 @@ import {
   zoneEdge,
   type ObjectAxes,
 } from "../input/object_axes";
+import { JumpWatch, type Jump } from "../input/jump_watch";
 import {
   axisDisplacement,
   axisTravel,
@@ -3475,6 +3476,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       tuningRejected: tuning.rejected,
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
       // ⛔ `IGN` is the one that matters: it is the visible form of the IN8 decision.
+      jump:
+        lastJump === null
+          ? "—"
+          : `${lastJump.id} ${lastJump.mm.toFixed(0)}mm/${lastJump.deg.toFixed(0)}° ` +
+            `(usual ${lastJump.usualMm.toFixed(1)}mm/${lastJump.usualDeg.toFixed(1)}°) ` +
+            `${((performance.now() - lastJumpAt) / 1000).toFixed(0)}s ago — ${lastJumpVerdict}`,
       roles:
         router.size === 0
           ? "—"
@@ -4850,6 +4857,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // ride-along, the cancel and the landing were three scattered statements in this frame
   // handler, and `pioneer_cascade.ts` already paid for that lesson.
   const alignSnaps = new AlignSnaps<ObjectId>();
+  // ⚠ LATCHED, not per-frame: a jump is over in one frame and a hand cannot look up in time.
+  // ⭐ The verdict in force when it happened is captured with it — that is the half that says
+  // WHICH rule was running, which is what the owner could not see.
+  const jumpWatch = new JumpWatch<ObjectId>();
+  let lastJump: Jump<ObjectId> | null = null;
+  let lastJumpVerdict = "";
+  let lastJumpAt = 0;
   /**
    * ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — what this gesture has demanded per
    * axis, and the slerp that lands it on a multiple when the gesture ends.
@@ -6659,6 +6673,24 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⭐⭐ The lesson is the shape, not the line: **an implicit invariant died when the
     // authority moved.** "Everything that needs drawing has a follower" was true by
     // construction and became false silently, because nothing stated it.
+    // ⭐⭐⭐ **THE DISCONTINUITY WATCH** — the owner, 2026-09-25: *"at one point, one of the
+    // objects has made a big jump (I could not see if it was the pioneer or the follower)."*
+    //
+    // ⛔⛔ Read off the **MODEL**, here, after every rule has written and before the follower and
+    // the sway bend it. ⚠ A jump the eye sees that the model did not make is a different defect,
+    // and one readout for both would report neither. ⭐ The decision is `jump_watch.ts`'s; this
+    // holds the call, which is the 2026-09-19 lesson.
+    for (const [jid, jmesh] of meshOf) {
+      const jp = modelPose(jmesh);
+      if (!jp) continue;
+      const j = jumpWatch.note(jid, jp.position, jp.orientation);
+      if (j !== null) {
+        lastJump = j;
+        lastJumpVerdict = lastVerdict;
+        lastJumpAt = performance.now();
+        hudDirty = true;
+      }
+    }
     for (const mesh of meshOf.values()) {
       const f = followerFor(mesh);
       // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather

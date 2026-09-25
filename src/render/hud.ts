@@ -44,6 +44,16 @@ export interface HudFields {
    * printed rather than reasoned about.
    */
   readonly roles: string;
+  /**
+   * ⭐⭐⭐ **THE LAST DISCONTINUITY ANY BODY MADE** — `jump_watch.ts`, 2026-09-25.
+   *
+   * ⛔⛔ The report that prompted it was **withdrawn** — *"I cannot reproduce the jump"* — and there
+   * is no open defect. ⭐ The line stays because looking for that one meant re-reading every path
+   * that could cause a jump to find it already guarded, and doing that twice would be the waste.
+   * ⚠ It names the BODY, the size of the step, what that body had been doing and the verdict in
+   * force — and it LATCHES, because a jump is over before a hand can look up.
+   */
+  readonly jump: string;
 }
 
 export interface Hud {
@@ -100,6 +110,8 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         `last      ${f.lastVerdict}`,
         `camera    ${f.camera}`,
         `roles     ${f.roles}`,
+        // ⭐ Sticky by design: it reports the last one seen, not the current frame's.
+        `jump      ${f.jump}`,
         `noise     ${f.noise}`,
         // ⛔⛔ THIS LINE WAS COMPUTED, HANDED OVER AND DROPPED — for the whole life of
         // the file. `scene.ts` has always filled `tuning` and `tuningRejected`, the

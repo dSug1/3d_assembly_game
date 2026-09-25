@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1136 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1137 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -249,20 +249,26 @@ is the boot clearance. ⭐⭐⭐ *A fixture that mirrors a constant is a second 
 and it disagrees exactly when the constant is the thing being changed.* ✅
 `src/core/scene_dims.ts` is the one home, read by `scene.ts` and by both suites; three assertions
 went RED the moment they were wired to it (clearance **300 → 280 mm**).
-⭐⭐ **AND `objectD` IS A BEVELLED HOLLOW CYLINDER** (`D92`, 2026-09-25): `L` thick about its own
-**z** — the parts' long axis — outer radius `L`, hole `L/2`. ⭐⭐⭐ **THE FIRST BUILD CAME BACK AS
-*"you did not do a cylinder, you did a doughnut"*, AND THE GEOMETRY WAS CORRECT** — the wall and
-the end face share their rim vertices, so `ComputeNormals` averaged across the rim and blended one
-into the other. ⛔ *A hard edge shaded as a soft one is a torus to the eye, whatever the vertices
-say.* ⭐ The owner named the modeller's fix — *add bevels on the sharp edges to keep them sharp* —
-and it is the right one for a reason worth keeping: a narrow chamfer confines the whole normal
-transition to a band, so the rim reads crisp **while the wall stays smooth**, which the obvious fix
-(splitting the rim vertices) would have destroyed by facetting the cylinder into 24 flats.
-⛔ **The first curved body**, and that reaches further than it looks: `mesh_topology` groups at
-**1°** so a cylinder does not collapse into one face, giving it **146** logical faces against a
-cuboid's 6, each separately tappable — and the hole's wall is the first outward normal that is not
-*away from the centre*. ⚠⚠ **The hole is invisible to the capture**, which is a CONVEX hull
-(`D49`); non-convex is `3D2`'s. Engine-free in `src/core/ring.ts`, 10 vectors, 6 mutants.
+⚠⚠ **`objectD` WAS A BEVELLED HOLLOW CYLINDER FOR AN HOUR AND THE OWNER REMOVED IT** (`D92`,
+made and reversed 2026-09-25) — it is the `L × 2L × 3L` pink cuboid again, and `core/ring.ts` with
+its 10 vectors is **deleted, not parked**. ⭐⭐⭐ **WHAT THE HOUR BOUGHT IS DEFECT 68**: the first
+build came back as *"you did not do a cylinder, you did a doughnut"* and **the geometry was
+correct** — the wall and the end face share their rim vertices, so `ComputeNormals` averaged across
+the rim and blended one into the other. ⛔ *A hard edge shaded as a soft one is a torus to the eye,
+whatever the vertices say*, and ⭐⭐⭐ *a vector suite that reads the geometry cannot see the
+SHADING, and the shading is what a hand judges* — ten green vectors on a body rejected on sight.
+⭐ The owner's fix was the modeller's one, *add bevels on the sharp edges to keep them sharp*: a
+narrow chamfer confines the normal transition to a band, so the rim reads crisp **while the wall
+stays smooth**, which splitting the rim vertices would have destroyed by facetting it into 24 flats.
+⭐⭐ **AND THE HUD HAS A `jump` LINE NOW** — a body's model pose is watched every frame and any
+**discontinuity** is latched with the verdict that was in force (`src/input/jump_watch.ts`).
+⚠⚠ **IT IS NOT THERE FOR AN OPEN DEFECT.** One was reported 2026-09-25 and **withdrawn** —
+*"I cannot reproduce the jump. It may be another artifact"* — and the ledger entry is deleted with
+it, because *a wrong analysis kept for the record is a trap for the next reader*. ⭐ The instrument
+stays because of what looking for it cost: every path that could plausibly cause a jump had to be
+re-read to find it already guarded, and `jump_watch.ts`'s header is the list. ⭐⭐ A jump is a step
+large against the body's **own recent median**, never against a constant — a `FOLLOW` follower is
+*supposed* to move exactly as far as its Pioneer did.
 ⭐⭐ **AND THE RIGHT-HAND BODY IS NO LONGER A BOX** (`D72`, 2026-09-22): `objectB` is a
 **trapezoidal pyramid**, `1.5L × 2L × 3L` with its top tapered to half its base — built by
 MOVING a Babylon box's vertices (`src/core/frustum.ts`), so the builder's winding survives.

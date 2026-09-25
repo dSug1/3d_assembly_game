@@ -949,3 +949,11 @@ three free-rotation call sites (roll, yaw, pitch) each take the frame **once** a
 their readers, because the grey gizmo line, the turn itself and the increment tally restate each
 other's axes and signs — two lookups could disagree on the frame the flag is toggled.
 ✅ 5 vectors; the old behaviour (always the live frame) run as a mutant reddens 2 of them.
+
+---
+
+## ⭐ STATUS TEXT MOVED DOWN FROM `QUEUE.md`, 2026-09-25
+
+⛔ The row stays in the queue; only its essay came here.
+
+✅✅ **RULE 6 CLOSED 2026-09-15** — by finger, its gain **computed**. ⛔⛔ **ITS SCREEN-PLANE FORM IS SUPERSEDED** (`D75`/`D76`): a body translates along **its own axes**, the finger's delta **solved onto both horizontal ones** so it tracks exactly, with Blender's 5° cone at the edge-on case. ⚠ One device look, three reports, three fixes — **unjudged again**, and `screenTranslation`/`depthTranslate` stay as declared debt. ⛔ 6bis/6ter/6quater still wait on face centres → [`queue_notes/IN4.md`(this file)
