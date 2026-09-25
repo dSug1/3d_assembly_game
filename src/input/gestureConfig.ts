@@ -906,8 +906,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pioneerCandidateConeDeg: 15,
   // ⚠ A guess inside the owner's 1–10: a fingertip is wider than the 16 px ring it aims at.
   pioneerCursorGrabRadii: 3,
-  // ⭐ ON: the drag is what the owner built the cursor for; `0` hands the ring's press back.
-  pioneerCursorDrag: 1,
+  // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
+  // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
+  pioneerCursorDrag: 0,
   flickWindow: 120,
   flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer

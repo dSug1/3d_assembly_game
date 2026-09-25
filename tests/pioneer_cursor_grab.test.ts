@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { grabbedCursor, type CursorPress } from "@input/pioneer_cursor_grab";
 import { MOUSE_SECOND_ID } from "@input/mouse_second_touch";
+import { DEFAULT_CONFIG } from "@input/gestureConfig";
 
 const R = 8;
 const touch = (x: number, y: number, pointerId = 1): CursorPress => ({
@@ -69,6 +70,16 @@ describe("⭐⭐ the owner's toggle", () => {
   it("⭐ switched ON, the same presses grab", () => {
     expect(grabbedCursor(mouse(100, 100), ONE, R, 10, true)).toBe("k");
     expect(grabbedCursor(touch(100, 100), ONE, R, 10, true)).toBe("k");
+  });
+});
+
+describe("⛔⛔ the shipped default is OFF", () => {
+  it("⭐ *\"default is cursor drag off\"* — the owner, 2026-09-25", () => {
+    // ⛔ RED against the ON default this toggle first shipped with.
+    expect(DEFAULT_CONFIG.pioneerCursorDrag).toBe(0);
+    expect(
+      grabbedCursor(mouse(100, 100), ONE, R, 10, DEFAULT_CONFIG.pioneerCursorDrag === 1),
+    ).toBeNull();
   });
 });
 
