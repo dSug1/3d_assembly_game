@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1159 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1166 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -151,7 +151,9 @@ and **once two pointers exist the cursor is RELATIVE** — one cursor cannot dri
 pointers without a jump. ⭐ The Shift-made second touch is anchor-only (no pick, always
 `OUTSIDE`), so it can never grab another body — which is why roll only *sometimes* worked before.
 ⭐ `secondTouchAlwaysAvailable`: on a mouse the second touch is always one Shift away, so `D60`
-translates an aligned body under the left button in any mode. ⚠ No wheel zoom on purpose.
+translates an aligned body under the left button in any mode. ⭐ **The wheel zooms** (`input/mouse_wheel_zoom.ts`): one notch = one fixed ratio of the orbit's
+`zoom` — the multiplier the pinch writes, through the same `applyCamera()` — clamped on the
+multiplier so scrolling past a limit stores nothing.
 ⚠⚠ Playable, never testable — rule 5 needs a finger.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
