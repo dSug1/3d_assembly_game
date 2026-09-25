@@ -8,10 +8,16 @@
  *
  * ## ⭐⭐ HOW IT FEEDS THE RULES: BY SYNTHESISING REAL POINTER EVENTS
  *
- * The adapter intercepts **mouse** pointer events before they reach the canvas and dispatches
- * synthetic `touch` ones in their place. ⭐ Babylon's own input manager then produces the ordinary
- * `onPointerObservable` notifications, so `scene.ts`'s gesture code is untouched and cannot tell
- * the difference — which is exactly the property that makes the layer deletable.
+ * ⛔⛔⛔ **IT PASSES THROUGH BY DEFAULT AND INTERCEPTS BY EXCEPTION**, which is the whole shape of
+ * the fix to the build that shipped. A mouse was **already** touchpoint #1 — nothing filters on
+ * `pointerType` — so the first version, which swallowed every mouse event and replaced it, froze a
+ * stream that worked. ⚠ Now an event is taken only when `DesktopVerdict.suppress` says the mapping
+ * is standing in for the touchpoint a mouse does not have; everything else reaches the rules
+ * exactly as it did before this file existed.
+ *
+ * ⭐ What IS intercepted becomes a synthetic `touch` pointer event dispatched on the canvas, so
+ * Babylon's own input manager produces the ordinary `onPointerObservable` notifications and
+ * `scene.ts`'s gesture code cannot tell the difference.
  *
  * ⚠ Checked rather than hoped: Babylon calls `setPointerCapture` for touch pointers inside a
  * `try/catch` (`webDeviceInputSystem.js`), so an id that belongs to no real pointer is safe.
@@ -142,9 +148,16 @@ export function attachDesktopInput(
   const intercept = (e: PointerEvent, type: DesktopEvent["type"]): void => {
     if (emitting || e.pointerType !== "mouse") return;
     seen++;
+    const v = map.step(fromPointer(e, type));
+    // ⭐⭐⭐ **PASS THROUGH UNLESS THE MAPPING ASKS FOR THE EVENT.** ⛔ The first build stopped
+    // every mouse event and replaced it, which froze a stream that already worked — the owner's
+    // *"everything is almost frozen"*, and a gap analysis against `6a28e62` showed this layer was
+    // the only functional change. ⚠ Now the real pointer reaches the rules untouched unless the
+    // mapping is standing in for the touchpoint a mouse does not have.
+    if (!v.suppress) return;
     e.stopPropagation();
     e.preventDefault();
-    emit(map.step(fromPointer(e, type)));
+    emit(v.actions);
   };
 
   const onDown = (e: PointerEvent) => intercept(e, "DOWN");
@@ -159,21 +172,22 @@ export function attachDesktopInput(
         x: e.clientX,
         y: e.clientY,
         wheel: notchesOf(e),
-      }),
+      }).actions,
     );
   };
   // ⭐ Esc, and anything that takes the window away: a button released outside the page never
   // reports, which is the easiest route to `IN2`'s stale grip that a mouse has.
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === "Escape") emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }));
+    if (e.key === "Escape")
+      emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
   };
-  const onBlur = () => emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }));
+  const onBlur = () => emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
   // ⛔ The right button is a touchpoint here, so its menu must not open. ⚠ On the canvas only —
   // taking it from the whole page would be rude on a HUD a hand wants to copy from.
   const onMenu = (e: Event) => e.preventDefault();
   // ⭐ The wheel's synthetic fingers lift on a clock, so something has to turn it.
   const onFrame = () =>
-    emit(map.step({ type: "TICK", t: performance.now(), x: 0, y: 0 }));
+    emit(map.step({ type: "TICK", t: performance.now(), x: 0, y: 0 }).actions);
 
   window.addEventListener("pointerdown", onDown, { capture: true });
   window.addEventListener("pointermove", onMove, { capture: true });
@@ -199,7 +213,7 @@ export function attachDesktopInput(
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("blur", onBlur);
     scene.onBeforeRenderObservable.remove(observer);
-    emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }));
+    emit(map.step({ type: "CANCEL", t: 0, x: 0, y: 0 }).actions);
   };
   scene.onDisposeObservable.add(teardown);
   return { stats: () => ({ seen, sent, last }) };

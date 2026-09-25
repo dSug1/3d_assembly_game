@@ -12,16 +12,33 @@
  * ⚠ It is also why the module is **removable**: delete its two lines in `render/desktop_input.ts`
  * and the product is exactly what it was, because nothing downstream knows it exists.
  *
+ * ## ⛔⛔⛔ THE FIRST BUILD REPLACED A STREAM THAT ALREADY WORKED, AND BROKE IT
+ *
+ * ⚠⚠ **A MOUSE WAS ALREADY TOUCHPOINT #1.** Nothing filters on `pointerType`, so at `6a28e62` a
+ * left-drag translated and rotated a body correctly — and the first version of this module
+ * intercepted **every** mouse event and replaced it with a synthetic one. ⛔ The owner: *"in the
+ * current commit, everything is almost frozen — the camera orbits by one increment as if delta
+ * does not accumulate, no rotation or translation."* ⭐ A gap analysis against that commit named
+ * the cause in one line: this layer is the **only** functional change between them.
+ *
+ * ⭐⭐⭐ **SO THE RULE IS NOW *PASS THROUGH BY DEFAULT, INTERCEPT BY EXCEPTION*.** The real mouse
+ * stream is left exactly as it was, and the only events this module takes are the ones that stand
+ * for the touchpoint a mouse does **not** have. ⚠ The blast radius of a layer is the set of events
+ * it swallows, and the first build's was *all of them* to add *one*.
+ *
  * ## ⭐⭐⭐ THE MAPPING, AND WHY THE RIGHT BUTTON RATHER THAN A MODIFIER
  *
- * | input | touchpoint |
- * |---|---|
- * | **LMB** down / drag / up | #1 — hold, translate, orbit, tap, double-tap, flick, shake |
- * | **RMB** down / drag / up | #2 — the alignment press (`D87`), depth, roll |
- * | cursor | drives the **most recently pressed** pointer; the other PARKS |
- * | **Shift** | flips which pointer the cursor drives |
- * | **wheel** | two `OUTSIDE` pointers symmetric about the cursor, separation scaled |
- * | **CANCEL** (Esc, blur) | lifts everything |
+ * | input | touchpoint | intercepted? |
+ * |---|---|---|
+ * | **LMB** down / drag / up | #1 — the browser's own mouse pointer, untouched | ⭐ **no** |
+ * | **RMB** down / up | #2 — the alignment press (`D87`) | ⛔ yes |
+ * | **Shift** + drag | moves #2 instead of #1 — depth and roll | ⛔ yes, only while held |
+ * | **wheel** | two `OUTSIDE` pointers symmetric about the cursor, separation scaled | ⛔ yes |
+ * | **CANCEL** (Esc, blur) | lifts every SYNTHETIC pointer | — |
+ *
+ * ⚠ **#2 PARKS UNLESS SHIFT IS HELD**, so an ordinary drag with both buttons down moves the held
+ * body and nothing else. ⭐ Parking is exact rather than approximate: `A11` made §1.1 a POSITION
+ * deadband, so a still pointer emits **nothing at all**, and `D43` says the channels SUM.
  *
  * ⛔⛔ **TWO MOUSE BUTTONS ARE GENUINELY INDEPENDENT AND A MODIFIER IS NOT.** `Shift`+LMB cannot
  * hold two pointers down at once — pressing it requires LMB to be **up**, so touchpoint #1 has
@@ -91,24 +108,34 @@ export interface SyntheticAction {
   readonly y: number;
 }
 
-type Slot = 1 | 2;
+export interface DesktopVerdict {
+  readonly actions: readonly SyntheticAction[];
+  /**
+   * ⛔⛔ **TRUE = SWALLOW THE REAL EVENT.** ⚠ The one field that decides this layer's blast
+   * radius: everything it does not suppress reaches the rules exactly as it did before the layer
+   * existed. ⭐ `false` is the default and the safe answer, which is the lesson of the build that
+   * suppressed everything and froze the product.
+   */
+  readonly suppress: boolean;
+}
+
+const PASS: DesktopVerdict = { actions: [], suppress: false };
 
 /**
- * ⭐⭐ **THE WHOLE STATE MACHINE.** ⛔ It is a class rather than a function because *which pointer
- * the cursor drives* is a latch, and `IN2`'s lesson is that a latch must be held in one place and
- * read, never inferred from where the cursor is now.
+ * ⭐⭐ **THE STATE MACHINE — AND IT OWNS ONLY WHAT THE MOUSE LACKS.** ⛔ Touchpoint #1 is the
+ * browser's own pointer and is not modelled here at all: modelling it is what broke it.
  */
 export class DesktopPointers {
-  private readonly at = new Map<Slot, { x: number; y: number }>();
-  private driven: Slot = 1;
+  /** Where the SECOND touchpoint is parked, or `null` when it is up. */
+  private second: { x: number; y: number } | null = null;
   private pinch: { x: number; y: number; half: number; t: number } | null = null;
 
-  /** ⚠ Diagnostics only — what the HUD would print if it printed this. */
+  /** ⚠ Diagnostics only — SYNTHETIC pointers down. The real one is the browser's to count. */
   get downCount(): number {
-    return this.at.size + (this.pinch === null ? 0 : 2);
+    return (this.second === null ? 0 : 1) + (this.pinch === null ? 0 : 2);
   }
 
-  step(ev: DesktopEvent): SyntheticAction[] {
+  step(ev: DesktopEvent): DesktopVerdict {
     switch (ev.type) {
       case "DOWN":
         return this.onDown(ev);
@@ -118,81 +145,68 @@ export class DesktopPointers {
         return this.onUp(ev);
       case "WHEEL":
         return this.onWheel(ev);
-      case "TICK":
-        return this.closePinchIfIdle(ev.t);
-      case "CANCEL":
-        return this.cancel();
+      case "TICK": {
+        const actions = this.closePinchIfIdle(ev.t);
+        return actions.length === 0 ? PASS : { actions, suppress: false };
+      }
+      case "CANCEL": {
+        const actions = this.cancel();
+        return actions.length === 0 ? PASS : { actions, suppress: false };
+      }
     }
   }
 
-  private static slotOf(button: number | undefined): Slot | null {
-    if (button === 0) return 1;
-    if (button === 2) return 2;
-    return null;
+  private onDown(ev: DesktopEvent): DesktopVerdict {
+    // ⭐⭐⭐ **THE LEFT BUTTON IS NOT OURS.** It already drives touchpoint #1 through the
+    // browser's own pointer, and it did so correctly before this file existed.
+    if (ev.button !== 2) return PASS;
+    if (this.second !== null) return { actions: [], suppress: true };
+    // ⛔ A press ends a zoom: §4's role table counts touchpoints, and leaving the pinch pair down
+    // would make this press a third finger, which is `IGNORED`.
+    const actions = this.closePinch();
+    this.second = { x: ev.x, y: ev.y };
+    actions.push({ kind: "DOWN", id: DESKTOP_IDS.second, x: ev.x, y: ev.y });
+    return { actions, suppress: true };
   }
 
-  private static idOf(slot: Slot): number {
-    return slot === 1 ? DESKTOP_IDS.first : DESKTOP_IDS.second;
+  private onMove(ev: DesktopEvent): DesktopVerdict {
+    // ⭐⭐ **SHIFT IS THE ONLY THING THAT TAKES A MOVE FROM THE REAL POINTER**, and only while the
+    // second touchpoint is actually down. ⚠ Otherwise the cursor drives #1, exactly as it always
+    // has — including while #2 is parked, which is what makes a two-finger hold feel ordinary.
+    if (ev.shift !== true || this.second === null) return PASS;
+    this.second.x = ev.x;
+    this.second.y = ev.y;
+    return {
+      actions: [{ kind: "MOVE", id: DESKTOP_IDS.second, x: ev.x, y: ev.y }],
+      suppress: true,
+    };
   }
 
-  private onDown(ev: DesktopEvent): SyntheticAction[] {
-    const slot = DesktopPointers.slotOf(ev.button);
-    if (slot === null || this.at.has(slot)) return [];
-    // ⛔ A press ends a zoom. ⚠ Otherwise the two synthetic `OUTSIDE` fingers would still be down
-    // and §4's role table would read three touchpoints, which is a configuration the hand never
-    // made.
-    const out = this.closePinch();
-    this.at.set(slot, { x: ev.x, y: ev.y });
-    this.driven = slot;
-    out.push({ kind: "DOWN", id: DesktopPointers.idOf(slot), x: ev.x, y: ev.y });
-    return out;
+  private onUp(ev: DesktopEvent): DesktopVerdict {
+    if (ev.button !== 2) return PASS;
+    const p = this.second;
+    // ⚠ Suppressed even with nothing to lift: its DOWN was swallowed, so letting the UP through
+    // would hand the rules a release for a press they never saw.
+    if (p === null) return { actions: [], suppress: true };
+    this.second = null;
+    // ⛔⛔ **REPORTED WHERE THAT POINTER WAS, NOT WHERE THE CURSOR IS.** A parked pointer's last
+    // position is its own; using the cursor would teleport it on release, and `A11`'s deadband
+    // would read one enormous step — a flick, or a translation the hand never made.
+    return {
+      actions: [{ kind: "UP", id: DESKTOP_IDS.second, x: p.x, y: p.y }],
+      suppress: true,
+    };
   }
 
-  private onMove(ev: DesktopEvent): SyntheticAction[] {
-    const other: Slot = this.driven === 1 ? 2 : 1;
-    // ⚠ Shift flips, but only onto a pointer that is actually down: otherwise holding Shift with
-    // one button would silently freeze the cursor, which reads as the product having hung.
-    let target: Slot = ev.shift === true && this.at.has(other) ? other : this.driven;
-    if (!this.at.has(target)) target = other;
-    const p = this.at.get(target);
-    // ⭐⭐ **HOVER IS NOT A GESTURE, AND THIS IS THE LINE THAT SAYS SO.** A mouse moves with no
-    // button down and a finger cannot, so it is the one event type touch never produces — feeding
-    // it would make every journey across the glass a drag.
-    // ⚠ There was an `at.size === 0` early return above as well; a mutant deleting it left the
-    // output identical, because this check already covers it. ⛔ *A branch no vector can enter is
-    // the dormant-fork shape*, so it went rather than being kept as a comment with a body.
-    if (p === undefined) return [];
-    p.x = ev.x;
-    p.y = ev.y;
-    return [{ kind: "MOVE", id: DesktopPointers.idOf(target), x: ev.x, y: ev.y }];
-  }
-
-  private onUp(ev: DesktopEvent): SyntheticAction[] {
-    const slot = DesktopPointers.slotOf(ev.button);
-    if (slot === null) return [];
-    const p = this.at.get(slot);
-    if (p === undefined) return [];
-    this.at.delete(slot);
-    // ⛔⛔ **THE LIFT IS REPORTED WHERE THAT POINTER WAS, NOT WHERE THE CURSOR IS.** A parked
-    // pointer's last position is its own; using the cursor would teleport it on release, and
-    // `A11`'s deadband would read that as a single enormous step.
-    const out: SyntheticAction[] = [
-      { kind: "UP", id: DesktopPointers.idOf(slot), x: p.x, y: p.y },
-    ];
-    const other: Slot = slot === 1 ? 2 : 1;
-    if (this.at.has(other)) this.driven = other;
-    return out;
-  }
-
-  private onWheel(ev: DesktopEvent): SyntheticAction[] {
+  private onWheel(ev: DesktopEvent): DesktopVerdict {
     const notches = ev.wheel ?? 0;
-    if (!Number.isFinite(notches) || notches === 0) return [];
-    const out: SyntheticAction[] = [];
+    if (!Number.isFinite(notches) || notches === 0) return PASS;
+    const actions: SyntheticAction[] = [];
     if (this.pinch === null) {
       // ⭐ ANCHORED where the wheel started, so a cursor that drifts mid-zoom does not drag the
       // pair across the scene and turn a zoom into an orbit.
       this.pinch = { x: ev.x, y: ev.y, half: PINCH_HALF_PX, t: ev.t };
-      out.push(
+      actions.push(
         { kind: "DOWN", id: DESKTOP_IDS.pinchA, x: ev.x - PINCH_HALF_PX, y: ev.y },
         { kind: "DOWN", id: DESKTOP_IDS.pinchB, x: ev.x + PINCH_HALF_PX, y: ev.y },
       );
@@ -200,11 +214,11 @@ export class DesktopPointers {
     const p = this.pinch;
     p.half = Math.max(8, p.half * Math.pow(PINCH_NOTCH_RATIO, notches));
     p.t = ev.t;
-    out.push(
+    actions.push(
       { kind: "MOVE", id: DESKTOP_IDS.pinchA, x: p.x - p.half, y: p.y },
       { kind: "MOVE", id: DESKTOP_IDS.pinchB, x: p.x + p.half, y: p.y },
     );
-    return out;
+    return { actions, suppress: true };
   }
 
   private closePinchIfIdle(t: number): SyntheticAction[] {
@@ -223,22 +237,19 @@ export class DesktopPointers {
   }
 
   /**
-   * ⭐⭐ **EVERYTHING UP** — Esc, a lost window, a pointer the browser cancelled.
+   * ⭐⭐ **EVERY SYNTHETIC POINTER UP** — Esc, a lost window, a pointer the browser cancelled.
    *
-   * ⛔ `IN2` records an open risk that a **stale grip** kills orbit and zoom together with no way
-   * back but a reload. ⚠ A mouse makes that easier to reach than a finger does, because a button
-   * released outside the window never reports. ⭐ So the panic key is part of the mapping, not an
-   * afterthought.
+   * ⛔ It cannot lift touchpoint #1, which belongs to the browser. ⚠ That is the honest limit of a
+   * layer that passes through by default, and it is the right trade: the real pointer is the one
+   * the browser will clean up on its own.
    */
   private cancel(): SyntheticAction[] {
     const out = this.closePinch();
-    for (const slot of [1, 2] as const) {
-      const p = this.at.get(slot);
-      if (p === undefined) continue;
-      this.at.delete(slot);
-      out.push({ kind: "UP", id: DesktopPointers.idOf(slot), x: p.x, y: p.y });
+    const p = this.second;
+    if (p !== null) {
+      this.second = null;
+      out.push({ kind: "UP", id: DESKTOP_IDS.second, x: p.x, y: p.y });
     }
-    this.driven = 1;
     return out;
   }
 }

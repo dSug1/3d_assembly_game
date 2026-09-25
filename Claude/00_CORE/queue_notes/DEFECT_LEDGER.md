@@ -947,3 +947,43 @@ direction is half a test.*
 ⛔ **NOT FIXED, DELIBERATELY**: making the counter binding-aware means parsing TypeScript, which is
 a great deal of machinery for a guard that works. ⚠ The weakness is written into the test's own
 header instead, so the next reader meets it before it costs anything.
+
+---
+
+## 71 — ⛔⛔⛔ **A LAYER THAT REPLACED A WORKING STREAM INSTEAD OF ADDING TO IT** (2026-09-25, the owner)
+
+> *"Not working. Delta position not working."* … *"In the commit `6a28e62` the desktop was working:
+> left click of mouse was working as first touch and translation and rotation was possible. In the
+> current commit, everything is almost frozen (for example, the camera orbits by one increment as
+> if delta does not accumulate, no rotation or translation)."*
+
+⛔⛔ **THE PREMISE I NEVER CHECKED WAS THAT DESKTOP DID NOT WORK.** Nothing in this project filters
+on `pointerType`, and a move for a pointer that never pressed is already dropped — so a mouse had
+been touchpoint #1 all along. ⚠ `D94` was written to *add* the second touchpoint and instead
+**intercepted every mouse event and replaced it**, which took the working one away.
+
+### ⭐⭐⭐ WHAT FOUND IT, AND IT WAS NOT AN ANALYSIS
+
+Four causes were plausible and three died to a read (the deadband is ~13 px; `sampleOf` takes
+`clientX/clientY`, which the synthetic events carry; Babylon falls back to `maxTouchPoints || 2`).
+⭐ What settled it was the owner naming **a commit where it worked** — and a gap analysis showing
+this layer was the **only functional change** between the two: `scene.ts` +22 lines, everything
+else new files.
+
+⚠⚠ `METHOD` already has the sentence and I did not apply it: *a device report is evidence about the
+code the device was running.* ⛔ **Its converse is the one this cost**: a report that something is
+broken is evidence about a CHANGE, and the fastest question is not *why is it broken* but *what did
+it work at last*.
+
+### ✅ THE FIX, AND THE RULE IT LEAVES BEHIND
+
+**Pass through by default, intercept by exception.** The mapping now returns a `suppress` flag with
+every verdict, and only three things are taken: the right button, `Shift`+drag, and the wheel.
+⭐ Every other mouse event reaches the rules exactly as it did before the file existed.
+
+⭐⭐⭐ **THE BLAST RADIUS OF A LAYER IS THE SET OF EVENTS IT SWALLOWS**, and it belongs in the
+vectors. ⚠ The suite now asserts `suppress` on every path — a mutant that intercepts the left
+button, which is precisely what shipped, goes **RED**.
+
+⛔ And the readout that was built to diagnose this stays: `seen → sent → got` on the HUD, counted at
+opposite ends of the chain.
