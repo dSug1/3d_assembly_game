@@ -139,6 +139,7 @@ import {
   OBJECT_TOP_SCALE,
   PLATE_DIMS_M,
   PYRAMID_DIMS_M,
+  bootTilt,
 } from "../core/scene_dims";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
 import { mateCandidateFaces, type FaceRef } from "../core/face_candidates";
@@ -470,20 +471,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // and `?sceneSeed=N` rolls a new scene. ⚠ Three arbitrary orientations mean **no two bodies
   // start aligned**, which is correct: `A16`'s highlight should be something a hand earns.
   const bootRotations = seededRotations(cfg.sceneSeed, 3);
-  // ⭐⭐⭐ **THE FORK'S BOOT SCENE (branch `1.0.18-`)** — the owner: *"2 of the 3 non-frozen
-  // objects are aligned on the gravity axis and on the depth axis of the camera at boot. There
-  // is one Pioneer (on the left) and one Follower (on the right)."*
+  // ⭐⭐⭐ **THE TWO PARTS BOOT SQUARE AND UNALIGNED** — the owner, 2026-09-25: *"boot the scene
+  // with no aligned object, translation mode. Use current rectangles transforms as displayed on
+  // the usb tablet to boot the scene as default."*
   //
-  // ✅ The POSITIONS already satisfied it: both sit at `y = 0` (same height — the gravity axis)
-  // and `z = 0` (same depth), differing only along world `x`, which the boot camera shows as
-  // screen-horizontal. ⛔ What changed is the ORIENTATIONS: `bootRotations[0]` and `[1]` are
-  // **not used here any more**, because two arbitrarily turned bodies have no parallel faces and
-  // the pair could not start aligned.
+  // ⭐⭐ **AND THE SECOND SENTENCE IS WHY `bootRotations[0]` AND `[1]` STAY UNUSED.** The revert
+  // note that stood here said to pass them back when the trial was discarded — and that would
+  // have changed what the glass shows, which is precisely what the owner ruled out. ⛔ The boot
+  // alignment was **satisfied at identity** (`A`'s bottom is `−y`, `B`'s top is `+y`, and the
+  // alignment is anti-parallel), so it never rotated anything: deleting it changes the scene's
+  // STATE and not one pixel of its pose. ⭐ Square is the current transform.
+  //
   // ⚠ `seededRotations` is still asked for three so the plate's unused slot keeps its index —
   // the same reason the comment below already gives for `bootRotations[2]`.
-  // ⚠⚠ **THIS IS THE LINE TO REVERT FIRST** if the trial is discarded: pass the two rotations
-  // back and delete `bootAlignment` below.
-  make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72]);
+  //
+  // ⛔⛔ **WHAT IT COSTS IS `D63`'s JIG.** The approach-swing trial booted with a **pre-aligned**
+  // pair so the swing had something to act on the moment the page loaded. ⚠ A hand must now make
+  // that alignment first, and the trial's earlier device verdicts are not comparable with any
+  // taken after this — *a jig that silently changed shape* is the thing `D78`'s note warned
+  // about, and this change makes it loudly instead.
+  // ⭐ `+30°` roll and `+30°` pitch about the BOOT CAMERA's axes (`z` and `x`) — the owner,
+  // 2026-09-25. ⛔ The pyramid takes `−30°`: *"same for the pyramid, in opposite senses."*
+  make("objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72], bootTilt(1));
   // ⭐⭐⭐ **THE RIGHT-HAND BODY IS THE TRAPEZOIDAL PYRAMID** — *"modify the rectangle on the
   // right to be a trapezoidal pyramid"* (the owner, 2026-09-22). ⚠ `objectB` is the one on the
   // right: it sits at `+x`, and it is the FOLLOWER of the boot pair a few hundred lines below.
@@ -491,7 +500,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     "objectB",
     new Vector3(0.2, 0, 0),
     [0.45, 0.58, 0.72],
-    undefined,
+    bootTilt(-1),
     PYRAMID_DIMS_M,
     false,
     OBJECT_TOP_SCALE,
@@ -1405,81 +1414,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const links = new AlignmentLinks();
 
-  /**
-   * ⭐⭐⭐ **THE FORK'S BOOT ALIGNMENT (branch `1.0.18-`)** — *"There is one Pioneer (on the
-   * left) and one Follower (on the right). Set that up at boot for this fork."*
-   *
-   * ⛔⛔ **IT CHOOSES FACES THAT ARE ALREADY PARALLEL, SO THE BOOT POSE IS NOT DISTURBED.**
-   * Both bodies boot square, so `objectA`'s bottom and `objectB`'s bottom already point the
-   * same way — and `D37`'s alignment is PARALLEL, so the solve is the identity. ⚠ Picking
-   * the FACING pair would have been the intuitive choice and would have spun the Follower
-   * 180° on frame one, which is §5.2's stated consequence of parallel-over-mate.
-   *
-   * ⛔⛔⛔ **IT READ `+x` UNTIL 2026-09-22, AND THE PYRAMID IS WHY IT NO LONGER CAN.** When
-   * `objectB` became a trapezoidal pyramid its four side faces tilted, so **no face of it is
-   * within 0.01 of `+x` any more** and this lookup would have failed — printing its verdict and
-   * quietly booting with no Pioneer/Follower pair at all. ⭐⭐ The bottom faces are the answer
-   * the shape hands you: a taper about the body's own vertical leaves `±y` EXACTLY flat on both
-   * bodies, so the pair is still parallel by construction and the identity solve survives.
-   * ⚠ The owner chose this over relaxing the lookup to *the most `+x`-facing face*, which would
-   * have tilted the Follower by the taper angle on frame one.
-   * ⛔ `tests/frustum.test.ts` asserts the exact `±y` normals beside the shape itself, so a
-   * future taper that tilted them reddens there rather than silently dropping the boot pair.
-   *
-   * ⛔ **BY NORMAL, NEVER BY FACE ID.** `meshTopology` numbers faces in whatever order the
-   * geometry yields, and `D50` exists because a table keyed on names was silently wrong for an
-   * imported body. ⚠ A hard-coded `"f2"` would be that mistake one layer up.
-   *
-   * ⚠ It writes the SAME three records the tap path writes — constraint, link, mode — and
-   * nothing else: with the faces already parallel there is no rotation to apply and no snap to
-   * play. ⭐ `SNAPSHOT`, so the pair boots **cyan + amber**, which is what a single tap makes.
-   */
-  const bootAlignment = (followerId: ObjectId, pioneerId: ObjectId): void => {
-    // ⛔ The DOWNWARD face — flat on a box and on a pyramid alike. See the header for why it
-    // is no longer `+x`.
-    const bottomFace = (id: ObjectId) =>
-      world.objects.get(id)?.faces.find((f) => f.normal[1] < -0.99) ?? null;
-    const pf = bottomFace(pioneerId);
-    // ⛔⛔ **THE FOLLOWER'S *TOP* FACE SINCE 2026-09-23, AND ONLY TO KEEP THIS SCENE UNCHANGED.**
-    // The alignment is **anti-parallel** now, so a bottom-to-bottom pair would stand the trial's
-    // second part on its head at boot. ⭐ Top-to-bottom is the same physical result the trial has
-    // always had — two upright parts — expressed in the new sense: anti(−y) is +y.
-    // ⚠ It is a FIXTURE following the product, not a rule: the trial's boot scene is a jig, and a
-    // jig that silently changed shape would make the swing's device verdicts incomparable.
-    const ff =
-      world.objects.get(followerId)?.faces.find((f) => f.normal[1] > 0.99) ??
-      null;
-    if (!pf || !ff) {
-      // ⚠ Named on the readout rather than thrown: a boot that half-succeeds is worse than one
-      // that says what it could not do, and this whole file is a trial.
-      lastVerdict = `boot: no bottom face on ${pf ? followerId : pioneerId} — no boot alignment`;
-      return;
-    }
-    const target = faceWorld(world, pioneerId, pf.id)?.normal;
-    if (!target) return;
-    world = pushObjectConstraint(
-      world,
-      followerId,
-      faceAlignConstraint(ff.normal, target),
-      false,
-    );
-    links.link(
-      followerId,
-      pioneerId,
-      pf.id,
-      worldPlacementOf(world, pioneerId)?.orientation ?? IDENTITY,
-      // ⭐ `D69` — the move cascade's baseline, read at the same instant as the orientation so
-      // the two halves of the link describe ONE moment.
-      worldPlacementOf(world, pioneerId)?.position ?? [0, 0, 0],
-    );
-    alignModeOf.set(followerId, "SNAPSHOT");
-  };
+  // ⛔⛔⛔ **`bootAlignment` STOOD HERE AND IS DELETED** — the owner, 2026-09-25: *"boot the scene
+  // with no aligned object."* ⚠ It pushed a `FACE_ALIGN` on `objectB` toward `objectA`'s bottom
+  // face and linked the pair as `SNAPSHOT`, so the scene opened with a cyan/amber pair already on
+  // the glass. ⭐ Deleted, not disabled (`D28`/`D40`: *a dormant fork is a trap*).
+  //
+  // ⭐⭐ **IT NEVER MOVED ANYTHING**, which is what makes this a state change and not a visual one:
+  // both parts boot square, `A`'s bottom is `−y`, `B`'s top is `+y`, and the alignment is
+  // anti-parallel — so the constraint was satisfied the instant it was pushed.
 
-  // ⛔ **`objectB` (right) FOLLOWS `objectA` (left)** — the owner's *"one Pioneer (on the left)
-  // and one Follower (on the right)"*. ⚠ Called once, here, where the model and the index both
-  // exist and before any frame has been drawn; the face markers are driven from the model every
-  // frame, so nothing needs painting by hand.
-  bootAlignment("objectB", "objectA");
 
   const releaseAlignmentOf = (followerId: ObjectId): void => {
     // ⚠ A release can be decided by the render loop (a turned Pioneer, a prune), where no
@@ -4765,8 +4708,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * ⭐ Which also retired the cost I had stated against this model — rotation no longer
    * costs a tap every time, only when switching.
    */
-  // ⭐⭐ *"Default start: rotation mode"* (owner, 2026-09-16). ⛔ There is one rule set now,
-  // so this is simply the start: `initialBehaviour()` returns `ROTATE`.
+  // ⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** (`D71`, 2026-09-22: *"set the default to translation
+  // mode at scene boot"*, and re-confirmed 2026-09-25 with the boot alignment's removal).
+  // ⛔⛔ **THIS COMMENT SAID `initialBehaviour()` RETURNS `ROTATE` UNTIL 2026-09-25, AND IT HAD
+  // BEEN FALSE SINCE `D71`.** ⚠ That is the exact shape the 2026-09-17 audit found and named: a
+  // DISAGREEMENT between a human sentence and the code, where the tell is *whether any instruction
+  // still asks for the other mode*. ⭐ None does — so the comment was the thing that was wrong,
+  // and it is the comment that moved.
   let behaviour: Behaviour = initialBehaviour();
 
   /**

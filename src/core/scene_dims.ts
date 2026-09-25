@@ -15,6 +15,8 @@
  * ⛔ ENGINE-FREE: plain numbers, so `src/core` and the suite can both read them.
  */
 
+import { qFromAxisAngle, qmul, type Quat } from "./vec";
+
 /** Metres. The objects are ~8 cm; the camera sits ~60 cm away. */
 export const OBJECT_SIZE_M = 0.08;
 
@@ -100,3 +102,30 @@ export const PYRAMID_DIMS_M: readonly [number, number, number] = [
   OBJECT_SIZE_M * 2 * PYRAMID_SCALE * PYRAMID_HEIGHT_SCALE,
   OBJECT_SIZE_M * 3 * PYRAMID_SCALE,
 ];
+
+/**
+ * ⭐⭐⭐ **THE TWO PARTS BOOT TILTED, IN OPPOSITE SENSES** (the owner, 2026-09-25: *"rotate the grey
+ * rectangle 30 degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*).
+ *
+ * ⛔⛔ **ROLL AND PITCH ARE `A7`'s, NOT BABYLON'S**, and that is the whole of the reading. The
+ * gravity frame defines pitch about the **horizontal screen axis** and roll about the **view
+ * direction flattened onto the ground** — so at the boot camera, which sits on `−z` looking toward
+ * `+z` with `+x` to the right, **pitch is about world `x`** and **roll is about world `z`**.
+ * ⚠ Reading them as the body's own axes would have been a different pose, and the two disagree
+ * the moment a body is not square.
+ *
+ * ⭐ **ROLL FIRST, THEN PITCH**, both as WORLD rotations, so the composition is
+ * `pitch ∘ roll` — the same left-composition every world rotation in this project uses. ⛔ The
+ * order is visible at 30°: swapping it is a different body pose, so it is stated rather than
+ * implied.
+ *
+ * @param sign `+1` for the grey part, `−1` for the pyramid — *"in opposite senses"*.
+ */
+export const BOOT_TILT_DEG = 30;
+
+export function bootTilt(sign: 1 | -1): Quat {
+  const a = (sign * BOOT_TILT_DEG * Math.PI) / 180;
+  const roll = qFromAxisAngle([0, 0, 1], a);
+  const pitch = qFromAxisAngle([1, 0, 0], a);
+  return qmul(pitch, roll);
+}

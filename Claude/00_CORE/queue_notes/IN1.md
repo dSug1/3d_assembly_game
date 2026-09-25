@@ -839,3 +839,9 @@ Fourteen defects, **none visible to a green suite.** Three shapes, in order of c
    it was compensating for a weak estimator — twice. *Build the negative and the
    imperfect specimen first; and when a threshold has to be large, ask what it is
    propping up before accepting the cost.*
+
+---
+
+## ⭐ STATUS TEXT MOVED DOWN FROM `QUEUE.md`, 2026-09-25
+
+✅ **CLOSED 2026-09-14.** **7 device passes, 14 defects none of which a green suite could see.** ⛔⛔ Its rule **2quinte** roll detector, *"built early and hardened"*, is **DELETED** (`D31`) — no channel since `A12`, and its retired verdict vetoed `IN3`'s flick (this file)

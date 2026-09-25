@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1137 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1140 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -207,8 +207,32 @@ turn that points its own face **AT** the tapped one (**anti-parallel** since `D7
 it reverses `D37`'s parallel *align* sense, and both texts stand). One alignment at a time, replaced by the next; the Follower face is **filled** and
 the Pioneer face **outlined** until it breaks; a **shake** or a **second tap on that same
 face** breaks it; a **flick** resets the rotation.
-⛔⛔ **THE SESSION BOOTS IN `TRANSLATE` — `D71`, 2026-09-22**: *"Set the default to translation
-mode at scene boot."* ⚠⚠ It REVERSES the twice-confirmed `ROTATE` start, and both are kept.
+⛔⛔ **THE SESSION BOOTS IN `TRANSLATE`, WITH NOTHING ALIGNED** (`D71`, and `D93` 2026-09-25:
+*"boot the scene with no aligned object, translation mode. Use current rectangles transforms as
+displayed on the usb tablet to boot the scene as default."*). ⚠⚠ `TRANSLATE` REVERSES the
+twice-confirmed `ROTATE` start, and both are kept.
+⭐⭐ **AND THE SECOND SENTENCE IS WHY THE TWO PARTS STILL BOOT SQUARE.** A standing note in
+`scene.ts` said to pass `bootRotations[0]`/`[1]` back when the trial's pre-aligned jig was
+discarded — and that would have changed what the glass shows, which the owner ruled out. ⛔ The
+boot alignment never ROTATED anything (`A`'s bottom is `−y`, `B`'s top is `+y`, and the alignment
+is anti-parallel, so it was satisfied at identity), so deleting it changes the scene's STATE and
+not one pixel of its pose.
+⚠⚠ **COST: `D63`'s JIG IS GONE.** The approach-swing trial opened with a pre-aligned pair so the
+swing had something to act on at page load; a hand must make that alignment now, and the trial's
+earlier device verdicts are **not comparable** with any taken after this.
+⚠ And a comment in `scene.ts` had claimed `initialBehaviour()` returned `ROTATE` since `D71` — the
+2026-09-17 disagreement shape one layer down, fixed the same day.
+⭐⭐ **AND THE TWO PARTS BOOT TILTED 30°, IN OPPOSITE SENSES** (*"rotate the grey rectangle 30
+degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*). ⛔ Roll and pitch are
+**`A7`'s**, not the body's: at the boot camera roll is about world **z** and pitch about world
+**x**, composed roll-first — `core/scene_dims.ts`'s `bootTilt`, 3 vectors, 3 mutants.
+⚠⚠ **AND IT HAS A VISIBLE COST, MEASURED RATHER THAN DISCOVERED**: tilting the pyramid swings a
+corner down, so its surface gap to the base plate closes to **53 mm** against a **60 mm** capture
+band — **the pyramid and the plate now show a white capture pair at boot**, where nothing did
+before. ⭐ The vector that used to assert *"at boot nothing captures at rest"* now pins BOTH
+directions — which pair captures and that the others do not — rather than quietly relaxing, because
+that property is the 2026-09-17 audit's own and a vector that stopped asking would undo it.
+⚠ The parts' mutual gap moved **280 → 216 mm** with the tilt.
 ⛔⛔ **DO NOT READ IT AS THE 2026-09-17 DEFECT RETURNING.** That defect was a DISAGREEMENT:
 `initialBehaviour()` returned `TRANSLATE` while this file, the spec and the call site all said
 `ROTATE`, and `git log -S` found no commit that ever returned it — the owner's decision never

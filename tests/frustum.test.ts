@@ -16,10 +16,13 @@ import { meshTopology } from "../src/core/mesh_topology";
 import { gapBetween, shapeFromVertices } from "../src/core/collision_shape";
 import type { Vec3 } from "../src/core/vec";
 import {
+  BOOT_TILT_DEG,
+  bootTilt,
   OBJECT_DIMS_M,
   OBJECT_TOP_SCALE,
   PYRAMID_DIMS_M,
 } from "../src/core/scene_dims";
+import { qFromAxisAngle, qmul } from "../src/core/vec";
 
 /** The scene's module, in metres. ⚠ Mirrors `render/scene.ts`'s `OBJECT_SIZE_M`. */
 // ⛔⛔⛔ **READ FROM THE PRODUCT, NOT RETYPED** (2026-09-25) — these mirrored `scene.ts` and went
@@ -312,5 +315,53 @@ describe("⭐⭐⭐ THE COMPOSITION — what the tapered body presents to the re
     expect(pts.length).toBe(24);
     const distinct = new Set(pts.map((q) => q.map((v) => v.toFixed(6)).join(",")));
     expect(distinct.size).toBe(8);
+  });
+});
+
+describe("⭐⭐⭐ `bootTilt` — the two parts' boot pose (the owner, 2026-09-25)", () => {
+  const deg = (q: readonly number[]) => (2 * Math.acos(Math.min(1, Math.abs(q[0]!))) * 180) / Math.PI;
+
+  it("⭐⭐ ROLL ABOUT z AND PITCH ABOUT x — the BOOT CAMERA's axes, not the body's", () => {
+    // ⛔⛔ THE READING THE WHOLE THING TURNS ON. `A7`'s gravity frame puts pitch on the horizontal
+    // screen axis and roll on the view direction flattened onto the ground; the camera boots on
+    // `−z` looking toward `+z` with `+x` to the right, so pitch is world `x` and roll world `z`.
+    // ⚠ RED against reading them as the body's own axes, which for a square body agree on the
+    // first rotation and diverge on the second.
+    const q = bootTilt(1);
+    const a = (BOOT_TILT_DEG * Math.PI) / 180;
+    const expected = qmul(qFromAxisAngle([1, 0, 0], a), qFromAxisAngle([0, 0, 1], a));
+    for (let i = 0; i < 4; i++)
+      expect(q[i]).toBeCloseTo(expected[i] as number, 12);
+  });
+
+  it("⛔⛔ THE TWO SENSES ARE OPPOSITE, AND THAT IS NOT THE SAME AS THE INVERSE", () => {
+    // ⭐ *"Same for the pyramid, in opposite senses"* — both angles negated, which for a
+    // composition of two rotations about DIFFERENT axes is not `conjugate(q)`.
+    // ⚠ RED against `bootTilt(-1) = qConj(bootTilt(1))`, which is the obvious wrong answer and
+    // agrees with the right one whenever the two axes are parallel — so a fixture built from one
+    // axis could not tell them apart.
+    const a = (BOOT_TILT_DEG * Math.PI) / 180;
+    const negated = qmul(
+      qFromAxisAngle([1, 0, 0], -a),
+      qFromAxisAngle([0, 0, 1], -a),
+    );
+    const conj = bootTilt(1);
+    const inverse = [conj[0], -conj[1], -conj[2], -conj[3]];
+    for (let i = 0; i < 4; i++)
+      expect(bootTilt(-1)[i]).toBeCloseTo(negated[i] as number, 12);
+    expect(
+      Math.abs(bootTilt(-1)[1] - (inverse[1] as number)) +
+        Math.abs(bootTilt(-1)[2] - (inverse[2] as number)) +
+        Math.abs(bootTilt(-1)[3] - (inverse[3] as number)),
+    ).toBeGreaterThan(1e-3);
+  });
+
+  it("⭐ the total swing is more than one 30° step and less than two", () => {
+    // ⚠ A cheap sanity assertion on the COMPOSITION rather than on its parts — `METHOD`: *a
+    // composition is a thing to MEASURE, not an emergent property.* Two 30° turns about
+    // perpendicular axes compose to about 42°.
+    expect(deg(bootTilt(1))).toBeGreaterThan(BOOT_TILT_DEG);
+    expect(deg(bootTilt(1))).toBeLessThan(2 * BOOT_TILT_DEG);
+    expect(deg(bootTilt(1))).toBeCloseTo(deg(bootTilt(-1)), 9);
   });
 });

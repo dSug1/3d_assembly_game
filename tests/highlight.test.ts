@@ -34,6 +34,7 @@ import {
   OBJECT_SIZE_M,
   PLATE_DIMS_M,
   PYRAMID_DIMS_M,
+  bootTilt,
 } from "@core/scene_dims";
 import { makeWorld, setWorldPlacement, type SceneObject, type World } from "@core/object_model";
 import type { Constraint } from "@core/constraint_stack";
@@ -271,40 +272,47 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     expect(captureOffsetM(-3, 1.5, FOV, VH)).toBe(0);
   });
 
-  it("AT THE BOOT CAMERA, NOTHING CAPTURES AT REST \u2014 against the SHIPPED default", () => {
-    // **THIS PROPERTY WAS TRUE OF THE PARTS, FALSE OF THE PLATE, AND IS NOW TRUE AGAIN.**
-    // `render/scene.ts` claimed *"at 5L nothing is in range at rest"*; the audit measured the
-    // plate at 312 mm against a 320 mm radius and showed the claim false.
+  it("⛔⛔⛔ AT THE BOOT CAMERA THE **PYRAMID CAPTURES THE PLATE** — and it did not before the tilt", () => {
+    // ⭐⭐ **THIS VECTOR USED TO ASSERT THE OPPOSITE, AND THE CHANGE IS THE OWNER'S**: *"rotate the
+    // grey rectangle 30 degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*
+    // (2026-09-25). ⛔ Tilting `objectB` swings a corner down, and the surface gap to the base
+    // plate closes from clear air to **53 mm** against a **60 mm** capture offset.
     //
-    // **IT READS `DEFAULT_CONFIG`, NOT A LITERAL, AND THAT IS THE VALUE OF IT.** The audit's
-    // sharpest finding was a vector asserting the value a function RETURNED rather than the
-    // decision the owner MADE \u2014 it defended the boot-mode defect for a day. A hard-coded 8 or
-    // 15 here would certify a configuration nobody ships the moment the number moves. So this
-    // is a live guard on the shipped number: raise the default far enough to capture the base
-    // plate at boot and the suite reddens.
+    // ⚠⚠ **IT IS PINNED RATHER THAN RELAXED.** The property *"at boot nothing captures at rest"*
+    // is the audit's own — `scene.ts` once claimed it and the audit measured it false — so a
+    // vector that quietly stopped asking would put the project back where it started. ⭐ The fact
+    // is asserted in both directions instead: which pair captures, and that the others do not.
+    //
+    // ⛔ **IT READS `DEFAULT_CONFIG`, NOT A LITERAL**, so raising the shipped offset reddens this.
     const offset = captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH);
     const w = scene(
-      ["objectA", [-0.2, 0, 0], IDENTITY, [], PART],
-      ["objectB", [0.2, 0, 0], IDENTITY, [], PYRAMID],
+      // ⛔⛔ **THE BOOT ORIENTATIONS COME FROM THE PRODUCT** (`bootTilt`), not from `IDENTITY`.
+      // ⚠ They were `IDENTITY` here until the tilt, which is defect 66's shape a second time: a
+      // fixture that mirrors the product goes stale in silence at the moment the product changes.
+      ["objectA", [-0.2, 0, 0], bootTilt(1), [], PART],
+      ["objectB", [0.2, 0, 0], bootTilt(-1), [], PYRAMID],
       ["objectD", [0, 0.307246, 0.16], IDENTITY, [], PART],
       ["objectC", [0, -3 * SIZE, 0], IDENTITY, [], PLATE],
     );
-    for (const id of ["objectA", "objectB", "objectD"]) {
+    // ⭐ The two that are still clear at rest.
+    for (const id of ["objectA", "objectD"]) {
       expect(nearestCapture(w, id, offset, null, gapIn(w), others(w, id))).toBeNull();
     }
-    // The PLATE is what a part is nearest to, by surface — 148 mm, not the 320 mm of air
-    // between the parts that this vector used to be about.
-    // ⛔⛔ **280 mm BETWEEN THE PARTS, AND IT HAS BEEN 320 AND 300 BEFORE IT** — once per time
-    // `objectB` changed shape: thickened `0.5L` in `x` (2026-09-22), then scaled by 4/3 so its
-    // top face is a part's small face (2026-09-25). `400 − 40 − 80`.
-    // ⚠⚠ **AND THE 2026-09-25 CHANGE DID NOT MOVE IT — because this file had RETYPED the
-    // dimensions.** The product scaled, the copy did not, and the vector whose whole job is to
-    // notice that stayed green. ⭐ It reads `PYRAMID_DIMS_M` now.
-    expect(surfaceGap(w, "objectA", "objectB")).toBeCloseTo(0.28, 9);
-    expect(offset).toBeLessThan(0.148 / 2);
-    // And it must stay big enough to be usable: an offset under 5 mm of world would mean two
-    // parts had to nearly touch before anything showed, which is a different failure.
-    expect(offset).toBeGreaterThan(0.005);
+    // ⛔⛔ AND THE ONE THAT IS NOT — named, so a hand seeing a white pair on the pyramid and the
+    // plate the instant it drags knows it is the scene and not a defect.
+    expect(
+      nearestCapture(w, "objectB", offset, null, gapIn(w), others(w, "objectB"))
+        ?.target,
+    ).toBe("objectC");
+    // ⚠ The measured numbers, so the margin is visible rather than implied: 53 mm of gap against
+    // a 60 mm band, where the grey part still has 91 mm.
+    expect(surfaceGap(w, "objectB", "objectC")! * 1000).toBeCloseTo(53.4, 1);
+    expect(surfaceGap(w, "objectA", "objectC")! * 1000).toBeCloseTo(90.7, 1);
+    expect(offset * 1000).toBeCloseTo(59.9, 1);
+    // ⛔⛔ **216 mm BETWEEN THE PARTS, AND IT HAS BEEN 320, 300 AND 280 BEFORE IT** — once per time
+    // `objectB` changed shape or pose. ⭐ The number moving is the vector working; it stopped
+    // moving once, in silence, and that was defect 66.
+    expect(surfaceGap(w, "objectA", "objectB")! * 1000).toBeCloseTo(216.1, 1);
   });
 
   it("the shipped default is 15 mm on the glass \u2014 the owner's number", () => {
