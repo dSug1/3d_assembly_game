@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1158 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1160 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -137,7 +137,19 @@ gesture rule knows it exists, so deleting one import and one call in `scene.ts` 
 build identical; only `pointerType === "mouse"` is intercepted, so no flag is needed.
 ⚠⚠ **PLAYABLE, NEVER TESTABLE** — rule 5 needs a finger, and every threshold it drives was judged
 by one (`motionDeadbandMm` 3.5 mm is ~13 px of desktop dead zone). ⭐ 18 vectors, 7 mutants.
-⛔⛔⛔ **AND IT CAME BACK *"not working. Delta position not working"*, WITH FOUR PLAUSIBLE CAUSES.**
+⛔⛔⛔ **AND THE FIRST BUILD FROZE THE DESKTOP, BECAUSE IT REPLACED A STREAM THAT ALREADY WORKED**
+(defect 71). ⚠⚠ **THE PREMISE I NEVER CHECKED WAS THAT DESKTOP DID NOT WORK**: nothing filters on
+`pointerType`, so a mouse had been touchpoint #1 all along — and a layer written to ADD the second
+touchpoint intercepted **every** mouse event and took the first one away. ⭐⭐⭐ The fix is a rule:
+**pass through by default, intercept by exception** — only the right button, `Shift`+drag and the
+wheel are taken, and `suppress` is asserted on every path, so the mutant that intercepts the left
+button goes RED. ⭐⭐ **The blast radius of a layer is the set of events it swallows**, and it
+belongs in the vectors.
+⚠⚠ **AND WHAT FOUND IT WAS NOT AN ANALYSIS** — the owner named *a commit where it worked*, and a
+gap analysis showed this layer was the only functional change between the two. ⭐ `METHOD` has the
+sentence and I did not apply its converse: *a report that something is broken is evidence about a
+CHANGE*, and the fastest question is not *why is it broken* but *what did it work at last*.
+⛔ **AND IT CAME BACK *"not working"* WITH FOUR PLAUSIBLE CAUSES.**
 Three died to a read — the deadband is only ~13 px, `sampleOf` takes `clientX/clientY` which the
 synthetic events carry, and Babylon falls back to `maxTouchPoints || 2` so the touch slots exist.
 ⚠ A fourth analysis would have been `D86`'s shape, which cost nine. ✅ So there is a **HUD `desktop`

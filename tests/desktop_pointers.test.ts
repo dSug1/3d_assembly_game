@@ -1,10 +1,16 @@
 /**
- * GOLDEN VECTORS — **A MOUSE, AS TWO TOUCHPOINTS** (the owner, 2026-09-25).
+ * GOLDEN VECTORS — **A MOUSE, AS THE TOUCHPOINT IT LACKS** (the owner, 2026-09-25).
  *
- * ⛔⛔ **THESE ARE ABOUT THE TRANSLATION, NOT ABOUT ANY GESTURE.** The whole value of the module is
- * that no rule knows it exists, so every vector here asks only *which touchpoints does this mouse
- * event stand for* — and a vector that reached into a gesture rule would be evidence the layering
- * had already failed.
+ * ⛔⛔⛔ **THE MOST IMPORTANT ASSERTIONS HERE ARE THE ONES ABOUT `suppress`.** The first build of
+ * this module intercepted every mouse event and replaced it with a synthetic one — and a mouse was
+ * **already** touchpoint #1, so it froze a stream that worked: *"everything is almost frozen — the
+ * camera orbits by one increment as if delta does not accumulate, no rotation or translation."*
+ * ⭐ A gap analysis against `6a28e62` named it in one line: this layer was the only functional
+ * change between the two commits.
+ *
+ * ⚠⚠ So the vectors below pin the **blast radius**, not just the output: every event the layer does
+ * NOT suppress reaches the rules exactly as it did before the layer existed. ⭐ *The blast radius
+ * of a layer is the set of events it swallows.*
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -21,138 +27,142 @@ const RIGHT = 2;
 
 const ids = (a: readonly SyntheticAction[]) => a.map((s) => `${s.kind}${s.id}`);
 
-describe("⭐⭐⭐ the two buttons are two touchpoints", () => {
-  it("⭐ LMB is touchpoint #1, and a drag is its move", () => {
+describe("⭐⭐⭐ THE LEFT BUTTON IS NOT OURS — the regression, as vectors", () => {
+  it("⛔⛔⛔ NOT ONE LEFT-BUTTON EVENT IS SUPPRESSED, AND NONE PRODUCES AN ACTION", () => {
+    // ⚠⚠ THE VECTOR THE WHOLE REDESIGN TURNS ON, and it is RED against the build that shipped:
+    // a mouse already drives touchpoint #1 through the browser's own pointer, and it did so
+    // correctly before this file existed. ⛔ Modelling it is what broke it.
     const d = new DesktopPointers();
-    expect(d.step({ type: "DOWN", t: 0, x: 10, y: 20, button: LEFT })).toEqual([
-      { kind: "DOWN", id: DESKTOP_IDS.first, x: 10, y: 20 },
-    ]);
-    expect(d.step({ type: "MOVE", t: 1, x: 11, y: 22 })).toEqual([
-      { kind: "MOVE", id: DESKTOP_IDS.first, x: 11, y: 22 },
-    ]);
-    expect(d.step({ type: "UP", t: 2, x: 11, y: 22, button: LEFT })).toEqual([
-      { kind: "UP", id: DESKTOP_IDS.first, x: 11, y: 22 },
-    ]);
+    for (const ev of [
+      { type: "DOWN", t: 0, x: 10, y: 10, button: LEFT },
+      { type: "MOVE", t: 1, x: 20, y: 30 },
+      { type: "MOVE", t: 2, x: 40, y: 60 },
+      { type: "UP", t: 3, x: 40, y: 60, button: LEFT },
+    ] as const) {
+      const v = d.step(ev);
+      expect(v.suppress).toBe(false);
+      expect(v.actions).toEqual([]);
+    }
   });
 
-  it("⭐⭐⭐ BOTH CAN BE DOWN AT ONCE — which a modifier could not do", () => {
-    // ⛔⛔ THE VECTOR THE WHOLE MAPPING TURNS ON. `Shift`+LMB cannot hold two pointers, because
-    // pressing it requires LMB to be up — and touchpoint #1 staying down while #2 presses IS the
-    // alignment gesture (`D87`: hold the part, press what you want it aligned to).
+  it("⭐⭐ AND A DRAG STILL PASSES THROUGH WHILE THE SECOND TOUCHPOINT IS DOWN", () => {
+    // ⭐ This is what makes a two-finger hold feel ordinary on a mouse: the cursor keeps driving
+    // the held body, and #2 simply parks. ⚠ RED against *the most recently pressed pointer wins*,
+    // which is what the first build did — and which takes the move away from #1.
     const d = new DesktopPointers();
-    d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: LEFT });
-    expect(d.step({ type: "DOWN", t: 1, x: 50, y: 60, button: RIGHT })).toEqual([
+    d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: RIGHT });
+    const v = d.step({ type: "MOVE", t: 1, x: 99, y: 99 });
+    expect(v.suppress).toBe(false);
+    expect(v.actions).toEqual([]);
+  });
+});
+
+describe("⭐⭐⭐ the right button is the second touchpoint", () => {
+  it("⭐ its press and release are swallowed and stand in for #2", () => {
+    const d = new DesktopPointers();
+    const down = d.step({ type: "DOWN", t: 0, x: 50, y: 60, button: RIGHT });
+    expect(down.suppress).toBe(true);
+    expect(down.actions).toEqual([
       { kind: "DOWN", id: DESKTOP_IDS.second, x: 50, y: 60 },
     ]);
-    expect(d.downCount).toBe(2);
+    const up = d.step({ type: "UP", t: 1, x: 50, y: 60, button: RIGHT });
+    expect(up.suppress).toBe(true);
+    expect(ids(up.actions)).toEqual([`UP${DESKTOP_IDS.second}`]);
   });
 
-  it("⛔⛔ THE CURSOR DRIVES THE MOST RECENTLY PRESSED, AND THE OTHER PARKS", () => {
-    // ⭐ Parking is exact, not a compromise: `A11` made §1.1 a POSITION deadband, so a still
-    // pointer emits nothing at all, and `D43` says the channels SUM. A zero summand is the rule.
-    // ⚠ RED against moving both — which would make every second-finger drag a two-finger
-    // translation and put depth and roll out of reach entirely.
+  it("⛔⛔ A RELEASE IS SUPPRESSED EVEN WITH NOTHING TO LIFT", () => {
+    // ⚠ Its DOWN was swallowed, so letting the UP through would hand the rules a release for a
+    // press they never saw — and `IN2` latches a role at press for the touchpoint's lifetime.
     const d = new DesktopPointers();
-    d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: LEFT });
-    d.step({ type: "DOWN", t: 1, x: 50, y: 50, button: RIGHT });
-    expect(d.step({ type: "MOVE", t: 2, x: 55, y: 70 })).toEqual([
+    const v = d.step({ type: "UP", t: 0, x: 0, y: 0, button: RIGHT });
+    expect(v.suppress).toBe(true);
+    expect(v.actions).toEqual([]);
+  });
+
+  it("⛔ a repeated press emits nothing but is still swallowed", () => {
+    const d = new DesktopPointers();
+    d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: RIGHT });
+    const v = d.step({ type: "DOWN", t: 1, x: 9, y: 9, button: RIGHT });
+    expect(v.actions).toEqual([]);
+    expect(v.suppress).toBe(true);
+  });
+
+  it("⛔ the MIDDLE button is left alone entirely — it was before this file existed", () => {
+    const d = new DesktopPointers();
+    expect(d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: 1 })).toEqual({
+      actions: [],
+      suppress: false,
+    });
+  });
+});
+
+describe("⭐⭐ SHIFT is the only thing that takes a move from the real pointer", () => {
+  it("⭐⭐⭐ WITH SHIFT AND #2 DOWN, THE MOVE IS #2's", () => {
+    const d = new DesktopPointers();
+    d.step({ type: "DOWN", t: 0, x: 50, y: 50, button: RIGHT });
+    const v = d.step({ type: "MOVE", t: 1, x: 55, y: 70, shift: true });
+    expect(v.suppress).toBe(true);
+    expect(v.actions).toEqual([
       { kind: "MOVE", id: DESKTOP_IDS.second, x: 55, y: 70 },
     ]);
   });
 
-  it("⭐⭐ SHIFT FLIPS WHICH ONE THE CURSOR DRIVES", () => {
+  it("⛔⛔ SHIFT WITH NO SECOND TOUCHPOINT CHANGES NOTHING", () => {
+    // ⚠⚠ RED against suppressing on the modifier alone, which would make Shift freeze an ordinary
+    // drag — and a frozen cursor is indistinguishable from the product having hung, which is the
+    // report this whole redesign came from.
     const d = new DesktopPointers();
-    d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: LEFT });
-    d.step({ type: "DOWN", t: 1, x: 50, y: 50, button: RIGHT });
-    expect(ids(d.step({ type: "MOVE", t: 2, x: 5, y: 5, shift: true }))).toEqual([
-      `MOVE${DESKTOP_IDS.first}`,
-    ]);
-    // ⭐ And releasing Shift hands the cursor straight back.
-    expect(ids(d.step({ type: "MOVE", t: 3, x: 6, y: 6 }))).toEqual([
-      `MOVE${DESKTOP_IDS.second}`,
-    ]);
+    const v = d.step({ type: "MOVE", t: 0, x: 9, y: 9, shift: true });
+    expect(v.suppress).toBe(false);
+    expect(v.actions).toEqual([]);
   });
 
-  it("⛔ SHIFT WITH ONLY ONE POINTER DOWN STILL MOVES IT — a frozen cursor reads as a hang", () => {
-    // ⚠ RED against the literal reading *flip, whatever is there*: holding Shift during an
-    // ordinary drag would emit nothing and look exactly like the product having stopped.
+  it("⭐ releasing Shift hands the cursor straight back to #1", () => {
     const d = new DesktopPointers();
-    d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: LEFT });
-    expect(ids(d.step({ type: "MOVE", t: 1, x: 9, y: 9, shift: true }))).toEqual([
-      `MOVE${DESKTOP_IDS.first}`,
+    d.step({ type: "DOWN", t: 0, x: 50, y: 50, button: RIGHT });
+    d.step({ type: "MOVE", t: 1, x: 60, y: 60, shift: true });
+    expect(d.step({ type: "MOVE", t: 2, x: 70, y: 70 }).suppress).toBe(false);
+  });
+
+  it("⛔⛔ AND #2's LIFT IS REPORTED WHERE SHIFT LEFT IT, NOT WHERE THE CURSOR IS", () => {
+    // ⚠ A parked pointer's last position is its own. ⛔ RED against using the event's coordinates:
+    // the release would teleport it, and `A11`'s deadband would read one enormous step.
+    const d = new DesktopPointers();
+    d.step({ type: "DOWN", t: 0, x: 10, y: 10, button: RIGHT });
+    d.step({ type: "MOVE", t: 1, x: 30, y: 40, shift: true });
+    d.step({ type: "MOVE", t: 2, x: 900, y: 900 }); // ⭐ drives #1, must not move #2
+    expect(d.step({ type: "UP", t: 3, x: 900, y: 900, button: RIGHT }).actions).toEqual([
+      { kind: "UP", id: DESKTOP_IDS.second, x: 30, y: 40 },
     ]);
-  });
-
-  it("⛔⛔ A LIFT IS REPORTED WHERE THAT POINTER WAS, NOT WHERE THE CURSOR IS", () => {
-    // ⚠⚠ The parked pointer's own position. ⛔ RED against using the event's coordinates: the
-    // release would teleport it, and `A11`'s deadband would read one enormous step — which is a
-    // flick, a shake, or a translation the hand never made.
-    const d = new DesktopPointers();
-    d.step({ type: "DOWN", t: 0, x: 10, y: 10, button: LEFT });
-    d.step({ type: "DOWN", t: 1, x: 90, y: 90, button: RIGHT });
-    d.step({ type: "MOVE", t: 2, x: 95, y: 95 });
-    expect(d.step({ type: "UP", t: 3, x: 95, y: 95, button: LEFT })).toEqual([
-      { kind: "UP", id: DESKTOP_IDS.first, x: 10, y: 10 },
-    ]);
-  });
-
-  it("⭐ when one lifts, the cursor falls back to the other", () => {
-    const d = new DesktopPointers();
-    d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: LEFT });
-    d.step({ type: "DOWN", t: 1, x: 50, y: 50, button: RIGHT });
-    d.step({ type: "UP", t: 2, x: 50, y: 50, button: RIGHT });
-    expect(ids(d.step({ type: "MOVE", t: 3, x: 7, y: 7 }))).toEqual([
-      `MOVE${DESKTOP_IDS.first}`,
-    ]);
-  });
-
-  it("⭐⭐⭐ HOVER IS NOT A GESTURE — the one event a finger cannot produce", () => {
-    // ⛔ A mouse moves with no button down. ⚠ Without this, every journey across the glass would
-    // be a drag, and the first click would land on a body that had already been thrown.
-    const d = new DesktopPointers();
-    expect(d.step({ type: "MOVE", t: 0, x: 5, y: 5 })).toEqual([]);
-    expect(d.step({ type: "MOVE", t: 1, x: 500, y: 500 })).toEqual([]);
-  });
-
-  it("⛔ a middle button, a repeated press and a stray release are all ignored", () => {
-    const d = new DesktopPointers();
-    expect(d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: 1 })).toEqual([]);
-    expect(d.step({ type: "UP", t: 1, x: 0, y: 0, button: LEFT })).toEqual([]);
-    d.step({ type: "DOWN", t: 2, x: 0, y: 0, button: LEFT });
-    // ⚠ A second DOWN on a button already down would otherwise make two `DOWN` for one id, and
-    // `IN2` latches a role per pointer id for its lifetime.
-    expect(d.step({ type: "DOWN", t: 3, x: 9, y: 9, button: LEFT })).toEqual([]);
   });
 });
 
 describe("⭐⭐⭐ the wheel is a real pinch, not a camera radius", () => {
   it("⭐⭐ the first notch puts TWO pointers down, symmetric about the cursor", () => {
     // ⛔ Rule 4 is a RATIO OF SEPARATIONS. ⚠ Setting the camera radius instead would be a second
-    // implementation of zoom — defect 66's shape, which kept a whole suite green over a changed
-    // product.
+    // implementation of zoom — defect 66's shape.
     const d = new DesktopPointers();
-    const out = d.step({ type: "WHEEL", t: 0, x: 400, y: 300, wheel: 1 });
-    expect(out.filter((a) => a.kind === "DOWN").map((a) => a.x)).toEqual([
+    const v = d.step({ type: "WHEEL", t: 0, x: 400, y: 300, wheel: 1 });
+    expect(v.suppress).toBe(true);
+    expect(v.actions.filter((a) => a.kind === "DOWN").map((a) => a.x)).toEqual([
       400 - PINCH_HALF_PX,
       400 + PINCH_HALF_PX,
     ]);
-    expect(out.every((a) => a.y === 300)).toBe(true);
     expect(d.downCount).toBe(2);
   });
 
-  it("⭐⭐ ONE NOTCH IS ONE RATIO, and the sign zooms IN on a positive notch", () => {
+  it("⭐⭐ ONE NOTCH IS ONE RATIO, and a positive notch zooms IN", () => {
     const d = new DesktopPointers();
     d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: 1 });
-    const out = d.step({ type: "WHEEL", t: 10, x: 0, y: 0, wheel: 1 });
-    const half = out.find((a) => a.id === DESKTOP_IDS.pinchB)!.x;
-    expect(half).toBeCloseTo(PINCH_HALF_PX * PINCH_NOTCH_RATIO ** 2, 6);
-    // ⛔ And the other way shrinks it — RED against an absolute step, which would make the last
-    // notch of a long zoom a different size from the first.
-    const back = d.step({ type: "WHEEL", t: 20, x: 0, y: 0, wheel: -2 });
-    expect(back.find((a) => a.id === DESKTOP_IDS.pinchB)!.x).toBeCloseTo(
-      PINCH_HALF_PX,
+    const out = d.step({ type: "WHEEL", t: 10, x: 0, y: 0, wheel: 1 }).actions;
+    expect(out.find((a) => a.id === DESKTOP_IDS.pinchB)!.x).toBeCloseTo(
+      PINCH_HALF_PX * PINCH_NOTCH_RATIO ** 2,
       6,
     );
+    // ⛔ RED against an absolute step, which would make the last notch of a long zoom a different
+    // size from the first.
+    const back = d.step({ type: "WHEEL", t: 20, x: 0, y: 0, wheel: -2 }).actions;
+    expect(back.find((a) => a.id === DESKTOP_IDS.pinchB)!.x).toBeCloseTo(PINCH_HALF_PX, 6);
   });
 
   it("⛔⛔ IT IS ANCHORED WHERE THE WHEEL STARTED — a drifting cursor must not orbit", () => {
@@ -160,7 +170,7 @@ describe("⭐⭐⭐ the wheel is a real pinch, not a camera radius", () => {
     // followed the cursor would turn a zoom into an orbit halfway through.
     const d = new DesktopPointers();
     d.step({ type: "WHEEL", t: 0, x: 100, y: 100, wheel: 1 });
-    const out = d.step({ type: "WHEEL", t: 10, x: 800, y: 700, wheel: 1 });
+    const out = d.step({ type: "WHEEL", t: 10, x: 800, y: 700, wheel: 1 }).actions;
     expect(out.every((a) => a.y === 100)).toBe(true);
     expect(
       out.find((a) => a.id === DESKTOP_IDS.pinchA)!.x +
@@ -171,60 +181,61 @@ describe("⭐⭐⭐ the wheel is a real pinch, not a camera radius", () => {
   it("⭐ the synthetic fingers LIFT once the wheel goes quiet", () => {
     const d = new DesktopPointers();
     d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: 1 });
-    expect(d.step({ type: "TICK", t: PINCH_IDLE_MS - 1, x: 0, y: 0 })).toEqual([]);
-    expect(ids(d.step({ type: "TICK", t: PINCH_IDLE_MS + 1, x: 0, y: 0 }))).toEqual([
-      `UP${DESKTOP_IDS.pinchA}`,
-      `UP${DESKTOP_IDS.pinchB}`,
-    ]);
+    expect(d.step({ type: "TICK", t: PINCH_IDLE_MS - 1, x: 0, y: 0 }).actions).toEqual([]);
+    expect(
+      ids(d.step({ type: "TICK", t: PINCH_IDLE_MS + 1, x: 0, y: 0 }).actions),
+    ).toEqual([`UP${DESKTOP_IDS.pinchA}`, `UP${DESKTOP_IDS.pinchB}`]);
     expect(d.downCount).toBe(0);
   });
 
-  it("⛔⛔ A PRESS ENDS A ZOOM — three touchpoints is a configuration no hand made", () => {
-    // ⚠ §4's role table counts touchpoints. ⭐ RED against leaving the pair down: the next press
-    // would be an `IGNORED` third finger and the body would simply not respond.
+  it("⛔ a TICK never suppresses anything — it is not a real event", () => {
+    // ⚠ It arrives from the render loop, not from the hand; a `suppress` here would be nonsense
+    // and the field is asserted so it cannot drift into meaning something.
     const d = new DesktopPointers();
     d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: 1 });
-    const out = d.step({ type: "DOWN", t: 10, x: 5, y: 5, button: LEFT });
-    expect(ids(out)).toEqual([
+    expect(d.step({ type: "TICK", t: 9999, x: 0, y: 0 }).suppress).toBe(false);
+  });
+
+  it("⛔⛔ A RIGHT PRESS ENDS A ZOOM — three touchpoints is a configuration no hand made", () => {
+    const d = new DesktopPointers();
+    d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: 1 });
+    const v = d.step({ type: "DOWN", t: 10, x: 5, y: 5, button: RIGHT });
+    expect(ids(v.actions)).toEqual([
       `UP${DESKTOP_IDS.pinchA}`,
       `UP${DESKTOP_IDS.pinchB}`,
-      `DOWN${DESKTOP_IDS.first}`,
+      `DOWN${DESKTOP_IDS.second}`,
     ]);
   });
 
-  it("⛔ a zero or non-finite notch does nothing at all", () => {
+  it("⛔ a zero or non-finite notch does nothing and is NOT swallowed", () => {
     const d = new DesktopPointers();
-    expect(d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: 0 })).toEqual([]);
-    expect(d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: Number.NaN })).toEqual([]);
+    expect(d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: 0 })).toEqual({
+      actions: [],
+      suppress: false,
+    });
+    expect(d.step({ type: "WHEEL", t: 0, x: 0, y: 0, wheel: Number.NaN }).actions).toEqual([]);
     expect(d.downCount).toBe(0);
   });
 });
 
-describe("⭐⭐ CANCEL — the panic key", () => {
-  it("⛔⛔ LIFTS EVERYTHING, INCLUDING A LIVE PINCH", () => {
-    // ⭐ `IN2` records an open risk that a STALE GRIP kills orbit and zoom together with no way
-    // back but a reload. ⚠ A mouse reaches it more easily than a finger, because a button released
-    // outside the window never reports — so Esc is part of the mapping, not an afterthought.
+describe("⭐⭐ CANCEL — every SYNTHETIC pointer up", () => {
+  it("⛔⛔ LIFTS #2 AND A LIVE PINCH, and is idempotent", () => {
     const d = new DesktopPointers();
-    d.step({ type: "DOWN", t: 0, x: 1, y: 1, button: LEFT });
     d.step({ type: "DOWN", t: 1, x: 2, y: 2, button: RIGHT });
     d.step({ type: "WHEEL", t: 2, x: 3, y: 3, wheel: 1 });
-    const out = d.step({ type: "CANCEL", t: 3, x: 0, y: 0 });
-    expect(out.every((a) => a.kind === "UP")).toBe(true);
-    expect(out).toHaveLength(4);
+    const v = d.step({ type: "CANCEL", t: 3, x: 0, y: 0 });
+    expect(v.actions.every((a) => a.kind === "UP")).toBe(true);
+    expect(v.actions).toHaveLength(3);
     expect(d.downCount).toBe(0);
-    // ⚠ And it is idempotent: a second Esc must not emit a lift for something already up.
-    expect(d.step({ type: "CANCEL", t: 4, x: 0, y: 0 })).toEqual([]);
+    expect(d.step({ type: "CANCEL", t: 4, x: 0, y: 0 }).actions).toEqual([]);
   });
 
-  it("⭐ after a cancel the mapping starts clean — LMB is #1 again", () => {
+  it("⚠ IT CANNOT LIFT TOUCHPOINT #1, AND THAT IS THE HONEST LIMIT", () => {
+    // ⛔ #1 is the browser's own pointer and this layer never took it. ⭐ The right trade: the
+    // real pointer is the one the browser cleans up itself.
     const d = new DesktopPointers();
     d.step({ type: "DOWN", t: 0, x: 0, y: 0, button: LEFT });
-    d.step({ type: "DOWN", t: 1, x: 0, y: 0, button: RIGHT });
-    d.step({ type: "CANCEL", t: 2, x: 0, y: 0 });
-    expect(ids(d.step({ type: "DOWN", t: 3, x: 0, y: 0, button: LEFT }))).toEqual([
-      `DOWN${DESKTOP_IDS.first}`,
-    ]);
+    expect(d.step({ type: "CANCEL", t: 1, x: 0, y: 0 }).actions).toEqual([]);
   });
 });
 
