@@ -226,6 +226,9 @@ import {
 } from "../input/approach_swing";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createHud } from "./hud";
+// ⛔ THE DESKTOP MAPPING IS THESE TWO LINES AND NOTHING ELSE. Delete them and the import below
+// and the product is exactly what it was — see `desktop_input.ts` for why that is the whole point.
+import { attachDesktopInput } from "./desktop_input";
 import { createMenu, type MenuSlider } from "./menu";
 
 /**
@@ -2499,6 +2502,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
   const hud = createHud();
+  // ⭐⭐⭐ **A MOUSE, AS TWO TOUCHPOINTS** (the owner, 2026-09-25). ⛔ One call, and the only line in
+  // this file that knows a desktop exists: `desktop_input.ts` translates mouse events into the
+  // synthetic touchpoints the rules already speak, so nothing below this line changes.
+  // ⚠ Only `pointerType === "mouse"` is intercepted, so a finger is untouched and no flag is
+  // needed. ⛔ It makes the game PLAYABLE on desktop, never TESTABLE — rule 5 needs a finger.
+  attachDesktopInput(canvas, scene);
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
