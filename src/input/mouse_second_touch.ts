@@ -33,13 +33,16 @@
  * HOLDER, so Shift drove the holder. ⭐⭐ Shift now means **drive the pointer pressed SECOND**,
  * whichever button that was. Without Shift the cursor drives the one pressed FIRST.
  *
- * ## ⭐ THE RULES, ALL OF THEM
+ * ## ⭐ THE RULES, ALL OF THEM (2026-09-25)
  *
- * | situation | the cursor drives |
+ * | input | what it is |
  * |---|---|
- * | only one pointer down | that pointer |
- * | both down, no Shift | the pointer pressed **first** |
- * | both down, Shift | the pointer pressed **second** |
+ * | left drag | touchpoint #1 — the browser's own pointer, untouched |
+ * | Shift + left drag | an anchor-only second touch (gravity + roll) — the cursor drives it |
+ * | right press and HOLD | the HitFace: the first touch of `D87`, which the cursor NEVER moves |
+ * | left click while right is held | the Pioneer press — single = cyan, double = amber |
+ *
+ * ⛔ A right press while the left is down is refused: it would arrive second and mean a Pioneer.
  *
  * ⭐⭐ **AND WHEN NO POINTER HAS BEEN OFFSET, EVERY REAL EVENT PASSES UNTOUCHED** — byte-identical to
  * `6a28e62`, where a mouse already was touchpoint #1. An offset exists only after the cursor has
@@ -106,10 +109,10 @@ interface Pt {
 
 export class MouseSecondTouch {
   /**
-   * #2: where it is, whether it was pressed BEFORE the real pointer, and whether SHIFT made it
-   * (an anchor-only channel driver that lives for the left button's hold) or the RIGHT button did.
+   * #2: where it is, and whether SHIFT made it (an anchor-only channel driver that lives for the
+   * left button's hold) or the RIGHT button did (the HitFace holder, which the cursor never moves).
    */
-  private second: (Pt & { first: boolean; shiftMade: boolean }) | null = null;
+  private second: (Pt & { shiftMade: boolean }) | null = null;
   /** The real pointer's position AS THE SCENE KNOWS IT, while the left button holds it down. */
   private real: Pt | null = null;
   /** The last cursor position, for the delta. */
@@ -137,12 +140,16 @@ export class MouseSecondTouch {
         // left release the window missed must not make a right press think it came second.
         this.reconcile(ev, emit);
         if (ev.button === RIGHT_BUTTON) {
-          // ⚠ A Shift-made #2 gives way to a real right press — one second touch at a time.
-          if (this.second !== null && this.second.shiftMade) this.liftSecond(emit);
-          if (this.second === null) {
-            // ⭐ `first` is a fact about #2's OWN press, recorded once — `IN2` latches the role
-            // at the same instant, so the two cannot disagree.
-            this.second = { x: ev.x, y: ev.y, first: this.real === null, shiftMade: false };
+          // ⭐⭐⭐ **RIGHT PRESS AND HOLD = THE HITFACE** (the owner, 2026-09-25): *"right click hits
+          // hitface and hold, mouse move to pioneer face and single left click sets pioneer face
+          // and aligns (cyan) or double left click (amber)."* ⭐ It is the FIRST touch of `D87`'s
+          // gesture — the held body, whose raycast face is the HitFace and becomes the
+          // FollowerFace — and the left click that follows is the second touch pressing the
+          // Pioneer. ⛔ So it is refused while the left button is down: it would arrive SECOND and
+          // mean the opposite. ⚠ Swallowed either way — reaching Babylon it is a press of the
+          // mouse's one pointer.
+          if (this.real === null && this.second === null) {
+            this.second = { x: ev.x, y: ev.y, shiftMade: false };
             emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
           }
           skip = true;
@@ -258,20 +265,21 @@ export class MouseSecondTouch {
   /** ⭐ The Shift-made #2 presses where the cursor WAS, so its first move is this event's delta. */
   private pressShiftSecond(emit: MouseAction[]): void {
     const c = this.cursor!;
-    this.second = { x: c.x, y: c.y, first: false, shiftMade: true };
+    this.second = { x: c.x, y: c.y, shiftMade: true };
     emit.push(this.secondAction("DOWN"));
   }
 
   /**
-   * ⭐⭐ WHICH POINTER THE CURSOR DRIVES. Alone, the one that is down. Both down: the one pressed
-   * FIRST, or with Shift the one pressed SECOND — whichever button each was.
+   * ⭐⭐ WHICH POINTER THE CURSOR DRIVES.
+   *
+   * ⛔⛔ **NEVER THE RIGHT BUTTON'S** — the owner, 2026-09-25: *"right button click does not
+   * translate nor rotate any object."* The HitFace holder stays exactly where it pressed while the
+   * cursor travels to the Pioneer face. ⭐ With Shift, the Shift-made second touch; otherwise the
+   * real pointer, if it is down.
    */
   private drivenBy(shift: boolean): "REAL" | "SECOND" | null {
-    if (this.second === null) return this.real === null ? null : "REAL";
-    if (this.real === null) return "SECOND";
-    const secondIsFirst = this.second.first;
-    // no Shift → the first-pressed pointer; Shift → the second-pressed one
-    return shift !== secondIsFirst ? "SECOND" : "REAL";
+    if (shift && this.second !== null && this.second.shiftMade) return "SECOND";
+    return this.real === null ? null : "REAL";
   }
 }
 
@@ -299,4 +307,17 @@ function same(a: Pt, b: Pt): boolean {
  */
 export function secondTouchAlwaysAvailable(holderPointerType: string): boolean {
   return holderPointerType === "mouse";
+}
+
+/**
+ * ⭐⭐⭐ **ONLY THE RIGHT BUTTON SETS A HITFACE ON A MOUSE** — the owner, 2026-09-25: *"hitface
+ * triggered only by right click, not by left click."*
+ *
+ * ⭐ The left button is for MOVING — its press still resolves a face, because a left click on a
+ * Pioneer face is how the alignment is made, but that face is never shown or used as a HitFace.
+ * ⛔ The right-button holder is delivered as a `touch` pointer, so it passes; a finger is `touch`
+ * and passes too, which leaves the phone exactly as it was.
+ */
+export function hitFaceAllowed(holderPointerType: string): boolean {
+  return holderPointerType !== "mouse";
 }

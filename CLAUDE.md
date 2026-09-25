@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1168 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1156 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -126,15 +126,30 @@ radius — the scene's claim that *"at 5L nothing is in range"* was false.
 ⛔⛔ **A DEVICE LOOK IS OWED ON THE WHOLE PASS.** Rule 5 is not suspended because the findings
 came from a read: the boot mode, the twist and roll channels, the deadband's emission and the
 render order all changed.
-⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (`D94`, 2026-09-25) — rebuilt from scratch after
-four deployed rounds that were each wrong in a PREMISE about the real pointer, never in a gesture
-rule (defect 70). ⛔⛔ Three rules, each the negation of a round: **never touch a DOM pointer event**
-(the layer works at Babylon's `onPrePointerObservable` seam and delivers #2 straight to the
-observable); **model only the touchpoint the mouse lacks** (`src/input/mouse_second_touch.ts` has
-one piece of state); **read `buttons` on every event, remember nothing**. ⭐ Left drag = horizontal
-translation (yaw/pitch in rotation); **`Shift`+left drag = gravity + roll** through an anchor-only
-second touch; hold left and right-click another body's face to align. ⚠ No wheel zoom on
-purpose. ⚠⚠ Playable, never testable — rule 5 needs a finger.
+⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`, 2026-09-25) — rebuilt from scratch after four
+deployed rounds that were each wrong in a PREMISE about the real pointer, never in a gesture rule
+(defect 70). ⭐ The mapping that shipped:
+
+| | left drag | Shift + left drag |
+|---|---|---|
+| aligned body, either mode | horizontal translation | gravity (dy) + roll (dx) |
+| free body, translation | horizontal translation | gravity (dy) |
+| free body, rotation | yaw + pitch | roll (dx) |
+
+and to **align**: **right-press and hold** on the part's face — that face is the HitFace, and
+the right button never translates or rotates anything — then move to the Pioneer face and
+**left-click** (single = cyan `SNAPSHOT`, double = amber `FOLLOW`). ⭐ It is `D87`'s gesture with
+the right button as the first touch and the left click as the second; **only the right button
+sets a HitFace** (`hitFaceAllowed`).
+⛔⛔ Four rules, each the negation of a failure: **never touch a DOM pointer event** (the layer
+skips at Babylon's `onPrePointerObservable` and delivers #2 straight to the observable);
+**model only the touchpoint the mouse lacks**; **read `buttons` on every event, remember nothing**;
+and **once two pointers exist the cursor is RELATIVE** — one cursor cannot drive two absolute
+pointers without a jump. ⭐ The Shift-made second touch is anchor-only (no pick, always
+`OUTSIDE`), so it can never grab another body — which is why roll only *sometimes* worked before.
+⭐ `secondTouchAlwaysAvailable`: on a mouse the second touch is always one Shift away, so `D60`
+translates an aligned body under the left button in any mode. ⚠ No wheel zoom on purpose.
+⚠⚠ Playable, never testable — rule 5 needs a finger.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE

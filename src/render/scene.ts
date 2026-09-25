@@ -229,7 +229,10 @@ import { createHud } from "./hud";
 // ⛔ THE DESKTOP SECOND TOUCH IS THIS IMPORT AND ONE CALL, AND NOTHING ELSE. Delete both and the
 // touch build is byte-identical — `mouse_adapter.ts` says why that is the whole point.
 import { attachMouseSecondTouch } from "./mouse_adapter";
-import { secondTouchAlwaysAvailable } from "../input/mouse_second_touch";
+import {
+  hitFaceAllowed,
+  secondTouchAlwaysAvailable,
+} from "../input/mouse_second_touch";
 import { createMenu, type MenuSlider } from "./menu";
 
 /**
@@ -1016,6 +1019,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const holder = router.objects()[0];
     const grip = holder === undefined ? undefined : held.get(holder.id);
     if (grip === undefined || grip.pressFace === null) return null;
+    // ⭐ On a mouse only the RIGHT button sets a HitFace (`hitFaceAllowed`, the owner 2026-09-25).
+    if (!hitFaceAllowed(grip.pointerType)) return null;
     const objectId = idOf.get(grip.mesh);
     if (objectId === undefined) return null;
     if (alignedFaceOf(world, objectId) !== null) return null;
