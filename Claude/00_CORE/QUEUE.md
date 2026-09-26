@@ -34,7 +34,7 @@ falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **d
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
 ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, THE TWO PARTS TILTED 30°** (`D93`, 2026-09-25) — `bootAlignment` deleted (state only), `D63`'s jig gone with it, roll about world `z` then pitch about world `x`. ⚠ Parts' mutual gap 280 → 216 mm → `D93` in `DECISIONS.md` and its history.
 ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch, **Shift + left drag = the second** (gravity + roll; an aligned body's left drag translates in any mode); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align. ⛔ The right button never moves anything → defect 70.
-⭐⭐ **`scene.ts` IS SPLIT** (`D104`): thirteen render modules → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged.
+⭐⭐ **`scene.ts` IS SPLIT** (`D104`) → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged.
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
@@ -309,7 +309,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | 3D1 | The object model: id, placement, connectors, assembly tree (parent ≠ root) | 3D | feature | ✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `core/object_model.ts`, engine-free. ⭐⭐ Its vectors were written FIRST and **falsified on purpose** — breaking the composition turns 14 of 42 red → [`queue_notes/3D1.md`](queue_notes/3D1.md) | 3D0 |
 | 3D2 | Snap transform + capture radius + seat | 3D | feature | ✅ **SNAP, SEAT, UNSNAP BUILT 2026-09-26** (`D100`, §11.13), ⛔ unjudged by a hand. ⚠ Owed: the approach and the mate connector → [`queue_notes/3D2.md`](queue_notes/3D2.md) | 3D1 |
 | 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⭐⭐ **THE BREAK GESTURE IS SPECIFIED** (`D47`): two fingers, one on each mated object, pulling **apart along the centre→centre direction** past a `BreakThreshold` (slider). ⛔⛔ It needs `3D2`'s **seat** first — §1.4's stack solves orientation only, so a mate does not hold POSITION today and *breaking* would be indistinguishable from *moving* → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 | 3D2 |
-| 3D4 | Real 3D file import (glTF) | 3D | feature | queued | 3D1 |
+| 3D4 | Real 3D file import (glTF) | 3D | feature | queued → `30_OBJECTS_3D/spec/MATERIALS_AND_IMPORT.md` | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |
 
 ## Phase RND — scene and rendering
@@ -358,5 +358,5 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
 | GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105` → `20_GAME_RULES/spec/GAME_STRUCTURE.md` | — |
-| GM7 | Populate worlds and levels; a theme | GAME | content | `World_0`›`Level_0`›`Scene_0` | GM1 |
-| GM8 | Save/load a scene as local JSON from Free Flow | GAME | feature | queued; the seam exists | GM1 |
+| GM7 | Populate worlds and levels; a theme | GAME | content | `World_0` exists | GM1 |
+| GM8 | Save/load a scene as local JSON (Free Flow) | GAME | feature | queued | GM1 |
