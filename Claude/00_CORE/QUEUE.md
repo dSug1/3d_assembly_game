@@ -34,6 +34,7 @@ falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **d
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
 ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, THE TWO PARTS TILTED 30°** (`D93`, 2026-09-25) — `bootAlignment` deleted (state only), `D63`'s jig gone with it, roll about world `z` then pitch about world `x`. ⚠ Parts' mutual gap 280 → 216 mm → `D93` in `DECISIONS.md` and its history.
 ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch, **Shift + left drag = the second** (gravity + roll; an aligned body's left drag translates in any mode); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align. ⛔ The right button never moves anything → defect 70.
+⭐⭐ **`scene.ts` IS SPLIT** (`D104`, 2026-09-26): a composition root + thirteen render modules → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged by a hand.
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 

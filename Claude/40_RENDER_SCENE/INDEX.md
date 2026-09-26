@@ -1,9 +1,9 @@
 # 40 — RENDER & SCENE · the one place the engine appears
 
-> **STATUS** · ⚠ diagnostic scene, real camera rules · **OWNS** · the Babylon scene,
+> **STATUS** · ⭐ **SPLIT INTO MODULES 2026-09-26** · **OWNS** · the Babylon scene,
 > camera, picking, materials, the on-glass readout and the tuning menu
 > **READ IF** · you are drawing something, or wondering why the boundary exists
-> **LAST VERIFIED** · 2026-09-16
+> **LAST VERIFIED** · 2026-09-26
 
 ## The rule this folder exists to protect
 
@@ -21,6 +21,31 @@ what cannot be measured gets shipped on hope.
 counted in [`../00_CORE/QUEUE.md`](../00_CORE/QUEUE.md), never here — was reproduced
 **headlessly** before it was fixed. `src/render/` holds only what needs the engine.
 
+## ⭐⭐⭐ The layout since 2026-09-26 — `scene.ts` is a composition root
+
+`scene.ts` was **7,861 lines, one closure** (`D104`); it is **1,118** now and holds no rule: the
+engine, the boot, every `SceneState` field in its old order, and the install order. ⭐ Every module
+takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 lesson binds them all:
+*a rule in a render file is a rule nothing can interrogate* — write the decision in `src/input` or
+`src/core`; a render module holds the state and the call.
+
+| module | owns |
+|---|---|
+| `scene_state.ts` | `SceneState`, the closure-level types, the constants |
+| `bodies.ts` | meshes, topology, shapes, the model-pose port (`setModelPose`) |
+| `markers.ts` | face fills and contours, fuchsia rings, PioneerFaceCursors, outlines |
+| `alignment_wiring.ts` | `alignFollowerToPioneer`, release, seat/unseat |
+| `gizmo.ts` · `highlight_pass.ts` | the axis gizmo; the capture highlight and the swing latch |
+| `camera_rig.ts` | orbit, zoom, centre blend, reset, gesture frames |
+| `hud_paint.ts` · `tuning_menu.ts` | every readout line; every slider |
+| `sway_pass.ts` · `drive.ts` | the nudge and the spin; where a translation or depth step lands |
+| `seat_wiring.ts` | the snap, the seats, the unsnap feed, the cursor drag |
+| `pointer_wiring.ts` · `render_loop.ts` | every press/move/release; the per-frame order |
+
+⚠ No vector reaches any of them; the split was checked by the typecheck, the suite, the build and a
+**headless Chrome boot** with a clean console — rule 5 still owes a hand. ⭐ Three essays moved to
+[`history/2026-09-26_index_essays_moved.md`](history/2026-09-26_index_essays_moved.md).
+
 ## Where it stands
 
 ✅ **Scene**: a camera and **three** objects. ⚠ The third is deliberately **off-axis and
@@ -37,17 +62,6 @@ surface, rather than both writing `camera.radius` and fighting over it.
 ✅✅ **THE OBJECT RULES ARE REAL NOW, and the MODEL is authoritative** (`3D1`, closed
 2026-09-15). A gesture writes `src/core/object_model.ts`; the render loop reads the model
 every frame and draws `displayPose = SWAY ∘ FOLLOW ∘ model`.
-⛔⛔ **The defect that taught this, found by finger**: the loop used to draw only the
-objects that HAPPENED to have a follower, so a translated object was **LOCKED** until
-something else created one — and then **JUMPED** to where it should have been all along.
-⭐ *Draw from the model, never from whatever bookkeeping a rule left behind.*
-
-⚠ **Still a stand-in**: rule 2bis runs without its PRECONDITION (§1.4's empty constraint stack),
-which `IN3` adds. The gesture, its axes and its gain are real.
-
-⭐⭐ **`requireGestureFrame()` THROWS rather than guessing.** `A7`'s frame is undefined looking exactly
-along gravity, and a silent fallback would turn *"the axes are wrong at the pole"* into a defect a hand
-has to find. ⚠ The orbit rings make the pole unreachable, so it guards an invariant.
 
 ⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`): a claim a device
 cannot check is an assertion, not a finding.
@@ -171,32 +185,8 @@ camera visibly travels toward it.
 ⚠ All are diagnostic, and listed here because they are the reason defects get *found*: deleting one
 quietly would cost the next device session.
 
-## ⭐⭐ FORK C's WIRING — what `scene.ts` owns of `D37` (2026-09-16)
-
-⚠ Here because **`IN3`'s last three defects were all in this layer**, where no vector reaches.
-
-* **`forkCAlign`** — the alignment, reached from a **second holder's `TAP`**. ⛔ Not a press,
-  and not the `SECOND` role: a finger on ANOTHER object is routed `OBJECT`, so *"tap on second
-  object's hit face"* arrives as that grip's own tap and the Follower is the OTHER grip.
-  ⭐ Exactly one other holder or it refuses — with two, which one is the Follower has no
-  trustworthy answer.
-* **`Held.pressFace`** — per grip: the trigger names **two** faces on two objects at once,
-  which one `selectedFace` cannot express. **`Held.alignmentTouched`** — *made during THIS
-  gesture?*, which no look at the state can answer.
-* ⛔⛔ **THE MARKERS ARE PARENTED TO THE OBJECT** (defect 46): positioned from the CACHED
-  `getWorldMatrix()` (recomputed inside `scene.render()`, after the read), every marker drew
-  last frame's pose. ⭐ Parenting makes the lag **unreachable**, not corrected.
-  ⛔⛔ **EXCEPT A BILLBOARD** (defect 71): Babylon drops a billboarded child's parent ROTATION,
-  so the face rings drew off their faces on a turned body. They are placed in world space each
-  frame from `computeWorldMatrix(true)`, as the gizmo rings always were.
-* The highlight is raised **at the alignment**, not at the press (`D35`), and ⛔ **every
-  refusal is printed**: this gesture's failure mode is *nothing visibly happened*.
-* **TWO markers since `D39`** — a filled quad on the Follower (what moved) and a **line
-  contour** on the Pioneer (what it was aimed at), both through **one** `placeFaceMarker`:
-  a second copy of that geometry is a second implementation that can silently disagree.
-  ⛔ The pair is **atomic** — the contour may not outlive the fill, or it claims a
-  relationship that is gone. ⚠ `CreateLines` is one pixel wide by WebGL's rule, not by
-  choice; if a hand finds it faint the answer is `GreasedLine`, not a thicker hack.
+⭐ **Fork C's wiring** (2026-09-16, what the old `scene.ts` owned of `D37`) →
+[`history/2026-09-26_index_essays_moved.md`](history/2026-09-26_index_essays_moved.md).
 
 ## Queued
 

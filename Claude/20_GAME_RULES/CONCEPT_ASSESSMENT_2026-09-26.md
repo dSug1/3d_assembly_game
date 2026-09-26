@@ -87,9 +87,8 @@ it belongs now, not at store submission (`SEC1`).
 
 ## Two engineering risks that will bite the game layer
 
-* **`src/render/scene.ts` is ~7,900 lines.** The project's hardest-won lesson is that *a rule in a
-  render file is a rule nothing can interrogate* — and every game feature (the score, the detector,
-  the UI) will want to land there. ⭐ Split it **before** `GM1`, not after.
+* ✅ **DONE the same day (`D104`)**: `src/render/scene.ts` was ~7,900 lines; it is a 1,118-line
+  composition root plus thirteen modules now, so a game feature has a file of its own to land in.
 * **The tree has never held more than three bodies, and every collision shape is convex** (`3D5`).
   The first imported mesh — curved, hollow or L-shaped — will test `mesh_topology`, GJK and the seat
   at once. ⭐ Plan one deliberately ugly real part as a test asset early.
