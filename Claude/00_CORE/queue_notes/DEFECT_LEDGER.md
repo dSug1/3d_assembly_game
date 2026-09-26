@@ -1029,3 +1029,28 @@ cursor, so it cannot translate or rotate; a right press while the left is down i
 (it would arrive second and mean a Pioneer); and `hitFaceAllowed` hides the HitFace for a
 mouse-pressed holder, which the scene's `hitFaceNow` reads. ⚠ A quick right click on its own is
 still a tap on a body, which toggles the mode as any tap does.
+
+## 71 — ⛔⛔ **A BILLBOARD PARENTED TO A BODY LOSES THE BODY'S ROTATION** (2026-09-25, the owner)
+
+> *"The PioneerFaceCursor position is not correct: at first, when the object is aligned, the
+> cursor shall be placed at the center of the PioneerFace (currently, it can fall outside the
+> PioneerFace, or even outside the Pioneer object)."*
+
+⭐ The numbers were right: the cursor's point WAS the face centre, in the Pioneer's local frame.
+⛔⛔ The drawing was wrong. Babylon composes a billboarded child with its parent's **scale and
+translation only** and discards the parent's **rotation** (`TransformNode.computeWorldMatrix`,
+unless the global `BillboardUseParentOrientation` is set) — so the local offset was applied
+UNROTATED: right on a square body, anywhere on a turned one. ⚠ And the drag read the TRUE position
+through `computeWorldMatrix(true)`, so the ring the eye saw and the ring a press could grab were in
+two different places, which made the drag look broken too.
+
+⭐⭐ **WHY IT WAS BUILT THAT WAY**: defect 46 taught *parent, never position* — true for a mesh that
+turns WITH its body, false for one that must face the camera. The white ring on a fuchsia face had
+the same shape and the same bug; the fuchsia offer ships OFF, so no hand had seen it.
+✅ Both rings are now placed in WORLD space every frame from `computeWorldMatrix(true)` — defect
+46's other cure, safe because the draw pass runs after the poses are written — which is how the
+gizmo rings were always placed.
+⭐ **Measured, not argued**: a `NullEngine`, a body turned 90°, its `+x` face centre — parented
+billboard `[3, 0, 0]`, world-placed `[2, 0, −1]`, truth `[2, 0, −1]`.
+⛔ No vector reaches `src/render`, so none could have gone red. ⭐ `METHOD`: *a structural cure
+learned on one kind of mesh is a claim about that kind — check that the next mesh is the same kind.*

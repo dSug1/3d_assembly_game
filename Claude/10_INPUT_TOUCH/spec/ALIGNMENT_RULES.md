@@ -1757,3 +1757,63 @@ the mouse needs no rule of its own — `outsideTapReleases` in `input/alignment.
 shake the Follower; shake the Pioneer (all its followers); turn or move the Pioneer of a cyan
 follower; flick the Follower within the gesture that aligned it; align it to something else; and
 **a tap on empty space while holding it** (`D95`).
+
+### 11.10 — ⭐⭐⭐ `D96`: THE PIONEERFACECURSOR
+
+> *"When aligning, create an object PioneerFaceCursor: it shall be a green ring and it shall be
+> placed at the center of the PioneerFace by default. Destroy it … when un-alignment occurs and
+> this PioneerFace is cancelled. … there can be several PioneerFaceCursors … and they can also have
+> the same position … implement a proper tracking."* — the owner, 2026-09-25, then *"the ring shall
+> be amber instead of green"* and *"the ring shall always be in the screen view plane"*.
+
+⭐⭐ **ONE CURSOR PER ALIGNMENT, KEYED BY THE WHOLE COUPLE** — follower + FollowerFace + pioneer +
+PioneerFace (`core/pioneer_face_cursors.ts`). ⛔ Not one per Pioneer face: `pioneerFaces()`
+de-duplicates, which is right for a contour and wrong here — two Followers on one face own two
+rings at one position. ⭐ A Follower re-aligned on ANOTHER face (either side) is a different couple,
+so its old ring is destroyed and a new one made at the new face.
+⭐ **Reconciled against the links every frame** and **disposed** when its couple goes, whatever
+removed it — retired by membership, the 2026-09-17 lesson. ⚠ A surviving cursor is the SAME object
+frame to frame, so a moved position persists.
+
+**The drag** (the owner, same day): *"when left button clicked inside the PioneerFaceCursor
+(desktop) or first or second touch pressed within a certain distance from the PioneerFaceCursor
+(mobile) … translate the PioneerFaceCursor on top of the PioneerFace surface … it cannot exit an
+edge … if the surface is not flat, the PioneerFaceCursor position shall follow the surface."*
+
+| | rule | where |
+|---|---|---|
+| grab | mouse: LEFT button INSIDE the ring (radius 8 px); touch: within `pioneerCursorGrabRadii` × radius (1–10); nearest wins; never the synthesised second touch | `input/pioneer_cursor_grab.ts` |
+| claim | the pointer is taken **before the router** — it selects, orbits, taps and counts as nothing else, until it lifts | `scene.ts` `cursorPointer` |
+| move | RELATIVE: the grab offset is kept, so a press several radii away does not jump the ring | `scene.ts` |
+| place | the ray's nearest hit on the face's TRIANGLES (two-sided); on a miss, the plane through the cursor, pulled back to the nearest surface point — bounded by the edges, on the surface when it is not flat | `core/face_surface.ts` |
+| toggle | **FACE › *PioneerFaceCursor drag on/off*** (`pioneerCursorDrag`) — ⛔ **ships OFF**, the owner's *"default is cursor drag off"*; at 0 nothing grabs | FACE menu |
+
+⚠ Costs, unjudged: the ring sits at the face CENTRE, so with the drag ON a press meant for that
+face's centre grabs the ring instead — wider reach, more often; and 8 px is a small mouse target.
+⛔⛔ **AND THE RING IS NOT PARENTED** — a billboard parented to a body loses the body's ROTATION
+(defect 71), so it is placed in world space every frame.
+
+### 11.11 — ⭐⭐ `D97`: AN ALIGNED FOLLOWER'S TRANSLATION AXES
+
+> *"those axis are displayed whenever the aligned follower object is touched or left clicked (not
+> necessarily when a movement occurs) in whichever mode. If in horizontal plane translation (first
+> touch or left click without shift), always show the red and blue axis. If in gravity axis
+> translation (second touch or left click + shift), always show the green axis, or only the grey
+> axis if the roll rotation is ongoing. Do not show the axis as full screen length … show length
+> corresponding to the segment between the FollowerFace center (the origin of the axis) and the
+> projection of the position of the PioneerFaceCursor onto this axis."* — the owner, 2026-09-26
+
+| held aligned Follower | red + blue | green |
+|---|---|---|
+| first touch / left click alone | ✅ always | — |
+| + a second touch / Shift | — | ✅ always, ⛔ unless a roll has turned it **during this hold** and the grey is up |
+
+⭐ Decided by which touches are DOWN, not by what moved — `alignedTravelAxes` in
+`input/aligned_axes.ts`. A second touch is `OUTSIDE` (a finger, or the mouse's Shift touchpoint) or
+`SECOND` on the same body. ⭐ Each line is a SIGNED segment from the FollowerFace centre to the
+cursor's projection (`segmentTowardCursor`), zero-length when the cursor is square to the axis.
+⛔⛔ **The rotation lines are untouched** — the owner: *"do not modify anything about the rules for
+the display of the rotation axis"* — so grey/purple/maroon stay `displayedAxes`'s, and a free body
+keeps the old travel rule and its full-screen lines.
+⚠ *"Ongoing"* is read per HOLD because `displayedAxes` keeps its last answer across holds: a roll
+from an earlier gesture must not hide the green on a fresh one.
