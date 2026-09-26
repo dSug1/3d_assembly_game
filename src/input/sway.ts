@@ -348,11 +348,13 @@ export function turnDegrees3(a: Vec3, b: Vec3): number {
  * @param heldId the body the finger is carrying, or `null` when a pinch or a rotation kicked
  *   the sway with no holder at all.
  * @param isGrasped `true` for any body a touchpoint is pressed on — see below.
+ * @param pioneerOfMover the Pioneer the moving body is aligned to, or `null` — see below.
  */
 export function receivesSway(
   body: { readonly id: string; readonly frozen?: boolean } | null,
   heldId: string | null,
   isGrasped: (id: string) => boolean = () => false,
+  pioneerOfMover: string | null = null,
 ): boolean {
   if (body === null) return false;
   // ⚠ The MOVER is excluded because it is already going that way — the sway is what the
@@ -372,5 +374,16 @@ export function receivesSway(
   // a DISPLAY offset, so it never moved the model — which makes it worse, not better: the
   // part would drift back after the finger lifted, with nothing to say why.
   if (isGrasped(body.id)) return false;
+  // ⭐⭐⭐ **AND NEITHER IS THE MOVER'S OWN PIONEER** — the owner, 2026-09-26: *"make sure the
+  // pioneer object does not sway when its follower object moves (we set this as a rule previously
+  // but it has been somehow forgotten)."*
+  //
+  // ⛔⛔ **NO EARLIER TEXT OF IT SURVIVES** — not in the docs, the code, the git history or the
+  // saved transcripts — so whatever form it had, it never reached a vector, and that is how it
+  // lapsed with nothing going red. ⭐ It is a vector now (`tests/sway.test.ts`).
+  // ⭐ The Pioneer is what the Follower is being assembled TO: a target that recoils from the
+  // part approaching it makes the approach unreadable, and the capture gap it shows would move for
+  // a reason that is not the hand's.
+  if (pioneerOfMover !== null && body.id === pioneerOfMover) return false;
   return body.frozen !== true;
 }

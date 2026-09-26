@@ -4353,6 +4353,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     if (!(impulse > 0)) return;
 
     const heldId = idOf.get(heldMesh) ?? null;
+    // ⭐ The mover's own Pioneer does not sway (`receivesSway`, the owner, 2026-09-26).
+    const pioneerOfMover =
+      heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
     for (const mesh of scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
       // marker cannot sway — a readout that moved with the scene would be describing
@@ -4363,7 +4366,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // frozen and the PICTURE was not: the sway is a display offset added after the model is
       // read, so the base plate rocked while its placement could not change. ⭐ One predicate,
       // shared with `spinOthers` and vectored in `tests/sway.test.ts`.
-      if (!receivesSway(bodyOf(mesh), heldId, isGrasped)) continue;
+      if (!receivesSway(bodyOf(mesh), heldId, isGrasped, pioneerOfMover))
+        continue;
       const f = followerFor(mesh);
       f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
       f.swayY = { x: f.swayY.x, v: f.swayY.v + dir[1] * impulse };
@@ -4402,13 +4406,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
 
     const pivot = grip.mesh.position;
     const heldId = idOf.get(grip.mesh) ?? null;
+    // ⭐ …and does not swing either — a follower TURNING is moving too.
+    const pioneerOfMover =
+      heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
     for (const mesh of scene.meshes) {
       if (mesh.metadata?.orbitCandidate !== true) continue;
       if (mesh === grip.mesh) continue;
       // ⛔⛔ A frozen body does not swing about the held one either — the same rule, the same
       // predicate. ⚠ This is the writer that made the base plate SWING rather than rock, which
       // is the more obvious of the two on the glass.
-      if (!receivesSway(bodyOf(mesh), heldId, isGrasped)) continue;
+      if (!receivesSway(bodyOf(mesh), heldId, isGrasped, pioneerOfMover))
+        continue;
       const f = followerFor(mesh);
       // ⚠ The pivot is captured per kick and shared by the block. A kick arriving while
       // an older one is still decaying moves the pivot; for the sub-degree swings this

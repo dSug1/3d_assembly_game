@@ -400,3 +400,18 @@ describe("⭐⭐⭐ D53 — a grasped body receives no sway", () => {
     expect(receivesSway(null, "a", grasping())).toBe(false);
   });
 });
+
+describe("⭐⭐⭐ the mover's own PIONEER does not sway", () => {
+  it("⛔⛔ *\"the pioneer object does not sway when its follower object moves\"* — the owner, 2026-09-26", () => {
+    // ⛔ RED against the predicate before this rule, which swayed every other free body.
+    expect(receivesSway({ id: "pioneer" }, "follower", () => false, "pioneer")).toBe(false);
+  });
+
+  it("⭐ every OTHER body still sways — the exclusion names one body, not the scene", () => {
+    expect(receivesSway({ id: "bystander" }, "follower", () => false, "pioneer")).toBe(true);
+  });
+
+  it("⭐ a mover with no Pioneer spares nobody extra", () => {
+    expect(receivesSway({ id: "pioneer" }, "free", () => false, null)).toBe(true);
+  });
+});
