@@ -37,6 +37,11 @@
 
 > *"A touchpoint to zoom in / out shall also be excluded."* — the owner, the same day
 
+> *"C2: I consider shift to be a toggle of axis within a movement which is already engaged: this
+> shall not count. Same for second touch on mobile device if this second touch toggles the axis
+> within the movement which is already engaged. C3: a third touchpoint the router ignores: shall
+> not count (this is not reproducible on desktop)."* — the owner, the same day
+
 The pictured final configuration: the pyramid seated on the plate, the grey part standing on the
 pyramid, the pink cuboid on the grey part — every FollowerFace centred on its PioneerFaceCursor.
 
@@ -97,14 +102,25 @@ mode"* (`D28`: any single tap flips the mode; `D66`: only a tap, never a press):
 | B4 | desktop: a **quick right click** on a body (a tap), a quick left click on empty space |
 | B5 | the two taps of a double tap that flips the mode twice (also A3 when on empty space) |
 
+**D. An axis toggle within a movement already engaged, and an inert touchpoint** — the owner's
+C2/C3 rulings:
+
+| case | how it arrives today |
+|---|---|
+| D1 | desktop: the **Shift** touchpoint while the left button holds a body — it switches the engaged hold's channel (horizontal → gravity, or → roll), so it is a toggle of axis, not a movement of its own |
+| D2 | mobile: the **second touch that toggles the axis** of an engaged hold — a finger on empty space (or on a frozen body, `D77`'s miss) driving gravity or roll, or on the held body itself (`SECOND`) |
+| D3 | a **third touchpoint the router ignores** (`IGNORED`) — it can do nothing; ⚠ not reproducible on desktop |
+
+⭐ So on both devices the hold is the episode, and whatever the hand adds to steer it is free. ⛔ A
+second touch that **presses a Pioneer face** is not this — it aligns (C3).
+
 **C. What still counts, stated so the boundary is sharp:**
 
 | case | why |
 |---|---|
 | C1 | `D95`'s **tap on empty space while holding an aligned body** — it un-aligns, which is assembly, not a toggle |
-| C2 | the **second finger that drives** gravity or roll while a body is held — on the tablet a finger, on the desktop the **Shift** touchpoint. ⚠ Shift switches the *channel* (horizontal → gravity, or → roll), not rotation/translation, and it moves the part; ⛔ **owner to confirm** — if Shift is meant to be free, the tablet's second finger must be free too for parity, and the pictured optimum falls from 9 to 6 |
-| C3 | a **hold** that moved nothing, a **third touchpoint** the router ignores, any fumble — §3's rule |
-| C4 | every align press, drag, twist, shake, flick, unsnap and cursor drag |
+| C2 | a **hold** that moved nothing, any fumble that is not D3 — §3's rule |
+| C3 | every hold, align press, drag, twist, shake, flick, unsnap and cursor drag |
 
 ⛔ **The ledger must classify with the same functions the gestures use** — `tapMeaning`, the
 router's roles, the recognizer's verdict — never a second copy of *"is this a tap"* (`D60`'s
@@ -145,14 +161,16 @@ The costs the solver reads, under today's rules:
 |---|---|---|
 | hold a free part | 1 | the first touch |
 | align it (press the Pioneer face while holding) | 1 | `D87`, one press |
-| bring it to the cursor | 1 | a second finger for gravity while the hold drags horizontally — the two channels sum in one episode (`D43`); the snap seats it for free |
-| wrong square quadrant after the squaring twist (`D98`) | +1 | the twist drag; the tap to `ROTATE` is a toggle, excluded (§3.1 B) |
+| bring it to the cursor | 0 | the hold already engaged drags horizontally; the second finger for gravity is an axis toggle within it (§3.1 D); the snap seats it for free |
+| wrong square quadrant after the squaring twist (`D98`) | +0, time only | a tap to `ROTATE` (excluded, B) and a twist by the hold already engaged — it costs seconds, never an episode |
 | mode toggle | 0 | excluded by rule (§3.1 B) — and unneeded anyway: boot is `TRANSLATE` and an aligned body translates in any mode (`D60`) |
 | camera orbit, pinch, reset | 0 | excluded by rule (§3.1 A) — so looking around is free and the solver never has to model the view |
 | unsnap | 1 | never on the optimal path of a well-posed scene |
 
-⭐ The pictured configuration, under those costs: **9 episodes** (three parts × hold, press, second
-finger). ⚠ Order matters and the solver must model it: a seated Pioneer carries its followers, so
+⭐ The pictured configuration, under those costs: **6 episodes** (three parts × hold + Pioneer
+press) — ⚠ it was 9 before the owner's C2 ruling freed the second finger. ⭐ So under these rules
+the episode count is a count of **presses that change the assembly**, and everything about *how*
+a part is steered is paid in time. ⚠ Order matters and the solver must model it: a seated Pioneer carries its followers, so
 building from the top down is legal but costs no less; a `SNAPSHOT` Pioneer moved later releases its
 follower, which costs a re-align.
 
@@ -166,7 +184,7 @@ follower, which costs a re-align.
 | 2 | **Final-configuration data** per scene: face pairs, cursor positions, spin quadrant — and its **detector**, read from the model every frame | 1 | a scene reported complete with one part unseated, or a spin quadrant off by 90° |
 | 3 | **The touch ledger**: one count per touchpoint episode at the router, classified at release by §3.1, started at the first press after boot, printed on the HUD | — (can be built first, it is one counter) | a camera orbit or a mode-toggle tap counted; a mouse Shift second touch counted differently from a finger; an episode missed on a lost `pointerup` |
 | 4 | **The timer**: first press after boot → detection; on the HUD | 2 | a timer that runs before the first press or after detection |
-| 5 | **The solver** in `src/core`, vectored against hand-worked optima, including the pictured 9 | 2, and the costs above kept in one place | a hand-typed optimum; a solver that disagrees with a hand-worked sequence |
+| 5 | **The solver** in `src/core`, vectored against hand-worked optima, including the pictured 6 | 2, and the costs above kept in one place | a hand-typed optimum; a solver that disagrees with a hand-worked sequence |
 | 6 | **The score**: episodes vs optimum, the bonus on equality, the time; **Free Flow** voids it | 2–5 | a score shown while Free Flow is on |
 
 ⛔ Each is a queue row in Phase GAME; this file is their dossier until one outgrows it.
@@ -175,8 +193,6 @@ follower, which costs a re-align.
 
 ## 7. OPEN, AND THE OWNER'S TO DECIDE
 
-- §3.1 C2: does the desktop's **Shift** second touch count (my reading: yes, as the tablet's second
-  finger does)?
 - The snap's conditions, and the **unsnap** gesture.
 - Whether the solver's optimum is shown to the player before, after, or never.
 - How episodes and time combine into one rank, if they must (⭐ two readouts and no formula is the

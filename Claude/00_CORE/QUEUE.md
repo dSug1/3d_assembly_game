@@ -354,5 +354,5 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM1 | Final-configuration data per scene + its detector | GAME | feature | queued | 3D2 |
 | GM2 | The touch ledger: one count per episode, classified at release (camera/zoom/toggles excluded, §3.1), on the HUD | GAME | feature | queued | — |
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
-| GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 9) | GAME | feature | queued | GM1 |
+| GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
