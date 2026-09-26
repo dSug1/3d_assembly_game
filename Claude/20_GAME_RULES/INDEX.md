@@ -1,17 +1,15 @@
 # 20 — GAME RULES · how the game behaves, in plain language
 
-> **STATUS** · ⚠ empty by design · **OWNS** · the behavioural record
-> **LAST VERIFIED** · 2026-09-13
+> **STATUS** · ⭐ **THE SCORE IS SPECIFIED, NOT BUILT** (2026-09-26) · **OWNS** · the behavioural record
+> **LAST VERIFIED** · 2026-09-26
 
-Nothing is scheduled here yet. The game layer waits on `IN` and `3D`.
+⭐ [`spec/SCORE.md`](spec/SCORE.md) — the score (`D99`–`D101`): **touchpoint episodes** against a
+**solved optimum**, plus **elapsed time**; the snap is automatic and not an episode, unsnap is; a
+seated Pioneer carries its followers; **Free Flow mode** escapes the score. Its §6 is the build
+list, mirrored as `GM1`–`GM5` in `QUEUE.md`. ⛔ Nothing of it is built; the approach and the snap
+(`3D2`) come first.
 
-⭐ **What this folder is FOR, and why it exists on day one.** In the predecessor, the
-behaviour of the thing was scattered across a spec, a queue and a session log, and
-answering *"what is the game supposed to do when X"* meant reading three files and
-reconciling them. A single plain-language behavioural record fixed that. Start it the
-day the first rule exists, not later.
-
-⚠ It describes **behaviour**, not mechanism: *"an object released inside another's
-capture radius seats into it"*, not *"`testMate` returns `withinRadius`"*. When the
-two disagree, this file is the requirement and the code is the bug — or the file is
-out of date, which is itself the finding.
+⚠ This folder describes **behaviour**, not mechanism: *"an object released inside another's
+capture radius seats into it"*, not *"`testMate` returns `withinRadius`"*. When the two disagree,
+the record is the requirement and the code is the bug — or the record is out of date, which is
+itself the finding.

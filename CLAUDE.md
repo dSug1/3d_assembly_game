@@ -169,7 +169,7 @@ surface when it is not flat. Grab offset kept, so it never jumps under the finge
 ⭐⭐ **AN ALIGNED FOLLOWER'S AXES** (`D97`, 2026-09-26): shown while it is HELD, moving or not — first
 touch red + blue, second touch / Shift green (none while a roll is on) — each a SEGMENT from the
 FollowerFace centre to the PioneerFaceCursor's projection. ⛔ Rotation lines unchanged.
-⭐ **FACE ALIGNMENT › *PioneerFaceCursor drag on/off*** (`pioneerCursorDrag`, ships **`0` — OFF**, the owner's default): at `0` nothing grabs the ring.
+⭐ **FACE ALIGNMENT › *Free Flow mode (PioneerFaceCursor drag on/off)*** (`pioneerCursorDrag`, ships **`0` — OFF**, the owner's default): at `0` nothing grabs the ring.
 ⛔⛔ **A BILLBOARD MUST NOT BE PARENTED TO A BODY**: Babylon keeps a billboarded child's parent
 SCALE and TRANSLATION and drops its ROTATION, so the ring sat off its face — or off the body —
 on any turned Pioneer (and the white fuchsia-face ring with it). Both are now placed in WORLD
@@ -179,9 +179,17 @@ in a `NullEngine`: parented `[3,0,0]` against the true `[2,0,-1]`.
 **CAMERA** › *CAMERA ORBIT* (the ring and gain sliders) and *CAMERA APPROACH SWING AT CAPTURE* (the
 swing's four — ⛔ **the swing ships at 0, OFF**; the owner's 30° of 2026-09-19 is a slider move
 away); **OBJECT TRANSLATION** (+ *PIONEER translates*, *WorldAxisB*, *translate: plane/channels*);
-**OBJECT ROTATION**; **FACE ALIGNMENT** › *PIONEERFACECURSOR* (drag on/off, sensitivity) and
+**OBJECT ROTATION**; **FACE ALIGNMENT** › *PIONEERFACECURSOR* (Free Flow drag on/off, sensitivity) and
 *FOLLOWERFACE* (x-ray opacity, with *EVICTION SHAKE* and *CAPTURE* inside it).
 ⛔ **`captureOffsetMm` ships at 5 mm** (the owner, 2026-09-26; was 15, briefly 4) — 1.5 mm clear of the 3.5 mm deadband.
+⭐⭐⭐ **THE SCORE IS SPECIFIED, NOT BUILT** (`D99`–`D101`, 2026-09-26) →
+[`Claude/20_GAME_RULES/spec/SCORE.md`](Claude/20_GAME_RULES/spec/SCORE.md). The unit is **one
+touchpoint episode** (press → release, counted at the router, the mouse's synthesised touchpoints
+included); the player is scored on episodes against an **absolute optimum from a solver** (bonus on
+equality) and on **elapsed time**. ⛔ The **snap is automatic** under owner-defined conditions and is
+NOT an episode; **unsnap is**; and **a seated Pioneer carries its followers** — `3D1`'s tree, which
+`3D2` must honour. **Free Flow mode** (the renamed cursor-drag slider) escapes the score.
+⭐ Next to build: the approach (still unfinalised) and the snap.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE

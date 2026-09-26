@@ -1786,7 +1786,7 @@ edge … if the surface is not flat, the PioneerFaceCursor position shall follow
 | claim | the pointer is taken **before the router** — it selects, orbits, taps and counts as nothing else, until it lifts | `scene.ts` `cursorPointer` |
 | move | RELATIVE: the grab offset is kept, so a press several radii away does not jump the ring | `scene.ts` |
 | place | the ray's nearest hit on the face's TRIANGLES (two-sided); on a miss, the plane through the cursor, pulled back to the nearest surface point — bounded by the edges, on the surface when it is not flat | `core/face_surface.ts` |
-| toggle | **FACE ALIGNMENT › *PioneerFaceCursor drag on/off*** (`pioneerCursorDrag`) — ⛔ **ships OFF**, the owner's *"default is cursor drag off"*; at 0 nothing grabs | FACE menu |
+| toggle | **FACE ALIGNMENT › *Free Flow mode (PioneerFaceCursor drag on/off)*** (`pioneerCursorDrag`, `D101`) — ⛔ **ships OFF**, the owner's *"default is cursor drag off"*; at 0 nothing grabs | FACE menu |
 
 ⚠ Costs, unjudged: the ring sits at the face CENTRE, so with the drag ON a press meant for that
 face's centre grabs the ring instead — wider reach, more often; and 8 px is a small mouse target.
