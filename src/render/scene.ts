@@ -4204,9 +4204,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         {
           title: "PIONEERFACECURSOR",
           sliders: [
-            // ⭐⭐ The owner's toggle, directly above the sensitivity it makes meaningful. ⚠ `0` keeps
-            // the ring drawn and hands every press on it back to the ordinary rules.
-            tunable("PioneerFaceCursor drag on/off", "pioneerCursorDrag", 0, 1, 1),
+            // ⭐⭐ **FREE FLOW MODE** — the owner, 2026-09-26: the player leaves the SCORE and builds
+            // freely, and moving the PioneerFaceCursor is its first freedom (`20_GAME_RULES/spec/SCORE.md`).
+            // ⚠ `0` keeps the ring drawn and hands every press on it back to the ordinary rules.
+            // ⛔ The config key is unchanged, so `?pioneerCursorDrag=1` still works.
+            tunable(
+              "Free Flow mode (PioneerFaceCursor drag on/off)",
+              "pioneerCursorDrag",
+              0,
+              1,
+              1,
+            ),
             // ⭐⭐ The owner's 1–10 ring radii a TOUCH may press from the ring and still grab it.
             // ⚠ Touch only: the mouse must click INSIDE the ring, whatever this says.
             tunable(

@@ -32,7 +32,7 @@ falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **d
 ⛔⛔⛔ **THE PRODUCT CHANGED SHAPE AND THE WHOLE SUITE STAYED GREEN** (defect 66, 2026-09-25): two test files kept their **own retyped copy** of the body dimensions, so scaling the pyramid (`D91`) moved the product and not the fixtures — including the vector whose stated job is the boot clearance. ⭐⭐⭐ *A fixture that mirrors a constant is a second implementation of it, and it disagrees exactly when the constant is what changed.* ✅ One home: `core/scene_dims.ts`.
 ⭐ The HUD has a `jump` line (`input/jump_watch.ts`) — a standing readout, not an open defect.
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
-⭐⭐ **THE SCENE BOOTS UNALIGNED AND IN `TRANSLATE`** (`D93`, 2026-09-25): *"boot the scene with no aligned object … use current rectangles transforms as displayed on the usb tablet."* ⛔ `bootAlignment` is **deleted** — it never rotated anything, so only the STATE changed. ⚠⚠ **`D63`'s jig goes with it**: the swing trial opened pre-aligned, a hand must make that alignment now, and its earlier verdicts are not comparable with later ones. ⭐⭐ **AND THE TWO PARTS BOOT TILTED 30° in opposite senses** — roll about world `z`, pitch about world `x` (`A7`'s axes at the boot camera), roll first. ⚠⚠ **Measured cost**: the pyramid's gap to the plate closes to **53 mm** against a **60 mm** band, so **that pair showed a white capture contour at boot** (✅ gone: 5 mm offset); the parts' mutual gap moved 280 → 216 mm.
+⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, THE TWO PARTS TILTED 30°** (`D93`, 2026-09-25) — `bootAlignment` deleted (state only), `D63`'s jig gone with it, roll about world `z` then pitch about world `x`. ⚠ Parts' mutual gap 280 → 216 mm → `D93` in `DECISIONS.md` and its history.
 ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch, **Shift + left drag = the second** (gravity + roll; an aligned body's left drag translates in any mode); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align. ⛔ The right button never moves anything → defect 70.
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
@@ -306,7 +306,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 |---|---|---|---|---|---|
 | 3D0 | Mate connectors + residual; constraint stack + solver | 3D | feature | ✅ **built 2026-09-13**, carried and covered | — |
 | 3D1 | The object model: id, placement, connectors, assembly tree (parent ≠ root) | 3D | feature | ✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `core/object_model.ts`, engine-free. ⭐⭐ Its vectors were written FIRST and **falsified on purpose** — breaking the composition turns 14 of 42 red → [`queue_notes/3D1.md`](queue_notes/3D1.md) | 3D0 |
-| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT — and its CAPTURE half is BUILT** (`D49`): surface-to-surface, shapes computed at spawn, offset in mm on the glass, on a slider. ⛔ Still owed: the snap, the seat, the mate. ⛔⛔ **The game cannot assemble anything today** — nothing is SEATED, and §4’s `6quater` is flick-based, which this model does not have. ⚠ **Blocked on ONE owner decision: which gesture asserts a mate** → [`queue_notes/3D2.md`](queue_notes/3D2.md) | 3D1 |
+| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT, with the approach.** Capture half BUILT (`D49`, surface gap, mm on the glass, a slider). ⛔ Owed: the snap, the seat, the mate — nothing is SEATED today. ✅ **`D100` answers the blocker: NO gesture** — the snap is AUTOMATIC under owner conditions, a seated Pioneer CARRIES its followers, unsnap is a touch → [`queue_notes/3D2.md`](queue_notes/3D2.md) | 3D1 |
 | 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⭐⭐ **THE BREAK GESTURE IS SPECIFIED** (`D47`): two fingers, one on each mated object, pulling **apart along the centre→centre direction** past a `BreakThreshold` (slider). ⛔⛔ It needs `3D2`'s **seat** first — §1.4's stack solves orientation only, so a mate does not hold POSITION today and *breaking* would be indistinguishable from *moving* → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 | 3D2 |
 | 3D4 | Real 3D file import (glTF) | 3D | feature | queued | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |
@@ -346,5 +346,13 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 
 ## Phase GAME — the game proper
 
-Nothing scheduled. ⭐ When it starts, rows go **here** with the right `Sub` tag —
-never in a second queue in that folder.
+⭐ The score, specified 2026-09-26 (`D99`–`D101`); the dossier for every row below is
+[`../20_GAME_RULES/spec/SCORE.md`](../20_GAME_RULES/spec/SCORE.md) §6.
+
+| # | Item | Sub | Kind | Status | Dep |
+|---|---|---|---|---|---|
+| GM1 | Final-configuration data per scene + its detector | GAME | feature | queued | 3D2 |
+| GM2 | The touch ledger: one count per touchpoint episode, at the router, on the HUD | GAME | feature | queued | — |
+| GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
+| GM4 | The solver: the absolute least episodes, engine-free, vectored (the pictured scene = 9) | GAME | feature | queued | GM1 |
+| GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
