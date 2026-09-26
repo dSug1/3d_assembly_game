@@ -167,7 +167,11 @@ import {
   type PioneerFaceCursor,
 } from "../core/pioneer_face_cursors";
 import { pointOnFace } from "../core/face_surface";
-import { alignedTravelAxes, segmentTowardCursor } from "../input/aligned_axes";
+import {
+  alignedTravelAxes,
+  secondTouchDown,
+  segmentTowardCursor,
+} from "../input/aligned_axes";
 import {
   grabbedCursor,
   PIONEER_CURSOR_PX,
@@ -2265,8 +2269,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           byMotion ??
           ([false, false, false, false, false, false] as GizmoChannels);
         const travel = alignedTravelAxes(
-          router.outside().length >= 1 ||
+          // ⛔ The mouse's Shift touchpoint counts only while Shift is held — it outlives Shift
+          // until the left button lifts (`secondTouchDown`).
+          secondTouchDown(
+            router.outside().map((p) => p.id),
             router.secondTouchOn(grip.mesh) !== null,
+            mouseLayer.shiftHeld(),
+          ),
           turn[3] && rolledThisHold.has(id),
         );
         shown = [travel[0], travel[1], travel[2], turn[3], turn[4], turn[5]];
@@ -2717,7 +2726,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
   // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
   // "mouse"` is looked at, and the scene's gesture code below is untouched.
-  attachMouseSecondTouch(canvas, scene, (notches) => {
+  const mouseLayer = attachMouseSecondTouch(canvas, scene, (notches) => {
     // ⭐⭐ THE WHEEL WRITES THE SAME `zoom` THE PINCH WRITES, through the same `applyCamera()` —
     // one zoom, not two. ⛔ Clamped on the multiplier, so scrolling past a limit cannot store zoom
     // the camera will never show (`input/mouse_wheel_zoom.ts`).

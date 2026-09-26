@@ -6,8 +6,10 @@
 import { describe, expect, it } from "vitest";
 import {
   alignedTravelAxes,
+  secondTouchDown,
   segmentTowardCursor,
 } from "@input/aligned_axes";
+import { MOUSE_SECOND_ID } from "@input/mouse_second_touch";
 import type { Vec3 } from "@core/vec";
 
 describe("⭐⭐⭐ which translation axes a held aligned Follower shows", () => {
@@ -62,5 +64,29 @@ describe("⭐⭐⭐ each axis is a segment toward the PioneerFaceCursor's projec
     const [a, b] = segmentTowardCursor(O, [0, 0, 0], [5, 5, 5]);
     expect(a).toEqual(O);
     expect(b).toEqual(O);
+  });
+});
+
+describe("⛔⛔ the mouse's Shift touchpoint counts only while Shift is held", () => {
+  it("⭐⭐ Shift released with the left button still down → NOT a second touch (back to red + blue)", () => {
+    // > *"when I release the shift and left click is still pressed, the gizmo is stuck on the
+    // > green"* — the owner, 2026-09-26. ⛔ RED against reading the touchpoint's mere presence.
+    expect(secondTouchDown([MOUSE_SECOND_ID], false, false)).toBe(false);
+    expect(alignedTravelAxes(secondTouchDown([MOUSE_SECOND_ID], false, false), false)).toEqual([
+      true,
+      false,
+      true,
+    ]);
+  });
+
+  it("⭐ Shift held → it is the second touch (green)", () => {
+    expect(secondTouchDown([MOUSE_SECOND_ID], false, true)).toBe(true);
+  });
+
+  it("⭐ a real finger outside, or one on the same body, counts whatever Shift says", () => {
+    // ⛔ RED against gating every OUTSIDE touchpoint on Shift, which would break the phone.
+    expect(secondTouchDown([7], false, false)).toBe(true);
+    expect(secondTouchDown([], true, false)).toBe(true);
+    expect(secondTouchDown([], false, true)).toBe(false);
   });
 });

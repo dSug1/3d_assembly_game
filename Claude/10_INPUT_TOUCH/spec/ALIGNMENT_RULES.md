@@ -1817,3 +1817,7 @@ the display of the rotation axis"* — so grey/purple/maroon stay `displayedAxes
 keeps the old travel rule and its full-screen lines.
 ⚠ *"Ongoing"* is read per HOLD because `displayedAxes` keeps its last answer across holds: a roll
 from an earlier gesture must not hide the green on a fresh one.
+⛔ **Desktop, 2026-09-26**: *"when I release the shift and left click is still pressed, the gizmo is
+stuck on the green."* The Shift touchpoint is tied to the LEFT button (it lifts with it, so a
+released Shift cannot read as a tap), so its presence is not the answer: `secondTouchDown` counts it
+only while Shift is HELD, which the mouse layer reports from pointer and key events.
