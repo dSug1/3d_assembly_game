@@ -356,6 +356,18 @@ export function attach(world: World, childId: ObjectId, parentId: ObjectId): Wor
   });
 }
 
+/**
+ * ⭐ Write `id`'s LOCAL placement — relative to its parent, or to the world when it has none.
+ * ⭐ What a seated Follower is written through every frame (`core/seat.ts`): its placement in the
+ * Pioneer's frame is DERIVED from the cursor, so a world-space write would be the wrong frame.
+ * ⛔ Frozen bodies do not move, here as everywhere.
+ */
+export function setLocalPlacement(world: World, id: ObjectId, local: Placed): World {
+  const o = world.objects.get(id);
+  if (!o || o.frozen === true) return world;
+  return withObject(world, { ...o, local });
+}
+
 /** Unparent `id` **without moving it**: its world placement becomes its local one. */
 export function detach(world: World, id: ObjectId): World {
   const o = world.objects.get(id);

@@ -372,6 +372,9 @@ export function pioneerSwaySuppressed(
  * @param isGrasped `true` for any body a touchpoint is pressed on — see below.
  * @param pioneerOfMover the Pioneer the moving body is aligned to, or `null` — see below.
  * @param moverNearPioneer `pioneerSwaySuppressed`'s answer: is the mover within the radius?
+ * @param inMoverAssembly `D100` — is this body SEATED with the mover (a child of it, its parent,
+ *   or a sibling on one Pioneer)? A seated assembly is one body: it moves with the mover through
+ *   the tree, and a sway offset on one part of it would wobble it against the rest.
  */
 export function receivesSway(
   body: { readonly id: string; readonly frozen?: boolean } | null,
@@ -379,6 +382,7 @@ export function receivesSway(
   isGrasped: (id: string) => boolean = () => false,
   pioneerOfMover: string | null = null,
   moverNearPioneer = true,
+  inMoverAssembly: (id: string) => boolean = () => false,
 ): boolean {
   if (body === null) return false;
   // ⚠ The MOVER is excluded because it is already going that way — the sway is what the
@@ -413,5 +417,6 @@ export function receivesSway(
   // trigger otherwise."* ⛔ The distance test is `pioneerSwaySuppressed`'s; this reads its answer.
   if (pioneerOfMover !== null && body.id === pioneerOfMover && moverNearPioneer)
     return false;
+  if (inMoverAssembly(body.id)) return false;
   return body.frozen !== true;
 }

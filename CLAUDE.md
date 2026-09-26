@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1232 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1264 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -189,7 +189,16 @@ included — ⛔ **camera, zoom and mode-toggle touches excluded**, §3.1); the 
 equality) and on **elapsed time**. ⛔ The **snap is automatic** under owner-defined conditions and is
 NOT an episode; **unsnap is**; and **a seated Pioneer carries its followers** — `3D1`'s tree, which
 `3D2` must honour. **Free Flow mode** (the renamed cursor-drag slider) escapes the score.
-⭐ Next to build: the approach (still unfinalised) and the snap.
+⭐⭐⭐ **THE SNAP, THE SEAT AND THE UNSNAP ARE BUILT** (`D100`, 2026-09-26) — ⛔ **UNJUDGED BY A
+HAND**. An aligned Follower whose FollowerFace centre comes within the **capture offset** of the
+PioneerFaceCursor, normals inside the **fuchsia cone**, **lerps** onto the cursor and becomes a
+**CHILD** of its Pioneer (`3D1`'s tree): it turns about its FACE, refuses its own translation, the
+cascades and the sway treat the assembly as one body, and a press on the partner does nothing.
+**Unsnap** = hold the **Pioneer** first, press the Follower, then a rapid zoom-out (tablet) or move
+(mouse) on the eviction shake's sliders; it re-arms only once **outside the radius**. Pure in
+`input/snap.ts`, `input/unsnap.ts`, `input/seat_snap.ts`, `core/seat.ts` →
+[`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.13.
+⚠ The approach itself is not built: the zone only lights white.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE

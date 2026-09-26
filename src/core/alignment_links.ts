@@ -93,6 +93,13 @@ export class AlignmentLinks {
   private readonly forward = new Map<ObjectId, PioneerRef>();
   /** Pioneer OBJECT → its followers. ⚠ Kept in step with `forward` by `link`/`unlink` ONLY. */
   private readonly reverse = new Map<ObjectId, Set<ObjectId>>();
+  /**
+   * ⭐⭐ **THE SEATED FOLLOWERS** (`D100`, 2026-09-26): links whose Follower has SNAPPED onto its
+   * Pioneer and is now a child of it in the tree. ⛔ A seated link is carried by the TREE, so the
+   * turn and move cascades must skip it (`followerLinksFrom`'s `isSeated`), and it is released
+   * only by the unsnap gesture or by the link going. ⚠ Cleared with the link: `unlink` and `prune`.
+   */
+  private readonly seated = new Set<ObjectId>();
 
   /**
    * ⭐⭐ Record that `follower` is aligned to `pioneer`.
@@ -153,8 +160,31 @@ export class AlignmentLinks {
   }
 
   /** ⭐ Forget a follower's alignment. ⚠ Safe to call for a body that has none. */
+  /** ⭐ Mark a linked Follower as SEATED. ⛔ Silent for a body with no link — a seat needs one. */
+  seat(follower: ObjectId): boolean {
+    if (!this.forward.has(follower)) return false;
+    this.seated.add(follower);
+    return true;
+  }
+
+  /** ⭐ The unsnap: the link stays, the seat goes. */
+  unseat(follower: ObjectId): void {
+    this.seated.delete(follower);
+  }
+
+  isSeated(follower: ObjectId): boolean {
+    return this.seated.has(follower);
+  }
+
+  /** ⭐ Every seated Follower — what the scene re-derives each frame. ⚠ A copy. */
+  seatedFollowers(): ObjectId[] {
+    return [...this.seated];
+  }
+
   unlink(follower: ObjectId): void {
     const previous = this.forward.get(follower);
+    // ⛔ The seat cannot outlive the link, whichever path removed it.
+    this.seated.delete(follower);
     if (previous === undefined) return;
     this.forward.delete(follower);
     // ⚠ The reverse index is keyed by the Pioneer OBJECT, never by the face — the shake rule

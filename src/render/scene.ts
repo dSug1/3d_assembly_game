@@ -122,6 +122,9 @@ import {
 import type { Quat, Vec3 } from "../core/vec";
 import {
   makeWorld,
+  attach,
+  detach,
+  setLocalPlacement,
   setWorldPlacement,
   worldPlacementOf,
   WORLD_DOWN,
@@ -160,7 +163,7 @@ import {
   faceWorld,
   pushObjectConstraint,
 } from "../core/object_model";
-import { IDENTITY, dot, qmul } from "../core/vec";
+import { IDENTITY, add, dot, qRotate, qmul, sub } from "../core/vec";
 import { seededRotations } from "../core/random_pose";
 import { AlignmentLinks } from "../core/alignment_links";
 import {
@@ -169,6 +172,14 @@ import {
   type PioneerFaceCursor,
 } from "../core/pioneer_face_cursors";
 import { pointOnFace } from "../core/face_surface";
+import { SnapArming, snapConditionMet } from "../input/snap";
+import {
+  UnsnapDetector,
+  unsnapCouple,
+  unsnapParamsFrom,
+} from "../input/unsnap";
+import { SeatSnaps } from "../input/seat_snap";
+import { seatedLocalPlacement } from "../core/seat";
 import {
   alignedTravelAxes,
   secondTouchDown,
@@ -1464,6 +1475,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // with the owner's *"break the initial alignment instead"* policy — which is exactly why a
     // silent `false` would be the worst outcome: the constraint would be pushed and the body
     // would have no link, so nothing would ever release it and `prune` would not know.
+    // ⭐ `D100`: a re-aligned Follower leaves its seat first — a child of one Pioneer cannot be
+    // aligned to another through the tree.
+    unseatWorld(followerId);
     const linked = links.link(
       followerId,
       pioneerId,
@@ -1577,6 +1591,58 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const links = new AlignmentLinks();
 
+  /**
+   * ⭐⭐⭐ **THE SNAP AND THE SEAT** (`D100`, the owner, 2026-09-26). The DECISIONS are pure —
+   * `input/snap.ts` (may it, does it), `core/seat.ts` (where a seated body sits), `input/unsnap.ts`
+   * (the gesture that releases it) — and this file holds the state and the calls.
+   *
+   * ⭐ A seated Follower is a CHILD of its Pioneer in the model's tree, so *follows the transform*
+   * is `worldPlacementOf`'s doing; every frame its LOCAL placement is re-derived from the cursor
+   * (`syncSeats`), which is what makes a twist a turn about the FACE and a dragged cursor carry the
+   * body. ⛔ Its own translation is refused (`applyWorldStep`); the cascades skip it; a re-align, a
+   * release or a prune un-parents it (`unseatWorld`).
+   */
+  const snapArming = new SnapArming();
+  const seatSnaps = new SeatSnaps<ObjectId>();
+  const unsnapDetectors = new Map<string, UnsnapDetector>();
+  /** ⭐ Un-parent a follower in the WORLD and drop its flights. ⚠ The link's own flag is `links`'. */
+  const unseatWorld = (followerId: ObjectId): void => {
+    if (world.objects.get(followerId)?.parent !== null) {
+      world = detach(world, followerId);
+      hudDirty = true;
+    }
+    seatSnaps.cancel(followerId);
+    const cur = pioneerCursors.ofFollower(followerId);
+    if (cur !== null) {
+      snapArming.forget(cur.key);
+      unsnapDetectors.delete(cur.key);
+    }
+  };
+  /** ⭐ Are these two bodies a seated couple, either way round? — what a press must not break. */
+  const isSeatedCouple = (a: ObjectId | null, b: ObjectId | null): boolean => {
+    if (a === null || b === null) return false;
+    return (
+      (links.isSeated(a) && links.pioneerFor(a)?.objectId === b) ||
+      (links.isSeated(b) && links.pioneerFor(b)?.objectId === a)
+    );
+  };
+  /** ⭐ The seated root above a body — itself when it is not seated. */
+  const seatedRootOf = (id: ObjectId): ObjectId => {
+    let x = id;
+    for (let i = 0; i < 16 && links.isSeated(x); i++) {
+      const p = links.pioneerFor(x)?.objectId;
+      if (p === undefined) break;
+      x = p;
+    }
+    return x;
+  };
+  /** ⭐ Is `id` seated in the same assembly as `mover`? — the sway treats it as one body. */
+  const inAssemblyWith = (mover: ObjectId | null, id: ObjectId): boolean => {
+    if (mover === null || mover === id) return false;
+    if (!links.isSeated(mover) && !links.isSeated(id)) return false;
+    return seatedRootOf(mover) === seatedRootOf(id);
+  };
+
   // ⛔⛔⛔ **`bootAlignment` STOOD HERE AND IS DELETED** — the owner, 2026-09-25: *"boot the scene
   // with no aligned object."* ⚠ It pushed a `FACE_ALIGN` on `objectB` toward `objectA`'s bottom
   // face and linked the pair as `SNAPSHOT`, so the scene opened with a cyan/amber pair already on
@@ -1594,6 +1660,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const ev = evictObjectConstraints(world, followerId);
     world = ev.world;
     cancelAlignAnim(followerId);
+    // ⭐ `D100`: a released alignment takes its seat with it — the body keeps its world pose.
+    unseatWorld(followerId);
     links.unlink(followerId);
     alignModeOf.delete(followerId);
     // ⚠ The ACTIVE-alignment records are cleared only if this body is the one they name: the
@@ -3832,7 +3900,7 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldA
             `
 topo      ${[...topoOf.values()]
               .map((t) => `${t.faces.length}/${t.edges.length}`)
-              .join(" ")}  mk=${faceMarkers.size}  pfc=${pioneerCursors.size}` +
+              .join(" ")}  mk=${faceMarkers.size}  pfc=${pioneerCursors.size}  seated=${links.seatedFollowers().join(",") || "—"}  snapping=${seatSnaps.size}` +
             // ⛔⛔ **`outl=` REPORTED THE CACHE SIZE, WHICH IS NOT THE QUESTION** — a hand read it
             // as a bug (*"it goes to 2, not to zero"*) and was right to: a number that only ever
             // grows cannot describe what is on the screen. ⭐ `METHOD`: *audit an instrument
@@ -4458,6 +4526,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           isGrasped,
           pioneerOfMover,
           nearPioneer,
+          (id) => inAssemblyWith(heldId, id),
         )
       )
         continue;
@@ -4516,6 +4585,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           isGrasped,
           pioneerOfMover,
           nearPioneer,
+          (id) => inAssemblyWith(heldId, id),
         )
       )
         continue;
@@ -4597,6 +4667,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * are now the same function, and a third channel cannot be added without both.
    */
   const applyWorldStep = (grip: Held, step: Vec3): void => {
+    // ⛔⛔ `D100`: a SEATED or SNAPPING Follower is not translated by its own finger — it sits on
+    // its Pioneer's cursor and moves with the Pioneer. ⚠ Reported, never silent: this is the
+    // *nothing visibly happened* failure a hand cannot diagnose from outside.
+    const seatedId = idOf.get(grip.mesh);
+    if (
+      seatedId !== undefined &&
+      (links.isSeated(seatedId) || seatSnaps.has(seatedId))
+    ) {
+      lastVerdict = `snap: ${seatedId} is seated — move its Pioneer, or unsnap`;
+      return;
+    }
     // ⚠ The LeadingFace ray is NOT aimed from here any more — it follows what the channels asked
     // for (`frameAskedM`), which has no lag, rather than what the body did. See `noteAxisTravel`.
     // ⚠ The swing reads SCREEN travel (*"opposite to the dx movement"*), so the applied
@@ -5886,6 +5967,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐ The held body's HitFace: the FollowerFace this press WOULD use. ⚠ A different one
         // makes the press a RE-POINT rather than a no-op.
         heldPressFace: pressHeldGrip?.pressFace?.faceId ?? null,
+        // ⛔ `D100`: a seated couple's second touchpoint is the UNSNAP's, not the align's.
+        pressedIsSeatedPartner: isSeatedCouple(pressHeldId, pickedId ?? null),
         // ⭐⭐⭐ **`D87` — THE MODE COMES FROM *THIS* PRESS.** ⛔ `D67` read it off the held grip
         // because the held body was the Pioneer; inverted, the Pioneer is the body being pressed,
         // so the touch that selects it is the one that says which relation is wanted.
@@ -6099,6 +6182,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     if (!grip) return;
 
     if (info.type === PointerEventTypes.POINTERMOVE) {
+      // ⭐⭐⭐ **THE UNSNAP GESTURE** (`D100`): the FIRST holder on the Pioneer, the SECOND on its
+      // seated Follower, then a rapid move — the fingers' separation growing (tablet) or the
+      // driven pointer travelling (mouse) by the eviction shake's own leg within its window.
+      // ⛔ The pair and the numbers are `unsnap.ts`'s; this reads press order off the router.
+      feedUnsnap(s);
       // ⚠ Handed the live hit, which the router discards: a finger that presses on a
       // part and slides off is still holding it (§4).
       router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
@@ -6822,6 +6910,161 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   bootObjectAxes = axesFromFrame(requireGestureFrame());
   bootGestureFrame = requireGestureFrame();
 
+  /**
+   * ⭐ The offset radius in world metres NOW — the white contour's own conversion, so the snap's
+   * *within the offset radius* is the capture's.
+   */
+  const offsetRadiusM = (): number =>
+    captureOffsetM(
+      cfg.captureOffsetMm,
+      camera.radius,
+      camera.fov,
+      canvas.clientHeight,
+    );
+
+  /** ⭐ The PioneerFaceCursor in WORLD, from the MODEL (never the swayed mesh). */
+  const cursorWorldOf = (pioneerId: ObjectId, local: Vec3): Vec3 | null => {
+    const pw = worldPlacementOf(world, pioneerId);
+    if (!pw) return null;
+    return add(pw.position, qRotate(pw.orientation, local));
+  };
+
+  /**
+   * ⭐⭐⭐ **SEATS AND SNAPS, ONE PASS.** For every aligned couple: a SEATED one has its local
+   * placement re-derived from the cursor (`seatedLocalPlacement`) and its constraint retargeted;
+   * an unseated, armed one that meets `snapConditionMet` starts its position lerp; a lerp that
+   * lands ATTACHES the body and marks the seat.
+   */
+  const syncSeats = (nowMs: number): void => {
+    const offsetM = offsetRadiusM();
+    const coneRad = (cfg.pioneerCandidateConeDeg * Math.PI) / 180;
+    for (const cur of pioneerCursors.all()) {
+      const f = cur.followerId;
+      const faceLocal = world.objects
+        .get(f)
+        ?.faces.find((x) => x.id === cur.followerFaceId);
+      if (faceLocal === undefined) continue;
+      const cursorW = cursorWorldOf(cur.pioneerId, cur.position);
+      const pn = faceWorld(world, cur.pioneerId, cur.pioneerFaceId)?.normal;
+      if (cursorW === null || !pn) continue;
+
+      if (links.isSeated(f)) {
+        // ⭐ The seat is an IDENTITY, held every frame: face centre ON the cursor.
+        const o = world.objects.get(f);
+        if (!o || o.parent !== cur.pioneerId) continue;
+        const want = seatedLocalPlacement(cur.position, o.local.orientation, faceLocal.centre);
+        const d = sub(want.position, o.local.position);
+        if (dot(d, d) > 1e-16) world = setLocalPlacement(world, f, want);
+        // ⭐ Keep the constraint truthful as the assembly turns — the same retarget `FOLLOW` uses.
+        const stack = o.constraints;
+        if (stack.length === 1 && stack[0]!.kind === "FACE_ALIGN") {
+          const t = stack[0]!.targetWorld;
+          if (dot(t, pn) > -0.999999) {
+            world = clearObjectConstraints(world, f);
+            world = pushObjectConstraint(world, f, retargetAlignment(stack[0]!, pn), false);
+          }
+        }
+        continue;
+      }
+
+      const fw = faceWorld(world, f, cur.followerFaceId);
+      if (!fw) continue;
+      const dvec = sub(fw.centre, cursorW);
+      const dist = Math.sqrt(dot(dvec, dvec));
+      const armed = snapArming.armed(cur.key, dist, offsetM);
+      if (seatSnaps.has(f)) {
+        // ⚠ A flight follows a cursor or a Pioneer that moves: its END is the cursor NOW.
+        const q = alignSnaps.targetOf(f) ?? modelOrientation(meshOf.get(f)!);
+        seatSnaps.retarget(f, sub(cursorW, qRotate(q, faceLocal.centre)));
+        continue;
+      }
+      if (!armed) continue;
+      if (world.objects.get(f)?.frozen === true) continue;
+      if (!snapConditionMet(fw.centre, cursorW, offsetM, fw.normal, pn, coneRad)) continue;
+      const mesh = meshOf.get(f);
+      if (!mesh) continue;
+      const q = alignSnaps.targetOf(f) ?? modelOrientation(mesh);
+      seatSnaps.start(
+        f,
+        requirePose(mesh).position,
+        sub(cursorW, qRotate(q, faceLocal.centre)),
+        nowMs,
+      );
+      lastVerdict = `snap: ${f} → ${cur.pioneerId}/${cur.pioneerFaceId} (${(dist * 1000).toFixed(0)} mm)`;
+      hudDirty = true;
+    }
+    // ⭐ The position half of every snap in flight, on the alignment's own clock and easing.
+    for (const step of seatSnaps.advance(
+      nowMs,
+      cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
+      easeInOut,
+      (id) => meshOf.has(id) && pioneerCursors.ofFollower(id) !== null,
+    )) {
+      const mesh = meshOf.get(step.id);
+      if (!mesh) continue;
+      setModelPose(mesh, {
+        position: step.position,
+        orientation: modelOrientation(mesh),
+      });
+      if (!step.done) continue;
+      const cur = pioneerCursors.ofFollower(step.id);
+      if (cur === null) continue;
+      // ⭐⭐ LANDED: the body becomes a CHILD of its Pioneer, and the seat is marked on the link.
+      world = attach(world, step.id, cur.pioneerId);
+      if (world.objects.get(step.id)?.parent === cur.pioneerId && links.seat(step.id)) {
+        lastVerdict = `snap: ${step.id} SEATED on ${cur.pioneerId}/${cur.pioneerFaceId}`;
+      } else {
+        lastVerdict = `snap: ${step.id} could not be seated on ${cur.pioneerId} (refused)`;
+      }
+      hudDirty = true;
+    }
+  };
+
+  /**
+   * ⭐⭐ Feed the unsnap detector with the two holders' positions, in mm on the glass; act when it
+   * fires. ⛔ Order is the ROUTER's press order (`unsnapCouple` reads it); the device is the
+   * driven grip's `pointerType`.
+   */
+  const feedUnsnap = (sample: Sample): void => {
+    const holders = router.objects();
+    if (holders.length !== 2) return;
+    const g1 = held.get(holders[0]!.id);
+    const g2 = held.get(holders[1]!.id);
+    if (!g1 || !g2) return;
+    const id1 = idOf.get(g1.mesh);
+    const id2 = idOf.get(g2.mesh);
+    if (id1 === undefined || id2 === undefined) return;
+    const follower = unsnapCouple(
+      id1,
+      id2,
+      (f) => links.pioneerFor(f)?.objectId ?? null,
+      (f) => links.isSeated(f),
+    );
+    if (follower === null) return;
+    const cur = pioneerCursors.ofFollower(follower);
+    if (cur === null) return;
+    // ⭐ A mouse's driven pointer is the real one (`pointerType === "mouse"`); the right-button
+    // touchpoint is synthesised as "touch" and never moves.
+    const mouseGrip = g1.pointerType === "mouse" ? g1 : g2.pointerType === "mouse" ? g2 : null;
+    let det = unsnapDetectors.get(cur.key);
+    if (det === undefined) {
+      det = new UnsnapDetector(unsnapParamsFrom(cfg), mouseGrip === null ? "TOUCH" : "MOUSE");
+      unsnapDetectors.set(cur.key, det);
+    }
+    const mm = (p: Sample) => ({ x: p.x / mmToPx(1), y: p.y / mmToPx(1) });
+    const a = mouseGrip === null ? mm(g1.prev) : mm(mouseGrip.prev);
+    const b = mouseGrip === null ? mm(g2.prev) : mm(mouseGrip === g1 ? g2.prev : g1.prev);
+    // ⚠ `prev` is the last sample each grip saw; this event's own sample is the newer of the two.
+    const fired = det.push(sample.t, a, b);
+    if (!fired) return;
+    unseatWorld(follower);
+    links.unseat(follower);
+    snapArming.holdOff(cur.key);
+    unsnapDetectors.delete(cur.key);
+    lastVerdict = `unsnap: ${follower} released from ${cur.pioneerId} — re-arms once outside the offset radius`;
+    hudDirty = true;
+  };
+
   engine.runRenderLoop(() => {
     const now = performance.now();
 
@@ -7018,6 +7261,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         links.alignedObjects(),
         (f) => links.pioneerFor(f),
         (f) => alignModeOf.get(f),
+        (f) => links.isSeated(f),
       ),
       // ⚠ WORLD orientation, through the parent chain — never `local`, which is measured in
       // someone else's frame the moment an assembly exists.
@@ -7095,6 +7339,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         links.alignedObjects(),
         (f) => links.pioneerFor(f),
         (f) => alignModeOf.get(f),
+        (f) => links.isSeated(f),
       ),
       (id) => worldPlacementOf(world, id)?.position ?? null,
     );
@@ -7129,6 +7374,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     for (const [follower, position] of moves.baselines) {
       links.notePosition(follower, position);
     }
+
+    // ⭐⭐⭐ **THE SNAP AND THE SEATS, EVERY FRAME** (`D100`) — after the cascades, which may have
+    // moved a Pioneer, and before the meshes are written.
+    syncSeats(now);
 
     const tauSec = cfg.translateInertiaMs / 1000;
     // ⛔⛔ ITERATE THE **MODEL**, NOT THE FOLLOWER MAP — and this line is a defect fix, not
@@ -7287,6 +7536,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // value is deliberately NOT used to decide what to hide; see below.
     for (const id of links.prune((f) => alignedFaceOf(world, f) !== null)) {
       alignModeOf.delete(id);
+      unseatWorld(id);
       // ⚠ A pruned link is a state change with no pointer event behind it. See `hudDirty`.
       hudDirty = true;
     }

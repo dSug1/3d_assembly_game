@@ -142,8 +142,9 @@ the seat makes the Follower a **child** of the Pioneer rather than adding a thir
 followers (`A17`) or only the unsnap does; and that the sway must treat a seated assembly as one
 body (`receivesSway` already spares the mover's Pioneer).
 
-⚠ The approach is **not finalised** ([`../../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md)
-§6.3, and the swing trial ships OFF). It is the next thing to build, with the snap.
+✅ **The snap, the seat and the unsnap are built** (2026-09-26, `D100`) — the rules are
+[`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.13.
+⚠ The approach is **not built**: the zone only lights white, and the swing trial ships OFF.
 
 ---
 

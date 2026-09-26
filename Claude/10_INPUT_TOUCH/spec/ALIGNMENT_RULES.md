@@ -1840,3 +1840,36 @@ twist about the face normal that no single shortest swing can reproduce.
 Follower turns about the aligned normal by the smallest angle — **≤ 45°** — that squares its edges
 to the Pioneer's (`squaringTwist`, `input/alignment.ts`). The normal is untouched and the spin
 about it stays free; ⚠ the total turn is no longer strictly minimal, by the owner's choice.
+
+### 11.13 — ⭐⭐⭐ `D100`: THE SNAP, THE SEAT AND THE UNSNAP — BUILT 2026-09-26
+
+> *"Snap conditions: if the center of the followerFace is within an offset radius distance from
+> the PioneerFaceCursor, and the anti-normals of the pioneerface and followerface are within the
+> fuchsia angle cone, the followerface snaps the pioneerface. Snap = followerface normal anti-align
+> with PioneerFace normal and followerFace center sets at the position of the PioneerFaceCursor
+> which consequently drives the position of the follower object. All the movements to be lerp and
+> slerp. Once snapped, the follower object follows the transform of the Pioneer object (= similar
+> to a child object) and can still be rotated around the followerFace center around the
+> followerFace normal axis. To unsnap: first touch on pioneer object and second touch on follower
+> object and one rapid zoom out movement (same sliders as eviction shake) or first right click hold
+> on pioneer object + second left click hold on follower object + rapid delta position."* — the
+> owner, 2026-09-26 (the unsnap order corrected the same day, *"to maintain symmetry between mobile
+> and desktop"*)
+
+| | rule | where |
+|---|---|---|
+| **may it snap** | only an ALIGNED couple (the cursor exists per alignment); ⛔ after an unsnap, **held off until the couple has left the offset radius once** (re-arm on exit, `3D3`'s) | `input/snap.ts` `SnapArming` |
+| **does it snap** | FollowerFace centre within the **capture offset** (mm on the glass → world metres, the white contour's own number) of the cursor, AND the normals within the **fuchsia cone** (`pioneerCandidateConeDeg`) of anti-parallel. ⭐ No new number | `snapConditionMet` |
+| **the snap** | the orientation is the alignment's slerp (already anti-parallel); the position **lerps** the face centre onto the cursor on the same clock and easing; ⚠ a flight retargets if the cursor or Pioneer moves | `input/seat_snap.ts` |
+| **the seat** | on landing the Follower becomes a **CHILD** of its Pioneer (`object_model.attach`, `3D1`'s tree) and the link is marked seated. Every frame its LOCAL placement is **re-derived** from the cursor: `position = cursor − rotate(orientation, faceCentre)` — so the face centre is on the cursor by construction, a twist about the normal is a turn **about the face**, and a dragged cursor (Free Flow) carries the body | `core/seat.ts`, `scene.ts` `syncSeats` |
+| **what a seat refuses** | its own translation (reported: *"seated — move its Pioneer, or unsnap"*); the turn and move cascades skip it (the tree carries it); the sway treats the assembly as one body; a press on the partner aligns/swaps/undoes **nothing** | `applyWorldStep`, `followerLinksFrom`, `receivesSway`, `pressMeaning` |
+| **what ends a seat** | the **unsnap**; a release of the alignment; a re-alignment; a prune — each un-parents the body where it stands | `unseatWorld` |
+| **the unsnap** | FIRST holder on the Pioneer, SECOND on its seated Follower (both devices), then within the eviction shake's `evictShakeWindowMs` a growth of the fingers' **separation** by `evictShakeLegMm` (tablet, *zoom out*) or a **travel** of the driven pointer by that leg (mouse) | `input/unsnap.ts` |
+
+⚠⚠ **NOT BUILT, deliberately**: the **approach** — the offset-radius zone still only lights the
+white contour (*"for the moment, we are not using it"*), the swing trial ships OFF, and no mate
+connector is pushed: the seat is the tree plus a retargeted `FACE_ALIGN`, and `core/mate_connector.ts`
+stays unwired.
+⚠ Costs, unjudged by a hand: the white capture contour still lights on a seated pair (gap zero);
+a seated Follower held in TRANSLATE shows its axes but moves nothing; the frozen plate is a
+parent, never a child, so a part seats ON it and the plate cannot seat on anything.
