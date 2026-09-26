@@ -1895,3 +1895,18 @@ parent, never a child, so a part seats ON it and the plate cannot seat on anythi
 
 ⚠ Unjudged by a hand, all of it. ⚠ What a seated member held in `TRANSLATE` shows is now the
 assembly's axes at the touched face.
+
+#### 11.13.2 — ⭐⭐ `D103`: THE FLICK UNSNAPS — the brutal way, SPECIFIED, NOT BUILT (2026-09-26)
+
+> *"There is another way to unsnap: 1 by flicking the snapped object. This is fair, because the
+> second way is more brutal (it also unsnaps any follower which were aligned with the object being
+> unsnapped): it costs less but is less chirurgical."* — the owner, 2026-09-26
+
+| | my reading | ⚠ why it needs saying |
+|---|---|---|
+| **the trigger** | the recognizer's `FLICK` verdict at the release of a touchpoint on a **SEATED** object | ⛔ today a flick means `IN3`'s **rotation reset** (`flickResetPlan`); on a seated object the unsnap REPLACES it, and on a free or merely aligned object the reset stays exactly as it is |
+| **what it releases** | the flicked object's own seat, **and every seat that depends on it** — its seated Followers, and theirs, down the chain | *"any follower which were aligned with the object being unsnapped"* — I read *aligned* as **seated**; ⛔ **owner to confirm** whether an aligned-but-unseated Follower of it also loses its alignment |
+| **where things end up** | every released body stays where it stands (no jump); each couple is held off until it leaves the offset radius, as after the precise unsnap | the same re-arm, or they would snap straight back |
+| **which object** | the RAW body the finger touched | ⛔⛔ `D102` redirects a press on any member to the assembly's ROOT, so the flick must read the raw body, or flicking a mid-stack part would unsnap the root instead |
+| **alignment** | the flicked object keeps its alignment (only the SEAT goes), as the precise unsnap does | ⛔ **owner to confirm** — *brutal* may mean the alignment goes too |
+| **score** | **1** episode, against the precise unsnap's **2** | `20_GAME_RULES/spec/SCORE.md` §5.1 |

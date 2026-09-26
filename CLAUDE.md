@@ -202,6 +202,8 @@ cascades and the sway treat the assembly as one body, and a press on the partner
 ROOT (the walk stops below a frozen Pioneer, so a part on the plate holds the part), the gizmo
 anchors on the touched face, and the snap is a **magnet** — `snapMs` 60 ms on an accelerating
 `u²`. ⚠ The offset is now 10 mm (~40 mm of world at boot): nothing captures at rest.
+⭐ **UNSNAP COSTS 2 EPISODES; A FLICK UNSNAPS FOR 1** (`D103`) — but releases every seat that
+depends on the flicked object: cheaper, less surgical. ⛔ The flick-unsnap is specified, not built.
 ⚠ The approach itself is not built: the zone only lights white.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
