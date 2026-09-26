@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1264 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1270 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -181,7 +181,7 @@ swing's four — ⛔ **the swing ships at 0, OFF**; the owner's 30° of 2026-09-
 away); **OBJECT TRANSLATION** (+ *PIONEER translates*, *WorldAxisB*, *translate: plane/channels*);
 **OBJECT ROTATION**; **FACE ALIGNMENT** › *PIONEERFACECURSOR* (Free Flow drag on/off, sensitivity) and
 *FOLLOWERFACE* (x-ray opacity, with *EVICTION SHAKE* and *CAPTURE* inside it).
-⛔ **`captureOffsetMm` ships at 5 mm** (the owner, 2026-09-26; was 15, briefly 4) — 1.5 mm clear of the 3.5 mm deadband.
+⛔ **`captureOffsetMm` ships at 15 mm** (the owner, 2026-09-26: 15 → 4 → 5 → 15 in one day; the radius is the snap's reach).
 ⭐⭐⭐ **THE SCORE IS SPECIFIED, NOT BUILT** (`D99`–`D101`, 2026-09-26) →
 [`Claude/20_GAME_RULES/spec/SCORE.md`](Claude/20_GAME_RULES/spec/SCORE.md). The unit is **one
 touchpoint episode** (press → release, counted at the router, the mouse's synthesised touchpoints
@@ -198,6 +198,10 @@ cascades and the sway treat the assembly as one body, and a press on the partner
 (mouse) on the eviction shake's sliders; it re-arms only once **outside the radius**. Pure in
 `input/snap.ts`, `input/unsnap.ts`, `input/seat_snap.ts`, `core/seat.ts` →
 [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.13.
+⭐⭐ **AND A SEATED ASSEMBLY DRIVES AS ONE BODY** (`D102`): a press on any member holds the
+ROOT (the walk stops below a frozen Pioneer, so a part on the plate holds the part), the gizmo
+anchors on the touched face, and the snap is a **magnet** — `snapMs` 60 ms on an accelerating
+`u²`. ⚠ The 15 mm offset returns: the pyramid captures the plate at boot again.
 ⚠ The approach itself is not built: the zone only lights white.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
@@ -302,7 +306,7 @@ degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*). ⛔ Roll
 ⚠⚠ **AND IT HAS A VISIBLE COST, MEASURED RATHER THAN DISCOVERED**: tilting the pyramid swings a
 corner down, so its surface gap to the base plate closes to **53 mm** against a **60 mm** capture
 band — so the pyramid and the plate showed a white capture pair at boot. ✅ **UNDONE 2026-09-26 by
-the owner's 5 mm capture offset** (briefly 4): the band is ~20 mm at the boot camera, and
+the owner's 5 mm capture offset** (briefly 4): the band was ~20 mm at the boot camera, and
 *"at boot nothing captures at rest"* — the 2026-09-17 audit's own property — holds again, pinned in
 both directions by the same vector, now in its third reading.
 ⚠ The parts' mutual gap moved **280 → 216 mm** with the tilt.

@@ -1873,3 +1873,25 @@ stays unwired.
 ⚠ Costs, unjudged by a hand: the white capture contour still lights on a seated pair (gap zero);
 a seated Follower held in TRANSLATE shows its axes but moves nothing; the frozen plate is a
 parent, never a child, so a part seats ON it and the plate cannot seat on anything.
+
+#### 11.13.1 — ⭐⭐ `D102`: THE ASSEMBLY DRIVES AS ONE BODY, THE MAGNET, AND 15 mm (2026-09-26)
+
+> *"Set the default offset radius to 15 mm. Make the snap translation movement faster and more
+> abrupt so the user can feel as if there was a magnet effect. When the follower is snapped to the
+> pioneer, they shall be treated as a whole during rotation and translation (although the capacity
+> to unsnap shall remain). In particular, when translating, the faces of the pioneer and follower
+> shall be part of the same object and the gizmo shall reach any face (except the parts which are
+> occulted in the PioneerFace and FollowerFace). Also, the follower shall be raycast hittable to
+> receive the input as part of the same object."* — the owner, 2026-09-26
+
+| | rule | where |
+|---|---|---|
+| **the press drives the ROOT** | a press on any member of a seated assembly holds the top-most Pioneer reached by walking seated links up; the tree carries the members, so translation, yaw/pitch/roll, twist and the second finger's channels act on the whole. ⛔ The walk **stops below a frozen Pioneer**: a part seated on the plate holds the part (translation refused, twist free) | `input/assembly.ts` `assemblyRoot` |
+| **the raw face** | the member face the finger touched is kept beside the drive body: the **gizmo anchors there** (*"reach any face"*; the two mating faces are inside the assembly and cannot be hit). ⛔ It is NOT a HitFace — face ids are per body — so an assembly is aligned by a ROOT face only | `Held.rawPress` |
+| **the unsnap, redirected** | the second touch on the seated Follower now arrives as a `SECOND` on the root; the gesture reads the RAW pair (first the Pioneer, second the Follower) and the second's own samples; a member seated on the frozen plate stays a separate holder and the two-holder form serves it | `feedUnsnap` |
+| **a frozen Pioneer is holdable** | only while a seated Follower rests on it — the unsnap's first touch; a bare plate's first touch is still `D89`'s miss. ⚠ Cost: a finger resting on a loaded plate holds it instead of orbiting | `frozenHoldAdmitted` |
+| **the magnet** | the position half of a snap has its own time, **`snapMs` = 60 ms** (slider 0–400, below the sway radius), and `magnetEase = u²`, which accelerates INTO contact; the orientation keeps the alignment's slerp | `seat_snap.ts` |
+| **15 mm** | `captureOffsetMm` ships at 15 again (15 → 4 → 5 → 15 in one day): the radius is the snap's reach now. ⚠ The tilted pyramid captures the plate at boot again — the vector's fourth reading | `gestureConfig.ts` |
+
+⚠ Unjudged by a hand, all of it. ⚠ What a seated member held in `TRANSLATE` shows is now the
+assembly's axes at the touched face.
