@@ -567,3 +567,14 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 |---|---|---|---|
 | `D89` | ⛔⛔⛔ **`D77`'s CARVE-OUT FOLLOWS THE ROLE: THE **FIRST** TOUCH ON A FROZEN BODY IS THE MISS NOW** | 2026-09-25 | ⛔⛔ `D87` moved the Pioneer onto the **second** touch — the one `D77` discarded — putting the plate out of reach. ⭐⭐ The FIRST touch is the useless one now: a held body is the FOLLOWER, and a frozen body is refused that role. ⚠⚠ **Cost, named and chosen**: a finger resting on the plate selects it as a Pioneer. ⭐⭐⭐ `METHOD`: *a guard written in terms of WHICH FINGER is one a role inversion silently aims at the wrong one* → §11.7 |
 | `D90` | ⭐⭐⭐ **A PRESS ON THE HELD BODY'S OWN FOLLOWER IS A *SWAP*, AND THE RELEASE PATH STOPS ALIGNING** | 2026-09-25 | *"why is there no swap between the pioneer and the follower?"* ⛔⛔ A guard refused it — correctly under `D67`, where *hold B, press A* named the relation that already EXISTED; inverted, the same fingers name the opposite one. ⭐⭐ A swap cannot close a loop (a Follower is capped at one alignment): `cycleBreaker` names the prospective Pioneer's own link and `scene.ts` severs it. ⛔ It reverses the owner's 2026-09-17 *"instead break the initial alignment"*; both stand. ⛔⛔ And `tapMeaning` — **the last rule speaking `D67`** — loses its `ALIGN` → §11.8 |
+
+---
+
+## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-26 — live rows, essays only
+
+⛔ Still binding; moved to pay for `D98`.
+
+| # | decision | date | consequence |
+|---|---|---|---|
+| `D93` | ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, WITH THE TWO PARTS TILTED 30°** | 2026-09-25 | *"boot the scene with no aligned object, translation mode"*, then *"rotate the grey rectangle 30 degrees roll and 30 pitch. Same for the pyramid, in opposite senses."* ⛔ `bootAlignment` is deleted — it never ROTATED anything, so removing it changed STATE, not a pixel. ⭐⭐ Roll and pitch are **`A7`'s**, so at the boot camera roll is world `z` and pitch world `x`; roll first. ⚠⚠ **And the tilt has a visible cost, MEASURED**: `objectB`'s gap to the plate closes to **53 mm** against a **60 mm** capture band, so the pyramid and the plate showed a white capture pair at boot — ✅ gone since the 5 mm offset (2026-09-26). ⚠ `D63`'s pre-aligned jig is gone with the alignment |
+| `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | Three device reports: the channels *"seem inverted"*, *"very weak"*, *"dead at a level camera"*. ⭐⭐ **BLENDER SAYS *NO* TO THE PAIRING**: a constrained move maps the WHOLE delta onto the chosen axis, with **no cosine loss**. ⛔ So the holder's 2D delta is **solved** onto both horizontal axes (`translatePairing=1`), and edge-on falls back to the judged fixed rate inside Blender's own 5° cone. ⚠⚠ It made `D74`'s in-zone basis INERT — answered by `D82` → `queue_notes/IN4.md` |

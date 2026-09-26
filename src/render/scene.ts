@@ -81,6 +81,7 @@ import {
   tapMeaning,
   pressMeaning,
   outsideTapReleases,
+  squaringTwist,
   flickResetPlan,
   type TapContext,
   ShakeDetector,
@@ -1382,7 +1383,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // one in the config. ⚠ Moving that slider moves both, which is the cost of not adding a
     // knob; splitting them later is one field and one line.
     // ⚠ At `0` the slider means *no animation*, exactly as it does for the camera.
-    const target = qmul(solved.rotation, before);
+    // ⭐⭐⭐ **AND THEN SQUARED TO THE PIONEER** — the owner, 2026-09-26: *"add that squaring
+    // twist"*. ⛔ A turn about the aligned normal only (≤ 45°), so the constraint just pushed is
+    // untouched; the decision is `squaringTwist`'s (`input/alignment.ts`).
+    const swung = qmul(solved.rotation, before);
+    const pioneerOrientation = worldPlacementOf(world, pioneerId)?.orientation;
+    const target =
+      pioneerOrientation === undefined
+        ? swung
+        : qmul(
+            squaringTwist(capped.stack[0]!.targetWorld, swung, pioneerOrientation),
+            swung,
+          );
     const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
     if (snapMs > 0) {
       alignSnaps.start(followerId, drawn, target, performance.now());

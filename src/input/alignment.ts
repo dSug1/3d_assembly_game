@@ -26,7 +26,18 @@
  * applies, exactly as `drag_rule.ts` and `mode_toggle.ts` are shaped.
  */
 import type { Constraint } from "../core/constraint_stack";
-import { qconj, qmul, type Quat, type Vec3 } from "../core/vec";
+import {
+  IDENTITY,
+  cross,
+  dot,
+  normalize,
+  qFromAxisAngle,
+  qRotate,
+  qconj,
+  qmul,
+  type Quat,
+  type Vec3,
+} from "../core/vec";
 
 /**
  * ⭐⭐⭐ **THE DIRECTION AN ALIGNED FOLLOWER FACE MUST END UP POINTING** — and the ONE place
@@ -573,4 +584,62 @@ export function outsideTapReleases(
   heldIsAligned: boolean,
 ): boolean {
   return heldObjectCount === 1 && heldIsAligned;
+}
+
+/**
+ * ⭐⭐⭐ **THE SQUARING TWIST** — the owner, 2026-09-26: *"add that squaring twist"*.
+ *
+ * > *"I have seen cases where one follower face is aligned to a rectangle face (which removes the
+ * > initial roll gap) and when I align the same follower face to another rectangle face, the roll
+ * > reappears and I lose the perpendicularity."*
+ *
+ * ⛔⛔ **THE MINIMAL SWING CANNOT KEEP IT, MEASURED**: a Follower square to the plate, swung onto a
+ * face of the grey part (booted 30° roll + 30° pitch), lands 8.2°–30° off square to it — two turns
+ * about different axes carry a twist about the face normal that no single shortest swing can
+ * reproduce (spec §11.12). ⭐ So after the swing the Follower turns ABOUT THE ALIGNED NORMAL by the
+ * smallest angle that puts its edges square to the Pioneer's — **at most 45°**, the nearest of the
+ * four square positions. ⚠ The total turn is no longer strictly minimal; the owner chose that.
+ *
+ * ⭐ It turns about the aligned normal only, so the alignment itself is untouched, and the spin
+ * about that normal stays FREE afterwards (`D37`'s cap is unchanged).
+ *
+ * ⭐ A face's edge direction is the body axis lying most nearly IN its plane, projected onto it —
+ * exact for a box face and for the pyramid's slanted sides, whose body `z` lies in their plane.
+ * ⛔ A projection that collapses returns `IDENTITY`: suppress, do not guess.
+ *
+ * @param axis the aligned normal in WORLD — the Follower face's direction after the swing.
+ * @param follower the Follower's WORLD orientation after the swing.
+ * @param pioneer the Pioneer's WORLD orientation.
+ * @returns the world rotation to compose on the LEFT of the swung orientation.
+ */
+export function squaringTwist(axis: Vec3, follower: Quat, pioneer: Quat): Quat {
+  const n = normalize(axis);
+  if (n === null) return IDENTITY;
+  const edgeOf = (q: Quat): Vec3 | null => {
+    let best: Vec3 | null = null;
+    let bestK = Infinity;
+    for (const e of [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ] as const) {
+      const v = qRotate(q, e as Vec3);
+      const k = Math.abs(dot(v, n));
+      if (k < bestK) {
+        bestK = k;
+        best = v;
+      }
+    }
+    if (best === null) return null;
+    const k = dot(best, n);
+    return normalize([best[0] - n[0] * k, best[1] - n[1] * k, best[2] - n[2] * k]);
+  };
+  const f = edgeOf(follower);
+  const p = edgeOf(pioneer);
+  if (f === null || p === null) return IDENTITY;
+  const angle = Math.atan2(dot(cross(f, p), n), dot(f, p));
+  // ⭐ Square, not parallel: edges a quarter turn apart are already square, so only the remainder
+  // modulo 90° is turned — which is what bounds the twist at 45°.
+  const quarter = Math.PI / 2;
+  return qFromAxisAngle(n, angle - quarter * Math.round(angle / quarter));
 }

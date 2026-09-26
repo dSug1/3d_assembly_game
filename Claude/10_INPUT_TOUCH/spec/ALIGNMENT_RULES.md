@@ -1835,5 +1835,8 @@ snap's end (`AlignSnaps.targetOf`) and still starts drawing from the drawn pose.
 ⚠⚠ **THE LOST SQUARENESS IS THE GEOMETRY, MEASURED**: a Follower square to the plate, re-aligned by
 the minimal turn to the grey part (booted 30° roll + 30° pitch), lands **8.2°** (top face),
 **17.6°** (side) or **30.0°** (end) off square to it — two turns about different axes carry a
-twist about the face normal that no single shortest swing can reproduce. ⛔ Keeping squareness to the
-Pioneer would need an extra twist after the swing, which is not *minimal*: an owner decision.
+twist about the face normal that no single shortest swing can reproduce.
+⭐⭐ **THE OWNER CHOSE THE SQUARING TWIST** (*"add that squaring twist"*): after the swing the
+Follower turns about the aligned normal by the smallest angle — **≤ 45°** — that squares its edges
+to the Pioneer's (`squaringTwist`, `input/alignment.ts`). The normal is untouched and the spin
+about it stays free; ⚠ the total turn is no longer strictly minimal, by the owner's choice.
