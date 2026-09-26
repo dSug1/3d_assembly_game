@@ -1360,7 +1360,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     world = clearObjectConstraints(world, followerId);
     world = pushObjectConstraint(world, followerId, capped.stack[0]!, false);
 
-    const before = modelOrientation(followerGrip.mesh);
+    // ⭐⭐ **SOLVED FROM THE LAST *ALIGNED* ORIENTATION** — the owner, 2026-09-26: *"the rotation
+    // shall be minimum from its last aligned quaternion."* ⛔ Mid-snap, the drawn pose is only part
+    // of the way there, and a swing from it would keep the unfinished part of the previous turn.
+    // ⚠ The new snap still STARTS at the drawn pose, so nothing jumps.
+    const drawn = modelOrientation(followerGrip.mesh);
+    const before = alignSnaps.targetOf(followerId) ?? drawn;
     const solved = solve(capped.stack, before, {
       evictOnOverflow: cfg.evictOnOverflow,
     });
@@ -1380,7 +1385,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const target = qmul(solved.rotation, before);
     const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
     if (snapMs > 0) {
-      alignSnaps.start(followerId, before, target, performance.now());
+      alignSnaps.start(followerId, drawn, target, performance.now());
     } else {
       setModelOrientation(followerGrip.mesh, target);
       alignSnaps.cancel(followerId);

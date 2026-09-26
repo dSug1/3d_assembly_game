@@ -171,3 +171,31 @@ describe("⭐⭐⭐ RIDE ALONG — a gesture during the snap moves the arc, not 
     expect(apart(landed.orientation, qmul(Y90, qmul(Z90, X90)))).toBeCloseTo(0, 9);
   });
 });
+
+describe("⭐⭐ `targetOf` — the last ALIGNED orientation, for a re-alignment mid-flight", () => {
+  // > *"the rotation shall be minimum from its last aligned quaternion"* — the owner, 2026-09-26
+  const q90 = qFromAxisAngle([0, 0, 1], Math.PI / 2);
+
+  it("⭐ while travelling it is the snap's END, not the pose it is drawn at", () => {
+    // ⛔ RED against returning `from`, or the half-way pose.
+    const snaps = new AlignSnaps<string>();
+    snaps.start("f", IDENTITY, q90, 0);
+    expect(snaps.targetOf("f")).toEqual(q90);
+  });
+
+  it("⭐ a ride is composed in — the end is where the body will actually land", () => {
+    const snaps = new AlignSnaps<string>();
+    const r = qFromAxisAngle([1, 0, 0], 0.3);
+    snaps.start("f", IDENTITY, q90, 0);
+    snaps.ride("f", r);
+    expect(qAngle(qmul(qconj(snaps.targetOf("f")!), qmul(r, q90)))).toBeCloseTo(0, 12);
+  });
+
+  it("⚠ nothing in flight → null (landed or cancelled), and the caller reads the model", () => {
+    const snaps = new AlignSnaps<string>();
+    expect(snaps.targetOf("f")).toBeNull();
+    snaps.start("f", IDENTITY, q90, 0);
+    snaps.cancel("f");
+    expect(snaps.targetOf("f")).toBeNull();
+  });
+});
