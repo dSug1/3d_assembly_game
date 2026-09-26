@@ -57,8 +57,9 @@ import { type Vec3 } from "../core/vec";
 import { makeWorld, type ObjectId } from "../core/object_model";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { RotationFollower, RotationTally } from "../input/rotation_increment";
-import { OBJECT_SIZE_M, OBJECT_TOP_SCALE, PLATE_DIMS_M, PYRAMID_DIMS_M, bootTilt } from "../core/scene_dims";
 import { seededRotations } from "../core/random_pose";
+import { resolveBootOrientation, type SceneDescriptor } from "../core/game_structure";
+import { SCENE_0 } from "../content/scene_0";
 import { AlignmentLinks } from "../core/alignment_links";
 import { PioneerFaceCursors } from "../core/pioneer_face_cursors";
 import { SnapArming } from "../input/snap";
@@ -87,9 +88,14 @@ export interface SceneHandle {
   framesRendered: () => number;
 }
 
-export function createScene(canvas: HTMLCanvasElement): SceneHandle {
+export function createScene(
+  canvas: HTMLCanvasElement,
+  /** ⭐ The scene to boot — `Scene_0` unless a level says otherwise (`core/game_structure.ts`). */
+  spec: SceneDescriptor = SCENE_0,
+): SceneHandle {
   const st = {} as SceneState;
   st.canvas = canvas;
+  st.sceneSpec = spec;
   st.engine = new Engine(st.canvas, true, { stencil: true }, true);
   st.scene = new Scene(st.engine);
 
@@ -200,19 +206,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // about, and this change makes it loudly instead.
   // ⭐ `+30°` roll and `+30°` pitch about the BOOT CAMERA's axes (`z` and `x`) — the owner,
   // 2026-09-25. ⛔ The pyramid takes `−30°`: *"same for the pyramid, in opposite senses."*
-  make(st, "objectA", new Vector3(-0.2, 0, 0), [0.65, 0.67, 0.72], bootTilt(1));
   // ⭐⭐⭐ **THE RIGHT-HAND BODY IS THE TRAPEZOIDAL PYRAMID** — *"modify the rectangle on the
   // right to be a trapezoidal pyramid"* (the owner, 2026-09-22). ⚠ `objectB` is the one on the
   // right: it sits at `+x`, and it is the FOLLOWER of the boot pair a few hundred lines below.
-  make(st, 
-    "objectB",
-    new Vector3(0.2, 0, 0),
-    [0.45, 0.58, 0.72],
-    bootTilt(-1),
-    PYRAMID_DIMS_M,
-    false,
-    OBJECT_TOP_SCALE,
-  );
   // ⭐ A THIRD OBJECT, so the barycentre mechanism has something to choose BETWEEN.
   // ⚠ Deliberately off-axis and off-plane: with three collinear objects every barycentre lies
   // on the same line and the ray could not distinguish them, so the test would look like it
@@ -229,14 +225,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⭐⭐ **AND IT IS FROZEN** — *"the object transform cannot be modified and the object cannot
   // be a follower"*. ⛔ A base plate that could be dragged, rotated or aligned to something
   // would not be a base plate; it is the fixed thing everything else is placed against.
-  make(st, 
-    "objectC",
-    new Vector3(0, -OBJECT_SIZE_M * 3, 0),
-    [0.72, 0.58, 0.45],
-    undefined,
-    PLATE_DIMS_M,
-    true,
-  );
   // ⭐⭐ **A FOURTH PART, PINK** — *"a fourth pink rectangle replicate of the blue rectangle and
   // place it where the orange rectangle previously was"*. ⭐ *Replicate* is about the SIZE: the
   // same `L × 2L × 3L` as the other parts, which is why it takes the default dims.
@@ -255,12 +243,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⚠ `(0, 0.307246, 0.16)` is where the orange body sat when all three parts formed a 5L
   // triangle — so the three PARTS are still 5L apart pairwise, and the plate is the only body
   // that left that arrangement.
-  make(st, 
-    "objectD",
-    new Vector3(0, 0.307246, 0.16),
-    [0.92, 0.5, 0.72],
-    bootRotations[2],
-  );
+  // ⭐⭐⭐ **THE BODIES BOOT FROM `Scene_0`'s DATA** (the owner, 2026-09-26: *"name our current
+  // scene as Scene_0"*): four `BodySpec`s in `content/scene_0.ts` replaced four `make(...)` calls
+  // here, in the same order with the same numbers. ⛔ The orientation names are resolved by
+  // `core/game_structure.ts`, where a vector reaches them.
+  for (const b of st.sceneSpec.bodies) {
+    make(
+      st,
+      b.id,
+      new Vector3(b.position[0], b.position[1], b.position[2]),
+      [b.colour[0], b.colour[1], b.colour[2]],
+      resolveBootOrientation(b.orientation, bootRotations),
+      b.dims,
+      b.frozen,
+      b.topScale,
+    );
+  }
 
   st.idOf = new Map<AbstractMesh, ObjectId>();
   st.meshOf = new Map<ObjectId, AbstractMesh>();

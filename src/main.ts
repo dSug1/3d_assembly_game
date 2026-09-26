@@ -14,6 +14,9 @@
  * silent skip is worse than a failure, because a failure gets investigated.
  */
 import { createScene } from "@render/scene";
+import { installGameShell } from "@render/screens";
+import { GAME_CONTENT } from "./content/worlds";
+import { SCENE_0 } from "./content/scene_0";
 import { isStaleBuild, parseServedBuild, refreshUrl } from "@core/build_gate";
 
 /**
@@ -77,7 +80,12 @@ try {
   const canvas = document.getElementById("app") as HTMLCanvasElement | null;
   if (!canvas) throw new Error("no #app canvas in the document");
 
-  const handle = createScene(canvas);
+  // ⭐ `?flow=1` boots the game shell (intro → menu → worlds → levels); the default goes straight
+  // to `Scene_0`, so the device loop pays no taps. Flipping the default is this one line.
+  const showFlow = new URL(window.location.href).searchParams.get("flow") === "1";
+  const handle = showFlow
+    ? installGameShell(canvas, GAME_CONTENT, (scene) => createScene(canvas, scene))
+    : createScene(canvas, SCENE_0);
 
   // ⭐ A canvas of zero size renders nothing and reports no error. Cheap to check,
   // and it is the other way a device shows a blank page.
@@ -92,6 +100,7 @@ try {
   // ⭐ And the loop must actually turn. If no frame has been produced after a
   // second, say so rather than showing a plausible-looking empty scene.
   window.setTimeout(() => {
+    // ⚠ `-1` is the shell before a level starts: nothing is expected to draw yet.
     if (handle.framesRendered() === 0) {
       showError(
         "The render loop produced no frames",

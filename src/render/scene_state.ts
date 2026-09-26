@@ -16,6 +16,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, ShakeDetector, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type AlignMode, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
+import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
 import { RotationFollower, RotationTally } from "../input/rotation_increment";
 import { AlignmentLinks } from "../core/alignment_links";
@@ -416,6 +417,8 @@ export interface Follow {
  * wiring move into modules that take `st` instead of closing over a 7,800-line function.
  */
 export interface SceneState {
+  /** ⭐ The scene being played — `Scene_0` unless a level says otherwise. */
+  sceneSpec: SceneDescriptor;
   tuning: ReturnType<typeof parseConfigOverrides>;
   centreMarker: Mesh;
   mouseLayer: MouseSecondTouchHandle;

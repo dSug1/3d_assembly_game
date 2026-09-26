@@ -67,6 +67,8 @@ const PENDING: Record<string, string> = {
     "the dy trade, then delete with its vectors or restore",
   // ── `3D2`: the seat. The assembly tree exists; nothing is assembled yet. ──────
   reroot: "3D2 — `parent ≠ root`, needed the first time an assembly is re-hung",
+  parseSceneDescriptor: "GM8 — loading a scene from a local JSON file in Free Flow (the seam exists, the button does not)",
+  serializeSceneDescriptor: "GM8 — saving a scene to a local JSON file from Free Flow",
   connectorWorldPose: "3D2 — a mate is between CONNECTORS, and this places them",
   // ── `3D2`/`3D3`: the mate geometry, built and vectored ahead of the gesture. ──
   testMate: "3D2 — the anti-parallel test a snap must pass before it fires",

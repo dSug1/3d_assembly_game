@@ -34,7 +34,7 @@ falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **d
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
 ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, THE TWO PARTS TILTED 30°** (`D93`, 2026-09-25) — `bootAlignment` deleted (state only), `D63`'s jig gone with it, roll about world `z` then pitch about world `x`. ⚠ Parts' mutual gap 280 → 216 mm → `D93` in `DECISIONS.md` and its history.
 ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch, **Shift + left drag = the second** (gravity + roll; an aligned body's left drag translates in any mode); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align. ⛔ The right button never moves anything → defect 70.
-⭐⭐ **`scene.ts` IS SPLIT** (`D104`, 2026-09-26): a composition root + thirteen render modules → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged by a hand.
+⭐⭐ **`scene.ts` IS SPLIT** (`D104`): thirteen render modules → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged.
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
@@ -357,3 +357,6 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
+| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105` → `20_GAME_RULES/spec/GAME_STRUCTURE.md` | — |
+| GM7 | Populate worlds and levels; a theme | GAME | content | `World_0`›`Level_0`›`Scene_0` | GM1 |
+| GM8 | Save/load a scene as local JSON from Free Flow | GAME | feature | queued; the seam exists | GM1 |

@@ -604,3 +604,12 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | # | decision | date | consequence |
 |---|---|---|---|
 | `D87` | ⛔⛔⛔ **THE ROLES ARE INVERTED AGAIN: FIRST TOUCH THE FOLLOWER, SECOND THE PIONEER** | 2026-09-25 | *"the pioneer is pressed first and the follower is pressed second. Invert that order. That will allow to align a hitface with a pioneer face."* ⛔ It reverses `D67`, four days old; both texts stand. ⭐⭐ It makes `D88`'s offer and this press ONE gesture. ⚠⚠ Cost, and `D67` was chosen for it: several Followers can no longer be aligned to one Pioneer in a single hold. ⛔⛔ It also aimed three other rules at the wrong finger → `D89`, `D90`, defects 63–64 |
+
+---
+
+## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-26 (late) — to pay for `D105`
+
+| # | decision | date | consequence |
+|---|---|---|---|
+| `D91` | ⭐⭐ **THE PYRAMID'S SMALL FACE IS A PART'S SMALL FACE, AND IT IS A QUARTER SHORTER** | 2026-09-25 | *"scale the pyramid so that the small rectangular face has the same dimensions as the small rectangular face of the grey rectangle"*, then *"reduce the height by 25%"*. ⭐⭐ **The scale is UNIFORM in `x` and `z` and that is not a choice — it falls out**: both ratios are **4/3**. ⛔ The height's extra 0.75 cannot touch the top face, because `y` IS the taper axis — `2L × 2L × 4L`. ⛔ Boot clearance **300 → 280 mm** |
+| `D86` | ⭐⭐⭐ **THE REST WINDOW IS DERIVED FROM THE DEVICE, NOT FIXED** | 2026-09-24 | *"I would prefer to derive the ms from the device fps."* ⛔⛔ Browsers dispatch pointer input **once per frame per pointer**, so §1.1's silence interval IS the frame interval — and **30 ms** sat below even the measured one-finger gap (**47–68 ms**). ✅ `restMs = clamp(2.5 × median(gaps), 50, 250)`. ✅✅ **JUDGED: *"working well"*** → defect 62 |

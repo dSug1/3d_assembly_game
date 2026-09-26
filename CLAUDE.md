@@ -212,6 +212,11 @@ depends on the flicked object: cheaper, less surgical. ⛔ The flick-unsnap is s
 function takes `st` first. ⛔ No rule moved INTO a render file; the 2026-09-19 lesson binds every
 module. ⚠ Checked by the typecheck, the suite, the build and a headless Chrome boot; a hand is owed
 → [`Claude/40_RENDER_SCENE/INDEX.md`](Claude/40_RENDER_SCENE/INDEX.md).
+⭐⭐ **THE GAME SCAFFOLD EXISTS AND IS EMPTY** (`D105`, 2026-09-26): intro → menu → worlds → levels
+→ play (`core/game_structure.ts`, vectored), one world and one level playing **`Scene_0`** — the
+workbench, now DATA in `content/scene_0.ts` that `scene.ts` boots from — and a JSON seam for the
+scene. `?flow=1` shows the shell; the default boots `Scene_0` directly. ⛔ `GM6`–`GM8` populate it →
+[`Claude/20_GAME_RULES/spec/GAME_STRUCTURE.md`](Claude/20_GAME_RULES/spec/GAME_STRUCTURE.md).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
