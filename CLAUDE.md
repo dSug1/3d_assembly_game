@@ -185,7 +185,7 @@ away); **OBJECT TRANSLATION** (+ *PIONEER translates*, *WorldAxisB*, *translate:
 ⭐⭐⭐ **THE SCORE IS SPECIFIED, NOT BUILT** (`D99`–`D101`, 2026-09-26) →
 [`Claude/20_GAME_RULES/spec/SCORE.md`](Claude/20_GAME_RULES/spec/SCORE.md). The unit is **one
 touchpoint episode** (press → release, counted at the router, the mouse's synthesised touchpoints
-included); the player is scored on episodes against an **absolute optimum from a solver** (bonus on
+included — ⛔ **camera, zoom and mode-toggle touches excluded**, §3.1); the player is scored on episodes against an **absolute optimum from a solver** (bonus on
 equality) and on **elapsed time**. ⛔ The **snap is automatic** under owner-defined conditions and is
 NOT an episode; **unsnap is**; and **a seated Pioneer carries its followers** — `3D1`'s tree, which
 `3D2` must honour. **Free Flow mode** (the renamed cursor-drag slider) escapes the score.
