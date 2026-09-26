@@ -81,6 +81,7 @@ import {
   tapMeaning,
   pressMeaning,
   outsideTapReleases,
+  squaringTwist,
   flickResetPlan,
   type TapContext,
   ShakeDetector,
@@ -1360,7 +1361,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     world = clearObjectConstraints(world, followerId);
     world = pushObjectConstraint(world, followerId, capped.stack[0]!, false);
 
-    const before = modelOrientation(followerGrip.mesh);
+    // ⭐⭐ **SOLVED FROM THE LAST *ALIGNED* ORIENTATION** — the owner, 2026-09-26: *"the rotation
+    // shall be minimum from its last aligned quaternion."* ⛔ Mid-snap, the drawn pose is only part
+    // of the way there, and a swing from it would keep the unfinished part of the previous turn.
+    // ⚠ The new snap still STARTS at the drawn pose, so nothing jumps.
+    const drawn = modelOrientation(followerGrip.mesh);
+    const before = alignSnaps.targetOf(followerId) ?? drawn;
     const solved = solve(capped.stack, before, {
       evictOnOverflow: cfg.evictOnOverflow,
     });
@@ -1377,10 +1383,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // one in the config. ⚠ Moving that slider moves both, which is the cost of not adding a
     // knob; splitting them later is one field and one line.
     // ⚠ At `0` the slider means *no animation*, exactly as it does for the camera.
-    const target = qmul(solved.rotation, before);
+    // ⭐⭐⭐ **AND THEN SQUARED TO THE PIONEER** — the owner, 2026-09-26: *"add that squaring
+    // twist"*. ⛔ A turn about the aligned normal only (≤ 45°), so the constraint just pushed is
+    // untouched; the decision is `squaringTwist`'s (`input/alignment.ts`).
+    const swung = qmul(solved.rotation, before);
+    const pioneerOrientation = worldPlacementOf(world, pioneerId)?.orientation;
+    const target =
+      pioneerOrientation === undefined
+        ? swung
+        : qmul(
+            squaringTwist(capped.stack[0]!.targetWorld, swung, pioneerOrientation),
+            swung,
+          );
     const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
     if (snapMs > 0) {
-      alignSnaps.start(followerId, before, target, performance.now());
+      alignSnaps.start(followerId, drawn, target, performance.now());
     } else {
       setModelOrientation(followerGrip.mesh, target);
       alignSnaps.cancel(followerId);

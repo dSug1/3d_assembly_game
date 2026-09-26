@@ -272,11 +272,11 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     expect(captureOffsetM(-3, 1.5, FOV, VH)).toBe(0);
   });
 
-  it("⛔⛔⛔ AT THE BOOT CAMERA **NOTHING CAPTURES AT REST** — again, since the 4 mm offset", () => {
+  it("⛔⛔⛔ AT THE BOOT CAMERA **NOTHING CAPTURES AT REST** — again, since the 5 mm offset", () => {
     // ⭐⭐⭐ **THE THIRD READING OF THIS VECTOR.** Nothing captured at boot; then the owner's 30°
     // tilt closed the pyramid–plate gap to 53 mm inside a 60 mm band and it asserted that pair;
-    // now the owner's *"set default capture offset to 4 mm"* (2026-09-26) shrinks the band to
-    // ~16 mm and every pair is clear again.
+    // now the owner's 5 mm default (2026-09-26, briefly 4) shrinks the band to ~20 mm and every
+    // pair is clear again.
     // ⭐⭐ **THIS VECTOR USED TO ASSERT THE OPPOSITE, AND THE CHANGE IS THE OWNER'S**: *"rotate the
     // grey rectangle 30 degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*
     // (2026-09-25). ⛔ Tilting `objectB` swings a corner down, and the surface gap to the base
@@ -304,22 +304,22 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
       expect(nearestCapture(w, id, offset, null, gapIn(w), others(w, id))).toBeNull();
     }
     // ⚠ The measured numbers, so the margin is visible rather than implied: the nearest pair is
-    // 53 mm apart against a ~16 mm band.
+    // 53 mm apart against a ~20 mm band.
     expect(surfaceGap(w, "objectB", "objectC")! * 1000).toBeCloseTo(53.4, 1);
     expect(surfaceGap(w, "objectA", "objectC")! * 1000).toBeCloseTo(90.7, 1);
-    expect(offset * 1000).toBeCloseTo(16.0, 1);
+    expect(offset * 1000).toBeCloseTo(20.0, 1);
     // ⛔⛔ **216 mm BETWEEN THE PARTS, AND IT HAS BEEN 320, 300 AND 280 BEFORE IT** — once per time
     // `objectB` changed shape or pose. ⭐ The number moving is the vector working; it stopped
     // moving once, in silence, and that was defect 66.
     expect(surfaceGap(w, "objectA", "objectB")! * 1000).toBeCloseTo(216.1, 1);
   });
 
-  it("the shipped default is 4 mm on the glass \u2014 the owner's number (2026-09-26, was 15)", () => {
+  it("the shipped default is 5 mm on the glass \u2014 the owner's number (2026-09-26, was 15)", () => {
     // Stated once, here, so a change to it is a deliberate edit with a red suite in between
     // rather than a silent drift. What that number DOES is the vector above.
-    expect(DEFAULT_CONFIG.captureOffsetMm).toBe(4);
-    // 4 mm of glass at the boot camera is about 16 mm of world \u2014 a fifth of the L = 80 mm module.
-    expect(captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH)).toBeCloseTo(0.016, 3);
+    expect(DEFAULT_CONFIG.captureOffsetMm).toBe(5);
+    // 5 mm of glass at the boot camera is about 20 mm of world \u2014 a quarter of the L = 80 mm module.
+    expect(captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH)).toBeCloseTo(0.02, 3);
   });
 });
 

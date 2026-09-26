@@ -1044,9 +1044,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // camera distance. ⛔ Not carried over from `snapRadiusFactor`: that was 4L between CENTRES
   // and this is a gap between SURFACES, so the old value would be a number answering the old
   // question. See the field's header.
-  // ⛔⛔ **4 mm — THE OWNER, 2026-09-26: *"set default capture offset to 4 mm"*** (was 15). ⚠ At
-  // the boot camera that is ~16 mm of world, so NOTHING captures at rest at boot again.
-  captureOffsetMm: 4,
+  // ⛔⛔ **5 mm — THE OWNER, 2026-09-26**: *"set default capture offset to 4 mm"*, then *"update the
+  // default capture offset to 5 mm"* (was 15). ⚠ At the boot camera that is ~20 mm of world, so
+  // NOTHING captures at rest at boot; ⭐ and it clears the 3.5 mm motion deadband by 1.5 mm, where
+  // 4 mm cleared it by 0.5 — a nudge from rest has room to land inside the band.
+  captureOffsetMm: 5,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-26: *"set the default approach swing to zero."*
   // ⚠ It was 30°, CHOSEN BY THE OWNER ON THE GLASS on 2026-09-19 (the swing at or below the knee);
   // that value is one slider move away, in CAMERA ORBIT › CAMERA APPROACH SWING AT CAPTURE.

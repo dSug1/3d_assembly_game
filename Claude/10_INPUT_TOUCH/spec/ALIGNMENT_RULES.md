@@ -1821,3 +1821,22 @@ from an earlier gesture must not hide the green on a fresh one.
 stuck on the green."* The Shift touchpoint is tied to the LEFT button (it lifts with it, so a
 released Shift cannot read as a tap), so its presence is not the answer: `secondTouchDown` counts it
 only while Shift is HELD, which the mouse layer reports from pointer and key events.
+
+### 11.12 — A RE-ALIGNMENT TURNS MINIMALLY FROM THE LAST *ALIGNED* ORIENTATION
+
+> *"when a follower rotates to align its follower face, the rotation shall be minimum from its last
+> aligned quaternion … when I align the same follower face to another rectangle face, the roll
+> reappears and I lose the perpendicularity."* — the owner, 2026-09-26
+
+⭐ **Checked, and the rule already held** — `solve` swings minimally from the body's current
+orientation, which is its last aligned one. ⛔ **One gap closed**: a re-alignment made while the
+previous snap was still animating (~130 ms) solved from the HALF-TURNED pose; it now solves from the
+snap's end (`AlignSnaps.targetOf`) and still starts drawing from the drawn pose.
+⚠⚠ **THE LOST SQUARENESS IS THE GEOMETRY, MEASURED**: a Follower square to the plate, re-aligned by
+the minimal turn to the grey part (booted 30° roll + 30° pitch), lands **8.2°** (top face),
+**17.6°** (side) or **30.0°** (end) off square to it — two turns about different axes carry a
+twist about the face normal that no single shortest swing can reproduce.
+⭐⭐ **THE OWNER CHOSE THE SQUARING TWIST** (*"add that squaring twist"*): after the swing the
+Follower turns about the aligned normal by the smallest angle — **≤ 45°** — that squares its edges
+to the Pioneer's (`squaringTwist`, `input/alignment.ts`). The normal is untouched and the spin
+about it stays free; ⚠ the total turn is no longer strictly minimal, by the owner's choice.

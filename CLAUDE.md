@@ -91,7 +91,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1215 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1226 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -181,7 +181,7 @@ swing's four — ⛔ **the swing ships at 0, OFF**; the owner's 30° of 2026-09-
 away); **OBJECT TRANSLATION** (+ *PIONEER translates*, *WorldAxisB*, *translate: plane/channels*);
 **OBJECT ROTATION**; **FACE ALIGNMENT** › *PIONEERFACECURSOR* (drag on/off, sensitivity) and
 *FOLLOWERFACE* (x-ray opacity, with *EVICTION SHAKE* and *CAPTURE* inside it).
-⛔ **`captureOffsetMm` ships at 4 mm** (the owner, 2026-09-26; was 15).
+⛔ **`captureOffsetMm` ships at 5 mm** (the owner, 2026-09-26; was 15, briefly 4) — 1.5 mm clear of the 3.5 mm deadband.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
@@ -285,7 +285,7 @@ degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*). ⛔ Roll
 ⚠⚠ **AND IT HAS A VISIBLE COST, MEASURED RATHER THAN DISCOVERED**: tilting the pyramid swings a
 corner down, so its surface gap to the base plate closes to **53 mm** against a **60 mm** capture
 band — so the pyramid and the plate showed a white capture pair at boot. ✅ **UNDONE 2026-09-26 by
-the owner's *"set default capture offset to 4 mm"***: the band is ~16 mm at the boot camera, and
+the owner's 5 mm capture offset** (briefly 4): the band is ~20 mm at the boot camera, and
 *"at boot nothing captures at rest"* — the 2026-09-17 audit's own property — holds again, pinned in
 both directions by the same vector, now in its third reading.
 ⚠ The parts' mutual gap moved **280 → 216 mm** with the tilt.

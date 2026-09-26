@@ -93,6 +93,21 @@ export class AlignSnaps<Id> {
     });
   }
 
+  /**
+   * ⭐⭐ **WHERE THIS BODY'S SNAP IS GOING** — its last ALIGNED orientation, with every ride
+   * composed in; `null` when nothing is in flight.
+   *
+   * > *"when a follower rotates to align its follower face, the rotation shall be minimum from
+   * > its last aligned quaternion."* — the owner, 2026-09-26
+   *
+   * ⛔ A re-alignment that arrives mid-flight must solve from HERE, not from the half-turned pose
+   * the body is drawn at: from the partial pose, the unfinished part of the previous turn — the
+   * very roll it was removing — would be carried into the new alignment.
+   */
+  targetOf(id: Id): Quat | null {
+    return this.live.get(id)?.to ?? null;
+  }
+
   /** ⚠ Is this body still travelling? */
   has(id: Id): boolean {
     return this.live.has(id);
