@@ -11,6 +11,16 @@
  */
 import type { Vec3 } from "../core/vec";
 
+/**
+ * ⭐⭐ **THE MAGNET'S EASING** — accelerating INTO contact, the reverse of the camera's `easeInOut`:
+ * a magnet pulls harder the nearer the part gets, so the second half of the flight covers three
+ * quarters of the distance and the body arrives with a thump rather than settling.
+ */
+export function magnetEase(u: number): number {
+  const k = Math.min(1, Math.max(0, u));
+  return k * k;
+}
+
 export interface SeatSnap {
   readonly from: Vec3;
   readonly to: Vec3;

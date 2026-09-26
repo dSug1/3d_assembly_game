@@ -13,7 +13,8 @@ import {
   unsnapCouple,
   unsnapParamsFrom,
 } from "@input/unsnap";
-import { SeatSnaps } from "@input/seat_snap";
+import { SeatSnaps, magnetEase } from "@input/seat_snap";
+import { assemblyRoot, frozenHoldAdmitted } from "@input/assembly";
 import { seatedLocalPlacement } from "@core/seat";
 import { AlignmentLinks } from "@core/alignment_links";
 import {
@@ -359,5 +360,54 @@ describe("⭐ object_model.setLocalPlacement — the seat's writer", () => {
     w = setLocalPlacement(w, "plate", { position: [9, 9, 9], orientation: IDENTITY });
     expect(worldPlacementOf(w, "plate")).toEqual(before);
     expect(setLocalPlacement(w, "ghost", { position: [1, 1, 1], orientation: IDENTITY })).toBe(w);
+  });
+});
+
+describe("⭐⭐⭐ assemblyRoot — a press on any member drives the assembly's root", () => {
+  // grey seated on the pyramid, the pyramid seated on the plate (frozen)
+  const pioneerOf = (f: string) => ({ grey: "pyramid", pyramid: "plate" })[f] ?? null;
+  const seated = (f: string) => f === "grey" || f === "pyramid";
+  const frozen = (b: string) => b === "plate";
+
+  it("⭐ a seated member walks up to its Pioneer; a free body is its own root", () => {
+    expect(assemblyRoot("grey", pioneerOf, seated, () => false)).toBe("plate");
+    expect(assemblyRoot("pink", pioneerOf, seated, frozen)).toBe("pink");
+  });
+
+  it("⛔⛔ the walk STOPS BELOW A FROZEN PIONEER — a part on the plate holds the part", () => {
+    // ⛔ RED against walking onto the plate, which can never move and whose first touch is a miss.
+    expect(assemblyRoot("grey", pioneerOf, seated, frozen)).toBe("pyramid");
+    expect(assemblyRoot("pyramid", pioneerOf, seated, frozen)).toBe("pyramid");
+  });
+
+  it("⚠ an aligned-but-unseated member is its own root; a ring cannot hang it", () => {
+    expect(assemblyRoot("grey", pioneerOf, (f) => f === "pyramid", frozen)).toBe("grey");
+    expect(assemblyRoot("a", (f) => (f === "a" ? "b" : "a"), () => true, () => false)).toBeDefined();
+  });
+
+  it("⭐ a frozen body is holdable only when a seated Follower rests on it", () => {
+    expect(frozenHoldAdmitted(true)).toBe(true);
+    expect(frozenHoldAdmitted(false)).toBe(false);
+  });
+});
+
+describe("⭐⭐ magnetEase — accelerating INTO contact", () => {
+  it("⭐ endpoints, monotone, and the second half covers three quarters of the way", () => {
+    expect(magnetEase(0)).toBe(0);
+    expect(magnetEase(1)).toBe(1);
+    // ⛔ RED against `easeInOut`, whose second half covers exactly half.
+    expect(magnetEase(0.5)).toBeCloseTo(0.25, 12);
+    let prev = 0;
+    for (let i = 1; i <= 10; i++) {
+      const v = magnetEase(i / 10);
+      expect(v).toBeGreaterThan(prev);
+      prev = v;
+    }
+    expect(magnetEase(-1)).toBe(0);
+    expect(magnetEase(2)).toBe(1);
+  });
+
+  it("⭐ the shipped snap time is 60 ms, on a slider", () => {
+    expect(DEFAULT_CONFIG.snapMs).toBe(60);
   });
 });

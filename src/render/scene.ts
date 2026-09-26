@@ -178,8 +178,9 @@ import {
   unsnapCouple,
   unsnapParamsFrom,
 } from "../input/unsnap";
-import { SeatSnaps } from "../input/seat_snap";
+import { SeatSnaps, magnetEase } from "../input/seat_snap";
 import { seatedLocalPlacement } from "../core/seat";
+import { assemblyRoot, frozenHoldAdmitted } from "../input/assembly";
 import {
   alignedTravelAxes,
   secondTouchDown,
@@ -1605,6 +1606,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const snapArming = new SnapArming();
   const seatSnaps = new SeatSnaps<ObjectId>();
   const unsnapDetectors = new Map<string, UnsnapDetector>();
+  /**
+   * ⭐⭐⭐ **THE BODY A PRESS ACTUALLY TOUCHED**, per pointer — kept beside the router's DRIVE body
+   * (`assemblyRoot`): the unsnap reads the raw pair (*first the Pioneer, second the Follower*),
+   * the gizmo anchors on the raw face. ⚠ And each pointer's type, because a `SECOND` touchpoint has
+   * no grip to carry it. Both dropped at release.
+   */
+  const rawPressedBody = new Map<number, ObjectId>();
+  const pointerTypeOf = new Map<number, string>();
+  const driveBodyOf = (id: ObjectId): ObjectId =>
+    assemblyRoot(
+      id,
+      (f) => links.pioneerFor(f)?.objectId ?? null,
+      (f) => links.isSeated(f),
+      (b) => world.objects.get(b)?.frozen === true,
+    );
   /** ⭐ Un-parent a follower in the WORLD and drop its flights. ⚠ The link's own flag is `links`'. */
   const unseatWorld = (followerId: ObjectId): void => {
     if (world.objects.get(followerId)?.parent !== null) {
@@ -2385,10 +2401,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // the axes are drawn where a hand is already looking.
       const followerFaceId = alignedFaceOf(world, id);
       const centre = worldPlacementOf(world, id)?.position ?? null;
+      // ⭐ An assembly held by a member's face anchors THERE — *"the gizmo shall reach any face"*.
       const anchor =
+        (grip.rawPress === null
+          ? null
+          : faceWorld(world, grip.rawPress.objectId, grip.rawPress.faceId)
+              ?.centre) ??
         (followerFaceId === null
           ? null
-          : faceWorld(world, id, followerFaceId)?.centre) ?? centre;
+          : faceWorld(world, id, followerFaceId)?.centre) ??
+        centre;
       // ⛔ NO STAND-IN. A body the model cannot place shows no gizmo, exactly as `⛔NOSHAPE` shows
       // no capture shell — suppress rather than substitute.
       if (!anchor) continue;
@@ -2912,6 +2934,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ `null` in fork A, and whenever the pick resolved no face.
      */
     pressFace: { faceId: string; cos: number } | null;
+    /** ⭐ The member face a redirected press touched — the gizmo's anchor (`assembly.ts`). */
+    rawPress: { objectId: ObjectId; faceId: string } | null;
     /**
      * ⭐⭐⭐ **FORK C** — was an alignment pushed or replaced on this object DURING this
      * gesture? The owner's scoping of the rotation reset, and it cannot be answered by looking
@@ -3900,7 +3924,8 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldA
             `
 topo      ${[...topoOf.values()]
               .map((t) => `${t.faces.length}/${t.edges.length}`)
-              .join(" ")}  mk=${faceMarkers.size}  pfc=${pioneerCursors.size}  seated=${links.seatedFollowers().join(",") || "—"}  snapping=${seatSnaps.size}` +
+              .join(" ")}  mk=${faceMarkers.size}  pfc=${pioneerCursors.size}  seated=${links.seatedFollowers().join(",") || "—"}  snapping=${seatSnaps.size}
+unsnap    ${unsnapTrace}` +
             // ⛔⛔ **`outl=` REPORTED THE CACHE SIZE, WHICH IS NOT THE QUESTION** — a hand read it
             // as a bug (*"it goes to 2, not to zero"*) and was right to: a number that only ever
             // grows cannot describe what is on the screen. ⭐ `METHOD`: *audit an instrument
@@ -4349,6 +4374,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
                 // ⭐ The owner, 2026-09-26: the Pioneer does not sway while its Follower is within this
                 // many capture offsets of it; *"put it just below the offset radius"*.
                 tunable("Pioneer sway off within (× offset)", "pioneerSwayRadii", 0, 10, 0.5),
+                // ⭐ The magnet's pull: how long the face centre takes to reach the cursor (`D100`).
+                tunable("snap time (ms, 0 = at once)", "snapMs", 0, 400, 10),
                 // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
                 // ships at 0 and turning it on changes only what the HUD reports.
                 tunable(
@@ -5634,8 +5661,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       }
       eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
-    if (info.type === PointerEventTypes.POINTERUP)
+    if (info.type === PointerEventTypes.POINTERUP) {
       eventGaps.delete(e.pointerId);
+      rawPressedBody.delete(e.pointerId);
+      pointerTypeOf.delete(e.pointerId);
+    }
 
     // ⭐⭐⭐ A PIONEERFACECURSOR GRAB OWNS ITS POINTER — before the router can latch a role for it.
     if (cursorPointer(info.type, e)) {
@@ -5687,13 +5717,29 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // the way IN, before the latch, so every rule downstream sees a touchpoint that landed on
       // nothing — which is what makes it a working second finger for the body in the OTHER hand.
       // ⚠ The DECISION is `frozen_pick.ts`'s; this reads the two facts and obeys.
-      const hitId = rayHit === null ? undefined : idOf.get(rayHit);
+      const rawHitId = rayHit === null ? undefined : idOf.get(rayHit);
+      // ⭐⭐⭐ **A PRESS ON ANY MEMBER OF A SEATED ASSEMBLY DRIVES ITS ROOT** (the owner, 2026-09-26:
+      // *"treated as a whole during rotation and translation … the follower shall be raycast
+      // hittable to receive the input as part of the same object"*). ⛔ The decision is
+      // `assemblyRoot`'s; the raw body is remembered for the unsnap and the gizmo.
+      const hitId = rawHitId === undefined ? undefined : driveBodyOf(rawHitId);
+      const driveHit =
+        hitId === undefined || hitId === rawHitId
+          ? rayHit
+          : (meshOf.get(hitId) ?? rayHit);
+      if (rawHitId !== undefined) rawPressedBody.set(e.pointerId, rawHitId);
+      pointerTypeOf.set(e.pointerId, e.pointerType);
       // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
       // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
       //
       const hit = pressHit(
-        rayHit,
-        hitId !== undefined && world.objects.get(hitId)?.frozen === true,
+        driveHit,
+        // ⭐ A frozen body with a SEATED follower on it is holdable — the unsnap's first touch.
+        hitId !== undefined &&
+          world.objects.get(hitId)?.frozen === true &&
+          !frozenHoldAdmitted(
+            links.followersOf(hitId).some((f) => links.isSeated(f)),
+          ),
         // ⛔ The count BEFORE this press is registered: `router.press` has not run yet.
         router.size,
       );
@@ -5815,9 +5861,28 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
               faceNormal.z,
             ] as Vec3)
           : null;
-      const pressFace = faceHit
-        ? { faceId: faceHit.faceId, cos: faceHit.cos }
-        : null;
+      // ⭐ The face the finger touched, on the body it touched: when the press was redirected to
+      // an assembly's root, the pick normal belongs to the RAW body and its face is the gizmo's
+      // anchor — ⛔ and NOT a HitFace, since face ids are per body (`assembly.ts`).
+      const rawId = rawPressedBody.get(e.pointerId);
+      const rawFace =
+        faceNormal && rawId !== undefined && rawId !== pickedId
+          ? faceFromPickedNormal(world, rawId, [
+              faceNormal.x,
+              faceNormal.y,
+              faceNormal.z,
+            ] as Vec3)
+          : null;
+      const rawPress =
+        rawFace !== null && rawId !== undefined
+          ? { objectId: rawId, faceId: rawFace.faceId }
+          : null;
+      const pressFace =
+        rawPress !== null
+          ? null
+          : faceHit
+            ? { faceId: faceHit.faceId, cos: faceHit.cos }
+            : null;
       lastVerdict = faceHit
         ? `${pickedId}/${faceHit.faceId} under the finger (cos ${faceHit.cos.toFixed(2)})`
         : "no face resolved";
@@ -5834,6 +5899,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pointerType: e.pointerType,
         mode: null,
         pressFace,
+        rawPress,
         alignmentTouched: false,
         pressActed: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
@@ -6027,6 +6093,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // the holder is still on its object before anything else can happen.
       } else {
         router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        // ⭐ A second touch on a seated Follower (redirected to its root) is the UNSNAP's.
+        lastFedPointer = e.pointerId;
+        feedUnsnap(s);
         // ⭐⭐⭐ A12: A SECOND FINGER ON THE SAME OBJECT DRIVES IT, exactly as one outside
         // does — the owner: *"second touchpoint INSIDE OR OUTSIDE any object"*. Its x is
         // roll and its y is depth, while the finger on the object is held still.
@@ -6186,6 +6255,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // seated Follower, then a rapid move — the fingers' separation growing (tablet) or the
       // driven pointer travelling (mouse) by the eviction shake's own leg within its window.
       // ⛔ The pair and the numbers are `unsnap.ts`'s; this reads press order off the router.
+      lastFedPointer = e.pointerId;
       feedUnsnap(s);
       // ⚠ Handed the live hit, which the router discards: a finger that presses on a
       // part and slides off is still holding it (§4).
@@ -6994,10 +7064,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       hudDirty = true;
     }
     // ⭐ The position half of every snap in flight, on the alignment's own clock and easing.
+    // ⭐ THE MAGNET: the snap's own, shorter time and an easing that accelerates into contact.
     for (const step of seatSnaps.advance(
       nowMs,
-      cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
-      easeInOut,
+      cfg.snapMs,
+      magnetEase,
       (id) => meshOf.has(id) && pioneerCursors.ofFollower(id) !== null,
     )) {
       const mesh = meshOf.get(step.id);
@@ -7025,42 +7096,93 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * fires. ⛔ Order is the ROUTER's press order (`unsnapCouple` reads it); the device is the
    * driven grip's `pointerType`.
    */
+  /**
+   * ⭐⭐ **WHERE THE UNSNAP FEED STOPPED, ON THE HUD** — the owner, 2026-09-26: *"once a follower is
+   * snapped onto the frozen object, I cannot unsnap with right click on frozen and left click on
+   * follower and rapid delta position: the assembly is stuck."* ⛔ Every reading of the code found
+   * the path intact, so this prints the step it actually reached — `METHOD`: *when a defect resists
+   * several correct-looking analyses, stop modelling the code and ask which READOUT moves.*
+   */
+  let unsnapTrace = "—";
+  let lastFedPointer = -1;
   const feedUnsnap = (sample: Sample): void => {
+    // ⭐ The FIRST touchpoint: the earliest OBJECT holder. Its RAW body must be the Pioneer.
     const holders = router.objects();
-    if (holders.length !== 2) return;
-    const g1 = held.get(holders[0]!.id);
-    const g2 = held.get(holders[1]!.id);
-    if (!g1 || !g2) return;
-    const id1 = idOf.get(g1.mesh);
-    const id2 = idOf.get(g2.mesh);
-    if (id1 === undefined || id2 === undefined) return;
+    if (holders.length === 0) {
+      unsnapTrace = "no holder";
+      return;
+    }
+    const first = holders[0]!;
+    const g1 = held.get(first.id);
+    if (!g1) {
+      unsnapTrace = `holder #${first.id} has no grip`;
+      return;
+    }
+    const rawFirst = rawPressedBody.get(first.id) ?? idOf.get(g1.mesh);
+    if (rawFirst === undefined) {
+      unsnapTrace = "first body unknown";
+      return;
+    }
+    // ⭐ The SECOND touchpoint: a `SECOND` on the same drive body (the seated member, redirected to
+    // its root), or a second OBJECT holder (a member seated on the frozen plate, which the walk
+    // stops below). Its RAW body must be the seated Follower.
+    const onSame = router.secondTouchOn(g1.mesh);
+    const g2 = holders.length >= 2 ? held.get(holders[1]!.id) : undefined;
+    const second: { id: number; last: Sample } | null =
+      onSame !== null
+        ? { id: onSame.id, last: onSame.last }
+        : holders.length >= 2 && g2 !== undefined
+          ? { id: holders[1]!.id, last: g2.prev }
+          : null;
+    if (second === null) {
+      unsnapTrace = `first ${rawFirst} (#${first.id}); no second touch (holders ${holders.length})`;
+      return;
+    }
+    const rawSecond = rawPressedBody.get(second.id);
+    if (rawSecond === undefined) {
+      unsnapTrace = `first ${rawFirst}; second #${second.id} has no raw body`;
+      return;
+    }
     const follower = unsnapCouple(
-      id1,
-      id2,
+      rawFirst,
+      rawSecond,
       (f) => links.pioneerFor(f)?.objectId ?? null,
       (f) => links.isSeated(f),
     );
-    if (follower === null) return;
+    if (follower === null) {
+      unsnapTrace =
+        `not a seated pair: first ${rawFirst}, second ${rawSecond}` +
+        ` (seated=${links.isSeated(rawSecond)}, pioneer=${links.pioneerFor(rawSecond)?.objectId ?? "—"})`;
+      return;
+    }
     const cur = pioneerCursors.ofFollower(follower);
-    if (cur === null) return;
-    // ⭐ A mouse's driven pointer is the real one (`pointerType === "mouse"`); the right-button
-    // touchpoint is synthesised as "touch" and never moves.
-    const mouseGrip = g1.pointerType === "mouse" ? g1 : g2.pointerType === "mouse" ? g2 : null;
+    if (cur === null) {
+      unsnapTrace = `${follower} has no cursor`;
+      return;
+    }
+    // ⭐ On a mouse the DRIVEN pointer is the second (the real, left-button one); the right-button
+    // touchpoint that holds the Pioneer never moves.
+    const mouse = pointerTypeOf.get(second.id) === "mouse";
     let det = unsnapDetectors.get(cur.key);
     if (det === undefined) {
-      det = new UnsnapDetector(unsnapParamsFrom(cfg), mouseGrip === null ? "TOUCH" : "MOUSE");
+      det = new UnsnapDetector(unsnapParamsFrom(cfg), mouse ? "MOUSE" : "TOUCH");
       unsnapDetectors.set(cur.key, det);
     }
     const mm = (p: Sample) => ({ x: p.x / mmToPx(1), y: p.y / mmToPx(1) });
-    const a = mouseGrip === null ? mm(g1.prev) : mm(mouseGrip.prev);
-    const b = mouseGrip === null ? mm(g2.prev) : mm(mouseGrip === g1 ? g2.prev : g1.prev);
-    // ⚠ `prev` is the last sample each grip saw; this event's own sample is the newer of the two.
-    const fired = det.push(sample.t, a, b);
+    // ⭐ This event's own sample is the freshest for the pointer that sent it; a grip's `prev` is
+    // one event behind.
+    const pa = second.id === lastFedPointer ? sample : second.last;
+    const pb = first.id === lastFedPointer ? sample : g1.prev;
+    const fired = det.push(sample.t, mm(pa), mm(pb));
+    unsnapTrace =
+      `${rawFirst}→${follower} ${mouse ? "MOUSE" : "TOUCH"} armed` +
+      ` (need ${cfg.evictShakeLegMm} mm in ${cfg.evictShakeWindowMs} ms)`;
     if (!fired) return;
     unseatWorld(follower);
     links.unseat(follower);
     snapArming.holdOff(cur.key);
     unsnapDetectors.delete(cur.key);
+    unsnapTrace = `FIRED — ${follower} released from ${cur.pioneerId}`;
     lastVerdict = `unsnap: ${follower} released from ${cur.pioneerId} — re-arms once outside the offset radius`;
     hudDirty = true;
   };

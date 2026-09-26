@@ -272,11 +272,11 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     expect(captureOffsetM(-3, 1.5, FOV, VH)).toBe(0);
   });
 
-  it("⛔⛔⛔ AT THE BOOT CAMERA **NOTHING CAPTURES AT REST** — again, since the 5 mm offset", () => {
-    // ⭐⭐⭐ **THE THIRD READING OF THIS VECTOR.** Nothing captured at boot; then the owner's 30°
-    // tilt closed the pyramid–plate gap to 53 mm inside a 60 mm band and it asserted that pair;
-    // now the owner's 5 mm default (2026-09-26, briefly 4) shrinks the band to ~20 mm and every
-    // pair is clear again.
+  it("⛔⛔⛔ AT THE BOOT CAMERA THE **PYRAMID CAPTURES THE PLATE** — the 15 mm offset is back", () => {
+    // ⭐⭐⭐ **THE FOURTH READING OF THIS VECTOR.** Nothing captured at boot; the owner's 30° tilt
+    // closed the pyramid–plate gap to 53 mm inside a 60 mm band; a 5 mm offset (briefly 4) cleared
+    // every pair; and on 2026-09-26 the owner set 15 mm again once the snap made the radius the
+    // snap's reach — so the pyramid–plate pair captures at rest at boot, and nothing else does.
     // ⭐⭐ **THIS VECTOR USED TO ASSERT THE OPPOSITE, AND THE CHANGE IS THE OWNER'S**: *"rotate the
     // grey rectangle 30 degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*
     // (2026-09-25). ⛔ Tilting `objectB` swings a corner down, and the surface gap to the base
@@ -298,28 +298,31 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
       ["objectD", [0, 0.307246, 0.16], IDENTITY, [], PART],
       ["objectC", [0, -3 * SIZE, 0], IDENTITY, [], PLATE],
     );
-    // ⭐ Every body is clear at rest — including the pyramid, which the 15 mm offset captured.
-    // ⛔ RED against the 15 mm default, which names `objectC` for `objectB`.
-    for (const id of ["objectA", "objectB", "objectD"]) {
+    // ⭐ The two that are clear at rest.
+    for (const id of ["objectA", "objectD"]) {
       expect(nearestCapture(w, id, offset, null, gapIn(w), others(w, id))).toBeNull();
     }
-    // ⚠ The measured numbers, so the margin is visible rather than implied: the nearest pair is
-    // 53 mm apart against a ~20 mm band.
+    // ⛔⛔ AND THE ONE THAT IS NOT — named, so a hand seeing a white pair on the pyramid and the
+    // plate at page load knows it is the scene and not a defect. ⛔ RED against the 5 mm default.
+    expect(
+      nearestCapture(w, "objectB", offset, null, gapIn(w), others(w, "objectB"))?.target,
+    ).toBe("objectC");
+    // ⚠ The measured numbers: 53 mm of gap against a 60 mm band, where the grey part has 91 mm.
     expect(surfaceGap(w, "objectB", "objectC")! * 1000).toBeCloseTo(53.4, 1);
     expect(surfaceGap(w, "objectA", "objectC")! * 1000).toBeCloseTo(90.7, 1);
-    expect(offset * 1000).toBeCloseTo(20.0, 1);
+    expect(offset * 1000).toBeCloseTo(59.9, 1);
     // ⛔⛔ **216 mm BETWEEN THE PARTS, AND IT HAS BEEN 320, 300 AND 280 BEFORE IT** — once per time
     // `objectB` changed shape or pose. ⭐ The number moving is the vector working; it stopped
     // moving once, in silence, and that was defect 66.
     expect(surfaceGap(w, "objectA", "objectB")! * 1000).toBeCloseTo(216.1, 1);
   });
 
-  it("the shipped default is 5 mm on the glass \u2014 the owner's number (2026-09-26, was 15)", () => {
+  it("the shipped default is 15 mm on the glass \u2014 the owner's number (2026-09-26, after 5)", () => {
     // Stated once, here, so a change to it is a deliberate edit with a red suite in between
     // rather than a silent drift. What that number DOES is the vector above.
-    expect(DEFAULT_CONFIG.captureOffsetMm).toBe(5);
-    // 5 mm of glass at the boot camera is about 20 mm of world \u2014 a quarter of the L = 80 mm module.
-    expect(captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH)).toBeCloseTo(0.02, 3);
+    expect(DEFAULT_CONFIG.captureOffsetMm).toBe(15);
+    // 15 mm of glass at the boot camera is about 60 mm of world \u2014 \u00be of the L = 80 mm module.
+    expect(captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH)).toBeCloseTo(0.06, 3);
   });
 });
 

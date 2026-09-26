@@ -525,6 +525,13 @@ export interface GestureConfig {
    */
   pioneerSwayRadii: number;
   /**
+   * ⭐⭐ **THE SNAP'S OWN TIME** — the owner, 2026-09-26: *"make the snap translation movement faster
+   * and more abrupt so the user can feel as if there was a magnet effect."* ⚠ The position half of
+   * a snap used to borrow the alignment's 129 ms; this is shorter and rides `magnetEase`, which
+   * ACCELERATES into contact. `0` = arrive at once.
+   */
+  snapMs: number;
+  /**
    * ⭐⭐⭐ **THE APPROACH SWING'S AMPLITUDE, IN DEGREES OF CAMERA YAW** — the trial on branch
    * `1.0.18-`. ⛔ How far the camera leans out at HALF the trigger gap; it is back on its own
    * orbit at the trigger and at contact, by construction.
@@ -1050,13 +1057,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // camera distance. ⛔ Not carried over from `snapRadiusFactor`: that was 4L between CENTRES
   // and this is a gap between SURFACES, so the old value would be a number answering the old
   // question. See the field's header.
-  // ⛔⛔ **5 mm — THE OWNER, 2026-09-26**: *"set default capture offset to 4 mm"*, then *"update the
-  // default capture offset to 5 mm"* (was 15). ⚠ At the boot camera that is ~20 mm of world, so
-  // NOTHING captures at rest at boot; ⭐ and it clears the 3.5 mm motion deadband by 1.5 mm, where
-  // 4 mm cleared it by 0.5 — a nudge from rest has room to land inside the band.
-  captureOffsetMm: 5,
+  // ⛔⛔ **15 mm — THE OWNER, 2026-09-26, the third default of the day**: 15 → 4 → 5 → *"set the
+  // default offset radius to 15 mm"* once the snap existed, because the radius is the SNAP's reach
+  // now (`D100`) and a 5 mm band asked the hand to land within ~20 mm of world. ⚠ At the boot
+  // camera 15 mm is ~60 mm of world, so the tilted pyramid CAPTURES the plate at boot again.
+  captureOffsetMm: 15,
   // ⭐ The owner's *"default at three times the offset radius"* (2026-09-26).
   pioneerSwayRadii: 3,
+  // ⚠ A guess, with a slider — a magnet's pull is a feel only a hand can judge.
+  snapMs: 60,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-26: *"set the default approach swing to zero."*
   // ⚠ It was 30°, CHOSEN BY THE OWNER ON THE GLASS on 2026-09-19 (the swing at or below the knee);
   // that value is one slider move away, in CAMERA ORBIT › CAMERA APPROACH SWING AT CAPTURE.
@@ -1145,6 +1154,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `pioneerCursorDrag (${cfg.pioneerCursorDrag}) must be exactly 0 or 1: it switches the ` +
         "PioneerFaceCursor drag on and off, and a half-set flag would read as truthy while the " +
         "readout claimed otherwise.",
+    );
+  }
+
+  if (!Number.isFinite(cfg.snapMs) || cfg.snapMs < 0 || cfg.snapMs > 400) {
+    throw new Error(
+      `snapMs (${cfg.snapMs}) must be between 0 and 400 ms: it is how long the FollowerFace ` +
+        "centre takes to reach the PioneerFaceCursor once the snap fires.",
     );
   }
 
