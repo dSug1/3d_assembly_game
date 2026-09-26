@@ -198,10 +198,10 @@ cascades and the sway treat the assembly as one body, and a press on the partner
 (mouse) on the eviction shake's sliders; it re-arms only once **outside the radius**. Pure in
 `input/snap.ts`, `input/unsnap.ts`, `input/seat_snap.ts`, `core/seat.ts` →
 [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.13.
-⭐⭐ **AND A SEATED ASSEMBLY DRIVES AS ONE BODY** (`D102`): a press on any member holds the
-ROOT (the walk stops below a frozen Pioneer, so a part on the plate holds the part), the gizmo
-anchors on the touched face, and the snap is a **magnet** — `snapMs` 60 ms on an accelerating
-`u²`. ⚠ The offset is now 10 mm (~40 mm of world at boot): nothing captures at rest.
+⭐⭐ **AND A SEATED ASSEMBLY TRANSLATES AS ONE BODY** (`D102`): a member's translation lands on
+the ROOT (the walk stops below a frozen Pioneer); ⛔ its ROTATION stays its own — the first build
+redirected the whole grip and *"I cannot roll any longer the follower"* undid it the same day. The
+snap is a **magnet** — `snapMs` 60 ms on an accelerating `u²`. ⚠ The offset is now 10 mm (~40 mm of world at boot): nothing captures at rest.
 ⭐ **UNSNAP COSTS 2 EPISODES; A FLICK UNSNAPS FOR 1** (`D103`) — but releases every seat that
 depends on the flicked object: cheaper, less surgical. ⛔ The flick-unsnap is specified, not built.
 ⚠ The approach itself is not built: the zone only lights white.

@@ -8,15 +8,18 @@
  * > FollowerFace). Also, the follower shall be raycast hittable to receive the input as part of
  * > the same object."*
  *
- * ⭐⭐ **THE DECISION IS *WHICH BODY A PRESS DRIVES*.** A press on any member of a seated assembly
- * drives its ROOT — the top-most Pioneer reached by walking seated links upward — and the tree
- * carries the rest (`3D1`, parent ≠ root). ⛔ The walk STOPS BELOW A FROZEN PIONEER: a part seated
- * on the base plate is fixed to it, so the press holds the part (whose translation the seat
- * refuses and whose twist about its face survives) rather than a plate that can never move.
+ * ⭐⭐ **THE DECISION IS *WHICH BODY A TRANSLATION MOVES*.** A translation of any member of a
+ * seated assembly lands on its ROOT — the top-most Pioneer reached by walking seated links upward
+ * — and the tree carries the rest (`3D1`, parent ≠ root). ⛔ The walk STOPS BELOW A FROZEN
+ * PIONEER: a part seated on the base plate is fixed to it, so the step is refused rather than sent
+ * to a plate that can never move.
  *
- * ⚠ The face the finger actually touched is kept beside the drive body (`rawPress`), because the
- * gizmo anchors on it: *"the gizmo shall reach any face"*. ⛔ It is NOT a HitFace — face ids are
- * per body, and an alignment of the assembly by a member's face is a later generalisation.
+ * ⛔⛔ **ROTATION IS THE TOUCHED BODY'S, NOT THE ROOT'S** — the owner, 2026-09-26, after the first
+ * build redirected the whole GRIP to the root: *"now I cannot roll any longer the follower object
+ * around the followerface normal axis."* A seated Follower's one free DOF is the twist about ITS
+ * constraint; a grip on the root has no such channel. ⭐ So the finger holds the member it touched,
+ * `applyWorldStep` forwards only the translation, and the gizmo anchors on the member's own
+ * FollowerFace (the aligned rule) — the *"reach any face"* anchor went with the grip redirect.
  *
  * ⛔ ENGINE-FREE.
  */

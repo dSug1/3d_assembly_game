@@ -1607,10 +1607,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const seatSnaps = new SeatSnaps<ObjectId>();
   const unsnapDetectors = new Map<string, UnsnapDetector>();
   /**
-   * ⭐⭐⭐ **THE BODY A PRESS ACTUALLY TOUCHED**, per pointer — kept beside the router's DRIVE body
-   * (`assemblyRoot`): the unsnap reads the raw pair (*first the Pioneer, second the Follower*),
-   * the gizmo anchors on the raw face. ⚠ And each pointer's type, because a `SECOND` touchpoint has
-   * no grip to carry it. Both dropped at release.
+   * ⭐ The body each pointer pressed, and its pointer type — the unsnap reads the pair (*first the
+   * Pioneer, second the Follower*) and the device off these, because a `SECOND` touchpoint has no
+   * grip to carry them. Both dropped at release.
    */
   const rawPressedBody = new Map<number, ObjectId>();
   const pointerTypeOf = new Map<number, string>();
@@ -2401,16 +2400,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // the axes are drawn where a hand is already looking.
       const followerFaceId = alignedFaceOf(world, id);
       const centre = worldPlacementOf(world, id)?.position ?? null;
-      // ⭐ An assembly held by a member's face anchors THERE — *"the gizmo shall reach any face"*.
       const anchor =
-        (grip.rawPress === null
-          ? null
-          : faceWorld(world, grip.rawPress.objectId, grip.rawPress.faceId)
-              ?.centre) ??
         (followerFaceId === null
           ? null
-          : faceWorld(world, id, followerFaceId)?.centre) ??
-        centre;
+          : faceWorld(world, id, followerFaceId)?.centre) ?? centre;
       // ⛔ NO STAND-IN. A body the model cannot place shows no gizmo, exactly as `⛔NOSHAPE` shows
       // no capture shell — suppress rather than substitute.
       if (!anchor) continue;
@@ -2934,8 +2927,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      * ⚠ `null` in fork A, and whenever the pick resolved no face.
      */
     pressFace: { faceId: string; cos: number } | null;
-    /** ⭐ The member face a redirected press touched — the gizmo's anchor (`assembly.ts`). */
-    rawPress: { objectId: ObjectId; faceId: string } | null;
     /**
      * ⭐⭐⭐ **FORK C** — was an alignment pushed or replaced on this object DURING this
      * gesture? The owner's scoping of the rotation reset, and it cannot be answered by looking
@@ -4698,8 +4689,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // its Pioneer's cursor and moves with the Pioneer. ⚠ Reported, never silent: this is the
     // *nothing visibly happened* failure a hand cannot diagnose from outside.
     const seatedId = idOf.get(grip.mesh);
+    // ⭐⭐⭐ **A TRANSLATION OF A SEATED MEMBER MOVES ITS ASSEMBLY** (`D102`, re-homed here on
+    // 2026-09-26): the step lands on the ROOT `assemblyRoot` names, and the tree carries the member.
+    // ⛔ A member whose root is itself (its Pioneer is frozen, or it is still snapping) is refused,
+    // reported — it is fixed to the plate, or still on its way to the cursor.
+    const rootId = seatedId === undefined ? undefined : driveBodyOf(seatedId);
+    const targetMesh =
+      rootId === undefined || rootId === seatedId
+        ? grip.mesh
+        : (meshOf.get(rootId) ?? grip.mesh);
     if (
       seatedId !== undefined &&
+      targetMesh === grip.mesh &&
       (links.isSeated(seatedId) || seatSnaps.has(seatedId))
     ) {
       lastVerdict = `snap: ${seatedId} is seated — move its Pioneer, or unsnap`;
@@ -4719,12 +4720,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // `dy` does at a LEVEL camera, where its plane is edge-on and the judged fixed rate drives.
     // ⚠ Without it the swing has no direction to find there, however long it waits.
     frameTravelDepthM += dot(step, grip.frame.depth);
-    const mp = requirePose(grip.mesh);
+    const mp = requirePose(targetMesh);
     // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
     // camera's own maximum orbit radius. A body through the near plane renders *a black page with
     // no error at all*, and one past the ceiling cannot be brought back by any zoom.
     const limits = depthLimits(cfg);
-    setModelPose(grip.mesh, {
+    setModelPose(targetMesh, {
       position: clampDepthRange(
         asVec3(camera.position),
         [
@@ -5718,15 +5719,15 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // nothing — which is what makes it a working second finger for the body in the OTHER hand.
       // ⚠ The DECISION is `frozen_pick.ts`'s; this reads the two facts and obeys.
       const rawHitId = rayHit === null ? undefined : idOf.get(rayHit);
-      // ⭐⭐⭐ **A PRESS ON ANY MEMBER OF A SEATED ASSEMBLY DRIVES ITS ROOT** (the owner, 2026-09-26:
-      // *"treated as a whole during rotation and translation … the follower shall be raycast
-      // hittable to receive the input as part of the same object"*). ⛔ The decision is
-      // `assemblyRoot`'s; the raw body is remembered for the unsnap and the gizmo.
-      const hitId = rawHitId === undefined ? undefined : driveBodyOf(rawHitId);
-      const driveHit =
-        hitId === undefined || hitId === rawHitId
-          ? rayHit
-          : (meshOf.get(hitId) ?? rayHit);
+      // ⛔⛔ **THE PRESS HOLDS THE BODY IT TOUCHED — `D102`'s redirect moved to the TRANSLATION
+      // STEP** (the owner, 2026-09-26: *"now I cannot roll any longer the follower object around
+      // the followerface normal axis … restore the behavior as it was in 389eaa2"*). ⚠ Redirecting
+      // the GRIP to the assembly's root took the seated Follower's twist with it: its one free DOF
+      // belongs to ITS constraint, and a grip on the root has no such channel. ⭐ So the finger
+      // holds the member, its twist turns it about its face, and only `applyWorldStep` forwards a
+      // translation to the root — *as a whole* for translation, *the touched body* for rotation.
+      const hitId = rawHitId;
+      const driveHit = rayHit;
       if (rawHitId !== undefined) rawPressedBody.set(e.pointerId, rawHitId);
       pointerTypeOf.set(e.pointerId, e.pointerType);
       // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
@@ -5861,28 +5862,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
               faceNormal.z,
             ] as Vec3)
           : null;
-      // ⭐ The face the finger touched, on the body it touched: when the press was redirected to
-      // an assembly's root, the pick normal belongs to the RAW body and its face is the gizmo's
-      // anchor — ⛔ and NOT a HitFace, since face ids are per body (`assembly.ts`).
-      const rawId = rawPressedBody.get(e.pointerId);
-      const rawFace =
-        faceNormal && rawId !== undefined && rawId !== pickedId
-          ? faceFromPickedNormal(world, rawId, [
-              faceNormal.x,
-              faceNormal.y,
-              faceNormal.z,
-            ] as Vec3)
-          : null;
-      const rawPress =
-        rawFace !== null && rawId !== undefined
-          ? { objectId: rawId, faceId: rawFace.faceId }
-          : null;
-      const pressFace =
-        rawPress !== null
-          ? null
-          : faceHit
-            ? { faceId: faceHit.faceId, cos: faceHit.cos }
-            : null;
+      const pressFace = faceHit
+        ? { faceId: faceHit.faceId, cos: faceHit.cos }
+        : null;
       lastVerdict = faceHit
         ? `${pickedId}/${faceHit.faceId} under the finger (cos ${faceHit.cos.toFixed(2)})`
         : "no face resolved";
@@ -5899,7 +5881,6 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         pointerType: e.pointerType,
         mode: null,
         pressFace,
-        rawPress,
         alignmentTouched: false,
         pressActed: false,
         sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
