@@ -6,6 +6,7 @@
  * property here is a detail of how it gets there; that one is the owner's requirement.
  */
 import { describe, expect, it } from "vitest";
+import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import { axisDisplacement, axisTravel } from "@input/axis_translate";
 import { axesFromFrame } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
@@ -814,5 +815,12 @@ describe("⛔⛔⛔ defect 65 — a null sign is PROVISIONAL, and re-bases when 
     const got = acquireSwingSign(armed(null), 0, 0, 0.04, 0.006);
     expect(got).not.toBeNull();
     expect(got!.sign).toBe(1);
+  });
+});
+
+describe("⛔⛔ the approach swing ships OFF", () => {
+  it("⭐ *\"set the default approach swing to zero\"* — the owner, 2026-09-26", () => {
+    // ⛔ RED against the 30° chosen on the glass on 2026-09-19, which is now a slider move away.
+    expect(DEFAULT_CONFIG.approachSwingDeg).toBe(0);
   });
 });
