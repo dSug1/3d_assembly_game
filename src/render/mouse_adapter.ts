@@ -43,6 +43,12 @@ import { wheelNotches } from "../input/mouse_wheel_zoom";
 export interface MouseSecondTouchHandle {
   /** ⚠ Diagnostics: real mouse events seen, synthetic actions delivered, the last one. */
   stats(): { seen: number; sent: number; last: string };
+  /**
+   * ⭐ Is Shift held NOW? — read off every mouse event and every Shift key press/release, so a
+   * Shift let go on a still mouse is seen at once. ⚠ A rule asks this, not the Shift touchpoint's
+   * presence: that touchpoint outlives Shift until the left button lifts (`aligned_axes.ts`).
+   */
+  shiftHeld(): boolean;
 }
 
 export function attachMouseSecondTouch(
@@ -58,6 +64,7 @@ export function attachMouseSecondTouch(
   let seen = 0;
   let sent = 0;
   let last = "—";
+  let shift = false;
   // ⭐ The mouse's own pointer id, read off every real event — a `REAL` action re-issues THAT
   // pointer at its own position, so it must carry the same id the scene latched a role for.
   let realId = 1;
@@ -115,6 +122,7 @@ export function attachMouseSecondTouch(
     if (type === null) return;
     seen++;
     realId = e.pointerId;
+    shift = e.shiftKey;
     apply(
       {
         type,
@@ -131,10 +139,17 @@ export function attachMouseSecondTouch(
   // ⭐ The two non-pointer DOM listeners this needs: Esc and a lost window lift #2, and the OS
   // context menu must not open on a button that is a touchpoint — anywhere on the page, since the
   // HUD sits over the canvas and a menu opened there swallows the click that dismisses it.
-  const cancel = () =>
+  const cancel = () => {
+    shift = false;
     apply({ type: "CANCEL", button: -1, buttons: 0, shift: false, x: 0, y: 0 });
+  };
   const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Shift") shift = true;
     if (e.key === "Escape") cancel();
+  };
+  // ⭐ Shift's release must be seen WITHOUT waiting for the mouse to move.
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (e.key === "Shift") shift = false;
   };
   const onMenu = (e: Event) => e.preventDefault();
   // ⭐⭐ THE WHEEL ZOOMS (the owner, 2026-09-25). ⚠ A `wheel` event, not a pointer event, so the
@@ -147,15 +162,17 @@ export function attachMouseSecondTouch(
   };
   canvas.addEventListener("wheel", onWheel, { passive: false });
   window.addEventListener("keydown", onKey);
+  window.addEventListener("keyup", onKeyUp);
   window.addEventListener("blur", cancel);
   window.addEventListener("contextmenu", onMenu);
   scene.onDisposeObservable.add(() => {
     window.removeEventListener("keydown", onKey);
+    window.removeEventListener("keyup", onKeyUp);
     window.removeEventListener("blur", cancel);
     window.removeEventListener("contextmenu", onMenu);
     canvas.removeEventListener("wheel", onWheel);
     cancel();
   });
 
-  return { stats: () => ({ seen, sent, last }) };
+  return { stats: () => ({ seen, sent, last }), shiftHeld: () => shift };
 }

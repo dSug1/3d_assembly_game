@@ -167,7 +167,11 @@ import {
   type PioneerFaceCursor,
 } from "../core/pioneer_face_cursors";
 import { pointOnFace } from "../core/face_surface";
-import { alignedTravelAxes, segmentTowardCursor } from "../input/aligned_axes";
+import {
+  alignedTravelAxes,
+  secondTouchDown,
+  segmentTowardCursor,
+} from "../input/aligned_axes";
 import {
   grabbedCursor,
   PIONEER_CURSOR_PX,
@@ -2265,8 +2269,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           byMotion ??
           ([false, false, false, false, false, false] as GizmoChannels);
         const travel = alignedTravelAxes(
-          router.outside().length >= 1 ||
+          // ⛔ The mouse's Shift touchpoint counts only while Shift is held — it outlives Shift
+          // until the left button lifts (`secondTouchDown`).
+          secondTouchDown(
+            router.outside().map((p) => p.id),
             router.secondTouchOn(grip.mesh) !== null,
+            mouseLayer.shiftHeld(),
+          ),
           turn[3] && rolledThisHold.has(id),
         );
         shown = [travel[0], travel[1], travel[2], turn[3], turn[4], turn[5]];
@@ -2717,7 +2726,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
   // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
   // "mouse"` is looked at, and the scene's gesture code below is untouched.
-  attachMouseSecondTouch(canvas, scene, (notches) => {
+  const mouseLayer = attachMouseSecondTouch(canvas, scene, (notches) => {
     // ⭐⭐ THE WHEEL WRITES THE SAME `zoom` THE PINCH WRITES, through the same `applyCamera()` —
     // one zoom, not two. ⛔ Clamped on the multiplier, so scrolling past a limit cannot store zoom
     // the camera will never show (`input/mouse_wheel_zoom.ts`).
@@ -4344,6 +4353,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     if (!(impulse > 0)) return;
 
     const heldId = idOf.get(heldMesh) ?? null;
+    // ⭐ The mover's own Pioneer does not sway (`receivesSway`, the owner, 2026-09-26).
+    const pioneerOfMover =
+      heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
     for (const mesh of scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
       // marker cannot sway — a readout that moved with the scene would be describing
@@ -4354,7 +4366,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // frozen and the PICTURE was not: the sway is a display offset added after the model is
       // read, so the base plate rocked while its placement could not change. ⭐ One predicate,
       // shared with `spinOthers` and vectored in `tests/sway.test.ts`.
-      if (!receivesSway(bodyOf(mesh), heldId, isGrasped)) continue;
+      if (!receivesSway(bodyOf(mesh), heldId, isGrasped, pioneerOfMover))
+        continue;
       const f = followerFor(mesh);
       f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
       f.swayY = { x: f.swayY.x, v: f.swayY.v + dir[1] * impulse };
@@ -4393,13 +4406,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
 
     const pivot = grip.mesh.position;
     const heldId = idOf.get(grip.mesh) ?? null;
+    // ⭐ …and does not swing either — a follower TURNING is moving too.
+    const pioneerOfMover =
+      heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
     for (const mesh of scene.meshes) {
       if (mesh.metadata?.orbitCandidate !== true) continue;
       if (mesh === grip.mesh) continue;
       // ⛔⛔ A frozen body does not swing about the held one either — the same rule, the same
       // predicate. ⚠ This is the writer that made the base plate SWING rather than rock, which
       // is the more obvious of the two on the glass.
-      if (!receivesSway(bodyOf(mesh), heldId, isGrasped)) continue;
+      if (!receivesSway(bodyOf(mesh), heldId, isGrasped, pioneerOfMover))
+        continue;
       const f = followerFor(mesh);
       // ⚠ The pivot is captured per kick and shared by the block. A kick arriving while
       // an older one is still decaying moves the pivot; for the sub-degree swings this
