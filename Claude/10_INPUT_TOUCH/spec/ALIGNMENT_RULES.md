@@ -1915,3 +1915,9 @@ assembly's axes at the touched face.
 object, itself and its snapped children objects cannot sway when a third object is moved"*): a body
 whose seated chain reaches a frozen body is part of the plate — `anchoredToFrozen` in
 `input/assembly.ts`, read by `receivesSway`. ⛔ A merely aligned body still sways.
+
+✅ **Unsnap from the frozen plate on desktop — confirmed by the owner, 2026-09-26**: *"Unsnapping
+from the plate on desktop is ok."* (right-hold the plate, left click the seated part, a rapid move).
+⚠ It had been reported stuck earlier the same day; the fixes between were the unsnap feed reading
+each event's own sample and the plate being holdable while a part is seated on it. ⭐ The HUD's
+`unsnap` line stays as an instrument, like `jump`: it names the step the gesture reached.
