@@ -256,8 +256,8 @@ import {
   type SwingLatch,
   pitchAngleFor,
 } from "../input/approach_swing";
-import { validateGestureConfig } from "../input/gestureConfig";
-import { createHud } from "./hud";
+import { validateGestureConfig, type GestureConfig } from "../input/gestureConfig";
+import { createHud, type Hud } from "./hud";
 // ⛔ THE DESKTOP SECOND TOUCH IS THIS IMPORT AND ONE CALL, AND NOTHING ELSE. Delete both and the
 // touch build is byte-identical — `mouse_adapter.ts` says why that is the whole point.
 import { attachMouseSecondTouch } from "./mouse_adapter";
@@ -339,9 +339,416 @@ export interface SceneHandle {
   framesRendered: () => number;
 }
 
+/**
+ * ⭐⭐⭐ Put a marker ON a face — **by PARENTING it to the object**, not by positioning it.
+ *
+ * ⛔⛔ **DEVICE-REPORTED 2026-09-17: *"the highlighted quads always lag the movements of the
+ * faces they highlight."*** ⭐ Exactly one frame of lag, every frame, and the cause was not
+ * the arithmetic: this ran AFTER the meshes were written but read `mesh.getWorldMatrix()`,
+ * which is Babylon's **cached** matrix — recomputed during `scene.render()`, i.e. after this
+ * block. So every marker was placed from the pose the object had **last** frame, while its
+ * orientation came from `rotationQuaternion` and was current: the two disagreed, which is
+ * why it read as a slide rather than as a delay.
+ *
+ * ⭐⭐ **PARENTING MAKES IT UNREACHABLE RATHER THAN FIXED.** A child's world transform is
+ * composed from its parent's at render time, so there is no stale matrix to read and no
+ * ordering to get right — the marker is *on* the face in the same sense a decal is.
+ * ⛔ `computeWorldMatrix(true)` here would also have worked, and would have left the next
+ * writer one reordering away from the same bug. `METHOD`: prefer the structure that cannot
+ * express the defect.
+ *
+ * ⚠⚠ **AND IT MOVES A GUARANTEE OUT OF REACH OF A VECTOR, WHICH IS WORTH SAYING**: that the
+ * marker turns WITH its face is now the scene graph's doing, and no golden vector reaches
+ * `src/render`. `face_pick.test.ts` still pins the composition that the graph performs —
+ * the constant offset under the object's orientation — which is the closest a test can get.
+ *
+ * ⚠ The local face centre and normal come from the MODEL, which is where faces live; the
+ * sway and the follower reach the marker through the parent, so what the eye sees still
+ * agrees by construction.
+ *
+ * @returns false when the object or face no longer exists — the caller hides the marker.
+ */
+/**
+ * ⭐⭐⭐ **A FACE MARKER IS BUILT FROM THE FACE'S OWN TRIANGLES AND ITS OWN BOUNDARY** (`D50`).
+ *
+ * ⛔⛔ **IT WAS A UNIT RECTANGLE SCALED BY A DIMENSIONS TABLE**, oriented to the face normal.
+ * ⚠ That is right for an axis-aligned cuboid and meaningless for anything else: a triangular
+ * end would have worn a rectangle, and an L-shaped face a rectangle covering the notch.
+ * ⭐ Now the fill IS the face's triangles and the contour IS its boundary loop, so a face of
+ * any shape marks itself correctly — including a face nobody wrote a table entry for.
+ *
+ * ⚠ Built once per body-and-face and cached: pure local geometry, carried by the body's own
+ * transform. ⛔ PARENTED, never positioned per frame — defect 46's lesson.
+ * ⚠ Lifted along the face normal by a hair, or it z-fights the surface it marks.
+ */
+interface FaceMarker {
+  readonly fill: Mesh;
+  readonly mat: StandardMaterial;
+  readonly loop: LinesMesh;
+  /**
+   * ⭐⭐ **THE X-RAY TWIN** — the same triangles, drawn in rendering group 1 so that nothing in
+   * the scene can occlude it (the owner, 2026-09-23). ⛔ A SECOND MESH rather than a change to
+   * the first: the marker you can already see stays opaque and exactly as it was, and this
+   * only adds what the body was hiding.
+   */
+  readonly xray: Mesh;
+  readonly xrayMat: StandardMaterial;
+}
+
+interface BodyOutlines {
+  readonly body: LinesMesh;
+  readonly align: LinesMesh;
+  shell: LinesMesh;
+}
+
+type TurnAxes = [Vec3 | null, Vec3 | null, Vec3 | null];
+
+interface AxisGizmo {
+  readonly lines: readonly [
+    LinesMesh,
+    LinesMesh,
+    LinesMesh,
+    LinesMesh,
+    LinesMesh,
+    LinesMesh,
+  ];
+}
+
+interface Held {
+  rec: Recognizer<DiagnosticPose>;
+  mesh: AbstractMesh;
+  /**
+   * ⭐⭐ AMENDMENT A7 — the GRAVITY frame, latched at press. Yaw about the world
+   * vertical, pitch about the camera's (always horizontal) right, roll and depth about
+   * the view direction flattened onto the ground.
+   * ⛔ NOT the camera's own axes: with a tilted camera the view axis has a vertical
+   * component, so rolling about it partly duplicates yawing and the two gestures
+   * interfere. ⚠ `screenFrame()` still exists for A3's handover, which needs the TRUE
+   * view axis — two frames, two purposes.
+   */
+  frame: GravityFrame;
+  /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
+  prev: Sample;
+  /**
+   * ⭐⭐⭐ **`D67` — DID THIS GRIP'S OWN PRESS COMPLETE A DOUBLE TAP?** The owner's route to
+   * orange: *"the first touch shall be double tap without final release [on] the pioneer
+   * object."* ⛔ Latched at the press, because `TapHistory` answers *would this pair* about the
+   * instant the finger landed, and by the time a Follower is chosen the answer has moved on.
+   * ⚠ It is a property of THE PIONEER'S grip; a Follower's own flag is never read.
+   */
+  pressWasDoubleTap: boolean;
+  /**
+   * ⭐ The pointer type that PRESSED this grip. ⛔ Read by one rule only —
+   * `secondTouchOwnsRollAndDepth` — to learn that a mouse holder's second touch is always one
+   * Shift away (`secondTouchAlwaysAvailable`).
+   */
+  pointerType: string;
+  /**
+   * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
+   *
+   * ⛔⛔ THE OWNER OVERTURNED THE LATCH, 2026-09-14, and was right. I first gated rule 6
+   * on the anchor being `STATIONARY` at the moment the drag committed, and latched the
+   * answer — reasoning from §4 that a mode must not flip mid-gesture. On the device
+   * that produced a plain bug: move the second finger, let it settle, and the object
+   * ROTATED as though the finger were not there.
+   * ⭐ THE LESSON IS THE DISTINCTION BETWEEN THE TWO SIGNALS. §4 latches roles because
+   * `MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading — a resting thumb crosses the
+   * threshold by itself, so a rule keyed to it would flicker. Whether a finger is DOWN
+   * is neither: it is discrete and deliberate, it changes only when a person decides
+   * it does, and it is the one thing they can see. Latching it hides state instead of
+   * protecting it. ⚠ Do not generalise "latch at press" to every input.
+   * ⚠ `null` only before the gesture commits.
+   */
+  /**
+   * ⭐⭐⭐ **`"TRANSLATE_2ND"` WAS `"DEPTH"` UNTIL 2026-09-23**, and the rename is the owner's:
+   * *"the second finger should not set mode to depth since it is driving the translation along
+   * gravity axis, not depth"* … *"or the name of the mode 'depth' is ill chosen."*
+   *
+   * ⛔⛔ It was named in `A10`, when that finger DID drive depth. `D75` moved it to **gravity**
+   * and the name stayed — so the mode has been announcing the wrong axis ever since, on the HUD
+   * and in every rule that read it. ⭐ The new name says what the mode IS (a translation, driven
+   * by the second touchpoint) rather than which axis it happened to drive on the day it was
+   * written, so it cannot go stale the next time the channels move.
+   * ⚠ That staleness is not cosmetic: it cost **defect 55** (the swing hunting for
+   * `"TRANSLATE"`) and the gizmo vanishing under the finger that was moving the body.
+   */
+  mode: "ROTATE" | "TRANSLATE" | "TRANSLATE_2ND" | null;
+  /**
+   * ⭐⭐ **FORK C** — the face THIS touchpoint's press landed on, in the object it carries.
+   *
+   * ⛔⛔ PER GRIP, NOT ONE GLOBAL, and that is forced by the rule: *"one touchpoint on first
+   * object's hit face (FollowerFace) && tap on second object's hit face (PioneerFace)"*.
+   * Two faces on two objects are live at the same instant, so a single `selectedFace` —
+   * which is all `IN3` ever needs — cannot express the trigger. ⭐ The Follower is the OTHER
+   * grip's face; the Pioneer is the tapping grip's own.
+   * ⚠ `null` in fork A, and whenever the pick resolved no face.
+   */
+  pressFace: { faceId: string; cos: number } | null;
+  /**
+   * ⭐⭐⭐ **FORK C** — was an alignment pushed or replaced on this object DURING this
+   * gesture? The owner's scoping of the rotation reset, and it cannot be answered by looking
+   * at the state:
+   *
+   * > *"If the object was already aligned when the rotation was started, reset to the
+   * > beginning of the rotation (therefore the alignment is conserved). If the alignment
+   * > occurred during the rotation, reset the rotation (therefore this looses the
+   * > alignment)."*
+   *
+   * ⭐ With the alignment older than the press, the recogniser's snapshot already satisfies
+   * it, so restoring costs nothing. With the alignment made mid-gesture, the snapshot
+   * predates it and restoring would leave the object disagreeing with its own constraint.
+   */
+  alignmentTouched: boolean;
+  /**
+   * ⭐⭐⭐ `D55` — **DID THIS TOUCHPOINT'S OWN *PRESS* MAKE AN ALIGNMENT?**
+   *
+   * ⛔⛔ WITHOUT IT THE GESTURE WOULD UNDO ITSELF. The alignment now fires on the way
+   * DOWN, and the matching release is a `TAP` on the face that alignment names — which
+   * `tapMeaning` reads, correctly and unchanged, as `UNALIGN`. ⚠ So a single tap would
+   * align on the press and break it on the release, ~80 ms apart, and the glass would
+   * show nothing at all having happened.
+   *
+   * ⭐ It also consumes `D28`'s movement-mode toggle, for the reason the tap path has
+   * always consumed it: **one gesture, one consequence.**
+   *
+   * ⚠ Distinct from `alignmentTouched`, which lives on the **Follower's** grip and
+   * answers the flick reset's *"was an alignment made during this gesture?"*. This one
+   * lives on the **Pioneer's** grip and answers *"has this release already been spent?"*.
+   * ⛔ Two questions, two fields — collapsing them would be the substituted-quantity
+   * shape this file has been burned by twice.
+   */
+  pressActed: boolean;
+  /**
+   * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
+   * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
+   * established, and a fresh press is a fresh axis — `shake.ts` says so in its own header.
+   */
+  shake: ShakeDetector;
+  /**
+   * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
+   * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer
+   * id, because `MotionTracker` is stateful and hysteretic: sharing one between two
+   * fingers would mix their histories and answer about neither.
+   * ⚠ Rebuilt when a touchpoint goes down, never reused across a release.
+   */
+  /**
+   * ⛔⛔ KEYED BY THE ROUTER'S `seq` — PRESS ORDER — AND NEVER BY THE POINTER ID.
+   *
+   * ⚠⚠ Device-reported, 2026-09-16: release the second touchpoint from its object,
+   * press it down outside any object, and the first object *"continues translation and
+   * then switches to rotation"* instead of rotating at once.
+   *
+   * ⭐⭐ THE CAUSE: a `MotionTracker` keeps an ANCHOR POSITION, and **browsers reuse
+   * pointer ids after a release**. A new finger landing on a reused id inherited the old
+   * finger's tracker, measured its displacement from an anchor somewhere else entirely,
+   * and read `MOVING` at once — so A13 judged the second finger to be moving and the
+   * holder kept translating until the new finger settled.
+   *
+   * ⭐ `seq` is monotone for the life of the router and never reused. `router.ts` already
+   * says why it exists: *"the ONLY ordering anyone gets... `Map` iteration order would
+   * LOOK like press order right up until an id is reused."* ⛔ The same trap, one layer
+   * up — this project has now hit it twice, so the fix is structural rather than a
+   * cleanup somebody has to remember.
+   * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
+   */
+  anchorMotion: Map<number, MotionTracker>;
+  /**
+   * ⭐⭐⭐ `D57` — **WHICH WAY A SECOND TOUCHPOINT'S `dx` ROLLS THIS BODY, LATCHED AT THE
+   * FIRST ROLL OF THE GESTURE**, keyed by anchor press order exactly as `anchorMotion` is.
+   *
+   * ⛔⛔ THE RATE IS NOW CONSTANT AND THE DIRECTION IS NOT COMPUTED PER FRAME. The owner's
+   * rule is *"dx drives the roll, dy the depth, **whatever the orientation** — remove the
+   * cos/sin projections"*, and the projection carried BOTH. ⚠ Only the rate could be made
+   * orientation-free: a handedness has to be relative to something, and the constraint axis
+   * can point toward the camera or away from it.
+   *
+   * ⭐⭐ **LATCHED, BECAUSE THE ONLY STABLE MOMENT IS THE PRESS.** Recomputed per frame the
+   * sign would flip mid-drag as the axis swung through horizontal-on-screen — turning the
+   * dead control the owner reported into an unpredictable one, which is worse. ⛔ `IN2`
+   * latches every role at press and `A15` allows exceptions only on DISCRETE events; this is
+   * the same doctrine one rule over: *a mode may be keyed on PRESENCE, never on MOTION.*
+   */
+  anchorRollSign: Map<number, 1 | -1>;
+  /**
+   * ⭐⭐ **WHICH WAY `dx` TWISTS AN ALIGNED BODY -- latched once per grip** (2026-09-22).
+   * ⛔ The same doctrine as `anchorRollSign` one channel over: recomputed per frame the sign
+   * flips mid-drag as the alignment axis swings through horizontal-on-screen.
+   */
+  twistSign?: 1 | -1;
+  /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
+  depthSway: SwayWatcher;
+
+  /**
+   * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
+   * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
+   * which would be a continuous shove rather than a reaction.
+   * ⚠ It reads `Recognizer.motionState`, which is `IN0`'s hysteretic still/moving test
+   * with its own measured thresholds. A speed comparison invented here would be a
+   * SECOND definition of "moving", free to disagree with the one the rules use.
+   */
+  /**
+   * ⭐ Decides WHEN the scene reacts — see `input/sway.ts`. It owns the direction and
+   * speed estimate over a stated window, so this file does not invent a second one.
+   */
+  sway: SwayWatcher;
+  /** The same, for ROTATION — see `input/sway.ts`'s `SpinSwayWatcher`. */
+  spinSway: SpinSwayWatcher;
+}
+
+/**
+ * RULE 6's INERTIA. ⭐ The finger drives a TARGET; the mesh follows it under a
+ * critically damped law (`input/follow.ts`), so it accelerates out of rest and
+ * decelerates into place instead of being pinned to the fingertip.
+ *
+ * ⛔⛔ KEYED BY MESH, NOT BY TOUCHPOINT, AND IT OUTLIVES THE RELEASE — that is the
+ * whole of the deceleration. A follower torn down with the gesture would stop the
+ * object dead the instant the finger left, which is exactly the teleporting feel the
+ * inertia exists to remove.
+ * ⛔ ADVANCED IN THE RENDER LOOP, not on pointer events: pointer events stop arriving
+ * the moment the finger stops, and a system with momentum has to keep integrating
+ * after its input goes quiet.
+ */
+interface Follow {
+  /** Where the finger has put it. */
+  readonly target: Vector3;
+  /**
+   * ⭐ The target's own SMOOTHED velocity, m/s, per axis — what the phantom is
+   * projected along. ⛔ Smoothed, never a two-sample difference: it gets multiplied by
+   * the lead and written straight into where the object is drawn. See `lead.ts`.
+   */
+  readonly vTarget: Vector3;
+  /** The previous frame's target, for that velocity. */
+  readonly lastTarget: Vector3;
+  x: FollowState;
+  y: FollowState;
+  z: FollowState;
+  /**
+   * ⭐ THE SYMPATHETIC SWAY — an OFFSET from wherever this object otherwise is, sprung
+   * back to zero. ⛔ An offset and not a position: the object's real place is never
+   * touched, so a barycentre, a raycast or a future mate reads the same coordinates
+   * whether or not the scene happens to be swaying at that instant.
+   */
+  swayX: FollowState;
+  swayY: FollowState;
+  swayZ: FollowState;
+  /**
+   * ⭐ THE ROTATIONAL SWAY, as a rotation VECTOR sprung back to zero — three scalar
+   * springs on its components. ⛔ A vector and not an angle-about-a-fixed-axis: two
+   * kicks on different axes then superpose correctly, which they cannot if the state
+   * is one angle and the axis gets overwritten. ⚠ Superposition is exact only for
+   * small rotations, which these are by construction.
+   */
+  swayRotX: FollowState;
+  swayRotY: FollowState;
+  swayRotZ: FollowState;
+  /** What the block swings AROUND: the held object's centre, captured at the kick. */
+  swayPivot: Vector3;
+  /**
+   * The orientation this object would have with no sway at all. ⛔ Kept because the
+   * sway is applied ON TOP every frame; reading the mesh back would compound it.
+   */
+  qHome: Quat;
+}
+
+/**
+ * ⭐⭐⭐ **THE SCENE'S SHARED STATE — ONE OBJECT, TYPED** (the split of `scene.ts`, 2026-09-26).
+ * Every field was a closure variable of `createScene`; naming them here is what lets the
+ * wiring move into modules that take `st` instead of closing over a 7,800-line function.
+ */
+export interface SceneState {
+  engine: Engine;
+  scene: Scene;
+  camera: ArcRotateCamera;
+  light: HemisphericLight;
+  dimsOf: Map<ObjectId, readonly [number, number, number]>;
+  untaperedBodies: string[];
+  idOf: Map<AbstractMesh, ObjectId>;
+  meshOf: Map<ObjectId, AbstractMesh>;
+  shapelessBodies: string[];
+  drawFault: string | null;
+  drawFaultCount: number;
+  topoOf: Map<ObjectId, MeshTopology>;
+  world: World;
+  faceMarkers: Map<string, FaceMarker>;
+  candidateRings: Map<string, LinesMesh>;
+  candidateRingLocal: Map<string, Vec3>;
+  pioneerCursors: PioneerFaceCursors;
+  pioneerCursorMeshes: Map<string, Mesh>;
+  pioneerCursorMat: StandardMaterial;
+  alignModeOf: Map<ObjectId, AlignMode>;
+  links: AlignmentLinks;
+  snapArming: SnapArming;
+  seatSnaps: SeatSnaps<ObjectId>;
+  unsnapDetectors: Map<string, UnsnapDetector>;
+  rawPressedBody: Map<number, ObjectId>;
+  pointerTypeOf: Map<number, string>;
+  outlines: Map<ObjectId, BodyOutlines>;
+  highlighted: HighlightVerdict;
+  bootObjectAxes: ObjectAxes | null;
+  bootGestureFrame: GravityFrame | null;
+  gizmoAxes: Map<ObjectId, GizmoChannels>;
+  rolledThisHold: Set<ObjectId>;
+  frameAxisDriven: Map<ObjectId, [boolean, boolean, boolean]>;
+  frameTurnAxes: Map<ObjectId, TurnAxes>;
+  gizmoTurnAxes: Map<ObjectId, TurnAxes>;
+  lastTrackGain: number;
+  lastEdgeOn: boolean;
+  zoneWas: boolean;
+  zonePair: readonly ObjectId[];
+  zoneEnterCalls: number;
+  axisGizmos: Map<ObjectId, AxisGizmo>;
+  gizmoRings: Map<ObjectId, LinesMesh>;
+  gizmoTurnRings: Map<ObjectId, LinesMesh>;
+  markerMat: StandardMaterial;
+  hud: Hud;
+  taps: TapHistory;
+  router: PointerRouter<AbstractMesh>;
+  held: Map<number, Held>;
+  followers: Map<AbstractMesh, Follow>;
+  lastVerdict: string;
+  hudDirty: boolean;
+  pinch: PinchTracker;
+  pendingCentre: { x: number; y: number; at: number } | null;
+  cameraReset: CameraResetAnimation | null;
+  orbit: OrbitController;
+  zoom: number;
+  zoomAtPinchStart: number;
+  centreBlend: OrbitCentreBlend;
+  orbitCentreM: Vector3;
+  swing: SwingLatch | null;
+  frameTravelRightM: number;
+  frameTravelUpM: number;
+  frameTravelDepthM: number;
+  appliedSwingYaw: number;
+  swingAmp: { rad: number; atMs: number } | null;
+  swingFrozenProgress: number | null;
+  eventGaps: Map< number, { last: number; gaps: { t: number; ms: number }[] } >;
+  noise: PointerNoiseMeter;
+  noisePointer: number | null;
+  behaviour: Behaviour;
+  alignSnaps: AlignSnaps<ObjectId>;
+  jumpWatch: JumpWatch<ObjectId>;
+  lastJump: Jump<ObjectId> | null;
+  lastJumpVerdict: string;
+  lastJumpAt: number;
+  rotationTally: RotationTally<ObjectId>;
+  rotationFollower: RotationFollower<ObjectId>;
+  lastTapToggled: boolean;
+  pairReverted: Set<number>;
+  cursorDrags: Map<number, { key: string; dx: number; dy: number }>;
+  frames: number;
+  lastFrameMs: number | null;
+  unsnapTrace: string;
+  lastFedPointer: number;
+  cfg: GestureConfig;
+  canvas: HTMLCanvasElement;
+}
+
 export function createScene(canvas: HTMLCanvasElement): SceneHandle {
-  const engine = new Engine(canvas, true, { stencil: true }, true);
-  const scene = new Scene(engine);
+  const st = {} as SceneState;
+  st.canvas = canvas;
+  st.engine = new Engine(st.canvas, true, { stencil: true }, true);
+  st.scene = new Scene(st.engine);
 
   // ⛔⛔ **PARSED HERE, FIRST, BECAUSE THE BOOT SCENE ITSELF NOW DEPENDS ON IT.** It used to sit
   // three hundred lines below, next to the gesture state that reads it — fine while only
@@ -350,30 +757,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // URL read would bypass `parseConfigOverrides`' validation and its rejected-key reporting,
   // and a typo'd key would then silently do nothing instead of being named on the HUD.
   const tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
-  const cfg = tuning.config;
+  st.cfg = tuning.config;
   // ⚠ Explicit, so "dark page" always means the SCENE, never an unset default.
-  scene.clearColor = new Color4(0.078, 0.086, 0.102, 1);
+  st.scene.clearColor = new Color4(0.078, 0.086, 0.102, 1);
 
-  const camera = new ArcRotateCamera(
+  st.camera = new ArcRotateCamera(
     "camera",
     -Math.PI / 2,
     Math.PI / 3,
     CAMERA_RADIUS_M,
     Vector3.Zero(),
-    scene,
+    st.scene,
   );
   // ⛔⛔ SEE THE HEADER. Without this the whole scene is inside the near plane.
   // ⛔ ONE CONSTANT, ONE PLACE: the value lives in `gestureConfig.ts` because the
   // config VALIDATOR needs it to refuse a zoom range that would clip the scene.
-  camera.minZ = CAMERA_NEAR_PLANE_M;
-  camera.maxZ = 100;
+  st.camera.minZ = CAMERA_NEAR_PLANE_M;
+  st.camera.maxZ = 100;
   // ⛔ The camera does NOT take the pointer. Rules 1 and 4 drive the orbit through
   // the gesture layer; letting Babylon's own controls attach as well means two
   // things claim the same touch and the winner depends on event order.
-  camera.detachControl();
+  st.camera.detachControl();
 
-  const light = new HemisphericLight("light", new Vector3(0.3, 1, 0.2), scene);
-  light.intensity = 0.95;
+  st.light = new HemisphericLight("light", new Vector3(0.3, 1, 0.2), st.scene);
+  st.light.intensity = 0.95;
 
   // ⚠ EXPLICIT materials rather than the auto-created default: with tree-shaken ES6
   // imports the default material is one more thing that has to have been pulled in,
@@ -387,7 +794,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the face-marker extents — and a single constant would have drawn all five of them at the
    * parts' size on a plate seventy times their volume.
    */
-  const dimsOf = new Map<ObjectId, readonly [number, number, number]>();
+  st.dimsOf = new Map<ObjectId, readonly [number, number, number]>();
 
   /**
    * ⭐⭐ **TURN A BUILT BOX INTO A TRUNCATED PYRAMID BY MOVING ITS VERTICES.**
@@ -422,7 +829,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return true;
   };
   /** ⚠ Bodies whose taper was refused — reported on the HUD, never silently a box. */
-  const untaperedBodies: string[] = [];
+  st.untaperedBodies = [];
 
   const make = (
     name: string,
@@ -444,17 +851,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      */
     topScale = 1,
   ) => {
-    dimsOf.set(name, dims);
+    st.dimsOf.set(name, dims);
     // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
     const mesh = CreateBox(
       name,
       { width: dims[0], height: dims[1], depth: dims[2] },
-      scene,
+      st.scene,
     );
     // ⛔ BEFORE the collision hull and the topology are read off it, which both happen later
     // and both read the mesh rather than any table (`D49`, `D50`) — so they inherit the
     // tapered geometry by doing nothing at all.
-    if (topScale !== 1 && !taperMesh(mesh, topScale)) untaperedBodies.push(name);
+    if (topScale !== 1 && !taperMesh(mesh, topScale)) st.untaperedBodies.push(name);
     mesh.position = at;
     // ⛔ Quaternion mode. While `rotationQuaternion` is null Babylon uses the Euler
     // `rotation` instead, which is the frame-mixing defect above.
@@ -462,7 +869,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ Babylon stores `(x, y, z, w)`; `core/vec` uses `[w, x, y, z]`. One conversion, here.
     if (boot !== undefined)
       mesh.rotationQuaternion.set(boot[1], boot[2], boot[3], boot[0]);
-    const mat = new StandardMaterial(name + "-mat", scene);
+    const mat = new StandardMaterial(name + "-mat", st.scene);
     mat.diffuseColor = new Color3(...rgb);
     mesh.material = mat;
     // ⭐⭐ TAGGED, so §2 rule 1's barycentre sees the OBJECTS and nothing else. The
@@ -515,7 +922,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ⛔⛔ THE ROTATIONS ARE **SEEDED**, not per-boot random — `core/random_pose.ts` argues why,
   // and `?sceneSeed=N` rolls a new scene. ⚠ Three arbitrary orientations mean **no two bodies
   // start aligned**, which is correct: `A16`'s highlight should be something a hand earns.
-  const bootRotations = seededRotations(cfg.sceneSeed, 3);
+  const bootRotations = seededRotations(st.cfg.sceneSeed, 3);
   // ⭐⭐⭐ **THE TWO PARTS BOOT SQUARE AND UNALIGNED** — the owner, 2026-09-25: *"boot the scene
   // with no aligned object, translation mode. Use current rectangles transforms as displayed on
   // the usb tablet to boot the scene as default."*
@@ -619,7 +1026,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return q === null ? ([1, 0, 0, 0] as Quat) : ([q.w, q.x, q.y, q.z] as Quat);
   };
 
-  const idOf = new Map<AbstractMesh, ObjectId>();
+  st.idOf = new Map<AbstractMesh, ObjectId>();
   /**
    * ⭐ The MODEL's record for a mesh, or `null` for a mesh the model does not know — a
    * marker, a contour, a highlight. ⚠ It reads `world` live, so a rule asking it cannot be
@@ -628,10 +1035,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const bodyOf = (
     mesh: AbstractMesh,
   ): { readonly id: ObjectId; readonly frozen?: boolean } | null => {
-    const id = idOf.get(mesh);
-    return id === undefined ? null : (world.objects.get(id) ?? null);
+    const id = st.idOf.get(mesh);
+    return id === undefined ? null : (st.world.objects.get(id) ?? null);
   };
-  const meshOf = new Map<ObjectId, AbstractMesh>();
+  st.meshOf = new Map<ObjectId, AbstractMesh>();
   /**
    * ⛔ PER-AXIS half-extents, and now per BODY. ⚠ A single `half` was a cube's privilege; a
    * single set of three was the equal-parts privilege, and the base plate ended that too.
@@ -699,7 +1106,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * in scene construction takes the page down; *this body never captures* is survivable, and an
    * INVISIBLE failure is not. This project has been burned twice by a readout that was absent.
    */
-  const shapelessBodies: string[] = [];
+  st.shapelessBodies = [];
   /**
    * ⛔⛔ **A THROW INSIDE THE DRAW PATH USED TO BE INVISIBLE, AND THAT COST A DEVICE PASS.**
    *
@@ -709,15 +1116,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⛔ The first message is latched and printed on the HUD; later ones are counted, because a
    * throw in a render loop repeats sixty times a second and a scrolling readout is unreadable.
    */
-  let drawFault: string | null = null;
-  let drawFaultCount = 0;
+  st.drawFault = null;
+  st.drawFaultCount = 0;
   const guardDraw = (where: string, fn: () => void): void => {
     try {
       fn();
     } catch (err) {
-      drawFaultCount++;
-      if (drawFault === null) {
-        drawFault = `${where}: ${err instanceof Error ? err.message : String(err)}`;
+      st.drawFaultCount++;
+      if (st.drawFault === null) {
+        st.drawFault = `${where}: ${err instanceof Error ? err.message : String(err)}`;
         // ⚠ Console too — the HUD has no room for a stack, and over the USB loop a tablet's
         // console is reachable through `chrome://inspect`.
         console.error("[draw]", where, err);
@@ -741,7 +1148,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⚠ Built here, at spawn, and never per frame: it is pure geometry in the body's LOCAL frame,
    * so the body's own transform carries it.
    */
-  const topoOf = new Map<ObjectId, MeshTopology>();
+  st.topoOf = new Map<ObjectId, MeshTopology>();
   const topologyFromMesh = (m: AbstractMesh): MeshTopology | null => {
     const raw = m.getVerticesData(VertexBuffer.PositionKind);
     const idx = m.getIndices();
@@ -758,35 +1165,35 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const topologyOfBody = (m: AbstractMesh): MeshTopology => {
     const t = topologyFromMesh(m);
     if (t !== null) {
-      topoOf.set(m.name, t);
+      st.topoOf.set(m.name, t);
       return t;
     }
     // ⛔ Named on the HUD, never substituted: a body with no topology has no outlines and no
     // logical faces, and an invisible failure is the one this project has been burned by.
-    if (!shapelessBodies.includes(m.name)) shapelessBodies.push(m.name);
+    if (!st.shapelessBodies.includes(m.name)) st.shapelessBodies.push(m.name);
     const empty: MeshTopology = {
       positions: [],
       faces: [],
       edges: [],
       vertexPlanes: [],
     };
-    topoOf.set(m.name, empty);
+    st.topoOf.set(m.name, empty);
     return empty;
   };
 
   const shapeOfBody = (m: AbstractMesh): ConvexShape => {
     const s = shapeFromMesh(m);
     if (s !== null) return s;
-    shapelessBodies.push(m.name);
+    st.shapelessBodies.push(m.name);
     return { points: [] };
   };
 
-  let world: World = makeWorld(
-    scene.meshes
+  st.world = makeWorld(
+    st.scene.meshes
       .filter((m) => m.metadata?.orbitCandidate === true)
       .map((m) => {
-        idOf.set(m, m.name);
-        meshOf.set(m.name, m);
+        st.idOf.set(m, m.name);
+        st.meshOf.set(m.name, m);
         return {
           id: m.name,
           local: {
@@ -823,13 +1230,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
   /** The object's TRUE placement, through its parent chain. `null` for a non-object. */
   const modelPose = (mesh: AbstractMesh) => {
-    const id = idOf.get(mesh);
-    return id === undefined ? null : worldPlacementOf(world, id);
+    const id = st.idOf.get(mesh);
+    return id === undefined ? null : worldPlacementOf(st.world, id);
   };
 
   /** Write the model. ⛔ The only way an object's real pose ever changes. */
   const setModelPose = (mesh: AbstractMesh, placed: Placed): void => {
-    const id = idOf.get(mesh);
+    const id = st.idOf.get(mesh);
     if (id === undefined) return;
     // ⛔⛔⛔ **A FROZEN BODY REFUSES *AUDIBLY*** — audit fix, 2026-09-17.
     //
@@ -840,12 +1247,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // follower"* out loud, and the placement path said nothing at all.
     // ⭐ The model still refuses in `object_model.ts`; this only makes the refusal VISIBLE.
     // The readout is not the enforcement, and must never become it.
-    if (world.objects.get(id)?.frozen === true) {
-      lastVerdict = `${id} is FROZEN — its transform cannot be modified`;
-      hudDirty = true;
+    if (st.world.objects.get(id)?.frozen === true) {
+      st.lastVerdict = `${id} is FROZEN — its transform cannot be modified`;
+      st.hudDirty = true;
       return;
     }
-    world = setWorldPlacement(world, id, placed);
+    st.world = setWorldPlacement(st.world, id, placed);
   };
 
   /**
@@ -869,74 +1276,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const home = modelOrientation(grip.mesh);
     followerFor(grip.mesh).qHome = home;
     const spin = grip.spinSway.push(home, t, true);
-    if (spin && cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
+    if (spin && st.cfg.rotateSwayDeg > 0) spinOthers(grip, spin);
   };
 
-  /**
-   * ⭐⭐⭐ Put a marker ON a face — **by PARENTING it to the object**, not by positioning it.
-   *
-   * ⛔⛔ **DEVICE-REPORTED 2026-09-17: *"the highlighted quads always lag the movements of the
-   * faces they highlight."*** ⭐ Exactly one frame of lag, every frame, and the cause was not
-   * the arithmetic: this ran AFTER the meshes were written but read `mesh.getWorldMatrix()`,
-   * which is Babylon's **cached** matrix — recomputed during `scene.render()`, i.e. after this
-   * block. So every marker was placed from the pose the object had **last** frame, while its
-   * orientation came from `rotationQuaternion` and was current: the two disagreed, which is
-   * why it read as a slide rather than as a delay.
-   *
-   * ⭐⭐ **PARENTING MAKES IT UNREACHABLE RATHER THAN FIXED.** A child's world transform is
-   * composed from its parent's at render time, so there is no stale matrix to read and no
-   * ordering to get right — the marker is *on* the face in the same sense a decal is.
-   * ⛔ `computeWorldMatrix(true)` here would also have worked, and would have left the next
-   * writer one reordering away from the same bug. `METHOD`: prefer the structure that cannot
-   * express the defect.
-   *
-   * ⚠⚠ **AND IT MOVES A GUARANTEE OUT OF REACH OF A VECTOR, WHICH IS WORTH SAYING**: that the
-   * marker turns WITH its face is now the scene graph's doing, and no golden vector reaches
-   * `src/render`. `face_pick.test.ts` still pins the composition that the graph performs —
-   * the constant offset under the object's orientation — which is the closest a test can get.
-   *
-   * ⚠ The local face centre and normal come from the MODEL, which is where faces live; the
-   * sway and the follower reach the marker through the parent, so what the eye sees still
-   * agrees by construction.
-   *
-   * @returns false when the object or face no longer exists — the caller hides the marker.
-   */
-  /**
-   * ⭐⭐⭐ **A FACE MARKER IS BUILT FROM THE FACE'S OWN TRIANGLES AND ITS OWN BOUNDARY** (`D50`).
-   *
-   * ⛔⛔ **IT WAS A UNIT RECTANGLE SCALED BY A DIMENSIONS TABLE**, oriented to the face normal.
-   * ⚠ That is right for an axis-aligned cuboid and meaningless for anything else: a triangular
-   * end would have worn a rectangle, and an L-shaped face a rectangle covering the notch.
-   * ⭐ Now the fill IS the face's triangles and the contour IS its boundary loop, so a face of
-   * any shape marks itself correctly — including a face nobody wrote a table entry for.
-   *
-   * ⚠ Built once per body-and-face and cached: pure local geometry, carried by the body's own
-   * transform. ⛔ PARENTED, never positioned per frame — defect 46's lesson.
-   * ⚠ Lifted along the face normal by a hair, or it z-fights the surface it marks.
-   */
-  interface FaceMarker {
-    readonly fill: Mesh;
-    readonly mat: StandardMaterial;
-    readonly loop: LinesMesh;
-    /**
-     * ⭐⭐ **THE X-RAY TWIN** — the same triangles, drawn in rendering group 1 so that nothing in
-     * the scene can occlude it (the owner, 2026-09-23). ⛔ A SECOND MESH rather than a change to
-     * the first: the marker you can already see stays opaque and exactly as it was, and this
-     * only adds what the body was hiding.
-     */
-    readonly xray: Mesh;
-    readonly xrayMat: StandardMaterial;
-  }
-  const faceMarkers = new Map<string, FaceMarker>();
+  st.faceMarkers = new Map<string, FaceMarker>();
   const faceMarkerFor = (
     objectId: ObjectId,
     faceId: string,
   ): FaceMarker | null => {
     const key = `${objectId}/${faceId}`;
-    const hit = faceMarkers.get(key);
+    const hit = st.faceMarkers.get(key);
     if (hit !== undefined) return hit;
-    const body = meshOf.get(objectId);
-    const topo = topoOf.get(objectId);
+    const body = st.meshOf.get(objectId);
+    const topo = st.topoOf.get(objectId);
     const face = topo?.faces.find((f) => f.id === faceId);
     if (!body || !topo || !face) return null;
 
@@ -956,14 +1308,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       }
       indices.push(li);
     }
-    const fill = new Mesh(`follower-face-${key}`, scene);
+    const fill = new Mesh(`follower-face-${key}`, st.scene);
     const data = new VertexData();
     data.positions = positions;
     // ⚠ DOUBLE-SIDED by duplicating the winding: a face marker must read from either side,
     // because an aligned body is routinely seen from behind the face that carries the alignment.
     data.indices = [...indices, ...indices.slice().reverse()];
     data.applyToMesh(fill, false);
-    const mat = new StandardMaterial(`follower-face-${key}-mat`, scene);
+    const mat = new StandardMaterial(`follower-face-${key}-mat`, st.scene);
     mat.emissiveColor = FOLLOWER_COLOUR.clone();
     mat.disableLighting = true;
     mat.backFaceCulling = false;
@@ -979,7 +1331,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⛔ CLOSED by repeating the first point — an open loop leaves one edge of the face
     // unmarked, which reads as a defect in the pick rather than in the drawing.
     if (loopPts.length > 0) loopPts.push(loopPts[0] as Vector3);
-    const loop = CreateLines(`face-loop-${key}`, { points: loopPts }, scene);
+    const loop = CreateLines(`face-loop-${key}`, { points: loopPts }, st.scene);
     loop.color = PIONEER_COLOUR.clone();
     loop.parent = body;
     loop.isPickable = false;
@@ -990,14 +1342,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ `renderingGroupId = 1` and not a depth-function trick: the group boundary is a property
     // of the scene's draw order, where a per-material `ALWAYS` would still lose to anything
     // drawn after it in the same group. ⛔ One mechanism, not two that can disagree.
-    const xray = new Mesh(`follower-face-xray-${key}`, scene);
+    const xray = new Mesh(`follower-face-xray-${key}`, st.scene);
     const xrayData = new VertexData();
     xrayData.positions = positions;
     xrayData.indices = [...indices, ...indices.slice().reverse()];
     xrayData.applyToMesh(xray, false);
     const xrayMat = new StandardMaterial(
       `follower-face-xray-${key}-mat`,
-      scene,
+      st.scene,
     );
     xrayMat.emissiveColor = FOLLOWER_COLOUR.clone();
     xrayMat.disableLighting = true;
@@ -1011,7 +1363,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     xray.isVisible = false;
 
     const made: FaceMarker = { fill, mat, loop, xray, xrayMat };
-    faceMarkers.set(key, made);
+    st.faceMarkers.set(key, made);
     return made;
   };
 
@@ -1054,14 +1406,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // mode, when object is not aligned"*, and I read the mode as a condition of the RULE rather
     // than as the setting he happened to be describing it in. ⭐ The offer is about geometry —
     // this face against those faces — and a body being TRANSLATED into place wants it as much.
-    const holder = router.objects()[0];
-    const grip = holder === undefined ? undefined : held.get(holder.id);
+    const holder = st.router.objects()[0];
+    const grip = holder === undefined ? undefined : st.held.get(holder.id);
     if (grip === undefined || grip.pressFace === null) return null;
     // ⭐ On a mouse only the RIGHT button sets a HitFace (`hitFaceAllowed`, the owner 2026-09-25).
     if (!hitFaceAllowed(grip.pointerType)) return null;
-    const objectId = idOf.get(grip.mesh);
+    const objectId = st.idOf.get(grip.mesh);
     if (objectId === undefined) return null;
-    if (alignedFaceOf(world, objectId) !== null) return null;
+    if (alignedFaceOf(st.world, objectId) !== null) return null;
     return { objectId, faceId: grip.pressFace.faceId };
   };
 
@@ -1082,7 +1434,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * have always been placed this way.
    */
   const worldPointOn = (objectId: ObjectId, local: Vec3): Vector3 | null => {
-    const body = meshOf.get(objectId);
+    const body = st.meshOf.get(objectId);
     if (!body) return null;
     return Vector3.TransformCoordinates(
       new Vector3(local[0], local[1], local[2]),
@@ -1095,25 +1447,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    *
    * ⛔ NOT parented — see `worldPointOn`. Its position AND scale are written every frame.
    */
-  const candidateRings = new Map<string, LinesMesh>();
+  st.candidateRings = new Map<string, LinesMesh>();
   /** ⭐ Each candidate ring's point, in its body's LOCAL frame, lifted off the face. */
-  const candidateRingLocal = new Map<string, Vec3>();
+  st.candidateRingLocal = new Map<string, Vec3>();
   const candidateRingFor = (
     objectId: ObjectId,
     faceId: string,
   ): LinesMesh | null => {
     const key = `${objectId}/${faceId}`;
-    const hit = candidateRings.get(key);
+    const hit = st.candidateRings.get(key);
     if (hit !== undefined) return hit;
-    const body = meshOf.get(objectId);
-    const face = world.objects
+    const body = st.meshOf.get(objectId);
+    const face = st.world.objects
       .get(objectId)
       ?.faces.find((f) => f.id === faceId);
     if (!body || !face) return null;
     const m = CreateLines(
       `candidate-ring-${key}`,
       { points: RING_POINTS },
-      scene,
+      st.scene,
     );
     m.color = new Color3(1, 1, 1);
     m.isPickable = false;
@@ -1124,12 +1476,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     m.isVisible = false;
     m.metadata = { orbitCandidate: false };
     // ⚠ Lifted off the surface by the same hair the face marker uses, or it z-fights the fill.
-    candidateRingLocal.set(key, [
+    st.candidateRingLocal.set(key, [
       face.centre[0] + face.normal[0] * MARKER_LIFT_M * 2,
       face.centre[1] + face.normal[1] * MARKER_LIFT_M * 2,
       face.centre[2] + face.normal[2] * MARKER_LIFT_M * 2,
     ]);
-    candidateRings.set(key, m);
+    st.candidateRings.set(key, m);
     return m;
   };
 
@@ -1147,19 +1499,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ever made. ⚠ The material is SHARED and survives, so a dispose frees the mesh's buffers only.
    * ⛔ PARENTED to the Pioneer (defect 46) and BILLBOARDED — always in the screen view plane.
    */
-  const pioneerCursors = new PioneerFaceCursors();
-  const pioneerCursorMeshes = new Map<string, Mesh>();
-  const pioneerCursorMat = new StandardMaterial("pioneer-cursor-mat", scene);
-  pioneerCursorMat.emissiveColor = PIONEER_CURSOR_COLOUR.clone();
-  pioneerCursorMat.disableLighting = true;
-  pioneerCursorMat.backFaceCulling = false;
+  st.pioneerCursors = new PioneerFaceCursors();
+  st.pioneerCursorMeshes = new Map<string, Mesh>();
+  st.pioneerCursorMat = new StandardMaterial("pioneer-cursor-mat", st.scene);
+  st.pioneerCursorMat.emissiveColor = PIONEER_CURSOR_COLOUR.clone();
+  st.pioneerCursorMat.disableLighting = true;
+  st.pioneerCursorMat.backFaceCulling = false;
   // ⚠ `PIONEER_CURSOR_PX` (16) lives in `input/pioneer_cursor_grab.ts`, because the grab reach is
   // built on it — a little larger than the white candidate ring (`GIZMO_RING_PX`), so they nest.
   const syncPioneerCursors = (): void => {
     const couples: AlignmentCouple[] = [];
-    for (const followerId of links.alignedObjects()) {
-      const followerFaceId = alignedFaceOf(world, followerId);
-      const p = links.pioneerFor(followerId);
+    for (const followerId of st.links.alignedObjects()) {
+      const followerFaceId = alignedFaceOf(st.world, followerId);
+      const p = st.links.pioneerFor(followerId);
       if (followerFaceId === null || p === null) continue;
       couples.push({
         followerId,
@@ -1168,24 +1520,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         pioneerFaceId: p.faceId,
       });
     }
-    const { created, destroyed } = pioneerCursors.reconcile(couples, (o, f) => {
-      const face = world.objects.get(o)?.faces.find((x) => x.id === f);
+    const { created, destroyed } = st.pioneerCursors.reconcile(couples, (o, f) => {
+      const face = st.world.objects.get(o)?.faces.find((x) => x.id === f);
       return face === undefined ? null : face;
     });
     for (const cur of destroyed) {
       // ⭐ `dispose(false, false)`: the shared material is kept; the mesh and its buffers go.
-      pioneerCursorMeshes.get(cur.key)?.dispose(false, false);
-      pioneerCursorMeshes.delete(cur.key);
+      st.pioneerCursorMeshes.get(cur.key)?.dispose(false, false);
+      st.pioneerCursorMeshes.delete(cur.key);
     }
     for (const cur of created) {
-      const body = meshOf.get(cur.pioneerId);
+      const body = st.meshOf.get(cur.pioneerId);
       if (!body) continue;
       const m = CreateTorus(
         `pioneer-cursor-${cur.key.replaceAll("\u0000", "|")}`,
         { diameter: 1, thickness: 0.14, tessellation: 32 },
-        scene,
+        st.scene,
       );
-      m.material = pioneerCursorMat;
+      m.material = st.pioneerCursorMat;
       m.isPickable = false;
       m.metadata = { orbitCandidate: false };
       // ⭐ Above the body, like every instrument ring: a cursor must not be hidden by what it marks.
@@ -1199,13 +1551,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       m.bakeCurrentTransformIntoVertices();
       m.billboardMode = Mesh.BILLBOARDMODE_ALL;
       // ⛔⛔ NOT PARENTED — a billboarded child loses its parent's rotation (`worldPointOn`).
-      pioneerCursorMeshes.set(cur.key, m);
+      st.pioneerCursorMeshes.set(cur.key, m);
     }
     const scale =
-      trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight) *
+      trackingMetresPerPx(st.camera.radius, st.camera.fov, st.canvas.clientHeight) *
       PIONEER_CURSOR_PX;
-    for (const cur of pioneerCursors.all()) {
-      const m = pioneerCursorMeshes.get(cur.key);
+    for (const cur of st.pioneerCursors.all()) {
+      const m = st.pioneerCursorMeshes.get(cur.key);
       if (m === undefined) continue;
       // ⚠ Written every frame from the cursor's own LOCAL position through the Pioneer's world
       // matrix, so a drag and a turned Pioneer both land where the face is; lifted off the face
@@ -1239,10 +1591,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ACTIONS the offer drives, not on the fact it is computed from.
    */
   const candidateFacesNow = (): FaceRef[] => {
-    if (cfg.pioneerCandidates !== 1) return [];
+    if (st.cfg.pioneerCandidates !== 1) return [];
     const hit = hitFaceNow();
     if (hit === null) return [];
-    return mateCandidateFaces(world, hit, cfg.pioneerCandidateConeDeg);
+    return mateCandidateFaces(st.world, hit, st.cfg.pioneerCandidateConeDeg);
   };
 
   /** ⭐ The same offer as keys, as the PRESS path needs it (the frozen-face exception). */
@@ -1263,31 +1615,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
      */
     transientGrip: Held,
   ): boolean => {
-    const followerId = idOf.get(followerGrip.mesh);
+    const followerId = st.idOf.get(followerGrip.mesh);
     if (followerId === undefined || followerGrip.pressFace === null) {
-      lastVerdict = "align: press resolved no face — toggled instead";
+      st.lastVerdict = "align: press resolved no face — toggled instead";
       return false;
     }
     // ⛔⛔ EXACTLY ONE OTHER HOLDER. The rule names a *first* and a *second* object; with
     // two other objects held, *which* one is the Follower has no answer worth trusting, and
     // guessing would align an object the hand did not mean to move. ⭐ Same discipline as
     // `A15`'s *"every remaining holder is evaluated, not a guessed pairing"*.
-    const others = [...held.entries()].filter(
+    const others = [...st.held.entries()].filter(
       ([pid]) => pid !== followerPointerId,
     );
     if (others.length !== 1) {
-      lastVerdict =
+      st.lastVerdict =
         others.length === 0
           ? "align: nothing held — the tap toggled the mode"
           : `align: ${others.length} objects held — no Pioneer can be chosen, toggled instead`;
       return false;
     }
     const pioneerGrip = others[0]![1];
-    const pioneerId = idOf.get(pioneerGrip.mesh);
+    const pioneerId = st.idOf.get(pioneerGrip.mesh);
     if (pioneerId === undefined || pioneerGrip.pressFace === null) {
       // ⚠ `D67`: the held body IS the Pioneer, so this is *the first touch never resolved a
       // PioneerFace* — the one thing the whole gesture stands on.
-      lastVerdict =
+      st.lastVerdict =
         "align: the held object has no resolved PioneerFace — toggled instead";
       return false;
     }
@@ -1298,8 +1650,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // would be lost is the EXPLANATION — the tap would silently do nothing, and *"tapping the
     // plate does nothing"* is precisely the shape this file has been burned by twice today.
     // ⭐ A frozen body remains a perfectly good PIONEER; only the Follower role is refused.
-    if (world.objects.get(followerId)?.frozen === true) {
-      lastVerdict = `align: ${followerId} is FROZEN — it cannot be a follower`;
+    if (st.world.objects.get(followerId)?.frozen === true) {
+      st.lastVerdict = `align: ${followerId} is FROZEN — it cannot be a follower`;
       // ⚠ `false`: the tap was NOT consumed, so it still falls through to the mode toggle.
       // ⛔ Unlike the cycle case there is nothing to undo here, and a tap that did absolutely
       // nothing would be the readout-that-lies shape again.
@@ -1333,7 +1685,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐⭐ THE DECISION IS `cycleBreaker`'s, in `core/alignment_links.ts`, where a vector reaches
     // it. ⛔ This file holds the CALL and nothing else — the 2026-09-19 lesson, which cost seven
     // mutants that survived the whole suite.
-    const swapped = links.cycleBreaker(followerId, pioneerId);
+    const swapped = st.links.cycleBreaker(followerId, pioneerId);
     if (swapped !== null) {
       // ⛔⛔ **AND THEN IT FALLS THROUGH.** ⚠ It used to `return true` here, which is the *break
       // only* reading — the owner's 2026-09-17 sentence — and it left the hand repeating the
@@ -1345,46 +1697,46 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // the owner's own *"the PioneerFace resets as null"*. There is no live relationship
     // afterwards: moving the other object later does not drag this alignment with it.
     const pioneerWorld = faceWorld(
-      world,
+      st.world,
       pioneerId,
       pioneerGrip.pressFace.faceId,
     )?.normal;
-    const followerLocal = world.objects
+    const followerLocal = st.world.objects
       .get(followerId)
       ?.faces.find((f) => f.id === followerGrip.pressFace!.faceId)?.normal;
     if (!pioneerWorld || !followerLocal) {
-      lastVerdict = "align: face lookup failed — toggled instead";
+      st.lastVerdict = "align: face lookup failed — toggled instead";
       return false;
     }
 
     const capped = singleAlignment(
-      world.objects.get(followerId)?.constraints ?? [],
+      st.world.objects.get(followerId)?.constraints ?? [],
       faceAlignConstraint(followerLocal, pioneerWorld),
     );
     if (capped.refused) {
       // ⛔ A `MATE` holds the stack. Unreachable today (§4's `6quater` is the only rule that
       // pushes one and fork C has no flick), and reported rather than silently overridden.
-      lastVerdict = "align: REFUSED — a MATE holds the stack";
+      st.lastVerdict = "align: REFUSED — a MATE holds the stack";
       return false;
     }
     // ⚠ `clear` then `push` IS the setter, and it is safe *because* of the refusal above:
     // with no mate on the stack there is nothing `clear` can destroy that the cap would have
     // kept. ⛔ Written as two calls rather than a new core API, so the object model gains no
     // surface for one caller.
-    world = clearObjectConstraints(world, followerId);
-    world = pushObjectConstraint(world, followerId, capped.stack[0]!, false);
+    st.world = clearObjectConstraints(st.world, followerId);
+    st.world = pushObjectConstraint(st.world, followerId, capped.stack[0]!, false);
 
     // ⭐⭐ **SOLVED FROM THE LAST *ALIGNED* ORIENTATION** — the owner, 2026-09-26: *"the rotation
     // shall be minimum from its last aligned quaternion."* ⛔ Mid-snap, the drawn pose is only part
     // of the way there, and a swing from it would keep the unfinished part of the previous turn.
     // ⚠ The new snap still STARTS at the drawn pose, so nothing jumps.
     const drawn = modelOrientation(followerGrip.mesh);
-    const before = alignSnaps.targetOf(followerId) ?? drawn;
+    const before = st.alignSnaps.targetOf(followerId) ?? drawn;
     const solved = solve(capped.stack, before, {
-      evictOnOverflow: cfg.evictOnOverflow,
+      evictOnOverflow: st.cfg.evictOnOverflow,
     });
     if (solved.rejected) {
-      lastVerdict = "align: solver refused the alignment";
+      st.lastVerdict = "align: solver refused the alignment";
       return false;
     }
     // ⭐ ONE alignment, so this is §1.4's entry 1: the MINIMAL swing — *"rotation on the
@@ -1400,7 +1752,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // twist"*. ⛔ A turn about the aligned normal only (≤ 45°), so the constraint just pushed is
     // untouched; the decision is `squaringTwist`'s (`input/alignment.ts`).
     const swung = qmul(solved.rotation, before);
-    const pioneerOrientation = worldPlacementOf(world, pioneerId)?.orientation;
+    const pioneerOrientation = worldPlacementOf(st.world, pioneerId)?.orientation;
     const target =
       pioneerOrientation === undefined
         ? swung
@@ -1408,15 +1760,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             squaringTwist(capped.stack[0]!.targetWorld, swung, pioneerOrientation),
             swung,
           );
-    const snapMs = cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+    const snapMs = st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
     if (snapMs > 0) {
-      alignSnaps.start(followerId, drawn, target, performance.now());
+      st.alignSnaps.start(followerId, drawn, target, performance.now());
     } else {
       setModelOrientation(followerGrip.mesh, target);
-      alignSnaps.cancel(followerId);
+      st.alignSnaps.cancel(followerId);
     }
     if (swapped !== null) {
-      lastVerdict = `align: SWAP — released ${swapped}'s own alignment, ${followerId}→${pioneerId}`;
+      st.lastVerdict = `align: SWAP — released ${swapped}'s own alignment, ${followerId}→${pioneerId}`;
     }
     followerGrip.alignmentTouched = true;
     // ⭐⭐ THE HIGHLIGHT IS THE ALIGNMENT'S STATE, not the press's: it appears HERE and dies
@@ -1457,7 +1809,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     transientGrip.pressFace = null;
     // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
     // ACTIVE alignment's mode and would recolour an older object's highlight.
-    alignModeOf.set(followerId, mode);
+    st.alignModeOf.set(followerId, mode);
     // ⛔ And WHO it was aligned to, which the constraint itself does not record.
     // ⚠ `link` MOVES an existing link rather than adding a second — a body has one alignment,
     // so re-aligning it must remove it from its previous Pioneer's set.
@@ -1479,18 +1831,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐ `D100`: a re-aligned Follower leaves its seat first — a child of one Pioneer cannot be
     // aligned to another through the tree.
     unseatWorld(followerId);
-    const linked = links.link(
+    const linked = st.links.link(
       followerId,
       pioneerId,
       pioneerFaceId,
-      worldPlacementOf(world, pioneerId)?.orientation ?? IDENTITY,
+      worldPlacementOf(st.world, pioneerId)?.orientation ?? IDENTITY,
       // ⭐ `D69` — the move cascade's baseline, read at the same instant as the orientation so
       // the two halves of the link describe ONE moment.
-      worldPlacementOf(world, pioneerId)?.position ?? [0, 0, 0],
+      worldPlacementOf(st.world, pioneerId)?.position ?? [0, 0, 0],
     );
     if (!linked) {
-      lastVerdict = `align: REFUSED — ${followerId}→${pioneerId} would close a cycle`;
-      hudDirty = true;
+      st.lastVerdict = `align: REFUSED — ${followerId}→${pioneerId} would close a cycle`;
+      st.hudDirty = true;
     }
     paintHighlightColours();
     // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
@@ -1507,9 +1859,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ Nothing is trapped by it: a tap on empty space or on the held object still toggles,
     // so `TRANSLATE` is one tap away — and staying in `ROTATE` is what makes the rotation
     // reset testable straight after an alignment.
-    lastVerdict =
+    st.lastVerdict =
       `align: ${mode} ${followerId}/${followerFaceId} → ` +
-      `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${behaviour}`;
+      `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${st.behaviour}`;
     return true;
   };
 
@@ -1569,7 +1921,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * COLOUR is remembered, keyed by object. ⚠ Entries are PRUNED every frame against
    * `alignedFaceOf`, so a stale one cannot outlive its alignment even though it is state.
    */
-  const alignModeOf = new Map<ObjectId, AlignMode>();
+  st.alignModeOf = new Map<ObjectId, AlignMode>();
 
   /**
    * ⭐⭐⭐ **WHO IS ALIGNED TO WHOM** — `core/alignment_links.ts`, a two-way index.
@@ -1590,7 +1942,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the need for every release path — shake, re-tap, rotation reset, eviction — to remember to
    * call `unlink`.
    */
-  const links = new AlignmentLinks();
+  st.links = new AlignmentLinks();
 
   /**
    * ⭐⭐⭐ **THE SNAP AND THE SEAT** (`D100`, the owner, 2026-09-26). The DECISIONS are pure —
@@ -1603,49 +1955,49 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * body. ⛔ Its own translation is refused (`applyWorldStep`); the cascades skip it; a re-align, a
    * release or a prune un-parents it (`unseatWorld`).
    */
-  const snapArming = new SnapArming();
-  const seatSnaps = new SeatSnaps<ObjectId>();
-  const unsnapDetectors = new Map<string, UnsnapDetector>();
+  st.snapArming = new SnapArming();
+  st.seatSnaps = new SeatSnaps<ObjectId>();
+  st.unsnapDetectors = new Map<string, UnsnapDetector>();
   /**
    * ⭐ The body each pointer pressed, and its pointer type — the unsnap reads the pair (*first the
    * Pioneer, second the Follower*) and the device off these, because a `SECOND` touchpoint has no
    * grip to carry them. Both dropped at release.
    */
-  const rawPressedBody = new Map<number, ObjectId>();
-  const pointerTypeOf = new Map<number, string>();
+  st.rawPressedBody = new Map<number, ObjectId>();
+  st.pointerTypeOf = new Map<number, string>();
   const driveBodyOf = (id: ObjectId): ObjectId =>
     assemblyRoot(
       id,
-      (f) => links.pioneerFor(f)?.objectId ?? null,
-      (f) => links.isSeated(f),
-      (b) => world.objects.get(b)?.frozen === true,
+      (f) => st.links.pioneerFor(f)?.objectId ?? null,
+      (f) => st.links.isSeated(f),
+      (b) => st.world.objects.get(b)?.frozen === true,
     );
   /** ⭐ Un-parent a follower in the WORLD and drop its flights. ⚠ The link's own flag is `links`'. */
   const unseatWorld = (followerId: ObjectId): void => {
-    if (world.objects.get(followerId)?.parent !== null) {
-      world = detach(world, followerId);
-      hudDirty = true;
+    if (st.world.objects.get(followerId)?.parent !== null) {
+      st.world = detach(st.world, followerId);
+      st.hudDirty = true;
     }
-    seatSnaps.cancel(followerId);
-    const cur = pioneerCursors.ofFollower(followerId);
+    st.seatSnaps.cancel(followerId);
+    const cur = st.pioneerCursors.ofFollower(followerId);
     if (cur !== null) {
-      snapArming.forget(cur.key);
-      unsnapDetectors.delete(cur.key);
+      st.snapArming.forget(cur.key);
+      st.unsnapDetectors.delete(cur.key);
     }
   };
   /** ⭐ Are these two bodies a seated couple, either way round? — what a press must not break. */
   const isSeatedCouple = (a: ObjectId | null, b: ObjectId | null): boolean => {
     if (a === null || b === null) return false;
     return (
-      (links.isSeated(a) && links.pioneerFor(a)?.objectId === b) ||
-      (links.isSeated(b) && links.pioneerFor(b)?.objectId === a)
+      (st.links.isSeated(a) && st.links.pioneerFor(a)?.objectId === b) ||
+      (st.links.isSeated(b) && st.links.pioneerFor(b)?.objectId === a)
     );
   };
   /** ⭐ The seated root above a body — itself when it is not seated. */
   const seatedRootOf = (id: ObjectId): ObjectId => {
     let x = id;
-    for (let i = 0; i < 16 && links.isSeated(x); i++) {
-      const p = links.pioneerFor(x)?.objectId;
+    for (let i = 0; i < 16 && st.links.isSeated(x); i++) {
+      const p = st.links.pioneerFor(x)?.objectId;
       if (p === undefined) break;
       x = p;
     }
@@ -1654,7 +2006,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   /** ⭐ Is `id` seated in the same assembly as `mover`? — the sway treats it as one body. */
   const inAssemblyWith = (mover: ObjectId | null, id: ObjectId): boolean => {
     if (mover === null || mover === id) return false;
-    if (!links.isSeated(mover) && !links.isSeated(id)) return false;
+    if (!st.links.isSeated(mover) && !st.links.isSeated(id)) return false;
     return seatedRootOf(mover) === seatedRootOf(id);
   };
 
@@ -1671,14 +2023,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const releaseAlignmentOf = (followerId: ObjectId): void => {
     // ⚠ A release can be decided by the render loop (a turned Pioneer, a prune), where no
     // pointer event follows to repaint the HUD. See `hudDirty`.
-    hudDirty = true;
-    const ev = evictObjectConstraints(world, followerId);
-    world = ev.world;
+    st.hudDirty = true;
+    const ev = evictObjectConstraints(st.world, followerId);
+    st.world = ev.world;
     cancelAlignAnim(followerId);
     // ⭐ `D100`: a released alignment takes its seat with it — the body keeps its world pose.
     unseatWorld(followerId);
-    links.unlink(followerId);
-    alignModeOf.delete(followerId);
+    st.links.unlink(followerId);
+    st.alignModeOf.delete(followerId);
     // ⚠ The ACTIVE-alignment records are cleared only if this body is the one they name: the
     // tap, shake and flick rules read them, and wiping them for an unrelated body would make
     // the next gesture on the ACTIVE follower behave as though nothing were aligned.
@@ -1724,12 +2076,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ EVERY aligned object, not just the active one: a body aligned in `FOLLOW` earlier must
     // keep reporting `FOLLOW` after the fingers move on, or the colour would describe the most
     // recent gesture instead of the relationship it names.
-    for (const [key, q] of faceMarkers) {
+    for (const [key, q] of st.faceMarkers) {
       const id = key.slice(0, key.indexOf("/"));
-      const mode = alignModeOf.get(id);
+      const mode = st.alignModeOf.get(id);
       const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
       q.mat.emissiveColor.copyFrom(want);
-      const o = outlines.get(id);
+      const o = st.outlines.get(id);
       if (o !== undefined) o.align.color.copyFrom(want);
     }
   };
@@ -1785,7 +2137,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       existing === null
         ? { lines, updatable: true }
         : { lines, updatable: true, instance: existing },
-      scene,
+      st.scene,
     );
     m.color = colour.clone();
     m.isPickable = false;
@@ -1794,12 +2146,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
 
   const BODY_OUTLINE_FRACTION = 0.005;
   const ALIGN_OUTLINE_FRACTION = 0.02;
-  interface BodyOutlines {
-    readonly body: LinesMesh;
-    readonly align: LinesMesh;
-    shell: LinesMesh;
-  }
-  const outlines = new Map<ObjectId, BodyOutlines>();
+  st.outlines = new Map<ObjectId, BodyOutlines>();
   const spanOf = (t: MeshTopology): number => {
     let span = 0;
     for (const p of t.positions) {
@@ -1808,10 +2155,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return span > 0 ? span : 1;
   };
   const outlinesFor = (id: ObjectId): BodyOutlines | null => {
-    const hit = outlines.get(id);
+    const hit = st.outlines.get(id);
     if (hit !== undefined) return hit;
-    const topo = topoOf.get(id);
-    const body = meshOf.get(id);
+    const topo = st.topoOf.get(id);
+    const body = st.meshOf.get(id);
     if (!topo || !body || topo.edges.length === 0) return null;
     const sp = spanOf(topo);
     const mk = (name: string, h: number, colour: Color3): LinesMesh => {
@@ -1837,7 +2184,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         CAPTURE_COLOUR,
       ),
     };
-    outlines.set(id, made);
+    st.outlines.set(id, made);
     return made;
   };
 
@@ -1857,7 +2204,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     for (const id of pair) if (id !== null) wanted.add(id);
     for (const id of wanted) {
       const o = outlinesFor(id);
-      const topo = topoOf.get(id);
+      const topo = st.topoOf.get(id);
       if (!o || !topo) continue;
       o.shell = edgeLines(
         `shell-outline-${id}`,
@@ -1871,7 +2218,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     }
     // ⚠ Retired by SET MEMBERSHIP, whatever stopped wanting them — the stale-highlight bug of
     // 2026-09-17 was the other pattern, and it produced two false defect reports.
-    for (const [id, o] of outlines) {
+    for (const [id, o] of st.outlines) {
       if (wanted.has(id)) continue;
       o.body.isVisible = false;
       o.shell.isVisible = false;
@@ -1889,7 +2236,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * because the OTHER body moved (a sway nudge, an animation) with no pointer event at all, and
    * a highlight that only updated on input would then describe a stale scene.
    */
-  let highlighted: HighlightVerdict = {
+  st.highlighted = {
     pair: null,
     translating: false,
     inRange: false,
@@ -1911,17 +2258,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⭐ A body with no entry uses the BOOT axes, which is the dictation's own default rather
    * than a stand-in: *all* object axes are the boot camera's until something moves them.
    */
-  let bootObjectAxes: ObjectAxes | null = null;
+  st.bootObjectAxes = null;
   /**
    * ⭐ The gravity frame at scene boot — what a FREE body is turned about while `worldAxisB` is on.
    * ⚠ Filled beside `bootObjectAxes`, at the very bottom of this file, for the same reason.
    */
-  let bootGestureFrame: GravityFrame | null = null;
+  st.bootGestureFrame = null;
   /** ⭐ The decision is `rotationFrame`'s, in `src/input`; this only supplies the two candidates. */
   const rotationFrameOf = (live: GravityFrame): GravityFrame =>
     rotationFrame({
-      worldAxisB: cfg.worldAxisB === 1,
-      bootFrame: bootGestureFrame,
+      worldAxisB: st.cfg.worldAxisB === 1,
+      bootFrame: st.bootGestureFrame,
       liveFrame: live,
     });
 
@@ -1941,10 +2288,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // follows the live camera every frame instead of only at a crossing.
   const axesOf = (): ObjectAxes =>
     updatedObjectAxes({
-      worldAxisB: cfg.worldAxisB === 1,
-      bootAxes: bootObjectAxes ?? axesFromFrame(requireGestureFrame()),
+      worldAxisB: st.cfg.worldAxisB === 1,
+      bootAxes: st.bootObjectAxes ?? axesFromFrame(requireGestureFrame()),
       liveFrame: gravityFrame(screenFrame().viewAxis, WORLD_DOWN),
-      previous: bootObjectAxes ?? axesFromFrame(requireGestureFrame()),
+      previous: st.bootObjectAxes ?? axesFromFrame(requireGestureFrame()),
     });
   // ⚠ `lastTravelDir` stood here — the direction a body last ACTUALLY went. ⛔ The ray is aimed by
   // the INPUT now (the owner, 2026-09-23), so what persists between frames is the SHOWN axes and
@@ -1962,21 +2309,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * if the delta position triggers a translation in this direction."* ⛔ The decision is
    * `displayedAxes`'s; this only remembers its answer, so a pause does not blank the gizmo.
    */
-  const gizmoAxes = new Map<ObjectId, GizmoChannels>();
+  st.gizmoAxes = new Map<ObjectId, GizmoChannels>();
   /**
    * ⭐ Bodies a ROLL has turned during their CURRENT hold — what *"the roll rotation is ongoing"*
    * means for an aligned Follower's green axis (`aligned_axes.ts`). ⚠ `gizmoAxes` keeps its answer
    * across holds, so the grey line alone cannot say whether the roll belongs to THIS gesture.
    * Dropped when the body leaves the gizmo.
    */
-  const rolledThisHold = new Set<ObjectId>();
+  st.rolledThisHold = new Set<ObjectId>();
   /**
    * ⭐ ONE place both `axisTravel` call sites report to — the holder's drag and the second
    * touchpoint's push. ⛔ The owner, 2026-09-23: *"make sure the delta position on the second
    * touch triggers the gizmo in the same way as the delta positions of the first touch."*
    */
   /** ⚠ WHICH CHANNELS pushed this body THIS FRAME, over both fingers. Consumed by the gizmo. */
-  const frameAxisDriven = new Map<ObjectId, [boolean, boolean, boolean]>();
+  st.frameAxisDriven = new Map<ObjectId, [boolean, boolean, boolean]>();
   /**
    * ⭐⭐⭐ **THE THREE TURN CHANNELS**, in the gizmo's own order after the translation axes:
    * `ROLL` grey, `YAW` purple, `PITCH` maroon.
@@ -1984,7 +2331,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const TURN_ROLL = 0;
   const TURN_YAW = 1;
   const TURN_PITCH = 2;
-  type TurnAxes = [Vec3 | null, Vec3 | null, Vec3 | null];
   /**
    * ⭐⭐ **THE AXES THE BODY IS BEING TURNED ABOUT**, world, this frame, one slot per turn channel.
    *
@@ -1994,23 +2340,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * computed at the gizmo would be free to draw a line the body is **not** turning about, which is
    * exactly the class of defect `scene.ts`-resident rules keep producing.
    */
-  const frameTurnAxes = new Map<ObjectId, TurnAxes>();
+  st.frameTurnAxes = new Map<ObjectId, TurnAxes>();
   /** ⭐ The last axis each channel turned about — kept so a pause does not blank its line. */
-  const gizmoTurnAxes = new Map<ObjectId, TurnAxes>();
+  st.gizmoTurnAxes = new Map<ObjectId, TurnAxes>();
   const noteTurnAxis = (
     id: ObjectId | undefined,
     kind: 0 | 1 | 2,
     axis: Vec3,
   ): void => {
     if (id === undefined) return;
-    const cur = frameTurnAxes.get(id) ?? ([null, null, null] as TurnAxes);
+    const cur = st.frameTurnAxes.get(id) ?? ([null, null, null] as TurnAxes);
     cur[kind] = axis;
-    frameTurnAxes.set(id, cur);
+    st.frameTurnAxes.set(id, cur);
   };
   const noteAxisTravel = (id: ObjectId | undefined, t: AxisTravel): void => {
     if (id === undefined) return;
-    const p = frameAxisDriven.get(id) ?? [false, false, false];
-    frameAxisDriven.set(id, [
+    const p = st.frameAxisDriven.get(id) ?? [false, false, false];
+    st.frameAxisDriven.set(id, [
       p[0] || t.driven[0],
       p[1] || t.driven[1],
       p[2] || t.driven[2],
@@ -2023,8 +2369,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * abandoned for the fixed-rate push. ⚠ Without these, *"it went much too far"* and *"it barely
    * moved"* are one symptom with two causes, and the camera pose is what separates them.
    */
-  let lastTrackGain = 0;
-  let lastEdgeOn = false;
+  st.lastTrackGain = 0;
+  st.lastEdgeOn = false;
 
   /**
    * ⛔⛔ **`CameraOffsetZoneEnter` — DECLARED, CALLED, AND EMPTY BY INSTRUCTION.**
@@ -2038,16 +2384,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * instrument shape this project met three times on 2026-09-16 alone.
    */
   /** ⚠ Last frame's range verdict — the EDGE is what fires the hook, never the level. */
-  let zoneWas = false;
+  st.zoneWas = false;
   /**
    * ⛔ The pair that was in range when the zone was ENTERED, so the EXIT edge can reach the
    * same two bodies. ⚠ At the exit `highlighted.pair` is already `null` — the verdict that
    * tells you a body has left is the one that no longer names it.
    */
-  let zonePair: readonly ObjectId[] = [];
-  let zoneEnterCalls = 0;
+  st.zonePair = [];
+  st.zoneEnterCalls = 0;
   const cameraOffsetZoneEnter = (): void => {
-    zoneEnterCalls += 1;
+    st.zoneEnterCalls += 1;
   };
 
   /**
@@ -2086,17 +2432,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     new Color3(0.72, 0.42, 1),
     new Color3(0.6, 0.22, 0.14),
   ] as const;
-  interface AxisGizmo {
-    readonly lines: readonly [
-      LinesMesh,
-      LinesMesh,
-      LinesMesh,
-      LinesMesh,
-      LinesMesh,
-      LinesMesh,
-    ];
-  }
-  const axisGizmos = new Map<ObjectId, AxisGizmo>();
+  st.axisGizmos = new Map<ObjectId, AxisGizmo>();
   /**
    * ⭐⭐ **THE WHITE CIRCLE AT THE GIZMO'S CENTRE** — the owner, 2026-09-23: *"add a white circle
    * at the gizmo center so I can identify the leadingface easily."*
@@ -2164,8 +2500,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * one there. That is honest — one pivot, drawn twice — and the alternative, hiding one, would
    * have made the marker's meaning depend on the alignment state.
    */
-  const gizmoRings = new Map<ObjectId, LinesMesh>();
-  const gizmoTurnRings = new Map<ObjectId, LinesMesh>();
+  st.gizmoRings = new Map<ObjectId, LinesMesh>();
+  st.gizmoTurnRings = new Map<ObjectId, LinesMesh>();
   /**
    * ⭐⭐⭐ **THE TURN FAMILY DRAWS ABOVE THE MOVE FAMILY** — the owner, 2026-09-23: *"if the grey
    * rotation axis and the green rotation axis are aligned, make sure the grey axis is shown on top
@@ -2195,7 +2531,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const m = CreateLines(
       `gizmo-ring-${tag}-${id}`,
       { points: RING_POINTS },
-      scene,
+      st.scene,
     );
     m.color = colour.clone();
     m.isPickable = false;
@@ -2206,12 +2542,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     return m;
   };
   const gizmoRingFor = (id: ObjectId): LinesMesh =>
-    ringFrom(gizmoRings, id, GIZMO_RING_MOVE_COLOUR, "move", GIZMO_MOVE_GROUP);
+    ringFrom(st.gizmoRings, id, GIZMO_RING_MOVE_COLOUR, "move", GIZMO_MOVE_GROUP);
   // ⚠ The grey ring rides with the grey line, or the two halves of one instrument would sit on
   // opposite sides of the boundary and the ring would vanish under a translation line.
   const gizmoTurnRingFor = (id: ObjectId): LinesMesh =>
     ringFrom(
-      gizmoTurnRings,
+      st.gizmoTurnRings,
       id,
       GIZMO_RING_TURN_COLOUR,
       "turn",
@@ -2219,7 +2555,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     );
 
   const gizmoFor = (id: ObjectId): AxisGizmo => {
-    const existing = axisGizmos.get(id);
+    const existing = st.axisGizmos.get(id);
     if (existing) return existing;
     const mk = (i: number): LinesMesh => {
       // ⚠ Two points, updatable: the geometry is rewritten every frame rather than the mesh
@@ -2227,7 +2563,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const m = CreateLines(
         `axis-gizmo-${id}-${i}`,
         { points: [Vector3.Zero(), Vector3.Zero()], updatable: true },
-        scene,
+        st.scene,
       );
       m.color = GIZMO_AXIS_COLOURS[i]!.clone();
       // ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"when the follower is translating and followerface
@@ -2257,7 +2593,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     const made: AxisGizmo = {
       lines: [mk(0), mk(1), mk(2), mk(3), mk(4), mk(5)],
     };
-    axisGizmos.set(id, made);
+    st.axisGizmos.set(id, made);
     return made;
   };
 
@@ -2277,8 +2613,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // everywhere and neither can be read back to its body. ⭐ Which body wins is `soleGizmoBody`'s, in
     // `src/input` — and the gizmo follows the finger that is actually pushing.
     const candidates: { id: ObjectId; driven: boolean }[] = [];
-    for (const grip of held.values()) {
-      const id = idOf.get(grip.mesh);
+    for (const grip of st.held.values()) {
+      const id = st.idOf.get(grip.mesh);
       if (id === undefined) continue;
       // ⛔⛔⛔ **NO GIZMO ON A FROZEN BODY — `D77`, AND IT HAD SILENTLY LAPSED.** The owner made
       // that a rule on 2026-09-23, enforced at a DEFINITION: `leadingFace` refused a frozen body,
@@ -2289,14 +2625,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // set of axes for a body whose transform `setWorldPlacement` refuses to change.
       // ⭐ `METHOD`: *deleting the file a rule lived in deletes the rule* — a definition-site
       // guarantee is only as durable as the definition.
-      if (world.objects.get(id)?.frozen === true) continue;
+      if (st.world.objects.get(id)?.frozen === true) continue;
       // ⭐⭐ An ALIGNED Follower qualifies by being HELD, in either mode (the owner, 2026-09-26:
       // *"displayed whenever the aligned follower object is touched or left clicked (not
       // necessarily when a movement occurs) in whichever mode"*).
       if (
-        alignedFaceOf(world, id) === null &&
+        alignedFaceOf(st.world, id) === null &&
         !isTranslatingMode(grip.mode) &&
-        !frameTurnAxes.has(id)
+        !st.frameTurnAxes.has(id)
       )
         continue;
       if (candidates.some((c) => c.id === id)) continue;
@@ -2305,17 +2641,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // translation path records a set every frame a finger is down, zeros included.
         id,
         driven:
-          (frameAxisDriven.get(id)?.some(Boolean) ?? false) ||
-          frameTurnAxes.has(id),
+          (st.frameAxisDriven.get(id)?.some(Boolean) ?? false) ||
+          st.frameTurnAxes.has(id),
       });
     }
     const owner = soleGizmoBody(candidates);
-    for (const grip of held.values()) {
+    for (const grip of st.held.values()) {
       // ⛔⛔ **THE SECOND TOUCHPOINT'S MODE IS A TRANSLATION, AND THIS ASKED BY NAME** — the
       // owner, 2026-09-23: *"sometimes the gizmo does not show when the second touch is driving
       // the translation."* ⭐ The set lives in `input/grip_mode.ts`, and the mode itself is no
       // longer named after an axis.
-      const id = idOf.get(grip.mesh);
+      const id = st.idOf.get(grip.mesh);
       if (id === undefined) continue;
       // ⛔⛔ **A ROTATION SHOWS THE GIZMO TOO** — the owner, 2026-09-23: *"the gizmo does not exist
       // in rotation mode on aligned follower object. It may need to be created."* ⚠ Every turn
@@ -2325,9 +2661,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // *"displayed whenever the aligned follower object is touched or left clicked (not
       // necessarily when a movement occurs) in whichever mode"*).
       if (
-        alignedFaceOf(world, id) === null &&
+        alignedFaceOf(st.world, id) === null &&
         !isTranslatingMode(grip.mode) &&
-        !frameTurnAxes.has(id)
+        !st.frameTurnAxes.has(id)
       )
         continue;
       // ⛔ Every other eligible body is skipped here rather than hidden later: `live` then holds
@@ -2336,18 +2672,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐⭐⭐ **WHICH DIRECTIONS TO SHOW** — the owner: *"the direction is shown only if the delta
       // position triggers a translation in this direction."* ⛔ The rule is `displayedAxes`'s, in
       // `src/input`, and it keeps the last non-empty answer so a pause does not blank the gizmo.
-      const turning = frameTurnAxes.get(id) ?? null;
+      const turning = st.frameTurnAxes.get(id) ?? null;
       // ⚠ Remembered PER CHANNEL: a body that yawed and then rolled keeps both lines aimed the way
       // each gesture actually turned it, and a pause blanks neither.
       const remembered =
-        gizmoTurnAxes.get(id) ?? ([null, null, null] as TurnAxes);
+        st.gizmoTurnAxes.get(id) ?? ([null, null, null] as TurnAxes);
       if (turning) {
         for (let k = 0; k < 3; k++)
           remembered[k] = turning[k] ?? remembered[k] ?? null;
-        gizmoTurnAxes.set(id, remembered);
+        st.gizmoTurnAxes.set(id, remembered);
       }
-      const channels = frameAxisDriven.get(id) ?? [false, false, false];
-      const byMotion = displayedAxes(gizmoAxes.get(id) ?? null, [
+      const channels = st.frameAxisDriven.get(id) ?? [false, false, false];
+      const byMotion = displayedAxes(st.gizmoAxes.get(id) ?? null, [
         channels[0],
         channels[1],
         channels[2],
@@ -2355,15 +2691,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         turning?.[TURN_YAW] != null,
         turning?.[TURN_PITCH] != null,
       ]);
-      if (byMotion !== null) gizmoAxes.set(id, byMotion);
-      if (turning?.[TURN_ROLL] != null) rolledThisHold.add(id);
+      if (byMotion !== null) st.gizmoAxes.set(id, byMotion);
+      if (turning?.[TURN_ROLL] != null) st.rolledThisHold.add(id);
       // ⭐⭐⭐ **AN ALIGNED FOLLOWER'S RED, GREEN AND BLUE ARE `alignedTravelAxes`'s** — decided by
       // which touches are DOWN, not by what moved (the owner, 2026-09-26). ⛔⛔ The three ROTATION
       // lines stay exactly as `displayedAxes` decides them: *"do not modify anything about the
       // rules for the display of the rotation axis."*
       // ⭐ A second touch is a finger on empty space or the mouse's Shift touchpoint (`OUTSIDE`),
       // or a finger on this same body (`SECOND`).
-      const alignedHere = alignedFaceOf(world, id) !== null;
+      const alignedHere = alignedFaceOf(st.world, id) !== null;
       let shown: GizmoChannels;
       if (alignedHere) {
         const turn =
@@ -2373,11 +2709,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
           // ⛔ The mouse's Shift touchpoint counts only while Shift is held — it outlives Shift
           // until the left button lifts (`secondTouchDown`).
           secondTouchDown(
-            router.outside().map((p) => p.id),
-            router.secondTouchOn(grip.mesh) !== null,
+            st.router.outside().map((p) => p.id),
+            st.router.secondTouchOn(grip.mesh) !== null,
             mouseLayer.shiftHeld(),
           ),
-          turn[3] && rolledThisHold.has(id),
+          turn[3] && st.rolledThisHold.has(id),
         );
         shown = [travel[0], travel[1], travel[2], turn[3], turn[4], turn[5]];
       } else {
@@ -2398,12 +2734,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // marker.*
       // ⚠ The FollowerFace is preferred because it is the face the body is being assembled BY, so
       // the axes are drawn where a hand is already looking.
-      const followerFaceId = alignedFaceOf(world, id);
-      const centre = worldPlacementOf(world, id)?.position ?? null;
+      const followerFaceId = alignedFaceOf(st.world, id);
+      const centre = worldPlacementOf(st.world, id)?.position ?? null;
       const anchor =
         (followerFaceId === null
           ? null
-          : faceWorld(world, id, followerFaceId)?.centre) ?? centre;
+          : faceWorld(st.world, id, followerFaceId)?.centre) ?? centre;
       // ⛔ NO STAND-IN. A body the model cannot place shows no gizmo, exactly as `⛔NOSHAPE` shows
       // no capture shell — suppress rather than substitute.
       if (!anchor) continue;
@@ -2426,7 +2762,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // length is never a function of the body or of where it is going.
       const camDistTo = (p: Vec3): number =>
         Math.max(
-          Vector3.Distance(camera.position, new Vector3(p[0], p[1], p[2])),
+          Vector3.Distance(st.camera.position, new Vector3(p[0], p[1], p[2])),
           0.05,
         );
       const span = camDistTo(anchor) * 20;
@@ -2440,10 +2776,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       const turnSpan =
         (trackingMetresPerPx(
           camDistTo(turnAnchor),
-          camera.fov,
-          canvas.clientHeight,
+          st.camera.fov,
+          st.canvas.clientHeight,
         ) *
-          Math.min(canvas.clientWidth, canvas.clientHeight) *
+          Math.min(st.canvas.clientWidth, st.canvas.clientHeight) *
           GIZMO_TURN_SCREEN_FRACTION) /
         2;
       // ⭐⭐⭐ **THE RING MARKS WHERE THE AXES MEET, AND IT FOLLOWS WHICHEVER FAMILY IS SHOWING** —
@@ -2463,7 +2799,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         ring.isVisible = on;
         if (!on) return;
         const m =
-          trackingMetresPerPx(camDistTo(at), camera.fov, canvas.clientHeight) *
+          trackingMetresPerPx(camDistTo(at), st.camera.fov, st.canvas.clientHeight) *
           GIZMO_RING_PX;
         ring.scaling.set(m, m, m);
         ring.position.set(at[0], at[1], at[2]);
@@ -2476,7 +2812,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       );
       const g = gizmoFor(id);
       // ⭐ The aligned Follower's own PioneerFaceCursor, in WORLD space (`worldPointOn`).
-      const cursor = alignedHere ? pioneerCursors.ofFollower(id) : null;
+      const cursor = alignedHere ? st.pioneerCursors.ofFollower(id) : null;
       const cursorWorld =
         cursor === null ? null : worldPointOn(cursor.pioneerId, cursor.position);
       const cursorAt: Vec3 | null =
@@ -2542,24 +2878,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
                   ],
             instance: g.lines[i]!,
           },
-          scene,
+          st.scene,
         );
         line.isVisible = true;
       }
     }
-    for (const [id, g] of axisGizmos) {
+    for (const [id, g] of st.axisGizmos) {
       if (live.has(id)) continue;
       for (const line of g.lines) line.isVisible = false;
     }
-    for (const id of [...rolledThisHold])
-      if (!live.has(id)) rolledThisHold.delete(id);
+    for (const id of [...st.rolledThisHold])
+      if (!live.has(id)) st.rolledThisHold.delete(id);
     // ⚠ The circles go with them: two readings of one state must appear and vanish together.
-    for (const [id, r] of gizmoRings) if (!live.has(id)) r.isVisible = false;
-    for (const [id, r] of gizmoTurnRings)
+    for (const [id, r] of st.gizmoRings) if (!live.has(id)) r.isVisible = false;
+    for (const [id, r] of st.gizmoTurnRings)
       if (!live.has(id)) r.isVisible = false;
     // ⛔ CONSUMED HERE, every frame: the gizmo must read the channels of THIS frame.
-    frameAxisDriven.clear();
-    frameTurnAxes.clear();
+    st.frameAxisDriven.clear();
+    st.frameTurnAxes.clear();
   };
 
   const refreshHighlight = (): void => {
@@ -2567,9 +2903,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // press order is the only ordering a hand controls. ⚠ Two fingers on the SAME body collapse
     // to one entry, which is right: that is a holder plus a `SECOND`, not a pair.
     const ids: ObjectId[] = [];
-    for (const p of router.objects()) {
-      const g = held.get(p.id);
-      const id = g === undefined ? undefined : idOf.get(g.mesh);
+    for (const p of st.router.objects()) {
+      const g = st.held.get(p.id);
+      const id = g === undefined ? undefined : st.idOf.get(g.mesh);
       if (id !== undefined && !ids.includes(id)) ids.push(id);
     }
     // ⛔⛔ `D60` — THE HIGHLIGHT MUST SEE IT TOO, or the white contours would say the pair is
@@ -2578,13 +2914,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐ Only meaningful with ONE held body: with two, `translatesOnDrag`'s first line already
     // fires and this adds nothing.
     const soleGrip = ids.length === 1 ? gripOfObject(ids[0]!) : undefined;
-    highlighted = highlightedPair(
-      world,
+    st.highlighted = highlightedPair(
+      st.world,
       ids,
       // ⛔ CONDITION 2, from the SAME function `grip.mode` is assigned from — one rule, one place.
       translatesOnDrag(
         ids.length,
-        behaviour,
+        st.behaviour,
         soleGrip !== undefined && secondTouchOwnsRollAndDepth(soleGrip),
       ),
       {
@@ -2599,19 +2935,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // deciding. ⚠ Measured on the tablet: `172mm → 345mm` mid-approach before this.
         // ⭐ `approach_swing.ts` argues the feedback loop this prevents.
         captureOffsetM:
-          swing?.offsetAtTriggerM ??
+          st.swing?.offsetAtTriggerM ??
           captureOffsetM(
-            cfg.captureOffsetMm,
-            camera.radius,
-            camera.fov,
-            canvas.clientHeight,
+            st.cfg.captureOffsetMm,
+            st.camera.radius,
+            st.camera.fov,
+            st.canvas.clientHeight,
           ),
-        alignMatchRad: (cfg.alignMatchDeg * Math.PI) / 180,
+        alignMatchRad: (st.cfg.alignMatchDeg * Math.PI) / 180,
       },
-      highlighted.pair?.target ?? null,
+      st.highlighted.pair?.target ?? null,
       // ⛔ SURFACE TO SURFACE. ⚠ It reads the MODEL, not the display pose — the sway is
       // decoration and a highlight must not flicker with an animation nobody asked it to track.
-      (a, b) => surfaceGap(world, a, b),
+      (a, b) => surfaceGap(st.world, a, b),
       // ⛔⛔⛔ `D62` — **A BODY MAY APPROACH ITS ALIGNMENT PARTNERS AND NOTHING ELSE.**
       //
       // > *"I want to do the same with Pioneer: currently, when I second touch an object which
@@ -2631,7 +2967,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⛔ THE RULE IS `AlignmentLinks.partnersOf`, NOT A LAMBDA HERE. ⚠ It WAS a lambda, and a
       // mutant that reinstated the reported bug left all 944 vectors green — because a rule in a
       // render file is a rule nothing can interrogate.
-      (id) => links.partnersOf(id),
+      (id) => st.links.partnersOf(id),
     );
     // ⭐⭐⭐ **THE OFFSET RADIUS ZONE'S OWN EDGE — WHERE THE OBJECT AXES ARE RE-DECIDED.**
     //
@@ -2649,8 +2985,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // resolves it, and `object_axes.ts` argues why that is also the right feel — a basis
     // re-derived every frame would swing through 90° mid-push as the drag crossed a face.
     {
-      const edge = zoneEdge(zoneWas, highlighted.inRange);
-      zoneWas = highlighted.inRange;
+      const edge = zoneEdge(st.zoneWas, st.highlighted.inRange);
+      st.zoneWas = st.highlighted.inRange;
       // ⛔⛔ **THE ZONE IS ENTERED BY PROXIMITY; THE DUO IS NAMEABLE ONLY WHILE A DRAG
       // TRANSLATES.** `inRange` is a distance and `pair` additionally requires condition 2, so a
       // hand can drift into range in ROTATE mode — the crossing happens, and there is nobody to
@@ -2658,13 +2994,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // sitting inside the zone, and the edge that would have fixed it is already spent.
       // ⭐ So the pair is latched the moment it becomes nameable, and that counts as the entry.
       const named =
-        highlighted.pair === null
+        st.highlighted.pair === null
           ? null
-          : [highlighted.pair.subject, highlighted.pair.target];
+          : [st.highlighted.pair.subject, st.highlighted.pair.target];
       const becameNameable =
-        highlighted.inRange && named !== null && zonePair.length === 0;
+        st.highlighted.inRange && named !== null && st.zonePair.length === 0;
       if (named !== null && (edge === "ENTER" || becameNameable))
-        zonePair = named;
+        st.zonePair = named;
       if (edge !== null || becameNameable) {
         // ⛔⛔⛔ **THE BASIS NO LONGER MOVES HERE** — `D82`, 2026-09-23, the owner: *"eliminate
         // this rule: Inside the offset radius the axes are the LeadingFace normal, gravity, and
@@ -2672,15 +3008,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // the pair's identity, for the readout, and the owner's own hook.
         // ⛔ The HOOK fires on the CROSSING only, never on the late naming: the owner's trigger is
         // *"has entered … an offset radius zone"*, and a body that was already inside has not.
-        if (edge === "ENTER" && cfg.cameraOffsetZoneEnterSetupB === 1)
+        if (edge === "ENTER" && st.cfg.cameraOffsetZoneEnterSetupB === 1)
           cameraOffsetZoneEnter();
-        lastVerdict =
-          `zone ${edge ?? "IN(named)"} — ${zonePair.length} body pair, axes UNCHANGED (D82)` +
-          (edge === "ENTER" && cfg.cameraOffsetZoneEnterSetupB === 1
-            ? `, CameraOffsetZoneEnter #${zoneEnterCalls} (no behaviour yet)`
+        st.lastVerdict =
+          `zone ${edge ?? "IN(named)"} — ${st.zonePair.length} body pair, axes UNCHANGED (D82)` +
+          (edge === "ENTER" && st.cfg.cameraOffsetZoneEnterSetupB === 1
+            ? `, CameraOffsetZoneEnter #${st.zoneEnterCalls} (no behaviour yet)`
             : "");
         // ⚠ Cleared AFTER the readout, or the line would report zero bodies on every exit.
-        if (edge === "EXIT") zonePair = [];
+        if (edge === "EXIT") st.zonePair = [];
       }
     }
 
@@ -2695,7 +3031,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // the camera. ⛔ A live offset would make the progress depend on the swing the progress is
     // driving. ⭐ A yaw-only lean keeps the orbit RADIUS constant so it would not in fact drift
     // today, but the latch means that stays true if the swing ever gains a radial component.
-    if (highlighted.inRange && swing === null && highlighted.gapM !== null) {
+    if (st.highlighted.inRange && st.swing === null && st.highlighted.gapM !== null) {
       // ⭐⭐⭐ **CASE 2 — THE YELLOW TARGET SWITCHES TO THE PAIR'S BARYCENTRE** (the owner,
       // 2026-09-19), on the capture's rising edge and once only.
       // ⛔ *"same as if the switch of barycenter was triggered by the user input"* — so it goes
@@ -2705,20 +3041,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // jump that blend exists to remove.
       // ⚠⚠ It reads the MODEL, never the display pose — the sway is decoration, and an orbit
       // centre that moved with a wobble would make the camera chase an animation.
-      if (cfg.approachRetargetsOrbit === 1 && highlighted.pair !== null) {
-        const a = worldPlacementOf(world, highlighted.pair.subject)?.position;
-        const b = worldPlacementOf(world, highlighted.pair.target)?.position;
+      if (st.cfg.approachRetargetsOrbit === 1 && st.highlighted.pair !== null) {
+        const a = worldPlacementOf(st.world, st.highlighted.pair.subject)?.position;
+        const b = worldPlacementOf(st.world, st.highlighted.pair.target)?.position;
         // ⚠ A body without a placement is refused rather than substituted: a barycentre computed
         // from one of the two would name a point neither body is at.
         if (a && b) {
-          centreBlend.retarget(pairBarycentre(a, b));
+          st.centreBlend.retarget(pairBarycentre(a, b));
           syncCentre();
         }
       }
-      swing = {
-        gapAtTriggerM: highlighted.gapM,
+      st.swing = {
+        gapAtTriggerM: st.highlighted.gapM,
         // ⚠ The threshold this capture was judged against, frozen with it — they are one fact.
-        offsetAtTriggerM: highlighted.offsetM,
+        offsetAtTriggerM: st.highlighted.offsetM,
         // ⛔ *"opposite to the dx movement"* — `approach_swing.ts` owns that negation, so the
         // one place the word OPPOSITE becomes arithmetic is a function with a vector on it.
         // ⛔⛔⛔ **AND IT IS THE TRAVEL OF *THIS* FRAME** — device-reported, 2026-09-20:
@@ -2728,14 +3064,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         // `D49`'s offset), and then this is **zero** — which `swingSignFor` answers with
         // `null`, and a `null` sign is a swing of zero. ⛔ The old code answered `+1`.
         sign: swingSignFor(
-          frameTravelRightM,
-          frameTravelUpM,
-          frameTravelDepthM,
+          st.frameTravelRightM,
+          st.frameTravelUpM,
+          st.frameTravelDepthM,
         ),
-        armTravelM: frameTravelRightM,
-        armTravelUpM: frameTravelUpM,
+        armTravelM: st.frameTravelRightM,
+        armTravelUpM: st.frameTravelUpM,
       };
-    } else if (!highlighted.inRange && swing !== null) {
+    } else if (!st.highlighted.inRange && st.swing !== null) {
       // ⚠ Pulling apart past the offset ends the approach. ⛔ Nothing has to be restored: the
       // progress is already back at 0 by the time the capture drops, so dropping the latch is
       // continuous rather than a jump. That is the whole argument for an additive offset.
@@ -2756,15 +3092,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // instant that displacement becomes permanent — so it is also the instant the latch
       // stops protecting anything and starts lying. `approach_swing.ts` owns the decision.
       // ⚠ It moves nothing: a basis decides where the NEXT travel goes.
-      const rings = orbit.ringElevationRad();
-      const ending = endApproach(appliedSwingYaw, rings.bottom, rings.top);
-      orbit.absorb(ending.yawRad, ending.vOffset);
+      const rings = st.orbit.ringElevationRad();
+      const ending = endApproach(st.appliedSwingYaw, rings.bottom, rings.top);
+      st.orbit.absorb(ending.yawRad, ending.vOffset);
       if (ending.rebaseFrames) rebaseGestureFrames();
-      appliedSwingYaw = 0;
-      swing = null;
+      st.appliedSwingYaw = 0;
+      st.swing = null;
       // ⚠ Forgotten with the approach, so the next one starts from its own first reading.
-      swingAmp = null;
-      swingFrozenProgress = null;
+      st.swingAmp = null;
+      st.swingFrozenProgress = null;
     }
     // ⛔⛔⛔ **CONSUMED HERE, EVERY FRAME, WHETHER OR NOT ANYTHING ARMED.** This one line is what
     // keeps the swing's direction a property of the approach: the arming edge above can only
@@ -2774,19 +3110,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⭐⭐⭐ **A SWING THAT ARMED WITHOUT A DIRECTION TAKES THE FIRST ONE THAT ARRIVES** (defect
     // 65). ⛔ It must run BEFORE the accumulators are consumed below, and it reads the same travel
     // the arming edge would have read had it landed on this frame.
-    if (swing !== null && swing.sign === null && highlighted.gapM !== null) {
+    if (st.swing !== null && st.swing.sign === null && st.highlighted.gapM !== null) {
       const signed = acquireSwingSign(
-        swing,
-        frameTravelRightM,
-        frameTravelUpM,
-        highlighted.gapM,
-        frameTravelDepthM,
+        st.swing,
+        st.frameTravelRightM,
+        st.frameTravelUpM,
+        st.highlighted.gapM,
+        st.frameTravelDepthM,
       );
-      if (signed !== null) swing = signed;
+      if (signed !== null) st.swing = signed;
     }
-    frameTravelRightM = 0;
-    frameTravelUpM = 0;
-    frameTravelDepthM = 0;
+    st.frameTravelRightM = 0;
+    st.frameTravelUpM = 0;
+    st.frameTravelDepthM = 0;
     // ⛔ The contours ARE the state, drawn. They have no lifetime of their own, so they are
     // synced here and nowhere else.
     // ⚠ The SAME offset the rule just compared against — taken off the verdict rather than
@@ -2797,8 +3133,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // has not got.
     guardDraw("captureOutlines", () =>
       showCaptureOutlines(
-        [highlighted.pair?.subject ?? null, highlighted.pair?.target ?? null],
-        highlighted.offsetM,
+        [st.highlighted.pair?.subject ?? null, st.highlighted.pair?.target ?? null],
+        st.highlighted.offsetM,
       ),
     );
   };
@@ -2810,12 +3146,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const centreMarker = CreateSphere(
     "orbit-centre-marker",
     { diameter: 0.012 },
-    scene,
+    st.scene,
   );
-  const markerMat = new StandardMaterial("orbit-centre-mat", scene);
-  markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
-  markerMat.disableLighting = true;
-  centreMarker.material = markerMat;
+  st.markerMat = new StandardMaterial("orbit-centre-mat", st.scene);
+  st.markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
+  st.markerMat.disableLighting = true;
+  centreMarker.material = st.markerMat;
   // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
   // exists to display.
   centreMarker.isPickable = false;
@@ -2823,23 +3159,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
-  const hud = createHud();
+  st.hud = createHud();
   // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
   // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
   // "mouse"` is looked at, and the scene's gesture code below is untouched.
-  const mouseLayer = attachMouseSecondTouch(canvas, scene, (notches) => {
+  const mouseLayer = attachMouseSecondTouch(st.canvas, st.scene, (notches) => {
     // ⭐⭐ THE WHEEL WRITES THE SAME `zoom` THE PINCH WRITES, through the same `applyCamera()` —
     // one zoom, not two. ⛔ Clamped on the multiplier, so scrolling past a limit cannot store zoom
     // the camera will never show (`input/mouse_wheel_zoom.ts`).
-    const base = orbit.pose(1).radiusM;
+    const base = st.orbit.pose(1).radiusM;
     if (!(base > 1e-9)) return;
-    zoom = wheelZoom(
-      zoom,
+    st.zoom = wheelZoom(
+      st.zoom,
       notches,
-      cfg.cameraRadiusMinM / base,
-      cfg.cameraRadiusMaxM / base,
+      st.cfg.cameraRadiusMinM / base,
+      st.cfg.cameraRadiusMaxM / base,
     );
-    zoomAtPinchStart = zoom;
+    st.zoomAtPinchStart = st.zoom;
     applyCamera();
   });
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
@@ -2856,187 +3192,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * unreachable exactly when it is needed. ⚠ With one history a double-tap that straddles
    * an object's edge still counts, which is what a hand meant by it.
    */
-  const taps = new TapHistory(cfg);
-  interface Held {
-    rec: Recognizer<DiagnosticPose>;
-    mesh: AbstractMesh;
-    /**
-     * ⭐⭐ AMENDMENT A7 — the GRAVITY frame, latched at press. Yaw about the world
-     * vertical, pitch about the camera's (always horizontal) right, roll and depth about
-     * the view direction flattened onto the ground.
-     * ⛔ NOT the camera's own axes: with a tilted camera the view axis has a vertical
-     * component, so rolling about it partly duplicates yawing and the two gestures
-     * interfere. ⚠ `screenFrame()` still exists for A3's handover, which needs the TRUE
-     * view axis — two frames, two purposes.
-     */
-    frame: GravityFrame;
-    /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
-    prev: Sample;
-    /**
-     * ⭐⭐⭐ **`D67` — DID THIS GRIP'S OWN PRESS COMPLETE A DOUBLE TAP?** The owner's route to
-     * orange: *"the first touch shall be double tap without final release [on] the pioneer
-     * object."* ⛔ Latched at the press, because `TapHistory` answers *would this pair* about the
-     * instant the finger landed, and by the time a Follower is chosen the answer has moved on.
-     * ⚠ It is a property of THE PIONEER'S grip; a Follower's own flag is never read.
-     */
-    pressWasDoubleTap: boolean;
-    /**
-     * ⭐ The pointer type that PRESSED this grip. ⛔ Read by one rule only —
-     * `secondTouchOwnsRollAndDepth` — to learn that a mouse holder's second touch is always one
-     * Shift away (`secondTouchAlwaysAvailable`).
-     */
-    pointerType: string;
-    /**
-     * ⭐⭐ WHAT THIS GESTURE IS DOING — read from PRESENCE, every frame, not latched.
-     *
-     * ⛔⛔ THE OWNER OVERTURNED THE LATCH, 2026-09-14, and was right. I first gated rule 6
-     * on the anchor being `STATIONARY` at the moment the drag committed, and latched the
-     * answer — reasoning from §4 that a mode must not flip mid-gesture. On the device
-     * that produced a plain bug: move the second finger, let it settle, and the object
-     * ROTATED as though the finger were not there.
-     * ⭐ THE LESSON IS THE DISTINCTION BETWEEN THE TWO SIGNALS. §4 latches roles because
-     * `MOVING`/`STATIONARY` is a NOISY, CONTINUOUS reading — a resting thumb crosses the
-     * threshold by itself, so a rule keyed to it would flicker. Whether a finger is DOWN
-     * is neither: it is discrete and deliberate, it changes only when a person decides
-     * it does, and it is the one thing they can see. Latching it hides state instead of
-     * protecting it. ⚠ Do not generalise "latch at press" to every input.
-     * ⚠ `null` only before the gesture commits.
-     */
-    /**
-     * ⭐⭐⭐ **`"TRANSLATE_2ND"` WAS `"DEPTH"` UNTIL 2026-09-23**, and the rename is the owner's:
-     * *"the second finger should not set mode to depth since it is driving the translation along
-     * gravity axis, not depth"* … *"or the name of the mode 'depth' is ill chosen."*
-     *
-     * ⛔⛔ It was named in `A10`, when that finger DID drive depth. `D75` moved it to **gravity**
-     * and the name stayed — so the mode has been announcing the wrong axis ever since, on the HUD
-     * and in every rule that read it. ⭐ The new name says what the mode IS (a translation, driven
-     * by the second touchpoint) rather than which axis it happened to drive on the day it was
-     * written, so it cannot go stale the next time the channels move.
-     * ⚠ That staleness is not cosmetic: it cost **defect 55** (the swing hunting for
-     * `"TRANSLATE"`) and the gizmo vanishing under the finger that was moving the body.
-     */
-    mode: "ROTATE" | "TRANSLATE" | "TRANSLATE_2ND" | null;
-    /**
-     * ⭐⭐ **FORK C** — the face THIS touchpoint's press landed on, in the object it carries.
-     *
-     * ⛔⛔ PER GRIP, NOT ONE GLOBAL, and that is forced by the rule: *"one touchpoint on first
-     * object's hit face (FollowerFace) && tap on second object's hit face (PioneerFace)"*.
-     * Two faces on two objects are live at the same instant, so a single `selectedFace` —
-     * which is all `IN3` ever needs — cannot express the trigger. ⭐ The Follower is the OTHER
-     * grip's face; the Pioneer is the tapping grip's own.
-     * ⚠ `null` in fork A, and whenever the pick resolved no face.
-     */
-    pressFace: { faceId: string; cos: number } | null;
-    /**
-     * ⭐⭐⭐ **FORK C** — was an alignment pushed or replaced on this object DURING this
-     * gesture? The owner's scoping of the rotation reset, and it cannot be answered by looking
-     * at the state:
-     *
-     * > *"If the object was already aligned when the rotation was started, reset to the
-     * > beginning of the rotation (therefore the alignment is conserved). If the alignment
-     * > occurred during the rotation, reset the rotation (therefore this looses the
-     * > alignment)."*
-     *
-     * ⭐ With the alignment older than the press, the recogniser's snapshot already satisfies
-     * it, so restoring costs nothing. With the alignment made mid-gesture, the snapshot
-     * predates it and restoring would leave the object disagreeing with its own constraint.
-     */
-    alignmentTouched: boolean;
-    /**
-     * ⭐⭐⭐ `D55` — **DID THIS TOUCHPOINT'S OWN *PRESS* MAKE AN ALIGNMENT?**
-     *
-     * ⛔⛔ WITHOUT IT THE GESTURE WOULD UNDO ITSELF. The alignment now fires on the way
-     * DOWN, and the matching release is a `TAP` on the face that alignment names — which
-     * `tapMeaning` reads, correctly and unchanged, as `UNALIGN`. ⚠ So a single tap would
-     * align on the press and break it on the release, ~80 ms apart, and the glass would
-     * show nothing at all having happened.
-     *
-     * ⭐ It also consumes `D28`'s movement-mode toggle, for the reason the tap path has
-     * always consumed it: **one gesture, one consequence.**
-     *
-     * ⚠ Distinct from `alignmentTouched`, which lives on the **Follower's** grip and
-     * answers the flick reset's *"was an alignment made during this gesture?"*. This one
-     * lives on the **Pioneer's** grip and answers *"has this release already been spent?"*.
-     * ⛔ Two questions, two fields — collapsing them would be the substituted-quantity
-     * shape this file has been burned by twice.
-     */
-    pressActed: boolean;
-    /**
-     * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
-     * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
-     * established, and a fresh press is a fresh axis — `shake.ts` says so in its own header.
-     */
-    shake: ShakeDetector;
-    /**
-     * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
-     * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer
-     * id, because `MotionTracker` is stateful and hysteretic: sharing one between two
-     * fingers would mix their histories and answer about neither.
-     * ⚠ Rebuilt when a touchpoint goes down, never reused across a release.
-     */
-    /**
-     * ⛔⛔ KEYED BY THE ROUTER'S `seq` — PRESS ORDER — AND NEVER BY THE POINTER ID.
-     *
-     * ⚠⚠ Device-reported, 2026-09-16: release the second touchpoint from its object,
-     * press it down outside any object, and the first object *"continues translation and
-     * then switches to rotation"* instead of rotating at once.
-     *
-     * ⭐⭐ THE CAUSE: a `MotionTracker` keeps an ANCHOR POSITION, and **browsers reuse
-     * pointer ids after a release**. A new finger landing on a reused id inherited the old
-     * finger's tracker, measured its displacement from an anchor somewhere else entirely,
-     * and read `MOVING` at once — so A13 judged the second finger to be moving and the
-     * holder kept translating until the new finger settled.
-     *
-     * ⭐ `seq` is monotone for the life of the router and never reused. `router.ts` already
-     * says why it exists: *"the ONLY ordering anyone gets... `Map` iteration order would
-     * LOOK like press order right up until an id is reused."* ⛔ The same trap, one layer
-     * up — this project has now hit it twice, so the fix is structural rather than a
-     * cleanup somebody has to remember.
-     * ⚠ Entries are ALSO dropped on release, so the map cannot grow without bound.
-     */
-    anchorMotion: Map<number, MotionTracker>;
-    /**
-     * ⭐⭐⭐ `D57` — **WHICH WAY A SECOND TOUCHPOINT'S `dx` ROLLS THIS BODY, LATCHED AT THE
-     * FIRST ROLL OF THE GESTURE**, keyed by anchor press order exactly as `anchorMotion` is.
-     *
-     * ⛔⛔ THE RATE IS NOW CONSTANT AND THE DIRECTION IS NOT COMPUTED PER FRAME. The owner's
-     * rule is *"dx drives the roll, dy the depth, **whatever the orientation** — remove the
-     * cos/sin projections"*, and the projection carried BOTH. ⚠ Only the rate could be made
-     * orientation-free: a handedness has to be relative to something, and the constraint axis
-     * can point toward the camera or away from it.
-     *
-     * ⭐⭐ **LATCHED, BECAUSE THE ONLY STABLE MOMENT IS THE PRESS.** Recomputed per frame the
-     * sign would flip mid-drag as the axis swung through horizontal-on-screen — turning the
-     * dead control the owner reported into an unpredictable one, which is worse. ⛔ `IN2`
-     * latches every role at press and `A15` allows exceptions only on DISCRETE events; this is
-     * the same doctrine one rule over: *a mode may be keyed on PRESENCE, never on MOTION.*
-     */
-    anchorRollSign: Map<number, 1 | -1>;
-    /**
-     * ⭐⭐ **WHICH WAY `dx` TWISTS AN ALIGNED BODY -- latched once per grip** (2026-09-22).
-     * ⛔ The same doctrine as `anchorRollSign` one channel over: recomputed per frame the sign
-     * flips mid-drag as the alignment axis swings through horizontal-on-screen.
-     */
-    twistSign?: 1 | -1;
-    /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
-    depthSway: SwayWatcher;
-
-    /**
-     * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
-     * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
-     * which would be a continuous shove rather than a reaction.
-     * ⚠ It reads `Recognizer.motionState`, which is `IN0`'s hysteretic still/moving test
-     * with its own measured thresholds. A speed comparison invented here would be a
-     * SECOND definition of "moving", free to disagree with the one the rules use.
-     */
-    /**
-     * ⭐ Decides WHEN the scene reacts — see `input/sway.ts`. It owns the direction and
-     * speed estimate over a stated window, so this file does not invent a second one.
-     */
-    sway: SwayWatcher;
-    /** The same, for ROTATION — see `input/sway.ts`'s `SpinSwayWatcher`. */
-    spinSway: SpinSwayWatcher;
-  }
+  st.taps = new TapHistory(st.cfg);
   /**
    * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
    * a `live` map and an `outside` map and decide membership by which one an id was in —
@@ -3044,67 +3200,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * and no vectors. The router is engine-free and tested; `held` below is only the
    * per-gesture state a role cannot carry.
    */
-  const router = new PointerRouter<AbstractMesh>();
-  const held = new Map<number, Held>();
+  st.router = new PointerRouter<AbstractMesh>();
+  st.held = new Map<number, Held>();
 
-  /**
-   * RULE 6's INERTIA. ⭐ The finger drives a TARGET; the mesh follows it under a
-   * critically damped law (`input/follow.ts`), so it accelerates out of rest and
-   * decelerates into place instead of being pinned to the fingertip.
-   *
-   * ⛔⛔ KEYED BY MESH, NOT BY TOUCHPOINT, AND IT OUTLIVES THE RELEASE — that is the
-   * whole of the deceleration. A follower torn down with the gesture would stop the
-   * object dead the instant the finger left, which is exactly the teleporting feel the
-   * inertia exists to remove.
-   * ⛔ ADVANCED IN THE RENDER LOOP, not on pointer events: pointer events stop arriving
-   * the moment the finger stops, and a system with momentum has to keep integrating
-   * after its input goes quiet.
-   */
-  interface Follow {
-    /** Where the finger has put it. */
-    readonly target: Vector3;
-    /**
-     * ⭐ The target's own SMOOTHED velocity, m/s, per axis — what the phantom is
-     * projected along. ⛔ Smoothed, never a two-sample difference: it gets multiplied by
-     * the lead and written straight into where the object is drawn. See `lead.ts`.
-     */
-    readonly vTarget: Vector3;
-    /** The previous frame's target, for that velocity. */
-    readonly lastTarget: Vector3;
-    x: FollowState;
-    y: FollowState;
-    z: FollowState;
-    /**
-     * ⭐ THE SYMPATHETIC SWAY — an OFFSET from wherever this object otherwise is, sprung
-     * back to zero. ⛔ An offset and not a position: the object's real place is never
-     * touched, so a barycentre, a raycast or a future mate reads the same coordinates
-     * whether or not the scene happens to be swaying at that instant.
-     */
-    swayX: FollowState;
-    swayY: FollowState;
-    swayZ: FollowState;
-    /**
-     * ⭐ THE ROTATIONAL SWAY, as a rotation VECTOR sprung back to zero — three scalar
-     * springs on its components. ⛔ A vector and not an angle-about-a-fixed-axis: two
-     * kicks on different axes then superpose correctly, which they cannot if the state
-     * is one angle and the axis gets overwritten. ⚠ Superposition is exact only for
-     * small rotations, which these are by construction.
-     */
-    swayRotX: FollowState;
-    swayRotY: FollowState;
-    swayRotZ: FollowState;
-    /** What the block swings AROUND: the held object's centre, captured at the kick. */
-    swayPivot: Vector3;
-    /**
-     * The orientation this object would have with no sway at all. ⛔ Kept because the
-     * sway is applied ON TOP every frame; reading the mesh back would compound it.
-     */
-    qHome: Quat;
-  }
-  const followers = new Map<AbstractMesh, Follow>();
+  st.followers = new Map<AbstractMesh, Follow>();
 
   const followerFor = (mesh: AbstractMesh): Follow => {
-    let f = followers.get(mesh);
+    let f = st.followers.get(mesh);
     if (!f) {
       // ⭐ Seeded from the MODEL where there is one. The mesh is a view, and seeding a
       // filter from its own output is how a system acquires a memory nobody declared.
@@ -3128,11 +3230,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         swayPivot: p.clone(),
         qHome: mp ? mp.orientation : readPose(mesh),
       };
-      followers.set(mesh, f);
+      st.followers.set(mesh, f);
     }
     return f;
   };
-  let lastVerdict = "—";
+  st.lastVerdict = "—";
 
   /**
    * ⭐⭐ **SOMETHING THE RENDER LOOP DECIDED NEEDS TO REACH THE READOUT.**
@@ -3142,7 +3244,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * renderer — the cascade, the prune and the snaps all reach verdicts with no pointer event
    * behind them, and before 2026-09-17 those verdicts waited for the next touch to be shown.
    */
-  let hudDirty = false;
+  st.hudDirty = false;
 
   // ─────────────────────────────────────────────────────────────────
   // §2 RULE 4 — PINCH ZOOM, for touchpoints that hit NOTHING.
@@ -3151,7 +3253,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   // object or OUTSIDE one is decided once, when it goes down, and never revisited.
   // Without that a user steadying their grip near a part would silently switch
   // between two different mappings mid-gesture. ⭐ `IN2` now owns that latch.
-  const pinch = new PinchTracker(cfg);
+  st.pinch = new PinchTracker(st.cfg);
 
   /**
    * An orbit centre chosen but NOT YET COMMITTED — see `orbitCentreGraceMs`.
@@ -3159,7 +3261,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * a frame is the granularity anything visible happens at, and there is no callback to
    * cancel, leak, or fire after the scene is gone.
    */
-  let pendingCentre: { x: number; y: number; at: number } | null = null;
+  st.pendingCentre = null;
 
   /**
    * The double-tap reset in flight, or `null`.
@@ -3167,7 +3269,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * would fight the hand for the camera, and the hand would lose — the reset writes the
    * whole pose every frame.
    */
-  let cameraReset: CameraResetAnimation | null = null;
+  st.cameraReset = null;
 
   // ─────────────────────────────────────────────────────────────────
   // §2 RULE 1 — ORBIT, for ONE touchpoint that hits nothing.
@@ -3183,8 +3285,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const ORBIT_START_YAW_RAD = -Math.PI / 2;
   const ORBIT_START_ELEVATION = 0.62;
   const ORBIT_START_CENTRE_M: Vec3 = [0, 0, 0];
-  const orbit = new OrbitController(
-    cfg,
+  st.orbit = new OrbitController(
+    st.cfg,
     ORBIT_START_YAW_RAD,
     ORBIT_START_ELEVATION,
   );
@@ -3208,18 +3310,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the rig's own surface, which is what the orbit was designed around.
    */
   const ORBIT_START_ZOOM = (() => {
-    const base = orbit.pose(1).radiusM;
+    const base = st.orbit.pose(1).radiusM;
     if (!(base > 1e-9)) return 1;
-    return Math.max(1, cfg.cameraRadiusMaxM / 2 / base);
+    return Math.max(1, st.cfg.cameraRadiusMaxM / 2 / base);
   })();
 
-  let zoom = ORBIT_START_ZOOM;
-  let zoomAtPinchStart = ORBIT_START_ZOOM;
+  st.zoom = ORBIT_START_ZOOM;
+  st.zoomAtPinchStart = ORBIT_START_ZOOM;
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
-  const centreBlend = new OrbitCentreBlend(cfg, ORBIT_START_CENTRE_M);
-  let orbitCentreM: Vector3 = Vector3.Zero();
+  st.centreBlend = new OrbitCentreBlend(st.cfg, ORBIT_START_CENTRE_M);
+  st.orbitCentreM = Vector3.Zero();
 
   /**
    * §2 rule 1's orbit centre: the barycentre nearest the touchpoint's ray.
@@ -3228,8 +3330,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * why it happens here and not in `input/`.
    */
   const recomputeOrbitCentre = (e: { clientX: number; clientY: number }) => {
-    const ray = scene.createPickingRay(e.clientX, e.clientY, null, camera);
-    const visible = scene.meshes
+    const ray = st.scene.createPickingRay(e.clientX, e.clientY, null, st.camera);
+    const visible = st.scene.meshes
       .filter(
         (m) =>
           m.isEnabled() && m.isVisible && m.metadata?.orbitCandidate === true,
@@ -3255,25 +3357,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         origin: [ray.origin.x, ray.origin.y, ray.origin.z],
         direction: [ray.direction.x, ray.direction.y, ray.direction.z],
       },
-      cfg,
+      st.cfg,
     );
     // ⚠ RETARGET, never assign. The blend starts from wherever the centre actually is,
     // so interrupting a half-finished migration does not put the jump back.
-    centreBlend.retarget(c);
+    st.centreBlend.retarget(c);
     syncCentre();
   };
 
   /** Read the blended centre into the scene, and show the chosen target. */
   const syncCentre = () => {
-    const c = centreBlend.centreM;
-    orbitCentreM = new Vector3(c[0], c[1], c[2]);
+    const c = st.centreBlend.centreM;
+    st.orbitCentreM = new Vector3(c[0], c[1], c[2]);
     // ⭐⭐ THE MARKER JUMPS TO THE CHOSEN BARYCENTRE IMMEDIATELY, while the camera
     // migrates to it. Owner's instruction, and it is the right reading of what the
     // marker is FOR: it exists to show which barycentre rule 1 SELECTED, so a marker
     // that crawls along with the camera makes the selection harder to read rather
     // than easier. ⚠ The migration is still visible — as the gap between the camera
     // and a marker that is already where it is going.
-    const t = centreBlend.targetM;
+    const t = st.centreBlend.targetM;
     centreMarker.position.set(t[0], t[1], t[2]);
   };
 
@@ -3287,7 +3389,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const resetCamera = () => {
     // ⚠ Any centre still waiting out its grace is dropped: it was chosen for a gesture
     // that has turned out to be a reset.
-    pendingCentre = null;
+    st.pendingCentre = null;
 
     // ⭐⭐ HOME IS THE LAST YELLOW TARGET, NOT THE ORIGIN. The marker shows the barycentre
     // §2 rule 1 last CHOSE, and that is the thing the user has been orbiting — sending
@@ -3300,34 +3402,34 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // double tap would fly the camera somewhere the user has never seen — the same argument
       // this function already makes about the orbit CENTRE, applied to the zoom.
       zoom: ORBIT_START_ZOOM,
-      centreM: centreBlend.targetM,
+      centreM: st.centreBlend.targetM,
     };
     const now: CameraPose = {
-      yawRad: orbit.yaw,
-      elevation: orbit.elevation,
-      zoom,
-      centreM: centreBlend.centreM,
+      yawRad: st.orbit.yaw,
+      elevation: st.orbit.elevation,
+      zoom: st.zoom,
+      centreM: st.centreBlend.centreM,
     };
 
-    if (cfg.cameraResetMs > 0) {
+    if (st.cfg.cameraResetMs > 0) {
       // ⛔ A blend in flight is ABANDONED to the animation: two things easing the same
       // centre on two different clocks would fight, and the finger-travel one cannot
       // even advance — a double-tap supplies no travel.
-      centreBlend.snapTo(now.centreM);
-      cameraReset = new CameraResetAnimation(now, home, cfg.cameraResetMs);
+      st.centreBlend.snapTo(now.centreM);
+      st.cameraReset = new CameraResetAnimation(now, home, st.cfg.cameraResetMs);
       return;
     }
 
-    cameraReset = null;
+    st.cameraReset = null;
     applyCameraPose(home);
   };
 
   /** Put the camera exactly at a pose. Shared by the reset's every frame and its end. */
   const applyCameraPose = (p: CameraPose): void => {
-    orbit.reset(p.yawRad, p.elevation);
-    zoom = p.zoom;
-    zoomAtPinchStart = p.zoom;
-    centreBlend.snapTo(p.centreM);
+    st.orbit.reset(p.yawRad, p.elevation);
+    st.zoom = p.zoom;
+    st.zoomAtPinchStart = p.zoom;
+    st.centreBlend.snapTo(p.centreM);
     syncCentre();
     applyCamera();
   };
@@ -3338,7 +3440,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * one, so it is a property of the approach rather than of any gesture.
    * ⚠ It holds only what must NOT be re-read: the gap at the trigger, and which way to lean.
    */
-  let swing: SwingLatch | null = null;
+  st.swing = null;
   /**
    * ⭐⭐⭐ **THE SCREEN-RIGHT TRAVEL APPLIED SINCE THE LAST FRAME**, in metres — and it is
    * **CONSUMED AND ZEROED BY `refreshHighlight` EVERY FRAME**, which is the whole fix for the
@@ -3355,7 +3457,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * two bodies the approach is whatever the pair's gap does, and singling one out would be a
    * rule this file is not allowed to own.
    */
-  let frameTravelRightM = 0;
+  st.frameTravelRightM = 0;
   /**
    * ⭐⭐ **THE VERTICAL HALF OF THE SAME FRAME'S TRAVEL** — device-reported, 2026-09-21:
    * *"when the follower enters the offset radius by a vertical translation (delta position dy)
@@ -3364,9 +3466,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * answer *was this crossing driven by a translation at all*, which is the question that
    * separates a vertical drag from a press, a rotation or a pinch.
    */
-  let frameTravelUpM = 0;
+  st.frameTravelUpM = 0;
   /** ⭐⭐ The ALONG-VIEW component of the body's travel — invisible on screen, and still travel. */
-  let frameTravelDepthM = 0;
+  st.frameTravelDepthM = 0;
   /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
@@ -3381,20 +3483,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * the render loop from writing the camera on frames where nothing about it changed — and
    * makes the return to zero a single write rather than a state nobody notices.
    */
-  let appliedSwingYaw = 0;
+  st.appliedSwingYaw = 0;
   /**
    * ⭐⭐ `D63` — the SMOOTHED swing amplitude, and the clock it was last advanced on.
    * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
    * than from whatever the last approach happened to end on.
    */
-  let swingAmp: { rad: number; atMs: number } | null = null;
+  st.swingAmp = null;
   /**
    * ⛔⛔ The progress the swing was showing when a translation STOPPED driving it, captured
    * once. ⚠ It must be remembered rather than recomputed: `rebaseTriggerGap(gap, p)` with `p`
    * read from the LIVE gap is algebraically the identity — `gap/(1−(g0−gap)/g0) = g0` — so it
    * would do nothing at all, which is how the first version of this fix failed.
    */
-  let swingFrozenProgress: number | null = null;
+  st.swingFrozenProgress = null;
 
   /**
    * ⭐⭐ How far the camera is currently leaning out of its own orbit, in radians.
@@ -3406,7 +3508,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * ⛔ `0` whenever there is no live approach, and `0` at both ENDS of a live one.
    */
   const swingAngleNow = (): number => {
-    if (swing === null) return 0;
+    if (st.swing === null) return 0;
     // ⭐⭐⭐ **DIVIDED BY THE FINGER'S SPEED** (the owner, 2026-09-19) — which cancels the
     // `dp/dt` in the lean's derivative and makes the camera sweep at the same rate whatever the
     // hand does. `approach_swing.ts` carries the derivation.
@@ -3429,7 +3531,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⛔ THE DECISION IS `swingDriverIndex`'s, not this file's — deleting the mode test here
     // reinstates the reported defect, and a mutant that did exactly that left the whole suite
     // green while it lived in a `.find()`.
-    const grips = [...held.values()];
+    const grips = [...st.held.values()];
     const driver = swingDriverIndex(grips.map((g) => g.mode));
     const translating = driver >= 0 ? grips[driver] : undefined;
     if (translating === undefined) {
@@ -3439,19 +3541,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // trading a continuous unwanted orbit for a discontinuous one.
       // ⚠ The progress is captured ONCE, on the frame the translation stopped. Recomputing it
       // from the live gap is the IDENTITY and the fix would silently do nothing.
-      swingFrozenProgress = freezeProgress(
-        swingFrozenProgress,
-        swingProgress(highlighted.gapM ?? 0, swing),
+      st.swingFrozenProgress = freezeProgress(
+        st.swingFrozenProgress,
+        swingProgress(st.highlighted.gapM ?? 0, st.swing),
         false,
       );
       const rebased = rebaseTriggerGap(
-        highlighted.gapM ?? 0,
-        swingFrozenProgress ?? 0,
+        st.highlighted.gapM ?? 0,
+        st.swingFrozenProgress ?? 0,
       );
-      if (rebased !== null) swing = { ...swing, gapAtTriggerM: rebased };
-      return appliedSwingYaw;
+      if (rebased !== null) st.swing = { ...st.swing, gapAtTriggerM: rebased };
+      return st.appliedSwingYaw;
     }
-    swingFrozenProgress = freezeProgress(swingFrozenProgress, 0, true);
+    st.swingFrozenProgress = freezeProgress(st.swingFrozenProgress, 0, true);
     // ⛔⛔ **EVERY FINGER DRIVING THIS BODY, AS OF NOW** (defects 64 and 70). The holder's own
     // recognizer was the only speed consulted, so a second-finger push read `0` — which the
     // amplitude law answers with the WIDEST swing, bypassing both tuned dials. ⚠ And the window
@@ -3465,10 +3567,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       ),
     ]);
     const target = swingAmplitudeRad(
-      (cfg.approachSwingDeg * Math.PI) / 180,
+      (st.cfg.approachSwingDeg * Math.PI) / 180,
       speed,
-      cfg.approachSwingSpeedGain,
-      cfg.approachSwingSpeedExponent,
+      st.cfg.approachSwingSpeedGain,
+      st.cfg.approachSwingSpeedExponent,
     );
     // ⭐⭐⭐ **SMOOTHED — device-reported, 2026-09-19**: *"the orbit of the camera becomes
     // jittery … especially the swing speed exponent"*, and *"although the delta position movement
@@ -3478,17 +3580,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // ⚠ Smoothing `A` and never the speed: three other rules read that number, and there is one
     // definition of *how fast is this finger*.
     const now = performance.now();
-    swingAmp =
-      swingAmp === null
+    st.swingAmp =
+      st.swingAmp === null
         ? { rad: target, atMs: now }
         : {
-            rad: smoothAmplitude(swingAmp.rad, target, now - swingAmp.atMs),
+            rad: smoothAmplitude(st.swingAmp.rad, target, now - st.swingAmp.atMs),
             atMs: now,
           };
     return swingYawRad(
-      swingProgress(highlighted.gapM ?? 0, swing),
-      swingAmp.rad,
-      swing.sign,
+      swingProgress(st.highlighted.gapM ?? 0, st.swing),
+      st.swingAmp.rad,
+      st.swing.sign,
     );
   };
 
@@ -3509,11 +3611,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const applyCamera = () => {
     const a = swingAngleNow();
-    const rings = orbit.ringElevationRad();
+    const rings = st.orbit.ringElevationRad();
     // ⛔ THE PITCH TAKES THE MAGNITUDE, NOT THE SIGNED ANGLE — `pitchAngleFor` argues why: the
     // owner's expectation names ONE vertical direction for both drag directions.
-    const pose = orbit.pose(
-      zoom,
+    const pose = st.orbit.pose(
+      st.zoom,
       a,
       pitchOffsetV(pitchAngleFor(a), rings.bottom, rings.top),
     );
@@ -3521,10 +3623,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // Clamping the components independently would change the viewing ANGLE, which is
     // not what a near-plane guard is for.
     const wanted = pose.radiusM;
-    const allowed = clampCameraRadiusM(wanted, cfg);
+    const allowed = clampCameraRadiusM(wanted, st.cfg);
     const k = wanted > 1e-9 ? allowed / wanted : 1;
-    camera.setPosition(
-      orbitCentreM.add(
+    st.camera.setPosition(
+      st.orbitCentreM.add(
         new Vector3(
           pose.offsetM[0] * k,
           pose.offsetM[1] * k,
@@ -3532,7 +3634,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         ),
       ),
     );
-    camera.setTarget(orbitCentreM);
+    st.camera.setTarget(st.orbitCentreM);
   };
 
   // ⚠ Place the camera on the rig surface at startup, so the very first frame is
@@ -3546,17 +3648,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * insertion order — the two agree until an id is reused.
    */
   const pinchPair = (): [Sample, Sample] | null => {
-    const out = router.outside();
-    if (out.length !== 2 || router.objects().length !== 0) return null;
+    const out = st.router.outside();
+    if (out.length !== 2 || st.router.objects().length !== 0) return null;
     return [out[0]!.last, out[1]!.last];
   };
 
   const updatePinch = () => {
     const p = pinchPair();
     if (!p) return;
-    const factor = pinch.scale(p[0], p[1]);
+    const factor = st.pinch.scale(p[0], p[1]);
     if (factor === null) return; // still inside the deadband: leave the camera alone
-    zoom = zoomAtPinchStart * factor;
+    st.zoom = st.zoomAtPinchStart * factor;
     applyCamera();
   };
 
@@ -3662,13 +3764,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   const rebaseGestureFrames = (): void => {
     const g = gravityFrame(screenFrame().viewAxis, WORLD_DOWN);
     if (!g) return;
-    for (const grip of held.values()) grip.frame = g;
+    for (const grip of st.held.values()) grip.frame = g;
   };
 
   const screenFrame = (): ScreenFrame => ({
-    right: asVec3(camera.getDirection(Vector3.Right())),
-    up: asVec3(camera.getDirection(Vector3.Up())),
-    viewAxis: asVec3(camera.getDirection(Vector3.Forward())),
+    right: asVec3(st.camera.getDirection(Vector3.Right())),
+    up: asVec3(st.camera.getDirection(Vector3.Up())),
+    viewAxis: asVec3(st.camera.getDirection(Vector3.Forward())),
   });
 
   const describe = (v: ReleaseVerdict): string => {
@@ -3684,7 +3786,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
     // threshold it was judged by. "The flick did not fire" is otherwise
     // unfalsifiable on a device: too slow a finger and a broken estimator look the
     // same. That ambiguity is what made the first rollback build feel inconsistent.
-    const lift = `lift ${Math.round(v.liftSpeedMmPerS)}/${cfg.flickLiftSpeed}mm/s`;
+    const lift = `lift ${Math.round(v.liftSpeedMmPerS)}/${st.cfg.flickLiftSpeed}mm/s`;
     return `${v.kind}${f}${rule}  ${Math.round(v.durationMs)}ms  ${lift}`;
   };
 
@@ -3699,18 +3801,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    * a blank one.
    */
   const depthReadout = (): string => {
-    for (const grip of held.values()) {
+    for (const grip of st.held.values()) {
       const push = grip.frame.depth;
       const mp = modelPose(grip.mesh);
       if (!mp) continue;
-      const c = asVec3(camera.position);
+      const c = asVec3(st.camera.position);
       const r: Vec3 = [
         mp.position[0] - c[0],
         mp.position[1] - c[1],
         mp.position[2] - c[2],
       ];
       const d = r[0] * push[0] + r[1] * push[1] + r[2] * push[2];
-      const { minM, maxM } = depthLimits(cfg);
+      const { minM, maxM } = depthLimits(st.cfg);
       const at =
         d <= minM + 1e-4 ? "  ⛔MIN" : d >= maxM - 1e-4 ? "  ⛔MAX" : "";
       // ⭐⭐ A10'S GATE, ON THE GLASS. The rule is invisible otherwise: a hand that gets
@@ -3733,7 +3835,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // left for it to protect — and a readout of a quantity the product no longer acts on
       // is the trap the retired roll line already cost us.
       const mode =
-        `${grip.mode ?? "—"} obj=${router.objects().length} out=${router.outside().length}` +
+        `${grip.mode ?? "—"} obj=${st.router.objects().length} out=${st.router.outside().length}` +
         `${secondFingerOf(grip).present ? " 2nd" : ""}` +
         `${grip.rec.motionState === "STATIONARY" ? ` ready ${corridor}` : ""}`;
       return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at} ${mode}`;
@@ -3742,26 +3844,26 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
   };
 
   const paint = () => {
-    const first = held.get(router.objects()[0]?.id ?? -1);
-    hud.update({
+    const first = st.held.get(st.router.objects()[0]?.id ?? -1);
+    st.hud.update({
       // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
       // what is on the glass. The rules read `activeCount`, which excludes them.
-      pointers: router.size,
+      pointers: st.router.size,
       // ⛔ Straight off the recognizer that made the decision. Never recomputed here:
       // a readout that derives its own answer is a second implementation, and it can
       // disagree with the product while showing green. See `METHOD`.
       phase: first ? first.rec.currentPhase : "—",
       motion: first ? first.rec.motionState : "—",
       // ⚠ A12 RETIRED the circular roll, so this is always false and is kept only because
-      lastVerdict,
+      lastVerdict: st.lastVerdict,
       // ⚠ Shown so a session can never be spent testing a value that was not in
       // force — including a typo'd key, which is REPORTED rather than ignored.
       camera:
-        `c=(${orbitCentreM.x.toFixed(2)},${orbitCentreM.y.toFixed(2)},${orbitCentreM.z.toFixed(2)}) ` +
-        `${centreBlend.isBlending ? `→${(centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
-        `r=${camera.radius.toFixed(3)}m zoom=${zoom.toFixed(2)} ` +
-        `elev=${orbit.elevation.toFixed(2)}${orbit.atLimit ? "⛔LIMIT" : ""}` +
-        `${pinch.isZooming ? "  ZOOMING" : ""}` +
+        `c=(${st.orbitCentreM.x.toFixed(2)},${st.orbitCentreM.y.toFixed(2)},${st.orbitCentreM.z.toFixed(2)}) ` +
+        `${st.centreBlend.isBlending ? `→${(st.centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
+        `r=${st.camera.radius.toFixed(3)}m zoom=${st.zoom.toFixed(2)} ` +
+        `elev=${st.orbit.elevation.toFixed(2)}${st.orbit.atLimit ? "⛔LIMIT" : ""}` +
+        `${st.pinch.isZooming ? "  ZOOMING" : ""}` +
         depthReadout(),
       tuning:
         tuning.applied.length === 0 ? "defaults" : tuning.applied.join(" "),
@@ -3769,19 +3871,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐ Each touchpoint in PRESS order with its latched role, e.g. `#1OBJ #2IGN`.
       // ⛔ `IGN` is the one that matters: it is the visible form of the IN8 decision.
       jump:
-        lastJump === null
+        st.lastJump === null
           ? "—"
-          : `${lastJump.id} ${lastJump.mm.toFixed(0)}mm/${lastJump.deg.toFixed(0)}° ` +
-            `(usual ${lastJump.usualMm.toFixed(1)}mm/${lastJump.usualDeg.toFixed(1)}°) ` +
-            `${((performance.now() - lastJumpAt) / 1000).toFixed(0)}s ago — ${lastJumpVerdict}`,
+          : `${st.lastJump.id} ${st.lastJump.mm.toFixed(0)}mm/${st.lastJump.deg.toFixed(0)}° ` +
+            `(usual ${st.lastJump.usualMm.toFixed(1)}mm/${st.lastJump.usualDeg.toFixed(1)}°) ` +
+            `${((performance.now() - st.lastJumpAt) / 1000).toFixed(0)}s ago — ${st.lastJumpVerdict}`,
       roles:
-        router.size === 0
+        st.router.size === 0
           ? "—"
-          : router
+          : st.router
               .all()
               .map((p) => `#${p.id}${p.role.slice(0, 3)}`)
               .join(" ") +
-            `  active=${router.activeCount}` +
+            `  active=${st.router.activeCount}` +
             // ⭐ The LATCHED mode of the gesture in progress — rule 6 vs the 2bis
             // stand-in. ⛔ Printed because it is decided once and cannot be inferred
             // from what the fingers are doing now, which is the whole point of a latch.
@@ -3791,15 +3893,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // presence does not decide it — a tap does. ⛔ So the readout is the only way a
             // device pass can tell *"the toggle did not fire"* from *"I toggled twice"*.
             // ⚠ Shown even with nothing held: the mode is the state the next press inherits.
-            `  [${behaviour}]` +
+            `  [${st.behaviour}]` +
             // ⭐ The lead at which a steady drag leaves NO gap, for the sliders as they
             // stand. ⛔ Printed rather than left in a doc: it moves whenever either of
             // the other two sliders moves, so a written-down number would go stale the
             // first time the owner touched them.
-            `  lead ${cfg.translateLeadMs}/${(
+            `  lead ${st.cfg.translateLeadMs}/${(
               neutralLeadSec(
-                cfg.translateInertiaMs / 1000,
-                cfg.translateDampingRatio,
+                st.cfg.translateInertiaMs / 1000,
+                st.cfg.translateDampingRatio,
               ) * 1000
             ).toFixed(1)}ms` +
             // ⭐⭐⭐ **`A16`'s STATE — AND IT PRINTS WHICH CONDITION IS FAILING, NOT JUST THE
@@ -3814,12 +3916,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // ⛔ TWO FLAGS NOW, NOT THREE: the `A` for *aligned* is gone because the alignment
             // is no longer part of the approach. ⚠ Leaving it would have implied it still
             // gated the contour — the readout-that-lies shape, one letter wide.
-            `  ${highlighted.pair === null ? "◇" : "◆"}` +
-            `${highlighted.translating ? "T" : "t"}` +
-            `${highlighted.inRange ? "R" : "r"}` +
-            (highlighted.pair === null
+            `  ${st.highlighted.pair === null ? "◇" : "◆"}` +
+            `${st.highlighted.translating ? "T" : "t"}` +
+            `${st.highlighted.inRange ? "R" : "r"}` +
+            (st.highlighted.pair === null
               ? ""
-              : ` ${highlighted.pair.subject}↔${highlighted.pair.target}`) +
+              : ` ${st.highlighted.pair.subject}↔${st.highlighted.pair.target}`) +
             // ⭐⭐⭐ **THE GAP AND THE THRESHOLD IT WAS COMPARED AGAINST, BOTH IN MILLIMETRES.**
             //
             // ⛔⛔ **THE `R` FLAG ALONE STOPPED BEING ENOUGH THE MOMENT THE THRESHOLD BECAME
@@ -3831,27 +3933,27 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // ⛔ STRAIGHT FROM THE VERDICT. A HUD that measured the gap itself would be a second
             // implementation, free to disagree with the product while both showed green — which
             // is the trap `highlight.ts` returns its reasons to avoid.
-            (highlighted.gapM === null
+            (st.highlighted.gapM === null
               ? ""
-              : ` gap=${(highlighted.gapM * 1000).toFixed(0)}/${(
-                  highlighted.offsetM * 1000
+              : ` gap=${(st.highlighted.gapM * 1000).toFixed(0)}/${(
+                  st.highlighted.offsetM * 1000
                 ).toFixed(0)}mm`) +
             // ⛔⛔ **A BODY WHOSE GEOMETRY COULD NOT BE READ, NAMED.** It has no shape, so it can
             // never capture and never be outlined — and every one of those is a SILENCE. ⚠ An
             // absent readout cannot be caught by looking at the screen (`METHOD`), and *this part
             // never highlights* would otherwise be indistinguishable from *I am holding it wrong*.
             // ⭐ Empty in every normal run, so it costs nothing until it matters.
-            (shapelessBodies.length === 0
+            (st.shapelessBodies.length === 0
               ? ""
-              : `  ⛔NOSHAPE(${shapelessBodies.join(",")})`) +
+              : `  ⛔NOSHAPE(${st.shapelessBodies.join(",")})`) +
             // ⛔⛔ **A BODY WHOSE TAPER WAS REFUSED, NAMED, for the same reason one sentence up.**
             // `taperTop` returns null rather than substituting a shape (`LESSONS_CARRIED` §6), so
             // the body is still on the glass — as a BOX. ⚠ *The pyramid is a rectangle again* is
             // a thing a hand would notice and have no way to explain, and a silent fallback is
             // exactly the class this readout exists to close.
-            (untaperedBodies.length === 0
+            (st.untaperedBodies.length === 0
               ? ""
-              : `  ⛔NOTAPER(${untaperedBodies.join(",")})`) +
+              : `  ⛔NOTAPER(${st.untaperedBodies.join(",")})`) +
             // ⭐⭐⭐ **THE OBJECT AXES, ON THEIR OWN LINE** (2026-09-22). ⛔ Three things a hand
             // cannot see and would otherwise have to infer from how the body moved:
             //
@@ -3864,23 +3966,23 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
             // rule's whole failure mode is *the body went somewhere I did not expect*, which no
             // amount of watching the body can attribute.
             `
-axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldAxisA(live camera: move+turn)"}` +
-            ` ${cfg.translatePairing === 1 ? "PLANE" : "CHANNELS"}` +
-            ` track=${lastTrackGain.toFixed(2)}×${lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
-            ` zone=${highlighted.inRange ? "IN" : "out"}` +
-            (zonePair.length === 0 ? "" : `(${zonePair.join("↔")})`) +
-            (cfg.cameraOffsetZoneEnterSetupB === 1
-              ? ` enterHook=${zoneEnterCalls}(no-op)`
+axes      ${st.cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldAxisA(live camera: move+turn)"}` +
+            ` ${st.cfg.translatePairing === 1 ? "PLANE" : "CHANNELS"}` +
+            ` track=${st.lastTrackGain.toFixed(2)}×${st.lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
+            ` zone=${st.highlighted.inRange ? "IN" : "out"}` +
+            (st.zonePair.length === 0 ? "" : `(${st.zonePair.join("↔")})`) +
+            (st.cfg.cameraOffsetZoneEnterSetupB === 1
+              ? ` enterHook=${st.zoneEnterCalls}(no-op)`
               : "") +
             // ⛔ Per HELD body, because that is the one whose axes are being used right now.
-            [...held.values()]
-              .map((g) => idOf.get(g.mesh))
+            [...st.held.values()]
+              .map((g) => st.idOf.get(g.mesh))
               .filter((id): id is ObjectId => id !== undefined)
               .map((id) => {
                 const a = axesOf();
                 // ⚠ `lead=` stood here and named the face the body was advancing on. ⛔ There is no
                 // such face any more: the gizmo sits on the FollowerFace, or on the body's centre.
-                const ff = alignedFaceOf(world, id);
+                const ff = alignedFaceOf(st.world, id);
                 const v = (x: readonly number[]): string =>
                   `${x[0]!.toFixed(2)},${x[1]!.toFixed(2)},${x[2]!.toFixed(2)}`;
                 return (
@@ -3897,9 +3999,9 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldA
               if (hf === null)
                 return `  hit=— (needs an UNALIGNED held body with a resolved face)`;
               const n = candidateFacesNow().length;
-              return cfg.pioneerCandidates !== 1
+              return st.cfg.pioneerCandidates !== 1
                 ? `  hit=${hf.objectId}/${hf.faceId} fuchsia=OFF`
-                : `  hit=${hf.objectId}/${hf.faceId} cone=${cfg.pioneerCandidateConeDeg}° fuchsia=${n}`;
+                : `  hit=${hf.objectId}/${hf.faceId} cone=${st.cfg.pioneerCandidateConeDeg}° fuchsia=${n}`;
             })() +
             // ⭐⭐⭐ **WHERE THE OUTLINE PIPELINE STOPS** — added 2026-09-18 after a device report
             // of *"no outline of any sort"*, which four different failures produce identically:
@@ -3913,10 +4015,10 @@ axes      ${cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldA
             // the *absent readout* failure wearing a different hat: the check I added to answer a
             // question could not be read, so it answered nothing.
             `
-topo      ${[...topoOf.values()]
+topo      ${[...st.topoOf.values()]
               .map((t) => `${t.faces.length}/${t.edges.length}`)
-              .join(" ")}  mk=${faceMarkers.size}  pfc=${pioneerCursors.size}  seated=${links.seatedFollowers().join(",") || "—"}  snapping=${seatSnaps.size}
-unsnap    ${unsnapTrace}` +
+              .join(" ")}  mk=${st.faceMarkers.size}  pfc=${st.pioneerCursors.size}  seated=${st.links.seatedFollowers().join(",") || "—"}  snapping=${st.seatSnaps.size}
+unsnap    ${st.unsnapTrace}` +
             // ⛔⛔ **`outl=` REPORTED THE CACHE SIZE, WHICH IS NOT THE QUESTION** — a hand read it
             // as a bug (*"it goes to 2, not to zero"*) and was right to: a number that only ever
             // grows cannot describe what is on the screen. ⭐ `METHOD`: *audit an instrument
@@ -3925,9 +4027,9 @@ unsnap    ${unsnapTrace}` +
             // vertices it actually has** — an empty buffer and a hidden mesh look identical.
             `
 outl      ${
-              outlines.size === 0
+              st.outlines.size === 0
                 ? "(none built)"
-                : [...outlines.entries()]
+                : [...st.outlines.entries()]
                     .map(([id, o]) => {
                       const v = (m: LinesMesh): string =>
                         `${m.isVisible ? "V" : "-"}${m.getTotalVertices()}`;
@@ -3940,26 +4042,26 @@ outl      ${
             // ⛔ *A dead control must say so*, and so must a control that is alive and going the
             // wrong way: the sign, the progress and the angle are the three numbers a device
             // report about direction needs, and without them the only evidence is an impression.
-            (swing === null
+            (st.swing === null
               ? ""
               : `
 swing     sign${
                   // ⛔ `?` is *no direction was available at the threshold*, which is a swing of
                   // ZERO and not a swing going the wrong way — the 2026-09-20 report could not
                   // distinguish those two from outside, and this is what tells them apart.
-                  swing.sign === null ? "⛔?" : swing.sign > 0 ? "+" : "−"
-                } p=${swingProgress(highlighted.gapM ?? 0, swing).toFixed(2)}` +
-                ` yaw=${((appliedSwingYaw * 180) / Math.PI).toFixed(1)}°` +
-                ` g0=${(swing.gapAtTriggerM * 1000).toFixed(0)}mm` +
+                  st.swing.sign === null ? "⛔?" : st.swing.sign > 0 ? "+" : "−"
+                } p=${swingProgress(st.highlighted.gapM ?? 0, st.swing).toFixed(2)}` +
+                ` yaw=${((st.appliedSwingYaw * 180) / Math.PI).toFixed(1)}°` +
+                ` g0=${(st.swing.gapAtTriggerM * 1000).toFixed(0)}mm` +
                 // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
                 // from"* is the question a direction report asks, and `0.0000` here is the whole
                 // explanation of a `⛔?`.
-                ` arm=(${(swing.armTravelM * 1000).toFixed(1)},${(swing.armTravelUpM * 1000).toFixed(1)})mm` +
-                ` ${swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
-            (drawFault === null
+                ` arm=(${(st.swing.armTravelM * 1000).toFixed(1)},${(st.swing.armTravelUpM * 1000).toFixed(1)})mm` +
+                ` ${st.swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
+            (st.drawFault === null
               ? ""
               : `
-DRAWFAULT x${drawFaultCount} ${drawFault}`) +
+DRAWFAULT x${st.drawFaultCount} ${st.drawFault}`) +
             // ⭐⭐⭐ **THE ALIGNMENT LINKS, PRINTED — AND THIS LINE IS OWED TO A DEVICE REPORT.**
             //
             // ⛔⛔ A hand reported *"the release of the cyan follower objects by the rotation of
@@ -3969,14 +4071,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             // ⭐ Now each link prints as `follower>pioneer/face:C` or `:F` for cyan/FOLLOW, so
             // *the rule did not fire* and *the link was never there* stop being the same
             // observation. ⚠ Straight from the index; nothing is recomputed here.
-            (links.size === 0
+            (st.links.size === 0
               ? ""
               : "  ⚭" +
-                links
+                st.links
                   .alignedObjects()
                   .map((f) => {
-                    const r = links.pioneerFor(f);
-                    const m = alignModeOf.get(f) === "FOLLOW" ? "F" : "C";
+                    const r = st.links.pioneerFor(f);
+                    const m = st.alignModeOf.get(f) === "FOLLOW" ? "F" : "C";
                     return r === null
                       ? f
                       : `${f}>${r.objectId}/${r.faceId}:${m}`;
@@ -4007,7 +4109,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    */
   const tunable = (
     label: string,
-    key: keyof typeof cfg & string,
+    key: keyof typeof st.cfg & string,
     min: number,
     max: number,
     step: number,
@@ -4016,9 +4118,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     min,
     max,
     step,
-    get: () => cfg[key] as unknown as number,
+    get: () => st.cfg[key] as unknown as number,
     set: (value) => {
-      const candidate = { ...cfg, [key]: value };
+      const candidate = { ...st.cfg, [key]: value };
       try {
         validateGestureConfig(candidate);
       } catch (err) {
@@ -4027,7 +4129,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⛔ Mutate the ONE config object everything already holds — no second copy.
       // Carried rule `L1`: a tuning value living in both a debug tool and production
       // silently drifted apart.
-      (cfg as unknown as Record<string, number>)[key] = value;
+      (st.cfg as unknown as Record<string, number>)[key] = value;
       applyCamera();
       paint();
       return null;
@@ -4409,41 +4511,41 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * glass while their finger is covering it.
    */
   /** ⚠ Per pointer id: the last event's clock, and every inter-event gap in the last second. */
-  const eventGaps = new Map<
+  st.eventGaps = new Map<
     number,
     { last: number; gaps: { t: number; ms: number }[] }
   >();
-  const noise = new PointerNoiseMeter();
-  let noisePointer: number | null = null;
+  st.noise = new PointerNoiseMeter();
+  st.noisePointer = null;
 
   const noiseLine = (): string => {
-    const floor = noise.floorMm;
+    const floor = st.noise.floorMm;
     if (Number.isNaN(floor))
-      return `— (n=${noise.samples}, hold one finger still)`;
+      return `— (n=${st.noise.samples}, hold one finger still)`;
     // ⭐ Printed against the value currently IN FORCE, because the reading is only
     // ever interesting as a comparison — and a config the sagitta rule is judged by
     // must not be compared against a half-remembered number.
     // ⭐⭐ AND THE EVENT GAPS, against the threshold they have to beat. ⛔ A `!` marks a pointer
     // whose worst gap EXCEEDS `restConfirmMs` — the flicker's precondition, as a measured fact.
-    const gaps = [...eventGaps.entries()]
+    const gaps = [...st.eventGaps.entries()]
       .map(([pid, v]) => {
         const worst = v.gaps.reduce((m, g) => Math.max(m, g.ms), 0);
-        return `p${pid}:${worst.toFixed(0)}${worst > cfg.restConfirmMs ? "!" : ""}`;
+        return `p${pid}:${worst.toFixed(0)}${worst > st.cfg.restConfirmMs ? "!" : ""}`;
       })
       .join(" ");
     // ⭐⭐⭐ **THE ADAPTIVE REST WINDOW, ON THE GLASS.** ⛔ A threshold that MOVES and cannot be
     // seen is the instrument this project has been burned by most. ⚠ `rest` is what each held
     // pointer's tracker actually derived, beside the raw gaps it derived it from.
-    const rests = [...held.values()]
+    const rests = [...st.held.values()]
       .map(
         (g) =>
           `${g.rec.restMs.toFixed(0)}(med ${g.rec.gapMedianMs.toFixed(0)})`,
       )
       .join(" ");
     return (
-      `floor=${floor.toFixed(3)}mm n=${noise.samples}` +
-      ` | rest ${rests || `${cfg.restConfirmMs}(seed)`}` +
-      ` x${cfg.restGapFactor} | gaps ${gaps || "—"}`
+      `floor=${floor.toFixed(3)}mm n=${st.noise.samples}` +
+      ` | rest ${rests || `${st.cfg.restConfirmMs}(seed)`}` +
+      ` x${st.cfg.restGapFactor} | gaps ${gaps || "—"}`
     );
   };
 
@@ -4477,7 +4579,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * the sway must not disturb.
    */
   const isGrasped = (id: ObjectId): boolean => {
-    for (const g of held.values()) if (idOf.get(g.mesh) === id) return true;
+    for (const g of st.held.values()) if (st.idOf.get(g.mesh) === id) return true;
     return false;
   };
 
@@ -4493,14 +4595,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     heldId !== null &&
     pioneerId !== null &&
     pioneerSwaySuppressed(
-      surfaceGap(world, heldId, pioneerId),
+      surfaceGap(st.world, heldId, pioneerId),
       captureOffsetM(
-        cfg.captureOffsetMm,
-        camera.radius,
-        camera.fov,
-        canvas.clientHeight,
+        st.cfg.captureOffsetMm,
+        st.camera.radius,
+        st.camera.fov,
+        st.canvas.clientHeight,
       ),
-      cfg.pioneerSwayRadii,
+      st.cfg.pioneerSwayRadii,
     );
 
   const nudgeOthersWorld = (
@@ -4509,25 +4611,25 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     speedMmPerS: number,
   ): void => {
     const perPx = trackingMetresPerPx(
-      camera.radius,
-      camera.fov,
-      canvas.clientHeight,
+      st.camera.radius,
+      st.camera.fov,
+      st.canvas.clientHeight,
     );
     // ⭐ Amplitude × how fast the object set off. Slow, small and slow; fast, bigger AND
     // quicker — it still peaks at the same time constant, so a larger excursion covers
     // that ground faster. See `swayScale`, which clamps the ratio.
-    const scale = swayScale(speedMmPerS, cfg.swayReferenceSpeedMmPerS);
-    const peakM = mmToPx(cfg.translateSwayMm) * perPx * scale;
-    const impulse = impulseForPeak(peakM, cfg.translateSwayTauMs / 1000);
+    const scale = swayScale(speedMmPerS, st.cfg.swayReferenceSpeedMmPerS);
+    const peakM = mmToPx(st.cfg.translateSwayMm) * perPx * scale;
+    const impulse = impulseForPeak(peakM, st.cfg.translateSwayTauMs / 1000);
     if (!(impulse > 0)) return;
 
-    const heldId = idOf.get(heldMesh) ?? null;
+    const heldId = st.idOf.get(heldMesh) ?? null;
     // ⭐ The mover's own Pioneer does not sway while the mover is within three capture offsets
     // of it (`receivesSway`, `pioneerSwaySuppressed` — the owner, 2026-09-26).
     const pioneerOfMover =
-      heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
+      heldId === null ? null : (st.links.pioneerFor(heldId)?.objectId ?? null);
     const nearPioneer = moverNearPioneer(heldId, pioneerOfMover);
-    for (const mesh of scene.meshes) {
+    for (const mesh of st.scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
       // marker cannot sway — a readout that moved with the scene would be describing
       // itself. And the held object is excluded: it is already going that way.
@@ -4579,18 +4681,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * far from the pivot travels further, exactly as a rigid body does.
    */
   const spinOthers = (grip: Held, kick: SpinSwayKick): void => {
-    const scale = swayScale(kick.degPerS, cfg.rotateSwayReferenceDegPerS);
-    const peakRad = ((cfg.rotateSwayDeg * Math.PI) / 180) * scale;
-    const impulse = impulseForPeak(peakRad, cfg.rotateSwayTauMs / 1000);
+    const scale = swayScale(kick.degPerS, st.cfg.rotateSwayReferenceDegPerS);
+    const peakRad = ((st.cfg.rotateSwayDeg * Math.PI) / 180) * scale;
+    const impulse = impulseForPeak(peakRad, st.cfg.rotateSwayTauMs / 1000);
     if (!(impulse > 0)) return;
 
     const pivot = grip.mesh.position;
-    const heldId = idOf.get(grip.mesh) ?? null;
+    const heldId = st.idOf.get(grip.mesh) ?? null;
     // ⭐ …and does not swing either — a follower TURNING is moving too.
     const pioneerOfMover =
-      heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
+      heldId === null ? null : (st.links.pioneerFor(heldId)?.objectId ?? null);
     const nearPioneer = moverNearPioneer(heldId, pioneerOfMover);
-    for (const mesh of scene.meshes) {
+    for (const mesh of st.scene.meshes) {
       if (mesh.metadata?.orbitCandidate !== true) continue;
       if (mesh === grip.mesh) continue;
       // ⛔⛔ A frozen body does not swing about the held one either — the same rule, the same
@@ -4688,7 +4790,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⛔⛔ `D100`: a SEATED or SNAPPING Follower is not translated by its own finger — it sits on
     // its Pioneer's cursor and moves with the Pioneer. ⚠ Reported, never silent: this is the
     // *nothing visibly happened* failure a hand cannot diagnose from outside.
-    const seatedId = idOf.get(grip.mesh);
+    const seatedId = st.idOf.get(grip.mesh);
     // ⭐⭐⭐ **A TRANSLATION OF A SEATED MEMBER MOVES ITS ASSEMBLY** (`D102`, re-homed here on
     // 2026-09-26): the step lands on the ROOT `assemblyRoot` names, and the tree carries the member.
     // ⛔ A member whose root is itself (its Pioneer is frozen, or it is still snapping) is refused,
@@ -4697,13 +4799,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     const targetMesh =
       rootId === undefined || rootId === seatedId
         ? grip.mesh
-        : (meshOf.get(rootId) ?? grip.mesh);
+        : (st.meshOf.get(rootId) ?? grip.mesh);
     if (
       seatedId !== undefined &&
       targetMesh === grip.mesh &&
-      (links.isSeated(seatedId) || seatSnaps.has(seatedId))
+      (st.links.isSeated(seatedId) || st.seatSnaps.has(seatedId))
     ) {
-      lastVerdict = `snap: ${seatedId} is seated — move its Pioneer, or unsnap`;
+      st.lastVerdict = `snap: ${seatedId} is seated — move its Pioneer, or unsnap`;
       return;
     }
     // ⚠ The LeadingFace ray is NOT aimed from here any more — it follows what the channels asked
@@ -4713,21 +4815,21 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // delta that `A11`'s deadband may have swallowed. ⛔⛔ ACCUMULATED, NOT LATCHED:
     // `refreshHighlight` zeroes it every frame, so the arming edge reads only the travel that
     // crossed the threshold.
-    frameTravelRightM += dot(step, grip.frame.right);
-    frameTravelUpM += dot(step, grip.frame.up);
+    st.frameTravelRightM += dot(step, grip.frame.right);
+    st.frameTravelUpM += dot(step, grip.frame.up);
     // ⛔⛔ **AND THE ALONG-VIEW COMPONENT.** `right` and `up` span the SCREEN, so a body pushed
     // along the gravity frame's own depth leaves no trace in either — which is what the holder's
     // `dy` does at a LEVEL camera, where its plane is edge-on and the judged fixed rate drives.
     // ⚠ Without it the swing has no direction to find there, however long it waits.
-    frameTravelDepthM += dot(step, grip.frame.depth);
+    st.frameTravelDepthM += dot(step, grip.frame.depth);
     const mp = requirePose(targetMesh);
     // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
     // camera's own maximum orbit radius. A body through the near plane renders *a black page with
     // no error at all*, and one past the ceiling cannot be brought back by any zoom.
-    const limits = depthLimits(cfg);
+    const limits = depthLimits(st.cfg);
     setModelPose(targetMesh, {
       position: clampDepthRange(
-        asVec3(camera.position),
+        asVec3(st.camera.position),
         [
           mp.position[0] + step[0],
           mp.position[1] + step[1],
@@ -4742,10 +4844,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   };
 
   const applyDepthStep = (grip: Held, dyPx: number): void => {
-    const gid = idOf.get(grip.mesh);
+    const gid = st.idOf.get(grip.mesh);
     const axes =
       gid === undefined
-        ? (bootObjectAxes ?? axesFromFrame(grip.frame))
+        ? (st.bootObjectAxes ?? axesFromFrame(grip.frame))
         : axesOf();
     const travel = axisTravel(
       { holderDxPx: 0, holderDyPx: 0, secondDyPx: dyPx },
@@ -4753,11 +4855,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       axes,
       // ⭐ RULE 6's COMPUTED FACTOR, redirected: a given finger travel moves the object as far
       // along this axis as it would move it across the screen.
-      trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
-      cfg.gainTranslateScreen,
-      cfg.gainTranslateDepth,
-      cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
-      cfg.axisTrackingConeDeg,
+      trackingMetresPerPx(st.camera.radius, st.camera.fov, st.canvas.clientHeight),
+      st.cfg.gainTranslateScreen,
+      st.cfg.gainTranslateDepth,
+      st.cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
+      st.cfg.axisTrackingConeDeg,
       grip.frame.towardGravity,
     );
     // ⭐ The gizmo hears this finger exactly as it hears the holder's — same function, same frame.
@@ -4802,7 +4904,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * rule 5 / 6bis / 6ter's configuration and must stay reachable.
    */
   const secondFingerOf = (grip: Held): { present: boolean } => {
-    for (const q of router.all()) {
+    for (const q of st.router.all()) {
       const isSecond =
         q.role === "OUTSIDE" || (q.role === "SECOND" && q.object === grip.mesh);
       if (!isSecond) continue;
@@ -4818,7 +4920,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * that structural brace, and it is what stops the map growing for the life of a gesture.
    */
   const forgetAnchor = (seq: number): void => {
-    for (const grip of held.values()) {
+    for (const grip of st.held.values()) {
       grip.anchorMotion.delete(seq);
       grip.anchorRollSign.delete(seq);
     }
@@ -4839,14 +4941,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * first — so the rule asks the alignment index both ways.
    */
   const pinnedNow = (): { follower: ObjectId; pioneer: ObjectId } | null => {
-    if (cfg.pioneerTranslates !== 0) return null;
+    if (st.cfg.pioneerTranslates !== 0) return null;
     const ids: ObjectId[] = [];
-    for (const q of router.objects()) {
-      const g = held.get(q.id);
-      const id = g === undefined ? undefined : idOf.get(g.mesh);
+    for (const q of st.router.objects()) {
+      const g = st.held.get(q.id);
+      const id = g === undefined ? undefined : st.idOf.get(g.mesh);
       if (id !== undefined && !ids.includes(id)) ids.push(id);
     }
-    return pinnedPair(ids, (f) => links.pioneerFor(f)?.objectId ?? null);
+    return pinnedPair(ids, (f) => st.links.pioneerFor(f)?.objectId ?? null);
   };
 
   /**
@@ -4854,8 +4956,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * the one record of that; `alignModeOf` says what an alignment MEANS, never whether one exists.
    */
   const gripIsAlignedFollower = (grip: Held): boolean => {
-    const id = idOf.get(grip.mesh);
-    return id !== undefined && links.pioneerFor(id) !== null;
+    const id = st.idOf.get(grip.mesh);
+    return id !== undefined && st.links.pioneerFor(id) !== null;
   };
 
   /**
@@ -4875,11 +4977,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // exactly as it does on the glass once a second finger is down. ⛔ The desktop fact lives in the
   // desktop module; this rule only reads it.
   const secondTouchOwnsRollAndDepth = (grip: Held): boolean =>
-    (router.outside().length >= 1 || secondTouchAlwaysAvailable(grip.pointerType)) &&
+    (st.router.outside().length >= 1 || secondTouchAlwaysAvailable(grip.pointerType)) &&
     secondTouchDrive("OUTSIDE", gripIsAlignedFollower(grip)) === "BOTH";
 
   const gripOfObject = (id: ObjectId): Held | undefined => {
-    for (const g of held.values()) if (idOf.get(g.mesh) === id) return g;
+    for (const g of st.held.values()) if (st.idOf.get(g.mesh) === id) return g;
     return undefined;
   };
 
@@ -4895,7 +4997,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⛔ Keyed by PRESS ORDER, never by pointer id. See `Held.anchorMotion`.
     let tracker = grip.anchorMotion.get(anchorSeq);
     if (!tracker) {
-      tracker = new MotionTracker(cfg);
+      tracker = new MotionTracker(st.cfg);
       grip.anchorMotion.set(anchorSeq, tracker);
     }
     // ⭐⭐ ASK THE CLOCK RIGHT HERE TOO, not only in the render loop. This is the one
@@ -4914,7 +5016,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
     const drive = bothAxes
       ? pinnedSecondDrive(tracker.axes, tracker.step)
-      : secondFingerDrive(tracker.axes, tracker.step, behaviour);
+      : secondFingerDrive(tracker.axes, tracker.step, st.behaviour);
     if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
 
     if (drive.depthDyPx !== 0) {
@@ -4935,18 +5037,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // without a handover constant — see the 2sexte block in the ROTATE branch.
       // ⚠ `constrainedRollAngle` returns `null` square to the axis, where a roll has no
       // component to give: nothing happens, and the drag chart is the one that works there.
-      const rollId = idOf.get(grip.mesh);
+      const rollId = st.idOf.get(grip.mesh);
       const rollStack =
         rollId === undefined
           ? []
-          : (world.objects.get(rollId)?.constraints ?? []);
+          : (st.world.objects.get(rollId)?.constraints ?? []);
       // ⛔⛔ The same audit fix as the one-finger twist, at the second finger's channel: a
       // COUNT stood in for *"is this body aligned?"* and sent a mated body to free roll.
       const rollChannel = rotationChannel(rollStack);
       if (rollChannel.kind === "REFUSED") {
         // ⛔ Same as the one-finger twist: a refusal that fell through to the free roll below
         // would break the mate while the HUD reported that it had not.
-        lastVerdict = `align: roll refused — ${rollChannel.why}`;
+        st.lastVerdict = `align: roll refused — ${rollChannel.why}`;
       } else if (rollChannel.kind === "TWIST") {
         const axis = rollChannel.axis;
         // ⭐ The grey line's axis, recorded where the turn is applied (the owner, 2026-09-23).
@@ -5025,7 +5127,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         const twist = flatTwistAngle(
           drive.rollDxPx,
           rollSign,
-          (cfg.gainRollDrag * Math.PI) / 180,
+          (st.cfg.gainRollDrag * Math.PI) / 180,
         );
         // ⚠ NO `null` BRANCH ANY MORE, and that is the point: this channel had one because
         // the projection could fail, and `D57` removed the projection. ⛔ A `twist !== null`
@@ -5035,10 +5137,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // the body is advanced a whole increment at a time in the render loop — which is what
           // stops it ever sitting between two and having to come back.
           if (
-            incrementRadians(cfg.rotationIncrementDeg) !== null &&
+            incrementRadians(st.cfg.rotationIncrementDeg) !== null &&
             rollId !== undefined
           ) {
-            rotationTally.add(rollId, "roll", axis, twist);
+            st.rotationTally.add(rollId, "roll", axis, twist);
           } else {
             setModelOrientation(
               grip.mesh,
@@ -5054,7 +5156,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // channel over — a fix that landed on one path and not on its twin.
           // ⛔ `METHOD`: *when a rule has two channels, the correction belongs to the RULE.*
           if (rollId !== undefined) {
-            alignSnaps.ride(rollId, rotateAboutAxis(IDENTITY, axis, twist));
+            st.alignSnaps.ride(rollId, rotateAboutAxis(IDENTITY, axis, twist));
           }
         }
       } else {
@@ -5072,9 +5174,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // line, the turn, the tally), because two of them restate the other's axis and sign.
           const rollFrame = rotationFrameOf(grip.frame);
           noteTurnAxis(rollId, TURN_ROLL, rollFrame.depth);
-          const rollDeg = rollDragDeg(drive.rollDxPx, cfg.gainRollDrag);
+          const rollDeg = rollDragDeg(drive.rollDxPx, st.cfg.gainRollDrag);
           const incOn =
-            incrementRadians(cfg.rotationIncrementDeg) !== null &&
+            incrementRadians(st.cfg.rotationIncrementDeg) !== null &&
             rollId !== undefined;
           if (!incOn) {
             setModelOrientation(
@@ -5093,7 +5195,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // SAME axis and sign, or the detents would be counted on a quantity the body is not
           // turning. ⛔ *A sign is not tested by any amount of testing the magnitude.*
           if (rollId !== undefined) {
-            rotationTally.add(
+            st.rotationTally.add(
               rollId,
               "roll",
               rollFrame.depth,
@@ -5206,7 +5308,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // DISAGREEMENT between a human sentence and the code, where the tell is *whether any instruction
   // still asks for the other mode*. ⭐ None does — so the comment was the thing that was wrong,
   // and it is the comment that moved.
-  let behaviour: Behaviour = initialBehaviour();
+  st.behaviour = initialBehaviour();
 
   /**
    * ⭐⭐⭐ `IN3`'s SELECTED FACE — §2 rule 2's other half, and the input every remaining
@@ -5295,14 +5397,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // ⭐⭐ The bookkeeping moved to `input/align_snap.ts` so it can be INTERROGATED: the
   // ride-along, the cancel and the landing were three scattered statements in this frame
   // handler, and `pioneer_cascade.ts` already paid for that lesson.
-  const alignSnaps = new AlignSnaps<ObjectId>();
+  st.alignSnaps = new AlignSnaps<ObjectId>();
   // ⚠ LATCHED, not per-frame: a jump is over in one frame and a hand cannot look up in time.
   // ⭐ The verdict in force when it happened is captured with it — that is the half that says
   // WHICH rule was running, which is what the owner could not see.
-  const jumpWatch = new JumpWatch<ObjectId>();
-  let lastJump: Jump<ObjectId> | null = null;
-  let lastJumpVerdict = "";
-  let lastJumpAt = 0;
+  st.jumpWatch = new JumpWatch<ObjectId>();
+  st.lastJump = null;
+  st.lastJumpVerdict = "";
+  st.lastJumpAt = 0;
   /**
    * ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — what this gesture has demanded per
    * axis, and the slerp that lands it on a multiple when the gesture ends.
@@ -5316,7 +5418,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * was written to fix: a settle would silently overwrite a travelling alignment and leave that
    * body stranded mid-arc with its constraint still claiming it had landed.
    */
-  const rotationTally = new RotationTally<ObjectId>();
+  st.rotationTally = new RotationTally<ObjectId>();
   /**
    * ⭐⭐⭐ **THE CHASE TOWARD THE CURRENT DETENT — an exponential approach, not a timed arc.**
    *
@@ -5327,7 +5429,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * newly crossed increment restarted it at `t = 0` — so crossing several detents relaunched the
    * body from a standstill again and again. ⭐ An exponential has no clock to restart.
    */
-  const rotationFollower = new RotationFollower<ObjectId>();
+  st.rotationFollower = new RotationFollower<ObjectId>();
 
   /**
    * ⭐⭐⭐ **ADVANCE THE BODY TO THE INCREMENT THE FINGER IS IN NOW.**
@@ -5357,14 +5459,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    */
   const advanceRotation = (id: ObjectId | undefined): void => {
     if (id === undefined) return;
-    const inc = incrementRadians(cfg.rotationIncrementDeg);
-    if (inc === null || alignSnaps.has(id)) return;
-    const step = rotationTally.advance(id, inc);
-    const mesh = meshOf.get(id);
+    const inc = incrementRadians(st.cfg.rotationIncrementDeg);
+    if (inc === null || st.alignSnaps.has(id)) return;
+    const step = st.rotationTally.advance(id, inc);
+    const mesh = st.meshOf.get(id);
     if (step === null || !mesh) return;
     // ⭐ The target simply moves. There is no clock to restart, so a body already chasing a
     // detent keeps every bit of the speed it had — which is the whole point of the change.
-    rotationFollower.push(id, step, modelOrientation(mesh));
+    st.rotationFollower.push(id, step, modelOrientation(mesh));
   };
 
   /**
@@ -5379,7 +5481,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * the hand can see and undo, which is honest; a jump back to the press pose would not be.
    */
   const cancelAlignAnim = (objectId: ObjectId): void => {
-    alignSnaps.cancel(objectId);
+    st.alignSnaps.cancel(objectId);
   };
 
   // ⛔⛔ **`settleAlignAnim` WAS DELETED HERE, 2026-09-17, AND ITS ABSENCE IS THE FIX.** It
@@ -5414,7 +5516,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * a tap consumed by an alignment toggled nothing, and undoing it would flip the mode the hand
    * had. ⚠ Written at every tap release, both paths, so it cannot describe an older gesture.
    */
-  let lastTapToggled = false;
+  st.lastTapToggled = false;
   /**
    * ⭐⭐ `D68` — presses that already spent their toggle by REVERTING the first tap's. ⛔ Their
    * own release must add nothing, or a full double tap would end up flipped by one.
@@ -5422,7 +5524,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * a press that UNDOES, which is what keeps `D28`'s *two taps revert* true when the second half
    * never lifts.
    */
-  const pairReverted = new Set<number>();
+  st.pairReverted = new Set<number>();
 
   /**
    * ⭐⭐⭐ **THE ONE PLACE A TAP FLIPS THE MODE — and it records the fact `D68` reads.**
@@ -5458,13 +5560,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // alignment's own consumption is applied by its caller (`alignedByThisTap`), which is why
     // `false` is passed here — this helper is only ever reached when the tap was not spent that
     // way, and threading it twice would give the rule two masters.
-    if (!tapReleaseToggles(pairReverted.delete(pointerId), false)) {
-      lastVerdict = `${why} — release spent (its press reverted the pair)`;
+    if (!tapReleaseToggles(st.pairReverted.delete(pointerId), false)) {
+      st.lastVerdict = `${why} — release spent (its press reverted the pair)`;
       return;
     }
-    behaviour = toggleBehaviour(behaviour);
-    lastTapToggled = true;
-    lastVerdict = `${why} → ${behaviour}`;
+    st.behaviour = toggleBehaviour(st.behaviour);
+    st.lastTapToggled = true;
+    st.lastVerdict = `${why} → ${st.behaviour}`;
   };
 
   // ⛔⛔ **`pressToggled` AND `secondTouch` ARE DELETED WITH `D66`.** The first existed only
@@ -5484,14 +5586,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       released.t,
       released.x,
       released.y,
-      cfg.tapMaxDuration,
-      mmToPx(cfg.doubleTapSlop),
+      st.cfg.tapMaxDuration,
+      mmToPx(st.cfg.doubleTapSlop),
     );
     if (!wasTap) return null;
     // ⛔ The history is kept for §1.3's double tap whatever the fork, and the toggle depends
     // on neither its verdict nor on anything being held: *"a single tap by one only
     // touchpoint ANYWHERE also toggles"* (owner, 2026-09-16).
-    const verdict = taps.record(pressed, released.t);
+    const verdict = st.taps.record(pressed, released.t);
     // ⛔⛔ EVERY tap toggles — *"a single tap by one only touchpoint anywhere"* — with no
     // condition left: not the fork (there is one model now), and not whether anything is
     // held, since the mode is what the NEXT grab inherits.
@@ -5529,41 +5631,41 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * not flat). ⚠ The drag is RELATIVE — the grab offset is kept — so a touch pressed several radii
    * away moves the ring without making it jump under the finger.
    */
-  const cursorDrags = new Map<number, { key: string; dx: number; dy: number }>();
+  st.cursorDrags = new Map<number, { key: string; dx: number; dy: number }>();
   const cursorScreen = (
     cur: PioneerFaceCursor,
   ): { x: number; y: number } | null => {
-    const body = meshOf.get(cur.pioneerId);
+    const body = st.meshOf.get(cur.pioneerId);
     if (!body) return null;
     const w = Vector3.TransformCoordinates(
       new Vector3(cur.position[0], cur.position[1], cur.position[2]),
       body.computeWorldMatrix(true),
     );
-    const rw = engine.getRenderWidth();
-    const rh = engine.getRenderHeight();
+    const rw = st.engine.getRenderWidth();
+    const rh = st.engine.getRenderHeight();
     const p = Vector3.Project(
       w,
       Matrix.IdentityReadOnly,
-      scene.getTransformMatrix(),
-      camera.viewport.toGlobal(rw, rh),
+      st.scene.getTransformMatrix(),
+      st.camera.viewport.toGlobal(rw, rh),
     );
     // ⚠ Behind the camera or past the far plane: not on screen, so not grabbable.
     if (!(p.z >= 0 && p.z <= 1)) return null;
-    const rect = canvas.getBoundingClientRect();
+    const rect = st.canvas.getBoundingClientRect();
     return {
       x: rect.left + (p.x * rect.width) / rw,
       y: rect.top + (p.y * rect.height) / rh,
     };
   };
   const dragCursorTo = (key: string, x: number, y: number): void => {
-    const cur = pioneerCursors.get(key);
+    const cur = st.pioneerCursors.get(key);
     if (cur === null) return;
-    const body = meshOf.get(cur.pioneerId);
-    const topo = topoOf.get(cur.pioneerId);
+    const body = st.meshOf.get(cur.pioneerId);
+    const topo = st.topoOf.get(cur.pioneerId);
     const face = topo?.faces.find((f) => f.id === cur.pioneerFaceId);
     if (!body || !topo || !face) return;
     // ⭐ Into the Pioneer's LOCAL frame, where the cursor and the face's triangles both live.
-    const ray = scene.createPickingRay(x, y, null, camera);
+    const ray = st.scene.createPickingRay(x, y, null, st.camera);
     const inv = body.computeWorldMatrix(true).clone().invert();
     const o = Vector3.TransformCoordinates(ray.origin, inv);
     const d = Vector3.TransformNormal(ray.direction, inv).normalize();
@@ -5580,10 +5682,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   /** ⭐ `true` when this event belongs to a cursor drag and must go no further. */
   const cursorPointer = (type: number, e: PointerEvent): boolean => {
     if (type === PointerEventTypes.POINTERDOWN) {
-      cursorDrags.delete(e.pointerId);
-      if (pioneerCursors.size === 0) return false;
+      st.cursorDrags.delete(e.pointerId);
+      if (st.pioneerCursors.size === 0) return false;
       const onScreen: CursorOnScreen[] = [];
-      for (const cur of pioneerCursors.all()) {
+      for (const cur of st.pioneerCursors.all()) {
         const p = cursorScreen(cur);
         if (p !== null) onScreen.push({ key: cur.key, x: p.x, y: p.y });
       }
@@ -5597,51 +5699,51 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         },
         onScreen,
         PIONEER_CURSOR_PX / 2,
-        cfg.pioneerCursorGrabRadii,
-        cfg.pioneerCursorDrag === 1,
+        st.cfg.pioneerCursorGrabRadii,
+        st.cfg.pioneerCursorDrag === 1,
       );
       if (key === null) return false;
       const at = onScreen.find((c) => c.key === key);
       if (at === undefined) return false;
-      cursorDrags.set(e.pointerId, {
+      st.cursorDrags.set(e.pointerId, {
         key,
         dx: e.clientX - at.x,
         dy: e.clientY - at.y,
       });
-      const cur = pioneerCursors.get(key);
-      lastVerdict = `cursor: grabbed ${cur?.followerId ?? "?"} → ${cur?.pioneerId ?? "?"}/${cur?.pioneerFaceId ?? "?"}`;
+      const cur = st.pioneerCursors.get(key);
+      st.lastVerdict = `cursor: grabbed ${cur?.followerId ?? "?"} → ${cur?.pioneerId ?? "?"}/${cur?.pioneerFaceId ?? "?"}`;
       return true;
     }
-    const d = cursorDrags.get(e.pointerId);
+    const d = st.cursorDrags.get(e.pointerId);
     if (d === undefined) return false;
     if (type === PointerEventTypes.POINTERMOVE)
       dragCursorTo(d.key, e.clientX - d.dx, e.clientY - d.dy);
-    else if (type === PointerEventTypes.POINTERUP) cursorDrags.delete(e.pointerId);
+    else if (type === PointerEventTypes.POINTERUP) st.cursorDrags.delete(e.pointerId);
     return true;
   };
 
-  scene.onPointerObservable.add((info) => {
+  st.scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
 
     // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
     // see the raw stream whatever rule the touchpoint turns out to belong to, and it
     // must not be able to change what that rule does.
-    if (info.type === PointerEventTypes.POINTERDOWN && noisePointer === null) {
-      noisePointer = e.pointerId;
-      noise.reset();
+    if (info.type === PointerEventTypes.POINTERDOWN && st.noisePointer === null) {
+      st.noisePointer = e.pointerId;
+      st.noise.reset();
     }
-    if (e.pointerId === noisePointer) {
+    if (e.pointerId === st.noisePointer) {
       // ⚠ DOWN and MOVE only, named explicitly. Babylon also emits `POINTERPICK`,
       // `POINTERTAP` and `POINTERDOUBLETAP` carrying the SAME underlying event, and a
       // duplicated sample would pull the RMS down — an instrument that flatters
       // itself is worse than none. `METHOD`: the instrument is a suspect.
-      if (info.type === PointerEventTypes.POINTERUP) noisePointer = null;
+      if (info.type === PointerEventTypes.POINTERUP) st.noisePointer = null;
       else if (
         info.type === PointerEventTypes.POINTERDOWN ||
         info.type === PointerEventTypes.POINTERMOVE
       ) {
-        noise.push(s);
+        st.noise.push(s);
       }
     }
 
@@ -5654,18 +5756,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       info.type === PointerEventTypes.POINTERDOWN ||
       info.type === PointerEventTypes.POINTERMOVE
     ) {
-      const seen = eventGaps.get(e.pointerId);
+      const seen = st.eventGaps.get(e.pointerId);
       if (seen !== undefined && info.type === PointerEventTypes.POINTERMOVE) {
         seen.gaps.push({ t: s.t, ms: s.t - seen.last });
         while (seen.gaps.length > 0 && s.t - seen.gaps[0]!.t > 1000)
           seen.gaps.shift();
       }
-      eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
+      st.eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
     if (info.type === PointerEventTypes.POINTERUP) {
-      eventGaps.delete(e.pointerId);
-      rawPressedBody.delete(e.pointerId);
-      pointerTypeOf.delete(e.pointerId);
+      st.eventGaps.delete(e.pointerId);
+      st.rawPressedBody.delete(e.pointerId);
+      st.pointerTypeOf.delete(e.pointerId);
     }
 
     // ⭐⭐⭐ A PIONEERFACECURSOR GRAB OWNS ITS POINTER — before the router can latch a role for it.
@@ -5700,17 +5802,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⭐ The anchors go with it: `anchorMotion` lives on the grip, so dropping the grip drops
     // the trackers that would otherwise answer §1.1's question about a previous gesture's
     // travel.
-    if (info.type === PointerEventTypes.POINTERDOWN && held.has(e.pointerId)) {
-      held.get(e.pointerId)!.anchorMotion.clear();
-      held.delete(e.pointerId);
-      lastVerdict = `pressed an id that never released — dropped its stale grip`;
+    if (info.type === PointerEventTypes.POINTERDOWN && st.held.has(e.pointerId)) {
+      st.held.get(e.pointerId)!.anchorMotion.clear();
+      st.held.delete(e.pointerId);
+      st.lastVerdict = `pressed an id that never released — dropped its stale grip`;
     }
 
     if (info.type === PointerEventTypes.POINTERDOWN) {
       // ⛔ A NEW TOUCH CANCELS A RESET IN FLIGHT. The animation writes the whole camera
       // pose every frame, so a drag during one would be overwritten as fast as it was
       // applied — the hand would appear to have no effect at all.
-      cameraReset = null;
+      st.cameraReset = null;
       const pick = info.pickInfo;
       const rayHit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐⭐ **A SECOND TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (the owner, 2026-09-23:
@@ -5718,7 +5820,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // the way IN, before the latch, so every rule downstream sees a touchpoint that landed on
       // nothing — which is what makes it a working second finger for the body in the OTHER hand.
       // ⚠ The DECISION is `frozen_pick.ts`'s; this reads the two facts and obeys.
-      const rawHitId = rayHit === null ? undefined : idOf.get(rayHit);
+      const rawHitId = rayHit === null ? undefined : st.idOf.get(rayHit);
       // ⛔⛔ **THE PRESS HOLDS THE BODY IT TOUCHED — `D102`'s redirect moved to the TRANSLATION
       // STEP** (the owner, 2026-09-26: *"now I cannot roll any longer the follower object around
       // the followerface normal axis … restore the behavior as it was in 389eaa2"*). ⚠ Redirecting
@@ -5728,8 +5830,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // translation to the root — *as a whole* for translation, *the touched body* for rotation.
       const hitId = rawHitId;
       const driveHit = rayHit;
-      if (rawHitId !== undefined) rawPressedBody.set(e.pointerId, rawHitId);
-      pointerTypeOf.set(e.pointerId, e.pointerType);
+      if (rawHitId !== undefined) st.rawPressedBody.set(e.pointerId, rawHitId);
+      st.pointerTypeOf.set(e.pointerId, e.pointerType);
       // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
       // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
       //
@@ -5737,17 +5839,17 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         driveHit,
         // ⭐ A frozen body with a SEATED follower on it is holdable — the unsnap's first touch.
         hitId !== undefined &&
-          world.objects.get(hitId)?.frozen === true &&
+          st.world.objects.get(hitId)?.frozen === true &&
           !frozenHoldAdmitted(
-            links.followersOf(hitId).some((f) => links.isSeated(f)),
+            st.links.followersOf(hitId).some((f) => st.links.isSeated(f)),
           ),
         // ⛔ The count BEFORE this press is registered: `router.press` has not run yet.
-        router.size,
+        st.router.size,
       );
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
-      const routed = router.press(e.pointerId, s, hit);
+      const routed = st.router.press(e.pointerId, s, hit);
       if (rayHit !== null && hit === null) {
-        lastVerdict = `frozen ${hitId ?? "?"} — second touch routed as a MISS`;
+        st.lastVerdict = `frozen ${hitId ?? "?"} — second touch routed as a MISS`;
       }
 
       // ⭐⭐⭐ **`D68` — A PRESS THAT COMPLETES A DOUBLE TAP UNDOES THE FIRST TAP'S TOGGLE.**
@@ -5755,13 +5857,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // orange, the translation/rotation mode toggles: it should not."* ⚠ `D28`'s *two taps
       // revert* was keyed to the second RELEASE, and `D67`'s route to orange never lifts.
       // ⭐ THE DECISION IS `pairPressRevertsToggle`'s; this reads the two facts and obeys.
-      if (pairPressRevertsToggle(taps.wouldPair(s), lastTapToggled)) {
-        behaviour = toggleBehaviour(behaviour);
-        lastTapToggled = false;
+      if (pairPressRevertsToggle(st.taps.wouldPair(s), st.lastTapToggled)) {
+        st.behaviour = toggleBehaviour(st.behaviour);
+        st.lastTapToggled = false;
         // ⛔ …and this press's own release must not toggle again, or the full double tap would
         // end up flipped by one instead of reverting.
-        pairReverted.add(e.pointerId);
-        lastVerdict = `double tap (no release) → mode back to ${behaviour}`;
+        st.pairReverted.add(e.pointerId);
+        st.lastVerdict = `double tap (no release) → mode back to ${st.behaviour}`;
       }
 
       // ⛔⛔⛔ **`D66` — A PRESS NO LONGER TOGGLES THE MOVEMENT MODE, ANYWHERE.**
@@ -5802,7 +5904,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // finger is already ON one is rule 6's ANCHOR, not an orbit — §2 rule 1 requires
         // ONE touchpoint and no hit. Choosing a barycentre for it would move the marker
         // and retarget the camera for a gesture that will never orbit at all.
-        if (router.outside().length === 1 && router.objects().length === 0) {
+        if (st.router.outside().length === 1 && st.router.objects().length === 0) {
           // ⭐⭐ DEFERRED, NOT IMMEDIATE. A second touchpoint outside any object turns
           // this into a PINCH (rule 4), and the two never land in the same instant — so
           // committing a new orbit centre on the first one moves the marker and
@@ -5810,23 +5912,23 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // ⚠ The PRESS coordinates are kept, not re-read later: rule 1 chooses what to
           // orbit around from the ray of the finger that STARTED it, and a finger that
           // has drifted 120 ms' worth would choose a different barycentre.
-          pendingCentre =
-            cfg.orbitCentreGraceMs > 0
+          st.pendingCentre =
+            st.cfg.orbitCentreGraceMs > 0
               ? { x: e.clientX, y: e.clientY, at: s.t }
               : null;
-          if (!pendingCentre) recomputeOrbitCentre(e);
+          if (!st.pendingCentre) recomputeOrbitCentre(e);
         } else {
           // ⛔ A SECOND ONE ARRIVED: this is a pinch. Drop the pending retarget entirely
           // — the camera keeps orbiting whatever it was already orbiting.
-          pendingCentre = null;
+          st.pendingCentre = null;
         }
         const p = pinchPair();
         if (p) {
-          pinch.begin(p[0], p[1]);
+          st.pinch.begin(p[0], p[1]);
           // ⚠ Captured HERE, once. The zoom is a ratio against the gesture's start,
           // never an accumulation — so a pinch out and back returns exactly where it
           // began. See input/pinch.ts.
-          zoomAtPinchStart = zoom;
+          st.zoomAtPinchStart = st.zoom;
         }
         paint();
         return;
@@ -5851,12 +5953,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // FollowerFace shall remain highlighted until un-highlight occurs"* is the alignment's
       // clause — so a press that aligns nothing draws nothing.
       const faceNormal = pick?.getNormal(true);
-      const pickedId = idOf.get(mesh);
+      const pickedId = st.idOf.get(mesh);
       // ⚠ `faceHit`, not `hit`: `hit` is the picked MESH a few lines above, and two different
       // things called the same name in one scope is how the wrong one gets used.
       const faceHit =
         faceNormal && pickedId !== undefined
-          ? faceFromPickedNormal(world, pickedId, [
+          ? faceFromPickedNormal(st.world, pickedId, [
               faceNormal.x,
               faceNormal.y,
               faceNormal.z,
@@ -5865,25 +5967,25 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       const pressFace = faceHit
         ? { faceId: faceHit.faceId, cos: faceHit.cos }
         : null;
-      lastVerdict = faceHit
+      st.lastVerdict = faceHit
         ? `${pickedId}/${faceHit.faceId} under the finger (cos ${faceHit.cos.toFixed(2)})`
         : "no face resolved";
-      const rec = new Recognizer(cfg, poseOf(mesh), taps);
+      const rec = new Recognizer(st.cfg, poseOf(mesh), st.taps);
       rec.press(s);
-      held.set(e.pointerId, {
+      st.held.set(e.pointerId, {
         rec,
         mesh,
         frame: requireGestureFrame(),
         prev: s,
         // ⭐ `D67`: asked HERE, once, on the way down — a peek, not a record. The release still
         // consumes the pair through `TapHistory.record`.
-        pressWasDoubleTap: taps.wouldPair(s),
+        pressWasDoubleTap: st.taps.wouldPair(s),
         pointerType: e.pointerType,
         mode: null,
         pressFace,
         alignmentTouched: false,
         pressActed: false,
-        sway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
+        sway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         anchorMotion: new Map(),
         anchorRollSign: new Map(),
         // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
@@ -5893,8 +5995,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // mapping, which is precisely what `CONSTRAINTS` §4 forbids (*a tuning value needed in
         // two places is IMPORTED, never copied*). ⚠ Nothing had drifted yet; the point is that
         // nothing now can.
-        shake: new ShakeDetector(shakeParamsFrom(cfg), cfg.pointerNoiseMm),
-        depthSway: new SwayWatcher(cfg.swayTurnDeg, cfg.pointerNoiseMm),
+        shake: new ShakeDetector(shakeParamsFrom(st.cfg), st.cfg.pointerNoiseMm),
+        depthSway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
         // of orientation noise per sample. Measured over 10 s of a still finger that is
@@ -5902,8 +6004,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ The cost is the slowest turn that can still register — 92°/s at ×3, which is
         // a quarter turn a second, an ordinary rotation.
         spinSway: new SpinSwayWatcher(
-          cfg.rotateSwayTurnDeg,
-          3 * cfg.gainRotateFree * cfg.pointerNoiseMm * (180 / Math.PI),
+          st.cfg.rotateSwayTurnDeg,
+          3 * st.cfg.gainRotateFree * st.cfg.pointerNoiseMm * (180 / Math.PI),
         ),
       });
       // ⭐⭐⭐ **`D55` — THE PIONEER–FOLLOWER MECHANISM TOGGLES ON *HERE*, ON THE WAY DOWN.**
@@ -5927,12 +6029,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       //
       // ⛔ THE DECISION IS `pressMeaning`'s, NOT THIS FILE'S — `pioneer_cascade.ts`'s rule: *a
       // RULE in a render file is a rule nothing can interrogate.* ⚠ Only the WIRING is here.
-      const pressGrip = held.get(e.pointerId)!;
-      const pressOthers = [...held.entries()].filter(
+      const pressGrip = st.held.get(e.pointerId)!;
+      const pressOthers = [...st.held.entries()].filter(
         ([pid]) => pid !== e.pointerId,
       );
       const pressHeldIds = pressOthers
-        .map(([, g]) => idOf.get(g.mesh))
+        .map(([, g]) => st.idOf.get(g.mesh))
         .filter((v): v is string => v !== undefined);
       // ⚠ Asked only when exactly one other body is held, so `links` is consulted about a body
       // that unambiguously exists — the same guard `pressMeaning` re-states and refuses on.
@@ -5941,7 +6043,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       const pressHeldGrip =
         pressOthers.length === 1 ? pressOthers[0]![1] : undefined;
       const pressPioneerOfHeld =
-        pressHeldId === null ? null : links.pioneerFor(pressHeldId);
+        pressHeldId === null ? null : st.links.pioneerFor(pressHeldId);
       // ⭐⭐⭐ **A FUCHSIA FACE PRESSED BY THE SECOND TOUCH BECOMES THE PIONEERFACE.**
       //
       // > *"if one fuchsia highlighted face is pressed by second touch, it becomes PioneerFace and
@@ -5977,7 +6079,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // for fuchsia ones would be a second decision about the same gesture. ⭐ The highlight is
       // what it always was — guidance — and no longer a precondition for acting.
       const heldPioneer =
-        pressHeldId === null ? null : links.pioneerFor(pressHeldId);
+        pressHeldId === null ? null : st.links.pioneerFor(pressHeldId);
       if (
         pressGrip.pressWasDoubleTap === true &&
         pressHeldId !== null &&
@@ -5987,8 +6089,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         heldPioneer.objectId === pickedId &&
         heldPioneer.faceId === pressFace.faceId
       ) {
-        alignModeOf.set(pressHeldId, "FOLLOW");
-        lastVerdict = `align: ${pressHeldId} → FOLLOW (double tap on its Pioneer face)`;
+        st.alignModeOf.set(pressHeldId, "FOLLOW");
+        st.lastVerdict = `align: ${pressHeldId} → FOLLOW (double tap on its Pioneer face)`;
         pressGrip.pressActed = true;
         paint();
         return;
@@ -6007,7 +6109,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // than remembered: `alignedFaceOf` is the one implementation, and a shadow copy would be a
         // second source of truth free to disagree after an eviction.
         alignedFaceOfHeld:
-          pressHeldId === null ? null : alignedFaceOf(world, pressHeldId),
+          pressHeldId === null ? null : alignedFaceOf(st.world, pressHeldId),
         // ⭐⭐ The PIONEERFACE the held body follows — a face of the PRESSED body, and the only
         // thing `pressedFace` may be compared against. ⛔ Straight off the link, not remembered.
         pioneerFaceOfHeld: pressPioneerOfHeld?.faceId ?? null,
@@ -6055,14 +6157,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
 
     // ⛔ Everything past here is a MOVE or an UP for a touchpoint already latched. The
     // role decides which rule sees it — never a second look at what is under the finger.
-    const routed = router.get(e.pointerId);
+    const routed = st.router.get(e.pointerId);
     if (!routed) return;
 
     if (routed.role === "SECOND") {
       if (info.type === PointerEventTypes.POINTERUP) {
         forgetAnchor(routed.seq);
-        router.release(e.pointerId);
-        lastVerdict = "second touchpoint released";
+        st.router.release(e.pointerId);
+        st.lastVerdict = "second touchpoint released";
         // ⭐⭐⭐ *"Tapped ANYWHERE"* includes the held object itself.
         // ⚠ A `SECOND` release never fed §1.3's tap history before the toggle existed. It
         // does now, and that is deliberate: a tap on the held object is a tap *anywhere*.
@@ -6073,19 +6175,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
       } else {
-        router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
         // ⭐ A second touch on a seated Follower (redirected to its root) is the UNSNAP's.
-        lastFedPointer = e.pointerId;
+        st.lastFedPointer = e.pointerId;
         feedUnsnap(s);
         // ⭐⭐⭐ A12: A SECOND FINGER ON THE SAME OBJECT DRIVES IT, exactly as one outside
         // does — the owner: *"second touchpoint INSIDE OR OUTSIDE any object"*. Its x is
         // roll and its y is depth, while the finger on the object is held still.
         // ⚠ A touchpoint on a DIFFERENT object is deliberately excluded: that is §4 rule 5
         // / 6bis / 6ter's configuration and must stay reachable.
-        const holder2 = router
+        const holder2 = st.router
           .objects()
           .find((q) => q.object === routed.object);
-        const grip2 = holder2 ? held.get(holder2.id) : undefined;
+        const grip2 = holder2 ? st.held.get(holder2.id) : undefined;
         // ⚠ `SAME_OBJECT` is untouched by `D59` — the owner's sentence says *outside any
         // object* — but it goes through the same table so all three configurations are decided
         // in one place rather than by three scattered call sites.
@@ -6115,8 +6217,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // from here would evict a constraint (§1.4) that the user never asked to lose.
       if (info.type === PointerEventTypes.POINTERUP) {
         forgetAnchor(routed.seq);
-        router.release(e.pointerId);
-      } else router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        st.router.release(e.pointerId);
+      } else st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
       paint();
       return;
     }
@@ -6126,14 +6228,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         const prev = routed.last;
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
-        router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
         // ⭐⭐ THIS IS THE FINGER THAT DRIVES DEPTH OR ROLL, and this branch is the only place
         // either is applied. ✅ **SIMULTANEOUS SINCE 2026-09-17** (owner): the holder's own
         // x/y keep running in their own handler while this one adds its axis, and the two SUM.
         // ⛔ `A10`'s gate — which required the holder to be STILL — is deleted, and
         // `depth_translate.ts` carries the note: what it protected is worth knowing first.
-        const holder = router.objects()[0];
-        const grip = holder ? held.get(holder.id) : undefined;
+        const holder = st.router.objects()[0];
+        const grip = holder ? st.held.get(holder.id) : undefined;
         // ⭐⭐⭐ **`D59` — AN ALIGNED FOLLOWER GIVES THIS FINGER BOTH AXES**, exactly as a
         // finger on its Pioneer already did. ⛔ The owner's generalisation: an aligned body has
         // one rotational DOF left, so there is nothing for the movement mode to choose between.
@@ -6150,19 +6252,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           paint();
           return;
         }
-        if (router.outside().length === 2) {
+        if (st.router.outside().length === 2) {
           updatePinch();
         } else if (
-          router.outside().length === 1 &&
-          router.objects().length === 0
+          st.router.outside().length === 1 &&
+          st.router.objects().length === 0
         ) {
           // §2 rule 1: ONE touchpoint, no hit — orbit.
           const dx = s.x - prev.x;
           const dy = s.y - prev.y;
-          orbit.drag(dx, dy);
+          st.orbit.drag(dx, dy);
           // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so
           // the camera arrives as the gesture progresses rather than on a timer.
-          centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+          st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
           syncCentre();
           applyCamera();
         }
@@ -6173,12 +6275,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ The SAME two thresholds §1.3 uses for an object — a tap is a tap whatever it
         // lands on, and a second definition here could disagree with the first.
         forgetAnchor(routed.seq);
-        router.release(e.pointerId);
+        st.router.release(e.pointerId);
         // ⭐⭐⭐ A15: this is A10's DEPTH ANCHOR going up — the case that motivated the
         // amendment, because depth is what slides the object off the holder's finger.
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
-        pinch.end();
+        st.pinch.end();
         // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms fork
         // C's pending toggle. ⛔ A DOUBLE tap keeps exactly the meaning it has in forks A and
         // B — the camera reset — and cancels the pending toggle rather than being consumed
@@ -6192,9 +6294,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // uses, and asked BEFORE it, because `noteTap` toggles. ⭐ The desktop's right-hold + left
         // click on empty space arrives here as exactly this configuration (`D94`).
         const soleHolder =
-          router.objects().length === 1 ? router.objects()[0] : undefined;
-        const heldGrip = soleHolder ? held.get(soleHolder.id) : undefined;
-        const heldId = heldGrip ? idOf.get(heldGrip.mesh) : undefined;
+          st.router.objects().length === 1 ? st.router.objects()[0] : undefined;
+        const heldGrip = soleHolder ? st.held.get(soleHolder.id) : undefined;
+        const heldId = heldGrip ? st.idOf.get(heldGrip.mesh) : undefined;
         const isTap = isTapRelease(
           routed.pressed.t,
           routed.pressed.x,
@@ -6202,33 +6304,33 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           s.t,
           s.x,
           s.y,
-          cfg.tapMaxDuration,
-          mmToPx(cfg.doubleTapSlop),
+          st.cfg.tapMaxDuration,
+          mmToPx(st.cfg.doubleTapSlop),
         );
         if (
           isTap &&
           heldGrip !== undefined &&
           heldId !== undefined &&
           outsideTapReleases(
-            router.objects().length,
-            alignedFaceOf(world, heldId) !== null,
+            st.router.objects().length,
+            alignedFaceOf(st.world, heldId) !== null,
           )
         ) {
           // ⚠ The history is still recorded, so a double tap keeps pairing exactly as it did.
-          taps.record(routed.pressed, s.t);
+          st.taps.record(routed.pressed, s.t);
           releaseAlignmentOf(heldId);
           heldGrip.alignmentTouched = false;
-          lastVerdict = `align: TAP on empty space released the alignment on ${heldId}`;
+          st.lastVerdict = `align: TAP on empty space released the alignment on ${heldId}`;
         } else if (noteTap(routed.pressed, s, e.pointerId) === "DOUBLE_TAP") {
           resetCamera();
-          lastVerdict = "DOUBLE_TAP → camera reset";
+          st.lastVerdict = "DOUBLE_TAP → camera reset";
         }
       }
       paint();
       return;
     }
 
-    const grip = held.get(e.pointerId);
+    const grip = st.held.get(e.pointerId);
     if (!grip) return;
 
     if (info.type === PointerEventTypes.POINTERMOVE) {
@@ -6236,11 +6338,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // seated Follower, then a rapid move — the fingers' separation growing (tablet) or the
       // driven pointer travelling (mouse) by the eviction shake's own leg within its window.
       // ⛔ The pair and the numbers are `unsnap.ts`'s; this reads press order off the router.
-      lastFedPointer = e.pointerId;
+      st.lastFedPointer = e.pointerId;
       feedUnsnap(s);
       // ⚠ Handed the live hit, which the router discards: a finger that presses on a
       // part and slides off is still holding it (§4).
-      router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
 
       // ⭐⭐⭐ **`D51` — A PINNED PIONEER STEERS THE FOLLOWER AND DOES NOT MOVE ITSELF.**
       //
@@ -6257,7 +6359,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ones rather than a second copy. ⛔ `METHOD`: one rule, one implementation.
       {
         const pin = pinnedNow();
-        const myId = idOf.get(grip.mesh);
+        const myId = st.idOf.get(grip.mesh);
         if (pin !== null && myId === pin.pioneer && routed !== null) {
           const target = gripOfObject(pin.follower);
           if (target !== undefined) {
@@ -6318,8 +6420,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // mode."* ⚠ Without it the first touch keeps twisting about the very axis the second
         // touch's `dx` turns, and two fingers drive ONE DOF.
         grip.mode = translatesOnDrag(
-          router.objects().length,
-          behaviour,
+          st.router.objects().length,
+          st.behaviour,
           secondTouchOwnsRollAndDepth(grip),
         )
           ? "TRANSLATE"
@@ -6334,7 +6436,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         grip.rec.motionState === "MOVING",
         grip.mode === "TRANSLATE",
       );
-      if (kick && cfg.translateSwayMm > 0) nudgeOthers(grip, kick);
+      if (kick && st.cfg.translateSwayMm > 0) nudgeOthers(grip, kick);
 
       // ⛔⛔ A10: THE HOLDER MOVING IS RULE 6, ALWAYS. There is nothing to test here and
       // nothing to wait for — this event is proof the holder is not still, which is the
@@ -6360,12 +6462,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // sliders ship with the rule.
       {
         const fired = grip.shake.push(s);
-        const sid = idOf.get(grip.mesh);
+        const sid = st.idOf.get(grip.mesh);
         if (fired && sid !== undefined) {
-          const ev = evictObjectConstraints(world, sid);
-          world = ev.world;
+          const ev = evictObjectConstraints(st.world, sid);
+          st.world = ev.world;
           if (ev.result.refused) {
-            lastVerdict = "align: shake — nothing to release";
+            st.lastVerdict = "align: shake — nothing to release";
           } else {
             // ⭐ *"un-highlight the FollowerFace and then nullify the FollowerFace"* — the
             // highlight IS the alignment's state, so it goes with it (`D35`).
@@ -6378,7 +6480,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             if (selectedFace === null) {
             }
             grip.alignmentTouched = false;
-            lastVerdict = `align: SHAKE released the alignment on ${sid}`;
+            st.lastVerdict = `align: SHAKE released the alignment on ${sid}`;
           }
           // ⭐⭐⭐ **A SHAKE ON A *PIONEER* RELEASES **EVERY** FOLLOWER ALIGNED TO IT.**
           //
@@ -6399,10 +6501,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // ⭐⭐ AN INDEX LOOKUP, NOT A SCAN over every alignment in the scene — and
           // `followersOf` hands back a COPY, because releasing mutates the very set being
           // walked and deleting from a live `Set` mid-iteration silently skips entries.
-          const orphaned = links.followersOf(sid);
+          const orphaned = st.links.followersOf(sid);
           if (orphaned.length > 0) {
             for (const followerId of orphaned) releaseAlignmentOf(followerId);
-            lastVerdict =
+            st.lastVerdict =
               `align: SHAKE on Pioneer ${sid} released ${orphaned.length} follower` +
               `${orphaned.length === 1 ? "" : "s"} (${orphaned.join(", ")})`;
           }
@@ -6437,10 +6539,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⚠ `sid` above is scoped to the shake block; this branch asks for its own. ⛔ A body
         // the model does not know is given the boot basis rather than no basis — it is still
         // being dragged, and the alternative is a frame in which the finger does nothing.
-        const tid = idOf.get(grip.mesh);
+        const tid = st.idOf.get(grip.mesh);
         const axes =
           tid === undefined
-            ? (bootObjectAxes ?? axesFromFrame(grip.frame))
+            ? (st.bootObjectAxes ?? axesFromFrame(grip.frame))
             : axesOf();
         const travel = axisTravel(
           {
@@ -6453,18 +6555,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // projection identically zero at every camera angle.
           screenFrame(),
           axes,
-          trackingMetresPerPx(camera.radius, camera.fov, canvas.clientHeight),
-          cfg.gainTranslateScreen,
-          cfg.gainTranslateDepth,
-          cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
-          cfg.axisTrackingConeDeg,
+          trackingMetresPerPx(st.camera.radius, st.camera.fov, st.canvas.clientHeight),
+          st.cfg.gainTranslateScreen,
+          st.cfg.gainTranslateDepth,
+          st.cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
+          st.cfg.axisTrackingConeDeg,
           // ⭐ Read ONLY inside the cone, where it is the sign `depthTranslate` needed: +1
           // looking down on the scene, −1 looking up at it.
           grip.frame.towardGravity,
         );
         noteAxisTravel(tid, travel);
-        lastTrackGain = travel.trackGain;
-        lastEdgeOn = travel.edgeOn;
+        st.lastTrackGain = travel.trackGain;
+        st.lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);
         // ⭐ `grip.frame` is the basis LATCHED AT PRESS, and `applyWorldStep` uses it for the
         // swing's screen travel and the depth clamp only — the body's own axes decide the
@@ -6480,8 +6582,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // tablet as `→0%` forever). ⛔ The same quantity the orbit uses — millimetres of finger
         // travel — so the centre arrives as the gesture progresses rather than on a timer.
         // ⚠ Gated on the selector so **case 1 is byte-for-byte what it was**.
-        if (cfg.approachRetargetsOrbit === 1 && centreBlend.isBlending) {
-          centreBlend.advance(
+        if (st.cfg.approachRetargetsOrbit === 1 && st.centreBlend.isBlending) {
+          st.centreBlend.advance(
             Math.hypot(grip.rec.step.dx, grip.rec.step.dy) / mmToPx(1),
           );
           syncCentre();
@@ -6518,11 +6620,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⛔ It REFUSES where the axis points at the camera — the projection has no direction
         // there — and says so, rather than turning the object by an arbitrary amount.
         {
-          const fid = idOf.get(grip.mesh);
+          const fid = st.idOf.get(grip.mesh);
           const fstack =
             fid === undefined
               ? []
-              : (world.objects.get(fid)?.constraints ?? []);
+              : (st.world.objects.get(fid)?.constraints ?? []);
           // ⛔⛔ **`rotationChannel`, NOT `fstack.length === 1`** — audit, 2026-09-17. The count
           // asked the wrong question: it meant *"is this body aligned?"* and answered *"does it
           // hold exactly one thing?"*, so a body holding a MATE plus an alignment fell through
@@ -6530,7 +6632,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // `3D2`. ⭐ The REFUSED verdict is the honest third answer, and it is reported.
           const channel = rotationChannel(fstack);
           if (channel.kind === "REFUSED") {
-            lastVerdict = `align: rotation refused — ${channel.why}`;
+            st.lastVerdict = `align: rotation refused — ${channel.why}`;
             // ⛔⛔⛔ **AND IT RETURNS, WHICH IS THE ENTIRE POINT OF THE FIX.** Setting a verdict
             // and falling through would leave the body FREE-ROTATING under the refusal — the
             // very behaviour this branch exists to prevent, with a readout that says the
@@ -6547,7 +6649,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             // follower object)."* ⛔ Recorded where the turn is APPLIED, exactly as the second
             // touchpoint's roll is: both channels twist about the SAME constraint axis, and a
             // gizmo that learned it from only one of them would go blank on the other.
-            noteTurnAxis(idOf.get(grip.mesh), TURN_ROLL, axis);
+            noteTurnAxis(st.idOf.get(grip.mesh), TURN_ROLL, axis);
             // ⛔⛔⛔ **D57 REACHES THE FIRST TOUCHPOINT AT LAST** -- device-reported 2026-09-22:
             // *"there are some cases where the dx delta position and the yaw rotation direction
             // are inverted."*
@@ -6581,14 +6683,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
             const twist = flatTwistAngle(
               grip.rec.step.dx,
               twistSign,
-              cfg.gainRotateConstrained,
+              st.cfg.gainRotateConstrained,
             );
             if (twist !== 0) {
               if (
-                incrementRadians(cfg.rotationIncrementDeg) !== null &&
+                incrementRadians(st.cfg.rotationIncrementDeg) !== null &&
                 fid !== undefined
               ) {
-                rotationTally.add(fid, "twist", axis, twist);
+                st.rotationTally.add(fid, "twist", axis, twist);
               } else {
                 setModelOrientation(
                   grip.mesh,
@@ -6610,9 +6712,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
                 // ⛔ ONE definition of the world rotation, borrowed from the rule that applies
                 // it — a second `qFromAxisAngle` here would be free to disagree with it.
                 // ⚠ `ride` ignores a body with no snap in flight, so no guard is needed here.
-                alignSnaps.ride(fid, rotateAboutAxis(IDENTITY, axis, twist));
+                st.alignSnaps.ride(fid, rotateAboutAxis(IDENTITY, axis, twist));
               }
-              lastVerdict = `align: twist ${((twist * 180) / Math.PI).toFixed(1)}° about the alignment`;
+              st.lastVerdict = `align: twist ${((twist * 180) / Math.PI).toFixed(1)}° about the alignment`;
               // ⭐⭐ THE SWAY — the line whose absence the owner spotted. An aligned object
               // turning is still an object turning, and the scene reacts to it.
               noteSpin(grip, s.t);
@@ -6640,8 +6742,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // ⭐ TALLIED PER AXIS, and the angles restated here are `screenPlaneRotation`'s own,
         // negation and all. ⛔ The settle corrects what the gesture DEMANDED, so a sign that
         // disagreed with the rule would land the body on a multiple of the wrong quantity.
-        const radPerPx = cfg.gainRotateFree / mmToPx(1);
-        const freeId = idOf.get(grip.mesh);
+        const radPerPx = st.cfg.gainRotateFree / mmToPx(1);
+        const freeId = st.idOf.get(grip.mesh);
         // ⭐⭐⭐ **PURPLE AND MAROON** — the owner, 2026-09-23: *"create purple and marron axis for
         // yaw and pitch rotation on unaligned object in rotation mode."*
         // ⛔⛔ **PER CHANNEL, FROM THE DEADBANDED STEP THE TURN ITSELF USES** (`grip.rec.step`, not
@@ -6660,19 +6762,19 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         if (grip.rec.step.dy !== 0)
           noteTurnAxis(freeId, TURN_PITCH, turnFrame.right);
         const incOnFree =
-          incrementRadians(cfg.rotationIncrementDeg) !== null &&
+          incrementRadians(st.cfg.rotationIncrementDeg) !== null &&
           freeId !== undefined;
         if (incOnFree) {
           // ⭐ The angles restated here are `screenPlaneRotation`'s own, negation and all, about
           // the same two frame axes — pinned to the real function by
           // `tests/rotation_increment.test.ts`, because this is a place a sign is restated.
-          rotationTally.add(
+          st.rotationTally.add(
             freeId,
             "yaw",
             turnFrame.up,
             -grip.rec.step.dx * radPerPx,
           );
-          rotationTally.add(
+          st.rotationTally.add(
             freeId,
             "pitch",
             turnFrame.right,
@@ -6693,7 +6795,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
               // deliberately kept OUT of the config so a debug value could not leak
               // into production. Carried rule `L1`: a tuning value living in both a debug
               // tool and production silently drifted.
-              cfg.gainRotateFree / mmToPx(1),
+              st.cfg.gainRotateFree / mmToPx(1),
             ),
           );
       }
@@ -6721,7 +6823,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
       // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
       const verdict = grip.rec.release(s);
-      lastVerdict = describe(verdict);
+      st.lastVerdict = describe(verdict);
 
       // ⛔⛔ **FORK B's FLICK-TO-ALIGN IS DELETED HERE** (2026-09-17, with forks A and B).
       // ⭐ What stood in this place pushed a `GRAVITY_ALIGN` or `WORLD_AXIS_ALIGN` at the
@@ -6744,7 +6846,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       if (verdict.kind === "FLICK") {
         const plan = flickResetPlan(grip.alignmentTouched);
         const snap = grip.rec.pressSnapshot;
-        const rid = idOf.get(grip.mesh);
+        const rid = st.idOf.get(grip.mesh);
         // ⛔ The reset writes the PRESS pose itself, so a snap in flight is simply dropped —
         // landing it first would be a rotation the reset is about to undo anyway.
         if (rid !== undefined) cancelAlignAnim(rid);
@@ -6754,14 +6856,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           setModelOrientation(grip.mesh, snap);
         }
         if (plan.dropAlignment && rid !== undefined) {
-          const ev = evictObjectConstraints(world, rid);
-          world = ev.world;
+          const ev = evictObjectConstraints(st.world, rid);
+          st.world = ev.world;
           if (selectedFace?.objectId === rid) {
             selectedFace = null;
           }
-          lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
+          st.lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
         } else {
-          lastVerdict =
+          st.lastVerdict =
             "align: rotation reset — alignment older than the press, conserved";
         }
       }
@@ -6782,7 +6884,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⚠⚠ `D68` — THE HONEST HALF. A tap consumed by an alignment toggles NOTHING, so the
       // fact is cleared before either branch can set it: undoing a toggle that never happened
       // would flip the mode the hand actually had.
-      lastTapToggled = false;
+      st.lastTapToggled = false;
       // ⛔⛔⛔ **`D55` — A RELEASE WHOSE OWN PRESS ALIGNED IS ALREADY SPENT.**
       //
       // ⚠⚠ WITHOUT THIS BRANCH THE GESTURE UNDOES ITSELF, and it would look like the trigger
@@ -6797,13 +6899,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // `SNAPSHOT` → `FOLLOW`. ⛔ Only *"did MY press make it?"* separates the two.
       if (grip.pressActed) {
         alignedByThisTap = true;
-        lastVerdict = `${lastVerdict} — release spent (the press aligned)`;
+        st.lastVerdict = `${st.lastVerdict} — release spent (the press aligned)`;
       } else if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") {
-        const others = [...held.entries()].filter(
+        const others = [...st.held.entries()].filter(
           ([pid]) => pid !== e.pointerId,
         );
         const heldId =
-          others.length === 1 ? (idOf.get(others[0]![1].mesh) ?? null) : null;
+          others.length === 1 ? (st.idOf.get(others[0]![1].mesh) ?? null) : null;
         // ⛔⛔⛔ **THE TAP READS THE *HELD BODY's OWN* ALIGNMENT, NOT THE ACTIVE RECORD** —
         // audit fix, 2026-09-17.
         //
@@ -6819,9 +6921,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // PIONEER now and the held one the FOLLOWER, so the questions are all about the held
         // body. ⛔ This is `D87` reaching the release path, four defects after it reached the
         // press — see `tapMeaning`.
-        const tappedId = idOf.get(grip.mesh) ?? null;
+        const tappedId = st.idOf.get(grip.mesh) ?? null;
         const heldGrip = others.length === 1 ? others[0]![1] : null;
-        const heldPioneer = heldId === null ? null : links.pioneerFor(heldId);
+        const heldPioneer = heldId === null ? null : st.links.pioneerFor(heldId);
         const ctx: TapContext = {
           tappedObject: tappedId,
           tappedFace: grip.pressFace?.faceId ?? null,
@@ -6829,7 +6931,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           pioneerOfHeld: heldPioneer?.objectId ?? null,
           pioneerFaceOfHeld: heldPioneer?.faceId ?? null,
           alignedFaceOfHeld:
-            heldId === null ? null : alignedFaceOf(world, heldId),
+            heldId === null ? null : alignedFaceOf(st.world, heldId),
           heldPressFace: heldGrip?.pressFace?.faceId ?? null,
         };
         const meaning = tapMeaning(ctx);
@@ -6841,11 +6943,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           // the body that owns the alignment. ⚠ Releasing the TAPPED body — which this branch
           // did until `D90` — broke the PIONEER's relation to some third body, one the hand
           // never touched.
-          const hadAlignment = links.pioneerFor(heldId) !== null;
+          const hadAlignment = st.links.pioneerFor(heldId) !== null;
           releaseAlignmentOf(heldId);
           if (heldGrip !== null) heldGrip.alignmentTouched = false;
           alignedByThisTap = true;
-          lastVerdict = hadAlignment
+          st.lastVerdict = hadAlignment
             ? `align: RE-PRESS released the alignment on ${heldId}`
             : `align: re-press — nothing to release on ${heldId}`;
         }
@@ -6862,7 +6964,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // object, a second touchpoint. Only this one configuration is claimed.
       if (verdict.kind === "DOUBLE_TAP" && !alignedByThisTap) {
         resetCamera();
-        lastVerdict = "DOUBLE_TAP → camera reset";
+        st.lastVerdict = "DOUBLE_TAP → camera reset";
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
       // *anywhere* includes the object the touchpoint was carrying, which is this branch.
@@ -6922,7 +7024,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       const highlightedStillAligned =
         selectedFace !== null &&
         hasAlignment(
-          world.objects.get(selectedFace.objectId)?.constraints ?? [],
+          st.world.objects.get(selectedFace.objectId)?.constraints ?? [],
         );
       if (!highlightedStillAligned) {
         selectedFace = null;
@@ -6933,20 +7035,20 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // own. ⛔ That is the whole difference from the three formulations before this one, each
       // of which had to decide what to do about a pose it should not have allowed.
       {
-        const endId = idOf.get(grip.mesh);
-        if (endId !== undefined) rotationTally.clear(endId);
+        const endId = st.idOf.get(grip.mesh);
+        if (endId !== undefined) st.rotationTally.clear(endId);
       }
-      router.release(e.pointerId);
-      held.delete(e.pointerId);
+      st.router.release(e.pointerId);
+      st.held.delete(e.pointerId);
       paint();
     }
   });
 
   paint();
 
-  let frames = 0;
+  st.frames = 0;
   /** ⚠ One clock, `performance.now()`, as everywhere else in this file. */
-  let lastFrameMs: number | null = null;
+  st.lastFrameMs = null;
   // ⭐⭐⭐ **THE AXES ARE BORN HERE, AT BOOT, FROM THE BOOT CAMERA** — *"at scene boot, all
   // object axis are updated based on camera quaternion at scene boot"* (the owner, 2026-09-22),
   // and with `worldAxisB` on they are *"fixed forever for this scene"*.
@@ -6958,8 +7060,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
   // ⚠ Every body inherits this basis through `axesOf`'s fallback rather than by a loop over
   // the scene: a body created later (an import, a spawn) then gets the same answer, where a
   // one-time loop would leave it with none.
-  bootObjectAxes = axesFromFrame(requireGestureFrame());
-  bootGestureFrame = requireGestureFrame();
+  st.bootObjectAxes = axesFromFrame(requireGestureFrame());
+  st.bootGestureFrame = requireGestureFrame();
 
   /**
    * ⭐ The offset radius in world metres NOW — the white contour's own conversion, so the snap's
@@ -6967,15 +7069,15 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    */
   const offsetRadiusM = (): number =>
     captureOffsetM(
-      cfg.captureOffsetMm,
-      camera.radius,
-      camera.fov,
-      canvas.clientHeight,
+      st.cfg.captureOffsetMm,
+      st.camera.radius,
+      st.camera.fov,
+      st.canvas.clientHeight,
     );
 
   /** ⭐ The PioneerFaceCursor in WORLD, from the MODEL (never the swayed mesh). */
   const cursorWorldOf = (pioneerId: ObjectId, local: Vec3): Vec3 | null => {
-    const pw = worldPlacementOf(world, pioneerId);
+    const pw = worldPlacementOf(st.world, pioneerId);
     if (!pw) return null;
     return add(pw.position, qRotate(pw.orientation, local));
   };
@@ -6988,87 +7090,87 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    */
   const syncSeats = (nowMs: number): void => {
     const offsetM = offsetRadiusM();
-    const coneRad = (cfg.pioneerCandidateConeDeg * Math.PI) / 180;
-    for (const cur of pioneerCursors.all()) {
+    const coneRad = (st.cfg.pioneerCandidateConeDeg * Math.PI) / 180;
+    for (const cur of st.pioneerCursors.all()) {
       const f = cur.followerId;
-      const faceLocal = world.objects
+      const faceLocal = st.world.objects
         .get(f)
         ?.faces.find((x) => x.id === cur.followerFaceId);
       if (faceLocal === undefined) continue;
       const cursorW = cursorWorldOf(cur.pioneerId, cur.position);
-      const pn = faceWorld(world, cur.pioneerId, cur.pioneerFaceId)?.normal;
+      const pn = faceWorld(st.world, cur.pioneerId, cur.pioneerFaceId)?.normal;
       if (cursorW === null || !pn) continue;
 
-      if (links.isSeated(f)) {
+      if (st.links.isSeated(f)) {
         // ⭐ The seat is an IDENTITY, held every frame: face centre ON the cursor.
-        const o = world.objects.get(f);
+        const o = st.world.objects.get(f);
         if (!o || o.parent !== cur.pioneerId) continue;
         const want = seatedLocalPlacement(cur.position, o.local.orientation, faceLocal.centre);
         const d = sub(want.position, o.local.position);
-        if (dot(d, d) > 1e-16) world = setLocalPlacement(world, f, want);
+        if (dot(d, d) > 1e-16) st.world = setLocalPlacement(st.world, f, want);
         // ⭐ Keep the constraint truthful as the assembly turns — the same retarget `FOLLOW` uses.
         const stack = o.constraints;
         if (stack.length === 1 && stack[0]!.kind === "FACE_ALIGN") {
           const t = stack[0]!.targetWorld;
           if (dot(t, pn) > -0.999999) {
-            world = clearObjectConstraints(world, f);
-            world = pushObjectConstraint(world, f, retargetAlignment(stack[0]!, pn), false);
+            st.world = clearObjectConstraints(st.world, f);
+            st.world = pushObjectConstraint(st.world, f, retargetAlignment(stack[0]!, pn), false);
           }
         }
         continue;
       }
 
-      const fw = faceWorld(world, f, cur.followerFaceId);
+      const fw = faceWorld(st.world, f, cur.followerFaceId);
       if (!fw) continue;
       const dvec = sub(fw.centre, cursorW);
       const dist = Math.sqrt(dot(dvec, dvec));
-      const armed = snapArming.armed(cur.key, dist, offsetM);
-      if (seatSnaps.has(f)) {
+      const armed = st.snapArming.armed(cur.key, dist, offsetM);
+      if (st.seatSnaps.has(f)) {
         // ⚠ A flight follows a cursor or a Pioneer that moves: its END is the cursor NOW.
-        const q = alignSnaps.targetOf(f) ?? modelOrientation(meshOf.get(f)!);
-        seatSnaps.retarget(f, sub(cursorW, qRotate(q, faceLocal.centre)));
+        const q = st.alignSnaps.targetOf(f) ?? modelOrientation(st.meshOf.get(f)!);
+        st.seatSnaps.retarget(f, sub(cursorW, qRotate(q, faceLocal.centre)));
         continue;
       }
       if (!armed) continue;
-      if (world.objects.get(f)?.frozen === true) continue;
+      if (st.world.objects.get(f)?.frozen === true) continue;
       if (!snapConditionMet(fw.centre, cursorW, offsetM, fw.normal, pn, coneRad)) continue;
-      const mesh = meshOf.get(f);
+      const mesh = st.meshOf.get(f);
       if (!mesh) continue;
-      const q = alignSnaps.targetOf(f) ?? modelOrientation(mesh);
-      seatSnaps.start(
+      const q = st.alignSnaps.targetOf(f) ?? modelOrientation(mesh);
+      st.seatSnaps.start(
         f,
         requirePose(mesh).position,
         sub(cursorW, qRotate(q, faceLocal.centre)),
         nowMs,
       );
-      lastVerdict = `snap: ${f} → ${cur.pioneerId}/${cur.pioneerFaceId} (${(dist * 1000).toFixed(0)} mm)`;
-      hudDirty = true;
+      st.lastVerdict = `snap: ${f} → ${cur.pioneerId}/${cur.pioneerFaceId} (${(dist * 1000).toFixed(0)} mm)`;
+      st.hudDirty = true;
     }
     // ⭐ The position half of every snap in flight, on the alignment's own clock and easing.
     // ⭐ THE MAGNET: the snap's own, shorter time and an easing that accelerates into contact.
-    for (const step of seatSnaps.advance(
+    for (const step of st.seatSnaps.advance(
       nowMs,
-      cfg.snapMs,
+      st.cfg.snapMs,
       magnetEase,
-      (id) => meshOf.has(id) && pioneerCursors.ofFollower(id) !== null,
+      (id) => st.meshOf.has(id) && st.pioneerCursors.ofFollower(id) !== null,
     )) {
-      const mesh = meshOf.get(step.id);
+      const mesh = st.meshOf.get(step.id);
       if (!mesh) continue;
       setModelPose(mesh, {
         position: step.position,
         orientation: modelOrientation(mesh),
       });
       if (!step.done) continue;
-      const cur = pioneerCursors.ofFollower(step.id);
+      const cur = st.pioneerCursors.ofFollower(step.id);
       if (cur === null) continue;
       // ⭐⭐ LANDED: the body becomes a CHILD of its Pioneer, and the seat is marked on the link.
-      world = attach(world, step.id, cur.pioneerId);
-      if (world.objects.get(step.id)?.parent === cur.pioneerId && links.seat(step.id)) {
-        lastVerdict = `snap: ${step.id} SEATED on ${cur.pioneerId}/${cur.pioneerFaceId}`;
+      st.world = attach(st.world, step.id, cur.pioneerId);
+      if (st.world.objects.get(step.id)?.parent === cur.pioneerId && st.links.seat(step.id)) {
+        st.lastVerdict = `snap: ${step.id} SEATED on ${cur.pioneerId}/${cur.pioneerFaceId}`;
       } else {
-        lastVerdict = `snap: ${step.id} could not be seated on ${cur.pioneerId} (refused)`;
+        st.lastVerdict = `snap: ${step.id} could not be seated on ${cur.pioneerId} (refused)`;
       }
-      hudDirty = true;
+      st.hudDirty = true;
     }
   };
 
@@ -7084,31 +7186,31 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
    * the path intact, so this prints the step it actually reached — `METHOD`: *when a defect resists
    * several correct-looking analyses, stop modelling the code and ask which READOUT moves.*
    */
-  let unsnapTrace = "—";
-  let lastFedPointer = -1;
+  st.unsnapTrace = "—";
+  st.lastFedPointer = -1;
   const feedUnsnap = (sample: Sample): void => {
     // ⭐ The FIRST touchpoint: the earliest OBJECT holder. Its RAW body must be the Pioneer.
-    const holders = router.objects();
+    const holders = st.router.objects();
     if (holders.length === 0) {
-      unsnapTrace = "no holder";
+      st.unsnapTrace = "no holder";
       return;
     }
     const first = holders[0]!;
-    const g1 = held.get(first.id);
+    const g1 = st.held.get(first.id);
     if (!g1) {
-      unsnapTrace = `holder #${first.id} has no grip`;
+      st.unsnapTrace = `holder #${first.id} has no grip`;
       return;
     }
-    const rawFirst = rawPressedBody.get(first.id) ?? idOf.get(g1.mesh);
+    const rawFirst = st.rawPressedBody.get(first.id) ?? st.idOf.get(g1.mesh);
     if (rawFirst === undefined) {
-      unsnapTrace = "first body unknown";
+      st.unsnapTrace = "first body unknown";
       return;
     }
     // ⭐ The SECOND touchpoint: a `SECOND` on the same drive body (the seated member, redirected to
     // its root), or a second OBJECT holder (a member seated on the frozen plate, which the walk
     // stops below). Its RAW body must be the seated Follower.
-    const onSame = router.secondTouchOn(g1.mesh);
-    const g2 = holders.length >= 2 ? held.get(holders[1]!.id) : undefined;
+    const onSame = st.router.secondTouchOn(g1.mesh);
+    const g2 = holders.length >= 2 ? st.held.get(holders[1]!.id) : undefined;
     const second: { id: number; last: Sample } | null =
       onSame !== null
         ? { id: onSame.id, last: onSame.last }
@@ -7116,64 +7218,64 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           ? { id: holders[1]!.id, last: g2.prev }
           : null;
     if (second === null) {
-      unsnapTrace = `first ${rawFirst} (#${first.id}); no second touch (holders ${holders.length})`;
+      st.unsnapTrace = `first ${rawFirst} (#${first.id}); no second touch (holders ${holders.length})`;
       return;
     }
-    const rawSecond = rawPressedBody.get(second.id);
+    const rawSecond = st.rawPressedBody.get(second.id);
     if (rawSecond === undefined) {
-      unsnapTrace = `first ${rawFirst}; second #${second.id} has no raw body`;
+      st.unsnapTrace = `first ${rawFirst}; second #${second.id} has no raw body`;
       return;
     }
     const follower = unsnapCouple(
       rawFirst,
       rawSecond,
-      (f) => links.pioneerFor(f)?.objectId ?? null,
-      (f) => links.isSeated(f),
+      (f) => st.links.pioneerFor(f)?.objectId ?? null,
+      (f) => st.links.isSeated(f),
     );
     if (follower === null) {
-      unsnapTrace =
+      st.unsnapTrace =
         `not a seated pair: first ${rawFirst}, second ${rawSecond}` +
-        ` (seated=${links.isSeated(rawSecond)}, pioneer=${links.pioneerFor(rawSecond)?.objectId ?? "—"})`;
+        ` (seated=${st.links.isSeated(rawSecond)}, pioneer=${st.links.pioneerFor(rawSecond)?.objectId ?? "—"})`;
       return;
     }
-    const cur = pioneerCursors.ofFollower(follower);
+    const cur = st.pioneerCursors.ofFollower(follower);
     if (cur === null) {
-      unsnapTrace = `${follower} has no cursor`;
+      st.unsnapTrace = `${follower} has no cursor`;
       return;
     }
     // ⭐ On a mouse the DRIVEN pointer is the second (the real, left-button one); the right-button
     // touchpoint that holds the Pioneer never moves.
-    const mouse = pointerTypeOf.get(second.id) === "mouse";
-    let det = unsnapDetectors.get(cur.key);
+    const mouse = st.pointerTypeOf.get(second.id) === "mouse";
+    let det = st.unsnapDetectors.get(cur.key);
     if (det === undefined) {
-      det = new UnsnapDetector(unsnapParamsFrom(cfg), mouse ? "MOUSE" : "TOUCH");
-      unsnapDetectors.set(cur.key, det);
+      det = new UnsnapDetector(unsnapParamsFrom(st.cfg), mouse ? "MOUSE" : "TOUCH");
+      st.unsnapDetectors.set(cur.key, det);
     }
     const mm = (p: Sample) => ({ x: p.x / mmToPx(1), y: p.y / mmToPx(1) });
     // ⭐ This event's own sample is the freshest for the pointer that sent it; a grip's `prev` is
     // one event behind.
-    const pa = second.id === lastFedPointer ? sample : second.last;
-    const pb = first.id === lastFedPointer ? sample : g1.prev;
+    const pa = second.id === st.lastFedPointer ? sample : second.last;
+    const pb = first.id === st.lastFedPointer ? sample : g1.prev;
     const fired = det.push(sample.t, mm(pa), mm(pb));
-    unsnapTrace =
+    st.unsnapTrace =
       `${rawFirst}→${follower} ${mouse ? "MOUSE" : "TOUCH"} armed` +
-      ` (need ${cfg.evictShakeLegMm} mm in ${cfg.evictShakeWindowMs} ms)`;
+      ` (need ${st.cfg.evictShakeLegMm} mm in ${st.cfg.evictShakeWindowMs} ms)`;
     if (!fired) return;
     unseatWorld(follower);
-    links.unseat(follower);
-    snapArming.holdOff(cur.key);
-    unsnapDetectors.delete(cur.key);
-    unsnapTrace = `FIRED — ${follower} released from ${cur.pioneerId}`;
-    lastVerdict = `unsnap: ${follower} released from ${cur.pioneerId} — re-arms once outside the offset radius`;
-    hudDirty = true;
+    st.links.unseat(follower);
+    st.snapArming.holdOff(cur.key);
+    st.unsnapDetectors.delete(cur.key);
+    st.unsnapTrace = `FIRED — ${follower} released from ${cur.pioneerId}`;
+    st.lastVerdict = `unsnap: ${follower} released from ${cur.pioneerId} — re-arms once outside the offset radius`;
+    st.hudDirty = true;
   };
 
-  engine.runRenderLoop(() => {
+  st.engine.runRenderLoop(() => {
     const now = performance.now();
 
     // ⭐ And on idle frames too: a flip made with an empty glass produces no pointer event.
-    const dtSec = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
-    lastFrameMs = now;
+    const dtSec = st.lastFrameMs === null ? 0 : (now - st.lastFrameMs) / 1000;
+    st.lastFrameMs = now;
 
     // ⛔⛔⛔ ADVANCE THE MOTION CLOCK FOR EVERY LIVE TOUCHPOINT, EVERY FRAME.
     //
@@ -7188,7 +7290,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // exists, `STATIONARY` by one that by definition may not arrive. ⭐⭐ Elapsed time with
     // no sample is the strongest evidence of stillness there is — it simply has to be asked
     // for, and the render loop is the clock everything visible already runs on.
-    for (const grip of held.values()) {
+    for (const grip of st.held.values()) {
       grip.rec.tick(now);
       for (const tracker of grip.anchorMotion.values()) tracker.tick(now);
     }
@@ -7216,10 +7318,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // every frame, and two writers would fight for the camera with the reset winning by
     // arriving second. ⛔ The swing's own return to zero is unaffected: it is a pure function
     // of the gap, so whatever it missed it picks up on the next frame it is allowed to write.
-    if (cameraReset === null) {
+    if (st.cameraReset === null) {
       const wantSwing = swingAngleNow();
-      if (wantSwing !== appliedSwingYaw) {
-        appliedSwingYaw = wantSwing;
+      if (wantSwing !== st.appliedSwingYaw) {
+        st.appliedSwingYaw = wantSwing;
         applyCamera();
       }
     }
@@ -7229,24 +7331,24 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // stable, so a stalled frame simply arrives rather than exploding.
     // ⭐ The double-tap reset, flying home. ⛔ Advanced here and not on a timer: the loop
     // is the clock everything visible already runs on, and there is no callback to leak.
-    if (cameraReset !== null) {
-      applyCameraPose(cameraReset.advance(dtSec * 1000));
-      if (cameraReset.done) cameraReset = null;
+    if (st.cameraReset !== null) {
+      applyCameraPose(st.cameraReset.advance(dtSec * 1000));
+      if (st.cameraReset.done) st.cameraReset = null;
     }
 
     // ⭐ The deferred orbit centre, committed once its grace has passed with no second
     // touchpoint outside. ⚠ `router.outside().length` is re-checked here and not only at
     // press: a finger could have arrived and left again within the window.
     if (
-      pendingCentre !== null &&
-      now - pendingCentre.at >= cfg.orbitCentreGraceMs
+      st.pendingCentre !== null &&
+      now - st.pendingCentre.at >= st.cfg.orbitCentreGraceMs
     ) {
-      const p = pendingCentre;
-      pendingCentre = null;
+      const p = st.pendingCentre;
+      st.pendingCentre = null;
       // ⚠ BOTH conditions re-checked at commit time, not only at press: within the grace
       // a second finger could have arrived and left, or a finger could have landed on an
       // object and turned the whole gesture into a translation.
-      if (router.outside().length === 1 && router.objects().length === 0) {
+      if (st.router.outside().length === 1 && st.router.objects().length === 0) {
         recomputeOrbitCentre({ clientX: p.x, clientY: p.y });
       }
     }
@@ -7267,13 +7369,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⚠ `easeInOut` is the camera reset's own easing, imported rather than re-derived: two
     // eased snaps in one product should not accelerate differently for no reason.
     // ⚠ EVERY live snap, not one: see `alignSnaps` where it is declared.
-    for (const step of alignSnaps.advance(
+    for (const step of st.alignSnaps.advance(
       now,
-      cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
+      st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
       easeInOut,
-      (id) => meshOf.has(id),
+      (id) => st.meshOf.has(id),
     )) {
-      const mesh = meshOf.get(step.id);
+      const mesh = st.meshOf.get(step.id);
       if (mesh) setModelOrientation(mesh, step.orientation);
     }
 
@@ -7286,7 +7388,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     //
     // ⚠ No edge-trigger and no rest test. A frame in which nothing crossed a boundary advances
     // nothing, so asking every frame costs a comparison and cannot repeat a step.
-    for (const g of held.values()) advanceRotation(idOf.get(g.mesh));
+    for (const g of st.held.values()) advanceRotation(st.idOf.get(g.mesh));
 
     // ⭐⭐ **THE INCREMENT'S CHASE** — an exponential approach, advanced with the alignment
     // snaps. ⚠ A body cannot be in both: `advanceRotation` refuses to start one while an
@@ -7302,16 +7404,16 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // `now - lastFrameMs` would have been **zero every frame** and the follower would never
       // have moved at all. ⚠ A silent freeze, caught by the compiler refusing the redeclaration
       // rather than by anything looking. ⭐ *One clock, `performance.now()`, as everywhere else.*
-      for (const step of rotationFollower.advance(
+      for (const step of st.rotationFollower.advance(
         dtSec * 1000,
-        (cfg.cameraResetMs * ALIGN_SNAP_FRACTION) / 3,
+        (st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION) / 3,
         (id) => {
-          const m = meshOf.get(id);
+          const m = st.meshOf.get(id);
           return m ? modelOrientation(m) : null;
         },
-        (id) => meshOf.has(id),
+        (id) => st.meshOf.has(id),
       )) {
-        const mesh = meshOf.get(step.id);
+        const mesh = st.meshOf.get(step.id);
         if (mesh) setModelOrientation(mesh, step.orientation);
       }
     }
@@ -7361,32 +7463,32 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // test had to re-type it and its copy used one mode for every link. See `followerLinksFrom`.
     const cascade = resolvePioneerTurns(
       followerLinksFrom(
-        links.alignedObjects(),
-        (f) => links.pioneerFor(f),
-        (f) => alignModeOf.get(f),
-        (f) => links.isSeated(f),
+        st.links.alignedObjects(),
+        (f) => st.links.pioneerFor(f),
+        (f) => st.alignModeOf.get(f),
+        (f) => st.links.isSeated(f),
       ),
       // ⚠ WORLD orientation, through the parent chain — never `local`, which is measured in
       // someone else's frame the moment an assembly exists.
-      (id) => worldPlacementOf(world, id)?.orientation ?? null,
+      (id) => worldPlacementOf(st.world, id)?.orientation ?? null,
     );
 
     // ⚠ Anything the cascade decides must reach the readout in the SAME frame — see `hudDirty`.
-    if (cascade.steps.length > 0) hudDirty = true;
+    if (cascade.steps.length > 0) st.hudDirty = true;
     for (const step of cascade.steps) {
       if (step.kind === "RELEASE") {
         // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* — the
         // pose is left exactly as the hand left it, and only the RULE goes.
-        const ref = links.pioneerFor(step.follower);
+        const ref = st.links.pioneerFor(step.follower);
         releaseAlignmentOf(step.follower);
-        lastVerdict =
+        st.lastVerdict =
           `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} turned, ` +
           `alignment released on ${step.follower}`;
         continue;
       }
       // ⭐⭐ C2: the follower takes the SAME WORLD ROTATION, which keeps the two normals
       // parallel by construction — no solve, and no chance of the solver adding a twist.
-      const followerMesh = meshOf.get(step.follower);
+      const followerMesh = st.meshOf.get(step.follower);
       if (followerMesh) {
         setModelOrientation(
           followerMesh,
@@ -7396,34 +7498,34 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⭐⭐ AN ANIMATION IN FLIGHT RIDES ALONG: both ends take the same world rotation, so the
       // snap keeps travelling toward a target that has moved with the Pioneer. ⛔ Without this
       // the slerp would drag the body back toward where the Pioneer USED to point.
-      alignSnaps.ride(step.follower, step.delta);
+      st.alignSnaps.ride(step.follower, step.delta);
       // ⭐ Keep the CONSTRAINT truthful — the geometry above already holds. ⚠ Without this the
       // stack would still name the old world direction, and the next rule to read it (a twist,
       // a reset) would act on a stale target.
-      const ref = links.pioneerFor(step.follower);
+      const ref = st.links.pioneerFor(step.follower);
       const pn =
         ref === null
           ? null
-          : faceWorld(world, ref.objectId, ref.faceId)?.normal;
-      const stack = world.objects.get(step.follower)?.constraints ?? [];
+          : faceWorld(st.world, ref.objectId, ref.faceId)?.normal;
+      const stack = st.world.objects.get(step.follower)?.constraints ?? [];
       // ⛔⛔ Audit, 2026-09-17: the count again. ⚠ Here the fall-through was SILENT rather than
       // destructive — the constraint simply kept naming the Pioneer's OLD world direction, and
       // the next twist or reset acted on a stale target with nothing to say so.
       if (pn && rotationChannel(stack).kind === "TWIST") {
-        world = clearObjectConstraints(world, step.follower);
-        world = pushObjectConstraint(
-          world,
+        st.world = clearObjectConstraints(st.world, step.follower);
+        st.world = pushObjectConstraint(
+          st.world,
           step.follower,
           retargetAlignment(stack[0]!, pn),
           false,
         );
       }
-      lastVerdict = `align: FOLLOW — ${step.follower} took ${ref?.objectId ?? "pioneer"}'s turn`;
+      st.lastVerdict = `align: FOLLOW — ${step.follower} took ${ref?.objectId ?? "pioneer"}'s turn`;
     }
     // ⛔ RE-BASELINE LAST, from the plan. ⚠ A released follower is deliberately absent from
     // `baselines`, so this cannot resurrect a link `releaseAlignmentOf` has just removed.
     for (const [follower, orientation] of cascade.baselines) {
-      links.noteOrientation(follower, orientation);
+      st.links.noteOrientation(follower, orientation);
     }
 
     // ⭐⭐⭐ **`D69` — AND A TRANSLATED PIONEER CARRIES ITS FOLLOWERS, ALL OF THEM.**
@@ -7439,28 +7541,28 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // can interrogate*, which this branch has paid for seven times.
     const moves = resolvePioneerMoves(
       followerMoveLinksFrom(
-        links.alignedObjects(),
-        (f) => links.pioneerFor(f),
-        (f) => alignModeOf.get(f),
-        (f) => links.isSeated(f),
+        st.links.alignedObjects(),
+        (f) => st.links.pioneerFor(f),
+        (f) => st.alignModeOf.get(f),
+        (f) => st.links.isSeated(f),
       ),
-      (id) => worldPlacementOf(world, id)?.position ?? null,
+      (id) => worldPlacementOf(st.world, id)?.position ?? null,
     );
-    if (moves.steps.length > 0) hudDirty = true;
+    if (moves.steps.length > 0) st.hudDirty = true;
     for (const step of moves.steps) {
       // ⭐⭐⭐ **`D70` — A MOVED PIONEER RELEASES A CYAN FOLLOWER**, exactly as a turned one does.
       // ⛔ The owner: *"a translation of the pioneer should break the alignment of the cyan."*
       // ⚠ Written through the SAME `releaseAlignmentOf` the turn cascade uses, so the two
       // channels cannot end in different states.
       if (step.kind === "RELEASE") {
-        const ref = links.pioneerFor(step.follower);
+        const ref = st.links.pioneerFor(step.follower);
         releaseAlignmentOf(step.follower);
-        lastVerdict =
+        st.lastVerdict =
           `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} moved, ` +
           `alignment released on ${step.follower}`;
         continue;
       }
-      const followerMesh = meshOf.get(step.follower);
+      const followerMesh = st.meshOf.get(step.follower);
       if (!followerMesh) continue;
       const mp = requirePose(followerMesh);
       // ⚠ A FROZEN body is refused by `object_model`'s writers, so the plate cannot be dragged
@@ -7475,14 +7577,14 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       });
     }
     for (const [follower, position] of moves.baselines) {
-      links.notePosition(follower, position);
+      st.links.notePosition(follower, position);
     }
 
     // ⭐⭐⭐ **THE SNAP AND THE SEATS, EVERY FRAME** (`D100`) — after the cascades, which may have
     // moved a Pioneer, and before the meshes are written.
     syncSeats(now);
 
-    const tauSec = cfg.translateInertiaMs / 1000;
+    const tauSec = st.cfg.translateInertiaMs / 1000;
     // ⛔⛔ ITERATE THE **MODEL**, NOT THE FOLLOWER MAP — and this line is a defect fix, not
     // a tidy-up. The loop used to walk `followers`, a map populated lazily by whoever
     // happened to need one: the sway (for the OTHER objects) and the rotation rule (for the
@@ -7509,18 +7611,18 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // the sway bend it. ⚠ A jump the eye sees that the model did not make is a different defect,
     // and one readout for both would report neither. ⭐ The decision is `jump_watch.ts`'s; this
     // holds the call, which is the 2026-09-19 lesson.
-    for (const [jid, jmesh] of meshOf) {
+    for (const [jid, jmesh] of st.meshOf) {
       const jp = modelPose(jmesh);
       if (!jp) continue;
-      const j = jumpWatch.note(jid, jp.position, jp.orientation);
+      const j = st.jumpWatch.note(jid, jp.position, jp.orientation);
       if (j !== null) {
-        lastJump = j;
-        lastJumpVerdict = lastVerdict;
-        lastJumpAt = performance.now();
-        hudDirty = true;
+        st.lastJump = j;
+        st.lastJumpVerdict = st.lastVerdict;
+        st.lastJumpAt = performance.now();
+        st.hudDirty = true;
       }
     }
-    for (const mesh of meshOf.values()) {
+    for (const mesh of st.meshOf.values()) {
       const f = followerFor(mesh);
       // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather
       // than merely present. Whatever the rules wrote this frame is what the follower now
@@ -7530,8 +7632,8 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         f.target.set(mp.position[0], mp.position[1], mp.position[2]);
         f.qHome = mp.orientation;
       }
-      const zeta = cfg.translateDampingRatio;
-      const leadSec = cfg.translateLeadMs / 1000;
+      const zeta = st.cfg.translateDampingRatio;
+      const leadSec = st.cfg.translateLeadMs / 1000;
       // ⭐ The finger's smoothed velocity, then the phantom projected along it. ⛔ The
       // smoother uses the object's OWN time constant: the lead is estimated at the only
       // timescale that can matter to it, and it costs no second slider.
@@ -7581,7 +7683,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       );
       // ⭐ The sway springs home on its own clock — slower and softer than the object's
       // own inertia, and CRITICALLY damped so it returns without wobbling about.
-      const swayTau = cfg.translateSwayTauMs / 1000;
+      const swayTau = st.cfg.translateSwayTauMs / 1000;
       f.swayX = advanceFollow(f.swayX, 0, swayTau, 1, dtSec);
       f.swayY = advanceFollow(f.swayY, 0, swayTau, 1, dtSec);
       f.swayZ = advanceFollow(f.swayZ, 0, swayTau, 1, dtSec);
@@ -7637,11 +7739,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⛔ `prune` reconciles the index against the model — it catches releases that evict a
     // constraint WITHOUT unlinking (the shake-on-self path does exactly that). ⚠ Its return
     // value is deliberately NOT used to decide what to hide; see below.
-    for (const id of links.prune((f) => alignedFaceOf(world, f) !== null)) {
-      alignModeOf.delete(id);
+    for (const id of st.links.prune((f) => alignedFaceOf(st.world, f) !== null)) {
+      st.alignModeOf.delete(id);
       unseatWorld(id);
       // ⚠ A pruned link is a state change with no pointer event behind it. See `hudDirty`.
-      hudDirty = true;
+      st.hudDirty = true;
     }
 
     // ⛔⛔⛔ **HIDE BY SET MEMBERSHIP, NEVER BY WHAT `prune` HAPPENED TO DROP — DEVICE BUG,
@@ -7667,7 +7769,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // from the paths that remove them. ⚠ I used exactly this pattern for the Pioneer contours
     // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
     // highlight DID disappear and the follower's did not, the asymmetry the report describes.
-    const alignedNow = new Set(links.alignedObjects());
+    const alignedNow = new Set(st.links.alignedObjects());
     // ⭐⭐⭐ **THE FUCHSIA CANDIDATES** — every face on another body that the HitFace is within
     // `pioneerCandidateConeDeg` of mating with (the owner, 2026-09-24). ⛔ Recomputed every frame
     // from the MODEL, never remembered: *during the rotation* means the set follows the pose, and
@@ -7684,20 +7786,20 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
       // behind and produced TWO false defect reports against a rule that was correct.
       // ⭐ `METHOD`: *prefer the structure that cannot express the defect.*
-      for (const [key, q] of faceMarkers) {
+      for (const [key, q] of st.faceMarkers) {
         const id = key.slice(0, key.indexOf("/"));
         const faceId = key.slice(key.indexOf("/") + 1);
         // ⛔⛔ **ONE POOL, ONE MEMBERSHIP TEST.** The fuchsia faces join the same retire loop
         // rather than getting a pool of their own: on 2026-09-17 two marker pools retired by two
         // different rules in one edit, and the asymmetry produced TWO false device reports.
         const wanted =
-          (alignedNow.has(id) && alignedFaceOf(world, id) === faceId) ||
+          (alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId) ||
           candidateKeys.has(key);
         // ⛔⛔ **THE RING IS RETIRED IN THE SAME PASS, ON THE SAME KEY.** ⚠ It had a loop of its
         // own and its own (correct) test, which is one edit away from the 2026-09-17 defect: two
         // marker pools retired by two rules, and the asymmetry produced two false device reports.
         // ⭐ One pass cannot drift, whatever a later change does to the membership test above.
-        const ring = candidateRings.get(key);
+        const ring = st.candidateRings.get(key);
         if (ring !== undefined && !candidateKeys.has(key))
           ring.isVisible = false;
         if (wanted) continue;
@@ -7708,7 +7810,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
         // correct, and the cause was one pool retired by membership and another by what changed.
         q.xray.isVisible = false;
       }
-      for (const [id, o] of outlines) {
+      for (const [id, o] of st.outlines) {
         if (alignedNow.has(id)) continue;
         // ⛔ THE PAIR IS ATOMIC. A body outline left behind by a released alignment would claim
         // the body is still aligned — the readout-that-lies shape this file guards against.
@@ -7723,27 +7825,27 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           if (!marker.mat.emissiveColor.equals(CANDIDATE_COLOUR))
             marker.mat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
           marker.fill.isVisible = true;
-          const xrayOn = cfg.followerFaceXrayAlpha > 0;
+          const xrayOn = st.cfg.followerFaceXrayAlpha > 0;
           if (xrayOn) {
             if (!marker.xrayMat.emissiveColor.equals(CANDIDATE_COLOUR))
               marker.xrayMat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
-            marker.xrayMat.alpha = cfg.followerFaceXrayAlpha;
+            marker.xrayMat.alpha = st.cfg.followerFaceXrayAlpha;
           }
           marker.xray.isVisible = xrayOn;
         }
         // ⚠ Position AND scale written here — NOT parented (`worldPointOn`); the scale keeps a
         // constant apparent size as the camera moves, the same conversion the capture shell uses.
         const ring = candidateRingFor(c.objectId, c.faceId);
-        const ringLocal = candidateRingLocal.get(`${c.objectId}/${c.faceId}`);
+        const ringLocal = st.candidateRingLocal.get(`${c.objectId}/${c.faceId}`);
         const ringAt =
           ringLocal === undefined ? null : worldPointOn(c.objectId, ringLocal);
         if (ring !== null && ringAt !== null) {
           ring.position.copyFrom(ringAt);
           const m =
             trackingMetresPerPx(
-              camera.radius,
-              camera.fov,
-              canvas.clientHeight,
+              st.camera.radius,
+              st.camera.fov,
+              st.canvas.clientHeight,
             ) * GIZMO_RING_PX;
           ring.scaling.set(m, m, m);
           ring.isVisible = true;
@@ -7751,10 +7853,10 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       }
 
       for (const id of alignedNow) {
-        const faceId = alignedFaceOf(world, id);
+        const faceId = alignedFaceOf(st.world, id);
         // ⚠ `prune` just guaranteed this, so the guard is for the types rather than the logic.
         if (faceId === null) continue;
-        const mode = alignModeOf.get(id);
+        const mode = st.alignModeOf.get(id);
         const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
         // ⭐⭐⭐ THE FOLLOWER FACE, DRAWN FROM ITS OWN TRIANGLES (`D50`) — so a triangular or an
         // L-shaped face marks itself correctly instead of wearing a rectangle.
@@ -7766,13 +7868,13 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           marker.fill.isVisible = true;
           // ⭐ `0` means the twin is not drawn AT ALL, which is the build before this flag — not an
           // invisible mesh still costing a draw call and still able to come back wrong.
-          const xrayOn = cfg.followerFaceXrayAlpha > 0;
+          const xrayOn = st.cfg.followerFaceXrayAlpha > 0;
           if (xrayOn) {
             if (!marker.xrayMat.emissiveColor.equals(want))
               marker.xrayMat.emissiveColor.copyFrom(want);
             // ⚠ Written every frame because it is a SLIDER: a hand turning it must see the overlay
             // change under the finger, which is the whole point of shipping the number with the rule.
-            marker.xrayMat.alpha = cfg.followerFaceXrayAlpha;
+            marker.xrayMat.alpha = st.cfg.followerFaceXrayAlpha;
           }
           marker.xray.isVisible = xrayOn;
         }
@@ -7792,7 +7894,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // ⚠ The old form was `selectedFace !== null && pioneerFace !== null && …` — two records
       // kept in step by hand, and defect 44 was exactly them falling out of step.
       const wantedPioneerKeys = new Set<string>();
-      for (const ref of links.pioneerFaces()) {
+      for (const ref of st.links.pioneerFaces()) {
         const key = `${ref.objectId}/${ref.faceId}`;
         wantedPioneerKeys.add(key);
         const m = faceMarkerFor(ref.objectId, ref.faceId);
@@ -7829,7 +7931,7 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       }
       // ⚠ Hidden rather than disposed: a body can be re-aligned to the same face seconds later,
       // and churning meshes per gesture is how a render loop acquires a stall.
-      for (const [key, q] of faceMarkers) {
+      for (const [key, q] of st.faceMarkers) {
         if (!wantedPioneerKeys.has(key)) q.loop.isVisible = false;
       }
       // ⭐⭐⭐ THE PIONEERFACECURSORS, reconciled against the same links the contours read.
@@ -7847,15 +7949,15 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // rule was itself stale.
     // ⚠ Guarded by a DIRTY FLAG rather than painted every frame: the HUD writes text into the
     // DOM, and 60 unconditional layout-invalidating writes a second is a cost with no reader.
-    if (hudDirty) {
-      hudDirty = false;
+    if (st.hudDirty) {
+      st.hudDirty = false;
       paint();
     }
 
-    scene.render();
-    frames++;
+    st.scene.render();
+    st.frames++;
   });
-  window.addEventListener("resize", () => engine.resize());
+  window.addEventListener("resize", () => st.engine.resize());
 
-  return { scene, engine, framesRendered: () => frames };
+  return { scene: st.scene, engine: st.engine, framesRendered: () => st.frames };
 }
