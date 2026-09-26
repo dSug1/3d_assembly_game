@@ -1057,11 +1057,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // camera distance. ⛔ Not carried over from `snapRadiusFactor`: that was 4L between CENTRES
   // and this is a gap between SURFACES, so the old value would be a number answering the old
   // question. See the field's header.
-  // ⛔⛔ **15 mm — THE OWNER, 2026-09-26, the third default of the day**: 15 → 4 → 5 → *"set the
-  // default offset radius to 15 mm"* once the snap existed, because the radius is the SNAP's reach
-  // now (`D100`) and a 5 mm band asked the hand to land within ~20 mm of world. ⚠ At the boot
-  // camera 15 mm is ~60 mm of world, so the tilted pyramid CAPTURES the plate at boot again.
-  captureOffsetMm: 15,
+  // ⛔⛔ **10 mm — THE OWNER, 2026-09-26** (*"set default capture offset to 10 mm"*), after 15 → 4 →
+  // 5 → 15 the same day. ⚠ The radius is the SNAP's reach now (`D100`). At the boot camera 10 mm is
+  // ~40 mm of world, so NOTHING captures at rest at boot (the tilted pyramid is 53 mm off the plate).
+  captureOffsetMm: 10,
   // ⭐ The owner's *"default at three times the offset radius"* (2026-09-26).
   pioneerSwayRadii: 3,
   // ⚠ A guess, with a slider — a magnet's pull is a feel only a hand can judge.

@@ -181,7 +181,7 @@ swing's four — ⛔ **the swing ships at 0, OFF**; the owner's 30° of 2026-09-
 away); **OBJECT TRANSLATION** (+ *PIONEER translates*, *WorldAxisB*, *translate: plane/channels*);
 **OBJECT ROTATION**; **FACE ALIGNMENT** › *PIONEERFACECURSOR* (Free Flow drag on/off, sensitivity) and
 *FOLLOWERFACE* (x-ray opacity, with *EVICTION SHAKE* and *CAPTURE* inside it).
-⛔ **`captureOffsetMm` ships at 15 mm** (the owner, 2026-09-26: 15 → 4 → 5 → 15 in one day; the radius is the snap's reach).
+⛔ **`captureOffsetMm` ships at 10 mm** (the owner, 2026-09-26: 15 → 4 → 5 → 15 → 10; the radius is the snap's reach; nothing captures at boot).
 ⭐⭐⭐ **THE SCORE IS SPECIFIED, NOT BUILT** (`D99`–`D101`, 2026-09-26) →
 [`Claude/20_GAME_RULES/spec/SCORE.md`](Claude/20_GAME_RULES/spec/SCORE.md). The unit is **one
 touchpoint episode** (press → release, counted at the router, the mouse's synthesised touchpoints
@@ -201,7 +201,7 @@ cascades and the sway treat the assembly as one body, and a press on the partner
 ⭐⭐ **AND A SEATED ASSEMBLY DRIVES AS ONE BODY** (`D102`): a press on any member holds the
 ROOT (the walk stops below a frozen Pioneer, so a part on the plate holds the part), the gizmo
 anchors on the touched face, and the snap is a **magnet** — `snapMs` 60 ms on an accelerating
-`u²`. ⚠ The 15 mm offset returns: the pyramid captures the plate at boot again.
+`u²`. ⚠ The offset is now 10 mm (~40 mm of world at boot): nothing captures at rest.
 ⚠ The approach itself is not built: the zone only lights white.
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
