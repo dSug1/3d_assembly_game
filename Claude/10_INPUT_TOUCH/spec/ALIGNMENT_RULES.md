@@ -1886,8 +1886,8 @@ parent, never a child, so a part seats ON it and the plate cannot seat on anythi
 
 | | rule | where |
 |---|---|---|
-| **the press drives the ROOT** | a press on any member of a seated assembly holds the top-most Pioneer reached by walking seated links up; the tree carries the members, so translation, yaw/pitch/roll, twist and the second finger's channels act on the whole. ⛔ The walk **stops below a frozen Pioneer**: a part seated on the plate holds the part (translation refused, twist free) | `input/assembly.ts` `assemblyRoot` |
-| **the raw face** | the member face the finger touched is kept beside the drive body: the **gizmo anchors there** (*"reach any face"*; the two mating faces are inside the assembly and cannot be hit). ⛔ It is NOT a HitFace — face ids are per body — so an assembly is aligned by a ROOT face only | `Held.rawPress` |
+| **a TRANSLATION drives the ROOT** | the finger holds the body it touched; `applyWorldStep` forwards its translation to the top-most Pioneer reached by walking seated links up, and the tree carries the members. ⛔ The walk **stops below a frozen Pioneer**: a part seated on the plate is refused (fixed to the plate). ⚠⚠ **Corrected the same day**: the first build redirected the whole GRIP to the root, and *"I cannot roll any longer the follower object around the followerface normal axis"* — a grip on the root has no twist channel | `input/assembly.ts` `assemblyRoot`, `applyWorldStep` |
+| **ROTATION is the touched body's** | a seated Follower held in `ROTATE` twists about its face normal, at its face (`389eaa2`'s behaviour, restored); holding the ROOT turns the whole assembly. ⚠ The gizmo anchors on the member's own FollowerFace (the aligned rule); the *"reach any face"* anchor went with the grip redirect | — |
 | **the unsnap, redirected** | the second touch on the seated Follower now arrives as a `SECOND` on the root; the gesture reads the RAW pair (first the Pioneer, second the Follower) and the second's own samples; a member seated on the frozen plate stays a separate holder and the two-holder form serves it | `feedUnsnap` |
 | **a frozen Pioneer is holdable** | only while a seated Follower rests on it — the unsnap's first touch; a bare plate's first touch is still `D89`'s miss. ⚠ Cost: a finger resting on a loaded plate holds it instead of orbiting | `frozenHoldAdmitted` |
 | **the magnet** | the position half of a snap has its own time, **`snapMs` = 60 ms** (slider 0–400, below the sway radius), and `magnetEase = u²`, which accelerates INTO contact; the orientation keeps the alignment's slerp | `seat_snap.ts` |
@@ -1895,3 +1895,18 @@ parent, never a child, so a part seats ON it and the plate cannot seat on anythi
 
 ⚠ Unjudged by a hand, all of it. ⚠ What a seated member held in `TRANSLATE` shows is now the
 assembly's axes at the touched face.
+
+#### 11.13.2 — ⭐⭐ `D103`: THE FLICK UNSNAPS — the brutal way, SPECIFIED, NOT BUILT (2026-09-26)
+
+> *"There is another way to unsnap: 1 by flicking the snapped object. This is fair, because the
+> second way is more brutal (it also unsnaps any follower which were aligned with the object being
+> unsnapped): it costs less but is less chirurgical."* — the owner, 2026-09-26
+
+| | my reading | ⚠ why it needs saying |
+|---|---|---|
+| **the trigger** | the recognizer's `FLICK` verdict at the release of a touchpoint on a **SEATED** object | ⛔ today a flick means `IN3`'s **rotation reset** (`flickResetPlan`); on a seated object the unsnap REPLACES it, and on a free or merely aligned object the reset stays exactly as it is |
+| **what it releases** | the flicked object's own seat, **and every seat that depends on it** — its seated Followers, and theirs, down the chain | *"any follower which were aligned with the object being unsnapped"* — I read *aligned* as **seated**; ⛔ **owner to confirm** whether an aligned-but-unseated Follower of it also loses its alignment |
+| **where things end up** | every released body stays where it stands (no jump); each couple is held off until it leaves the offset radius, as after the precise unsnap | the same re-arm, or they would snap straight back |
+| **which object** | the RAW body the finger touched | ⛔⛔ `D102` redirects a press on any member to the assembly's ROOT, so the flick must read the raw body, or flicking a mid-stack part would unsnap the root instead |
+| **alignment** | the flicked object keeps its alignment (only the SEAT goes), as the precise unsnap does | ⛔ **owner to confirm** — *brutal* may mean the alignment goes too |
+| **score** | **1** episode, against the precise unsnap's **2** | `20_GAME_RULES/spec/SCORE.md` §5.1 |

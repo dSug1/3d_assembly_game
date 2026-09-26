@@ -42,6 +42,11 @@
 > within the movement which is already engaged. C3: a third touchpoint the router ignores: shall
 > not count (this is not reproducible on desktop)."* — the owner, the same day
 
+> *"This shall be unsnap: 2. However, there is another way to unsnap: 1 by flicking the snapped
+> object. This is fair, because the second way is more brutal (it also unsnaps any follower which
+> were aligned with the object being unsnapped): it costs less but is less chirurgical."* — the
+> owner, the same day
+
 The pictured final configuration: the pyramid seated on the plate, the grey part standing on the
 pyramid, the pink cuboid on the grey part — every FollowerFace centred on its PioneerFaceCursor.
 
@@ -166,7 +171,8 @@ The costs the solver reads, under today's rules:
 | wrong square quadrant after the squaring twist (`D98`) | +0, time only | a tap to `ROTATE` (excluded, B) and a twist by the hold already engaged — it costs seconds, never an episode |
 | mode toggle | 0 | excluded by rule (§3.1 B) — and unneeded anyway: boot is `TRANSLATE` and an aligned body translates in any mode (`D60`) |
 | camera orbit, pinch, reset | 0 | excluded by rule (§3.1 A) — so looking around is free and the solver never has to model the view |
-| unsnap | 1 | never on the optimal path of a well-posed scene |
+| **unsnap**, the precise way | **2** | hold the Pioneer (1) + touch the seated Follower (1); the rapid move is inside the second. ⚠ 1 if the Pioneer was already held |
+| **unsnap by FLICK**, the brutal way | **1** | one flick on the seated object — ⛔ **and every Follower seated on it is unsnapped too** (§5.1). Cheaper, less surgical: the solver must price what it undoes |
 
 ⭐ The pictured configuration, under those costs: **6 episodes** (three parts × hold + Pioneer
 press) — ⚠ it was 9 before the owner's C2 ruling freed the second finger. ⭐ So under these rules
@@ -177,11 +183,21 @@ follower, which costs a re-align.
 
 ---
 
+### 5.1 ⭐ THE TWO UNSNAPS — why the cheaper one is fair
+
+⭐ The owner's trade: **price against precision**. The precise unsnap (two touches and a rapid
+move) releases exactly one seat; the flick costs one episode and releases the flicked object's seat
+**and every seat that depends on it**, so a player who flicks a mid-stack part pays in rebuilding
+what fell off. ⛔ So the solver must model the flick's cascade, not just its price — a flick that
+looks cheaper can be dearer once its re-snaps are counted.
+⛔ The flick-unsnap is **specified, not built** — its rules and conflicts are in
+[`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.13.2.
+
 ## 6. WHAT NEEDS TO BE BUILT, IN ORDER
 
 | # | what | needs | falsified by |
 |---|---|---|---|
-| 1 | **The approach and the snap** (`3D2`): the conditions (distance, cone angle, …), the seat onto the PioneerFaceCursor, the Pioneer carrying its followers via the tree, the **unsnap** episode | the owner's conditions and the unsnap gesture | a hand: a part that snaps outside the conditions, or fails to inside them; a moved Pioneer whose follower stays behind |
+| 1 | **The approach and the snap** (`3D2`): ✅ the snap, the seat and the precise unsnap are BUILT (`D100`); ⛔ owed: the **flick-unsnap** (§5.1) and the approach | the flick-unsnap's open points (`ALIGNMENT_RULES` §11.13.2) | a hand: a flick that releases one seat but leaves its dependants seated; a flick on a FREE body that no longer resets its rotation |
 | 2 | **Final-configuration data** per scene: face pairs, cursor positions, spin quadrant — and its **detector**, read from the model every frame | 1 | a scene reported complete with one part unseated, or a spin quadrant off by 90° |
 | 3 | **The touch ledger**: one count per touchpoint episode at the router, classified at release by §3.1, started at the first press after boot, printed on the HUD | — (can be built first, it is one counter) | a camera orbit or a mode-toggle tap counted; a mouse Shift second touch counted differently from a finger; an episode missed on a lost `pointerup` |
 | 4 | **The timer**: first press after boot → detection; on the HUD | 2 | a timer that runs before the first press or after detection |
