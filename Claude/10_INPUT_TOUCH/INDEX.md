@@ -298,7 +298,7 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `pinned_pioneer.ts` | ⭐⭐ `D51` — a held **Pioneer** that steers instead of being carried: at `pioneerTranslates = 0` its finger gives the Follower **both** depth and roll, breaking `A16`'s one-axis rule on purpose |
 | `pioneer_cascade.ts` | a turned Pioneer **releases its cyan followers and rotates its orange ones, down a chain** (`D42`/`D70`), with **no cycles**. ⛔ It states this layer's rule: *a RULE in a render file is one nothing can interrogate* |
 | `highlight.ts` | the white **capture** contours — the pair's SURFACE gap (`D49`) in mm on the glass, and the shell that IS that threshold, inflated by **half** it so two whites touching means capture |
-| `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **three** exclusions: the kicker, (`D53`) any body with a finger on it, and the mover's **Pioneer** within `pioneerSwayRadii` offsets (slider, 3) |
+| `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **three** exclusions: the kicker, (`D53`) any body with a finger on it, the mover's **Pioneer** within `pioneerSwayRadii` offsets (slider, 3), and any body **seated on a frozen one** |
 | `approach_swing.ts` | ⚠ **A TRIAL** (`D63`) — the camera leans around the join and returns **by construction**, an offset exactly zero at both ends → [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md), which carries its delete list |
 | `camera_reset.ts` | the double-tap's flight home, and the clock `align_snap` borrows a fraction of |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |

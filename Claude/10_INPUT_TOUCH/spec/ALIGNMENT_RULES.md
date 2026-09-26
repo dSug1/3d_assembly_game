@@ -1910,3 +1910,8 @@ assembly's axes at the touched face.
 | **which object** | the RAW body the finger touched | ⛔⛔ `D102` redirects a press on any member to the assembly's ROOT, so the flick must read the raw body, or flicking a mid-stack part would unsnap the root instead |
 | **alignment** | the flicked object keeps its alignment (only the SEAT goes), as the precise unsnap does | ⛔ **owner to confirm** — *brutal* may mean the alignment goes too |
 | **score** | **1** episode, against the precise unsnap's **2** | `20_GAME_RULES/spec/SCORE.md` §5.1 |
+
+⭐ **Anchored bodies do not sway** (the owner, 2026-09-26: *"if an object is snapped to a frozen
+object, itself and its snapped children objects cannot sway when a third object is moved"*): a body
+whose seated chain reaches a frozen body is part of the plate — `anchoredToFrozen` in
+`input/assembly.ts`, read by `receivesSway`. ⛔ A merely aligned body still sways.

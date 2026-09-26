@@ -14,7 +14,7 @@ import {
   unsnapParamsFrom,
 } from "@input/unsnap";
 import { SeatSnaps, magnetEase } from "@input/seat_snap";
-import { assemblyRoot, frozenHoldAdmitted } from "@input/assembly";
+import { anchoredToFrozen, assemblyRoot, frozenHoldAdmitted } from "@input/assembly";
 import { seatedLocalPlacement } from "@core/seat";
 import { AlignmentLinks } from "@core/alignment_links";
 import {
@@ -409,5 +409,32 @@ describe("⭐⭐ magnetEase — accelerating INTO contact", () => {
 
   it("⭐ the shipped snap time is 60 ms, on a slider", () => {
     expect(DEFAULT_CONFIG.snapMs).toBe(60);
+  });
+});
+
+describe("⭐⭐⭐ anchoredToFrozen — a part seated on the plate, and its children, never sway", () => {
+  // grey seated on the pyramid, the pyramid seated on the plate (frozen); pink merely aligned to grey
+  const pioneerOf = (f: string) => ({ grey: "pyramid", pyramid: "plate", pink: "grey" })[f] ?? null;
+  const seated = (f: string) => f === "grey" || f === "pyramid";
+  const frozen = (b: string) => b === "plate";
+
+  it("⭐ seated directly on the plate → anchored; seated on THAT → anchored too", () => {
+    // > *"itself and its snapped children objects cannot sway"* — the owner, 2026-09-26
+    expect(anchoredToFrozen("pyramid", pioneerOf, seated, frozen)).toBe(true);
+    // ⛔ RED against checking only the direct Pioneer.
+    expect(anchoredToFrozen("grey", pioneerOf, seated, frozen)).toBe(true);
+  });
+
+  it("⛔ merely ALIGNED is not anchored; a stack on a free part is not; the plate itself is not", () => {
+    expect(anchoredToFrozen("pink", pioneerOf, seated, frozen)).toBe(false);
+    expect(anchoredToFrozen("grey", pioneerOf, seated, () => false)).toBe(false);
+    expect(anchoredToFrozen("plate", pioneerOf, seated, frozen)).toBe(false);
+  });
+
+  it("⭐⭐ receivesSway: an anchored body does not sway when a THIRD body moves", () => {
+    const anchored = (id: string) => anchoredToFrozen(id, pioneerOf, seated, frozen);
+    // ⛔ RED against the predicate before this rule.
+    expect(receivesSway({ id: "grey" }, "stranger", () => false, null, true, () => false, anchored)).toBe(false);
+    expect(receivesSway({ id: "pink" }, "stranger", () => false, null, true, () => false, anchored)).toBe(true);
   });
 });

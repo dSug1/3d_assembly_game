@@ -14,6 +14,7 @@ import { captureOffsetM } from "../input/highlight";
 import { type Held, type SceneState } from "./scene_state";
 import { bodyOf, followerFor, modelOrientation } from "./bodies";
 import { inAssemblyWith } from "./alignment_wiring";
+import { anchoredToFrozen } from "../input/assembly";
 
 /**
  * ⭐⭐⭐ **THE ROTATIONAL SWAY, FOR EVERY PATH THAT TURNS A HELD OBJECT.**
@@ -136,6 +137,13 @@ export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
         pioneerOfMover,
         nearPioneer,
         (id) => inAssemblyWith(st, heldId, id),
+        (id) =>
+          anchoredToFrozen(
+            id,
+            (f) => st.links.pioneerFor(f)?.objectId ?? null,
+            (f) => st.links.isSeated(f),
+            (b) => st.world.objects.get(b)?.frozen === true,
+          ),
       )
     )
       continue;
@@ -197,6 +205,13 @@ export function spinOthers(st: SceneState, grip: Held, kick: SpinSwayKick) : voi
         pioneerOfMover,
         nearPioneer,
         (id) => inAssemblyWith(st, heldId, id),
+        (id) =>
+          anchoredToFrozen(
+            id,
+            (f) => st.links.pioneerFor(f)?.objectId ?? null,
+            (f) => st.links.isSeated(f),
+            (b) => st.world.objects.get(b)?.frozen === true,
+          ),
       )
     )
       continue;
