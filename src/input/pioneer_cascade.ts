@@ -167,9 +167,15 @@ export function followerLinksFrom(
   aligned: readonly ObjectId[],
   pioneerOf: (follower: ObjectId) => { readonly objectId: ObjectId; readonly orientation: Quat } | null,
   modeOf: (follower: ObjectId) => AlignMode | undefined,
+  /**
+   * ⭐⭐ `D100` — a SEATED Follower is carried by the tree, so the cascade must neither rotate it
+   * (it already turned with its parent) nor release it (a turned Pioneer keeps its seat).
+   */
+  isSeated: (follower: ObjectId) => boolean = () => false,
 ): FollowerLink[] {
   const out: FollowerLink[] = [];
   for (const follower of aligned) {
+    if (isSeated(follower)) continue;
     const ref = pioneerOf(follower);
     // ⚠ A body listed as aligned whose link has gone is skipped, not defaulted: the two are
     // reconciled every frame by `prune`, and inventing a Pioneer here would outlive it.
@@ -293,9 +299,15 @@ export function followerMoveLinksFrom(
   aligned: readonly ObjectId[],
   pioneerOf: (follower: ObjectId) => { readonly objectId: ObjectId; readonly position: Vec3 } | null,
   modeOf: (follower: ObjectId) => AlignMode | undefined,
+  /**
+   * ⭐⭐ `D100` — a SEATED Follower is carried by the tree, so the cascade must neither rotate it
+   * (it already turned with its parent) nor release it (a turned Pioneer keeps its seat).
+   */
+  isSeated: (follower: ObjectId) => boolean = () => false,
 ): FollowerMoveLink[] {
   const out: FollowerMoveLink[] = [];
   for (const follower of aligned) {
+    if (isSeated(follower)) continue;
     const ref = pioneerOf(follower);
     if (ref === null) continue;
     // ⚠ `SNAPSHOT` is the default for a body whose mode was never recorded, exactly as the turn

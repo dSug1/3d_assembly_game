@@ -229,6 +229,14 @@ export interface PressContext {
    * `alignedFaceOfHeld`, the press RE-POINTS the alignment onto it rather than doing nothing.
    */
   readonly heldPressFace: string | null;
+  /**
+   * ⭐⭐ `D100` — the pressed body and the held one are a SEATED couple (either way round). ⛔ Then
+   * the press aligns, swaps and undoes NOTHING: a seat is released by the UNSNAP gesture only
+   * (`unsnap.ts`: hold the Pioneer, press the Follower, then a rapid move), which `pressMeaning`
+   * would otherwise read as `D90`'s swap — and the reverse order as `D39`'s undo — and break the
+   * seat by accident.
+   */
+  readonly pressedIsSeatedPartner?: boolean;
   /** ⭐ The mode comes from the PIONEER's press — see `TapContext`. */
   /**
    * ⭐⭐ **THIS PRESS'S OWN double tap.** ⛔ `D67` read it off the HELD grip because the held body
@@ -292,6 +300,8 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
   // ⚠ A press on the body that is already held is `SECOND`'s configuration, not this one — and
   // a Pioneer and a Follower on one body is not a relation.
   if (follower === ctx.pressedObject) return nothing;
+  // ⛔⛔ `D100`: a seated couple's second touchpoint belongs to the UNSNAP gesture.
+  if (ctx.pressedIsSeatedPartner === true) return nothing;
   // ⛔⛔ **THE ONE CONFIGURATION A PRESS DOES NOT ALIGN**: the press would produce EXACTLY the
   // alignment that already exists — same Pioneer, same PioneerFace, same FollowerFace. ⭐ Then it
   // does nothing and the RELEASE undoes it (`D39`), so a hand that presses and holds has not

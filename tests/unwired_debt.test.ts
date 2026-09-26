@@ -66,8 +66,6 @@ const PENDING: Record<string, string> = {
     "retired 2026-09-22 by D57 reaching the first touchpoint; awaiting the device verdict on " +
     "the dy trade, then delete with its vectors or restore",
   // ── `3D2`: the seat. The assembly tree exists; nothing is assembled yet. ──────
-  attach: "3D2 — parenting a seated part is what a mate does",
-  detach: "3D2/3D3 — breaking a mate un-parents it",
   reroot: "3D2 — `parent ≠ root`, needed the first time an assembly is re-hung",
   connectorWorldPose: "3D2 — a mate is between CONNECTORS, and this places them",
   // ── `3D2`/`3D3`: the mate geometry, built and vectored ahead of the gesture. ──

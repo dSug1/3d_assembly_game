@@ -298,7 +298,7 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `pinned_pioneer.ts` | ⭐⭐ `D51` — a held **Pioneer** that steers instead of being carried: at `pioneerTranslates = 0` its finger gives the Follower **both** depth and roll, breaking `A16`'s one-axis rule on purpose |
 | `pioneer_cascade.ts` | a turned Pioneer **releases its cyan followers and rotates its orange ones, down a chain** (`D42`/`D70`), with **no cycles**. ⛔ It states this layer's rule: *a RULE in a render file is one nothing can interrogate* |
 | `highlight.ts` | the white **capture** contours — the pair's SURFACE gap (`D49`) in mm on the glass, and the shell that IS that threshold, inflated by **half** it so two whites touching means capture |
-| `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **three** exclusions: the body that CAUSED the kick, (`D53`) any body with a finger on it, and the mover's own **Pioneer** |
+| `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **three** exclusions: the kicker, (`D53`) any body with a finger on it, and the mover's **Pioneer** within `pioneerSwayRadii` offsets (slider, 3) |
 | `approach_swing.ts` | ⚠ **A TRIAL** (`D63`) — the camera leans around the join and returns **by construction**, an offset exactly zero at both ends → [`spec/APPROACH_SWING_TRIAL.md`](spec/APPROACH_SWING_TRIAL.md), which carries its delete list |
 | `camera_reset.ts` | the double-tap's flight home, and the clock `align_snap` borrows a fraction of |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
@@ -308,5 +308,6 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `recognizer.ts` | §1.3 itself: the state machine, rollback, and the release-time priority ladder |
 | `mouse_second_touch.ts` · ⚠ `render/mouse_adapter.ts` | ⭐⭐ `D94` — **a mouse as two touches**: left = the browser's own pointer; **Shift + left drag** = an anchor-only second touch; **right-press and hold** = the HitFace (never driven), then a **left click** presses the Pioneer. ⛔ Never touches a DOM event, models only #2, reads `buttons` every event. `hitFaceAllowed`: only the right button sets a HitFace; `secondTouchAlwaysAvailable`: `D60` translates an aligned body under the left button in any mode |
 | `pioneer_cursor_grab.ts` · `mouse_wheel_zoom.ts` | `D96`: which PioneerFaceCursor a press grabs (mouse inside the ring, touch within 1–10 radii; OFF by default) · the wheel's notches onto pinch's `zoom` |
+| `snap.ts` · `unsnap.ts` · `seat_snap.ts` | `D100`: the snap conditions and re-arm; the unsnap gesture; the seat's lerp → §11.13 |
 
 ---

@@ -16,8 +16,8 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1226 golden vectors,
-all passing** (37 → … → **1226**; ⭐ each DROP has a `D` row). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1264 golden vectors,
+all passing** (37 → … → **1264**; ⭐ each DROP has a `D` row). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is a cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
@@ -306,7 +306,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 |---|---|---|---|---|---|
 | 3D0 | Mate connectors + residual; constraint stack + solver | 3D | feature | ✅ **built 2026-09-13**, carried and covered | — |
 | 3D1 | The object model: id, placement, connectors, assembly tree (parent ≠ root) | 3D | feature | ✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `core/object_model.ts`, engine-free. ⭐⭐ Its vectors were written FIRST and **falsified on purpose** — breaking the composition turns 14 of 42 red → [`queue_notes/3D1.md`](queue_notes/3D1.md) | 3D0 |
-| 3D2 | Snap transform + capture radius + seat | 3D | feature | 🔨 **NEXT, with the approach.** Capture half BUILT (`D49`, surface gap, mm on the glass, a slider). ⛔ Owed: the snap, the seat, the mate — nothing is SEATED today. ✅ **`D100` answers the blocker: NO gesture** — the snap is AUTOMATIC under owner conditions, a seated Pioneer CARRIES its followers, unsnap is a touch → [`queue_notes/3D2.md`](queue_notes/3D2.md) | 3D1 |
+| 3D2 | Snap transform + capture radius + seat | 3D | feature | ✅ **SNAP, SEAT, UNSNAP BUILT 2026-09-26** (`D100`, §11.13), ⛔ unjudged by a hand. ⚠ Owed: the approach and the mate connector → [`queue_notes/3D2.md`](queue_notes/3D2.md) | 3D1 |
 | 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⭐⭐ **THE BREAK GESTURE IS SPECIFIED** (`D47`): two fingers, one on each mated object, pulling **apart along the centre→centre direction** past a `BreakThreshold` (slider). ⛔⛔ It needs `3D2`'s **seat** first — §1.4's stack solves orientation only, so a mate does not hold POSITION today and *breaking* would be indistinguishable from *moving* → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 | 3D2 |
 | 3D4 | Real 3D file import (glTF) | 3D | feature | queued | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |
@@ -352,7 +352,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | GM1 | Final-configuration data per scene + its detector | GAME | feature | queued | 3D2 |
-| GM2 | The touch ledger: one count per touchpoint episode, at the router, on the HUD | GAME | feature | queued | — |
+| GM2 | The touch ledger: one count per episode, classified at release (camera/zoom/toggles excluded, §3.1), on the HUD | GAME | feature | queued | — |
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
-| GM4 | The solver: the absolute least episodes, engine-free, vectored (the pictured scene = 9) | GAME | feature | queued | GM1 |
+| GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
