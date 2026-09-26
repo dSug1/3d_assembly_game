@@ -519,6 +519,12 @@ export interface GestureConfig {
    */
   captureOffsetMm: number;
   /**
+   * ⭐⭐ How many capture offsets from its Pioneer a Follower may be before the Pioneer SWAYS
+   * again — the owner, 2026-09-26: *"the sway of pioneer shall not be allowed if the follower is
+   * within three times the offset radius; it shall trigger otherwise."* ⚠ `0` = only at contact.
+   */
+  pioneerSwayRadii: number;
+  /**
    * ⭐⭐⭐ **THE APPROACH SWING'S AMPLITUDE, IN DEGREES OF CAMERA YAW** — the trial on branch
    * `1.0.18-`. ⛔ How far the camera leans out at HALF the trigger gap; it is back on its own
    * orbit at the trigger and at contact, by construction.
@@ -1049,6 +1055,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // NOTHING captures at rest at boot; ⭐ and it clears the 3.5 mm motion deadband by 1.5 mm, where
   // 4 mm cleared it by 0.5 — a nudge from rest has room to land inside the band.
   captureOffsetMm: 5,
+  // ⭐ The owner's *"default at three times the offset radius"* (2026-09-26).
+  pioneerSwayRadii: 3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-26: *"set the default approach swing to zero."*
   // ⚠ It was 30°, CHOSEN BY THE OWNER ON THE GLASS on 2026-09-19 (the swing at or below the knee);
   // that value is one slider move away, in CAMERA ORBIT › CAMERA APPROACH SWING AT CAPTURE.
@@ -1137,6 +1145,17 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `pioneerCursorDrag (${cfg.pioneerCursorDrag}) must be exactly 0 or 1: it switches the ` +
         "PioneerFaceCursor drag on and off, and a half-set flag would read as truthy while the " +
         "readout claimed otherwise.",
+    );
+  }
+
+  if (
+    !Number.isFinite(cfg.pioneerSwayRadii) ||
+    cfg.pioneerSwayRadii < 0 ||
+    cfg.pioneerSwayRadii > 10
+  ) {
+    throw new Error(
+      `pioneerSwayRadii (${cfg.pioneerSwayRadii}) must be between 0 and 10: it is how many ` +
+        "capture offsets from its Pioneer a Follower may be before the Pioneer sways again.",
     );
   }
 

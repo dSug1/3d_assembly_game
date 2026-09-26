@@ -98,6 +98,7 @@ import {
   SwayWatcher,
   swayScale,
   receivesSway,
+  pioneerSwaySuppressed,
   swayWorldDirection,
   SpinSwayWatcher,
   CameraResetAnimation,
@@ -4277,6 +4278,9 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
                 // ends visibly WRONG on the glass, because a slider whose every value looks plausible
                 // teaches a hand nothing.
                 tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
+                // ⭐ The owner, 2026-09-26: the Pioneer does not sway while its Follower is within this
+                // many capture offsets of it; *"put it just below the offset radius"*.
+                tunable("Pioneer sway off within (× offset)", "pioneerSwayRadii", 0, 10, 0.5),
                 // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
                 // ships at 0 and turning it on changes only what the HUD reports.
                 tunable(
@@ -4391,6 +4395,28 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     return false;
   };
 
+  /**
+   * ⭐ Is the held body within `pioneerSwayRadii` capture offsets of its Pioneer? ⛔ The two
+   * numbers are the white contour's own: the SURFACE gap and the offset in world metres at the
+   * current camera distance, so the sway's *near* is the capture's *near*.
+   */
+  const moverNearPioneer = (
+    heldId: ObjectId | null,
+    pioneerId: ObjectId | null,
+  ): boolean =>
+    heldId !== null &&
+    pioneerId !== null &&
+    pioneerSwaySuppressed(
+      surfaceGap(world, heldId, pioneerId),
+      captureOffsetM(
+        cfg.captureOffsetMm,
+        camera.radius,
+        camera.fov,
+        canvas.clientHeight,
+      ),
+      cfg.pioneerSwayRadii,
+    );
+
   const nudgeOthersWorld = (
     heldMesh: AbstractMesh,
     dir: Vec3,
@@ -4410,9 +4436,11 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     if (!(impulse > 0)) return;
 
     const heldId = idOf.get(heldMesh) ?? null;
-    // ⭐ The mover's own Pioneer does not sway (`receivesSway`, the owner, 2026-09-26).
+    // ⭐ The mover's own Pioneer does not sway while the mover is within three capture offsets
+    // of it (`receivesSway`, `pioneerSwaySuppressed` — the owner, 2026-09-26).
     const pioneerOfMover =
       heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
+    const nearPioneer = moverNearPioneer(heldId, pioneerOfMover);
     for (const mesh of scene.meshes) {
       // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
       // marker cannot sway — a readout that moved with the scene would be describing
@@ -4423,7 +4451,15 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       // frozen and the PICTURE was not: the sway is a display offset added after the model is
       // read, so the base plate rocked while its placement could not change. ⭐ One predicate,
       // shared with `spinOthers` and vectored in `tests/sway.test.ts`.
-      if (!receivesSway(bodyOf(mesh), heldId, isGrasped, pioneerOfMover))
+      if (
+        !receivesSway(
+          bodyOf(mesh),
+          heldId,
+          isGrasped,
+          pioneerOfMover,
+          nearPioneer,
+        )
+      )
         continue;
       const f = followerFor(mesh);
       f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
@@ -4466,13 +4502,22 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
     // ⭐ …and does not swing either — a follower TURNING is moving too.
     const pioneerOfMover =
       heldId === null ? null : (links.pioneerFor(heldId)?.objectId ?? null);
+    const nearPioneer = moverNearPioneer(heldId, pioneerOfMover);
     for (const mesh of scene.meshes) {
       if (mesh.metadata?.orbitCandidate !== true) continue;
       if (mesh === grip.mesh) continue;
       // ⛔⛔ A frozen body does not swing about the held one either — the same rule, the same
       // predicate. ⚠ This is the writer that made the base plate SWING rather than rock, which
       // is the more obvious of the two on the glass.
-      if (!receivesSway(bodyOf(mesh), heldId, isGrasped, pioneerOfMover))
+      if (
+        !receivesSway(
+          bodyOf(mesh),
+          heldId,
+          isGrasped,
+          pioneerOfMover,
+          nearPioneer,
+        )
+      )
         continue;
       const f = followerFor(mesh);
       // ⚠ The pivot is captured per kick and shared by the block. A kick arriving while

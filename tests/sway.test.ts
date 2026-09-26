@@ -7,12 +7,14 @@
  * still, so the scene reacted once and then sat frozen — found by finger, not by a suite.
  */
 import { describe, expect, it } from "vitest";
+import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import {
   SwayWatcher,
   swayScale,
   swayWorldDirection,
   turnDegrees,
   receivesSway,
+  pioneerSwaySuppressed,
   SWAY_SCALE_MIN,
   SWAY_SCALE_MAX,
   SpinSwayWatcher,
@@ -401,17 +403,55 @@ describe("⭐⭐⭐ D53 — a grasped body receives no sway", () => {
   });
 });
 
-describe("⭐⭐⭐ the mover's own PIONEER does not sway", () => {
-  it("⛔⛔ *\"the pioneer object does not sway when its follower object moves\"* — the owner, 2026-09-26", () => {
+describe("⭐⭐⭐ the mover's own PIONEER does not sway — while the mover is NEAR it", () => {
+  it("⛔⛔ *\"the pioneer object does not sway when its follower object moves\"* — near, it does not", () => {
     // ⛔ RED against the predicate before this rule, which swayed every other free body.
-    expect(receivesSway({ id: "pioneer" }, "follower", () => false, "pioneer")).toBe(false);
+    expect(receivesSway({ id: "pioneer" }, "follower", () => false, "pioneer", true)).toBe(false);
+  });
+
+  it("⭐⭐ *\"it shall trigger otherwise\"* — FAR from its Pioneer, the Pioneer sways again", () => {
+    // ⛔ RED against the unconditional exclusion this rule replaces (the owner, 2026-09-26).
+    expect(receivesSway({ id: "pioneer" }, "follower", () => false, "pioneer", false)).toBe(true);
   });
 
   it("⭐ every OTHER body still sways — the exclusion names one body, not the scene", () => {
-    expect(receivesSway({ id: "bystander" }, "follower", () => false, "pioneer")).toBe(true);
+    expect(receivesSway({ id: "bystander" }, "follower", () => false, "pioneer", true)).toBe(true);
   });
 
   it("⭐ a mover with no Pioneer spares nobody extra", () => {
-    expect(receivesSway({ id: "pioneer" }, "free", () => false, null)).toBe(true);
+    expect(receivesSway({ id: "pioneer" }, "free", () => false, null, true)).toBe(true);
+  });
+});
+
+describe("⭐⭐ pioneerSwaySuppressed — within N capture offsets, by SURFACE gap", () => {
+  // > *"not allowed if the follower is within three times the offset radius; it shall trigger
+  // > otherwise"* — the owner, 2026-09-26. The offset is 0.02 m (5 mm at the boot camera).
+  const OFFSET = 0.02;
+
+  it("⭐ inside three offsets → suppressed; outside → not", () => {
+    expect(pioneerSwaySuppressed(2 * OFFSET, OFFSET, 3)).toBe(true);
+    // ⛔ RED against ignoring the distance (always suppressed).
+    expect(pioneerSwaySuppressed(4 * OFFSET, OFFSET, 3)).toBe(false);
+  });
+
+  it("⛔ exactly on the boundary is still WITHIN", () => {
+    // ⛔ RED against a strict `<`.
+    expect(pioneerSwaySuppressed(3 * OFFSET, OFFSET, 3)).toBe(true);
+  });
+
+  it("⭐ the slider is the multiplier — at 1 the old far case is now far", () => {
+    // ⛔ RED against a hard-coded 3.
+    expect(pioneerSwaySuppressed(2 * OFFSET, OFFSET, 1)).toBe(false);
+    expect(pioneerSwaySuppressed(2 * OFFSET, OFFSET, 2)).toBe(true);
+  });
+
+  it("⚠ an unreadable gap SUPPRESSES — the owner's first rule is the safe direction", () => {
+    // ⛔ RED against letting a ⛔NOSHAPE body's Pioneer recoil.
+    expect(pioneerSwaySuppressed(null, OFFSET, 3)).toBe(true);
+    expect(pioneerSwaySuppressed(Number.NaN, OFFSET, 3)).toBe(true);
+  });
+
+  it("⭐ the shipped default is THREE — *\"set it as default at three times\"*", () => {
+    expect(DEFAULT_CONFIG.pioneerSwayRadii).toBe(3);
   });
 });
