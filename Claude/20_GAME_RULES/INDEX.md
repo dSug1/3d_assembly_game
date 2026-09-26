@@ -9,6 +9,9 @@ seated Pioneer carries its followers; **Free Flow mode** escapes the score. Its 
 list, mirrored as `GM1`–`GM5` in `QUEUE.md`. ⛔ Nothing of it is built; the approach and the snap
 (`3D2`) come first.
 
+⭐ [`CONCEPT_ASSESSMENT_2026-09-26.md`](CONCEPT_ASSESSMENT_2026-09-26.md) — what is missing
+between the build and a game, in the order to tackle it. ⛔ An assessment, not a queue.
+
 ⚠ This folder describes **behaviour**, not mechanism: *"an object released inside another's
 capture radius seats into it"*, not *"`testMate` returns `withinRadius`"*. When the two disagree,
 the record is the requirement and the code is the bug — or the record is out of date, which is
