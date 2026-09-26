@@ -167,6 +167,7 @@ import {
   type PioneerFaceCursor,
 } from "../core/pioneer_face_cursors";
 import { pointOnFace } from "../core/face_surface";
+import { alignedTravelAxes, segmentTowardCursor } from "../input/aligned_axes";
 import {
   grabbedCursor,
   PIONEER_CURSOR_PX,
@@ -1858,6 +1859,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
    */
   const gizmoAxes = new Map<ObjectId, GizmoChannels>();
   /**
+   * ⭐ Bodies a ROLL has turned during their CURRENT hold — what *"the roll rotation is ongoing"*
+   * means for an aligned Follower's green axis (`aligned_axes.ts`). ⚠ `gizmoAxes` keeps its answer
+   * across holds, so the grey line alone cannot say whether the roll belongs to THIS gesture.
+   * Dropped when the body leaves the gizmo.
+   */
+  const rolledThisHold = new Set<ObjectId>();
+  /**
    * ⭐ ONE place both `axisTravel` call sites report to — the holder's drag and the second
    * touchpoint's push. ⛔ The owner, 2026-09-23: *"make sure the delta position on the second
    * touch triggers the gizmo in the same way as the delta positions of the first touch."*
@@ -2177,7 +2185,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // ⭐ `METHOD`: *deleting the file a rule lived in deletes the rule* — a definition-site
       // guarantee is only as durable as the definition.
       if (world.objects.get(id)?.frozen === true) continue;
-      if (!isTranslatingMode(grip.mode) && !frameTurnAxes.has(id)) continue;
+      // ⭐⭐ An ALIGNED Follower qualifies by being HELD, in either mode (the owner, 2026-09-26:
+      // *"displayed whenever the aligned follower object is touched or left clicked (not
+      // necessarily when a movement occurs) in whichever mode"*).
+      if (
+        alignedFaceOf(world, id) === null &&
+        !isTranslatingMode(grip.mode) &&
+        !frameTurnAxes.has(id)
+      )
+        continue;
       if (candidates.some((c) => c.id === id)) continue;
       candidates.push({
         // ⚠ DRIVEN means a channel moved it this frame, not merely that a rule ran: the
@@ -2200,7 +2216,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       // in rotation mode on aligned follower object. It may need to be created."* ⚠ Every turn
       // gesture happens in ROTATE mode, where the translating-mode gate hid the gizmo entirely and
       // the turn lines with it.
-      if (!isTranslatingMode(grip.mode) && !frameTurnAxes.has(id)) continue;
+      // ⭐⭐ An ALIGNED Follower qualifies by being HELD, in either mode (the owner, 2026-09-26:
+      // *"displayed whenever the aligned follower object is touched or left clicked (not
+      // necessarily when a movement occurs) in whichever mode"*).
+      if (
+        alignedFaceOf(world, id) === null &&
+        !isTranslatingMode(grip.mode) &&
+        !frameTurnAxes.has(id)
+      )
+        continue;
       // ⛔ Every other eligible body is skipped here rather than hidden later: `live` then holds
       // one id at most, and the sweep below blanks all the rest with nothing added for it.
       if (id !== owner) continue;
@@ -2218,7 +2242,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         gizmoTurnAxes.set(id, remembered);
       }
       const channels = frameAxisDriven.get(id) ?? [false, false, false];
-      const shown = displayedAxes(gizmoAxes.get(id) ?? null, [
+      const byMotion = displayedAxes(gizmoAxes.get(id) ?? null, [
         channels[0],
         channels[1],
         channels[2],
@@ -2226,8 +2250,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         turning?.[TURN_YAW] != null,
         turning?.[TURN_PITCH] != null,
       ]);
-      if (shown === null) continue;
-      gizmoAxes.set(id, shown);
+      if (byMotion !== null) gizmoAxes.set(id, byMotion);
+      if (turning?.[TURN_ROLL] != null) rolledThisHold.add(id);
+      // ⭐⭐⭐ **AN ALIGNED FOLLOWER'S RED, GREEN AND BLUE ARE `alignedTravelAxes`'s** — decided by
+      // which touches are DOWN, not by what moved (the owner, 2026-09-26). ⛔⛔ The three ROTATION
+      // lines stay exactly as `displayedAxes` decides them: *"do not modify anything about the
+      // rules for the display of the rotation axis."*
+      // ⭐ A second touch is a finger on empty space or the mouse's Shift touchpoint (`OUTSIDE`),
+      // or a finger on this same body (`SECOND`).
+      const alignedHere = alignedFaceOf(world, id) !== null;
+      let shown: GizmoChannels;
+      if (alignedHere) {
+        const turn =
+          byMotion ??
+          ([false, false, false, false, false, false] as GizmoChannels);
+        const travel = alignedTravelAxes(
+          router.outside().length >= 1 ||
+            router.secondTouchOn(grip.mesh) !== null,
+          turn[3] && rolledThisHold.has(id),
+        );
+        shown = [travel[0], travel[1], travel[2], turn[3], turn[4], turn[5]];
+      } else {
+        if (byMotion === null) continue;
+        shown = byMotion;
+      }
       // ⭐⭐⭐ **WHERE THE GIZMO SITS — THE FOLLOWERFACE'S CENTRE, ELSE THE BODY'S OWN** — the
       // owner, 2026-09-23: *"Remove the rule of the raycast of the delta position direction from
       // the object center to identify the leadingface, and keep the gizmo always positioned at the
@@ -2319,6 +2365,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         shown[3] || shown[4] || shown[5],
       );
       const g = gizmoFor(id);
+      // ⭐ The aligned Follower's own PioneerFaceCursor, in WORLD space (`worldPointOn`).
+      const cursor = alignedHere ? pioneerCursors.ofFollower(id) : null;
+      const cursorWorld =
+        cursor === null ? null : worldPointOn(cursor.pioneerId, cursor.position);
+      const cursorAt: Vec3 | null =
+        cursorWorld === null
+          ? null
+          : [cursorWorld.x, cursorWorld.y, cursorWorld.z];
       // ⭐ The last three directions are the axes the body is being TURNED about, not ones it is
       // being moved along. ⚠ `null` until that channel has turned it, and a `null` hides its line
       // however the channel set reads — a line needs a direction, and there is no stand-in.
@@ -2342,21 +2396,40 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
         const travel = i < 3;
         const reach = travel ? span : turnSpan;
         const base = travel ? anchor : turnAnchor;
+        // ⭐⭐⭐ **AN ALIGNED FOLLOWER'S TRAVEL AXIS IS A SEGMENT, NOT A FULL-SCREEN LINE** — the
+        // owner, 2026-09-26: from the FollowerFace centre to the PioneerFaceCursor's projection onto
+        // the axis, so its length reads how far the cursor is along it. ⛔ No cursor yet (the frame
+        // the alignment is made — the cursor pass runs after this one) → no line, never a
+        // one-frame full-screen flash and never a stand-in end.
+        if (travel && alignedHere && cursorAt === null) {
+          g.lines[i]!.isVisible = false;
+          continue;
+        }
+        const seg =
+          travel && cursorAt !== null
+            ? segmentTowardCursor(anchor, a, cursorAt)
+            : null;
         const line = CreateLines(
           `axis-gizmo-${id}-${i}`,
           {
-            points: [
-              new Vector3(
-                base[0] - a[0] * reach,
-                base[1] - a[1] * reach,
-                base[2] - a[2] * reach,
-              ),
-              new Vector3(
-                base[0] + a[0] * reach,
-                base[1] + a[1] * reach,
-                base[2] + a[2] * reach,
-              ),
-            ],
+            points:
+              seg !== null
+                ? [
+                    new Vector3(seg[0][0], seg[0][1], seg[0][2]),
+                    new Vector3(seg[1][0], seg[1][1], seg[1][2]),
+                  ]
+                : [
+                    new Vector3(
+                      base[0] - a[0] * reach,
+                      base[1] - a[1] * reach,
+                      base[2] - a[2] * reach,
+                    ),
+                    new Vector3(
+                      base[0] + a[0] * reach,
+                      base[1] + a[1] * reach,
+                      base[2] + a[2] * reach,
+                    ),
+                  ],
             instance: g.lines[i]!,
           },
           scene,
@@ -2368,6 +2441,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle {
       if (live.has(id)) continue;
       for (const line of g.lines) line.isVisible = false;
     }
+    for (const id of [...rolledThisHold])
+      if (!live.has(id)) rolledThisHold.delete(id);
     // ⚠ The circles go with them: two readings of one state must appear and vanish together.
     for (const [id, r] of gizmoRings) if (!live.has(id)) r.isVisible = false;
     for (const [id, r] of gizmoTurnRings)

@@ -1792,3 +1792,28 @@ edge … if the surface is not flat, the PioneerFaceCursor position shall follow
 face's centre grabs the ring instead — wider reach, more often; and 8 px is a small mouse target.
 ⛔⛔ **AND THE RING IS NOT PARENTED** — a billboard parented to a body loses the body's ROTATION
 (defect 71), so it is placed in world space every frame.
+
+### 11.11 — ⭐⭐ `D97`: AN ALIGNED FOLLOWER'S TRANSLATION AXES
+
+> *"those axis are displayed whenever the aligned follower object is touched or left clicked (not
+> necessarily when a movement occurs) in whichever mode. If in horizontal plane translation (first
+> touch or left click without shift), always show the red and blue axis. If in gravity axis
+> translation (second touch or left click + shift), always show the green axis, or only the grey
+> axis if the roll rotation is ongoing. Do not show the axis as full screen length … show length
+> corresponding to the segment between the FollowerFace center (the origin of the axis) and the
+> projection of the position of the PioneerFaceCursor onto this axis."* — the owner, 2026-09-26
+
+| held aligned Follower | red + blue | green |
+|---|---|---|
+| first touch / left click alone | ✅ always | — |
+| + a second touch / Shift | — | ✅ always, ⛔ unless a roll has turned it **during this hold** and the grey is up |
+
+⭐ Decided by which touches are DOWN, not by what moved — `alignedTravelAxes` in
+`input/aligned_axes.ts`. A second touch is `OUTSIDE` (a finger, or the mouse's Shift touchpoint) or
+`SECOND` on the same body. ⭐ Each line is a SIGNED segment from the FollowerFace centre to the
+cursor's projection (`segmentTowardCursor`), zero-length when the cursor is square to the axis.
+⛔⛔ **The rotation lines are untouched** — the owner: *"do not modify anything about the rules for
+the display of the rotation axis"* — so grey/purple/maroon stay `displayedAxes`'s, and a free body
+keeps the old travel rule and its full-screen lines.
+⚠ *"Ongoing"* is read per HOLD because `displayedAxes` keeps its last answer across holds: a roll
+from an earlier gesture must not hide the green on a fresh one.
