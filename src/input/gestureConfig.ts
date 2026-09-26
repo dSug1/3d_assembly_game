@@ -1045,9 +1045,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // and this is a gap between SURFACES, so the old value would be a number answering the old
   // question. See the field's header.
   captureOffsetMm: 15,
-  // ✅ **CHOSEN BY THE OWNER ON THE GLASS, 2026-09-19**, replacing my guess of 25°. ⛔ It is the
-  // swing at or below the knee (67 mm/s); above it the speed divisor takes over.
-  approachSwingDeg: 30,
+  // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-26: *"set the default approach swing to zero."*
+  // ⚠ It was 30°, CHOSEN BY THE OWNER ON THE GLASS on 2026-09-19 (the swing at or below the knee);
+  // that value is one slider move away, in CAMERA ORBIT › CAMERA APPROACH SWING AT CAPTURE.
+  approachSwingDeg: 0,
   // ✅ **CHOSEN BY THE OWNER ON THE GLASS, 2026-09-19** — and that matters more than where they
   // came from: the previous pair were my guesses, borrowed from `swayReferenceSpeedMmPerS`.
   // ⛔ The knee is `1/gain` = **67 mm/s**, so damping now begins at about half the hand speed it

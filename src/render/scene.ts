@@ -3964,6 +3964,52 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           0.002,
         ),
       ],
+      // ⭐⭐ **A FOLDER UNDER CAMERA ORBIT** — the owner, 2026-09-26: *"create a new folder 'camera
+      // approach swing at capture' under camera orbit menu"*, holding the swing's four controls.
+      subsections: [
+        {
+          title: "CAMERA APPROACH SWING AT CAPTURE",
+          sliders: [
+          // ⭐⭐⭐ **THE APPROACH SWING (trial, branch `1.0.18-`)** — how far the camera leans out
+          // at HALF the trigger gap, and back to zero at contact.
+          // ⛔ **`0` TURNS THE WHOLE MECHANISM OFF**, which is what makes it A/B-able by finger
+          // in the same minute on the same scene — the comparison that settled `D28` and `IN13`.
+          // ⛔ **SHIPS AT 0 — OFF** (the owner, 2026-09-26: *"set the default approach swing to
+          // zero"*); the 30° a hand chose on 2026-09-19 is one slider move away.
+          tunable(
+            "approach swing (° of camera yaw)",
+            "approachSwingDeg",
+            0,
+            90,
+            1,
+          ),
+          // ⭐⭐ **THE SPEED DIVISOR, `gain × speed^exponent`** — the owner's fine-tuning pair.
+          // ⛔ Damping starts where the divisor passes 1, at `(1/gain)^(1/exponent)` mm/s: the
+          // default 0.0083 puts that knee at **120 mm/s**. ⚠ A small range with a fine step,
+          // because the useful values are all near the bottom of it.
+          tunable("swing speed gain", "approachSwingSpeedGain", 0, 0.05, 0.0005),
+          // ⛔ **`0` REMOVES THE SPEED DEPENDENCE ENTIRELY**, which is how to A/B the idea by
+          // finger; `1` makes the camera's angular rate independent of hand speed; above 1 the
+          // camera slows as the hand speeds up.
+          tunable(
+            "swing speed exponent",
+            "approachSwingSpeedExponent",
+            0,
+            3,
+            0.1,
+          ),
+          // ⭐⭐⭐ **A RULE SELECTOR, NOT A NUMBER** — `0` is the current build; `1` switches the
+          // yellow orbit target to the Pioneer–Follower barycentre the moment they capture.
+          tunable(
+            "orbit retargets on capture (0/1)",
+            "approachRetargetsOrbit",
+            0,
+            1,
+            1,
+          ),
+          ],
+        },
+      ],
     },
     {
       title: "OBJECT TRANSLATION",
@@ -4055,6 +4101,24 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           400,
           10,
         ),
+        // ⭐ Moved here from CAPTURE (the owner, 2026-09-26): the three rules that decide what a
+        // translating finger does.
+        // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
+        // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
+        // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
+        // its finger drives the Follower's roll AND depth together.
+        // ⚠ A 0/1 slider because the menu has no other kind of control — the fork selector took
+        // the same shape (`D26`) — and `validateGestureConfig` refuses anything between, so a
+        // half-set flag cannot masquerade as the default.
+        tunable("PIONEER translates (0=pinned)", "pioneerTranslates", 0, 1, 1),
+        // ⭐⭐⭐ **THE OWNER'S FLAG OF 2026-09-22 — `WorldAxisA` / `WorldAxisB`.** `1` (the
+        // default) fixes the object axes to the BOOT camera for the whole scene; `0` lets them
+        // follow the camera, which is the build before this. ⛔ It does NOT select the channel
+        // remap — `dy` drives depth and the second finger drives gravity either way.
+        tunable("WorldAxisB: axes fixed at boot (0/1)", "worldAxisB", 0, 1, 1),
+        // ⭐⭐ 1 = the body follows the finger in its own horizontal plane; 0 = the dictated
+        // dx→x / dy→depth channels. ⛔ A RULE, not a number — the device report of 2026-09-23.
+        tunable("translate: 1=plane, 0=channels", "translatePairing", 0, 1, 1),
       ],
     },
     {
@@ -4106,133 +4170,12 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
       ],
     },
     {
-      // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
-      // number has been wrong every single time*, and all four of these are guesses.
-      // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
-      // between a shake and a **corrective nudge** during fine positioning, because eviction
-      // destroys alignments the user set deliberately. ⚠ `evictShakeLegMm` has a validator
-      // rule under it (3× the measured noise), so the slider cannot reach a value where a
-      // reversal could be jitter.
-      title: "⭐ EVICTION SHAKE (A4)",
-      sliders: [
-        tunable("reversals to evict", "evictShakeReversals", 2, 5, 1),
-        tunable("window (ms)", "evictShakeWindowMs", 200, 1200, 50),
-        tunable("leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
-        tunable(
-          "straightness (0=strict, 1=any)",
-          "evictShakeStraightness",
-          0.1,
-          0.9,
-          0.05,
-        ),
-      ],
-    },
-    {
-      // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
-      // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
-      // is set aside where a hand says it wants to tune something — the same exception §8 of the
-      // spec grants `BreakThreshold`.
-      // ⚠⚠ IT IS MILLIMETRES ON THE GLASS, NOT IN THE WORLD. The world gap it authorises grows
-      // with the camera distance, so the same slider value means the same APPARENT clearance at
-      // every zoom — which is what the owner asked for and what the HUD's `gap=…/…mm` shows.
-      title: "⭐ CAPTURE (D49)",
-      sliders: [
-        // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
-        // above ~40 mm the whole scene captures at the boot zoom. ⛔ A range chosen to make both
-        // ends visibly WRONG on the glass, because a slider whose every value looks plausible
-        // teaches a hand nothing.
-        tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
-        // ⭐⭐⭐ **THE APPROACH SWING (trial, branch `1.0.18-`)** — how far the camera leans out
-        // at HALF the trigger gap, and back to zero at contact.
-        // ⛔ **`0` TURNS THE WHOLE MECHANISM OFF**, which is what makes it A/B-able by finger
-        // in the same minute on the same scene — the comparison that settled `D28` and `IN13`.
-        // ⚠ The default 25° is a GUESS, and a guessed number has been wrong every single time
-        // in this project. Judge it here, not in the source.
-        tunable(
-          "approach swing (° of camera yaw)",
-          "approachSwingDeg",
-          0,
-          90,
-          1,
-        ),
-        // ⭐⭐ **THE SPEED DIVISOR, `gain × speed^exponent`** — the owner's fine-tuning pair.
-        // ⛔ Damping starts where the divisor passes 1, at `(1/gain)^(1/exponent)` mm/s: the
-        // default 0.0083 puts that knee at **120 mm/s**. ⚠ A small range with a fine step,
-        // because the useful values are all near the bottom of it.
-        tunable("swing speed gain", "approachSwingSpeedGain", 0, 0.05, 0.0005),
-        // ⛔ **`0` REMOVES THE SPEED DEPENDENCE ENTIRELY**, which is how to A/B the idea by
-        // finger; `1` makes the camera's angular rate independent of hand speed; above 1 the
-        // camera slows as the hand speeds up.
-        tunable(
-          "swing speed exponent",
-          "approachSwingSpeedExponent",
-          0,
-          3,
-          0.1,
-        ),
-        // ⭐⭐⭐ **A RULE SELECTOR, NOT A NUMBER** — `0` is the current build; `1` switches the
-        // yellow orbit target to the Pioneer–Follower barycentre the moment they capture.
-        tunable(
-          "orbit retargets on capture (0/1)",
-          "approachRetargetsOrbit",
-          0,
-          1,
-          1,
-        ),
-        // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
-        // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
-        // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
-        // its finger drives the Follower's roll AND depth together.
-        // ⚠ A 0/1 slider because the menu has no other kind of control — the fork selector took
-        // the same shape (`D26`) — and `validateGestureConfig` refuses anything between, so a
-        // half-set flag cannot masquerade as the default.
-        tunable("PIONEER translates (0=pinned)", "pioneerTranslates", 0, 1, 1),
-        // ⭐⭐⭐ **THE OWNER'S FLAG OF 2026-09-22 — `WorldAxisA` / `WorldAxisB`.** `1` (the
-        // default) fixes the object axes to the BOOT camera for the whole scene; `0` lets them
-        // follow the camera, which is the build before this. ⛔ It does NOT select the channel
-        // remap — `dy` drives depth and the second finger drives gravity either way.
-        tunable("WorldAxisB: axes fixed at boot (0/1)", "worldAxisB", 0, 1, 1),
-        // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
-        // ships at 0 and turning it on changes only what the HUD reports.
-        tunable(
-          "zone ENTER calls CameraOffsetZoneEnter (0/1)",
-          "cameraOffsetZoneEnterSetupB",
-          0,
-          1,
-          1,
-        ),
-        // ⭐⭐ 1 = the body follows the finger in its own horizontal plane; 0 = the dictated
-        // dx→x / dy→depth channels. ⛔ A RULE, not a number — the device report of 2026-09-23.
-        tunable("translate: 1=plane, 0=channels", "translatePairing", 0, 1, 1),
-        // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
-        // there is no fallback and a level camera sends the body a very long way.
-        tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
-        // ⭐⭐⭐ THE FEATURE'S OWN SWITCH, directly above its cone — the owner, 2026-09-25.
-        // ⚠ `0` also retires the exception that lets a press reach a FROZEN body's offered face.
-        tunable("fuchsia offer on/off", "pioneerCandidates", 0, 1, 1),
-        // ⭐⭐ How close to MATING a face must be before it lights fuchsia. ⛔ `0` is the honest
-        // OFF for the cone: only an exactly opposed face. The owner asked for 0–45 in steps of 5.
-        tunable("fuchsia cone (deg)", "pioneerCandidateConeDeg", 0, 45, 5),
-        // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
-        // the flag; anything above draws an x-ray twin at that opacity.
-        tunable(
-          "FollowerFace x-ray opacity (0=off)",
-          "followerFaceXrayAlpha",
-          0,
-          1,
-          0.05,
-        ),
-        // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
-        // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
-        // one pixel — so a width tunable would be a slider that does nothing, which is the
-        // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
-      ],
-    },
-    {
       // ⭐⭐ **THE FACE SUBMENU** — the owner, 2026-09-25: *"create a Face submenu and place the
       // slider as PioneerFaceCursor sensitivity inside this submenu"*. ⚠ Last, after CAPTURE: the
       // section order above is the owner's, and a new section does not reorder it.
-      title: "FACE",
+      // ⭐⭐ **RENAMED FACE ALIGNMENT** — the owner, 2026-09-26: *"rename the menu FACE to FACE
+      // ALIGNMENT and move the menus eviction shake and capture under FACE ALIGNMENT"*.
+      title: "FACE ALIGNMENT",
       sliders: [
         // ⭐⭐ The owner's toggle, directly above the sensitivity it makes meaningful. ⚠ `0` keeps
         // the ring drawn and hands every press on it back to the ordinary rules.
@@ -4246,6 +4189,80 @@ DRAWFAULT x${drawFaultCount} ${drawFault}`) +
           10,
           0.5,
         ),
+        // ⭐ Moved here from CAPTURE (the owner, 2026-09-26).
+        // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
+        // the flag; anything above draws an x-ray twin at that opacity.
+        tunable(
+          "FollowerFace x-ray opacity (0=off)",
+          "followerFaceXrayAlpha",
+          0,
+          1,
+          0.05,
+        ),
+      ],
+      // ⭐ Folders: the shake that breaks an alignment, and the capture that follows one.
+      subsections: [
+        {
+          // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
+          // number has been wrong every single time*, and all four of these are guesses.
+          // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
+          // between a shake and a **corrective nudge** during fine positioning, because eviction
+          // destroys alignments the user set deliberately. ⚠ `evictShakeLegMm` has a validator
+          // rule under it (3× the measured noise), so the slider cannot reach a value where a
+          // reversal could be jitter.
+          title: "⭐ EVICTION SHAKE (A4)",
+          sliders: [
+            tunable("reversals to evict", "evictShakeReversals", 2, 5, 1),
+            tunable("window (ms)", "evictShakeWindowMs", 200, 1200, 50),
+            tunable("leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
+            tunable(
+              "straightness (0=strict, 1=any)",
+              "evictShakeStraightness",
+              0.1,
+              0.9,
+              0.05,
+            ),
+          ],
+        },
+        {
+          // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
+          // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
+          // is set aside where a hand says it wants to tune something — the same exception §8 of the
+          // spec grants `BreakThreshold`.
+          // ⚠⚠ IT IS MILLIMETRES ON THE GLASS, NOT IN THE WORLD. The world gap it authorises grows
+          // with the camera distance, so the same slider value means the same APPARENT clearance at
+          // every zoom — which is what the owner asked for and what the HUD's `gap=…/…mm` shows.
+          title: "⭐ CAPTURE (D49)",
+          sliders: [
+            // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
+            // above ~40 mm the whole scene captures at the boot zoom. ⛔ A range chosen to make both
+            // ends visibly WRONG on the glass, because a slider whose every value looks plausible
+            // teaches a hand nothing.
+            tunable("capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
+            // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
+            // ships at 0 and turning it on changes only what the HUD reports.
+            tunable(
+              "zone ENTER calls CameraOffsetZoneEnter (0/1)",
+              "cameraOffsetZoneEnterSetupB",
+              0,
+              1,
+              1,
+            ),
+            // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
+            // there is no fallback and a level camera sends the body a very long way.
+            tunable("axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
+            // ⭐⭐⭐ THE FEATURE'S OWN SWITCH, directly above its cone — the owner, 2026-09-25.
+            // ⚠ `0` also retires the exception that lets a press reach a FROZEN body's offered face.
+            tunable("fuchsia offer on/off", "pioneerCandidates", 0, 1, 1),
+            // ⭐⭐ How close to MATING a face must be before it lights fuchsia. ⛔ `0` is the honest
+            // OFF for the cone: only an exactly opposed face. The owner asked for 0–45 in steps of 5.
+            tunable("fuchsia cone (deg)", "pioneerCandidateConeDeg", 0, 45, 5),
+            // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
+            // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
+            // one pixel — so a width tunable would be a slider that does nothing, which is the
+            // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
+          ],
+        },
       ],
     },
   ]);

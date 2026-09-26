@@ -45,6 +45,12 @@ export interface MenuSlider {
 export interface MenuSection {
   readonly title: string;
   readonly sliders: readonly MenuSlider[];
+  /**
+   * ⭐ Folders INSIDE this section, drawn indented under its sliders and folded on their own (the
+   * owner, 2026-09-26: *"create a new folder … under camera orbit menu"*). ⚠ Each remembers its
+   * open state under its PARENT's title too, so two folders of one name cannot share a state.
+   */
+  readonly subsections?: readonly MenuSection[];
 }
 
 export interface Menu {
@@ -145,10 +151,15 @@ export function createMenu(
     if (message !== null) error.textContent = "⛔ " + message;
   };
 
-  for (const section of sections) {
+  const addSection = (
+    section: MenuSection,
+    container: HTMLElement,
+    key: string,
+    depth: number,
+  ): void => {
     // ⭐ Sections start EXPANDED the first time — a menu whose contents are hidden by
     // default reads as an empty menu — and remember whatever the owner chooses after.
-    let expanded = remembered(sectionKey(section.title), true);
+    let expanded = remembered(key, true);
 
     const title = document.createElement("button");
     title.style.cssText = [
@@ -156,9 +167,9 @@ export function createMenu(
       "justify-content:space-between",
       "align-items:center",
       "width:100%",
-      "padding:10px",
+      `padding:10px 10px 10px ${10 + depth * 14}px`,
       "font:inherit",
-      "color:#7fd0a0",
+      depth === 0 ? "color:#7fd0a0" : "color:#a9c7e8",
       "background:transparent",
       "border:0",
       "border-top:1px solid #2b3648",
@@ -169,10 +180,10 @@ export function createMenu(
     const label = document.createElement("span");
     label.textContent = section.title;
     title.append(label, caret);
-    panel.appendChild(title);
+    container.appendChild(title);
 
     const body = document.createElement("div");
-    panel.appendChild(body);
+    container.appendChild(body);
 
     const applyExpanded = () => {
       body.hidden = !expanded;
@@ -181,7 +192,7 @@ export function createMenu(
     };
     title.addEventListener("click", () => {
       expanded = !expanded;
-      remember(sectionKey(section.title), expanded);
+      remember(key, expanded);
       applyExpanded();
     });
     applyExpanded();
@@ -239,7 +250,13 @@ export function createMenu(
       refreshers.push(render);
       render();
     }
-  }
+    // ⭐ Folders come after the section's own sliders, inside its body — so folding the parent
+    // folds them too.
+    for (const sub of section.subsections ?? [])
+      addSection(sub, body, `${key}/${sub.title}`, depth + 1);
+  };
+  for (const section of sections)
+    addSection(section, panel, sectionKey(section.title), 0);
 
   const applyOpen = () => {
     panel.hidden = !open;
