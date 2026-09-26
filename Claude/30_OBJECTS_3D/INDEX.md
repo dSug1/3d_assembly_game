@@ -78,4 +78,5 @@ body is**, which the base plate proved →
 ## ⚠ Carried forward unclosed
 
 * **The assembly tree has never held more than two objects** (`3D5`).
-* **The capture radius is centre-to-centre** — wrong for a `6L×9L` plate, and unmeasured.
+* ⭐ **Materials and import (`3D4`)** — import from Blender as `.glb`, never author in the build →
+  [`spec/MATERIALS_AND_IMPORT.md`](spec/MATERIALS_AND_IMPORT.md).
