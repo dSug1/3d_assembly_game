@@ -175,12 +175,13 @@ SCALE and TRANSLATION and drops its ROTATION, so the ring sat off its face — o
 on any turned Pioneer (and the white fuchsia-face ring with it). Both are now placed in WORLD
 space every frame from `computeWorldMatrix(true)`, as the gizmo rings always were. ⭐ Measured
 in a `NullEngine`: parented `[3,0,0]` against the true `[2,0,-1]`.
-⭐ **THE TUNING MENU, AS THE OWNER LAID IT OUT (2026-09-26)**: CAMERA ORBIT › *camera approach swing
-at capture* (the swing's four controls — ⛔ **the swing ships at 0, OFF**; the 30° chosen on the
-glass 2026-09-19 is one slider move away); OBJECT TRANSLATION now holds *PIONEER translates*,
-*WorldAxisB* and *translate: plane/channels*; **FACE ALIGNMENT** (was FACE) holds the cursor drag,
-its sensitivity and the FollowerFace x-ray, with EVICTION SHAKE and CAPTURE as folders inside it.
-`MenuSection.subsections` is what nests them.
+⭐ **THE TUNING MENU, AS THE OWNER LAID IT OUT (2026-09-26)** — `MenuSection.subsections` nests it:
+**CAMERA** › *CAMERA ORBIT* (the ring and gain sliders) and *CAMERA APPROACH SWING AT CAPTURE* (the
+swing's four — ⛔ **the swing ships at 0, OFF**; the owner's 30° of 2026-09-19 is a slider move
+away); **OBJECT TRANSLATION** (+ *PIONEER translates*, *WorldAxisB*, *translate: plane/channels*);
+**OBJECT ROTATION**; **FACE ALIGNMENT** › *PIONEERFACECURSOR* (drag on/off, sensitivity) and
+*FOLLOWERFACE* (x-ray opacity, with *EVICTION SHAKE* and *CAPTURE* inside it).
+⛔ **`captureOffsetMm` ships at 4 mm** (the owner, 2026-09-26; was 15).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
@@ -283,10 +284,10 @@ degrees roll and 30 pitch. Same for the pyramid, in opposite senses"*). ⛔ Roll
 **x**, composed roll-first — `core/scene_dims.ts`'s `bootTilt`, 3 vectors, 3 mutants.
 ⚠⚠ **AND IT HAS A VISIBLE COST, MEASURED RATHER THAN DISCOVERED**: tilting the pyramid swings a
 corner down, so its surface gap to the base plate closes to **53 mm** against a **60 mm** capture
-band — **the pyramid and the plate now show a white capture pair at boot**, where nothing did
-before. ⭐ The vector that used to assert *"at boot nothing captures at rest"* now pins BOTH
-directions — which pair captures and that the others do not — rather than quietly relaxing, because
-that property is the 2026-09-17 audit's own and a vector that stopped asking would undo it.
+band — so the pyramid and the plate showed a white capture pair at boot. ✅ **UNDONE 2026-09-26 by
+the owner's *"set default capture offset to 4 mm"***: the band is ~16 mm at the boot camera, and
+*"at boot nothing captures at rest"* — the 2026-09-17 audit's own property — holds again, pinned in
+both directions by the same vector, now in its third reading.
 ⚠ The parts' mutual gap moved **280 → 216 mm** with the tilt.
 ⛔⛔ **DO NOT READ IT AS THE 2026-09-17 DEFECT RETURNING.** That defect was a DISAGREEMENT:
 `initialBehaviour()` returned `TRANSLATE` while this file, the spec and the call site all said
