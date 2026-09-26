@@ -375,6 +375,8 @@ export function pioneerSwaySuppressed(
  * @param inMoverAssembly `D100` — is this body SEATED with the mover (a child of it, its parent,
  *   or a sibling on one Pioneer)? A seated assembly is one body: it moves with the mover through
  *   the tree, and a sway offset on one part of it would wobble it against the rest.
+ * @param isAnchored `anchoredToFrozen`'s answer: a body seated — directly or down a chain — on a
+ *   FROZEN body never sways (the owner, 2026-09-26), whatever moved.
  */
 export function receivesSway(
   body: { readonly id: string; readonly frozen?: boolean } | null,
@@ -383,6 +385,7 @@ export function receivesSway(
   pioneerOfMover: string | null = null,
   moverNearPioneer = true,
   inMoverAssembly: (id: string) => boolean = () => false,
+  isAnchored: (id: string) => boolean = () => false,
 ): boolean {
   if (body === null) return false;
   // ⚠ The MOVER is excluded because it is already going that way — the sway is what the
@@ -418,5 +421,8 @@ export function receivesSway(
   if (pioneerOfMover !== null && body.id === pioneerOfMover && moverNearPioneer)
     return false;
   if (inMoverAssembly(body.id)) return false;
+  // ⭐⭐ Fixed to the plate, it is part of the plate: *"itself and its snapped children objects
+  // cannot sway when a third object is moved"* (the owner, 2026-09-26).
+  if (isAnchored(body.id)) return false;
   return body.frozen !== true;
 }

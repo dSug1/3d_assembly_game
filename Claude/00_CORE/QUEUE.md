@@ -16,8 +16,8 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1270 golden vectors,
-all passing** (37 → … → **1270**; ⭐ each DROP has a `D` row). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1283 golden vectors,
+all passing** (37 → … → **1283**; ⭐ each DROP has a `D` row). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is a cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
@@ -34,6 +34,7 @@ falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **d
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
 ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, THE TWO PARTS TILTED 30°** (`D93`, 2026-09-25) — `bootAlignment` deleted (state only), `D63`'s jig gone with it, roll about world `z` then pitch about world `x`. ⚠ Parts' mutual gap 280 → 216 mm → `D93` in `DECISIONS.md` and its history.
 ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch, **Shift + left drag = the second** (gravity + roll; an aligned body's left drag translates in any mode); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align. ⛔ The right button never moves anything → defect 70.
+⭐⭐ **`scene.ts` IS SPLIT** (`D104`): thirteen render modules → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged.
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
@@ -356,3 +357,6 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
+| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105` → `20_GAME_RULES/spec/GAME_STRUCTURE.md` | — |
+| GM7 | Populate worlds and levels; a theme | GAME | content | `World_0`›`Level_0`›`Scene_0` | GM1 |
+| GM8 | Save/load a scene as local JSON from Free Flow | GAME | feature | queued; the seam exists | GM1 |

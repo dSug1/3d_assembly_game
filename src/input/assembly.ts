@@ -52,3 +52,30 @@ export function assemblyRoot(
 export function frozenHoldAdmitted(hasSeatedFollowers: boolean): boolean {
   return hasSeatedFollowers;
 }
+
+/**
+ * ⭐⭐⭐ **IS THIS BODY ANCHORED TO A FROZEN ONE?** — the owner, 2026-09-26: *"if an object is
+ * snapped to a frozen object, itself and its snapped children objects cannot sway when a third
+ * object is moved."*
+ *
+ * ⭐ Walk the SEATED links upward; the body is anchored when the walk reaches a frozen body. So a
+ * part seated on the plate is anchored, and so is everything seated on that part, down the chain.
+ * ⛔ An aligned-but-unseated body is not: alignment is a direction, not a fixing. ⚠ A frozen body
+ * itself answers `false` here — it already never sways (`receivesSway`'s own rule).
+ */
+export function anchoredToFrozen(
+  id: string,
+  pioneerOf: (follower: string) => string | null,
+  isSeated: (follower: string) => boolean,
+  isFrozen: (body: string) => boolean,
+): boolean {
+  let x = id;
+  for (let i = 0; i < 16; i++) {
+    if (!isSeated(x)) return false;
+    const p = pioneerOf(x);
+    if (p === null) return false;
+    if (isFrozen(p)) return true;
+    x = p;
+  }
+  return false;
+}
