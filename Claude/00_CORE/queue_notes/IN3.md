@@ -1,5 +1,10 @@
 # `IN3` — rules 1–3 (one touchpoint)
 
+> ⛔ **CURRENT STATE (2026-09-27)** — the row is BUILT; this dossier is its record. Deleted since:
+> `FOLLOW` (`D106`), eviction, both shakes, `shake.ts` and the re-press undo (`D107`), the flick and
+> the rotation reset (`D110`), the fuchsia offer and the pinned Pioneer (`D109`). Unalign = tap empty
+> space while holding; undo = double tap on a body (`D111`) → [`../../10_INPUT_TOUCH/spec/INPUTS_TABLE.md`](../../10_INPUT_TOUCH/spec/INPUTS_TABLE.md).
+
 **Status: NEXT, and UNBLOCKED** — `3D1` landed 2026-09-15, so the object model, the face
 centres and the constraint stack all exist. ⛔ **`IN3` also CLOSES `3D1`**, which has no
 visible behaviour of its own and therefore cannot be closed by a device look alone.

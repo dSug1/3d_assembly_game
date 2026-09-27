@@ -1,37 +1,13 @@
 /**
- * ⭐⭐⭐ **`A16` — WHEN THE TWO WHITE HIGHLIGHTS APPEAR, AND WHEN THEY DO NOT.**
+ * ⭐⭐ **TWO DECISIONS LEFT FROM `A16`'s HIGHLIGHT MODULE**: `captureOffsetM` (the capture offset
+ * in world metres — the snap's reach) and `translatesOnDrag` (does this drag translate or rotate).
  *
- * Design of record: [`Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`] §12 (`A16`).
+ * ⛔ The white capture highlight itself — `highlightedPair`, its outlines and its zone edge — is
+ * DELETED (`D120`), and `alignmentMatchesTarget` with it. The file keeps its name because both
+ * survivors were born here. Design history: `Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md` §12.
  *
- * > *"two highlights possible only when the first object is aligned && translation by one
- * > touchpoint or two touchpoints and distance below threshold"* — the owner, 2026-09-17
- *
- * > *"modify the rule: the white contour does not necessitate the object to be aligned to
- * > toggle on and off. I want to remove the 'object is aligned' from the approach logic (we
- * > will see how to handle the alignment for the mate logic later on)"* — the owner, same day
- *
- * ⛔⛔ **SO THE RULE IS NOW TWO CONDITIONS, NOT THREE**: a drag that TRANSLATES, and a body
- * within the radius. ⚠ The alignment requirement was added and removed within the day, and the
- * sequence is worth keeping because neither end of it was arbitrary:
- *
- * 1. The first build hung the contours on **proximity alone**, in any movement mode.
- * 2. A hand rejected that: *"highlight both objects even if they are not aligned: this is
- *    NOK"*, then *"that's also the case with single object translation."*
- * 3. I read that as *require the alignment* — and it did fix the symptom.
- * 4. ⭐⭐ The owner then removed the alignment and KEPT the translation condition, which
- *    suggests the real objection in (2) was the contours appearing during a **rotation**, not
- *    their appearing unaligned. ⚠ Condition 2 did not exist when the complaint was made, so
- *    both readings fitted the evidence and I picked the stronger one without saying so.
- *
- * ⭐⭐ **WHAT WHITE MEANS NOW, IN ONE SENTENCE**: *these two bodies are close enough to
- * approach, and the drag in progress could move them.* ⛔ The alignment is no longer part of it
- * — it returns for the MATE, which is a different and irreversible act.
- * ⚠ `alignmentMatchesTarget` below is therefore **kept and NOT WIRED**, declared rather than
- * deleted; see its header.
- *
- * ⛔ ENGINE-FREE. Every function DECIDES; the caller draws.
+ * ⛔ ENGINE-FREE. Every function DECIDES; the caller acts.
  */
-import type { ObjectId } from "../core/object_model";
 import type { Behaviour } from "./mode_toggle";
 import { mmToPx } from "../core/units";
 import { trackingMetresPerPx } from "./translate";
@@ -61,6 +37,8 @@ import { trackingMetresPerPx } from "./translate";
  * *in range* measured from one and *out of range* measured from the other — a rule with two
  * answers. ⭐ Stated because it is a modelling choice, not an approximation.
  *
+ * ⭐ Its readers today are the snap (`D100`, a Follower captures within this reach of its cursor)
+ * and the sway's assembly test.
  * ⛔ Returns 0 for a degenerate viewport or camera, which reads as *nothing captures* — the
  * safe direction, and the same convention `trackingMetresPerPx` already uses.
  */
@@ -75,87 +53,10 @@ export function captureOffsetM(
 }
 
 /**
- * ⛔⛔ **`captureShellDims`, `bodyContourDims` AND `MIN_CONTOUR_SCALE` ARE DELETED** (`D50`,
- * 2026-09-18). They sized a BOX outline: the body's three extents, grown additively for the
- * shell and by a hair for the body contour.
- * ⭐ The outlines are the mesh's own edges now, offset by `mesh_topology.offsetPositions` — a
- * true offset of every face plane, which a box's extents cannot express for any body that is
- * not a box. ⚠ **The HALF survives**: `scene.ts` offsets each body by `offsetM / 2`, so two
- * shells still meet exactly at the capture threshold, and a vector in `mesh_topology.test.ts`
- * asserts that composition against the rule.
- * ⛔ *Deleted, not disabled* — a vector for a rule that no longer exists passes while
- * describing the wrong product.
- */
-
-/** ⚠ Both are `D46` §1 placeholders, flagged for fine-tuning by the owner. */
-export interface HighlightNumbers {
-  /**
-   * The capture offset in **METRES**, already converted from the glass by `captureOffsetM`.
-   *
-   * ⛔⛔ **SURFACE TO SURFACE, NOT CENTRE TO CENTRE** (`D49`). ⚠ It replaced `snapRadiusM`, whose
-   * `4L` value carries no information here: that number answered *how far apart may two CENTRES
-   * be*, and this one answers *how far apart may two SURFACES be*. ⭐ A value borrowed from the
-   * old question would be a constant inheriting the wrong question — `METHOD` names that trap.
-   */
-  readonly captureOffsetM: number;
-  /**
-   * How near parallel the alignment axis must be to a target face normal, in radians.
-   * ⚠ NO LONGER READ BY `highlightedPair` — kept because `alignmentMatchesTarget` takes it and
-   * the mate will. ⛔ See that function's header for why it is declared, not deleted.
-   */
-  readonly alignMatchRad: number;
-}
-
-/** The pair to outline. ⛔ `null` everywhere else — there is no partial state. */
-export interface HighlightPair {
-  /** The *"first object"* — the one carrying the alignment. */
-  readonly subject: ObjectId;
-  /** The `TargetObject` it is aligned to and near. */
-  readonly target: ObjectId;
-}
-
-/**
- * ⭐⭐⭐ **THE VERDICT, WITH ITS REASONS** — and the reasons are not a luxury.
+ * ⭐⭐⭐ **DOES THIS DRAG TRANSLATE?** — born as `A16`'s condition 2 (*"translation by one
+ * touchpoint or two touchpoints"*), the highlight it once gated being deleted (`D120`).
  *
- * ⛔⛔ **THREE CONDITIONS AND THEY ARE AN `AND`, SO A MISSING HIGHLIGHT LOOKS IDENTICAL
- * WHICHEVER ONE IS FALSE.** ⚠ *"I forgot to align"*, *"I am in rotation mode"* and *"they are
- * too far apart"* are one symptom with three causes, and this project has spent whole device
- * passes on exactly that ambiguity.
- *
- * ⭐⭐ THEY ARE RETURNED RATHER THAN RECOMPUTED BY THE READOUT, which is the part that
- * matters: a HUD that derived its own answer would be a **second implementation**, free to
- * disagree with the product while both show green. ⛔ One computation, one truth, printed.
- */
-export interface HighlightVerdict {
-  /** The pair to outline, or `null`. ⭐ This is what is DRAWN. */
-  readonly pair: HighlightPair | null;
-  /** The TRANSLATION condition. */
-  readonly translating: boolean;
-  /** The RANGE condition — another body is within the offset of at least one held body. */
-  readonly inRange: boolean;
-  /**
-   * ⭐⭐ The **measured surface gap** to the nearest candidate, in metres, or `null` when
-   * nothing was measurable (nothing held, or no body has a shape).
-   *
-   * ⛔⛔ **IT IS THE NUMBER THE RULE ACTUALLY COMPARED, CARRIED OUT FOR THE READOUT** — not a
-   * recomputation. ⚠ `A16`'s two flags say *which condition failed*; they cannot say *by how
-   * much*, and with a camera-scaled threshold *"too far"* now depends on the zoom as well as on
-   * the bodies. ⭐ Printing gap against threshold is what turns *"no white contour"* from a
-   * symptom into a reading. ⚠ Reported even when the pair is refused, which is the case a hand
-   * needs it in.
-   */
-  readonly gapM: number | null;
-  /** The threshold `gapM` was compared against, in metres — so the HUD can print both. */
-  readonly offsetM: number;
-}
-
-/**
- * ⭐⭐⭐ **`A16`'s CONDITION 2 — *"translation by one touchpoint or two touchpoints"*.**
- *
- * ⛔⛔ **THIS IS THE ONE PLACE THAT RULE LIVES, AND `scene.ts` NOW READS IT TOO.** The render
- * file already decided the same thing for its own purposes
- * (`mode = objects().length === 1 ? behaviour : "TRANSLATE"`), and a second copy here would be
- * two implementations of one rule — free to disagree, with nothing to catch it. ⭐ `METHOD`'s
+ * ⛔⛔ **THIS IS THE ONE PLACE THAT RULE LIVES**, and `pointer_wiring.ts` reads it. ⭐ `METHOD`'s
  * shape: *one constant lives in exactly one place*, and so does one rule.
  *
  * ⭐ Why two held objects translate in EITHER mode: they are two holders, and the mode is
@@ -185,7 +86,7 @@ export interface HighlightVerdict {
  * touch on the twist would put **two fingers on one DOF**, which is precisely the conflict the
  * owner reported: *"… and conflicts with the dx or dy of the first touch."*
  *
- * ⚠ **KEYED ON PRESENCE, NEVER ON MOTION** — `A15`'s rule, and this obeys it: the second
+ * ⚠ **KEYED ON PRESENCE, NEVER ON MOTION**, and this obeys it: the second
  * touchpoint being DOWN is a discrete fact, so the first touch's job changes when a finger lands
  * or lifts and never because something moved.
  */

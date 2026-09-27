@@ -5,9 +5,10 @@
  * on a SLOPE, a boot camera that differs from the live one — because every interesting claim
  * here is an equality that a degenerate fixture would satisfy by accident:
  *
- *   * `WorldAxisB` fixed vs live is invisible if the camera never moves;
- *   * the orthogonalisation is invisible if the leading face is already vertical;
- *   * the ENTER/EXIT edge is invisible if the zone state never changes twice.
+ *   * `WorldAxisB`'s boot frame vs the live one is invisible if the camera never moves.
+ *
+ * ⛔ (The leading-face orthogonalisation and the zone ENTER/EXIT edge this list also named are
+ * deleted, `D82`/`D120`, with their vectors.)
  *
  * ⭐ That is the 2026-09-17 audit's one shape — *a fixture chosen because it is easy to reason
  * about is usually chosen from the set where the quantity under test is zero* — and it is why
@@ -44,8 +45,8 @@ const frameAt = (azimuthDeg: number, elevationDeg: number): GravityFrame => {
 // unasserted now — it is false by instruction.
 
 /**
- * GOLDEN VECTORS — **A FREE BODY'S ROTATION BASIS FOLLOWS `worldAxisB` TOO** (the owner,
- * 2026-09-23: *"do the change"*).
+ * GOLDEN VECTORS — **A FREE BODY'S ROTATION BASIS IS THE BOOT FRAME TOO** (`WorldAxisB`; the
+ * owner, 2026-09-23: *"do the change"*; the live-frame alternative deleted, `D109`).
  *
  * ⛔ The two fixtures are a quarter turn apart on purpose: a boot camera equal to the live one
  * satisfies every claim here by accident, which is the 2026-09-17 audit's one repeating shape.
@@ -57,14 +58,14 @@ describe("⭐⭐ rotationFrame — a free body turns about the BOOT camera's fra
   it("⭐⭐⭐ THE PREMISE, MEASURED: freezing moves PITCH and ROLL and leaves YAW alone", () => {
     // ⛔⛔ This is the claim the whole answer to the owner rests on, so it is MEASURED rather than
     // asserted in prose. A gravity frame's `up` is the world vertical BY DEFINITION, so the yaw
-    // axis cannot depend on the camera and this flag cannot touch it.
+    // axis cannot depend on the camera and the frame choice cannot touch it.
     expect(BOOT_FRAME.up).toEqual(LIVE_FRAME.up);
     // ⚠ And the other two genuinely differ, or every vector below would pass against any rule.
     expect(dot(BOOT_FRAME.right, LIVE_FRAME.right)).toBeCloseTo(0, 12);
     expect(dot(BOOT_FRAME.depth, LIVE_FRAME.depth)).toBeCloseTo(0, 12);
   });
 
-  it("⭐⭐⭐ `worldAxisB` ON turns the body about the BOOT camera's frame", () => {
+  it("⭐⭐⭐ `WorldAxisB` turns the body about the BOOT camera's frame", () => {
     expect(
       rotationFrame({
         bootFrame: BOOT_FRAME,

@@ -214,33 +214,6 @@ export class OrbitController {
     this.v = Math.min(1, Math.max(0, v));
   }
 
-  /**
-   * ⭐⭐⭐ **TAKE A TEMPORARY OFFSET INTO THE ORBIT ITSELF, WITHOUT MOVING THE CAMERA.**
-   *
-   * ⛔⛔ DEVICE-REPORTED, 2026-09-19: *"if the follower object's touch is released during a
-   * translation within the offset radius, the camera shall not jump back to its transform when
-   * the pioneer-follower entered the offset radius (this creates an unwanted jump): instead the
-   * camera shall keep its current transform."*
-   *
-   * ⭐⭐ **THE APPROACH SWING IS AN OFFSET THAT SOMETHING ELSE OWNS**, and when that something
-   * goes away the offset goes to zero — which is a JUMP, because the camera was leaning on it.
-   * ⚠ The capture verdict is computed from the HELD bodies, so a release empties it, the latch
-   * drops, and the lean vanishes in one frame. ⛔ Absorbing is the answer that needs no special
-   * case anywhere else: the offset becomes part of the orbit, so the pose is **identical** and
-   * there is nothing left to vanish.
-   *
-   * ⭐ It is also correct at the other two exits. At contact and on a clean separation the offset
-   * is already **zero**, so absorbing is a no-op — the caller may do it unconditionally rather
-   * than deciding which kind of ending this was, and a decision not taken cannot be taken wrongly.
-   *
-   * ⚠ The elevation is clamped here exactly as `orbitOffset` clamps `v + vOffset`, so a swing
-   * that was saturated against a ring absorbs to that ring and the pose still does not move.
-   */
-  absorb(yawOffsetRad: number, vOffset: number): void {
-    if (Number.isFinite(yawOffsetRad)) this.yawRad += yawOffsetRad;
-    if (Number.isFinite(vOffset)) this.v = Math.min(1, Math.max(0, this.v + vOffset));
-  }
-
   get yaw(): number {
     return this.yawRad;
   }
@@ -282,40 +255,11 @@ export class OrbitController {
     this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation));
   }
 
-  /**
-   * @param yawOffsetRad ⭐⭐⭐ **AN ADDITIVE LEAN THAT THE CONTROLLER DOES NOT REMEMBER** — the
-   *   approach swing (branch `1.0.18-`). ⛔ It is a parameter and **not** a field on purpose:
-   *   the camera's own orbit is never written, so *"back to its original position"* is what
-   *   passing `0` means rather than something a restore has to achieve. ⚠ A restore can be
-   *   missed — a dropped frame, an early release, a body that never reaches contact — and
-   *   leaves the camera somewhere nobody chose; an offset cannot.
-   *   ⭐ It also rides on top of a hand orbiting meanwhile, instead of fighting it.
-   */
-  /**
-   * @param vOffset ⭐⭐ **THE PITCH HALF OF THE APPROACH SWING**, in the ring surface's own `v`
-   *   units. ⛔ Added here and clamped by `orbitOffset`, so the camera cannot leave the ring
-   *   surface however large the swing is — which is what keeps it away from the pole where
-   *   `A7`'s gesture frame does not exist. ⚠ Like `yawOffsetRad` it is a PARAMETER: the
-   *   controller's own elevation is never written, so passing `0` is what *"back where it was"*
-   *   means.
-   */
-  pose(zoom: number, yawOffsetRad = 0, vOffset = 0): OrbitPose {
-    return orbitOffset(this.cfg, this.yawRad + yawOffsetRad, this.v + vOffset, zoom);
+  // ⛔ The approach swing's yaw / elevation OFFSETS and `absorb` are deleted with the swing (`D120`).
+  pose(zoom: number): OrbitPose {
+    return orbitOffset(this.cfg, this.yawRad, this.v, zoom);
   }
 
-  /**
-   * ⭐ The elevation ANGLES of the bottom and top rings, in radians — what a pitch in degrees
-   * has to be measured against before it can be turned into a `v`.
-   * ⚠ Exposed here rather than recomputed by the caller: `rigsOf` is this file's own mapping
-   * from config to rings, and a second reading of it elsewhere could drift.
-   */
-  ringElevationRad(): { bottom: number; top: number } {
-    const { bottom, top } = rigsOf(this.cfg);
-    return {
-      bottom: Math.atan2(bottom.heightM, bottom.radiusM),
-      top: Math.atan2(top.heightM, top.radiusM),
-    };
-  }
 }
 
 

@@ -15,9 +15,8 @@
  * these vectors is that single sign.
  */
 import { describe, expect, it } from "vitest";
-import { faceAlignConstraint, pioneerTurned, retargetAlignment, alignModeFor, pressMeaning, type PressContext,
+import { faceAlignConstraint, pioneerTurned, retargetAlignment, pressMeaning, type PressContext,
   outsideTapRelease,
-  alignsOnRelease,
 } from "@input/alignment";
 import {
   singleAlignment,
@@ -222,8 +221,8 @@ describe("⛔⛔ THE CAP OF ONE — a second alignment REPLACES, and never freez
   });
 
   it("⛔⛔ a MATE on the stack REFUSES the alignment rather than overriding it", () => {
-    // ⭐ Unreachable in fork C today — §4's `6quater` is the only rule that pushes a mate and
-    // it is flick-based — so this is a guard against a FUTURE session wiring one and finding
+    // ⭐ Unreachable today — nothing pushes a mate (§4's `6quater`, flick-based, is deleted with
+    // the flick, `D110`) — so this is a guard against a FUTURE session wiring one and finding
     // that an orientation gesture silently broke an assembly relationship. `D13`'s spirit.
     const mate: Constraint = {
       kind: "MATE",
@@ -261,7 +260,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
     // SEPARATELY, because face ids are per body and `objectA/f4` ≠ `objectB/f4`.
     pioneerFaceOfHeld: null,
     heldPressFace: null,
-    pressWasDoubleTap: false,
     ...over,
   });
 
@@ -276,19 +274,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
     // vector cannot fail on its own — the ones below carry the discrimination.
     expect(pressMeaning(press())).toEqual({
       action: "ALIGN",
-      mode: "SNAPSHOT",
-    });
-  });
-
-  it("⭐⭐⭐ THE MODE COMES FROM *THIS* PRESS NOW, not from the held grip", () => {
-    // ⛔⛔ RED AGAINST `D67`: there the flag was the HELD body's, because the held body was the
-    // Pioneer. ⚠ Inverted, the Pioneer is the body under this finger, so its own double tap is
-    // what asks for `FOLLOW`.
-    // ⛔⛔ `D106` (2026-09-27): a double press is a snapshot like any other — `FOLLOW` is deleted.
-    // ⛔ RED against the old reading, where it asked for `FOLLOW`.
-    expect(pressMeaning(press({ pressWasDoubleTap: true }))).toEqual({
-      action: "ALIGN",
-      mode: "SNAPSHOT",
     });
   });
 
@@ -303,7 +288,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
     };
     expect(pressMeaning(press(same))).toEqual({
       action: "NOTHING",
-      mode: null,
     });
     // ⭐ A different PIONEER face re-points it.
     expect(pressMeaning(press({ ...same, pressedFace: "-z" })).action).toBe(
@@ -348,7 +332,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
     // capped at one alignment and the ring needs `A→B` to survive, which it does not.
     expect(pressMeaning(press())).toEqual({
       action: "ALIGN",
-      mode: "SNAPSHOT",
     });
     // ⭐ And the held body ALREADY following the pressed one, on a DIFFERENT PioneerFace, is a
     // re-point rather than a refusal — the same verdict, from the other side of the pair.
@@ -516,23 +499,13 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     expect(pioneerTurned(before, now).kind).toBe("RELEASE");
   });
 
-  it("⛔⛔ THE MODE COMES FROM THE GESTURE NOW — there is no flag to read", () => {
-    // ⭐ `pioneerTurnRuleOf` and `?pioneerTurnRule` lived for a few hours on 2026-09-17. The
-    // owner replaced the SETTING with the GESTURE, which is better than a flag in the way that
-    // matters: two alignments can differ, and a hand can see which is which from the colours
-    // rather than remembering what a slider was left on.
-    // ⛔⛔ `D106` (2026-09-27): `FOLLOW` is deleted — every alignment is a snapshot, whatever the
-    // press. ⛔ RED against the double press still making a `FOLLOW`.
-    expect(alignModeFor()).toBe("SNAPSHOT");
-  });
-
   it("⭐ retargeting rewrites the DIRECTION and nothing else about the constraint", () => {
     // ⚠ §1.4's doctrine survives: the constraint still holds a WORLD direction, so a camera
-    // orbit still cannot redefine it. ⛔ What C2 changes is only where that direction is
-    // re-read from, every frame — the face it was taken from.
+    // orbit still cannot redefine it. ⛔ What a retarget changes (C2's, deleted `D106`; the seat's
+    // now) is only where that direction is re-read from, every frame — the face it was taken from.
     // ⛔⛔ BOTH take the PIONEER'S NORMAL and negate it themselves (2026-09-23), so the
-    // anti-parallel sign lives in one place and a `FOLLOW` cascade cannot re-align its
-    // followers the other way one frame after a tap.
+    // anti-parallel sign lives in one place and a retarget cannot re-align its followers the
+    // other way one frame after a tap.
     const c = faceAlignConstraint([0, 0, 1], [0, 1, 0]);
     expect(c.targetWorld).toEqual([-0, -1, -0]);
     const r = retargetAlignment(c, [1, 0, 0]);
@@ -566,17 +539,3 @@ describe("⭐⭐⭐ `D95`/`D107` — a tap on empty space while holding releases
   });
 });
 
-describe("⭐⭐⭐ `D119` — the second touch aligns only on a RELEASED TAP", () => {
-  // > *"I want the follower object to align only if I do first touch hold on follower object + second
-  // > touch tap on pioneer object: if I do a press of second touch, the object shall not align"* —
-  // > the owner, 2026-09-27.
-  it("⭐ a tap (and the second tap of a pair) aligns", () => {
-    expect(alignsOnRelease("TAP")).toBe(true);
-    expect(alignsOnRelease("DOUBLE_TAP")).toBe(true);
-  });
-
-  it("⛔ a HOLD or a drag does not — RED against `D55`, which aligned on the press itself", () => {
-    expect(alignsOnRelease("HOLD")).toBe(false);
-    expect(alignsOnRelease("CONTINUOUS_KEPT")).toBe(false);
-  });
-});

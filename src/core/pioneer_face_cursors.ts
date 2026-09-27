@@ -21,8 +21,8 @@
  *
  * `reconcile` takes the couples that exist NOW (derived from the model every frame) and returns
  * what to create and what to destroy. ⛔ No release path has to remember to call anything — the
- * 2026-09-17 lesson (*retire by membership, never by what a path happened to report*): a shake, a
- * re-tap, a turned Pioneer, a prune or a swap all retire the cursor the same way, by its couple no
+ * 2026-09-17 lesson (*retire by membership, never by what a path happened to report*): an unalign
+ * tap, an undo, a turned Pioneer, a prune or a swap all retire the cursor the same way, by its couple no
  * longer being in the set.
  *
  * ⭐ A surviving cursor is the SAME object across frames, so its position — the Pioneer face's

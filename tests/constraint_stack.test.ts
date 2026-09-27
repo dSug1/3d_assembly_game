@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   type Constraint,
   bestTwist,
-  hasAlignment,
   push,
   rotationChannel,
   solve,
@@ -81,7 +80,7 @@ describe("constraint stack", () => {
  * ⭐⭐⭐ **WHAT A DRAG MAY DO TO A BODY'S ROTATION — asked of the STACK, not of its LENGTH.**
  *
  * ⛔⛔⛔ **THIS REPLACES THREE COPIES OF `stack.length === 1` IN `render/scene.ts`**, found by
- * audit 2026-09-17: the one-finger twist, the second finger's roll, and the `FOLLOW` retarget.
+ * audit 2026-09-17: the one-finger twist, the second finger's roll, and the (since deleted) `FOLLOW` retarget.
  * Each read *"is there exactly one constraint?"*, meant *"is this body aligned?"*, and fell
  * through to **FREE ROTATION** for every other count.
  *
@@ -165,32 +164,6 @@ describe("⛔⛔ rotationChannel — a COUNT is not a question about the stack",
  * ⚠ A mated body would then keep its follower highlight and its entry in the link index for
  * ever, because `evict` deliberately never removes a mate.
  */
-describe("⛔ hasAlignment — a MATE is not an alignment", () => {
-  const mate: Constraint = {
-    kind: "MATE",
-    localNormal: [0, 0, 1],
-    targetWorld: UP,
-    otherObjectId: "other",
-  };
-
-  it("⭐ an alignment counts", () => {
-    expect(hasAlignment([gravity])).toBe(true);
-    expect(hasAlignment([{ kind: "FACE_ALIGN", localNormal: UP, targetWorld: UP }])).toBe(true);
-  });
-
-  it("⛔⛔ a MATE does not — it survives an eviction, so it would pin the marker for ever", () => {
-    expect(hasAlignment([mate])).toBe(false);
-  });
-
-  it("⭐ and a mate alongside an alignment still counts, because the alignment is there", () => {
-    expect(hasAlignment([mate, gravity])).toBe(true);
-  });
-
-  it("⭐ an empty stack is not aligned", () => {
-    expect(hasAlignment([])).toBe(false);
-  });
-});
-
 /**
  * ⭐⭐⭐ **ENTRY 2's TWIST — and the vector that used to make it untestable.**
  *

@@ -23,5 +23,5 @@ export * from "./recognizer";
 
 // ⛔ `roll.ts` and `one_euro.ts` were DELETED on 2026-09-16. `A12` moved roll to the second
 // touchpoint, and the circular detector then sat unwired for a day — except that it still
-// vetoed the flick test, which broke `IN3`'s 2ter/2quater. ⭐ `D28`'s rule, applied again:
+// vetoed the flick test (itself deleted since, `D110`), which broke `IN3`'s 2ter/2quater. ⭐ `D28`'s rule, applied again:
 // deleted, not disabled. The account is in `queue_notes/IN3.md`.

@@ -85,8 +85,7 @@ export interface SceneObject {
    * child's placement is relative. ⭐ The owner's rule is **parent yes, child never** — a base
    * plate is the thing others mount onto.
    * ⚠ That is the difference between a rule and an invariant: a dozen things move an object
-   * here — rule 6, depth, the approach, a snap, the sway, an alignment slerp, a `FOLLOW`
-   * cascade — and asking each of them to check a flag means the next one added will not.
+   * here — rule 6, depth, the approach, a snap, the sway, an alignment slerp, a seat — and asking each of them to check a flag means the next one added will not.
    * ⭐ `METHOD`: *a constraint enforced at the one place the quantity is stored is an
    * invariant.* The hold-off learned the same lesson the hard way earlier today.
    *
@@ -435,14 +434,14 @@ export function pushObjectConstraint(
   const o = world.objects.get(id);
   if (!o) return world;
   // ⛔⛔ A FROZEN BODY CANNOT BE A FOLLOWER. ⚠ Refused here rather than at the tap, because a
-  // constraint is what would MOVE it: an alignment's solve, a `FOLLOW` cascade and a mate all
+  // constraint is what would MOVE it: an alignment's solve, a seat retarget and a mate all
   // read the stack and write a pose. ⭐ Nothing can be constrained, so nothing can be moved
   // through the constraint door either.
   if (o.frozen === true) return world;
   return withObject(world, { ...o, constraints: push(o.constraints, c, matePriorityOverAnchor) });
 }
 
-/** Spec §2septies — a double-tap clears one object's stack. ⛔ No drag ever clears it. */
+/** Clear one object's stack — the alignment setter's first half (`alignFollowerTo`). ⛔ No drag ever clears it. (Born as §2septies' double-tap, deleted `D111`.) */
 export function clearObjectConstraints(world: World, id: ObjectId): World {
   const o = world.objects.get(id);
   if (!o) return world;

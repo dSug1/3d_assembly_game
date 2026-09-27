@@ -1,5 +1,5 @@
 /**
- * THE MARKERS — face fills and contours, the fuchsia rings, the PioneerFaceCursors, the body outlines. Instruments on the glass; none of them decides anything.
+ * THE MARKERS — face fills and contours, the PioneerFaceCursors, the body outlines. Instruments on the glass; none of them decides anything.
  *
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
@@ -194,7 +194,7 @@ export function worldPointOn(st: SceneState, objectId: ObjectId, local: Vec3) : 
 }
 
 // ⚠ `PIONEER_CURSOR_PX` (16) lives in `input/pioneer_cursor_grab.ts`, because the grab reach is
-// built on it — a little larger than the white candidate ring (`GIZMO_RING_PX`), so they nest.
+// built on it — a little larger than the white gizmo ring (`GIZMO_RING_PX`), so they nest.
 export function syncPioneerCursors(st: SceneState) : void {
   const couples: AlignmentCouple[] = [];
   for (const followerId of st.links.alignedObjects()) {
@@ -233,7 +233,7 @@ export function syncPioneerCursors(st: SceneState) : void {
     // ⭐⭐ **ALWAYS IN THE SCREEN VIEW PLANE** — the owner, 2026-09-25: *"the ring shall always be
     // in the screen view plane (not in the plane of the PioneerFace)"*. ⚠ The torus is built in
     // its local XZ plane, so it is turned into XY ONCE and baked, then billboarded exactly as the
-    // candidate ring is: a billboard presents the local XY plane to the camera. ⛔ Laid in the
+    // gizmo ring is: a billboard presents the local XY plane to the camera. ⛔ Laid in the
     // face plane it went edge-on — and invisible — whenever the face turned away from the view.
     m.rotation.x = Math.PI / 2;
     m.bakeCurrentTransformIntoVertices();
@@ -264,69 +264,15 @@ export function syncPioneerCursors(st: SceneState) : void {
 
 
 /**
- * ⭐⭐⭐ **THE PIONEER's CONTOUR** — *"the PioneerFace contour shall be highlighted"*.
- *
- * ⛔⛔ A CONTOUR AND NOT A FILL, BECAUSE THE TWO FACES ARE NOT THE SAME KIND OF THING. The
- * Follower is what MOVED and carries the constraint; the Pioneer is only what it was aimed
- * at, and its object is untouched. ⭐ One filled quad and one outline say that without a
- * legend — and the owner asked for exactly that distinction.
- *
- * ⚠ A closed square of LINES, unit-sized and scaled: `CreateLines` gives a `color` and no
- * material to tune, and its one-pixel width is a WebGL limit rather than a choice. ⛔ If a
- * hand finds it too faint the answer is `GreasedLine`, not a thicker hack — recorded so the
- * next session does not rediscover the limit.
- * ⚠ `isPickable = false` and NOT `orbitCandidate`, for the same two reasons the fill has:
- * an instrument must not intercept the picks it describes, nor move the barycentre it is
- * drawn near.
- */
-/**
- * ⭐⭐⭐ **THE COLOURS ARE THE READOUT FOR THE MODE** — the owner's instruction, and the only
- * way a hand can see which of the two an alignment is.
- *
- * ⛔ `SNAPSHOT` (single tap): the Follower is **cyan** and the Pioneer **amber** — two
- * colours, because the two faces are related only by the instant the tap happened.
- * ⛔ `FOLLOW` (double tap): the Follower takes the Pioneer's **amber** — one colour, because
- * they now move as one thing.
- * ⚠⚠ **THIS COMMENT SAID *"never per frame"* AND THE RENDER LOOP HAS DONE EXACTLY THAT
- * SINCE `A18`** — corrected by audit, 2026-09-17. The per-frame pass covers every aligned
- * body and writes only on CHANGE, so it is not a second unguarded writer; but *never per
- * frame* was simply false, and a reader trusting it would conclude this function is the only
- * thing keeping the colours right.
- * ⭐ What it is actually FOR: making a `SWITCH` visible in the same event that caused it,
- * rather than one frame later. ⚠ The two agree by construction because they compute `want`
- * the same way, from `alignModeOf`.
- */
-export function paintHighlightColours(st: SceneState) : void {
-  // ⚠ EVERY aligned object, not just the active one: a body aligned in `FOLLOW` earlier must
-  // keep reporting `FOLLOW` after the fingers move on, or the colour would describe the most
-  // recent gesture instead of the relationship it names.
-  for (const [key, q] of st.faceMarkers) {
-    const id = key.slice(0, key.indexOf("/"));
-    // ⭐ One colour since `D106`: every alignment is a snapshot.
-    const want = FOLLOWER_COLOUR;
-    q.mat.emissiveColor.copyFrom(want);
-    const o = st.outlines.get(id);
-    if (o !== undefined) o.align.color.copyFrom(want);
-  }
-}
-
-/**
  * ⭐⭐⭐ **EVERY OUTLINE A BODY CAN WEAR, BUILT FROM ITS OWN MESH EDGES** (`D50`).
  *
- * ⛔⛔ **ALL THREE USED TO BE A UNIT BOX SCALED TO A DIMENSIONS TABLE.** For the boot
- * cuboids that is indistinguishable from the mesh, which is exactly why it survived two device
- * passes — and for an imported part it is simply the wrong shape. ⭐ Each is now the body's
- * own hard edges, offset outward by a different amount so the three nest and stay tellable
- * apart.
+ * ⛔⛔ **IT USED TO BE A UNIT BOX SCALED TO A DIMENSIONS TABLE.** For the boot cuboids that is
+ * indistinguishable from the mesh, which is exactly why it survived two device passes — and for
+ * an imported part it is simply the wrong shape. ⭐ It is now the body's own hard edges.
  *
- * | outline | offset | means |
- * |---|---|---|
- * | white **body** | a hair | *this body is in a capturable pair* |
- * | cyan/amber **alignment** | a little more | *this body is aligned*, and in which mode |
- * | white **shell** | **half the capture offset** | *another surface this near will capture* |
- *
- * ⚠ The two small offsets are fractions of the body's own span, so a plate and a part both
- * get outlines that read — one absolute lift would vanish on the plate and swamp a part.
+ * ⭐ ONE outline is left: the cyan **alignment** outline (*this body is aligned*), offset outward
+ * by a fraction of the body's own span. ⛔ The white body outline and the white capture shell
+ * that nested with it are deleted with the capture highlight (`D120`).
  */
 /**
  * ⭐⭐⭐ **AN OUTLINE BUILT FROM A BODY'S HARD EDGES** — real mesh edges, as a LINE LIST.
@@ -339,7 +285,7 @@ export function paintHighlightColours(st: SceneState) : void {
  * ⚠ The price is that the width is not adjustable, which is why the width slider went with it.
  *
  * ⭐ `instance` reuses the buffers when the vertex count is unchanged — always true for one
- * body — so rebuilding the shell every frame allocates nothing.
+ * body — so rebuilding an outline allocates nothing.
  */
 export function edgeLines(st: SceneState, name: string,
   topo: MeshTopology,

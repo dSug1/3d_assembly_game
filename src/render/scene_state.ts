@@ -4,7 +4,6 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { type AlignMode } from "../input/alignment";
 import { type EpisodeTally } from "../input/episode_ledger";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -67,9 +66,9 @@ export const ALIGN_SNAP_FRACTION = 2 / 7;
 export const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
 export const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
 /**
- * ⭐⭐⭐ **FUCHSIA — A FACE THE HELD BODY IS NEARLY READY TO MATE WITH** (the owner, 2026-09-24).
- * ⛔ A third colour and not a shade of the other two: cyan and amber say *this pair IS aligned*,
- * and this one says *this pair COULD be* — an offer, not a state.
+ * ⭐⭐⭐ **FUCHSIA — THE HITFACE'S CONTOUR** while it is active (the owner, 2026-09-25). ⛔ A third
+ * colour and not a shade of the other two: cyan and amber say *this pair IS aligned*. ⚠ It first
+ * coloured the fuchsia OFFER (candidate faces, 2026-09-24), deleted by `D109`.
  */
 export const CANDIDATE_COLOUR = new Color3(1, 0.1, 0.8);
 /**
@@ -186,14 +185,6 @@ export interface Held {
   /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
   prev: Sample;
   /**
-   * ⭐⭐⭐ **`D67` — DID THIS GRIP'S OWN PRESS COMPLETE A DOUBLE TAP?** The owner's route to
-   * orange: *"the first touch shall be double tap without final release [on] the pioneer
-   * object."* ⛔ Latched at the press, because `TapHistory` answers *would this pair* about the
-   * instant the finger landed, and by the time a Follower is chosen the answer has moved on.
-   * ⚠ It is a property of THE PIONEER'S grip; a Follower's own flag is never read.
-   */
-  pressWasDoubleTap: boolean;
-  /**
    * ⭐ The pointer type that PRESSED this grip. ⛔ Read by one rule only —
    * `secondTouchOwnsRollAndDepth` — to learn that a mouse holder's second touch is always one
    * Shift away (`secondTouchAlwaysAvailable`).
@@ -230,60 +221,15 @@ export interface Held {
    */
   mode: "ROTATE" | "TRANSLATE" | "TRANSLATE_2ND" | null;
   /**
-   * ⭐⭐ **FORK C** — the face THIS touchpoint's press landed on, in the object it carries.
+   * ⭐⭐ The face THIS touchpoint's press landed on, in the object it carries — the HitFace.
    *
    * ⛔⛔ PER GRIP, NOT ONE GLOBAL, and that is forced by the rule: *"one touchpoint on first
    * object's hit face (FollowerFace) && tap on second object's hit face (PioneerFace)"*.
-   * Two faces on two objects are live at the same instant, so a single `selectedFace` —
-   * which is all `IN3` ever needs — cannot express the trigger. ⭐ The Follower is the OTHER
-   * grip's face; the Pioneer is the tapping grip's own.
-   * ⚠ `null` in fork A, and whenever the pick resolved no face.
+   * Two faces on two objects are live at the same instant. ⭐ Since `D87` the held grip's face
+   * is the FollowerFace; the PioneerFace comes from the tap (`tapFace`).
+   * ⚠ `null` whenever the pick resolved no face.
    */
   pressFace: { faceId: string; cos: number } | null;
-  /**
-   * ⭐⭐⭐ **FORK C** — was an alignment pushed or replaced on this object DURING this
-   * gesture? The owner's scoping of the rotation reset, and it cannot be answered by looking
-   * at the state:
-   *
-   * > *"If the object was already aligned when the rotation was started, reset to the
-   * > beginning of the rotation (therefore the alignment is conserved). If the alignment
-   * > occurred during the rotation, reset the rotation (therefore this looses the
-   * > alignment)."*
-   *
-   * ⭐ With the alignment older than the press, the recogniser's snapshot already satisfies
-   * it, so restoring costs nothing. With the alignment made mid-gesture, the snapshot
-   * predates it and restoring would leave the object disagreeing with its own constraint.
-   */
-  alignmentTouched: boolean;
-  /**
-   * ⭐⭐⭐ `D55` — **DID THIS TOUCHPOINT'S OWN *PRESS* MAKE AN ALIGNMENT?**
-   *
-   * ⛔⛔ WITHOUT IT THE GESTURE WOULD UNDO ITSELF. The alignment now fires on the way
-   * DOWN, and the matching release is a `TAP` on the face that alignment names — which
-   * `tapMeaning` reads, correctly and unchanged, as `UNALIGN`. ⚠ So a single tap would
-   * align on the press and break it on the release, ~80 ms apart, and the glass would
-   * show nothing at all having happened.
-   *
-   * ⭐ It also consumes `D28`'s movement-mode toggle, for the reason the tap path has
-   * always consumed it: **one gesture, one consequence.**
-   *
-   * ⚠ Distinct from `alignmentTouched`, which lives on the **Follower's** grip and
-   * answers the flick reset's *"was an alignment made during this gesture?"*. This one
-   * lives on the **Pioneer's** grip and answers *"has this release already been spent?"*.
-   * ⛔ Two questions, two fields — collapsing them would be the substituted-quantity
-   * shape this file has been burned by twice.
-   */
-  pressActed: boolean;
-  /**
-   * ⭐ `D119`: what THIS press would align (the held Follower's pointer and the relation), carried to
-   * the release — which aligns only if it is a TAP. `null` when the press means nothing.
-   */
-  pendingAlign: { heldPointerId: number; mode: AlignMode } | null;
-  /**
-   * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
-   * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
-   * established, and a fresh press is a fresh axis — `shake.ts` says so in its own header.
-   */
   /**
    * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
    * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer
@@ -325,8 +271,8 @@ export interface Held {
    * ⭐⭐ **LATCHED, BECAUSE THE ONLY STABLE MOMENT IS THE PRESS.** Recomputed per frame the
    * sign would flip mid-drag as the axis swung through horizontal-on-screen — turning the
    * dead control the owner reported into an unpredictable one, which is worse. ⛔ `IN2`
-   * latches every role at press and `A15` allows exceptions only on DISCRETE events; this is
-   * the same doctrine one rule over: *a mode may be keyed on PRESENCE, never on MOTION.*
+   * latches every role at press; this is the same doctrine one rule over: *a mode may be keyed
+   * on PRESENCE, never on MOTION.*
    */
   anchorRollSign: Map<number, 1 | -1>;
   /**
@@ -338,14 +284,6 @@ export interface Held {
   /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
   depthSway: SwayWatcher;
 
-  /**
-   * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
-   * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
-   * which would be a continuous shove rather than a reaction.
-   * ⚠ It reads `Recognizer.motionState`, which is `IN0`'s hysteretic still/moving test
-   * with its own measured thresholds. A speed comparison invented here would be a
-   * SECOND definition of "moving", free to disagree with the one the rules use.
-   */
   /**
    * ⭐ Decides WHEN the scene reacts — see `input/sway.ts`. It owns the direction and
    * speed estimate over a stated window, so this file does not invent a second one.
@@ -421,7 +359,6 @@ export interface SceneState {
   tuning: ReturnType<typeof parseConfigOverrides>;
   centreMarker: Mesh;
   mouseLayer: MouseSecondTouchHandle;
-  selectedFace: { objectId: string; faceId: string; cos: number } | null;
   orbitStartZoom: number;
   engine: Engine;
   scene: Scene;
@@ -479,8 +416,8 @@ export interface SceneState {
   /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */
   edgeBandEl: HTMLDivElement;
   edgeBandKey: string;
-  /** ⭐ `D119`: a second touch that pressed a FROZEN body — its face, for a tap to align to. */
-  frozenTapFace: Map<number, { id: ObjectId; faceId: string }>;
+  /** ⭐ `D119`/`D124`: a second touch that pressed a frozen body, or steers over another — its face, for a tap to align to. */
+  tapFace: Map<number, { id: ObjectId; faceId: string }>;
   /** ⭐ The rig elevation the scene boots at, and the camera reset returns to. */
   bootElevation: number;
   /** ⭐ `3D6`: couples exempt from colliding with each other since an unsnap, until they separate. */

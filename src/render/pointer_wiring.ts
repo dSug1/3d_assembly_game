@@ -4,31 +4,30 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { alignsOnRelease, isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
-import { type Vec3 } from "../core/vec";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
+import { type Vec3, IDENTITY } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
-import { hasAlignment, rotationChannel } from "../core/constraint_stack";
-import { IDENTITY } from "../core/vec";
+import { rotationChannel } from "../core/constraint_stack";
 import { frozenHoldAdmitted } from "../input/assembly";
 import { translatesOnDrag } from "../input/highlight";
 import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, undoLast } from "./undo_wiring";
-import { pressHit } from "../input/frozen_pick";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
-import { alignFollowerTo, alignFollowerToPioneer, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
+import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
 import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
-import { describe, paint, sampleOf } from "./hud_paint";
+import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
@@ -98,19 +97,14 @@ export function installPointerHandler(st: SceneState): void {
 
     // ⭐⭐⭐ A PIONEERFACECURSOR GRAB OWNS ITS POINTER — before the router can latch a role for it.
     if (cursorPointer(st, info.type, e)) {
-      paint(st);
+      st.hudDirty = true;
       return;
     }
 
     // ⭐ The anchor fork latches here, before anything is dispatched, so one event cannot be
     // judged half under one rule set and half under another.
-
-    // ⭐⭐⭐ A15 — AN ORPHANED SELECTION IS COLLECTED HERE, AT THE NEXT INPUT EVENT, and
-    // before anything is dispatched. ⛔ The owner's requirement: the lift itself changes
-    // nothing, and the object is unselected only once the hand says something new — after
-    // which THIS event flows into whatever rule the re-resolved configuration selects.
-    // ⚠ A POINTERUP is deliberately absent: the orphaned holder's own release is handled
-    // in its branch, where the §1.3 verdict has to be SKIPPED rather than re-resolved.
+    // ⛔ `A15`'s orphaned-selection collection that stood here is deleted (`D54`): a holder keeps
+    // its object for its touchpoint's lifetime.
 
     // ⛔⛔⛔ **A PRESS FOR AN ID THAT NEVER RELEASED TAKES ITS OLD GRIP WITH IT** — audit fix,
     // 2026-09-17.
@@ -150,11 +144,11 @@ export function installPointerHandler(st: SceneState): void {
         mmToPx(bandMmNow(st)),
       );
       const rayHit = !inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
-      // ⭐⭐⭐ **A SECOND TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (the owner, 2026-09-23:
-      // *"therefore, this second touch could for example move another object"*). ⛔ Filtered on
-      // the way IN, before the latch, so every rule downstream sees a touchpoint that landed on
-      // nothing — which is what makes it a working second finger for the body in the OTHER hand.
-      // ⚠ The DECISION is `frozen_pick.ts`'s; this reads the two facts and obeys.
+      // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
+      // only, the owner 2026-09-23: *"therefore, this second touch could for example move another
+      // object"*). ⛔ Filtered on the way IN, before the latch, so every rule downstream sees a
+      // touchpoint that landed on nothing. ⭐ The one exception: a frozen body carrying a SEATED
+      // follower (the unsnap's first touch). ⚠ The DECISION is `frozen_pick.ts`'s; this obeys.
       const rawHitId = rayHit === null ? undefined : st.idOf.get(rayHit);
       // ⛔⛔ **THE PRESS HOLDS THE BODY IT TOUCHED — `D102`'s redirect moved to the TRANSLATION
       // STEP** (the owner, 2026-09-26: *"now I cannot roll any longer the follower object around
@@ -169,10 +163,12 @@ export function installPointerHandler(st: SceneState): void {
       st.pointerTypeOf.set(e.pointerId, e.pointerType);
       // ⭐⭐ `D108` — THE DESKTOP HAS NO MODE: the mouse's press latches it from Ctrl.
       if (e.pointerType === "mouse") st.behaviour = desktopBehaviour(e.ctrlKey);
-      // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
-      // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
-      //
-      const hit = pressHit(
+      // ⭐ `D112`: the facts the episode ledger reads, taken BEFORE this press registers.
+      const heldBefore = st.router
+        .objects()
+        .map((q) => st.held.get(q.id))
+        .map((g) => (g === undefined ? undefined : st.idOf.get(g.mesh)));
+      const hitFirst = pressHit(
         driveHit,
         // ⭐ A frozen body with a SEATED follower on it is holdable — the unsnap's first touch.
         hitId !== undefined &&
@@ -180,15 +176,18 @@ export function installPointerHandler(st: SceneState): void {
           !frozenHoldAdmitted(
             st.links.followersOf(hitId).some((f) => st.links.isSeated(f)),
           ),
-        // ⛔ The count BEFORE this press is registered: `router.press` has not run yet.
-        st.router.size,
       );
+      // ⭐⭐⭐ `D124`: with a body held, a press on ANOTHER body steers it — never grabs the other one.
+      const hitFirstId = hitFirst === null ? undefined : st.idOf.get(hitFirst);
+      const steers =
+        hitFirstId !== undefined &&
+        pressSteers({
+          holdersBefore: heldBefore.length,
+          hitIsHeld: heldBefore.includes(hitFirstId),
+          seatedPartnerOfHeld: heldBefore.some((h) => h !== undefined && isSeatedCouple(st, h, hitFirstId)),
+        });
+      const hit = steers ? null : hitFirst;
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
-      // ⭐ `D112`: the facts the episode ledger reads, taken BEFORE this press registers.
-      const heldBefore = st.router
-        .objects()
-        .map((q) => st.held.get(q.id))
-        .map((g) => (g === undefined ? undefined : st.idOf.get(g.mesh)));
       const routed = st.router.press(e.pointerId, s, hit);
       st.episodeFacts.set(e.pointerId, {
         role: routed.role,
@@ -196,20 +195,23 @@ export function installPointerHandler(st: SceneState): void {
         pressedAnotherBody: rawHitId !== undefined && !heldBefore.includes(rawHitId),
       });
       if (rayHit !== null && hit === null) {
-        st.lastVerdict = `frozen ${hitId ?? "?"} — routed as a MISS (a tap on it aligns, D119)`;
-        // ⭐ `D119`: remember the frozen face under this touch — a TAP here aligns the held body to it.
+        st.lastVerdict = steers
+          ? `${hitId ?? "?"} — the second touch STEERS (a tap on it aligns, D124)`
+          : `frozen ${hitId ?? "?"} — routed as a MISS (a tap on it aligns, D119)`;
+        // ⭐ `D119`/`D124`: remember the face under this touch — a TAP here aligns the held body to it.
         const n = pick?.getNormal(true);
         const f =
           n && hitId !== undefined
             ? faceFromPickedNormal(st.world, hitId, [n.x, n.y, n.z] as Vec3)
             : null;
-        if (f !== null && hitId !== undefined) st.frozenTapFace.set(e.pointerId, { id: hitId, faceId: f.faceId });
+        if (f !== null && hitId !== undefined) st.tapFace.set(e.pointerId, { id: hitId, faceId: f.faceId });
       }
 
       // ⭐⭐⭐ **`D68` — A PRESS THAT COMPLETES A DOUBLE TAP UNDOES THE FIRST TAP'S TOGGLE.**
-      // ⛔ The owner: *"if i double tap without release the pioneer and press the follower →
-      // orange, the translation/rotation mode toggles: it should not."* ⚠ `D28`'s *two taps
-      // revert* was keyed to the second RELEASE, and `D67`'s route to orange never lifts.
+      // ⛔ The owner (history — the orange FOLLOW it names is deleted, `D106`): *"if i double tap
+      // without release the pioneer and press the follower → orange, the translation/rotation mode
+      // toggles: it should not."* ⚠ `D28`'s *two taps revert* is keyed to the second RELEASE, and a
+      // press that completes the pair never lifts first.
       // ⭐ THE DECISION IS `pairPressRevertsToggle`'s; this reads the two facts and obeys.
       if (pairPressRevertsToggle(st.taps.wouldPair(s), st.lastTapToggled)) {
         st.behaviour = toggleBehaviour(st.behaviour);
@@ -237,7 +239,7 @@ export function installPointerHandler(st: SceneState): void {
         // exactly one partner). It starts no recognizer, takes no anchor and moves
         // nothing. ⚠ It is still COUNTED on the readout, so "why is nothing happening"
         // has a visible answer.
-        paint(st);
+        st.hudDirty = true;
         return;
       }
 
@@ -247,7 +249,7 @@ export function installPointerHandler(st: SceneState): void {
         // travelling fingers. ⛔ Creating a `Held` here would give one mesh two recognizers.
         // ⚠ A6's anchor may equally be a finger OUTSIDE every object; this branch is the
         // case where the hand happened to put it back on the part.
-        paint(st);
+        st.hudDirty = true;
         return;
       }
 
@@ -284,7 +286,7 @@ export function installPointerHandler(st: SceneState): void {
           // began. See input/pinch.ts.
           st.zoomAtPinchStart = st.zoom;
         }
-        paint(st);
+        st.hudDirty = true;
         return;
       }
 
@@ -333,23 +335,12 @@ export function installPointerHandler(st: SceneState): void {
         prev: s,
         // ⭐ `D67`: asked HERE, once, on the way down — a peek, not a record. The release still
         // consumes the pair through `TapHistory.record`.
-        pressWasDoubleTap: st.taps.wouldPair(s),
         pointerType: e.pointerType,
         mode: null,
         pressFace,
-        alignmentTouched: false,
-        pressActed: false,
-        pendingAlign: null,
         sway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         anchorMotion: new Map(),
         anchorRollSign: new Map(),
-        // ⭐ The four tunables and the MEASURED noise — passed in, never assumed, exactly as
-        // `SwayWatcher` takes it.
-        // ⛔⛔ THROUGH `shakeParamsFrom`, AND THAT IS A FIX: this file built the same four
-        // fields inline while `shake.ts` exported the function for it — two copies of one
-        // mapping, which is precisely what `CONSTRAINTS` §4 forbids (*a tuning value needed in
-        // two places is IMPORTED, never copied*). ⚠ Nothing had drifted yet; the point is that
-        // nothing now can.
         depthSway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -362,128 +353,10 @@ export function installPointerHandler(st: SceneState): void {
           3 * st.cfg.gainRotateFree * st.cfg.pointerNoiseMm * (180 / Math.PI),
         ),
       });
-      // ⭐⭐⭐ **`D55` — THE PIONEER–FOLLOWER MECHANISM TOGGLES ON *HERE*, ON THE WAY DOWN.**
-      //
-      // > *"when first touch is pressed on first object, as soon as a second touch is pressed
-      // > on second object (= a tap or a continued press), the Pioneer - Follower mechanism
-      // > toggles on. To toggle off, the rule stays unchanged."* — the owner, 2026-09-19
-      //
-      // ⛔⛔ **IT IS THE TRIGGER THAT MOVED, NOT THE MECHANISM.** `alignFollowerToPioneer` is
-      // called unchanged, with all its refusals — frozen Follower, no resolved face, the cycle
-      // undo — and the release path below still owns every way OUT. ⭐ What changed is that a
-      // **continued press** now counts: the old trigger was a release verdict, so a finger that
-      // came down on the second body and stayed there aligned NOTHING until it lifted.
-      //
-      // ⚠⚠ **AND THIS IS WHERE `D51` BECOMES THE ORDINARY POSTURE.** `pinnedPair` needs a live
-      // relation, and the relation used to cost a deliberate tap; now the grab IS it. ⛔ With
-      // `pioneerTranslates = 0` at boot, the second body stops being cargo and becomes a
-      // control surface — its finger drives the Follower's depth and roll — the instant it is
-      // touched. ⭐ That is the owner's intent read plainly, and it is stated rather than
-      // discovered because it changes what two fingers on two bodies do at boot.
-      //
-      // ⛔ THE DECISION IS `pressMeaning`'s, NOT THIS FILE'S — `pioneer_cascade.ts`'s rule: *a
-      // RULE in a render file is a rule nothing can interrogate.* ⚠ Only the WIRING is here.
-      const pressGrip = st.held.get(e.pointerId)!;
-      const pressOthers = [...st.held.entries()].filter(
-        ([pid]) => pid !== e.pointerId,
-      );
-      const pressHeldIds = pressOthers
-        .map(([, g]) => st.idOf.get(g.mesh))
-        .filter((v): v is string => v !== undefined);
-      // ⚠ Asked only when exactly one other body is held, so `links` is consulted about a body
-      // that unambiguously exists — the same guard `pressMeaning` re-states and refuses on.
-      const pressHeldId = pressHeldIds.length === 1 ? pressHeldIds[0]! : null;
-      // ⚠ The held GRIP, not just its id: `D67` reads the Pioneer's own press for the mode.
-      const pressHeldGrip =
-        pressOthers.length === 1 ? pressOthers[0]![1] : undefined;
-      const pressPioneerOfHeld =
-        pressHeldId === null ? null : st.links.pioneerFor(pressHeldId);
-      // ⭐⭐⭐ **A FUCHSIA FACE PRESSED BY THE SECOND TOUCH BECOMES THE PIONEERFACE.**
-      //
-      // > *"if one fuchsia highlighted face is pressed by second touch, it becomes PioneerFace and
-      // > the object becomes Pioneer object and the highlight switches to the pioneer highlight
-      // > and the object with HitFace becomes aligned Follower object and the HitFace becomes
-      // > FollowerFace."* — the owner, 2026-09-24
-      //
-      // ⛔⛔ **THE ROLES ARE THE INVERSE OF `D67`'s**, which is why this cannot be folded into
-      // `pressMeaning`: there the PRESSED body is the Follower and the HELD one the Pioneer,
-      // because the hand reaches out to the part it wants to move. ⚠ Here the hand is already
-      // holding the part and reaching out to the thing it wants to align TO — the fuchsia
-      // highlight is what makes the intent unambiguous, and it only exists in this configuration.
-      //
-      // ⭐ It tails into what is already built: `alignFollowerToPioneer` is called with the HELD
-      // grip as the Follower, so it finds the freshly pressed body as its one other holder and
-      // every downstream rule — the colours, the two-way index, the cascade — is the vetted one.
-      // ⛔ `pressActed` from the RETURN VALUE, as `D67`'s branch does: a refusal must leave the
-      // release untouched so the tap still means what it always meant.
-      // ⭐⭐⭐ **THE SECOND PRESS OF A DOUBLE TAP UPGRADES THE RELATION TO `FOLLOW`.**
-      //
-      // > *"rapid double tap on fuchsia face does not trigger the amber mode"* — the owner
-      //
-      // ⛔⛔ **THE FIRST PRESS CONSUMES THE OFFER, WHICH IS WHY THE SECOND ONE MISSES IT.** Once
-      // it aligns, the held body IS aligned — and `pressMeaning` answers `NOTHING` for a press on
-      // the very face it now follows (`D39`'s rule, so a press-and-hold does not silently undo).
-      // ⭐ So the pair is recognised on the LINK that already exists rather than on an offer that
-      // no longer does: same two bodies, same face, and this press pairs with the last.
-      // ⚠ Waiting out the double-tap window before aligning was the other way to fix it, and it
-      // would put the whole gesture behind a timer — `D73`'s lesson about lag, one rule over.
-      //
-      // ⛔ The ALIGN half of this branch is **deleted by `D87`**: with the roles inverted,
-      // `pressMeaning` aligns the held body to the pressed one for ANY face, so a separate rule
-      // for fuchsia ones would be a second decision about the same gesture. ⭐ The highlight is
-      // what it always was — guidance — and no longer a precondition for acting.
-      // ⛔ The double press on the Pioneer face that made a `FOLLOW` is deleted with it (`D106`).
-      const pressVerdict = pressMeaning({
-        // ⭐ `D67`: the body under THIS press is the FOLLOWER, and the held one is the Pioneer.
-        pressedObject: pickedId ?? null,
-        pressedFace: pressFace?.faceId ?? null,
-        heldObjects: pressHeldIds,
-        // ⛔ The cycle guard, in the inverted direction: does the PIONEER already follow the
-        // body being pressed?
-        pioneerOfHeld:
-          pressPioneerOfHeld === null ? null : pressPioneerOfHeld.objectId,
-        // ⭐⭐ The HELD body's CURRENT FollowerFace — it is the FOLLOWER under `D87`, so *already
-        // aligned to this very face* is a question about IT. ⛔ Derived from its constraint rather
-        // than remembered: `alignedFaceOf` is the one implementation, and a shadow copy would be a
-        // second source of truth free to disagree after an eviction.
-        alignedFaceOfHeld:
-          pressHeldId === null ? null : alignedFaceOf(st.world, pressHeldId),
-        // ⭐⭐ The PIONEERFACE the held body follows — a face of the PRESSED body, and the only
-        // thing `pressedFace` may be compared against. ⛔ Straight off the link, not remembered.
-        pioneerFaceOfHeld: pressPioneerOfHeld?.faceId ?? null,
-        // ⭐ The held body's HitFace: the FollowerFace this press WOULD use. ⚠ A different one
-        // makes the press a RE-POINT rather than a no-op.
-        heldPressFace: pressHeldGrip?.pressFace?.faceId ?? null,
-        // ⛔ `D100`: a seated couple's second touchpoint is the UNSNAP's, not the align's.
-        pressedIsSeatedPartner: isSeatedCouple(st, pressHeldId, pickedId ?? null),
-        // ⭐⭐⭐ **`D87` — THE MODE COMES FROM *THIS* PRESS.** ⛔ `D67` read it off the held grip
-        // because the held body was the Pioneer; inverted, the Pioneer is the body being pressed,
-        // so the touch that selects it is the one that says which relation is wanted.
-        pressWasDoubleTap: pressGrip.pressWasDoubleTap === true,
-      });
-      if (
-        pressVerdict.action === "ALIGN" &&
-        pressVerdict.mode !== null &&
-        pressHeldGrip !== undefined
-      ) {
-        // ⭐⭐⭐ **`D87` — THE HELD BODY IS THE FOLLOWER NOW.** ⛔ So the call is made with the
-        // HELD pointer and grip, and `alignFollowerToPioneer` finds the freshly pressed body as
-        // its one other holder — the Pioneer. ⚠ Under `D67` these two arguments were this press's
-        // own, which is the whole of the inversion at the wiring level.
-        // ⛔ `pressActed` is set from the RETURN VALUE, never from the intent. Every refusal
-        // inside `alignFollowerToPioneer` returns `false` and says why on the HUD, and a press
-        // that aligned nothing must leave its release completely untouched — the tap then means
-        // whatever it has always meant, including `D28`'s toggle.
-        // ⛔⛔ `D119`: REMEMBERED, NOT DONE — the release aligns, and only if it is a TAP.
-        pressGrip.pendingAlign = { heldPointerId: pressOthers[0]![0], mode: pressVerdict.mode };
-      }
-      // ⛔⛔ `A22`'s **SWITCH** branch stood here and is deleted with `D67`: the upgrade to
-      // `FOLLOW` was the second touch's rapid pair, and the owner has moved that decision to
-      // the PIONEER's own press. ⚠ `pressMeaning` can no longer return `SWITCH` at all.
-      // ⛔ `D58`'s THIRD TRIGGER — a continued press on the held body's exact PioneerFace —
-      // stood here and is **deleted by `D66`**. ⚠ It was the one press on a Pioneer that had no
-      // other job; it now has none again, and `A22`'s rapid-pair upgrade keeps the gesture.
-      paint(st);
+      // ⛔⛔ THE PRESS NEVER ALIGNS (`D119`), and since `D124` no second press on another body reaches
+      // here at all — it steers, and its TAP aligns in the OUTSIDE release. The press-time alignment
+      // (`D55`, `pendingAlign`, `alignFollowerToPioneer`) is deleted by the 2026-09-27 audit.
+      st.hudDirty = true;
       return;
     }
 
@@ -505,8 +378,6 @@ export function installPointerHandler(st: SceneState): void {
         // for this pointer id and leaving one behind would eat the NEXT gesture's tap.
         // ⛔⛔ `D108`: a tap on the held body itself no longer toggles — only empty space does.
         noteTap(st, routed.pressed, s, e.pointerId, false);
-        // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
-        // the holder is still on its object before anything else can happen.
       } else {
         st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
         // ⭐ A second touch on a seated Follower (redirected to its root) is the UNSNAP's.
@@ -515,22 +386,21 @@ export function installPointerHandler(st: SceneState): void {
         // ⭐⭐⭐ A12: A SECOND FINGER ON THE SAME OBJECT DRIVES IT, exactly as one outside
         // does — the owner: *"second touchpoint INSIDE OR OUTSIDE any object"*. Its x is
         // roll and its y is depth, while the finger on the object is held still.
-        // ⚠ A touchpoint on a DIFFERENT object is deliberately excluded: that is §4 rule 5
-        // / 6bis / 6ter's configuration and must stay reachable.
+        // ⚠ A touchpoint on a DIFFERENT object never lands here: since `D124` it is routed as a
+        // MISS and steers from the OUTSIDE branch (its tap aligns).
         const holder2 = st.router
           .objects()
           .find((q) => q.object === routed.object);
         const grip2 = holder2 ? st.held.get(holder2.id) : undefined;
-        // ⚠ `SAME_OBJECT` is untouched by `D59` — the owner's sentence says *outside any
-        // object* — but it goes through the same table so all three configurations are decided
-        // in one place rather than by three scattered call sites.
+        // ⭐ The same table decides this finger as the OUTSIDE one (`D108`: the drive depends on
+        // the body and the mode, never on where the finger landed).
         if (
           grip2 &&
           applyDepthDrag(st, 
             grip2,
             routed.seq,
             s,
-            secondTouchDrive("SAME_OBJECT", gripIsAlignedFollower(st, grip2)) ===
+            secondTouchDrive(gripIsAlignedFollower(st, grip2), st.behaviour) ===
               "BOTH",
           )
         ) {
@@ -539,20 +409,20 @@ export function installPointerHandler(st: SceneState): void {
           // nothing and is not a tap either. Nothing to record — the press already decided.
         }
       }
-      paint(st);
+      st.hudDirty = true;
       return;
     }
 
     if (routed.role === "IGNORED") {
       // ⛔⛔ AN IGNORED TOUCHPOINT RUNS NOTHING, INCLUDING ON RELEASE — no release
-      // verdict, no flick test, no tap history. ⚠ The OPPOSITE of the pinch three
+      // verdict, no tap history. ⚠ The OPPOSITE of the pinch three
       // branches below, where lifting one of two fingers ends the gesture. A stray TAP
       // from here would evict a constraint (§1.4) that the user never asked to lose.
       if (info.type === PointerEventTypes.POINTERUP) {
         forgetAnchor(st, routed.seq);
         st.router.release(e.pointerId);
       } else st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
-      paint(st);
+      st.hudDirty = true;
       return;
     }
 
@@ -579,10 +449,10 @@ export function installPointerHandler(st: SceneState): void {
             grip,
             routed.seq,
             s,
-            secondTouchDrive("OUTSIDE", gripIsAlignedFollower(st, grip)) === "BOTH",
+            secondTouchDrive(gripIsAlignedFollower(st, grip), st.behaviour) === "BOTH",
           )
         ) {
-          paint(st);
+          st.hudDirty = true;
           return;
         }
         if (st.router.outside().length === 2) {
@@ -609,16 +479,12 @@ export function installPointerHandler(st: SceneState): void {
         // lands on, and a second definition here could disagree with the first.
         forgetAnchor(st, routed.seq);
         st.router.release(e.pointerId);
-        // ⭐⭐⭐ A15: this is A10's DEPTH ANCHOR going up — the case that motivated the
-        // amendment, because depth is what slides the object off the holder's finger.
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         st.pinch.end();
-        // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms fork
-        // C's pending toggle. ⛔ A DOUBLE tap keeps exactly the meaning it has in forks A and
-        // B — the camera reset — and cancels the pending toggle rather than being consumed
-        // by it. ⭐ That is what the discrimination bought: the two gestures stopped
-        // overlapping, so the special case disappeared instead of growing.
+        // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms the
+        // pending toggle. ⛔ A DOUBLE tap here is the camera reset, and cancels the pending
+        // toggle rather than being consumed by it.
         // ⛔⛔ **`D64` — a finger that drove depth or roll releases, it does not tap.** ⚠ The
         // DOUBLE-TAP is untouched: the history is recorded either way, so the camera reset
         // pairs exactly as it always has. Only the toggle is spent.
@@ -640,10 +506,12 @@ export function installPointerHandler(st: SceneState): void {
           st.cfg.tapMaxDuration,
           mmToPx(st.cfg.doubleTapSlop),
         );
-        // ⭐⭐ `D119` — A TAP ON A FROZEN BODY ALIGNS THE HELD BODY TO THE FACE UNDER IT. ⛔ Asked FIRST:
-        // it is an assembly act, and must not fall through to the unalign or the mode toggle.
-        const frozenTap = st.frozenTapFace.get(e.pointerId);
-        st.frozenTapFace.delete(e.pointerId);
+        // ⭐⭐ `D119`/`D124` — A TAP ON ANOTHER BODY (frozen, or steered by this touch) ALIGNS THE HELD
+        // BODY TO THE FACE UNDER IT; `tapFace` was set at the press for any non-held body routed as a
+        // miss. ⛔ Asked FIRST: it is an assembly act, and must not fall through to the unalign or the
+        // mode toggle. ⚠ `frozenTap`/`frozenVerdict` are historical names — the body need not be frozen.
+        const frozenTap = st.tapFace.get(e.pointerId);
+        st.tapFace.delete(e.pointerId);
         const frozenVerdict =
           isTap && frozenTap !== undefined && heldGrip !== undefined && heldId !== undefined
             ? pressMeaning({
@@ -655,13 +523,12 @@ export function installPointerHandler(st: SceneState): void {
                 pioneerFaceOfHeld: st.links.pioneerFor(heldId)?.faceId ?? null,
                 heldPressFace: heldGrip.pressFace?.faceId ?? null,
                 pressedIsSeatedPartner: isSeatedCouple(st, heldId, frozenTap.id),
-                pressWasDoubleTap: false,
               })
             : null;
         if (frozenVerdict !== null && heldGrip !== undefined && heldId !== undefined && frozenTap !== undefined) {
           st.taps.record(routed.pressed, s.t);
-          if (frozenVerdict.action === "ALIGN" && frozenVerdict.mode !== null) {
-            alignFollowerTo(st, heldId, heldGrip, frozenVerdict.mode, frozenTap.id, frozenTap.faceId, null);
+          if (frozenVerdict.action === "ALIGN") {
+            alignFollowerTo(st, heldId, heldGrip, frozenTap.id, frozenTap.faceId, null);
             // ⭐ The ledger: an assembly tap, like the unalign tap (`D112`).
             st.episodeUnaligned.add(e.pointerId);
           } else {
@@ -682,7 +549,6 @@ export function installPointerHandler(st: SceneState): void {
           st.episodeUnaligned.add(e.pointerId);
           if (alignedFaceOf(st.world, heldId) !== null) {
             releaseAlignmentOf(st, heldId);
-            heldGrip.alignmentTouched = false;
             st.lastVerdict = `align: TAP on empty space released the alignment on ${heldId}`;
           } else {
             // ⭐⭐ `D107`: holding a PIONEER — the tap releases EVERY follower aligned to it.
@@ -711,7 +577,7 @@ export function installPointerHandler(st: SceneState): void {
           st.lastVerdict = "DOUBLE_TAP → camera reset";
         }
       }
-      paint(st);
+      st.hudDirty = true;
       return;
     }
 
@@ -721,7 +587,7 @@ export function installPointerHandler(st: SceneState): void {
     if (info.type === PointerEventTypes.POINTERMOVE) {
       // ⭐⭐⭐ **THE UNSNAP GESTURE** (`D100`): the FIRST holder on the Pioneer, the SECOND on its
       // seated Follower, then a rapid move — the fingers' separation growing (tablet) or the
-      // driven pointer travelling (mouse) by the eviction shake's own leg within its window.
+      // driven pointer travelling (mouse) by the unsnap leg (`unsnapLegMm`) within its window.
       // ⛔ The pair and the numbers are `unsnap.ts`'s; this reads press order off the router.
       st.lastFedPointer = e.pointerId;
       feedUnsnap(st, s);
@@ -761,11 +627,8 @@ export function installPointerHandler(st: SceneState): void {
         // through the middle of a swap — and a swap is 150-300 ms of hand, which is very
         // visible if the holder happens to be moving at the time. ⚠ That is exactly why the
         // owner's cases 2 and 3 *"differ by timing of the input"*.
-        // ⭐⭐ **ONE RULE, ONE PLACE** (`A16`): `translatesOnDrag` is the same function the
-        // highlight condition reads, so the two cannot drift apart. ⛔ It used to be spelled
-        // inline here as `objects().length === 1 ? behaviour : "TRANSLATE"`, and a second copy
-        // in `highlight.ts` would have been two implementations of one rule — free to
-        // disagree, with nothing to catch it.
+        // ⭐⭐ **ONE RULE, ONE PLACE** (`A16`): `translatesOnDrag` in `highlight.ts` owns it. ⛔ It
+        // used to be spelled inline here as `objects().length === 1 ? behaviour : "TRANSLATE"`.
         // ⭐⭐⭐ `D60` — **AND A SECOND TOUCH THAT OWNS ROLL + DEPTH TAKES THE MODE'S PLACE.**
         // ⛔ The owner's completion: *"the first touch shall control the translation with delta
         // position x and y — which is currently the case in translation mode but not in rotation
@@ -817,14 +680,12 @@ export function installPointerHandler(st: SceneState): void {
         // finger moves nothing, and a drag leaves rest continuously rather than stepping
         // by the radius. ⛔ This is also amendment A9, met at the source.
         // ⭐⭐⭐ **THE CHANNELS ARE REMAPPED (the owner, 2026-09-22)**: `dx` drives the body's
-        // **x** axis and `dy` drives its **depth** axis — both horizontal outside the zone — and
-        // the SECOND touchpoint's `dy` drives its **gravity** axis (`applyDepthStep`).
-        // ⛔⛔ It is unconditional: `worldAxisB` chooses WHICH axes, never whether the remap
-        // applies. ⚠ What it costs, and it is inherent rather than tunable: the holder's `dy`
-        // goes quiet at a level camera, where a depth change produces no screen motion at all.
-        // ⭐ `axis_translate.ts` derives it, and the sign `depthTranslate` needed `awaySign`
-        // for falls out of the projection instead of being asserted.
-        // ⚠ `sid` above is scoped to the shake block; this branch asks for its own. ⛔ A body
+        // **x** axis and `dy` drives its **depth** axis — both horizontal — and the SECOND
+        // touchpoint's `dy` drives its **gravity** axis (`applyDepthStep`). ⭐ The axes are the
+        // boot-latched ones (`WorldAxisB`, the only frame since `D109`). ⚠ What it costs, and it is
+        // inherent rather than tunable: the holder's `dy` goes quiet at a level camera, where a
+        // depth change produces no screen motion at all. ⭐ `axis_translate.ts` derives it, and
+        // the depth sign falls out of the projection instead of being asserted. ⛔ A body
         // the model does not know is given the boot basis rather than no basis — it is still
         // being dragged, and the alternative is a frame in which the finger does nothing.
         const tid = st.idOf.get(grip.mesh);
@@ -847,30 +708,21 @@ export function installPointerHandler(st: SceneState): void {
           st.cfg.gainTranslateScreen,
           st.cfg.gainTranslateDepth,
           st.cfg.axisTrackingConeDeg,
-          // ⭐ Read ONLY inside the cone, where it is the sign `depthTranslate` needed: +1
-          // looking down on the scene, −1 looking up at it.
+          // ⭐ Read ONLY inside the cone, where it is the depth sign: +1 looking down on the
+          // scene, −1 looking up at it.
           grip.frame.towardGravity,
         );
         noteAxisTravel(st, tid, travel);
         st.lastTrackGain = travel.trackGain;
         st.lastEdgeOn = travel.edgeOn;
         const step = axisDisplacement(travel, axes);
-        // ⭐ `grip.frame` is the basis LATCHED AT PRESS, and `applyWorldStep` uses it for the
-        // swing's screen travel and the depth clamp only — the body's own axes decide the
-        // motion, and with `worldAxisB` they were latched at BOOT rather than at this press.
-        // ⛔ THE FINGER MOVES THE TARGET, NOT THE MESH. The mesh chases it in the render
-        // loop. With `translateInertiaMs` at 0 the two are the same thing.
-        // ⛔ THE FINGER MOVES THE MODEL. The follower's target is re-read from it every
-        // frame, so the inertia stays exactly what it was — a filter on the way to the
-        // screen, and no longer the place the object's position is kept.
-        // ⭐ ONE writer for an applied step: it moves the body, feeds the swing's direction and
-        // records the travel direction the LeadingFace ray is fired along. ⛔ THE FINGER MOVES
-        // THE MODEL — the follower re-reads it every frame, so the inertia stays a filter on the
-        // way to the screen rather than the place the position is kept.
+        // ⭐ The body's own axes decide the motion, latched at BOOT (`WorldAxisB`), not at this press.
+        // ⭐ ONE writer for an applied step. ⛔ THE FINGER MOVES THE MODEL — the follower re-reads
+        // it every frame, so the inertia stays a filter on the way to the screen rather than the
+        // place the position is kept.
         applyWorldStep(st, grip, step);
       } else if (grip.mode === "ROTATE") {
-        // The provisional motion — applied LIVE, and undone by the recognizer itself
-        // if the flick test passes at release.
+        // The motion — applied LIVE (the flick that could undo it is deleted, `D110`).
         //
         // ⭐⭐⭐ `IN3`: RULE 2bis NOW HAS ITS PRECONDITION — *"with an empty constraint
         // stack"* — and it is asked through `dragRule`, which is also where 2sexte and the
@@ -915,7 +767,7 @@ export function installPointerHandler(st: SceneState): void {
             // than the defect it replaced: the HUD would have reported the refusal while the
             // mate broke.
             grip.prev = s;
-            paint(st);
+            st.hudDirty = true;
             return;
           } else if (channel.kind === "TWIST") {
             const axis = channel.axis;
@@ -980,7 +832,7 @@ export function installPointerHandler(st: SceneState): void {
               // That is why it looked wired in one mode and missing in the other.
               // ✅ NOW IT RIDES ALONG: the twist is a WORLD rotation about the aligned axis, so
               // composing it onto both ends of the animation keeps the snap travelling AND
-              // accumulates the turn — the same trick C2's follow uses. ⚠ Not a compromise: a
+              // accumulates the turn. ⚠ Not a compromise: a
               // hand twisting while the object swings into place gets both, which is what both
               // gestures asked for.
               if (fid !== undefined) {
@@ -995,7 +847,7 @@ export function installPointerHandler(st: SceneState): void {
               noteSpin(st, grip, s.t);
             }
             grip.prev = s;
-            paint(st);
+            st.hudDirty = true;
             return;
           }
           // ⚠ An UNALIGNED object in fork C rotates freely — fork A's 2bis, which is what
@@ -1012,8 +864,7 @@ export function installPointerHandler(st: SceneState): void {
         // the same hand shape — and everything that existed to tell them apart is gone:
         // 2quinte's circle fit, the `rollAngle` commit threshold, the provisional
         // yaw/pitch, A8's rebase to the circle's start, and the jump all of it produced.
-        // ⚠ `roll.ts` still exists with its 40 vectors and is no longer on the gesture
-        // path — the same status as `shake.ts` and `anchor_rotate.ts`.
+        // ⛔ `roll.ts` is deleted; `anchor_rotate.ts` stays built and off the gesture path.
         // ⭐ TALLIED PER AXIS, and the angles restated here are `screenPlaneRotation`'s own,
         // negation and all. ⛔ The settle corrects what the gesture DEMANDED, so a sign that
         // disagreed with the rule would land the body on a multiple of the wrong quantity.
@@ -1028,9 +879,8 @@ export function installPointerHandler(st: SceneState): void {
         // ⭐ The axes are `screenPlaneRotation`'s own — the gravity frame's `up` and `right` — taken
         // from the same `grip.frame` the rotation below is handed, so the line cannot disagree with
         // the turn it describes.
-        // ⛔⛔ **`worldAxisB` PICKS THE FRAME HERE TOO** (the owner, 2026-09-23). ⚠ ONE lookup for
-        // the lines, the tally and the turn — they restate each other's axes, so two calls could
-        // hand them different ones on the very frame the flag is toggled.
+        // ⭐ `rotationFrameOf` picks the frame (the boot-latched `WorldAxisB`, the only one since
+        // `D109`). ⚠ ONE lookup for the lines, the tally and the turn — they restate each other's axes.
         const turnFrame = rotationFrameOf(st, grip.frame);
         if (grip.rec.step.dx !== 0)
           noteTurnAxis(st, freeId, TURN_YAW, turnFrame.up);
@@ -1084,78 +934,22 @@ export function installPointerHandler(st: SceneState): void {
       }
 
       grip.prev = s;
-      paint(st);
+      st.hudDirty = true;
       return;
     }
 
     if (info.type === PointerEventTypes.POINTERUP) {
-      // ⭐⭐⭐ A15 — AN ORPHANED HOLDER LIFTS WITHOUT A VERDICT, and the exclusion is the
-      // point. ⛔ A flick-to-align or a double-tap belongs to a finger that was still on
-      // its object; running one here would align — or evict a constraint on — an object the
-      // user stopped touching a few hundred milliseconds ago, and never aimed this gesture
-      // at. ⚠ The camera reset is refused for the same reason: the press was on an object.
-      // ⚠ No `ReleaseContext` yet: selection and the two-touchpoint context are
-      // `IN2`/`IN3`. So 6quater cannot win here, and the readout will show 2ter /
-      // 2quater only. That is a missing INPUT, not a recognizer that ignores it.
       const verdict = grip.rec.release(s);
-      st.lastVerdict = describe(st, verdict);
+      st.lastVerdict = describe(verdict);
 
-      // ⛔⛔ THE FLICK IS DELETED (`D110`, 2026-09-27) — its rotation reset with it.
-      // ⭐⭐⭐ **THE TAP'S FOUR MEANINGS, AND `tapMeaning` OWNS THE CHOICE.**
-      //
-      // ⛔⛔ `D27`/`D28` MADE EVERY TAP FLIP THE MOVEMENT MODE, and the alignment trigger IS a
-      // tap — so the two rules want the same gesture, and the alignment CONSUMES it when it
-      // fires (`D38`). ⭐ Since 2026-09-17 the GESTURE also chooses what the alignment means:
-      // a single tap makes a `SNAPSHOT`, a double tap makes a `FOLLOW`, and either one on the
-      // face that is already the Pioneer switches the mode or lets it go.
-      //
-      // ⚠⚠ **AND A DOUBLE TAP ON ANOTHER OBJECT'S FACE NO LONGER FLIES THE CAMERA HOME.**
-      // That meaning survives everywhere else — empty space, the held object — but here it
-      // would make every `FOLLOW` alignment reset the view, which is unusable. ⛔ The camera
-      // reset is therefore evaluated AFTER the alignment decision and skipped when the tap
-      // aligned; this block used to run first, which is why it moved.
+      // ⛔⛔ THE FLICK IS DELETED (`D110`, 2026-09-27) — its rotation reset with it. ⛔ `tapMeaning`,
+      // `D39`'s re-tap undo and the FOLLOW double tap are deleted too (`D106`/`D107`): a holder's own
+      // release never aligns; the second touch's TAP does, in the OUTSIDE branch above.
       let alignedByThisTap = false;
       // ⚠⚠ `D68` — THE HONEST HALF. A tap consumed by an alignment toggles NOTHING, so the
       // fact is cleared before either branch can set it: undoing a toggle that never happened
       // would flip the mode the hand actually had.
       st.lastTapToggled = false;
-      // ⛔⛔⛔ **`D55` — A RELEASE WHOSE OWN PRESS ALIGNED IS ALREADY SPENT.**
-      //
-      // ⚠⚠ WITHOUT THIS BRANCH THE GESTURE UNDOES ITSELF, and it would look like the trigger
-      // never worked at all. The press aligns; the release that follows it is a `TAP` on the
-      // very face that alignment names, and `tapMeaning` reads that — correctly, and by a rule
-      // the owner explicitly kept — as `UNALIGN`. ⭐ So align-then-break, ~80 ms apart, with
-      // nothing on the glass to show for it.
-      //
-      // ⭐⭐ **AND IT IS THE *PRESS* THAT IS ASKED, NOT THE STATE.** *"Is the held body aligned
-      // to this one?"* would be the substituted quantity again: it is true for the second tap
-      // of a double tap as well, and that release must NOT be consumed — it is what carries
-      // `SNAPSHOT` → `FOLLOW`. ⛔ Only *"did MY press make it?"* separates the two.
-      // ⭐⭐⭐ `D119` — THE REMEMBERED ALIGNMENT FIRES ON A RELEASED TAP, and on nothing else.
-      if (grip.pendingAlign !== null) {
-        const pa = grip.pendingAlign;
-        grip.pendingAlign = null;
-        const heldGrip = st.held.get(pa.heldPointerId);
-        if (alignsOnRelease(verdict.kind) && heldGrip !== undefined) {
-          grip.pressActed = alignFollowerToPioneer(st, pa.heldPointerId, heldGrip, pa.mode, grip);
-        } else {
-          st.lastVerdict = "align: the second touch was PRESSED, not tapped — no alignment (D119)";
-        }
-      }
-      if (grip.pressActed) {
-        alignedByThisTap = true;
-        st.lastVerdict = `${st.lastVerdict} — release spent (the press aligned)`;
-      }
-      // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
-      // orbit can get stuck close in with an object filling the view, and then every tap
-      // lands ON something — a reset that only listened to empty space would be
-      // unreachable precisely when it is wanted.
-      // ⚠⚠ UNLESS THE TAP ALIGNED — **the owner's rule, 2026-09-17**: *"the double tap in such
-      // case shall not trigger the camera orbit reset."* ⭐ A double tap on another object's
-      // face now makes a `FOLLOW` alignment, and flying the camera home on top of it would
-      // make the gesture unusable. ⛔ One gesture, one consequence.
-      // ⚠ Everywhere else the double tap keeps the camera reset: empty space, the held
-      // object, a second touchpoint. Only this one configuration is claimed.
       // ⭐⭐⭐ `D111` — **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** (the owner, 2026-09-27),
       // and it no longer flies the camera home: that stays on EMPTY space. ⚠ Cost: an orbit stuck
       // close in with a body filling the view must find a patch of empty space to reset.
@@ -1169,58 +963,10 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐ THE VERDICT IS READ, NOT RE-JUDGED: the recognizer already recorded this tap in
       // the SHARED `TapHistory` (`recognizer.ts` does it), so calling `noteTap` here would
       // record the same tap twice and corrupt the double-tap pairing for every consumer.
-      // ⚠ Both `TAP` and `DOUBLE_TAP` toggle, once each: a `DOUBLE_TAP` verdict IS the
-      // second tap of a pair, so two taps flip the mode twice — back where it started — and
-      // also reset the camera, which is the owner's stated worst case and identical to what
-      // a second touchpoint's taps do. ⛔ One rule: **one toggle per tap release.**
-      // ⛔⛔ **`D66` — AND NOTHING SETTLES UP HERE ANY MORE.** `D58`'s press toggle used to
-      // land in this branch twice over: a flag saying *the press already did it*, and a
-      // ROLLBACK for the one gesture where the press's meaning and the tap's disagreed (a
-      // re-tap on the PioneerFace releases the alignment, `D39`). ⭐ Both are deleted with the
-      // press toggle: a rule that cannot fire needs no correction, and `D39` gets its single
-      // meaning back without one.
-      // ⛔⛔ `D108`: a tap on the object the touchpoint was carrying NO LONGER TOGGLES the mode —
-      // only a tap on EMPTY space does (`tapTogglesMode`). ⚠ Nothing toggled, so `D68`'s revert
-      // must not fire on a press that pairs with it.
-      if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") st.lastTapToggled = false;
-      // ⭐ §3 rule 3 — *"release unselects object and face, stack preserved."* ⛔ The stack
-      // lives on the OBJECT, so preserving it is not an action: it is what NOT clearing the
-      // selection state means.
-      //
-      // ⭐⭐⭐ AND THE OWNER AMENDED IT, 2026-09-16: *"keep the face highlighted when the
-      // object is aligned, until the shaking releases the alignment."*
-      // ⛔⛔ THE ARGUMENT IS THAT THE HIGHLIGHT IS NOT A SELECTION INDICATOR ANY MORE — it is
-      // **the alignment's only visible state**. A constrained object looks exactly like a
-      // free one: the stack is invisible, 2sexte's refusal to yaw feels like a dead control,
-      // and *which* face is anchored is unknowable. ⭐ So the marker outlives the gesture
-      // that made it and dies with the CONSTRAINT, which is the thing it now reports.
-      // ⚠ §3's clause still governs an UNALIGNED object: press, look, release, and the
-      // highlight goes — nothing to report, nothing drawn.
-      // ⛔⛔⛔ **DEVICE-REPORTED: *"the aligned face shall continue to be highlighted. You
-      // completely disregarded the highlight rule — or if you built it, I can't see it."***
-      //
-      // ⚠ It WAS built, and this line destroyed it one event later. The test asked *"is the
-      // object being RELEASED the highlighted one?"* — and in fork C it never is: the
-      // highlight names the **Follower**, while the release that follows an alignment is the
-      // **Pioneer's** tap. So the marker was raised and wiped in the same handler.
-      //
-      // ⭐⭐ THE FIX IS TO ASK THE QUESTION THE HIGHLIGHT ACTUALLY ANSWERS. It reports *this
-      // object is aligned on this face* (`D35`), so it lives exactly as long as that
-      // alignment does — **whichever** object is being released. ⛔ The old form was a
-      // condition about the GESTURE standing in for a fact about the MODEL, which is the
-      // shape `METHOD` calls a substituted quantity.
-      // ⛔⛔ `hasAlignment`, NOT `length > 0` — audit, 2026-09-17: a MATE is not an alignment,
-      // and `evict` deliberately never removes one, so a mated body would keep its follower
-      // marker for ever. ⚠ A stale highlight is what produced TWO false device reports on
-      // 2026-09-17; this is the same shape one constraint-kind further on.
-      const highlightedStillAligned =
-        st.selectedFace !== null &&
-        hasAlignment(
-          st.world.objects.get(st.selectedFace.objectId)?.constraints ?? [],
-        );
-      if (!highlightedStillAligned) {
-        st.selectedFace = null;
-      }
+      // ⛔⛔ **`D66` — AND NOTHING SETTLES UP HERE ANY MORE**: `D58`'s press toggle and its
+      // rollback are deleted with the press toggle.
+      // ⛔⛔ `D108`: a tap on the object the touchpoint was carrying NO LONGER TOGGLES the mode — only a
+      // tap on EMPTY space does (`tapTogglesMode`); `lastTapToggled` was cleared above for this release.
       forgetAnchor(st, routed.seq);
       // ⭐⭐ **THE GESTURE ENDS, AND THERE IS NOTHING TO TIDY UP.** The body is already on an
       // increment — it has never been anywhere else — so a release needs no correction of its
@@ -1232,7 +978,7 @@ export function installPointerHandler(st: SceneState): void {
       }
       st.router.release(e.pointerId);
       st.held.delete(e.pointerId);
-      paint(st);
+      st.hudDirty = true;
     }
   });
 

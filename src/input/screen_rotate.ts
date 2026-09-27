@@ -26,7 +26,7 @@
  *
  *     finger RIGHT  ⇒ the face toward the viewer travels RIGHT
  *     finger UP     ⇒ the face toward the viewer travels UP
- *     roll POSITIVE ⇒ CLOCKWISE on screen (matching `roll.ts`)
+ *     roll POSITIVE ⇒ CLOCKWISE on screen (matching the deleted `roll.ts`)
  *
  * ⚠ The caller resolves the three axes ONCE, at press. Storing them rather than
  * recomputing per frame is the same lesson as §1.4's `WORLD_AXIS_ALIGN`: rule 1's

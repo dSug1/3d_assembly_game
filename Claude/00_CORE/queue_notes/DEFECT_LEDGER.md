@@ -2,7 +2,12 @@
 
 > **STATUS** · live · **OWNS** · the account of each defect counted in `QUEUE.md`'s ledger
 > **READ IF** · you are about to build anything in the input or render layers
-> **LAST VERIFIED** — 2026-09-17
+> **LAST VERIFIED** — 2026-09-27
+
+⭐ **THE COUNT, RECONCILED 2026-09-27**: entries run to **72**; **65, 66, 67 and 69** are vector or
+fixture defects (a mutant, a change, my own fixtures) and are NOT in the by-finger column. So
+`QUEUE.md`'s ledger stands at **68** — 67 by finger, one by composing a measurement with a threshold.
+The totals of **45** and **50** further down are the counts as they stood on those dates.
 
 ⭐⭐ **WHY THIS FILE EXISTS.** `QUEUE.md` keeps the ledger's **counts**, so the number has one
 home and stops drifting. ⛔ The *stories* grew to 7 KB inside a front door with a byte budget,

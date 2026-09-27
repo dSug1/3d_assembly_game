@@ -15,8 +15,9 @@ npm run verify             # typecheck + golden vectors
 ```
 
 ⚠ **Touch gestures cannot be honestly tested with a mouse.** `--host` exists so a
-real device on the same network can load the dev server; a desktop pointer has one
-touchpoint, no DPI story and no tilt.
+real device on the same network can load the dev server. A mouse is modelled as a two-touch
+device (`D94`: Shift + drag is the second touch) so the game is playable on a desktop, but it is
+not a finger — no pinch, no DPI story, no tilt.
 
 ## Layout
 

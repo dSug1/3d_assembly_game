@@ -11,9 +11,8 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { trackingMetresPerPx, type GravityFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { worldPlacementOf, type ObjectId } from "../core/object_model";
+import { worldPlacementOf, type ObjectId, faceWorld } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
-import { faceWorld } from "../core/object_model";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
 import { displayedAxes, soleGizmoBody, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
@@ -22,7 +21,7 @@ import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RIN
 import { worldPointOn } from "./markers";
 import { requireGestureFrame } from "./camera_rig";
 
-/** ⭐ The decision is `rotationFrame`'s, in `src/input`; this only supplies the two candidates. */
+/** ⭐ The decision is `rotationFrame`'s, in `src/input` (the boot frame since `D109`); this only supplies the inputs. */
 export function rotationFrameOf(st: SceneState, live: GravityFrame) : GravityFrame {
 return rotationFrame({
     bootFrame: st.bootGestureFrame,
@@ -43,8 +42,7 @@ return rotationFrame({
 // owner: *"Inside shall be the same as outside."* ⚠ There used to be a `Map<ObjectId,
 // ObjectAxes>` here, written only at the zone's edges; with the in-zone basis deleted nothing
 // writes it, so it is gone rather than left to look like state.
-// ⭐ The decision stays in `input/object_axes.ts` — this asks it, per call, so `worldAxisA` now
-// follows the live camera every frame instead of only at a crossing.
+// ⭐ The zone is deleted too (`D120`); the axes are the boot ones below.
 export function axesOf(st: SceneState) : ObjectAxes {
   // ⭐⭐ `D109`: the boot camera's axes, fixed for the scene, are the ONLY axes — `worldAxisB = 0`
   // (the live camera's) is deleted with its flag.
@@ -294,8 +292,8 @@ export function refreshAxisGizmo(st: SceneState) : void {
       (followerFaceId === null
         ? null
         : faceWorld(st.world, id, followerFaceId)?.centre) ?? centre;
-    // ⛔ NO STAND-IN. A body the model cannot place shows no gizmo, exactly as `⛔NOSHAPE` shows
-    // no capture shell — suppress rather than substitute.
+    // ⛔ NO STAND-IN. A body the model cannot place shows no gizmo, exactly as a `⛔NOSHAPE` body
+    // gets no outline — suppress rather than substitute.
     if (!anchor) continue;
     // ⭐⭐⭐ **THE TURN AXES GO THROUGH THE BODY'S CENTRE, ALWAYS** — the owner, 2026-09-23: *"the
     // gizmo axis for rotation shall pass through the object center, not the aligned face even if
@@ -322,7 +320,7 @@ export function refreshAxisGizmo(st: SceneState) : void {
     const span = camDistTo(anchor) * 20;
     // ⭐⭐⭐ **THE TURN AXES ARE A THIRD OF THE SHORTER SCREEN EDGE** (the owner, 2026-09-23), so
     // they are sized in PIXELS and keep a constant apparent length as the camera comes in —
-    // rule 3's shape, and the same conversion the white ring and the capture shell already use.
+    // rule 3's shape, and the same conversion the white ring already uses.
     // ⛔ `camDist` rather than `camera.radius`: the orbit radius is the distance to the ORBIT
     // CENTRE, and a body away from that centre would have drawn a line of the wrong length.
     // ⚠ HALVED, because the line runs BOTH ways from the anchor and the owner named the whole

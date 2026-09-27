@@ -5,10 +5,9 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { rollDragDeg, secondFingerDrive, depthLimits, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, screenRollRotation, MotionTracker, type Sample } from "../input";
-import { type Vec3 } from "../core/vec";
+import { type Vec3, IDENTITY } from "../core/vec";
 import { incrementRadians } from "../input/rotation_increment";
 import { rotationChannel } from "../core/constraint_stack";
-import { IDENTITY } from "../core/vec";
 import { bothAxesSecondDrive } from "../input/second_touch_drive";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
@@ -19,62 +18,18 @@ import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { screenFrame } from "./camera_rig";
 import { noteSpin, nudgeOthersWorld } from "./sway_pass";
 
-/**
- * ⭐⭐ AMENDMENT A6 — DEPTH TRANSLATION BY A COMMON VERTICAL DRAG.
- *
- * One touchpoint on the object, one touchpoint beside it, and **both travelling in y by
- * the same amount** — the object goes deeper into the scene or comes back.
- *
- * ⛔⛔ IT SHARES A CONFIGURATION WITH RULE 6, so the discriminator is the whole design:
- * **common mode is depth, differential mode is rule 6.** The anchor sitting still is what
- * makes a gesture rule 6; both fingers travelling together is what makes it A6.
- *
- * ⭐ A6 replaced A5's pinch because a hand found the hole: two fingers will not fit on a
- * SMALL object, and pushing a part away shrinks it — so the pinch destroyed its own
- * affordance as it succeeded. The anchor can now be anywhere.
- */
-/**
- * Move the held object in depth by ONE touchpoint's share of this frame's travel.
- *
- * ⛔⛔ HALF, AND THAT IS ARITHMETIC RATHER THAN CAUTION. The common travel is the AVERAGE
- * of the two fingers', and each finger delivers its own move event — so applying half of
- * each event's delta sums to exactly the common travel. Applying the whole of each would
- * move the object TWICE as far as the hand asked.
- */
-/**
- * Move the held object in depth by the DRIVER's own travel.
- *
- * ⛔⛔ THE DRIVER IS THE FINGER TOUCHING THE OBJECT, AND IT SUPPLIES ALL THE MOTION. The
- * second finger contributes none — it authorises the depth reading by following. ⚠ Three
- * earlier versions of this blended the two fingers' travel (a mean, a minimum, a faded
- * mean) and a hand felt every one of them: a blend has seams.
- */
-/**
- * ⭐⭐⭐ **THE SECOND TOUCHPOINT'S `dy` NOW DRIVES THE BODY'S *GRAVITY* AXIS** (the owner,
- * 2026-09-22) — it drove the depth axis until then, and the holder's own `dy` has taken
- * that over. ⛔ The channel moved; the plumbing did not. `secondFingerDrive` still decides
- * WHETHER this finger is translating, `gainTranslateDepth` is still the gain, and the name
- * of that tunable is deliberately unchanged: it is *the second finger's translate gain*,
- * and renaming a number a hand has tuned is how a device session loses its baseline.
- *
- * ⚠⚠ **`depthTranslate` IS NOT CALLED ANY MORE**, and it is declared as such in
- * `tests/unwired_debt.test.ts` rather than deleted: six models and five device passes are
- * behind it, and rule 5 has not judged the remap that replaced it.
- */
+// ⛔ History: `A6` (depth by a common vertical drag) and `A10` (the anchor drives depth) stood
+// here; both are superseded by the object axes (`D75`) — the holder's `dy` drives the body's
+// DEPTH axis and the second touchpoint's `dy` its GRAVITY axis. ⚠ `gainTranslateDepth` keeps its
+// name (*the second finger's translate gain*): renaming a number a hand has tuned is how a
+// device session loses its baseline. ⛔ `depthTranslate` is deleted (`D109`).
 /**
  * ⭐⭐⭐ **APPLY A WORLD TRANSLATION STEP — the ONE place a translation lands on a body.**
  *
- * ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"the swing of camera [is] missing at offset radius
- * zone enter sometimes when the follower approaches the pioneer from the gravity axis
- * direction."* ⚠ The swing takes its direction from `frameTravel*`, and **only the holder's
- * branch fed it** — the second touchpoint's channel, which is the GRAVITY axis, applied its
- * displacement and recorded nothing. ⭐ So an approach along gravity armed with
- * `swingSignFor(0, 0)`, which is `null`, and the swing never started. *"Sometimes"* is exactly
- * the frames where the holder happened to be moving too.
- *
- * ⭐⭐ **IT IS THE `D68` SHAPE IN ANOTHER FILE: one fact, two writers, one of which forgot.**
- * ⛔ So the fix is not the missing line — it is that applying a step and recording what it did
- * are now the same function, and a third channel cannot be added without both.
+ * ⭐⭐ Every channel (the holder's and the second touchpoint's) goes through here, so applying a
+ * step and its bookkeeping — the seat redirect, the depth clamp — cannot drift apart. ⚠ It was
+ * made one function after a 2026-09-23 report where the second touchpoint's channel skipped the
+ * (since deleted, `D120`) approach swing's travel record — *one fact, two writers, one forgot*.
  */
 export function applyWorldStep(st: SceneState, grip: Held, step: Vec3) : void {
   // ⛔⛔ `D100`: a SEATED or SNAPPING Follower is not translated by its own finger — it sits on
@@ -98,13 +53,6 @@ export function applyWorldStep(st: SceneState, grip: Held, step: Vec3) : void {
     st.lastVerdict = `snap: ${seatedId} is seated — move its Pioneer, or unsnap`;
     return;
   }
-  // ⚠ The LeadingFace ray is NOT aimed from here any more — it follows what the channels asked
-  // for (`frameAskedM`), which has no lag, rather than what the body did. See `noteAxisTravel`.
-  // ⚠ The swing reads SCREEN travel (*"opposite to the dx movement"*), so the applied
-  // displacement is projected back onto the gravity frame rather than recomputed from a pointer
-  // delta that `A11`'s deadband may have swallowed. ⛔⛔ ACCUMULATED, NOT LATCHED:
-  // `refreshHighlight` zeroes it every frame, so the arming edge reads only the travel that
-  // crossed the threshold.
   const mp = requirePose(st, targetMesh);
   // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
   // camera's own maximum orbit radius. A body through the near plane renders *a black page with
@@ -146,45 +94,21 @@ export function applyDepthStep(st: SceneState, grip: Held, dyPx: number) : void 
   );
   // ⭐ The gizmo hears this finger exactly as it hears the holder's — same function, same frame.
   noteAxisTravel(st, gid, travel);
-  // ⭐ ONE writer, so this channel now feeds the swing exactly as the holder's does.
+  // ⭐ ONE writer — the same `applyWorldStep` as the holder's channel.
   applyWorldStep(st, grip, axisDisplacement(travel, axes));
 }
 
 
 // ⛔⛔ **THE OLD DEPTH RULE STOOD HERE UNTIL 2026-09-22.** `depthTranslate` moved the body
 // along `GravityFrame.depth` with an `awaySign` of its own; the second touchpoint now drives
-// the body's GRAVITY axis instead, and the projection supplies that sign. ⭐ Deleted from the
-// call path rather than parked here: *a dormant fork is a trap* (`D28`), and the module itself
-// survives with its vectors, declared in `tests/unwired_debt.test.ts` until rule 5 judges the
-// remap that replaced it.
+// the body's GRAVITY axis instead, and the projection supplies that sign. ⛔ `depthTranslate`
+// itself is deleted (`D109`).
 
 /**
- * Feed the gate and, if this is a common drag, move the object. ⭐ Called from BOTH
- * touchpoints' move handlers — the anchor has no recognizer, so without its own call its
- * travel would be invisible and the gesture would work only while the object finger moved.
+ * ⭐⭐ IS A SECOND TOUCHPOINT DOWN FOR THIS GRIP? — for the HUD's mode readout.
  *
- * @returns true when A6 owns this object right now, so the caller skips its own rule.
- */
-/**
- * ⭐⭐ AMENDMENT A10 — the ANCHOR drives depth, while the finger on the object is STILL.
- *
- * ⛔⛔ THE GATE IS THE HOLDER'S MOTION STATE AND NOTHING ELSE. No window, no ratio, no
- * tolerance: A6 had all three and the owner rejected the result on the glass, because
- * *"are these two travels equal?"* has no answer at a reversal or at a late start, and
- * both happen in every gesture.
- *
- * @param anchor  the touchpoint OUTSIDE every object — the one supplying the motion.
- * @param anchorDyPx its travel THIS FRAME.
- * @returns whether depth consumed the event, so the caller stops.
- */
-/**
- * ⭐⭐ THE SECOND TOUCHPOINT AND ITS LIVE MOTION STATE, for A13's mode choice.
- *
- * ⛔ Presence and state, re-read every frame — never latched. ⚠ `null` state means the
- * finger has gone down and NEVER MOVED, so it has no tracker yet: the strongest form of
- * idle there is, not a missing answer.
- * ⚠ A touchpoint on a DIFFERENT object is deliberately not one of these — that is §4
- * rule 5 / 6bis / 6ter's configuration and must stay reachable.
+ * ⛔ Presence, re-read every frame — never latched. ⚠ A touchpoint on a DIFFERENT body is
+ * routed `OUTSIDE` since `D124` (it steers), so it counts here too.
  */
 export function secondFingerOf(st: SceneState, grip: Held) : { present: boolean } {
   for (const q of st.router.all()) {
@@ -213,7 +137,7 @@ export function forgetAnchor(st: SceneState, seq: number) : void {
 
 /**
  * ⭐ `D59` — is the body this grip carries an **aligned Follower**? ⛔ The alignment index is
- * the one record of that; `alignModeOf` says what an alignment MEANS, never whether one exists.
+ * the one record of that.
  */
 export function gripIsAlignedFollower(st: SceneState, grip: Held) : boolean {
   const id = st.idOf.get(grip.mesh);
@@ -241,11 +165,11 @@ export function applyDepthDrag(st: SceneState, grip: Held,
   grip.rec.tick(anchorSample.t);
   tracker.push(anchorSample);
 
-  // ⭐⭐⭐ A12 + A16 — the second finger drives ONE of two rules: **roll** by its x or
-  // **depth** by its y, and the MODE picks which. ⚠ A12 gave it both at once, kept
-  // independent by A11's per-axis bands; A16 narrowed it to one, and with the forks gone
-  // (`D28`) that narrowing is all there is. ⛔ The travel is the DEADBANDED travel, exactly
-  // as rule 6 and 2bis take the holder's.
+  // ⭐⭐⭐ A12 + A16 — the second finger drives **roll** by its x and/or **translation** by its y.
+  // ⚠ `bothAxes` (an aligned Follower, `D59`/`D108`; a free body in `TRANSLATE`, `D123`) gives it
+  // both at once, kept independent by A11's per-axis bands; otherwise the MODE picks one
+  // (`secondFingerDrive`). ⛔ The travel is the DEADBANDED travel, exactly as rule 6 and 2bis
+  // take the holder's.
   // ⛔ The live mode is handed over so the choice is made inside the vectored rule, not
   // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
   const drive = bothAxes
@@ -269,8 +193,7 @@ export function applyDepthDrag(st: SceneState, grip: Held,
     // never about the view. ⭐ This is the chart that works where the drag degenerates
     // (camera looking along the axis), which is why `A12`'s channel split answers `A3`
     // without a handover constant — see the 2sexte block in the ROTATE branch.
-    // ⚠ `constrainedRollAngle` returns `null` square to the axis, where a roll has no
-    // component to give: nothing happens, and the drag chart is the one that works there.
+
     const rollId = st.idOf.get(grip.mesh);
     const rollStack =
       rollId === undefined
@@ -283,8 +206,11 @@ export function applyDepthDrag(st: SceneState, grip: Held,
       // ⛔ Same as the one-finger twist: a refusal that fell through to the free roll below
       // would break the mate while the HUD reported that it had not.
       st.lastVerdict = `align: roll refused — ${rollChannel.why}`;
-    } else if (rollChannel.kind === "TWIST") {
-      const axis = rollChannel.axis;
+    } else if (rollChannel.kind === "TWIST" || bothAxes) {
+      // ⭐⭐ `D123`: a FREE body driven on both axes spins about GRAVITY — the world vertical — by the
+      // same chart, sign and gain as an aligned body spins about its normal.
+      const axis =
+        rollChannel.kind === "TWIST" ? rollChannel.axis : rotationFrameOf(st, grip.frame).up;
       // ⭐ The grey line's axis, recorded where the turn is applied (the owner, 2026-09-23).
       noteTurnAxis(st, rollId, TURN_ROLL, axis);
       // ⭐⭐⭐ **`D52` — THE SECOND TOUCHPOINT ROLLS THE FOLLOWER THE SAME WAY THE FIRST
@@ -295,7 +221,8 @@ export function applyDepthDrag(st: SceneState, grip: Held,
       // ⛔⛔ **IT WAS NOT A SIGN, IT WAS A DIFFERENT CHART — measured before changing
       // anything.** The two channels agreed for some constraint axes and opposed for others:
       // `constrainedDragAngle` projects the finger's travel onto the **near-side direction**,
-      // while `constrainedRollAngle` mapped a screen roll through `sign(axis·view)`. ⚠ A
+      // while `constrainedRollAngle` (deleted since, `D109`) mapped a screen roll through
+      // `sign(axis·view)`. ⚠ A
       // blanket sign flip would have fixed the axes that opposed and broken the ones that
       // agreed — the trap this project names as *a sign is not tested by any amount of
       // testing the magnitude*, one level up: the two SIGNS were each defensible and their
@@ -321,10 +248,8 @@ export function applyDepthDrag(st: SceneState, grip: Held,
       //
       // ⭐ The first touchpoint never loses it, because it passes `dx` AND `dy` and can always
       // drag along the near-side direction whatever its screen orientation.
-      // ⛔⛔ AND `constrainedRollAngle` IS NOT A FALLBACK HERE, which is worth stating so the
-      // next session does not try it: an axis horizontal on screen is **square to the view**,
-      // which is exactly where that chart returns `null` too. Both charts are dead in the
-      // same configuration; only the missing `dy` could have served it.
+      // ⛔⛔ AND THE ROLL CHART (`constrainedRollAngle`, deleted `D109`) WAS NO FALLBACK: an axis
+      // horizontal on screen is **square to the view**, where that chart returned `null` too.
       // ⭐⭐⭐ **`D57` — CONSTANT RATE. THE PROJECTION IS GONE, AS THE OWNER REQUIRED.**
       //
       // > *"for the second touchpoint on the Pioneer, the dx on the screen shall drive the
@@ -403,9 +328,10 @@ export function applyDepthDrag(st: SceneState, grip: Held,
       {
         // ⭐ A FREE body rolls about the gravity frame's own depth — `screenRollRotation`'s axis,
         // stated here so the grey line cannot disagree with the turn it describes.
-        // ⛔⛔ **AND *WHICH* GRAVITY FRAME IS `worldAxisB`'s ANSWER SINCE 2026-09-23** — the boot
-        // camera's while it is on. ⚠ Taken ONCE and handed to all three readers below (the grey
-        // line, the turn, the tally), because two of them restate the other's axis and sign.
+        // ⛔⛔ **AND *WHICH* GRAVITY FRAME IS `rotationFrameOf`'s ANSWER** — the boot camera's
+        // (`WorldAxisB`, the only frame since `D109`). ⚠ Taken ONCE and handed to all three readers
+        // below (the grey line, the turn, the tally), because two of them restate the other's axis
+        // and sign.
         const rollFrame = rotationFrameOf(st, grip.frame);
         noteTurnAxis(st, rollId, TURN_ROLL, rollFrame.depth);
         const rollDeg = rollDragDeg(drive.rollDxPx, st.cfg.gainRollDrag);
@@ -422,9 +348,6 @@ export function applyDepthDrag(st: SceneState, grip: Held,
             ),
           );
         }
-        // ⚠ `screenRollRotation` turns by MINUS deg about `frame.depth`; the tally states the
-        // SAME axis and sign, or the settle would correct a turn it had mis-measured.
-        // ⛔ *A sign is not tested by any amount of testing the magnitude.*
         // ⚠ `screenRollRotation` turns by MINUS deg about `frame.depth`; the tally states the
         // SAME axis and sign, or the detents would be counted on a quantity the body is not
         // turning. ⛔ *A sign is not tested by any amount of testing the magnitude.*
@@ -443,8 +366,8 @@ export function applyDepthDrag(st: SceneState, grip: Held,
     noteSpin(st, grip, anchorSample.t);
   }
   // ⛔⛔ AND THE HOLDER'S GESTURE IS NO LONGER A TAP. It is being held STILL on the
-  // object, which is a tap's exact shape — and a DOUBLE_TAP resolves to 2septies
-  // eviction. See `Recognizer.consumeAsMotion`.
+  // object, which is a tap's exact shape — and a DOUBLE_TAP on a body is the undo (`D111`).
+  // See `Recognizer.consumeAsMotion`.
   grip.rec.consumeAsMotion();
 
   // ⛔⛔ THE DEPTH SWAY ANSWERS A **DEPTH** PUSH, NOT ANY DRIVE. A12 gave this function a

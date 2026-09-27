@@ -4,6 +4,8 @@
 2026-09-16 when the row's status cell was distilled, so the record had somewhere to
 live that is not a front door.
 
+⛔ **2026-09-27**: the eviction shake and its tunables are deleted (`D107`) — the shake numbers below are the record.
+
 
 ✅✅ **THE TRAP BELOW IS GONE, 2026-09-16 — and by deletion, not by discipline.** The six
 tunables this dossier warned a session about — `rollAngle`, `gainRoll`, `rollStepDistance`,

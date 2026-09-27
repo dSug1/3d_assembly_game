@@ -48,6 +48,8 @@ contact. The score specification already provides the metrics: episodes and time
 
 ### 4. A smaller gesture vocabulary for the first hour
 
+⭐ **Acted on 2026-09-27**: `FOLLOW`, the shakes, the flick and the flick-unsnap are deleted (`D106`–`D110`).
+
 Roughly fifteen gestures exist: the mode-toggle tap, hold + press to align, the double press for
 `FOLLOW`, the shake, the flick, the twist, the roll, the second finger's gravity, two unsnaps, the
 pinch, the orbit, the camera reset, the cursor drag, and Shift on the desktop. For *all public,

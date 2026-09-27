@@ -1,4 +1,10 @@
 /**
+ * ⛔⛔ **WHAT THIS FILE HOLDS NOW**: `depthLimits` (the derived depth bounds), `secondFingerDrive`
+ * (which axis a second finger drives when the mode picks) and `rollDragDeg`. ⛔ The A10 depth rule
+ * described below — `depthTranslate` and its still-holder gate — is DELETED (the gate by `D43`, the
+ * function by `D109`); the second touch now drives the body's GRAVITY axis through
+ * `axis_translate.ts`. The header is kept as the history of why.
+ *
  * AMENDMENT **A10** — **DEPTH TRANSLATION BY A STILL HOLDER AND A MOVING ANCHOR.**
  *
  * Design of record: `Claude/10_INPUT_TOUCH/AMENDMENTS_R5.md` A10, superseding A6's
@@ -147,11 +153,10 @@ export function secondFingerDrive(
   // `TRANSLATE` pairs the holder's screen-plane drag with the second finger's **depth** —
   // both translations — and `ROTATE` pairs yaw/pitch with **roll**. One question, *am I
   // translating or rotating?*, and both fingers follow the same answer.
-  // ⚠⚠ IT SUPERSEDES `A12`'s TWO-AXES-AT-ONCE, which is no longer reachable at all now that
-  // forks A and B are deleted (`D28`). A12's per-axis bands still do the work of keeping the
-  // corridors independent; what is gone is a diagonal driving roll AND depth together.
-  // ⛔ What it costs, stated: a roll and a depth push need a tap between them. ⭐ That is the
-  // point — no diagonal does half of each by accident.
+  // ⚠⚠ `A12`'s TWO-AXES-AT-ONCE CAME BACK — for an aligned Follower (`D59`/`D108`) and a free body
+  // in `TRANSLATE` (`D123`), through `bothAxesSecondDrive`. ⭐ So this one-axis pick is reached
+  // only by a free body in `ROTATE` (`secondTouchDrive` → `MODE_PICKS`); the `TRANSLATE` branch
+  // below is kept for completeness.
   if (toggled === "ROTATE") {
     return { rollDxPx: gate(secondAxes.x) ? secondStep.dx : 0, depthDyPx: 0 };
   }

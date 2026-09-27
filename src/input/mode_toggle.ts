@@ -64,7 +64,8 @@
  * movement can be reverted back while the camera orbit resets."* ⚠ The first tap of the pair
  * toggles on its RELEASE; the second is supposed to toggle back on ITS release. ⭐ `D67`'s route
  * to orange is *a double tap whose second half never lifts*, so the second toggle never happens
- * and the pair leaves the mode flipped — half a gesture's worth of state.
+ * and the pair leaves the mode flipped — half a gesture's worth of state. (⚠ The orange FOLLOW is
+ * deleted, `D106`; the revert stands for any double tap whose second half never lifts.)
  *
  * ⭐⭐ **SO THE COMPLETING PRESS TAKES THE SECOND TOGGLE OVER FROM THE RELEASE.** It undoes what
  * the first tap did, and its own release is then spent. Both readings of the gesture end where

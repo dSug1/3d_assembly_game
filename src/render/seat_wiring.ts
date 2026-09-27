@@ -7,11 +7,9 @@
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { retargetAlignment, type Sample } from "../input";
-import { type Vec3 } from "../core/vec";
-import { attach, setLocalPlacement, worldPlacementOf, type ObjectId } from "../core/object_model";
+import { type Vec3, add, dot, qRotate, sub } from "../core/vec";
+import { attach, setLocalPlacement, worldPlacementOf, type ObjectId, clearObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
 import { mmToPx } from "../core/units";
-import { clearObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
-import { add, dot, qRotate, sub } from "../core/vec";
 import { type PioneerFaceCursor } from "../core/pioneer_face_cursors";
 import { pointOnFace } from "../core/face_surface";
 import { snapConditionMet } from "../input/snap";
@@ -116,7 +114,7 @@ export function cursorPointer(st: SceneState, type: number, e: PointerEvent) : b
 
 
 /**
- * ⭐ The offset radius in world metres NOW — the white contour's own conversion, so the snap's
+ * ⭐ The offset radius in world metres NOW — `captureOffsetM`, the (deleted) white contour's conversion, so the snap's
  * *within the offset radius* is the capture's.
  */
 export function offsetRadiusM(st: SceneState) : number {
@@ -163,7 +161,7 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
       const want = seatedLocalPlacement(cur.position, o.local.orientation, faceLocal.centre);
       const d = sub(want.position, o.local.position);
       if (dot(d, d) > 1e-16) st.world = setLocalPlacement(st.world, f, want);
-      // ⭐ Keep the constraint truthful as the assembly turns — the same retarget `FOLLOW` uses.
+      // ⭐ Keep the constraint truthful as the assembly turns (the retarget `FOLLOW` used, `D106`).
       const stack = o.constraints;
       if (stack.length === 1 && stack[0]!.kind === "FACE_ALIGN") {
         const t = stack[0]!.targetWorld;

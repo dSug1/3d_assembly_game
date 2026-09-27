@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the evidence discipline, and the instrument traps
 > **READ IF** · you are about to claim something works
-> **LAST VERIFIED** · 2026-09-16
+> **LAST VERIFIED** · 2026-09-27
 
 Carried from the predecessor project, where every rule below was bought with a
 failure. [`LESSONS_CARRIED.md`](LESSONS_CARRIED.md) tells the stories; this is the

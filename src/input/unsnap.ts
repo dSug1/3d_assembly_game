@@ -14,9 +14,8 @@
  * ⛔ Two readings of *rapid*, one per device, because the desktop's right-button touchpoint never
  * moves (`D94`): on the tablet the SEPARATION of the two fingers must GROW by `legMm` within
  * `windowMs` (*"zoom out"*); with a mouse the driven pointer must TRAVEL `legMm` within `windowMs`
- * (*"rapid delta position"*). ⭐ Both numbers are the eviction shake's own sliders
- * (`unsnapLegMm`, `unsnapWindowMs`, the shake's two numbers kept when it was deleted, `D107`) — so no new
- * tunable is authored here.
+ * (*"rapid delta position"*). ⭐ Both numbers are the deleted eviction shake's two sliders, kept
+ * under their own names (`unsnapLegMm`, `unsnapWindowMs`, `D107`) — so no new tunable is authored here.
  *
  * ⛔ ENGINE-FREE.
  */

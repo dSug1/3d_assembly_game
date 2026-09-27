@@ -37,7 +37,7 @@ import type { Sample } from "./motion";
  * brings a random direction back. Measured — a finger held perfectly still fired **272
  * kicks** in 3 seconds. ⭐ Over 60 ms a deliberate 100 mm/s drag travels 6 mm while the
  * noise stays under a millimetre, and the direction is unambiguous. Same reasoning as
- * `roll.ts`'s span: state the baseline, and check the signal clears the noise.
+ * the (deleted) `roll.ts`'s span: state the baseline, and check the signal clears the noise.
  * ⚠ It is a trade against latency: longer resolves slower drags, and delays the
  * detection of a turn. 60 ms registers a reversal within about four frames.
  */
@@ -361,8 +361,7 @@ export function pioneerSwaySuppressed(
  * `pioneer_cascade.ts` paid for that lesson already — *a RULE in a render file is a rule
  * nothing can interrogate*. The same decision was written inline in `nudgeOthersWorld` and in
  * `spinOthers`, so a third sway writer would have grown a third copy, and the day one of them
- * was corrected the other would have stayed wrong. ⭐ `CONSTRAINTS` §4, the same reason
- * `shakeParamsFrom` exists.
+ * was corrected the other would have stayed wrong. ⭐ `CONSTRAINTS` §4: one rule, one place.
  *
  * @param body the candidate, or `null` for a mesh the object model does not know — a marker,
  *   a contour, a highlight. ⚠ Those are tagged out of the sway anyway; refusing `null` here

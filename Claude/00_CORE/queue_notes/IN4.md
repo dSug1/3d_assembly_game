@@ -1,5 +1,10 @@
 # `IN4` — rules 4–6 (two touchpoints)
 
+> ⛔ **CURRENT STATE (2026-09-27)**: `D109` deleted `worldAxisB=0`, the `CHANNELS` mapping
+> (`translatePairing`), `screenTranslation`, `depthTranslate`, the zone-enter hook and the pinned
+> Pioneer; the boot frame and the solved `PLANE` mapping are the only rules. `D123`: a free body's
+> second touch in `TRANSLATE` lifts along gravity and spins. The text below is the record.
+
 **Status: partial. Rule 4 ✅ (`IN9`). Rule 6 ✅✅ CLOSED 2026-09-15 — tuned by finger over
 five device passes and then confirmed by the owner in ORDINARY PLAY, which is what the row
 was holding out for. Rules 6bis / 6ter / 6quater wait on `3D1`, so the ROW stays partial.**

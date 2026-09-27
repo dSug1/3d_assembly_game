@@ -108,8 +108,8 @@ export interface GestureConfig {
    * modulo function"*, with the landing slerped so there is no hard stop.
    *
    * ⛔⛔ **`0` IS THE CURRENT BUILD, NO CHANGE.** One slider carries the flag and the angle,
-   * which is this project's idiom for a trial — the approach swing and the orbit centre blend
-   * both work that way, and it is what lets a hand compare the two modes in the same minute.
+   * which is this project's idiom for a trial — the orbit centre blend works that way (and the
+   * deleted approach swing did), and it is what lets a hand compare the two modes in the same minute.
    *
    * ⚠⚠ **AND ONLY THE END IS QUANTISED.** An earlier formulation quantised the turn *as it
    * happened* and was rejected on the device — *"it creates too much lag in the rotation vs. the
@@ -117,11 +117,6 @@ export interface GestureConfig {
    * is the current build exactly, and the increment is a single correction at the gesture's end.
    */
   rotationIncrementDeg: number;
-  /**
-   * §2quinte roll: a dimensionless multiplier on the swept angle.
-   * ⛔ It scales what the object is TURNED BY, never what the commit threshold reads —
-   * scaling the latter would silently move `rollAngle` as well. See `roll.ts`.
-   */
   /**
    * ⭐⭐⭐ AMENDMENT A12 — DEGREES of roll per MILLIMETRE of the SECOND touchpoint's
    * HORIZONTAL travel, while the finger on the object is held still.
@@ -222,7 +217,7 @@ export interface GestureConfig {
    * to the drag speed, as a viscous coupling would be, so a slow drag nudges the scene
    * gently and slowly while a fast one throws it further AND quicker — the excursion
    * still peaks at `translateSwayTauMs`, so a bigger one covers that ground faster.
-   * ⚠ Clamped to ×0.3…×3 (`input/sway.ts`): a flick reaches twenty times this and would
+   * ⚠ Clamped to ×0.3…×3 (`input/sway.ts`): a fast throw reaches twenty times this and would
    * otherwise fling the rest of the scene across the view.
    */
   swayReferenceSpeedMmPerS: number;
@@ -250,26 +245,13 @@ export interface GestureConfig {
   gainTranslateMutual: number;
 
   // ── §1.3 the recognizer ─────────────────────────────────────────────────
-  /** ms of motion buffer the flick test reads. */
-  /**
-   * ⭐⭐⭐ **HOW CLOSE TO MATING A FACE MUST BE BEFORE IT LIGHTS FUCHSIA**, in degrees.
-   *
-   * > *"highlight in fuchsia any face of any other object which normal is aligned within xx
-   * > degrees of the normal of the HitFace. Make xx a slider between 0 and 45 degrees with 5
-   * > degrees increment."* — the owner, 2026-09-24
-   *
-   * ⛔⛔ *ALIGNED* IS READ AS **ANTI-PARALLEL** — the mate sense, `D78`'s. The argument, and the
-   * one line to change if that reading is wrong, are in `core/face_candidates.ts`.
-   *
-   * ⭐ `0` is the honest OFF: only an exactly opposed face lights. ⚠ A GUESS at `15`, with the
-   * slider the owner asked for; no hand has judged it.
-   */
   /**
    * ⭐⭐ **THE SNAP CONE, in degrees** — how far from ANTI-PARALLEL the FollowerFace and the
    * PioneerFace may be and the snap still fire (`D100`). ⛔ It was `pioneerCandidateConeDeg`, the
    * fuchsia offer's cone; the offer is DELETED (`D109`, the owner, 2026-09-27: *"Fuchsia cone is
    * used for snap: rename it snap cone angle and move it to snap slider"*) and the cone is the
-   * snap's alone. ⚠ The HitFace's own fuchsia contour stays; it never read this.
+   * snap's alone. ⚠ The HitFace's own fuchsia contour stays; it never read this. ⭐ *Aligned* is
+   * read as **ANTI-PARALLEL** — the mate sense, `D78`'s.
    */
   snapConeDeg: number;
   /**
@@ -285,6 +267,10 @@ export interface GestureConfig {
    */
   edgeBandMm: number;
   /**
+   * ⭐ `D121`: the opacity a FROZEN body takes while the camera sees its bottom face (1 = unchanged).
+   */
+  frozenUndersideAlpha: number;
+  /**
    * ⭐⭐ **THE COLLISION SKIN** (`3D6`), millimetres on the glass: every pair of bodies is kept at
    * least this far apart. ⛔ Must be > 0 — GJK reads touching and overlapping alike as 0, so a zero
    * skin could not tell a contact from a penetration.
@@ -292,17 +278,18 @@ export interface GestureConfig {
   collisionSkinMm: number;
   /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
-   * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between
-   * like `pioneerCandidates`. `0` leaves the ring drawn and every press to the ordinary rules.
+   * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between.
+   * `0` leaves the ring drawn and every press to the ordinary rules.
    */
   pioneerCursorDrag: number;
+  /** ms of motion buffer the release reads (`trimBuffer`) — the lift speed and the recognizer's speed. */
   flickWindow: number;
   /**
    * ms. The trailing window the LIFT SPEED is averaged over.
    * ⛔⛔ NOT THE LAST SAMPLE PAIR. A browser emits `pointerup` at whatever position
    * and time it likes — very often repeating the last `pointermove` coordinates —
-   * and a two-sample estimator reads that as a dead stop and throws the flick away.
-   * Device-confirmed as the cause of inconsistent rollback. See flick.ts.
+   * and a two-sample estimator reads that as a dead stop. ⚠ It once decided the (since deleted,
+   * `D110`) flick; it is a readout now. See flick.ts.
    */
   flickLiftWindow: number;
   // ⛔ `flickLiftSpeed`, `flickDistance`, `flickPurity` are DELETED with the flick (`D110`); the two
@@ -330,9 +317,9 @@ export interface GestureConfig {
   pointerNoiseMm: number;
 
   // ── §1.3 taps ──────────────────────────────────────────────────
-  // ⭐ NOT IN THE SPEC, AND §1.4 DOES NOT WORK WITHOUT THEM. §1.4 / rule 2septies
-  // make a double-tap the ONLY way a constraint is ever evicted, and §1.3's state
-  // machine stops at TAP. Recorded in `Claude/10_INPUT_TOUCH/INDEX.md`.
+  // ⭐ NOT IN THE SPEC. They were added because §1.4 / rule 2septies made a double-tap the
+  // way a constraint was evicted (deleted since: a double tap on a body is the undo, `D111`),
+  // and §1.3's state machine stopped at TAP. Recorded in `Claude/10_INPUT_TOUCH/INDEX.md`.
 
   /**
    * ms. A press released LATER than this, having never moved, is a HOLD -- not a
@@ -451,11 +438,12 @@ export interface GestureConfig {
   mateBreakLinear: number;
   mateBreakAngular: number;
 
-  // ── `A16` — THE HIGHLIGHT CONDITION ───────────────────────────────────
-  // Design of record: `Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md` §1, §12, §19.
-  // ⚠⚠ **BOTH ARE FLAGGED FOR FINE-TUNING** (the owner: *"to be finetuned later"*).
+  // ── THE CAPTURE OFFSET AND THE SNAP ────────────────────────────────────
+  // Design of record: `Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md` §1, §12, §19. ⛔ Born as
+  // `A16`'s highlight condition; the white highlight is deleted (`D120`) and the offset is the
+  // snap's reach now.
   // ⚠ `MinDistanceBeforeSnapIsConfirmed` is deliberately ABSENT — the hold-off is not
-  // built in this slice, and `config_debt.test.ts` refuses a tunable nothing reads.
+  // built, and `config_debt.test.ts` refuses a tunable nothing reads.
 
   /**
    * ⭐⭐⭐ **THE CAPTURE OFFSET, IN MILLIMETRES ON THE GLASS** (`D49`, 2026-09-18).
@@ -508,8 +496,8 @@ export interface GestureConfig {
    * **explodes** as the axis turns to face the camera — for the horizontal plane that is an
    * ordinary **level camera**. ⭐ **5° IS BLENDER'S OWN NUMBER** (`axisProjection`, which switches
    * to a plain projection below it), adopted rather than guessed — ⚠ and where Blender then lets
-   * the object nearly STOP, this falls back to `depthTranslate`'s fixed-rate push, which a device
-   * look closed on 2026-09-16. That is the owner's report 3: *"I would expect the object to
+   * the object nearly STOP, this falls back to a fixed-rate push (the rate of the deleted
+   * `depthTranslate`, which a device look closed on 2026-09-16). That is the owner's report 3: *"I would expect the object to
    * continue translating with dy input."*
    *
    * ⚠ `0` disables the fallback, which is how to see the runaway a hand is being protected from.
@@ -524,8 +512,7 @@ export interface GestureConfig {
    * ⛔ The opacity of an **X-RAY TWIN** of the FollowerFace marker, drawn after everything else
    * so no geometry can hide it. ⚠ `0` is OFF and is today's build exactly — the twin is not
    * drawn at all, not drawn invisibly — which is what makes this one control both the flag the
-   * owner asked for and the number a hand judges it by. ⭐ The same shape as `approachSwingDeg`,
-   * where `0` disables the swing outright.
+   * owner asked for and the number a hand judges it by.
    *
    * ⭐⭐ **THE ORIGINAL MARKER IS UNTOUCHED AND STILL OPAQUE.** Where the face is in plain sight
    * you see it as you always did, with the twin blending over it; where the body occludes it,
@@ -625,7 +612,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // so depth is available ~0.45 s after a drag ends. ⭐ A finger that is placed and NOT
   // moved starts STATIONARY and waits for nothing, which is the ordinary case.
   // ⭐ Every one has a slider, because IN5 says the slider ships WITH the rule and these
-  // four are now load-bearing for a MODE, not only for a flick test.
+  // four are now load-bearing for a MODE, not only for the (since deleted) flick test.
 
   referenceCameraDistance: 0.6,
   // ⭐⭐ 0.07 rad/mm — CHOSEN ON THE DEVICE by the owner, 2026-09-14, with the menu
@@ -743,12 +730,14 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   gainTranslateMutual: 0.5,
 
-  // ⚠ The fuchsia offer's 15°, inherited unjudged by the snap (`D109`).
+  // ⚠ The deleted fuchsia offer's 15°, inherited unjudged by the snap (`D109`).
   snapConeDeg: 15,
   // ⚠ A guess inside the owner's 1–10: a fingertip is wider than the 16 px ring it aims at.
   pioneerCursorGrabRadii: 3,
   // ⚠ A guess with a slider: wide enough for a fingertip's edge, narrow enough to leave the view.
   edgeBandMm: 6,
+  // ⚠ A guess with a slider: see-through enough to show what is above, solid enough to stay a floor.
+  frozenUndersideAlpha: 0.3,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
@@ -773,7 +762,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ 150° to DECIDE, swept: the shortest arc at which every realistic swirl
   // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
 
-  // ── The unsnap's rapid move — the shake's two owner-chosen numbers (2026-09-17), kept. ──
+  // ── The unsnap's rapid move — the deleted shake's two owner-chosen numbers (2026-09-17), kept. ──
   unsnapWindowMs: 300,
   unsnapLegMm: 6,
   // ⭐⭐ SHIPPED AS `beta = 0` ON DEVICE EVIDENCE, AGAINST MY OWN MEASUREMENT.
@@ -954,6 +943,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
+  if (!(cfg.frozenUndersideAlpha >= 0 && cfg.frozenUndersideAlpha <= 1)) {
+    throw new Error(`frozenUndersideAlpha (${cfg.frozenUndersideAlpha}) must be in [0, 1]: it is an opacity.`);
+  }
+
   // ⛔ 0 switches the band off; past 20 mm it eats a phone's view.
   if (!Number.isFinite(cfg.edgeBandMm) || cfg.edgeBandMm < 0 || cfg.edgeBandMm > 20) {
     throw new Error(
@@ -1042,7 +1035,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `pointerNoiseMm (${cfg.pointerNoiseMm} mm) must be POSITIVE — it is a MEASURED floor ` +
         "(0.761 mm on the reference tablet, 2026-09-14) and three rules in this validator are " +
         "multiples of it. At zero they all pass trivially, so one URL parameter would disable " +
-        "the shake's noise guard and the deadband's floor at the same time.",
+        "the unsnap leg's noise guard and the deadband's floor at the same time.",
     );
   }
   if (!(cfg.motionDeadbandMm > 0)) {
@@ -1052,10 +1045,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
-  // ⛔⛔ THE SHAKE'S LEG MUST CLEAR THE MEASURED NOISE, or eviction fires on jitter.
+  // ⛔⛔ THE UNSNAP LEG MUST CLEAR THE MEASURED NOISE, or jitter unsnaps a seated part.
   // ⭐ Same shape as the sagitta rule below: a threshold is only defensible RELATIVE to
-  // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The
-  // multiple is `shake.ts`'s axis gate — a leg that cannot even establish a direction
+  // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The ×3 was the
+  // deleted eviction shake's axis gate (`D107`) — a leg that cannot even establish a direction
   // cannot be a leg.
   if (cfg.unsnapLegMm < 3 * cfg.pointerNoiseMm) {
     throw new Error(

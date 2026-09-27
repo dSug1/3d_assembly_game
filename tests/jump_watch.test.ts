@@ -31,7 +31,7 @@ const drag = (w: JumpWatch<string>, n: number, mmPerFrame: number, from = 0) => 
 describe("⭐⭐⭐ a jump is a DISCONTINUITY, not a speed", () => {
   it("⛔⛔⛔ A FAST STEADY DRAG IS NEVER A JUMP — 30 mm a frame, forever", () => {
     // ⚠⚠ THE FALSE-ALARM VECTOR, and it is the one that matters most. A drag at 500 mm/s covers
-    // 30 mm in a 60 ms frame — well over the absolute floor — and a `FOLLOW` follower is
+    // 30 mm in a 60 ms frame — well over the absolute floor — and a seated follower is
     // *supposed* to move exactly as far as its Pioneer did. ⛔ A fixed threshold would call all
     // of that a jump, and the readout would be worthless on the first gesture.
     const w = new JumpWatch<string>();

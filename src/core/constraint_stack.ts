@@ -166,11 +166,11 @@ export interface EvictResult {
   readonly removed: number;
   /**
    * ⛔⛔ **TRUE WHEN THE GESTURE FOUND NOTHING TO TAKE, AND THE CALLER MUST SAY SO.**
-   * ⭐ `shake.ts`'s header states the contract this half implements: *"a mate-only stack
-   * must refuse AUDIBLY rather than silently do nothing."* ⚠ Without it, a hand that
-   * shakes a mated object gets the same nothing as a hand whose shake was not recognised,
-   * and those are opposite situations — one means *it did not work*, the other *there was
-   * nothing to undo*. `IN7` owes the negative haptic; this is what it will read.
+   * ⭐ The contract (first stated by the since-deleted `shake.ts`, `D107`): *"a mate-only stack
+   * must refuse AUDIBLY rather than silently do nothing."* ⚠ Without it, a release gesture on
+   * a mated object gets the same nothing as a gesture that was not recognised, and those are
+   * opposite situations — one means *it did not work*, the other *there was nothing to undo*.
+   * `IN7` owes the negative haptic; this is what it will read.
    */
   readonly refused: boolean;
 }
@@ -191,8 +191,8 @@ export interface EvictResult {
  * drop the free DOF to zero on the second tap and reproduce the defect the owner reported
  * against fork B (*"the second flick completely freezes the rotation"*).
  *
- * ⛔ A `MATE` on the stack is REFUSED rather than silently dropped or joined: fork C has no
- * rule that pushes one (§4's `6quater` is flick-based and no flick aligns anything now), so this cannot
+ * ⛔ A `MATE` on the stack is REFUSED rather than silently dropped or joined: nothing pushes one
+ * (§4's `6quater` was flick-based, and the flick is deleted, `D110`), so this cannot
  * happen today — and the day it can, whether an alignment may override an assembly
  * relationship is the owner's call, not a default. `ALIGNMENT_RULES.md` §7.12.
  */
@@ -208,10 +208,10 @@ export function singleAlignment(
  * ⭐⭐⭐ **EVICTION — `A4`/`D13`: THE ALIGNMENTS GO, THE MATES STAY.**
  *
  * ⛔⛔ THE DISTINCTION IS THE WHOLE RULE, AND `cleared()` DOES NOT MAKE IT. §2septies'
- * double-tap *"clears its constraint stack"*, written before mates existed on it; `D13`
- * amended that, because an alignment is a **gesture's** decision (cheap to redo by flicking
- * again) while a mate is an **assembly** relationship — the thing the game is for. ⭐ A
- * gesture that destroys assembly work must not be reachable by a shake of the hand.
+ * double-tap (deleted since, `D111`) *"clears its constraint stack"*, written before mates
+ * existed on it; `D13` amended that, because an alignment is a **gesture's** decision (cheap to
+ * redo) while a mate is an **assembly** relationship — the thing the game is for. ⭐ A release
+ * gesture must never destroy assembly work.
  *
  * ⚠ Pure, and it decides nothing about feedback: it reports what it took and whether it
  * came up empty. Compare `solve`'s `rejected` — same discipline, same reason.
@@ -242,7 +242,7 @@ export function push(
  * ⭐⭐⭐ **WHAT A DRAG MAY DO TO THIS BODY'S ROTATION.**
  *
  * ⛔⛔⛔ **IT REPLACES THREE COPIES OF `stack.length === 1` IN `render/scene.ts`** — the
- * one-finger twist, the second finger's roll, and the `FOLLOW` retarget — found by audit on
+ * one-finger twist, the second finger's roll, and the (since deleted) `FOLLOW` retarget — found by audit on
  * 2026-09-17. Each of them read *"is there exactly ONE constraint?"*, meant *"is this body
  * ALIGNED?"*, and fell through to **FREE ROTATION** for every other count.
  *
@@ -299,15 +299,3 @@ export function rotationChannel(stack: readonly Constraint[]): RotationChannel {
   return { kind: "TWIST", axis: only.targetWorld, constraint: only };
 }
 
-/**
- * ⭐⭐ **DOES THIS BODY CARRY AN ALIGNMENT?** — what the follower highlight and the link index
- * actually want to know.
- *
- * ⛔ `render/scene.ts` asked `constraints.length > 0`, which counts a **MATE** as an
- * alignment. ⚠ `evict` deliberately never removes a mate, so a mated body would keep its
- * follower marker and its entry in the two-way index for ever — a stale highlight, which is
- * the exact failure that produced two false device reports on 2026-09-17.
- */
-export function hasAlignment(stack: readonly Constraint[]): boolean {
-  return stack.some((c) => c.kind !== "MATE");
-}

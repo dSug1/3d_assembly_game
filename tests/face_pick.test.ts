@@ -228,7 +228,7 @@ describe("⛔⛔ alignedFaceOf — derived from the stack, so it cannot outlive 
 
   it("⛔⛔ NO ALIGNMENT ⇒ null, WHICH IS WHAT MAKES THE HIGHLIGHT SELF-CLEARING", () => {
     // ⭐ This is the whole reason the function reads the model instead of a remembered record:
-    // the moment a shake, a re-tap or a rotation reset evicts the constraint, the highlight has
+    // the moment an unalign tap, an undo or a turned Pioneer evicts the constraint, the highlight has
     // nothing to draw. ⛔ No cleanup path to forget, and no way for the marker to survive the
     // thing it reports.
     expect(alignedFaceOf(makeWorld([body("a", [])]), "a")).toBeNull();

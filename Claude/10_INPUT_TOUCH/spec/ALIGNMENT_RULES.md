@@ -7,15 +7,21 @@ rules — and this one was reached by 21 links. ⭐ The text below keeps every m
 C* that is HISTORY; what changed is the name of the thing a session opens.
 
 > **STATUS** · ✅ **STAGE 1 CLOSED BY A DEVICE LOOK (2026-09-17)** · 🔨 stage 2 superseded by `APPROACH_AND_MATE.md` · **OWNS** ·
-> the alignment rules — the tap, the twist, the undos, and what a turned Pioneer costs
+> the alignment rules — the tap, the twist, the unalign, and what a turned Pioneer costs
 > **READ IF** · you are building or judging the ALIGNMENT (the tap-to-align model)
-> **LAST VERIFIED** · 2026-09-17
+> **LAST VERIFIED** · 2026-09-27
+
+⛔ **CURRENT (2026-09-27)**: the shake, the re-press/re-tap undo and `tapMeaning` are **deleted**
+(`D107`); `FOLLOW` is deleted (`D106`); the flick is deleted (`D110`). To **unalign**: tap empty
+space while holding the aligned body, or align it elsewhere — holding a Pioneer, that tap releases
+all its followers (`D107`). **Undo** is a double tap on a body (`D111`). Text below that says
+otherwise is history.
 
 ✅✅ **STAGE 1 IS CLOSED BY A DEVICE LOOK** — *"device pass ok, except these modifications"*
 (owner, 2026-09-17), and all five modifications are built: everything simultaneous (`D43`),
 the tap aligning in either movement mode (`D44`), the sway restored on an aligned rotation
 (defect 47), the snap played as a slerp (`D45`), and the twist no longer killing it (defect
-48). ⭐ Both undos are kept — the shake AND the re-tap.
+48). ⭐ Both undos were kept then — the shake AND the re-tap (⛔ both deleted since, `D107`).
 ⚠⚠ **WHAT THE CLOSE DOES NOT COVER, STATED**: the five corrections have **not themselves been
 re-judged** by a hand, except the slerp's speed, which the owner tuned three times in a few
 minutes. ⛔ The close is only as strong as the phrase that gave it — this project already
@@ -1859,14 +1865,15 @@ about it stays free; ⚠ the total turn is no longer strictly minimal, by the ow
 | | rule | where |
 |---|---|---|
 | **may it snap** | only an ALIGNED couple (the cursor exists per alignment); ⛔ after an unsnap, **held off until the couple has left the offset radius once** (re-arm on exit, `3D3`'s) | `input/snap.ts` `SnapArming` |
-| **does it snap** | FollowerFace centre within the **capture offset** (mm on the glass → world metres, the white contour's own number) of the cursor, AND the normals within the **fuchsia cone** (`pioneerCandidateConeDeg`) of anti-parallel. ⭐ No new number | `snapConditionMet` |
+| **does it snap** | FollowerFace centre within the **capture offset** (mm on the glass → world metres, the capture offset) of the cursor, AND the normals within the **snap cone** (`snapConeDeg`, *snap cone angle* in the CAPTURE menu — the fuchsia cone before `D109`) of anti-parallel. ⭐ No new number | `snapConditionMet` |
 | **the snap** | the orientation is the alignment's slerp (already anti-parallel); the position **lerps** the face centre onto the cursor on the same clock and easing; ⚠ a flight retargets if the cursor or Pioneer moves | `input/seat_snap.ts` |
 | **the seat** | on landing the Follower becomes a **CHILD** of its Pioneer (`object_model.attach`, `3D1`'s tree) and the link is marked seated. Every frame its LOCAL placement is **re-derived** from the cursor: `position = cursor − rotate(orientation, faceCentre)` — so the face centre is on the cursor by construction, a twist about the normal is a turn **about the face**, and a dragged cursor (Free Flow) carries the body | `core/seat.ts`, `scene.ts` `syncSeats` |
 | **what a seat refuses** | its own translation (reported: *"seated — move its Pioneer, or unsnap"*); the turn and move cascades skip it (the tree carries it); the sway treats the assembly as one body; a press on the partner aligns/swaps/undoes **nothing** | `applyWorldStep`, `followerLinksFrom`, `receivesSway`, `pressMeaning` |
 | **what ends a seat** | the **unsnap**; a release of the alignment; a re-alignment; a prune — each un-parents the body where it stands | `unseatWorld` |
 | **the unsnap** | FIRST holder on the Pioneer, SECOND on its seated Follower (both devices), then within `unsnapWindowMs` a growth of the fingers' **separation** by `unsnapLegMm` (tablet, *zoom out*) or a **travel** of the driven pointer by that leg (mouse) | `input/unsnap.ts` |
 
-⚠⚠ **NOT BUILT, deliberately**: the **approach** — the offset-radius zone still only lights the
+⛔ **Superseded by `D120`** (2026-09-27): the white capture highlights and the approach swing are
+**deleted**, so the next two paragraphs are history. ⚠⚠ **NOT BUILT, deliberately**: the **approach** — the offset-radius zone still only lights the
 white contour (*"for the moment, we are not using it"*), the swing trial ships OFF, and no mate
 connector is pushed: the seat is the tree plus a retargeted `FACE_ALIGN`, and `core/mate_connector.ts`
 stays unwired.
@@ -1900,7 +1907,7 @@ assembly's axes at the touched face.
 
 > *"Flick un-snap D103: obsolete. Remove"* — the owner, 2026-09-27. ⭐ The flick itself is deleted
 > the same day (`D110`), so the gesture the specification hung on no longer exists. The precise
-> unsnap (two touches and a rapid move) is the only unsnap; it still costs 2.
+> unsnap (two touches and a rapid move) is the only unsnap; it costs 1 episode (`D115` revises `D103`'s 2).
 
 ⭐ **Anchored bodies do not sway** (the owner, 2026-09-26: *"if an object is snapped to a frozen
 object, itself and its snapped children objects cannot sway when a third object is moved"*): a body
@@ -1953,7 +1960,7 @@ partition it by what is held; (3) Ctrl is read at the left press, not mid-drag.
 | `D112` | **the HUD's first line is the score** — `N episodes  mm:ss  undo=K`; the ledger is `SCORE.md` §3 as a rule (`episodeCounts`), the clock starts at the first press; the undo pair costs ONE; Free Flow counts nothing | `input/episode_ledger.ts` | ⚠ a lost `pointerup` loses an episode — the post-observer only counts a release it sees |
 
 | `D113` | **the edge band is always empty space** — *"we need a solution in case there is no empty space on the screen"*, the owner choosing *"Edge band"*: a press within `edgeBandMm` (6 mm, the *edge band width* slider at the top of CAMERA, `0` = off) of a canvas edge is a MISS whatever is drawn there; a faint dashed line marks its inner edge | `input/edge_band.ts` | a body cannot be grabbed through the band — orbit or zoom brings it inward; a Free Flow ring in the band is still grabbed (it is claimed before the pick) |
-| `D114` | **the band opens only when there is no empty space** — *"set the band width to zero, unless there is no empty space on screen (in such case, band = 6mm)"*: at 4 Hz a grid of points one fingertip apart (10 mm) is picked against the scene; a point is EMPTY when a first touch there would miss (nothing, or a frozen body a first touch cannot hold, `D89`). Any empty point → band 0; none → the slider's width | `input/edge_band.ts` (`effectiveBandMm`, `probeGrid`), `render/empty_space_probe.ts` | a gap narrower than ~10 mm is not seen as empty; the band can appear or vanish up to 250 ms after the view changes; a press is judged against the band in force at that moment |
+| `D114` | **the band opens only when there is no empty space** — *"set the band width to zero, unless there is no empty space on screen (in such case, band = 6mm)"*: at 4 Hz a grid of points one fingertip apart (10 mm) is picked against the scene; a point is EMPTY when a first touch there would miss (nothing, or a frozen body, where every press is a miss, `D119`). Any empty point → band 0; none → the slider's width | `input/edge_band.ts` (`effectiveBandMm`, `probeGrid`), `render/empty_space_probe.ts` | a gap narrower than ~10 mm is not seen as empty; the band can appear or vanish up to 250 ms after the view changes; a press is judged against the band in force at that moment |
 | `D115` | **a two-touch action is ONE episode, landing when its last touch lifts** — *"count the episode only when the last of the two touches is released (for example alignment of face)"* · *"Make sure these actions also have one episode count in desktop"*: a counted touch pressed while a body was held is an ACTION touch and uses up the hold it pairs with; a gesture costs `max(holds, actions)`, added at the gesture's end. Impacted: face alignment (and `D90`'s swap), unalign, a Pioneer's release, the unsnap — tablet and desktop alike (right-hold = the hold, left click = the action) | `input/episode_ledger.ts` (`EpisodeTally`) | ⛔ revises `D103`: the unsnap is 1, not 2; a hold that makes two actions in turn costs 2 |
 
 ⚠⚠ **Readings to falsify first**: (1) an action spans the whole gesture, so a two-finger gesture
@@ -1982,3 +1989,21 @@ landing after the release (the 60 ms magnet) belongs to the gesture that caused 
 ⭐ Checked in a local headless Chrome (CDP touches): press-and-hold on B → no alignment; tap on B →
 aligned; drag on the plate → A lifted along gravity, alignment kept; tap on the plate → aligned to it.
 Shift + left drag on empty space: zoom unchanged (it went 3.14 → 0.21 on the build before).
+
+---
+
+## 15 — ⭐⭐ THE FOURTH PASS: SEE-THROUGH FROM BELOW, A GRAVITY SPIN, ONE BODY AT A TIME (`D121`–`D124`)
+
+> *"if the camera passes below the bottom face of a frozen object … the frozen object shall become
+> transparent"* · *"in Scene_1, make the dimension of the yellow sand plane half"* (then *"80 %"*) ·
+> *"If an object is not aligned, I cannot reach the roll around gravity axis … same as what is
+> possible when the object is aligned"* · *"if a first touch is hold on an object, a second touch hold
+> on another object should not translate the other object, it shall serve as gravity / roll input to
+> the first object movement"* — the owner, 2026-09-27
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D121` | **a frozen body seen from below turns see-through** — `seenFromBelow`: the camera is past the plane of the body's most-downward face; its material's opacity becomes `frozenUndersideAlpha` (0.3, slider in CAMERA), and 1 again above | `core/underside.ts`, the render loop | a body whose bottom face is not horizontal is judged by that face's plane, not by *"below"* in height |
+| `D122` | `Scene_1`'s floor: 47.9 → 23.95 → 19.16 → 20.5012 → **21.116236** units (the last steps 107 %, 103 %) | `content/scene_1.ts` | — |
+| `D123` | **a FREE body's second touch in `TRANSLATE` drives BOTH** — `dy` lifts, `dx` spins about GRAVITY (the world vertical), by the aligned spin's own chart, sign and gain; `ROTATE` keeps the roll about depth | `input/second_touch_drive.ts` (`secondTouchDrive(…, mode)`), `render/drive.ts` | a diagonal second finger lifts AND spins; ✅ checked: a 96 px drag turned a free body 7° about exactly `(0, −1, 0)` |
+| `D124` | **with a body held, a second PRESS on another body STEERS the held one** — `pressSteers`: it is routed as empty space and its face remembered, so a TAP there still aligns (`D119`'s path). ⛔ Except the held body itself, and a body in its ASSEMBLY (the unsnap's second touch) | `input/frozen_pick.ts`, `render/pointer_wiring.ts` (`tapFace`) | two bodies can no longer be moved at once on the tablet — as on desktop, which never could; ✅ checked: B stayed put under a dragging finger, A lifted, nothing aligned; a tap on B aligned |

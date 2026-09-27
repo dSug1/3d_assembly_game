@@ -33,8 +33,8 @@
  * | a circle (2quinte) | — | `depth` — roll |
  *
  * ⭐ **The axis you push along is the axis you can turn about.** A hand learns one frame
- * instead of two, and it is the frame the WORLD is built in: §2 rule 2ter anchors a face to
- * gravity and parts are assembled on a working plane, so gravity is the thing the user is
+ * instead of two, and it is the frame the WORLD is built in: parts are assembled on a working
+ * plane (and §2 rule 2ter, deleted with the flick, anchored a face to gravity), so gravity is the thing the user is
  * already reasoning about.
  *
  * ## ⚠ WHAT IT COSTS, AND THE THIRD ONE IS THE ONE TO WATCH

@@ -100,14 +100,17 @@ const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
 
 /**
  * ⭐ The floor — Unity's built-in Plane (10 × 10 units) at `(0, −2.3, 0)`, scale `(4.79, 0.22, 4.79)`:
- * 47.9 × 47.9 units. ⚠ A plane has no thickness and a body needs a shape, so it is a slab 0.05 units
+ * 47.9 × 47.9 units — ⭐ HALVED to 23.95 (`D122`, the owner, 2026-09-27: *"make the dimension of the
+ * yellow sand plane half of what they are currently"*), then to **80 %** of that, **19.16 × 19.16**
+ * (*"reduce the width and length of the yellow sand plate to 80 % of their current sizes"*), then
+ * **107 %** of that (*"increase … to 107 % of their current sizes"*), then **103 %**: **21.116236 × 21.116236**. ⚠ A plane has no thickness and a body needs a shape, so it is a slab 0.05 units
  * thick whose TOP is the plane (`y = −2.3`). Frozen, as asked.
  */
 const FLOOR: BodySpec = {
   id: "Floor",
   position: [0, -2.3 - 0.025, 0],
   colour: SCENE_1_PALETTE.MAT_F,
-  dims: [47.9, 0.05, 47.9],
+  dims: [21.116236, 0.05, 21.116236],
   orientation: "identity",
   frozen: true,
   topScale: 1,

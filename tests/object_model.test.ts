@@ -488,7 +488,7 @@ describe("the constraint stack, attached to an object", () => {
     expect(after.objects.get("mid")!.constraints).toEqual([]);
   });
 
-  it("clearing empties that object's stack only — spec §2septies", () => {
+  it("clearing empties that object's stack only — the alignment setter's clear (born as §2septies)", () => {
     const { world } = chainOfThree();
     const both = pushObjectConstraint(pushObjectConstraint(world, "leaf", anchor, false), "mid", anchor, false);
     const after = clearObjectConstraints(both, "leaf");
@@ -523,7 +523,7 @@ describe("immutability — every operation returns a new world", () => {
 // The owner, 2026-09-17, for the base plate.
 //
 // ⛔⛔ ENFORCED AT THE TWO WRITERS, which is the whole design. A dozen things move an object —
-// rule 6, depth, the approach, a snap, the sway, an alignment slerp, a FOLLOW cascade — and
+// rule 6, depth, the approach, a snap, the sway, an alignment slerp, a seat — and
 // asking each of them to check a flag means the next one added will not.
 // ══════════════════════════════════════════════════════════════════════════════
 describe("⛔⛔ frozen — an invariant at the writers, not a rule at the call sites", () => {
@@ -559,7 +559,7 @@ describe("⛔⛔ frozen — an invariant at the writers, not a rule at the call 
 
   it("⛔⛔ A FROZEN BODY CANNOT BE A FOLLOWER — the constraint push is refused", () => {
     // ⭐⭐ NOT a second feature: a constraint is what would MOVE it. An alignment's solve, a
-    // FOLLOW cascade and a mate all read the stack and write a pose, so refusing the stack
+    // seat retarget and a mate all read the stack and write a pose, so refusing the stack
     // closes the same guarantee through the other door.
     const w = makeWorld([plate(true)]);
     const after = pushObjectConstraint(

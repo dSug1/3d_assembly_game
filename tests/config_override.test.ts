@@ -160,7 +160,7 @@ describe("⛔⛔ durations and noise cannot be negative or zero", () => {
     ["flickWindow", 0, /flickWindow/],
     // ⛔⛔ ZERO NOISE IS THE DANGEROUS ONE: every noise-relative rule in this validator is a
     // MULTIPLE of it, so `pointerNoiseMm=0` silently admits `motionDeadbandMm=0` and
-    // `evictShakeLegMm=0` — one URL parameter disabling three guards at once.
+    // `unsnapLegMm=0` (once the eviction shake's leg) — one URL parameter disabling three guards at once.
     ["pointerNoiseMm", 0, /pointerNoiseMm/],
     ["pointerNoiseMm", -1, /pointerNoiseMm/],
     ["motionDeadbandMm", 0, /motionDeadbandMm|pointerNoise/],

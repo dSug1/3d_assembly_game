@@ -40,7 +40,7 @@
  * | left drag | touchpoint #1 — the browser's own pointer, untouched |
  * | Shift + left drag | an anchor-only second touch (gravity + roll) — the cursor drives it |
  * | right press and HOLD | the HitFace: the first touch of `D87`, which the cursor NEVER moves |
- * | left click while right is held | the Pioneer press — single = cyan, double = amber |
+ * | left click while right is held | the Pioneer tap — it aligns (cyan; the double-click amber FOLLOW is deleted, `D106`) |
  *
  * ⛔ A right press while the left is down is refused: it would arrive second and mean a Pioneer.
  *
@@ -142,7 +142,8 @@ export class MouseSecondTouch {
         if (ev.button === RIGHT_BUTTON) {
           // ⭐⭐⭐ **RIGHT PRESS AND HOLD = THE HITFACE** (the owner, 2026-09-25): *"right click hits
           // hitface and hold, mouse move to pioneer face and single left click sets pioneer face
-          // and aligns (cyan) or double left click (amber)."* ⭐ It is the FIRST touch of `D87`'s
+          // and aligns (cyan) or double left click (amber)."* (⛔ the amber FOLLOW is deleted, `D106`.)
+          // ⭐ It is the FIRST touch of `D87`'s
           // gesture — the held body, whose raycast face is the HitFace and becomes the
           // FollowerFace — and the left click that follows is the second touch pressing the
           // Pioneer. ⛔ So it is refused while the left button is down: it would arrive SECOND and

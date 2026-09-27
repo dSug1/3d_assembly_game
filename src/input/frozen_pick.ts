@@ -1,32 +1,19 @@
 /**
- * ⭐⭐⭐ **A TOUCH ON A FROZEN BODY THAT COULD NOT DO ANYTHING IS HANDED OVER AS A MISS.**
+ * ⭐⭐⭐ **A TOUCH ON A FROZEN BODY IS HANDED OVER AS A MISS — EVERY TOUCH, SINCE `D119`.**
  *
  * > *"If any frozen object receives a second touch, treat this second touch as if it was not
  * > raycast hitting any object (therefore, this second touch could for example move another
  * > object)."* — the owner, 2026-09-23, `D77`
  *
- * ## ⛔⛔⛔ `D89` — THE CARVE-OUT FOLLOWS THE **ROLE**, AND `D87` MOVED IT
+ * ⭐⭐ `D119` (2026-09-27) generalised it: the first touch AND the second are misses, so a finger
+ * over the plate drives the held body's gravity and roll like empty space, and a **TAP** on the
+ * plate aligns the held body to the face under it (resolved at the release). ⚠ The one exception
+ * is the caller's: a frozen body carrying a SEATED follower is holdable, the unsnap's first touch.
  *
- * ⚠⚠ `D77` discarded the **second** touch and spared the **first**, for exactly one reason: `D67`
- * had put the **Pioneer** on the first touch, so the plate had to stay holdable or it would have
- * left the alignment model entirely. ⛔ `D87` reversed those roles — the Pioneer is the body being
- * **pressed** now — and `D77` went on guarding the finger the Pioneer had left.
- *
- * ⭐⭐ **SO THE TWO TOUCHES SWAP.** A **first** touch on a frozen body is the useless one now: a
- * held body is the FOLLOWER, and a frozen body is refused that role, so holding the plate can no
- * longer produce any alignment at all. ⭐ It becomes the miss, and that finger goes to work as an
- * `OUTSIDE` touchpoint — which is the whole of `D77`'s intent, aimed at the finger that now
- * qualifies. ⛔ A **second** touch keeps its hit, because that is the press that names a Pioneer.
- *
- * ⭐⭐⭐ `METHOD`: *a guard written in terms of WHICH FINGER is a guard that a role inversion
- * silently aims at the wrong one.* ⚠ Neither `D77` nor `D87` mentions the other, and nothing could
- * go red: the rule was still true as written, about a finger that had stopped mattering.
- *
- * ⚠⚠ **WHAT IT COSTS, AND `D77` WAS WRITTEN FOR EXACTLY THIS**: a finger resting on the plate
- * while a part is held now latches the plate (role `OBJECT`) and selects it as a Pioneer, instead
- * of driving the held part's roll or depth. ⭐ The owner chose it with that named: *the plate is
- * the thing most parts are aligned to*, and an alignment you cannot reach is worse than a channel
- * you can reach another way.
+ * ⚠ History: `D89` (2026-09-25) had swapped `D77`'s carve-out after `D87` inverted the roles —
+ * the FIRST touch became the miss and the second kept its hit to press the plate as a Pioneer.
+ * ⭐ `METHOD` from it: *a guard written in terms of WHICH FINGER is a guard that a role inversion
+ * silently aims at the wrong one.* `D119`'s tap-to-align made the carve-out unnecessary.
  *
  * ## ⛔⛔ WHY IT IS DECIDED HERE AND NOT IN THE ROUTER
  *
@@ -49,21 +36,34 @@
  * @param hit what the ray hit, or `null`.
  * @param isFrozen whether THAT body is frozen. ⚠ Asked of the caller rather than read here:
  *   this module has no world, which is what keeps it a decision instead of a lookup.
- * @param touchpointsAlreadyDown how many touchpoints were live **before** this press. ⭐ `0`
- *   means this is the first touch, and since `D89` that is the one dropped on a frozen body.
- *   ⛔ It is a COUNT and not a boolean, because the rule has to answer the third and fourth
- *   finger too — and those are presses that CAN name a Pioneer, so they keep their hit.
  */
-export function pressHit<O>(
-  hit: O | null,
-  isFrozen: boolean,
-  /** ⚠ Kept for the call site's shape; no longer read (`D119`). */
-  _touchpointsAlreadyDown: number,
-): O | null {
+export function pressHit<O>(hit: O | null, isFrozen: boolean): O | null {
   // ⭐⭐ `D119` (the owner, 2026-09-27): a FROZEN body is a miss for EVERY touch — the second finger
   // over it drives the held body's gravity and roll like empty space. ⛔ `D89` kept the second touch's
   // hit so the plate could be pressed as a Pioneer; a TAP on it still aligns (resolved at release).
   // ⚠ The unsnap's first touch on a loaded plate is admitted by the caller (`isFrozen` false).
   if (hit === null) return null;
   return isFrozen ? null : hit;
+}
+
+/**
+ * ⭐⭐⭐ **`D124` — A SECOND PRESS ON ANOTHER BODY STEERS; IT NEVER GRABS IT** (the owner, 2026-09-27:
+ * *"In mobile, I can translate two objects at the same time which is a possibility not available in
+ * desktop. Therefore, if a first touch is hold on an object, a second touch hold on another object
+ * should not translate the other object, it shall serve as gravity / roll input to the first object
+ * movement. Note that I am not referring to a second touch tap (which serves to align)"*).
+ *
+ * ⭐ With a body already held, a press on a DIFFERENT body is routed as empty space — it drives the
+ * held body's gravity / roll — and its face is remembered, so a TAP there still aligns (`D119`).
+ * ⛔ Two exceptions, both kept on purpose: the held body ITSELF (`SECOND`, `A12`'s finger), and the held
+ * body's SEATED PARTNER — the unsnap's second touch lands on the seated Follower.
+ * ⚠ Narrowed by the 2026-09-27 audit: it was *the held body's whole ASSEMBLY*, so two parts seated on
+ * the one plate were siblings, and holding one and pressing the other still GRABBED it.
+ */
+export function pressSteers(f: {
+  readonly holdersBefore: number;
+  readonly hitIsHeld: boolean;
+  readonly seatedPartnerOfHeld: boolean;
+}): boolean {
+  return f.holdersBefore > 0 && !f.hitIsHeld && !f.seatedPartnerOfHeld;
 }

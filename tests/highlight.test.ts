@@ -350,8 +350,8 @@ describe("⛔⛔ CONDITION 2 — *translation by one touchpoint or two touchpoin
   // ⚠⚠ NO VECTOR FOR A COUNT OF ZERO, AND THAT IS DELIBERATE. My first version asserted
   // `translatesOnDrag(0, "TRANSLATE") === false` and it failed — the function answers `true`,
   // because it only asks *what would a drag do*. ⭐ Rather than add a `count <= 0` guard to
-  // satisfy the fixture, the case is left to the one caller that can actually see it:
-  // `highlightedPair` returns `null` for an empty held list, and there is a vector for that.
+  // satisfy the fixture, the case is left to the callers, none of which asks it about zero held
+  // objects (`highlightedPair`, which once guarded it, is deleted, `D120`).
   // ⛔ `METHOD`: *a guard that cannot fail is not a guard* — no caller ever asks this function
   // about zero objects, so a guard here would have been unfalsifiable code added to make a
   // test of my own devising pass. Mistake shape 5, caught before it landed.
