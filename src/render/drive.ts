@@ -10,10 +10,9 @@ import { type ObjectId } from "../core/object_model";
 import { incrementRadians } from "../input/rotation_increment";
 import { rotationChannel } from "../core/constraint_stack";
 import { IDENTITY, dot } from "../core/vec";
-import { pinnedPair, pinnedSecondDrive, secondTouchDrive } from "../input/pinned_pioneer";
+import { pinnedPair, pinnedSecondDrive } from "../input/pinned_pioneer";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
-import { secondTouchAlwaysAvailable } from "../input/mouse_second_touch";
 import { TURN_ROLL, type Held, type SceneState } from "./scene_state";
 import { asVec3, modelOrientation, requirePose, setModelOrientation, setModelPose } from "./bodies";
 import { driveBodyOf } from "./alignment_wiring";
@@ -269,14 +268,6 @@ export function gripIsAlignedFollower(st: SceneState, grip: Held) : boolean {
  * held objects already translate on a drag by `translatesOnDrag`'s own first line, which is
  * exactly why the owner saw the wanted behaviour there and nowhere else.
  */
-// ⭐⭐ A MOUSE HOLDER'S SECOND TOUCH IS ALWAYS AVAILABLE (`secondTouchAlwaysAvailable`, the
-// owner 2026-09-25): an aligned body under the left button translates at once, whatever the mode,
-// exactly as it does on the glass once a second finger is down. ⛔ The desktop fact lives in the
-// desktop module; this rule only reads it.
-export function secondTouchOwnsRollAndDepth(st: SceneState, grip: Held) : boolean {
-return (st.router.outside().length >= 1 || secondTouchAlwaysAvailable(grip.pointerType)) &&
-  secondTouchDrive("OUTSIDE", gripIsAlignedFollower(st, grip)) === "BOTH";
-}
 
 export function gripOfObject(st: SceneState, id: ObjectId) : Held | undefined {
   for (const g of st.held.values()) if (st.idOf.get(g.mesh) === id) return g;

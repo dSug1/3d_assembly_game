@@ -15,7 +15,7 @@ import { guardDraw } from "./bodies";
 import { showCaptureOutlines } from "./markers";
 import { cameraOffsetZoneEnter } from "./gizmo";
 import { rebaseGestureFrames, syncCentre } from "./camera_rig";
-import { gripOfObject, secondTouchOwnsRollAndDepth } from "./drive";
+import { gripIsAlignedFollower, gripOfObject } from "./drive";
 
 export function refreshHighlight(st: SceneState) : void {
   // ⭐ Held bodies in PRESS ORDER, de-duplicated — `router.objects()` is ordered by press, and
@@ -40,7 +40,7 @@ export function refreshHighlight(st: SceneState) : void {
     translatesOnDrag(
       ids.length,
       st.behaviour,
-      soleGrip !== undefined && secondTouchOwnsRollAndDepth(st, soleGrip),
+      soleGrip !== undefined && gripIsAlignedFollower(st, soleGrip),
     ),
     {
       // ⭐⭐⭐ **RECOMPUTED EVERY FRAME FROM THE CAMERA** (`D49`, the owner: the offset *"shall

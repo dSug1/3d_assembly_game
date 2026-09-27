@@ -15,7 +15,6 @@ import {
   hitFaceAllowed,
   MouseSecondTouch,
   MOUSE_SECOND_ID,
-  secondTouchAlwaysAvailable,
   type MouseAction,
   type MouseInput,
 } from "@input/mouse_second_touch";
@@ -217,14 +216,6 @@ describe("⛔⛔⛔ THE MASK IS READ EVERY TIME — a missed release never stick
       emit: [{ target: "SECOND", kind: "UP", x: 1, y: 2 }],
     });
     expect(m.step(ev({ type: "CANCEL" }))).toEqual({ skip: false, emit: [] });
-  });
-});
-
-describe("⭐⭐⭐ ON A MOUSE THE SECOND TOUCH IS ALWAYS AVAILABLE — `D60` for an aligned body", () => {
-  it("⭐⭐ a mouse holder counts it as present; a finger and a pen do not", () => {
-    expect(secondTouchAlwaysAvailable("mouse")).toBe(true);
-    expect(secondTouchAlwaysAvailable("touch")).toBe(false);
-    expect(secondTouchAlwaysAvailable("pen")).toBe(false);
   });
 });
 

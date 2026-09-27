@@ -140,6 +140,8 @@ export function secondTouchDrive(
   heldIsAlignedFollower: boolean,
 ): "BOTH" | "MODE_PICKS" {
   if (place === "PIONEER") return "BOTH";
-  if (place === "OUTSIDE" && heldIsAlignedFollower) return "BOTH";
+  // ⭐⭐ `D108`: on an aligned Follower the second touch drives gravity + spin WHEREVER it lands —
+  // on empty space or on the body itself — because the body has no mode left to pick one.
+  if (heldIsAlignedFollower) return "BOTH";
   return "MODE_PICKS";
 }

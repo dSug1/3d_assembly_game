@@ -25,7 +25,7 @@ import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, paint, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers } from "./sway_pass";
-import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower, gripOfObject, pinnedNow, secondTouchOwnsRollAndDepth } from "./drive";
+import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower, gripOfObject, pinnedNow } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
 
 export function installPointerHandler(st: SceneState): void {
@@ -721,7 +721,7 @@ export function installPointerHandler(st: SceneState): void {
         grip.mode = translatesOnDrag(
           st.router.objects().length,
           st.behaviour,
-          secondTouchOwnsRollAndDepth(st, grip),
+          gripIsAlignedFollower(st, grip),
         )
           ? "TRANSLATE"
           : "ROTATE";

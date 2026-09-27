@@ -133,11 +133,11 @@ describe("⛔⛔⛔ `D59` — WHEN DOES THE SECOND TOUCH GIVE BOTH AXES?", () =>
     expect(secondTouchDrive("PIONEER", false)).toBe("BOTH");
   });
 
-  it("⛔⛔ on the SAME object → the mode picks, even for an aligned Follower", () => {
-    // ⚠ DELIBERATELY UNTOUCHED: the owner's sentence says *outside any object*, and `A12`'s
-    // finger shares a body with the holder, where a diagonal would smear one axis into the other
-    // by accident — the argument this file opens with.
-    expect(secondTouchDrive("SAME_OBJECT", true)).toBe("MODE_PICKS");
+  it("⛔⛔ on the SAME object → the mode picks for a FREE body; an ALIGNED one drives both (`D108`)", () => {
+    // ⛔⛔ REVERSED 2026-09-27: `D108` makes an aligned body mode-less, so there is no mode left to
+    // pick. ⚠ The cost this vector used to guard is now accepted: a finger on the same body moving
+    // DIAGONALLY drives gravity AND spin together, where the mode used to keep one.
+    expect(secondTouchDrive("SAME_OBJECT", true)).toBe("BOTH");
     expect(secondTouchDrive("SAME_OBJECT", false)).toBe("MODE_PICKS");
   });
 });

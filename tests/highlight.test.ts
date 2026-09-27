@@ -670,4 +670,15 @@ describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not eno
   });
 });
 
+describe("⭐⭐⭐ `D108` — an ALIGNED Follower is mode-less: its first touch always translates", () => {
+  it("⭐ one finger, ROTATE mode, aligned → translate", () => {
+    // > *"1- OK"* — the owner, 2026-09-27, accepting *"for an aligned body, the first finger always
+    // > slides it horizontally"* on both devices.
+    expect(translatesOnDrag(1, "ROTATE", true)).toBe(true);
+  });
 
+  it("⭐ a FREE body still obeys the mode", () => {
+    expect(translatesOnDrag(1, "ROTATE", false)).toBe(false);
+    expect(translatesOnDrag(1, "TRANSLATE", false)).toBe(true);
+  });
+});
