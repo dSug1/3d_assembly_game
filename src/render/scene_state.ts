@@ -485,6 +485,9 @@ export interface SceneState {
   /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */
   edgeBandEl: HTMLDivElement;
   edgeBandKey: string;
+  /** ⭐ `D114`: does a FIRST touch have somewhere empty to land? Probed at 4 Hz; `true` until then. */
+  emptySpaceVisible: boolean;
+  lastEmptyProbeMs: number;
   episodeFacts: Map<number, { role: PointerRole; heldAtPress: number; pressedAnotherBody: boolean }>;
   episodeUnaligned: Set<number>;
   episodeUndo: Set<number>;
