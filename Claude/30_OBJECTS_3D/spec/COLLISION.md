@@ -40,6 +40,8 @@ the Blender source lands, it is ONE new implementation and ONE line at the compo
 NOW, with a list of one, precisely so that change is not a signature change.
 ⚠ A concave body with today's source is its **hull**: a hole is filled, so insertion cannot work
 until `3D8`. Stated, and accepted by the owner as the interim.
+⭐⭐ **What the Blender shapes and boxes must be, and what the loader must do with them** →
+[`BLENDER_COLLISION_AUTHORING.md`](BLENDER_COLLISION_AUTHORING.md).
 
 ## 3. TRANSLATION — kinematic STOP and SLIDE (✅ the owner: *"ok for translation"*)
 

@@ -95,6 +95,8 @@ has to know which kind a body is.
   collide as it looks — the hull at spawn fills them, so insertion waits for this row.
 * **`3D9` — bounds**: an authored box per part (a `UBX_<mesh>` box, or a named empty), read as the
   body's `Aabb` for the broad phase.
+* ⭐⭐ **The full specification — naming, convexity, budgets, fit tolerances, the box's containment,
+  export settings, the loader's validation and fallback** → [`BLENDER_COLLISION_AUTHORING.md`](BLENDER_COLLISION_AUTHORING.md).
 * ⛔ Both drop in behind the `3D6` seams — `CollisionShapeSource` and `BoundsSource`
   ([`COLLISION.md`](COLLISION.md) §2): one new implementation, one line at the composition root,
   and every collision vector unchanged. A part WITHOUT authored pieces keeps the hull at spawn.

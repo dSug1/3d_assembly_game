@@ -317,8 +317,8 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |
 | 3D6 | ⛔⛔⛔ **COLLISION — no penetration** (build #1): stop+slide on translation, same-axis clamp on rotation, snapping/seated rules, broad phase | 3D | feature | ✅ **BUILT 2026-09-27**, ⛔ unjudged; feedback beyond the HUD is `GM9` → `COLLISION.md` §8 | 3D1 |
 | 3D7 | **Play volume** — translation clamped to the level's volume (build #3) | 3D | feature | queued | 3D6 |
-| 3D8 | LATER: collision shapes authored in Blender (`UCX_`), behind `3D6`'s seam | 3D | feature | future → `MATERIALS_AND_IMPORT.md` | 3D6, 3D4 |
-| 3D9 | LATER: bounds authored in Blender, behind `3D6`'s seam | 3D | feature | future | 3D6, 3D4 |
+| 3D8 | LATER: Blender collision shapes (`UCX_`) | 3D | feature | specified → `BLENDER_COLLISION_AUTHORING.md` | 3D6, 3D4 |
+| 3D9 | LATER: Blender bounding boxes (`UBX_`) | 3D | feature | specified → same file | 3D6, 3D4 |
 
 ## Phase RND — scene and rendering
 
