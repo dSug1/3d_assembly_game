@@ -46,6 +46,20 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-27)
 
+⛔⛔⛔ **BUILD NOW, BEFORE ANYTHING ELSE — THE PLAYABILITY PROGRAM** (`D116`, the owner): **`3D6`
+COLLISION** (no body penetrates another — translation STOPS and SLIDES; a rotation is CLAMPED along
+its OWN axis, never slid, never turned about another axis, *"because quaternion are not commutable
+and the user cannot go back"*; the convex hull at spawn + GJK for now, behind seams that Blender-
+authored `UCX_` shapes and bounds replace later, `3D8`/`3D9`) → **`GM1`** a goal, the MATE check
+(the snap plus the SPIN, judged against the level's target) and completion → **`3D7`** a play
+volume → **`3D2`** the approach → **`GM9`** the player layer →
+[`Claude/00_CORE/queue_notes/PLAYABILITY_2026-09-27.md`](Claude/00_CORE/queue_notes/PLAYABILITY_2026-09-27.md),
+[`Claude/30_OBJECTS_3D/spec/COLLISION.md`](Claude/30_OBJECTS_3D/spec/COLLISION.md).
+✅ **`3D6` IS BUILT** (2026-09-27, ⛔ unjudged by a hand): every gesture pose write is resolved by
+`core/collision.ts` first — checked along the path (no tunnelling), a 0.3 mm skin on the glass, the
+**clamp** the owner confirmed; the alignment turn itself does not collide. ⏸ The mate's spin
+questions are deferred by the owner (*"we will see mate and spin later on"*) → `PLAYABILITY` §2.
+
 ⭐⭐⭐ **THE INPUTS ARE SIMPLIFIED** (`D106`–`D109`, 2026-09-27, branch `1.0.39-Inputs-simplification`)
 — ⛔ **NO DEVICE LOOK YET.** The owner accepted a merge-and-eliminate pass; the one list of every
 input, both devices, is now [`Claude/10_INPUT_TOUCH/spec/INPUTS_TABLE.md`](Claude/10_INPUT_TOUCH/spec/INPUTS_TABLE.md).
@@ -113,7 +127,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1190 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`); the
+✅ Green: TypeScript + Babylon + Vite, **1207 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

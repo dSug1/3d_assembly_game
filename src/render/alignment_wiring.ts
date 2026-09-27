@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { graceAfterUnsnap } from "./collision_wiring";
 import { isTapRelease, tapReleaseToggles, toggleBehaviour, faceAlignConstraint, squaringTwist, type AlignMode, type Sample } from "../input";
 import { detach, worldPlacementOf, type ObjectId } from "../core/object_model";
 import { mmToPx } from "../core/units";
@@ -180,7 +181,7 @@ export function alignFollowerToPioneer(st: SceneState, followerPointerId: number
   if (snapMs > 0) {
     st.alignSnaps.start(followerId, drawn, target, performance.now());
   } else {
-    setModelOrientation(st, followerGrip.mesh, target);
+    setModelOrientation(st, followerGrip.mesh, target, false);
     st.alignSnaps.cancel(followerId);
   }
   if (swapped !== null) {
@@ -291,6 +292,9 @@ return assemblyRoot(
 
 /** ⭐ Un-parent a follower in the WORLD and drop its flights. ⚠ The link's own flag is `links`'. */
 export function unseatWorld(st: SceneState, followerId: ObjectId) : void {
+  const parent = st.world.objects.get(followerId)?.parent ?? null;
+  // ⭐ `3D6`: it starts at gap 0 with its Pioneer — exempt from it until they have separated once.
+  if (parent !== null) graceAfterUnsnap(st, followerId, parent);
   if (st.world.objects.get(followerId)?.parent !== null) {
     st.world = detach(st.world, followerId);
     st.hudDirty = true;

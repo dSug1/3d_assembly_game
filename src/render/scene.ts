@@ -631,6 +631,9 @@ export function createScene(
   });
   document.body.appendChild(st.edgeBandEl);
   st.edgeBandKey = "";
+  st.collisionGrace = new Set<string>();
+  st.lastCollision = "";
+  st.lastCollisionAt = -Infinity;
   st.emptySpaceVisible = true;
   st.lastEmptyProbeMs = -Infinity;
   // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at

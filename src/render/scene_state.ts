@@ -486,6 +486,11 @@ export interface SceneState {
   /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */
   edgeBandEl: HTMLDivElement;
   edgeBandKey: string;
+  /** ⭐ `3D6`: couples exempt from colliding with each other since an unsnap, until they separate. */
+  collisionGrace: Set<string>;
+  /** The last block, for the HUD — `A⟂B 42% slid` — and when it happened. */
+  lastCollision: string;
+  lastCollisionAt: number;
   /** ⭐ `D114`: does a FIRST touch have somewhere empty to land? Probed at 4 Hz; `true` until then. */
   emptySpaceVisible: boolean;
   lastEmptyProbeMs: number;

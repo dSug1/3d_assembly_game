@@ -82,3 +82,21 @@ has to know which kind a body is.
 4. One scene environment for every level, and the hemispheric light retired or kept as fill.
 5. ⚠ One deliberately ugly real part as the first test asset — curved, hollow or L-shaped — because
    it tests `mesh_topology`, GJK and the seat at once (`CONCEPT_ASSESSMENT` risk 2, `3D5`).
+
+## ⭐⭐ LATER — collision shapes and bounds authored in Blender (`3D8`, `3D9`, 2026-09-27)
+
+> *"for the moment, continue to implement [the hull at spawn and the GJK gap]. Make sure it is
+> modular, and can be later replaced by the collision shapes authored in Blender. Capture this
+> future development in the md files."* · the same *"for the bounding box"* — the owner, 2026-09-27
+
+* **`3D8` — collision shapes**: each part exports its convex pieces beside the mesh, named
+  `UCX_<mesh>_NN` (the Unreal convention, widely supported by exporters). The loader reads them as
+  the body's `ConvexPart[]` and hides them. ⭐ This is what makes a hole, a slot or an L-shape
+  collide as it looks — the hull at spawn fills them, so insertion waits for this row.
+* **`3D9` — bounds**: an authored box per part (a `UBX_<mesh>` box, or a named empty), read as the
+  body's `Aabb` for the broad phase.
+* ⭐⭐ **The full specification — naming, convexity, budgets, fit tolerances, the box's containment,
+  export settings, the loader's validation and fallback** → [`BLENDER_COLLISION_AUTHORING.md`](BLENDER_COLLISION_AUTHORING.md).
+* ⛔ Both drop in behind the `3D6` seams — `CollisionShapeSource` and `BoundsSource`
+  ([`COLLISION.md`](COLLISION.md) §2): one new implementation, one line at the composition root,
+  and every collision vector unchanged. A part WITHOUT authored pieces keeps the hull at spawn.

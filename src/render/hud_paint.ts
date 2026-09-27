@@ -97,6 +97,8 @@ export function paint(st: SceneState) {
       (st.episodes.pending > 0 ? ` (+${st.episodes.pending} on release)` : "") +
       `  ${formatElapsed(st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
       `  undo=${st.undo.size}` +
+      // ⭐ `3D6`: the last block, for two seconds — a stop must never read as a bug.
+      (performance.now() - st.lastCollisionAt < 2000 ? `  ⟂ ${st.lastCollision}` : "") +
       `  band=${bandMmNow(st) > 0 ? `${bandMmNow(st)}mm (no empty space)` : "off"}` +
       (st.cfg.pioneerCursorDrag === 1 ? "  FREE FLOW (not scored)" : ""),
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
