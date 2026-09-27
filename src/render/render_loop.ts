@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { seenFromBelow } from "../core/underside";
 import { pruneCollisionGrace } from "./collision_wiring";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
@@ -583,7 +584,19 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ `D113`: the edge band's outline follows the canvas and the slider. ⚠ Laid out every frame
     // from the canvas rectangle — a rotation or a resize must not leave it drawn in the wrong place.
     {
-      // ⭐ `3D6`: an unsnapped couple is ordinary again once it has separated past the skin.
+      // ⭐ `D121`: a frozen body the camera sees from BELOW turns see-through. ⚠ Written on change only.
+    {
+      const cam: [number, number, number] = [st.camera.position.x, st.camera.position.y, st.camera.position.z];
+      for (const [fid, o] of st.world.objects) {
+        if (o.frozen !== true) continue;
+        const mesh = st.meshOf.get(fid);
+        const mat = mesh?.material as { alpha: number } | null | undefined;
+        if (!mat) continue;
+        const want = seenFromBelow(st.world, fid, cam) ? st.cfg.frozenUndersideAlpha : 1;
+        if (mat.alpha !== want) mat.alpha = want;
+      }
+    }
+    // ⭐ `3D6`: an unsnapped couple is ordinary again once it has separated past the skin.
     pruneCollisionGrace(st);
     // ⭐ `D114`: the band is 0 while a first touch has somewhere empty to land.
       probeEmptySpace(st, performance.now());

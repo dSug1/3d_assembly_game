@@ -630,7 +630,7 @@ export function createScene(
   });
   document.body.appendChild(st.edgeBandEl);
   st.edgeBandKey = "";
-  st.frozenTapFace = new Map();
+  st.tapFace = new Map();
   st.collisionGrace = new Set<string>();
   st.lastCollision = "";
   st.lastCollisionAt = -Infinity;

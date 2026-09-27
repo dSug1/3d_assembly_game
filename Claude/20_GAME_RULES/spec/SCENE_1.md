@@ -47,8 +47,9 @@
 * **Colour**: Kelvin → RGB (Tanner Helland's fit), times the filter colour.
 * **Shadows**: soft (PCF), strength 0.4 → Babylon darkness 0.6, one 1024 map per light; every piece
   casts and receives, the floor receives.
-* **Floor**: Unity's Plane is 10 × 10 units, so scale 4.79 is 47.9 × 47.9 units; a plane has no
-  thickness, so it is a 0.05-unit slab whose TOP is `y = −2.3`. Frozen.
+* **Floor**: Unity's Plane is 10 × 10 units, so scale 4.79 is 47.9 × 47.9 units — ⭐ **halved, then
+  80 % of that: 19.16 × 19.16** (`D122`, the owner). A plane has no thickness, so it is a 0.05-unit
+  slab whose TOP is `y = −2.3`. Frozen; seen from below it turns see-through (`D121`).
 
 ## 4. ⚠⚠ What the brief and the table disagree on — built as the TABLE says
 

@@ -4,6 +4,8 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { pressSteers } from "../input/frozen_pick";
+import { rootOf } from "../core/collision";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -172,7 +174,12 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
       // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
       //
-      const hit = pressHit(
+      // ⭐ `D112`: the facts the episode ledger reads, taken BEFORE this press registers.
+      const heldBefore = st.router
+        .objects()
+        .map((q) => st.held.get(q.id))
+        .map((g) => (g === undefined ? undefined : st.idOf.get(g.mesh)));
+      const hitFirst = pressHit(
         driveHit,
         // ⭐ A frozen body with a SEATED follower on it is holdable — the unsnap's first touch.
         hitId !== undefined &&
@@ -183,12 +190,19 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔ The count BEFORE this press is registered: `router.press` has not run yet.
         st.router.size,
       );
+      // ⭐⭐⭐ `D124`: with a body held, a press on ANOTHER body steers it — never grabs the other one.
+      const hitFirstId = hitFirst === null ? undefined : st.idOf.get(hitFirst);
+      const steers =
+        hitFirstId !== undefined &&
+        pressSteers({
+          holdersBefore: heldBefore.length,
+          hitIsHeld: heldBefore.includes(hitFirstId),
+          sameAssemblyAsHeld: heldBefore.some(
+            (h) => h !== undefined && rootOf(st.world, h) === rootOf(st.world, hitFirstId),
+          ),
+        });
+      const hit = steers ? null : hitFirst;
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
-      // ⭐ `D112`: the facts the episode ledger reads, taken BEFORE this press registers.
-      const heldBefore = st.router
-        .objects()
-        .map((q) => st.held.get(q.id))
-        .map((g) => (g === undefined ? undefined : st.idOf.get(g.mesh)));
       const routed = st.router.press(e.pointerId, s, hit);
       st.episodeFacts.set(e.pointerId, {
         role: routed.role,
@@ -196,14 +210,16 @@ export function installPointerHandler(st: SceneState): void {
         pressedAnotherBody: rawHitId !== undefined && !heldBefore.includes(rawHitId),
       });
       if (rayHit !== null && hit === null) {
-        st.lastVerdict = `frozen ${hitId ?? "?"} — routed as a MISS (a tap on it aligns, D119)`;
-        // ⭐ `D119`: remember the frozen face under this touch — a TAP here aligns the held body to it.
+        st.lastVerdict = steers
+          ? `${hitId ?? "?"} — the second touch STEERS (a tap on it aligns, D124)`
+          : `frozen ${hitId ?? "?"} — routed as a MISS (a tap on it aligns, D119)`;
+        // ⭐ `D119`/`D124`: remember the face under this touch — a TAP here aligns the held body to it.
         const n = pick?.getNormal(true);
         const f =
           n && hitId !== undefined
             ? faceFromPickedNormal(st.world, hitId, [n.x, n.y, n.z] as Vec3)
             : null;
-        if (f !== null && hitId !== undefined) st.frozenTapFace.set(e.pointerId, { id: hitId, faceId: f.faceId });
+        if (f !== null && hitId !== undefined) st.tapFace.set(e.pointerId, { id: hitId, faceId: f.faceId });
       }
 
       // ⭐⭐⭐ **`D68` — A PRESS THAT COMPLETES A DOUBLE TAP UNDOES THE FIRST TAP'S TOGGLE.**
@@ -530,7 +546,7 @@ export function installPointerHandler(st: SceneState): void {
             grip2,
             routed.seq,
             s,
-            secondTouchDrive("SAME_OBJECT", gripIsAlignedFollower(st, grip2)) ===
+            secondTouchDrive("SAME_OBJECT", gripIsAlignedFollower(st, grip2), st.behaviour) ===
               "BOTH",
           )
         ) {
@@ -579,7 +595,7 @@ export function installPointerHandler(st: SceneState): void {
             grip,
             routed.seq,
             s,
-            secondTouchDrive("OUTSIDE", gripIsAlignedFollower(st, grip)) === "BOTH",
+            secondTouchDrive("OUTSIDE", gripIsAlignedFollower(st, grip), st.behaviour) === "BOTH",
           )
         ) {
           paint(st);
@@ -642,8 +658,8 @@ export function installPointerHandler(st: SceneState): void {
         );
         // ⭐⭐ `D119` — A TAP ON A FROZEN BODY ALIGNS THE HELD BODY TO THE FACE UNDER IT. ⛔ Asked FIRST:
         // it is an assembly act, and must not fall through to the unalign or the mode toggle.
-        const frozenTap = st.frozenTapFace.get(e.pointerId);
-        st.frozenTapFace.delete(e.pointerId);
+        const frozenTap = st.tapFace.get(e.pointerId);
+        st.tapFace.delete(e.pointerId);
         const frozenVerdict =
           isTap && frozenTap !== undefined && heldGrip !== undefined && heldId !== undefined
             ? pressMeaning({

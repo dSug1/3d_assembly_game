@@ -46,6 +46,13 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-27)
 
+⭐⭐ **THE FOURTH PASS** (`D121`–`D124`, branch `1.0.41-Mondrian`, ⛔ unjudged by a hand): a **frozen body
+seen from below turns see-through** (opacity slider in CAMERA); `Scene_1`'s **floor is 19.16 units**
+(halved, then 80 %); a **free body's second touch in `TRANSLATE` spins it about GRAVITY** as well as
+lifting it — the aligned body's pair; and **a second press on another body STEERS the held one** — it
+never grabs it, so one body moves at a time on the tablet as on the desktop, and a TAP there still
+aligns → `ALIGNMENT_RULES.md` §15, `INPUTS_TABLE.md`.
+
 ⭐⭐ **THE THIRD PASS OF THE DAY** (`D118`–`D120`, ⛔ unjudged by a hand): **the mouse never pinches** —
 Shift + left drag on empty space no longer zooms, the wheel does; **the second touch aligns only on a
 released TAP** — a press that stays or moves aligns nothing, and a press on the **frozen plate** is
@@ -144,7 +151,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1142 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted); the
+✅ Green: TypeScript + Babylon + Vite, **1154 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

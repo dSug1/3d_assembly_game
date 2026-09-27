@@ -283,8 +283,11 @@ export function applyDepthDrag(st: SceneState, grip: Held,
       // ⛔ Same as the one-finger twist: a refusal that fell through to the free roll below
       // would break the mate while the HUD reported that it had not.
       st.lastVerdict = `align: roll refused — ${rollChannel.why}`;
-    } else if (rollChannel.kind === "TWIST") {
-      const axis = rollChannel.axis;
+    } else if (rollChannel.kind === "TWIST" || bothAxes) {
+      // ⭐⭐ `D123`: a FREE body driven on both axes spins about GRAVITY — the world vertical — by the
+      // same chart, sign and gain as an aligned body spins about its normal.
+      const axis =
+        rollChannel.kind === "TWIST" ? rollChannel.axis : rotationFrameOf(st, grip.frame).up;
       // ⭐ The grey line's axis, recorded where the turn is applied (the owner, 2026-09-23).
       noteTurnAxis(st, rollId, TURN_ROLL, axis);
       // ⭐⭐⭐ **`D52` — THE SECOND TOUCHPOINT ROLLS THE FOLLOWER THE SAME WAY THE FIRST

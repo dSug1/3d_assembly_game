@@ -73,9 +73,18 @@ export type SecondTouchPlace =
 export function secondTouchDrive(
   _place: SecondTouchPlace,
   heldIsAlignedFollower: boolean,
+  /**
+   * ⭐⭐ `D123` (the owner, 2026-09-27: *"If an object is not aligned, I cannot reach the roll around
+   * gravity axis … I should be able to roll the object around the gravity axis (same as what is
+   * possible when the object is aligned)"*): a FREE body in `TRANSLATE` takes both too — `dy` lifts
+   * it, `dx` spins it about GRAVITY, the aligned body's pair with gravity for the normal.
+   * ⛔ `ROTATE` keeps the mode's pick (roll about the depth axis), so all three turns stay reachable.
+   */
+  mode: "TRANSLATE" | "ROTATE" = "ROTATE",
 ): "BOTH" | "MODE_PICKS" {
   // ⭐⭐ `D108`: on an aligned Follower the second touch drives gravity + spin WHEREVER it lands —
   // on empty space or on the body itself — because the body has no mode left to pick one.
   if (heldIsAlignedFollower) return "BOTH";
+  if (mode === "TRANSLATE") return "BOTH";
   return "MODE_PICKS";
 }

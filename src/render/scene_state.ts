@@ -479,8 +479,8 @@ export interface SceneState {
   /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */
   edgeBandEl: HTMLDivElement;
   edgeBandKey: string;
-  /** ⭐ `D119`: a second touch that pressed a FROZEN body — its face, for a tap to align to. */
-  frozenTapFace: Map<number, { id: ObjectId; faceId: string }>;
+  /** ⭐ `D119`/`D124`: a second touch that pressed a frozen body, or steers over another — its face, for a tap to align to. */
+  tapFace: Map<number, { id: ObjectId; faceId: string }>;
   /** ⭐ The rig elevation the scene boots at, and the camera reset returns to. */
   bootElevation: number;
   /** ⭐ `3D6`: couples exempt from colliding with each other since an unsnap, until they separate. */

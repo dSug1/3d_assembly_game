@@ -1982,3 +1982,21 @@ landing after the release (the 60 ms magnet) belongs to the gesture that caused 
 ⭐ Checked in a local headless Chrome (CDP touches): press-and-hold on B → no alignment; tap on B →
 aligned; drag on the plate → A lifted along gravity, alignment kept; tap on the plate → aligned to it.
 Shift + left drag on empty space: zoom unchanged (it went 3.14 → 0.21 on the build before).
+
+---
+
+## 15 — ⭐⭐ THE FOURTH PASS: SEE-THROUGH FROM BELOW, A GRAVITY SPIN, ONE BODY AT A TIME (`D121`–`D124`)
+
+> *"if the camera passes below the bottom face of a frozen object … the frozen object shall become
+> transparent"* · *"in Scene_1, make the dimension of the yellow sand plane half"* (then *"80 %"*) ·
+> *"If an object is not aligned, I cannot reach the roll around gravity axis … same as what is
+> possible when the object is aligned"* · *"if a first touch is hold on an object, a second touch hold
+> on another object should not translate the other object, it shall serve as gravity / roll input to
+> the first object movement"* — the owner, 2026-09-27
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D121` | **a frozen body seen from below turns see-through** — `seenFromBelow`: the camera is past the plane of the body's most-downward face; its material's opacity becomes `frozenUndersideAlpha` (0.3, slider in CAMERA), and 1 again above | `core/underside.ts`, the render loop | a body whose bottom face is not horizontal is judged by that face's plane, not by *"below"* in height |
+| `D122` | `Scene_1`'s floor: 47.9 → 23.95 → **19.16** units | `content/scene_1.ts` | — |
+| `D123` | **a FREE body's second touch in `TRANSLATE` drives BOTH** — `dy` lifts, `dx` spins about GRAVITY (the world vertical), by the aligned spin's own chart, sign and gain; `ROTATE` keeps the roll about depth | `input/second_touch_drive.ts` (`secondTouchDrive(…, mode)`), `render/drive.ts` | a diagonal second finger lifts AND spins; ✅ checked: a 96 px drag turned a free body 7° about exactly `(0, −1, 0)` |
+| `D124` | **with a body held, a second PRESS on another body STEERS the held one** — `pressSteers`: it is routed as empty space and its face remembered, so a TAP there still aligns (`D119`'s path). ⛔ Except the held body itself, and a body in its ASSEMBLY (the unsnap's second touch) | `input/frozen_pick.ts`, `render/pointer_wiring.ts` (`tapFace`) | two bodies can no longer be moved at once on the tablet — as on desktop, which never could; ✅ checked: B stayed put under a dragging finger, A lifted, nothing aligned; a tap on B aligned |

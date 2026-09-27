@@ -44,7 +44,7 @@ file.
 | `D95` | ⭐⭐ **A TAP ON EMPTY SPACE WHILE HOLDING AN ALIGNED BODY RELEASES IT** | 2026-09-25 | ⭐ Binding, extended by `D107` (holding a Pioneer releases its followers); the free-body toggle narrowed by `D108` → §11.9, §12 |
 | `D96` | ⭐⭐ **A PIONEERFACECURSOR PER ALIGNMENT** | 2026-09-25 | ⭐ Binding. ⚠ → history |
 | `D97` | ⭐⭐ **AN ALIGNED FOLLOWER'S AXES: SHOWN WHILE HELD, AS SEGMENTS TO THE CURSOR** | 2026-09-26 | ⭐ Binding. ⚠ → history |
-| `D98` | ⭐⭐ **AN ALIGNMENT IS SQUARED TO ITS PIONEER** | 2026-09-26 | After the minimal swing, a ≤ 45° twist about the aligned normal squares the Follower's edges to the Pioneer's; the swing alone lost 8–30° on a tilted part. ⚠ No longer strictly minimal → §11.12 |
+| `D98` | ⭐⭐ **AN ALIGNMENT IS SQUARED TO ITS PIONEER** | 2026-09-26 | ⭐ Binding. ⚠ → history |
 | `D99` | ⭐⭐⭐ **THE SCORE: TOUCHPOINT EPISODES AGAINST A SOLVED OPTIMUM, AND ELAPSED TIME** | 2026-09-26 | ⭐ Binding → `20_GAME_RULES/spec/SCORE.md`. ⚠ → history |
 | `D100` | ⭐⭐ **THE SNAP IS AUTOMATIC AND A SEATED PIONEER CARRIES ITS FOLLOWERS; UNSNAP IS AN EPISODE** | 2026-09-26 | ⭐ Binding. ⚠ → history |
 | `D101` | ⭐ **FREE FLOW MODE** — the cursor-drag slider, renamed, escapes the score | 2026-09-26 | ⭐ Binding. ⚠ → history |
@@ -67,6 +67,10 @@ file.
 | `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | The wheel is the desktop's zoom → §14 |
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | A tap on the plate aligns; a press steers → §14 |
 | `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | They matched no shape and served no rule → §14 |
+| `D121` | ⭐ **A FROZEN BODY SEEN FROM BELOW TURNS SEE-THROUGH** | 2026-09-27 | Opacity 0.3, a slider → §15 |
+| `D122` | `Scene_1`'s floor: halved, then 80 % — 19.16 units | 2026-09-27 | → `SCENE_1.md` |
+| `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | With the gravity lift, as an aligned body → §15 |
+| `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | A tap there still aligns → §15 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ Binding. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -89,13 +93,13 @@ file.
 | `D60` | ⭐⭐⭐ **AND THE FIRST TOUCH THEN TRANSLATES, WHATEVER THE MODE** | 2026-09-19 | ⭐ Binding — a **DOF budget**: once the second touch owns roll + depth, leaving the first on the twist puts two fingers on ONE DOF → §5.8 |
 | `D59` | ⭐⭐⭐ **AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH BOTH AXES** | 2026-09-19 | ⭐ Binding — the rule moved from *where the finger landed* to *what the body is*: an aligned body has one rotational DOF left → §5.7 |
 | `D58` | ⚠ **REPEALED BY `D66`** — a PRESS toggled the movement mode, in two places | 2026-09-19 | ⚠ → history |
-| `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | ⭐ Binding — authority was `|dir.x|`, **zero** for an axis horizontal on screen, and **silent**. Only the RATE could go; the sign is latched at the press → §5.5 |
+| `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | ⭐ Binding. ⚠ → history |
 | `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** — the alignment still toggles ON at the PRESS; `A22`'s rapid-pair upgrade is gone with the second touch's tap count | 2026-09-19 | ⛔ Reversed by `D119`: the second touch aligns on its released TAP, never its press |
 | `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding — the hand's own body must not wobble under it. ⚠ Excluded: the kicker, any held body, and (2026-09-26) the mover's **Pioneer within `pioneerSwayRadii` capture offsets** (slider, 3) |
 | `D52` | ⚠ **RESOLVED BY `D57` THE SAME DAY** — the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it | 2026-09-19 | ⚠ → §5.5 |
 | `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers instead of being carried** | 2026-09-18 | ⛔ DELETED (`D109`) — the pinned pair; its both-axes drive survives for every aligned Follower (`D59`, `D108`) |
-| `D50` | ⭐⭐⭐ **EVERY OUTLINE AND FACE MARKER IS READ OFF THE MESH** | 2026-09-18 | ⭐ Binding — it deleted a `Map<name, dims>`, which for a cuboid coincides with the mesh and for an imported part is the wrong shape. ⭐ Why `D72`'s frustum cost nothing → §20 (approach) |
+| `D50` | ⭐⭐⭐ **EVERY OUTLINE AND FACE MARKER IS READ OFF THE MESH** | 2026-09-18 | ⭐ Binding. ⚠ → history |
 | `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D48` | ⚠ **RETIRED WITHIN THE DAY, KEPT AS THE RECORD** — white contours required the alignment; the owner removed it, keeping the TRANSLATION condition | 2026-09-17 | ⚠ *both readings fit the evidence — name both* → §13 (approach) |
 | `D47` | ⭐⭐⭐ **A MATE IS BROKEN BY PULLING IT APART WITH TWO FINGERS** | 2026-09-17 | ⭐ Binding, ⚠ → history |

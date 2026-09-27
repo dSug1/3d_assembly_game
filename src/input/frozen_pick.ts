@@ -67,3 +67,23 @@ export function pressHit<O>(
   if (hit === null) return null;
   return isFrozen ? null : hit;
 }
+
+/**
+ * ⭐⭐⭐ **`D124` — A SECOND PRESS ON ANOTHER BODY STEERS; IT NEVER GRABS IT** (the owner, 2026-09-27:
+ * *"In mobile, I can translate two objects at the same time which is a possibility not available in
+ * desktop. Therefore, if a first touch is hold on an object, a second touch hold on another object
+ * should not translate the other object, it shall serve as gravity / roll input to the first object
+ * movement. Note that I am not referring to a second touch tap (which serves to align)"*).
+ *
+ * ⭐ With a body already held, a press on a DIFFERENT body is routed as empty space — it drives the
+ * held body's gravity / roll — and its face is remembered, so a TAP there still aligns (`D119`).
+ * ⛔ Two exceptions, both kept on purpose: the held body ITSELF (`SECOND`, `A12`'s finger), and a body
+ * in the held body's own ASSEMBLY — the unsnap's second touch lands on the seated Follower.
+ */
+export function pressSteers(f: {
+  readonly holdersBefore: number;
+  readonly hitIsHeld: boolean;
+  readonly sameAssemblyAsHeld: boolean;
+}): boolean {
+  return f.holdersBefore > 0 && !f.hitIsHeld && !f.sameAssemblyAsHeld;
+}

@@ -285,6 +285,10 @@ export interface GestureConfig {
    */
   edgeBandMm: number;
   /**
+   * ⭐ `D121`: the opacity a FROZEN body takes while the camera sees its bottom face (1 = unchanged).
+   */
+  frozenUndersideAlpha: number;
+  /**
    * ⭐⭐ **THE COLLISION SKIN** (`3D6`), millimetres on the glass: every pair of bodies is kept at
    * least this far apart. ⛔ Must be > 0 — GJK reads touching and overlapping alike as 0, so a zero
    * skin could not tell a contact from a penetration.
@@ -749,6 +753,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pioneerCursorGrabRadii: 3,
   // ⚠ A guess with a slider: wide enough for a fingertip's edge, narrow enough to leave the view.
   edgeBandMm: 6,
+  // ⚠ A guess with a slider: see-through enough to show what is above, solid enough to stay a floor.
+  frozenUndersideAlpha: 0.3,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
@@ -952,6 +958,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `collisionSkinMm (${cfg.collisionSkinMm}) must be in (0, 5] mm: it is the gap every pair of ` +
         "bodies is kept at, and at 0 a contact and a penetration both read as a gap of 0.",
     );
+  }
+
+  if (!(cfg.frozenUndersideAlpha >= 0 && cfg.frozenUndersideAlpha <= 1)) {
+    throw new Error(`frozenUndersideAlpha (${cfg.frozenUndersideAlpha}) must be in [0, 1]: it is an opacity.`);
   }
 
   // ⛔ 0 switches the band off; past 20 mm it eats a phone's view.
