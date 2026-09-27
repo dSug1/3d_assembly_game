@@ -13,7 +13,7 @@
  * | `OUTSIDE` while a body is held — the axis finger, the mode-toggle tap | ⛔ | D2, B1 |
  * | `OUTSIDE` while held, **and it unaligned** (`D95`/`D107`) | ✅ | C1 |
  * | `SECOND` — on the held body itself | ⛔ | D2 |
- * | `SECOND` that pressed ANOTHER body — the unsnap's touch on a seated Follower, redirected to its root | ✅ — an unsnap costs 2 (`D103`) | C3 |
+ * | `SECOND` that pressed ANOTHER body — the unsnap's touch on a seated Follower, redirected to its root | ✅ — the action touch of an unsnap (the whole unsnap is ONE, `D115`) | C3 |
  * | `IGNORED` — a third finger | ⛔ | D3 |
  * | a PioneerFaceCursor grab — Free Flow | ⛔ | `D101` |
  * | the second tap of an **undo** double tap | ⛔ — the pair costs ONE (`D111`) | — |
@@ -61,4 +61,53 @@ export function formatElapsed(ms: number): string {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * ⭐⭐ **THE TALLY — one episode per ACTION, counted when its gesture ends** (`D115`, the owner,
+ * 2026-09-27: *"When an action is triggered by two touch, count the episode only when the last of
+ * the two touches is released (for example alignment of face)"* — and *"Make sure these actions
+ * also have one episode count in desktop"*).
+ *
+ * ⭐ A counted touch is either a **HOLD** (it went down with nothing held) or an **ACTION** touch
+ * (it went down while a body was held: the align press, the unalign tap, the unsnap's touch). ⭐⭐ An
+ * action touch USES UP the hold it pairs with, so hold + press lands as ONE; a hold with no action
+ * is one on its own. So a gesture costs `max(holds, actions)`: two separate holds are 2, a hold
+ * with two actions in turn is 2, a hold with one action is 1.
+ * ⛔ Nothing lands until the gesture's LAST touch lifts. ⚠ The desktop is the same path: the right
+ * button's hold is touch #2's pointer and the left click is the real one (`D94`).
+ * ⚠⚠ It REVISES `D103`/`SCORE.md`: the precise unsnap was priced 2 (hold + touch); it is 1 now.
+ */
+export class EpisodeTally {
+  private holds = 0;
+  private actions = 0;
+  private totalCount = 0;
+
+  /**
+   * One touchpoint released. @param counts `episodeCounts`'s verdict. @param action it went down
+   * while a body was held — it completes a two-touch action.
+   */
+  note(counts: boolean, action: boolean): void {
+    if (!counts) return;
+    if (action) this.actions += 1;
+    else this.holds += 1;
+  }
+
+  /** What the open gesture will cost when it ends. */
+  get pending(): number {
+    return Math.max(this.holds, this.actions);
+  }
+
+  /** The last touchpoint of the gesture released: its cost lands. Returns what landed. */
+  gestureEnded(): number {
+    const landed = this.pending;
+    this.totalCount += landed;
+    this.holds = 0;
+    this.actions = 0;
+    return landed;
+  }
+
+  get total(): number {
+    return this.totalCount;
+  }
 }

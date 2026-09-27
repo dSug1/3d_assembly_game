@@ -40,6 +40,7 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
+import { EpisodeTally } from "../input/episode_ledger";
 import { GestureSpan, UndoHistory } from "../core/undo_history";
 import { type SceneSnapshot } from "./undo_wiring";
 import "@babylonjs/core/Culling/ray";
@@ -680,7 +681,7 @@ export function createScene(
   st.gestureSpan = new GestureSpan();
   st.gestureBefore = null;
   st.gestureUndid = false;
-  st.episodes = 0;
+  st.episodes = new EpisodeTally();
   st.sceneStartMs = null;
   st.hudSecond = -1;
   st.episodeFacts = new Map();

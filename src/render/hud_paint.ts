@@ -92,7 +92,10 @@ export function paint(st: SceneState) {
   const first = st.held.get(st.router.objects()[0]?.id ?? -1);
   st.hud.update({
     score:
-      `${st.episodes} episode${st.episodes === 1 ? "" : "s"}  ${formatElapsed(st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
+      `${st.episodes.total} episode${st.episodes.total === 1 ? "" : "s"}` +
+      // ⭐ `D115`: what the open gesture will cost when its last touch lifts.
+      (st.episodes.pending > 0 ? ` (+${st.episodes.pending} on release)` : "") +
+      `  ${formatElapsed(st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
       `  undo=${st.undo.size}` +
       `  band=${bandMmNow(st) > 0 ? `${bandMmNow(st)}mm (no empty space)` : "off"}` +
       (st.cfg.pioneerCursorDrag === 1 ? "  FREE FLOW (not scored)" : ""),

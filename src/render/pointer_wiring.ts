@@ -1218,7 +1218,9 @@ export function installPointerHandler(st: SceneState): void {
     const unaligned = st.episodeUnaligned.delete(e.pointerId);
     const undoSecondTap = st.episodeUndo.delete(e.pointerId);
     // ⛔ Free Flow escapes the score (`D101`): nothing is counted while the cursor drag is on.
-    if (
+    // ⭐⭐ `D115`: classified NOW, counted when the gesture's LAST touch lifts — so a two-touch action
+    // (an alignment, an unalign, an unsnap) lands on the HUD once, at its end.
+    st.episodes.note(
       st.cfg.pioneerCursorDrag !== 1 &&
       episodeCounts({
         role: facts?.role ?? null,
@@ -1226,11 +1228,14 @@ export function installPointerHandler(st: SceneState): void {
         pressedAnotherBody: facts?.pressedAnotherBody ?? false,
         unaligned,
         undoSecondTap,
-      })
-    ) {
-      st.episodes += 1;
-      st.hudDirty = true;
+      }),
+      // ⭐ Pressed while a body was held: it completes a two-touch action, and uses up that hold.
+      (facts?.heldAtPress ?? 0) > 0,
+    );
+    st.hudDirty = true;
+    if (st.gestureSpan.release(e.pointerId)) {
+      st.episodes.gestureEnded();
+      endGesture(st);
     }
-    if (st.gestureSpan.release(e.pointerId)) endGesture(st);
   });
 }

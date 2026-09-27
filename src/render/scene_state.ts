@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { type EpisodeTally } from "../input/episode_ledger";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
@@ -477,7 +478,7 @@ export interface SceneState {
   gestureBefore: SceneSnapshot | null;
   gestureUndid: boolean;
   /** ⭐ `D112`: the touchpoint episodes counted, and when the scene started (the timer). */
-  episodes: number;
+  episodes: EpisodeTally;
   /** ⚠ `null` until the first press — `SCORE.md` §6: the ledger starts at the first press after boot. */
   sceneStartMs: number | null;
   /** The last whole second the HUD showed — the timer repaints once a second, not per frame. */

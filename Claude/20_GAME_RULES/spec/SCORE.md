@@ -126,7 +126,7 @@ second touch that **presses a Pioneer face** is not this — it aligns (C3).
 |---|---|
 | C1 | `D95`/`D107`'s **tap on empty space while holding an aligned body or a Pioneer** — it un-aligns, which is assembly, not a toggle |
 | C2 | a **hold** that moved nothing, any fumble that is not D3 — §3's rule |
-| C3 | every hold, align press, drag, twist and unsnap (the shakes and the flick are deleted, `D107`/`D110`); the undo pair counts ONCE (`D111`); a cursor drag is Free Flow and counts nothing |
+| C3 | every hold, align press, drag, twist and unsnap (the shakes and the flick are deleted, `D107`/`D110`) — ⭐ a two-touch action (align, unalign, a Pioneer's release, unsnap) is ONE, landing when its last touch lifts (`D115`); the undo pair counts ONCE (`D111`); a cursor drag is Free Flow and counts nothing |
 
 ⛔ **The ledger must classify with the same functions the gestures use** — `tapTogglesMode`, `outsideTapRelease`, the
 router's roles, the recognizer's verdict — never a second copy of *"is this a tap"* (`D60`'s
@@ -166,16 +166,16 @@ The costs the solver reads, under today's rules:
 | step | episodes | why |
 |---|---|---|
 | hold a free part | 1 | the first touch |
-| align it (press the Pioneer face while holding) | 1 | `D87`, one press |
+| align it (press the Pioneer face while holding) | **+0** | ⭐⭐ `D115` (2026-09-27): a two-touch action is ONE episode — the press uses up the hold it pairs with, and the pair lands when the LAST touch lifts. ⚠ It was +1 (`D87`, one press) |
 | bring it to the cursor | 0 | the hold already engaged drags horizontally; the second finger for gravity is an axis toggle within it (§3.1 D); the snap seats it for free |
 | wrong square quadrant after the squaring twist (`D98`) | +0, time only | a tap to `ROTATE` (excluded, B) and a twist by the hold already engaged — it costs seconds, never an episode |
 | mode toggle | 0 | excluded by rule (§3.1 B) — and unneeded anyway: boot is `TRANSLATE` and an aligned body translates in any mode (`D60`) |
 | camera orbit, pinch, reset | 0 | excluded by rule (§3.1 A) — so looking around is free and the solver never has to model the view |
-| **unsnap**, the precise way | **2** | hold the Pioneer (1) + touch the seated Follower (1); the rapid move is inside the second. ⚠ 1 if the Pioneer was already held |
+| **unsnap**, the precise way | **1** | ⭐⭐ `D115`: hold the Pioneer + touch the seated Follower is one two-touch action; the rapid move is inside the second. ⛔ It was **2** (`D103`) — the owner, 2026-09-27: *"Make sure these actions also have one episode count"*. ⚠ Formerly: 1 if the Pioneer was already held |
 | **undo** — a double tap on any body (`D111`) | **1** | both taps together; the undone action's own episodes stay counted |
 
-⭐ The pictured configuration, under those costs: **6 episodes** (three parts × hold + Pioneer
-press) — ⚠ it was 9 before the owner's C2 ruling freed the second finger. ⭐ So under these rules
+⭐ The pictured configuration, under those costs: **3 episodes** (three parts × one hold-and-align
+action, `D115`) — ⚠ it was 6 with the press priced apart, and 9 before the owner's C2 ruling freed the second finger. ⭐ So under these rules
 the episode count is a count of **presses that change the assembly**, and everything about *how*
 a part is steered is paid in time. ⚠ Order matters and the solver must model it: a seated Pioneer carries its followers, so
 building from the top down is legal but costs no less; a `SNAPSHOT` Pioneer moved later releases its
@@ -185,7 +185,7 @@ follower, which costs a re-align.
 
 ### 5.1 ⛔ THE FLICK-UNSNAP IS REMOVED (`D110`, 2026-09-27)
 
-*"Flick un-snap D103: obsolete. Remove"* — the precise unsnap (2) is the only one, and the flick is
+*"Flick un-snap D103: obsolete. Remove"* — the precise unsnap (1 since `D115`; it was 2) is the only one, and the flick is
 deleted with it. ⭐ The player's cheap way back is now the **undo** (1, `D111`), which reverses the
 last action whole — seats included — rather than releasing a chain of them.
 
