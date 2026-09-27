@@ -2,9 +2,9 @@
  * ⭐⭐⭐ **`IN3`, RULE 2 — WHICH FACE DID THE FINGER LAND ON?**
  *
  * §2 rule 2: *"one raycast hit on one object => the hit object is selected and the hit face
- * is selected."* Everything else in `IN3` reads that face: 2ter anchors it to gravity,
- * 2quater to a world axis, `MATE` joins two of them, and §4's 6bis builds its axis from two
- * face centres.
+ * is selected."* Everything else in `IN3` reads that face: it is the HitFace that becomes the
+ * FollowerFace, the tap's PioneerFace, and `MATE` joins two of them. (⛔ 2ter/2quater, which
+ * anchored it by a flick, are deleted with the flick, `D110`.)
  *
  * ⛔⛔ **IT IS DRIVEN BY THE PICKED NORMAL, NOT BY A TRIANGLE INDEX.** Babylon hands back a
  * `faceId` that is a **triangle** number: a box face is two of them, an imported mesh face

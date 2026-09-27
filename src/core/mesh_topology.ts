@@ -345,7 +345,8 @@ function chainLoop(edges: readonly (readonly [number, number])[]): number[] {
 }
 
 /**
- * ⭐⭐⭐ **THE MESH, OFFSET OUTWARD SO EVERY FACE PLANE MOVES BY `h`** — the capture shell.
+ * ⭐⭐⭐ **THE MESH, OFFSET OUTWARD SO EVERY FACE PLANE MOVES BY `h`** — built for the capture shell
+ * (deleted, `D120`); the alignment outline's offset uses it now.
  *
  * ⛔⛔ **A SCALE IS NOT AN OFFSET, AND THAT IS WHY THIS IS NOT ONE LINE.** Scaling a body by a
  * factor moves a far face further than a near one and a thin axis less than a thick one; the

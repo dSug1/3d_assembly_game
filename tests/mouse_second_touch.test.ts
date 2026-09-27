@@ -4,7 +4,7 @@
  * The contract, in the owner's words: *"right button click does not translate nor rotate any
  * object"*; *"hitface triggered only by right click, not by left click"*; *"right click hits
  * hitface and hold, mouse move to pioneer face and single left click sets pioneer face and aligns
- * (cyan) or double left click (amber)"*; and *"left button drag with shift = translation in gravity
+ * (cyan) or double left click (amber)"* — the amber FOLLOW is deleted since (`D106`); and *"left button drag with shift = translation in gravity
  * axis with dy and roll with dx."*
  *
  * ⛔⛔ The first block is still the regression guard: with no offset, the real pointer is never

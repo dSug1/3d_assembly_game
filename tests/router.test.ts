@@ -200,8 +200,8 @@ describe("IN2 — what the rules are allowed to count", () => {
     // ⛔ The §4 rule table is written against this number, and `D16` changed what belongs
     // in it: a SECOND touchpoint is one a RULE CAN SEE, so it counts. A third finger on the
     // same object cannot be seen by any rule, so it does not.
-    // ⚠ This is what keeps the eviction shake (A4) off while a two-finger rule is running —
-    // it is gated on `activeCount === 1`.
+    // ⚠ It once kept the eviction shake (A4, deleted `D107`) off while a two-finger rule ran —
+    // the shake was gated on `activeCount === 1`.
     const r = new PointerRouter<typeof CUBE>();
     r.press(1, at(100, 100), CUBE);
     r.press(2, at(110, 110), CUBE);

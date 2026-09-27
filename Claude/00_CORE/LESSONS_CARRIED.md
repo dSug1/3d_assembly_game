@@ -124,7 +124,7 @@ session:
 coincident faces 18.4 px apart.
 
 ⭐ **Un-snapping needs two hands** was the predecessor's rule; the touchscreen
-equivalent is an owner decision and is recorded as open in [`DECISIONS.md`](DECISIONS.md).
+equivalent was answered by `D100`'s unsnap → [`DECISIONS.md`](DECISIONS.md).
 
 ## What is genuinely new here, and therefore unproven
 

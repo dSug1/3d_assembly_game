@@ -2,21 +2,20 @@
  * §1.3 — THE GESTURE RECOGNIZER. One per touchpoint, with an explicit state machine
  * and A SINGLE COMMIT POINT.
  *
- * ⭐⭐ THIS IS WHAT MAKES THE DRAG RULES AND THE FLICK RULES SEPARABLE. Before it,
- * 2bis / 2ter / 2quater / 2quinte / 6bis / 6quater were independent per-frame
- * predicates, and since EVERY drag ends in a release, every drag could satisfy a
- * flick rule. They competed for the same gesture and the winner was arbitrary.
+ * ⭐⭐ THIS IS WHAT MADE THE DRAG RULES AND THE FLICK RULES SEPARABLE. Before it, the
+ * continuous and release-time rules were independent per-frame predicates, and since EVERY
+ * drag ends in a release, every drag could satisfy a flick rule. ⛔ The flick rules
+ * (2ter/2quater/6quater) are deleted since (`D110`); a committed drag now always ends KEPT.
  *
  *     PRESSED ──(MotionTracker says MOVING)──> COMMITTED_CONTINUOUS ──> RELEASED
  *     PRESSED ──(release before that)──────────> TAP | DOUBLE_TAP | HOLD
  *
- * ⭐ PROVISIONAL MOTION AND ROLLBACK. The pose is snapshotted at press. While
- * COMMITTED_CONTINUOUS the continuous rule is applied LIVE and PROVISIONALLY. At
- * release the flick test runs: pass ⇒ the pose is RESTORED to the snapshot and a
- * discrete rule fires instead; fail ⇒ the provisional motion is kept and is final.
+ * ⭐ THE POSE IS SNAPSHOTTED AT PRESS. While COMMITTED_CONTINUOUS the continuous rule is
+ * applied LIVE. ⛔ The release-time rollback (a passing flick test restored the snapshot) is
+ * deleted — retired 2026-09-16, the flick itself with `D110`.
  *
- * ⛔ THE POSE TYPE IS OPAQUE ON PURPOSE. `3D1` has not built the object model yet,
- * and rollback does not need it — it needs snapshot/restore and nothing else. A
+ * ⛔ THE POSE TYPE IS OPAQUE ON PURPOSE. `3D1` had not built the object model yet,
+ * and a snapshot does not need it — it needs snapshot/restore and nothing else. A
  * concrete pose type here would couple the recognizer to a half-built model, and
  * `tests/boundary.test.ts` would not catch that: it guards engine imports, not
  * premature coupling.
@@ -41,7 +40,7 @@ export type Phase = "PRESSED" | "COMMITTED_CONTINUOUS" | "RELEASED";
 export type ReleaseKind =
   /** Released without committing, within `tapMaxDuration`. */
   | "TAP"
-  /** A second TAP inside `doubleTapWindow` and `doubleTapSlop`. Rule 2septies. */
+  /** A second TAP inside `doubleTapWindow` and `doubleTapSlop`. On a body: the undo (`D111`). */
   | "DOUBLE_TAP"
   /** Released without committing, but held too long to be a tap. ⚠ Fires nothing. */
   | "HOLD"
@@ -54,7 +53,7 @@ export type ReleaseKind =
   | "CONTINUOUS_KEPT";
 
 // ⛔ `ROLL_KEPT` WAS REMOVED FROM THIS UNION ON 2026-09-16. `A12` retired the circular roll,
-// and leaving the kind producible let the detector **veto the flick test** — see `release`.
+// and leaving the kind producible let the detector **veto the flick test** (defect 40).
 // ⚠ An unreachable variant is a trap, so it is deleted rather than documented as impossible.
 
 export interface ReleaseVerdict {
@@ -62,10 +61,9 @@ export interface ReleaseVerdict {
   /** Press → release, ms. */
   readonly durationMs: number;
   /**
-   * The lift speed the flick test ACTUALLY MEASURED, mm/s — reported whether or not
-   * it passed. ⭐ Without it, "the flick did not fire" is unfalsifiable on a device:
-   * you cannot tell a finger that was too slow from an estimator that read zero, and
-   * that ambiguity is exactly what made the first rollback build feel inconsistent.
+   * The lift speed at release, mm/s — a readout only since the flick test is deleted
+   * (`D110`). ⭐ It was kept so a finger too slow and an estimator that read zero could be told
+   * apart on a device.
    */
   readonly liftSpeedMmPerS: number;
 }
@@ -121,6 +119,8 @@ export class TapHistory {
    * the release time, so a second touch that is **pressed and held** never asked it at all —
    * and `D55` had moved the ALIGN to the press while leaving the mode SWITCH behind on the
    * release. ⚠ That is `D55`'s own rule applied to one half of the gesture and not the other.
+   * (History: the press-time align is deleted — the TAP aligns since `D119` — and so is the
+   * orange FOLLOW, `D106`; the peek still serves `D68`'s revert.)
    *
    * ⭐⭐ **IT IS A PEEK, AND IT MUTATES NOTHING.** The release still runs `record`, which is
    * what actually consumes the pair and clears the memory — two writers of one fact is the
@@ -204,7 +204,7 @@ export class Recognizer<P> {
   /**
    * ⭐⭐⭐ **THE FINGER'S SPEED RIGHT NOW, mm/s — WINDOWED, never a one-sample rate.**
    *
-   * ⛔⛔ IT IS `terminalSpeedPxPerS`, THE SAME ESTIMATOR THE FLICK USES, and reusing it is the
+   * ⛔⛔ IT IS `terminalSpeedPxPerS`, THE SAME ESTIMATOR THE LIFT SPEED USES, and reusing it is the
    * whole point: a second definition of *how fast is this finger* would be free to disagree with
    * the one every other rule is judged by — and this project has the scar. §1.1 estimated speed
    * over **one sample pair**, so with the measured 0.761 mm of pointer noise a resting finger
@@ -212,7 +212,7 @@ export class Recognizer<P> {
    * day the noise was measured. ⭐ `METHOD`'s mistake shape 1: *a rate estimated over too short
    * a baseline.*
    *
-   * ⚠ `trimBuffer` first, so the window is the flick's own and not "whatever samples happen to
+   * ⚠ `trimBuffer` first, so the window is `flickWindow` and not "whatever samples happen to
    * be in memory" — which would make the estimate depend on how long the gesture has run.
    */
   get speedMmPerS(): number {
@@ -258,7 +258,7 @@ export class Recognizer<P> {
 
   /**
    * Feed a move sample. The caller applies the continuous rule for this touchpoint
-   * on every frame the returned phase is `COMMITTED_CONTINUOUS` — provisionally.
+   * on every frame the returned phase is `COMMITTED_CONTINUOUS`.
    */
   move(s: Sample): Phase {
     if (this.phase === "RELEASED") return this.phase;
@@ -273,54 +273,13 @@ export class Recognizer<P> {
       this.taps.reset();
     }
     // ⛔ COMMITTED_CONTINUOUS IS ONE-WAY until release. Returning to STATIONARY
-    // mid-drag must not un-commit: the pose has already moved provisionally, and
-    // a rule that switched back would strand it half-applied.
-    if (this.phase === "COMMITTED_CONTINUOUS") {
-      // ⛔⛔⛔ THE ROLL DETECTOR IS NO LONGER FED, AND THE REASON IS A DEFECT IT CAUSED.
-      //
-      // `A12` retired the circular roll as a one-touchpoint gesture and the detector was
-      // left running — *"unused"*, the comment here said. ⚠ IT WAS NOT UNUSED: `release`
-      // returned `ROLL_KEPT` whenever it committed, which **pre-empts the flick test**. A
-      // hand rotating a cube sweeps arcs, so it committed routinely, and once `IN3`'s
-      // 2ter/2quater went live a rotation flick pushed **nothing** — device-reported
-      // 2026-09-16 as *"the face does not point up at rotation flick"* and *"no DOF
-      // reduction at the first flick"*, unpredictably, because it depended on how curved
-      // the drag happened to be.
-      //
-      // ⭐⭐ A RETIRED GESTURE THAT STILL OWNS A VERDICT IS NOT INERT. This project has now
-      // met that shape three times in one day: the HUD line showing a retired quantity,
-      // `secondTouchGraceMs` decayed into a slider that changed nothing, and this — the
-      // worst of the three, because the other two only misinformed while this one silently
-      // vetoed a live rule.
-      // ⛔ `roll.ts` itself stays, with its 40 vectors: the day a circular roll comes back it
-      // is what comes back. It simply is not wired to anything, and now that is TRUE.
-    }
+    // mid-drag must not un-commit: the pose has already moved, and a rule that switched
+    // back would strand it half-applied.
+    // ⛔ History (defect 40): the retired circular-roll detector was once still fed here, and its
+    // `ROLL_KEPT` verdict silently vetoed the flick — *a retired gesture that still owns a verdict
+    // is not inert*. The detector, `roll.ts` and the flick are all deleted now.
     return this.phase;
   }
-
-  /**
-   * ⭐⭐ AMENDMENT **A8** — WHEN A ROLL COMMITS, UNDO THE YAW/PITCH IT WAS MISTAKEN FOR.
-   *
-   * ⛔⛔ THE DEFECT THIS FIXES, FOUND BY FINGER: a circular sweep does not read as a roll
-   * immediately. The detector needs `rollAngle` of arc before it will say so, and until
-   * then §1.3 applies the continuous rule PROVISIONALLY — which is 2bis, yaw and pitch. So
-   * the roll used to begin from a pose the user never asked for, and the result was not a
-   * pure roll of the original orientation. ⚠ The owner: *"the user should want a roll from
-   * the initial quaternion, especially to maintain the alignment on an axis."*
-   *
-   * ⭐ THE MECHANISM IS ALREADY IN THE SPEC. §1.3 defines provisional motion with rollback
-   * — it simply only applied it at RELEASE, for the flick test. A roll committing mid-drag
-   * is the same situation one transition earlier, and it takes the same answer.
-   *
-   * ⛔ IT REBASES TO THE FIT WINDOW'S START, **NOT** TO THE PRESS. A hand may drag in a
-   * straight line and then begin to circle; that drag is a real yaw the user asked for, it
-   * is not part of the evidence for a circle, and undoing it would be a second defect
-   * wearing the first one's clothes.
-   *
-   * ⚠ The object therefore JUMPS at the commit — by the whole swept angle, which 2quinte
-   * then applies from the rebased pose. That is not a glitch: it replaces exactly as much
-   * unasked-for yaw/pitch with the roll the finger actually drew.
-   */
 
   /**
    * ⭐⭐ ANOTHER RULE MOVED THIS OBJECT WHILE THIS TOUCHPOINT HELD IT STILL.
@@ -328,14 +287,14 @@ export class Recognizer<P> {
    * ⛔⛔ A10 CREATED THIS SITUATION AND IT HAS NO PRECEDENT IN §1.3. Depth requires the
    * finger on the object to be STILL — which is, character for character, §1.3's own
    * precondition for a TAP and for a HOLD. So without this, every depth push would end in
-   * a tap, and two pushes in quick succession would be a **DOUBLE-TAP**, which
-   * `resolveDiscreteRule` maps to **2septies eviction**: a gesture that destroys the
-   * user's constraint work, fired by a gesture that never touched a constraint.
+   * a tap, and two pushes in quick succession would be a **DOUBLE-TAP** — on a body, the undo
+   * (`D111`; it was `2septies` eviction until then): an action fired by a gesture that never
+   * asked for it.
    *
    * ⭐ The rule it follows is §1.3's own: a touchpoint whose gesture PRODUCED MOTION is
    * not a discrete gesture. It simply was not this touchpoint that supplied the motion.
    * ⚠ It does NOT commit the recognizer — nothing here rolls back, and the finger may
-   * still go on to drag, roll or flick normally.
+   * still go on to drag or roll normally.
    */
   consumeAsMotion(): void {
     this.consumedFlag = true;
@@ -354,10 +313,10 @@ export class Recognizer<P> {
     const liftSpeedMmPerS = pxToMm(terminalSpeedPxPerS(trimmed, this.cfg));
 
     if (!wasCommitted) {
-      // Never committed: nothing moved, so there is nothing to roll back.
-      // ⛔⛔ A GESTURE ANOTHER RULE CONSUMED IS NEVER A TAP. A10's depth push holds this
+      // Never committed: nothing moved.
+      // ⛔⛔ A GESTURE ANOTHER RULE CONSUMED IS NEVER A TAP. A second finger's drive holds this
       // finger STILL on the object, which is exactly a tap's shape — and a DOUBLE_TAP here
-      // resolves to 2septies, which evicts constraints the user never asked to lose.
+      // would fire the undo (`D111`) the user never asked for.
       // ⚠ `HOLD` is the honest verdict: held, fired nothing, and `taps.reset()` below
       // makes sure it cannot be the first half of a double-tap either.
       const kind: ReleaseKind =
@@ -371,18 +330,6 @@ export class Recognizer<P> {
         liftSpeedMmPerS,
       };
     }
-
-    // ⛔⛔ §1.3's *"once roll is committed, the flick test is skipped"* IS GONE WITH THE
-    // GESTURE IT PROTECTED (`A12`, and the defect above). ⚠ The old comment here said a
-    // circular path *"fails the purity ratio anyway"* and that the explicit skip removed the
-    // edge case *"rather than relying on that happening to hold"* — so removing the skip
-    // means we now rely on exactly what that sentence distrusted.
-    // ⭐ That is accepted deliberately, for two reasons: the gesture the skip existed to
-    // protect no longer runs on this channel, and the case that actually matters — a
-    // back-and-forth, whose every leg looks like a flick — is `A4`'s eviction shake, which
-    // carries its own `suppressesFlick` for precisely this and lands with the wiring.
-    // ⚠ **A DEVICE QUESTION, STATED**: can a strongly curved rotation drag now end in an
-    // accidental alignment? The purity ratio is the only thing saying no.
 
     // ⛔⛔ `D110`: A COMMITTED GESTURE ENDS KEPT — there is no flick test left to run.
     return {

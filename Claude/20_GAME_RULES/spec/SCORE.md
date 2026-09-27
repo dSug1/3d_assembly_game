@@ -1,8 +1,8 @@
 # THE SCORE — touchpoint episodes and elapsed time, against an absolute optimum
 
-> **STATUS** · ⛔ **SPECIFIED, NOT BUILT** (2026-09-26) · **OWNS** · the score's definition and its build list
+> **STATUS** · 🔨 **PARTLY BUILT** (2026-09-27): the snap, seat and unsnap (`D100`), the touch ledger and the HUD's first line — episodes + timer (`D112`/`D115`, `GM2`); ⛔ NOT built: the final-configuration detector, the solver's optimum, the score · **OWNS** · the score's definition and its build list
 > **READ IF** · you are about to build the snap, the touch ledger, the solver, the timer or the HUD score
-> **LAST VERIFIED** · 2026-09-26
+> **LAST VERIFIED** · 2026-09-27
 
 ⭐ Created 2026-09-26 from the owner's proposal and decisions. ⛔ The build queue is
 [`../../00_CORE/QUEUE.md`](../../00_CORE/QUEUE.md), Phase GAME; this file is the record those rows point at.
@@ -59,8 +59,8 @@ pyramid, the pink cuboid on the grey part — every FollowerFace centred on its 
 | **touchpoint episode** | one touchpoint from its **press to its release**, whatever it did — a hold, a tap, a drag, a second finger, or a touch that moved nothing — ⛔ **except the camera and mode-toggle cases of §3.1**, which are not episodes | `IN2`'s router latches every touchpoint at press; the mouse layer synthesises the same touchpoints (`D94`), so a left drag, a right hold and a Shift second touch are each one episode |
 | **boot configuration** | the scene as the page loads: every part's placement, nothing aligned, `TRANSLATE` (`D93`) | `core/scene_dims.ts`, `bootTilt` |
 | **final configuration** | owner-authored per scene: for each part, **which face is seated on which Pioneer face**, **where on that face** (the PioneerFaceCursor's position), and **which of the four square spin positions** | ⛔ not built — data, not code |
-| **snap** | **automatic**, once conditions the owner will define are met (distance, cone angle, …); it seats the FollowerFace centre on the PioneerFaceCursor; ⛔ **it is not an episode** | ⛔ not built (`3D2`) |
-| **unsnap** | a **touchpoint episode** the owner will define; it un-seats | ⛔ not built |
+| **snap** | **automatic**, once conditions the owner will define are met (distance, cone angle, …); it seats the FollowerFace centre on the PioneerFaceCursor; ⛔ **it is not an episode** | ✅ built (`D100`) — capture offset + snap cone, `input/snap.ts` |
+| **unsnap** | a **touchpoint episode** the owner will define; it un-seats | ✅ built (`D100`), costs **1** (`D115`); the flick-unsnap is deleted (`D110`) — `input/unsnap.ts` |
 | **the optimum** | the **absolute least number of episodes** from boot to final, computed by a solver | ⛔ not built |
 | **Free Flow mode** | the user leaves the score and builds freely; dragging the PioneerFaceCursor is its first freedom | the FACE ALIGNMENT slider *Free Flow mode (PioneerFaceCursor drag on/off)*, `pioneerCursorDrag` |
 
@@ -103,7 +103,7 @@ mode"*. ⭐⭐ Narrowed by `D108` (2026-09-27) to ONE gesture, so the list shran
 |---|---|
 | B1 | tablet: a **tap by the second touchpoint on empty space** while ONE free body without followers is held — the only toggle |
 | B2 | desktop: **Ctrl** at the left press — a modifier, like Shift (D1), never a touchpoint |
-| B3 | the two taps of a double tap that flips the mode twice (also A3 when on empty space) |
+| B3 | the two taps of a double tap that flips the mode twice (also A3 when on empty space) — ⚠ since `D108`/`D111` only on EMPTY space with a free body held; a double tap on a BODY is the **undo** (§5) |
 
 ⚠ A tap with nothing held, or on a body, toggles nothing now — it is still excluded where A3 or D3
 covers it, and otherwise counts as a fumble (C2).
@@ -114,7 +114,7 @@ C2/C3 rulings:
 | case | how it arrives today |
 |---|---|
 | D1 | desktop: the **Shift** touchpoint while the left button holds a body — it switches the engaged hold's channel (horizontal → gravity, or → roll), so it is a toggle of axis, not a movement of its own |
-| D2 | mobile: the **second touch that toggles the axis** of an engaged hold — a finger on empty space (or on a frozen body, `D77`'s miss) driving gravity or roll, or on the held body itself (`SECOND`) |
+| D2 | mobile: the **second touch that toggles the axis** of an engaged hold — a finger on empty space (or on a frozen body — every press on one is a miss, `D119`) driving gravity or roll, or on the held body itself (`SECOND`) |
 | D3 | a **third touchpoint the router ignores** (`IGNORED`) — it can do nothing; ⚠ not reproducible on desktop |
 
 ⭐ So on both devices the hold is the episode, and whatever the hand adds to steer it is free. ⛔ A
@@ -149,7 +149,7 @@ body (`receivesSway` already spares the mover's Pioneer).
 
 ✅ **The snap, the seat and the unsnap are built** (2026-09-26, `D100`) — the rules are
 [`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.13.
-⚠ The approach is **not built**: the zone only lights white, and the swing trial ships OFF.
+⚠ The approach is **not built**; the white zone highlights and the swing trial are deleted (`D120`).
 
 ---
 
@@ -206,7 +206,7 @@ last action whole — seats included — rather than releasing a chain of them.
 
 ## 7. OPEN, AND THE OWNER'S TO DECIDE
 
-- The snap's conditions, and the **unsnap** gesture.
+- ~~The snap's conditions, and the **unsnap** gesture.~~ ✅ decided and built (`D100`, `D115`).
 - Whether the solver's optimum is shown to the player before, after, or never.
 - How episodes and time combine into one rank, if they must (⭐ two readouts and no formula is the
   honest first build; a formula is a guessed number).

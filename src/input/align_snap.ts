@@ -58,8 +58,8 @@ export class AlignSnaps<Id> {
   /**
    * ⭐⭐ **DROP IT WHERE IT IS** — for every rule that RELEASES an alignment.
    *
-   * ⛔ The owner's rule: releasing an alignment *"does not rotate the first object"*. A shake,
-   * a re-tap or a turned Pioneer arriving mid-flight must **stop** the snap, not finish it —
+   * ⛔ The owner's rule: releasing an alignment *"does not rotate the first object"*. An unalign tap,
+   * an undo or a turned Pioneer arriving mid-flight must **stop** the snap, not finish it —
    * finishing would be the alignment still acting after it was let go.
    */
   cancel(id: Id): void {

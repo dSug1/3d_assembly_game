@@ -18,16 +18,9 @@ import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
 
 export function describe(v: ReleaseVerdict) : string {
-  // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16).
-  // ⭐⭐ It could no longer fire — `rolledBack` is a permanent `false` — and a HUD line
-  // that cannot fire is the DEAD INSTRUMENT shape this project met three times on
-  // 2026-09-16 alone: a retired quantity printed as though it were live, a slider that
-  // changed nothing, and a detector that still vetoed. ⚠ The field stays on the verdict
-  // (one consumer could exist tomorrow); the LINE goes, because the line makes a claim.
-  // ⭐ The measured lift speed is printed WHETHER OR NOT it passed, against the
-  // threshold it was judged by. "The flick did not fire" is otherwise
-  // unfalsifiable on a device: too slow a finger and a broken estimator look the
-  // same. That ambiguity is what made the first rollback build feel inconsistent.
+  // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16), and the
+  // `rolledBack` field and the flick with it (`D110`).
+  // ⭐ The measured lift speed is still printed — a readout of the release, nothing judges it now.
   const lift = `lift ${Math.round(v.liftSpeedMmPerS)}mm/s`;
   return `${v.kind}  ${Math.round(v.durationMs)}ms  ${lift}`;
 }
@@ -107,7 +100,6 @@ export function paint(st: SceneState) {
     // disagree with the product while showing green. See `METHOD`.
     phase: first ? first.rec.currentPhase : "—",
     motion: first ? first.rec.motionState : "—",
-    // ⚠ A12 RETIRED the circular roll, so this is always false and is kept only because
     lastVerdict: st.lastVerdict,
     // ⚠ Shown so a session can never be spent testing a value that was not in
     // force — including a typo'd key, which is REPORTED rather than ignored.
@@ -158,7 +150,7 @@ export function paint(st: SceneState) {
             ) * 1000
           ).toFixed(1)}ms` +
           // ⛔⛔ **A BODY WHOSE GEOMETRY COULD NOT BE READ, NAMED.** It has no shape, so it can
-          // never capture and never be outlined — and every one of those is a SILENCE. ⚠ An
+          // never collide and never be outlined — and every one of those is a SILENCE. ⚠ An
           // absent readout cannot be caught by looking at the screen (`METHOD`), and *this part
           // never highlights* would otherwise be indistinguishable from *I am holding it wrong*.
           // ⭐ Empty in every normal run, so it costs nothing until it matters.
@@ -173,13 +165,10 @@ export function paint(st: SceneState) {
           (st.untaperedBodies.length === 0
             ? ""
             : `  ⛔NOTAPER(${st.untaperedBodies.join(",")})`) +
-          // ⭐⭐⭐ **THE OBJECT AXES, ON THEIR OWN LINE** (2026-09-22). ⛔ Three things a hand
-          // cannot see and would otherwise have to infer from how the body moved:
-          //
-          //  * **which rule is in force** — `WorldAxisB` frozen at boot, or the live camera;
-          //  * **whether this body is in the zone**, because the basis SWAPS there and *the
-          //    controls changed direction* is exactly what that feels like;
-          //  * **which face is leading**, since the in-zone basis is built from its normal.
+          // ⭐⭐⭐ **THE OBJECT AXES, ON THEIR OWN LINE** (2026-09-22). ⛔ What a hand cannot see
+          // and would otherwise have to infer from how the body moved: the axes themselves
+          // (`WorldAxisB`, frozen at boot — the only frame since `D109`), the tracking gain, and
+          // where the gizmo sits. ⚠ The zone basis and the leading face it once printed are deleted.
           //
           // ⚠ `METHOD`: an absent readout cannot be caught by looking at the screen — and this
           // rule's whole failure mode is *the body went somewhere I did not expect*, which no
@@ -204,9 +193,9 @@ axes      fixed@boot PLANE` +
               );
             })
             .join("") +
-          // ⭐⭐⭐ **THE HITFACE, ON THE GLASS** (the owner, 2026-09-24; the offers deleted, `D109`). ⛔ The
-          // rule is invisible otherwise: a hand that sees no fuchsia cannot tell whether the
-          // cone is too tight, the body is aligned already, or the mode is wrong.
+          // ⭐⭐⭐ **THE HITFACE, ON THE GLASS** (the owner, 2026-09-24; the offers deleted, `D109`), with
+          // the snap cone it is judged against. ⛔ A hand that sees no fuchsia contour cannot otherwise
+          // tell whether the body is aligned already or no face resolved.
           (() => {
             const hf = hitFaceNow(st);
             if (hf === null)
@@ -255,9 +244,9 @@ DRAWFAULT x${st.drawFaultCount} ${st.drawFault}`) +
           //
           // ⛔⛔ A hand reported *"the release of the cyan follower objects by the rotation of
           // the pioneer is not working"* and there was **nothing on the glass to narrow it
-          // with**: an alignment that never linked, a link pruned too eagerly, a mode read as
-          // `FOLLOW`, and a turn below the epsilon all look identical — nothing happens.
-          // ⭐ Now each link prints as `follower>pioneer/face:C` or `:F` for cyan/FOLLOW, so
+          // with**: an alignment that never linked, a link pruned too eagerly, and a turn below
+          // the epsilon all look identical — nothing happens.
+          // ⭐ Now each link prints as `follower>pioneer/face:S` (seated) or `:A` (aligned), so
           // *the rule did not fire* and *the link was never there* stop being the same
           // observation. ⚠ Straight from the index; nothing is recomputed here.
           (st.links.size === 0

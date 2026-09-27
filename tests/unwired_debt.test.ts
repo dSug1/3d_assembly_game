@@ -50,10 +50,8 @@ const PENDING: Record<string, string> = {
   // ── Superseded 2026-09-22 by the OBJECT AXES, and kept for the same reason. ──────────
   // ⛔⛔ The owner's remap sends the holder's `dy` to the body's DEPTH axis and the second
   // touchpoint's `dy` to its GRAVITY axis, both through `axis_translate.ts` — so rule 6's
-  // screen-plane form and `A5`/`A10`'s depth rule are off the call path together. ⚠ Neither is
-  // stale: **six models and five device passes** are behind `depthTranslate`, rule 6's gain is
-  // the one computed number on this project, and **no hand has judged the remap**. ⭐ They go
-  // when rule 5 says the new mapping stands, and come back if it does not.
+  // screen-plane form and `A5`/`A10`'s depth rule went off the call path together. ⛔ Both are
+  // DELETED since (`screenTranslation`, `depthTranslate`, `D109`), so no entry stands for them here.
   // ⚠ `trackingMetresPerPx` and `depthLimits` are still WIRED — the factor and the bounds were
   // always the derived parts, and the new rule reads both.
   constrainedDragAngle:

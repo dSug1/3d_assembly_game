@@ -66,9 +66,9 @@ export const ALIGN_SNAP_FRACTION = 2 / 7;
 export const FOLLOWER_COLOUR = new Color3(0.2, 0.9, 1);
 export const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
 /**
- * ⭐⭐⭐ **FUCHSIA — A FACE THE HELD BODY IS NEARLY READY TO MATE WITH** (the owner, 2026-09-24).
- * ⛔ A third colour and not a shade of the other two: cyan and amber say *this pair IS aligned*,
- * and this one says *this pair COULD be* — an offer, not a state.
+ * ⭐⭐⭐ **FUCHSIA — THE HITFACE'S CONTOUR** while it is active (the owner, 2026-09-25). ⛔ A third
+ * colour and not a shade of the other two: cyan and amber say *this pair IS aligned*. ⚠ It first
+ * coloured the fuchsia OFFER (candidate faces, 2026-09-24), deleted by `D109`.
  */
 export const CANDIDATE_COLOUR = new Color3(1, 0.1, 0.8);
 /**
@@ -221,21 +221,15 @@ export interface Held {
    */
   mode: "ROTATE" | "TRANSLATE" | "TRANSLATE_2ND" | null;
   /**
-   * ⭐⭐ **FORK C** — the face THIS touchpoint's press landed on, in the object it carries.
+   * ⭐⭐ The face THIS touchpoint's press landed on, in the object it carries — the HitFace.
    *
    * ⛔⛔ PER GRIP, NOT ONE GLOBAL, and that is forced by the rule: *"one touchpoint on first
    * object's hit face (FollowerFace) && tap on second object's hit face (PioneerFace)"*.
-   * Two faces on two objects are live at the same instant, so a single `selectedFace` —
-   * which is all `IN3` ever needs — cannot express the trigger. ⭐ The Follower is the OTHER
-   * grip's face; the Pioneer is the tapping grip's own.
-   * ⚠ `null` in fork A, and whenever the pick resolved no face.
+   * Two faces on two objects are live at the same instant. ⭐ Since `D87` the held grip's face
+   * is the FollowerFace; the PioneerFace comes from the tap (`tapFace`).
+   * ⚠ `null` whenever the pick resolved no face.
    */
   pressFace: { faceId: string; cos: number } | null;
-  /**
-   * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
-   * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
-   * established, and a fresh press is a fresh axis — `shake.ts` says so in its own header.
-   */
   /**
    * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
    * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer
@@ -277,8 +271,8 @@ export interface Held {
    * ⭐⭐ **LATCHED, BECAUSE THE ONLY STABLE MOMENT IS THE PRESS.** Recomputed per frame the
    * sign would flip mid-drag as the axis swung through horizontal-on-screen — turning the
    * dead control the owner reported into an unpredictable one, which is worse. ⛔ `IN2`
-   * latches every role at press and `A15` allows exceptions only on DISCRETE events; this is
-   * the same doctrine one rule over: *a mode may be keyed on PRESENCE, never on MOTION.*
+   * latches every role at press; this is the same doctrine one rule over: *a mode may be keyed
+   * on PRESENCE, never on MOTION.*
    */
   anchorRollSign: Map<number, 1 | -1>;
   /**
@@ -290,14 +284,6 @@ export interface Held {
   /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
   depthSway: SwayWatcher;
 
-  /**
-   * ⭐ Whether the finger was ALREADY moving last frame. ⛔ The sway fires on the
-   * TRANSITION to moving — *"initiates or resumes"* — not on every frame of a drag,
-   * which would be a continuous shove rather than a reaction.
-   * ⚠ It reads `Recognizer.motionState`, which is `IN0`'s hysteretic still/moving test
-   * with its own measured thresholds. A speed comparison invented here would be a
-   * SECOND definition of "moving", free to disagree with the one the rules use.
-   */
   /**
    * ⭐ Decides WHEN the scene reacts — see `input/sway.ts`. It owns the direction and
    * speed estimate over a stated window, so this file does not invent a second one.

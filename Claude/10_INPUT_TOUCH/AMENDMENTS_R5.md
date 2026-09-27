@@ -4,7 +4,12 @@
 > revision-5 specification
 > **READ IF** · you are implementing any gesture rule. ⛔ **Read this BEFORE the spec** —
 > where the two conflict, an amendment here wins
-> **LAST VERIFIED** · 2026-09-15
+> **LAST VERIFIED** · 2026-09-27
+
+⛔ **STATUS NOTES (2026-09-27)** — the amendments below keep their text; what has since gone:
+**A1/A4** eviction and the shake, with `shake.ts`, are **deleted** (`D107`); **A15** was deleted
+by `D54`; **A16**'s *any single tap* is **narrowed** (`D108`): only a touch tap on empty space
+with one free body held toggles the mode, an aligned body is mode-less, and desktop has no mode.
 
 ⛔⛔ **THE SPECIFICATION IS NOT EDITED.** Revision 5's text stands unaltered in
 [`spec/SPEC_INPUT_SYSTEM_R5.md`](spec/SPEC_INPUT_SYSTEM_R5.md); this file supersedes it.
@@ -99,7 +104,8 @@ one file are in
 ## A4 — ⭐⭐ EVICTION IS A QUICK BACK-AND-FORTH, NOT A ROLL *(owner, 2026-09-15)*
 
 **Supersedes A1's trigger.** ⛔ **IN FORCE, NOT BUILT** — `src/input/shake.ts` exists with
-15 vectors and is **not wired**.
+15 vectors and is **not wired**. ⛔⛔ *(status 2026-09-27: the shake was later wired and is now
+**DELETED**, `shake.ts` with it — `D107`. Unalign is a tap on empty space while holding.)*
 
 ⭐ **The binding clauses, in full:**
 
@@ -531,7 +537,7 @@ any rotation drag that curved enough (defect 40, `queue_notes/IN3.md`).
 ⛔ Deleted at the owner's instruction (*"clean the roll also for the fork A"*): `roll.ts`,
 `one_euro.ts`, 58 vectors, `rebaseOnRollCommit`, the pose history, the `ROLL_KEPT` verdict and
 ~16 tunables.
-⭐ The argument below — *retractions are kept on purpose* — still holds for `shake.ts` and
+⭐ The argument below — *retractions are kept on purpose* — still held for `shake.ts` (⛔ deleted since, `D107`) and
 `anchor_rotate.ts`, and the distinction it missed is the one to carry: **those two are not
 CALLED. This one was.** Kept unrewritten, as the record of a defensible decision that turned
 out to cost a defect.
@@ -581,6 +587,9 @@ runs *"differ by timing of the input"*.
 ---
 
 ## A15 — ⭐⭐⭐ A HOLDER THAT IS NO LONGER **UNDER ITS OBJECT** GIVES THE SELECTION UP *(owner, 2026-09-16)*
+
+⛔⛔ **DELETED by `D54` (2026-09-18)** — a holder keeps its object for its touchpoint's lifetime.
+The text below is the record.
 
 **Amends** §4's role latch — first time, and on a **discrete** event only.
 
@@ -665,6 +674,9 @@ in [`../00_CORE/queue_notes/IN8.md`](../00_CORE/queue_notes/IN8.md).**
 ---
 
 ## A16 — ⭐⭐⭐ FORK C: **ANY SINGLE TAP** TOGGLES THE MOVEMENT BEHAVIOUR *(owner, 2026-09-16)*
+
+⛔ **NARROWED by `D108` (2026-09-27)**: only a touch tap on EMPTY SPACE with one FREE body held
+toggles the mode; an aligned body is mode-less; desktop has no mode (Ctrl + left drag rotates).
 
 **Adds** a third reading of §2/§4 to `D26`'s flag — it amends no clause, forks A and B are
 untouched, and it is reachable as `?touchpointAssignment=2`.

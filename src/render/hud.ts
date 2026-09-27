@@ -3,9 +3,9 @@
  *
  * ⭐⭐ A STATE MACHINE IS INVISIBLE, AND `METHOD` CLOSES A ROW ONLY ON A LOOK AT A
  * REAL DEVICE. Without this, "I looked at it on the tablet" degrades into "the cube
- * moved" — which says nothing about whether the gesture COMMITTED, whether the flick
- * test fired, whether the pose was rolled back, or which discrete rule won at
- * release. Those are the whole of `IN1`, and none of them has a visible shape.
+ * moved" — which says nothing about whether the gesture COMMITTED, or what it was judged at
+ * release (a tap, a double tap, a hold, a kept drag). Those are the whole of `IN1`, and none
+ * of them has a visible shape.
  *
  * ⛔ There is no console on a tablet unless it is plugged into a laptop, and the
  * device loop is USB precisely so it can be. But reading a log while both thumbs are

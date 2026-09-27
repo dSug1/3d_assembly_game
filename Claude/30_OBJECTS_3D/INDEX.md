@@ -15,14 +15,13 @@ precisely so it could move. 14 vectors.
 connectors, and the constraint stack attached to the object. ⭐⭐ **`reroot` is rule 3 made
 executable** — it re-points the chain onto the held object while every object's world
 placement stays put, and *grabbing a child moves the whole assembly* is a vector by name.
-⭐ Fixtures are THREE deep; the deep-chain vector goes to 16.
 🔌 **WIRED AND CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `scene.ts` builds a
 `World`, **every rule writes the model**, and the render loop is the SINGLE writer of a mesh
 transform. ⛔ The pass found **one defect, in the wiring**, and 409 vectors passed before and
 after the fix because the iteration set lives in `src/render`, on the far side of the boundary —
 which is why a device look is what closes a change.
 ⭐ The account: [`../00_CORE/queue_notes/3D1.md`](../00_CORE/queue_notes/3D1.md).
-⛔ **NEXT: `3D6`** → [`spec/COLLISION.md`](spec/COLLISION.md).
+✅ **`3D6` BUILT** — `core/collision.ts`, `render/collision_wiring.ts` → [`spec/COLLISION.md`](spec/COLLISION.md). ⛔ **NEXT: `GM1`**.
 
 ## ⛔⛔ The four rules that must not be rediscovered
 

@@ -12,10 +12,9 @@
  * |---|---|
  * | `scene_state.ts` | `SceneState`, the closure-level types, the constants |
  * | `bodies.ts` | meshes, topology, shapes, the model-pose port (`setModelPose`) |
- * | `markers.ts` | face fills and contours, fuchsia rings, PioneerFaceCursors, outlines |
- * | `alignment_wiring.ts` | `alignFollowerToPioneer`, release, seat/unseat |
+ * | `markers.ts` | face fills and contours, the HitFace contour, PioneerFaceCursors, outlines |
+ * | `alignment_wiring.ts` | `alignFollowerTo`, release, seat/unseat |
  * | `gizmo.ts` | the axis gizmo and its rings |
- * | `highlight_pass.ts` | the capture highlight and the swing latch, per frame |
  * | `camera_rig.ts` | orbit, zoom, centre blend, reset, gesture frames |
  * | `hud_paint.ts` | every readout line |
  * | `tuning_menu.ts` | every slider |
@@ -146,9 +145,9 @@ export function createScene(
    *
    * ⛔⛔ THEY USED TO BE ONE SHARED CONSTANT, and the base plate is what broke that: at
    * `6L × 0.3L × 9L` it shares nothing with the `L × 2L × 3L` parts. ⚠ Five things read a
-   * body's size — the mesh, its faces, the white capture contour, the alignment contour and
-   * the face-marker extents — and a single constant would have drawn all five of them at the
-   * parts' size on a plate seventy times their volume.
+   * body's size — the mesh, its faces, the alignment contour and the face-marker extents (and
+   * the white capture contour, deleted `D120`) — and a single constant would have drawn them
+   * at the parts' size on a plate seventy times their volume.
    */
   st.dimsOf = new Map<ObjectId, readonly [number, number, number]>();
   /** ⚠ Bodies whose taper was refused — reported on the HUD, never silently a box. */
@@ -166,31 +165,14 @@ export function createScene(
   // √((5L)² − (2.5L)² − (2L)²) = 0.307246. ⛔ A guessed y would leave the three distances
   // unequal, and *"increase their distances"* would then be true of one pair and not the others.
   //
-  // ⛔⛔⛔ **THIS COMMENT SAID *"AND AT 5L NOTHING IS IN RANGE AT REST, WHICH IS THE POINT"*
-  // AND IT WAS FALSE — corrected by audit, 2026-09-17.**
-  //
-  // ⭐ The reasoning held for the three PARTS: 400 mm apart against a `4L` = 320 mm capture
-  // radius, so no pair of parts is in range at rest and `A16`'s distance condition finally does
-  // something on the glass. ⚠ **The base plate arrived afterwards and nobody re-ran the
-  // arithmetic.** It sits `3L` below the parts' centres, which puts its CENTRE
-  // √((2.5L)² + (3L)²) = **312.4 mm** from `objectA` and `objectB` — inside the radius. So
-  // dragging either of them at boot raises the white capture pair on the plate at once, which
-  // is the opposite of what this comment promised a device pass would see.
-  // ⚠ `objectD` is clear: 570 mm to the plate, 400 mm to each part.
-  //
-  // ⛔⛔ **AND IT IS NOT A NUMBER TO NUDGE.** The radius is centre-to-centre
-  // (`CENTRES-FOR-NOW`) and the plate is `6L × 9L`, so a part resting ON the plate near its
-  // edge is FURTHER from its centre than one hovering high above the middle: any radius is
-  // wrong for a body of that shape. ⭐ The fix is the face-distance rule the owner has already
-  // named (*"later we will use distances between faces"*), which `3D2` owes.
-  // ⭐⭐ `METHOD`: *a claim about a composition expires when any part of it changes* — the
-  // spacing was re-derived when it moved, and the claim ABOUT the spacing was not.
-  // The vector that states it: `tests/highlight.test.ts`, *"AT BOOT THE PARTS ARE CLEAR OF
-  // EACH OTHER AND NOT CLEAR OF THE PLATE"*.
+  // ⚠ History (audit 2026-09-17): a claim here that *"at 5L nothing is in range at rest"* was
+  // false for the base plate under the old centre-to-centre capture radius; the capture became a
+  // surface gap (`D49`) and its white highlight is deleted (`D120`). ⭐⭐ `METHOD`: *a claim about a
+  // composition expires when any part of it changes.*
   //
   // ⛔⛔ THE ROTATIONS ARE **SEEDED**, not per-boot random — `core/random_pose.ts` argues why,
   // and `?sceneSeed=N` rolls a new scene. ⚠ Three arbitrary orientations mean **no two bodies
-  // start aligned**, which is correct: `A16`'s highlight should be something a hand earns.
+  // start aligned**, which is correct: an alignment should be something a hand earns.
   const bootRotations = seededRotations(st.cfg.sceneSeed, 3);
   // ⭐⭐⭐ **THE TWO PARTS BOOT SQUARE AND UNALIGNED** — the owner, 2026-09-25: *"boot the scene
   // with no aligned object, translation mode. Use current rectangles transforms as displayed on
@@ -374,19 +356,6 @@ export function createScene(
   st.pioneerCursorMat.backFaceCulling = false;
 
   /**
-   * ⭐⭐⭐ THE SELECTED FACE, DRAWN — `IN3` rule 2's only visible effect.
-   *
-   * ⛔⛔ WITHOUT IT, RULE 2 IS UNJUDGEABLE. Selecting a face changes nothing a user can see
-   * until 2ter or 2quater exist, so *"did it pick the face I aimed at?"* has no answer on the
-   * glass — and every rule built on top would inherit that doubt. ⭐ The HUD prints the face
-   * id and the pick's cosine; this is the same answer where the hand is looking.
-   *
-   * ⚠ A thin quad, not a material change: a per-face material needs submeshes, which is a
-   * mesh-authoring decision `3D4` has not made yet. ⛔ `DOUBLESIDE` on purpose — Babylon's
-   * plane winding faces one way and which way is exactly the sort of engine detail that
-   * would make the highlight invisible from one side only, found late and on a device.
-   */
-  /**
    * ⭐⭐⭐ **ONE FOLLOWER QUAD PER ALIGNED OBJECT, NOT ONE IN TOTAL** (the owner, 2026-09-17:
    * *"when an object is aligned, always maintain its FollowerFace highlighted (even if the
    * touchpoints later select other objects) until its alignment is broken"*).
@@ -398,8 +367,8 @@ export function createScene(
    *
    * ⭐⭐ **AND THE POOL IS DRIVEN ENTIRELY BY THE MODEL.** Each frame every object is asked
    * `alignedFaceOf(world, id)`; a non-null answer gets a quad on that face and nothing else
-   * does. ⛔ So there is no lifetime to manage and no cleanup path to forget: the instant a
-   * shake, a re-tap or a rotation reset evicts the constraint, the highlight has nothing to
+   * does. ⛔ So there is no lifetime to manage and no cleanup path to forget: the instant an
+   * unalign, an undo or a turned Pioneer evicts the constraint, the highlight has nothing to
    * draw. ⚠ A remembered per-object record would be a second source of truth for a fact the
    * constraint stack already holds, free to disagree after any eviction.
    */
@@ -414,20 +383,8 @@ export function createScene(
    * case the face quad alone could not cover, and with `L × 2L × 3L` bodies at arbitrary
    * orientations it happens constantly.
    *
-   * ⛔⛔ **IT IS DRAWN AT A LARGER SCALE THAN `A16`'s WHITE CAPTURE CONTOUR, ON PURPOSE.** Both
-   * are box outlines on the same body and a body can be **aligned AND captured at the same
-   * time** — which is in fact the normal state while docking, since `A16` requires an
-   * alignment. ⚠ At equal scale the two would z-fight into a dashed mess and neither colour
-   * would be legible. ⭐ 1.06 for this one against 1.02 for the white: they nest, and both read.
-   */
-
-  /**
-   * ⚠⚠ **THE ONE THING THAT STILL HAS TO BE REMEMBERED: THE MODE.**
-   *
-   * ⛔ `SNAPSHOT` vs `FOLLOW` is not in the constraint — the stack records *which face onto
-   * which world direction*, not *by which gesture*. ⭐ So the FACE is derived and only the
-   * COLOUR is remembered, keyed by object. ⚠ Entries are PRUNED every frame against
-   * `alignedFaceOf`, so a stale one cannot outlive its alignment even though it is state.
+   * ⚠ It was drawn larger than `A16`'s white capture contour so the two nested; that contour is
+   * deleted (`D120`).
    */
 
   /**
@@ -435,7 +392,8 @@ export function createScene(
    *
    * The owner, 2026-09-17: *"for each aligned object, track its pioneer object. If the said
    * pioneer object is later shaken, the alignment of the aligned object shall be released …
-   * when I shake the pioneer object it shall release all the follower objects"*, then *"make
+   * when I shake the pioneer object it shall release all the follower objects"* (the shake is
+   * deleted, `D107`; a tap on empty space while holding the Pioneer does it now), then *"make
    * sure the tracking of pioneer and follower objects can be later scaled when there are
    * several objects in the scene"*.
    *
@@ -446,8 +404,8 @@ export function createScene(
    *
    * ⭐⭐ **AND IT IS RECONCILED AGAINST THE MODEL EVERY FRAME** (`links.prune`), so the one
    * remembered fact cannot outlive the constraint that justifies it. ⛔ That is what removes
-   * the need for every release path — shake, re-tap, rotation reset, eviction — to remember to
-   * call `unlink`.
+   * the need for every release path — an unalign tap, an undo, a turned Pioneer, eviction — to
+   * remember to call `unlink`.
    */
   st.links = new AlignmentLinks();
 
@@ -475,22 +433,11 @@ export function createScene(
   st.outlines = new Map<ObjectId, BodyOutlines>();
 
   /**
-   * ⭐⭐⭐ **`A16`, EVALUATED ONCE PER FRAME.**
-   *
-   * ⛔⛔ **DERIVED, NEVER REMEMBERED.** The only value carried across a frame is the previous
-   * target id, and only so a distance tie resolves in favour of the body already outlined —
-   * hysteresis by memory rather than by a second threshold, which costs no tunable.
-   *
-   * ⚠ IN THE RENDER LOOP AND NOT IN THE POINTER HANDLER: a pair can come into or out of range
-   * because the OTHER body moved (a sway nudge, an animation) with no pointer event at all, and
-   * a highlight that only updated on input would then describe a stale scene.
-   */
-
-  /**
    * ⭐⭐⭐ **THE OBJECT AXES — STATE ONLY. THE RULE IS `input/object_axes.ts`.**
    *
    * The owner, 2026-09-22: *"at scene boot, all object axis are updated based on camera
-   * quaternion at scene boot"*, and thereafter they are re-decided **on a zone edge**.
+   * quaternion at scene boot"*. ⛔ They were once re-decided on a capture-zone edge; that basis
+   * is deleted (`D82`), and since `D109` the boot axes are the only ones.
    *
    * ⛔⛔ **WHY A MAP HERE AND NOT A FIELD ON `SceneObject`**: the axes are an INPUT-layer
    * concept — which way a finger pushes a body — and the model is the geometry every rule
@@ -502,21 +449,12 @@ export function createScene(
    */
   st.bootObjectAxes = null;
   /**
-   * ⭐ The gravity frame at scene boot — what a FREE body is turned about while `worldAxisB` is on.
+   * ⭐ The gravity frame at scene boot — what a FREE body is turned about (`WorldAxisB`, `D109`).
    * ⚠ Filled beside `bootObjectAxes`, at the very bottom of this file, for the same reason.
    */
   st.bootGestureFrame = null;
-  // ⚠ `lastTravelDir` stood here — the direction a body last ACTUALLY went. ⛔ The ray is aimed by
-  // the INPUT now (the owner, 2026-09-23), so what persists between frames is the SHOWN axes and
-  // their senses, which is state the aim is derived from rather than the aim itself.
-  /**
-   * ⭐⭐⭐ **WHAT THE CHANNELS ASKED FOR THIS FRAME**, per body — the direction the LeadingFace ray
-   * is fired along. ⛔ The owner, 2026-09-23: *"You can lag the travel, but the input itself has
-   * no lag. The gizmo repositioning should match the input, not the travel and its lag."*
-   * ⚠ So it is the axis of the channel pushed HARDEST this frame — not a sum, which only reaches
-   * the top face inside 29.4° of vertical on `objectB`, and not a memory of where the body has
-   * been. ⛔ Consumed every frame.
-   */
+  // ⚠ `lastTravelDir` and the LeadingFace ray it aimed are deleted; what persists between frames
+  // is the SHOWN axes and their senses.
   /**
    * ⭐⭐ **WHICH AXES THE GIZMO IS SHOWING** — the owner, 2026-09-23: *"the direction is shown only
    * if the delta position triggers a translation in this direction."* ⛔ The decision is
@@ -559,23 +497,7 @@ export function createScene(
   st.lastTrackGain = 0;
   st.lastEdgeOn = false;
 
-  /**
-   * ⛔⛔ **`CameraOffsetZoneEnter` — DECLARED, CALLED, AND EMPTY BY INSTRUCTION.**
-   *
-   * > *"if CameraOffsetZoneEnterSetupB is toggled on - launch the CameraOffsetZoneEnter
-   * > method (we will define it later on)."* — the owner, 2026-09-22
-   *
-   * ⚠ It is here so that the behaviour lands in ONE named place when it is dictated, and so
-   * the flag that gates it is genuinely read rather than declared debt. ⛔ It does nothing
-   * today and the HUD says so — an empty method that pretended to act would be the dead
-   * instrument shape this project met three times on 2026-09-16 alone.
-   */
-  /** ⚠ Last frame's range verdict — the EDGE is what fires the hook, never the level. */
-  /**
-   * ⛔ The pair that was in range when the zone was ENTERED, so the EXIT edge can reach the
-   * same two bodies. ⚠ At the exit `highlighted.pair` is already `null` — the verdict that
-   * tells you a body has left is the one that no longer names it.
-   */
+  // ⛔ `CameraOffsetZoneEnter`, its flag and the zone ENTER/EXIT state are deleted (`D109`/`D120`).
   st.axisGizmos = new Map<ObjectId, AxisGizmo>();
   /**
    * ⭐⭐⭐ **TWO RINGS, ONE PER FAMILY** — the owner, 2026-09-23: *"there can be a grey ring for the
@@ -584,9 +506,9 @@ export function createScene(
    *
    * ⛔⛔⛔ **AND THAT CORRECTS A PREMISE OF MINE THAT WAS SIMPLY FALSE.** I had built ONE ring that
    * switched colour, on the argument that a body is either being moved or being turned. It is not:
-   * `pinnedSecondDrive` hands the second touchpoint **BOTH** of its axes when the held body is an
-   * aligned follower (`heldIsAlignedFollower` → `"BOTH"` in `pinned_pioneer.ts`), so its `dx` rolls
-   * and its `dy` lifts in the SAME frame — which is the exact configuration the owner named.
+   * `secondTouchDrive` hands the second touchpoint **BOTH** of its axes when the held body is an
+   * aligned follower (`"BOTH"` in `second_touch_drive.ts`), so its `dx` rolls and its `dy` lifts
+   * in the SAME frame — which is the exact configuration the owner named.
    * ⭐ `METHOD`: *a premise about what the product can do is a thing to READ OUT OF THE CODE, not
    * to infer from the rule you happen to be editing.*
    *
@@ -770,62 +692,7 @@ export function createScene(
   st.centreBlend = new OrbitCentreBlend(st.cfg, ORBIT_START_CENTRE_M);
   st.orbitCentreM = Vector3.Zero();
 
-  /**
-   * ⭐⭐⭐ **THE APPROACH SWING'S LATCH** — the trial on branch `1.0.18-`, `null` when the
-   * capture is not live. ⛔ Armed on the RISING EDGE of the capture and dropped on the falling
-   * one, so it is a property of the approach rather than of any gesture.
-   * ⚠ It holds only what must NOT be re-read: the gap at the trigger, and which way to lean.
-   */
-  /**
-   * ⭐⭐⭐ **THE SCREEN-RIGHT TRAVEL APPLIED SINCE THE LAST FRAME**, in metres — and it is
-   * **CONSUMED AND ZEROED BY `refreshHighlight` EVERY FRAME**, which is the whole fix for the
-   * 2026-09-20 report (*"sometimes the yaw is to the left bottom, sometimes it is to the right
-   * up for the same delta position x"*).
-   *
-   * ⛔⛔ It used to be `lastTranslateRightPx`: *the last non-zero travel ever applied*, reset by
-   * **nothing** — not a lift, not a mode flip, not a new gesture. ⚠ And the capture's rising
-   * edge needs no motion to fire, so an approach could arm on a press, a rotation or a pinch and
-   * inherit a direction from a drag that had ended minutes earlier. ⭐ Zeroed every frame, the
-   * only thing the arming edge can read is **the travel that crossed the threshold**.
-   *
-   * ⚠ It sums every translating grip's travel, not just the captured pair's: with two fingers on
-   * two bodies the approach is whatever the pair's gap does, and singling one out would be a
-   * rule this file is not allowed to own.
-   */
-  /**
-   * ⭐⭐ **THE VERTICAL HALF OF THE SAME FRAME'S TRAVEL** — device-reported, 2026-09-21:
-   * *"when the follower enters the offset radius by a vertical translation (delta position dy)
-   * the camera orbit swing is not triggered."*
-   * ⛔ It is not there to AIM the swing — a yaw is symmetric about a vertical approach — but to
-   * answer *was this crossing driven by a translation at all*, which is the question that
-   * separates a vertical drag from a press, a rotation or a pinch.
-   */
-  /** ⭐⭐ The ALONG-VIEW component of the body's travel — invisible on screen, and still travel. */
-  /**
-   * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
-   * device report: *"not working. the camera does not orbit."*
-   *
-   * ⚠⚠ `applyCamera()` is called ONLY by camera events — the reset, startup, a pinch, a
-   * slider and the orbit drag. **Nothing calls it while a finger is translating an object**,
-   * which is precisely the whole duration of an approach. ⭐ So the swing was computed
-   * correctly every frame and never reached the glass: the law was right and the WIRING was
-   * missing, with a green suite either way because `scene.ts` has no vectors.
-   *
-   * ⭐⭐ Comparing against the last APPLIED value rather than re-applying unconditionally keeps
-   * the render loop from writing the camera on frames where nothing about it changed — and
-   * makes the return to zero a single write rather than a state nobody notices.
-   */
-  /**
-   * ⭐⭐ `D63` — the SMOOTHED swing amplitude, and the clock it was last advanced on.
-   * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
-   * than from whatever the last approach happened to end on.
-   */
-  /**
-   * ⛔⛔ The progress the swing was showing when a translation STOPPED driving it, captured
-   * once. ⚠ It must be remembered rather than recomputed: `rebaseTriggerGap(gap, p)` with `p`
-   * read from the LIVE gap is algebraically the identity — `gap/(1−(g0−gap)/g0) = g0` — so it
-   * would do nothing at all, which is how the first version of this fix failed.
-   */
+  // ⛔ The approach camera swing's latch and travel records stood here; the swing is deleted (`D120`).
 
   // ⚠ Place the camera on the rig surface at startup, so the very first frame is
   // already the pose the orbit will move from — not the ArcRotateCamera constructor's
@@ -858,20 +725,6 @@ export function createScene(
   // `config_debt` and `unwired_debt` both exist to refuse.
 
   /**
-   * ⭐⭐⭐ A15 — THE RAYCAST AT A SECOND TOUCHPOINT'S LIFT.
-   *
-   * ⛔⛔ Fired on EVERY second-touchpoint release while something is still held, not only
-   * after a depth drag. ⭐ The raycast is the whole test, and for every other two-finger
-   * rule it simply answers `BOUND`: roll does not translate the object, and rule 6 keeps it
-   * under the finger by construction. ⚠ A *"was that a depth gesture?"* flag would be a
-   * second, weaker way of asking the same question — `METHOD`'s no-heuristic-pile-up, and
-   * a flag can be wrong where a ray cannot.
-   *
-   * ⭐ EVERY remaining holder is evaluated, not a guessed pairing. With two objects held,
-   * *"which holder was that finger the partner of?"* has no answer worth trusting, while
-   * *"is THIS holder still on its object?"* is well posed for each of them.
-   */
-  /**
    * ⛔⛔⛔ **`D54` — `A15`'s ORPHAN UNSELECT IS DELETED (2026-09-18, the owner).**
    *
    * > *"Until first touch is released: first touch can continue controlling the object
@@ -894,10 +747,9 @@ export function createScene(
    * ⭐ Requirement 1b needed no code: with nothing deleting the grip, a second touchpoint
    * pressed again finds `router.objects()[0]` and drives the same body, exactly as before.
    *
-   * ⭐⭐ **AND IT CLOSES A HOLE RATHER THAN LEAVING ONE.** `queue_notes/IN8.md` recorded that
-   * `D51`'s pinned Pioneer could slide the Follower off its holder through a release path
-   * `A15` never watched. ⛔ With no unselect anywhere, that hole is unreachable **by
-   * construction** — the durable fix the note asked for, arriving from the other direction.
+   * ⭐⭐ **AND IT CLOSED A HOLE RATHER THAN LEAVING ONE**: `D51`'s pinned Pioneer (itself deleted
+   * since, `D109`) could slide the Follower off its holder through a release path `A15` never
+   * watched; with no unselect anywhere, that hole was unreachable **by construction**.
    */
 
   /**
@@ -920,32 +772,11 @@ export function createScene(
   // and it is the comment that moved.
   st.behaviour = initialBehaviour();
 
-  /**
-   * ⭐⭐⭐ **FORK C's PIONEER, REMEMBERED** — the face whose tap created the live alignment.
-   *
-   * ⛔⛔ THE OWNER'S FIRST DICTATION SAID *"the PioneerFace resets as null"*, AND THE
-   * AMENDMENT OF THE SAME DAY KEPT IT: *"when an object is aligned, the FollowerFace shall be
-   * highlighted and the PioneerFace contour shall be highlighted, until the alignment is
-   * broken"*, and *"the alignment can be toggled off by taping another time to the same
-   * PioneerFace."* ⭐ Both rules need to know which face it was, so the reference survives
-   * the gesture that made it.
-   *
-   * ⚠ IT CHANGES NOTHING ABOUT THE CONSTRAINT, which still stores a **frozen world
-   * direction** (§1.4): moving the Pioneer's object afterwards does not drag the alignment
-   * with it. What is remembered is the face's IDENTITY, for drawing and for the undo.
-   * ⛔ ONE pair is visualised, so two objects aligned at once show only the latest — stated
-   * rather than hidden, and a device question (`ALIGNMENT_RULES.md` §7).
-   */
   // ⛔⛔⛔ **`pioneerFace` AND `alignMode` WERE DELETED HERE, 2026-09-17 — AND DELETED, NOT
   // LEFT.** They were the ACTIVE alignment's Pioneer face and its mode: one of each, for the
-  // whole scene. ⚠ The per-body truth has lived in `links` and `alignModeOf` since `A18`, and
-  // an audit found the tap rule still reading these — so re-tapping the FIRST of two aligned
-  // bodies was read as a fresh alignment and could never release it.
-  // ⭐ Once the tap read the body instead, TypeScript reported both as written-but-never-read,
-  // which is the whole argument: a scene-wide record that nothing consumes is exactly defect
-  // 40's shape (`A12`'s retired roll detector, still fed, still holding a veto).
-  // ⚠ `selectedFace` survives because the follower HIGHLIGHT still has one active record,
-  // which is a stated device question (`ALIGNMENT_RULES.md` §7).
+  // whole scene. ⚠ The per-body truth lives in `links` (the mode itself is deleted, `D106`).
+  // ⭐ A scene-wide record that nothing consumes is exactly defect 40's shape (`A12`'s retired
+  // roll detector, still fed, still holding a veto). ⛔ `selectedFace` followed it (audit 2026-09-27).
 
   /**
    * ⛔⛔⛔ **`pioneerOrientation` WAS DELETED HERE, 2026-09-17 — AND DELETED, NOT LEFT.**
@@ -962,14 +793,7 @@ export function createScene(
    * broken one, which stayed wired). ⭐ *Deleted, not disabled.*
    */
 
-  /**
-   * ⭐⭐⭐ **WHAT THE LIVE ALIGNMENT MEANS** — `SNAPSHOT` (a single tap made it) or `FOLLOW`
-   * (a double tap did). ⛔ It was `?pioneerTurnRule` for a few hours on 2026-09-17 and the
-   * owner replaced the flag with the GESTURE: *"one single tap … the logic is as fork C1; one
-   * double tap … as fork C2"*. ⭐ So it is per-alignment state rather than a session setting,
-   * and the highlight COLOURS report it — two colours for a snapshot, one for a relationship.
-   * ⚠ `null` exactly when nothing is aligned.
-   */
+
 
   /**
    * ⭐⭐⭐ **THE ALIGNMENT'S SNAP, ANIMATED** — owner, 2026-09-17: *"make the rotation a slerp
@@ -984,8 +808,8 @@ export function createScene(
    *
    * ⚠ THE CONSTRAINT IS PUSHED IMMEDIATELY while the pose travels, so for a few frames the
    * object does not yet satisfy its own alignment. ⛔ Deliberate: the stack is what every other
-   * rule reads, and a stack that lags the gesture would make the twist, the readout and the
-   * re-tap all briefly wrong. The pose catches up and lands EXACTLY on the solved orientation.
+   * rule reads, and a stack that lags the gesture would make the twist and the readout
+   * briefly wrong. The pose catches up and lands EXACTLY on the solved orientation.
    */
   // ⛔⛔⛔ **ONE SNAP PER BODY — IT WAS A SINGLE GLOBAL SLOT UNTIL 2026-09-17.** An audit
   // found that a second alignment on ANY body overwrote the slot and abandoned the first body
@@ -1034,29 +858,13 @@ export function createScene(
   // landed an in-flight snap so a rule could write the orientation itself — and the twist
   // called it, which is why a hand saw no slerp at all in `ROTATE`: the first movement past the
   // deadband ended the animation. ⭐ Every path now does one of two honest things instead:
-  // **rides along** (the twist, C2's follow — compose the world rotation onto both ends) or
-  // **cancels** (every release, and the rotation reset, which writes its own pose). ⚠ Nothing
+  // **rides along** (the twist and the roll — compose the world rotation onto both ends) or
+  // **cancels** (every release). ⚠ Nothing
   // needs to land a snap early any more, so the function that did is gone rather than kept for
   // a caller that might return.
 
-  /**
-   * ⭐⭐ Judge one release as a tap, keep §1.3's history, and toggle the mode **immediately**.
-   *
-   * ⛔⛔ IMMEDIATELY, device-corrected the same day: *"there is a lag when the second
-   * touchpoint is tapped and the behavior change. It shall be immediate."* ⭐ The owner's
-   * accepted worst case is explicit — *"a double tap occurs and the behavior and movement can
-   * be reverted back while the camera orbit resets"* — so a double tap toggles twice, back to
-   * where it began, and the camera reset fires as in every other fork. ⚠ That is Unity's own
-   * behaviour (`Tap` does not wait for a second tap), chosen here deliberately.
-   *
-   * @returns the verdict, or `null` if the release was not a tap at all — a PRESS, which
-   *   keeps every meaning it already has.
-   */
-  /**
-   * ⭐⭐ `D58` — touchpoints whose **press** already flipped the movement mode, so their
-   * release must not flip it again. ⛔ Keyed by pointer id and emptied on release; a tap is a
-   * press plus a lift, and without this every tap would toggle twice and change nothing.
-   */
+  // ⭐ The tap toggle itself is `noteTap`, in `alignment_wiring.ts`. ⛔ `D58`'s press-toggle set is
+  // deleted with the press toggle (`D66`).
   /**
    * ⭐⭐ `D68` — **did the last tap RELEASE actually toggle the mode?** ⛔ Not *was there a tap*:
    * a tap consumed by an alignment toggled nothing, and undoing it would flip the mode the hand
@@ -1099,7 +907,7 @@ export function createScene(
   st.lastFrameMs = null;
   // ⭐⭐⭐ **THE AXES ARE BORN HERE, AT BOOT, FROM THE BOOT CAMERA** — *"at scene boot, all
   // object axis are updated based on camera quaternion at scene boot"* (the owner, 2026-09-22),
-  // and with `worldAxisB` on they are *"fixed forever for this scene"*.
+  // and they are *"fixed forever for this scene"* (`WorldAxisB`, the only frame since `D109`).
   //
   // ⛔⛔ **AT THE FOOT OF THE FACTORY AND NOT AT THE TOP, DELIBERATELY.** `requireGestureFrame`
   // is a `const` declared half way down this file; reading it from an initialiser above its

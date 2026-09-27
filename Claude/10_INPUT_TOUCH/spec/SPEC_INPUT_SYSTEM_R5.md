@@ -1,7 +1,8 @@
 # INPUT SYSTEM — revision 5 (the owner's specification)
 
-> **STATUS** · ⭐ live — the DESIGN OF RECORD for the touch input system, **and the
-> inventory of what of it is built**
+> **STATUS** · ⭐ live — the DESIGN OF RECORD for the touch input system. ⛔ Its build
+> inventory below is OLD and names deleted gestures; the current list of every input is
+> [`INPUTS_TABLE.md`](INPUTS_TABLE.md) (2026-09-27)
 > **OWNS** · every gesture rule, the terms the rest of the project uses for them, and the
 > build status of each
 > **READ IF** · you are building or changing anything a finger touches
@@ -88,7 +89,7 @@ change (`D38` retired that clause). Everywhere else the tap keeps exactly this m
 | touchpoints | on what | what happens | spec | status |
 |---|---|---|---|---|
 | 1 | an object | select, and the §1.3 state machine: commit point, provisional motion, tap / double-tap / hold, flick test, release-time priority | §1.3, §2 rule 2 | ✅ `IN1` · ⛔ its **ROLLBACK is retired** (`D36`) — a flick keeps the rotation it was made with, except where fork C's own reset applies |
-| 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⭐ collision resolved 2026-09-15 — eviction moved to a quick back-and-forth (`A1`→`A4`) |
+| 1 | an object | double-tap → **fly the camera home** over `cameraResetMs` | ⛔ **no clause** | ✅ ⭐ collision resolved 2026-09-15 — eviction moved to a quick back-and-forth (`A1`→`A4`) · ⛔ eviction deleted (`D107`); a double tap on a BODY is now **undo** (`D111`) |
 | 1 | empty space | **orbit the camera** about the barycentre nearest the finger's ray | §2 rule 1 | ✅ `IN9` · ⚠ amended: delta position, NOT device tilt |
 | 1 | empty space | double-tap → **fly the camera home** | ⛔ **no clause** | ✅ — ⚠ it flips the mode twice on the way (a net nothing), the owner's accepted trade |
 | 2 | both empty space | **pinch zoom** | §4 rule 4 | ✅ `IN9` |
@@ -150,16 +151,16 @@ it to the object model and gives it the precondition it is missing.
 
 | rule | what it is | blocked on |
 |---|---|---|
-| §2 **2ter** | vertical flick → `GRAVITY_ALIGN` onto the constraint stack | `3D1` (faces), `IN3` |
-| §2 **2quater** | horizontal flick → `WORLD_AXIS_ALIGN` | `3D1`, `IN3` |
+| §2 **2ter** | vertical flick → `GRAVITY_ALIGN` onto the constraint stack | ⛔ **DELETED** — the flick and the rotation reset are gone (`D110`) |
+| §2 **2quater** | horizontal flick → `WORLD_AXIS_ALIGN` | ⛔ **DELETED** — the flick is gone (`D110`) |
 | §2 **2sexte** | constrained rotation about the remaining free DOF | `3D1`, `IN3` · ✅ **BUILT 2026-09-16** in forks B and C |
 | ⛔ **fork C's approach** | `TargetPosition`, the cross-quad gizmo, the orbit about it, and the two-object approach along centre→target | ⚠ **not in revision 5 at all** — the owner's own rules, [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) §2. Four owner decisions gate them (§7.6–§7.10) |
-| §2 **2septies** | ⭐ **SUPERSEDED by amendment A1** — eviction is a full **360° roll**, not a double-tap | `IN3` · ✅ the camera-reset collision is resolved; ⛔ A1 also amends **2quinte**, shares a context with **2sexte**, and leaves ONE open owner question: does a full turn break MATES too? |
+| §2 **2septies** | ⭐ **SUPERSEDED by amendment A1** — eviction is a full **360° roll**, not a double-tap | `IN3` · ✅ the camera-reset collision is resolved; ⛔ A1 also amends **2quinte**, shares a context with **2sexte**, and leaves ONE open owner question: does a full turn break MATES too? · ⛔⛔ **MOOT**: eviction (A1/A4) is deleted (`D107`); a double tap on a body is **undo** (`D111`) |
 | §3 **3** | release unselects object and face, stack preserved | `3D1` |
 | §4 **5** | two objects and two faces selected | `3D1` |
 | §4 **6bis** | translate along `AxisBtwFaces` / its orthogonal | `3D1` (face centres) |
 | §4 **6ter** | both objects translate toward each other | `3D1` |
-| §4 **6quater** | mate flick | `3D1` |
+| §4 **6quater** | mate flick | ⛔ **DELETED** — the flick is gone (`D110`); the snap is automatic (`D100`) |
 | §5 | landmark registration, contact / capture / seat, longest-axis alignment | deferred by the spec itself |
 | §6 | haptics | `IN7` · ⛔ iOS Safari has no Vibration API at all |
 
@@ -176,12 +177,14 @@ URL (`?motionDeadbandMm=3.5`) or moved on the on-screen menu, without a rebuild.
 ⛔ **The owner's later decisions SUPERSEDE clauses of revision 5**, and they live in
 [`../AMENDMENTS_R5.md`](../AMENDMENTS_R5.md) — moved out of this file on 2026-09-15 when it
 reached its 800-line cap. `METHOD`: *when two sections conflict, the later one wins.*
+⛔ **"in force" below means at the time of writing**: eviction and the shake (A1/A4) are deleted
+(`D107`), the flick with them (`D110`).
 
 | | supersedes | in force |
 |---|---|---|
-| **A1** | ✅✅ **WIRED 2026-09-16** (`D32`) — §1.4 / 2septies' double-tap eviction | the double-tap evicts nothing; it is purely the camera fly. ⚠ Its 360° roll trigger is itself superseded by **A4** |
-| **A4** | A1's trigger | eviction is a **quick back-and-forth**, one touchpoint, ≥2 reversals in a window. ⛔ The flick test is skipped once one reversal is seen, or an abandoned shake ADDS a constraint |
-| **A1 §4** (`D13`) | §1.4's *"clears its constraint stack"*, for mates | eviction **spares `MATE` entries** — one gesture, one intention |
+| **A1** | ⛔ **DELETED with eviction (`D107`)** · ✅✅ was WIRED 2026-09-16 (`D32`) — §1.4 / 2septies' double-tap eviction | the double-tap evicts nothing; it is purely the camera fly. ⚠ Its 360° roll trigger is itself superseded by **A4** |
+| **A4** | ⛔ **DELETED (`D107`)** — the shake is gone · A1's trigger | eviction is a **quick back-and-forth**, one touchpoint, ≥2 reversals in a window. ⛔ The flick test is skipped once one reversal is seen, or an abandoned shake ADDS a constraint |
+| **A1 §4** (`D13`) | ⛔ **moot since `D107`** · §1.4's *"clears its constraint stack"*, for mates | eviction **spares `MATE` entries** — one gesture, one intention |
 | **A2** | §0's *"two objects"* | the scene holds **three** |
 | **A5** | `D10`, and §5's *"two touchpoints on the same object — undefined and reachable"* | two fingers on ONE object are a **depth pinch**, and ⛔ *depth is HORIZONTAL* — the view axis flattened onto the ground plane, so **the object's height never changes**. The gain is **computed**, and `IN2`'s `IGNORED` role moves to the THIRD touchpoint |
 | **A6** | ⚠ **ITS TRIGGER SUPERSEDED BY A10** — it superseded A5's | depth is a **COMMON VERTICAL DRAG** — one finger on the object, one ANYWHERE, both travelling in y together. ⛔ It shares rule 6's configuration: **common mode is depth, differential mode is rule 6** |
@@ -216,7 +219,7 @@ first. The largest are:
   restores the press pose. The snapshot is still taken, for §6's undo.
 * ⛔ **2bis's and rule 6's touchpoint assignments are SWAPPED** (`A13`): one touchpoint
   TRANSLATES, and a second one held DOWN turns the same drag into a rotation.
-* §1.4 / 2septies' double-tap eviction (eviction is now a quick **back-and-forth**),
+* §1.4 / 2septies' double-tap eviction (eviction became a quick **back-and-forth** — ⛔ itself deleted, `D107`),
   §1.4's *"clears its constraint stack"* where a `MATE` is concerned (eviction spares mates),
   2quinte's ban on roll for a constrained object (roll DRIVES its free DOF, and 2sexte
   suppresses where it degenerates), and §0's "two objects" (the scene has three).
@@ -625,7 +628,8 @@ so a drag during one would be overwritten as fast as it was applied. `0` snaps.
 double-tap anywhere including on an object, so straightening the view would have destroyed
 deliberate work. ⭐ **Eviction moved, not the reset** — it is now a quick **back-and-forth**
 (amendments A1 → A4, in [`../AMENDMENTS_R5.md`](../AMENDMENTS_R5.md)). A double-tap now means
-exactly one thing.
+exactly one thing. ⛔ **Since 2026-09-27** the back-and-forth is deleted (`D107`) and a double
+tap on a BODY is **undo** (`D111`).
 
 ## 2. The sympathetic sway — the scene reacts to the held object
 

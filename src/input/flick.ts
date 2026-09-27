@@ -1,7 +1,11 @@
 /**
- * §1.3 — THE FLICK TEST, evaluated once at release over the motion buffer.
+ * §1.3 — THE RELEASE-TIME SPEED ESTIMATOR (`terminalSpeedPxPerS`) AND ITS BUFFER (`trimBuffer`).
  *
- * ⭐⭐ THIS IS WHAT MAKES DRAGS AND FLICKS SEPARABLE. Previously every drag ended in
+ * ⛔⛔ THE FLICK TEST THIS FILE WAS NAMED FOR IS DELETED (`D110`, 2026-09-27); what stays is the
+ * windowed speed estimate, read by the recognizer, `MotionTracker` and the lift-speed readout.
+ * The history below is why the estimate is windowed.
+ *
+ * ⭐⭐ THE FLICK TEST MADE DRAGS AND FLICKS SEPARABLE. Previously every drag ended in
  * a release, so every drag could satisfy a flick rule, and the two competed for the
  * same gesture. The discriminator is TERMINAL SPEED: a drag decelerates and lifts,
  * a flick is still moving when the finger leaves.
@@ -77,8 +81,8 @@ export function trimBuffer(
   // frozen around the last burst — so *"how fast is this finger"* answers with the speed of a
   // gesture that **has already finished**, indefinitely. ⭐ The flick reads it at the release,
   // where `now` and the last sample are the same instant, which is why it never showed there.
-  // ⛔ The approach swing reads it MID-GESTURE, which is where a stale answer damps the swing to
-  // nothing — and an immediate second push inherits the first one's speed.
+  // ⛔ The (since deleted, `D120`) approach swing read it MID-GESTURE, where a stale answer damped
+  // the swing to nothing — and an immediate second push inherited the first one's speed.
   //
   // ⚠ The default keeps the old behaviour exactly: a caller that does not say when *now* is gets
   // the release-time reading it has always had.

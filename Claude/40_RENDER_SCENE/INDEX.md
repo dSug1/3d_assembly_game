@@ -3,7 +3,7 @@
 > **STATUS** · ⭐ **SPLIT INTO MODULES 2026-09-26** · **OWNS** · the Babylon scene,
 > camera, picking, materials, the on-glass readout and the tuning menu
 > **READ IF** · you are drawing something, or wondering why the boundary exists
-> **LAST VERIFIED** · 2026-09-26
+> **LAST VERIFIED** · 2026-09-27
 
 ## The rule this folder exists to protect
 
@@ -33,14 +33,20 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 |---|---|
 | `scene_state.ts` | `SceneState`, the closure-level types, the constants |
 | `bodies.ts` | meshes, topology, shapes, the model-pose port (`setModelPose`) |
-| `markers.ts` | face fills and contours, fuchsia rings, PioneerFaceCursors, outlines |
+| `markers.ts` | face fills and contours, the HitFace's fuchsia contour, PioneerFaceCursors, outlines |
 | `alignment_wiring.ts` | `alignFollowerToPioneer`, release, seat/unseat |
-| `gizmo.ts` · `highlight_pass.ts` | the axis gizmo; the capture highlight and the swing latch |
+| `gizmo.ts` | the axis gizmo (⛔ `highlight_pass.ts` deleted with the white highlights and the swing, `D120`) |
 | `camera_rig.ts` | orbit, zoom, centre blend, reset, gesture frames |
 | `hud_paint.ts` · `tuning_menu.ts` | every readout line; every slider |
 | `sway_pass.ts` · `drive.ts` | the nudge and the spin; where a translation or depth step lands |
 | `seat_wiring.ts` | the snap, the seats, the unsnap feed, the cursor drag |
 | `pointer_wiring.ts` · `render_loop.ts` | every press/move/release; the per-frame order |
+| `collision_wiring.ts` | `3D6`: the shape and bounds SOURCES for `core/collision.ts` — the seam Blender shapes replace |
+| `undo_wiring.ts` | `D111`: snapshot at a gesture's start, restore on a double tap on a body |
+| `lighting.ts` · `empty_space_probe.ts` | a scene's lights from `core/lighting.ts` · `D114`'s probe for empty glass |
+| `screens.ts` | the game shell (`D105`), drawn as a DOM overlay; `?flow=1` |
+| `hud.ts` · `menu.ts` · `mouse_adapter.ts` | the readout · the slider panel · `D94`'s desktop seam (below) |
+| `scene.ts` | the composition root |
 
 ⚠ No vector reaches any of them; the split was checked by the typecheck, the suite, the build and a
 **headless Chrome boot** with a clean console — rule 5 still owes a hand. ⭐ Three essays moved to
@@ -48,9 +54,9 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 
 ## Where it stands
 
-✅ **Scene**: a camera and **three** objects. ⚠ The third is deliberately **off-axis and
-off-plane** — three collinear objects put every barycentre on one line, where no ray can tell
-them apart and §2 rule 1 would look correct while exercising nothing.
+✅ **Scenes are DATA**: `Scene_0` (the workbench) and `Scene_1` (`D117`) in `src/content/`, listed by
+`content/scenes.ts` and chosen by a scene slider that reboots. ⚠ `Scene_0`'s parts are deliberately
+**off-axis and off-plane** — collinear objects put every barycentre on one line.
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.
@@ -86,11 +92,11 @@ it directly — also the seam to a mate connector.
 
 A gesture recognizer is **invisible**. `METHOD` closes a change only on a look at a
 real device, and *"the cube moved"* says nothing about whether a gesture committed,
-whether a flick rolled the pose back, or which rule won at release.
+or which rule won at release.
 
 **`mouse_adapter.ts`** — `D94`'s desktop seam, and the only render file that knows a mouse exists. ⛔ It never stops or creates a DOM event: it skips at `onPrePointerObservable`.
 
-**`hud.ts`** — phase, motion state, the release verdict, the camera state and depth
+**`hud.ts`** — ⭐ its FIRST line is the score, episodes and the timer (`D112`/`D115`); then phase, motion state, the release verdict, the camera state and depth
 readout, the latched roles, the live noise floor, **which tunables the URL overrode**, and
 ⭐⭐ **the BUILD ID this bundle IS** (`build b1ce845+dirty  2026-09-16 04:52Z`).
 ⛔⛔ **TWO OF THOSE WERE MISSING UNTIL 2026-09-16, AND THE FIRST ONE NEVER EXISTED.**
@@ -101,8 +107,7 @@ wrong number to notice — so audit a readout against the **questions** it is do
 answer, not the lines it prints (`METHOD`).
 ⚠ The cost it was heading for: an `IN5` session measuring a default while believing it was
 measuring an override, with a typo'd key reported to nobody.
-⭐⭐ **The live FORK is printed by name** (`one-finger-translate`), a pending flip with it, and — in fork C — **the toggle's current state** (`[TRANSLATE]`) plus `→PENDING` while a tap is still waiting to be judged single or double. ⛔⛔ That last one is not optional: in fork C **no finger position reveals the mode**, so it is the only way to tell *"the toggle did not fire"* from *"I toggled twice"*. ⛔ `1.0.5` runs two rule tables from one build, so a device report that does not name the fork is **unattributable** — the morning's lesson aimed one layer up, at the rule table rather than the build. ⚠ Deliberately NOT on the `build` line: that identifies an immutable artefact, this changes at runtime.
-⭐ **`A15`'s ORPHANED binding is printed too** (`⛔ORPHANED(next input unselects)`) — a state in which everything looks normal and the very next input does something different, so without it *"it deselected by itself"* and *"the selection was already dead"* are indistinguishable on the glass.
+⭐ **The movement mode is printed** (`[TRANSLATE]`/`[ROTATE]`): no finger position reveals it. ⚠ The fork name, `→PENDING` and `A15`'s `⛔ORPHANED` readouts went with forks A/B (`D40`) and `A15` (`D54`).
 ⭐ **And the build stamp answers the question that cost a morning**: *which code did I just
 judge?* ⛔ `+dirty` is load-bearing — it is what distinguishes the USB dev loop from the
 same sha deployed, which is exactly the comparison that went wrong.
@@ -110,8 +115,8 @@ same sha deployed, which is exactly the comparison that went wrong.
 own answer can disagree with the product while both show green. ⛔ `pointer-events: none`: it must
 never eat a touch it exists to describe.
 
-**The LEADING-FACE GIZMO** (`refreshAxisGizmo`, `core/leading_face.ts`) — three coloured lines at the
-centre of the face a held body is **advancing on**, along that body's object axes: **x red, gravity
+**THE AXIS GIZMO** (`render/gizmo.ts`; ⛔ `core/leading_face.ts` is deleted) — three coloured lines at the
+FollowerFace centre, else the body's own, along that body's object axes: **x red, gravity
 green, depth blue**. ⭐ The only thing on the glass that says which basis a drag is using.
 ⛔⛔ **POSITIONED FROM THE MODEL AND NOT PARENTED, AND THE TWO TRAPS PULL OPPOSITE WAYS.**
 `mesh.getWorldMatrix()` is Babylon's **cached** matrix, recomputed inside `scene.render()` — after the
@@ -131,10 +136,9 @@ not show"* when the FollowerFace IS the LeadingFace. ⚠ Same face, and the mark
 the surface while the gizmo starts ON it, so a gizmo inside a large face was hidden **entirely**.
 ⭐ An instrument must not be occludable by the thing it describes.
 
-⚠ **A body whose geometry cannot answer shows no gizmo** — never a stand-in, exactly as `⛔NOSHAPE`
-shows no capture shell. ⛔ **Nor does a FROZEN body** (the owner, 2026-09-23): a gizmo on something
-that cannot move is a readout that lies, and `leadingFace` refuses one by definition rather than the
-renderer guarding for it.
+⚠ **A body whose geometry cannot answer shows no gizmo** — never a stand-in, exactly as a `⛔NOSHAPE`
+body gets no stand-in shape. ⛔ **Nor does a FROZEN body** (the owner, 2026-09-23): a gizmo on something
+that cannot move is a readout that lies — a guard since `leadingFace` was deleted.
 
 **`menu.ts`** — a collapsible panel of sliders for tuning by hand on the glass.
 ⛔ **Every change is validated on a COPY before it is applied, and refusals are shown.** Otherwise
@@ -143,7 +147,7 @@ exactly the numbers only meaningful in combination.
 ⚠ Sliders **and** step buttons: the page sets `touch-action: none` so the browser
 cannot claim the gestures, which can stop a native range input dragging. Buttons are
 plain taps and always work.
-⛔⛔ **And one control in it is not a tunable at all**: `⭐ FORK (1.0.5 A/B)` selects which of **three** rule tables is in force (`D26`, `D27`) — every other slider changes a number. ⭐ A 0/1/2 slider, because the menu has no other kind of control, and `validateGestureConfig` refuses anything between so a half-set flag cannot masquerade as the default. ⚠ It takes effect only once nothing is touching the glass; the HUD says `⛔PENDING(lift all fingers)` until then.
+⚠ The `FORK (1.0.5 A/B)` flag slider is gone with forks A/B (`D40`); every control is a tunable now, plus the scene slider (`D117`).
 ⭐ **Each section collapses, and the panel remembers what was open across a reload**
 (`localStorage`, keys `menu.open` and `menu.section.<title>`). A device pass is a long
 sequence of reloads — a panel that reopens fully expanded every time buries the two
@@ -162,10 +166,9 @@ build still refreshes. 16 vectors, both guards falsified on purpose.
 ⚠ The decision is in `src/core` and not in the wiring on purpose: `D23` recorded what it
 costs to leave one in `scene.ts`, where no vector can reach it.
 
-⭐⭐ **THE HUD'S `axes` LINE IS THE INSTRUMENT FOR THE WHOLE OBJECT-AXIS RULE** (2026-09-22/23): the
-flag in force, the mapping (`PLANE` / `CHANNELS`), **`track=`** the leverage, **`⛔EDGE-ON`** when the
-fixed-rate push has taken over, the zone state with its duo, and per held body its three axes and
-leading face. ⛔⛔ **NONE OF THOSE CAN BE ANSWERED BY LOOKING AT THE BODY**: *"it went much too far"*
+⭐⭐ **THE HUD'S `axes` LINE IS THE INSTRUMENT FOR THE WHOLE OBJECT-AXIS RULE** (2026-09-22/23): `fixed@boot PLANE`
+(the only rule left, `D109`), **`track=`** the leverage, **`⛔EDGE-ON`**, and per held body its three
+axes. ⛔⛔ **NONE OF THOSE CAN BE ANSWERED BY LOOKING AT THE BODY**: *"it went much too far"*
 and *"it barely moved"* are one symptom with two causes, and the camera pose separates them — which
 is how the three reports of 2026-09-23 arrived, as three descriptions of one arithmetic. ⚠ The
 numbers are **returned by the rule**, never recomputed here.

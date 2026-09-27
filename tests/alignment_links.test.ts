@@ -4,7 +4,8 @@
  * Design of record: the owner, 2026-09-17 — *"for each aligned object, track its pioneer
  * object … when I shake the pioneer object it shall release all the follower objects"*, and
  * *"make sure the tracking of pioneer and follower objects can be later scaled when there are
- * several objects in the scene"*.
+ * several objects in the scene"*. (⛔ The shake is deleted, `D107`; holding the Pioneer and
+ * tapping empty space releases all its followers now.)
  *
  * ⭐⭐ THE ONES THAT CARRY THE DESIGN are the **reverse-side** checks. The forward map
  * (`follower → pioneer`) is trivial and would pass almost any implementation; every real defect
@@ -34,7 +35,7 @@ describe("⭐⭐ many followers, one Pioneer — the owner's actual case", () =>
   });
 
   it("⭐ a Pioneer with no followers answers empty, not undefined", () => {
-    // ⚠ The caller loops over this every shake; a `undefined` would need a guard at each site.
+    // ⚠ The release-all tap loops over this; a `undefined` would need a guard at each site.
     expect(new AlignmentLinks().followersOf("p")).toEqual([]);
   });
 
@@ -60,7 +61,7 @@ describe("⭐⭐ many followers, one Pioneer — the owner's actual case", () =>
   });
 
   it("⛔⛔ TWO FOLLOWERS ON DIFFERENT FACES OF ONE PIONEER ⇒ TWO CONTOURS", () => {
-    // ⭐ And both still belong to the same Pioneer for the shake rule, which is the property
+    // ⭐ And both still belong to the same Pioneer for the release-all rule, which is the property
     // that would break if the reverse index were keyed by face instead of by body.
     const links = new AlignmentLinks();
     links.link("a", "p", "+x", IDENTITY, ORIGIN);
@@ -144,7 +145,7 @@ describe("⛔⛔ THE REVERSE SIDE — where a two-way index actually breaks", ()
     // ⛔ The caller's whole purpose is to release every follower it is handed, and releasing
     // mutates this index. ⚠ Handing back the live `Set` would have it deleting from the
     // collection it is iterating, which in JS silently SKIPS entries rather than throwing —
-    // so one of two followers would survive a shake, intermittently.
+    // so one of two followers would survive a release-all, intermittently.
     const links = new AlignmentLinks();
     links.link("a", "p", "+x", IDENTITY, ORIGIN);
     links.link("b", "p", "+x", IDENTITY, ORIGIN);

@@ -16,9 +16,9 @@ import type { MotionState } from "./motion";
 /**
  * ⭐⭐⭐ **AN ALIGNED FOLLOWER'S SECOND FINGER DRIVES BOTH AXES AT ONCE** (`D59`, `D108`).
  *
- * ⛔ Contrast `secondFingerDrive`, which returns one axis and zero for the other because the
- * movement mode picks between them. ⚠ The difference is the owner's, stated in the same
- * sentence that asked for this rule, and it is recorded at the top of this file.
+ * ⛔ Contrast `secondFingerDrive` (`depth_translate.ts`), which returns one axis and zero for the
+ * other because the movement mode picks between them — used when `secondTouchDrive` answers
+ * `MODE_PICKS`.
  *
  * ⭐ Per axis, the question is only *is this axis moving?* — `A11`'s hysteretic state, never a
  * speed invented here. ⛔ A second definition of *moving* would be free to disagree with the one
@@ -46,24 +46,15 @@ export function bothAxesSecondDrive(
  * ⛔⛔ **THE RULE IS NOW ABOUT THE BODY, NOT ABOUT WHERE THE FINGER LANDED.** `D51` gave both
  * axes to a finger on the **Pioneer**; the owner has generalised the reason behind it — *an
  * aligned Follower has one rotational DOF left, so there is nothing for a mode to choose between.*
- * ⭐ A free body still has three, and `A16`'s split still earns its keep there.
+ * ⭐ A free body in `ROTATE` still has the mode's pick; in `TRANSLATE` it takes both (`D123`).
  *
- * ⭐⭐ **AND IT SETTLES THE `A16` COLLISION `D58` OPENED, FOR ALIGNED BODIES.** `D58` flips the
- * movement mode when a finger presses outside; `secondFingerDrive` used that same mode to pick
- * roll-or-depth, so the channel alternated on every touch. ⛔ Where the mode no longer picks,
- * that cannot happen. ⚠ **The collision survives on a FREE body**, which this rule does not
- * reach — stated because it is the part a device pass must still judge.
+ * ⚠ History: `D58`'s press toggle made the picked channel alternate on every touch (deleted with
+ * the press toggle, `D66`), and in `ROTATE` an aligned body's FIRST touch once twisted about the
+ * same axis as the second's `dx` — two fingers on one DOF — until `D108` made an aligned body
+ * mode-less (its first touch always translates).
  *
- * ⚠⚠ **WHAT IT DOES *NOT* FIX, AND THE OWNER NAMED IT**: *"rotation mode: the second touch
- * drives only the roll … and conflicts with the dx or dy of the first touch."* ⛔ In `ROTATE` an
- * aligned body's FIRST touch twists about the same constraint axis the second's `dx` turns, so two
- * fingers drive **one DOF**. ⭐ Matching the Pioneer case preserves that overlap rather than
- * removing it — it is present there too, and removing it is a separate rule about what the first
- * touch does while a second is down.
- *
- * ⛔ `SAME_OBJECT` is deliberately untouched: the owner's sentence says *outside any object*, and
- * `A12`'s finger shares a body with the holder where a diagonal would smear one axis into the
- * other by accident — the argument `bothAxesSecondDrive` opens this file with.
+ * ⭐ Where the finger landed no longer matters (`D108`): a second finger on the held body itself
+ * (`A12`'s `SECOND`) is decided by this same table as one on empty space.
  */
 export function secondTouchDrive(
   heldIsAlignedFollower: boolean,

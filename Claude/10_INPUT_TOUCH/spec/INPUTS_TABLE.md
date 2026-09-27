@@ -79,7 +79,7 @@ of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE
 | `FOLLOW` (double press, amber) | `D106` | every alignment is a snapshot; a **seat** carries |
 | the Follower shake, the Pioneer shake | `D107` | tap empty space while holding |
 | `D39`'s re-press undo | `D107` | tap empty space while holding |
-| the flick's drop-alignment branch | `D107` | the flick resets rotation only |
+| the flick's drop-alignment branch | `D107` | — (the flick is deleted, `D110`) |
 | the flick itself (rotation reset) | `D110` | the undo |
 | `D103`'s flick-unsnap (specified) | `D110` | the precise unsnap; the undo |
 | the camera reset by a double tap on a BODY | `D111` | empty space — and the **edge band** is always empty space (`D113`) |

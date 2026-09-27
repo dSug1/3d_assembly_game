@@ -58,7 +58,8 @@
  * and it is exactly the behaviour the owner rejected in report 3.
  *
  * ⛔⛔ **SO INSIDE THE CONE WE USE THE RULE A HAND HAS ALREADY JUDGED**: `depthTranslate`'s
- * fixed-rate push — `dy × trackingFactor × gain`, with `sign(towardGravity)` deciding whether
+ * fixed-rate push (the function is deleted, `D109`; its mapping lives on here) —
+ * `dy × trackingFactor × gain`, with `sign(towardGravity)` deciding whether
  * fingers-up means *away* or *towards*. ⭐ That rule was closed by a device look on 2026-09-16
  * and its sign was itself a defect found by finger, so the degenerate branch is the
  * best-attested mapping in the file rather than an improvisation.
@@ -189,7 +190,7 @@ const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
  *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
  *   is how to see the runaway a hand is being protected from.
  * @param towardGravity `GravityFrame.towardGravity` — +1 looking down on the scene, −1 looking
- *   up at it. ⛔ Only read inside the cone, where it is the sign `depthTranslate` needed.
+ *   up at it. ⛔ Only read inside the cone, where it is the fixed-rate push's sign.
  */
 export function axisTravel(
   input: AxisInputsPx,

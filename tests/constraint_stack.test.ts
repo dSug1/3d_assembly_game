@@ -80,7 +80,7 @@ describe("constraint stack", () => {
  * ⭐⭐⭐ **WHAT A DRAG MAY DO TO A BODY'S ROTATION — asked of the STACK, not of its LENGTH.**
  *
  * ⛔⛔⛔ **THIS REPLACES THREE COPIES OF `stack.length === 1` IN `render/scene.ts`**, found by
- * audit 2026-09-17: the one-finger twist, the second finger's roll, and the `FOLLOW` retarget.
+ * audit 2026-09-17: the one-finger twist, the second finger's roll, and the (since deleted) `FOLLOW` retarget.
  * Each read *"is there exactly one constraint?"*, meant *"is this body aligned?"*, and fell
  * through to **FREE ROTATION** for every other count.
  *

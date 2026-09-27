@@ -1,5 +1,5 @@
 /**
- * THE ALIGNMENT WIRING — `alignFollowerToPioneer` and every path that releases, seats or unseats. ⛔ The decisions are `input/alignment.ts`'s and `core/alignment_links.ts`'s; this file holds the state and the calls.
+ * THE ALIGNMENT WIRING — `alignFollowerTo` and every path that releases, seats or unseats. ⛔ The decisions are `input/alignment.ts`'s and `core/alignment_links.ts`'s; this file holds the state and the calls.
  *
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
@@ -29,7 +29,7 @@ export function alignFollowerTo(
   transientGrip: Held | null,
 ) : boolean {
   if (followerGrip.pressFace === null) {
-    st.lastVerdict = "align: press resolved no face — toggled instead";
+    st.lastVerdict = "align: press resolved no face — no alignment";
     return false;
   }
 
@@ -41,9 +41,8 @@ export function alignFollowerTo(
   // ⭐ A frozen body remains a perfectly good PIONEER; only the Follower role is refused.
   if (st.world.objects.get(followerId)?.frozen === true) {
     st.lastVerdict = `align: ${followerId} is FROZEN — it cannot be a follower`;
-    // ⚠ `false`: the tap was NOT consumed, so it still falls through to the mode toggle.
-    // ⛔ Unlike the cycle case there is nothing to undo here, and a tap that did absolutely
-    // nothing would be the readout-that-lies shape again.
+    // ⚠ `false`: nothing was aligned. ⛔ Unlike the cycle case there is nothing to undo here,
+    // and a tap that did absolutely nothing would be the readout-that-lies shape again.
     return false;
   }
 
@@ -68,9 +67,9 @@ export function alignFollowerTo(
   // edge severs every cycle through it. ⚠ `F → P1 → P2` then making `P2` follow `F` drops
   // `F → P1`, exactly as the two-body case drops `A → B`.
   //
-  // ⛔ A cycle is not cosmetic — `resolvePioneerTurns` is a fixed point over these links, so a
-  // ring of orange bodies would take each other's rotation for ever. ⭐ Severing first makes the
-  // state unrepresentable rather than capped.
+  // ⛔ A cycle is not cosmetic — the cascades are a fixed point over these links, and a ring of
+  // seated bodies would carry each other for ever. ⭐ Severing first makes the state
+  // unrepresentable rather than capped.
   // ⭐⭐ THE DECISION IS `cycleBreaker`'s, in `core/alignment_links.ts`, where a vector reaches
   // it. ⛔ This file holds the CALL and nothing else — the 2026-09-19 lesson, which cost seven
   // mutants that survived the whole suite.
@@ -94,7 +93,7 @@ export function alignFollowerTo(
     .get(followerId)
     ?.faces.find((f) => f.id === followerGrip.pressFace!.faceId)?.normal;
   if (!pioneerWorld || !followerLocal) {
-    st.lastVerdict = "align: face lookup failed — toggled instead";
+    st.lastVerdict = "align: face lookup failed — no alignment";
     return false;
   }
 
@@ -103,8 +102,8 @@ export function alignFollowerTo(
     faceAlignConstraint(followerLocal, pioneerWorld),
   );
   if (capped.refused) {
-    // ⛔ A `MATE` holds the stack. Unreachable today (§4's `6quater` is the only rule that
-    // pushes one and fork C has no flick), and reported rather than silently overridden.
+    // ⛔ A `MATE` holds the stack. Unreachable today (nothing pushes a `MATE` since `6quater`'s
+    // flick was deleted, `D110`), and reported rather than silently overridden.
     st.lastVerdict = "align: REFUSED — a MATE holds the stack";
     return false;
   }
@@ -166,9 +165,8 @@ export function alignFollowerTo(
   // line starts lying.
   const followerFaceId = followerGrip.pressFace.faceId;
   // ⛔⛔ *"THEN THE PIONEERFACE RESETS AS NULL"* WAS AMENDED THE SAME DAY. The owner now
-  // wants its **contour highlighted until the alignment is broken**, and a re-tap on that
-  // same face to break it — so the face's identity is REMEMBERED where it can be drawn and
-  // compared. ⭐ What *is* still discarded is the grip's own `pressFace`: a Pioneer's grip
+  // wants its **contour highlighted until the alignment is broken** — so the face's identity is
+  // REMEMBERED where it can be drawn. ⭐ What *is* still discarded is the grip's own `pressFace`: a Pioneer's grip
   // is being released, and a stale face on a dead grip is the kind of thing a later rule
   // picks up by accident.
   const pioneerFaceId = pioneerFaceIdIn;
@@ -180,19 +178,17 @@ export function alignFollowerTo(
   // clearing the follower, which is now the finger that must KEEP its face for the whole hold.
   //
   // ⚠⚠ **IT COST THE UNDO** (the owner, 2026-09-25: *"if I press again a followerFace and its
-  // pioneerface, the follower simply rotates"*). With the held grip's face wiped, `pressMeaning`
-  // read `heldPressFace = null` against a live `alignedFaceOfHeld`, so *this body already
-  // follows this face* could never be true and `D39`'s re-press never undid anything — and the
-  // NEXT press on the same hold died at `align: press resolved no face` instead.
+  // pioneerface, the follower simply rotates"*). With the held grip's face wiped, the NEXT
+  // alignment on the same hold died at `align: press resolved no face` (history: it also
+  // disabled `D39`'s re-press undo, itself deleted since, `D107`).
   //
   // ⭐⭐ `METHOD`: **the comment right above this line already warned about it, aimed the other
   // way** — *"clearing the held grip's face instead would make the second Follower fail"*. An
   // inversion does not have to touch a line to break it; it only has to change which finger the
   // line names. ⛔ Nothing here can go red, which is why it reached the glass.
   if (transientGrip !== null) transientGrip.pressFace = null;
-  // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
-  // ACTIVE alignment's mode and would recolour an older object's highlight.
-  // ⛔ And WHO it was aligned to, which the constraint itself does not record.
+  // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — and records WHO it was aligned
+  // to, which the constraint itself does not record.
   // ⚠ `link` MOVES an existing link rather than adding a second — a body has one alignment,
   // so re-aligning it must remove it from its previous Pioneer's set.
   // ⛔⛔⛔ **THE BASELINE IS A *WORLD* ORIENTATION — AUDIT FIX, 2026-09-17.**
@@ -201,8 +197,8 @@ export function alignFollowerTo(
   // `worldPlacementOf(…).orientation`. ⭐ The two are IDENTICAL while every body has
   // `parent === null`, which is the whole scene today — so the mismatch is invisible and
   // waits for `3D2`. ⛔ The first PARENTED Pioneer then reads as *turned* on frame one, by
-  // its parent's entire orientation: every `SNAPSHOT` follower releases itself and every
-  // `FOLLOW` follower spins, with nothing having moved.
+  // its parent's entire orientation: every unseated follower releases itself, with nothing
+  // having moved.
   // ⭐⭐ `METHOD`: *a quantity measured in someone else's frame is a different quantity.*
   // The parameter now says which frame it wants, in `AlignmentLinks` as well as here.
   // ⚠ `link` now REFUSES a cycle itself (audit, 2026-09-17), so the verdict is checked
@@ -229,17 +225,10 @@ export function alignFollowerTo(
   // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
   //
   // > *"the mode shall not switch automatically to translation mode after an alignment in
-  // > rotation mode. It makes the game too complicated. Ignore this rule... This will also
-  // > allow me to test the flick after an alignment."*
+  // > rotation mode. It makes the game too complicated. Ignore this rule..."*
   //
-  // ⭐⭐ AND IT COSTS ME AN ARGUMENT I HAD LIKED: the tap's two meanings *coincided* while
-  // the alignment ended in `TRANSLATE`, because that was the same flip `D28`'s toggle would
-  // have made — so both rules could own the gesture without a hand seeing a contradiction.
-  // ⛔ They no longer coincide: **the alignment CONSUMES the tap** and the mode stays
-  // `ROTATE`. That is a real override of `D28`, not a coincidence, and it is the owner's.
-  // ⚠ Nothing is trapped by it: a tap on empty space or on the held object still toggles,
-  // so `TRANSLATE` is one tap away — and staying in `ROTATE` is what makes the rotation
-  // reset testable straight after an alignment.
+  // ⛔ **The alignment CONSUMES the tap** and the mode is left as it was. ⭐ Since `D108` an
+  // aligned body is mode-less anyway.
   st.lastVerdict =
     `align: SNAPSHOT ${followerId}/${followerFaceId} → ` +
     `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${st.behaviour}`;
@@ -364,8 +353,8 @@ export function advanceRotation(st: SceneState, id: ObjectId | undefined) : void
  * ⭐⭐ **DROP IT WHERE IT IS** — for every rule that RELEASES the alignment.
  *
  * ⛔⛔ THE DISTINCTION FROM `settleAlignAnim` IS THE WHOLE POINT, and it is the owner's own
- * rule: releasing an alignment *"does not rotate the first object"*. ⭐ So a shake, a re-tap
- * or a turned Pioneer that arrives mid-flight must **stop** the snap, not finish it —
+ * rule: releasing an alignment *"does not rotate the first object"*. ⭐ So an unalign tap, an
+ * undo or a turned Pioneer that arrives mid-flight must **stop** the snap, not finish it —
  * finishing would be the alignment still acting after it was let go, which is the one thing
  * a release is supposed to guarantee against.
  * ⚠ The object keeps whatever orientation the snap had reached. That is a partial rotation
@@ -440,13 +429,11 @@ export function noteTap(st: SceneState, pressed: Sample,
     mmToPx(st.cfg.doubleTapSlop),
   );
   if (!wasTap) return null;
-  // ⛔ The history is kept for §1.3's double tap whatever the fork, and the toggle depends
-  // on neither its verdict nor on anything being held: *"a single tap by one only
-  // touchpoint ANYWHERE also toggles"* (owner, 2026-09-16).
+  // ⛔ The history is kept for §1.3's double tap whatever the toggle decides — it is what the
+  // double tap and the camera reset read.
   const verdict = st.taps.record(pressed, released.t);
-  // ⛔⛔ EVERY tap toggles — *"a single tap by one only touchpoint anywhere"* — with no
-  // condition left: not the fork (there is one model now), and not whether anything is
-  // held, since the mode is what the NEXT grab inherits.
+  // ⚠ History: *"a single tap by one only touchpoint ANYWHERE also toggles"* (owner, 2026-09-16)
+  // was narrowed by `D108` — see below.
   // ⛔⛔ **AND NOTHING SPENDS IT ANY MORE** (`D66`). Two rules used to: a press that had
   // already toggled (`D58`), and a second touch that had driven the body (`D64`). Both are
   // gone with the press toggle — *"a tap by the second touchpoint can [toggle], as per

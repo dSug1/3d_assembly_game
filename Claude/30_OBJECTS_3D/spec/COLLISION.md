@@ -17,8 +17,9 @@
 (`src/core/collision_shape.ts`, `SceneObject.shape`), and `proximity.surfaceGap` is the **GJK
 distance** between two hulls (`0` when they touch or overlap). Both are vectored, including GJK's
 deep branches (`D49`).
-⛔ Their only readers are the white capture contour and the sway. **Nothing in the move path asks
-whether a body may go somewhere** — a part passes through another, and through the frozen plate.
+⛔ *(Before `3D6`:)* their only readers were the white capture contour and the sway. **Nothing in the move path asked
+whether a body may go somewhere** — a part passed through another, and through the frozen plate.
+✅ *Since:* the white contour is deleted (`D120`), and the move path asks `core/collision.ts` (`3D6`).
 
 ## 2. ⭐⭐⭐ MODULAR BY CONSTRUCTION — two sources that WILL be replaced
 

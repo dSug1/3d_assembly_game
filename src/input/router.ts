@@ -46,8 +46,7 @@
  * three-touchpoint one. ⚠ `IGNORED` is still latched for life, including across the
  * holder's release: it was ignored at press and stays ignored until it lifts.
  *
- * ⛔ RELEASING AN IGNORED TOUCHPOINT RUNS NOTHING — no release verdict, no flick test,
- * no tap history. ⚠ It is the OPPOSITE of the pinch, where lifting one of two fingers
+ * ⛔ RELEASING AN IGNORED TOUCHPOINT RUNS NOTHING — no release verdict, no tap history. ⚠ It is the OPPOSITE of the pinch, where lifting one of two fingers
  * ends the gesture, and the two live three lines apart in the caller.
  *
  * ⭐ ORDER-INDEPENDENCE IS §0's REQUIREMENT, IN ITS OWN WORDS: *"when a touchpoint is
@@ -104,11 +103,11 @@ export interface ReleasedPointer<O> {
   readonly pointer: RoutedPointer<O>;
   /**
    * ⛔ `false` for `IGNORED` **and for `SECOND`**. The caller must not run the §1.3
-   * release verdict, the flick test or the tap history for either — neither began a
+   * release verdict or the tap history for either — neither began a
    * gesture of its own to end.
    * ⚠ A `SECOND` release still MATTERS: it ends whatever two-finger rule was running, as
    * lifting one of two fingers ends the camera pinch. It simply is not a §1.3 gesture, and
-   * conflating "it did something" with "it ran a recognizer" is how a stray flick gets
+   * conflating "it did something" with "it ran a recognizer" is how a stray release verdict gets
    * attributed to a finger that never held anything.
    */
   readonly wasActive: boolean;

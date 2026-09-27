@@ -11,7 +11,7 @@
  * vectors spread over four modules — and the file keeps that shape now that it has won.
  *
  * ⭐⭐ WHAT IT IS, IN ONE SENTENCE: *hold one object, **TAP** a face on another, and the
- * held object turns the minimum amount that makes its own face point the same way.* No
+ * held object turns the minimum amount that makes its own face point AT it* (anti-parallel, `D78`). No
  * flick anywhere — which is the whole reason the owner left fork B:
  *
  * > *"difficult for user to implement, and releases the finger from the object it is
@@ -96,8 +96,7 @@ export function faceAlignConstraint(
 }
 
 /**
- * What a tap means. ⭐ **Three** actions since `D67`, and the alignment one carries the MODE it
- * asks for — see `tapMeaning`.
+ * What a press or tap means (`pressMeaning`'s answer). ⭐ **Three** actions since `D67`.
  *
  * ⛔⛔ **`SWITCH` IS DELETED.** It changed an alignment's MODE in place, because the second
  * touch's tap count used to ask for one. ⚠ The owner moved that decision to the Pioneer's own
@@ -107,9 +106,9 @@ export function faceAlignConstraint(
  * reach — `D28`'s and `D40`'s rule about dormant forks, one type-level down.
  */
 export type TapAction =
-  /** Align these two faces, in `mode`. ⚠ Replaces any existing alignment (the cap of one). */
+  /** Align these two faces. ⚠ Replaces any existing alignment (the cap of one). */
   | "ALIGN"
-  /** `D28`'s movement-mode toggle, which every other tap still means. */
+  /** `D28`'s movement-mode toggle. ⚠ `pressMeaning` never returns it. */
   | "TOGGLE"
   /**
    * ⭐ **DO NOTHING AT ALL** — `D55`'s press verdict when the configuration is not a fresh
@@ -118,7 +117,7 @@ export type TapAction =
    */
   | "NOTHING";
 
-/** What a tap decided. ⛔ `mode` is `null` for `TOGGLE`, which needs none. */
+/** What a tap decided. */
 export interface TapMeaning {
   readonly action: TapAction;
 }
@@ -132,23 +131,21 @@ export interface TapMeaning {
 
 
 /**
- * Everything the PRESS's meaning depends on. ⚠ Deliberately NOT `TapContext`: a press has no
- * tap kind and no `alignMode` to compare against, and reusing that shape would have invited a
- * caller to pass a `kind` the press cannot know.
+ * Everything the alignment decision depends on. ⭐ Asked at the second touch's TAP release since
+ * `D119` (the name `pressMeaning` is historical): the "pressed" body is the one the tap landed on.
  */
 export interface PressContext {
-  /** The body this press landed on — the **FOLLOWER** since `D67`. */
+  /** The body the tap landed on — the **PIONEER** since `D87`. */
   readonly pressedObject: string | null;
-  /** The face under it — the **FollowerFace**. */
+  /** The face under it — the **PioneerFace**. */
   readonly pressedFace: string | null;
-  /** The bodies already held. ⛔ Exactly one, and it is the **PIONEER**. */
+  /** The bodies already held. ⛔ Exactly one, and it is the **FOLLOWER** since `D87`. */
   readonly heldObjects: readonly string[];
   /**
    * The HELD body's own Pioneer, if it has one — the cycle guard in the direction the inversion
    * puts it: if the Pioneer already follows the body being pressed, this would close a loop.
    */
   readonly pioneerOfHeld: string | null;
-  /** The PRESSED body's current FollowerFace (`alignedFaceOf`), if any. */
   /**
    * ⭐ The HELD body's current FollowerFace — it is the FOLLOWER now, so *already aligned to this
    * very face* is a question about IT, not about the body under the finger.
@@ -167,13 +164,11 @@ export interface PressContext {
   readonly heldPressFace: string | null;
   /**
    * ⭐⭐ `D100` — the pressed body and the held one are a SEATED couple (either way round). ⛔ Then
-   * the press aligns, swaps and undoes NOTHING: a seat is released by the UNSNAP gesture only
+   * the press aligns and swaps NOTHING: a seat is released by the UNSNAP gesture only
    * (`unsnap.ts`: hold the Pioneer, press the Follower, then a rapid move), which `pressMeaning`
-   * would otherwise read as `D90`'s swap — and the reverse order as `D39`'s undo — and break the
-   * seat by accident.
+   * would otherwise read as `D90`'s swap and break the seat by accident.
    */
   readonly pressedIsSeatedPartner?: boolean;
-  /** ⭐ The mode comes from the PIONEER's press — see `TapContext`. */
 }
 
 /**
@@ -182,20 +177,18 @@ export interface PressContext {
  * > *"currently, the pioneer is pressed first and the follower is pressed second. Invert that
  * > order. That will allow to align a hitface with a pioneer face."* — the owner, 2026-09-25
  *
- * ⭐⭐ **IT MAKES THE HITFACE GESTURE AND THIS ONE THE SAME RULE.** The fuchsia offer is defined
- * on the HELD body's HitFace and lights faces on other bodies; under `D67`'s ordering the press
- * that accepted an offer had to mean the opposite of the press that made it. ⚠ One ordering, one
- * meaning: *hold the part, press what you want it aligned to.*
+ * ⭐⭐ **IT MAKES THE HITFACE GESTURE AND THIS ONE THE SAME RULE**: the held body's HitFace is the
+ * FollowerFace. ⚠ One ordering, one meaning: *hold the part, tap what you want it aligned to.*
+ * (The fuchsia offer that motivated it is deleted, `D109`.)
  *
  * ⚠⚠ **WHAT IT COSTS, AND `D67` WAS CHOSEN FOR EXACTLY THIS**: several Followers could be aligned
  * to one Pioneer **in one hold** — press one Follower's face, release, press the next. Inverted,
  * each alignment needs its own hold, because the single held body is now the Follower and a
  * Follower is capped at one alignment. ⛔ The pairs are still reachable, just not in one gesture.
  *
- * ⚠ **AND THE FROZEN GUARD CHANGES SIDES AGAIN.** Under `D67` the plate was HELD (`D77` leaves the
- * first touch alone). Inverted, the plate is PRESSED — and `D77` turns a second touch on a frozen
- * body into a MISS unless that face is one the product is currently OFFERING. ⭐ So aligning to
- * the plate now reads: turn the part until the plate's face lights fuchsia, then press it.
+ * ⚠ **AND THE FROZEN GUARD CHANGES SIDES AGAIN.** Under `D67` the plate was HELD. Inverted, the
+ * plate is the Pioneer — and since `D119` every touch on a frozen body is a MISS whose TAP aligns
+ * the held body to the face under it. ⭐ So aligning to the plate reads: hold the part, tap the plate.
  *
  * ⭐ `D67`'s own text, kept because a reversal is only legible beside what it reverses:
  *
@@ -212,10 +205,8 @@ export interface PressContext {
  * grip's face instead of the held one, which is the same rule it always had (*a transient grip
  * must not leave a stale face behind*) pointed at the finger that is actually transient.
  *
- * ⚠⚠ **AND THE FROZEN GUARD CHANGES SIDES, WHICH A HAND MEETS IMMEDIATELY.** The base plate can
- * still be a Pioneer — by being touched **first** — and can never be a Follower. So *align a
- * part to the plate* becomes *hold the plate, then press the part*, the reverse of the habit.
- * ⛔ Stated here because it is the commonest gesture in this scene, not a corner case.
+ * ⚠ History (`D67`): the plate was then a Pioneer by being touched **first** — *hold the plate,
+ * then press the part*. Superseded by `D87` and `D119` above; the plate can never be a Follower.
  *
  * ⚠ The refusals are the same four, each read from the other end: no face, not exactly one held
  * body, the same body twice, and the cycle.
@@ -232,10 +223,9 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
   if (follower === ctx.pressedObject) return nothing;
   // ⛔⛔ `D100`: a seated couple's second touchpoint belongs to the UNSNAP gesture.
   if (ctx.pressedIsSeatedPartner === true) return nothing;
-  // ⛔⛔ **THE ONE CONFIGURATION A PRESS DOES NOT ALIGN**: the press would produce EXACTLY the
-  // alignment that already exists — same Pioneer, same PioneerFace, same FollowerFace. ⭐ Then it
-  // does nothing and the RELEASE undoes it (`D39`), so a hand that presses and holds has not
-  // silently lost the alignment it is looking at.
+  // ⛔⛔ **THE ONE CONFIGURATION A TAP DOES NOT ALIGN**: it would produce EXACTLY the alignment
+  // that already exists — same Pioneer, same PioneerFace, same FollowerFace. ⭐ Then it does
+  // nothing (`D39`'s release-undo that used to follow is deleted, `D107`).
   //
   // ⛔⛔⛔ **ALL THREE, AND THE MISSING TWO WERE A REAL DEFECT** (the owner, 2026-09-25: *"instead
   // of aligning, it disengages the alignment"*). `D87`'s first build compared
@@ -267,7 +257,7 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
   // ⭐⭐ **A SWAP CANNOT CLOSE A LOOP, BECAUSE A FOLLOWER IS CAPPED AT ONE ALIGNMENT**: `B→A` only
   // makes a ring if `A→B` survives it, and the rule replaces rather than adds. ⛔ `scene.ts`
   // releases the prospective Pioneer's own link and then makes the new one — one gesture, one net
-  // relation, the roles exchanged. ⭐ That is the owner's *"the first touch is on the hitface which
+  // relation, the roles exchanged (the release is `alignFollowerTo`'s, via `cycleBreaker`). ⭐ That is the owner's *"the first touch is on the hitface which
   // potentially becomes a followerface"* holding **without an exception**, which is the whole
   // argument: a rule with one configuration it silently refuses is a rule a hand cannot trust.
   return { action: "ALIGN" };
@@ -283,8 +273,8 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
 // leaves the constraint pointing where that face *used to* look: the Follower still obeys a
 // target nothing on the glass corresponds to any more, and neither highlight says so.
 //
-// ⭐ The owner's two readings, behind one flag, because they are opposite answers to *what
-// does an alignment MEAN* — a snapshot of a direction, or a relationship between two faces:
+// ⭐ History: the owner's two readings — a snapshot of a direction, or a relationship between two
+// faces — stood here behind one flag, then as a gesture (`D42`). Only the snapshot survives:
 
 // ⛔ `AlignMode` and `alignModeFor` are DELETED (audit 2026-09-27): since `D106` every alignment is a
 // snapshot, and a one-member type carried through every call was noise.
@@ -309,13 +299,9 @@ export const PIONEER_TURN_EPSILON_RAD = 1e-4;
 /**
  * Did the Pioneer's object turn, and what follows from it?
  *
- * ⭐⭐ THE DELTA IS A **WORLD** ROTATION — `now ∘ before⁻¹` — which is what makes `FOLLOW`
- * exact rather than approximate: applying the same world rotation to both objects preserves
- * the angle between any two of their directions, so the Follower's aligned normal keeps its
- * **anti-parallel** relation to the Pioneer's face normal without solving anything.
- * ⛔ The opposite composition (`before⁻¹ ∘ now`) is the rotation expressed in the OBJECT's
- * own frame, and using it here would turn the Follower about the Pioneer's axes — a sign
- * error with no symptom at the identity, which is `METHOD`'s favourite shape.
+ * ⭐⭐ THE DELTA IS A **WORLD** ROTATION — `now ∘ before⁻¹`; only its ANGLE is read, which is
+ * the same for either composition. ⛔ Any turn past the epsilon releases the Follower (`FOLLOW`,
+ * which applied the delta, is deleted, `D106`).
  *
  * @param before the Pioneer's orientation when it was last observed.
  * @param now its orientation this frame.
@@ -355,10 +341,10 @@ export interface PioneerMove {
  *
  * ⭐⭐ **THE REAL RULE IS THE ONE THAT WAS ALREADY THERE**: `SNAPSHOT` means *I copied your pose
  * once*, so the moment the Pioneer's pose changes the copy is stale and the relation ends;
- * `FOLLOW` means *I am tied to you*, so it moves. ⛔ Position and orientation are two components
- * of one pose, and a rule that answered differently for each was **the asymmetry**, not the fix.
- * ⭐ `METHOD`: *when two channels exist, the correction belongs to the RULE* — so this function
- * sits beside `pioneerTurned` and answers in the same three verdicts.
+ * `FOLLOW` meant *I am tied to you*, so it moved (deleted, `D106`). ⛔ Position and orientation
+ * are two components of one pose, and a rule that answered differently for each was **the
+ * asymmetry**, not the fix. ⭐ `METHOD`: *when two channels exist, the correction belongs to the
+ * RULE* — so this function sits beside `pioneerTurned` and answers in the same verdicts.
  *
  * @param before the Pioneer's position when it was last observed.
  * @param now its position this frame.
@@ -372,18 +358,19 @@ export function pioneerMoved(before: Vec3, now: Vec3): PioneerMove {
 }
 
 /**
- * ⭐ Re-read an alignment's target from where the Pioneer's face points **now** (`FOLLOW`).
+ * ⭐ Re-read an alignment's target from where the Pioneer's face points **now** — used by the
+ * seat (`seat_wiring.ts`), which carries its Follower with the Pioneer (`FOLLOW`, its first
+ * caller, is deleted, `D106`).
  *
  * ⚠ It keeps §1.4's doctrine rather than breaking it: the constraint still holds a WORLD
  * direction, and a camera orbit still cannot redefine it. What changes is that the direction
- * is refreshed from the face it was taken from — which is the whole difference between the
- * owner's two readings, expressed as one field.
+ * is refreshed from the face it was taken from.
  *
  * @param pioneerWorldNormal ⛔⛔ **THE PIONEER'S FACE NORMAL, NOT A TARGET.** It goes through
  *   `alignTargetFor` exactly as the tap does, so the anti-parallel sign is applied in ONE place
  *   for both paths. ⚠ It took a `targetWorld` until 2026-09-23, and leaving it that way would
- *   have meant a `FOLLOW` cascade quietly re-aligning its followers PARALLEL one frame after a
- *   tap aligned them anti-parallel — a sign error with no symptom until the Pioneer moves.
+ *   have meant a retarget quietly re-aligning its followers PARALLEL one frame after a tap
+ *   aligned them anti-parallel — a sign error with no symptom until the Pioneer moves.
  */
 export function retargetAlignment(
   c: Constraint,
@@ -405,9 +392,9 @@ export function retargetAlignment(
  * `OUTSIDE` — so the mouse needs no rule of its own. ⛔ A second, desktop-only copy would be two
  * implementations of one gesture, free to disagree.
  *
- * ⛔ Exactly ONE held body, and it must be ALIGNED. ⚠ With nothing aligned the tap keeps its old
- * meaning — `D28`'s mode toggle — so this adds an unalign without taking a toggle away from any
- * configuration that had one to spare. ⚠ With two held bodies *which one?* has no answer.
+ * ⛔ Exactly ONE held body, ALIGNED or a PIONEER (`D107`). ⚠ Otherwise the tap keeps its old
+ * meaning — `D28`'s mode toggle (`D108`: a free body only). ⚠ With two held bodies *which one?*
+ * has no answer.
  *
  * ⚠ The tap is CONSUMED: it releases the alignment and does NOT also toggle the mode — one gesture,
  * one consequence, the rule `D38` set for the alignment tap.
@@ -421,7 +408,7 @@ export function outsideTapRelease(
   // ⭐ Its OWN alignment first: the nearer relation is the one a hand holding the body means.
   if (heldIsAligned) return "SELF";
   // ⭐⭐ `D107` — and holding a PIONEER, the same tap releases EVERY follower aligned to it: the
-  // Pioneer shake's job, without the shake (*"a complicated movement to execute"*).
+  // deleted Pioneer shake's job, without the shake (*"a complicated movement to execute"*).
   if (heldFollowerCount > 0) return "FOLLOWERS";
   return null;
 }

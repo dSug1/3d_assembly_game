@@ -323,8 +323,8 @@ export class MotionTracker {
   private readonly ay = new AxisBand();
   private lastStep: { dx: number; dy: number } = ZERO_STEP;
   /**
-   * ⭐⭐ The recent samples, for the speeds below. ⚠ Trimmed on every push, so it is the flick's
-   * own window and not *"whatever samples happen to be in memory"* — which would make the
+   * ⭐⭐ The recent samples, for the speeds below. ⚠ Trimmed on every push, so it is `flickWindow`
+   * and not *"whatever samples happen to be in memory"* — which would make the
    * estimate depend on how long the finger has been down.
    */
   private buffer: Sample[] = [];
@@ -350,7 +350,7 @@ export class MotionTracker {
   }
 
   /**
-   * ⭐⭐⭐ **THIS FINGER'S SPEED, mm/s — THE SAME ESTIMATOR THE RECOGNIZER AND THE FLICK USE.**
+   * ⭐⭐⭐ **THIS FINGER'S SPEED, mm/s — THE SAME ESTIMATOR THE RECOGNIZER AND THE LIFT SPEED USE.**
    *
    * ⛔⛔ `terminalSpeedPxPerS(trimBuffer(…))`, called and not re-implemented: *there is one
    * definition of how fast is this finger*, and this project has the scar for the alternative —

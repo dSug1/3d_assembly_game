@@ -52,29 +52,11 @@ export function startRenderLoop(st: SceneState): void {
       for (const tracker of grip.anchorMotion.values()) tracker.tick(now);
     }
 
-    // ⭐⭐ `A16`: re-derived EVERY FRAME, here, before anything reads it.
-    // ⛔⛔ The capture highlight pass is DELETED with its white outlines and the swing (`D120`).
+    // ⛔⛔ The capture highlight pass (`A16`) is DELETED with its white outlines, and the approach
+    // camera swing with it (`D120`).
 
-    // ⭐ The leading face and its gizmo, AFTER the highlight — the zone edge may have just
-    // re-decided the axes, and the gizmo is documented to point along them. ⚠ A gizmo drawn
-    // first would show the previous basis for one frame, at exactly the moment a hand is
-    // looking at it to see what changed.
+    // ⭐ The axis gizmo, redrawn every frame from the body's current axes.
     refreshAxisGizmo(st);
-
-    // ⭐⭐⭐ **AND THE APPROACH SWING IS PUT ON THE CAMERA HERE** — device-reported, 2026-09-19:
-    // *"not working. the camera does not orbit."*
-    //
-    // ⛔⛔ THE LAW WAS RIGHT AND THE WIRING WAS ABSENT. `applyCamera()` is called only by
-    // CAMERA events — reset, startup, pinch, a slider, the orbit drag — and an approach is a
-    // finger translating an OBJECT, during which not one of them fires. ⚠ So the yaw was
-    // recomputed every frame and never written. ⭐ `METHOD`: *a rule that is never called is
-    // indistinguishable from a rule that is wrong*, and only the glass can tell them apart:
-    // `approach_swing.ts` has eleven green vectors and every one of them still passed.
-    //
-    // ⚠ Skipped while the camera reset is flying home — that animation writes the whole pose
-    // every frame, and two writers would fight for the camera with the reset winning by
-    // arriving second. ⛔ The swing's own return to zero is unaffected: it is a pure function
-    // of the gap, so whatever it missed it picks up on the next frame it is allowed to write.
 
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally
@@ -136,7 +118,7 @@ export function startRenderLoop(st: SceneState): void {
     // ⛔ HERE RATHER THAN IN THE POINTER HANDLER, deliberately: the rotation paths return early
     // in four places (the refusal, the twist, the roll, the free drag), and a check bolted to
     // each of them is four chances to forget one. ⭐ The render loop sees every grip, every
-    // frame, whatever the gesture did — `A15`'s discipline: *ask the state, not the gesture.*
+    // frame, whatever the gesture did: *ask the state, not the gesture.*
     //
     // ⚠ No edge-trigger and no rest test. A frame in which nothing crossed a boundary advances
     // nothing, so asking every frame costs a comparison and cannot repeat a step.
@@ -170,36 +152,19 @@ export function startRenderLoop(st: SceneState): void {
       }
     }
 
-    // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1/C2, checked once per frame.
+    // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1, checked once per frame.
     //
     // ⛔⛔ THE CASE HAD NO RULE AT ALL UNTIL 2026-09-17, AND ITS ABSENCE WAS INVISIBLE: an
     // alignment stores a FROZEN world direction, so turning the object that direction was read
-    // FROM leaves the Follower obeying a target nothing on the glass corresponds to — and
-    // both highlights keep saying it is fine. ⭐ Two readings, behind one flag, because *what
-    // an alignment means* is the owner's question and not mine.
-    //
-    // ⚠ CHECKED HERE, AGAINST THE MODEL, and not at a pointer event: the Pioneer can be turned
-    // by any rule — a drag, a twist, a rotation reset — and watching the ORIENTATION catches
-    // every one of them without enumerating them. ⛔ The same discipline as `A15`'s raycast:
-    // ask the state, not the gesture.
-    // ⭐⭐⭐ **EVERY FOLLOWER WATCHES ITS OWN PIONEER, EVERY FRAME.**
-    //
-    // The owner, 2026-09-17: *"while the initial follower object is blue, if the pioneer object
-    // is rotated because it is aligned with another object, the alignment of the initial
-    // follower object shall be released"*, and *"the tracking shall enable a pioneer object to
-    // rotate all its follower objects which are orange"*.
-    //
-    // ⛔⛔ **BOTH OF THOSE ARE ONE GENERALISATION, NOT TWO RULES.** `pioneerTurned` already
-    // returns `RELEASE` for a `SNAPSHOT` (cyan) follower and `FOLLOW` for an orange one; it was
-    // simply being asked **once**, about the single active alignment. ⭐ Asked per LINK it
-    // covers every follower of every Pioneer, and chains fall out for free: an orange body
-    // rotates when its own Pioneer turns, and anything cyan aligned to THAT body then sees its
-    // baseline break and releases.
+    // FROM leaves the Follower obeying a target nothing on the glass corresponds to.
+    // ⭐⭐⭐ **EVERY UNSEATED FOLLOWER WATCHES ITS OWN PIONEER, EVERY FRAME**, and is released when
+    // it turns (the owner, 2026-09-17: *"if the pioneer object is rotated … the alignment of the
+    // initial follower object shall be released"*). ⛔ C2 — the FOLLOW that rotated its followers —
+    // is deleted (`D106`); a SEATED follower is carried by the tree instead.
     //
     // ⚠ CHECKED AGAINST THE MODEL, never at a pointer event: a Pioneer can be turned by a drag,
-    // a twist, a rotation reset, a slerp, or another alignment's `FOLLOW`. ⭐ Comparing poses
-    // catches all of them without enumerating any — `A15`'s discipline, *ask the state, not the
-    // gesture.*
+    // a twist, a slerp or a seat. ⭐ Comparing poses catches all of them without enumerating any
+    // — *ask the state, not the gesture.*
     //
     // ⚠⚠ ONE FRAME OF LAG IS POSSIBLE IN A CHAIN AND IS ACCEPTED: the links are visited in
     // insertion order, so a follower processed before its Pioneer rotates sees the turn on the
@@ -247,6 +212,8 @@ export function startRenderLoop(st: SceneState): void {
     // > *"Currently, if in rotation mode, a rotation of the pioneer controls the same rotation
     // > of all the orange follower objects. Do the same with translation: a translation of
     // > pioneer controls the same translation of all the follower objects."* — the owner
+    // ⚠ History: the orange FOLLOW is deleted (`D106`) and `D70` below releases an UNSEATED
+    // follower instead; a SEATED one rides the tree.
     //
     // ⛔ Run AFTER the turn cascade and read the same index. ⚠ The two cannot fight: a turn is
     // about a body's orientation and a move about its position, and a rotation about a body's
@@ -421,10 +388,8 @@ export function startRenderLoop(st: SceneState): void {
     // ⚠ The local face centre and normal come from the MODEL, which is where faces live.
     // ⭐⭐ BOTH MARKERS, ONE PATH — the filled quad on the Follower, the contour on the
     // Pioneer, each drawn only while the state that MEANS something is present.
-    // ⭐⭐⭐ **EVERY ALIGNED OBJECT KEEPS ITS FOLLOWERFACE**, asked of the MODEL, every frame.
-    // ⛔ `selectedFace` is no longer what decides this — it names the ACTIVE alignment and is
-    // still what the tap, shake and flick rules read, but it is one record and the owner needs
-    // to see all of them at once.
+    // ⭐⭐⭐ **EVERY ALIGNED OBJECT KEEPS ITS FOLLOWERFACE**, asked of the MODEL, every frame
+    // (`selectedFace`, the one active-alignment record, is deleted).
     //
     // ⭐⭐ **THIS LOOP COSTS *ALIGNED BODIES*, NOT *SCENE BODIES*, AND THAT IS DELIBERATE.** It
     // ran over `world.objects.keys()` when there were three; at sixty frames a second the shape
@@ -432,7 +397,7 @@ export function startRenderLoop(st: SceneState): void {
     // that matter. ⚠ `links.prune` reconciles the index against the model and RETURNS what it
     // dropped, so retiring a released body's markers needs no second sweep either.
     // ⛔ `prune` reconciles the index against the model — it catches releases that evict a
-    // constraint WITHOUT unlinking (the shake-on-self path does exactly that). ⚠ Its return
+    // constraint WITHOUT unlinking. ⚠ Its return
     // value is deliberately NOT used to decide what to hide; see below.
     for (const id of st.links.prune((f) => alignedFaceOf(st.world, f) !== null)) {
       unseatWorld(st, id);
@@ -446,7 +411,7 @@ export function startRenderLoop(st: SceneState): void {
     // > *"the rotation of the pioneer currently removes the highlight of the pioneer but does
     // > not release the alignment of the cyan follower object"*, then the clue that cracked it:
     // > *"if the highlight of the pioneer is toggled off, the shake on the cyan follower is not
-    // > working any longer"*
+    // > working any longer"* (the shake is deleted since, `D107`)
     //
     // ⚠⚠ **THE RELEASE WAS WORKING ALL ALONG.** The constraint was evicted and the link
     // removed; what failed is that the follower's markers were never HIDDEN, so the body still
@@ -455,8 +420,8 @@ export function startRenderLoop(st: SceneState): void {
     // which was correct and is now vectored twice over.
     //
     // ⛔⛔ THE CAUSE WAS THE SHAPE OF THE LOOP: it hid only what `prune` dropped, and
-    // `releaseAlignmentOf` unlinks DIRECTLY — so for every release that went through it (the
-    // shake sweep, the re-tap, the rotation reset, a turned Pioneer, the cycle guard) `prune`
+    // `releaseAlignmentOf` unlinks DIRECTLY — so for every release that went through it (then:
+    // the shake sweep, the re-tap, the rotation reset, a turned Pioneer, the cycle guard) `prune`
     // never saw the body and nothing ever hid its markers.
     // ⭐⭐ `METHOD`: *prefer the structure that cannot express the defect.* Hiding everything
     // not currently wanted is correct **whatever** removed the link, and needs no cooperation
@@ -516,8 +481,7 @@ export function startRenderLoop(st: SceneState): void {
           }
           marker.xray.isVisible = xrayOn;
         }
-        // ⭐⭐ AND THE WHOLE BODY, in the alignment's colour — its own mesh edges, offset a
-        // little further out than the white body outline so the two nest rather than z-fight.
+        // ⭐⭐ AND THE WHOLE BODY, in the alignment's colour — its own mesh edges.
         const o = outlinesFor(st, id);
         if (o !== null) {
           if (!o.align.color.equals(want)) o.align.color.copyFrom(want);
@@ -544,8 +508,9 @@ export function startRenderLoop(st: SceneState): void {
           m.loop.isVisible = true;
         }
       }
-      // ⭐⭐⭐ **THE HITFACE WEARS A FUCHSIA CONTOUR WHILE IT IS ACTIVE** — the owner, 2026-09-25:
-      // *"when active, highlight the contour of the hitface in fuchsia."*
+      // ⭐⭐⭐ **THE HITFACE WEARS A FUCHSIA CONTOUR WHILE IT IS ACTIVE** (`CANDIDATE_COLOUR`, which
+      // colours nothing else since `D109`) — the owner, 2026-09-25: *"when active, highlight the
+      // contour of the hitface in fuchsia."*
       //
       // ⭐ OUTLINED, not filled, and that is the existing grammar rather than a new one: a FILL
       // says *this face moved* (the Follower); a CONTOUR says *this face is the one being aimed*.
@@ -556,7 +521,7 @@ export function startRenderLoop(st: SceneState): void {
         const m = faceMarkerFor(st, hitFace.objectId, hitFace.faceId);
         if (m !== null) {
           // ⚠ A Pioneer contour on the same face KEEPS its amber: an established relation outranks
-          // an offer, which is the order the fills already use.
+          // the HitFace.
           if (!wantedPioneerKeys.has(key)) {
             if (!m.loop.color.equals(CANDIDATE_COLOUR))
               m.loop.color.copyFrom(CANDIDATE_COLOUR);

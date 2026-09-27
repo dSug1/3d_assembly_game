@@ -3,7 +3,8 @@
  *
  * > *"for each aligned object, track its pioneer object. If the said pioneer object is later
  * > shaken, the alignment of the aligned object shall be released … when I shake the pioneer
- * > object it shall release all the follower objects"* — the owner, 2026-09-17
+ * > object it shall release all the follower objects"* — the owner, 2026-09-17 (⛔ the shake is
+ * > deleted, `D107`: a tap on empty space while holding the Pioneer releases them now)
  *
  * > *"make sure the tracking of pioneer and follower objects can be later scaled when there are
  * > several objects in the scene"* — the owner, same day
@@ -31,8 +32,8 @@
  * aligned to the SAME face of the same Pioneer are outlined once, not twice.
  *
  * ⛔ The first implementation kept only `follower → pioneer` and answered the second question
- * by scanning every entry. ⚠ That is fine for three bodies and wrong in shape: the shake
- * handler and the per-frame highlight pass would both have walked the whole scene, and the
+ * by scanning every entry. ⚠ That is fine for three bodies and wrong in shape: the release
+ * handler and the per-frame marker pass would both have walked the whole scene, and the
  * **render pass is the one that matters** — it runs 60 times a second whatever the hand is
  * doing. ⭐ `alignedObjects()` is what lets the caller iterate the handful of aligned bodies
  * instead of every body in the world.
@@ -58,14 +59,13 @@ export interface PioneerRef {
    * ⛔⛔ **PER LINK, NOT ONE GLOBAL BASELINE, AND THAT IS WHAT MAKES CHAINS WORK.** The owner,
    * 2026-09-17: *"while the initial follower object is blue, if the pioneer object is rotated
    * because it is aligned with another object, the alignment of the initial follower object
-   * shall be released."* ⭐ A `FOLLOW` body rotates when ITS pioneer turns; anything aligned to
-   * it in `SNAPSHOT` must then release. ⚠ With a single baseline only the ACTIVE alignment was
-   * watched, so a chain was invisible.
+   * shall be released."* ⭐ Each link watches ITS OWN Pioneer (the rotating `FOLLOW` half of the
+   * chain is deleted, `D106`). ⚠ With a single baseline only the ACTIVE alignment was watched, so
+   * a chain was invisible.
    *
    * ⭐⭐ **AND WATCHING THE ORIENTATION IS CAUSE-AGNOSTIC, which is the whole reason the rule
-   * is expressed this way**: a finger, a twist, a rotation reset, a slerp, or another
-   * alignment's `FOLLOW` all move the Pioneer, and comparing poses catches every one without
-   * enumerating them. ⛔ The same discipline as `A15`'s raycast: *ask the state, not the
+   * is expressed this way**: a finger, a twist, a slerp or a seat all move the Pioneer, and
+   * comparing poses catches every one without enumerating them. ⛔ *Ask the state, not the
    * gesture.*
    *
    * ⛔⛔ **IT IS A *WORLD* ORIENTATION, THROUGH THE PARENT CHAIN — NOT `local`.** An audit on
@@ -73,8 +73,8 @@ export interface PioneerRef {
    * compared it against `worldPlacementOf(…).orientation`. ⚠ The two agree exactly while every
    * body is unparented, which is the whole scene before `3D2` — so the defect is silent today
    * and fires on the first assembly: a parented Pioneer reads as *turned* by its parent's whole
-   * orientation on the very first frame, releasing every `SNAPSHOT` follower and spinning every
-   * `FOLLOW` one, with nothing having moved. ⭐ Said in the type, because *"an orientation"* is
+   * orientation on the very first frame, releasing every unseated follower with nothing having
+   * moved. ⭐ Said in the type, because *"an orientation"* is
    * not one quantity.
    */
   readonly orientation: Quat;
@@ -134,10 +134,9 @@ export class AlignmentLinks {
     // ⭐⭐ `object_model.ts` already argues the general form for `frozen`: *a constraint
     // enforced at the one place the quantity is stored is an INVARIANT; enforced anywhere else
     // it is a convention, and the next caller added will not know about it.* A cycle here is
-    // worse than a wrong pose — `resolvePioneerTurns` is a fixed point over these links, so a
-    // ring of `FOLLOW` bodies takes each other's rotation for ever and the glass FREEZES.
-    // ⚠ The resolver's cap and the walk's own `seen` set both stay: they are now defence in
-    // depth rather than the only defence.
+    // worse than a wrong pose — while `FOLLOW` existed (`D106` deleted it), `resolvePioneerTurns`
+    // was a fixed point over these links, so a ring of `FOLLOW` bodies took each other's rotation
+    // for ever and the glass FROZE. ⚠ The walk's own `seen` set stays as defence in depth.
     //
     // ⛔ **BEFORE `unlink`, which is the whole subtlety.** `link` MOVES a link rather than
     // adding one, so it begins by unlinking the follower — and a refusal that had already run
@@ -221,8 +220,8 @@ export class AlignmentLinks {
     this.seated.delete(follower);
     if (previous === undefined) return;
     this.forward.delete(follower);
-    // ⚠ The reverse index is keyed by the Pioneer OBJECT, never by the face — the shake rule
-    // acts on a body, and a body's faces must not each own a separate follower set.
+    // ⚠ The reverse index is keyed by the Pioneer OBJECT, never by the face — the release-all
+    // tap (`D107`) acts on a body, and a body's faces must not each own a separate follower set.
     const set = this.reverse.get(previous.objectId);
     if (set === undefined) return;
     set.delete(follower);
@@ -330,10 +329,9 @@ export class AlignmentLinks {
    * reaches by accident. ⚠ But `F → P1 → P2` then `P2 → F` is the same defect one link
    * further out, and a one-step check would wave it through.
    *
-   * ⭐⭐ **AND A CYCLE IS NOT A COSMETIC PROBLEM.** `resolvePioneerTurns` is a fixed point over
-   * these links: a cycle of `FOLLOW` bodies would each take the other's rotation, for ever.
-   * ⛔ That is why the resolver is capped — the cap stops a hung render loop, which is the
-   * worst failure this project can ship because the glass simply freezes with no error.
+   * ⭐⭐ **AND A CYCLE IS NOT A COSMETIC PROBLEM.** While `FOLLOW` existed (deleted, `D106`), a
+   * cycle of `FOLLOW` bodies would each take the other's rotation, for ever — a hung render loop,
+   * the worst failure this project can ship because the glass simply freezes with no error.
    * ⭐ This method makes the state **unrepresentable** instead, which is the better half of the
    * defence: `METHOD`'s *prefer the structure that cannot express the defect.* ⚠ The cap stays
    * anyway — two guards against a frozen screen is not one too many.
@@ -395,7 +393,7 @@ export class AlignmentLinks {
    * ⭐⭐⭐ **RECONCILE AGAINST THE MODEL** — the only lifetime rule, and it runs every frame.
    *
    * ⛔⛔ THIS IS WHAT KEEPS A REMEMBERED FACT HONEST. The constraint stack is authoritative: a
-   * shake, a re-tap, a rotation reset or an eviction can drop an alignment through paths this
+   * tap, an undo, a turned Pioneer or an eviction can drop an alignment through paths this
    * class never sees. ⭐ So rather than asking every one of them to call `unlink`, the index is
    * checked against the model each frame and anything the model no longer supports is dropped.
    * ⚠ `METHOD`: *prefer the structure that cannot express the defect* — a link cannot outlive

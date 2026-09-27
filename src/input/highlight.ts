@@ -1,35 +1,12 @@
 /**
- * ⭐⭐⭐ **`A16` — WHEN THE TWO WHITE HIGHLIGHTS APPEAR, AND WHEN THEY DO NOT.**
+ * ⭐⭐ **TWO DECISIONS LEFT FROM `A16`'s HIGHLIGHT MODULE**: `captureOffsetM` (the capture offset
+ * in world metres — the snap's reach) and `translatesOnDrag` (does this drag translate or rotate).
  *
- * Design of record: [`Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`] §12 (`A16`).
+ * ⛔ The white capture highlight itself — `highlightedPair`, its outlines and its zone edge — is
+ * DELETED (`D120`), and `alignmentMatchesTarget` with it. The file keeps its name because both
+ * survivors were born here. Design history: `Claude/10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md` §12.
  *
- * > *"two highlights possible only when the first object is aligned && translation by one
- * > touchpoint or two touchpoints and distance below threshold"* — the owner, 2026-09-17
- *
- * > *"modify the rule: the white contour does not necessitate the object to be aligned to
- * > toggle on and off. I want to remove the 'object is aligned' from the approach logic (we
- * > will see how to handle the alignment for the mate logic later on)"* — the owner, same day
- *
- * ⛔⛔ **SO THE RULE IS NOW TWO CONDITIONS, NOT THREE**: a drag that TRANSLATES, and a body
- * within the radius. ⚠ The alignment requirement was added and removed within the day, and the
- * sequence is worth keeping because neither end of it was arbitrary:
- *
- * 1. The first build hung the contours on **proximity alone**, in any movement mode.
- * 2. A hand rejected that: *"highlight both objects even if they are not aligned: this is
- *    NOK"*, then *"that's also the case with single object translation."*
- * 3. I read that as *require the alignment* — and it did fix the symptom.
- * 4. ⭐⭐ The owner then removed the alignment and KEPT the translation condition, which
- *    suggests the real objection in (2) was the contours appearing during a **rotation**, not
- *    their appearing unaligned. ⚠ Condition 2 did not exist when the complaint was made, so
- *    both readings fitted the evidence and I picked the stronger one without saying so.
- *
- * ⭐⭐ **WHAT WHITE MEANS NOW, IN ONE SENTENCE**: *these two bodies are close enough to
- * approach, and the drag in progress could move them.* ⛔ The alignment is no longer part of it
- * — it returns for the MATE, which is a different and irreversible act.
- * ⚠ `alignmentMatchesTarget` below is therefore **kept and NOT WIRED**, declared rather than
- * deleted; see its header.
- *
- * ⛔ ENGINE-FREE. Every function DECIDES; the caller draws.
+ * ⛔ ENGINE-FREE. Every function DECIDES; the caller acts.
  */
 import type { Behaviour } from "./mode_toggle";
 import { mmToPx } from "../core/units";
@@ -60,6 +37,8 @@ import { trackingMetresPerPx } from "./translate";
  * *in range* measured from one and *out of range* measured from the other — a rule with two
  * answers. ⭐ Stated because it is a modelling choice, not an approximation.
  *
+ * ⭐ Its readers today are the snap (`D100`, a Follower captures within this reach of its cursor)
+ * and the sway's assembly test.
  * ⛔ Returns 0 for a degenerate viewport or camera, which reads as *nothing captures* — the
  * safe direction, and the same convention `trackingMetresPerPx` already uses.
  */
@@ -74,12 +53,10 @@ export function captureOffsetM(
 }
 
 /**
- * ⭐⭐⭐ **`A16`'s CONDITION 2 — *"translation by one touchpoint or two touchpoints"*.**
+ * ⭐⭐⭐ **DOES THIS DRAG TRANSLATE?** — born as `A16`'s condition 2 (*"translation by one
+ * touchpoint or two touchpoints"*), the highlight it once gated being deleted (`D120`).
  *
- * ⛔⛔ **THIS IS THE ONE PLACE THAT RULE LIVES, AND `scene.ts` NOW READS IT TOO.** The render
- * file already decided the same thing for its own purposes
- * (`mode = objects().length === 1 ? behaviour : "TRANSLATE"`), and a second copy here would be
- * two implementations of one rule — free to disagree, with nothing to catch it. ⭐ `METHOD`'s
+ * ⛔⛔ **THIS IS THE ONE PLACE THAT RULE LIVES**, and `pointer_wiring.ts` reads it. ⭐ `METHOD`'s
  * shape: *one constant lives in exactly one place*, and so does one rule.
  *
  * ⭐ Why two held objects translate in EITHER mode: they are two holders, and the mode is
@@ -109,7 +86,7 @@ export function captureOffsetM(
  * touch on the twist would put **two fingers on one DOF**, which is precisely the conflict the
  * owner reported: *"… and conflicts with the dx or dy of the first touch."*
  *
- * ⚠ **KEYED ON PRESENCE, NEVER ON MOTION** — `A15`'s rule, and this obeys it: the second
+ * ⚠ **KEYED ON PRESENCE, NEVER ON MOTION**, and this obeys it: the second
  * touchpoint being DOWN is a discrete fact, so the first touch's job changes when a finger lands
  * or lifts and never because something moved.
  */

@@ -221,8 +221,8 @@ describe("⛔⛔ THE CAP OF ONE — a second alignment REPLACES, and never freez
   });
 
   it("⛔⛔ a MATE on the stack REFUSES the alignment rather than overriding it", () => {
-    // ⭐ Unreachable in fork C today — §4's `6quater` is the only rule that pushes a mate and
-    // it is flick-based — so this is a guard against a FUTURE session wiring one and finding
+    // ⭐ Unreachable today — nothing pushes a mate (§4's `6quater`, flick-based, is deleted with
+    // the flick, `D110`) — so this is a guard against a FUTURE session wiring one and finding
     // that an orientation gesture silently broke an assembly relationship. `D13`'s spirit.
     const mate: Constraint = {
       kind: "MATE",
@@ -501,11 +501,11 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
 
   it("⭐ retargeting rewrites the DIRECTION and nothing else about the constraint", () => {
     // ⚠ §1.4's doctrine survives: the constraint still holds a WORLD direction, so a camera
-    // orbit still cannot redefine it. ⛔ What C2 changes is only where that direction is
-    // re-read from, every frame — the face it was taken from.
+    // orbit still cannot redefine it. ⛔ What a retarget changes (C2's, deleted `D106`; the seat's
+    // now) is only where that direction is re-read from, every frame — the face it was taken from.
     // ⛔⛔ BOTH take the PIONEER'S NORMAL and negate it themselves (2026-09-23), so the
-    // anti-parallel sign lives in one place and a `FOLLOW` cascade cannot re-align its
-    // followers the other way one frame after a tap.
+    // anti-parallel sign lives in one place and a retarget cannot re-align its followers the
+    // other way one frame after a tap.
     const c = faceAlignConstraint([0, 0, 1], [0, 1, 0]);
     expect(c.targetWorld).toEqual([-0, -1, -0]);
     const r = retargetAlignment(c, [1, 0, 0]);

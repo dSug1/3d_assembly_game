@@ -1,7 +1,7 @@
 /**
  * ⭐⭐⭐ **A DISCONTINUITY DETECTOR — it turns *"at one point something jumped"* into evidence.**
  *
- * > *"I swapped back and forth with double taps (always amber) … At one point, one of the objects
+ * > *"I swapped back and forth with double taps (always amber — the FOLLOW since deleted, `D106`) … At one point, one of the objects
  * > has made a big jump (I could not see if it was the pioneer or the follower). Why is that?"*
  * > — the owner, 2026-09-25
  *
@@ -24,6 +24,9 @@
  * * the twist rides a snap too;
  * * `D90`'s swap reads its new baseline at link time.
  *
+ * ⚠ The list was written while `FOLLOW` existed; since `D106` the turn and move cascades only
+ * RELEASE an unseated follower, and a seated one is carried by the tree.
+ *
  * ⚠ So if a jump is ever seen again, none of those is the answer, and this readout names the body
  * and the rule instead of costing another nine analyses — which is what `D86` cost when a
  * threshold had no readout: *when a defect resists several correct-looking analyses, stop
@@ -32,7 +35,7 @@
  * ## ⭐⭐ WHAT A *JUMP* IS, AND WHY A FIXED THRESHOLD CANNOT SAY
  *
  * A body legitimately moves fast: a drag at 500 mm/s covers 30 mm in one 60 ms frame, and a
- * `FOLLOW` follower is *supposed* to move exactly as far as its Pioneer did. ⛔ So *large* is not
+ * seated follower is *supposed* to move exactly as far as its Pioneer did. ⛔ So *large* is not
  * the question. **A jump is a step that is large COMPARED TO WHAT THAT BODY WAS ALREADY DOING** —
  * a discontinuity, not a speed.
  *

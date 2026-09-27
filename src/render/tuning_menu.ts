@@ -67,9 +67,6 @@ export function installTuningMenu(st: SceneState): void {
     // other four act on, and the two destructive ones sit last. ⭐ The panel remembers which
     // sections are open by TITLE (`localStorage`), so reordering costs a hand nothing.
     {
-      // ⭐⭐ **CAMERA, WITH TWO FOLDERS** — the owner, 2026-09-26: *"in CAMERA menu, create a
-      // subfolder CAMERA ORBIT and move all the sliders under CAMERA ORBIT except the subfolder
-      // CAMERA APPROACH SWING AT CAPTURE which stays under CAMERA"*.
       title: "SCENE",
       // ⭐⭐ The owner, 2026-09-27: *"toggle with a slider between Scene_0 and Scene_1. When the slider
       // is toggled, the corresponding scene boot from beginning."* ⛔ A RELOAD, not a swap: the page
@@ -78,6 +75,8 @@ export function installTuningMenu(st: SceneState): void {
     },
     {
       title: "CAMERA",
+      // ⭐⭐ The owner, 2026-09-26: *"in CAMERA menu, create a subfolder CAMERA ORBIT"*. ⛔ Its sibling,
+      // CAMERA APPROACH SWING AT CAPTURE, is deleted with the swing (`D120`).
       // ⭐ `D113` (the owner, 2026-09-27: *"Put a slider for the band width"*): at the TOP of CAMERA,
       // not inside a subsection — the strip that is always empty space, 0 = off.
       // ⭐ `D114`: the width it opens to when NO empty space is left on the glass — 0 otherwise.
@@ -182,8 +181,8 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
         // what baseline. ⛔ The tolerance is on the DIFFERENCE of the two travels: it is
         // what separates A6 from rule 6, whose anchor is deliberately still.
-        // ⭐⭐ A10 MADE THESE FOUR LOAD-BEARING FOR A MODE, not only for a flick test:
-        // the depth gate IS the holder's §1.1 motion state. ⛔ They were re-sized against
+        // ⭐⭐ A10 MADE THESE FOUR LOAD-BEARING FOR A MODE, not only for the (since deleted)
+        // flick test: the depth gate IS the holder's §1.1 motion state. ⛔ They were re-sized against
         // the measured noise floor when A10 landed, and a hand has not judged the new set.
         // ⭐⭐⭐ ONE RADIUS, and it is now the commit threshold, the rest test AND the
         // jitter deadband at once (A11). ⛔ The most load-bearing number in the input
@@ -317,7 +316,7 @@ export function installTuningMenu(st: SceneState): void {
               // spec grants `BreakThreshold`.
               // ⚠⚠ IT IS MILLIMETRES ON THE GLASS, NOT IN THE WORLD. The world gap it authorises grows
               // with the camera distance, so the same slider value means the same APPARENT clearance at
-              // every zoom — which is what the owner asked for and what the HUD's `gap=…/…mm` shows.
+              // every zoom — which is what the owner asked for.
               title: "⭐ CAPTURE (D49)",
               sliders: [
                 // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
@@ -330,12 +329,13 @@ export function installTuningMenu(st: SceneState): void {
                 tunable(st, "Pioneer sway off within (× offset)", "pioneerSwayRadii", 0, 10, 0.5),
                 // ⭐ The magnet's pull: how long the face centre takes to reach the cursor (`D100`).
                 tunable(st, "snap time (ms, 0 = at once)", "snapMs", 0, 400, 10),
-                // ⭐ The UNSNAP's rapid move — the eviction shake's two numbers, kept (`D107`).
+                // ⭐ The UNSNAP's rapid move — the two numbers kept from the deleted eviction shake (`D107`).
                 tunable(st, "unsnap window (ms)", "unsnapWindowMs", 200, 1200, 50),
                 tunable(st, "unsnap leg (mm)", "unsnapLegMm", 3, 25, 1),
                 // ⭐⭐ `D109` (the owner, 2026-09-27): *"Fuchsia cone is used for snap: rename it snap
                 // cone angle and move it to snap slider"* — how far from anti-parallel the two faces
-                // may be and still snap. ⚠ The owner asked for 0–45 in steps of 5 when it was fuchsia.
+                // may be and still snap. ⚠ The owner asked for 0–45 in steps of 5 when it was the
+                // fuchsia offer's cone.
                 tunable(st, "snap cone angle (deg)", "snapConeDeg", 0, 45, 5),
                 // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
                 // there is no fallback and a level camera sends the body a very long way.

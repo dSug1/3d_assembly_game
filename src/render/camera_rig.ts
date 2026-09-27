@@ -129,19 +129,8 @@ export function applyCameraPose(st: SceneState, p: CameraPose) : void {
 
 
 /**
- * ⭐⭐⭐ **THE SWING IS NOW YAW *AND* PITCH** — the owner, 2026-09-19: *"also add a pitch
- * swing of the same value … the swing of the camera helps the user visualize the alignment in
- * the directions orthogonal to the translation approach."*
- *
- * ⛔ **ONE ANGLE, APPLIED ON TWO AXES.** *"The same value"* is taken literally: both halves
- * are the same `sin(π p)`, so the camera leaves on a diagonal and comes back along it — one
- * motion rather than two that happen to coincide. ⚠ They also therefore reach zero together,
- * which is what keeps *"back to its original position"* true for both.
- *
- * ⭐⭐ **AND THE SAME SIGN.** A dx approach is horizontal, so the two orthogonal directions it
- * cannot show are DEPTH (which the yaw reveals) and HEIGHT (the pitch). ⚠ Giving them opposite
- * signs would sweep the camera along the other diagonal — equally defensible, and a hand
- * decides. This is the one line to try if the motion reads oddly.
+ * ⭐ Write the orbit rig's pose onto the camera — the one writer every camera event calls (reset,
+ * startup, pinch, a slider, the orbit drag, the wheel).
  */
 export function applyCamera(st: SceneState) {
   // ⛔⛔ THE APPROACH SWING IS DELETED (`D120`, 2026-09-27): the rig pose is the camera, with no

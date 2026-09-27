@@ -1,13 +1,13 @@
 # APPROACH & MATE — the owner's mechanism
 
-> **STATUS** · 🔨 **`A16`–`A21` + `D49` BUILT AND ON THE GLASS** — the highlights, the alignment tracking, the scene, `frozen`, and the **surface-gap capture** (§19); ⛔ the approach, snap and mate are NOT built (2026-09-18, branch `1.0.12-Pioneer-and-Follower-logic`)
+> **STATUS** · 🔨 **CURRENT (2026-09-27)**: the snap, the seat and the unsnap are **BUILT** (`D100`, [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) §11.13); the **white capture highlights** (§12's contours, the shell) are **DELETED** (`D120`), with the approach swing; the shake is deleted (`D107`). The alignment tracking, the scene and `frozen` stand. ⛔ The approach and a pushed `MATE` are not built. *(Was: `A16`–`A21` + `D49` built, snap not built — 2026-09-18.)*
 > **OWNS** · how a held object approaches another and joins it
 > **READ IF** · you are building or judging the approach, the snap, or the mate
-> **LAST VERIFIED** · 2026-09-17
+> **LAST VERIFIED** · 2026-09-27 (status line only; the body is the 2026-09-17/18 record)
 
 ⛔ **§2 below is the owner's text**; everything after it is analysis, and ⚠ **§1's numbers have
 all been amended since** — read §1 before trusting any figure quoted later.
-⭐⭐ **WHAT IS ACTUALLY BUILT IS §12–§18**: `A16` the white contours, `A17` the alignment
+⭐⭐ **WHAT WAS BUILT ON 2026-09-18 IS §12–§18** (⛔ the white contours and the shake since deleted, `D120`/`D107`): `A16` the white contours, `A17` the alignment
 readouts and the pioneer/follower tracking, §14 a stale-highlight bug worth reading, `A18` the
 no-cycle rule, `A19` the workbench scene, `A20` the `frozen` attribute, `A21` nearest-wins.
 ⛔ The approach, the hold-off, `SnapIsAuthorized`, the snap, the mate and the break are **not

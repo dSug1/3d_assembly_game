@@ -8,6 +8,9 @@
  *
  * > *"if the pioneer object rotates, all its blue follower shall be released from alignment"*
  *
+ * ⛔ The orange half is history: `FOLLOW` is deleted (`D106`), so a turned Pioneer now only
+ * RELEASES its unseated followers, and a seated one is carried by the tree.
+ *
  * ⛔⛔⛔ **THIS EXISTS BECAUSE THE RULE WAS UNTESTABLE WHERE IT LIVED.** It was a loop inside
  * `render/scene.ts`, so no vector could reach it — and when a hand reported *"the release of
  * the cyan follower objects by the rotation of the pioneer is not working"* there was **no way
@@ -16,11 +19,8 @@
  * MEASURE* — and a cascade is a composition of the worst kind, because its output feeds its
  * own input.
  *
- * ⭐⭐ **THE CASCADE RESOLVES WITHIN ONE CALL, not one level per frame.** The previous version
- * compared each follower against a remembered pose, so a chain unwound at one link per frame.
- * ⛔ That was defensible for two bodies and wrong for the owner's rule, which says P1's
- * rotation *"shall cascade to rotation of F1"* — as one consequence, not as a sequence a hand
- * can watch crawl.
+ * ⭐⭐ **ONE CALL, ONE PASS.** With nothing rotated by the cascade any more, no follower's pose
+ * changes during the resolve, so a single pass over the links settles them all.
  *
  * ⛔ ENGINE-FREE. It reads orientations through a callback and returns a PLAN; it moves nothing.
  */
@@ -55,15 +55,11 @@ export interface CascadePlan {
 /**
  * ⭐⭐⭐ **RESOLVE EVERY CONSEQUENCE OF EVERY PIONEER'S CURRENT POSE.**
  *
- * ⭐ The algorithm is a fixed point: a follower that rotates becomes a Pioneer whose pose has
- * changed, so the pass repeats until nothing more moves. ⛔ **CAPPED**, because a cycle is
- * expressible — A aligned to B and B aligned to A — and an uncapped fixed point on a cycle is
- * a hung render loop rather than a wrong answer. ⚠ The cap is one pass per link plus one: a
- * chain of `n` links needs at most `n` passes, so the cap cannot cut a legitimate cascade short.
+ * ⭐ One pass: a turned Pioneer releases each UNSEATED follower; every other link is re-baselined.
+ * ⚠ It was a capped fixed point while `FOLLOW` rotated followers (a rotated follower was a
+ * Pioneer whose pose had changed); since `D106` nothing here moves a body.
  *
  * @param orientationOf the CURRENT world orientation of a body, or `null` if it is gone.
- *   ⚠ Called for Pioneers and for followers that rotate; the resolver keeps its own view of
- *   anything it moves, so the caller's world need not be updated between steps.
  */
 export function resolvePioneerTurns(
   linksIn: readonly FollowerLink[],
@@ -90,7 +86,8 @@ export function resolvePioneerTurns(
  *
  * ⛔⛔ **IT WAS AN INLINE `flatMap` IN `render/scene.ts` UNTIL 2026-09-17**, and an audit found
  * what that cost: `tests/pioneer_release_wiring.test.ts` had to RE-TYPE the assembly to test it,
- * and its copy gave **one mode to every link** while the product reads `alignModeOf` per link.
+ * and its copy gave **one mode to every link** while the product then read the mode per link
+ * (the mode itself is deleted since, `D106`).
  * ⚠ So the test that existed to prove the wiring could not have caught a wiring defect in the
  * one field the wiring is about — a harness that recomputes what the product computed is a
  * second implementation that can silently disagree.
@@ -153,7 +150,9 @@ export interface MovePlan {
 }
 
 /**
- * ⭐⭐⭐ **`D69` — A TRANSLATED PIONEER CARRIES EVERY FOLLOWER, DOWN THE CHAIN.**
+ * ⭐⭐⭐ **`D69` → `D70` — WHAT A TRANSLATED PIONEER COSTS ITS FOLLOWERS.** ⛔ Today: a moved
+ * Pioneer RELEASES each unseated follower (`D70`), and a seated one rides the tree. What follows
+ * is `D69`'s history, when every follower was carried.
  *
  * > *"Currently, if in rotation mode, a rotation of the pioneer controls the same rotation of
  * > all the orange follower objects. Do the same with translation: a translation of pioneer
@@ -163,8 +162,8 @@ export interface MovePlan {
  * sentence names *"all the **orange** follower objects"* for the rotation and *"all the follower
  * objects"* for the translation, one clause apart. ⭐ It is also the reading that makes `D67`'s
  * multi-select worth having: several bodies chosen in one hold move as a group.
- * ⚠ And it costs nothing geometrically — `SNAPSHOT` versus `FOLLOW` is a statement about what a
- * **turn** costs, and `FACE_ALIGN` constrains a normal, which no translation can disturb.
+ * ⚠ And it costs nothing geometrically — `FACE_ALIGN` constrains a normal, which no translation
+ * can disturb.
  *
  * ⭐⭐ **A STATE COMPARISON, EXACTLY LIKE `resolvePioneerTurns`.** Each link remembers where its
  * Pioneer was; the delta is *where it is now* minus that. ⛔ Not a delta routed from the gesture:
@@ -172,9 +171,7 @@ export interface MovePlan {
  * listened to one of those would silently miss the others — which is the *substituted quantity*
  * shape this project keeps paying for.
  *
- * ⭐ Chains fall out of the passes: a Follower moved in pass 1 is a Pioneer whose position has
- * changed, so pass 2 sees it. ⚠ The pass cap is `links + 1`, as the turn cascade's is, so a ring
- * cannot spin forever — `AlignmentLinks.link` refuses cycles, and this refuses to depend on it.
+ * ⭐ One pass, as the turn cascade's: nothing here moves a body since `D70`/`D106`.
  *
  * ⚠ A Pioneer whose position cannot be read leaves its link untouched: *suppress, do not guess*.
  */
