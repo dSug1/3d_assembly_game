@@ -225,7 +225,6 @@ export function alignFollowerToPioneer(st: SceneState, followerPointerId: number
   transientGrip.pressFace = null;
   // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
   // ACTIVE alignment's mode and would recolour an older object's highlight.
-  st.alignModeOf.set(followerId, mode);
   // ⛔ And WHO it was aligned to, which the constraint itself does not record.
   // ⚠ `link` MOVES an existing link rather than adding a second — a body has one alignment,
   // so re-aligning it must remove it from its previous Pioneer's set.
@@ -350,7 +349,6 @@ export function releaseAlignmentOf(st: SceneState, followerId: ObjectId) : void 
   // ⭐ `D100`: a released alignment takes its seat with it — the body keeps its world pose.
   unseatWorld(st, followerId);
   st.links.unlink(followerId);
-  st.alignModeOf.delete(followerId);
   // ⚠ The ACTIVE-alignment records are cleared only if this body is the one they name: the
   // tap, shake and flick rules read them, and wiping them for an unrelated body would make
   // the next gesture on the ACTIVE follower behave as though nothing were aligned.

@@ -194,7 +194,7 @@ describe("⭐⭐⭐ the cascades SKIP a seated Follower — the tree carries it"
     l.link("f", "p", "top", IDENTITY, [0, 0, 0]);
     l.seat("f");
     const plan = resolvePioneerTurns(
-      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), () => "SNAPSHOT", (f) => l.isSeated(f)),
+      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), (f) => l.isSeated(f)),
       (id) => (id === "p" ? q : IDENTITY),
     );
     expect(plan.steps).toHaveLength(0);
@@ -205,7 +205,7 @@ describe("⭐⭐⭐ the cascades SKIP a seated Follower — the tree carries it"
     l.link("f", "p", "top", IDENTITY, [0, 0, 0]);
     l.seat("f");
     const plan = resolvePioneerMoves(
-      followerMoveLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), () => "FOLLOW", (f) => l.isSeated(f)),
+      followerMoveLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), (f) => l.isSeated(f)),
       (id) => (id === "p" ? [1, 0, 0] : [0, 0, 0]),
     );
     expect(plan.steps).toHaveLength(0);
@@ -215,7 +215,7 @@ describe("⭐⭐⭐ the cascades SKIP a seated Follower — the tree carries it"
     const l = new AlignmentLinks();
     l.link("f", "p", "top", IDENTITY, [0, 0, 0]);
     const plan = resolvePioneerTurns(
-      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), () => "SNAPSHOT", (f) => l.isSeated(f)),
+      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), (f) => l.isSeated(f)),
       (id) => (id === "p" ? q : IDENTITY),
     );
     expect(plan.steps.map((s) => s.kind)).toEqual(["RELEASE"]);

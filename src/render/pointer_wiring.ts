@@ -387,23 +387,7 @@ export function installPointerHandler(st: SceneState): void {
       // `pressMeaning` aligns the held body to the pressed one for ANY face, so a separate rule
       // for fuchsia ones would be a second decision about the same gesture. ⭐ The highlight is
       // what it always was — guidance — and no longer a precondition for acting.
-      const heldPioneer =
-        pressHeldId === null ? null : st.links.pioneerFor(pressHeldId);
-      if (
-        pressGrip.pressWasDoubleTap === true &&
-        pressHeldId !== null &&
-        pickedId !== undefined &&
-        pressFace !== null &&
-        heldPioneer !== null &&
-        heldPioneer.objectId === pickedId &&
-        heldPioneer.faceId === pressFace.faceId
-      ) {
-        st.alignModeOf.set(pressHeldId, "FOLLOW");
-        st.lastVerdict = `align: ${pressHeldId} → FOLLOW (double tap on its Pioneer face)`;
-        pressGrip.pressActed = true;
-        paint(st);
-        return;
-      }
+      // ⛔ The double press on the Pioneer face that made a `FOLLOW` is deleted with it (`D106`).
       const pressVerdict = pressMeaning({
         // ⭐ `D67`: the body under THIS press is the FOLLOWER, and the held one is the Pioneer.
         pressedObject: pickedId ?? null,

@@ -322,7 +322,7 @@ DRAWFAULT x${st.drawFaultCount} ${st.drawFault}`) +
                 .alignedObjects()
                 .map((f) => {
                   const r = st.links.pioneerFor(f);
-                  const m = st.alignModeOf.get(f) === "FOLLOW" ? "F" : "C";
+                  const m = st.links.isSeated(f) ? "S" : "A";
                   return r === null
                     ? f
                     : `${f}>${r.objectId}/${r.faceId}:${m}`;

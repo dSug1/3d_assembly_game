@@ -52,7 +52,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, initialBehaviour, TapHistory, type AlignMode } from "../input";
+import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, initialBehaviour, TapHistory } from "../input";
 import { type Vec3 } from "../core/vec";
 import { makeWorld, type ObjectId } from "../core/object_model";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
@@ -427,7 +427,6 @@ export function createScene(
    * COLOUR is remembered, keyed by object. ⚠ Entries are PRUNED every frame against
    * `alignedFaceOf`, so a stale one cannot outlive its alignment even though it is state.
    */
-  st.alignModeOf = new Map<ObjectId, AlignMode>();
 
   /**
    * ⭐⭐⭐ **WHO IS ALIGNED TO WHOM** — `core/alignment_links.ts`, a two-way index.

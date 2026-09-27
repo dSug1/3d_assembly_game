@@ -26,8 +26,6 @@
  */
 import type { ObjectId } from "../core/object_model";
 import type { Quat, Vec3 } from "../core/vec";
-import { qmul } from "../core/vec";
-import type { AlignMode } from "./alignment";
 import { pioneerMoved, pioneerTurned } from "./alignment";
 
 /** One follower's link, as this resolver needs it. */
@@ -36,18 +34,13 @@ export interface FollowerLink {
   readonly pioneer: ObjectId;
   /** The Pioneer's orientation as this follower last saw it. */
   readonly baseline: Quat;
-  /** `SNAPSHOT` (cyan) releases on a turn; `FOLLOW` (orange) takes the turn. */
-  readonly mode: AlignMode;
 }
 
-export type CascadeStep =
-  /** ⭐ Cyan: the alignment goes, and **the body does not move** (`D41`'s C1). */
-  | { readonly kind: "RELEASE"; readonly follower: ObjectId }
-  /** ⭐ Orange: the body takes the Pioneer's WORLD rotation (`D41`'s C2). */
-  | { readonly kind: "ROTATE"; readonly follower: ObjectId; readonly delta: Quat };
+/** ⭐ The alignment goes, and **the body does not move** (`D41`'s C1; C2 went with `FOLLOW`, `D106`). */
+export type CascadeStep = { readonly kind: "RELEASE"; readonly follower: ObjectId };
 
 export interface CascadePlan {
-  /** In the order they must be applied. ⚠ A `ROTATE` may precede a `RELEASE` it caused. */
+  /** In the order they must be applied. */
   readonly steps: readonly CascadeStep[];
   /** Follower → the Pioneer pose it should now be baselined against. */
   readonly baselines: ReadonlyMap<ObjectId, Quat>;
@@ -70,72 +63,18 @@ export function resolvePioneerTurns(
   linksIn: readonly FollowerLink[],
   orientationOf: (id: ObjectId) => Quat | null,
 ): CascadePlan {
+  // ⭐ Since `D106` nothing moves a follower here, so one pass settles every link: a turned
+  // Pioneer releases its (unseated) followers, and every other link is re-baselined.
   const steps: CascadeStep[] = [];
   const baselines = new Map<ObjectId, Quat>();
-  /** The resolver's own view of every pose it has moved. */
-  const pose = new Map<ObjectId, Quat>();
-  const now = (id: ObjectId): Quat | null => pose.get(id) ?? orientationOf(id);
-
-  /** Links still to resolve. ⚠ A released one is removed; a rotated one is re-baselined. */
-  let pending = linksIn.map((l) => ({ ...l }));
-  const cap = linksIn.length + 1;
-
-  for (let pass = 0; pass < cap; pass++) {
-    let moved = false;
-    const survivors: typeof pending = [];
-    for (const link of pending) {
-      const pioneerNow = now(link.pioneer);
-      if (pioneerNow === null) {
-        // ⚠ The Pioneer is gone. ⛔ The alignment does NOT go with it — §1.4 stores a frozen
-        // world direction precisely so an alignment survives its Pioneer being deleted.
-        survivors.push(link);
-        continue;
-      }
-      const turn = pioneerTurned(link.baseline, pioneerNow, link.mode);
-      if (turn.kind === "NONE") {
-        survivors.push(link);
-        continue;
-      }
-      if (turn.kind === "RELEASE") {
-        // ⛔⛔ THE BODY IS NOT MOVED, so it is NOT a changed Pioneer for anything aligned to
-        // IT. ⭐ That is exactly the owner's second clause: *"if P1 is blue, P2 rotation shall
-        // release the alignment of P1 with P2 but not the alignment of F1 with P1."* ⚠ It falls
-        // out of the geometry rather than needing a rule — F1's baseline for P1 still holds,
-        // because P1 never turned.
-        steps.push({ kind: "RELEASE", follower: link.follower });
-        // ⚠ NOT pushed to survivors, and NOT baselined: the link is about to cease to exist.
-        moved = true;
-        continue;
-      }
-      // ⭐ `FOLLOW`. The delta is a WORLD rotation, so it composes on the left.
-      // ⚠ `PioneerTurn.delta` is typed `Quat | null` across all three verdicts, so it is
-      // CHECKED rather than asserted — a `!` here would be an assertion about another
-      // module's invariant, and this file would not notice if that invariant changed.
-      if (turn.delta === null) {
-        survivors.push(link);
-        continue;
-      }
-      steps.push({ kind: "ROTATE", follower: link.follower, delta: turn.delta });
-      const before = now(link.follower);
-      if (before !== null) pose.set(link.follower, qmul(turn.delta, before));
-      // ⛔⛔ RE-BASELINED IMMEDIATELY, inside the pass. ⚠ Without this the same turn would be
-      // re-applied on every subsequent pass and the body would spin away — the fixed point
-      // would never be reached and the cap would silently truncate it.
-      survivors.push({ ...link, baseline: pioneerNow });
-      baselines.set(link.follower, pioneerNow);
-      // ⭐ THIS is what makes it cascade: `link.follower` has moved, so anything aligned to it
-      // sees a changed Pioneer on the next pass.
-      moved = true;
+  for (const link of linksIn) {
+    const pioneerNow = orientationOf(link.pioneer);
+    if (pioneerNow === null) continue;
+    if (pioneerTurned(link.baseline, pioneerNow).kind === "RELEASE") {
+      steps.push({ kind: "RELEASE", follower: link.follower });
+      continue;
     }
-    pending = survivors;
-    if (!moved) break;
-  }
-
-  // ⭐ Everything still pending is baselined against what its Pioneer looks like now, so a turn
-  // is never counted twice. ⚠ Including the `NONE` cases, where it is a no-op by construction.
-  for (const link of pending) {
-    const pioneerNow = now(link.pioneer);
-    if (pioneerNow !== null) baselines.set(link.follower, pioneerNow);
+    baselines.set(link.follower, pioneerNow);
   }
   return { steps, baselines };
 }
@@ -166,7 +105,6 @@ export function resolvePioneerTurns(
 export function followerLinksFrom(
   aligned: readonly ObjectId[],
   pioneerOf: (follower: ObjectId) => { readonly objectId: ObjectId; readonly orientation: Quat } | null,
-  modeOf: (follower: ObjectId) => AlignMode | undefined,
   /**
    * ⭐⭐ `D100` — a SEATED Follower is carried by the tree, so the cascade must neither rotate it
    * (it already turned with its parent) nor release it (a turned Pioneer keeps its seat).
@@ -184,7 +122,6 @@ export function followerLinksFrom(
       follower,
       pioneer: ref.objectId,
       baseline: ref.orientation,
-      mode: modeOf(follower) ?? "SNAPSHOT",
     });
   }
   return out;
@@ -197,18 +134,10 @@ export interface FollowerMoveLink {
   readonly pioneer: ObjectId;
   /** Where the Pioneer was when this link was last settled. */
   readonly baseline: Vec3;
-  /**
-   * ⭐⭐ `D70` — the MODE, which `D69` deliberately left out and was wrong to. ⛔ A `SNAPSHOT` is
-   * a copy taken once: when the Pioneer's pose changes the copy is stale, whether the change was
-   * a turn or a move.
-   */
-  readonly mode: AlignMode;
 }
 
 /** What a translated Pioneer owes one Follower. ⭐ `D70`: the same two outcomes a turn has. */
-export type MoveStep =
-  | { readonly kind: "RELEASE"; readonly follower: ObjectId }
-  | { readonly kind: "TRANSLATE"; readonly follower: ObjectId; readonly delta: Vec3 };
+export type MoveStep = { readonly kind: "RELEASE"; readonly follower: ObjectId };
 
 export interface MovePlan {
   readonly steps: readonly MoveStep[];
@@ -245,51 +174,17 @@ export function resolvePioneerMoves(
   linksIn: readonly FollowerMoveLink[],
   positionOf: (id: ObjectId) => Vec3 | null,
 ): MovePlan {
+  // ⭐ Since `D106` a moved Pioneer only RELEASES its (unseated) followers; one pass settles it.
   const steps: MoveStep[] = [];
   const baselines = new Map<ObjectId, Vec3>();
-  const pose = new Map<ObjectId, Vec3>();
-  const now = (id: ObjectId): Vec3 | null => pose.get(id) ?? positionOf(id);
-  let pending = linksIn.map((l) => ({ ...l }));
-  const cap = linksIn.length + 1;
-  for (let pass = 0; pass < cap; pass++) {
-    let moved = false;
-    const survivors: typeof pending = [];
-    for (const link of pending) {
-      const pioneerNow = now(link.pioneer);
-      if (pioneerNow === null) {
-        survivors.push(link);
-        continue;
-      }
-      // ⛔⛔ THE DECISION IS `pioneerMoved`'s, beside `pioneerTurned`, so the two channels of
-      // ONE question — *what does a Pioneer's pose change cost this Follower?* — cannot drift.
-      const move = pioneerMoved(link.baseline, pioneerNow, link.mode);
-      if (move.kind === "NONE") {
-        survivors.push(link);
-        continue;
-      }
-      if (move.kind === "RELEASE") {
-        // ⭐ `D70`: a cyan alignment is a copy taken once, and a moved Pioneer makes it stale.
-        // ⚠ No baseline is recorded: the link is about to go, and writing to it would leave the
-        // index describing a relation that no longer exists.
-        steps.push({ kind: "RELEASE", follower: link.follower });
-        moved = true;
-        continue;
-      }
-      const delta = move.delta!;
-      steps.push({ kind: "TRANSLATE", follower: link.follower, delta });
-      baselines.set(link.follower, pioneerNow);
-      const followerNow = now(link.follower);
-      if (followerNow !== null) {
-        pose.set(link.follower, [
-          followerNow[0] + delta[0],
-          followerNow[1] + delta[1],
-          followerNow[2] + delta[2],
-        ]);
-      }
-      moved = true;
+  for (const link of linksIn) {
+    const pioneerNow = positionOf(link.pioneer);
+    if (pioneerNow === null) continue;
+    if (pioneerMoved(link.baseline, pioneerNow).kind === "RELEASE") {
+      steps.push({ kind: "RELEASE", follower: link.follower });
+      continue;
     }
-    pending = survivors;
-    if (!moved || pending.length === 0) break;
+    baselines.set(link.follower, pioneerNow);
   }
   return { steps, baselines };
 }
@@ -298,7 +193,6 @@ export function resolvePioneerMoves(
 export function followerMoveLinksFrom(
   aligned: readonly ObjectId[],
   pioneerOf: (follower: ObjectId) => { readonly objectId: ObjectId; readonly position: Vec3 } | null,
-  modeOf: (follower: ObjectId) => AlignMode | undefined,
   /**
    * ⭐⭐ `D100` — a SEATED Follower is carried by the tree, so the cascade must neither rotate it
    * (it already turned with its parent) nor release it (a turned Pioneer keeps its seat).
@@ -310,14 +204,7 @@ export function followerMoveLinksFrom(
     if (isSeated(follower)) continue;
     const ref = pioneerOf(follower);
     if (ref === null) continue;
-    // ⚠ `SNAPSHOT` is the default for a body whose mode was never recorded, exactly as the turn
-    // cascade assumes: the weaker relation is the safe one to assume.
-    out.push({
-      follower,
-      pioneer: ref.objectId,
-      baseline: ref.position,
-      mode: modeOf(follower) ?? "SNAPSHOT",
-    });
+    out.push({ follower, pioneer: ref.objectId, baseline: ref.position });
   }
   return out;
 }

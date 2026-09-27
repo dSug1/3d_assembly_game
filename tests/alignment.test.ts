@@ -40,14 +40,7 @@ import {
 } from "@core/object_model";
 import { constrainedDragAngle, rotateAboutAxis } from "@input/anchor_rotate";
 import { mmToPx } from "@core/units";
-import {
-  IDENTITY,
-  qconj,
-  qFromAxisAngle,
-  qmul,
-  type Quat,
-  type Vec3,
-} from "@core/vec";
+import { IDENTITY, qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
 
 const BOX = (id: string): SceneObject => ({
   id,
@@ -314,9 +307,11 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
     // ⛔⛔ RED AGAINST `D67`: there the flag was the HELD body's, because the held body was the
     // Pioneer. ⚠ Inverted, the Pioneer is the body under this finger, so its own double tap is
     // what asks for `FOLLOW`.
+    // ⛔⛔ `D106` (2026-09-27): a double press is a snapshot like any other — `FOLLOW` is deleted.
+    // ⛔ RED against the old reading, where it asked for `FOLLOW`.
     expect(pressMeaning(press({ pressWasDoubleTap: true }))).toEqual({
       action: "ALIGN",
-      mode: "FOLLOW",
+      mode: "SNAPSHOT",
     });
   });
 
@@ -602,10 +597,8 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     // destructive is to let arithmetic noise count as a hand. ⭐ 1e-4 rad is ~0.006°: four
     // orders under the smallest deliberate twist, and well above quaternion round-off.
     const q = qFromAxisAngle([0.3, 0.8, -0.5], 1.1);
-    expect(pioneerTurned(q, q, "SNAPSHOT").kind).toBe("NONE");
-    expect(
-      pioneerTurned(q, qmul(qFromAxisAngle([0, 1, 0], 1e-6), q), "FOLLOW").kind,
-    ).toBe("NONE");
+    expect(pioneerTurned(q, q).kind).toBe("NONE");
+    expect(pioneerTurned(q, qmul(qFromAxisAngle([0, 1, 0], 1e-6), q)).kind).toBe("NONE");
   });
 
   it("⭐ A SNAPSHOT RELEASES, and reports no rotation to apply — the Follower must not move", () => {
@@ -618,85 +611,8 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     // decision and its consequence differently.
     const before = IDENTITY;
     const now = qFromAxisAngle([0, 1, 0], 0.5);
-    const t = pioneerTurned(before, now, "SNAPSHOT");
-    expect(t.kind).toBe("RELEASE");
-    expect(t.delta).toBeNull();
-  });
-
-  it("⭐⭐⭐ C2's delta keeps the two faces ANTI-PARALLEL — the composition, not the claim", () => {
-    // ⛔⛔ THE VECTOR THIS PAIR EXISTS FOR. `FOLLOW` is only worth having if applying its
-    // delta leaves the Follower's aligned face pointing exactly where the Pioneer's face now
-    // points. ⭐ Every piece is tested elsewhere; this asserts the chain.
-    const r = tapAndAlign(
-      qFromAxisAngle([0.2, 0.7, -0.3], 0.9),
-      "+x",
-      IDENTITY,
-      "+y",
-    );
-    const pioneerBefore = r.world.objects.get("pioneer")!.local.orientation;
-
-    // the hand turns the PIONEER
-    const turn = qFromAxisAngle([0.4, 0.2, 0.9], 0.8);
-    const pioneerNow = qmul(turn, pioneerBefore);
-    let world = setWorldPlacement(r.world, "pioneer", {
-      position: [0.3, 0, 0],
-      orientation: pioneerNow,
-    });
-
-    const t = pioneerTurned(pioneerBefore, pioneerNow, "FOLLOW");
-    expect(t.kind).toBe("FOLLOW");
-    // apply it to the FOLLOWER, exactly as the scene does
-    const follower = world.objects.get("follower")!.local.orientation;
-    world = setWorldPlacement(world, "follower", {
-      position: [0, 0, 0],
-      orientation: qmul(t.delta!, follower),
-    });
-
-    const pioneerNormal = faceWorld(world, "pioneer", "+y")!.normal;
-    const followerNormal = faceWorld(world, "follower", "+x")!.normal;
-    followerNormal.forEach((v, i) =>
-      expect(v).toBeCloseTo(anti(pioneerNormal)[i]!, 10),
-    );
-  });
-
-  it("⛔⛔ AND THE OTHER COMPOSITION ORDER BREAKS IT — both measured, in one vector", () => {
-    // ⭐ `now ∘ before⁻¹` is the rotation in WORLD; `before⁻¹ ∘ now` is the same rotation
-    // expressed in the object's OWN frame. ⚠ They agree when `before` is the identity — which
-    // is exactly why a fixture at the identity would certify the wrong one.
-    //
-    // ⛔⛔ MY FIRST VERSION OF THIS VECTOR WAS TOO WEAK TO MEAN ANYTHING: with a mild fixture
-    // the wrong order still left the faces 8° apart (dot 0.990) and the threshold was 0.99, so
-    // it passed by 0.0003. ⭐ Mistake shape 5 again — my own fixture — and the cure was to
-    // MEASURE candidate fixtures instead of choosing one by eye: the pair below puts the
-    // faces nearly opposite. ⚠ Both orders are now asserted in the same vector, so it cannot
-    // pass by the correct one being wrong too.
-    const r = tapAndAlign(IDENTITY, "+x", qFromAxisAngle([1, 1, 0], 2.4), "+y");
-    const pBefore = r.world.objects.get("pioneer")!.local.orientation;
-    const pNow = qmul(qFromAxisAngle([0, 0, 1], 2.0), pBefore);
-    const world0 = setWorldPlacement(r.world, "pioneer", {
-      position: [0.3, 0, 0],
-      orientation: pNow,
-    });
-    const pn = faceWorld(world0, "pioneer", "+y")!.normal;
-    const follower = world0.objects.get("follower")!.local.orientation;
-
-    const after = (delta: Quat) => {
-      const w = setWorldPlacement(world0, "follower", {
-        position: [0, 0, 0],
-        orientation: qmul(delta, follower),
-      });
-      const fn = faceWorld(w, "follower", "+x")!.normal;
-      return fn[0]! * pn[0]! + fn[1]! * pn[1]! + fn[2]! * pn[2]!;
-    };
-
-    // ✅ the world delta — what `pioneerTurned` returns — is EXACT. ⚠ `−1` since 2026-09-23:
-    // the faces are held ANTI-parallel, so exactness is a dot of −1 rather than +1.
-    expect(after(pioneerTurned(pBefore, pNow, "FOLLOW").delta!)).toBeCloseTo(
-      -1,
-      10,
-    );
-    // ⛔ the object-frame delta leaves them nowhere near it — measured, not assumed
-    expect(after(qmul(qconj(pBefore), pNow))).toBeGreaterThan(-0.9);
+    // ⭐ Since `D106` a verdict carries no rotation at all: there is nothing a caller could apply.
+    expect(pioneerTurned(before, now).kind).toBe("RELEASE");
   });
 
   it("⛔⛔ THE MODE COMES FROM THE GESTURE NOW — there is no flag to read", () => {
@@ -704,8 +620,9 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
     // owner replaced the SETTING with the GESTURE, which is better than a flag in the way that
     // matters: two alignments can differ, and a hand can see which is which from the colours
     // rather than remembering what a slider was left on.
-    expect(alignModeFor(false)).toBe("SNAPSHOT");
-    expect(alignModeFor(true)).toBe("FOLLOW");
+    // ⛔⛔ `D106` (2026-09-27): `FOLLOW` is deleted — every alignment is a snapshot, whatever the
+    // press. ⛔ RED against the double press still making a `FOLLOW`.
+    expect(alignModeFor()).toBe("SNAPSHOT");
   });
 
   it("⭐ retargeting rewrites the DIRECTION and nothing else about the constraint", () => {

@@ -340,7 +340,7 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
   // relation, the roles exchanged. ⭐ That is the owner's *"the first touch is on the hitface which
   // potentially becomes a followerface"* holding **without an exception**, which is the whole
   // argument: a rule with one configuration it silently refuses is a rule a hand cannot trust.
-  return { action: "ALIGN", mode: alignModeFor(ctx.pressWasDoubleTap) };
+  return { action: "ALIGN", mode: alignModeFor() };
 }
 
 /** What a flick must do to the object it was made on. ⭐ Both fields, always both. */
@@ -419,15 +419,11 @@ export type AlignMode =
    * and both highlights go. ⚠ Drawn in **two colours** — the two faces are related only by
    * the moment the tap happened.
    */
-  | "SNAPSHOT"
-  /**
-   * ⭐ **FOLLOW — made by a DOUBLE TAP.** The alignment is a relationship: turning the
-   * Pioneer turns the Follower by the same rotation, the target is re-read from the Pioneer's
-   * face every frame, and the highlights stay. ⚠ Drawn in **one colour**, because the two
-   * faces are now one thing — the owner's own instruction, and the only way a hand can tell
-   * which mode an alignment is in.
-   */
-  | "FOLLOW";
+  | "SNAPSHOT";
+// ⛔⛔ **`FOLLOW` IS DELETED** (`D106`, the owner, 2026-09-27: *"OK"* to merging SNAPSHOT and FOLLOW).
+// ⭐ The snap made it redundant: a SEATED Follower is carried by the tree (`D100`), and an unseated
+// one is being steered toward its ring, with no reason to follow the Pioneer around. So every
+// alignment is a snapshot; a double press no longer means anything different from a single one.
 
 /**
  * ⭐ Which mode a gesture asks for. ⛔ ONE place, so the mapping cannot drift between the press
@@ -439,18 +435,13 @@ export type AlignMode =
  * grip rather than a verdict about this touch. ⭐ The mapping itself is untouched: a pair means
  * a relationship, a single means a snapshot.
  */
-export function alignModeFor(pioneerPressWasDoubleTap: boolean): AlignMode {
-  return pioneerPressWasDoubleTap ? "FOLLOW" : "SNAPSHOT";
+export function alignModeFor(): AlignMode {
+  return "SNAPSHOT";
 }
 
 /** What the Pioneer's turn costs the Follower. ⭐ A decision; the caller acts. */
 export interface PioneerTurn {
-  readonly kind: "NONE" | "RELEASE" | "FOLLOW";
-  /**
-   * `FOLLOW` only: the **world** rotation to apply to the Follower, and the one to compose
-   * onto its orientation — `qmul(delta, follower)`, never the other order.
-   */
-  readonly delta: Quat | null;
+  readonly kind: "NONE" | "RELEASE";
 }
 
 /**
@@ -475,19 +466,10 @@ export const PIONEER_TURN_EPSILON_RAD = 1e-4;
  * @param before the Pioneer's orientation when it was last observed.
  * @param now its orientation this frame.
  */
-export function pioneerTurned(
-  before: Quat,
-  now: Quat,
-  mode: AlignMode,
-): PioneerTurn {
+export function pioneerTurned(before: Quat, now: Quat): PioneerTurn {
   const delta = qmul(now, qconj(before));
-  // ⭐ The turn angle of a unit quaternion is `2·acos|w|`; the absolute value folds the
-  // double cover, so `q` and `−q` — the same rotation — cannot read as 360° apart.
   const angle = 2 * Math.acos(Math.min(1, Math.abs(delta[0])));
-  if (angle < PIONEER_TURN_EPSILON_RAD) return { kind: "NONE", delta: null };
-  return mode === "SNAPSHOT"
-    ? { kind: "RELEASE", delta: null }
-    : { kind: "FOLLOW", delta };
+  return angle < PIONEER_TURN_EPSILON_RAD ? { kind: "NONE" } : { kind: "RELEASE" };
 }
 
 /**
@@ -500,9 +482,7 @@ export const PIONEER_MOVE_EPSILON_M = 1e-6;
 
 /** What a Pioneer's MOVE costs one Follower. ⭐ The mirror of `PioneerTurn`. */
 export interface PioneerMove {
-  readonly kind: "NONE" | "RELEASE" | "FOLLOW";
-  /** `FOLLOW` only: the world translation to add to the Follower's position. */
-  readonly delta: Vec3 | null;
+  readonly kind: "NONE" | "RELEASE";
 }
 
 /**
@@ -529,23 +509,12 @@ export interface PioneerMove {
  * @param before the Pioneer's position when it was last observed.
  * @param now its position this frame.
  */
-export function pioneerMoved(
-  before: Vec3,
-  now: Vec3,
-  mode: AlignMode,
-): PioneerMove {
-  const delta: Vec3 = [
-    now[0] - before[0],
-    now[1] - before[1],
-    now[2] - before[2],
-  ];
-  // ⚠ The squared length, so no root is taken 60 times a second for every aligned body.
-  const d2 = delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2];
-  if (d2 < PIONEER_MOVE_EPSILON_M * PIONEER_MOVE_EPSILON_M)
-    return { kind: "NONE", delta: null };
-  return mode === "SNAPSHOT"
-    ? { kind: "RELEASE", delta: null }
-    : { kind: "FOLLOW", delta };
+export function pioneerMoved(before: Vec3, now: Vec3): PioneerMove {
+  const d0 = now[0] - before[0];
+  const d1 = now[1] - before[1];
+  const d2 = now[2] - before[2];
+  const dd = d0 * d0 + d1 * d1 + d2 * d2;
+  return dd < PIONEER_MOVE_EPSILON_M * PIONEER_MOVE_EPSILON_M ? { kind: "NONE" } : { kind: "RELEASE" };
 }
 
 /**

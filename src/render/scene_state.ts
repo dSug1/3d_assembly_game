@@ -14,7 +14,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, ShakeDetector, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type AlignMode, type FollowState, type Sample } from "../input";
+import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, ShakeDetector, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -443,7 +443,6 @@ export interface SceneState {
   pioneerCursors: PioneerFaceCursors;
   pioneerCursorMeshes: Map<string, Mesh>;
   pioneerCursorMat: StandardMaterial;
-  alignModeOf: Map<ObjectId, AlignMode>;
   links: AlignmentLinks;
   snapArming: SnapArming;
   seatSnaps: SeatSnaps<ObjectId>;

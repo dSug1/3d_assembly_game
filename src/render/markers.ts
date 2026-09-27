@@ -351,8 +351,8 @@ export function paintHighlightColours(st: SceneState) : void {
   // recent gesture instead of the relationship it names.
   for (const [key, q] of st.faceMarkers) {
     const id = key.slice(0, key.indexOf("/"));
-    const mode = st.alignModeOf.get(id);
-    const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
+    // ⭐ One colour since `D106`: every alignment is a snapshot.
+    const want = FOLLOWER_COLOUR;
     q.mat.emissiveColor.copyFrom(want);
     const o = st.outlines.get(id);
     if (o !== undefined) o.align.color.copyFrom(want);
