@@ -565,6 +565,8 @@ export function startRenderLoop(st: SceneState): void {
         if (mat.alpha !== want) mat.alpha = want;
       }
     }
+    // ⭐ `D125`: the contour slider. ⚠ Written on change only.
+    for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
     // ⭐ `3D6`: an unsnapped couple is ordinary again once it has separated past the skin.
     pruneCollisionGrace(st);
     // ⭐ `D114`: the band is 0 while a first touch has somewhere empty to land.

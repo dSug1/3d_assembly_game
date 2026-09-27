@@ -19,11 +19,15 @@
  * ⛔ **"PENETRATES" IS READ AS A SKIN.** GJK answers `0` for touching AND for overlapping, so a
  * body is kept at least `skinM` from every other; a pair already inside the skin may move only in
  * ways that do not bring it closer — so a body resting in contact can always leave.
+ * ⛔⛔ **AND AT EXACTLY 0 THE GAP CANNOT SAY "CLOSER"** (`D125`): a pair that STARTS in contact (a
+ * `Scene_1` piece and its neighbour, face to face by construction) reads 0 before and 0 however deep it
+ * is pushed. So at 0 → 0 the rule reads the OVERLAP DEPTH along the pair's separating axes instead, and
+ * the slide takes its normal from the same measure.
  */
-import { gapBetween, separationBetween } from "./collision_shape";
+import { gapBetween, overlapAlong, separationBetween } from "./collision_shape";
 import { setWorldPlacement, worldPlacementOf, type ObjectId, type World } from "./object_model";
 import type { Placed } from "./mate_connector";
-import { add, dot, length, qAngle, qmul, qRotate, qSlerp, scale, sub, type Vec3 } from "./vec";
+import { add, cross, dot, length, qAngle, qmul, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "./vec";
 
 /** One convex piece of a body, in its LOCAL frame. */
 export type ConvexPart = readonly Vec3[];
@@ -134,6 +138,41 @@ function boxesNear(a: Aabb, b: Aabb, margin: number): boolean {
   return true;
 }
 
+/**
+ * ⚠ `D125`: a GJK gap this small IS contact. GJK answers ~1e-16, not 0, for two boxes touching or
+ * overlapping — measured — so a test for `> 0` let every overlap through. One nanometre.
+ */
+const CONTACT_M = 1e-9;
+
+/**
+ * ⭐ `D125`: the directions a pair's overlap is measured along — each body's three local axes (the
+ * face normals of a box) and their cross products (a box's edge–edge axes), both signs. For two boxes
+ * these are exactly the separating axes; for a hull, a fixed and ample set.
+ */
+function contactDirs(orientations: readonly Quat[]): Vec3[] {
+  const axes: Vec3[] = [];
+  for (const q of orientations) for (const e of [[1, 0, 0], [0, 1, 0], [0, 0, 1]] as Vec3[]) axes.push(qRotate(q, e));
+  const out: Vec3[] = [...axes];
+  for (let i = 0; i < axes.length; i++)
+    for (let j = i + 1; j < axes.length; j++) {
+      const c = cross(axes[i]!, axes[j]!);
+      const l = length(c);
+      if (l > 1e-6) out.push(scale(c, 1 / l));
+    }
+  return [...out, ...out.map((u) => scale(u, -1))];
+}
+
+/** ⭐ `D125`: the deepest overlap between two lists of world parts, and its direction (`A` → `B`). */
+function partsDepth(a: readonly Vec3[][], b: readonly Vec3[][], dirs: readonly Vec3[]): { depth: number; dir: Vec3 } | null {
+  let worst: { depth: number; dir: Vec3 } | null = null;
+  for (const pa of a)
+    for (const pb of b) {
+      const o = overlapAlong(pa, pb, dirs);
+      if (o && (worst === null || o.depth > worst.depth)) worst = o;
+    }
+  return worst;
+}
+
 /** The min gap between two lists of world parts — `null` when either is empty. */
 function partsGap(a: readonly Vec3[][], b: readonly Vec3[][]): number | null {
   let best: number | null = null;
@@ -191,7 +230,18 @@ export function poseFree(
     if (gNew === null || gNew >= setup.skinM) continue;
     const mb = worldParts(before, m, setup.shapes);
     const gOld = mb ? partsGap(mb, oa) : null;
-    if (gOld !== null && gNew >= gOld - 1e-12) continue;
+    if (gOld !== null && gNew >= gOld - 1e-12) {
+      if (gNew > CONTACT_M) continue;
+      // ⛔ `D125`: 0 → 0 — touching then, touching or overlapping now. Deeper is refused.
+      const dirs = contactDirs(
+        [worldPlacementOf(before, m), worldPlacementOf(after, m), worldPlacementOf(after, o)]
+          .filter((p) => p !== null)
+          .map((p) => p.orientation),
+      );
+      const dOld = partsDepth(mb!, oa, dirs);
+      const dNew = partsDepth(ma, oa, dirs);
+      if (dOld === null || dNew === null || dNew.depth <= Math.max(0, dOld.depth) + 1e-12) continue;
+    }
     return { free: false, blockedBy: o };
   }
   return { free: true, blockedBy: null };
@@ -326,7 +376,15 @@ export function resolveMove(
         const s = separationBetween(a, b);
         if (s && (best === null || length(s) < length(best))) best = s;
       }
-    if (best && length(best) > 0) n = scale(best, 1 / length(best));
+    if (best && length(best) > CONTACT_M) n = scale(best, 1 / length(best));
+    // ⭐ `D125`: stopped IN CONTACT, GJK's separation is the zero vector and names no normal — the
+    // overlap measure does: `A` leaves along `−dir`.
+    else if (best) {
+      const bAt = worldPlacementOf(stoppedWorld, blocker);
+      const dirs = contactDirs([stopped.orientation, ...(bAt ? [bAt.orientation] : [])]);
+      const d = partsDepth(mp, bp, dirs);
+      if (d) n = scale(d.dir, -1);
+    }
   }
   if (n === null) return { placed: stopped, t, slid: false, blockedBy: blocker };
   const slide = slideAlong(scale(sub(target.position, from.position), 1 - t), n);

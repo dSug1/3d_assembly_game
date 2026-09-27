@@ -77,11 +77,20 @@ function shadowFor(light: SpotLight | DirectionalLight, strength: number): Shado
   return g;
 }
 
-/** Every body casts and receives — the frozen floor only receives. */
-export function attachShadows(gens: readonly ShadowGenerator[], bodies: readonly AbstractMesh[], frozen: (m: AbstractMesh) => boolean): void {
+/**
+ * Every body casts and receives — the frozen floor only receives. ⭐ `D125`: `drawn` names the mesh
+ * that is actually SEEN (a body's coloured core, inside its transparent contour).
+ */
+export function attachShadows(
+  gens: readonly ShadowGenerator[],
+  bodies: readonly AbstractMesh[],
+  frozen: (m: AbstractMesh) => boolean,
+  drawn: (m: AbstractMesh) => AbstractMesh,
+): void {
   if (gens.length === 0) return;
   for (const m of bodies) {
-    m.receiveShadows = true;
-    if (!frozen(m)) for (const g of gens) g.addShadowCaster(m, false);
+    const d = drawn(m);
+    d.receiveShadows = true;
+    if (!frozen(m)) for (const g of gens) g.addShadowCaster(d, false);
   }
 }

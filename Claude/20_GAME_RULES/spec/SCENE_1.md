@@ -71,6 +71,27 @@ bars crossed). ⚠ The first table's disagreements with the brief (42 vs 41 piec
   is not modelled.
 * **No tone mapping**: the sand floor, lit almost straight down by the directional light, saturates;
   the whites read slightly warm. An exposure / tone-mapping pass is the fix when it matters.
-* **The painting's pieces are tightly packed** (they touch edge to edge, and none overlaps): under
-  `3D6`'s collision a piece blocked in the plane moves freely out of it first.
+* **The painting's pieces touch face to face** (§6): under `3D6`'s collision a piece blocked in the
+  plane can slide along its neighbours' faces and out of the plane (in depth), never into them.
 * ⛔ **No goal** — `Scene_1` has no final configuration yet (`GM1`).
+
+## 6. ⭐⭐ The transparent contour (`D125`)
+
+> *"each piece has a transparent contour (the faces which will align and snap) and inside there is the
+> colored part … extend the pieces so that their faces touch (no gap between the faces) but maintain a
+> transparent margin with the colored core inside so that there is a visual gap maintained between the
+> pieces."* — the owner, 2026-09-27
+
+* ⭐ Every gap between two neighbouring pieces in the table is **0.03 units** — 92 pairs, all equal (a
+  vector). So each piece gets a **margin of 0.015 on every side** (`SCENE_1_CONTOUR_MARGIN`, the
+  `BodySpec.margin` field): the BODY — mesh, collision hull, logical faces, what a touch picks — is the
+  table's size + 0.03, and every neighbouring pair **touches** (a vector: gap 0, no overlap).
+* ⭐ The **coloured core** is the table's own size, unchanged, a child mesh that is never picked and
+  that casts the shadows — so the cores keep their 0.03 visual gap.
+* The contour is tinted in the piece's own colour at **opacity 0.1** (the owner), no specular, no
+  depth write; the slider is CAMERA › *piece contour opacity* (`pieceContourAlpha`, 0 hides it).
+* ⭐ A face that aligns and snaps is the CONTOUR's face, so a snapped pair lands face to face with its
+  cores 0.03 apart — the painting's own gap.
+* ⛔⛔ **IT EXPOSED A HOLE IN `3D6`** (found by a headless drag, not a hand): a pair that STARTS in
+  contact read GJK's `0` before and after any push, so *"may not come closer"* let a piece walk
+  through the bar beside it. Fixed in `core/collision.ts` → `COLLISION.md` §8.

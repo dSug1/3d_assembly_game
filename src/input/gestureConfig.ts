@@ -271,6 +271,11 @@ export interface GestureConfig {
    */
   frozenUndersideAlpha: number;
   /**
+   * ⭐ `D125`: the opacity of a body's transparent CONTOUR — the margin around its coloured core,
+   * tinted in the body's own colour. `0` hides it; `1` draws the whole body solid.
+   */
+  pieceContourAlpha: number;
+  /**
    * ⭐⭐ **THE COLLISION SKIN** (`3D6`), millimetres on the glass: every pair of bodies is kept at
    * least this far apart. ⛔ Must be > 0 — GJK reads touching and overlapping alike as 0, so a zero
    * skin could not tell a contact from a penetration.
@@ -738,6 +743,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   edgeBandMm: 6,
   // ⚠ A guess with a slider: see-through enough to show what is above, solid enough to stay a floor.
   frozenUndersideAlpha: 0.3,
+  // ⚠ A guess with a slider: faint enough to keep the gap between the cores, visible enough to show the faces.
+  pieceContourAlpha: 0.1,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
@@ -941,6 +948,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `collisionSkinMm (${cfg.collisionSkinMm}) must be in (0, 5] mm: it is the gap every pair of ` +
         "bodies is kept at, and at 0 a contact and a penetration both read as a gap of 0.",
     );
+  }
+
+  if (!(cfg.pieceContourAlpha >= 0 && cfg.pieceContourAlpha <= 1)) {
+    throw new Error(`pieceContourAlpha (${cfg.pieceContourAlpha}) must be in [0, 1]: it is an opacity.`);
   }
 
   if (!(cfg.frozenUndersideAlpha >= 0 && cfg.frozenUndersideAlpha <= 1)) {

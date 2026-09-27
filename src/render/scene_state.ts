@@ -365,6 +365,8 @@ export interface SceneState {
   camera: ArcRotateCamera;
   light: HemisphericLight;
   dimsOf: Map<ObjectId, readonly [number, number, number]>;
+  /** ⭐ `D125`: every contour material, so the slider reaches them all; empty in a scene without one. */
+  contourMats: StandardMaterial[];
   untaperedBodies: string[];
   idOf: Map<AbstractMesh, ObjectId>;
   meshOf: Map<ObjectId, AbstractMesh>;

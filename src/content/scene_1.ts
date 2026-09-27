@@ -82,6 +82,15 @@ export const SCENE_1_SLOTS: Readonly<Record<string, Slot>> = Object.fromEntries(
   ROWS.map((r) => [r[0], r[1]]),
 );
 
+/**
+ * ⭐⭐ **THE TRANSPARENT CONTOUR** (`D125`, the owner, 2026-09-27: *"extend the pieces so that their
+ * faces touch (no gap between the faces) but maintain a transparent margin with the colored core
+ * inside"*). ⭐ Every gap between two neighbouring pieces in the table is **0.03** units (a vector), so
+ * half of it on every side makes every neighbouring pair touch, face to face, while the coloured
+ * cores — the table's own sizes, unchanged — keep their 0.03 apart.
+ */
+export const SCENE_1_CONTOUR_MARGIN = 0.03 / 2;
+
 const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
   id,
   position: [x, y, z],
@@ -90,6 +99,7 @@ const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
   orientation: "identity",
   frozen: false,
   topScale: 1,
+  margin: SCENE_1_CONTOUR_MARGIN,
 }));
 
 /**

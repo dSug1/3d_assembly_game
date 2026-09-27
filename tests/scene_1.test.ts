@@ -3,10 +3,10 @@
  * renaming, the lights' conventions checked against the owner's own words, and the scene switch.
  */
 import { describe, expect, it } from "vitest";
-import { SCENE_1, SCENE_1_SLOTS } from "../src/content/scene_1";
+import { SCENE_1, SCENE_1_CONTOUR_MARGIN, SCENE_1_SLOTS } from "../src/content/scene_1";
 import { SCENE_0 } from "../src/content/scene_0";
 import { SCENES, sceneAt } from "../src/content/scenes";
-import { parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
+import { contourDims, parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
 import { illuminanceAt, kelvinToRgb, unityForward, type LightSpec } from "@core/lighting";
 import { levelElevation, orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
@@ -78,6 +78,74 @@ describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
 
   it("⭐ it survives the JSON seam (`GM8`) unchanged", () => {
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_1))).toEqual(SCENE_1);
+  });
+});
+
+describe("⭐⭐⭐ `D125` — the transparent contour: the faces touch, the coloured cores keep their gap", () => {
+  // ⭐ Neighbours: facing along one axis, overlapping along the other, gap under 0.1 (a bar's width —
+  // two pieces either side of a bar are not neighbours).
+  const pairs = (dimsOf: (b: (typeof pieces)[number]) => readonly number[]) => {
+    const out: { a: string; b: string; gap: number }[] = [];
+    for (let i = 0; i < pieces.length; i++)
+      for (let j = i + 1; j < pieces.length; j++) {
+        const a = pieces[i]!;
+        const b = pieces[j]!;
+        const da = dimsOf(a);
+        const db = dimsOf(b);
+        for (const [ax, ot] of [[0, 1], [1, 0]] as const) {
+          const gap = Math.abs(a.position[ax]! - b.position[ax]!) - (da[ax]! + db[ax]!) / 2;
+          const along = (da[ot]! + db[ot]!) / 2 - Math.abs(a.position[ot]! - b.position[ot]!);
+          if (gap > -1e-9 && gap < 0.1 - 1e-9 && along > 1e-9) out.push({ a: a.id, b: b.id, gap });
+        }
+      }
+    return out;
+  };
+
+  it("⭐ the table's cores: every neighbouring pair is exactly 0.03 apart — the gap the contour closes", () => {
+    const p = pairs((b) => b.dims);
+    expect(p.length).toBe(92);
+    for (const q of p) expect(q.gap).toBeCloseTo(0.03, 9);
+  });
+
+  it("⭐⭐ the bodies: every neighbouring pair TOUCHES, face to face, and none overlaps (RED before D125)", () => {
+    const p = pairs((b) => contourDims(b));
+    expect(p.length).toBe(92);
+    for (const q of p) expect(Math.abs(q.gap)).toBeLessThan(1e-9);
+    for (let i = 0; i < pieces.length; i++)
+      for (let j = i + 1; j < pieces.length; j++) {
+        const a = pieces[i]!;
+        const b = pieces[j]!;
+        const da = contourDims(a);
+        const db = contourDims(b);
+        const ox = (da[0] + db[0]) / 2 - Math.abs(a.position[0] - b.position[0]);
+        const oy = (da[1] + db[1]) / 2 - Math.abs(a.position[1] - b.position[1]);
+        expect(ox > 1e-9 && oy > 1e-9).toBe(false);
+      }
+  });
+
+  it("every piece carries the contour, half the gap; the floor has none", () => {
+    expect(SCENE_1_CONTOUR_MARGIN).toBe(0.015);
+    for (const b of pieces) expect(b.margin).toBe(SCENE_1_CONTOUR_MARGIN);
+    expect(SCENE_1.bodies.find((b) => b.id === "Floor")?.margin).toBeUndefined();
+  });
+
+  it("⭐ contourDims: the core plus the margin on EVERY side; no margin → the dims themselves", () => {
+    expect(contourDims({ dims: [1, 2, 3], margin: 0.5 })).toEqual([2, 3, 4]);
+    expect(contourDims({ dims: [1, 2, 3] })).toEqual([1, 2, 3]);
+  });
+
+  it("⭐ the JSON seam keeps the margin and refuses a negative one", () => {
+    const back = parseSceneDescriptor(serializeSceneDescriptor(SCENE_1));
+    expect(back.bodies[0]!.margin).toBe(SCENE_1_CONTOUR_MARGIN);
+    const bad = JSON.parse(serializeSceneDescriptor(SCENE_1));
+    bad.bodies[0].margin = -0.01;
+    expect(() => parseSceneDescriptor(JSON.stringify(bad))).toThrow(/margin/);
+  });
+
+  it("the contour's opacity is a slider in [0, 1]", () => {
+    expect(DEFAULT_CONFIG.pieceContourAlpha).toBe(0.1);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceContourAlpha: 1.2 })).toThrow(/pieceContourAlpha/);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceContourAlpha: -0.1 })).toThrow(/pieceContourAlpha/);
   });
 });
 

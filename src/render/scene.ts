@@ -61,7 +61,7 @@ import { makeWorld, type ObjectId } from "../core/object_model";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { RotationFollower, RotationTally } from "../input/rotation_increment";
 import { seededRotations } from "../core/random_pose";
-import { resolveBootOrientation, type SceneDescriptor } from "../core/game_structure";
+import { contourDims, resolveBootOrientation, type SceneDescriptor } from "../core/game_structure";
 import { SCENE_0 } from "../content/scene_0";
 import { AlignmentLinks } from "../core/alignment_links";
 import { PioneerFaceCursors } from "../core/pioneer_face_cursors";
@@ -77,7 +77,7 @@ import { createHud } from "./hud";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, PIONEER_CURSOR_COLOUR, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
-import { make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
+import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
 import { applyCamera, requireGestureFrame } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
@@ -150,6 +150,7 @@ export function createScene(
    * at the parts' size on a plate seventy times their volume.
    */
   st.dimsOf = new Map<ObjectId, readonly [number, number, number]>();
+  st.contourMats = [];
   /** ⚠ Bodies whose taper was refused — reported on the HUD, never silently a box. */
   st.untaperedBodies = [];
   // ⭐⭐⭐ **THE BOOT LAYOUT — `5L` APART, PAIRWISE, AT THREE RANDOM ORIENTATIONS.**
@@ -239,15 +240,18 @@ export function createScene(
   // ⭐ `unitM`: the scene is AUTHORED in its own units; positions and sizes become metres here, once.
   const unitM = st.sceneSpec.unitM ?? 1;
   for (const b of st.sceneSpec.bodies) {
+    // ⭐ `D125`: the BODY is the contour's box; the coloured core inside it is `dims` itself.
+    const outer = contourDims(b);
     make(
       st,
       b.id,
       new Vector3(b.position[0] * unitM, b.position[1] * unitM, b.position[2] * unitM),
       [b.colour[0], b.colour[1], b.colour[2]],
       resolveBootOrientation(b.orientation, bootRotations),
-      [b.dims[0] * unitM, b.dims[1] * unitM, b.dims[2] * unitM],
+      [outer[0] * unitM, outer[1] * unitM, outer[2] * unitM],
       b.frozen,
       b.topScale,
+      (b.margin ?? 0) > 0 ? [b.dims[0] * unitM, b.dims[1] * unitM, b.dims[2] * unitM] : undefined,
     );
   }
 
@@ -330,7 +334,8 @@ export function createScene(
       }),
   );
   // ⭐ `Scene_1`: every movable body casts, every body receives (the frozen floor only receives).
-  attachShadows(shadowGens, [...st.meshOf.values()], (m) => st.world.objects.get(st.idOf.get(m) ?? "")?.frozen === true);
+  // ⭐ `D125`: a body with a contour casts from its CORE — the transparent margin throws no shadow.
+  attachShadows(shadowGens, [...st.meshOf.values()], (m) => st.world.objects.get(st.idOf.get(m) ?? "")?.frozen === true, (m) => coreOf(m));
 
   st.faceMarkers = new Map<string, FaceMarker>();
 

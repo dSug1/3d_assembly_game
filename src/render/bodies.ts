@@ -74,7 +74,12 @@ export function make(st: SceneState, name: string,
    * ⭐ The fraction of the base the TOP face keeps — `1` leaves the body a box. ⚠ The
    * body's own local `y` is the taper axis, which for a part booting square is world up.
    */
-  topScale = 1,) {
+  topScale = 1,
+  /**
+   * ⭐⭐ `D125`: the COLOURED CORE's extents, when the body has a transparent contour. The body (mesh,
+   * collision shape, faces) is `dims`; the core is a child drawn inside it, and never picked.
+   */
+  coreDims?: readonly [number, number, number],) {
   st.dimsOf.set(name, dims);
   // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
   const mesh = CreateBox(
@@ -96,6 +101,23 @@ export function make(st: SceneState, name: string,
   const mat = new StandardMaterial(name + "-mat", st.scene);
   mat.diffuseColor = new Color3(...rgb);
   mesh.material = mat;
+  let core: Mesh | undefined;
+  if (coreDims !== undefined) {
+    // ⭐ The contour: the body's own box, see-through, tinted in its own colour so the core under it
+    // is not washed out. ⚠ No specular (a glint on glass reads as a surface), no depth write (the
+    // markers drawn after it must not be hidden by a box you can see through).
+    mat.alpha = st.cfg.pieceContourAlpha;
+    mat.specularColor = Color3.Black();
+    mat.disableDepthWrite = true;
+    st.contourMats.push(mat);
+    core = CreateBox(name + "-core", { width: coreDims[0], height: coreDims[1], depth: coreDims[2] }, st.scene);
+    const coreMat = new StandardMaterial(name + "-core-mat", st.scene);
+    coreMat.diffuseColor = new Color3(...rgb);
+    core.material = coreMat;
+    core.parent = mesh;
+    // ⛔ Never picked: a touch on the core must land on the BODY, whose faces are the contour's.
+    core.isPickable = false;
+  }
   // ⭐⭐ TAGGED, so §2 rule 1's barycentre sees the OBJECTS and nothing else. The
   // diagnostic marker below is a mesh too, and a marker that became a barycentre
   // candidate would move the very centre it is drawn to show — a readout that
@@ -105,7 +127,7 @@ export function make(st: SceneState, name: string,
   // place a body's frozen-ness was written down, and this project's own scar is that *a shadow
   // copy is free to disagree with the thing it copies*. ⚠ Nothing may read this after
   // `makeWorld`: `world.objects.get(id)?.frozen` is the one answer from then on.
-  mesh.metadata = { orbitCandidate: true, frozen };
+  mesh.metadata = { orbitCandidate: true, frozen, core };
   return mesh;
 }
 
@@ -125,6 +147,11 @@ export function make(st: SceneState, name: string,
 // ⚠ The parent chain is unexercised here — three loose boxes, no assembly yet — but
 // it is the SAME call, so `3D2` parenting a part changes nothing in this file.
 /** Babylon `(x, y, z, w)` → `core/vec` `[w, x, y, z]`. ⚠ Identity if the mesh has no quaternion. */
+/** ⭐ `D125`: the coloured core drawn inside a body with a contour, else the body itself. */
+export function coreOf(m: AbstractMesh): AbstractMesh {
+  return (m.metadata?.core as AbstractMesh | undefined) ?? m;
+}
+
 export function quatOf(m: AbstractMesh) : Quat {
   const q = m.rotationQuaternion;
   return q === null ? ([1, 0, 0, 0] as Quat) : ([q.w, q.x, q.y, q.z] as Quat);
