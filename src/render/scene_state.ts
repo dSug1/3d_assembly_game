@@ -486,6 +486,8 @@ export interface SceneState {
   /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */
   edgeBandEl: HTMLDivElement;
   edgeBandKey: string;
+  /** ⭐ The rig elevation the scene boots at, and the camera reset returns to. */
+  bootElevation: number;
   /** ⭐ `3D6`: couples exempt from colliding with each other since an unsnap, until they separate. */
   collisionGrace: Set<string>;
   /** The last block, for the HUD — `A⟂B 42% slid` — and when it happened. */

@@ -461,3 +461,23 @@ export class OrbitCentreBlend {
     if (travelMm > 0) this.travelledMm += travelMm;
   }
 }
+
+/**
+ * ⭐ **THE LEVEL VIEW** (`Scene_1`'s `bootView: "LEVEL"`): the rig elevation `v ∈ [0, 1]` at which the
+ * camera sits at the HEIGHT of the orbit centre, so it looks along the ground — *"camera looks along
+ * depth"*. ⭐ Found on the rig itself (bisection on `orbitOffset`'s height), so it stays level
+ * whatever the rings are tuned to. ⚠ Clamped to the rig: `0` / `1` when no ring crosses the centre.
+ */
+export function levelElevation(cfg: GestureConfig): number {
+  const h = (v: number) => orbitOffset(cfg, 0, v, 1).offsetM[1];
+  if (h(0) >= 0) return 0;
+  if (h(1) <= 0) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (h(mid) < 0) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}

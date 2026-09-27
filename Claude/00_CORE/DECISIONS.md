@@ -47,11 +47,11 @@ file.
 | `D98` | ⭐⭐ **AN ALIGNMENT IS SQUARED TO ITS PIONEER** | 2026-09-26 | After the minimal swing, a ≤ 45° twist about the aligned normal squares the Follower's edges to the Pioneer's; the swing alone lost 8–30° on a tilted part. ⚠ No longer strictly minimal → §11.12 |
 | `D99` | ⭐⭐⭐ **THE SCORE: TOUCHPOINT EPISODES AGAINST A SOLVED OPTIMUM, AND ELAPSED TIME** | 2026-09-26 | ⭐ Binding → `20_GAME_RULES/spec/SCORE.md`. ⚠ → history |
 | `D100` | ⭐⭐ **THE SNAP IS AUTOMATIC AND A SEATED PIONEER CARRIES ITS FOLLOWERS; UNSNAP IS AN EPISODE** | 2026-09-26 | ⭐ Binding. ⚠ → history |
-| `D101` | ⭐ **FREE FLOW MODE** — the cursor-drag slider, renamed, escapes the score | 2026-09-26 | key `pioneerCursorDrag` unchanged; the cursor drag is its first freedom |
+| `D101` | ⭐ **FREE FLOW MODE** — the cursor-drag slider, renamed, escapes the score | 2026-09-26 | ⭐ Binding. ⚠ → history |
 | `D102` | ⭐⭐ **A SEATED ASSEMBLY DRIVES AS ONE BODY; THE SNAP IS A MAGNET; THE OFFSET IS 15 mm** | 2026-09-26 | ⭐ Binding. ⚠ → history |
-| `D103` | ⭐⭐ **UNSNAP COSTS 2; A FLICK UNSNAPS FOR 1, AND TAKES ITS DEPENDANTS** | 2026-09-26 | ⛔ Revised by `D115`: the unsnap costs **1**; the flick-unsnap is removed (`D110`) → §11.13.2 |
-| `D104` | ⭐⭐⭐ **`scene.ts` IS SPLIT INTO MODULES** — a composition root + thirteen render modules over one `SceneState` | 2026-09-26 | 7,861 → 1,118 lines; no rule moved INTO a render file; checked by typecheck, suite, build, headless boot → `40_RENDER_SCENE/INDEX.md` |
-| `D105` | ⭐⭐ **THE GAME SCAFFOLD: intro → menu → worlds → levels → play; the current scene is `Scene_0`** | 2026-09-26 | Empty by design (`GM6`–`GM8`); `Scene_0` is DATA; `?flow=1` shows the shell → `20_GAME_RULES/spec/GAME_STRUCTURE.md` |
+| `D103` | ⭐⭐ **UNSNAP COSTS 2; A FLICK UNSNAPS FOR 1, AND TAKES ITS DEPENDANTS** | 2026-09-26 | ⭐ Binding. ⚠ → history |
+| `D104` | ⭐⭐⭐ **`scene.ts` IS SPLIT INTO MODULES** — a composition root + thirteen render modules over one `SceneState` | 2026-09-26 | ⭐ Binding. ⚠ → history |
+| `D105` | ⭐⭐ **THE GAME SCAFFOLD: intro → menu → worlds → levels → play; the current scene is `Scene_0`** | 2026-09-26 | ⭐ Binding. ⚠ → history |
 | `D106` | ⭐⭐ **`FOLLOW` IS DELETED — every alignment is a SNAPSHOT** | 2026-09-27 | One press aligns; a **seat** carries; an unseated Follower lets go when its Pioneer moves or turns. ⛔ Reverses `D42`'s double tap → §12 |
 | `D107` | ⭐⭐ **TWO WAYS TO UNALIGN: tap empty space while holding, or align elsewhere** | 2026-09-27 | Holding a Pioneer, the tap releases all its followers. ⛔ Gone: both shakes, `D39`'s re-press undo, the flick's drop branch → §12 |
 | `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | Aligned: 1st finger slides, 2nd lifts + spins. Tablet toggles only on a touch tap on EMPTY space holding one free body without followers; desktop has no mode (Ctrl rotates). No button → §12 |
@@ -63,6 +63,7 @@ file.
 | `D114` | ⭐⭐ **THE EDGE BAND OPENS ONLY WHEN NO EMPTY SPACE IS LEFT** | 2026-09-27 | A 4 Hz fingertip-grid probe; empty = a first touch would miss; else 0 → §13 |
 | `D115` | ⭐⭐ **A TWO-TOUCH ACTION IS ONE EPISODE, COUNTED WHEN ITS LAST TOUCH LIFTS** | 2026-09-27 | Align, unalign, a Pioneer's release, unsnap; tablet and desktop alike → §13 |
 | `D116` | ⛔⛔⛔ **BUILD THE PLAYABILITY PROGRAM FIRST; COLLISION: STOP+SLIDE ON TRANSLATION, SAME-AXIS CLAMP ON ROTATION** | 2026-09-27 | ✅ `3D6` BUILT; clamp owner-confirmed; seams for Blender → `COLLISION.md` |
+| `D117` | ⭐⭐ **`Scene_1`, THE PAINTING; A SCENE SLIDER REBOOTS ON THE CHOSEN SCENE** | 2026-09-27 | Owner's values at 0.1 m/unit; Unity lights read as URP → `SCENE_1.md` |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ Binding, ⚠⚠ **but `D89` SWAPPED WHICH TOUCH**. ⛔⛔ Its *no gizmo* half lapsed when `leadingFace` was deleted, with **nothing going red**; it is a guard now. ⭐ *Deleting the file a rule lived in deletes the rule* |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⛔⛔ One finger slides a body about its own HORIZONTAL plane (`dx`→x, `dy`→depth) and a second finger LIFTS it. ⚠⚠ Its MAPPING is superseded by `D76`; the channels stand |

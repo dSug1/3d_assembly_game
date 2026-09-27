@@ -596,6 +596,13 @@ export interface GestureConfig {
    * ⛔ `core/random_pose.ts` argues the case.
    */
   sceneSeed: number;
+  /**
+   * ⭐⭐ **WHICH SCENE BOOTS** — an index into `content/scenes.ts` (the owner, 2026-09-27: *"toggle with
+   * a slider between Scene_0 and Scene_1. When the slider is toggled, the corresponding scene boot
+   * from beginning"*). ⛔ Read ONCE, at boot: the slider rewrites `?sceneIndex=` and reloads the page,
+   * so nothing — bodies, lights, seats, undo, the episode count — survives from the other scene.
+   */
+  sceneIndex: number;
 }
 
 export const DEFAULT_CONFIG: GestureConfig = {
@@ -948,6 +955,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ Arbitrary, and that is the point: any fixed value gives three arbitrary poses. Changed
   // by the URL when a different scene is wanted.
   sceneSeed: 20260917,
+  sceneIndex: 0,
 };
 
 /**
@@ -973,6 +981,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
+  if (!Number.isInteger(cfg.sceneIndex) || cfg.sceneIndex < 0) {
+    throw new Error(`sceneIndex (${cfg.sceneIndex}) must be a whole number ≥ 0 — an index into the scene registry.`);
+  }
 
   if (cfg.pioneerCursorDrag !== 0 && cfg.pioneerCursorDrag !== 1) {
     throw new Error(

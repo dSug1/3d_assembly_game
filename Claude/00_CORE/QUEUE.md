@@ -16,15 +16,15 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-27)
 
-⛔⛔⛔ **BUILD NOW, BEFORE ANYTHING ELSE — THE PLAYABILITY PROGRAM** (the owner, 2026-09-27): **`3D6`
+⏸ **PAUSED for `Scene_1`** → [`SCENE_1.md`](../20_GAME_RULES/spec/SCENE_1.md). ⛔⛔⛔ **THE PLAYABILITY PROGRAM**: **`3D6`
 collision** → **`GM1` a goal + the mate + completion** → **`3D7` play volume** → **`3D2` the
 approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-27.md`](queue_notes/PLAYABILITY_2026-09-27.md).
 ⭐ Collision: translation stops + slides; rotation CLAMPS on its own axis, never slides or switches
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1213 golden vectors,
-all passing** (37 → … → 1283 → 1173 → **1213**; ⭐ each DROP has a `D` row: `D106`–`D110`). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1227 golden vectors,
+all passing** (37 → … → 1283 → 1173 → **1227**; ⭐ each DROP has a `D` row: `D106`–`D110`). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`, 2026-09-22/23):
 a body translates along **its own axes**, the boot camera's, frozen (`worldAxisB=1`). ⛔ The first mapping

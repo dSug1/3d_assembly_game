@@ -96,10 +96,11 @@ describe("⭐⭐⭐ Scene_0 — the boot, as data", () => {
     expect(SCENE_0.final).toBeNull();
   });
 
-  it("⭐ the content is one world, one level, Scene_0", () => {
+  it("⭐ the content is one world, two levels: Scene_0 and Scene_1 (2026-09-27)", () => {
     expect(GAME_CONTENT.worlds.map((w) => w.id)).toEqual(["World_0"]);
     expect(levelOf(GAME_CONTENT, "World_0", "Level_0")?.scene).toBe(SCENE_0);
-    expect(levelOf(GAME_CONTENT, "World_0", "Level_1")).toBeNull();
+    expect(levelOf(GAME_CONTENT, "World_0", "Level_1")?.scene.id).toBe("Scene_1");
+    expect(levelOf(GAME_CONTENT, "World_0", "Level_2")).toBeNull();
   });
 
   it("⭐ resolveBootOrientation names the same quaternions the boot used", () => {

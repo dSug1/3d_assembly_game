@@ -9,7 +9,7 @@ import { clampCameraRadiusM, orbitCentre, gravityFrame, CameraResetAnimation, ty
 import { type Vec3 } from "../core/vec";
 import { WORLD_DOWN } from "../core/object_model";
 import { pitchOffsetV, pitchAngleFor } from "../input/approach_swing";
-import { ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type SceneState } from "./scene_state";
+import { ORBIT_START_YAW_RAD, type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
 import { swingAngleNow } from "./highlight_pass";
 
@@ -89,7 +89,7 @@ export function resetCamera(st: SceneState) {
   // have looked at. ⚠ Only the ANGLES and the zoom go back to their launch values.
   const home: CameraPose = {
     yawRad: ORBIT_START_YAW_RAD,
-    elevation: ORBIT_START_ELEVATION,
+    elevation: st.bootElevation,
     // ⚠ THE BOOT ZOOM, NOT 1. ⛔ *"Home"* has to be the view the session opened with, or a
     // double tap would fly the camera somewhere the user has never seen — the same argument
     // this function already makes about the orbit CENTRE, applied to the zoom.

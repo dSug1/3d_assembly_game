@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { SCENES } from "../content/scenes";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createMenu, type MenuSlider } from "./menu";
 import { type SceneState } from "./scene_state";
@@ -69,6 +70,13 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐⭐ **CAMERA, WITH TWO FOLDERS** — the owner, 2026-09-26: *"in CAMERA menu, create a
       // subfolder CAMERA ORBIT and move all the sliders under CAMERA ORBIT except the subfolder
       // CAMERA APPROACH SWING AT CAPTURE which stays under CAMERA"*.
+      title: "SCENE",
+      // ⭐⭐ The owner, 2026-09-27: *"toggle with a slider between Scene_0 and Scene_1. When the slider
+      // is toggled, the corresponding scene boot from beginning."* ⛔ A RELOAD, not a swap: the page
+      // comes back on `?sceneIndex=N`, so nothing of the other scene survives.
+      sliders: [sceneSlider(st)],
+    },
+    {
       title: "CAMERA",
       // ⭐ `D113` (the owner, 2026-09-27: *"Put a slider for the band width"*): at the TOP of CAMERA,
       // not inside a subsection — the strip that is always empty space, 0 = off.
@@ -383,4 +391,23 @@ export function installTuningMenu(st: SceneState): void {
       ],
     },
   ]);
+}
+
+/** ⭐ The scene switch: `get` is the index booted; `set` rewrites `?sceneIndex=` and reloads. */
+function sceneSlider(st: SceneState): MenuSlider {
+  return {
+    label: `scene (0 = Scene_0, ${SCENES.length - 1} = ${SCENES[SCENES.length - 1]!.id}) — reboots`,
+    min: 0,
+    max: SCENES.length - 1,
+    step: 1,
+    get: () => st.cfg.sceneIndex,
+    set: (value) => {
+      const v = Math.round(value);
+      if (v === st.cfg.sceneIndex) return null;
+      const url = new URL(window.location.href);
+      url.searchParams.set("sceneIndex", String(v));
+      window.location.assign(url.toString());
+      return null;
+    },
+  };
 }

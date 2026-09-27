@@ -40,14 +40,15 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
+import { attachShadows, buildLighting } from "./lighting";
+import { levelElevation } from "../input/orbit";
 import { EpisodeTally } from "../input/episode_ledger";
 import { GestureSpan, UndoHistory } from "../core/undo_history";
 import { type SceneSnapshot } from "./undo_wiring";
 import "@babylonjs/core/Culling/ray";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
-import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -110,8 +111,6 @@ export function createScene(
   // and a typo'd key would then silently do nothing instead of being named on the HUD.
   st.tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
   st.cfg = st.tuning.config;
-  // ⚠ Explicit, so "dark page" always means the SCENE, never an unset default.
-  st.scene.clearColor = new Color4(0.078, 0.086, 0.102, 1);
 
   st.camera = new ArcRotateCamera(
     "camera",
@@ -131,8 +130,13 @@ export function createScene(
   // things claim the same touch and the winner depends on event order.
   st.camera.detachControl();
 
-  st.light = new HemisphericLight("light", new Vector3(0.3, 1, 0.2), st.scene);
-  st.light.intensity = 0.95;
+  // ⭐⭐ THE SCENE'S OWN LIGHTS AND BACKGROUND (`Scene_1`), or `Scene_0`'s one hemispheric light.
+  // ⭐ Measured at the mean of the bodies, in AUTHORED units — where the lights were aimed.
+  const shadowGens = buildLighting(st, (() => {
+    const bs = st.sceneSpec.bodies.filter((b) => !b.frozen);
+    const n = Math.max(1, bs.length);
+    return [0, 1, 2].map((i) => bs.reduce((a, b) => a + b.position[i]!, 0) / n) as [number, number, number];
+  })());
 
   // ⚠ EXPLICIT materials rather than the auto-created default: with tree-shaken ES6
   // imports the default material is one more thing that has to have been pulled in,
@@ -250,14 +254,16 @@ export function createScene(
   // scene as Scene_0"*): four `BodySpec`s in `content/scene_0.ts` replaced four `make(...)` calls
   // here, in the same order with the same numbers. ⛔ The orientation names are resolved by
   // `core/game_structure.ts`, where a vector reaches them.
+  // ⭐ `unitM`: the scene is AUTHORED in its own units; positions and sizes become metres here, once.
+  const unitM = st.sceneSpec.unitM ?? 1;
   for (const b of st.sceneSpec.bodies) {
     make(
       st,
       b.id,
-      new Vector3(b.position[0], b.position[1], b.position[2]),
+      new Vector3(b.position[0] * unitM, b.position[1] * unitM, b.position[2] * unitM),
       [b.colour[0], b.colour[1], b.colour[2]],
       resolveBootOrientation(b.orientation, bootRotations),
-      b.dims,
+      [b.dims[0] * unitM, b.dims[1] * unitM, b.dims[2] * unitM],
       b.frozen,
       b.topScale,
     );
@@ -341,6 +347,8 @@ export function createScene(
         };
       }),
   );
+  // ⭐ `Scene_1`: every movable body casts, every body receives (the frozen floor only receives).
+  attachShadows(shadowGens, [...st.meshOf.values()], (m) => st.world.objects.get(st.idOf.get(m) ?? "")?.frozen === true);
 
   st.faceMarkers = new Map<string, FaceMarker>();
 
@@ -729,10 +737,13 @@ export function createScene(
    * whole pose every frame.
    */
   st.cameraReset = null;
+  // ⭐ `Scene_1`'s LEVEL view, found on the rig; every other scene keeps the rig's own start.
+  st.bootElevation =
+    st.sceneSpec.bootView === "LEVEL" ? levelElevation(st.cfg) : ORBIT_START_ELEVATION;
   st.orbit = new OrbitController(
     st.cfg,
     ORBIT_START_YAW_RAD,
-    ORBIT_START_ELEVATION,
+    st.bootElevation,
   );
   // ⭐ ONE zoom scalar, shared. Pinch scales the whole orbit SURFACE rather than
   // setting a radius directly, so rule 1 and rule 4 compose instead of fighting over
