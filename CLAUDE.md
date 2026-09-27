@@ -44,7 +44,22 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-25)
+## Where it stands (2026-09-27)
+
+⭐⭐⭐ **THE INPUTS ARE SIMPLIFIED** (`D106`–`D109`, 2026-09-27, branch `1.0.39-Inputs-simplification`)
+— ⛔ **NO DEVICE LOOK YET.** The owner accepted a merge-and-eliminate pass; the one list of every
+input, both devices, is now [`Claude/10_INPUT_TOUCH/spec/INPUTS_TABLE.md`](Claude/10_INPUT_TOUCH/spec/INPUTS_TABLE.md).
+⭐ **`D106` — `FOLLOW` is deleted**: every alignment is a snapshot; a seat carries; an unseated
+Follower lets go when its Pioneer moves. ⭐ **`D107` — two ways to unalign**: tap empty space while
+holding (holding a Pioneer, that releases all its followers), or align elsewhere — both shakes,
+`D39`'s re-press undo and the flick's drop branch are gone. ⭐⭐ **`D108` — an aligned body is
+MODE-LESS** (first finger slides, second lifts + spins), and **the toggle narrows**: on the tablet
+only a touch tap on EMPTY space while one free body without followers is held; the desktop has no
+mode — **Ctrl + left drag rotates**. No on-screen button. ⭐ **`D109` — the dormant switches are
+deleted**: the pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone-enter hook, the
+**fuchsia offer** (its cone is now the **snap cone angle**, in CAPTURE) and three unwired functions.
+⚠ Both unsnaps remain (the precise one built, the flick-unsnap specified) → `ALIGNMENT_RULES.md` §12.
+⛔ **Everything below is the record as it stood; where it names a deleted gesture, §12 wins.**
 
 ⭐⭐⭐ **THE FUCHSIA OFFER, AND THE ROLES INVERTED A SECOND TIME** (`D88`/`D87`, 2026-09-24/25).
 ⛔ **NO DEVICE LOOK HAS CLOSED ANY OF IT.** The held body's **HitFace** — the first touch's own
@@ -91,7 +106,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1283 golden vectors passing** — ⚠ MEASURED 2026-09-25; the
+✅ Green: TypeScript + Babylon + Vite, **1173 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`'s deletions); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -132,16 +147,16 @@ deployed rounds that were each wrong in a PREMISE about the real pointer, never 
 
 | | left drag | Shift + left drag |
 |---|---|---|
-| aligned body, either mode | horizontal translation | gravity (dy) + roll (dx) |
-| free body, translation | horizontal translation | gravity (dy) |
-| free body, rotation | yaw + pitch | roll (dx) |
+| aligned body (no mode, `D108`) | horizontal translation | gravity (dy) + spin (dx) |
+| free body | horizontal translation | gravity (dy) |
+| free body, **Ctrl** held at the press (`D108`) | yaw + pitch | roll (dx) |
 
-⭐ **To unalign** (`D95`, besides the older gestures): hold the aligned part and **tap empty
+⭐ **To unalign** (`D95`/`D107`, the only way besides aligning elsewhere): hold the aligned part and **tap empty
 space** — on the phone with the second finger, on desktop with a left click while the right
 button holds the part. One rule serves both.
 and to **align**: **right-press and hold** on the part's face — that face is the HitFace, and
 the right button never translates or rotates anything — then move to the Pioneer face and
-**left-click** (single = cyan `SNAPSHOT`, double = amber `FOLLOW`). ⭐ It is `D87`'s gesture with
+**left-click** (every alignment is a snapshot since `D106`). ⭐ It is `D87`'s gesture with
 the right button as the first touch and the left click as the second; **only the right button
 sets a HitFace** (`hitFaceAllowed`).
 ⛔⛔ Four rules, each the negation of a failure: **never touch a DOM pointer event** (the layer
@@ -150,8 +165,7 @@ skips at Babylon's `onPrePointerObservable` and delivers #2 straight to the obse
 and **once two pointers exist the cursor is RELATIVE** — one cursor cannot drive two absolute
 pointers without a jump. ⭐ The Shift-made second touch is anchor-only (no pick, always
 `OUTSIDE`), so it can never grab another body — which is why roll only *sometimes* worked before.
-⭐ `secondTouchAlwaysAvailable`: on a mouse the second touch is always one Shift away, so `D60`
-translates an aligned body under the left button in any mode. ⭐ **The wheel zooms** (`input/mouse_wheel_zoom.ts`): one notch = one fixed ratio of the orbit's
+⭐ **The wheel zooms** (`input/mouse_wheel_zoom.ts`): one notch = one fixed ratio of the orbit's
 `zoom` — the multiplier the pinch writes, through the same `applyCamera()` — clamped on the
 multiplier so scrolling past a limit stores nothing.
 ⚠⚠ Playable, never testable — rule 5 needs a finger.

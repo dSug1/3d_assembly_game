@@ -142,3 +142,22 @@ describe("⭐⭐ config debt", () => {
     expect(new RegExp("\\.rollAngle\\b").test(probe)).toBe(false);
   });
 });
+
+describe("⛔⛔ `D109` — the dormant switches are GONE, not parked", () => {
+  // > *"5- OK to delete. Fuchsia cone is used for snap: rename it snap cone angle and move it to
+  // > snap slider"* — the owner, 2026-09-27.
+  // ⭐ RED against the old config, where each of these was a live 0/1 selector with a URL override.
+  it("no rule selector survives, and the cone is the snap's", () => {
+    const keys = Object.keys(DEFAULT_CONFIG);
+    for (const gone of [
+      "pioneerTranslates",
+      "worldAxisB",
+      "translatePairing",
+      "cameraOffsetZoneEnterSetupB",
+      "pioneerCandidates",
+      "pioneerCandidateConeDeg",
+    ])
+      expect(keys).not.toContain(gone);
+    expect(DEFAULT_CONFIG.snapConeDeg).toBe(15);
+  });
+});

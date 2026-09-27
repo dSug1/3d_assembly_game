@@ -112,44 +112,6 @@ export function constrainedDragAngle(
 }
 
 /**
- * Amendment A3 — the angle to turn about the constraint axis, from a screen ROLL.
- *
- * ⚠ `degClockwise` is `RollDetector.accumulatedDeg`, whose declared sign is positive for
- * CLOCKWISE on screen — the same channel 2quinte uses on an unconstrained object.
- *
- * ⛔ THE SIGN FLIPS WITH THE AXIS. When the constraint axis points AWAY from the viewer a
- * clockwise sweep is one way round it, and when it points back at the viewer it is the
- * other — but the object must follow the finger either way, or orbiting under the object
- * would silently reverse its controls. `sign(dot(axis, viewAxis))` is that flip, and it is
- * asserted in both directions.
- *
- * @returns radians about `axisWorld`, or `null` when the axis is square to the view and
- *   no roll can be honoured without breaking the anchor.
- */
-export function constrainedRollAngle(
-  frame: ScreenFrame,
-  axisWorld: Vec3,
-  degClockwise: number,
-): number | null {
-  const a = normalize(axisWorld);
-  const v = normalize(frame.viewAxis);
-  if (!a || !v) return null;
-  const c = dot(a, v);
-  // ⛔⛔ **SQUARE TO WITHIN ARITHMETIC, NOT SQUARE TO THE BIT** — audit fix, 2026-09-17. This
-  // read `c === 0`: an exact float comparison on a dot product of two vectors that have each
-  // been normalised by a division. ⚠ An exactly-zero dot is measure-zero, so the axis a camera
-  // actually reaches is square to within 1e-17 and the guard waved it through — at FULL rate,
-  // with the sign taken from whichever way the last bit fell. ⭐ *A guard that cannot fire is
-  // not a guard*, which is this validator's own phrase turned on one of its neighbours.
-  // ⚠ 1e-9 is the epsilon `nearSideScreenDirection` already uses for the same degeneracy, so
-  // this is ONE arithmetic tolerance rather than a new number.
-  if (Math.abs(c) <= 1e-9) return null; // square to the view: no component to roll about
-  // ⚠ `screen_rotate.screenRollRotation` turns by `−degClockwise` about the view axis.
-  // Matching it keeps ONE definition of which way a circle turns an object.
-  return ((-degClockwise * Math.PI) / 180) * Math.sign(c);
-}
-
-/**
  * Apply a rotation about a WORLD axis on top of `base`.
  *
  * ⭐ Left-multiplied, exactly as `screen_rotate.ts` does it: `qmul(b, a)` is "apply `a`,

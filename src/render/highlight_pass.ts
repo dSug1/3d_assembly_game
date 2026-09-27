@@ -13,9 +13,8 @@ import { freezeProgress, rebaseTriggerGap, smoothAmplitude, swingDriverIndex, en
 import { type SceneState } from "./scene_state";
 import { guardDraw } from "./bodies";
 import { showCaptureOutlines } from "./markers";
-import { cameraOffsetZoneEnter } from "./gizmo";
 import { rebaseGestureFrames, syncCentre } from "./camera_rig";
-import { gripOfObject, secondTouchOwnsRollAndDepth } from "./drive";
+import { gripIsAlignedFollower, gripOfObject } from "./drive";
 
 export function refreshHighlight(st: SceneState) : void {
   // ⭐ Held bodies in PRESS ORDER, de-duplicated — `router.objects()` is ordered by press, and
@@ -40,7 +39,7 @@ export function refreshHighlight(st: SceneState) : void {
     translatesOnDrag(
       ids.length,
       st.behaviour,
-      soleGrip !== undefined && secondTouchOwnsRollAndDepth(st, soleGrip),
+      soleGrip !== undefined && gripIsAlignedFollower(st, soleGrip),
     ),
     {
       // ⭐⭐⭐ **RECOMPUTED EVERY FRAME FROM THE CAMERA** (`D49`, the owner: the offset *"shall
@@ -124,16 +123,11 @@ export function refreshHighlight(st: SceneState) : void {
       // ⛔⛔⛔ **THE BASIS NO LONGER MOVES HERE** — `D82`, 2026-09-23, the owner: *"eliminate
       // this rule: Inside the offset radius the axes are the LeadingFace normal, gravity, and
       // their orthogonal. Inside shall be the same as outside."* ⭐ What remains on the edge is
-      // the pair's identity, for the readout, and the owner's own hook.
+      // the pair's identity, for the readout. ⛔ The owner's empty `CameraOffsetZoneEnter` hook is DELETED (`D109`).
       // ⛔ The HOOK fires on the CROSSING only, never on the late naming: the owner's trigger is
       // *"has entered … an offset radius zone"*, and a body that was already inside has not.
-      if (edge === "ENTER" && st.cfg.cameraOffsetZoneEnterSetupB === 1)
-        cameraOffsetZoneEnter(st);
       st.lastVerdict =
-        `zone ${edge ?? "IN(named)"} — ${st.zonePair.length} body pair, axes UNCHANGED (D82)` +
-        (edge === "ENTER" && st.cfg.cameraOffsetZoneEnterSetupB === 1
-          ? `, CameraOffsetZoneEnter #${st.zoneEnterCalls} (no behaviour yet)`
-          : "");
+        `zone ${edge ?? "IN(named)"} — ${st.zonePair.length} body pair, axes UNCHANGED (D82)`;
       // ⚠ Cleared AFTER the readout, or the line would report zero bodies on every exit.
       if (edge === "EXIT") st.zonePair = [];
     }

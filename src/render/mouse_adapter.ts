@@ -68,6 +68,8 @@ export function attachMouseSecondTouch(
   // ⭐ The mouse's own pointer id, read off every real event — a `REAL` action re-issues THAT
   // pointer at its own position, so it must carry the same id the scene latched a role for.
   let realId = 1;
+  /** ⭐ `D108`: Ctrl latches the desktop's rotate at the press — carried onto re-issued events. */
+  let ctrl = false;
 
   /** Deliver one synthetic action straight to the scene's handler. */
   const deliver = (a: MouseAction): void => {
@@ -87,6 +89,7 @@ export function attachMouseSecondTouch(
         clientX: a.x,
         clientY: a.y,
         buttons: a.kind === "UP" ? 0 : 1,
+        ctrlKey: a.target === "REAL" && ctrl,
       },
     );
     // ⛔ Canvas-relative for `scene.pick`, which works in the engine's coordinates while the event
@@ -123,6 +126,7 @@ export function attachMouseSecondTouch(
     seen++;
     realId = e.pointerId;
     shift = e.shiftKey;
+    ctrl = e.ctrlKey;
     apply(
       {
         type,

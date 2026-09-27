@@ -194,7 +194,7 @@ describe("⭐⭐⭐ the cascades SKIP a seated Follower — the tree carries it"
     l.link("f", "p", "top", IDENTITY, [0, 0, 0]);
     l.seat("f");
     const plan = resolvePioneerTurns(
-      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), () => "SNAPSHOT", (f) => l.isSeated(f)),
+      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), (f) => l.isSeated(f)),
       (id) => (id === "p" ? q : IDENTITY),
     );
     expect(plan.steps).toHaveLength(0);
@@ -205,7 +205,7 @@ describe("⭐⭐⭐ the cascades SKIP a seated Follower — the tree carries it"
     l.link("f", "p", "top", IDENTITY, [0, 0, 0]);
     l.seat("f");
     const plan = resolvePioneerMoves(
-      followerMoveLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), () => "FOLLOW", (f) => l.isSeated(f)),
+      followerMoveLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), (f) => l.isSeated(f)),
       (id) => (id === "p" ? [1, 0, 0] : [0, 0, 0]),
     );
     expect(plan.steps).toHaveLength(0);
@@ -215,7 +215,7 @@ describe("⭐⭐⭐ the cascades SKIP a seated Follower — the tree carries it"
     const l = new AlignmentLinks();
     l.link("f", "p", "top", IDENTITY, [0, 0, 0]);
     const plan = resolvePioneerTurns(
-      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), () => "SNAPSHOT", (f) => l.isSeated(f)),
+      followerLinksFrom(l.alignedObjects(), (f) => l.pioneerFor(f), (f) => l.isSeated(f)),
       (id) => (id === "p" ? q : IDENTITY),
     );
     expect(plan.steps.map((s) => s.kind)).toEqual(["RELEASE"]);
@@ -271,9 +271,9 @@ describe("⭐⭐⭐ the unsnap gesture — one touchpoint on each body, then a r
     expect(unsnapCouple("f", "f", pioneerOf, seated)).toBeNull();
   });
 
-  it("⭐ the params are the eviction shake's own sliders — *\"same sliders as eviction shake\"*", () => {
-    expect(P.legMm).toBe(DEFAULT_CONFIG.evictShakeLegMm);
-    expect(P.windowMs).toBe(DEFAULT_CONFIG.evictShakeWindowMs);
+  it("⭐ the params are the unsnap's own sliders — the shake's two numbers, kept when it was deleted (D107)", () => {
+    expect(P.legMm).toBe(DEFAULT_CONFIG.unsnapLegMm);
+    expect(P.windowMs).toBe(DEFAULT_CONFIG.unsnapWindowMs);
   });
 
   it("⭐⭐ TOUCH: the fingers' separation GROWING by a leg within the window fires, once", () => {

@@ -1864,7 +1864,7 @@ about it stays free; ⚠ the total turn is no longer strictly minimal, by the ow
 | **the seat** | on landing the Follower becomes a **CHILD** of its Pioneer (`object_model.attach`, `3D1`'s tree) and the link is marked seated. Every frame its LOCAL placement is **re-derived** from the cursor: `position = cursor − rotate(orientation, faceCentre)` — so the face centre is on the cursor by construction, a twist about the normal is a turn **about the face**, and a dragged cursor (Free Flow) carries the body | `core/seat.ts`, `scene.ts` `syncSeats` |
 | **what a seat refuses** | its own translation (reported: *"seated — move its Pioneer, or unsnap"*); the turn and move cascades skip it (the tree carries it); the sway treats the assembly as one body; a press on the partner aligns/swaps/undoes **nothing** | `applyWorldStep`, `followerLinksFrom`, `receivesSway`, `pressMeaning` |
 | **what ends a seat** | the **unsnap**; a release of the alignment; a re-alignment; a prune — each un-parents the body where it stands | `unseatWorld` |
-| **the unsnap** | FIRST holder on the Pioneer, SECOND on its seated Follower (both devices), then within the eviction shake's `evictShakeWindowMs` a growth of the fingers' **separation** by `evictShakeLegMm` (tablet, *zoom out*) or a **travel** of the driven pointer by that leg (mouse) | `input/unsnap.ts` |
+| **the unsnap** | FIRST holder on the Pioneer, SECOND on its seated Follower (both devices), then within `unsnapWindowMs` a growth of the fingers' **separation** by `unsnapLegMm` (tablet, *zoom out*) or a **travel** of the driven pointer by that leg (mouse) | `input/unsnap.ts` |
 
 ⚠⚠ **NOT BUILT, deliberately**: the **approach** — the offset-radius zone still only lights the
 white contour (*"for the moment, we are not using it"*), the swing trial ships OFF, and no mate
@@ -1915,3 +1915,31 @@ assembly's axes at the touched face.
 object, itself and its snapped children objects cannot sway when a third object is moved"*): a body
 whose seated chain reaches a frozen body is part of the plate — `anchoredToFrozen` in
 `input/assembly.ts`, read by `receivesSway`. ⛔ A merely aligned body still sways.
+
+✅ **Unsnap from the frozen plate on desktop — confirmed by the owner, 2026-09-26**: *"Unsnapping
+from the plate on desktop is ok."* (right-hold the plate, left click the seated part, a rapid move).
+⚠ It had been reported stuck earlier the same day; the fixes between were the unsnap feed reading
+each event's own sample and the plate being holdable while a part is seated on it. ⭐ The HUD's
+`unsnap` line stays as an instrument, like `jump`: it names the step the gesture reached.
+
+---
+
+## 12 — ⭐⭐⭐ THE 2026-09-27 SIMPLIFICATION (`D106`–`D109`)
+
+> *"are there inputs we can simplify, merge, eliminate?"* … *"1- OK 2-OK, delete unused sliders
+> 3-OK 4-OK, but no button on screen 5- OK to delete. Fuchsia cone is used for snap: rename it
+> snap cone angle and move it to snap slider"* — the owner, 2026-09-27
+
+⭐ The inventory that results is [`INPUTS_TABLE.md`](INPUTS_TABLE.md). ⛔ **No device look yet.**
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D106` | **`FOLLOW` is deleted** — `AlignMode` is `SNAPSHOT` only; a moved or turned Pioneer RELEASES its unseated followers (`resolvePioneerTurns`/`Moves`, one pass); a seat carries | `input/alignment.ts`, `input/pioneer_cascade.ts` | *a Follower that keeps its alignment while its Pioneer turns* now needs a seat |
+| `D107` | **unalign = tap empty space while holding** (`outsideTapRelease`: `SELF` first, else `FOLLOWERS` when holding a Pioneer), or align elsewhere. Shakes, the re-press undo, `tapMeaning` and the flick's drop branch are deleted; `flickResetPlan(true)` restores nothing | `input/alignment.ts` | the shake's window and leg live on as `unsnapWindowMs`/`unsnapLegMm`; a flick in the aligning gesture now does nothing |
+| `D108` | **an aligned Follower is mode-less** — `translatesOnDrag(…, heldIsAlignedFollower)` translates; `secondTouchDrive` gives BOTH axes wherever the second finger lands. **The toggle**: `tapTogglesMode` — touch, empty space, one held body, free, no followers; `desktopBehaviour(ctrlKey)` latched at the mouse press | `input/highlight.ts`, `input/second_touch_drive.ts`, `input/mode_toggle.ts` | a diagonal second finger on an aligned body drives gravity AND spin; a tap on a body or with nothing held no longer toggles; `D68`'s revert only follows a tap that toggled |
+| `D109` | **dormant switches deleted**: `pioneerTranslates` (pinned Pioneer), `worldAxisB=0`, `translatePairing=0`, `cameraOffsetZoneEnterSetupB`, the fuchsia offer (`pioneerCandidates`, `core/face_candidates.ts`) and the unwired `screenTranslation`, `depthTranslate`, `constrainedRollAngle`. `pioneerCandidateConeDeg` → **`snapConeDeg`**, *snap cone angle (deg)* in CAPTURE | `input/gestureConfig.ts`, `input/object_axes.ts`, `input/axis_translate.ts` | a Pioneer held beside its Follower translates; the HitFace keeps its fuchsia contour and nothing else is lit |
+
+⚠⚠ **Readings chosen, each a sentence to falsify on the glass**: (1) holding an aligned Pioneer, the
+tap releases its OWN alignment first; (2) the tablet toggle and the release share one gesture and
+partition it by what is held; (3) Ctrl is read at the left press, not mid-drag.
+⭐ Both unsnaps remain: the precise one built (§11.13), the flick-unsnap specified (§11.13.2).

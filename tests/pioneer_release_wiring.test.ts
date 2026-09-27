@@ -15,22 +15,12 @@
  * device report that nobody could explain from the unit tests.
  */
 import { describe, expect, it } from "vitest";
-import {
-  evictObjectConstraints,
-  faceWorld,
-  makeWorld,
-  pushObjectConstraint,
-  setWorldPlacement,
-  worldPlacementOf,
-  type SceneObject,
-  type World,
-} from "@core/object_model";
+import { evictObjectConstraints, faceWorld, makeWorld, setWorldPlacement, worldPlacementOf, type SceneObject, type World } from "@core/object_model";
 import { alignedFaceOf } from "@core/face_pick";
 import { AlignmentLinks } from "@core/alignment_links";
 import { faceAlignConstraint } from "@input/alignment";
 import { singleAlignment } from "@core/constraint_stack";
 import { followerLinksFrom, resolvePioneerTurns } from "@input/pioneer_cascade";
-import type { AlignMode } from "@input/alignment";
 import { IDENTITY, qFromAxisAngle, type Quat, type Vec3 } from "@core/vec";
 
 const L = 0.08;
@@ -101,20 +91,10 @@ function aligned(
  * ⛔ `METHOD`: *a harness that recomputes what the product computed is a second implementation
  * that can silently disagree* — stated in `object_model.ts` about a caller, and true of a test.
  *
- * @param modeOf per FOLLOWER, exactly as the product supplies it. ⚠ A plain mode is accepted
- *   for the single-follower vectors, but it is passed through the real per-link door.
  */
-const plan = (
-  world: World,
-  links: AlignmentLinks,
-  modeOf: AlignMode | ((f: string) => AlignMode | undefined),
-) =>
+const plan = (world: World, links: AlignmentLinks) =>
   resolvePioneerTurns(
-    followerLinksFrom(
-      links.alignedObjects(),
-      (f) => links.pioneerFor(f),
-      typeof modeOf === "function" ? modeOf : () => modeOf,
-    ),
+    followerLinksFrom(links.alignedObjects(), (f) => links.pioneerFor(f)),
     (id) => worldPlacementOf(world, id)?.orientation ?? null,
   );
 
@@ -130,7 +110,7 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
 
   it("⭐ and NOTHING happens while the Pioneer sits still", () => {
     const { world, links } = aligned("+x", "+x");
-    expect(plan(world, links, "SNAPSHOT").steps).toEqual([]);
+    expect(plan(world, links).steps).toEqual([]);
   });
 
   it("⭐⭐⭐ TURNING THE PIONEER PLANS A RELEASE FOR THE CYAN FOLLOWER", () => {
@@ -139,7 +119,7 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
       position: worldPlacementOf(world, "p")!.position,
       orientation: qFromAxisAngle([0, 1, 0], 0.3),
     });
-    expect(plan(turned, links, "SNAPSHOT").steps).toEqual([
+    expect(plan(turned, links).steps).toEqual([
       { kind: "RELEASE", follower: "f" },
     ]);
   });
@@ -154,7 +134,7 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
       position: worldPlacementOf(world, "p")!.position,
       orientation: qFromAxisAngle([0, 1, 0], 0.3),
     });
-    for (const step of plan(turned, links, "SNAPSHOT").steps) {
+    for (const step of plan(turned, links).steps) {
       expect(step.kind).toBe("RELEASE");
       const ev = evictObjectConstraints(turned, step.follower);
       turned = ev.world;
@@ -176,22 +156,7 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
       position: worldPlacementOf(world, "p")!.position,
       orientation: qFromAxisAngle([0, 1, 0], (0.2 * Math.PI) / 180),
     });
-    expect(plan(turned, links, "SNAPSHOT").steps.length).toBe(1);
-  });
-
-  it("⭐ the ORANGE case rotates instead, and KEEPS the alignment", () => {
-    // ⚠ The counterpart, asserted here so that *"the cyan one did not release"* cannot be
-    // confused with *"the mode was read as FOLLOW"* — which would look identical on the glass
-    // apart from the colour.
-    const { world, links } = aligned("+x", "+x");
-    const turned = setWorldPlacement(world, "p", {
-      position: worldPlacementOf(world, "p")!.position,
-      orientation: qFromAxisAngle([0, 1, 0], 0.3),
-    });
-    const steps = plan(turned, links, "FOLLOW").steps;
-    expect(steps.length).toBe(1);
-    expect(steps[0]!.kind).toBe("ROTATE");
-    expect(alignedFaceOf(turned, "f")).toBe("+x"); // ⛔ still aligned
+    expect(plan(turned, links).steps.length).toBe(1);
   });
 
   it("⛔⛔ AND IT WORKS FOR A PIONEER THAT DID NOT START SQUARE", () => {
@@ -225,12 +190,12 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
       worldPlacementOf(world, "p")!.position,
     );
     // ⭐ quiet while it sits, even though neither body is axis-aligned
-    expect(plan(world, links, "SNAPSHOT").steps).toEqual([]);
+    expect(plan(world, links).steps).toEqual([]);
     const turned = setWorldPlacement(world, "p", {
       position: worldPlacementOf(world, "p")!.position,
       orientation: qFromAxisAngle([0, 1, 0], 0.25),
     });
-    expect(plan(turned, links, "SNAPSHOT").steps).toEqual([
+    expect(plan(turned, links).steps).toEqual([
       { kind: "RELEASE", follower: "f" },
     ]);
   });
@@ -245,42 +210,6 @@ describe("⛔⛔⛔ THE REPORTED DEFECT, as a composition", () => {
  * structurally incapable of building it.
  */
 describe("⛔⛔ each link carries its OWN reading, and the assembly is what supplies it", () => {
-  it("⭐⭐ two followers of one Pioneer, one SNAPSHOT and one FOLLOW", () => {
-    // ⚠ Built through `pushObjectConstraint`, not by writing the map — so the frozen guard and
-    // the ordering rule are exercised rather than bypassed, which `aligned()` above does not do.
-    let world = makeWorld([body("f"), body("g"), body("p")]);
-    world = setWorldPlacement(world, "p", { position: [0.2, 0, 0], orientation: IDENTITY });
-    const links = new AlignmentLinks();
-    for (const [follower, face] of [
-      ["f", "+x"],
-      ["g", "+y"],
-    ] as const) {
-      const pioneerWorld = faceWorld(world, "p", face)!.normal;
-      const followerLocal = world.objects.get(follower)!.faces.find((x) => x.id === face)!.normal;
-      world = pushObjectConstraint(
-        world,
-        follower,
-        faceAlignConstraint(followerLocal, pioneerWorld),
-        false,
-      );
-      links.link(
-        follower,
-        "p",
-        face,
-        worldPlacementOf(world, "p")!.orientation,
-        worldPlacementOf(world, "p")!.position,
-      );
-    }
-    const turned = setWorldPlacement(world, "p", {
-      position: worldPlacementOf(world, "p")!.position,
-      orientation: qFromAxisAngle([0, 1, 0], 0.3),
-    });
-
-    const steps = plan(turned, links, (f) => (f === "f" ? "SNAPSHOT" : "FOLLOW")).steps;
-    // ⛔ ONE of each, decided per body — which the old helper could not express at all.
-    expect(steps.find((s) => s.follower === "f")?.kind).toBe("RELEASE");
-    expect(steps.find((s) => s.follower === "g")?.kind).toBe("ROTATE");
-  });
 
   it("⛔⛔ a follower whose mode has been FORGOTTEN releases rather than rotates", () => {
     // ⭐ The default is stated in `followerLinksFrom` and asserted here: a lost mode must fail
@@ -291,7 +220,7 @@ describe("⛔⛔ each link carries its OWN reading, and the assembly is what sup
       position: worldPlacementOf(world, "p")!.position,
       orientation: qFromAxisAngle([0, 1, 0], 0.3),
     });
-    expect(plan(turned, links, () => undefined).steps).toEqual([{ kind: "RELEASE", follower: "f" }]);
+    expect(plan(turned, links).steps).toEqual([{ kind: "RELEASE", follower: "f" }]);
   });
 
   it("⛔ a body listed as aligned whose LINK has gone is skipped, not defaulted", () => {
@@ -299,7 +228,7 @@ describe("⛔⛔ each link carries its OWN reading, and the assembly is what sup
     // a body can be listed without a link. ⭐ Inventing a Pioneer for it would outlive the
     // alignment that justified it — the leak this whole two-way index exists to avoid.
     const { world, links } = aligned("+x", "+x");
-    const built = followerLinksFrom(["f", "ghost"], (f) => links.pioneerFor(f), () => "FOLLOW");
+    const built = followerLinksFrom(["f", "ghost"], (f) => links.pioneerFor(f));
     expect(built.map((l) => l.follower)).toEqual(["f"]);
     expect(worldPlacementOf(world, "f")).not.toBeNull();
   });

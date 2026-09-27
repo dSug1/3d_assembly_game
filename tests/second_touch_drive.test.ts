@@ -1,69 +1,24 @@
 /**
- * GOLDEN VECTORS — **`D51`: the pinned Pioneer.**
+ * GOLDEN VECTORS — **what a second touch drives** (`D51`'s both-axes drive, kept for an aligned Follower; the pinned pair itself is deleted, `D109`).
  *
  * ⛔⛔ The rule's whole point is a DIFFERENCE from `A16`'s one-axis second finger, so the
  * vectors assert the difference directly rather than the new behaviour alone: a vector that
  * only showed "both axes apply" would pass just as well if the other rule had been changed too.
  */
 import { describe, expect, it } from "vitest";
-import { pinnedPair, pinnedSecondDrive,
-  secondTouchDrive,
-} from "@input/pinned_pioneer";
+import { bothAxesSecondDrive, secondTouchDrive } from "@input/second_touch_drive";
 import { secondFingerDrive } from "@input/depth_translate";
 import type { MotionState } from "@input/motion";
 
 const MOVING: MotionState = "MOVING";
 const STILL: MotionState = "STATIONARY";
 
-describe("⭐⭐ pinnedPair — exactly two held bodies, and related", () => {
-  const aligned = (map: Record<string, string>) => (id: string) => map[id] ?? null;
-
-  it("⭐ finds the pair in either press order", () => {
-    const pioneerFor = aligned({ part: "plate" });
-    expect(pinnedPair(["part", "plate"], pioneerFor)).toEqual({
-      follower: "part",
-      pioneer: "plate",
-    });
-    // ⚠ Press order says nothing about who is the Pioneer — the hand chooses which body to
-    // align, not which to grab first.
-    expect(pinnedPair(["plate", "part"], pioneerFor)).toEqual({
-      follower: "part",
-      pioneer: "plate",
-    });
-  });
-
-  it("⛔ two UNRELATED held bodies are not a pinned pair", () => {
-    // ⚠ This is the ordinary two-holder case and it must stay untouched: both translate.
-    expect(pinnedPair(["a", "b"], aligned({ a: "c" }))).toBeNull();
-    expect(pinnedPair(["a", "b"], aligned({}))).toBeNull();
-  });
-
-  it("⛔ one body, or three, is not this configuration", () => {
-    const pioneerFor = aligned({ part: "plate" });
-    expect(pinnedPair(["part"], pioneerFor)).toBeNull();
-    // ⚠ With three held, WHICH pair is *the* pair has no trustworthy answer — `scene.ts`
-    // refuses an alignment for the same reason when two other bodies are held.
-    expect(pinnedPair(["part", "plate", "other"], pioneerFor)).toBeNull();
-  });
-
-  it("⛔ a MUTUAL pair is refused rather than resolved by press order", () => {
-    // ⚠ `A18`'s `wouldCycle` makes this unrepresentable — and this module does not rely on a
-    // neighbour's invariant, because a guard that assumes one fails the day the neighbour
-    // changes. ⭐ Refusing is deterministic; picking would make behaviour depend on press order.
-    expect(pinnedPair(["a", "b"], aligned({ a: "b", b: "a" }))).toBeNull();
-  });
-
-  it("⚠ the same body twice is not two bodies", () => {
-    expect(pinnedPair(["a", "a"], aligned({ a: "a" }))).toBeNull();
-  });
-});
-
-describe("⭐⭐⭐ pinnedSecondDrive — BOTH axes, which is the whole difference", () => {
+describe("⭐⭐⭐ bothAxesSecondDrive — BOTH axes, which is the whole difference", () => {
   const axes = (x: MotionState, y: MotionState) => ({ x, y });
   const step = { dx: 7, dy: -11 };
 
   it("⭐⭐⭐ a DIAGONAL drag gives roll AND depth together", () => {
-    expect(pinnedSecondDrive(axes(MOVING, MOVING), step)).toEqual({
+    expect(bothAxesSecondDrive(axes(MOVING, MOVING), step)).toEqual({
       rollDxPx: 7,
       depthDyPx: -11,
     });
@@ -75,7 +30,7 @@ describe("⭐⭐⭐ pinnedSecondDrive — BOTH axes, which is the whole differen
     // cannot control both the depth and the roll."*
     // ⚠ Asserting only the new rule would pass just as well if someone had "tidied" `A16` into
     // agreeing with it — which would silently delete a decision a hand made twice.
-    const both = pinnedSecondDrive(axes(MOVING, MOVING), step);
+    const both = bothAxesSecondDrive(axes(MOVING, MOVING), step);
     const rotate = secondFingerDrive(axes(MOVING, MOVING), step, "ROTATE");
     const translate = secondFingerDrive(axes(MOVING, MOVING), step, "TRANSLATE");
     expect(rotate).toEqual({ rollDxPx: 7, depthDyPx: 0 });
@@ -87,18 +42,18 @@ describe("⭐⭐⭐ pinnedSecondDrive — BOTH axes, which is the whole differen
   it("⭐ each axis is gated on ITS OWN motion state, not on the finger as a whole", () => {
     // ⛔ `A11`'s per-axis deadband is what keeps the two corridors independent — the same thing
     // `A12` relied on the last time two axes applied at once.
-    expect(pinnedSecondDrive(axes(MOVING, STILL), step)).toEqual({ rollDxPx: 7, depthDyPx: 0 });
-    expect(pinnedSecondDrive(axes(STILL, MOVING), step)).toEqual({ rollDxPx: 0, depthDyPx: -11 });
+    expect(bothAxesSecondDrive(axes(MOVING, STILL), step)).toEqual({ rollDxPx: 7, depthDyPx: 0 });
+    expect(bothAxesSecondDrive(axes(STILL, MOVING), step)).toEqual({ rollDxPx: 0, depthDyPx: -11 });
   });
 
   it("⛔ a resting finger drives nothing on either axis", () => {
-    expect(pinnedSecondDrive(axes(STILL, STILL), step)).toEqual({ rollDxPx: 0, depthDyPx: 0 });
+    expect(bothAxesSecondDrive(axes(STILL, STILL), step)).toEqual({ rollDxPx: 0, depthDyPx: 0 });
   });
 
   it("⚠ it does NOT read the movement mode — unlike the rule it contrasts with", () => {
     // ⭐ There is no mode parameter at all, which is the structural form of *both axes always*.
     // ⛔ A mode-dependent version would reintroduce the tap-to-switch this rule exists to avoid.
-    expect(pinnedSecondDrive.length).toBe(2);
+    expect(bothAxesSecondDrive.length).toBe(2);
   });
 });
 
@@ -125,19 +80,11 @@ describe("⛔⛔⛔ `D59` — WHEN DOES THE SECOND TOUCH GIVE BOTH AXES?", () =>
     expect(secondTouchDrive("OUTSIDE", false)).toBe("MODE_PICKS");
   });
 
-  it("⭐ on the PIONEER → BOTH, aligned or not — `D51` unchanged", () => {
-    // ⚠ `pinnedNow()` already refuses unless the pair is a live Pioneer/Follower with the flag
-    // off, so `heldIsAlignedFollower` is redundant at that call site — and the table must not
-    // start depending on a neighbour's invariant. ⛔ Both values give the same answer.
-    expect(secondTouchDrive("PIONEER", true)).toBe("BOTH");
-    expect(secondTouchDrive("PIONEER", false)).toBe("BOTH");
-  });
-
-  it("⛔⛔ on the SAME object → the mode picks, even for an aligned Follower", () => {
-    // ⚠ DELIBERATELY UNTOUCHED: the owner's sentence says *outside any object*, and `A12`'s
-    // finger shares a body with the holder, where a diagonal would smear one axis into the other
-    // by accident — the argument this file opens with.
-    expect(secondTouchDrive("SAME_OBJECT", true)).toBe("MODE_PICKS");
+  it("⛔⛔ on the SAME object → the mode picks for a FREE body; an ALIGNED one drives both (`D108`)", () => {
+    // ⛔⛔ REVERSED 2026-09-27: `D108` makes an aligned body mode-less, so there is no mode left to
+    // pick. ⚠ The cost this vector used to guard is now accepted: a finger on the same body moving
+    // DIAGONALLY drives gravity AND spin together, where the mode used to keep one.
+    expect(secondTouchDrive("SAME_OBJECT", true)).toBe("BOTH");
     expect(secondTouchDrive("SAME_OBJECT", false)).toBe("MODE_PICKS");
   });
 });

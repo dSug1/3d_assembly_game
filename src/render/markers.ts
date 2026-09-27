@@ -16,12 +16,20 @@ import { trackingMetresPerPx } from "../input";
 import { type Vec3 } from "../core/vec";
 import { type ObjectId } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
-import { mateCandidateFaces, type FaceRef } from "../core/face_candidates";
 import { type AlignmentCouple } from "../core/pioneer_face_cursors";
 import { PIONEER_CURSOR_PX } from "../input/pioneer_cursor_grab";
 import { offsetPositions, type MeshTopology } from "../core/mesh_topology";
 import { hitFaceAllowed } from "../input/mouse_second_touch";
-import { ALIGN_OUTLINE_FRACTION, BODY_OUTLINE_FRACTION, CAPTURE_COLOUR, FOLLOWER_COLOUR, MARKER_LIFT_M, PIONEER_COLOUR, RING_POINTS, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
+import { ALIGN_OUTLINE_FRACTION, BODY_OUTLINE_FRACTION, CAPTURE_COLOUR, FOLLOWER_COLOUR, MARKER_LIFT_M, PIONEER_COLOUR, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
+
+/**
+ * ⭐ One face of one body. ⛔ It lived in `core/face_candidates.ts`, deleted with the fuchsia offer
+ * (`D109`); the HitFace is its one remaining reader.
+ */
+export interface FaceRef {
+  readonly objectId: ObjectId;
+  readonly faceId: string;
+}
 
 export function faceMarkerFor(st: SceneState, objectId: ObjectId,
   faceId: string,) : FaceMarker | null {
@@ -185,39 +193,6 @@ export function worldPointOn(st: SceneState, objectId: ObjectId, local: Vec3) : 
   );
 }
 
-export function candidateRingFor(st: SceneState, objectId: ObjectId,
-  faceId: string,) : LinesMesh | null {
-  const key = `${objectId}/${faceId}`;
-  const hit = st.candidateRings.get(key);
-  if (hit !== undefined) return hit;
-  const body = st.meshOf.get(objectId);
-  const face = st.world.objects
-    .get(objectId)
-    ?.faces.find((f) => f.id === faceId);
-  if (!body || !face) return null;
-  const m = CreateLines(
-    `candidate-ring-${key}`,
-    { points: RING_POINTS },
-    st.scene,
-  );
-  m.color = new Color3(1, 1, 1);
-  m.isPickable = false;
-  // ⭐ Above the body and above the face marker it sits on, for the same reason the gizmo is:
-  // an instrument that says *here is the offer* must not be occluded by the thing it marks.
-  m.renderingGroupId = 2;
-  m.billboardMode = Mesh.BILLBOARDMODE_ALL;
-  m.isVisible = false;
-  m.metadata = { orbitCandidate: false };
-  // ⚠ Lifted off the surface by the same hair the face marker uses, or it z-fights the fill.
-  st.candidateRingLocal.set(key, [
-    face.centre[0] + face.normal[0] * MARKER_LIFT_M * 2,
-    face.centre[1] + face.normal[1] * MARKER_LIFT_M * 2,
-    face.centre[2] + face.normal[2] * MARKER_LIFT_M * 2,
-  ]);
-  st.candidateRings.set(key, m);
-  return m;
-}
-
 // ⚠ `PIONEER_CURSOR_PX` (16) lives in `input/pioneer_cursor_grab.ts`, because the grab reach is
 // built on it — a little larger than the white candidate ring (`GIZMO_RING_PX`), so they nest.
 export function syncPioneerCursors(st: SceneState) : void {
@@ -289,30 +264,6 @@ export function syncPioneerCursors(st: SceneState) : void {
 
 
 /**
- * ⭐ The fuchsia set, as the PRESS path needs it. ⛔ Computed from the model on demand rather
- * than read off a variable the render loop happens to have left behind: a press and a frame are
- * different moments, and a set cached by the draw would answer for the wrong one.
- */
-/**
- * ⭐⭐⭐ **THE OFFER — and the ONE place `pioneerCandidates` switches it off.**
- *
- * > *"create a toggle slider to enable or disable the above rules"* — the owner, 2026-09-25,
- * naming exactly two: the fuchsia highlight of OTHER bodies' faces, and the press on one.
- *
- * ⛔⛔ **THE HITFACE IS NOT GATED HERE, AND THAT IS THE POINT.** It and its fuchsia contour are a
- * separate instruction and stay live at `0` — the owner: *"I did not tell to disable the
- * hitFaceNow."* ⚠ I gated the source first and took both with it; the switch belongs on the
- * ACTIONS the offer drives, not on the fact it is computed from.
- */
-export function candidateFacesNow(st: SceneState) : FaceRef[] {
-  if (st.cfg.pioneerCandidates !== 1) return [];
-  const hit = hitFaceNow(st);
-  if (hit === null) return [];
-  return mateCandidateFaces(st.world, hit, st.cfg.pioneerCandidateConeDeg);
-}
-
-
-/**
  * ⭐⭐⭐ **THE PIONEER's CONTOUR** — *"the PioneerFace contour shall be highlighted"*.
  *
  * ⛔⛔ A CONTOUR AND NOT A FILL, BECAUSE THE TWO FACES ARE NOT THE SAME KIND OF THING. The
@@ -351,8 +302,8 @@ export function paintHighlightColours(st: SceneState) : void {
   // recent gesture instead of the relationship it names.
   for (const [key, q] of st.faceMarkers) {
     const id = key.slice(0, key.indexOf("/"));
-    const mode = st.alignModeOf.get(id);
-    const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
+    // ⭐ One colour since `D106`: every alignment is a snapshot.
+    const want = FOLLOWER_COLOUR;
     q.mat.emissiveColor.copyFrom(want);
     const o = st.outlines.get(id);
     if (o !== undefined) o.align.color.copyFrom(want);

@@ -197,13 +197,19 @@ export interface HighlightVerdict {
 export function translatesOnDrag(
   heldObjectCount: number,
   mode: Behaviour,
-  secondTouchOwnsRollAndDepth = false,
+  /**
+   * ⭐⭐ `D108` (the owner, 2026-09-27): an ALIGNED Follower is MODE-LESS on both devices — its
+   * first touch always slides it in its horizontal plane; the second touch lifts it and spins it
+   * about the aligned normal. ⛔ It was *"does a second touch currently own roll and depth"*, which
+   * on the tablet left a one-finger aligned body twisting in `ROTATE` — two channels for one DOF.
+   */
+  heldIsAlignedFollower = false,
 ): boolean {
   if (heldObjectCount >= 2) return true;
   // ⛔ `D60`: the second touch has taken the rotational freedom, so the first takes translation
   // — whatever the mode says. ⚠ Defaulted to `false` so every caller that does not know about a
   // second touch keeps exactly the behaviour it had.
-  if (secondTouchOwnsRollAndDepth) return true;
+  if (heldIsAlignedFollower) return true;
   return mode === "TRANSLATE";
 }
 

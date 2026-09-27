@@ -4,16 +4,13 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { advanceFollow, retargetAlignment, displayPose, exponentialSmooth, phantomTarget, trackingMetresPerPx, easeInOut } from "../input";
+import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
 import { worldPlacementOf } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
-import { rotationChannel } from "../core/constraint_stack";
-import { clearObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
-import { qmul } from "../core/vec";
 import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
-import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, GIZMO_RING_PX, PIONEER_COLOUR, type SceneState } from "./scene_state";
-import { followerFor, guardDraw, modelOrientation, modelPose, requirePose, setModelOrientation, setModelPose, writePose } from "./bodies";
-import { candidateFacesNow, candidateRingFor, faceMarkerFor, hitFaceNow, outlinesFor, syncPioneerCursors, worldPointOn } from "./markers";
+import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
+import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
+import { faceMarkerFor, hitFaceNow, outlinesFor, syncPioneerCursors } from "./markers";
 import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
 import { refreshAxisGizmo } from "./gizmo";
 import { refreshHighlight, swingAngleNow } from "./highlight_pass";
@@ -218,7 +215,6 @@ export function startRenderLoop(st: SceneState): void {
       followerLinksFrom(
         st.links.alignedObjects(),
         (f) => st.links.pioneerFor(f),
-        (f) => st.alignModeOf.get(f),
         (f) => st.links.isSeated(f),
       ),
       // ⚠ WORLD orientation, through the parent chain — never `local`, which is measured in
@@ -229,51 +225,14 @@ export function startRenderLoop(st: SceneState): void {
     // ⚠ Anything the cascade decides must reach the readout in the SAME frame — see `hudDirty`.
     if (cascade.steps.length > 0) st.hudDirty = true;
     for (const step of cascade.steps) {
-      if (step.kind === "RELEASE") {
-        // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* — the
-        // pose is left exactly as the hand left it, and only the RULE goes.
-        const ref = st.links.pioneerFor(step.follower);
-        releaseAlignmentOf(st, step.follower);
-        st.lastVerdict =
-          `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} turned, ` +
-          `alignment released on ${step.follower}`;
-        continue;
-      }
-      // ⭐⭐ C2: the follower takes the SAME WORLD ROTATION, which keeps the two normals
-      // parallel by construction — no solve, and no chance of the solver adding a twist.
-      const followerMesh = st.meshOf.get(step.follower);
-      if (followerMesh) {
-        setModelOrientation(st, 
-          followerMesh,
-          qmul(step.delta, modelOrientation(st, followerMesh)),
-        );
-      }
-      // ⭐⭐ AN ANIMATION IN FLIGHT RIDES ALONG: both ends take the same world rotation, so the
-      // snap keeps travelling toward a target that has moved with the Pioneer. ⛔ Without this
-      // the slerp would drag the body back toward where the Pioneer USED to point.
-      st.alignSnaps.ride(step.follower, step.delta);
-      // ⭐ Keep the CONSTRAINT truthful — the geometry above already holds. ⚠ Without this the
-      // stack would still name the old world direction, and the next rule to read it (a twist,
-      // a reset) would act on a stale target.
+      // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* — the
+      // pose is left exactly as the hand left it, and only the RULE goes. ⛔ C2 (`FOLLOW`) is
+      // deleted (`D106`): a seat carries its follower through the tree instead.
       const ref = st.links.pioneerFor(step.follower);
-      const pn =
-        ref === null
-          ? null
-          : faceWorld(st.world, ref.objectId, ref.faceId)?.normal;
-      const stack = st.world.objects.get(step.follower)?.constraints ?? [];
-      // ⛔⛔ Audit, 2026-09-17: the count again. ⚠ Here the fall-through was SILENT rather than
-      // destructive — the constraint simply kept naming the Pioneer's OLD world direction, and
-      // the next twist or reset acted on a stale target with nothing to say so.
-      if (pn && rotationChannel(stack).kind === "TWIST") {
-        st.world = clearObjectConstraints(st.world, step.follower);
-        st.world = pushObjectConstraint(
-          st.world,
-          step.follower,
-          retargetAlignment(stack[0]!, pn),
-          false,
-        );
-      }
-      st.lastVerdict = `align: FOLLOW — ${step.follower} took ${ref?.objectId ?? "pioneer"}'s turn`;
+      releaseAlignmentOf(st, step.follower);
+      st.lastVerdict =
+        `align: ${ref?.objectId ?? "pioneer"} turned, ` +
+        `alignment released on ${step.follower}`;
     }
     // ⛔ RE-BASELINE LAST, from the plan. ⚠ A released follower is deliberately absent from
     // `baselines`, so this cannot resurrect a link `releaseAlignmentOf` has just removed.
@@ -296,38 +255,19 @@ export function startRenderLoop(st: SceneState): void {
       followerMoveLinksFrom(
         st.links.alignedObjects(),
         (f) => st.links.pioneerFor(f),
-        (f) => st.alignModeOf.get(f),
         (f) => st.links.isSeated(f),
       ),
       (id) => worldPlacementOf(st.world, id)?.position ?? null,
     );
     if (moves.steps.length > 0) st.hudDirty = true;
     for (const step of moves.steps) {
-      // ⭐⭐⭐ **`D70` — A MOVED PIONEER RELEASES A CYAN FOLLOWER**, exactly as a turned one does.
-      // ⛔ The owner: *"a translation of the pioneer should break the alignment of the cyan."*
-      // ⚠ Written through the SAME `releaseAlignmentOf` the turn cascade uses, so the two
-      // channels cannot end in different states.
-      if (step.kind === "RELEASE") {
-        const ref = st.links.pioneerFor(step.follower);
-        releaseAlignmentOf(st, step.follower);
-        st.lastVerdict =
-          `align: SNAPSHOT — ${ref?.objectId ?? "pioneer"} moved, ` +
-          `alignment released on ${step.follower}`;
-        continue;
-      }
-      const followerMesh = st.meshOf.get(step.follower);
-      if (!followerMesh) continue;
-      const mp = requirePose(st, followerMesh);
-      // ⚠ A FROZEN body is refused by `object_model`'s writers, so the plate cannot be dragged
-      // along even if something linked it — the guarantee is there and not here.
-      setModelPose(st, followerMesh, {
-        position: [
-          mp.position[0] + step.delta[0],
-          mp.position[1] + step.delta[1],
-          mp.position[2] + step.delta[2],
-        ],
-        orientation: mp.orientation,
-      });
+      // ⭐⭐⭐ **`D70` — A MOVED PIONEER RELEASES AN UNSEATED FOLLOWER**, exactly as a turned one
+      // does — through the SAME `releaseAlignmentOf`, so the two channels cannot end differently.
+      const ref = st.links.pioneerFor(step.follower);
+      releaseAlignmentOf(st, step.follower);
+      st.lastVerdict =
+        `align: ${ref?.objectId ?? "pioneer"} moved, ` +
+        `alignment released on ${step.follower}`;
     }
     for (const [follower, position] of moves.baselines) {
       st.links.notePosition(follower, position);
@@ -493,7 +433,6 @@ export function startRenderLoop(st: SceneState): void {
     // constraint WITHOUT unlinking (the shake-on-self path does exactly that). ⚠ Its return
     // value is deliberately NOT used to decide what to hide; see below.
     for (const id of st.links.prune((f) => alignedFaceOf(st.world, f) !== null)) {
-      st.alignModeOf.delete(id);
       unseatWorld(st, id);
       // ⚠ A pruned link is a state change with no pointer event behind it. See `hudDirty`.
       st.hudDirty = true;
@@ -523,17 +462,8 @@ export function startRenderLoop(st: SceneState): void {
     // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
     // highlight DID disappear and the follower's did not, the asymmetry the report describes.
     const alignedNow = new Set(st.links.alignedObjects());
-    // ⭐⭐⭐ **THE FUCHSIA CANDIDATES** — every face on another body that the HitFace is within
-    // `pioneerCandidateConeDeg` of mating with (the owner, 2026-09-24). ⛔ Recomputed every frame
-    // from the MODEL, never remembered: *during the rotation* means the set follows the pose, and
-    // a remembered set is the shape that produced eight reports on the gizmo.
+    // ⛔⛔ THE FUCHSIA CANDIDATES ARE DELETED (`D109`, 2026-09-27); the HitFace keeps its contour.
     const hitFace = hitFaceNow(st);
-    // ⚠ `candidateFacesNow` is the gated source; `hitFace` is NOT gated, so the HitFace contour
-    // below survives with the offer switched off.
-    const candidates = candidateFacesNow(st);
-    const candidateKeys = new Set(
-      candidates.map((c) => `${c.objectId}/${c.faceId}`),
-    );
     guardDraw(st, "alignmentMarkers", () => {
       // ⛔⛔ **RETIRED BY SET MEMBERSHIP, WHATEVER REMOVED THE LINK.** The 2026-09-17 bug was the
       // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
@@ -542,19 +472,7 @@ export function startRenderLoop(st: SceneState): void {
       for (const [key, q] of st.faceMarkers) {
         const id = key.slice(0, key.indexOf("/"));
         const faceId = key.slice(key.indexOf("/") + 1);
-        // ⛔⛔ **ONE POOL, ONE MEMBERSHIP TEST.** The fuchsia faces join the same retire loop
-        // rather than getting a pool of their own: on 2026-09-17 two marker pools retired by two
-        // different rules in one edit, and the asymmetry produced TWO false device reports.
-        const wanted =
-          (alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId) ||
-          candidateKeys.has(key);
-        // ⛔⛔ **THE RING IS RETIRED IN THE SAME PASS, ON THE SAME KEY.** ⚠ It had a loop of its
-        // own and its own (correct) test, which is one edit away from the 2026-09-17 defect: two
-        // marker pools retired by two rules, and the asymmetry produced two false device reports.
-        // ⭐ One pass cannot drift, whatever a later change does to the membership test above.
-        const ring = st.candidateRings.get(key);
-        if (ring !== undefined && !candidateKeys.has(key))
-          ring.isVisible = false;
+        const wanted = alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId;
         if (wanted) continue;
         q.fill.isVisible = false;
         // ⛔⛔ **RETIRED BY THE SAME MEMBERSHIP TEST, IN THE SAME LOOP.** The twin must not outlive
@@ -570,47 +488,12 @@ export function startRenderLoop(st: SceneState): void {
         o.align.isVisible = false;
       }
 
-      // ⭐⭐ **THE FUCHSIA FILL AND ITS WHITE RING**, drawn BEFORE the alignment colours so that a
-      // face which is both a candidate and a live Follower/Pioneer keeps its established meaning.
-      for (const c of candidates) {
-        const marker = faceMarkerFor(st, c.objectId, c.faceId);
-        if (marker !== null) {
-          if (!marker.mat.emissiveColor.equals(CANDIDATE_COLOUR))
-            marker.mat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
-          marker.fill.isVisible = true;
-          const xrayOn = st.cfg.followerFaceXrayAlpha > 0;
-          if (xrayOn) {
-            if (!marker.xrayMat.emissiveColor.equals(CANDIDATE_COLOUR))
-              marker.xrayMat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
-            marker.xrayMat.alpha = st.cfg.followerFaceXrayAlpha;
-          }
-          marker.xray.isVisible = xrayOn;
-        }
-        // ⚠ Position AND scale written here — NOT parented (`worldPointOn`); the scale keeps a
-        // constant apparent size as the camera moves, the same conversion the capture shell uses.
-        const ring = candidateRingFor(st, c.objectId, c.faceId);
-        const ringLocal = st.candidateRingLocal.get(`${c.objectId}/${c.faceId}`);
-        const ringAt =
-          ringLocal === undefined ? null : worldPointOn(st, c.objectId, ringLocal);
-        if (ring !== null && ringAt !== null) {
-          ring.position.copyFrom(ringAt);
-          const m =
-            trackingMetresPerPx(
-              st.camera.radius,
-              st.camera.fov,
-              st.canvas.clientHeight,
-            ) * GIZMO_RING_PX;
-          ring.scaling.set(m, m, m);
-          ring.isVisible = true;
-        }
-      }
-
       for (const id of alignedNow) {
         const faceId = alignedFaceOf(st.world, id);
         // ⚠ `prune` just guaranteed this, so the guard is for the types rather than the logic.
         if (faceId === null) continue;
-        const mode = st.alignModeOf.get(id);
-        const want = mode === "FOLLOW" ? PIONEER_COLOUR : FOLLOWER_COLOUR;
+        // ⭐ One colour since `D106`: every alignment is a snapshot.
+        const want = FOLLOWER_COLOUR;
         // ⭐⭐⭐ THE FOLLOWER FACE, DRAWN FROM ITS OWN TRIANGLES (`D50`) — so a triangular or an
         // L-shaped face marks itself correctly instead of wearing a rectangle.
         const marker = faceMarkerFor(st, id, faceId);
@@ -663,11 +546,9 @@ export function startRenderLoop(st: SceneState): void {
       // *"when active, highlight the contour of the hitface in fuchsia."*
       //
       // ⭐ OUTLINED, not filled, and that is the existing grammar rather than a new one: a FILL
-      // says *this face moved* (the Follower) or *this face is on offer* (a candidate); a CONTOUR
-      // says *this face is the one being aimed*. ⚠ So the HitFace and the candidates share a
-      // colour and differ in form, which is exactly the pair they are.
+      // says *this face moved* (the Follower); a CONTOUR says *this face is the one being aimed*.
       // ⛔ It joins `wantedPioneerKeys` rather than getting a pool of its own: one set, one retire,
-      // the same discipline the fills and the rings are now under.
+      // the same discipline the fills are under.
       if (hitFace !== null) {
         const key = `${hitFace.objectId}/${hitFace.faceId}`;
         const m = faceMarkerFor(st, hitFace.objectId, hitFace.faceId);

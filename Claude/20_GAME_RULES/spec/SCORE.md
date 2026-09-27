@@ -97,15 +97,16 @@ in / out shall also be excluded"*:
 | A4 | desktop: the **left drag on empty space** with nothing held (A1), and the **wheel** — which is not a touchpoint at all |
 
 **B. The mode toggle** — *"any touch or click to toggle between rotation/translation in whichever
-mode"* (`D28`: any single tap flips the mode; `D66`: only a tap, never a press):
+mode"*. ⭐⭐ Narrowed by `D108` (2026-09-27) to ONE gesture, so the list shrank with it:
 
 | case | how it arrives today |
 |---|---|
-| B1 | a **single tap on empty space** with nothing held |
-| B2 | a **single tap on a body** that nothing holds — a press and release inside the tap window |
-| B3 | a **tap by the second touchpoint** while a body is held — on empty space **or** on the held body (`D66`), except `D95`'s case below |
-| B4 | desktop: a **quick right click** on a body (a tap), a quick left click on empty space |
-| B5 | the two taps of a double tap that flips the mode twice (also A3 when on empty space) |
+| B1 | tablet: a **tap by the second touchpoint on empty space** while ONE free body without followers is held — the only toggle |
+| B2 | desktop: **Ctrl** at the left press — a modifier, like Shift (D1), never a touchpoint |
+| B3 | the two taps of a double tap that flips the mode twice (also A3 when on empty space) |
+
+⚠ A tap with nothing held, or on a body, toggles nothing now — it is still excluded where A3 or D3
+covers it, and otherwise counts as a fumble (C2).
 
 **D. An axis toggle within a movement already engaged, and an inert touchpoint** — the owner's
 C2/C3 rulings:
@@ -123,11 +124,11 @@ second touch that **presses a Pioneer face** is not this — it aligns (C3).
 
 | case | why |
 |---|---|
-| C1 | `D95`'s **tap on empty space while holding an aligned body** — it un-aligns, which is assembly, not a toggle |
+| C1 | `D95`/`D107`'s **tap on empty space while holding an aligned body or a Pioneer** — it un-aligns, which is assembly, not a toggle |
 | C2 | a **hold** that moved nothing, any fumble that is not D3 — §3's rule |
-| C3 | every hold, align press, drag, twist, shake, flick, unsnap and cursor drag |
+| C3 | every hold, align press, drag, twist, flick, unsnap and cursor drag (the shakes are deleted, `D107`) |
 
-⛔ **The ledger must classify with the same functions the gestures use** — `tapMeaning`, the
+⛔ **The ledger must classify with the same functions the gestures use** — `tapTogglesMode`, `outsideTapRelease`, the
 router's roles, the recognizer's verdict — never a second copy of *"is this a tap"* (`D60`'s
 lesson: two implementations of one fact disagree exactly when one is fixed).
 
@@ -142,9 +143,8 @@ never lands exactly — so the final configuration cannot be detected and no cou
 frozen world direction and only `FOLLOW` (amber) carries a rotation, not a position (`D42`); a seat
 is a rigid relationship. ⛔ That is `3D1`'s assembly tree — parent ≠ root, built and vectored — so
 the seat makes the Follower a **child** of the Pioneer rather than adding a third alignment mode.
-⚠ The consequences to settle when it is built: what `SNAPSHOT`/`FOLLOW` mean for a seated pair
-(probably nothing — a seat supersedes both); whether a shake on a seated Pioneer still releases
-followers (`A17`) or only the unsnap does; and that the sway must treat a seated assembly as one
+⚠ The consequences it had to settle: `FOLLOW` is deleted (`D106`) — a seat supersedes it; the
+Pioneer shake is deleted (`D107`), so only the unsnap or a tap releases; and that the sway must treat a seated assembly as one
 body (`receivesSway` already spares the mover's Pioneer).
 
 ✅ **The snap, the seat and the unsnap are built** (2026-09-26, `D100`) — the rules are

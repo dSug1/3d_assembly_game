@@ -20,7 +20,6 @@ import {
   screenShadow,
   type AxisInputsPx,
   type CameraScreenAxes,
-  type TranslatePairing,
   displayedAxes,
   soleGizmoBody,
 } from "@input/axis_translate";
@@ -81,7 +80,6 @@ const run = (
   input: Partial<AxisInputsPx>,
   c: ReturnType<typeof camera>,
   axes: ObjectAxes,
-  pairing: TranslatePairing = "PLANE",
   gain = 1,
   cone = CONE,
 ) =>
@@ -92,7 +90,6 @@ const run = (
     PER_PX,
     gain,
     gain,
-    pairing,
     cone,
     c.gravity.towardGravity,
   );
@@ -175,35 +172,10 @@ describe("⭐⭐⭐ PLANE — the body follows the finger inside its own horizon
   it("⭐ the gains multiply the tracking factor, and 1.0 is 'under the finger'", () => {
     const c = camera(20, 40);
     const axes = axesFromFrame(c.gravity);
-    const t = run({ holderDxPx: 10, holderDyPx: -10 }, c, axes, "PLANE", 2);
+    const t = run({ holderDxPx: 10, holderDyPx: -10 }, c, axes, 2);
     const landed = toScreenPx(axisDisplacement(t, axes), c.screen);
     expect(landed[0]).toBeCloseTo(20, 6);
     expect(landed[1]).toBeCloseTo(-20, 6);
-  });
-});
-
-describe("CHANNELS — the dictated pairing, each axis tracking exactly", () => {
-  it("⭐ `dx` slides the body ALONG the x axis's screen line, at the finger's rate", () => {
-    // ⛔ Blender's `G X`: the body moves along the axis by the component of the pointer motion
-    // lying along that axis's screen image — no cosine loss, and no motion at all from the part
-    // of the drag that runs across the axis.
-    const c = camera(35, 30);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({ holderDxPx: 50 }, c, axes, "CHANNELS");
-    expect(t.depthM).toBe(0);
-    const s = screenShadow(axes.x, c.screen)!;
-    const len = Math.hypot(s[0], s[1]);
-    const landed = toScreenPx(axisDisplacement(t, axes), c.screen);
-    expect(landed[0]).toBeCloseTo((50 * s[0] * s[0]) / (len * len), 6);
-    expect(landed[1]).toBeCloseTo((50 * s[0] * s[1]) / (len * len), 6);
-  });
-
-  it("⛔ the two pairings genuinely DISAGREE for the photographed configuration", () => {
-    const c = camera(35, 30);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const plane = run({ holderDxPx: 50 }, c, axes, "PLANE");
-    const chan = run({ holderDxPx: 50 }, c, axes, "CHANNELS");
-    expect(Math.abs(plane.depthM - chan.depthM)).toBeGreaterThan(1e-4);
   });
 });
 
@@ -255,7 +227,7 @@ describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
 
   it("⛔ cone = 0 disables the fallback — the runaway a hand is being protected from", () => {
     const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({ holderDyPx: -50 }, camera(0, 0.05), axes, "PLANE", 1, 0);
+    const t = run({ holderDyPx: -50 }, camera(0, 0.05), axes, 1, 0);
     expect(t.edgeOn).toBe(false);
     // ⚠ 50 px of finger, and the body has gone a hundred times further than it would flat on.
     expect(Math.abs(t.depthM)).toBeGreaterThan(100 * 50 * PER_PX);
@@ -318,7 +290,6 @@ describe("degenerate inputs never reach a placement", () => {
       PER_PX,
       1,
       1,
-      "PLANE",
       CONE,
       0,
     );

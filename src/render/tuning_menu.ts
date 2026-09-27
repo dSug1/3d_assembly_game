@@ -234,24 +234,8 @@ export function installTuningMenu(st: SceneState): void {
           400,
           10,
         ),
-        // ⭐ Moved here from CAPTURE (the owner, 2026-09-26): the three rules that decide what a
-        // translating finger does.
-        // ⭐⭐⭐ **`D51` — NOT A TUNABLE, A RULE SELECTOR.** Every other control here changes a
-        // NUMBER; this one changes what two fingers on a Pioneer and its Follower DO.
-        // ⛔ `1` = today (both translate). `0` = the Pioneer is pinned: it cannot translate, and
-        // its finger drives the Follower's roll AND depth together.
-        // ⚠ A 0/1 slider because the menu has no other kind of control — the fork selector took
-        // the same shape (`D26`) — and `validateGestureConfig` refuses anything between, so a
-        // half-set flag cannot masquerade as the default.
-        tunable(st, "PIONEER translates (0=pinned)", "pioneerTranslates", 0, 1, 1),
-        // ⭐⭐⭐ **THE OWNER'S FLAG OF 2026-09-22 — `WorldAxisA` / `WorldAxisB`.** `1` (the
-        // default) fixes the object axes to the BOOT camera for the whole scene; `0` lets them
-        // follow the camera, which is the build before this. ⛔ It does NOT select the channel
-        // remap — `dy` drives depth and the second finger drives gravity either way.
-        tunable(st, "WorldAxisB: axes fixed at boot (0/1)", "worldAxisB", 0, 1, 1),
-        // ⭐⭐ 1 = the body follows the finger in its own horizontal plane; 0 = the dictated
-        // dx→x / dy→depth channels. ⛔ A RULE, not a number — the device report of 2026-09-23.
-        tunable(st, "translate: 1=plane, 0=channels", "translatePairing", 0, 1, 1),
+        // ⛔ The three rule selectors that stood here (pinned Pioneer, WorldAxisB, plane/channels)
+        // are DELETED with their alternatives (`D109`, 2026-09-27).
       ],
     },
     {
@@ -352,28 +336,6 @@ export function installTuningMenu(st: SceneState): void {
           ],
           subsections: [
             {
-              // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
-              // number has been wrong every single time*, and all four of these are guesses.
-              // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
-              // between a shake and a **corrective nudge** during fine positioning, because eviction
-              // destroys alignments the user set deliberately. ⚠ `evictShakeLegMm` has a validator
-              // rule under it (3× the measured noise), so the slider cannot reach a value where a
-              // reversal could be jitter.
-              title: "⭐ EVICTION SHAKE (A4)",
-              sliders: [
-                tunable(st, "reversals to evict", "evictShakeReversals", 2, 5, 1),
-                tunable(st, "window (ms)", "evictShakeWindowMs", 200, 1200, 50),
-                tunable(st, "leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
-                tunable(st, 
-                  "straightness (0=strict, 1=any)",
-                  "evictShakeStraightness",
-                  0.1,
-                  0.9,
-                  0.05,
-                ),
-              ],
-            },
-            {
               // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
               // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
               // is set aside where a hand says it wants to tune something — the same exception §8 of the
@@ -393,24 +355,16 @@ export function installTuningMenu(st: SceneState): void {
                 tunable(st, "Pioneer sway off within (× offset)", "pioneerSwayRadii", 0, 10, 0.5),
                 // ⭐ The magnet's pull: how long the face centre takes to reach the cursor (`D100`).
                 tunable(st, "snap time (ms, 0 = at once)", "snapMs", 0, 400, 10),
-                // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
-                // ships at 0 and turning it on changes only what the HUD reports.
-                tunable(st, 
-                  "zone ENTER calls CameraOffsetZoneEnter (0/1)",
-                  "cameraOffsetZoneEnterSetupB",
-                  0,
-                  1,
-                  1,
-                ),
+                // ⭐ The UNSNAP's rapid move — the eviction shake's two numbers, kept (`D107`).
+                tunable(st, "unsnap window (ms)", "unsnapWindowMs", 200, 1200, 50),
+                tunable(st, "unsnap leg (mm)", "unsnapLegMm", 3, 25, 1),
+                // ⭐⭐ `D109` (the owner, 2026-09-27): *"Fuchsia cone is used for snap: rename it snap
+                // cone angle and move it to snap slider"* — how far from anti-parallel the two faces
+                // may be and still snap. ⚠ The owner asked for 0–45 in steps of 5 when it was fuchsia.
+                tunable(st, "snap cone angle (deg)", "snapConeDeg", 0, 45, 5),
                 // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
                 // there is no fallback and a level camera sends the body a very long way.
                 tunable(st, "axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
-                // ⭐⭐⭐ THE FEATURE'S OWN SWITCH, directly above its cone — the owner, 2026-09-25.
-                // ⚠ `0` also retires the exception that lets a press reach a FROZEN body's offered face.
-                tunable(st, "fuchsia offer on/off", "pioneerCandidates", 0, 1, 1),
-                // ⭐⭐ How close to MATING a face must be before it lights fuchsia. ⛔ `0` is the honest
-                // OFF for the cone: only an exactly opposed face. The owner asked for 0–45 in steps of 5.
-                tunable(st, "fuchsia cone (deg)", "pioneerCandidateConeDeg", 0, 45, 5),
                 // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
                 // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
                 // one pixel — so a width tunable would be a slider that does nothing, which is the

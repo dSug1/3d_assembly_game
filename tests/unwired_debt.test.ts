@@ -56,12 +56,6 @@ const PENDING: Record<string, string> = {
   // when rule 5 says the new mapping stands, and come back if it does not.
   // ⚠ `trackingMetresPerPx` and `depthLimits` are still WIRED — the factor and the bounds were
   // always the derived parts, and the new rule reads both.
-  screenTranslation:
-    "retired 2026-09-22 by the object-axis remap; delete with its vectors once a device look " +
-    "accepts dx→x / dy→depth, or restore",
-  depthTranslate:
-    "retired 2026-09-22 by the object-axis remap (the second touchpoint now drives the GRAVITY " +
-    "axis); delete with its vectors once a device look accepts it, or restore",
   constrainedDragAngle:
     "retired 2026-09-22 by D57 reaching the first touchpoint; awaiting the device verdict on " +
     "the dy trade, then delete with its vectors or restore",
@@ -85,15 +79,6 @@ const PENDING: Record<string, string> = {
     "contact, which is the degeneracy the mechanism was redesigned to remove. Centres cannot " +
     "meet, so this is the measure 4b.1 projects the finger onto",
   // ⛔⛔ **`A3`'s SECOND CHART, RETIRED FROM ITS ONLY CHANNEL BY `D52`** (2026-09-18).
-  constrainedRollAngle:
-    "IN3/A3 — the OTHER chart over an anchored body's one free DOF: it maps a screen roll " +
-    "through `sign(axis·view)` and works where the drag chart degenerates. ⛔ It drove the " +
-    "second touchpoint until a hand reported that channel turning the Follower the WRONG WAY " +
-    "— the two charts agreed for some constraint axes and opposed for others, so the second " +
-    "touchpoint now uses the FIRST's chart and agrees by construction. ⚠ Kept because the " +
-    "coverage argument is still true and unanswered: at an axis square to the view neither " +
-    "channel can twist, and if a hand ever wants motion there this is the only thing that " +
-    "provides it — at the cost of a sign nothing can be consistent with",
   // ⛔⛔ THE TWO SWAPPED PLACES ON 2026-09-18, AND THE SWAP IS THE POINT. `shapeFromVertices`
   // LEFT this list when `scene.ts` started reading real mesh vertices — the guard caught the
   // stale entry the moment it was wired, which is the second direction it checks.

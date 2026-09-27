@@ -10,7 +10,9 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  desktopBehaviour,
   initialBehaviour,
+  tapTogglesMode,
   isTapRelease,
   pairPressRevertsToggle,
   tapReleaseToggles,
@@ -95,10 +97,12 @@ describe("⛔⛔ THE TOGGLE IS IMMEDIATE, and a double tap simply flips TWICE", 
     // `Set` in `scene.ts` that nothing read. ⛔ It is here now because a rule in a render file
     // is a rule nothing can interrogate — including this vector.
     expect(surface.sort()).toEqual([
+      "desktopBehaviour",
       "initialBehaviour",
       "isTapRelease",
       "pairPressRevertsToggle",
       "tapReleaseToggles",
+      "tapTogglesMode",
       "toggleBehaviour",
     ]);
   });
@@ -293,5 +297,36 @@ describe("⛔⛔⛔ `D68` WHOLE — the two halves, and the SEQUENCES a hand act
     expect(tapReleaseToggles(true, false)).toBe(false);
     expect(tapReleaseToggles(false, true)).toBe(false);
     expect(tapReleaseToggles(true, true)).toBe(false);
+  });
+});
+
+describe("⭐⭐⭐ `D108` — ONE tap toggles the mode: touch, empty space, one free body held", () => {
+  // > *"4-OK, but no button on screen"* — the owner, 2026-09-27, accepting *"Tablet: keep a
+  // > toggle, but only for a tap on empty space with a body held. Desktop: drop the mode."*
+  const base = {
+    isMouseDerived: false,
+    onEmptySpace: true,
+    heldObjectCount: 1,
+    heldIsAligned: false,
+    heldFollowerCount: 0,
+  };
+
+  it("⭐ the one configuration that toggles", () => {
+    expect(tapTogglesMode(base)).toBe(true);
+  });
+
+  it("⛔ RED against `D28`'s *any tap anywhere*: each other fact refuses it", () => {
+    expect(tapTogglesMode({ ...base, isMouseDerived: true })).toBe(false);
+    expect(tapTogglesMode({ ...base, onEmptySpace: false })).toBe(false);
+    expect(tapTogglesMode({ ...base, heldObjectCount: 0 })).toBe(false);
+    expect(tapTogglesMode({ ...base, heldObjectCount: 2 })).toBe(false);
+    // ⭐ these two are `D95`/`D107`'s release — the same gesture, a different answer
+    expect(tapTogglesMode({ ...base, heldIsAligned: true })).toBe(false);
+    expect(tapTogglesMode({ ...base, heldFollowerCount: 1 })).toBe(false);
+  });
+
+  it("⭐⭐ the desktop has no mode: Ctrl rotates, a plain drag translates", () => {
+    expect(desktopBehaviour(true)).toBe("ROTATE");
+    expect(desktopBehaviour(false)).toBe("TRANSLATE");
   });
 });

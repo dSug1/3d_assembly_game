@@ -12,7 +12,7 @@
  *
  * ⭐ This file holds the two DECISIONS: *does this couple snap now* and *may it snap at all*.
  * The distance is the capture offset in world metres (`captureOffsetM`, mm on the glass scaled by
- * the camera) and the cone is the fuchsia cone (`pioneerCandidateConeDeg`) — no new number.
+ * the camera) and the cone is `snapConeDeg` — the fuchsia offer's cone, renamed when the offer was deleted (`D109`).
  *
  * ⛔⛔ **RE-ARM ON EXIT.** An unsnapped couple is still inside the radius — it was seated there —
  * so without a hold-off it would snap back on the next frame. `SnapArming` holds a couple off
@@ -30,7 +30,7 @@ import { dot, normalize, sub, type Vec3 } from "../core/vec";
  * @param offsetM the capture offset in world metres — the *"offset radius"*.
  * @param followerNormalW the FollowerFace's outward normal, WORLD.
  * @param pioneerNormalW the PioneerFace's outward normal, WORLD.
- * @param coneRad the fuchsia cone: how far from exactly ANTI-parallel the two may be.
+ * @param coneRad the snap cone (`snapConeDeg`): how far from exactly ANTI-parallel the two may be.
  */
 export function snapConditionMet(
   faceCentreW: Vec3,

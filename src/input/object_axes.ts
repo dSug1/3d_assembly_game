@@ -125,40 +125,8 @@ export function zoneEdge(was: boolean, now: boolean): ZoneEdge {
   return now ? "ENTER" : "EXIT";
 }
 
-/** Everything the axes rule needs to answer. ⭐ Plain data, so the decision is vectorable. */
-export interface AxesInputs {
-  /** `worldAxisB` as a boolean — the flag the owner asked for. */
-  readonly worldAxisB: boolean;
-  /** ⭐ The axes built at scene boot from the boot camera, fixed for the whole scene. */
-  readonly bootAxes: ObjectAxes;
-  /** The camera's basis NOW. ⚠ `null` only where `gravityFrame` refuses. */
-  readonly liveFrame: GravityFrame | null;
-  /** What this body is using now — the answer when nothing better can be built. */
-  readonly previous: ObjectAxes;
-}
-
-/**
- * ⭐⭐⭐ **THE RULE ITSELF — what a body's axes become.** Section C of the dictation, whole.
- *
- * ⛔⛔ **IT IS TOTAL: every branch returns a basis, and the fallback is always `previous`.**
- * The alternative — returning `null` and letting the caller decide — puts the decision back in
- * `scene.ts`, and *a rule written in `scene.ts` is a rule nothing can interrogate* (the
- * 2026-09-19 lesson, seven surviving mutants). ⚠ Keeping a working basis is also the only
- * honest answer: a body mid-drag has to be translated along something.
- */
-export function updatedObjectAxes(i: AxesInputs): ObjectAxes {
-  // ⭐⭐ THE FLAG DECIDES, AND THE DIFFERENCE IS ONLY *WHICH CAMERA*. `WorldAxisB` is the boot
-  // camera's basis, frozen for the scene; `WorldAxisA` is the camera as it is now. ⛔ Both are
-  // `axesFromFrame` of a gravity frame — one latched, one live — so there is exactly one
-  // construction of a basis in this file.
-  if (i.worldAxisB) return i.bootAxes;
-  return i.liveFrame === null ? i.previous : axesFromFrame(i.liveFrame);
-}
-
 /** Everything the rotation basis needs. ⭐ Plain data, so this decision is vectorable too. */
 export interface RotationFrameInputs {
-  /** `worldAxisB` as a boolean — the SAME flag the translation basis reads. */
-  readonly worldAxisB: boolean;
   /** ⭐ The gravity frame built at scene boot. ⚠ `null` before boot has filled it. */
   readonly bootFrame: GravityFrame | null;
   /** The gravity frame this grip carries now — latched at press, re-based after a camera move. */
@@ -198,7 +166,8 @@ export interface RotationFrameInputs {
  * there reads as a ROLL rather than a tip. ⭐ That is exactly the property the owner ASKED FOR on
  * the translation side — *a push that went "right" before an orbit still goes the same way in the
  * world afterwards* — carried over to the turn, and it is the thing to judge by finger.
- * ⚠ `?worldAxisB=0` restores the live frame for both at once.
+ * ⛔ `worldAxisB = 0`, the live-camera alternative, is DELETED (`D109`, 2026-09-27): the boot
+ * frame is the only frame.
  *
  * ⛔ It does NOT touch a TWIST on an aligned body: that turns about the constraint's own axis and
  * never consulted a camera frame at all. The owner's question was about the UNALIGNED case.
@@ -207,6 +176,6 @@ export function rotationFrame(i: RotationFrameInputs): GravityFrame {
   // ⛔ The fallback is the live frame, never a throw and never a stand-in basis: this is read on
   // the gesture path, and a body mid-turn has to be turned about something. ⚠ It is reachable only
   // before boot fills the frame — the TDZ shape that crashed the 2026-09-19 build.
-  if (i.worldAxisB && i.bootFrame !== null) return i.bootFrame;
+  if (i.bootFrame !== null) return i.bootFrame;
   return i.liveFrame;
 }

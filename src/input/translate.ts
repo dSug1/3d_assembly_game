@@ -71,36 +71,3 @@ export function trackingMetresPerPx(
   return (2 * cameraDistanceM * Math.tan(fovRad / 2)) / viewportHeightPx;
 }
 
-export interface ScreenTranslation {
-  /** Metres along the camera's RIGHT axis. */
-  readonly rightM: number;
-  /** Metres along the camera's UP axis. */
-  readonly upM: number;
-}
-
-/**
- * Rule 6's displacement for one frame, in the camera's screen plane.
- *
- * @param dxPx  finger travel, CSS pixels, screen x (rightwards positive)
- * @param dyPx  finger travel, CSS pixels, screen y (DOWNWARDS positive — the browser's
- *              convention, and the opposite of the camera's up axis)
- * @param gain  `gainTranslateScreen`. ⭐ Dimensionless: 1 = the object stays under the
- *              finger. Above 1 it outruns the finger, below 1 it lags behind.
- */
-export function screenTranslation(
-  dxPx: number,
-  dyPx: number,
-  cameraDistanceM: number,
-  fovRad: number,
-  viewportHeightPx: number,
-  gain: number,
-): ScreenTranslation {
-  const perPx = trackingMetresPerPx(cameraDistanceM, fovRad, viewportHeightPx) * gain;
-  return {
-    rightM: dxPx * perPx,
-    // ⛔ NEGATED. Screen y grows downwards and the camera's up axis grows upwards; a
-    // missing sign here is the single most common defect in a drag, and it looks
-    // exactly like "the controls are inverted" rather than like a bug.
-    upM: -dyPx * perPx,
-  };
-}

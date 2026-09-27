@@ -41,9 +41,8 @@
  * ⛔ It is Blender's *unconstrained* move with the view plane replaced by the body's horizontal
  * plane — the nearest thing in Blender to what this product is doing.
  *
- * **`CHANNELS`.** The dictated pairing, `dx`→x and `dy`→depth, each **normalised** — Blender's
- * `G X` applied twice, once per channel. ⚠ Kept as a selector so a hand can compare the two
- * rather than take my word for which answers report 1.
+ * ⛔ **`CHANNELS`**, the dictated `dx`→x / `dy`→depth pairing, was a selectable alternative
+ * (`translatePairing = 0`) and is DELETED (`D109`, 2026-09-27): `PLANE` is the one mapping.
  *
  * **Gravity** is always its own channel, normalised the same way.
  *
@@ -92,16 +91,6 @@ export interface AxisInputsPx {
   /** The second touchpoint's vertical travel → the object's **gravity** axis. */
   readonly secondDyPx: number;
 }
-
-/**
- * ⭐⭐⭐ **WHICH MAPPING THE HOLDER'S TWO NUMBERS GET** — a RULE SELECTOR, not a tunable.
- *
- * ⛔ `PLANE`: the 2D delta is decomposed onto both horizontal axes, so the body follows the
- * finger inside its own horizontal plane.
- * ⛔ `CHANNELS`: the dictation's literal pairing, `dx`→x and `dy`→depth, each tracking exactly
- * along its own axis — Blender's `G X`, twice.
- */
-export type TranslatePairing = "PLANE" | "CHANNELS";
 
 /**
  * ⭐ The gizmo's six channels: `[x, gravity, depth, roll, yaw, pitch]`.
@@ -209,7 +198,6 @@ export function axisTravel(
   metresPerPx: number,
   holderGain: number,
   secondGain: number,
-  pairing: TranslatePairing,
   coneDeg: number,
   towardGravity: number,
 ): AxisTravel {
@@ -267,7 +255,7 @@ export function axisTravel(
   let depthM = 0;
   let edgeOn = false;
 
-  if (pairing === "PLANE") {
+  {
     // ⭐⭐⭐ **THE 2×2 SOLVE.** Find the travels along x and depth whose SCREEN motion adds up to
     // the finger's. ⛔ Solving beats projecting onto each axis separately: the two shadows are
     // not perpendicular on screen in general, so independent projections would double-count the
@@ -287,18 +275,6 @@ export function axisTravel(
       // arithmetic that reads as *"depth feels wrong in one camera pose"* and nowhere else.
       xM = (along(sx, dx, dy) ?? 0) * holderGain;
       depthM = fallbackDepth;
-    }
-  } else {
-    // ⭐ CHANNELS: Blender's `G X`, once per channel — the whole delta is not used, only the
-    // component the dictation assigns to that axis.
-    const x = along(sx, dx, 0);
-    const d = along(sd, 0, dy);
-    xM = (x ?? 0) * holderGain;
-    if (d === null) {
-      edgeOn = true;
-      depthM = fallbackDepth;
-    } else {
-      depthM = d * holderGain;
     }
   }
 

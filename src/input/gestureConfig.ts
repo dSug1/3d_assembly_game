@@ -265,30 +265,13 @@ export interface GestureConfig {
    * slider the owner asked for; no hand has judged it.
    */
   /**
-   * ⭐⭐⭐ **IS THE FUCHSIA OFFER ON AT ALL?** `1` on, `0` off — the owner, 2026-09-25:
-   * *"create a toggle slider to enable or disable the above rules."*
-   *
-   * ⛔ What `0` switches off — the ACTIONS the owner named, and only those: the fuchsia FILLS on
-   * other bodies' faces, and their white centre rings.
-   *
-   * ⚠ It used to switch off a second thing — the exception that let a press through onto a FROZEN
-   * body's offered face. ⭐ `D89` admits every press but the first on a frozen body outright, so
-   * that exception is deleted and this flag no longer decides whether the plate is reachable.
-   *
-   * ⛔⛔ **THE HITFACE AND ITS FUCHSIA CONTOUR STAY LIVE AT `0`.** They are a separate instruction
-   * and not one of the two rules this flag names. ⚠ My first build gated `hitFaceNow` itself and
-   * took them with it — the owner: *"I did not tell to disable the hitFaceNow."* ⭐ `METHOD`:
-   * *a switch belongs on the ACTIONS a fact drives, not on the fact.*
-   *
-   * ⚠⚠ **IT DOES NOT SWITCH OFF ALIGNING.** Since `D87` the press rule is `pressMeaning`'s and is
-   * not fuchsia-specific: hold a body, press another's face, and it aligns whether or not anything
-   * was highlighted. ⭐ The offer is guidance, and this turns the guidance off.
-   *
-   * ⚠ A 0/1 selector, refused in between exactly as `worldAxisB` is: a half-set flag must not read
-   * as `truthy` and ship one behaviour while the readout claims another.
+   * ⭐⭐ **THE SNAP CONE, in degrees** — how far from ANTI-PARALLEL the FollowerFace and the
+   * PioneerFace may be and the snap still fire (`D100`). ⛔ It was `pioneerCandidateConeDeg`, the
+   * fuchsia offer's cone; the offer is DELETED (`D109`, the owner, 2026-09-27: *"Fuchsia cone is
+   * used for snap: rename it snap cone angle and move it to snap slider"*) and the cone is the
+   * snap's alone. ⚠ The HitFace's own fuchsia contour stays; it never read this.
    */
-  pioneerCandidates: number;
-  pioneerCandidateConeDeg: number;
+  snapConeDeg: number;
   /**
    * ⭐⭐ How far from a PioneerFaceCursor a TOUCH may press and still grab it, in RING RADII — the
    * owner, 2026-09-25: *"a slider starting from the radius of the PioneerFaceCursor up to 10 times
@@ -317,38 +300,18 @@ export interface GestureConfig {
   /** max(|dx|,|dy|) / (min(|dx|,|dy|) + eps). One ratio, no undefined wedge. */
   flickPurity: number;
 
-  // ── §2 rule 2septies, as amended: THE EVICTION SHAKE ──────────────────────────
-  // Design of record: `Claude/10_INPUT_TOUCH/AMENDMENTS_R5.md` A4 (`D15`).
-  // ⛔⛔ ALL FOUR ARE `IN5` PLACEHOLDERS AND EACH NEEDS A SLIDER. The whole safety of
-  // this gesture is the gap between a SHAKE and a corrective NUDGE, and that gap is a
-  // hand's judgement: "left a bit, right a bit" during fine positioning is a genuine
-  // back-and-forth, and no simulation can say where the boundary sits.
+  // ── THE UNSNAP'S RAPID MOVE (`D100`) ─────────────────────────────────────────
+  // ⛔ These were the eviction shake's window and leg (`A4`); the shake is DELETED (`D107`) and the
+  // unsnap, which borrowed them (*"same sliders as eviction shake"*), keeps them under its own name.
 
-  /** Reversals required to evict. A4: 2 — out, back, out. */
-  evictShakeReversals: number;
+  /** The rapid move must happen inside this window, in milliseconds. */
+  unsnapWindowMs: number;
   /**
-   * They must all fall inside this window, in milliseconds.
-   * ⚠ Too long and a slow fidget accumulates into an eviction; too short and the
-   * gesture demands a speed not everyone has. ⭐ The audience includes youth (`D2`).
+   * How far the fingers' separation must GROW (tablet) or the driven pointer TRAVEL (mouse), in
+   * millimetres. ⛔ `validateGestureConfig` refuses a value that does not clear 3× the measured
+   * `pointerNoiseMm`, so jitter cannot unsnap.
    */
-  evictShakeWindowMs: number;
-  /**
-   * Minimum travel back from an extremum before a reversal counts, in millimetres.
-   * ⭐ It is the HYSTERESIS as well as the amplitude floor — one number, because they
-   * are the same question asked twice: *is this a leg, or is it jitter?*
-   * ⛔ `validateGestureConfig` refuses a value that does not clear the MEASURED
-   * `pointerNoiseMm`.
-   */
-  evictShakeLegMm: number;
-  /**
-   * Maximum excursion PERPENDICULAR to the shake axis, as a fraction of the along-axis
-   * amplitude.
-   * ⛔⛔ THIS IS WHAT SEPARATES A SHAKE FROM A CIRCLE, and it is not optional: **a
-   * circle projects to a back-and-forth on EVERY axis**. Since `A3`/`D14` made roll a
-   * legitimate control on exactly the objects eviction applies to, a detector without
-   * this would destroy an alignment every time someone spun a part to look at it.
-   */
-  evictShakeStraightness: number;
+  unsnapLegMm: number;
   /**
    * mm. Typical position noise of ONE pointer sample from a resting finger.
    * ⭐⭐ A DEVICE PROPERTY, not a preference, and it is what decides whether a
@@ -572,99 +535,6 @@ export interface GestureConfig {
    * `truthy` and ship one behaviour while the readout claims another.
    */
   approachRetargetsOrbit: number;
-  /**
-   * ⭐⭐⭐ **MAY A HELD **PIONEER** TRANSLATE?** `1` yes (today's behaviour), `0` no (`D51`).
-   *
-   * > *"I want to have a flag to toggle on or off the translation of the Pioneer object in this
-   * > case"* — the owner, 2026-09-18
-   *
-   * ⛔ At `0`, two touchpoints on a Pioneer and its Follower give: the **Follower translates**
-   * exactly as now, whatever the movement mode; the **Pioneer does not move at all**; and the
-   * finger on the Pioneer drives the Follower's **roll (x) and depth (y) together**.
-   * ⚠ Both axes at once is deliberate and is NOT what a second touchpoint on a singly-held body
-   * does — `input/pinned_pioneer.ts` argues why the two configurations differ.
-   *
-   * ⚠⚠ **A NUMBER, NOT A BOOLEAN, AND ONLY BECAUSE OF THE MENU.** Every control in the tuning
-   * panel is a numeric slider, and the fork selector took the same 0/1 shape for the same reason
-   * (`D26`). ⛔ The validator refuses anything between, so a half-set flag cannot masquerade as
-   * the default.
-   *
-   * ⚠⚠ **AND THIS PROJECT HAS DELETED EVERY FLAG IT HAS BUILT** — `D26`→`D28`, `D29`→`D40`,
-   * `D41`→`D42`, each within days, because *a dormant fork is a trap*. ⭐ That is not an argument
-   * against this one: those were built to let a hand COMPARE, and every one was deleted the day
-   * the hand chose. Expect the same here — the flag is how the comparison is made, not a setting
-   * the game ships with two of.
-   */
-  pioneerTranslates: number;
-  /**
-   * ⭐⭐⭐ **WHERE THE OBJECT AXES COME FROM OUTSIDE THE CAPTURE ZONE** — `NOT A TUNABLE, A
-   * RULE SELECTOR`, the third of them, and the owner's flag of 2026-09-22.
-   *
-   * > *"WorldAxisA — toggle off: current build (no change). WorldAxisB — toggle on: the world
-   * > x, world gravity and world depth axis are created at scene boot as per camera position
-   * > at scene boot and are fixed forever for this scene."*
-   *
-   * ⛔ `0` = **WorldAxisA**: the axes are the camera's, recomputed as it orbits — today's
-   * build, where a drag is always referred to the screen in front of you.
-   * ⛔ `1` = **WorldAxisB**: the axes are the boot camera's, **frozen for the whole scene** —
-   * so a body keeps moving along the same world directions however the camera is flown, and a
-   * push that went "right" before an orbit still goes the same way in the world afterwards.
-   *
-   * ⭐⭐ **DEFAULT `1`, THE OWNER'S CHOICE** (*"Default at scene boot: WorldAxisB is toggled
-   * on"*). ⚠ That makes the NEW rule the one that boots, which is the opposite of how the
-   * swing and `approachRetargetsOrbit` shipped — recorded because it is deliberate, and
-   * `?worldAxisB=0` is the A/B a hand needs to judge it.
-   *
-   * ⚠⚠ **IT DOES NOT SELECT THE *REMAP*.** The holder's `dy` drives the object's DEPTH axis
-   * and the second touchpoint's `dy` drives its GRAVITY axis in **both** settings — that part
-   * of the dictation is unconditional. This flag chooses only which triple of world directions
-   * the channels are projected onto.
-   *
-   * ⭐⭐⭐ **AND SINCE 2026-09-23 IT GOVERNS THE *ROTATION* BASIS OF A FREE BODY TOO** — the owner
-   * asked why translation followed the world axes while rotation followed the camera, and the
-   * answer was that the dictation had simply never reached the rotation. ⛔ *"Do the change"*: at
-   * `1` an unaligned body PITCHES and ROLLS about the boot camera's frame as well, so one flag
-   * answers *which camera does this body obey* for both gestures. ⚠ The YAW is unaffected either
-   * way — a gravity frame's `up` is the world vertical by definition. ⭐ The rule and its cost are
-   * `rotationFrame` in `object_axes.ts`; a TWIST on an ALIGNED body is untouched, because it turns
-   * about the constraint and never read a camera frame.
-   *
-   * ⚠ A 0/1 slider because the menu has no other kind of control (`D26`'s shape), and the
-   * validator refuses anything between: a half-set selector must not read as `truthy` and ship
-   * one behaviour while the readout claims another.
-   */
-  worldAxisB: number;
-  /**
-   * ⭐⭐⭐ **DOES CROSSING INTO THE OFFSET RADIUS ZONE CALL `CameraOffsetZoneEnter`?** —
-   * the owner, 2026-09-22: *"if CameraOffsetZoneEnterSetupB is toggled on — launch the
-   * CameraOffsetZoneEnter method (we will define it later on)."*
-   *
-   * ⛔⛔ **THE METHOD IS NOT DEFINED YET, SO THE DEFAULT IS `0` AND THE HOOK DOES NOTHING.**
-   * ⚠ That is the honest state and it is written here rather than left to be inferred: the
-   * flag, its slider and its call site exist so that the behaviour can be dropped into one
-   * place when it is dictated — and until then, turning it on changes nothing but the HUD.
-   * ⭐ `zoneEdge`'s ENTER is the event; `object_axes.ts` owns it, and the axes update on the
-   * same edge whether or not this is on.
-   *
-   * ⛔ A 0/1 selector, refused in between, exactly as `worldAxisB`.
-   */
-  cameraOffsetZoneEnterSetupB: number;
-  /**
-   * ⭐⭐⭐ **WHAT THE HOLDER'S TWO NUMBERS DRIVE** — a RULE SELECTOR, after the device look of
-   * 2026-09-23: *"the dx continues to move on the x world axis and dy on the world depth axis,
-   * which feels strange … the input axis and movements axis seem inverted."*
-   *
-   * ⛔ `1` = **`PLANE`** (the default): the 2D delta is decomposed onto BOTH horizontal axes, so
-   * the body moves inside its own horizontal plane and its image follows the finger exactly.
-   * Nothing can feel inverted, because the body goes where the finger goes.
-   * ⛔ `0` = **`CHANNELS`**: the dictation's literal pairing, `dx`→x and `dy`→depth, each now
-   * tracking exactly along its own axis (which is Blender's `G X`, applied twice).
-   *
-   * ⭐⭐ **BLENDER MAKES NO SUCH PAIRING AT ALL** — an unconstrained move follows the mouse in
-   * the view plane, and a constrained one maps the WHOLE mouse delta onto the one axis the user
-   * chose. ⚠ So this flag is where the comparison is made, not a setting the game ships two of.
-   */
-  translatePairing: number;
   /**
    * ⭐⭐⭐ **HOW NEAR THE VIEW DIRECTION AN AXIS MAY COME BEFORE EXACT TRACKING IS ABANDONED**,
    * in degrees.
@@ -909,14 +779,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   gainTranslateMutual: 0.5,
 
-  // ⚠ A guess with a slider — the owner asked for 0–45 in steps of 5 and has not judged a value.
-  // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"set default fuchsia offer = off."* ⚠ It
-  // shipped ON for one day, on my argument that a hand judges a new feature fastest with it
-  // visible. ⭐ `?pioneerCandidates=1` is the whole of turning it back on.
-  // ⭐ It no longer decides whether the plate can be a Pioneer: `D89` moved `D77`'s carve-out onto
-  // the FIRST touch, so a press on a frozen body is admitted with the offer off or on.
-  pioneerCandidates: 0,
-  pioneerCandidateConeDeg: 15,
+  // ⚠ The fuchsia offer's 15°, inherited unjudged by the snap (`D109`).
+  snapConeDeg: 15,
   // ⚠ A guess inside the owner's 1–10: a fingertip is wider than the 16 px ring it aims at.
   pioneerCursorGrabRadii: 3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
@@ -944,24 +808,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ 150° to DECIDE, swept: the shortest arc at which every realistic swirl
   // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
 
-  // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
-  evictShakeReversals: 2,
-  // ⭐⭐ **300 ms — THE OWNER'S NUMBER, 2026-09-17**, and the first of these four a hand has
-  // chosen. ⚠ It replaces my 600 ms, which was *"roughly three unhurried legs"* and untested.
-  // ⛔ Halving it makes the gesture CRISPER and harder to reach by accident: two reversals now
-  // have to fall inside 300 ms, so a leisurely reposition cannot accumulate into an eviction.
-  evictShakeWindowMs: 300,
-  // ⭐ **6 mm — the owner's, 2026-09-17.** ⚠ Mine was 8 mm, *"~10× the measured 0.761 mm
-  // noise floor"*, and admittedly not known to be the boundary with a corrective nudge.
-  // ⛔ It still clears the validator's floor (3× the measured noise = 2.28 mm) with room, so a
-  // reversal cannot be jitter — and a shorter leg pairs with the shorter window: the gesture
-  // gets smaller and faster rather than smaller and slower.
-  evictShakeLegMm: 6,
-  // ⭐ **0.45 — the owner's, 2026-09-17**, slightly looser than my 0.4. ⚠ It admits a hand's
-  // natural bow and must still refuse a circle; ⛔ the gap between those two is the whole
-  // question, and it is a finger's to answer. `shake.test.ts` keeps the circle counter-example
-  // at its own fixture values, so the refusal is still proven whatever this number becomes.
-  evictShakeStraightness: 0.45,
+  // ── The unsnap's rapid move — the shake's two owner-chosen numbers (2026-09-17), kept. ──
+  unsnapWindowMs: 300,
+  unsnapLegMm: 6,
   // ⭐⭐ SHIPPED AS `beta = 0` ON DEVICE EVIDENCE, AGAINST MY OWN MEASUREMENT.
   // A/B'd by finger on 2026-09-14 (`?rollFilterBeta=0` vs the default) and the
   // filtered version was judged better. ⛔ My metric said the opposite — it scored
@@ -1079,27 +928,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ `0` = the current build, so the trial's existing behaviour is what boots and case 2 is
   // something a hand turns on to compare — the comparison that settled `D28` and `IN13`.
   approachRetargetsOrbit: 0,
-  // ⭐⭐ **0 — PINNED, BY THE OWNER'S CHOICE (2026-09-18)**: *"set the default at boot:
-  // Pioneer translates = 0 (-> pinned)."*
-  // ⚠⚠ **AND IT OVERRULES THE CAUTION I SHIPPED IT WITH.** This read `1` with a comment
-  // saying *a new rule does not become the default before a device pass says so*. ⛔ `D38`
-  // settled that argument once already and the answer has not changed: **the owner IS the
-  // hand**, and a default he has chosen on the glass outranks a default I chose on principle.
-  // ⭐ `?pioneerTranslates=1` restores the old behaviour, and the menu toggles it live.
-  pioneerTranslates: 0,
-  // ⭐⭐ **1 — THE OWNER'S CHOICE AT BOOT** (*"Default at scene boot: WorldAxisB is toggled
-  // on"*), so the world-fixed axes are what a hand meets first and `?worldAxisB=0` is the way
-  // back to the camera-referred build. ⚠ The reverse of how a trial normally ships here, and
-  // deliberate: it is a dictated default, not a caution I chose.
-  worldAxisB: 1,
-  // ⛔ `0` because `CameraOffsetZoneEnter` HAS NO DEFINITION YET. Turning it on today changes
-  // nothing except what the HUD says, and shipping it on would be a slider that does nothing —
-  // the exact shape `config_debt.test.ts` exists to refuse.
-  cameraOffsetZoneEnterSetupB: 0,
-  // ⭐⭐ `1` = PLANE, and it is the DEFAULT because a hand reported the other one as inverted
-  // (2026-09-23). ⚠ `?translatePairing=0` is the way back to the dictated channels, now that
-  // they track exactly — the comparison the owner should make with a finger.
-  translatePairing: 1,
   // ⭐ Blender's number, not mine.
   axisTrackingConeDeg: 5,
   // ✅ **0.05 — THE OWNER'S NUMBER, 2026-09-23** (*"Set the default transparency to 0.05"*),
@@ -1139,14 +967,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const SETTLE_NOISE_MULTIPLE = 3;
 
 export function validateGestureConfig(cfg: GestureConfig): void {
-  // ⛔ 0 or 1, never in between — the same discipline `worldAxisB` is held to.
-  if (cfg.pioneerCandidates !== 0 && cfg.pioneerCandidates !== 1) {
-    throw new Error(
-      `pioneerCandidates (${cfg.pioneerCandidates}) must be exactly 0 or 1: it switches the ` +
-        "fuchsia Pioneer-candidate offer on and off, and a half-set flag would read as truthy " +
-        "while the readout claimed otherwise.",
-    );
-  }
 
   if (cfg.pioneerCursorDrag !== 0 && cfg.pioneerCursorDrag !== 1) {
     throw new Error(
@@ -1187,17 +1007,17 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
-  // ⛔ The owner's slider is 0–45. Outside it the highlight stops meaning *nearly ready to mate*:
-  // past 90° a face pointing the SAME way would light, which is the reading this rule rejects.
+  // ⛔ The owner's slider is 0–45. Past 90° a face pointing the SAME way would snap, which is the
+  // reading a mate rejects (rule 4: anti-parallel).
   if (
-    !Number.isFinite(cfg.pioneerCandidateConeDeg) ||
-    cfg.pioneerCandidateConeDeg < 0 ||
-    cfg.pioneerCandidateConeDeg > 45
+    !Number.isFinite(cfg.snapConeDeg) ||
+    cfg.snapConeDeg < 0 ||
+    cfg.snapConeDeg > 45
   ) {
     throw new Error(
-      `pioneerCandidateConeDeg (${cfg.pioneerCandidateConeDeg}) must be between 0 and 45 ` +
-        "degrees: it is how far from ANTI-PARALLEL a face may be and still be offered as a " +
-        "Pioneer candidate, and past 90 the test would admit faces pointing the same way.",
+      `snapConeDeg (${cfg.snapConeDeg}) must be between 0 and 45 ` +
+        "degrees: it is how far from ANTI-PARALLEL the two faces may be and the snap still " +
+        "fire, and past 90 the test would admit faces pointing the same way.",
     );
   }
 
@@ -1223,7 +1043,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   //
   // ⛔⛔ **AND `pointerNoiseMm` IS THE LOAD-BEARING ONE.** Three rules here are MULTIPLES of
   // it, so `pointerNoiseMm=0` does not merely set a number to zero — it silently satisfies
-  // `evictShakeLegMm ≥ 3×0` and `motionDeadbandMm ≥ 3×0`, disabling two guards that exist to
+  // `unsnapLegMm ≥ 3×0` and `motionDeadbandMm ≥ 3×0`, disabling two guards that exist to
   // protect the user's work from jitter. ⭐ `METHOD`: *a threshold defined as a multiple of a
   // measurement inherits that measurement's failure modes* — including zero.
   const positiveMs: ReadonlyArray<readonly [string, number]> = [
@@ -1271,27 +1091,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The
   // multiple is `shake.ts`'s axis gate — a leg that cannot even establish a direction
   // cannot be a leg.
-  if (cfg.evictShakeLegMm < 3 * cfg.pointerNoiseMm) {
+  if (cfg.unsnapLegMm < 3 * cfg.pointerNoiseMm) {
     throw new Error(
-      `evictShakeLegMm (${cfg.evictShakeLegMm} mm) does not clear 3× the measured ` +
-        `pointer noise (${cfg.pointerNoiseMm} mm): a reversal could be jitter, and ` +
-        "eviction destroys the user's alignments.",
-    );
-  }
-  // ⚠ Two reversals is the minimum that distinguishes a shake from a single stroke that
-  // merely came back. One would make every over-and-return drag an eviction.
-  if (cfg.evictShakeReversals < 2) {
-    throw new Error(
-      `evictShakeReversals (${cfg.evictShakeReversals}) must be at least 2: one ` +
-        "reversal is an ordinary drag that changed its mind.",
-    );
-  }
-  // ⛔ A straightness of 1 or more admits a circle, whose transverse excursion equals
-  // its along-axis amplitude. The guard would be decorative.
-  if (!(cfg.evictShakeStraightness > 0 && cfg.evictShakeStraightness < 1)) {
-    throw new Error(
-      `evictShakeStraightness (${cfg.evictShakeStraightness}) must be in (0, 1): at 1 a ` +
-        "CIRCLE passes, and a circle is the gesture that must not evict.",
+      `unsnapLegMm (${cfg.unsnapLegMm} mm) does not clear 3× the measured pointer noise ` +
+        `(${cfg.pointerNoiseMm} mm): jitter could unsnap a seated part.`,
     );
   }
 
@@ -1417,21 +1220,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "ship one of the two behaviours while the readout claimed a third.",
     );
   }
-  if (cfg.pioneerTranslates !== 0 && cfg.pioneerTranslates !== 1) {
-    throw new Error(
-      `pioneerTranslates (${cfg.pioneerTranslates}) must be exactly 0 or 1: it selects a RULE, ` +
-        "not a quantity, and a value in between would read as `truthy` and silently ship one " +
-        "of the two behaviours while the readout claimed a third.",
-    );
-  }
-  if (cfg.worldAxisB !== 0 && cfg.worldAxisB !== 1) {
-    throw new Error(
-      `worldAxisB (${cfg.worldAxisB}) must be exactly 0 or 1: it selects WHICH BASIS a body is ` +
-        "translated along (the boot camera's, frozen, or the live camera's), not a quantity — " +
-        "and a value in between would read as `truthy` and freeze the axes while the readout " +
-        "claimed the camera was still steering them.",
-    );
-  }
   // ⛔ An alpha outside [0, 1] is not a stronger overlay: above 1 Babylon clamps and the mesh
   // stops blending, which reads as *the flag stopped working* rather than as a bad number.
   // ⚠ `0` is meaningful (the twin is not drawn), so this is a RANGE and not a positivity test.
@@ -1442,13 +1230,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "would silently disable the overlay while the readout claimed a value.",
     );
   }
-  if (cfg.translatePairing !== 0 && cfg.translatePairing !== 1) {
-    throw new Error(
-      `translatePairing (${cfg.translatePairing}) must be exactly 0 or 1: it selects WHICH RULE ` +
-        "maps the holder's two numbers onto the object axes (the plane solve or the dictated " +
-        "channels), not a quantity.",
-    );
-  }
   // ⛔ A cone wider than 90° would swallow every axis and leave nothing but the fixed-rate push,
   // which is a state no slider should be able to reach by accident. ⚠ `0` is meaningful (no
   // fallback at all), so this is a RANGE and not a positivity test.
@@ -1457,16 +1238,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `axisTrackingConeDeg (${cfg.axisTrackingConeDeg}) must be in [0, 90): it is a half-angle ` +
         "around the view direction, and at 90 every axis is inside it — exact tracking would be " +
         "unreachable and every translation would run at the fallback rate. NaN fails this too.",
-    );
-  }
-  if (
-    cfg.cameraOffsetZoneEnterSetupB !== 0 &&
-    cfg.cameraOffsetZoneEnterSetupB !== 1
-  ) {
-    throw new Error(
-      `cameraOffsetZoneEnterSetupB (${cfg.cameraOffsetZoneEnterSetupB}) must be exactly 0 or 1: ` +
-        "it selects whether the zone's ENTER edge calls CameraOffsetZoneEnter, which is a RULE " +
-        "and not a quantity.",
     );
   }
   // ⛔ `0` is MEANINGFUL here (the swing off), so the rule is a range and not a positivity
