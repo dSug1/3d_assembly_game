@@ -5,7 +5,7 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, pressMeaning, outsideTapRelease, flickResetPlan, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flickResetPlan, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
 import { type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
@@ -15,12 +15,13 @@ import { IDENTITY } from "../core/vec";
 import { frozenHoldAdmitted } from "../input/assembly";
 import { translatesOnDrag } from "../input/highlight";
 import { secondTouchDrive } from "../input/pinned_pioneer";
+import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { pressHit } from "../input/frozen_pick";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
-import { alignFollowerToPioneer, cancelAlignAnim, isSeatedCouple, noteTap, releaseAlignmentOf, toggleByTap } from "./alignment_wiring";
+import { alignFollowerToPioneer, cancelAlignAnim, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
 import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, paint, sampleOf } from "./hud_paint";
@@ -140,6 +141,8 @@ export function installPointerHandler(st: SceneState): void {
       const driveHit = rayHit;
       if (rawHitId !== undefined) st.rawPressedBody.set(e.pointerId, rawHitId);
       st.pointerTypeOf.set(e.pointerId, e.pointerType);
+      // ⭐⭐ `D108` — THE DESKTOP HAS NO MODE: the mouse's press latches it from Ctrl.
+      if (e.pointerType === "mouse") st.behaviour = desktopBehaviour(e.ctrlKey);
       // ⭐⭐⭐ **IS THE FACE UNDER THIS RAY ONE THE PRODUCT IS OFFERING?** — the owner, 2026-09-24:
       // *"frozen object fuchsia face is not responsive to touch and nothing happens."*
       //
@@ -462,7 +465,8 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔⛔ **`D64` — AND A FINGER THAT DROVE THIS BODY DOES NOT TOGGLE ON THE WAY UP.**
         // ⚠ Both sets are consulted unconditionally, never short-circuited: each owns an entry
         // for this pointer id and leaving one behind would eat the NEXT gesture's tap.
-        noteTap(st, routed.pressed, s, e.pointerId);
+        // ⛔⛔ `D108`: a tap on the held body itself no longer toggles — only empty space does.
+        noteTap(st, routed.pressed, s, e.pointerId, false);
         // ⭐⭐⭐ A15: released FROM THE SAME OBJECT (A12's roll/depth finger). Ask whether
         // the holder is still on its object before anything else can happen.
       } else {
@@ -621,7 +625,22 @@ export function installPointerHandler(st: SceneState): void {
             for (const f of orphaned) releaseAlignmentOf(st, f);
             st.lastVerdict = `align: TAP on empty space released ${orphaned.length} follower(s) of ${heldId}`;
           }
-        } else if (noteTap(st, routed.pressed, s, e.pointerId) === "DOUBLE_TAP") {
+        } else if (
+          noteTap(
+            st,
+            routed.pressed,
+            s,
+            e.pointerId,
+            tapTogglesMode({
+              isMouseDerived:
+                e.pointerType === "mouse" || e.pointerId === MOUSE_SECOND_ID,
+              onEmptySpace: true,
+              heldObjectCount: st.router.objects().length,
+              heldIsAligned: heldId !== undefined && alignedFaceOf(st.world, heldId) !== null,
+              heldFollowerCount: heldId !== undefined ? st.links.followersOf(heldId).length : 0,
+            }),
+          ) === "DOUBLE_TAP"
+        ) {
           resetCamera(st);
           st.lastVerdict = "DOUBLE_TAP → camera reset";
         }
@@ -1157,16 +1176,10 @@ export function installPointerHandler(st: SceneState): void {
       // re-tap on the PioneerFace releases the alignment, `D39`). ⭐ Both are deleted with the
       // press toggle: a rule that cannot fire needs no correction, and `D39` gets its single
       // meaning back without one.
-      if (
-        !alignedByThisTap &&
-        (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP")
-      ) {
-        // ⚠ A tap that ALIGNED or released an alignment is excluded, unchanged — *"as per
-        // present rule for tap"*: one gesture, one consequence.
-        // ⛔⛔ **THIS LINE USED TO FLIP THE MODE WITHOUT ARMING `D68`'s REVERT**, which is the
-        // 2026-09-23 device report: a double tap on the Pioneer left the session one toggle out.
-        toggleByTap(st, "tap on the object", e.pointerId);
-      }
+      // ⛔⛔ `D108`: a tap on the object the touchpoint was carrying NO LONGER TOGGLES the mode —
+      // only a tap on EMPTY space does (`tapTogglesMode`). ⚠ Nothing toggled, so `D68`'s revert
+      // must not fire on a press that pairs with it.
+      if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") st.lastTapToggled = false;
       // ⭐ §3 rule 3 — *"release unselects object and face, stack preserved."* ⛔ The stack
       // lives on the OBJECT, so preserving it is not an action: it is what NOT clearing the
       // selection state means.

@@ -463,7 +463,9 @@ export function toggleByTap(st: SceneState, why: string, pointerId: number) : vo
 // present rule for tap"* — and `noteTap` needs no verdict from anyone.
 export function noteTap(st: SceneState, pressed: Sample,
   released: Sample,
-  pointerId: number,) : "TAP" | "DOUBLE_TAP" | null {
+  pointerId: number,
+  /** ⭐⭐ `D108`: whether this tap may toggle at all — `tapTogglesMode`'s answer, the caller's facts. */
+  toggles: boolean,) : "TAP" | "DOUBLE_TAP" | null {
   const wasTap = isTapRelease(
     pressed.t,
     pressed.x,
@@ -489,6 +491,12 @@ export function noteTap(st: SceneState, pressed: Sample,
   // double tap and the camera reset read.
   // ⭐ `D68`: this tap DID toggle, so a press that completes the pair may undo it — and the
   // arming is `toggleByTap`'s, not this function's, so the OBJECT path cannot disagree.
-  toggleByTap(st, "tap", pointerId);
+  // ⛔⛔ `D108`: no longer EVERY tap — only the one `tapTogglesMode` names. A tap that does not
+  // toggle clears `lastTapToggled`, so `D68`'s revert cannot undo a toggle that never happened.
+  if (toggles) toggleByTap(st, "tap on empty space", pointerId);
+  else {
+    st.pairReverted.delete(pointerId);
+    st.lastTapToggled = false;
+  }
   return verdict;
 }

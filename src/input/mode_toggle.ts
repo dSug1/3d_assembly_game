@@ -184,6 +184,49 @@ export function toggleBehaviour(b: Behaviour): Behaviour {
   return b === "TRANSLATE" ? "ROTATE" : "TRANSLATE";
 }
 
+/** The facts `tapTogglesMode` reads, all known at the tap's release. */
+export interface ToggleTapContext {
+  /** The tap came from a mouse — its real pointer, or the Shift-made second touch. */
+  readonly isMouseDerived: boolean;
+  /** The tap landed on NO body (`OUTSIDE`). */
+  readonly onEmptySpace: boolean;
+  readonly heldObjectCount: number;
+  readonly heldIsAligned: boolean;
+  readonly heldFollowerCount: number;
+}
+
+/**
+ * ⭐⭐⭐ **`D108` — WHICH TAP STILL TOGGLES THE MODE** (the owner, 2026-09-27: *"4-OK, but no button
+ * on screen"*).
+ *
+ * ⛔⛔ It was *"a single tap by one only touchpoint ANYWHERE toggles"* (`D28`) — so every tap that
+ * meant something else (a tap on the held body, a tap on another body, a tap on empty space with
+ * nothing held) ALSO flipped the mode, and `D66`/`D68`/`D64` were three patches on that one rule.
+ * ⭐ Now ONE configuration toggles: a **touch** tap on **empty space** while **exactly one FREE body
+ * with no followers** is held. ⚠ An aligned body has no mode left (`D108`), and holding an aligned
+ * body or a Pioneer the same tap RELEASES (`D95`/`D107`) — so the three answers partition the
+ * gesture instead of overlapping.
+ * ⛔ **A mouse never toggles**: the desktop has no mode — left drag translates, Ctrl + left drag
+ * rotates (`desktopBehaviour`).
+ */
+export function tapTogglesMode(c: ToggleTapContext): boolean {
+  return (
+    !c.isMouseDerived &&
+    c.onEmptySpace &&
+    c.heldObjectCount === 1 &&
+    !c.heldIsAligned &&
+    c.heldFollowerCount === 0
+  );
+}
+
+/**
+ * ⭐⭐ **`D108` — THE DESKTOP HAS NO MODE**: a left drag translates, **Ctrl** + left drag rotates,
+ * latched at the press. ⭐ Shift still switches the axis inside either (`D94`'s table).
+ */
+export function desktopBehaviour(ctrlKey: boolean): Behaviour {
+  return ctrlKey ? "ROTATE" : "TRANSLATE";
+}
+
 /**
  * §1.3's tap test, in **one** place.
  *
