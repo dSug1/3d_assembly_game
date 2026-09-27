@@ -16,7 +16,9 @@
 import { createScene } from "@render/scene";
 import { installGameShell } from "@render/screens";
 import { GAME_CONTENT } from "./content/worlds";
-import { SCENE_0 } from "./content/scene_0";
+import { sceneAt } from "./content/scenes";
+import { parseConfigOverrides } from "./input/config_override";
+import { DEFAULT_CONFIG } from "./input/gestureConfig";
 import { isStaleBuild, parseServedBuild, refreshUrl } from "@core/build_gate";
 
 /**
@@ -85,7 +87,7 @@ try {
   const showFlow = new URL(window.location.href).searchParams.get("flow") === "1";
   const handle = showFlow
     ? installGameShell(canvas, GAME_CONTENT, (scene) => createScene(canvas, scene))
-    : createScene(canvas, SCENE_0);
+    : createScene(canvas, sceneAt(parseConfigOverrides(DEFAULT_CONFIG, window.location.search).config.sceneIndex));
 
   // ⭐ A canvas of zero size renders nothing and reports no error. Cheap to check,
   // and it is the other way a device shows a blank page.

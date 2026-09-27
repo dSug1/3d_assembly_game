@@ -19,6 +19,7 @@
  */
 import { bootTilt } from "./scene_dims";
 import type { Quat } from "./vec";
+import type { LightingSpec } from "./lighting";
 
 export type Triple = readonly [number, number, number];
 
@@ -45,6 +46,16 @@ export interface SceneDescriptor {
   readonly id: string;
   readonly title: string;
   readonly bodies: readonly BodySpec[];
+  /**
+   * ⭐ Metres per AUTHORED unit (default 1). `Scene_1` is authored in the owner's Unity units at
+   * 0.1 m each, so its numbers stay exactly as written and the camera rig still frames it.
+   * ⛔ Applied to body positions and sizes and to light positions and ranges — never to angles.
+   */
+  readonly unitM?: number;
+  /** ⭐ `"LEVEL"`: the boot camera looks along `+z` from the height of the orbit centre. Default: the rig's. */
+  readonly bootView?: "LEVEL";
+  /** ⭐ The scene's own lights and background; absent → the one hemispheric light `Scene_0` has. */
+  readonly lighting?: LightingSpec;
   /** ⛔ `GM1`'s: the final configuration to detect. `null` until an owner authors one. */
   readonly final: null;
 }
@@ -219,7 +230,23 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
       topScale: x.topScale,
     };
   });
-  return { id: o.id, title: o.title, bodies, final: null };
+  if (o.unitM !== undefined && !(typeof o.unitM === "number" && o.unitM > 0 && Number.isFinite(o.unitM)))
+    throw new Error(`scene ${o.id}: unitM must be a positive number`);
+  if (o.bootView !== undefined && o.bootView !== "LEVEL") throw new Error(`scene ${o.id}: unknown bootView`);
+  if (o.lighting !== undefined) {
+    const l = o.lighting as Record<string, unknown> | null;
+    if (typeof l !== "object" || l === null || !isTriple(l.background) || !Array.isArray(l.lights))
+      throw new Error(`scene ${o.id}: lighting needs a background and a lights array`);
+  }
+  return {
+    id: o.id,
+    title: o.title,
+    bodies,
+    ...(o.unitM !== undefined ? { unitM: o.unitM as number } : {}),
+    ...(o.bootView !== undefined ? { bootView: "LEVEL" as const } : {}),
+    ...(o.lighting !== undefined ? { lighting: o.lighting as LightingSpec } : {}),
+    final: null,
+  };
 }
 
 /** ⭐ The inverse of `parseSceneDescriptor`; `parse(serialize(s))` equals `s`. */

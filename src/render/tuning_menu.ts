@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { SCENES } from "../content/scenes";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createMenu, type MenuSlider } from "./menu";
 import { type SceneState } from "./scene_state";
@@ -69,6 +70,13 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐⭐ **CAMERA, WITH TWO FOLDERS** — the owner, 2026-09-26: *"in CAMERA menu, create a
       // subfolder CAMERA ORBIT and move all the sliders under CAMERA ORBIT except the subfolder
       // CAMERA APPROACH SWING AT CAPTURE which stays under CAMERA"*.
+      title: "SCENE",
+      // ⭐⭐ The owner, 2026-09-27: *"toggle with a slider between Scene_0 and Scene_1. When the slider
+      // is toggled, the corresponding scene boot from beginning."* ⛔ A RELOAD, not a swap: the page
+      // comes back on `?sceneIndex=N`, so nothing of the other scene survives.
+      sliders: [sceneSlider(st)],
+    },
+    {
       title: "CAMERA",
       // ⭐ `D113` (the owner, 2026-09-27: *"Put a slider for the band width"*): at the TOP of CAMERA,
       // not inside a subsection — the strip that is always empty space, 0 = off.
@@ -103,48 +111,6 @@ export function installTuningMenu(st: SceneState): void {
               0.05,
               0.002,
             ),
-          ],
-        },
-        {
-          title: "CAMERA APPROACH SWING AT CAPTURE",
-          sliders: [
-          // ⭐⭐⭐ **THE APPROACH SWING (trial, branch `1.0.18-`)** — how far the camera leans out
-          // at HALF the trigger gap, and back to zero at contact.
-          // ⛔ **`0` TURNS THE WHOLE MECHANISM OFF**, which is what makes it A/B-able by finger
-          // in the same minute on the same scene — the comparison that settled `D28` and `IN13`.
-          // ⛔ **SHIPS AT 0 — OFF** (the owner, 2026-09-26: *"set the default approach swing to
-          // zero"*); the 30° a hand chose on 2026-09-19 is one slider move away.
-          tunable(st, 
-            "approach swing (° of camera yaw)",
-            "approachSwingDeg",
-            0,
-            90,
-            1,
-          ),
-          // ⭐⭐ **THE SPEED DIVISOR, `gain × speed^exponent`** — the owner's fine-tuning pair.
-          // ⛔ Damping starts where the divisor passes 1, at `(1/gain)^(1/exponent)` mm/s: the
-          // default 0.0083 puts that knee at **120 mm/s**. ⚠ A small range with a fine step,
-          // because the useful values are all near the bottom of it.
-          tunable(st, "swing speed gain", "approachSwingSpeedGain", 0, 0.05, 0.0005),
-          // ⛔ **`0` REMOVES THE SPEED DEPENDENCE ENTIRELY**, which is how to A/B the idea by
-          // finger; `1` makes the camera's angular rate independent of hand speed; above 1 the
-          // camera slows as the hand speeds up.
-          tunable(st, 
-            "swing speed exponent",
-            "approachSwingSpeedExponent",
-            0,
-            3,
-            0.1,
-          ),
-          // ⭐⭐⭐ **A RULE SELECTOR, NOT A NUMBER** — `0` is the current build; `1` switches the
-          // yellow orbit target to the Pioneer–Follower barycentre the moment they capture.
-          tunable(st, 
-            "orbit retargets on capture (0/1)",
-            "approachRetargetsOrbit",
-            0,
-            1,
-            1,
-          ),
           ],
         },
       ],
@@ -383,4 +349,23 @@ export function installTuningMenu(st: SceneState): void {
       ],
     },
   ]);
+}
+
+/** ⭐ The scene switch: `get` is the index booted; `set` rewrites `?sceneIndex=` and reloads. */
+function sceneSlider(st: SceneState): MenuSlider {
+  return {
+    label: `scene (0 = Scene_0, ${SCENES.length - 1} = ${SCENES[SCENES.length - 1]!.id}) — reboots`,
+    min: 0,
+    max: SCENES.length - 1,
+    step: 1,
+    get: () => st.cfg.sceneIndex,
+    set: (value) => {
+      const v = Math.round(value);
+      if (v === st.cfg.sceneIndex) return null;
+      const url = new URL(window.location.href);
+      url.searchParams.set("sceneIndex", String(v));
+      window.location.assign(url.toString());
+      return null;
+    },
+  };
 }

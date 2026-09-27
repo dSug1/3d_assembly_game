@@ -19,14 +19,8 @@
  * missing from it.
  */
 import { describe, expect, it } from "vitest";
-import {
-  alignmentMatchesTarget,
-  captureOffsetM,
-  highlightedPair,
-  translatesOnDrag,
-  type HighlightNumbers,
-} from "@input/highlight";
-import { centreDistance, nearestCapture, surfaceGap } from "@core/proximity";
+import { captureOffsetM, translatesOnDrag } from "@input/highlight";
+import { centreDistance, surfaceGap } from "@core/proximity";
 import { boxShape } from "@core/collision_shape";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import {
@@ -44,7 +38,6 @@ import { IDENTITY, qFromAxisAngle, type Quat, type Vec3 } from "@core/vec";
 // when the owner scaled the pyramid the whole suite stayed green against the old body — including
 // the boot-clearance vector below, whose entire job is to notice exactly that.
 const SIZE = OBJECT_SIZE_M; // ⭐ the scene's L, in metres
-const H = SIZE / 2;
 const DEG = Math.PI / 180;
 
 /** The scene's real body dimensions, in metres — parts, and the base plate. */
@@ -63,17 +56,6 @@ const PLATE = PLATE_DIMS_M as unknown as [number, number, number];
  */
 const PYRAMID = PYRAMID_DIMS_M as unknown as [number, number, number];
 
-/**
- * ⭐⭐ **A 100 mm SURFACE OFFSET — chosen for the vectors, not shipped.**
- *
- * ⛔ The product's offset is computed per frame from the camera (`captureOffsetM`), so there is
- * no fixed metre value to pin fixtures to. ⚠ These vectors therefore state their own threshold
- * and place bodies relative to IT — which is the lesson the *too far* vector below already
- * learned the hard way: a distance fixture written relative to *the scene* silently changes
- * meaning when the scene does.
- */
-const OFFSET = 0.1;
-const N: HighlightNumbers = { captureOffsetM: OFFSET, alignMatchRad: 15 * DEG };
 
 /**
  * ⛔⛔ **THE `BOOT` FIXTURE WAS DELETED ON 2026-09-18, AND THE REASON IS WORTH KEEPING.**
@@ -129,13 +111,7 @@ function scene(...placed: readonly Placement[]): World {
   return w;
 }
 
-/** An alignment driving the object's `+x` onto a frozen WORLD direction. */
-const aligned = (targetWorld: Vec3): Constraint[] => [
-  { kind: "FACE_ALIGN", localNormal: [1, 0, 0], targetWorld },
-];
 
-/** ⭐ The product's own measure, bound to a world — what `scene.ts` passes in. */
-const gapIn = (w: World) => (a: string, b: string) => surfaceGap(w, a, b);
 
 /**
  * ⚠ Every OTHER body in the world — what `nearestCapture` used to consider by default.
@@ -215,7 +191,8 @@ describe("THE SURFACE GAP — the measure itself, on the real scene", () => {
     w = setWorldPlacement(w, "a", { position: [0, 0, 0], orientation: IDENTITY });
     w = setWorldPlacement(w, "b", { position: [0.05, 0, 0], orientation: IDENTITY });
     expect(surfaceGap(w, "a", "b")).toBeNull();
-    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w), others(w, "a"))).toBeNull();
+    // ⭐ out of range, never in range — `null`, which no threshold can read as near
+    expect(surfaceGap(w, "a", others(w, "a")[0]!)).toBeNull();
   });
 });
 
@@ -300,7 +277,8 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     // ⭐ Every body is clear at rest. ⛔ RED against the 15 mm default, which names the plate for
     // the pyramid.
     for (const id of ["objectA", "objectB", "objectD"]) {
-      expect(nearestCapture(w, id, offset, null, gapIn(w), others(w, id))).toBeNull();
+      // ⭐ Measured directly now that the capture pass is deleted (`D120`): no gap is inside the offset.
+      for (const o of others(w, id)) expect(surfaceGap(w, id, o)!).toBeGreaterThan(offset);
     }
     // ⚠ The measured numbers: the nearest pair is 53 mm apart against a ~40 mm band.
     expect(surfaceGap(w, "objectB", "objectC")! * 1000).toBeCloseTo(53.4, 1);
@@ -318,132 +296,6 @@ describe("THE CAMERA-SCALED OFFSET — the owner's rule, as arithmetic", () => {
     expect(DEFAULT_CONFIG.captureOffsetMm).toBe(10);
     // 10 mm of glass at the boot camera is about 40 mm of world, half the L = 80 mm module.
     expect(captureOffsetM(DEFAULT_CONFIG.captureOffsetMm, 1.5, FOV, VH)).toBeCloseTo(0.04, 3);
-  });
-});
-
-describe("⛔⛔⛔ `D62` — A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE", () => {
-  // ⛔⛔ THE OWNER, 2026-09-19: *"Currently, a Follower can enter in the offset radius of any
-  // object and the white highlights trigger. I want to restrict this strictly to its Pioneer
-  // object (= a Follower object cannot approach any other object than its Pioneer)."*
-  //
-  // ⚠⚠ **IT OVERTURNS `A21`**, which `proximity.ts` quoted verbatim: *"within a
-  // SnapIsPossibleRadius of ANY other object (not necessarily the object with PioneerFace)"*.
-  // ⭐ The old rule had an argument — the Pioneer answers *which way is up*, the target answers
-  // *what am I docking with* — and a hand has overruled it. Vectored as a REVERSAL so the next
-  // reader sees a decision rather than an accident.
-
-  /** `h` in the middle, `a` and `b` both well inside the band on either side. */
-  const flanked = () => scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1, 0, 0]]);
-
-  it("⭐⭐⭐ with a Pioneer named, every OTHER body is invisible to the capture", () => {
-    const w = flanked();
-    // ⚠ Both are in range — established first, so the vector cannot pass by nothing being near.
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), others(w, "h"))?.target).toBe("a");
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["b"])?.target).toBe("b");
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["a"])?.target).toBe("a");
-  });
-
-  it("⛔⛔ a Pioneer OUT of range captures nothing — it does not fall back to the scene", () => {
-    // ⭐⭐ THE VECTOR THAT MATTERS MOST. A fallback would make the restriction disappear exactly
-    // when the state is surprising, and the contour would name a body the owner just forbade.
-    const w = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["far", [3, 0, 0]]);
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), others(w, "h"))?.target).toBe("a");
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["far"])).toBeNull();
-  });
-
-  it("⚠ a Pioneer that is not in the world captures nothing, and does not throw", () => {
-    // ⛔ A stale link is a reason to REFUSE, never to widen. `LESSONS_CARRIED` §6: a degenerate
-    // input returns nothing rather than a default.
-    const w = flanked();
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["ghost"])).toBeNull();
-  });
-
-  it("⛔⛔⛔ AN **EMPTY** PARTNER SET CAPTURES NOTHING — the owner's rule at its word", () => {
-    // ⛔⛔ WIDENED 2026-09-19. The first build restricted only the FOLLOWER, and a Pioneer —
-    // having no Pioneer of its own — fell through to *the whole scene* and lit up against any
-    // third body. The owner saw it on the glass:
-    //
-    //   *"when I second touch an object which becomes Pioneer, it can white highlight if the
-    //    Pioneer is close to a third object (which could be not the Follower): this should not
-    //    happen. the white highlight should be reserved only for Pioneer-Follower duo."*
-    //
-    // ⭐ So there is no longer ANY *"unrestricted"* value: a body in neither role answers empty,
-    // and empty captures nothing — even with two bodies well inside the band.
-    const w = flanked();
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), [])).toBeNull();
-  });
-
-  it("⭐⭐ A PIONEER MAY CAPTURE ANY OF ITS FOLLOWERS — the nearest one wins", () => {
-    // ⚠ `A18`'s index is TWO-WAY and a Pioneer may have SEVERAL Followers, which is why the
-    // restriction is a set and not one body. ⛔ Within the set the ordinary *nearest* rule still
-    // decides — the restriction narrows the candidates, it does not replace the comparison.
-    const w = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.06, 0, 0]]);
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["a", "b"])?.target).toBe("b");
-    expect(nearestCapture(w, "h", OFFSET, null, gapIn(w), ["a"])?.target).toBe("a");
-  });
-
-  it("⛔⛔⛔ AND THE COMPOSITION: `highlightedPair` draws no contour on a forbidden neighbour", () => {
-    // ⭐⭐ THE RULE AND THE PRODUCT'S ENTRY POINT ARE DIFFERENT FUNCTIONS, and only measuring
-    // the composition says the lookup is actually threaded through — mistake shape 4, which has
-    // caught this file before.
-    const w = flanked();
-    const near = { captureOffsetM: OFFSET, alignMatchRad: 1 };
-    const gap = (x: string, y: string) => surfaceGap(w, x, y);
-    // ⚠ Without a Pioneer: the nearest neighbour is captured, as it always was.
-    expect(highlightedPair(w, ["h"], true, near, null, gap, () => others(w, "h")).pair?.target).toBe("a");
-    // ✅ With one: the pair names the Pioneer, whichever side it is on.
-    expect(highlightedPair(w, ["h"], true, near, null, gap, () => ["b"]).pair?.target).toBe("b");
-    // ⛔ And with a Pioneer out of range there is NO pair at all, though `a` is right there.
-    const w2 = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["far", [3, 0, 0]]);
-    const gap2 = (x: string, y: string) => surfaceGap(w2, x, y);
-    const v = highlightedPair(w2, ["h"], true, near, null, gap2, () => ["far"]);
-    expect(v.pair).toBeNull();
-    expect(v.inRange).toBe(false);
-    // ⚠⚠ AND THE READOUT OBEYS THE RULE: the printed gap describes the PIONEER, not the body
-    // the hand can see nearby. A number that describes a forbidden pair is a readout that lies.
-    expect(v.gapM).toBeGreaterThan(1);
-  });
-});
-
-describe("the capture band, and the tie rule", () => {
-  /** Two parts on the x axis whose SURFACES are `gap` apart. */
-  const apart = (gap: number) =>
-    scene(["a", [0, 0, 0], IDENTITY, [], PART], ["b", [SIZE + gap, 0, 0], IDENTITY, [], PART]);
-
-  it("the band itself: 95 mm captures, 105 mm does not", () => {
-    const near = apart(0.095);
-    const far = apart(0.105);
-    expect(nearestCapture(near, "a", OFFSET, null, gapIn(near), others(near, "a"))?.target).toBe("b");
-    expect(nearestCapture(far, "a", OFFSET, null, gapIn(far), others(far, "a"))).toBeNull();
-  });
-
-  it("EXACTLY on the offset still captures — the boundary belongs to the inside", () => {
-    // The rule is `d > offsetM` -> out, so equality is IN. Untested until 2026-09-17: the
-    // audit found `>` -> `>=` survives every other vector, because no fixture lands on the line.
-    // Which way it falls matters less than it being STATED: an unpinned boundary is a
-    // free variable the next reader may flip while tidying.
-    const w = apart(OFFSET);
-    expect(surfaceGap(w, "a", "b")).toBeCloseTo(OFFSET, 9);
-    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w), others(w, "a"))?.target).toBe("b");
-  });
-
-  it("the capture carries the MEASURED gap, not just the winner", () => {
-    // The HUD prints this number, and it must be the one the rule compared — a readout that
-    // measured the gap itself would be a second implementation free to disagree.
-    const w = apart(0.05);
-    expect(nearestCapture(w, "a", OFFSET, null, gapIn(w), others(w, "a"))?.gapM).toBeCloseTo(0.05, 9);
-  });
-
-  it("an EXACT tie keeps the incumbent — and only an exact one", () => {
-    // `proximity.ts` called this *"hysteresis by MEMORY"*. It is not: the comparison is
-    // `===`, so it holds the incumbent only when the two gaps are bit-for-bit equal.
-    // Both halves are pinned here so the limitation is visible rather than assumed away.
-    const tied = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1, 0, 0]]);
-    expect(nearestCapture(tied, "h", OFFSET, "b", gapIn(tied), others(tied, "h"))?.target).toBe("b");
-    expect(nearestCapture(tied, "h", OFFSET, "a", gapIn(tied), others(tied, "h"))?.target).toBe("a");
-    // One part in 1e12 nearer, and the incumbent loses. That is the overclaim, measured.
-    const nudged = scene(["h", [0, 0, 0]], ["a", [0.1, 0, 0]], ["b", [-0.1 - 1e-13, 0, 0]]);
-    expect(nearestCapture(nudged, "h", OFFSET, "b", gapIn(nudged), others(nudged, "h"))?.target).toBe("a");
   });
 });
 
@@ -503,171 +355,6 @@ describe("⛔⛔ CONDITION 2 — *translation by one touchpoint or two touchpoin
   // ⛔ `METHOD`: *a guard that cannot fail is not a guard* — no caller ever asks this function
   // about zero objects, so a guard here would have been unfalsifiable code added to make a
   // test of my own devising pass. Mistake shape 5, caught before it landed.
-});
-
-describe("⛔⛔ CONDITION 1 — the alignment, as GEOMETRY not identity", () => {
-  it("⭐⭐ an alignment made against a THIRD object still qualifies for this one", () => {
-    // ⛔⛔ *"is the target the object the alignment was tapped on?"* would return false here and
-    // silently refuse an ordinary assembly. ⚠ `D46` §2 is explicit: *any* other object, **not
-    // necessarily the one with PioneerFace**.
-    const w = scene(["a", [0, 0, 0]], ["b", [0.09, 0, 0]], ["c", [0, 0, 0.9]]);
-    expect(alignmentMatchesTarget(w, aligned([1, 0, 0]), "b", N.alignMatchRad)).toBe(true);
-  });
-
-  it("⭐⭐ the tolerance BITES — a target turned 45° no longer matches, 10° still does", () => {
-    const turned = scene(["a", [0, 0, 0]], ["b", [0.09, 0, 0], qFromAxisAngle([0, 0, 1], 45 * DEG)]);
-    expect(alignmentMatchesTarget(turned, aligned([1, 0, 0]), "b", N.alignMatchRad)).toBe(false);
-    const nudged = scene(["a", [0, 0, 0]], ["b", [0.09, 0, 0], qFromAxisAngle([0, 0, 1], 10 * DEG)]);
-    expect(alignmentMatchesTarget(nudged, aligned([1, 0, 0]), "b", N.alignMatchRad)).toBe(true);
-  });
-
-  it("⛔⛔ |dot| — AND IT TAKES A PART WITH NO OPPOSITE FACE TO SHOW IT", () => {
-    // ⚠⚠ ON A CUBE THIS ASSERTION WOULD BE HOLLOW, and a mutant proved it: every cube face has
-    // an opposite, so a SIGNED test finds `-x` and passes anyway. ⭐ It binds the moment a part
-    // is not a cube. This wedge has a single `+x` face; an alignment frozen pointing the other
-    // way along that axis is still aligned to it.
-    let w = makeWorld([
-      cube("a"),
-      {
-        ...cube("wedge"),
-        faces: [
-          { id: "+x", centre: [H, 0, 0], normal: [1, 0, 0] },
-          { id: "+y", centre: [0, H, 0], normal: [0, 1, 0] },
-        ],
-      },
-    ]);
-    w = setWorldPlacement(w, "a", { position: [0, 0, 0], orientation: IDENTITY });
-    w = setWorldPlacement(w, "wedge", { position: [0.09, 0, 0], orientation: IDENTITY });
-    expect(alignmentMatchesTarget(w, aligned([-1, 0, 0]), "wedge", N.alignMatchRad)).toBe(true);
-    // ⚠ and an unrelated axis is still refused, so this is a test and not a yes-man
-    expect(alignmentMatchesTarget(w, aligned([0, 0, 1]), "wedge", N.alignMatchRad)).toBe(false);
-  });
-
-  it("⛔⛔ A **MATE** DOES NOT COUNT AS AN ALIGNMENT — a seat is not an orientation", () => {
-    // ⭐ A mated object carries a `MATE` whose `targetWorld` is a real world direction, so a
-    // test that looked only at the vector would accept it.
-    const w = scene(["a", [0, 0, 0]], ["b", [0.09, 0, 0]]);
-    const mate: Constraint[] = [
-      { kind: "MATE", localNormal: [1, 0, 0], targetWorld: [1, 0, 0], otherObjectId: "c" },
-    ];
-    expect(alignmentMatchesTarget(w, mate, "b", N.alignMatchRad)).toBe(false);
-  });
-
-  it("⚠ an empty stack matches nothing; a missing target answers false", () => {
-    const w = scene(["a", [0, 0, 0]], ["b", [0.09, 0, 0]]);
-    expect(alignmentMatchesTarget(w, [], "b", N.alignMatchRad)).toBe(false);
-    expect(alignmentMatchesTarget(w, aligned([1, 0, 0]), "gone", N.alignMatchRad)).toBe(false);
-  });
-});
-
-describe("⛔⛔⛔ THE CONJUNCTION — all three, and each one alone is not enough", () => {
-  /**
-   * `a` aligned onto +x, and `b` with **50 mm of clear air** between their surfaces — inside
-   * the 100 mm test offset. ⚠ Written as a SURFACE gap: the centres are 130 mm apart, and
-   * quoting that number instead is exactly the fixture mistake this file made once already.
-   */
-  const nearAndAligned = () =>
-    scene(
-      ["a", [0, 0, 0], IDENTITY, aligned([1, 0, 0]), PART],
-      ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
-    );
-
-  it("⭐⭐ all three ⇒ the pair is outlined", () => {
-    const w = nearAndAligned();
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
-    expect(v.pair).toEqual({ subject: "a", target: "b" });
-    // ⭐ and both reasons report satisfied, so the HUD cannot contradict the contour
-    expect(v.translating && v.inRange).toBe(true);
-  });
-
-  it("⛔⛔ ALIGNED AND NEAR BUT **ROTATING** ⇒ NOTHING — the case a hand rejected", () => {
-    // ⭐⭐⭐ THE VECTOR THIS WHOLE SLICE EXISTS FOR. The previous build had conditions 1 and 3
-    // and shipped without 2, and the owner rejected it by finger: *"white contours cannot
-    // appear if objects are not aligned"* and *"that's also the case with single object
-    // translation."* ⛔ `translating === false` is a one-finger drag in ROTATE mode, and it must
-    // draw nothing even though everything else about the geometry is ready.
-    const w = nearAndAligned();
-    const v = highlightedPair(w, ["a"], false, N, null, gapIn(w), (id) => others(w, id));
-    expect(v.pair).toBeNull();
-    // ⭐⭐ AND THE READOUT MUST BLAME THE RIGHT CONDITION — the range is fine and only the
-    // movement mode is wrong, so a verdict claiming otherwise would send a device pass
-    // hunting the wrong thing.
-    expect(v.translating).toBe(false);
-    expect(v.inRange).toBe(true);
-  });
-
-  it("⛔⛔ TRANSLATING AND NEAR BUT **NOT ALIGNED** ⇒ IT **DOES** HIGHLIGHT", () => {
-    // ⚠⚠ THIS VECTOR WAS INVERTED ON 2026-09-17, AND THE INVERSION IS THE RECORD OF A DESIGN
-    // REVERSAL, NOT A BUG FIX. It used to assert `null`: the owner had said *"white contours
-    // cannot appear if objects are not aligned"*, and I made the alignment a precondition.
-    // ⛔ He then removed it: *"the white contour does not necessitate the object to be aligned
-    // … remove the 'object is aligned' from the approach logic."*
-    // ⭐⭐ The lesson is mine to keep: the original complaint was made against a build with NO
-    // translation condition, so *"appearing while unaligned"* and *"appearing while rotating"*
-    // were indistinguishable in the evidence. I picked the stronger reading and did not say
-    // that I had chosen. `METHOD`: **when two readings fit one report, name both.**
-    const w = scene(
-      ["a", [0, 0, 0], IDENTITY, [], PART],
-      ["b", [SIZE + 0.05, 0, 0], IDENTITY, [], PART],
-    );
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
-    expect(v.pair).toEqual({ subject: "a", target: "b" });
-    expect(v.inRange).toBe(true);
-    expect(v.translating).toBe(true);
-  });
-
-  it("⛔⛔ TRANSLATING AND ALIGNED BUT **TOO FAR** ⇒ NOTHING", () => {
-    // ⚠⚠ 400 mm apart — **5L**, comfortably outside the 4L radius. ⛔ THIS VECTOR USED TO USE
-    // THE BOOT SEPARATION (3L = 240 mm) AND IT BROKE the moment the radius went from 2.0 × span
-    // (160 mm) to 4L (320 mm): 240 mm is now INSIDE the band, so the fixture stopped being a
-    // *too far* case while still claiming to be one. ⭐ The lesson is the fixture's, not the
-    // code's — a distance fixture written relative to *the scene* silently changes meaning when
-    // the scene does, so this one is written relative to **the threshold**.
-    const w = scene(
-      ["a", [-0.2, 0, 0], IDENTITY, aligned([1, 0, 0]), PART],
-      ["b", [0.2, 0, 0], IDENTITY, [], PART],
-    );
-    expect(surfaceGap(w, "a", "b")!).toBeGreaterThan(N.captureOffsetM);
-    const v = highlightedPair(w, ["a"], true, N, null, gapIn(w), (id) => others(w, id));
-    expect(v.pair).toBeNull();
-    // ⚠ out of range — and the readout says exactly that, so a hand knows to close the gap
-    expect(v.inRange).toBe(false);
-  });
-
-  it("⚠⚠ two held objects: PRESS ORDER decides the subject now, and that is a real loss", () => {
-    // ⛔⛔ THIS VECTOR USED TO ASSERT THAT THE **ALIGNED** BODY WON, WHICHEVER WAS PRESSED
-    // FIRST. ⚠ Removing the alignment from the approach removed the only asymmetry the pair
-    // had, so the subject is now simply the first-pressed body — and with a symmetric pair it
-    // genuinely does not matter WHICH is called the subject: the same two bodies are outlined
-    // either way, which is all the white contours claim.
-    // ⭐ Recorded because it stops being harmless the moment the approach does something
-    // DIRECTIONAL with the subject (slice 3's snap moves *the first object*). At that point the
-    // pair needs an asymmetry again, and the alignment is the obvious candidate.
-    const w = scene(
-      ["a", [0, 0, 0], IDENTITY, [], PART],
-      ["b", [SIZE + 0.05, 0, 0], IDENTITY, aligned([1, 0, 0]), PART],
-    );
-    expect(highlightedPair(w, ["a", "b"], true, N, null, gapIn(w), (id) => others(w, id)).pair).toEqual({ subject: "a", target: "b" });
-    expect(highlightedPair(w, ["b", "a"], true, N, null, gapIn(w), (id) => others(w, id)).pair).toEqual({ subject: "b", target: "a" });
-  });
-
-  it("⚠ nothing held ⇒ nothing, whatever the geometry says", () => {
-    const w = nearAndAligned();
-    const v = highlightedPair(w, [], true, N, null, gapIn(w), (id) => others(w, id));
-    expect(v.pair).toBeNull();
-    // ⚠ nothing held, so the range was never evaluated
-    expect(v.inRange).toBe(false);
-  });
-
-  it("⭐ the tie rule reaches through the conjunction", () => {
-    const w = scene(
-      ["a", [0, 0, 0], IDENTITY, aligned([1, 0, 0])],
-      ["b", [0.09, 0, 0]],
-      ["c", [-0.09, 0, 0]],
-    );
-    expect(highlightedPair(w, ["a"], true, N, "c", gapIn(w), (id) => others(w, id)).pair!.target).toBe("c");
-    expect(highlightedPair(w, ["a"], true, N, "b", gapIn(w), (id) => others(w, id)).pair!.target).toBe("b");
-  });
 });
 
 describe("⭐⭐⭐ `D108` — an ALIGNED Follower is mode-less: its first touch always translates", () => {

@@ -112,19 +112,6 @@ export function axesFromFrame(frame: GravityFrame): ObjectAxes {
 /** Which way the offset radius zone was crossed this frame, or `null` for no crossing. */
 export type ZoneEdge = "ENTER" | "EXIT" | null;
 
-/**
- * ⭐ The edge, from the capture verdict's own `inRange`.
- *
- * ⛔ It takes the verdict the white contours are drawn from, never a second proximity test of
- * its own: *a rule keyed on its own copy of "near enough" would be free to disagree with the
- * contours a hand is looking at* — `D62`'s readout lesson, which this project has now paid for
- * twice.
- */
-export function zoneEdge(was: boolean, now: boolean): ZoneEdge {
-  if (was === now) return null;
-  return now ? "ENTER" : "EXIT";
-}
-
 /** Everything the rotation basis needs. ⭐ Plain data, so this decision is vectorable too. */
 export interface RotationFrameInputs {
   /** ⭐ The gravity frame built at scene boot. ⚠ `null` before boot has filled it. */

@@ -67,10 +67,6 @@ const PENDING: Record<string, string> = {
   // ── `3D2`/`3D3`: the mate geometry, built and vectored ahead of the gesture. ──
   testMate: "3D2 — the anti-parallel test a snap must pass before it fires",
   mateResidual: "3D3 — breaking reads the RESIDUAL, never the observed gap (rule 4)",
-  // ── The approach's alignment precondition, removed from `A16` by the owner. ──
-  alignmentMatchesTarget:
-    "the MATE — the owner removed the alignment from the APPROACH (`A16`) and kept it for " +
-    "the mate: *'we will see how to handle the alignment for the mate logic later on'*",
   // ── `D49`: the surface-gap rule. Two halves of it are deliberately ahead. ────
   // ⛔⛔ BOTH ARE *PENDING*, NOT *STALE*, AND THE DISTINCTION IS THIS FILE'S WHOLE POINT.
   centreDistance:

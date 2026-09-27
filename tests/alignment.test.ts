@@ -17,6 +17,7 @@
 import { describe, expect, it } from "vitest";
 import { faceAlignConstraint, pioneerTurned, retargetAlignment, alignModeFor, pressMeaning, type PressContext,
   outsideTapRelease,
+  alignsOnRelease,
 } from "@input/alignment";
 import {
   singleAlignment,
@@ -562,5 +563,20 @@ describe("⭐⭐⭐ `D95`/`D107` — a tap on empty space while holding releases
     expect(outsideTapRelease(0, false, 0)).toBeNull();
     // ⚠ *which one?* has no answer with two
     expect(outsideTapRelease(2, true, 1)).toBeNull();
+  });
+});
+
+describe("⭐⭐⭐ `D119` — the second touch aligns only on a RELEASED TAP", () => {
+  // > *"I want the follower object to align only if I do first touch hold on follower object + second
+  // > touch tap on pioneer object: if I do a press of second touch, the object shall not align"* —
+  // > the owner, 2026-09-27.
+  it("⭐ a tap (and the second tap of a pair) aligns", () => {
+    expect(alignsOnRelease("TAP")).toBe(true);
+    expect(alignsOnRelease("DOUBLE_TAP")).toBe(true);
+  });
+
+  it("⛔ a HOLD or a drag does not — RED against `D55`, which aligned on the press itself", () => {
+    expect(alignsOnRelease("HOLD")).toBe(false);
+    expect(alignsOnRelease("CONTINUOUS_KEPT")).toBe(false);
   });
 });

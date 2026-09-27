@@ -1,5 +1,8 @@
 # THE APPROACH SWING — a trial on branch `1.0.18-`
 
+> ⛔⛔ **DELETED 2026-09-27 (`D120`)** — the owner: *"remove the white highlight function as well as the
+> camera swing when the object enter the offset radius zone"*. This page is the record of the trial.
+
 > **STATUS** · trial, **FEEL ACCEPTED 2026-09-21** · **OWNS** · the camera lean during a Follower's approach
 > **READ IF** · you are judging this branch, or deciding whether to keep or discard it
 > **LAST VERIFIED** · 2026-09-21 — *"The feel is ok"* (the owner, on `7413c0e`, tuning defaults),

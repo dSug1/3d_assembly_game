@@ -11,7 +11,6 @@ import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from ".
 import { type Vec3 } from "../core/vec";
 import { type ObjectId } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
-import { swingProgress } from "../input/approach_swing";
 import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
 import { hitFaceNow } from "./markers";
@@ -159,40 +158,6 @@ export function paint(st: SceneState) {
               st.cfg.translateDampingRatio,
             ) * 1000
           ).toFixed(1)}ms` +
-          // ⭐⭐⭐ **`A16`'s STATE — AND IT PRINTS WHICH CONDITION IS FAILING, NOT JUST THE
-          // VERDICT.** ⛔⛔ Three conditions AND together, and on the glass a missing highlight
-          // looks identical whichever one is false. ⚠ So *"I forgot to align"*, *"I am in
-          // rotation mode"* and *"they are too far apart"* would be one symptom with three
-          // causes — and this project has spent whole device passes on exactly that kind of
-          // ambiguity. ⭐ Each condition gets a letter: **A**ligned, **T**ranslating,
-          // **R**ange; upper case means satisfied, lower case means not.
-          // ⚠ STRAIGHT FROM THE VERDICT — nothing recomputed here. `highlight.ts` returns its
-          // reasons precisely so this line cannot become a second implementation.
-          // ⛔ TWO FLAGS NOW, NOT THREE: the `A` for *aligned* is gone because the alignment
-          // is no longer part of the approach. ⚠ Leaving it would have implied it still
-          // gated the contour — the readout-that-lies shape, one letter wide.
-          `  ${st.highlighted.pair === null ? "◇" : "◆"}` +
-          `${st.highlighted.translating ? "T" : "t"}` +
-          `${st.highlighted.inRange ? "R" : "r"}` +
-          (st.highlighted.pair === null
-            ? ""
-            : ` ${st.highlighted.pair.subject}↔${st.highlighted.pair.target}`) +
-          // ⭐⭐⭐ **THE GAP AND THE THRESHOLD IT WAS COMPARED AGAINST, BOTH IN MILLIMETRES.**
-          //
-          // ⛔⛔ **THE `R` FLAG ALONE STOPPED BEING ENOUGH THE MOMENT THE THRESHOLD BECAME
-          // CAMERA-DEPENDENT** (`D49`). ⚠ *"Too far"* now has two causes that look identical
-          // on the glass — the bodies really are apart, or the camera is close and the offset
-          // has shrunk with it — and this project has spent whole device passes on one symptom
-          // with two causes. ⭐ With both numbers printed, moving the camera and watching the
-          // threshold move is a one-look confirmation that the rule is doing what was asked.
-          // ⛔ STRAIGHT FROM THE VERDICT. A HUD that measured the gap itself would be a second
-          // implementation, free to disagree with the product while both showed green — which
-          // is the trap `highlight.ts` returns its reasons to avoid.
-          (st.highlighted.gapM === null
-            ? ""
-            : ` gap=${(st.highlighted.gapM * 1000).toFixed(0)}/${(
-                st.highlighted.offsetM * 1000
-              ).toFixed(0)}mm`) +
           // ⛔⛔ **A BODY WHOSE GEOMETRY COULD NOT BE READ, NAMED.** It has no shape, so it can
           // never capture and never be outlined — and every one of those is a SILENCE. ⚠ An
           // absent readout cannot be caught by looking at the screen (`METHOD`), and *this part
@@ -223,8 +188,6 @@ export function paint(st: SceneState) {
           `
 axes      fixed@boot PLANE` +
           ` track=${st.lastTrackGain.toFixed(2)}×${st.lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
-          ` zone=${st.highlighted.inRange ? "IN" : "out"}` +
-          (st.zonePair.length === 0 ? "" : `(${st.zonePair.join("↔")})`) +
           // ⛔ Per HELD body, because that is the one whose axes are being used right now.
           [...st.held.values()]
             .map((g) => st.idOf.get(g.mesh))
@@ -281,31 +244,10 @@ outl      ${
                   .map(([id, o]) => {
                     const v = (m: LinesMesh): string =>
                       `${m.isVisible ? "V" : "-"}${m.getTotalVertices()}`;
-                    return `${id}:${v(o.body)}/${v(o.align)}/${v(o.shell)}`;
+                    return `${id}:${v(o.align)}`;
                   })
                   .join(" ")
           }` +
-          // ⭐⭐⭐ **THE SWING, ON THE READOUT** — a trial rule with three latched quantities and
-          // an invented SIGN is exactly the kind a hand cannot debug from the outside.
-          // ⛔ *A dead control must say so*, and so must a control that is alive and going the
-          // wrong way: the sign, the progress and the angle are the three numbers a device
-          // report about direction needs, and without them the only evidence is an impression.
-          (st.swing === null
-            ? ""
-            : `
-swing     sign${
-                // ⛔ `?` is *no direction was available at the threshold*, which is a swing of
-                // ZERO and not a swing going the wrong way — the 2026-09-20 report could not
-                // distinguish those two from outside, and this is what tells them apart.
-                st.swing.sign === null ? "⛔?" : st.swing.sign > 0 ? "+" : "−"
-              } p=${swingProgress(st.highlighted.gapM ?? 0, st.swing).toFixed(2)}` +
-              ` yaw=${((st.appliedSwingYaw * 180) / Math.PI).toFixed(1)}°` +
-              ` g0=${(st.swing.gapAtTriggerM * 1000).toFixed(0)}mm` +
-              // ⚠ The travel the ARMING FRAME saw, not a live one — *"what did the sign come
-              // from"* is the question a direction report asks, and `0.0000` here is the whole
-              // explanation of a `⛔?`.
-              ` arm=(${(st.swing.armTravelM * 1000).toFixed(1)},${(st.swing.armTravelUpM * 1000).toFixed(1)})mm` +
-              ` ${st.swingFrozenProgress === null ? "driven" : "FROZEN"}`) +
           (st.drawFault === null
             ? ""
             : `

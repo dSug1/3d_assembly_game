@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the one list of inputs, tablet and desktop
 > **READ IF** · you are about to add, change or remove a gesture — or to judge one on a device
-> **LAST VERIFIED** · 2026-09-27 (`1.0.39-Inputs-simplification`, `D106`–`D114`)
+> **LAST VERIFIED** · 2026-09-27 (`1.0.40-Collision-debugging`, `D106`–`D120`)
 
 ⭐ The rules and their reasons live in [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) (§12 for this
 pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the inventory.
@@ -23,7 +23,9 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | a FREE body | 2nd finger `dy` (empty space or the body), `TRANSLATE` | lift / lower along gravity |
 | a FREE body | 2nd finger `dx` (empty space or the body), `ROTATE` | roll |
 | a FREE body, no followers | ⭐ 2nd finger **tap on empty space** | **toggle `TRANSLATE` ↔ `ROTATE`** — the only toggle (`D108`) |
-| any body (its face = the HitFace) | 2nd finger **press a face on another body** | align: the held face turns to point AT the pressed one (anti-parallel); replaces any earlier alignment |
+| any body (its face = the HitFace) | 2nd finger **TAP a face on another body** — press and release, short and still | align: the held face turns to point AT the tapped one (anti-parallel); replaces any earlier alignment. ⛔ `D119`: a 2nd finger that PRESSES and stays, or moves, aligns nothing |
+| any body | 2nd finger **TAP the frozen plate** | align to the plate's face under the finger (`D119`) |
+| any body | 2nd finger **press / drag on the frozen plate** | the plate is empty space: `dy` lifts (gravity), `dx` rolls or spins — no re-alignment (`D119`) |
 | an ALIGNED body | 1st finger drag, any mode | slide it in its horizontal plane (`D108`: mode-less) |
 | an ALIGNED body | 2nd finger `dy` / `dx`, anywhere | lift along gravity / spin about the aligned normal, together |
 | an ALIGNED body | 2nd finger tap on empty space | **unalign** it (`D95`) |
@@ -35,8 +37,11 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 ⭐ **Automatic, not an input**: the **snap** — an aligned Follower whose FollowerFace centre comes
 within the capture offset of its PioneerFaceCursor, normals within the **snap cone angle**, lerps
 onto it and is seated (`D100`).
-⚠ A frozen body (the plate): a FIRST touch on it is a miss (it drives the camera or another body);
-a second touch on it may pick it as the Pioneer (`D89`).
+⚠ A frozen body (the plate): EVERY press on it is a miss (`D119`) — a first touch drives the camera,
+a second touch drives the held body's gravity / roll; only a TAP on it names it as a Pioneer. ⭐ The
+one exception: a plate with a part SEATED on it is holdable by the first touch — the unsnap's.
+⛔ **No white highlights any more** (`D120`): the white capture contour and shell, and the camera swing
+on entering the capture zone, are deleted.
 
 ## 2. Desktop (mouse — a two-touch device, `D94`)
 
@@ -53,12 +58,13 @@ a second touch on it may pick it as the Pioneer (`D89`).
 | an ALIGNED body | left drag (Ctrl or not) | slide in its horizontal plane |
 | an ALIGNED body | Shift + left drag | gravity (`dy`) + spin about the normal (`dx`) |
 | — | **right-press and hold** on a face | that face is the HitFace; the right button never moves anything |
-| right-hold | left click on another body's face | align |
+| right-hold | left click on another body's face | align — ⭐ on the click's RELEASE, like a tap (`D119`) |
 | right-hold on an aligned body | left click on empty space | unalign it |
 | right-hold on a Pioneer | left click on empty space | release all its followers |
 | the Pioneer, then the Follower | rapid move | unsnap |
 | — | left press inside the ring | drag the PioneerFaceCursor — ⚠ Free Flow only |
 | — | Esc, or the window losing focus | lift the Shift-made second touch |
+| nothing | Shift + left drag on empty space | ⛔ nothing — it no longer zooms (`D118`); the **wheel** is the desktop's zoom |
 
 ⛔ Shift and Ctrl are **modifiers of a movement already engaged** — neither is a touchpoint episode
 of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE.md) §3).
@@ -79,6 +85,10 @@ of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE
 | `worldAxisB=0`, `translatePairing=0` | `D109` | boot-fixed axes, plane solve — the only ones |
 | the fuchsia offer | `D109` | its cone is the **snap cone angle** (CAPTURE) |
 | `CameraOffsetZoneEnter` (empty) | `D109` | — |
+| a Shift + left drag on empty space zooming (a pinch of two mouse-made touches) | `D118` | the wheel |
+| aligning on the second touch's PRESS | `D119` | aligning on its released TAP |
+| `D89`: a second touch on the frozen plate selects it | `D119` | a tap on it aligns; a press steers |
+| the white capture contour and shell; the camera swing at capture (`D63`) | `D120` | — (the snap never used them) |
 
 ## 4. The HUD's first line (`D112`)
 

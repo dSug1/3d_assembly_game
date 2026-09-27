@@ -57,14 +57,13 @@
 export function pressHit<O>(
   hit: O | null,
   isFrozen: boolean,
-  touchpointsAlreadyDown: number,
+  /** ⚠ Kept for the call site's shape; no longer read (`D119`). */
+  _touchpointsAlreadyDown: number,
 ): O | null {
+  // ⭐⭐ `D119` (the owner, 2026-09-27): a FROZEN body is a miss for EVERY touch — the second finger
+  // over it drives the held body's gravity and roll like empty space. ⛔ `D89` kept the second touch's
+  // hit so the plate could be pressed as a Pioneer; a TAP on it still aligns (resolved at release).
+  // ⚠ The unsnap's first touch on a loaded plate is admitted by the caller (`isFrozen` false).
   if (hit === null) return null;
-  if (!isFrozen) return hit;
-  // ⛔ A negative or non-finite count cannot say which touch this is, and DROPPING a pick is the
-  // change of behaviour — so a count that makes no sense leaves the pick alone.
-  if (!Number.isFinite(touchpointsAlreadyDown) || touchpointsAlreadyDown < 0)
-    return hit;
-  // ⭐ `> 0` — every touch but the first keeps its hit, so the plate is pressable as a Pioneer.
-  return touchpointsAlreadyDown > 0 ? hit : null;
+  return isFrozen ? null : hit;
 }

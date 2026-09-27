@@ -20,7 +20,7 @@ import { type AlignmentCouple } from "../core/pioneer_face_cursors";
 import { PIONEER_CURSOR_PX } from "../input/pioneer_cursor_grab";
 import { offsetPositions, type MeshTopology } from "../core/mesh_topology";
 import { hitFaceAllowed } from "../input/mouse_second_touch";
-import { ALIGN_OUTLINE_FRACTION, BODY_OUTLINE_FRACTION, CAPTURE_COLOUR, FOLLOWER_COLOUR, MARKER_LIFT_M, PIONEER_COLOUR, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
+import { ALIGN_OUTLINE_FRACTION, FOLLOWER_COLOUR, MARKER_LIFT_M, PIONEER_COLOUR, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
 
 /**
  * ⭐ One face of one body. ⛔ It lived in `core/face_candidates.ts`, deleted with the fuchsia offer
@@ -389,20 +389,10 @@ export function outlinesFor(st: SceneState, id: ObjectId) : BodyOutlines | null 
     return m;
   };
   const made: BodyOutlines = {
-    body: mk(
-      `body-outline-${id}`,
-      sp * BODY_OUTLINE_FRACTION,
-      CAPTURE_COLOUR,
-    ),
     align: mk(
       `align-outline-${id}`,
       sp * ALIGN_OUTLINE_FRACTION,
       FOLLOWER_COLOUR,
-    ),
-    shell: mk(
-      `shell-outline-${id}`,
-      sp * BODY_OUTLINE_FRACTION,
-      CAPTURE_COLOUR,
     ),
   };
   st.outlines.set(id, made);
@@ -410,37 +400,3 @@ export function outlinesFor(st: SceneState, id: ObjectId) : BodyOutlines | null 
 }
 
 
-/**
- * ⭐⭐ **THE SHELL IS REBUILT EVERY FRAME, BECAUSE THE OFFSET MOVES EVERY FRAME.**
- *
- * ⛔ It is a true mesh OFFSET, not a scale: every face plane moves out by the same distance,
- * which is what a capture threshold means. ⚠ A scale moves a far face further than a near one
- * and a thin axis less than a thick one, and the base plate is `0.3L` on one axis and `9L` on
- * another. ⭐ `edgeLines` reuses the existing buffers, so this allocates nothing per frame.
- */
-export function showCaptureOutlines(st: SceneState, pair: readonly (ObjectId | null)[],
-  offsetM: number,) : void {
-  const wanted = new Set<ObjectId>();
-  for (const id of pair) if (id !== null) wanted.add(id);
-  for (const id of wanted) {
-    const o = outlinesFor(st, id);
-    const topo = st.topoOf.get(id);
-    if (!o || !topo) continue;
-    o.shell = edgeLines(st, 
-      `shell-outline-${id}`,
-      topo,
-      offsetPositions(topo, offsetM / 2),
-      CAPTURE_COLOUR,
-      o.shell,
-    );
-    o.body.isVisible = true;
-    o.shell.isVisible = true;
-  }
-  // ⚠ Retired by SET MEMBERSHIP, whatever stopped wanting them — the stale-highlight bug of
-  // 2026-09-17 was the other pattern, and it produced two false defect reports.
-  for (const [id, o] of st.outlines) {
-    if (wanted.has(id)) continue;
-    o.body.isVisible = false;
-    o.shell.isVisible = false;
-  }
-}

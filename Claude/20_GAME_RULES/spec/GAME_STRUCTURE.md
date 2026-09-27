@@ -44,3 +44,8 @@ one line in `main.ts` and the owner's call.
   new `BodySpec` field with a vector, never a special case in `scene.ts`.
 * ⛔ **`SceneDescriptor.final` is `null`** until `GM1` authors the final configuration and its
   detector; the parser refuses a non-null one loudly rather than carrying a shape nothing reads.
+
+## ⭐ `Scene_1` (2026-09-27)
+
+`World_0 / Level_1` plays **`Scene_1`, the painting**; any scene can be booted with the **SCENE** slider
+or `?sceneIndex=N` (the registry is `content/scenes.ts`) → [`SCENE_1.md`](SCENE_1.md).

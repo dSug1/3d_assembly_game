@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
-import { PinchTracker, clampCameraRadiusM } from "../src/input/pinch";
+import { PinchTracker, clampCameraRadiusM, pinchAllowed } from "../src/input/pinch";
 import { MotionTracker, type Sample } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
 
@@ -168,5 +168,25 @@ describe("⛔⛔ the camera radius clamp — the black-page guard", () => {
 
   it("⛔ an inverted zoom range is rejected", () => {
     expect(() => new MotionTracker({ ...cfg, cameraRadiusMinM: 5 })).toThrow();
+  });
+});
+
+describe("⛔⛔ `D118` — a pinch is two REAL fingers; the mouse never pinches", () => {
+  // > *"In desktop mode, when I press shift and then left click on empty space, I can then zoom the
+  // > camera in or out with delta position: remove this feature"* — the owner, 2026-09-27.
+  it("⭐ two touches pinch", () => {
+    expect(pinchAllowed([false, false])).toBe(true);
+  });
+
+  it("⛔ RED against the old rule, which pinched with ANY two touchpoints on empty space", () => {
+    // the mouse's own pointer, the Shift-made touchpoint #2, or both
+    expect(pinchAllowed([true, false])).toBe(false);
+    expect(pinchAllowed([false, true])).toBe(false);
+    expect(pinchAllowed([true, true])).toBe(false);
+  });
+
+  it("⚠ not two touchpoints, not a pinch", () => {
+    expect(pinchAllowed([false])).toBe(false);
+    expect(pinchAllowed([false, false, false])).toBe(false);
   });
 });

@@ -40,14 +40,15 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
+import { attachShadows, buildLighting } from "./lighting";
+import { levelElevation } from "../input/orbit";
 import { EpisodeTally } from "../input/episode_ledger";
 import { GestureSpan, UndoHistory } from "../core/undo_history";
 import { type SceneSnapshot } from "./undo_wiring";
 import "@babylonjs/core/Culling/ray";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
-import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -110,8 +111,6 @@ export function createScene(
   // and a typo'd key would then silently do nothing instead of being named on the HUD.
   st.tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
   st.cfg = st.tuning.config;
-  // ⚠ Explicit, so "dark page" always means the SCENE, never an unset default.
-  st.scene.clearColor = new Color4(0.078, 0.086, 0.102, 1);
 
   st.camera = new ArcRotateCamera(
     "camera",
@@ -131,8 +130,13 @@ export function createScene(
   // things claim the same touch and the winner depends on event order.
   st.camera.detachControl();
 
-  st.light = new HemisphericLight("light", new Vector3(0.3, 1, 0.2), st.scene);
-  st.light.intensity = 0.95;
+  // ⭐⭐ THE SCENE'S OWN LIGHTS AND BACKGROUND (`Scene_1`), or `Scene_0`'s one hemispheric light.
+  // ⭐ Measured at the mean of the bodies, in AUTHORED units — where the lights were aimed.
+  const shadowGens = buildLighting(st, (() => {
+    const bs = st.sceneSpec.bodies.filter((b) => !b.frozen);
+    const n = Math.max(1, bs.length);
+    return [0, 1, 2].map((i) => bs.reduce((a, b) => a + b.position[i]!, 0) / n) as [number, number, number];
+  })());
 
   // ⚠ EXPLICIT materials rather than the auto-created default: with tree-shaken ES6
   // imports the default material is one more thing that has to have been pulled in,
@@ -250,14 +254,16 @@ export function createScene(
   // scene as Scene_0"*): four `BodySpec`s in `content/scene_0.ts` replaced four `make(...)` calls
   // here, in the same order with the same numbers. ⛔ The orientation names are resolved by
   // `core/game_structure.ts`, where a vector reaches them.
+  // ⭐ `unitM`: the scene is AUTHORED in its own units; positions and sizes become metres here, once.
+  const unitM = st.sceneSpec.unitM ?? 1;
   for (const b of st.sceneSpec.bodies) {
     make(
       st,
       b.id,
-      new Vector3(b.position[0], b.position[1], b.position[2]),
+      new Vector3(b.position[0] * unitM, b.position[1] * unitM, b.position[2] * unitM),
       [b.colour[0], b.colour[1], b.colour[2]],
       resolveBootOrientation(b.orientation, bootRotations),
-      b.dims,
+      [b.dims[0] * unitM, b.dims[1] * unitM, b.dims[2] * unitM],
       b.frozen,
       b.topScale,
     );
@@ -341,6 +347,8 @@ export function createScene(
         };
       }),
   );
+  // ⭐ `Scene_1`: every movable body casts, every body receives (the frozen floor only receives).
+  attachShadows(shadowGens, [...st.meshOf.values()], (m) => st.world.objects.get(st.idOf.get(m) ?? "")?.frozen === true);
 
   st.faceMarkers = new Map<string, FaceMarker>();
 
@@ -477,13 +485,6 @@ export function createScene(
    * because the OTHER body moved (a sway nudge, an animation) with no pointer event at all, and
    * a highlight that only updated on input would then describe a stale scene.
    */
-  st.highlighted = {
-    pair: null,
-    translating: false,
-    inRange: false,
-    gapM: null,
-    offsetM: 0,
-  };
 
   /**
    * ⭐⭐⭐ **THE OBJECT AXES — STATE ONLY. THE RULE IS `input/object_axes.ts`.**
@@ -570,13 +571,11 @@ export function createScene(
    * instrument shape this project met three times on 2026-09-16 alone.
    */
   /** ⚠ Last frame's range verdict — the EDGE is what fires the hook, never the level. */
-  st.zoneWas = false;
   /**
    * ⛔ The pair that was in range when the zone was ENTERED, so the EXIT edge can reach the
    * same two bodies. ⚠ At the exit `highlighted.pair` is already `null` — the verdict that
    * tells you a body has left is the one that no longer names it.
    */
-  st.zonePair = [];
   st.axisGizmos = new Map<ObjectId, AxisGizmo>();
   /**
    * ⭐⭐⭐ **TWO RINGS, ONE PER FAMILY** — the owner, 2026-09-23: *"there can be a grey ring for the
@@ -631,6 +630,7 @@ export function createScene(
   });
   document.body.appendChild(st.edgeBandEl);
   st.edgeBandKey = "";
+  st.frozenTapFace = new Map();
   st.collisionGrace = new Set<string>();
   st.lastCollision = "";
   st.lastCollisionAt = -Infinity;
@@ -729,10 +729,13 @@ export function createScene(
    * whole pose every frame.
    */
   st.cameraReset = null;
+  // ⭐ `Scene_1`'s LEVEL view, found on the rig; every other scene keeps the rig's own start.
+  st.bootElevation =
+    st.sceneSpec.bootView === "LEVEL" ? levelElevation(st.cfg) : ORBIT_START_ELEVATION;
   st.orbit = new OrbitController(
     st.cfg,
     ORBIT_START_YAW_RAD,
-    ORBIT_START_ELEVATION,
+    st.bootElevation,
   );
   // ⭐ ONE zoom scalar, shared. Pinch scales the whole orbit SURFACE rather than
   // setting a radius directly, so rule 1 and rule 4 compose instead of fighting over
@@ -773,7 +776,6 @@ export function createScene(
    * one, so it is a property of the approach rather than of any gesture.
    * ⚠ It holds only what must NOT be re-read: the gap at the trigger, and which way to lean.
    */
-  st.swing = null;
   /**
    * ⭐⭐⭐ **THE SCREEN-RIGHT TRAVEL APPLIED SINCE THE LAST FRAME**, in metres — and it is
    * **CONSUMED AND ZEROED BY `refreshHighlight` EVERY FRAME**, which is the whole fix for the
@@ -790,7 +792,6 @@ export function createScene(
    * two bodies the approach is whatever the pair's gap does, and singling one out would be a
    * rule this file is not allowed to own.
    */
-  st.frameTravelRightM = 0;
   /**
    * ⭐⭐ **THE VERTICAL HALF OF THE SAME FRAME'S TRAVEL** — device-reported, 2026-09-21:
    * *"when the follower enters the offset radius by a vertical translation (delta position dy)
@@ -799,9 +800,7 @@ export function createScene(
    * answer *was this crossing driven by a translation at all*, which is the question that
    * separates a vertical drag from a press, a rotation or a pinch.
    */
-  st.frameTravelUpM = 0;
   /** ⭐⭐ The ALONG-VIEW component of the body's travel — invisible on screen, and still travel. */
-  st.frameTravelDepthM = 0;
   /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
@@ -816,20 +815,17 @@ export function createScene(
    * the render loop from writing the camera on frames where nothing about it changed — and
    * makes the return to zero a single write rather than a state nobody notices.
    */
-  st.appliedSwingYaw = 0;
   /**
    * ⭐⭐ `D63` — the SMOOTHED swing amplitude, and the clock it was last advanced on.
    * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
    * than from whatever the last approach happened to end on.
    */
-  st.swingAmp = null;
   /**
    * ⛔⛔ The progress the swing was showing when a translation STOPPED driving it, captured
    * once. ⚠ It must be remembered rather than recomputed: `rebaseTriggerGap(gap, p)` with `p`
    * read from the LIVE gap is algebraically the identity — `gap/(1−(g0−gap)/g0) = g0` — so it
    * would do nothing at all, which is how the first version of this fix failed.
    */
-  st.swingFrozenProgress = null;
 
   // ⚠ Place the camera on the rig surface at startup, so the very first frame is
   // already the pose the orbit will move from — not the ArcRotateCamera constructor's

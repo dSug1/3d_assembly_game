@@ -7,6 +7,7 @@
  */
 import type { GameContent } from "../core/game_structure";
 import { SCENE_0 } from "./scene_0";
+import { SCENE_1 } from "./scene_1";
 
 export const GAME_CONTENT: GameContent = {
   title: "3D Assembly",
@@ -15,7 +16,10 @@ export const GAME_CONTENT: GameContent = {
     {
       id: "World_0",
       title: "World 0",
-      levels: [{ id: "Level_0", title: "Level 0", scene: SCENE_0 }],
+      levels: [
+        { id: "Level_0", title: "Level 0", scene: SCENE_0 },
+        { id: "Level_1", title: "Level 1 — the painting", scene: SCENE_1 },
+      ],
     },
   ],
 };
