@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · owner decisions and their consequences
 > **READ IF** · you are about to re-open something, or need to know whose call it is
-> **LAST VERIFIED** · 2026-09-21
+> **LAST VERIFIED** · 2026-09-27
 
 ⭐ **TIERED, since 2026-09-16**: a SUPERSEDED row keeps its headline here and its consequence text
 in [`history/2026-09-16_superseded_decisions.md`](history/2026-09-16_superseded_decisions.md).
@@ -34,14 +34,14 @@ file.
 | `D78` | ⭐⭐⭐ **THE ALIGNMENT IS ANTI-PARALLEL — a FollowerFace points AT the PioneerFace** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D86` | ⭐⭐⭐ **THE REST WINDOW IS DERIVED FROM THE DEVICE, NOT FIXED** | 2026-09-24 | ⭐ Binding, ⚠ → history |
 | `D87` | ⛔⛔⛔ **THE ROLES ARE INVERTED AGAIN: FIRST TOUCH THE FOLLOWER, SECOND THE PIONEER** | 2026-09-25 | ⭐ Binding, ⚠ → history |
-| `D88` | ⭐⭐⭐ **THE FUCHSIA OFFER — every face the held body is nearly ready to MATE with** | 2026-09-24 | *"highlight in fuchsia any face of any other object which normal is aligned within xx degrees of the normal of the HitFace."* ⭐⭐ ***Aligned* is ANTI-PARALLEL** (`D78`'s sense): the other reading lights the faces a press is about to turn the body AWAY from. ⚠ **OFF by default** → `core/face_candidates.ts`, §11 |
+| `D88` | ⭐⭐⭐ **THE FUCHSIA OFFER — every face the held body is nearly ready to MATE with** | 2026-09-24 | ⛔ The offer is DELETED (`D109`); its cone is the snap cone. ⚠ → history |
 | `D89` | ⛔⛔⛔ **`D77`'s CARVE-OUT FOLLOWS THE ROLE: THE **FIRST** TOUCH ON A FROZEN BODY IS THE MISS NOW** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D90` | ⭐⭐⭐ **A PRESS ON THE HELD BODY'S OWN FOLLOWER IS A *SWAP*, AND THE RELEASE PATH STOPS ALIGNING** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D91` | ⭐⭐ **THE PYRAMID'S SMALL FACE IS A PART'S SMALL FACE, AND IT IS A QUARTER SHORTER** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D92` | ⚠⚠ **REVERSED THE SAME DAY — `objectD` IS A CUBOID AGAIN** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D93` | ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, WITH THE TWO PARTS TILTED 30°** | 2026-09-25 | ⭐ Binding, ⚠ → history |
-| `D94` | ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** — rebuilt from scratch | 2026-09-25 | ⭐ Left drag = the first touch; **Shift + left drag = the second** (gravity + roll); **right-press and hold = the HitFace**, then **left click the Pioneer face** (double = amber). ⛔ The right button never moves anything. Never touches a DOM event, models only #2, reads `buttons`. ⚠ Playable, never testable → defect 70 |
-| `D95` | ⭐⭐ **A TAP ON EMPTY SPACE WHILE HOLDING AN ALIGNED BODY RELEASES IT** | 2026-09-25 | One rule for phone and desktop: the right-button hold IS the first touch, a left click on nothing IS an `OUTSIDE` tap. ⛔ Free body → still the mode toggle. Consumed → §11.9 |
+| `D94` | ⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** — rebuilt from scratch | 2026-09-25 | ⭐ Binding, amended by `D108` (Ctrl + left drag rotates; no double-click FOLLOW) → [`INPUTS_TABLE`](../10_INPUT_TOUCH/spec/INPUTS_TABLE.md). ⚠ → history |
+| `D95` | ⭐⭐ **A TAP ON EMPTY SPACE WHILE HOLDING AN ALIGNED BODY RELEASES IT** | 2026-09-25 | ⭐ Binding, extended by `D107` (holding a Pioneer releases its followers); the free-body toggle narrowed by `D108` → §11.9, §12 |
 | `D96` | ⭐⭐ **A PIONEERFACECURSOR PER ALIGNMENT** | 2026-09-25 | An amber ring at the PioneerFace centre, facing the screen; one per follower couple, disposed with it. Dragged on the face's surface, bounded by its edges — ⛔ **drag ships OFF** (FACE ALIGNMENT menu) → §11.10, defect 71 |
 | `D97` | ⭐⭐ **AN ALIGNED FOLLOWER'S AXES: SHOWN WHILE HELD, AS SEGMENTS TO THE CURSOR** | 2026-09-26 | First touch → red + blue; second touch / Shift → green, or none while a roll is on. Each from the FollowerFace centre to the cursor's projection. ⛔ Rotation lines unchanged → §11.11 |
 | `D98` | ⭐⭐ **AN ALIGNMENT IS SQUARED TO ITS PIONEER** | 2026-09-26 | After the minimal swing, a ≤ 45° twist about the aligned normal squares the Follower's edges to the Pioneer's; the swing alone lost 8–30° on a tilted part. ⚠ No longer strictly minimal → §11.12 |
@@ -52,15 +52,19 @@ file.
 | `D103` | ⭐⭐ **UNSNAP COSTS 2; A FLICK UNSNAPS FOR 1, AND TAKES ITS DEPENDANTS** | 2026-09-26 | Price against precision. ⛔ Flick specified, not built → §11.13.2 |
 | `D104` | ⭐⭐⭐ **`scene.ts` IS SPLIT INTO MODULES** — a composition root + thirteen render modules over one `SceneState` | 2026-09-26 | 7,861 → 1,118 lines; no rule moved INTO a render file; checked by typecheck, suite, build, headless boot → `40_RENDER_SCENE/INDEX.md` |
 | `D105` | ⭐⭐ **THE GAME SCAFFOLD: intro → menu → worlds → levels → play; the current scene is `Scene_0`** | 2026-09-26 | Empty by design (`GM6`–`GM8`); `Scene_0` is DATA; `?flow=1` shows the shell → `20_GAME_RULES/spec/GAME_STRUCTURE.md` |
+| `D106` | ⭐⭐ **`FOLLOW` IS DELETED — every alignment is a SNAPSHOT** | 2026-09-27 | One press aligns; a **seat** carries; an unseated Follower lets go when its Pioneer moves or turns. ⛔ Reverses `D42`'s double tap → §12 |
+| `D107` | ⭐⭐ **TWO WAYS TO UNALIGN: tap empty space while holding, or align elsewhere** | 2026-09-27 | Holding a Pioneer, the tap releases all its followers. ⛔ Gone: both shakes, `D39`'s re-press undo, the flick's drop branch → §12 |
+| `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | Aligned: 1st finger slides, 2nd lifts + spins. Tablet toggles only on a touch tap on EMPTY space holding one free body without followers; desktop has no mode (Ctrl rotates). No button → §12 |
+| `D109` | ⭐⭐ **THE DORMANT SWITCHES ARE DELETED; THE FUCHSIA CONE IS THE SNAP CONE** | 2026-09-27 | Gone: pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone hook, the fuchsia offer, three unwired functions → §12 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ Binding, ⚠⚠ **but `D89` SWAPPED WHICH TOUCH**. ⛔⛔ Its *no gizmo* half lapsed when `leadingFace` was deleted, with **nothing going red**; it is a guard now. ⭐ *Deleting the file a rule lived in deletes the rule* |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⛔⛔ One finger slides a body about its own HORIZONTAL plane (`dx`→x, `dy`→depth) and a second finger LIFTS it. ⚠⚠ Its MAPPING is superseded by `D76`; the channels stand |
 | `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside the capture zone is the same as outside** | 2026-09-23 | ⭐ Binding, ⚠ → history |
-| `D84` | ⭐⭐⭐ **`WorldAxisB` NOW GOVERNS A FREE BODY'S *ROTATION* BASIS TOO** | 2026-09-23 | *"was it a miss?"* → *"do the change."* ⛔⛔ **NEITHER**: `D74`/`D75` named only TRANSLATION channels, so `A7`'s LIVE frame stood on — not by decision but because none was made. ⭐ `METHOD`: *a scope never stated is not a scope chosen.* ⭐⭐ **YAW WAS ALREADY WORLD-FIXED**; only PITCH and ROLL freeze |
+| `D84` | ⭐⭐⭐ **`WorldAxisB` NOW GOVERNS A FREE BODY'S *ROTATION* BASIS TOO** | 2026-09-23 | ⭐ Binding — the flag is deleted (`D109`), the boot frame is the only frame. ⚠ → history |
 | `D74` | ⭐⭐⭐ **`WorldAxisB` — THE OBJECT AXES ARE FIXED AT SCENE BOOT** | 2026-09-22 | ⭐ Binding, ⚠ → history |
 | `D73` | ⭐⭐⭐ **A ROTATION IS ALWAYS ON AN INCREMENT** — ✅✅ **CLOSED BY A DEVICE LOOK** | 2026-09-22 | ⭐ Binding. `rotationIncrementDeg` 0–45/5, **ships at 0**; four formulations, three rejected by a hand. ⚠ `dy` no longer twisting is the unjudged cost |
 | `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | ⭐ Binding — built by MOVING a box's vertices; the hull and faces were already mesh-derived, so it cost nothing downstream |
-| `D71` | ⭐⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** | 2026-09-22 | ⭐ Binding, re-confirmed by `D93`. ⛔⛔ **NOT the audit's defect returning**: that was a DISAGREEMENT between every document and the code, and the tell is whether any instruction still asks for the other mode. ⚠ A stale `scene.ts` comment claimed `ROTATE` until 2026-09-25 — the same shape, one layer down |
+| `D71` | ⭐⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** | 2026-09-22 | ⭐ Binding, re-confirmed by `D93`. ⚠ → history |
 | `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | ⭐ Binding, and it corrects `D69`. ⭐⭐ **Position and orientation are two components of one pose** → §5.17 |
 | `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** — a translated Pioneer carried EVERY Follower; cyan should break instead | 2026-09-21 | ⚠ → §5.16 |
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding — the completing PRESS takes the toggle over, and its own release is spent → §5.15 |
@@ -79,7 +83,7 @@ file.
 | `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding — the hand's own body must not wobble under it. ⚠ Excluded: the kicker, any held body, and (2026-09-26) the mover's **Pioneer within `pioneerSwayRadii` capture offsets** (slider, 3) |
 | `D52` | ⚠ **RESOLVED BY `D57` THE SAME DAY** — the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it | 2026-09-19 | ⚠ → §5.5 |
-| `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers instead of being carried** | 2026-09-18 | ⭐ Binding — at `pioneerTranslates = 0` its finger gives the Follower **both** depth and roll, breaking `A16`'s one-axis rule on purpose |
+| `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers instead of being carried** | 2026-09-18 | ⛔ DELETED (`D109`) — the pinned pair; its both-axes drive survives for every aligned Follower (`D59`, `D108`) |
 | `D50` | ⭐⭐⭐ **EVERY OUTLINE AND FACE MARKER IS READ OFF THE MESH** | 2026-09-18 | ⭐ Binding — it deleted a `Map<name, dims>`, which for a cuboid coincides with the mesh and for an imported part is the wrong shape. ⭐ Why `D72`'s frustum cost nothing → §20 (approach) |
 | `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D48` | ⚠ **RETIRED WITHIN THE DAY, KEPT AS THE RECORD** — white contours required the alignment; the owner removed it, keeping the TRANSLATION condition | 2026-09-17 | ⚠ *both readings fit the evidence — name both* → §13 (approach) |
@@ -102,7 +106,7 @@ file.
 | `D31` | ⭐⭐⭐ **THE ONE-TOUCHPOINT ROLL IS DELETED, NOT PARKED** | 2026-09-16 | ⭐ Binding |
 | `D30` | ⭐⭐⭐ **A FLICK PUSHES AN ALIGNMENT ONLY WHILE THE MODE IS `ROTATE`** | 2026-09-16 | ⭐ Binding — read literally, §2's 2ter/2quater anchor whatever the drag was doing, so a brisk vertical TRANSLATE would move a part and then spin it · [`queue_notes/IN3.md`](queue_notes/IN3.md) |
 | `D29` | ⭐⭐⭐ **THREE ANCHOR-RULE FORKS BEHIND ONE FLAG, and `IN3` is built in fork B** | 2026-09-16 | ⭐ Binding |
-| `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding |
+| `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding — the toggle NARROWED by `D108`: one tablet tap, none on desktop |
 | `D27` | ⭐⭐⭐ **ANY SINGLE TAP toggles the movement behaviour; a PRESS keeps every meaning it has** | 2026-09-16 | ⭐ Binding |
 | `D26` | ⭐⭐ **THE ASSIGNMENTS WERE A FLAG, NOT A FORK** — ⚠ **CLOSED BY `D28`** | 2026-09-16 | ⚠ → history |
 | `D25` | ⚠ **REVERSED BY `D54`** — a holder no longer under its object used to give the selection up | 2026-09-16 | ⚠ → history |

@@ -33,6 +33,8 @@ queue. They are stable; do not renumber.
 
 # BUILD STATUS — what of this specification exists *(added 2026-09-14, not the owner's text)*
 
+⭐⭐ **THE CURRENT LIST OF EVERY INPUT, TABLET AND DESKTOP, IS [`INPUTS_TABLE.md`](INPUTS_TABLE.md)** (2026-09-27, after `D106`–`D109`). ⚠ The inventory below is older and names gestures since deleted.
+
 ## The configurations a hand can actually make
 
 ⭐ **Roles are latched at PRESS** (§4, `src/input/router.ts`), so this table is written
