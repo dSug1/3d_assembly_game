@@ -3,7 +3,7 @@
  * undo pair costing ONE (`D111`).
  */
 import { describe, expect, it } from "vitest";
-import { episodeCounts, formatElapsed, type EpisodeFacts } from "@input/episode_ledger";
+import { EpisodeTally, episodeCounts, formatElapsed, type EpisodeFacts } from "@input/episode_ledger";
 
 const f = (o: Partial<EpisodeFacts>): EpisodeFacts => ({
   role: "OBJECT",
@@ -61,5 +61,70 @@ describe("the timer", () => {
   it("⛔ never negative, never NaN", () => {
     expect(formatElapsed(-5)).toBe("00:00");
     expect(formatElapsed(NaN)).toBe("00:00");
+  });
+});
+
+describe("⭐⭐⭐ `D115` — a two-touch action is ONE episode, counted when its last touch lifts", () => {
+  // > *"When an action is triggered by two touch, count the episode only when the last of the two
+  // > touches is released (for example alignment of face)"* · *"Make sure these actions also have
+  // > one episode count in desktop"* — the owner, 2026-09-27.
+  const release = (t: EpisodeTally, o: Partial<EpisodeFacts>) =>
+    t.note(episodeCounts(f(o)), (o.heldAtPress ?? 0) > 0);
+
+  it("⭐⭐ the face alignment: the press lifts first, nothing lands; the hold lifts, ONE lands", () => {
+    const t = new EpisodeTally();
+    release(t, { role: "OBJECT", heldAtPress: 1 }); // the Pioneer press (touch 2) lifts first
+    // ⛔ RED against the per-release counter, which showed 1 here — and 2 at the end.
+    expect(t.total).toBe(0);
+    expect(t.pending).toBe(1);
+    release(t, { role: "OBJECT", heldAtPress: 0 }); // the Follower's hold lifts
+    expect(t.gestureEnded()).toBe(1);
+    expect(t.total).toBe(1);
+  });
+
+  it("⭐⭐ each listed action is one: unalign tap, a Pioneer's release, the unsnap", () => {
+    for (const second of [
+      { role: "OUTSIDE" as const, heldAtPress: 1, unaligned: true },
+      { role: "SECOND" as const, heldAtPress: 1, pressedAnotherBody: true },
+    ]) {
+      const t = new EpisodeTally();
+      release(t, { role: "OBJECT", heldAtPress: 0 });
+      release(t, second);
+      expect(t.gestureEnded()).toBe(1);
+    }
+  });
+
+  it("⭐ the hold lifting FIRST changes nothing — the order of the two releases is free", () => {
+    const t = new EpisodeTally();
+    release(t, { role: "OBJECT", heldAtPress: 0 });
+    release(t, { role: "OBJECT", heldAtPress: 1 });
+    expect(t.gestureEnded()).toBe(1);
+  });
+
+  it("⭐ a hold with TWO actions in turn is two; two separate holds are two", () => {
+    const a = new EpisodeTally();
+    release(a, { role: "OBJECT", heldAtPress: 1 });
+    release(a, { role: "OUTSIDE", heldAtPress: 1, unaligned: true });
+    release(a, { role: "OBJECT", heldAtPress: 0 });
+    expect(a.gestureEnded()).toBe(2);
+    const b = new EpisodeTally();
+    release(b, { role: "OBJECT", heldAtPress: 0 });
+    release(b, { role: "OBJECT", heldAtPress: 0 });
+    expect(b.gestureEnded()).toBe(2);
+  });
+
+  it("⛔ a free second finger (gravity, roll, toggle) adds nothing", () => {
+    const t = new EpisodeTally();
+    release(t, { role: "OUTSIDE", heldAtPress: 1 });
+    release(t, { role: "OBJECT", heldAtPress: 0 });
+    expect(t.gestureEnded()).toBe(1);
+  });
+
+  it("⭐ a one-touch gesture lands at its own release, as before", () => {
+    const t = new EpisodeTally();
+    release(t, { role: "OBJECT", heldAtPress: 0 });
+    expect(t.gestureEnded()).toBe(1);
+    expect(t.gestureEnded()).toBe(0);
+    expect(t.total).toBe(1);
   });
 });

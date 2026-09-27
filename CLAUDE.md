@@ -113,7 +113,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1179 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`); the
+✅ Green: TypeScript + Babylon + Vite, **1190 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -223,7 +223,9 @@ cascades and the sway treat the assembly as one body, and a press on the partner
 the ROOT (the walk stops below a frozen Pioneer); ⛔ its ROTATION stays its own — the first build
 redirected the whole grip and *"I cannot roll any longer the follower"* undid it the same day. The
 snap is a **magnet** — `snapMs` 60 ms on an accelerating `u²`. ⚠ The offset is now 10 mm (~40 mm of world at boot): nothing captures at rest.
-⭐ **UNSNAP COSTS 2 EPISODES** (`D103`); ⛔ its flick-unsnap is removed as obsolete (`D110`).
+⭐ **A TWO-TOUCH ACTION IS ONE EPISODE** (`D115`) — align, unalign, a Pioneer's release and the unsnap
+each cost 1, on both devices, landing when the LAST touch lifts; ⛔ so the unsnap is 1, not `D103`'s 2,
+and its flick-unsnap is removed as obsolete (`D110`).
 ⚠ The approach itself is not built: the zone only lights white.
 ⭐⭐⭐ **`scene.ts` IS SPLIT INTO MODULES** (`D104`, 2026-09-26): the 7,861-line closure is a
 1,118-line composition root plus thirteen render modules (`bodies`, `markers`, `alignment_wiring`,

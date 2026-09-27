@@ -83,6 +83,8 @@ of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE
 ## 4. The HUD's first line (`D112`)
 
 `score  N episodes  mm:ss  undo=K` — the touchpoint episodes counted by `SCORE.md` §3 (camera,
-toggles and steering fingers are free; the undo pair costs one), the time since the first press,
+toggles and steering fingers are free; the undo pair costs one; ⭐ a two-touch action — align, unalign,
+a Pioneer's release, unsnap — is ONE, on both devices, and lands when its LAST touch lifts, shown
+meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
