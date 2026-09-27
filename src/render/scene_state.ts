@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { type AlignMode } from "../input/alignment";
 import { type EpisodeTally } from "../input/episode_ledger";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -27,11 +28,9 @@ import { UnsnapDetector } from "../input/unsnap";
 import { SeatSnaps } from "../input/seat_snap";
 import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
-import { type HighlightVerdict } from "../input/highlight";
 import { type ObjectAxes } from "../input/object_axes";
 import { JumpWatch, type Jump } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
-import { type SwingLatch } from "../input/approach_swing";
 import { type GestureConfig } from "../input/gestureConfig";
 import { type Hud } from "./hud";
 import { type MouseSecondTouchHandle } from "./mouse_adapter";
@@ -78,13 +77,6 @@ export const CANDIDATE_COLOUR = new Color3(1, 0.1, 0.8);
  * shall be amber instead of green"*, correcting the first dictation).
  */
 export const PIONEER_CURSOR_COLOUR = PIONEER_COLOUR;
-/**
- * ⭐⭐ `A16`'s **WHITE** — the capture contour, on BOTH bodies of the pair.
- *
- * ⛔ ONE WHITE FOR BOTH, by the owner's decision: *"make the white contours not differ for the
- * moment, capture it for possible future improvement."*
- */
-export const CAPTURE_COLOUR = new Color3(1, 1, 1);
 
 // ⛔⛔⛔ **THE BOOT SCENE'S DIMENSIONS LIVE IN `core/scene_dims.ts`**, not here. ⚠ They were
 // declared in this file and MIRRORED in two test files, so scaling the pyramid on 2026-09-25 left
@@ -161,9 +153,8 @@ export interface FaceMarker {
 }
 
 export interface BodyOutlines {
-  readonly body: LinesMesh;
+  /** ⭐ The aligned body's coloured outline. ⛔ The white capture outlines are deleted (`D120`). */
   readonly align: LinesMesh;
-  shell: LinesMesh;
 }
 
 export type TurnAxes = [Vec3 | null, Vec3 | null, Vec3 | null];
@@ -283,6 +274,11 @@ export interface Held {
    * shape this file has been burned by twice.
    */
   pressActed: boolean;
+  /**
+   * ⭐ `D119`: what THIS press would align (the held Follower's pointer and the relation), carried to
+   * the release — which aligns only if it is a TAP. `null` when the press means nothing.
+   */
+  pendingAlign: { heldPointerId: number; mode: AlignMode } | null;
   /**
    * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
    * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
@@ -451,7 +447,6 @@ export interface SceneState {
   rawPressedBody: Map<number, ObjectId>;
   pointerTypeOf: Map<number, string>;
   outlines: Map<ObjectId, BodyOutlines>;
-  highlighted: HighlightVerdict;
   bootObjectAxes: ObjectAxes | null;
   bootGestureFrame: GravityFrame | null;
   gizmoAxes: Map<ObjectId, GizmoChannels>;
@@ -461,8 +456,6 @@ export interface SceneState {
   gizmoTurnAxes: Map<ObjectId, TurnAxes>;
   lastTrackGain: number;
   lastEdgeOn: boolean;
-  zoneWas: boolean;
-  zonePair: readonly ObjectId[];
   axisGizmos: Map<ObjectId, AxisGizmo>;
   gizmoRings: Map<ObjectId, LinesMesh>;
   gizmoTurnRings: Map<ObjectId, LinesMesh>;
@@ -486,6 +479,8 @@ export interface SceneState {
   /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */
   edgeBandEl: HTMLDivElement;
   edgeBandKey: string;
+  /** ⭐ `D119`: a second touch that pressed a FROZEN body — its face, for a tap to align to. */
+  frozenTapFace: Map<number, { id: ObjectId; faceId: string }>;
   /** ⭐ The rig elevation the scene boots at, and the camera reset returns to. */
   bootElevation: number;
   /** ⭐ `3D6`: couples exempt from colliding with each other since an unsnap, until they separate. */
@@ -509,13 +504,6 @@ export interface SceneState {
   zoomAtPinchStart: number;
   centreBlend: OrbitCentreBlend;
   orbitCentreM: Vector3;
-  swing: SwingLatch | null;
-  frameTravelRightM: number;
-  frameTravelUpM: number;
-  frameTravelDepthM: number;
-  appliedSwingYaw: number;
-  swingAmp: { rad: number; atMs: number } | null;
-  swingFrozenProgress: number | null;
   eventGaps: Map< number, { last: number; gaps: { t: number; ms: number }[] } >;
   noise: PointerNoiseMeter;
   noisePointer: number | null;
@@ -539,7 +527,6 @@ export interface SceneState {
 }
 
 
-export const BODY_OUTLINE_FRACTION = 0.005;
 
 export const ALIGN_OUTLINE_FRACTION = 0.02;
 

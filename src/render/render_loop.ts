@@ -16,8 +16,7 @@ import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientatio
 import { faceMarkerFor, hitFaceNow, outlinesFor, syncPioneerCursors } from "./markers";
 import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
 import { refreshAxisGizmo } from "./gizmo";
-import { refreshHighlight, swingAngleNow } from "./highlight_pass";
-import { applyCamera, applyCameraPose, recomputeOrbitCentre } from "./camera_rig";
+import { applyCameraPose, recomputeOrbitCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { syncSeats } from "./seat_wiring";
 
@@ -49,7 +48,7 @@ export function startRenderLoop(st: SceneState): void {
     }
 
     // ⭐⭐ `A16`: re-derived EVERY FRAME, here, before anything reads it.
-    refreshHighlight(st);
+    // ⛔⛔ The capture highlight pass is DELETED with its white outlines and the swing (`D120`).
 
     // ⭐ The leading face and its gizmo, AFTER the highlight — the zone edge may have just
     // re-decided the axes, and the gizmo is documented to point along them. ⚠ A gizmo drawn
@@ -71,13 +70,6 @@ export function startRenderLoop(st: SceneState): void {
     // every frame, and two writers would fight for the camera with the reset winning by
     // arriving second. ⛔ The swing's own return to zero is unaffected: it is a pure function
     // of the gap, so whatever it missed it picks up on the next frame it is allowed to write.
-    if (st.cameraReset === null) {
-      const wantSwing = swingAngleNow(st);
-      if (wantSwing !== st.appliedSwingYaw) {
-        st.appliedSwingYaw = wantSwing;
-        applyCamera(st);
-      }
-    }
 
     // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
     // deceleration is the part that makes it feel like mass. The step is unconditionally

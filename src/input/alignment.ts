@@ -519,3 +519,17 @@ export function squaringTwist(axis: Vec3, follower: Quat, pioneer: Quat): Quat {
   const quarter = Math.PI / 2;
   return qFromAxisAngle(n, angle - quarter * Math.round(angle / quarter));
 }
+
+/**
+ * ⭐⭐⭐ **`D119` — THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP** (the owner, 2026-09-27: *"I want the
+ * follower object to align only if I do first touch hold on follower object + second touch tap on
+ * pioneer object: if I do a press of second touch, the object shall not align : it shall align only
+ * on a released tap"*).
+ * ⛔ `D55`/`D87` aligned on the PRESS — so a second finger put down to steer (gravity, roll), say over
+ * a body that fills the screen, re-aligned the Follower. ⭐ Now the press only REMEMBERS what it would
+ * do; the release decides, and only a TAP (short, unmoved) carries it out.
+ */
+export function alignsOnRelease(kind: "TAP" | "DOUBLE_TAP" | "HOLD" | "CONTINUOUS_KEPT"): boolean {
+  return kind === "TAP" || kind === "DOUBLE_TAP";
+}
+

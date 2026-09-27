@@ -7,7 +7,6 @@
  */
 import { describe, expect, it } from "vitest";
 import { isTranslatingMode, TRANSLATING_MODES } from "@input/grip_mode";
-import { swingDriverIndex } from "@input/approach_swing";
 
 describe("⛔⛔ the translating modes", () => {
   it("⭐⭐ the SECOND touchpoint's mode is a TRANSLATION — defect 55, asserted once", () => {
@@ -33,11 +32,5 @@ describe("⛔⛔ the translating modes", () => {
 
   it("⭐ the set is exactly those two — a third caller reads this, not the code", () => {
     expect([...TRANSLATING_MODES].sort()).toEqual(["TRANSLATE", "TRANSLATE_2ND"]);
-  });
-
-  it("⛔⛔ and the SWING reads that set rather than its own copy of it", () => {
-    expect(swingDriverIndex(["TRANSLATE_2ND", null, "TRANSLATE"])).toBe(0);
-    expect(swingDriverIndex(["ROTATE", "TRANSLATE_2ND"])).toBe(1);
-    expect(swingDriverIndex(["ROTATE", null])).toBe(-1);
   });
 });

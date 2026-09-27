@@ -14,7 +14,7 @@
  * the sloped face is the second vector in this file rather than a footnote.
  */
 import { describe, expect, it } from "vitest";
-import { axesFromFrame, rotationFrame, zoneEdge } from "@input/object_axes";
+import { axesFromFrame, rotationFrame } from "@input/object_axes";
 import { gravityFrame, type GravityFrame } from "@input/gravity_frame";
 import { dot, type Vec3 } from "@core/vec";
 
@@ -42,24 +42,6 @@ const frameAt = (azimuthDeg: number, elevationDeg: number): GravityFrame => {
 // owner has removed: *"Inside shall be the same as outside. I think this is polluting the approach
 // movement."* ⭐ Kept as a note rather than as skipped tests, because the property is not merely
 // unasserted now — it is false by instruction.
-
-describe("the zone edge", () => {
-  it("fires once on each crossing and never in between", () => {
-    expect(zoneEdge(false, true)).toBe("ENTER");
-    expect(zoneEdge(true, false)).toBe("EXIT");
-    expect(zoneEdge(false, false)).toBeNull();
-    expect(zoneEdge(true, true)).toBeNull();
-  });
-
-  it("⭐ a run of frames produces exactly two edges for one visit", () => {
-    // ⛔ THE COMPOSITION, not the layer: a body approaches, dwells four frames, and leaves.
-    // ⚠ An edge detector that re-fired while inside would re-latch the axes every frame,
-    // which is the very thing latching on the edge exists to prevent.
-    const run = [false, false, true, true, true, true, false, false];
-    const edges = run.slice(1).map((now, i) => zoneEdge(run[i]!, now));
-    expect(edges.filter((e) => e !== null)).toEqual(["ENTER", "EXIT"]);
-  });
-});
 
 /**
  * GOLDEN VECTORS — **A FREE BODY'S ROTATION BASIS FOLLOWS `worldAxisB` TOO** (the owner,

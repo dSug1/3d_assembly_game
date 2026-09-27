@@ -101,3 +101,14 @@ export class PinchTracker {
 export function clampCameraRadiusM(radiusM: number, cfg: GestureConfig): number {
   return Math.min(cfg.cameraRadiusMaxM, Math.max(cfg.cameraRadiusMinM, radiusM));
 }
+
+/**
+ * ⭐⭐ **A PINCH IS TWO REAL FINGERS** (`D118`, the owner, 2026-09-27: *"In desktop mode, when I press
+ * shift and then left click on empty space, I can then zoom the camera in or out with delta position:
+ * remove this feature as this pollutes the inputs."*). ⛔ A mouse-derived touchpoint — the mouse's
+ * own pointer, or the Shift-made touchpoint #2 — never starts a pinch: the desktop zooms with the
+ * wheel only.
+ */
+export function pinchAllowed(mouseDerived: readonly boolean[]): boolean {
+  return mouseDerived.length === 2 && !mouseDerived.some((m) => m);
+}

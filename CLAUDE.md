@@ -46,6 +46,14 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-27)
 
+⭐⭐ **THE THIRD PASS OF THE DAY** (`D118`–`D120`, ⛔ unjudged by a hand): **the mouse never pinches** —
+Shift + left drag on empty space no longer zooms, the wheel does; **the second touch aligns only on a
+released TAP** — a press that stays or moves aligns nothing, and a press on the **frozen plate** is
+empty space, so a finger over it steers the held body's gravity / roll while a TAP on it aligns to it
+(reverses `D55` and `D89`); and **the white capture highlights and the approach camera swing are
+deleted** — they marked a capture zone drawn from the visible mesh that no rule read (the capture
+offset stays: the snap and the sway use it) → `ALIGNMENT_RULES.md` §14, `INPUTS_TABLE.md`.
+
 ⭐⭐⭐ **`Scene_1` — THE PAINTING — AND A SCENE SLIDER** (`D117`; the program below is PAUSED for it):
 41 upright boxes and a frozen floor, the owner's Unity values unchanged at **0.1 m per unit**
 (`unitM`), two spots and a directional light read as URP (direction from the Euler angles — checked
@@ -136,7 +144,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1227 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`); the
+✅ Green: TypeScript + Babylon + Vite, **1142 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

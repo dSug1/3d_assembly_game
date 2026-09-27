@@ -54,10 +54,29 @@ export function alignFollowerToPioneer(st: SceneState, followerPointerId: number
   const pioneerGrip = others[0]![1];
   const pioneerId = st.idOf.get(pioneerGrip.mesh);
   if (pioneerId === undefined || pioneerGrip.pressFace === null) {
-    // ⚠ `D67`: the held body IS the Pioneer, so this is *the first touch never resolved a
-    // PioneerFace* — the one thing the whole gesture stands on.
     st.lastVerdict =
       "align: the held object has no resolved PioneerFace — toggled instead";
+    return false;
+  }
+  return alignFollowerTo(st, followerId, followerGrip, mode, pioneerId, pioneerGrip.pressFace.faceId, transientGrip);
+}
+
+/**
+ * ⭐⭐ `D119` — the alignment with its Pioneer NAMED, not found among the held grips: a TAP on the
+ * frozen plate aligns to it without the plate ever being held. ⛔ Every refusal below is unchanged.
+ */
+export function alignFollowerTo(
+  st: SceneState,
+  followerId: ObjectId,
+  followerGrip: Held,
+  mode: AlignMode,
+  pioneerId: ObjectId,
+  pioneerFaceIdIn: string,
+  /** The finger that selected the Pioneer, if it was a grip — its `pressFace` is wiped. */
+  transientGrip: Held | null,
+) : boolean {
+  if (followerGrip.pressFace === null) {
+    st.lastVerdict = "align: press resolved no face — toggled instead";
     return false;
   }
 
@@ -116,7 +135,7 @@ export function alignFollowerToPioneer(st: SceneState, followerPointerId: number
   const pioneerWorld = faceWorld(
     st.world,
     pioneerId,
-    pioneerGrip.pressFace.faceId,
+    pioneerFaceIdIn,
   )?.normal;
   const followerLocal = st.world.objects
     .get(followerId)
@@ -205,7 +224,7 @@ export function alignFollowerToPioneer(st: SceneState, followerPointerId: number
   // compared. ⭐ What *is* still discarded is the grip's own `pressFace`: a Pioneer's grip
   // is being released, and a stale face on a dead grip is the kind of thing a later rule
   // picks up by accident.
-  const pioneerFaceId = pioneerGrip.pressFace.faceId;
+  const pioneerFaceId = pioneerFaceIdIn;
   // ⛔⛔⛔ **THE FACE CLEARED IS THE *TRANSIENT* GRIP'S — AND `D87` MOVED WHICH FINGER THAT IS.**
   //
   // ⭐ The rule has never changed: *a transient grip must not leave a stale face behind.* ⛔ Under
@@ -223,7 +242,7 @@ export function alignFollowerToPioneer(st: SceneState, followerPointerId: number
   // way** — *"clearing the held grip's face instead would make the second Follower fail"*. An
   // inversion does not have to touch a line to break it; it only has to change which finger the
   // line names. ⛔ Nothing here can go red, which is why it reached the glass.
-  transientGrip.pressFace = null;
+  if (transientGrip !== null) transientGrip.pressFace = null;
   // ⚠ KEYED BY OBJECT, so it survives the fingers moving on — `alignMode` alone is the
   // ACTIVE alignment's mode and would recolour an older object's highlight.
   // ⛔ And WHO it was aligned to, which the constraint itself does not record.

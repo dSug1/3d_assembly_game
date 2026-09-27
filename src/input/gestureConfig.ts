@@ -501,47 +501,6 @@ export interface GestureConfig {
    */
   snapMs: number;
   /**
-   * ⭐⭐⭐ **THE APPROACH SWING'S AMPLITUDE, IN DEGREES OF CAMERA YAW** — the trial on branch
-   * `1.0.18-`. ⛔ How far the camera leans out at HALF the trigger gap; it is back on its own
-   * orbit at the trigger and at contact, by construction.
-   *
-   * ⚠⚠ **GUESSED, AND THEREFORE SHIPPED WITH A SLIDER** — `METHOD`'s hardest-won rule here:
-   * *a guessed number has been wrong every single time* (four gains raised ×3.4, ×2.3 and ×2 by a
-   * hand; a computed landmark rejected in favour of a fifteenth of it). ⭐ `0` disables the swing
-   * entirely, which is how to A/B the whole mechanism by finger without a rebuild.
-   * ⚠ Also on the URL as `?approachSwingDeg=0`.
-   */
-  approachSwingDeg: number;
-  /**
-   * ⭐⭐ **THE SWING'S SPEED DIVISOR: `gain × speed^exponent`** — the owner, 2026-09-19:
-   * *"make it A ∝ 1/(slider multiple gain × speed^slider expon gain) so I can finetune."*
-   * ⛔ Damping begins at **`speed = 1/gain` mm/s, whatever the exponent** — the product is
-   * grouped before the power so the two dials do not fight.
-   * ⚠ At the defaults that knee is **67 mm/s** (`1/0.015`), chosen by the owner on the glass.
-   */
-  approachSwingSpeedGain: number;
-  /**
-   * ⭐⭐ The exponent in that divisor. ⛔ **`1` makes the camera's angular rate independent of
-   * hand speed** (it cancels `dp/dt` — `approach_swing.ts` derives it); **`0` removes the speed
-   * dependence entirely**, which is how to A/B the idea by finger; above 1 the camera slows as
-   * the hand speeds up.
-   */
-  approachSwingSpeedExponent: number;
-  /**
-   * ⭐⭐⭐ **NOT A TUNABLE, A RULE SELECTOR** — like `pioneerTranslates`, and for the same
-   * reason: every other control here changes a NUMBER, this one changes what the camera DOES.
-   *
-   * ⛔ `0` = **case 1**, the current build: the orbit centre is whatever rule 1 last chose.
-   * ⛔ `1` = **case 2**: the instant the Pioneer and Follower enter the offset radius, the yellow
-   * target switches to **their** barycentre — through the same `retarget` + blend a finger uses,
-   * so the camera migrates rather than jumping and the marker moves at once.
-   *
-   * ⚠ A 0/1 slider because the menu has no other kind of control (`D26`'s shape), and
-   * `validateGestureConfig` refuses anything between — a half-set selector must not read as
-   * `truthy` and ship one behaviour while the readout claims another.
-   */
-  approachRetargetsOrbit: number;
-  /**
    * ⭐⭐⭐ **HOW NEAR THE VIEW DIRECTION AN AXIS MAY COME BEFORE EXACT TRACKING IS ABANDONED**,
    * in degrees.
    *
@@ -578,14 +537,6 @@ export interface GestureConfig {
    * `?followerFaceXrayAlpha=0.3`.
    */
   followerFaceXrayAlpha: number;
-  /**
-   * Degrees. How near parallel the alignment axis must be to one of the target's face
-   * normals for `A16`'s condition 1 to hold.
-   * ⚠ A DIFFERENT QUESTION from the (unbuilt) snap threshold even though both are angular
-   * slack: this asks *have we entered the mechanism*, that asks *may an irreversible move
-   * fire*. Coupling them would make tuning one silently move the other.
-   */
-  alignMatchDeg: number;
 
   /**
    * ⭐⭐ The seed for the boot scene's three random orientations.
@@ -927,20 +878,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pioneerSwayRadii: 3,
   // ⚠ A guess, with a slider — a magnet's pull is a feel only a hand can judge.
   snapMs: 60,
-  // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-26: *"set the default approach swing to zero."*
-  // ⚠ It was 30°, CHOSEN BY THE OWNER ON THE GLASS on 2026-09-19 (the swing at or below the knee);
-  // that value is one slider move away, in CAMERA ORBIT › CAMERA APPROACH SWING AT CAPTURE.
-  approachSwingDeg: 0,
-  // ✅ **CHOSEN BY THE OWNER ON THE GLASS, 2026-09-19** — and that matters more than where they
-  // came from: the previous pair were my guesses, borrowed from `swayReferenceSpeedMmPerS`.
-  // ⛔ The knee is `1/gain` = **67 mm/s**, so damping now begins at about half the hand speed it
-  // used to, and the 1.7 exponent makes it bite faster above that — a quarter of the swing at
-  // twice the knee, where the old pair left a half.
-  approachSwingSpeedGain: 0.015,
-  approachSwingSpeedExponent: 1.7,
-  // ⚠ `0` = the current build, so the trial's existing behaviour is what boots and case 2 is
-  // something a hand turns on to compare — the comparison that settled `D28` and `IN13`.
-  approachRetargetsOrbit: 0,
   // ⭐ Blender's number, not mine.
   axisTrackingConeDeg: 5,
   // ✅ **0.05 — THE OWNER'S NUMBER, 2026-09-23** (*"Set the default transparency to 0.05"*),
@@ -949,9 +886,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // by a hand on this project, and the first that was too STRONG rather than too weak.
   // ⛔ `0` still restores the build before the flag, which is the A/B.
   followerFaceXrayAlpha: 0.05,
-  // ⚠ Placeholder. Deliberately tight: entering the docking mechanism should mean the hand
-  // really did align against this thing.
-  alignMatchDeg: 15,
   // ⚠ Arbitrary, and that is the point: any fixed value gives three arbitrary poses. Changed
   // by the URL when a different scene is wanted.
   sceneSeed: 20260917,
@@ -1234,24 +1168,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "motion buffer has already discarded.",
     );
   }
-  // ── `A16`'s two, and each one can really fail ───────────────────────────
-  //
-  // ⭐ `METHOD`: *a guard that cannot fail is not a guard.* Both configurations below are
-  // reachable from the URL and both leave every individual function CORRECT while making the
-  // mechanism unusable — the class a green suite cannot see.
-  // ⚠⚠ THIS RULE WAS REWRITTEN 2026-09-17 AND THE OLD VERSION IS THE INTERESTING PART: it
-  // said `> 1`, reasoning that 1.0 × an object's span is exactly where two CUBES touch. ⛔ That
-  // reasoning died with the per-object radius — the factor now multiplies the scene's module
-  // `L`, not a body's span, so "1" no longer names contact and the old bound was arithmetic
-  // about a quantity this field no longer holds. ⭐ A stale guard that still passes is worse
-  // than none: it looks like the number has been thought about.
-  if (cfg.approachRetargetsOrbit !== 0 && cfg.approachRetargetsOrbit !== 1) {
-    throw new Error(
-      `approachRetargetsOrbit (${cfg.approachRetargetsOrbit}) must be exactly 0 or 1: it selects ` +
-        "a RULE, not a quantity, and a value in between would read as `truthy` and silently " +
-        "ship one of the two behaviours while the readout claimed a third.",
-    );
-  }
   // ⛔ An alpha outside [0, 1] is not a stronger overlay: above 1 Babylon clamps and the mesh
   // stops blending, which reads as *the flag stopped working* rather than as a bad number.
   // ⚠ `0` is meaningful (the twin is not drawn), so this is a RANGE and not a positivity test.
@@ -1272,27 +1188,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
         "unreachable and every translation would run at the fallback rate. NaN fails this too.",
     );
   }
-  // ⛔ `0` is MEANINGFUL here (the swing off), so the rule is a range and not a positivity
-  // test — the opposite of `captureOffsetMm` below, where zero would mean *nothing ever
-  // captures* and is a mistake rather than a setting.
-  if (
-    !(cfg.approachSwingSpeedGain >= 0) ||
-    !(cfg.approachSwingSpeedExponent >= 0)
-  ) {
-    throw new Error(
-      `approachSwingSpeedGain (${cfg.approachSwingSpeedGain}) and ` +
-        `approachSwingSpeedExponent (${cfg.approachSwingSpeedExponent}) must both be >= 0: ` +
-        "they form a DIVISOR, and a negative one would mirror the swing mid-approach rather " +
-        "than damping it. NaN fails this too — it would silently disable the swing.",
-    );
-  }
-  if (!(cfg.approachSwingDeg >= 0) || cfg.approachSwingDeg > 90) {
-    throw new Error(
-      `approachSwingDeg (${cfg.approachSwingDeg}) is outside 0..90: the approach swing is a ` +
-        "camera lean, and beyond a quarter turn it swings past the join rather than looking " +
-        "at it. NaN fails this too, which is the point — it would silently disable the swing.",
-    );
-  }
   // ⛔ `0` is legal and means OFF, so this is a RANGE and not a positivity test. ⚠ NaN fails
   // it too, which is the point: a bad URL override must be refused out loud rather than quietly
   // turning the mechanism off and looking exactly like the current build.
@@ -1307,21 +1202,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `captureOffsetMm (${cfg.captureOffsetMm}) is not positive: a zero or negative capture ` +
         "offset makes every gap test fail, so no pair could ever be highlighted and the whole " +
         "mechanism would be silently unreachable with nothing on the glass to say why.",
-    );
-  }
-  // ⚠⚠ **AND THERE IS DELIBERATELY NO CROSS-TUNABLE RULE FOR IT YET, WHICH IS WORTH STATING.**
-  // ⭐ The number it will be coupled to is `MinDistanceBeforeSnapIsConfirmed`, the hold-off —
-  // `APPROACH_AND_MATE.md` §1 already records that the two cannot be chosen independently,
-  // because a hold-off outside the capture band means nothing can ever dock. ⛔ That field does
-  // not exist yet, so a rule relating them would be arithmetic about a quantity this config
-  // does not hold. ⚠ The same reasoning retired the old `> 1` bound on `snapRadiusFactor`, and
-  // a stale guard that still passes is worse than none: it looks like the number was thought
-  // about.
-  if (!(cfg.alignMatchDeg > 0 && cfg.alignMatchDeg < 90)) {
-    throw new Error(
-      `alignMatchDeg (${cfg.alignMatchDeg}°) is outside (0, 90): at 0 no alignment could ever ` +
-        "match and the highlights would never appear; at 90 every orientation matches and " +
-        "condition 1 stops meaning anything — a whole condition deleted by a number.",
     );
   }
 

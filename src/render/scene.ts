@@ -485,13 +485,6 @@ export function createScene(
    * because the OTHER body moved (a sway nudge, an animation) with no pointer event at all, and
    * a highlight that only updated on input would then describe a stale scene.
    */
-  st.highlighted = {
-    pair: null,
-    translating: false,
-    inRange: false,
-    gapM: null,
-    offsetM: 0,
-  };
 
   /**
    * ⭐⭐⭐ **THE OBJECT AXES — STATE ONLY. THE RULE IS `input/object_axes.ts`.**
@@ -578,13 +571,11 @@ export function createScene(
    * instrument shape this project met three times on 2026-09-16 alone.
    */
   /** ⚠ Last frame's range verdict — the EDGE is what fires the hook, never the level. */
-  st.zoneWas = false;
   /**
    * ⛔ The pair that was in range when the zone was ENTERED, so the EXIT edge can reach the
    * same two bodies. ⚠ At the exit `highlighted.pair` is already `null` — the verdict that
    * tells you a body has left is the one that no longer names it.
    */
-  st.zonePair = [];
   st.axisGizmos = new Map<ObjectId, AxisGizmo>();
   /**
    * ⭐⭐⭐ **TWO RINGS, ONE PER FAMILY** — the owner, 2026-09-23: *"there can be a grey ring for the
@@ -639,6 +630,7 @@ export function createScene(
   });
   document.body.appendChild(st.edgeBandEl);
   st.edgeBandKey = "";
+  st.frozenTapFace = new Map();
   st.collisionGrace = new Set<string>();
   st.lastCollision = "";
   st.lastCollisionAt = -Infinity;
@@ -784,7 +776,6 @@ export function createScene(
    * one, so it is a property of the approach rather than of any gesture.
    * ⚠ It holds only what must NOT be re-read: the gap at the trigger, and which way to lean.
    */
-  st.swing = null;
   /**
    * ⭐⭐⭐ **THE SCREEN-RIGHT TRAVEL APPLIED SINCE THE LAST FRAME**, in metres — and it is
    * **CONSUMED AND ZEROED BY `refreshHighlight` EVERY FRAME**, which is the whole fix for the
@@ -801,7 +792,6 @@ export function createScene(
    * two bodies the approach is whatever the pair's gap does, and singling one out would be a
    * rule this file is not allowed to own.
    */
-  st.frameTravelRightM = 0;
   /**
    * ⭐⭐ **THE VERTICAL HALF OF THE SAME FRAME'S TRAVEL** — device-reported, 2026-09-21:
    * *"when the follower enters the offset radius by a vertical translation (delta position dy)
@@ -810,9 +800,7 @@ export function createScene(
    * answer *was this crossing driven by a translation at all*, which is the question that
    * separates a vertical drag from a press, a rotation or a pinch.
    */
-  st.frameTravelUpM = 0;
   /** ⭐⭐ The ALONG-VIEW component of the body's travel — invisible on screen, and still travel. */
-  st.frameTravelDepthM = 0;
   /**
    * ⛔⛔ **THE SWING YAW THAT IS ACTUALLY ON THE CAMERA** — and the reason this exists is a
    * device report: *"not working. the camera does not orbit."*
@@ -827,20 +815,17 @@ export function createScene(
    * the render loop from writing the camera on frames where nothing about it changed — and
    * makes the return to zero a single write rather than a state nobody notices.
    */
-  st.appliedSwingYaw = 0;
   /**
    * ⭐⭐ `D63` — the SMOOTHED swing amplitude, and the clock it was last advanced on.
    * ⛔ `null` means *no approach*, so the next one starts from its own first reading rather
    * than from whatever the last approach happened to end on.
    */
-  st.swingAmp = null;
   /**
    * ⛔⛔ The progress the swing was showing when a translation STOPPED driving it, captured
    * once. ⚠ It must be remembered rather than recomputed: `rebaseTriggerGap(gap, p)` with `p`
    * read from the LIVE gap is algebraically the identity — `gap/(1−(g0−gap)/g0) = g0` — so it
    * would do nothing at all, which is how the first version of this fix failed.
    */
-  st.swingFrozenProgress = null;
 
   // ⚠ Place the camera on the rig surface at startup, so the very first frame is
   // already the pose the orbit will move from — not the ArcRotateCamera constructor's

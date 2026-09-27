@@ -4,14 +4,14 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { pinchAllowed } from "../input/pinch";
+import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, orbitCentre, gravityFrame, CameraResetAnimation, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
 import { WORLD_DOWN } from "../core/object_model";
-import { pitchOffsetV, pitchAngleFor } from "../input/approach_swing";
 import { ORBIT_START_YAW_RAD, type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
-import { swingAngleNow } from "./highlight_pass";
 
 /**
  * §2 rule 1's orbit centre: the barycentre nearest the touchpoint's ray.
@@ -144,15 +144,9 @@ export function applyCameraPose(st: SceneState, p: CameraPose) : void {
  * decides. This is the one line to try if the motion reads oddly.
  */
 export function applyCamera(st: SceneState) {
-  const a = swingAngleNow(st);
-  const rings = st.orbit.ringElevationRad();
-  // ⛔ THE PITCH TAKES THE MAGNITUDE, NOT THE SIGNED ANGLE — `pitchAngleFor` argues why: the
-  // owner's expectation names ONE vertical direction for both drag directions.
-  const pose = st.orbit.pose(
-    st.zoom,
-    a,
-    pitchOffsetV(pitchAngleFor(a), rings.bottom, rings.top),
-  );
+  // ⛔⛔ THE APPROACH SWING IS DELETED (`D120`, 2026-09-27): the rig pose is the camera, with no
+  // offset added on top.
+  const pose = st.orbit.pose(st.zoom);
   // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
   // Clamping the components independently would change the viewing ANGLE, which is
   // not what a near-plane guard is for.
@@ -180,6 +174,8 @@ export function applyCamera(st: SceneState) {
 export function pinchPair(st: SceneState) : [Sample, Sample] | null {
   const out = st.router.outside();
   if (out.length !== 2 || st.router.objects().length !== 0) return null;
+  // ⛔ `D118`: never from a mouse — the wheel is the desktop's zoom.
+  if (!pinchAllowed(out.map((q) => st.pointerTypeOf.get(q.id) === "mouse" || q.id === MOUSE_SECOND_ID))) return null;
   return [out[0]!.last, out[1]!.last];
 }
 
@@ -217,26 +213,6 @@ export function requireGestureFrame(st: SceneState) : GravityFrame {
   return g;
 }
 
-
-/**
- * ⭐⭐⭐ **HAND EVERY LIVE GRIP THE BASIS THE CAMERA IS ACTUALLY AT NOW.**
- *
- * ⛔ Called on ONE event: the end of an approach that left the camera somewhere new
- * (`endApproach().rebaseFrames`). ⚠ Not on a timer, not while the swing is live — the
- * dictation is explicit that the approach axis *"is not updated by the camera orbit"*, and
- * during the lean the displacement is temporary and returns to zero on its own.
- *
- * ⛔⛔ **IT DOES NOT THROW, AND `requireGestureFrame` DOES.** That one is called from a PRESS,
- * where a refusal is the honest answer and lands on the gesture that asked. This runs inside
- * the render loop, where a throw would take the whole frame down for a camera the orbit rings
- * make unreachable anyway. ⭐ So a frame that cannot be built leaves the grip with the basis
- * it has — the previous behaviour, which is a real answer rather than an improvised one.
- */
-export function rebaseGestureFrames(st: SceneState) : void {
-  const g = gravityFrame(screenFrame(st).viewAxis, WORLD_DOWN);
-  if (!g) return;
-  for (const grip of st.held.values()) grip.frame = g;
-}
 
 export function screenFrame(st: SceneState) : ScreenFrame {
 return ({

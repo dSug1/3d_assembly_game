@@ -27,14 +27,18 @@ describe("the pick handed to the router", () => {
     expect(pressHit(BODY, true, 0)).toBeNull();
   });
 
-  it("⭐⭐ and every LATER touch keeps its hit — that is the press that names a Pioneer", () => {
-    expect(pressHit(BODY, true, 1)).toBe(BODY);
+  it("⛔⛔⛔ `D119` — and every LATER touch is a MISS too: the second finger steers over the plate", () => {
+    // > *"I need to be able to press second touch on top of a frozen object to control the follower
+    // > object gravity translation / roll … without triggering a new alignment"* — the owner.
+    // ⛔ RED against `D89`, which kept these hits so the plate could be PRESSED as a Pioneer. ⭐ A TAP
+    // on it still aligns — resolved at the release, not here.
+    expect(pressHit(BODY, true, 1)).toBeNull();
     // ⛔ The third and fourth finger too. ⚠ `D77` refused these on the argument that *a hand
     // resting on the plate does not stop resting on it at the third touchpoint*; inverted, they
     // are all presses that can select a Pioneer, and refusing them would put the plate out of
     // reach for any hand already using two fingers.
-    expect(pressHit(BODY, true, 2)).toBe(BODY);
-    expect(pressHit(BODY, true, 7)).toBe(BODY);
+    expect(pressHit(BODY, true, 2)).toBeNull();
+    expect(pressHit(BODY, true, 7)).toBeNull();
   });
 
   it("⛔ an unfrozen body is never filtered, at any touchpoint count", () => {
@@ -46,20 +50,12 @@ describe("the pick handed to the router", () => {
     expect(pressHit(null, true, 3)).toBeNull();
   });
 
-  it("⛔ a nonsense count leaves the pick ALONE — dropping one is the change of behaviour", () => {
-    expect(pressHit(BODY, true, Number.NaN)).toBe(BODY);
-    expect(pressHit(BODY, true, -1)).toBe(BODY);
-    // ⚠ RED against the bare `count > 0`, which reads every nonsense count as a first touch and
-    // therefore DROPS it — the aggressive direction, and the opposite of what this rule wants.
-    expect(pressHit(BODY, true, Number.NEGATIVE_INFINITY)).toBe(BODY);
-  });
-
-  it("⭐ the two arguments are independent — neither alone decides", () => {
+  it("⭐ `D119`: only the frozen flag decides — the count no longer does", () => {
     // ⚠ Without this, a fixture that only ever varied one of them would pass against an
     // implementation that ignored the other: the frozen flag alone, or the count alone.
     expect(pressHit(BODY, true, 0)).toBeNull();
     expect(pressHit(BODY, false, 0)).toBe(BODY);
-    expect(pressHit(BODY, true, 1)).toBe(BODY);
+    expect(pressHit(BODY, true, 1)).toBeNull();
     expect(pressHit(BODY, false, 1)).toBe(BODY);
   });
 

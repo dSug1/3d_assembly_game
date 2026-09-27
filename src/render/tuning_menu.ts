@@ -113,48 +113,6 @@ export function installTuningMenu(st: SceneState): void {
             ),
           ],
         },
-        {
-          title: "CAMERA APPROACH SWING AT CAPTURE",
-          sliders: [
-          // ⭐⭐⭐ **THE APPROACH SWING (trial, branch `1.0.18-`)** — how far the camera leans out
-          // at HALF the trigger gap, and back to zero at contact.
-          // ⛔ **`0` TURNS THE WHOLE MECHANISM OFF**, which is what makes it A/B-able by finger
-          // in the same minute on the same scene — the comparison that settled `D28` and `IN13`.
-          // ⛔ **SHIPS AT 0 — OFF** (the owner, 2026-09-26: *"set the default approach swing to
-          // zero"*); the 30° a hand chose on 2026-09-19 is one slider move away.
-          tunable(st, 
-            "approach swing (° of camera yaw)",
-            "approachSwingDeg",
-            0,
-            90,
-            1,
-          ),
-          // ⭐⭐ **THE SPEED DIVISOR, `gain × speed^exponent`** — the owner's fine-tuning pair.
-          // ⛔ Damping starts where the divisor passes 1, at `(1/gain)^(1/exponent)` mm/s: the
-          // default 0.0083 puts that knee at **120 mm/s**. ⚠ A small range with a fine step,
-          // because the useful values are all near the bottom of it.
-          tunable(st, "swing speed gain", "approachSwingSpeedGain", 0, 0.05, 0.0005),
-          // ⛔ **`0` REMOVES THE SPEED DEPENDENCE ENTIRELY**, which is how to A/B the idea by
-          // finger; `1` makes the camera's angular rate independent of hand speed; above 1 the
-          // camera slows as the hand speeds up.
-          tunable(st, 
-            "swing speed exponent",
-            "approachSwingSpeedExponent",
-            0,
-            3,
-            0.1,
-          ),
-          // ⭐⭐⭐ **A RULE SELECTOR, NOT A NUMBER** — `0` is the current build; `1` switches the
-          // yellow orbit target to the Pioneer–Follower barycentre the moment they capture.
-          tunable(st, 
-            "orbit retargets on capture (0/1)",
-            "approachRetargetsOrbit",
-            0,
-            1,
-            1,
-          ),
-          ],
-        },
       ],
     },
     {

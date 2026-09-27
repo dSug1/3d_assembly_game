@@ -6,10 +6,9 @@
  */
 import { rollDragDeg, secondFingerDrive, depthLimits, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, screenRollRotation, MotionTracker, type Sample } from "../input";
 import { type Vec3 } from "../core/vec";
-import { type ObjectId } from "../core/object_model";
 import { incrementRadians } from "../input/rotation_increment";
 import { rotationChannel } from "../core/constraint_stack";
-import { IDENTITY, dot } from "../core/vec";
+import { IDENTITY } from "../core/vec";
 import { bothAxesSecondDrive } from "../input/second_touch_drive";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
@@ -106,13 +105,6 @@ export function applyWorldStep(st: SceneState, grip: Held, step: Vec3) : void {
   // delta that `A11`'s deadband may have swallowed. ⛔⛔ ACCUMULATED, NOT LATCHED:
   // `refreshHighlight` zeroes it every frame, so the arming edge reads only the travel that
   // crossed the threshold.
-  st.frameTravelRightM += dot(step, grip.frame.right);
-  st.frameTravelUpM += dot(step, grip.frame.up);
-  // ⛔⛔ **AND THE ALONG-VIEW COMPONENT.** `right` and `up` span the SCREEN, so a body pushed
-  // along the gravity frame's own depth leaves no trace in either — which is what the holder's
-  // `dy` does at a LEVEL camera, where its plane is edge-on and the judged fixed rate drives.
-  // ⚠ Without it the swing has no direction to find there, however long it waits.
-  st.frameTravelDepthM += dot(step, grip.frame.depth);
   const mp = requirePose(st, targetMesh);
   // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
   // camera's own maximum orbit radius. A body through the near plane renders *a black page with
@@ -228,24 +220,6 @@ export function gripIsAlignedFollower(st: SceneState, grip: Held) : boolean {
   return id !== undefined && st.links.pioneerFor(id) !== null;
 }
 
-
-/**
- * ⭐⭐⭐ `D59`/`D60` — **is a second touchpoint currently owning this body's roll AND depth?**
- *
- * ⛔ ONE HELPER, READ BY BOTH HALVES OF THE RULE: it decides what that second finger drives
- * (`D59`) and, because of that, what the FIRST touch does (`D60`). ⚠ Two copies of this
- * question would be free to disagree, and the pair would then either fight over one DOF or
- * leave one unreachable — with nothing to catch it.
- *
- * ⚠ `router.outside()` is the OUTSIDE case only. The Pioneer case needs no test here: two
- * held objects already translate on a drag by `translatesOnDrag`'s own first line, which is
- * exactly why the owner saw the wanted behaviour there and nowhere else.
- */
-
-export function gripOfObject(st: SceneState, id: ObjectId) : Held | undefined {
-  for (const g of st.held.values()) if (st.idOf.get(g.mesh) === id) return g;
-  return undefined;
-}
 
 export function applyDepthDrag(st: SceneState, grip: Held,
   anchorSeq: number,

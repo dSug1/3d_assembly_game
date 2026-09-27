@@ -1959,3 +1959,26 @@ partition it by what is held; (3) Ctrl is read at the left press, not mid-drag.
 ⚠⚠ **Readings to falsify first**: (1) an action spans the whole gesture, so a two-finger gesture
 that moved AND aligned undoes as one; (2) the undo's second tap is the free one; (3) a seat
 landing after the release (the 60 ms magnet) belongs to the gesture that caused it.
+
+---
+
+## 14 — ⭐⭐⭐ THE THIRD PASS: THE MOUSE DOES NOT PINCH, THE TAP ALIGNS, NO WHITE (`D118`–`D120`)
+
+> *"In desktop mode, when I press shift and then left click on empty space, I can then zoom the camera
+> in or out with delta position: remove this feature as this pollutes the inputs."* · *"I want the
+> follower object to align only if I do first touch hold on follower object + second touch tap on
+> pioneer object: if I do a press of second touch, the object shall not align … I need to be able to
+> press second touch on top of a frozen object to control the follower object gravity translation /
+> roll even if the frozen object occupies much of the screen"* · *"Explain when the white highlights
+> appear … if they highlight no particular function, they are useless, therefore remove the white
+> highlight function as well as the camera swing"* — the owner, 2026-09-27
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D118` | **a pinch is two REAL fingers** — `pinchAllowed`: a mouse-derived touchpoint (the mouse's pointer, or the Shift-made #2) never starts one | `input/pinch.ts`, `render/camera_rig.ts` `pinchPair` | two mouse touchpoints on empty space now do nothing |
+| `D119` | **the second touch aligns only on a released TAP** — its press only REMEMBERS the alignment (`Held.pendingAlign`); the release aligns if `alignsOnRelease` (a TAP). ⭐ A **frozen** body is a MISS for every press (`pressHit`), so a finger over the plate steers gravity / roll; a TAP on it aligns to the face under it (`alignFollowerTo`, the Pioneer named) | `input/alignment.ts`, `input/frozen_pick.ts`, `render/alignment_wiring.ts`, `render/pointer_wiring.ts` | ⛔ reverses `D55` (*"a continued press counts"*) and `D89` (the plate pressable as a Pioneer); an alignment now waits ~80 ms for the lift; a tap that slides past the tap slop does not align |
+| `D120` | **the white capture highlights and the approach swing are DELETED** — they marked a *capture zone* (a body's surface within the capture offset of another, while translating) drawn from the visible mesh; they matched neither the collision shapes nor the boxes, and the snap never read them. Gone: `highlightedPair`, `nearestCapture`, `zoneEdge`, `approach_swing.ts`, the white `body` / `shell` outlines, the zone readout, the swing's four sliders and `alignMatchDeg` | `render/highlight_pass.ts` deleted | the capture offset STAYS — the snap distance and the Pioneer-sway rule read it |
+
+⭐ Checked in a local headless Chrome (CDP touches): press-and-hold on B → no alignment; tap on B →
+aligned; drag on the plate → A lifted along gravity, alignment kept; tap on the plate → aligned to it.
+Shift + left drag on empty space: zoom unchanged (it went 3.14 → 0.21 on the build before).
