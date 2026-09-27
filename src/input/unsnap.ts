@@ -15,7 +15,7 @@
  * moves (`D94`): on the tablet the SEPARATION of the two fingers must GROW by `legMm` within
  * `windowMs` (*"zoom out"*); with a mouse the driven pointer must TRAVEL `legMm` within `windowMs`
  * (*"rapid delta position"*). ⭐ Both numbers are the eviction shake's own sliders
- * (`evictShakeLegMm`, `evictShakeWindowMs`) — *"same sliders as eviction shake"* — so no new
+ * (`unsnapLegMm`, `unsnapWindowMs`, the shake's two numbers kept when it was deleted, `D107`) — so no new
  * tunable is authored here.
  *
  * ⛔ ENGINE-FREE.
@@ -29,7 +29,7 @@ export interface UnsnapParams {
 
 /** ⭐ The two numbers, read from the ONE config (`CONSTRAINTS` §4: imported, never copied). */
 export function unsnapParamsFrom(cfg: GestureConfig): UnsnapParams {
-  return { legMm: cfg.evictShakeLegMm, windowMs: cfg.evictShakeWindowMs };
+  return { legMm: cfg.unsnapLegMm, windowMs: cfg.unsnapWindowMs };
 }
 
 /**

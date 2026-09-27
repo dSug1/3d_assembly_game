@@ -352,28 +352,6 @@ export function installTuningMenu(st: SceneState): void {
           ],
           subsections: [
             {
-              // ⭐⭐⭐ SHIPPED WITH THE RULE, NOT AFTER IT — `QUEUE`'s standing lesson: *a guessed
-              // number has been wrong every single time*, and all four of these are guesses.
-              // ⛔⛔ AND THE JUDGEMENT IS A SAFETY ONE, not a feel one: the whole question is the gap
-              // between a shake and a **corrective nudge** during fine positioning, because eviction
-              // destroys alignments the user set deliberately. ⚠ `evictShakeLegMm` has a validator
-              // rule under it (3× the measured noise), so the slider cannot reach a value where a
-              // reversal could be jitter.
-              title: "⭐ EVICTION SHAKE (A4)",
-              sliders: [
-                tunable(st, "reversals to evict", "evictShakeReversals", 2, 5, 1),
-                tunable(st, "window (ms)", "evictShakeWindowMs", 200, 1200, 50),
-                tunable(st, "leg / hysteresis (mm)", "evictShakeLegMm", 3, 25, 1),
-                tunable(st, 
-                  "straightness (0=strict, 1=any)",
-                  "evictShakeStraightness",
-                  0.1,
-                  0.9,
-                  0.05,
-                ),
-              ],
-            },
-            {
               // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
               // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
               // is set aside where a hand says it wants to tune something — the same exception §8 of the
@@ -393,6 +371,9 @@ export function installTuningMenu(st: SceneState): void {
                 tunable(st, "Pioneer sway off within (× offset)", "pioneerSwayRadii", 0, 10, 0.5),
                 // ⭐ The magnet's pull: how long the face centre takes to reach the cursor (`D100`).
                 tunable(st, "snap time (ms, 0 = at once)", "snapMs", 0, 400, 10),
+                // ⭐ The UNSNAP's rapid move — the eviction shake's two numbers, kept (`D107`).
+                tunable(st, "unsnap window (ms)", "unsnapWindowMs", 200, 1200, 50),
+                tunable(st, "unsnap leg (mm)", "unsnapLegMm", 3, 25, 1),
                 // ⚠ Gates a method THAT DOES NOT EXIST YET (*"we will define it later on"*), so it
                 // ships at 0 and turning it on changes only what the HUD reports.
                 tunable(st, 

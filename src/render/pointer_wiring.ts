@@ -5,13 +5,12 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapMeaning, pressMeaning, outsideTapReleases, flickResetPlan, ShakeDetector, shakeParamsFrom, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, type TapContext } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, pressMeaning, outsideTapRelease, flickResetPlan, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
 import { type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
 import { hasAlignment, rotationChannel } from "../core/constraint_stack";
-import { evictObjectConstraints } from "../core/object_model";
 import { IDENTITY } from "../core/vec";
 import { frozenHoldAdmitted } from "../input/assembly";
 import { translatesOnDrag } from "../input/highlight";
@@ -304,7 +303,6 @@ export function installPointerHandler(st: SceneState): void {
         // mapping, which is precisely what `CONSTRAINTS` §4 forbids (*a tuning value needed in
         // two places is IMPORTED, never copied*). ⚠ Nothing had drifted yet; the point is that
         // nothing now can.
-        shake: new ShakeDetector(shakeParamsFrom(st.cfg), st.cfg.pointerNoiseMm),
         depthSway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -604,16 +602,25 @@ export function installPointerHandler(st: SceneState): void {
           isTap &&
           heldGrip !== undefined &&
           heldId !== undefined &&
-          outsideTapReleases(
+          outsideTapRelease(
             st.router.objects().length,
             alignedFaceOf(st.world, heldId) !== null,
-          )
+            st.links.followersOf(heldId).length,
+          ) !== null
         ) {
           // ⚠ The history is still recorded, so a double tap keeps pairing exactly as it did.
           st.taps.record(routed.pressed, s.t);
-          releaseAlignmentOf(st, heldId);
-          heldGrip.alignmentTouched = false;
-          st.lastVerdict = `align: TAP on empty space released the alignment on ${heldId}`;
+          if (alignedFaceOf(st.world, heldId) !== null) {
+            releaseAlignmentOf(st, heldId);
+            heldGrip.alignmentTouched = false;
+            st.lastVerdict = `align: TAP on empty space released the alignment on ${heldId}`;
+          } else {
+            // ⭐⭐ `D107`: holding a PIONEER — the tap releases EVERY follower aligned to it.
+            // ⚠ `followersOf` hands back a COPY: releasing mutates the set being walked.
+            const orphaned = st.links.followersOf(heldId);
+            for (const f of orphaned) releaseAlignmentOf(st, f);
+            st.lastVerdict = `align: TAP on empty space released ${orphaned.length} follower(s) of ${heldId}`;
+          }
         } else if (noteTap(st, routed.pressed, s, e.pointerId) === "DOUBLE_TAP") {
           resetCamera(st);
           st.lastVerdict = "DOUBLE_TAP → camera reset";
@@ -668,7 +675,6 @@ export function installPointerHandler(st: SceneState): void {
           // followers, and a tap must still be a tap. ⛔ What it does NOT get is a continuous
           // rule: no translate, no rotate, no sway kick of its own.
           grip.rec.move(s);
-          grip.shake.push(s);
           paint(st);
           return;
         }
@@ -737,72 +743,8 @@ export function installPointerHandler(st: SceneState): void {
       // line and withhold the vertical until it had one; that hesitation at each end of
       // every drag is exactly what the owner rejected.
 
-      // ⭐⭐⭐ **FORK C's SHAKE — AND IT IS NOT GATED ON THE MODE, UNLIKE `D32`'s.**
-      //
-      // > *"Shaking of one object releases the alignment constraints on that object and
-      // > un-highlight the FollowerFace and then nullify the FollowerFace."*
-      //
-      // ⛔⛔ NOT GATED ON THE MODE, and `D32` (which gated fork B's) is deleted with fork B.
-      // The owner's sentence carries no mode condition, and said so again when it failed —
-      // *"the shake is not working in translation mode, contradicting what you have written
-      // above: correct this bug."*
-      // ⚠⚠ IT WAS NOT THIS GATE THAT FAILED THEM. The block already ran in both modes; what
-      // failed was the detector, which claimed its axis ONCE at the start of the gesture — so
-      // after an alignment (which takes a hold and a tap, i.e. time) no later shake could
-      // ever register, in either mode. `shake.ts` carries that defect and its fix.
-      // ⚠ The cost of having no mode gate is accepted and named: in fork C a vigorous
-      // repositioning can evict, and the four shake tunables are the only defence. Their
-      // sliders ship with the rule.
-      {
-        const fired = grip.shake.push(s);
-        const sid = st.idOf.get(grip.mesh);
-        if (fired && sid !== undefined) {
-          const ev = evictObjectConstraints(st.world, sid);
-          st.world = ev.world;
-          if (ev.result.refused) {
-            st.lastVerdict = "align: shake — nothing to release";
-          } else {
-            // ⭐ *"un-highlight the FollowerFace and then nullify the FollowerFace"* — the
-            // highlight IS the alignment's state, so it goes with it (`D35`).
-            // ⭐ *"un-highlight the FollowerFace"* — and the Pioneer's contour with it: both
-            // report the same alignment, so neither may outlive it (the owner's amendment).
-            if (st.selectedFace?.objectId === sid) {
-              cancelAlignAnim(st, st.selectedFace.objectId);
-              st.selectedFace = null;
-            }
-            if (st.selectedFace === null) {
-            }
-            grip.alignmentTouched = false;
-            st.lastVerdict = `align: SHAKE released the alignment on ${sid}`;
-          }
-          // ⭐⭐⭐ **A SHAKE ON A *PIONEER* RELEASES **EVERY** FOLLOWER ALIGNED TO IT.**
-          //
-          // > *"If the said pioneer object is later shaken, the alignment of the aligned object
-          // > shall be released … in case I have aligned one object and then another object to
-          // > the same pioneer object: when I shake the pioneer object it shall release all the
-          // > follower objects"* — the owner, 2026-09-17
-          //
-          // ⛔⛔ **TWO THINGS CHANGED HERE AND BOTH WERE LIMITATIONS, NOT CHOICES.**
-          // ⚠ It was gated on `alignMode === "FOLLOW"`, on the argument that `SNAPSHOT` got the
-          // same outcome for free — shaking while rotating turns the body, and a turned Pioneer
-          // releases a `SNAPSHOT`. ⛔ That argument had a hole this file already admitted: in
-          // `SNAPSHOT` with the mode on `TRANSLATE`, a shake turns nothing, so it released
-          // nothing. ✅ Now the rule is unconditional and the hole is closed.
-          // ⚠ And it compared ONE `pioneerFace` against ONE `selectedFace`, so at most a single
-          // follower was released. ✅ `pioneerOf` is many-to-one, so all of them go.
-          //
-          // ⭐⭐ AN INDEX LOOKUP, NOT A SCAN over every alignment in the scene — and
-          // `followersOf` hands back a COPY, because releasing mutates the very set being
-          // walked and deleting from a live `Set` mid-iteration silently skips entries.
-          const orphaned = st.links.followersOf(sid);
-          if (orphaned.length > 0) {
-            for (const followerId of orphaned) releaseAlignmentOf(st, followerId);
-            st.lastVerdict =
-              `align: SHAKE on Pioneer ${sid} released ${orphaned.length} follower` +
-              `${orphaned.length === 1 ? "" : "s"} (${orphaned.join(", ")})`;
-          }
-        }
-      }
+      // ⛔⛔ THE EVICTION SHAKE IS DELETED (`D107`): *tap empty space while holding* releases an
+      // alignment — or, holding a Pioneer, all its followers — on both devices.
       if (grip.mode === "TRANSLATE") {
         // §4 RULE 6 — ⛔⛔ **NO LONGER THE SCREEN VIEW PLANE** (`D75`, 2026-09-22): the body is
         // translated along ITS OWN AXES, and the two comments below about the gain and the
@@ -1148,17 +1090,9 @@ export function installPointerHandler(st: SceneState): void {
           // *"rotation reset"* the literal description of this rule rather than an analogy.
           setModelOrientation(st, grip.mesh, snap);
         }
-        if (plan.dropAlignment && rid !== undefined) {
-          const ev = evictObjectConstraints(st.world, rid);
-          st.world = ev.world;
-          if (st.selectedFace?.objectId === rid) {
-            st.selectedFace = null;
-          }
-          st.lastVerdict = `align: rotation reset — alignment made in this gesture, dropped (${ev.result.removed})`;
-        } else {
-          st.lastVerdict =
-            "align: rotation reset — alignment older than the press, conserved";
-        }
+        st.lastVerdict = plan.restoreOrientation
+          ? "align: rotation reset — to the press"
+          : "align: flick ignored — the alignment made in this gesture wins (`D107`)";
       }
       // ⭐⭐⭐ **THE TAP'S FOUR MEANINGS, AND `tapMeaning` OWNS THE CHOICE.**
       //
@@ -1193,57 +1127,6 @@ export function installPointerHandler(st: SceneState): void {
       if (grip.pressActed) {
         alignedByThisTap = true;
         st.lastVerdict = `${st.lastVerdict} — release spent (the press aligned)`;
-      } else if (verdict.kind === "TAP" || verdict.kind === "DOUBLE_TAP") {
-        const others = [...st.held.entries()].filter(
-          ([pid]) => pid !== e.pointerId,
-        );
-        const heldId =
-          others.length === 1 ? (st.idOf.get(others[0]![1].mesh) ?? null) : null;
-        // ⛔⛔⛔ **THE TAP READS THE *HELD BODY's OWN* ALIGNMENT, NOT THE ACTIVE RECORD** —
-        // audit fix, 2026-09-17.
-        //
-        // ⚠⚠ This block used to build its context from the three GLOBALS (`alignMode`,
-        // `pioneerFace`, and `selectedFace` as the guard), which name **the most recent
-        // alignment in the scene**. ⭐ The per-body truth has lived in `links` and `alignModeOf`
-        // since `A18`, and they disagree the moment a second body is aligned.
-        // ⭐⭐ `METHOD`: *a substituted quantity* — *"is the active alignment on the held body?"*
-        // stood in for *"what is the held body aligned to?"*, and the two agree only while
-        // exactly one body is aligned.
-        //
-        // ⭐⭐⭐ **`D90` — EVERY FIELD IS READ OFF THE OTHER END AGAIN.** The tapped body is the
-        // PIONEER now and the held one the FOLLOWER, so the questions are all about the held
-        // body. ⛔ This is `D87` reaching the release path, four defects after it reached the
-        // press — see `tapMeaning`.
-        const tappedId = st.idOf.get(grip.mesh) ?? null;
-        const heldGrip = others.length === 1 ? others[0]![1] : null;
-        const heldPioneer = heldId === null ? null : st.links.pioneerFor(heldId);
-        const ctx: TapContext = {
-          tappedObject: tappedId,
-          tappedFace: grip.pressFace?.faceId ?? null,
-          heldObject: heldId,
-          pioneerOfHeld: heldPioneer?.objectId ?? null,
-          pioneerFaceOfHeld: heldPioneer?.faceId ?? null,
-          alignedFaceOfHeld:
-            heldId === null ? null : alignedFaceOf(st.world, heldId),
-          heldPressFace: heldGrip?.pressFace?.faceId ?? null,
-        };
-        const meaning = tapMeaning(ctx);
-        // ⛔⛔ **`tapMeaning` CAN NO LONGER ALIGN** (`D90`): the press owns that, and this path's
-        // own `ALIGN` was `D67`'s trigger left running — it is what silently re-pointed an
-        // alignment when the owner expected a swap. ⭐ Deleted, not left unreachable.
-        if (meaning.action === "UNALIGN" && heldId !== null) {
-          // ⭐⭐⭐ **THE BODY RELEASED IS THE HELD ONE.** It is the FOLLOWER since `D87`, and it is
-          // the body that owns the alignment. ⚠ Releasing the TAPPED body — which this branch
-          // did until `D90` — broke the PIONEER's relation to some third body, one the hand
-          // never touched.
-          const hadAlignment = st.links.pioneerFor(heldId) !== null;
-          releaseAlignmentOf(st, heldId);
-          if (heldGrip !== null) heldGrip.alignmentTouched = false;
-          alignedByThisTap = true;
-          st.lastVerdict = hadAlignment
-            ? `align: RE-PRESS released the alignment on ${heldId}`
-            : `align: re-press — nothing to release on ${heldId}`;
-        }
       }
       // ⭐⭐ A DOUBLE-TAP ON AN OBJECT RESETS THE CAMERA TOO. ⛔ The reason is reachability:
       // orbit can get stuck close in with an object filling the view, and then every tap

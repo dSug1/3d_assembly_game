@@ -17,7 +17,6 @@ export * from "./depth_translate";
 export * from "./mode_toggle";
 export * from "./alignment";
 export * from "./display_pose";
-export * from "./shake";
 export * from "./sway";
 export * from "./camera_reset";
 export * from "./recognizer";

@@ -300,7 +300,7 @@ export function feedUnsnap(st: SceneState, sample: Sample) : void {
   const fired = det.push(sample.t, mm(pa), mm(pb));
   st.unsnapTrace =
     `${rawFirst}→${follower} ${mouse ? "MOUSE" : "TOUCH"} armed` +
-    ` (need ${st.cfg.evictShakeLegMm} mm in ${st.cfg.evictShakeWindowMs} ms)`;
+    ` (need ${st.cfg.unsnapLegMm} mm in ${st.cfg.unsnapWindowMs} ms)`;
   if (!fired) return;
   unseatWorld(st, follower);
   st.links.unseat(follower);

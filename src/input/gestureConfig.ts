@@ -317,38 +317,18 @@ export interface GestureConfig {
   /** max(|dx|,|dy|) / (min(|dx|,|dy|) + eps). One ratio, no undefined wedge. */
   flickPurity: number;
 
-  // ── §2 rule 2septies, as amended: THE EVICTION SHAKE ──────────────────────────
-  // Design of record: `Claude/10_INPUT_TOUCH/AMENDMENTS_R5.md` A4 (`D15`).
-  // ⛔⛔ ALL FOUR ARE `IN5` PLACEHOLDERS AND EACH NEEDS A SLIDER. The whole safety of
-  // this gesture is the gap between a SHAKE and a corrective NUDGE, and that gap is a
-  // hand's judgement: "left a bit, right a bit" during fine positioning is a genuine
-  // back-and-forth, and no simulation can say where the boundary sits.
+  // ── THE UNSNAP'S RAPID MOVE (`D100`) ─────────────────────────────────────────
+  // ⛔ These were the eviction shake's window and leg (`A4`); the shake is DELETED (`D107`) and the
+  // unsnap, which borrowed them (*"same sliders as eviction shake"*), keeps them under its own name.
 
-  /** Reversals required to evict. A4: 2 — out, back, out. */
-  evictShakeReversals: number;
+  /** The rapid move must happen inside this window, in milliseconds. */
+  unsnapWindowMs: number;
   /**
-   * They must all fall inside this window, in milliseconds.
-   * ⚠ Too long and a slow fidget accumulates into an eviction; too short and the
-   * gesture demands a speed not everyone has. ⭐ The audience includes youth (`D2`).
+   * How far the fingers' separation must GROW (tablet) or the driven pointer TRAVEL (mouse), in
+   * millimetres. ⛔ `validateGestureConfig` refuses a value that does not clear 3× the measured
+   * `pointerNoiseMm`, so jitter cannot unsnap.
    */
-  evictShakeWindowMs: number;
-  /**
-   * Minimum travel back from an extremum before a reversal counts, in millimetres.
-   * ⭐ It is the HYSTERESIS as well as the amplitude floor — one number, because they
-   * are the same question asked twice: *is this a leg, or is it jitter?*
-   * ⛔ `validateGestureConfig` refuses a value that does not clear the MEASURED
-   * `pointerNoiseMm`.
-   */
-  evictShakeLegMm: number;
-  /**
-   * Maximum excursion PERPENDICULAR to the shake axis, as a fraction of the along-axis
-   * amplitude.
-   * ⛔⛔ THIS IS WHAT SEPARATES A SHAKE FROM A CIRCLE, and it is not optional: **a
-   * circle projects to a back-and-forth on EVERY axis**. Since `A3`/`D14` made roll a
-   * legitimate control on exactly the objects eviction applies to, a detector without
-   * this would destroy an alignment every time someone spun a part to look at it.
-   */
-  evictShakeStraightness: number;
+  unsnapLegMm: number;
   /**
    * mm. Typical position noise of ONE pointer sample from a resting finger.
    * ⭐⭐ A DEVICE PROPERTY, not a preference, and it is what decides whether a
@@ -944,24 +924,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ 150° to DECIDE, swept: the shortest arc at which every realistic swirl
   // commits while no wiggle or sloppy arc does. ⭐ The release cost that used to carry
 
-  // ── The eviction shake (A4). ⚠ Four placeholders; none is measured. ───────────
-  evictShakeReversals: 2,
-  // ⭐⭐ **300 ms — THE OWNER'S NUMBER, 2026-09-17**, and the first of these four a hand has
-  // chosen. ⚠ It replaces my 600 ms, which was *"roughly three unhurried legs"* and untested.
-  // ⛔ Halving it makes the gesture CRISPER and harder to reach by accident: two reversals now
-  // have to fall inside 300 ms, so a leisurely reposition cannot accumulate into an eviction.
-  evictShakeWindowMs: 300,
-  // ⭐ **6 mm — the owner's, 2026-09-17.** ⚠ Mine was 8 mm, *"~10× the measured 0.761 mm
-  // noise floor"*, and admittedly not known to be the boundary with a corrective nudge.
-  // ⛔ It still clears the validator's floor (3× the measured noise = 2.28 mm) with room, so a
-  // reversal cannot be jitter — and a shorter leg pairs with the shorter window: the gesture
-  // gets smaller and faster rather than smaller and slower.
-  evictShakeLegMm: 6,
-  // ⭐ **0.45 — the owner's, 2026-09-17**, slightly looser than my 0.4. ⚠ It admits a hand's
-  // natural bow and must still refuse a circle; ⛔ the gap between those two is the whole
-  // question, and it is a finger's to answer. `shake.test.ts` keeps the circle counter-example
-  // at its own fixture values, so the refusal is still proven whatever this number becomes.
-  evictShakeStraightness: 0.45,
+  // ── The unsnap's rapid move — the shake's two owner-chosen numbers (2026-09-17), kept. ──
+  unsnapWindowMs: 300,
+  unsnapLegMm: 6,
   // ⭐⭐ SHIPPED AS `beta = 0` ON DEVICE EVIDENCE, AGAINST MY OWN MEASUREMENT.
   // A/B'd by finger on 2026-09-14 (`?rollFilterBeta=0` vs the default) and the
   // filtered version was judged better. ⛔ My metric said the opposite — it scored
@@ -1223,7 +1188,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   //
   // ⛔⛔ **AND `pointerNoiseMm` IS THE LOAD-BEARING ONE.** Three rules here are MULTIPLES of
   // it, so `pointerNoiseMm=0` does not merely set a number to zero — it silently satisfies
-  // `evictShakeLegMm ≥ 3×0` and `motionDeadbandMm ≥ 3×0`, disabling two guards that exist to
+  // `unsnapLegMm ≥ 3×0` and `motionDeadbandMm ≥ 3×0`, disabling two guards that exist to
   // protect the user's work from jitter. ⭐ `METHOD`: *a threshold defined as a multiple of a
   // measurement inherits that measurement's failure modes* — including zero.
   const positiveMs: ReadonlyArray<readonly [string, number]> = [
@@ -1271,27 +1236,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // `pointerNoiseMm`, and this one destroys the user's work when it is wrong. The
   // multiple is `shake.ts`'s axis gate — a leg that cannot even establish a direction
   // cannot be a leg.
-  if (cfg.evictShakeLegMm < 3 * cfg.pointerNoiseMm) {
+  if (cfg.unsnapLegMm < 3 * cfg.pointerNoiseMm) {
     throw new Error(
-      `evictShakeLegMm (${cfg.evictShakeLegMm} mm) does not clear 3× the measured ` +
-        `pointer noise (${cfg.pointerNoiseMm} mm): a reversal could be jitter, and ` +
-        "eviction destroys the user's alignments.",
-    );
-  }
-  // ⚠ Two reversals is the minimum that distinguishes a shake from a single stroke that
-  // merely came back. One would make every over-and-return drag an eviction.
-  if (cfg.evictShakeReversals < 2) {
-    throw new Error(
-      `evictShakeReversals (${cfg.evictShakeReversals}) must be at least 2: one ` +
-        "reversal is an ordinary drag that changed its mind.",
-    );
-  }
-  // ⛔ A straightness of 1 or more admits a circle, whose transverse excursion equals
-  // its along-axis amplitude. The guard would be decorative.
-  if (!(cfg.evictShakeStraightness > 0 && cfg.evictShakeStraightness < 1)) {
-    throw new Error(
-      `evictShakeStraightness (${cfg.evictShakeStraightness}) must be in (0, 1): at 1 a ` +
-        "CIRCLE passes, and a circle is the gesture that must not evict.",
+      `unsnapLegMm (${cfg.unsnapLegMm} mm) does not clear 3× the measured pointer noise ` +
+        `(${cfg.pointerNoiseMm} mm): jitter could unsnap a seated part.`,
     );
   }
 

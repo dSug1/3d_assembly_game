@@ -15,17 +15,8 @@
  * these vectors is that single sign.
  */
 import { describe, expect, it } from "vitest";
-import {
-  faceAlignConstraint,
-  flickResetPlan,
-  pioneerTurned,
-  retargetAlignment,
-  tapMeaning,
-  alignModeFor,
-  pressMeaning,
-  type PressContext,
-  type TapContext,
-  outsideTapReleases,
+import { faceAlignConstraint, flickResetPlan, pioneerTurned, retargetAlignment, alignModeFor, pressMeaning, type PressContext,
+  outsideTapRelease,
 } from "@input/alignment";
 import {
   singleAlignment,
@@ -256,16 +247,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
   // deleted 41 fork vectors and 15 with `D66`.
   // ⭐ `D90`: the TAPPED body is the PIONEER and the HELD body is the FOLLOWER, on the release
   // path too — every field is a question about the HELD body now.
-  const tap = (over: Partial<TapContext> = {}): TapContext => ({
-    tappedObject: "objectB",
-    tappedFace: "+x",
-    heldObject: "objectA",
-    pioneerOfHeld: null,
-    pioneerFaceOfHeld: null,
-    alignedFaceOfHeld: null,
-    heldPressFace: null,
-    ...over,
-  });
 
   const press = (over: Partial<PressContext> = {}): PressContext => ({
     // ⭐ `D87`: the PRESSED body is the PIONEER and the HELD body is the FOLLOWER.
@@ -296,11 +277,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
       action: "ALIGN",
       mode: "SNAPSHOT",
     });
-    // ⛔⛔ AND THE RELEASE NO LONGER ALIGNS AT ALL (`D90`): the press owns that since `D87`, so
-    // an ordinary tap on another body is `D28`'s mode toggle and nothing else.
-    // ⚠ RED against `D67`'s `tapMeaning`, which answered `ALIGN` here — and that answer is what
-    // silently re-pointed an alignment when the owner expected a swap.
-    expect(tapMeaning(tap())).toEqual({ action: "TOGGLE", mode: null });
   });
 
   it("⭐⭐⭐ THE MODE COMES FROM *THIS* PRESS NOW, not from the held grip", () => {
@@ -381,40 +357,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
     ).toBe("ALIGN");
   });
 
-  it("⭐⭐ THE UNDO MOVED TO THE RELEASE, AND IT RELEASES THE **HELD** BODY", () => {
-    // ⛔⛔ `D39`, and its three terms are `pressMeaning`'s exactly: the press saw an alignment it
-    // would not change and did nothing, so the release lets it go. ⚠ `D67` released the TAPPED
-    // body here, which under `D87` would break the PIONEER's own relation to a third body.
-    const same = {
-      pioneerOfHeld: "objectB",
-      pioneerFaceOfHeld: "+x",
-      alignedFaceOfHeld: "f5",
-      heldPressFace: "f5",
-    };
-    expect(tapMeaning(tap(same))).toEqual({ action: "UNALIGN", mode: null });
-    // ⭐ A different PIONEER face, or a different HitFace, is a re-point the PRESS already made —
-    // so the release must NOT also undo it. ⚠ RED against a two-term undo.
-    expect(tapMeaning(tap({ ...same, tappedFace: "-z" })).action).toBe(
-      "TOGGLE",
-    );
-    expect(tapMeaning(tap({ ...same, heldPressFace: "f2" })).action).toBe(
-      "TOGGLE",
-    );
-    // ⛔ And the namespace collision again (defect 63): `alignedFaceOfHeld` must be compared with
-    // `heldPressFace`, never with `tappedFace` — they belong to different bodies.
-    expect(
-      tapMeaning(
-        tap({
-          tappedFace: "f5",
-          pioneerOfHeld: "objectB",
-          pioneerFaceOfHeld: "f5",
-          alignedFaceOfHeld: "f5",
-          heldPressFace: "f9",
-        }),
-      ).action,
-    ).toBe("TOGGLE");
-  });
-
   it("⚠⚠ AND THE MULTI-SELECT `D67` WAS CHOSEN FOR IS GONE — the cost, as a vector", () => {
     // ⛔⛔ `D67`'s own reason: *"which enables to select several follower objects to the pioneer
     // object in one go."* ⚠ Inverted, the single HELD body is the Follower, and a Follower is
@@ -445,14 +387,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
       "NOTHING",
     );
   });
-
-  it("⭐ a tap with nothing held, or on the held body itself, still TOGGLES the mode", () => {
-    // ⛔ `D28`'s tap toggle is untouched by the inversion — and since `D66` it is the only
-    // trigger left, so breaking it here would take the mode switch with it.
-    expect(tapMeaning(tap({ heldObject: null })).action).toBe("TOGGLE");
-    expect(tapMeaning(tap({ tappedObject: null })).action).toBe("TOGGLE");
-    expect(tapMeaning(tap({ tappedObject: "objectA" })).action).toBe("TOGGLE");
-  });
 });
 
 describe("⭐⭐⭐ THE ROTATION RESET — scoped by WHEN the alignment happened", () => {
@@ -461,10 +395,10 @@ describe("⭐⭐⭐ THE ROTATION RESET — scoped by WHEN the alignment happened
     // > looses the alignment)."* ⭐ Because the snapshot PREDATES the alignment, so restoring
     // it would leave the object disagreeing with its own constraint — the one state §1.4
     // exists to prevent.
-    expect(flickResetPlan(true)).toEqual({
-      restoreOrientation: true,
-      dropAlignment: true,
-    });
+    // ⛔⛔ `D107` (2026-09-27): the drop branch is deleted — a flick in the gesture that made the
+    // alignment now does NOTHING, since restoring the pre-alignment pose would contradict the
+    // constraint. ⛔ RED against the old plan, which dropped the alignment and restored.
+    expect(flickResetPlan(true)).toEqual({ restoreOrientation: false });
   });
 
   it("⛔⛔ an alignment that PREDATES the press survives the reset", () => {
@@ -474,18 +408,7 @@ describe("⭐⭐⭐ THE ROTATION RESET — scoped by WHEN the alignment happened
     // satisfies the constraint. No re-solve, no special case — which is what makes the
     // owner's framing better than mine. I had asked the question about the STATE; the answer
     // is about the GESTURE, and only the gesture can tell these two cases apart.
-    expect(flickResetPlan(false)).toEqual({
-      restoreOrientation: true,
-      dropAlignment: false,
-    });
-  });
-
-  it("⚠ the orientation is restored in BOTH cases — the reset is never refused", () => {
-    // ⭐ The owner reinstated *the rotation reset*; the alignment's fate is the only thing
-    // that varies. ⛔ Stated as its own vector so a later session cannot read the two above
-    // as *"sometimes it does nothing"*.
-    expect(flickResetPlan(true).restoreOrientation).toBe(true);
-    expect(flickResetPlan(false).restoreOrientation).toBe(true);
+    expect(flickResetPlan(false)).toEqual({ restoreOrientation: true });
   });
 });
 
@@ -641,23 +564,26 @@ describe("⛔⛔ TURNING THE PIONEER — two readings of what an alignment MEANS
   });
 });
 
-describe("⭐⭐⭐ `D95` — a tap on empty space while holding an aligned body releases it", () => {
-  it("⭐⭐ one held body, aligned → the tap releases it", () => {
+describe("⭐⭐⭐ `D95`/`D107` — a tap on empty space while holding releases", () => {
+  it("⭐⭐ one held body, aligned → the tap releases ITS alignment", () => {
     // > *"first touch pressed on aligned object and single tap with second touch not raycast
-    // > hitting any object"* — and the desktop's right-hold + left click on empty space is the
-    // > same configuration, so it needs no rule of its own.
-    expect(outsideTapReleases(1, true)).toBe(true);
+    // > hitting any object"* — the desktop's right-hold + left click on empty space is the same.
+    expect(outsideTapRelease(1, true, 0)).toBe("SELF");
   });
 
-  it("⛔⛔ a FREE held body keeps the old meaning — the mode toggle", () => {
-    // ⚠ RED against releasing on any held body: the tap would stop toggling the mode for a
-    // configuration that has no alignment to give up.
-    expect(outsideTapReleases(1, false)).toBe(false);
+  it("⭐⭐ `D107`: holding a PIONEER → the tap releases ALL its followers (the Pioneer shake's job)", () => {
+    // ⛔ RED against `D95`, which answered nothing for an unaligned held body.
+    expect(outsideTapRelease(1, false, 2)).toBe("FOLLOWERS");
   });
 
-  it("⛔ nothing held, or two held, is not this rule", () => {
-    expect(outsideTapReleases(0, false)).toBe(false);
+  it("⭐ aligned AND a Pioneer → its OWN alignment first", () => {
+    expect(outsideTapRelease(1, true, 3)).toBe("SELF");
+  });
+
+  it("⛔ a free held body with no followers, nothing held, or two held → not this rule", () => {
+    expect(outsideTapRelease(1, false, 0)).toBeNull();
+    expect(outsideTapRelease(0, false, 0)).toBeNull();
     // ⚠ *which one?* has no answer with two
-    expect(outsideTapReleases(2, true)).toBe(false);
+    expect(outsideTapRelease(2, true, 1)).toBeNull();
   });
 });

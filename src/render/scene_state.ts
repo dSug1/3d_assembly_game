@@ -14,7 +14,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, ShakeDetector, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
+import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -284,7 +284,6 @@ export interface Held {
    * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
    * established, and a fresh press is a fresh axis — `shake.ts` says so in its own header.
    */
-  shake: ShakeDetector;
   /**
    * ⭐⭐ A10's gate needs the ANCHOR's motion state, and the anchor has no recognizer of
    * its own — only a role. ⛔ One tracker per participating touchpoint, keyed by pointer

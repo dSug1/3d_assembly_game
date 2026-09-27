@@ -271,9 +271,9 @@ describe("⭐⭐⭐ the unsnap gesture — one touchpoint on each body, then a r
     expect(unsnapCouple("f", "f", pioneerOf, seated)).toBeNull();
   });
 
-  it("⭐ the params are the eviction shake's own sliders — *\"same sliders as eviction shake\"*", () => {
-    expect(P.legMm).toBe(DEFAULT_CONFIG.evictShakeLegMm);
-    expect(P.windowMs).toBe(DEFAULT_CONFIG.evictShakeWindowMs);
+  it("⭐ the params are the unsnap's own sliders — the shake's two numbers, kept when it was deleted (D107)", () => {
+    expect(P.legMm).toBe(DEFAULT_CONFIG.unsnapLegMm);
+    expect(P.windowMs).toBe(DEFAULT_CONFIG.unsnapWindowMs);
   });
 
   it("⭐⭐ TOUCH: the fingers' separation GROWING by a leg within the window fires, once", () => {
