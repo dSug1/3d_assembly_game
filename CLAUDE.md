@@ -46,6 +46,16 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-27)
 
+⛔⛔⛔ **BUILD NOW, BEFORE ANYTHING ELSE — THE PLAYABILITY PROGRAM** (`D116`, the owner): **`3D6`
+COLLISION** (no body penetrates another — translation STOPS and SLIDES; a rotation is CLAMPED along
+its OWN axis, never slid, never turned about another axis, *"because quaternion are not commutable
+and the user cannot go back"*; the convex hull at spawn + GJK for now, behind seams that Blender-
+authored `UCX_` shapes and bounds replace later, `3D8`/`3D9`) → **`GM1`** a goal, the MATE check
+(the snap plus the SPIN, judged against the level's target) and completion → **`3D7`** a play
+volume → **`3D2`** the approach → **`GM9`** the player layer →
+[`Claude/00_CORE/queue_notes/PLAYABILITY_2026-09-27.md`](Claude/00_CORE/queue_notes/PLAYABILITY_2026-09-27.md),
+[`Claude/30_OBJECTS_3D/spec/COLLISION.md`](Claude/30_OBJECTS_3D/spec/COLLISION.md).
+
 ⭐⭐⭐ **THE INPUTS ARE SIMPLIFIED** (`D106`–`D109`, 2026-09-27, branch `1.0.39-Inputs-simplification`)
 — ⛔ **NO DEVICE LOOK YET.** The owner accepted a merge-and-eliminate pass; the one list of every
 input, both devices, is now [`Claude/10_INPUT_TOUCH/spec/INPUTS_TABLE.md`](Claude/10_INPUT_TOUCH/spec/INPUTS_TABLE.md).
