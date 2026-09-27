@@ -5,10 +5,9 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { rollDragDeg, secondFingerDrive, depthLimits, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, screenRollRotation, MotionTracker, type Sample } from "../input";
-import { type Vec3 } from "../core/vec";
+import { type Vec3, IDENTITY } from "../core/vec";
 import { incrementRadians } from "../input/rotation_increment";
 import { rotationChannel } from "../core/constraint_stack";
-import { IDENTITY } from "../core/vec";
 import { bothAxesSecondDrive } from "../input/second_touch_drive";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";

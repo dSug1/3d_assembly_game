@@ -57,18 +57,8 @@ export type ReleaseKind =
 // and leaving the kind producible let the detector **veto the flick test** — see `release`.
 // ⚠ An unreachable variant is a trap, so it is deleted rather than documented as impossible.
 
-/**
- * The discrete rule the release-time priority ladder selects. Exactly one may fire.
- * `NONE` means the provisional continuous motion stands.
- */
-export type DiscreteRule = "2septies" | "NONE";
-
 export interface ReleaseVerdict {
   readonly kind: ReleaseKind;
-  /** True when the pose was restored to the press snapshot. */
-  readonly rolledBack: boolean;
-  /** The one discrete rule permitted to fire. */
-  readonly rule: DiscreteRule;
   /** Press → release, ms. */
   readonly durationMs: number;
   /**
@@ -87,20 +77,9 @@ export interface PosePort<P> {
   restore(pose: P): void;
 }
 
-/**
- * §1.3 RELEASE-TIME PRIORITY. Exactly one discrete rule may fire:
- *
- *     6quater (mate flick, two-object context)
- *       > 2ter / 2quater (axis flick, single-object context)
- *       > none (keep the provisional continuous motion)
- *
- * ⭐ Pure, and exported, so the ladder is testable without a gesture at all.
- */
-export function resolveDiscreteRule(kind: ReleaseKind): DiscreteRule {
-  // ⛔ `6quater`, `2ter` and `2quater` were FLICK rules; `D110` deleted the flick with them.
-  return kind === "DOUBLE_TAP" ? "2septies" : "NONE";
-}
-
+// ⛔⛔ `resolveDiscreteRule`, `DiscreteRule` and `ReleaseVerdict.rule` / `.rolledBack` are DELETED (audit
+// 2026-09-27): the flick rules went with `D110`, the double-tap eviction ("2septies") with `D111`'s undo,
+// and the rollback with 2026-09-16 — what was left only re-labelled the `kind`, or was always `false`.
 /**
  * Double-tap memory.
  *
@@ -388,8 +367,6 @@ export class Recognizer<P> {
       if (kind === "HOLD") this.taps.reset();
       return {
         kind,
-        rolledBack: false,
-        rule: resolveDiscreteRule(kind),
         durationMs,
         liftSpeedMmPerS,
       };
@@ -410,8 +387,6 @@ export class Recognizer<P> {
     // ⛔⛔ `D110`: A COMMITTED GESTURE ENDS KEPT — there is no flick test left to run.
     return {
       kind: "CONTINUOUS_KEPT",
-      rolledBack: false,
-      rule: "NONE",
       durationMs,
       liftSpeedMmPerS,
     };

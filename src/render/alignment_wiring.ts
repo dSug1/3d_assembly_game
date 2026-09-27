@@ -5,61 +5,15 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { graceAfterUnsnap } from "./collision_wiring";
-import { isTapRelease, tapReleaseToggles, toggleBehaviour, faceAlignConstraint, squaringTwist, type AlignMode, type Sample } from "../input";
-import { detach, worldPlacementOf, type ObjectId } from "../core/object_model";
+import { isTapRelease, tapReleaseToggles, toggleBehaviour, faceAlignConstraint, squaringTwist, type Sample } from "../input";
+import { detach, worldPlacementOf, type ObjectId, clearObjectConstraints, evictObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { singleAlignment, solve } from "../core/constraint_stack";
-import { clearObjectConstraints, evictObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
 import { IDENTITY, qmul } from "../core/vec";
 import { assemblyRoot } from "../input/assembly";
 import { ALIGN_SNAP_FRACTION, type Held, type SceneState } from "./scene_state";
 import { modelOrientation, setModelOrientation } from "./bodies";
-import { paintHighlightColours } from "./markers";
-
-/** ⭐ The same offer as keys, as the PRESS path needs it (the frozen-face exception). */
-export function alignFollowerToPioneer(st: SceneState, followerPointerId: number,
-  followerGrip: Held,
-  mode: AlignMode,
-  /**
-   * ⭐⭐⭐ **THE FINGER THAT IS ABOUT TO GO AWAY**, named by the caller because only the caller
-   * knows. ⛔ Its `pressFace` is wiped at the end; the other grip's is left alone.
-   *
-   * ⚠⚠ It was `followerGrip`, hard-coded, and that was true only of `D67`'s press path. The two
-   * call sites disagree about which finger is transient — on a PRESS the Pioneer's touch is the
-   * new one, on a RELEASE the follower's is the one lifting — so a fixed answer is wrong for one
-   * of them whichever way it points. ⭐ `METHOD`: *when two callers disagree about a fact, the
-   * fact is an argument, not a constant.*
-   */
-  transientGrip: Held,) : boolean {
-  const followerId = st.idOf.get(followerGrip.mesh);
-  if (followerId === undefined || followerGrip.pressFace === null) {
-    st.lastVerdict = "align: press resolved no face — toggled instead";
-    return false;
-  }
-  // ⛔⛔ EXACTLY ONE OTHER HOLDER. The rule names a *first* and a *second* object; with
-  // two other objects held, *which* one is the Follower has no answer worth trusting, and
-  // guessing would align an object the hand did not mean to move. ⭐ Same discipline as
-  // `A15`'s *"every remaining holder is evaluated, not a guessed pairing"*.
-  const others = [...st.held.entries()].filter(
-    ([pid]) => pid !== followerPointerId,
-  );
-  if (others.length !== 1) {
-    st.lastVerdict =
-      others.length === 0
-        ? "align: nothing held — the tap toggled the mode"
-        : `align: ${others.length} objects held — no Pioneer can be chosen, toggled instead`;
-    return false;
-  }
-  const pioneerGrip = others[0]![1];
-  const pioneerId = st.idOf.get(pioneerGrip.mesh);
-  if (pioneerId === undefined || pioneerGrip.pressFace === null) {
-    st.lastVerdict =
-      "align: the held object has no resolved PioneerFace — toggled instead";
-    return false;
-  }
-  return alignFollowerTo(st, followerId, followerGrip, mode, pioneerId, pioneerGrip.pressFace.faceId, transientGrip);
-}
 
 /**
  * ⭐⭐ `D119` — the alignment with its Pioneer NAMED, not found among the held grips: a TAP on the
@@ -69,7 +23,6 @@ export function alignFollowerTo(
   st: SceneState,
   followerId: ObjectId,
   followerGrip: Held,
-  mode: AlignMode,
   pioneerId: ObjectId,
   pioneerFaceIdIn: string,
   /** The finger that selected the Pioneer, if it was a grip — its `pressFace` is wiped. */
@@ -206,18 +159,12 @@ export function alignFollowerTo(
   if (swapped !== null) {
     st.lastVerdict = `align: SWAP — released ${swapped}'s own alignment, ${followerId}→${pioneerId}`;
   }
-  followerGrip.alignmentTouched = true;
   // ⭐⭐ THE HIGHLIGHT IS THE ALIGNMENT'S STATE, not the press's: it appears HERE and dies
   // with the constraint (`D35`, and the owner's *"until un-highlight occurs"*).
   // ⚠ Captured BEFORE the grip's face is cleared below — the readout names the face this
   // alignment was actually made on, and reading it back off a cleared grip is how a verdict
   // line starts lying.
   const followerFaceId = followerGrip.pressFace.faceId;
-  st.selectedFace = {
-    objectId: followerId,
-    faceId: followerFaceId,
-    cos: followerGrip.pressFace.cos,
-  };
   // ⛔⛔ *"THEN THE PIONEERFACE RESETS AS NULL"* WAS AMENDED THE SAME DAY. The owner now
   // wants its **contour highlighted until the alignment is broken**, and a re-tap on that
   // same face to break it — so the face's identity is REMEMBERED where it can be drawn and
@@ -279,7 +226,6 @@ export function alignFollowerTo(
     st.lastVerdict = `align: REFUSED — ${followerId}→${pioneerId} would close a cycle`;
     st.hudDirty = true;
   }
-  paintHighlightColours(st);
   // ⛔⛔⛔ **THE MODE NO LONGER SWITCHES — the owner removed that clause, 2026-09-16:**
   //
   // > *"the mode shall not switch automatically to translation mode after an alignment in
@@ -295,7 +241,7 @@ export function alignFollowerTo(
   // so `TRANSLATE` is one tap away — and staying in `ROTATE` is what makes the rotation
   // reset testable straight after an alignment.
   st.lastVerdict =
-    `align: ${mode} ${followerId}/${followerFaceId} → ` +
+    `align: SNAPSHOT ${followerId}/${followerFaceId} → ` +
     `${pioneerId}/${pioneerFaceId} · ${solved.freeDof} DOF free · stays ${st.behaviour}`;
   return true;
 }
@@ -372,12 +318,6 @@ export function releaseAlignmentOf(st: SceneState, followerId: ObjectId) : void 
   // ⭐ `D100`: a released alignment takes its seat with it — the body keeps its world pose.
   unseatWorld(st, followerId);
   st.links.unlink(followerId);
-  // ⚠ The ACTIVE-alignment records are cleared only if this body is the one they name: the
-  // tap, shake and flick rules read them, and wiping them for an unrelated body would make
-  // the next gesture on the ACTIVE follower behave as though nothing were aligned.
-  if (st.selectedFace?.objectId === followerId) {
-    st.selectedFace = null;
-  }
 }
 
 

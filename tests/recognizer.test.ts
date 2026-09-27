@@ -13,7 +13,6 @@ import type { Sample } from "../src/input/motion";
 import {
   Recognizer,
   TapHistory,
-  resolveDiscreteRule,
   type PosePort,
 } from "../src/input/recognizer";
 import { mmToPx } from "../src/core/units";
@@ -153,7 +152,6 @@ describe("recognizer — provisional motion and rollback", () => {
     pose.moveProvisionally(42); // the rotation the hand performed, on purpose
     const v = rec.release(samples[samples.length - 1]!);
     expect(v.kind).toBe("CONTINUOUS_KEPT");
-    expect(v.rolledBack).toBe(false);
     expect(pose.restored).toEqual([]);
     expect(pose.current()).toBe(42);
   });
@@ -189,7 +187,6 @@ describe("recognizer — provisional motion and rollback", () => {
     pose.moveProvisionally(42);
     const v = rec.release(settled[settled.length - 1]!);
     expect(v.kind).toBe("CONTINUOUS_KEPT");
-    expect(v.rolledBack).toBe(false);
     expect(pose.restored).toEqual([]);
     expect(pose.current()).toBe(42);
   });
@@ -214,7 +211,7 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
       { x: 100, y: 100, t: 100 },
     ]);
     expect(v.kind).toBe("TAP");
-    expect(v.rule).toBe("NONE"); // selection is rule 2, on press; a tap fires nothing
+    expect(v.kind).not.toBe("DOUBLE_TAP"); // selection is rule 2, on press; a tap fires nothing
   });
 
   it("⛔ a LONG press with no travel is a HOLD, not a TAP", () => {
@@ -227,10 +224,10 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
       { x: 100, y: 100, t: 400 },
     ]);
     expect(v.kind).toBe("HOLD");
-    expect(v.rule).toBe("NONE");
+    expect(v.kind).not.toBe("DOUBLE_TAP");
   });
 
-  it("⭐ two taps on TWO DIFFERENT touchpoints are a DOUBLE_TAP → rule 2septies", () => {
+  it("⭐ two taps on TWO DIFFERENT touchpoints are a DOUBLE_TAP", () => {
     // ⛔ THE REASON TapHistory IS NOT IN THE RECOGNIZER: two taps are two pointer
     // ids, so the recognizer that saw the first is gone when the second presses.
     const pose = recordingPose();
@@ -248,7 +245,7 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
       { x: 100, y: 100, t: 380 },
     ]);
     expect(v.kind).toBe("DOUBLE_TAP");
-    expect(v.rule).toBe("2septies");
+    expect(v.kind).toBe("DOUBLE_TAP");
   });
 
   it("⭐⭐⭐ `A22` — `wouldPair` ANSWERS ON THE WAY DOWN WHAT `record` ANSWERS ON THE WAY UP", () => {
@@ -380,10 +377,10 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
       { x: 100, y: 100, t: 360 },
     ]);
     expect(third.kind).toBe("TAP");
-    expect(third.rule).toBe("NONE");
+    expect(third.kind).not.toBe("DOUBLE_TAP");
   });
 
-  it("⭐⭐ a HOLD breaks the chain too — and the harm is 2septies, not a wrong label", () => {
+  it("⭐⭐ a HOLD breaks the chain too — and the harm is a false DOUBLE_TAP, not a wrong label", () => {
     // ⛔⛔ NOTHING TESTED THIS BEFORE 2026-09-17: deleting `if (kind === "HOLD")
     // this.taps.reset();` from `release` left every vector in this file green. ⚠ The
     // mechanism was described in three comments and asserted by none — which is exactly the
@@ -428,7 +425,7 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
         { x: 100, y: 100, t: 260 },
       ]);
       expect(after.kind, holdVia).toBe("TAP");
-      expect(after.rule, holdVia).toBe("NONE");
+      expect(after.kind, holdVia).not.toBe("DOUBLE_TAP");
     }
   });
 
@@ -464,7 +461,7 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
       { x: 100, y: 100, t: 500 },
     ]);
     expect(second.kind).toBe("DOUBLE_TAP");
-    expect(second.rule).toBe("2septies");
+    expect(second.kind).toBe("DOUBLE_TAP");
   });
 });
 
@@ -516,7 +513,6 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
     pose.moveProvisionally(42);
     const v = rec.release(samples[samples.length - 1]!);
     expect(v.kind).toBe("CONTINUOUS_KEPT");
-    expect(v.rolledBack).toBe(false);
     expect(pose.current()).toBe(42);
   });
 
@@ -541,14 +537,6 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
     }
   });
 
-});
-
-describe("release-time priority (§1.3) — after `D110`", () => {
-  it("a DOUBLE_TAP fires 2septies; every other kind fires nothing", () => {
-    expect(resolveDiscreteRule("DOUBLE_TAP")).toBe("2septies");
-    for (const kind of ["CONTINUOUS_KEPT", "TAP", "HOLD"] as const)
-      expect(resolveDiscreteRule(kind)).toBe("NONE");
-  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -620,7 +608,7 @@ describe("⛔⛔ a gesture ANOTHER RULE consumed is never a tap", () => {
     expect(pressAndLift(mk(), 100, true).kind).toBe("HOLD");
     const second = pressAndLift(mk(), 200, true);
     expect(second.kind).toBe("HOLD");
-    expect(second.rule).toBe("NONE");
+    expect(second.kind).not.toBe("DOUBLE_TAP");
     // ⭐ ...and the chain the two pushes passed through is BROKEN, so the next real tap is a
     // first tap. ⚠ 300 − 60 = 240 ms: inside `doubleTapWindow`, on the same point, so only
     // the reset stands between this and an eviction nobody asked for.
@@ -629,7 +617,7 @@ describe("⛔⛔ a gesture ANOTHER RULE consumed is never a tap", () => {
       { x: 100, y: 100, t: 360 },
     ]);
     expect(later.kind).toBe("TAP");
-    expect(later.rule).toBe("NONE");
+    expect(later.kind).not.toBe("DOUBLE_TAP");
   });
 
   it("⭐ it does NOT commit the gesture — the finger may still drag afterwards", () => {

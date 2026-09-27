@@ -121,7 +121,6 @@ export type TapAction =
 /** What a tap decided. ⛔ `mode` is `null` for `TOGGLE`, which needs none. */
 export interface TapMeaning {
   readonly action: TapAction;
-  readonly mode: AlignMode | null;
 }
 
 
@@ -175,12 +174,6 @@ export interface PressContext {
    */
   readonly pressedIsSeatedPartner?: boolean;
   /** ⭐ The mode comes from the PIONEER's press — see `TapContext`. */
-  /**
-   * ⭐⭐ **THIS PRESS'S OWN double tap.** ⛔ `D67` read it off the HELD grip because the held body
-   * was the Pioneer; with `D87`'s inversion the Pioneer is the body being pressed, so the mode
-   * comes from the touch that selects it.
-   */
-  readonly pressWasDoubleTap: boolean;
 }
 
 /**
@@ -228,7 +221,7 @@ export interface PressContext {
  * body, the same body twice, and the cycle.
  */
 export function pressMeaning(ctx: PressContext): TapMeaning {
-  const nothing: TapMeaning = { action: "NOTHING", mode: null };
+  const nothing: TapMeaning = { action: "NOTHING" };
   // ⚠ The PRESSED body supplies the PioneerFace, so without one there is nothing to aim at.
   if (ctx.pressedObject === null || ctx.pressedFace === null) return nothing;
   // ⛔ Exactly one held body, or *which Follower?* has no answer.
@@ -277,7 +270,7 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
   // relation, the roles exchanged. ⭐ That is the owner's *"the first touch is on the hitface which
   // potentially becomes a followerface"* holding **without an exception**, which is the whole
   // argument: a rule with one configuration it silently refuses is a rule a hand cannot trust.
-  return { action: "ALIGN", mode: alignModeFor() };
+  return { action: "ALIGN" };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -293,41 +286,12 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
 // ⭐ The owner's two readings, behind one flag, because they are opposite answers to *what
 // does an alignment MEAN* — a snapshot of a direction, or a relationship between two faces:
 
-/**
- * ⭐⭐⭐ **WHAT AN ALIGNMENT *IS* — and since 2026-09-17 the GESTURE says which, not a flag.**
- *
- * ⛔⛔ THESE WERE `D41`'s FORKS C1 AND C2, chosen by `?pioneerTurnRule`. The owner merged them
- * the same day: *"one single tap on the second object PioneerFace: the logic is as fork C1 …
- * one double tap … the logic is as fork C2"*. ⭐⭐ So the reading is no longer a setting a
- * session picks — it is **a property of each alignment**, chosen when it is made and readable
- * on the glass, because the two modes are drawn in different colours.
- */
-export type AlignMode =
-  /**
-   * ⭐ **SNAPSHOT — made by a SINGLE TAP.** The alignment is a snapshot of a direction:
-   * turning the Pioneer invalidates it, so it is released, the Follower is **not** rotated,
-   * and both highlights go. ⚠ Drawn in **two colours** — the two faces are related only by
-   * the moment the tap happened.
-   */
-  | "SNAPSHOT";
+// ⛔ `AlignMode` and `alignModeFor` are DELETED (audit 2026-09-27): since `D106` every alignment is a
+// snapshot, and a one-member type carried through every call was noise.
 // ⛔⛔ **`FOLLOW` IS DELETED** (`D106`, the owner, 2026-09-27: *"OK"* to merging SNAPSHOT and FOLLOW).
 // ⭐ The snap made it redundant: a SEATED Follower is carried by the tree (`D100`), and an unseated
 // one is being steered toward its ring, with no reason to follow the Pioneer around. So every
 // alignment is a snapshot; a double press no longer means anything different from a single one.
-
-/**
- * ⭐ Which mode a gesture asks for. ⛔ ONE place, so the mapping cannot drift between the press
- * path and the release path — `CONSTRAINTS` §4.
- *
- * ⚠⚠ **`D67` MOVED WHICH FINGER ANSWERS IT**, and nothing else. It used to take the SECOND
- * touch's tap kind; it now takes the **Pioneer's own press** — *"the first touch shall be double
- * tap without final release [on] the pioneer object"* — so the parameter is a boolean about a
- * grip rather than a verdict about this touch. ⭐ The mapping itself is untouched: a pair means
- * a relationship, a single means a snapshot.
- */
-export function alignModeFor(): AlignMode {
-  return "SNAPSHOT";
-}
 
 /** What the Pioneer's turn costs the Follower. ⭐ A decision; the caller acts. */
 export interface PioneerTurn {
@@ -518,18 +482,5 @@ export function squaringTwist(axis: Vec3, follower: Quat, pioneer: Quat): Quat {
   // modulo 90° is turned — which is what bounds the twist at 45°.
   const quarter = Math.PI / 2;
   return qFromAxisAngle(n, angle - quarter * Math.round(angle / quarter));
-}
-
-/**
- * ⭐⭐⭐ **`D119` — THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP** (the owner, 2026-09-27: *"I want the
- * follower object to align only if I do first touch hold on follower object + second touch tap on
- * pioneer object: if I do a press of second touch, the object shall not align : it shall align only
- * on a released tap"*).
- * ⛔ `D55`/`D87` aligned on the PRESS — so a second finger put down to steer (gravity, roll), say over
- * a body that fills the screen, re-aligned the Follower. ⭐ Now the press only REMEMBERS what it would
- * do; the release decides, and only a TAP (short, unmoved) carries it out.
- */
-export function alignsOnRelease(kind: "TAP" | "DOUBLE_TAP" | "HOLD" | "CONTINUOUS_KEPT"): boolean {
-  return kind === "TAP" || kind === "DOUBLE_TAP";
 }
 

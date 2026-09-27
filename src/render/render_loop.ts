@@ -23,7 +23,11 @@ import { syncSeats } from "./seat_wiring";
 
 export function startRenderLoop(st: SceneState): void {
 
-  st.engine.runRenderLoop(() => {
+  // ⛔⛔ AUDIT 2026-09-27: THE WHOLE FRAME IS GUARDED. Babylon queues the next frame only AFTER this
+  // function returns (`AbstractEngine._renderLoop`), so one throw anywhere below used to stop the loop
+  // for good — a frozen glass with no error. ⭐ Now it lands on the HUD's DRAWFAULT line and the next
+  // frame runs; the inner `guardDraw` around the markers stays, so a marker fault does not skip the rest.
+  st.engine.runRenderLoop(() => guardDraw(st, "frame", () => {
     const now = performance.now();
 
     // ⭐ And on idle frames too: a flip made with an empty glass produces no pointer event.
@@ -628,5 +632,5 @@ export function startRenderLoop(st: SceneState): void {
 
     st.scene.render();
     st.frames++;
-  });
+  }));
 }

@@ -299,15 +299,3 @@ export function rotationChannel(stack: readonly Constraint[]): RotationChannel {
   return { kind: "TWIST", axis: only.targetWorld, constraint: only };
 }
 
-/**
- * ⭐⭐ **DOES THIS BODY CARRY AN ALIGNMENT?** — what the follower highlight and the link index
- * actually want to know.
- *
- * ⛔ `render/scene.ts` asked `constraints.length > 0`, which counts a **MATE** as an
- * alignment. ⚠ `evict` deliberately never removes a mate, so a mated body would keep its
- * follower marker and its entry in the two-way index for ever — a stale highlight, which is
- * the exact failure that produced two false device reports on 2026-09-17.
- */
-export function hasAlignment(stack: readonly Constraint[]): boolean {
-  return stack.some((c) => c.kind !== "MATE");
-}

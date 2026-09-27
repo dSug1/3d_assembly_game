@@ -69,7 +69,7 @@ describe("⛔⛔⛔ `D59` — WHEN DOES THE SECOND TOUCH GIVE BOTH AXES?", () =>
   // **one rotational DOF left**, so there is nothing for a mode to choose between.
 
   it("⭐⭐⭐ OUTSIDE any object + an ALIGNED FOLLOWER → BOTH — the owner's change", () => {
-    expect(secondTouchDrive("OUTSIDE", true)).toBe("BOTH");
+    expect(secondTouchDrive(true, "ROTATE")).toBe("BOTH");
   });
 
   it("⛔⛔ OUTSIDE + a FREE body → the mode still picks — `A16` survives where it earns its keep", () => {
@@ -77,14 +77,14 @@ describe("⛔⛔⛔ `D59` — WHEN DOES THE SECOND TOUCH GIVE BOTH AXES?", () =>
     // split is not redundant there. ⛔ This is also where `D58`'s `A16` collision SURVIVES —
     // the channel still alternates as the press toggles the mode. Named, because a device pass
     // must judge it and a green suite cannot.
-    expect(secondTouchDrive("OUTSIDE", false)).toBe("MODE_PICKS");
+    expect(secondTouchDrive(false, "ROTATE")).toBe("MODE_PICKS");
   });
 
   it("⛔⛔ on the SAME object → the mode picks for a FREE body; an ALIGNED one drives both (`D108`)", () => {
     // ⛔⛔ REVERSED 2026-09-27: `D108` makes an aligned body mode-less, so there is no mode left to
     // pick. ⚠ The cost this vector used to guard is now accepted: a finger on the same body moving
     // DIAGONALLY drives gravity AND spin together, where the mode used to keep one.
-    expect(secondTouchDrive("SAME_OBJECT", true)).toBe("BOTH");
-    expect(secondTouchDrive("SAME_OBJECT", false)).toBe("MODE_PICKS");
+    expect(secondTouchDrive(true, "ROTATE")).toBe("BOTH");
+    expect(secondTouchDrive(false, "ROTATE")).toBe("MODE_PICKS");
   });
 });

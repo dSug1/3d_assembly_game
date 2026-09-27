@@ -17,8 +17,7 @@ import { hitFaceNow } from "./markers";
 import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
 
-export function describe(_st: SceneState, v: ReleaseVerdict) : string {
-  const rule = v.rule === "NONE" ? "" : `  → ${v.rule}`;
+export function describe(v: ReleaseVerdict) : string {
   // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16).
   // ⭐⭐ It could no longer fire — `rolledBack` is a permanent `false` — and a HUD line
   // that cannot fire is the DEAD INSTRUMENT shape this project met three times on
@@ -30,7 +29,7 @@ export function describe(_st: SceneState, v: ReleaseVerdict) : string {
   // unfalsifiable on a device: too slow a finger and a broken estimator look the
   // same. That ambiguity is what made the first rollback build feel inconsistent.
   const lift = `lift ${Math.round(v.liftSpeedMmPerS)}mm/s`;
-  return `${v.kind}${rule}  ${Math.round(v.durationMs)}ms  ${lift}`;
+  return `${v.kind}  ${Math.round(v.durationMs)}ms  ${lift}`;
 }
 
 

@@ -4,7 +4,6 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { type AlignMode } from "../input/alignment";
 import { type EpisodeTally } from "../input/episode_ledger";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -186,14 +185,6 @@ export interface Held {
   /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
   prev: Sample;
   /**
-   * ⭐⭐⭐ **`D67` — DID THIS GRIP'S OWN PRESS COMPLETE A DOUBLE TAP?** The owner's route to
-   * orange: *"the first touch shall be double tap without final release [on] the pioneer
-   * object."* ⛔ Latched at the press, because `TapHistory` answers *would this pair* about the
-   * instant the finger landed, and by the time a Follower is chosen the answer has moved on.
-   * ⚠ It is a property of THE PIONEER'S grip; a Follower's own flag is never read.
-   */
-  pressWasDoubleTap: boolean;
-  /**
    * ⭐ The pointer type that PRESSED this grip. ⛔ Read by one rule only —
    * `secondTouchOwnsRollAndDepth` — to learn that a mouse holder's second touch is always one
    * Shift away (`secondTouchAlwaysAvailable`).
@@ -240,45 +231,6 @@ export interface Held {
    * ⚠ `null` in fork A, and whenever the pick resolved no face.
    */
   pressFace: { faceId: string; cos: number } | null;
-  /**
-   * ⭐⭐⭐ **FORK C** — was an alignment pushed or replaced on this object DURING this
-   * gesture? The owner's scoping of the rotation reset, and it cannot be answered by looking
-   * at the state:
-   *
-   * > *"If the object was already aligned when the rotation was started, reset to the
-   * > beginning of the rotation (therefore the alignment is conserved). If the alignment
-   * > occurred during the rotation, reset the rotation (therefore this looses the
-   * > alignment)."*
-   *
-   * ⭐ With the alignment older than the press, the recogniser's snapshot already satisfies
-   * it, so restoring costs nothing. With the alignment made mid-gesture, the snapshot
-   * predates it and restoring would leave the object disagreeing with its own constraint.
-   */
-  alignmentTouched: boolean;
-  /**
-   * ⭐⭐⭐ `D55` — **DID THIS TOUCHPOINT'S OWN *PRESS* MAKE AN ALIGNMENT?**
-   *
-   * ⛔⛔ WITHOUT IT THE GESTURE WOULD UNDO ITSELF. The alignment now fires on the way
-   * DOWN, and the matching release is a `TAP` on the face that alignment names — which
-   * `tapMeaning` reads, correctly and unchanged, as `UNALIGN`. ⚠ So a single tap would
-   * align on the press and break it on the release, ~80 ms apart, and the glass would
-   * show nothing at all having happened.
-   *
-   * ⭐ It also consumes `D28`'s movement-mode toggle, for the reason the tap path has
-   * always consumed it: **one gesture, one consequence.**
-   *
-   * ⚠ Distinct from `alignmentTouched`, which lives on the **Follower's** grip and
-   * answers the flick reset's *"was an alignment made during this gesture?"*. This one
-   * lives on the **Pioneer's** grip and answers *"has this release already been spent?"*.
-   * ⛔ Two questions, two fields — collapsing them would be the substituted-quantity
-   * shape this file has been burned by twice.
-   */
-  pressActed: boolean;
-  /**
-   * ⭐ `D119`: what THIS press would align (the held Follower's pointer and the relation), carried to
-   * the release — which aligns only if it is a TAP. `null` when the press means nothing.
-   */
-  pendingAlign: { heldPointerId: number; mode: AlignMode } | null;
   /**
    * ⭐⭐⭐ `A4`/`D13` — THE EVICTION SHAKE, ONE PER GESTURE, and it is the ESCAPE from
    * defect 41. ⛔ One per gesture because the detector carries the AXIS its first leg
@@ -421,7 +373,6 @@ export interface SceneState {
   tuning: ReturnType<typeof parseConfigOverrides>;
   centreMarker: Mesh;
   mouseLayer: MouseSecondTouchHandle;
-  selectedFace: { objectId: string; faceId: string; cos: number } | null;
   orbitStartZoom: number;
   engine: Engine;
   scene: Scene;

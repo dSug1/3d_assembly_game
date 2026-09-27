@@ -73,31 +73,38 @@ describe("⭐ `D122` — Scene_1's sand floor: halved, 80 %, 107 %, then 103 %",
 
 describe("⭐⭐⭐ `D123` — a FREE body's second touch in TRANSLATE drives both: gravity AND a spin about gravity", () => {
   it("⭐ TRANSLATE → BOTH, on empty space or on the body — RED against `MODE_PICKS`", () => {
-    expect(secondTouchDrive("OUTSIDE", false, "TRANSLATE")).toBe("BOTH");
-    expect(secondTouchDrive("SAME_OBJECT", false, "TRANSLATE")).toBe("BOTH");
+    expect(secondTouchDrive(false, "TRANSLATE")).toBe("BOTH");
+    expect(secondTouchDrive(false, "TRANSLATE")).toBe("BOTH");
   });
 
   it("⛔ ROTATE keeps the mode's pick — the roll about depth stays reachable", () => {
-    expect(secondTouchDrive("OUTSIDE", false, "ROTATE")).toBe("MODE_PICKS");
+    expect(secondTouchDrive(false, "ROTATE")).toBe("MODE_PICKS");
   });
 
   it("an aligned body is BOTH in either mode, as before", () => {
-    expect(secondTouchDrive("OUTSIDE", true, "ROTATE")).toBe("BOTH");
-    expect(secondTouchDrive("OUTSIDE", true, "TRANSLATE")).toBe("BOTH");
+    expect(secondTouchDrive(true, "ROTATE")).toBe("BOTH");
+    expect(secondTouchDrive(true, "TRANSLATE")).toBe("BOTH");
   });
 });
 
 describe("⭐⭐⭐ `D124` — with a body held, a second press on ANOTHER body steers; it never grabs", () => {
-  it("⭐ another body, not in the held body's assembly → steer (RED: it used to be held)", () => {
-    expect(pressSteers({ holdersBefore: 1, hitIsHeld: false, sameAssemblyAsHeld: false })).toBe(true);
+  it("⭐ another body → steer (RED: it used to be held)", () => {
+    expect(pressSteers({ holdersBefore: 1, hitIsHeld: false, seatedPartnerOfHeld: false })).toBe(true);
   });
 
   it("⛔ the first touch still holds; a finger on the held body itself is still `SECOND`", () => {
-    expect(pressSteers({ holdersBefore: 0, hitIsHeld: false, sameAssemblyAsHeld: false })).toBe(false);
-    expect(pressSteers({ holdersBefore: 1, hitIsHeld: true, sameAssemblyAsHeld: true })).toBe(false);
+    expect(pressSteers({ holdersBefore: 0, hitIsHeld: false, seatedPartnerOfHeld: false })).toBe(false);
+    expect(pressSteers({ holdersBefore: 1, hitIsHeld: true, seatedPartnerOfHeld: true })).toBe(false);
   });
 
-  it("⛔ a body in the held body's ASSEMBLY is still held — the unsnap's second touch needs it", () => {
-    expect(pressSteers({ holdersBefore: 1, hitIsHeld: false, sameAssemblyAsHeld: true })).toBe(false);
+  it("⛔ the held body's SEATED PARTNER is still held — the unsnap's second touch needs it", () => {
+    expect(pressSteers({ holdersBefore: 1, hitIsHeld: false, seatedPartnerOfHeld: true })).toBe(false);
+  });
+
+  it("⛔⛔ AUDIT 2026-09-27: a SIBLING in the same assembly STEERS — it is not the seated partner", () => {
+    // ⚠ Two parts both seated on the one plate share an assembly. The first build's exception was
+    // the whole assembly, so holding one and pressing the other still GRABBED it — D124 broken.
+    // ⭐ The caller now asks `isSeatedCouple(held, hit)`, which is false for siblings.
+    expect(pressSteers({ holdersBefore: 1, hitIsHeld: false, seatedPartnerOfHeld: false })).toBe(true);
   });
 });

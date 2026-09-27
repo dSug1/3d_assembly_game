@@ -109,9 +109,6 @@ export function axesFromFrame(frame: GravityFrame): ObjectAxes {
   return { x: frame.right, gravity: frame.up, depth: frame.depth };
 }
 
-/** Which way the offset radius zone was crossed this frame, or `null` for no crossing. */
-export type ZoneEdge = "ENTER" | "EXIT" | null;
-
 /** Everything the rotation basis needs. ⭐ Plain data, so this decision is vectorable too. */
 export interface RotationFrameInputs {
   /** ⭐ The gravity frame built at scene boot. ⚠ `null` before boot has filled it. */

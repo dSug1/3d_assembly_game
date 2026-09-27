@@ -34,13 +34,8 @@ export function bothAxesSecondDrive(
   };
 }
 
-/** Where the driving second touch went down. ⛔ `IN2`'s roles, named for what they MEAN here. */
-export type SecondTouchPlace =
-  /** Outside every object — `A10`'s anchor, and the commonest second finger. */
-  | "OUTSIDE"
-  /** On the very object the first touch is carrying — `A12`'s finger, `IN2`'s `SECOND` role. */
-  | "SAME_OBJECT";
-
+// ⛔ `SecondTouchPlace` is DELETED (audit 2026-09-27): since `D108` the drive depends on the BODY and the
+// mode, never on where the finger landed, and the parameter was ignored.
 /**
  * ⭐⭐⭐ **`D59` — DOES THE SECOND TOUCH GIVE BOTH AXES, OR DOES THE MODE PICK ONE?**
  *
@@ -71,7 +66,6 @@ export type SecondTouchPlace =
  * other by accident — the argument `bothAxesSecondDrive` opens this file with.
  */
 export function secondTouchDrive(
-  _place: SecondTouchPlace,
   heldIsAlignedFollower: boolean,
   /**
    * ⭐⭐ `D123` (the owner, 2026-09-27: *"If an object is not aligned, I cannot reach the roll around
@@ -80,7 +74,7 @@ export function secondTouchDrive(
    * it, `dx` spins it about GRAVITY, the aligned body's pair with gravity for the normal.
    * ⛔ `ROTATE` keeps the mode's pick (roll about the depth axis), so all three turns stay reachable.
    */
-  mode: "TRANSLATE" | "ROTATE" = "ROTATE",
+  mode: "TRANSLATE" | "ROTATE",
 ): "BOTH" | "MODE_PICKS" {
   // ⭐⭐ `D108`: on an aligned Follower the second touch drives gravity + spin WHEREVER it lands —
   // on empty space or on the body itself — because the body has no mode left to pick one.

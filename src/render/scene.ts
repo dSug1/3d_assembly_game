@@ -921,17 +921,6 @@ export function createScene(
   st.behaviour = initialBehaviour();
 
   /**
-   * ⭐⭐⭐ `IN3`'s SELECTED FACE — §2 rule 2's other half, and the input every remaining
-   * `IN3` rule reads: 2ter anchors it to gravity, 2quater to a world axis, `MATE` joins two.
-   *
-   * ⛔ `null` in forks A and C, always. ⚠ It carries the pick's COSINE because a later rule
-   * may want to refuse a grazing pick — and nothing refuses one yet, so the number is
-   * evidence on the readout rather than a hidden threshold.
-   */
-  st.selectedFace =
-    null;
-
-  /**
    * ⭐⭐⭐ **FORK C's PIONEER, REMEMBERED** — the face whose tap created the live alignment.
    *
    * ⛔⛔ THE OWNER'S FIRST DICTATION SAID *"the PioneerFace resets as null"*, AND THE

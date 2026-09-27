@@ -31,7 +31,6 @@
  *
  * ⛔ ENGINE-FREE. Every function DECIDES; the caller draws.
  */
-import type { ObjectId } from "../core/object_model";
 import type { Behaviour } from "./mode_toggle";
 import { mmToPx } from "../core/units";
 import { trackingMetresPerPx } from "./translate";
@@ -72,81 +71,6 @@ export function captureOffsetM(
 ): number {
   if (!(offsetMm > 0)) return 0;
   return mmToPx(offsetMm) * trackingMetresPerPx(cameraDistanceM, fovRad, viewportHeightPx);
-}
-
-/**
- * ⛔⛔ **`captureShellDims`, `bodyContourDims` AND `MIN_CONTOUR_SCALE` ARE DELETED** (`D50`,
- * 2026-09-18). They sized a BOX outline: the body's three extents, grown additively for the
- * shell and by a hair for the body contour.
- * ⭐ The outlines are the mesh's own edges now, offset by `mesh_topology.offsetPositions` — a
- * true offset of every face plane, which a box's extents cannot express for any body that is
- * not a box. ⚠ **The HALF survives**: `scene.ts` offsets each body by `offsetM / 2`, so two
- * shells still meet exactly at the capture threshold, and a vector in `mesh_topology.test.ts`
- * asserts that composition against the rule.
- * ⛔ *Deleted, not disabled* — a vector for a rule that no longer exists passes while
- * describing the wrong product.
- */
-
-/** ⚠ Both are `D46` §1 placeholders, flagged for fine-tuning by the owner. */
-export interface HighlightNumbers {
-  /**
-   * The capture offset in **METRES**, already converted from the glass by `captureOffsetM`.
-   *
-   * ⛔⛔ **SURFACE TO SURFACE, NOT CENTRE TO CENTRE** (`D49`). ⚠ It replaced `snapRadiusM`, whose
-   * `4L` value carries no information here: that number answered *how far apart may two CENTRES
-   * be*, and this one answers *how far apart may two SURFACES be*. ⭐ A value borrowed from the
-   * old question would be a constant inheriting the wrong question — `METHOD` names that trap.
-   */
-  readonly captureOffsetM: number;
-  /**
-   * How near parallel the alignment axis must be to a target face normal, in radians.
-   * ⚠ NO LONGER READ BY `highlightedPair` — kept because `alignmentMatchesTarget` takes it and
-   * the mate will. ⛔ See that function's header for why it is declared, not deleted.
-   */
-  readonly alignMatchRad: number;
-}
-
-/** The pair to outline. ⛔ `null` everywhere else — there is no partial state. */
-export interface HighlightPair {
-  /** The *"first object"* — the one carrying the alignment. */
-  readonly subject: ObjectId;
-  /** The `TargetObject` it is aligned to and near. */
-  readonly target: ObjectId;
-}
-
-/**
- * ⭐⭐⭐ **THE VERDICT, WITH ITS REASONS** — and the reasons are not a luxury.
- *
- * ⛔⛔ **THREE CONDITIONS AND THEY ARE AN `AND`, SO A MISSING HIGHLIGHT LOOKS IDENTICAL
- * WHICHEVER ONE IS FALSE.** ⚠ *"I forgot to align"*, *"I am in rotation mode"* and *"they are
- * too far apart"* are one symptom with three causes, and this project has spent whole device
- * passes on exactly that ambiguity.
- *
- * ⭐⭐ THEY ARE RETURNED RATHER THAN RECOMPUTED BY THE READOUT, which is the part that
- * matters: a HUD that derived its own answer would be a **second implementation**, free to
- * disagree with the product while both show green. ⛔ One computation, one truth, printed.
- */
-export interface HighlightVerdict {
-  /** The pair to outline, or `null`. ⭐ This is what is DRAWN. */
-  readonly pair: HighlightPair | null;
-  /** The TRANSLATION condition. */
-  readonly translating: boolean;
-  /** The RANGE condition — another body is within the offset of at least one held body. */
-  readonly inRange: boolean;
-  /**
-   * ⭐⭐ The **measured surface gap** to the nearest candidate, in metres, or `null` when
-   * nothing was measurable (nothing held, or no body has a shape).
-   *
-   * ⛔⛔ **IT IS THE NUMBER THE RULE ACTUALLY COMPARED, CARRIED OUT FOR THE READOUT** — not a
-   * recomputation. ⚠ `A16`'s two flags say *which condition failed*; they cannot say *by how
-   * much*, and with a camera-scaled threshold *"too far"* now depends on the zoom as well as on
-   * the bodies. ⭐ Printing gap against threshold is what turns *"no white contour"* from a
-   * symptom into a reading. ⚠ Reported even when the pair is refused, which is the case a hand
-   * needs it in.
-   */
-  readonly gapM: number | null;
-  /** The threshold `gapM` was compared against, in metres — so the HUD can print both. */
-  readonly offsetM: number;
 }
 
 /**

@@ -7,11 +7,9 @@
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { retargetAlignment, type Sample } from "../input";
-import { type Vec3 } from "../core/vec";
-import { attach, setLocalPlacement, worldPlacementOf, type ObjectId } from "../core/object_model";
+import { type Vec3, add, dot, qRotate, sub } from "../core/vec";
+import { attach, setLocalPlacement, worldPlacementOf, type ObjectId, clearObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
 import { mmToPx } from "../core/units";
-import { clearObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
-import { add, dot, qRotate, sub } from "../core/vec";
 import { type PioneerFaceCursor } from "../core/pioneer_face_cursors";
 import { pointOnFace } from "../core/face_surface";
 import { snapConditionMet } from "../input/snap";

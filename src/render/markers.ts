@@ -264,53 +264,6 @@ export function syncPioneerCursors(st: SceneState) : void {
 
 
 /**
- * ⭐⭐⭐ **THE PIONEER's CONTOUR** — *"the PioneerFace contour shall be highlighted"*.
- *
- * ⛔⛔ A CONTOUR AND NOT A FILL, BECAUSE THE TWO FACES ARE NOT THE SAME KIND OF THING. The
- * Follower is what MOVED and carries the constraint; the Pioneer is only what it was aimed
- * at, and its object is untouched. ⭐ One filled quad and one outline say that without a
- * legend — and the owner asked for exactly that distinction.
- *
- * ⚠ A closed square of LINES, unit-sized and scaled: `CreateLines` gives a `color` and no
- * material to tune, and its one-pixel width is a WebGL limit rather than a choice. ⛔ If a
- * hand finds it too faint the answer is `GreasedLine`, not a thicker hack — recorded so the
- * next session does not rediscover the limit.
- * ⚠ `isPickable = false` and NOT `orbitCandidate`, for the same two reasons the fill has:
- * an instrument must not intercept the picks it describes, nor move the barycentre it is
- * drawn near.
- */
-/**
- * ⭐⭐⭐ **THE COLOURS ARE THE READOUT FOR THE MODE** — the owner's instruction, and the only
- * way a hand can see which of the two an alignment is.
- *
- * ⛔ `SNAPSHOT` (single tap): the Follower is **cyan** and the Pioneer **amber** — two
- * colours, because the two faces are related only by the instant the tap happened.
- * ⛔ `FOLLOW` (double tap): the Follower takes the Pioneer's **amber** — one colour, because
- * they now move as one thing.
- * ⚠⚠ **THIS COMMENT SAID *"never per frame"* AND THE RENDER LOOP HAS DONE EXACTLY THAT
- * SINCE `A18`** — corrected by audit, 2026-09-17. The per-frame pass covers every aligned
- * body and writes only on CHANGE, so it is not a second unguarded writer; but *never per
- * frame* was simply false, and a reader trusting it would conclude this function is the only
- * thing keeping the colours right.
- * ⭐ What it is actually FOR: making a `SWITCH` visible in the same event that caused it,
- * rather than one frame later. ⚠ The two agree by construction because they compute `want`
- * the same way, from `alignModeOf`.
- */
-export function paintHighlightColours(st: SceneState) : void {
-  // ⚠ EVERY aligned object, not just the active one: a body aligned in `FOLLOW` earlier must
-  // keep reporting `FOLLOW` after the fingers move on, or the colour would describe the most
-  // recent gesture instead of the relationship it names.
-  for (const [key, q] of st.faceMarkers) {
-    const id = key.slice(0, key.indexOf("/"));
-    // ⭐ One colour since `D106`: every alignment is a snapshot.
-    const want = FOLLOWER_COLOUR;
-    q.mat.emissiveColor.copyFrom(want);
-    const o = st.outlines.get(id);
-    if (o !== undefined) o.align.color.copyFrom(want);
-  }
-}
-
-/**
  * ⭐⭐⭐ **EVERY OUTLINE A BODY CAN WEAR, BUILT FROM ITS OWN MESH EDGES** (`D50`).
  *
  * ⛔⛔ **ALL THREE USED TO BE A UNIT BOX SCALED TO A DIMENSIONS TABLE.** For the boot

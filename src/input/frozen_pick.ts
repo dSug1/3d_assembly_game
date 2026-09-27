@@ -54,12 +54,7 @@
  *   ⛔ It is a COUNT and not a boolean, because the rule has to answer the third and fourth
  *   finger too — and those are presses that CAN name a Pioneer, so they keep their hit.
  */
-export function pressHit<O>(
-  hit: O | null,
-  isFrozen: boolean,
-  /** ⚠ Kept for the call site's shape; no longer read (`D119`). */
-  _touchpointsAlreadyDown: number,
-): O | null {
+export function pressHit<O>(hit: O | null, isFrozen: boolean): O | null {
   // ⭐⭐ `D119` (the owner, 2026-09-27): a FROZEN body is a miss for EVERY touch — the second finger
   // over it drives the held body's gravity and roll like empty space. ⛔ `D89` kept the second touch's
   // hit so the plate could be pressed as a Pioneer; a TAP on it still aligns (resolved at release).
@@ -77,13 +72,15 @@ export function pressHit<O>(
  *
  * ⭐ With a body already held, a press on a DIFFERENT body is routed as empty space — it drives the
  * held body's gravity / roll — and its face is remembered, so a TAP there still aligns (`D119`).
- * ⛔ Two exceptions, both kept on purpose: the held body ITSELF (`SECOND`, `A12`'s finger), and a body
- * in the held body's own ASSEMBLY — the unsnap's second touch lands on the seated Follower.
+ * ⛔ Two exceptions, both kept on purpose: the held body ITSELF (`SECOND`, `A12`'s finger), and the held
+ * body's SEATED PARTNER — the unsnap's second touch lands on the seated Follower.
+ * ⚠ Narrowed by the 2026-09-27 audit: it was *the held body's whole ASSEMBLY*, so two parts seated on
+ * the one plate were siblings, and holding one and pressing the other still GRABBED it.
  */
 export function pressSteers(f: {
   readonly holdersBefore: number;
   readonly hitIsHeld: boolean;
-  readonly sameAssemblyAsHeld: boolean;
+  readonly seatedPartnerOfHeld: boolean;
 }): boolean {
-  return f.holdersBefore > 0 && !f.hitIsHeld && !f.sameAssemblyAsHeld;
+  return f.holdersBefore > 0 && !f.hitIsHeld && !f.seatedPartnerOfHeld;
 }
