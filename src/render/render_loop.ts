@@ -14,7 +14,7 @@ import { alignedFaceOf } from "../core/face_pick";
 import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
 import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
-import { faceMarkerFor, hitFaceNow, outlinesFor, syncPioneerCursors } from "./markers";
+import { faceMarkerFor, hitFaceNow, liftHighlights, outlinesFor, syncPioneerCursors } from "./markers";
 import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
 import { refreshAxisGizmo } from "./gizmo";
 import { applyCameraPose, recomputeOrbitCentre } from "./camera_rig";
@@ -537,6 +537,8 @@ export function startRenderLoop(st: SceneState): void {
       }
       // ⭐⭐⭐ THE PIONEERFACECURSORS, reconciled against the same links the contours read.
       syncPioneerCursors(st);
+      // ⭐ Every highlight one pixel off what it marks, at this frame's zoom.
+      liftHighlights(st);
     });
 
     // ⛔⛔⛔ **THE HUD IS REPAINTED WHEN THE *LOOP* CHANGES SOMETHING** — audit fix, 2026-09-17.

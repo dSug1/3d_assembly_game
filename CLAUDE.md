@@ -70,7 +70,7 @@ the chosen scene, so it boots from the beginning; scenes are data in `content/sc
 pieces are the owner's **second layout** (*"reshuffle the pieces"*, 2026-09-27): 41, none overlapping, and
 ⭐⭐ **each a transparent CONTOUR around its coloured core** (`D125`): the bodies touch face to face, the
 cores keep the painting's 0.03 gap — which exposed and fixed a `3D6` hole (a pair starting at contact
-could be pushed through) → [`Claude/20_GAME_RULES/spec/SCENE_1.md`](Claude/20_GAME_RULES/spec/SCENE_1.md).
+could be pushed through); ⭐ and **every highlight floats ONE PIXEL** off what it marks, at every zoom (`D126`) → [`Claude/20_GAME_RULES/spec/SCENE_1.md`](Claude/20_GAME_RULES/spec/SCENE_1.md).
 
 ⛔⛔⛔ **BUILD NOW, BEFORE ANYTHING ELSE — THE PLAYABILITY PROGRAM** (`D116`, the owner): **`3D6`
 COLLISION** (no body penetrates another — translation STOPS and SLIDES; a rotation is CLAMPED along
@@ -152,7 +152,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1156 golden vectors passing** — ⚠ MEASURED 2026-09-27 (+ 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1163 golden vectors passing** — ⚠ MEASURED 2026-09-27 (+ 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

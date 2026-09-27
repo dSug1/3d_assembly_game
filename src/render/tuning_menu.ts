@@ -269,7 +269,8 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐⭐ **RENAMED FACE ALIGNMENT** — the owner, 2026-09-26: *"rename the menu FACE to FACE
       // ALIGNMENT and move the menus eviction shake and capture under FACE ALIGNMENT"*.
       title: "FACE ALIGNMENT",
-      sliders: [],
+      // ⭐ The owner, 2026-09-27: every highlight one pixel off what it marks, at every zoom.
+      sliders: [tunable(st, "highlight offset (mm on the glass)", "highlightLiftMm", 0.05, 3, 0.05)],
       // ⭐⭐ **TWO FOLDERS, ONE PER FACE OF THE PAIR** — the owner, 2026-09-26.
       subsections: [
         {

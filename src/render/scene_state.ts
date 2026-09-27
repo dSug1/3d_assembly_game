@@ -37,12 +37,8 @@ import { type GestureSpan, type UndoHistory } from "../core/undo_history";
 import { type PointerRole } from "../input/router";
 import { type SceneSnapshot } from "./undo_wiring";
 
-/**
- * ⭐ How far a face marker floats off the surface it marks, in METRES. ⛔ Enough to beat
- * z-fighting and small enough not to read as a gap — and a named constant because it is used
- * in the parent's frame now, where a bare `0.0015` would look like a UV or an alpha.
- */
-export const MARKER_LIFT_M = 0.0015;
+// ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
+// recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
 
 /**
  * ⭐⭐ **THE ALIGNMENT SNAP RUNS AT A THIRD OF THE CAMERA RESET'S TIME** — owner, 2026-09-17:
@@ -138,6 +134,9 @@ export type DiagnosticPose = Quat;
  * ⚠ Lifted along the face normal by a hair, or it z-fights the surface it marks.
  */
 export interface FaceMarker {
+  /** The body the face belongs to, and the face's outward normal in that body's frame. */
+  readonly objectId: ObjectId;
+  readonly normal: Vec3;
   readonly fill: Mesh;
   readonly mat: StandardMaterial;
   readonly loop: LinesMesh;
@@ -154,6 +153,8 @@ export interface FaceMarker {
 export interface BodyOutlines {
   /** ⭐ The aligned body's coloured outline. ⛔ The white capture outlines are deleted (`D120`). */
   readonly align: LinesMesh;
+  /** ⭐ The offset, in metres, the outline's geometry was last built with. */
+  builtM: number | null;
 }
 
 export type TurnAxes = [Vec3 | null, Vec3 | null, Vec3 | null];
@@ -467,7 +468,6 @@ export interface SceneState {
 
 
 
-export const ALIGN_OUTLINE_FRACTION = 0.02;
 
 /**
  * ⭐⭐⭐ **THE THREE TURN CHANNELS**, in the gizmo's own order after the translation axes:

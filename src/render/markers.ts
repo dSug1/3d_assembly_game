@@ -20,7 +20,8 @@ import { type AlignmentCouple } from "../core/pioneer_face_cursors";
 import { PIONEER_CURSOR_PX } from "../input/pioneer_cursor_grab";
 import { offsetPositions, type MeshTopology } from "../core/mesh_topology";
 import { hitFaceAllowed } from "../input/mouse_second_touch";
-import { ALIGN_OUTLINE_FRACTION, FOLLOWER_COLOUR, MARKER_LIFT_M, PIONEER_COLOUR, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
+import { FOLLOWER_COLOUR, PIONEER_COLOUR, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
+import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 
 /**
  * ⭐ One face of one body. ⛔ It lived in `core/face_candidates.ts`, deleted with the fuchsia offer
@@ -41,8 +42,8 @@ export function faceMarkerFor(st: SceneState, objectId: ObjectId,
   const face = topo?.faces.find((f) => f.id === faceId);
   if (!body || !topo || !face) return null;
 
-  const lift = (v: number, i: number): number =>
-    v + (face.normal[i] as number) * MARKER_LIFT_M;
+  // ⭐ Built ON the face: the lift is a per-frame TRANSLATION along the normal (`liftHighlights`),
+  // because one pixel on the glass is a different world distance at every zoom.
   // ⭐ A local index space for this face only, so the fill carries just its own vertices.
   const local = new Map<number, number>();
   const positions: number[] = [];
@@ -53,7 +54,7 @@ export function faceMarkerFor(st: SceneState, objectId: ObjectId,
       li = local.size;
       local.set(vi, li);
       const p = topo.positions[vi] as Vec3;
-      positions.push(lift(p[0], 0), lift(p[1], 1), lift(p[2], 2));
+      positions.push(p[0], p[1], p[2]);
     }
     indices.push(li);
   }
@@ -75,7 +76,7 @@ export function faceMarkerFor(st: SceneState, objectId: ObjectId,
 
   const loopPts = face.boundary.map((vi) => {
     const p = topo.positions[vi] as Vec3;
-    return new Vector3(lift(p[0], 0), lift(p[1], 1), lift(p[2], 2));
+    return new Vector3(p[0], p[1], p[2]);
   });
   // ⛔ CLOSED by repeating the first point — an open loop leaves one edge of the face
   // unmarked, which reads as a defect in the pick rather than in the drawing.
@@ -111,7 +112,7 @@ export function faceMarkerFor(st: SceneState, objectId: ObjectId,
   xray.isPickable = false;
   xray.isVisible = false;
 
-  const made: FaceMarker = { fill, mat, loop, xray, xrayMat };
+  const made: FaceMarker = { objectId, normal: face.normal, fill, mat, loop, xray, xrayMat };
   st.faceMarkers.set(key, made);
   return made;
 }
@@ -249,11 +250,12 @@ export function syncPioneerCursors(st: SceneState) : void {
     if (m === undefined) continue;
     // ⚠ Written every frame from the cursor's own LOCAL position through the Pioneer's world
     // matrix, so a drag and a turned Pioneer both land where the face is; lifted off the face
-    // like the rings, or it z-fights the fill.
+    // three highlight lifts, or it z-fights the fill.
+    const h = 3 * liftFor(st, cur.pioneerId);
     const w = worldPointOn(st, cur.pioneerId, [
-      cur.position[0] + cur.normal[0] * MARKER_LIFT_M * 3,
-      cur.position[1] + cur.normal[1] * MARKER_LIFT_M * 3,
-      cur.position[2] + cur.normal[2] * MARKER_LIFT_M * 3,
+      cur.position[0] + cur.normal[0] * h,
+      cur.position[1] + cur.normal[1] * h,
+      cur.position[2] + cur.normal[2] * h,
     ]);
     m.isVisible = w !== null;
     if (w === null) continue;
@@ -271,7 +273,7 @@ export function syncPioneerCursors(st: SceneState) : void {
  * an imported part it is simply the wrong shape. ⭐ It is now the body's own hard edges.
  *
  * ⭐ ONE outline is left: the cyan **alignment** outline (*this body is aligned*), offset outward
- * by a fraction of the body's own span. ⛔ The white body outline and the white capture shell
+ * by one highlight lift — a pixel on the glass (`liftHighlights`). ⛔ The white body outline and the white capture shell
  * that nested with it are deleted with the capture highlight (`D120`).
  */
 /**
@@ -313,36 +315,48 @@ export function edgeLines(st: SceneState, name: string,
   return m;
 }
 
-export function spanOf(t: MeshTopology) : number {
-  let span = 0;
-  for (const p of t.positions) {
-    span = Math.max(span, Math.abs(p[0]), Math.abs(p[1]), Math.abs(p[2]));
-  }
-  return span > 0 ? span : 1;
-}
-
 export function outlinesFor(st: SceneState, id: ObjectId) : BodyOutlines | null {
   const hit = st.outlines.get(id);
   if (hit !== undefined) return hit;
   const topo = st.topoOf.get(id);
   const body = st.meshOf.get(id);
   if (!topo || !body || topo.edges.length === 0) return null;
-  const sp = spanOf(topo);
-  const mk = (name: string, h: number, colour: Color3): LinesMesh => {
-    const m = edgeLines(st, name, topo, offsetPositions(topo, h), colour, null);
-    m.parent = body;
-    m.isVisible = false;
-    return m;
-  };
-  const made: BodyOutlines = {
-    align: mk(
-      `align-outline-${id}`,
-      sp * ALIGN_OUTLINE_FRACTION,
-      FOLLOWER_COLOUR,
-    ),
-  };
+  const h = liftFor(st, id);
+  const align = edgeLines(st, `align-outline-${id}`, topo, offsetPositions(topo, h), FOLLOWER_COLOUR, null);
+  align.parent = body;
+  align.isVisible = false;
+  const made: BodyOutlines = { align, builtM: h };
   st.outlines.set(id, made);
   return made;
+}
+
+/** ⭐ One highlight lift for body `id`, in metres, at its own distance from the camera this frame. */
+export function liftFor(st: SceneState, id: ObjectId): number {
+  const body = st.meshOf.get(id);
+  const d = body === undefined ? st.camera.radius : Vector3.Distance(st.camera.position, body.getAbsolutePosition());
+  return highlightLiftM(st.cfg.highlightLiftMm, d, st.camera.fov, st.canvas.clientHeight);
+}
+
+/**
+ * ⭐⭐ **EVERY VISIBLE HIGHLIGHT, ONE PIXEL OFF WHAT IT MARKS** (the owner, 2026-09-27). Face markers
+ * are moved along their normal (a translation, free); an outline is rebuilt only when its baked
+ * offset has gone stale (`outlineOffsetStale`). ⛔ Run AFTER visibility is decided this frame.
+ */
+export function liftHighlights(st: SceneState): void {
+  for (const q of st.faceMarkers.values()) {
+    if (!q.fill.isVisible && !q.loop.isVisible && !q.xray.isVisible) continue;
+    const h = liftFor(st, q.objectId);
+    for (const m of [q.fill, q.loop, q.xray]) m.position.set(q.normal[0] * h, q.normal[1] * h, q.normal[2] * h);
+  }
+  for (const [id, o] of st.outlines) {
+    if (!o.align.isVisible) continue;
+    const h = liftFor(st, id);
+    if (!outlineOffsetStale(o.builtM, h)) continue;
+    const topo = st.topoOf.get(id);
+    if (!topo) continue;
+    edgeLines(st, `align-outline-${id}`, topo, offsetPositions(topo, h), o.align.color, o.align);
+    o.builtM = h;
+  }
 }
 
 

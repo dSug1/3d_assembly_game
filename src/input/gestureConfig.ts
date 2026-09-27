@@ -276,6 +276,11 @@ export interface GestureConfig {
    */
   pieceContourAlpha: number;
   /**
+   * ⭐ How far every highlight floats off the face or edge it marks, in mm ON THE GLASS — the face
+   * fills and contours, the aligned outline, the PioneerFaceCursor (×3). One CSS pixel by default.
+   */
+  highlightLiftMm: number;
+  /**
    * ⭐⭐ **THE COLLISION SKIN** (`3D6`), millimetres on the glass: every pair of bodies is kept at
    * least this far apart. ⛔ Must be > 0 — GJK reads touching and overlapping alike as 0, so a zero
    * skin could not tell a contact from a penetration.
@@ -745,6 +750,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   frozenUndersideAlpha: 0.3,
   // ⚠ A guess with a slider: faint enough to keep the gap between the cores, visible enough to show the faces.
   pieceContourAlpha: 0.1,
+  // ⭐ The owner: one pixel — one CSS pixel is 25.4 / 96 mm. ⚠ Raise it if a far zoom flickers.
+  highlightLiftMm: 25.4 / 96,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
@@ -947,6 +954,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     throw new Error(
       `collisionSkinMm (${cfg.collisionSkinMm}) must be in (0, 5] mm: it is the gap every pair of ` +
         "bodies is kept at, and at 0 a contact and a penetration both read as a gap of 0.",
+    );
+  }
+
+  if (!(cfg.highlightLiftMm > 0 && cfg.highlightLiftMm <= 5)) {
+    throw new Error(
+      `highlightLiftMm (${cfg.highlightLiftMm}) must be in (0, 5] mm: at 0 a highlight z-fights the face it marks.`,
     );
   }
 
