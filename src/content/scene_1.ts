@@ -8,16 +8,11 @@
  * `unitM` (0.1 m per unit) is what makes it fit the camera rig, so the painting stands 0.49 m wide
  * the way `Scene_0`'s parts are 8 cm. ⛔ Change `unitM`, never a number here.
  *
- * ⚠⚠ **WHAT THE BRIEF SAID AND THE TABLE DID NOT** — built as the TABLE says, and named:
- * * The brief says 42 pieces; the table lists **41** (Piece13, Piece18 and Piece35 absent, and the
- *   blank row between Piece34 and Piece36 carries nothing).
- * * `MAT_B` is said to cover 24 pieces; the table gives it **23** (Piece11 + the 22 bars).
- * * The conventions say `z = −0.33333`; every row says `−0.34`. ⭐ The ROWS are used (a table is
- *   the more specific statement, and the painting's own numbers agree with each other).
- *
- * ⭐ **The renaming the owner asked for** — *"rename the pieces so Piece13, Piece18 and Piece35 are
- * in the scene and Piece42, Piece43 and Piece44 do not exist any longer"* — is applied in order:
- * Piece42 → **Piece13**, Piece43 → **Piece18**, Piece44 → **Piece35**.
+ * ⭐⭐ **THE SECOND LAYOUT** (the owner, 2026-09-27: *"reshuffle the pieces as follows"*) — a new table
+ * of 41 rows replaces the first one whole: 13 white, 20 black, 3 yellow, 4 red, 1 blue, every piece
+ * at `z = −0.34` and 0.3 deep, the bounds unchanged (x −2.41 → 2.46, gravity −2.13 → 2.67). Its
+ * materials are named `Mat_White` … `Mat_Blue`; they map onto the slots below. ⚠ The first table's
+ * gaps and its Piece42–44 renaming are gone with it.
  *
  * ⚠ Colours: the owner named them (*white, black, yellow, red, blue, sand yellow*) and deferred real
  * materials to the glTF path; the RGB values below are mine, a Mondrian palette on the flat diffuse
@@ -39,48 +34,47 @@ export const SCENE_1_PALETTE: Readonly<Record<Slot, readonly [number, number, nu
 
 /** `[name, slot, x, y, z, sx, sy, sz]` — the owner's table, row for row. */
 const ROWS: readonly (readonly [string, Slot, number, number, number, number, number, number])[] = [
-  ["Piece1", "MAT_A", -1.844, 2.402, -0.34, 1.13, 0.53, 0.3],
-  ["Piece2", "MAT_A", -2.13, 1.48, -0.34, 0.49, 1.06, 0.3],
-  ["Piece3", "MAT_A", -2.13, -0.03, -0.34, 0.49, 1.65, 0.3],
-  ["Piece4", "MAT_C", -2.13, -1.56, -0.34, 0.49, 1.08, 0.3],
-  ["Piece5", "MAT_A", -0.313, 2.402, -0.34, 1.73, 0.53, 0.3],
-  ["Piece6", "MAT_C", 1.37, 2.402, -0.34, 1.41, 0.53, 0.3],
-  ["Piece7", "MAT_C", 1.37, 1.48, -0.34, 1.41, 1.08, 0.3],
-  ["Piece8", "MAT_A", 1.37, -0.65, -0.34, 1.41, 0.46, 0.3],
-  ["Piece9", "MAT_A", 0.02, -0.65, -0.34, 1.07, 0.46, 0.3],
-  ["Piece10", "MAT_A", 0.02, -1.25, -0.34, 1.07, 0.46, 0.3],
-  ["Piece11", "MAT_B", -1.18, -0.98, -0.34, 1.07, 1.06, 0.3],
-  ["Piece12", "MAT_D", -0.61, 0.86, -0.34, 2.27, 2.29, 0.3],
-  ["Piece14", "MAT_A", -1.18, -1.87, -0.34, 1.07, 0.45, 0.3],
-  ["Piece15", "MAT_A", 0.79, -2.02, -0.34, 2.58, 0.16, 0.3],
-  ["Piece16", "MAT_A", 2.34, 0.9, -0.34, 0.23, 3.52, 0.3],
-  ["Piece17", "MAT_D", 2.34, -1.58, -0.34, 0.23, 1.04, 0.3],
-  ["Piece19", "MAT_E", 1.37, -1.42, -0.34, 1.41, 0.74, 0.3],
-  ["Piece20", "MAT_A", 1.77, 0.28, -0.34, 0.62, 1.08, 0.3],
-  ["Piece21", "MAT_A", 1, 0.28, -0.34, 0.62, 1.08, 0.3],
-  ["Piece22", "MAT_B", -0.17, 2.07, -0.34, 4.47, 0.1, 0.3],
-  ["Piece23", "MAT_B", -1.19, -0.37, -0.34, 1.05, 0.1, 0.3],
-  ["Piece24", "MAT_B", -2.12, 0.89, -0.34, 0.46, 0.1, 0.3],
-  ["Piece25", "MAT_B", -2.12, -0.94, -0.34, 0.46, 0.1, 0.3],
-  ["Piece26", "MAT_B", 2.36, -0.96, -0.34, 0.17, 0.1, 0.3],
-  ["Piece27", "MAT_B", -1.19, -1.58, -0.34, 1.05, 0.1, 0.3],
-  ["Piece28", "MAT_B", 0.03, -0.37, -0.34, 1.05, 0.1, 0.3],
-  ["Piece29", "MAT_B", 0.03, -0.97, -0.34, 1.05, 0.1, 0.3],
-  ["Piece30", "MAT_B", 0.03, -1.55, -0.34, 1.05, 0.1, 0.3],
-  ["Piece31", "MAT_B", 0.03, -1.87, -0.34, 1.05, 0.1, 0.3],
-  ["Piece32", "MAT_B", 1.41, -0.37, -0.34, 1.4, 0.1, 0.3],
-  ["Piece33", "MAT_B", 1.41, 0.85, -0.34, 1.4, 0.1, 0.3],
-  ["Piece34", "MAT_B", 1.41, -0.97, -0.34, 1.4, 0.1, 0.3],
-  ["Piece36", "MAT_B", 1.41, -1.92, -0.34, 1.4, 0.1, 0.3],
-  ["Piece37", "MAT_B", -1.22, 2.4, -0.34, 0.1, 0.51, 0.3],
-  ["Piece38", "MAT_B", 0.61, 2.4, -0.34, 0.1, 0.51, 0.3],
-  ["Piece39", "MAT_B", 0.61, 0.04, -0.34, 0.1, 3.9, 0.3],
-  ["Piece40", "MAT_B", 1.4, 0.25, -0.34, 0.1, 1.06, 0.3],
-  ["Piece41", "MAT_B", 2.18, 0.26, -0.34, 0.1, 4.77, 0.3],
-  // ⭐ Renamed as asked: these three rows were Piece42, Piece43 and Piece44.
-  ["Piece13", "MAT_B", -1.8, -0.06, -0.34, 0.1, 4.12, 0.3],
-  ["Piece18", "MAT_B", -0.58, -1.21, -0.34, 0.1, 1.8, 0.3],
-  ["Piece35", "MAT_B", 0.02, -1.7, -0.34, 1.07, 0.18, 0.3],
+  ["Piece1", "MAT_A", -0.7, 2.525, -0.34, 1.26, 0.29, 0.3],
+  ["Piece2", "MAT_D", -2.24, 2.26, -0.34, 0.34, 0.82, 0.3],
+  ["Piece3", "MAT_A", -1.7, 2.26, -0.34, 0.42, 0.82, 0.3],
+  ["Piece4", "MAT_A", 1.04, 2.26, -0.34, 1.9, 0.82, 0.3],
+  ["Piece5", "MAT_A", 2.305, 2.26, -0.34, 0.31, 0.82, 0.3],
+  ["Piece6", "MAT_C", -1.005, 2.035, -0.34, 0.65, 0.37, 0.3],
+  ["Piece7", "MAT_D", -0.295, 2.035, -0.34, 0.45, 0.37, 0.3],
+  ["Piece8", "MAT_A", -0.7, 1.085, -0.34, 1.26, 1.21, 0.3],
+  ["Piece9", "MAT_A", -1.95, 0.485, -0.34, 0.92, 2.41, 0.3],
+  ["Piece10", "MAT_E", 1.04, 0.485, -0.34, 1.9, 2.41, 0.3],
+  ["Piece11", "MAT_A", 2.305, 0.485, -0.34, 0.31, 2.41, 0.3],
+  ["Piece12", "MAT_D", -1.15, -0.55, -0.34, 0.36, 1.74, 0.3],
+  ["Piece13", "MAT_A", -0.44, -0.55, -0.34, 0.74, 1.74, 0.3],
+  ["Piece14", "MAT_A", -1.95, -1.15, -0.34, 0.92, 0.54, 0.3],
+  ["Piece15", "MAT_A", 1.04, -1.15, -0.34, 1.9, 0.54, 0.3],
+  ["Piece16", "MAT_A", 2.305, -1.15, -0.34, 0.31, 0.54, 0.3],
+  ["Piece17", "MAT_C", -1.95, -1.855, -0.34, 0.92, 0.55, 0.3],
+  ["Piece18", "MAT_A", -0.7, -1.855, -0.34, 1.26, 0.55, 0.3],
+  ["Piece19", "MAT_C", 0.555, -1.855, -0.34, 0.93, 0.55, 0.3],
+  ["Piece20", "MAT_A", 1.585, -1.855, -0.34, 0.81, 0.55, 0.3],
+  ["Piece21", "MAT_D", 2.305, -1.855, -0.34, 0.31, 0.55, 0.3],
+  ["Piece22", "MAT_B", -0.7, 2.3, -0.34, 1.26, 0.1, 0.3],
+  ["Piece23", "MAT_B", -1.99, 2.26, -0.34, 0.1, 0.82, 0.3],
+  ["Piece24", "MAT_B", -0.6, 2.035, -0.34, 0.1, 0.37, 0.3],
+  ["Piece25", "MAT_B", -1.95, 1.77, -0.34, 0.92, 0.1, 0.3],
+  ["Piece26", "MAT_B", -0.7, 1.77, -0.34, 1.26, 0.1, 0.3],
+  ["Piece27", "MAT_B", 1.04, 1.77, -0.34, 1.9, 0.1, 0.3],
+  ["Piece28", "MAT_B", 2.305, 1.77, -0.34, 0.31, 0.1, 0.3],
+  ["Piece29", "MAT_B", -0.7, 0.4, -0.34, 1.26, 0.1, 0.3],
+  ["Piece30", "MAT_B", -1.41, 0.27, -0.34, 0.1, 4.8, 0.3],
+  ["Piece31", "MAT_B", 0.01, 0.27, -0.34, 0.1, 4.8, 0.3],
+  ["Piece32", "MAT_B", 2.07, 0.27, -0.34, 0.1, 4.8, 0.3],
+  ["Piece33", "MAT_B", -0.89, -0.55, -0.34, 0.1, 1.74, 0.3],
+  ["Piece34", "MAT_B", -1.95, -0.8, -0.34, 0.92, 0.1, 0.3],
+  ["Piece35", "MAT_B", 1.04, -0.8, -0.34, 1.9, 0.1, 0.3],
+  ["Piece36", "MAT_B", 2.305, -0.8, -0.34, 0.31, 0.1, 0.3],
+  ["Piece37", "MAT_B", -1.95, -1.5, -0.34, 0.92, 0.1, 0.3],
+  ["Piece38", "MAT_B", -0.7, -1.5, -0.34, 1.26, 0.1, 0.3],
+  ["Piece39", "MAT_B", 1.04, -1.5, -0.34, 1.9, 0.1, 0.3],
+  ["Piece40", "MAT_B", 2.305, -1.5, -0.34, 0.31, 0.1, 0.3],
+  ["Piece41", "MAT_B", 1.1, -1.855, -0.34, 0.1, 0.55, 0.3],
 ];
 
 /** Which slot each piece wears — kept so a later glTF material can be matched by slot. */

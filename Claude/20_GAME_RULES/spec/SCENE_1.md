@@ -51,15 +51,16 @@
   80 %, 107 %, then 103 % of that: 21.116236 × 21.116236** (`D122`, the owner). A plane has no thickness, so it is a 0.05-unit
   slab whose TOP is `y = −2.3`. Frozen; seen from below it turns see-through (`D121`).
 
-## 4. ⚠⚠ What the brief and the table disagree on — built as the TABLE says
+## 4. ⭐⭐ The second layout — the table that is built
 
-| the brief | the table | built |
-|---|---|---|
-| *"42 flat 3D boxes"* | **41** rows (Piece13, 18, 35 absent; one blank row) | 41 pieces + the floor |
-| `MAT_B` = *"24 pieces"* | **23** (Piece11 + 22 bars) | 23 |
-| *"z = −0.33333"* | every row `−0.34` | `−0.34` |
+> *"Let's reshuffle the pieces as follows"* — the owner, 2026-09-27, with a new 41-row table.
 
-⭐ The renaming, applied in order: Piece42 → **Piece13**, Piece43 → **Piece18**, Piece44 → **Piece35**.
+The second table replaces the first whole: **41 pieces — 13 white, 20 black, 3 yellow, 4 red, 1 blue**,
+every one at `z = −0.34` and 0.3 deep, inside the same bounds (x −2.41 → 2.46, gravity −2.13 → 2.67).
+Its materials are named `Mat_White`, `Mat_Black`, `Mat_Yellow`, `Mat_Red`, `Mat_Blue` and map onto the
+slots `MAT_A`–`MAT_E`. ⭐ **No two pieces overlap** in the picture plane (a vector; the first table's
+bars crossed). ⚠ The first table's disagreements with the brief (42 vs 41 pieces, 24 vs 23 black,
+`z −0.33333`) and its Piece42–44 → 13 / 18 / 35 renaming went with it — they are in git history.
 
 ## 5. ⚠ What is NOT the Unity scene yet — stated
 
@@ -70,7 +71,6 @@
   is not modelled.
 * **No tone mapping**: the sand floor, lit almost straight down by the directional light, saturates;
   the whites read slightly warm. An exposure / tone-mapping pass is the fix when it matters.
-* **The painting's pieces are tightly packed** (gaps down to 0.01 units = 1 mm, some bars crossing):
-  under `3D6`'s collision a piece blocked in the plane moves freely out of it first (checked: the red
-  Piece12 moved in depth, then sideways; a bar that met it slid).
+* **The painting's pieces are tightly packed** (they touch edge to edge, and none overlaps): under
+  `3D6`'s collision a piece blocked in the plane moves freely out of it first.
 * ⛔ **No goal** — `Scene_1` has no final configuration yet (`GM1`).
