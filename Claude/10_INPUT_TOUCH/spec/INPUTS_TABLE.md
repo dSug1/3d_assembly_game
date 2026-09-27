@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the one list of inputs, tablet and desktop
 > **READ IF** · you are about to add, change or remove a gesture — or to judge one on a device
-> **LAST VERIFIED** · 2026-09-27 (`1.0.40-Undo-and-episodes`, `D106`–`D112`)
+> **LAST VERIFIED** · 2026-09-27 (`1.0.39-Inputs-simplification`, `D106`–`D114`)
 
 ⭐ The rules and their reasons live in [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) (§12 for this
 pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the inventory.
