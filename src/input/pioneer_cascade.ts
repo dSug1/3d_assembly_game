@@ -32,6 +32,12 @@ import { pioneerMoved, pioneerTurned } from "./alignment";
 export interface FollowerLink {
   readonly follower: ObjectId;
   readonly pioneer: ObjectId;
+  /**
+   * ⭐ A SEATED follower is carried by the tree, never released by this rule — but its baseline is
+   * still REFRESHED, or the moment its seat ends (an unsnap) the stale baseline reads as *the Pioneer
+   * turned* and the alignment is released too. ⛔ It was skipped outright, baseline and all.
+   */
+  readonly seated?: boolean;
   /** The Pioneer's orientation as this follower last saw it. */
   readonly baseline: Quat;
 }
@@ -70,7 +76,7 @@ export function resolvePioneerTurns(
   for (const link of linksIn) {
     const pioneerNow = orientationOf(link.pioneer);
     if (pioneerNow === null) continue;
-    if (pioneerTurned(link.baseline, pioneerNow).kind === "RELEASE") {
+    if (!link.seated && pioneerTurned(link.baseline, pioneerNow).kind === "RELEASE") {
       steps.push({ kind: "RELEASE", follower: link.follower });
       continue;
     }
@@ -113,7 +119,6 @@ export function followerLinksFrom(
 ): FollowerLink[] {
   const out: FollowerLink[] = [];
   for (const follower of aligned) {
-    if (isSeated(follower)) continue;
     const ref = pioneerOf(follower);
     // ⚠ A body listed as aligned whose link has gone is skipped, not defaulted: the two are
     // reconciled every frame by `prune`, and inventing a Pioneer here would outlive it.
@@ -122,6 +127,7 @@ export function followerLinksFrom(
       follower,
       pioneer: ref.objectId,
       baseline: ref.orientation,
+      seated: isSeated(follower),
     });
   }
   return out;
@@ -132,6 +138,8 @@ export function followerLinksFrom(
 export interface FollowerMoveLink {
   readonly follower: ObjectId;
   readonly pioneer: ObjectId;
+  /** ⭐ As `FollowerLink.seated`: carried, never released, baseline refreshed. */
+  readonly seated?: boolean;
   /** Where the Pioneer was when this link was last settled. */
   readonly baseline: Vec3;
 }
@@ -180,7 +188,7 @@ export function resolvePioneerMoves(
   for (const link of linksIn) {
     const pioneerNow = positionOf(link.pioneer);
     if (pioneerNow === null) continue;
-    if (pioneerMoved(link.baseline, pioneerNow).kind === "RELEASE") {
+    if (!link.seated && pioneerMoved(link.baseline, pioneerNow).kind === "RELEASE") {
       steps.push({ kind: "RELEASE", follower: link.follower });
       continue;
     }
@@ -201,10 +209,9 @@ export function followerMoveLinksFrom(
 ): FollowerMoveLink[] {
   const out: FollowerMoveLink[] = [];
   for (const follower of aligned) {
-    if (isSeated(follower)) continue;
     const ref = pioneerOf(follower);
     if (ref === null) continue;
-    out.push({ follower, pioneer: ref.objectId, baseline: ref.position });
+    out.push({ follower, pioneer: ref.objectId, baseline: ref.position, seated: isSeated(follower) });
   }
   return out;
 }

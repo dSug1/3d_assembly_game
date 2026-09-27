@@ -1054,3 +1054,28 @@ gizmo rings were always placed.
 billboard `[3, 0, 0]`, world-placed `[2, 0, −1]`, truth `[2, 0, −1]`.
 ⛔ No vector reaches `src/render`, so none could have gone red. ⭐ `METHOD`: *a structural cure
 learned on one kind of mesh is a claim about that kind — check that the next mesh is the same kind.*
+
+## 72 — ⛔⛔⛔ **THREE REPORTS, ONE CAUSE: EVERY SNAP WAS CANCELLED ON ITS LANDING STEP** (2026-09-27, the owner, `3D6`)
+
+> *"two pioneer-follower which get unseated and unaligned : i cannot move them any longer after
+> that"* · *"a follower seated object can be unseated with only a touch delta position … it unseats
+> the object as soon as snapped"* · *"if i rotate a pioneer, the follower unsnaps instead of
+> following the pioneer object as a child"*
+
+⭐⭐ **FOUND BY A HARNESS, NOT BY READING**: a local headless Chrome on CDP (port 9333, never the
+tablet's 9222) driving REAL touches, with a DEV-only `window.__st` to read the model. Its first run
+printed `snap: objectA CANCELLED — objectB is in the way` — the Follower blocked by its OWN Pioneer.
+⛔ **The cause**: `3D6` exempted a snapping couple by asking `seatSnaps.has(follower)`, and
+`SeatSnaps.advance` deletes a snap BEFORE it hands back the landing step — so the last write of every
+snap was tested against its own Pioneer, refused, and the snap cancelled. The Follower was left at
+the cursor, NOT seated, inside the skin: it *looked* snapped, then *"unsnapped"* at the first touch;
+a turned Pioneer RELEASED it (an aligned body, not a child); and the unexempt pair, inside the skin,
+could hardly move.
+✅ The snap's write NAMES its couple (`setModelPose(…, alsoExempt)`), never infers it.
+⭐ **And a second defect the same read found**: a SEATED follower's cascade baseline was never
+refreshed (the builders skipped seated links outright), so the frame a seat ended the stale baseline
+read as *the Pioneer turned* and the alignment was released with it. ✅ Seated links are kept with a
+`seated` flag: never released, baseline refreshed.
+⭐⭐ `METHOD`: *a fact inferred from another module's bookkeeping is only as good as that module's
+ORDER of operations* — `has` was true for the whole flight and false for exactly the one write that
+mattered. Pinned by a vector on `SeatSnaps` itself.

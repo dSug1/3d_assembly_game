@@ -27,13 +27,23 @@ export function skinM(st: SceneState): number {
   );
 }
 
-export function collisionSetup(st: SceneState): CollisionSetup {
+export function collisionSetup(
+  st: SceneState,
+  /**
+   * ⭐ A couple exempt for THIS write only — the snap's own lerp names its Follower and Pioneer.
+   * ⛔⛔ It must not be inferred from `seatSnaps.has`: `SeatSnaps.advance` removes a snap BEFORE it
+   * hands back the landing step, so the last write of every snap was tested against its own
+   * Pioneer and CANCELLED (the owner's three reports of 2026-09-27, one cause).
+   */
+  alsoExempt: readonly [ObjectId, ObjectId] | null = null,
+): CollisionSetup {
   return {
     shapes: SHAPES,
     bounds: BOUNDS,
     skinM: skinM(st),
     exempt: (a, b) => {
       if (st.collisionGrace.has(pairKey(a, b))) return true;
+      if (alsoExempt !== null && pairKey(a, b) === pairKey(alsoExempt[0], alsoExempt[1])) return true;
       // ⭐ SNAPPING: the couple is MEANT to meet at gap 0 (`COLLISION.md` §5).
       const snapping = (f: ObjectId, p: ObjectId) =>
         st.seatSnaps.has(f) && st.links.pioneerFor(f)?.objectId === p;
@@ -43,8 +53,13 @@ export function collisionSetup(st: SceneState): CollisionSetup {
 }
 
 /** ⭐ The guarded move — what `setModelPose` writes instead of the asked pose. */
-export function guardMove(st: SceneState, id: ObjectId, target: Placed): MoveVerdict {
-  const v = resolveMove(st.world, id, target, collisionSetup(st));
+export function guardMove(
+  st: SceneState,
+  id: ObjectId,
+  target: Placed,
+  alsoExempt: readonly [ObjectId, ObjectId] | null = null,
+): MoveVerdict {
+  const v = resolveMove(st.world, id, target, collisionSetup(st, alsoExempt));
   if (v.blockedBy !== null) {
     st.lastCollision = `${id}⟂${v.blockedBy} ${Math.round(v.t * 100)}%${v.slid ? " slid" : ""}`;
     st.lastCollisionAt = performance.now();

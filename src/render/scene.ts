@@ -681,6 +681,9 @@ export function createScene(
 
   st.followers = new Map<AbstractMesh, Follow>();
   st.undo = new UndoHistory<SceneSnapshot>();
+  // ⭐ DEV ONLY — the scene state on `window` for a CDP harness to read. ⛔ `import.meta.env.DEV` is
+  // false in `npm run build`, so the production bundle carries no hook.
+  if (import.meta.env.DEV) (window as unknown as { __st?: unknown }).__st = st;
   st.gestureSpan = new GestureSpan();
   st.gestureBefore = null;
   st.gestureUndid = false;

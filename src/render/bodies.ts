@@ -274,6 +274,8 @@ export function setModelPose(
    * not a gesture — `COLLISION.md` §4). Every gesture write collides.
    */
   collide = true,
+  /** ⭐ `3D6`: a couple exempt for this write only — the snap's lerp. See `collisionSetup`. */
+  alsoExempt: readonly [ObjectId, ObjectId] | null = null,
 ) : MoveVerdict | null {
   const id = st.idOf.get(mesh);
   if (id === undefined) return null;
@@ -293,7 +295,7 @@ export function setModelPose(
   }
   // ⭐⭐⭐ `3D6` — NO BODY PENETRATES ANOTHER: the move is resolved (stop + slide for a translation,
   // a same-axis clamp for a turn) before it is written. ⭐ The rule is `core/collision.ts`'s.
-  const verdict = collide ? guardMove(st, id, placed) : null;
+  const verdict = collide ? guardMove(st, id, placed, alsoExempt) : null;
   st.world = setWorldPlacement(st.world, id, verdict === null ? placed : verdict.placed);
   return verdict;
 }

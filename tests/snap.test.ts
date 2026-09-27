@@ -438,3 +438,14 @@ describe("⭐⭐⭐ anchoredToFrozen — a part seated on the plate, and its chi
     expect(receivesSway({ id: "pink" }, "stranger", () => false, null, true, () => false, anchored)).toBe(true);
   });
 });
+
+describe("⚠⚠ THE TRAP THAT CANCELLED EVERY SNAP (2026-09-27) — `advance` drops a snap BEFORE its landing step", () => {
+  it("⛔ on the step marked `done`, `has(id)` is already FALSE — so no rule may infer *snapping* from it", () => {
+    const s = new SeatSnaps<string>();
+    s.start("F", [0, 1, 0], [0, 0, 0], 0);
+    const steps = s.advance(1000, 60, (u) => u);
+    expect(steps).toEqual([{ id: "F", position: [0, 0, 0], done: true }]);
+    // ⭐ The fact the collision exemption tripped on: the landing write is made AFTER this.
+    expect(s.has("F")).toBe(false);
+  });
+});
