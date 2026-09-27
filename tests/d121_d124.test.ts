@@ -61,11 +61,11 @@ describe("⭐⭐ `D121` — a frozen body the camera sees from BELOW turns see-t
   });
 });
 
-describe("⭐ `D122` — Scene_1's sand floor: halved, then 80 %, then 107 %", () => {
-  it("47.9 → 23.95 → 19.16 → 20.5012 units across, still frozen, still topped at the Unity plane", () => {
+describe("⭐ `D122` — Scene_1's sand floor: halved, 80 %, 107 %, then 103 %", () => {
+  it("47.9 → 23.95 → 19.16 → 20.5012 → 21.116236 units across, still frozen, still topped at the Unity plane", () => {
     const floor = SCENE_1.bodies.find((b) => b.id === "Floor")!;
-    expect(floor.dims[0]).toBe(20.5012);
-    expect(floor.dims[2]).toBe(20.5012);
+    expect(floor.dims[0]).toBe(21.116236);
+    expect(floor.dims[2]).toBe(21.116236);
     expect(floor.frozen).toBe(true);
     expect(floor.position[1] + floor.dims[1] / 2).toBeCloseTo(-2.3, 9);
   });

@@ -103,14 +103,14 @@ const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
  * 47.9 × 47.9 units — ⭐ HALVED to 23.95 (`D122`, the owner, 2026-09-27: *"make the dimension of the
  * yellow sand plane half of what they are currently"*), then to **80 %** of that, **19.16 × 19.16**
  * (*"reduce the width and length of the yellow sand plate to 80 % of their current sizes"*), then
- * **107 %** of that, **20.5012 × 20.5012** (*"increase … to 107 % of their current sizes"*). ⚠ A plane has no thickness and a body needs a shape, so it is a slab 0.05 units
+ * **107 %** of that (*"increase … to 107 % of their current sizes"*), then **103 %**: **21.116236 × 21.116236**. ⚠ A plane has no thickness and a body needs a shape, so it is a slab 0.05 units
  * thick whose TOP is the plane (`y = −2.3`). Frozen, as asked.
  */
 const FLOOR: BodySpec = {
   id: "Floor",
   position: [0, -2.3 - 0.025, 0],
   colour: SCENE_1_PALETTE.MAT_F,
-  dims: [20.5012, 0.05, 20.5012],
+  dims: [21.116236, 0.05, 21.116236],
   orientation: "identity",
   frozen: true,
   topScale: 1,

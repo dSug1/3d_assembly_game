@@ -48,7 +48,7 @@
 * **Shadows**: soft (PCF), strength 0.4 → Babylon darkness 0.6, one 1024 map per light; every piece
   casts and receives, the floor receives.
 * **Floor**: Unity's Plane is 10 × 10 units, so scale 4.79 is 47.9 × 47.9 units — ⭐ **halved, then
-  80 %, then 107 % of that: 20.5012 × 20.5012** (`D122`, the owner). A plane has no thickness, so it is a 0.05-unit
+  80 %, 107 %, then 103 % of that: 21.116236 × 21.116236** (`D122`, the owner). A plane has no thickness, so it is a 0.05-unit
   slab whose TOP is `y = −2.3`. Frozen; seen from below it turns see-through (`D121`).
 
 ## 4. ⚠⚠ What the brief and the table disagree on — built as the TABLE says
