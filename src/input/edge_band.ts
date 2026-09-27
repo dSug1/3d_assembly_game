@@ -34,3 +34,37 @@ export function inEdgeBand(x: number, y: number, rect: CanvasRect, bandPx: numbe
     lx < bandPx || ly < bandPx || rect.width - lx < bandPx || rect.height - ly < bandPx
   );
 }
+
+/**
+ * ⭐⭐⭐ **THE BAND OPENS ONLY WHEN THERE IS NO EMPTY SPACE** (`D114`, the owner, 2026-09-27: *"set
+ * the band width to zero, unless there is no empty space on screen (in such case, band = 6mm)"*).
+ *
+ * ⭐ `emptySpaceVisible` is the render layer's probe (`probeGrid` points picked against the scene):
+ * a point counts as empty when a FIRST touch there would be a miss — nothing hit, or a frozen body
+ * a first touch cannot hold (`D89`). ⛔ The probe ignores the band itself, so opening it cannot
+ * close it again on the next probe.
+ */
+export function effectiveBandMm(bandWhenNeededMm: number, emptySpaceVisible: boolean): number {
+  return emptySpaceVisible ? 0 : Math.max(0, bandWhenNeededMm);
+}
+
+/**
+ * The probe points, canvas-relative, one every `spacingPx` — cell CENTRES, so the edges are
+ * probed half a cell in. ⭐ The spacing is a fingertip (`D114`: 10 mm): a gap smaller than a finger
+ * is not empty space a hand can use. ⛔ Capped, so a tiny spacing cannot make a probe of millions.
+ */
+export function probeGrid(
+  width: number,
+  height: number,
+  spacingPx: number,
+  maxPoints = 2000,
+): [number, number][] {
+  if (!(width > 0) || !(height > 0) || !(spacingPx > 0)) return [];
+  const nx = Math.max(1, Math.round(width / spacingPx));
+  const ny = Math.max(1, Math.round(height / spacingPx));
+  if (nx * ny > maxPoints) return probeGrid(width, height, spacingPx * 2, maxPoints);
+  const pts: [number, number][] = [];
+  for (let j = 0; j < ny; j++)
+    for (let i = 0; i < nx; i++) pts.push([((i + 0.5) * width) / nx, ((j + 0.5) * height) / ny]);
+  return pts;
+}

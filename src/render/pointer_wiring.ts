@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
@@ -146,7 +147,7 @@ export function installPointerHandler(st: SceneState): void {
         e.clientX,
         e.clientY,
         st.canvas.getBoundingClientRect(),
-        mmToPx(st.cfg.edgeBandMm),
+        mmToPx(bandMmNow(st)),
       );
       const rayHit = !inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐⭐ **A SECOND TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (the owner, 2026-09-23:

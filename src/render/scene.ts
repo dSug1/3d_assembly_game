@@ -630,6 +630,8 @@ export function createScene(
   });
   document.body.appendChild(st.edgeBandEl);
   st.edgeBandKey = "";
+  st.emptySpaceVisible = true;
+  st.lastEmptyProbeMs = -Infinity;
   // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
   // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
   // "mouse"` is looked at, and the scene's gesture code below is untouched.

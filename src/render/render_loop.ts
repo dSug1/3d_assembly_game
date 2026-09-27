@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
 import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
 import { worldPlacementOf } from "../core/object_model";
@@ -587,8 +588,10 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ `D113`: the edge band's outline follows the canvas and the slider. ⚠ Laid out every frame
     // from the canvas rectangle — a rotation or a resize must not leave it drawn in the wrong place.
     {
+      // ⭐ `D114`: the band is 0 while a first touch has somewhere empty to land.
+      probeEmptySpace(st, performance.now());
       const r = st.canvas.getBoundingClientRect();
-      const b = mmToPx(st.cfg.edgeBandMm);
+      const b = mmToPx(bandMmNow(st));
       // ⚠ Written only on CHANGE: a style write per frame is a layout invalidation with no reader.
       const key = `${r.left},${r.top},${r.width},${r.height},${b}`;
       if (key !== st.edgeBandKey) {

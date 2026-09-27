@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { bandMmNow } from "./empty_space_probe";
 import { formatElapsed } from "../input/episode_ledger";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from "../input";
@@ -93,6 +94,7 @@ export function paint(st: SceneState) {
     score:
       `${st.episodes} episode${st.episodes === 1 ? "" : "s"}  ${formatElapsed(st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
       `  undo=${st.undo.size}` +
+      `  band=${bandMmNow(st) > 0 ? `${bandMmNow(st)}mm (no empty space)` : "off"}` +
       (st.cfg.pioneerCursorDrag === 1 ? "  FREE FLOW (not scored)" : ""),
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
     // what is on the glass. The rules read `activeCount`, which excludes them.
