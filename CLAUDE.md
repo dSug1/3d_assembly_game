@@ -62,7 +62,7 @@ deleted**: the pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone-en
 `D103`'s flick-unsnap — *"obsolete"*); a **double tap on any body UNDOES the last action** — one
 history for the scene, an action being a gesture that changed the model, so a move, an alignment, a
 snap or an unsnap comes back whole (the camera reset keeps empty space only — and a 6 mm **edge band**
-along the screen is always empty space, `D113`, so it stays reachable); and the HUD's **first
+along the screen is always empty space, `D113`, its width a slider at the top of CAMERA, so it stays reachable); and the HUD's **first
 line is the score** — touchpoint episodes by `SCORE.md` §3 and the time since the first press, the
 undo pair costing ONE → `ALIGNMENT_RULES.md` §12–§13.
 ⛔ **Everything below is the record as it stood; where it names a deleted gesture, §12 wins.**

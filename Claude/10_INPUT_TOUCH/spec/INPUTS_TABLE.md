@@ -15,7 +15,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | nothing | 2 fingers pinch on empty space | zoom |
 | nothing | double tap on empty space | reset the camera |
-| — | ⭐ **anything in the EDGE BAND** (6 mm along the screen edges, dashed line) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`) |
+| — | ⭐ **anything in the EDGE BAND** (6 mm along the screen edges, dashed line; width = the slider at the top of **CAMERA**, 0 = off) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`) |
 | — | ⭐ **double tap on any body** | **undo the last action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
 | a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes) |
