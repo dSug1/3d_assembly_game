@@ -400,6 +400,17 @@ const MAX_ITERATIONS = 64;
  * is deliberately ignorant of everything but points.
  */
 export function gapBetween(a: readonly Vec3[], b: readonly Vec3[]): number | null {
+  const v = separationBetween(a, b);
+  return v === null ? null : length(v);
+}
+
+/**
+ * ⭐⭐ **THE SEPARATION VECTOR** — the closest point of `A ⊖ B` to the origin: it points from `B`
+ * toward `A` and its length is the gap (`[0,0,0]` when they touch or overlap). ⭐ `3D6`'s slide reads
+ * its DIRECTION as the contact normal. ⛔ Same iteration as `gapBetween`, which is its length — one
+ * GJK, not two.
+ */
+export function separationBetween(a: readonly Vec3[], b: readonly Vec3[]): Vec3 | null {
   if (a.length === 0 || b.length === 0) return null;
 
   const diffSupport = (dir: Vec3): Vec3 =>
@@ -407,7 +418,7 @@ export function gapBetween(a: readonly Vec3[], b: readonly Vec3[]): number | nul
 
   // ⚠ Any starting direction works; a poor one costs an iteration, never an answer.
   let v = diffSupport([1, 0, 0]);
-  if (length(v) === 0) return 0;
+  if (length(v) === 0) return [0, 0, 0];
   let simplex: Vec3[] = [v];
 
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
@@ -429,5 +440,5 @@ export function gapBetween(a: readonly Vec3[], b: readonly Vec3[]): number | nul
     simplex = near.keep.map((i) => at(simplex, i));
     v = near.point;
   }
-  return length(v);
+  return v;
 }

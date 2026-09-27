@@ -211,10 +211,20 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
   )) {
     const mesh = st.meshOf.get(step.id);
     if (!mesh) continue;
-    setModelPose(st, mesh, {
+    const moved = setModelPose(st, mesh, {
       position: step.position,
       orientation: modelOrientation(st, mesh),
     });
+    // ⭐⭐ `3D6`: a snap whose lerp would cross a THIRD body is CANCELLED — the Follower stays where
+    // it is and the couple is held off until it leaves the radius (`COLLISION.md` §5).
+    if (moved !== null && moved.blockedBy !== null) {
+      st.seatSnaps.cancel(step.id);
+      const held = st.pioneerCursors.ofFollower(step.id);
+      if (held !== null) st.snapArming.holdOff(held.key);
+      st.lastVerdict = `snap: ${step.id} CANCELLED — ${moved.blockedBy} is in the way`;
+      st.hudDirty = true;
+      continue;
+    }
     if (!step.done) continue;
     const cur = st.pioneerCursors.ofFollower(step.id);
     if (cur === null) continue;

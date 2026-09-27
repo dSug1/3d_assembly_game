@@ -11,7 +11,7 @@
 
 | # | row | what | spec |
 |---|---|---|---|
-| 1 | **`3D6`** | ⛔⛔ **COLLISION** — no body penetrates another: translation STOPS and SLIDES; rotation CLAMPS on the same axis (never slides, never switches axis); snapping and seated rules; broad phase; blocked feedback. ⭐ Modular: shape source and bounds source are interfaces, today the hull at spawn and its box | [`../../30_OBJECTS_3D/spec/COLLISION.md`](../../30_OBJECTS_3D/spec/COLLISION.md) |
+| 1 | **`3D6`** ✅ BUILT 2026-09-27, unjudged | ⛔⛔ **COLLISION** — no body penetrates another: translation STOPS and SLIDES; rotation CLAMPS on the same axis (never slides, never switches axis); snapping and seated rules; broad phase; blocked feedback. ⭐ Modular: shape source and bounds source are interfaces, today the hull at spawn and its box | [`../../30_OBJECTS_3D/spec/COLLISION.md`](../../30_OBJECTS_3D/spec/COLLISION.md) |
 | 2 | **`GM1`** (+ the mate) | ⛔⛔ **A GOAL AND ITS DETECTION** — target data per level (which face on which Pioneer, where, which spin), the MATE check against it, a completion detector read from the model, level end (clock and count frozen, result shown). Par per level until the solver (`GM4`) | §2 below |
 | 3 | **`3D7`** | **THE PLAY VOLUME** — translation clamped to a volume; a lost part recoverable; + the blocked / snap feedback of `3D6` §6 | §3 below |
 | 4 | **`3D2`** (the approach) | the assist that brings a part onto its target — alignment hint on the approach, hold-off; needed badly once collision makes tight fits hard by finger | `APPROACH_AND_MATE.md` |
@@ -29,7 +29,7 @@ Both → [`../../30_OBJECTS_3D/spec/COLLISION.md`](../../30_OBJECTS_3D/spec/COLL
 * **Rotation: NOT slide, and never switch the axis** — *"i do not want to switch rotation axis if
   there is a collision because quaternion are not commutable and the user cannot go back"*. ⭐ So a
   blocked turn is CLAMPED along its own axis (`Δᵗ`), the excess dropped; the undo is the exact way
-  back. ⛔ Owner to confirm: clamp to contact vs refuse the whole frame step (`COLLISION.md` §4.7).
+  back. ✅ **Clamp**, confirmed by the owner (*"clamp"*) over refusing the whole frame step.
 * **Shapes: the hull at spawn and the GJK gap, for now** — modular, replaceable by Blender `UCX_`
   shapes (`3D8`). ⚠ Interim cost: a hole is filled, so insertion waits for `3D8`.
 * **Broad phase: a cheap bounding box** — modular, replaceable by an authored box (`3D9`).
@@ -62,8 +62,10 @@ face wherever the cursor sits; a level's target says *this* face of *this* part 
 3. **the completion detector** — every target couple mated, read from the model every frame;
 4. **level end** — the clock and the count stop, the result is shown (`GM5` scores it).
 
-⚠ Open, the owner's: does a seated-but-wrong couple (right faces, wrong spin) show as wrong? Does the
-mate LOCK the spin once correct, or leave it free until the level ends?
+⏸ **DEFERRED BY THE OWNER** (2026-09-27: *"we will see mate and spin later on. Just capture in md
+files"*) — two questions to answer before `GM1` builds the mate check:
+1. does a couple seated on the right faces but at the wrong SPIN show as wrong?
+2. once the spin is right, does the mate LOCK it, or leave it free until the level ends?
 
 ## 3. The play volume
 

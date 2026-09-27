@@ -73,7 +73,9 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐ `D113` (the owner, 2026-09-27: *"Put a slider for the band width"*): at the TOP of CAMERA,
       // not inside a subsection — the strip that is always empty space, 0 = off.
       // ⭐ `D114`: the width it opens to when NO empty space is left on the glass — 0 otherwise.
-      sliders: [tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1)],
+      sliders: [
+        tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
+      ],
       subsections: [
         {
           title: "CAMERA ORBIT",
@@ -150,6 +152,8 @@ export function installTuningMenu(st: SceneState): void {
     {
       title: "OBJECT TRANSLATION",
       sliders: [
+        // ⭐ `3D6`: how far apart every pair of bodies is kept — a contact, read on the glass.
+        tunable(st, "collision skin (mm on glass)", "collisionSkinMm", 0.05, 3, 0.05),
         // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
         // under the finger at every camera distance. The slider exists so that claim
         // can be DISPROVED by finger, and so the owner can judge whether direct

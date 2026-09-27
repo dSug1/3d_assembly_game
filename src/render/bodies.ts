@@ -4,6 +4,8 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { guardMove } from "./collision_wiring";
+import { type MoveVerdict } from "../core/collision";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
@@ -263,9 +265,18 @@ export function modelPose(st: SceneState, mesh: AbstractMesh) {
 
 
 /** Write the model. ⛔ The only way an object's real pose ever changes. */
-export function setModelPose(st: SceneState, mesh: AbstractMesh, placed: Placed) : void {
+export function setModelPose(
+  st: SceneState,
+  mesh: AbstractMesh,
+  placed: Placed,
+  /**
+   * ⭐ `3D6`: `false` only for the product's own ALIGNMENT turn (the constraint being satisfied is
+   * not a gesture — `COLLISION.md` §4). Every gesture write collides.
+   */
+  collide = true,
+) : MoveVerdict | null {
   const id = st.idOf.get(mesh);
-  if (id === undefined) return;
+  if (id === undefined) return null;
   // ⛔⛔⛔ **A FROZEN BODY REFUSES *AUDIBLY*** — audit fix, 2026-09-17.
   //
   // ⚠ `setWorldPlacement` returns the world unchanged for a frozen body, which is the right
@@ -278,9 +289,13 @@ export function setModelPose(st: SceneState, mesh: AbstractMesh, placed: Placed)
   if (st.world.objects.get(id)?.frozen === true) {
     st.lastVerdict = `${id} is FROZEN — its transform cannot be modified`;
     st.hudDirty = true;
-    return;
+    return null;
   }
-  st.world = setWorldPlacement(st.world, id, placed);
+  // ⭐⭐⭐ `3D6` — NO BODY PENETRATES ANOTHER: the move is resolved (stop + slide for a translation,
+  // a same-axis clamp for a turn) before it is written. ⭐ The rule is `core/collision.ts`'s.
+  const verdict = collide ? guardMove(st, id, placed) : null;
+  st.world = setWorldPlacement(st.world, id, verdict === null ? placed : verdict.placed);
+  return verdict;
 }
 
 export function followerFor(st: SceneState, mesh: AbstractMesh) : Follow {
@@ -373,11 +388,11 @@ export function modelOrientation(st: SceneState, mesh: AbstractMesh) : Quat {
 return requirePose(st, mesh).orientation;
 }
 
-export function setModelOrientation(st: SceneState, mesh: AbstractMesh, q: Quat) : void {
+export function setModelOrientation(st: SceneState, mesh: AbstractMesh, q: Quat, collide = true) : void {
   setModelPose(st, mesh, {
     position: requirePose(st, mesh).position,
     orientation: q,
-  });
+  }, collide);
 }
 
 export function asVec3(v: Vector3) : Vec3 {

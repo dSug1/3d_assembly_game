@@ -1,6 +1,6 @@
 # COLLISION — bodies must not penetrate each other (`3D6`, `D116`)
 
-> **STATUS** · ⛔ specified 2026-09-27, **NOT BUILT** — the FIRST row of the build program
+> **STATUS** · ✅ **BUILT 2026-09-27**, ⛔ **unjudged by a hand** (§8 lists what differs from this spec) — the FIRST row of the build program
 > ([`../../00_CORE/queue_notes/PLAYABILITY_2026-09-27.md`](../../00_CORE/queue_notes/PLAYABILITY_2026-09-27.md))
 > **OWNS** · non-penetration: the shapes, the broad phase, the narrow phase, and what a blocked
 > translation, rotation, snap and seat do
@@ -70,15 +70,14 @@ quaternions do not commute, and a hand cannot retrace a turn the product invente
    it is now given.
 4. **A body in contact may turn AWAY**: a step is refused only if it makes the penetration worse
    than `−ε`, so a part resting on the plate is never locked.
-5. **Rotation increments** (`D73`): an increment is all-or-nothing — if the next detent does not
-   fit, the body holds on the current one.
+5. **Rotation increments** (`D73`): ⚠ AS BUILT, the increment's approach is clamped like any turn,
+   so a blocked detent stops at contact BETWEEN two detents. The all-or-nothing reading proposed
+   here is not built (§8).
 6. ⚠⚠ **THE HONEST LIMIT**: clamping DROPS part of the input, so bringing the finger back to where
    it started returns the body step by step but **not necessarily to its starting pose** — the
    dropped pieces were about different axes. ⭐ The exact way back is the **undo** (`D111`), which
    restores the pose from before the gesture.
-7. ⛔ **Owner to confirm**: *clamp* (turn until contact) vs *refuse the whole frame step* (stop up
-   to one step short of contact, never partial). Both keep the axis; clamp touches, refuse is
-   simpler. **Recommended: clamp.**
+7. ✅ **CLAMP — the owner, 2026-09-27** (*"clamp"*), over refusing the whole frame step.
 
 ## 5. ⭐⭐ ALIGNED, SNAPPING, SEATED — three states, three collision rules
 
@@ -121,3 +120,35 @@ as in the seated row; its **unseated** followers let go (`D106`) and are ordinar
 7. Swapping the shape source for a two-part stub changes no rule vector (the seam is real).
 8. A body without a shape (`⛔NOSHAPE`) is never moved into — it blocks as its bounds, never as
    nothing.
+
+## 8. ✅ AS BUILT (2026-09-27) — and where it differs from the above
+
+| piece | where |
+|---|---|
+| the rule: `resolveMove`, `poseFree`, `blendPlacement` (same-axis partial turn), `slideAlong`, `subtreeOf` / `rootOf` | `src/core/collision.ts` |
+| the seams: `CollisionShapeSource` (`hullAtSpawn`, a list of ONE part), `BoundsSource` (`boundsFromShapes`) | `src/core/collision.ts` |
+| the separation vector (the slide's normal) — the SAME GJK as `gapBetween`, which is now its length | `src/core/collision_shape.ts` `separationBetween` |
+| the composition seam (`SHAPES`, `BOUNDS` — the one line `3D8`/`3D9` change), the skin, the snapping / unsnap-grace exemptions | `src/render/collision_wiring.ts` |
+| the guard: every gesture pose write (`setModelPose`) is resolved first | `src/render/bodies.ts` |
+| the snap lerp cancelled when a third body is in the way, the couple held off | `src/render/seat_wiring.ts` |
+
+* ⭐ **Checked ALONG THE PATH**, not at the end: a step is cut into substeps no longer than the skin
+  (the furthest any point moves, `|Δp| + θ·R`, capped at 64) — a fast drag cannot TUNNEL through a
+  thin body. ⛔ An endpoint-only test was the first build and its vectors went red.
+* ⭐ **The skin** is `collisionSkinMm` (0.3 mm on the glass, slider in OBJECT TRANSLATION) — GJK reads
+  touching and overlapping alike as 0, so a pair is kept at the skin, and a pair already INSIDE it
+  may only move apart. ⚠ A pair at exactly 0 (only an exempt couple reaches it) may move while it
+  stays at 0: the escape hatch for a state the rule did not make.
+* ⚠ **The ALIGNMENT turn does not collide** (`setModelPose(…, collide = false)`): it is the
+  constraint being satisfied, not a gesture. A body it turns into a neighbour can only move OUT.
+* ⚠ **Increments**: see §4.5.
+* ⚠ **Feedback is the HUD only** (`⟂ A⟂B 42% slid` on the first line for two seconds). The contact
+  flash, the vibration and the sound of §6 are `GM9`'s.
+* ⚠ The broad phase re-derives each body's box per query from the shape source — cheap at today's
+  body count; a cached box per body is the first optimisation when the count grows.
+* ⭐ 17 vectors (`tests/collision.test.ts`): stop, slide, no tunnelling, leave-but-not-press, the
+  frozen plate, exemption, the SAME-AXIS clamp (asserted on the axis, and for an arbitrary turn), the
+  compound, the sibling exemption, and ⭐⭐ **the seam**: an L-shape whose notch the hull fills blocks
+  a cube, and the SAME rule with a two-part source lets it in. Mutants: endpoint-only, no slide,
+  members colliding, the turn not clamped — each turns vectors red.
+

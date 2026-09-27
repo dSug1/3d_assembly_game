@@ -285,6 +285,12 @@ export interface GestureConfig {
    */
   edgeBandMm: number;
   /**
+   * ⭐⭐ **THE COLLISION SKIN** (`3D6`), millimetres on the glass: every pair of bodies is kept at
+   * least this far apart. ⛔ Must be > 0 — GJK reads touching and overlapping alike as 0, so a zero
+   * skin could not tell a contact from a penetration.
+   */
+  collisionSkinMm: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between
    * like `pioneerCandidates`. `0` leaves the ring drawn and every press to the ordinary rules.
@@ -785,6 +791,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pioneerCursorGrabRadii: 3,
   // ⚠ A guess with a slider: wide enough for a fingertip's edge, narrow enough to leave the view.
   edgeBandMm: 6,
+  // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
+  collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
@@ -994,6 +1002,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
 
   // ⛔ The owner's range, and `grabbedCursor` clamps to it as well — a validator catches a URL typo
   // at boot instead of letting it ship as a silently different reach.
+  if (!Number.isFinite(cfg.collisionSkinMm) || cfg.collisionSkinMm <= 0 || cfg.collisionSkinMm > 5) {
+    throw new Error(
+      `collisionSkinMm (${cfg.collisionSkinMm}) must be in (0, 5] mm: it is the gap every pair of ` +
+        "bodies is kept at, and at 0 a contact and a penetration both read as a gap of 0.",
+    );
+  }
+
   // ⛔ 0 switches the band off; past 20 mm it eats a phone's view.
   if (!Number.isFinite(cfg.edgeBandMm) || cfg.edgeBandMm < 0 || cfg.edgeBandMm > 20) {
     throw new Error(

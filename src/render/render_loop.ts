@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { pruneCollisionGrace } from "./collision_wiring";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
 import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
@@ -128,7 +129,9 @@ export function startRenderLoop(st: SceneState): void {
       (id) => st.meshOf.has(id),
     )) {
       const mesh = st.meshOf.get(step.id);
-      if (mesh) setModelOrientation(st, mesh, step.orientation);
+      // ⚠ `3D6`: the ALIGNMENT turn is the constraint being satisfied, not a gesture — it does not
+      // collide (`COLLISION.md` §4). A body it turns into a neighbour can only move OUT.
+      if (mesh) setModelOrientation(st, mesh, step.orientation, false);
     }
 
     // ⭐⭐⭐ **WHICH INCREMENT IS EACH HELD BODY IN NOW?** Asked once per frame, per grip.
@@ -588,7 +591,9 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ `D113`: the edge band's outline follows the canvas and the slider. ⚠ Laid out every frame
     // from the canvas rectangle — a rotation or a resize must not leave it drawn in the wrong place.
     {
-      // ⭐ `D114`: the band is 0 while a first touch has somewhere empty to land.
+      // ⭐ `3D6`: an unsnapped couple is ordinary again once it has separated past the skin.
+    pruneCollisionGrace(st);
+    // ⭐ `D114`: the band is 0 while a first touch has somewhere empty to land.
       probeEmptySpace(st, performance.now());
       const r = st.canvas.getBoundingClientRect();
       const b = mmToPx(bandMmNow(st));
