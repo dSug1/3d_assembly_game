@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { formatElapsed } from "../input/episode_ledger";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from "../input";
 import { type Vec3 } from "../core/vec";
@@ -89,6 +90,10 @@ export function depthReadout(st: SceneState) : string {
 export function paint(st: SceneState) {
   const first = st.held.get(st.router.objects()[0]?.id ?? -1);
   st.hud.update({
+    score:
+      `${st.episodes} episode${st.episodes === 1 ? "" : "s"}  ${formatElapsed(performance.now() - st.sceneStartMs)}` +
+      `  undo=${st.undo.size}` +
+      (st.cfg.pioneerCursorDrag === 1 ? "  FREE FLOW (not scored)" : ""),
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
     // what is on the glass. The rules read `activeCount`, which excludes them.
     pointers: st.router.size,

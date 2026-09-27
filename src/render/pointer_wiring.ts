@@ -16,6 +16,8 @@ import { frozenHoldAdmitted } from "../input/assembly";
 import { translatesOnDrag } from "../input/highlight";
 import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
+import { episodeCounts } from "../input/episode_ledger";
+import { beginGesture, endGesture, undoLast } from "./undo_wiring";
 import { pressHit } from "../input/frozen_pick";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
@@ -30,6 +32,17 @@ import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } f
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
 
 export function installPointerHandler(st: SceneState): void {
+  // ⭐⭐ `D111` — THE GESTURE'S FIRST DOWN, observed BEFORE every rule (`insertFirst`): the model is
+  // snapshotted as it stands, so the undo's entry is the scene before anything this gesture did.
+  st.scene.onPointerObservable.add(
+    (info) => {
+      if (info.type !== PointerEventTypes.POINTERDOWN) return;
+      const e = info.event as PointerEvent;
+      if (st.gestureSpan.press(e.pointerId)) beginGesture(st);
+    },
+    undefined,
+    true,
+  );
 
   st.scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
@@ -158,7 +171,17 @@ export function installPointerHandler(st: SceneState): void {
         st.router.size,
       );
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
+      // ⭐ `D112`: the facts the episode ledger reads, taken BEFORE this press registers.
+      const heldBefore = st.router
+        .objects()
+        .map((q) => st.held.get(q.id))
+        .map((g) => (g === undefined ? undefined : st.idOf.get(g.mesh)));
       const routed = st.router.press(e.pointerId, s, hit);
+      st.episodeFacts.set(e.pointerId, {
+        role: routed.role,
+        heldAtPress: heldBefore.length,
+        pressedAnotherBody: rawHitId !== undefined && !heldBefore.includes(rawHitId),
+      });
       if (rayHit !== null && hit === null) {
         st.lastVerdict = `frozen ${hitId ?? "?"} — second touch routed as a MISS`;
       }
@@ -614,6 +637,7 @@ export function installPointerHandler(st: SceneState): void {
         ) {
           // ⚠ The history is still recorded, so a double tap keeps pairing exactly as it did.
           st.taps.record(routed.pressed, s.t);
+          st.episodeUnaligned.add(e.pointerId);
           if (alignedFaceOf(st.world, heldId) !== null) {
             releaseAlignmentOf(st, heldId);
             heldGrip.alignmentTouched = false;
@@ -1091,9 +1115,13 @@ export function installPointerHandler(st: SceneState): void {
       // make the gesture unusable. ⛔ One gesture, one consequence.
       // ⚠ Everywhere else the double tap keeps the camera reset: empty space, the held
       // object, a second touchpoint. Only this one configuration is claimed.
+      // ⭐⭐⭐ `D111` — **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** (the owner, 2026-09-27),
+      // and it no longer flies the camera home: that stays on EMPTY space. ⚠ Cost: an orbit stuck
+      // close in with a body filling the view must find a patch of empty space to reset.
+      // ⭐ The pair costs ONE episode: the second tap is excluded by the ledger.
       if (verdict.kind === "DOUBLE_TAP" && !alignedByThisTap) {
-        resetCamera(st);
-        st.lastVerdict = "DOUBLE_TAP → camera reset";
+        undoLast(st);
+        st.episodeUndo.add(e.pointerId);
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
       // *anywhere* includes the object the touchpoint was carrying, which is this branch.
@@ -1165,5 +1193,31 @@ export function installPointerHandler(st: SceneState): void {
       st.held.delete(e.pointerId);
       paint(st);
     }
+  });
+
+  // ⭐⭐ THE RELEASE, observed AFTER every rule: the episode is classified with what the release DID,
+  // and the gesture ends when nothing is left down (`D111`, `D112`).
+  st.scene.onPointerObservable.add((info) => {
+    if (info.type !== PointerEventTypes.POINTERUP) return;
+    const e = info.event as PointerEvent;
+    const facts = st.episodeFacts.get(e.pointerId);
+    st.episodeFacts.delete(e.pointerId);
+    const unaligned = st.episodeUnaligned.delete(e.pointerId);
+    const undoSecondTap = st.episodeUndo.delete(e.pointerId);
+    // ⛔ Free Flow escapes the score (`D101`): nothing is counted while the cursor drag is on.
+    if (
+      st.cfg.pioneerCursorDrag !== 1 &&
+      episodeCounts({
+        role: facts?.role ?? null,
+        heldAtPress: facts?.heldAtPress ?? 0,
+        pressedAnotherBody: facts?.pressedAnotherBody ?? false,
+        unaligned,
+        undoSecondTap,
+      })
+    ) {
+      st.episodes += 1;
+      st.hudDirty = true;
+    }
+    if (st.gestureSpan.release(e.pointerId)) endGesture(st);
   });
 }

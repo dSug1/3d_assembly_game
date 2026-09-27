@@ -40,6 +40,8 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
+import { GestureSpan, UndoHistory } from "../core/undo_history";
+import { type SceneSnapshot } from "./undo_wiring";
 import "@babylonjs/core/Culling/ray";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -660,6 +662,16 @@ export function createScene(
   st.held = new Map<number, Held>();
 
   st.followers = new Map<AbstractMesh, Follow>();
+  st.undo = new UndoHistory<SceneSnapshot>();
+  st.gestureSpan = new GestureSpan();
+  st.gestureBefore = null;
+  st.gestureUndid = false;
+  st.episodes = 0;
+  st.sceneStartMs = performance.now();
+  st.hudSecond = -1;
+  st.episodeFacts = new Map();
+  st.episodeUnaligned = new Set<number>();
+  st.episodeUndo = new Set<number>();
   st.lastVerdict = "—";
 
   /**

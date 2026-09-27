@@ -34,6 +34,9 @@ import { type SwingLatch } from "../input/approach_swing";
 import { type GestureConfig } from "../input/gestureConfig";
 import { type Hud } from "./hud";
 import { type MouseSecondTouchHandle } from "./mouse_adapter";
+import { type GestureSpan, type UndoHistory } from "../core/undo_history";
+import { type PointerRole } from "../input/router";
+import { type SceneSnapshot } from "./undo_wiring";
 
 /**
  * ⭐ How far a face marker floats off the surface it marks, in METRES. ⛔ Enough to beat
@@ -468,6 +471,19 @@ export interface SceneState {
   router: PointerRouter<AbstractMesh>;
   held: Map<number, Held>;
   followers: Map<AbstractMesh, Follow>;
+  /** ⭐ `D111`: the scene's one undo history, and the gesture that may add to it. */
+  undo: UndoHistory<SceneSnapshot>;
+  gestureSpan: GestureSpan;
+  gestureBefore: SceneSnapshot | null;
+  gestureUndid: boolean;
+  /** ⭐ `D112`: the touchpoint episodes counted, and when the scene started (the timer). */
+  episodes: number;
+  sceneStartMs: number;
+  /** The last whole second the HUD showed — the timer repaints once a second, not per frame. */
+  hudSecond: number;
+  episodeFacts: Map<number, { role: PointerRole; heldAtPress: number; pressedAnotherBody: boolean }>;
+  episodeUnaligned: Set<number>;
+  episodeUndo: Set<number>;
   lastVerdict: string;
   hudDirty: boolean;
   pinch: PinchTracker;

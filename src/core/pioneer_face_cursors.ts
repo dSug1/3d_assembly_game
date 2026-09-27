@@ -132,4 +132,15 @@ export class PioneerFaceCursors {
   get size(): number {
     return this.byKey.size;
   }
+
+  /** ⭐ `D111`'s undo: every cursor, COPIED — a ring dragged later must not move the snapshot. */
+  snapshot(): PioneerFaceCursor[] {
+    return [...this.byKey.values()].map((c) => ({ ...c, position: [...c.position] as Vec3 }));
+  }
+
+  /** Replace every cursor with a `snapshot`'s. ⚠ Copied again, so the snapshot can be reused. */
+  restore(s: readonly PioneerFaceCursor[]): void {
+    this.byKey.clear();
+    for (const c of s) this.byKey.set(c.key, { ...c, position: [...c.position] as Vec3 });
+  }
 }
