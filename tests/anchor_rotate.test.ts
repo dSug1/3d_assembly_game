@@ -20,7 +20,6 @@
 import { describe, expect, it } from "vitest";
 import {
   constrainedDragAngle,
-  constrainedRollAngle,
   flatTwistAngle,
   nearSideScreenDirection,
   rollSignFor,
@@ -70,12 +69,6 @@ describe("⭐⭐ the anchor SURVIVES the motion", () => {
     for (let i = 0; i < 40; i++) {
       q = rotateAboutAxis(q, GRAVITY, constrainedDragAngle(FRONT, GRAVITY, mmToPx(25), 0, GAIN)!);
     }
-    expect(driftDeg(qRotate(q, GRAVITY))).toBeCloseTo(0, 9);
-  });
-
-  it("an A3 roll, where roll drives, also leaves it exactly on its axis", () => {
-    const angle = constrainedRollAngle(TOP, GRAVITY, 90)!;
-    const q = rotateAboutAxis(IDENTITY, GRAVITY, angle);
     expect(driftDeg(qRotate(q, GRAVITY))).toBeCloseTo(0, 9);
   });
 
@@ -198,72 +191,6 @@ describe("the drag mapping, and where it is degenerate", () => {
     const one = constrainedDragAngle(FRONT, GRAVITY, mmToPx(10), 0, GAIN)!;
     const three = constrainedDragAngle(FRONT, GRAVITY, mmToPx(30), 0, GAIN)!;
     expect(three).toBeCloseTo(3 * one, 12);
-  });
-});
-
-describe("the A3 roll mapping", () => {
-  it("⛔ THE SIGN FLIPS with the axis, or orbiting under the object reverses the controls", () => {
-    const fromTop = constrainedRollAngle(TOP, GRAVITY, 90)!;
-    const fromBottom = constrainedRollAngle(BOTTOM, GRAVITY, 90)!;
-    expect(Math.sign(fromTop)).toBe(-Math.sign(fromBottom));
-  });
-
-  it("matches `screenRollRotation`'s convention when the axis IS the view axis", () => {
-    // Looking up: view = +y = the gravity axis. A clockwise sweep must produce the same
-    // rotation `screen_rotate` would, which is −deg about the view axis.
-    expect(constrainedRollAngle(BOTTOM, GRAVITY, 90)!).toBeCloseTo(-Math.PI / 2, 12);
-  });
-
-  it("⛔ returns null when the axis is square to the view — nothing to roll about", () => {
-    expect(constrainedRollAngle(FRONT, GRAVITY, 90)).toBeNull();
-  });
-
-  it("⛔⛔ and it is SQUARE TO WITHIN ARITHMETIC, not square to the bit", () => {
-    // ⛔⛔⛔ **THE GUARD READ `c === 0`** — an exact float comparison on a dot product of two
-    // normalised vectors that have each been through a cross product and a division. ⚠ An
-    // exactly-zero dot is measure-zero: the axis the camera actually reaches is square to
-    // within 1e-17 and the guard waves it through, at FULL rate, with a sign taken from
-    // whichever way that last bit fell. ⭐ So the branch documented as *"square to the view: no
-    // component to roll about"* could essentially never run.
-    // ⚠ The epsilon is the one its own sibling already uses — `nearSideScreenDirection` guards
-    // `len > 1e-9` — so this is one arithmetic tolerance, not a new tunable.
-    // ⭐⭐ `METHOD`: *a guard that cannot fire is not a guard.*
-    // ⚠ `FRONT` looks along −z and `GRAVITY` is +y, so the two are square and the dot is
-    // exactly 0. ⭐ Tilt the camera by 1e-12 radians — far below anything a hand or a float can
-    // resolve — and the dot becomes 1e-12 rather than 0.
-    const eps = 1e-12;
-    const n = Math.hypot(eps, 1);
-    const frame: ScreenFrame = { ...FRONT, viewAxis: [0, eps / n, -1 / n] };
-    expect(constrainedRollAngle(frame, GRAVITY, 90)).toBeNull();
-  });
-
-  it("⚠ AND THE SIGN STILL FLIPS ACROSS SQUARE — stated, not fixed", () => {
-    // ⛔⛔ **THIS IS A DEVICE QUESTION, AND THE VECTOR EXISTS TO SAY SO RATHER THAN TO BLESS
-    // IT.** The magnitude does not depend on how square the axis is — only the SIGN does — so
-    // as the camera crosses the square plane the roll reverses at full rate. ⭐ Making it fade
-    // with `|c|` would remove the discontinuity and would also change the FEEL everywhere else,
-    // and *"the object must follow the finger"* at full rate was a deliberate choice.
-    // ⚠ `IN5`: a hand decides feel. This pins the current behaviour so a change to it is
-    // visible rather than accidental.
-    const tilt = (eps: number) => {
-      const n = Math.hypot(eps, 1);
-      const frame: ScreenFrame = { ...FRONT, viewAxis: [0, eps / n, -1 / n] };
-      return constrainedRollAngle(frame, GRAVITY, 90);
-    };
-    const a = tilt(0.001);
-    const b = tilt(-0.001);
-    expect(a).not.toBeNull();
-    expect(b).not.toBeNull();
-    // ⛔ Equal in size, opposite in direction, for a 0.1° change of camera tilt.
-    expect(Math.abs(a!)).toBeCloseTo(Math.abs(b!), 12);
-    expect(Math.sign(a!)).toBe(-Math.sign(b!));
-  });
-
-  it("is linear in the swept angle", () => {
-    expect(constrainedRollAngle(TOP, GRAVITY, 120)!).toBeCloseTo(
-      3 * constrainedRollAngle(TOP, GRAVITY, 40)!,
-      12,
-    );
   });
 });
 
@@ -404,14 +331,13 @@ describe("⛔⛔⛔ THE DEAD ZONE `D57` REMOVED — the projection's cosine, kep
     expect(Math.abs(secondTouchDeg(off(60 * DEG)))).toBeCloseTo(20 * Math.cos(60 * DEG), 4);
   });
 
-  it("⛔⛔ AND `constrainedRollAngle` IS NOT A FALLBACK THERE — both charts die together", () => {
+  it("⛔⛔ AND THE SECOND TOUCH IS DEAD THERE TOO (`constrainedRollAngle`, the other chart, is deleted — `D109`)", () => {
     // ⚠ The obvious repair is *hand over to `A3`'s other chart where this one fades*. It does
     // not work, and stating why saves the next session the experiment: an axis horizontal on
     // screen is **square to the view**, which is precisely where that chart returns `null`.
     // ⛔ The two degeneracies were believed complementary; in this configuration they coincide.
     // ⭐ Only the missing `dy` could serve it — which is a decision about `A16`'s channel split,
     // not an arithmetic repair.
-    expect(constrainedRollAngle(FRAME, [1, 0, 0], 30)).toBeNull();
     expect(secondTouchDeg([1, 0, 0])).toBe(0);
   });
 });

@@ -713,7 +713,6 @@ describe("⛔⛔⛔ AN APPROACH ALONG GRAVITY ARMS THE SWING — the 2026-09-23 
       PER_PX,
       1,
       1,
-      "PLANE",
       5,
       c.gravity.towardGravity,
     );

@@ -29,31 +29,17 @@
  * never called (it reads `frame.depth`). ⛔ Deleting it made these vectors BETTER, not just
  * shorter: they now exercise the mapping the scene actually uses.
  */
-import { gravityFrame } from "../src/input/gravity_frame";
 import { describe, expect, it } from "vitest";
 import {
   rollDragDeg,
   secondFingerDrive,
   depthLimits,
-  depthTranslate,
 } from "../src/input/depth_translate";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
-import { dot, length, normalize, scale, sub, type Vec3 } from "../src/core/vec";
 import { mmToPx } from "../src/core/units";
 
-const DOWN: Vec3 = [0, -1, 0];
-const CAM: Vec3 = [0, 0.8, -1.2];
-const VIEW: Vec3 = normalize([0, -0.5, 1])!;
-const OBJ: Vec3 = [0.15, 0.1, 0.1];
 const { minM, maxM } = depthLimits(DEFAULT_CONFIG);
-const PER_PX = 0.002; // rule 6's computed factor, at some camera distance
 
-const push = gravityFrame(VIEW, DOWN)!.depth!;
-const depthOf = (p: Vec3) => dot(sub(p, CAM), push);
-/** ⭐ +1: this fixture's camera looks DOWN on the scene, so "away" rises on screen. */
-const AWAY = Math.sign(dot(VIEW, DOWN));
-const move = (dyPx: number, gain = 1, obj: Vec3 = OBJ) =>
-  depthTranslate(CAM, obj, push, AWAY, dyPx, PER_PX, gain, minM, maxM);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ⭐⭐ THE GATE, COMPOSED WITH THE REAL MOTION STATE
@@ -80,148 +66,13 @@ const move = (dyPx: number, gain = 1, obj: Vec3 = OBJ) =>
 // vector whose subject cannot occur is not a safety net; these certified a function that no
 // longer exists.
 
-describe("⭐⭐ HEIGHT NEVER CHANGES — gravity is the primary constraint", () => {
-  it("at every camera elevation", () => {
-    for (const tilt of [0.1, 0.5, 1.5, 4]) {
-      const view = normalize([0, -tilt, 1])!;
-      const out = depthTranslate(CAM, OBJ, gravityFrame(view, DOWN)!.depth!, Math.sign(dot(view, DOWN)), mmToPx(-20), PER_PX, 1, minM, maxM);
-      expect(out[1], `tilt ${tilt}`).toBeCloseTo(OBJ[1], 12);
-    }
-  });
-
-  it("⛔ and the across-view offset is untouched too — only the depth moves", () => {
-    const across = (p: Vec3) => {
-      const r = sub(p, CAM);
-      return sub(sub(r, scale(push, dot(r, push))), scale(DOWN, dot(r, DOWN)));
-    };
-    expect(length(sub(across(move(mmToPx(-30))), across(OBJ)))).toBeCloseTo(0, 12);
-  });
-});
-
-describe("the sense and the size of the motion", () => {
-  it("⚠ fingers UP push the object AWAY — it sits higher on screen when further off", () => {
-    expect(depthOf(move(mmToPx(-20)))).toBeGreaterThan(depthOf(OBJ));
-  });
-
-  it("fingers DOWN bring it closer", () => {
-    expect(depthOf(move(mmToPx(20)))).toBeLessThan(depthOf(OBJ));
-  });
-
-  it("⭐⭐ moves as far as RULE 6 would for the same travel — gain 1 means CONSISTENT, not tracking", () => {
-    // 30 mm of finger at this camera factor: the same world distance a screen-plane drag
-    // would cover, just pointed into the scene instead of across it.
-    const travelPx = mmToPx(30);
-    expect(depthOf(move(-travelPx)) - depthOf(OBJ)).toBeCloseTo(travelPx * PER_PX, 9);
-  });
-
-  it("is linear in the travel, and in the gain", () => {
-    expect(depthOf(move(-mmToPx(30))) - depthOf(OBJ)).toBeCloseTo(
-      3 * (depthOf(move(-mmToPx(10))) - depthOf(OBJ)),
-      9,
-    );
-    expect(depthOf(move(-mmToPx(10), 2)) - depthOf(OBJ)).toBeCloseTo(
-      2 * (depthOf(move(-mmToPx(10), 1)) - depthOf(OBJ)),
-      9,
-    );
-  });
-
-  it("⭐ out and back RETURNS — it is a displacement, applied per frame", () => {
-    const away = move(-mmToPx(25));
-    const back = depthTranslate(CAM, away, push, AWAY, mmToPx(25), PER_PX, 1, minM, maxM);
-    expect(length(sub(back, OBJ))).toBeCloseTo(0, 9);
-  });
-
-  it("zero travel changes nothing", () => {
-    expect(length(sub(move(0), OBJ))).toBeCloseTo(0, 12);
-  });
-});
-
-describe("⛔⛔ WHICH WAY IS AWAY depends on the camera's side of the horizon", () => {
-  // ⚠⚠ THE DEFECT THESE PIN, FOUND BY FINGER: "when the camera is on the bottom ring
-  // facing upwards, the depth translation is chaotic." An object pushed further off along
-  // the ground RISES toward the horizon seen from above and SINKS seen from below — so a
-  // rule that hard-codes "fingers up means away" is right on the top rings and BACKWARDS on
-  // the bottom one. ⭐ A hand correcting a backwards control produces exactly that chaos.
-
-  const UP_VIEW: Vec3 = normalize([0, 0.7, 0.7])!; // a camera below, looking up
-  const upPush = gravityFrame(UP_VIEW, DOWN)!.depth!;
-  const upDepthOf = (q: Vec3) => dot(sub(q, CAM), upPush);
-
-  it("⭐ looking DOWN on the scene, fingers UP push the object away", () => {
-    expect(depthOf(move(mmToPx(-20)))).toBeGreaterThan(depthOf(OBJ));
-  });
-
-  it("⛔⛔ looking UP from below, the SAME fingers bring it CLOSER — the sign must flip", () => {
-    const out = depthTranslate(
-      CAM, OBJ, upPush, Math.sign(dot(UP_VIEW, DOWN)), mmToPx(-20), PER_PX, 1, minM, maxM,
-    );
-    expect(upDepthOf(out)).toBeLessThan(upDepthOf(OBJ));
-  });
-
-  it("⛔ COUNTER-EXAMPLE: forcing the old hard-coded +1 from below inverts the gesture", () => {
-    // ⭐ This is what shipped, and it is what the hand felt. Kept so the fix cannot be
-    // quietly undone by someone "simplifying" the sign away.
-    const wrong = depthTranslate(CAM, OBJ, upPush, 1, mmToPx(-20), PER_PX, 1, minM, maxM);
-    const right = depthTranslate(
-      CAM, OBJ, upPush, Math.sign(dot(UP_VIEW, DOWN)), mmToPx(-20), PER_PX, 1, minM, maxM,
-    );
-    expect(Math.sign(upDepthOf(wrong) - upDepthOf(OBJ))).toBe(
-      -Math.sign(upDepthOf(right) - upDepthOf(OBJ)),
-    );
-  });
-
-  it("⛔ a LEVEL camera shows nothing for a depth change, so the gesture goes quiet", () => {
-    // ⚠ The fifth appearance of "goes quiet before it fails", and the first with the quiet
-    // zone in the MIDDLE of the range rather than at an end.
-    const level: Vec3 = normalize([0, 0, 1])!;
-    expect(Math.sign(dot(level, DOWN))).toBe(0);
-    const out = depthTranslate(
-      CAM, OBJ, gravityFrame(level, DOWN)!.depth!, 0, mmToPx(-20), PER_PX, 1, minM, maxM,
-    );
-    expect(out).toEqual(OBJ);
-  });
-});
-
-describe("⛔ the clamps and the degenerate cases", () => {
-  it("cannot be pulled onto the camera", () => {
-    expect(depthOf(move(mmToPx(100000)))).toBeCloseTo(minM, 9);
-    expect(minM).toBeGreaterThan(CAMERA_NEAR_PLANE_M);
-  });
-
-  it("cannot be pushed past the camera's own maximum orbit radius", () => {
-    expect(depthOf(move(-mmToPx(100000)))).toBeCloseTo(maxM, 9);
-  });
+// ⛔⛔ `depthTranslate` IS DELETED (`D109`, 2026-09-27) with its sixteen vectors: the object-axis
+// remap took it off the call path on 2026-09-22 and its edge-on rate lives on in `axis_translate.ts`.
+describe("⭐ the depth bounds — still read by the axis translation", () => {
 
   it("⭐ both bounds are DERIVED — no new tunable to measure", () => {
     expect(minM).toBe(2 * CAMERA_NEAR_PLANE_M);
     expect(maxM).toBe(DEFAULT_CONFIG.cameraRadiusMaxM);
-  });
-
-  it("⛔ a camera looking STRAIGHT DOWN has no depth direction", () => {
-    // ⭐⭐ THE FRAME ITSELF REFUSES, which is a STRONGER statement than the one this vector
-    // used to make. `depthPushDirection` returned a null *direction*; `gravityFrame` returns
-    // **no frame at all** — looking straight down there is no horizontal view axis to flatten,
-    // so neither depth NOR the roll axis exists, and the caller cannot get half an answer.
-    expect(gravityFrame([0, -1, 0], DOWN)).toBeNull();
-    expect(depthTranslate(CAM, OBJ, [0, 0, 0], 1, mmToPx(-20), PER_PX, 1, minM, maxM)).toEqual(
-      OBJ,
-    );
-  });
-
-  it("⛔ an object BEHIND the camera is left alone", () => {
-    const behind: Vec3 = [0, 0.1, -3];
-    expect(move(mmToPx(-20), 1, behind)).toEqual(behind);
-  });
-
-  it("⛔ never writes a NaN — one would never wash out of a placement", () => {
-    for (const bad of [NaN, Infinity]) {
-      for (const c of depthTranslate(CAM, OBJ, push, AWAY, bad, PER_PX, 1, minM, maxM)) {
-        expect(Number.isFinite(c)).toBe(true);
-      }
-      for (const c of depthTranslate(CAM, OBJ, push, AWAY, mmToPx(-20), bad, 1, minM, maxM)) {
-        expect(Number.isFinite(c)).toBe(true);
-      }
-    }
   });
 });
 

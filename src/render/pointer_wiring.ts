@@ -14,7 +14,7 @@ import { hasAlignment, rotationChannel } from "../core/constraint_stack";
 import { IDENTITY } from "../core/vec";
 import { frozenHoldAdmitted } from "../input/assembly";
 import { translatesOnDrag } from "../input/highlight";
-import { secondTouchDrive } from "../input/pinned_pioneer";
+import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { pressHit } from "../input/frozen_pick";
 import { axesFromFrame } from "../input/object_axes";
@@ -26,7 +26,7 @@ import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, paint, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers } from "./sway_pass";
-import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower, gripOfObject, pinnedNow } from "./drive";
+import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
 
 export function installPointerHandler(st: SceneState): void {
@@ -663,41 +663,9 @@ export function installPointerHandler(st: SceneState): void {
       // part and slides off is still holding it (§4).
       st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
 
-      // ⭐⭐⭐ **`D51` — A PINNED PIONEER STEERS THE FOLLOWER AND DOES NOT MOVE ITSELF.**
-      //
-      // > *"if it is toggled off … 1) the Pioneer cannot translate and 2) the second touchpoint
-      // > controls both the depth translation and the roll of the Follower object"*
-      //
-      // ⛔ BEFORE the recognizer commits this grip to a continuous rule, because the point is
-      // that this body has **no** continuous rule of its own while pinned. ⚠ Letting it commit
-      // and then suppressing the write would leave the sway, the shake and the mode latch all
-      // running on a gesture that moves nothing — which is how a *retired gesture that still
-      // owns a verdict* happens (defect 40).
-      // ⭐ The drive goes through the SAME path `A10`'s second finger uses, with `bothAxes` — so
-      // the roll's constraint channel, the snap ride-along and the depth clamp are the vetted
-      // ones rather than a second copy. ⛔ `METHOD`: one rule, one implementation.
-      {
-        const pin = pinnedNow(st);
-        const myId = st.idOf.get(grip.mesh);
-        if (pin !== null && myId === pin.pioneer && routed !== null) {
-          const target = gripOfObject(st, pin.follower);
-          if (target !== undefined) {
-            applyDepthDrag(st, 
-              target,
-              routed.seq,
-              s,
-              secondTouchDrive("PIONEER", gripIsAlignedFollower(st, target)) ===
-                "BOTH",
-            );
-          }
-          // ⚠ The Pioneer's own recognizer is still fed — a shake on it must still release its
-          // followers, and a tap must still be a tap. ⛔ What it does NOT get is a continuous
-          // rule: no translate, no rotate, no sway kick of its own.
-          grip.rec.move(s);
-          paint(st);
-          return;
-        }
-      }
+      // ⛔⛔ `D51`'s PINNED PIONEER IS DELETED (`D109`): a Pioneer held beside its Follower translates
+      // like any held body, and the Follower's second finger drives both axes wherever it lands (`D108`).
+
 
       if (grip.rec.move(s) === "COMMITTED_CONTINUOUS") {
         // ⭐⭐ PRESENCE, RE-READ EVERY FRAME. A second finger outside any object — no
@@ -812,7 +780,6 @@ export function installPointerHandler(st: SceneState): void {
           trackingMetresPerPx(st.camera.radius, st.camera.fov, st.canvas.clientHeight),
           st.cfg.gainTranslateScreen,
           st.cfg.gainTranslateDepth,
-          st.cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
           st.cfg.axisTrackingConeDeg,
           // ⭐ Read ONLY inside the cone, where it is the sign `depthTranslate` needed: +1
           // looking down on the scene, −1 looking up at it.

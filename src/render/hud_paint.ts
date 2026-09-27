@@ -12,7 +12,7 @@ import { alignedFaceOf } from "../core/face_pick";
 import { swingProgress } from "../input/approach_swing";
 import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
-import { candidateFacesNow, hitFaceNow } from "./markers";
+import { hitFaceNow } from "./markers";
 import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
 
@@ -210,14 +210,10 @@ export function paint(st: SceneState) {
           // rule's whole failure mode is *the body went somewhere I did not expect*, which no
           // amount of watching the body can attribute.
           `
-axes      ${st.cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "WorldAxisA(live camera: move+turn)"}` +
-          ` ${st.cfg.translatePairing === 1 ? "PLANE" : "CHANNELS"}` +
+axes      fixed@boot PLANE` +
           ` track=${st.lastTrackGain.toFixed(2)}×${st.lastEdgeOn ? " ⛔EDGE-ON" : ""}` +
           ` zone=${st.highlighted.inRange ? "IN" : "out"}` +
           (st.zonePair.length === 0 ? "" : `(${st.zonePair.join("↔")})`) +
-          (st.cfg.cameraOffsetZoneEnterSetupB === 1
-            ? ` enterHook=${st.zoneEnterCalls}(no-op)`
-            : "") +
           // ⛔ Per HELD body, because that is the one whose axes are being used right now.
           [...st.held.values()]
             .map((g) => st.idOf.get(g.mesh))
@@ -235,17 +231,14 @@ axes      ${st.cfg.worldAxisB === 1 ? "WorldAxisB(fixed@boot: move+turn)" : "Wor
               );
             })
             .join("") +
-          // ⭐⭐⭐ **THE HITFACE AND ITS OFFERS, ON THE GLASS** (the owner, 2026-09-24). ⛔ The
+          // ⭐⭐⭐ **THE HITFACE, ON THE GLASS** (the owner, 2026-09-24; the offers deleted, `D109`). ⛔ The
           // rule is invisible otherwise: a hand that sees no fuchsia cannot tell whether the
           // cone is too tight, the body is aligned already, or the mode is wrong.
           (() => {
             const hf = hitFaceNow(st);
             if (hf === null)
               return `  hit=— (needs an UNALIGNED held body with a resolved face)`;
-            const n = candidateFacesNow(st).length;
-            return st.cfg.pioneerCandidates !== 1
-              ? `  hit=${hf.objectId}/${hf.faceId} fuchsia=OFF`
-              : `  hit=${hf.objectId}/${hf.faceId} cone=${st.cfg.pioneerCandidateConeDeg}° fuchsia=${n}`;
+            return `  hit=${hf.objectId}/${hf.faceId} snapCone=${st.cfg.snapConeDeg}°`;
           })() +
           // ⭐⭐⭐ **WHERE THE OUTLINE PIPELINE STOPS** — added 2026-09-18 after a device report
           // of *"no outline of any sort"*, which four different failures produce identically:

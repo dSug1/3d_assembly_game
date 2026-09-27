@@ -4,13 +4,13 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, trackingMetresPerPx, easeInOut } from "../input";
+import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
 import { worldPlacementOf } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
 import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
-import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, GIZMO_RING_PX, PIONEER_COLOUR, type SceneState } from "./scene_state";
+import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
-import { candidateFacesNow, candidateRingFor, faceMarkerFor, hitFaceNow, outlinesFor, syncPioneerCursors, worldPointOn } from "./markers";
+import { faceMarkerFor, hitFaceNow, outlinesFor, syncPioneerCursors } from "./markers";
 import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
 import { refreshAxisGizmo } from "./gizmo";
 import { refreshHighlight, swingAngleNow } from "./highlight_pass";
@@ -462,17 +462,8 @@ export function startRenderLoop(st: SceneState): void {
     // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
     // highlight DID disappear and the follower's did not, the asymmetry the report describes.
     const alignedNow = new Set(st.links.alignedObjects());
-    // ⭐⭐⭐ **THE FUCHSIA CANDIDATES** — every face on another body that the HitFace is within
-    // `pioneerCandidateConeDeg` of mating with (the owner, 2026-09-24). ⛔ Recomputed every frame
-    // from the MODEL, never remembered: *during the rotation* means the set follows the pose, and
-    // a remembered set is the shape that produced eight reports on the gizmo.
+    // ⛔⛔ THE FUCHSIA CANDIDATES ARE DELETED (`D109`, 2026-09-27); the HitFace keeps its contour.
     const hitFace = hitFaceNow(st);
-    // ⚠ `candidateFacesNow` is the gated source; `hitFace` is NOT gated, so the HitFace contour
-    // below survives with the offer switched off.
-    const candidates = candidateFacesNow(st);
-    const candidateKeys = new Set(
-      candidates.map((c) => `${c.objectId}/${c.faceId}`),
-    );
     guardDraw(st, "alignmentMarkers", () => {
       // ⛔⛔ **RETIRED BY SET MEMBERSHIP, WHATEVER REMOVED THE LINK.** The 2026-09-17 bug was the
       // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
@@ -481,19 +472,7 @@ export function startRenderLoop(st: SceneState): void {
       for (const [key, q] of st.faceMarkers) {
         const id = key.slice(0, key.indexOf("/"));
         const faceId = key.slice(key.indexOf("/") + 1);
-        // ⛔⛔ **ONE POOL, ONE MEMBERSHIP TEST.** The fuchsia faces join the same retire loop
-        // rather than getting a pool of their own: on 2026-09-17 two marker pools retired by two
-        // different rules in one edit, and the asymmetry produced TWO false device reports.
-        const wanted =
-          (alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId) ||
-          candidateKeys.has(key);
-        // ⛔⛔ **THE RING IS RETIRED IN THE SAME PASS, ON THE SAME KEY.** ⚠ It had a loop of its
-        // own and its own (correct) test, which is one edit away from the 2026-09-17 defect: two
-        // marker pools retired by two rules, and the asymmetry produced two false device reports.
-        // ⭐ One pass cannot drift, whatever a later change does to the membership test above.
-        const ring = st.candidateRings.get(key);
-        if (ring !== undefined && !candidateKeys.has(key))
-          ring.isVisible = false;
+        const wanted = alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId;
         if (wanted) continue;
         q.fill.isVisible = false;
         // ⛔⛔ **RETIRED BY THE SAME MEMBERSHIP TEST, IN THE SAME LOOP.** The twin must not outlive
@@ -507,41 +486,6 @@ export function startRenderLoop(st: SceneState): void {
         // ⛔ THE PAIR IS ATOMIC. A body outline left behind by a released alignment would claim
         // the body is still aligned — the readout-that-lies shape this file guards against.
         o.align.isVisible = false;
-      }
-
-      // ⭐⭐ **THE FUCHSIA FILL AND ITS WHITE RING**, drawn BEFORE the alignment colours so that a
-      // face which is both a candidate and a live Follower/Pioneer keeps its established meaning.
-      for (const c of candidates) {
-        const marker = faceMarkerFor(st, c.objectId, c.faceId);
-        if (marker !== null) {
-          if (!marker.mat.emissiveColor.equals(CANDIDATE_COLOUR))
-            marker.mat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
-          marker.fill.isVisible = true;
-          const xrayOn = st.cfg.followerFaceXrayAlpha > 0;
-          if (xrayOn) {
-            if (!marker.xrayMat.emissiveColor.equals(CANDIDATE_COLOUR))
-              marker.xrayMat.emissiveColor.copyFrom(CANDIDATE_COLOUR);
-            marker.xrayMat.alpha = st.cfg.followerFaceXrayAlpha;
-          }
-          marker.xray.isVisible = xrayOn;
-        }
-        // ⚠ Position AND scale written here — NOT parented (`worldPointOn`); the scale keeps a
-        // constant apparent size as the camera moves, the same conversion the capture shell uses.
-        const ring = candidateRingFor(st, c.objectId, c.faceId);
-        const ringLocal = st.candidateRingLocal.get(`${c.objectId}/${c.faceId}`);
-        const ringAt =
-          ringLocal === undefined ? null : worldPointOn(st, c.objectId, ringLocal);
-        if (ring !== null && ringAt !== null) {
-          ring.position.copyFrom(ringAt);
-          const m =
-            trackingMetresPerPx(
-              st.camera.radius,
-              st.camera.fov,
-              st.canvas.clientHeight,
-            ) * GIZMO_RING_PX;
-          ring.scaling.set(m, m, m);
-          ring.isVisible = true;
-        }
       }
 
       for (const id of alignedNow) {
@@ -602,11 +546,9 @@ export function startRenderLoop(st: SceneState): void {
       // *"when active, highlight the contour of the hitface in fuchsia."*
       //
       // ⭐ OUTLINED, not filled, and that is the existing grammar rather than a new one: a FILL
-      // says *this face moved* (the Follower) or *this face is on offer* (a candidate); a CONTOUR
-      // says *this face is the one being aimed*. ⚠ So the HitFace and the candidates share a
-      // colour and differ in form, which is exactly the pair they are.
+      // says *this face moved* (the Follower); a CONTOUR says *this face is the one being aimed*.
       // ⛔ It joins `wantedPioneerKeys` rather than getting a pool of its own: one set, one retire,
-      // the same discipline the fills and the rings are now under.
+      // the same discipline the fills are under.
       if (hitFace !== null) {
         const key = `${hitFace.objectId}/${hitFace.faceId}`;
         const m = faceMarkerFor(st, hitFace.objectId, hitFace.faceId);

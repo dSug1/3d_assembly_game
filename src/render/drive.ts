@@ -10,7 +10,7 @@ import { type ObjectId } from "../core/object_model";
 import { incrementRadians } from "../input/rotation_increment";
 import { rotationChannel } from "../core/constraint_stack";
 import { IDENTITY, dot } from "../core/vec";
-import { pinnedPair, pinnedSecondDrive } from "../input/pinned_pioneer";
+import { bothAxesSecondDrive } from "../input/second_touch_drive";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
 import { TURN_ROLL, type Held, type SceneState } from "./scene_state";
@@ -149,7 +149,6 @@ export function applyDepthStep(st: SceneState, grip: Held, dyPx: number) : void 
     trackingMetresPerPx(st.camera.radius, st.camera.fov, st.canvas.clientHeight),
     st.cfg.gainTranslateScreen,
     st.cfg.gainTranslateDepth,
-    st.cfg.translatePairing === 1 ? "PLANE" : "CHANNELS",
     st.cfg.axisTrackingConeDeg,
     grip.frame.towardGravity,
   );
@@ -221,32 +220,6 @@ export function forgetAnchor(st: SceneState, seq: number) : void {
 
 
 /**
- * @param bothAxes ⭐⭐ `D51`'s PINNED PIONEER: the driving finger gives roll AND depth at
- *   once, instead of the movement mode picking one. ⛔ Reachable only from the pinned
- *   configuration — two touchpoints on a Pioneer and its Follower, with the flag off.
- *   ⚠ The owner named the difference from `A16` himself; `pinned_pioneer.ts` argues it.
- */
-/**
- * ⭐⭐⭐ **`D51` — ARE THE TWO HELD BODIES A PIONEER AND ITS FOLLOWER, WITH THE FLAG OFF?**
- *
- * ⛔ `null` whenever the flag is on, so the default path is byte-for-byte what it was and a
- * device close of the old behaviour still means something.
- * ⚠ Press order is irrelevant — the hand chooses which body to align, not which to grab
- * first — so the rule asks the alignment index both ways.
- */
-export function pinnedNow(st: SceneState) : { follower: ObjectId; pioneer: ObjectId } | null {
-  if (st.cfg.pioneerTranslates !== 0) return null;
-  const ids: ObjectId[] = [];
-  for (const q of st.router.objects()) {
-    const g = st.held.get(q.id);
-    const id = g === undefined ? undefined : st.idOf.get(g.mesh);
-    if (id !== undefined && !ids.includes(id)) ids.push(id);
-  }
-  return pinnedPair(ids, (f) => st.links.pioneerFor(f)?.objectId ?? null);
-}
-
-
-/**
  * ⭐ `D59` — is the body this grip carries an **aligned Follower**? ⛔ The alignment index is
  * the one record of that; `alignModeOf` says what an alignment MEANS, never whether one exists.
  */
@@ -302,7 +275,7 @@ export function applyDepthDrag(st: SceneState, grip: Held,
   // ⛔ The live mode is handed over so the choice is made inside the vectored rule, not
   // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
   const drive = bothAxes
-    ? pinnedSecondDrive(tracker.axes, tracker.step)
+    ? bothAxesSecondDrive(tracker.axes, tracker.step)
     : secondFingerDrive(tracker.axes, tracker.step, st.behaviour);
   if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
 

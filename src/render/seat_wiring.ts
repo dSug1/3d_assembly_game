@@ -145,7 +145,7 @@ export function cursorWorldOf(st: SceneState, pioneerId: ObjectId, local: Vec3) 
  */
 export function syncSeats(st: SceneState, nowMs: number) : void {
   const offsetM = offsetRadiusM(st);
-  const coneRad = (st.cfg.pioneerCandidateConeDeg * Math.PI) / 180;
+  const coneRad = (st.cfg.snapConeDeg * Math.PI) / 180;
   for (const cur of st.pioneerCursors.all()) {
     const f = cur.followerId;
     const faceLocal = st.world.objects

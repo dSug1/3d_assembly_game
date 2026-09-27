@@ -342,15 +342,6 @@ export function createScene(
   st.faceMarkers = new Map<string, FaceMarker>();
 
   /**
-   * ⭐⭐ The white ring that marks a fuchsia face's centre, one per candidate face.
-   *
-   * ⛔ NOT parented — see `worldPointOn`. Its position AND scale are written every frame.
-   */
-  st.candidateRings = new Map<string, LinesMesh>();
-  /** ⭐ Each candidate ring's point, in its body's LOCAL frame, lifted off the face. */
-  st.candidateRingLocal = new Map<string, Vec3>();
-
-  /**
    * ⭐⭐⭐ **THE PIONEERFACECURSORS** — the owner, 2026-09-25: an amber ring at the PioneerFace
    * centre for every live alignment, destroyed with it (`core/pioneer_face_cursors.ts`).
    *
@@ -583,7 +574,6 @@ export function createScene(
    * tells you a body has left is the one that no longer names it.
    */
   st.zonePair = [];
-  st.zoneEnterCalls = 0;
   st.axisGizmos = new Map<ObjectId, AxisGizmo>();
   /**
    * ⭐⭐⭐ **TWO RINGS, ONE PER FAMILY** — the owner, 2026-09-23: *"there can be a grey ring for the

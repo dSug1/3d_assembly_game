@@ -437,8 +437,6 @@ export interface SceneState {
   topoOf: Map<ObjectId, MeshTopology>;
   world: World;
   faceMarkers: Map<string, FaceMarker>;
-  candidateRings: Map<string, LinesMesh>;
-  candidateRingLocal: Map<string, Vec3>;
   pioneerCursors: PioneerFaceCursors;
   pioneerCursorMeshes: Map<string, Mesh>;
   pioneerCursorMat: StandardMaterial;
@@ -461,7 +459,6 @@ export interface SceneState {
   lastEdgeOn: boolean;
   zoneWas: boolean;
   zonePair: readonly ObjectId[];
-  zoneEnterCalls: number;
   axisGizmos: Map<ObjectId, AxisGizmo>;
   gizmoRings: Map<ObjectId, LinesMesh>;
   gizmoTurnRings: Map<ObjectId, LinesMesh>;

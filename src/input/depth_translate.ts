@@ -59,7 +59,6 @@ import { CAMERA_NEAR_PLANE_M, type GestureConfig } from "./gestureConfig";
 import type { MotionState } from "./motion";
 import type { Behaviour } from "./mode_toggle";
 import { pxToMm } from "../core/units";
-import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
 
 /**
  * How near and how far a depth translation may drive an object, in metres of HORIZONTAL
@@ -103,59 +102,6 @@ export function depthLimits(cfg: GestureConfig): { minM: number; maxM: number } 
 // question that does not have to be asked cannot be asked wrongly.
 // ⛔ What is lost with it, stated: a hand can no longer move one finger and be certain only
 // one rule ran. That was the partition's whole value, and it is the owner's to trade away.
-
-/**
- * Move an object in horizontal depth by one frame's common travel.
- *
- * @param push     the horizontal direction depth runs along — `GravityFrame.depth`.
- * @param awaySign +1 when moving the object AWAY makes it rise on screen (the camera looks
- *   DOWN on the scene), −1 when it makes it sink (the camera looks UP from below).
- *   ⛔⛔ IT IS NOT A CONSTANT, AND ASSUMING IT WAS WAS A DEFECT FOUND BY FINGER: *"when the
- *   camera is on the bottom ring facing upwards, the depth translation is chaotic."* An
- *   object further off along the ground rises toward the horizon seen from above and SINKS
- *   seen from below, so *fingers-up means away* is right on the top rings and backwards on
- *   the bottom one — and a hand correcting a backwards control produces exactly the chaos
- *   that was reported. ⭐ `Math.sign(GravityFrame.towardGravity)` is the value.
- *   ⚠ **0 at a level camera**, where a depth change produces no screen motion and there is
- *   nothing to follow. The gesture goes quiet rather than guessing a direction.
- * @param commonDyPx this frame's shared vertical travel, CSS pixels. ⚠ Screen y grows
- *   DOWNWARD.
- * @param metresPerPx `trackingMetresPerPx` for the camera — rule 6's computed factor, so a
- *   given finger travel moves the object as far into the scene as it would across it.
- *
- * ⛔ Returns the position UNCHANGED when there is no push direction or the object is not in
- * front of the camera — never a `NaN`, which would never wash out of a placement.
- */
-export function depthTranslate(
-  cameraPosition: Vec3,
-  objectPosition: Vec3,
-  push: Vec3,
-  awaySign: number,
-  commonDyPx: number,
-  metresPerPx: number,
-  gain: number,
-  minM: number,
-  maxM: number,
-): Vec3 {
-  const dir = normalize(push);
-  if (!dir || !Number.isFinite(commonDyPx) || !Number.isFinite(metresPerPx)) {
-    return objectPosition;
-  }
-  // ⛔ A level camera shows nothing for a depth change, so there is no direction to
-  // follow. Suppress rather than pick one — `LESSONS_CARRIED` §6.
-  const sign = Math.sign(awaySign);
-  if (sign === 0 || !Number.isFinite(awaySign)) return objectPosition;
-
-  const depth = dot(sub(objectPosition, cameraPosition), dir);
-  if (!(depth > 0)) return objectPosition;
-
-  // ⚠ NEGATED because screen y grows downward; ⭐ times `sign` because which way "away"
-  // looks depends on whether the camera is above the scene or below it.
-  const wanted = depth - commonDyPx * metresPerPx * gain * sign;
-  const clamped = Math.min(maxM, Math.max(minM, wanted));
-  // ⭐ Only the along-push component moves, so HEIGHT is untouched by construction.
-  return add(objectPosition, scale(dir, clamped - depth));
-}
 
 /**
  * ⭐⭐⭐ **AMENDMENT A12** — what the SECOND touchpoint is asking for, per axis.

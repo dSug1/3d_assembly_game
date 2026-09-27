@@ -8,7 +8,6 @@
  */
 import { describe, expect, it } from "vitest";
 import { gravityFrame } from "../src/input/gravity_frame";
-import { depthTranslate } from "../src/input/depth_translate";
 import { cross, dot, length, normalize, type Vec3 } from "../src/core/vec";
 
 const DOWN: Vec3 = [0, -1, 0];
@@ -208,56 +207,7 @@ describe("⛔⛔ the SIGN of `towardGravity` — the number a hand feels", () =>
   });
 });
 
-describe("⛔⛔ THE COMPOSITION NOBODY COMPUTED: frame → `awaySign` → which way it goes", () => {
-  // ⭐⭐ THE SEAM IS THE TEST. `gravityFrame` is right, `depthTranslate` is right for whatever
-  // `awaySign` it is given, and the wiring between them lived only in `src/render/scene.ts`
-  // where no vector reaches. This describe block IS that wiring, asserted on the only thing a
-  // hand can actually check: **did the object end up further away, or nearer?**
-  // ⛔ Negate `dot(v, g)` and both directed vectors below fail, because both objects travel
-  // the wrong way — which no assertion about the frame's magnitudes could ever have said.
-
-  const METRES_PER_PX = 0.01;
-  const GAIN = 1;
-  const FINGERS_UP_PX = -10; // ⚠ screen y grows DOWNWARD, so dragging up is negative.
-
-  /** Exactly what `scene.ts` does at a depth gesture, with nothing else in the way. */
-  function dragUpAndReport(cameraPosition: Vec3, forward: Vec3): number {
-    const frame = gravityFrame(forward, DOWN)!;
-    const object: Vec3 = [0, 0, 0];
-    const moved = depthTranslate(
-      cameraPosition,
-      object,
-      frame.depth, //                     the horizontal push direction
-      Math.sign(frame.towardGravity), //  ⭐⭐ THE SEAM
-      FINGERS_UP_PX,
-      METRES_PER_PX,
-      GAIN,
-      0.1,
-      100,
-    );
-    // Signed travel along `depth`: positive = further from the camera along the ground.
-    const d: Vec3 = [moved[0] - object[0], moved[1] - object[1], moved[2] - object[2]];
-    return dot(d, frame.depth);
-  }
-
-  it("⭐ from ABOVE, dragging two fingers UP pushes the object AWAY", () => {
-    // Camera 5 up and 5 back, looking down at the origin.
-    const travel = dragUpAndReport([0, 5, -5], normalize([0, -5, 5])!);
-    expect(travel).toBeCloseTo(0.1, 9); // 10 px × 0.01 m/px × gain 1
-  });
-
-  it("⛔ from BELOW, the SAME drag pulls it NEARER — and that is not a bug", () => {
-    // ⭐⭐ THE WHOLE POINT. Seen from underneath, away-along-the-ground reads as DOWN on the
-    // glass, so following the finger upward means coming closer. A hand does not learn two
-    // rules; it keeps following the object, and this sign is what lets it.
-    const travel = dragUpAndReport([0, -5, -5], normalize([0, 5, 5])!);
-    expect(travel).toBeCloseTo(-0.1, 9);
-  });
-
-  it("⚠ LEVEL: nothing happens at all, rather than a guessed direction", () => {
-    // `Math.sign(0)` is 0 and `depthTranslate` returns the position unchanged — a depth
-    // change produces no screen motion here, so there is nothing for the hand to follow.
-    // `LESSONS_CARRIED` §6: suppress, do not substitute.
-    expect(dragUpAndReport([0, 0, -5], normalize([0, 0, 1])!)).toBeCloseTo(0, 12);
-  });
-});
+// ⛔⛔ *"THE COMPOSITION NOBODY COMPUTED: frame → awaySign"* stood here and composed the frame with
+// `depthTranslate`, deleted `D109` (2026-09-27). ⭐ The sign's one live consumer is
+// `axisTravel`'s edge-on push, and `axis_translate.test.ts`'s *"the SIGN is continuous through the
+// cone"* asserts it from above and below — so negating `towardGravity` still turns a vector red.

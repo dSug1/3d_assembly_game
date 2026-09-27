@@ -9,23 +9,22 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
-import { gravityFrame, trackingMetresPerPx, type GravityFrame } from "../input";
+import { trackingMetresPerPx, type GravityFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { worldPlacementOf, WORLD_DOWN, type ObjectId } from "../core/object_model";
+import { worldPlacementOf, type ObjectId } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
 import { faceWorld } from "../core/object_model";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
-import { axesFromFrame, updatedObjectAxes, rotationFrame, type ObjectAxes } from "../input/object_axes";
+import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
 import { displayedAxes, soleGizmoBody, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
 import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
-import { requireGestureFrame, screenFrame } from "./camera_rig";
+import { requireGestureFrame } from "./camera_rig";
 
 /** ⭐ The decision is `rotationFrame`'s, in `src/input`; this only supplies the two candidates. */
 export function rotationFrameOf(st: SceneState, live: GravityFrame) : GravityFrame {
 return rotationFrame({
-    worldAxisB: st.cfg.worldAxisB === 1,
     bootFrame: st.bootGestureFrame,
     liveFrame: live,
   });
@@ -47,12 +46,9 @@ return rotationFrame({
 // ⭐ The decision stays in `input/object_axes.ts` — this asks it, per call, so `worldAxisA` now
 // follows the live camera every frame instead of only at a crossing.
 export function axesOf(st: SceneState) : ObjectAxes {
-return updatedObjectAxes({
-    worldAxisB: st.cfg.worldAxisB === 1,
-    bootAxes: st.bootObjectAxes ?? axesFromFrame(requireGestureFrame(st)),
-    liveFrame: gravityFrame(screenFrame(st).viewAxis, WORLD_DOWN),
-    previous: st.bootObjectAxes ?? axesFromFrame(requireGestureFrame(st)),
-  });
+  // ⭐⭐ `D109`: the boot camera's axes, fixed for the scene, are the ONLY axes — `worldAxisB = 0`
+  // (the live camera's) is deleted with its flag.
+  return st.bootObjectAxes ?? axesFromFrame(requireGestureFrame(st));
 }
 
 export function noteTurnAxis(st: SceneState, id: ObjectId | undefined,
@@ -72,10 +68,6 @@ export function noteAxisTravel(st: SceneState, id: ObjectId | undefined, t: Axis
     p[1] || t.driven[1],
     p[2] || t.driven[2],
   ]);
-}
-
-export function cameraOffsetZoneEnter(st: SceneState) : void {
-  st.zoneEnterCalls += 1;
 }
 
 export function ringFrom(st: SceneState, pool: Map<ObjectId, LinesMesh>,
