@@ -15,6 +15,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | nothing | 2 fingers pinch on empty space | zoom |
 | nothing | double tap on empty space | reset the camera |
+| — | ⭐ **anything in the EDGE BAND** (6 mm along the screen edges, dashed line) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`) |
 | — | ⭐ **double tap on any body** | **undo the last action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
 | a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes) |
@@ -72,7 +73,7 @@ of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE
 | the flick's drop-alignment branch | `D107` | the flick resets rotation only |
 | the flick itself (rotation reset) | `D110` | the undo |
 | `D103`'s flick-unsnap (specified) | `D110` | the precise unsnap; the undo |
-| the camera reset by a double tap on a BODY | `D111` | empty space only |
+| the camera reset by a double tap on a BODY | `D111` | empty space — and the **edge band** is always empty space (`D113`) |
 | any tap toggling the mode | `D108` | tablet: one tap on empty space, free body held; desktop: Ctrl |
 | the pinned Pioneer (`pioneerTranslates=0`) | `D109` | an aligned Follower's second finger drives both axes anywhere |
 | `worldAxisB=0`, `translatePairing=0` | `D109` | boot-fixed axes, plane solve — the only ones |

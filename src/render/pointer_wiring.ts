@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
 import { type Vec3 } from "../core/vec";
@@ -138,7 +139,16 @@ export function installPointerHandler(st: SceneState): void {
       // applied — the hand would appear to have no effect at all.
       st.cameraReset = null;
       const pick = info.pickInfo;
-      const rayHit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
+      // ⭐⭐⭐ `D113` — **THE EDGE BAND IS ALWAYS EMPTY SPACE**: a press near a canvas edge is a MISS
+      // whatever is drawn there, so the camera reset, the orbit and the pinch stay reachable when a
+      // body fills the view. ⭐ The decision is `inEdgeBand`'s; this supplies the rectangle.
+      const inBand = inEdgeBand(
+        e.clientX,
+        e.clientY,
+        st.canvas.getBoundingClientRect(),
+        mmToPx(st.cfg.edgeBandMm),
+      );
+      const rayHit = !inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐⭐ **A SECOND TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (the owner, 2026-09-23:
       // *"therefore, this second touch could for example move another object"*). ⛔ Filtered on
       // the way IN, before the latch, so every rule downstream sees a touchpoint that landed on

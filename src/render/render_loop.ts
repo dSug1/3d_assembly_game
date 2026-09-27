@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { mmToPx } from "../core/units";
 import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
 import { worldPlacementOf } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
@@ -583,6 +584,23 @@ export function startRenderLoop(st: SceneState): void {
     // rule was itself stale.
     // ⚠ Guarded by a DIRTY FLAG rather than painted every frame: the HUD writes text into the
     // DOM, and 60 unconditional layout-invalidating writes a second is a cost with no reader.
+    // ⭐ `D113`: the edge band's outline follows the canvas and the slider. ⚠ Laid out every frame
+    // from the canvas rectangle — a rotation or a resize must not leave it drawn in the wrong place.
+    {
+      const r = st.canvas.getBoundingClientRect();
+      const b = mmToPx(st.cfg.edgeBandMm);
+      // ⚠ Written only on CHANGE: a style write per frame is a layout invalidation with no reader.
+      const key = `${r.left},${r.top},${r.width},${r.height},${b}`;
+      if (key !== st.edgeBandKey) {
+        st.edgeBandKey = key;
+        const el = st.edgeBandEl.style;
+        el.display = b > 0 ? "block" : "none";
+        el.left = `${r.left + b}px`;
+        el.top = `${r.top + b}px`;
+        el.width = `${Math.max(0, r.width - 2 * b)}px`;
+        el.height = `${Math.max(0, r.height - 2 * b)}px`;
+      }
+    }
     // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame.
     const second =
       st.sceneStartMs === null ? 0 : Math.floor((performance.now() - st.sceneStartMs) / 1000);

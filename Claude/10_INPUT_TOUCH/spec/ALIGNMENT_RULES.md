@@ -1952,6 +1952,8 @@ partition it by what is held; (3) Ctrl is read at the left press, not mid-drag.
 | `D111` | **a double tap on a body undoes the last action** — one history for the scene; an action is a GESTURE (first finger down → last up) that changed the model (placements, parents = seats, constraints, links, cursors); its entry is the model BEFORE it; repeated double taps walk further back (50 kept) | `core/undo_history.ts`, `render/undo_wiring.ts` | the camera reset leaves bodies: empty space only. ⚠ An undone snap is held off until its couple leaves the radius, or it would re-fire at once |
 | `D112` | **the HUD's first line is the score** — `N episodes  mm:ss  undo=K`; the ledger is `SCORE.md` §3 as a rule (`episodeCounts`), the clock starts at the first press; the undo pair costs ONE; Free Flow counts nothing | `input/episode_ledger.ts` | ⚠ a lost `pointerup` loses an episode — the post-observer only counts a release it sees |
 
+| `D113` | **the edge band is always empty space** — *"we need a solution in case there is no empty space on the screen"*, the owner choosing *"Edge band"*: a press within `edgeBandMm` (6 mm, CAMERA › CAMERA ORBIT slider, `0` = off) of a canvas edge is a MISS whatever is drawn there; a faint dashed line marks its inner edge | `input/edge_band.ts` | a body cannot be grabbed through the band — orbit or zoom brings it inward; a Free Flow ring in the band is still grabbed (it is claimed before the pick) |
+
 ⚠⚠ **Readings to falsify first**: (1) an action spans the whole gesture, so a two-finger gesture
 that moved AND aligned undoes as one; (2) the undo's second tap is the free one; (3) a seat
 landing after the release (the 60 ms magnet) belongs to the gesture that caused it.

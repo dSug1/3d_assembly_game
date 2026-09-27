@@ -61,7 +61,8 @@ deleted**: the pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone-en
 ⭐⭐ **And a second pass the same day (`D110`–`D112`)**: the **flick is deleted** (its rotation reset, and
 `D103`'s flick-unsnap — *"obsolete"*); a **double tap on any body UNDOES the last action** — one
 history for the scene, an action being a gesture that changed the model, so a move, an alignment, a
-snap or an unsnap comes back whole (the camera reset keeps empty space only); and the HUD's **first
+snap or an unsnap comes back whole (the camera reset keeps empty space only — and a 6 mm **edge band**
+along the screen is always empty space, `D113`, so it stays reachable); and the HUD's **first
 line is the score** — touchpoint episodes by `SCORE.md` §3 and the time since the first press, the
 undo pair costing ONE → `ALIGNMENT_RULES.md` §12–§13.
 ⛔ **Everything below is the record as it stood; where it names a deleted gesture, §12 wins.**
@@ -111,7 +112,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1174 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`); the
+✅ Green: TypeScript + Babylon + Vite, **1179 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

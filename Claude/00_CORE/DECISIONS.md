@@ -45,7 +45,7 @@ file.
 | `D96` | ⭐⭐ **A PIONEERFACECURSOR PER ALIGNMENT** | 2026-09-25 | ⭐ Binding. ⚠ → history |
 | `D97` | ⭐⭐ **AN ALIGNED FOLLOWER'S AXES: SHOWN WHILE HELD, AS SEGMENTS TO THE CURSOR** | 2026-09-26 | ⭐ Binding. ⚠ → history |
 | `D98` | ⭐⭐ **AN ALIGNMENT IS SQUARED TO ITS PIONEER** | 2026-09-26 | After the minimal swing, a ≤ 45° twist about the aligned normal squares the Follower's edges to the Pioneer's; the swing alone lost 8–30° on a tilted part. ⚠ No longer strictly minimal → §11.12 |
-| `D99` | ⭐⭐⭐ **THE SCORE: TOUCHPOINT EPISODES AGAINST A SOLVED OPTIMUM, AND ELAPSED TIME** | 2026-09-26 | One episode = press → release; ⛔ camera, zoom, mode and axis toggles excluded (§3.1). Fewer wins; equal to the optimum wins the bonus; time punishes sloppiness. Not built → `20_GAME_RULES/spec/SCORE.md` |
+| `D99` | ⭐⭐⭐ **THE SCORE: TOUCHPOINT EPISODES AGAINST A SOLVED OPTIMUM, AND ELAPSED TIME** | 2026-09-26 | ⭐ Binding → `20_GAME_RULES/spec/SCORE.md`. ⚠ → history |
 | `D100` | ⭐⭐ **THE SNAP IS AUTOMATIC AND A SEATED PIONEER CARRIES ITS FOLLOWERS; UNSNAP IS AN EPISODE** | 2026-09-26 | ✅ **BUILT 2026-09-26**: capture offset + fuchsia cone → lerp onto the cursor, then a CHILD; unsnap = Pioneer first, Follower second, a rapid move → §11.13 |
 | `D101` | ⭐ **FREE FLOW MODE** — the cursor-drag slider, renamed, escapes the score | 2026-09-26 | key `pioneerCursorDrag` unchanged; the cursor drag is its first freedom |
 | `D102` | ⭐⭐ **A SEATED ASSEMBLY DRIVES AS ONE BODY; THE SNAP IS A MAGNET; THE OFFSET IS 15 mm** | 2026-09-26 | A member's TRANSLATION drives the root (stops below a frozen Pioneer); its ROTATION stays its own twist (a grip redirect cost the roll, undone); `snapMs` 60 on `u²` → §11.13.1 |
@@ -59,6 +59,7 @@ file.
 | `D110` | ⭐⭐ **THE FLICK IS DELETED — and `D103`'s flick-unsnap with it** | 2026-09-27 | Detector, verdict, rules and the rotation reset; a committed gesture ends kept → §13 |
 | `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | One scene history; an action = a gesture that changed the model; the camera reset keeps empty space only → §13 |
 | `D112` | ⭐⭐ **THE HUD LEADS WITH THE SCORE: episodes and time** | 2026-09-27 | `SCORE.md` §3 as a rule; the undo pair costs 1; the clock starts at the first press → §13 |
+| `D113` | ⭐⭐ **THE EDGE BAND IS ALWAYS EMPTY SPACE** — the camera reset stays reachable | 2026-09-27 | 6 mm along the edges, a slider; a body cannot be grabbed through it → §13 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ Binding, ⚠⚠ **but `D89` SWAPPED WHICH TOUCH**. ⛔⛔ Its *no gizmo* half lapsed when `leadingFace` was deleted, with **nothing going red**; it is a guard now. ⭐ *Deleting the file a rule lived in deletes the rule* |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⛔⛔ One finger slides a body about its own HORIZONTAL plane (`dx`→x, `dy`→depth) and a second finger LIFTS it. ⚠⚠ Its MAPPING is superseded by `D76`; the channels stand |

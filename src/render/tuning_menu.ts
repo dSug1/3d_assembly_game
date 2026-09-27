@@ -75,6 +75,8 @@ export function installTuningMenu(st: SceneState): void {
         {
           title: "CAMERA ORBIT",
           sliders: [
+            // ⭐ `D113`: the strip along the edges that is always empty space (0 = off).
+            tunable(st, "edge band (mm, always empty space)", "edgeBandMm", 0, 20, 1),
             tunable(st, "top radius (m)", "orbitTopRadiusM", 0, 1.5, 0.01),
             tunable(st, "top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
             tunable(st, "middle radius (m)", "orbitMiddleRadiusM", 0, 1.5, 0.01),

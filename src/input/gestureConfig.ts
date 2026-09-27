@@ -279,6 +279,12 @@ export interface GestureConfig {
    */
   pioneerCursorGrabRadii: number;
   /**
+   * ⭐⭐ **THE EDGE BAND**, in millimetres on the glass (`D113`): a press this close to a canvas edge
+   * is empty space whatever is drawn under it, so the camera reset (a double tap), the orbit and the
+   * pinch stay reachable when a body fills the view. ⚠ `0` switches it off.
+   */
+  edgeBandMm: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between
    * like `pioneerCandidates`. `0` leaves the ring drawn and every press to the ordinary rules.
@@ -777,6 +783,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   snapConeDeg: 15,
   // ⚠ A guess inside the owner's 1–10: a fingertip is wider than the 16 px ring it aims at.
   pioneerCursorGrabRadii: 3,
+  // ⚠ A guess with a slider: wide enough for a fingertip's edge, narrow enough to leave the view.
+  edgeBandMm: 6,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
@@ -986,6 +994,14 @@ export function validateGestureConfig(cfg: GestureConfig): void {
 
   // ⛔ The owner's range, and `grabbedCursor` clamps to it as well — a validator catches a URL typo
   // at boot instead of letting it ship as a silently different reach.
+  // ⛔ 0 switches the band off; past 20 mm it eats a phone's view.
+  if (!Number.isFinite(cfg.edgeBandMm) || cfg.edgeBandMm < 0 || cfg.edgeBandMm > 20) {
+    throw new Error(
+      `edgeBandMm (${cfg.edgeBandMm}) must be between 0 and 20 mm: it is the strip along the ` +
+        "screen edges that always counts as empty space.",
+    );
+  }
+
   if (
     !Number.isFinite(cfg.pioneerCursorGrabRadii) ||
     cfg.pioneerCursorGrabRadii < 1 ||

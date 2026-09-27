@@ -482,6 +482,9 @@ export interface SceneState {
   sceneStartMs: number | null;
   /** The last whole second the HUD showed — the timer repaints once a second, not per frame. */
   hudSecond: number;
+  /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */
+  edgeBandEl: HTMLDivElement;
+  edgeBandKey: string;
   episodeFacts: Map<number, { role: PointerRole; heldAtPress: number; pressedAnotherBody: boolean }>;
   episodeUnaligned: Set<number>;
   episodeUndo: Set<number>;
