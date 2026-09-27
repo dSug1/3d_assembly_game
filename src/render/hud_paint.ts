@@ -91,7 +91,7 @@ export function paint(st: SceneState) {
   const first = st.held.get(st.router.objects()[0]?.id ?? -1);
   st.hud.update({
     score:
-      `${st.episodes} episode${st.episodes === 1 ? "" : "s"}  ${formatElapsed(performance.now() - st.sceneStartMs)}` +
+      `${st.episodes} episode${st.episodes === 1 ? "" : "s"}  ${formatElapsed(st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
       `  undo=${st.undo.size}` +
       (st.cfg.pioneerCursorDrag === 1 ? "  FREE FLOW (not scored)" : ""),
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about

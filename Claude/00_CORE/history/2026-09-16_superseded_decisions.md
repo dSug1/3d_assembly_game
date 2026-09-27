@@ -628,3 +628,12 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ### QUEUE text moved down 2026-09-27 (`D109` deleted the offer it describes)
 
 ⭐⭐⭐ **THE FUCHSIA OFFER AND THE SECOND INVERSION** (`D88`/`D87`, 2026-09-24/25) — ⛔ **NO DEVICE LOOK YET.** The held body's **HitFace** (the first touch's raycast answer, latched at press) lights every face on every other body within `pioneerCandidateConeDeg` of **mating** with it — ⚠ *aligned* read as **ANTI-PARALLEL** (`D78`'s sense), the first thing a hand should falsify. ⛔ Pressing one promotes it to PioneerFace, so `D87` **inverts `D67` back**: **first touch the Follower, second the Pioneer** — one gesture for the offer and its acceptance, costing `D67`'s several-Followers-in-one-hold. ⛔⛔⛔ **FOUR DEFECTS IN ONE DAY, ALL FROM THE INVERSION AND NONE ABLE TO GO RED**: the *already aligned* no-op compared a held face against a pressed one (face ids are **per body**); the line wiping a lifting finger's face went on wiping the HELD one, killing `D39`'s undo; `D77`'s frozen carve-out went on guarding the finger the Pioneer had left, putting the plate out of reach (`D89` swaps the two touches — ⚠ cost: a finger resting on the plate now selects it); and the guard refusing *hold B, press A* was right only while the held body was the Pioneer, with `tapMeaning` quietly re-pointing instead (`D90`). ⭐⭐⭐ One shape through all of them: *an inversion does not have to touch a line to break it; it only has to change which finger the line names* → [`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11
+
+---
+
+## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-27 (second pass) — to pay for `D110`–`D112`
+
+| # | decision | date | consequence |
+|---|---|---|---|
+| `D96` | ⭐⭐ **A PIONEERFACECURSOR PER ALIGNMENT** | 2026-09-25 | An amber ring at the PioneerFace centre, facing the screen; one per follower couple, disposed with it. Dragged on the face's surface, bounded by its edges — ⛔ **drag ships OFF** (FACE ALIGNMENT menu) → §11.10, defect 71 |
+| `D97` | ⭐⭐ **AN ALIGNED FOLLOWER'S AXES: SHOWN WHILE HELD, AS SEGMENTS TO THE CURSOR** | 2026-09-26 | First touch → red + blue; second touch / Shift → green, or none while a roll is on. Each from the FollowerFace centre to the cursor's projection. ⛔ Rotation lines unchanged → §11.11 |

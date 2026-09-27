@@ -584,7 +584,8 @@ export function startRenderLoop(st: SceneState): void {
     // ⚠ Guarded by a DIRTY FLAG rather than painted every frame: the HUD writes text into the
     // DOM, and 60 unconditional layout-invalidating writes a second is a cost with no reader.
     // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame.
-    const second = Math.floor((performance.now() - st.sceneStartMs) / 1000);
+    const second =
+      st.sceneStartMs === null ? 0 : Math.floor((performance.now() - st.sceneStartMs) / 1000);
     if (second !== st.hudSecond) {
       st.hudSecond = second;
       st.hudDirty = true;

@@ -478,7 +478,8 @@ export interface SceneState {
   gestureUndid: boolean;
   /** ⭐ `D112`: the touchpoint episodes counted, and when the scene started (the timer). */
   episodes: number;
-  sceneStartMs: number;
+  /** ⚠ `null` until the first press — `SCORE.md` §6: the ledger starts at the first press after boot. */
+  sceneStartMs: number | null;
   /** The last whole second the HUD showed — the timer repaints once a second, not per frame. */
   hudSecond: number;
   episodeFacts: Map<number, { role: PointerRole; heldAtPress: number; pressedAnotherBody: boolean }>;

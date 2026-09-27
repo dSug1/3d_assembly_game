@@ -38,6 +38,8 @@ export function installPointerHandler(st: SceneState): void {
     (info) => {
       if (info.type !== PointerEventTypes.POINTERDOWN) return;
       const e = info.event as PointerEvent;
+      // ⭐ `D112`: the clock starts at the first press after boot (`SCORE.md` §6), not at load.
+      if (st.sceneStartMs === null) st.sceneStartMs = performance.now();
       if (st.gestureSpan.press(e.pointerId)) beginGesture(st);
     },
     undefined,

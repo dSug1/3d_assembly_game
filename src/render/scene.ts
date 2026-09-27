@@ -667,7 +667,7 @@ export function createScene(
   st.gestureBefore = null;
   st.gestureUndid = false;
   st.episodes = 0;
-  st.sceneStartMs = performance.now();
+  st.sceneStartMs = null;
   st.hudSecond = -1;
   st.episodeFacts = new Map();
   st.episodeUnaligned = new Set<number>();
