@@ -285,8 +285,6 @@ export interface GestureConfig {
    */
   pioneerCursorDrag: number;
   flickWindow: number;
-  /** mm/s at lift, below which it is a drag that stopped — never a flick. */
-  flickLiftSpeed: number;
   /**
    * ms. The trailing window the LIFT SPEED is averaged over.
    * ⛔⛔ NOT THE LAST SAMPLE PAIR. A browser emits `pointerup` at whatever position
@@ -295,10 +293,8 @@ export interface GestureConfig {
    * Device-confirmed as the cause of inconsistent rollback. See flick.ts.
    */
   flickLiftWindow: number;
-  /** mm of travel within the window. */
-  flickDistance: number;
-  /** max(|dx|,|dy|) / (min(|dx|,|dy|) + eps). One ratio, no undefined wedge. */
-  flickPurity: number;
+  // ⛔ `flickLiftSpeed`, `flickDistance`, `flickPurity` are DELETED with the flick (`D110`); the two
+  // windows above survive — the release buffer and the lift-speed readout still read them.
 
   // ── THE UNSNAP'S RAPID MOVE (`D100`) ─────────────────────────────────────────
   // ⛔ These were the eviction shake's window and leg (`A4`); the shake is DELETED (`D107`) and the
@@ -435,8 +431,6 @@ export interface GestureConfig {
   maxBarycenterCandidates: number;
   /** §6bis A/B. "rotated" is the spec's default; "direct" is the comparison arm. */
   axisMappingMode: "rotated" | "direct";
-  /** §6quater directedness, against the screen projection of AxisBtwFaces. */
-  mateDirectionPurity: number;
 
   // ── mate geometry ───────────────────────────────────────────────────────
   /** ⛔ NEGATIVE. A mate is anti-parallel; see core/mate_connector.ts. */
@@ -787,12 +781,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
   flickWindow: 120,
-  flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
   // samples at 60-120 Hz, short enough to still mean "at lift". IN5 measures it.
   flickLiftWindow: 40,
-  flickDistance: 6,
-  flickPurity: 2.5,
   // ⛔⛔ THE ROLL NUMBERS ARE COUPLED AND ARE SWEPT TOGETHER, against REALISTIC
   // gestures (ellipses with drifting centres) and realistic NEGATIVES (wiggles,
   // sloppy arcs, zigzags). ⚠ Still placeholders — swept against synthetic humanity,
@@ -896,7 +887,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   maxBarycenterCandidates: 8,
   axisMappingMode: "rotated",
-  mateDirectionPurity: 2,
 
   mateFacingCos: -0.85,
   mateBreakLinear: 0.02,

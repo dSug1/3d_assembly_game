@@ -5,7 +5,7 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flickResetPlan, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
 import { type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
@@ -21,7 +21,7 @@ import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
-import { alignFollowerToPioneer, cancelAlignAnim, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
+import { alignFollowerToPioneer, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
 import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, paint, sampleOf } from "./hud_paint";
@@ -1046,40 +1046,7 @@ export function installPointerHandler(st: SceneState): void {
       const verdict = grip.rec.release(s);
       st.lastVerdict = describe(st, verdict);
 
-      // ⛔⛔ **FORK B's FLICK-TO-ALIGN IS DELETED HERE** (2026-09-17, with forks A and B).
-      // ⭐ What stood in this place pushed a `GRAVITY_ALIGN` or `WORLD_AXIS_ALIGN` at the
-      // release of a flick, re-solved, and unselected. The owner left it because a
-      // release-time trigger *"releases the finger from the object it is tracking"* — and
-      // fork C's tap does the same work mid-gesture. ⚠ `A4`'s flick SKIP went with it: there
-      // is no flick-driven constraint left for a shake's last leg to push, and the flick now
-      // means one thing only, which is the rotation reset below.
-      // ⭐⭐⭐ **FORK C: THE ROTATION RESET, REINSTATED** (owner, 2026-09-16).
-      //
-      // ⛔ `D36` deleted §1.3's rollback GLOBALLY the same day, because it fought fork B's
-      // flick-to-align: a flick both pushed a constraint and threw away the rotation the hand
-      // had just made. ⭐ Fork C has **no flick alignment at all**, so the channel is free and
-      // the conflict does not exist here — which is why this is a fork C rule and not a
-      // restored global behaviour. Fork A shipped without it and still does.
-      //
-      // ⭐⭐ THE OWNER SCOPED IT BY **WHEN THE ALIGNMENT HAPPENED**, not by whether one
-      // exists — see `flickResetPlan`. Only the gesture can tell those apart, and
-      // `grip.alignmentTouched` is that fact.
-      if (verdict.kind === "FLICK") {
-        const plan = flickResetPlan(grip.alignmentTouched);
-        const snap = grip.rec.pressSnapshot;
-        const rid = st.idOf.get(grip.mesh);
-        // ⛔ The reset writes the PRESS pose itself, so a snap in flight is simply dropped —
-        // landing it first would be a rotation the reset is about to undo anyway.
-        if (rid !== undefined) cancelAlignAnim(st, rid);
-        if (plan.restoreOrientation && snap !== null) {
-          // ⚠ ORIENTATION ONLY — the snapshot never carried a position, which is what makes
-          // *"rotation reset"* the literal description of this rule rather than an analogy.
-          setModelOrientation(st, grip.mesh, snap);
-        }
-        st.lastVerdict = plan.restoreOrientation
-          ? "align: rotation reset — to the press"
-          : "align: flick ignored — the alignment made in this gesture wins (`D107`)";
-      }
+      // ⛔⛔ THE FLICK IS DELETED (`D110`, 2026-09-27) — its rotation reset with it.
       // ⭐⭐⭐ **THE TAP'S FOUR MEANINGS, AND `tapMeaning` OWNS THE CHOICE.**
       //
       // ⛔⛔ `D27`/`D28` MADE EVERY TAP FLIP THE MOVEMENT MODE, and the alignment trigger IS a
