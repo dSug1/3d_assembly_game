@@ -47,8 +47,8 @@ npm run build       # production bundle into dist/
 ## Where it stands (2026-09-27)
 
 ⭐⭐ **THE FOURTH PASS** (`D121`–`D124`, branch `1.0.41-Mondrian`, ⛔ unjudged by a hand): a **frozen body
-seen from below turns see-through** (opacity slider in CAMERA); `Scene_1`'s **floor is 19.16 units**
-(halved, then 80 %); a **free body's second touch in `TRANSLATE` spins it about GRAVITY** as well as
+seen from below turns see-through** (opacity slider in CAMERA); `Scene_1`'s **floor is 20.5012 units**
+(halved, 80 %, then 107 %); a **free body's second touch in `TRANSLATE` spins it about GRAVITY** as well as
 lifting it — the aligned body's pair; and **a second press on another body STEERS the held one** — it
 never grabs it, so one body moves at a time on the tablet as on the desktop, and a TAP there still
 aligns → `ALIGNMENT_RULES.md` §15, `INPUTS_TABLE.md`.

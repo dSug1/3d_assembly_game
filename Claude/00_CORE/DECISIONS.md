@@ -68,7 +68,7 @@ file.
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | A tap on the plate aligns; a press steers → §14 |
 | `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | They matched no shape and served no rule → §14 |
 | `D121` | ⭐ **A FROZEN BODY SEEN FROM BELOW TURNS SEE-THROUGH** | 2026-09-27 | Opacity 0.3, a slider → §15 |
-| `D122` | `Scene_1`'s floor: halved, then 80 % — 19.16 units | 2026-09-27 | → `SCENE_1.md` |
+| `D122` | `Scene_1`'s floor: halved, 80 %, then 107 % — 20.5012 units | 2026-09-27 | → `SCENE_1.md` |
 | `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | With the gravity lift, as an aligned body → §15 |
 | `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | A tap there still aligns → §15 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ Binding. ⚠ → history |
