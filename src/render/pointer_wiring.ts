@@ -4,8 +4,9 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flickResetPlan, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
 import { type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
@@ -16,12 +17,14 @@ import { frozenHoldAdmitted } from "../input/assembly";
 import { translatesOnDrag } from "../input/highlight";
 import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
+import { episodeCounts } from "../input/episode_ledger";
+import { beginGesture, endGesture, undoLast } from "./undo_wiring";
 import { pressHit } from "../input/frozen_pick";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
-import { alignFollowerToPioneer, cancelAlignAnim, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
+import { alignFollowerToPioneer, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
 import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, paint, sampleOf } from "./hud_paint";
@@ -30,6 +33,19 @@ import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } f
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
 
 export function installPointerHandler(st: SceneState): void {
+  // ⭐⭐ `D111` — THE GESTURE'S FIRST DOWN, observed BEFORE every rule (`insertFirst`): the model is
+  // snapshotted as it stands, so the undo's entry is the scene before anything this gesture did.
+  st.scene.onPointerObservable.add(
+    (info) => {
+      if (info.type !== PointerEventTypes.POINTERDOWN) return;
+      const e = info.event as PointerEvent;
+      // ⭐ `D112`: the clock starts at the first press after boot (`SCORE.md` §6), not at load.
+      if (st.sceneStartMs === null) st.sceneStartMs = performance.now();
+      if (st.gestureSpan.press(e.pointerId)) beginGesture(st);
+    },
+    undefined,
+    true,
+  );
 
   st.scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
@@ -123,7 +139,16 @@ export function installPointerHandler(st: SceneState): void {
       // applied — the hand would appear to have no effect at all.
       st.cameraReset = null;
       const pick = info.pickInfo;
-      const rayHit = pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
+      // ⭐⭐⭐ `D113` — **THE EDGE BAND IS ALWAYS EMPTY SPACE**: a press near a canvas edge is a MISS
+      // whatever is drawn there, so the camera reset, the orbit and the pinch stay reachable when a
+      // body fills the view. ⭐ The decision is `inEdgeBand`'s; this supplies the rectangle.
+      const inBand = inEdgeBand(
+        e.clientX,
+        e.clientY,
+        st.canvas.getBoundingClientRect(),
+        mmToPx(st.cfg.edgeBandMm),
+      );
+      const rayHit = !inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
       // ⭐⭐⭐ **A SECOND TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (the owner, 2026-09-23:
       // *"therefore, this second touch could for example move another object"*). ⛔ Filtered on
       // the way IN, before the latch, so every rule downstream sees a touchpoint that landed on
@@ -158,7 +183,17 @@ export function installPointerHandler(st: SceneState): void {
         st.router.size,
       );
       // ⭐⭐ THE ONE PLACE A ROLE IS DECIDED, and it is decided by `IN2`, once.
+      // ⭐ `D112`: the facts the episode ledger reads, taken BEFORE this press registers.
+      const heldBefore = st.router
+        .objects()
+        .map((q) => st.held.get(q.id))
+        .map((g) => (g === undefined ? undefined : st.idOf.get(g.mesh)));
       const routed = st.router.press(e.pointerId, s, hit);
+      st.episodeFacts.set(e.pointerId, {
+        role: routed.role,
+        heldAtPress: heldBefore.length,
+        pressedAnotherBody: rawHitId !== undefined && !heldBefore.includes(rawHitId),
+      });
       if (rayHit !== null && hit === null) {
         st.lastVerdict = `frozen ${hitId ?? "?"} — second touch routed as a MISS`;
       }
@@ -614,6 +649,7 @@ export function installPointerHandler(st: SceneState): void {
         ) {
           // ⚠ The history is still recorded, so a double tap keeps pairing exactly as it did.
           st.taps.record(routed.pressed, s.t);
+          st.episodeUnaligned.add(e.pointerId);
           if (alignedFaceOf(st.world, heldId) !== null) {
             releaseAlignmentOf(st, heldId);
             heldGrip.alignmentTouched = false;
@@ -1046,40 +1082,7 @@ export function installPointerHandler(st: SceneState): void {
       const verdict = grip.rec.release(s);
       st.lastVerdict = describe(st, verdict);
 
-      // ⛔⛔ **FORK B's FLICK-TO-ALIGN IS DELETED HERE** (2026-09-17, with forks A and B).
-      // ⭐ What stood in this place pushed a `GRAVITY_ALIGN` or `WORLD_AXIS_ALIGN` at the
-      // release of a flick, re-solved, and unselected. The owner left it because a
-      // release-time trigger *"releases the finger from the object it is tracking"* — and
-      // fork C's tap does the same work mid-gesture. ⚠ `A4`'s flick SKIP went with it: there
-      // is no flick-driven constraint left for a shake's last leg to push, and the flick now
-      // means one thing only, which is the rotation reset below.
-      // ⭐⭐⭐ **FORK C: THE ROTATION RESET, REINSTATED** (owner, 2026-09-16).
-      //
-      // ⛔ `D36` deleted §1.3's rollback GLOBALLY the same day, because it fought fork B's
-      // flick-to-align: a flick both pushed a constraint and threw away the rotation the hand
-      // had just made. ⭐ Fork C has **no flick alignment at all**, so the channel is free and
-      // the conflict does not exist here — which is why this is a fork C rule and not a
-      // restored global behaviour. Fork A shipped without it and still does.
-      //
-      // ⭐⭐ THE OWNER SCOPED IT BY **WHEN THE ALIGNMENT HAPPENED**, not by whether one
-      // exists — see `flickResetPlan`. Only the gesture can tell those apart, and
-      // `grip.alignmentTouched` is that fact.
-      if (verdict.kind === "FLICK") {
-        const plan = flickResetPlan(grip.alignmentTouched);
-        const snap = grip.rec.pressSnapshot;
-        const rid = st.idOf.get(grip.mesh);
-        // ⛔ The reset writes the PRESS pose itself, so a snap in flight is simply dropped —
-        // landing it first would be a rotation the reset is about to undo anyway.
-        if (rid !== undefined) cancelAlignAnim(st, rid);
-        if (plan.restoreOrientation && snap !== null) {
-          // ⚠ ORIENTATION ONLY — the snapshot never carried a position, which is what makes
-          // *"rotation reset"* the literal description of this rule rather than an analogy.
-          setModelOrientation(st, grip.mesh, snap);
-        }
-        st.lastVerdict = plan.restoreOrientation
-          ? "align: rotation reset — to the press"
-          : "align: flick ignored — the alignment made in this gesture wins (`D107`)";
-      }
+      // ⛔⛔ THE FLICK IS DELETED (`D110`, 2026-09-27) — its rotation reset with it.
       // ⭐⭐⭐ **THE TAP'S FOUR MEANINGS, AND `tapMeaning` OWNS THE CHOICE.**
       //
       // ⛔⛔ `D27`/`D28` MADE EVERY TAP FLIP THE MOVEMENT MODE, and the alignment trigger IS a
@@ -1124,9 +1127,13 @@ export function installPointerHandler(st: SceneState): void {
       // make the gesture unusable. ⛔ One gesture, one consequence.
       // ⚠ Everywhere else the double tap keeps the camera reset: empty space, the held
       // object, a second touchpoint. Only this one configuration is claimed.
+      // ⭐⭐⭐ `D111` — **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** (the owner, 2026-09-27),
+      // and it no longer flies the camera home: that stays on EMPTY space. ⚠ Cost: an orbit stuck
+      // close in with a body filling the view must find a patch of empty space to reset.
+      // ⭐ The pair costs ONE episode: the second tap is excluded by the ledger.
       if (verdict.kind === "DOUBLE_TAP" && !alignedByThisTap) {
-        resetCamera(st);
-        st.lastVerdict = "DOUBLE_TAP → camera reset";
+        undoLast(st);
+        st.episodeUndo.add(e.pointerId);
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
       // *anywhere* includes the object the touchpoint was carrying, which is this branch.
@@ -1198,5 +1205,31 @@ export function installPointerHandler(st: SceneState): void {
       st.held.delete(e.pointerId);
       paint(st);
     }
+  });
+
+  // ⭐⭐ THE RELEASE, observed AFTER every rule: the episode is classified with what the release DID,
+  // and the gesture ends when nothing is left down (`D111`, `D112`).
+  st.scene.onPointerObservable.add((info) => {
+    if (info.type !== PointerEventTypes.POINTERUP) return;
+    const e = info.event as PointerEvent;
+    const facts = st.episodeFacts.get(e.pointerId);
+    st.episodeFacts.delete(e.pointerId);
+    const unaligned = st.episodeUnaligned.delete(e.pointerId);
+    const undoSecondTap = st.episodeUndo.delete(e.pointerId);
+    // ⛔ Free Flow escapes the score (`D101`): nothing is counted while the cursor drag is on.
+    if (
+      st.cfg.pioneerCursorDrag !== 1 &&
+      episodeCounts({
+        role: facts?.role ?? null,
+        heldAtPress: facts?.heldAtPress ?? 0,
+        pressedAnotherBody: facts?.pressedAnotherBody ?? false,
+        unaligned,
+        undoSecondTap,
+      })
+    ) {
+      st.episodes += 1;
+      st.hudDirty = true;
+    }
+    if (st.gestureSpan.release(e.pointerId)) endGesture(st);
   });
 }

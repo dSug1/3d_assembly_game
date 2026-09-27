@@ -1896,20 +1896,11 @@ parent, never a child, so a part seats ON it and the plate cannot seat on anythi
 ⚠ Unjudged by a hand, all of it. ⚠ What a seated member held in `TRANSLATE` shows is now the
 assembly's axes at the touched face.
 
-#### 11.13.2 — ⭐⭐ `D103`: THE FLICK UNSNAPS — the brutal way, SPECIFIED, NOT BUILT (2026-09-26)
+#### 11.13.2 — ⛔⛔ `D103`'s FLICK-UNSNAP IS REMOVED — obsolete (`D110`, 2026-09-27)
 
-> *"There is another way to unsnap: 1 by flicking the snapped object. This is fair, because the
-> second way is more brutal (it also unsnaps any follower which were aligned with the object being
-> unsnapped): it costs less but is less chirurgical."* — the owner, 2026-09-26
-
-| | my reading | ⚠ why it needs saying |
-|---|---|---|
-| **the trigger** | the recognizer's `FLICK` verdict at the release of a touchpoint on a **SEATED** object | ⛔ today a flick means `IN3`'s **rotation reset** (`flickResetPlan`); on a seated object the unsnap REPLACES it, and on a free or merely aligned object the reset stays exactly as it is |
-| **what it releases** | the flicked object's own seat, **and every seat that depends on it** — its seated Followers, and theirs, down the chain | *"any follower which were aligned with the object being unsnapped"* — I read *aligned* as **seated**; ⛔ **owner to confirm** whether an aligned-but-unseated Follower of it also loses its alignment |
-| **where things end up** | every released body stays where it stands (no jump); each couple is held off until it leaves the offset radius, as after the precise unsnap | the same re-arm, or they would snap straight back |
-| **which object** | the RAW body the finger touched | ⛔⛔ `D102` redirects a press on any member to the assembly's ROOT, so the flick must read the raw body, or flicking a mid-stack part would unsnap the root instead |
-| **alignment** | the flicked object keeps its alignment (only the SEAT goes), as the precise unsnap does | ⛔ **owner to confirm** — *brutal* may mean the alignment goes too |
-| **score** | **1** episode, against the precise unsnap's **2** | `20_GAME_RULES/spec/SCORE.md` §5.1 |
+> *"Flick un-snap D103: obsolete. Remove"* — the owner, 2026-09-27. ⭐ The flick itself is deleted
+> the same day (`D110`), so the gesture the specification hung on no longer exists. The precise
+> unsnap (two touches and a rapid move) is the only unsnap; it still costs 2.
 
 ⭐ **Anchored bodies do not sway** (the owner, 2026-09-26: *"if an object is snapped to a frozen
 object, itself and its snapped children objects cannot sway when a third object is moved"*): a body
@@ -1942,4 +1933,27 @@ each event's own sample and the plate being holdable while a part is seated on i
 ⚠⚠ **Readings chosen, each a sentence to falsify on the glass**: (1) holding an aligned Pioneer, the
 tap releases its OWN alignment first; (2) the tablet toggle and the release share one gesture and
 partition it by what is held; (3) Ctrl is read at the left press, not mid-drag.
-⭐ Both unsnaps remain: the precise one built (§11.13), the flick-unsnap specified (§11.13.2).
+⚠ The flick-unsnap was kept here too — and removed hours later (`D110`, §13).
+
+---
+
+## 13 — ⭐⭐⭐ THE SAME DAY'S SECOND PASS: NO FLICK, AN UNDO, A SCORE LINE (`D110`–`D112`)
+
+> *"a flick now only resets rotation: i think we can remove this one."* · *"Double tap on an
+> object shall revert the previous action (therefore bring back the object to the previous
+> transform if there was movement, un-snap if there was snap, snap if there was un-snap, etc.)"* ·
+> *"Flick un-snap D103: obsolete. Remove"* · *"Add the touchpoint episode count and timer as first
+> line in the HUD"* — the owner, 2026-09-27; and for the undo: *"Last action, any body"*, *"Count
+> as one episode (includes both the double-tap and the scene reset)"*.
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D110` | **the flick is deleted** — the detector, the `FLICK` verdict, its three release rules (`6quater`, `2ter`, `2quater`) and the rotation reset; a committed gesture ends `CONTINUOUS_KEPT`. `D103`'s flick-unsnap goes with it | `input/recognizer.ts`, `input/flick.ts` (the buffer and the lift speed survive) | a rotation can no longer be thrown away by a fast release — the undo does that now |
+| `D111` | **a double tap on a body undoes the last action** — one history for the scene; an action is a GESTURE (first finger down → last up) that changed the model (placements, parents = seats, constraints, links, cursors); its entry is the model BEFORE it; repeated double taps walk further back (50 kept) | `core/undo_history.ts`, `render/undo_wiring.ts` | the camera reset leaves bodies: empty space only. ⚠ An undone snap is held off until its couple leaves the radius, or it would re-fire at once |
+| `D112` | **the HUD's first line is the score** — `N episodes  mm:ss  undo=K`; the ledger is `SCORE.md` §3 as a rule (`episodeCounts`), the clock starts at the first press; the undo pair costs ONE; Free Flow counts nothing | `input/episode_ledger.ts` | ⚠ a lost `pointerup` loses an episode — the post-observer only counts a release it sees |
+
+| `D113` | **the edge band is always empty space** — *"we need a solution in case there is no empty space on the screen"*, the owner choosing *"Edge band"*: a press within `edgeBandMm` (6 mm, the *edge band width* slider at the top of CAMERA, `0` = off) of a canvas edge is a MISS whatever is drawn there; a faint dashed line marks its inner edge | `input/edge_band.ts` | a body cannot be grabbed through the band — orbit or zoom brings it inward; a Free Flow ring in the band is still grabbed (it is claimed before the pick) |
+
+⚠⚠ **Readings to falsify first**: (1) an action spans the whole gesture, so a two-finger gesture
+that moved AND aligned undoes as one; (2) the undo's second tap is the free one; (3) a seat
+landing after the release (the 60 ms magnet) belongs to the gesture that caused it.

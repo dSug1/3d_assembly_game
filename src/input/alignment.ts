@@ -280,52 +280,6 @@ export function pressMeaning(ctx: PressContext): TapMeaning {
   return { action: "ALIGN", mode: alignModeFor() };
 }
 
-/** What a flick must do to the object it was made on. ⭐ Both fields, always both. */
-export interface ResetPlan {
-  /** Restore the orientation captured at the press — ⚠ orientation only, never position. */
-  readonly restoreOrientation: boolean;
-}
-
-/**
- * ⭐⭐⭐ **THE ROTATION RESET, SCOPED THE WAY THE OWNER SCOPED IT.**
- *
- * > *"reinstate the rotation reset by flick which was previously implemented"* — and then,
- * > asked what it should do while an alignment holds: *"If the object was already aligned
- * > when the rotation was started, reset to the beginning of the rotation (therefore the
- * > alignment is conserved). If the alignment occurred during the rotation, reset the
- * > rotation (therefore this looses the alignment)."*
- *
- * ⭐⭐ **THAT IS A SHARPER RULE THAN THE THREE I OFFERED, AND IT IS WHY THIS FUNCTION EXISTS.**
- * I had framed the question as a property of the STATE (*is it aligned?*); the owner answered
- * with a property of the GESTURE (*when did the alignment happen?*). The state cannot tell the
- * two cases apart, and the gesture can — so the recogniser's snapshot is exactly the right
- * reference, and no new geometry is needed:
- *
- * * the alignment predates the press ⇒ the snapshot **satisfies** the constraint, so restoring
- *   it conserves the alignment for free. Nothing special happens; it simply works.
- * * the alignment was made during this gesture ⇒ the snapshot **predates** it, so restoring it
- *   would leave the object disagreeing with its own constraint. The constraint goes too.
- *
- * ⛔ Which is also why the flag is *"an alignment was pushed or replaced during this
- * gesture"* and not *"was it aligned at press"*: a tap that REPLACES an older alignment
- * mid-gesture leaves the snapshot satisfying a constraint that is no longer on the stack, and
- * that is the same case, not a third one.
- *
- * ⚠ `D36` deleted this rollback GLOBALLY at the owner's instruction because it fought fork B's
- * flick-to-align. ⛔ This model has **no flick alignment at all**, so that conflict cannot
- * arise — which is why the reset came back with it (`D37`) and why the flick now means one
- * thing only. Forks A and B are deleted (`D40`); what is left is not a fork.
- */
-export function flickResetPlan(
-  alignmentTouchedThisGesture: boolean,
-): ResetPlan {
-  // ⛔⛔ `D107`: the flick no longer DROPS an alignment made in its own gesture — restoring the
-  // pre-alignment pose while keeping the constraint would contradict it, so the flick then does
-  // nothing and the alignment wins. An alignment older than the press is reset to the press, as
-  // before.
-  return { restoreOrientation: !alignmentTouchedThisGesture };
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // ⭐⭐⭐ WHEN THE **PIONEER'S** OBJECT IS TURNED WHILE THE FOLLOWER IS ALIGNED
 // ══════════════════════════════════════════════════════════════════════════════

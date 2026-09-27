@@ -126,7 +126,7 @@ second touch that **presses a Pioneer face** is not this — it aligns (C3).
 |---|---|
 | C1 | `D95`/`D107`'s **tap on empty space while holding an aligned body or a Pioneer** — it un-aligns, which is assembly, not a toggle |
 | C2 | a **hold** that moved nothing, any fumble that is not D3 — §3's rule |
-| C3 | every hold, align press, drag, twist, flick, unsnap and cursor drag (the shakes are deleted, `D107`) |
+| C3 | every hold, align press, drag, twist and unsnap (the shakes and the flick are deleted, `D107`/`D110`); the undo pair counts ONCE (`D111`); a cursor drag is Free Flow and counts nothing |
 
 ⛔ **The ledger must classify with the same functions the gestures use** — `tapTogglesMode`, `outsideTapRelease`, the
 router's roles, the recognizer's verdict — never a second copy of *"is this a tap"* (`D60`'s
@@ -172,7 +172,7 @@ The costs the solver reads, under today's rules:
 | mode toggle | 0 | excluded by rule (§3.1 B) — and unneeded anyway: boot is `TRANSLATE` and an aligned body translates in any mode (`D60`) |
 | camera orbit, pinch, reset | 0 | excluded by rule (§3.1 A) — so looking around is free and the solver never has to model the view |
 | **unsnap**, the precise way | **2** | hold the Pioneer (1) + touch the seated Follower (1); the rapid move is inside the second. ⚠ 1 if the Pioneer was already held |
-| **unsnap by FLICK**, the brutal way | **1** | one flick on the seated object — ⛔ **and every Follower seated on it is unsnapped too** (§5.1). Cheaper, less surgical: the solver must price what it undoes |
+| **undo** — a double tap on any body (`D111`) | **1** | both taps together; the undone action's own episodes stay counted |
 
 ⭐ The pictured configuration, under those costs: **6 episodes** (three parts × hold + Pioneer
 press) — ⚠ it was 9 before the owner's C2 ruling freed the second finger. ⭐ So under these rules
@@ -183,23 +183,19 @@ follower, which costs a re-align.
 
 ---
 
-### 5.1 ⭐ THE TWO UNSNAPS — why the cheaper one is fair
+### 5.1 ⛔ THE FLICK-UNSNAP IS REMOVED (`D110`, 2026-09-27)
 
-⭐ The owner's trade: **price against precision**. The precise unsnap (two touches and a rapid
-move) releases exactly one seat; the flick costs one episode and releases the flicked object's seat
-**and every seat that depends on it**, so a player who flicks a mid-stack part pays in rebuilding
-what fell off. ⛔ So the solver must model the flick's cascade, not just its price — a flick that
-looks cheaper can be dearer once its re-snaps are counted.
-⛔ The flick-unsnap is **specified, not built** — its rules and conflicts are in
-[`../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](../../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.13.2.
+*"Flick un-snap D103: obsolete. Remove"* — the precise unsnap (2) is the only one, and the flick is
+deleted with it. ⭐ The player's cheap way back is now the **undo** (1, `D111`), which reverses the
+last action whole — seats included — rather than releasing a chain of them.
 
 ## 6. WHAT NEEDS TO BE BUILT, IN ORDER
 
 | # | what | needs | falsified by |
 |---|---|---|---|
-| 1 | **The approach and the snap** (`3D2`): ✅ the snap, the seat and the precise unsnap are BUILT (`D100`); ⛔ owed: the **flick-unsnap** (§5.1) and the approach | the flick-unsnap's open points (`ALIGNMENT_RULES` §11.13.2) | a hand: a flick that releases one seat but leaves its dependants seated; a flick on a FREE body that no longer resets its rotation |
+| 1 | **The approach and the snap** (`3D2`): ✅ the snap, the seat and the precise unsnap are BUILT (`D100`); ⛔ owed: the approach | — | a hand |
 | 2 | **Final-configuration data** per scene: face pairs, cursor positions, spin quadrant — and its **detector**, read from the model every frame | 1 | a scene reported complete with one part unseated, or a spin quadrant off by 90° |
-| 3 | **The touch ledger**: one count per touchpoint episode at the router, classified at release by §3.1, started at the first press after boot, printed on the HUD | — (can be built first, it is one counter) | a camera orbit or a mode-toggle tap counted; a mouse Shift second touch counted differently from a finger; an episode missed on a lost `pointerup` |
+| 3 | ✅ **BUILT** (`D112`, 2026-09-27) — **The touch ledger**: one count per touchpoint episode at the router, classified at release by §3.1 (`input/episode_ledger.ts`), started at the first press after boot, printed as the HUD's FIRST line with the timer | — (can be built first, it is one counter) | a camera orbit or a mode-toggle tap counted; a mouse Shift second touch counted differently from a finger; an episode missed on a lost `pointerup` |
 | 4 | **The timer**: first press after boot → detection; on the HUD | 2 | a timer that runs before the first press or after detection |
 | 5 | **The solver** in `src/core`, vectored against hand-worked optima, including the pictured 6 | 2, and the costs above kept in one place | a hand-typed optimum; a solver that disagrees with a hand-worked sequence |
 | 6 | **The score**: episodes vs optimum, the bonus on equality, the time; **Free Flow** voids it | 2–5 | a score shown while Free Flow is on |

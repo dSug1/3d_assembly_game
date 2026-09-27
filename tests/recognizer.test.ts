@@ -10,14 +10,11 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { Sample } from "../src/input/motion";
-import { type Flick } from "../src/input/flick";
 import {
-  NO_RELEASE_CONTEXT,
   Recognizer,
   TapHistory,
   resolveDiscreteRule,
   type PosePort,
-  type ReleaseContext,
 } from "../src/input/recognizer";
 import { mmToPx } from "../src/core/units";
 
@@ -86,11 +83,10 @@ function run(opts: {
 function gesture(
   rec: Recognizer<number>,
   samples: readonly Sample[],
-  ctx: ReleaseContext = NO_RELEASE_CONTEXT,
 ) {
   rec.press(samples[0]!);
   for (let i = 1; i < samples.length - 1; i++) rec.move(samples[i]!);
-  return rec.release(samples[samples.length - 1]!, ctx);
+  return rec.release(samples[samples.length - 1]!);
 }
 
 function fresh() {
@@ -137,7 +133,9 @@ describe("recognizer — the commit point", () => {
 });
 
 describe("recognizer — provisional motion and rollback", () => {
-  it("⛔⛔⛔ A FLICK KEEPS THE ROTATION IT WAS MADE WITH — the rollback is RETIRED", () => {
+  it("⛔⛔⛔ `D110`: A FAST DRAG ENDS KEPT — the flick is deleted, and nothing rolls back", () => {
+    // > *"a flick now only resets rotation: i think we can remove this one"* — the owner, 2026-09-27.
+    // ⛔ RED against the old recognizer, which called this release a FLICK.
     // ⛔⛔ THIS VECTOR ASSERTED THE OPPOSITE UNTIL 2026-09-16, and the retraction is the
     // record: *"a rotation followed by a flick was previously resetting the quaternion of the
     // object: get rid of that if this conflicts with the alignment by flick"* — owner.
@@ -154,7 +152,7 @@ describe("recognizer — provisional motion and rollback", () => {
     for (const s of samples.slice(1, -1)) rec.move(s);
     pose.moveProvisionally(42); // the rotation the hand performed, on purpose
     const v = rec.release(samples[samples.length - 1]!);
-    expect(v.kind).toBe("FLICK");
+    expect(v.kind).toBe("CONTINUOUS_KEPT");
     expect(v.rolledBack).toBe(false);
     expect(pose.restored).toEqual([]);
     expect(pose.current()).toBe(42);
@@ -372,7 +370,7 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
       new Recognizer(cfg, pose.port, taps),
       run({ speedMmPerS: 200, ms: 120, t0: 80 }),
     );
-    expect(["CONTINUOUS_KEPT", "FLICK"]).toContain(dragged.kind);
+    expect(dragged.kind).toBe("CONTINUOUS_KEPT");
     // ⭐ 300 − 60 = 240 ms after the first tap's release, and on the same point: inside BOTH
     // `doubleTapWindow` (300 ms) and `doubleTapSlop` (8 mm). Without the chain break this is
     // a DOUBLE_TAP, and `resolveDiscreteRule` maps that to **2septies** — an eviction fired
@@ -508,7 +506,7 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
   // SUBJECT is gone. They are deleted rather than adjusted: a vector whose subject no longer
   // exists is a liability. What replaced them is the behaviour that now holds.
 
-  it("⭐ A CURVED DRAG IS JUDGED BY THE FLICK TEST LIKE ANY OTHER", () => {
+  it("⭐ A CURVED DRAG ENDS KEPT LIKE ANY OTHER", () => {
     // ⛔ It used to be exempt by rule. Now a swept circle that ends without a flick keeps its
     // motion, exactly as a straight slow drag does — no special case in either direction.
     const { rec, pose } = fresh();
@@ -520,47 +518,6 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
     expect(v.kind).toBe("CONTINUOUS_KEPT");
     expect(v.rolledBack).toBe(false);
     expect(pose.current()).toBe(42);
-  });
-
-  it("⛔⛔ A SWEEP FOLLOWED BY A FAST STRAIGHT RUN **IS** A FLICK — and that is deliberate", () => {
-    // ⭐⭐⭐ THIS VECTOR HAS BEEN TRUE BOTH WAYS IN ONE DAY, AND THE HISTORY IS THE POINT.
-    //
-    // ⛔ §1.3 once SKIPPED the flick test after a committed roll, with a comment saying a
-    // circular path *"fails the purity ratio anyway"* and that the explicit skip existed
-    // *"rather than relying on that happening to hold"*. `D31` deleted the roll, so the skip
-    // went with it, and this vector then recorded that the purity ratio happened to reject
-    // one measured curve — stating plainly that it proved nothing about curves in general.
-    //
-    // ⭐ It did not hold for long: the device asked for *"the flick should be triggerable
-    // during an ongoing rotation"*, which is the SAME QUESTION from the other side. A flick
-    // is now read over the longest TAIL that passes rather than over the whole window, so a
-    // curve that ends in a fast straight run does flick — by design, because that is what a
-    // hand rotating an object and then flicking a face looks like.
-    //
-    // ⚠⚠ WHAT PROTECTS AN ALIGNMENT FROM AN ACCIDENT IS NOW THREE THINGS, none of them the
-    // purity ratio: the tail's MINIMUM SPAN (`flickLiftWindow`), `ShakeDetector.suppressesFlick`
-    // from the first reversal, and eviction as the escape (`D32`). ⭐ That is a better answer
-    // than a skip — each is a separate, testable statement — and it is the owner's report
-    // that forced it rather than my reasoning.
-    const { rec } = fresh();
-    const swept = circle(70, true);
-    rec.press(swept[0]!);
-    for (const s of swept.slice(1)) rec.move(s);
-    const last = swept[swept.length - 1]!;
-    for (let k = 1; k <= 5; k++) {
-      rec.move({ x: last.x, y: last.y - 8 * k, t: last.t + 8 * k });
-    }
-    const v = rec.release({ x: last.x, y: last.y - 48, t: last.t + 48 });
-    expect(v.kind).toBe("FLICK");
-    expect(v.flick?.axis).toBe("VERTICAL");
-
-    // ⛔ AND THE CURVE ALONE STILL IS NOT ONE — without the straight exit, the same sweep
-    // keeps its motion. ⭐ The tail scan did not make everything a flick; it made the TAIL
-    // the subject, and a tail that is still curving fails the purity ratio exactly as before.
-    const { rec: rec2 } = fresh();
-    rec2.press(swept[0]!);
-    for (const s of swept.slice(1, -1)) rec2.move(s);
-    expect(rec2.release(swept[swept.length - 1]!).kind).toBe("CONTINUOUS_KEPT");
   });
 
   it("⛔⛔ THE ROLL MACHINERY IS GONE FROM THE RECOGNIZER'S SURFACE, not merely unfed", () => {
@@ -586,78 +543,11 @@ describe("⚠ RETIRED BY A12 — roll (2quinte) as a ONE-TOUCHPOINT circular ges
 
 });
 
-describe("release-time priority (§1.3)", () => {
-  const flick = (axis: "HORIZONTAL" | "VERTICAL"): Flick => ({
-    axis,
-    sign: 1,
-    travelMm: 20,
-    liftSpeedMmPerS: 400,
-    purity: 9,
-  });
-  const ctx = (o: Partial<ReleaseContext>): ReleaseContext => ({
-    ...NO_RELEASE_CONTEXT,
-    ...o,
-  });
-
-  it("a DOUBLE_TAP fires 2septies", () => {
-    expect(resolveDiscreteRule("DOUBLE_TAP", null, ctx({}), cfg)).toBe("2septies");
-  });
-
-  it("a VERTICAL flick on one object fires 2ter (gravity)", () => {
-    const r = resolveDiscreteRule("FLICK", flick("VERTICAL"), ctx({ singleObjectSelected: true }), cfg);
-    expect(r).toBe("2ter");
-  });
-
-  it("a HORIZONTAL flick on one object fires 2quater (world axis)", () => {
-    const r = resolveDiscreteRule("FLICK", flick("HORIZONTAL"), ctx({ singleObjectSelected: true }), cfg);
-    expect(r).toBe("2quater");
-  });
-
-  it("⭐ 6quater OUTRANKS 2ter when the mate context holds and the flick is directed", () => {
-    const r = resolveDiscreteRule(
-      "FLICK",
-      flick("VERTICAL"),
-      ctx({
-        singleObjectSelected: true, // 2ter would otherwise fire
-        mateContextAvailable: true,
-        mateDirectionPurity: cfg.mateDirectionPurity + 1,
-      }),
-      cfg,
-    );
-    expect(r).toBe("6quater");
-  });
-
-  it("⚠ an UNDIRECTED flick in a mate context falls THROUGH to 2ter", () => {
-    // It must not swallow the gesture: a user with two objects selected would then
-    // have no way to set a gravity anchor at all.
-    const r = resolveDiscreteRule(
-      "FLICK",
-      flick("VERTICAL"),
-      ctx({
-        singleObjectSelected: true,
-        mateContextAvailable: true,
-        mateDirectionPurity: cfg.mateDirectionPurity - 0.5,
-      }),
-      cfg,
-    );
-    expect(r).toBe("2ter");
-  });
-
-  it("a flick with nothing selected fires nothing", () => {
-    expect(resolveDiscreteRule("FLICK", flick("VERTICAL"), ctx({}), cfg)).toBe("NONE");
-  });
-
-  it("⛔ EXACTLY ONE rule can come back — the kinds that keep motion fire none", () => {
-    for (const kind of ["CONTINUOUS_KEPT", "TAP", "HOLD"] as const) {
-      expect(
-        resolveDiscreteRule(
-          kind,
-          flick("VERTICAL"),
-          ctx({ singleObjectSelected: true, mateContextAvailable: true, mateDirectionPurity: 9 }),
-          cfg,
-        ),
-      ).toBe("NONE");
-    }
+describe("release-time priority (§1.3) — after `D110`", () => {
+  it("a DOUBLE_TAP fires 2septies; every other kind fires nothing", () => {
+    expect(resolveDiscreteRule("DOUBLE_TAP")).toBe("2septies");
+    for (const kind of ["CONTINUOUS_KEPT", "TAP", "HOLD"] as const)
+      expect(resolveDiscreteRule(kind)).toBe("NONE");
   });
 });
 

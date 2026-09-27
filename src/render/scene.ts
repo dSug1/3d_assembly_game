@@ -40,6 +40,8 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
+import { GestureSpan, UndoHistory } from "../core/undo_history";
+import { type SceneSnapshot } from "./undo_wiring";
 import "@babylonjs/core/Culling/ray";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -616,6 +618,18 @@ export function createScene(
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
   st.hud = createHud();
+  // ⭐ `D113`: a faint dashed line at the edge band's inner edge, so a hand can SEE the strip that
+  // is always empty space. ⛔ `pointer-events: none` — the readout must not take the touches it shows.
+  st.edgeBandEl = document.createElement("div");
+  Object.assign(st.edgeBandEl.style, {
+    position: "fixed",
+    pointerEvents: "none",
+    border: "1px dashed rgba(255,255,255,0.18)",
+    boxSizing: "border-box",
+    zIndex: "1",
+  });
+  document.body.appendChild(st.edgeBandEl);
+  st.edgeBandKey = "";
   // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
   // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
   // "mouse"` is looked at, and the scene's gesture code below is untouched.
@@ -660,6 +674,16 @@ export function createScene(
   st.held = new Map<number, Held>();
 
   st.followers = new Map<AbstractMesh, Follow>();
+  st.undo = new UndoHistory<SceneSnapshot>();
+  st.gestureSpan = new GestureSpan();
+  st.gestureBefore = null;
+  st.gestureUndid = false;
+  st.episodes = 0;
+  st.sceneStartMs = null;
+  st.hudSecond = -1;
+  st.episodeFacts = new Map();
+  st.episodeUnaligned = new Set<number>();
+  st.episodeUndo = new Set<number>();
   st.lastVerdict = "—";
 
   /**

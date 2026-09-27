@@ -88,6 +88,12 @@ export interface PioneerRef {
   readonly position: Vec3;
 }
 
+/** ⭐ `AlignmentLinks.snapshot` — opaque outside this file except for the undo's comparison. */
+export interface LinksSnapshot {
+  readonly forward: readonly (readonly [ObjectId, PioneerRef])[];
+  readonly seated: readonly ObjectId[];
+}
+
 export class AlignmentLinks {
   /** follower → its Pioneer object AND face. ⭐ One alignment per body, so a plain map. */
   private readonly forward = new Map<ObjectId, PioneerRef>();
@@ -179,6 +185,34 @@ export class AlignmentLinks {
   /** ⭐ Every seated Follower — what the scene re-derives each frame. ⚠ A copy. */
   seatedFollowers(): ObjectId[] {
     return [...this.seated];
+  }
+
+  /**
+   * ⭐ `D111`'s undo: a full copy of the index — baselines included, so a restored link compares
+   * its Pioneer against the pose it had then. ⛔ Opaque: only `restore` reads it.
+   */
+  snapshot(): LinksSnapshot {
+    return {
+      forward: [...this.forward.entries()],
+      seated: [...this.seated],
+    };
+  }
+
+  /** Replace the whole index with a `snapshot`. The reverse index is REBUILT, never copied. */
+  restore(s: LinksSnapshot): void {
+    this.forward.clear();
+    this.reverse.clear();
+    this.seated.clear();
+    for (const [f, ref] of s.forward) {
+      this.forward.set(f, ref);
+      let set = this.reverse.get(ref.objectId);
+      if (set === undefined) {
+        set = new Set<ObjectId>();
+        this.reverse.set(ref.objectId, set);
+      }
+      set.add(f);
+    }
+    for (const f of s.seated) if (this.forward.has(f)) this.seated.add(f);
   }
 
   unlink(follower: ObjectId): void {

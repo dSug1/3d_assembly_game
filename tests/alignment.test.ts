@@ -15,7 +15,7 @@
  * these vectors is that single sign.
  */
 import { describe, expect, it } from "vitest";
-import { faceAlignConstraint, flickResetPlan, pioneerTurned, retargetAlignment, alignModeFor, pressMeaning, type PressContext,
+import { faceAlignConstraint, pioneerTurned, retargetAlignment, alignModeFor, pressMeaning, type PressContext,
   outsideTapRelease,
 } from "@input/alignment";
 import {
@@ -386,29 +386,6 @@ describe("⛔⛔⛔ `D67` — THE ROLES ARE INVERTED: FIRST TOUCH THE PIONEER, S
     expect(pressMeaning(press({ pressedObject: "objectA" })).action).toBe(
       "NOTHING",
     );
-  });
-});
-
-describe("⭐⭐⭐ THE ROTATION RESET — scoped by WHEN the alignment happened", () => {
-  it("⛔⛔ an alignment made DURING the gesture is dropped by the reset", () => {
-    // > *"If the alignment occurred during the rotation, reset the rotation (therefore this
-    // > looses the alignment)."* ⭐ Because the snapshot PREDATES the alignment, so restoring
-    // it would leave the object disagreeing with its own constraint — the one state §1.4
-    // exists to prevent.
-    // ⛔⛔ `D107` (2026-09-27): the drop branch is deleted — a flick in the gesture that made the
-    // alignment now does NOTHING, since restoring the pre-alignment pose would contradict the
-    // constraint. ⛔ RED against the old plan, which dropped the alignment and restored.
-    expect(flickResetPlan(true)).toEqual({ restoreOrientation: false });
-  });
-
-  it("⛔⛔ an alignment that PREDATES the press survives the reset", () => {
-    // > *"If the object was already aligned when the rotation was started, reset to the
-    // > beginning of the rotation (therefore the alignment is conserved)."*
-    // ⭐⭐ And it survives for FREE: the snapshot was taken while aligned, so it already
-    // satisfies the constraint. No re-solve, no special case — which is what makes the
-    // owner's framing better than mine. I had asked the question about the STATE; the answer
-    // is about the GESTURE, and only the gesture can tell these two cases apart.
-    expect(flickResetPlan(false)).toEqual({ restoreOrientation: true });
   });
 });
 

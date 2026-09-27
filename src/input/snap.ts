@@ -82,6 +82,16 @@ export class SnapArming {
     this.heldOff.delete(key);
   }
 
+  /** ⭐ `D111`'s undo: the couples held off after an unsnap. */
+  snapshot(): string[] {
+    return [...this.heldOff];
+  }
+
+  restore(keys: readonly string[]): void {
+    this.heldOff.clear();
+    for (const k of keys) this.heldOff.add(k);
+  }
+
   isHeldOff(key: string): boolean {
     return this.heldOff.has(key);
   }

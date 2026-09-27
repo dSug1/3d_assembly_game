@@ -279,14 +279,18 @@ export interface GestureConfig {
    */
   pioneerCursorGrabRadii: number;
   /**
+   * ⭐⭐ **THE EDGE BAND**, in millimetres on the glass (`D113`): a press this close to a canvas edge
+   * is empty space whatever is drawn under it, so the camera reset (a double tap), the orbit and the
+   * pinch stay reachable when a body fills the view. ⚠ `0` switches it off.
+   */
+  edgeBandMm: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between
    * like `pioneerCandidates`. `0` leaves the ring drawn and every press to the ordinary rules.
    */
   pioneerCursorDrag: number;
   flickWindow: number;
-  /** mm/s at lift, below which it is a drag that stopped — never a flick. */
-  flickLiftSpeed: number;
   /**
    * ms. The trailing window the LIFT SPEED is averaged over.
    * ⛔⛔ NOT THE LAST SAMPLE PAIR. A browser emits `pointerup` at whatever position
@@ -295,10 +299,8 @@ export interface GestureConfig {
    * Device-confirmed as the cause of inconsistent rollback. See flick.ts.
    */
   flickLiftWindow: number;
-  /** mm of travel within the window. */
-  flickDistance: number;
-  /** max(|dx|,|dy|) / (min(|dx|,|dy|) + eps). One ratio, no undefined wedge. */
-  flickPurity: number;
+  // ⛔ `flickLiftSpeed`, `flickDistance`, `flickPurity` are DELETED with the flick (`D110`); the two
+  // windows above survive — the release buffer and the lift-speed readout still read them.
 
   // ── THE UNSNAP'S RAPID MOVE (`D100`) ─────────────────────────────────────────
   // ⛔ These were the eviction shake's window and leg (`A4`); the shake is DELETED (`D107`) and the
@@ -435,8 +437,6 @@ export interface GestureConfig {
   maxBarycenterCandidates: number;
   /** §6bis A/B. "rotated" is the spec's default; "direct" is the comparison arm. */
   axisMappingMode: "rotated" | "direct";
-  /** §6quater directedness, against the screen projection of AxisBtwFaces. */
-  mateDirectionPurity: number;
 
   // ── mate geometry ───────────────────────────────────────────────────────
   /** ⛔ NEGATIVE. A mate is anti-parallel; see core/mate_connector.ts. */
@@ -783,16 +783,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   snapConeDeg: 15,
   // ⚠ A guess inside the owner's 1–10: a fingertip is wider than the 16 px ring it aims at.
   pioneerCursorGrabRadii: 3,
+  // ⚠ A guess with a slider: wide enough for a fingertip's edge, narrow enough to leave the view.
+  edgeBandMm: 6,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
   flickWindow: 120,
-  flickLiftSpeed: 250,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
   // samples at 60-120 Hz, short enough to still mean "at lift". IN5 measures it.
   flickLiftWindow: 40,
-  flickDistance: 6,
-  flickPurity: 2.5,
   // ⛔⛔ THE ROLL NUMBERS ARE COUPLED AND ARE SWEPT TOGETHER, against REALISTIC
   // gestures (ellipses with drifting centres) and realistic NEGATIVES (wiggles,
   // sloppy arcs, zigzags). ⚠ Still placeholders — swept against synthetic humanity,
@@ -896,7 +895,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   maxBarycenterCandidates: 8,
   axisMappingMode: "rotated",
-  mateDirectionPurity: 2,
 
   mateFacingCos: -0.85,
   mateBreakLinear: 0.02,
@@ -996,6 +994,14 @@ export function validateGestureConfig(cfg: GestureConfig): void {
 
   // ⛔ The owner's range, and `grabbedCursor` clamps to it as well — a validator catches a URL typo
   // at boot instead of letting it ship as a silently different reach.
+  // ⛔ 0 switches the band off; past 20 mm it eats a phone's view.
+  if (!Number.isFinite(cfg.edgeBandMm) || cfg.edgeBandMm < 0 || cfg.edgeBandMm > 20) {
+    throw new Error(
+      `edgeBandMm (${cfg.edgeBandMm}) must be between 0 and 20 mm: it is the strip along the ` +
+        "screen edges that always counts as empty space.",
+    );
+  }
+
   if (
     !Number.isFinite(cfg.pioneerCursorGrabRadii) ||
     cfg.pioneerCursorGrabRadii < 1 ||

@@ -58,7 +58,13 @@ only a touch tap on EMPTY space while one free body without followers is held; t
 mode — **Ctrl + left drag rotates**. No on-screen button. ⭐ **`D109` — the dormant switches are
 deleted**: the pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone-enter hook, the
 **fuchsia offer** (its cone is now the **snap cone angle**, in CAPTURE) and three unwired functions.
-⚠ Both unsnaps remain (the precise one built, the flick-unsnap specified) → `ALIGNMENT_RULES.md` §12.
+⭐⭐ **And a second pass the same day (`D110`–`D112`)**: the **flick is deleted** (its rotation reset, and
+`D103`'s flick-unsnap — *"obsolete"*); a **double tap on any body UNDOES the last action** — one
+history for the scene, an action being a gesture that changed the model, so a move, an alignment, a
+snap or an unsnap comes back whole (the camera reset keeps empty space only — and a 6 mm **edge band**
+along the screen is always empty space, `D113`, its width a slider at the top of CAMERA, so it stays reachable); and the HUD's **first
+line is the score** — touchpoint episodes by `SCORE.md` §3 and the time since the first press, the
+undo pair costing ONE → `ALIGNMENT_RULES.md` §12–§13.
 ⛔ **Everything below is the record as it stood; where it names a deleted gesture, §12 wins.**
 
 ⭐⭐⭐ **THE FUCHSIA OFFER, AND THE ROLES INVERTED A SECOND TIME** (`D88`/`D87`, 2026-09-24/25).
@@ -106,7 +112,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1173 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`'s deletions); the
+✅ Green: TypeScript + Babylon + Vite, **1179 golden vectors passing** — ⚠ MEASURED 2026-09-27 (1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -216,8 +222,7 @@ cascades and the sway treat the assembly as one body, and a press on the partner
 the ROOT (the walk stops below a frozen Pioneer); ⛔ its ROTATION stays its own — the first build
 redirected the whole grip and *"I cannot roll any longer the follower"* undid it the same day. The
 snap is a **magnet** — `snapMs` 60 ms on an accelerating `u²`. ⚠ The offset is now 10 mm (~40 mm of world at boot): nothing captures at rest.
-⭐ **UNSNAP COSTS 2 EPISODES; A FLICK UNSNAPS FOR 1** (`D103`) — but releases every seat that
-depends on the flicked object: cheaper, less surgical. ⛔ The flick-unsnap is specified, not built.
+⭐ **UNSNAP COSTS 2 EPISODES** (`D103`); ⛔ its flick-unsnap is removed as obsolete (`D110`).
 ⚠ The approach itself is not built: the zone only lights white.
 ⭐⭐⭐ **`scene.ts` IS SPLIT INTO MODULES** (`D104`, 2026-09-26): the 7,861-line closure is a
 1,118-line composition root plus thirteen render modules (`bodies`, `markers`, `alignment_wiring`,

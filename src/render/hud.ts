@@ -18,6 +18,8 @@
  */
 
 export interface HudFields {
+  /** ⭐ `D112`: the episode count and the timer — the FIRST line, the owner's instruction. */
+  readonly score: string;
   readonly pointers: number;
   readonly phase: string;
   readonly motion: string;
@@ -97,6 +99,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
   return {
     update(f) {
       box.textContent = [
+        `score     ${f.score}`,
         `pointers  ${f.pointers}`,
         `phase     ${f.phase}`,
         `motion    ${f.motion}`,

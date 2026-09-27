@@ -31,12 +31,7 @@
  * than that, one IMPLEMENTATION: a re-derived commit test is a second opinion that
  * can silently disagree with the first.
  */
-import {
-  detectFlick,
-  terminalSpeedPxPerS,
-  trimBuffer,
-  type Flick,
-} from "./flick";
+import { terminalSpeedPxPerS, trimBuffer } from "./flick";
 import type { GestureConfig } from "./gestureConfig";
 import { MotionTracker, type MotionState, type Sample } from "./motion";
 import { mmToPx, pxToMm } from "../core/units";
@@ -50,9 +45,12 @@ export type ReleaseKind =
   | "DOUBLE_TAP"
   /** Released without committing, but held too long to be a tap. ⚠ Fires nothing. */
   | "HOLD"
-  /** Committed, and the flick test passed at release. The pose was rolled back. */
-  | "FLICK"
-  /** Committed, flick test failed: the provisional motion stands. */
+  /**
+   * Committed: the motion stands. ⛔⛔ `"FLICK"` stood beside it until `D110` (the owner,
+   * 2026-09-27: *"a flick now only resets rotation: i think we can remove this one"*) — the
+   * detector, its verdict and its rules are deleted, not left dormant (defect 40: *a retired
+   * gesture that still owns a verdict is not inert*).
+   */
   | "CONTINUOUS_KEPT";
 
 // ⛔ `ROLL_KEPT` WAS REMOVED FROM THIS UNION ON 2026-09-16. `A12` retired the circular roll,
@@ -63,37 +61,10 @@ export type ReleaseKind =
  * The discrete rule the release-time priority ladder selects. Exactly one may fire.
  * `NONE` means the provisional continuous motion stands.
  */
-export type DiscreteRule = "2septies" | "6quater" | "2ter" | "2quater" | "NONE";
-
-/**
- * What the ladder needs from the scene, as PLAIN DATA.
- *
- * ⛔ Supplied by the caller, never computed here: `AxisBtwFaces` needs the camera
- * projection, and this layer imports no engine. That is also why the directedness
- * arrives as a NUMBER the caller measured, not as a scene object to interrogate.
- */
-export interface ReleaseContext {
-  /** §6quater: two objects selected AND the other touchpoint is STATIONARY. */
-  readonly mateContextAvailable: boolean;
-  /**
-   * §6quater directedness: the same purity ratio as §1.3, measured against the
-   * SCREEN PROJECTION of `AxisBtwFaces`. `null` when there is no such axis.
-   */
-  readonly mateDirectionPurity: number | null;
-  /** §2ter / §2quater: exactly one object is selected. */
-  readonly singleObjectSelected: boolean;
-}
-
-export const NO_RELEASE_CONTEXT: ReleaseContext = {
-  mateContextAvailable: false,
-  mateDirectionPurity: null,
-  singleObjectSelected: false,
-};
+export type DiscreteRule = "2septies" | "NONE";
 
 export interface ReleaseVerdict {
   readonly kind: ReleaseKind;
-  /** Only for `kind === "FLICK"`. */
-  readonly flick: Flick | null;
   /** True when the pose was restored to the press snapshot. */
   readonly rolledBack: boolean;
   /** The one discrete rule permitted to fire. */
@@ -125,29 +96,9 @@ export interface PosePort<P> {
  *
  * ⭐ Pure, and exported, so the ladder is testable without a gesture at all.
  */
-export function resolveDiscreteRule(
-  kind: ReleaseKind,
-  flick: Flick | null,
-  ctx: ReleaseContext,
-  cfg: GestureConfig,
-): DiscreteRule {
-  if (kind === "DOUBLE_TAP") return "2septies"; // §1.4 eviction; no flick involved
-  if (kind !== "FLICK" || !flick) return "NONE";
-
-  if (
-    ctx.mateContextAvailable &&
-    ctx.mateDirectionPurity !== null &&
-    ctx.mateDirectionPurity >= cfg.mateDirectionPurity
-  ) {
-    return "6quater";
-  }
-
-  // ⚠ A mate context whose directedness FAILS falls through to the single-object
-  // rules — it does not swallow the gesture. Otherwise a user with two objects
-  // selected could never set a gravity anchor.
-  if (!ctx.singleObjectSelected) return "NONE";
-  // §2ter is the VERTICAL flick (gravity); §2quater the HORIZONTAL (world axis).
-  return flick.axis === "VERTICAL" ? "2ter" : "2quater";
+export function resolveDiscreteRule(kind: ReleaseKind): DiscreteRule {
+  // ⛔ `6quater`, `2ter` and `2quater` were FLICK rules; `D110` deleted the flick with them.
+  return kind === "DOUBLE_TAP" ? "2septies" : "NONE";
 }
 
 /**
@@ -414,7 +365,7 @@ export class Recognizer<P> {
   /** ⭐ Set by `consumeAsMotion`. See there for why a depth push must not be a tap. */
   private consumedFlag = false;
 
-  release(s: Sample, ctx: ReleaseContext = NO_RELEASE_CONTEXT): ReleaseVerdict {
+  release(s: Sample): ReleaseVerdict {
     const press = this.pressSample;
     const wasCommitted = this.phase === "COMMITTED_CONTINUOUS";
     this.buffer.push(s);
@@ -437,9 +388,8 @@ export class Recognizer<P> {
       if (kind === "HOLD") this.taps.reset();
       return {
         kind,
-        flick: null,
         rolledBack: false,
-        rule: resolveDiscreteRule(kind, null, ctx, this.cfg),
+        rule: resolveDiscreteRule(kind),
         durationMs,
         liftSpeedMmPerS,
       };
@@ -457,48 +407,11 @@ export class Recognizer<P> {
     // ⚠ **A DEVICE QUESTION, STATED**: can a strongly curved rotation drag now end in an
     // accidental alignment? The purity ratio is the only thing saying no.
 
-    const flick = detectFlick(trimmed, this.cfg);
-    if (!flick) {
-      return {
-        kind: "CONTINUOUS_KEPT",
-        flick: null,
-        rolledBack: false,
-        rule: "NONE",
-        durationMs,
-        liftSpeedMmPerS,
-      };
-    }
-
-    // ⛔⛔⛔ THE ROLLBACK IS GONE — OWNER, 2026-09-16, AND IT IS §1.3's ASSUMPTION THAT
-    // EXPIRED, not its arithmetic.
-    //
-    // > *"a rotation followed by a flick was previously resetting the quaternion of the
-    // > object: get rid of that if this conflicts with the alignment by flick."*
-    //
-    // ⭐⭐ §1.3 undid the provisional motion *"so a flick snaps from where the gesture
-    // STARTED — the two never compose into a drag-then-snap the user did not ask for."*
-    // ⛔ That sentence was written when a drag and a flick were **rival readings of one
-    // gesture**: whichever won, the other's effect was unwanted. Two things retired it.
-    // `A16` made rotation a MODE a hand chooses, so the drag is no longer a guess — it is
-    // what the user asked for; and `D33` made the flick readable at the END of a drag, so
-    // *drag-then-snap* became the normal gesture rather than an accident.
-    //
-    // ⭐⭐⭐ **A ROLLBACK IS ONLY HONEST WHEN THE MOTION IT UNDOES WAS PROVISIONAL.** Once
-    // the same drag both rotates deliberately AND ends in a flick, restoring the press pose
-    // throws away deliberate work — the defect the owner reported. ⚠ And the alignment
-    // makes it moot: 2ter/2quater re-solve the stack from the CURRENT orientation, so the
-    // constrained axis lands on its target either way and only the free DOF differs — by
-    // exactly the rotation the hand performed on purpose.
-    //
-    // ⚠ `snapshot` STAYS and is still taken at every press: §6's undo (`IN6`) is the same
-    // object with a different owner, and it is the one consumer that still wants it.
-    // ⛔ `rolledBack` stays on the verdict as a permanent `false` rather than being deleted
-    // — the HUD prints it, and a field that vanished would silently stop reporting.
+    // ⛔⛔ `D110`: A COMMITTED GESTURE ENDS KEPT — there is no flick test left to run.
     return {
-      kind: "FLICK",
-      flick,
+      kind: "CONTINUOUS_KEPT",
       rolledBack: false,
-      rule: resolveDiscreteRule("FLICK", flick, ctx, this.cfg),
+      rule: "NONE",
       durationMs,
       liftSpeedMmPerS,
     };

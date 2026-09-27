@@ -16,8 +16,8 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-22) — the input layer is done bar `IN3`
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1173 golden vectors,
-all passing** (37 → … → 1283 → **1173**; ⭐ each DROP has a `D` row: `D106`–`D109`). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1179 golden vectors,
+all passing** (37 → … → 1283 → 1173 → **1179**; ⭐ each DROP has a `D` row: `D106`–`D110`). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔ **THE `D66`–`D70` PASS (2026-09-21) REACHED `DECISIONS.md` AND THE SPEC, NEVER THIS QUEUE** → the [alignment spec](../10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §5.13–§5.17.
 ✅✅ **ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (`D73`, 2026-09-22)** — *"the build is working ok"*, after four formulations, three rejected by a hand (lagging, going forward, reversing). ⭐ The fourth never leaves an increment; its step is an **exponential approach**. ⚠ It ships at **0**, and **`dy` no longer twists** is a cost not reported on → [`queue_notes/IN3.md`](queue_notes/IN3.md)
@@ -28,7 +28,7 @@ lost the cosine and a hand felt all of it: *inverted*, *very weak*, *dead at a l
 Now the delta is **solved onto both horizontal axes** (`translatePairing=1`), with **Blender's 5° cone**
 falling back to `depthTranslate`'s judged rate. ⚠ `D74`'s in-zone basis is **deleted** (`D82`).
 ⭐⭐⭐ **`D86` — §1.1's REST WINDOW IS DERIVED FROM THE DEVICE**, ✅✅ judged: 30 ms was below the measured per-pointer dispatch interval (47–87 ms), so a moving finger read as STOPPED. ⛔ Nine wrong analyses first; the owner found it in the HUD. ⭐ `D77`: **no gizmo on a frozen body** — ⚠ lapsed with `leading_face.ts`, now a guard → [`queue_notes/IN4.md`](queue_notes/IN4.md)
-⭐⭐⭐ **THE INPUTS ARE SIMPLIFIED** (`D106`–`D109`, 2026-09-27) — `FOLLOW`, both shakes, the re-press undo, the pinned Pioneer, three rule selectors and the fuchsia offer are deleted; an aligned body is mode-less; the tablet toggles on one tap, the desktop not at all (Ctrl rotates). ⛔ Unjudged → [`INPUTS_TABLE.md`](../10_INPUT_TOUCH/spec/INPUTS_TABLE.md). ⭐ `D87`'s inversion (first touch the Follower) stands; its four defects are in history.
+⭐⭐⭐ **THE INPUTS ARE SIMPLIFIED** (`D106`–`D109`, 2026-09-27) — `FOLLOW`, both shakes, the re-press undo, the pinned Pioneer, three rule selectors and the fuchsia offer are deleted; an aligned body is mode-less; the tablet toggles on one tap, the desktop not at all (Ctrl rotates). ⭐ Then `D110`–`D112`: **no flick** (nor `D103`'s flick-unsnap), a **double tap on a body undoes** the last action, and the HUD's first line is the **episode count and timer**. ⛔ Unjudged → [`INPUTS_TABLE.md`](../10_INPUT_TOUCH/spec/INPUTS_TABLE.md). ⭐ `D87`'s inversion (first touch the Follower) stands; its four defects are in history.
 ⛔⛔⛔ **THE PRODUCT CHANGED SHAPE AND THE WHOLE SUITE STAYED GREEN** (defect 66, 2026-09-25): two test files kept their **own retyped copy** of the body dimensions, so scaling the pyramid (`D91`) moved the product and not the fixtures — including the vector whose stated job is the boot clearance. ⭐⭐⭐ *A fixture that mirrors a constant is a second implementation of it, and it disagrees exactly when the constant is what changed.* ✅ One home: `core/scene_dims.ts`.
 ⭐ The HUD has a `jump` line (`input/jump_watch.ts`) — a standing readout, not an open defect.
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.

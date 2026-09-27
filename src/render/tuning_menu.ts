@@ -70,7 +70,9 @@ export function installTuningMenu(st: SceneState): void {
       // subfolder CAMERA ORBIT and move all the sliders under CAMERA ORBIT except the subfolder
       // CAMERA APPROACH SWING AT CAPTURE which stays under CAMERA"*.
       title: "CAMERA",
-      sliders: [],
+      // ⭐ `D113` (the owner, 2026-09-27: *"Put a slider for the band width"*): at the TOP of CAMERA,
+      // not inside a subsection — the strip that is always empty space, 0 = off.
+      sliders: [tunable(st, "edge band width (mm, 0 = off)", "edgeBandMm", 0, 20, 1)],
       subsections: [
         {
           title: "CAMERA ORBIT",
