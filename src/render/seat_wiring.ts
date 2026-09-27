@@ -211,10 +211,16 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
   )) {
     const mesh = st.meshOf.get(step.id);
     if (!mesh) continue;
-    const moved = setModelPose(st, mesh, {
-      position: step.position,
-      orientation: modelOrientation(st, mesh),
-    });
+    // ⛔⛔ THE COUPLE IS NAMED, NOT INFERRED: on the landing step `seatSnaps` has already dropped the
+    // snap, so `seatSnaps.has` said *not snapping* and the Follower was blocked by its own Pioneer.
+    const pioneerNow = st.links.pioneerFor(step.id)?.objectId ?? null;
+    const moved = setModelPose(
+      st,
+      mesh,
+      { position: step.position, orientation: modelOrientation(st, mesh) },
+      true,
+      pioneerNow === null ? null : [step.id, pioneerNow],
+    );
     // ⭐⭐ `3D6`: a snap whose lerp would cross a THIRD body is CANCELLED — the Follower stays where
     // it is and the couple is held off until it leaves the radius (`COLLISION.md` §5).
     if (moved !== null && moved.blockedBy !== null) {

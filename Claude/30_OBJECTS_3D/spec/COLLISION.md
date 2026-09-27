@@ -141,6 +141,9 @@ as in the seated row; its **unseated** followers let go (`D106`) and are ordinar
   touching and overlapping alike as 0, so a pair is kept at the skin, and a pair already INSIDE it
   may only move apart. ⚠ A pair at exactly 0 (only an exempt couple reaches it) may move while it
   stays at 0: the escape hatch for a state the rule did not make.
+* ⛔⛔ **THE SNAPPING COUPLE IS NAMED BY THE SNAP'S OWN WRITE**, never inferred from `seatSnaps.has`
+  — defect 72: `advance` drops a snap before its landing step, so every snap was cancelled against
+  its own Pioneer until 2026-09-27.
 * ⚠ **The ALIGNMENT turn does not collide** (`setModelPose(…, collide = false)`): it is the
   constraint being satisfied, not a gesture. A body it turns into a neighbour can only move OUT.
 * ⚠ **Increments**: see §4.5.

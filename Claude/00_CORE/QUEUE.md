@@ -23,8 +23,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1207 golden vectors,
-all passing** (37 → … → 1283 → 1173 → **1207**; ⭐ each DROP has a `D` row: `D106`–`D110`). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1213 golden vectors,
+all passing** (37 → … → 1283 → 1173 → **1213**; ⭐ each DROP has a `D` row: `D106`–`D110`). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES SHIPPED AND CAME BACK WITH THREE REPORTS IN ONE LOOK** (`D74`–`D76`, 2026-09-22/23):
 a body translates along **its own axes**, the boot camera's, frozen (`worldAxisB=1`). ⛔ The first mapping
@@ -315,7 +315,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⭐⭐ **THE BREAK GESTURE IS SPECIFIED** (`D47`): two fingers, one on each mated object, pulling **apart along the centre→centre direction** past a `BreakThreshold` (slider). ⛔⛔ It needs `3D2`'s **seat** first — §1.4's stack solves orientation only, so a mate does not hold POSITION today and *breaking* would be indistinguishable from *moving* → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 | 3D2 |
 | 3D4 | Real 3D file import (glTF) | 3D | feature | queued → `30_OBJECTS_3D/spec/MATERIALS_AND_IMPORT.md` | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |
-| 3D6 | ⛔⛔⛔ **COLLISION — no penetration** (build #1): stop+slide on translation, same-axis clamp on rotation, snapping/seated rules, broad phase | 3D | feature | ✅ **BUILT 2026-09-27**, ⛔ unjudged; feedback beyond the HUD is `GM9` → `COLLISION.md` §8 | 3D1 |
+| 3D6 | ⛔⛔⛔ **COLLISION — no penetration** (build #1): stop+slide on translation, same-axis clamp on rotation, snapping/seated rules, broad phase | 3D | feature | ✅ **BUILT 2026-09-27**; defect 72 fixed; ⛔ unjudged; feedback beyond the HUD is `GM9` → `COLLISION.md` §8 | 3D1 |
 | 3D7 | **Play volume** — translation clamped to the level's volume (build #3) | 3D | feature | queued | 3D6 |
 | 3D8 | LATER: Blender collision shapes (`UCX_`) | 3D | feature | specified → `BLENDER_COLLISION_AUTHORING.md` | 3D6, 3D4 |
 | 3D9 | LATER: Blender bounding boxes (`UBX_`) | 3D | feature | specified → same file | 3D6, 3D4 |

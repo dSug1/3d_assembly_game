@@ -227,3 +227,22 @@ describe("the pieces", () => {
     expect(slideAlong([1, 2, 0], [1, 0, 0])).toEqual([1, 2, 0]);
   });
 });
+
+describe("⛔⛔ THE SNAP LANDS FLUSH ON ITS PIONEER ONLY WITH ITS COUPLE EXEMPT (2026-09-27)", () => {
+  // > *"a follower seated object can be unseated with only a touch delta position"* · *"if i rotate
+  // > a pioneer, the follower unsnaps instead of following"* — the owner. ⭐ One cause: the snap's
+  // > landing step was tested against its own Pioneer (the exemption was inferred from
+  // > `seatSnaps.has`, which is already false on that step), blocked, and the snap CANCELLED.
+  const w = makeWorld([body("F", [0, 0.2, 0]), body("P", [0, 0, 0])]);
+  const flush = { position: [0, 0.1, 0] as Vec3, orientation: IDENTITY };
+
+  it("⛔ without the exemption the landing is refused — the defect", () => {
+    expect(resolveMove(w, "F", flush, setup()).blockedBy).toBe("P");
+  });
+
+  it("⭐ with the couple NAMED for the write, it lands exactly flush", () => {
+    const v = resolveMove(w, "F", flush, setup({ exempt: (a, b) => (a === "F" && b === "P") || (a === "P" && b === "F") }));
+    expect(v.t).toBe(1);
+    expect(v.placed.position).toEqual([0, 0.1, 0]);
+  });
+});

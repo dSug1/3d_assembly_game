@@ -84,3 +84,40 @@ describe("⛔ the cases that must not hang or corrupt", () => {
     expect(plan.baselines.size).toBe(0);
   });
 });
+
+describe("⭐⭐⭐ a SEATED follower is carried, never released — and its baseline stays FRESH", () => {
+  // > *"two pioneer-follower which get unseated and unaligned : i cannot move them any longer
+  // > after that"* — the owner, 2026-09-27. ⛔ A seated link was SKIPPED outright, baseline and all,
+  // so the moment its seat ended the stale baseline read as *the Pioneer turned* and the
+  // alignment went with the seat.
+  const turned = qFromAxisAngle([0, 1, 0], 0.5);
+  it("⭐ seated: the Pioneer turns, nothing is released, the baseline follows it", () => {
+    const plan = resolvePioneerTurns(
+      [{ follower: "F", pioneer: "P", baseline: IDENTITY, seated: true }],
+      () => turned,
+    );
+    expect(plan.steps).toEqual([]);
+    // ⛔ RED against the old builder, which never produced a link — so no baseline — for a seat.
+    expect(plan.baselines.get("F")).toEqual(turned);
+  });
+
+  it("⭐⭐ and once the seat ENDS, the next frame releases nothing — the baseline was kept", () => {
+    const seated = resolvePioneerTurns(
+      [{ follower: "F", pioneer: "P", baseline: IDENTITY, seated: true }],
+      () => turned,
+    );
+    const after = resolvePioneerTurns(
+      [{ follower: "F", pioneer: "P", baseline: seated.baselines.get("F")!, seated: false }],
+      () => turned,
+    );
+    expect(after.steps).toEqual([]);
+  });
+
+  it("⛔ an UNSEATED follower is still released by a turn — `D106` unchanged", () => {
+    const plan = resolvePioneerTurns(
+      [{ follower: "F", pioneer: "P", baseline: IDENTITY, seated: false }],
+      () => turned,
+    );
+    expect(plan.steps).toEqual([{ kind: "RELEASE", follower: "F" }]);
+  });
+});
