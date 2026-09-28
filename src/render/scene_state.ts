@@ -17,6 +17,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
+import { type FrameMeter } from "../core/frame_meter";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
 import { RotationFollower, RotationTally } from "../input/rotation_increment";
@@ -460,6 +461,8 @@ export interface SceneState {
   cursorDrags: Map<number, { key: string; dx: number; dy: number }>;
   frames: number;
   lastFrameMs: number | null;
+  /** ⭐ The frame meter — the HUD's `frame` line (median and p95 of recent frames). */
+  frameMeter: FrameMeter;
   unsnapTrace: string;
   lastFedPointer: number;
   cfg: GestureConfig;

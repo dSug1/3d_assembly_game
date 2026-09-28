@@ -272,6 +272,11 @@ export interface GestureConfig {
    */
   pieceContourAlpha: number;
   /**
+   * ⭐ `1` draws the scene's shadows, `0` skips them — a switch to MEASURE their cost on a weak GPU
+   * (the owner, 2026-09-28: `Scene_1` slow on the tablet). Only a scene with lighting casts any.
+   */
+  shadowsOn: number;
+  /**
    * ⭐ `D130`: how far, in WORLD metres, a body's centre may sit from its goal and still count.
    * ⚠ A tolerance on the scene's geometry, not a touch threshold — rule 3's screen millimetres do
    * not apply to it.
@@ -285,9 +290,12 @@ export interface GestureConfig {
    */
   highlightLiftMm: number;
   /**
-   * ⭐⭐ **THE COLLISION SKIN** (`3D6`), millimetres on the glass: every pair of bodies is kept at
-   * least this far apart. ⛔ Must be > 0 — GJK reads touching and overlapping alike as 0, so a zero
-   * skin could not tell a contact from a penetration.
+   * ⭐⭐ **THE COLLISION ALLOWANCE** (`3D6`, redefined by `D136`), millimetres on the glass: how far a
+   * body may SINK into another — contact is allowed, only a deeper overlap is refused. It is the
+   * margin a hand has to line a piece up within to slide it into a slot of zero clearance, and the
+   * substep of the path check (so a move cannot tunnel). ⚠ Was *the gap every pair is kept apart*,
+   * which made `Scene_1`'s touching slots unreachable. ⛔ Must be > 0. Name kept: renaming a tuned
+   * number loses its baseline.
    */
   collisionSkinMm: number;
   /**
@@ -752,6 +760,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   edgeBandMm: 6,
   // ⚠ A guess with a slider: faint enough to keep the gap between the cores, visible enough to show the faces.
   pieceContourAlpha: 0.1,
+  // ⭐ On, as the scene was authored; the slider is the instrument.
+  shadowsOn: 1,
   // ⚠ Guesses with sliders: 5 mm is under the width of `Scene_1`'s thinnest piece (10 mm) and above
   // its core gap (3 mm); 5° is well under what the eye reads as crooked.
   goalPositionTolM: 0.005,
@@ -958,8 +968,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // at boot instead of letting it ship as a silently different reach.
   if (!Number.isFinite(cfg.collisionSkinMm) || cfg.collisionSkinMm <= 0 || cfg.collisionSkinMm > 5) {
     throw new Error(
-      `collisionSkinMm (${cfg.collisionSkinMm}) must be in (0, 5] mm: it is the gap every pair of ` +
-        "bodies is kept at, and at 0 a contact and a penetration both read as a gap of 0.",
+      `collisionSkinMm (${cfg.collisionSkinMm}) must be in (0, 5] mm: it is how far a body may sink ` +
+        "into another (D136), and the path check's substep — at 0 nothing could be lined up into a slot.",
     );
   }
 
@@ -974,6 +984,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.goalAngleTolDeg > 0 && cfg.goalAngleTolDeg <= 45)) {
     throw new Error(`goalAngleTolDeg (${cfg.goalAngleTolDeg}) must be in (0, 45]°: past 45 a box's half-turns overlap.`);
+  }
+  if (cfg.shadowsOn !== 0 && cfg.shadowsOn !== 1) {
+    throw new Error(`shadowsOn (${cfg.shadowsOn}) must be 0 or 1: it is a switch.`);
   }
   if (!(cfg.pieceContourAlpha >= 0 && cfg.pieceContourAlpha <= 1)) {
     throw new Error(`pieceContourAlpha (${cfg.pieceContourAlpha}) must be in [0, 1]: it is an opacity.`);

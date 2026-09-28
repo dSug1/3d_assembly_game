@@ -33,6 +33,8 @@ export function startRenderLoop(st: SceneState): void {
 
     // ⭐ And on idle frames too: a flip made with an empty glass produces no pointer event.
     const dtSec = st.lastFrameMs === null ? 0 : (now - st.lastFrameMs) / 1000;
+    // ⭐ The frame meter: every render-loop interval, so the HUD reports what THIS device takes.
+    if (st.lastFrameMs !== null) st.frameMeter.push(now - st.lastFrameMs);
     st.lastFrameMs = now;
 
     // ⛔⛔⛔ ADVANCE THE MOTION CLOCK FOR EVERY LIVE TOUCHPOINT, EVERY FRAME.
@@ -570,6 +572,12 @@ export function startRenderLoop(st: SceneState): void {
         const core = mesh.metadata?.core as { isVisible: boolean } | undefined;
         if (core && core.isVisible !== want) core.isVisible = want;
       }
+    }
+    // ⭐ The shadow switch (shadowsOn, CAMERA): three soft shadow maps redraw every piece each frame
+    // in `Scene_1` — the slider measures what that costs on a weak GPU. ⚠ Written on change only.
+    {
+      const on = st.cfg.shadowsOn === 1;
+      if (st.scene.shadowsEnabled !== on) st.scene.shadowsEnabled = on;
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;

@@ -164,3 +164,41 @@ as in the seated row; its **unseated** followers let go (`D106`) and are ordinar
   a push in, a slide along, a diagonal, a digging turn, the depth measure — RED against the old rule,
   and against `> 0` for contact, no depth test, and no depth normal.
 
+
+## 9. ⭐⭐⭐ `D136` — CONTACT IS ALLOWED; ONLY PENETRATION IS REFUSED (2026-09-28)
+
+> *"I cannot get the blue object to snap as per attached picture. Snap gets immediately cancelled"*
+> (HUD: `snap: Piece10 CANCELLED — Piece31 is in the way`) — then, offered three fixes, *"Allow
+> touching"*, and *"Make a slider for this skin margin allowance"* — the owner, 2026-09-28
+
+⛔⛔ **The cause was a contradiction between two rules, not a bug in either.** `D125` made
+`Scene_1`'s neighbouring contours touch at exactly 0, so every slot has **zero clearance**; §3's
+skin kept every pair **at least `skinM` apart**. ✅ Measured on the goal layout: `Piece10` pushed
+straight back into its slot from 5 cm out stopped **33 mm short** (its own depth — its back face could
+not pass its neighbours' front faces), blocked by `Piece27`; and a snap landing flush on a THIRD body
+(here `Piece31`, beside the Pioneer `Piece4`) had its last step refused.
+
+⭐ **The rule now** (`poseFree`, `core/collision.ts`):
+
+| the pair | verdict |
+|---|---|
+| apart (GJK gap > 1 nm) | free, however close it comes |
+| touching or overlapping, depth ≤ `skinM` | free — contact, and the tolerance |
+| deeper than `skinM`, and it was ALREADY in contact, no deeper than before | free — leaving is always possible |
+| deeper than `skinM` otherwise | **refused** — penetration |
+
+* **`collisionSkinMm` keeps its name and its 0.3 mm on the glass**, with a new meaning: **how far a
+  body may sink into another** — the margin a hand has to line a piece up within to slide it into a
+  zero-clearance slot — and still the path check's substep, so a move cannot tunnel. ⭐ Its slider,
+  OBJECT TRANSLATION › *collision allowance*, is relabelled; 0.05–3 mm.
+* ⚠ **The depth measure is exact for boxes** (it tests the bodies' own axes and their crosses). For a
+  slanted hull it over-reads, so such a pair stops at first contact — safe, never sinking. ⛔ A first
+  build let the *"may leave if not deeper"* allowance apply to a pair that had been APART, and two equal
+  over-reads passed a cube straight into a hull's notch — caught by §8's notch vector; the allowance
+  now needs the pair to have been in contact.
+* ⚠ **Cost, stated**: a body stops sunk up to one allowance into what it hits, instead of one skin
+  short of it — under a millimetre of scene at ordinary zoom, inside a transparent contour.
+* ✅ Vectors (`tests/d136.test.ts`, on the real goal layout): the slot re-entered (RED: 33 mm short);
+  lined up within the allowance it slides in, beyond it it is refused; the slider's 3 mm takes a 2 mm
+  misalignment; arriving flush on a third body from apart is allowed (RED: *"is in the way"*). §3's and
+  §5's vectors restated to the new rule. ⛔ Unjudged by a hand.

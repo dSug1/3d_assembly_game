@@ -68,14 +68,14 @@ describe("⭐⭐⭐ TRANSLATION — stop, then slide", () => {
     expect(v.blockedBy).toBeNull();
   });
 
-  it("⛔⛔ a move INTO B stops at the skin — it never passes through", () => {
+  it("⛔⛔ a move INTO B stops AT contact, sunk no deeper than the tolerance — never through (`D136`)", () => {
+    // ⭐ `D136`: contact is allowed and only PENETRATION refused — so the stop is at the faces meeting,
+    // sunk at most `SKIN` (the tolerance), where it used to be held a skin APART.
     const v = resolveMove(w, "A", { position: [0.5, 0, 0], orientation: IDENTITY }, setup());
     expect(v.blockedBy).toBe("B");
     expect(v.t).toBeLessThan(1);
-    const after = makeWorld([{ ...body("A", v.placed.position) }, body("B", [0.3, 0, 0])]);
-    const g = surfaceGap(after, "A", "B")!;
-    expect(g).toBeGreaterThanOrEqual(SKIN - 1e-9);
-    expect(g).toBeLessThan(SKIN * 1.5);
+    expect(v.placed.position[0]).toBeGreaterThanOrEqual(0.2 - 1e-9);
+    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + SKIN + 1e-9);
   });
 
   it("⭐⭐ a DIAGONAL drag into B SLIDES — the tangential part survives in full", () => {
@@ -84,7 +84,8 @@ describe("⭐⭐⭐ TRANSLATION — stop, then slide", () => {
     const tall = makeWorld([body("A", [0, 0, 0]), body("B", [0.3, 0, 0], [0.1, 0.8, 0.1])]);
     const v = resolveMove(tall, "A", { position: [0.3, 0.2, 0], orientation: IDENTITY }, setup());
     expect(v.slid).toBe(true);
-    expect(v.placed.position[0]).toBeCloseTo(0.2 - SKIN, 3);
+    expect(v.placed.position[0]).toBeGreaterThanOrEqual(0.2 - 1e-9);
+    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + SKIN + 1e-9);
     expect(v.placed.position[1]).toBeCloseTo(0.2, 3);
   });
 
@@ -95,11 +96,10 @@ describe("⭐⭐⭐ TRANSLATION — stop, then slide", () => {
     expect(back.t).toBe(1);
   });
 
-  it("⭐ a body resting INSIDE the skin can LEAVE, and cannot press further in", () => {
-    // ⚠ Inside the skin, not at gap 0 — the case AT 0 has its own describe below (`D125`).
-    const x = 0.2 - SKIN / 2;
+  it("⭐ a body sunk by the FULL tolerance can LEAVE, and cannot press further in (`D136`)", () => {
+    const x = 0.2 + SKIN;
     const resting = makeWorld([body("A", [x, 0, 0]), body("B", [0.3, 0, 0])]);
-    expect(surfaceGap(resting, "A", "B")).toBeCloseTo(SKIN / 2, 9);
+    expect(surfaceGap(resting, "A", "B")).toBeCloseTo(0, 9);
     const away = resolveMove(resting, "A", { position: [0.1, 0, 0], orientation: IDENTITY }, setup());
     expect(away.t).toBe(1);
     const into = resolveMove(resting, "A", { position: [0.25, 0, 0], orientation: IDENTITY }, setup());
@@ -110,7 +110,7 @@ describe("⭐⭐⭐ TRANSLATION — stop, then slide", () => {
     const wp = makeWorld([body("A", [0, 0.2, 0]), body("plate", [0, 0, 0], [1, 0.05, 1], true)]);
     const v = resolveMove(wp, "A", { position: [0, -0.3, 0], orientation: IDENTITY }, setup());
     expect(v.blockedBy).toBe("plate");
-    expect(v.placed.position[1]).toBeGreaterThan(0.025 + 0.05 - 1e-6);
+    expect(v.placed.position[1]).toBeGreaterThanOrEqual(0.025 + 0.05 - SKIN - 1e-9);
   });
 
   it("⭐ an exempt pair (a snapping or just-unsnapped couple) passes", () => {
@@ -132,7 +132,7 @@ describe("⛔⛔⛔ `D125` — TWO BODIES THAT START IN CONTACT (a gap of exactl
   it("⛔⛔ a push INTO the neighbour goes nowhere (RED: it went straight through)", () => {
     const v = resolveMove(touching(), "A", { position: [0.3, 0, 0], orientation: IDENTITY }, setup());
     expect(v.blockedBy).toBe("B");
-    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + 1e-9);
+    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + SKIN + 1e-9); // ⭐ `D136`: the tolerance, no more
   });
 
   it("⭐ a slide ALONG the shared face is free, and so is leaving", () => {
@@ -145,7 +145,7 @@ describe("⛔⛔⛔ `D125` — TWO BODIES THAT START IN CONTACT (a gap of exactl
 
   it("⭐⭐ a DIAGONAL push SLIDES along the face — the contact normal comes from the depth (RED: it passed through)", () => {
     const v = resolveMove(touching(), "A", { position: [0.3, 0.2, 0], orientation: IDENTITY }, setup());
-    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + 1e-9);
+    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + SKIN + 1e-9);
     expect(v.placed.position[1]).toBeCloseTo(0.2, 3);
   });
 
@@ -153,7 +153,7 @@ describe("⛔⛔⛔ `D125` — TWO BODIES THAT START IN CONTACT (a gap of exactl
     const q = qFromAxisAngle([0, 0, 1], 0.4);
     const v = resolveMove(touching(), "A", { position: [0.2, 0, 0], orientation: q }, setup());
     expect(v.blockedBy).toBe("B");
-    expect(v.t).toBeLessThan(0.05);
+    expect(v.t).toBeLessThan(0.1); // ⭐ `D136`: the corner may dig in by the tolerance, no more
   });
 
   it("⭐ the depth measure: apart < 0, touching = 0, overlapping = the overlap", () => {
@@ -219,7 +219,7 @@ describe("⭐⭐ ASSEMBLIES — the compound moves as one; its members never tes
     const v = resolveMove(w, "P", { position: [0.5, 0, 0], orientation: IDENTITY }, setup());
     expect(v.blockedBy).toBe("D");
     const fAfter = pos(attach(makeWorld([body("P", v.placed.position), body("F", [v.placed.position[0], 0.1, 0]), body("D", [0.3, 0.1, 0])]), "F", "P"), "F");
-    expect(fAfter[0]).toBeLessThan(0.2);
+    expect(fAfter[0]).toBeLessThanOrEqual(0.2 + SKIN + 1e-9);
   });
 });
 
@@ -284,8 +284,11 @@ describe("⛔⛔ THE SNAP LANDS FLUSH ON ITS PIONEER ONLY WITH ITS COUPLE EXEMPT
   const w = makeWorld([body("F", [0, 0.2, 0]), body("P", [0, 0, 0])]);
   const flush = { position: [0, 0.1, 0] as Vec3, orientation: IDENTITY };
 
-  it("⛔ without the exemption the landing is refused — the defect", () => {
-    expect(resolveMove(w, "F", flush, setup()).blockedBy).toBe("P");
+  it("⭐ `D136`: without the exemption the flush landing is ALLOWED now — contact is not penetration", () => {
+    // ⚠ It was refused, the defect of 2026-09-27; the exemption stays for the lerp's own path.
+    const v = resolveMove(w, "F", flush, setup());
+    expect(v.blockedBy).toBeNull();
+    expect(v.t).toBe(1);
   });
 
   it("⭐ with the couple NAMED for the write, it lands exactly flush", () => {

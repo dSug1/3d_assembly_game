@@ -89,6 +89,8 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
         tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
+        // ⭐ Measure what the shadows cost: watch the HUD's `frame` line while flipping it.
+        tunable(st, "shadows (1 = on, 0 = off)", "shadowsOn", 0, 1, 1),
       ],
       subsections: [
         {
@@ -124,8 +126,9 @@ export function installTuningMenu(st: SceneState): void {
     {
       title: "OBJECT TRANSLATION",
       sliders: [
-        // ⭐ `3D6`: how far apart every pair of bodies is kept — a contact, read on the glass.
-        tunable(st, "collision skin (mm on glass)", "collisionSkinMm", 0.05, 3, 0.05),
+        // ⭐ `D136`: how far a body may SINK into another (mm on the glass) — contact is allowed; the
+        // margin a hand must line a piece up within to slide it into a zero-clearance slot.
+        tunable(st, "collision allowance — how far a body may sink into another (mm on glass)", "collisionSkinMm", 0.05, 3, 0.05),
         // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
         // under the finger at every camera distance. The slider exists so that claim
         // can be DISPROVED by finger, and so the owner can judge whether direct

@@ -58,6 +58,7 @@ import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { sceneConfig } from "../input/scene_rig";
 import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, initialBehaviour, TapHistory } from "../input";
 import { type Vec3 } from "../core/vec";
+import { FrameMeter } from "../core/frame_meter";
 import { makeWorld, type ObjectId } from "../core/object_model";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 import { RotationFollower, RotationTally } from "../input/rotation_increment";
@@ -112,6 +113,9 @@ export function createScene(
   // ⭐ `D131`: the scene's own orbit rig first, then the URL over it.
   st.tuning = parseConfigOverrides(sceneConfig(DEFAULT_CONFIG, spec.orbit), window.location.search);
   st.cfg = st.tuning.config;
+  // ⛔ BEFORE anything paints: the HUD's `frame` line reads the meter on the first `paint()`,
+  // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).
+  st.frameMeter = new FrameMeter();
 
   st.camera = new ArcRotateCamera(
     "camera",
