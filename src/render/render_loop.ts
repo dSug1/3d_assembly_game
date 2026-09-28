@@ -10,14 +10,15 @@ import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
 import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
 import { worldPlacementOf } from "../core/object_model";
+import { planeEdgeOn } from "../input/axis_translate";
 import { alignedFaceOf } from "../core/face_pick";
 import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
 import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
 import { faceMarkerFor, hitFaceNow, liftHighlights, outlinesFor, syncPioneerCursors } from "./markers";
 import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
-import { refreshAxisGizmo } from "./gizmo";
-import { applyCameraPose, recomputeOrbitCentre } from "./camera_rig";
+import { axesOf, refreshAxisGizmo } from "./gizmo";
+import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { syncSeats } from "./seat_wiring";
 
@@ -574,6 +575,15 @@ export function startRenderLoop(st: SceneState): void {
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
     // ⭐ `3D6`: an unsnapped couple is ordinary again once it has separated past the skin.
     pruneCollisionGrace(st);
+    // ⭐ `D134`: EDGE-ON is the CAMERA's, so it is read every frame — a click or an orbit changes it
+    // with no drag. ⚠ Same test as the rule (`planeEdgeOn`), same axes; the HUD repaints on change.
+    {
+      const edge = planeEdgeOn(screenFrame(st), axesOf(st), st.cfg.axisTrackingConeDeg);
+      if (edge !== st.edgeOnNow) {
+        st.edgeOnNow = edge;
+        st.hudDirty = true;
+      }
+    }
     // ⭐ `D114`: the band is 0 while a first touch has somewhere empty to land.
       probeEmptySpace(st, performance.now());
       const r = st.canvas.getBoundingClientRect();

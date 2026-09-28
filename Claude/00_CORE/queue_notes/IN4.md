@@ -978,3 +978,8 @@ refused: *"I cannot disrupt the user feeling by changing the axis of translation
 ⭐ Literature: Blender's `axisProjection` (below 5°, `axis × −factor` from the mouse's vertical)
 binds the sign to the axis's orientation — the same defect; Au, Tai & Fu (CGF 2012) disallow an
 axis near the view direction outright. ⛔ Unjudged by a hand.
+
+⭐ **`D134`, 2026-09-28 (branch `1.0.46-`)**: the HUD's `⛔EDGE-ON` was stale (written only by a drag);
+now `planeEdgeOn`, the rule's own test, is read every frame. ⚠ Measured: `Scene_1`'s rig is edge-on
+over 16 % of its elevation range and boots in it (−0.6°); `Scene_0` 5 %, boots at −1.6°. ✅ 1 vector
+(readout = rule over a pose sweep).

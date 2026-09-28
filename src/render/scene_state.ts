@@ -395,7 +395,7 @@ export interface SceneState {
   frameTurnAxes: Map<ObjectId, TurnAxes>;
   gizmoTurnAxes: Map<ObjectId, TurnAxes>;
   lastTrackGain: number;
-  lastEdgeOn: boolean;
+  edgeOnNow: boolean;
   axisGizmos: Map<ObjectId, AxisGizmo>;
   gizmoRings: Map<ObjectId, LinesMesh>;
   gizmoTurnRings: Map<ObjectId, LinesMesh>;

@@ -189,6 +189,22 @@ export function screenShadow(
 const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
 
 /**
+ * ⭐⭐ **IS THE BODY'S HORIZONTAL PLANE EDGE-ON TO THIS CAMERA?** — the one definition, read by
+ * `axisTravel` to choose its branch AND by the HUD every frame (`D134`). `|det|` is the area the x
+ * and depth axes' screen shadows span — `sin(pitch)` for a pair of horizontal axes — and the plane
+ * is edge-on when that is within `sin(coneDeg)`. ⛔ A property of the CAMERA, not of a drag: the
+ * readout used to be written only by a translating finger, so a click or an orbit left the last
+ * drag's answer on the glass. `false` for a camera with no basis.
+ */
+export function planeEdgeOn(camera: CameraScreenAxes, axes: ObjectAxes, coneDeg: number): boolean {
+  const sx = screenShadow(axes.x, camera);
+  const sd = screenShadow(axes.depth, camera);
+  if (!sx || !sd) return false;
+  const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
+  return !(Math.abs(sx[0] * sd[1] - sx[1] * sd[0]) > coneSin);
+}
+
+/**
  * The three channels.
  *
  * @param metresPerPx `trackingMetresPerPx` for this camera — rule 6's computed factor. ⭐ With
@@ -281,8 +297,9 @@ export function axisTravel(
     const det = sx[0] * sd[1] - sx[1] * sd[0];
     // ⚠ `|det|` is the area the two shadows span — it goes to zero when the plane is EDGE-ON,
     // which is the level camera, and that is the only degeneracy the pair has: two
-    // perpendicular world axes cannot both point at the camera.
-    if (Math.abs(det) > coneSin) {
+    // perpendicular world axes cannot both point at the camera. ⭐ The test is `planeEdgeOn`'s, so
+    // the HUD's readout and this branch cannot disagree.
+    if (!planeEdgeOn(camera, axes, coneDeg)) {
       xM = ((dx * sd[1] - dy * sd[0]) / det) * holderGain;
       depthM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
     } else {

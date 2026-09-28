@@ -54,7 +54,9 @@ GOAL** (`final`, `GM1`'s data; ⛔ no detector yet), and **five pieces boot out 
 from the owner's phone snapshot → `SCENE_1.md` §7. ⭐⭐ **`D130`: the goal is met when the pieces sit right
 RELATIVE to each other** (the painting anywhere; a box's face or its opposite — four half-turns), checked by
 `core/goal.ts` and read on the HUD's score line (`goal 36/41 …`, `goal ✅`); ⛔ level end not built. ⭐ **`D131`:
-each scene carries its own orbit rig** — `Scene_1` radii 1.8 / 1.0 / 1.5 m → `SCENE_1.md` §8.
+each scene carries its own orbit rig** — `Scene_1` radii 1.8 / 1.0 / 1.5 m → `SCENE_1.md` §8. ⭐ **`D134`: the HUD's
+`⛔EDGE-ON` is the camera's, read every frame** (it was stale — written only by a drag); both scenes BOOT inside
+the band (branch `1.0.46-`).
 
 ⭐⭐ **THE FOURTH PASS** (`D121`–`D124`, branch `1.0.41-Mondrian`, ⛔ unjudged by a hand): a **frozen body
 seen from below turned see-through** (⛔ reversed by `D128`); `Scene_1`'s **floor is 21.116236 units**
@@ -162,7 +164,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1195 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1196 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 1 for `D134`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
