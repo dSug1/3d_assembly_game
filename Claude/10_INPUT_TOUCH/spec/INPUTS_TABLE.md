@@ -16,7 +16,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | nothing | 2 fingers pinch on empty space | zoom |
 | nothing | double tap on empty space | reset the camera |
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
-| — | ⭐ **double tap on any body** | **undo the last action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`) |
+| — | ⭐ **double tap on the body the last action MOVED** (double click on desktop) | **undo that action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`). ⭐ On any OTHER body it is refused and the HUD says which body moved (`D141`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
 | a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes) |
 | any body, being TRANSLATED | ⭐ **both fingers move sideways in OPPOSITE directions, with no `dy`** — a horizontal pinch, the 2nd finger anywhere (empty space, the body, another body) | **zoom** (spreading = zoom in, closing = zoom out, as the empty-space pinch); the **translation and the roll are PAUSED**. ⭐ It **ends as soon as either finger's `dy` is not zero** — that move translates again; both ways read the same deadband (`motionDeadbandMm`, OBJECT TRANSLATION) (`D137`, amended) |

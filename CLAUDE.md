@@ -44,7 +44,7 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-09-27)
+## Where it stands (2026-09-28)
 
 ⭐⭐ **2026-09-28** (`D127`–`D134`, branch `1.0.44-Created-goal-scene-and-fixed-edge-on`, ⛔ unjudged by a hand): **edge-on, the holder's `dy`
 drives BLUE alone, finger up = away from the CURRENT camera** — the axes stay the world's (a camera-relative
@@ -67,7 +67,8 @@ for the session when the device measures a median frame over 33 ms with them (th
 `40_RENDER_SCENE/INDEX.md`. ⭐⭐ **`D139`: A SNAP STOPS THE DRAG THAT MADE IT** — a held Follower that seats locks its grip:
 only the roll goes on until the finger lifts or the click is released → `ALIGNMENT_RULES.md` §18. ⛔⛔ **Defect 73 /
 `D140`: a STALE cursor snapped** — re-aligning a seated Follower to a second Pioneer made it jump there: the
-snap ran before the cursors were rebuilt; now only the live couple's cursor may snap.
+snap ran before the cursors were rebuilt; now only the live couple's cursor may snap. ⭐⭐ **`D141`: a double tap
+(or double click) undoes only on the body the last action MOVED** → `queue_notes/IN6.md`.
 
 ⭐⭐ **THE FOURTH PASS** (`D121`–`D124`, branch `1.0.41-Mondrian`, ⛔ unjudged by a hand): a **frozen body
 seen from below turned see-through** (⛔ reversed by `D128`); `Scene_1`'s **floor is 21.116236 units**
@@ -175,7 +176,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1229 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1235 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

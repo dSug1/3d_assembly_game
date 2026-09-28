@@ -14,8 +14,12 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-27)
+## ⭐⭐⭐ YOU ARE HERE (2026-09-28)
 
+⭐⭐ **2026-09-28, live on `1.0.48-`** (all unjudged by a hand): `Scene_1`'s goal + boot + relative goal check
+(`D129`–`D131`), a rig per scene, the edge-on readout (`D134`), collision allows contact (`D136`), a sideways
+pinch while translating zooms (`D137`), auto shadows + a frame meter (`D138`), a snap stops its drag (`D139`),
+defect 73 (`D140`), undo only on the moved body (`D141`). ⚠ `D133`/`D135` were built and reverted.
 ⏸ **PAUSED for `Scene_1`** → [`SCENE_1.md`](../20_GAME_RULES/spec/SCENE_1.md). ⛔⛔⛔ **THE PLAYABILITY PROGRAM**: **`3D6`
 collision** → **`GM1` a goal + the mate + completion** → **`3D7` play volume** → **`3D2` the
 approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-27.md`](queue_notes/PLAYABILITY_2026-09-27.md).
@@ -23,8 +27,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1229 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → **1229**, `D127`–`D134`, the frame meter, `D136`–`D140`; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1235 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → **1235**, `D127`–`D134`, the frame meter, `D136`–`D141`; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -272,7 +276,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | ✅✅ **THE ALIGNMENT MODEL IS CLOSED BY A DEVICE LOOK (2026-09-17)** — tap-to-align (**anti-parallel** since `D78`, capped at one), both faces marked, the twist, an eased slerp. ⛔ Since judged away: `FOLLOW` (`D106`), both undos (`D107`), the flick (`D110`). ⛔ **NOT built**: `TargetPosition`, its gizmo, the orbit, the approach. ✅✅ `D73`’s increments closed 2026-09-22, shipping at **0**. ⛔ **`D87`/`D90` (the inverted roles, the swap) are BUILT AND UNJUDGED**; the fuchsia offer is deleted (`D109`) — spec §11 → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | ✅✅ **RULE 6 CLOSED 2026-09-15** — by finger, its gain **computed**. ⛔⛔ **ITS SCREEN-PLANE FORM IS SUPERSEDED** (`D75`/`D76`): a body translates along **its own axes**, the finger’s delta solved onto both horizontal ones. ⚠ Unjudged again; `screenTranslation`/`depthTranslate` are deleted (`D109`). ⛔ 6bis onward still wait on face centres → [`queue_notes/IN4.md`](queue_notes/IN4.md) | IN2, 3D1 (6bis onward only) |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued, ⭐⭐ **practical without a rebuild**: every tunable overrides from the URL. ✅ `pointerNoiseMm` = **0.761 mm** is the one number MEASURED, and measuring it exposed a defect eight device passes had accepted. ⛔⛔ **A TRAP TO READ BEFORE BOOKING A SESSION**: several tunables are READ but sit OFF the gesture path, so `config_debt` sees them used while they change nothing → [`queue_notes/IN5.md`](queue_notes/IN5.md) | IN3 |
-| IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | ✅ **BUILT as one scene history** (`D111`): a double tap on a body undoes the last action — `core/undo_history.ts`, `render/undo_wiring.ts`. ⛔ Unjudged | IN1 |
+| IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | ✅ **BUILT as one scene history** (`D111`): a double tap undoes the last action — ⭐ only on a body that action MOVED (`D141`) — `core/undo_history.ts`, `render/undo_wiring.ts`. ⛔ Unjudged → [`queue_notes/IN6.md`](queue_notes/IN6.md) | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — was undefined and reachable (§5) | IN | decision | 🔧 **ANSWERED THREE TIMES AND BUILT.** ⭐ The second touchpoint — inside **or** outside any object — drove roll by its x and depth by its y (`D22`/`A12`, `A10`); ⚠ now it lifts along gravity and spins (`D108`/`D123`), and a press on ANOTHER body steers the held one (`D124`). ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16**, which also closed the small-object hole owed since `A5`. ⛔⛔ **`A15`/`D25`'s orphan unselect is DELETED** (`D54`) → [`queue_notes/IN8.md`](queue_notes/IN8.md) | IN2 |
 | IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needed NO object model | IN | feature | ✅✅ **CLOSED 2026-09-14**, both rules working by finger. Rule 1 cost **three** defects no green suite could see — including a **composition nobody had computed** and a scheme **reversed on measurement**. ⭐ *"Three rigs, therefore two transitions"* is enforced by `validateGestureConfig` → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |

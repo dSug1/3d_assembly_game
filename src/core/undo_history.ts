@@ -13,7 +13,7 @@
  *
  * ⛔ ENGINE-FREE: the snapshot type is the caller's; this file only orders them.
  */
-import type { ObjectId, SceneObject, World } from "./object_model";
+import { worldPlacementOf, type ObjectId, type SceneObject, type World } from "./object_model";
 import type { Vec3 } from "./vec";
 
 /** A last-in, first-out history of the model as it stood before each action. */
@@ -31,6 +31,11 @@ export class UndoHistory<S> {
   /** The most recent entry, removed — or `null` when there is nothing to undo. */
   pop(): S | null {
     return this.stack.pop() ?? null;
+  }
+
+  /** ⭐ `D141`: the most recent entry, LEFT in place — so a refused undo loses nothing. */
+  peek(): S | null {
+    return this.stack[this.stack.length - 1] ?? null;
   }
 
   get size(): number {
@@ -140,4 +145,46 @@ export function modelsDiffer(
     linksDiffer(a.links, b.links) ||
     cursorsDiffer(a.cursors, b.cursors)
   );
+}
+
+/**
+ * ⭐⭐⭐ `D141` — **WHICH BODIES DID AN ACTION TOUCH?** (the owner, 2026-09-28: *"a double click or double
+ * tap reset to the previous only if it is done on the same object which has moved"*).
+ * ⭐ A body whose WORLD pose changed — so a seated child carried by its root counts — or whose parent or
+ * constraints changed; and, for an action that moves nothing but changes an alignment (an unsnap, a
+ * release), each FOLLOWER whose link or seat changed. ⛔ Not the Pioneer of such a link: it did not move.
+ */
+export function bodiesTouched(
+  a: ModelSnapshot<LinksState, CursorsState, unknown>,
+  b: ModelSnapshot<LinksState, CursorsState, unknown>,
+  eps = 1e-6,
+): ObjectId[] {
+  const out = new Set<ObjectId>();
+  for (const [id, ob] of b.world.objects) {
+    const oa = a.world.objects.get(id);
+    if (oa === undefined) {
+      out.add(id);
+      continue;
+    }
+    const pa = worldPlacementOf(a.world, id);
+    const pb = worldPlacementOf(b.world, id);
+    const poseMoved =
+      pa === null || pb === null ||
+      !near(pa.position, pb.position, eps) ||
+      (!near(pa.orientation, pb.orientation, eps) && !near(pa.orientation, pb.orientation.map((v) => -v), eps));
+    if (poseMoved || objectsDiffer(oa, ob, eps)) out.add(id);
+  }
+  const linkOf = (s: LinksState) => new Map(s.forward.map((f) => [f[0], `${f[1]}\u0000${f[2]}`]));
+  const la = linkOf(a.links);
+  const lb = linkOf(b.links);
+  for (const f of new Set([...la.keys(), ...lb.keys()])) if (la.get(f) !== lb.get(f)) out.add(f);
+  const sa = new Set(a.links.seated);
+  const sb = new Set(b.links.seated);
+  for (const f of new Set([...sa, ...sb])) if (sa.has(f) !== sb.has(f)) out.add(f);
+  return [...out].sort();
+}
+
+/** ⭐ `D141`: may a double tap on `tapped` undo an action that touched `touched`? */
+export function undoAllowedOn(tapped: ObjectId, touched: readonly ObjectId[]): boolean {
+  return touched.includes(tapped);
 }
