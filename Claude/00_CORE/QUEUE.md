@@ -19,7 +19,7 @@ record. **A status changes in BOTH places or neither.**
 ⭐⭐ **2026-09-28, live on `1.0.48-Scene_1-completed`** (all unjudged by a hand): `Scene_1`'s goal + boot + relative goal check
 (`D129`–`D131`), a rig per scene, the edge-on readout (`D134`), collision allows contact (`D136`), a sideways
 pinch while translating zooms (`D137`), auto shadows + a frame meter (`D138`), a snap stops its drag (`D139`),
-defect 73 (`D140`), undo only on the moved body (`D141`). ⚠ `D133`/`D135` were built and reverted.
+defect 73 (`D140`), undo only on the moved body (`D141`), ⭐ the mate sets the spin at the goal's dissolve (`D143`). ⚠ `D133`/`D135` were built and reverted.
 ⏸ **PAUSED for `Scene_1`** → [`SCENE_1.md`](../20_GAME_RULES/spec/SCENE_1.md). ⛔⛔⛔ **THE PLAYABILITY PROGRAM**: **`3D6`
 collision** → **`GM1` a goal + the mate + completion** → **`3D7` play volume** → **`3D2` the
 approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-27.md`](queue_notes/PLAYABILITY_2026-09-27.md).
@@ -27,8 +27,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1240 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → **1240**, `D127`–`D134`, the frame meter, `D136`–`D142`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1247 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → **1247**, `D127`–`D134`, the frame meter, `D136`–`D143`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -340,7 +340,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
-| GM1 | Final-configuration data per scene + the MATE check (spin) + its detector + level end (build #2) | GAME | feature | ⛔ **NEXT**; 🔧 the DATA and the DETECTOR are built — `Scene_1`'s goal is its table (`D129`), met relative to each other, a box's face or its opposite (`D130`, HUD); a seated piece in place dissolves its couple, with a pop-up (`D142`); ⛔ level end not built; ⏸ mate/spin deferred → `PLAYABILITY` §2, §2.1 | 3D6 |
+| GM1 | Final-configuration data per scene + the MATE check (spin) + its detector + level end (build #2) | GAME | feature | ⛔ **NEXT**; 🔧 the DATA and the DETECTOR are built — `Scene_1`'s goal is its table (`D129`), met relative to each other, a box's face or its opposite (`D130`, HUD); a seated piece in place dissolves its couple, with a pop-up (`D142`), and the MATE sets its spin onto the goal then (`D143`, the whole mate); ⛔ level end not built → `PLAYABILITY` §2, §2.1 | 3D6 |
 | GM2 | The touch ledger on the HUD | GAME | feature | ✅ built (`D112`, `D115`) | — |
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
