@@ -41,8 +41,8 @@ Each cost a live session in the predecessor.
 4. ⭐ **`rollOrder` is what makes a mate FASTENED rather than REVOLUTE.** Normals
    alone leave the roll about the contact axis free.
 
-⭐ And from the renderer: **ONE SCENE CAMERA, never one per object** (two drew
-coincident faces 18.4 px apart).
+⭐ Renderer: **ONE SCENE CAMERA, never one per object** (two drew coincident
+faces 18.4 px apart).
 
 ## The constraint stack
 
@@ -77,5 +77,5 @@ body is**, which the base plate proved →
 ## ⚠ Carried forward unclosed
 
 * **The assembly tree has never held more than two objects** (`3D5`).
-* ⭐ **Materials and import (`3D4`)** — import from Blender as `.glb`, never author in the build →
-  [`spec/MATERIALS_AND_IMPORT.md`](spec/MATERIALS_AND_IMPORT.md).
+* ⭐ **Import (`3D4`)**: Blender → `.glb` → [`spec/MATERIALS_AND_IMPORT.md`](spec/MATERIALS_AND_IMPORT.md);
+  `.blend` files → [`spec/BLENDER_ASSETS.md`](spec/BLENDER_ASSETS.md).

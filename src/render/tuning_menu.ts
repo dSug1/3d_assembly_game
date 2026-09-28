@@ -5,6 +5,8 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { SCENES } from "../content/scenes";
+import { GAME_CONTENT } from "../content/worlds";
+import { playHref, resolveSceneIndex } from "../core/game_route";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createMenu, type MenuSlider } from "./menu";
 import { type SceneState } from "./scene_state";
@@ -370,13 +372,13 @@ function sceneSlider(st: SceneState): MenuSlider {
     min: 0,
     max: SCENES.length - 1,
     step: 1,
-    get: () => st.cfg.sceneIndex,
+    // ⭐ The index PLAYED, which an out-of-range `?sceneIndex=` is not.
+    get: () => resolveSceneIndex(GAME_CONTENT, st.cfg.sceneIndex),
     set: (value) => {
       const v = Math.round(value);
-      if (v === st.cfg.sceneIndex) return null;
-      const url = new URL(window.location.href);
-      url.searchParams.set("sceneIndex", String(v));
-      window.location.assign(url.toString());
+      if (v === resolveSceneIndex(GAME_CONTENT, st.cfg.sceneIndex)) return null;
+      // ⭐ `D144`: one writer of a play URL — the pause menu's Restart uses the same one.
+      window.location.assign(playHref(window.location.href, v));
       return null;
     },
   };

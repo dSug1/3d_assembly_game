@@ -74,6 +74,12 @@ GOAL pose dissolves its couple** (highlights and cursor gone, the piece stays) w
 onto its goal (twist only, through the face centre); in `Scene_1` a piece seated by its OPPOSITE face mates onto the
 half-turn (per-scene `symmetry` data, not a rule). *"That will be it"*: no mate check besides `goal.ts`, no spin lock →
 `PLAYABILITY` §2.1. ⭐ The highlight lift defaults to **0.1 mm** (was one pixel), its depth margin vectored.
+⭐⭐ **`D144` (branch `1.0.51-Game-shell`, ⛔ unjudged by a hand): THE WAY OUT OF A LEVEL** — a ⏸ button
+(bottom-left) opens a pause menu: *Resume*, *Restart level*, *Quit to menu* (that world's level list). Leaving a
+level is a **page reload on a new URL** (`?sceneIndex=N` plays, `?flow=1&screen=…` shows the shell), because
+nothing in `createScene` has a teardown; ⭐ **ONE scene list** — the slider's is derived from `content/worlds.ts`,
+so a new scene is one data file + one level; ⭐ **`Scene_1` boots by default** → `GAME_STRUCTURE.md` §4, and the
+industry-practice improvements for later (in-page switch, results, settings, pause clock, back button) §5.
 
 ⭐⭐ **THE FOURTH PASS** (`D121`–`D124`, branch `1.0.41-Mondrian`, ⛔ unjudged by a hand): a **frozen body
 seen from below turned see-through** (⛔ reversed by `D128`); `Scene_1`'s **floor is 21.116236 units**
@@ -181,7 +187,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1247 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1262 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 15 for `D144`, + 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -306,7 +312,7 @@ module. ⚠ Checked by the typecheck, the suite, the build and a headless Chrome
 ⭐⭐ **THE GAME SCAFFOLD EXISTS AND IS EMPTY** (`D105`, 2026-09-26): intro → menu → worlds → levels
 → play (`core/game_structure.ts`, vectored), one world and one level playing **`Scene_0`** — the
 workbench, now DATA in `content/scene_0.ts` that `scene.ts` boots from — and a JSON seam for the
-scene. `?flow=1` shows the shell; the default boots `Scene_0` directly. ⛔ `GM6`–`GM8` populate it →
+scene. `?flow=1` shows the shell; the default boots `Scene_0` directly (⭐ `Scene_1` since `D144`). ⛔ `GM6`–`GM8` populate it →
 [`Claude/20_GAME_RULES/spec/GAME_STRUCTURE.md`](Claude/20_GAME_RULES/spec/GAME_STRUCTURE.md).
 ✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/**
 

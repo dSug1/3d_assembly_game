@@ -83,6 +83,9 @@ has to know which kind a body is.
 5. ⚠ One deliberately ugly real part as the first test asset — curved, hollow or L-shaped — because
    it tests `mesh_topology`, GJK and the seat at once (`CONCEPT_ASSESSMENT` risk 2, `3D5`).
 
+⭐ The first asset exists: `Assets/Blender/scene_2.blend`, `Scene_1` rebuilt for an import to compare
+against → [`BLENDER_ASSETS.md`](BLENDER_ASSETS.md).
+
 ## ⭐⭐ LATER — collision shapes and bounds authored in Blender (`3D8`, `3D9`, 2026-09-27)
 
 > *"for the moment, continue to implement [the hull at spawn and the GJK gap]. Make sure it is

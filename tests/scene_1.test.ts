@@ -280,7 +280,7 @@ describe("⭐⭐ the switch and the view", () => {
   });
 
   it("⭐ sceneIndex is a whole number ≥ 0 — a typo is refused, not booted", () => {
-    expect(DEFAULT_CONFIG.sceneIndex).toBe(0);
+    expect(DEFAULT_CONFIG.sceneIndex).toBe(1); // `D144`: Scene_1 boots by default
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, sceneIndex: 1.5 })).toThrow(/sceneIndex/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, sceneIndex: -1 })).toThrow(/sceneIndex/);
   });

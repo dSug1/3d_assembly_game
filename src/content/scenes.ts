@@ -3,16 +3,19 @@
  * structure modular so that I can toggle with a slider between Scene_0 and Scene_1"*).
  *
  * ⭐ The index is the `sceneIndex` tunable (URL `?sceneIndex=1`, and the slider at the top of the
- * tuning menu, which reboots the page on the chosen scene). ⛔ A new scene is one entry here and one
- * data file; nothing in `render/` names a scene.
+ * tuning menu, which reboots the page on the chosen scene).
+ *
+ * ⭐⭐ `D144`: **the list is DERIVED from the catalogue** (`content/worlds.ts`), in reading order — it
+ * used to be a second hand-written list of the same scenes. ⛔ A new scene is one data file and one
+ * level in `worlds.ts`; nothing here and nothing in `render/` names a scene.
  */
 import type { SceneDescriptor } from "../core/game_structure";
-import { SCENE_0 } from "./scene_0";
-import { SCENE_1 } from "./scene_1";
+import { resolveSceneIndex, scenesOf } from "../core/game_route";
+import { GAME_CONTENT } from "./worlds";
 
-export const SCENES: readonly SceneDescriptor[] = [SCENE_0, SCENE_1];
+export const SCENES: readonly SceneDescriptor[] = scenesOf(GAME_CONTENT);
 
-/** ⭐ The scene an index names — ⚠ an index out of range falls back to `Scene_0`, never throws. */
+/** ⭐ The scene an index names — ⚠ an index out of range falls back to the first, never throws. */
 export function sceneAt(index: number): SceneDescriptor {
-  return SCENES[Number.isInteger(index) && index >= 0 && index < SCENES.length ? index : 0]!;
+  return SCENES[resolveSceneIndex(GAME_CONTENT, index)]!;
 }
