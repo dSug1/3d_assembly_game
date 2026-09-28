@@ -918,7 +918,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ Arbitrary, and that is the point: any fixed value gives three arbitrary poses. Changed
   // by the URL when a different scene is wanted.
   sceneSeed: 20260917,
-  sceneIndex: 0,
+  // ⭐ `D144`, the owner, 2026-09-28: *"Default screen boot = scene_1 for the moment."* — `Scene_1`, the
+  // painting, is the level being built; `?sceneIndex=0` still boots the workbench.
+  sceneIndex: 1,
 };
 
 /**

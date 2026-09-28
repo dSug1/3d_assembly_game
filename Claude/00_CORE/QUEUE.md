@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · what gets built next, for the whole project
 > **READ IF** · you are starting any build, or wondering where an item stands
-> **LAST VERIFIED** · 2026-09-27
+> **LAST VERIFIED** · 2026-09-28
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list anywhere else, and do not reorder it.
 
@@ -20,6 +20,7 @@ record. **A status changes in BOTH places or neither.**
 (`D129`–`D131`), a rig per scene, the edge-on readout (`D134`), collision allows contact (`D136`), a sideways
 pinch while translating zooms (`D137`), auto shadows + a frame meter (`D138`), a snap stops its drag (`D139`),
 defect 73 (`D140`), undo only on the moved body (`D141`), ⭐ the mate sets the spin at the goal's dissolve (`D143`). ⚠ `D133`/`D135` were built and reverted.
+⭐ **`1.0.51-Game-shell`: `D144`** — a ⏸ pause menu leaves a level (by page reload), ONE scene list, `Scene_1` boots → `GM6`.
 ⏸ **PAUSED for `Scene_1`** → [`SCENE_1.md`](../20_GAME_RULES/spec/SCENE_1.md). ⛔⛔⛔ **THE PLAYABILITY PROGRAM**: **`3D6`
 collision** → **`GM1` a goal + the mate + completion** → **`3D7` play volume** → **`3D2` the
 approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-27.md`](queue_notes/PLAYABILITY_2026-09-27.md).
@@ -27,8 +28,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1247 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → **1247**, `D127`–`D134`, the frame meter, `D136`–`D143`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1262 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → **1262**, `D127`–`D134`, the frame meter, `D136`–`D144`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -345,7 +346,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
-| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105` → `20_GAME_RULES/spec/GAME_STRUCTURE.md` | — |
+| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105`; 🔧 **back from PLAY built** (`D144`: ⏸ pause menu, by reload; one scene list), ⛔ unjudged; the later list is §5 → `20_GAME_RULES/spec/GAME_STRUCTURE.md` §4–§5 | — |
 | GM7 | Populate worlds and levels; a theme | GAME | content | `World_0` exists | GM1 |
 | GM8 | Save/load a scene as local JSON (Free Flow) | GAME | feature | queued | GM1 |
 | GM9 | The player layer: player HUD, cues, hints, sound, haptics, save-in-progress (build #5) | GAME | feature | queued | GM1 |

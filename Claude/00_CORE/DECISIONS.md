@@ -35,7 +35,7 @@ file.
 | `D86` | ⭐⭐⭐ **THE REST WINDOW IS DERIVED FROM THE DEVICE, NOT FIXED** | 2026-09-24 | ⭐ Binding, ⚠ → history |
 | `D87` | ⛔⛔⛔ **THE ROLES ARE INVERTED AGAIN: FIRST TOUCH THE FOLLOWER, SECOND THE PIONEER** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D88` | ⭐⭐⭐ **THE FUCHSIA OFFER — every face the held body is nearly ready to MATE with** | 2026-09-24 | ⛔ The offer is DELETED (`D109`); its cone is the snap cone. ⚠ → history |
-| `D89` | ⛔⛔⛔ **`D77`'s CARVE-OUT FOLLOWS THE ROLE: THE **FIRST** TOUCH ON A FROZEN BODY IS THE MISS NOW** | 2026-09-25 | ⛔ Reversed by `D119`: every press on a frozen body is a miss; a TAP on it aligns |
+| `D89` | ⛔⛔⛔ **`D77`'s CARVE-OUT FOLLOWS THE ROLE: THE **FIRST** TOUCH ON A FROZEN BODY IS THE MISS NOW** | 2026-09-25 | ⛔ Reversed by `D119` → §14 |
 | `D90` | ⭐⭐⭐ **A PRESS ON THE HELD BODY'S OWN FOLLOWER IS A *SWAP*, AND THE RELEASE PATH STOPS ALIGNING** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D91` | ⭐⭐ **THE PYRAMID'S SMALL FACE IS A PART'S SMALL FACE, AND IT IS A QUARTER SHORTER** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D92` | ⚠⚠ **REVERSED THE SAME DAY — `objectD` IS A CUBOID AGAIN** | 2026-09-25 | ⭐ Binding, ⚠ → history |
@@ -67,7 +67,7 @@ file.
 | `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | The wheel is the desktop's zoom → §14 |
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | A tap on the plate aligns; a press steers → §14 |
 | `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | They matched no shape and served no rule → §14 |
-| `D121` | ⚠ **REVERSED BY `D128`** — a frozen body seen from below turned see-through | 2026-09-27 | Opacity 0.3 and its slider deleted → §15 |
+| `D121` | ⚠ **REVERSED BY `D128`** — a frozen body seen from below turned see-through | 2026-09-27 | → §15 |
 | `D122` | `Scene_1`'s floor: halved, 80 %, 107 %, 103 % — 21.116236 units | 2026-09-27 | → `SCENE_1.md` |
 | `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | With the gravity lift, as an aligned body → §15 |
 | `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | A tap there still aligns → §15 |
@@ -89,6 +89,7 @@ file.
 | `D141` | ⭐⭐ **A DOUBLE TAP UNDOES ONLY ON THE BODY THE LAST ACTION MOVED** | 2026-09-28 | → `IN6.md` |
 | `D142` | ⭐ **A SEATED PIECE AT ITS GOAL DISSOLVES ITS COUPLE** | 2026-09-28 | → GM1 |
 | `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** — `Scene_1`: a face or its opposite | 2026-09-28 | → `PLAYABILITY` §2.1 |
+| `D144` | ⭐⭐ **A ⏸ PAUSE MENU LEAVES A LEVEL, BY PAGE RELOAD; ONE SCENE LIST; `Scene_1` BOOTS** | 2026-09-28 | → `GAME_STRUCTURE.md` §4–§5 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -112,7 +113,7 @@ file.
 | `D59` | ⭐⭐⭐ **AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH BOTH AXES** | 2026-09-19 | ⭐ Binding, ⚠ → history |
 | `D58` | ⚠ **REPEALED BY `D66`** — a PRESS toggled the movement mode, in two places | 2026-09-19 | ⚠ → history |
 | `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | ⭐ Binding. ⚠ → history |
-| `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** — the alignment still toggles ON at the PRESS; `A22`'s rapid-pair upgrade is gone with the second touch's tap count | 2026-09-19 | ⛔ Reversed by `D119`: the second touch aligns on its released TAP, never its press |
+| `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** — the alignment still toggles ON at the PRESS; `A22`'s rapid-pair upgrade is gone with the second touch's tap count | 2026-09-19 | ⛔ Reversed by `D119` → §14 |
 | `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D52` | ⚠ **RESOLVED BY `D57` THE SAME DAY** — the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it | 2026-09-19 | ⚠ → §5.5 |

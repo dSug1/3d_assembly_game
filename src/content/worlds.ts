@@ -2,6 +2,8 @@
  * ⭐⭐ **THE GAME'S CONTENT** — worlds and levels (the owner, 2026-09-26: *"We will later populate
  * them"*). ⛔ One world, one level, `Scene_0`: a scaffold, not a catalogue. A new level is a new
  * `SceneDescriptor` and one entry here; a new world is one more object in `worlds`.
+ * ⭐ `D144`: this is the ONE scene list — the scene slider's index counts these levels in reading
+ * order (`content/scenes.ts`), so a level's position here is its `?sceneIndex=`.
  *
  * ⚠ Engine-free data. Nothing here may import the renderer.
  */

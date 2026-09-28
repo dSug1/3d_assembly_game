@@ -7,22 +7,23 @@
  * and forwards taps. ⚠ Placeholders on purpose: one world, one level, no art, no settings — the
  * owner populates them.
  *
- * ⛔ `?flow=1` shows it; the default boot goes straight to `Scene_0`, because the device loop that
- * judges every gesture would otherwise pay three taps per reload. Flipping the default is one line
- * in `main.ts`, the owner's call.
+ * ⛔ `?flow=1` shows it; the default boot goes straight to a scene (`Scene_1` since `D144`), because
+ * the device loop that judges every gesture would otherwise pay three taps per reload.
+ *
+ * ⭐⭐ `D144`: **the shell never starts a scene in the page.** *Play* on a level LOADS it — the page is
+ * replaced by the level's URL — and the level's ⏸ button is the way back (`installPauseMenu`). Every
+ * destination is computed by `core/game_route.ts`; this file draws and navigates.
  */
-import {
-  GameFlow,
-  levelOf,
-  type GameContent,
-  type SceneDescriptor,
-  type Screen,
-} from "../core/game_structure";
+import { type GameContent, type Screen } from "../core/game_structure";
+import { flowAt, pauseTarget, playHref, playIndexOf, type PauseAction } from "../core/game_route";
 
 export interface GameShellHandle {
-  /** The scene's frame count once a level has started; `-1` before. */
+  /** ⚠ Always `-1`: the shell draws no scene — a level is a page of its own. */
   framesRendered(): number;
 }
+
+/** ⭐ How a screen leaves the page — `window.location.assign` in the product, a spy in a test. */
+export type Navigate = (href: string) => void;
 
 const PANEL = [
   "position:fixed",
@@ -52,17 +53,17 @@ const BUTTON = [
 ].join(";");
 
 export function installGameShell(
-  canvas: HTMLCanvasElement,
   content: GameContent,
-  startScene: (scene: SceneDescriptor, freeFlow: boolean) => { framesRendered(): number },
+  /** ⭐ The screen to open on — `Quit to menu` lands on a level list (`D144`). */
+  initial: Exclude<Screen, { kind: "PLAY" }>,
+  navigate: Navigate,
   parent: HTMLElement = document.body,
 ): GameShellHandle {
-  const flow = new GameFlow(content);
+  const flow = flowAt(content, initial);
   const panel = document.createElement("div");
   panel.setAttribute("data-role", "game-shell");
   panel.style.cssText = PANEL;
   parent.appendChild(panel);
-  let scene: { framesRendered(): number } | null = null;
 
   const button = (label: string, onTap: () => void, enabled = true): HTMLButtonElement => {
     const b = document.createElement("button");
@@ -86,15 +87,16 @@ export function installGameShell(
     const s: Screen = flow.screen;
     panel.replaceChildren();
     if (s.kind === "PLAY") {
-      // ⛔ The scene is started ONCE; the shell steps aside and the HUD and the tuning menu own
-      // the glass from here. ⚠ `back()` from PLAY is not offered yet: a second `createScene` on
-      // one canvas is `GM6`'s to design, not something to improvise here.
-      panel.hidden = true;
-      const level = levelOf(content, s.worldId, s.levelId);
-      if (scene === null && level !== null) scene = startScene(level.scene, s.freeFlow);
+      // ⭐⭐ `D144`: the level is LOADED — the page becomes the level's URL, so the scene boots from
+      // nothing exactly as the scene slider's does. ⛔ A second `createScene` on this page is not
+      // designed (no teardown exists), and a reload cannot leak.
+      const index = playIndexOf(content, s);
+      if (index !== null) {
+        panel.replaceChildren(line("loading…", "15px", "#8fa6c8"));
+        navigate(playHref(window.location.href, index));
+      }
       return;
     }
-    panel.hidden = false;
     if (s.kind === "INTRO") {
       panel.append(
         line(content.title, "34px"),
@@ -131,6 +133,91 @@ export function installGameShell(
     panel.append(button("Back", () => flow.back()));
   };
   render();
-  void canvas;
-  return { framesRendered: () => (scene === null ? -1 : scene.framesRendered()) };
+  return { framesRendered: () => -1 };
+}
+
+/** ⭐ The ⏸ button: 10 mm on the glass, bottom-left — the HUD holds top-left, the tuning menu top-right. */
+const PAUSE_BUTTON = [
+  "position:fixed",
+  "left:calc(10px + env(safe-area-inset-left))",
+  "bottom:calc(10px + env(safe-area-inset-bottom))",
+  "z-index:250",
+  "width:10mm",
+  "height:10mm",
+  "padding:0",
+  "font:20px/1 ui-monospace,monospace",
+  "color:#cfe3ff",
+  "background:rgba(27,37,51,0.85)",
+  "border:1px solid #2b3648",
+  "border-radius:6px",
+  "touch-action:manipulation",
+].join(";");
+
+/**
+ * ⭐⭐ **THE PAUSE MENU** (`D144`) — the one way out of a level, the industry's pattern: a ⏸ button
+ * opens an overlay with *Resume*, *Restart level* and *Quit to menu*. ⭐ A pause, not a bare *back*:
+ * a button that leaves at once is hit by accident on a touch screen.
+ *
+ * ⛔ Both are DOM elements over the canvas, so a touch on them never reaches Babylon, the pointer
+ * router or the episode ledger — pausing is not a touchpoint episode (`SCORE.md` §3.1's exclusions).
+ * ⚠ The scene is NOT frozen behind the overlay: nothing in it runs without a finger except the
+ * HUD's timer, which keeps counting — pausing the clock belongs to `GM3`/`GM5`.
+ * ⭐ Where each button goes is `pauseTarget`'s, in `core/game_route.ts`.
+ */
+export function installPauseMenu(
+  content: GameContent,
+  /** The scene index being played. */
+  index: number,
+  navigate: Navigate,
+  parent: HTMLElement = document.body,
+): void {
+  const open = document.createElement("button");
+  open.setAttribute("data-role", "pause-button");
+  open.setAttribute("aria-label", "Pause");
+  open.textContent = "⏸";
+  open.style.cssText = PAUSE_BUTTON;
+
+  const overlay = document.createElement("div");
+  overlay.setAttribute("data-role", "pause-menu");
+  overlay.style.cssText = PANEL;
+  // ⛔ `display`, never the `hidden` attribute: PANEL's inline `display:flex` overrides `hidden`.
+  const show = (paused: boolean): void => {
+    overlay.style.display = paused ? "flex" : "none";
+    open.style.display = paused ? "none" : "block";
+  };
+  show(false);
+
+  const act = (action: PauseAction): void => {
+    const href = pauseTarget(action, window.location.href, content, index);
+    if (href === null) {
+      show(false);
+      return;
+    }
+    overlay.replaceChildren(label("loading…", "15px", "#8fa6c8"));
+    navigate(href);
+  };
+  const choice = (text: string, action: PauseAction): HTMLButtonElement => {
+    const b = document.createElement("button");
+    b.textContent = text;
+    b.style.cssText = BUTTON;
+    b.addEventListener("click", () => act(action));
+    return b;
+  };
+  const label = (text: string, size: string, colour = "#cfe3ff"): HTMLDivElement => {
+    const d = document.createElement("div");
+    d.textContent = text;
+    d.style.cssText = `font-size:${size};color:${colour}`;
+    return d;
+  };
+
+  open.addEventListener("click", () => {
+    overlay.replaceChildren(
+      label("Paused", "24px"),
+      choice("Resume", "RESUME"),
+      choice("Restart level", "RESTART"),
+      choice("Quit to menu", "QUIT"),
+    );
+    show(true);
+  });
+  parent.append(open, overlay);
 }

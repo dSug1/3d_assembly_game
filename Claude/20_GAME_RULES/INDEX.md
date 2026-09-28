@@ -8,7 +8,7 @@ optimum**, plus **time**; **Free Flow** escapes it. §6 is the build list (`GM1`
 snap/seat/unsnap (`D100`), the ledger (`src/input/episode_ledger.ts`) and the HUD's episodes +
 timer line (`D112`/`D115`). ⛔ Not built: the detector, the solver, the score.
 ⭐ [`spec/GAME_STRUCTURE.md`](spec/GAME_STRUCTURE.md) — the scaffold (`D105`), `?flow=1`; ⛔ empty
-until `GM6`–`GM8`.
+until `GM6`–`GM8`. ⭐ `D144`: a ⏸ pause menu leaves a level by reload; one scene list; §5 = later.
 ⭐ [`spec/SCENE_1.md`](spec/SCENE_1.md) — `Scene_1`, picked by the scene slider (`D117`).
 
 ⭐ [`CONCEPT_ASSESSMENT_2026-09-26.md`](CONCEPT_ASSESSMENT_2026-09-26.md) — what is missing
