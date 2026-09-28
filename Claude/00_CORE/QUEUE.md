@@ -346,7 +346,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
-| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105`; 🔧 **back from PLAY built** (`D144`: ⏸ pause menu, by reload; one scene list), ⛔ unjudged; the later list is §5 → `20_GAME_RULES/spec/GAME_STRUCTURE.md` §4–§5 | — |
+| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105`; 🔧 **back from PLAY built** (`D144`: ⏸ pause menu, by reload; one scene list), ⛔ unjudged; the later list is §5 → `20_GAME_RULES/spec/GAME_STRUCTURE.md` §4–§6 | — |
 | GM7 | Populate worlds and levels; a theme | GAME | content | `World_0` exists | GM1 |
 | GM8 | Save/load a scene as local JSON (Free Flow) | GAME | feature | queued | GM1 |
 | GM9 | The player layer: player HUD, cues, hints, sound, haptics, save-in-progress (build #5) | GAME | feature | queued | GM1 |

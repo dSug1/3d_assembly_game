@@ -96,3 +96,46 @@ no page exception. ⛔ **Rule 5: a hand on the tablet is owed.**
 | 9 | **Carry Free Flow in the URL** (`&freeFlow=1`) | only once something reads it — `D101`'s score |
 | 10 | **Boot on the menu by default** in the shipped build, keeping the direct boot for the device loop | the owner's call; one line in `main.ts` |
 
+
+## 6. ⭐ Memory, garbage collection, and the other scaffolding issues (2026-09-28)
+
+> *"shall we take care of garbage collection and what other issues when we scaffold the game ?"* —
+> the owner, 2026-09-28. ⭐ Advice recorded, ⛔ nothing built.
+
+### 6.1 Garbage collection — ⭐ nothing to do while a level is left by RELOAD (§4)
+
+⭐ JavaScript's collector frees plain objects by itself. ⛔ It does NOT free three things, and a page
+reload frees all three — the second reason (besides simplicity) the reload was the right first step:
+
+* **GPU memory** — meshes, materials, textures, shadow maps stay allocated until `dispose()`.
+* **Listeners and timers** on `window` — each keeps its closure, and the level's state, alive.
+* **Babylon observers and render loops** — one left running draws a scene nobody sees.
+
+✅ **Inside a level it reads healthy** (a read of the source, 2026-09-28): the gizmo updates its lines IN
+PLACE (`instance:` in `render/gizmo.ts`), face markers are made once per face and hidden or shown (bounded,
+~250 in `Scene_1`), PioneerFaceCursors are disposed (`render/markers.ts`).
+⚠ **What could cost a level is collection PAUSES, not leaks**: the core maths returns a new `[x, y, z]`
+per operation and the gizmo makes a few `new Vector3` per frame. ⛔ Probably not the tablet's slowness —
+shadows alone halved its frame rate (`D138`), which points at the GPU. ⭐ **Measure before changing
+anything**: USB + `chrome://inspect` → a Performance trace while dragging → count the *Minor GC* blocks;
+the HUD's `frame` p95 is the number to watch.
+⛔ **Owed the day §5 #1 (the in-page switch) is built — a TEARDOWN CONTRACT**: every `install*` returns a
+`dispose()`, and `createScene`'s handle gets one that runs them all, then `scene.dispose()`. Today five
+`window` listeners (`render/mouse_adapter.ts`), a `resize` listener (`render/scene.ts`) and the goal
+pop-up's timer are never removed. ⭐ Its test: switch levels ten times, take a heap snapshot, and exactly
+ONE Babylon `Scene` remains.
+
+### 6.2 The other issues, most urgent first
+
+| # | issue | what to do | when |
+|---|---|---|---|
+| 1 | **Loading Blender assets** (`3D4`, branch `1.0.50-Blender_assets`) | a `.glb` loads asynchronously: a loading state, and a missing file reported on the page (`showError` covers crashes, not a failed fetch). An imported mesh goes through the same checks as `parseSceneDescriptor` — never a unit cube in its place. ⚠ Draco / KTX2 compression shrinks files a lot; both Apache-2.0, recorded in `THIRD_PARTY_NOTICES.md` first (`N13`) | ⭐ before `Scene_2` |
+| 2 | **A performance budget per level** | the tablet runs `Scene_1` at 10–20 fps, and its 41 pieces are each a mesh plus a contour — ~100 draw calls. Set triangles, draw calls, lights and texture sizes BEFORE authoring `Scene_2` in Blender. Cheap wins later: `freezeWorldMatrix()` on frozen bodies, `material.freeze()`, merging or instancing identical pieces | ⭐ before `Scene_2` |
+| 3 | **Download size** | the build already warns about chunk size (Babylon). Load each level's assets on demand; it matters more once Capacitor ships them offline (`DEP2`) | with #1 |
+| 4 | **WebGL context loss** | a backgrounded phone can lose its GPU context; the scene must come back on restore. Pairs with §5 #5: pause on `visibilitychange` and stop rendering while hidden (battery too) | with §5 #5 |
+| 5 | **Data that survives a reload** (progress, settings) | a VERSION number in the saved format from day one, so an update still reads old saves. `localStorage` can throw (private browsing): wrap every access, as the tuning menu does. ⛔ `SEC1` first | with §5 #6 |
+| 6 | **Pause in the middle of a gesture** | a finger holding a body while another taps ⏸ has no defined behaviour. Simple rule: opening the pause menu CANCELS any active gesture | with the next pause change |
+| 7 | **Sound** | iOS plays audio only after a user gesture — the intro's *tap to start* is the standard place to unlock it | when sound arrives (`GM9`) |
+
+⭐ **Recommended order**: nothing on garbage collection now; #1 and #2 before `Scene_2`, because they
+shape how Blender levels are authored; the teardown contract only when the reload is dropped.
