@@ -2060,3 +2060,16 @@ spans only −18°…+17°, 16 % of its elevation range edge-on. Leaving it take
 flip is back: seen from below, finger up brings the body TOWARD the camera, continuous with exact
 tracking outside the cone (2026-09-16's finger-found fix). `D132`'s camera → gizmo reading and
 `D134`'s readout stand.
+
+---
+
+## 17 — ⭐⭐ A SIDEWAYS PINCH WHILE TRANSLATING ZOOMS (`D137`)
+
+> *"In mobile, during the translation of an object, if two touchpoints have dx which go towards or away
+> from each other and no dy (similar to a pinch out or in to zoom), then pause the translation and
+> perform a zoom out or in"* — then *"Correction: pause the translation and the roll"* — the owner,
+> 2026-09-28
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D137` | **while a body is translated, two fingers moving sideways in OPPOSITE directions with no `dy` zoom the camera**; the holder's translation and the second finger's roll and lift are PAUSED. The test: both x axes `MOVING`, neither y axis (§1.1's per-axis bands — no new threshold), opposite latest sideways travel. ⭐ **LATCHED**: decided once per pair of fingers, a zoom until a finger lifts. The zoom is the empty-space pinch's own law (`PinchTracker`: spreading = in, closing = out). ⛔ Never from a mouse (`D118`) | `input/hold_pinch.ts` (the rule), `render/hold_pinch_wiring.ts` (the latch and the zoom), called from the holder's translation and from `applyDepthDrag` | ⛔ **a mode keyed on MOTION** — `METHOD` forbids it; the latch is the mitigation, not a cure: a two-finger translation that STARTS with the fingers drifting apart sideways becomes a zoom for the rest of that pair. ⚠ It needs both fingers MOVING sideways at once, so a pinch with one still finger stays a translation |

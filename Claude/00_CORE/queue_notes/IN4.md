@@ -993,3 +993,8 @@ elevation range and boots in it (−0.6°); `Scene_0` 5 %, boots at −1.6°. �
 over a pose sweep).
 
 ⚠ **`D133` REVERTED the same day** (the owner) — never shipped; the below-camera flip stands.
+
+⭐⭐ **`D137`, 2026-09-28**: while a body is translated, two fingers moving sideways in opposite
+directions with no `dy` ZOOM, and the translation and roll pause — latched until a finger lifts
+(`METHOD`'s motion-mode rule, mitigated by the latch). `input/hold_pinch.ts` → alignment spec §17,
+`INPUTS_TABLE.md`. ✅ 6 vectors. ⛔ Unjudged.
