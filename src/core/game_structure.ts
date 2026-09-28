@@ -11,23 +11,81 @@
  * first seam: a scene is a `SceneDescriptor`, JSON-serialisable, so Free Flow can one day save one
  * and a level can load one, with no network egress (`CONSTRAINTS` §5).
  *
- * ⚠ `SceneDescriptor.final` is `null` for every scene today: the final configuration and its
- * detector are `GM1`'s (`20_GAME_RULES/spec/SCORE.md`), and this field is where they land.
+ * ⭐ `SceneDescriptor.final` is the level-completed configuration — `Scene_1` has one (`D129`),
+ * `Scene_0` none. ⛔ Its detector is `GM1`'s and is not built (`20_GAME_RULES/spec/SCORE.md`).
  *
  * ⛔ ENGINE-FREE. The screens' DOM lives in `render/screens.ts`; this is the state machine and the
  * data model, which is where a test can reach them.
  */
 import { bootTilt } from "./scene_dims";
-import type { Quat } from "./vec";
+import { qFromAxisAngle, type Quat } from "./vec";
 import type { LightingSpec } from "./lighting";
 
 export type Triple = readonly [number, number, number];
 
 /**
  * ⭐ How a body is turned at boot. `"tilt+"`/`"tilt-"` are `D93`'s 30° roll + pitch in either
- * sense; `{ seeded: n }` is the n-th of the scene's seeded random rotations (`?sceneSeed=`).
+ * sense; `{ seeded: n }` is the n-th of the scene's seeded random rotations (`?sceneSeed=`);
+ * `{ yawDeg: d }` is a turn of `d` degrees about the world vertical (`D129`).
  */
-export type BootOrientation = "identity" | "tilt+" | "tilt-" | { readonly seeded: number };
+export type BootOrientation =
+  | "identity"
+  | "tilt+"
+  | "tilt-"
+  | { readonly seeded: number }
+  | { readonly yawDeg: number };
+
+/**
+ * ⭐ Which other orientations look the same as a goal's (`D130`). `"halfTurns"`: a plain box — a
+ * half-turn about any of its own three axes leaves it identical, so each face may stand where its
+ * OPPOSITE was (the owner: *"face aligned or opposite face aligned as there is no way to
+ * distinguish two opposite faces for these geometries"*), and a rectangle face shows no 180° spin.
+ */
+export type GoalSymmetry = "halfTurns";
+
+/** ⭐ One body's pose in a level's FINAL configuration — authored units, like `BodySpec`. */
+export interface FinalPose {
+  readonly id: string;
+  readonly position: Triple;
+  readonly orientation: BootOrientation;
+  readonly symmetry?: GoalSymmetry;
+}
+
+/**
+ * ⭐⭐ **THE LEVEL-COMPLETED CONFIGURATION** (`GM1`'s data, `D129`): the pose every listed body must
+ * reach — what the player achieves in the fewest touchpoint episodes and the least time
+ * (`SCORE.md`). ⭐ `frame` (`D130`): `"ABSOLUTE"` — at these very poses; `"RELATIVE"` — the bodies
+ * sit correctly relative to EACH OTHER, the whole anywhere (*"painting can sit anywhere"*). The
+ * check is `core/goal.ts`. ⛔ Level end is not built.
+ */
+export interface FinalConfiguration {
+  readonly frame: "ABSOLUTE" | "RELATIVE";
+  readonly bodies: readonly FinalPose[];
+}
+
+/**
+ * ⭐ A scene's own camera-orbit rig (`D131`, the owner, 2026-09-28: *"Make the camera orbit radii and
+ * height tunable for each scene"*): the three rings' radius and height, metres, about the orbit
+ * centre. ⭐ Folded into the config at boot BEFORE the URL, so `?orbitTopRadiusM=` still wins and the
+ * sliders tune the booted scene. Absent: the config's defaults.
+ */
+export interface OrbitRig {
+  readonly topRadiusM: number;
+  readonly topHeightM: number;
+  readonly middleRadiusM: number;
+  readonly middleHeightM: number;
+  readonly bottomRadiusM: number;
+  readonly bottomHeightM: number;
+}
+
+const ORBIT_KEYS = [
+  "topRadiusM",
+  "topHeightM",
+  "middleRadiusM",
+  "middleHeightM",
+  "bottomRadiusM",
+  "bottomHeightM",
+] as const;
 
 export interface BodySpec {
   readonly id: string;
@@ -69,8 +127,10 @@ export interface SceneDescriptor {
   readonly bootView?: "LEVEL";
   /** ⭐ The scene's own lights and background; absent → the one hemispheric light `Scene_0` has. */
   readonly lighting?: LightingSpec;
-  /** ⛔ `GM1`'s: the final configuration to detect. `null` until an owner authors one. */
-  readonly final: null;
+  /** ⭐ `D131`: the scene's own orbit rings; absent → the config's defaults. */
+  readonly orbit?: OrbitRig;
+  /** ⭐ `GM1`'s: the final configuration to reach. `null` until an owner authors one. */
+  readonly final: FinalConfiguration | null;
 }
 
 export interface LevelSpec {
@@ -182,6 +242,7 @@ export function resolveBootOrientation(
   if (o === "identity") return undefined;
   if (o === "tilt+") return bootTilt(1);
   if (o === "tilt-") return bootTilt(-1);
+  if ("yawDeg" in o) return qFromAxisAngle([0, 1, 0], (o.yawDeg * Math.PI) / 180);
   return seeded[o.seeded];
 }
 
@@ -198,7 +259,12 @@ const isOrientation = (v: unknown): v is BootOrientation =>
     v !== null &&
     typeof (v as { seeded?: unknown }).seeded === "number" &&
     Number.isInteger((v as { seeded: number }).seeded) &&
-    (v as { seeded: number }).seeded >= 0);
+    (v as { seeded: number }).seeded >= 0) ||
+  (typeof v === "object" &&
+    v !== null &&
+    Object.keys(v).length === 1 &&
+    typeof (v as { yawDeg?: unknown }).yawDeg === "number" &&
+    Number.isFinite((v as { yawDeg: number }).yawDeg));
 
 /**
  * ⭐⭐ Parse a scene from JSON, refusing anything malformed with the FIELD named. ⛔ Never a
@@ -216,8 +282,6 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
   if (typeof o.id !== "string" || o.id === "") throw new Error("scene: missing id");
   if (typeof o.title !== "string") throw new Error(`scene ${o.id}: missing title`);
   if (!Array.isArray(o.bodies)) throw new Error(`scene ${o.id}: bodies is not an array`);
-  if (o.final !== null && o.final !== undefined)
-    throw new Error(`scene ${o.id}: final configurations are not supported yet (GM1)`);
   const ids = new Set<string>();
   const bodies: BodySpec[] = o.bodies.map((b: unknown, k: number) => {
     if (typeof b !== "object" || b === null) throw new Error(`scene ${o.id}: body ${k} is not an object`);
@@ -254,6 +318,12 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     if (typeof l !== "object" || l === null || !isTriple(l.background) || !Array.isArray(l.lights))
       throw new Error(`scene ${o.id}: lighting needs a background and a lights array`);
   }
+  if (o.orbit !== undefined) {
+    const r = o.orbit as Record<string, unknown> | null;
+    for (const k of ORBIT_KEYS)
+      if (typeof r !== "object" || r === null || typeof r[k] !== "number" || !Number.isFinite(r[k]))
+        throw new Error(`scene ${o.id}: orbit.${k} must be a finite number`);
+  }
   return {
     id: o.id,
     title: o.title,
@@ -261,7 +331,45 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     ...(o.unitM !== undefined ? { unitM: o.unitM as number } : {}),
     ...(o.bootView !== undefined ? { bootView: "LEVEL" as const } : {}),
     ...(o.lighting !== undefined ? { lighting: o.lighting as LightingSpec } : {}),
-    final: null,
+    ...(o.orbit !== undefined ? { orbit: o.orbit as OrbitRig } : {}),
+    final: parseFinal(o.id, o.final, bodies),
+  };
+}
+
+/**
+ * ⭐ `D129`: a final configuration names bodies the scene HAS, each once, never a frozen one (it
+ * cannot move, so it has no pose to reach). ⛔ Refused with the field named, never defaulted.
+ */
+function parseFinal(sceneId: string, raw: unknown, bodies: readonly BodySpec[]): FinalConfiguration | null {
+  if (raw === null || raw === undefined) return null;
+  const where = `scene ${sceneId}: final`;
+  const list = (raw as { bodies?: unknown }).bodies;
+  if (typeof raw !== "object" || !Array.isArray(list)) throw new Error(`${where}: bodies is not an array`);
+  const frame = (raw as { frame?: unknown }).frame;
+  if (frame !== "ABSOLUTE" && frame !== "RELATIVE") throw new Error(`${where}: frame must be ABSOLUTE or RELATIVE`);
+  const seen = new Set<string>();
+  return {
+    frame,
+    bodies: list.map((p: unknown, k: number) => {
+      const x = (typeof p === "object" && p !== null ? p : {}) as Record<string, unknown>;
+      const at = `${where}: ${typeof x.id === "string" ? x.id : `pose ${k}`}`;
+      const body = bodies.find((b) => b.id === x.id);
+      if (typeof x.id !== "string" || !body) throw new Error(`${at}: names no body of the scene`);
+      if (body.frozen) throw new Error(`${at}: a frozen body has no final pose to reach`);
+      if (seen.has(x.id)) throw new Error(`${at}: duplicate id`);
+      seen.add(x.id);
+      if (!isTriple(x.position)) throw new Error(`${at}: position is not three finite numbers`);
+      // ⛔ A seeded rotation changes with `?sceneSeed=` — a goal must be one fixed pose.
+      if (!isOrientation(x.orientation) || (typeof x.orientation === "object" && "seeded" in x.orientation))
+        throw new Error(`${at}: unknown orientation`);
+      if (x.symmetry !== undefined && x.symmetry !== "halfTurns") throw new Error(`${at}: unknown symmetry`);
+      return {
+        id: x.id,
+        position: x.position,
+        orientation: x.orientation,
+        ...(x.symmetry === undefined ? {} : { symmetry: x.symmetry }),
+      };
+    }),
   };
 }
 

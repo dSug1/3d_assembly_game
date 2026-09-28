@@ -18,7 +18,7 @@
  * materials to the glTF path; the RGB values below are mine, a Mondrian palette on the flat diffuse
  * path the build already has.
  */
-import type { BodySpec, SceneDescriptor } from "../core/game_structure";
+import type { BodySpec, FinalConfiguration, SceneDescriptor, Triple } from "../core/game_structure";
 
 type Slot = "MAT_A" | "MAT_B" | "MAT_C" | "MAT_D" | "MAT_E" | "MAT_F";
 
@@ -91,16 +91,61 @@ export const SCENE_1_SLOTS: Readonly<Record<string, Slot>> = Object.fromEntries(
  */
 export const SCENE_1_CONTOUR_MARGIN = 0.03 / 2;
 
-const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
-  id,
-  position: [x, y, z],
-  colour: SCENE_1_PALETTE[slot],
-  dims: [sx, sy, sz],
-  orientation: "identity",
-  frozen: false,
-  topScale: 1,
-  margin: SCENE_1_CONTOUR_MARGIN,
-}));
+/**
+ * ⭐⭐⭐ **THE LEVEL-COMPLETED CONFIGURATION IS THE TABLE** (`D129`, the owner, 2026-09-28: *"current
+ * configuration of parts is 'level completed configuration', therefore the target the user has to
+ * achieve in minimum touchpoint episodes and time"*) — every piece where the table puts it, square.
+ */
+/**
+ * ⭐⭐ `D130` (the owner, 2026-09-28): *"goal completed when parts sit correctly relative to each
+ * other … painting can sit anywhere for this Scene_01"* → `RELATIVE`; and *"their respective goal can
+ * be achieved by two way: face aligned or opposite face aligned"* → `halfTurns`. ⚠ Given for ALL 41,
+ * not only the five that boot away: every piece is a plain box, so any one a player moves and puts
+ * back flipped looks the same and must count the same.
+ */
+export const SCENE_1_FINAL: FinalConfiguration = {
+  frame: "RELATIVE",
+  bodies: ROWS.map(([id, , x, y, z]) => ({
+    id,
+    position: [x, y, z],
+    orientation: "identity",
+    symmetry: "halfTurns",
+  })),
+};
+
+/**
+ * ⭐⭐ **THE BOOT — five pieces out of the painting** (`D129`, the owner, 2026-09-28: *"reproduce the
+ * pieces transforms as in the snapshot (just change the transform of the couple of pieces which have
+ * changed, the rest and the camera stay unchanged)"*).
+ *
+ * ⭐ RECOVERED FROM THE SNAPSHOT, since nothing on the device prints a pose: the camera was solved
+ * from four unmoved pieces' corners (0.97 px rms, and it reproduced the phone's canvas height at
+ * Babylon's 0.8 rad fov), then each moved piece's x, z and yaw from its own corners at its known
+ * size. ⭐ Every piece kept its table HEIGHT — a one-finger drag is horizontal — and Piece41, fitted
+ * with y free, landed on it to 0.001. ⚠ The two black bars are a few pixels wide: their yaw cannot
+ * be read and is 0. Reprojection rms per piece: 1.2, 1.6, 1.5, 1.8, 0.4 px.
+ */
+const BOOT_MOVES: Readonly<Record<string, { position: Triple; yawDeg: number }>> = {
+  Piece1: { position: [-1.992, 2.525, 1.287], yawDeg: 32.4 },
+  Piece2: { position: [-2.116, 2.26, -1.591], yawDeg: -5 },
+  Piece17: { position: [-2.17, -1.855, -1.313], yawDeg: 9.3 },
+  Piece23: { position: [-2.864, 2.26, 0.587], yawDeg: 0 },
+  Piece41: { position: [1.323, -1.855, -1.412], yawDeg: 0 },
+};
+
+const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => {
+  const moved = BOOT_MOVES[id];
+  return {
+    id,
+    position: moved?.position ?? [x, y, z],
+    colour: SCENE_1_PALETTE[slot],
+    dims: [sx, sy, sz],
+    orientation: moved && moved.yawDeg !== 0 ? { yawDeg: moved.yawDeg } : "identity",
+    frozen: false,
+    topScale: 1,
+    margin: SCENE_1_CONTOUR_MARGIN,
+  };
+});
 
 /**
  * ⭐ The floor — Unity's built-in Plane (10 × 10 units) at `(0, −2.3, 0)`, scale `(4.79, 0.22, 4.79)`:
@@ -167,5 +212,14 @@ export const SCENE_1: SceneDescriptor = {
       },
     ],
   },
-  final: null,
+  // ⭐ `D131` (the owner, 2026-09-28): radii top 1.8 m, middle 1 m, bottom 1.5 m; heights as `Scene_0`'s.
+  orbit: {
+    topRadiusM: 1.8,
+    topHeightM: 0.55,
+    middleRadiusM: 1.0,
+    middleHeightM: 0.1,
+    bottomRadiusM: 1.5,
+    bottomHeightM: -0.5,
+  },
+  final: SCENE_1_FINAL,
 };

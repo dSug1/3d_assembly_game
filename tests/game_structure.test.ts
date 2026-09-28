@@ -14,7 +14,7 @@ import {
 import { SCENE_0 } from "../src/content/scene_0";
 import { GAME_CONTENT } from "../src/content/worlds";
 import { bootTilt, OBJECT_SIZE_M, OBJECT_TOP_SCALE, PLATE_DIMS_M } from "@core/scene_dims";
-import { IDENTITY, qFromAxisAngle } from "@core/vec";
+import { IDENTITY, qFromAxisAngle, qRotate } from "@core/vec";
 
 describe("⭐⭐⭐ GameFlow — intro → menu → worlds → levels → play, and back", () => {
   it("⭐ the happy path reaches PLAY on Level_0 with the score ON", () => {
@@ -113,6 +113,17 @@ describe("⭐⭐⭐ Scene_0 — the boot, as data", () => {
     // by the caller, never a made-up turn
     expect(resolveBootOrientation({ seeded: 9 }, seeded)).toBeUndefined();
   });
+
+  it("⭐ `D129`: `{ yawDeg }` turns about the world vertical, in the engine's LEFT-HANDED sense", () => {
+    // ⛔ The sign is the one the snapshot solve used (Babylon: +x yawed +90° goes to −z). A
+    // right-handed reading would mirror every recovered piece's turn.
+    const q = resolveBootOrientation({ yawDeg: 90 }, [])!;
+    const v = qRotate(q, [1, 0, 0]);
+    expect(v[0]).toBeCloseTo(0, 12);
+    expect(v[1]).toBeCloseTo(0, 12);
+    expect(v[2]).toBeCloseTo(-1, 12);
+    expect(qRotate(resolveBootOrientation({ yawDeg: 0 }, [])!, [0, 0, 1])).toEqual([0, 0, 1]);
+  });
 });
 
 describe("⭐⭐ the JSON seam — a scene survives a round trip, and a bad one is named", () => {
@@ -136,7 +147,7 @@ describe("⭐⭐ the JSON seam — a scene survives a round trip, and a bad one 
     expect(() => parseSceneDescriptor(bad((o) => (o.bodies[3].topScale = 2)))).toThrow(/objectD: topScale/);
     expect(() => parseSceneDescriptor(bad((o) => (o.bodies[3].id = "objectA")))).toThrow(/duplicate id/);
     expect(() => parseSceneDescriptor(bad((o) => (o.bodies[0].position = [0, NaN, 0])))).toThrow(/objectA: position/);
-    // ⛔ a final configuration is GM1's — refused loudly until it exists
-    expect(() => parseSceneDescriptor(bad((o) => (o.final = {})))).toThrow(/GM1/);
+    // ⛔ a final configuration without its pose list is refused, named (`D129`)
+    expect(() => parseSceneDescriptor(bad((o) => (o.final = {})))).toThrow(/final: bodies/);
   });
 });

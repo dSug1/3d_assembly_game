@@ -658,3 +658,17 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D98` | ⭐⭐ **AN ALIGNMENT IS SQUARED TO ITS PIONEER** | 2026-09-26 | After the minimal swing, a ≤ 45° twist about the aligned normal squares the Follower's edges to the Pioneer's; the swing alone lost 8–30° on a tilted part. ⚠ No longer strictly minimal → §11.12 |
 | `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | ⭐ Binding — authority was `|dir.x|`, **zero** for an axis horizontal on screen, and **silent**. Only the RATE could go; the sign is latched at the press → §5.5 |
 | `D43` | ⛔⛔⛔ **`A10`'s DEPTH GATE IS DELETED — both fingers integrate at once** | 2026-09-17 | ⭐ Binding — it retires a gate that cost six models and five device passes, so the account lives with the row that owns depth: [`../queue_notes/IN8.md`](../queue_notes/IN8.md) |
+
+## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-28 — to pay for `D127`–`D131`
+
+⛔ The rows stay in `DECISIONS.md`; only their consequence text came here, verbatim.
+
+| # | decision | date | consequence |
+|---|---|---|---|
+| `D73` | ⭐⭐⭐ **A ROTATION IS ALWAYS ON AN INCREMENT** — ✅✅ **CLOSED BY A DEVICE LOOK** | 2026-09-22 | ⭐ Binding. `rotationIncrementDeg` 0–45/5, **ships at 0**; four formulations, three rejected by a hand. ⚠ `dy` no longer twisting is the unjudged cost |
+| `D62` | ⭐⭐⭐ **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** | 2026-09-19 | ⭐ Binding — it overturns `A21` (*within a radius of ANY other object*), a freedom deliberately given up. ⛔ A Pioneer out of range captures **nothing** → §5.10 |
+| `D60` | ⭐⭐⭐ **AND THE FIRST TOUCH THEN TRANSLATES, WHATEVER THE MODE** | 2026-09-19 | ⭐ Binding — a **DOF budget**: once the second touch owns roll + depth, leaving the first on the twist puts two fingers on ONE DOF → §5.8 |
+| `D59` | ⭐⭐⭐ **AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH BOTH AXES** | 2026-09-19 | ⭐ Binding — the rule moved from *where the finger landed* to *what the body is*: an aligned body has one rotational DOF left → §5.7 |
+| `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | ⭐ Binding — built by MOVING a box's vertices; the hull and faces were already mesh-derived, so it cost nothing downstream |
+| `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding — the hand's own body must not wobble under it. ⚠ Excluded: the kicker, any held body, and (2026-09-26) the mover's **Pioneer within `pioneerSwayRadii` capture offsets** (slider, 3) |
+| `D44` | ⭐⭐ **A TAP ON ANOTHER OBJECT'S FACE ALIGNS IN **EITHER** MOVEMENT MODE** | 2026-09-17 | ⭐ Binding — what keeps `D28`'s toggle reachable is a tap on **empty space or the held object**, not every tap in `TRANSLATE` → the alignment spec |

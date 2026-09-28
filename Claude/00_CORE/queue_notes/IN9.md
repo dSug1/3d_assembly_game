@@ -664,3 +664,12 @@ a slider when it is wired, not after a device session is spent disliking it.**
 
 ⚠ `gainOrbitElevation` is still a guess (a full sweep in ~100 mm). On this evidence it
 is probably slow too; its slider is already beside the yaw one.
+
+---
+
+## ⭐ `D131` — EACH SCENE CARRIES ITS OWN RIG, 2026-09-28
+
+The six ring numbers can now come from the scene (`SceneDescriptor.orbit`, folded in by
+`input/scene_rig.ts` before the URL). `Scene_0` states the 2026-09-14 rig above, unchanged;
+`Scene_1` takes radii 1.8 / 1.0 / 1.5 m at the same heights → `SCENE_1.md` §8. The radius sliders
+now reach 3 m. ⛔ Unjudged by a hand.

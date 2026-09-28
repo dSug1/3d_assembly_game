@@ -272,6 +272,14 @@ export interface GestureConfig {
    */
   pieceContourAlpha: number;
   /**
+   * ⭐ `D130`: how far, in WORLD metres, a body's centre may sit from its goal and still count.
+   * ⚠ A tolerance on the scene's geometry, not a touch threshold — rule 3's screen millimetres do
+   * not apply to it.
+   */
+  goalPositionTolM: number;
+  /** ⭐ `D130`: degrees a body may be turned from the nearest accepted goal orientation. */
+  goalAngleTolDeg: number;
+  /**
    * ⭐ How far every highlight floats off the face or edge it marks, in mm ON THE GLASS — the face
    * fills and contours, the aligned outline, the PioneerFaceCursor (×3). One CSS pixel by default.
    */
@@ -744,6 +752,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   edgeBandMm: 6,
   // ⚠ A guess with a slider: faint enough to keep the gap between the cores, visible enough to show the faces.
   pieceContourAlpha: 0.1,
+  // ⚠ Guesses with sliders: 5 mm is under the width of `Scene_1`'s thinnest piece (10 mm) and above
+  // its core gap (3 mm); 5° is well under what the eye reads as crooked.
+  goalPositionTolM: 0.005,
+  goalAngleTolDeg: 5,
   // ⭐ The owner: one pixel — one CSS pixel is 25.4 / 96 mm. ⚠ Raise it if a far zoom flickers.
   highlightLiftMm: 25.4 / 96,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
@@ -957,6 +969,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
+  if (!(cfg.goalPositionTolM > 0 && cfg.goalPositionTolM <= 0.1)) {
+    throw new Error(`goalPositionTolM (${cfg.goalPositionTolM}) must be in (0, 0.1] m: 0 accepts nothing.`);
+  }
+  if (!(cfg.goalAngleTolDeg > 0 && cfg.goalAngleTolDeg <= 45)) {
+    throw new Error(`goalAngleTolDeg (${cfg.goalAngleTolDeg}) must be in (0, 45]°: past 45 a box's half-turns overlap.`);
+  }
   if (!(cfg.pieceContourAlpha >= 0 && cfg.pieceContourAlpha <= 1)) {
     throw new Error(`pieceContourAlpha (${cfg.pieceContourAlpha}) must be in [0, 1]: it is an opacity.`);
   }
