@@ -16,7 +16,7 @@ record. **A status changes in BOTH places or neither.**
 
 ## ⭐⭐⭐ YOU ARE HERE (2026-09-28)
 
-⭐⭐ **2026-09-28, live on `1.0.48-`** (all unjudged by a hand): `Scene_1`'s goal + boot + relative goal check
+⭐⭐ **2026-09-28, live on `1.0.48-Scene_1-completed`** (all unjudged by a hand): `Scene_1`'s goal + boot + relative goal check
 (`D129`–`D131`), a rig per scene, the edge-on readout (`D134`), collision allows contact (`D136`), a sideways
 pinch while translating zooms (`D137`), auto shadows + a frame meter (`D138`), a snap stops its drag (`D139`),
 defect 73 (`D140`), undo only on the moved body (`D141`). ⚠ `D133`/`D135` were built and reverted.
