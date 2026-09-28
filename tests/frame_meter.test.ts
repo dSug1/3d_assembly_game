@@ -39,8 +39,7 @@ describe("⭐⭐ FrameMeter — the median and the p95 of recent frames", () => 
     expect(m.stats()).toEqual({ medianMs: 16, p95Ms: 16, n: 5 });
   });
 
-  it("⭐ the shadow switch is a validated tunable: on by default, 0 or 1 only", () => {
-    expect(DEFAULT_CONFIG.shadowsOn).toBe(1);
+  it("⭐ the shadow switch is a validated tunable: whole values 0–2 only (`D138` made 2 = auto the default)", () => {
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, shadowsOn: 0 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, shadowsOn: 0.5 })).toThrow(/shadowsOn/);
   });

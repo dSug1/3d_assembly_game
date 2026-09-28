@@ -100,6 +100,17 @@ function goalReadout(st: SceneState): string {
   return `  goal ${r.inPlace}/${r.total}${far}`;
 }
 
+/** ⭐ `D138`: what the shadow switch is doing — and on AUTO, what the device's measurement decided. */
+function shadowsLabel(st: SceneState): string {
+  const m = st.cfg.shadowsOn;
+  if (m === 0) return "off";
+  if (m === 1) return "on";
+  if (st.autoShadow === null) return "auto (measuring…)";
+  return st.autoShadow === "OFF"
+    ? `auto → OFF (too slow: median over ${st.cfg.autoShadowBudgetMs}ms)`
+    : `auto → on`;
+}
+
 export function paint(st: SceneState) {
   const first = st.held.get(st.router.objects()[0]?.id ?? -1);
   st.hud.update({
@@ -285,7 +296,7 @@ DRAWFAULT x${st.drawFaultCount} ${st.drawFault}`) +
                 })
                 .join(" ")),
     noise: noiseLine(st),
-    frame: `${formatFrameStats(st.frameMeter.stats())}  shadows=${st.cfg.shadowsOn === 1 ? "on" : "off"}`,
+    frame: `${formatFrameStats(st.frameMeter.stats())}  shadows=${shadowsLabel(st)}`,
   });
 }
 

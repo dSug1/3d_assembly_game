@@ -473,6 +473,11 @@ export interface SceneState {
   lastFrameMs: number | null;
   /** ⭐ The frame meter — the HUD's `frame` line (median and p95 of recent frames). */
   frameMeter: FrameMeter;
+  /** ⭐ `D138`: AUTO shadows' verdict — `null` while measuring — and when that measurement began. */
+  autoShadow: "ON" | "OFF" | null;
+  autoShadowArmedAt: number;
+  /** The `shadowsOn` value last applied, so a change back to AUTO re-arms the measurement. */
+  shadowModeSeen: number;
   unsnapTrace: string;
   lastFedPointer: number;
   cfg: GestureConfig;

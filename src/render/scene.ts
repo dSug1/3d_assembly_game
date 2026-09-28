@@ -116,6 +116,9 @@ export function createScene(
   // ⛔ BEFORE anything paints: the HUD's `frame` line reads the meter on the first `paint()`,
   // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).
   st.frameMeter = new FrameMeter();
+  st.autoShadow = null;
+  st.autoShadowArmedAt = performance.now();
+  st.shadowModeSeen = st.cfg.shadowsOn;
 
   st.camera = new ArcRotateCamera(
     "camera",
