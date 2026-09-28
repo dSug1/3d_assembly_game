@@ -11,6 +11,7 @@ import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from ".
 import { type Vec3 } from "../core/vec";
 import { type ObjectId, worldPlacementOf } from "../core/object_model";
 import { goalReport } from "../core/goal";
+import { formatFrameStats } from "../core/frame_meter";
 import { alignedFaceOf } from "../core/face_pick";
 import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
@@ -284,6 +285,7 @@ DRAWFAULT x${st.drawFaultCount} ${st.drawFault}`) +
                 })
                 .join(" ")),
     noise: noiseLine(st),
+    frame: `${formatFrameStats(st.frameMeter.stats())}  shadows=${st.cfg.shadowsOn === 1 ? "on" : "off"}`,
   });
 }
 

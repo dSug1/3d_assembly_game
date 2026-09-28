@@ -19,7 +19,10 @@ const BOUNDS = boundsFromShapes(SHAPES);
 
 const pairKey = (a: ObjectId, b: ObjectId): string => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
 
-/** The skin in world metres: millimetres on the glass through the camera's tracking factor (rule 3). */
+/**
+ * The collision ALLOWANCE in world metres — how far a body may sink into another (`D136`):
+ * millimetres on the glass through the camera's tracking factor (rule 3).
+ */
 export function skinM(st: SceneState): number {
   return (
     mmToPx(st.cfg.collisionSkinMm) *

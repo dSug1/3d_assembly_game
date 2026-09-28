@@ -99,3 +99,13 @@ not a part pushed away over many).
 Nearly everything since 2026-09-24 is **unjudged by a hand** (rule 5), and "millimetres" are CSS mm,
 not physical — collision's `ε` and every band are tuned in mm on the glass, so the calibration
 becomes load-bearing.
+
+---
+
+## ⭐⭐⭐ `D136` — CONTACT ALLOWED, ONLY PENETRATION REFUSED, 2026-09-28
+
+⚠ Report: *"I cannot get the blue object to snap … Snap gets immediately cancelled"* (`Piece31 is in
+the way`). ⭐ Cause: `D125`'s zero-clearance slots against §3's skin (every pair kept a skin apart) —
+measured, a piece stopped 33 mm short of its own slot. The owner chose *"Allow touching"*; the skin is
+now the depth a body may sink into another, with its slider relabelled → `COLLISION.md` §9.
+✅ 6 new vectors (4 RED on the old rule), 9 restated. ⛔ Unjudged.

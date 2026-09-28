@@ -16,9 +16,16 @@
  * there is a collision because quaternion are not commutable and the user cannot go back"*). A
  * PURE translation then SLIDES the rest along the contact; a rotation never slides.
  *
- * ⛔ **"PENETRATES" IS READ AS A SKIN.** GJK answers `0` for touching AND for overlapping, so a
- * body is kept at least `skinM` from every other; a pair already inside the skin may move only in
- * ways that do not bring it closer — so a body resting in contact can always leave.
+ * ⭐⭐ **`D136` — CONTACT IS ALLOWED; "PENETRATES" IS READ AS AN OVERLAP DEPTH** (2026-09-28). A pair
+ * apart is free however close it comes; touching or overlapping (GJK answers `0` for both) is judged
+ * by depth — up to `skinM` is tolerated, a pair already in contact may only get shallower, so it can
+ * always leave. ⛔ It REPLACES *every pair is kept at least `skinM` apart*, which left `Scene_1`'s
+ * zero-clearance slots unreachable (a piece stopped 33 mm short; a snap landing flush on a third body
+ * was cancelled). ⚠ The depth is exact for boxes; for a slanted hull it over-reads, so such a pair
+ * stops at first contact (safe).
+ * ⛔ *(Superseded record:)* **"PENETRATES" WAS READ AS A SKIN.** GJK answers `0` for touching AND for
+ * overlapping, so a body was kept at least `skinM` from every other; a pair already inside the skin
+ * could move only in ways that did not bring it closer.
  * ⛔⛔ **AND AT EXACTLY 0 THE GAP CANNOT SAY "CLOSER"** (`D125`): a pair that STARTS in contact (a
  * `Scene_1` piece and its neighbour, face to face by construction) reads 0 before and 0 however deep it
  * is pushed. So at 0 → 0 the rule reads the OVERLAP DEPTH along the pair's separating axes instead, and
@@ -211,9 +218,18 @@ function candidates(
 }
 
 /**
- * ⭐⭐ **IS THIS POSE CHANGE ALLOWED?** Every candidate pair must stay at least `skinM` apart — or,
- * already inside the skin before, must not come any closer. `before` and `after` differ only in
- * where `moving` is.
+ * ⭐⭐ **IS THIS POSE CHANGE ALLOWED?** — `D136` (the owner, 2026-09-28, choosing *"Allow touching"*
+ * after *"I cannot get the blue object to snap … Snap gets immediately cancelled"*).
+ *
+ * ⛔⛔ The rule was *every pair stays at least `skinM` apart*. `Scene_1`'s slots have ZERO clearance
+ * (`D125`: neighbouring contours touch at exactly 0), so no piece could re-enter its slot — measured:
+ * `Piece10` pushed back from 5 cm out stopped **33 mm short**, its back face unable to pass its
+ * neighbours' front faces — and a snap landing flush against a third body was cancelled.
+ * ⭐ Now **contact is allowed; only PENETRATION is refused**: a pair apart is free however close it
+ * comes; a pair touching or overlapping is judged by its OVERLAP DEPTH (`D125`'s measure) — up to
+ * `skinM` is tolerated, and a pair already deeper may only get shallower, so a body can always leave.
+ * ⭐ `skinM` keeps one constant: the most a body may sink into another, and the substep length of the
+ * path check, so a move still cannot tunnel. `before` and `after` differ only in where `moving` is.
  */
 export function poseFree(
   before: World,
@@ -227,20 +243,25 @@ export function poseFree(
     const oa = worldParts(after, o, setup.shapes);
     if (!ma || !oa) continue;
     const gNew = partsGap(ma, oa);
-    if (gNew === null || gNew >= setup.skinM) continue;
+    // ⭐ Apart — free, however close.
+    if (gNew === null || gNew > CONTACT_M) continue;
+    // ⭐ Touching or overlapping: GJK says ~0 for both, so the DEPTH decides (`D125`'s measure).
+    const dirs = contactDirs(
+      [worldPlacementOf(before, m), worldPlacementOf(after, m), worldPlacementOf(after, o)]
+        .filter((p) => p !== null)
+        .map((p) => p.orientation),
+    );
+    const dNew = partsDepth(ma, oa, dirs);
+    if (dNew === null || dNew.depth <= setup.skinM) continue;
+    // ⛔ Deeper than the tolerance: allowed only for a pair ALREADY in contact that gets no deeper —
+    // leaving is free. ⛔⛔ Never for a pair that was APART: the depth measure is exact for boxes and
+    // OVER-reads a slanted hull (it tests the bodies' own axes only), so an apart-then-touching step
+    // could compare two equal over-reads and pass straight into a hull — measured, the notch test.
     const mb = worldParts(before, m, setup.shapes);
     const gOld = mb ? partsGap(mb, oa) : null;
-    if (gOld !== null && gNew >= gOld - 1e-12) {
-      if (gNew > CONTACT_M) continue;
-      // ⛔ `D125`: 0 → 0 — touching then, touching or overlapping now. Deeper is refused.
-      const dirs = contactDirs(
-        [worldPlacementOf(before, m), worldPlacementOf(after, m), worldPlacementOf(after, o)]
-          .filter((p) => p !== null)
-          .map((p) => p.orientation),
-      );
-      const dOld = partsDepth(mb!, oa, dirs);
-      const dNew = partsDepth(ma, oa, dirs);
-      if (dOld === null || dNew === null || dNew.depth <= Math.max(0, dOld.depth) + 1e-12) continue;
+    if (mb && gOld !== null && gOld <= CONTACT_M) {
+      const dOld = partsDepth(mb, oa, dirs);
+      if (dOld !== null && dNew.depth <= Math.max(0, dOld.depth) + 1e-12) continue;
     }
     return { free: false, blockedBy: o };
   }

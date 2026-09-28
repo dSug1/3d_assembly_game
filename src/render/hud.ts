@@ -56,6 +56,11 @@ export interface HudFields {
    * force — and it LATCHES, because a jump is over before a hand can look up.
    */
   readonly jump: string;
+  /**
+   * ⭐ How long frames take on THIS device — median and p95 of the last 120 — and whether shadows
+   * are on. ⚠ A property of the device and the scene, so it is only evidence on the glass it ran on.
+   */
+  readonly frame: string;
 }
 
 export interface Hud {
@@ -131,6 +136,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         // A device report is only evidence about the code the device was running, and a
         // stale Pages bundle cost a morning on 2026-09-16 — the fix had been live for two
         // hours. ⚠ `+dirty` is what separates the USB dev loop from the same sha deployed.
+        `frame     ${f.frame}`,
         `build     ${BUILD_STAMP}`,
       ].join("\n");
     },
