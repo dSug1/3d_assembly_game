@@ -68,7 +68,7 @@ export const SCENE_0: SceneDescriptor = {
     middleRadiusM: 0.36,
     middleHeightM: 0.1,
     bottomRadiusM: 0.5,
-    bottomHeightM: -0.5,
+    bottomHeightM: -1.2, // ⭐ the owner, 2026-09-28 (was −0.5)
   },
   final: null,
 };
