@@ -23,6 +23,7 @@ import { axesOf, refreshAxisGizmo } from "./gizmo";
 import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { syncSeats } from "./seat_wiring";
+import { dissolveOnGoal } from "./goal_dissolve_wiring";
 
 export function startRenderLoop(st: SceneState): void {
 
@@ -250,6 +251,8 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐⭐⭐ **THE SNAP AND THE SEATS, EVERY FRAME** (`D100`) — after the cascades, which may have
     // moved a Pioneer, and before the meshes are written.
     syncSeats(st, now);
+    // ⭐⭐ `D142`: a seated follower in its goal pose lets go of its Pioneer (with a pop-up).
+    dissolveOnGoal(st);
 
     const tauSec = st.cfg.translateInertiaMs / 1000;
     // ⛔⛔ ITERATE THE **MODEL**, NOT THE FOLLOWER MAP — and this line is a defect fix, not

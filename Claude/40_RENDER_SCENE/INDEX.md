@@ -74,7 +74,7 @@ world distance — 1.5 mm for a face marker, 2 % of the body's half-size for the
 px up close and under one far away. ⭐ Now `highlightLiftMm` (one CSS pixel, a slider in FACE ALIGNMENT)
 is turned into metres at each body's camera distance every frame (`input/highlight_lift.ts`): face
 markers are built ON the face and translated along its normal; an outline's offset is baked, so it is
-rebuilt only when stale by 5 % (a zoom). ⭐ One pixel is ~60× the 24-bit depth step at 3 m, ~1200× at
+rebuilt only when stale by 5 % (a zoom). ⭐ **Default 0.1 mm since 2026-09-28** (the owner; ~67/d × a 24-bit depth step at d m, vectored). One pixel is ~60× the 24-bit depth step at 3 m, ~1200× at
 0.15 m. ⚠ A 16-bit depth buffer would need 2–3 px beyond ~1 m. The PioneerFaceCursor rides 3 lifts up.
 
 ⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`): a claim a device

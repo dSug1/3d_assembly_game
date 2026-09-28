@@ -2107,3 +2107,10 @@ reset to the previous only if it is done on the same object which has moved"*). 
 undoes the last action only when made on a body that action TOUCHED (moved or turned — a carried seated
 child included — or, for an unsnap / a release, the Follower whose alignment changed); on any other body
 it is refused and the HUD names the body that moved → `queue_notes/IN6.md`.
+
+⭐⭐ **`D142` — a seated follower in its goal pose dissolves its couple** (the owner, 2026-09-28: *"when a
+follower object has snapped and is in its goal transform, unhighlight the pioneer and the follower and
+reset the pioneer and follower so that the couple pioneer - follower disappear"*, and a pop-up). Each
+frame a follower is seated, `core/goal.ts` is asked; each SEATED follower it has in place is released
+through `releaseAlignmentOf` (constraint, seat, link — the highlights and cursor follow), keeping its
+world pose, and a pop-up names it (`render/goal_popup.ts`). ⚠ Scenes with a goal only (`Scene_1`).
