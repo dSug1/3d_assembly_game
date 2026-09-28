@@ -46,6 +46,13 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-09-27)
 
+⭐⭐⭐ **`D135` — THE FIRST FINGER'S dx AND dy EACH DRIVE THE AXIS THAT LOOKS LIKE THEM AT THE GIZMO**
+(branch `1.0.45-Edge-on-inputs`, ⛔ unjudged by a hand): `dx` drives whichever of red / blue runs most across
+the screen at the gizmo (finger right → image right), `dy` the other (finger up → away; toward from below),
+at a **fixed rate** at every camera — it replaces `D76`'s exact tracking and the whole edge-on branch
+(`D127`/`D132`/`D134`); the HUD's `axes` line shows the pairing (`dx→red dy→blue`) →
+`ALIGNMENT_RULES.md` §17, `INPUTS_TABLE.md`.
+
 ⭐⭐ **2026-09-28** (`D127`–`D134`, branch `1.0.44-Created-goal-scene-and-fixed-edge-on`, ⛔ unjudged by a hand): **edge-on, the holder's `dy`
 drives BLUE alone, finger up = away from the CURRENT camera** — the axes stay the world's (a camera-relative
 fallback was refused); and a **frozen body seen from below DISAPPEARS** (not drawn, not picked, material
@@ -166,7 +173,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1197 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1191 golden vectors passing** — ⚠ MEASURED 2026-09-28 (− 6 for `D135`: the exact-tracking and edge-on vectors replaced by fewer, broader ones; + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

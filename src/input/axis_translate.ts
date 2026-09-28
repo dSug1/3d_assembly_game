@@ -32,11 +32,19 @@
  * pairing Blender does not make at all: *the user* picks the axis there, and the mapping is
  * from the whole pointer motion, never from one of its components.
  *
- * ## ⭐⭐ WHAT THIS FILE DOES NOW
+ * ## ⭐⭐⭐ WHAT THIS FILE DOES NOW — `D135` (2026-09-28)
  *
- * **`PLANE` (the default).** The holder's 2D delta is **decomposed onto the two horizontal
- * axes' screen shadows** — a 2×2 solve — so the body moves inside its own horizontal plane and
- * its image follows the finger **exactly**. ⭐ Nothing can feel inverted, because the body goes
+ * **The holder's `dx` and `dy` are PAIRED with the axes as they look at the gizmo** — `dx` drives
+ * the horizontal axis whose image moves most across the screen there (toward screen-right for a
+ * finger going right), `dy` the other (fingers-up AWAY from the camera, TOWARD it looking up) — at a
+ * **fixed rate** on either axis, at every camera → `axisPairing`. ⛔ Everything below down to the
+ * cost of the cone is the RECORD of the rule it replaced (`D76`'s exact tracking and its edge-on
+ * fallback, `D127`/`D132`): nothing switches at a level camera any more, and the body no longer
+ * stays exactly under the finger at an oblique view — the owner's choice, *"Fixed rate"*.
+ *
+ * **`PLANE` (superseded by `D135`).** The holder's 2D delta was **decomposed onto the two horizontal
+ * axes' screen shadows** — a 2×2 solve — so the body moved inside its own horizontal plane and
+ * its image followed the finger **exactly**. ⭐ Nothing can feel inverted, because the body goes
  * where the finger goes; and the gain is 1 by construction, which is report 2's answer.
  * ⛔ It is Blender's *unconstrained* move with the view plane replaced by the body's horizontal
  * plane — the nearest thing in Blender to what this product is doing.
@@ -88,10 +96,11 @@
  * drops to the fixed rate inside, so there is a step in world speed at the boundary. ⛔ Both
  * sides produce nearly no SCREEN motion there, which is why the step is not what a hand feels —
  * but it is real, it is on the HUD as `⛔EDGE-ON`, and `axisTrackingConeDeg` is a slider.
+ * ⭐ Since `D135` the cone guards the GRAVITY channel alone, and the HUD shows the pairing instead.
  *
  * ⛔ ENGINE-FREE.
  */
-import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
+import { add, cross, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
 import type { ObjectAxes } from "./object_axes";
 
 /** The camera's own axes — `ScreenFrame`'s `right` and `up`. ⚠ Never the gravity frame. */
@@ -143,12 +152,10 @@ export interface AxisTravelM {
 
 /**
  * What the mapping did, for the readout. ⛔ Returned rather than recomputed by the HUD: *a
- * readout that derives its own answer is a second implementation* (`METHOD`), and the whole
- * point of `edgeOn` is to tell *"the rule refused"* from *"I pushed the wrong way"*.
+ * readout that derives its own answer is a second implementation* (`METHOD`). ⚠ Its `edgeOn` flag is
+ * deleted with the edge-on branch (`D135`): nothing switches at a level camera any more.
  */
 export interface AxisTravel extends AxisTravelM {
-  /** True while the horizontal plane is edge-on and the fixed-rate fallback is driving. */
-  readonly edgeOn: boolean;
   /**
    * ⭐⭐ **THE LEVERAGE** — world travel per unit of finger travel, both in tracking-factor
    * units. ⛔ It is NOT 1 when the body is under the finger: a foreshortened plane needs MORE
@@ -192,20 +199,64 @@ export function screenShadow(
 
 const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
 
+/** ⭐ `D135`: which axis each holder channel drives, and which way. */
+export interface AxisPairing {
+  /** The axis `dx` drives: `"x"` (red) or `"depth"` (blue); `dy` drives the other. */
+  readonly dxAxis: "x" | "depth";
+  /** `+1`: a finger going RIGHT moves along `+dxAxis`. */
+  readonly dxSign: 1 | -1;
+  /** `+1`: a finger going UP moves along `+` the other axis. */
+  readonly dySign: 1 | -1;
+}
+
 /**
- * ⭐⭐ **IS THE BODY'S HORIZONTAL PLANE EDGE-ON TO THIS CAMERA?** — the one definition, read by
- * `axisTravel` to choose its branch AND by the HUD every frame (`D134`). `|det|` is the area the x
- * and depth axes' screen shadows span — `sin(pitch)` for a pair of horizontal axes — and the plane
- * is edge-on when that is within `sin(coneDeg)`. ⛔ A property of the CAMERA, not of a drag: the
- * readout used to be written only by a translating finger, so a click or an orbit left the last
- * drag's answer on the glass. `false` for a camera with no basis.
+ * ⭐⭐⭐ **`D135` — THE PAIRING, READ AT THE GIZMO** (the owner, 2026-09-28: *"For whichever camera vs.
+ * center of gizmo configuration, i want to match the dx and dy input with the respective axis which
+ * shows the maximal projection onto screen x and screen y axis. Then the sense of translation should
+ * be the projection of the input onto the axis."*).
+ *
+ * ⭐ Each horizontal axis's SCREEN motion is taken where the gizmo is — perspective included, since a
+ * body off the screen's centre sees the axes turned — `m = (a·right)·z − (p·right)·(a·fwd)` with `p`
+ * the camera → anchor and `z = p·fwd` (the common `f / z²` dropped: only the comparison and the sign
+ * are used). `dx` takes the axis whose motion is most HORIZONTAL; `dx` right moves it toward screen
+ * right. `dy` takes the other: fingers-up is AWAY from the camera — `D132`'s camera → gizmo reading
+ * (at a level camera no screen projection has a sign to give) — flipped looking up (the 2026-09-16
+ * finger-found rule, kept by `D133`'s revert).
+ * ⚠ At 45° the two axes cross the screen equally and the pairing swaps there; a camera does not move
+ * during a one-finger drag, so it swaps between drags, never under the finger.
+ * ⛔ `null` for a camera with no basis — the caller then keeps red on `dx`.
  */
-export function planeEdgeOn(camera: CameraScreenAxes, axes: ObjectAxes, coneDeg: number): boolean {
-  const sx = screenShadow(axes.x, camera);
-  const sd = screenShadow(axes.depth, camera);
-  if (!sx || !sd) return false;
-  const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
-  return !(Math.abs(sx[0] * sd[1] - sx[1] * sd[0]) > coneSin);
+export function axisPairing(
+  camera: CameraScreenAxes,
+  axes: ObjectAxes,
+  toAnchor: Vec3,
+  towardGravity: number,
+): AxisPairing | null {
+  const right = normalize(camera.right);
+  const up = normalize(camera.up);
+  if (!right || !up) return null;
+  // ⭐ `right × up` points INTO the screen (`gravity_frame`'s `right = up × depth`).
+  const fwd = normalize(cross(right, up));
+  if (!fwd) return null;
+  // ⚠ An anchor behind the camera or at it has no perspective to read — use the screen's centre.
+  let p = toAnchor;
+  let z = dot(p, fwd);
+  if (!(z > 1e-9) || !p.every(Number.isFinite)) {
+    p = fwd;
+    z = 1;
+  }
+  const across = (a: Vec3) => dot(a, right) * z - dot(p, right) * dot(a, fwd);
+  const mRed = across(axes.x);
+  const mBlue = across(axes.depth);
+  const dxAxis = Math.abs(mRed) >= Math.abs(mBlue) ? "x" : "depth";
+  const dyAxis = dxAxis === "x" ? axes.depth : axes.x;
+  const away = Math.sign(finite(dot(dyAxis, toAnchor))) || 1;
+  const below = Math.sign(finite(towardGravity)) || 1;
+  return {
+    dxAxis,
+    dxSign: (Math.sign(dxAxis === "x" ? mRed : mBlue) || 1) as 1 | -1,
+    dySign: (away * below) as 1 | -1,
+  };
 }
 
 /**
@@ -218,13 +269,12 @@ export function planeEdgeOn(camera: CameraScreenAxes, axes: ObjectAxes, coneDeg:
  * @param secondGain `gainTranslateDepth` — the second touchpoint's channel. ⚠ It has kept its
  *   name and its number while its AXIS moved to gravity; renaming a tuned number is how a
  *   device session loses its baseline.
- * @param coneDeg `axisTrackingConeDeg` — how near the view direction an axis may come before
- *   the exact mapping is abandoned for the fixed-rate push. ⭐ **5° is Blender's own number**
- *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
- *   is how to see the runaway a hand is being protected from.
- * @param view ⛔ only read inside the cone, where it is the fixed-rate push's sign: `toAnchor` —
- *   the camera to the GIZMO's anchor — says which end of blue is *away* (`D132`), and
- *   `towardGravity` (+1 looking down, −1 looking up, `GravityFrame`'s) flips it from below.
+ * @param coneDeg `axisTrackingConeDeg` — how near the view direction the GRAVITY axis may come
+ *   before its exact tracking falls back to a fixed rate. ⭐ **5° is Blender's own number**
+ *   (`axisProjection`). ⚠ Since `D135` the holder's channels do not read it.
+ * @param view the holder's pairing inputs (`axisPairing`, `D135`): `toAnchor` — the camera to the
+ *   GIZMO's anchor, where the axes are read and what *away* grows from — and `towardGravity`
+ *   (+1 looking down, −1 looking up, `GravityFrame`'s), which flips *away* from below.
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -246,7 +296,6 @@ export function axisTravel(
       xM: 0,
       gravityM: 0,
       depthM: 0,
-      edgeOn: false,
       trackGain: 0,
       driven: [false, false, false],
     };
@@ -254,15 +303,26 @@ export function axisTravel(
   const dx = finite(input.holderDxPx) * metresPerPx;
   const dy = finite(input.holderDyPx) * metresPerPx;
   const dy2 = finite(input.secondDyPx) * metresPerPx;
-  // ⭐⭐⭐ **THE CHANNEL MAP, STATED ONCE AND READ TWICE.** `dx` drives x, the holder's `dy` drives
-  // depth, and the second touchpoint's `dy` drives gravity (`D75`). ⛔ The gizmo asks THIS rather
-  // than inspecting the travel, because the `PLANE` solve spreads one channel across two axes.
-  const driven: readonly [boolean, boolean, boolean] = [
-    dx !== 0,
-    dy2 !== 0,
-    dy !== 0,
-  ];
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
+
+  // ⭐⭐⭐ `D135` — **THE HOLDER'S TWO CHANNELS, PAIRED WITH THE AXES AS THEY LOOK AT THE GIZMO.** `dx`
+  // drives the horizontal axis that runs most ACROSS the screen there, toward screen-right for a
+  // finger going right; `dy` drives the other, fingers-up AWAY from the camera. ⭐ A FIXED RATE — one
+  // pixel of finger buys one tracking factor of world travel, on either axis, at every camera: no
+  // weak axis (`D76`'s complaint), no runaway, and no edge-on branch left to switch at.
+  const pair = axisPairing(camera, axes, view.toAnchor, view.towardGravity);
+  const dxTravel = dx * holderGain * (pair?.dxSign ?? 1);
+  const dyTravel = -dy * holderGain * (pair?.dySign ?? 1);
+  const dxOnRed = (pair?.dxAxis ?? "x") === "x";
+  const xM = dxOnRed ? dxTravel : dyTravel;
+  const depthM = dxOnRed ? dyTravel : dxTravel;
+  // ⭐⭐⭐ **WHICH AXES WERE PUSHED** — each channel moves exactly ONE axis now, so the axis moved IS
+  // the channel pushed, and the gizmo lights the line of the axis the finger is driving.
+  const driven: readonly [boolean, boolean, boolean] = [
+    dxOnRed ? dx !== 0 : dy !== 0,
+    dy2 !== 0,
+    dxOnRed ? dy !== 0 : dx !== 0,
+  ];
 
   /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
   const along = (
@@ -278,48 +338,6 @@ export function axisTravel(
     return (mx * s[0] + my * s[1]) / (len * len);
   };
 
-  // ⭐⭐ THE FIXED-RATE PUSH, for a plane that is edge-on. ⛔ `depthTranslate`'s mapping, which
-  // a device look closed on 2026-09-16 — including its sign, which was itself a defect found by
-  // finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the picture is
-  // symmetric and no sign is derivable; *fingers-up = away* is the convention, continuous with
-  // the camera looking even slightly down.
-  // ⭐⭐ `D127`/`D132`: and *away* is THIS camera's — which end of blue takes the body FARTHER from
-  // it, read from the camera to the gizmo's anchor. ⛔ Not along the view: a body off the screen's
-  // centre is off the view axis, and near a quarter-orbit the two disagree in sign. ⚠ Blue exactly
-  // square to that line: `+blue`, by convention.
-  const blueAway = Math.sign(finite(dot(axes.depth, view.toAnchor))) || 1;
-  const awaySign = (Math.sign(finite(view.towardGravity)) || 1) * blueAway;
-  const fallbackDepth = -dy * holderGain * awaySign;
-
-  let xM = 0;
-  let depthM = 0;
-  let edgeOn = false;
-
-  {
-    // ⭐⭐⭐ **THE 2×2 SOLVE.** Find the travels along x and depth whose SCREEN motion adds up to
-    // the finger's. ⛔ Solving beats projecting onto each axis separately: the two shadows are
-    // not perpendicular on screen in general, so independent projections would double-count the
-    // overlap and the body would outrun the finger on a diagonal drag.
-    const det = sx[0] * sd[1] - sx[1] * sd[0];
-    // ⚠ `|det|` is the area the two shadows span — it goes to zero when the plane is EDGE-ON,
-    // which is the level camera, and that is the only degeneracy the pair has: two
-    // perpendicular world axes cannot both point at the camera. ⭐ The test is `planeEdgeOn`'s, so
-    // the HUD's readout and this branch cannot disagree.
-    if (!planeEdgeOn(camera, axes, coneDeg)) {
-      xM = ((dx * sd[1] - dy * sd[0]) / det) * holderGain;
-      depthM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
-    } else {
-      edgeOn = true;
-      // ⭐ x keeps exact tracking where its shadow is healthy, and only depth falls back to the
-      // judged fixed rate.
-      // ⛔ `D127`: fed `dx` ALONE — the holder's `dy` is blue's here, and a camera even slightly
-      // off level used to leak it onto red.
-      // ⚠ `fallbackDepth` carries `holderGain` already; applying it twice is the kind of
-      // arithmetic that reads as *"depth feels wrong in one camera pose"* and nowhere else.
-      xM = (along(sx, dx, 0) ?? 0) * holderGain;
-      depthM = fallbackDepth;
-    }
-  }
 
   // ⭐ Gravity, always its own channel and always tracking exactly. ⚠ Its shadow shrinks as the
   // camera looks down and vanishes at the pole, which the orbit rings make unreachable — the
@@ -333,8 +351,7 @@ export function axisTravel(
     xM,
     depthM,
     gravityM,
-    edgeOn,
-    // ⭐ What one pixel bought, as a multiple of the tracking factor: 1 is under the finger.
+    // ⭐ What one pixel bought, as a multiple of the tracking factor — the holder's gain, since `D135`.
     trackGain: asked > 0 ? Math.hypot(xM, depthM) / asked : 0,
   };
 }
