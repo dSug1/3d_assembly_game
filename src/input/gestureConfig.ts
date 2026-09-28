@@ -847,8 +847,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // interpolation is shape-preserving. ⭐ Enforced, not assumed: `validateGestureConfig`
   // scans the sweep with `distanceTurningPoints` and refuses more than one.
   // ⚠ Still not a MEASUREMENT: chosen by feel, on one device, at one screen size.
+  // ⚠ 2026-09-28: the bottom ring lowered to −1.2 m — the eye is now √(0.5² + 1.2²) = 1.30 m out at the
+  // bottom (was 0.71 m), so the waist is deeper and the "1.14 vs 0.71" asymmetry above is historical.
   orbitBottomRadiusM: 0.5,
-  orbitBottomHeightM: -0.5,
+  // ⭐ The owner, 2026-09-28: the bottom ring lowered to −1.2 m (was −0.5), in every scene's rig.
+  orbitBottomHeightM: -1.2,
   orbitMiddleRadiusM: 0.36,
   orbitMiddleHeightM: 0.1,
   orbitTopRadiusM: 1.0,

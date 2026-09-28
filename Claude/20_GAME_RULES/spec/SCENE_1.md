@@ -148,6 +148,6 @@ air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sen
   place and the piece furthest out. ⛔ Level end (clock and count frozen, result shown) is not built.
 * **The rig** — every scene may carry `orbit` (three rings' radius and height); it replaces the
   config's defaults at boot, before the URL, so the sliders tune the booted scene. `Scene_1`: radii
-  **1.8 / 1.0 / 1.5 m** (top / middle / bottom), heights 0.55 / 0.1 / −0.5 m (unchanged). `Scene_0`
+  **1.8 / 1.0 / 1.5 m** (top / middle / bottom), heights 0.55 / 0.1 / −0.5 m (unchanged) — ⭐ the bottom ring lowered to **−1.2 m** on 2026-09-28, in both scenes and the config default (the owner). `Scene_0`
   states the 2026-09-14 rig it always had (1.0 / 0.36 / 0.5). ⭐ The boot view does not move: the
   camera still boots 1.5 m out and the zoom multiplier absorbs the new rings.

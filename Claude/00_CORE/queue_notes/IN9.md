@@ -673,3 +673,8 @@ The six ring numbers can now come from the scene (`SceneDescriptor.orbit`, folde
 `input/scene_rig.ts` before the URL). `Scene_0` states the 2026-09-14 rig above, unchanged;
 `Scene_1` takes radii 1.8 / 1.0 / 1.5 m at the same heights → `SCENE_1.md` §8. The radius sliders
 now reach 3 m. ⛔ Unjudged by a hand.
+
+⭐ **2026-09-28 — the bottom ring lowered to −1.2 m** (the owner: *"set default camera orbit bottom height
+= -1.2"*), in the config default AND both scenes' rigs (each states its own, so the default alone would
+have changed nothing on the glass). Heights still climb, one waist each (the validator passes); the eye
+is now 1.30 m out at `Scene_0`'s bottom (was 0.71) and 1.92 m at `Scene_1`'s. ⛔ Unjudged by a hand.
