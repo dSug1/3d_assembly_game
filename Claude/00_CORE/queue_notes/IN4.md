@@ -982,3 +982,14 @@ axis near the view direction outright. ⛔ Unjudged by a hand.
 ⭐⭐ **`D132`, same day**: still reversed on the phone with the body off-centre (Piece10, blue nearly
 square to the view). ⛔ `D127` read *away* along the view; now along camera → gizmo anchor
 (`gizmoAnchor`, the owner's suggestion). ✅ 1 vector with its counter-example beside it. ⛔ Unjudged.
+
+⛔ **`D133`, same day**: from below, fingers-up is away too (the owner, for consistency) — the
+2026-09-16 `towardGravity` flip is deleted; from below the push now reverses at the cone's edge
+(stated, vectored). ✅ 2 vectors, both RED on `D132`'s rule fed its flip. ⛔ Unjudged.
+
+⭐ **`D134`, same day**: the HUD's `⛔EDGE-ON` was stale (written only by a drag); now `planeEdgeOn`,
+the rule's own test, is read every frame. ⚠ Measured: `Scene_1`'s rig is edge-on over 16 % of its
+elevation range and boots in it (−0.6°); `Scene_0` 5 %, boots at −1.6°. ✅ 1 vector (readout = rule
+over a pose sweep).
+
+⚠ **`D133` REVERTED the same day** (the owner) — never shipped; the below-camera flip stands.
