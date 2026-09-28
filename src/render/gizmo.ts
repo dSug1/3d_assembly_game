@@ -119,7 +119,7 @@ export function gizmoFor(st: SceneState, id: ObjectId) : AxisGizmo {
     m.color = GIZMO_AXIS_COLOURS[i]!.clone();
     // ⛔⛔⛔ **DEVICE-REPORTED, 2026-09-23**: *"when the follower is translating and followerface
     // is the leadingface, the gizmo does not show."* ⚠ Both are drawn on the SAME face, and the
-    // face marker floats `MARKER_LIFT_M` (1.5 mm) ABOVE the surface while the gizmo starts ON
+    // face marker floats one highlight lift (then 1.5 mm) ABOVE the surface while the gizmo starts ON
     // it — so the marker's filled quad covered it, and the two in-plane axes are exactly the
     // ones that vanish. ⛔ The x-ray twin made it certain rather than likely: group 1 draws
     // over everything in group 0 by construction.

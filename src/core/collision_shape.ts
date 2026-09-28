@@ -405,6 +405,33 @@ export function gapBetween(a: readonly Vec3[], b: readonly Vec3[]): number | nul
 }
 
 /**
+ * ⭐⭐ **HOW DEEP TWO CLOUDS OVERLAP, ALONG GIVEN DIRECTIONS** (`D125`) — what GJK cannot say, since it
+ * reads touching and overlapping alike as `0`. For each unit `u`, `h(u) = max a·u − min b·u` is how far
+ * `A` reaches past `B`'s near side along `u`; the smallest over the directions is returned with the `u`
+ * that gave it (pointing from `A` toward `B`: `A` leaves along `−dir`).
+ * ⭐ Negative → apart along some `u`; `0` → touching; positive → the overlap. ⚠ EXACT when the list
+ * holds the separating axes (for two boxes: both sets of face normals and their cross products);
+ * otherwise an upper bound on the true penetration — still the same measure before and after a move.
+ */
+export function overlapAlong(
+  a: readonly Vec3[],
+  b: readonly Vec3[],
+  dirs: readonly Vec3[],
+): { depth: number; dir: Vec3 } | null {
+  if (a.length === 0 || b.length === 0 || dirs.length === 0) return null;
+  let best: { depth: number; dir: Vec3 } | null = null;
+  for (const u of dirs) {
+    let maxA = -Infinity;
+    for (const p of a) maxA = Math.max(maxA, dot(p, u));
+    let minB = Infinity;
+    for (const p of b) minB = Math.min(minB, dot(p, u));
+    const h = maxA - minB;
+    if (best === null || h < best.depth) best = { depth: h, dir: u };
+  }
+  return best;
+}
+
+/**
  * ⭐⭐ **THE SEPARATION VECTOR** — the closest point of `A ⊖ B` to the origin: it points from `B`
  * toward `A` and its length is the gap (`[0,0,0]` when they touch or overlap). ⭐ `3D6`'s slide reads
  * its DIRECTION as the contact normal. ⛔ Same iteration as `gapBetween`, which is its length — one

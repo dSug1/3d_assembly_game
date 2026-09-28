@@ -40,6 +40,19 @@ export interface BodySpec {
   readonly frozen: boolean;
   /** ⭐ The fraction of the base the TOP face keeps; `1` is a box, `0.5` the pyramid (`D72`). */
   readonly topScale: number;
+  /**
+   * ⭐⭐ **THE TRANSPARENT CONTOUR** (`D125`, the owner, 2026-09-27): the body — its mesh, its collision
+   * shape, its faces — is `dims` grown by `margin` on EVERY side, and only the `dims` core inside is
+   * drawn in `colour`. So two bodies can touch face to face while their coloured cores keep a visible
+   * gap of `2 × margin`. ⚠ Authored units, like `dims`. Absent or `0`: no contour, the body is `dims`.
+   */
+  readonly margin?: number;
+}
+
+/** ⭐ `D125`: the body's full extents — its coloured `dims` plus the contour on every side. */
+export function contourDims(b: Pick<BodySpec, "dims" | "margin">): Triple {
+  const m = b.margin ?? 0;
+  return [b.dims[0] + 2 * m, b.dims[1] + 2 * m, b.dims[2] + 2 * m];
 }
 
 export interface SceneDescriptor {
@@ -220,6 +233,8 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     if (typeof x.frozen !== "boolean") throw new Error(`${where}: frozen must be a boolean`);
     if (typeof x.topScale !== "number" || !(x.topScale > 0) || x.topScale > 1)
       throw new Error(`${where}: topScale must be in (0, 1]`);
+    if (x.margin !== undefined && !(typeof x.margin === "number" && Number.isFinite(x.margin) && x.margin >= 0))
+      throw new Error(`${where}: margin must be a number ≥ 0`);
     return {
       id: x.id,
       position: x.position,
@@ -228,6 +243,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
       orientation: x.orientation,
       frozen: x.frozen,
       topScale: x.topScale,
+      ...(x.margin === undefined ? {} : { margin: x.margin }),
     };
   });
   if (o.unitM !== undefined && !(typeof o.unitM === "number" && o.unitM > 0 && Number.isFinite(o.unitM)))

@@ -140,8 +140,12 @@ as in the seated row; its **unseated** followers let go (`D106`) and are ordinar
   thin body. ⛔ An endpoint-only test was the first build and its vectors went red.
 * ⭐ **The skin** is `collisionSkinMm` (0.3 mm on the glass, slider in OBJECT TRANSLATION) — GJK reads
   touching and overlapping alike as 0, so a pair is kept at the skin, and a pair already INSIDE it
-  may only move apart. ⚠ A pair at exactly 0 (only an exempt couple reaches it) may move while it
-  stays at 0: the escape hatch for a state the rule did not make.
+  may only move apart. ⛔⛔ **At 0 → 0 it reads the OVERLAP DEPTH** (`D125`): GJK answers ~1e-16, not
+  0, at contact (measured), and a pair that STARTS touching — every `Scene_1` piece, since the
+  contour — read 0 however deep it was pushed, so a piece walked through its neighbour. Below 1 nm is
+  contact; there, the depth along the separating axes (`overlapAlong`: both bodies' face normals and
+  their cross products — exact for boxes) may not grow, and the slide takes its normal from it. ⭐ So
+  a body the alignment turn left overlapping really can only move OUT.
 * ⛔⛔ **THE SNAPPING COUPLE IS NAMED BY THE SNAP'S OWN WRITE**, never inferred from `seatSnaps.has`
   — defect 72: `advance` drops a snap before its landing step, so every snap was cancelled against
   its own Pioneer until 2026-09-27.
@@ -156,5 +160,7 @@ as in the seated row; its **unseated** followers let go (`D106`) and are ordinar
   frozen plate, exemption, the SAME-AXIS clamp (asserted on the axis, and for an arbitrary turn), the
   compound, the sibling exemption, and ⭐⭐ **the seam**: an L-shape whose notch the hull fills blocks
   a cube, and the SAME rule with a two-part source lets it in. Mutants: endpoint-only, no slide,
-  members colliding, the turn not clamped — each turns vectors red.
+  members colliding, the turn not clamped — each turns vectors red. ⭐ + 6 for contact at 0 (`D125`):
+  a push in, a slide along, a diagonal, a digging turn, the depth measure — RED against the old rule,
+  and against `> 0` for contact, no depth test, and no depth normal.
 

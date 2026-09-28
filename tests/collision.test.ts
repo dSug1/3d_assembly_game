@@ -20,7 +20,7 @@ import {
   type CollisionSetup,
   type CollisionShapeSource,
 } from "@core/collision";
-import { boxShape, gapBetween } from "@core/collision_shape";
+import { boxShape, gapBetween, overlapAlong } from "@core/collision_shape";
 import { attach, makeWorld, worldPlacementOf, type SceneObject, type World } from "@core/object_model";
 import { surfaceGap } from "@core/proximity";
 import { IDENTITY, qAngle, qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
@@ -96,8 +96,7 @@ describe("⭐⭐⭐ TRANSLATION — stop, then slide", () => {
   });
 
   it("⭐ a body resting INSIDE the skin can LEAVE, and cannot press further in", () => {
-    // ⚠ Inside the skin, not at gap 0: GJK reads touching and overlapping alike as 0, which is why
-    // the rule keeps a skin at all — a state at 0 is only ever an EXEMPT couple (`COLLISION.md` §5).
+    // ⚠ Inside the skin, not at gap 0 — the case AT 0 has its own describe below (`D125`).
     const x = 0.2 - SKIN / 2;
     const resting = makeWorld([body("A", [x, 0, 0]), body("B", [0.3, 0, 0])]);
     expect(surfaceGap(resting, "A", "B")).toBeCloseTo(SKIN / 2, 9);
@@ -117,6 +116,55 @@ describe("⭐⭐⭐ TRANSLATION — stop, then slide", () => {
   it("⭐ an exempt pair (a snapping or just-unsnapped couple) passes", () => {
     const v = resolveMove(w, "A", { position: [0.5, 0, 0], orientation: IDENTITY }, setup({ exempt: () => true }));
     expect(v.t).toBe(1);
+  });
+});
+
+describe("⛔⛔⛔ `D125` — TWO BODIES THAT START IN CONTACT (a gap of exactly 0)", () => {
+  // ⚠ GJK reads touching and overlapping alike as 0, so "may not come closer" compared 0 with 0 and
+  // let a touching body walk straight through its neighbour — found by a headless drag in `Scene_1`,
+  // whose contoured pieces all boot face to face. ⭐ At 0 → 0 the rule now asks how DEEP.
+  const touching = () => makeWorld([body("A", [0.2, 0, 0]), body("B", [0.3, 0, 0], [0.1, 0.8, 0.1])]);
+
+  it("the fixture really is at 0 — faces flush, not inside the skin", () => {
+    expect(surfaceGap(touching(), "A", "B")).toBeCloseTo(0, 12);
+  });
+
+  it("⛔⛔ a push INTO the neighbour goes nowhere (RED: it went straight through)", () => {
+    const v = resolveMove(touching(), "A", { position: [0.3, 0, 0], orientation: IDENTITY }, setup());
+    expect(v.blockedBy).toBe("B");
+    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + 1e-9);
+  });
+
+  it("⭐ a slide ALONG the shared face is free, and so is leaving", () => {
+    const along = resolveMove(touching(), "A", { position: [0.2, 0.2, 0], orientation: IDENTITY }, setup());
+    expect(along.t).toBe(1);
+    expect(along.placed.position[1]).toBeCloseTo(0.2, 9);
+    const away = resolveMove(touching(), "A", { position: [0.05, 0, 0], orientation: IDENTITY }, setup());
+    expect(away.t).toBe(1);
+  });
+
+  it("⭐⭐ a DIAGONAL push SLIDES along the face — the contact normal comes from the depth (RED: it passed through)", () => {
+    const v = resolveMove(touching(), "A", { position: [0.3, 0.2, 0], orientation: IDENTITY }, setup());
+    expect(v.placed.position[0]).toBeLessThanOrEqual(0.2 + 1e-9);
+    expect(v.placed.position[1]).toBeCloseTo(0.2, 3);
+  });
+
+  it("⛔ a TURN that digs a corner in is clamped (RED: it turned freely)", () => {
+    const q = qFromAxisAngle([0, 0, 1], 0.4);
+    const v = resolveMove(touching(), "A", { position: [0.2, 0, 0], orientation: q }, setup());
+    expect(v.blockedBy).toBe("B");
+    expect(v.t).toBeLessThan(0.05);
+  });
+
+  it("⭐ the depth measure: apart < 0, touching = 0, overlapping = the overlap", () => {
+    const axes: Vec3[] = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]];
+    const cube = (x: number) => boxShape([0.1, 0.1, 0.1]).points.map((p) => [p[0] + x, p[1], p[2]] as Vec3);
+    expect(overlapAlong(cube(0), cube(0.15), axes)!.depth).toBeCloseTo(-0.05, 12);
+    expect(overlapAlong(cube(0), cube(0.1), axes)!.depth).toBeCloseTo(0, 12);
+    const o = overlapAlong(cube(0), cube(0.07), axes)!;
+    expect(o.depth).toBeCloseTo(0.03, 12);
+    // ⭐ the direction that achieved it points from A toward B: the way A would have to leave is −dir
+    expect(o.dir).toEqual([1, 0, 0]);
   });
 });
 

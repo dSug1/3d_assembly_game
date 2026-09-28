@@ -962,3 +962,19 @@ other's axes and signs — two lookups could disagree on the frame the flag is t
 ⛔ The row stays in the queue; only its essay came here.
 
 ✅✅ **RULE 6 CLOSED 2026-09-15** — by finger, its gain **computed**. ⛔⛔ **ITS SCREEN-PLANE FORM IS SUPERSEDED** (`D75`/`D76`): a body translates along **its own axes**, the finger's delta **solved onto both horizontal ones** so it tracks exactly, with Blender's 5° cone at the edge-on case. ⚠ One device look, three reports, three fixes — **unjudged again**, and `screenTranslation`/`depthTranslate` stay as declared debt. ⛔ 6bis/6ter/6quater still wait on face centres → [`queue_notes/IN4.md`(this file)
+
+---
+
+## ⭐⭐⭐ `D127` — EDGE-ON STAYS ON THE WORLD AXES, 2026-09-28
+
+⚠ Report (2026-09-27, `Scene_1`, a near-level camera orbited off boot, HUD `⛔EDGE-ON`): *"the
+translation on the blue axis is reversed: if the finger goes up the object translates to the left."*
+⭐ Cause: the fixed-rate fallback pushed `+blue` for fingers-up, which is *away* only at the BOOT
+camera. ⛔ My proposed fix (drive along the view's horizontal forward, split onto red and blue) was
+refused: *"I cannot disrupt the user feeling by changing the axis of translation."*
+✅ Built: `dy` → blue alone, sign from `blue · viewDepth` of the current camera, times
+`sign(towardGravity)` (the 2026-09-16 below-ring flip). 3 vectors: two RED against the build before
+(six skew azimuths × three elevations; the below ring), one stating the quarter-orbit cost.
+⭐ Literature: Blender's `axisProjection` (below 5°, `axis × −factor` from the mouse's vertical)
+binds the sign to the axis's orientation — the same defect; Au, Tai & Fu (CGF 2012) disallow an
+axis near the view direction outright. ⛔ Unjudged by a hand.

@@ -85,19 +85,52 @@ async function findTarget() {
   }).catch(() => null);
   if (!res?.ok) return null;
   const targets = await res.json().catch(() => []);
-  // ⚠ Several tabs of the app can be open; prefer a VISIBLE one. A background tab screencasts
+  // ⚠ Several tabs of the app can be open; take the VISIBLE one. A background tab screencasts
   // nothing, and a mirror frozen on a stale frame is the readout-that-lies shape again.
+  // ⛔⛔ This comment said "prefer a visible one" while the code returned `pages[0]` — with six tabs
+  // open the mirror showed one stale frame of a background tab (the owner: "not working",
+  // 2026-09-27). ⭐ Each tab is now ASKED, read-only: `document.visibilityState`.
   const pages = targets.filter(
-    (t) => t.type === "page" && String(t.url).includes(TARGET_URL_MATCH),
+    (t) => t.type === "page" && String(t.url).includes(TARGET_URL_MATCH) && t.webSocketDebuggerUrl,
   );
-  return pages[0] ?? null;
+  for (const p of pages) if ((await visibilityOf(p.webSocketDebuggerUrl)) === "visible") return p;
+  if (pages.length > 0) setStatus(`${pages.length} localhost:5173 tab(s) on the tablet, none in front — bring one to the front`);
+  return null;
+}
+
+/** ⭐ One tab's `document.visibilityState`, or `null` if it does not answer within 2 s. Read-only. */
+function visibilityOf(wsUrl) {
+  return new Promise((resolve) => {
+    let ws;
+    const finish = (v) => {
+      clearTimeout(timer);
+      try { ws?.close(); } catch {}
+      resolve(v);
+    };
+    const timer = setTimeout(() => finish(null), 2000);
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch {
+      finish(null);
+      return;
+    }
+    ws.onopen = () =>
+      ws.send(JSON.stringify({ id: 1, method: "Runtime.evaluate", params: { expression: "document.visibilityState", returnByValue: true } }));
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.id === 1) finish(msg.result?.result?.value ?? null);
+      } catch {}
+    };
+    ws.onerror = () => finish(null);
+  });
 }
 
 async function streamOnce() {
   await adb(["forward", `tcp:${CDP_PORT}`, "localabstract:chrome_devtools_remote"]);
   const target = await findTarget();
   if (!target?.webSocketDebuggerUrl) {
-    setStatus("waiting for the tablet's localhost:5173 tab");
+    if (!status.includes("none in front")) setStatus("waiting for the tablet's localhost:5173 tab");
     return;
   }
 
@@ -106,7 +139,18 @@ async function streamOnce() {
     let id = 0;
     const send = (method, params) =>
       ws.send(JSON.stringify({ id: ++id, method, params: params ?? {} }));
-    const done = () => resolve();
+    // ⭐ A WATCHDOG: a tab sent to the background stops screencasting without closing, so a mirror
+    // with no frame for 4 s drops the tab and looks for the visible one again.
+    let lastFrameAt = Date.now();
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastFrameAt > 4000) {
+        try { ws.close(); } catch {}
+      }
+    }, 1000);
+    const done = () => {
+      clearInterval(watchdog);
+      resolve();
+    };
 
     ws.onopen = () => {
       setStatus("mirroring");
@@ -130,6 +174,7 @@ async function streamOnce() {
         return;
       }
       if (msg.method !== "Page.screencastFrame") return;
+      lastFrameAt = Date.now();
       publish(msg.params.data);
       // ⛔⛔ THE ACK IS NOT OPTIONAL. Chrome sends the next frame only once the last is
       // acknowledged; drop it and the mirror shows one frame and freezes for ever.

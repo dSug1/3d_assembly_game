@@ -49,17 +49,18 @@
   casts and receives, the floor receives.
 * **Floor**: Unity's Plane is 10 × 10 units, so scale 4.79 is 47.9 × 47.9 units — ⭐ **halved, then
   80 %, 107 %, then 103 % of that: 21.116236 × 21.116236** (`D122`, the owner). A plane has no thickness, so it is a 0.05-unit
-  slab whose TOP is `y = −2.3`. Frozen; seen from below it turns see-through (`D121`).
+  slab whose TOP is `y = −2.3`. Frozen; seen from below it disappears (`D128`, which replaced `D121`'s see-through).
 
-## 4. ⚠⚠ What the brief and the table disagree on — built as the TABLE says
+## 4. ⭐⭐ The second layout — the table that is built
 
-| the brief | the table | built |
-|---|---|---|
-| *"42 flat 3D boxes"* | **41** rows (Piece13, 18, 35 absent; one blank row) | 41 pieces + the floor |
-| `MAT_B` = *"24 pieces"* | **23** (Piece11 + 22 bars) | 23 |
-| *"z = −0.33333"* | every row `−0.34` | `−0.34` |
+> *"Let's reshuffle the pieces as follows"* — the owner, 2026-09-27, with a new 41-row table.
 
-⭐ The renaming, applied in order: Piece42 → **Piece13**, Piece43 → **Piece18**, Piece44 → **Piece35**.
+The second table replaces the first whole: **41 pieces — 13 white, 20 black, 3 yellow, 4 red, 1 blue**,
+every one at `z = −0.34` and 0.3 deep, inside the same bounds (x −2.41 → 2.46, gravity −2.13 → 2.67).
+Its materials are named `Mat_White`, `Mat_Black`, `Mat_Yellow`, `Mat_Red`, `Mat_Blue` and map onto the
+slots `MAT_A`–`MAT_E`. ⭐ **No two pieces overlap** in the picture plane (a vector; the first table's
+bars crossed). ⚠ The first table's disagreements with the brief (42 vs 41 pieces, 24 vs 23 black,
+`z −0.33333`) and its Piece42–44 → 13 / 18 / 35 renaming went with it — they are in git history.
 
 ## 5. ⚠ What is NOT the Unity scene yet — stated
 
@@ -70,7 +71,27 @@
   is not modelled.
 * **No tone mapping**: the sand floor, lit almost straight down by the directional light, saturates;
   the whites read slightly warm. An exposure / tone-mapping pass is the fix when it matters.
-* **The painting's pieces are tightly packed** (gaps down to 0.01 units = 1 mm, some bars crossing):
-  under `3D6`'s collision a piece blocked in the plane moves freely out of it first (checked: the red
-  Piece12 moved in depth, then sideways; a bar that met it slid).
+* **The painting's pieces touch face to face** (§6): under `3D6`'s collision a piece blocked in the
+  plane can slide along its neighbours' faces and out of the plane (in depth), never into them.
 * ⛔ **No goal** — `Scene_1` has no final configuration yet (`GM1`).
+
+## 6. ⭐⭐ The transparent contour (`D125`)
+
+> *"each piece has a transparent contour (the faces which will align and snap) and inside there is the
+> colored part … extend the pieces so that their faces touch (no gap between the faces) but maintain a
+> transparent margin with the colored core inside so that there is a visual gap maintained between the
+> pieces."* — the owner, 2026-09-27
+
+* ⭐ Every gap between two neighbouring pieces in the table is **0.03 units** — 92 pairs, all equal (a
+  vector). So each piece gets a **margin of 0.015 on every side** (`SCENE_1_CONTOUR_MARGIN`, the
+  `BodySpec.margin` field): the BODY — mesh, collision hull, logical faces, what a touch picks — is the
+  table's size + 0.03, and every neighbouring pair **touches** (a vector: gap 0, no overlap).
+* ⭐ The **coloured core** is the table's own size, unchanged, a child mesh that is never picked and
+  that casts the shadows — so the cores keep their 0.03 visual gap.
+* The contour is tinted in the piece's own colour at **opacity 0.1** (the owner), no specular, no
+  depth write; the slider is CAMERA › *piece contour opacity* (`pieceContourAlpha`, 0 hides it).
+* ⭐ A face that aligns and snaps is the CONTOUR's face, so a snapped pair lands face to face with its
+  cores 0.03 apart — the painting's own gap.
+* ⛔⛔ **IT EXPOSED A HOLE IN `3D6`** (found by a headless drag, not a hand): a pair that STARTS in
+  contact read GJK's `0` before and after any push, so *"may not come closer"* let a piece walk
+  through the bar beside it. Fixed in `core/collision.ts` → `COLLISION.md` §8.

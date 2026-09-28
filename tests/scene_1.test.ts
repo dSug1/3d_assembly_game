@@ -3,10 +3,10 @@
  * renaming, the lights' conventions checked against the owner's own words, and the scene switch.
  */
 import { describe, expect, it } from "vitest";
-import { SCENE_1, SCENE_1_SLOTS } from "../src/content/scene_1";
+import { SCENE_1, SCENE_1_CONTOUR_MARGIN, SCENE_1_SLOTS } from "../src/content/scene_1";
 import { SCENE_0 } from "../src/content/scene_0";
 import { SCENES, sceneAt } from "../src/content/scenes";
-import { parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
+import { contourDims, parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
 import { illuminanceAt, kelvinToRgb, unityForward, type LightSpec } from "@core/lighting";
 import { levelElevation, orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
@@ -14,17 +14,14 @@ import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 const pieces = SCENE_1.bodies.filter((b) => b.id !== "Floor");
 
 describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
-  it("41 pieces and a frozen floor — ⚠ the brief says 42; the table lists 41", () => {
+  it("41 pieces and a frozen floor", () => {
     expect(pieces.length).toBe(41);
     expect(SCENE_1.bodies.find((b) => b.id === "Floor")?.frozen).toBe(true);
     expect(pieces.every((b) => !b.frozen)).toBe(true);
   });
 
-  it("⭐ the renaming: Piece13, 18 and 35 exist; Piece42, 43 and 44 do not", () => {
+  it("⭐ every name Piece1..Piece41 is taken exactly once", () => {
     const ids = new Set(pieces.map((b) => b.id));
-    for (const k of ["Piece13", "Piece18", "Piece35"]) expect(ids.has(k)).toBe(true);
-    for (const k of ["Piece42", "Piece43", "Piece44"]) expect(ids.has(k)).toBe(false);
-    // ⭐ and every name 1..41 is taken exactly once
     expect([...ids].sort()).toEqual(Array.from({ length: 41 }, (_, i) => `Piece${i + 1}`).sort());
   });
 
@@ -50,15 +47,105 @@ describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
     }
   });
 
-  it("⭐ the slots: 12 white, 23 black (⚠ the brief says 24), 3 yellow, 2 red, 1 blue", () => {
+  it("⭐ the second layout's slots: 13 white, 20 black, 3 yellow, 4 red, 1 blue", () => {
     const n = (s: string) => Object.values(SCENE_1_SLOTS).filter((v) => v === s).length;
-    expect([n("MAT_A"), n("MAT_B"), n("MAT_C"), n("MAT_D"), n("MAT_E")]).toEqual([12, 23, 3, 2, 1]);
-    expect(SCENE_1_SLOTS.Piece12).toBe("MAT_D");
-    expect(SCENE_1_SLOTS.Piece19).toBe("MAT_E");
+    expect([n("MAT_A"), n("MAT_B"), n("MAT_C"), n("MAT_D"), n("MAT_E")]).toEqual([13, 20, 3, 4, 1]);
+    expect(SCENE_1_SLOTS.Piece10).toBe("MAT_E");
+    expect(SCENE_1_SLOTS.Piece2).toBe("MAT_D");
+    expect(SCENE_1_SLOTS.Piece6).toBe("MAT_C");
+  });
+
+  it("⭐ the second layout: no two pieces overlap in the picture plane — the first table's bars crossed", () => {
+    const hit: string[] = [];
+    for (let i = 0; i < pieces.length; i++)
+      for (let j = i + 1; j < pieces.length; j++) {
+        const a = pieces[i]!;
+        const b = pieces[j]!;
+        const ox = (a.dims[0]! + b.dims[0]!) / 2 - Math.abs(a.position[0]! - b.position[0]!);
+        const oy = (a.dims[1]! + b.dims[1]!) / 2 - Math.abs(a.position[1]! - b.position[1]!);
+        if (ox > 1e-9 && oy > 1e-9) hit.push(`${a.id}/${b.id}`);
+      }
+    expect(hit).toEqual([]);
+  });
+
+  it("⭐ the second layout's pieces are where the owner put them", () => {
+    const at = (id: string) => pieces.find((b) => b.id === id)!;
+    expect(at("Piece1").position).toEqual([-0.7, 2.525, -0.34]);
+    expect(at("Piece1").dims).toEqual([1.26, 0.29, 0.3]);
+    expect(at("Piece30").dims).toEqual([0.1, 4.8, 0.3]);
+    expect(at("Piece41").position).toEqual([1.1, -1.855, -0.34]);
   });
 
   it("⭐ it survives the JSON seam (`GM8`) unchanged", () => {
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_1))).toEqual(SCENE_1);
+  });
+});
+
+describe("⭐⭐⭐ `D125` — the transparent contour: the faces touch, the coloured cores keep their gap", () => {
+  // ⭐ Neighbours: facing along one axis, overlapping along the other, gap under 0.1 (a bar's width —
+  // two pieces either side of a bar are not neighbours).
+  const pairs = (dimsOf: (b: (typeof pieces)[number]) => readonly number[]) => {
+    const out: { a: string; b: string; gap: number }[] = [];
+    for (let i = 0; i < pieces.length; i++)
+      for (let j = i + 1; j < pieces.length; j++) {
+        const a = pieces[i]!;
+        const b = pieces[j]!;
+        const da = dimsOf(a);
+        const db = dimsOf(b);
+        for (const [ax, ot] of [[0, 1], [1, 0]] as const) {
+          const gap = Math.abs(a.position[ax]! - b.position[ax]!) - (da[ax]! + db[ax]!) / 2;
+          const along = (da[ot]! + db[ot]!) / 2 - Math.abs(a.position[ot]! - b.position[ot]!);
+          if (gap > -1e-9 && gap < 0.1 - 1e-9 && along > 1e-9) out.push({ a: a.id, b: b.id, gap });
+        }
+      }
+    return out;
+  };
+
+  it("⭐ the table's cores: every neighbouring pair is exactly 0.03 apart — the gap the contour closes", () => {
+    const p = pairs((b) => b.dims);
+    expect(p.length).toBe(92);
+    for (const q of p) expect(q.gap).toBeCloseTo(0.03, 9);
+  });
+
+  it("⭐⭐ the bodies: every neighbouring pair TOUCHES, face to face, and none overlaps (RED before D125)", () => {
+    const p = pairs((b) => contourDims(b));
+    expect(p.length).toBe(92);
+    for (const q of p) expect(Math.abs(q.gap)).toBeLessThan(1e-9);
+    for (let i = 0; i < pieces.length; i++)
+      for (let j = i + 1; j < pieces.length; j++) {
+        const a = pieces[i]!;
+        const b = pieces[j]!;
+        const da = contourDims(a);
+        const db = contourDims(b);
+        const ox = (da[0] + db[0]) / 2 - Math.abs(a.position[0] - b.position[0]);
+        const oy = (da[1] + db[1]) / 2 - Math.abs(a.position[1] - b.position[1]);
+        expect(ox > 1e-9 && oy > 1e-9).toBe(false);
+      }
+  });
+
+  it("every piece carries the contour, half the gap; the floor has none", () => {
+    expect(SCENE_1_CONTOUR_MARGIN).toBe(0.015);
+    for (const b of pieces) expect(b.margin).toBe(SCENE_1_CONTOUR_MARGIN);
+    expect(SCENE_1.bodies.find((b) => b.id === "Floor")?.margin).toBeUndefined();
+  });
+
+  it("⭐ contourDims: the core plus the margin on EVERY side; no margin → the dims themselves", () => {
+    expect(contourDims({ dims: [1, 2, 3], margin: 0.5 })).toEqual([2, 3, 4]);
+    expect(contourDims({ dims: [1, 2, 3] })).toEqual([1, 2, 3]);
+  });
+
+  it("⭐ the JSON seam keeps the margin and refuses a negative one", () => {
+    const back = parseSceneDescriptor(serializeSceneDescriptor(SCENE_1));
+    expect(back.bodies[0]!.margin).toBe(SCENE_1_CONTOUR_MARGIN);
+    const bad = JSON.parse(serializeSceneDescriptor(SCENE_1));
+    bad.bodies[0].margin = -0.01;
+    expect(() => parseSceneDescriptor(JSON.stringify(bad))).toThrow(/margin/);
+  });
+
+  it("the contour's opacity is a slider in [0, 1]", () => {
+    expect(DEFAULT_CONFIG.pieceContourAlpha).toBe(0.1);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceContourAlpha: 1.2 })).toThrow(/pieceContourAlpha/);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceContourAlpha: -0.1 })).toThrow(/pieceContourAlpha/);
   });
 });
 

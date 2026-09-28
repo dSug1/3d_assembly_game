@@ -1,7 +1,10 @@
 /**
- * ⭐⭐ **A FROZEN BODY SEEN FROM BELOW TURNS TRANSPARENT** (`D121`, the owner, 2026-09-27: *"if the
- * camera passes below the bottom face of a frozen object (i.e. the camera look upwards and sees the
- * bottom face of the frozen object), the frozen object shall become transparent"*). Engine-free.
+ * ⭐⭐ **A FROZEN BODY SEEN FROM BELOW DISAPPEARS** (`D128`, the owner, 2026-09-28: *"when a frozen
+ * object is seen from below, it keeps its material (it does not become transparent) but it
+ * disappears from the scene (so I can reach other objects)"*). ⛔ It reverses `D121`'s transparency
+ * (2026-09-27: *"… the frozen object shall become transparent"*); the test of *below* is unchanged.
+ * ⚠ It leaves the RENDER and the PICK only — the model, its collision and its alignments stand.
+ * Engine-free.
  *
  * ⭐ *"Sees the bottom face"* is read literally: the camera is on the OUTSIDE of that face's plane.
  * The bottom face is the one whose world normal points most DOWN (and it must point down at all).
@@ -28,8 +31,13 @@ export function seesFace(camera: Vec3, face: { centre: Vec3; normal: Vec3 }): bo
   return d[0] * face.normal[0] + d[1] * face.normal[1] + d[2] * face.normal[2] > 0;
 }
 
-/** ⭐ The whole rule, for one body. */
+/** ⭐ Does the camera see this body's bottom face? */
 export function seenFromBelow(world: World, id: ObjectId, camera: Vec3): boolean {
   const f = bottomFaceWorld(world, id);
   return f !== null && seesFace(camera, f);
+}
+
+/** ⭐⭐ The whole rule, for one body: FROZEN and seen from below → hidden (`D128`). */
+export function hiddenFromBelow(world: World, id: ObjectId, camera: Vec3): boolean {
+  return world.objects.get(id)?.frozen === true && seenFromBelow(world, id, camera);
 }

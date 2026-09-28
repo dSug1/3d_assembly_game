@@ -33,7 +33,7 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 |---|---|
 | `scene_state.ts` | `SceneState`, the closure-level types, the constants |
 | `bodies.ts` | meshes, topology, shapes, the model-pose port (`setModelPose`) |
-| `markers.ts` | face fills and contours, the HitFace's fuchsia contour, PioneerFaceCursors, outlines |
+| `markers.ts` | face fills and contours, the HitFace's fuchsia contour, PioneerFaceCursors, outlines, their per-frame lift (`liftHighlights`) |
 | `alignment_wiring.ts` | `alignFollowerToPioneer`, release, seat/unseat |
 | `gizmo.ts` | the axis gizmo (⛔ `highlight_pass.ts` deleted with the white highlights and the swing, `D120`) |
 | `camera_rig.ts` | orbit, zoom, centre blend, reset, gesture frames |
@@ -68,6 +68,14 @@ surface, rather than both writing `camera.radius` and fighting over it.
 ✅✅ **THE OBJECT RULES ARE REAL NOW, and the MODEL is authoritative** (`3D1`, closed
 2026-09-15). A gesture writes `src/core/object_model.ts`; the render loop reads the model
 every frame and draws `displayPose = SWAY ∘ FOLLOW ∘ model`.
+
+⭐⭐ **EVERY HIGHLIGHT FLOATS ONE PIXEL OFF WHAT IT MARKS** (`D126`, the owner 2026-09-27). It was a
+world distance — 1.5 mm for a face marker, 2 % of the body's half-size for the aligned outline — so 10–20
+px up close and under one far away. ⭐ Now `highlightLiftMm` (one CSS pixel, a slider in FACE ALIGNMENT)
+is turned into metres at each body's camera distance every frame (`input/highlight_lift.ts`): face
+markers are built ON the face and translated along its normal; an outline's offset is baked, so it is
+rebuilt only when stale by 5 % (a zoom). ⭐ One pixel is ~60× the 24-bit depth step at 3 m, ~1200× at
+0.15 m. ⚠ A 16-bit depth buffer would need 2–3 px beyond ~1 m. The PioneerFaceCursor rides 3 lifts up.
 
 ⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`): a claim a device
 cannot check is an assertion, not a finding.
@@ -132,7 +140,7 @@ the same loop** as the fill: a twin outliving its marker is the stale-highlight 
 false device reports.
 
 ⛔⛔ **THE GIZMO IS DRAWN IN GROUP 2, ABOVE BOTH** — device-reported 2026-09-23: *"the gizmo does
-not show"* when the FollowerFace IS the LeadingFace. ⚠ Same face, and the marker floats 1.5 mm above
+not show"* when the FollowerFace IS the LeadingFace. ⚠ Same face, and the marker floated 1.5 mm (a pixel since `D126`) above
 the surface while the gizmo starts ON it, so a gizmo inside a large face was hidden **entirely**.
 ⭐ An instrument must not be occludable by the thing it describes.
 

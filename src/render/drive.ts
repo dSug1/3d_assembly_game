@@ -90,7 +90,7 @@ export function applyDepthStep(st: SceneState, grip: Held, dyPx: number) : void 
     st.cfg.gainTranslateScreen,
     st.cfg.gainTranslateDepth,
     st.cfg.axisTrackingConeDeg,
-    grip.frame.towardGravity,
+    grip.frame,
   );
   // ⭐ The gizmo hears this finger exactly as it hears the holder's — same function, same frame.
   noteAxisTravel(st, gid, travel);

@@ -4,7 +4,7 @@
  * second press on another body steers the held one instead of grabbing the other.
  */
 import { describe, expect, it } from "vitest";
-import { bottomFaceWorld, seenFromBelow, seesFace } from "@core/underside";
+import { bottomFaceWorld, hiddenFromBelow, seenFromBelow, seesFace } from "@core/underside";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import { IDENTITY, qFromAxisAngle } from "@core/vec";
 import { pressSteers } from "@input/frozen_pick";
@@ -55,9 +55,32 @@ describe("⭐⭐ `D121` — a frozen body the camera sees from BELOW turns see-t
     expect(seesFace([0, 1, 0], face)).toBe(false);
   });
 
-  it("the opacity is a validated tunable in [0, 1]", () => {
-    expect(DEFAULT_CONFIG.frozenUndersideAlpha).toBe(0.3);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, frozenUndersideAlpha: 1.5 })).toThrow(/frozenUndersideAlpha/);
+  it("⛔ `D128`: the opacity tunable is DELETED — the body keeps its material", () => {
+    // > *"when a frozen object is seen from below, it keeps its material (it does not become
+    // > transparent) but it disappears from the scene (so I can reach other objects)."*
+    // > — the owner, 2026-09-28. ⛔ RED against `D121`'s build, which shipped it at 0.3.
+    expect("frozenUndersideAlpha" in DEFAULT_CONFIG).toBe(false);
+    expect(() => validateGestureConfig(DEFAULT_CONFIG)).not.toThrow();
+  });
+});
+
+describe("⭐⭐ `D128` — a frozen body seen from below DISAPPEARS, so a press reaches what is behind it", () => {
+  const free: SceneObject = { ...PLATE, id: "part", frozen: false };
+  const w = makeWorld([PLATE, free]);
+
+  it("⭐ frozen and seen from below → hidden; from above → shown", () => {
+    // ⛔ RED against the build before: there was no hiding rule, only an opacity.
+    expect(hiddenFromBelow(w, "plate", [0, -3, 2])).toBe(true);
+    expect(hiddenFromBelow(w, "plate", [0, 1, 2])).toBe(false);
+  });
+
+  it("⛔ a FREE body seen from below is never hidden — the rule is the frozen body's", () => {
+    expect(seenFromBelow(w, "part", [0, -3, 2])).toBe(true);
+    expect(hiddenFromBelow(w, "part", [0, -3, 2])).toBe(false);
+  });
+
+  it("⛔ an unknown id is not hidden", () => {
+    expect(hiddenFromBelow(w, "nobody", [0, -3, 2])).toBe(false);
   });
 });
 
