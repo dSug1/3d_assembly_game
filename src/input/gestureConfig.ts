@@ -771,8 +771,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // its core gap (3 mm); 5° is well under what the eye reads as crooked.
   goalPositionTolM: 0.005,
   goalAngleTolDeg: 5,
-  // ⭐ The owner: one pixel — one CSS pixel is 25.4 / 96 mm. ⚠ Raise it if a far zoom flickers.
-  highlightLiftMm: 25.4 / 96,
+  // ⭐ The owner, 2026-09-28: 0.1 mm (was one CSS pixel, 25.4 / 96 mm). ⭐ Measured safe: it stays ~67/d times
+  // above a 24-bit depth buffer's resolution at d metres (the camera's 0.01–100 m planes) — 13× at 5 m, vectored.
+  // ⚠ Raise it if a far zoom flickers (a device with a coarser depth buffer).
+  highlightLiftMm: 0.1,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON

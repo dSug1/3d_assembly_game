@@ -12,10 +12,29 @@ const FOV = 0.8;
 const H = 800;
 
 describe("⭐⭐ the lift is a distance ON THE GLASS", () => {
-  it("⭐ the default is one CSS pixel — its world size is exactly one pixel's at that distance", () => {
-    expect(DEFAULT_CONFIG.highlightLiftMm).toBeCloseTo(25.4 / 96, 12);
+  it("⭐ the default is 0.1 mm on the glass (the owner, 2026-09-28; was one CSS pixel) — its world size tracks the distance", () => {
+    expect(DEFAULT_CONFIG.highlightLiftMm).toBe(0.1);
     for (const d of [0.15, 0.6, 1.5, 3]) {
-      expect(highlightLiftM(DEFAULT_CONFIG.highlightLiftMm, d, FOV, H)).toBeCloseTo(trackingMetresPerPx(d, FOV, H), 12);
+      expect(highlightLiftM(DEFAULT_CONFIG.highlightLiftMm, d, FOV, H)).toBeCloseTo(
+        trackingMetresPerPx(d, FOV, H) * ((0.1 * 96) / 25.4),
+        12,
+      );
+    }
+  });
+
+  it("⛔ the default still clears a 24-bit depth buffer by 10× at every distance a body can be seen from — no z-fighting (the owner: 'does that create an issue?')", () => {
+    // ⭐ The orbit radius tops out at `cameraRadiusMaxM` (3 m); a body can sit a couple of metres past the
+    // orbit centre, so 5 m bounds it. ⚠ A first draft said 10 m and the margin there is only 6.7× (the
+    // ratio is ≈ 67/d at an 800 px viewport) — measured by this vector, not guessed.
+    // ⭐ A perspective depth buffer resolves `z²·(far − near) / (far·near·2²⁴)` at distance z; the
+    // camera's planes are 0.01 m and 100 m. ⚠ A 16-BIT buffer (×256 coarser) would z-fight at any lift
+    // this small — none of the target devices ships one, which is the premise this vector states.
+    const NEAR = 0.01;
+    const FAR = 100;
+    const resolution = (z: number) => (z * z * (FAR - NEAR)) / (FAR * NEAR * 2 ** 24);
+    expect(DEFAULT_CONFIG.cameraRadiusMaxM).toBeLessThanOrEqual(3);
+    for (const d of [0.15, 0.6, 1.5, 3, 5]) {
+      expect(highlightLiftM(DEFAULT_CONFIG.highlightLiftMm, d, FOV, H)).toBeGreaterThan(10 * resolution(d));
     }
   });
 
