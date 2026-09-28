@@ -19,6 +19,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | — | ⭐ **double tap on any body** | **undo the last action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
 | a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes) |
+| any body, being TRANSLATED | ⭐ **both fingers move sideways in OPPOSITE directions, with no `dy`** — a horizontal pinch, the 2nd finger anywhere (empty space, the body, another body) | **zoom** (spreading = zoom in, closing = zoom out, as the empty-space pinch); the **translation and the roll are PAUSED**. ⚠ Latched: once read as a pinch, it stays a zoom until a finger lifts (`D137`) |
 | a FREE body | 1st finger drag, `ROTATE` | yaw about the vertical + pitch about the boot camera's right |
 | a FREE body | 2nd finger `dy` / `dx` (empty space, the body, or ANOTHER body), `TRANSLATE` | lift along gravity / ⭐ **spin about gravity**, together — the aligned body's pair, with gravity for the normal (`D123`) |
 | a FREE body | 2nd finger `dx` (empty space, the body, or another body), `ROTATE` | roll about the depth axis |

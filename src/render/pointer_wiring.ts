@@ -22,6 +22,8 @@ import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, undoLast } from "./undo_wiring";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
+import { nextDxSign } from "../input/hold_pinch";
+import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
 import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
@@ -341,6 +343,9 @@ export function installPointerHandler(st: SceneState): void {
         sway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         anchorMotion: new Map(),
         anchorRollSign: new Map(),
+        holderDxSign: 0,
+        anchorDxSign: new Map(),
+        holdPinch: null,
         depthSway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -661,7 +666,12 @@ export function installPointerHandler(st: SceneState): void {
 
       // ⛔⛔ THE EVICTION SHAKE IS DELETED (`D107`): *tap empty space while holding* releases an
       // alignment — or, holding a Pioneer, all its followers — on both devices.
-      if (grip.mode === "TRANSLATE") {
+      // ⭐⭐ `D137`: two fingers spreading or closing sideways while translating — the ZOOM owns the move,
+      // and the translation is paused (latched until a finger lifts; the rule is `input/hold_pinch.ts`).
+      if (grip.mode === "TRANSLATE") grip.holderDxSign = nextDxSign(grip.holderDxSign, grip.rec.step.dx);
+      if (grip.mode === "TRANSLATE" && holdPinchStep(st, grip)) {
+        // ⭐ Zoomed inside `holdPinchStep`; nothing to translate.
+      } else if (grip.mode === "TRANSLATE") {
         // §4 RULE 6 — ⛔⛔ **NO LONGER THE SCREEN VIEW PLANE** (`D75`, 2026-09-22): the body is
         // translated along ITS OWN AXES, and the two comments below about the gain and the
         // deadband are the parts of rule 6 that survive unchanged.

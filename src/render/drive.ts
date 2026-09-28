@@ -11,6 +11,8 @@ import { rotationChannel } from "../core/constraint_stack";
 import { bothAxesSecondDrive } from "../input/second_touch_drive";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
+import { nextDxSign } from "../input/hold_pinch";
+import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_ROLL, type Held, type SceneState } from "./scene_state";
 import { asVec3, modelOrientation, requirePose, setModelOrientation, setModelPose } from "./bodies";
 import { driveBodyOf } from "./alignment_wiring";
@@ -134,6 +136,9 @@ export function forgetAnchor(st: SceneState, seq: number) : void {
   for (const grip of st.held.values()) {
     grip.anchorMotion.delete(seq);
     grip.anchorRollSign.delete(seq);
+    grip.anchorDxSign.delete(seq);
+    // ⭐ `D137`: the pinch's second finger lifted — the latch ends; the holder translates again.
+    if (grip.holdPinch?.seq === seq) grip.holdPinch = null;
   }
 }
 
@@ -167,6 +172,13 @@ export function applyDepthDrag(st: SceneState, grip: Held,
   // defect that made this gesture *"sometimes blocked"*.
   grip.rec.tick(anchorSample.t);
   tracker.push(anchorSample);
+  // ⭐⭐ `D137`: a sideways pinch against the holder is a ZOOM — roll and lift are paused with the
+  // translation (the owner: *"pause the translation and the roll"*). Latched until a finger lifts.
+  grip.anchorDxSign.set(anchorSeq, nextDxSign(grip.anchorDxSign.get(anchorSeq) ?? 0, tracker.step.dx));
+  if (holdPinchStep(st, grip)) {
+    grip.rec.consumeAsMotion();
+    return true;
+  }
 
   // ⭐⭐⭐ A12 + A16 — the second finger drives **roll** by its x and/or **translation** by its y.
   // ⚠ `bothAxes` (an aligned Follower, `D59`/`D108`; a free body in `TRANSLATE`, `D123`) gives it

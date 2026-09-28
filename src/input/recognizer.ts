@@ -246,6 +246,11 @@ export class Recognizer<P> {
     return this.motion.current;
   }
 
+  /** ⭐ The per-axis state (`A11`) — `D137`'s hold-pinch reads the holder's with the second finger's. */
+  get axes(): { readonly x: MotionState; readonly y: MotionState } {
+    return this.motion.axes;
+  }
+
   press(s: Sample): void {
     this.phase = "PRESSED";
     this.buffer = [s];

@@ -277,6 +277,16 @@ export interface Held {
    * on PRESENCE, never on MOTION.*
    */
   anchorRollSign: Map<number, 1 | -1>;
+  /** ⭐ `D137`: the holder's latest sideways direction (its last non-zero deadbanded `dx`). */
+  holderDxSign: -1 | 0 | 1;
+  /** ⭐ `D137`: each second finger's latest sideways direction, by press order. */
+  anchorDxSign: Map<number, -1 | 0 | 1>;
+  /**
+   * ⭐⭐ `D137`: the LATCHED hold-pinch — the second finger's `seq`, its zoom tracker and the zoom it
+   * started from — or `null`. ⛔ Set once, cleared only when a finger lifts (`METHOD`: a mode keyed on
+   * motion must not be re-decided every frame).
+   */
+  holdPinch: { readonly seq: number; readonly tracker: PinchTracker; readonly zoomAtStart: number } | null;
   /**
    * ⭐⭐ **WHICH WAY `dx` TWISTS AN ALIGNED BODY -- latched once per grip** (2026-09-22).
    * ⛔ The same doctrine as `anchorRollSign` one channel over: recomputed per frame the sign

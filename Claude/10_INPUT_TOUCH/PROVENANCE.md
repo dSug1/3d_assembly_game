@@ -188,3 +188,10 @@ form has none.
 | **Decomposing a 2D pointer delta onto two axes of a plane** (the 2×2 solve) | ✅ **PRIOR ART** | The standard "move in the ground/construction plane" of every DCC and CAD package; mathematically a change of basis, which is not claimable |
 | **A cone around the view direction where the exact mapping is abandoned** | ✅ **PRIOR ART, with a number** | Blender's `axisProjection()` switches below **5°**. ⭐ We adopt the angle and depart from what it does inside it — Blender lets the object nearly stop, we fall back to a fixed-rate push |
 
+
+### ⭐ Registered 2026-09-28 — a sideways pinch while holding zooms (`D137`)
+
+| the part | verdict | the citation, or the gap |
+|---|---|---|
+| **Two fingers spreading / closing → zoom** | ✅ **PRIOR ART, and universal** | The pinch-to-zoom of every multitouch UI; already registered for the empty-space pinch (`IN9`) |
+| ⚠ **The same pinch recognised WHILE one of the two fingers holds a body, the body's translation and roll paused and the pinch latched until a lift** | ⚠ **INTERNAL COMPOSITION** | Not searched for a publication; one hand's two fingers, no novel multi-finger mapping beyond the pinch itself. ⚠ Recorded for `SEC4` |
