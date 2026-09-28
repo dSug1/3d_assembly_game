@@ -91,7 +91,7 @@ const run = (
     gain,
     gain,
     cone,
-    c.gravity.towardGravity,
+    c.gravity,
   );
 
 describe("⭐⭐⭐ PLANE — the body follows the finger inside its own horizontal plane", () => {
@@ -212,6 +212,55 @@ describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
     expect(Math.sign(aboveInside)).not.toBe(Math.sign(belowInside));
   });
 
+  it("⭐⭐⭐ `D127`: finger UP pushes along BLUE ALONE, AWAY from THIS camera, at every orbit angle", () => {
+    // > *"I want to translate the object in the world axis in whatever camera position … In edge-on
+    // > case, I want dy to translate the object on blue axis (finger up = translation on blue axis
+    // > away from the camera)."* — the owner, 2026-09-28
+    // ⛔ RED against the build before: the sign was the BOOT camera's, so past a quarter-orbit
+    // fingers-up brought the body TOWARD the camera, and the holder's dy leaked onto red whenever
+    // the camera was not exactly level. ⚠ Azimuths deliberately NOT square to the world axes —
+    // the owner's screenshot is a skew one — and ±90° is its own vector below.
+    const axes = axesFromFrame(camera(0, 30).gravity); // ⭐ BOOT axes, not this camera's
+    for (const az of [0, 35, 135, 180, 218, 315]) {
+      for (const el of [0, 2, 4]) {
+        const c = camera(az, el);
+        const t = run({ holderDyPx: -50 }, c, axes);
+        expect(t.edgeOn).toBe(true);
+        expect(Math.abs(t.xM)).toBe(0);
+        expect(t.gravityM).toBe(0);
+        expect(Math.abs(t.depthM)).toBeCloseTo(50 * PER_PX, 9);
+        // ⭐ AWAY, measured against THIS camera's horizontal view direction.
+        expect(dot(axisDisplacement(t, axes), c.gravity.depth)).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("⛔ from BELOW the finger-found sign stands: finger up comes TOWARD this camera", () => {
+    // ⚠ *"when the camera is on the bottom ring facing upwards, the depth translation is
+    // chaotic"* — outside the cone, exact tracking brings a body TOWARD a camera looking up when
+    // the finger goes up, so the cone must agree or entering it from below reverses the push.
+    const axes = axesFromFrame(camera(0, 30).gravity);
+    for (const az of [0, 35, 180, 218]) {
+      const c = camera(az, -2);
+      const t = run({ holderDyPx: -50 }, c, axes);
+      expect(t.edgeOn).toBe(true);
+      expect(dot(axisDisplacement(t, axes), c.gravity.depth)).toBeLessThan(0);
+    }
+  });
+
+  it("⚠ at a quarter-orbit BLUE lies across the screen: finger up slides along blue, never red", () => {
+    // ⭐ The owner's rule taken literally where *away* has no meaning — blue is square to the view.
+    // ⚠ The cost, stated: here finger up moves the body SIDEWAYS on the glass, and no finger
+    // moves it toward or away from the camera (red points at it and goes quiet).
+    const axes = axesFromFrame(camera(0, 30).gravity);
+    for (const az of [90, -90]) {
+      const t = run({ holderDyPx: -50 }, camera(az, 2), axes);
+      expect(t.edgeOn).toBe(true);
+      expect(Math.abs(t.xM)).toBe(0);
+      expect(Math.abs(t.depthM)).toBeCloseTo(50 * PER_PX, 9);
+    }
+  });
+
   it("⚠ the RATE steps at the boundary, and the step is stated rather than hidden", () => {
     // ⛔ Just outside the cone the exact mapping is buying `1/sin(5°)` ≈ 11× the tracking factor;
     // inside it the fallback buys 1×. ⭐ Neither produces visible SCREEN motion there, which is
@@ -291,7 +340,7 @@ describe("degenerate inputs never reach a placement", () => {
       1,
       1,
       CONE,
-      0,
+      { depth: [0, 0, 1], towardGravity: 0 },
     );
     expect(t.xM).toBe(0);
     expect(t.gravityM).toBe(0);

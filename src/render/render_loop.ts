@@ -4,7 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { seenFromBelow } from "../core/underside";
+import { hiddenFromBelow } from "../core/underside";
 import { pruneCollisionGrace } from "./collision_wiring";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
@@ -555,16 +555,19 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ `D113`: the edge band's outline follows the canvas and the slider. ⚠ Laid out every frame
     // from the canvas rectangle — a rotation or a resize must not leave it drawn in the wrong place.
     {
-      // ⭐ `D121`: a frozen body the camera sees from BELOW turns see-through. ⚠ Written on change only.
+      // ⭐ `D128`: a frozen body the camera sees from BELOW disappears — its material untouched.
+      // ⚠ `isVisible` is what Babylon's default pick reads too, so a press goes through it to
+      // what is behind. ⛔ Not inherited: the coloured core (`D125`) is hidden with it.
     {
       const cam: [number, number, number] = [st.camera.position.x, st.camera.position.y, st.camera.position.z];
       for (const [fid, o] of st.world.objects) {
         if (o.frozen !== true) continue;
         const mesh = st.meshOf.get(fid);
-        const mat = mesh?.material as { alpha: number } | null | undefined;
-        if (!mat) continue;
-        const want = seenFromBelow(st.world, fid, cam) ? st.cfg.frozenUndersideAlpha : 1;
-        if (mat.alpha !== want) mat.alpha = want;
+        if (!mesh) continue;
+        const want = !hiddenFromBelow(st.world, fid, cam);
+        if (mesh.isVisible !== want) mesh.isVisible = want;
+        const core = mesh.metadata?.core as { isVisible: boolean } | undefined;
+        if (core && core.isVisible !== want) core.isVisible = want;
       }
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.

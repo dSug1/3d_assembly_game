@@ -40,8 +40,11 @@ onto it and is seated (`D100`).
 ⚠ A frozen body (the plate): EVERY press on it is a miss (`D119`) — a first touch drives the camera,
 a second touch drives the held body's gravity / roll; only a TAP on it names it as a Pioneer. ⭐ The
 one exception: a plate with a part SEATED on it is holdable by the first touch — the unsnap's.
-⭐ **Automatic, not an input**: a **frozen body the camera sees from BELOW turns see-through** — the
-camera is past the plane of its bottom face (`D121`; opacity slider at the top of **CAMERA**, 1 = never).
+⭐ **Automatic, not an input**: a **frozen body the camera sees from BELOW disappears** — the camera is
+past the plane of its bottom face; it is neither drawn nor picked, so a press reaches what is behind it
+(`D128`, which reverses `D121`'s see-through; no slider).
+⭐ **Edge-on** (camera within 5° of level, HUD `⛔EDGE-ON`): the holder's `dy` drives **blue alone**,
+finger up = **away from the current camera** (from below: toward), and `dx` drives red (`D127`).
 ⛔ **No white highlights any more** (`D120`): the white capture contour and shell, and the camera swing
 on entering the capture zone, are deleted.
 

@@ -82,8 +82,6 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐ `D114`: the width it opens to when NO empty space is left on the glass — 0 otherwise.
       sliders: [
         tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
-        // ⭐ `D121`: a frozen body seen from BELOW turns see-through (1 = never).
-        tunable(st, "frozen body opacity seen from below", "frozenUndersideAlpha", 0, 1, 0.05),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
         tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
       ],

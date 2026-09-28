@@ -267,10 +267,6 @@ export interface GestureConfig {
    */
   edgeBandMm: number;
   /**
-   * ⭐ `D121`: the opacity a FROZEN body takes while the camera sees its bottom face (1 = unchanged).
-   */
-  frozenUndersideAlpha: number;
-  /**
    * ⭐ `D125`: the opacity of a body's transparent CONTOUR — the margin around its coloured core,
    * tinted in the body's own colour. `0` hides it; `1` draws the whole body solid.
    */
@@ -746,8 +742,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pioneerCursorGrabRadii: 3,
   // ⚠ A guess with a slider: wide enough for a fingertip's edge, narrow enough to leave the view.
   edgeBandMm: 6,
-  // ⚠ A guess with a slider: see-through enough to show what is above, solid enough to stay a floor.
-  frozenUndersideAlpha: 0.3,
   // ⚠ A guess with a slider: faint enough to keep the gap between the cores, visible enough to show the faces.
   pieceContourAlpha: 0.1,
   // ⭐ The owner: one pixel — one CSS pixel is 25.4 / 96 mm. ⚠ Raise it if a far zoom flickers.
@@ -965,10 +959,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
 
   if (!(cfg.pieceContourAlpha >= 0 && cfg.pieceContourAlpha <= 1)) {
     throw new Error(`pieceContourAlpha (${cfg.pieceContourAlpha}) must be in [0, 1]: it is an opacity.`);
-  }
-
-  if (!(cfg.frozenUndersideAlpha >= 0 && cfg.frozenUndersideAlpha <= 1)) {
-    throw new Error(`frozenUndersideAlpha (${cfg.frozenUndersideAlpha}) must be in [0, 1]: it is an opacity.`);
   }
 
   // ⛔ 0 switches the band off; past 20 mm it eats a phone's view.

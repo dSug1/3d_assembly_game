@@ -67,6 +67,19 @@
  * a body pushed away produces no screen motion at all — so the convention there is
  * *fingers-up = away*, continuous with the camera looking even slightly down.
  *
+ * ⭐⭐⭐ **`D127` — THE AXES STAY THE WORLD'S; *AWAY* IS READ OFF THE CAMERA OF NOW** (the owner,
+ * 2026-09-28: *"I want to translate the object in the world axis in whatever camera position … In
+ * edge-on case, I want dy to translate the object on blue axis (finger up = translation on blue
+ * axis away from the camera)."*). ⛔⛔ The push was `+blue` for fingers-up, which is *away* only
+ * at the BOOT camera: past a quarter-orbit it brought the body toward the camera. ⭐ Now the holder's
+ * `dy` drives **blue alone** and its sign is `blue · viewDepth` — so the axis never changes, only
+ * which of its two ends is *away*. ⚠ A camera orbit re-reads it; a finger mid-drag cannot orbit.
+ * ⭐ **Blender has the same flaw**: `axisProjection`'s view-parallel branch moves along
+ * `axis × −factor` whatever the axis's orientation, so mouse-up is *away* only when the axis
+ * points at the viewer. ⚠ **Cost, stated**: at a quarter-orbit blue is square to the view, *away*
+ * has no meaning (`+blue` by convention), fingers-up slides the body SIDEWAYS on the glass, and
+ * nothing moves it in depth — red points at the camera and goes quiet.
+ *
  * ⚠ **The cost of the cone, stated**: the rate is capped at `1/sin(cone)` just outside it and
  * drops to the fixed rate inside, so there is a step in world speed at the boundary. ⛔ Both
  * sides produce nearly no SCREEN motion there, which is why the step is not what a hand feels —
@@ -189,8 +202,9 @@ const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
  *   the exact mapping is abandoned for the fixed-rate push. ⭐ **5° is Blender's own number**
  *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
  *   is how to see the runaway a hand is being protected from.
- * @param towardGravity `GravityFrame.towardGravity` — +1 looking down on the scene, −1 looking
- *   up at it. ⛔ Only read inside the cone, where it is the fixed-rate push's sign.
+ * @param view the camera's `GravityFrame` — ⛔ only read inside the cone, where it is the
+ *   fixed-rate push's sign: `depth` (the view flattened onto the ground) says which end of blue
+ *   is *away* (`D127`), and `towardGravity` (+1 looking down, −1 looking up) flips it from below.
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -200,7 +214,7 @@ export function axisTravel(
   holderGain: number,
   secondGain: number,
   coneDeg: number,
-  towardGravity: number,
+  view: { readonly depth: Vec3; readonly towardGravity: number },
 ): AxisTravel {
   const sx = screenShadow(axes.x, camera);
   const sd = screenShadow(axes.depth, camera);
@@ -249,7 +263,10 @@ export function axisTravel(
   // finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the picture is
   // symmetric and no sign is derivable; *fingers-up = away* is the convention, continuous with
   // the camera looking even slightly down.
-  const awaySign = Math.sign(finite(towardGravity)) || 1;
+  // ⭐⭐ `D127`: and *away* is THIS camera's — which end of blue points into the view. ⚠ At a
+  // quarter-orbit blue is square to the view and the dot is 0: `+blue`, by convention.
+  const blueAway = Math.sign(finite(dot(axes.depth, view.depth))) || 1;
+  const awaySign = (Math.sign(finite(view.towardGravity)) || 1) * blueAway;
   const fallbackDepth = -dy * holderGain * awaySign;
 
   let xM = 0;
@@ -270,11 +287,13 @@ export function axisTravel(
       depthM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
     } else {
       edgeOn = true;
-      // ⭐ x is still healthy here — it is the axis lying across the screen — so it keeps exact
-      // tracking, and only depth falls back to the judged fixed rate.
+      // ⭐ x keeps exact tracking where its shadow is healthy, and only depth falls back to the
+      // judged fixed rate.
+      // ⛔ `D127`: fed `dx` ALONE — the holder's `dy` is blue's here, and a camera even slightly
+      // off level used to leak it onto red.
       // ⚠ `fallbackDepth` carries `holderGain` already; applying it twice is the kind of
       // arithmetic that reads as *"depth feels wrong in one camera pose"* and nowhere else.
-      xM = (along(sx, dx, dy) ?? 0) * holderGain;
+      xM = (along(sx, dx, 0) ?? 0) * holderGain;
       depthM = fallbackDepth;
     }
   }

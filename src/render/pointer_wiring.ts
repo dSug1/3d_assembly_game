@@ -708,9 +708,9 @@ export function installPointerHandler(st: SceneState): void {
           st.cfg.gainTranslateScreen,
           st.cfg.gainTranslateDepth,
           st.cfg.axisTrackingConeDeg,
-          // ⭐ Read ONLY inside the cone, where it is the depth sign: +1 looking down on the
-          // scene, −1 looking up at it.
-          grip.frame.towardGravity,
+          // ⭐ Read ONLY inside the cone, where it is the depth sign: which end of blue is away
+          // from this camera (`D127`), flipped when looking up at the scene.
+          grip.frame,
         );
         noteAxisTravel(st, tid, travel);
         st.lastTrackGain = travel.trackGain;

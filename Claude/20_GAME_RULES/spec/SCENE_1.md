@@ -49,7 +49,7 @@
   casts and receives, the floor receives.
 * **Floor**: Unity's Plane is 10 × 10 units, so scale 4.79 is 47.9 × 47.9 units — ⭐ **halved, then
   80 %, 107 %, then 103 % of that: 21.116236 × 21.116236** (`D122`, the owner). A plane has no thickness, so it is a 0.05-unit
-  slab whose TOP is `y = −2.3`. Frozen; seen from below it turns see-through (`D121`).
+  slab whose TOP is `y = −2.3`. Frozen; seen from below it disappears (`D128`, which replaced `D121`'s see-through).
 
 ## 4. ⭐⭐ The second layout — the table that is built
 

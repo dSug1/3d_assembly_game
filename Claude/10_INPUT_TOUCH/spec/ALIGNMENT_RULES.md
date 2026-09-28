@@ -2007,3 +2007,23 @@ Shift + left drag on empty space: zoom unchanged (it went 3.14 → 0.21 on the b
 | `D122` | `Scene_1`'s floor: 47.9 → 23.95 → 19.16 → 20.5012 → **21.116236** units (the last steps 107 %, 103 %) | `content/scene_1.ts` | — |
 | `D123` | **a FREE body's second touch in `TRANSLATE` drives BOTH** — `dy` lifts, `dx` spins about GRAVITY (the world vertical), by the aligned spin's own chart, sign and gain; `ROTATE` keeps the roll about depth | `input/second_touch_drive.ts` (`secondTouchDrive(…, mode)`), `render/drive.ts` | a diagonal second finger lifts AND spins; ✅ checked: a 96 px drag turned a free body 7° about exactly `(0, −1, 0)` |
 | `D124` | **with a body held, a second PRESS on another body STEERS the held one** — `pressSteers`: it is routed as empty space and its face remembered, so a TAP there still aligns (`D119`'s path). ⛔ Except the held body itself, and a body in its ASSEMBLY (the unsnap's second touch) | `input/frozen_pick.ts`, `render/pointer_wiring.ts` (`tapFace`) | two bodies can no longer be moved at once on the tablet — as on desktop, which never could; ✅ checked: B stayed put under a dragging finger, A lifted, nothing aligned; a tap on B aligned |
+
+---
+
+## 16 — ⭐⭐ EDGE-ON IN WORLD AXES, AND THE FLOOR SEEN FROM BELOW (`D127`, `D128`)
+
+> *"I don't like your fix: I want to translate the object in the world axis in whatever camera
+> position: I cannot disrupt the user feeling by changing the axis of translation … In edge-on case,
+> I want dy to translate the object on blue axis (finger up = translation on blue axis away from the
+> camera). Also, modify the rule: when a frozen object is seen from below, it keeps its material (it
+> does not become transparent) but it disappears from the scene (so I can reach other objects)."*
+> — the owner, 2026-09-28
+
+⛔ **Refused first**: a camera-relative edge-on fallback (`dy` along the view's horizontal forward,
+then split onto red and blue). It would have changed which world axis a finger drives as the camera
+orbits.
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D127` | **edge-on, the holder's `dy` drives BLUE ALONE; finger up = AWAY from the CURRENT camera** — the sign is `sign(blue · viewDepth) × sign(towardGravity)`, so from below the finger-found flip stands and entering the cone flips nothing; `dx` drives red alone (it no longer takes `dy`'s leak off level) | `input/axis_translate.ts` (`axisTravel(…, view)`) | at a quarter-orbit blue is square to the view: *away* has no meaning (`+blue` by convention), fingers-up slides the body SIDEWAYS, and nothing moves it in depth. ⭐ Blender's view-parallel branch (`axisProjection`) binds the sign to the axis, not the camera — the defect reported here |
+| `D128` | **a frozen body seen from below DISAPPEARS** — `hiddenFromBelow` (frozen AND `seenFromBelow`); the render loop sets `isVisible` on the body and its core, which Babylon's default pick also reads. The material is never touched | `core/underside.ts`, the render loop | a hidden plate cannot be TAPPED as a Pioneer, and it leaves the orbit barycentre's candidates (they are the bodies on screen); its collision, alignments and seats stand |
