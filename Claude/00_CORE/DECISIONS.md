@@ -56,8 +56,8 @@ file.
 | `D107` | ⭐⭐ **TWO WAYS TO UNALIGN: tap empty space while holding, or align elsewhere** | 2026-09-27 | ⭐ Binding, ⚠ → history |
 | `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | ⭐ Binding, ⚠ → history |
 | `D109` | ⭐⭐ **THE DORMANT SWITCHES ARE DELETED; THE FUCHSIA CONE IS THE SNAP CONE** | 2026-09-27 | ⭐ Binding, ⚠ → history |
-| `D110` | ⭐⭐ **THE FLICK IS DELETED — and `D103`'s flick-unsnap with it** | 2026-09-27 | Detector, verdict, rules and the rotation reset; a committed gesture ends kept → §13 |
-| `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | One scene history; an action = a gesture that changed the model; the camera reset keeps empty space only → §13 |
+| `D110` | ⭐⭐ **THE FLICK IS DELETED — and `D103`'s flick-unsnap with it** | 2026-09-27 | → §13 |
+| `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | → §13, `IN6.md` |
 | `D112` | ⭐⭐ **THE HUD LEADS WITH THE SCORE: episodes and time** | 2026-09-27 | `SCORE.md` §3 as a rule; the undo pair costs 1; the clock starts at the first press → §13 |
 | `D113` | ⭐⭐ **THE EDGE BAND IS ALWAYS EMPTY SPACE** — the camera reset stays reachable | 2026-09-27 | 6 mm along the edges, a slider; a body cannot be grabbed through it → §13 |
 | `D114` | ⭐⭐ **THE EDGE BAND OPENS ONLY WHEN NO EMPTY SPACE IS LEFT** | 2026-09-27 | A 4 Hz fingertip-grid probe; empty = a first touch would miss; else 0 → §13 |
@@ -88,6 +88,7 @@ file.
 | `D140` | ⛔ **ONLY THE LIVE COUPLE'S CURSOR MAY SNAP** — defect 73, a stale one jumped a re-aligned Follower | 2026-09-28 | → §18 |
 | `D141` | ⭐⭐ **A DOUBLE TAP UNDOES ONLY ON THE BODY THE LAST ACTION MOVED** | 2026-09-28 | → `IN6.md` |
 | `D142` | ⭐ **A SEATED PIECE AT ITS GOAL DISSOLVES ITS COUPLE** | 2026-09-28 | → GM1 |
+| `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** — `Scene_1`: a face or its opposite | 2026-09-28 | → `PLAYABILITY` §2.1 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

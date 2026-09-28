@@ -676,7 +676,7 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding — the completing PRESS takes the toggle over, and its own release is spent → §5.15 |
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | ⭐ Binding — `pickResult.faceId` gives face picking directly, which rule 2 needs. ⚠ Apache-2.0, so the NOTICE must ship. ⭐ Reversible in about a day *because* of `D6` |
 
-## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-28 (branch `1.0.48-`) — to pay for `D136`–`D142`
+## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-28 (branch `1.0.48-Scene_1-completed`) — to pay for `D136`–`D142`
 
 | # | decision | date | consequence |
 |---|---|---|---|

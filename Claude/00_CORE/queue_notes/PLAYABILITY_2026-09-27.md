@@ -12,7 +12,7 @@
 | # | row | what | spec |
 |---|---|---|---|
 | 1 | **`3D6`** ✅ BUILT 2026-09-27, unjudged | ⛔⛔ **COLLISION** — no body penetrates another: translation STOPS and SLIDES; rotation CLAMPS on the same axis (never slides, never switches axis); snapping and seated rules; broad phase; blocked feedback. ⭐ Modular: shape source and bounds source are interfaces, today the hull at spawn and its box | [`../../30_OBJECTS_3D/spec/COLLISION.md`](../../30_OBJECTS_3D/spec/COLLISION.md) |
-| 2 | **`GM1`** (+ the mate) | ⛔⛔ **A GOAL AND ITS DETECTION** — target data per level (which face on which Pioneer, where, which spin), the MATE check against it, a completion detector read from the model, level end (clock and count frozen, result shown). Par per level until the solver (`GM4`) | §2 below |
+| 2 | **`GM1`** (+ the mate, `D143`) | ⛔⛔ **A GOAL AND ITS DETECTION** — target data per level (which face on which Pioneer, where, which spin), the MATE check against it, a completion detector read from the model, level end (clock and count frozen, result shown). Par per level until the solver (`GM4`) | §2 below |
 | 3 | **`3D7`** | **THE PLAY VOLUME** — translation clamped to a volume; a lost part recoverable; + the blocked / snap feedback of `3D6` §6 | §3 below |
 | 4 | **`3D2`** (the approach) | the assist that brings a part onto its target — alignment hint on the approach, hold-off; needed badly once collision makes tight fits hard by finger | `APPROACH_AND_MATE.md` |
 | 5 | **`GM9`** | **THE PLAYER LAYER IN THE SCENE** — a clean player HUD (episodes, time, par, level) with the debug HUD behind a toggle; held / blocked / correct-target cues for a player rather than a developer; first-level gesture hints; sound and haptics (snap, block, undo, complete); the level in progress saved (IndexedDB) | §4 below |
@@ -62,8 +62,9 @@ face wherever the cursor sits; a level's target says *this* face of *this* part 
 3. **the completion detector** — every target couple mated, read from the model every frame;
 4. **level end** — the clock and the count stop, the result is shown (`GM5` scores it).
 
-⏸ **DEFERRED BY THE OWNER** (2026-09-27: *"we will see mate and spin later on. Just capture in md
-files"*) — two questions to answer before `GM1` builds the mate check:
+✅ **ANSWERED BY `D143`** (below) — the mate is ONE act at the dissolve, and items 1–3 above are
+`core/goal.ts` rather than a mate check. ⚠ The two questions as they were deferred (2026-09-27: *"we
+will see mate and spin later on. Just capture in md files"*):
 1. does a couple seated on the right faces but at the wrong SPIN show as wrong?
 2. once the spin is right, does the mate LOCK it, or leave it free until the level ends?
 
@@ -81,6 +82,25 @@ face or its opposite (four half-turns), read on the HUD's score line → `SCENE_
 couple, its highlights and its cursor disappear, the piece stays put, and a pop-up says so (§4.1 for
 making it better). `input/goal_dissolve.ts` over `core/goal.ts`'s verdict (now naming the pieces in
 place). ✅ 4 vectors. ⛔ Unjudged.
+
+⭐⭐ **`D143`, 2026-09-28 — THE MATE** (the owner: *"complete D142 by adding a mate which orients the spin
+to the correct angle at the moment the follower-pioneer is dissolved. That will be it."*). The goal
+accepts a piece within `goalAngleTolDeg` (5°); at the dissolve the leftover error about the FollowerFace
+normal — the one DOF the snap leaves free — is removed, so the piece sits on its goal spin exactly.
+`mateSpin` (`input/goal_dissolve.ts`) turns by the TWIST part only (a swing–twist split), through the
+face centre: the face stays flush and on its spot; a tilt in the error is left to the snap. The target is
+the NEAREST accepted orientation, carried by the relative fit (`GoalReport.targetOrientations`).
+⭐⭐ **A FACE OR ITS OPPOSITE — IN `Scene_1` ONLY** (the owner: *"a face and its opposite face can snap and
+meet the goal so the mate shall take that into account in this specific scene (this will not be true in
+all the scenes)"*): a piece seated by its opposite face mates onto the HALF-TURN, never flipped back. ⭐ It
+is scene DATA, not a rule: the half-turns are accepted only for a goal body carrying `symmetry:
+"halfTurns"` (`Scene_1`'s five pieces); without it a flipped piece is not in place, so it never dissolves
+nor mates. ⚠ Written
+without collision, like the alignment turn (≤ 5°). ⭐ So §2's two questions: a wrong spin reads *not in
+place* (the goal check's angle); a right one is SET, then the piece is free. ⛔ Not built, by *"that will be
+it"*: a mate check apart from `goal.ts`, a spin lock, `mateResidual`. ✅ 7 vectors; five mutants RED
+(no mate, full turn, sign, the symmetry ignored, body centre — the last survived a face centre on the body's axis until moved
+off it). ⛔ Unjudged.
 ## 3. The play volume
 
 Nothing keeps a part inside the scene today: it can be dragged off-screen, far behind the camera,
