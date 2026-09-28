@@ -44,7 +44,7 @@ one exception: a plate with a part SEATED on it is holdable by the first touch �
 past the plane of its bottom face; it is neither drawn nor picked, so a press reaches what is behind it
 (`D128`, which reverses `D121`'s see-through; no slider).
 ⭐ **Edge-on** (camera within 5° of level, HUD `⛔EDGE-ON`): the holder's `dy` drives **blue alone**,
-finger up = **away from the camera**, read along camera → gizmo (from below: toward), and `dx` drives red (`D127`, `D132`).
+finger up = **away from the current camera** (from below: toward), and `dx` drives red (`D127`).
 ⛔ **No white highlights any more** (`D120`): the white capture contour and shell, and the camera swing
 on entering the capture zone, are deleted.
 

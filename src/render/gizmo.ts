@@ -43,30 +43,6 @@ return rotationFrame({
 // ObjectAxes>` here, written only at the zone's edges; with the in-zone basis deleted nothing
 // writes it, so it is gone rather than left to look like state.
 // ⭐ The zone is deleted too (`D120`); the axes are the boot ones below.
-/**
- * ⭐⭐ **WHERE THE GIZMO SITS** — the FollowerFace's centre, else the body's own (see the owner's
- * words in `refreshAxisGizmo`). ⭐ ONE definition: the gizmo is drawn here, and `D132`'s *away* is
- * read from the camera to this same point. `null` for a body the model cannot place.
- */
-export function gizmoAnchor(st: SceneState, id: ObjectId): Vec3 | null {
-  const followerFaceId = alignedFaceOf(st.world, id);
-  return (
-    (followerFaceId === null ? null : faceWorld(st.world, id, followerFaceId)?.centre) ??
-    worldPlacementOf(st.world, id)?.position ??
-    null
-  );
-}
-
-/**
- * ⭐ `D132`: the camera to the gizmo's anchor, world metres — the line *away* is read along.
- * ⚠ A body the model does not know (no id) is read at its mesh's position.
- */
-export function cameraToGizmo(st: SceneState, id: ObjectId | undefined, meshAt: Vec3): Vec3 {
-  const a = (id === undefined ? null : gizmoAnchor(st, id)) ?? meshAt;
-  const c = st.camera.position;
-  return [a[0] - c.x, a[1] - c.y, a[2] - c.z];
-}
-
 export function axesOf(st: SceneState) : ObjectAxes {
   // ⭐⭐ `D109`: the boot camera's axes, fixed for the scene, are the ONLY axes — `worldAxisB = 0`
   // (the live camera's) is deleted with its flag.
@@ -310,8 +286,12 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // marker.*
     // ⚠ The FollowerFace is preferred because it is the face the body is being assembled BY, so
     // the axes are drawn where a hand is already looking.
+    const followerFaceId = alignedFaceOf(st.world, id);
     const centre = worldPlacementOf(st.world, id)?.position ?? null;
-    const anchor = gizmoAnchor(st, id);
+    const anchor =
+      (followerFaceId === null
+        ? null
+        : faceWorld(st.world, id, followerFaceId)?.centre) ?? centre;
     // ⛔ NO STAND-IN. A body the model cannot place shows no gizmo, exactly as a `⛔NOSHAPE` body
     // gets no outline — suppress rather than substitute.
     if (!anchor) continue;
