@@ -35,6 +35,8 @@ export interface GoalTolerance {
 export interface GoalReport {
   readonly met: boolean;
   readonly inPlace: number;
+  /** ⭐ `D142`: WHICH bodies are in place — `inPlace` is its length. */
+  readonly inPlaceIds: readonly string[];
   readonly total: number;
   /** ⭐ The body furthest out, measured against the tolerances; `null` when none is listed. */
   readonly worstId: string | null;
@@ -150,7 +152,7 @@ export function goalReport(
     now: poseOf(b.id),
   }));
   const total = goals.length;
-  if (total === 0) return { met: false, inPlace: 0, total, worstId: null, worstPositionM: 0, worstAngleRad: 0 };
+  if (total === 0) return { met: false, inPlace: 0, inPlaceIds: [], total, worstId: null, worstPositionM: 0, worstAngleRad: 0 };
   let rotation: Quat = IDENTITY;
   let translation: Vec3 = [0, 0, 0];
   const present = goals.filter((g) => g.now !== null);
@@ -178,7 +180,7 @@ export function goalReport(
         1 / present.length,
       );
   }
-  let inPlace = 0;
+  const inPlaceIds: string[] = [];
   let worst: { id: string; p: number; a: number; score: number } | null = null;
   for (const g of goals) {
     if (!g.now) {
@@ -188,13 +190,14 @@ export function goalReport(
     const expected = add(qRotate(rotation, g.at), translation);
     const p = length(sub(g.now.position, expected));
     const a = Math.min(...g.accepted.map((q) => qAngle(qmul(g.now!.orientation, qconj(qmul(rotation, q))))));
-    if (p <= tol.positionM && a <= tol.angleRad) inPlace++;
+    if (p <= tol.positionM && a <= tol.angleRad) inPlaceIds.push(g.id);
     const score = Math.max(p / Math.max(tol.positionM, 1e-12), a / Math.max(tol.angleRad, 1e-12));
     if (!worst || score > worst.score) worst = { id: g.id, p, a, score };
   }
   return {
-    met: inPlace === total,
-    inPlace,
+    met: inPlaceIds.length === total,
+    inPlace: inPlaceIds.length,
+    inPlaceIds,
     total,
     worstId: worst?.id ?? null,
     worstPositionM: worst?.p ?? 0,

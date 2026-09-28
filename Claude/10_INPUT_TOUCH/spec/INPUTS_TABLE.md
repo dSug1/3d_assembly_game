@@ -39,7 +39,9 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 within the capture offset of its PioneerFaceCursor, normals within the **snap cone angle**, lerps
 onto it and is seated (`D100`). ⭐⭐ **And the drag that made the seat STOPS** (`D139`): a finger holding the
 Follower drives nothing more — no translation, lift, pinch-zoom or tap — **except the roll** (the second
-finger's `dx`), until it lifts or the click is released.
+finger's `dx`), until it lifts or the click is released. ⭐⭐ **And a seated piece that is in its GOAL pose lets go of its
+Pioneer** (`D142`): the couple, its highlights and its cursor disappear, the piece stays where it is, and a pop-up
+says *reached its goal*.
 ⚠ A frozen body (the plate): EVERY press on it is a miss (`D119`) — a first touch drives the camera,
 a second touch drives the held body's gravity / roll; only a TAP on it names it as a Pioneer. ⭐ The
 one exception: a plate with a part SEATED on it is holdable by the first touch — the unsnap's.

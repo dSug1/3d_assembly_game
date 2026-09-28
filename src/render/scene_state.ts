@@ -478,6 +478,9 @@ export interface SceneState {
   lastFrameMs: number | null;
   /** ⭐ The frame meter — the HUD's `frame` line (median and p95 of recent frames). */
   frameMeter: FrameMeter;
+  /** ⭐ `D142`: the goal pop-up's element (made on first use) and its fade timer. */
+  goalPopupEl?: HTMLDivElement;
+  goalPopupTimer?: ReturnType<typeof setTimeout>;
   /** ⭐ `D138`: AUTO shadows' verdict — `null` while measuring — and when that measurement began. */
   autoShadow: "ON" | "OFF" | null;
   autoShadowArmedAt: number;

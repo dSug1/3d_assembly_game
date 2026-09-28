@@ -77,6 +77,10 @@ completed configuration'"* — not as couples: `SceneDescriptor.final` holds eac
 face or its opposite (four half-turns), read on the HUD's score line → `SCENE_1.md` §8. ⚠ It judges POSES;
 §2's mate and spin questions stay deferred.
 
+⭐⭐ **`D142`, 2026-09-28 — a seated follower in its goal pose lets go of its Pioneer** (the owner): the
+couple, its highlights and its cursor disappear, the piece stays put, and a pop-up says so (§4.1 for
+making it better). `input/goal_dissolve.ts` over `core/goal.ts`'s verdict (now naming the pieces in
+place). ✅ 4 vectors. ⛔ Unjudged.
 ## 3. The play volume
 
 Nothing keeps a part inside the scene today: it can be dragged off-screen, far behind the camera,
@@ -93,6 +97,34 @@ not a part pushed away over many).
 * Nothing teaches a gesture: the second finger lifts, a double tap undoes, the edge band exists.
 * Sound and haptics are absent: snap, block, undo and level complete first.
 * A backgrounded phone tab loses the level: save it in progress.
+
+### 4.1 ⭐⭐ The goal pop-up — built plain on purpose, to be made better (`D142`, 2026-09-28)
+
+> *"when dissolve on goal, make a pop up in the HUD so the user can see one piece has reached its goal.
+> write in the md file to make this pop up better later on for more game interactivity"* — the owner
+
+✅ **What exists** (`render/goal_popup.ts`): a green rounded box, centred at 22 % from the top, *"✅
+PieceN reached its goal · 37/41"*, 2.2 s then a 0.5 s fade; a new one replaces the one showing; it never
+takes a touch. ⛔ It is the ONLY player-facing cue for the goal, and it is text.
+
+⭐ **To make it better — the ideas to weigh, not decided:**
+1. **On the piece, not only on the screen** — a short glow / pulse of the piece's own contour, or a
+   ring that expands from it, so the eye is already where the event happened.
+2. **The count as progress** — a bar or a ring filling toward the level (`N/41`), with the LAST piece
+   and the level end (`GM1`'s level end, `GM5`'s score) as a bigger moment: episodes against the par,
+   time, a bonus when the optimum is equalled (`SCORE.md`).
+3. **Sound and haptics** — a short chime; on iOS a native haptic (`IN7`: web-iOS has no Vibration
+   API — Capacitor's plugin), a light vibration on Android.
+4. **Streaks and combos** — pieces placed in a row without an undo, or quickly, as a reason to play
+   better (only if the score model agrees — `SCORE.md` counts episodes, not speed bonuses).
+5. **Wording and language** — the piece's NAME (`Piece10`) means nothing to a player: a colour /
+   shape word, or none, and localisation.
+6. **Accessibility** — contrast, a size that reads on a phone, reduced motion honoured
+   (`prefers-reduced-motion`), and never covering the piece just placed.
+7. **Placement** — away from the finger that made the move (it is often at the top of the screen on a
+   tablet held in two hands).
+⚠ Whatever is chosen: the cue must come from the SAME verdict that dissolves the couple
+(`core/goal.ts`), never from a second detector — a cue that disagrees with the rule is worse than none.
 
 ## 5. Debt that bounds all of it
 
