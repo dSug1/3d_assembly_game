@@ -998,3 +998,6 @@ over a pose sweep).
 directions with no `dy` ZOOM, and the translation and roll pause — latched until a finger lifts
 (`METHOD`'s motion-mode rule, mitigated by the latch). `input/hold_pinch.ts` → alignment spec §17,
 `INPUTS_TABLE.md`. ✅ 6 vectors. ⛔ Unjudged.
+
+⭐ **`D137` amended, same day**: the zoom now ENDS as soon as either finger's deadbanded `dy` is not zero
+(it was latched until a lift) — a toggle on `motionDeadbandMm` both ways. ✅ 2 vectors.

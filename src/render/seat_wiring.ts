@@ -236,6 +236,14 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
     st.world = attach(st.world, step.id, cur.pioneerId);
     if (st.world.objects.get(step.id)?.parent === cur.pioneerId && st.links.seat(step.id)) {
       st.lastVerdict = `snap: ${step.id} SEATED on ${cur.pioneerId}/${cur.pioneerFaceId}`;
+      // ⭐⭐ `D139`: the drag that made the seat STOPS here — a grip holding the Follower keeps the
+      // roll alone until its finger lifts (`input/seat_lock.ts`).
+      for (const g of st.held.values()) {
+        if (st.idOf.get(g.mesh) === step.id && !g.seatLocked) {
+          g.seatLocked = true;
+          st.lastVerdict += " — translation stopped: lift the finger (roll still free)";
+        }
+      }
     } else {
       st.lastVerdict = `snap: ${step.id} could not be seated on ${cur.pioneerId} (refused)`;
     }

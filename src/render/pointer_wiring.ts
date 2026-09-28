@@ -23,6 +23,7 @@ import { beginGesture, endGesture, undoLast } from "./undo_wiring";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { nextDxSign } from "../input/hold_pinch";
+import { seatLockAllows } from "../input/seat_lock";
 import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
@@ -346,6 +347,7 @@ export function installPointerHandler(st: SceneState): void {
         holderDxSign: 0,
         anchorDxSign: new Map(),
         holdPinch: null,
+        seatLocked: false,
         depthSway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -501,7 +503,8 @@ export function installPointerHandler(st: SceneState): void {
           st.router.objects().length === 1 ? st.router.objects()[0] : undefined;
         const heldGrip = soleHolder ? st.held.get(soleHolder.id) : undefined;
         const heldId = heldGrip ? st.idOf.get(heldGrip.mesh) : undefined;
-        const isTap = isTapRelease(
+        // ⭐ `D139`: a locked grip takes no tap meaning — no align, unalign, release or toggle.
+        const isTap = seatLockAllows(heldGrip?.seatLocked === true, "TAP") && isTapRelease(
           routed.pressed.t,
           routed.pressed.x,
           routed.pressed.y,
@@ -646,6 +649,12 @@ export function installPointerHandler(st: SceneState): void {
         )
           ? "TRANSLATE"
           : "ROTATE";
+      }
+      // ⭐⭐ `D139`: a grip whose Follower just SEATED drives nothing with this finger until it lifts.
+      if (!seatLockAllows(grip.seatLocked, grip.mode === "ROTATE" ? "ROTATE" : "TRANSLATE")) {
+        grip.prev = s;
+        st.hudDirty = true;
+        return;
       }
       // ⭐⭐ THE SYMPATHETIC SWAY. Three triggers, all of them a CHANGE OF INTENT: the
       // finger starts or resumes moving, the gesture becomes a translation mid-rotation,

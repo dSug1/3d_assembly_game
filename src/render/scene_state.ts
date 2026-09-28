@@ -282,11 +282,16 @@ export interface Held {
   /** ⭐ `D137`: each second finger's latest sideways direction, by press order. */
   anchorDxSign: Map<number, -1 | 0 | 1>;
   /**
-   * ⭐⭐ `D137`: the LATCHED hold-pinch — the second finger's `seq`, its zoom tracker and the zoom it
-   * started from — or `null`. ⛔ Set once, cleared only when a finger lifts (`METHOD`: a mode keyed on
-   * motion must not be re-decided every frame).
+   * ⭐⭐ `D137`: the running hold-pinch — the second finger's `seq`, its zoom tracker and the zoom it
+   * started from — or `null`. ⭐ Set on a sideways pinch with both deadbanded `dy` zero; cleared as soon
+   * as either `dy` is not (amended), or when a finger lifts.
    */
   holdPinch: { readonly seq: number; readonly tracker: PinchTracker; readonly zoomAtStart: number } | null;
+  /**
+   * ⭐⭐ `D139`: this grip's Follower has just SEATED — every channel is refused but the roll until the
+   * finger lifts (the lock dies with the grip). ⛔ Set by the landing only (`seat_wiring.ts`).
+   */
+  seatLocked: boolean;
   /**
    * ⭐⭐ **WHICH WAY `dx` TWISTS AN ALIGNED BODY -- latched once per grip** (2026-09-22).
    * ⛔ The same doctrine as `anchorRollSign` one channel over: recomputed per frame the sign
