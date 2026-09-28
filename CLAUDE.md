@@ -62,7 +62,9 @@ read every frame** (it was stale — written only by a drag); both scenes BOOT i
 zero-clearance slots were unreachable (a piece stopped 33 mm short; a snap landing flush on a third body
 was cancelled); the skin is now how far a body may sink into another, its slider relabelled in OBJECT
 TRANSLATION → `COLLISION.md` §9. ⭐⭐ **`D137`: while translating, two fingers moving sideways apart or
-together (no `dy`) ZOOM** — translation and roll paused, latched until a finger lifts → `ALIGNMENT_RULES.md` §17.
+together (no `dy`) ZOOM** — translation and roll paused, latched until a finger lifts → `ALIGNMENT_RULES.md` §17. ⭐⭐ **`D138`: AUTO SHADOWS** — the default; shadows go OFF
+for the session when the device measures a median frame over 33 ms with them (the tablet: 10 → 20 fps) →
+`40_RENDER_SCENE/INDEX.md`.
 
 ⭐⭐ **THE FOURTH PASS** (`D121`–`D124`, branch `1.0.41-Mondrian`, ⛔ unjudged by a hand): a **frozen body
 seen from below turned see-through** (⛔ reversed by `D128`); `Scene_1`'s **floor is 21.116236 units**
@@ -170,7 +172,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1215 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1219 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that

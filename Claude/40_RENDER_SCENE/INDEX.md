@@ -199,6 +199,12 @@ quietly would cost the next device session.
 ⭐ **Fork C's wiring** (2026-09-16, what the old `scene.ts` owned of `D37`) →
 [`history/2026-09-26_index_essays_moved.md`](history/2026-09-26_index_essays_moved.md).
 
+⭐⭐ **The frame meter and AUTO shadows** (`D138`, 2026-09-28; the tablet ran `Scene_1` at 10 fps, 20 without
+shadows): the HUD's `frame` line is the median and p95 of the last 120 frames (`core/frame_meter.ts`);
+CAMERA's *shadows* is `0` off, `1` on, `2` **auto** (default) — on, measured for 3 s, then OFF for the
+session if the median misses `autoShadowBudgetMs` (33 ms) (`core/auto_shadow.ts`). Latched: re-measuring
+without shadows would flip it back.
+
 ## Queued
 
 `RND1` constraint glyphs (hard vs soft) · `RND2` mate preview ghost + drop line ·

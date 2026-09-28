@@ -5,6 +5,8 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { hiddenFromBelow } from "../core/underside";
+import { autoShadowVerdict } from "../core/auto_shadow";
+import { FrameMeter } from "../core/frame_meter";
 import { pruneCollisionGrace } from "./collision_wiring";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
@@ -575,8 +577,28 @@ export function startRenderLoop(st: SceneState): void {
     }
     // ⭐ The shadow switch (shadowsOn, CAMERA): three soft shadow maps redraw every piece each frame
     // in `Scene_1` — the slider measures what that costs on a weak GPU. ⚠ Written on change only.
+    // ⭐⭐ `D138`: 2 = AUTO — shadows ON while the device is measured, then the verdict, once.
     {
-      const on = st.cfg.shadowsOn === 1;
+      const mode = st.cfg.shadowsOn;
+      if (mode !== st.shadowModeSeen) {
+        // ⭐ Set (back) to auto: a FRESH measurement, with the shadows on — the old frames were taken
+        // under another setting and would decide for the wrong one.
+        st.shadowModeSeen = mode;
+        if (mode === 2) {
+          st.autoShadow = null;
+          st.autoShadowArmedAt = now;
+          st.frameMeter = new FrameMeter();
+        }
+        st.hudDirty = true;
+      }
+      if (mode === 2 && st.autoShadow === null) {
+        const v = autoShadowVerdict(st.frameMeter.stats(), now - st.autoShadowArmedAt, st.cfg.autoShadowBudgetMs);
+        if (v !== null) {
+          st.autoShadow = v;
+          st.hudDirty = true;
+        }
+      }
+      const on = mode === 1 || (mode === 2 && st.autoShadow !== "OFF");
       if (st.scene.shadowsEnabled !== on) st.scene.shadowsEnabled = on;
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
@@ -608,9 +630,10 @@ export function startRenderLoop(st: SceneState): void {
         el.height = `${Math.max(0, r.height - 2 * b)}px`;
       }
     }
-    // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame.
-    const second =
-      st.sceneStartMs === null ? 0 : Math.floor((performance.now() - st.sceneStartMs) / 1000);
+    // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame. ⛔ On the wall clock, not the
+    // score's: counted from the first press, it never ticked before a touch — and the `frame` line
+    // (and `D138`'s shadow verdict) sat at `—` on an untouched page.
+    const second = Math.floor(performance.now() / 1000);
     if (second !== st.hudSecond) {
       st.hudSecond = second;
       st.hudDirty = true;

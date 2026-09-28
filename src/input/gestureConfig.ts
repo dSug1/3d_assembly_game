@@ -272,10 +272,13 @@ export interface GestureConfig {
    */
   pieceContourAlpha: number;
   /**
-   * ⭐ `1` draws the scene's shadows, `0` skips them — a switch to MEASURE their cost on a weak GPU
-   * (the owner, 2026-09-28: `Scene_1` slow on the tablet). Only a scene with lighting casts any.
+   * ⭐ The scene's shadows: `0` off, `1` on, `2` **AUTO** (`D138`) — on, unless the device measures
+   * too slow for them after boot (median frame time over `autoShadowBudgetMs`), then off for the
+   * session. Only a scene with lighting casts any. (The owner, 2026-09-28: 10 fps → 20 fps without.)
    */
   shadowsOn: number;
+  /** ⭐ `D138`: the median frame time, ms, a device must beat to keep AUTO shadows — 33 ≈ 30 fps. */
+  autoShadowBudgetMs: number;
   /**
    * ⭐ `D130`: how far, in WORLD metres, a body's centre may sit from its goal and still count.
    * ⚠ A tolerance on the scene's geometry, not a touch threshold — rule 3's screen millimetres do
@@ -760,8 +763,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   edgeBandMm: 6,
   // ⚠ A guess with a slider: faint enough to keep the gap between the cores, visible enough to show the faces.
   pieceContourAlpha: 0.1,
-  // ⭐ On, as the scene was authored; the slider is the instrument.
-  shadowsOn: 1,
+  // ⭐ `D138`: AUTO — the device's own frame time decides, once, after boot.
+  shadowsOn: 2,
+  // ⚠ A judgement with a slider: 30 fps is where a touch drag stops feeling direct.
+  autoShadowBudgetMs: 33,
   // ⚠ Guesses with sliders: 5 mm is under the width of `Scene_1`'s thinnest piece (10 mm) and above
   // its core gap (3 mm); 5° is well under what the eye reads as crooked.
   goalPositionTolM: 0.005,
@@ -985,8 +990,11 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.goalAngleTolDeg > 0 && cfg.goalAngleTolDeg <= 45)) {
     throw new Error(`goalAngleTolDeg (${cfg.goalAngleTolDeg}) must be in (0, 45]°: past 45 a box's half-turns overlap.`);
   }
-  if (cfg.shadowsOn !== 0 && cfg.shadowsOn !== 1) {
-    throw new Error(`shadowsOn (${cfg.shadowsOn}) must be 0 or 1: it is a switch.`);
+  if (cfg.shadowsOn !== 0 && cfg.shadowsOn !== 1 && cfg.shadowsOn !== 2) {
+    throw new Error(`shadowsOn (${cfg.shadowsOn}) must be 0 (off), 1 (on) or 2 (auto, D138).`);
+  }
+  if (!(cfg.autoShadowBudgetMs > 0 && cfg.autoShadowBudgetMs <= 200)) {
+    throw new Error(`autoShadowBudgetMs (${cfg.autoShadowBudgetMs}) must be in (0, 200] ms: a median frame time.`);
   }
   if (!(cfg.pieceContourAlpha >= 0 && cfg.pieceContourAlpha <= 1)) {
     throw new Error(`pieceContourAlpha (${cfg.pieceContourAlpha}) must be in [0, 1]: it is an opacity.`);

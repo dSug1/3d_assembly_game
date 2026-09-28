@@ -89,8 +89,9 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
         tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
-        // ⭐ Measure what the shadows cost: watch the HUD's `frame` line while flipping it.
-        tunable(st, "shadows (1 = on, 0 = off)", "shadowsOn", 0, 1, 1),
+        // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.
+        tunable(st, "shadows (0 = off, 1 = on, 2 = auto)", "shadowsOn", 0, 2, 1),
+        tunable(st, "auto shadows: frame budget (ms, median)", "autoShadowBudgetMs", 10, 100, 1),
       ],
       subsections: [
         {
