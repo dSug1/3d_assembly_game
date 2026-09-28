@@ -978,3 +978,7 @@ refused: *"I cannot disrupt the user feeling by changing the axis of translation
 ⭐ Literature: Blender's `axisProjection` (below 5°, `axis × −factor` from the mouse's vertical)
 binds the sign to the axis's orientation — the same defect; Au, Tai & Fu (CGF 2012) disallow an
 axis near the view direction outright. ⛔ Unjudged by a hand.
+
+⭐⭐ **`D132`, same day**: still reversed on the phone with the body off-centre (Piece10, blue nearly
+square to the view). ⛔ `D127` read *away* along the view; now along camera → gizmo anchor
+(`gizmoAnchor`, the owner's suggestion). ✅ 1 vector with its counter-example beside it. ⛔ Unjudged.

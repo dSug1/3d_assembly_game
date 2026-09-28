@@ -74,6 +74,10 @@
  * at the BOOT camera: past a quarter-orbit it brought the body toward the camera. ⭐ Now the holder's
  * `dy` drives **blue alone** and its sign is `blue · viewDepth` — so the axis never changes, only
  * which of its two ends is *away*. ⚠ A camera orbit re-reads it; a finger mid-drag cannot orbit.
+ * ⭐⭐ **`D132`** (the owner, the same day: *"compute the camera position vs. the center of the gizmo,
+ * not the camera position in absolute world coordinates"*): *away* is read along the line from the
+ * camera to the GIZMO's anchor, not along the view — the body's distance from the camera is what
+ * must grow, and for a body off the screen's centre the two directions part.
  * ⭐ **Blender has the same flaw**: `axisProjection`'s view-parallel branch moves along
  * `axis × −factor` whatever the axis's orientation, so mouse-up is *away* only when the axis
  * points at the viewer. ⚠ **Cost, stated**: at a quarter-orbit blue is square to the view, *away*
@@ -202,9 +206,9 @@ const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
  *   the exact mapping is abandoned for the fixed-rate push. ⭐ **5° is Blender's own number**
  *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
  *   is how to see the runaway a hand is being protected from.
- * @param view the camera's `GravityFrame` — ⛔ only read inside the cone, where it is the
- *   fixed-rate push's sign: `depth` (the view flattened onto the ground) says which end of blue
- *   is *away* (`D127`), and `towardGravity` (+1 looking down, −1 looking up) flips it from below.
+ * @param view ⛔ only read inside the cone, where it is the fixed-rate push's sign: `toAnchor` —
+ *   the camera to the GIZMO's anchor — says which end of blue is *away* (`D132`), and
+ *   `towardGravity` (+1 looking down, −1 looking up, `GravityFrame`'s) flips it from below.
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -214,7 +218,7 @@ export function axisTravel(
   holderGain: number,
   secondGain: number,
   coneDeg: number,
-  view: { readonly depth: Vec3; readonly towardGravity: number },
+  view: { readonly toAnchor: Vec3; readonly towardGravity: number },
 ): AxisTravel {
   const sx = screenShadow(axes.x, camera);
   const sd = screenShadow(axes.depth, camera);
@@ -263,9 +267,11 @@ export function axisTravel(
   // finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the picture is
   // symmetric and no sign is derivable; *fingers-up = away* is the convention, continuous with
   // the camera looking even slightly down.
-  // ⭐⭐ `D127`: and *away* is THIS camera's — which end of blue points into the view. ⚠ At a
-  // quarter-orbit blue is square to the view and the dot is 0: `+blue`, by convention.
-  const blueAway = Math.sign(finite(dot(axes.depth, view.depth))) || 1;
+  // ⭐⭐ `D127`/`D132`: and *away* is THIS camera's — which end of blue takes the body FARTHER from
+  // it, read from the camera to the gizmo's anchor. ⛔ Not along the view: a body off the screen's
+  // centre is off the view axis, and near a quarter-orbit the two disagree in sign. ⚠ Blue exactly
+  // square to that line: `+blue`, by convention.
+  const blueAway = Math.sign(finite(dot(axes.depth, view.toAnchor))) || 1;
   const awaySign = (Math.sign(finite(view.towardGravity)) || 1) * blueAway;
   const fallbackDepth = -dy * holderGain * awaySign;
 
