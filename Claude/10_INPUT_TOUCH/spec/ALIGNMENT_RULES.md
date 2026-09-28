@@ -2038,3 +2038,25 @@ makes the body's DISTANCE from the camera grow. ⭐ The anchor is `gizmoAnchor` 
 the FollowerFace centre else the body's), one definition for where the gizmo is drawn and where
 *away* is read. ✅ A vector at 92° with the body 0.4 m off-axis: the distance grows, and `D127`'s
 reading, run beside it, shrinks it.
+
+⛔⛔ **`D133` — the same day** (*"When the camera is below the gizmo center, can you invert the finger
+dy input so that there is consistency with when camera is above"*): fingers-up is **away** from below
+as from above. The `sign(towardGravity)` flip in the cone — 2026-09-16's finger-found fix for *"the
+depth translation is chaotic"* on the bottom ring — is deleted, and `axisTravel`'s `view` is only
+`toAnchor` now. ⚠ **Cost, stated and vectored**: outside the cone exact tracking still brings a body
+TOWARD a camera looking up when the finger goes up, so from below the push reverses as the camera
+crosses the cone's 5° edge. From above nothing changes.
+
+⭐ **`D134` — the readout, the same day** (*"when i click an object, most of the time the axis indicate
+'edge-on', whatever the camera orbit is"*). ⛔ The HUD's `⛔EDGE-ON` was written only by a translating
+finger, so a click or an orbit left the last drag's answer showing. ⭐ Edge-on is the CAMERA's (the
+area the horizontal axes span on screen is `sin(pitch)`), so `planeEdgeOn` is one pure function,
+read by `axisTravel` for its branch and by the render loop every frame for the HUD — swept over
+poses, the two agree. ⚠ **And most of it was TRUE**: both scenes boot within the band (`Scene_0`
+−1.6°, `Scene_1` −0.6°, its `LEVEL` view), a yaw orbit never changes pitch, and `Scene_1`'s rig
+spans only −18°…+17°, 16 % of its elevation range edge-on. Leaving it takes a VERTICAL orbit.
+
+⚠⚠ **`D133` REVERTED, the same day, at the owner's request — never shipped.** The `sign(towardGravity)`
+flip is back: seen from below, finger up brings the body TOWARD the camera, continuous with exact
+tracking outside the cone (2026-09-16's finger-found fix). `D132`'s camera → gizmo reading and
+`D134`'s readout stand.

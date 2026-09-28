@@ -502,7 +502,7 @@ export function createScene(
    * moved"* are one symptom with two causes, and the camera pose is what separates them.
    */
   st.lastTrackGain = 0;
-  st.lastEdgeOn = false;
+  st.edgeOnNow = false;
 
   // ⛔ `CameraOffsetZoneEnter`, its flag and the zone ENTER/EXIT state are deleted (`D109`/`D120`).
   st.axisGizmos = new Map<ObjectId, AxisGizmo>();

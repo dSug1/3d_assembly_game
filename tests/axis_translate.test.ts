@@ -21,6 +21,7 @@ import {
   type AxisInputsPx,
   type CameraScreenAxes,
   displayedAxes,
+  planeEdgeOn,
   soleGizmoBody,
 } from "@input/axis_translate";
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
@@ -302,8 +303,26 @@ describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
     }
   });
 
-  it("⚠ the RATE steps at the boundary, and the step is stated rather than hidden", () => {
-    // ⛔ Just outside the cone the exact mapping is buying `1/sin(5°)` ≈ 11× the tracking factor;
+  it("⭐⭐ `D134`: the HUD's EDGE-ON is the CAMERA's — `planeEdgeOn` needs no drag, and it IS the rule's branch", () => {
+    // > *"when i click an object, most of the time the axis indicate 'edge-on', whatever the camera
+    // > orbit is"* — the owner, 2026-09-28. ⛔ The readout was written only by a translating finger,
+    // so a click or an orbit left the last drag's answer showing. ⭐ Now it is a function of the
+    // camera alone — and, swept over every pose, it agrees with `axisTravel`'s own branch, so the
+    // readout can never say one thing while the rule does another.
+    const axes = axesFromFrame(camera(0, 30).gravity);
+    for (const az of [0, 35, 90, 143, 218, 300])
+      for (const el of [-20, -5.5, -4.5, -1, 0, 1, 4.5, 5.5, 12, 45]) {
+        const c = camera(az, el);
+        const edge = planeEdgeOn(c.screen, axes, CONE);
+        expect(edge).toBe(Math.abs(el) < CONE);
+        expect(run({ holderDyPx: -10 }, c, axes).edgeOn).toBe(edge);
+      }
+    // ⭐ The slider moves it: at a 0° cone nothing is edge-on but an exactly level camera's degeneracy.
+    expect(planeEdgeOn(camera(35, 2).screen, axes, 0)).toBe(false);
+    expect(planeEdgeOn({ right: [0, 0, 0], up: [0, 1, 0] }, axes, CONE)).toBe(false);
+  });
+
+  it("⚠ the RATE steps at the boundary, and the step is stated rather than hidden", () => {    // ⛔ Just outside the cone the exact mapping is buying `1/sin(5°)` ≈ 11× the tracking factor;
     // inside it the fallback buys 1×. ⭐ Neither produces visible SCREEN motion there, which is
     // why this is a cost and not a defect — but a vector says the number out loud.
     const axes = axesFromFrame(camera(0, 30).gravity);
