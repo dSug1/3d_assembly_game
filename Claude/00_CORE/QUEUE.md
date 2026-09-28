@@ -23,8 +23,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1169 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → **1169**, `D127`/`D128`; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1195 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → **1195**, `D127`–`D131`; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -335,7 +335,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
-| GM1 | Final-configuration data per scene + the MATE check (spin) + its detector + level end (build #2) | GAME | feature | ⛔ **NEXT**; ⏸ mate/spin questions deferred → `PLAYABILITY` §2 | 3D6 |
+| GM1 | Final-configuration data per scene + the MATE check (spin) + its detector + level end (build #2) | GAME | feature | ⛔ **NEXT**; 🔧 the DATA and the DETECTOR are built — `Scene_1`'s goal is its table (`D129`), met relative to each other, a box's face or its opposite (`D130`, HUD); ⛔ level end not built; ⏸ mate/spin deferred → `PLAYABILITY` §2, §2.1 | 3D6 |
 | GM2 | The touch ledger on the HUD | GAME | feature | ✅ built (`D112`, `D115`) | — |
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |

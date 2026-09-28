@@ -71,7 +71,12 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐⭐ The owner, 2026-09-27: *"toggle with a slider between Scene_0 and Scene_1. When the slider
       // is toggled, the corresponding scene boot from beginning."* ⛔ A RELOAD, not a swap: the page
       // comes back on `?sceneIndex=N`, so nothing of the other scene survives.
-      sliders: [sceneSlider(st)],
+      sliders: [
+        sceneSlider(st),
+        // ⭐ `D130`: how near a body must sit to its goal (world mm here, stored in metres).
+        tunable(st, "goal position tolerance (m)", "goalPositionTolM", 0.001, 0.05, 0.001),
+        tunable(st, "goal angle tolerance (°)", "goalAngleTolDeg", 1, 45, 1),
+      ],
     },
     {
       title: "CAMERA",
@@ -89,11 +94,11 @@ export function installTuningMenu(st: SceneState): void {
         {
           title: "CAMERA ORBIT",
           sliders: [
-            tunable(st, "top radius (m)", "orbitTopRadiusM", 0, 1.5, 0.01),
+            tunable(st, "top radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
             tunable(st, "top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
-            tunable(st, "middle radius (m)", "orbitMiddleRadiusM", 0, 1.5, 0.01),
+            tunable(st, "middle radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
             tunable(st, "middle height (m)", "orbitMiddleHeightM", -1.5, 1.5, 0.01),
-            tunable(st, "bottom radius (m)", "orbitBottomRadiusM", 0, 1.5, 0.01),
+            tunable(st, "bottom radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
             tunable(st, "bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
             // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
             tunable(st, "centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),

@@ -95,3 +95,59 @@ bars crossed). ⚠ The first table's disagreements with the brief (42 vs 41 piec
 * ⛔⛔ **IT EXPOSED A HOLE IN `3D6`** (found by a headless drag, not a hand): a pair that STARTS in
   contact read GJK's `0` before and after any push, so *"may not come closer"* let a piece walk
   through the bar beside it. Fixed in `core/collision.ts` → `COLLISION.md` §8.
+
+## 7. ⭐⭐⭐ The goal and the boot (`D129`)
+
+> *"current configuration of parts is 'level completed configuration', therefore the target the user
+> has to achieve in minimum touchpoint episodes and time · scene boot configuration: reproduce the
+> pieces transforms as in the snapshot (just change the transform of the couple of pieces which have
+> changed, the rest and the camera stay unchanged)"* — the owner, 2026-09-28, with a phone snapshot
+
+* **The goal** is the table of §4, square: `SCENE_1_FINAL`, the scene's `final` (`GM1`'s data; the
+  floor is frozen and has no pose to reach). ⛔ Its detector is not built.
+* **The boot** moves five pieces out of it, read off the snapshot; the other 36 and the camera boot
+  as before:
+
+| piece | boot position (units) | yaw | reprojection |
+|---|---|---|---|
+| Piece1 (white bar) | (−1.992, 2.525, 1.287) | 32.4° | 1.2 px |
+| Piece2 (red) | (−2.116, 2.26, −1.591) | −5.0° | 1.6 px |
+| Piece17 (yellow) | (−2.17, −1.855, −1.313) | 9.3° | 1.5 px |
+| Piece23 (black) | (−2.864, 2.26, 0.587) | 0 (unreadable) | 1.8 px |
+| Piece41 (black) | (1.323, −1.855, −1.412) | 0 (unreadable) | 0.4 px |
+
+⭐ **How, since nothing on the device prints a pose**: the camera was solved from four unmoved pieces'
+core corners (0.97 px rms; it reproduced the phone canvas's height at Babylon's 0.8 rad fov), then
+each moved piece's x, z and yaw from its corners at its known size, its height held. ⭐ The height is
+evidence, not an assumption: a one-finger drag is horizontal, and Piece41 and Piece23 fitted with y
+FREE land on their table heights (0.001 and 0.03 units). ⚠ A black bar's silhouette runs from its
+top face's BACK edge to its bottom face's FRONT edge — reading it centre to centre put Piece41 in the
+air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sense (+x → −z at +90°).
+✅ Answered by `D130` (§8): RELATIVE — the painting whole, anywhere.
+
+## 8. ⭐⭐⭐ When the goal is met, and the scene's own rig (`D130`, `D131`)
+
+> *"for the 5 changed pieces, their respective goal can be achieved by two way: face aligned or
+> opposite face aligned as there is no way to distinguish two opposite faces for these geometries ·
+> goal completed when parts sit correctly relative to each other (modulo the point above), painting
+> can sit anywhere for this Scene_01 · change the rig radius of the camera orbit: top=1.8m, middle =
+> 1 m, bottom = 1.5 m"* · *"Make the camera orbit radii and height tunable for each scene"* — the
+> owner, 2026-09-28
+
+* **`frame: "RELATIVE"`** — `core/goal.ts` fits the rigid motion carrying the goal's centres onto the
+  current ones (Horn 1987, closed form), refined on the pieces already in place so the misplaced
+  ones cannot drag it (without that, the boot's five outliers made every piece read out: 0/41). Each
+  piece is then judged against its goal carried by that motion. ⚠ A full rotation, not only a yaw —
+  *relative to each other* taken literally.
+* **`symmetry: "halfTurns"`** — a plain box looks the same after a half-turn about any of its own
+  three axes: each face may stand where its opposite was, and a rectangle face shows no 180° spin, so
+  four orientations are accepted. ⚠ Given to ALL 41 pieces, not only the five that boot away: every
+  piece is such a box, so one a player moves and puts back flipped looks right and must count.
+* **Tolerances** — `goalPositionTolM` 5 mm (world) and `goalAngleTolDeg` 5°, guesses with sliders in
+  SCENE. ⭐ The HUD's score line reads `goal ✅`, or `goal 36/41 (Piece1 208mm/32°)` — the count in
+  place and the piece furthest out. ⛔ Level end (clock and count frozen, result shown) is not built.
+* **The rig** — every scene may carry `orbit` (three rings' radius and height); it replaces the
+  config's defaults at boot, before the URL, so the sliders tune the booted scene. `Scene_1`: radii
+  **1.8 / 1.0 / 1.5 m** (top / middle / bottom), heights 0.55 / 0.1 / −0.5 m (unchanged). `Scene_0`
+  states the 2026-09-14 rig it always had (1.0 / 0.36 / 0.5). ⭐ The boot view does not move: the
+  camera still boots 1.5 m out and the zoom multiplier absorbs the new rings.

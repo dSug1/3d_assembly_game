@@ -55,6 +55,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { sceneConfig } from "../input/scene_rig";
 import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, initialBehaviour, TapHistory } from "../input";
 import { type Vec3 } from "../core/vec";
 import { makeWorld, type ObjectId } from "../core/object_model";
@@ -108,7 +109,8 @@ export function createScene(
   // has to exist before the first `make()` call. ⭐ Moved rather than duplicated: a second
   // URL read would bypass `parseConfigOverrides`' validation and its rejected-key reporting,
   // and a typo'd key would then silently do nothing instead of being named on the HUD.
-  st.tuning = parseConfigOverrides(DEFAULT_CONFIG, window.location.search);
+  // ⭐ `D131`: the scene's own orbit rig first, then the URL over it.
+  st.tuning = parseConfigOverrides(sceneConfig(DEFAULT_CONFIG, spec.orbit), window.location.search);
   st.cfg = st.tuning.config;
 
   st.camera = new ArcRotateCamera(

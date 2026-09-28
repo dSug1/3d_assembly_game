@@ -61,5 +61,14 @@ export const SCENE_0: SceneDescriptor = {
       topScale: 1,
     },
   ],
+  // ⭐ `D131`: its own rig — the owner's device-chosen rings of 2026-09-14, unchanged (a WAIST).
+  orbit: {
+    topRadiusM: 1.0,
+    topHeightM: 0.55,
+    middleRadiusM: 0.36,
+    middleHeightM: 0.1,
+    bottomRadiusM: 0.5,
+    bottomHeightM: -0.5,
+  },
   final: null,
 };

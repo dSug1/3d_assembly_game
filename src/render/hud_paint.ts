@@ -9,7 +9,8 @@ import { formatElapsed } from "../input/episode_ledger";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from "../input";
 import { type Vec3 } from "../core/vec";
-import { type ObjectId } from "../core/object_model";
+import { type ObjectId, worldPlacementOf } from "../core/object_model";
+import { goalReport } from "../core/goal";
 import { alignedFaceOf } from "../core/face_pick";
 import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
@@ -79,6 +80,25 @@ export function depthReadout(st: SceneState) : string {
   return "";
 }
 
+/**
+ * ⭐ `D130`: the goal, read from the model — `goal ✅` once met, else how many bodies are in place and
+ * the one furthest out. ⛔ The rule is `core/goal.ts`'s; this only prints its answer. Empty for a
+ * scene with no goal.
+ */
+function goalReadout(st: SceneState): string {
+  const final = st.sceneSpec.final;
+  if (!final) return "";
+  const r = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), {
+    positionM: st.cfg.goalPositionTolM,
+    angleRad: (st.cfg.goalAngleTolDeg * Math.PI) / 180,
+  });
+  if (r.met) return "  goal ✅";
+  const far = Number.isFinite(r.worstPositionM)
+    ? ` (${r.worstId} ${(r.worstPositionM * 1000).toFixed(0)}mm/${((r.worstAngleRad * 180) / Math.PI).toFixed(0)}°)`
+    : ` (${r.worstId} missing)`;
+  return `  goal ${r.inPlace}/${r.total}${far}`;
+}
+
 export function paint(st: SceneState) {
   const first = st.held.get(st.router.objects()[0]?.id ?? -1);
   st.hud.update({
@@ -91,6 +111,7 @@ export function paint(st: SceneState) {
       // ⭐ `3D6`: the last block, for two seconds — a stop must never read as a bug.
       (performance.now() - st.lastCollisionAt < 2000 ? `  ⟂ ${st.lastCollision}` : "") +
       `  band=${bandMmNow(st) > 0 ? `${bandMmNow(st)}mm (no empty space)` : "off"}` +
+      goalReadout(st) +
       (st.cfg.pioneerCursorDrag === 1 ? "  FREE FLOW (not scored)" : ""),
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
     // what is on the glass. The rules read `activeCount`, which excludes them.

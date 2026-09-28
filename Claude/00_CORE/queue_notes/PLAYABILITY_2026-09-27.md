@@ -67,6 +67,16 @@ files"*) — two questions to answer before `GM1` builds the mate check:
 1. does a couple seated on the right faces but at the wrong SPIN show as wrong?
 2. once the spin is right, does the mate LOCK it, or leave it free until the level ends?
 
+### 2.1 ⭐⭐ `D129` — the first target data, 2026-09-28
+
+⭐ The owner defined `Scene_1`'s goal as a whole LAYOUT — *"current configuration of parts is 'level
+completed configuration'"* — not as couples: `SceneDescriptor.final` holds each piece's pose
+(`FinalConfiguration`, parsed and vectored), and the boot moves five pieces out of it → `SCENE_1.md`
+§7. ⛔ Still to build: level end.
+✅ **2026-09-28, `D130`**: the DETECTOR is built — `core/goal.ts`, RELATIVE (the painting anywhere), a box's
+face or its opposite (four half-turns), read on the HUD's score line → `SCENE_1.md` §8. ⚠ It judges POSES;
+§2's mate and spin questions stay deferred.
+
 ## 3. The play volume
 
 Nothing keeps a part inside the scene today: it can be dragged off-screen, far behind the camera,

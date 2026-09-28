@@ -11,7 +11,65 @@ import { illuminanceAt, kelvinToRgb, unityForward, type LightSpec } from "@core/
 import { levelElevation, orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 
-const pieces = SCENE_1.bodies.filter((b) => b.id !== "Floor");
+/** ⭐ The pieces as they BOOT (`D129`: five of them out of the painting). */
+const booted = SCENE_1.bodies.filter((b) => b.id !== "Floor");
+/**
+ * ⭐ The painting as the owner's table gives it — the LEVEL-COMPLETED configuration (`D129`). ⚠ The
+ * geometry vectors below are claims about the painting, so they read the goal, not the boot.
+ */
+const pieces = booted.map((b) => {
+  const f = SCENE_1.final!.bodies.find((p) => p.id === b.id)!;
+  return { ...b, position: f.position, orientation: f.orientation };
+});
+
+describe("⭐⭐⭐ `D129` — the table is the level-completed configuration; five pieces boot out of it", () => {
+  const MOVED = ["Piece1", "Piece2", "Piece17", "Piece23", "Piece41"];
+
+  it("⭐ the goal lists all 41 pieces, square, at the table — and never the frozen floor (RED: it was null)", () => {
+    const f = SCENE_1.final!;
+    expect(f.bodies.map((p) => p.id).sort()).toEqual(booted.map((b) => b.id).sort());
+    expect(f.bodies.every((p) => p.orientation === "identity")).toBe(true);
+    expect(f.bodies.find((p) => p.id === "Piece17")!.position).toEqual([-1.95, -1.855, -0.34]);
+    expect(f.bodies.some((p) => p.id === "Floor")).toBe(false);
+  });
+
+  it("⭐⭐ exactly the snapshot's five pieces boot away from the goal; the other 36 boot ON it", () => {
+    const away = booted.filter((b) => {
+      const f = SCENE_1.final!.bodies.find((p) => p.id === b.id)!;
+      return JSON.stringify(b.position) !== JSON.stringify(f.position) || b.orientation !== f.orientation;
+    });
+    expect(away.map((b) => b.id).sort()).toEqual([...MOVED].sort());
+  });
+
+  it("⭐ each moved piece keeps its table HEIGHT — a one-finger drag is horizontal", () => {
+    for (const id of MOVED) {
+      const b = booted.find((x) => x.id === id)!;
+      expect(b.position[1]).toBe(pieces.find((x) => x.id === id)!.position[1]);
+    }
+    expect(booted.find((b) => b.id === "Piece1")!.orientation).toEqual({ yawDeg: 32.4 });
+    expect(booted.find((b) => b.id === "Piece41")!.orientation).toBe("identity");
+  });
+
+  it("⛔ the boot layout: no two bodies overlap (each yawed box bounded by its turned footprint)", () => {
+    const box = (b: (typeof booted)[number]) => {
+      const d = contourDims(b);
+      const t = typeof b.orientation === "object" && "yawDeg" in b.orientation ? (b.orientation.yawDeg * Math.PI) / 180 : 0;
+      const hx = (Math.abs(Math.cos(t)) * d[0] + Math.abs(Math.sin(t)) * d[2]) / 2;
+      const hz = (Math.abs(Math.sin(t)) * d[0] + Math.abs(Math.cos(t)) * d[2]) / 2;
+      return { p: b.position, h: [hx, d[1] / 2, hz] };
+    };
+    const bodies = SCENE_1.bodies.map(box);
+    const hit: string[] = [];
+    for (let i = 0; i < bodies.length; i++)
+      for (let j = i + 1; j < bodies.length; j++) {
+        const a = bodies[i]!;
+        const b = bodies[j]!;
+        if ([0, 1, 2].every((k) => a.h[k]! + b.h[k]! - Math.abs(a.p[k]! - b.p[k]!) > 1e-9))
+          hit.push(`${SCENE_1.bodies[i]!.id}/${SCENE_1.bodies[j]!.id}`);
+      }
+    expect(hit).toEqual([]);
+  });
+});
 
 describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
   it("41 pieces and a frozen floor", () => {
@@ -76,8 +134,21 @@ describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
     expect(at("Piece41").position).toEqual([1.1, -1.855, -0.34]);
   });
 
-  it("⭐ it survives the JSON seam (`GM8`) unchanged", () => {
+  it("⭐ it survives the JSON seam (`GM8`) unchanged — its goal and its yawed pieces included", () => {
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_1))).toEqual(SCENE_1);
+  });
+
+  it("⛔ a goal is refused with its field named: an unknown body, the frozen floor, a twin, a bad yaw", () => {
+    const bad = (mutate: (o: any) => void): string => {
+      const o = JSON.parse(serializeSceneDescriptor(SCENE_1));
+      mutate(o);
+      return JSON.stringify(o);
+    };
+    expect(() => parseSceneDescriptor(bad((o) => (o.final.bodies[0].id = "Nobody")))).toThrow(/final: Nobody: names no body/);
+    expect(() => parseSceneDescriptor(bad((o) => (o.final.bodies[0].id = "Floor")))).toThrow(/final: Floor: a frozen body/);
+    expect(() => parseSceneDescriptor(bad((o) => (o.final.bodies[1].id = "Piece1")))).toThrow(/final: Piece1: duplicate/);
+    expect(() => parseSceneDescriptor(bad((o) => (o.final.bodies[0].position = [0, 0])))).toThrow(/final: Piece1: position/);
+    expect(() => parseSceneDescriptor(bad((o) => (o.bodies[0].orientation = { yawDeg: "32" })))).toThrow(/Piece1: unknown orientation/);
   });
 });
 
