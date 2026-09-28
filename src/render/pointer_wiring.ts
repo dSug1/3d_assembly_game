@@ -976,9 +976,9 @@ export function installPointerHandler(st: SceneState): void {
       // and it no longer flies the camera home: that stays on EMPTY space. ⚠ Cost: an orbit stuck
       // close in with a body filling the view must find a patch of empty space to reset.
       // ⭐ The pair costs ONE episode: the second tap is excluded by the ledger.
+      // ⭐⭐ `D141`: and only on the body the last action MOVED — a double tap elsewhere undoes nothing.
       if (verdict.kind === "DOUBLE_TAP" && !alignedByThisTap) {
-        undoLast(st);
-        st.episodeUndo.add(e.pointerId);
+        if (undoLast(st, st.idOf.get(grip.mesh) ?? null)) st.episodeUndo.add(e.pointerId);
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
       // *anywhere* includes the object the touchpoint was carrying, which is this branch.

@@ -9,7 +9,7 @@
 import type { ObjectId } from "../core/object_model";
 import type { LinksSnapshot } from "../core/alignment_links";
 import { coupleKey, type PioneerFaceCursor } from "../core/pioneer_face_cursors";
-import { modelsDiffer, type CursorsState, type LinksState, type ModelSnapshot } from "../core/undo_history";
+import { bodiesTouched, modelsDiffer, undoAllowedOn, type CursorsState, type LinksState, type ModelSnapshot } from "../core/undo_history";
 import type { World } from "../core/object_model";
 import { syncPioneerCursors } from "./markers";
 import type { SceneState } from "./scene_state";
@@ -20,6 +20,8 @@ export interface SceneSnapshot {
   readonly links: LinksSnapshot;
   readonly cursors: readonly PioneerFaceCursor[];
   readonly heldOff: readonly string[];
+  /** ⭐ `D141`: the bodies the action this snapshot precedes TOUCHED — set when the action is recorded. */
+  readonly touched?: readonly ObjectId[];
 }
 
 export function takeSnapshot(st: SceneState): SceneSnapshot {
@@ -58,7 +60,10 @@ export function endGesture(st: SceneState): void {
   const before = st.gestureBefore;
   st.gestureBefore = null;
   if (before === null || st.gestureUndid) return;
-  if (modelsDiffer(plain(before), plain(takeSnapshot(st)))) st.undo.push(before);
+  const after = takeSnapshot(st);
+  // ⭐ `D141`: remembered WITH the entry, so a double tap can ask whether it names a body that moved.
+  if (modelsDiffer(plain(before), plain(after)))
+    st.undo.push({ ...before, touched: bodiesTouched(plain(before), plain(after)) });
 }
 
 /**
@@ -71,7 +76,15 @@ export function endGesture(st: SceneState): void {
  * radius): undoing a snap puts the Follower back where it was, often still inside the radius, and
  * the snap would otherwise fire again on the next frame.
  */
-export function undoLast(st: SceneState): boolean {
+export function undoLast(st: SceneState, tapped: ObjectId | null = null): boolean {
+  // ⭐⭐ `D141`: a double tap undoes only on a body the last action MOVED — asked on the entry left in
+  // place, so a refused undo loses nothing.
+  const top = st.undo.peek();
+  if (top !== null && tapped !== null && !undoAllowedOn(tapped, top.touched ?? [])) {
+    st.lastVerdict = `undo: refused — the last action moved ${(top.touched ?? []).join(", ") || "nothing"}, not ${tapped}`;
+    st.hudDirty = true;
+    return false;
+  }
   const s = st.undo.pop();
   if (s === null) {
     st.lastVerdict = "undo: nothing to undo";

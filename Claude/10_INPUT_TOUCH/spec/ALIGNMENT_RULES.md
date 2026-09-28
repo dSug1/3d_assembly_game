@@ -2101,3 +2101,9 @@ translation's (or the roll's) again; it may re-enter. `motionDeadbandMm` is the 
 Pioneer made it jump (by up to the piece's size) and seat there: `syncSeats` ran on the FIRST couple's
 stale cursor for one frame (the cursors are reconciled later in the frame). ✅ Only the live couple's
 cursor may seat, snap or steer a flight (`cursorIsLive`) → `DEFECT_LEDGER.md` 73.
+
+⭐⭐ **`D141` — undo only on the body that moved** (the owner, 2026-09-28: *"a double click or double tap
+reset to the previous only if it is done on the same object which has moved"*). `D111`'s double tap now
+undoes the last action only when made on a body that action TOUCHED (moved or turned — a carried seated
+child included — or, for an unsnap / a release, the Follower whose alignment changed); on any other body
+it is refused and the HUD names the body that moved → `queue_notes/IN6.md`.
