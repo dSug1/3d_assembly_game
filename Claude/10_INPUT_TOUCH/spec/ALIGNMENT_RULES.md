@@ -2027,3 +2027,14 @@ orbits.
 |---|---|---|---|
 | `D127` | **edge-on, the holder's `dy` drives BLUE ALONE; finger up = AWAY from the CURRENT camera** — the sign is `sign(blue · viewDepth) × sign(towardGravity)`, so from below the finger-found flip stands and entering the cone flips nothing; `dx` drives red alone (it no longer takes `dy`'s leak off level) | `input/axis_translate.ts` (`axisTravel(…, view)`) | at a quarter-orbit blue is square to the view: *away* has no meaning (`+blue` by convention), fingers-up slides the body SIDEWAYS, and nothing moves it in depth. ⭐ Blender's view-parallel branch (`axisProjection`) binds the sign to the axis, not the camera — the defect reported here |
 | `D128` | **a frozen body seen from below DISAPPEARS** — `hiddenFromBelow` (frozen AND `seenFromBelow`); the render loop sets `isVisible` on the body and its core, which Babylon's default pick also reads. The material is never touched | `core/underside.ts`, the render loop | a hidden plate cannot be TAPPED as a Pioneer, and it leaves the orbit barycentre's candidates (they are the bodies on screen); its collision, alignments and seats stand |
+
+⭐⭐ **`D132` — the same day, after a device look** (*"In this configuration, the translation on blue
+axis and finger dy input are still reversed. I think we need to compute the camera position vs. the
+center of the gizmo, not the camera position in absolute world coordinates."*). ⛔ `D127` read *away*
+along the VIEW (`blue · viewDepth`); a body off the screen's centre is off that axis, and near a
+quarter-orbit the two part in sign — the screenshot had blue nearly square to the view and Piece10
+well left of centre. ⭐ Now *away* is `sign(blue · (gizmo anchor − camera))`: the end of blue that
+makes the body's DISTANCE from the camera grow. ⭐ The anchor is `gizmoAnchor` (`render/gizmo.ts`,
+the FollowerFace centre else the body's), one definition for where the gizmo is drawn and where
+*away* is read. ✅ A vector at 92° with the body 0.4 m off-axis: the distance grows, and `D127`'s
+reading, run beside it, shrinks it.

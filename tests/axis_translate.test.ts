@@ -26,7 +26,7 @@ import {
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
 import { trackingMetresPerPx } from "@input/translate";
-import { dot, normalize, type Vec3 } from "@core/vec";
+import { add, dot, length, normalize, scale, type Vec3 } from "@core/vec";
 
 const DEG = Math.PI / 180;
 const DOWN: Vec3 = [0, -1, 0];
@@ -91,7 +91,8 @@ const run = (
     gain,
     gain,
     cone,
-    c.gravity,
+    // ⭐ The body at the centre of the screen, 1.5 m out, unless a vector says otherwise.
+    { towardGravity: c.gravity.towardGravity, toAnchor: scale(c.view, 1.5) },
   );
 
 describe("⭐⭐⭐ PLANE — the body follows the finger inside its own horizontal plane", () => {
@@ -235,6 +236,46 @@ describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
     }
   });
 
+  it("⭐⭐⭐ `D132`: AWAY is read from the camera to the GIZMO, not along the view — the body off-centre", () => {
+    // > *"the translation on blue axis and finger dy input are still reversed. I think we need to
+    // > compute the camera position vs. the center of the gizmo, not the camera position in absolute
+    // > world coordinates."* — the owner, 2026-09-28, the body well left of the screen's centre.
+    // ⛔ RED against `D127`'s build: two degrees past a quarter-orbit, blue · view is −0.035 — so
+    // `+blue` read as TOWARD — while the body sits 0.4 m to the right of the view axis, where `+blue`
+    // takes it FARTHER from the camera. ⭐ The assertion is the owner's meaning, measured: the
+    // camera-to-body distance GROWS when the finger goes up.
+    const axes = axesFromFrame(camera(0, 30).gravity);
+    const c = camera(92, 2);
+    const toAnchor = add(scale(c.view, 1.5), scale(c.gravity.right, 0.4));
+    expect(dot(axes.depth, c.gravity.depth)).toBeLessThan(0); // the view-axis reading says the other way
+    const t = axisTravel(
+      { holderDxPx: 0, holderDyPx: -50, secondDyPx: 0 },
+      c.screen,
+      axes,
+      PER_PX,
+      1,
+      1,
+      CONE,
+      { towardGravity: c.gravity.towardGravity, toAnchor },
+    );
+    expect(t.edgeOn).toBe(true);
+    const moved = axisDisplacement(t, axes);
+    expect(length(add(toAnchor, moved))).toBeGreaterThan(length(toAnchor));
+    // ⛔ THE COUNTER-EXAMPLE — `D127`'s reading, along the VIEW: the same finger brings this body
+    // CLOSER. That is the owner's report, as arithmetic.
+    const alongView = axisTravel(
+      { holderDxPx: 0, holderDyPx: -50, secondDyPx: 0 },
+      c.screen,
+      axes,
+      PER_PX,
+      1,
+      1,
+      CONE,
+      { towardGravity: c.gravity.towardGravity, toAnchor: scale(c.view, 1.5) },
+    );
+    expect(length(add(toAnchor, axisDisplacement(alongView, axes)))).toBeLessThan(length(toAnchor));
+  });
+
   it("⛔ from BELOW the finger-found sign stands: finger up comes TOWARD this camera", () => {
     // ⚠ *"when the camera is on the bottom ring facing upwards, the depth translation is
     // chaotic"* — outside the cone, exact tracking brings a body TOWARD a camera looking up when
@@ -340,7 +381,7 @@ describe("degenerate inputs never reach a placement", () => {
       1,
       1,
       CONE,
-      { depth: [0, 0, 1], towardGravity: 0 },
+      { towardGravity: 0, toAnchor: [0, 0, 1] },
     );
     expect(t.xM).toBe(0);
     expect(t.gravityM).toBe(0);
