@@ -19,7 +19,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | — | ⭐ **double tap on any body** | **undo the last action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
 | a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes) |
-| any body, being TRANSLATED | ⭐ **both fingers move sideways in OPPOSITE directions, with no `dy`** — a horizontal pinch, the 2nd finger anywhere (empty space, the body, another body) | **zoom** (spreading = zoom in, closing = zoom out, as the empty-space pinch); the **translation and the roll are PAUSED**. ⚠ Latched: once read as a pinch, it stays a zoom until a finger lifts (`D137`) |
+| any body, being TRANSLATED | ⭐ **both fingers move sideways in OPPOSITE directions, with no `dy`** — a horizontal pinch, the 2nd finger anywhere (empty space, the body, another body) | **zoom** (spreading = zoom in, closing = zoom out, as the empty-space pinch); the **translation and the roll are PAUSED**. ⭐ It **ends as soon as either finger's `dy` is not zero** — that move translates again; both ways read the same deadband (`motionDeadbandMm`, OBJECT TRANSLATION) (`D137`, amended) |
 | a FREE body | 1st finger drag, `ROTATE` | yaw about the vertical + pitch about the boot camera's right |
 | a FREE body | 2nd finger `dy` / `dx` (empty space, the body, or ANOTHER body), `TRANSLATE` | lift along gravity / ⭐ **spin about gravity**, together — the aligned body's pair, with gravity for the normal (`D123`) |
 | a FREE body | 2nd finger `dx` (empty space, the body, or another body), `ROTATE` | roll about the depth axis |
@@ -37,7 +37,9 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 
 ⭐ **Automatic, not an input**: the **snap** — an aligned Follower whose FollowerFace centre comes
 within the capture offset of its PioneerFaceCursor, normals within the **snap cone angle**, lerps
-onto it and is seated (`D100`).
+onto it and is seated (`D100`). ⭐⭐ **And the drag that made the seat STOPS** (`D139`): a finger holding the
+Follower drives nothing more — no translation, lift, pinch-zoom or tap — **except the roll** (the second
+finger's `dx`), until it lifts or the click is released.
 ⚠ A frozen body (the plate): EVERY press on it is a miss (`D119`) — a first touch drives the camera,
 a second touch drives the held body's gravity / roll; only a TAP on it names it as a Pioneer. ⭐ The
 one exception: a plate with a part SEATED on it is holdable by the first touch — the unsnap's.

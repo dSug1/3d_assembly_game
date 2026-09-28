@@ -12,6 +12,7 @@ import { bothAxesSecondDrive } from "../input/second_touch_drive";
 import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
 import { nextDxSign } from "../input/hold_pinch";
+import { seatLockAllows } from "../input/seat_lock";
 import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_ROLL, type Held, type SceneState } from "./scene_state";
 import { asVec3, modelOrientation, requirePose, setModelOrientation, setModelPose } from "./bodies";
@@ -175,7 +176,7 @@ export function applyDepthDrag(st: SceneState, grip: Held,
   // ⭐⭐ `D137`: a sideways pinch against the holder is a ZOOM — roll and lift are paused with the
   // translation (the owner: *"pause the translation and the roll"*). Latched until a finger lifts.
   grip.anchorDxSign.set(anchorSeq, nextDxSign(grip.anchorDxSign.get(anchorSeq) ?? 0, tracker.step.dx));
-  if (holdPinchStep(st, grip)) {
+  if (seatLockAllows(grip.seatLocked, "ZOOM") && holdPinchStep(st, grip)) {
     grip.rec.consumeAsMotion();
     return true;
   }
@@ -187,9 +188,14 @@ export function applyDepthDrag(st: SceneState, grip: Held,
   // take the holder's.
   // ⛔ The live mode is handed over so the choice is made inside the vectored rule, not
   // here — `D23`: breaking a decision left in `scene.ts` reddens nothing.
-  const drive = bothAxes
+  const asked = bothAxes
     ? bothAxesSecondDrive(tracker.axes, tracker.step)
     : secondFingerDrive(tracker.axes, tracker.step, st.behaviour);
+  // ⭐⭐ `D139`: a grip whose Follower just SEATED keeps the ROLL alone — the lift is refused.
+  const drive = {
+    rollDxPx: seatLockAllows(grip.seatLocked, "ROLL") ? asked.rollDxPx : 0,
+    depthDyPx: seatLockAllows(grip.seatLocked, "LIFT") ? asked.depthDyPx : 0,
+  };
   if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;
 
   if (drive.depthDyPx !== 0) {

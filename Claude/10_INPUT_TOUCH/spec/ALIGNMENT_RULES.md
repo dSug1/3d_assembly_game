@@ -2073,3 +2073,26 @@ tracking outside the cone (2026-09-16's finger-found fix). `D132`'s camera → g
 | # | rule | code | cost, stated |
 |---|---|---|---|
 | `D137` | **while a body is translated, two fingers moving sideways in OPPOSITE directions with no `dy` zoom the camera**; the holder's translation and the second finger's roll and lift are PAUSED. The test: both x axes `MOVING`, neither y axis (§1.1's per-axis bands — no new threshold), opposite latest sideways travel. ⭐ **LATCHED**: decided once per pair of fingers, a zoom until a finger lifts. The zoom is the empty-space pinch's own law (`PinchTracker`: spreading = in, closing = out). ⛔ Never from a mouse (`D118`) | `input/hold_pinch.ts` (the rule), `render/hold_pinch_wiring.ts` (the latch and the zoom), called from the holder's translation and from `applyDepthDrag` | ⛔ **a mode keyed on MOTION** — `METHOD` forbids it; the latch is the mitigation, not a cure: a two-finger translation that STARTS with the fingers drifting apart sideways becomes a zoom for the rest of that pair. ⚠ It needs both fingers MOVING sideways at once, so a pinch with one still finger stays a translation |
+
+⭐⭐ **`D137` AMENDED, the same day** (*"Modify: the zoom should stop and the translation toggled back as
+soon as one dy is not zero. both dy = zero (to toggle the zoom on) and one dy not zero (to toggle the
+translation back) shall be subject to the deadband (same slider already present)."*). ⛔ The first build
+LATCHED the zoom until a finger lifted — its stated cost, a translation that began as a sideways drift
+stuck as a zoom, is what the owner removed. ⭐ Now a TOGGLE on the deadbanded `dy` of §1.1: ON needs both
+fingers' `dy` = 0 (with the sideways test), OFF comes the moment either `dy` ≠ 0, and that move is the
+translation's (or the roll's) again; it may re-enter. `motionDeadbandMm` is the hysteresis both ways.
+⚠ The cost moves to the other side: a finger's vertical jitter past the band ends a zoom.
+✅ `holdPinchEnds`, 2 vectors (the same `dy` that refuses the start ends the zoom).
+
+---
+
+## 18 — ⭐⭐ A SNAP STOPS THE DRAG THAT MADE IT (`D139`)
+
+> *"when the follower snaps the pioneer, the translation shall stop and a touch lift or a click release
+> is expected before any other action except roll which can still continue. (otherwise, currently, the
+> moment the follower snaps, the translation continues and it translate both the pioneer and the
+> follower together)."* — the owner, 2026-09-28
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| `D139` | **the moment a HELD Follower lands on its Pioneer (`D100`'s seat), that grip is LOCKED**: the first finger's translation / rotation, the second finger's lift, `D137`'s pinch-zoom and every second-touch TAP meaning (align, unalign, release, toggle) are refused; **the ROLL** (the second finger's `dx`, the spin about the seated face) **goes on**. The lock belongs to the grip, so the finger's lift — or the click's release — ends it. ⛔ Why: `D102` makes a seated member's translation land on its ROOT, so the drag that made the seat went straight on dragging Pioneer and Follower together | `input/seat_lock.ts` (`seatLockAllows`), set at the landing in `render/seat_wiring.ts`, read by the holder's move, `applyDepthDrag` and the second touch's tap | ⚠ an intended re-seat or slide right after the snap needs a lift first; ⚠ a Pioneer held by ANOTHER finger is not locked — holding the Pioneer carries its seated Follower by design |
