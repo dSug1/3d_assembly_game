@@ -54,7 +54,7 @@ file.
 | `D105` | ⭐⭐ **THE GAME SCAFFOLD: intro → menu → worlds → levels → play; the current scene is `Scene_0`** | 2026-09-26 | ⭐ Binding. ⚠ → history |
 | `D106` | ⭐⭐ **`FOLLOW` IS DELETED — every alignment is a SNAPSHOT** | 2026-09-27 | One press aligns; a **seat** carries; an unseated Follower lets go when its Pioneer moves or turns. ⛔ Reverses `D42`'s double tap → §12 |
 | `D107` | ⭐⭐ **TWO WAYS TO UNALIGN: tap empty space while holding, or align elsewhere** | 2026-09-27 | Holding a Pioneer, the tap releases all its followers. ⛔ Gone: both shakes, `D39`'s re-press undo, the flick's drop branch → §12 |
-| `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | ⭐ Binding, ⚠ → history |
+| `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | Aligned: 1st finger slides, 2nd lifts + spins. Tablet toggles only on a touch tap on EMPTY space holding one free body without followers; desktop has no mode (Ctrl rotates). No button → §12 |
 | `D109` | ⭐⭐ **THE DORMANT SWITCHES ARE DELETED; THE FUCHSIA CONE IS THE SNAP CONE** | 2026-09-27 | Gone: pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone hook, the fuchsia offer, three unwired functions → §12 |
 | `D110` | ⭐⭐ **THE FLICK IS DELETED — and `D103`'s flick-unsnap with it** | 2026-09-27 | Detector, verdict, rules and the rotation reset; a committed gesture ends kept → §13 |
 | `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | One scene history; an action = a gesture that changed the model; the camera reset keeps empty space only → §13 |
@@ -80,10 +80,9 @@ file.
 | `D131` | ⭐⭐ **EACH SCENE CARRIES ITS OWN ORBIT RIG** | 2026-09-28 | → `SCENE_1.md` §8 |
 | `D132` | ⭐⭐ **EDGE-ON *AWAY* IS READ FROM THE CAMERA TO THE GIZMO, NOT ALONG THE VIEW** | 2026-09-28 | Corrects `D127` → §16 |
 | `D133` | ⚠ **REVERTED THE SAME DAY** — finger up *away* from below too; never shipped, the flip stands | 2026-09-28 | → §16 |
-| `D134` | ⭐ **THE HUD's EDGE-ON IS THE CAMERA's, READ EVERY FRAME** | 2026-09-28 | ⚠ Superseded by `D135` → §16 |
-| `D135` | ⭐⭐⭐ **dx AND dy EACH DRIVE THE AXIS THAT LOOKS LIKE THEM AT THE GIZMO, AT A FIXED RATE** | 2026-09-28 | Replaces `D76`'s tracking → §17 |
+| `D134` | ⭐ **THE HUD's EDGE-ON IS THE CAMERA's, READ EVERY FRAME** | 2026-09-28 | → §16 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
-| `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⚠ Tracking superseded by `D135`. ⚠ → history |
+| `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
 | `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside the capture zone is the same as outside** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D84` | ⭐⭐⭐ **`WorldAxisB` NOW GOVERNS A FREE BODY'S *ROTATION* BASIS TOO** | 2026-09-23 | ⭐ Binding — the flag is deleted (`D109`), the boot frame is the only frame. ⚠ → history |

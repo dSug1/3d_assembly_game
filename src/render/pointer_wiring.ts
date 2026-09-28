@@ -717,7 +717,7 @@ export function installPointerHandler(st: SceneState): void {
         );
         noteAxisTravel(st, tid, travel);
         st.lastTrackGain = travel.trackGain;
-        // ⭐ The pairing readout (`st.pairingNow`) is NOT written here: the render loop reads it every frame (`D135`).
+        // ⛔ `st.edgeOnNow` is NOT written here any more (`D134`): it is the camera's, refreshed every frame.
         const step = axisDisplacement(travel, axes);
         // ⭐ The body's own axes decide the motion, latched at BOOT (`WorldAxisB`), not at this press.
         // ⭐ ONE writer for an applied step. ⛔ THE FINGER MOVES THE MODEL — the follower re-reads

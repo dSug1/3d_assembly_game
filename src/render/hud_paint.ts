@@ -196,7 +196,7 @@ export function paint(st: SceneState) {
           // amount of watching the body can attribute.
           `
 axes      fixed@boot PLANE` +
-          ` track=${st.lastTrackGain.toFixed(2)}×${st.pairingNow ? ` ${st.pairingNow}` : ""}` +
+          ` track=${st.lastTrackGain.toFixed(2)}×${st.edgeOnNow ? " ⛔EDGE-ON" : ""}` +
           // ⛔ Per HELD body, because that is the one whose axes are being used right now.
           [...st.held.values()]
             .map((g) => st.idOf.get(g.mesh))

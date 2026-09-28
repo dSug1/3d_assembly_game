@@ -993,14 +993,3 @@ elevation range and boots in it (−0.6°); `Scene_0` 5 %, boots at −1.6°. �
 over a pose sweep).
 
 ⚠ **`D133` REVERTED the same day** (the owner) — never shipped; the below-camera flip stands.
-
----
-
-## ⭐⭐⭐ `D135` — THE HOLDER'S CHANNELS PAIRED WITH THE AXES AT THE GIZMO, 2026-09-28
-
-The owner replaced `D76`'s exact tracking (the 2×2 solve) and its edge-on fallback with one rule:
-`dx` drives the horizontal axis that looks most horizontal at the gizmo (finger right → image right),
-`dy` the other (finger up → away; toward from below), at a **fixed rate** (asked; *"Fixed rate"*).
-`axisPairing` is the rule and the HUD's readout. ⚠ Costs: no longer under the finger at an oblique
-view; a swap at 45°. ✅ 1191 vectors (the PLANE and EDGE-ON describes replaced) → alignment spec §17.
-⛔ Unjudged by a hand.
