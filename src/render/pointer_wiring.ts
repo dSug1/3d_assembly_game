@@ -25,7 +25,7 @@ import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
 import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
-import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
+import { axesOf, cameraToGizmo, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers } from "./sway_pass";
@@ -708,9 +708,12 @@ export function installPointerHandler(st: SceneState): void {
           st.cfg.gainTranslateScreen,
           st.cfg.gainTranslateDepth,
           st.cfg.axisTrackingConeDeg,
-          // ⭐ Read ONLY inside the cone, where it is the depth sign: which end of blue is away
-          // from this camera (`D127`), flipped when looking up at the scene.
-          grip.frame,
+          // ⭐ Read ONLY inside the cone, where it is the depth sign: which end of blue takes the
+          // body away from the camera, read toward the GIZMO (`D132`), flipped looking up.
+          {
+            towardGravity: grip.frame.towardGravity,
+            toAnchor: cameraToGizmo(st, tid, [grip.mesh.position.x, grip.mesh.position.y, grip.mesh.position.z]),
+          },
         );
         noteAxisTravel(st, tid, travel);
         st.lastTrackGain = travel.trackGain;
