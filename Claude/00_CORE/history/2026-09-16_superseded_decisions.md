@@ -676,7 +676,7 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding — the completing PRESS takes the toggle over, and its own release is spent → §5.15 |
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | ⭐ Binding — `pickResult.faceId` gives face picking directly, which rule 2 needs. ⚠ Apache-2.0, so the NOTICE must ship. ⭐ Reversible in about a day *because* of `D6` |
 
-## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-28 (branch `1.0.48-`) — to pay for `D136`–`D139`
+## ⭐ CONSEQUENCE TEXT MOVED DOWN 2026-09-28 (branch `1.0.48-`) — to pay for `D136`–`D140`
 
 | # | decision | date | consequence |
 |---|---|---|---|
@@ -684,3 +684,4 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D106` | ⭐⭐ **`FOLLOW` IS DELETED — every alignment is a SNAPSHOT** | 2026-09-27 | One press aligns; a **seat** carries; an unseated Follower lets go when its Pioneer moves or turns. ⛔ Reverses `D42`'s double tap → §12 |
 | `D107` | ⭐⭐ **TWO WAYS TO UNALIGN: tap empty space while holding, or align elsewhere** | 2026-09-27 | Holding a Pioneer, the tap releases all its followers. ⛔ Gone: both shakes, `D39`'s re-press undo, the flick's drop branch → §12 |
 | `D95` | ⭐⭐ **A TAP ON EMPTY SPACE WHILE HOLDING AN ALIGNED BODY RELEASES IT** | 2026-09-25 | ⭐ Binding, extended by `D107` (holding a Pioneer releases its followers); the free-body toggle narrowed by `D108` → §11.9, §12 |
+| `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | Aligned: 1st finger slides, 2nd lifts + spins. Tablet toggles only on a touch tap on EMPTY space holding one free body without followers; desktop has no mode (Ctrl rotates). No button → §12 |

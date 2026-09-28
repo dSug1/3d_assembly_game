@@ -2096,3 +2096,8 @@ translation's (or the roll's) again; it may re-enter. `motionDeadbandMm` is the 
 | # | rule | code | cost, stated |
 |---|---|---|---|
 | `D139` | **the moment a HELD Follower lands on its Pioneer (`D100`'s seat), that grip is LOCKED**: the first finger's translation / rotation, the second finger's lift, `D137`'s pinch-zoom and every second-touch TAP meaning (align, unalign, release, toggle) are refused; **the ROLL** (the second finger's `dx`, the spin about the seated face) **goes on**. The lock belongs to the grip, so the finger's lift — or the click's release — ends it. ⛔ Why: `D102` makes a seated member's translation land on its ROOT, so the drag that made the seat went straight on dragging Pioneer and Follower together | `input/seat_lock.ts` (`seatLockAllows`), set at the landing in `render/seat_wiring.ts`, read by the holder's move, `applyDepthDrag` and the second touch's tap | ⚠ an intended re-seat or slide right after the snap needs a lift first; ⚠ a Pioneer held by ANOTHER finger is not locked — holding the Pioneer carries its seated Follower by design |
+
+⛔⛔ **Defect 73 / `D140`, the same day** — re-aligning a SEATED Follower by another face to a second
+Pioneer made it jump (by up to the piece's size) and seat there: `syncSeats` ran on the FIRST couple's
+stale cursor for one frame (the cursors are reconciled later in the frame). ✅ Only the live couple's
+cursor may seat, snap or steer a flight (`cursorIsLive`) → `DEFECT_LEDGER.md` 73.

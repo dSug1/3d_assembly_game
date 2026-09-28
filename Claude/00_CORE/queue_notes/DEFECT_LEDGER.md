@@ -1084,3 +1084,23 @@ read as *the Pioneer turned* and the alignment was released with it. ✅ Seated 
 ⭐⭐ `METHOD`: *a fact inferred from another module's bookkeeping is only as good as that module's
 ORDER of operations* — `has` was true for the whole flight and false for exactly the one write that
 mattered. Pinned by a vector on `SeatSnaps` itself.
+
+---
+
+## 73 — a STALE cursor snapped for one frame after a re-alignment (`D140`, 2026-09-28)
+
+⚠ Report, by finger: *"I align a follower and snap it to a first pioneer, then I select another face of
+the same follower and align it to another second pioneer: the follower directly jumps to snap the second
+pioneer at the moment I click the second pioneer"* — and, asked, *"sometimes, the jump is much more than
+10 mm"*, which ruled out the first reading (a new couple already inside the capture radius cannot jump
+further than the radius).
+⭐ Cause: the render loop runs `syncSeats` EARLY and reconciles the cursors LATE (with the markers). The
+first frame after the re-alignment still listed the OLD cursor (face A → the first Pioneer); the
+re-alignment's `unseatWorld` had just forgotten that couple's hold-off, and the body still sat ON it — so
+the old couple snapped, its destination built from the NEW orientation (`alignSnaps.targetOf`) on the OLD
+face, off by about the piece's size; the next frame the flight retargeted to the new cursor and seated.
+✅ `cursorIsLive` (`core/pioneer_face_cursors.ts`): `syncSeats` acts only on the cursor of the couple the
+links say NOW. 5 vectors on the predicate. ⚠ The ordering itself is not vectored — the render loop has
+no headless harness — which is why the guard is a predicate read at the point of use.
+⭐⭐ `METHOD`: *a cache rebuilt later in the frame than it is read is stale for exactly one frame after
+every change* — and one frame is all a snap needs to launch.
