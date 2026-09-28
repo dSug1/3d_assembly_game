@@ -395,8 +395,7 @@ export interface SceneState {
   frameTurnAxes: Map<ObjectId, TurnAxes>;
   gizmoTurnAxes: Map<ObjectId, TurnAxes>;
   lastTrackGain: number;
-  /** ⭐ `D135`: the held body's pairing, e.g. `dx→red dy→blue`; empty when nothing is held. */
-  pairingNow: string;
+  edgeOnNow: boolean;
   axisGizmos: Map<ObjectId, AxisGizmo>;
   gizmoRings: Map<ObjectId, LinesMesh>;
   gizmoTurnRings: Map<ObjectId, LinesMesh>;

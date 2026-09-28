@@ -10,14 +10,14 @@ import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
 import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
 import { worldPlacementOf } from "../core/object_model";
-import { axisPairing } from "../input/axis_translate";
+import { planeEdgeOn } from "../input/axis_translate";
 import { alignedFaceOf } from "../core/face_pick";
 import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
 import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
 import { faceMarkerFor, hitFaceNow, liftHighlights, outlinesFor, syncPioneerCursors } from "./markers";
 import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
-import { axesOf, cameraToGizmo, refreshAxisGizmo } from "./gizmo";
+import { axesOf, refreshAxisGizmo } from "./gizmo";
 import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { syncSeats } from "./seat_wiring";
@@ -575,25 +575,12 @@ export function startRenderLoop(st: SceneState): void {
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
     // ⭐ `3D6`: an unsnapped couple is ordinary again once it has separated past the skin.
     pruneCollisionGrace(st);
-    // ⭐ `D135`: the PAIRING in force for the held body — which axis `dx` and `dy` drive — read every
-    // frame from the camera and the gizmo (`D134`'s lesson: a readout written only by a drag goes
-    // stale on a click or an orbit). ⚠ The rule's own `axisPairing`, same inputs; repainted on change.
+    // ⭐ `D134`: EDGE-ON is the CAMERA's, so it is read every frame — a click or an orbit changes it
+    // with no drag. ⚠ Same test as the rule (`planeEdgeOn`), same axes; the HUD repaints on change.
     {
-      let label = "";
-      const grip = st.held.get(st.router.objects()[0]?.id ?? -1);
-      if (grip) {
-        const id = st.idOf.get(grip.mesh);
-        const at = grip.mesh.position;
-        const p = axisPairing(
-          screenFrame(st),
-          axesOf(st),
-          cameraToGizmo(st, id, [at.x, at.y, at.z]),
-          grip.frame.towardGravity,
-        );
-        if (p) label = p.dxAxis === "x" ? "dx→red dy→blue" : "dx→blue dy→red";
-      }
-      if (label !== st.pairingNow) {
-        st.pairingNow = label;
+      const edge = planeEdgeOn(screenFrame(st), axesOf(st), st.cfg.axisTrackingConeDeg);
+      if (edge !== st.edgeOnNow) {
+        st.edgeOnNow = edge;
         st.hudDirty = true;
       }
     }
