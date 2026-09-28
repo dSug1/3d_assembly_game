@@ -18,7 +18,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
 | — | ⭐ **double tap on any body** | **undo the last action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
-| a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes) |
+| a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes): ⭐ `dx` drives the axis that runs most ACROSS the screen at the gizmo, `dy` the other — see below (`D135`) |
 | a FREE body | 1st finger drag, `ROTATE` | yaw about the vertical + pitch about the boot camera's right |
 | a FREE body | 2nd finger `dy` / `dx` (empty space, the body, or ANOTHER body), `TRANSLATE` | lift along gravity / ⭐ **spin about gravity**, together — the aligned body's pair, with gravity for the normal (`D123`) |
 | a FREE body | 2nd finger `dx` (empty space, the body, or another body), `ROTATE` | roll about the depth axis |
@@ -26,7 +26,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | any body (its face = the HitFace) | 2nd finger **TAP a face on another body** — press and release, short and still | align: the held face turns to point AT the tapped one (anti-parallel); replaces any earlier alignment. ⛔ `D119`: a 2nd finger that PRESSES and stays, or moves, aligns nothing |
 | any body | 2nd finger **TAP the frozen plate** | align to the plate's face under the finger (`D119`) |
 | any body | 2nd finger **press / drag on ANOTHER body** — frozen plate or not | ⭐ it STEERS the held body (`dy` lifts, `dx` spins or rolls) and never grabs the other one: two bodies are no longer moved at once (`D124`, `D119`). ⛔ Except a body SEATED in the held body's assembly — the unsnap's touch |
-| an ALIGNED body | 1st finger drag, any mode | slide it in its horizontal plane (`D108`: mode-less) |
+| an ALIGNED body | 1st finger drag, any mode | slide it in its horizontal plane (`D108`: mode-less), paired as below (`D135`) |
 | an ALIGNED body | 2nd finger `dy` / `dx`, anywhere (another body included) | lift along gravity / spin about the aligned normal, together |
 | an ALIGNED body | 2nd finger tap on empty space | **unalign** it (`D95`) |
 | a PIONEER (has followers) | 2nd finger tap on empty space | **release all its followers** (`D107`) |
@@ -43,8 +43,11 @@ one exception: a plate with a part SEATED on it is holdable by the first touch �
 ⭐ **Automatic, not an input**: a **frozen body the camera sees from BELOW disappears** — the camera is
 past the plane of its bottom face; it is neither drawn nor picked, so a press reaches what is behind it
 (`D128`, which reverses `D121`'s see-through; no slider).
-⭐ **Edge-on** (camera within 5° of level, HUD `⛔EDGE-ON`): the holder's `dy` drives **blue alone**,
-finger up = **away from the camera**, read along camera → gizmo (from below: toward), and `dx` drives red (`D127`, `D132`).
+⭐⭐ **The first finger's two channels** (`D135`, every camera): `dx` drives whichever of red / blue runs most
+across the screen at the gizmo — finger right = toward screen-right; `dy` drives the other — finger up =
+**away from the camera** (from below: toward). A fixed rate on either axis: the body does not stay exactly
+under the finger at an oblique view. The HUD's `axes` line shows the pairing (`dx→red dy→blue`). ⛔ The
+edge-on case and its `⛔EDGE-ON` flag are gone (`D127`/`D132`/`D134` superseded).
 ⛔ **No white highlights any more** (`D120`): the white capture contour and shell, and the camera swing
 on entering the capture zone, are deleted.
 
@@ -56,11 +59,11 @@ on entering the capture zone, are deleted.
 | — | wheel | zoom |
 | nothing | double left click on empty space | reset the camera |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`) |
-| a FREE body | left drag | translate in its horizontal plane (`D108`: no mode on desktop) |
+| a FREE body | left drag | translate in its horizontal plane (`D108`: no mode on desktop), paired as on the tablet (`D135`) |
 | a FREE body | **Ctrl** + left drag | rotate: yaw + pitch |
 | a FREE body | Shift + left drag | gravity (`dy`) + ⭐ **spin about gravity** (`dx`) (`D123`) |
 | a FREE body | Ctrl + Shift + left drag | roll (`dx`) |
-| an ALIGNED body | left drag (Ctrl or not) | slide in its horizontal plane |
+| an ALIGNED body | left drag (Ctrl or not) | slide in its horizontal plane, paired as on the tablet (`D135`) |
 | an ALIGNED body | Shift + left drag | gravity (`dy`) + spin about the normal (`dx`) |
 | — | **right-press and hold** on a face | that face is the HitFace; the right button never moves anything |
 | right-hold | left click on another body's face | align — ⭐ on the click's RELEASE, like a tap (`D119`) |

@@ -2060,3 +2060,37 @@ spans only −18°…+17°, 16 % of its elevation range edge-on. Leaving it take
 flip is back: seen from below, finger up brings the body TOWARD the camera, continuous with exact
 tracking outside the cone (2026-09-16's finger-found fix). `D132`'s camera → gizmo reading and
 `D134`'s readout stand.
+
+---
+
+## 17 — ⭐⭐⭐ EACH FINGER CHANNEL DRIVES THE AXIS THAT LOOKS LIKE IT, AT A FIXED RATE (`D135`)
+
+> *"I want to revisit the way we have defined the inputs on red and blue axis. For whichever camera
+> vs. center of gizmo configuration, i want to match the dx and dy input with the respective axis
+> which shows the maximal projection onto screen x and screen y axis. Then the sense of translation
+> should be the projection of the input onto the axis."* — the owner, 2026-09-28, with two pictures
+> (blue running away → `dx` red, `dy` blue; turned a quarter → `dx` blue, `dy` red). Asked the rate:
+> *"Fixed rate"*.
+
+| channel | drives | sense |
+|---|---|---|
+| holder `dx` | the horizontal axis whose image moves MOST across the screen at the gizmo | finger right → the body's image moves right |
+| holder `dy` | the other horizontal axis | finger up → AWAY from the camera (camera → gizmo, `D132`); looking up, TOWARD it (the 2026-09-16 flip, kept by `D133`'s revert) |
+| 2nd touch `dy` | gravity — unchanged, exact tracking | finger up → up |
+
+* **Read at the gizmo, with perspective** (`axisPairing`, `input/axis_translate.ts`): each axis's screen
+  motion is `(a·right)·z − (p·right)·(a·fwd)`, `p` the camera → gizmo anchor — a body off the screen's
+  centre sees the axes turned, which is what *"camera vs. center of gizmo"* asks.
+* **A fixed rate**: one pixel of finger buys one tracking factor of world travel, on either axis, at every
+  camera. ⭐ No weak axis (`D76`'s *"the input seems very weak"* was a cosine), no runaway, and **no edge-on
+  branch** — nothing switches at a level camera, so `D127`'s fallback, `D134`'s `⛔EDGE-ON` flag and the
+  cone's reading on the holder are gone; the cone guards the gravity channel alone.
+* **The HUD's `axes` line shows the pairing** (`dx→red dy→blue`), read every frame from the camera and
+  the gizmo (`D134`'s lesson). ⭐ The gizmo lights the axis MOVED, which is now the channel pushed.
+* ⚠ **Costs, stated**: the body no longer stays exactly under the finger at an oblique view (`D76`'s
+  tracking, judged on 2026-09-23, is replaced); the pairing swaps where both axes cross the screen
+  equally (45°) — between drags, never under one; and it REVERSES `D109`'s deletion of a dictated pairing
+  (`CHANNELS`), which was fixed `dx`→red, `dy`→blue — this one is chosen by the view.
+* ✅ Vectors: both pictures; a sweep of 10 orbits × 6 elevations × 3 off-centre anchors on five promises
+  (one axis per channel, the fixed rate, dx right → image right, dy up → away / toward from below, dx on
+  the more horizontal axis). A mutant pairing `dx` always with red fails four of them.

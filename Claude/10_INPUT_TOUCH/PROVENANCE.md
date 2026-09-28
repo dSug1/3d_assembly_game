@@ -188,3 +188,13 @@ form has none.
 | **Decomposing a 2D pointer delta onto two axes of a plane** (the 2×2 solve) | ✅ **PRIOR ART** | The standard "move in the ground/construction plane" of every DCC and CAD package; mathematically a change of basis, which is not claimable |
 | **A cone around the view direction where the exact mapping is abandoned** | ✅ **PRIOR ART, with a number** | Blender's `axisProjection()` switches below **5°**. ⭐ We adopt the angle and depart from what it does inside it — Blender lets the object nearly stop, we fall back to a fixed-rate push |
 
+
+### ⭐⭐ Amended 2026-09-28 — the channels PAIRED with the axes at the gizmo (`D135`)
+
+⚠ Registered at adoption, before a hand has judged it. ⛔ A register, not an opinion; not legal advice.
+
+| the part | verdict | the citation, or the gap |
+|---|---|---|
+| **Choosing the constraint axis by how its SCREEN projection lines up with the input** | ✅ **PRIOR ART** | Au, Tai & Fu, *Multitouch Gestures for Constrained Transformation of 3D Objects*, Computer Graphics Forum 31(2), 2012 — candidate axes are drawn and the one whose projection best matches the drag is used; an axis near the view direction is disallowed. [Wiley](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-8659.2012.03044.x) |
+| **A fixed-rate push along an axis, its sign set by the view** | ✅ **PRIOR ART** | Blender's `axisProjection()` view-parallel branch (mouse vertical → the axis, fixed law). ⭐ We read *away* from the camera → gizmo line instead of the axis's own orientation, the flaw recorded at `D127` |
+| ⚠ **Pairing the finger's screen-x and screen-y channels, each to the horizontal axis whose projection at the gizmo is most horizontal / the other, at a fixed rate** | ⚠ **INTERNAL COMPOSITION** of the two rows above | No publication found describing this exact pairing (searched 2026-09-28, not exhaustive). ⚠ One finger, one plane, no multi-finger composite — outside `SEC4`'s stated exposure (6bis–6quater) |
