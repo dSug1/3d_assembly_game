@@ -10,7 +10,8 @@ import { retargetAlignment, type Sample } from "../input";
 import { type Vec3, add, dot, qRotate, sub } from "../core/vec";
 import { attach, setLocalPlacement, worldPlacementOf, type ObjectId, clearObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
 import { mmToPx } from "../core/units";
-import { type PioneerFaceCursor } from "../core/pioneer_face_cursors";
+import { cursorIsLive, type PioneerFaceCursor } from "../core/pioneer_face_cursors";
+import { alignedFaceOf } from "../core/face_pick";
 import { pointOnFace } from "../core/face_surface";
 import { snapConditionMet } from "../input/snap";
 import { UnsnapDetector, unsnapCouple, unsnapParamsFrom } from "../input/unsnap";
@@ -146,6 +147,16 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
   const coneRad = (st.cfg.snapConeDeg * Math.PI) / 180;
   for (const cur of st.pioneerCursors.all()) {
     const f = cur.followerId;
+    // ⛔⛔ `D140`: only the LIVE couple's cursor may seat, snap or steer a flight. The cursors are
+    // reconciled later in the frame, so right after a re-alignment the OLD one is still listed — and it
+    // made the Follower jump (a stale couple, armed, the body still on it).
+    const liveFace = alignedFaceOf(st.world, f);
+    const livePioneer = st.links.pioneerFor(f);
+    const live =
+      liveFace === null || livePioneer === null
+        ? null
+        : { followerId: f, followerFaceId: liveFace, pioneerId: livePioneer.objectId, pioneerFaceId: livePioneer.faceId };
+    if (!cursorIsLive(cur, live)) continue;
     const faceLocal = st.world.objects
       .get(f)
       ?.faces.find((x) => x.id === cur.followerFaceId);

@@ -65,7 +65,9 @@ TRANSLATION → `COLLISION.md` §9. ⭐⭐ **`D137`: while translating, two fing
 together (no `dy`) ZOOM** — translation and roll paused; it ENDS as soon as either finger's deadbanded `dy` is not zero (amended) → `ALIGNMENT_RULES.md` §17. ⭐⭐ **`D138`: AUTO SHADOWS** — the default; shadows go OFF
 for the session when the device measures a median frame over 33 ms with them (the tablet: 10 → 20 fps) →
 `40_RENDER_SCENE/INDEX.md`. ⭐⭐ **`D139`: A SNAP STOPS THE DRAG THAT MADE IT** — a held Follower that seats locks its grip:
-only the roll goes on until the finger lifts or the click is released → `ALIGNMENT_RULES.md` §18.
+only the roll goes on until the finger lifts or the click is released → `ALIGNMENT_RULES.md` §18. ⛔⛔ **Defect 73 /
+`D140`: a STALE cursor snapped** — re-aligning a seated Follower to a second Pioneer made it jump there: the
+snap ran before the cursors were rebuilt; now only the live couple's cursor may snap.
 
 ⭐⭐ **THE FOURTH PASS** (`D121`–`D124`, branch `1.0.41-Mondrian`, ⛔ unjudged by a hand): a **frozen body
 seen from below turned see-through** (⛔ reversed by `D128`); `Scene_1`'s **floor is 21.116236 units**
@@ -173,7 +175,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1224 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1229 golden vectors passing** — ⚠ MEASURED 2026-09-28 (+ 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -619,7 +621,7 @@ and the only thing that closes a change here. ⚠ The numbers a hand has now acc
 first candidates if anything feels wrong later. ⛔ It has **no inertia**: that was built and rejected on the device. See `QUEUE.md`'s YOU-ARE-HERE
 block before rebuilding either that or `targetVelocity`.
 
-⛔⛔ **Sixty-eight defects, sixty-seven of them BY FINGER, and none visible to a green
+⛔⛔ **Sixty-nine defects, sixty-eight of them BY FINGER, and none visible to a green
 suite** (the ledger in `QUEUE.md`; entries 65–67 and 69 are vector defects, not counted). ⚠ The 2026-09-17 audit's findings are a **separate column** and are NOT added to that
 total — it means *found by a hand, invisible to a green suite*, and that is the whole of this
 project's argument for device passes. ⭐ The two do not compete: **the device finds what is

@@ -23,8 +23,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1224 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → **1224**, `D127`–`D134`, the frame meter, `D136`–`D139`; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1229 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → **1229**, `D127`–`D134`, the frame meter, `D136`–`D140`; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -98,7 +98,7 @@ one axis. ⚠ Both texts stand as the record of defects that can no longer occur
 
 ### ⛔⛔ THE FIVE MISTAKES THIS PROJECT KEEPS MAKING — they bind `IN3`/`IN4`
 
-Sixty-eight defects, **sixty-seven by finger** (the other by composing a measurement with a threshold),
+Sixty-nine defects, **sixty-eight by finger** (the other by composing a measurement with a threshold),
 and **not one visible to a green suite**. ⚠⚠ **TWICE IN ONE DAY THE CAUSE WAS *ONE FACT, TWO WRITERS,
 ONE OF WHICH FORGOT*** — defects 52 and 53. They are **five** shapes — the fifth is below, and it
 costs a correct implementation rather than a broken one:
@@ -150,9 +150,10 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | 70 — four rounds of a desktop input layer | **1** |
 | 71 — a billboard parented to a body | **1** |
 | 72 — every snap cancelled on its landing step (`3D6`) | **1** |
-| ⭐⭐ **THE TOTAL** | **= 68** |
+| 73 — a STALE cursor snapped for one frame after a re-alignment (`D140`) | **1** |
+| ⭐⭐ **THE TOTAL** | **= 69** |
 
-⚠ The ledger numbers 72 entries: **65, 66, 67 and 69** were found by a mutant, a change or my own fixtures — a different kind, not counted here.
+⚠ The ledger numbers 73 entries: **65, 66, 67 and 69** were found by a mutant, a change or my own fixtures — a different kind, not counted here.
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT**: the accounts are in
 [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md); a count changes in both places
 or in neither.

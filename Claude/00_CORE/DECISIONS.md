@@ -54,7 +54,7 @@ file.
 | `D105` | ⭐⭐ **THE GAME SCAFFOLD: intro → menu → worlds → levels → play; the current scene is `Scene_0`** | 2026-09-26 | ⭐ Binding. ⚠ → history |
 | `D106` | ⭐⭐ **`FOLLOW` IS DELETED — every alignment is a SNAPSHOT** | 2026-09-27 | ⭐ Binding, ⚠ → history |
 | `D107` | ⭐⭐ **TWO WAYS TO UNALIGN: tap empty space while holding, or align elsewhere** | 2026-09-27 | ⭐ Binding, ⚠ → history |
-| `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | Aligned: 1st finger slides, 2nd lifts + spins. Tablet toggles only on a touch tap on EMPTY space holding one free body without followers; desktop has no mode (Ctrl rotates). No button → §12 |
+| `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | ⭐ Binding, ⚠ → history |
 | `D109` | ⭐⭐ **THE DORMANT SWITCHES ARE DELETED; THE FUCHSIA CONE IS THE SNAP CONE** | 2026-09-27 | Gone: pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone hook, the fuchsia offer, three unwired functions → §12 |
 | `D110` | ⭐⭐ **THE FLICK IS DELETED — and `D103`'s flick-unsnap with it** | 2026-09-27 | Detector, verdict, rules and the rotation reset; a committed gesture ends kept → §13 |
 | `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | One scene history; an action = a gesture that changed the model; the camera reset keeps empty space only → §13 |
@@ -85,6 +85,7 @@ file.
 | `D137` | ⭐⭐ **A SIDEWAYS PINCH WHILE TRANSLATING ZOOMS; translation and roll pause** — until a dy leaves the band | 2026-09-28 | → §17 |
 | `D138` | ⭐⭐ **AUTO SHADOWS: OFF ON A DEVICE MEASURED TOO SLOW FOR THEM** | 2026-09-28 | → render `INDEX.md` |
 | `D139` | ⭐⭐ **A SNAP STOPS THE DRAG THAT MADE IT — only roll till a lift** | 2026-09-28 | → §18 |
+| `D140` | ⛔ **ONLY THE LIVE COUPLE'S CURSOR MAY SNAP** — defect 73, a stale one jumped a re-aligned Follower | 2026-09-28 | → §18 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

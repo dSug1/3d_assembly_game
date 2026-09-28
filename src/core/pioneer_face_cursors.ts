@@ -59,6 +59,23 @@ export function coupleKey(c: AlignmentCouple): string {
   );
 }
 
+/**
+ * ⭐⭐ `D140` — **IS THIS CURSOR STILL ITS FOLLOWER'S LIVE ALIGNMENT?** `live` is the couple the links
+ * say NOW (`null` when the body is no longer aligned).
+ *
+ * ⛔⛔ The cursors are reconciled LATE in the frame (with the markers) and the snap runs EARLY, so for
+ * one frame after a re-alignment the old cursor was still there (the owner, 2026-09-28: *"I align a
+ * follower and snap it to a first pioneer, then I select another face … and align it to another second
+ * pioneer: the follower directly jumps to snap the second pioneer"*, the jump *"much more than 10 mm"*).
+ * The Follower still sat ON the old cursor, the re-alignment had just cleared that couple's hold-off,
+ * so the old couple snapped — with a destination built from the NEW orientation on the OLD face, off by
+ * about the piece's size — and the flight then retargeted to the new cursor and seated there.
+ * ⭐ A rule acting on a cursor must ask this first.
+ */
+export function cursorIsLive(cur: AlignmentCouple, live: AlignmentCouple | null): boolean {
+  return live !== null && coupleKey(cur) === coupleKey(live);
+}
+
 /** ⭐ A local face centre and normal, or `null` when the face cannot be read yet. */
 export type FaceFrameOf = (
   objectId: ObjectId,
