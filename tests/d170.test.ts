@@ -9,12 +9,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { SCENE_1 } from "../src/content/scene_1";
-import { SCENE1_DEMO } from "../src/content/scene1_demo";
+import { SCENE1_DEMO as SHELL } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
 import { formatDemoPlan } from "../src/content/demo_plan_format";
 import { SCENES } from "../src/content/scenes";
 import { GAME_CONTENT } from "../src/content/worlds";
-import { DEMO_DEFAULTS, DEMO_MOVES_END, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
+import { withDemoPlan, DEMO_DEFAULTS, DEMO_MOVES_END, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
 import { contourDims, parseSceneDescriptor, serializeSceneDescriptor, type SceneDescriptor } from "@core/game_structure";
 import { boxShape, gapBetween } from "@core/collision_shape";
 import { boundsFromShapes, hullAtSpawn, poseFree } from "@core/collision";
@@ -25,6 +25,8 @@ import { orbitOffset } from "@input/orbit";
 import { sceneConfig } from "@input/scene_rig";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 
+/** ⭐ `D173`: the demo scene as it BOOTS — the shell completed by its plan (which loads on its own). */
+const SCENE1_DEMO = withDemoPlan(SHELL, PLAN);
 const final = new Map(SCENE_1.final!.bodies.map((f) => [f.id, f.position]));
 const near = (a: readonly number[], b: readonly number[], eps = 1e-5) => a.every((v, i) => Math.abs(v - b[i]!) <= eps);
 const turn = (a: DemoPose, b: DemoPose) => qAngle(qmul([...b.orientation], qconj([...a.orientation])));

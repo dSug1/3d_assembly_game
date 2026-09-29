@@ -10,7 +10,8 @@
  * level in `worlds.ts`; nothing here and nothing in `render/` names a scene.
  */
 import type { SceneDescriptor } from "../core/game_structure";
-import { resolveSceneIndex, scenesOf } from "../core/game_route";
+import { levelsOf, resolveSceneIndex, scenesOf } from "../core/game_route";
+import { withDemoPlan } from "../core/demo_plan";
 import { GAME_CONTENT } from "./worlds";
 
 export const SCENES: readonly SceneDescriptor[] = scenesOf(GAME_CONTENT);
@@ -18,4 +19,13 @@ export const SCENES: readonly SceneDescriptor[] = scenesOf(GAME_CONTENT);
 /** ⭐ The scene an index names — ⚠ an index out of range falls back to the first, never throws. */
 export function sceneAt(index: number): SceneDescriptor {
   return SCENES[resolveSceneIndex(GAME_CONTENT, index)]!;
+}
+
+/**
+ * ⭐⭐ `D173`: the scene an index names, READY to boot — a demo level's plan is fetched now (its own file) and applied;
+ * any other level resolves at once. ⚠ An index out of range falls back to the first, as `sceneAt`.
+ */
+export async function sceneReady(index: number): Promise<SceneDescriptor> {
+  const level = levelsOf(GAME_CONTENT)[resolveSceneIndex(GAME_CONTENT, index)]!;
+  return level.demoPlan ? withDemoPlan(level.scene, await level.demoPlan()) : sceneAt(index);
 }

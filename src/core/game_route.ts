@@ -23,7 +23,7 @@
  *
  * ⛔ ENGINE-FREE and DOM-free: hrefs in, hrefs out, so a test reaches every route.
  */
-import { GameFlow, levelOf, type GameContent, type SceneDescriptor, type Screen } from "./game_structure";
+import { GameFlow, levelOf, type GameContent, type LevelSpec, type SceneDescriptor, type Screen } from "./game_structure";
 
 /** ⭐ A level by its ids — what a scene index names. */
 export interface LevelRef {
@@ -34,6 +34,11 @@ export interface LevelRef {
 /** ⭐ Every level of the catalogue in reading order — the scene index IS a position in this list. */
 export function levelRefs(content: GameContent): readonly LevelRef[] {
   return content.worlds.flatMap((w) => w.levels.map((l) => ({ worldId: w.id, levelId: l.id })));
+}
+
+/** ⭐ `D173`: every level of the catalogue, in the scene index's order. */
+export function levelsOf(content: GameContent): readonly LevelSpec[] {
+  return content.worlds.flatMap((w) => w.levels);
 }
 
 /** ⭐ Every scene of the catalogue, in the same order — the scene slider's list. */
