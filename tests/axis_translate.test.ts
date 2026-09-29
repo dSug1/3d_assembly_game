@@ -29,6 +29,7 @@ import {
   type CameraScreenAxes,
   displayedAxes,
   freeTravelPhase,
+  hitRingApparentPx,
   NO_TRAVEL_GIZMO,
   planeEdgeOn,
   stepTravelGizmo,
@@ -821,5 +822,31 @@ describe("⭐⭐⭐ `D151` — a translation line STOPS where it hits an object,
 
   it("⛔ no hit — or one past the reach, behind, or NaN — leaves the line exactly as before, no ring", () => {
     for (const h of [null, 31, 0, -2, NaN, Infinity]) expect(stopAtHit(30, h)).toEqual({ lengthM: 30, hit: false });
+  });
+});
+
+describe("⭐⭐ `D152` — a hit ring keeps the origin ring's WORLD size, so it follows the perspective", () => {
+  // > *"Scale the projected gizmos based on the original white gizmo dimension and their respective
+  // > distance to the camera and focal/settings of the camera so the impression is that they follow
+  // > the perspective of the scene."* — the owner, 2026-09-29
+  it("⭐⭐ farther than the gizmo → smaller on the glass; nearer → larger; level with it → the same", () => {
+    // ⛔ RED against the build before: every hit ring was 11 px wherever it was.
+    expect(hitRingApparentPx(11, 1.5, 3)).toBeCloseTo(5.5, 12);
+    expect(hitRingApparentPx(11, 1.5, 0.75)).toBeCloseTo(22, 12);
+    expect(hitRingApparentPx(11, 1.5, 1.5)).toBeCloseTo(11, 12);
+  });
+
+  it("⭐ composed with the projection, the ring's WORLD size equals the origin ring's — at any fov", () => {
+    for (const fov of [0.5, 0.8, 1.2])
+      for (const [d0, d1] of [[1.5, 3], [1.2, 0.4], [2, 9]] as const) {
+        const origin = trackingMetresPerPx(d0!, fov, H) * 11;
+        const hit = trackingMetresPerPx(d1!, fov, H) * hitRingApparentPx(11, d0!, d1!);
+        expect(hit).toBeCloseTo(origin, 12);
+      }
+  });
+
+  it("⛔ a degenerate distance keeps the origin ring's size — never zero, never infinite", () => {
+    for (const [d0, d1] of [[0, 1], [1, 0], [NaN, 1], [1, Infinity], [-1, 2]])
+      expect(hitRingApparentPx(11, d0!, d1!)).toBe(11);
   });
 });

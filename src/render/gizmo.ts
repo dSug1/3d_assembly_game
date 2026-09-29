@@ -18,7 +18,7 @@ import { worldPlacementOf, type ObjectId, faceWorld } from "../core/object_model
 import { alignedFaceOf } from "../core/face_pick";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
-import { awaySignFrom, clipSegmentInFront, displayedAxes, freeTravelPhase, stopAtHit, travelHalves, soleGizmoBody, stepTravelGizmo, travelLines, type AwaySign, type GizmoChannels, type AxisTravel, type TravelLine, type TravelPhase } from "../input/axis_translate";
+import { awaySignFrom, clipSegmentInFront, displayedAxes, freeTravelPhase, hitRingApparentPx, stopAtHit, travelHalves, soleGizmoBody, stepTravelGizmo, travelLines, type AwaySign, type GizmoChannels, type AxisTravel, type TravelLine, type TravelPhase } from "../input/axis_translate";
 import { translatesOnDrag } from "../input/highlight";
 import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type Held, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
@@ -428,12 +428,12 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // ring's colour says which family, and its position says which pivot.
     // ⭐ Each ring appears with ITS OWN family, at ITS OWN pivot — so an aligned body being
     // rolled and lifted at once shows both, and each says where the rule it belongs to acts.
-    const placeRing = (ring: LinesMesh, at: Vec3, on: boolean): void => {
+    const placeRing = (ring: LinesMesh, at: Vec3, on: boolean, px: number = GIZMO_RING_PX): void => {
       ring.isVisible = on;
       if (!on) return;
       const m =
         trackingMetresPerPx(camDistTo(at), st.camera.fov, st.canvas.clientHeight) *
-        GIZMO_RING_PX;
+        px;
       ring.scaling.set(m, m, m);
       ring.position.set(at[0], at[1], at[2]);
     };
@@ -461,7 +461,13 @@ export function refreshAxisGizmo(st: SceneState) : void {
         if (stop.hit) {
           const key = `${id}:${i}:${side}`;
           hitRingsLive.add(key);
-          placeRing(ringFrom(st, st.gizmoHitRings, key, GIZMO_RING_MOVE_COLOUR, "hit", GIZMO_MOVE_GROUP), at, true);
+          // ⭐ `D152`: the origin ring's WORLD size, so it shrinks and grows with the scene's perspective.
+          placeRing(
+            ringFrom(st, st.gizmoHitRings, key, GIZMO_RING_MOVE_COLOUR, "hit", GIZMO_MOVE_GROUP),
+            at,
+            true,
+            hitRingApparentPx(GIZMO_RING_PX, camDistTo(anchor), camDistTo(at)),
+          );
         }
         return new Vector3(at[0], at[1], at[2]);
       };
