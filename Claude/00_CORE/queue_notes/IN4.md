@@ -1011,3 +1011,7 @@ directions with no `dy` ZOOM, and the translation and roll pause — latched unt
 ⭐⭐ **`D146`, the same day**: *"Camera position after zoom shall not change direction of translation during drag."* — the away/toward sign is latched at the press (`awaySignFrom` → `Held.awaySign`), so a zoom mid-drag cannot flip it. ✅ 2 vectors, 1260 → 1262.
 
 ⭐⭐ **`D147`, reversing `D146` the same day, then `D148`**: a zoom — and then also a gravity lift — mid-drag re-decides the sign; it is read live at every step (`awaySignNow`), no latch. ✅ 1262 → 1263.
+
+⭐ **`D149`** (rays only while moving) was built and reverted the same day (`7d775d8`).
+
+⭐⭐ **`D150`**: *"at start or toggle to translation in horizontal plane, both red and blue axis are displayed and extend full screen as long as both dx and dy stay within deadband; at start or toggle to translation in gravity axis, green axis is displayed full screen as long as dx stays within deadband; if one delta position is beyond deadband, its axis extend only in the direction of translation until delta position is beyond the deadband in the opposite sense."* — a free body's red + blue (or green alone while a second touch is down) are FULL at a start or a toggle, then each a RAY toward its travel once its input goes beyond the deadband, flipping only when it goes beyond the other way. ⛔ Defect 74 found building it: blue was never drawn since `D145` (a line behind the camera does not render) — every gizmo line is now cut to its front part. ✅ 1263 → 1272 → alignment spec §19.

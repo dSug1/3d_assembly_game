@@ -21,7 +21,7 @@ record. **A status changes in BOTH places or neither.**
 pinch while translating zooms (`D137`), auto shadows + a frame meter (`D138`), a snap stops its drag (`D139`),
 defect 73 (`D140`), undo only on the moved body (`D141`), ⭐ the mate sets the spin at the goal's dissolve (`D143`). ⚠ `D133`/`D135` were built and reverted.
 ⭐ **`1.0.51-Game-shell`: `D144`** — a ⏸ pause menu leaves a level (by page reload), ONE scene list, `Scene_1` boots → `GM6`.
-⭐⭐ **`1.0.52-`: `D145`** — translation along the LIVE camera (`dx` its right, `dy` its view, flattened; up = away iff the camera is at/above the gizmo, read every step, so a zoom or a lift mid-drag can flip it, `D147`/`D148`); red + blue light together → `IN4`.
+⭐⭐ **`1.0.52-`: `D145`** — translation along the LIVE camera (`dx` its right, `dy` its view, flattened; up = away iff the camera is at/above the gizmo, read every step, so a zoom or a lift mid-drag can flip it, `D147`/`D148`); a free body's gizmo is full at a start, then a ray toward the travel (`D150`; `D149` reverted) → `IN4`.
 ⏸ **PAUSED for `Scene_1`** → [`SCENE_1.md`](../20_GAME_RULES/spec/SCENE_1.md). ⛔⛔⛔ **THE PLAYABILITY PROGRAM**: **`3D6`
 collision** → **`GM1` a goal + the mate + completion** → **`3D7` play volume** → **`3D2` the
 approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-27.md`](queue_notes/PLAYABILITY_2026-09-27.md).
@@ -29,8 +29,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1263 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → **1263**, `D127`–`D134`, the frame meter, `D136`–`D148`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1272 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → **1272**, `D127`–`D134`, the frame meter, `D136`–`D150`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -159,7 +159,7 @@ the sum of the rows' dossiers — not a figure anyone restates from memory:
 | 73 — a STALE cursor snapped for one frame after a re-alignment (`D140`) | **1** |
 | ⭐⭐ **THE TOTAL** | **= 69** |
 
-⚠ The ledger numbers 73 entries: **65, 66, 67 and 69** were found by a mutant, a change or my own fixtures — a different kind, not counted here.
+⚠ The ledger numbers 74 entries: **65, 66, 67, 69 and 74** were found by a mutant, a change, my own fixtures or a headless measurement — a different kind, not counted here.
 ⛔⛔ **THE NARRATIVES MOVED OUT, THE COUNTS DID NOT**: the accounts are in
 [`queue_notes/DEFECT_LEDGER.md`](queue_notes/DEFECT_LEDGER.md); a count changes in both places
 or in neither.
