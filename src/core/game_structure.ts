@@ -147,6 +147,11 @@ export interface LevelSpec {
   readonly id: string;
   readonly title: string;
   readonly scene: SceneDescriptor;
+  /**
+   * ⭐ `D173`: a DEMO level's plan, loaded ONLY when the level is played (a separate file the browser fetches then) —
+   * `scene` is its shell, completed by `withDemoPlan`. ⛔ Never a static import: the plan would ride in every page load.
+   */
+  readonly demoPlan?: () => Promise<DemoPlan>;
 }
 
 export interface WorldSpec {

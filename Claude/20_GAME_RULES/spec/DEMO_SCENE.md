@@ -117,6 +117,15 @@ fails **throws** — it never ships a shorter or a colliding plan.
 committed** (`src/content/scene1_demo_plan.ts`, 37 KB, by `scripts/gen_demo_plan.ts`, ~17 s), so it can be read,
 reviewed and diffed. ⛔ A vector regenerates it and fails if the committed file differs.
 
+⭐⭐ **And it is LOADED ONLY BY THE DEMO LEVEL** (`D173`, the owner, 2026-09-29: *"load the demo's move plan only in the
+demo scene"*). The level carries a loader (`LevelSpec.demoPlan`, a dynamic `import()`), so the plan is its own file
+(`scene1_demo_plan-….js`, 31.6 KB, **4.3 KB** compressed) fetched when `?sceneIndex=2` boots; `scene1_demo.ts` exports the
+SHELL (every piece at its final pose, no plan), and `withDemoPlan` (`core/demo_plan.ts`) completes it once the plan has
+arrived — `sceneReady` (`content/scenes.ts`) awaits it before `createScene`. ⛔ Nothing may import the plan
+statically: `tests/d173.test.ts` reads the sources to hold that (one static import and the plan is back in every page
+load, every other test green). ✅ Measured on the built site: `Scene_1` fetches no plan, the demo fetches it and plays
+to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.4 KB compressed).
+
 ## 6. How it plays — the pieces
 
 * **At launch** the start configuration is shown for a **1 s lead-in**, then the moves play **one after the other**,
@@ -152,7 +161,7 @@ reviewed and diffed. ⛔ A vector regenerates it and fails if the committed file
 * **World 0, `Level1_demo`** — *Demo — the painting*, after `Level_1`: `?sceneIndex=2`, or the SCENE slider.
   (`Scene_demo` / `Level_demo` at `D170`, renamed by `D171`.)
 * `Scene_1`'s floor, lights, rig and final configuration; its pieces start at the plan's start poses (the 11 no move
-  touches stay in the painting). `SceneDescriptor.demo` carries the plan.
+  touches stay in the painting). `SceneDescriptor.demo` carries the plan once loaded (`D173`, §5).
 * **The result, seed 1** — the pieces in PLAY order (the first one put back first): `Piece8, Piece32, Piece39,
   Piece15, Piece25, Piece35, Piece26, Piece7, Piece36, Piece10, Piece27, Piece24, Piece11, Piece6, Piece22, Piece2,
   Piece5, Piece40, Piece28, Piece3, Piece23, Piece9, Piece1, Piece37, Piece34, Piece16, Piece17, Piece14, Piece21,
@@ -172,7 +181,7 @@ reviewed and diffed. ⛔ A vector regenerates it and fails if the committed file
 
 | | the scripted replay (built) | a recorded video |
 |---|---|---|
-| **download** | the plan is **37 KB** of text (150 moves); the scene's code is already loaded | a 30 s clip is **~3–10 MB** (H.264/VP9, 720–1080p); a frame-by-frame capture far more |
+| **download** | the plan is **4.3 KB** compressed (37 KB of text, 150 moves), fetched by the demo level alone (`D173`); the scene's code is already loaded | a 30 s clip is **~3–10 MB** (H.264/VP9, 720–1080p); a frame-by-frame capture far more |
 | **fits the screen** | renders at the device's own size and aspect, portrait or landscape, sharp at any density — and the zoom fits the cube to THIS screen | fixed resolution and aspect; letterboxed or cropped, soft when scaled up |
 | **follows the game** | a change to a piece, a colour, the lights or the plan shows at once; the slider changes its speed | re-record at every change; a speed change is only a playback rate |
 | **interactive** | the level is live at its end | none |

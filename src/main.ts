@@ -16,7 +16,7 @@
 import { createScene } from "@render/scene";
 import { installGameShell, installPauseMenu } from "@render/screens";
 import { GAME_CONTENT } from "./content/worlds";
-import { sceneAt } from "./content/scenes";
+import { sceneReady } from "./content/scenes";
 import { resolveSceneIndex, shellScreenFromSearch } from "@core/game_route";
 import { parseConfigOverrides } from "./input/config_override";
 import { DEFAULT_CONFIG } from "./input/gestureConfig";
@@ -89,7 +89,8 @@ try {
   // (`core/game_route.ts`), and every level carries the ⏸ pause menu, its one way out.
   const navigate = (href: string): void => window.location.assign(href);
   const shellScreen = shellScreenFromSearch(window.location.search, GAME_CONTENT);
-  let handle: { framesRendered(): number };
+  // ⚠ `-1` until a level has started drawing: the frame check below expects nothing yet.
+  let handle: { framesRendered(): number } = { framesRendered: () => -1 };
   if (shellScreen !== null) {
     handle = installGameShell(GAME_CONTENT, shellScreen, navigate);
   } else {
@@ -97,8 +98,13 @@ try {
       GAME_CONTENT,
       parseConfigOverrides(DEFAULT_CONFIG, window.location.search).config.sceneIndex,
     );
-    handle = createScene(canvas, sceneAt(index));
-    installPauseMenu(GAME_CONTENT, index, navigate);
+    // ⭐ `D173`: a demo level fetches its plan first (its own file); every other level resolves at once.
+    void sceneReady(index)
+      .then((spec) => {
+        handle = createScene(canvas, spec);
+        installPauseMenu(GAME_CONTENT, index, navigate);
+      })
+      .catch((err: unknown) => showError("The level could not be loaded", err instanceof Error ? (err.stack ?? err.message) : String(err)));
   }
 
   // ⭐ A canvas of zero size renders nothing and reports no error. Cheap to check,

@@ -442,3 +442,18 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
   for (const m of moves) if (!(m.body in start)) start[m.body] = m.from;
   return { seed: opt.seed, volume: { min: volume.min.map(round) as unknown as Vec3, max: volume.max.map(round) as unknown as Vec3 }, moves, start };
 }
+
+/**
+ * ⭐⭐ `D173` — **A DEMO SCENE, COMPLETED BY ITS PLAN** once the plan has loaded: every piece the plan moves starts at
+ * its start pose, and the plan rides on the scene. The shell's other pieces stay where it put them (their final pose).
+ */
+export function withDemoPlan(shell: SceneDescriptor, plan: DemoPlan): SceneDescriptor {
+  return {
+    ...shell,
+    bodies: shell.bodies.map((b) => {
+      const s = plan.start[b.id];
+      return s && !b.frozen ? { ...b, position: s.position, orientation: { quat: s.orientation } } : b;
+    }),
+    demo: plan,
+  };
+}
