@@ -134,11 +134,28 @@ lesson: two implementations of one fact disagree exactly when one is fixed).
 
 ---
 
+### 3.3 ⭐⭐ DESKTOP ↔ MOBILE — THE SAME ACTION COSTS THE SAME (measured headless, 2026-09-29, after `D161`)
+
+> *"list the actions with space in desktop and compare with the mobile configuration, in particular episode counts, to make sure there is equivalence"* — the owner, 2026-09-29
+
+| action | desktop | mobile | episodes (both) |
+|---|---|---|---|
+| select, then release, doing nothing | click + unclick; right click + Esc; Space alone | touch + release | **0** |
+| move a part | left drag | one-finger drag | **1** |
+| align | Space + click the part (or right click it), then a plain click on the Pioneer face; or right HOLD + left click | hold the part, second finger taps the Pioneer face | **1** |
+| move, then align in the same action | drag, Space mid-drag, then a plain click on the Pioneer face | drag, and while still holding, second finger taps the Pioneer | **1** |
+| press still, then align | left press, Space, then a plain click on the Pioneer face | hold, second finger taps | **1** |
+| unalign | Space + click (or right click) the aligned part, then a plain click on empty space | hold the aligned part, second finger taps empty space | **1** |
+| cancel a latched HitFace | a plain click on the same part, or Esc | lift the finger | **0** (after a press held still); **1** if the part had moved first |
+| a double tap / double click that undoes nothing | double click | double tap | **0** |
+
+⭐ Every row was driven in a headless Chrome on `Scene_0` (a fresh boot per case; the mobile cases with real touch events, two fingers where the gesture has two) and the episode delta and `objectA`'s alignment read back. ⚠ Two of MY instruments were wrong on the first run and are not the product: a synthetic `touchEnd` lifted the holding finger instead of the tapping one (CDP's `touchEnd` names the ENDED points), and a left press sent with the mask `1` while the right button was held told the layer the right had been released. ⛔ A device look is still owed on every row.
+
 ### 3.2 ⭐⭐ `D158` — A GESTURE THAT LANDS NOTHING COSTS NOTHING (2026-09-29)
 
 > *"an action which does not land into anything (for example: space pressed with no further action, left or right click and unclick on an object, touch and release on an object) should count as zero episode"* — the owner, 2026-09-29
 
-⭐ When a gesture's last touch lifts, its cost lands only if it CHANGED THE MODEL — the undo layer's own comparison of the bodies, the alignments, the seats and the cursors before and after (`endGesture`). So an align, an unalign, an unsnap, a move and an undo land; a press and release on a body, Space with nothing after it, a Space click cancelled by Esc, a drag that crossed no rotation increment and a double tap or click that does not land (`D157`, absorbed) cost ZERO. ⭐ The undo pair still costs ONE (`D111`): its first tap changed nothing, its second tap's gesture undid. ⛔ `D157`'s take-back and `undoSecondTap` are deleted with it, and so is `D155`'s continuation mark: a press held still + Space + an alignment costs 1 (the alignment), a drag that MOVED + Space + an alignment costs 2 (two things landed). ✅ `EpisodeTally.gestureEnded(changed)`, 4 vectors; headless, each case measured.
+⭐ When a gesture's last touch lifts, its cost lands only if it CHANGED THE MODEL — the undo layer's own comparison of the bodies, the alignments, the seats and the cursors before and after (`endGesture`). So an align, an unalign, an unsnap, a move and an undo land; a press and release on a body, Space with nothing after it, a Space click cancelled by Esc, a drag that crossed no rotation increment and a double tap or click that does not land (`D157`, absorbed) cost ZERO. ⭐ The undo pair still costs ONE (`D111`): its first tap changed nothing, its second tap's gesture undid. ⛔ `D157`'s take-back and `undoSecondTap` are deleted with it, and so is `D155`'s continuation mark: a press held still + Space + an alignment costs 1 (the alignment), a drag that MOVED + Space + an alignment costs 2 (two things landed). ⛔ **Reversed by `D159` the same day**: a Space freeze carries the gesture, so drag + Space + the action that follows lands ONCE — 1 if anything changed (alignment, or the move then Esc), 0 if not. ✅ `EpisodeTally.gestureEnded(changed)`, 4 vectors; headless, each case measured.
 
 ## 4. WHY THE SNAP IS A PREREQUISITE, AND WHAT IT CHANGES
 

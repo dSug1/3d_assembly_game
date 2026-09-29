@@ -1163,3 +1163,9 @@ loop** as the fill — a marker pool that retires by what CHANGED instead of by 
 ⭐⭐ **`D156`** — desktop unalign: Space + click the Follower, Space + click empty space (a tap while it holds, `D107`) → alignment spec §20. ✅ 1287 → 1291.
 
 ⚠ **`D158`** amends `D155`'s count: a drag that moved + Space + an alignment is 2 episodes (both landed); a press held still + Space + an alignment is 1.
+
+⭐⭐ **`D159`** — a plain click (left or right) completes a Space-locked action; a Space freeze carries the gesture, so drag + Space + the next action lands one episode (1 if anything changed, 0 if not). ✅ 1293 → 1299 → alignment spec §20.
+
+⭐ **`D160`** — with a HitFace latched, a click on the same part cancels it; the count is the underlying action's. ✅ 1299 → 1301.
+
+⭐⭐ **`D161`** — a right click released unused on a part latches the HitFace like Space; used while held it lifts as before. Desktop ↔ mobile episode equivalence measured → `SCORE.md` §3.3. ✅ 1301 → 1305.

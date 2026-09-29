@@ -702,3 +702,7 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ⭐ **`D48`, headline text moved 2026-09-29 (to pay for `D157`)**: *white contours required the alignment; the owner removed it, keeping the TRANSLATION condition.*
 ⭐ **`D17`, headline text moved 2026-09-29 (to pay for `D158`)**: *its TRIGGER is gone; the configuration and `A5`'s geometry stand.*
 ⭐ **`D52`, headline text moved 2026-09-29 (to pay for `D158`)**: *the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it*
+⭐ **`D58`, headline text moved 2026-09-29 (to pay for `D159`)**: *a PRESS toggled the movement mode, in two places.*
+⭐ **`D121`, headline text moved 2026-09-29 (to pay for `D160`)**: *a frozen body seen from below turned see-through.*
+⭐ **`D133`, headline text moved 2026-09-29 (to pay for `D161`)**: *finger up away from below too; never shipped, the flip stands.*
+⭐ **`D25`, headline text moved 2026-09-29 (to pay for `D161`)**: *a holder no longer under its object used to give the selection up.*

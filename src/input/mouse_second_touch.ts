@@ -43,6 +43,9 @@
  * | left click while right is held | the Pioneer tap — it aligns (cyan; the double-click amber FOLLOW is deleted, `D106`) |
  * | ⭐ `D154`: **Space + click** (either button) on a body | the HitFace — a held second touch, LATCHED past the click; an ongoing drag is frozen first |
  * | ⭐ `D154`: **Space + click** on ANOTHER body | the Pioneer tap — it aligns, then the latched HitFace lifts: one episode (`D115`) |
+ * | ⭐ `D159`: with a HitFace latched, a **plain click** (left or right, no Space) | completes the action as a Space click would: another body aligns, empty space unaligns |
+ * | ⭐ `D160`: with a HitFace latched, a click on the **same** body | CANCELS it — the count is the underlying action's (a frozen drag that moved: 1; else 0) |
+ * | ⭐ `D161`: a **right press released unused** on a body | LATCHES the HitFace like Space + click — the next plain click completes the action; used while held (a left click or drag), it lifts on release as before |
  * | ⭐ `D155`: **Space pressed** while the left button holds a body (moving or not) | the drag stops and the face it pressed becomes the latched HitFace |
  * | ⭐ `D155`: an alignment made with Space | uses Space up — it must be hit again to start another HitFace |
  * | ⭐ `D156`: **Space + click on EMPTY space** with a HitFace latched | a tap there while it holds — `D107`'s unalign (a Pioneer: its followers go); then the HitFace lifts |
@@ -130,7 +133,16 @@ export class MouseSecondTouch {
    * #2: where it is, and whether SHIFT made it (an anchor-only channel driver that lives for the
    * left button's hold) or the RIGHT button did (the HitFace holder, which the cursor never moves).
    */
-  private second: (Pt & { shiftMade: boolean; spaceBody?: string }) | null = null;
+  private second:
+    | (Pt & {
+        shiftMade: boolean;
+        spaceBody?: string;
+        /** ⭐ `D161`: the body a RIGHT press made this HitFace on — it latches there if released unused. */
+        rightBody?: string;
+        /** ⭐ `D161`: the left button pressed while the right held it — an action was made; no latch. */
+        used?: boolean;
+      })
+    | null = null;
   /**
    * ⭐ `D154`: the Pioneer tap in flight — the REAL pointer pressed at `at` by a Space click on another
    * body, released there when that button lifts, and the latched HitFace lifted just after it.
@@ -186,10 +198,11 @@ export class MouseSecondTouch {
         const space = ev.space === true && !this.spaceUsed;
         const latched = this.second?.spaceBody ?? null;
         const on = ev.onBody ?? null;
-        if (latched !== null && !space) {
-          // ⭐ A click WITHOUT Space lets the latched HitFace go, then is an ordinary click.
-          this.liftSecond(emit);
-        } else if (latched !== null) {
+        // ⭐⭐ `D159` (the owner, 2026-09-29: *"following a click locked by space key … a simple left click or
+        // right click is sufficient to complete the action (no need hold Space key or to press Space key
+        // again)"*): with a HitFace latched, EVERY click completes the action — Space or not. ⛔ `D154`'s
+        // *a click without Space lets it go* is reversed; Esc still cancels.
+        if (latched !== null) {
           skip = true;
           if (on === null) {
             // ⭐⭐ `D156` (the owner, 2026-09-29: *"also to unalign a follower object = space + click on
@@ -199,9 +212,12 @@ export class MouseSecondTouch {
             this.tap = { button: ev.button, at: { ...here } };
             emit.push({ target: "REAL", kind: "DOWN", x: here.x, y: here.y });
           } else if (on.id === latched) {
-            // ⭐ The same body again: the HitFace moves to the face under this click.
+            // ⭐⭐ `D160` (the owner, 2026-09-29: *"on the same part it cancels the HitFace and does not increase
+            // the episode count (the episode count shall be driven by the underlying ongoing action)"*): the
+            // HitFace lifts and the click itself is swallowed — so the gesture ends on the underlying action
+            // alone (`D158`/`D159`: a frozen drag that moved lands 1; a plain latch lands 0). ⛔ `D154`'s
+            // *the same body moves the HitFace* is reversed.
             this.liftSecond(emit);
-            this.pressSpaceSecond(here, on.id, emit);
           } else {
             // ⭐⭐ ANOTHER body: the Pioneer tap — the real pointer presses here and does not move.
             this.tap = { button: ev.button, at: { ...here } };
@@ -233,11 +249,19 @@ export class MouseSecondTouch {
           // mean the opposite. ⚠ Swallowed either way — reaching Babylon it is a press of the
           // mouse's one pointer.
           if (this.real === null && this.second === null) {
-            this.second = { x: ev.x, y: ev.y, shiftMade: false };
+            // ⭐ `D161`: on a (non-frozen) body, remember it — the release may latch the HitFace there.
+            this.second =
+              on !== null && !on.frozen
+                ? { x: ev.x, y: ev.y, shiftMade: false, rightBody: on.id }
+                : { x: ev.x, y: ev.y, shiftMade: false };
             emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
           }
           skip = true;
         } else if (ev.button === LEFT_BUTTON && this.real === null) {
+          // ⭐ `D161`: a left press while the right button holds the HitFace IS the action (an align tap, a
+          // steer, an unalign) — the right release will lift it, never latch it.
+          if (this.second !== null && !this.second.shiftMade && this.second.spaceBody === undefined)
+            this.second.used = true;
           // ⭐ The real pointer presses where the cursor IS, so it starts with no offset and the
           // event passes untouched.
           this.real = { ...here };
@@ -263,8 +287,15 @@ export class MouseSecondTouch {
           // the mouse's ONE pointer, which would release touchpoint #1 while the left is held.
           skip = true;
           // ⛔⛔ Lifted WHERE IT IS, never at the cursor — a lift elsewhere is one enormous step.
-          if (this.second !== null && !this.second.shiftMade && this.second.spaceBody === undefined)
-            this.liftSecond(emit);
+          if (this.second !== null && !this.second.shiftMade && this.second.spaceBody === undefined) {
+            // ⭐⭐⭐ `D161` (the owner, 2026-09-29: *"currently, right click on an object triggers the hitface but
+            // when the right click is released, the hitface cancels: make it a latch with episode counting
+            // once the action is completed (similar to the space key)"*): released UNUSED on a body, the
+            // HitFace stays — latched exactly as a Space click latches it (`D154`/`D159`/`D160`).
+            if (this.second.rightBody !== undefined && this.second.used !== true)
+              this.second.spaceBody = this.second.rightBody;
+            else this.liftSecond(emit);
+          }
         } else if (ev.button === LEFT_BUTTON && this.real !== null) {
           // ⭐ A Shift-made #2 lives for the left button's hold, and lifts just BEFORE it.
           if (this.second !== null && this.second.shiftMade) this.liftSecond(emit);

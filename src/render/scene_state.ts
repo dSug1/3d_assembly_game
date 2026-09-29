@@ -449,6 +449,13 @@ export interface SceneState {
   lastEmptyProbeMs: number;
   episodeFacts: Map<number, { role: PointerRole; heldAtPress: number; pressedAnotherBody: boolean }>;
   episodeUnaligned: Set<number>;
+  /**
+   * ⭐ `D159`: a Space freeze is carrying the gesture across the drag's release — the release does not
+   * end it and the latched HitFace's press does not begin a new one, so the action lands ONCE.
+   */
+  freezeCarry: boolean;
+  /** ⭐ `D159`: the latched HitFace that continues a frozen drag — its hold is the drag's, not a second one. */
+  episodeContinued: Set<number>;
   /** ⭐ `D155`: the face a Space freeze hands to the next second-touch press on this mesh. */
   inheritPressFace: { mesh: AbstractMesh; pressFace: { faceId: string; cos: number } | null } | null;
   lastVerdict: string;

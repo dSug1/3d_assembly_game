@@ -164,3 +164,27 @@ describe("⭐⭐⭐ `D158` — a gesture that LANDS NOTHING costs nothing", () =
     expect(t.gestureEnded()).toBe(1);
   });
 });
+
+describe("⭐⭐ `D159` — a Space freeze and the action it becomes land ONE episode", () => {
+  // > *"clicking space key shall not count immediately as an episode: the episode shall be counted once at
+  // > the end of the action which follows … if the action which follows is Esc being pressed, if the object
+  // > has moved (translation or rotation), the count shall be one."* — the owner, 2026-09-29
+  it("⭐ the latched HitFace that continues the drag's hold adds nothing", () => {
+    const hold = { role: "OBJECT" as const, heldAtPress: 0, unaligned: false, pressedAnotherBody: false };
+    // ⛔ RED against `D158`: every OBJECT touch was a hold of its own.
+    expect(episodeCounts({ ...hold, continuesAnother: true })).toBe(false);
+    expect(episodeCounts(hold)).toBe(true);
+  });
+
+  it("⭐⭐ one gesture — drag hold + continued HitFace + the align tap: ONE if anything changed, ZERO if not", () => {
+    const moved = new EpisodeTally();
+    moved.note(true, false); // the drag's touch, released by the freeze (the gesture is CARRIED)
+    moved.note(false, false); // the continued HitFace
+    moved.note(false, true); // the align tap (an alignment tap is not itself counted)
+    expect(moved.gestureEnded(true)).toBe(1);
+    const esc = new EpisodeTally();
+    esc.note(true, false);
+    esc.note(false, false); // Esc lifts the HitFace
+    expect(esc.gestureEnded(false)).toBe(0); // a press held still, then Esc: nothing changed
+  });
+});

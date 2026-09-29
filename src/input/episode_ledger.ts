@@ -35,11 +35,17 @@ export interface EpisodeFacts {
    * seated Follower's touch is redirected to its root, which the Pioneer's finger holds.
    */
   readonly pressedAnotherBody: boolean;
+  /**
+   * ⭐ `D159`: this touchpoint CONTINUES another's hold — the latched HitFace that took over a Space-frozen
+   * drag. The drag's touch is the hold; this one adds nothing, so the action lands ONE episode.
+   */
+  readonly continuesAnother?: boolean;
 }
 
 /** ⭐ The whole rule: does this touchpoint cost the player an episode? */
 export function episodeCounts(f: EpisodeFacts): boolean {
   if (f.role === null) return false;
+  if (f.continuesAnother === true) return false;
   switch (f.role) {
     case "OBJECT":
       return true;

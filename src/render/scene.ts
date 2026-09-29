@@ -589,7 +589,6 @@ export function createScene(
     const grip = st.held.get(pointerId);
     const id = grip === undefined ? undefined : st.idOf.get(grip.mesh);
     if (grip === undefined || id === undefined) return null;
-    st.inheritPressFace = { mesh: grip.mesh, pressFace: grip.pressFace };
     const w = st.engine.getRenderWidth();
     const h = st.engine.getRenderHeight();
     const p = Vector3.Project(grip.mesh.getAbsolutePosition(), Matrix.Identity(), st.scene.getTransformMatrix(), st.camera.viewport.toGlobal(w, h));
@@ -601,6 +600,14 @@ export function createScene(
       y: rect.top + (p.y * rect.height) / h,
       mesh: grip.mesh,
     };
+  },
+  // ⭐⭐ `D159`: a freeze is happening — hand the drag's pressed face to the second touch that takes over,
+  // and CARRY the gesture across the drag's release, so the whole action lands once at its end.
+  (pointerId) => {
+    const grip = st.held.get(pointerId);
+    if (grip === undefined) return;
+    st.inheritPressFace = { mesh: grip.mesh, pressFace: grip.pressFace };
+    st.freezeCarry = true;
   });
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
@@ -641,6 +648,8 @@ export function createScene(
   st.episodeFacts = new Map();
   st.episodeUnaligned = new Set<number>();
   st.inheritPressFace = null;
+  st.freezeCarry = false;
+  st.episodeContinued = new Set<number>();
   st.lastVerdict = "—";
 
   /**
