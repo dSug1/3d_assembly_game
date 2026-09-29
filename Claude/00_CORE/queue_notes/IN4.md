@@ -1001,3 +1001,11 @@ directions with no `dy` ZOOM, and the translation and roll pause — latched unt
 
 ⭐ **`D137` amended, same day**: the zoom now ENDS as soon as either finger's deadbanded `dy` is not zero
 (it was latched until a lift) — a toggle on `motionDeadbandMm` both ways. ✅ 2 vectors.
+
+## ⭐⭐⭐ `D145` — the translation runs along the LIVE camera again (2026-09-29, ⛔ unjudged)
+
+> *"horizontal plane translation (first touch or left click without shift) is done: on camera view axis (projected onto the horizontal plane) for dy — dy towards top translates the object away from the camera if the camera is above or at the gizmo gravity position; towards the camera if the camera is below the gizmo gravity position — on camera screen horizontal axis (projected onto the horizontal plane …) for dx. Translation sense follows dx sense. Red and blue axis are displayed as soon as one or two of the two dx or dy inputs are above the deadband (both axis display even if there is only one input)"* — the owner, 2026-09-29
+
+⛔⛔ Reverses `D74`/`D75`'s boot-fixed axes and `D127`'s *"the axes stay the world's"* (the owner refused a camera-relative fallback on 2026-09-28; this is the owner's own reversal). `axesOf` returns the live camera's gravity frame; `bootObjectAxes` is deleted. `dx` → the screen's right, exactly under the finger; `dy` → the view, flattened, tracked at `1/|shadow|` outside the cone and at the fixed rate inside; its sign is the camera's height against the gizmo's, everywhere (the old view-pitch sign disagreed for a body above eye level). ⭐ The gizmo lights red AND blue for any holder input. ⚠ A free body's turn keeps the boot frame (`D84`). `input/axis_translate.ts`; the suite rewritten (35 vectors, 1262 → 1260); the old mapping fails 5, four mutants each red → alignment spec §19.
+
+⭐⭐ **`D146`, the same day**: *"Camera position after zoom shall not change direction of translation during drag."* — the away/toward sign is latched at the press (`awaySignFrom` → `Held.awaySign`), so a zoom mid-drag cannot flip it. ✅ 2 vectors, 1260 → 1262.

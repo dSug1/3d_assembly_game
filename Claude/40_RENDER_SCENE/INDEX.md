@@ -174,8 +174,8 @@ build still refreshes. 16 vectors, both guards falsified on purpose.
 ⚠ The decision is in `src/core` and not in the wiring on purpose: `D23` recorded what it
 costs to leave one in `scene.ts`, where no vector can reach it.
 
-⭐⭐ **THE HUD'S `axes` LINE IS THE INSTRUMENT FOR THE WHOLE OBJECT-AXIS RULE** (2026-09-22/23): `fixed@boot PLANE`
-(the only rule left, `D109`), **`track=`** the leverage, **`⛔EDGE-ON`**, and per held body its three
+⭐⭐ **THE HUD'S `axes` LINE IS THE INSTRUMENT FOR THE WHOLE OBJECT-AXIS RULE** (2026-09-22/23): `camera PLANE`
+(`D145`; was `fixed@boot`), **`track=`** the leverage, **`⛔EDGE-ON`**, and per held body its three
 axes. ⛔⛔ **NONE OF THOSE CAN BE ANSWERED BY LOOKING AT THE BODY**: *"it went much too far"*
 and *"it barely moved"* are one symptom with two causes, and the camera pose separates them — which
 is how the three reports of 2026-09-23 arrived, as three descriptions of one arithmetic. ⚠ The

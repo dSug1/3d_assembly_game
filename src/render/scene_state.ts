@@ -28,9 +28,8 @@ import { UnsnapDetector } from "../input/unsnap";
 import { SeatSnaps } from "../input/seat_snap";
 import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
-import { type ObjectAxes } from "../input/object_axes";
 import { JumpWatch, type Jump } from "../input/jump_watch";
-import { type GizmoChannels } from "../input/axis_translate";
+import { type AwaySign, type GizmoChannels } from "../input/axis_translate";
 import { type GestureConfig } from "../input/gestureConfig";
 import { type Hud } from "./hud";
 import { type MouseSecondTouchHandle } from "./mouse_adapter";
@@ -184,6 +183,11 @@ export interface Held {
    * view axis — two frames, two purposes.
    */
   frame: GravityFrame;
+  /**
+   * ⭐⭐ `D146` — which way finger up translates this grip's body (`awaySignFrom`), LATCHED at press so a
+   * zoom mid-drag — which changes the camera's height — cannot flip it.
+   */
+  awaySign: AwaySign;
   /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
   prev: Sample;
   /**
@@ -403,7 +407,6 @@ export interface SceneState {
   rawPressedBody: Map<number, ObjectId>;
   pointerTypeOf: Map<number, string>;
   outlines: Map<ObjectId, BodyOutlines>;
-  bootObjectAxes: ObjectAxes | null;
   bootGestureFrame: GravityFrame | null;
   gizmoAxes: Map<ObjectId, GizmoChannels>;
   rolledThisHold: Set<ObjectId>;

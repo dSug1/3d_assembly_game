@@ -687,3 +687,7 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 | `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | Aligned: 1st finger slides, 2nd lifts + spins. Tablet toggles only on a touch tap on EMPTY space holding one free body without followers; desktop has no mode (Ctrl rotates). No button → §12 |
 | `D109` | ⭐⭐ **THE DORMANT SWITCHES ARE DELETED; THE FUCHSIA CONE IS THE SNAP CONE** | 2026-09-27 | Gone: pinned Pioneer, `worldAxisB=0`, `translatePairing=0`, the zone hook, the fuchsia offer, three unwired functions → §12 |
 | `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers instead of being carried** | 2026-09-18 | ⛔ DELETED (`D109`) — the pinned pair; its both-axes drive survives for every aligned Follower (`D59`, `D108`) |
+
+⭐ **`D67`, the note moved from `DECISIONS.md` on 2026-09-29 (to pay for `D145`)**: *Kept: it bought **several Followers in one hold**, which is exactly what the reversal (`D87`) costs.*
+⭐ **`D17` and `D12`, notes moved the same day**: `D17` — *Kept: it is what moved depth off the pinch.* `D12` — *Kept: it moved eviction off the double-tap, and that half stands.*
+⭐ **`D10`, note moved 2026-09-29 (to pay for `D146`)**: *Kept: "ignored" still governs the THIRD touchpoint on.*

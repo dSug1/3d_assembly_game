@@ -19,7 +19,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | — | ⭐ **double tap on the body the last action MOVED** (double click on desktop) | **undo that action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`). ⭐ On any OTHER body it is refused and the HUD says which body moved (`D141`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
 | — | ⭐ **the ⏸ button, bottom-left** (`D144`) | the **pause menu**: *Resume*, *Restart level*, *Quit to menu* (that world's level list). A DOM button — it never reaches the gesture layer and is **not** an episode |
-| a FREE body | 1st finger drag, `TRANSLATE` | slide it in its own horizontal plane (boot-fixed axes) |
+| a FREE body | 1st finger drag, `TRANSLATE` | slide it in the horizontal plane along THIS camera (`D145`): `dx` along the screen's right; `dy` along the view — finger up AWAY if the camera is at/above the gizmo, TOWARD if below. Red + blue light together |
 | any body, being TRANSLATED | ⭐ **both fingers move sideways in OPPOSITE directions, with no `dy`** — a horizontal pinch, the 2nd finger anywhere (empty space, the body, another body) | **zoom** (spreading = zoom in, closing = zoom out, as the empty-space pinch); the **translation and the roll are PAUSED**. ⭐ It **ends as soon as either finger's `dy` is not zero** — that move translates again; both ways read the same deadband (`motionDeadbandMm`, OBJECT TRANSLATION) (`D137`, amended) |
 | a FREE body | 1st finger drag, `ROTATE` | yaw about the vertical + pitch about the boot camera's right |
 | a FREE body | 2nd finger `dy` / `dx` (empty space, the body, or ANOTHER body), `TRANSLATE` | lift along gravity / ⭐ **spin about gravity**, together — the aligned body's pair, with gravity for the normal (`D123`) |
@@ -28,7 +28,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | any body (its face = the HitFace) | 2nd finger **TAP a face on another body** — press and release, short and still | align: the held face turns to point AT the tapped one (anti-parallel); replaces any earlier alignment. ⛔ `D119`: a 2nd finger that PRESSES and stays, or moves, aligns nothing |
 | any body | 2nd finger **TAP the frozen plate** | align to the plate's face under the finger (`D119`) |
 | any body | 2nd finger **press / drag on ANOTHER body** — frozen plate or not | ⭐ it STEERS the held body (`dy` lifts, `dx` spins or rolls) and never grabs the other one: two bodies are no longer moved at once (`D124`, `D119`). ⛔ Except a body SEATED in the held body's assembly — the unsnap's touch |
-| an ALIGNED body | 1st finger drag, any mode | slide it in its horizontal plane (`D108`: mode-less) |
+| an ALIGNED body | 1st finger drag, any mode | slide it as a free body does (`D145`; `D108`: mode-less) |
 | an ALIGNED body | 2nd finger `dy` / `dx`, anywhere (another body included) | lift along gravity / spin about the aligned normal, together |
 | an ALIGNED body | 2nd finger tap on empty space | **unalign** it (`D95`) |
 | a PIONEER (has followers) | 2nd finger tap on empty space | **release all its followers** (`D107`) |
@@ -63,7 +63,7 @@ on entering the capture zone, are deleted.
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
 | nothing | double left click on empty space | reset the camera |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`) |
-| a FREE body | left drag | translate in its horizontal plane (`D108`: no mode on desktop) |
+| a FREE body | left drag | translate as the tablet's first finger (`D145`; `D108`: no mode on desktop) |
 | a FREE body | **Ctrl** + left drag | rotate: yaw + pitch |
 | a FREE body | Shift + left drag | gravity (`dy`) + ⭐ **spin about gravity** (`dx`) (`D123`) |
 | a FREE body | Ctrl + Shift + left drag | roll (`dx`) |
@@ -95,7 +95,7 @@ of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE
 | the camera reset by a double tap on a BODY | `D111` | empty space — and the **edge band** is always empty space (`D113`) |
 | any tap toggling the mode | `D108` | tablet: one tap on empty space, free body held; desktop: Ctrl |
 | the pinned Pioneer (`pioneerTranslates=0`) | `D109` | an aligned Follower's second finger drives both axes anywhere |
-| `worldAxisB=0`, `translatePairing=0` | `D109` | boot-fixed axes, plane solve — the only ones |
+| `worldAxisB=0`, `translatePairing=0` | `D109` | boot-fixed axes, plane solve — ⛔ themselves replaced by the live camera's (`D145`) |
 | the fuchsia offer | `D109` | its cone is the **snap cone angle** (CAPTURE) |
 | `CameraOffsetZoneEnter` (empty) | `D109` | — |
 | a Shift + left drag on empty space zooming (a pinch of two mouse-made touches) | `D118` | the wheel |

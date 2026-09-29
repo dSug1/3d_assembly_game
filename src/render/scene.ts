@@ -72,7 +72,6 @@ import { UnsnapDetector } from "../input/unsnap";
 import { SeatSnaps } from "../input/seat_snap";
 import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
-import { axesFromFrame } from "../input/object_axes";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
@@ -446,25 +445,11 @@ export function createScene(
   st.pointerTypeOf = new Map<number, string>();
   st.outlines = new Map<ObjectId, BodyOutlines>();
 
-  /**
-   * ⭐⭐⭐ **THE OBJECT AXES — STATE ONLY. THE RULE IS `input/object_axes.ts`.**
-   *
-   * The owner, 2026-09-22: *"at scene boot, all object axis are updated based on camera
-   * quaternion at scene boot"*. ⛔ They were once re-decided on a capture-zone edge; that basis
-   * is deleted (`D82`), and since `D109` the boot axes are the only ones.
-   *
-   * ⛔⛔ **WHY A MAP HERE AND NOT A FIELD ON `SceneObject`**: the axes are an INPUT-layer
-   * concept — which way a finger pushes a body — and the model is the geometry every rule
-   * agrees on. ⚠ Putting them on the model would give `frozen`, `attach` and the placement
-   * writers a fourth thing to carry, for a quantity none of them reads.
-   *
-   * ⭐ A body with no entry uses the BOOT axes, which is the dictation's own default rather
-   * than a stand-in: *all* object axes are the boot camera's until something moves them.
-   */
-  st.bootObjectAxes = null;
+  // ⭐⭐⭐ `D145`: `bootObjectAxes` stood here — the boot camera's translation axes. A translation
+  // runs along the LIVE camera's axes now (`axesOf`), so there is no state to keep.
   /**
    * ⭐ The gravity frame at scene boot — what a FREE body is turned about (`WorldAxisB`, `D109`).
-   * ⚠ Filled beside `bootObjectAxes`, at the very bottom of this file, for the same reason.
+   * ⚠ Filled at the very bottom of this file — `requireGestureFrame` is declared below (a TDZ).
    */
   st.bootGestureFrame = null;
   // ⚠ `lastTravelDir` and the LeadingFace ray it aimed are deleted; what persists between frames
@@ -930,7 +915,6 @@ export function createScene(
   // ⚠ Every body inherits this basis through `axesOf`'s fallback rather than by a loop over
   // the scene: a body created later (an import, a spawn) then gets the same answer, where a
   // one-time loop would leave it with none.
-  st.bootObjectAxes = axesFromFrame(requireGestureFrame(st));
   st.bootGestureFrame = requireGestureFrame(st);
 
   /**
