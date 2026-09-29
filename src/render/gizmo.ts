@@ -17,9 +17,10 @@ import { worldPlacementOf, type ObjectId, faceWorld } from "../core/object_model
 import { alignedFaceOf } from "../core/face_pick";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
+import { originRingTone } from "../input/pioneer_press";
 import { awaySignFrom, clipSegmentInFront, displayedAxes, hitRingApparentPx, soleGizmoBody, stopAtHit, type AwaySign, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
-import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type SceneState, type TurnAxes } from "./scene_state";
+import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, PIONEER_COLOUR, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
 import { requireGestureFrame, screenFrame } from "./camera_rig";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
@@ -406,7 +407,11 @@ export function refreshAxisGizmo(st: SceneState) : void {
       ring.scaling.set(m, m, m);
       ring.position.set(at[0], at[1], at[2]);
     };
-    placeRing(gizmoRingFor(st, id), anchor, shown[0] || shown[1] || shown[2]);
+    // ⭐⭐ `D164`: the origin ring is AMBER on an aligned part — it reads on the cyan FollowerFace; white otherwise.
+    const originRing = gizmoRingFor(st, id);
+    const tone = originRingTone(alignedHere) === "AMBER" ? PIONEER_COLOUR : GIZMO_RING_MOVE_COLOUR;
+    if (!originRing.color.equals(tone)) originRing.color.copyFrom(tone);
+    placeRing(originRing, anchor, shown[0] || shown[1] || shown[2]);
     placeRing(
       gizmoTurnRingFor(st, id),
       turnAnchor,

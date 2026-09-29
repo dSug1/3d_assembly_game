@@ -105,6 +105,8 @@ file.
 | `D161` | ⭐⭐ **A RIGHT CLICK RELEASED UNUSED LATCHES THE HITFACE, AS SPACE DOES** | 2026-09-29 | → §20 |
 | `D162` | ⭐ **A PRESSED ALIGNED PART FILLS ITS PIONEERFACE AMBER** | 2026-09-29 | → §21 |
 | `D163` | ⭐ **A LATCHED HITFACE ON AN ALIGNED PART: FUCHSIA OVER CYAN** | 2026-09-29 | → §21 |
+| `D164` | ⭐ **AN ALIGNED PART'S RING IS AMBER; ITS PIONEER'S RING CYAN** | 2026-09-29 | → §21 |
+| `D165` | ⭐ **FACE FILLS HALF-OPAQUE; A SLIDER** | 2026-09-29 | → §21 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -115,7 +117,7 @@ file.
 | `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | ⭐ Binding, ⚠ → history |
 | `D71` | ⭐⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** | 2026-09-22 | ⭐ Binding, re-confirmed by `D93`. ⚠ → history |
 | `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | ⭐ Binding, ⚠ → history |
-| `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** — a translated Pioneer carried EVERY Follower; cyan should break instead | 2026-09-21 | ⚠ → §5.16 |
+| `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** | 2026-09-21 | ⚠ → §5.16 |
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D67` | ⚠ **REVERSED BY `D87`** — first touch the PIONEER, second the Follower | 2026-09-21 | ⚠ → §5.14, history |
 | `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding, ⚠ → history |
@@ -173,7 +175,7 @@ file.
 | `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⛔ Eviction deleted (`D107`); mates are broken by `D47`/`D100`'s unsnap |
 | `D12` | ⚠ **SUPERSEDED BY `D15`** | 2026-09-15 | ⚠ → history |
 | `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | ⭐ Binding, ⚠ → history |
-| `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is half of a **depth pinch** now | 2026-09-14 | ⚠ → history |
+| `D10` | ⚠ **SUPERSEDED BY `D16`** | 2026-09-14 | ⚠ → history |
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | ⭐ Binding, ⚠ → history |
 
 ## ⚠ Still the owner's to make

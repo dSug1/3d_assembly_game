@@ -68,10 +68,11 @@ export const PIONEER_COLOUR = new Color3(1, 0.62, 0.1);
  */
 export const CANDIDATE_COLOUR = new Color3(1, 0.1, 0.8);
 /**
- * ⭐ The PioneerFaceCursor is AMBER — the Pioneer's own colour (the owner, 2026-09-25: *"the ring
- * shall be amber instead of green"*, correcting the first dictation).
+ * ⭐ The PioneerFaceCursor was AMBER — the Pioneer's own colour (the owner, 2026-09-25: *"the ring shall be amber
+ * instead of green"*). ⭐⭐ `D164` (2026-09-29): it is CYAN now — *"make the gizmo of the pioneer cyan. This will help
+ * visibility"* — so it reads on the amber Pioneer face, which `D162` fills while the aligned part is pressed.
  */
-export const PIONEER_CURSOR_COLOUR = PIONEER_COLOUR;
+export const PIONEER_CURSOR_COLOUR = FOLLOWER_COLOUR;
 
 // ⛔⛔⛔ **THE BOOT SCENE'S DIMENSIONS LIVE IN `core/scene_dims.ts`**, not here. ⚠ They were
 // declared in this file and MIRRORED in two test files, so scaling the pyramid on 2026-09-25 left

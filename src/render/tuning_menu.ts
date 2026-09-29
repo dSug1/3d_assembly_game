@@ -279,7 +279,11 @@ export function installTuningMenu(st: SceneState): void {
       // ALIGNMENT and move the menus eviction shake and capture under FACE ALIGNMENT"*.
       title: "FACE ALIGNMENT",
       // ⭐ The owner, 2026-09-27: every highlight one pixel off what it marks, at every zoom.
-      sliders: [tunable(st, "highlight offset (mm on the glass)", "highlightLiftMm", 0.05, 3, 0.05)],
+      sliders: [
+        tunable(st, "highlight offset (mm on the glass)", "highlightLiftMm", 0.05, 3, 0.05),
+        // ⭐ `D165` — the owner, 2026-09-29: *"provide a slider for that below highlight offset slider"*.
+        tunable(st, "face highlight opacity (cyan / amber fills)", "faceHighlightAlpha", 0, 1, 0.05),
+      ],
       // ⭐⭐ **TWO FOLDERS, ONE PER FACE OF THE PAIR** — the owner, 2026-09-26.
       subsections: [
         {

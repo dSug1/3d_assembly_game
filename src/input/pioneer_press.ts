@@ -46,3 +46,14 @@ export function pressedPioneerFaceKeys(
 export function hitFaceShown(onAlignedPart: boolean, latched: boolean): boolean {
   return !onAlignedPart || latched;
 }
+
+/**
+ * ⭐⭐ `D164` — **THE RINGS SWAP COLOURS ACROSS AN ALIGNMENT** (the owner, 2026-09-29: *"when an object is aligned,
+ * make its gizmo amber and make the gizmo of the pioneer cyan. This will help visibility for the user"*).
+ * ⭐ The ring at an aligned part's gizmo origin (its FollowerFace centre) is AMBER — the Pioneer's colour — so it
+ * stands out on the Follower's cyan fill; and the Pioneer's ring, the PioneerFaceCursor, is CYAN, so it stands out on
+ * the amber face (which `D162` fills while the part is pressed). A free part's origin ring stays white.
+ */
+export function originRingTone(onAlignedPart: boolean): "AMBER" | "WHITE" {
+  return onAlignedPart ? "AMBER" : "WHITE";
+}
