@@ -46,3 +46,20 @@ export const TRANSLATING_MODES: readonly string[] = ["TRANSLATE", "TRANSLATE_2ND
 export function isTranslatingMode(mode: string | null | undefined): boolean {
   return mode === undefined || mode === null ? false : TRANSLATING_MODES.includes(mode);
 }
+
+/**
+ * ⭐⭐ `D168` — **DOES A PRESSED BODY KEEP ITS GIZMO THIS FRAME?** (the owner, 2026-09-29: *"when the rotation mode is
+ * toggled and the object is pressed (touch or click), make the axis persistent even if delta position is within
+ * deadband to avoid the axis flicker"*).
+ * ⭐ An aligned body: always (it is mode-less). A free body: while its grip TRANSLATES, as before — and now also while it
+ * ROTATES. ⛔ A rotating free body qualified only on a frame it actually TURNED, and inside the deadband a pointer emits
+ * no turn, so the gizmo was dropped for that frame and every line hidden: the flicker. ⚠ The lines themselves stay the
+ * last ones drawn (`displayedAxes` keeps the last non-empty set).
+ */
+export function keepsGizmo(c: {
+  readonly aligned: boolean;
+  readonly mode: string | null | undefined;
+  readonly turnedThisFrame: boolean;
+}): boolean {
+  return c.aligned || isTranslatingMode(c.mode) || c.mode === "ROTATE" || c.turnedThisFrame;
+}
