@@ -96,6 +96,10 @@ file.
 | `D148` | ⭐⭐ **…AND A GRAVITY LIFT: THE SIGN IS READ EVERY STEP** | 2026-09-29 | → §19 |
 | `D153` | ⭐⭐ **A TRANSLATION LINE STOPS AT THE OBJECT IT HITS; ITS RING IN PERSPECTIVE** (`D149`–`D152` reverted) | 2026-09-29 | → §19 |
 | `D154` | ⭐⭐ **DESKTOP: SPACE + CLICK THE HITFACE, THEN THE PIONEERFACE — ONE EPISODE** | 2026-09-29 | → §20 |
+| `D155` | ⭐⭐ **SPACE MID-HOLD FREEZES IT INTO THE HITFACE; AN ALIGNMENT USES SPACE UP** | 2026-09-29 | → §20 |
+| `D156` | ⭐⭐ **SPACE + CLICK FOLLOWER, THEN EMPTY SPACE: UNALIGN** | 2026-09-29 | → §20 |
+| `D157` | ⭐ **A DOUBLE TAP OR CLICK THAT DOES NOT LAND COSTS ZERO** | 2026-09-29 | Absorbed by `D158` |
+| `D158` | ⭐⭐ **A GESTURE THAT CHANGES NOTHING COSTS ZERO EPISODES** | 2026-09-29 | → `SCORE.md` §3.2 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -110,8 +114,8 @@ file.
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D67` | ⚠ **REVERSED BY `D87`** — first touch the PIONEER, second the Follower | 2026-09-21 | ⚠ → §5.14, history |
 | `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding, ⚠ → history |
-| `D65` | ⚠ **REPEALED BY `D66` the same day** — a second touch's release never toggled; the cause was the PRESS all along | 2026-09-21 | ⚠ → history |
-| `D64` | ⚠ **SUPERSEDED BY `D65`, THEN REPEALED WITH IT** — *driving consumes the toggle* | 2026-09-21 | ⚠ → history |
+| `D65` | ⚠ **REPEALED BY `D66` the same day** | 2026-09-21 | ⚠ → history |
+| `D64` | ⚠ **SUPERSEDED BY `D65`, THEN REPEALED WITH IT** | 2026-09-21 | ⚠ → history |
 | `D63` | ⭐⭐⭐ **THE APPROACH SWING — the camera looks around the join and comes back** (TRIAL) | 2026-09-19 | ⛔ Deleted by `D120`. ⚠ → history |
 | `D62` | ⭐⭐⭐ **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** | 2026-09-19 | ⭐ Binding, ⚠ → history |
 | `D61` | ⚠ **REPEALED BY `D66`** | 2026-09-19 | ⚠ → history |
@@ -122,18 +126,18 @@ file.
 | `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** | 2026-09-19 | ⛔ Reversed by `D119` → §14, history |
 | `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding, ⚠ → history |
-| `D52` | ⚠ **RESOLVED BY `D57` THE SAME DAY** — the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it | 2026-09-19 | ⚠ → §5.5 |
+| `D52` | ⚠ **RESOLVED BY `D57` THE SAME DAY** | 2026-09-19 | ⚠ → §5.5 |
 | `D51` | ⭐⭐⭐ **A HELD PIONEER MAY BE PINNED — it steers instead of being carried** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D50` | ⭐⭐⭐ **EVERY OUTLINE AND FACE MARKER IS READ OFF THE MESH** | 2026-09-18 | ⭐ Binding. ⚠ → history |
 | `D49` | ⭐⭐⭐ **THE CAPTURE IS A SURFACE OFFSET, COMPUTED AT SPAWN** | 2026-09-18 | ⭐ The surface gap binds (snap, sway); the white it drove is deleted (`D120`). ⚠ → history |
-| `D48` | ⚠ **RETIRED WITHIN THE DAY, KEPT AS THE RECORD** — white contours required the alignment; the owner removed it, keeping the TRANSLATION condition | 2026-09-17 | ⚠ *both readings fit the evidence — name both* → §13 (approach) |
+| `D48` | ⚠ **RETIRED WITHIN THE DAY, KEPT AS THE RECORD** | 2026-09-17 | ⚠ *both readings fit the evidence — name both* → §13 (approach) |
 | `D47` | ⭐⭐⭐ **A MATE IS BROKEN BY PULLING IT APART WITH TWO FINGERS** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D46` | ⭐⭐⭐ **APPROACH & MATE — the owner's mechanism, measured between CENTRES** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D45` | ⭐⭐ **THE ALIGNMENT SNAP IS A SLERP, ON THE CAMERA RESET'S SLIDER** — binding; ⛔ NOT the rejected rotation inertia | 2026-09-17 | ⚠ → history |
 | `D44` | ⭐⭐ **A TAP ON ANOTHER OBJECT'S FACE ALIGNS IN **EITHER** MOVEMENT MODE** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D43` | ⛔⛔⛔ **`A10`'s DEPTH GATE IS DELETED — both fingers integrate at once** | 2026-09-17 | ⭐ Binding. ⚠ → history |
 | `D42` | ⚠ **SUPERSEDED IN PART BY `D67`** | 2026-09-17 | ⚠ → history |
-| `D41` | ⚠ **SUPERSEDED BY `D42` after four hours** — what a turned Pioneer costs the Follower; the two readings survive, the FLAG does not | 2026-09-17 | ⚠ → history |
+| `D41` | ⚠ **SUPERSEDED BY `D42` after four hours** | 2026-09-17 | ⚠ → history |
 | `D40` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap-to-align set is THE input model** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D39` | ⚠ **SUPERSEDED IN PART BY `D67`** | 2026-09-16 | ⛔ The re-tap undo is deleted (`D107`). ⚠ → history |
 | `D38` | ⭐⭐ **FORK C IS THE DEFAULT, AND ITS ALIGNMENT NO LONGER SWITCHES THE MODE** | 2026-09-16 | ⭐ Binding. ⚠ → history |
@@ -157,7 +161,7 @@ file.
 | `D20` | ⭐⭐ **Depth is a STILL HOLDER and a MOVING ANCHOR** | 2026-09-15 | ⭐ Binding |
 | `D19` | ⭐⭐ **A DEADBAND on the pointer delta, per axis, with a slider** | 2026-09-15 | ⭐ Binding |
 | `D18` | ⭐⭐ **Every object gesture stands on a GRAVITY FRAME** | 2026-09-15 | ⭐ Binding |
-| `D17` | ⚠ **SUPERSEDED BY `D20`** — its TRIGGER is gone; the configuration and `A5`'s geometry stand | 2026-09-15 | ⚠ → history |
+| `D17` | ⚠ **SUPERSEDED BY `D20`** | 2026-09-15 | ⚠ → history |
 | `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** | 2026-09-15 | ⚠ → history |
 | `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⛔ Shake deleted (`D107`) |
 | `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding |

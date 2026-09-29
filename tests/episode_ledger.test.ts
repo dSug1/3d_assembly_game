@@ -9,7 +9,6 @@ const f = (o: Partial<EpisodeFacts>): EpisodeFacts => ({
   role: "OBJECT",
   heldAtPress: 0,
   unaligned: false,
-  undoSecondTap: false,
   pressedAnotherBody: false,
   ...o,
 });
@@ -44,11 +43,6 @@ describe("⭐⭐⭐ what costs an episode", () => {
     expect(episodeCounts(f({ role: null }))).toBe(false);
   });
 
-  it("⭐⭐ the undo double tap costs ONE: its first tap counts, its second does not", () => {
-    // > *"Count as one episode (includes both the double-tap and the scene reset)"* — the owner.
-    expect(episodeCounts(f({ role: "OBJECT" }))).toBe(true);
-    expect(episodeCounts(f({ role: "OBJECT", undoSecondTap: true }))).toBe(false);
-  });
 });
 
 describe("the timer", () => {
@@ -126,5 +120,47 @@ describe("⭐⭐⭐ `D115` — a two-touch action is ONE episode, counted when i
     expect(t.gestureEnded()).toBe(1);
     expect(t.gestureEnded()).toBe(0);
     expect(t.total).toBe(1);
+  });
+});
+
+describe("⭐⭐⭐ `D158` — a gesture that LANDS NOTHING costs nothing", () => {
+  // > *"an action which does not land into anything (for example: space pressed with no further action,
+  // > left or right click and unclick on an object, touch and release on an object) should count as zero
+  // > episode"* — the owner, 2026-09-29 (absorbing `D157`'s double tap that does not land)
+  it("⭐⭐ a press and release on a body that changed nothing: ZERO", () => {
+    const t = new EpisodeTally();
+    t.note(true, false);
+    // ⛔ RED against the tally before: a hold counted whether or not it did anything.
+    expect(t.gestureEnded(false)).toBe(0);
+    expect(t.total).toBe(0);
+  });
+
+  it("⭐ a gesture that changed the model lands its cost, as before — a two-touch action still ONE", () => {
+    const t = new EpisodeTally();
+    t.note(true, false);
+    t.note(true, true);
+    expect(t.gestureEnded(true)).toBe(1);
+    expect(t.total).toBe(1);
+  });
+
+  it("⭐⭐ the undo double tap costs ONE, a double tap that does not land ZERO — by the same rule", () => {
+    const undo = new EpisodeTally();
+    undo.note(true, false); // first tap
+    undo.gestureEnded(false); // changed nothing
+    undo.note(true, false); // second tap
+    undo.gestureEnded(true); // the undo landed
+    expect(undo.total).toBe(1);
+    const refused = new EpisodeTally();
+    refused.note(true, false);
+    refused.gestureEnded(false);
+    refused.note(true, false);
+    refused.gestureEnded(false); // refused, or nothing to undo
+    expect(refused.total).toBe(0);
+  });
+
+  it("⚠ with no answer given, a gesture lands its cost — the rule before `D158`", () => {
+    const t = new EpisodeTally();
+    t.note(true, false);
+    expect(t.gestureEnded()).toBe(1);
   });
 });

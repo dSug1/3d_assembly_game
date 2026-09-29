@@ -16,7 +16,9 @@
  * | `SECOND` that pressed ANOTHER body — the unsnap's touch on a seated Follower, redirected to its root | ✅ — the action touch of an unsnap (the whole unsnap is ONE, `D115`) | C3 |
  * | `IGNORED` — a third finger | ⛔ | D3 |
  * | a PioneerFaceCursor grab — Free Flow | ⛔ | `D101` |
- * | the second tap of an **undo** double tap | ⛔ — the pair costs ONE (`D111`) | — |
+ * | ⭐⭐ **any touchpoint of a gesture that changed NOTHING** — a press and release on a body, a Space click
+ * |   cancelled, a double tap that does not land (`D157`) | ⛔ — ZERO (`D158`: the gesture lands nothing) | — |
+ * | an **undo** double tap | ⭐ ONE — the first tap changed nothing, the second's gesture undid (`D111`, by `D158`) | — |
  */
 import type { PointerRole } from "./router";
 
@@ -28,8 +30,6 @@ export interface EpisodeFacts {
   readonly heldAtPress: number;
   /** This touchpoint's tap released an alignment or a Pioneer's followers. */
   readonly unaligned: boolean;
-  /** This touchpoint's tap was the SECOND of an undo double tap. */
-  readonly undoSecondTap: boolean;
   /**
    * The body under this touchpoint's ray was NOT one already held. ⭐ Only `SECOND` reads it: a
    * seated Follower's touch is redirected to its root, which the Pioneer's finger holds.
@@ -40,7 +40,6 @@ export interface EpisodeFacts {
 /** ⭐ The whole rule: does this touchpoint cost the player an episode? */
 export function episodeCounts(f: EpisodeFacts): boolean {
   if (f.role === null) return false;
-  if (f.undoSecondTap) return false;
   switch (f.role) {
     case "OBJECT":
       return true;
@@ -98,9 +97,20 @@ export class EpisodeTally {
     return Math.max(this.holds, this.actions);
   }
 
-  /** The last touchpoint of the gesture released: its cost lands. Returns what landed. */
-  gestureEnded(): number {
-    const landed = this.pending;
+  /**
+   * The last touchpoint of the gesture released: its cost lands. Returns what landed.
+   *
+   * ⭐⭐⭐ `D158` — **A GESTURE THAT LANDS NOTHING COSTS NOTHING** (the owner, 2026-09-29: *"an action which does
+   * not land into anything (for example: space pressed with no further action, left or right click and
+   * unclick on an object, touch and release on an object) should count as zero episode"*; it absorbs
+   * `D157`'s *"a double tap which does not land … should count as zero episode"*). ⭐ `changedModel` is the
+   * undo layer's own answer — the model, the alignments, the seats and the cursors compared before and
+   * after the gesture (`endGesture`) — so an align, an unalign, an unsnap, a move and an undo all land,
+   * and a press and release, a cancelled Space click or a refused double tap do not.
+   * @param changedModel did the gesture change the model? Default `true` — the rule before `D158`.
+   */
+  gestureEnded(changedModel = true): number {
+    const landed = changedModel ? this.pending : 0;
     this.totalCount += landed;
     this.holds = 0;
     this.actions = 0;

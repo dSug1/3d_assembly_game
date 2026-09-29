@@ -20,3 +20,7 @@ constraints changed; and, for an action that moves nothing but changes an alignm
 release), the Follower whose link or seat changed (not its Pioneer). A double tap undoes only if the
 tapped body is among them (`undoAllowedOn`); elsewhere it is refused with the HUD naming the body that
 moved, and the entry stays (`peek`). ✅ 6 vectors (`tests/d141.test.ts`). ⛔ Unjudged by a hand.
+
+⭐⭐ **`D157` (2026-09-29) — a double tap (or double click) that does not land costs ZERO episodes** (the owner: *"a double tap which does not land (for example, a double tap on an object which has never moved) does nothing and should count as zero episode"* · *"same for double click which does not land"*). ⭐ A double tap is two gestures, and the first had already landed its episode when the second was read as a double tap. Now each gesture tells the tally whether it changed the model (`endGesture` returns it); a double tap whose undo does NOT land (refused by `D141`, or nothing to undo) excludes its second tap and takes back the first's episode — only if that gesture changed nothing (`EpisodeTally.retractInertPrevious`). A landed undo still costs ONE. ✅ 3 vectors, 1291 → 1294; headless with real double clicks: never-moved body 0, a drag 1, a refused double click still 1, a landed undo 2.
+
+⭐ **`D158` absorbs `D157`** the same day: any gesture that changes nothing costs zero; the take-back is deleted → `SCORE.md` §3.2.

@@ -56,14 +56,17 @@ export function beginGesture(st: SceneState): void {
  * ⭐ The last pointer up: an ACTION if the model changed. ⛔ Not when the gesture WAS an undo —
  * recording the undo as an action would make the next double tap redo it.
  */
-export function endGesture(st: SceneState): void {
+export function endGesture(st: SceneState): boolean {
   const before = st.gestureBefore;
   st.gestureBefore = null;
-  if (before === null || st.gestureUndid) return;
+  // ⭐ `D157`: an undo changed the model too — never an inert gesture.
+  if (before === null) return false;
+  if (st.gestureUndid) return true;
   const after = takeSnapshot(st);
   // ⭐ `D141`: remembered WITH the entry, so a double tap can ask whether it names a body that moved.
-  if (modelsDiffer(plain(before), plain(after)))
-    st.undo.push({ ...before, touched: bodiesTouched(plain(before), plain(after)) });
+  if (!modelsDiffer(plain(before), plain(after))) return false;
+  st.undo.push({ ...before, touched: bodiesTouched(plain(before), plain(after)) });
+  return true;
 }
 
 /**

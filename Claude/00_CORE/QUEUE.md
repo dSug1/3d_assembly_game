@@ -29,8 +29,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1281 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → 1272 → **1281**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`, `D154`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1293 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → 1272 → 1281 → 1287 → 1291 → 1294 → **1293**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D158`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -41,7 +41,7 @@ and the in-zone basis are deleted, `D82`/`D109`).
 ⭐ The HUD has a `jump` line (`input/jump_watch.ts`) — a standing readout, not an open defect.
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
 ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, THE TWO PARTS TILTED 30°** (`D93`, 2026-09-25) — `bootAlignment` deleted (state only), `D63`'s jig gone with it, roll about world `z` then pitch about world `x`. ⚠ Parts' mutual gap 280 → 216 mm → `D93` in `DECISIONS.md` and its history.
-⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch (translates; **Ctrl** rotates, `D108`), **Shift + left drag = the second** (gravity + roll); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align — ⭐ or **Space + click** each (`D154`). ⛔ The right button moves nothing.
+⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch (translates; **Ctrl** rotates, `D108`), **Shift + left drag = the second** (gravity + roll); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align — ⭐ or **Space + click** each (`D154`), or Space during a left hold (`D155`); Space + click the Follower then empty space unaligns (`D156`). ⛔ The right button moves nothing.
 ⭐⭐ **`scene.ts` IS SPLIT** (`D104`) → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged.
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
@@ -49,7 +49,7 @@ and the in-zone basis are deleted, `D82`/`D109`).
 ### ⭐ WHAT IS STILL OWED
 
 1. ⛔⛔ **The playability program above** — `GM1` next.
-2. ⛔⛔ **A device look on everything since `D106`** (`INPUTS_TABLE.md`), and on the alignment model's §10 list.
+2. ⛔⛔ **A device look on everything since `D106`** (`INPUTS_TABLE.md`; ⭐ its §5 is the checklist for `D155`–`D158`), and on the alignment model's §10 list.
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
@@ -278,7 +278,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | ✅✅ **THE ALIGNMENT MODEL IS CLOSED BY A DEVICE LOOK (2026-09-17)** — tap-to-align (**anti-parallel** since `D78`, capped at one), both faces marked, the twist, an eased slerp. ⛔ Since judged away: `FOLLOW` (`D106`), both undos (`D107`), the flick (`D110`). ⛔ **NOT built**: `TargetPosition`, its gizmo, the orbit, the approach. ✅✅ `D73`’s increments closed 2026-09-22, shipping at **0**. ⛔ **`D87`/`D90` (the inverted roles, the swap) are BUILT AND UNJUDGED**; the fuchsia offer is deleted (`D109`) — spec §11 → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
 | IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | ✅✅ **RULE 6 CLOSED 2026-09-15** — by finger, its gain **computed**. ⛔⛔ **ITS SCREEN-PLANE FORM IS SUPERSEDED** (`D75`/`D76`): a body translates along **its own axes**, the finger’s delta solved onto both horizontal ones. ⛔ `D145`: along the LIVE camera's right and view, flattened. ⚠ Unjudged again; `screenTranslation`/`depthTranslate` are deleted (`D109`). ⛔ 6bis onward still wait on face centres → [`queue_notes/IN4.md`](queue_notes/IN4.md) | IN2, 3D1 (6bis onward only) |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued, ⭐⭐ **practical without a rebuild**: every tunable overrides from the URL. ✅ `pointerNoiseMm` = **0.761 mm** is the one number MEASURED, and measuring it exposed a defect eight device passes had accepted. ⛔⛔ **A TRAP TO READ BEFORE BOOKING A SESSION**: several tunables are READ but sit OFF the gesture path, so `config_debt` sees them used while they change nothing → [`queue_notes/IN5.md`](queue_notes/IN5.md) | IN3 |
-| IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | ✅ **BUILT as one scene history** (`D111`): a double tap undoes the last action — ⭐ only on a body that action MOVED (`D141`) — `core/undo_history.ts`, `render/undo_wiring.ts`. ⛔ Unjudged → [`queue_notes/IN6.md`](queue_notes/IN6.md) | IN1 |
+| IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | ✅ **BUILT as one scene history** (`D111`): a double tap undoes the last action — ⭐ only on a body that action MOVED (`D141`) — `core/undo_history.ts`, `render/undo_wiring.ts`. ⛔ Unjudged ⭐ A gesture that changes nothing costs 0 (`D157`/`D158`) → [`queue_notes/IN6.md`](queue_notes/IN6.md) | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
 | IN8 | ⚠ Two touchpoints on the SAME object — was undefined and reachable (§5) | IN | decision | 🔧 **ANSWERED THREE TIMES AND BUILT.** ⭐ The second touchpoint — inside **or** outside any object — drove roll by its x and depth by its y (`D22`/`A12`, `A10`); ⚠ now it lifts along gravity and spins (`D108`/`D123`), and a press on ANOTHER body steers the held one (`D124`). ✅✅ **CLOSED BY A DEVICE LOOK 2026-09-16**, which also closed the small-object hole owed since `A5`. ⛔⛔ **`A15`/`D25`'s orphan unselect is DELETED** (`D54`) → [`queue_notes/IN8.md`](queue_notes/IN8.md) | IN2 |
 | IN9 | ⭐ **CAMERA-ONLY rules: 4 (pinch zoom) and 1 (orbit)** — ⛔ needed NO object model | IN | feature | ✅✅ **CLOSED 2026-09-14**, both rules working by finger. Rule 1 cost **three** defects no green suite could see — including a **composition nobody had computed** and a scheme **reversed on measurement**. ⭐ *"Three rigs, therefore two transitions"* is enforced by `validateGestureConfig` → [`queue_notes/IN9.md`](queue_notes/IN9.md) | IN1 |
@@ -343,7 +343,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | GM1 | Final-configuration data per scene + the MATE check (spin) + its detector + level end (build #2) | GAME | feature | ⛔ **NEXT**; 🔧 the DATA and the DETECTOR are built — `Scene_1`'s goal is its table (`D129`), met relative to each other, a box's face or its opposite (`D130`, HUD); a seated piece in place dissolves its couple, with a pop-up (`D142`), and the MATE sets its spin onto the goal then (`D143`, the whole mate); ⛔ level end not built → `PLAYABILITY` §2, §2.1 | 3D6 |
-| GM2 | The touch ledger on the HUD | GAME | feature | ✅ built (`D112`, `D115`) | — |
+| GM2 | The touch ledger on the HUD | GAME | feature | ✅ built (`D112`, `D115`) ⭐ `D158`: a gesture that changes nothing costs 0 | — |
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |

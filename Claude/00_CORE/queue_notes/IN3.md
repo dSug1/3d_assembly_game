@@ -1157,3 +1157,9 @@ loop** as the fill — a marker pool that retires by what CHANGED instead of by 
 ✅✅ **THE ALIGNMENT MODEL IS CLOSED BY A DEVICE LOOK (2026-09-17)** — *"device pass ok, except these modifications"*, and all five modifications are built (`D43`–`D45`, defects 47–48). ⭐ Tap-to-align (**anti-parallel** since `D78`, capped at one, `SNAPSHOT` or `FOLLOW` by single/double tap), both faces marked, the twist about the aligned normal, shake **and** re-tap as undos, the rotation reset, and an eased **slerp** into place. ⚠ **The corrections themselves have not been re-judged** — only the slerp's speed, which a hand tuned three times. ⛔ **NOT built**: `TargetPosition`, its gizmo, the orbit and the approach — `1.0.22`. ✅✅ **AND `D73`'s ROTATION INCREMENTS ARE CLOSED BY A DEVICE LOOK (2026-09-22)**, shipping at **0**. ⛔ **`D87`/`D88` (the fuchsia offer, the inverted roles) are BUILT AND UNJUDGED** — spec §11 (this file)
 
 ⭐⭐ **`D154` (2026-09-29)** — desktop: Space + click the HitFace (latched), Space + click the PioneerFace (a tap) → aligns, one episode; built in the mouse layer over `D94`'s path → alignment spec §20. ✅ 1272 → 1281. ⛔ Unjudged.
+
+⭐⭐ **`D155`** — Space during a left hold on a body (moving or not) freezes it into the latched HitFace with the dragged face; an alignment with Space uses Space up; drag + alignment is one episode → alignment spec §20. ✅ 1281 → 1287.
+
+⭐⭐ **`D156`** — desktop unalign: Space + click the Follower, Space + click empty space (a tap while it holds, `D107`) → alignment spec §20. ✅ 1287 → 1291.
+
+⚠ **`D158`** amends `D155`'s count: a drag that moved + Space + an alignment is 2 episodes (both landed); a press held still + Space + an alignment is 1.
