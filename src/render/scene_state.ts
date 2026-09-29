@@ -293,6 +293,8 @@ export interface Held {
    * finger lifts (the lock dies with the grip). ⛔ Set by the landing only (`seat_wiring.ts`).
    */
   seatLocked: boolean;
+  /** ⭐ `D172`: the highest touchpoint `seq` down when the seat locked the grip — only a later one may roll. */
+  seatSeq: number;
   /**
    * ⭐⭐ **WHICH WAY `dx` TWISTS AN ALIGNED BODY -- latched once per grip** (2026-09-22).
    * ⛔ The same doctrine as `anchorRollSign` one channel over: recomputed per frame the sign

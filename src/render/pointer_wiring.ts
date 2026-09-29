@@ -359,6 +359,7 @@ export function installPointerHandler(st: SceneState): void {
         anchorDxSign: new Map(),
         holdPinch: null,
         seatLocked: false,
+        seatSeq: -1,
         depthSway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°

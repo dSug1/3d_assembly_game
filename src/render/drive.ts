@@ -11,7 +11,7 @@ import { rotationChannel } from "../core/constraint_stack";
 import { bothAxesSecondDrive } from "../input/second_touch_drive";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
 import { nextDxSign } from "../input/hold_pinch";
-import { seatLockAllows } from "../input/seat_lock";
+import { rollRearmed, seatLockAllows } from "../input/seat_lock";
 import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_ROLL, type Held, type SceneState } from "./scene_state";
 import { asVec3, modelOrientation, requirePose, setModelOrientation, setModelPose } from "./bodies";
@@ -184,9 +184,10 @@ export function applyDepthDrag(st: SceneState, grip: Held,
   const asked = bothAxes
     ? bothAxesSecondDrive(tracker.axes, tracker.step)
     : secondFingerDrive(tracker.axes, tracker.step, st.behaviour);
-  // ⭐⭐ `D139`: a grip whose Follower just SEATED keeps the ROLL alone — the lift is refused.
+  // ⭐⭐ `D139`: a grip whose Follower just SEATED keeps the ROLL alone — the lift is refused; and (`D172`) the roll only
+  // from a second touchpoint pressed AFTER the seat.
   const drive = {
-    rollDxPx: seatLockAllows(grip.seatLocked, "ROLL") ? asked.rollDxPx : 0,
+    rollDxPx: seatLockAllows(grip.seatLocked, "ROLL", rollRearmed(anchorSeq, grip.seatSeq)) ? asked.rollDxPx : 0,
     depthDyPx: seatLockAllows(grip.seatLocked, "LIFT") ? asked.depthDyPx : 0,
   };
   if (drive.rollDxPx === 0 && drive.depthDyPx === 0) return false;

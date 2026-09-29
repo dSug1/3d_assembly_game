@@ -1183,3 +1183,5 @@ loop** as the fill — a marker pool that retires by what CHANGED instead of by 
 ⭐⭐ **`D167`** — desktop: a Shift tap toggles translation / rotation (Ctrl deleted); Esc's jump fixed; Alt/F10 blocked from the browser menu; focus loss inert. Chrome + Edge measured → alignment spec §22. ✅ 1317 → 1321.
 
 ⭐ **`D168`** — a pressed free body in rotation keeps its axes on a still frame (no flicker in the deadband) → alignment spec §22. ✅ 1321 → 1324.
+
+⭐⭐ **`D172`** — after a snap the roll must be re-armed by a touchpoint pressed after the seat (a new finger, a new Shift, a new click) → alignment spec §23. ✅ 1502 → 1506.

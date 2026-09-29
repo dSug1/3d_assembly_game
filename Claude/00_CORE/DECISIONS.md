@@ -84,11 +84,11 @@ file.
 | `D136` | ⭐⭐⭐ **CONTACT IS ALLOWED; ONLY PENETRATION IS REFUSED** — the skin is how far a body may sink | 2026-09-28 | Scene_1's slots were unreachable → `COLLISION.md` §9 |
 | `D137` | ⭐⭐ **A SIDEWAYS PINCH WHILE TRANSLATING ZOOMS; translation and roll pause** — until a dy leaves the band | 2026-09-28 | → §17 |
 | `D138` | ⭐⭐ **AUTO SHADOWS: OFF ON A DEVICE MEASURED TOO SLOW FOR THEM** | 2026-09-28 | → render `INDEX.md` |
-| `D139` | ⭐⭐ **A SNAP STOPS THE DRAG THAT MADE IT — only roll till a lift** | 2026-09-28 | → §18 |
-| `D140` | ⛔ **ONLY THE LIVE COUPLE'S CURSOR MAY SNAP** — defect 73, a stale one jumped a re-aligned Follower | 2026-09-28 | → §18 |
+| `D139` | ⭐⭐ **A SNAP STOPS THE DRAG THAT MADE IT** | 2026-09-28 | → §18 |
+| `D140` | ⛔ **ONLY THE LIVE COUPLE'S CURSOR MAY SNAP** (defect 73) | 2026-09-28 | → §18 |
 | `D141` | ⭐⭐ **A DOUBLE TAP UNDOES ONLY ON THE BODY THE LAST ACTION MOVED** | 2026-09-28 | → `IN6.md` |
 | `D142` | ⭐ **A SEATED PIECE AT ITS GOAL DISSOLVES ITS COUPLE** | 2026-09-28 | → GM1 |
-| `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** — `Scene_1`: a face or its opposite | 2026-09-28 | → `PLAYABILITY` §2.1 |
+| `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** | 2026-09-28 | → `PLAYABILITY` §2.1 |
 | `D144` | ⭐⭐ **A ⏸ MENU LEAVES A LEVEL BY RELOAD; ONE SCENE LIST; `Scene_1` BOOTS** | 2026-09-28 | → `GAME_STRUCTURE.md` §4–§5 |
 | `D145` | ⭐⭐⭐ **TRANSLATION ALONG THE LIVE CAMERA; UP = AWAY IF CAMERA ≥ GIZMO** | 2026-09-29 | Reverses `D74`'s boot axes → §19 |
 | `D146` | ⚠ **REVERSED BY `D147`** | 2026-09-29 | → §19 |
@@ -112,6 +112,7 @@ file.
 | `D168` | ⭐ **A BODY ROTATED KEEPS ITS AXES** | 2026-09-29 | → §22 |
 | `D169` | ⭐ **`Scene_1`: FLOOR 2 M; TOP CENTRE = ORIGIN** | 2026-09-29 | → `SCENE_1.md` §9 |
 | `D170` | ⭐⭐ **A DEMO SCENE ASSEMBLES ITSELF** | 2026-09-29 | → `DEMO_SCENE.md` |
+| `D172` | ⭐⭐ **AFTER A SNAP, THE ROLL MUST BE RE-ARMED** | 2026-09-29 | → §23 |
 | `D171` | ⭐⭐ **`Scene1_demo`: 150 MOVES, FIT ZOOM, 15° SETTLE** | 2026-09-29 | → `DEMO_SCENE.md` |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
