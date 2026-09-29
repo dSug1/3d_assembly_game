@@ -48,8 +48,8 @@
 * **Shadows**: soft (PCF), strength 0.4 → Babylon darkness 0.6, one 1024 map per light; every piece
   casts and receives, the floor receives.
 * **Floor**: Unity's Plane is 10 × 10 units, so scale 4.79 is 47.9 × 47.9 units — ⭐ **halved, then
-  80 %, 107 %, then 103 % of that: 21.116236 × 21.116236** (`D122`, the owner). A plane has no thickness, so it is a 0.05-unit
-  slab whose TOP is `y = −2.3`. Frozen; seen from below it disappears (`D128`, which replaced `D121`'s see-through).
+  80 %, 107 %, then 103 % of that: 21.116236 × 21.116236** (`D122`, the owner), ⭐ then **20 × 20 — 2.000 m** (`D169`). A plane has no thickness, so it is a 0.05-unit
+  slab whose TOP was `y = −2.3` — ⭐ `y = 0` since `D169` (§9). Frozen; seen from below it disappears (`D128`, which replaced `D121`'s see-through).
 
 ## 4. ⭐⭐ The second layout — the table that is built
 
@@ -151,3 +151,13 @@ air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sen
   **1.8 / 1.0 / 1.5 m** (top / middle / bottom), heights 0.55 / 0.1 / −0.5 m (unchanged) — ⭐ the bottom ring lowered to **−1.2 m** on 2026-09-28, in both scenes and the config default (the owner). `Scene_0`
   states the 2026-09-14 rig it always had (1.0 / 0.36 / 0.5). ⭐ The boot view does not move: the
   camera still boots 1.5 m out and the zoom multiplier absorbs the new rings.
+
+## 9. ⭐ The floor's top centre is the origin (`D169`)
+
+> *"in the Scene_1 and in the scene_2.blend, modify the dimensions of the floor to 2.000 m x 5 mm x 2.000 m"* · *"translate all the objects of the scene (floor, pieces, lights, camera orbit rings in Scene_1, etc.) so that the center of the top face of the floor is at (0,0,0) coordinates"* · *"make sure the default values for the camera orbit rings heights sliders are updated accordingly"* — the owner, 2026-09-29
+
+* **The floor** is **20 × 0.05 × 20 units = 2.000 m × 5 mm × 2.000 m**, its top face centred on `(0, 0, 0)`.
+* **Everything moved up by `SCENE_1_SHIFT_Y` = 2.3 units (0.23 m)** — the pieces (goal and boot), the three lights. The numbers in `scene_1.ts` are the owner's plus 2.3 in gravity; x and z, sizes, directions and colours are untouched. So the painting's lowest core is still 0.17 units above the floor, and the spots still aim at the painting, now `(0, 4.8, 0)`.
+* **The orbit rings moved with it** through a new `orbit.centreM` — the BOOT orbit centre, `[0, 0.23, 0]` m (it was the world origin for every scene; `input/scene_rig.ts` `bootOrbitCentre`). ⭐⭐ **The ring HEIGHT sliders keep their defaults (0.55 / 0.1 / −1.2 m) ON PURPOSE**: a ring's height is measured FROM the orbit centre (the camera sits at centre + ring offset), and the centre moved — adding 0.23 m to the heights as well would lift the camera twice. ⭐ Measured headless: the camera boots at `(0, 0.23, −1.5)` about `(0, 0.23, 0)` and the boot picture matches the old one except the horizon, where the 11 cm-narrower floor now ends.
+* ⛔ A defect the move exposed: the boot wrote `orbitCentreM = Vector3.Zero()` straight, so a start centre other than the origin never reached the camera; it now reads the centre blend's.
+* `Scene_2`'s asset (`Assets/Blender/scene_2.blend`) moved the same way → `BLENDER_ASSETS.md` §2.

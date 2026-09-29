@@ -3,7 +3,10 @@
  * renaming, the lights' conventions checked against the owner's own words, and the scene switch.
  */
 import { describe, expect, it } from "vitest";
-import { SCENE_1, SCENE_1_CONTOUR_MARGIN, SCENE_1_SLOTS } from "../src/content/scene_1";
+import { SCENE_1, SCENE_1_CONTOUR_MARGIN, SCENE_1_SHIFT_Y, SCENE_1_SLOTS } from "../src/content/scene_1";
+
+/** ⭐ `D169`: the owner's gravity coordinate, moved up with the scene so the floor's top centre is the origin. */
+const up = (y: number) => +(y + SCENE_1_SHIFT_Y).toFixed(6);
 import { SCENE_0 } from "../src/content/scene_0";
 import { SCENES, sceneAt } from "../src/content/scenes";
 import { contourDims, parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
@@ -29,7 +32,7 @@ describe("⭐⭐⭐ `D129` — the table is the level-completed configuration; f
     const f = SCENE_1.final!;
     expect(f.bodies.map((p) => p.id).sort()).toEqual(booted.map((b) => b.id).sort());
     expect(f.bodies.every((p) => p.orientation === "identity")).toBe(true);
-    expect(f.bodies.find((p) => p.id === "Piece17")!.position).toEqual([-1.95, -1.855, -0.34]);
+    expect(f.bodies.find((p) => p.id === "Piece17")!.position).toEqual([-1.95, up(-1.855), -0.34]);
     expect(f.bodies.some((p) => p.id === "Floor")).toBe(false);
   });
 
@@ -83,7 +86,7 @@ describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
     expect([...ids].sort()).toEqual(Array.from({ length: 41 }, (_, i) => `Piece${i + 1}`).sort());
   });
 
-  it("⭐ the owner's stated bounds: x ≈ −2.41 → 2.46, gravity ≈ −2.13 → 2.67", () => {
+  it("⭐ the owner's stated bounds: x ≈ −2.41 → 2.46, gravity ≈ −2.13 → 2.67 (+ 2.3 since `D169`)", () => {
     const lo = [Infinity, Infinity];
     const hi = [-Infinity, -Infinity];
     for (const b of pieces)
@@ -93,8 +96,8 @@ describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
       }
     expect(lo[0]).toBeCloseTo(-2.41, 1);
     expect(hi[0]).toBeCloseTo(2.46, 1);
-    expect(lo[1]).toBeCloseTo(-2.13, 1);
-    expect(hi[1]).toBeCloseTo(2.67, 1);
+    expect(lo[1]).toBeCloseTo(up(-2.13), 1);
+    expect(hi[1]).toBeCloseTo(up(2.67), 1);
   });
 
   it("every piece stands in one plane, 0.3 deep, unrotated", () => {
@@ -128,10 +131,10 @@ describe("⭐⭐⭐ the painting, as the owner's table gives it", () => {
 
   it("⭐ the second layout's pieces are where the owner put them", () => {
     const at = (id: string) => pieces.find((b) => b.id === id)!;
-    expect(at("Piece1").position).toEqual([-0.7, 2.525, -0.34]);
+    expect(at("Piece1").position).toEqual([-0.7, up(2.525), -0.34]);
     expect(at("Piece1").dims).toEqual([1.26, 0.29, 0.3]);
     expect(at("Piece30").dims).toEqual([0.1, 4.8, 0.3]);
-    expect(at("Piece41").position).toEqual([1.1, -1.855, -0.34]);
+    expect(at("Piece41").position).toEqual([1.1, up(-1.855), -0.34]);
   });
 
   it("⭐ it survives the JSON seam (`GM8`) unchanged — its goal and its yawed pieces included", () => {
@@ -229,11 +232,11 @@ describe("⭐⭐⭐ the lights — Unity's conventions, checked against the owne
     return Math.hypot(d[0]! - t * f[0], d[1]! - t * f[1], d[2]! - t * f[2]);
   };
 
-  it("⭐⭐ both spots are aimed at the painting, around (0, 2.5, 0) — within a unit", () => {
+  it("⭐⭐ both spots are aimed at the painting, around (0, 2.5, 0) (+ 2.3 since `D169`) — within a unit", () => {
     // ⛔ RED under any other Euler reading (a right-handed flip, or Y before X): the rays miss by metres.
     for (const name of ["Light_spot_left", "Light_spot_rear"]) {
       const l = L.find((x) => x.name === name)!;
-      expect(aimMiss(l, [0, 2.5, 0])).toBeLessThan(1);
+      expect(aimMiss(l, [0, up(2.5), 0])).toBeLessThan(1);
     }
   });
 
