@@ -268,7 +268,7 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `pioneer_cursor_grab.ts` · `mouse_wheel_zoom.ts` | `D96`: which PioneerFaceCursor a press grabs (mouse inside the ring, touch within 1–10 radii; OFF by default) · the wheel's notches onto pinch's `zoom` |
 | `snap.ts` · `unsnap.ts` · `seat_snap.ts` · `assembly.ts` | `D100`: the snap conditions and re-arm; the unsnap gesture; the seat's magnet lerp; the assembly's root → §11.13 |
 | `second_touch_drive.ts` | the second touch's drive (`D108`/`D123`): gravity lift + spin, for an aligned body and a free one in `TRANSLATE` |
-| `aligned_axes.ts` | `D97`'s segments from the FollowerFace to the cursor. ⛔ `grip_mode.ts` deleted (`D150`: the gizmo asks presence) |
+| `aligned_axes.ts` · `grip_mode.ts` | `D97`'s segments from the FollowerFace to the cursor · which grip modes translate |
 | `episode_ledger.ts` | `D112`/`D115`: the episode count and the timer on the HUD's first line (`GM2`) |
 | `edge_band.ts` | `D113`/`D114`: the edge band that is always empty space, and the grid probe that opens it |
 | `jump_watch.ts` | the HUD's `jump` line — a pose discontinuity against the body's own recent median |

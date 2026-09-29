@@ -516,7 +516,6 @@ export function createScene(
    * have made the marker's meaning depend on the alignment state.
    */
   st.gizmoRings = new Map<ObjectId, LinesMesh>();
-  st.gizmoHitRings = new Map<string, LinesMesh>();
   st.gizmoTurnRings = new Map<ObjectId, LinesMesh>();
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.

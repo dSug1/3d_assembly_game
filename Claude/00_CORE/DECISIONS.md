@@ -94,9 +94,6 @@ file.
 | `D146` | ⚠ **REVERSED BY `D147`** — the sign latched at press | 2026-09-29 | → §19 |
 | `D147` | ⭐⭐ **A ZOOM RE-DECIDES THE DIRECTION, EVEN MID-DRAG** | 2026-09-29 | → §19 |
 | `D148` | ⭐⭐ **…AND A GRAVITY LIFT: THE SIGN IS READ EVERY STEP** | 2026-09-29 | → §19 |
-| `D150` | ⭐⭐ **FREE-BODY GIZMO: FULL AT A START, THEN A RAY TOWARD THE TRAVEL** | 2026-09-29 | → §19 |
-| `D151` | ⭐⭐ **A TRANSLATION LINE STOPS AT THE OBJECT IT HITS, WITH A WHITE RING** | 2026-09-29 | → §19 |
-| `D152` | ⭐ **A HIT RING KEEPS THE ORIGIN RING'S WORLD SIZE — IN PERSPECTIVE** | 2026-09-29 | → §19 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -107,7 +104,7 @@ file.
 | `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | ⭐ Binding, ⚠ → history |
 | `D71` | ⭐⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** | 2026-09-22 | ⭐ Binding, re-confirmed by `D93`. ⚠ → history |
 | `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | ⭐ Binding, ⚠ → history |
-| `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** | 2026-09-21 | ⚠ → §5.16 |
+| `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** — a translated Pioneer carried EVERY Follower; cyan should break instead | 2026-09-21 | ⚠ → §5.16 |
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D67` | ⚠ **REVERSED BY `D87`** — first touch the PIONEER, second the Follower | 2026-09-21 | ⚠ → §5.14, history |
 | `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding, ⚠ → history |
@@ -150,9 +147,9 @@ file.
 | `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding — the toggle NARROWED by `D108`: one tablet tap, none on desktop |
 | `D27` | ⭐⭐⭐ **ANY SINGLE TAP toggles the movement behaviour; a PRESS keeps every meaning it has** | 2026-09-16 | ⛔ Narrowed by `D108` |
 | `D26` | ⭐⭐ **THE ASSIGNMENTS WERE A FLAG, NOT A FORK** — ⚠ **CLOSED BY `D28`** | 2026-09-16 | ⚠ → history |
-| `D25` | ⚠ **REVERSED BY `D54`** | 2026-09-16 | ⚠ → history |
-| `D24` | ⚠ **RETIRED BY `D28`** | 2026-09-16 | ⚠ → history |
-| `D23` | ⚠ **SUPERSEDED BY `D28`** | 2026-09-16 | ⚠ → history |
+| `D25` | ⚠ **REVERSED BY `D54`** — a holder no longer under its object used to give the selection up | 2026-09-16 | ⚠ → history |
+| `D24` | ⚠ **RETIRED BY `D28`** — a lift-and-replace of the second touchpoint was ONE gesture | 2026-09-16 | ⚠ → history |
+| `D23` | ⚠ **SUPERSEDED BY `D28`** — one touchpoint TRANSLATES; a second held still ROTATES | 2026-09-16 | ⚠ → history |
 | `D22` | ⭐⭐⭐ **Roll moves to the SECOND touchpoint's x** | 2026-09-15 | ⭐ Binding |
 | `D21` | ⭐⭐⭐ **STATIONARY is a POSITION DEADBAND, not a timer** | 2026-09-15 | ⭐ Binding |
 | `D20` | ⭐⭐ **Depth is a STILL HOLDER and a MOVING ANCHOR** | 2026-09-15 | ⭐ Binding |
