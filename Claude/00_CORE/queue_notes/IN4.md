@@ -1011,5 +1011,3 @@ directions with no `dy` ZOOM, and the translation and roll pause — latched unt
 ⭐⭐ **`D146`, the same day**: *"Camera position after zoom shall not change direction of translation during drag."* — the away/toward sign is latched at the press (`awaySignFrom` → `Held.awaySign`), so a zoom mid-drag cannot flip it. ✅ 2 vectors, 1260 → 1262.
 
 ⭐⭐ **`D147`, reversing `D146` the same day, then `D148`**: a zoom — and then also a gravity lift — mid-drag re-decides the sign; it is read live at every step (`awaySignNow`), no latch. ✅ 1262 → 1263.
-
-⭐⭐ **`D149`**: *"Gizmo axis shall display only from gizmo origin towards the direction of translation if their respective delta position is beyond deadband, hidden if inside deadband."* … *"New rule is for free unaligned object only"* — a free body's red/green/blue are rays toward the travel side while their own input is `MOVING`, hidden otherwise; aligned followers unchanged. ✅ 1263 → 1267 → alignment spec §19.

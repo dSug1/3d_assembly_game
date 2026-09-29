@@ -459,36 +459,6 @@ export function displayedAxes(
   return driven.some((d) => d) ? driven : previous;
 }
 
-/** ⭐ One translation line of a FREE body: `0` hidden, `±1` a ray from the gizmo toward `±axis`. */
-export type TravelRay = -1 | 0 | 1;
-
-/**
- * ⭐⭐⭐ `D149` — **A FREE BODY'S TRANSLATION LINES ARE RAYS, AND ONLY WHILE THEIR OWN INPUT MOVES**
- * (the owner, 2026-09-29: *"Gizmo axis shall display only from gizmo origin towards the direction of
- * translation if their respective delta position is beyond deadband, hidden if inside deadband"* —
- * *"my rule is only for unaligned object"*).
- *
- * Per channel `[x, gravity, depth]` — red from the holder's `dx`, green from the second touch's `dy`,
- * blue from the holder's `dy`: a RAY from the gizmo's origin toward the way the body last travelled
- * along that axis while the channel's input is beyond the deadband, and NOTHING while it is inside.
- * ⭐ *Beyond the deadband* is §1.1's per-axis STATE (`MOVING`), not one event's step: `A11` emits in
- * bursts, and a line keyed on the burst would blink while the finger is plainly moving. ⭐ The ray's
- * side is the TRAVEL's sign, not the finger's — for blue that is where `D145`/`D148` actually sent it.
- * ⛔ It reverses, for a free body, `D145`'s *red and blue together* and 2026-09-23's *a pause keeps the
- * last lines*: a resting finger shows no translation line. ⚠ An ALIGNED follower is untouched (`D97`).
- *
- * @param moving each channel's input is beyond the deadband (`MOVING`).
- * @param lastSign the sign of the last non-zero travel along each axis; `0` before any.
- */
-export function freeTravelRays(
-  moving: readonly [boolean, boolean, boolean],
-  lastSign: readonly [number, number, number],
-): readonly [TravelRay, TravelRay, TravelRay] {
-  const ray = (i: 0 | 1 | 2): TravelRay =>
-    moving[i] && Number.isFinite(lastSign[i]) && lastSign[i] !== 0 ? (lastSign[i] > 0 ? 1 : -1) : 0;
-  return [ray(0), ray(1), ray(2)];
-}
-
 /**
  * ⭐ Keep a body inside the depth range a gesture may drive it to — `A5`'s bounds, unchanged.
  *

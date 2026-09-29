@@ -16,9 +16,9 @@ import { worldPlacementOf, type ObjectId, faceWorld } from "../core/object_model
 import { alignedFaceOf } from "../core/face_pick";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
-import { awaySignFrom, displayedAxes, freeTravelRays, soleGizmoBody, type AwaySign, type GizmoChannels, type AxisTravel, type TravelRay } from "../input/axis_translate";
+import { awaySignFrom, displayedAxes, soleGizmoBody, type AwaySign, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
-import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type Held, type SceneState, type TurnAxes } from "./scene_state";
+import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
 import { requireGestureFrame } from "./camera_rig";
 
@@ -97,22 +97,6 @@ export function noteAxisTravel(st: SceneState, id: ObjectId | undefined, t: Axis
     p[1] || t.driven[1],
     p[2] || t.driven[2],
   ]);
-  // ⭐ `D149`: which way the body last went along each axis — the side a free body's ray is drawn on.
-  const sign = st.gizmoTravelSign.get(id) ?? [0, 0, 0];
-  const moved = [t.xM, t.gravityM, t.depthM];
-  for (let k = 0; k < 3; k++) if (Number.isFinite(moved[k]) && moved[k] !== 0) sign[k] = Math.sign(moved[k]!);
-  st.gizmoTravelSign.set(id, sign);
-}
-
-/**
- * ⭐ `D149`: is each channel's INPUT beyond the deadband right now — §1.1's per-axis state, `MOVING`?
- * `[x, gravity, depth]` = the holder's x, any second touch's y, the holder's y. ⛔ Only while the grip
- * TRANSLATES and no hold-pinch zoom (`D137`) has paused it — otherwise nothing is being translated.
- */
-function travelInputsMoving(grip: Held): [boolean, boolean, boolean] {
-  if (!isTranslatingMode(grip.mode) || grip.holdPinch !== null) return [false, false, false];
-  const second = [...grip.anchorMotion.values()].some((t) => t.axes.y === "MOVING");
-  return [grip.rec.axes.x === "MOVING", second, grip.rec.axes.y === "MOVING"];
 }
 
 export function ringFrom(st: SceneState, pool: Map<ObjectId, LinesMesh>,
@@ -300,8 +284,6 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // or a finger on this same body (`SECOND`).
     const alignedHere = alignedFaceOf(st.world, id) !== null;
     let shown: GizmoChannels;
-    // ⭐ `D149`: a FREE body's translation lines are rays; `null` for an aligned one (`D97` draws those).
-    let rays: readonly [TravelRay, TravelRay, TravelRay] | null = null;
     if (alignedHere) {
       const turn =
         byMotion ??
@@ -319,10 +301,7 @@ export function refreshAxisGizmo(st: SceneState) : void {
       shown = [travel[0], travel[1], travel[2], turn[3], turn[4], turn[5]];
     } else {
       if (byMotion === null) continue;
-      // ⭐⭐⭐ `D149`: red, green and blue each a RAY toward where the body went, shown only while its own
-      // input is beyond the deadband; the turn lines keep `displayedAxes`'s rule.
-      rays = freeTravelRays(travelInputsMoving(grip), st.gizmoTravelSign.get(id) ?? [0, 0, 0]);
-      shown = [rays[0] !== 0, rays[1] !== 0, rays[2] !== 0, byMotion[3], byMotion[4], byMotion[5]];
+      shown = byMotion;
     }
     // ⭐⭐⭐ **WHERE THE GIZMO SITS — THE FOLLOWERFACE'S CENTRE, ELSE THE BODY'S OWN** — the
     // owner, 2026-09-23: *"Remove the rule of the raycast of the delta position direction from
@@ -464,16 +443,6 @@ export function refreshAxisGizmo(st: SceneState) : void {
                   new Vector3(seg[0][0], seg[0][1], seg[0][2]),
                   new Vector3(seg[1][0], seg[1][1], seg[1][2]),
                 ]
-              : travel && rays !== null
-                ? [
-                    // ⭐ `D149`: from the gizmo's origin, one way only.
-                    new Vector3(base[0], base[1], base[2]),
-                    new Vector3(
-                      base[0] + a[0] * reach * rays[i]!,
-                      base[1] + a[1] * reach * rays[i]!,
-                      base[2] + a[2] * reach * rays[i]!,
-                    ),
-                  ]
               : [
                   new Vector3(
                     base[0] - a[0] * reach,
