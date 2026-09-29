@@ -8,7 +8,7 @@ import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, desktopBehaviour, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
@@ -169,8 +169,8 @@ export function installPointerHandler(st: SceneState): void {
       const driveHit = rayHit;
       if (rawHitId !== undefined) st.rawPressedBody.set(e.pointerId, rawHitId);
       st.pointerTypeOf.set(e.pointerId, e.pointerType);
-      // ⭐⭐ `D108` — THE DESKTOP HAS NO MODE: the mouse's press latches it from Ctrl.
-      if (e.pointerType === "mouse") st.behaviour = desktopBehaviour(e.ctrlKey);
+      // ⛔ `D108`'s *the mouse's press latches the mode from Ctrl* is deleted (`D167`): the desktop keeps the mode, as
+      // the tablet does, and a Shift tap toggles it.
       // ⭐ `D112`: the facts the episode ledger reads, taken BEFORE this press registers.
       const heldBefore = st.router
         .objects()

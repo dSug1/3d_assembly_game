@@ -208,7 +208,7 @@ export interface ToggleTapContext {
  * body or a Pioneer the same tap RELEASES (`D95`/`D107`) — so the three answers partition the
  * gesture instead of overlapping.
  * ⛔ **A mouse never toggles**: the desktop has no mode — left drag translates, Ctrl + left drag
- * rotates (`desktopBehaviour`).
+ * rotates (`desktopBehaviour`, deleted by `D167`: a Shift tap toggles).
  */
 export function tapTogglesMode(c: ToggleTapContext): boolean {
   return (
@@ -221,11 +221,20 @@ export function tapTogglesMode(c: ToggleTapContext): boolean {
 }
 
 /**
- * ⭐⭐ **`D108` — THE DESKTOP HAS NO MODE**: a left drag translates, **Ctrl** + left drag rotates,
- * latched at the press. ⭐ Shift still switches the axis inside either (`D94`'s table).
+ * ⭐⭐⭐ `D167` — **ON THE DESKTOP A SHIFT TAP TOGGLES TRANSLATION / ROTATION** (the owner, 2026-09-29: *"Remove the
+ * Ctrl to toggle rotation in desktop. Instead, a single Shift tap while an object is pressed shall toggle between
+ * translation / rotation (note that a Shift hold remain as currently wired)"*). ⛔ `D108`'s *the desktop has no mode;
+ * Ctrl rotates* (`desktopBehaviour`) is deleted.
+ * ⭐ The same conditions as the tablet's tap on empty space (`tapTogglesMode`), minus where the tap lands: exactly one
+ * body held, FREE (an aligned body is mode-less, `D108`) and carrying no followers. The mode then persists, as the
+ * tablet's does. ⚠ *A tap* — Shift down and up within the tap time with no Shift drag between — is the mouse layer's.
  */
-export function desktopBehaviour(ctrlKey: boolean): Behaviour {
-  return ctrlKey ? "ROTATE" : "TRANSLATE";
+export function shiftTapTogglesMode(c: {
+  readonly heldObjectCount: number;
+  readonly heldIsAligned: boolean;
+  readonly heldFollowerCount: number;
+}): boolean {
+  return c.heldObjectCount === 1 && !c.heldIsAligned && c.heldFollowerCount === 0;
 }
 
 /**

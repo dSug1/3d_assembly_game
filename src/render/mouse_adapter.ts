@@ -79,8 +79,12 @@ export function attachMouseSecondTouch(
    * went down: a carry left set with no freeze would stop every later gesture from landing.
    */
   beginFreeze?: (pointerId: number) => void,
+  /** ⭐ `D167`: a Shift tap while a part is pressed — the scene decides whether the mode toggles. */
+  onShiftTap?: () => void,
+  /** ⭐ `D167`: the longest Shift press that is still a tap — the scene's `tapMaxDuration`. */
+  tapMaxMs = 250,
 ): MouseSecondTouchHandle {
-  const model = new MouseSecondTouch();
+  const model = new MouseSecondTouch(tapMaxMs);
   let seen = 0;
   let sent = 0;
   let last = "—";
@@ -90,8 +94,6 @@ export function attachMouseSecondTouch(
   // ⭐ The mouse's own pointer id, read off every real event — a `REAL` action re-issues THAT
   // pointer at its own position, so it must carry the same id the scene latched a role for.
   let realId = 1;
-  /** ⭐ `D108`: Ctrl latches the desktop's rotate at the press — carried onto re-issued events. */
-  let ctrl = false;
   /** ⭐ `D155`: the mesh an inheriting second touch must press — its pick is restricted to it. */
   let inheritMesh: AbstractMesh | null = null;
 
@@ -113,7 +115,6 @@ export function attachMouseSecondTouch(
         clientX: a.x,
         clientY: a.y,
         buttons: a.kind === "UP" ? 0 : 1,
-        ctrlKey: a.target === "REAL" && ctrl,
       },
     );
     // ⛔ Canvas-relative for `scene.pick`, which works in the engine's coordinates while the event
@@ -136,6 +137,8 @@ export function attachMouseSecondTouch(
     const v = model.step(input);
     // ⭐ `D159`: the scene learns of a freeze BEFORE the drag's release is delivered.
     if (v.emit.some((a) => a.inherit === true)) beginFreeze?.(realId);
+    // ⭐ `D167`: a Shift tap — the scene toggles the mode if a free part is held.
+    if (v.toggleMode === true) onShiftTap?.();
     // ⭐ Delivered FIRST: this runs before Babylon processes the real event, so a lift the model
     // owes reaches the scene before the event that revealed it.
     for (const a of v.emit) deliver(a);
@@ -157,7 +160,6 @@ export function attachMouseSecondTouch(
     seen++;
     realId = e.pointerId;
     shift = e.shiftKey;
-    ctrl = e.ctrlKey;
     apply(
       {
         type,
@@ -183,7 +185,14 @@ export function attachMouseSecondTouch(
     apply({ type: "CANCEL", button: -1, buttons: 0, shift: false, x: 0, y: 0 });
   };
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === "Shift") shift = true;
+    // ⭐⭐ `D167`: Alt and F10 must not hand the keyboard to the BROWSER's menu (Chrome, Edge and Firefox on Windows
+    // focus it on Alt's release) — the page would lose focus mid-gesture. ⚠ Safari's Option key has no such role.
+    if (e.key === "Alt" || e.key === "F10") e.preventDefault();
+    if (e.key === "Shift") {
+      shift = true;
+      // ⭐ `D167`: a fresh press (not the key's repeat) may begin a Shift TAP.
+      if (!e.repeat) apply({ type: "SHIFT_DOWN", button: -1, buttons: 0, shift: true, x: 0, y: 0, t: performance.now() });
+    }
     if (e.key === "Escape") cancel();
     // ⭐ `D154`: Space is a modifier here — ⛔ and must not scroll the page or press a focused button.
     if (e.code === "Space") {
@@ -210,7 +219,11 @@ export function attachMouseSecondTouch(
   };
   // ⭐ Shift's release must be seen WITHOUT waiting for the mouse to move.
   const onKeyUp = (e: KeyboardEvent) => {
-    if (e.key === "Shift") shift = false;
+    if (e.key === "Alt" || e.key === "F10") e.preventDefault(); // ⭐ `D167`: the menu activates on the RELEASE
+    if (e.key === "Shift") {
+      shift = false;
+      apply({ type: "SHIFT_UP", button: -1, buttons: 0, shift: false, x: 0, y: 0, t: performance.now() });
+    }
     if (e.code === "Space") space = false;
   };
   const onMenu = (e: Event) => e.preventDefault();
@@ -225,12 +238,20 @@ export function attachMouseSecondTouch(
   canvas.addEventListener("wheel", onWheel, { passive: false });
   window.addEventListener("keydown", onKey);
   window.addEventListener("keyup", onKeyUp);
-  window.addEventListener("blur", cancel);
+  // ⭐⭐ `D167` (the owner: *"disable the page loss of focus"*): no page can stop the window losing focus (Alt+Tab,
+  // another window, a notification) — but losing it no longer DOES anything in the game. ⛔ It used to run Esc's
+  // cancel, lifting a latched HitFace and the Shift touch. Only the held keys are forgotten: their releases will
+  // never arrive, and a Shift or Space believed held for ever would be the worse state.
+  const lostFocus = () => {
+    shift = false;
+    space = false;
+  };
+  window.addEventListener("blur", lostFocus);
   window.addEventListener("contextmenu", onMenu);
   scene.onDisposeObservable.add(() => {
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("keyup", onKeyUp);
-    window.removeEventListener("blur", cancel);
+    window.removeEventListener("blur", lostFocus);
     window.removeEventListener("contextmenu", onMenu);
     canvas.removeEventListener("wheel", onWheel);
     cancel();

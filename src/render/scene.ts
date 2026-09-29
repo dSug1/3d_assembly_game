@@ -80,6 +80,8 @@ import { wheelZoom } from "../input/mouse_wheel_zoom";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
 import { applyCamera, requireGestureFrame } from "./camera_rig";
+import { shiftTapTogglesMode, toggleBehaviour } from "../input/mode_toggle";
+import { alignedFaceOf } from "../core/face_pick";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler } from "./pointer_wiring";
@@ -605,7 +607,26 @@ export function createScene(
     if (grip === undefined) return;
     st.inheritPressFace = { mesh: grip.mesh, pressFace: grip.pressFace };
     st.freezeCarry = true;
-  });
+  },
+  // ⭐⭐ `D167`: a Shift tap while a part is pressed toggles translation / rotation — on the tablet's own conditions
+  // (one free body held, no followers). ⛔ Not an episode: no touchpoint is involved.
+  () => {
+    const holder = st.router.objects()[0];
+    const grip = holder === undefined ? undefined : st.held.get(holder.id);
+    const heldId = grip === undefined ? undefined : st.idOf.get(grip.mesh);
+    if (
+      !shiftTapTogglesMode({
+        heldObjectCount: st.router.objects().length,
+        heldIsAligned: heldId !== undefined && alignedFaceOf(st.world, heldId) !== null,
+        heldFollowerCount: heldId !== undefined ? st.links.followersOf(heldId).length : 0,
+      })
+    )
+      return;
+    st.behaviour = toggleBehaviour(st.behaviour);
+    st.lastVerdict = `Shift tap → ${st.behaviour}`;
+    st.hudDirty = true;
+  },
+  st.cfg.tapMaxDuration);
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
