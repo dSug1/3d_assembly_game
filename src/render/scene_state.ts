@@ -404,6 +404,8 @@ export interface SceneState {
   outlines: Map<ObjectId, BodyOutlines>;
   bootGestureFrame: GravityFrame | null;
   gizmoAxes: Map<ObjectId, GizmoChannels>;
+  /** ⭐ `D149`: the sign of the last non-zero travel along `[x, gravity, depth]`, per body — a free body's ray side. */
+  gizmoTravelSign: Map<ObjectId, [number, number, number]>;
   rolledThisHold: Set<ObjectId>;
   frameAxisDriven: Map<ObjectId, [boolean, boolean, boolean]>;
   frameTurnAxes: Map<ObjectId, TurnAxes>;
