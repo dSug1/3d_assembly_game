@@ -460,6 +460,62 @@ export function displayedAxes(
 }
 
 /**
+ * ⭐⭐⭐ `D153` — **A TRANSLATION LINE STOPS WHERE IT HITS AN OBJECT** (the owner, 2026-09-29: *"a
+ * translation axis stops where it hits an object and a white ring gizmo is displayed at this
+ * point"*; first built as `D151` over `D150`'s gizmo, reverted with it, and re-added here over
+ * `D145`'s).
+ *
+ * Each half of a translation line runs out from the gizmo `reach` metres; `hitM` is how far along it
+ * the first other object lies (`null`: none). ⭐ A hit inside the reach shortens the half to it and
+ * asks for the ring there; no hit — or one past the reach, or not ahead — leaves the half as it was.
+ */
+export function stopAtHit(reach: number, hitM: number | null): { readonly lengthM: number; readonly hit: boolean } {
+  if (hitM !== null && Number.isFinite(hitM) && hitM > 0 && hitM <= reach) return { lengthM: hitM, hit: true };
+  return { lengthM: reach, hit: false };
+}
+
+/**
+ * ⭐⭐ `D153` — **A HIT RING FOLLOWS THE SCENE'S PERSPECTIVE** (the owner: *"white rings at hit points
+ * shall follow the scene's perspective"*; first `D152`). The white ring at the gizmo's origin is
+ * `ringPx` on the glass; a ring at a hit keeps that ring's WORLD size, so on the glass it is
+ * `ringPx × originDist / hitDist` — smaller when the hit is farther than the gizmo, larger when nearer.
+ * The camera's field of view enters through `trackingMetresPerPx`, which turns these pixels back into
+ * metres at the hit. ⚠ A degenerate distance returns `ringPx`, never a zero or infinite ring.
+ */
+export function hitRingApparentPx(ringPx: number, originDistM: number, hitDistM: number): number {
+  if (!(originDistM > 0) || !(hitDistM > 0) || !Number.isFinite(originDistM) || !Number.isFinite(hitDistM))
+    return ringPx;
+  return (ringPx * originDistM) / hitDistM;
+}
+
+/**
+ * ⭐⭐ **THE PART OF A GIZMO LINE IN FRONT OF THE CAMERA** — `[p0, p1]` cut where it crosses the plane
+ * `minDepth` ahead of the eye along the view, or `null` when all of it is behind.
+ *
+ * ⛔⛔ Defect 74 (found building `D150`, kept through its revert): a line with one end BEHIND the camera
+ * was not drawn at all — and since `D145` the blue axis IS the camera's own view, flattened, so its
+ * full-screen line always runs back under the camera and blue never showed. ⭐ Measured in a headless
+ * Chrome: the same line cut to its front half drew. The gizmo cuts every line here before drawing it.
+ */
+export function clipSegmentInFront(
+  p0: Vec3,
+  p1: Vec3,
+  eye: Vec3,
+  view: Vec3,
+  minDepth: number,
+): readonly [Vec3, Vec3] | null {
+  const v = normalize(view);
+  if (!v) return null;
+  const d0 = dot(sub(p0, eye), v) - minDepth;
+  const d1 = dot(sub(p1, eye), v) - minDepth;
+  if (!Number.isFinite(d0) || !Number.isFinite(d1)) return null;
+  if (d0 < 0 && d1 < 0) return null;
+  if (d0 >= 0 && d1 >= 0) return [p0, p1];
+  const cut = add(p0, scale(sub(p1, p0), d0 / (d0 - d1)));
+  return d0 < 0 ? [cut, p1] : [p0, cut];
+}
+
+/**
  * ⭐ Keep a body inside the depth range a gesture may drive it to — `A5`'s bounds, unchanged.
  *
  * ⛔⛔ **IT IS CARRIED OVER DELIBERATELY, BECAUSE THE CHANNEL MOVED AND THE HAZARD DID NOT.**

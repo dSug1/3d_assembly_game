@@ -1011,3 +1011,7 @@ directions with no `dy` ZOOM, and the translation and roll pause — latched unt
 ⭐⭐ **`D146`, the same day**: *"Camera position after zoom shall not change direction of translation during drag."* — the away/toward sign is latched at the press (`awaySignFrom` → `Held.awaySign`), so a zoom mid-drag cannot flip it. ✅ 2 vectors, 1260 → 1262.
 
 ⭐⭐ **`D147`, reversing `D146` the same day, then `D148`**: a zoom — and then also a gravity lift — mid-drag re-decides the sign; it is read live at every step (`awaySignNow`), no latch. ✅ 1262 → 1263.
+
+⛔ **`D149`–`D152` built and reverted the same day** (back to `350910f`).
+
+⭐⭐ **`D153`**: over `D145`'s gizmo, a translation line stops at the first other object it hits, with a white ring there in the scene's perspective; defect 74's front-clip is kept so blue draws. ✅ 1263 → 1272 → alignment spec §19.
