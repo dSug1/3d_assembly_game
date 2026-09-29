@@ -9,13 +9,14 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
+import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { trackingMetresPerPx, type GravityFrame } from "../input";
 import { type Vec3 } from "../core/vec";
 import { worldPlacementOf, type ObjectId, faceWorld } from "../core/object_model";
 import { alignedFaceOf } from "../core/face_pick";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
-import { displayedAxes, soleGizmoBody, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
+import { awaySignFrom, displayedAxes, soleGizmoBody, type AwaySign, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
 import { isTranslatingMode } from "../input/grip_mode";
 import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
@@ -58,6 +59,16 @@ export function cameraToGizmo(st: SceneState, id: ObjectId | undefined, meshAt: 
   const a = (id === undefined ? null : gizmoAnchor(st, id)) ?? meshAt;
   const c = st.camera.position;
   return [a[0] - c.x, a[1] - c.y, a[2] - c.z];
+}
+
+/**
+ * ⭐⭐ `D148` — **WHICH WAY FINGER UP GOES, FOR THIS STEP**: `awaySignFrom` on the camera and the gizmo
+ * as they are NOW (the owner, 2026-09-29: *"relative position of the gizmo and camera shall be updated
+ * each frame"*). ⛔ Never latched: a zoom (`D147`) or a gravity lift (`D148`) mid-drag re-decides it.
+ */
+export function awaySignNow(st: SceneState, mesh: AbstractMesh): AwaySign {
+  const p = mesh.position;
+  return awaySignFrom(cameraToGizmo(st, st.idOf.get(mesh), [p.x, p.y, p.z]));
 }
 
 export function axesOf(st: SceneState) : ObjectAxes {

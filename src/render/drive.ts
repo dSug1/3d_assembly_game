@@ -16,7 +16,7 @@ import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_ROLL, type Held, type SceneState } from "./scene_state";
 import { asVec3, modelOrientation, requirePose, setModelOrientation, setModelPose } from "./bodies";
 import { driveBodyOf } from "./alignment_wiring";
-import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
+import { awaySignNow, axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { screenFrame } from "./camera_rig";
 import { noteSpin, nudgeOthersWorld } from "./sway_pass";
 
@@ -89,7 +89,7 @@ export function applyDepthStep(st: SceneState, grip: Held, dyPx: number) : void 
     st.cfg.gainTranslateScreen,
     st.cfg.gainTranslateDepth,
     st.cfg.axisTrackingConeDeg,
-    { awaySign: grip.awaySign },
+    { awaySign: awaySignNow(st, grip.mesh) },
   );
   // ⭐ The gizmo hears this finger exactly as it hears the holder's — same function, same frame.
   noteAxisTravel(st, gid, travel);

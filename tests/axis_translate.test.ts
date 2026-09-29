@@ -100,7 +100,7 @@ const run = (
     gain,
     gain,
     cone,
-    // ⭐ `D146`: in the product this is latched at the press; here the press IS this call.
+    // ⭐ In the product this is read live at every step (`D148`), as here.
     { awaySign: awaySignFrom(toAnchor) },
   );
 
@@ -199,11 +199,12 @@ describe("⭐⭐⭐ `D145` — finger UP is AWAY when the camera is at or above 
   });
 });
 
-describe("⭐⭐⭐ `D146` — a ZOOM mid-drag cannot flip the direction: the sign is LATCHED at the press", () => {
-  // > *"Camera position after zoom shall not change direction of translation during drag."*
-  // > — the owner, 2026-09-29
+describe("⭐⭐⭐ `D147`/`D148` — the direction is re-read every step: a ZOOM or a LIFT mid-drag can flip it", () => {
+  // > *"camera position at the end of zoom shall determine the direction of translation, even if the
+  // > zoom happens during drag"* — the owner, 2026-09-29, reversing `D146` (*"Camera position after
+  // > zoom shall not change direction of translation during drag"*)
 
-  it("⭐⭐ a zoom that carries the camera across the gizmo's height leaves finger-up AWAY", () => {
+  it("⭐⭐ a zoom that carries the camera BELOW the gizmo turns finger-up TOWARD the camera", () => {
     // ⭐ The premise, measured: a camera looking down 20° at a gizmo just below its eye level; zooming
     // in slides the camera along its view line, DOWN, until it is below the gizmo.
     const c = camera(35, 20);
@@ -214,10 +215,10 @@ describe("⭐⭐⭐ `D146` — a ZOOM mid-drag cannot flip the direction: the si
       gizmo[1] - cameraAt(radius)[1],
       gizmo[2] - cameraAt(radius)[2],
     ];
-    const atPress = awaySignFrom(toAnchorAt(1.5));
-    expect(atPress).toBe(1); // camera above the gizmo at the press → away
-    expect(awaySignFrom(toAnchorAt(0.05))).toBe(-1); // ⛔ re-read after the zoom, it would flip
-    // ⭐ The latched sign rides the whole drag: finger up still goes AWAY after the zoom.
+    expect(awaySignFrom(toAnchorAt(1.5))).toBe(1); // camera above the gizmo at the press → away
+    const afterZoom = awaySignFrom(toAnchorAt(0.05));
+    expect(afterZoom).toBe(-1); // ⭐ the zoom left the camera below it
+    // ⭐ The re-decided sign drives the rest of the drag: finger up now comes TOWARD the camera.
     const t = axisTravel(
       { holderDxPx: 0, holderDyPx: -30, secondDyPx: 0 },
       c.screen,
@@ -226,9 +227,36 @@ describe("⭐⭐⭐ `D146` — a ZOOM mid-drag cannot flip the direction: the si
       1,
       1,
       CONE,
-      { awaySign: atPress },
+      { awaySign: afterZoom },
     );
-    expect(dot(axisDisplacement(t, live(c)), c.gravity.depth)).toBeGreaterThan(0);
+    expect(dot(axisDisplacement(t, live(c)), c.gravity.depth)).toBeLessThan(0);
+  });
+
+  it("⭐⭐ `D148`: a GRAVITY lift that carries the gizmo above the camera turns finger-up TOWARD", () => {
+    // > *"Same for translation on gravity axis: relative position of the gizmo and camera shall be
+    // > updated each frame and determine the direction of translation on blue axis"* — the owner
+    const c = camera(35, 20);
+    const eye: Vec3 = scale(c.view, -1.5); // the camera, 1.5 m back from the orbit centre
+    const gizmoAt = (y: number): Vec3 => [0, y, 0];
+    const toAnchor = (g: Vec3): Vec3 => [g[0] - eye[0], g[1] - eye[1], g[2] - eye[2]];
+    const before = awaySignFrom(toAnchor(gizmoAt(0)));
+    expect(before).toBe(1); // below the camera → away
+    // ⭐ the second finger lifts the body 1 m: its gizmo is now above the camera
+    const t = run({ secondDyPx: -10 }, c, live(c));
+    expect(t.gravityM).toBeGreaterThan(0);
+    const after = awaySignFrom(toAnchor(gizmoAt(eye[1] + 0.2)));
+    expect(after).toBe(-1);
+    const step = axisTravel(
+      { holderDxPx: 0, holderDyPx: -30, secondDyPx: 0 },
+      c.screen,
+      live(c),
+      PER_PX,
+      1,
+      1,
+      CONE,
+      { awaySign: after },
+    );
+    expect(dot(axisDisplacement(step, live(c)), c.gravity.depth)).toBeLessThan(0);
   });
 
   it("⭐ `awaySignFrom` — at or above: away; below: toward; a NaN height counts as level", () => {

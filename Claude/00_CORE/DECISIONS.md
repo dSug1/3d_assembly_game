@@ -91,7 +91,9 @@ file.
 | `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** — `Scene_1`: a face or its opposite | 2026-09-28 | → `PLAYABILITY` §2.1 |
 | `D144` | ⭐⭐ **A ⏸ PAUSE MENU LEAVES A LEVEL, BY PAGE RELOAD; ONE SCENE LIST; `Scene_1` BOOTS** | 2026-09-28 | → `GAME_STRUCTURE.md` §4–§5 |
 | `D145` | ⭐⭐⭐ **TRANSLATION ALONG THE LIVE CAMERA; UP = AWAY IFF THE CAMERA IS AT/ABOVE THE GIZMO** | 2026-09-29 | Reverses `D74`'s boot axes → §19 |
-| `D146` | ⭐⭐ **THE AWAY/TOWARD SIGN IS LATCHED AT THE PRESS — a zoom cannot flip a drag** | 2026-09-29 | → §19 |
+| `D146` | ⚠ **REVERSED BY `D147`** — the sign latched at press | 2026-09-29 | → §19 |
+| `D147` | ⭐⭐ **A ZOOM RE-DECIDES THE DIRECTION, EVEN MID-DRAG** | 2026-09-29 | → §19 |
+| `D148` | ⭐⭐ **…AND A GRAVITY LIFT: THE SIGN IS READ EVERY STEP** | 2026-09-29 | → §19 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -115,7 +117,7 @@ file.
 | `D59` | ⭐⭐⭐ **AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH BOTH AXES** | 2026-09-19 | ⭐ Binding, ⚠ → history |
 | `D58` | ⚠ **REPEALED BY `D66`** — a PRESS toggled the movement mode, in two places | 2026-09-19 | ⚠ → history |
 | `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | ⭐ Binding. ⚠ → history |
-| `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** — the alignment still toggles ON at the PRESS; `A22`'s rapid-pair upgrade is gone with the second touch's tap count | 2026-09-19 | ⛔ Reversed by `D119` → §14 |
+| `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** | 2026-09-19 | ⛔ Reversed by `D119` → §14, history |
 | `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D53` | ⭐⭐ **A BODY UNDER A FINGER IS NOT SWAYED** | 2026-09-18 | ⭐ Binding, ⚠ → history |
 | `D52` | ⚠ **RESOLVED BY `D57` THE SAME DAY** — the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it | 2026-09-19 | ⚠ → §5.5 |
@@ -128,7 +130,7 @@ file.
 | `D45` | ⭐⭐ **THE ALIGNMENT SNAP IS A SLERP, ON THE CAMERA RESET'S SLIDER** — binding; ⛔ NOT the rejected rotation inertia | 2026-09-17 | ⚠ → history |
 | `D44` | ⭐⭐ **A TAP ON ANOTHER OBJECT'S FACE ALIGNS IN **EITHER** MOVEMENT MODE** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D43` | ⛔⛔⛔ **`A10`'s DEPTH GATE IS DELETED — both fingers integrate at once** | 2026-09-17 | ⭐ Binding. ⚠ → history |
-| `D42` | ⚠ **SUPERSEDED IN PART BY `D67`** — the flag became a GESTURE; which GESTURE asks for `FOLLOW` has now moved to the Pioneer's press | 2026-09-17 | ⚠ → history |
+| `D42` | ⚠ **SUPERSEDED IN PART BY `D67`** | 2026-09-17 | ⚠ → history |
 | `D41` | ⚠ **SUPERSEDED BY `D42` after four hours** — what a turned Pioneer costs the Follower; the two readings survive, the FLAG does not | 2026-09-17 | ⚠ → history |
 | `D40` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap-to-align set is THE input model** | 2026-09-17 | ⭐ Binding, ⚠ → history |
 | `D39` | ⚠ **SUPERSEDED IN PART BY `D67`** — both faces are still marked; the re-tap UNDO moved onto the **FollowerFace** | 2026-09-16 | ⛔ The re-tap undo is deleted (`D107`). ⚠ → history |

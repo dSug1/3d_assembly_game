@@ -225,11 +225,11 @@ export type AwaySign = 1 | -1;
 /**
  * ⭐⭐⭐ `D145` — **WHICH WAY FINGER UP GOES**: AWAY when the camera is at or above the gizmo's height,
  * TOWARD when below. `toAnchor` is the camera → the gizmo's anchor; only its height is read.
- * ⭐⭐ `D146` (the owner, 2026-09-29: *"Camera position after zoom shall not change direction of
- * translation during drag."*): the caller asks this ONCE, at the press, and keeps the answer for the
- * grip's lifetime — a zoom slides the camera along its view line, changing its HEIGHT, and read every
- * step it could flip a drag half-way. ⚠ The latch also holds when the second finger lifts the body
- * across the camera's height mid-drag.
+ * ⭐⭐ WHEN IT IS ASKED: at EVERY translation step, from the camera and the gizmo as they are now
+ * (`D148`, the owner, 2026-09-29: *"relative position of the gizmo and camera shall be updated each
+ * frame and determine the direction of translation on blue axis"*). So a zoom that moves the camera
+ * across the gizmo's height (`D147`) and a second finger that lifts the gizmo across the camera's
+ * (`D148`) both flip the direction mid-drag. ⛔ `D146`'s latch at the press is gone.
  */
 export function awaySignFrom(toAnchor: Vec3): AwaySign {
   return finite(toAnchor[1]) <= 0 ? 1 : -1;
@@ -267,8 +267,7 @@ export function planeEdgeOn(camera: CameraScreenAxes, axes: ObjectAxes, coneDeg:
  *   is how to see the runaway a hand is being protected from.
  * @param axes ⭐ `D145`: the LIVE camera's gravity frame (`axesFromFrame`) — x the screen's right
  *   and depth the view, both flattened; gravity the world vertical.
- * @param view `awaySign` — `awaySignFrom`'s answer, LATCHED at the grip's press (`D146`): the sign of
- *   the holder's `dy`, so a zoom mid-drag cannot flip it.
+ * @param view `awaySign` — `awaySignFrom`'s answer for THIS step (`D148`: read live, never latched).
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -327,7 +326,7 @@ export function axisTravel(
   // the gizmo's height, and TOWARD it when below. ⛔ It replaces `D127`/`D132`'s *which end of blue
   // is away* (an answer for BOOT axes, which no longer exist) and the view-pitch sign the screen
   // shadow carried outside the cone: the two disagreed for a body above eye level while the camera
-  // looked down, and the owner's rule is the perspective-correct one. ⭐ `D146`: latched at the press.
+  // looked down, and the owner's rule is the perspective-correct one. ⭐ Read live at every step (`D148`).
   const awaySign = view.awaySign === -1 ? -1 : 1;
 
   // ⭐ x lies across the glass (no camera roll), so its shadow is `[1, 0]` and `along` is the finger's
