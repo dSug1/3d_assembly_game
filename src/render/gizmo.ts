@@ -19,7 +19,7 @@ import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../inpu
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
 import { originRingTone } from "../input/pioneer_press";
 import { awaySignFrom, clipSegmentInFront, displayedAxes, hitRingApparentPx, soleGizmoBody, stopAtHit, type AwaySign, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
-import { isTranslatingMode } from "../input/grip_mode";
+import { keepsGizmo } from "../input/grip_mode";
 import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, PIONEER_COLOUR, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
 import { requireGestureFrame, screenFrame } from "./camera_rig";
@@ -236,10 +236,13 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // ⭐⭐ An ALIGNED Follower qualifies by being HELD, in either mode (the owner, 2026-09-26:
     // *"displayed whenever the aligned follower object is touched or left clicked (not
     // necessarily when a movement occurs) in whichever mode"*).
+    // ⭐⭐ `D168`: a free body being ROTATED keeps its gizmo on a still frame too — no flicker in the deadband.
     if (
-      alignedFaceOf(st.world, id) === null &&
-      !isTranslatingMode(grip.mode) &&
-      !st.frameTurnAxes.has(id)
+      !keepsGizmo({
+        aligned: alignedFaceOf(st.world, id) !== null,
+        mode: grip.mode,
+        turnedThisFrame: st.frameTurnAxes.has(id),
+      })
     )
       continue;
     if (candidates.some((c) => c.id === id)) continue;
@@ -267,10 +270,13 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // ⭐⭐ An ALIGNED Follower qualifies by being HELD, in either mode (the owner, 2026-09-26:
     // *"displayed whenever the aligned follower object is touched or left clicked (not
     // necessarily when a movement occurs) in whichever mode"*).
+    // ⭐⭐ `D168`: a free body being ROTATED keeps its gizmo on a still frame too — no flicker in the deadband.
     if (
-      alignedFaceOf(st.world, id) === null &&
-      !isTranslatingMode(grip.mode) &&
-      !st.frameTurnAxes.has(id)
+      !keepsGizmo({
+        aligned: alignedFaceOf(st.world, id) !== null,
+        mode: grip.mode,
+        turnedThisFrame: st.frameTurnAxes.has(id),
+      })
     )
       continue;
     // ⛔ Every other eligible body is skipped here rather than hidden later: `live` then holds

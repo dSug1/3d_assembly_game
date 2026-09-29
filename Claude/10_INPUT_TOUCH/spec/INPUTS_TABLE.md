@@ -122,7 +122,7 @@ meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
 
-## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D167`)
+## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D168`)
 
 ⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
 
@@ -148,6 +148,7 @@ drag is on.
 | 7j | seat a follower on its Pioneer, then drag the follower (`D166`) | the whole assembly moves; the red / blue axes and the white ring show on the PIONEER |
 | 7k | press a free part and **tap Shift** (`D167`) | the HUD shows `[ROTATE]`; a drag turns the part; tap again → `[TRANSLATE]`; **Ctrl** + drag now translates |
 | 7l | **Esc** mid-drag; **Alt** or **F10** mid-drag; Alt+Tab away and back (`D167`) | no jump; the browser menu is not focused; nothing in the scene changed |
+| 7m | in `ROTATE`, press a free part, turn it, then hold still (touch or click) (`D168`) | its rotation axis stays on screen — no flicker |
 
 **Both devices — the episode count, first HUD line** (`D158`/`D159`)
 
