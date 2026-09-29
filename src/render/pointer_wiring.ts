@@ -20,8 +20,7 @@ import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, undoLast } from "./undo_wiring";
-import { axesFromFrame } from "../input/object_axes";
-import { axisDisplacement, axisTravel } from "../input/axis_translate";
+import { awaySignFrom, axisDisplacement, axisTravel } from "../input/axis_translate";
 import { nextDxSign } from "../input/hold_pinch";
 import { seatLockAllows } from "../input/seat_lock";
 import { holdPinchStep } from "./hold_pinch_wiring";
@@ -335,6 +334,8 @@ export function installPointerHandler(st: SceneState): void {
         rec,
         mesh,
         frame: requireGestureFrame(st),
+        // ⭐⭐ `D146`: decided HERE, once — the camera's height against the gizmo's at the press.
+        awaySign: awaySignFrom(cameraToGizmo(st, pickedId, [mesh.position.x, mesh.position.y, mesh.position.z])),
         prev: s,
         // ⭐ `D67`: asked HERE, once, on the way down — a peek, not a record. The release still
         // consumes the pair through `TapHistory.record`.
@@ -707,11 +708,10 @@ export function installPointerHandler(st: SceneState): void {
         // the depth sign falls out of the projection instead of being asserted. ⛔ A body
         // the model does not know is given the boot basis rather than no basis — it is still
         // being dragged, and the alternative is a frame in which the finger does nothing.
+        // ⭐⭐⭐ `D145`: the LIVE camera's axes — `dx` along the screen's right, `dy` along the view,
+        // both flattened; finger up is AWAY when the camera is at or above the gizmo.
         const tid = st.idOf.get(grip.mesh);
-        const axes =
-          tid === undefined
-            ? (st.bootObjectAxes ?? axesFromFrame(grip.frame))
-            : axesOf(st);
+        const axes = axesOf(st);
         const travel = axisTravel(
           {
             holderDxPx: grip.rec.step.dx,
@@ -727,18 +727,14 @@ export function installPointerHandler(st: SceneState): void {
           st.cfg.gainTranslateScreen,
           st.cfg.gainTranslateDepth,
           st.cfg.axisTrackingConeDeg,
-          // ⭐ Read ONLY inside the cone, where it is the depth sign: which end of blue takes the
-          // body away from the camera, read toward the GIZMO (`D132`), flipped looking up.
-          {
-            towardGravity: grip.frame.towardGravity,
-            toAnchor: cameraToGizmo(st, tid, [grip.mesh.position.x, grip.mesh.position.y, grip.mesh.position.z]),
-          },
+          // ⭐ `D145`/`D146`: the depth sign, latched at the press — a zoom mid-drag cannot flip it.
+          { awaySign: grip.awaySign },
         );
         noteAxisTravel(st, tid, travel);
         st.lastTrackGain = travel.trackGain;
         // ⛔ `st.edgeOnNow` is NOT written here any more (`D134`): it is the camera's, refreshed every frame.
         const step = axisDisplacement(travel, axes);
-        // ⭐ The body's own axes decide the motion, latched at BOOT (`WorldAxisB`), not at this press.
+        // ⭐ `D145`: the live camera's axes decide the motion (the boot-latched `WorldAxisB` is gone).
         // ⭐ ONE writer for an applied step. ⛔ THE FINGER MOVES THE MODEL — the follower re-reads
         // it every frame, so the inertia stays a filter on the way to the screen rather than the
         // place the position is kept.

@@ -31,13 +31,6 @@ return rotationFrame({
 
 
 // ⚠ `WORLD_UP` stood here and had exactly one reader: the in-zone basis, which `D82` deleted.
-/**
- * ⛔ `bootObjectAxes` is filled at boot, below the last `const` this file declares — a
- * lazily built one would capture *the camera at first drag*, which is not what was asked
- * for. ⚠ The final fallback exists only so a call before that point cannot read `null`;
- * `METHOD` — a guard that turns a broken state into silence is worse than a failure, and
- * this one at least returns a real basis.
- */
 // ⛔⛔ **ONE BASIS FOR EVERY BODY, INSIDE THE CAPTURE ZONE AND OUTSIDE IT** — `D82`, the
 // owner: *"Inside shall be the same as outside."* ⚠ There used to be a `Map<ObjectId,
 // ObjectAxes>` here, written only at the zone's edges; with the in-zone basis deleted nothing
@@ -68,9 +61,12 @@ export function cameraToGizmo(st: SceneState, id: ObjectId | undefined, meshAt: 
 }
 
 export function axesOf(st: SceneState) : ObjectAxes {
-  // ⭐⭐ `D109`: the boot camera's axes, fixed for the scene, are the ONLY axes — `worldAxisB = 0`
-  // (the live camera's) is deleted with its flag.
-  return st.bootObjectAxes ?? axesFromFrame(requireGestureFrame(st));
+  // ⭐⭐⭐ `D145` (the owner, 2026-09-29): a translation runs along the LIVE camera's axes — x the
+  // screen's right and depth the view, both flattened onto the horizontal plane. ⛔ It reverses
+  // `D74`/`D109`'s boot-fixed axes (`bootObjectAxes` is deleted with them); the gizmo's red and blue
+  // are drawn along these, so they turn with an orbit. ⚠ A free body's TURN keeps the boot frame
+  // (`rotationFrame`, `D84`).
+  return axesFromFrame(requireGestureFrame(st));
 }
 
 export function noteTurnAxis(st: SceneState, id: ObjectId | undefined,

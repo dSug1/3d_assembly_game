@@ -11,9 +11,15 @@
  * what the rule says, project it back onto the screen, and check it landed under the finger.
  * That single property answers reports 1 and 2 at once — a body that is under the finger cannot
  * feel inverted and cannot feel weak.
+ *
+ * ⛔⛔ **`D145` (2026-09-29) REPLACED THE MAPPING AGAIN, AND ITS VECTORS WITH IT**: the axes are the
+ * LIVE camera's (x the screen's right, depth the view, both flattened), `dy`'s sign is the camera's
+ * height against the gizmo's, and the holder lights red AND blue. ⛔ The boot-axis 2×2 solve, `D127`'s
+ * *away along blue* and `D132`'s off-centre reading went with the rule they pinned.
  */
 import { describe, expect, it } from "vitest";
 import {
+  awaySignFrom,
   axisDisplacement,
   axisTravel,
   clampDepthRange,
@@ -27,7 +33,7 @@ import {
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
 import { trackingMetresPerPx } from "@input/translate";
-import { add, dot, length, normalize, scale, type Vec3 } from "@core/vec";
+import { add, dot, normalize, scale, type Vec3 } from "@core/vec";
 
 const DEG = Math.PI / 180;
 const DOWN: Vec3 = [0, -1, 0];
@@ -83,6 +89,8 @@ const run = (
   axes: ObjectAxes,
   gain = 1,
   cone = CONE,
+  // ⭐ The body at the centre of the screen, 1.5 m out, unless a vector says otherwise.
+  toAnchor: Vec3 = scale(c.view, 1.5),
 ) =>
   axisTravel(
     { holderDxPx: 0, holderDyPx: 0, secondDyPx: 0, ...input },
@@ -92,242 +100,189 @@ const run = (
     gain,
     gain,
     cone,
-    // ⭐ The body at the centre of the screen, 1.5 m out, unless a vector says otherwise.
-    { towardGravity: c.gravity.towardGravity, toAnchor: scale(c.view, 1.5) },
+    // ⭐ `D146`: in the product this is latched at the press; here the press IS this call.
+    { awaySign: awaySignFrom(toAnchor) },
   );
 
-describe("⭐⭐⭐ PLANE — the body follows the finger inside its own horizontal plane", () => {
-  it("ROUND TRIP: at gain 1 the body lands exactly under the finger, at every camera pose", () => {
-    // ⛔ THE ANSWER TO REPORTS 1 AND 2 IN ONE PROPERTY. Every camera the orbit rings can reach,
-    // and azimuths deliberately NOT square to the world axes — the configuration the owner
-    // photographed is a skew one, and a fixture at 0° would sit in the set where the two shadows
-    // happen to be perpendicular and the defect cannot appear.
-    for (const az of [0, 17, 35, 90, 143, 218]) {
-      for (const el of [12, 30, 45, 70]) {
+/** ⭐ `D145`: the axes a translation runs along — THIS camera's gravity frame. */
+const live = (c: ReturnType<typeof camera>): ObjectAxes => axesFromFrame(c.gravity);
+const AZIMUTHS = [0, 17, 35, 90, 143, 218, 300];
+const ELEVATIONS = [-40, -20, -4, 0, 4, 20, 45, 70];
+
+describe("⭐⭐⭐ `D145` — dx along the screen's right, dy along the view, both flattened", () => {
+  // > *"horizontal plane translation (first touch or left click without shift) is done: on camera
+  // > view axis (projected onto the horizontal plane) for dy … on camera screen horizontal axis
+  // > (projected onto the horizontal plane …) for dx. Translation sense follows dx sense."*
+  // > — the owner, 2026-09-29
+
+  it("⭐⭐ a pure `dx` moves along THIS camera's right only, in the finger's sense, exactly under it", () => {
+    for (const az of AZIMUTHS)
+      for (const el of ELEVATIONS) {
         const c = camera(az, el);
-        const axes = axesFromFrame(camera(0, 30).gravity); // ⭐ BOOT axes, not this camera's
-        for (const [dx, dy] of [
-          [40, 0],
-          [0, -25],
-          [-33, 18],
-          [120, 90],
-        ]) {
-          const t = run({ holderDxPx: dx!, holderDyPx: dy! }, c, axes);
-          const landed = toScreenPx(axisDisplacement(t, axes), c.screen);
-          expect(landed[0]).toBeCloseTo(dx!, 6);
-          expect(landed[1]).toBeCloseTo(dy!, 6);
-          expect(t.edgeOn).toBe(false);
-          // ⚠ The LEVERAGE, not the tracking: a foreshortened plane needs MORE world travel to
-          // put the body under the finger, so this is >= 1 and grows as the plane tilts away.
-          expect(t.trackGain).toBeGreaterThanOrEqual(0.999);
-          expect(Number.isFinite(t.trackGain)).toBe(true);
+        for (const dx of [40, -25]) {
+          const t = run({ holderDxPx: dx }, c, live(c));
+          const moved = axisDisplacement(t, live(c));
+          expect(Math.abs(t.depthM)).toBe(0); // ⭐ no depth from a pure dx
+          expect(t.gravityM).toBeCloseTo(0, 15);
+          expect(moved[1]).toBeCloseTo(0, 12); // horizontal
+          expect(Math.sign(dot(moved, c.gravity.right))).toBe(Math.sign(dx));
+          // ⭐ Under the finger: the independent projection lands it at `dx`, with no vertical drift.
+          const landed = toScreenPx(moved, c.screen);
+          expect(landed[0]).toBeCloseTo(dx, 6);
+          expect(landed[1]).toBeCloseTo(0, 6);
         }
       }
+  });
+
+  it("⭐⭐ a pure `dy` moves along THIS camera's view, flattened — never across it, never up", () => {
+    for (const az of AZIMUTHS)
+      for (const el of ELEVATIONS) {
+        const c = camera(az, el);
+        const t = run({ holderDyPx: -30 }, c, live(c));
+        const moved = axisDisplacement(t, live(c));
+        expect(t.xM).toBeCloseTo(0, 15);
+        expect(t.gravityM).toBeCloseTo(0, 15);
+        expect(moved[1]).toBeCloseTo(0, 12);
+        expect(Math.abs(dot(moved, c.gravity.right))).toBeLessThan(1e-12);
+        expect(Math.abs(dot(moved, c.gravity.depth))).toBeGreaterThan(0);
+      }
+  });
+
+  it("⛔ RED AGAINST THE BOOT AXES: after an orbit, `dx` no longer slides along the boot camera's x", () => {
+    // ⭐ The premise, measured: at a camera a third of the way round, the boot x and this camera's
+    // right are far apart — so the axes the caller hands over are the whole change.
+    const boot = axesFromFrame(camera(0, 30).gravity);
+    const c = camera(143, 30);
+    expect(Math.abs(dot(boot.x, c.gravity.right))).toBeLessThan(0.9);
+    const moved = axisDisplacement(run({ holderDxPx: 40 }, c, live(c)), live(c));
+    expect(dot(normalize(moved)!, c.gravity.right)).toBeCloseTo(1, 12);
+  });
+});
+
+describe("⭐⭐⭐ `D145` — finger UP is AWAY when the camera is at or above the gizmo, TOWARD when below", () => {
+  // > *"dy towards top translates the object away from the camera if the camera is above or at the
+  // > gizmo gravity position; dy towards top translates the object towards the camera if the camera is
+  // > below the gizmo gravity position"* — the owner, 2026-09-29
+  const away = (c: ReturnType<typeof camera>, toAnchor: Vec3, dy = -30) =>
+    dot(axisDisplacement(run({ holderDyPx: dy }, c, live(c), 1, CONE, toAnchor), live(c)), c.gravity.depth);
+
+  it("⭐⭐⭐ the whole table: every camera pose, the gizmo below, level with and above the camera", () => {
+    for (const az of AZIMUTHS)
+      for (const el of ELEVATIONS) {
+        const c = camera(az, el);
+        const ahead = scale(c.gravity.depth, 1.5);
+        expect(away(c, add(ahead, [0, -0.4, 0]))).toBeGreaterThan(0); // camera ABOVE → away
+        expect(away(c, ahead)).toBeGreaterThan(0); // ⭐ camera AT the gizmo's height → away
+        expect(away(c, add(ahead, [0, 0.4, 0]))).toBeLessThan(0); // camera BELOW → toward
+        // ⭐ and finger DOWN is the opposite, always
+        expect(away(c, add(ahead, [0, -0.4, 0]), 30)).toBeLessThan(0);
+        expect(away(c, add(ahead, [0, 0.4, 0]), 30)).toBeGreaterThan(0);
+      }
+  });
+
+  it("⛔⛔ RED AGAINST THE VIEW-PITCH SIGN: a camera looking DOWN at a body ABOVE its own height", () => {
+    // ⭐ A body at the top of the screen, above eye level, while the camera looks down 20°: the screen
+    // shadow's sign (the view's pitch) says *finger up = away*; the owner's rule says TOWARD — and so
+    // does perspective: a body above eye level moved away sinks toward the horizon, DOWN on the glass.
+    const c = camera(35, 20);
+    const toAnchor = add(scale(c.gravity.depth, 1.0), [0, 0.3, 0]);
+    expect(dot(c.gravity.depth, c.screen.up)).toBeGreaterThan(0); // the old sign: away
+    expect(away(c, toAnchor)).toBeLessThan(0);
+  });
+
+  it("⛔⛔ RED AGAINST `D127`: a LEVEL camera below the gizmo brings it TOWARD the camera", () => {
+    // ⚠ `D127` read *fingers-up = away* at an exactly level camera, whatever the heights.
+    const c = camera(218, 0);
+    const t = run({ holderDyPx: -30 }, c, live(c), 1, CONE, add(scale(c.gravity.depth, 1.5), [0, 0.2, 0]));
+    expect(t.edgeOn).toBe(true);
+    expect(dot(axisDisplacement(t, live(c)), c.gravity.depth)).toBeLessThan(0);
+  });
+});
+
+describe("⭐⭐⭐ `D146` — a ZOOM mid-drag cannot flip the direction: the sign is LATCHED at the press", () => {
+  // > *"Camera position after zoom shall not change direction of translation during drag."*
+  // > — the owner, 2026-09-29
+
+  it("⭐⭐ a zoom that carries the camera across the gizmo's height leaves finger-up AWAY", () => {
+    // ⭐ The premise, measured: a camera looking down 20° at a gizmo just below its eye level; zooming
+    // in slides the camera along its view line, DOWN, until it is below the gizmo.
+    const c = camera(35, 20);
+    const gizmo: Vec3 = [0, 0.05, 0];
+    const cameraAt = (radius: number): Vec3 => scale(c.view, -radius);
+    const toAnchorAt = (radius: number): Vec3 => [
+      gizmo[0] - cameraAt(radius)[0],
+      gizmo[1] - cameraAt(radius)[1],
+      gizmo[2] - cameraAt(radius)[2],
+    ];
+    const atPress = awaySignFrom(toAnchorAt(1.5));
+    expect(atPress).toBe(1); // camera above the gizmo at the press → away
+    expect(awaySignFrom(toAnchorAt(0.05))).toBe(-1); // ⛔ re-read after the zoom, it would flip
+    // ⭐ The latched sign rides the whole drag: finger up still goes AWAY after the zoom.
+    const t = axisTravel(
+      { holderDxPx: 0, holderDyPx: -30, secondDyPx: 0 },
+      c.screen,
+      live(c),
+      PER_PX,
+      1,
+      1,
+      CONE,
+      { awaySign: atPress },
+    );
+    expect(dot(axisDisplacement(t, live(c)), c.gravity.depth)).toBeGreaterThan(0);
+  });
+
+  it("⭐ `awaySignFrom` — at or above: away; below: toward; a NaN height counts as level", () => {
+    expect(awaySignFrom([0, -0.3, 1])).toBe(1);
+    expect(awaySignFrom([0, 0, 1])).toBe(1);
+    expect(awaySignFrom([0, 0.3, 1])).toBe(-1);
+    expect(awaySignFrom([0, NaN, 1])).toBe(1);
+  });
+});
+
+describe("⭐⭐ the RATE — tracked outside the cone, the judged fixed rate inside it", () => {
+  it("⭐ outside the cone `dy` buys `1/sin(pitch)` — the tracking `D76` asked for", () => {
+    for (const el of [-45, -20, 12, 30, 70]) {
+      const c = camera(35, el);
+      const t = run({ holderDyPx: -30 }, c, live(c));
+      expect(t.edgeOn).toBe(false);
+      expect(Math.abs(t.depthM)).toBeCloseTo((30 * PER_PX) / Math.sin(Math.abs(el) * DEG), 9);
     }
   });
 
-  it("⛔⛔ THE OLD RULE FAILS THAT ROUND TRIP — the report, as arithmetic", () => {
-    // ⚠ The previous mapping, reproduced here as the counter-example it now is: each input
-    // scaled BY its axis's foreshortening instead of divided by it. ⭐ A vector that cannot fail
-    // is not a test, and this is the rule a hand rejected.
-    const c = camera(35, 30);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const superseded = {
-      xM: 40 * PER_PX * dot(axes.x, c.screen.right),
-      depthM: 0,
-      gravityM: 0,
-    };
-    const landed = toScreenPx(axisDisplacement(superseded, axes), c.screen);
-    // ⛔ It lands SHORT of the finger: 40 px asked for, and this is what arrived.
-    expect(Math.abs(landed[0])).toBeLessThan(40 * 0.95);
-  });
-
-  it("⭐⭐ A HORIZONTAL DRAG MOVES THE BODY HORIZONTALLY ON SCREEN — report 1, directly", () => {
-    // ⛔ The complaint was that `dx` moved the body along an axis that looks VERTICAL on the
-    // glass. ⚠ Under PLANE the body's screen motion IS the finger's, so a purely horizontal drag
-    // produces purely horizontal motion — whatever the axes are doing in the world.
-    const c = camera(35, 30);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({ holderDxPx: 50 }, c, axes);
-    const landed = toScreenPx(axisDisplacement(t, axes), c.screen);
-    expect(landed[0]).toBeCloseTo(50, 6);
-    expect(landed[1]).toBeCloseTo(0, 6);
-    // ⭐ And it genuinely used BOTH world axes to do it — otherwise this fixture would be in the
-    // set where the pairing question does not arise.
-    expect(Math.abs(t.xM)).toBeGreaterThan(1e-6);
-    expect(Math.abs(t.depthM)).toBeGreaterThan(1e-6);
-  });
-
-  it("⭐ the gain is the SAME on all three channels — report 2's actual complaint", () => {
-    // ⚠ *"the input seems very weak and not the same as the gravity axis input which is right"*.
-    // ⛔ So the check is an EQUALITY between channels, not a value: 30 px of finger buys the same
-    // 30 px of body motion whichever channel carries it.
-    const c = camera(35, 30);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const px = (t: ReturnType<typeof run>) =>
-      Math.hypot(...toScreenPx(axisDisplacement(t, axes), c.screen));
-    expect(px(run({ holderDxPx: 30 }, c, axes))).toBeCloseTo(30, 6);
-    expect(px(run({ holderDyPx: 30 }, c, axes))).toBeCloseTo(30, 6);
-    expect(px(run({ secondDyPx: 30 }, c, axes))).toBeCloseTo(30, 6);
+  it("⛔⛔ EDGE-ON — a level camera — the body KEEPS MOVING, one tracking factor per pixel", () => {
+    // ⚠ Report 3: *"the holder's dy is dead at a level camera"*. `Scene_1` boots here.
+    for (const el of [0, 2, -2, 4.5]) {
+      const c = camera(35, el);
+      const t = run({ holderDyPx: -50 }, c, live(c));
+      expect(t.edgeOn).toBe(true);
+      expect(Math.abs(t.depthM)).toBeCloseTo(50 * PER_PX, 9);
+      expect(t.xM).toBeCloseTo(0, 15);
+    }
   });
 
   it("⭐ the gains multiply the tracking factor, and 1.0 is 'under the finger'", () => {
     const c = camera(20, 40);
-    const axes = axesFromFrame(c.gravity);
-    const t = run({ holderDxPx: 10, holderDyPx: -10 }, c, axes, 2);
-    const landed = toScreenPx(axisDisplacement(t, axes), c.screen);
-    expect(landed[0]).toBeCloseTo(20, 6);
-    expect(landed[1]).toBeCloseTo(-20, 6);
-  });
-});
-
-describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
-  it("the body KEEPS MOVING in depth, at the judged fixed rate, instead of going dead", () => {
-    // ⚠ The old rule returned exactly 0 here and a hand called it out. ⛔ Blender goes quiet too
-    // (`axisProjection` switches to a plain projection inside 5°); this deliberately does not.
-    const c = camera(0, 0);
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({ holderDyPx: -50 }, c, axes);
-    expect(t.edgeOn).toBe(true);
-    // ⭐ FINGERS-UP IS AWAY at a level camera — the convention, since the picture is symmetric
-    // there and no sign is derivable from it.
-    expect(t.depthM).toBeGreaterThan(0);
-    // ⭐ At the fixed rate: one pixel of finger buys one tracking factor of world travel.
-    expect(t.depthM).toBeCloseTo(50 * PER_PX, 9);
-    // ⚠ And `x` is untouched by the degeneracy — it is the axis lying across the screen.
-    expect(run({ holderDxPx: 30 }, c, axes).xM).not.toBe(0);
-  });
-
-  it("⭐⭐ the SIGN is continuous through the cone — the defect that was found by finger", () => {
-    // ⛔ *"when the camera is on the bottom ring facing upwards, the depth translation is
-    // chaotic"* — fingers-up means AWAY seen from above and TOWARDS seen from below. ⚠ Inside
-    // the cone the sign is still read from `towardGravity`, so entering the cone from either
-    // side flips nothing.
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const push = { holderDyPx: -50 };
-    const aboveOutside = run(push, camera(0, 20), axes).depthM;
-    const aboveInside = run(push, camera(0, 2), axes).depthM;
-    const belowInside = run(push, camera(0, -2), axes).depthM;
-    const belowOutside = run(push, camera(0, -20), axes).depthM;
-    expect(Math.sign(aboveOutside)).toBe(Math.sign(aboveInside));
-    expect(Math.sign(belowOutside)).toBe(Math.sign(belowInside));
-    expect(Math.sign(aboveInside)).not.toBe(Math.sign(belowInside));
-  });
-
-  it("⭐⭐⭐ `D127`: finger UP pushes along BLUE ALONE, AWAY from THIS camera, at every orbit angle", () => {
-    // > *"I want to translate the object in the world axis in whatever camera position … In edge-on
-    // > case, I want dy to translate the object on blue axis (finger up = translation on blue axis
-    // > away from the camera)."* — the owner, 2026-09-28
-    // ⛔ RED against the build before: the sign was the BOOT camera's, so past a quarter-orbit
-    // fingers-up brought the body TOWARD the camera, and the holder's dy leaked onto red whenever
-    // the camera was not exactly level. ⚠ Azimuths deliberately NOT square to the world axes —
-    // the owner's screenshot is a skew one — and ±90° is its own vector below.
-    const axes = axesFromFrame(camera(0, 30).gravity); // ⭐ BOOT axes, not this camera's
-    for (const az of [0, 35, 135, 180, 218, 315]) {
-      for (const el of [0, 2, 4]) {
-        const c = camera(az, el);
-        const t = run({ holderDyPx: -50 }, c, axes);
-        expect(t.edgeOn).toBe(true);
-        expect(Math.abs(t.xM)).toBe(0);
-        expect(t.gravityM).toBe(0);
-        expect(Math.abs(t.depthM)).toBeCloseTo(50 * PER_PX, 9);
-        // ⭐ AWAY, measured against THIS camera's horizontal view direction.
-        expect(dot(axisDisplacement(t, axes), c.gravity.depth)).toBeGreaterThan(0);
-      }
-    }
-  });
-
-  it("⭐⭐⭐ `D132`: AWAY is read from the camera to the GIZMO, not along the view — the body off-centre", () => {
-    // > *"the translation on blue axis and finger dy input are still reversed. I think we need to
-    // > compute the camera position vs. the center of the gizmo, not the camera position in absolute
-    // > world coordinates."* — the owner, 2026-09-28, the body well left of the screen's centre.
-    // ⛔ RED against `D127`'s build: two degrees past a quarter-orbit, blue · view is −0.035 — so
-    // `+blue` read as TOWARD — while the body sits 0.4 m to the right of the view axis, where `+blue`
-    // takes it FARTHER from the camera. ⭐ The assertion is the owner's meaning, measured: the
-    // camera-to-body distance GROWS when the finger goes up.
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const c = camera(92, 2);
-    const toAnchor = add(scale(c.view, 1.5), scale(c.gravity.right, 0.4));
-    expect(dot(axes.depth, c.gravity.depth)).toBeLessThan(0); // the view-axis reading says the other way
-    const t = axisTravel(
-      { holderDxPx: 0, holderDyPx: -50, secondDyPx: 0 },
-      c.screen,
-      axes,
-      PER_PX,
-      1,
-      1,
-      CONE,
-      { towardGravity: c.gravity.towardGravity, toAnchor },
-    );
-    expect(t.edgeOn).toBe(true);
-    const moved = axisDisplacement(t, axes);
-    expect(length(add(toAnchor, moved))).toBeGreaterThan(length(toAnchor));
-    // ⛔ THE COUNTER-EXAMPLE — `D127`'s reading, along the VIEW: the same finger brings this body
-    // CLOSER. That is the owner's report, as arithmetic.
-    const alongView = axisTravel(
-      { holderDxPx: 0, holderDyPx: -50, secondDyPx: 0 },
-      c.screen,
-      axes,
-      PER_PX,
-      1,
-      1,
-      CONE,
-      { towardGravity: c.gravity.towardGravity, toAnchor: scale(c.view, 1.5) },
-    );
-    expect(length(add(toAnchor, axisDisplacement(alongView, axes)))).toBeLessThan(length(toAnchor));
-  });
-
-  it("⛔ from BELOW the finger-found sign stands: finger up comes TOWARD this camera", () => {
-    // ⚠ *"when the camera is on the bottom ring facing upwards, the depth translation is
-    // chaotic"* — outside the cone, exact tracking brings a body TOWARD a camera looking up when
-    // the finger goes up, so the cone must agree or entering it from below reverses the push.
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    for (const az of [0, 35, 180, 218]) {
-      const c = camera(az, -2);
-      const t = run({ holderDyPx: -50 }, c, axes);
-      expect(t.edgeOn).toBe(true);
-      expect(dot(axisDisplacement(t, axes), c.gravity.depth)).toBeLessThan(0);
-    }
-  });
-
-  it("⚠ at a quarter-orbit BLUE lies across the screen: finger up slides along blue, never red", () => {
-    // ⭐ The owner's rule taken literally where *away* has no meaning — blue is square to the view.
-    // ⚠ The cost, stated: here finger up moves the body SIDEWAYS on the glass, and no finger
-    // moves it toward or away from the camera (red points at it and goes quiet).
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    for (const az of [90, -90]) {
-      const t = run({ holderDyPx: -50 }, camera(az, 2), axes);
-      expect(t.edgeOn).toBe(true);
-      expect(Math.abs(t.xM)).toBe(0);
-      expect(Math.abs(t.depthM)).toBeCloseTo(50 * PER_PX, 9);
-    }
+    const t1 = run({ holderDxPx: 10, holderDyPx: -10 }, c, live(c));
+    const t2 = run({ holderDxPx: 10, holderDyPx: -10 }, c, live(c), 2);
+    expect(t2.xM).toBeCloseTo(2 * t1.xM, 12);
+    expect(t2.depthM).toBeCloseTo(2 * t1.depthM, 12);
+    expect(toScreenPx(axisDisplacement(t1, live(c)), c.screen)[0]).toBeCloseTo(10, 6);
   });
 
   it("⭐⭐ `D134`: the HUD's EDGE-ON is the CAMERA's — `planeEdgeOn` needs no drag, and it IS the rule's branch", () => {
-    // > *"when i click an object, most of the time the axis indicate 'edge-on', whatever the camera
-    // > orbit is"* — the owner, 2026-09-28. ⛔ The readout was written only by a translating finger,
-    // so a click or an orbit left the last drag's answer showing. ⭐ Now it is a function of the
-    // camera alone — and, swept over every pose, it agrees with `axisTravel`'s own branch, so the
-    // readout can never say one thing while the rule does another.
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    for (const az of [0, 35, 90, 143, 218, 300])
+    for (const az of AZIMUTHS)
       for (const el of [-20, -5.5, -4.5, -1, 0, 1, 4.5, 5.5, 12, 45]) {
         const c = camera(az, el);
-        const edge = planeEdgeOn(c.screen, axes, CONE);
+        const edge = planeEdgeOn(c.screen, live(c), CONE);
         expect(edge).toBe(Math.abs(el) < CONE);
-        expect(run({ holderDyPx: -10 }, c, axes).edgeOn).toBe(edge);
+        expect(run({ holderDyPx: -10 }, c, live(c)).edgeOn).toBe(edge);
       }
-    // ⭐ The slider moves it: at a 0° cone nothing is edge-on but an exactly level camera's degeneracy.
-    expect(planeEdgeOn(camera(35, 2).screen, axes, 0)).toBe(false);
-    expect(planeEdgeOn({ right: [0, 0, 0], up: [0, 1, 0] }, axes, CONE)).toBe(false);
+    expect(planeEdgeOn({ right: [0, 0, 0], up: [0, 1, 0] }, live(camera(0, 30)), CONE)).toBe(false);
   });
 
-  it("⚠ the RATE steps at the boundary, and the step is stated rather than hidden", () => {    // ⛔ Just outside the cone the exact mapping is buying `1/sin(5°)` ≈ 11× the tracking factor;
-    // inside it the fallback buys 1×. ⭐ Neither produces visible SCREEN motion there, which is
-    // why this is a cost and not a defect — but a vector says the number out loud.
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const justOutside = run({ holderDyPx: -50 }, camera(0, 5.5), axes);
-    const justInside = run({ holderDyPx: -50 }, camera(0, 4.5), axes);
+  it("⚠ the RATE steps at the boundary, and the step is stated rather than hidden", () => {
+    const justOutside = run({ holderDyPx: -50 }, camera(0, 5.5), live(camera(0, 5.5)));
+    const justInside = run({ holderDyPx: -50 }, camera(0, 4.5), live(camera(0, 4.5)));
     expect(justOutside.edgeOn).toBe(false);
     expect(justInside.edgeOn).toBe(true);
     expect(Math.abs(justOutside.depthM / justInside.depthM)).toBeGreaterThan(5);
@@ -335,11 +290,19 @@ describe("⛔⛔ EDGE-ON — a level camera, which is report 3", () => {
   });
 
   it("⛔ cone = 0 disables the fallback — the runaway a hand is being protected from", () => {
-    const axes = axesFromFrame(camera(0, 30).gravity);
-    const t = run({ holderDyPx: -50 }, camera(0, 0.05), axes, 1, 0);
+    const c = camera(0, 0.05);
+    const t = run({ holderDyPx: -50 }, c, live(c), 1, 0);
     expect(t.edgeOn).toBe(false);
-    // ⚠ 50 px of finger, and the body has gone a hundred times further than it would flat on.
     expect(Math.abs(t.depthM)).toBeGreaterThan(100 * 50 * PER_PX);
+  });
+
+  it("⭐ gravity is untouched — the second touch's `dy` still lifts, exactly under the finger", () => {
+    const c = camera(35, 30);
+    const t = run({ secondDyPx: -30 }, c, live(c));
+    expect(t.xM).toBeCloseTo(0, 15);
+    expect(t.depthM).toBeCloseTo(0, 15);
+    expect(t.gravityM).toBeGreaterThan(0);
+    expect(toScreenPx(axisDisplacement(t, live(c)), c.screen)[1]).toBeCloseTo(-30, 6);
   });
 });
 
@@ -400,7 +363,7 @@ describe("degenerate inputs never reach a placement", () => {
       1,
       1,
       CONE,
-      { towardGravity: 0, toAnchor: [0, 0, 1] },
+      { awaySign: 1 },
     );
     expect(t.xM).toBe(0);
     expect(t.gravityM).toBe(0);
@@ -428,7 +391,6 @@ describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
   //
   // ⭐ The gizmo draws `[x, gravity, depth]` in that order — **red, green, blue**.
   const c = camera(35, 30);
-  const axes = axesFromFrame(camera(0, 30).gravity);
   /**
    * ⭐ The channel set is the plain per-frame emission again — the owner, 2026-09-23: *"Remove the
    * deadband on the gizmo."* ⚠ `A11` has already deadbanded these travels for the BODY; the gizmo
@@ -438,62 +400,22 @@ describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
   const shownFor = (dx: boolean, holderDy: boolean, secondDy: boolean) =>
     displayedAxes(null, [dx, secondDy, holderDy, false, false, false]);
 
-  it("⭐⭐⭐ RED AGAINST THE FIRST BUILD OF THIS RULE: a pure `dx` lights RED ALONE", () => {
-    // ⛔⛔ **THE PREMISE, MEASURED FIRST**: under `PLANE` a pure `dx` genuinely moves the body
-    // along BOTH horizontal axes — that is how the 2×2 solve keeps it under the finger. ⭐ So a
-    // rule reading the TRAVEL lights red and blue here, which is exactly what the owner rejected.
-    const t = run({ holderDxPx: 50 }, c, axes);
-    expect(Math.abs(t.xM)).toBeGreaterThan(1e-6);
-    expect(Math.abs(t.depthM)).toBeGreaterThan(1e-6);
-    // ⛔ THE ASSERTION: the line belongs to the CHANNEL that was pushed.
-    expect(shownFor(true, false, false)).toEqual([
-      true,
-      false,
-      false,
-      false,
-      false,
-      false,
-    ]);
+  // ⛔⛔ THREE VECTORS STOOD HERE — *a pure `dx` lights red alone*, *a pure `dy` blue alone*, *both
+  // only when both* (the owner, 2026-09-23). ⭐ `D145` reverses them: *"Red and blue axis are
+  // displayed as soon as one or two of the two dx or dy inputs are above the deadband (both axis
+  // display even if there is only one input)"*. ⚠ The rule lives in `axisTravel`'s `driven`, which
+  // is what the gizmo reads, so the vectors read it there.
+  const shownBy = (input: Partial<AxisInputsPx>) =>
+    displayedAxes(null, [...run(input, c, live(c)).driven, false, false, false]);
+
+  it("⭐⭐⭐ `D145`: a pure `dx`, a pure `dy`, or both — RED AND BLUE together, green off", () => {
+    // ⛔ RED against the build before: a pure `dx` lit red alone, a pure `dy` blue alone.
+    for (const input of [{ holderDxPx: 12 }, { holderDyPx: -12 }, { holderDxPx: 5, holderDyPx: 9 }])
+      expect(shownBy(input)).toEqual([true, false, true, false, false, false]);
   });
 
-  it("⭐⭐⭐ a pure holder `dy` lights BLUE alone", () => {
-    const t = run({ holderDyPx: -40 }, c, axes);
-    expect(Math.abs(t.xM)).toBeGreaterThan(1e-6); // ⚠ again, the travel is spread
-    expect(shownFor(false, true, false)).toEqual([
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-    ]);
-  });
-
-  it("⭐⭐ both RED and BLUE only when both `dx` and `dy` are non-null — the owner's words", () => {
-    expect(shownFor(true, true, false)).toEqual([
-      true,
-      false,
-      true,
-      false,
-      false,
-      false,
-    ]);
-    expect(shownFor(true, false, false)).toEqual([
-      true,
-      false,
-      false,
-      false,
-      false,
-      false,
-    ]);
-    expect(shownFor(false, true, false)).toEqual([
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-    ]);
+  it("⭐ inside the deadband nothing is emitted, so nothing lights", () => {
+    expect(shownBy({})).toBeNull();
   });
 
   it("⭐⭐⭐ a pure SECOND-touch push lights GREEN alone — his first example", () => {

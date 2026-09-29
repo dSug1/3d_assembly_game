@@ -89,6 +89,33 @@
  * sides produce nearly no SCREEN motion there, which is why the step is not what a hand feels —
  * but it is real, it is on the HUD as `⛔EDGE-ON`, and `axisTrackingConeDeg` is a slider.
  *
+ * ## ⭐⭐⭐ `D145` — THE AXES ARE THE CAMERA'S AGAIN, AND *AWAY* IS READ FROM HEIGHTS (2026-09-29)
+ *
+ * > *"horizontal plane translation (first touch or left click without shift) is done: on camera view
+ * > axis (projected onto the horizontal plane) for dy — dy towards top translates the object away
+ * > from the camera if the camera is above or at the gizmo gravity position, towards the camera if
+ * > the camera is below the gizmo gravity position; on camera screen horizontal axis (projected onto
+ * > the horizontal plane …) for dx. Translation sense follows dx sense."* — the owner, 2026-09-29
+ *
+ * ⛔⛔ **IT REVERSES `D74`/`D75`'s BOOT-FIXED AXES AND `D127`'s *"the axes stay the world's"*.** The
+ * caller now hands this function the LIVE camera's gravity frame (`axesFromFrame`): **x** is the
+ * screen's right, flattened, and **depth** the view direction, flattened — so the 2×2 solve that
+ * spread one finger channel over two world axes has nothing left to solve, and is gone:
+ *
+ * * **`dx` → x, exactly under the finger** — x lies across the glass (no camera roll exists);
+ * * **`dy` → depth**, at `1 / |its screen shadow|` (the tracking `D76` asked for: *"the input seems
+ *   very weak"* was the cosine loss) outside the cone, and at the judged fixed rate inside it;
+ * * ⭐⭐ **its SIGN is the owner's rule, everywhere, not only edge-on**: finger up is AWAY when the
+ *   camera is at or above the gizmo's height, TOWARD when below. ⭐ It is also the true perspective
+ *   answer — a body moved away slides toward the HORIZON row, i.e. UP on the glass when it sits
+ *   below eye level — where the old screen shadow's sign was the VIEW's pitch, which disagrees for
+ *   a body above eye level while the camera looks down (the `D132` shape, one axis over).
+ *
+ * ⭐ And the gizmo's **red and blue light together** for any holder input (`driven`), reversing the
+ * 2026-09-23 *"both only when both dx and dy are not null"*.
+ * ⚠ A free body's TURN still stands on the boot frame (`D84`, `rotationFrame`) — the owner named
+ * the translation only.
+ *
  * ⛔ ENGINE-FREE.
  */
 import { add, dot, normalize, scale, sub, type Vec3 } from "../core/vec";
@@ -192,6 +219,22 @@ export function screenShadow(
 
 const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
 
+/** ⭐ `+1`: finger up takes the body AWAY from the camera (`+depth`); `−1`: TOWARD it. */
+export type AwaySign = 1 | -1;
+
+/**
+ * ⭐⭐⭐ `D145` — **WHICH WAY FINGER UP GOES**: AWAY when the camera is at or above the gizmo's height,
+ * TOWARD when below. `toAnchor` is the camera → the gizmo's anchor; only its height is read.
+ * ⭐⭐ `D146` (the owner, 2026-09-29: *"Camera position after zoom shall not change direction of
+ * translation during drag."*): the caller asks this ONCE, at the press, and keeps the answer for the
+ * grip's lifetime — a zoom slides the camera along its view line, changing its HEIGHT, and read every
+ * step it could flip a drag half-way. ⚠ The latch also holds when the second finger lifts the body
+ * across the camera's height mid-drag.
+ */
+export function awaySignFrom(toAnchor: Vec3): AwaySign {
+  return finite(toAnchor[1]) <= 0 ? 1 : -1;
+}
+
 /**
  * ⭐⭐ **IS THE BODY'S HORIZONTAL PLANE EDGE-ON TO THIS CAMERA?** — the one definition, read by
  * `axisTravel` to choose its branch AND by the HUD every frame (`D134`). `|det|` is the area the x
@@ -222,9 +265,10 @@ export function planeEdgeOn(camera: CameraScreenAxes, axes: ObjectAxes, coneDeg:
  *   the exact mapping is abandoned for the fixed-rate push. ⭐ **5° is Blender's own number**
  *   (`axisProjection`), adopted rather than guessed. `0` disables the fallback entirely, which
  *   is how to see the runaway a hand is being protected from.
- * @param view ⛔ only read inside the cone, where it is the fixed-rate push's sign: `toAnchor` —
- *   the camera to the GIZMO's anchor — says which end of blue is *away* (`D132`), and
- *   `towardGravity` (+1 looking down, −1 looking up, `GravityFrame`'s) flips it from below.
+ * @param axes ⭐ `D145`: the LIVE camera's gravity frame (`axesFromFrame`) — x the screen's right
+ *   and depth the view, both flattened; gravity the world vertical.
+ * @param view `awaySign` — `awaySignFrom`'s answer, LATCHED at the grip's press (`D146`): the sign of
+ *   the holder's `dy`, so a zoom mid-drag cannot flip it.
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -234,7 +278,7 @@ export function axisTravel(
   holderGain: number,
   secondGain: number,
   coneDeg: number,
-  view: { readonly toAnchor: Vec3; readonly towardGravity: number },
+  view: { readonly awaySign: AwaySign },
 ): AxisTravel {
   const sx = screenShadow(axes.x, camera);
   const sd = screenShadow(axes.depth, camera);
@@ -256,12 +300,12 @@ export function axisTravel(
   const dy2 = finite(input.secondDyPx) * metresPerPx;
   // ⭐⭐⭐ **THE CHANNEL MAP, STATED ONCE AND READ TWICE.** `dx` drives x, the holder's `dy` drives
   // depth, and the second touchpoint's `dy` drives gravity (`D75`). ⛔ The gizmo asks THIS rather
-  // than inspecting the travel, because the `PLANE` solve spreads one channel across two axes.
-  const driven: readonly [boolean, boolean, boolean] = [
-    dx !== 0,
-    dy2 !== 0,
-    dy !== 0,
-  ];
+  // than inspecting the travel.
+  // ⭐⭐ `D145`: *"Red and blue axis are displayed as soon as one or two of the two dx or dy inputs are
+  // above the deadband (both axis display even if there is only one input)"* — so the holder lights
+  // x AND depth together. ⚠ `dx`/`dy` are already §1.1's deadbanded travel: non-zero IS *above*.
+  const holder = dx !== 0 || dy !== 0;
+  const driven: readonly [boolean, boolean, boolean] = [holder, dy2 !== 0, holder];
   const coneSin = Math.sin(Math.max(0, finite(coneDeg)) * (Math.PI / 180));
 
   /** Exact tracking along ONE axis: the travel that keeps the body under the finger. */
@@ -278,48 +322,27 @@ export function axisTravel(
     return (mx * s[0] + my * s[1]) / (len * len);
   };
 
-  // ⭐⭐ THE FIXED-RATE PUSH, for a plane that is edge-on. ⛔ `depthTranslate`'s mapping, which
-  // a device look closed on 2026-09-16 — including its sign, which was itself a defect found by
-  // finger. ⚠ `sign(towardGravity)` is 0 only at an exactly level camera, where the picture is
-  // symmetric and no sign is derivable; *fingers-up = away* is the convention, continuous with
-  // the camera looking even slightly down.
-  // ⭐⭐ `D127`/`D132`: and *away* is THIS camera's — which end of blue takes the body FARTHER from
-  // it, read from the camera to the gizmo's anchor. ⛔ Not along the view: a body off the screen's
-  // centre is off the view axis, and near a quarter-orbit the two disagree in sign. ⚠ Blue exactly
-  // square to that line: `+blue`, by convention.
-  const blueAway = Math.sign(finite(dot(axes.depth, view.toAnchor))) || 1;
-  const awaySign = (Math.sign(finite(view.towardGravity)) || 1) * blueAway;
-  const fallbackDepth = -dy * holderGain * awaySign;
+  // ⭐⭐⭐ `D145` — **THE SIGN OF THE HOLDER'S `dy`, FROM HEIGHTS.** Finger up (`dy < 0`) is AWAY —
+  // `+depth`, the view flattened, which points away from the camera — when the camera is at or above
+  // the gizmo's height, and TOWARD it when below. ⛔ It replaces `D127`/`D132`'s *which end of blue
+  // is away* (an answer for BOOT axes, which no longer exist) and the view-pitch sign the screen
+  // shadow carried outside the cone: the two disagreed for a body above eye level while the camera
+  // looked down, and the owner's rule is the perspective-correct one. ⭐ `D146`: latched at the press.
+  const awaySign = view.awaySign === -1 ? -1 : 1;
 
-  let xM = 0;
-  let depthM = 0;
-  let edgeOn = false;
+  // ⭐ x lies across the glass (no camera roll), so its shadow is `[1, 0]` and `along` is the finger's
+  // `dx` itself — exact tracking, *"translation sense follows dx sense"*. ⚠ Degenerate only for a
+  // camera with no basis, answered above.
+  const xM = (along(sx, dx, 0) ?? 0) * holderGain;
 
-  {
-    // ⭐⭐⭐ **THE 2×2 SOLVE.** Find the travels along x and depth whose SCREEN motion adds up to
-    // the finger's. ⛔ Solving beats projecting onto each axis separately: the two shadows are
-    // not perpendicular on screen in general, so independent projections would double-count the
-    // overlap and the body would outrun the finger on a diagonal drag.
-    const det = sx[0] * sd[1] - sx[1] * sd[0];
-    // ⚠ `|det|` is the area the two shadows span — it goes to zero when the plane is EDGE-ON,
-    // which is the level camera, and that is the only degeneracy the pair has: two
-    // perpendicular world axes cannot both point at the camera. ⭐ The test is `planeEdgeOn`'s, so
-    // the HUD's readout and this branch cannot disagree.
-    if (!planeEdgeOn(camera, axes, coneDeg)) {
-      xM = ((dx * sd[1] - dy * sd[0]) / det) * holderGain;
-      depthM = ((sx[0] * dy - sx[1] * dx) / det) * holderGain;
-    } else {
-      edgeOn = true;
-      // ⭐ x keeps exact tracking where its shadow is healthy, and only depth falls back to the
-      // judged fixed rate.
-      // ⛔ `D127`: fed `dx` ALONE — the holder's `dy` is blue's here, and a camera even slightly
-      // off level used to leak it onto red.
-      // ⚠ `fallbackDepth` carries `holderGain` already; applying it twice is the kind of
-      // arithmetic that reads as *"depth feels wrong in one camera pose"* and nowhere else.
-      xM = (along(sx, dx, 0) ?? 0) * holderGain;
-      depthM = fallbackDepth;
-    }
-  }
+  // ⭐⭐ depth: tracked outside the cone — `1 / |shadow|`, the leverage `D76` asked for — and the
+  // judged fixed rate inside it, where the shadow vanishes (a level camera; `Scene_1` boots there).
+  // ⭐ The test is `planeEdgeOn`'s, so the HUD's `⛔EDGE-ON` and this branch cannot disagree.
+  // ⚠ The cost is unchanged: a step in world speed at the cone's edge, capped at `1/sin(cone)`.
+  const edgeOn = planeEdgeOn(camera, axes, coneDeg);
+  const shadow = Math.hypot(sd[0], sd[1]);
+  const rate = edgeOn || !(shadow > 0) ? 1 : 1 / shadow;
+  const depthM = -dy * awaySign * rate * holderGain;
 
   // ⭐ Gravity, always its own channel and always tracking exactly. ⚠ Its shadow shrinks as the
   // camera looks down and vanishes at the pole, which the orbit rings make unreachable — the

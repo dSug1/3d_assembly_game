@@ -207,7 +207,7 @@ export function paint(st: SceneState) {
           // rule's whole failure mode is *the body went somewhere I did not expect*, which no
           // amount of watching the body can attribute.
           `
-axes      fixed@boot PLANE` +
+axes      camera PLANE` +
           ` track=${st.lastTrackGain.toFixed(2)}×${st.edgeOnNow ? " ⛔EDGE-ON" : ""}` +
           // ⛔ Per HELD body, because that is the one whose axes are being used right now.
           [...st.held.values()]

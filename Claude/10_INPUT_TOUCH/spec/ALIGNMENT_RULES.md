@@ -2114,3 +2114,20 @@ reset the pioneer and follower so that the couple pioneer - follower disappear"*
 frame a follower is seated, `core/goal.ts` is asked; each SEATED follower it has in place is released
 through `releaseAlignmentOf` (constraint, seat, link — the highlights and cursor follow), keeping its
 world pose, and a pop-up names it (`render/goal_popup.ts`). ⚠ Scenes with a goal only (`Scene_1`).
+
+## 19 — ⭐⭐⭐ TRANSLATION ALONG THE LIVE CAMERA (`D145`, 2026-09-29)
+
+> *"horizontal plane translation (first touch or left click without shift) is done: on camera view axis (projected onto the horizontal plane) for dy — dy towards top translates the object away from the camera if the camera is above or at the gizmo gravity position; towards the camera if the camera is below the gizmo gravity position — on camera screen horizontal axis (projected onto the horizontal plane …) for dx. Translation sense follows dx sense. Red and blue axis are displayed as soon as one or two of the two dx or dy inputs are above the deadband (both axis display even if there is only one input)"* — the owner, 2026-09-29
+
+⛔⛔ **It reverses §16's `D127`/`D132` and `D74`/`D75`'s boot-fixed axes.** On 2026-09-28 the owner refused a camera-relative fallback — *"I cannot disrupt the user feeling by changing the axis of translation"* — and both texts stand: this is the owner's own reversal, and its cost is exactly that one — **the translation axes now turn with an orbit**.
+
+| # | rule | code | cost, stated |
+|---|---|---|---|
+| 1B | **`dx` → the camera's right, flattened**, in the finger's sense and exactly under it (no camera roll exists, so the flattening changes nothing) | `axesOf` = `axesFromFrame(requireGestureFrame)`; `axisTravel`'s `xM` | a push that went *right* before an orbit goes a different world way after it |
+| 1A | **`dy` → the view, flattened**: tracked at `1/|shadow|` (`D76`'s *no cosine loss*) outside `axisTrackingConeDeg`, the judged fixed rate inside (a level camera — `Scene_1` boots there) | `axisTravel`'s `depthM`, `planeEdgeOn` | the rate step at the cone's edge is unchanged |
+| 1Aa/1Ab | **finger up = AWAY when the camera is at or above the gizmo's height, TOWARD when below** — everywhere, not only edge-on | `awaySign` from `toAnchor[1]` (camera → gizmo) | ⭐ it is also perspective's answer: the old sign was the VIEW's pitch, which disagrees for a body above eye level while the camera looks down |
+| 2 | **red AND blue light together** as soon as `dx` or `dy` leaves the deadband (reverses 2026-09-23's *both only when both*) | `axisTravel`'s `driven` | — |
+
+⚠ **Not changed**: the second touch's gravity lift and spin (`D123`), the depth clamp (`A5`), and a free body's TURN, which keeps the boot frame (`D84`, `rotationFrame`) — the owner named the translation only. ⭐ The HUD's `axes` line reads `camera PLANE` and prints the live axes. ✅ 35 vectors in `tests/axis_translate.test.ts` (the boot-axis round trip, `D127`/`D132` and the red-alone/blue-alone vectors went with their rule); the old mapping fails 5; four mutants (the *at* height, the channel map, the tracking rate, the height sign) each red; a headless boot and drag threw nothing. ⛔ Rule 5: a hand is owed.
+
+⭐⭐ **`D146` — the sign is LATCHED at the press** (the owner, 2026-09-29: *"Camera position after zoom shall not change direction of translation during drag."*). Orbit cannot run during a translation (it needs one pointer on empty space and none on a body), but a ZOOM can — the wheel, `D137`'s sideways pinch — and it slides the camera along its view line, changing its HEIGHT, so re-reading 1Aa/1Ab every step could flip a drag half-way. ⭐ `awaySignFrom` is asked once, when the grip is made (`Held.awaySign`), and `axisTravel` takes the answer. ⚠ The latch also holds when the second finger lifts the body across the camera's height mid-drag; the axes themselves are still read live, and a zoom does not turn them. ✅ 2 vectors.

@@ -9,7 +9,6 @@ import { type Vec3, IDENTITY } from "../core/vec";
 import { incrementRadians } from "../input/rotation_increment";
 import { rotationChannel } from "../core/constraint_stack";
 import { bothAxesSecondDrive } from "../input/second_touch_drive";
-import { axesFromFrame } from "../input/object_axes";
 import { axisDisplacement, axisTravel, clampDepthRange } from "../input/axis_translate";
 import { nextDxSign } from "../input/hold_pinch";
 import { seatLockAllows } from "../input/seat_lock";
@@ -17,7 +16,7 @@ import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_ROLL, type Held, type SceneState } from "./scene_state";
 import { asVec3, modelOrientation, requirePose, setModelOrientation, setModelPose } from "./bodies";
 import { driveBodyOf } from "./alignment_wiring";
-import { axesOf, cameraToGizmo, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
+import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { screenFrame } from "./camera_rig";
 import { noteSpin, nudgeOthersWorld } from "./sway_pass";
 
@@ -79,10 +78,7 @@ export function applyWorldStep(st: SceneState, grip: Held, step: Vec3) : void {
 
 export function applyDepthStep(st: SceneState, grip: Held, dyPx: number) : void {
   const gid = st.idOf.get(grip.mesh);
-  const axes =
-    gid === undefined
-      ? (st.bootObjectAxes ?? axesFromFrame(grip.frame))
-      : axesOf(st);
+  const axes = axesOf(st);
   const travel = axisTravel(
     { holderDxPx: 0, holderDyPx: 0, secondDyPx: dyPx },
     screenFrame(st),
@@ -93,10 +89,7 @@ export function applyDepthStep(st: SceneState, grip: Held, dyPx: number) : void 
     st.cfg.gainTranslateScreen,
     st.cfg.gainTranslateDepth,
     st.cfg.axisTrackingConeDeg,
-    {
-      towardGravity: grip.frame.towardGravity,
-      toAnchor: cameraToGizmo(st, gid, [grip.mesh.position.x, grip.mesh.position.y, grip.mesh.position.z]),
-    },
+    { awaySign: grip.awaySign },
   );
   // ⭐ The gizmo hears this finger exactly as it hears the holder's — same function, same frame.
   noteAxisTravel(st, gid, travel);

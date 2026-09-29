@@ -73,12 +73,12 @@ file.
 | `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | A tap there still aligns → §15 |
 | `D125` | ⭐⭐ **A PIECE IS A TRANSPARENT CONTOUR AROUND ITS COLOURED CORE** — faces touch, cores keep the gap | 2026-09-27 | `Scene_1`: margin 0.015; opacity 0.1, a slider; contact at 0 reads DEPTH → `SCENE_1.md` §6 |
 | `D126` | ⭐ **A HIGHLIGHT FLOATS ONE PIXEL OFF WHAT IT MARKS, AT EVERY ZOOM** | 2026-09-27 | Was 1.5 mm / 2 % in the world; mm on the glass, a slider → `40_RENDER_SCENE/INDEX.md` |
-| `D127` | ⭐⭐⭐ **EDGE-ON: THE HOLDER'S `dy` DRIVES BLUE ALONE, FINGER UP = AWAY FROM THIS CAMERA** | 2026-09-28 | World axes at every camera; only the sign reads the view → §16 |
+| `D127` | ⭐⭐⭐ **EDGE-ON: THE HOLDER'S `dy` DRIVES BLUE ALONE, FINGER UP = AWAY FROM THIS CAMERA** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
 | `D128` | ⭐⭐ **A FROZEN BODY SEEN FROM BELOW DISAPPEARS — its material unchanged** | 2026-09-28 | Not drawn, not picked; reverses `D121` → §16 |
 | `D129` | ⭐⭐⭐ **`Scene_1`'s TABLE IS THE LEVEL'S GOAL; FIVE PIECES BOOT OUT OF IT** | 2026-09-28 | → `SCENE_1.md` §7 |
 | `D130` | ⭐⭐⭐ **THE GOAL IS MET RELATIVE TO EACH OTHER; A BOX'S FACE OR ITS OPPOSITE** | 2026-09-28 | `core/goal.ts` → `SCENE_1.md` §8 |
 | `D131` | ⭐⭐ **EACH SCENE CARRIES ITS OWN ORBIT RIG** | 2026-09-28 | → `SCENE_1.md` §8 |
-| `D132` | ⭐⭐ **EDGE-ON *AWAY* IS READ FROM THE CAMERA TO THE GIZMO, NOT ALONG THE VIEW** | 2026-09-28 | Corrects `D127` → §16 |
+| `D132` | ⭐⭐ **EDGE-ON *AWAY* IS READ FROM THE CAMERA TO THE GIZMO, NOT ALONG THE VIEW** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
 | `D133` | ⚠ **REVERTED THE SAME DAY** — finger up *away* from below too; never shipped, the flip stands | 2026-09-28 | → §16 |
 | `D134` | ⭐ **THE HUD's EDGE-ON IS THE CAMERA's, READ EVERY FRAME** | 2026-09-28 | → §16 |
 | `D136` | ⭐⭐⭐ **CONTACT IS ALLOWED; ONLY PENETRATION IS REFUSED** — the skin is how far a body may sink | 2026-09-28 | Scene_1's slots were unreachable → `COLLISION.md` §9 |
@@ -90,6 +90,8 @@ file.
 | `D142` | ⭐ **A SEATED PIECE AT ITS GOAL DISSOLVES ITS COUPLE** | 2026-09-28 | → GM1 |
 | `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** — `Scene_1`: a face or its opposite | 2026-09-28 | → `PLAYABILITY` §2.1 |
 | `D144` | ⭐⭐ **A ⏸ PAUSE MENU LEAVES A LEVEL, BY PAGE RELOAD; ONE SCENE LIST; `Scene_1` BOOTS** | 2026-09-28 | → `GAME_STRUCTURE.md` §4–§5 |
+| `D145` | ⭐⭐⭐ **TRANSLATION ALONG THE LIVE CAMERA; UP = AWAY IFF THE CAMERA IS AT/ABOVE THE GIZMO** | 2026-09-29 | Reverses `D74`'s boot axes → §19 |
+| `D146` | ⭐⭐ **THE AWAY/TOWARD SIGN IS LATCHED AT THE PRESS — a zoom cannot flip a drag** | 2026-09-29 | → §19 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -102,7 +104,7 @@ file.
 | `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** — a translated Pioneer carried EVERY Follower; cyan should break instead | 2026-09-21 | ⚠ → §5.16 |
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding, ⚠ → history |
-| `D67` | ⚠ **REVERSED BY `D87`** — first touch the PIONEER, second the Follower. ⭐ Kept: it bought **several Followers in one hold**, which is exactly what the reversal costs | 2026-09-21 | ⚠ → §5.14 |
+| `D67` | ⚠ **REVERSED BY `D87`** — first touch the PIONEER, second the Follower | 2026-09-21 | ⚠ → §5.14, history |
 | `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D65` | ⚠ **REPEALED BY `D66` the same day** — a second touch's release never toggled; the cause was the PRESS all along | 2026-09-21 | ⚠ → history |
 | `D64` | ⚠ **SUPERSEDED BY `D65`, THEN REPEALED WITH IT** — *driving consumes the toggle* | 2026-09-21 | ⚠ → history |
@@ -151,14 +153,14 @@ file.
 | `D20` | ⭐⭐ **Depth is a STILL HOLDER and a MOVING ANCHOR** | 2026-09-15 | ⭐ Binding |
 | `D19` | ⭐⭐ **A DEADBAND on the pointer delta, per axis, with a slider** | 2026-09-15 | ⭐ Binding |
 | `D18` | ⭐⭐ **Every object gesture stands on a GRAVITY FRAME** | 2026-09-15 | ⭐ Binding |
-| `D17` | ⚠ **SUPERSEDED BY `D20`** — its TRIGGER is gone; the configuration and `A5`'s geometry stand. ⭐ Kept: it is what moved depth off the pinch | 2026-09-15 | ⚠ → history |
+| `D17` | ⚠ **SUPERSEDED BY `D20`** — its TRIGGER is gone; the configuration and `A5`'s geometry stand | 2026-09-15 | ⚠ → history |
 | `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** — the pinch trigger is gone; the depth GEOMETRY it established stands | 2026-09-15 | ⚠ → history |
 | `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⛔ Shake deleted (`D107`) |
 | `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding |
 | `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⛔ Eviction deleted (`D107`); mates are broken by `D47`/`D100`'s unsnap |
-| `D12` | ⚠ **SUPERSEDED BY `D15`** — eviction was a full 360° roll, now a back-and-forth. ⭐ Kept: it moved eviction off the double-tap, and that half stands | 2026-09-15 | ⚠ → history |
+| `D12` | ⚠ **SUPERSEDED BY `D15`** — eviction was a full 360° roll, now a back-and-forth | 2026-09-15 | ⚠ → history |
 | `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | ⭐ Binding, ⚠ → history |
-| `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is half of a **depth pinch** now. ⭐ Kept: *ignored* still governs the THIRD touchpoint on | 2026-09-14 | ⚠ → history |
+| `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is half of a **depth pinch** now | 2026-09-14 | ⚠ → history |
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | ⭐ Binding, ⚠ → history |
 
 ## ⚠ Still the owner's to make

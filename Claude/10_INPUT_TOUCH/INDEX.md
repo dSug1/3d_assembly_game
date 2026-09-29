@@ -20,8 +20,8 @@ about it (`D123`). ⛔ All unjudged by a hand.
 increment**. ⚠ `dy` no longer twists; `rotationIncrementDeg` ships at **0** →
 [`../00_CORE/queue_notes/IN3.md`](../00_CORE/queue_notes/IN3.md).
 
-⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, `D84`): a body translates and (free) pitches/rolls along **the boot
-camera's axes, frozen for the scene** — the only frame since `D109`. The finger's delta is **solved onto
+⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, `D84`): a (free) body pitches/rolls about **the boot camera's axes**;
+⭐ since `D145` it TRANSLATES along the **live** camera's (§19). The finger's delta is **solved onto
 both horizontal axes** (exact tracking, one gain). ⛔ The in-zone basis is deleted (`D82`), and the
 LeadingFace raycast with `core/leading_face.ts`; the gizmo sits at the FollowerFace centre, else the
 body's own → [`../00_CORE/queue_notes/IN4.md`](../00_CORE/queue_notes/IN4.md).
