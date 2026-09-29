@@ -77,7 +77,7 @@ import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
-import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, PIONEER_CURSOR_COLOUR, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
+import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
 import { applyCamera, requireGestureFrame } from "./camera_rig";
 import { paint } from "./hud_paint";
@@ -363,10 +363,7 @@ export function createScene(
    */
   st.pioneerCursors = new PioneerFaceCursors();
   st.pioneerCursorMeshes = new Map<string, Mesh>();
-  st.pioneerCursorMat = new StandardMaterial("pioneer-cursor-mat", st.scene);
-  st.pioneerCursorMat.emissiveColor = PIONEER_CURSOR_COLOUR.clone();
-  st.pioneerCursorMat.disableLighting = true;
-  st.pioneerCursorMat.backFaceCulling = false;
+  // ⭐ `D166`: the cursor is a line ring now, coloured on the line — the torus's shared material is gone.
 
   /**
    * ⭐⭐⭐ **ONE FOLLOWER QUAD PER ALIGNED OBJECT, NOT ONE IN TOTAL** (the owner, 2026-09-17:

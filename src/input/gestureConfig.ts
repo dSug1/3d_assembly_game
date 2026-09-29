@@ -781,8 +781,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // above a 24-bit depth buffer's resolution at d metres (the camera's 0.01–100 m planes) — 13× at 5 m, vectored.
   // ⚠ Raise it if a far zoom flickers (a device with a coarser depth buffer).
   highlightLiftMm: 0.1,
-  // ⭐ `D165`: half, *"less opaque"* than the solid fill — a guess with a slider.
-  faceHighlightAlpha: 0.5,
+  // ⭐ `D165`: *"less opaque"* than the solid fill. ⭐ `D166`: the owner set it, 2026-09-29 — 0.17.
+  faceHighlightAlpha: 0.17,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON

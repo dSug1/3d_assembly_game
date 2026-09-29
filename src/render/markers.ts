@@ -6,7 +6,6 @@
  */
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import { CreateLines, CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
@@ -21,7 +20,7 @@ import { PIONEER_CURSOR_PX } from "../input/pioneer_cursor_grab";
 import { offsetPositions, type MeshTopology } from "../core/mesh_topology";
 import { hitFaceAllowed, MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { hitFaceShown } from "../input/pioneer_press";
-import { FOLLOWER_COLOUR, PIONEER_COLOUR, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
+import { FOLLOWER_COLOUR, PIONEER_COLOUR, PIONEER_CURSOR_COLOUR, RING_POINTS, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
 import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 
 /**
@@ -224,12 +223,9 @@ export function syncPioneerCursors(st: SceneState) : void {
   for (const cur of created) {
     const body = st.meshOf.get(cur.pioneerId);
     if (!body) continue;
-    const m = CreateTorus(
-      `pioneer-cursor-${cur.key.replaceAll("\u0000", "|")}`,
-      { diameter: 1, thickness: 0.14, tessellation: 32 },
-      st.scene,
-    );
-    m.material = st.pioneerCursorMat;
+    // ⭐⭐ `D166`: the white gizmo ring's own line ring — one pixel thick, as it is — in the cursor's colour.
+    const m = CreateLines(`pioneer-cursor-${cur.key.replaceAll("\u0000", "|")}`, { points: RING_POINTS }, st.scene);
+    m.color = PIONEER_CURSOR_COLOUR.clone();
     m.isPickable = false;
     m.metadata = { orbitCandidate: false };
     // ⭐ Above the body, like every instrument ring: a cursor must not be hidden by what it marks.
@@ -239,15 +235,11 @@ export function syncPioneerCursors(st: SceneState) : void {
     // its local XZ plane, so it is turned into XY ONCE and baked, then billboarded exactly as the
     // gizmo ring is: a billboard presents the local XY plane to the camera. ⛔ Laid in the
     // face plane it went edge-on — and invisible — whenever the face turned away from the view.
-    m.rotation.x = Math.PI / 2;
-    m.bakeCurrentTransformIntoVertices();
+    // ⚠ `D166`: `RING_POINTS` already lie in the local XY plane — the plane a billboard presents to the camera.
     m.billboardMode = Mesh.BILLBOARDMODE_ALL;
     // ⛔⛔ NOT PARENTED — a billboarded child loses its parent's rotation (`worldPointOn`).
     st.pioneerCursorMeshes.set(cur.key, m);
   }
-  const scale =
-    trackingMetresPerPx(st.camera.radius, st.camera.fov, st.canvas.clientHeight) *
-    PIONEER_CURSOR_PX;
   for (const cur of st.pioneerCursors.all()) {
     const m = st.pioneerCursorMeshes.get(cur.key);
     if (m === undefined) continue;
@@ -263,6 +255,12 @@ export function syncPioneerCursors(st: SceneState) : void {
     m.isVisible = w !== null;
     if (w === null) continue;
     m.position.copyFrom(w);
+    // ⭐⭐ `D166`: sized from ITS OWN distance to the camera — as the white ring is — so it keeps one size on the glass
+    // wherever it sits. ⛔ It was sized from `camera.radius`, the distance to the ORBIT CENTRE, so a Pioneer nearer or
+    // farther than the centre drew its ring larger or smaller.
+    const scale =
+      trackingMetresPerPx(Vector3.Distance(st.camera.position, w), st.camera.fov, st.canvas.clientHeight) *
+      PIONEER_CURSOR_PX;
     m.scaling.set(scale, scale, scale);
   }
 }

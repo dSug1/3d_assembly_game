@@ -395,7 +395,6 @@ export interface SceneState {
   faceMarkers: Map<string, FaceMarker>;
   pioneerCursors: PioneerFaceCursors;
   pioneerCursorMeshes: Map<string, Mesh>;
-  pioneerCursorMat: StandardMaterial;
   links: AlignmentLinks;
   snapArming: SnapArming;
   seatSnaps: SeatSnaps<ObjectId>;
@@ -562,7 +561,7 @@ export const GIZMO_AXIS_COLOURS = [
  * ⚠ Unlit and in the gizmo's own rendering group, because a marker that says *"this is the face
  * you are advancing on"* must not be shaded or occluded by the body it is describing.
  */
-export const GIZMO_RING_PX = 11;
+export { GIZMO_RING_PX } from "../input/pioneer_cursor_grab";
 
 /** ⭐ The MOVE ring: white, on the FollowerFace, shown while a translation channel is lit. */
 export const GIZMO_RING_MOVE_COLOUR = new Color3(1, 1, 1);

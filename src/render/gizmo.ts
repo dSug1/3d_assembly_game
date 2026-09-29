@@ -342,7 +342,14 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // ⚠ The FollowerFace is preferred because it is the face the body is being assembled BY, so
     // the axes are drawn where a hand is already looking.
     const centre = worldPlacementOf(st.world, id)?.position ?? null;
-    const anchor = gizmoAnchor(st, id);
+    // ⭐⭐ `D166` (the owner, 2026-09-29: *"When a follower object is snapped onto pioneer and moved, the axis should
+    // show on the pioneer object"*): a SEATED follower's translation lands on its assembly's root (`D102`), so the
+    // translation gizmo is drawn THERE, as that body's own. ⛔ Its segments to the cursor had zero length once
+    // seated — the FollowerFace sits on the cursor — which is why no axis showed. ⚠ The turn lines stay on the
+    // follower: a seated follower's ROTATION is its own (`D102`).
+    const moveId = driveBodyOf(st, id);
+    const carried = moveId !== id;
+    const anchor = gizmoAnchor(st, carried ? moveId : id);
     // ⛔ NO STAND-IN. A body the model cannot place shows no gizmo, exactly as a `⛔NOSHAPE` body
     // gets no outline — suppress rather than substitute.
     if (!anchor) continue;
@@ -409,7 +416,8 @@ export function refreshAxisGizmo(st: SceneState) : void {
     };
     // ⭐⭐ `D164`: the origin ring is AMBER on an aligned part — it reads on the cyan FollowerFace; white otherwise.
     const originRing = gizmoRingFor(st, id);
-    const tone = originRingTone(alignedHere) === "AMBER" ? PIONEER_COLOUR : GIZMO_RING_MOVE_COLOUR;
+    const ringAligned = carried ? alignedFaceOf(st.world, moveId) !== null : alignedHere;
+    const tone = originRingTone(ringAligned) === "AMBER" ? PIONEER_COLOUR : GIZMO_RING_MOVE_COLOUR;
     if (!originRing.color.equals(tone)) originRing.color.copyFrom(tone);
     placeRing(originRing, anchor, shown[0] || shown[1] || shown[2]);
     placeRing(
@@ -419,7 +427,8 @@ export function refreshAxisGizmo(st: SceneState) : void {
     );
     const g = gizmoFor(st, id);
     // ⭐ The aligned Follower's own PioneerFaceCursor, in WORLD space (`worldPointOn`).
-    const cursor = alignedHere ? st.pioneerCursors.ofFollower(id) : null;
+    // ⭐ `D166`: a carried gizmo draws full lines from the root, never segments to the follower's cursor.
+    const cursor = alignedHere && !carried ? st.pioneerCursors.ofFollower(id) : null;
     const cursorWorld =
       cursor === null ? null : worldPointOn(st, cursor.pioneerId, cursor.position);
     const cursorAt: Vec3 | null =
@@ -454,7 +463,7 @@ export function refreshAxisGizmo(st: SceneState) : void {
       // the axis, so its length reads how far the cursor is along it. ⛔ No cursor yet (the frame
       // the alignment is made — the cursor pass runs after this one) → no line, never a
       // one-frame full-screen flash and never a stand-in end.
-      if (travel && alignedHere && cursorAt === null) {
+      if (travel && alignedHere && !carried && cursorAt === null) {
         g.lines[i]!.isVisible = false;
         continue;
       }

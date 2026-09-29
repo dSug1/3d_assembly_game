@@ -59,3 +59,14 @@ describe("⭐ `D165` — the face fills' opacity is a tunable, less than solid b
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, faceHighlightAlpha: 0 })).not.toThrow();
   });
 });
+
+describe("⭐ `D166` — the owner's numbers: the cursor 1.3 × the white ring; the face fills at 0.17", () => {
+  it("⭐ the PioneerFaceCursor is 30% larger than the white gizmo ring — ⛔ RED against 16 px", async () => {
+    const { GIZMO_RING_PX, PIONEER_CURSOR_PX } = await import("@input/pioneer_cursor_grab");
+    expect(GIZMO_RING_PX).toBe(11);
+    expect(PIONEER_CURSOR_PX).toBeCloseTo(GIZMO_RING_PX * 1.3, 12);
+  });
+  it("⭐ the face fills default to 0.17 — ⛔ RED against 0.5", () => {
+    expect(DEFAULT_CONFIG.faceHighlightAlpha).toBe(0.17);
+  });
+});

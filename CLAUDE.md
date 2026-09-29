@@ -196,7 +196,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1315 golden vectors passing** — ⚠ MEASURED 2026-09-29 (+ 2 for `D165`, + 1 for `D164`, + 3 for `D163`, + 4 for `D162`, + 4 for `D161`, + 2 for `D160`, + 6 for `D159`, − 1 for `D158`, + 3 for `D157`, + 4 for `D156`, + 6 for `D155`, + 9 for `D154`, + 9 for `D153`, + 1 for `D148`, + 2 for `D146`, − 2 for `D145`, + 15 for `D144`, + 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1317 golden vectors passing** — ⚠ MEASURED 2026-09-29 (+ 2 for `D166`, + 2 for `D165`, + 1 for `D164`, + 3 for `D163`, + 4 for `D162`, + 4 for `D161`, + 2 for `D160`, + 6 for `D159`, − 1 for `D158`, + 3 for `D157`, + 4 for `D156`, + 6 for `D155`, + 9 for `D154`, + 9 for `D153`, + 1 for `D148`, + 2 for `D146`, − 2 for `D145`, + 15 for `D144`, + 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -266,7 +266,9 @@ counts measured equal, row by row → `SCORE.md` §3.3. ⭐ **`D162`**: while an
 right), its Pioneer face is FILLED amber; on release it returns to the amber contour → `ALIGNMENT_RULES.md` §21.
 ⭐ **`D163`**: a HitFace latched on an ALIGNED part shows its fuchsia contour, drawn over the cyan outline.
 ⭐ **`D164`**: an aligned part's gizmo ring is AMBER and its Pioneer's cursor ring CYAN (they swapped) — each reads on the other's fill.
-⭐ **`D165`**: the cyan and amber face fills are half-opaque (`faceHighlightAlpha` 0.5), a slider under *highlight offset*.
+⭐ **`D165`**: the cyan and amber face fills are faint (`faceHighlightAlpha`, 0.17 since `D166`), a slider under *highlight offset*.
+⭐ **`D166`**: the Pioneer's cursor is a thin line ring 1.3× the white one, one size on the glass; a seated follower's drag
+shows its translation axes on the ROOT it moves.
 ⛔⛔ Four rules, each the negation of a failure: **never touch a DOM pointer event** (the layer
 skips at Babylon's `onPrePointerObservable` and delivers #2 straight to the observable);
 **model only the touchpoint the mouse lacks**; **read `buttons` on every event, remember nothing**;
