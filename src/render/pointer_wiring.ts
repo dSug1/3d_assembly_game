@@ -20,14 +20,14 @@ import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, undoLast } from "./undo_wiring";
-import { axisDisplacement, axisTravel, NO_TRAVEL_GIZMO } from "../input/axis_translate";
+import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { nextDxSign } from "../input/hold_pinch";
 import { seatLockAllows } from "../input/seat_lock";
 import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
 import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
-import { awaySignNow, axesOf, noteAxisTravel, noteFreeTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
+import { awaySignNow, axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers } from "./sway_pass";
@@ -334,8 +334,6 @@ export function installPointerHandler(st: SceneState): void {
         rec,
         mesh,
         frame: requireGestureFrame(st),
-        // ⭐ `D150`: a press is a START — no phase, no side, so the first frame draws full lines.
-        travelGizmo: NO_TRAVEL_GIZMO,
         prev: s,
         // ⭐ `D67`: asked HERE, once, on the way down — a peek, not a record. The release still
         // consumes the pair through `TapHistory.record`.
@@ -731,7 +729,6 @@ export function installPointerHandler(st: SceneState): void {
           { awaySign: awaySignNow(st, grip.mesh) },
         );
         noteAxisTravel(st, tid, travel);
-        noteFreeTravel(st, grip, travel);
         st.lastTrackGain = travel.trackGain;
         // ⛔ `st.edgeOnNow` is NOT written here any more (`D134`): it is the camera's, refreshed every frame.
         const step = axisDisplacement(travel, axes);

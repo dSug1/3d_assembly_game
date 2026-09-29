@@ -24,18 +24,13 @@ import {
   axisTravel,
   clampDepthRange,
   clipSegmentInFront,
+  hitRingApparentPx,
+  stopAtHit,
   screenShadow,
   type AxisInputsPx,
   type CameraScreenAxes,
   displayedAxes,
-  freeTravelPhase,
-  hitRingApparentPx,
-  NO_TRAVEL_GIZMO,
   planeEdgeOn,
-  stepTravelGizmo,
-  stopAtHit,
-  travelHalves,
-  travelLines,
   soleGizmoBody,
 } from "@input/axis_translate";
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
@@ -688,149 +683,19 @@ describe("⭐⭐ soleGizmoBody — which body carries the gizmo", () => {
   });
 });
 
-describe("⭐⭐⭐ `D150` — a FREE body's translation gizmo: full at a start or a toggle, then a ray toward the travel", () => {
-  // > *"at start or toggle to translation in horizontal plane, both red and blue axis are displayed and
-  // > extend full screen as long as both dx and dy stay within deadband; at start or toggle to
-  // > translation in gravity axis, green axis is displayed full screen as long as [its delta] stays
-  // > within deadband; if one delta position is beyond deadband, its axis extend only in the direction
-  // > of translation until delta position is beyond the deadband in the opposite sense."* — the owner
-  const T = (xM: number, gravityM: number, depthM: number) => ({ xM, gravityM, depthM });
-  const H = "HORIZONTAL" as const;
-  const G = "GRAVITY" as const;
-
-  it("⭐ the phase is PRESENCE: translating + a second touch down → gravity; translating alone → horizontal", () => {
-    expect(freeTravelPhase(true, false)).toBe(H);
-    expect(freeTravelPhase(true, true)).toBe(G);
-    expect(freeTravelPhase(false, true)).toBeNull();
-    expect(freeTravelPhase(false, false)).toBeNull();
-  });
-
-  it("⭐⭐ at the START (a press), red and blue FULL screen, green hidden — before any movement", () => {
-    // ⛔ RED against `D145`: nothing showed until an input went beyond the deadband.
-    const g = stepTravelGizmo(NO_TRAVEL_GIZMO, H, null);
-    expect(travelLines(g)).toEqual(["FULL", "HIDDEN", "FULL"]);
-  });
-
-  it("⭐⭐ `dx` beyond the deadband turns RED into a ray toward the travel; BLUE stays full", () => {
-    let g = stepTravelGizmo(NO_TRAVEL_GIZMO, H, null);
-    g = stepTravelGizmo(g, H, T(0.01, 0, 0));
-    expect(travelLines(g)).toEqual([1, "HIDDEN", "FULL"]);
-  });
-
-  it("⭐⭐⭐ the ray STAYS through a rest and flips only when travel goes the OTHER way", () => {
-    let g = stepTravelGizmo(NO_TRAVEL_GIZMO, H, T(0, 0, -0.02));
-    expect(travelLines(g)).toEqual(["FULL", "HIDDEN", -1]);
-    // ⭐ inside the deadband: no travel at all — nothing changes
-    g = stepTravelGizmo(g, H, T(0, 0, 0));
-    g = stepTravelGizmo(g, H, null);
-    expect(travelLines(g)).toEqual(["FULL", "HIDDEN", -1]);
-    // ⭐ beyond it the other way: the ray flips
-    g = stepTravelGizmo(g, H, T(0, 0, 0.005));
-    expect(travelLines(g)).toEqual(["FULL", "HIDDEN", 1]);
-  });
-
-  it("⭐⭐ a TOGGLE to gravity: green FULL alone; its lift turns it into a ray; back to horizontal is full again", () => {
-    let g = stepTravelGizmo(NO_TRAVEL_GIZMO, H, T(0.01, 0, -0.01));
-    expect(travelLines(g)).toEqual([1, "HIDDEN", -1]);
-    g = stepTravelGizmo(g, G, null); // ⭐ the second touch goes down
-    expect(travelLines(g)).toEqual(["HIDDEN", "FULL", "HIDDEN"]);
-    g = stepTravelGizmo(g, G, T(0, 0.01, 0));
-    expect(travelLines(g)).toEqual(["HIDDEN", 1, "HIDDEN"]);
-    g = stepTravelGizmo(g, H, null); // ⭐ it lifts: a toggle back, and the sides are forgotten
-    expect(travelLines(g)).toEqual(["FULL", "HIDDEN", "FULL"]);
-  });
-
-  it("⭐ a travel recorded IN the new phase survives the toggle's reset", () => {
-    // ⛔ The reset happens on the phase CHANGE, before this step's travel is applied.
-    const g = stepTravelGizmo(stepTravelGizmo(NO_TRAVEL_GIZMO, H, null), G, T(0, -0.01, 0));
-    expect(travelLines(g)).toEqual(["HIDDEN", -1, "HIDDEN"]);
-  });
-
-  it("⛔ not translating (the grip rotates): no translation line; a NaN travel is ignored", () => {
-    expect(travelLines(stepTravelGizmo(NO_TRAVEL_GIZMO, null, T(0.1, 0.1, 0.1)))).toEqual(["HIDDEN", "HIDDEN", "HIDDEN"]);
-    const g = stepTravelGizmo(NO_TRAVEL_GIZMO, H, T(NaN, 0, 0));
-    expect(travelLines(g)).toEqual(["FULL", "HIDDEN", "FULL"]);
-  });
-
-  it("⭐ blue's side is the TRAVEL's: from below the gizmo, finger up comes TOWARD — the ray points at the camera", () => {
-    const c = camera(35, -20);
-    const t = axisTravel(
-      { holderDxPx: 0, holderDyPx: -30, secondDyPx: 0 },
-      c.screen,
-      live(c),
-      PER_PX,
-      1,
-      1,
-      CONE,
-      { awaySign: -1 },
-    );
-    expect(t.depthM).toBeLessThan(0);
-    expect(travelLines(stepTravelGizmo(NO_TRAVEL_GIZMO, H, t))[2]).toBe(-1);
-  });
-});
-
-describe("⛔⛔ `clipSegmentInFront` — a gizmo line with an end BEHIND the camera was never drawn", () => {
-  // ⭐ Found building `D150`: blue is the view's own direction since `D145`, so its full-screen line
-  // runs back under the camera — and a line crossing behind the eye did not render at all.
-  const eye: Vec3 = [0, 0.8, -1.27];
-  const view = normalize([0, -0.8, 1.27])!;
-  const near = 0.02;
-  const depth = (p: Vec3) => dot([p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]], view);
-
-  it("⭐⭐ blue's full line from Scene_0's boot camera is CUT at the front, not dropped", () => {
-    // ⭐ The very line the headless run measured: through the gizmo, ±30 m along the flattened view.
-    const cut = clipSegmentInFront([0.2, 0, -30.27], [0.2, 0, 30.27], eye, view, near)!;
-    expect(cut).not.toBeNull();
-    expect(depth(cut[0])).toBeCloseTo(near, 9); // ⭐ the behind end moved up to the plane
-    expect(cut[1]).toEqual([0.2, 0, 30.27]); // the far end untouched
-  });
-
-  it("⭐ a line wholly in front is returned as it is; wholly behind → null", () => {
-    const a: Vec3 = [-1, 0, 0];
-    const b: Vec3 = [1, 0, 0];
-    expect(clipSegmentInFront(a, b, eye, view, near)).toEqual([a, b]);
-    expect(clipSegmentInFront([0, 0.8, -5], [1, 0.8, -6], eye, view, near)).toBeNull();
-  });
-
-  it("⭐ either end may be the behind one — a ray drawn TOWARD the camera is cut at its tip", () => {
-    const cut = clipSegmentInFront([0.2, 0, 0], [0.2, 0, -30], eye, view, near)!;
-    expect(cut[0]).toEqual([0.2, 0, 0]);
-    expect(depth(cut[1])).toBeCloseTo(near, 9);
-  });
-
-  it("⛔ no view direction, or a NaN end: nothing, never a line through the eye", () => {
-    expect(clipSegmentInFront([0, 0, 0], [1, 0, 0], eye, [0, 0, 0], near)).toBeNull();
-    expect(clipSegmentInFront([NaN, 0, 0], [1, 0, 0], eye, view, near)).toBeNull();
-  });
-});
-
-describe("⭐⭐⭐ `D151` — a translation line STOPS where it hits an object, with a white ring there", () => {
-  // > *"In addition to the rule already implemented, a translation axis stops where it hits an object
-  // > and a white ring gizmo is displayed at this point. If no hit while the axis is displayed, no
-  // > change as currently implemented."* — the owner, 2026-09-29
-  it("⭐ the halves cast: both sides of a FULL line, the ray's own side, none when hidden", () => {
-    expect(travelHalves("FULL")).toEqual([-1, 1]);
-    expect(travelHalves(1)).toEqual([1]);
-    expect(travelHalves(-1)).toEqual([-1]);
-    expect(travelHalves("HIDDEN")).toEqual([]);
-  });
-
+describe("⭐⭐⭐ `D153` — a translation line STOPS where it hits an object; its ring follows the perspective", () => {
+  // > *"a translation axis stops where it hits an object and a white ring gizmo is displayed at this
+  // > point"* · *"white rings at hit points shall follow the scene's perspective"* — the owner, 2026-09-29
   it("⭐⭐ a hit inside the reach shortens the half to it and asks for the ring", () => {
     expect(stopAtHit(30, 0.42)).toEqual({ lengthM: 0.42, hit: true });
     expect(stopAtHit(30, 30)).toEqual({ lengthM: 30, hit: true });
   });
 
-  it("⛔ no hit — or one past the reach, behind, or NaN — leaves the line exactly as before, no ring", () => {
+  it("⛔ no hit — or one past the reach, behind, or NaN — leaves the line as it was, no ring", () => {
     for (const h of [null, 31, 0, -2, NaN, Infinity]) expect(stopAtHit(30, h)).toEqual({ lengthM: 30, hit: false });
   });
-});
 
-describe("⭐⭐ `D152` — a hit ring keeps the origin ring's WORLD size, so it follows the perspective", () => {
-  // > *"Scale the projected gizmos based on the original white gizmo dimension and their respective
-  // > distance to the camera and focal/settings of the camera so the impression is that they follow
-  // > the perspective of the scene."* — the owner, 2026-09-29
-  it("⭐⭐ farther than the gizmo → smaller on the glass; nearer → larger; level with it → the same", () => {
-    // ⛔ RED against the build before: every hit ring was 11 px wherever it was.
+  it("⭐⭐ the ring: farther than the gizmo → smaller on the glass; nearer → larger; level → the same", () => {
     expect(hitRingApparentPx(11, 1.5, 3)).toBeCloseTo(5.5, 12);
     expect(hitRingApparentPx(11, 1.5, 0.75)).toBeCloseTo(22, 12);
     expect(hitRingApparentPx(11, 1.5, 1.5)).toBeCloseTo(11, 12);
@@ -848,5 +713,37 @@ describe("⭐⭐ `D152` — a hit ring keeps the origin ring's WORLD size, so it
   it("⛔ a degenerate distance keeps the origin ring's size — never zero, never infinite", () => {
     for (const [d0, d1] of [[0, 1], [1, 0], [NaN, 1], [1, Infinity], [-1, 2]])
       expect(hitRingApparentPx(11, d0!, d1!)).toBe(11);
+  });
+});
+
+describe("⛔⛔ defect 74 — `clipSegmentInFront`: a gizmo line with an end BEHIND the camera was never drawn", () => {
+  const eye: Vec3 = [0, 0.8, -1.27];
+  const view = normalize([0, -0.8, 1.27])!;
+  const near = 0.02;
+  const depth = (p: Vec3) => dot([p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]], view);
+
+  it("⭐⭐ blue's full line from Scene_0's boot camera is CUT at the front, not dropped", () => {
+    const cut = clipSegmentInFront([0.2, 0, -30.27], [0.2, 0, 30.27], eye, view, near)!;
+    expect(cut).not.toBeNull();
+    expect(depth(cut[0])).toBeCloseTo(near, 9);
+    expect(cut[1]).toEqual([0.2, 0, 30.27]);
+  });
+
+  it("⭐ a line wholly in front is returned as it is; wholly behind → null", () => {
+    const a: Vec3 = [-1, 0, 0];
+    const b: Vec3 = [1, 0, 0];
+    expect(clipSegmentInFront(a, b, eye, view, near)).toEqual([a, b]);
+    expect(clipSegmentInFront([0, 0.8, -5], [1, 0.8, -6], eye, view, near)).toBeNull();
+  });
+
+  it("⭐ either end may be the behind one", () => {
+    const cut = clipSegmentInFront([0.2, 0, 0], [0.2, 0, -30], eye, view, near)!;
+    expect(cut[0]).toEqual([0.2, 0, 0]);
+    expect(depth(cut[1])).toBeCloseTo(near, 9);
+  });
+
+  it("⛔ no view direction, or a NaN end: nothing, never a line through the eye", () => {
+    expect(clipSegmentInFront([0, 0, 0], [1, 0, 0], eye, [0, 0, 0], near)).toBeNull();
+    expect(clipSegmentInFront([NaN, 0, 0], [1, 0, 0], eye, view, near)).toBeNull();
   });
 });

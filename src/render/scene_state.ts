@@ -29,7 +29,7 @@ import { SeatSnaps } from "../input/seat_snap";
 import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch, type Jump } from "../input/jump_watch";
-import { type GizmoChannels, type TravelGizmo } from "../input/axis_translate";
+import { type GizmoChannels } from "../input/axis_translate";
 import { type GestureConfig } from "../input/gestureConfig";
 import { type Hud } from "./hud";
 import { type MouseSecondTouchHandle } from "./mouse_adapter";
@@ -183,8 +183,6 @@ export interface Held {
    * view axis — two frames, two purposes.
    */
   frame: GravityFrame;
-  /** ⭐ `D150`: a free body's translation gizmo — its phase and each axis's last travel side. */
-  travelGizmo: TravelGizmo;
   /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
   prev: Sample;
   /**
@@ -414,7 +412,7 @@ export interface SceneState {
   edgeOnNow: boolean;
   axisGizmos: Map<ObjectId, AxisGizmo>;
   gizmoRings: Map<ObjectId, LinesMesh>;
-  /** ⭐ `D151`: the white rings where a translation line hits an object, keyed `body:axis:side`. */
+  /** ⭐ `D153`: the white rings where a translation line hits an object, keyed `body:axis:side`. */
   gizmoHitRings: Map<string, LinesMesh>;
   gizmoTurnRings: Map<ObjectId, LinesMesh>;
   markerMat: StandardMaterial;
