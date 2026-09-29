@@ -560,6 +560,24 @@ export function stopAtHit(reach: number, hitM: number | null): { readonly length
 }
 
 /**
+ * ⭐⭐ `D152` — **A HIT RING FOLLOWS THE SCENE'S PERSPECTIVE** (the owner, 2026-09-29: *"Scale the
+ * projected gizmos based on the original white gizmo dimension and their respective distance to the
+ * camera and focal/settings of the camera so the impression is that they follow the perspective of
+ * the scene."*).
+ *
+ * The white ring at the gizmo's origin is `ringPx` on the glass. A ring projected onto a hit keeps
+ * that ring's WORLD size, so on the glass it is `ringPx × originDist / hitDist`: smaller when the hit
+ * is farther than the gizmo, larger when nearer — the camera's field of view enters through the
+ * projection (`trackingMetresPerPx`), which turns these pixels back into metres at the hit.
+ * ⚠ A degenerate distance returns `ringPx`, never a zero or infinite ring.
+ */
+export function hitRingApparentPx(ringPx: number, originDistM: number, hitDistM: number): number {
+  if (!(originDistM > 0) || !(hitDistM > 0) || !Number.isFinite(originDistM) || !Number.isFinite(hitDistM))
+    return ringPx;
+  return (ringPx * originDistM) / hitDistM;
+}
+
+/**
  * ⭐⭐ **THE PART OF A GIZMO LINE IN FRONT OF THE CAMERA** — `[p0, p1]` cut where it crosses the plane
  * `minDepth` ahead of the eye along the view, or `null` when all of it is behind.
  *
