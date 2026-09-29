@@ -103,6 +103,8 @@ file.
 | `D159` | ⭐⭐ **A PLAIN CLICK COMPLETES A SPACE-LOCKED ACTION; A FREEZE LANDS ONCE, AT ITS END** | 2026-09-29 | → §20 |
 | `D160` | ⭐ **A CLICK ON THE LATCHED PART CANCELS IT** | 2026-09-29 | → §20 |
 | `D161` | ⭐⭐ **A RIGHT CLICK RELEASED UNUSED LATCHES THE HITFACE, AS SPACE DOES** | 2026-09-29 | → §20 |
+| `D162` | ⭐ **A PRESSED ALIGNED PART FILLS ITS PIONEERFACE AMBER** | 2026-09-29 | → §21 |
+| `D163` | ⭐ **A LATCHED HITFACE ON AN ALIGNED PART: FUCHSIA OVER CYAN** | 2026-09-29 | → §21 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -157,8 +159,8 @@ file.
 | `D27` | ⭐⭐⭐ **ANY SINGLE TAP toggles the movement behaviour; a PRESS keeps every meaning it has** | 2026-09-16 | ⛔ Narrowed by `D108` |
 | `D26` | ⭐⭐ **THE ASSIGNMENTS WERE A FLAG, NOT A FORK** — ⚠ **CLOSED BY `D28`** | 2026-09-16 | ⚠ → history |
 | `D25` | ⚠ **REVERSED BY `D54`** | 2026-09-16 | ⚠ → history |
-| `D24` | ⚠ **RETIRED BY `D28`** — a lift-and-replace of the second touchpoint was ONE gesture | 2026-09-16 | ⚠ → history |
-| `D23` | ⚠ **SUPERSEDED BY `D28`** — one touchpoint TRANSLATES; a second held still ROTATES | 2026-09-16 | ⚠ → history |
+| `D24` | ⚠ **RETIRED BY `D28`** | 2026-09-16 | ⚠ → history |
+| `D23` | ⚠ **SUPERSEDED BY `D28`** | 2026-09-16 | ⚠ → history |
 | `D22` | ⭐⭐⭐ **Roll moves to the SECOND touchpoint's x** | 2026-09-15 | ⭐ Binding |
 | `D21` | ⭐⭐⭐ **STATIONARY is a POSITION DEADBAND, not a timer** | 2026-09-15 | ⭐ Binding |
 | `D20` | ⭐⭐ **Depth is a STILL HOLDER and a MOVING ANCHOR** | 2026-09-15 | ⭐ Binding |
@@ -169,7 +171,7 @@ file.
 | `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⛔ Shake deleted (`D107`) |
 | `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding |
 | `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⛔ Eviction deleted (`D107`); mates are broken by `D47`/`D100`'s unsnap |
-| `D12` | ⚠ **SUPERSEDED BY `D15`** — eviction was a full 360° roll, now a back-and-forth | 2026-09-15 | ⚠ → history |
+| `D12` | ⚠ **SUPERSEDED BY `D15`** | 2026-09-15 | ⚠ → history |
 | `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | ⭐ Binding, ⚠ → history |
 | `D10` | ⚠ **SUPERSEDED BY `D16`** — a second touchpoint on a held object was IGNORED; it is half of a **depth pinch** now | 2026-09-14 | ⚠ → history |
 | `D9` | ⭐ **Babylon over three.js** | 2026-09-13 | ⭐ Binding, ⚠ → history |

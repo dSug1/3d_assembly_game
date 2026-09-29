@@ -164,6 +164,11 @@ export class MouseSecondTouch {
     return this.second !== null;
   }
 
+  /** ⭐ `D162`: is the second touch a LATCHED HitFace — down past its click (`D154`/`D161`), no button held? */
+  get isSecondLatched(): boolean {
+    return this.second?.spaceBody !== undefined;
+  }
+
   /** ⚠ Diagnostics: is the real pointer currently re-issued away from the cursor? */
   get isOffset(): boolean {
     return this.real !== null && this.cursor !== null && !same(this.real, this.cursor);

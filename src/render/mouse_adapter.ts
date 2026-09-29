@@ -50,6 +50,8 @@ export interface MouseSecondTouchHandle {
    * presence: that touchpoint outlives Shift until the left button lifts (`aligned_axes.ts`).
    */
   shiftHeld(): boolean;
+  /** ⭐ `D162`: is the second touch a LATCHED HitFace — its click already released? */
+  secondLatched(): boolean;
 }
 
 export function attachMouseSecondTouch(
@@ -234,5 +236,5 @@ export function attachMouseSecondTouch(
     cancel();
   });
 
-  return { stats: () => ({ seen, sent, last }), shiftHeld: () => shift };
+  return { stats: () => ({ seen, sent, last }), shiftHeld: () => shift, secondLatched: () => model.isSecondLatched };
 }

@@ -119,7 +119,7 @@ meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
 
-## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D161`)
+## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D163`)
 
 ⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
 
@@ -137,6 +137,8 @@ drag is on.
 | 7b | **Space + click** a part, then a **plain click on the same part** (`D160`) | the HitFace is cancelled; **+0** — after a drag that moved + Space, **+1** (the move) |
 | 7c | **right click** a part and release, then a **plain click** on another part (`D161`) | it aligns — **+1**; on empty space (an aligned part): unaligns; on the same part: cancelled, **+0** |
 | 7d | right **HOLD** a part + left click another part (unchanged) | it aligns, and the HitFace lifts with the right button — no latch |
+| 7e | press (touch, left or right) an ALIGNED part and hold (`D162`) | its Pioneer face fills amber; on release it returns to the amber contour (a right click that latches reverts too) |
+| 7f | Space + click (or right click and release) an ALIGNED part (`D163`) | the clicked face shows a FUCHSIA contour, on top of the cyan outline |
 
 **Both devices — the episode count, first HUD line** (`D158`/`D159`)
 

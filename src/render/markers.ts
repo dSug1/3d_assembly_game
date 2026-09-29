@@ -19,7 +19,8 @@ import { alignedFaceOf } from "../core/face_pick";
 import { type AlignmentCouple } from "../core/pioneer_face_cursors";
 import { PIONEER_CURSOR_PX } from "../input/pioneer_cursor_grab";
 import { offsetPositions, type MeshTopology } from "../core/mesh_topology";
-import { hitFaceAllowed } from "../input/mouse_second_touch";
+import { hitFaceAllowed, MOUSE_SECOND_ID } from "../input/mouse_second_touch";
+import { hitFaceShown } from "../input/pioneer_press";
 import { FOLLOWER_COLOUR, PIONEER_COLOUR, type BodyOutlines, type FaceMarker, type SceneState } from "./scene_state";
 import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 
@@ -164,7 +165,9 @@ export function hitFaceNow(st: SceneState) : FaceRef | null {
   if (!hitFaceAllowed(grip.pointerType)) return null;
   const objectId = st.idOf.get(grip.mesh);
   if (objectId === undefined) return null;
-  if (alignedFaceOf(st.world, objectId) !== null) return null;
+  // ⭐ `D163`: on an ALIGNED part, only while the HitFace is latched (Space, a released right click).
+  const latched = holder!.id === MOUSE_SECOND_ID && st.mouseLayer.secondLatched();
+  if (!hitFaceShown(alignedFaceOf(st.world, objectId) !== null, latched)) return null;
   return { objectId, faceId: grip.pressFace.faceId };
 }
 

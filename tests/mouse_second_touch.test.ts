@@ -553,3 +553,17 @@ describe("⭐⭐⭐ `D161` — a RIGHT press released unused on a part LATCHES t
     }
   });
 });
+
+describe("⭐ `D162` — the layer says when its second touch is a LATCHED HitFace (not pressed)", () => {
+  const A = { id: "A", frozen: false };
+  it("⭐ right HELD: not latched (pressed); released unused: latched; Space + click: latched at once", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: RIGHT, buttons: R, x: 1, y: 1, onBody: A }));
+    expect(m.isSecondLatched).toBe(false);
+    m.step(ev({ type: "UP", button: RIGHT, buttons: 0, x: 1, y: 1 }));
+    expect(m.isSecondLatched).toBe(true);
+    const n = new MouseSecondTouch();
+    n.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 1, y: 1, space: true, onBody: A }));
+    expect(n.isSecondLatched).toBe(true);
+  });
+});
