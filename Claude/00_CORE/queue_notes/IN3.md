@@ -1169,3 +1169,7 @@ loop** as the fill — a marker pool that retires by what CHANGED instead of by 
 ⭐ **`D160`** — with a HitFace latched, a click on the same part cancels it; the count is the underlying action's. ✅ 1299 → 1301.
 
 ⭐⭐ **`D161`** — a right click released unused on a part latches the HitFace like Space; used while held it lifts as before. Desktop ↔ mobile episode equivalence measured → `SCORE.md` §3.3. ✅ 1301 → 1305.
+
+⭐ **`D162`** — a pressed aligned part fills its PioneerFace amber until the press ends → alignment spec §21. ✅ 1305 → 1309.
+
+⭐ **`D163`** — a latched HitFace on an aligned part shows its fuchsia contour, drawn over the cyan → alignment spec §21. ✅ 1309 → 1312.

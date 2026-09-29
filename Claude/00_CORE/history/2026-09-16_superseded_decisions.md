@@ -706,3 +706,6 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ⭐ **`D121`, headline text moved 2026-09-29 (to pay for `D160`)**: *a frozen body seen from below turned see-through.*
 ⭐ **`D133`, headline text moved 2026-09-29 (to pay for `D161`)**: *finger up away from below too; never shipped, the flip stands.*
 ⭐ **`D25`, headline text moved 2026-09-29 (to pay for `D161`)**: *a holder no longer under its object used to give the selection up.*
+⭐ **`D24`, headline text moved 2026-09-29 (to pay for `D162`)**: *a lift-and-replace of the second touchpoint was ONE gesture.*
+⭐ **`D23`, headline text moved 2026-09-29 (to pay for `D163`)**: *one touchpoint TRANSLATES; a second held still ROTATES.*
+⭐ **`D12`, headline text moved 2026-09-29 (to pay for `D163`)**: *eviction was a full 360° roll, now a back-and-forth.*

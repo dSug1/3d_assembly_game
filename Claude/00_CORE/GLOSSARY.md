@@ -13,7 +13,7 @@
 | `DEP0`–`DEP4` | build and **deployment** |
 | `SEC0`–`SEC4` | privacy, stores, **compliance** |
 | `GM1`–`GM9` | the **game** proper (sub `GAME`, `20_GAME_RULES`) |
-| `D1`–`D161` | owner **decisions** (see `DECISIONS.md`) |
+| `D1`–`D163` | owner **decisions** (see `DECISIONS.md`) |
 | `A1`–`A23` | the owner's **amendments** to the R5 spec (`10_INPUT_TOUCH/AMENDMENTS_R5.md`, approach spec) |
 | `N13` | carried: no non-commercially-licensed dependency. Binding |
 

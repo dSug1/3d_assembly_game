@@ -18,6 +18,8 @@ import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolveP
 import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
 import { faceMarkerFor, hitFaceNow, liftHighlights, outlinesFor, syncPioneerCursors } from "./markers";
+import { pressedPioneerFaceKeys } from "../input/pioneer_press";
+import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
 import { axesOf, refreshAxisGizmo } from "./gizmo";
 import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig";
@@ -439,6 +441,15 @@ export function startRenderLoop(st: SceneState): void {
     const alignedNow = new Set(st.links.alignedObjects());
     // ⛔⛔ THE FUCHSIA CANDIDATES ARE DELETED (`D109`, 2026-09-27); the HitFace keeps its contour.
     const hitFace = hitFaceNow(st);
+    // ⭐⭐ `D162`: the Pioneer faces of the aligned parts PRESSED now — a finger or a button down. ⛔ A HitFace
+    // latched past its click (Space, a released right click) is not pressed.
+    const pressedPioneer = pressedPioneerFaceKeys(
+      [...st.held.entries()]
+        .filter(([pid]) => !(pid === MOUSE_SECOND_ID && st.mouseLayer.secondLatched()))
+        .map(([, g]) => st.idOf.get(g.mesh))
+        .filter((id): id is string => id !== undefined),
+      (f) => st.links.pioneerFor(f),
+    );
     guardDraw(st, "alignmentMarkers", () => {
       // ⛔⛔ **RETIRED BY SET MEMBERSHIP, WHATEVER REMOVED THE LINK.** The 2026-09-17 bug was the
       // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
@@ -447,7 +458,8 @@ export function startRenderLoop(st: SceneState): void {
       for (const [key, q] of st.faceMarkers) {
         const id = key.slice(0, key.indexOf("/"));
         const faceId = key.slice(key.indexOf("/") + 1);
-        const wanted = alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId;
+        const wanted =
+          (alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId) || pressedPioneer.has(key);
         if (wanted) continue;
         q.fill.isVisible = false;
         // ⛔⛔ **RETIRED BY THE SAME MEMBERSHIP TEST, IN THE SAME LOOP.** The twin must not outlive
@@ -497,6 +509,16 @@ export function startRenderLoop(st: SceneState): void {
         }
       }
 
+      // ⭐⭐ `D162`: a pressed aligned part's Pioneer face is FILLED amber, over its contour, until the press
+      // ends — then the retire above hides the fill and the contour below stays with the couple.
+      for (const key of pressedPioneer) {
+        const slash = key.indexOf("/");
+        const m = faceMarkerFor(st, key.slice(0, slash), key.slice(slash + 1));
+        if (m === null) continue;
+        if (!m.mat.emissiveColor.equals(PIONEER_COLOUR)) m.mat.emissiveColor.copyFrom(PIONEER_COLOUR);
+        m.fill.isVisible = true;
+      }
+
       // ⛔⛔ **EVERY PIONEER FACE THAT SOMETHING IS ALIGNED TO**, from the index.
       //
       // ⭐ THE PAIR IS ATOMIC BY STRUCTURE: a Pioneer face is drawn only because a link names it,
@@ -513,6 +535,7 @@ export function startRenderLoop(st: SceneState): void {
         if (m !== null) {
           if (!m.loop.color.equals(PIONEER_COLOUR))
             m.loop.color.copyFrom(PIONEER_COLOUR);
+          m.loop.renderingGroupId = 0;
           m.loop.isVisible = true;
         }
       }
@@ -533,6 +556,9 @@ export function startRenderLoop(st: SceneState): void {
           if (!wantedPioneerKeys.has(key)) {
             if (!m.loop.color.equals(CANDIDATE_COLOUR))
               m.loop.color.copyFrom(CANDIDATE_COLOUR);
+            // ⭐⭐ `D163`: FUCHSIA OVERRIDES CYAN — the contour shares its edges with the aligned part's cyan
+            // outline, and at one depth the two fight; a later rendering group draws it on top, always.
+            m.loop.renderingGroupId = 1;
             m.loop.isVisible = true;
           }
           wantedPioneerKeys.add(key);
@@ -541,7 +567,10 @@ export function startRenderLoop(st: SceneState): void {
       // ⚠ Hidden rather than disposed: a body can be re-aligned to the same face seconds later,
       // and churning meshes per gesture is how a render loop acquires a stall.
       for (const [key, q] of st.faceMarkers) {
-        if (!wantedPioneerKeys.has(key)) q.loop.isVisible = false;
+        if (!wantedPioneerKeys.has(key)) {
+          q.loop.isVisible = false;
+          q.loop.renderingGroupId = 0;
+        }
       }
       // ⭐⭐⭐ THE PIONEERFACECURSORS, reconciled against the same links the contours read.
       syncPioneerCursors(st);
