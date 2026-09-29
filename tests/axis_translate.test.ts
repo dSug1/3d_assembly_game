@@ -27,6 +27,7 @@ import {
   type AxisInputsPx,
   type CameraScreenAxes,
   displayedAxes,
+  freeTravelRays,
   planeEdgeOn,
   soleGizmoBody,
 } from "@input/axis_translate";
@@ -436,8 +437,10 @@ describe("⭐⭐ displayedAxes — which gizmo lines are drawn", () => {
   const shownBy = (input: Partial<AxisInputsPx>) =>
     displayedAxes(null, [...run(input, c, live(c)).driven, false, false, false]);
 
-  it("⭐⭐⭐ `D145`: a pure `dx`, a pure `dy`, or both — RED AND BLUE together, green off", () => {
+  it("⭐⭐ `D145`'s channel map: any holder input DRIVES red and blue together, green off", () => {
     // ⛔ RED against the build before: a pure `dx` lit red alone, a pure `dy` blue alone.
+    // ⚠ Since `D149` a FREE body's lines are `freeTravelRays`'s (below); this map still decides which
+    // body is DRIVEN (the gizmo's owner) and an aligned body's turn lines.
     for (const input of [{ holderDxPx: 12 }, { holderDyPx: -12 }, { holderDxPx: 5, holderDyPx: 9 }])
       expect(shownBy(input)).toEqual([true, false, true, false, false, false]);
   });
@@ -677,5 +680,44 @@ describe("⭐⭐ soleGizmoBody — which body carries the gizmo", () => {
 
   it("⛔ and no candidates means no gizmo — nothing stands in", () => {
     expect(soleGizmoBody([])).toBeNull();
+  });
+});
+
+describe("⭐⭐⭐ `D149` — a FREE body's translation lines are RAYS, shown only while their input moves", () => {
+  // > *"Gizmo axis shall display only from gizmo origin towards the direction of translation if their
+  // > respective delta position is beyond deadband, hidden if inside deadband."* … *"my rule is only
+  // > for unaligned object"* — the owner, 2026-09-29
+  it("⭐⭐ each channel on its own: moving → a ray on its travel side; inside the deadband → hidden", () => {
+    // ⛔ RED against `D145`: a pure `dx` lit BOTH red and blue.
+    expect(freeTravelRays([true, false, false], [1, 1, -1])).toEqual([1, 0, 0]);
+    expect(freeTravelRays([false, false, true], [1, 1, -1])).toEqual([0, 0, -1]);
+    expect(freeTravelRays([false, true, false], [0, -1, 0])).toEqual([0, -1, 0]);
+    expect(freeTravelRays([true, true, true], [-1, 1, 1])).toEqual([-1, 1, 1]);
+  });
+
+  it("⛔ a resting finger shows NO translation line — the old *a pause keeps the last lines* is gone", () => {
+    expect(freeTravelRays([false, false, false], [1, -1, 1])).toEqual([0, 0, 0]);
+  });
+
+  it("⛔ moving but no travel yet (no side known) → hidden, never a guessed side", () => {
+    expect(freeTravelRays([true, true, true], [0, 0, 0])).toEqual([0, 0, 0]);
+    expect(freeTravelRays([true, false, false], [NaN, 0, 0])).toEqual([0, 0, 0]);
+  });
+
+  it("⭐ the side is the TRAVEL's: blue's ray follows where `D148`'s sign sent the body, not the finger", () => {
+    // ⭐ Finger up from BELOW the gizmo goes TOWARD the camera: the travel along depth is negative.
+    const c = camera(35, -20);
+    const t = axisTravel(
+      { holderDxPx: 0, holderDyPx: -30, secondDyPx: 0 },
+      c.screen,
+      live(c),
+      PER_PX,
+      1,
+      1,
+      CONE,
+      { awaySign: -1 },
+    );
+    expect(t.depthM).toBeLessThan(0);
+    expect(freeTravelRays([false, false, true], [0, 0, Math.sign(t.depthM)])).toEqual([0, 0, -1]);
   });
 });

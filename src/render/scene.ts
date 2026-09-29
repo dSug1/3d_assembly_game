@@ -460,6 +460,7 @@ export function createScene(
    * `displayedAxes`'s; this only remembers its answer, so a pause does not blank the gizmo.
    */
   st.gizmoAxes = new Map<ObjectId, GizmoChannels>();
+  st.gizmoTravelSign = new Map<ObjectId, [number, number, number]>();
   /**
    * ⭐ Bodies a ROLL has turned during their CURRENT hold — what *"the roll rotation is ongoing"*
    * means for an aligned Follower's green axis (`aligned_axes.ts`). ⚠ `gizmoAxes` keeps its answer
