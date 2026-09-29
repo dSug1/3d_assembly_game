@@ -293,6 +293,12 @@ export interface GestureConfig {
    */
   highlightLiftMm: number;
   /**
+   * ⭐ `D165` — the OPACITY of the face fills: the cyan FollowerFace and the amber Pioneer face a press fills
+   * (`D162`). `1` is the solid fill they were; lower lets the part show through (the owner, 2026-09-29: *"make
+   * the amber and cyan face highlights less opaque (provide a slider for that below highlight offset slider)"*).
+   */
+  faceHighlightAlpha: number;
+  /**
    * ⭐⭐ **THE COLLISION ALLOWANCE** (`3D6`, redefined by `D136`), millimetres on the glass: how far a
    * body may SINK into another — contact is allowed, only a deeper overlap is refused. It is the
    * margin a hand has to line a piece up within to slide it into a slot of zero clearance, and the
@@ -775,6 +781,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // above a 24-bit depth buffer's resolution at d metres (the camera's 0.01–100 m planes) — 13× at 5 m, vectored.
   // ⚠ Raise it if a far zoom flickers (a device with a coarser depth buffer).
   highlightLiftMm: 0.1,
+  // ⭐ `D165`: half, *"less opaque"* than the solid fill — a guess with a slider.
+  faceHighlightAlpha: 0.5,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
@@ -988,6 +996,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.highlightLiftMm > 0 && cfg.highlightLiftMm <= 5)) {
     throw new Error(
       `highlightLiftMm (${cfg.highlightLiftMm}) must be in (0, 5] mm: at 0 a highlight z-fights the face it marks.`,
+    );
+  }
+
+  if (!(cfg.faceHighlightAlpha >= 0 && cfg.faceHighlightAlpha <= 1)) {
+    throw new Error(
+      `faceHighlightAlpha (${cfg.faceHighlightAlpha}) must be in [0, 1]: it is an OPACITY — 0 hides the fill, 1 is solid.`,
     );
   }
 

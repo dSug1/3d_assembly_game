@@ -1173,3 +1173,7 @@ loop** as the fill — a marker pool that retires by what CHANGED instead of by 
 ⭐ **`D162`** — a pressed aligned part fills its PioneerFace amber until the press ends → alignment spec §21. ✅ 1305 → 1309.
 
 ⭐ **`D163`** — a latched HitFace on an aligned part shows its fuchsia contour, drawn over the cyan → alignment spec §21. ✅ 1309 → 1312.
+
+⭐ **`D164`** — an aligned part's origin ring is amber, its Pioneer's cursor ring cyan → alignment spec §21. ✅ 1312 → 1313.
+
+⭐ **`D165`** — the cyan and amber face fills are half-opaque by default, `faceHighlightAlpha` with a slider under *highlight offset*. ✅ 1313 → 1315.

@@ -709,3 +709,5 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ⭐ **`D24`, headline text moved 2026-09-29 (to pay for `D162`)**: *a lift-and-replace of the second touchpoint was ONE gesture.*
 ⭐ **`D23`, headline text moved 2026-09-29 (to pay for `D163`)**: *one touchpoint TRANSLATES; a second held still ROTATES.*
 ⭐ **`D12`, headline text moved 2026-09-29 (to pay for `D163`)**: *eviction was a full 360° roll, now a back-and-forth.*
+⭐ **`D10`, headline text moved 2026-09-29 (to pay for `D164`)**: *a second touchpoint on a held object was IGNORED; it is half of a **depth pinch** now*
+⭐ **`D69`, headline text moved 2026-09-29 (to pay for `D165`)**: *a translated Pioneer carried EVERY Follower; cyan should break instead*

@@ -2,7 +2,8 @@
  * GOLDEN VECTORS — **`D162`**: a pressed aligned part shows its PioneerFace in amber (the owner, 2026-09-29).
  */
 import { describe, expect, it } from "vitest";
-import { faceKey, hitFaceShown, pressedPioneerFaceKeys } from "@input/pioneer_press";
+import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
+import { faceKey, hitFaceShown, originRingTone, pressedPioneerFaceKeys } from "@input/pioneer_press";
 
 const links: Record<string, { objectId: string; faceId: string }> = {
   A: { objectId: "B", faceId: "f3" },
@@ -37,5 +38,24 @@ describe("⭐⭐ `D163` — the HitFace's fuchsia contour on an ALIGNED part, wh
   });
   it("⛔ an aligned part merely pressed: not shown, as before", () => {
     expect(hitFaceShown(true, false)).toBe(false);
+  });
+});
+
+describe("⭐ `D164` — an aligned part's origin ring is AMBER; a free part's stays white", () => {
+  it("⭐ ⛔ RED against the build before, where every origin ring was white", () => {
+    expect(originRingTone(true)).toBe("AMBER");
+    expect(originRingTone(false)).toBe("WHITE");
+  });
+});
+
+describe("⭐ `D165` — the face fills' opacity is a tunable, less than solid by default", () => {
+  it("⭐ ⛔ RED against the build before, where the fills were solid (no tunable): the default is below 1", () => {
+    expect(DEFAULT_CONFIG.faceHighlightAlpha).toBeLessThan(1);
+    expect(DEFAULT_CONFIG.faceHighlightAlpha).toBeGreaterThan(0);
+  });
+  it("⛔ an opacity outside [0, 1] is refused, not drawn", () => {
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, faceHighlightAlpha: 1.5 })).toThrow(/faceHighlightAlpha/);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, faceHighlightAlpha: -0.1 })).toThrow(/faceHighlightAlpha/);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, faceHighlightAlpha: 0 })).not.toThrow();
   });
 });

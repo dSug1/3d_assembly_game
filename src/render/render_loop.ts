@@ -488,6 +488,8 @@ export function startRenderLoop(st: SceneState): void {
           // ⚠ Written only on CHANGE, not blindly per frame.
           if (!marker.mat.emissiveColor.equals(want))
             marker.mat.emissiveColor.copyFrom(want);
+          // ⭐ `D165`: the fill's opacity is a slider — written every frame so the slider acts under the finger.
+          marker.mat.alpha = st.cfg.faceHighlightAlpha;
           marker.fill.isVisible = true;
           // ⭐ `0` means the twin is not drawn AT ALL, which is the build before this flag — not an
           // invisible mesh still costing a draw call and still able to come back wrong.
@@ -516,6 +518,7 @@ export function startRenderLoop(st: SceneState): void {
         const m = faceMarkerFor(st, key.slice(0, slash), key.slice(slash + 1));
         if (m === null) continue;
         if (!m.mat.emissiveColor.equals(PIONEER_COLOUR)) m.mat.emissiveColor.copyFrom(PIONEER_COLOUR);
+        m.mat.alpha = st.cfg.faceHighlightAlpha; // ⭐ `D165`
         m.fill.isVisible = true;
       }
 
