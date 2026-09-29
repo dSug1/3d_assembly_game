@@ -95,6 +95,7 @@ file.
 | `D147` | ⭐⭐ **A ZOOM RE-DECIDES THE DIRECTION, EVEN MID-DRAG** | 2026-09-29 | → §19 |
 | `D148` | ⭐⭐ **…AND A GRAVITY LIFT: THE SIGN IS READ EVERY STEP** | 2026-09-29 | → §19 |
 | `D153` | ⭐⭐ **A TRANSLATION LINE STOPS AT THE OBJECT IT HITS; ITS RING IN PERSPECTIVE** (`D149`–`D152` reverted) | 2026-09-29 | → §19 |
+| `D154` | ⭐⭐ **DESKTOP: SPACE + CLICK THE HITFACE, THEN THE PIONEERFACE — ONE EPISODE** | 2026-09-29 | → §20 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -113,7 +114,7 @@ file.
 | `D64` | ⚠ **SUPERSEDED BY `D65`, THEN REPEALED WITH IT** — *driving consumes the toggle* | 2026-09-21 | ⚠ → history |
 | `D63` | ⭐⭐⭐ **THE APPROACH SWING — the camera looks around the join and comes back** (TRIAL) | 2026-09-19 | ⛔ Deleted by `D120`. ⚠ → history |
 | `D62` | ⭐⭐⭐ **A FOLLOWER MAY APPROACH ITS PIONEER AND NOTHING ELSE** | 2026-09-19 | ⭐ Binding, ⚠ → history |
-| `D61` | ⚠ **REPEALED BY `D66`** — the first outside press of a hold was inert, exempting a Follower | 2026-09-19 | ⚠ → history |
+| `D61` | ⚠ **REPEALED BY `D66`** | 2026-09-19 | ⚠ → history |
 | `D60` | ⭐⭐⭐ **AND THE FIRST TOUCH THEN TRANSLATES, WHATEVER THE MODE** | 2026-09-19 | ⭐ Binding, ⚠ → history |
 | `D59` | ⭐⭐⭐ **AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH BOTH AXES** | 2026-09-19 | ⭐ Binding, ⚠ → history |
 | `D58` | ⚠ **REPEALED BY `D66`** — a PRESS toggled the movement mode, in two places | 2026-09-19 | ⚠ → history |
@@ -157,7 +158,7 @@ file.
 | `D19` | ⭐⭐ **A DEADBAND on the pointer delta, per axis, with a slider** | 2026-09-15 | ⭐ Binding |
 | `D18` | ⭐⭐ **Every object gesture stands on a GRAVITY FRAME** | 2026-09-15 | ⭐ Binding |
 | `D17` | ⚠ **SUPERSEDED BY `D20`** — its TRIGGER is gone; the configuration and `A5`'s geometry stand | 2026-09-15 | ⚠ → history |
-| `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** — the pinch trigger is gone; the depth GEOMETRY it established stands | 2026-09-15 | ⚠ → history |
+| `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** | 2026-09-15 | ⚠ → history |
 | `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⛔ Shake deleted (`D107`) |
 | `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding |
 | `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⛔ Eviction deleted (`D107`); mates are broken by `D47`/`D100`'s unsnap |

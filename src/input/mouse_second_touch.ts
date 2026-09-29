@@ -41,6 +41,8 @@
  * | Shift + left drag | an anchor-only second touch (gravity + roll) — the cursor drives it |
  * | right press and HOLD | the HitFace: the first touch of `D87`, which the cursor NEVER moves |
  * | left click while right is held | the Pioneer tap — it aligns (cyan; the double-click amber FOLLOW is deleted, `D106`) |
+ * | ⭐ `D154`: **Space + click** (either button) on a body | the HitFace — a held second touch, LATCHED past the click; an ongoing drag is frozen first |
+ * | ⭐ `D154`: **Space + click** on ANOTHER body | the Pioneer tap — it aligns, then the latched HitFace lifts: one episode (`D115`) |
  *
  * ⛔ A right press while the left is down is refused: it would arrive second and mean a Pioneer.
  *
@@ -69,6 +71,13 @@ export interface MouseInput {
   readonly shift: boolean;
   readonly x: number;
   readonly y: number;
+  /** ⭐ `D154`: is Space held at this event? */
+  readonly space?: boolean;
+  /**
+   * ⭐ `D154`: the body under the cursor at a DOWN, resolved by the adapter (a pick) — `null` for
+   * empty space. ⚠ Only read for a Space click; absent for every other event.
+   */
+  readonly onBody?: { readonly id: string; readonly frozen: boolean } | null;
 }
 
 /**
@@ -112,7 +121,14 @@ export class MouseSecondTouch {
    * #2: where it is, and whether SHIFT made it (an anchor-only channel driver that lives for the
    * left button's hold) or the RIGHT button did (the HitFace holder, which the cursor never moves).
    */
-  private second: (Pt & { shiftMade: boolean }) | null = null;
+  private second: (Pt & { shiftMade: boolean; spaceBody?: string }) | null = null;
+  /**
+   * ⭐ `D154`: the Pioneer tap in flight — the REAL pointer pressed at `at` by a Space click on another
+   * body, released there when that button lifts, and the latched HitFace lifted just after it.
+   */
+  private tap: { button: number; at: Pt } | null = null;
+  /** ⭐ `D154`: the left button's hold belongs to a Space click — its moves and its release are swallowed. */
+  private swallowLeft = false;
   /** The real pointer's position AS THE SCENE KNOWS IT, while the left button holds it down. */
   private real: Pt | null = null;
   /** The last cursor position, for the delta. */
@@ -135,10 +151,56 @@ export class MouseSecondTouch {
     const here: Pt = { x: ev.x, y: ev.y };
 
     switch (ev.type) {
-      case "DOWN":
+      case "DOWN": {
         // ⛔ RECONCILED FIRST for a press too: #2's press order is recorded from `real`, and a
         // left release the window missed must not make a right press think it came second.
         this.reconcile(ev, emit);
+        // ⭐⭐⭐ `D154` — **SPACE + CLICK ALIGNS** (the owner, 2026-09-29): *"Space + click (left or right):
+        // freeze the ongoing translation or rotation (if any) and highlight the hitface. Space being
+        // hold or another hit on space + click (left or right) on another object: select the
+        // pioneerface and align the hitface which becomes the follower face. All this counts as one
+        // episode."* ⭐ It is the right button's gesture with the hold LATCHED: the HitFace is a second
+        // touch that stays down past the click, and the second click is the Pioneer tap.
+        if (this.tap !== null) {
+          // ⛔ A second button during the tap: nothing — the tap owns the pointer until it lifts.
+          skip = true;
+          break;
+        }
+        const space = ev.space === true;
+        const latched = this.second?.spaceBody ?? null;
+        const on = ev.onBody ?? null;
+        if (latched !== null && !space) {
+          // ⭐ A click WITHOUT Space lets the latched HitFace go, then is an ordinary click.
+          this.liftSecond(emit);
+        } else if (latched !== null) {
+          skip = true;
+          if (on === null) {
+            // ⭐ Space + click on empty space: cancelled, and nothing else happens.
+            this.liftSecond(emit);
+          } else if (on.id === latched) {
+            // ⭐ The same body again: the HitFace moves to the face under this click.
+            this.liftSecond(emit);
+            this.pressSpaceSecond(here, on.id, emit);
+          } else {
+            // ⭐⭐ ANOTHER body: the Pioneer tap — the real pointer presses here and does not move.
+            this.tap = { button: ev.button, at: { ...here } };
+            emit.push({ target: "REAL", kind: "DOWN", x: here.x, y: here.y });
+          }
+          if (ev.button === LEFT_BUTTON && this.tap === null) this.swallowLeft = true;
+          break;
+        } else if (space && on !== null && !on.frozen && this.second === null) {
+          // ⭐⭐ THE FIRST SPACE CLICK: freeze an ongoing left drag where the scene has it, then latch
+          // the HitFace here. ⛔ A frozen body cannot be a Follower (`D77`), so it is not latched.
+          if (this.real !== null) {
+            emit.push({ target: "REAL", kind: "UP", x: this.real.x, y: this.real.y });
+            this.real = null;
+            this.swallowLeft = true;
+          }
+          this.pressSpaceSecond(here, on.id, emit);
+          if (ev.button === LEFT_BUTTON) this.swallowLeft = true;
+          skip = true;
+          break;
+        }
         if (ev.button === RIGHT_BUTTON) {
           // ⭐⭐⭐ **RIGHT PRESS AND HOLD = THE HITFACE** (the owner, 2026-09-25): *"right click hits
           // hitface and hold, mouse move to pioneer face and single left click sets pioneer face
@@ -160,14 +222,28 @@ export class MouseSecondTouch {
           this.real = { ...here };
         }
         break;
+      }
 
       case "UP":
+        // ⭐ `D154`: the Pioneer tap lifts WHERE IT PRESSED, then the latched HitFace — in that order, so
+        // the tap releases while the Follower is still held (`D119`: it aligns on the released tap).
+        if (this.tap !== null && ev.button === this.tap.button) {
+          skip = true;
+          this.endTap(emit);
+          break;
+        }
+        if (this.swallowLeft && ev.button === LEFT_BUTTON) {
+          skip = true;
+          this.swallowLeft = false;
+          break;
+        }
         if (ev.button === RIGHT_BUTTON) {
           // ⛔ Skipped even with nothing to lift: a right-button UP reaching Babylon is an UP of
           // the mouse's ONE pointer, which would release touchpoint #1 while the left is held.
           skip = true;
           // ⛔⛔ Lifted WHERE IT IS, never at the cursor — a lift elsewhere is one enormous step.
-          if (this.second !== null && !this.second.shiftMade) this.liftSecond(emit);
+          if (this.second !== null && !this.second.shiftMade && this.second.spaceBody === undefined)
+            this.liftSecond(emit);
         } else if (ev.button === LEFT_BUTTON && this.real !== null) {
           // ⭐ A Shift-made #2 lives for the left button's hold, and lifts just BEFORE it.
           if (this.second !== null && this.second.shiftMade) this.liftSecond(emit);
@@ -188,6 +264,12 @@ export class MouseSecondTouch {
         // ⛔ RECONCILED FIRST for a move: a pointer whose button the mask says is up must not
         // receive one last move before it is lifted.
         this.reconcile(ev, emit);
+        // ⭐ `D154`: a Space click's hold moves nothing — the tap stays where it pressed (a TAP), and a
+        // swallowed left hold drives no body (the freeze).
+        if (this.tap !== null || this.swallowLeft) {
+          skip = true;
+          break;
+        }
         const moved = dx !== 0 || dy !== 0;
         // ⭐⭐⭐ **SHIFT + LEFT DRAG DRIVES A SECOND TOUCH OF ITS OWN** (the owner, 2026-09-25):
         // *"left button drag with shift = translation in gravity axis with dy and roll with dx"* —
@@ -220,7 +302,9 @@ export class MouseSecondTouch {
       }
 
       case "CANCEL":
+        if (this.tap !== null) this.endTap(emit);
         if (this.second !== null) this.liftSecond(emit);
+        this.swallowLeft = false;
         break;
     }
 
@@ -239,8 +323,13 @@ export class MouseSecondTouch {
    * piece of state is re-checked against the mask the OS maintains, on every event.
    */
   private reconcile(ev: MouseInput, emit: MouseAction[]): void {
-    // ⚠ A Shift-made #2 belongs to the LEFT button's hold, a right-made one to the right button.
-    if (this.second !== null) {
+    // ⭐ `D154`: a Pioneer tap whose button the mask says is up was released off the page.
+    if (this.tap !== null && (ev.buttons & (this.tap.button === RIGHT_BUTTON ? RIGHT_BIT : LEFT_BIT)) === 0)
+      this.endTap(emit);
+    if (this.swallowLeft && (ev.buttons & LEFT_BIT) === 0) this.swallowLeft = false;
+    // ⚠ A Shift-made #2 belongs to the LEFT button's hold, a right-made one to the right button, and a
+    // Space-made one to NO button — it is latched past its click (`D154`).
+    if (this.second !== null && this.second.spaceBody === undefined) {
       const bit = this.second.shiftMade ? LEFT_BIT : RIGHT_BIT;
       if ((ev.buttons & bit) === 0) this.liftSecond(emit);
     }
@@ -261,6 +350,20 @@ export class MouseSecondTouch {
     if (this.second === null) return;
     emit.push(this.secondAction("UP"));
     this.second = null;
+  }
+
+  /** ⭐ `D154`: the latched HitFace — a second touch pressed on `bodyId` at `at`, never driven. */
+  private pressSpaceSecond(at: Pt, bodyId: string, emit: MouseAction[]): void {
+    this.second = { x: at.x, y: at.y, shiftMade: false, spaceBody: bodyId };
+    emit.push(this.secondAction("DOWN"));
+  }
+
+  /** ⭐ `D154`: the Pioneer tap releases where it pressed, then the latched HitFace lifts. */
+  private endTap(emit: MouseAction[]): void {
+    const t = this.tap!;
+    this.tap = null;
+    emit.push({ target: "REAL", kind: "UP", x: t.at.x, y: t.at.y });
+    this.liftSecond(emit);
   }
 
   /** ⭐ The Shift-made #2 presses where the cursor WAS, so its first move is this event's delta. */
