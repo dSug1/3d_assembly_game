@@ -120,12 +120,12 @@ reviewed and diffed. ⛔ A vector regenerates it and fails if the committed file
 ## 6. How it plays — the pieces
 
 * **At launch** the start configuration is shown for a **1 s lead-in**, then the moves play **one after the other**,
-  each eased in and out. The HUD's score line reads `demo 81/150 YAW Piece16 (30s)`, then `demo 150/150 — camera
+  each eased in and out. The HUD's score line reads `demo 81/150 YAW Piece16 (23s)`, then `demo 150/150 — camera
   settling`, then `demo ✅` (and `goal ✅`).
-* ⭐ **The speed slider**: SCENE › *demo duration (s)*, **10–60 s**, default **30 s** (`demoDurationS`) — the WHOLE run,
+* ⭐ **The speed slider**: SCENE › *demo duration (s)*, **10–60 s**, default **23 s** (`demoDurationS`; the owner, 2026-09-29 — 30 s, then 20 s) — the WHOLE run,
   from the first move to the camera's stop (the lead-in not counted). A move's share of the moves' time is
   proportional to `0.5 + √travel` (`travel` = distance + angle × the piece's half-diagonal). ⚠ With 150 moves a move
-  takes **0.3 %–1.25 %** of the run: 0.08–0.35 s at 30 s, 0.03–0.12 s at 10 s. ⭐ Moving the slider mid-demo changes the
+  takes **0.3 %–1.25 %** of the run: 0.07–0.29 s at the default 23 s, 0.03–0.12 s at 10 s, 0.17–0.75 s at 60 s. ⭐ Moving the slider mid-demo changes the
   SPEED from then on — nothing jumps.
 * ⛔ **Nothing is pickable while it plays** (a demo is watched; a grip would fight the replay). The episode count stays 0.
 * ⚠ **It is a replay of poses, not of gestures**: no alignment, cursor or seat is created, and no highlight is drawn.

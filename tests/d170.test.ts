@@ -341,8 +341,8 @@ describe("⭐⭐ the playback — timing, speed, camera (`input/demo_playback.ts
     expect([0, 0.5, 1].map((p) => demoDistanceM(3.4, 3, p))).toEqual([3, 3, 3]);
   });
 
-  it("⭐ the duration is a validated tunable, 10–60 s, default 30", () => {
-    expect(DEFAULT_CONFIG.demoDurationS).toBe(30);
+  it("⭐ the duration is a validated tunable, 10–60 s, default 23 (the owner, 2026-09-29; 30, then 20)", () => {
+    expect(DEFAULT_CONFIG.demoDurationS).toBe(23);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, demoDurationS: 9 })).toThrow(/demoDurationS/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, demoDurationS: 61 })).toThrow(/demoDurationS/);
   });
