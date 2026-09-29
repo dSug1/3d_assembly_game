@@ -71,6 +71,8 @@ on entering the capture zone, are deleted.
 | an ALIGNED body | Shift + left drag | gravity (`dy`) + spin about the normal (`dx`) |
 | — | **right-press and hold** on a face | that face is the HitFace; the right button never moves anything |
 | right-hold | left click on another body's face | align — ⭐ on the click's RELEASE, like a tap (`D119`) |
+| — | ⭐ **Space + click** (left or right) on a face | `D154`: that face is the HitFace, LATCHED past the click; an ongoing drag freezes |
+| a Space-latched HitFace | ⭐ **Space + click** (held or hit again) on another body's face | align — one episode; on the same body: move the HitFace; on empty space, Esc, or a click without Space: cancel |
 | right-hold | left drag on another body | ⭐ steers the right-held body, like a drag on empty space — never moves the other (`D124`) |
 | right-hold on an aligned body | left click on empty space | unalign it |
 | right-hold on a Pioneer | left click on empty space | release all its followers |

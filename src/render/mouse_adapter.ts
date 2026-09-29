@@ -59,12 +59,19 @@ export function attachMouseSecondTouch(
    * `applyCamera()`; this file only translates the wheel into notches — `input/mouse_wheel_zoom.ts`.
    */
   onWheelNotches?: (notches: number) => void,
+  /**
+   * ⭐ `D154`: the body under a client point — a pick, read only at a press. `null` for empty space.
+   * ⛔ The scene owns the ids; this file never learns what a body is.
+   */
+  bodyAt?: (clientX: number, clientY: number) => { id: string; frozen: boolean } | null,
 ): MouseSecondTouchHandle {
   const model = new MouseSecondTouch();
   let seen = 0;
   let sent = 0;
   let last = "—";
   let shift = false;
+  /** ⭐ `D154`: Space, from the keyboard — a pointer event does not carry it. */
+  let space = false;
   // ⭐ The mouse's own pointer id, read off every real event — a `REAL` action re-issues THAT
   // pointer at its own position, so it must carry the same id the scene latched a role for.
   let realId = 1;
@@ -135,6 +142,8 @@ export function attachMouseSecondTouch(
         shift: e.shiftKey,
         x: e.clientX,
         y: e.clientY,
+        space,
+        ...(type === "DOWN" && space && bodyAt !== undefined ? { onBody: bodyAt(e.clientX, e.clientY) } : {}),
       },
       pi,
     );
@@ -145,15 +154,22 @@ export function attachMouseSecondTouch(
   // HUD sits over the canvas and a menu opened there swallows the click that dismisses it.
   const cancel = () => {
     shift = false;
+    space = false;
     apply({ type: "CANCEL", button: -1, buttons: 0, shift: false, x: 0, y: 0 });
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "Shift") shift = true;
     if (e.key === "Escape") cancel();
+    // ⭐ `D154`: Space is a modifier here — ⛔ and must not scroll the page or press a focused button.
+    if (e.code === "Space") {
+      space = true;
+      e.preventDefault();
+    }
   };
   // ⭐ Shift's release must be seen WITHOUT waiting for the mouse to move.
   const onKeyUp = (e: KeyboardEvent) => {
     if (e.key === "Shift") shift = false;
+    if (e.code === "Space") space = false;
   };
   const onMenu = (e: Event) => e.preventDefault();
   // ⭐⭐ THE WHEEL ZOOMS (the owner, 2026-09-25). ⚠ A `wheel` event, not a pointer event, so the

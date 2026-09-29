@@ -694,3 +694,5 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ⭐ **`D55`, headline text moved 2026-09-29 (to pay for `D147`/`D148`)**: *the alignment still toggles ON at the PRESS; `A22`'s rapid-pair upgrade is gone with the second touch's tap count.*
 ⭐ **`D42`, headline text moved 2026-09-29**: *the flag became a GESTURE; which GESTURE asks for `FOLLOW` has now moved to the Pioneer's press.*
 ⭐ **`D39`, headline text moved 2026-09-29 (to pay for `D153`)**: *both faces are still marked; the re-tap UNDO moved onto the **FollowerFace**.*
+⭐ **`D16`, headline text moved 2026-09-29 (to pay for `D154`)**: *the pinch trigger is gone; the depth GEOMETRY it established stands.*
+⭐ **`D61`, headline text moved 2026-09-29 (to pay for `D154`)**: *the first outside press of a hold was inert, exempting a Follower.*

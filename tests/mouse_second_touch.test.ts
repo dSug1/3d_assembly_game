@@ -224,3 +224,117 @@ describe("⛔ the synthetic id cannot collide with a real pointer", () => {
     expect(MOUSE_SECOND_ID).toBeGreaterThan(1000);
   });
 });
+
+/**
+ * ⭐⭐⭐ `D154` — **SPACE + CLICK ALIGNS** (the owner, 2026-09-29): *"Space + click (left or right): freeze
+ * the ongoing translation or rotation (if any) and highlight the hitface. Space being hold or another hit
+ * on space + click (left or right) on another object: select the pioneerface and align the hitface which
+ * becomes the follower face. All this counts as one episode."*
+ */
+describe("⭐⭐⭐ `D154` — Space + click latches the HitFace; Space + click on another body is the Pioneer tap", () => {
+  const A = { id: "A", frozen: false };
+  const B = { id: "B", frozen: false };
+  const PLATE = { id: "plate", frozen: true };
+  const at = (a: readonly MouseAction[], k: number) => [a[k]!.x, a[k]!.y];
+
+  for (const [name, btn, bit] of [["left", LEFT, L], ["right", RIGHT, R]] as const) {
+    it(`⭐⭐⭐ the whole gesture with the ${name} button — latched past the click, one tap, then the lift`, () => {
+      const m = new MouseSecondTouch();
+      // ⭐ Space + click on A: the HitFace holder presses there, and STAYS down after the release.
+      const d1 = m.step(ev({ type: "DOWN", button: btn, buttons: bit, x: 10, y: 20, space: true, onBody: A }));
+      expect(tag(d1.emit)).toEqual(["SECOND.DOWN"]);
+      expect(at(d1.emit, 0)).toEqual([10, 20]);
+      expect(d1.skip).toBe(true);
+      const u1 = m.step(ev({ type: "UP", button: btn, buttons: 0, x: 10, y: 20, space: true }));
+      expect(u1.skip).toBe(true);
+      expect(u1.emit).toEqual([]);
+      expect(m.isSecondDown).toBe(true);
+      // ⭐ Space let go and the mouse travels — nothing moves, the HitFace stays.
+      expect(m.step(ev({ type: "MOVE", x: 200, y: 90 }))).toEqual({ skip: false, emit: [] });
+      // ⭐ Space hit again + click on B: the Pioneer tap presses there…
+      const d2 = m.step(ev({ type: "DOWN", button: btn, buttons: bit, x: 200, y: 90, space: true, onBody: B }));
+      expect(tag(d2.emit)).toEqual(["REAL.DOWN"]);
+      expect(at(d2.emit, 0)).toEqual([200, 90]);
+      expect(d2.skip).toBe(true);
+      // …does not move while held (a TAP)…
+      const mv = m.step(ev({ type: "MOVE", buttons: bit, x: 205, y: 93, space: true }));
+      expect(mv).toEqual({ skip: true, emit: [] });
+      // …and releases WHERE IT PRESSED, BEFORE the HitFace lifts — so it aligns while the Follower is held.
+      const u2 = m.step(ev({ type: "UP", button: btn, buttons: 0, x: 205, y: 93, space: true }));
+      expect(tag(u2.emit)).toEqual(["REAL.UP", "SECOND.UP"]);
+      expect(at(u2.emit, 0)).toEqual([200, 90]);
+      expect(at(u2.emit, 1)).toEqual([10, 20]);
+      expect(m.isSecondDown).toBe(false);
+    });
+  }
+
+  it("⭐⭐ FREEZE: Space + right click during a left drag lifts the drag where the scene has it, then latches", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 50, y: 50 }));
+    m.step(ev({ type: "MOVE", buttons: L, x: 60, y: 55 }));
+    const d = m.step(ev({ type: "DOWN", button: RIGHT, buttons: L | R, x: 60, y: 55, space: true, onBody: A }));
+    expect(tag(d.emit)).toEqual(["REAL.UP", "SECOND.DOWN"]);
+    // ⛔ the rest of the left hold drives nothing, and its release is swallowed
+    expect(m.step(ev({ type: "MOVE", buttons: L | R, x: 90, y: 70 }))).toEqual({ skip: true, emit: [] });
+    expect(m.step(ev({ type: "UP", button: LEFT, buttons: R, x: 90, y: 70 })).skip).toBe(true);
+    expect(m.step(ev({ type: "UP", button: RIGHT, buttons: 0, x: 90, y: 70 })).emit).toEqual([]);
+    expect(m.isSecondDown).toBe(true);
+  });
+
+  it("⭐ Space + click on the SAME body moves the HitFace; on empty space it cancels", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 10, y: 10, space: true, onBody: A }));
+    m.step(ev({ type: "UP", button: LEFT, buttons: 0, x: 10, y: 10 }));
+    const again = m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 14, y: 12, space: true, onBody: A }));
+    expect(tag(again.emit)).toEqual(["SECOND.UP", "SECOND.DOWN"]);
+    expect(at(again.emit, 1)).toEqual([14, 12]);
+    m.step(ev({ type: "UP", button: LEFT, buttons: 0, x: 14, y: 12 }));
+    const off = m.step(ev({ type: "DOWN", button: RIGHT, buttons: R, x: 400, y: 400, space: true, onBody: null }));
+    expect(tag(off.emit)).toEqual(["SECOND.UP"]);
+    expect(off.skip).toBe(true);
+    expect(m.isSecondDown).toBe(false);
+  });
+
+  it("⭐ a click WITHOUT Space lets the latched HitFace go, then is an ordinary click", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: RIGHT, buttons: R, x: 10, y: 10, space: true, onBody: A }));
+    m.step(ev({ type: "UP", button: RIGHT, buttons: 0, x: 10, y: 10 }));
+    const plain = m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 30, y: 30 }));
+    expect(tag(plain.emit)).toEqual(["SECOND.UP"]);
+    expect(plain.skip).toBe(false);
+  });
+
+  it("⛔ a FROZEN body is never latched as the HitFace (it cannot be a Follower) — the click passes", () => {
+    const m = new MouseSecondTouch();
+    expect(m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 1, y: 1, space: true, onBody: PLATE }))).toEqual({ skip: false, emit: [] });
+    expect(m.isSecondDown).toBe(false);
+  });
+
+  it("⭐ …but a frozen body CAN be the Pioneer — the tap goes there", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 1, y: 1, space: true, onBody: A }));
+    m.step(ev({ type: "UP", button: LEFT, buttons: 0, x: 1, y: 1 }));
+    expect(tag(m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 5, y: 5, space: true, onBody: PLATE })).emit)).toEqual(["REAL.DOWN"]);
+  });
+
+  it("⛔ Esc cancels a latched HitFace; a tap whose button was released off the page still ends in order", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 1, y: 1, space: true, onBody: A }));
+    m.step(ev({ type: "UP", button: LEFT, buttons: 0, x: 1, y: 1 }));
+    expect(tag(m.step(ev({ type: "CANCEL" })).emit)).toEqual(["SECOND.UP"]);
+    const n = new MouseSecondTouch();
+    n.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 1, y: 1, space: true, onBody: A }));
+    n.step(ev({ type: "UP", button: LEFT, buttons: 0, x: 1, y: 1 }));
+    n.step(ev({ type: "DOWN", button: RIGHT, buttons: R, x: 9, y: 9, space: true, onBody: B }));
+    // ⛔ the right button's release never arrived — the next event's mask says it is up
+    expect(tag(n.step(ev({ type: "MOVE", buttons: 0, x: 20, y: 20 })).emit)).toEqual(["REAL.UP", "SECOND.UP"]);
+  });
+
+  it("⛔⛔ WITHOUT Space nothing changed: right hold + left click is still the gesture", () => {
+    const m = new MouseSecondTouch();
+    expect(tag(m.step(ev({ type: "DOWN", button: RIGHT, buttons: R, x: 1, y: 1, onBody: A })).emit)).toEqual(["SECOND.DOWN"]);
+    expect(m.step(ev({ type: "DOWN", button: LEFT, buttons: L | R, x: 9, y: 9 }))).toEqual({ skip: false, emit: [] });
+    expect(m.step(ev({ type: "UP", button: LEFT, buttons: R, x: 9, y: 9 }))).toEqual({ skip: false, emit: [] });
+    expect(tag(m.step(ev({ type: "UP", button: RIGHT, buttons: 0, x: 9, y: 9 })).emit)).toEqual(["SECOND.UP"]);
+  });
+});

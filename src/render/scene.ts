@@ -575,6 +575,13 @@ export function createScene(
     );
     st.zoomAtPinchStart = st.zoom;
     applyCamera(st);
+  },
+  // ⭐ `D154`: the body under a Space click — the scene's own pick, the scene's own ids.
+  (clientX, clientY) => {
+    const rect = st.canvas.getBoundingClientRect();
+    const mesh = st.scene.pick(clientX - rect.left, clientY - rect.top)?.pickedMesh ?? null;
+    const id = mesh === null ? undefined : st.idOf.get(mesh);
+    return id === undefined ? null : { id, frozen: st.world.objects.get(id)?.frozen === true };
   });
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
