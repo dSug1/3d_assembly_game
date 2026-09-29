@@ -48,7 +48,7 @@ import "@babylonjs/core/Culling/ray";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
@@ -582,6 +582,25 @@ export function createScene(
     const mesh = st.scene.pick(clientX - rect.left, clientY - rect.top)?.pickedMesh ?? null;
     const id = mesh === null ? undefined : st.idOf.get(mesh);
     return id === undefined ? null : { id, frozen: st.world.objects.get(id)?.frozen === true };
+  },
+  // ⭐ `D155`: a Space freeze — the body the mouse's grip holds, a client point on it (its centre,
+  // projected), and its pressed face handed over for the second touch that takes the hold.
+  (pointerId) => {
+    const grip = st.held.get(pointerId);
+    const id = grip === undefined ? undefined : st.idOf.get(grip.mesh);
+    if (grip === undefined || id === undefined) return null;
+    st.inheritPressFace = { mesh: grip.mesh, pressFace: grip.pressFace };
+    const w = st.engine.getRenderWidth();
+    const h = st.engine.getRenderHeight();
+    const p = Vector3.Project(grip.mesh.getAbsolutePosition(), Matrix.Identity(), st.scene.getTransformMatrix(), st.camera.viewport.toGlobal(w, h));
+    const rect = st.canvas.getBoundingClientRect();
+    return {
+      id,
+      frozen: st.world.objects.get(id)?.frozen === true,
+      x: rect.left + (p.x * rect.width) / w,
+      y: rect.top + (p.y * rect.height) / h,
+      mesh: grip.mesh,
+    };
   });
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
@@ -621,7 +640,7 @@ export function createScene(
   st.hudSecond = -1;
   st.episodeFacts = new Map();
   st.episodeUnaligned = new Set<number>();
-  st.episodeUndo = new Set<number>();
+  st.inheritPressFace = null;
   st.lastVerdict = "—";
 
   /**

@@ -449,7 +449,8 @@ export interface SceneState {
   lastEmptyProbeMs: number;
   episodeFacts: Map<number, { role: PointerRole; heldAtPress: number; pressedAnotherBody: boolean }>;
   episodeUnaligned: Set<number>;
-  episodeUndo: Set<number>;
+  /** ⭐ `D155`: the face a Space freeze hands to the next second-touch press on this mesh. */
+  inheritPressFace: { mesh: AbstractMesh; pressFace: { faceId: string; cos: number } | null } | null;
   lastVerdict: string;
   hudDirty: boolean;
   pinch: PinchTracker;

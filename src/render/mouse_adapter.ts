@@ -28,6 +28,7 @@
  * This file carries no numbers of its own so that line stays visible.
  */
 import type { Scene } from "@babylonjs/core/scene";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import {
   PointerEventTypes,
   PointerInfo,
@@ -64,6 +65,12 @@ export function attachMouseSecondTouch(
    * ⛔ The scene owns the ids; this file never learns what a body is.
    */
   bodyAt?: (clientX: number, clientY: number) => { id: string; frozen: boolean } | null,
+  /**
+   * ⭐ `D155`: the body the mouse's pointer holds, for a Space freeze — its id, whether it is frozen, a
+   * client point on it, and its mesh. ⛔ Asking also hands its pressed face to the scene, so the second
+   * touch that takes over inherits it. `null` when the pointer holds no body.
+   */
+  freezeHeld?: (pointerId: number) => { id: string; frozen: boolean; x: number; y: number; mesh: AbstractMesh } | null,
 ): MouseSecondTouchHandle {
   const model = new MouseSecondTouch();
   let seen = 0;
@@ -77,6 +84,8 @@ export function attachMouseSecondTouch(
   let realId = 1;
   /** ⭐ `D108`: Ctrl latches the desktop's rotate at the press — carried onto re-issued events. */
   let ctrl = false;
+  /** ⭐ `D155`: the mesh an inheriting second touch must press — its pick is restricted to it. */
+  let inheritMesh: AbstractMesh | null = null;
 
   /** Deliver one synthetic action straight to the scene's handler. */
   const deliver = (a: MouseAction): void => {
@@ -104,7 +113,12 @@ export function attachMouseSecondTouch(
     const rect = canvas.getBoundingClientRect();
     // ⛔ An anchor-only action is delivered with NO pick, so the scene routes it `OUTSIDE` — a
     // Shift-made second touch must never become the holder of whatever lies under the cursor.
-    const pick = a.anchorOnly === true ? null : scene.pick(a.x - rect.left, a.y - rect.top);
+    const pick =
+      a.anchorOnly === true
+        ? null
+        : a.inherit === true && inheritMesh !== null
+          ? scene.pick(a.x - rect.left, a.y - rect.top, (m) => m === inheritMesh)
+          : scene.pick(a.x - rect.left, a.y - rect.top);
     scene.onPointerObservable.notifyObservers(new PointerInfo(type, evt, pick), type);
     sent++;
     last = `${a.target}.${a.kind}@${a.x.toFixed(0)},${a.y.toFixed(0)}`;
@@ -164,6 +178,23 @@ export function attachMouseSecondTouch(
     if (e.code === "Space") {
       space = true;
       e.preventDefault();
+      // ⭐⭐ `D155`: a FRESH press (not the key's auto-repeat) freezes a left hold on a body into the
+      // HitFace, or only re-arms Space after an alignment.
+      if (!e.repeat) {
+        const held = freezeHeld?.(realId) ?? null;
+        inheritMesh = held?.mesh ?? null;
+        apply({
+          type: "SPACE",
+          button: -1,
+          buttons: 0,
+          shift,
+          space: true,
+          x: held?.x ?? 0,
+          y: held?.y ?? 0,
+          onBody: held === null ? null : { id: held.id, frozen: held.frozen },
+        });
+        inheritMesh = null;
+      }
     }
   };
   // ⭐ Shift's release must be seen WITHOUT waiting for the mouse to move.

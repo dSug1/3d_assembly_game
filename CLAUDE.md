@@ -196,7 +196,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1281 golden vectors passing** — ⚠ MEASURED 2026-09-29 (+ 9 for `D154`, + 9 for `D153`, + 1 for `D148`, + 2 for `D146`, − 2 for `D145`, + 15 for `D144`, + 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1293 golden vectors passing** — ⚠ MEASURED 2026-09-29 (− 1 for `D158`, + 3 for `D157`, + 4 for `D156`, + 6 for `D155`, + 9 for `D154`, + 9 for `D153`, + 1 for `D148`, + 2 for `D146`, − 2 for `D145`, + 15 for `D144`, + 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -251,7 +251,13 @@ the right button never translates or rotates anything — then move to the Pione
 **left-click** (every alignment is a snapshot since `D106`). ⭐ It is `D87`'s gesture with
 the right button as the first touch and the left click as the second; **only the right button
 sets a HitFace** (`hitFaceAllowed`). ⭐ **`D154`**: or **Space + click** (either button) the HitFace — latched past the
-click, an ongoing drag frozen — then **Space + click** the Pioneer face (Space held, or hit again): it aligns, one episode.
+click, an ongoing drag frozen — then **Space + click** the Pioneer face (Space held, or hit again): it aligns, one episode. ⭐ **`D155`**: Space pressed
+while the left button holds a body (dragging or not) freezes it and makes the dragged face the HitFace; an alignment
+uses Space up (hit it again for the next one). ⭐ **`D156`**: Space + click the
+Follower, then Space + click EMPTY space, unaligns it (a Pioneer: its followers go) — one episode.
+⭐⭐ **`D158`** (absorbing `D157`): a gesture that CHANGES NOTHING costs zero episodes — a click and unclick on a body,
+Space alone, a cancelled Space click, a double tap or click that does not land. The undo pair still costs one →
+`SCORE.md` §3.2.
 ⛔⛔ Four rules, each the negation of a failure: **never touch a DOM pointer event** (the layer
 skips at Babylon's `onPrePointerObservable` and delivers #2 straight to the observable);
 **model only the touchpoint the mouse lacks**; **read `buttons` on every event, remember nothing**;

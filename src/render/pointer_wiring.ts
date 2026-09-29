@@ -322,9 +322,15 @@ export function installPointerHandler(st: SceneState): void {
               faceNormal.z,
             ] as Vec3)
           : null;
-      const pressFace = faceHit
+      let pressFace = faceHit
         ? { faceId: faceHit.faceId, cos: faceHit.cos }
         : null;
+      // ⭐⭐ `D155`: a Space freeze — this second touch takes over the face the frozen drag pressed, not
+      // the one a pick at its point would name (a rotation moves the body under the pointer).
+      if (st.inheritPressFace !== null && e.pointerId === MOUSE_SECOND_ID && st.inheritPressFace.mesh === mesh) {
+        pressFace = st.inheritPressFace.pressFace;
+      }
+      st.inheritPressFace = null;
       st.lastVerdict = faceHit
         ? `${pickedId}/${faceHit.faceId} under the finger (cos ${faceHit.cos.toFixed(2)})`
         : "no face resolved";
@@ -972,7 +978,9 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐ The pair costs ONE episode: the second tap is excluded by the ledger.
       // ⭐⭐ `D141`: and only on the body the last action MOVED — a double tap elsewhere undoes nothing.
       if (verdict.kind === "DOUBLE_TAP" && !alignedByThisTap) {
-        if (undoLast(st, st.idOf.get(grip.mesh) ?? null)) st.episodeUndo.add(e.pointerId);
+        // ⭐ `D158`: nothing to mark — the first tap changed nothing and costs 0; the second's gesture
+        // costs 1 if the undo landed and 0 if it did not (`D157`).
+        undoLast(st, st.idOf.get(grip.mesh) ?? null);
       }
       // ⛔⛔ *"A single tap by one only touchpoint ANYWHERE also toggles"* — and
       // *anywhere* includes the object the touchpoint was carrying, which is this branch.
@@ -1006,7 +1014,6 @@ export function installPointerHandler(st: SceneState): void {
     const facts = st.episodeFacts.get(e.pointerId);
     st.episodeFacts.delete(e.pointerId);
     const unaligned = st.episodeUnaligned.delete(e.pointerId);
-    const undoSecondTap = st.episodeUndo.delete(e.pointerId);
     // ⛔ Free Flow escapes the score (`D101`): nothing is counted while the cursor drag is on.
     // ⭐⭐ `D115`: classified NOW, counted when the gesture's LAST touch lifts — so a two-touch action
     // (an alignment, an unalign, an unsnap) lands on the HUD once, at its end.
@@ -1017,15 +1024,14 @@ export function installPointerHandler(st: SceneState): void {
         heldAtPress: facts?.heldAtPress ?? 0,
         pressedAnotherBody: facts?.pressedAnotherBody ?? false,
         unaligned,
-        undoSecondTap,
       }),
       // ⭐ Pressed while a body was held: it completes a two-touch action, and uses up that hold.
       (facts?.heldAtPress ?? 0) > 0,
     );
     st.hudDirty = true;
     if (st.gestureSpan.release(e.pointerId)) {
-      st.episodes.gestureEnded();
-      endGesture(st);
+      // ⭐⭐ `D158`: a gesture that changed nothing lands no episode.
+      st.episodes.gestureEnded(endGesture(st));
     }
   });
 }

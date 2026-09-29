@@ -696,3 +696,9 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ⭐ **`D39`, headline text moved 2026-09-29 (to pay for `D153`)**: *both faces are still marked; the re-tap UNDO moved onto the **FollowerFace**.*
 ⭐ **`D16`, headline text moved 2026-09-29 (to pay for `D154`)**: *the pinch trigger is gone; the depth GEOMETRY it established stands.*
 ⭐ **`D61`, headline text moved 2026-09-29 (to pay for `D154`)**: *the first outside press of a hold was inert, exempting a Follower.*
+⭐ **`D65`, headline text moved 2026-09-29 (to pay for `D155`)**: *a second touch's release never toggled; the cause was the PRESS all along.*
+⭐ **`D64`, headline text moved the same day**: *driving consumes the toggle.*
+⭐ **`D41`, headline text moved 2026-09-29 (to pay for `D156`)**: *what a turned Pioneer costs the Follower; the two readings survive, the FLAG does not.*
+⭐ **`D48`, headline text moved 2026-09-29 (to pay for `D157`)**: *white contours required the alignment; the owner removed it, keeping the TRANSLATION condition.*
+⭐ **`D17`, headline text moved 2026-09-29 (to pay for `D158`)**: *its TRIGGER is gone; the configuration and `A5`'s geometry stand.*
+⭐ **`D52`, headline text moved 2026-09-29 (to pay for `D158`)**: *the second touchpoint's roll had a dead zone: authority was `|dir.x|`, **0.00° for an axis horizontal on screen**, while the first touch never lost it*

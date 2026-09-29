@@ -43,6 +43,9 @@
  * | left click while right is held | the Pioneer tap — it aligns (cyan; the double-click amber FOLLOW is deleted, `D106`) |
  * | ⭐ `D154`: **Space + click** (either button) on a body | the HitFace — a held second touch, LATCHED past the click; an ongoing drag is frozen first |
  * | ⭐ `D154`: **Space + click** on ANOTHER body | the Pioneer tap — it aligns, then the latched HitFace lifts: one episode (`D115`) |
+ * | ⭐ `D155`: **Space pressed** while the left button holds a body (moving or not) | the drag stops and the face it pressed becomes the latched HitFace |
+ * | ⭐ `D155`: an alignment made with Space | uses Space up — it must be hit again to start another HitFace |
+ * | ⭐ `D156`: **Space + click on EMPTY space** with a HitFace latched | a tap there while it holds — `D107`'s unalign (a Pioneer: its followers go); then the HitFace lifts |
  *
  * ⛔ A right press while the left is down is refused: it would arrive second and mean a Pioneer.
  *
@@ -63,7 +66,8 @@ const LEFT_BIT = 1;
 const RIGHT_BIT = 2;
 
 export interface MouseInput {
-  readonly type: "DOWN" | "MOVE" | "UP" | "CANCEL";
+  /** ⭐ `SPACE`: the Space key went DOWN (not a repeat) — `D155`. */
+  readonly type: "DOWN" | "MOVE" | "UP" | "CANCEL" | "SPACE";
   /** `PointerEvent.button` — `0` left, `2` right, `-1` for a move or a cancel. */
   readonly button: number;
   /** `PointerEvent.buttons` — the browser's mask AFTER this event. */
@@ -96,6 +100,11 @@ export interface MouseAction {
    * *"it says ready X->roll but the roll does not appear. Sometimes it rolls, though."*
    */
   readonly anchorOnly?: boolean;
+  /**
+   * ⭐ `D155`: this second touch takes over the face the real pointer's grip pressed — the scene has
+   * been told which (the adapter's freeze hook) and resolves it on this press, not from a pick.
+   */
+  readonly inherit?: boolean;
 }
 
 export interface Verdict {
@@ -129,6 +138,11 @@ export class MouseSecondTouch {
   private tap: { button: number; at: Pt } | null = null;
   /** ⭐ `D154`: the left button's hold belongs to a Space click — its moves and its release are swallowed. */
   private swallowLeft = false;
+  /**
+   * ⭐ `D155`: an alignment made with Space used it up — a Space still held does not count until it is
+   * released or hit again (*"the space key needs to be hit again to start another hitface cycle"*).
+   */
+  private spaceUsed = false;
   /** The real pointer's position AS THE SCENE KNOWS IT, while the left button holds it down. */
   private real: Pt | null = null;
   /** The last cursor position, for the delta. */
@@ -146,6 +160,9 @@ export class MouseSecondTouch {
   step(ev: MouseInput): Verdict {
     const emit: MouseAction[] = [];
     let skip = false;
+    // ⭐ `D155`: Space is re-armed by its release (seen on any event) or by a fresh press.
+    if (ev.space !== true || ev.type === "SPACE") this.spaceUsed = false;
+    if (ev.type === "SPACE") return this.spaceDown(ev, emit);
     const dx = this.cursor === null ? 0 : ev.x - this.cursor.x;
     const dy = this.cursor === null ? 0 : ev.y - this.cursor.y;
     const here: Pt = { x: ev.x, y: ev.y };
@@ -166,7 +183,7 @@ export class MouseSecondTouch {
           skip = true;
           break;
         }
-        const space = ev.space === true;
+        const space = ev.space === true && !this.spaceUsed;
         const latched = this.second?.spaceBody ?? null;
         const on = ev.onBody ?? null;
         if (latched !== null && !space) {
@@ -175,8 +192,12 @@ export class MouseSecondTouch {
         } else if (latched !== null) {
           skip = true;
           if (on === null) {
-            // ⭐ Space + click on empty space: cancelled, and nothing else happens.
-            this.liftSecond(emit);
+            // ⭐⭐ `D156` (the owner, 2026-09-29: *"also to unalign a follower object = space + click on
+            // follower and space + click on empty space"*): a TAP on empty space while the HitFace holds —
+            // exactly `D107`'s unalign (holding a Pioneer, its followers are released; a free body: nothing,
+            // a mouse tap never toggles the mode). Then the HitFace lifts, and Space is used up.
+            this.tap = { button: ev.button, at: { ...here } };
+            emit.push({ target: "REAL", kind: "DOWN", x: here.x, y: here.y });
           } else if (on.id === latched) {
             // ⭐ The same body again: the HitFace moves to the face under this click.
             this.liftSecond(emit);
@@ -364,6 +385,30 @@ export class MouseSecondTouch {
     this.tap = null;
     emit.push({ target: "REAL", kind: "UP", x: t.at.x, y: t.at.y });
     this.liftSecond(emit);
+    // ⭐ `D155`/`D156`: the alignment — or the unalign — used Space up.
+    this.spaceUsed = true;
+  }
+
+  /**
+   * ⭐⭐⭐ `D155` — **SPACE PRESSED DURING A LEFT HOLD ON A BODY** (the owner, 2026-09-29): *"if a translation
+   * or a rotation is ongoing, the pressing of space key during the movement should stop the translation
+   * or rotation and immediately select the face which was dragged as the hitface"* — *"also, if a face is
+   * currently being pressed by left click (even without movement)"*. ⭐ The drag is released where the
+   * scene has it and the rest of the hold is swallowed (the freeze); a second touch presses at
+   * `(ev.x, ev.y)` — the adapter's point on that body — and INHERITS the dragged face. ⛔ Not for a
+   * frozen body, with no body (`onBody` null), or while another second touch or a tap is live: then
+   * Space only re-arms. ⚠ The cursor is not moved: `x`/`y` here are the body's, not the mouse's.
+   */
+  private spaceDown(ev: MouseInput, emit: MouseAction[]): Verdict {
+    const on = ev.onBody ?? null;
+    if (on !== null && !on.frozen && this.real !== null && this.second === null && this.tap === null) {
+      emit.push({ target: "REAL", kind: "UP", x: this.real.x, y: this.real.y });
+      this.real = null;
+      this.swallowLeft = true;
+      this.second = { x: ev.x, y: ev.y, shiftMade: false, spaceBody: on.id };
+      emit.push({ ...this.secondAction("DOWN"), inherit: true });
+    }
+    return emit.length === 0 ? PASS : { skip: false, emit };
   }
 
   /** ⭐ The Shift-made #2 presses where the cursor WAS, so its first move is this event's delta. */

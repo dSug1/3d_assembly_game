@@ -16,7 +16,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | nothing | 2 fingers pinch on empty space | zoom |
 | nothing | double tap on empty space | reset the camera |
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
-| — | ⭐ **double tap on the body the last action MOVED** (double click on desktop) | **undo that action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`). ⭐ On any OTHER body it is refused and the HUD says which body moved (`D141`) |
+| — | ⭐ **double tap on the body the last action MOVED** (double click on desktop) | **undo that action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`). ⭐ On any OTHER body it is refused and the HUD says which body moved (`D141`) ⭐ A double tap that does not land costs zero episodes (`D157`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
 | — | ⭐ **the ⏸ button, bottom-left** (`D144`) | the **pause menu**: *Resume*, *Restart level*, *Quit to menu* (that world's level list). A DOM button — it never reaches the gesture layer and is **not** an episode |
 | a FREE body | 1st finger drag, `TRANSLATE` | slide it in the horizontal plane along THIS camera (`D145`): `dx` along the screen's right; `dy` along the view — finger up AWAY if the camera is at/above the gizmo, TOWARD if below (read every step, `D148`). Red + blue light together; each stops at the object it hits, with a white ring (`D153`) |
@@ -62,7 +62,7 @@ on entering the capture zone, are deleted.
 | — | wheel | zoom |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
 | nothing | double left click on empty space | reset the camera |
-| — | ⭐ **double left click on any body** | **undo the last action** (`D111`) |
+| — | ⭐ **double left click on any body** | **undo the last action** (`D111`); one that does not land costs zero episodes (`D157`) |
 | a FREE body | left drag | translate as the tablet's first finger (`D145`; `D108`: no mode on desktop) |
 | a FREE body | **Ctrl** + left drag | rotate: yaw + pitch |
 | a FREE body | Shift + left drag | gravity (`dy`) + ⭐ **spin about gravity** (`dx`) (`D123`) |
@@ -72,7 +72,10 @@ on entering the capture zone, are deleted.
 | — | **right-press and hold** on a face | that face is the HitFace; the right button never moves anything |
 | right-hold | left click on another body's face | align — ⭐ on the click's RELEASE, like a tap (`D119`) |
 | — | ⭐ **Space + click** (left or right) on a face | `D154`: that face is the HitFace, LATCHED past the click; an ongoing drag freezes |
-| a Space-latched HitFace | ⭐ **Space + click** (held or hit again) on another body's face | align — one episode; on the same body: move the HitFace; on empty space, Esc, or a click without Space: cancel |
+| a Space-latched HitFace | ⭐ **Space + click** (held or hit again) on another body's face | align — one episode; on the same body: move the HitFace; Esc, or a click without Space: cancel |
+| a Space-latched HitFace | ⭐ **Space + click on empty space** (held or hit again) | `D156`: **unalign** it (a Pioneer: release its followers) — one episode |
+| left button on a body (dragging or not) | ⭐ **press Space** | `D155`: the drag stops and its pressed face becomes the latched HitFace |
+| — | after an alignment made with Space | `D155`: Space must be released or hit again before it selects another HitFace |
 | right-hold | left drag on another body | ⭐ steers the right-held body, like a drag on empty space — never moves the other (`D124`) |
 | right-hold on an aligned body | left click on empty space | unalign it |
 | right-hold on a Pioneer | left click on empty space | release all its followers |
@@ -115,3 +118,29 @@ a Pioneer's release, unsnap — is ONE, on both devices, and lands when its LAST
 meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
+
+## 5. ⭐ Device checklist — what the 2026-09-29 deploy adds (`D155`–`D158`)
+
+⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
+
+**Desktop (mouse + keyboard)**
+
+| # | do | expect |
+|---|---|---|
+| 1 | left-drag a part, press **Space** mid-drag (`D155`) | it stops at once; the face you grabbed turns fuchsia (HitFace) and stays after you release the button |
+| 2 | left-press a part and hold still, press **Space** (`D155`) | same: no movement, the pressed face turns fuchsia |
+| 3 | after 1 or 2, **Space + click** a face on another part | the first part aligns to it (cyan / amber) |
+| 4 | right after 3, keep Space held and click a part (`D155`) | an ordinary click — no new HitFace until Space is released or hit again |
+| 5 | **Space + click** an aligned part, then **Space + click empty space** (`D156`) | it unaligns (outlines gone); on a Pioneer, its followers are released |
+| 6 | Space + click a part, then **Esc** | the HitFace is cancelled, nothing else happens |
+
+**Both devices — the episode count, first HUD line** (`D157`/`D158`)
+
+| # | do | expect |
+|---|---|---|
+| 7 | tap or click a part and release, no movement | **+0** |
+| 8 | right-click and release a part (desktop); Space alone (desktop) | **+0** |
+| 9 | double tap / double click a part that has never moved, or one the last action did not move | **+0** (nothing undone) |
+| 10 | drag a part, then double tap / double click it | **+1** for the drag, **+1** for the undo |
+| 11 | an alignment (any way) / an unalignment | **+1** each |
+| 12 | drag a part that moves, then Space → Space + click to align | **+2** (the move, then the alignment); a press held still → **+1** |
