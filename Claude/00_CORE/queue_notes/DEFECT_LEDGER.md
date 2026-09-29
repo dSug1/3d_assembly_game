@@ -1104,3 +1104,7 @@ links say NOW. 5 vectors on the predicate. ⚠ The ordering itself is not vector
 no headless harness — which is why the guard is a predicate read at the point of use.
 ⭐⭐ `METHOD`: *a cache rebuilt later in the frame than it is read is stale for exactly one frame after
 every change* — and one frame is all a snap needs to launch.
+
+## 74 — blue was never drawn since `D145` (found by a headless measurement, 2026-09-29; ⚠ NOT counted — not by finger)
+
+Building `D150`, the blue translation line did not show in a headless Chrome although the mesh read `isVisible`, enabled, group 2, the right colour and correct endpoints. ⭐ The line lies along the camera's own view, flattened (`D145`), so its full-screen extent runs back under the camera — and a line with an end behind the eye was not drawn at all; cut to its front half it drew. ✅ `clipSegmentInFront` (`input/axis_translate.ts`) cuts every gizmo line at twice the near plane, 4 vectors. ⚠ Whether the tablet's GPU showed the same is unknown — no report named it. ⭐ `METHOD`: *a readout of the mesh's state is not a readout of the pixels.*

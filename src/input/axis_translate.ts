@@ -459,34 +459,106 @@ export function displayedAxes(
   return driven.some((d) => d) ? driven : previous;
 }
 
-/** ⭐ One translation line of a FREE body: `0` hidden, `±1` a ray from the gizmo toward `±axis`. */
-export type TravelRay = -1 | 0 | 1;
+/**
+ * ⭐ Which translation a FREE body's grip is in: the holder's horizontal plane, the second touch's
+ * gravity axis, or none (it rotates). ⭐ Keyed on PRESENCE — the mode and whether a second touch is
+ * down — never on motion (`METHOD`: *a mode may be keyed on presence; never on motion*).
+ */
+export type TravelPhase = "HORIZONTAL" | "GRAVITY" | null;
+
+/** ⭐ One translation line: hidden, full screen both ways, or a ray from the gizmo toward `±axis`. */
+export type TravelLine = "HIDDEN" | "FULL" | 1 | -1;
+
+/** ⭐ A free body's translation gizmo: its phase, and the side each axis last travelled (0: none yet). */
+export interface TravelGizmo {
+  readonly phase: TravelPhase;
+  /** `[x, gravity, depth]`. */
+  readonly sign: readonly [number, number, number];
+}
+
+/** ⭐ A fresh grip: no phase yet, no side known. */
+export const NO_TRAVEL_GIZMO: TravelGizmo = { phase: null, sign: [0, 0, 0] };
 
 /**
- * ⭐⭐⭐ `D149` — **A FREE BODY'S TRANSLATION LINES ARE RAYS, AND ONLY WHILE THEIR OWN INPUT MOVES**
- * (the owner, 2026-09-29: *"Gizmo axis shall display only from gizmo origin towards the direction of
- * translation if their respective delta position is beyond deadband, hidden if inside deadband"* —
- * *"my rule is only for unaligned object"*).
- *
- * Per channel `[x, gravity, depth]` — red from the holder's `dx`, green from the second touch's `dy`,
- * blue from the holder's `dy`: a RAY from the gizmo's origin toward the way the body last travelled
- * along that axis while the channel's input is beyond the deadband, and NOTHING while it is inside.
- * ⭐ *Beyond the deadband* is §1.1's per-axis STATE (`MOVING`), not one event's step: `A11` emits in
- * bursts, and a line keyed on the burst would blink while the finger is plainly moving. ⭐ The ray's
- * side is the TRAVEL's sign, not the finger's — for blue that is where `D145`/`D148` actually sent it.
- * ⛔ It reverses, for a free body, `D145`'s *red and blue together* and 2026-09-23's *a pause keeps the
- * last lines*: a resting finger shows no translation line. ⚠ An ALIGNED follower is untouched (`D97`).
- *
- * @param moving each channel's input is beyond the deadband (`MOVING`).
- * @param lastSign the sign of the last non-zero travel along each axis; `0` before any.
+ * ⭐ `D150`: the phase from presence. A grip that TRANSLATES is in `GRAVITY` while a second touch is
+ * down — the owner's *"toggle to translation in gravity axis"* — and in `HORIZONTAL` otherwise.
  */
-export function freeTravelRays(
-  moving: readonly [boolean, boolean, boolean],
-  lastSign: readonly [number, number, number],
-): readonly [TravelRay, TravelRay, TravelRay] {
-  const ray = (i: 0 | 1 | 2): TravelRay =>
-    moving[i] && Number.isFinite(lastSign[i]) && lastSign[i] !== 0 ? (lastSign[i] > 0 ? 1 : -1) : 0;
-  return [ray(0), ray(1), ray(2)];
+export function freeTravelPhase(translates: boolean, secondTouchDown: boolean): TravelPhase {
+  if (!translates) return null;
+  return secondTouchDown ? "GRAVITY" : "HORIZONTAL";
+}
+
+/**
+ * ⭐⭐⭐ `D150` — **ONE STEP OF A FREE BODY'S TRANSLATION GIZMO** (the owner, 2026-09-29):
+ *
+ * > *"at start or toggle to translation in horizontal plane, both red and blue axis are displayed and
+ * > extend full screen as long as both dx and dy stay within deadband; at start or toggle to
+ * > translation in gravity axis, green axis is displayed full screen as long as [its delta] stays
+ * > within deadband; if one delta position is beyond deadband, its axis extend only in the direction
+ * > of translation until delta position is beyond the deadband in the opposite sense."*
+ *
+ * ⭐ A START or a TOGGLE is a change of `phase` — a new grip starts at `null` — and it forgets every
+ * side, so the lines are full screen again. ⭐ Then each axis takes the sign of the body's TRAVEL along
+ * it whenever that travel is non-zero: `A11` emits travel only beyond the deadband, so a finger inside
+ * it changes nothing, and the side flips only when the finger goes beyond it the OTHER way. ⭐ It is the
+ * TRAVEL's sign, not the finger's — so blue points where `D145`/`D148` actually sent the body.
+ *
+ * @param travel this step's travel, or `null` for a frame with none (the gizmo's own pass).
+ */
+export function stepTravelGizmo(
+  prev: TravelGizmo,
+  phase: TravelPhase,
+  travel: AxisTravelM | null,
+): TravelGizmo {
+  const sign: [number, number, number] =
+    phase === prev.phase ? [prev.sign[0], prev.sign[1], prev.sign[2]] : [0, 0, 0];
+  if (travel !== null) {
+    const moved = [travel.xM, travel.gravityM, travel.depthM];
+    for (let k = 0; k < 3; k++) {
+      const v = moved[k]!;
+      if (Number.isFinite(v) && v !== 0) sign[k] = Math.sign(v);
+    }
+  }
+  return { phase, sign };
+}
+
+/**
+ * ⭐ `D150`: the three lines `[x, gravity, depth]` a free body's gizmo draws. `HORIZONTAL`: red and blue,
+ * each FULL until its axis has travelled, then a ray toward that travel; green hidden. `GRAVITY`: green
+ * alone, the same way. `null`: none.
+ */
+export function travelLines(g: TravelGizmo): readonly [TravelLine, TravelLine, TravelLine] {
+  const line = (k: 0 | 1 | 2): TravelLine => (g.sign[k] === 0 ? "FULL" : g.sign[k]! > 0 ? 1 : -1);
+  if (g.phase === "HORIZONTAL") return [line(0), "HIDDEN", line(2)];
+  if (g.phase === "GRAVITY") return ["HIDDEN", line(1), "HIDDEN"];
+  return ["HIDDEN", "HIDDEN", "HIDDEN"];
+}
+
+/**
+ * ⭐⭐ **THE PART OF A GIZMO LINE IN FRONT OF THE CAMERA** — `[p0, p1]` cut where it crosses the plane
+ * `minDepth` ahead of the eye along the view, or `null` when all of it is behind.
+ *
+ * ⛔⛔ Found building `D150` (2026-09-29): a line with one end BEHIND the camera was not drawn at all —
+ * and since `D145` the blue axis IS the camera's own view, flattened, so its full-screen line always
+ * runs back under the camera and blue never showed. ⭐ Measured in a headless Chrome: the same line cut
+ * to the front half drew. The gizmo now cuts every line here before drawing it.
+ */
+export function clipSegmentInFront(
+  p0: Vec3,
+  p1: Vec3,
+  eye: Vec3,
+  view: Vec3,
+  minDepth: number,
+): readonly [Vec3, Vec3] | null {
+  const v = normalize(view);
+  if (!v) return null;
+  const d0 = dot(sub(p0, eye), v) - minDepth;
+  const d1 = dot(sub(p1, eye), v) - minDepth;
+  if (!Number.isFinite(d0) || !Number.isFinite(d1)) return null;
+  if (d0 < 0 && d1 < 0) return null;
+  if (d0 >= 0 && d1 >= 0) return [p0, p1];
+  const cut = add(p0, scale(sub(p1, p0), d0 / (d0 - d1)));
+  return d0 < 0 ? [cut, p1] : [p0, cut];
 }
 
 /**

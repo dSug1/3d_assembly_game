@@ -16,11 +16,13 @@ import { worldPlacementOf, type ObjectId, faceWorld } from "../core/object_model
 import { alignedFaceOf } from "../core/face_pick";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
-import { awaySignFrom, displayedAxes, freeTravelRays, soleGizmoBody, type AwaySign, type GizmoChannels, type AxisTravel, type TravelRay } from "../input/axis_translate";
-import { isTranslatingMode } from "../input/grip_mode";
+import { awaySignFrom, clipSegmentInFront, displayedAxes, freeTravelPhase, soleGizmoBody, stepTravelGizmo, travelLines, type AwaySign, type GizmoChannels, type AxisTravel, type TravelLine, type TravelPhase } from "../input/axis_translate";
+import { translatesOnDrag } from "../input/highlight";
 import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type Held, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
-import { requireGestureFrame } from "./camera_rig";
+import { requireGestureFrame, screenFrame } from "./camera_rig";
+import { asVec3 } from "./bodies";
+import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
 
 /** ⭐ The decision is `rotationFrame`'s, in `src/input` (the boot frame since `D109`); this only supplies the inputs. */
 export function rotationFrameOf(st: SceneState, live: GravityFrame) : GravityFrame {
@@ -71,6 +73,29 @@ export function awaySignNow(st: SceneState, mesh: AbstractMesh): AwaySign {
   return awaySignFrom(cameraToGizmo(st, st.idOf.get(mesh), [p.x, p.y, p.z]));
 }
 
+/**
+ * ⭐ `D150`: which translation a FREE body's grip is in — from presence: whether it would translate
+ * (`translatesOnDrag`: the tablet's mode, the desktop's Ctrl at press) and whether a second touch is
+ * down (`secondTouchDown`, the aligned rule's own test). `null` for an aligned body: `D97` draws those.
+ */
+export function freeTravelPhaseOf(st: SceneState, grip: Held): TravelPhase {
+  const id = st.idOf.get(grip.mesh);
+  if (id === undefined || alignedFaceOf(st.world, id) !== null) return null;
+  return freeTravelPhase(
+    translatesOnDrag(st.router.objects().length, st.behaviour, false),
+    secondTouchDown(
+      st.router.outside().map((p) => p.id),
+      st.router.secondTouchOn(grip.mesh) !== null,
+      st.mouseLayer.shiftHeld(),
+    ),
+  );
+}
+
+/** ⭐ `D150`: a translation step's travel, recorded on the grip under the phase it happened in. */
+export function noteFreeTravel(st: SceneState, grip: Held, travel: AxisTravel): void {
+  grip.travelGizmo = stepTravelGizmo(grip.travelGizmo, freeTravelPhaseOf(st, grip), travel);
+}
+
 export function axesOf(st: SceneState) : ObjectAxes {
   // ⭐⭐⭐ `D145` (the owner, 2026-09-29): a translation runs along the LIVE camera's axes — x the
   // screen's right and depth the view, both flattened onto the horizontal plane. ⛔ It reverses
@@ -97,22 +122,6 @@ export function noteAxisTravel(st: SceneState, id: ObjectId | undefined, t: Axis
     p[1] || t.driven[1],
     p[2] || t.driven[2],
   ]);
-  // ⭐ `D149`: which way the body last went along each axis — the side a free body's ray is drawn on.
-  const sign = st.gizmoTravelSign.get(id) ?? [0, 0, 0];
-  const moved = [t.xM, t.gravityM, t.depthM];
-  for (let k = 0; k < 3; k++) if (Number.isFinite(moved[k]) && moved[k] !== 0) sign[k] = Math.sign(moved[k]!);
-  st.gizmoTravelSign.set(id, sign);
-}
-
-/**
- * ⭐ `D149`: is each channel's INPUT beyond the deadband right now — §1.1's per-axis state, `MOVING`?
- * `[x, gravity, depth]` = the holder's x, any second touch's y, the holder's y. ⛔ Only while the grip
- * TRANSLATES and no hold-pinch zoom (`D137`) has paused it — otherwise nothing is being translated.
- */
-function travelInputsMoving(grip: Held): [boolean, boolean, boolean] {
-  if (!isTranslatingMode(grip.mode) || grip.holdPinch !== null) return [false, false, false];
-  const second = [...grip.anchorMotion.values()].some((t) => t.axes.y === "MOVING");
-  return [grip.rec.axes.x === "MOVING", second, grip.rec.axes.y === "MOVING"];
 }
 
 export function ringFrom(st: SceneState, pool: Map<ObjectId, LinesMesh>,
@@ -230,7 +239,7 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // necessarily when a movement occurs) in whichever mode"*).
     if (
       alignedFaceOf(st.world, id) === null &&
-      !isTranslatingMode(grip.mode) &&
+      freeTravelPhaseOf(st, grip) === null &&
       !st.frameTurnAxes.has(id)
     )
       continue;
@@ -248,7 +257,7 @@ export function refreshAxisGizmo(st: SceneState) : void {
   for (const grip of st.held.values()) {
     // ⛔⛔ **THE SECOND TOUCHPOINT'S MODE IS A TRANSLATION, AND THIS ASKED BY NAME** — the
     // owner, 2026-09-23: *"sometimes the gizmo does not show when the second touch is driving
-    // the translation."* ⭐ The set lives in `input/grip_mode.ts`, and the mode itself is no
+    // the translation."* ⭐ `D150` asks PRESENCE instead (`freeTravelPhaseOf`; `grip_mode.ts` is deleted), and the mode itself is no
     // longer named after an axis.
     const id = st.idOf.get(grip.mesh);
     if (id === undefined) continue;
@@ -261,7 +270,7 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // necessarily when a movement occurs) in whichever mode"*).
     if (
       alignedFaceOf(st.world, id) === null &&
-      !isTranslatingMode(grip.mode) &&
+      freeTravelPhaseOf(st, grip) === null &&
       !st.frameTurnAxes.has(id)
     )
       continue;
@@ -300,8 +309,8 @@ export function refreshAxisGizmo(st: SceneState) : void {
     // or a finger on this same body (`SECOND`).
     const alignedHere = alignedFaceOf(st.world, id) !== null;
     let shown: GizmoChannels;
-    // ⭐ `D149`: a FREE body's translation lines are rays; `null` for an aligned one (`D97` draws those).
-    let rays: readonly [TravelRay, TravelRay, TravelRay] | null = null;
+    // ⭐ `D150`: a FREE body's translation lines; `null` for an aligned one (`D97` draws those).
+    let lines: readonly [TravelLine, TravelLine, TravelLine] | null = null;
     if (alignedHere) {
       const turn =
         byMotion ??
@@ -318,11 +327,14 @@ export function refreshAxisGizmo(st: SceneState) : void {
       );
       shown = [travel[0], travel[1], travel[2], turn[3], turn[4], turn[5]];
     } else {
-      if (byMotion === null) continue;
-      // ⭐⭐⭐ `D149`: red, green and blue each a RAY toward where the body went, shown only while its own
-      // input is beyond the deadband; the turn lines keep `displayedAxes`'s rule.
-      rays = freeTravelRays(travelInputsMoving(grip), st.gizmoTravelSign.get(id) ?? [0, 0, 0]);
-      shown = [rays[0] !== 0, rays[1] !== 0, rays[2] !== 0, byMotion[3], byMotion[4], byMotion[5]];
+      // ⭐⭐⭐ `D150`: red, green and blue from the grip's phase — full screen at a start or a toggle,
+      // then a ray toward the travel once that axis's input has gone beyond the deadband. ⛔ The turn
+      // lines keep `displayedAxes`'s rule.
+      grip.travelGizmo = stepTravelGizmo(grip.travelGizmo, freeTravelPhaseOf(st, grip), null);
+      lines = travelLines(grip.travelGizmo);
+      const turn = byMotion ?? ([false, false, false, false, false, false] as GizmoChannels);
+      shown = [lines[0] !== "HIDDEN", lines[1] !== "HIDDEN", lines[2] !== "HIDDEN", turn[3], turn[4], turn[5]];
+      if (!shown.some(Boolean)) continue;
     }
     // ⭐⭐⭐ **WHERE THE GIZMO SITS — THE FOLLOWERFACE'S CENTRE, ELSE THE BODY'S OWN** — the
     // owner, 2026-09-23: *"Remove the rule of the raycast of the delta position direction from
@@ -455,23 +467,20 @@ export function refreshAxisGizmo(st: SceneState) : void {
         travel && cursorAt !== null
           ? segmentTowardCursor(anchor, a, cursorAt)
           : null;
-      const line = CreateLines(
-        `axis-gizmo-${id}-${i}`,
-        {
-          points:
+      const ends: [Vector3, Vector3] =
             seg !== null
               ? [
                   new Vector3(seg[0][0], seg[0][1], seg[0][2]),
                   new Vector3(seg[1][0], seg[1][1], seg[1][2]),
                 ]
-              : travel && rays !== null
+              : travel && lines !== null && (lines[i] === 1 || lines[i] === -1)
                 ? [
-                    // ⭐ `D149`: from the gizmo's origin, one way only.
+                    // ⭐ `D150`: from the gizmo's origin, toward the travel only.
                     new Vector3(base[0], base[1], base[2]),
                     new Vector3(
-                      base[0] + a[0] * reach * rays[i]!,
-                      base[1] + a[1] * reach * rays[i]!,
-                      base[2] + a[2] * reach * rays[i]!,
+                      base[0] + a[0] * reach * (lines[i] as number),
+                      base[1] + a[1] * reach * (lines[i] as number),
+                      base[2] + a[2] * reach * (lines[i] as number),
                     ),
                   ]
               : [
@@ -485,7 +494,28 @@ export function refreshAxisGizmo(st: SceneState) : void {
                     base[1] + a[1] * reach,
                     base[2] + a[2] * reach,
                   ),
-                ],
+                ];
+      // ⛔⛔ `D150`'s finding: a line running BEHIND the camera is not drawn at all — blue, the view's
+      // own direction since `D145`, always does. Cut to its front part (twice the near plane, `A5`'s
+      // margin); nothing in front → no line.
+      const front = clipSegmentInFront(
+        asVec3(ends[0]),
+        asVec3(ends[1]),
+        asVec3(st.camera.position),
+        screenFrame(st).viewAxis,
+        2 * CAMERA_NEAR_PLANE_M,
+      );
+      if (front === null) {
+        g.lines[i]!.isVisible = false;
+        continue;
+      }
+      const line = CreateLines(
+        `axis-gizmo-${id}-${i}`,
+        {
+          points: [
+            new Vector3(front[0][0], front[0][1], front[0][2]),
+            new Vector3(front[1][0], front[1][1], front[1][2]),
+          ],
           instance: g.lines[i]!,
         },
         st.scene,

@@ -29,7 +29,7 @@ import { SeatSnaps } from "../input/seat_snap";
 import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch, type Jump } from "../input/jump_watch";
-import { type GizmoChannels } from "../input/axis_translate";
+import { type GizmoChannels, type TravelGizmo } from "../input/axis_translate";
 import { type GestureConfig } from "../input/gestureConfig";
 import { type Hud } from "./hud";
 import { type MouseSecondTouchHandle } from "./mouse_adapter";
@@ -183,6 +183,8 @@ export interface Held {
    * view axis — two frames, two purposes.
    */
   frame: GravityFrame;
+  /** ⭐ `D150`: a free body's translation gizmo — its phase and each axis's last travel side. */
+  travelGizmo: TravelGizmo;
   /** ⚠ The PREVIOUS sample. The rotation is applied as a per-frame INCREMENT. */
   prev: Sample;
   /**
@@ -404,8 +406,6 @@ export interface SceneState {
   outlines: Map<ObjectId, BodyOutlines>;
   bootGestureFrame: GravityFrame | null;
   gizmoAxes: Map<ObjectId, GizmoChannels>;
-  /** ⭐ `D149`: the sign of the last non-zero travel along `[x, gravity, depth]`, per body — a free body's ray side. */
-  gizmoTravelSign: Map<ObjectId, [number, number, number]>;
   rolledThisHold: Set<ObjectId>;
   frameAxisDriven: Map<ObjectId, [boolean, boolean, boolean]>;
   frameTurnAxes: Map<ObjectId, TurnAxes>;
