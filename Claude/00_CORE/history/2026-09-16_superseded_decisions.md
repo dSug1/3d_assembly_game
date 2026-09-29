@@ -713,3 +713,4 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ⭐ **`D69`, headline text moved 2026-09-29 (to pay for `D165`)**: *a translated Pioneer carried EVERY Follower; cyan should break instead*
 ⭐ **`D146`, headline text moved 2026-09-29 (to pay for `D166`)**: *the sign latched at press*
 ⭐ **`D67`, headline text moved 2026-09-29 (to pay for `D166`)**: *first touch the PIONEER, second the Follower*
+⭐ **The withdrawn `A7` report, text moved 2026-09-29 (to pay for `D169`)**: *⭐⭐ Mistake shape 4 aims at **correct** work as easily as at broken work.*

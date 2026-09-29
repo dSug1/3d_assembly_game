@@ -7,6 +7,7 @@
  */
 import type { OrbitRig } from "../core/game_structure";
 import type { GestureConfig } from "./gestureConfig";
+import type { Vec3 } from "../core/vec";
 
 export function sceneConfig(base: GestureConfig, rig: OrbitRig | undefined): GestureConfig {
   if (!rig) return base;
@@ -19,4 +20,13 @@ export function sceneConfig(base: GestureConfig, rig: OrbitRig | undefined): Ges
     orbitBottomRadiusM: rig.bottomRadiusM,
     orbitBottomHeightM: rig.bottomHeightM,
   };
+}
+
+/**
+ * ⭐ `D169`: the orbit's BOOT centre — the scene's own (`OrbitRig.centreM`), else `fallback` (the world origin).
+ * ⭐ `Scene_1` moved up so its floor's top centre is the origin; its rings moved with it through this.
+ */
+export function bootOrbitCentre(rig: OrbitRig | undefined, fallback: Vec3): Vec3 {
+  const c = rig?.centreM;
+  return c === undefined ? fallback : [c[0], c[1], c[2]];
 }

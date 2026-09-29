@@ -68,7 +68,7 @@ file.
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | A tap on the plate aligns; a press steers → §14 |
 | `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | They matched no shape and served no rule → §14 |
 | `D121` | ⚠ **REVERSED BY `D128`** | 2026-09-27 | → §15 |
-| `D122` | `Scene_1`'s floor: halved, 80 %, 107 %, 103 % — 21.116236 units | 2026-09-27 | → `SCENE_1.md` |
+| `D122` | `Scene_1`'s floor size (now `D169`) | 2026-09-27 | → `SCENE_1.md` |
 | `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | With the gravity lift, as an aligned body → §15 |
 | `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | A tap there still aligns → §15 |
 | `D125` | ⭐⭐ **A PIECE IS A TRANSPARENT CONTOUR AROUND ITS COLOURED CORE** — faces touch, cores keep the gap | 2026-09-27 | `Scene_1`: margin 0.015; opacity 0.1, a slider; contact at 0 reads DEPTH → `SCENE_1.md` §6 |
@@ -110,6 +110,7 @@ file.
 | `D166` | ⭐ **THIN 1.3× CURSOR RING; SEATED AXES ON ROOT** | 2026-09-29 | → §21 |
 | `D167` | ⭐⭐ **SHIFT TAP TOGGLES THE MODE (NOT CTRL); FOCUS LOSS INERT** | 2026-09-29 | → §22 |
 | `D168` | ⭐ **A BODY ROTATED KEEPS ITS AXES** | 2026-09-29 | → §22 |
+| `D169` | ⭐ **`Scene_1`: FLOOR 2 M; TOP CENTRE = ORIGIN** | 2026-09-29 | → `SCENE_1.md` §9 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -210,8 +211,7 @@ every row still to come owes one of its own.
 ## ⭐⭐ Two entries that are not decisions, kept as pointers
 
 ⭐ **A report the owner WITHDREW** (2026-09-15) — `A7`/`D18` was not the fault, and
-`tests/a7_wiring.test.ts` measures the composition at four tilts. ⭐⭐ Mistake shape 4 aims at
-**correct** work as easily as at broken work.
+`tests/a7_wiring.test.ts` measures the composition at four tilts.
 
 ⚠ **Two things were measured out and REVERTED** — rotation inertia and `targetVelocity` → the
 *"TWO THINGS A NEW SESSION MUST NOT REBUILD"* block in [`QUEUE.md`](QUEUE.md).

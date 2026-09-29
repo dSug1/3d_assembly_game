@@ -85,7 +85,8 @@ env.objects.link(floor)
 # Preview only (an asset ships no lights and the game has its own camera): face the painting.
 cam = bpy.data.objects.get("Camera")
 if cam:
-    cam.location = (0.025, -13.0, 0.27); cam.rotation_euler = (math.radians(90), 0, 0)
+    # D169: the scene moved up 2.3 so the floor's top centre is the origin.
+    cam.location = (0.025, -13.0, 0.27 + 2.3); cam.rotation_euler = (math.radians(90), 0, 0)
     scene.camera = cam
 
 bpy.ops.wm.save_mainfile()

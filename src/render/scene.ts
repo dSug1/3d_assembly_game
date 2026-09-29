@@ -55,7 +55,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { sceneConfig } from "../input/scene_rig";
+import { bootOrbitCentre, sceneConfig } from "../input/scene_rig";
 import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, initialBehaviour, TapHistory } from "../input";
 import { type Vec3 } from "../core/vec";
 import { FrameMeter } from "../core/frame_meter";
@@ -742,8 +742,10 @@ export function createScene(
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
-  st.centreBlend = new OrbitCentreBlend(st.cfg, ORBIT_START_CENTRE_M);
-  st.orbitCentreM = Vector3.Zero();
+  st.centreBlend = new OrbitCentreBlend(st.cfg, bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
+  // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
+  const bootCentre = st.centreBlend.centreM;
+  st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);
 
   // ⛔ The approach camera swing's latch and travel records stood here; the swing is deleted (`D120`).
 

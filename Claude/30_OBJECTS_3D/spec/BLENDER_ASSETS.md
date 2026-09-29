@@ -44,7 +44,7 @@ script, never retyped), so a difference in the comparison is the import's, not t
 * **Materials**: `Mat_White`, `Mat_Black`, `Mat_Yellow`, `Mat_Red`, `Mat_Blue` (the owner's names,
   `SCENE_1.md` §4), `Mat_Sand` for the floor, each core colour with a `…_Contour` twin. RGB = the game's
   palette (`SCENE_1_PALETTE`, linear), roughness 0.6. Base Color AND Viewport Display set (§6).
-* **The frozen plate**: `Floor`, 21.116236 × 0.05 × 21.116236, its TOP at the plane (−2.3), custom
+* **The frozen plate**: `Floor`, 20 × 0.05 × 20 (2.000 m × 5 mm × 2.000 m at `unitM` 0.1), its TOP centred on the origin (`D169`; it was 21.116236 wide, topped at −2.3), custom
   property **`frozen = true`** — the game's flag. ⚠ A `.glb` export carries it only with *Include →
   Custom Properties* ticked (glTF `extras`).
 * **Collections**: `Painting` (41 contours + 41 cores), `Environment` (`Floor`, the lights, `Camera`).
@@ -94,7 +94,7 @@ world fill is not Babylon's sky/ground hemisphere (up- and down-facing faces dif
   2.41`, scale 1.
 * ⭐ **92 contour pairs touch** face to face in the picture plane — the same 92 as `SCENE_1.md` §6's
   vector — **0 overlap**, and the **core gap is 0.03** at every one of them.
-* Floor top at −2.3; the painting's bottom at −2.13, so it stands a little above the floor, as in the game.
+* Floor top at −2.3; the painting's bottom at −2.13, so it stands a little above the floor, as in the game. ⭐ Since `D169` (2026-09-29) everything is 2.3 higher — floor top at 0, painting bottom at 0.17 — and the floor 20 wide.
 * Two preview renders: the painting, then lit (blue background, sand floor, soft shadows).
 * ⭐ **The scripts reproduce the file**: a copy rebuilt by `build_painting.py` + `add_lights.py` matched
   it object for object (87 objects: names, parents, positions, sizes, rotations, materials, light
@@ -125,3 +125,7 @@ LIGHTS_JSON="$(cygpath -w "$TEMP/lights.json")" "$B" -b Assets/Blender/scene_2.b
    are set on every material now.
 3. Replaced by `Scene_1`'s painting (§2), then the frozen plate's flag and the lights (§4).
 4. Renamed `scene_2.blend` (`git mv`) — the owner's `Scene_2` will import it and be compared with `Scene_1`.
+
+## 8. ⭐ `D169` — the floor's top centre is the origin (2026-09-29)
+
+⭐ Edited IN PLACE, not regenerated (so any hand edit survives): the 46 top-level objects (41 contours — their cores follow as children — `Floor`, the three lights, `Camera`) moved **+2.3 in Blender `z`** (the game's gravity), and the `Floor` mesh scaled to **20 × 20** in x/y (thickness 0.05 kept). ⭐ The scripts follow `scene_1.ts`, whose numbers moved the same way (`build_painting.py`'s preview camera too), and a copy rebuilt by `build_painting.py` + `add_lights.py` matched the edited file on all 87 objects (world positions, rotations, sizes, materials, light energies — unchanged, since they are computed relative to the painting — custom properties). → `SCENE_1.md` §9.
