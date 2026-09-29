@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { advanceDemoFrame } from "./demo_wiring";
 import { hiddenFromBelow } from "../core/underside";
 import { autoShadowVerdict } from "../core/auto_shadow";
 import { FrameMeter } from "../core/frame_meter";
@@ -109,6 +110,9 @@ export function startRenderLoop(st: SceneState): void {
     // ⚠ `easeInOut` is the camera reset's own easing, imported rather than re-derived: two
     // eased snaps in one product should not accelerate differently for no reason.
     // ⚠ EVERY live snap, not one: see `alignSnaps` where it is declared.
+    // ⭐ `D170`: a demo scene's replay writes its poses (and the camera) first, as the other model writers do.
+    advanceDemoFrame(st, dtSec);
+
     for (const step of st.alignSnaps.advance(
       now,
       st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION,

@@ -40,7 +40,8 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 within the capture offset of its PioneerFaceCursor, normals within the **snap cone angle**, lerps
 onto it and is seated (`D100`). ⭐⭐ **And the drag that made the seat STOPS** (`D139`): a finger holding the
 Follower drives nothing more — no translation, lift, pinch-zoom or tap — **except the roll** (the second
-finger's `dx`), until it lifts or the click is released. ⭐⭐ **And a seated piece that is in its GOAL pose lets go of its
+finger's `dx`), until it lifts or the click is released; ⭐ and (`D172`) the roll only from a second touch or Shift
+pressed AFTER the snap — the one already down at the snap is disarmed. ⭐⭐ **And a seated piece that is in its GOAL pose lets go of its
 Pioneer** (`D142`): the couple, its highlights and its cursor disappear, the piece stays where it is, and a pop-up
 says *reached its goal*.
 ⚠ A frozen body (the plate): EVERY press on it is a miss (`D119`) — a first touch drives the camera,
@@ -122,7 +123,7 @@ meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
 
-## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D168`)
+## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D172`)
 
 ⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
 
@@ -149,6 +150,7 @@ drag is on.
 | 7k | press a free part and **tap Shift** (`D167`) | the HUD shows `[ROTATE]`; a drag turns the part; tap again → `[TRANSLATE]`; **Ctrl** + drag now translates |
 | 7l | **Esc** mid-drag; **Alt** or **F10** mid-drag; Alt+Tab away and back (`D167`) | no jump; the browser menu is not focused; nothing in the scene changed |
 | 7m | in `ROTATE`, press a free part, turn it, then hold still (touch or click) (`D168`) | its rotation axis stays on screen — no flicker |
+| 7n | align a part, hold a second finger (or Shift) down, drag the part onto its seat; then move that second finger / the mouse sideways; then lift it and press a NEW one (`D172`) | no roll from the finger that was down at the snap; the NEW one rolls the seated part |
 
 **Both devices — the episode count, first HUD line** (`D158`/`D159`)
 

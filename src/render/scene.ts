@@ -55,6 +55,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { startDemo } from "./demo_wiring";
 import { bootOrbitCentre, sceneConfig } from "../input/scene_rig";
 import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, initialBehaviour, TapHistory } from "../input";
 import { type Vec3 } from "../core/vec";
@@ -754,6 +755,8 @@ export function createScene(
   // own alpha/beta/radius, which would jump the instant a finger touched the glass.
   applyCamera(st);
   installTuningMenu(st);
+  // ⭐ `D170`: a demo scene starts playing itself (and its pieces stop being pickable until it ends).
+  startDemo(st);
 
   /**
    * THE `pointerNoiseMm` INSTRUMENT (`IN5`). See `src/input/noise_meter.ts`.

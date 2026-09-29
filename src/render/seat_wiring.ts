@@ -252,7 +252,9 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
       for (const g of st.held.values()) {
         if (st.idOf.get(g.mesh) === step.id && !g.seatLocked) {
           g.seatLocked = true;
-          st.lastVerdict += " — translation stopped: lift the finger (roll still free)";
+          // ⭐ `D172`: the touchpoints down NOW cannot roll — only one pressed after this moment re-arms it.
+          g.seatSeq = Math.max(-1, ...st.router.all().map((p) => p.seq));
+          st.lastVerdict += " — translation stopped: lift the finger (roll: a NEW second touch or Shift)";
         }
       }
     } else {

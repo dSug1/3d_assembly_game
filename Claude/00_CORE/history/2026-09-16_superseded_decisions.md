@@ -714,3 +714,5 @@ are in force. ⛔ Moved because the addition had to pay for itself, which is the
 ⭐ **`D146`, headline text moved 2026-09-29 (to pay for `D166`)**: *the sign latched at press*
 ⭐ **`D67`, headline text moved 2026-09-29 (to pay for `D166`)**: *first touch the PIONEER, second the Follower*
 ⭐ **The withdrawn `A7` report, text moved 2026-09-29 (to pay for `D169`)**: *⭐⭐ Mistake shape 4 aims at **correct** work as easily as at broken work.*
+⭐ **Row text moved 2026-09-29 (to pay for `D170`)**: `D88` — *every face the held body is nearly ready to MATE with*; *its cone is the snap cone.* `D13` — *a full turn clears alignments, never a joint*; *mates are broken by `D47`/`D100`'s unsnap.*
+⭐ **Row text moved 2026-09-29 (to pay for `D172`)**: `D143` — *`Scene_1`: a face or its opposite*. `D140` — *defect 73, a stale one jumped a re-aligned Follower*.

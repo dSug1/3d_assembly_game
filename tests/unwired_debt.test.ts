@@ -76,14 +76,12 @@ const PENDING: Record<string, string> = {
   // ⛔⛔ THE TWO SWAPPED PLACES ON 2026-09-18, AND THE SWAP IS THE POINT. `shapeFromVertices`
   // LEFT this list when `scene.ts` started reading real mesh vertices — the guard caught the
   // stale entry the moment it was wired, which is the second direction it checks.
-  boxShape:
-    "test surface — the EXACT hull of a box, and the fixture builder every geometry vector is " +
-    "written against. ⛔ The product no longer calls it: a body's shape is read off its own " +
-    "mesh (`shapeFromMesh`), so an imported body needs no dimensions table. ⚠ Kept because " +
-    "hand-rolling eight corners in each vector is how fixtures drift, and because `3D4` will " +
-    "want a known-exact hull to check an imported one against",
+  // ⭐ `boxShape` LEFT this list 2026-09-29 (`D170`): the demo generator builds its world from box shapes.
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
+  // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
+  // product plays, and `d170.test.ts` regenerates it to prove the data is still the generator's.
+  generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
   // ⭐ That is the second direction the list is asserted in: *a stale allowlist is the same lie

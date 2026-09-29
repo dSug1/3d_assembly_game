@@ -26,7 +26,7 @@ import { canon, type Quat } from "./vec";
  * ⚠ Chosen because it is **eight lines and has no state to get wrong**. ⛔ Not for anything
  * where randomness has to be unguessable; this seeds a debug scene.
  */
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
