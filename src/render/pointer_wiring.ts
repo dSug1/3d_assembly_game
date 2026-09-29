@@ -43,7 +43,13 @@ export function installPointerHandler(st: SceneState): void {
       const e = info.event as PointerEvent;
       // ⭐ `D112`: the clock starts at the first press after boot (`SCORE.md` §6), not at load.
       if (st.sceneStartMs === null) st.sceneStartMs = performance.now();
-      if (st.gestureSpan.press(e.pointerId)) beginGesture(st);
+      if (st.gestureSpan.press(e.pointerId)) {
+        // ⭐⭐ `D159`: the latched HitFace that takes over a Space-frozen drag CONTINUES that gesture — no new
+        // snapshot, and its hold is the drag's (`episodeContinued`). ⛔ Any other press ends a stale carry.
+        if (st.freezeCarry && e.pointerId === MOUSE_SECOND_ID) st.episodeContinued.add(e.pointerId);
+        else beginGesture(st);
+        st.freezeCarry = false;
+      }
     },
     undefined,
     true,
@@ -1024,12 +1030,14 @@ export function installPointerHandler(st: SceneState): void {
         heldAtPress: facts?.heldAtPress ?? 0,
         pressedAnotherBody: facts?.pressedAnotherBody ?? false,
         unaligned,
+        continuesAnother: st.episodeContinued.delete(e.pointerId),
       }),
       // ⭐ Pressed while a body was held: it completes a two-touch action, and uses up that hold.
       (facts?.heldAtPress ?? 0) > 0,
     );
     st.hudDirty = true;
-    if (st.gestureSpan.release(e.pointerId)) {
+    // ⭐⭐ `D159`: a Space freeze's drag release does NOT end the gesture — the action it becomes lands once.
+    if (st.gestureSpan.release(e.pointerId) && !st.freezeCarry) {
       // ⭐⭐ `D158`: a gesture that changed nothing lands no episode.
       st.episodes.gestureEnded(endGesture(st));
     }

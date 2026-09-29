@@ -69,12 +69,12 @@ on entering the capture zone, are deleted.
 | a FREE body | Ctrl + Shift + left drag | roll (`dx`) |
 | an ALIGNED body | left drag (Ctrl or not) | slide in its horizontal plane |
 | an ALIGNED body | Shift + left drag | gravity (`dy`) + spin about the normal (`dx`) |
-| — | **right-press and hold** on a face | that face is the HitFace; the right button never moves anything |
+| — | **right-press** on a face | that face is the HitFace; the right button never moves anything. ⭐ `D161`: released with nothing done, it stays LATCHED (as Space + click) — the next plain click completes the action |
 | right-hold | left click on another body's face | align — ⭐ on the click's RELEASE, like a tap (`D119`) |
 | — | ⭐ **Space + click** (left or right) on a face | `D154`: that face is the HitFace, LATCHED past the click; an ongoing drag freezes |
-| a Space-latched HitFace | ⭐ **Space + click** (held or hit again) on another body's face | align — one episode; on the same body: move the HitFace; Esc, or a click without Space: cancel |
-| a Space-latched HitFace | ⭐ **Space + click on empty space** (held or hit again) | `D156`: **unalign** it (a Pioneer: release its followers) — one episode |
-| left button on a body (dragging or not) | ⭐ **press Space** | `D155`: the drag stops and its pressed face becomes the latched HitFace |
+| a Space-latched HitFace | ⭐ **a click** (left or right — Space NOT needed, `D159`) on another body's face | align — one episode; on the SAME part: cancel the HitFace (`D160`, the count is the underlying action's); Esc: cancel |
+| a Space-latched HitFace | ⭐ **a click on empty space** (Space not needed, `D159`) | `D156`: **unalign** it (a Pioneer: release its followers) — one episode |
+| left button on a body (dragging or not) | ⭐ **press Space** | `D155`: the drag stops and its pressed face becomes the latched HitFace; ⭐ `D159`: nothing is counted yet — the action that follows lands ONE episode (Esc after a move: 1; after a press held still: 0) |
 | — | after an alignment made with Space | `D155`: Space must be released or hit again before it selects another HitFace |
 | right-hold | left drag on another body | ⭐ steers the right-held body, like a drag on empty space — never moves the other (`D124`) |
 | right-hold on an aligned body | left click on empty space | unalign it |
@@ -119,7 +119,7 @@ meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
 
-## 5. ⭐ Device checklist — what the 2026-09-29 deploy adds (`D155`–`D158`)
+## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D161`)
 
 ⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
 
@@ -127,20 +127,27 @@ drag is on.
 
 | # | do | expect |
 |---|---|---|
-| 1 | left-drag a part, press **Space** mid-drag (`D155`) | it stops at once; the face you grabbed turns fuchsia (HitFace) and stays after you release the button |
+| 1 | left-drag a part, press **Space** mid-drag (`D155`) | it stops at once; the face you grabbed turns fuchsia (HitFace) and stays after you release the button; ⭐ the episode count does NOT change yet (`D159`) |
 | 2 | left-press a part and hold still, press **Space** (`D155`) | same: no movement, the pressed face turns fuchsia |
-| 3 | after 1 or 2, **Space + click** a face on another part | the first part aligns to it (cyan / amber) |
+| 3 | after 1 or 2, a **plain click** (left or right, no Space) on a face of another part (`D159`) | the first part aligns to it (cyan / amber) |
 | 4 | right after 3, keep Space held and click a part (`D155`) | an ordinary click — no new HitFace until Space is released or hit again |
-| 5 | **Space + click** an aligned part, then **Space + click empty space** (`D156`) | it unaligns (outlines gone); on a Pioneer, its followers are released |
+| 5 | **Space + click** an aligned part, then a **plain click on empty space** (`D156`/`D159`) | it unaligns (outlines gone); on a Pioneer, its followers are released |
 | 6 | Space + click a part, then **Esc** | the HitFace is cancelled, nothing else happens |
+| 7 | **Space + click** a part, then a **plain right click** on another part | it aligns |
+| 7b | **Space + click** a part, then a **plain click on the same part** (`D160`) | the HitFace is cancelled; **+0** — after a drag that moved + Space, **+1** (the move) |
+| 7c | **right click** a part and release, then a **plain click** on another part (`D161`) | it aligns — **+1**; on empty space (an aligned part): unaligns; on the same part: cancelled, **+0** |
+| 7d | right **HOLD** a part + left click another part (unchanged) | it aligns, and the HitFace lifts with the right button — no latch |
 
-**Both devices — the episode count, first HUD line** (`D157`/`D158`)
+**Both devices — the episode count, first HUD line** (`D158`/`D159`)
 
 | # | do | expect |
 |---|---|---|
-| 7 | tap or click a part and release, no movement | **+0** |
-| 8 | right-click and release a part (desktop); Space alone (desktop) | **+0** |
-| 9 | double tap / double click a part that has never moved, or one the last action did not move | **+0** (nothing undone) |
-| 10 | drag a part, then double tap / double click it | **+1** for the drag, **+1** for the undo |
-| 11 | an alignment (any way) / an unalignment | **+1** each |
-| 12 | drag a part that moves, then Space → Space + click to align | **+2** (the move, then the alignment); a press held still → **+1** |
+| 8 | tap or click a part and release, no movement | **+0** |
+| 9 | right-click and release a part (desktop); Space alone (desktop) | **+0** |
+| 10 | double tap / double click a part that has never moved, or one the last action did not move | **+0** (nothing undone) |
+| 11 | drag a part, then double tap / double click it | **+1** for the drag, **+1** for the undo |
+| 12 | an alignment (any way) / an unalignment | **+1** each |
+| 13 | desktop: drag a part that moves, Space, then a plain click on another part to align | **+1** in all — as holding a part and tapping the Pioneer on mobile |
+| 14 | desktop: drag a part that moves, Space, then **Esc** | **+1** (the move); a press held still, Space, Esc → **+0** |
+
+⭐ The desktop ↔ mobile equivalence of every Space / right-click action, measured → `20_GAME_RULES/spec/SCORE.md` §3.3.

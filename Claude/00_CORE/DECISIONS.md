@@ -67,7 +67,7 @@ file.
 | `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | The wheel is the desktop's zoom → §14 |
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | A tap on the plate aligns; a press steers → §14 |
 | `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | They matched no shape and served no rule → §14 |
-| `D121` | ⚠ **REVERSED BY `D128`** — a frozen body seen from below turned see-through | 2026-09-27 | → §15 |
+| `D121` | ⚠ **REVERSED BY `D128`** | 2026-09-27 | → §15 |
 | `D122` | `Scene_1`'s floor: halved, 80 %, 107 %, 103 % — 21.116236 units | 2026-09-27 | → `SCENE_1.md` |
 | `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | With the gravity lift, as an aligned body → §15 |
 | `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | A tap there still aligns → §15 |
@@ -79,7 +79,7 @@ file.
 | `D130` | ⭐⭐⭐ **THE GOAL IS MET RELATIVE TO EACH OTHER; A BOX'S FACE OR ITS OPPOSITE** | 2026-09-28 | `core/goal.ts` → `SCENE_1.md` §8 |
 | `D131` | ⭐⭐ **EACH SCENE CARRIES ITS OWN ORBIT RIG** | 2026-09-28 | → `SCENE_1.md` §8 |
 | `D132` | ⭐⭐ **EDGE-ON *AWAY* IS READ FROM THE CAMERA TO THE GIZMO, NOT ALONG THE VIEW** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
-| `D133` | ⚠ **REVERTED THE SAME DAY** — finger up *away* from below too; never shipped, the flip stands | 2026-09-28 | → §16 |
+| `D133` | ⚠ **REVERTED THE SAME DAY** | 2026-09-28 | → §16 |
 | `D134` | ⭐ **THE HUD's EDGE-ON IS THE CAMERA's, READ EVERY FRAME** | 2026-09-28 | → §16 |
 | `D136` | ⭐⭐⭐ **CONTACT IS ALLOWED; ONLY PENETRATION IS REFUSED** — the skin is how far a body may sink | 2026-09-28 | Scene_1's slots were unreachable → `COLLISION.md` §9 |
 | `D137` | ⭐⭐ **A SIDEWAYS PINCH WHILE TRANSLATING ZOOMS; translation and roll pause** — until a dy leaves the band | 2026-09-28 | → §17 |
@@ -100,6 +100,9 @@ file.
 | `D156` | ⭐⭐ **SPACE + CLICK FOLLOWER, THEN EMPTY SPACE: UNALIGN** | 2026-09-29 | → §20 |
 | `D157` | ⭐ **A DOUBLE TAP OR CLICK THAT DOES NOT LAND COSTS ZERO** | 2026-09-29 | Absorbed by `D158` |
 | `D158` | ⭐⭐ **A GESTURE THAT CHANGES NOTHING COSTS ZERO EPISODES** | 2026-09-29 | → `SCORE.md` §3.2 |
+| `D159` | ⭐⭐ **A PLAIN CLICK COMPLETES A SPACE-LOCKED ACTION; A FREEZE LANDS ONCE, AT ITS END** | 2026-09-29 | → §20 |
+| `D160` | ⭐ **A CLICK ON THE LATCHED PART CANCELS IT** | 2026-09-29 | → §20 |
+| `D161` | ⭐⭐ **A RIGHT CLICK RELEASED UNUSED LATCHES THE HITFACE, AS SPACE DOES** | 2026-09-29 | → §20 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -121,7 +124,7 @@ file.
 | `D61` | ⚠ **REPEALED BY `D66`** | 2026-09-19 | ⚠ → history |
 | `D60` | ⭐⭐⭐ **AND THE FIRST TOUCH THEN TRANSLATES, WHATEVER THE MODE** | 2026-09-19 | ⭐ Binding, ⚠ → history |
 | `D59` | ⭐⭐⭐ **AN ALIGNED FOLLOWER GIVES THE SECOND TOUCH BOTH AXES** | 2026-09-19 | ⭐ Binding, ⚠ → history |
-| `D58` | ⚠ **REPEALED BY `D66`** — a PRESS toggled the movement mode, in two places | 2026-09-19 | ⚠ → history |
+| `D58` | ⚠ **REPEALED BY `D66`** | 2026-09-19 | ⚠ → history |
 | `D57` | ⭐⭐⭐ **THE SECOND TOUCHPOINT'S ROLL IS FLAT — `dx`, whatever the orientation** | 2026-09-19 | ⭐ Binding. ⚠ → history |
 | `D55` | ⚠ **SUPERSEDED IN PART BY `D67`** | 2026-09-19 | ⛔ Reversed by `D119` → §14, history |
 | `D54` | ⭐⭐⭐ **`A15`'s ORPHAN UNSELECT IS DELETED — a holder keeps its object for the touchpoint's lifetime** | 2026-09-18 | ⭐ Binding, ⚠ → history |
@@ -153,7 +156,7 @@ file.
 | `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding — the toggle NARROWED by `D108`: one tablet tap, none on desktop |
 | `D27` | ⭐⭐⭐ **ANY SINGLE TAP toggles the movement behaviour; a PRESS keeps every meaning it has** | 2026-09-16 | ⛔ Narrowed by `D108` |
 | `D26` | ⭐⭐ **THE ASSIGNMENTS WERE A FLAG, NOT A FORK** — ⚠ **CLOSED BY `D28`** | 2026-09-16 | ⚠ → history |
-| `D25` | ⚠ **REVERSED BY `D54`** — a holder no longer under its object used to give the selection up | 2026-09-16 | ⚠ → history |
+| `D25` | ⚠ **REVERSED BY `D54`** | 2026-09-16 | ⚠ → history |
 | `D24` | ⚠ **RETIRED BY `D28`** — a lift-and-replace of the second touchpoint was ONE gesture | 2026-09-16 | ⚠ → history |
 | `D23` | ⚠ **SUPERSEDED BY `D28`** — one touchpoint TRANSLATES; a second held still ROTATES | 2026-09-16 | ⚠ → history |
 | `D22` | ⭐⭐⭐ **Roll moves to the SECOND touchpoint's x** | 2026-09-15 | ⭐ Binding |

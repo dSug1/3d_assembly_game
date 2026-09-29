@@ -71,6 +71,12 @@ export function attachMouseSecondTouch(
    * touch that takes over inherits it. `null` when the pointer holds no body.
    */
   freezeHeld?: (pointerId: number) => { id: string; frozen: boolean; x: number; y: number; mesh: AbstractMesh } | null,
+  /**
+   * ⭐ `D159`: a freeze IS happening — the scene hands the held face over and carries the gesture's count
+   * across the drag's release. ⛔ Called only when the model emitted a freeze, never merely because Space
+   * went down: a carry left set with no freeze would stop every later gesture from landing.
+   */
+  beginFreeze?: (pointerId: number) => void,
 ): MouseSecondTouchHandle {
   const model = new MouseSecondTouch();
   let seen = 0;
@@ -126,6 +132,8 @@ export function attachMouseSecondTouch(
 
   const apply = (input: MouseInput, pi?: { skipOnPointerObservable: boolean }): void => {
     const v = model.step(input);
+    // ⭐ `D159`: the scene learns of a freeze BEFORE the drag's release is delivered.
+    if (v.emit.some((a) => a.inherit === true)) beginFreeze?.(realId);
     // ⭐ Delivered FIRST: this runs before Babylon processes the real event, so a lift the model
     // owes reaches the scene before the event that revealed it.
     for (const a of v.emit) deliver(a);
@@ -157,7 +165,8 @@ export function attachMouseSecondTouch(
         x: e.clientX,
         y: e.clientY,
         space,
-        ...(type === "DOWN" && space && bodyAt !== undefined ? { onBody: bodyAt(e.clientX, e.clientY) } : {}),
+        // ⭐ `D159`: on EVERY press — a plain click completes a latched HitFace's action too.
+        ...(type === "DOWN" && bodyAt !== undefined ? { onBody: bodyAt(e.clientX, e.clientY) } : {}),
       },
       pi,
     );
