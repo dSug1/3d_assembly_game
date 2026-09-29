@@ -10,6 +10,7 @@
 import type { GameContent } from "../core/game_structure";
 import { SCENE_0 } from "./scene_0";
 import { SCENE_1 } from "./scene_1";
+import { SCENE1_DEMO } from "./scene1_demo";
 
 export const GAME_CONTENT: GameContent = {
   title: "3D Assembly",
@@ -21,6 +22,8 @@ export const GAME_CONTENT: GameContent = {
       levels: [
         { id: "Level_0", title: "Level 0", scene: SCENE_0 },
         { id: "Level_1", title: "Level 1 — the painting", scene: SCENE_1 },
+        // ⭐ `D170`: the painting assembling itself (`DEMO_SCENE.md`) — `?sceneIndex=2`.
+        { id: "Level1_demo", title: "Demo — the painting", scene: SCENE1_DEMO },
       ],
     },
   ],

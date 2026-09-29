@@ -78,6 +78,8 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ `D130`: how near a body must sit to its goal (world mm here, stored in metres).
         tunable(st, "goal position tolerance (m)", "goalPositionTolM", 0.001, 0.05, 0.001),
         tunable(st, "goal angle tolerance (°)", "goalAngleTolDeg", 1, 45, 1),
+        // ⭐ `D170`: how long a demo scene takes, first move to last — changing it mid-demo changes the speed.
+        tunable(st, "demo duration (s)", "demoDurationS", 10, 60, 5),
       ],
     },
     {

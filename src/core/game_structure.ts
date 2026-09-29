@@ -20,6 +20,7 @@
 import { bootTilt } from "./scene_dims";
 import { qFromAxisAngle, type Quat } from "./vec";
 import type { LightingSpec } from "./lighting";
+import type { DemoPlan } from "./demo_plan";
 
 export type Triple = readonly [number, number, number];
 
@@ -33,7 +34,9 @@ export type BootOrientation =
   | "tilt+"
   | "tilt-"
   | { readonly seeded: number }
-  | { readonly yawDeg: number };
+  | { readonly yawDeg: number }
+  /** ⭐ `D170`: any orientation, `[w, x, y, z]` — a demo's start poses are turned about any axis. */
+  | { readonly quat: Quat };
 
 /**
  * ⭐ Which other orientations look the same as a goal's (`D130`). `"halfTurns"`: a plain box — a
@@ -134,6 +137,8 @@ export interface SceneDescriptor {
   readonly lighting?: LightingSpec;
   /** ⭐ `D131`: the scene's own orbit rings; absent → the config's defaults. */
   readonly orbit?: OrbitRig;
+  /** ⭐⭐ `D170`: a DEMO scene plays this plan from its start configuration to `final` (`DEMO_SCENE.md`). */
+  readonly demo?: DemoPlan;
   /** ⭐ `GM1`'s: the final configuration to reach. `null` until an owner authors one. */
   readonly final: FinalConfiguration | null;
 }
@@ -248,6 +253,7 @@ export function resolveBootOrientation(
   if (o === "tilt+") return bootTilt(1);
   if (o === "tilt-") return bootTilt(-1);
   if ("yawDeg" in o) return qFromAxisAngle([0, 1, 0], (o.yawDeg * Math.PI) / 180);
+  if ("quat" in o) return [o.quat[0], o.quat[1], o.quat[2], o.quat[3]];
   return seeded[o.seeded];
 }
 
@@ -269,7 +275,13 @@ const isOrientation = (v: unknown): v is BootOrientation =>
     v !== null &&
     Object.keys(v).length === 1 &&
     typeof (v as { yawDeg?: unknown }).yawDeg === "number" &&
-    Number.isFinite((v as { yawDeg: number }).yawDeg));
+    Number.isFinite((v as { yawDeg: number }).yawDeg)) ||
+  (typeof v === "object" &&
+    v !== null &&
+    Object.keys(v).length === 1 &&
+    Array.isArray((v as { quat?: unknown }).quat) &&
+    (v as { quat: unknown[] }).quat.length === 4 &&
+    (v as { quat: unknown[] }).quat.every((x) => typeof x === "number" && Number.isFinite(x)));
 
 /**
  * ⭐⭐ Parse a scene from JSON, refusing anything malformed with the FIELD named. ⛔ Never a
@@ -331,6 +343,15 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     if (r !== null && r.centreM !== undefined && !isTriple(r.centreM))
       throw new Error(`scene ${o.id}: orbit.centreM is not three finite numbers`);
   }
+  if (o.demo !== undefined) {
+    const d = o.demo as Record<string, unknown> | null;
+    if (typeof d !== "object" || d === null || !Array.isArray(d.moves) || typeof d.start !== "object" || d.start === null)
+      throw new Error(`scene ${o.id}: demo needs a moves array and a start map`);
+    for (const m of d.moves as unknown[]) {
+      const b = (m as { body?: unknown } | null)?.body;
+      if (typeof b !== "string" || !bodies.some((x) => x.id === b)) throw new Error(`scene ${o.id}: demo moves a body the scene lacks (${String(b)})`);
+    }
+  }
   return {
     id: o.id,
     title: o.title,
@@ -339,6 +360,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     ...(o.bootView !== undefined ? { bootView: "LEVEL" as const } : {}),
     ...(o.lighting !== undefined ? { lighting: o.lighting as LightingSpec } : {}),
     ...(o.orbit !== undefined ? { orbit: o.orbit as OrbitRig } : {}),
+    ...(o.demo !== undefined ? { demo: o.demo as DemoPlan } : {}),
     final: parseFinal(o.id, o.final, bodies),
   };
 }

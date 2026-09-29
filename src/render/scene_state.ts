@@ -36,6 +36,7 @@ import { type MouseSecondTouchHandle } from "./mouse_adapter";
 import { type GestureSpan, type UndoHistory } from "../core/undo_history";
 import { type PointerRole } from "../input/router";
 import { type SceneSnapshot } from "./undo_wiring";
+import { type DemoPlan } from "../core/demo_plan";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -439,6 +440,8 @@ export interface SceneState {
   tapFace: Map<number, { id: ObjectId; faceId: string }>;
   /** ⭐ The rig elevation the scene boots at, and the camera reset returns to. */
   bootElevation: number;
+  /** ⭐ `D170`: a demo scene's playback — its plan, the lead-in left, its progress ∈ [0, 1] — or `null`. */
+  demo: { plan: DemoPlan; leadS: number; progress: number; done: boolean; fitM: number } | null;
   /** ⭐ `3D6`: couples exempt from colliding with each other since an unsnap, until they separate. */
   collisionGrace: Set<string>;
   /** The last block, for the HUD — `A⟂B 42% slid` — and when it happened. */
@@ -637,7 +640,8 @@ export const GIZMO_TURN_GROUP = 3;
  * resets it to. ⛔ Named once and used twice — a reset that drifted from the start
  * state would be the same defect as a debug constant living in two places (`L1`).
  */
-export const ORBIT_START_YAW_RAD = -Math.PI / 2;
+// ⭐ `D171`: its one home is `core/scene_dims.ts` now, so the demo generator (engine-free) reads the same yaw.
+export { ORBIT_START_YAW_RAD } from "../core/scene_dims";
 
 export const ORBIT_START_ELEVATION = 0.62;
 

@@ -288,6 +288,11 @@ export interface GestureConfig {
   /** ⭐ `D130`: degrees a body may be turned from the nearest accepted goal orientation. */
   goalAngleTolDeg: number;
   /**
+   * ⭐ `D170`: a demo scene's duration, seconds, from its first move to its last (the 1 s lead-in not
+   * counted). The owner: *"the complete demo can be adjusted to run between 10 s to 1 min"*.
+   */
+  demoDurationS: number;
+  /**
    * ⭐ How far every highlight floats off the face or edge it marks, in mm ON THE GLASS — the face
    * fills and contours, the aligned outline, the PioneerFaceCursor (×3). One CSS pixel by default.
    */
@@ -777,6 +782,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // its core gap (3 mm); 5° is well under what the eye reads as crooked.
   goalPositionTolM: 0.005,
   goalAngleTolDeg: 5,
+  // ⭐ `D170`: the middle of the owner's 10 s – 1 min range; a slider in SCENE.
+  demoDurationS: 30,
   // ⭐ The owner, 2026-09-28: 0.1 mm (was one CSS pixel, 25.4 / 96 mm). ⭐ Measured safe: it stays ~67/d times
   // above a 24-bit depth buffer's resolution at d metres (the camera's 0.01–100 m planes) — 13× at 5 m, vectored.
   // ⚠ Raise it if a far zoom flickers (a device with a coarser depth buffer).
@@ -1005,6 +1012,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
+  if (!(cfg.demoDurationS >= 10 && cfg.demoDurationS <= 60)) {
+    throw new Error(`demoDurationS (${cfg.demoDurationS}) must be in [10, 60] s — the owner's range.`);
+  }
   if (!(cfg.goalPositionTolM > 0 && cfg.goalPositionTolM <= 0.1)) {
     throw new Error(`goalPositionTolM (${cfg.goalPositionTolM}) must be in (0, 0.1] m: 0 accepts nothing.`);
   }

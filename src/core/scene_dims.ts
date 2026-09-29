@@ -129,3 +129,9 @@ export function bootTilt(sign: 1 | -1): Quat {
   const pitch = qFromAxisAngle([1, 0, 0], a);
   return qmul(pitch, roll);
 }
+
+/**
+ * ⭐ The orbit's yaw at boot — the camera at `−z` of the orbit centre, looking along `+z`. ⛔ One home (`D171`):
+ * the render rig boots at it, the camera reset returns to it, and the demo generator aims pieces from it.
+ */
+export const ORBIT_START_YAW_RAD = -Math.PI / 2;

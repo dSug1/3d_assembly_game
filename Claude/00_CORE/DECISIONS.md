@@ -34,7 +34,7 @@ file.
 | `D78` | ⭐⭐⭐ **THE ALIGNMENT IS ANTI-PARALLEL — a FollowerFace points AT the PioneerFace** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D86` | ⭐⭐⭐ **THE REST WINDOW IS DERIVED FROM THE DEVICE, NOT FIXED** | 2026-09-24 | ⭐ Binding, ⚠ → history |
 | `D87` | ⛔⛔⛔ **THE ROLES ARE INVERTED AGAIN: FIRST TOUCH THE FOLLOWER, SECOND THE PIONEER** | 2026-09-25 | ⭐ Binding, ⚠ → history |
-| `D88` | ⭐⭐⭐ **THE FUCHSIA OFFER — every face the held body is nearly ready to MATE with** | 2026-09-24 | ⛔ The offer is DELETED (`D109`); its cone is the snap cone. ⚠ → history |
+| `D88` | ⭐⭐⭐ **THE FUCHSIA OFFER** | 2026-09-24 | ⛔ DELETED (`D109`). ⚠ → history |
 | `D89` | ⛔⛔⛔ **`D77`'s CARVE-OUT FOLLOWS THE ROLE: THE **FIRST** TOUCH ON A FROZEN BODY IS THE MISS NOW** | 2026-09-25 | ⛔ Reversed by `D119` → §14 |
 | `D90` | ⭐⭐⭐ **A PRESS ON THE HELD BODY'S OWN FOLLOWER IS A *SWAP*, AND THE RELEASE PATH STOPS ALIGNING** | 2026-09-25 | ⭐ Binding, ⚠ → history |
 | `D91` | ⭐⭐ **THE PYRAMID'S SMALL FACE IS A PART'S SMALL FACE, AND IT IS A QUARTER SHORTER** | 2026-09-25 | ⭐ Binding, ⚠ → history |
@@ -111,6 +111,8 @@ file.
 | `D167` | ⭐⭐ **SHIFT TAP TOGGLES THE MODE (NOT CTRL); FOCUS LOSS INERT** | 2026-09-29 | → §22 |
 | `D168` | ⭐ **A BODY ROTATED KEEPS ITS AXES** | 2026-09-29 | → §22 |
 | `D169` | ⭐ **`Scene_1`: FLOOR 2 M; TOP CENTRE = ORIGIN** | 2026-09-29 | → `SCENE_1.md` §9 |
+| `D170` | ⭐⭐ **A DEMO SCENE ASSEMBLES ITSELF** | 2026-09-29 | → `DEMO_SCENE.md` |
+| `D171` | ⭐⭐ **`Scene1_demo`: 150 MOVES, FIT ZOOM, 15° SETTLE** | 2026-09-29 | → `DEMO_SCENE.md` |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -176,7 +178,7 @@ file.
 | `D16` | ⚠ **SUPERSEDED IN PART BY `D17`** | 2026-09-15 | ⚠ → history |
 | `D15` | ⭐⭐ **Eviction is a QUICK BACK-AND-FORTH, not a roll** | 2026-09-15 | ⛔ Shake deleted (`D107`) |
 | `D14` | ⛔⛔ **Roll DRIVES the free DOF of an anchored object; 2sexte suppresses where it degenerates** | 2026-09-15 | ⭐ Binding |
-| `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** — a full turn clears alignments, never a joint | 2026-09-15 | ⛔ Eviction deleted (`D107`); mates are broken by `D47`/`D100`'s unsnap |
+| `D13` | ⛔⛔ **Eviction SPARES `MATE` entries** | 2026-09-15 | ⛔ Eviction deleted (`D107`) |
 | `D12` | ⚠ **SUPERSEDED BY `D15`** | 2026-09-15 | ⚠ → history |
 | `D11` | ⭐⭐ **Adopt the PROVENANCE DISCIPLINE** from the owner's `TECHNIQUE_CATALOG.md` §0/§5 | 2026-09-15 | ⭐ Binding, ⚠ → history |
 | `D10` | ⚠ **SUPERSEDED BY `D16`** | 2026-09-14 | ⚠ → history |

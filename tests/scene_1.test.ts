@@ -274,8 +274,8 @@ describe("⭐⭐⭐ the lights — Unity's conventions, checked against the owne
 });
 
 describe("⭐⭐ the switch and the view", () => {
-  it("⭐ the registry: 0 is Scene_0, 1 is Scene_1; out of range falls back to Scene_0", () => {
-    expect(SCENES.map((s) => s.id)).toEqual(["Scene_0", "Scene_1"]);
+  it("⭐ the registry: 0 is Scene_0, 1 is Scene_1, 2 the demo (`D170`, renamed `Scene1_demo` by `D171`); out of range falls back to Scene_0", () => {
+    expect(SCENES.map((s) => s.id)).toEqual(["Scene_0", "Scene_1", "Scene1_demo"]);
     expect(sceneAt(0)).toBe(SCENE_0);
     expect(sceneAt(1)).toBe(SCENE_1);
     expect(sceneAt(7)).toBe(SCENE_0);
