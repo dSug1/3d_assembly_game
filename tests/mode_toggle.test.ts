@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  desktopBehaviour,
+  shiftTapTogglesMode,
   initialBehaviour,
   tapTogglesMode,
   isTapRelease,
@@ -97,10 +97,10 @@ describe("⛔⛔ THE TOGGLE IS IMMEDIATE, and a double tap simply flips TWICE", 
     // `Set` in `scene.ts` that nothing read. ⛔ It is here now because a rule in a render file
     // is a rule nothing can interrogate — including this vector.
     expect(surface.sort()).toEqual([
-      "desktopBehaviour",
       "initialBehaviour",
       "isTapRelease",
       "pairPressRevertsToggle",
+      "shiftTapTogglesMode",
       "tapReleaseToggles",
       "tapTogglesMode",
       "toggleBehaviour",
@@ -325,8 +325,13 @@ describe("⭐⭐⭐ `D108` — ONE tap toggles the mode: touch, empty space, one
     expect(tapTogglesMode({ ...base, heldFollowerCount: 1 })).toBe(false);
   });
 
-  it("⭐⭐ the desktop has no mode: Ctrl rotates, a plain drag translates", () => {
-    expect(desktopBehaviour(true)).toBe("ROTATE");
-    expect(desktopBehaviour(false)).toBe("TRANSLATE");
+  it("⭐⭐ `D167`: a Shift tap toggles on the tablet's conditions — one FREE body held, no followers", () => {
+    // ⛔ `D108`'s Ctrl-latched desktop mode (`desktopBehaviour`) is deleted.
+    const base = { heldObjectCount: 1, heldIsAligned: false, heldFollowerCount: 0 };
+    expect(shiftTapTogglesMode(base)).toBe(true);
+    expect(shiftTapTogglesMode({ ...base, heldObjectCount: 0 })).toBe(false);
+    expect(shiftTapTogglesMode({ ...base, heldObjectCount: 2 })).toBe(false);
+    expect(shiftTapTogglesMode({ ...base, heldIsAligned: true })).toBe(false); // an aligned body is mode-less
+    expect(shiftTapTogglesMode({ ...base, heldFollowerCount: 1 })).toBe(false);
   });
 });

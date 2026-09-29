@@ -45,6 +45,7 @@
  * | ⭐ `D154`: **Space + click** on ANOTHER body | the Pioneer tap — it aligns, then the latched HitFace lifts: one episode (`D115`) |
  * | ⭐ `D159`: with a HitFace latched, a **plain click** (left or right, no Space) | completes the action as a Space click would: another body aligns, empty space unaligns |
  * | ⭐ `D160`: with a HitFace latched, a click on the **same** body | CANCELS it — the count is the underlying action's (a frozen drag that moved: 1; else 0) |
+ * | ⭐ `D167`: a **Shift TAP** (down and up within the tap time, no Shift drag between) while the left button holds a part | the verdict asks the scene to toggle translation / rotation (`toggleMode`) |
  * | ⭐ `D161`: a **right press released unused** on a body | LATCHES the HitFace like Space + click — the next plain click completes the action; used while held (a left click or drag), it lifts on release as before |
  * | ⭐ `D155`: **Space pressed** while the left button holds a body (moving or not) | the drag stops and the face it pressed becomes the latched HitFace |
  * | ⭐ `D155`: an alignment made with Space | uses Space up — it must be hit again to start another HitFace |
@@ -70,7 +71,7 @@ const RIGHT_BIT = 2;
 
 export interface MouseInput {
   /** ⭐ `SPACE`: the Space key went DOWN (not a repeat) — `D155`. */
-  readonly type: "DOWN" | "MOVE" | "UP" | "CANCEL" | "SPACE";
+  readonly type: "DOWN" | "MOVE" | "UP" | "CANCEL" | "SPACE" | "SHIFT_DOWN" | "SHIFT_UP";
   /** `PointerEvent.button` — `0` left, `2` right, `-1` for a move or a cancel. */
   readonly button: number;
   /** `PointerEvent.buttons` — the browser's mask AFTER this event. */
@@ -80,6 +81,8 @@ export interface MouseInput {
   readonly y: number;
   /** ⭐ `D154`: is Space held at this event? */
   readonly space?: boolean;
+  /** ⭐ `D167`: the event's time in ms — read for `SHIFT_DOWN` / `SHIFT_UP` only. */
+  readonly t?: number;
   /**
    * ⭐ `D154`: the body under the cursor at a DOWN, resolved by the adapter (a pick) — `null` for
    * empty space. ⚠ Only read for a Space click; absent for every other event.
@@ -119,6 +122,8 @@ export interface Verdict {
   readonly skip: boolean;
   /** Synthetic actions, delivered BEFORE the real event is processed. */
   readonly emit: readonly MouseAction[];
+  /** ⭐ `D167`: a Shift TAP while the left button holds a part — the scene toggles translation / rotation. */
+  readonly toggleMode?: boolean;
 }
 
 const PASS: Verdict = { skip: false, emit: [] };
@@ -155,6 +160,11 @@ export class MouseSecondTouch {
    * released or hit again (*"the space key needs to be hit again to start another hitface cycle"*).
    */
   private spaceUsed = false;
+  /** ⭐ `D167`: Shift went down at `t`; `used` once a Shift drag made the second touch — then it is a HOLD. */
+  private shiftTap: { t: number; used: boolean } | null = null;
+
+  /** @param tapMaxMs the longest press that is still a tap — `tapMaxDuration`, the recognizer's own. */
+  constructor(private readonly tapMaxMs = 250) {}
   /** The real pointer's position AS THE SCENE KNOWS IT, while the left button holds it down. */
   private real: Pt | null = null;
   /** The last cursor position, for the delta. */
@@ -180,6 +190,7 @@ export class MouseSecondTouch {
     // ⭐ `D155`: Space is re-armed by its release (seen on any event) or by a fresh press.
     if (ev.space !== true || ev.type === "SPACE") this.spaceUsed = false;
     if (ev.type === "SPACE") return this.spaceDown(ev, emit);
+    if (ev.type === "SHIFT_DOWN" || ev.type === "SHIFT_UP") return this.shiftKey(ev);
     const dx = this.cursor === null ? 0 : ev.x - this.cursor.x;
     const dy = this.cursor === null ? 0 : ev.y - this.cursor.y;
     const here: Pt = { x: ev.x, y: ev.y };
@@ -362,6 +373,7 @@ export class MouseSecondTouch {
         if (this.tap !== null) this.endTap(emit);
         if (this.second !== null) this.liftSecond(emit);
         this.swallowLeft = false;
+        this.shiftTap = null;
         break;
     }
 
@@ -369,7 +381,9 @@ export class MouseSecondTouch {
     // state for an ordinary release, so nothing is lifted twice.
     if (ev.type === "UP") this.reconcile(ev, emit);
 
-    this.cursor = here;
+    // ⛔⛔ `D167` — **THE ESC BUG**: a CANCEL carries no position (the adapter sends `0, 0`), and recording it as the
+    // cursor made the next move one step from the page's corner to the pointer — a held body jumped away.
+    if (ev.type !== "CANCEL") this.cursor = here;
     return emit.length === 0 && !skip ? PASS : { skip, emit };
   }
 
@@ -447,8 +461,26 @@ export class MouseSecondTouch {
     return emit.length === 0 ? PASS : { skip: false, emit };
   }
 
+  /**
+   * ⭐⭐ `D167` — **A SHIFT TAP** toggles translation / rotation: Shift down, then up within `tapMaxMs`, with no Shift drag
+   * between (that made the second touch — a HOLD, `D94`, unchanged) and the left button holding a part. ⛔ Neither
+   * event moves the cursor.
+   */
+  private shiftKey(ev: MouseInput): Verdict {
+    const t = ev.t ?? 0;
+    if (ev.type === "SHIFT_DOWN") {
+      this.shiftTap = { t, used: false };
+      return PASS;
+    }
+    const tap = this.shiftTap;
+    this.shiftTap = null;
+    if (tap === null || tap.used || !(t - tap.t <= this.tapMaxMs) || this.real === null) return PASS;
+    return { skip: false, emit: [], toggleMode: true };
+  }
+
   /** ⭐ The Shift-made #2 presses where the cursor WAS, so its first move is this event's delta. */
   private pressShiftSecond(emit: MouseAction[]): void {
+    if (this.shiftTap !== null) this.shiftTap.used = true;
     const c = this.cursor!;
     this.second = { x: c.x, y: c.y, shiftMade: true };
     emit.push(this.secondAction("DOWN"));

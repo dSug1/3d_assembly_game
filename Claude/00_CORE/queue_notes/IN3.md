@@ -1179,3 +1179,5 @@ loop** as the fill — a marker pool that retires by what CHANGED instead of by 
 ⭐ **`D165`** — the cyan and amber face fills are half-opaque by default, `faceHighlightAlpha` with a slider under *highlight offset*. ✅ 1313 → 1315.
 
 ⭐ **`D166`** — the cursor ring is a thin line ring, 1.3 × the white ring, one size on the glass; a seated follower's drag shows its axes on the root; fill opacity 0.17 → alignment spec §21. ✅ 1315 → 1317.
+
+⭐⭐ **`D167`** — desktop: a Shift tap toggles translation / rotation (Ctrl deleted); Esc's jump fixed; Alt/F10 blocked from the browser menu; focus loss inert. Chrome + Edge measured → alignment spec §22. ✅ 1317 → 1321.

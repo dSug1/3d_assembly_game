@@ -567,3 +567,43 @@ describe("⭐ `D162` — the layer says when its second touch is a LATCHED HitFa
     expect(n.isSecondLatched).toBe(true);
   });
 });
+
+describe("⭐⭐⭐ `D167` — the Esc bug, and the Shift TAP that toggles translation / rotation", () => {
+  it("⛔⛔ Esc during a drag no longer sends the body away — the next move is the real one, not from the corner", () => {
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 400, y: 300 }));
+    m.step(ev({ type: "MOVE", buttons: L, x: 410, y: 300 }));
+    m.step(ev({ type: "CANCEL" })); // Esc
+    // ⛔ RED against the build before: the cursor was (0, 0), so this move re-issued the pointer at (820, 600).
+    expect(m.step(ev({ type: "MOVE", buttons: L, x: 412, y: 301 }))).toEqual({ skip: false, emit: [] });
+  });
+
+  const SD = (t: number) => ev({ type: "SHIFT_DOWN", shift: true, t });
+  const SU = (t: number) => ev({ type: "SHIFT_UP", t });
+
+  it("⭐⭐ a Shift TAP while the left button holds a part asks for the toggle — and moves nothing", () => {
+    const m = new MouseSecondTouch(250);
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 100, y: 100 }));
+    expect(m.step(SD(1000))).toEqual({ skip: false, emit: [] });
+    expect(m.step(SU(1120))).toEqual({ skip: false, emit: [], toggleMode: true });
+    // the cursor is untouched: the next move is ordinary
+    expect(m.step(ev({ type: "MOVE", buttons: L, x: 101, y: 100 }))).toEqual({ skip: false, emit: [] });
+  });
+
+  it("⛔ a Shift HOLD — a Shift drag between — is `D94`'s second touch, never a toggle", () => {
+    const m = new MouseSecondTouch(250);
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 100, y: 100 }));
+    m.step(SD(1000));
+    expect(tag(m.step(ev({ type: "MOVE", buttons: L, shift: true, x: 110, y: 100 })).emit)).toEqual(["SECOND.DOWN", "SECOND.MOVE"]);
+    expect(m.step(SU(1100)).toggleMode).toBeUndefined();
+  });
+
+  it("⛔ no part pressed, or Shift held too long: no toggle", () => {
+    const m = new MouseSecondTouch(250);
+    m.step(SD(1000));
+    expect(m.step(SU(1050)).toggleMode).toBeUndefined(); // nothing pressed
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 1, y: 1 }));
+    m.step(SD(2000));
+    expect(m.step(SU(2400)).toggleMode).toBeUndefined(); // 400 ms > 250 ms
+  });
+});

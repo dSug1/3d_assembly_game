@@ -2204,3 +2204,16 @@ world pose, and a pop-up names it (`render/goal_popup.ts`). ⚠ Scenes with a go
 | the face fills' opacity | default `faceHighlightAlpha` **0.17** (the owner's number; `D165` shipped 0.5) |
 
 ✅ 2 vectors, 1315 → 1317; headless: after a seat, dragging the seated box moved the pyramid and drew red + blue with the white ring at the pyramid's centre; the cursor ring drew one pixel thick.
+
+## 22 — ⭐⭐ DESKTOP KEYS: THE SHIFT TAP, ESC, ALT / F10, AND FOCUS LOSS (`D167`, 2026-09-29)
+
+> *"fix the esc bug; disable the Alt focus on Chrome's menu; check what happens with other browsers Edge, Safari, etc. and disable the page loss of focus; Remove the Ctrl to toggle rotation in desktop. Instead, a single Shift tap while an object is pressed shall toggle between translation / rotation (note that a Shift hold remain as currently wired)"* — the owner, 2026-09-29, after reviewing the list of keys that did things he had not specified
+
+| what | now |
+|---|---|
+| **translation ↔ rotation on the desktop** | a **Shift TAP** — Shift down and up within `tapMaxDuration`, with no Shift drag between — while the left button holds ONE FREE part with no followers toggles the mode, and the mode PERSISTS, as the tablet's does (`shiftTapTogglesMode`, `mode_toggle.ts`; the tap is `MouseSecondTouch.shiftKey`). ⛔ `D108`'s *the desktop has no mode; Ctrl + drag rotates* (`desktopBehaviour`, Ctrl read at every press) is DELETED: Ctrl does nothing now. ⭐ A Shift HOLD — Shift + drag — is `D94`'s second touch, unchanged; in `ROTATE` it rolls. ⚠ Not an episode (no touchpoint) |
+| **Esc** | ⛔⛔ **the bug**: the cancel carried no position and the layer recorded `0, 0` as the cursor, so the next move stepped from the page's corner to the pointer — a held body jumped away. Fixed: a CANCEL leaves the cursor alone. ⭐ Esc keeps cancelling a latched HitFace, a pending tap and the Shift touch |
+| **Alt, F10** | their default is prevented on key-down AND key-up, so Chrome, Edge and Firefox (Windows) no longer hand the keyboard to their menu. ⚠ Safari's Option key has no such role |
+| **the window losing focus** (Alt+Tab, another window, a notification) | no page can prevent it, so it is made INERT: it only forgets Shift and Space as held (their releases will never arrive). ⛔ It used to run Esc's cancel — lifting a latched HitFace and the Shift touch |
+
+✅ Measured headless in **Chrome 154 and Edge 154** (same results): Esc mid-drag — no jump; Alt / F10 — `defaultPrevented` on both events; a focus loss with a HitFace latched — still latched; a Shift tap while pressing the box — `ROTATE`, and the next drag turned it without moving it; a second tap — `TRANSLATE`, and Ctrl + drag TRANSLATED. ⚠ Firefox (not installed; no CDP) and Safari (macOS) not run. ✅ 6 vectors, 1317 → 1321; the Esc mutant red.

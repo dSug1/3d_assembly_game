@@ -29,8 +29,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1317 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → 1272 → 1281 → 1287 → 1291 → 1294 → 1293 → 1299 → 1301 → 1305 → 1309 → 1312 → 1313 → 1315 → **1317**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D166`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1321 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → 1272 → 1281 → 1287 → 1291 → 1294 → 1293 → 1299 → 1301 → 1305 → 1309 → 1312 → 1313 → 1315 → 1317 → **1321**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D167`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -41,7 +41,7 @@ and the in-zone basis are deleted, `D82`/`D109`).
 ⭐ The HUD has a `jump` line (`input/jump_watch.ts`) — a standing readout, not an open defect.
 ⚠ The hollow cylinder (`D92`) was made and removed the same day — defect 68 is what it taught.
 ⭐⭐ **THE SCENE BOOTS UNALIGNED, IN `TRANSLATE`, THE TWO PARTS TILTED 30°** (`D93`, 2026-09-25) — `bootAlignment` deleted (state only), `D63`'s jig gone with it, roll about world `z` then pitch about world `x`. ⚠ Parts' mutual gap 280 → 216 mm → `D93` in `DECISIONS.md` and its history.
-⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch (translates; **Ctrl** rotates, `D108`), **Shift + left drag = the second** (gravity + roll); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align — ⭐ or **Space + click** each (`D154`), or Space during a left hold (`D155`); Space + click the Follower then empty space unaligns (`D156`). ⛔ The right button moves nothing.
+⭐⭐ **A MOUSE IS A TWO-TOUCH DEVICE** (`D94`): left drag = the first touch (translates; a **Shift tap** toggles rotation, `D167`), **Shift + left drag = the second** (gravity + roll); **right-press and hold = the HitFace**, then **left-click the Pioneer face** to align — ⭐ or **Space + click** each (`D154`), or Space during a left hold (`D155`); Space + click the Follower then empty space unaligns (`D156`). ⛔ The right button moves nothing.
 ⭐⭐ **`scene.ts` IS SPLIT** (`D104`) → `40_RENDER_SCENE/INDEX.md`. ⛔ Unjudged.
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
@@ -49,7 +49,7 @@ and the in-zone basis are deleted, `D82`/`D109`).
 ### ⭐ WHAT IS STILL OWED
 
 1. ⛔⛔ **The playability program above** — `GM1` next.
-2. ⛔⛔ **A device look on everything since `D106`** (`INPUTS_TABLE.md`; ⭐ its §5 is the checklist for `D155`–`D166`), and on the alignment model's §10 list.
+2. ⛔⛔ **A device look on everything since `D106`** (`INPUTS_TABLE.md`; ⭐ its §5 is the checklist for `D155`–`D167`), and on the alignment model's §10 list.
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 

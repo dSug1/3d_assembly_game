@@ -64,10 +64,11 @@ on entering the capture zone, are deleted.
 | nothing | double left click on empty space | reset the camera |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`); one that does not land costs zero episodes (`D157`) |
 | a FREE body | left drag | translate as the tablet's first finger (`D145`; `D108`: no mode on desktop) |
-| a FREE body | **Ctrl** + left drag | rotate: yaw + pitch |
+| a FREE body, pressed | ⭐ **a Shift TAP** (`D167`) | toggle translation ↔ rotation (it persists); ⛔ Ctrl does nothing since `D167` |
+| a FREE body, in `ROTATE` | left drag | rotate: yaw + pitch |
 | a FREE body | Shift + left drag | gravity (`dy`) + ⭐ **spin about gravity** (`dx`) (`D123`) |
-| a FREE body | Ctrl + Shift + left drag | roll (`dx`) |
-| an ALIGNED body | left drag (Ctrl or not) | slide in its horizontal plane |
+| a FREE body, in `ROTATE` | Shift + left drag (a HOLD) | roll (`dx`) |
+| an ALIGNED body | left drag | slide in its horizontal plane (mode-less) |
 | an ALIGNED body | Shift + left drag | gravity (`dy`) + spin about the normal (`dx`) |
 | — | **right-press** on a face | that face is the HitFace; the right button never moves anything. ⭐ `D161`: released with nothing done, it stays LATCHED (as Space + click) — the next plain click completes the action |
 | right-hold | left click on another body's face | align — ⭐ on the click's RELEASE, like a tap (`D119`) |
@@ -81,10 +82,12 @@ on entering the capture zone, are deleted.
 | right-hold on a Pioneer | left click on empty space | release all its followers |
 | the Pioneer, then the Follower | rapid move | unsnap |
 | — | left press inside the ring | drag the PioneerFaceCursor — ⚠ Free Flow only |
-| — | Esc, or the window losing focus | lift the Shift-made second touch |
+| — | Esc | lift the Shift-made second touch, cancel a latched HitFace or a pending tap (`D167`: no longer sends a held part away) |
+| — | the window losing focus (Alt+Tab, …) | ⭐ `D167`: nothing — only Shift and Space are forgotten as held |
+| — | Alt, F10 | ⭐ `D167`: nothing — the browser's menu is kept from taking the keyboard |
 | nothing | Shift + left drag on empty space | ⛔ nothing — it no longer zooms (`D118`); the **wheel** is the desktop's zoom |
 
-⛔ Shift and Ctrl are **modifiers of a movement already engaged** — neither is a touchpoint episode
+⛔ Shift (held) is a **modifier of a movement already engaged**; a Shift TAP toggles the mode (`D167`) — neither is a touchpoint episode
 of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE.md) §3).
 
 ## 3. Deleted 2026-09-27, and what replaced each
@@ -98,7 +101,7 @@ of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE
 | the flick itself (rotation reset) | `D110` | the undo |
 | `D103`'s flick-unsnap (specified) | `D110` | the precise unsnap; the undo |
 | the camera reset by a double tap on a BODY | `D111` | empty space — and the **edge band** is always empty space (`D113`) |
-| any tap toggling the mode | `D108` | tablet: one tap on empty space, free body held; desktop: Ctrl |
+| any tap toggling the mode | `D108` | tablet: one tap on empty space, free body held; desktop: a Shift tap while a free part is pressed (`D167`; Ctrl before) |
 | the pinned Pioneer (`pioneerTranslates=0`) | `D109` | an aligned Follower's second finger drives both axes anywhere |
 | `worldAxisB=0`, `translatePairing=0` | `D109` | boot-fixed axes, plane solve — ⛔ themselves replaced by the live camera's (`D145`) |
 | the fuchsia offer | `D109` | its cone is the **snap cone angle** (CAPTURE) |
@@ -119,7 +122,7 @@ meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
 
-## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D166`)
+## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D167`)
 
 ⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
 
@@ -143,6 +146,8 @@ drag is on.
 | 7h | FACE ALIGNMENT › *face highlight opacity* (`D165`) | the cyan and amber fills are faint by default (0.17, `D166`); the slider (below *highlight offset*) sets it live, 0–1 |
 | 7i | look at the Pioneer's cursor ring (`D166`) | as thin as the white ring, a little larger (1.3×), and the SAME size on the glass wherever the Pioneer is |
 | 7j | seat a follower on its Pioneer, then drag the follower (`D166`) | the whole assembly moves; the red / blue axes and the white ring show on the PIONEER |
+| 7k | press a free part and **tap Shift** (`D167`) | the HUD shows `[ROTATE]`; a drag turns the part; tap again → `[TRANSLATE]`; **Ctrl** + drag now translates |
+| 7l | **Esc** mid-drag; **Alt** or **F10** mid-drag; Alt+Tab away and back (`D167`) | no jump; the browser menu is not focused; nothing in the scene changed |
 
 **Both devices — the episode count, first HUD line** (`D158`/`D159`)
 
