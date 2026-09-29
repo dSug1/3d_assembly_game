@@ -414,6 +414,8 @@ export interface SceneState {
   edgeOnNow: boolean;
   axisGizmos: Map<ObjectId, AxisGizmo>;
   gizmoRings: Map<ObjectId, LinesMesh>;
+  /** ⭐ `D151`: the white rings where a translation line hits an object, keyed `body:axis:side`. */
+  gizmoHitRings: Map<string, LinesMesh>;
   gizmoTurnRings: Map<ObjectId, LinesMesh>;
   markerMat: StandardMaterial;
   hud: Hud;

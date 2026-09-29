@@ -535,6 +535,31 @@ export function travelLines(g: TravelGizmo): readonly [TravelLine, TravelLine, T
 }
 
 /**
+ * ⭐ `D151`: the halves of a translation line that are drawn — `-1` and `+1` for a FULL line (each
+ * half runs out from the gizmo on its own side), the ray's own side for a ray, none when hidden.
+ */
+export function travelHalves(line: TravelLine): readonly (1 | -1)[] {
+  if (line === "FULL") return [-1, 1];
+  if (line === 1 || line === -1) return [line];
+  return [];
+}
+
+/**
+ * ⭐⭐⭐ `D151` — **A TRANSLATION LINE STOPS WHERE IT HITS AN OBJECT** (the owner, 2026-09-29: *"In
+ * addition to the rule already implemented, a translation axis stops where it hits an object and a
+ * white ring gizmo is displayed at this point. If no hit while the axis is displayed, no change as
+ * currently implemented."*).
+ *
+ * One half of a line runs out from the gizmo `reach` metres; `hitM` is how far along it the first
+ * other object lies (`null`: none). ⭐ A hit inside the reach shortens the half to it and asks for the
+ * ring there; no hit — or one past the reach, or not ahead — leaves the half exactly as before.
+ */
+export function stopAtHit(reach: number, hitM: number | null): { readonly lengthM: number; readonly hit: boolean } {
+  if (hitM !== null && Number.isFinite(hitM) && hitM > 0 && hitM <= reach) return { lengthM: hitM, hit: true };
+  return { lengthM: reach, hit: false };
+}
+
+/**
  * ⭐⭐ **THE PART OF A GIZMO LINE IN FRONT OF THE CAMERA** — `[p0, p1]` cut where it crosses the plane
  * `minDepth` ahead of the eye along the view, or `null` when all of it is behind.
  *
