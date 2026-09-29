@@ -8,6 +8,8 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { Ray } from "@babylonjs/core/Culling/ray";
+import { driveBodyOf } from "./alignment_wiring";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { trackingMetresPerPx, type GravityFrame } from "../input";
@@ -16,7 +18,7 @@ import { worldPlacementOf, type ObjectId, faceWorld } from "../core/object_model
 import { alignedFaceOf } from "../core/face_pick";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
-import { awaySignFrom, clipSegmentInFront, displayedAxes, freeTravelPhase, soleGizmoBody, stepTravelGizmo, travelLines, type AwaySign, type GizmoChannels, type AxisTravel, type TravelLine, type TravelPhase } from "../input/axis_translate";
+import { awaySignFrom, clipSegmentInFront, displayedAxes, freeTravelPhase, stopAtHit, travelHalves, soleGizmoBody, stepTravelGizmo, travelLines, type AwaySign, type GizmoChannels, type AxisTravel, type TravelLine, type TravelPhase } from "../input/axis_translate";
 import { translatesOnDrag } from "../input/highlight";
 import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type Held, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
@@ -145,6 +147,23 @@ export function ringFrom(st: SceneState, pool: Map<ObjectId, LinesMesh>,
   return m;
 }
 
+/**
+ * ⭐ `D151`: how far along `dir` from `from` the first OTHER object lies, within `reach` — `null` for
+ * none. ⛔ Skips the held body and everything carried with it (its assembly, `driveBodyOf`), and
+ * anything hidden or not pickable — a frozen floor seen from below (`D128`) is not there to hit.
+ */
+function firstHitAlong(st: SceneState, heldId: ObjectId, from: Vec3, dir: Vec3, reach: number): number | null {
+  const root = driveBodyOf(st, heldId);
+  const hit = st.scene.pickWithRay(
+    new Ray(new Vector3(from[0], from[1], from[2]), new Vector3(dir[0], dir[1], dir[2]), reach),
+    (m) => {
+      const id = st.idOf.get(m);
+      return id !== undefined && m.isPickable && m.isVisible && m.isEnabled() && driveBodyOf(st, id) !== root;
+    },
+  );
+  return hit?.hit ? hit.distance : null;
+}
+
 export function gizmoRingFor(st: SceneState, id: ObjectId) : LinesMesh {
 return ringFrom(st, st.gizmoRings, id, GIZMO_RING_MOVE_COLOUR, "move", GIZMO_MOVE_GROUP);
 }
@@ -215,6 +234,8 @@ export function gizmoFor(st: SceneState, id: ObjectId) : AxisGizmo {
  */
 export function refreshAxisGizmo(st: SceneState) : void {
   const live = new Set<ObjectId>();
+  // ⭐ `D151`: the hit rings placed this frame; every other one is hidden at the end.
+  const hitRingsLive = new Set<string>();
   // ⛔⛔⛔ **ONE GIZMO ON THE SCREEN, NEVER TWO** — the owner, 2026-09-23: *"the gizmo shall not
   // be applied to a second object (pioneer object for example) as this confuses the reading on
   // the screen."* ⚠ The translation lines are FULL-SCREEN, so a second set crosses the first
@@ -425,6 +446,30 @@ export function refreshAxisGizmo(st: SceneState) : void {
     const g = gizmoFor(st, id);
     // ⭐ The aligned Follower's own PioneerFaceCursor, in WORLD space (`worldPointOn`).
     const cursor = alignedHere ? st.pioneerCursors.ofFollower(id) : null;
+    // ⭐⭐⭐ `D151`: each drawn half of a FREE body's translation line runs out from the gizmo until it
+    // hits another object — ending there, with a white ring — or to its full reach, as before.
+    const freeTravelEnds = (line: TravelLine, i: number): [Vector3, Vector3] => {
+      const a = [axes.x, axes.gravity, axes.depth][i]!;
+      const end = (side: 1 | -1): Vector3 => {
+        const dir: Vec3 = [a[0] * side, a[1] * side, a[2] * side];
+        const stop = stopAtHit(span, firstHitAlong(st, id, anchor, dir, span));
+        const at: Vec3 = [
+          anchor[0] + dir[0] * stop.lengthM,
+          anchor[1] + dir[1] * stop.lengthM,
+          anchor[2] + dir[2] * stop.lengthM,
+        ];
+        if (stop.hit) {
+          const key = `${id}:${i}:${side}`;
+          hitRingsLive.add(key);
+          placeRing(ringFrom(st, st.gizmoHitRings, key, GIZMO_RING_MOVE_COLOUR, "hit", GIZMO_MOVE_GROUP), at, true);
+        }
+        return new Vector3(at[0], at[1], at[2]);
+      };
+      const halves = travelHalves(line);
+      const origin = new Vector3(anchor[0], anchor[1], anchor[2]);
+      // ⭐ A ray is origin → its end; a FULL line is its two ends, through the origin.
+      return halves.length === 2 ? [end(-1), end(1)] : [origin, end(halves[0] ?? 1)];
+    };
     const cursorWorld =
       cursor === null ? null : worldPointOn(st, cursor.pioneerId, cursor.position);
     const cursorAt: Vec3 | null =
@@ -473,16 +518,8 @@ export function refreshAxisGizmo(st: SceneState) : void {
                   new Vector3(seg[0][0], seg[0][1], seg[0][2]),
                   new Vector3(seg[1][0], seg[1][1], seg[1][2]),
                 ]
-              : travel && lines !== null && (lines[i] === 1 || lines[i] === -1)
-                ? [
-                    // ⭐ `D150`: from the gizmo's origin, toward the travel only.
-                    new Vector3(base[0], base[1], base[2]),
-                    new Vector3(
-                      base[0] + a[0] * reach * (lines[i] as number),
-                      base[1] + a[1] * reach * (lines[i] as number),
-                      base[2] + a[2] * reach * (lines[i] as number),
-                    ),
-                  ]
+              : travel && lines !== null
+                ? freeTravelEnds(lines[i]!, i)
               : [
                   new Vector3(
                     base[0] - a[0] * reach,
@@ -527,6 +564,7 @@ export function refreshAxisGizmo(st: SceneState) : void {
     if (live.has(id)) continue;
     for (const line of g.lines) line.isVisible = false;
   }
+  for (const [key, ring] of st.gizmoHitRings) if (!hitRingsLive.has(key)) ring.isVisible = false;
   for (const id of [...st.rolledThisHold])
     if (!live.has(id)) st.rolledThisHold.delete(id);
   // ⚠ The circles go with them: two readings of one state must appear and vanish together.

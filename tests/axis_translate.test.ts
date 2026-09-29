@@ -32,6 +32,8 @@ import {
   NO_TRAVEL_GIZMO,
   planeEdgeOn,
   stepTravelGizmo,
+  stopAtHit,
+  travelHalves,
   travelLines,
   soleGizmoBody,
 } from "@input/axis_translate";
@@ -798,5 +800,26 @@ describe("⛔⛔ `clipSegmentInFront` — a gizmo line with an end BEHIND the ca
   it("⛔ no view direction, or a NaN end: nothing, never a line through the eye", () => {
     expect(clipSegmentInFront([0, 0, 0], [1, 0, 0], eye, [0, 0, 0], near)).toBeNull();
     expect(clipSegmentInFront([NaN, 0, 0], [1, 0, 0], eye, view, near)).toBeNull();
+  });
+});
+
+describe("⭐⭐⭐ `D151` — a translation line STOPS where it hits an object, with a white ring there", () => {
+  // > *"In addition to the rule already implemented, a translation axis stops where it hits an object
+  // > and a white ring gizmo is displayed at this point. If no hit while the axis is displayed, no
+  // > change as currently implemented."* — the owner, 2026-09-29
+  it("⭐ the halves cast: both sides of a FULL line, the ray's own side, none when hidden", () => {
+    expect(travelHalves("FULL")).toEqual([-1, 1]);
+    expect(travelHalves(1)).toEqual([1]);
+    expect(travelHalves(-1)).toEqual([-1]);
+    expect(travelHalves("HIDDEN")).toEqual([]);
+  });
+
+  it("⭐⭐ a hit inside the reach shortens the half to it and asks for the ring", () => {
+    expect(stopAtHit(30, 0.42)).toEqual({ lengthM: 0.42, hit: true });
+    expect(stopAtHit(30, 30)).toEqual({ lengthM: 30, hit: true });
+  });
+
+  it("⛔ no hit — or one past the reach, behind, or NaN — leaves the line exactly as before, no ring", () => {
+    for (const h of [null, 31, 0, -2, NaN, Infinity]) expect(stopAtHit(30, h)).toEqual({ lengthM: 30, hit: false });
   });
 });
