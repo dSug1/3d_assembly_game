@@ -21,8 +21,19 @@
  */
 import { MOUSE_SECOND_ID } from "./mouse_second_touch";
 
-/** ⭐ The ring's DIAMETER on screen, in CSS px — what the scene draws and what reach is built on. */
-export const PIONEER_CURSOR_PX = 16;
+/**
+ * ⭐ The white gizmo ring's DIAMETER on screen, in CSS px — constant at every distance (it is rescaled each frame).
+ * ⚠ Its one home, here and not in `render/`, because the PioneerFaceCursor's size is defined from it.
+ */
+export const GIZMO_RING_PX = 11;
+
+/**
+ * ⭐ The PioneerFaceCursor's DIAMETER on screen, in CSS px — what the scene draws and what reach is built on.
+ * ⭐⭐ `D166` (the owner, 2026-09-29: *"Make the gizmo of the pioneerface same thickness as the gizmo of the center
+ * of an object … and 30% bigger radius … the gizmo of the pioneerface shall not change size with position"*):
+ * 1.3 × the white ring (was 16 px, a thick torus).
+ */
+export const PIONEER_CURSOR_PX = GIZMO_RING_PX * 1.3;
 
 /** ⭐ The owner's slider range, in ring radii. */
 export const GRAB_RADII_MIN = 1;

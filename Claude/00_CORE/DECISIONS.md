@@ -91,7 +91,7 @@ file.
 | `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** — `Scene_1`: a face or its opposite | 2026-09-28 | → `PLAYABILITY` §2.1 |
 | `D144` | ⭐⭐ **A ⏸ PAUSE MENU LEAVES A LEVEL, BY PAGE RELOAD; ONE SCENE LIST; `Scene_1` BOOTS** | 2026-09-28 | → `GAME_STRUCTURE.md` §4–§5 |
 | `D145` | ⭐⭐⭐ **TRANSLATION ALONG THE LIVE CAMERA; UP = AWAY IFF THE CAMERA IS AT/ABOVE THE GIZMO** | 2026-09-29 | Reverses `D74`'s boot axes → §19 |
-| `D146` | ⚠ **REVERSED BY `D147`** — the sign latched at press | 2026-09-29 | → §19 |
+| `D146` | ⚠ **REVERSED BY `D147`** | 2026-09-29 | → §19 |
 | `D147` | ⭐⭐ **A ZOOM RE-DECIDES THE DIRECTION, EVEN MID-DRAG** | 2026-09-29 | → §19 |
 | `D148` | ⭐⭐ **…AND A GRAVITY LIFT: THE SIGN IS READ EVERY STEP** | 2026-09-29 | → §19 |
 | `D153` | ⭐⭐ **A TRANSLATION LINE STOPS AT THE OBJECT IT HITS; ITS RING IN PERSPECTIVE** (`D149`–`D152` reverted) | 2026-09-29 | → §19 |
@@ -105,8 +105,9 @@ file.
 | `D161` | ⭐⭐ **A RIGHT CLICK RELEASED UNUSED LATCHES THE HITFACE, AS SPACE DOES** | 2026-09-29 | → §20 |
 | `D162` | ⭐ **A PRESSED ALIGNED PART FILLS ITS PIONEERFACE AMBER** | 2026-09-29 | → §21 |
 | `D163` | ⭐ **A LATCHED HITFACE ON AN ALIGNED PART: FUCHSIA OVER CYAN** | 2026-09-29 | → §21 |
-| `D164` | ⭐ **AN ALIGNED PART'S RING IS AMBER; ITS PIONEER'S RING CYAN** | 2026-09-29 | → §21 |
-| `D165` | ⭐ **FACE FILLS HALF-OPAQUE; A SLIDER** | 2026-09-29 | → §21 |
+| `D164` | ⭐ **ALIGNED PART'S RING AMBER; PIONEER'S RING CYAN** | 2026-09-29 | → §21 |
+| `D165` | ⭐ **FACE FILLS LESS OPAQUE; A SLIDER** | 2026-09-29 | → §21 |
+| `D166` | ⭐ **THIN 1.3× CURSOR RING; SEATED AXES ON ROOT** | 2026-09-29 | → §21 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -119,7 +120,7 @@ file.
 | `D70` | ⭐⭐⭐ **A MOVED PIONEER COSTS A FOLLOWER WHAT A TURNED ONE DOES — cyan BREAKS, orange follows** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D69` | ⚠ **CORRECTED BY `D70` THE SAME DAY** | 2026-09-21 | ⚠ → §5.16 |
 | `D68` | ⭐⭐ **A DOUBLE TAP REVERTS THE MODE EVEN WHEN THE SECOND HALF NEVER LIFTS** | 2026-09-21 | ⭐ Binding, ⚠ → history |
-| `D67` | ⚠ **REVERSED BY `D87`** — first touch the PIONEER, second the Follower | 2026-09-21 | ⚠ → §5.14, history |
+| `D67` | ⚠ **REVERSED BY `D87`** | 2026-09-21 | ⚠ → §5.14, history |
 | `D66` | ⭐⭐⭐ **A PRESS DOES NOT TOGGLE THE MODE — ONLY A TAP DOES, WHICH IS `D28` AGAIN** | 2026-09-21 | ⭐ Binding, ⚠ → history |
 | `D65` | ⚠ **REPEALED BY `D66` the same day** | 2026-09-21 | ⚠ → history |
 | `D64` | ⚠ **SUPERSEDED BY `D65`, THEN REPEALED WITH IT** | 2026-09-21 | ⚠ → history |

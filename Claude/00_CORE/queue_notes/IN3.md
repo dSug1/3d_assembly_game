@@ -1177,3 +1177,5 @@ loop** as the fill — a marker pool that retires by what CHANGED instead of by 
 ⭐ **`D164`** — an aligned part's origin ring is amber, its Pioneer's cursor ring cyan → alignment spec §21. ✅ 1312 → 1313.
 
 ⭐ **`D165`** — the cyan and amber face fills are half-opaque by default, `faceHighlightAlpha` with a slider under *highlight offset*. ✅ 1313 → 1315.
+
+⭐ **`D166`** — the cursor ring is a thin line ring, 1.3 × the white ring, one size on the glass; a seated follower's drag shows its axes on the root; fill opacity 0.17 → alignment spec §21. ✅ 1315 → 1317.

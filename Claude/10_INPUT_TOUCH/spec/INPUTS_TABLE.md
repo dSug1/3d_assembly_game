@@ -119,7 +119,7 @@ meanwhile as `(+1 on release)`, `D115`), the time since the first press,
 and how many actions can be undone. ⭐ `FREE FLOW (not scored)` replaces the count while the cursor
 drag is on.
 
-## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D165`)
+## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D166`)
 
 ⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
 
@@ -140,7 +140,9 @@ drag is on.
 | 7e | press (touch, left or right) an ALIGNED part and hold (`D162`) | its Pioneer face fills amber; on release it returns to the amber contour (a right click that latches reverts too) |
 | 7f | Space + click (or right click and release) an ALIGNED part (`D163`) | the clicked face shows a FUCHSIA contour, on top of the cyan outline |
 | 7g | look at an aligned couple (`D164`) | the aligned part's gizmo ring (at its FollowerFace) is AMBER; the Pioneer's cursor ring is CYAN — visible on the amber fill while the part is pressed |
-| 7h | FACE ALIGNMENT › *face highlight opacity* (`D165`) | the cyan and amber fills are half see-through by default; the slider (below *highlight offset*) sets it live, 0–1 |
+| 7h | FACE ALIGNMENT › *face highlight opacity* (`D165`) | the cyan and amber fills are faint by default (0.17, `D166`); the slider (below *highlight offset*) sets it live, 0–1 |
+| 7i | look at the Pioneer's cursor ring (`D166`) | as thin as the white ring, a little larger (1.3×), and the SAME size on the glass wherever the Pioneer is |
+| 7j | seat a follower on its Pioneer, then drag the follower (`D166`) | the whole assembly moves; the red / blue axes and the white ring show on the PIONEER |
 
 **Both devices — the episode count, first HUD line** (`D158`/`D159`)
 
