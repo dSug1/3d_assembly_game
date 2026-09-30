@@ -9,8 +9,17 @@
  * ⛔ Nothing may import `scene1_demo_plan` statically — `tests/d173.test.ts` reads the sources to hold that.
  */
 import type { SceneDescriptor } from "../core/game_structure";
-import type { DemoPlan } from "../core/demo_plan";
-import { SCENE_1 } from "./scene_1";
+import type { DemoOptions, DemoPlan } from "../core/demo_plan";
+import { SCENE_1, SCENE_1_PALETTE } from "./scene_1";
+
+/**
+ * ⭐ `D174` (the owner: *"ordered by color"*): the grid's colour groups in the painting's own order — white, black,
+ * yellow, red, blue (the slots `MAT_A`–`MAT_E`, as `SCENE_1.md` §4 counts them). What the generator is given for
+ * `Scene_1`, by the script that writes the plan and by the vector that checks it.
+ */
+export const SCENE1_DEMO_OPTIONS: Partial<DemoOptions> = {
+  colourOrder: [SCENE_1_PALETTE.MAT_A, SCENE_1_PALETTE.MAT_B, SCENE_1_PALETTE.MAT_C, SCENE_1_PALETTE.MAT_D, SCENE_1_PALETTE.MAT_E],
+};
 
 const finalOf = (id: string) => SCENE_1.final!.bodies.find((f) => f.id === id);
 

@@ -18,6 +18,7 @@ import type { DemoPlan } from "../core/demo_plan";
 export const SCENE1_DEMO_PLAN: DemoPlan = {
   seed: ${plan.seed},
   volume: ${JSON.stringify(plan.volume)},
+  stage: ${JSON.stringify(plan.stage)},
   moves: [
 ${moves},
   ],

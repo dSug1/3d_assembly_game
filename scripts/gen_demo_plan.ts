@@ -6,9 +6,10 @@
  */
 import { writeFileSync } from "node:fs";
 import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE1_DEMO_OPTIONS } from "../src/content/scene1_demo";
 import { generateDemoPlan } from "../src/core/demo_plan";
 import { formatDemoPlan } from "../src/content/demo_plan_format";
 
-const plan = generateDemoPlan(SCENE_1);
+const plan = generateDemoPlan(SCENE_1, SCENE1_DEMO_OPTIONS);
 writeFileSync(new URL("../src/content/scene1_demo_plan.ts", import.meta.url), formatDemoPlan(plan));
 console.log(`wrote ${plan.moves.length} moves over ${Object.keys(plan.start).length} pieces`);
