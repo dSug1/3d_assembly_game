@@ -125,6 +125,8 @@ drag is on.
 
 ## 5. ⭐ Device checklist — what the 2026-09-29 deploys add (`D155`–`D172`)
 
+✅ **CLOSED BY THE OWNER, 2026-09-30** — *"Checked and all closed"* (with everything since `D106`). The list stays as the record.
+
 ⛔ Unjudged by a hand; check the HUD's `build` line first. Each line: what to do → what should happen.
 
 **Desktop (mouse + keyboard)**

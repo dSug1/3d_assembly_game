@@ -109,7 +109,9 @@ export function parseConfigOverrides(
     }
     // ⚠ Cache-busting and other unrelated parameters are common on this URL; they
     // are not mistakes and must not be reported as ones.
-    if (key === "cb" || key === "t") continue;
+    // ⭐ `D180`: `uiTheme` picks the screens' graphics style (`core/ui_theme.ts` `chooseTheme`) — a parameter, not a
+    // tunable; found reported as a mistake on the HUD by the first headless look.
+    if (key === "cb" || key === "t" || key === "uiTheme") continue;
     if (!(NUMERIC_KEYS as readonly string[]).includes(key)) {
       rejected.push(`${key}: not an overridable tunable`);
       continue;

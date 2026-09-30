@@ -37,6 +37,7 @@ import { type GestureSpan, type UndoHistory } from "../core/undo_history";
 import { type PointerRole } from "../input/router";
 import { type SceneSnapshot } from "./undo_wiring";
 import { type DemoPlan } from "../core/demo_plan";
+import { type LevelEnd, type LevelResult } from "../core/level_end";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -433,6 +434,10 @@ export interface SceneState {
   episodes: EpisodeTally;
   /** ⚠ `null` until the first press — `SCORE.md` §6: the ledger starts at the first press after boot. */
   sceneStartMs: number | null;
+  /** ⭐ `D180`: the level end's latch — its `result` is the frozen result once the level is complete. */
+  levelEnd: LevelEnd;
+  /** ⭐ `D180`: told once, on the frame the level completes (`main.ts` shows the results screen). */
+  onLevelEnd: ((result: LevelResult) => void) | null;
   /** The last whole second the HUD showed — the timer repaints once a second, not per frame. */
   hudSecond: number;
   /** ⭐ `D113`: the edge band's faint outline, and the width it was last drawn at. */

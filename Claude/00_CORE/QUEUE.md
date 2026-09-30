@@ -14,7 +14,13 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-28)
+## ⭐⭐⭐ YOU ARE HERE (2026-09-30)
+
+⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
+(played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
+*Level select*) as a bottom sheet; every screen now styled by a swappable UI THEME (`night`, `paper`, `?uiTheme=`) →
+[`LEVEL_END.md`](../20_GAME_RULES/spec/LEVEL_END.md). ⛔ Unjudged by a hand. ⭐ The owner closed the device look on
+everything since `D106` (2026-09-30) and kept the demo's portrait start as it is.
 
 ⭐⭐ **2026-09-28, live on `1.0.48-Scene_1-completed`** (all unjudged by a hand): `Scene_1`'s goal + boot + relative goal check
 (`D129`–`D131`), a rig per scene, the edge-on readout (`D134`), collision allows contact (`D136`), a sideways
@@ -29,8 +35,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1532 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → 1272 → 1281 → 1287 → 1291 → 1294 → 1293 → 1299 → 1301 → 1305 → 1309 → 1312 → 1313 → 1315 → 1317 → 1321 → 1324 → 1330 → 1377 → 1502 → 1506 → 1512 → 1527 → 1528 → 1529 → 1531 → **1532**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D179`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1549 golden vectors,
+all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → 1272 → 1281 → 1287 → 1291 → 1294 → 1293 → 1299 → 1301 → 1305 → 1309 → 1312 → 1313 → 1315 → 1317 → 1321 → 1324 → 1330 → 1377 → 1502 → 1506 → 1512 → 1527 → 1528 → 1529 → 1531 → 1532 → **1549**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D180`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -48,8 +54,9 @@ and the in-zone basis are deleted, `D82`/`D109`).
 
 ### ⭐ WHAT IS STILL OWED
 
-1. ⛔⛔ **The playability program above** — `GM1` next.
-2. ⛔⛔ **A device look on everything since `D106`** (`INPUTS_TABLE.md`; ⭐ its §5 is the checklist for `D155`–`D168`), and on the alignment model's §10 list.
+1. ⛔⛔ **The playability program above** — `GM1` ✅ built (`D180`, the level end); `3D7` next.
+2. ✅ **~~A device look on everything since `D106`~~** — *"Checked and all closed"*, the owner, 2026-09-30. ⭐ `D180` owes its own.
+   The old entry: (`INPUTS_TABLE.md`; ⭐ its §5 is the checklist for `D155`–`D168`), and on the alignment model's §10 list.
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
@@ -342,12 +349,12 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
-| GM1 | Final-configuration data per scene + the MATE check (spin) + its detector + level end (build #2) | GAME | feature | ⛔ **NEXT**; 🔧 the DATA and the DETECTOR are built — `Scene_1`'s goal is its table (`D129`), met relative to each other, a box's face or its opposite (`D130`, HUD); a seated piece in place dissolves its couple, with a pop-up (`D142`), and the MATE sets its spin onto the goal then (`D143`, the whole mate); ⛔ level end not built → `PLAYABILITY` §2, §2.1 | 3D6 |
+| GM1 | Final-configuration data per scene + the MATE check (spin) + its detector + level end (build #2) | GAME | feature | ✅ **BUILT** (`D180`); the DATA and the DETECTOR — `Scene_1`'s goal is its table (`D129`), met relative to each other, a box's face or its opposite (`D130`, HUD); a seated piece in place dissolves its couple, with a pop-up (`D142`), and the MATE sets its spin onto the goal then (`D143`, the whole mate); ✅ **the level end** (`D180`: at rest, clock and count frozen, a results card) → `LEVEL_END.md`, `PLAYABILITY` §2, §2.1. ⛔ Unjudged | 3D6 |
 | GM2 | The touch ledger on the HUD | GAME | feature | ✅ built (`D112`, `D115`) ⭐ `D158`: a gesture that changes nothing costs 0 | — |
 | GM3 | The timer: first press → detection | GAME | feature | queued | GM1 |
 | GM4 | The solver: the absolute least episodes, engine-free, vectored (pictured scene = 6) | GAME | feature | queued | GM1 |
 | GM5 | The score: episodes vs optimum + bonus, time; Free Flow voids it | GAME | feature | queued | GM1–GM4 |
-| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105`; 🔧 **back from PLAY built** (`D144`: ⏸ pause menu, by reload; one scene list), ⛔ unjudged; the later list is §5 → `20_GAME_RULES/spec/GAME_STRUCTURE.md` §4–§6 | — |
+| GM6 | Populate the screens: art, settings, result, back from PLAY | GAME | content | scaffold `D105`; 🔧 **back from PLAY built** (`D144`: ⏸ pause menu, by reload; one scene list); ✅ **the result screen and a UI theme** (`D180`), ⛔ unjudged; the later list is §5 → `20_GAME_RULES/spec/GAME_STRUCTURE.md` §4–§6 | — |
 | GM7 | Populate worlds and levels; a theme | GAME | content | `World_0` exists | GM1 |
 | GM8 | Save/load a scene as local JSON (Free Flow) | GAME | feature | queued | GM1 |
 | GM9 | The player layer: player HUD, cues, hints, sound, haptics, save-in-progress (build #5) | GAME | feature | queued | GM1 |

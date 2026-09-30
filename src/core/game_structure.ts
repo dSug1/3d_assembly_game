@@ -164,6 +164,8 @@ export interface GameContent {
   readonly title: string;
   readonly tagline: string;
   readonly worlds: readonly WorldSpec[];
+  /** ⭐ `D180`: the id of the UI theme the game uses (`content/ui_themes.ts`); `?uiTheme=` overrides it. */
+  readonly uiTheme?: string;
 }
 
 /** ⭐ The screens. `PLAY` carries the level; `freeFlow` is the menu's escape from the score. */

@@ -119,7 +119,9 @@ export function paint(st: SceneState) {
       `${st.episodes.total} episode${st.episodes.total === 1 ? "" : "s"}` +
       // ⭐ `D115`: what the open gesture will cost when its last touch lifts.
       (st.episodes.pending > 0 ? ` (+${st.episodes.pending} on release)` : "") +
-      `  ${formatElapsed(st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
+      // ⭐ `D180`: once the level is complete the clock is STOPPED at its result.
+      `  ${formatElapsed(st.levelEnd.result ? st.levelEnd.result.elapsedMs : st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
+      (st.levelEnd.result ? "  LEVEL COMPLETE" : "") +
       `  undo=${st.undo.size}` +
       // ⭐ `3D6`: the last block, for two seconds — a stop must never read as a bug.
       (performance.now() - st.lastCollisionAt < 2000 ? `  ⟂ ${st.lastCollision}` : "") +

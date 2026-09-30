@@ -15,6 +15,8 @@ import { loadScene1DemoPlan, SCENE1_DEMO } from "./scene1_demo";
 export const GAME_CONTENT: GameContent = {
   title: "3D Assembly",
   tagline: "Pick up, align, snap.",
+  // ⭐ `D180`: the UI's graphics style — a theme id from `content/ui_themes.ts` (`?uiTheme=` overrides it).
+  uiTheme: "night",
   worlds: [
     {
       id: "World_0",

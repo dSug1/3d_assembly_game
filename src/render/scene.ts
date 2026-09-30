@@ -87,12 +87,15 @@ import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler } from "./pointer_wiring";
 import { startRenderLoop } from "./render_loop";
+import { LevelEnd, type LevelResult } from "../core/level_end";
 
 export interface SceneHandle {
   readonly scene: Scene;
   readonly engine: Engine;
   /** Set by the render loop; `main.ts` uses it to prove drawing actually happened. */
   framesRendered: () => number;
+  /** ⭐ `D180`: `cb` is told once, when the level is complete (`core/level_end.ts`). */
+  onLevelEnd(cb: (result: LevelResult) => void): void;
 }
 
 export function createScene(
@@ -663,6 +666,8 @@ export function createScene(
   st.gestureUndid = false;
   st.episodes = new EpisodeTally();
   st.sceneStartMs = null;
+  st.levelEnd = new LevelEnd();
+  st.onLevelEnd = null;
   st.hudSecond = -1;
   st.episodeFacts = new Map();
   st.episodeUnaligned = new Set<number>();
@@ -993,5 +998,12 @@ export function createScene(
   startRenderLoop(st);
   window.addEventListener("resize", () => st.engine.resize());
 
-  return { scene: st.scene, engine: st.engine, framesRendered: () => st.frames };
+  return {
+    scene: st.scene,
+    engine: st.engine,
+    framesRendered: () => st.frames,
+    onLevelEnd: (cb) => {
+      st.onLevelEnd = cb;
+    },
+  };
 }

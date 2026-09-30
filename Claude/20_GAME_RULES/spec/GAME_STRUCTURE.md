@@ -33,7 +33,7 @@ one line in `main.ts` and the owner's call. ⭐ **`D144`: the default is `Scene_
 
 | row | what to populate | needs |
 |---|---|---|
-| `GM6` | **the screens**: art, a settings screen, a result screen, ~~*back* from PLAY~~ (✅ `D144`, by reload — §4; the in-page switch is §5) | a visual language (`CONCEPT_ASSESSMENT` §5) |
+| `GM6` | **the screens**: art, a settings screen, ~~a result screen~~ (✅ `D180`), ~~*back* from PLAY~~ (✅ `D144`, by reload — §4; the in-page switch is §5) | a visual language (`CONCEPT_ASSESSMENT` §5) |
 | `GM7` | **worlds and levels**: more `SceneDescriptor`s, a difficulty order, a theme (`CONCEPT_ASSESSMENT` §6) | `GM1`'s final configuration per scene |
 | `GM8` | **save/load in Free Flow**: serialise the current scene (boot layout, final layout, cursor positions) to a local JSON file and load one — ⛔ no network egress (`CONSTRAINTS` §5) | the seam above; a *final layout* needs `GM1` |
 
@@ -87,8 +87,8 @@ no page exception. ⛔ **Rule 5: a hand on the tablet is owed.**
 | # | improvement | why / what it needs |
 |---|---|---|
 | 1 | **Switch levels without a reload** — one engine, `scene.dispose()`, the next `createScene`, behind a loading screen | ⛔ a teardown audit first: every render module installs DOM, observers and listeners with no dispose. Removes the ~1 s reload |
-| 2 | **A results screen** — *Next* · *Retry* · *Level select*, the score and time | `GM1`'s level end, `GM5`'s score |
-| 3 | **A settings screen**, from the menu AND the pause menu — audio, haptics, left-handed layout (⏸ mirrored), reset progress | the menu's *Settings — later* button is its slot |
+| 2 | ✅ **A results screen** — *Next* · *Retry* · *Level select*, moves, time and pieces — **built** (`D180`, `LEVEL_END.md`); the SCORE waits on `GM5` | `GM5`'s score |
+| 3 | **A settings screen**, from the menu AND the pause menu — audio, haptics, left-handed layout (⏸ mirrored), reset progress, ⭐ the UI theme (`D180`) | the menu's *Settings — later* button is its slot |
 | 4 | **Pause freezes the clock** — the episode timer stops while the overlay is up | `GM3`/`GM5`; the timer is wall-clock today |
 | 5 | **The system back and backgrounding open the pause menu** — Android back, the browser's back, `visibilitychange` | `DEP2`'s Capacitor back-button event; ⚠ the browser's back needs a history entry per level |
 | 6 | **Progress kept on the device** — unlocked levels, best episodes/time, stars — `localStorage` | ⛔ `SEC1` before any store: no egress, but per-device data (`60_SECURITY_COMPLIANCE`) |
