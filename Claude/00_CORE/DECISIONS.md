@@ -115,8 +115,7 @@ file.
 | `D172` | ⭐⭐ **AFTER A SNAP, THE ROLL MUST BE RE-ARMED** | 2026-09-29 | → §23 |
 | `D173` | ⭐ **THE DEMO PLAN LOADS ONLY IN THE DEMO LEVEL** | 2026-09-29 | → `DEMO_SCENE.md` §5 |
 | `D171` | ⭐⭐ **`Scene1_demo`: 150 MOVES, FIT ZOOM, 15° SETTLE** | 2026-09-29 | → `DEMO_SCENE.md` |
-| `D174` | ⭐⭐ **THE DEMO STARTS FROM A FLOOR GRID** | 2026-09-30 | → `DEMO_SCENE` |
-| `D175`–`D179` | ⭐ **THE GRID: TWO ROWS, NATURAL FEEL; CAMERA 15° EARLIER** | 2026-09-30 | → `DEMO_SCENE` |
+| `D174`–`D179` | ⛔ **THE FLOOR GRID** (by `D191`); its camera 15° earlier stands | 2026-09-30 | → `DEMO_SCENE` |
 | `D180` | ⭐⭐ **THE LEVEL END; A SWAPPABLE UI THEME** | 2026-09-30 | → `LEVEL_END.md` |
 | `D181` | ⭐⭐ **`3D7`: THE PLAY VOLUME** | 2026-09-30 | → `COLLISION.md` §10 |
 | `D182` | ⭐⭐ **SNAP WAITS FOR A CLEAR PATH; UNSNAP HOLDS** | 2026-09-30 | → §24 |
@@ -128,6 +127,7 @@ file.
 | `D188` | ⭐⭐ **THE SCORE BAR** | 2026-09-30 | → `LEVEL_END.md` §6 |
 | `D189` | ⭐⭐ **THE GOAL MOVES ONLY WHEN AN ACTION ENDS** | 2026-09-30 | → `LEVEL_END` §5bis |
 | `D190` | ⭐⭐ **ONLY MOVED PIECES ARE RE-JUDGED; THE FRAME FIT FIXED** | 2026-09-30 | → §5ter |
+| `D191` | ⭐⭐ **THE DEMO STARTS FROM HEAPS, ONE PER COLOUR** | 2026-09-30 | → `DEMO_SCENE` |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

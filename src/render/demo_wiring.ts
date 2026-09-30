@@ -18,7 +18,7 @@ export function startDemo(st: SceneState): void {
     return;
   }
   // ⭐ `D171`: the distance at which the whole cube is on screen from the BOOT view, on this screen's aspect —
-  // ⭐ `D174`: and the floor grid, the start configuration, which lies outside the cube toward that camera.
+  // ⭐ `D174`/`D191`: and the heaps, the start configuration, which lie outside the cube toward that camera.
   const unitM = st.sceneSpec.unitM ?? 1;
   // ⭐ `D175`: from where the demo's camera STARTS — 15° before the boot yaw.
   const off = orbitOffset(st.cfg, demoYawAt(0), st.bootElevation, 1).offsetM;

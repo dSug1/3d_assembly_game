@@ -116,7 +116,7 @@ export function demoCamera(bootElevation: number, progress: number): { yawRad: n
 
 /**
  * ⭐ `D174` — what the start view must hold, in metres from the cube's centre (the orbit's boot centre): the cube's
- * eight corners and the floor grid's eight. ⭐ A plan without a grid frames the cube alone.
+ * eight corners and the stage's eight (the heaps, `D191`). ⭐ A plan without a stage frames the cube alone.
  */
 export function demoFramePointsM(plan: Pick<DemoPlan, "volume"> & Partial<Pick<DemoPlan, "stage">>, unitM: number): Vec3[] {
   const c = [0, 1, 2].map((i) => (plan.volume.min[i]! + plan.volume.max[i]!) / 2);
@@ -135,7 +135,7 @@ export function demoFramePointsM(plan: Pick<DemoPlan, "volume"> & Partial<Pick<D
  * centre → camera); every corner must fall inside the vertical AND the horizontal field of view. For a corner `p`
  * (from the centre) at right `x`, up `y` and forward `f`: `d ≥ |x| / tan(fovH / 2) − f` and `d ≥ |y| / tan(fovV / 2) − f`.
  * ⚠ `fovV` is Babylon's (vertical, radians); `fovH` follows from the screen's aspect (width / height).
- * ⭐ `D174`: for any POINTS (from the looked-at centre) — the cube's corners and the floor grid's (`demoFramePointsM`),
+ * ⭐ `D174`: for any POINTS (from the looked-at centre) — the cube's corners and the stage's (`demoFramePointsM`),
  * which lies off-centre, toward the boot camera. ⚠ A point nearer the camera than the centre (`f < 0`) needs MORE
  * distance, not less — the same inequality, read with its sign.
  */
