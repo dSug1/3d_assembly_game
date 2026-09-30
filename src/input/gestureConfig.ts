@@ -463,8 +463,6 @@ export interface GestureConfig {
   cameraLeashDeg: number;
   /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
   boxSmoothMs: number;
-  /** ⭐ Prototype: once an axis stops, the camera's settle onto the box on it — an exponential time constant, ms (0 = at once). */
-  cameraSettleMs: number;
   /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
   cameraSettleDelayMs: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
@@ -893,7 +891,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraLeashDeg: 15,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
-  cameraSettleMs: 250,
   // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
   cameraSettleDelayMs: 0,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
@@ -1020,8 +1017,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
   }
-  if (!(cfg.cameraSettleMs >= 0 && cfg.cameraSettleMs <= 5000) || !(cfg.cameraSettleDelayMs >= 0 && cfg.cameraSettleDelayMs <= 2000)) {
-    throw new Error(`cameraSettleMs / cameraSettleDelayMs (${cfg.cameraSettleMs} / ${cfg.cameraSettleDelayMs}) must be in [0, 5000] / [0, 2000] ms.`);
+  if (!(cfg.cameraSettleDelayMs >= 0 && cfg.cameraSettleDelayMs <= 2000)) {
+    throw new Error(`cameraSettleDelayMs (${cfg.cameraSettleDelayMs}) must be in [0, 2000] ms.`);
   }
   if (!(cfg.pitchSideConeDeg >= 0 && cfg.pitchSideConeDeg <= 80)) {
     throw new Error(`pitchSideConeDeg (${cfg.pitchSideConeDeg}) must be in [0, 80]°: past 80 the side never decides.`);

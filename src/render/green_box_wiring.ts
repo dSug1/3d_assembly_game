@@ -58,7 +58,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   st.cameraOrbit =
     st.cameraOrbit === null
-      ? cameraOrbitAt(at, now)
+      ? cameraOrbitAt(at, now, st.cfg)
       : cameraOrbitStep(
           st.cameraOrbit,
           at,
@@ -67,7 +67,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
           st.cfg,
           {
             leashRad: (st.cfg.cameraLeashDeg * Math.PI) / 180,
-            settleTauMs: st.cfg.cameraSettleMs,
             settleDelayMs: st.cfg.cameraSettleDelayMs,
           },
           { yaw: rig.yaw, v: rig.v },
