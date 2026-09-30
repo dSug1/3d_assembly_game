@@ -9,21 +9,25 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { SCENE_1 } from "../src/content/scene_1";
-import { SCENE1_DEMO as SHELL } from "../src/content/scene1_demo";
+import { SCENE1_DEMO as SHELL, SCENE1_DEMO_OPTIONS } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
 import { formatDemoPlan } from "../src/content/demo_plan_format";
 import { SCENES } from "../src/content/scenes";
 import { GAME_CONTENT } from "../src/content/worlds";
-import { withDemoPlan, DEMO_DEFAULTS, DEMO_MOVES_END, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
+import { withDemoPlan, DEMO_CHAIN, DEMO_DEFAULTS, DEMO_MOVES_END, demoReach, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
 import { contourDims, parseSceneDescriptor, serializeSceneDescriptor, type SceneDescriptor } from "@core/game_structure";
 import { boxShape, gapBetween } from "@core/collision_shape";
 import { boundsFromShapes, hullAtSpawn, poseFree } from "@core/collision";
 import { makeWorld, setWorldPlacement, type World } from "@core/object_model";
 import { add, cross, dot, IDENTITY, length, normalize, qAngle, qconj, qmul, qRotate, sub, type Vec3 } from "@core/vec";
-import { advanceDemo, DEMO_LEAD_IN_S, demoCamera, demoDistanceM, demoMoveAt, demoPosesAt, demoSchedule, fitDistanceM } from "@input/demo_playback";
+import { advanceDemo, DEMO_LEAD_IN_S, demoCamera, demoDistanceM, demoFramePointsM, demoMoveAt, demoPosesAt, demoSchedule, fitPointsDistanceM } from "@input/demo_playback";
 import { orbitOffset } from "@input/orbit";
 import { sceneConfig } from "@input/scene_rig";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
+
+/** ⭐ The distance that fits a centred box of half-extents `h` — its eight corners (`D174` made the fit take points). */
+const fitDistanceM = (h: Vec3, toCam: Vec3, fov: number, aspect: number) =>
+  fitPointsDistanceM(demoFramePointsM({ volume: { min: [-h[0], -h[1], -h[2]], max: [h[0], h[1], h[2]] } }, 1), toCam, fov, aspect);
 
 /** ⭐ `D173`: the demo scene as it BOOTS — the shell completed by its plan (which loads on its own). */
 const SCENE1_DEMO = withDemoPlan(SHELL, PLAN);
@@ -34,7 +38,7 @@ const turn = (a: DemoPose, b: DemoPose) => qAngle(qmul([...b.orientation], qconj
 describe("⭐⭐⭐ `D170` — the plan is data, and the data is the generator's", () => {
   it("⭐ the committed `scene1_demo_plan.ts` is exactly what the generator writes today (seed 1)", { timeout: 120_000 }, () => {
     const committed = readFileSync(new URL("../src/content/scene1_demo_plan.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
-    expect(committed).toBe(formatDemoPlan(generateDemoPlan(SCENE_1, { seed: DEMO_DEFAULTS.seed })));
+    expect(committed).toBe(formatDemoPlan(generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, seed: DEMO_DEFAULTS.seed })));
   });
 
   it("⭐ `D171`: 150 moves — 30 pieces, 5 moves each (the owner's hypothesis)", () => {
@@ -53,20 +57,16 @@ describe("⭐⭐⭐ every move is the reverse of a player move — its SHAPE", (
     it(`#${i + 1} ${m.kind} ${m.body}`, () => {
       const d = sub([...m.to.position], [...m.from.position]);
       const still = turn(m.from, m.to) < 1e-5;
-      if (m.kind === "TRANSLATE") expect([still, Math.abs(d[1]) < 1e-9, length(d) > 0]).toEqual([true, true, true]);
+      // ⭐ `D174`: a carry — straight legs in any direction (one finger and the second at once), never a turn
+      if (m.kind === "TRANSLATE") expect([still, length(d) > 0]).toEqual([true, true]);
       if (m.kind === "LIFT") expect([still, Math.abs(d[0]) + Math.abs(d[2]) < 1e-9, length(d) > 0]).toEqual([true, true, true]);
       if (m.kind === "APPROACH") {
         expect(still).toBe(true);
         expect(d.filter((v) => Math.abs(v) > 1e-9)).toHaveLength(1); // ⭐ one world axis
       }
-      if (m.kind === "YAW" || m.kind === "ALIGN") {
+      if (m.kind === "ALIGN") {
         expect(near(m.from.position, m.to.position, 1e-9)).toBe(true); // ⭐ about the centre
         expect(turn(m.from, m.to)).toBeGreaterThan(0.05);
-      }
-      if (m.kind === "YAW") {
-        const q = qmul([...m.to.orientation], qconj([...m.from.orientation]));
-        const axis = normalize([q[1], q[2], q[3]])!;
-        expect(Math.abs(axis[1])).toBeCloseTo(1, 5); // ⭐ about gravity
       }
       if (m.kind === "ALIGN") expect(turn(m.to, { position: [0, 0, 0], orientation: [...IDENTITY] as DemoPose["orientation"] })).toBeLessThan(1e-5);
       if (m.kind === "SNAP") {
@@ -78,13 +78,9 @@ describe("⭐⭐⭐ every move is the reverse of a player move — its SHAPE", (
     });
   }
 
-  it("⭐ each piece's chain is 5 moves (`D171`) ending ALIGN → APPROACH → SNAP, so a YAW is always undone by an ALIGN", () => {
-    for (const id of Object.keys(PLAN.start)) {
-      const kinds = PLAN.moves.filter((m) => m.body === id).map((m) => m.kind);
-      expect(kinds.slice(-3)).toEqual(["ALIGN", "APPROACH", "SNAP"]);
-      expect(kinds).toHaveLength(5);
-      expect(kinds[0] === "TRANSLATE" ? kinds[1] : kinds[0]).toMatch(/^(LIFT|YAW)$/);
-    }
+  it("⭐ each piece's chain is 5 moves (`D171`): LIFT → TRANSLATE → ALIGN → APPROACH → SNAP (`D174`)", () => {
+    expect(DEMO_CHAIN).toEqual(["LIFT", "TRANSLATE", "ALIGN", "APPROACH", "SNAP"]);
+    for (const id of Object.keys(PLAN.start)) expect(PLAN.moves.filter((m) => m.body === id).map((m) => m.kind)).toEqual(DEMO_CHAIN);
   });
 
   it("⭐ each SNAP seats the piece against its Pioneer: at the final pose that neighbour is one of its seats", () => {
@@ -115,7 +111,7 @@ function assembled(): World {
   );
 }
 
-/** ⭐ Every collision or cube exit met along the PLAYBACK of `plan` from its start configuration. */
+/** ⭐ Every collision, or exit from the cube and its floor grid (`D174`, `demoReach`), met along the PLAYBACK of `plan`. */
 function violations(plan: DemoPlan, scene: SceneDescriptor, samples: number): string[] {
   const fin = new Map(scene.final!.bodies.map((f) => [f.id, f.position]));
   let world = makeWorld(
@@ -135,6 +131,7 @@ function violations(plan: DemoPlan, scene: SceneDescriptor, samples: number): st
   const sched = demoSchedule(plan.moves);
   const dims = new Map(scene.bodies.map((b) => [b.id, contourDims(b)]));
   const bad: string[] = [];
+  const box = demoReach(plan);
   plan.moves.forEach((m, i) => {
     const { t0, t1 } = sched[i]!;
     for (let k = 1; k <= samples; k++) {
@@ -144,7 +141,7 @@ function violations(plan: DemoPlan, scene: SceneDescriptor, samples: number): st
       const h = dims.get(m.body)!.map((v) => v / 2);
       for (let c = 0; c < 8; c++) {
         const corner = add(p.position, qRotate(p.orientation, [c & 1 ? h[0]! : -h[0]!, c & 2 ? h[1]! : -h[1]!, c & 4 ? h[2]! : -h[2]!]));
-        if (corner.some((v, j) => v < plan.volume.min[j]! - 1e-6 || v > plan.volume.max[j]! + 1e-6)) bad.push(`#${i + 1} ${m.body} leaves the cube`);
+        if (corner.some((v, j) => v < box.min[j]! - 1e-6 || v > box.max[j]! + 1e-6)) bad.push(`#${i + 1} ${m.body} leaves the cube and the grid`);
       }
       world = next;
     }
@@ -186,21 +183,19 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
     }
   });
 
-  it("⭐⭐ sampled along the PLAYBACK (120 samples per move): no penetration, every moving box inside the cube", { timeout: 300_000 }, () => {
+  it("⭐⭐ sampled along the PLAYBACK (120 samples per move): no penetration, every moving box inside the cube or over the grid", { timeout: 300_000 }, () => {
     expect(violations(PLAN, SCENE_1, 120)).toEqual([]);
   });
 
   it("⭐ `D171`: every piece is truly CLEAR where its APPROACH starts — at least `clearance` from every other body", { timeout: 120_000 }, () => {
     expect(leastApproachClearance(PLAN)).toBeGreaterThanOrEqual(DEMO_DEFAULTS.clearance - 1e-5);
     // ⭐ and on a fresh 100-move plan, where the rule before `D171` pulled four pieces sideways INSIDE the painting
-    expect(leastApproachClearance(generateDemoPlan(SCENE_1, { moveCount: 100 }))).toBeGreaterThanOrEqual(DEMO_DEFAULTS.clearance - 1e-5);
+    expect(leastApproachClearance(generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, moveCount: 100 }))).toBeGreaterThanOrEqual(DEMO_DEFAULTS.clearance - 1e-5);
   });
 
   it("⭐⭐ `D171` — the pieces come apart TOWARD the camera that will watch them go back (the real playback's camera)", () => {
     const sched = demoSchedule(PLAN.moves);
-    const c = [0, 1, 2].map((i) => (PLAN.volume.min[i]! + PLAN.volume.max[i]!) / 2);
     let pull = Infinity;
-    let spot = Infinity;
     PLAN.moves.forEach((m, i) => {
       const d = towardCamera(demoCamera(0.45, sched[i]!.t0 * DEMO_MOVES_END).yawRad);
       // ⭐ an APPROACH comes in from where the piece was pulled out to: that pull faced the camera, or ran across it
@@ -208,29 +203,30 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
         const out = normalize(sub([...m.from.position], [...m.to.position]))!;
         pull = Math.min(pull, dot(out, d));
       }
-      // ⭐ a TRANSLATE leaves the scatter spot: on the camera's side of the centre, by `facing` less the camera's drift
-      if (m.kind === "TRANSLATE") spot = Math.min(spot, (m.from.position[0] - c[0]!) * d[0] + (m.from.position[2] - c[2]!) * d[2]);
     });
-    // ⭐ never behind: at worst 25° past square to the camera (measured −0.29 on seed 1, where one piece's camera-facing
-    // axes were all blocked; the rule before `D171`, −z first, reached −1.00 with 16 of 30 pulls behind)
-    expect(pull).toBeGreaterThan(-0.45);
-    expect(spot).toBeGreaterThan(DEMO_DEFAULTS.facing - 0.2);
+    // ⭐ never behind: at worst square to the camera (`D174`, seed 1: −0.00, one pull exactly across; `D171`'s plan
+    // measured −0.29, and the rule before `D171`, −z first, reached −1.00 with 16 of 30 pulls behind)
+    expect(pull).toBeGreaterThan(-0.05);
   });
 
-  it("⭐ a TIGHTER cube (a 12-unit floor → side 6) is honoured too — the check, not the luck of the draw", { timeout: 120_000 }, () => {
+  // ⚠ `D174`: 14, not 12 — a side-6 cube is 0.3 units taller than the painting, so a piece put back from BEHIND has no
+  // room to be carried over it, and the generator throws (correctly: it never ships a colliding plan). Side 7 leaves 0.8.
+  it("⭐ a TIGHTER cube (a 14-unit floor → side 7) is honoured too — the check, not the luck of the draw", { timeout: 120_000 }, () => {
     const tight: SceneDescriptor = {
       ...SCENE_1,
-      bodies: SCENE_1.bodies.map((b) => (b.frozen ? { ...b, dims: [12, b.dims[1], 12] as const } : b)),
+      bodies: SCENE_1.bodies.map((b) => (b.frozen ? { ...b, dims: [14, b.dims[1], 14] as const } : b)),
     };
-    const plan = generateDemoPlan(tight, { moveCount: 30 });
-    expect(plan.volume).toEqual({ min: [-3, -0.7, -3], max: [3, 5.3, 3] });
+    const plan = generateDemoPlan(tight, { ...SCENE1_DEMO_OPTIONS, moveCount: 30 });
+    expect(plan.volume).toEqual({ min: [-3.5, -1.2, -3.5], max: [3.5, 5.8, 3.5] });
+    expect(plan.stage.max[2]).toBeCloseTo(-3.5 - DEMO_DEFAULTS.gridOffset, 9); // ⭐ its grid just outside ITS cube
     expect(violations(plan, tight, 100)).toEqual([]);
   });
 
   it("⛔ a generation that cannot be completed THROWS — it never ships a shorter plan", () => {
-    expect(() => generateDemoPlan(SCENE_1, { moveCount: 3 })).toThrow(/cannot be split into chains of 5–5/);
+    expect(() => generateDemoPlan(SCENE_1, { moveCount: 3 })).toThrow(/cannot be split into chains of 5/);
     expect(() => generateDemoPlan(SCENE_1, { moveCount: 151 })).toThrow(/cannot be split/);
-    expect(() => generateDemoPlan(SCENE_1, { chain: [3, 5] })).toThrow(/at least 4 moves/);
+    // ⭐ `D174`: a grid that would leave the floor — begun 6 units outside the cube, its first row is past the floor's edge (z −11 < −10)
+    expect(() => generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, moveCount: 30, gridOffset: 6 })).toThrow(/leaves the floor/);
     expect(() => generateDemoPlan({ ...SCENE_1, final: null })).toThrow(/final configuration/);
   });
 });

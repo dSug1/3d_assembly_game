@@ -67,10 +67,28 @@ export function demoPosesAt(plan: DemoPlan, progress: number): Map<string, Place
     const u = smooth((progress - t0) / Math.max(1e-12, t1 - t0));
     const a = toPlaced(m.from);
     const b = toPlaced(m.to);
-    const pos: Vec3 = [0, 1, 2].map((k) => a.position[k]! + (b.position[k]! - a.position[k]!) * u) as unknown as Vec3;
-    out.set(m.body, { position: pos, orientation: qSlerp(a.orientation, b.orientation, u) });
+    out.set(m.body, { position: alongPath([a.position, ...(m.via ?? []), b.position], u), orientation: qSlerp(a.orientation, b.orientation, u) });
   });
   return out;
+}
+
+/**
+ * ⭐ `D174`: the point at fraction `u` of a path's LENGTH — straight legs through its corners (`DemoMove.via`), so a
+ * carry over the build moves at one speed along all of it and the ease spans the whole path, not each leg.
+ */
+export function alongPath(points: readonly (readonly number[])[], u: number): Vec3 {
+  const legs = points.slice(1).map((p, i) => Math.hypot(p[0]! - points[i]![0]!, p[1]! - points[i]![1]!, p[2]! - points[i]![2]!));
+  const total = legs.reduce((s, l) => s + l, 0);
+  let left = Math.min(1, Math.max(0, u)) * total;
+  for (let i = 0; i < legs.length; i++) {
+    if (left <= legs[i]! || i === legs.length - 1) {
+      const f = legs[i]! > 0 ? Math.min(1, left / legs[i]!) : 1;
+      const a = points[i]!, b = points[i + 1]!;
+      return [a[0]! + (b[0]! - a[0]!) * f, a[1]! + (b[1]! - a[1]!) * f, a[2]! + (b[2]! - a[2]!) * f];
+    }
+    left -= legs[i]!;
+  }
+  return [points[0]![0]!, points[0]![1]!, points[0]![2]!];
 }
 
 /** ⭐ Which move is playing at `progress` (its index), or `null` before the first / after the last. */
@@ -97,13 +115,31 @@ export function demoCamera(bootElevation: number, progress: number): { yawRad: n
 }
 
 /**
+ * ⭐ `D174` — what the start view must hold, in metres from the cube's centre (the orbit's boot centre): the cube's
+ * eight corners and the floor grid's eight. ⭐ A plan without a grid frames the cube alone.
+ */
+export function demoFramePointsM(plan: Pick<DemoPlan, "volume"> & Partial<Pick<DemoPlan, "stage">>, unitM: number): Vec3[] {
+  const c = [0, 1, 2].map((i) => (plan.volume.min[i]! + plan.volume.max[i]!) / 2);
+  const out: Vec3[] = [];
+  for (const b of plan.stage ? [plan.volume, plan.stage] : [plan.volume])
+    for (let k = 0; k < 8; k++) {
+      const p = [k & 1 ? b.max[0] : b.min[0], k & 2 ? b.max[1] : b.min[1], k & 4 ? b.max[2] : b.min[2]];
+      out.push([(p[0]! - c[0]!) * unitM, (p[1]! - c[1]!) * unitM, (p[2]! - c[2]!) * unitM]);
+    }
+  return out;
+}
+
+/**
  * ⭐⭐ `D171` — **THE DISTANCE AT WHICH THE WHOLE DEMO VOLUME IS ON SCREEN** (the owner: *"set the camera zoom at
  * demo start so that the full volume is seeable"*): the camera looks at the cube's centre from `toCamera` (unit,
  * centre → camera); every corner must fall inside the vertical AND the horizontal field of view. For a corner `p`
  * (from the centre) at right `x`, up `y` and forward `f`: `d ≥ |x| / tan(fovH / 2) − f` and `d ≥ |y| / tan(fovV / 2) − f`.
  * ⚠ `fovV` is Babylon's (vertical, radians); `fovH` follows from the screen's aspect (width / height).
+ * ⭐ `D174`: for any POINTS (from the looked-at centre) — the cube's corners and the floor grid's (`demoFramePointsM`),
+ * which lies off-centre, toward the boot camera. ⚠ A point nearer the camera than the centre (`f < 0`) needs MORE
+ * distance, not less — the same inequality, read with its sign.
  */
-export function fitDistanceM(halfExtentsM: Vec3, toCamera: Vec3, fovV: number, aspect: number): number {
+export function fitPointsDistanceM(pointsM: readonly Vec3[], toCamera: Vec3, fovV: number, aspect: number): number {
   const f: Vec3 = [-toCamera[0], -toCamera[1], -toCamera[2]];
   // ⭐ Right = up × forward (Babylon's left-handed frame, the same as `orbitOffset`'s camera); up = forward × right.
   const rx = f[2], rz = -f[0];
@@ -113,9 +149,8 @@ export function fitDistanceM(halfExtentsM: Vec3, toCamera: Vec3, fovV: number, a
   const tv = Math.tan(fovV / 2);
   const th = tv * aspect;
   let d = 0;
-  for (let c = 0; c < 8; c++) {
-    const p: Vec3 = [c & 1 ? halfExtentsM[0] : -halfExtentsM[0], c & 2 ? halfExtentsM[1] : -halfExtentsM[1], c & 4 ? halfExtentsM[2] : -halfExtentsM[2]];
-    const dot3 = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const dot3 = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  for (const p of pointsM) {
     const ahead = dot3(p, f);
     d = Math.max(d, Math.abs(dot3(p, r)) / th - ahead, Math.abs(dot3(p, u)) / tv - ahead);
   }

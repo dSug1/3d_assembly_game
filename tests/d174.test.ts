@@ -1,0 +1,244 @@
+/**
+ * GOLDEN VECTORS — **`D174`: the demo starts from a floor GRID** (the owner, 2026-09-30) →
+ * `Claude/20_GAME_RULES/spec/DEMO_SCENE.md` §2bis.
+ *
+ * > *"the parts in the start configuration shall be all aligned with the floor, set on the floor on a virtual grid (do
+ * > not show any grid), ordered by color and inside the color groups by descending size. Once lifted, each part shall
+ * > reach a position which blends into the current build (piece position matching camera orbit movement not to occlude
+ * > the movement)"* — with *"only the 30 moved"*, *"in front, just outside the demo cube"*, *"volume"*.
+ *
+ * ⭐ Asserted on the COMMITTED plan, read back from its poses — never from the generator's own bookkeeping.
+ */
+import { describe, expect, it } from "vitest";
+import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
+import { SCENE1_DEMO as SHELL } from "../src/content/scene1_demo";
+import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
+import { DEMO_DEFAULTS, demoReach, flatOrientations, withDemoPlan, type DemoPose } from "@core/demo_plan";
+import { contourDims } from "@core/game_structure";
+import { cross, dot, normalize, qAngle, qRotate, sub, type Quat, type Vec3 } from "@core/vec";
+import { alongPath, demoFramePointsM, demoPosesAt, demoSchedule, fitPointsDistanceM } from "@input/demo_playback";
+
+const body = (id: string) => SCENE_1.bodies.find((b) => b.id === id)!;
+const final = new Map(SCENE_1.final!.bodies.map((f) => [f.id, f.position]));
+const q = (p: DemoPose): Quat => [...p.orientation] as unknown as Quat;
+/**
+ * A piece's world half-extents at an orientation — and whether it is SQUARE (every local axis on a world axis).
+ * ⚠ To 1e-5: the saved plan rounds a quaternion to 1e-6 (0.707107), which is not exactly unit length.
+ */
+function extents(id: string, o: Quat): { half: Vec3; square: boolean } {
+  const d = contourDims(body(id));
+  const half: [number, number, number] = [0, 0, 0];
+  let square = true;
+  for (let i = 0; i < 3; i++) {
+    const a = qRotate(o, [i === 0 ? 1 : 0, i === 1 ? 1 : 0, i === 2 ? 1 : 0]);
+    for (let j = 0; j < 3; j++) {
+      half[j] = half[j]! + (Math.abs(a[j]!) * d[i]!) / 2;
+      if (Math.abs(a[j]!) > 1e-5 && Math.abs(Math.abs(a[j]!) - 1) > 1e-5) square = false;
+    }
+  }
+  return { half, square };
+}
+const ids = Object.keys(PLAN.start);
+const FLOOR_TOP = 0;
+
+describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT on the floor, on a grid", () => {
+  it("⭐ only the 30 the plan moves; the other 11 stay in the painting", () => {
+    expect(ids).toHaveLength(30);
+    for (const b of withDemoPlan(SHELL, PLAN).bodies)
+      if (!b.frozen && !PLAN.start[b.id]) expect(b.position).toEqual(final.get(b.id));
+  });
+
+  it("⭐⭐ *aligned with the floor*: square to its axes, the smallest side vertical, the longest along x, resting ON it", () => {
+    for (const id of ids) {
+      const s = PLAN.start[id]!;
+      const { half, square } = extents(id, q(s));
+      const d = [...contourDims(body(id))].sort((a, b) => b - a);
+      expect(square).toBe(true);
+      expect(half[0]).toBeCloseTo(d[0]! / 2, 5); // longest along x — the rows
+      expect(half[1]).toBeCloseTo(d[2]! / 2, 5); // smallest vertical
+      expect(half[2]).toBeCloseTo(d[1]! / 2, 5);
+      expect(s.position[1] - half[1]).toBeCloseTo(FLOOR_TOP, 5); // on the floor, not above it and not in it
+    }
+  });
+
+  it("⭐⭐ *ordered by color and inside the color groups by descending size* — in reading order as the boot camera sees it", () => {
+    const rows = [...new Set(ids.map((id) => PLAN.start[id]!.position[2]))].sort((a, b) => b - a); // far row first
+    const read = rows.flatMap((z) => ids.filter((id) => PLAN.start[id]!.position[2] === z).sort((a, b) => PLAN.start[a]!.position[0] - PLAN.start[b]!.position[0]));
+    const colours = [SCENE_1_PALETTE.MAT_A, SCENE_1_PALETTE.MAT_B, SCENE_1_PALETTE.MAT_C, SCENE_1_PALETTE.MAT_D, SCENE_1_PALETTE.MAT_E];
+    const group = (id: string) => colours.findIndex((c) => c.every((v, i) => v === body(id).colour[i]));
+    const volume = (id: string) => body(id).dims[0] * body(id).dims[1] * body(id).dims[2];
+    const index = (id: string) => SCENE_1.bodies.indexOf(body(id));
+    const expected = [...ids].sort((a, b) => group(a) - group(b) || volume(b) - volume(a) || index(a) - index(b));
+    expect(read).toEqual(expected);
+    // ⭐ and the order is not trivially the table's: the groups are interleaved in the painting
+    expect(expected).not.toEqual([...ids].sort((a, b) => index(a) - index(b)));
+    // ⭐ the boot camera looks along +z from −z, so its right is +x: a row reads left to right as x grows
+    expect(cross([0, 1, 0], [0, 0, 1])).toEqual([1, 0, 0]);
+  });
+
+  it("⭐ on a virtual GRID: each piece at the middle of a whole number of 5 mm cells across, its gutter included", () => {
+    const p = DEMO_DEFAULTS.gridPitch;
+    for (const id of ids) {
+      const long = Math.max(...contourDims(body(id)));
+      const cells = Math.ceil((long + DEMO_DEFAULTS.gridGap) / p - 1e-9);
+      const edge = PLAN.start[id]!.position[0] - (cells * p) / 2;
+      expect(Math.abs(edge / p - Math.round(edge / p))).toBeLessThan(1e-6);
+    }
+  });
+
+  it("⭐ *in front, just outside the demo cube*: the first row begins `gridOffset` out from the cube's front face, all on the floor", () => {
+    const front = PLAN.volume.min[2];
+    let nearest = -Infinity;
+    for (const id of ids) {
+      const s = PLAN.start[id]!;
+      const { half } = extents(id, q(s));
+      expect(s.position[2] + half[2]).toBeLessThan(front); // outside the cube, on the boot camera's side
+      nearest = Math.max(nearest, s.position[2] + half[2]);
+      const floor = body("Floor");
+      expect(Math.abs(s.position[0]) + half[0]).toBeLessThanOrEqual(floor.dims[0] / 2);
+      expect(Math.abs(s.position[2]) + half[2]).toBeLessThanOrEqual(floor.dims[2] / 2);
+    }
+    expect(PLAN.stage.max[2]).toBeCloseTo(front - DEMO_DEFAULTS.gridOffset, 9);
+    expect(front - nearest).toBeLessThan(DEMO_DEFAULTS.gridOffset + DEMO_DEFAULTS.gridGap * 3); // just outside
+  });
+
+  it("⭐ no two pieces on the grid closer than the gutter (`gridGap`, 1 cm)", () => {
+    for (const a of ids)
+      for (const b of ids) {
+        if (a >= b) continue;
+        const A = PLAN.start[a]!, B = PLAN.start[b]!;
+        const ha = extents(a, q(A)).half, hb = extents(b, q(B)).half;
+        const gx = Math.abs(A.position[0] - B.position[0]) - ha[0] - hb[0];
+        const gz = Math.abs(A.position[2] - B.position[2]) - ha[2] - hb[2];
+        expect(Math.max(gx, gz)).toBeGreaterThanOrEqual(DEMO_DEFAULTS.gridGap - 1e-5);
+      }
+  });
+
+  it("⭐ *do not show any grid*: the demo scene carries exactly Scene_1's bodies — no grid mesh, no marker", () => {
+    expect(withDemoPlan(SHELL, PLAN).bodies.map((b) => b.id)).toEqual(SCENE_1.bodies.map((b) => b.id));
+  });
+
+  it("⭐ `flatOrientations`: the four half-turns that lay a box flat, nearest the final pose first", () => {
+    const f = flatOrientations([0.13, 4.83, 0.33]); // a 4.8-unit black bar, standing
+    expect(f).toHaveLength(4);
+    expect(qAngle(f[0]!)).toBeCloseTo(Math.PI / 2, 8); // a quarter-turn lays it down; the others are half-turns more
+    for (const o of f) {
+      expect(Math.abs(qRotate(o, [0, 1, 0])[0])).toBeCloseTo(1, 8); // its length along x
+      expect(Math.abs(qRotate(o, [1, 0, 0])[1])).toBeCloseTo(1, 8); // its thinnest side vertical
+    }
+    expect(flatOrientations([2, 0.3, 1])[0]).toEqual([1, 0, 0, 0]); // already flat: no turn at all
+  });
+});
+
+describe("⭐⭐⭐ `D174` — *once lifted, each part reaches a position which blends into the current build*", () => {
+  it("⭐ LIFT: straight up off its cell; the ALIGN then turns it from FLAT to its final orientation", () => {
+    for (const id of ids) {
+      const [lift, carry, align] = PLAN.moves.filter((m) => m.body === id);
+      expect(lift!.from).toEqual(PLAN.start[id]);
+      const d = sub([...lift!.to.position], [...lift!.from.position]);
+      expect([Math.abs(d[0]) + Math.abs(d[2]) < 1e-9, d[1] > 0]).toEqual([true, true]);
+      expect(carry!.to).toEqual(align!.from);
+      expect(align!.from.orientation).toEqual(PLAN.start[id]!.orientation);
+    }
+  });
+
+  it("⭐⭐ it BLENDS INTO THE BUILD: every SNAP seats it against a Pioneer already in place — never onto a gap", () => {
+    const inPlace = new Set(SCENE_1.bodies.filter((b) => !b.frozen && !PLAN.start[b.id]).map((b) => b.id));
+    expect(inPlace.size).toBe(11);
+    for (const m of PLAN.moves.filter((x) => x.kind === "SNAP")) {
+      expect(inPlace.has(m.pioneer!)).toBe(true);
+      inPlace.add(m.body);
+    }
+    expect(inPlace.size).toBe(41);
+  });
+
+  it("⭐ the build's own moves stay in the CUBE; only the lift and the carry reach over the grid", () => {
+    const sched = demoSchedule(PLAN.moves);
+    const v = PLAN.volume;
+    PLAN.moves.forEach((m, i) => {
+      if (m.kind === "LIFT" || m.kind === "TRANSLATE") return;
+      for (let k = 0; k <= 30; k++) {
+        const p = demoPosesAt(PLAN, sched[i]!.t0 + ((sched[i]!.t1 - sched[i]!.t0) * k) / 30).get(m.body)!;
+        const { half } = extents(m.body, p.orientation);
+        for (let j = 0; j < 3; j++) {
+          // ⚠ `extents` bounds a TURNED box by its axis-aligned hull, so this is a stricter test than the corners
+          expect(p.position[j]! - half[j]!).toBeGreaterThanOrEqual(v.min[j]! - 1e-6);
+          expect(p.position[j]! + half[j]!).toBeLessThanOrEqual(v.max[j]! + 1e-6);
+        }
+      }
+    });
+    const r = demoReach(PLAN);
+    // ⭐ the reach is the hull of the two: the cube, extended toward the camera over the grid
+    const s = PLAN.stage;
+    expect(r).toEqual({
+      min: [Math.min(s.min[0], v.min[0]), v.min[1], Math.min(s.min[2], v.min[2])],
+      max: [Math.max(s.max[0], v.max[0]), v.max[1], Math.max(s.max[2], v.max[2])],
+    });
+    expect(r.min[2]).toBe(s.min[2]); // it reaches out over the grid
+    expect(r.max[2]).toBe(v.max[2]);
+  });
+
+  it("⭐ a carry OVER the build is up, across, down: level across from above the cell, then straight down to the spot", () => {
+    const over = PLAN.moves.filter((m) => m.kind === "TRANSLATE" && m.via);
+    expect(over.length).toBeGreaterThan(0);
+    for (const m of over) {
+      expect(m.via).toHaveLength(1);
+      const c = m.via![0]!;
+      expect(c[1]).toBeCloseTo(m.from.position[1], 9); // across at the lift's height
+      expect([c[0] - m.to.position[0], c[2] - m.to.position[2]].map((x) => Math.abs(x) < 1e-9)).toEqual([true, true]);
+      expect(c[1]).toBeGreaterThan(m.to.position[1]); // then DOWN onto the spot
+    }
+  });
+});
+
+describe("⭐⭐ `D174` — the playback: a path's corners, and a start view that holds the grid", () => {
+  it("⭐ `alongPath`: a point at a fraction of the path's LENGTH, through its corners", () => {
+    const pts = [[0, 0, 0], [0, 3, 0], [4, 3, 0]];
+    expect(alongPath(pts, 0)).toEqual([0, 0, 0]);
+    expect(alongPath(pts, 3 / 7)).toEqual([0, 3, 0]);
+    expect(alongPath(pts, 0.5)).toEqual([0.5, 3, 0]);
+    expect(alongPath(pts, 1)).toEqual([4, 3, 0]);
+    expect(alongPath([[1, 2, 3], [4, 6, 3]], 0.5)).toEqual([2.5, 4, 3]); // one leg: the old lerp
+  });
+
+  it("⭐ a carry over the build passes THROUGH its corner in the playback", () => {
+    const sched = demoSchedule(PLAN.moves);
+    const i = PLAN.moves.findIndex((m) => m.via);
+    const m = PLAN.moves[i]!;
+    let best = Infinity;
+    for (let k = 0; k <= 2000; k++) {
+      const p = demoPosesAt(PLAN, sched[i]!.t0 + ((sched[i]!.t1 - sched[i]!.t0) * k) / 2000).get(m.body)!;
+      best = Math.min(best, Math.hypot(...sub(p.position, [...m.via![0]!] as unknown as Vec3)));
+    }
+    expect(best).toBeLessThan(0.02);
+  });
+
+  it("⭐⭐ the start distance holds the cube AND the grid: every point in view, 1 % closer one is not", () => {
+    const pts = demoFramePointsM(PLAN, SCENE_1.unitM!);
+    expect(pts).toHaveLength(16);
+    for (const [toCam, aspect, gridDecides] of [
+      [normalize([0, 0.15, -1])!, 0.68, true], // ⭐ portrait: the grid's width decides
+      [normalize([0, 0.15, -1])!, 1.6, false], // landscape: the cube's height still does
+    ] as [Vec3, number, boolean][]) {
+      const d = fitPointsDistanceM(pts, toCam, 0.8, aspect);
+      const eye = (k: number): Vec3 => [toCam[0] * d * k, toCam[1] * d * k, toCam[2] * d * k];
+      const inView = (k: number) =>
+        pts.every((p) => {
+          const fwd = normalize(sub([0, 0, 0], eye(k)))!;
+          const right = normalize(cross([0, 1, 0], fwd))!;
+          const up = cross(fwd, right);
+          const v = sub(p, eye(k));
+          const z = dot(v, fwd);
+          return Math.abs(dot(v, right)) <= Math.tan(0.4) * aspect * z + 1e-9 && Math.abs(dot(v, up)) <= Math.tan(0.4) * z + 1e-9;
+        });
+      expect([inView(1), inView(0.99)]).toEqual([true, false]);
+      const alone = fitPointsDistanceM(demoFramePointsM({ volume: PLAN.volume }, SCENE_1.unitM!), toCam, 0.8, aspect);
+      if (gridDecides) expect(d).toBeGreaterThan(alone * 1.1);
+      else expect(d).toBeCloseTo(alone, 9);
+    }
+    // ⭐ a plan without a grid frames the cube alone: its eight corners — at a level view `half / tan(fov / 2) + half`
+    const eight = demoFramePointsM({ volume: PLAN.volume }, 1);
+    expect(eight).toHaveLength(8);
+    expect(fitPointsDistanceM(eight, [0, 0, -1], 0.8, 1)).toBeCloseTo(5 / Math.tan(0.4) + 5, 9);
+  });
+});

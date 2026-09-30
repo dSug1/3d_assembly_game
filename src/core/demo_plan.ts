@@ -20,10 +20,16 @@ import { makeWorld, setWorldPlacement, worldPlacementOf, type SceneObject, type 
 import type { Placed } from "./mate_connector";
 import { mulberry32 } from "./random_pose";
 import { ORBIT_START_YAW_RAD } from "./scene_dims";
-import { add, dot, IDENTITY, length, normalize, qAngle, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "./vec";
+import { add, dot, IDENTITY, length, qAngle, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "./vec";
 
-/** ⭐ What a player does, as the demo plays it (forwards). */
-export type DemoMoveKind = "SNAP" | "APPROACH" | "ALIGN" | "TRANSLATE" | "LIFT" | "YAW";
+/** ⭐ What a player does, as the demo plays it (forwards). ⛔ `YAW` is gone with the scatter (`D174`). */
+export type DemoMoveKind = "SNAP" | "APPROACH" | "ALIGN" | "TRANSLATE" | "LIFT";
+
+/**
+ * ⭐⭐ `D174` — **A PIECE'S CHAIN, PLAYED FORWARDS**: lifted off its grid cell, carried to the spot in front of its slot,
+ * turned upright there, approached, seated. 150 moves = 30 pieces × these 5.
+ */
+export const DEMO_CHAIN: readonly DemoMoveKind[] = ["LIFT", "TRANSLATE", "ALIGN", "APPROACH", "SNAP"];
 
 export interface DemoPose {
   readonly position: Triple;
@@ -38,14 +44,25 @@ export interface DemoMove {
   readonly pioneer?: string;
   readonly from: DemoPose;
   readonly to: DemoPose;
-  /** ⭐ Distance + angle × the piece's half-diagonal, authored units — what the playback times it by. */
+  /**
+   * ⭐ `D174`, `TRANSLATE` only: the corners of a path that goes OVER the build — `from` → each `via` → `to`, straight
+   * legs, the orientation unchanged. Absent: one straight leg.
+   */
+  readonly via?: readonly Triple[];
+  /** ⭐ Distance (along the legs) + angle × the piece's half-diagonal, authored units — what the playback times it by. */
   readonly travel: number;
 }
 
 export interface DemoPlan {
   readonly seed: number;
-  /** ⭐ The cube every piece stays inside (`DEMO_SCENE.md` §3). */
+  /** ⭐ The cube the build's moves stay inside (`DEMO_SCENE.md` §3). */
   readonly volume: Aabb;
+  /**
+   * ⭐ `D174`: the floor GRID's box — where the start configuration lies, just outside the cube toward the boot camera,
+   * from the floor to the thickest flat piece's top, its cells' gutters included. A move may use the cube and this,
+   * never more (`demoReach`).
+   */
+  readonly stage: Aabb;
   /** ⭐ PLAY order: the first move is played first. */
   readonly moves: readonly DemoMove[];
   /** ⭐ The start pose of every piece a move touches; the others start at their final pose. */
@@ -54,6 +71,7 @@ export interface DemoPlan {
 
 export interface DemoOptions {
   readonly seed: number;
+  /** ⭐ A multiple of 5 (`DEMO_CHAIN`): `D171`'s 150 = 30 pieces. */
   readonly moveCount: number;
   readonly snapGap: number;
   readonly estrange: readonly [number, number];
@@ -62,18 +80,21 @@ export interface DemoOptions {
   readonly tries: number;
   /** ⭐ A face must overlap its neighbour by this much, on both of its axes, to be a seat. */
   readonly minContact: number;
-  /**
-   * ⭐ The moves per piece, `[min, max]` — at least 4 (unsnap, estrange, unalign, translate). `D171`: `[5, 5]`, the
-   * owner's hypothesis *"30 pieces, 5 movements each"*.
-   */
-  readonly chain: readonly [number, number];
   /** ⭐ `D171`: after its estrangement a piece is at least this far from every other body — truly CLEAR. */
   readonly clearance: number;
+  /** ⭐ `D174`: the grid's cell — every piece takes a whole number of cells, gutter included. */
+  readonly gridPitch: number;
+  /** ⭐ `D174`: the least gutter between two pieces on the grid, and between two rows. */
+  readonly gridGap: number;
+  /** ⭐ `D174`: how far outside the cube's front face (toward the boot camera) the grid's first row begins. */
+  readonly gridOffset: number;
+  /** ⭐ `D174`: a row's width, centred across the cube; absent, the CUBE's own width — the grid is the cube's front, extended. */
+  readonly gridWidth?: number;
   /**
-   * ⭐ `D171` (the owner: *"bring the pieces towards where the camera will be when the pieces are re-assembled"*): a
-   * scattered piece's centre lies at least this far from the orbit centre TOWARD that camera, horizontally.
+   * ⭐ `D174`: the colour groups' order on the grid, as body colours; a colour not listed follows, in the order of its
+   * first body in the scene. `Scene_1`: white, black, yellow, red, blue (`SCENE1_DEMO_OPTIONS`).
    */
-  readonly facing: number;
+  readonly colourOrder?: readonly Triple[];
 }
 
 /** ⭐ The owner: *"the camera shall orbit uniformly towards the right"* — one full turn over the demo. */
@@ -126,10 +147,128 @@ export const DEMO_DEFAULTS: DemoOptions = {
   segment: 0.1,
   tries: 60,
   minContact: 0.02,
-  chain: [5, 5],
   clearance: 0.15,
-  facing: 1.5,
+  // ⭐ `D174`: a 5 mm grid, 1 cm gutters, 3 cm outside the cube, rows as wide as the cube (no `gridWidth`).
+  gridPitch: 0.05,
+  gridGap: 0.1,
+  gridOffset: 0.3,
 };
+
+/** ⭐ `D174`: the box that holds the cube AND the floor grid — every move of the plan stays inside it. */
+export function demoReach(plan: Pick<DemoPlan, "volume" | "stage">): Aabb {
+  const { volume: v, stage: s } = plan;
+  return {
+    min: [Math.min(v.min[0], s.min[0]), v.min[1], Math.min(v.min[2], s.min[2])],
+    max: [Math.max(v.max[0], s.max[0]), v.max[1], Math.max(v.max[2], s.max[2])],
+  };
+}
+
+/**
+ * ⭐⭐ `D174` — **A PIECE LAID FLAT** (the owner: *"aligned with the floor"*): resting on its LARGEST face — its
+ * smallest side vertical, its longest along world `x` (the grid's rows), the middle one along `z`. Four square
+ * orientations do that (the half-turns); they are returned nearest the final one (identity) first.
+ */
+export function flatOrientations(dims: Vec3): Quat[] {
+  const order = [0, 1, 2].sort((a, b) => dims[b]! - dims[a]! || a - b);
+  const axis = (i: number): Vec3 => [i === 0 ? 1 : 0, i === 1 ? 1 : 0, i === 2 ? 1 : 0];
+  const q90 = [0, 1, 2, 3].map((k) => (k * Math.PI) / 2);
+  const seen = new Map<string, Quat>();
+  for (const a of q90)
+    for (const b of q90)
+      for (const c of q90) {
+        const q = canonical(qmul(qFromAxisAngle([0, 1, 0], a), qmul(qFromAxisAngle([1, 0, 0], b), qFromAxisAngle([0, 0, 1], c))));
+        const long = qRotate(q, axis(order[0]!));
+        const short = qRotate(q, axis(order[2]!));
+        if (Math.abs(Math.abs(long[0]) - 1) > 1e-9 || Math.abs(Math.abs(short[1]) - 1) > 1e-9) continue;
+        // ⭐ `q` and `−q` are one turn: `canonical` settles the sign by `w` alone, so a half-turn (`w = 0`) needs
+        // the first non-zero component positive too, or it is counted twice.
+        const lead = q.find((v) => Math.abs(v) > 1e-9)!;
+        const r = q.map((v) => Math.round((lead < 0 ? -v : v) * 1e9) / 1e9 + 0) as unknown as Quat;
+        seen.set(r.join(","), r);
+      }
+  return [...seen.values()].sort((p, q) => qAngle(p) - qAngle(q) || p.join(",").localeCompare(q.join(",")));
+}
+
+/** ⭐ `D174`: the half-sizes of a piece laid flat, in world axes — `[longest, smallest, middle] / 2`. */
+function flatHalf(dims: Vec3): Vec3 {
+  const s = [...dims].sort((a, b) => b - a);
+  return [s[0]! / 2, s[2]! / 2, s[1]! / 2];
+}
+
+const sameColour = (a: Triple, b: Triple): boolean => a.every((v, i) => Math.abs(v - b[i]!) < 1e-9);
+
+/**
+ * ⭐⭐⭐ `D174` — **THE FLOOR GRID** (the owner: *"set on the floor on a virtual grid (do not show any grid), ordered by
+ * color and inside the color groups by descending size"*, *"in front, just outside the demo cube"*). Where each of
+ * `ids` rests at the start, laid flat, and the grid's box.
+ * ⭐ Reading order as the boot camera sees it: left to right (`+x`), then row after row toward the camera (`−z`), the
+ * first row `gridOffset` outside the cube's front face. Colour groups in `colourOrder`, each by CORE volume, largest
+ * first (ties: the scene's order); the groups follow on in the rows. Each piece takes a whole number of `gridPitch`
+ * cells — its footprint and a `gridGap` gutter — and sits at the middle of its cells across, at the middle of its row
+ * in depth. ⛔ Nothing is drawn. ⛔ A grid that leaves the floor THROWS.
+ */
+export function demoGrid(
+  scene: SceneDescriptor,
+  ids: readonly string[],
+  volume: Aabb,
+  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "gridWidth" | "colourOrder">,
+): { rest: Map<string, Vec3>; stage: Aabb } {
+  const floor = [...scene.bodies].filter((b) => b.frozen).sort((a, b) => Math.max(...contourDims(b)) - Math.max(...contourDims(a)))[0];
+  if (!floor) throw new Error(`${scene.id}: a demo grid needs a floor (a frozen body)`);
+  const fd = contourDims(floor);
+  const floorTop = floor.position[1] + fd[1] / 2;
+  const order: Triple[] = [...(opt.colourOrder ?? [])];
+  for (const b of scene.bodies) if (!b.frozen && !order.some((c) => sameColour(c, b.colour))) order.push(b.colour);
+  const index = new Map(scene.bodies.map((b, i) => [b.id, i]));
+  const spec = (id: string) => scene.bodies.find((b) => b.id === id) ?? (() => { throw new Error(`${scene.id}: no body ${id}`); })();
+  const sorted = [...ids].sort((a, b) => {
+    const A = spec(a), B = spec(b);
+    const ga = order.findIndex((c) => sameColour(c, A.colour)), gb = order.findIndex((c) => sameColour(c, B.colour));
+    const va = A.dims[0] * A.dims[1] * A.dims[2], vb = B.dims[0] * B.dims[1] * B.dims[2];
+    return ga - gb || vb - va || index.get(a)! - index.get(b)!;
+  });
+  const p = opt.gridPitch;
+  const cells = Math.floor((opt.gridWidth ?? volume.max[0] - volume.min[0]) / p + 1e-9);
+  const rows: { id: string; x0: number; cx: number; half: Vec3 }[][] = [[]];
+  let x = 0;
+  for (const id of sorted) {
+    const half = flatHalf(contourDims(spec(id)) as unknown as Vec3);
+    const cx = Math.ceil((2 * half[0] + opt.gridGap) / p - 1e-9);
+    if (cx > cells) throw new Error(`${scene.id}: ${id} is longer than a grid row`);
+    if (x + cx > cells) {
+      rows.push([]);
+      x = 0;
+    }
+    rows[rows.length - 1]!.push({ id, x0: x, cx, half });
+    x += cx;
+  }
+  const used = Math.max(...rows.map((r) => r.reduce((s, c) => s + c.cx, 0)));
+  const centreX = (volume.min[0] + volume.max[0]) / 2;
+  const originX = Math.round((centreX - (used * p) / 2) / p) * p;
+  const rest = new Map<string, Vec3>();
+  let top = volume.min[2] - opt.gridOffset;
+  const lo: [number, number, number] = [Infinity, floorTop, Infinity];
+  const hi: [number, number, number] = [-Infinity, floorTop, -Infinity];
+  for (const row of rows) {
+    const depth = Math.max(...row.map((c) => Math.ceil((2 * c.half[2] + opt.gridGap) / p - 1e-9))) * p;
+    for (const c of row) {
+      const pos: Vec3 = [originX + (c.x0 + c.cx / 2) * p, floorTop + c.half[1], top - depth / 2];
+      rest.set(c.id, pos);
+      // ⭐ The grid's box is its CELLS, gutters included — so a piece on its cell is inside it with room to spare.
+      lo[0] = Math.min(lo[0], originX + c.x0 * p);
+      hi[0] = Math.max(hi[0], originX + (c.x0 + c.cx) * p);
+      lo[2] = Math.min(lo[2], top - depth);
+      hi[2] = Math.max(hi[2], top);
+      hi[1] = Math.max(hi[1], floorTop + 2 * c.half[1]);
+    }
+    top -= depth;
+  }
+  const fx = [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2];
+  const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
+  if (lo[0] < fx[0]! || hi[0] > fx[1]! || lo[2] < fz[0]! || hi[2] > fz[1]!)
+    throw new Error(`${scene.id}: the demo grid (${rows.length} rows, x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}, z ${lo[2].toFixed(2)}…${hi[2].toFixed(2)}) leaves the floor`);
+  return { rest, stage: { min: lo, max: hi } };
+}
 
 /**
  * ⭐⭐ **THE DEMO VOLUME** (the owner: *"a cube of half the largest dimension of the floor, centered on the
@@ -277,7 +416,7 @@ export function seatsOf(world: World, id: string, minContact: number): { pioneer
   return out;
 }
 
-type Reverse = { kind: DemoMoveKind; body: string; pioneer?: string; from: Placed; to: Placed; travel: number };
+type Reverse = { kind: DemoMoveKind; body: string; pioneer?: string; from: Placed; to: Placed; via?: Vec3[]; travel: number };
 
 const between = (rnd: () => number, lo: number, hi: number): number => lo + (hi - lo) * rnd();
 function shuffled<T>(rnd: () => number, xs: readonly T[]): T[] {
@@ -288,159 +427,160 @@ function shuffled<T>(rnd: () => number, xs: readonly T[]): T[] {
   }
   return a;
 }
-/**
- * ⭐ Chain lengths in `[lo, hi]` summing to `total`, drawn at random; ⛔ throws when no such split exists (a total
- * below `lo`, or one no mix of lengths reaches — 150 in chains of exactly 5 is 30 chains, 151 is none).
- */
-function chains(rnd: () => number, total: number, [lo, hi]: readonly [number, number]): number[] {
-  if (lo < 4 || hi < lo) throw new Error(`a chain needs at least 4 moves (unsnap, estrange, unalign, translate), got [${lo}, ${hi}]`);
-  // ⭐ reach[n]: can `n` moves be split into chains of `lo`..`hi`?
-  const reach = [true];
-  for (let n = 1; n <= total; n++) reach.push([...Array(hi - lo + 1).keys()].some((k) => n - lo - k >= 0 && reach[n - lo - k]!));
-  if (!reach[total]) throw new Error(`${total} moves cannot be split into chains of ${lo}–${hi} moves`);
-  const out: number[] = [];
-  let left = total;
-  while (left > 0) {
-    const ok = [...Array(hi - lo + 1).keys()].map((k) => lo + k).filter((p) => left - p >= 0 && reach[left - p]);
-    const p = ok[Math.floor(rnd() * ok.length)]!;
-    out.push(p);
-    left -= p;
-  }
-  return out;
-}
 
-/** ⭐⭐ Take `scene`'s final configuration apart in `opt.moveCount` checked reverse moves; return the plan. */
+/** ⭐ `D174`: how a piece leaves the painting — found in phase A, replayed in phase C. */
+type Exit = { id: string; pioneer: string; unsnap: Placed; estrange: Placed; flat: Placed };
+
+/**
+ * ⭐⭐ Take `scene`'s final configuration apart in `opt.moveCount` checked reverse moves; return the plan.
+ *
+ * ⭐⭐⭐ `D174` — **THREE PHASES**, because the grid's order depends on WHICH pieces come off, and that is known only
+ * once they have:
+ * * **A — who, and how each leaves** (inside the cube): an unsnap off a seat, an estrangement toward the camera that
+ *   will watch it go back, and a turn there to lie FLAT. The piece is then parked far away.
+ * * **B — the grid**, for that set (`demoGrid`).
+ * * **C — the replay**: A's three steps again, then a path from the estrangement spot down onto the piece's cell —
+ *   straight, or over the build — and the lowering. ⭐ The grid lies outside the cube and A's steps inside it, so a
+ *   piece already on the grid cannot block a replayed step.
+ */
 export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOptions> = {}): DemoPlan {
   const opt: DemoOptions = { ...DEMO_DEFAULTS, ...options };
+  const K = opt.moveCount / DEMO_CHAIN.length;
+  if (!Number.isInteger(K) || K < 1)
+    throw new Error(`${opt.moveCount} moves cannot be split into chains of ${DEMO_CHAIN.length} (${DEMO_CHAIN.join(", ")})`);
   const rnd = mulberry32(opt.seed);
   const volume = demoVolume(scene);
   const final = finalPoses(scene);
-  let world = assembledWorld(scene, final);
+  const assembled = assembledWorld(scene, final);
   const setup: CollisionSetup = { shapes: hullAtSpawn, bounds: boundsFromShapes(hullAtSpawn), skinM: opt.skin };
-  const reverse: Reverse[] = [];
-  const out = new Set<string>();
+  const dimsOf = new Map(scene.bodies.map((b) => [b.id, contourDims(b) as unknown as Vec3]));
+  const placedAt = (w: World, id: string): Placed => worldPlacementOf(w, id)!;
+  const shifted = (w: World, id: string, d: Vec3): Placed => ({ position: add(placedAt(w, id).position, d), orientation: placedAt(w, id).orientation });
 
-  const step = (kind: DemoMoveKind, id: string, to: Placed, pioneer?: string): boolean => {
-    const from = worldPlacementOf(world, id)!;
-    const w = tryPath(world, id, to, setup, volume, opt);
-    if (!w) return false;
-    reverse.push({ kind, body: id, from, to, travel: travelOf(world, id, from, to), ...(pioneer ? { pioneer } : {}) });
-    world = w;
-    return true;
-  };
-  const at = (id: string): Placed => worldPlacementOf(world, id)!;
-  const moved = (id: string, d: Vec3): Placed => ({ position: add(at(id).position, d), orientation: at(id).orientation });
-  const turned = (id: string, axis: Vec3, rad: number): Placed => ({
-    position: at(id).position,
-    orientation: canonical(qmul(qFromAxisAngle(axis, rad), at(id).orientation)),
-  });
-
-  const plan = chains(rnd, opt.moveCount, opt.chain);
-  const centre: Vec3 = [0, 1, 2].map((i) => (volume.min[i]! + volume.max[i]!) / 2) as unknown as Vec3;
-  for (const [k, length_] of plan.entries()) {
-    // ⭐⭐ `D171`: WHERE THE CAMERA WILL BE when this piece is put back. Chains are taken apart last-played-first, so
-    // chain `k` plays as chain `K − 1 − k`, around progress `(K − 1 − k + ½) / K` — ⚠ an estimate: the schedule
-    // weighs moves by travel, and the camera turns 360° / K (12° at 30 pieces) over one chain.
-    const toCam = towardCamera(demoYawAt(DEMO_MOVES_END * ((plan.length - 1 - k + 0.5) / plan.length)));
-    // ⭐ 1. UNSNAP — a piece with a seat it can leave, chosen at random among those that can.
-    let piece: string | null = null;
-    for (const id of shuffled(rnd, [...final.keys()].filter((k) => !out.has(k)).sort())) {
-      for (const seat of shuffled(rnd, seatsOf(world, id, opt.minContact)))
-        if (step("SNAP", id, moved(id, scale(seat.away, opt.snapGap)), seat.pioneer)) {
-          piece = id;
-          break;
-        }
-      if (piece) break;
-    }
-    if (!piece) throw new Error(`${scene.id}: no piece can leave its seat after ${reverse.length} moves`);
-    out.add(piece);
-    const id = piece;
-
-    // ⭐ 2. ESTRANGE — along one world axis, toward the boot camera (−z) first.
-    // ⭐ `D171`: the horizontal axis most toward that camera first (was always −z), then the others by how far they face it.
+  /**
+   * ⭐ ESTRANGE, then turn FLAT there: along one world axis, most camera-facing first (`D171`), each at 1×–3× the range
+   * and truly clear (`clearance`); then the nearest flat orientation the piece can turn to about its centre, inside
+   * the cube. `null` if no spot allows both.
+   */
+  const leave = (w1: World, id: string, toCam: Vec3): { estrange: Placed; flat: Placed; world: World } | null => {
     const axes: Vec3[] = ([[0, 0, -1], [0, 0, 1], [1, 0, 0], [-1, 0, 0], [0, 1, 0]] as Vec3[])
       .map((a) => ({ a, f: dot(a, toCam) + rnd() * 1e-6 }))
       .sort((p, q) => q.f - p.f)
       .map((x) => x.a);
-    let done = false;
-    let pulled: Vec3 = [0, 1, 0];
-    // ⛔ `D171`, FOUND AT 150 MOVES: with −z crowded, a pull along `+y` slid a piece up INSIDE the painting's plane,
-    // into a hole a removed piece had left — never clear, and with no room to turn. ⭐ An estrangement must now end
-    // `clearance` away from every other body; else another axis, farther (up to twice the range) is tried.
-    // ⭐ Each axis, most camera-facing first, at 1×, 1.5× and 2× the range. ⚠ Measured on seed 1: sorting by facing is
-    // what counts (the −z-first rule sent 16 of 30 pieces out behind, worst −1.00; this sends 1, worst −0.29); a second
-    // pass that exhausted the facing axes first added nothing and was deleted.
-    const order = axes.flatMap((a) => [1, 1.5, 2].map((far) => ({ a, far })));
-    for (let t = 0; t < order.length * 4 && !done; t++) {
-      const { a: axis, far } = order[Math.floor(t / 4)]!;
-      const to = moved(id, scale(axis, between(rnd, opt.estrange[0], opt.estrange[1]) * far));
-      const w = tryPath(world, id, to, setup, volume, opt);
-      if (!w || clearanceOf(w, id) < opt.clearance) continue;
-      done = step("APPROACH", id, to);
-      if (done) pulled = axis;
-    }
-    if (!done) throw new Error(`${scene.id}: ${id} cannot be pulled clear`);
-
-    // ⭐ 3. UNALIGN — a random turn about the centre, shrinking; then (`D171`) about the axis it was pulled out
-    // along, which keeps it parallel to where it came from — a wide piece just out of the painting has room for
-    // nothing else; the last resort a turn about the vertical.
-    done = false;
-    for (let t = 0; t < opt.tries && !done; t++) {
-      const shrink = 1 - t / opt.tries;
-      const axis =
-        t >= opt.tries - 10
-          ? ([0, 1, 0] as Vec3)
-          : t >= opt.tries - 30
-            ? pulled
-            : normalize([rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1]) ?? ([0, 1, 0] as Vec3);
-      const deg = between(rnd, 30, 120) * shrink + 5;
-      done = step("ALIGN", id, turned(id, axis, ((rnd() < 0.5 ? -1 : 1) * deg * Math.PI) / 180));
-    }
-    if (!done) throw new Error(`${scene.id}: ${id} cannot be turned`);
-
-    // ⭐ 4. TRANSLATE, then LIFT / YAW in a random order — a kind that fails is replaced by another.
-    const extras: DemoMoveKind[] = ["TRANSLATE", ...shuffled(rnd, ["LIFT", "YAW"] as DemoMoveKind[])];
-    let made = 0;
-    for (let k = 0; made < length_ - 3; k++) {
-      if (k > opt.tries) throw new Error(`${scene.id}: ${id} cannot be scattered`);
-      const kind = k < extras.length ? extras[k]! : (["TRANSLATE", "LIFT", "YAW"] as DemoMoveKind[])[Math.floor(rnd() * 3)]!;
-      let ok = false;
-      for (let t = 0; t < opt.tries * (kind === "TRANSLATE" ? 3 : 1) && !ok; t++) {
-        const p = at(id).position;
-        if (kind === "TRANSLATE") {
-          // ⭐ `D171`: a spot on the CAMERA's side — `facing` or more out from the centre toward it, anywhere across;
-          // drawn in the camera's own frame (drawing the whole cube and rejecting wasted most tries, measured).
-          const half = (volume.max[0] - volume.min[0]) / 2;
-          const along = between(rnd, opt.facing, half * Math.SQRT2);
-          const across = between(rnd, -half * Math.SQRT2, half * Math.SQRT2);
-          const x = centre[0] + toCam[0] * along - toCam[2] * across;
-          const z = centre[2] + toCam[2] * along + toCam[0] * across;
-          if (x < volume.min[0] || x > volume.max[0] || z < volume.min[2] || z > volume.max[2]) continue;
-          ok = step(kind, id, moved(id, [x - p[0], 0, z - p[2]]));
-        } else if (kind === "LIFT") {
-          const y = between(rnd, volume.min[1], volume.max[1]);
-          ok = step(kind, id, moved(id, [0, y - p[1], 0]));
-        } else {
-          const deg = between(rnd, 30, 150) * (rnd() < 0.5 ? -1 : 1);
-          ok = step(kind, id, turned(id, [0, 1, 0], (deg * Math.PI) / 180));
+    // ⛔ FOUND BY THE SHAPE VECTOR: a piece that already lies flat in the painting (a horizontal bar) had an ALIGN of
+    // 0° — an empty move, a pause in the demo. ⭐ It is laid down a HALF-TURN away instead: its goal all the same
+    // (`D130`: a box's face or its opposite), and the ALIGN is a turn a player would make.
+    const flats = flatOrientations(dimsOf.get(id)!).filter((q) => qAngle(q) > 1e-6);
+    for (const axis of axes)
+      for (const far of [1, 1.5, 2, 2.5, 3])
+        for (let t = 0; t < 4; t++) {
+          const estrange = shifted(w1, id, scale(axis, between(rnd, opt.estrange[0], opt.estrange[1]) * far));
+          const wE = tryPath(w1, id, estrange, setup, volume, opt);
+          if (!wE || clearanceOf(wE, id) < opt.clearance) continue;
+          for (const q of flats) {
+            const flat: Placed = { position: estrange.position, orientation: q };
+            const wT = tryPath(wE, id, flat, setup, volume, opt);
+            if (wT) return { estrange, flat, world: wT };
+          }
         }
+    return null;
+  };
+
+  // ⭐ A — who comes off, in which order, and how each leaves the painting.
+  let world = assembled;
+  const exits: Exit[] = [];
+  for (let k = 0; k < K; k++) {
+    // ⭐⭐ `D171`: WHERE THE CAMERA WILL BE when this piece is put back. Chains are taken apart last-played-first, so
+    // chain `k` plays as chain `K − 1 − k`, around progress `(K − 1 − k + ½) / K` — ⚠ an estimate: the schedule
+    // weighs moves by travel, and the camera turns 360° / K (12° at 30 pieces) over one chain.
+    const toCam = towardCamera(demoYawAt(DEMO_MOVES_END * ((K - 1 - k + 0.5) / K)));
+    let found: { exit: Exit; world: World } | null = null;
+    for (const id of shuffled(rnd, [...final.keys()].filter((x) => !exits.some((e) => e.id === x)).sort())) {
+      for (const seat of shuffled(rnd, seatsOf(world, id, opt.minContact))) {
+        const unsnap = shifted(world, id, scale(seat.away, opt.snapGap));
+        const w1 = tryPath(world, id, unsnap, setup, volume, opt);
+        if (!w1) continue;
+        const out = leave(w1, id, toCam);
+        if (!out) continue;
+        found = { exit: { id, pioneer: seat.pioneer, unsnap, estrange: out.estrange, flat: out.flat }, world: out.world };
+        break;
       }
-      if (ok) made++;
+      if (found) break;
     }
+    if (!found) throw new Error(`${scene.id}: no piece can leave its seat and lie flat after ${exits.length} pieces`);
+    exits.push(found.exit);
+    // ⭐ Parked far away, where nothing can meet it, until phase C puts it on its cell.
+    world = setWorldPlacement(found.world, found.exit.id, { position: [1e4 * (k + 1), -1e4, 0], orientation: IDENTITY });
   }
 
-  // ⭐ Forwards: reversed, each move from its end back to its start.
+  // ⭐ B — the grid, for the pieces that came off.
+  const grid = demoGrid(scene, exits.map((e) => e.id), volume, opt);
+  const stage = grid.stage;
+  const reach = demoReach({ volume, stage });
+
+  // ⭐ C — the replay, and each piece's way down onto its cell.
+  world = assembled;
+  const reverse: Reverse[] = [];
+  const push = (kind: DemoMoveKind, id: string, to: Placed, box: Aabb, pioneer?: string): void => {
+    const from = placedAt(world, id);
+    const w = tryPath(world, id, to, setup, box, opt);
+    // ⛔ Phase A proved this step with the same neighbours inside the cube; a refusal here is a defect, never a retry.
+    if (!w) throw new Error(`${scene.id}: ${id}'s ${kind} could not be replayed`);
+    reverse.push({ kind, body: id, from, to, travel: travelOf(world, id, from, to), ...(pioneer ? { pioneer } : {}) });
+    world = w;
+  };
+  for (const e of exits) {
+    const id = e.id;
+    push("SNAP", id, e.unsnap, volume, e.pioneer);
+    push("APPROACH", id, e.estrange, volume);
+    push("ALIGN", id, e.flat, volume);
+    const E = placedAt(world, id);
+    const rest: Placed = { position: grid.rest.get(id)!, orientation: E.orientation };
+    const half = flatHalf(dimsOf.get(id)!);
+    // ⭐ The lowest height from which the piece clears every piece that can lie on the grid.
+    const clear = stage.max[1] + opt.clearance + half[1];
+    const top = reach.max[1] - half[1] - 0.01;
+    const lifted = (y: number): Placed => ({ position: [rest.position[0], y, rest.position[2]], orientation: E.orientation });
+    // ⭐ Routes, tried in order: straight from the spot to just above the cell; straight at the spot's own height;
+    // then OVER the build — up from the spot, across, and down onto the cell — at rising heights.
+    const routes: Placed[][] = [[lifted(clear)]];
+    if (E.position[1] > clear) routes.push([lifted(E.position[1])]);
+    for (let i = 0; i <= 8; i++) {
+      const y = clear + ((top - clear) * i) / 8;
+      if (y > E.position[1]) routes.push([{ position: [E.position[0], y, E.position[2]], orientation: E.orientation }, lifted(y)]);
+    }
+    let done = false;
+    for (const legs of routes) {
+      let w: World | null = world;
+      for (const to of legs) w = w && tryPath(w, id, to, setup, reach, opt);
+      const down = w && tryPath(w, id, rest, setup, reach, opt);
+      if (!w || !down) continue;
+      const L = legs[legs.length - 1]!;
+      const pts = [E, ...legs];
+      const travel = pts.slice(1).reduce((s, p, i) => s + length(sub(p.position, pts[i]!.position)), 0);
+      reverse.push({ kind: "TRANSLATE", body: id, from: E, to: L, travel, ...(legs.length > 1 ? { via: legs.slice(0, -1).map((p) => p.position) } : {}) });
+      reverse.push({ kind: "LIFT", body: id, from: L, to: rest, travel: travelOf(w, id, L, rest) });
+      world = down;
+      done = true;
+      break;
+    }
+    if (!done) throw new Error(`${scene.id}: ${id} finds no free way down onto its grid cell (from ${E.position.map((v) => v.toFixed(2))}, flat ${E.orientation.map((v) => v.toFixed(2))} to ${rest.position.map((v) => v.toFixed(2))}, clear ${clear.toFixed(2)}, piece ${exits.indexOf(e) + 1}/${K})`);
+  }
+
+  // ⭐ Forwards: reversed, each move from its end back to its start (a path's corners in the other order).
   const moves: DemoMove[] = reverse.reverse().map((r) => ({
     kind: r.kind,
     body: r.body,
     ...(r.pioneer ? { pioneer: r.pioneer } : {}),
     from: toPose(r.to),
     to: toPose(r.from),
+    ...(r.via ? { via: [...r.via].reverse().map((p) => p.map(round) as unknown as Triple) } : {}),
     travel: round(r.travel),
   }));
   const start: Record<string, DemoPose> = {};
   for (const m of moves) if (!(m.body in start)) start[m.body] = m.from;
-  return { seed: opt.seed, volume: { min: volume.min.map(round) as unknown as Vec3, max: volume.max.map(round) as unknown as Vec3 }, moves, start };
+  const box = (b: Aabb): Aabb => ({ min: b.min.map(round) as unknown as Vec3, max: b.max.map(round) as unknown as Vec3 });
+  return { seed: opt.seed, volume: box(volume), stage: box(stage), moves, start };
 }
 
 /**

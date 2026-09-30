@@ -4,7 +4,7 @@
  * → `Claude/20_GAME_RULES/spec/DEMO_SCENE.md` §6.
  */
 import { setWorldPlacement } from "../core/object_model";
-import { advanceDemo, DEMO_LEAD_IN_S, demoCamera, demoDistanceM, demoMoveAt, demoPosesAt, fitDistanceM } from "../input/demo_playback";
+import { advanceDemo, DEMO_LEAD_IN_S, demoCamera, demoDistanceM, demoFramePointsM, demoMoveAt, demoPosesAt, fitPointsDistanceM } from "../input/demo_playback";
 import { orbitOffset } from "../input/orbit";
 import { ORBIT_START_YAW_RAD } from "../core/scene_dims";
 import { movesProgress } from "../core/demo_plan";
@@ -18,13 +18,13 @@ export function startDemo(st: SceneState): void {
     st.demo = null;
     return;
   }
-  // ⭐ `D171`: the distance at which the whole cube is on screen from the BOOT view, on this screen's aspect.
+  // ⭐ `D171`: the distance at which the whole cube is on screen from the BOOT view, on this screen's aspect —
+  // ⭐ `D174`: and the floor grid, the start configuration, which lies outside the cube toward that camera.
   const unitM = st.sceneSpec.unitM ?? 1;
-  const half = [0, 1, 2].map((i) => ((plan.volume.max[i]! - plan.volume.min[i]!) / 2) * unitM) as [number, number, number];
   const off = orbitOffset(st.cfg, ORBIT_START_YAW_RAD, st.bootElevation, 1).offsetM;
   const len = Math.hypot(off[0], off[1], off[2]) || 1;
   const aspect = st.canvas.clientWidth / Math.max(1, st.canvas.clientHeight);
-  const fitM = fitDistanceM(half, [off[0] / len, off[1] / len, off[2] / len], st.camera.fov, aspect);
+  const fitM = fitPointsDistanceM(demoFramePointsM(plan, unitM), [off[0] / len, off[1] / len, off[2] / len], st.camera.fov, aspect);
   st.demo = { plan, leadS: DEMO_LEAD_IN_S, progress: 0, done: false, fitM };
   // ⛔ A demo is watched: a press on a piece is empty space (it orbits), never a grip that fights the replay.
   for (const mesh of st.meshOf.values()) mesh.isPickable = false;
