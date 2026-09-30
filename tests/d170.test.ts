@@ -231,8 +231,8 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
     const all = SCENE_1.bodies.filter((b) => !b.frozen).map((b) => b.id);
     const narrow = { ...SCENE_1, bodies: SCENE_1.bodies.map((b) => (b.frozen ? { ...b, dims: [6, b.dims[1], 20] as const } : b)) };
     expect(() => demoGrid(narrow, all, v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).toThrow(/leaves the floor/);
-    expect(() => demoGrid(SCENE_1, all, v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).not.toThrow(); // two rows fit all 41 on 20
-    expect(() => demoGrid(SCENE_1, ["Piece30"], { min: [-5, -2.7, -6], max: [5, 7.3, 4] }, DEMO_DEFAULTS)).toThrow(/reaches into the cube/);
+    expect(() => demoGrid(SCENE_1, Object.keys(PLAN.start), v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).not.toThrow(); // the plan's 30 fit
+    expect(() => demoGrid(SCENE_1, ["Piece30"], { min: [-5, -2.7, -6], max: [5, 7.3, 4] }, DEMO_DEFAULTS)).toThrow(/cannot lie between the floor.s edge and the cube/);
     expect(() => demoGrid(SCENE_1, ["Piece30"], v, DEMO_DEFAULTS)).not.toThrow();
     expect(() => generateDemoPlan({ ...SCENE_1, final: null })).toThrow(/final configuration/);
   });
