@@ -58,8 +58,8 @@ file.
 | `D109` | ⭐⭐ **THE DORMANT SWITCHES ARE DELETED; THE FUCHSIA CONE IS THE SNAP CONE** | 2026-09-27 | ⭐ Binding, ⚠ → history |
 | `D110` | ⭐⭐ **THE FLICK IS DELETED — and `D103`'s flick-unsnap with it** | 2026-09-27 | → §13 |
 | `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | → §13, `IN6.md` |
-| `D112` | ⭐⭐ **THE HUD LEADS WITH THE SCORE: episodes and time** | 2026-09-27 | `SCORE.md` §3 as a rule; the undo pair costs 1; the clock starts at the first press → §13 |
-| `D113` | ⭐⭐ **THE EDGE BAND IS ALWAYS EMPTY SPACE** — the camera reset stays reachable | 2026-09-27 | 6 mm along the edges, a slider; a body cannot be grabbed through it → §13 |
+| `D112` | ⭐⭐ **THE HUD LEADS WITH THE SCORE: episodes and time** | 2026-09-27 | → §13 |
+| `D113` | ⭐⭐ **THE EDGE BAND IS ALWAYS EMPTY SPACE** — the camera reset stays reachable | 2026-09-27 | → §13 |
 | `D114` | ⭐⭐ **THE EDGE BAND OPENS ONLY WHEN NO EMPTY SPACE IS LEFT** | 2026-09-27 | → §13 |
 | `D115` | ⭐⭐ **A TWO-TOUCH ACTION IS ONE EPISODE, COUNTED WHEN ITS LAST TOUCH LIFTS** | 2026-09-27 | Align, unalign, a Pioneer's release, unsnap; tablet and desktop alike → §13 |
 | `D116` | ⛔⛔⛔ **BUILD THE PLAYABILITY PROGRAM FIRST; COLLISION: STOP+SLIDE ON TRANSLATION, SAME-AXIS CLAMP ON ROTATION** | 2026-09-27 | ✅ `3D6` BUILT; clamp owner-confirmed; seams for Blender → `COLLISION.md` |
@@ -116,6 +116,7 @@ file.
 | `D173` | ⭐ **THE DEMO PLAN LOADS ONLY IN THE DEMO LEVEL** | 2026-09-29 | → `DEMO_SCENE.md` §5 |
 | `D171` | ⭐⭐ **`Scene1_demo`: 150 MOVES, FIT ZOOM, 15° SETTLE** | 2026-09-29 | → `DEMO_SCENE.md` |
 | `D174` | ⭐⭐ **THE DEMO STARTS FROM A FLOOR GRID; A LIFTED PIECE JOINS THE BUILD** | 2026-09-30 | → `DEMO_SCENE.md` §2–§2ter |
+| `D175` | ⭐ **THE GRID: LENGTHWISE, ONE RANK; CAMERA 15° EARLIER** | 2026-09-30 | → `DEMO_SCENE.md` §2bis, §7 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

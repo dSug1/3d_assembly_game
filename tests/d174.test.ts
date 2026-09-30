@@ -6,6 +6,8 @@
  * > not show any grid), ordered by color and inside the color groups by descending size. Once lifted, each part shall
  * > reach a position which blends into the current build (piece position matching camera orbit movement not to occlude
  * > the movement)"* — with *"only the 30 moved"*, *"in front, just outside the demo cube"*, *"volume"*.
+ * > *"the parts shall present their longest dimension towards the depth axis and their bottom surfaces on depth axis
+ * > shall be aligned on x axis"* — the owner, 2026-09-30 (`D175`).
  *
  * ⭐ Asserted on the COMMITTED plan, read back from its poses — never from the generator's own bookkeeping.
  */
@@ -48,22 +50,22 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
       if (!b.frozen && !PLAN.start[b.id]) expect(b.position).toEqual(final.get(b.id));
   });
 
-  it("⭐⭐ *aligned with the floor*: square to its axes, the smallest side vertical, the longest along x, resting ON it", () => {
+  it("⭐⭐ *aligned with the floor*: square to its axes, the smallest side vertical, the longest along DEPTH (`D175`), resting ON it", () => {
     for (const id of ids) {
       const s = PLAN.start[id]!;
       const { half, square } = extents(id, q(s));
       const d = [...contourDims(body(id))].sort((a, b) => b - a);
       expect(square).toBe(true);
-      expect(half[0]).toBeCloseTo(d[0]! / 2, 5); // longest along x — the rows
+      expect(half[2]).toBeCloseTo(d[0]! / 2, 5); // ⭐ `D175`: longest along z — depth
       expect(half[1]).toBeCloseTo(d[2]! / 2, 5); // smallest vertical
-      expect(half[2]).toBeCloseTo(d[1]! / 2, 5);
+      expect(half[0]).toBeCloseTo(d[1]! / 2, 5);
       expect(s.position[1] - half[1]).toBeCloseTo(FLOOR_TOP, 5); // on the floor, not above it and not in it
     }
   });
 
   it("⭐⭐ *ordered by color and inside the color groups by descending size* — in reading order as the boot camera sees it", () => {
-    const rows = [...new Set(ids.map((id) => PLAN.start[id]!.position[2]))].sort((a, b) => b - a); // far row first
-    const read = rows.flatMap((z) => ids.filter((id) => PLAN.start[id]!.position[2] === z).sort((a, b) => PLAN.start[a]!.position[0] - PLAN.start[b]!.position[0]));
+    // ⭐ `D175`: one rank, read left to right
+    const read = [...ids].sort((a, b) => PLAN.start[a]!.position[0] - PLAN.start[b]!.position[0]);
     const colours = [SCENE_1_PALETTE.MAT_A, SCENE_1_PALETTE.MAT_B, SCENE_1_PALETTE.MAT_C, SCENE_1_PALETTE.MAT_D, SCENE_1_PALETTE.MAT_E];
     const group = (id: string) => colours.findIndex((c) => c.every((v, i) => v === body(id).colour[i]));
     const volume = (id: string) => body(id).dims[0] * body(id).dims[1] * body(id).dims[2];
@@ -79,27 +81,34 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
   it("⭐ on a virtual GRID: each piece at the middle of a whole number of 5 mm cells across, its gutter included", () => {
     const p = DEMO_DEFAULTS.gridPitch;
     for (const id of ids) {
-      const long = Math.max(...contourDims(body(id)));
-      const cells = Math.ceil((long + DEMO_DEFAULTS.gridGap) / p - 1e-9);
+      const across = [...contourDims(body(id))].sort((a, b) => b - a)[1]!; // `D175`: its WIDTH is across
+      const cells = Math.ceil((across + DEMO_DEFAULTS.gridGap) / p - 1e-9);
       const edge = PLAN.start[id]!.position[0] - (cells * p) / 2;
       expect(Math.abs(edge / p - Math.round(edge / p))).toBeLessThan(1e-6);
     }
   });
 
-  it("⭐ *in front, just outside the demo cube*: the first row begins `gridOffset` out from the cube's front face, all on the floor", () => {
+  it("⭐⭐ `D175` — *their bottom surfaces on depth aligned on x*: every NEAR end (lowest z) on ONE line parallel to x", () => {
+    const near = ids.map((id) => PLAN.start[id]!.position[2] - extents(id, q(PLAN.start[id]!)).half[2]);
+    for (const z of near) expect(z).toBeCloseTo(near[0]!, 5);
+    // ⭐ and it is the near end that is flush, not the centre or the far end: the lengths differ
+    const far = ids.map((id) => PLAN.start[id]!.position[2] + extents(id, q(PLAN.start[id]!)).half[2]);
+    expect(Math.max(...far) - Math.min(...far)).toBeGreaterThan(3);
+  });
+
+  it("⭐ *in front, just outside the demo cube*, all on the floor: the longest piece's far end outside the cube, the line on the floor", () => {
     const front = PLAN.volume.min[2];
-    let nearest = -Infinity;
+    const floor = body("Floor");
     for (const id of ids) {
       const s = PLAN.start[id]!;
       const { half } = extents(id, q(s));
       expect(s.position[2] + half[2]).toBeLessThan(front); // outside the cube, on the boot camera's side
-      nearest = Math.max(nearest, s.position[2] + half[2]);
-      const floor = body("Floor");
       expect(Math.abs(s.position[0]) + half[0]).toBeLessThanOrEqual(floor.dims[0] / 2);
       expect(Math.abs(s.position[2]) + half[2]).toBeLessThanOrEqual(floor.dims[2] / 2);
     }
-    expect(PLAN.stage.max[2]).toBeCloseTo(front - DEMO_DEFAULTS.gridOffset, 9);
-    expect(front - nearest).toBeLessThan(DEMO_DEFAULTS.gridOffset + DEMO_DEFAULTS.gridGap * 3); // just outside
+    // ⭐ Scene_1: the 4.83-unit bars do not fit 3 cm out, so the line sits half a gutter in from the floor's edge
+    expect(PLAN.stage.min[2]).toBeCloseTo(-floor.dims[2] / 2, 9);
+    expect(PLAN.stage.max[2]).toBeLessThan(front);
   });
 
   it("⭐ no two pieces on the grid closer than the gutter (`gridGap`, 1 cm)", () => {
@@ -121,12 +130,12 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
   it("⭐ `flatOrientations`: the four half-turns that lay a box flat, nearest the final pose first", () => {
     const f = flatOrientations([0.13, 4.83, 0.33]); // a 4.8-unit black bar, standing
     expect(f).toHaveLength(4);
-    expect(qAngle(f[0]!)).toBeCloseTo(Math.PI / 2, 8); // a quarter-turn lays it down; the others are half-turns more
     for (const o of f) {
-      expect(Math.abs(qRotate(o, [0, 1, 0])[0])).toBeCloseTo(1, 8); // its length along x
+      expect(Math.abs(qRotate(o, [0, 1, 0])[2])).toBeCloseTo(1, 8); // `D175`: its length along z
       expect(Math.abs(qRotate(o, [1, 0, 0])[1])).toBeCloseTo(1, 8); // its thinnest side vertical
     }
-    expect(flatOrientations([2, 0.3, 1])[0]).toEqual([1, 0, 0, 0]); // already flat: no turn at all
+    expect(flatOrientations([1, 0.3, 2])[0]).toEqual([1, 0, 0, 0]); // already flat and lengthwise: no turn at all
+    expect(qAngle(flatOrientations([2, 0.3, 1])[0]!)).toBeCloseTo(Math.PI / 2, 8); // flat across: a quarter-turn
   });
 });
 
@@ -178,15 +187,17 @@ describe("⭐⭐⭐ `D174` — *once lifted, each part reaches a position which 
     expect(r.max[2]).toBe(v.max[2]);
   });
 
-  it("⭐ a carry OVER the build is up, across, down: level across from above the cell, then straight down to the spot", () => {
+  it("⭐ a carry OVER the build is up, across, down: level across from above the cell, then straight down (`D175`: then a step in)", () => {
     const over = PLAN.moves.filter((m) => m.kind === "TRANSLATE" && m.via);
     expect(over.length).toBeGreaterThan(0);
     for (const m of over) {
-      expect(m.via).toHaveLength(1);
       const c = m.via![0]!;
       expect(c[1]).toBeCloseTo(m.from.position[1], 9); // across at the lift's height
-      expect([c[0] - m.to.position[0], c[2] - m.to.position[2]].map((x) => Math.abs(x) < 1e-9)).toEqual([true, true]);
-      expect(c[1]).toBeGreaterThan(m.to.position[1]); // then DOWN onto the spot
+      const down = m.via!.length === 1 ? m.to.position : m.via![1]!;
+      expect([c[0] - down[0], c[2] - down[2]].map((x) => Math.abs(x) < 1e-9)).toEqual([true, true]); // straight down
+      expect(c[1]).toBeGreaterThan(down[1]);
+      if (m.via!.length === 2) expect(Math.abs(m.via![1]![1] - m.to.position[1])).toBeLessThan(1e-9); // a level step in
+      expect(m.via!.length).toBeLessThanOrEqual(2);
     }
   });
 });
@@ -218,7 +229,7 @@ describe("⭐⭐ `D174` — the playback: a path's corners, and a start view tha
     expect(pts).toHaveLength(16);
     for (const [toCam, aspect, gridDecides] of [
       [normalize([0, 0.15, -1])!, 0.68, true], // ⭐ portrait: the grid's width decides
-      [normalize([0, 0.15, -1])!, 1.6, false], // landscape: the cube's height still does
+      [normalize([0, 0.15, -1])!, 1.6, true], // `D175`: landscape too — one rank 1.6 m wide
     ] as [Vec3, number, boolean][]) {
       const d = fitPointsDistanceM(pts, toCam, 0.8, aspect);
       const eye = (k: number): Vec3 => [toCam[0] * d * k, toCam[1] * d * k, toCam[2] * d * k];
