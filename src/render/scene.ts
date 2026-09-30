@@ -88,6 +88,7 @@ import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler } from "./pointer_wiring";
 import { startRenderLoop } from "./render_loop";
 import { LevelEnd, type LevelResult } from "../core/level_end";
+import { playVolumeOf } from "../core/play_volume";
 
 export interface SceneHandle {
   readonly scene: Scene;
@@ -667,6 +668,7 @@ export function createScene(
   st.episodes = new EpisodeTally();
   st.sceneStartMs = null;
   st.levelEnd = new LevelEnd();
+  st.playVolume = playVolumeOf(st.sceneSpec);
   st.onLevelEnd = null;
   st.hudSecond = -1;
   st.episodeFacts = new Map();

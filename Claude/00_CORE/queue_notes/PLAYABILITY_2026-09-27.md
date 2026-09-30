@@ -110,7 +110,8 @@ off it). ⛔ Unjudged.
 animating) — played (the clock started) or a demo done; it latches, the clock and the count stop, and a results card comes
 up after a beat (moves · time · pieces; *Next level* · *Retry* · *Level select*). Every screen reads a UI THEME (design
 tokens; `night`, `paper`). `core/level_end.ts`, `core/ui_theme.ts`, `render/level_end_ui.ts` → `LEVEL_END.md`.
-✅ 17 vectors, four mutants RED. ⛔ Unjudged by a hand. ⭐ `GM1` is BUILT; next in the program, `3D7`.
+✅ 17 vectors, four mutants RED. ✅✅ **Closed by a device look** — the owner, 2026-09-30, build `a796ac0`: *"Tested, ok"*.
+⭐ `GM1` is BUILT and CLOSED; next in the program, `3D7`.
 
 ## 3. The play volume
 
@@ -118,6 +119,11 @@ Nothing keeps a part inside the scene today: it can be dragged off-screen, far b
 or (until `3D6`) under the plate. ⭐ A volume per level clamps translation (the same stop-and-slide
 as `3D6`, against the volume's walls); a lost part is recoverable (undo covers the last actions,
 not a part pushed away over many).
+
+✅ **`D181`, 2026-09-30 — BUILT** (*"Build 3D7"*): each level declares a box on its floor (`Scene_1`: 2 × 2 m, 1 m high);
+its walls are one more blocker to `3D6`'s rule — a move stops, a translation slides, a turn clamps on its own axis — and a
+piece already outside may come back in, never further out → `COLLISION.md` §10. ✅ 11 vectors, three mutants RED.
+⛔ Unjudged by a hand. Next in the program: `3D2`, the approach.
 
 ## 4. The player layer
 

@@ -44,6 +44,8 @@ export function collisionSetup(
     shapes: SHAPES,
     bounds: BOUNDS,
     skinM: skinM(st),
+    // ⭐ `3D7`: the level's walls — one more blocker to the same rule.
+    ...(st.playVolume ? { volume: st.playVolume } : {}),
     exempt: (a, b) => {
       if (st.collisionGrace.has(pairKey(a, b))) return true;
       if (alsoExempt !== null && pairKey(a, b) === pairKey(alsoExempt[0], alsoExempt[1])) return true;

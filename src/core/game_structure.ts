@@ -139,6 +139,12 @@ export interface SceneDescriptor {
   readonly orbit?: OrbitRig;
   /** ⭐⭐ `D170`: a DEMO scene plays this plan from its start configuration to `final` (`DEMO_SCENE.md`). */
   readonly demo?: DemoPlan;
+  /**
+   * ⭐ `3D7` (`D181`): the PLAY VOLUME — a box standing on the scene's floor (its largest frozen body): the floor's
+   * footprint, from its top up `aboveFloor` authored units. No body may leave it (`core/play_volume.ts`,
+   * `core/collision.ts`). Absent: unbounded.
+   */
+  readonly playVolume?: { readonly aboveFloor: number };
   /** ⭐ `GM1`'s: the final configuration to reach. `null` until an owner authors one. */
   readonly final: FinalConfiguration | null;
 }
@@ -350,6 +356,11 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     if (r !== null && r.centreM !== undefined && !isTriple(r.centreM))
       throw new Error(`scene ${o.id}: orbit.centreM is not three finite numbers`);
   }
+  if (o.playVolume !== undefined) {
+    const v = o.playVolume as { aboveFloor?: unknown } | null;
+    if (typeof v !== "object" || v === null || typeof v.aboveFloor !== "number" || !(v.aboveFloor > 0) || !Number.isFinite(v.aboveFloor))
+      throw new Error(`scene ${o.id}: playVolume.aboveFloor must be a positive finite number`);
+  }
   if (o.demo !== undefined) {
     const d = o.demo as Record<string, unknown> | null;
     if (typeof d !== "object" || d === null || !Array.isArray(d.moves) || typeof d.start !== "object" || d.start === null)
@@ -367,6 +378,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     ...(o.bootView !== undefined ? { bootView: "LEVEL" as const } : {}),
     ...(o.lighting !== undefined ? { lighting: o.lighting as LightingSpec } : {}),
     ...(o.orbit !== undefined ? { orbit: o.orbit as OrbitRig } : {}),
+    ...(o.playVolume !== undefined ? { playVolume: { aboveFloor: (o.playVolume as { aboveFloor: number }).aboveFloor } } : {}),
     ...(o.demo !== undefined ? { demo: o.demo as DemoPlan } : {}),
     final: parseFinal(o.id, o.final, bodies),
   };
