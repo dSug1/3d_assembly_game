@@ -47,8 +47,8 @@ one line in `main.ts` and the owner's call. ⭐ **`D144`: the default is `Scene_
 
 ## ⭐ `Scene_1` (2026-09-27)
 
-`World_0 / Level_1` plays **`Scene_1`, the painting**; any scene can be booted with the **SCENE** slider
-or `?sceneIndex=N` (the registry is `content/scenes.ts`) → [`SCENE_1.md`](SCENE_1.md).
+`World_0 / Level_1` plays **`Scene_1`, the painting**; any scene can be booted from the level menu
+or `?sceneIndex=N` (⛔ the **SCENE** slider is deleted, `D186`) (the registry is `content/scenes.ts`) → [`SCENE_1.md`](SCENE_1.md).
 ⭐ `D170`/`D171`: `World_0 / Level1_demo` plays **`Scene1_demo`** — `Scene_1` assembling itself in 150 moves (`?sceneIndex=2`); ⭐ `D173`: a level may carry a `demoPlan` loader, fetched only when it is played → [`DEMO_SCENE.md`](DEMO_SCENE.md).
 
 ## 4. ⭐⭐ `D144` — the way out of a level, one scene list, `Scene_1` by default (2026-09-28)

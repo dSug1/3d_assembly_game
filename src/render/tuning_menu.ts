@@ -4,9 +4,6 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { SCENES } from "../content/scenes";
-import { GAME_CONTENT } from "../content/worlds";
-import { playHref, resolveSceneIndex } from "../core/game_route";
 import { validateGestureConfig } from "../input/gestureConfig";
 import { createMenu, type MenuSlider } from "./menu";
 import { type SceneState } from "./scene_state";
@@ -70,11 +67,9 @@ export function installTuningMenu(st: SceneState): void {
     // sections are open by TITLE (`localStorage`), so reordering costs a hand nothing.
     {
       title: "SCENE",
-      // ⭐⭐ The owner, 2026-09-27: *"toggle with a slider between Scene_0 and Scene_1. When the slider
-      // is toggled, the corresponding scene boot from beginning."* ⛔ A RELOAD, not a swap: the page
-      // comes back on `?sceneIndex=N`, so nothing of the other scene survives.
+      // ⛔ `D186` (the owner, 2026-09-30: *"remove the slider scene (0=scene_0,...)"*): the scene switch is deleted — a
+      // scene is chosen from the level menu (`?flow=1`) or `?sceneIndex=N`, as the pause menu's *Quit to menu* leads.
       sliders: [
-        sceneSlider(st),
         // ⭐ `D183`: how near a piece NEVER GRABBED must sit to its goal to count (a grabbed one: the snap's margins).
         tunable(st, "never-grabbed goal (mm on glass)", "ungrabbedGoalMm", 0.5, 10, 0.5),
         tunable(st, "never-grabbed goal (°)", "ungrabbedGoalDeg", 0.5, 15, 0.5),
@@ -237,6 +232,9 @@ export function installTuningMenu(st: SceneState): void {
           0.15,
           0.005,
         ),
+        // ⭐ `D185`: past this angle out of the glass the maroon pitch turns like a wheel seen from the camera — the
+        // pressed side follows the finger up.
+        tunable(st, "pitch: wheel past (deg out of screen)", "pitchSideConeDeg", 0, 80, 5),
         // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
         // gain so one DOF does not feel like a different control from three — a guess, and
         // the range is the same as the free gain's so a hand can compare them directly.
@@ -366,23 +364,4 @@ export function installTuningMenu(st: SceneState): void {
       ],
     },
   ]);
-}
-
-/** ⭐ The scene switch: `get` is the index booted; `set` rewrites `?sceneIndex=` and reloads. */
-function sceneSlider(st: SceneState): MenuSlider {
-  return {
-    label: `scene (0 = Scene_0, ${SCENES.length - 1} = ${SCENES[SCENES.length - 1]!.id}) — reboots`,
-    min: 0,
-    max: SCENES.length - 1,
-    step: 1,
-    // ⭐ The index PLAYED, which an out-of-range `?sceneIndex=` is not.
-    get: () => resolveSceneIndex(GAME_CONTENT, st.cfg.sceneIndex),
-    set: (value) => {
-      const v = Math.round(value);
-      if (v === resolveSceneIndex(GAME_CONTENT, st.cfg.sceneIndex)) return null;
-      // ⭐ `D144`: one writer of a play URL — the pause menu's Restart uses the same one.
-      window.location.assign(playHref(window.location.href, v));
-      return null;
-    },
-  };
 }

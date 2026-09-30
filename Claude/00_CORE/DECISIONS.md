@@ -62,7 +62,7 @@ file.
 | `D113` | ⭐⭐ **THE EDGE BAND IS ALWAYS EMPTY SPACE** — the camera reset stays reachable | 2026-09-27 | → §13 |
 | `D114` | ⭐⭐ **THE EDGE BAND OPENS ONLY WHEN NO EMPTY SPACE IS LEFT** | 2026-09-27 | → §13 |
 | `D115` | ⭐⭐ **A TWO-TOUCH ACTION IS ONE EPISODE, COUNTED WHEN ITS LAST TOUCH LIFTS** | 2026-09-27 | → §13 |
-| `D116` | ⛔⛔⛔ **BUILD THE PLAYABILITY PROGRAM FIRST; COLLISION: STOP+SLIDE ON TRANSLATION, SAME-AXIS CLAMP ON ROTATION** | 2026-09-27 | ✅ `3D6` BUILT; clamp owner-confirmed; seams for Blender → `COLLISION.md` |
+| `D116` | ⛔⛔⛔ **BUILD THE PLAYABILITY PROGRAM FIRST; COLLISION: STOP+SLIDE ON TRANSLATION, SAME-AXIS CLAMP ON ROTATION** | 2026-09-27 | ✅ `3D6` built → `COLLISION.md` |
 | `D117` | ⭐⭐ **`Scene_1`, THE PAINTING; A SCENE SLIDER REBOOTS ON THE CHOSEN SCENE** | 2026-09-27 | → `SCENE_1.md` |
 | `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | → §14 |
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | → §14 |
@@ -115,16 +115,19 @@ file.
 | `D172` | ⭐⭐ **AFTER A SNAP, THE ROLL MUST BE RE-ARMED** | 2026-09-29 | → §23 |
 | `D173` | ⭐ **THE DEMO PLAN LOADS ONLY IN THE DEMO LEVEL** | 2026-09-29 | → `DEMO_SCENE.md` §5 |
 | `D171` | ⭐⭐ **`Scene1_demo`: 150 MOVES, FIT ZOOM, 15° SETTLE** | 2026-09-29 | → `DEMO_SCENE.md` |
-| `D174` | ⭐⭐ **THE DEMO STARTS FROM A FLOOR GRID; A LIFTED PIECE JOINS THE BUILD** | 2026-09-30 | → `DEMO_SCENE.md` §2–§2ter |
-| `D175` | ⭐ **THE GRID: LENGTHWISE, ONE RANK; CAMERA 15° EARLIER** | 2026-09-30 | → `DEMO_SCENE.md` §2bis, §7 |
-| `D176` | ⭐ **TWO INTERLOCKING ROWS, THE SECOND REVERSED** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
-| `D177` | ⭐ **A NATURAL FEEL: ±1.5° YAW, ±1 PX IN DEPTH** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
-| `D178` | ⭐ **BOLDER: 5–10° YAW, 5–10 % SHIFT** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
-| `D179` | ⭐ **0–4° (MED 2.5°), 0–5 % (MED 3 %)** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
+| `D174` | ⭐⭐ **THE DEMO STARTS FROM A FLOOR GRID** | 2026-09-30 | → `DEMO_SCENE` |
+| `D175`–`D176` | ⭐ **THE GRID: LENGTHWISE, TWO INTERLOCKING ROWS; CAMERA 15° EARLIER** | 2026-09-30 | → `DEMO_SCENE` |
+| `D177`–`D179` | ⭐ **THE GRID'S NATURAL FEEL — YAW AND SHIFT, BY MEDIANS** | 2026-09-30 | → `DEMO_SCENE` |
 | `D180` | ⭐⭐ **THE LEVEL END; A SWAPPABLE UI THEME** | 2026-09-30 | → `LEVEL_END.md` |
 | `D181` | ⭐⭐ **`3D7`: THE PLAY VOLUME** | 2026-09-30 | → `COLLISION.md` §10 |
-| `D182` | ⭐⭐ **SNAP WAITS FOR A CLEAR PATH; UNSNAP HOLDS; NO PIONEER SWAY** | 2026-09-30 | → §24 |
-| `D183` | ⭐⭐ **THE GOAL CAPTURE; PLACED LOOSE (1 mm / 1° UNGRABBED)** | 2026-09-30 | → `LEVEL_END.md` §5 |
+| `D182` | ⭐⭐ **SNAP WAITS FOR A CLEAR PATH; UNSNAP HOLDS** | 2026-09-30 | → §24 |
+| `D183` | ⭐⭐ **THE GOAL CAPTURE** | 2026-09-30 | → `LEVEL_END.md` §5 |
+| `D184` | ⭐⭐ **FINGER UP IS ALWAYS AWAY** | 2026-09-30 | → §25 |
+| `D185` | ⭐⭐ **THE PITCH TURNS LIKE A WHEEL FROM THE PRESS SIDE** | 2026-09-30 | → §26 |
+| `D186` | ⭐ **NO SCENE SLIDER; THE HUD COLLAPSES** | 2026-09-30 | → `LEVEL_END.md` §6 |
+| `D187` | ⭐⭐ **AN EPISODE LANDS WHEN TRIGGERED** | 2026-09-30 | → `SCORE.md` §3.4 |
+| `D188` | ⭐⭐ **THE SCORE BAR** | 2026-09-30 | → `LEVEL_END.md` §6 |
+| `D189` | ⭐⭐ **THE GOAL MOVES ONLY WHEN AN ACTION ENDS** | 2026-09-30 | → `LEVEL_END` §5bis |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -202,7 +205,7 @@ file.
 |---|---|
 | ✅ **~~Un-snap: what breaks a mate?~~** — answered: `D100`'s unsnap (built), 1 episode (`D115`) | `D47`'s pull-apart break stays specified |
 | ✅ **~~WHICH TOUCHPOINT ASSIGNMENT SHIPS~~** — **ANSWERED by `D28`** | ⛔ Kept as a correction: it read *"not due yet"* until the owner judged three readings of one build |
-| ⭐⭐ **FORK C's SECOND HALF — what is left of it** | `TargetPosition`, its gizmo and the orbit about it are specified and **not built**; the approach is **superseded by `D46`** — its `centre → target` projection degenerates facing the camera |
+| ⭐⭐ **FORK C's SECOND HALF — what is left of it** | `TargetPosition` and its gizmo/orbit: specified, **not built**; the approach **superseded by `D46`** |
 | **`axisMappingMode`: `rotated` vs `direct`** (§6bis) | build both, A/B on a device. The spec asks for the comparison rather than assuming |
 | **`matePriorityOverAnchor`** (§1.4) | default is anchor-wins. The opposite reading exists as a flag for A/B |
 | **Landmark registration, contact search, longest-axis alignment** | spec §5 lists them as deliberately deferred, so the gaps are explicit rather than implicit |

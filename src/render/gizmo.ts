@@ -5,11 +5,10 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
-import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { trackingMetresPerPx, type GravityFrame } from "../input";
 import { type Vec3 } from "../core/vec";
@@ -18,7 +17,7 @@ import { alignedFaceOf } from "../core/face_pick";
 import { alignedTravelAxes, secondTouchDown, segmentTowardCursor } from "../input/aligned_axes";
 import { axesFromFrame, rotationFrame, type ObjectAxes } from "../input/object_axes";
 import { originRingTone } from "../input/pioneer_press";
-import { awaySignFrom, clipSegmentInFront, displayedAxes, hitRingApparentPx, soleGizmoBody, stopAtHit, type AwaySign, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
+import { clipSegmentInFront, displayedAxes, hitRingApparentPx, soleGizmoBody, stopAtHit, type GizmoChannels, type AxisTravel } from "../input/axis_translate";
 import { keepsGizmo } from "../input/grip_mode";
 import { GIZMO_AXIS_COLOURS, GIZMO_MOVE_GROUP, GIZMO_RING_MOVE_COLOUR, GIZMO_RING_PX, GIZMO_RING_TURN_COLOUR, GIZMO_TURN_GROUP, GIZMO_TURN_SCREEN_FRACTION, PIONEER_COLOUR, RING_POINTS, TURN_PITCH, TURN_ROLL, TURN_YAW, type AxisGizmo, type SceneState, type TurnAxes } from "./scene_state";
 import { worldPointOn } from "./markers";
@@ -56,24 +55,18 @@ export function gizmoAnchor(st: SceneState, id: ObjectId): Vec3 | null {
   );
 }
 
-/**
- * ⭐ `D132`: the camera to the gizmo's anchor, world metres — the line *away* is read along.
- * ⚠ A body the model does not know (no id) is read at its mesh's position.
- */
-export function cameraToGizmo(st: SceneState, id: ObjectId | undefined, meshAt: Vec3): Vec3 {
-  const a = (id === undefined ? null : gizmoAnchor(st, id)) ?? meshAt;
-  const c = st.camera.position;
-  return [a[0] - c.x, a[1] - c.y, a[2] - c.z];
-}
+// ⛔ `D184`: the camera-to-gizmo height read for the translation sign (`D145`/`D148`) is deleted — finger up is always AWAY.
 
-/**
- * ⭐⭐ `D148` — **WHICH WAY FINGER UP GOES, FOR THIS STEP**: `awaySignFrom` on the camera and the gizmo
- * as they are NOW (the owner, 2026-09-29: *"relative position of the gizmo and camera shall be updated
- * each frame"*). ⛔ Never latched: a zoom (`D147`) or a gravity lift (`D148`) mid-drag re-decides it.
- */
-export function awaySignNow(st: SceneState, mesh: AbstractMesh): AwaySign {
-  const p = mesh.position;
-  return awaySignFrom(cameraToGizmo(st, st.idOf.get(mesh), [p.x, p.y, p.z]));
+/** ⭐ `D185`: the gizmo's centre on the glass, CSS px (`clientX`) — `null` for an unknown body or one behind the camera. */
+export function gizmoClientX(st: SceneState, id: ObjectId | undefined): number | null {
+  const a = id === undefined ? null : gizmoAnchor(st, id);
+  if (a === null) return null;
+  const rw = st.engine.getRenderWidth();
+  const rh = st.engine.getRenderHeight();
+  const p = Vector3.Project(new Vector3(a[0], a[1], a[2]), Matrix.IdentityReadOnly, st.scene.getTransformMatrix(), st.camera.viewport.toGlobal(rw, rh));
+  if (!(p.z >= 0 && p.z <= 1)) return null;
+  const rect = st.canvas.getBoundingClientRect();
+  return rect.left + (p.x * rect.width) / rw;
 }
 
 export function axesOf(st: SceneState) : ObjectAxes {

@@ -6,6 +6,8 @@
  */
 import { type EpisodeTally } from "../input/episode_ledger";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
+import { GoalCommit } from "../input/goal_commit";
+import type { PressSide } from "../input/screen_rotate";
 import type { Pose } from "../core/goal";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -34,6 +36,7 @@ import { JumpWatch, type Jump } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { type GestureConfig } from "../input/gestureConfig";
 import { type Hud } from "./hud";
+import { type ScoreOverlay } from "./score_overlay";
 import { type MouseSecondTouchHandle } from "./mouse_adapter";
 import { type GestureSpan, type UndoHistory } from "../core/undo_history";
 import { type PointerRole } from "../input/router";
@@ -305,6 +308,8 @@ export interface Held {
    * flips mid-drag as the alignment axis swings through horizontal-on-screen.
    */
   twistSign?: 1 | -1;
+  /** ⭐ `D185`: which side of the gizmo the press landed on, latched — the maroon pitch's sense reads it. */
+  pressSide: PressSide | null;
   /** A6's sympathetic sway, on the same trigger and the same four tunables as the drag. */
   depthSway: SwayWatcher;
 
@@ -426,6 +431,8 @@ export interface SceneState {
   gizmoTurnRings: Map<ObjectId, LinesMesh>;
   markerMat: StandardMaterial;
   hud: Hud;
+  /** ⭐ `D188`: the player's score bar — moves, time, goal. */
+  scoreOverlay: ScoreOverlay;
   taps: TapHistory;
   router: PointerRouter<AbstractMesh>;
   held: Map<number, Held>;
@@ -445,6 +452,10 @@ export interface SceneState {
   goalCapture: GoalCapture;
   goalPulls: GoalPulls;
   goalLastPose: Map<string, Pose>;
+  /** ⭐ `D189`: the pieces placed at the last COMPLETED action, the model they were read from, and a quiet next commit (undo). */
+  goalCommit: GoalCommit;
+  goalCommitWorld: World | null;
+  goalCommitQuiet: boolean;
   /** ⭐ `D183`: every piece a finger or the mouse has GRABBED this level — a piece never grabbed is judged strictly. */
   grabbed: Set<string>;
   /** ⭐ `D180`: the level end's latch — its `result` is the frozen result once the level is complete. */
@@ -477,6 +488,11 @@ export interface SceneState {
   freezeCarry: boolean;
   /** ⭐ `D159`: the latched HitFace that continues a frozen drag — its hold is the drag's, not a second one. */
   episodeContinued: Set<number>;
+  /** ⭐ `D187`: each touchpoint's key in the tally — its press record, replaced at its release. */
+  episodeKey: Map<number, number>;
+  episodeSeq: number;
+  /** ⭐ `D187`: the open gesture has changed the model (latched) — `gestureChangedSoFar`. */
+  gestureChanged: boolean;
   /** ⭐ `D155`: the face a Space freeze hands to the next second-touch press on this mesh. */
   inheritPressFace: { mesh: AbstractMesh; pressFace: { faceId: string; cos: number } | null } | null;
   lastVerdict: string;

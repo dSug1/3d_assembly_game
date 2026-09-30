@@ -50,6 +50,20 @@ function plain(s: SceneSnapshot): ModelSnapshot<LinksState, CursorsState, unknow
 export function beginGesture(st: SceneState): void {
   st.gestureBefore = takeSnapshot(st);
   st.gestureUndid = false;
+  st.gestureChanged = false;
+}
+
+/**
+ * ⭐⭐ `D187`: has the OPEN gesture changed the model yet? — `endGesture`'s own comparison, asked while it runs, so an
+ * episode lands the frame its action is triggered. ⭐ Latched once true: the answer cannot become *no* again for the
+ * episode count (what landed stays), and the comparison stops being paid for.
+ */
+export function gestureChangedSoFar(st: SceneState): boolean {
+  if (st.gestureChanged) return true;
+  const before = st.gestureBefore;
+  if (before === null) return false;
+  st.gestureChanged = st.gestureUndid || modelsDiffer(plain(before), plain(takeSnapshot(st)));
+  return st.gestureChanged;
 }
 
 /**
@@ -107,6 +121,8 @@ export function undoLast(st: SceneState, tapped: ObjectId | null = null): boolea
   // ⭐ `D183`: a goal pull in flight is dropped, and every piece re-sighted — one restored onto its goal is not captured.
   for (const id of ids) st.goalPulls.cancel(id);
   st.goalCapture.forget();
+  // ⭐ `D189`: the restore is committed at rest like any action, but SILENTLY — an undo is not an achievement.
+  st.goalCommitQuiet = true;
   st.world = s.world;
   st.links.restore(s.links);
   // ⚠ The rings are MESHES made on reconcile: clear them all, let the reconcile rebuild the set the

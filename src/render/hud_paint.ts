@@ -5,14 +5,15 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { demoReadout } from "./demo_wiring";
-import { goalTolOf, looseTolerance } from "./goal_capture_wiring";
+import { placedReport } from "./goal_capture_wiring";
+import { scoreView } from "../input/score_view";
 import { bandMmNow } from "./empty_space_probe";
 import { formatElapsed } from "../input/episode_ledger";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from "../input";
 import { type Vec3 } from "../core/vec";
-import { type ObjectId, worldPlacementOf } from "../core/object_model";
-import { goalReport } from "../core/goal";
+import { type ObjectId } from "../core/object_model";
+import { type GoalReport } from "../core/goal";
 import { formatFrameStats } from "../core/frame_meter";
 import { alignedFaceOf } from "../core/face_pick";
 import { type SceneState } from "./scene_state";
@@ -88,15 +89,16 @@ export function depthReadout(st: SceneState) : string {
  * the one furthest out. ⛔ The rule is `core/goal.ts`'s; this only prints its answer. Empty for a
  * scene with no goal.
  */
-function goalReadout(st: SceneState): string {
-  const final = st.sceneSpec.final;
-  if (!final) return "";
-  const r = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
-  if (r.met) return "  goal ✅";
+function goalReadout(st: SceneState, r: GoalReport | null): string {
+  if (r === null) return "";
+  // ⭐ `D189`: the COUNT is the committed one — it moves when an action completes, never midway; the piece furthest out
+  // is read live (an instrument).
+  const c = st.goalCommit;
+  if (c.total > 0 && c.count >= c.total) return "  goal ✅";
   const far = Number.isFinite(r.worstPositionM)
     ? ` (${r.worstId} ${(r.worstPositionM * 1000).toFixed(0)}mm/${((r.worstAngleRad * 180) / Math.PI).toFixed(0)}°)`
     : ` (${r.worstId} missing)`;
-  return `  goal ${r.inPlace}/${r.total}${far}`;
+  return `  goal ${c.count}/${c.total}${far}`;
 }
 
 /** ⭐ `D138`: what the shadow switch is doing — and on AUTO, what the device's measurement decided. */
@@ -112,19 +114,30 @@ function shadowsLabel(st: SceneState): string {
 
 export function paint(st: SceneState) {
   const first = st.held.get(st.router.objects()[0]?.id ?? -1);
+  // ⭐ ONE goal report per paint — the HUD's line and the score bar (`D188`) read the same answer.
+  const goal = placedReport(st);
+  const elapsedMs = st.levelEnd.result ? st.levelEnd.result.elapsedMs : st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs;
+  st.scoreOverlay.update(
+    scoreView({
+      episodes: st.episodes.total,
+      elapsedMs,
+      // ⭐ `D189`: the committed goal — it moves when an action completes.
+      goal: goal === null ? null : { inPlace: st.goalCommit.count, total: st.goalCommit.total },
+      demo: st.demo !== null,
+      freeFlow: st.cfg.pioneerCursorDrag === 1,
+    }),
+  );
   st.hud.update({
     score:
       `${st.episodes.total} episode${st.episodes.total === 1 ? "" : "s"}` +
-      // ⭐ `D115`: what the open gesture will cost when its last touch lifts.
-      (st.episodes.pending > 0 ? ` (+${st.episodes.pending} on release)` : "") +
       // ⭐ `D180`: once the level is complete the clock is STOPPED at its result.
-      `  ${formatElapsed(st.levelEnd.result ? st.levelEnd.result.elapsedMs : st.sceneStartMs === null ? 0 : performance.now() - st.sceneStartMs)}` +
+      `  ${formatElapsed(elapsedMs)}` +
       (st.levelEnd.result ? "  LEVEL COMPLETE" : "") +
       `  undo=${st.undo.size}` +
       // ⭐ `3D6`: the last block, for two seconds — a stop must never read as a bug.
       (performance.now() - st.lastCollisionAt < 2000 ? `  ⟂ ${st.lastCollision}` : "") +
       `  band=${bandMmNow(st) > 0 ? `${bandMmNow(st)}mm (no empty space)` : "off"}` +
-      goalReadout(st) +
+      goalReadout(st, goal) +
       demoReadout(st) +
       (st.cfg.pioneerCursorDrag === 1 ? "  FREE FLOW (not scored)" : ""),
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about

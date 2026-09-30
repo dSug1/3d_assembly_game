@@ -77,6 +77,9 @@ export interface Hud {
  */
 const BUILD_STAMP = `${__BUILD_ID__}  ${__BUILT_AT__}`;
 
+/** ⭐ `D186`: where the HUD's open / collapsed state is remembered. */
+const HUD_OPEN_KEY = "hud.open";
+
 export function createHud(parent: HTMLElement = document.body): Hud {
   const box = document.createElement("pre");
   box.setAttribute("data-role", "hud");
@@ -100,6 +103,52 @@ export function createHud(parent: HTMLElement = document.body): Hud {
     "user-select:none",
   ].join(";");
   parent.appendChild(box);
+
+  // ⭐⭐ `D186` — **THE HUD COLLAPSES** (the owner, 2026-09-30: *"create a button so I can collapse the HUD, place this
+  // button immediately to the left of the tuning menu burger button"*). ⭐ The burger's own look and size, one button
+  // width + its gap to its left (`menu.ts`: 40 px at 6 px from the edge); remembered on the device, as the menu's panel is.
+  // ⛔ Collapsing hides the readout only — it goes on being written, so reopening it shows the present, not a stale frame.
+  let open = true;
+  try {
+    open = localStorage.getItem(HUD_OPEN_KEY) !== "0";
+  } catch {
+    // ⚠ Storage can be refused (a private window): the HUD simply starts open.
+  }
+  const toggle = document.createElement("button");
+  toggle.textContent = "HUD";
+  toggle.setAttribute("data-role", "hud-toggle");
+  toggle.style.cssText = [
+    "position:fixed",
+    "top:calc(6px + env(safe-area-inset-top))",
+    "right:calc(52px + env(safe-area-inset-right))",
+    "z-index:201",
+    "width:40px",
+    "height:40px",
+    "padding:0",
+    "font:11px/1 ui-monospace,monospace",
+    "color:#cfe3ff",
+    "background:rgba(10,12,16,0.82)",
+    "border:1px solid #2b3648",
+    "border-radius:6px",
+    "touch-action:manipulation",
+  ].join(";");
+  const applyOpen = () => {
+    box.hidden = !open;
+    toggle.style.opacity = open ? "1" : "0.55";
+    toggle.setAttribute("aria-pressed", String(!open));
+    toggle.setAttribute("aria-label", open ? "Collapse the HUD" : "Show the HUD");
+  };
+  toggle.addEventListener("click", () => {
+    open = !open;
+    try {
+      localStorage.setItem(HUD_OPEN_KEY, open ? "1" : "0");
+    } catch {
+      // Forgetting is acceptable.
+    }
+    applyOpen();
+  });
+  applyOpen();
+  parent.appendChild(toggle);
 
   return {
     update(f) {

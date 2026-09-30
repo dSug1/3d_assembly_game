@@ -79,32 +79,68 @@ export function formatElapsed(ms: number): string {
  * action touch USES UP the hold it pairs with, so hold + press lands as ONE; a hold with no action
  * is one on its own. So a gesture costs `max(holds, actions)`: two separate holds are 2, a hold
  * with two actions in turn is 2, a hold with one action is 1.
- * ⛔ Nothing lands until the gesture's LAST touch lifts. ⚠ The desktop is the same path: the right
+ * ⛔ Nothing lands until the gesture's LAST touch lifts (⛔ `D187`: it lands when the action is TRIGGERED, `sync`). ⚠ The desktop is the same path: the right
  * button's hold is touch #2's pointer and the left click is the real one (`D94`).
  * ⚠⚠ It REVISES `D103`/`SCORE.md`: the precise unsnap was priced 2 (hold + touch); it is 1 now.
  */
 export class EpisodeTally {
-  private holds = 0;
-  private actions = 0;
+  /** ⭐ `D187`: every counted touch of the open gesture, by its press key — re-classified at its release. */
+  private readonly touches = new Map<number, { counts: boolean; action: boolean }>();
+  private nextKey = -1;
+  /** What the open gesture has already landed. ⛔ Never taken back. */
+  private landedCount = 0;
   private totalCount = 0;
 
   /**
-   * One touchpoint released. @param counts `episodeCounts`'s verdict. @param action it went down
-   * while a body was held — it completes a two-touch action.
+   * ⭐ `D187`: one touchpoint, classified — at its PRESS with what is known then, and again at its release (the same
+   * `key` replaces the first answer: an unalign tap is only known to count once it has unaligned).
+   * @param counts `episodeCounts`'s verdict. @param action it went down while a body was held — a two-touch action.
    */
-  note(counts: boolean, action: boolean): void {
-    if (!counts) return;
-    if (action) this.actions += 1;
-    else this.holds += 1;
+  touch(key: number, counts: boolean, action: boolean): void {
+    this.touches.set(key, { counts, action });
   }
 
-  /** What the open gesture will cost when it ends. */
+  /** One touchpoint, released, with no press record (a fresh key) — `D115`'s original form. */
+  note(counts: boolean, action: boolean): void {
+    this.touch(this.nextKey--, counts, action);
+  }
+
+  /** What the open gesture costs once it has changed the model — `max(holds, actions)` (`D115`). */
   get pending(): number {
-    return Math.max(this.holds, this.actions);
+    let holds = 0;
+    let actions = 0;
+    for (const t of this.touches.values()) {
+      if (!t.counts) continue;
+      if (t.action) actions += 1;
+      else holds += 1;
+    }
+    return Math.max(holds, actions);
   }
 
   /**
-   * The last touchpoint of the gesture released: its cost lands. Returns what landed.
+   * ⭐⭐⭐ `D187` — **AN EPISODE LANDS WHEN ITS ACTION IS TRIGGERED** (the owner, 2026-09-30: *"the episode count shall be
+   * incremented at the first touch or click or delta position which triggers an action which will increment the episode
+   * count, not at the release of the touch or click. For example: left click pressed / first touch on an object does
+   * nothing (because the user can still release the input) but as soon as the delta position translates / rotates the
+   * object, the count shall be incremented."*). Asked every frame and at every release: once the gesture has changed the
+   * model, what it costs is landed NOW; a later action in the same gesture lands when it adds to the cost. ⛔ A press
+   * alone lands nothing — `D158`'s *a gesture that changes nothing costs nothing* holds, decided at the first change
+   * instead of at the end. ⛔ What has landed is never taken back (a drag brought back to where it started still cost).
+   * ⛔ It REVISES `D115`'s *"count the episode only when the last of the two touches is released"*; the price of a
+   * two-touch action is unchanged (one).
+   * @returns what landed this call.
+   */
+  sync(changedModel: boolean): number {
+    if (!changedModel) return 0;
+    const add = Math.max(0, this.pending - this.landedCount);
+    this.landedCount += add;
+    this.totalCount += add;
+    return add;
+  }
+
+  /**
+   * The last touchpoint of the gesture released: whatever is still due lands (`sync`), and the gesture closes.
+   * Returns what the WHOLE gesture landed.
    *
    * ⭐⭐⭐ `D158` — **A GESTURE THAT LANDS NOTHING COSTS NOTHING** (the owner, 2026-09-29: *"an action which does
    * not land into anything (for example: space pressed with no further action, left or right click and
@@ -116,10 +152,10 @@ export class EpisodeTally {
    * @param changedModel did the gesture change the model? Default `true` — the rule before `D158`.
    */
   gestureEnded(changedModel = true): number {
-    const landed = changedModel ? this.pending : 0;
-    this.totalCount += landed;
-    this.holds = 0;
-    this.actions = 0;
+    this.sync(changedModel);
+    const landed = this.landedCount;
+    this.touches.clear();
+    this.landedCount = 0;
     return landed;
   }
 

@@ -16,10 +16,12 @@
  * LIVE camera's (x the screen's right, depth the view, both flattened), `dy`'s sign is the camera's
  * height against the gizmo's, and the holder lights red AND blue. ⛔ The boot-axis 2×2 solve, `D127`'s
  * *away along blue* and `D132`'s off-centre reading went with the rule they pinned.
+ * ⛔⛔ **`D184` (2026-09-30) DELETED THE HEIGHT RULE**: finger up is AWAY at every camera, above or below the gizmo —
+ * `D145`'s *toward when below* and `D147`/`D148`'s re-reading went with their vectors.
  */
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
-  awaySignFrom,
   axisDisplacement,
   axisTravel,
   clampDepthRange,
@@ -36,7 +38,7 @@ import {
 import { axesFromFrame, type ObjectAxes } from "@input/object_axes";
 import { gravityFrame } from "@input/gravity_frame";
 import { trackingMetresPerPx } from "@input/translate";
-import { add, dot, normalize, scale, type Vec3 } from "@core/vec";
+import { dot, normalize, type Vec3 } from "@core/vec";
 
 const DEG = Math.PI / 180;
 const DOWN: Vec3 = [0, -1, 0];
@@ -92,8 +94,6 @@ const run = (
   axes: ObjectAxes,
   gain = 1,
   cone = CONE,
-  // ⭐ The body at the centre of the screen, 1.5 m out, unless a vector says otherwise.
-  toAnchor: Vec3 = scale(c.view, 1.5),
 ) =>
   axisTravel(
     { holderDxPx: 0, holderDyPx: 0, secondDyPx: 0, ...input },
@@ -103,8 +103,6 @@ const run = (
     gain,
     gain,
     cone,
-    // ⭐ In the product this is read live at every step (`D148`), as here.
-    { awaySign: awaySignFrom(toAnchor) },
   );
 
 /** ⭐ `D145`: the axes a translation runs along — THIS camera's gravity frame. */
@@ -162,111 +160,43 @@ describe("⭐⭐⭐ `D145` — dx along the screen's right, dy along the view, b
   });
 });
 
-describe("⭐⭐⭐ `D145` — finger UP is AWAY when the camera is at or above the gizmo, TOWARD when below", () => {
-  // > *"dy towards top translates the object away from the camera if the camera is above or at the
-  // > gizmo gravity position; dy towards top translates the object towards the camera if the camera is
-  // > below the gizmo gravity position"* — the owner, 2026-09-29
-  const away = (c: ReturnType<typeof camera>, toAnchor: Vec3, dy = -30) =>
-    dot(axisDisplacement(run({ holderDyPx: dy }, c, live(c), 1, CONE, toAnchor), live(c)), c.gravity.depth);
+describe("⭐⭐⭐ `D184` — finger UP is ALWAYS AWAY from the camera, above or below the gizmo", () => {
+  // > *"currently, if the camera is above the gizmo dy towards top translates the part away from the camera, if the
+  // > camera is below the gizmo, dy towards top translates the part towards the camera. I want to change: in both
+  // > cases, dy towards top translates the part away from the camera."* — the owner, 2026-09-30
+  const away = (c: ReturnType<typeof camera>, dy = -30) =>
+    dot(axisDisplacement(run({ holderDyPx: dy }, c, live(c)), live(c)), c.gravity.depth);
 
-  it("⭐⭐⭐ the whole table: every camera pose, the gizmo below, level with and above the camera", () => {
+  it("⭐⭐⭐ the whole table: every camera pose, looking down, level or up — finger up away, finger down toward", () => {
     for (const az of AZIMUTHS)
       for (const el of ELEVATIONS) {
         const c = camera(az, el);
-        const ahead = scale(c.gravity.depth, 1.5);
-        expect(away(c, add(ahead, [0, -0.4, 0]))).toBeGreaterThan(0); // camera ABOVE → away
-        expect(away(c, ahead)).toBeGreaterThan(0); // ⭐ camera AT the gizmo's height → away
-        expect(away(c, add(ahead, [0, 0.4, 0]))).toBeLessThan(0); // camera BELOW → toward
-        // ⭐ and finger DOWN is the opposite, always
-        expect(away(c, add(ahead, [0, -0.4, 0]), 30)).toBeLessThan(0);
-        expect(away(c, add(ahead, [0, 0.4, 0]), 30)).toBeGreaterThan(0);
+        expect(away(c)).toBeGreaterThan(0);
+        expect(away(c, 30)).toBeLessThan(0);
       }
   });
 
-  it("⛔⛔ RED AGAINST THE VIEW-PITCH SIGN: a camera looking DOWN at a body ABOVE its own height", () => {
-    // ⭐ A body at the top of the screen, above eye level, while the camera looks down 20°: the screen
-    // shadow's sign (the view's pitch) says *finger up = away*; the owner's rule says TOWARD — and so
-    // does perspective: a body above eye level moved away sinks toward the horizon, DOWN on the glass.
+  it("⛔⛔ RED AGAINST `D145`: a camera looking DOWN at a body ABOVE its own height — finger up is AWAY", () => {
+    // ⭐ Measured on the old code: `awaySignFrom` read the camera below the gizmo and sent the body TOWARD (−0.139).
     const c = camera(35, 20);
-    const toAnchor = add(scale(c.gravity.depth, 1.0), [0, 0.3, 0]);
-    expect(dot(c.gravity.depth, c.screen.up)).toBeGreaterThan(0); // the old sign: away
-    expect(away(c, toAnchor)).toBeLessThan(0);
+    expect(dot(c.gravity.depth, c.screen.up)).toBeGreaterThan(0);
+    expect(away(c)).toBeGreaterThan(0);
   });
 
-  it("⛔⛔ RED AGAINST `D127`: a LEVEL camera below the gizmo brings it TOWARD the camera", () => {
-    // ⚠ `D127` read *fingers-up = away* at an exactly level camera, whatever the heights.
+  it("⛔⛔ AND AT A LEVEL CAMERA (edge-on, `Scene_1`'s boot): finger up is AWAY", () => {
     const c = camera(218, 0);
-    const t = run({ holderDyPx: -30 }, c, live(c), 1, CONE, add(scale(c.gravity.depth, 1.5), [0, 0.2, 0]));
+    const t = run({ holderDyPx: -30 }, c, live(c));
     expect(t.edgeOn).toBe(true);
-    expect(dot(axisDisplacement(t, live(c)), c.gravity.depth)).toBeLessThan(0);
-  });
-});
-
-describe("⭐⭐⭐ `D147`/`D148` — the direction is re-read every step: a ZOOM or a LIFT mid-drag can flip it", () => {
-  // > *"camera position at the end of zoom shall determine the direction of translation, even if the
-  // > zoom happens during drag"* — the owner, 2026-09-29, reversing `D146` (*"Camera position after
-  // > zoom shall not change direction of translation during drag"*)
-
-  it("⭐⭐ a zoom that carries the camera BELOW the gizmo turns finger-up TOWARD the camera", () => {
-    // ⭐ The premise, measured: a camera looking down 20° at a gizmo just below its eye level; zooming
-    // in slides the camera along its view line, DOWN, until it is below the gizmo.
-    const c = camera(35, 20);
-    const gizmo: Vec3 = [0, 0.05, 0];
-    const cameraAt = (radius: number): Vec3 => scale(c.view, -radius);
-    const toAnchorAt = (radius: number): Vec3 => [
-      gizmo[0] - cameraAt(radius)[0],
-      gizmo[1] - cameraAt(radius)[1],
-      gizmo[2] - cameraAt(radius)[2],
-    ];
-    expect(awaySignFrom(toAnchorAt(1.5))).toBe(1); // camera above the gizmo at the press → away
-    const afterZoom = awaySignFrom(toAnchorAt(0.05));
-    expect(afterZoom).toBe(-1); // ⭐ the zoom left the camera below it
-    // ⭐ The re-decided sign drives the rest of the drag: finger up now comes TOWARD the camera.
-    const t = axisTravel(
-      { holderDxPx: 0, holderDyPx: -30, secondDyPx: 0 },
-      c.screen,
-      live(c),
-      PER_PX,
-      1,
-      1,
-      CONE,
-      { awaySign: afterZoom },
-    );
-    expect(dot(axisDisplacement(t, live(c)), c.gravity.depth)).toBeLessThan(0);
+    expect(dot(axisDisplacement(t, live(c)), c.gravity.depth)).toBeGreaterThan(0);
   });
 
-  it("⭐⭐ `D148`: a GRAVITY lift that carries the gizmo above the camera turns finger-up TOWARD", () => {
-    // > *"Same for translation on gravity axis: relative position of the gizmo and camera shall be
-    // > updated each frame and determine the direction of translation on blue axis"* — the owner
-    const c = camera(35, 20);
-    const eye: Vec3 = scale(c.view, -1.5); // the camera, 1.5 m back from the orbit centre
-    const gizmoAt = (y: number): Vec3 => [0, y, 0];
-    const toAnchor = (g: Vec3): Vec3 => [g[0] - eye[0], g[1] - eye[1], g[2] - eye[2]];
-    const before = awaySignFrom(toAnchor(gizmoAt(0)));
-    expect(before).toBe(1); // below the camera → away
-    // ⭐ the second finger lifts the body 1 m: its gizmo is now above the camera
-    const t = run({ secondDyPx: -10 }, c, live(c));
-    expect(t.gravityM).toBeGreaterThan(0);
-    const after = awaySignFrom(toAnchor(gizmoAt(eye[1] + 0.2)));
-    expect(after).toBe(-1);
-    const step = axisTravel(
-      { holderDxPx: 0, holderDyPx: -30, secondDyPx: 0 },
-      c.screen,
-      live(c),
-      PER_PX,
-      1,
-      1,
-      CONE,
-      { awaySign: after },
-    );
-    expect(dot(axisDisplacement(step, live(c)), c.gravity.depth)).toBeLessThan(0);
-  });
-
-  it("⭐ `awaySignFrom` — at or above: away; below: toward; a NaN height counts as level", () => {
-    expect(awaySignFrom([0, -0.3, 1])).toBe(1);
-    expect(awaySignFrom([0, 0, 1])).toBe(1);
-    expect(awaySignFrom([0, 0.3, 1])).toBe(-1);
-    expect(awaySignFrom([0, NaN, 1])).toBe(1);
+  it("⛔ nothing reads a height for the sign any more — the drag's two callers and the gizmo", () => {
+    // ⚠ Comments stripped — a note may name what was deleted (`unwired_debt.test.ts`'s lesson).
+    const code = (file: string) =>
+      readFileSync(new URL(`../src/render/${file}`, import.meta.url), "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/\/\/[^\n]*/g, " ");
+    for (const file of ["drive.ts", "pointer_wiring.ts", "gizmo.ts"]) expect(code(file)).not.toMatch(/awaySign|cameraToGizmo/);
   });
 });
 
@@ -394,7 +324,6 @@ describe("degenerate inputs never reach a placement", () => {
       1,
       1,
       CONE,
-      { awaySign: 1 },
     );
     expect(t.xM).toBe(0);
     expect(t.gravityM).toBe(0);

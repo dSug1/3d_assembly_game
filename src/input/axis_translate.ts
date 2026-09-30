@@ -111,6 +111,17 @@
  *   below eye level — where the old screen shadow's sign was the VIEW's pitch, which disagrees for
  *   a body above eye level while the camera looks down (the `D132` shape, one axis over).
  *
+ * ## ⭐⭐⭐ `D184` — FINGER UP IS ALWAYS AWAY (2026-09-30)
+ *
+ * > *"currently, if the camera is above the gizmo dy towards top translates the part away from the camera, if the
+ * > camera is below the gizmo, dy towards top translates the part towards the camera. I want to change: in both
+ * > cases, dy towards top translates the part away from the camera."* — the owner, 2026-09-30
+ *
+ * ⛔⛔ It reverses the height rule above, and with it `D147`/`D148`'s re-reading at every step: there is no sign
+ * left to read. `awaySignFrom`, `AwaySign` and the render side's `awaySignNow` / `cameraToGizmo` are deleted.
+ * ⚠ **Cost, named**: with the camera BELOW a body, moving it away sinks it toward the horizon — DOWN on the glass —
+ * so finger up now sends the body down the screen there (the perspective argument `D145` made, given up by choice).
+ *
  * ⭐ And the gizmo's **red and blue light together** for any holder input (`driven`), reversing the
  * 2026-09-23 *"both only when both dx and dy are not null"*.
  * ⚠ A free body's TURN still stands on the boot frame (`D84`, `rotationFrame`) — the owner named
@@ -219,21 +230,8 @@ export function screenShadow(
 
 const finite = (n: number): number => (Number.isFinite(n) ? n : 0);
 
-/** ⭐ `+1`: finger up takes the body AWAY from the camera (`+depth`); `−1`: TOWARD it. */
-export type AwaySign = 1 | -1;
-
-/**
- * ⭐⭐⭐ `D145` — **WHICH WAY FINGER UP GOES**: AWAY when the camera is at or above the gizmo's height,
- * TOWARD when below. `toAnchor` is the camera → the gizmo's anchor; only its height is read.
- * ⭐⭐ WHEN IT IS ASKED: at EVERY translation step, from the camera and the gizmo as they are now
- * (`D148`, the owner, 2026-09-29: *"relative position of the gizmo and camera shall be updated each
- * frame and determine the direction of translation on blue axis"*). So a zoom that moves the camera
- * across the gizmo's height (`D147`) and a second finger that lifts the gizmo across the camera's
- * (`D148`) both flip the direction mid-drag. ⛔ `D146`'s latch at the press is gone.
- */
-export function awaySignFrom(toAnchor: Vec3): AwaySign {
-  return finite(toAnchor[1]) <= 0 ? 1 : -1;
-}
+// ⛔ `D184`: `AwaySign` / `awaySignFrom` (`D145`'s *toward when the camera is below the gizmo*, re-read every step by
+// `D147`/`D148`) are deleted — finger up is always AWAY.
 
 /**
  * ⭐⭐ **IS THE BODY'S HORIZONTAL PLANE EDGE-ON TO THIS CAMERA?** — the one definition, read by
@@ -267,7 +265,6 @@ export function planeEdgeOn(camera: CameraScreenAxes, axes: ObjectAxes, coneDeg:
  *   is how to see the runaway a hand is being protected from.
  * @param axes ⭐ `D145`: the LIVE camera's gravity frame (`axesFromFrame`) — x the screen's right
  *   and depth the view, both flattened; gravity the world vertical.
- * @param view `awaySign` — `awaySignFrom`'s answer for THIS step (`D148`: read live, never latched).
  */
 export function axisTravel(
   input: AxisInputsPx,
@@ -277,7 +274,6 @@ export function axisTravel(
   holderGain: number,
   secondGain: number,
   coneDeg: number,
-  view: { readonly awaySign: AwaySign },
 ): AxisTravel {
   const sx = screenShadow(axes.x, camera);
   const sd = screenShadow(axes.depth, camera);
@@ -321,13 +317,9 @@ export function axisTravel(
     return (mx * s[0] + my * s[1]) / (len * len);
   };
 
-  // ⭐⭐⭐ `D145` — **THE SIGN OF THE HOLDER'S `dy`, FROM HEIGHTS.** Finger up (`dy < 0`) is AWAY —
-  // `+depth`, the view flattened, which points away from the camera — when the camera is at or above
-  // the gizmo's height, and TOWARD it when below. ⛔ It replaces `D127`/`D132`'s *which end of blue
-  // is away* (an answer for BOOT axes, which no longer exist) and the view-pitch sign the screen
-  // shadow carried outside the cone: the two disagreed for a body above eye level while the camera
-  // looked down, and the owner's rule is the perspective-correct one. ⭐ Read live at every step (`D148`).
-  const awaySign = view.awaySign === -1 ? -1 : 1;
+  // ⭐⭐⭐ `D184` — **FINGER UP (`dy < 0`) IS ALWAYS AWAY**: `+depth`, the view flattened, which points away from
+  // the camera — whatever the camera's height against the gizmo's (`D145`'s *toward when below* is deleted).
+  // ⛔ Nor is it the view-pitch sign the screen shadow carries: only the shadow's LENGTH is read, below.
 
   // ⭐ x lies across the glass (no camera roll), so its shadow is `[1, 0]` and `along` is the finger's
   // `dx` itself — exact tracking, *"translation sense follows dx sense"*. ⚠ Degenerate only for a
@@ -341,7 +333,7 @@ export function axisTravel(
   const edgeOn = planeEdgeOn(camera, axes, coneDeg);
   const shadow = Math.hypot(sd[0], sd[1]);
   const rate = edgeOn || !(shadow > 0) ? 1 : 1 / shadow;
-  const depthM = -dy * awaySign * rate * holderGain;
+  const depthM = -dy * rate * holderGain;
 
   // ⭐ Gravity, always its own channel and always tracking exactly. ⚠ Its shadow shrinks as the
   // camera looks down and vanishes at the pole, which the orbit rings make unreachable — the

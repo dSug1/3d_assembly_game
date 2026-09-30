@@ -1,7 +1,7 @@
 # LEVEL_END — when a level is complete, the results screen, and the UI theme
 
 > **STATUS** · ✅✅ built and **CLOSED BY A DEVICE LOOK** 2026-09-30 (`D180`: *"Tested, ok"*, build `a796ac0`); ⭐ `D183`'s
-> goal capture (§5) ⛔ unjudged · **OWNS** · `GM1`'s level end, what PLACED means and the goal capture, the results screen,
+> goal capture (§5) and `D186`/`D188`'s score bar (§6) ⛔ unjudged · **OWNS** · `GM1`'s level end, what PLACED means and the goal capture, the results screen,
 > the UI theme (the graphics style of every screen)
 > **READ IF** · you are changing what ends a level, what the results show or where they lead, or restyling the screens
 
@@ -130,7 +130,54 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
   the next frame — two pop-ups (a dissolve now counts as its capture). ✅ `D182`'s horizontal snap onto Piece22 still
   seats, then dissolves once.
 
-## 6. For later
+## 5bis. ⭐⭐⭐ The goal moves only when an action COMPLETES (`D189`, 2026-09-30, ⛔ unjudged by a hand)
+
+> *"an action which results in a transform identical to the transform prior to the action, including the 180 degree
+> rotation margin in this scene, cannot trigger the message 'piece xxx reached its goal' (for example if I align a piece
+> to a pioneer and the piece stays in its goal before and after alignment, if I move a piece and move it back to its goal
+> within the same input movement, etc.)"* · *"goal xx/yy shall be incremented / decremented only after the action has
+> completed (release of the input, or snap, etc.), not midway of a movement"* — the owner
+
+* ⭐⭐ **The goal is COMMITTED** (`input/goal_commit.ts`, `render/goal_commit_wiring.ts`) — the pieces placed (§5), read
+  only when an action COMPLETES: the scene comes to REST after a change (no finger down; no snap, goal pull, alignment or
+  rotation-increment chase animating; the model not the one last committed), a snap LANDS, a goal pull LANDS, a couple
+  DISSOLVES. ⛔ Never midway: the HUD's `goal n/41` and the score bar's GOAL read the committed count (the HUD's piece
+  furthest out stays live, an instrument).
+* ⭐⭐ **"Reached its goal" = not placed at the previous commit, placed now.** So an action that leaves a placed piece
+  placed says nothing — an alignment, a drag out and back in one movement, a half-turn in `Scene_1` (its goal accepts it);
+  a piece that left and came back at a LATER completed action reached it again. Several at once share one pop-up.
+* ⭐ The first commit is the boot's baseline (the 36 placed pieces reached nothing). ⚠ An UNDO commits SILENTLY (a restore
+  is not an achievement), and a DEMO shows no pop-up. ⚠ The goal pull and the dissolve no longer pop up on their own —
+  they commit.
+* ✅ 7 vectors (`tests/d189.test.ts`), the wiring three RED on the old code. ✅ The real app (real mouse input): Piece8
+  dragged out in depth — live 35 while the committed count, the HUD and the bar stayed 36 — and back, released: 36, no
+  pop-up; then Piece2 brought home: one `✅ Piece2 reached its goal · 37/41`.
+
+## 6. ⭐⭐ The score bar, the HUD button, no scene slider (`D186`, `D188`, 2026-09-30, ⛔ unjudged by a hand)
+
+> *"remove the slider scene (0=scene_0,...)"* · *"create a button so I can collapse the HUD, place this button immediately
+> to the left of the tuning menu burger button"* · *"create an UI overlay which displays the score. Use the best practice
+> in the video game industry to display the score. For the moment, display the episode count, the time, and the goal."*
+> — the owner
+
+* ⭐⭐ **The score bar** (`input/score_view.ts` words it, `render/score_overlay.ts` draws it) — the casual-game HUD:
+  | what | how | why |
+  |---|---|---|
+  | one compact bar, **top centre** | a pill of three chips; below the ☰ / HUD buttons when the screen is narrower than 520 px | the eye's resting place; never under a thumb |
+  | **MOVES** · **TIME** · **GOAL** | the episodes (the results card's word, `D180`), `mm:ss` (frozen at the result), pieces placed / all with a meter (✓ and the success colour when met) | only what a player can act on; no par or stars until `GM4`/`GM5` |
+  | glanceable | tabular digits (no jitter), label under value, the goal as a fraction AND a bar | read in a glance mid-gesture |
+  | feedback | a value that goes UP bumps (moves, pieces placed); none under `prefers-reduced-motion` | the change is felt without reading |
+  | never in the way | `pointer-events: none`; hidden during a DEMO; no goal chip without a goal; Free Flow reads `—` *(Free Flow)* | the score must not eat a touch or claim one |
+  | themed | only `ui-scorebar` / `ui-score-*` classes — a vector refuses any literal style in the file (`d180`) | a theme swap restyles it |
+  ⭐ Painted with the HUD, from ONE goal report per paint (`placedReport`), and once a second for the clock.
+* ⭐ **The HUD collapses** — a *HUD* button immediately left of the ☰ (its look and size; one button + one gap in from
+  the edge), remembered on the device; the readout keeps being written while hidden.
+* ⛔ **The SCENE slider is deleted** — a scene is chosen from the level menu (`?flow=1`, the pause menu's *Quit to menu*)
+  or `?sceneIndex=N`.
+* ✅ Vectors (`tests/d186.test.ts`), RED on the old code (8 of 8 that could load); a real-time headless look at 882 × 1304
+  and ~504 px wide: the bar centred and clear of the buttons, dropped below them on the narrow screen.
+
+## 7. For later
 
 * **Scores**: *par* and stars once `GM4` (the solver) and `GM5` (the score) exist; the best result kept on the device
   (`GAME_STRUCTURE.md` §5 #6, `SEC1` first).

@@ -157,6 +157,25 @@ lesson: two implementations of one fact disagree exactly when one is fixed).
 
 ⭐ When a gesture's last touch lifts, its cost lands only if it CHANGED THE MODEL — the undo layer's own comparison of the bodies, the alignments, the seats and the cursors before and after (`endGesture`). So an align, an unalign, an unsnap, a move and an undo land; a press and release on a body, Space with nothing after it, a Space click cancelled by Esc, a drag that crossed no rotation increment and a double tap or click that does not land (`D157`, absorbed) cost ZERO. ⭐ The undo pair still costs ONE (`D111`): its first tap changed nothing, its second tap's gesture undid. ⛔ `D157`'s take-back and `undoSecondTap` are deleted with it, and so is `D155`'s continuation mark: a press held still + Space + an alignment costs 1 (the alignment), a drag that MOVED + Space + an alignment costs 2 (two things landed). ⛔ **Reversed by `D159` the same day**: a Space freeze carries the gesture, so drag + Space + the action that follows lands ONCE — 1 if anything changed (alignment, or the move then Esc), 0 if not. ✅ `EpisodeTally.gestureEnded(changed)`, 4 vectors; headless, each case measured.
 
+### 3.4 ⭐⭐⭐ `D187` — AN EPISODE LANDS WHEN ITS ACTION IS TRIGGERED (2026-09-30)
+
+> *"the episode count shall be incremented at the first touch or click or delta position which triggers an action which
+> will increment the episode count, not at the release of the touch or click. For example: left click pressed / first
+> touch on an object does nothing (because the user can still release the input) but as soon as the delta position
+> translates / rotates the object, the count shall be incremented."* — the owner, 2026-09-30
+
+* ⭐ WHAT an action costs is unchanged — `episodeCounts` per touch, `max(holds, actions)` per gesture (`D115`: a two-touch
+  action is ONE), and a gesture that changes nothing costs nothing (§3.2). ⭐ WHEN it lands changes: the frame the gesture
+  FIRST CHANGES THE MODEL — a drag's first step past the deadband, an alignment, an unsnap, an undo — not the release.
+* A touch is classified at its PRESS (`EpisodeTally.touch`, keyed per press) and again at its release, which replaces
+  the press record (an unalign tap only counts once it has unaligned). The render loop asks `sync` every frame with
+  `gestureChangedSoFar` — `endGesture`'s own comparison, latched once true; the release asks it too.
+* ⭐ A later action in the same hold lands when it adds to the cost (a hold with two actions: 1, then 2).
+* ⛔ What has landed is never taken back: a part dragged and brought back to where it started still cost one.
+* ⛔ It revises `D115`'s *"count the episode only when the last of the two touches is released"*; the HUD's
+  `(+n on release)` is deleted. ✅ Measured in the real app (a DevTools mouse drag on Piece2): 0 after the press held
+  still, **1 with the button still down** after the drag, 1 after the release, and a click that moves nothing adds 0.
+
 ## 4. WHY THE SNAP IS A PREREQUISITE, AND WHAT IT CHANGES
 
 ⛔⛔ Without a snap, *"matching the PioneerFaceCursor"* is not reachable by hand — a continuous drag

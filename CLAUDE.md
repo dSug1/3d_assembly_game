@@ -82,7 +82,7 @@ so a new scene is one data file + one level; ⭐ **`Scene_1` boots by default** 
 industry-practice improvements for later (in-page switch, results, settings, pause clock, back button) §5.
 ⭐⭐⭐ **`D145` (branch `1.0.52-`, ⛔ unjudged by a hand): TRANSLATION ALONG THE LIVE CAMERA** — the first touch (left drag
 without Shift) moves a body along THIS camera's axes, flattened: `dx` along the screen's right (exactly under the finger),
-`dy` along the view — finger up is AWAY when the camera is at or above the gizmo's height, TOWARD when below; and the
+`dy` along the view — finger up is AWAY when the camera is at or above the gizmo's height, TOWARD when below (⛔ `D184`: ALWAYS away now); and the
 gizmo's red AND blue light for any holder input. ⛔ Reverses `D74`'s boot-fixed axes and `D127`/`D132` (the owner's own
 reversal); a free body's TURN keeps the boot frame → `ALIGNMENT_RULES.md` §19. ⭐ **`D147`/`D148`** (reversing `D146`): that away/toward sign is
 read at EVERY step from the camera and the gizmo as they are — a zoom or a gravity lift mid-drag can flip it.
@@ -109,7 +109,7 @@ offset stays: the snap and the sway use it) → `ALIGNMENT_RULES.md` §14, `INPU
 41 upright boxes and a frozen floor, the owner's Unity values unchanged at **0.1 m per unit**
 (`unitM`), two spots and a directional light read as URP (direction from the Euler angles — checked
 against *"both spots are aimed at (0, 2.5, 0)"* — Kelvin × filter, soft shadows at 0.4), a level
-camera. ⭐ The **SCENE** slider at the top of the tuning menu (or `?sceneIndex=N`) RELOADS the page on
+camera. ⭐ The **SCENE** slider (⛔ deleted, `D186`: the level menu) at the top of the tuning menu (or `?sceneIndex=N`) RELOADS the page on
 the chosen scene, so it boots from the beginning; scenes are data in `content/scenes.ts`. ⭐ The
 pieces are the owner's **second layout** (*"reshuffle the pieces"*, 2026-09-27): 41, none overlapping, and
 ⭐⭐ **each a transparent CONTOUR around its coloured core** (`D125`): the bodies touch face to face, the
@@ -196,7 +196,7 @@ scopes, and the reach is invisible because both sides are typed `string`.* ⚠ I
 **inversion, not by writing**: under `D67` both terms named one body. The no-op needs **three**
 terms now → [`Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md`](Claude/10_INPUT_TOUCH/spec/ALIGNMENT_RULES.md) §11.
 
-✅ Green: TypeScript + Babylon + Vite, **1582 golden vectors passing** — ⚠ MEASURED 2026-09-30 (+ 19 − 1 for `D183`, + 4 for `D182`, + 11 for `D181`, + 17 for `D180`, + 1 for `D179`, + 2 for `D178`, + 1 for `D177`, + 1 for `D175`, + 15 for `D174`, + 6 for `D173`, + 4 for `D172`, + 125 for `D171` — 150 per-move vectors for 30 — + 47 for `D170`, + 6 for `D169`, + 3 for `D168`, + 4 for `D167`, + 2 for `D166`, + 2 for `D165`, + 1 for `D164`, + 3 for `D163`, + 4 for `D162`, + 4 for `D161`, + 2 for `D160`, + 6 for `D159`, − 1 for `D158`, + 3 for `D157`, + 4 for `D156`, + 6 for `D155`, + 9 for `D154`, + 9 for `D153`, + 1 for `D148`, + 2 for `D146`, − 2 for `D145`, + 15 for `D144`, + 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
+✅ Green: TypeScript + Babylon + Vite, **1606 golden vectors passing** — ⚠ MEASURED 2026-09-30 (+ 7 for `D189`, + 12 for `D186`–`D188`, + 7 for `D185`, + 4 − 6 for `D184`, + 19 − 1 for `D183`, + 4 for `D182`, + 11 for `D181`, + 17 for `D180`, + 1 for `D179`, + 2 for `D178`, + 1 for `D177`, + 1 for `D175`, + 15 for `D174`, + 6 for `D173`, + 4 for `D172`, + 125 for `D171` — 150 per-move vectors for 30 — + 47 for `D170`, + 6 for `D169`, + 3 for `D168`, + 4 for `D167`, + 2 for `D166`, + 2 for `D165`, + 1 for `D164`, + 3 for `D163`, + 4 for `D162`, + 4 for `D161`, + 2 for `D160`, + 6 for `D159`, − 1 for `D158`, + 3 for `D157`, + 4 for `D156`, + 6 for `D155`, + 9 for `D154`, + 9 for `D153`, + 1 for `D148`, + 2 for `D146`, − 2 for `D145`, + 15 for `D144`, + 7 for `D143`, + 4 for `D142`, + 1 for the highlight lift's depth margin, + 6 for `D141`, + 5 for `D140`, + 3 for `D139`, + 2 for `D137` amended, + 4 for `D138`, + 6 for `D137`, + 6 for `D136`, + 6 for the frame meter and the shadow switch, + 1 for `D134`, + 1 for `D132`, + 20 for `D130`/`D131`, + 6 for `D129`, + 6 for `D127`/`D128`, + 7 for `D126`, + 12 for `D125`, + 2 for `Scene_1`'s second layout, after the audit's cleanup; 1283 − 110 for `D106`–`D109`, − 21 + 22 for `D110`–`D112`, + 5 for `D113`, + 5 for `D114`, + 6 for `D115`, + 17 for `3D6`, + 6 for defect 72, + 14 for `Scene_1`, − 85 for `D118`–`D120`: the swing and capture suites deleted, + 12 for `D121`–`D124`); the
 count's one home is [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md), and **974** then **978**
 both went stale standing here. (1096 + 40 for `D87`–`D92`; 974 + 43 for `D71`–`D73`, the frustum and the increments; 861 + 113 — ⭐ the
 2026-09-19 pass: `D55`–`D62`, the tablet MIRROR and the **approach-swing trial**; before that
@@ -314,7 +314,18 @@ not, that MOVES INTO its goal margins is pulled onto its exact goal pose, during
 wins over the snap; ENTRY, not presence (a piece first seen inside, or just captured, must leave first); a blocked flight waits
 (`D182`). ⭐ PLACED (the capture, the HUD, the dissolve, the level end) = the snap's margins (10 mm on the glass, 15°) once a piece
 was GRABBED, **1 mm on the glass / 1°** if never (`ungrabbedGoalMm`/`Deg`) — the 5 mm / 5° tunables are deleted; identical pieces
-(`FinalPose.kind`) fill each other's slots → `20_GAME_RULES/spec/LEVEL_END.md` §5.
+(`FinalPose.kind`) fill each other's slots → `20_GAME_RULES/spec/LEVEL_END.md` §5. ⭐⭐ **`D184`** (⛔ unjudged): the
+holder's finger up ALWAYS translates the part AWAY from the camera, below the gizmo too — `D145`'s flip and `D147`/`D148`
+deleted → `ALIGNMENT_RULES.md` §25. ⭐⭐ **`D185`** (⛔ unjudged): the maroon PITCH (a free part in rotation, finger `dy`)
+turns like a wheel seen from the camera — pressed LEFT of the gizmo, finger up is clockwise; RIGHT, counter-clockwise (the
+side latched at the press); within `pitchSideConeDeg` (30°) of the screen plane the axis lies across the glass and keeps
+today's sign → `ALIGNMENT_RULES.md` §26. ⭐ **`D186`**: the SCENE slider is deleted; a *HUD* button left of the ☰
+collapses the readout. ⭐⭐ **`D187`**: an episode lands the frame its action is TRIGGERED (a drag's first step, an
+alignment, an undo), not at the release — the price is unchanged → `SCORE.md` §3.4. ⭐⭐ **`D188`**: a SCORE BAR, top
+centre — MOVES · TIME · GOAL (placed / all, a meter), themed, never a touch target → `LEVEL_END.md` §6 (⛔ all unjudged).
+⭐⭐ **`D189`**: the goal count and the *reached its goal* pop-up move only when an action COMPLETES (rest after a change, a
+snap, a pull, a dissolve) — a piece placed before and after (an alignment, a drag out and back, a half-turn) says nothing →
+`LEVEL_END.md` §5bis.
 ⛔⛔ Four rules, each the negation of a failure: **never touch a DOM pointer event** (the layer
 skips at Babylon's `onPrePointerObservable` and delivers #2 straight to the observable);
 **model only the touchpoint the mouse lacks**; **read `buttons` on every event, remember nothing**;

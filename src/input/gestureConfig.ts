@@ -88,6 +88,11 @@ export interface GestureConfig {
    */
   gainRotateFree: number;
   /**
+   * ⭐ `D185`: degrees out of the screen plane the maroon pitch axis must point before the press side decides its sense
+   * (a wheel seen from the camera); inside, the axis lies across the glass and the pitch keeps its old sign.
+   */
+  pitchSideConeDeg: number;
+  /**
    * ⭐⭐ 2sexte's gain — **radians of twist per MILLIMETRE** of finger travel along the
    * direction the anchored object's near side would move (`A3`).
    * ⛔ A GAIN, not a tracking factor: `anchor_rotate.ts` explains why the honest tracking
@@ -650,6 +655,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // config. ⭐ A hand says the object should turn more than twice as fast as the
   // number nobody had ever chosen — which is the whole argument for the slider.
   gainRotateFree: 0.07,
+  // ⚠ `D185`: a guess with a slider — at 30° the axis's end-on circle is half as tall as wide, where a turn starts
+  // to read as a wheel rather than a tip.
+  pitchSideConeDeg: 30,
   // ⚠ A GUESS, equal to `gainRotateFree` on purpose: one free DOF should not feel like a
   // different control from three. ⛔ It carried the value the wired gain had (0.07), NOT the
   // 0.6 this name was declared with and nobody ever ran.
@@ -991,6 +999,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
+  if (!(cfg.pitchSideConeDeg >= 0 && cfg.pitchSideConeDeg <= 80)) {
+    throw new Error(`pitchSideConeDeg (${cfg.pitchSideConeDeg}) must be in [0, 80]°: past 80 the side never decides.`);
+  }
   if (!(cfg.ungrabbedGoalMm > 0 && cfg.ungrabbedGoalMm <= cfg.captureOffsetMm)) {
     throw new Error(`ungrabbedGoalMm (${cfg.ungrabbedGoalMm}) must be in (0, captureOffsetMm]: stricter than a grabbed piece, never 0.`);
   }

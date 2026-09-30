@@ -23,6 +23,7 @@ import { captureOffsetM } from "../input/highlight";
 import { type SceneState } from "./scene_state";
 import { modelOrientation, requirePose, setModelPose } from "./bodies";
 import { unseatWorld } from "./alignment_wiring";
+import { commitGoal } from "./goal_commit_wiring";
 
 export function cursorScreen(st: SceneState, cur: PioneerFaceCursor,) : { x: number; y: number } | null {
   const body = st.meshOf.get(cur.pioneerId);
@@ -253,6 +254,8 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
     st.world = attach(st.world, step.id, cur.pioneerId);
     if (st.world.objects.get(step.id)?.parent === cur.pioneerId && st.links.seat(step.id)) {
       st.lastVerdict = `snap: ${step.id} SEATED on ${cur.pioneerId}/${cur.pioneerFaceId}`;
+      // ⭐ `D189`: a snap LANDING completes an action — the goal is committed.
+      commitGoal(st);
       // ⭐⭐ `D139`: the drag that made the seat STOPS here — a grip holding the Follower keeps the
       // roll alone until its finger lifts (`input/seat_lock.ts`).
       for (const g of st.held.values()) {
