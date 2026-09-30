@@ -10,10 +10,10 @@
  * TWICE the rig's offset — twice the radius, twice the height. Per axis:
  * * **input MOVING — the LEASH**: while the box is within `leashRad` of the camera the camera stays; past it, it is dragged
  *   along, `leashRad` behind. Its speed is what that did.
- * * **input STOPPED — the GLIDE**: a camera at rest stays where it is. A MOVING camera keeps its speed and brakes with the
- *   BOX's own braking shape — recorded from the box's last speed peak, its smoothing tail predicted to the end — stretched
- *   over the camera's own distance to where the box ends. It lands there at zero speed. ⛔ No fixed time: it follows from
- *   the speed, the distance and how the finger stopped.
+ * * **input STOPPED — the GLIDE**: a camera at rest stays where it is. A MOVING camera keeps its speed `v₀` and brakes
+ *   EXPONENTIALLY (the owner: *"build with the simplified exponential"*): time constant `τ = D / v₀`, `D` its distance to
+ *   where the box ends — which covers exactly `D`, the speed continuous at the stop. ⛔ No fixed time: it follows from the
+ *   speed and the distance.
  * ⭐ Yaw is compared the short way round; PITCH as the true angle `atan2(height, radius)` of each ring point — `v` is a ring
  * parameter, not an angle — and mapped back by bisection (the rings make it monotone).
  *
@@ -29,22 +29,12 @@ export interface OrbitAt {
   readonly v: number;
 }
 
-/** ⭐ The box's braking on one axis, from its last speed peak: distance travelled and speed at each frame (both ≥ 0). */
-interface Braking {
-  readonly dir: number;
-  readonly peak: number;
-  readonly s: readonly number[];
-  readonly u: readonly number[];
-}
-
-/** ⭐ A camera glide on one axis: its braking shape (distance fraction → speed fraction), where it is, and toward where. */
+/** ⭐ A camera glide on one axis: toward where the box ends, exponential with `tauMs = distance / v₀`. */
 interface Glide {
   readonly dir: number;
   readonly distance: number;
   readonly travelled: number;
-  readonly v0: number;
-  readonly xs: readonly number[];
-  readonly ys: readonly number[];
+  readonly tauMs: number;
 }
 
 interface AxisState {
@@ -54,7 +44,6 @@ interface AxisState {
   /** The input's (the raw rig's) angle last frame, and the box's. */
   readonly lastDriver: number;
   readonly lastBox: number;
-  readonly braking: Braking;
   readonly glide: Glide | null;
 }
 
@@ -104,10 +93,8 @@ export function vForPitch(cfg: GestureConfig, pitch: number): number {
 
 const ease = (dtMs: number, tauMs: number): number => (tauMs > 0 ? 1 - Math.exp(-Math.max(0, dtMs) / tauMs) : 1);
 
-const NO_BRAKING: Braking = { dir: 0, peak: 0, s: [0], u: [0] };
-
 function axisAt(angle: number, nowMs: number): AxisState {
-  return { vel: 0, movedAt: nowMs, lastDriver: angle, lastBox: angle, braking: NO_BRAKING, glide: null };
+  return { vel: 0, movedAt: nowMs, lastDriver: angle, lastBox: angle, glide: null };
 }
 
 /** ⭐ The camera orbit starts aligned with the box, at rest. */
@@ -116,54 +103,12 @@ export function cameraOrbitAt(box: OrbitAt, nowMs: number, cfg: GestureConfig): 
   return { cam: box, yaw: axisAt(box.yaw, nowMs), pitch: axisAt(pitch, nowMs), yawVel: 0, pitchVel: 0 };
 }
 
-/** ⭐ Follow the box's braking: a new peak (or a reversal) restarts it; a slower frame extends it. */
-function recordBraking(b: Braking, delta: number, dtMs: number): Braking {
-  if (dtMs <= 0 || delta === 0) return b;
-  const dir = Math.sign(delta);
-  const u = Math.abs(delta) / dtMs;
-  if (dir !== b.dir || u >= b.peak) return { dir, peak: u, s: [0], u: [u] };
-  return { ...b, s: [...b.s, b.s[b.s.length - 1]! + Math.abs(delta)], u: [...b.u, u] };
-}
-
-/**
- * ⭐⭐ The BRAKING SHAPE — speed fraction against distance fraction — from the box's record plus its smoothing tail still to
- * run (`tail`: the box's distance to the input, which it covers slowing linearly to zero — an exponential ease's own
- * profile). Degenerate (no speed, no distance): a straight line from 1 to 0.
- */
-function brakingShape(b: Braking, tail: number): { xs: number[]; ys: number[] } {
-  const sLast = b.s[b.s.length - 1]!;
-  const total = sLast + Math.max(0, tail);
-  if (!(b.peak > 0) || !(total > 1e-12)) return { xs: [0, 1], ys: [1, 0] };
-  const xs = b.s.map((s) => s / total);
-  const ys = b.u.map((u) => u / b.peak);
-  xs.push(1);
-  ys.push(0);
-  return { xs, ys };
-}
-
-/** Speed fraction at a distance fraction — piecewise linear. */
-function shapeAt(xs: readonly number[], ys: readonly number[], x: number): number {
-  if (x <= xs[0]!) return ys[0]!;
-  for (let i = 1; i < xs.length; i++) {
-    if (x <= xs[i]!) {
-      const span = xs[i]! - xs[i - 1]!;
-      const f = span > 0 ? (x - xs[i - 1]!) / span : 1;
-      return ys[i - 1]! + (ys[i]! - ys[i - 1]!) * f;
-    }
-  }
-  return ys[ys.length - 1]!;
-}
-
-/** ⭐ One step of a glide: the speed read off the shape at the MIDPOINT of the step; the last step lands. */
+/** ⭐ One step of a glide, integrated EXACTLY: `s = D − (D − s)·e^(−dt/τ)`; within a millidegree it lands. */
 function glideStep(g: Glide, dtMs: number): { glide: Glide | null; move: number; vel: number } {
-  const speed = (t: number) => g.v0 * shapeAt(g.xs, g.ys, t / g.distance);
-  const v1 = speed(g.travelled);
-  const mid = speed(Math.min(g.distance, g.travelled + 0.5 * v1 * dtMs));
-  // ⚠ A shape that ends at zero speed is only approached; within a millidegree (or a stall) it lands.
-  const step = Math.max(mid * dtMs, 0);
   const left = g.distance - g.travelled;
-  if (step >= left || left < 2e-5 || mid < 1e-9) return { glide: null, move: g.dir * left, vel: 0 };
-  return { glide: { ...g, travelled: g.travelled + step }, move: g.dir * step, vel: g.dir * mid };
+  const leftAfter = left * Math.exp(-dtMs / g.tauMs);
+  if (leftAfter < 2e-5) return { glide: null, move: g.dir * left, vel: 0 };
+  return { glide: { ...g, travelled: g.distance - leftAfter }, move: g.dir * (left - leftAfter), vel: (g.dir * leftAfter) / g.tauMs };
 }
 
 /**
@@ -174,7 +119,6 @@ function axisStep(
   a: AxisState,
   gapToBox: number,
   gapToEnd: number,
-  boxDelta: number,
   driverDelta: number,
   boxAngle: number,
   driverAngle: number,
@@ -182,10 +126,9 @@ function axisStep(
   dtMs: number,
   p: CameraOrbitParams,
 ): { next: AxisState; move: number } {
-  const braking = recordBraking(a.braking, boxDelta, dtMs);
   const movedAt = Math.abs(driverDelta) > 1e-9 ? nowMs : a.movedAt;
   const moving = movedAt === nowMs || nowMs - movedAt < p.settleDelayMs;
-  const base = { movedAt, lastDriver: driverAngle, lastBox: boxAngle, braking };
+  const base = { movedAt, lastDriver: driverAngle, lastBox: boxAngle };
   if (dtMs <= 0) return { next: { ...a, ...base }, move: 0 };
 
   if (moving) {
@@ -204,15 +147,15 @@ function axisStep(
     if (Math.abs(a.vel) < 1e-9 || Math.sign(a.vel) !== Math.sign(gapToEnd) || Math.abs(gapToEnd) < 1e-9) {
       return { next: { ...base, vel: 0, glide: null }, move: 0 };
     }
-    const shape = brakingShape(braking, Math.abs(gapToEnd - gapToBox));
-    glide = { dir: Math.sign(gapToEnd), distance: Math.abs(gapToEnd), travelled: 0, v0: Math.abs(a.vel), ...shape };
+    // ⭐ τ = D / v₀: the exponential that starts at the camera's speed covers exactly the distance.
+    glide = { dir: Math.sign(gapToEnd), distance: Math.abs(gapToEnd), travelled: 0, tauMs: Math.abs(gapToEnd) / Math.abs(a.vel) };
   }
   const g = glideStep(glide, dtMs);
   return { next: { ...base, vel: g.vel, glide: g.glide }, move: g.move };
 }
 
 /**
- * ⭐ One frame: each axis leashed while the input drives it, gliding with the box's braking once it has stopped.
+ * ⭐ One frame: each axis leashed while the input drives it, gliding exponentially onto where the box ends once it stops.
  * @param driver What the INPUT drives — the raw rig. ⛔ Not the smoothed box: its ease creeps on after the finger stops.
  */
 export function cameraOrbitStep(
@@ -228,7 +171,6 @@ export function cameraOrbitStep(
     s.yaw,
     wrapPi(box.yaw - s.cam.yaw),
     wrapPi(driver.yaw - s.cam.yaw),
-    wrapPi(box.yaw - s.yaw.lastBox),
     wrapPi(driver.yaw - s.yaw.lastDriver),
     box.yaw,
     driver.yaw,
@@ -239,7 +181,7 @@ export function cameraOrbitStep(
   const pc = pitchOf(cfg, s.cam.v);
   const pb = pitchOf(cfg, box.v);
   const pd = pitchOf(cfg, driver.v);
-  const q = axisStep(s.pitch, pb - pc, pd - pc, pb - s.pitch.lastBox, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p);
+  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p);
   return {
     cam: { yaw: s.cam.yaw + y.move, v: q.move === 0 ? s.cam.v : vForPitch(cfg, pc + q.move) },
     yaw: y.next,

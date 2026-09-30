@@ -128,11 +128,12 @@ describe("⭐⭐ `D191` — the green box", () => {
       expect(wrapPi(47 * DEG - s.cam.yaw)).toBeGreaterThanOrEqual(-1e-12); // never passes the box
       prevVel = s.yawVel;
     }
-    // ⭐ continuity: the first glide frame keeps the dragged speed less ONE frame of even braking (a = v² / 2d: here 294°/s
-    // over the 15° gap — 16 % a frame) — not a restart from rest, which would start near zero
-    const a = (before * before) / (2 * 15 * DEG);
-    expect(vels[0]!).toBeCloseTo(before - a * 16, 9);
-    expect(vels[0]! / before).toBeGreaterThan(0.8);
+    // ⭐ continuity: the first glide frame keeps the dragged speed less ONE frame of braking (here 294°/s over the 15° gap)
+    // — not a restart from rest, which would start near zero
+    // (the exponential: τ = D / v₀ over the 15° gap, so one 16 ms frame keeps e^(−16/τ) of the speed)
+    const tau = (15 * DEG) / before;
+    expect(vels[0]!).toBeCloseTo(before * Math.exp(-16 / tau), 9);
+    expect(vels[0]! / before).toBeGreaterThan(0.7); // not a restart from rest
   });
 
   it("⭐⭐ prototype: the owner — *when the box is still inside the leash, do not rotate the camera*", () => {
@@ -144,32 +145,29 @@ describe("⭐⭐ `D191` — the green box", () => {
     expect(s.cam.yaw).toBe(0);
   });
 
-  it("⭐⭐ prototype: the glide brakes with the BOX's own braking shape, stretched over the camera's distance", () => {
+  it("⭐⭐ prototype: the glide is EXPONENTIAL with τ = D / v₀ — the speed at 63 % of the way is v₀ / e, then it lands", () => {
     const P0 = { ...P, settleDelayMs: 0 };
     let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
-    // the box runs at 3 °/frame past the leash (the camera pinned 15° behind), then brakes: 2.5, 2, 1.5, 1, 0.5 °/frame, and
-    // stops (⚠ a fixture that JUMPS makes the jump the speed peak — the braking would start there)
     let box = 0;
     let t = 0;
-    for (const step of [3, 3, 3, 3, 3, 3, 3, 3, 2.5, 2, 1.5, 1, 0.5]) {
-      box += step * DEG;
+    for (let i = 0; i < 10; i++) {
+      box += 3 * DEG;
       s = cameraOrbitStep(s, { yaw: box, v: 0.5 }, (t += 16), 16, CFG, P0);
     }
-    const v0 = s.yawVel; // the last dragged speed: 0.5°/frame
-    expect(v0).toBeCloseTo((0.5 * DEG) / 16, 9);
-    // its shape: speed 1 → 0.667 at 60 % of the braking distance (2 °/frame of 3, after 4.5° of 7.5°)
+    const v0 = s.yawVel;
+    expect(v0).toBeCloseTo((3 * DEG) / 16, 9); // pinned: the box's speed
     const start = s.cam.yaw;
+    const D = box - start; // 15°
     let seen = false;
     for (let i = 0; i < 400 && !seen; i++) {
-      s = cameraOrbitStep(s, { yaw: box, v: 0.5 }, (t += 4), 4, CFG, P0);
-      if (s.cam.yaw - start >= 0.6 * 15 * DEG) {
-        expect(s.yawVel / v0).toBeGreaterThan(0.62);
-        expect(s.yawVel / v0).toBeLessThan(0.71);
+      s = cameraOrbitStep(s, { yaw: box, v: 0.5 }, (t += 2), 2, CFG, P0);
+      if (s.cam.yaw - start >= D * (1 - Math.exp(-1))) {
+        expect(Math.abs(s.yawVel / v0 - Math.exp(-1))).toBeLessThan(0.05); // read one 2 ms step past the mark
         seen = true;
       }
     }
     expect(seen).toBe(true);
-    for (let i = 0; i < 4000; i++) s = cameraOrbitStep(s, { yaw: box, v: 0.5 }, (t += 16), 16, CFG, P0);
+    for (let i = 0; i < 400; i++) s = cameraOrbitStep(s, { yaw: box, v: 0.5 }, (t += 16), 16, CFG, P0);
     expect(Math.abs(wrapPi(box - s.cam.yaw))).toBeLessThan(1e-4);
   });
 
