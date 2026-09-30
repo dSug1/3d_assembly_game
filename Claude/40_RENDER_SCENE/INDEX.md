@@ -45,6 +45,7 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 | `undo_wiring.ts` | `D111`: snapshot at a gesture's start, restore on a double tap on a body |
 | `lighting.ts` · `empty_space_probe.ts` | a scene's lights from `core/lighting.ts` · `D114`'s probe for empty glass |
 | `screens.ts` | the game shell (`D105`), a DOM overlay, `?flow=1`; ⭐ the ⏸ pause menu (`D144`) |
+| `ui_theme.ts` · `level_end_ui.ts` · `level_end_wiring.ts` | `D180`: the UI theme's tokens and classes (every screen's style) · the results screen · the level end's per-frame facts |
 | `hud.ts` · `menu.ts` · `mouse_adapter.ts` | the readout · the slider panel · `D94`'s desktop seam (below) |
 | `scene.ts` | the composition root |
 

@@ -315,7 +315,7 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 * **Occlusion by the assembly itself** (§2): 8.4 % of sampled moments hide the moving piece (`D174`; 10.2 % on the same
   instrument before), mostly the `SNAP` into a slot while the camera is edge-on. A camera that eases toward the face of
   the slot being filled — or a plan that puts pieces back while the camera faces the painting — would remove most.
-* ⚠ **The rows' ends cut in portrait at the start** (`D175`–`D179`, §7: 3.65 m needed, 3 m allowed): a start distance past the rig's maximum (the zoom then
+* ✅ **KEPT AS IT IS** — the owner, 2026-09-30: *"Ok, keep as current"*. ⚠ **The rows' ends cut in portrait at the start** (`D175`–`D179`, §7: 3.65 m needed, 3 m allowed): a start distance past the rig's maximum (the zoom then
   drawing IN to 3 m, which reverses `D171`'s *"the most out when the demo finishes"*), a wider field of view for the
   demo, or fewer pieces on the floor. The owner's to choose.
 * ⚠ The occlusion count (§2) was measured on `D174`'s plan and not re-measured for `D175`/`D176`.

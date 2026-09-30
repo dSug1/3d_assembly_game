@@ -21,6 +21,10 @@ import { resolveSceneIndex, shellScreenFromSearch } from "@core/game_route";
 import { parseConfigOverrides } from "./input/config_override";
 import { DEFAULT_CONFIG } from "./input/gestureConfig";
 import { isStaleBuild, parseServedBuild, refreshUrl } from "@core/build_gate";
+import { chooseTheme, themeProblems } from "@core/ui_theme";
+import { UI_THEMES } from "./content/ui_themes";
+import { applyUiTheme } from "@render/ui_theme";
+import { showLevelResults } from "@render/level_end_ui";
 
 /**
  * ⭐⭐⭐ ASK THE ORIGIN WHETHER THIS BUNDLE IS CURRENT, AND REPLACE THE PAGE ONCE IF NOT.
@@ -88,6 +92,12 @@ try {
   // ⭐⭐ `D144`: a page is EITHER the shell OR one level; moving between them is a new URL
   // (`core/game_route.ts`), and every level carries the ⏸ pause menu, its one way out.
   const navigate = (href: string): void => window.location.assign(href);
+  // ⭐⭐ `D180`: every screen is styled by ONE theme — the content's, or `?uiTheme=` to try another (`content/ui_themes.ts`).
+  const theme = chooseTheme(UI_THEMES, window.location.search, GAME_CONTENT.uiTheme);
+  applyUiTheme(theme);
+  // ⭐ A theme that is not legible (contrast, touch size) is SAID, on the page — never shipped silently.
+  const illegible = themeProblems(theme);
+  if (illegible.length > 0) showError(`The UI theme "${theme.id}" is not legible`, illegible.join("\n"));
   const shellScreen = shellScreenFromSearch(window.location.search, GAME_CONTENT);
   // ⚠ `-1` until a level has started drawing: the frame check below expects nothing yet.
   let handle: { framesRendered(): number } = { framesRendered: () => -1 };
@@ -101,8 +111,14 @@ try {
     // ⭐ `D173`: a demo level fetches its plan first (its own file); every other level resolves at once.
     void sceneReady(index)
       .then((spec) => {
-        handle = createScene(canvas, spec);
-        installPauseMenu(GAME_CONTENT, index, navigate);
+        const scene = createScene(canvas, spec);
+        handle = scene;
+        const pause = installPauseMenu(GAME_CONTENT, index, navigate);
+        // ⭐⭐ `D180`: the level end — the ⏸ goes, and after the theme's beat the results screen comes up.
+        scene.onLevelEnd((result) => {
+          pause.hide();
+          showLevelResults(GAME_CONTENT, index, result, navigate, theme.motion.celebrateDelayMs);
+        });
       })
       .catch((err: unknown) => showError("The level could not be loaded", err instanceof Error ? (err.stack ?? err.message) : String(err)));
   }

@@ -149,6 +149,37 @@ export function pauseTarget(
   if (action === "RESUME") return null;
   const k = resolveSceneIndex(content, index);
   if (action === "RESTART") return playHref(href, k);
-  const ref = levelRefs(content)[k];
+  return levelListHref(href, content, k);
+}
+
+/** ⭐ The level list of scene `index`'s own world (the menu if the catalogue has no such level). */
+function levelListHref(href: string, content: GameContent, index: number): string {
+  const ref = levelRefs(content)[index];
   return shellHref(href, ref ? { kind: "LEVELS", worldId: ref.worldId } : { kind: "MENU" });
+}
+
+/**
+ * ⭐ `D180`: the level a *Next level* button plays after scene `index` — the next one in reading order (across worlds)
+ * that is PLAYED, never a demo (a demo is watched, not a step of the game). `null` after the last.
+ */
+export function nextPlayableIndex(content: GameContent, index: number): number | null {
+  const levels = levelsOf(content);
+  for (let k = resolveSceneIndex(content, index) + 1; k < levels.length; k++) if (!levels[k]!.demoPlan) return k;
+  return null;
+}
+
+/** ⭐ `D180`: the results screen's buttons. */
+export type ResultAction = "NEXT" | "RETRY" | "LEVELS";
+
+/**
+ * ⭐⭐ **WHERE EACH RESULTS BUTTON GOES** (`D180`) after scene `index` is complete: `NEXT` plays the next playable level
+ * (`null` when there is none — the button is then not shown), `RETRY` the same level from its boot, `LEVELS` that
+ * world's level list — the industry's three (*Next* · *Retry* · *Level select*, `GAME_STRUCTURE.md` §4).
+ */
+export function resultTarget(action: ResultAction, href: string, content: GameContent, index: number): string | null {
+  const k = resolveSceneIndex(content, index);
+  if (action === "RETRY") return playHref(href, k);
+  if (action === "LEVELS") return levelListHref(href, content, k);
+  const next = nextPlayableIndex(content, k);
+  return next === null ? null : playHref(href, next);
 }

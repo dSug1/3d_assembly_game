@@ -101,6 +101,17 @@ place* (the goal check's angle); a right one is SET, then the piece is free. ⛔
 it"*: a mate check apart from `goal.ts`, a spin lock, `mateResidual`. ✅ 7 vectors; five mutants RED
 (no mate, full turn, sign, the symmetry ignored, body centre — the last survived a face centre on the body's axis until moved
 off it). ⛔ Unjudged.
+### 2.2 ⭐⭐⭐ `D180` — THE LEVEL END, 2026-09-30
+
+> *"Build level end. Use the current light video games best practices for the scaffold and user interface. For the
+> graphics aesthetics, make it so we can later modify to adopt one or another graphics style."* — the owner
+
+✅ §2 item 4, built: a level is complete when `goal.ts`'s verdict is met AND the scene is at rest (no finger down, no snap
+animating) — played (the clock started) or a demo done; it latches, the clock and the count stop, and a results card comes
+up after a beat (moves · time · pieces; *Next level* · *Retry* · *Level select*). Every screen reads a UI THEME (design
+tokens; `night`, `paper`). `core/level_end.ts`, `core/ui_theme.ts`, `render/level_end_ui.ts` → `LEVEL_END.md`.
+✅ 17 vectors, four mutants RED. ⛔ Unjudged by a hand. ⭐ `GM1` is BUILT; next in the program, `3D7`.
+
 ## 3. The play volume
 
 Nothing keeps a part inside the scene today: it can be dragged off-screen, far behind the camera,

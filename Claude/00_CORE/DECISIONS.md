@@ -81,7 +81,7 @@ file.
 | `D132` | ⭐⭐ **EDGE-ON *AWAY* IS READ FROM THE CAMERA TO THE GIZMO, NOT ALONG THE VIEW** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
 | `D133` | ⚠ **REVERTED THE SAME DAY** | 2026-09-28 | → §16 |
 | `D134` | ⭐ **THE HUD's EDGE-ON IS THE CAMERA's, READ EVERY FRAME** | 2026-09-28 | → §16 |
-| `D136` | ⭐⭐⭐ **CONTACT IS ALLOWED; ONLY PENETRATION IS REFUSED** — the skin is how far a body may sink | 2026-09-28 | Scene_1's slots were unreachable → `COLLISION.md` §9 |
+| `D136` | ⭐⭐⭐ **CONTACT IS ALLOWED; ONLY PENETRATION IS REFUSED** — the skin is how far a body may sink | 2026-09-28 | → `COLLISION.md` §9 |
 | `D137` | ⭐⭐ **A SIDEWAYS PINCH WHILE TRANSLATING ZOOMS; translation and roll pause** — until a dy leaves the band | 2026-09-28 | → §17 |
 | `D138` | ⭐⭐ **AUTO SHADOWS: OFF ON A DEVICE MEASURED TOO SLOW FOR THEM** | 2026-09-28 | → render `INDEX.md` |
 | `D139` | ⭐⭐ **A SNAP STOPS THE DRAG THAT MADE IT** | 2026-09-28 | → §18 |
@@ -90,7 +90,7 @@ file.
 | `D142` | ⭐ **A SEATED PIECE AT ITS GOAL DISSOLVES ITS COUPLE** | 2026-09-28 | → GM1 |
 | `D143` | ⭐⭐ **THE MATE: AT THE GOAL'S DISSOLVE THE SPIN IS SET** | 2026-09-28 | → `PLAYABILITY` §2.1 |
 | `D144` | ⭐⭐ **A ⏸ MENU LEAVES A LEVEL BY RELOAD; ONE SCENE LIST** | 2026-09-28 | → `GAME_STRUCTURE.md` §4–§5 |
-| `D145` | ⭐⭐⭐ **TRANSLATION ALONG THE LIVE CAMERA** | 2026-09-29 | Reverses `D74` → §19 |
+| `D145` | ⭐⭐⭐ **TRANSLATION ALONG THE LIVE CAMERA** | 2026-09-29 | → §19 |
 | `D146` | ⚠ **REVERSED BY `D147`** | 2026-09-29 | → §19 |
 | `D147` | ⭐⭐ **A ZOOM RE-DECIDES THE DIRECTION, EVEN MID-DRAG** | 2026-09-29 | → §19 |
 | `D148` | ⭐⭐ **…AND A LIFT: THE SIGN IS READ EVERY STEP** | 2026-09-29 | → §19 |
@@ -121,6 +121,7 @@ file.
 | `D177` | ⭐ **A NATURAL FEEL: ±1.5° YAW, ±1 PX IN DEPTH** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D178` | ⭐ **BOLDER: 5–10° YAW, 5–10 % SHIFT** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D179` | ⭐ **0–4° (MED 2.5°), 0–5 % (MED 3 %)** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
+| `D180` | ⭐⭐ **THE LEVEL END; A SWAPPABLE UI THEME** | 2026-09-30 | → `LEVEL_END.md` |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

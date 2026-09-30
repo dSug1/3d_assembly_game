@@ -27,6 +27,7 @@ import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig
 import { paint } from "./hud_paint";
 import { syncSeats } from "./seat_wiring";
 import { dissolveOnGoal } from "./goal_dissolve_wiring";
+import { levelEndFrame } from "./level_end_wiring";
 
 export function startRenderLoop(st: SceneState): void {
 
@@ -259,6 +260,8 @@ export function startRenderLoop(st: SceneState): void {
     syncSeats(st, now);
     // ⭐⭐ `D142`: a seated follower in its goal pose lets go of its Pioneer (with a pop-up).
     dissolveOnGoal(st);
+    // ⭐⭐ `D180`: the level end — asked only while the scene is at rest; once, it freezes the scene and tells `main.ts`.
+    levelEndFrame(st, now);
 
     const tauSec = st.cfg.translateInertiaMs / 1000;
     // ⛔⛔ ITERATE THE **MODEL**, NOT THE FOLLOWER MAP — and this line is a defect fix, not
