@@ -93,6 +93,20 @@ export interface DemoOptions {
    * first body in the scene. `Scene_1`: white, black, yellow, red, blue (`SCENE1_DEMO_OPTIONS`).
    */
   readonly colourOrder?: readonly Triple[];
+  /**
+   * ⭐ `D177` (the owner: *"randomly roll the parts when they are laid on the floor at start by up to 1.5 degrees negative
+   * or positive to give a natural feel"* — *"I was meaning yaw, not roll"*): each piece on the grid is turned about the
+   * VERTICAL by a random angle in ±this, degrees. It stays flat on the floor.
+   */
+  readonly startYawDeg: number;
+  /**
+   * ⭐ `D177` (the owner: *"randomly misalign the face facing camera by up to 1 pixel negative or positive in depth
+   * axis"*): each piece on the grid is shifted along depth by a random amount in ±this, authored units. ⚠ A PIXEL is a
+   * size on the glass and the plan is fixed data, so it is fixed at what one CSS pixel covers AT THE GRID in the start
+   * view on the reference tablet (882 × 1304 portrait, fov 0.8, the grid ~2.15 m from the camera): `2 × 2.15 × tan 0.4 /
+   * 1304` = **1.4 mm** = 0.014 units. On another screen it is a little more or less than a pixel.
+   */
+  readonly startJitter: number;
 }
 
 /** ⭐ The owner: *"the camera shall orbit uniformly towards the right"* — one full turn over the demo. */
@@ -162,7 +176,21 @@ export const DEMO_DEFAULTS: DemoOptions = {
   gridPitch: 0.05,
   gridGap: 0.1,
   gridOffset: 0.3,
+  // ⭐ `D177`: a natural feel — ±1.5° of yaw, ±1 pixel (1.4 mm) along depth.
+  startYawDeg: 1.5,
+  startJitter: 0.014,
 };
+
+/**
+ * ⭐ `D177` — **EACH PIECE'S NATURAL IMPERFECTION** on the grid: a yaw about the vertical (radians) and a shift along
+ * depth (authored units), drawn from the seed AND the piece — its own stream, so the draw does not depend on which pieces
+ * come off or in what order, and the rest of the generator's random sequence is untouched.
+ */
+export function naturalOf(scene: SceneDescriptor, id: string, opt: Pick<DemoOptions, "seed" | "startYawDeg" | "startJitter">): { yaw: number; dz: number } {
+  const i = scene.bodies.findIndex((b) => b.id === id);
+  const r = mulberry32(opt.seed * 7919 + 104729 * (i + 1));
+  return { yaw: ((r() * 2 - 1) * opt.startYawDeg * Math.PI) / 180, dz: (r() * 2 - 1) * opt.startJitter };
+}
 
 /** ⭐ `D174`: the box that holds the cube AND the floor grid — every move of the plan stays inside it. */
 export function demoReach(plan: Pick<DemoPlan, "volume" | "stage">): Aabb {
@@ -229,7 +257,7 @@ export function demoGrid(
   scene: SceneDescriptor,
   ids: readonly string[],
   volume: Aabb,
-  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "colourOrder">,
+  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "colourOrder" | "seed" | "startYawDeg" | "startJitter">,
 ): { rest: Map<string, Vec3>; stage: Aabb } {
   const floor = [...scene.bodies].filter((b) => b.frozen).sort((a, b) => Math.max(...contourDims(b)) - Math.max(...contourDims(a)))[0];
   if (!floor) throw new Error(`${scene.id}: a demo grid needs a floor (a frozen body)`);
@@ -248,13 +276,19 @@ export function demoGrid(
   const p = opt.gridPitch;
   const snap = (z: number) => Math.round(z / p) * p;
   const halves = sorted.map((id) => flatHalf(contourDims(spec(id)) as unknown as Vec3));
-  const cells = halves.map((h) => Math.ceil((2 * h[0] + opt.gridGap) / p - 1e-9));
+  // ⭐ `D177`: a turned piece is wider by its length × sin(yaw) and its corners pass its ends by half its width × sin(yaw);
+  // with the depth jitter, all paid for here — so the gutters stay whole.
+  const yawMax = (opt.startYawDeg * Math.PI) / 180;
+  const cells = halves.map((h) => Math.ceil((2 * h[0] + 2 * h[2] * Math.sin(yawMax) + opt.gridGap) / p - 1e-9));
+  const grow = (i: number) => halves[i]![0] * Math.sin(yawMax) + opt.startJitter;
   const lengthOf = (i: number) => 2 * halves[i]![2];
   const fx = [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2];
   const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
   const front = volume.min[2];
   // ⭐ Row 1's line: half a gutter in from the floor's edge — the most room for the two rows to interlock.
-  const near = Math.ceil((fz[0]! + opt.gridGap / 2) / p - 1e-9) * p;
+  // ⭐ `D177`: far enough in that a turned, shifted piece's corner stays on the floor (half a gutter before `D177`).
+  const edgeGrow = Math.max(...halves.map((_, i) => grow(i)));
+  const near = Math.ceil((fz[0]! + Math.max(opt.gridGap / 2, edgeGrow)) / p - 1e-9) * p;
 
   type Laid = { i: number; x0: number; z0: number; z1: number };
   const layout = (split: number): { laid: Laid[]; width: number; far: number } | null => {
@@ -274,7 +308,7 @@ export function demoGrid(
       let right = cursor;
       for (;;) {
         const left = right - cells[i]!;
-        const hit = laid.filter((l) => l.i < split && l.x0 < right && l.x0 + cells[l.i]! > left && !(l.z1 + opt.gridGap <= z0 + 1e-9 || z1 + opt.gridGap <= l.z0 + 1e-9));
+        const hit = laid.filter((l) => l.i < split && l.x0 < right && l.x0 + cells[l.i]! > left && !(l.z1 + grow(l.i) + opt.gridGap + grow(i) <= z0 + 1e-9 || z1 + opt.gridGap <= l.z0 + 1e-9));
         if (hit.length === 0) break;
         right = Math.min(...hit.map((l) => l.x0));
       }
@@ -296,15 +330,16 @@ export function demoGrid(
   const centreX = (volume.min[0] + volume.max[0]) / 2;
   const originX = Math.round((centreX - (best.width * p) / 2) / p) * p - minCell * p;
   const rest = new Map<string, Vec3>();
-  const lo: [number, number, number] = [Infinity, floorTop, near - opt.gridGap / 2];
+  const lo: [number, number, number] = [Infinity, floorTop, Math.max(fz[0]!, near - opt.gridGap / 2 - edgeGrow)];
   const hi: [number, number, number] = [-Infinity, floorTop, -Infinity];
   for (const l of best.laid) {
     const h = halves[l.i]!;
-    rest.set(sorted[l.i]!, [originX + (l.x0 + cells[l.i]! / 2) * p, floorTop + h[1], (l.z0 + l.z1) / 2]);
+    // ⭐ `D177`: turned a little about the vertical (`generateDemoPlan` gives it that orientation) and shifted along depth.
+    rest.set(sorted[l.i]!, [originX + (l.x0 + cells[l.i]! / 2) * p, floorTop + h[1], (l.z0 + l.z1) / 2 + naturalOf(scene, sorted[l.i]!, opt).dz]);
     lo[0] = Math.min(lo[0], originX + l.x0 * p);
     hi[0] = Math.max(hi[0], originX + (l.x0 + cells[l.i]!) * p);
     hi[1] = Math.max(hi[1], floorTop + 2 * h[1]);
-    hi[2] = Math.max(hi[2], l.z1 + opt.gridGap / 2);
+    hi[2] = Math.max(hi[2], l.z1 + grow(l.i) + opt.gridGap / 2);
   }
   if (lo[0] < fx[0]! || hi[0] > fx[1]! || lo[2] < fz[0]! - 1e-9)
     throw new Error(`${scene.id}: the demo grid (x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}, z from ${lo[2].toFixed(2)}) leaves the floor`);
@@ -513,7 +548,12 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     // ⛔ FOUND BY THE SHAPE VECTOR: a piece that already lies flat in the painting (a horizontal bar) had an ALIGN of
     // 0° — an empty move, a pause in the demo. ⭐ It is laid down a HALF-TURN away instead: its goal all the same
     // (`D130`: a box's face or its opposite), and the ALIGN is a turn a player would make.
-    const flats = flatOrientations(dimsOf.get(id)!).filter((q) => qAngle(q) > 1e-6);
+    // ⭐ `D177`: the piece is turned straight into its flat pose AND its little yaw, so the carry and the lift keep one
+    // orientation all the way down onto the floor.
+    const yaw = naturalOf(scene, id, opt).yaw;
+    const flats = flatOrientations(dimsOf.get(id)!)
+      .filter((q) => qAngle(q) > 1e-6)
+      .map((q) => canonical(qmul(qFromAxisAngle([0, 1, 0], yaw), q)));
     for (const axis of axes)
       for (const far of [1, 1.5, 2, 2.5, 3])
         for (let t = 0; t < 4; t++) {
