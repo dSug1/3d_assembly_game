@@ -14,6 +14,31 @@
  *
  * ⛔ ENGINE-FREE.
  */
+import { worldPlacementOf, type World } from "../core/object_model";
+import { length, qAngle, qconj, qmul, sub } from "../core/vec";
+/**
+ * ⭐ `D190`: the pieces an action MOVED — their world pose differs between the model last committed and the model now
+ * (a seated follower carried by its root counts). ⛔ `World` is immutable, so the same model is one comparison.
+ */
+export function piecesMoved(before: World, after: World, ids: readonly string[]): Set<string> {
+  const out = new Set<string>();
+  if (before === after) return out;
+  for (const id of ids) {
+    const a = worldPlacementOf(before, id);
+    const b = worldPlacementOf(after, id);
+    if (a === null || b === null) {
+      if (a !== b) out.add(id);
+      continue;
+    }
+    const turned = qAngle(qmul(b.orientation, qconj(a.orientation)));
+    if (length(sub(a.position, b.position)) > MOVED_M || turned > MOVED_RAD) out.add(id);
+  }
+  return out;
+}
+
+const MOVED_M = 1e-7;
+const MOVED_RAD = 1e-6;
+
 export class GoalCommit {
   private placed: ReadonlySet<string> | null = null;
   private totalCount = 0;
@@ -34,13 +59,21 @@ export class GoalCommit {
   /**
    * ⭐ Commit the pieces placed NOW; returns the ones that REACHED their goal (not placed at the previous commit).
    * ⛔ The first commit returns none: a piece placed at boot reached nothing.
+   * ⭐⭐ `D190` (the owner: *"why a one piece move would trigger the check on goal for all other pieces?"*): only the pieces
+   * the action MOVED (`moved`) are re-judged — every other piece keeps its committed status. ⛔ The relative frame is
+   * refitted on every report, so a piece sitting at its margin's edge could otherwise flip when a DIFFERENT piece moved
+   * (a fuzz of random moves found it). `null`: re-judge all (the first commit).
    */
-  commit(inPlaceIds: readonly string[], total: number): string[] {
+  commit(inPlaceIds: readonly string[], total: number, moved: ReadonlySet<string> | null = null): string[] {
     const before = this.placed;
-    const now = new Set(inPlaceIds);
+    const live = new Set(inPlaceIds);
+    const now =
+      before === null || moved === null
+        ? live
+        : new Set([...[...before].filter((id) => !moved.has(id)), ...[...live].filter((id) => moved.has(id))]);
     this.placed = now;
     this.totalCount = total;
     if (before === null) return [];
-    return inPlaceIds.filter((id) => !before.has(id));
+    return [...now].filter((id) => !before.has(id));
   }
 }

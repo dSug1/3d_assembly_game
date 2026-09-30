@@ -12,15 +12,21 @@
  */
 import { placedReport } from "./goal_capture_wiring";
 import { showGoalPopup } from "./goal_popup";
+import { piecesMoved } from "../input/goal_commit";
 import type { SceneState } from "./scene_state";
 
 /** ⭐ Commit the goal NOW; pop up the pieces that reached it (unless `quiet`). */
 export function commitGoal(st: SceneState, quiet = false): void {
   const r = placedReport(st);
+  // ⭐⭐ `D190`: only the pieces this action MOVED are re-judged; every other piece keeps its committed status.
+  const moved =
+    st.goalCommitWorld === null || st.sceneSpec.final === null
+      ? null
+      : piecesMoved(st.goalCommitWorld, st.world, st.sceneSpec.final.bodies.map((b) => b.id));
   st.goalCommitWorld = st.world;
   if (r === null) return;
   const baseline = st.goalCommit.never;
-  const reached = st.goalCommit.commit(r.inPlaceIds, r.total);
+  const reached = st.goalCommit.commit(r.inPlaceIds, r.total, moved);
   st.hudDirty = true;
   if (baseline || quiet || st.demo !== null || reached.length === 0) return;
   const who = reached.length === 1 ? `${reached[0]} reached its goal` : `${reached.join(", ")} reached their goals`;
