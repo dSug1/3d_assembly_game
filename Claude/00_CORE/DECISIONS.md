@@ -118,6 +118,7 @@ file.
 | `D174` | ⭐⭐ **THE DEMO STARTS FROM A FLOOR GRID; A LIFTED PIECE JOINS THE BUILD** | 2026-09-30 | → `DEMO_SCENE.md` §2–§2ter |
 | `D175` | ⭐ **THE GRID: LENGTHWISE, ONE RANK; CAMERA 15° EARLIER** | 2026-09-30 | → `DEMO_SCENE.md` §2bis, §7 |
 | `D176` | ⭐ **TWO INTERLOCKING ROWS, THE SECOND REVERSED** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
+| `D177` | ⭐ **A NATURAL FEEL: ±1.5° YAW, ±1 PX IN DEPTH** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

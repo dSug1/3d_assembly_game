@@ -10,6 +10,8 @@
  * > shall be aligned on x axis"* — the owner, 2026-09-30 (`D175`).
  * > *"make two or three rows of parts instead of one unique row. If required to fit the parts, reverse the order of
  * > alignment along longest dimension every second row. The rows do not need to be justified"* — the owner (`D176`).
+ * > *"randomly roll the parts when they are laid on the floor at start by up to 1.5 degrees … Also, randomly misalign the
+ * > face facing camera by up to 1 pixel negative or positive in depth axis"* — *"I was meaning yaw, not roll"* (`D177`).
  *
  * ⭐ Asserted on the COMMITTED plan, read back from its poses — never from the generator's own bookkeeping.
  */
@@ -17,7 +19,7 @@ import { describe, expect, it } from "vitest";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
 import { SCENE1_DEMO as SHELL } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
-import { DEMO_DEFAULTS, demoReach, flatOrientations, withDemoPlan, type DemoPose } from "@core/demo_plan";
+import { DEMO_DEFAULTS, demoReach, flatOrientations, naturalOf, withDemoPlan, type DemoPose } from "@core/demo_plan";
 import { contourDims } from "@core/game_structure";
 import { cross, dot, normalize, qAngle, qRotate, sub, type Quat, type Vec3 } from "@core/vec";
 import { alongPath, demoFramePointsM, demoPosesAt, demoSchedule, fitPointsDistanceM } from "@input/demo_playback";
@@ -43,12 +45,20 @@ function extents(id: string, o: Quat): { half: Vec3; square: boolean } {
   return { half, square };
 }
 const ids = Object.keys(PLAN.start);
-/** ⭐ `D176`: a piece's near and far ends along depth, at its start. */
-const nearEnd = (id: string) => PLAN.start[id]!.position[2] - extents(id, q(PLAN.start[id]!)).half[2];
-const farEnd = (id: string) => PLAN.start[id]!.position[2] + extents(id, q(PLAN.start[id]!)).half[2];
-/** ⭐ `D176`: row 1 is the pieces whose NEAR ends are on the near line; row 2 the rest. */
-const NEAR_LINE = Math.min(...ids.map(nearEnd));
-const row1 = ids.filter((id) => Math.abs(nearEnd(id) - NEAR_LINE) < 1e-5);
+/** ⭐ A piece's long axis in the world, at its start (`D175`: along depth, `D177`: turned by its little yaw). */
+const longAxis = (id: string): Vec3 => {
+  const d = contourDims(body(id));
+  const i = [0, 1, 2].sort((a, b) => d[b]! - d[a]! || a - b)[0]!;
+  return qRotate(q(PLAN.start[id]!), [i === 0 ? 1 : 0, i === 1 ? 1 : 0, i === 2 ? 1 : 0]);
+};
+const lengthOf = (id: string) => Math.max(...contourDims(body(id)));
+/** ⭐ `D176`/`D177`: the depth of a piece's END FACES' centres — the near one faces the boot camera. */
+const nearEnd = (id: string) => PLAN.start[id]!.position[2] - (lengthOf(id) / 2) * Math.abs(longAxis(id)[2]);
+const farEnd = (id: string) => PLAN.start[id]!.position[2] + (lengthOf(id) / 2) * Math.abs(longAxis(id)[2]);
+const JITTER = DEMO_DEFAULTS.startJitter;
+/** ⭐ Row 1's line, and row 1: the pieces whose near faces are on it, to within the jitter; row 2 the rest. */
+const NEAR_LINE = -body("Floor").dims[2] / 2 + DEMO_DEFAULTS.gridGap / 2;
+const row1 = ids.filter((id) => Math.abs(nearEnd(id) - NEAR_LINE) <= JITTER + 1e-5);
 const row2 = ids.filter((id) => !row1.includes(id));
 const FLOOR_TOP = 0;
 
@@ -59,17 +69,32 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
       if (!b.frozen && !PLAN.start[b.id]) expect(b.position).toEqual(final.get(b.id));
   });
 
-  it("⭐⭐ *aligned with the floor*: square to its axes, the smallest side vertical, the longest along DEPTH (`D175`), resting ON it", () => {
+  it("⭐⭐ *aligned with the floor*: the smallest side vertical, the longest along DEPTH (`D175`) within the yaw, resting ON it", () => {
     for (const id of ids) {
       const s = PLAN.start[id]!;
-      const { half, square } = extents(id, q(s));
+      const { half } = extents(id, q(s));
       const d = [...contourDims(body(id))].sort((a, b) => b - a);
-      expect(square).toBe(true);
-      expect(half[2]).toBeCloseTo(d[0]! / 2, 5); // ⭐ `D175`: longest along z — depth
-      expect(half[1]).toBeCloseTo(d[2]! / 2, 5); // smallest vertical
-      expect(half[0]).toBeCloseTo(d[1]! / 2, 5);
+      expect(half[1]).toBeCloseTo(d[2]! / 2, 5); // smallest EXACTLY vertical — flat, not rolled (`D177`: yaw only)
+      expect(Math.abs(longAxis(id)[2])).toBeGreaterThanOrEqual(Math.cos((DEMO_DEFAULTS.startYawDeg * Math.PI) / 180) - 1e-6);
+      expect(Math.abs(longAxis(id)[1])).toBeLessThan(1e-5); // the long axis level
       expect(s.position[1] - half[1]).toBeCloseTo(FLOOR_TOP, 5); // on the floor, not above it and not in it
     }
+  });
+
+  it("⭐⭐ `D177` — *a natural feel*: each piece YAWED by up to ±1.5°, its camera-facing face off its line by up to ±1 pixel in depth", () => {
+    const yaws = ids.map((id) => (Math.atan2(longAxis(id)[0], longAxis(id)[2]) + 2 * Math.PI) % Math.PI);
+    const signed = yaws.map((a) => ((a > Math.PI / 2 ? a - Math.PI : a) * 180) / Math.PI);
+    for (const a of signed) expect(Math.abs(a)).toBeLessThanOrEqual(DEMO_DEFAULTS.startYawDeg + 1e-4);
+    expect(Math.max(...signed.map(Math.abs))).toBeGreaterThan(DEMO_DEFAULTS.startYawDeg / 2); // random, not tiny
+    expect(signed.some((a) => a > 0.1) && signed.some((a) => a < -0.1)).toBe(true); // both ways
+    // ⭐ the face toward the camera: row 1's near faces, off their line by the jitter, both ways
+    const off = row1.map((id) => nearEnd(id) - NEAR_LINE);
+    for (const o of off) expect(Math.abs(o)).toBeLessThanOrEqual(JITTER + 1e-5);
+    expect(off.some((o) => o > JITTER / 4) && off.some((o) => o < -JITTER / 4)).toBe(true);
+    // ⭐ and it is the plan's draw, piece by piece: `naturalOf` from the seed and the piece
+    for (const id of ids) expect(Math.abs(naturalOf(SCENE_1, id, DEMO_DEFAULTS).dz)).toBeLessThanOrEqual(JITTER);
+    // ⭐ one pixel: 1.4 mm — what one CSS pixel covers at the grid, ~2.15 m from the start camera, on 1304 px of height
+    expect(JITTER * SCENE_1.unitM!).toBeCloseTo((2 * 2.15 * Math.tan(0.4)) / 1304, 4);
   });
 
   it("⭐⭐ *ordered by color and inside the color groups by descending size* — in reading order as the boot camera sees it", () => {
@@ -91,8 +116,9 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
   it("⭐ on a virtual GRID: each piece at the middle of a whole number of 5 mm cells across, its gutter included", () => {
     const p = DEMO_DEFAULTS.gridPitch;
     for (const id of ids) {
-      const across = [...contourDims(body(id))].sort((a, b) => b - a)[1]!; // `D175`: its WIDTH is across
-      const cells = Math.ceil((across + DEMO_DEFAULTS.gridGap) / p - 1e-9);
+      const d = [...contourDims(body(id))].sort((a, b) => b - a);
+      // `D175`: its WIDTH is across; `D177`: widened by its length × sin(the largest yaw)
+      const cells = Math.ceil((d[1]! + d[0]! * Math.sin((DEMO_DEFAULTS.startYawDeg * Math.PI) / 180) + DEMO_DEFAULTS.gridGap) / p - 1e-9);
       const edge = PLAN.start[id]!.position[0] - (cells * p) / 2;
       expect(Math.abs(edge / p - Math.round(edge / p))).toBeLessThan(1e-6);
     }
@@ -101,9 +127,9 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
   it("⭐⭐ `D176` — TWO ROWS, the alignment reversed on the second: row 1's NEAR ends on one line, row 2's FAR ends on another", () => {
     expect(row1.length).toBeGreaterThan(1);
     expect(row2.length).toBeGreaterThan(1);
-    const farLine = farEnd(row2[0]!);
-    for (const id of row2) expect(farEnd(id)).toBeCloseTo(farLine, 5); // `D175`'s *aligned on x*, from the other end
-    expect(farLine).toBeCloseTo(PLAN.volume.min[2] - DEMO_DEFAULTS.gridOffset, 5); // 3 cm outside the cube
+    const farLine = PLAN.volume.min[2] - DEMO_DEFAULTS.gridOffset; // 3 cm outside the cube
+    // `D175`'s *aligned on x*, from the other end — to within `D177`'s pixel
+    for (const id of row2) expect(Math.abs(farEnd(id) - farLine)).toBeLessThanOrEqual(JITTER + 1e-5);
     // ⭐ and the other ends are ragged: the lengths differ in both rows
     for (const [row, end] of [[row1, farEnd], [row2, nearEnd]] as const) {
       const e = row.map(end);
@@ -129,9 +155,10 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
     }
     // ⭐ row 1's line sits half a gutter in from the floor's edge (the most room for the rows to interlock)
     expect(PLAN.stage.min[2]).toBeCloseTo(-floor.dims[2] / 2, 9);
-    expect(NEAR_LINE).toBeCloseTo(-floor.dims[2] / 2 + DEMO_DEFAULTS.gridGap / 2, 5);
-    // ⭐ `D176`: two rows fit in the cube's own width (one rank took 18.25 units)
-    expect(PLAN.stage.max[0] - PLAN.stage.min[0]).toBeLessThanOrEqual(PLAN.volume.max[0] - PLAN.volume.min[0] + 1e-9);
+    expect(Math.min(...row1.map(nearEnd))).toBeGreaterThanOrEqual(NEAR_LINE - JITTER - 1e-5);
+    // ⭐ `D176`: two rows — about the cube's width (10.95 units with `D177`'s yaw room; one rank took 18.25), on the floor
+    expect(PLAN.stage.max[0] - PLAN.stage.min[0]).toBeLessThan(12);
+    expect(Math.max(-PLAN.stage.min[0], PLAN.stage.max[0])).toBeLessThanOrEqual(floor.dims[0] / 2);
     expect(PLAN.stage.max[2]).toBeLessThan(front);
   });
 

@@ -1,7 +1,7 @@
 # DEMO_SCENE — a scene that assembles itself
 
 > **STATUS** · 🔨 specified and built 2026-09-29 (`D170`, revised by `D171` the same day; ⭐ the start is a floor grid
-> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`, the same day), ⛔ unjudged by a hand ·
+> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, the same day), ⛔ unjudged by a hand ·
 > **OWNS** · what a demo scene is, how its disassembly is computed, how it plays, and `Scene1_demo`
 > **READ IF** · you are making a demo from another scene, changing how moves are generated or played, or changing
 > the demo's camera
@@ -40,6 +40,10 @@
 > *"make two or three rows of parts instead of one unique row. If required to fit the parts, reverse the order of
 > alignment along longest dimension every second row. The rows do not need to be justified"* — the owner, 2026-09-30
 > (`D176`)
+>
+> *"randomly roll the parts when they are laid on the floor at start by up to 1.5 degrees negative or positive to give
+> a natural feel. Also, randomly misalign the face facing camera by up to 1 pixel negative or positive in depth axis"* —
+> then *"I was meaning yaw, not roll"* — the owner, 2026-09-30 (`D177`)
 
 ## 1. The idea
 
@@ -136,6 +140,18 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
   * ⚠ Reading *"reverse the order of alignment"* as BOTH the end that is flush and the direction the row runs (a
     snake): the direction is what puts row 2's largest piece opposite row 1's smallest. Either is one choice in
     `demoGrid`.
+* ⭐⭐ **A NATURAL FEEL** (`D177`) — each piece on the grid, drawn from the seed and the piece (`naturalOf`, its own
+  random stream, so it does not depend on which pieces come off):
+  * **a yaw** about the vertical of up to **±1.5°** (`startYawDeg`) — it stays flat on the floor. ⛔ First built as a
+    ROLL about depth (the project's own sense of *roll*) and corrected by the owner before it shipped;
+  * **a shift along depth** of up to **±1 pixel** (`startJitter`), so the face toward the camera sits off its row's
+    line. ⚠ A pixel is a size on the glass and the plan is fixed data: it is fixed at what one CSS pixel covers AT THE
+    GRID in the start view on the reference tablet (882 × 1304 portrait, fov 0.8, ~2.15 m away) — **1.4 mm, 0.014
+    units**; on another screen, a little more or less than a pixel;
+  * **the gutters stay whole**: each cell is widened by the piece's length × sin 1.5°, and the rows keep a gutter plus
+    both pieces' corner swing and jitter apart. So the rows widen to **10.95 units** (`x −5.45 → 5.50`);
+  * the piece is turned straight into that pose at its spot before the building (its `ALIGN` ends in it), so the
+    carry and the lift keep one orientation all the way down.
 * **The order** (*"ordered by color and inside the color groups by descending size"*): **white, black, yellow, red,
   blue** — the painting's slot order, `MAT_A`–`MAT_E` (`SCENE1_DEMO_OPTIONS`) — each group by the CORE's **volume**,
   largest first (ties: the table's order). ⭐ In **reading order as the boot camera sees it**: row 1 left to right (`+x`,
@@ -202,6 +218,7 @@ and the generation throws — the tighter-cube vector uses side 7. A carry AROUN
 | `gridPitch` / `gridGap` / `gridOffset` | **0.05 / 0.1 / 0.3** (5 mm / 1 cm / 3 cm) | `D174` — a virtual grid, a gutter, just outside the cube (`D175`: when the floor allows) |
 | ⛔ `gridWidth` | deleted (`D175`) | one rank, as wide as the pieces |
 | camera start | **15° before** the boot yaw (`D175`) | the orbit is 375°, ending where it did |
+| `startYawDeg` / `startJitter` | **±1.5° / ±0.014** (1 pixel, 1.4 mm) | `D177` — a natural feel on the grid |
 | colour order | white, black, yellow, red, blue | `D174`, `SCENE1_DEMO_OPTIONS` |
 | ⛔ `facing`, unalign angles, yaw | deleted (`D174`) | they went with the scatter |
 | `segment` / skin | 0.1 / 0.003 (0.3 mm, the game's skin) | |
@@ -251,9 +268,9 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
   — every corner inside the vertical AND the horizontal field of view, from the boot view, on this screen's aspect
   (a portrait tablet at fov 0.8: **2.25 m**). ⭐ `D174`: **and the floor grid** — the start configuration, off-centre
   toward the camera (`demoFramePointsM`, `fitPointsDistanceM`), from the demo's START yaw (`D175`).
-  ⚠⚠ **In portrait it is still slightly too wide**: the two rows need **3.43 m** on the tablet's 882 × 1304 (`D175`'s one
-  rank 4.73 m) and the camera is held at the rig's **3 m** maximum — so at the start, in portrait, the outer ends of the
-  rows are cut (landscape 1304 × 882: **2.02 m**, all in view). §9. It then **draws back linearly to the rig's maximum**
+  ⚠⚠ **In portrait it is still slightly too wide**: the two rows need **3.59 m** on the tablet's 882 × 1304 (`D177`; 3.43
+  at `D176`, `D175`'s one rank 4.73 m) and the camera is held at the rig's **3 m** maximum — so at the start, in
+  portrait, the outer ends of the rows are cut (landscape 1304 × 882: **2.09 m**, all in view). §9. It then **draws back linearly to the rig's maximum**
   (`cameraRadiusMaxM`, 3 m), reached at the end. ⛔ A cube that cannot fit within the maximum is shown from the
   maximum. ⚠ The demo drives the zoom while it plays; the pinch and the wheel are the player's again at the end.
 * ✅ Measured headless (`D171`; Chrome, 882 × 1304, `demoDurationS=20`): the scattered pieces all on screen at the start
@@ -281,7 +298,7 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 * **Occlusion by the assembly itself** (§2): 8.4 % of sampled moments hide the moving piece (`D174`; 10.2 % on the same
   instrument before), mostly the `SNAP` into a slot while the camera is edge-on. A camera that eases toward the face of
   the slot being filled — or a plan that puts pieces back while the camera faces the painting — would remove most.
-* ⚠ **The rows' ends cut in portrait at the start** (`D175`/`D176`, §7: 3.43 m needed, 3 m allowed): a start distance past the rig's maximum (the zoom then
+* ⚠ **The rows' ends cut in portrait at the start** (`D175`–`D177`, §7: 3.59 m needed, 3 m allowed): a start distance past the rig's maximum (the zoom then
   drawing IN to 3 m, which reverses `D171`'s *"the most out when the demo finishes"*), a wider field of view for the
   demo, or fewer pieces on the floor. The owner's to choose.
 * ⚠ The occlusion count (§2) was measured on `D174`'s plan and not re-measured for `D175`/`D176`.
