@@ -42,6 +42,8 @@ export interface GoalReport {
    * by the fitted motion — what the dissolve's mate turns the spin onto.
    */
   readonly targetOrientations: ReadonlyMap<string, Quat>;
+  /** ⭐ `D183`: per body present — its slot, its errors and the exact pose that places it. */
+  readonly bodies: ReadonlyMap<string, BodyGoal>;
   readonly total: number;
   /** ⭐ The body furthest out, measured against the tolerances; `null` when none is listed. */
   readonly worstId: string | null;
@@ -140,6 +142,153 @@ export function bestRigidFit(from: readonly Vec3[], to: readonly Vec3[]): { rota
   return { rotation, translation: sub(ct, qRotate(rotation, cf)) };
 }
 
+interface Slot {
+  readonly id: string;
+  readonly kind: string;
+  readonly at: Vec3;
+  readonly accepted: readonly Quat[];
+}
+
+interface Frame {
+  readonly rotation: Quat;
+  readonly translation: Vec3;
+}
+
+/** ⭐ One body judged against one slot under a frame: its centre's distance, its angle to the nearest accepted turn. */
+function judge(slot: Slot, now: Pose, frame: Frame): { p: number; a: number; target: Pose } {
+  const expected = add(qRotate(frame.rotation, slot.at), frame.translation);
+  let a = Infinity;
+  let orientation: Quat = qmul(frame.rotation, slot.accepted[0]!);
+  for (const q of slot.accepted) {
+    const world = qmul(frame.rotation, q);
+    const d = qAngle(qmul(now.orientation, qconj(world)));
+    if (d < a) {
+      a = d;
+      orientation = world;
+    }
+  }
+  return { p: length(sub(now.position, expected)), a, target: { position: expected, orientation } };
+}
+
+/**
+ * ⭐⭐ THE FRAME. `ABSOLUTE`: the identity. `RELATIVE`: the bodies in place define it — a plain least-squares fit is
+ * dragged toward the misplaced ones (at `Scene_1`'s boot, five pieces 10–20 cm out shift it ~12 mm and every piece in
+ * place would read as out). ⭐ So: fit, keep the bodies within twice the median residual (or `FIT_INLIER_M`), refit on
+ * those — a few rounds, never fewer than three bodies.
+ */
+function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3; now: Vec3 }[]): Frame {
+  if (kind !== "RELATIVE") return { rotation: IDENTITY, translation: [0, 0, 0] };
+  let set = pairs;
+  let fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now));
+  for (let round = 0; round < 5 && fit; round++) {
+    const f = fit;
+    const res = pairs.map((g) => length(sub(g.now, add(qRotate(f.rotation, g.at), f.translation))));
+    const median = [...res].sort((a, b) => a - b)[Math.floor(res.length / 2)]!;
+    const keep = pairs.filter((_, i) => res[i]! <= Math.max(2 * median, FIT_INLIER_M));
+    if (keep.length < 3 || keep.length === set.length) break;
+    set = keep;
+    fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now)) ?? fit;
+  }
+  if (fit) return fit;
+  // ⚠ Fewer than three bodies, or all on a line: the turn is undetermined, so only the offset is fitted.
+  if (pairs.length === 0) return { rotation: IDENTITY, translation: [0, 0, 0] };
+  return {
+    rotation: IDENTITY,
+    translation: scale(pairs.reduce((s, g) => add(s, sub(g.now, g.at)), [0, 0, 0] as Vec3), 1 / pairs.length),
+  };
+}
+
+/**
+ * ⛔⛔ `D183`: the fit's OWN inlier floor, never the placement margin — with the snap's margins (~40 mm at the boot
+ * camera) a piece being captured sat inside the cut and bent the frame it was judged against: it landed 4.7 mm and 0.7°
+ * off the table (found in the real app).
+ */
+const FIT_INLIER_M = 0.002;
+
+/** ⭐ Every injective map of `n` bodies onto `m ≥ n` slots, identity first (so a tie keeps each body on its own slot). */
+function* injections(n: number, m: number, used: boolean[] = [], out: number[] = []): Generator<number[]> {
+  if (out.length === n) {
+    yield out.slice();
+    return;
+  }
+  const own = out.length;
+  const order = [own, ...[...Array(m).keys()].filter((k) => k !== own)];
+  for (const k of order) {
+    if (used[k]) continue;
+    used[k] = true;
+    out.push(k);
+    yield* injections(n, m, used, out);
+    out.pop();
+    used[k] = false;
+  }
+}
+
+/** ⚠ Past this many interchangeable bodies the exhaustive search (n!) gives way to a greedy one. */
+const EXHAUSTIVE_KIND = 6;
+
+/**
+ * ⭐⭐ `D183` — WHICH SLOT EACH BODY FILLS. Bodies of one `kind` are interchangeable: they are matched to their kind's
+ * slots at the least total score (a body's position and angle, each against its tolerance). A body with no kind, or
+ * alone in it, fills its own slot. ⛔ A missing body takes a slot left over, so a slot is never shared.
+ */
+function assign(
+  slots: readonly Slot[],
+  nowOf: ReadonlyMap<string, Pose | null>,
+  frame: Frame,
+  tol: GoalTolerance,
+): Map<string, Slot> {
+  const out = new Map<string, Slot>();
+  const byKind = new Map<string, Slot[]>();
+  for (const s of slots) byKind.set(s.kind, [...(byKind.get(s.kind) ?? []), s]);
+  const cost = (body: string, slot: Slot): number => {
+    const r = judge(slot, nowOf.get(body)!, frame);
+    return r.p / Math.max(tol.positionM, 1e-12) + r.a / Math.max(tol.angleRad, 1e-12);
+  };
+  for (const group of byKind.values()) {
+    const present = group.filter((s) => nowOf.get(s.id));
+    if (group.length < 2 || present.length === 0) {
+      for (const s of group) out.set(s.id, s);
+      continue;
+    }
+    // ⚠ Ordered so body i's OWN slot is index i — then `injections` tries the identity first.
+    const ordered = [...present, ...group.filter((s) => !nowOf.get(s.id))];
+    const table = present.map((b) => ordered.map((s) => cost(b.id, s)));
+    let best: number[] = present.map((_, i) => i);
+    if (present.length <= EXHAUSTIVE_KIND) {
+      let bestCost = Infinity;
+      for (const perm of injections(present.length, ordered.length)) {
+        const c = perm.reduce((sum, k, i) => sum + table[i]![k]!, 0);
+        if (c < bestCost - 1e-9) {
+          bestCost = c;
+          best = perm;
+        }
+      }
+    } else {
+      const taken = new Set<number>();
+      best = present.map((_, i) => {
+        let k = -1;
+        for (let j = 0; j < ordered.length; j++) if (!taken.has(j) && (k < 0 || table[i]![j]! < table[i]![k]!)) k = j;
+        taken.add(k);
+        return k;
+      });
+    }
+    present.forEach((b, i) => out.set(b.id, ordered[best[i]!]!));
+    const left = ordered.filter((_, k) => !best.includes(k));
+    group.filter((s) => !nowOf.get(s.id)).forEach((s, i) => out.set(s.id, left[i]!));
+  }
+  return out;
+}
+
+/** ⭐ `D183`: one body against its goal — how far, how turned, and the exact pose that would place it. */
+export interface BodyGoal {
+  /** The slot it fills — its own id unless an identical body's slot fits it better (`kind`). */
+  readonly slotId: string;
+  readonly positionM: number;
+  readonly angleRad: number;
+  /** ⭐ The pose on its slot: the centre exactly there, the nearest accepted orientation — what a capture pulls it to. */
+  readonly target: Pose;
+}
+
 /**
  * ⭐⭐ THE CHECK. `unitM` scales the goal's authored positions to the model's metres; `poseOf` is
  * each body's world pose NOW (`worldPlacementOf`), `null` for a body the world lacks.
@@ -149,70 +298,59 @@ export function goalReport(
   unitM: number,
   poseOf: (id: string) => Pose | null,
   tol: GoalTolerance,
+  /**
+   * ⭐ `D183`: the tolerance each body is JUDGED against — a piece never grabbed is held to a stricter one. Absent:
+   * `tol` for all. ⚠ `tol` alone fits the frame and matches the kinds.
+   */
+  tolOf: (id: string) => GoalTolerance = () => tol,
 ): GoalReport {
-  const goals = final.bodies.map((b) => ({
+  const slots: Slot[] = final.bodies.map((b) => ({
     id: b.id,
+    kind: b.kind ?? `#${b.id}`,
     at: scale(b.position as Vec3, unitM),
     accepted: acceptedOrientations(resolveBootOrientation(b.orientation, []) ?? IDENTITY, b.symmetry),
-    now: poseOf(b.id),
   }));
-  const total = goals.length;
-  if (total === 0) return { met: false, inPlace: 0, inPlaceIds: [], targetOrientations: new Map(), total, worstId: null, worstPositionM: 0, worstAngleRad: 0 };
-  let rotation: Quat = IDENTITY;
-  let translation: Vec3 = [0, 0, 0];
-  const present = goals.filter((g) => g.now !== null);
-  if (final.frame === "RELATIVE") {
-    // ⭐⭐ THE BODIES IN PLACE DEFINE THE FRAME. A plain least-squares fit is dragged toward the
-    // misplaced ones — at `Scene_1`'s boot, five pieces 10–20 cm out shift it ~12 mm and every piece
-    // in place would read as out. ⭐ So: fit, keep the bodies within twice the median residual (or
-    // within tolerance), refit on those — a few rounds, never fewer than three bodies.
-    let set = present;
-    let fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now!.position));
-    for (let round = 0; round < 5 && fit; round++) {
-      const f = fit;
-      const res = present.map((g) => length(sub(g.now!.position, add(qRotate(f.rotation, g.at), f.translation))));
-      const median = [...res].sort((a, b) => a - b)[Math.floor(res.length / 2)]!;
-      const keep = present.filter((_, i) => res[i]! <= Math.max(2 * median, tol.positionM));
-      if (keep.length < 3 || keep.length === set.length) break;
-      set = keep;
-      fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now!.position)) ?? fit;
-    }
-    if (fit) ({ rotation, translation } = fit);
-    // ⚠ Fewer than three bodies, or all on a line: the turn is undetermined, so only the offset is fitted.
-    else if (present.length > 0)
-      translation = scale(
-        present.reduce((s, g) => add(s, sub(g.now!.position, g.at)), [0, 0, 0] as Vec3),
-        1 / present.length,
-      );
+  const total = slots.length;
+  if (total === 0)
+    return { met: false, inPlace: 0, inPlaceIds: [], targetOrientations: new Map(), bodies: new Map(), total, worstId: null, worstPositionM: 0, worstAngleRad: 0 };
+  const nowOf = new Map(slots.map((s) => [s.id, poseOf(s.id)] as const));
+  const present = slots.filter((s) => nowOf.get(s.id));
+  // ⭐ Each body on its own slot first; then the kinds are re-matched under the frame and the frame refitted on the
+  // match, until it holds (a swapped pair of twins would otherwise read as two outliers of the fit).
+  let slotOf = new Map(slots.map((s) => [s.id, s] as const));
+  const pairs = () => present.map((s) => ({ at: slotOf.get(s.id)!.at, now: nowOf.get(s.id)!.position }));
+  let frame = fitFrame(final.frame, pairs());
+  for (let round = 0; round < 3; round++) {
+    const next = assign(slots, nowOf, frame, tol);
+    if (slots.every((s) => next.get(s.id) === slotOf.get(s.id))) break;
+    slotOf = next;
+    frame = fitFrame(final.frame, pairs());
   }
   const inPlaceIds: string[] = [];
   const targetOrientations = new Map<string, Quat>();
+  const bodies = new Map<string, BodyGoal>();
   let worst: { id: string; p: number; a: number; score: number } | null = null;
-  for (const g of goals) {
-    if (!g.now) {
-      if (!worst || worst.score < Infinity) worst = { id: g.id, p: Infinity, a: Infinity, score: Infinity };
+  for (const s of slots) {
+    const now = nowOf.get(s.id);
+    if (!now) {
+      if (!worst || worst.score < Infinity) worst = { id: s.id, p: Infinity, a: Infinity, score: Infinity };
       continue;
     }
-    const expected = add(qRotate(rotation, g.at), translation);
-    const p = length(sub(g.now.position, expected));
-    let a = Infinity;
-    for (const q of g.accepted) {
-      const world = qmul(rotation, q);
-      const d = qAngle(qmul(g.now.orientation, qconj(world)));
-      if (d < a) {
-        a = d;
-        targetOrientations.set(g.id, world);
-      }
-    }
-    if (p <= tol.positionM && a <= tol.angleRad) inPlaceIds.push(g.id);
-    const score = Math.max(p / Math.max(tol.positionM, 1e-12), a / Math.max(tol.angleRad, 1e-12));
-    if (!worst || score > worst.score) worst = { id: g.id, p, a, score };
+    const slot = slotOf.get(s.id)!;
+    const { p, a, target } = judge(slot, now, frame);
+    targetOrientations.set(s.id, target.orientation);
+    bodies.set(s.id, { slotId: slot.id, positionM: p, angleRad: a, target });
+    const t = tolOf(s.id);
+    if (p <= t.positionM && a <= t.angleRad) inPlaceIds.push(s.id);
+    const score = Math.max(p / Math.max(t.positionM, 1e-12), a / Math.max(t.angleRad, 1e-12));
+    if (!worst || score > worst.score) worst = { id: s.id, p, a, score };
   }
   return {
     met: inPlaceIds.length === total,
     inPlace: inPlaceIds.length,
     inPlaceIds,
     targetOrientations,
+    bodies,
     total,
     worstId: worst?.id ?? null,
     worstPositionM: worst?.p ?? 0,

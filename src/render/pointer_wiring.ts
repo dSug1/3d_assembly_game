@@ -172,7 +172,11 @@ export function installPointerHandler(st: SceneState): void {
       // translation to the root — *as a whole* for translation, *the touched body* for rotation.
       const hitId = rawHitId;
       const driveHit = rayHit;
-      if (rawHitId !== undefined) st.rawPressedBody.set(e.pointerId, rawHitId);
+      if (rawHitId !== undefined) {
+        st.rawPressedBody.set(e.pointerId, rawHitId);
+        // ⭐ `D183`: grabbed — from now on its goal is judged on the snap's margins, not the never-grabbed ones.
+        st.grabbed.add(rawHitId);
+      }
       st.pointerTypeOf.set(e.pointerId, e.pointerType);
       // ⛔ `D108`'s *the mouse's press latches the mode from Ctrl* is deleted (`D167`): the desktop keeps the mode, as
       // the tablet does, and a Shift tap toggles it.

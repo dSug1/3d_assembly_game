@@ -137,11 +137,6 @@ describe("⭐⭐⭐ `D130` — a box's face OR its opposite: the four half-turns
     expect(() => parseSceneDescriptor(bad((o) => (o.final.bodies[0].symmetry = "spin")))).toThrow(/Piece1: unknown symmetry/);
     expect(() => parseSceneDescriptor(bad((o) => (o.final.bodies[0].orientation = { seeded: 1 })))).toThrow(/Piece1: unknown orientation/);
   });
-
-  it("the tolerances are validated tunables", () => {
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, goalPositionTolM: 0 })).toThrow(/goalPositionTolM/);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, goalAngleTolDeg: 60 })).toThrow(/goalAngleTolDeg/);
-  });
 });
 
 describe("⭐⭐⭐ `D131` — each scene carries its own orbit rig", () => {

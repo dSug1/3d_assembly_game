@@ -5,6 +5,7 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { demoReadout } from "./demo_wiring";
+import { goalTolOf, looseTolerance } from "./goal_capture_wiring";
 import { bandMmNow } from "./empty_space_probe";
 import { formatElapsed } from "../input/episode_ledger";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
@@ -90,10 +91,7 @@ export function depthReadout(st: SceneState) : string {
 function goalReadout(st: SceneState): string {
   const final = st.sceneSpec.final;
   if (!final) return "";
-  const r = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), {
-    positionM: st.cfg.goalPositionTolM,
-    angleRad: (st.cfg.goalAngleTolDeg * Math.PI) / 180,
-  });
+  const r = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
   if (r.met) return "  goal ✅";
   const far = Number.isFinite(r.worstPositionM)
     ? ` (${r.worstId} ${(r.worstPositionM * 1000).toFixed(0)}mm/${((r.worstAngleRad * 180) / Math.PI).toFixed(0)}°)`

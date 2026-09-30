@@ -143,8 +143,9 @@ air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sen
   three axes: each face may stand where its opposite was, and a rectangle face shows no 180° spin, so
   four orientations are accepted. ⚠ Given to ALL 41 pieces, not only the five that boot away: every
   piece is such a box, so one a player moves and puts back flipped looks right and must count.
-* **Tolerances** — `goalPositionTolM` 5 mm (world) and `goalAngleTolDeg` 5°, guesses with sliders in
-  SCENE. ⭐ The HUD's score line reads `goal ✅`, or `goal 36/41 (Piece1 208mm/32°)` — the count in
+* **Tolerances** — ⛔ the 5 mm / 5° guesses are deleted (`D183`): a grabbed piece is placed within the
+  snap's margins, one never grabbed within 1 mm on the glass and 1°, and identical pieces (`kind`) fill
+  each other's slots → [`LEVEL_END.md`](LEVEL_END.md) §5. ⭐ The HUD's score line reads `goal ✅`, or `goal 36/41 (Piece1 208mm/32°)` — the count in
   place and the piece furthest out. ⛔ Level end (clock and count frozen, result shown) is not built.
 * **The rig** — every scene may carry `orbit` (three rings' radius and height); it replaces the
   config's defaults at boot, before the URL, so the sliders tune the booted scene. `Scene_1`: radii

@@ -1,7 +1,8 @@
 # LEVEL_END — when a level is complete, the results screen, and the UI theme
 
-> **STATUS** · ✅✅ built and **CLOSED BY A DEVICE LOOK** 2026-09-30 (`D180`: *"Tested, ok"*, build `a796ac0`) · **OWNS** · `GM1`'s level end, the results screen, the
-> UI theme (the graphics style of every screen)
+> **STATUS** · ✅✅ built and **CLOSED BY A DEVICE LOOK** 2026-09-30 (`D180`: *"Tested, ok"*, build `a796ac0`); ⭐ `D183`'s
+> goal capture (§5) ⛔ unjudged · **OWNS** · `GM1`'s level end, what PLACED means and the goal capture, the results screen,
+> the UI theme (the graphics style of every screen)
 > **READ IF** · you are changing what ends a level, what the results show or where they lead, or restyling the screens
 
 > *"Build level end. Use the current light video games best practices for the scaffold and user interface. For the
@@ -13,7 +14,7 @@
 `PLAYABILITY` §2 item 4: *"level end — the clock and the count stop, the result is shown"*.
 
 * ⭐⭐ **Complete = the goal is met AND the scene is at rest** — no finger down (`GestureSpan.active`), no snap animating
-  (`alignSnaps`, `seatSnaps`). The goal is `core/goal.ts`'s verdict — the one the HUD prints and the dissolve acts on;
+  (`alignSnaps`, `seatSnaps`, and a goal pull, `D183`). ⭐ Met = every piece PLACED, §5. The goal is `core/goal.ts`'s verdict — the one the HUD prints and the dissolve acts on;
   ⛔ never a second detector (`PLAYABILITY` §4.1: a cue that can disagree with the rule is worse than none).
 * ⭐ **Why at rest**: an episode lands when its gesture's last touch lifts (`D115`), so waiting for rest is what lets the
   LAST move count — and what keeps the results from appearing under a finger still pressing.
@@ -84,7 +85,52 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
 * ⚠ Moves read 0 there because no gesture was made; the count itself is `D112`'s ledger, unchanged.
 * ✅✅ **CLOSED BY A DEVICE LOOK** — the owner, on the tablet, build `a796ac0`, 2026-09-30: *"Tested, ok"*.
 
-## 5. For later
+## 5. ⭐⭐⭐ The goal capture, and what PLACED means (`D183`, 2026-09-30, ⛔ unjudged by a hand)
+
+> *"piece2 should be able to reach its goal also even if unaligned or aligned with other objects provided that its
+> transform meets the goal transform within the same position and roll margins as for the snap"* · *"Capture during a
+> drag like snap. goal wins over snap"* · *"Loose, use the capture margins so the feeling for the user is the same"* ·
+> *"if a piece was never grabbed, the criteria shall restrict to 1mm on the glass and 1 degree"* — the owner
+
+* ⭐⭐ **PLACED** — one rule, read by the capture, the HUD's `goal n/41`, the dissolve (`D142`) and §1: a piece's CENTRE
+  within the margin of its slot (the `RELATIVE` fit, `D130`), its ORIENTATION within the angle of the nearest accepted
+  one (the half-turns only where the scene's data says `symmetry: "halfTurns"` — `Scene_1`'s, not a rule).
+  * a piece **GRABBED** this level (pressed by a finger or the mouse, or dragged as an assembly's root): **the snap's own
+    margins** — `captureOffsetMm` (10 mm) on the glass at the camera NOW, `snapConeDeg` (15°);
+  * a piece **NEVER grabbed**: **1 mm on the glass and 1°** (`ungrabbedGoalMm`, `ungrabbedGoalDeg`, sliders in SCENE) —
+    so zooming out (which widens 10 mm of glass to ~8 cm of scene at 3 m) cannot place a piece nobody moved.
+  * ⛔ `D130`'s fixed 5 mm / 5° (`goalPositionTolM`, `goalAngleTolDeg`) are deleted with their sliders.
+* ⭐⭐ **THE CAPTURE** — a piece that MOVES INTO its margins, aligned or not, is pulled onto its EXACT goal pose (centre
+  and orientation, the nearest accepted one) — the snap's magnet (`snapMs`, `magnetEase`) — during the drag, as the snap
+  is. ⭐ **The goal wins over the snap**: asked first each frame; a snap in flight is dropped, the piece's alignment and
+  seat released (it keeps its pose), and the drag that made it STOPS as a snap's does (`D139`: the roll alone until the
+  finger lifts). It lands with the pop-up `✅ PieceN reached its goal · n/41`.
+* ⛔⛔ **ENTRY, NOT PRESENCE** — a piece already inside when it is first seen (the boot; the frame after an undo) or just
+  captured must LEAVE its margins before it is captured again; otherwise the first millimetre of any drag off the goal
+  would pull it back, and a placed piece could never be moved. A piece inside that did not move (a zoom, another piece's
+  fit shifting) is not captured.
+* ⭐ **A blocked flight WAITS** — `D182`'s path check: no pull starts through a third body; the piece stays pending while
+  it stays inside and is pulled once the way is clear. A pull cut mid-flight is re-offered the same way. ⚠ A SEATED
+  piece whose pull is blocked falls back to `D143`: its couple dissolves and only its spin is mated.
+* ⭐ **Identical pieces are interchangeable** — `FinalPose.kind`: pieces of one kind may fill any of that kind's slots,
+  matched at the least total error (a tie keeps each on its own). `Scene_1`: one colour and one size, same axis order, is
+  one kind — the black 1.26 bars Piece22/26/29/38 fill any of their four slots.
+* ⭐ **A piece never dragged** (a follower carried by its seated Pioneer) is captured by the same rule when it moves in —
+  under its never-grabbed margins unless it was grabbed before. The owner: at best its Pioneer's goal brings it home; at
+  worst a false positive, accepted.
+* ⛔ Not in a demo (it plays itself), not after the level end. Undo drops a pull in flight and re-sights every piece.
+* ✅ 19 vectors (`tests/d183.test.ts`): the kinds (twins swapped both placed; without kinds 39/41), loose vs strict, the
+  exact target (half-turn kept), the tunables, entry-not-presence, pending, retry, the pull landing exactly, the wiring
+  order. ⛔ Four mutants each RED: no kinds, the per-piece margins ignored, armed on first sight, capture left armed.
+* ✅ **The real app** (dev server, DevTools protocol, one step per frame through the drag's writer): Piece2, unaligned,
+  8° off — grabbed, captured at 38 mm (the margin is 39.7 mm at 1.5 m) and landed at 0.00 mm / 0.00°, `✅ … 37/41`;
+  never grabbed, not captured. ⛔⛔ **Two defects it found, each fixed with a vector that failed first**: the relative
+  fit's inlier cut WAS the placement margin, so the piece being captured bent its own frame and landed 4.7 mm / 0.7° off
+  (the fit has its own 2 mm floor now, `FIT_INLIER_M`); and a seated follower dissolved at its goal was CAPTURED again
+  the next frame — two pop-ups (a dissolve now counts as its capture). ✅ `D182`'s horizontal snap onto Piece22 still
+  seats, then dissolves once.
+
+## 6. For later
 
 * **Scores**: *par* and stars once `GM4` (the solver) and `GM5` (the score) exist; the best result kept on the device
   (`GAME_STRUCTURE.md` §5 #6, `SEC1` first).

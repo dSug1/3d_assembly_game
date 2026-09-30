@@ -5,7 +5,7 @@
  * constraint, seat, link; the highlights and the cursor follow from the link), and shows the pop-up.
  * ⭐ `D143`: then the MATE — the piece's spin about its FollowerFace normal is set onto its goal
  * (`mateSpin`). ⚠ Written without collision, as the alignment turn is (`COLLISION.md` §4): it is at
- * most `goalAngleTolDeg`, and it is the product landing a pose, not a gesture.
+ * most the snap cone (`D183`), and it is the product landing a pose, not a gesture.
  */
 import { goalReport } from "../core/goal";
 import { alignedFaceOf } from "../core/face_pick";
@@ -14,6 +14,7 @@ import { followersToDissolve, mateSpin } from "../input/goal_dissolve";
 import { setModelPose } from "./bodies";
 import { releaseAlignmentOf } from "./alignment_wiring";
 import { showGoalPopup } from "./goal_popup";
+import { goalTolOf, looseTolerance } from "./goal_capture_wiring";
 import type { SceneState } from "./scene_state";
 
 export function dissolveOnGoal(st: SceneState): void {
@@ -21,15 +22,16 @@ export function dissolveOnGoal(st: SceneState): void {
   if (!final) return;
   const seated = st.links.alignedObjects().filter((f) => st.links.isSeated(f));
   if (seated.length === 0) return;
-  const report = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), {
-    positionM: st.cfg.goalPositionTolM,
-    angleRad: (st.cfg.goalAngleTolDeg * Math.PI) / 180,
-  });
+  // ⭐ `D183`: PLACED — the snap's margins, or the never-grabbed ones. ⚠ A seated piece whose goal capture was BLOCKED lands here:
+  // released, and only its spin mated, as before `D183`.
+  const report = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
   for (const f of followersToDissolve(seated, new Set(report.inPlaceIds))) {
     const pioneer = st.links.pioneerFor(f)?.objectId ?? "?";
     // ⚠ Read the FollowerFace BEFORE the release: it is derived from the constraint the release evicts.
     const faceId = alignedFaceOf(st.world, f);
     releaseAlignmentOf(st, f);
+    // ⭐ `D183`: a dissolve IS its capture — disarmed, so the next frame does not capture it again (a second pop-up).
+    st.goalCapture.captured(f);
     const face = faceId === null ? null : faceWorld(st.world, f, faceId);
     const pose = worldPlacementOf(st.world, f);
     const target = report.targetOrientations.get(f);

@@ -40,6 +40,7 @@
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
 import { attachShadows, buildLighting } from "./lighting";
+import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { levelElevation } from "../input/orbit";
 import { EpisodeTally } from "../input/episode_ledger";
 import { GestureSpan, UndoHistory } from "../core/undo_history";
@@ -668,6 +669,10 @@ export function createScene(
   st.episodes = new EpisodeTally();
   st.sceneStartMs = null;
   st.levelEnd = new LevelEnd();
+  st.goalCapture = new GoalCapture();
+  st.goalPulls = new GoalPulls();
+  st.goalLastPose = new Map();
+  st.grabbed = new Set();
   st.playVolume = playVolumeOf(st.sceneSpec);
   st.onLevelEnd = null;
   st.hudSecond = -1;

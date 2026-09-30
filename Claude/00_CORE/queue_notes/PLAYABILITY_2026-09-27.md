@@ -85,7 +85,8 @@ place). ✅ 4 vectors. ⛔ Unjudged.
 
 ⭐⭐ **`D143`, 2026-09-28 — THE MATE** (the owner: *"complete D142 by adding a mate which orients the spin
 to the correct angle at the moment the follower-pioneer is dissolved. That will be it."*). The goal
-accepts a piece within `goalAngleTolDeg` (5°); at the dissolve the leftover error about the FollowerFace
+accepts a piece within `goalAngleTolDeg` (5°; ⭐ the snap cone since `D183`, which also pulls any piece that moves
+into its goal margins onto its exact pose → `LEVEL_END.md` §5); at the dissolve the leftover error about the FollowerFace
 normal — the one DOF the snap leaves free — is removed, so the piece sits on its goal spin exactly.
 `mateSpin` (`input/goal_dissolve.ts`) turns by the TWIST part only (a swing–twist split), through the
 face centre: the face stays flush and on its spot; a tilt in the error is left to the snap. The target is
