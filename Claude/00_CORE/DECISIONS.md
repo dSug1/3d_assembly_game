@@ -63,7 +63,7 @@ file.
 | `D114` | ⭐⭐ **THE EDGE BAND OPENS ONLY WHEN NO EMPTY SPACE IS LEFT** | 2026-09-27 | → §13 |
 | `D115` | ⭐⭐ **A TWO-TOUCH ACTION IS ONE EPISODE, COUNTED WHEN ITS LAST TOUCH LIFTS** | 2026-09-27 | → §13 |
 | `D116` | ⛔⛔⛔ **BUILD THE PLAYABILITY PROGRAM FIRST; COLLISION: STOP+SLIDE ON TRANSLATION, SAME-AXIS CLAMP ON ROTATION** | 2026-09-27 | ✅ `3D6` BUILT; clamp owner-confirmed; seams for Blender → `COLLISION.md` |
-| `D117` | ⭐⭐ **`Scene_1`, THE PAINTING; A SCENE SLIDER REBOOTS ON THE CHOSEN SCENE** | 2026-09-27 | Owner's values at 0.1 m/unit; Unity lights read as URP → `SCENE_1.md` |
+| `D117` | ⭐⭐ **`Scene_1`, THE PAINTING; A SCENE SLIDER REBOOTS ON THE CHOSEN SCENE** | 2026-09-27 | → `SCENE_1.md` |
 | `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | → §14 |
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | → §14 |
 | `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | → §14 |
@@ -72,9 +72,9 @@ file.
 | `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | → §15 |
 | `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | → §15 |
 | `D125` | ⭐⭐ **A PIECE IS A TRANSPARENT CONTOUR AROUND ITS COLOURED CORE** — faces touch, cores keep the gap | 2026-09-27 | → `SCENE_1.md` §6 |
-| `D126` | ⭐ **A HIGHLIGHT FLOATS ONE PIXEL OFF WHAT IT MARKS, AT EVERY ZOOM** | 2026-09-27 | Was 1.5 mm / 2 % in the world; mm on the glass, a slider → `40_RENDER_SCENE/INDEX.md` |
+| `D126` | ⭐ **A HIGHLIGHT FLOATS ONE PIXEL OFF WHAT IT MARKS, AT EVERY ZOOM** | 2026-09-27 | → `40_RENDER_SCENE/INDEX.md` |
 | `D127` | ⭐⭐⭐ **EDGE-ON: THE HOLDER'S `dy` DRIVES BLUE ALONE, FINGER UP = AWAY FROM THIS CAMERA** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
-| `D128` | ⭐⭐ **A FROZEN BODY SEEN FROM BELOW DISAPPEARS — its material unchanged** | 2026-09-28 | Not drawn, not picked; reverses `D121` → §16 |
+| `D128` | ⭐⭐ **A FROZEN BODY SEEN FROM BELOW DISAPPEARS — its material unchanged** | 2026-09-28 | → §16 |
 | `D129` | ⭐⭐⭐ **`Scene_1`'s TABLE IS THE LEVEL'S GOAL; FIVE PIECES BOOT OUT OF IT** | 2026-09-28 | → `SCENE_1.md` §7 |
 | `D130` | ⭐⭐⭐ **THE GOAL IS MET RELATIVE TO EACH OTHER; A BOX'S FACE OR ITS OPPOSITE** | 2026-09-28 | `core/goal.ts` → `SCENE_1.md` §8 |
 | `D131` | ⭐⭐ **EACH SCENE CARRIES ITS OWN ORBIT RIG** | 2026-09-28 | → `SCENE_1.md` §8 |
@@ -120,6 +120,7 @@ file.
 | `D176` | ⭐ **TWO INTERLOCKING ROWS, THE SECOND REVERSED** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D177` | ⭐ **A NATURAL FEEL: ±1.5° YAW, ±1 PX IN DEPTH** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D178` | ⭐ **BOLDER: 5–10° YAW, 5–10 % SHIFT** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
+| `D179` | ⭐ **0–4° (MED 2.5°), 0–5 % (MED 3 %)** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
