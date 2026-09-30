@@ -1,7 +1,7 @@
 # DEMO_SCENE — a scene that assembles itself
 
 > **STATUS** · 🔨 specified and built 2026-09-29 (`D170`, revised by `D171` the same day; ⭐ the start is a floor grid
-> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, the same day), ⛔ unjudged by a hand ·
+> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, then a median law, `D179`, the same day), ⛔ unjudged by a hand ·
 > **OWNS** · what a demo scene is, how its disassembly is computed, how it plays, and `Scene1_demo`
 > **READ IF** · you are making a demo from another scene, changing how moves are generated or played, or changing
 > the demo's camera
@@ -47,6 +47,10 @@
 >
 > *"random between 5 to 10 degrees negative or positive yaw, random between 5 to 10% of longest dimension of each part
 > negative or positive for part misalignment on depth for the row alignments"* — the owner, 2026-09-30 (`D178`)
+>
+> *"random between 0 to 4 degrees negative or positive yaw absolute value median 2.5 degrees, random between 0 to 5 % of
+> longest dimension of each part negative or positive for part misalignment on depth for the row alignments, absolute
+> value median 3%"* — the owner, 2026-09-30 (`D179`)
 
 ## 1. The idea
 
@@ -143,19 +147,24 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
   * ⚠ Reading *"reverse the order of alignment"* as BOTH the end that is flush and the direction the row runs (a
     snake): the direction is what puts row 2's largest piece opposite row 1's smallest. Either is one choice in
     `demoGrid`.
-* ⭐⭐ **A NATURAL FEEL** (`D177`, made bolder by `D178`) — each piece on the grid, drawn from the seed and the piece
-  (`naturalOf`, its own random stream, so it does not depend on which pieces come off):
-  * **a yaw** about the vertical of **5°–10°, either sign** (`startYawDeg`; ±1.5° at `D177`) — it stays flat on the
-    floor. ⛔ `D177` was first built as a ROLL about depth and corrected by the owner before it shipped;
-  * **a shift of its aligned face along depth** — row 1's near face, row 2's far face — of **5 %–10 % of its longest
-    side, either sign** (`startShiftFrac`; ±1 pixel at `D177`);
+* ⭐⭐ **A NATURAL FEEL** (`D177`; bolder at `D178`; a median law since `D179`) — each piece on the grid, drawn from
+  the seed and the piece (`naturalOf`, its own random stream, so it does not depend on which pieces come off):
+  * **a yaw** about the vertical, either sign, its size **0°–4° with a median of 2.5°** (`startYawDeg`; 5°–10° at
+    `D178`, ±1.5° at `D177`) — it stays flat on the floor. ⛔ `D177` was first built as a ROLL about depth and
+    corrected by the owner before it shipped;
+  * **a shift of its aligned face along depth** — row 1's near face, row 2's far face — either sign, its size **0–5 %
+    of its longest side with a median of 3 %** (`startShiftFrac`; 5–10 % at `D178`, ±1 pixel at `D177`);
+  * ⭐ **the law** (`sizeWithMedian`): size = `max × u^k` for a uniform `u`, `k = ln(median / max) / ln ½` — 0 at
+    `u = 0`, the max at 1, exactly the median at ½ (yaw `k` = 0.678, shift `k` = 0.737). Seed 1's 30: median yaw
+    2.45° (max 3.90°), median shift 2.85 %;
   * ⚠⚠ **A SHIFT'S SIGN IS FLIPPED WHERE IT MUST BE**: the strip between the floor's edge and the cube is ~4.9 units deep
-    and the longest pieces are 4.83, so a 4.83 bar shifted 0.24–0.48 the wrong way cannot stay both on the floor and
-    out of the cube. Each row's line moves to make room first; where a drawn sign still cannot fit, it is flipped (its
-    SIZE is kept). Seed 1: **9 of 30** flipped; the yaw is never changed. `DemoGrid.shift` holds the final shifts;
+    and the longest pieces are 4.83, so a bar shifted the wrong way cannot stay both on the floor and out of the cube.
+    Each row's line moves to make room first; where a drawn sign still cannot fit, the LONGER piece in the conflict is
+    flipped first (its SIZE is kept). Seed 1: **1 of 30** — Piece32, the 4.83 bar (9 at `D178`, when the short pieces
+    flipped first). The yaw is never changed. `DemoGrid.shift` holds the final shifts;
   * **the gutters stay whole**: each cell is the piece's TURNED footprint plus a gutter, and the rows interlock on
-    their real, turned and shifted extents. Seed 1: rows **13.2 units** wide (`x −6.60 → 6.60`), row 1's line at
-    `z −9.60` (moved in to leave room for pieces shifted toward the camera), row 2's at `z −5.35`; 13 and 17 pieces;
+    their real, turned and shifted extents; pieces stay 2 cm clear of the cube. Seed 1: rows **11.5 units** wide
+    (`x −5.75 → 5.75`), row 1's line at `z −9.80`, row 2's at `z −5.30`; 14 and 16 pieces;
   * the piece is turned straight into that pose at its spot before the building (its `ALIGN` ends in it), so the
     carry and the lift keep one orientation all the way down.
   * ⚠ The larger yaw changed which pieces can lie down at their spots, so the peeling drew a slightly different 30
@@ -226,7 +235,7 @@ and the generation throws — the tighter-cube vector uses side 7. A carry AROUN
 | `gridPitch` / `gridGap` / `gridOffset` | **0.05 / 0.1 / 0.3** (5 mm / 1 cm / 3 cm) | `D174` — a virtual grid, a gutter, just outside the cube (`D175`: when the floor allows) |
 | ⛔ `gridWidth` | deleted (`D175`) | one rank, as wide as the pieces |
 | camera start | **15° before** the boot yaw (`D175`) | the orbit is 375°, ending where it did |
-| `startYawDeg` / `startShiftFrac` | **5°–10° / 5 %–10 % of the longest side**, either sign | `D178` — a natural feel on the grid (±1.5° / ±1 pixel at `D177`) |
+| `startYawDeg` / `startShiftFrac` | **0–4°, median 2.5° / 0–5 % of the longest side, median 3 %**, either sign | `D179` — a natural feel on the grid (5–10° / 5–10 % at `D178`; ±1.5° / ±1 pixel at `D177`) |
 | colour order | white, black, yellow, red, blue | `D174`, `SCENE1_DEMO_OPTIONS` |
 | ⛔ `facing`, unalign angles, yaw | deleted (`D174`) | they went with the scatter |
 | `segment` / skin | 0.1 / 0.003 (0.3 mm, the game's skin) | |
@@ -276,9 +285,9 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
   — every corner inside the vertical AND the horizontal field of view, from the boot view, on this screen's aspect
   (a portrait tablet at fov 0.8: **2.25 m**). ⭐ `D174`: **and the floor grid** — the start configuration, off-centre
   toward the camera (`demoFramePointsM`, `fitPointsDistanceM`), from the demo's START yaw (`D175`).
-  ⚠⚠ **In portrait it is still too wide**: the two rows need **3.91 m** on the tablet's 882 × 1304 (`D178`; 3.59 at
-  `D177`, 3.43 at `D176`, `D175`'s one rank 4.73 m) and the camera is held at the rig's **3 m** maximum — so at the
-  start, in portrait, the outer ends of the rows are cut (landscape 1304 × 882: **2.22 m**, all in view). §9. It then **draws back linearly to the rig's maximum**
+  ⚠⚠ **In portrait it is still too wide**: the two rows need **3.65 m** on the tablet's 882 × 1304 (`D179`; 3.91 at
+  `D178`, 3.43 at `D176`, `D175`'s one rank 4.73 m) and the camera is held at the rig's **3 m** maximum — so at the
+  start, in portrait, the outer ends of the rows are cut (landscape 1304 × 882: **2.11 m**, all in view). §9. It then **draws back linearly to the rig's maximum**
   (`cameraRadiusMaxM`, 3 m), reached at the end. ⛔ A cube that cannot fit within the maximum is shown from the
   maximum. ⚠ The demo drives the zoom while it plays; the pinch and the wheel are the player's again at the end.
 * ✅ Measured headless (`D171`; Chrome, 882 × 1304, `demoDurationS=20`): the scattered pieces all on screen at the start
@@ -306,7 +315,7 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 * **Occlusion by the assembly itself** (§2): 8.4 % of sampled moments hide the moving piece (`D174`; 10.2 % on the same
   instrument before), mostly the `SNAP` into a slot while the camera is edge-on. A camera that eases toward the face of
   the slot being filled — or a plan that puts pieces back while the camera faces the painting — would remove most.
-* ⚠ **The rows' ends cut in portrait at the start** (`D175`–`D178`, §7: 3.91 m needed, 3 m allowed): a start distance past the rig's maximum (the zoom then
+* ⚠ **The rows' ends cut in portrait at the start** (`D175`–`D179`, §7: 3.65 m needed, 3 m allowed): a start distance past the rig's maximum (the zoom then
   drawing IN to 3 m, which reverses `D171`'s *"the most out when the demo finishes"*), a wider field of view for the
   demo, or fewer pieces on the floor. The owner's to choose.
 * ⚠ The occlusion count (§2) was measured on `D174`'s plan and not re-measured for `D175`/`D176`.

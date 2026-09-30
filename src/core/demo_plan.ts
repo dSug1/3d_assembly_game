@@ -94,17 +94,37 @@ export interface DemoOptions {
    */
   readonly colourOrder?: readonly Triple[];
   /**
-   * ⭐ `D177`/`D178` (the owner: *"random between 5 to 10 degrees negative or positive yaw"*; ±1.5° at `D177`, first
-   * built as a roll — *"I was meaning yaw, not roll"*): each piece on the grid is turned about the VERTICAL by a random
-   * angle whose SIZE is in `[min, max]` degrees, of either sign. It stays flat on the floor.
+   * ⭐ `D179` (the owner: *"random between 0 to 4 degrees negative or positive yaw absolute value median 2.5 degrees"*;
+   * 5°–10° at `D178`, ±1.5° at `D177`, first built as a roll — *"I was meaning yaw, not roll"*): each piece on the grid
+   * is turned about the VERTICAL by a random angle of either sign whose SIZE lies in `[0, max]` degrees with that
+   * MEDIAN (`sizeWithMedian`). It stays flat on the floor.
    */
-  readonly startYawDeg: readonly [number, number];
+  readonly startYawDeg: SizeLaw;
   /**
-   * ⭐ `D178` (the owner: *"random between 5 to 10% of longest dimension of each part negative or positive for part
-   * misalignment on depth for the row alignments"*; ±1 pixel at `D177`): each piece's aligned face sits off its row's
-   * line along depth by a random amount whose SIZE is in `[min, max]` × its longest side, of either sign.
+   * ⭐ `D179` (the owner: *"random between 0 to 5 % of longest dimension of each part negative or positive for part
+   * misalignment on depth for the row alignments, absolute value median 3%"*; 5–10 % at `D178`, ±1 pixel at `D177`):
+   * each piece's aligned face sits off its row's line along depth by a random amount of either sign whose SIZE, as a
+   * fraction of its longest side, lies in `[0, max]` with that MEDIAN.
    */
-  readonly startShiftFrac: readonly [number, number];
+  readonly startShiftFrac: SizeLaw;
+}
+
+/** ⭐ `D179`: a random SIZE in `[0, max]` whose median is `median`. */
+export interface SizeLaw {
+  readonly max: number;
+  readonly median: number;
+}
+
+/**
+ * ⭐ `D179` — **A SIZE IN `[0, max]` WITH A GIVEN MEDIAN**, from a uniform `u ∈ [0, 1]`: `max × u^k`, with
+ * `k = ln(median / max) / ln ½`, so `u = ½` gives exactly the median, `0` gives 0 and `1` the max, and it rises
+ * monotonically between. (4° with a median of 2.5°: `k` = 0.678; 5 % with a median of 3 %: `k` = 0.737.) ⛔ A median
+ * outside `(0, max)` has no such law and throws.
+ */
+export function sizeWithMedian(law: SizeLaw, u: number): number {
+  if (!(law.median > 0 && law.median < law.max)) throw new Error(`a size law needs 0 < median < max, got ${law.median} of ${law.max}`);
+  const k = Math.log(law.median / law.max) / Math.log(0.5);
+  return law.max * Math.pow(Math.min(1, Math.max(0, u)), k);
 }
 
 /** ⭐ The owner: *"the camera shall orbit uniformly towards the right"* — one full turn over the demo. */
@@ -174,14 +194,15 @@ export const DEMO_DEFAULTS: DemoOptions = {
   gridPitch: 0.05,
   gridGap: 0.1,
   gridOffset: 0.3,
-  // ⭐ `D178`: a natural feel — a yaw of 5°–10° and a shift along depth of 5 %–10 % of the piece's length, either sign.
-  startYawDeg: [5, 10],
-  startShiftFrac: [0.05, 0.1],
+  // ⭐ `D179`: a natural feel — a yaw of 0°–4° (median 2.5°) and a shift along depth of 0–5 % of the piece's length
+  // (median 3 %), either sign.
+  startYawDeg: { max: 4, median: 2.5 },
+  startShiftFrac: { max: 0.05, median: 0.03 },
 };
 
 /**
  * ⭐ `D177`/`D178` — **EACH PIECE'S NATURAL IMPERFECTION** on the grid, as DRAWN: a yaw about the vertical (radians) and
- * a shift of its aligned face along depth (authored units), each a size in its range with a random sign — drawn from the
+ * a shift of its aligned face along depth (authored units), each a size by its law with a random sign — drawn from the
  * seed AND the piece, its own stream, so the draw does not depend on which pieces come off or in what order and the rest
  * of the generator's random sequence is untouched. ⚠ `demoGrid` may flip the SHIFT's sign to keep a piece on the floor
  * and out of the cube (`DemoGrid.shift` is the final one); the yaw is always this.
@@ -189,7 +210,7 @@ export const DEMO_DEFAULTS: DemoOptions = {
 export function naturalOf(scene: SceneDescriptor, id: string, opt: Pick<DemoOptions, "seed" | "startYawDeg" | "startShiftFrac">): { yaw: number; shift: number } {
   const i = scene.bodies.findIndex((b) => b.id === id);
   const r = mulberry32(opt.seed * 7919 + 104729 * (i + 1));
-  const size = (range: readonly [number, number]) => range[0] + (range[1] - range[0]) * r();
+  const size = (law: SizeLaw) => sizeWithMedian(law, r());
   const sign = () => (r() < 0.5 ? -1 : 1);
   const yaw = (sign() * size(opt.startYawDeg) * Math.PI) / 180;
   const shift = sign() * size(opt.startShiftFrac) * Math.max(...contourDims(scene.bodies[i]!));
@@ -298,7 +319,7 @@ export function demoGrid(
   const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
   const front = volume.min[2];
   const floorLo = fz[0]! + opt.gridGap / 2; // ⭐ half a gutter in from the floor's edge
-  const cubeHi = front - 0.01; // ⭐ strictly outside the cube
+  const cubeHi = front - 0.02; // ⭐ strictly outside the cube — and the grid box's 1 cm margin with it
 
   /**
    * ⭐ A row's line and its pieces' final shifts. `near`: the NEAR faces sit at `line + shift`; `far`: the FAR faces.
@@ -324,7 +345,11 @@ export function demoGrid(
         return { line, shift: new Map(members.map((i) => [i, sign.get(i)! * Math.abs(nat[i]!.shift)])) };
       }
       // ⭐ the piece that pushes the line up is shifted toward the camera; the one that pulls it down, toward the cube
-      const flip = [loBy, hiBy].find((i) => i >= 0 && !flipped.has(i) && sign.get(i) === (i === loBy ? -1 : 1));
+      // ⭐ Of the two pieces in conflict, the LONGER is flipped first: it is the one with no room to spare, and flipping
+      // the short ones instead flipped 9 of 30 at seed 1 (`D179`); this flips 1, the 4.83-unit bar.
+      const flip = [loBy, hiBy]
+        .filter((i) => i >= 0 && !flipped.has(i) && sign.get(i) === (i === loBy ? -1 : 1))
+        .sort((x, y) => halfLong(y) - halfLong(x))[0];
       if (flip === undefined) return null;
       flipped.add(flip);
       sign.set(flip, -sign.get(flip)!);

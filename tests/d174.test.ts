@@ -14,6 +14,8 @@
  * > face facing camera by up to 1 pixel negative or positive in depth axis"* — *"I was meaning yaw, not roll"* (`D177`).
  * > *"random between 5 to 10 degrees negative or positive yaw, random between 5 to 10% of longest dimension of each part
  * > negative or positive for part misalignment on depth for the row alignments"* (`D178`).
+ * > *"random between 0 to 4 degrees negative or positive yaw absolute value median 2.5 degrees, random between 0 to 5 % of
+ * > longest dimension … absolute value median 3%"* (`D179`).
  *
  * ⭐ Asserted on the COMMITTED plan, read back from its poses — never from the generator's own bookkeeping.
  */
@@ -21,7 +23,7 @@ import { describe, expect, it } from "vitest";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
 import { SCENE1_DEMO as SHELL, SCENE1_DEMO_OPTIONS } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
-import { DEMO_DEFAULTS, demoGrid, demoReach, flatOrientations, naturalOf, withDemoPlan, type DemoPose } from "@core/demo_plan";
+import { DEMO_DEFAULTS, demoGrid, demoReach, flatOrientations, naturalOf, sizeWithMedian, withDemoPlan, type DemoPose } from "@core/demo_plan";
 import { contourDims } from "@core/game_structure";
 import { cross, dot, normalize, qAngle, qRotate, sub, type Quat, type Vec3 } from "@core/vec";
 import { alongPath, demoFramePointsM, demoPosesAt, demoSchedule, fitPointsDistanceM } from "@input/demo_playback";
@@ -90,36 +92,48 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
       const { half } = extents(id, q(s));
       const d = [...contourDims(body(id))].sort((a, b) => b - a);
       expect(half[1]).toBeCloseTo(d[2]! / 2, 5); // smallest EXACTLY vertical — flat, not rolled (`D177`: yaw only)
-      expect(Math.abs(longAxis(id)[2])).toBeGreaterThanOrEqual(Math.cos((OPT.startYawDeg[1] * Math.PI) / 180) - 1e-6);
+      expect(Math.abs(longAxis(id)[2])).toBeGreaterThanOrEqual(Math.cos((OPT.startYawDeg.max * Math.PI) / 180) - 1e-6);
       expect(Math.abs(longAxis(id)[1])).toBeLessThan(1e-5); // the long axis level
       expect(s.position[1] - half[1]).toBeCloseTo(FLOOR_TOP, 5); // on the floor, not above it and not in it
     }
   });
 
-  it("⭐⭐ `D178` — *random between 5 to 10 degrees negative or positive yaw*: every piece, both ways", () => {
+  it("⭐⭐ `D179` — *random between 0 to 4 degrees negative or positive yaw*, median 2.5°: every piece, both ways", () => {
     const y = ids.map(yawDeg);
-    for (const a of y) {
-      expect(Math.abs(a)).toBeGreaterThanOrEqual(OPT.startYawDeg[0] - 1e-3);
-      expect(Math.abs(a)).toBeLessThanOrEqual(OPT.startYawDeg[1] + 1e-3);
-    }
+    for (const a of y) expect(Math.abs(a)).toBeLessThanOrEqual(OPT.startYawDeg.max + 1e-3);
     expect(y.some((a) => a > 0) && y.some((a) => a < 0)).toBe(true);
+    // ⭐ the sample's median sits near the law's (30 draws: within a degree)
+    const sorted = y.map(Math.abs).sort((a, b) => a - b);
+    expect(Math.abs((sorted[14]! + sorted[15]!) / 2 - OPT.startYawDeg.median)).toBeLessThan(1);
     // ⭐ the yaw is the drawn one, sign and all — `naturalOf` from the seed and the piece
     for (const id of ids) expect(yawDeg(id)).toBeCloseTo((naturalOf(SCENE_1, id, OPT).yaw * 180) / Math.PI, 3);
   });
 
-  it("⭐⭐ `D178` — *random between 5 to 10% of longest dimension … negative or positive* off the row's line in depth", () => {
+  it("⭐⭐ `D179` — *random between 0 to 5 % of longest dimension … negative or positive*, median 3 %, off the row's line in depth", () => {
     const off: number[] = [];
     for (const id of row1) off.push((nearEnd(id) - GRID.lines[0]) / lengthOf(id));
     for (const id of row2) off.push((farEnd(id) - GRID.lines[1]) / lengthOf(id));
-    for (const o of off) {
-      expect(Math.abs(o)).toBeGreaterThanOrEqual(OPT.startShiftFrac[0] - 1e-5);
-      expect(Math.abs(o)).toBeLessThanOrEqual(OPT.startShiftFrac[1] + 1e-5);
-    }
+    for (const o of off) expect(Math.abs(o)).toBeLessThanOrEqual(OPT.startShiftFrac.max + 1e-5);
     expect(off.some((o) => o > 0) && off.some((o) => o < 0)).toBe(true);
     // ⭐ the size is the drawn one; ⚠ the SIGN may be flipped to keep a piece on the floor and out of the cube
     for (const id of ids) expect(Math.abs(GRID.shift.get(id)!)).toBeCloseTo(Math.abs(naturalOf(SCENE_1, id, OPT).shift), 9);
     const flipped = ids.filter((id) => Math.sign(GRID.shift.get(id)!) !== Math.sign(naturalOf(SCENE_1, id, OPT).shift));
-    expect(flipped.length).toBeLessThan(ids.length / 2); // most keep their drawn sign (seed 1: 9 of 30 flipped)
+    expect(flipped.length).toBeLessThanOrEqual(3); // seed 1: ONE, the 4.83-unit bar — the longer piece in a conflict flips first
+  });
+
+  it("⭐ `sizeWithMedian`: 0 at u = 0, the max at 1, EXACTLY the median at ½, rising between; a median outside (0, max) throws", () => {
+    for (const law of [OPT.startYawDeg, OPT.startShiftFrac]) {
+      expect(sizeWithMedian(law, 0)).toBe(0);
+      expect(sizeWithMedian(law, 1)).toBeCloseTo(law.max, 12);
+      expect(sizeWithMedian(law, 0.5)).toBeCloseTo(law.median, 12);
+      for (let u = 0.05; u < 1; u += 0.05) expect(sizeWithMedian(law, u + 0.01)).toBeGreaterThan(sizeWithMedian(law, u));
+      // ⭐ and over many draws, half fall below the median
+      let below = 0;
+      for (let k = 0; k < 1000; k++) if (sizeWithMedian(law, (k + 0.5) / 1000) < law.median) below++;
+      expect(below).toBe(500);
+    }
+    expect(() => sizeWithMedian({ max: 4, median: 4 }, 0.5)).toThrow(/median < max/);
+    expect(() => sizeWithMedian({ max: 4, median: 0 }, 0.5)).toThrow(/0 < median/);
   });
 
   it("⭐⭐ *ordered by color and inside the color groups by descending size* — in reading order as the boot camera sees it", () => {
