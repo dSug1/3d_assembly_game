@@ -342,9 +342,6 @@ export function installTuningMenu(st: SceneState): void {
                 // ends visibly WRONG on the glass, because a slider whose every value looks plausible
                 // teaches a hand nothing.
                 tunable(st, "capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
-                // ⭐ The owner, 2026-09-26: the Pioneer does not sway while its Follower is within this
-                // many capture offsets of it; *"put it just below the offset radius"*.
-                tunable(st, "Pioneer sway off within (× offset)", "pioneerSwayRadii", 0, 10, 0.5),
                 // ⭐ The magnet's pull: how long the face centre takes to reach the cursor (`D100`).
                 tunable(st, "snap time (ms, 0 = at once)", "snapMs", 0, 400, 10),
                 // ⭐ The UNSNAP's rapid move — the two numbers kept from the deleted eviction shake (`D107`).

@@ -8,7 +8,6 @@ import { advanceDemoFrame } from "./demo_wiring";
 import { hiddenFromBelow } from "../core/underside";
 import { autoShadowVerdict } from "../core/auto_shadow";
 import { FrameMeter } from "../core/frame_meter";
-import { pruneCollisionGrace } from "./collision_wiring";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
 import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
@@ -645,8 +644,6 @@ export function startRenderLoop(st: SceneState): void {
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
-    // ⭐ `3D6`: an unsnapped couple is ordinary again once it has separated past the skin.
-    pruneCollisionGrace(st);
     // ⭐ `D134`: EDGE-ON is the CAMERA's, so it is read every frame — a click or an orbit changes it
     // with no drag. ⚠ Same test as the rule (`planeEdgeOn`), same axes; the HUD repaints on change.
     {

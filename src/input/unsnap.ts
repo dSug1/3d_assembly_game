@@ -46,6 +46,36 @@ export function unsnapCouple(
   return pioneerOf(second) === first ? second : null;
 }
 
+/**
+ * ⭐⭐⭐ `D182` — **THE UNSNAP GESTURE HOLDS THE ASSEMBLY STILL** (the owner, 2026-09-30: *"an unsnap can pull the pioneer
+ * before the unsnap occurs. Fix that"*).
+ *
+ * ⛔ The cause: the unsnap's second touch lands on the SEATED Follower and is redirected to the assembly's root — the
+ * Pioneer (`D100`) — so until the detector fired, that finger's pull LIFTED and SPUN the Pioneer, and the first finger,
+ * holding the Pioneer, translated it. ⭐ Now, from the moment two touches form an unsnap couple (`unsnapCouple`: the first
+ * on the Pioneer, the second on its seated Follower), **neither drives any body** — their motion is the unsnap's gesture
+ * only, read by its detector. ⭐ It lasts until EITHER lifts — past the unsnap itself, because the second finger's grip is
+ * still the Pioneer's and would drag it off at once. ⛔ The recognizer still sees every move (a tap stays a tap).
+ */
+export class UnsnapHold {
+  private pair: readonly [number, number] | null = null;
+
+  /** Two touches — `first` on the Pioneer, `second` on its seated Follower — formed an unsnap couple. */
+  form(first: number, second: number): void {
+    this.pair = [first, second];
+  }
+
+  /** ⭐ Does this touchpoint drive nothing now? ⭐ The pair holds while BOTH are down; the first lift ends it. */
+  holds(pointerId: number, isDown: (id: number) => boolean): boolean {
+    if (this.pair === null) return false;
+    if (!isDown(this.pair[0]) || !isDown(this.pair[1])) {
+      this.pair = null;
+      return false;
+    }
+    return this.pair[0] === pointerId || this.pair[1] === pointerId;
+  }
+}
+
 export interface ScalarSample {
   readonly t: number;
   readonly v: number;

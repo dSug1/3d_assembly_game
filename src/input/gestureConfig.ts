@@ -512,12 +512,6 @@ export interface GestureConfig {
    */
   captureOffsetMm: number;
   /**
-   * ⭐⭐ How many capture offsets from its Pioneer a Follower may be before the Pioneer SWAYS
-   * again — the owner, 2026-09-26: *"the sway of pioneer shall not be allowed if the follower is
-   * within three times the offset radius; it shall trigger otherwise."* ⚠ `0` = only at contact.
-   */
-  pioneerSwayRadii: number;
-  /**
    * ⭐⭐ **THE SNAP'S OWN TIME** — the owner, 2026-09-26: *"make the snap translation movement faster
    * and more abrupt so the user can feel as if there was a magnet effect."* ⚠ The position half of
    * a snap used to borrow the alignment's 129 ms; this is shorter and rides `magnetEase`, which
@@ -918,8 +912,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // 5 → 15 the same day. ⚠ The radius is the SNAP's reach now (`D100`). At the boot camera 10 mm is
   // ~40 mm of world, so NOTHING captures at rest at boot (the tilted pyramid is 53 mm off the plate).
   captureOffsetMm: 10,
-  // ⭐ The owner's *"default at three times the offset radius"* (2026-09-26).
-  pioneerSwayRadii: 3,
   // ⚠ A guess, with a slider — a magnet's pull is a feel only a hand can judge.
   snapMs: 60,
   // ⭐ Blender's number, not mine.
@@ -977,17 +969,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     throw new Error(
       `snapMs (${cfg.snapMs}) must be between 0 and 400 ms: it is how long the FollowerFace ` +
         "centre takes to reach the PioneerFaceCursor once the snap fires.",
-    );
-  }
-
-  if (
-    !Number.isFinite(cfg.pioneerSwayRadii) ||
-    cfg.pioneerSwayRadii < 0 ||
-    cfg.pioneerSwayRadii > 10
-  ) {
-    throw new Error(
-      `pioneerSwayRadii (${cfg.pioneerSwayRadii}) must be between 0 and 10: it is how many ` +
-        "capture offsets from its Pioneer a Follower may be before the Pioneer sways again.",
     );
   }
 

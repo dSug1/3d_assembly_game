@@ -92,9 +92,9 @@ condition is met; **seated** = the lerp has LANDED — the Follower is a CHILD o
 | state | vs its own Pioneer | vs every other body | why |
 |---|---|---|---|
 | **aligned** (not snapped) | ⭐ **collides** like any body — translation stops at the Pioneer's face and SLIDES along it | collides | ⭐ the slide is what makes the snap reachable: gliding along the PioneerFace brings the FollowerFace centre to the cursor, and the snap fires |
-| **snapping** (the lerp in flight) | **exempt** — the two faces are MEANT to meet at gap 0 | if the lerp's next step would penetrate a third body, the snap is **cancelled**: the Follower stays where it is and the couple is held off until it leaves the radius (`SnapArming`, re-arm on exit) | a snap must never push through a neighbour |
+| **snapping** (the lerp in flight) | **exempt** — the two faces are MEANT to meet at gap 0 | ⭐ `D182`: a snap STARTS only if its straight flight is clear (`snapPathBlockedBy`) — a blocked one waits; if a step still penetrates a third body (something moved in), the snap is **cancelled** and nothing is held (⛔ the hold-off until leaving the radius is the unsnap's alone) | a snap must never push through a neighbour |
 | **seated** | **exempt**, the whole assembly among itself — a hull cannot represent the fit (`3D8` revisits this) | the **assembly is ONE compound**: a translation of any member moves the root (`D102`) and is tested as the union of the members' parts; a seated member's own **twist** about its face normal is tested against every body OUTSIDE its assembly, clamped on that axis (§4) | the seat is a rigid relationship; its members cannot collide with each other by definition |
-| **just unsnapped** | exempt until the couple's gap exceeds `ε` once, then ordinary | ordinary | it starts at gap 0 — a strict test would call the release a penetration |
+| **just unsnapped** | ⭐ `D182`: **ordinary** — `D136` lets a pair in contact leave; ⛔ the grace (exempt until separated) is deleted: pushed together, it never ended, and a Follower sank 14 mm into its Pioneer | ordinary | it starts at gap 0, which `D136` allows |
 
 ⚠ A **Pioneer that is turned** carries its seated followers (the tree) — the compound is tested
 as in the seated row; its **unseated** followers let go (`D106`) and are ordinary bodies.
@@ -131,7 +131,7 @@ as in the seated row; its **unseated** followers let go (`D106`) and are ordinar
 | the rule: `resolveMove`, `poseFree`, `blendPlacement` (same-axis partial turn), `slideAlong`, `subtreeOf` / `rootOf` | `src/core/collision.ts` |
 | the seams: `CollisionShapeSource` (`hullAtSpawn`, a list of ONE part), `BoundsSource` (`boundsFromShapes`) | `src/core/collision.ts` |
 | the separation vector (the slide's normal) — the SAME GJK as `gapBetween`, which is now its length | `src/core/collision_shape.ts` `separationBetween` |
-| the composition seam (`SHAPES`, `BOUNDS` — the one line `3D8`/`3D9` change), the skin, the snapping / unsnap-grace exemptions | `src/render/collision_wiring.ts` |
+| the composition seam (`SHAPES`, `BOUNDS` — the one line `3D8`/`3D9` change), the skin, the snapping exemption (⛔ the unsnap grace is deleted, `D182`) | `src/render/collision_wiring.ts` |
 | the guard: every gesture pose write (`setModelPose`) is resolved first | `src/render/bodies.ts` |
 | the snap lerp cancelled when a third body is in the way, the couple held off | `src/render/seat_wiring.ts` |
 
@@ -229,4 +229,5 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   the JSON seam. ⛔ Three mutants RED: no walls (6), no way back in (1), no slide (1).
 * ✅ The real wiring on the dev server (`Level 1`, through `guardMove`): `Piece1` pushed 5 m sideways stops at x 0.938 m
   (its turned corner on the 1 m edge), `Piece41` pushed 5 m toward the camera at z −0.985 m, `Piece17` lifted 3 m is
-  stopped by `Piece2` above it — the walls and the bodies in one rule. ⛔ Unjudged by a hand.
+  stopped by `Piece2` above it — the walls and the bodies in one rule.
+* ✅✅ **Closed by a device look** — the owner, 2026-09-30, build `18584ed`: *"Tested OK"*.

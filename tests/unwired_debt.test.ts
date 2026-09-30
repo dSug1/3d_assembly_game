@@ -79,6 +79,8 @@ const PENDING: Record<string, string> = {
   // ⭐ `boxShape` LEFT this list 2026-09-29 (`D170`): the demo generator builds its world from box shapes.
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
+  // ⭐ `D182`: its two product callers went with the Pioneer-sway radius and the unsnap grace.
+  surfaceGap: "`D49`'s surface gap — the clearance instrument of the collision and highlight vectors; no product caller since `D182`",
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
   // product plays, and `d170.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",

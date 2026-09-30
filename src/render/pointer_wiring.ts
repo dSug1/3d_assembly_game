@@ -34,6 +34,11 @@ import { noteSpin, nudgeOthers } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
 
+/** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
+function unsnapHolds(st: SceneState, pointerId: number): boolean {
+  return st.unsnapHold.holds(pointerId, (id) => st.router.all().some((p) => p.id === id));
+}
+
 export function installPointerHandler(st: SceneState): void {
   // ⭐⭐ `D111` — THE GESTURE'S FIRST DOWN, observed BEFORE every rule (`insertFirst`): the model is
   // snapshotted as it stands, so the undo's entry is the scene before anything this gesture did.
@@ -413,7 +418,9 @@ export function installPointerHandler(st: SceneState): void {
         const grip2 = holder2 ? st.held.get(holder2.id) : undefined;
         // ⭐ The same table decides this finger as the OUTSIDE one (`D108`: the drive depends on
         // the body and the mode, never on where the finger landed).
+        // ⭐⭐ `D182`: not while it is half of an unsnap couple — its pull is the unsnap's, never the Pioneer's.
         if (
+          !unsnapHolds(st, e.pointerId) &&
           grip2 &&
           applyDepthDrag(st, 
             grip2,
@@ -663,7 +670,8 @@ export function installPointerHandler(st: SceneState): void {
           : "ROTATE";
       }
       // ⭐⭐ `D139`: a grip whose Follower just SEATED drives nothing with this finger until it lifts.
-      if (!seatLockAllows(grip.seatLocked, grip.mode === "ROTATE" ? "ROTATE" : "TRANSLATE")) {
+      // ⭐⭐ `D182`: nor one that is half of an unsnap couple — the Pioneer holds still until a finger lifts.
+      if (unsnapHolds(st, e.pointerId) || !seatLockAllows(grip.seatLocked, grip.mode === "ROTATE" ? "ROTATE" : "TRANSLATE")) {
         grip.prev = s;
         st.hudDirty = true;
         return;

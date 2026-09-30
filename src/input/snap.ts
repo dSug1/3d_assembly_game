@@ -15,12 +15,16 @@
  * the camera) and the cone is `snapConeDeg` — the fuchsia offer's cone, renamed when the offer was deleted (`D109`).
  *
  * ⛔⛔ **RE-ARM ON EXIT.** An unsnapped couple is still inside the radius — it was seated there —
- * so without a hold-off it would snap back on the next frame. `SnapArming` holds a couple off
+ * so without a hold-off it would snap back on the next frame. ⭐ `D182`: an UNSNAP (and an undo) holds off; a blocked
+ * flight never does (`snapPathBlockedBy`). `SnapArming` holds a couple off
  * after an unsnap until its distance has EXCEEDED the radius once (`3D3`'s *re-arm on exit*).
  *
  * ⛔ ENGINE-FREE.
  */
 import { dot, normalize, sub, type Vec3 } from "../core/vec";
+import { resolveMove, type CollisionSetup } from "../core/collision";
+import type { ObjectId, World } from "../core/object_model";
+import type { Placed } from "../core/mate_connector";
 
 /**
  * ⭐⭐⭐ Does the couple meet the snap conditions NOW?
@@ -50,6 +54,19 @@ export function snapConditionMet(
   // ⭐ ANTI-parallel is the mate's sense (`D78`): the follower normal against the pioneer's NEGATED.
   const c = Math.max(-1, Math.min(1, -dot(nf, np)));
   return Math.acos(c) <= coneRad;
+}
+
+/**
+ * ⭐⭐⭐ `D182` — **A SNAP STARTS ONLY IF ITS FLIGHT IS CLEAR** (the owner, 2026-09-30: *"Build the fix"*, after the
+ * reproduction). Which body — or wall — would stop the follower's straight flight to its seat, or `null` when the path is
+ * free, judged by the one collision rule (`resolveMove`: along the path, the couple exempt through `setup`).
+ * ⛔ The cause it removes: a snap started from beside a zero-clearance slot flew into a neighbour, was CANCELLED, and the
+ * cancel HELD the couple off until it left the capture radius — so a piece slid in horizontally, sitting on its Pioneer,
+ * never snapped (measured on `Scene_1`'s Piece1/Piece22: 28 steps held; a lift re-armed it). ⭐ Now a blocked flight is
+ * never started, and nothing is held: the snap fires on the first frame its path is clear, from any direction.
+ */
+export function snapPathBlockedBy(world: World, followerId: ObjectId, seat: Placed, setup: CollisionSetup): ObjectId | null {
+  return resolveMove(world, followerId, seat, setup).blockedBy;
 }
 
 /**

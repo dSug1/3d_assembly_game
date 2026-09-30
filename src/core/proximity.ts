@@ -36,8 +36,9 @@ import { add, qRotate, sub } from "./vec";
 /**
  * ⭐⭐ **NOT WIRED — RESERVED FOR THE APPROACH DIRECTION, AND DECLARED RATHER THAN DELETED.**
  *
- * ⛔⛔ Nothing calls this today; `surfaceGap` is what the collision pass (`collision_wiring.ts`) and
- * the sway (`sway_pass.ts`) read — the `A16` capture test that first read it is deleted (`D120`). ⚠ It is kept
+ * ⛔⛔ Nothing calls this today; nor does anything in the product call `surfaceGap` since `D182` deleted its last two
+ * readers (the Pioneer-sway radius and the unsnap grace) — the vectors still measure clearances with it; the `A16`
+ * capture test that first read it is deleted (`D120`). ⚠ It is kept
  * because `D46` §4b.1 maps the finger's travel onto the **centre → centre** line, and that is
  * the one quantity in this mechanism that must NOT become face-based: a face-to-face direction
  * shrinks to noise at contact, which is the degeneracy the whole design was rebuilt to remove.

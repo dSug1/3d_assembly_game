@@ -69,7 +69,7 @@ import { SCENE_0 } from "../content/scene_0";
 import { AlignmentLinks } from "../core/alignment_links";
 import { PioneerFaceCursors } from "../core/pioneer_face_cursors";
 import { SnapArming } from "../input/snap";
-import { UnsnapDetector } from "../input/unsnap";
+import { UnsnapDetector, UnsnapHold } from "../input/unsnap";
 import { SeatSnaps } from "../input/seat_snap";
 import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
@@ -440,6 +440,7 @@ export function createScene(
   st.snapArming = new SnapArming();
   st.seatSnaps = new SeatSnaps<ObjectId>();
   st.unsnapDetectors = new Map<string, UnsnapDetector>();
+  st.unsnapHold = new UnsnapHold();
   /**
    * ⭐ The body each pointer pressed, and its pointer type — the unsnap reads the pair (*first the
    * Pioneer, second the Follower*) and the device off these, because a `SECOND` touchpoint has no
@@ -557,7 +558,6 @@ export function createScene(
   document.body.appendChild(st.edgeBandEl);
   st.edgeBandKey = "";
   st.tapFace = new Map();
-  st.collisionGrace = new Set<string>();
   st.lastCollision = "";
   st.lastCollisionAt = -Infinity;
   st.emptySpaceVisible = true;

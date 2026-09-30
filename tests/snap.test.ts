@@ -329,8 +329,8 @@ describe("⭐⭐ receivesSway — a seated assembly is ONE body", () => {
   it("⛔ a body seated with the mover does not sway; a stranger still does", () => {
     // ⛔ RED against the predicate before `inMoverAssembly`.
     const inAssembly = (id: string) => id === "child";
-    expect(receivesSway({ id: "child" }, "mover", () => false, null, true, inAssembly)).toBe(false);
-    expect(receivesSway({ id: "stranger" }, "mover", () => false, null, true, inAssembly)).toBe(true);
+    expect(receivesSway({ id: "child" }, "mover", () => false, null, inAssembly)).toBe(false);
+    expect(receivesSway({ id: "stranger" }, "mover", () => false, null, inAssembly)).toBe(true);
   });
 });
 
@@ -434,8 +434,8 @@ describe("⭐⭐⭐ anchoredToFrozen — a part seated on the plate, and its chi
   it("⭐⭐ receivesSway: an anchored body does not sway when a THIRD body moves", () => {
     const anchored = (id: string) => anchoredToFrozen(id, pioneerOf, seated, frozen);
     // ⛔ RED against the predicate before this rule.
-    expect(receivesSway({ id: "grey" }, "stranger", () => false, null, true, () => false, anchored)).toBe(false);
-    expect(receivesSway({ id: "pink" }, "stranger", () => false, null, true, () => false, anchored)).toBe(true);
+    expect(receivesSway({ id: "grey" }, "stranger", () => false, null, () => false, anchored)).toBe(false);
+    expect(receivesSway({ id: "pink" }, "stranger", () => false, null, () => false, anchored)).toBe(true);
   });
 });
 

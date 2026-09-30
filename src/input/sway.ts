@@ -324,28 +324,6 @@ export function turnDegrees3(a: Vec3, b: Vec3): number {
 }
 
 /**
- * ⭐⭐ **IS THE MOVER NEAR ENOUGH ITS PIONEER THAT THE PIONEER MUST NOT SWAY?** — the owner,
- * 2026-09-26: *"not allowed if the follower is within three times the offset radius; it shall
- * trigger otherwise."*
- *
- * ⭐ The gap is the SURFACE gap (`D49`, `core/proximity.ts`) and the radius is the capture offset
- * in WORLD metres (`captureOffsetM`, mm on the glass scaled by the camera) — the same two numbers
- * the white contour reads, so *near* here and *near* on the glass agree by construction.
- * ⚠ An unreadable gap (`⛔NOSHAPE`) SUPPRESSES: the safe direction is the one the owner's first
- * rule chose, a Pioneer that does not recoil.
- * ⭐ `radii` is the slider `pioneerSwayRadii` (*"set it as default at three times the offset
- * radius"*), so the number ships with the rule and a hand can move it.
- */
-export function pioneerSwaySuppressed(
-  gapM: number | null,
-  captureOffsetM: number,
-  radii: number,
-): boolean {
-  if (gapM === null || !Number.isFinite(gapM)) return true;
-  return gapM <= radii * captureOffsetM;
-}
-
-/**
  * ⭐⭐⭐ **WHO THE SYMPATHETIC SWAY MAY MOVE — one predicate, both writers.**
  *
  * > *"The frozen objects should not wobble."* — the owner, 2026-09-17
@@ -370,7 +348,6 @@ export function pioneerSwaySuppressed(
  *   the sway with no holder at all.
  * @param isGrasped `true` for any body a touchpoint is pressed on — see below.
  * @param pioneerOfMover the Pioneer the moving body is aligned to, or `null` — see below.
- * @param moverNearPioneer `pioneerSwaySuppressed`'s answer: is the mover within the radius?
  * @param inMoverAssembly `D100` — is this body SEATED with the mover (a child of it, its parent,
  *   or a sibling on one Pioneer)? A seated assembly is one body: it moves with the mover through
  *   the tree, and a sway offset on one part of it would wobble it against the rest.
@@ -382,7 +359,6 @@ export function receivesSway(
   heldId: string | null,
   isGrasped: (id: string) => boolean = () => false,
   pioneerOfMover: string | null = null,
-  moverNearPioneer = true,
   inMoverAssembly: (id: string) => boolean = () => false,
   isAnchored: (id: string) => boolean = () => false,
 ): boolean {
@@ -414,11 +390,12 @@ export function receivesSway(
   // ⭐ The Pioneer is what the Follower is being assembled TO: a target that recoils from the
   // part approaching it makes the approach unreadable, and the capture gap it shows would move for
   // a reason that is not the hand's.
-  // ⭐⭐ **WITHIN THREE CAPTURE OFFSETS ONLY** — the owner, later the same day: *"the sway of
-  // pioneer shall not be allowed if the follower is within three times the offset radius. It shall
-  // trigger otherwise."* ⛔ The distance test is `pioneerSwaySuppressed`'s; this reads its answer.
-  if (pioneerOfMover !== null && body.id === pioneerOfMover && moverNearPioneer)
-    return false;
+  // ⛔ *(Superseded record:)* **WITHIN THREE CAPTURE OFFSETS ONLY** — the owner, later the same day: *"the sway of pioneer
+  // shall not be allowed if the follower is within three times the offset radius. It shall trigger otherwise."*
+  // ⭐⭐ `D182` (the owner, 2026-09-30: *"a rapid translation of a follower can push a pioneer … Fix that"*): **AT ANY
+  // DISTANCE.** A far Follower's quick move swayed its Pioneer, and on the glass a sway IS a push. The radius, its
+  // slider (`pioneerSwayRadii`) and `pioneerSwaySuppressed` are deleted.
+  if (pioneerOfMover !== null && body.id === pioneerOfMover) return false;
   if (inMoverAssembly(body.id)) return false;
   // ⭐⭐ Fixed to the plate, it is part of the plate: *"itself and its snapped children objects
   // cannot sway when a third object is moved"* (the owner, 2026-09-26).
