@@ -74,9 +74,9 @@ file.
 | `D125` | ⭐⭐ **A PIECE IS A TRANSPARENT CONTOUR AROUND ITS COLOURED CORE** — faces touch, cores keep the gap | 2026-09-27 | → `SCENE_1.md` §6 |
 | `D126` | ⭐ **A HIGHLIGHT FLOATS ONE PIXEL OFF WHAT IT MARKS, AT EVERY ZOOM** | 2026-09-27 | → `40_RENDER_SCENE/INDEX.md` |
 | `D127` | ⭐⭐⭐ **EDGE-ON: THE HOLDER'S `dy` DRIVES BLUE ALONE, FINGER UP = AWAY FROM THIS CAMERA** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
-| `D128` | ⭐⭐ **A FROZEN BODY SEEN FROM BELOW DISAPPEARS — its material unchanged** | 2026-09-28 | → §16 |
+| `D128` | ⭐⭐ **A FROZEN BODY SEEN FROM BELOW DISAPPEARS** | 2026-09-28 | → §16 |
 | `D129` | ⭐⭐⭐ **`Scene_1`'s TABLE IS THE LEVEL'S GOAL; FIVE PIECES BOOT OUT OF IT** | 2026-09-28 | → `SCENE_1.md` §7 |
-| `D130` | ⭐⭐⭐ **THE GOAL IS MET RELATIVE TO EACH OTHER; A BOX'S FACE OR ITS OPPOSITE** | 2026-09-28 | `core/goal.ts` → `SCENE_1.md` §8 |
+| `D130` | ⭐⭐⭐ **THE GOAL IS MET RELATIVE TO EACH OTHER; A BOX'S FACE OR ITS OPPOSITE** | 2026-09-28 | → `SCENE_1.md` §8 |
 | `D131` | ⭐⭐ **EACH SCENE CARRIES ITS OWN ORBIT RIG** | 2026-09-28 | → `SCENE_1.md` §8 |
 | `D132` | ⭐⭐ **EDGE-ON *AWAY* IS READ FROM THE CAMERA TO THE GIZMO, NOT ALONG THE VIEW** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
 | `D133` | ⚠ **REVERTED THE SAME DAY** | 2026-09-28 | → §16 |
@@ -122,7 +122,8 @@ file.
 | `D178` | ⭐ **BOLDER: 5–10° YAW, 5–10 % SHIFT** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D179` | ⭐ **0–4° (MED 2.5°), 0–5 % (MED 3 %)** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D180` | ⭐⭐ **THE LEVEL END; A SWAPPABLE UI THEME** | 2026-09-30 | → `LEVEL_END.md` |
-| `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
+| `D181` | ⭐⭐ **`3D7`: THE PLAY VOLUME** | 2026-09-30 | → `COLLISION.md` §10 |
+| `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
 | `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside the capture zone is the same as outside** | 2026-09-23 | ⭐ Binding, ⚠ → history |

@@ -1,6 +1,6 @@
 # LEVEL_END — when a level is complete, the results screen, and the UI theme
 
-> **STATUS** · 🔨 built 2026-09-30 (`D180`), ⛔ unjudged by a hand · **OWNS** · `GM1`'s level end, the results screen, the
+> **STATUS** · ✅✅ built and **CLOSED BY A DEVICE LOOK** 2026-09-30 (`D180`: *"Tested, ok"*, build `a796ac0`) · **OWNS** · `GM1`'s level end, the results screen, the
 > UI theme (the graphics style of every screen)
 > **READ IF** · you are changing what ends a level, what the results show or where they lead, or restyling the screens
 
@@ -81,8 +81,8 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
   41/41 · Retry · Level select*, in `night` and `paper`.
 * ⛔ **Found by that look and fixed**: `?uiTheme=paper` was printed on the HUD as *"not an overridable tunable"* — the
   URL-override parser now passes it by (`input/config_override.ts`), with a vector.
-* ⚠ Moves read 0 there because no gesture was made; the count itself is `D112`'s ledger, unchanged. ⛔ Rule 5: a hand
-  finishing the painting on the tablet is owed.
+* ⚠ Moves read 0 there because no gesture was made; the count itself is `D112`'s ledger, unchanged.
+* ✅✅ **CLOSED BY A DEVICE LOOK** — the owner, on the tablet, build `a796ac0`, 2026-09-30: *"Tested, ok"*.
 
 ## 5. For later
 

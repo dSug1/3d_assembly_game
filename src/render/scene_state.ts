@@ -38,6 +38,7 @@ import { type PointerRole } from "../input/router";
 import { type SceneSnapshot } from "./undo_wiring";
 import { type DemoPlan } from "../core/demo_plan";
 import { type LevelEnd, type LevelResult } from "../core/level_end";
+import { type Aabb } from "../core/collision";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -434,6 +435,8 @@ export interface SceneState {
   episodes: EpisodeTally;
   /** ⚠ `null` until the first press — `SCORE.md` §6: the ledger starts at the first press after boot. */
   sceneStartMs: number | null;
+  /** ⭐ `3D7` (`D181`): the play volume, world metres — `null` for a scene that declares none (unbounded). */
+  playVolume: Aabb | null;
   /** ⭐ `D180`: the level end's latch — its `result` is the frozen result once the level is complete. */
   levelEnd: LevelEnd;
   /** ⭐ `D180`: told once, on the frame the level completes (`main.ts` shows the results screen). */

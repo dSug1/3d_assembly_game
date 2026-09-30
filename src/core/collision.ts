@@ -90,6 +90,41 @@ export interface CollisionSetup {
   readonly skinM: number;
   /** Pairs that never collide — the render layer's snapping and just-unsnapped couples. */
   readonly exempt?: (a: ObjectId, b: ObjectId) => boolean;
+  /**
+   * ⭐ `3D7` — **THE PLAY VOLUME**, world metres: no body may leave it. Its walls are one more blocker to the same rule —
+   * a move stops at a wall, a translation SLIDES along it, a rotation clamps on its own axis. Absent: unbounded.
+   */
+  readonly volume?: Aabb;
+}
+
+/** ⭐ `3D7`: what `blockedBy` names when a WALL of the play volume stopped the move — no body has this id. */
+export const PLAY_VOLUME = "the play volume";
+
+/**
+ * ⭐ `3D7`: how far the parts' furthest point lies OUTSIDE the volume, metres (≤ 0: every point inside, by that margin).
+ */
+function excursion(parts: readonly Vec3[][], v: Aabb): number {
+  let worst = -Infinity;
+  for (const part of parts)
+    for (const p of part)
+      for (let i = 0; i < 3; i++) worst = Math.max(worst, v.min[i]! - p[i]!, p[i]! - v.max[i]!);
+  return worst;
+}
+
+/**
+ * ⭐ `3D7`: the INWARD normals of the walls the parts are at (within `eps`) or beyond — the contact normals a
+ * translation slides along. A corner answers two or three.
+ */
+function wallNormals(parts: readonly Vec3[][], v: Aabb, eps: number): Vec3[] {
+  const out: Vec3[] = [];
+  for (let i = 0; i < 3; i++) {
+    let lo = Infinity, hi = -Infinity;
+    for (const part of parts) for (const p of part) [lo, hi] = [Math.min(lo, p[i]!), Math.max(hi, p[i]!)];
+    const e = (k: number): Vec3 => [i === 0 ? k : 0, i === 1 ? k : 0, i === 2 ? k : 0];
+    if (lo <= v.min[i]! + eps) out.push(e(1));
+    if (hi >= v.max[i]! - eps) out.push(e(-1));
+  }
+  return out;
 }
 
 /** The body and every body seated below it — what moves when it moves. */
@@ -265,6 +300,19 @@ export function poseFree(
     }
     return { free: false, blockedBy: o };
   }
+  // ⭐⭐ `3D7` — THE WALLS. Out by more than the tolerance is refused — unless the subtree was ALREADY that far out and
+  // gets no further: a body outside (a level that boots one there, a tolerance changed) can always come back in.
+  if (setup.volume) {
+    for (const m of moving) {
+      const ma = worldParts(after, m, setup.shapes);
+      if (!ma) continue;
+      const out = excursion(ma, setup.volume);
+      if (out <= setup.skinM) continue;
+      const mb = worldParts(before, m, setup.shapes);
+      if (mb && out <= Math.max(0, excursion(mb, setup.volume)) + 1e-12) continue;
+      return { free: false, blockedBy: PLAY_VOLUME };
+    }
+  }
   return { free: true, blockedBy: null };
 }
 
@@ -387,6 +435,18 @@ export function resolveMove(
   }
   // ⭐ THE SLIDE — only for a translation. The contact normal is GJK's separation at the stop.
   const stoppedWorld = setWorldPlacement(world, id, stopped);
+  // ⭐⭐ `3D7`: stopped by a WALL — slide along it: the component into every wall the body is at is removed (a corner
+  // removes two or three), the rest applied along the same path check.
+  if (blocker === PLAY_VOLUME && setup.volume) {
+    const eps = 2 * setup.skinM + 1e-9;
+    const walls = moving.flatMap((m) => wallNormals(worldParts(stoppedWorld, m, setup.shapes) ?? [], setup.volume!, eps));
+    let rest = scale(sub(target.position, from.position), 1 - t);
+    for (const n of walls) rest = slideAlong(rest, n);
+    if (walls.length === 0 || length(rest) <= 1e-15) return { placed: stopped, t, slid: false, blockedBy: blocker };
+    const slideTo: Placed = { position: add(stopped.position, rest), orientation: stopped.orientation };
+    const along = advance(stoppedWorld, id, moving, root, stopped, slideTo, setup);
+    return { placed: along.t > 0 ? blendPlacement(stopped, slideTo, along.t) : stopped, t, slid: along.t > 0, blockedBy: blocker };
+  }
   const mp = worldParts(stoppedWorld, id, setup.shapes);
   const bp = worldParts(stoppedWorld, blocker, setup.shapes);
   let n: Vec3 | null = null;

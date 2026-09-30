@@ -202,3 +202,31 @@ not pass its neighbours' front faces), blocked by `Piece27`; and a snap landing 
   lined up within the allowance it slides in, beyond it it is refused; the slider's 3 mm takes a 2 mm
   misalignment; arriving flush on a third body from apart is allowed (RED: *"is in the way"*). §3's and
   §5's vectors restated to the new rule. ⛔ Unjudged by a hand.
+
+## 10. ⭐⭐⭐ `3D7` — THE PLAY VOLUME (`D181`, 2026-09-30)
+
+> *"Build 3D7"* — the owner, 2026-09-30 (the playability program's build #3, `D116`)
+
+`PLAYABILITY` §3: *"Nothing keeps a part inside the scene today … A volume per level clamps translation (the same
+stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable."*
+
+* ⭐ **Data**: a level declares `playVolume: { aboveFloor }` — a box STANDING ON ITS FLOOR (the largest frozen body): the
+  floor's footprint, from its top up `aboveFloor` authored units (`core/play_volume.ts` `playVolumeOf`, world metres).
+  **`Scene_1`: 2 m × 2 m, 1 m high** (twice the painting's height). ⛔ A scene that declares none is unbounded — `Scene_0`,
+  the workbench, whose parts start off its small plate. The JSON seam carries it and refuses a height ≤ 0.
+* ⭐⭐ **The rule is `3D6`'s, with the walls as one more blocker** (`CollisionSetup.volume`, `blockedBy === PLAY_VOLUME`):
+  * `poseFree`: a subtree whose furthest point is OUT by more than `skinM` is refused — checked along the path in
+    `skinM` substeps, so one big step cannot tunnel through a wall;
+  * ⭐ **recoverable**: a body already out (a changed tolerance, a level that boots one there) may move back in or along,
+    never further out;
+  * `resolveMove`: a TRANSLATION stopped by a wall SLIDES — the component into every wall the body is at is removed (a
+    corner removes two or three), the rest re-checked along the path; ⛔ a ROTATION clamps on its own axis, never slid.
+* The HUD's collision line names it: `Piece1⟂the play volume 73%`.
+* ⚠ It clamps the GESTURES (every write through `guardMove`). The alignment turn, the snap's lerp and the demo's replay do
+  not collide, as before (§4); an undo restores a pose that was inside.
+* ✅ 11 vectors (`tests/d181.test.ts`): stop at a wall, no tunnelling, the slide, a corner, a rotation clamped about its
+  own axis, the way back in, unbounded without a volume, `Scene_1`'s box, every boot pose and every demo start inside it,
+  the JSON seam. ⛔ Three mutants RED: no walls (6), no way back in (1), no slide (1).
+* ✅ The real wiring on the dev server (`Level 1`, through `guardMove`): `Piece1` pushed 5 m sideways stops at x 0.938 m
+  (its turned corner on the 1 m edge), `Piece41` pushed 5 m toward the camera at z −0.985 m, `Piece17` lifted 3 m is
+  stopped by `Piece2` above it — the walls and the bodies in one rule. ⛔ Unjudged by a hand.

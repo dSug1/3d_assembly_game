@@ -177,6 +177,9 @@ const FLOOR: BodySpec = {
 export const SCENE_1: SceneDescriptor = {
   id: "Scene_1",
   title: "Scene 1 — the painting",
+  // ⭐ `3D7` (`D181`): no piece may leave the floor's 2 m × 2 m footprint, nor rise more than 1 m above it — twice the
+  // painting's height, so every lift the level needs has room.
+  playVolume: { aboveFloor: 10 },
   // ⭐ One authored unit = 0.1 m, so the 4.9-unit painting is 0.49 m and the rig frames it.
   unitM: 0.1,
   bootView: "LEVEL",

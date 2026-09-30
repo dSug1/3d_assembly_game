@@ -21,7 +21,7 @@ transform. ⛔ The pass found **one defect, in the wiring**, and 409 vectors pas
 after the fix because the iteration set lives in `src/render`, on the far side of the boundary —
 which is why a device look is what closes a change.
 ⭐ The account: [`../00_CORE/queue_notes/3D1.md`](../00_CORE/queue_notes/3D1.md).
-✅ **`3D6` BUILT** — `core/collision.ts`, `render/collision_wiring.ts` → [`spec/COLLISION.md`](spec/COLLISION.md). ⛔ **NEXT: `GM1`**.
+✅ **`3D6` BUILT** — `core/collision.ts`, `render/collision_wiring.ts` → [`spec/COLLISION.md`](spec/COLLISION.md). ✅ `3D7` (§10).
 
 ## ⛔⛔ The four rules that must not be rediscovered
 
