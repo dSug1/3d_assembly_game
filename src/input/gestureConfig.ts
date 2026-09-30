@@ -888,7 +888,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // enough not to feel like waiting for a cutscene.
   cameraResetMs: 450,
   // ⚠ Prototype guesses, with sliders in CAMERA.
-  cameraLeashDeg: 15,
+  cameraLeashDeg: 7,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
   // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
