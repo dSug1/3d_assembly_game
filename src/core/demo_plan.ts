@@ -94,19 +94,17 @@ export interface DemoOptions {
    */
   readonly colourOrder?: readonly Triple[];
   /**
-   * ⭐ `D177` (the owner: *"randomly roll the parts when they are laid on the floor at start by up to 1.5 degrees negative
-   * or positive to give a natural feel"* — *"I was meaning yaw, not roll"*): each piece on the grid is turned about the
-   * VERTICAL by a random angle in ±this, degrees. It stays flat on the floor.
+   * ⭐ `D177`/`D178` (the owner: *"random between 5 to 10 degrees negative or positive yaw"*; ±1.5° at `D177`, first
+   * built as a roll — *"I was meaning yaw, not roll"*): each piece on the grid is turned about the VERTICAL by a random
+   * angle whose SIZE is in `[min, max]` degrees, of either sign. It stays flat on the floor.
    */
-  readonly startYawDeg: number;
+  readonly startYawDeg: readonly [number, number];
   /**
-   * ⭐ `D177` (the owner: *"randomly misalign the face facing camera by up to 1 pixel negative or positive in depth
-   * axis"*): each piece on the grid is shifted along depth by a random amount in ±this, authored units. ⚠ A PIXEL is a
-   * size on the glass and the plan is fixed data, so it is fixed at what one CSS pixel covers AT THE GRID in the start
-   * view on the reference tablet (882 × 1304 portrait, fov 0.8, the grid ~2.15 m from the camera): `2 × 2.15 × tan 0.4 /
-   * 1304` = **1.4 mm** = 0.014 units. On another screen it is a little more or less than a pixel.
+   * ⭐ `D178` (the owner: *"random between 5 to 10% of longest dimension of each part negative or positive for part
+   * misalignment on depth for the row alignments"*; ±1 pixel at `D177`): each piece's aligned face sits off its row's
+   * line along depth by a random amount whose SIZE is in `[min, max]` × its longest side, of either sign.
    */
-  readonly startJitter: number;
+  readonly startShiftFrac: readonly [number, number];
 }
 
 /** ⭐ The owner: *"the camera shall orbit uniformly towards the right"* — one full turn over the demo. */
@@ -176,20 +174,26 @@ export const DEMO_DEFAULTS: DemoOptions = {
   gridPitch: 0.05,
   gridGap: 0.1,
   gridOffset: 0.3,
-  // ⭐ `D177`: a natural feel — ±1.5° of yaw, ±1 pixel (1.4 mm) along depth.
-  startYawDeg: 1.5,
-  startJitter: 0.014,
+  // ⭐ `D178`: a natural feel — a yaw of 5°–10° and a shift along depth of 5 %–10 % of the piece's length, either sign.
+  startYawDeg: [5, 10],
+  startShiftFrac: [0.05, 0.1],
 };
 
 /**
- * ⭐ `D177` — **EACH PIECE'S NATURAL IMPERFECTION** on the grid: a yaw about the vertical (radians) and a shift along
- * depth (authored units), drawn from the seed AND the piece — its own stream, so the draw does not depend on which pieces
- * come off or in what order, and the rest of the generator's random sequence is untouched.
+ * ⭐ `D177`/`D178` — **EACH PIECE'S NATURAL IMPERFECTION** on the grid, as DRAWN: a yaw about the vertical (radians) and
+ * a shift of its aligned face along depth (authored units), each a size in its range with a random sign — drawn from the
+ * seed AND the piece, its own stream, so the draw does not depend on which pieces come off or in what order and the rest
+ * of the generator's random sequence is untouched. ⚠ `demoGrid` may flip the SHIFT's sign to keep a piece on the floor
+ * and out of the cube (`DemoGrid.shift` is the final one); the yaw is always this.
  */
-export function naturalOf(scene: SceneDescriptor, id: string, opt: Pick<DemoOptions, "seed" | "startYawDeg" | "startJitter">): { yaw: number; dz: number } {
+export function naturalOf(scene: SceneDescriptor, id: string, opt: Pick<DemoOptions, "seed" | "startYawDeg" | "startShiftFrac">): { yaw: number; shift: number } {
   const i = scene.bodies.findIndex((b) => b.id === id);
   const r = mulberry32(opt.seed * 7919 + 104729 * (i + 1));
-  return { yaw: ((r() * 2 - 1) * opt.startYawDeg * Math.PI) / 180, dz: (r() * 2 - 1) * opt.startJitter };
+  const size = (range: readonly [number, number]) => range[0] + (range[1] - range[0]) * r();
+  const sign = () => (r() < 0.5 ? -1 : 1);
+  const yaw = (sign() * size(opt.startYawDeg) * Math.PI) / 180;
+  const shift = sign() * size(opt.startShiftFrac) * Math.max(...contourDims(scene.bodies[i]!));
+  return { yaw, shift };
 }
 
 /** ⭐ `D174`: the box that holds the cube AND the floor grid — every move of the plan stays inside it. */
@@ -244,21 +248,27 @@ const sameColour = (a: Triple, b: Triple): boolean => a.every((v, i) => Math.abs
  * ⭐⭐ `D176` (the owner: *"make two or three rows of parts instead of one unique row. If required to fit the parts,
  * reverse the order of alignment along longest dimension every second row. The rows do not need to be justified"*):
  * **TWO ROWS THAT INTERLOCK** in that one strip —
- * * **row 1**, left to right, its NEAR ends (lowest `z`) flush on a line half a gutter in from the floor's edge;
- * * **row 2**, the order continuing RIGHT TO LEFT, its FAR ends flush on a line `gridOffset` outside the cube (nearer the
- *   floor's edge if its longest piece needs it): each piece slid from where the one before ended to the first place
- *   where it clears row 1 by a gutter — a long piece opposite short ones. So the rows are ragged, not justified.
+ * * **row 1**, left to right, its NEAR end faces (toward the boot camera) on a line as near the floor's edge as it can;
+ * * **row 2**, the order continuing RIGHT TO LEFT, its FAR end faces on a line `gridOffset` outside the cube (nearer the
+ *   floor's edge if its pieces need it): each piece slid from where the one before ended to the first place where it
+ *   clears row 1 by a gutter — a long piece opposite short ones. So the rows are ragged, not justified.
+ * ⭐⭐ `D177`/`D178` (the owner: *"random between 5 to 10 degrees negative or positive yaw, random between 5 to 10% of
+ * longest dimension of each part negative or positive for part misalignment on depth for the row alignments"*): each
+ * piece is turned about the vertical by its `naturalOf` yaw, and its aligned face sits OFF its row's line by its shift.
+ * ⚠ The strip is ~4.9 units deep and the longest pieces 4.83, so a shift's SIGN cannot always be kept: where the drawn
+ * sign would put a piece off the floor or into the cube, it is FLIPPED (its size, 5–10 %, is kept) and the row's line
+ * moves to make room. The yaw is always kept.
  * The split between the rows is the one that makes the whole narrowest; the whole is centred across the cube. Each
- * piece takes a whole number of `gridPitch` cells across — its width and a `gridGap` gutter.
+ * piece takes a whole number of `gridPitch` cells across — its turned footprint and a `gridGap` gutter.
  * ⚠ A THIRD row cannot interlock: it would share row 1's line. ⛔ Nothing is drawn. ⛔ A grid that leaves the floor, or
- * a piece that would reach into the cube, THROWS.
+ * a row that cannot keep its pieces between the floor's edge and the cube, THROWS.
  */
 export function demoGrid(
   scene: SceneDescriptor,
   ids: readonly string[],
   volume: Aabb,
-  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "colourOrder" | "seed" | "startYawDeg" | "startJitter">,
-): { rest: Map<string, Vec3>; stage: Aabb } {
+  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "colourOrder" | "seed" | "startYawDeg" | "startShiftFrac">,
+): DemoGrid {
   const floor = [...scene.bodies].filter((b) => b.frozen).sort((a, b) => Math.max(...contourDims(b)) - Math.max(...contourDims(a)))[0];
   if (!floor) throw new Error(`${scene.id}: a demo grid needs a floor (a frozen body)`);
   const fd = contourDims(floor);
@@ -274,78 +284,130 @@ export function demoGrid(
     return ga - gb || vb - va || index.get(a)! - index.get(b)!;
   });
   const p = opt.gridPitch;
-  const snap = (z: number) => Math.round(z / p) * p;
+  const n = sorted.length;
   const halves = sorted.map((id) => flatHalf(contourDims(spec(id)) as unknown as Vec3));
-  // ⭐ `D177`: a turned piece is wider by its length × sin(yaw) and its corners pass its ends by half its width × sin(yaw);
-  // with the depth jitter, all paid for here — so the gutters stay whole.
-  const yawMax = (opt.startYawDeg * Math.PI) / 180;
-  const cells = halves.map((h) => Math.ceil((2 * h[0] + 2 * h[2] * Math.sin(yawMax) + opt.gridGap) / p - 1e-9));
-  const grow = (i: number) => halves[i]![0] * Math.sin(yawMax) + opt.startJitter;
-  const lengthOf = (i: number) => 2 * halves[i]![2];
+  const nat = sorted.map((id) => naturalOf(scene, id, opt));
+  // ⭐ A turned piece: its footprint across (its width turned, plus its length × |sin yaw|), how far its end faces'
+  // centres lie from its centre along depth (half its length × cos yaw), and how far their corners pass them (half its
+  // width × |sin yaw|). All paid for here, so the gutters stay whole.
+  const across = (i: number) => 2 * halves[i]![0] * Math.cos(nat[i]!.yaw) + 2 * halves[i]![2] * Math.abs(Math.sin(nat[i]!.yaw));
+  const halfLong = (i: number) => halves[i]![2] * Math.cos(nat[i]!.yaw);
+  const corner = (i: number) => halves[i]![0] * Math.abs(Math.sin(nat[i]!.yaw));
+  const cells = sorted.map((_, i) => Math.ceil((across(i) + opt.gridGap) / p - 1e-9));
   const fx = [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2];
   const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
   const front = volume.min[2];
-  // ⭐ Row 1's line: half a gutter in from the floor's edge — the most room for the two rows to interlock.
-  // ⭐ `D177`: far enough in that a turned, shifted piece's corner stays on the floor (half a gutter before `D177`).
-  const edgeGrow = Math.max(...halves.map((_, i) => grow(i)));
-  const near = Math.ceil((fz[0]! + Math.max(opt.gridGap / 2, edgeGrow)) / p - 1e-9) * p;
+  const floorLo = fz[0]! + opt.gridGap / 2; // ⭐ half a gutter in from the floor's edge
+  const cubeHi = front - 0.01; // ⭐ strictly outside the cube
 
-  type Laid = { i: number; x0: number; z0: number; z1: number };
-  const layout = (split: number): { laid: Laid[]; width: number; far: number } | null => {
+  /**
+   * ⭐ A row's line and its pieces' final shifts. `near`: the NEAR faces sit at `line + shift`; `far`: the FAR faces.
+   * Each piece allows the line an interval; a drawn sign that empties the intersection is flipped, the piece that binds
+   * first, once each. `prefer` picks the line inside what is left. `null` if nothing is left.
+   */
+  const fitRow = (members: number[], align: "near" | "far", prefer: (lo: number, hi: number) => number): { line: number; shift: Map<number, number> } | null => {
+    const sign = new Map(members.map((i) => [i, Math.sign(nat[i]!.shift) || 1]));
+    const flipped = new Set<number>();
+    for (;;) {
+      let lo = -Infinity, hi = Infinity, loBy = -1, hiBy = -1;
+      for (const i of members) {
+        const s = sign.get(i)! * Math.abs(nat[i]!.shift);
+        const L = 2 * halfLong(i), g = corner(i);
+        // near: the piece spans [line + s − g, line + s + L + g]; far: [line + s − L − g, line + s + g]
+        const a = align === "near" ? floorLo + g - s : floorLo + L + g - s;
+        const b = align === "near" ? cubeHi - L - g - s : cubeHi - g - s;
+        if (a > lo) [lo, loBy] = [a, i];
+        if (b < hi) [hi, hiBy] = [b, i];
+      }
+      if (lo <= hi) {
+        const line = prefer(lo, hi);
+        return { line, shift: new Map(members.map((i) => [i, sign.get(i)! * Math.abs(nat[i]!.shift)])) };
+      }
+      // ⭐ the piece that pushes the line up is shifted toward the camera; the one that pulls it down, toward the cube
+      const flip = [loBy, hiBy].find((i) => i >= 0 && !flipped.has(i) && sign.get(i) === (i === loBy ? -1 : 1));
+      if (flip === undefined) return null;
+      flipped.add(flip);
+      sign.set(flip, -sign.get(flip)!);
+    }
+  };
+  const up = (z: number) => Math.ceil(z / p - 1e-9) * p;
+  const down = (z: number) => Math.floor(z / p + 1e-9) * p;
+
+  type Laid = { i: number; x0: number; z0: number; z1: number; shift: number; row: 0 | 1 };
+  type Layout = { laid: Laid[]; width: number; lines: [number, number] };
+  const layout = (split: number): Layout | null => {
+    const r1 = [...Array(split).keys()];
+    const r2 = [...Array(n - split).keys()].map((k) => split + k);
+    // ⭐ row 1 as near the floor's edge as it can; row 2 `gridOffset` outside the cube if it can, else nearer the edge
+    const f1 = fitRow(r1, "near", (lo, hi) => Math.min(up(lo), hi));
+    const f2 = r2.length ? fitRow(r2, "far", (lo, hi) => Math.max(Math.min(down(hi), down(front - opt.gridOffset)), lo)) : { line: 0, shift: new Map() };
+    if (!f1 || !f2) return null;
     const laid: Laid[] = [];
     let x = 0;
-    for (let i = 0; i < split; i++) {
-      laid.push({ i, x0: x, z0: near, z1: near + lengthOf(i) });
+    for (const i of r1) {
+      const s = f1.shift.get(i)!;
+      laid.push({ i, x0: x, z0: f1.line + s - corner(i), z1: f1.line + s + 2 * halfLong(i) + corner(i), shift: s, row: 0 });
       x += cells[i]!;
     }
-    const long2 = Math.max(0, ...sorted.slice(split).map((_, k) => lengthOf(split + k)));
-    const far = snap(Math.max(front - opt.gridOffset, near + long2));
-    if (far >= front) return null;
     // ⭐ Row 2, right to left, each piece at the first place from the cursor that clears row 1 by a gutter.
     let cursor = x;
-    for (let i = split; i < sorted.length; i++) {
-      const z0 = far - lengthOf(i), z1 = far;
+    for (const i of r2) {
+      const s = f2.shift.get(i)!;
+      const z0 = f2.line + s - 2 * halfLong(i) - corner(i), z1 = f2.line + s + corner(i);
       let right = cursor;
       for (;;) {
         const left = right - cells[i]!;
-        const hit = laid.filter((l) => l.i < split && l.x0 < right && l.x0 + cells[l.i]! > left && !(l.z1 + grow(l.i) + opt.gridGap + grow(i) <= z0 + 1e-9 || z1 + opt.gridGap <= l.z0 + 1e-9));
+        const hit = laid.filter((l) => l.row === 0 && l.x0 < right && l.x0 + cells[l.i]! > left && !(l.z1 + opt.gridGap <= z0 + 1e-9 || z1 + opt.gridGap <= l.z0 + 1e-9));
         if (hit.length === 0) break;
         right = Math.min(...hit.map((l) => l.x0));
       }
-      laid.push({ i, x0: right - cells[i]!, z0, z1 });
+      laid.push({ i, x0: right - cells[i]!, z0, z1, shift: s, row: 1 });
       cursor = right - cells[i]!;
     }
     const lo = Math.min(...laid.map((l) => l.x0));
     const hi = Math.max(...laid.map((l) => l.x0 + cells[l.i]!));
-    return { laid, width: hi - lo, far };
+    return { laid, width: hi - lo, lines: [f1.line, f2.line] };
   };
-  let best: { laid: Laid[]; width: number; far: number } | null = null;
-  for (let split = 1; split < sorted.length; split++) {
+  let best: Layout | null = null;
+  for (let split = 1; split <= Math.max(1, n - 1); split++) {
     const l = layout(split);
     if (l && (!best || l.width < best.width)) best = l;
   }
-  if (!best) best = sorted.length === 1 ? layout(1) : null;
   if (!best) throw new Error(`${scene.id}: the demo grid's pieces cannot lie between the floor's edge and the cube`);
   const minCell = Math.min(...best.laid.map((l) => l.x0));
   const centreX = (volume.min[0] + volume.max[0]) / 2;
   const originX = Math.round((centreX - (best.width * p) / 2) / p) * p - minCell * p;
   const rest = new Map<string, Vec3>();
-  const lo: [number, number, number] = [Infinity, floorTop, Math.max(fz[0]!, near - opt.gridGap / 2 - edgeGrow)];
+  const shift = new Map<string, number>();
+  const lo: [number, number, number] = [Infinity, floorTop, Infinity];
   const hi: [number, number, number] = [-Infinity, floorTop, -Infinity];
   for (const l of best.laid) {
     const h = halves[l.i]!;
-    // ⭐ `D177`: turned a little about the vertical (`generateDemoPlan` gives it that orientation) and shifted along depth.
-    rest.set(sorted[l.i]!, [originX + (l.x0 + cells[l.i]! / 2) * p, floorTop + h[1], (l.z0 + l.z1) / 2 + naturalOf(scene, sorted[l.i]!, opt).dz]);
+    rest.set(sorted[l.i]!, [originX + (l.x0 + cells[l.i]! / 2) * p, floorTop + h[1], (l.z0 + l.z1) / 2]);
+    shift.set(sorted[l.i]!, l.shift);
     lo[0] = Math.min(lo[0], originX + l.x0 * p);
     hi[0] = Math.max(hi[0], originX + (l.x0 + cells[l.i]!) * p);
     hi[1] = Math.max(hi[1], floorTop + 2 * h[1]);
-    hi[2] = Math.max(hi[2], l.z1 + grow(l.i) + opt.gridGap / 2);
+    lo[2] = Math.min(lo[2], l.z0 - 0.01);
+    hi[2] = Math.max(hi[2], l.z1 + 0.01);
   }
-  if (lo[0] < fx[0]! || hi[0] > fx[1]! || lo[2] < fz[0]! - 1e-9)
-    throw new Error(`${scene.id}: the demo grid (x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}, z from ${lo[2].toFixed(2)}) leaves the floor`);
-  if (hi[2] - opt.gridGap / 2 >= front)
-    throw new Error(`${scene.id}: the demo grid's longest piece reaches into the cube from the floor's edge`);
-  return { rest, stage: { min: lo, max: hi } };
+  lo[2] = Math.max(lo[2], fz[0]!);
+  if (lo[0] < fx[0]! || hi[0] > fx[1]!)
+    throw new Error(`${scene.id}: the demo grid (x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}) leaves the floor`);
+  const rows = [0, 1].map((r) => best!.laid.filter((l) => l.row === r).map((l) => sorted[l.i]!));
+  return { rest, shift, rows: [rows[0]!, rows[1]!], lines: best.lines, stage: { min: lo, max: hi } };
+}
+
+/** ⭐ `D176`–`D178`: the grid — where each piece rests, its final depth shift, its two rows (in reading order) and their lines. */
+export interface DemoGrid {
+  readonly rest: Map<string, Vec3>;
+  /** ⭐ `D178`: each piece's shift off its row's line, authored units — its drawn size, its sign perhaps flipped. */
+  readonly shift: Map<string, number>;
+  /** ⭐ Row 1 left to right, row 2 right to left — the reading order. */
+  readonly rows: readonly [readonly string[], readonly string[]];
+  /** ⭐ Row 1's NEAR-face line and row 2's FAR-face line, `z`. */
+  readonly lines: readonly [number, number];
+  readonly stage: Aabb;
 }
 
 /**
