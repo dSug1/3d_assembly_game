@@ -174,20 +174,38 @@ function judge(slot: Slot, now: Pose, frame: Frame): { p: number; a: number; tar
  * ⭐⭐ THE FRAME. `ABSOLUTE`: the identity. `RELATIVE`: the bodies in place define it — a plain least-squares fit is
  * dragged toward the misplaced ones (at `Scene_1`'s boot, five pieces 10–20 cm out shift it ~12 mm and every piece in
  * place would read as out). ⭐ So: fit, keep the bodies within twice the median residual (or `FIT_INLIER_M`), refit on
- * those — a few rounds, never fewer than three bodies.
+ * those — until the kept set no longer changes, never fewer than three bodies.
+ * ⛔⛔ `D190`: *until the kept set no longer changes* — it stopped when the kept COUNT matched, so a round that swapped
+ * misplaced pieces out for placed ones (same count, other members) was never refitted: two pieces a metre away left the
+ * frame tilted 10.6°, the painting's top row read 40–57 mm off, and nine pieces nobody touched counted as un-placed —
+ * one move later they all "reached their goal" in one pop-up (the owner's report, found by a fuzz of random moves).
  */
 function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3; now: Vec3 }[]): Frame {
   if (kind !== "RELATIVE") return { rotation: IDENTITY, translation: [0, 0, 0] };
   let set = pairs;
   let fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now));
-  for (let round = 0; round < 5 && fit; round++) {
+  for (let round = 0; round < FIT_ROUNDS && fit; round++) {
     const f = fit;
     const res = pairs.map((g) => length(sub(g.now, add(qRotate(f.rotation, g.at), f.translation))));
     const median = [...res].sort((a, b) => a - b)[Math.floor(res.length / 2)]!;
     const keep = pairs.filter((_, i) => res[i]! <= Math.max(2 * median, FIT_INLIER_M));
-    if (keep.length < 3 || keep.length === set.length) break;
+    if (keep.length < 3 || (keep.length === set.length && keep.every((g, i) => g === set[i]))) break;
     set = keep;
     fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now)) ?? fit;
+  }
+  // ⭐⭐ `D190`: then the EXACT core — the pieces within `FIT_INLIER_M` — defines the frame, whenever three of them fit.
+  // ⛔ Loosely placed pieces (inside the margins, not exact) had a vote: with many of them the median cut let them in, so
+  // moving one ELSEWHERE shifted the frame by millimetres and flipped an untouched piece sitting at its margin's edge.
+  // The exact ones are the boot's and every piece a goal pull landed — so the frame no longer moves when a loose or far
+  // piece does.
+  for (let round = 0; round < FIT_ROUNDS && fit; round++) {
+    const f = fit;
+    const core = pairs.filter((g) => length(sub(g.now, add(qRotate(f.rotation, g.at), f.translation))) <= FIT_INLIER_M);
+    if (core.length < 3 || (core.length === set.length && core.every((g, i) => g === set[i]))) break;
+    const refit = bestRigidFit(core.map((g) => g.at), core.map((g) => g.now));
+    if (!refit) break;
+    set = core;
+    fit = refit;
   }
   if (fit) return fit;
   // ⚠ Fewer than three bodies, or all on a line: the turn is undetermined, so only the offset is fitted.
@@ -204,6 +222,9 @@ function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3;
  * off the table (found in the real app).
  */
 const FIT_INLIER_M = 0.002;
+
+/** ⭐ `D190`: how many refits the frame may take to settle — each round only drops or restores pieces. */
+const FIT_ROUNDS = 12;
 
 /** ⭐ Every injective map of `n` bodies onto `m ≥ n` slots, identity first (so a tie keeps each body on its own slot). */
 function* injections(n: number, m: number, used: boolean[] = [], out: number[] = []): Generator<number[]> {
@@ -240,9 +261,17 @@ function assign(
   const out = new Map<string, Slot>();
   const byKind = new Map<string, Slot[]>();
   for (const s of slots) byKind.set(s.kind, [...(byKind.get(s.kind) ?? []), s]);
+  // ⛔⛔ `D190`: the cost is CAPPED outside the margins — one flat price for every slot a piece is not inside. Uncapped, a
+  // piece a metre away could STEAL a LOOSELY placed twin's slot: the sum of distances only bounds the swap to within twice
+  // the loose twin's offset (measured: Piece31 1.12 m away, Piece30 34 mm off its slot — identity 1222 + 34 mm, swap
+  // 1123 + 133 mm: a tie, and Piece30 un-placed by a move it was not part of). Capped, the matching first places as many
+  // as it can, then minimises their error; a far piece never competes.
+  const OUTSIDE = 3;
   const cost = (body: string, slot: Slot): number => {
     const r = judge(slot, nowOf.get(body)!, frame);
-    return r.p / Math.max(tol.positionM, 1e-12) + r.a / Math.max(tol.angleRad, 1e-12);
+    const p = r.p / Math.max(tol.positionM, 1e-12);
+    const a = r.a / Math.max(tol.angleRad, 1e-12);
+    return p <= 1 && a <= 1 ? p + a : OUTSIDE;
   };
   for (const group of byKind.values()) {
     const present = group.filter((s) => nowOf.get(s.id));

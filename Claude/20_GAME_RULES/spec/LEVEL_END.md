@@ -153,6 +153,37 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
   dragged out in depth — live 35 while the committed count, the HUD and the bar stayed 36 — and back, released: 36, no
   pop-up; then Piece2 brought home: one `✅ Piece2 reached its goal · 37/41`.
 
+## 5ter. ⛔⛔ The pop-up that named a whole row of pieces — and why a piece nobody moved never changes now (`D190`, 2026-09-30)
+
+> *"the bug message was all 'piece XXX reached its goal' next to each other on one single row on the screen. This was not
+> just a couple pioneer-follower. Do a better and deeper analysis how this configuration can happen."* · *"why a one piece
+> move would trigger the check on goal for all other pieces?"* — the owner
+
+* ⭐ **What the owner saw is §5bis's combined message** (*"Piece3, Piece5, … reached their goals"*, one unwrapped row) — the
+  only code that names several pieces in one pop-up. ⛔ Not the load (the baseline read 36/41 on the first frame of a cold
+  load, and exact pieces are placed even at a zero margin), not the sway (it never writes the model).
+* ⭐⭐ **Found by a SEARCH**: random play on the real goal check — pieces sent anywhere in the play volume, set home
+  exactly, half-turned, loosely, or into a free twin's slot — flagging every step where a piece NOT moved changed status.
+  Three causes, each fixed in `core/goal.ts` and each shown RED by its own mutant:
+  1. **The frame fit stopped too early.** Its refinement stopped when the kept COUNT repeated, not the kept SET: two pieces
+     a metre away tilted the first fit 22°, the refit 10.6°, and a same-size but different set was never refitted — the
+     top row read 40–57 mm off and **nine untouched pieces un-placed**; one move later they all "reached their goal" in
+     one pop-up. ✅ It stops when the set repeats (`FIT_ROUNDS` 12).
+  2. **Loose pieces voted in the frame.** With many pieces placed loosely, the median cut let them in, so moving one
+     elsewhere shifted the frame by millimetres and tipped a piece at its margin's edge. ✅ The EXACT core (residual ≤
+     2 mm — the boot's pieces and every goal pull's) refits the frame whenever three of them fit.
+  3. **A far piece could steal a loose twin's slot.** The twin matching summed errors, which only bounds a swap to within
+     twice the loose twin's offset (Piece31 1.12 m away took Piece30's slot, 34 mm off it: a tie). ✅ Outside the margins
+     the cost is one flat price, so the matching places as many as it can first.
+* ⭐⭐⭐ **And the rule that makes it impossible whatever the fit does** (the owner's own question): at each completed
+  action **only the pieces that action MOVED are re-judged** (`piecesMoved`: world pose changed since the last commit —
+  a seated follower carried by its root counts); every other piece keeps its committed status. So one move reaches at
+  most the pieces it moved. ⚠ A piece exactly at its margin's edge can still tip in the RAW report when the frame is
+  refitted (2 seeds of 25 in the search) — the commit no longer listens to it. ⚠ The LEVEL END still reads the live report
+  at rest (it must see every piece).
+* ✅ 5 vectors (`tests/d190.test.ts`): the search (seeds 1, 8, 25 — 36,000 moves, zero flips; 10 on the old code), the
+  commit rule, `piecesMoved`, the wiring.
+
 ## 6. ⭐⭐ The score bar, the HUD button, no scene slider (`D186`, `D188`, 2026-09-30, ⛔ unjudged by a hand)
 
 > *"remove the slider scene (0=scene_0,...)"* · *"create a button so I can collapse the HUD, place this button immediately
