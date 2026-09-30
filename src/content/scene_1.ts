@@ -111,13 +111,19 @@ export const SCENE_1_CONTOUR_MARGIN = 0.03 / 2;
  * not only the five that boot away: every piece is a plain box, so any one a player moves and puts
  * back flipped looks the same and must count the same.
  */
+/**
+ * ⭐⭐ `D183`: and IDENTICAL pieces are interchangeable — one colour and one size is one `kind`, so any black
+ * 1.26 bar (Piece22, 26, 29, 38) may fill any of their four slots. ⚠ Same size in the same axis order: a bar turned
+ * a quarter is not its upright twin, the half-turns being the only turns accepted.
+ */
 export const SCENE_1_FINAL: FinalConfiguration = {
   frame: "RELATIVE",
-  bodies: ROWS.map(([id, , x, y, z]) => ({
+  bodies: ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
     id,
     position: [x, y, z],
     orientation: "identity",
     symmetry: "halfTurns",
+    kind: `${slot} ${sx}×${sy}×${sz}`,
   })),
 };
 

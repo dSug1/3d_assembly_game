@@ -23,8 +23,8 @@ file.
 
 | # | decision | date | consequence |
 |---|---|---|---|
-| `D1` | ⭐⭐⭐ **TypeScript + Babylon.js, web-first, Capacitor for stores** | 2026-09-13 | Made on **day one**, because the predecessor's deferred platform decision blocked four rows and the whole game layer. One codebase for web + iOS + Android + desktop |
-| `D2` | ⛔⛔ **Audience is ALL PUBLIC, INCLUDING YOUTH** | 2026-09-13 | Carried. COPPA / GDPR-K live → no analytics or ads SDKs; local-only is load-bearing; Play Families + Apple Kids apply |
+| `D1` | ⭐⭐⭐ **TypeScript + Babylon.js, web-first, Capacitor for stores** | 2026-09-13 | Made on **day one**: the predecessor's deferred platform choice blocked its game layer. One codebase, every platform |
+| `D2` | ⛔⛔ **Audience is ALL PUBLIC, INCLUDING YOUTH** | 2026-09-13 | COPPA / GDPR-K live → no analytics or ads SDKs; local-only is load-bearing; Play Families + Apple Kids apply |
 | `D3` | **The game will be commercialised** | carried | `N13` binding: no non-commercially-licensed dependency |
 | `D4` | ⭐ **Manipulation is direct and kinematic, not physics-driven** | carried | The transform is driven straight from input. Never regretted in the predecessor |
 | `D5` | ⭐⭐ **Assembly is by MATE CONNECTORS** (Onshape's model) | carried | `src/core/mate_connector.ts`, and the four rules in `LESSONS_CARRIED.md` |
@@ -124,6 +124,7 @@ file.
 | `D180` | ⭐⭐ **THE LEVEL END; A SWAPPABLE UI THEME** | 2026-09-30 | → `LEVEL_END.md` |
 | `D181` | ⭐⭐ **`3D7`: THE PLAY VOLUME** | 2026-09-30 | → `COLLISION.md` §10 |
 | `D182` | ⭐⭐ **SNAP WAITS FOR A CLEAR PATH; UNSNAP HOLDS; NO PIONEER SWAY** | 2026-09-30 | → §24 |
+| `D183` | ⭐⭐ **THE GOAL CAPTURE; PLACED LOOSE (1 mm / 1° UNGRABBED)** | 2026-09-30 | → `LEVEL_END.md` §5 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -200,8 +201,8 @@ file.
 | | what is blocked on it |
 |---|---|
 | ✅ **~~Un-snap: what breaks a mate?~~** — answered: `D100`'s unsnap (built), 1 episode (`D115`) | `D47`'s pull-apart break stays specified |
-| ✅ **~~WHICH TOUCHPOINT ASSIGNMENT SHIPS~~** — **ANSWERED by `D28`** | ⛔ Kept as a correction: it read *"deliberately not due yet"* until the owner judged three readings from one build and chose the tap toggle |
-| ⭐⭐ **FORK C's SECOND HALF — what is left of it** | `TargetPosition`, its gizmo and the orbit about it are specified and **not built**; the approach is **superseded by `D46`** — projecting onto `centre → target` has no direction when that line faces the camera |
+| ✅ **~~WHICH TOUCHPOINT ASSIGNMENT SHIPS~~** — **ANSWERED by `D28`** | ⛔ Kept as a correction: it read *"not due yet"* until the owner judged three readings of one build |
+| ⭐⭐ **FORK C's SECOND HALF — what is left of it** | `TargetPosition`, its gizmo and the orbit about it are specified and **not built**; the approach is **superseded by `D46`** — its `centre → target` projection degenerates facing the camera |
 | **`axisMappingMode`: `rotated` vs `direct`** (§6bis) | build both, A/B on a device. The spec asks for the comparison rather than assuming |
 | **`matePriorityOverAnchor`** (§1.4) | default is anchor-wins. The opposite reading exists as a flag for A/B |
 | **Landmark registration, contact search, longest-axis alignment** | spec §5 lists them as deliberately deferred, so the gaps are explicit rather than implicit |

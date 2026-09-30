@@ -5,6 +5,8 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { type EpisodeTally } from "../input/episode_ledger";
+import { GoalCapture, GoalPulls } from "../input/goal_capture";
+import type { Pose } from "../core/goal";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
@@ -439,6 +441,12 @@ export interface SceneState {
   sceneStartMs: number | null;
   /** ⭐ `3D7` (`D181`): the play volume, world metres — `null` for a scene that declares none (unbounded). */
   playVolume: Aabb | null;
+  /** ⭐ `D183`: the goal capture's arming, its pulls in flight, and each piece's pose last frame (what MOVED). */
+  goalCapture: GoalCapture;
+  goalPulls: GoalPulls;
+  goalLastPose: Map<string, Pose>;
+  /** ⭐ `D183`: every piece a finger or the mouse has GRABBED this level — a piece never grabbed is judged strictly. */
+  grabbed: Set<string>;
   /** ⭐ `D180`: the level end's latch — its `result` is the frozen result once the level is complete. */
   levelEnd: LevelEnd;
   /** ⭐ `D180`: told once, on the frame the level completes (`main.ts` shows the results screen). */

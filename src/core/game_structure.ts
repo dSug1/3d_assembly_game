@@ -52,6 +52,11 @@ export interface FinalPose {
   readonly position: Triple;
   readonly orientation: BootOrientation;
   readonly symmetry?: GoalSymmetry;
+  /**
+   * ⭐ `D183`: bodies of one KIND are interchangeable — any of them may fill any of their slots (the owner: identical
+   * pieces, *"agreed"*). Absent: the body fills its own slot only.
+   */
+  readonly kind?: string;
 }
 
 /**
@@ -411,11 +416,13 @@ function parseFinal(sceneId: string, raw: unknown, bodies: readonly BodySpec[]):
       if (!isOrientation(x.orientation) || (typeof x.orientation === "object" && "seeded" in x.orientation))
         throw new Error(`${at}: unknown orientation`);
       if (x.symmetry !== undefined && x.symmetry !== "halfTurns") throw new Error(`${at}: unknown symmetry`);
+      if (x.kind !== undefined && (typeof x.kind !== "string" || x.kind === "")) throw new Error(`${at}: kind must be a non-empty string`);
       return {
         id: x.id,
         position: x.position,
         orientation: x.orientation,
         ...(x.symmetry === undefined ? {} : { symmetry: x.symmetry }),
+        ...(x.kind === undefined ? {} : { kind: x.kind as string }),
       };
     }),
   };

@@ -75,9 +75,9 @@ export function installTuningMenu(st: SceneState): void {
       // comes back on `?sceneIndex=N`, so nothing of the other scene survives.
       sliders: [
         sceneSlider(st),
-        // ⭐ `D130`: how near a body must sit to its goal (world mm here, stored in metres).
-        tunable(st, "goal position tolerance (m)", "goalPositionTolM", 0.001, 0.05, 0.001),
-        tunable(st, "goal angle tolerance (°)", "goalAngleTolDeg", 1, 45, 1),
+        // ⭐ `D183`: how near a piece NEVER GRABBED must sit to its goal to count (a grabbed one: the snap's margins).
+        tunable(st, "never-grabbed goal (mm on glass)", "ungrabbedGoalMm", 0.5, 10, 0.5),
+        tunable(st, "never-grabbed goal (°)", "ungrabbedGoalDeg", 0.5, 15, 0.5),
         // ⭐ `D170`: how long a demo scene takes, first move to last — changing it mid-demo changes the speed.
         tunable(st, "demo duration (s)", "demoDurationS", 10, 60, 5),
       ],

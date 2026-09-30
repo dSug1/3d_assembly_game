@@ -13,7 +13,7 @@
  *
  * ⭐⭐ **`D143` — AND AT THAT MOMENT A MATE SETS THE SPIN** (the owner, 2026-09-28: *"complete D142 by
  * adding a mate which orients the spin to the correct angle at the moment the follower-pioneer is
- * dissolved"*). The goal accepts a piece within `goalAngleTolDeg`; the mate removes what is left of
+ * dissolved"*). The goal accepts a piece within its margins (the snap cone since `D183`); the mate removes what is left of
  * the error about the FollowerFace normal — the one degree of freedom the snap leaves free — so the
  * piece lands on its goal spin exactly. ⛔ ONLY the spin: the face stays flush (its normal unchanged)
  * and its centre stays where the snap put it, because the turn is about that normal, through that

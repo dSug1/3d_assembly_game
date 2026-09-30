@@ -9,18 +9,17 @@ import { goalReport } from "../core/goal";
 import { worldPlacementOf } from "../core/object_model";
 import type { LevelEndFacts } from "../core/level_end";
 import type { SceneState } from "./scene_state";
+import { goalTolOf, looseTolerance } from "./goal_capture_wiring";
 
 export function levelEndFrame(st: SceneState, nowMs: number): void {
   const final = st.sceneSpec.final;
   if (!final || st.levelEnd.result !== null) return;
   const pointersDown = st.gestureSpan.active;
-  const animating = st.alignSnaps.size > 0 || st.seatSnaps.size > 0;
+  const animating = st.alignSnaps.size > 0 || st.seatSnaps.size > 0 || st.goalPulls.size > 0;
   const demo: LevelEndFacts["demo"] = st.demo === null ? "NONE" : st.demo.done ? "DONE" : "PLAYING";
   if (pointersDown > 0 || animating || demo === "PLAYING" || (demo === "NONE" && st.sceneStartMs === null)) return;
-  const report = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), {
-    positionM: st.cfg.goalPositionTolM,
-    angleRad: (st.cfg.goalAngleTolDeg * Math.PI) / 180,
-  });
+  // ⭐ `D183`: PLACED — the snap's margins, or the never-grabbed ones.
+  const report = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
   const result = st.levelEnd.frame(
     {
       goalMet: report.met,

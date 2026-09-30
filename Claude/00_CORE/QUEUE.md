@@ -18,7 +18,10 @@ record. **A status changes in BOTH places or neither.**
 
 ⭐⭐ **`D181` — `3D7`, the play volume** → `COLLISION.md` §10. ✅ judged. ⭐⭐ **`D182`**: the snap waits for a clear flight (a
 cancel no longer held it off — reproduced); the unsnap holds the Pioneer; no Pioneer sway; the unsnap grace deleted →
-`ALIGNMENT_RULES.md` §24. ⛔ Unjudged. Next: `3D2`.
+`ALIGNMENT_RULES.md` §24. ⛔ Unjudged. ⭐⭐ **`D183`** (`1.0.57-`): a piece MOVED into its goal margins — aligned or
+not — is pulled onto its exact goal pose (the goal wins over the snap; entry, not presence; a blocked flight waits);
+PLACED = the snap's margins once grabbed, 1 mm on the glass / 1° never grabbed; identical pieces interchangeable →
+`LEVEL_END.md` §5. ⛔ Unjudged. Next: `3D2`.
 
 ⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
 (played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
@@ -39,8 +42,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1564 golden vectors,
-all passing** (37 → … → 1283 → 1227 → 1142 → 1154 → 1142 → 1144 → 1156 → 1163 → 1169 → 1175 → 1195 → 1196 → 1197 → 1203 → 1209 → 1215 → 1219 → 1221 → 1224 → 1229 → 1235 → 1236 → 1240 → 1247 → 1262 → 1260 → 1262 → 1263 → 1272 → 1281 → 1287 → 1291 → 1294 → 1293 → 1299 → 1301 → 1305 → 1309 → 1312 → 1313 → 1315 → 1317 → 1321 → 1324 → 1330 → 1377 → 1502 → 1506 → 1512 → 1527 → 1528 → 1529 → 1531 → 1532 → 1549 → 1560 → **1564**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D182`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1582 golden vectors,
+all passing** (37 → … → 1283 → … → 1512 → … → 1564 → **1582**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D183`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to

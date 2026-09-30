@@ -26,6 +26,7 @@ import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig
 import { paint } from "./hud_paint";
 import { syncSeats } from "./seat_wiring";
 import { dissolveOnGoal } from "./goal_dissolve_wiring";
+import { goalCaptureFrame } from "./goal_capture_wiring";
 import { levelEndFrame } from "./level_end_wiring";
 
 export function startRenderLoop(st: SceneState): void {
@@ -256,6 +257,8 @@ export function startRenderLoop(st: SceneState): void {
 
     // ⭐⭐⭐ **THE SNAP AND THE SEATS, EVERY FRAME** (`D100`) — after the cascades, which may have
     // moved a Pioneer, and before the meshes are written.
+    // ⭐⭐⭐ `D183`: a piece moved into its goal margins is pulled onto its goal — BEFORE the seats: the goal wins.
+    goalCaptureFrame(st, now);
     syncSeats(st, now);
     // ⭐⭐ `D142`: a seated follower in its goal pose lets go of its Pioneer (with a pop-up).
     dissolveOnGoal(st);

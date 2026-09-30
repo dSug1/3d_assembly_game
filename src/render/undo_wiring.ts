@@ -104,6 +104,9 @@ export function undoLast(st: SceneState, tapped: ObjectId | null = null): boolea
     st.jumpWatch.forget(id);
   }
   st.unsnapDetectors.clear();
+  // ⭐ `D183`: a goal pull in flight is dropped, and every piece re-sighted — one restored onto its goal is not captured.
+  for (const id of ids) st.goalPulls.cancel(id);
+  st.goalCapture.forget();
   st.world = s.world;
   st.links.restore(s.links);
   // ⚠ The rings are MESHES made on reconcile: clear them all, let the reconcile rebuild the set the

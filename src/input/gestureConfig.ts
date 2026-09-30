@@ -279,14 +279,12 @@ export interface GestureConfig {
   shadowsOn: number;
   /** ⭐ `D138`: the median frame time, ms, a device must beat to keep AUTO shadows — 33 ≈ 30 fps. */
   autoShadowBudgetMs: number;
-  /**
-   * ⭐ `D130`: how far, in WORLD metres, a body's centre may sit from its goal and still count.
-   * ⚠ A tolerance on the scene's geometry, not a touch threshold — rule 3's screen millimetres do
-   * not apply to it.
-   */
-  goalPositionTolM: number;
-  /** ⭐ `D130`: degrees a body may be turned from the nearest accepted goal orientation. */
-  goalAngleTolDeg: number;
+  // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece is placed within the snap's own
+  // margins (`captureOffsetMm` on the glass, `snapConeDeg`); one never grabbed within the two below.
+  /** ⭐ `D183`: mm ON THE GLASS a piece never grabbed may sit from its goal and count as placed (the owner: 1 mm). */
+  ungrabbedGoalMm: number;
+  /** ⭐ `D183`: degrees a piece never grabbed may be turned from its goal and count as placed (the owner: 1°). */
+  ungrabbedGoalDeg: number;
   /**
    * ⭐ `D170`: a demo scene's duration, seconds, from its first move to its last (the 1 s lead-in not
    * counted). The owner: *"the complete demo can be adjusted to run between 10 s to 1 min"*.
@@ -772,10 +770,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   shadowsOn: 2,
   // ⚠ A judgement with a slider: 30 fps is where a touch drag stops feeling direct.
   autoShadowBudgetMs: 33,
-  // ⚠ Guesses with sliders: 5 mm is under the width of `Scene_1`'s thinnest piece (10 mm) and above
-  // its core gap (3 mm); 5° is well under what the eye reads as crooked.
-  goalPositionTolM: 0.005,
-  goalAngleTolDeg: 5,
+  // ⭐ `D183`, the owner, 2026-09-30: *"if a piece was never grabbed, the criteria shall restrict to 1mm on the glass and
+  // 1 degree"* — so zooming out cannot place a piece nobody moved.
+  ungrabbedGoalMm: 1,
+  ungrabbedGoalDeg: 1,
   // ⭐ The owner, 2026-09-29: *"set default demo duration to 23 s"* (30 at `D170`, then 20); a slider in SCENE, 10–60 s.
   demoDurationS: 23,
   // ⭐ The owner, 2026-09-28: 0.1 mm (was one CSS pixel, 25.4 / 96 mm). ⭐ Measured safe: it stays ~67/d times
@@ -993,14 +991,14 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
+  if (!(cfg.ungrabbedGoalMm > 0 && cfg.ungrabbedGoalMm <= cfg.captureOffsetMm)) {
+    throw new Error(`ungrabbedGoalMm (${cfg.ungrabbedGoalMm}) must be in (0, captureOffsetMm]: stricter than a grabbed piece, never 0.`);
+  }
+  if (!(cfg.ungrabbedGoalDeg > 0 && cfg.ungrabbedGoalDeg <= 45)) {
+    throw new Error(`ungrabbedGoalDeg (${cfg.ungrabbedGoalDeg}) must be in (0, 45]°: 0 places nothing.`);
+  }
   if (!(cfg.demoDurationS >= 10 && cfg.demoDurationS <= 60)) {
     throw new Error(`demoDurationS (${cfg.demoDurationS}) must be in [10, 60] s — the owner's range.`);
-  }
-  if (!(cfg.goalPositionTolM > 0 && cfg.goalPositionTolM <= 0.1)) {
-    throw new Error(`goalPositionTolM (${cfg.goalPositionTolM}) must be in (0, 0.1] m: 0 accepts nothing.`);
-  }
-  if (!(cfg.goalAngleTolDeg > 0 && cfg.goalAngleTolDeg <= 45)) {
-    throw new Error(`goalAngleTolDeg (${cfg.goalAngleTolDeg}) must be in (0, 45]°: past 45 a box's half-turns overlap.`);
   }
   if (cfg.shadowsOn !== 0 && cfg.shadowsOn !== 1 && cfg.shadowsOn !== 2) {
     throw new Error(`shadowsOn (${cfg.shadowsOn}) must be 0 (off), 1 (on) or 2 (auto, D138).`);
