@@ -57,15 +57,15 @@ file.
 | `D108` | ⭐⭐⭐ **AN ALIGNED BODY IS MODE-LESS; THE MODE TOGGLE NARROWS** | 2026-09-27 | ⭐ Binding, ⚠ → history |
 | `D109` | ⭐⭐ **THE DORMANT SWITCHES ARE DELETED; THE FUCHSIA CONE IS THE SNAP CONE** | 2026-09-27 | ⭐ Binding, ⚠ → history |
 | `D110` | ⭐⭐ **THE FLICK IS DELETED — and `D103`'s flick-unsnap with it** | 2026-09-27 | → §13 |
-| `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | → §13, `IN6.md` |
+| `D111` | ⭐⭐⭐ **A DOUBLE TAP ON A BODY UNDOES THE LAST ACTION** | 2026-09-27 | → `IN6.md` |
 | `D112` | ⭐⭐ **THE HUD LEADS WITH THE SCORE: episodes and time** | 2026-09-27 | → §13 |
 | `D113` | ⭐⭐ **THE EDGE BAND IS ALWAYS EMPTY SPACE** — the camera reset stays reachable | 2026-09-27 | → §13 |
 | `D114` | ⭐⭐ **THE EDGE BAND OPENS ONLY WHEN NO EMPTY SPACE IS LEFT** | 2026-09-27 | → §13 |
-| `D115` | ⭐⭐ **A TWO-TOUCH ACTION IS ONE EPISODE, COUNTED WHEN ITS LAST TOUCH LIFTS** | 2026-09-27 | Align, unalign, a Pioneer's release, unsnap; tablet and desktop alike → §13 |
+| `D115` | ⭐⭐ **A TWO-TOUCH ACTION IS ONE EPISODE, COUNTED WHEN ITS LAST TOUCH LIFTS** | 2026-09-27 | → §13 |
 | `D116` | ⛔⛔⛔ **BUILD THE PLAYABILITY PROGRAM FIRST; COLLISION: STOP+SLIDE ON TRANSLATION, SAME-AXIS CLAMP ON ROTATION** | 2026-09-27 | ✅ `3D6` BUILT; clamp owner-confirmed; seams for Blender → `COLLISION.md` |
 | `D117` | ⭐⭐ **`Scene_1`, THE PAINTING; A SCENE SLIDER REBOOTS ON THE CHOSEN SCENE** | 2026-09-27 | Owner's values at 0.1 m/unit; Unity lights read as URP → `SCENE_1.md` |
-| `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | The wheel is the desktop's zoom → §14 |
-| `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | A tap on the plate aligns; a press steers → §14 |
+| `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | → §14 |
+| `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | → §14 |
 | `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | They matched no shape and served no rule → §14 |
 | `D121` | ⚠ **REVERSED BY `D128`** | 2026-09-27 | → §15 |
 | `D122` | `Scene_1`'s floor size (now `D169`) | 2026-09-27 | → `SCENE_1.md` |
@@ -117,6 +117,7 @@ file.
 | `D171` | ⭐⭐ **`Scene1_demo`: 150 MOVES, FIT ZOOM, 15° SETTLE** | 2026-09-29 | → `DEMO_SCENE.md` |
 | `D174` | ⭐⭐ **THE DEMO STARTS FROM A FLOOR GRID; A LIFTED PIECE JOINS THE BUILD** | 2026-09-30 | → `DEMO_SCENE.md` §2–§2ter |
 | `D175` | ⭐ **THE GRID: LENGTHWISE, ONE RANK; CAMERA 15° EARLIER** | 2026-09-30 | → `DEMO_SCENE.md` §2bis, §7 |
+| `D176` | ⭐ **TWO INTERLOCKING ROWS, THE SECOND REVERSED** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⭐ No gizmo binds; every press a miss since `D119`. ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

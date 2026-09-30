@@ -225,11 +225,13 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
   it("⛔ a generation that cannot be completed THROWS — it never ships a shorter plan", () => {
     expect(() => generateDemoPlan(SCENE_1, { moveCount: 3 })).toThrow(/cannot be split into chains of 5/);
     expect(() => generateDemoPlan(SCENE_1, { moveCount: 151 })).toThrow(/cannot be split/);
-    // ⭐ `D174`/`D175`: a grid that cannot lie on the floor outside the cube — all 41 side by side are wider than the
-    // floor; a 4.83-unit bar from the floor's edge reaches into a cube whose front is 4 units in (z −6)
+    // ⭐ `D174`–`D176`: a grid that cannot lie on the floor outside the cube — all 41 in two rows are wider than a floor
+    // 6 units across; a 4.83-unit bar from the floor's edge reaches into a cube whose front is 4 units in (z −6)
     const v = demoVolume(SCENE_1);
     const all = SCENE_1.bodies.filter((b) => !b.frozen).map((b) => b.id);
-    expect(() => demoGrid(SCENE_1, all, v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).toThrow(/leaves the floor/);
+    const narrow = { ...SCENE_1, bodies: SCENE_1.bodies.map((b) => (b.frozen ? { ...b, dims: [6, b.dims[1], 20] as const } : b)) };
+    expect(() => demoGrid(narrow, all, v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).toThrow(/leaves the floor/);
+    expect(() => demoGrid(SCENE_1, all, v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).not.toThrow(); // two rows fit all 41 on 20
     expect(() => demoGrid(SCENE_1, ["Piece30"], { min: [-5, -2.7, -6], max: [5, 7.3, 4] }, DEMO_DEFAULTS)).toThrow(/reaches into the cube/);
     expect(() => demoGrid(SCENE_1, ["Piece30"], v, DEMO_DEFAULTS)).not.toThrow();
     expect(() => generateDemoPlan({ ...SCENE_1, final: null })).toThrow(/final configuration/);

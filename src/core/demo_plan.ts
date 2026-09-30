@@ -211,15 +211,19 @@ const sameColour = (a: Triple, b: Triple): boolean => a.every((v, i) => Math.abs
 /**
  * ⭐⭐⭐ `D174` — **THE FLOOR GRID** (the owner: *"set on the floor on a virtual grid (do not show any grid), ordered by
  * color and inside the color groups by descending size"*, *"in front, just outside the demo cube"*). Where each of
- * `ids` rests at the start, laid flat, and the grid's box.
- * ⭐⭐ `D175` (the owner: *"the parts shall present their longest dimension towards the depth axis and their bottom
- * surfaces on depth axis shall be aligned on x axis"*): **ONE RANK** — each piece lengthwise in depth, their NEAR ends
- * (lowest `z`, toward the boot camera) flush on one line parallel to `x`, side by side left to right (`+x`, the boot
- * camera's right) in the order: colour groups in `colourOrder`, each by CORE volume, largest first (ties: the scene's
- * order). The line lies as near the cube as the longest piece allows — its far end `gridOffset` outside the cube's front
- * face — but never off the floor (half a gutter in from its edge); the rank is centred across the cube. Each piece takes
- * a whole number of `gridPitch` cells across — its width and a `gridGap` gutter — and sits at their middle.
- * ⛔ Nothing is drawn. ⛔ A rank that leaves the floor, or a piece that would reach into the cube, THROWS.
+ * `ids` rests at the start, laid flat, and the grid's box. Colour groups in `colourOrder`, each by CORE volume, largest
+ * first (ties: the scene's order). ⭐ `D175`: each piece LENGTHWISE in depth, between the floor's edge and the cube.
+ * ⭐⭐ `D176` (the owner: *"make two or three rows of parts instead of one unique row. If required to fit the parts,
+ * reverse the order of alignment along longest dimension every second row. The rows do not need to be justified"*):
+ * **TWO ROWS THAT INTERLOCK** in that one strip —
+ * * **row 1**, left to right, its NEAR ends (lowest `z`) flush on a line half a gutter in from the floor's edge;
+ * * **row 2**, the order continuing RIGHT TO LEFT, its FAR ends flush on a line `gridOffset` outside the cube (nearer the
+ *   floor's edge if its longest piece needs it): each piece slid from where the one before ended to the first place
+ *   where it clears row 1 by a gutter — a long piece opposite short ones. So the rows are ragged, not justified.
+ * The split between the rows is the one that makes the whole narrowest; the whole is centred across the cube. Each
+ * piece takes a whole number of `gridPitch` cells across — its width and a `gridGap` gutter.
+ * ⚠ A THIRD row cannot interlock: it would share row 1's line. ⛔ Nothing is drawn. ⛔ A grid that leaves the floor, or
+ * a piece that would reach into the cube, THROWS.
  */
 export function demoGrid(
   scene: SceneDescriptor,
@@ -242,31 +246,70 @@ export function demoGrid(
     return ga - gb || vb - va || index.get(a)! - index.get(b)!;
   });
   const p = opt.gridPitch;
+  const snap = (z: number) => Math.round(z / p) * p;
   const halves = sorted.map((id) => flatHalf(contourDims(spec(id)) as unknown as Vec3));
   const cells = halves.map((h) => Math.ceil((2 * h[0] + opt.gridGap) / p - 1e-9));
-  const used = cells.reduce((s, c) => s + c, 0);
-  const longest = Math.max(...halves.map((h) => 2 * h[2]));
+  const lengthOf = (i: number) => 2 * halves[i]![2];
   const fx = [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2];
   const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
-  // ⭐ The line the near ends sit on: as close to the cube as the longest piece lets it, never off the floor.
-  const line = Math.ceil(Math.max(fz[0]! + opt.gridGap / 2, volume.min[2] - opt.gridOffset - longest) / p - 1e-9) * p;
+  const front = volume.min[2];
+  // ⭐ Row 1's line: half a gutter in from the floor's edge — the most room for the two rows to interlock.
+  const near = Math.ceil((fz[0]! + opt.gridGap / 2) / p - 1e-9) * p;
+
+  type Laid = { i: number; x0: number; z0: number; z1: number };
+  const layout = (split: number): { laid: Laid[]; width: number; far: number } | null => {
+    const laid: Laid[] = [];
+    let x = 0;
+    for (let i = 0; i < split; i++) {
+      laid.push({ i, x0: x, z0: near, z1: near + lengthOf(i) });
+      x += cells[i]!;
+    }
+    const long2 = Math.max(0, ...sorted.slice(split).map((_, k) => lengthOf(split + k)));
+    const far = snap(Math.max(front - opt.gridOffset, near + long2));
+    if (far >= front) return null;
+    // ⭐ Row 2, right to left, each piece at the first place from the cursor that clears row 1 by a gutter.
+    let cursor = x;
+    for (let i = split; i < sorted.length; i++) {
+      const z0 = far - lengthOf(i), z1 = far;
+      let right = cursor;
+      for (;;) {
+        const left = right - cells[i]!;
+        const hit = laid.filter((l) => l.i < split && l.x0 < right && l.x0 + cells[l.i]! > left && !(l.z1 + opt.gridGap <= z0 + 1e-9 || z1 + opt.gridGap <= l.z0 + 1e-9));
+        if (hit.length === 0) break;
+        right = Math.min(...hit.map((l) => l.x0));
+      }
+      laid.push({ i, x0: right - cells[i]!, z0, z1 });
+      cursor = right - cells[i]!;
+    }
+    const lo = Math.min(...laid.map((l) => l.x0));
+    const hi = Math.max(...laid.map((l) => l.x0 + cells[l.i]!));
+    return { laid, width: hi - lo, far };
+  };
+  let best: { laid: Laid[]; width: number; far: number } | null = null;
+  for (let split = 1; split < sorted.length; split++) {
+    const l = layout(split);
+    if (l && (!best || l.width < best.width)) best = l;
+  }
+  if (!best) best = sorted.length === 1 ? layout(1) : null;
+  if (!best) throw new Error(`${scene.id}: the demo grid's pieces cannot lie between the floor's edge and the cube`);
+  const minCell = Math.min(...best.laid.map((l) => l.x0));
   const centreX = (volume.min[0] + volume.max[0]) / 2;
-  const originX = Math.round((centreX - (used * p) / 2) / p) * p;
+  const originX = Math.round((centreX - (best.width * p) / 2) / p) * p - minCell * p;
   const rest = new Map<string, Vec3>();
-  const lo: [number, number, number] = [originX, floorTop, line - opt.gridGap / 2];
-  const hi: [number, number, number] = [originX + used * p, floorTop, -Infinity];
-  let x = 0;
-  sorted.forEach((id, i) => {
-    const h = halves[i]!;
-    rest.set(id, [originX + (x + cells[i]! / 2) * p, floorTop + h[1], line + h[2]]);
-    x += cells[i]!;
+  const lo: [number, number, number] = [Infinity, floorTop, near - opt.gridGap / 2];
+  const hi: [number, number, number] = [-Infinity, floorTop, -Infinity];
+  for (const l of best.laid) {
+    const h = halves[l.i]!;
+    rest.set(sorted[l.i]!, [originX + (l.x0 + cells[l.i]! / 2) * p, floorTop + h[1], (l.z0 + l.z1) / 2]);
+    lo[0] = Math.min(lo[0], originX + l.x0 * p);
+    hi[0] = Math.max(hi[0], originX + (l.x0 + cells[l.i]!) * p);
     hi[1] = Math.max(hi[1], floorTop + 2 * h[1]);
-    hi[2] = Math.max(hi[2], line + 2 * h[2] + opt.gridGap / 2);
-  });
+    hi[2] = Math.max(hi[2], l.z1 + opt.gridGap / 2);
+  }
   if (lo[0] < fx[0]! || hi[0] > fx[1]! || lo[2] < fz[0]! - 1e-9)
     throw new Error(`${scene.id}: the demo grid (x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}, z from ${lo[2].toFixed(2)}) leaves the floor`);
-  if (line + longest >= volume.min[2])
-    throw new Error(`${scene.id}: the demo grid's longest piece (${longest.toFixed(2)}) reaches into the cube from the floor's edge`);
+  if (hi[2] - opt.gridGap / 2 >= front)
+    throw new Error(`${scene.id}: the demo grid's longest piece reaches into the cube from the floor's edge`);
   return { rest, stage: { min: lo, max: hi } };
 }
 
