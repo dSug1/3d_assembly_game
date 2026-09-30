@@ -293,7 +293,9 @@ ALIGN → APPROACH → SNAP`, the carry ending in front of its slot toward the c
 deleted → `DEMO_SCENE.md` §2–§2ter. ⚠ From the level boot view the grid is nearly edge-on (§9).
 ⭐ **`D175`**: the pieces lie LENGTHWISE in depth, one rank, near ends flush on a line at the floor's edge (18.25 units wide);
 the demo camera starts 15° before the boot yaw and ends where it did (375°). ⛔ In portrait the rank does not fit the 3 m start
-view (4.73 m needed) → `DEMO_SCENE.md` §2bis, §7, §9.
+view (4.73 m needed) → `DEMO_SCENE.md` §2bis, §7, §9. ⭐ **`D176`**: TWO interlocking rows instead — row 1 near ends flush at the
+floor's edge, left to right; row 2 far ends flush 3 cm outside the cube, right to left; ragged; the cube's width. ⚠ Portrait
+still needs 3.43 m of 3.
 ⛔⛔ Four rules, each the negation of a failure: **never touch a DOM pointer event** (the layer
 skips at Babylon's `onPrePointerObservable` and delivers #2 straight to the observable);
 **model only the touchpoint the mouse lacks**; **read `buttons` on every event, remember nothing**;

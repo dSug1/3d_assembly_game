@@ -8,6 +8,8 @@
  * > the movement)"* — with *"only the 30 moved"*, *"in front, just outside the demo cube"*, *"volume"*.
  * > *"the parts shall present their longest dimension towards the depth axis and their bottom surfaces on depth axis
  * > shall be aligned on x axis"* — the owner, 2026-09-30 (`D175`).
+ * > *"make two or three rows of parts instead of one unique row. If required to fit the parts, reverse the order of
+ * > alignment along longest dimension every second row. The rows do not need to be justified"* — the owner (`D176`).
  *
  * ⭐ Asserted on the COMMITTED plan, read back from its poses — never from the generator's own bookkeeping.
  */
@@ -41,6 +43,13 @@ function extents(id: string, o: Quat): { half: Vec3; square: boolean } {
   return { half, square };
 }
 const ids = Object.keys(PLAN.start);
+/** ⭐ `D176`: a piece's near and far ends along depth, at its start. */
+const nearEnd = (id: string) => PLAN.start[id]!.position[2] - extents(id, q(PLAN.start[id]!)).half[2];
+const farEnd = (id: string) => PLAN.start[id]!.position[2] + extents(id, q(PLAN.start[id]!)).half[2];
+/** ⭐ `D176`: row 1 is the pieces whose NEAR ends are on the near line; row 2 the rest. */
+const NEAR_LINE = Math.min(...ids.map(nearEnd));
+const row1 = ids.filter((id) => Math.abs(nearEnd(id) - NEAR_LINE) < 1e-5);
+const row2 = ids.filter((id) => !row1.includes(id));
 const FLOOR_TOP = 0;
 
 describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT on the floor, on a grid", () => {
@@ -64,8 +73,9 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
   });
 
   it("⭐⭐ *ordered by color and inside the color groups by descending size* — in reading order as the boot camera sees it", () => {
-    // ⭐ `D175`: one rank, read left to right
-    const read = [...ids].sort((a, b) => PLAN.start[a]!.position[0] - PLAN.start[b]!.position[0]);
+    // ⭐ `D176`: row 1 left to right, then row 2 RIGHT TO LEFT — the order snakes back
+    const x = (id: string) => PLAN.start[id]!.position[0];
+    const read = [...[...row1].sort((a, b) => x(a) - x(b)), ...[...row2].sort((a, b) => x(b) - x(a))];
     const colours = [SCENE_1_PALETTE.MAT_A, SCENE_1_PALETTE.MAT_B, SCENE_1_PALETTE.MAT_C, SCENE_1_PALETTE.MAT_D, SCENE_1_PALETTE.MAT_E];
     const group = (id: string) => colours.findIndex((c) => c.every((v, i) => v === body(id).colour[i]));
     const volume = (id: string) => body(id).dims[0] * body(id).dims[1] * body(id).dims[2];
@@ -88,12 +98,23 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
     }
   });
 
-  it("⭐⭐ `D175` — *their bottom surfaces on depth aligned on x*: every NEAR end (lowest z) on ONE line parallel to x", () => {
-    const near = ids.map((id) => PLAN.start[id]!.position[2] - extents(id, q(PLAN.start[id]!)).half[2]);
-    for (const z of near) expect(z).toBeCloseTo(near[0]!, 5);
-    // ⭐ and it is the near end that is flush, not the centre or the far end: the lengths differ
-    const far = ids.map((id) => PLAN.start[id]!.position[2] + extents(id, q(PLAN.start[id]!)).half[2]);
-    expect(Math.max(...far) - Math.min(...far)).toBeGreaterThan(3);
+  it("⭐⭐ `D176` — TWO ROWS, the alignment reversed on the second: row 1's NEAR ends on one line, row 2's FAR ends on another", () => {
+    expect(row1.length).toBeGreaterThan(1);
+    expect(row2.length).toBeGreaterThan(1);
+    const farLine = farEnd(row2[0]!);
+    for (const id of row2) expect(farEnd(id)).toBeCloseTo(farLine, 5); // `D175`'s *aligned on x*, from the other end
+    expect(farLine).toBeCloseTo(PLAN.volume.min[2] - DEMO_DEFAULTS.gridOffset, 5); // 3 cm outside the cube
+    // ⭐ and the other ends are ragged: the lengths differ in both rows
+    for (const [row, end] of [[row1, farEnd], [row2, nearEnd]] as const) {
+      const e = row.map(end);
+      expect(Math.max(...e) - Math.min(...e)).toBeGreaterThan(1);
+    }
+    // ⭐ they INTERLOCK: some pieces of the two rows share x, where the long face the short
+    const shareX = row1.some((a) => row2.some((b) => Math.abs(PLAN.start[a]!.position[0] - PLAN.start[b]!.position[0]) < 0.3));
+    expect(shareX).toBe(true);
+    // ⭐ not justified: the rows end at different x
+    const xs = (row: string[]) => row.map((id) => PLAN.start[id]!.position[0]);
+    expect(Math.min(...xs(row1))).not.toBeCloseTo(Math.min(...xs(row2)), 2);
   });
 
   it("⭐ *in front, just outside the demo cube*, all on the floor: the longest piece's far end outside the cube, the line on the floor", () => {
@@ -106,8 +127,11 @@ describe("⭐⭐⭐ `D174` — the start configuration: every moved piece FLAT o
       expect(Math.abs(s.position[0]) + half[0]).toBeLessThanOrEqual(floor.dims[0] / 2);
       expect(Math.abs(s.position[2]) + half[2]).toBeLessThanOrEqual(floor.dims[2] / 2);
     }
-    // ⭐ Scene_1: the 4.83-unit bars do not fit 3 cm out, so the line sits half a gutter in from the floor's edge
+    // ⭐ row 1's line sits half a gutter in from the floor's edge (the most room for the rows to interlock)
     expect(PLAN.stage.min[2]).toBeCloseTo(-floor.dims[2] / 2, 9);
+    expect(NEAR_LINE).toBeCloseTo(-floor.dims[2] / 2 + DEMO_DEFAULTS.gridGap / 2, 5);
+    // ⭐ `D176`: two rows fit in the cube's own width (one rank took 18.25 units)
+    expect(PLAN.stage.max[0] - PLAN.stage.min[0]).toBeLessThanOrEqual(PLAN.volume.max[0] - PLAN.volume.min[0] + 1e-9);
     expect(PLAN.stage.max[2]).toBeLessThan(front);
   });
 
@@ -229,7 +253,7 @@ describe("⭐⭐ `D174` — the playback: a path's corners, and a start view tha
     expect(pts).toHaveLength(16);
     for (const [toCam, aspect, gridDecides] of [
       [normalize([0, 0.15, -1])!, 0.68, true], // ⭐ portrait: the grid's width decides
-      [normalize([0, 0.15, -1])!, 1.6, true], // `D175`: landscape too — one rank 1.6 m wide
+      [normalize([0, 0.15, -1])!, 1.6, true], // landscape too: the grid lies nearer the camera than the cube
     ] as [Vec3, number, boolean][]) {
       const d = fitPointsDistanceM(pts, toCam, 0.8, aspect);
       const eye = (k: number): Vec3 => [toCam[0] * d * k, toCam[1] * d * k, toCam[2] * d * k];
@@ -244,7 +268,7 @@ describe("⭐⭐ `D174` — the playback: a path's corners, and a start view tha
         });
       expect([inView(1), inView(0.99)]).toEqual([true, false]);
       const alone = fitPointsDistanceM(demoFramePointsM({ volume: PLAN.volume }, SCENE_1.unitM!), toCam, 0.8, aspect);
-      if (gridDecides) expect(d).toBeGreaterThan(alone * 1.1);
+      if (gridDecides) expect(d).toBeGreaterThan(alone + 1e-6);
       else expect(d).toBeCloseTo(alone, 9);
     }
     // ⭐ a plan without a grid frames the cube alone: its eight corners — at a level view `half / tan(fov / 2) + half`
