@@ -66,11 +66,11 @@ file.
 | `D117` | ⭐⭐ **`Scene_1`, THE PAINTING; A SCENE SLIDER REBOOTS ON THE CHOSEN SCENE** | 2026-09-27 | Owner's values at 0.1 m/unit; Unity lights read as URP → `SCENE_1.md` |
 | `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | → §14 |
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | → §14 |
-| `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | They matched no shape and served no rule → §14 |
+| `D120` | ⭐⭐ **THE WHITE CAPTURE HIGHLIGHTS AND THE APPROACH SWING ARE DELETED** | 2026-09-27 | → §14 |
 | `D121` | ⚠ **REVERSED BY `D128`** | 2026-09-27 | → §15 |
 | `D122` | `Scene_1`'s floor size (now `D169`) | 2026-09-27 | → `SCENE_1.md` |
-| `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | With the gravity lift, as an aligned body → §15 |
-| `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | A tap there still aligns → §15 |
+| `D123` | ⭐⭐ **A FREE BODY'S SECOND TOUCH SPINS IT ABOUT GRAVITY (in `TRANSLATE`)** | 2026-09-27 | → §15 |
+| `D124` | ⭐⭐⭐ **A SECOND PRESS ON ANOTHER BODY STEERS THE HELD ONE; ONE BODY MOVES AT A TIME** | 2026-09-27 | → §15 |
 | `D125` | ⭐⭐ **A PIECE IS A TRANSPARENT CONTOUR AROUND ITS COLOURED CORE** — faces touch, cores keep the gap | 2026-09-27 | → `SCENE_1.md` §6 |
 | `D126` | ⭐ **A HIGHLIGHT FLOATS ONE PIXEL OFF WHAT IT MARKS, AT EVERY ZOOM** | 2026-09-27 | Was 1.5 mm / 2 % in the world; mm on the glass, a slider → `40_RENDER_SCENE/INDEX.md` |
 | `D127` | ⭐⭐⭐ **EDGE-ON: THE HOLDER'S `dy` DRIVES BLUE ALONE, FINGER UP = AWAY FROM THIS CAMERA** | 2026-09-28 | ⛔ Reversed by `D145` → §19 |
