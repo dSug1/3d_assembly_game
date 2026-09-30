@@ -82,8 +82,8 @@ file.
 | `D133` | ⚠ **REVERTED THE SAME DAY** | 2026-09-28 | → §16 |
 | `D134` | ⭐ **THE HUD's EDGE-ON IS THE CAMERA's, READ EVERY FRAME** | 2026-09-28 | → §16 |
 | `D136` | ⭐⭐⭐ **CONTACT IS ALLOWED; ONLY PENETRATION IS REFUSED** — the skin is how far a body may sink | 2026-09-28 | → `COLLISION.md` §9 |
-| `D137` | ⭐⭐ **A SIDEWAYS PINCH WHILE TRANSLATING ZOOMS; translation and roll pause** — until a dy leaves the band | 2026-09-28 | → §17 |
-| `D138` | ⭐⭐ **AUTO SHADOWS: OFF ON A DEVICE MEASURED TOO SLOW FOR THEM** | 2026-09-28 | → render `INDEX.md` |
+| `D137` | ⭐⭐ **A SIDEWAYS PINCH WHILE TRANSLATING ZOOMS** | 2026-09-28 | → §17 |
+| `D138` | ⭐⭐ **AUTO SHADOWS: OFF WHEN TOO SLOW** | 2026-09-28 | → render `INDEX.md` |
 | `D139` | ⭐⭐ **A SNAP STOPS THE DRAG THAT MADE IT** | 2026-09-28 | → §18 |
 | `D140` | ⛔ **ONLY THE LIVE COUPLE'S CURSOR MAY SNAP** (defect 73) | 2026-09-28 | → §18 |
 | `D141` | ⭐⭐ **A DOUBLE TAP UNDOES ONLY ON THE BODY THE LAST ACTION MOVED** | 2026-09-28 | → `IN6.md` |
@@ -123,6 +123,7 @@ file.
 | `D179` | ⭐ **0–4° (MED 2.5°), 0–5 % (MED 3 %)** | 2026-09-30 | → `DEMO_SCENE.md` §2bis |
 | `D180` | ⭐⭐ **THE LEVEL END; A SWAPPABLE UI THEME** | 2026-09-30 | → `LEVEL_END.md` |
 | `D181` | ⭐⭐ **`3D7`: THE PLAY VOLUME** | 2026-09-30 | → `COLLISION.md` §10 |
+| `D182` | ⭐⭐ **SNAP WAITS FOR A CLEAR PATH; UNSNAP HOLDS; NO PIONEER SWAY** | 2026-09-30 | → §24 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

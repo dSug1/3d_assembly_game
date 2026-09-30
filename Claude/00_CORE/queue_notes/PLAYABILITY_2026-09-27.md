@@ -123,7 +123,7 @@ not a part pushed away over many).
 ✅ **`D181`, 2026-09-30 — BUILT** (*"Build 3D7"*): each level declares a box on its floor (`Scene_1`: 2 × 2 m, 1 m high);
 its walls are one more blocker to `3D6`'s rule — a move stops, a translation slides, a turn clamps on its own axis — and a
 piece already outside may come back in, never further out → `COLLISION.md` §10. ✅ 11 vectors, three mutants RED.
-⛔ Unjudged by a hand. Next in the program: `3D2`, the approach.
+✅✅ **Closed by a device look** — the owner, 2026-09-30, build `18584ed`: *"Tested OK"*. Next in the program: `3D2`, the approach.
 
 ## 4. The player layer
 

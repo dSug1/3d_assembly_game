@@ -2229,3 +2229,48 @@ world pose, and a pop-up names it (`render/goal_popup.ts`). ⚠ Scenes with a go
 ⭐ **Decided by press order**: the router's `seq` only grows, so the lock records the highest `seq` down at the seat (`Held.seatSeq`, `seat_wiring.ts`) and a roll is allowed from a later one only (`rollRearmed`, `seatLockAllows` in `input/seat_lock.ts`). ⛔ Never by motion or by a timer (`METHOD`).
 
 ✅ 4 vectors (the old rule and an off-by-one red). ✅ Measured headless (Chrome, two emulated fingers on `Scene_0`): `objectA` aligned to `objectB`, a second finger held on empty space while the first dragged it to its seat; that finger's sideways drag left the orientation unchanged, and a NEW finger's rolled it. With the seat-time `seq` not recorded, the old finger rolled it — the check reads the wiring. ⚠ The desktop's Shift held through the seat is the same rule (the Shift touch is a router touchpoint) and was not run headless.
+
+## 24 — ⭐⭐⭐ THE SNAP WAITS FOR A CLEAR FLIGHT; THE UNSNAP HOLDS THE PIONEER; A PIONEER NEVER SWAYS FOR ITS FOLLOWER (`D182`, 2026-09-30)
+
+> *"When I try to snap piece 1 onto piece 22 by translating horizontally … i have difficulty to trigger the snap. However,
+> when the approach is on gravity axis, the snap is quite easy"* — then, with a screenshot: *"the follower piece 1 is sitting
+> on top of pioneer piece 22 and still the snap does not fire while i translate in horizontal plane"* — then *"Build the fix
+> and deploy. Also, i sometimes see that a rapid translation of a follower can push a pioneer, also an unsnap can pull the
+> pioneer before the unsnap occurs. Fix that as well."* — the owner, 2026-09-30
+
+### 24.1 The snap — found by reproducing it in the real app, not by reasoning
+
+⛔ My first answer (the drag following the live camera into a zero-clearance slot) was measured true for its own case and
+**wrong for the owner's**: the screenshot showed Piece1 already on Piece22, inside the radius. ⭐ The dev server,
+driven over the DevTools protocol (the real `syncSeats`, `guardMove`, `alignFollowerTo`), reproduced it:
+1. a snap STARTED from beside the slot; its straight flight crossed Piece31; the lerp was **CANCELLED** (`3D6`)
+2. ⛔ **and the cancel HELD THE COUPLE OFF until it left the capture radius** (`SnapArming`, meant for the unsnap);
+3. sliding horizontally in contact never leaves the radius → **28 steps, held**; a LIFT left it → re-armed → the drop snapped.
+
+⭐ **The fix** (`input/snap.ts` `snapPathBlockedBy`): a snap starts only if its straight flight to the seat is CLEAR by the
+one collision rule — a blocked one WAITS (the HUD: *"snap: Piece1 waits — Piece31 is in its way"*) and **holds nothing**;
+a flight cancelled mid-way (something moved into it) holds nothing either. The hold-off is the UNSNAP's (and the undo's)
+alone. ✅ Real app: from 13 mm beside the slot it waited, and fired at 1 mm, horizontally.
+
+### 24.2 The unsnap pulled the Pioneer
+
+⛔ The unsnap's second touch lands on the SEATED Follower and is redirected to the root — the Pioneer (`D100`) — so its pull
+LIFTED and SPUN the Pioneer, and the first finger TRANSLATED it, until the detector fired. ⭐ **`UnsnapHold`**
+(`input/unsnap.ts`): from the moment two touches form an unsnap couple, **neither drives any body** until one lifts —
+past the unsnap itself, since the second finger's grip is still the Pioneer's. The recognizer still sees every move.
+
+### 24.3 A rapid translation of a Follower pushed its Pioneer
+
+⛔ The mover's own Pioneer was spared the SWAY only within three capture offsets (`pioneerSwayRadii`, the owner's
+2026-09-26 *"It shall trigger otherwise"*); a far Follower's quick move swayed it — on the glass, a push. ⭐ **At any
+distance now** (`receivesSway`); the radius, its slider and `pioneerSwaySuppressed` are **deleted**.
+
+### 24.4 Found on the way: a released Follower sank into its Pioneer
+
+⛔ A released couple (unsnap, goal dissolve) was EXEMPT from each other until it separated past the skin — the unsnap
+**grace** (`3D6`); pushed toward each other the gap never grew, so the grace never ended: measured, **14 mm into
+Piece22** after a dissolve. ⭐ `D136` (contact allowed, only a deeper push refused) had made the grace unnecessary, so it is
+**deleted**: the same push now stops at the tolerance (1.2 mm at 1.5 m). `COLLISION.md` §5.
+
+✅ 9 vectors (`tests/d182.test.ts`) + the sway vectors restated (5 deleted with the radius); mutants RED (a path never
+blocked, a hold that never ends). ⛔ Unjudged by a hand.

@@ -4,7 +4,6 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { graceAfterUnsnap } from "./collision_wiring";
 import { isTapRelease, tapReleaseToggles, toggleBehaviour, faceAlignConstraint, squaringTwist, type Sample } from "../input";
 import { detach, worldPlacementOf, type ObjectId, clearObjectConstraints, evictObjectConstraints, faceWorld, pushObjectConstraint } from "../core/object_model";
 import { mmToPx } from "../core/units";
@@ -246,9 +245,9 @@ return assemblyRoot(
 
 /** ⭐ Un-parent a follower in the WORLD and drop its flights. ⚠ The link's own flag is `links`'. */
 export function unseatWorld(st: SceneState, followerId: ObjectId) : void {
-  const parent = st.world.objects.get(followerId)?.parent ?? null;
-  // ⭐ `3D6`: it starts at gap 0 with its Pioneer — exempt from it until they have separated once.
-  if (parent !== null) graceAfterUnsnap(st, followerId, parent);
+  // ⭐⭐ `D182`: NO grace any more. It starts in contact with its Pioneer, and `D136` already lets a pair in contact
+  // leave or slide; the grace also let it sink INTO its Pioneer for as long as it was pushed (measured, after a goal
+  // dissolve: 14 mm into Piece22).
   if (st.world.objects.get(followerId)?.parent !== null) {
     st.world = detach(st.world, followerId);
     st.hudDirty = true;

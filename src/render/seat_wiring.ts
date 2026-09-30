@@ -13,7 +13,8 @@ import { mmToPx } from "../core/units";
 import { cursorIsLive, type PioneerFaceCursor } from "../core/pioneer_face_cursors";
 import { alignedFaceOf } from "../core/face_pick";
 import { pointOnFace } from "../core/face_surface";
-import { snapConditionMet } from "../input/snap";
+import { snapConditionMet, snapPathBlockedBy } from "../input/snap";
+import { collisionSetup } from "./collision_wiring";
 import { UnsnapDetector, unsnapCouple, unsnapParamsFrom } from "../input/unsnap";
 import { magnetEase } from "../input/seat_snap";
 import { seatedLocalPlacement } from "../core/seat";
@@ -201,12 +202,18 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
     const mesh = st.meshOf.get(f);
     if (!mesh) continue;
     const q = st.alignSnaps.targetOf(f) ?? modelOrientation(st, mesh);
-    st.seatSnaps.start(
-      f,
-      requirePose(st, mesh).position,
-      sub(cursorW, qRotate(q, faceLocal.centre)),
-      nowMs,
-    );
+    const seatAt = sub(cursorW, qRotate(q, faceLocal.centre));
+    // ⭐⭐ `D182`: only a flight that is CLEAR starts — a blocked one waits, and holds nothing.
+    const blocker = snapPathBlockedBy(st.world, f, { position: seatAt, orientation: modelOrientation(st, mesh) }, collisionSetup(st, [f, cur.pioneerId]));
+    if (blocker !== null) {
+      const wait = `snap: ${f} waits — ${blocker} is in its way (align it with its seat)`;
+      if (st.lastVerdict !== wait) {
+        st.lastVerdict = wait;
+        st.hudDirty = true;
+      }
+      continue;
+    }
+    st.seatSnaps.start(f, requirePose(st, mesh).position, seatAt, nowMs);
     st.lastVerdict = `snap: ${f} → ${cur.pioneerId}/${cur.pioneerFaceId} (${(dist * 1000).toFixed(0)} mm)`;
     st.hudDirty = true;
   }
@@ -231,11 +238,10 @@ export function syncSeats(st: SceneState, nowMs: number) : void {
       pioneerNow === null ? null : [step.id, pioneerNow],
     );
     // ⭐⭐ `3D6`: a snap whose lerp would cross a THIRD body is CANCELLED — the Follower stays where
-    // it is and the couple is held off until it leaves the radius (`COLLISION.md` §5).
+    // it is (`COLLISION.md` §5). ⭐ `D182`: and NOT held off — the flight was clear when it started, so only
+    // something moved into it; the next frame's path check waits for it to clear.
     if (moved !== null && moved.blockedBy !== null) {
       st.seatSnaps.cancel(step.id);
-      const held = st.pioneerCursors.ofFollower(step.id);
-      if (held !== null) st.snapArming.holdOff(held.key);
       st.lastVerdict = `snap: ${step.id} CANCELLED — ${moved.blockedBy} is in the way`;
       st.hudDirty = true;
       continue;
@@ -314,6 +320,8 @@ export function feedUnsnap(st: SceneState, sample: Sample) : void {
       ` (seated=${st.links.isSeated(rawSecond)}, pioneer=${st.links.pioneerFor(rawSecond)?.objectId ?? "—"})`;
     return;
   }
+  // ⭐⭐ `D182`: an unsnap couple — from now until a finger lifts, neither touch drives the Pioneer.
+  st.unsnapHold.form(first.id, second.id);
   const cur = st.pioneerCursors.ofFollower(follower);
   if (cur === null) {
     st.unsnapTrace = `${follower} has no cursor`;

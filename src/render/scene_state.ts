@@ -24,7 +24,7 @@ import { RotationFollower, RotationTally } from "../input/rotation_increment";
 import { AlignmentLinks } from "../core/alignment_links";
 import { PioneerFaceCursors } from "../core/pioneer_face_cursors";
 import { SnapArming } from "../input/snap";
-import { UnsnapDetector } from "../input/unsnap";
+import { UnsnapDetector, UnsnapHold } from "../input/unsnap";
 import { SeatSnaps } from "../input/seat_snap";
 import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
@@ -404,6 +404,8 @@ export interface SceneState {
   snapArming: SnapArming;
   seatSnaps: SeatSnaps<ObjectId>;
   unsnapDetectors: Map<string, UnsnapDetector>;
+  /** ⭐ `D182`: while two touches form an unsnap couple, neither drives any body (`input/unsnap.ts`). */
+  unsnapHold: UnsnapHold;
   rawPressedBody: Map<number, ObjectId>;
   pointerTypeOf: Map<number, string>;
   outlines: Map<ObjectId, BodyOutlines>;
@@ -452,8 +454,6 @@ export interface SceneState {
   bootElevation: number;
   /** ⭐ `D170`: a demo scene's playback — its plan, the lead-in left, its progress ∈ [0, 1] — or `null`. */
   demo: { plan: DemoPlan; leadS: number; progress: number; done: boolean; fitM: number } | null;
-  /** ⭐ `3D6`: couples exempt from colliding with each other since an unsnap, until they separate. */
-  collisionGrace: Set<string>;
   /** The last block, for the HUD — `A⟂B 42% slid` — and when it happened. */
   lastCollision: string;
   lastCollisionAt: number;

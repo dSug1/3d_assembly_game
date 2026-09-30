@@ -257,7 +257,7 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `axis_translate.ts` | ⭐⭐⭐ `D75`/`D76` — the finger's delta **solved onto the two horizontal axes** so the body tracks it exactly, Blender's 5° cone at the edge-on case, and `A5`'s depth clamp carried over with the channel |
 | `pioneer_cascade.ts` | a turned or moved Pioneer **releases its unseated followers** (`D70`, `D106`), with **no cycles**. ⛔ It states this layer's rule: *a RULE in a render file is one nothing can interrogate* |
 | `highlight.ts` | `captureOffsetM` (the capture offset, mm on the glass → metres) and `translatesOnDrag`. ⛔ The white contours and shell are deleted (`D120`) |
-| `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **three** exclusions: the kicker, (`D53`) any body with a finger on it, the mover's **Pioneer** within `pioneerSwayRadii` offsets (slider, 3), and any body **seated on a frozen one** |
+| `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **three** exclusions: the kicker, (`D53`) any body with a finger on it, the mover's **Pioneer** at any distance (`D182`), and any body **seated on a frozen one** |
 | `camera_reset.ts` | the double-tap-on-empty-space flight home (`D111`), and the clock `align_snap` borrows a fraction of |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
 | `pinch.ts` | rule 4. A **ratio** of separations, never a rate |

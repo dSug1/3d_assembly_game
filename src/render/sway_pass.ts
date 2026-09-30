@@ -5,12 +5,10 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { impulseForPeak, trackingMetresPerPx, swayScale, receivesSway, pioneerSwaySuppressed, swayWorldDirection, type SwayKick, type SpinSwayKick } from "../input";
+import { impulseForPeak, trackingMetresPerPx, swayScale, receivesSway, swayWorldDirection, type SwayKick, type SpinSwayKick } from "../input";
 import { type Vec3 } from "../core/vec";
 import { type ObjectId } from "../core/object_model";
 import { mmToPx } from "../core/units";
-import { surfaceGap } from "../core/proximity";
-import { captureOffsetM } from "../input/highlight";
 import { type Held, type SceneState } from "./scene_state";
 import { bodyOf, followerFor, modelOrientation } from "./bodies";
 import { inAssemblyWith } from "./alignment_wiring";
@@ -76,27 +74,6 @@ export function isGrasped(st: SceneState, id: ObjectId) : boolean {
 }
 
 
-/**
- * ⭐ Is the held body within `pioneerSwayRadii` capture offsets of its Pioneer? ⛔ The two
- * numbers are the white contour's own: the SURFACE gap and the offset in world metres at the
- * current camera distance, so the sway's *near* is the capture's *near*.
- */
-export function moverNearPioneer(st: SceneState, heldId: ObjectId | null,
-  pioneerId: ObjectId | null,) : boolean {
-return heldId !== null &&
-  pioneerId !== null &&
-  pioneerSwaySuppressed(
-    surfaceGap(st.world, heldId, pioneerId),
-    captureOffsetM(
-      st.cfg.captureOffsetMm,
-      st.camera.radius,
-      st.camera.fov,
-      st.canvas.clientHeight,
-    ),
-    st.cfg.pioneerSwayRadii,
-  );
-}
-
 export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
   dir: Vec3,
   speedMmPerS: number,) : void {
@@ -114,11 +91,9 @@ export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
   if (!(impulse > 0)) return;
 
   const heldId = st.idOf.get(heldMesh) ?? null;
-  // ⭐ The mover's own Pioneer does not sway while the mover is within three capture offsets
-  // of it (`receivesSway`, `pioneerSwaySuppressed` — the owner, 2026-09-26).
+  // ⭐ The mover's own Pioneer never sways (`receivesSway`; `D182`: at any distance).
   const pioneerOfMover =
     heldId === null ? null : (st.links.pioneerFor(heldId)?.objectId ?? null);
-  const nearPioneer = moverNearPioneer(st, heldId, pioneerOfMover);
   for (const mesh of st.scene.meshes) {
     // ⛔ The SAME tag §2 rule 1 filters barycentre candidates by, so the diagnostic
     // marker cannot sway — a readout that moved with the scene would be describing
@@ -135,7 +110,6 @@ export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
         heldId,
         (id: ObjectId) => isGrasped(st, id),
         pioneerOfMover,
-        nearPioneer,
         (id) => inAssemblyWith(st, heldId, id),
         (id) =>
           anchoredToFrozen(
@@ -190,7 +164,6 @@ export function spinOthers(st: SceneState, grip: Held, kick: SpinSwayKick) : voi
   // ⭐ …and does not swing either — a follower TURNING is moving too.
   const pioneerOfMover =
     heldId === null ? null : (st.links.pioneerFor(heldId)?.objectId ?? null);
-  const nearPioneer = moverNearPioneer(st, heldId, pioneerOfMover);
   for (const mesh of st.scene.meshes) {
     if (mesh.metadata?.orbitCandidate !== true) continue;
     if (mesh === grip.mesh) continue;
@@ -203,7 +176,6 @@ export function spinOthers(st: SceneState, grip: Held, kick: SpinSwayKick) : voi
         heldId,
         (id: ObjectId) => isGrasped(st, id),
         pioneerOfMover,
-        nearPioneer,
         (id) => inAssemblyWith(st, heldId, id),
         (id) =>
           anchoredToFrozen(
