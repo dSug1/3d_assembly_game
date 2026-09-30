@@ -11,7 +11,7 @@ timer line (`D112`/`D115`). ⛔ Not built: the detector, the solver, the score.
 until `GM6`–`GM8`. ⭐ `D144`: a ⏸ pause menu leaves a level by reload; one scene list; §5 = later.
 ⭐ `D158`: a gesture that changes nothing costs zero episodes → `SCORE.md` §3.2.
 ⭐ [`spec/SCENE_1.md`](spec/SCENE_1.md) — `Scene_1`, picked by the scene slider (`D117`).
-⭐ [`spec/DEMO_SCENE.md`](spec/DEMO_SCENE.md) — a level assembling itself (`D170`/`D171`); `Scene1_demo`; ⭐ it starts from a floor grid (`D174`).
+⭐ [`spec/DEMO_SCENE.md`](spec/DEMO_SCENE.md) — a level assembling itself (`D170`/`D171`); `Scene1_demo`; ⭐ it starts from a floor grid (`D174`), one lengthwise rank (`D175`).
 
 ⭐ [`CONCEPT_ASSESSMENT_2026-09-26.md`](CONCEPT_ASSESSMENT_2026-09-26.md) — what is missing
 between the build and a game. ⛔ An assessment, not a queue.

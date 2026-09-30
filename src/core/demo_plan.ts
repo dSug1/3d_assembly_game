@@ -20,7 +20,7 @@ import { makeWorld, setWorldPlacement, worldPlacementOf, type SceneObject, type 
 import type { Placed } from "./mate_connector";
 import { mulberry32 } from "./random_pose";
 import { ORBIT_START_YAW_RAD } from "./scene_dims";
-import { add, dot, IDENTITY, length, qAngle, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "./vec";
+import { add, dot, IDENTITY, length, normalize, qAngle, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "./vec";
 
 /** ⭐ What a player does, as the demo plays it (forwards). ⛔ `YAW` is gone with the scatter (`D174`). */
 export type DemoMoveKind = "SNAP" | "APPROACH" | "ALIGN" | "TRANSLATE" | "LIFT";
@@ -86,10 +86,8 @@ export interface DemoOptions {
   readonly gridPitch: number;
   /** ⭐ `D174`: the least gutter between two pieces on the grid, and between two rows. */
   readonly gridGap: number;
-  /** ⭐ `D174`: how far outside the cube's front face (toward the boot camera) the grid's first row begins. */
+  /** ⭐ `D174`/`D175`: how far outside the cube's front face the longest piece's far end lies, when the floor allows. */
   readonly gridOffset: number;
-  /** ⭐ `D174`: a row's width, centred across the cube; absent, the CUBE's own width — the grid is the cube's front, extended. */
-  readonly gridWidth?: number;
   /**
    * ⭐ `D174`: the colour groups' order on the grid, as body colours; a colour not listed follows, in the order of its
    * first body in the scene. `Scene_1`: white, black, yellow, red, blue (`SCENE1_DEMO_OPTIONS`).
@@ -104,11 +102,22 @@ export const DEMO_ORBIT_TURNS = 1;
 export const DEMO_TAIL_DEG = 15;
 
 /**
- * ⭐⭐ `D171` — **WHERE THE MOVES END, as a fraction of the demo**. The camera turns at a steady rate `ω` while the
- * moves play (`360° × turns − 15°`), then DECELERATES uniformly to rest over the last 15° — which, arriving at zero
- * speed, takes `2 × 15° / ω`. So the moves take `(360 T − 15) / (360 T + 15)` of the demo: 345 / 375 = 0.92 at one turn.
+ * ⭐ `D175` (the owner, 2026-09-30: *"start the camera 15degrees orbit yaw before current start camera position"*): the
+ * demo's camera starts this far BEFORE the boot yaw — to the left, since it orbits to the right — and still ENDS where it
+ * did, at the boot yaw a turn on (the level's own front view, where the player takes over). So it turns 375°.
  */
-export const DEMO_MOVES_END = (360 * DEMO_ORBIT_TURNS - DEMO_TAIL_DEG) / (360 * DEMO_ORBIT_TURNS + DEMO_TAIL_DEG);
+export const DEMO_START_BEFORE_DEG = 15;
+
+/** ⭐ `D175`: the whole orbit, degrees — one turn and the 15° it starts before. */
+const DEMO_ORBIT_DEG = 360 * DEMO_ORBIT_TURNS + DEMO_START_BEFORE_DEG;
+
+/**
+ * ⭐⭐ `D171` — **WHERE THE MOVES END, as a fraction of the demo**. The camera turns at a steady rate `ω` while the
+ * moves play (the orbit less 15°), then DECELERATES uniformly to rest over the last 15° — which, arriving at zero
+ * speed, takes `2 × 15° / ω`. So the moves take `(orbit − 15) / (orbit + 15)` of the demo: 360 / 390 = 0.923 since
+ * `D175`'s 375° orbit (345 / 375 = 0.92 before).
+ */
+export const DEMO_MOVES_END = (DEMO_ORBIT_DEG - DEMO_TAIL_DEG) / (DEMO_ORBIT_DEG + DEMO_TAIL_DEG);
 
 /** ⭐ `D171`: the MOVES' own progress ∈ [0, 1] at the demo's `progress` — 1 from `DEMO_MOVES_END` on. */
 export function movesProgress(progress: number): number {
@@ -122,13 +131,14 @@ export function movesProgress(progress: number): number {
  */
 export function demoYawAt(progress: number): number {
   const p = Math.min(1, Math.max(0, progress));
-  const total = 2 * Math.PI * DEMO_ORBIT_TURNS;
+  const total = (DEMO_ORBIT_DEG * Math.PI) / 180;
   const tail = (DEMO_TAIL_DEG * Math.PI) / 180;
+  const start = ORBIT_START_YAW_RAD - (DEMO_START_BEFORE_DEG * Math.PI) / 180; // ⭐ `D175`
   const omega = (total - tail) / DEMO_MOVES_END; // rad per unit of progress
-  if (p <= DEMO_MOVES_END) return ORBIT_START_YAW_RAD + omega * p;
+  if (p <= DEMO_MOVES_END) return start + omega * p;
   const u = p - DEMO_MOVES_END;
   const span = 1 - DEMO_MOVES_END;
-  return ORBIT_START_YAW_RAD + (total - tail) + omega * u - (omega * u * u) / (2 * span);
+  return start + (total - tail) + omega * u - (omega * u * u) / (2 * span);
 }
 
 /** ⭐ The horizontal direction from the orbit centre toward the camera at `yawRad` (`orbitOffset`'s own). */
@@ -148,7 +158,7 @@ export const DEMO_DEFAULTS: DemoOptions = {
   tries: 60,
   minContact: 0.02,
   clearance: 0.15,
-  // ⭐ `D174`: a 5 mm grid, 1 cm gutters, 3 cm outside the cube, rows as wide as the cube (no `gridWidth`).
+  // ⭐ `D174`: a 5 mm grid, 1 cm gutters, 3 cm outside the cube (`D175`: one rank, lengthwise in depth).
   gridPitch: 0.05,
   gridGap: 0.1,
   gridOffset: 0.3,
@@ -165,8 +175,9 @@ export function demoReach(plan: Pick<DemoPlan, "volume" | "stage">): Aabb {
 
 /**
  * ⭐⭐ `D174` — **A PIECE LAID FLAT** (the owner: *"aligned with the floor"*): resting on its LARGEST face — its
- * smallest side vertical, its longest along world `x` (the grid's rows), the middle one along `z`. Four square
- * orientations do that (the half-turns); they are returned nearest the final one (identity) first.
+ * smallest side vertical. ⭐ `D175` (the owner: *"present their longest dimension towards the depth axis"*): its longest
+ * side along world `z` (depth), the middle one along `x`. Four square orientations do that (the half-turns); they are
+ * returned nearest the final one (identity) first.
  */
 export function flatOrientations(dims: Vec3): Quat[] {
   const order = [0, 1, 2].sort((a, b) => dims[b]! - dims[a]! || a - b);
@@ -179,7 +190,7 @@ export function flatOrientations(dims: Vec3): Quat[] {
         const q = canonical(qmul(qFromAxisAngle([0, 1, 0], a), qmul(qFromAxisAngle([1, 0, 0], b), qFromAxisAngle([0, 0, 1], c))));
         const long = qRotate(q, axis(order[0]!));
         const short = qRotate(q, axis(order[2]!));
-        if (Math.abs(Math.abs(long[0]) - 1) > 1e-9 || Math.abs(Math.abs(short[1]) - 1) > 1e-9) continue;
+        if (Math.abs(Math.abs(long[2]) - 1) > 1e-9 || Math.abs(Math.abs(short[1]) - 1) > 1e-9) continue;
         // ⭐ `q` and `−q` are one turn: `canonical` settles the sign by `w` alone, so a half-turn (`w = 0`) needs
         // the first non-zero component positive too, or it is counted twice.
         const lead = q.find((v) => Math.abs(v) > 1e-9)!;
@@ -189,10 +200,10 @@ export function flatOrientations(dims: Vec3): Quat[] {
   return [...seen.values()].sort((p, q) => qAngle(p) - qAngle(q) || p.join(",").localeCompare(q.join(",")));
 }
 
-/** ⭐ `D174`: the half-sizes of a piece laid flat, in world axes — `[longest, smallest, middle] / 2`. */
+/** ⭐ `D175`: the half-sizes of a piece laid flat, in world axes — `[middle, smallest, longest] / 2`. */
 function flatHalf(dims: Vec3): Vec3 {
   const s = [...dims].sort((a, b) => b - a);
-  return [s[0]! / 2, s[2]! / 2, s[1]! / 2];
+  return [s[1]! / 2, s[2]! / 2, s[0]! / 2];
 }
 
 const sameColour = (a: Triple, b: Triple): boolean => a.every((v, i) => Math.abs(v - b[i]!) < 1e-9);
@@ -201,17 +212,20 @@ const sameColour = (a: Triple, b: Triple): boolean => a.every((v, i) => Math.abs
  * ⭐⭐⭐ `D174` — **THE FLOOR GRID** (the owner: *"set on the floor on a virtual grid (do not show any grid), ordered by
  * color and inside the color groups by descending size"*, *"in front, just outside the demo cube"*). Where each of
  * `ids` rests at the start, laid flat, and the grid's box.
- * ⭐ Reading order as the boot camera sees it: left to right (`+x`), then row after row toward the camera (`−z`), the
- * first row `gridOffset` outside the cube's front face. Colour groups in `colourOrder`, each by CORE volume, largest
- * first (ties: the scene's order); the groups follow on in the rows. Each piece takes a whole number of `gridPitch`
- * cells — its footprint and a `gridGap` gutter — and sits at the middle of its cells across, at the middle of its row
- * in depth. ⛔ Nothing is drawn. ⛔ A grid that leaves the floor THROWS.
+ * ⭐⭐ `D175` (the owner: *"the parts shall present their longest dimension towards the depth axis and their bottom
+ * surfaces on depth axis shall be aligned on x axis"*): **ONE RANK** — each piece lengthwise in depth, their NEAR ends
+ * (lowest `z`, toward the boot camera) flush on one line parallel to `x`, side by side left to right (`+x`, the boot
+ * camera's right) in the order: colour groups in `colourOrder`, each by CORE volume, largest first (ties: the scene's
+ * order). The line lies as near the cube as the longest piece allows — its far end `gridOffset` outside the cube's front
+ * face — but never off the floor (half a gutter in from its edge); the rank is centred across the cube. Each piece takes
+ * a whole number of `gridPitch` cells across — its width and a `gridGap` gutter — and sits at their middle.
+ * ⛔ Nothing is drawn. ⛔ A rank that leaves the floor, or a piece that would reach into the cube, THROWS.
  */
 export function demoGrid(
   scene: SceneDescriptor,
   ids: readonly string[],
   volume: Aabb,
-  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "gridWidth" | "colourOrder">,
+  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "colourOrder">,
 ): { rest: Map<string, Vec3>; stage: Aabb } {
   const floor = [...scene.bodies].filter((b) => b.frozen).sort((a, b) => Math.max(...contourDims(b)) - Math.max(...contourDims(a)))[0];
   if (!floor) throw new Error(`${scene.id}: a demo grid needs a floor (a frozen body)`);
@@ -228,45 +242,31 @@ export function demoGrid(
     return ga - gb || vb - va || index.get(a)! - index.get(b)!;
   });
   const p = opt.gridPitch;
-  const cells = Math.floor((opt.gridWidth ?? volume.max[0] - volume.min[0]) / p + 1e-9);
-  const rows: { id: string; x0: number; cx: number; half: Vec3 }[][] = [[]];
-  let x = 0;
-  for (const id of sorted) {
-    const half = flatHalf(contourDims(spec(id)) as unknown as Vec3);
-    const cx = Math.ceil((2 * half[0] + opt.gridGap) / p - 1e-9);
-    if (cx > cells) throw new Error(`${scene.id}: ${id} is longer than a grid row`);
-    if (x + cx > cells) {
-      rows.push([]);
-      x = 0;
-    }
-    rows[rows.length - 1]!.push({ id, x0: x, cx, half });
-    x += cx;
-  }
-  const used = Math.max(...rows.map((r) => r.reduce((s, c) => s + c.cx, 0)));
+  const halves = sorted.map((id) => flatHalf(contourDims(spec(id)) as unknown as Vec3));
+  const cells = halves.map((h) => Math.ceil((2 * h[0] + opt.gridGap) / p - 1e-9));
+  const used = cells.reduce((s, c) => s + c, 0);
+  const longest = Math.max(...halves.map((h) => 2 * h[2]));
+  const fx = [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2];
+  const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
+  // ⭐ The line the near ends sit on: as close to the cube as the longest piece lets it, never off the floor.
+  const line = Math.ceil(Math.max(fz[0]! + opt.gridGap / 2, volume.min[2] - opt.gridOffset - longest) / p - 1e-9) * p;
   const centreX = (volume.min[0] + volume.max[0]) / 2;
   const originX = Math.round((centreX - (used * p) / 2) / p) * p;
   const rest = new Map<string, Vec3>();
-  let top = volume.min[2] - opt.gridOffset;
-  const lo: [number, number, number] = [Infinity, floorTop, Infinity];
-  const hi: [number, number, number] = [-Infinity, floorTop, -Infinity];
-  for (const row of rows) {
-    const depth = Math.max(...row.map((c) => Math.ceil((2 * c.half[2] + opt.gridGap) / p - 1e-9))) * p;
-    for (const c of row) {
-      const pos: Vec3 = [originX + (c.x0 + c.cx / 2) * p, floorTop + c.half[1], top - depth / 2];
-      rest.set(c.id, pos);
-      // ⭐ The grid's box is its CELLS, gutters included — so a piece on its cell is inside it with room to spare.
-      lo[0] = Math.min(lo[0], originX + c.x0 * p);
-      hi[0] = Math.max(hi[0], originX + (c.x0 + c.cx) * p);
-      lo[2] = Math.min(lo[2], top - depth);
-      hi[2] = Math.max(hi[2], top);
-      hi[1] = Math.max(hi[1], floorTop + 2 * c.half[1]);
-    }
-    top -= depth;
-  }
-  const fx = [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2];
-  const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
-  if (lo[0] < fx[0]! || hi[0] > fx[1]! || lo[2] < fz[0]! || hi[2] > fz[1]!)
-    throw new Error(`${scene.id}: the demo grid (${rows.length} rows, x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}, z ${lo[2].toFixed(2)}…${hi[2].toFixed(2)}) leaves the floor`);
+  const lo: [number, number, number] = [originX, floorTop, line - opt.gridGap / 2];
+  const hi: [number, number, number] = [originX + used * p, floorTop, -Infinity];
+  let x = 0;
+  sorted.forEach((id, i) => {
+    const h = halves[i]!;
+    rest.set(id, [originX + (x + cells[i]! / 2) * p, floorTop + h[1], line + h[2]]);
+    x += cells[i]!;
+    hi[1] = Math.max(hi[1], floorTop + 2 * h[1]);
+    hi[2] = Math.max(hi[2], line + 2 * h[2] + opt.gridGap / 2);
+  });
+  if (lo[0] < fx[0]! || hi[0] > fx[1]! || lo[2] < fz[0]! - 1e-9)
+    throw new Error(`${scene.id}: the demo grid (x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}, z from ${lo[2].toFixed(2)}) leaves the floor`);
+  if (line + longest >= volume.min[2])
+    throw new Error(`${scene.id}: the demo grid's longest piece (${longest.toFixed(2)}) reaches into the cube from the floor's edge`);
   return { rest, stage: { min: lo, max: hi } };
 }
 
@@ -548,6 +548,19 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     for (let i = 0; i <= 8; i++) {
       const y = clear + ((top - clear) * i) / 8;
       if (y > E.position[1]) routes.push([{ position: [E.position[0], y, E.position[2]], orientation: E.orientation }, lifted(y)]);
+    }
+    // ⭐ `D175`, FOUND BY THE GENERATOR: a piece laid flat LENGTHWISE beside the painting's edge cannot rise straight
+    // from its spot — the painting's side column is over it. So: first a step straight AWAY from its slot (the way it
+    // was pulled out, flattened), then up, across, and down — at 1 to 3 units out, at rising heights.
+    const fin = final.get(id)!.position;
+    const away = normalize([E.position[0] - fin[0], 0, E.position[2] - fin[2]]) ?? ([0, 0, -1] as Vec3);
+    for (const out of [1, 2, 3]) {
+      const P: Vec3 = add(E.position, scale(away, out));
+      routes.push([{ position: P, orientation: E.orientation }, lifted(clear)]);
+      for (let i = 0; i <= 8; i++) {
+        const y = clear + ((top - clear) * i) / 8;
+        if (y > P[1]) routes.push([{ position: P, orientation: E.orientation }, { position: [P[0], y, P[2]], orientation: E.orientation }, lifted(y)]);
+      }
     }
     let done = false;
     for (const legs of routes) {

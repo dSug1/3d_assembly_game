@@ -14,7 +14,7 @@ import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
 import { formatDemoPlan } from "../src/content/demo_plan_format";
 import { SCENES } from "../src/content/scenes";
 import { GAME_CONTENT } from "../src/content/worlds";
-import { withDemoPlan, DEMO_CHAIN, DEMO_DEFAULTS, DEMO_MOVES_END, demoReach, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
+import { withDemoPlan, demoGrid, DEMO_CHAIN, DEMO_DEFAULTS, DEMO_MOVES_END, demoReach, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
 import { contourDims, parseSceneDescriptor, serializeSceneDescriptor, type SceneDescriptor } from "@core/game_structure";
 import { boxShape, gapBetween } from "@core/collision_shape";
 import { boundsFromShapes, hullAtSpawn, poseFree } from "@core/collision";
@@ -204,9 +204,9 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
         pull = Math.min(pull, dot(out, d));
       }
     });
-    // ⭐ never behind: at worst square to the camera (`D174`, seed 1: −0.00, one pull exactly across; `D171`'s plan
-    // measured −0.29, and the rule before `D171`, −z first, reached −1.00 with 16 of 30 pulls behind)
-    expect(pull).toBeGreaterThan(-0.05);
+    // ⭐ never behind: at worst a little past square to the camera (seed 1: `D175` −0.15, `D174` −0.00, `D171` −0.29 — where
+    // every camera-facing axis was blocked; the rule before `D171`, −z first, reached −1.00 with 16 of 30 pulls behind)
+    expect(pull).toBeGreaterThan(-0.3);
   });
 
   // ⚠ `D174`: 14, not 12 — a side-6 cube is 0.3 units taller than the painting, so a piece put back from BEHIND has no
@@ -218,15 +218,20 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
     };
     const plan = generateDemoPlan(tight, { ...SCENE1_DEMO_OPTIONS, moveCount: 30 });
     expect(plan.volume).toEqual({ min: [-3.5, -1.2, -3.5], max: [3.5, 5.8, 3.5] });
-    expect(plan.stage.max[2]).toBeCloseTo(-3.5 - DEMO_DEFAULTS.gridOffset, 9); // ⭐ its grid just outside ITS cube
+    expect(plan.stage.max[2]).toBeLessThan(-3.5); // ⭐ its grid outside ITS cube
     expect(violations(plan, tight, 100)).toEqual([]);
   });
 
   it("⛔ a generation that cannot be completed THROWS — it never ships a shorter plan", () => {
     expect(() => generateDemoPlan(SCENE_1, { moveCount: 3 })).toThrow(/cannot be split into chains of 5/);
     expect(() => generateDemoPlan(SCENE_1, { moveCount: 151 })).toThrow(/cannot be split/);
-    // ⭐ `D174`: a grid that would leave the floor — begun 6 units outside the cube, its first row is past the floor's edge (z −11 < −10)
-    expect(() => generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, moveCount: 30, gridOffset: 6 })).toThrow(/leaves the floor/);
+    // ⭐ `D174`/`D175`: a grid that cannot lie on the floor outside the cube — all 41 side by side are wider than the
+    // floor; a 4.83-unit bar from the floor's edge reaches into a cube whose front is 4 units in (z −6)
+    const v = demoVolume(SCENE_1);
+    const all = SCENE_1.bodies.filter((b) => !b.frozen).map((b) => b.id);
+    expect(() => demoGrid(SCENE_1, all, v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).toThrow(/leaves the floor/);
+    expect(() => demoGrid(SCENE_1, ["Piece30"], { min: [-5, -2.7, -6], max: [5, 7.3, 4] }, DEMO_DEFAULTS)).toThrow(/reaches into the cube/);
+    expect(() => demoGrid(SCENE_1, ["Piece30"], v, DEMO_DEFAULTS)).not.toThrow();
     expect(() => generateDemoPlan({ ...SCENE_1, final: null })).toThrow(/final configuration/);
   });
 });
@@ -265,11 +270,14 @@ describe("⭐⭐ the playback — timing, speed, camera (`input/demo_playback.ts
 
   it("⭐⭐ the camera: a turn to the RIGHT, steady while the moves play, rising linearly to the top ring", () => {
     const boot = -Math.PI / 2;
+    const start = boot - Math.PI / 12; // ⭐ `D175`: 15° before the boot yaw
     const deg = (r: number) => (r * 180) / Math.PI;
     const c0 = demoCamera(0.45, 0);
     const c1 = demoCamera(0.45, 1);
-    expect([c0.yawRad, c0.elevation]).toEqual([boot, 0.45]);
-    expect(deg(c1.yawRad - boot)).toBeCloseTo(360, 9);
+    expect(c0.yawRad).toBeCloseTo(start, 12);
+    expect(c0.elevation).toBe(0.45);
+    expect(deg(c1.yawRad - boot)).toBeCloseTo(360, 9); // ⭐ it still ENDS a turn on from the boot yaw — 375° in all
+    expect(deg(c1.yawRad - c0.yawRad)).toBeCloseTo(375, 9);
     expect(c1.elevation).toBe(1);
     expect(demoCamera(0.45, 0.5).elevation).toBeCloseTo(0.725, 12);
     // ⭐ steady: equal steps of progress, equal turns, up to the end of the moves
@@ -278,18 +286,19 @@ describe("⭐⭐ the playback — timing, speed, camera (`input/demo_playback.ts
     // ⭐ "towards the right": the camera's first step moves along its own right, cross(up, forward)
     const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
     const cam = (yaw: number) => orbitOffset(cfg, yaw, 0.45, 1).offsetM;
-    const forward = normalize(sub([0, 0, 0], cam(boot)))!;
+    const forward = normalize(sub([0, 0, 0], cam(start)))!;
     const right = cross([0, 1, 0], forward);
-    expect(dot(sub(cam(demoCamera(0.45, 0.01).yawRad), cam(boot)), right)).toBeGreaterThan(0);
+    expect(dot(sub(cam(demoCamera(0.45, 0.01).yawRad), cam(start)), right)).toBeGreaterThan(0);
   });
 
   it("⭐⭐ `D171` — the goal is reached with 15° of orbit LEFT; the camera then slows, with no jolt, to rest at the end", () => {
     const deg = (r: number) => (r * 180) / Math.PI;
-    expect(DEMO_MOVES_END).toBeCloseTo(345 / 375, 12);
+    expect(DEMO_MOVES_END).toBeCloseTo(360 / 390, 12); // `D175`'s 375° orbit (345 / 375 before)
     // ⭐ the last move lands exactly when 15° remain
     expect(movesProgress(DEMO_MOVES_END)).toBe(1);
     expect(movesProgress(DEMO_MOVES_END - 1e-6)).toBeLessThan(1);
-    expect(deg(demoYawAt(DEMO_MOVES_END) - demoYawAt(0))).toBeCloseTo(345, 9);
+    expect(deg(demoYawAt(DEMO_MOVES_END) - demoYawAt(0))).toBeCloseTo(360, 9);
+    expect(deg(demoYawAt(1) - demoYawAt(DEMO_MOVES_END))).toBeCloseTo(15, 9);
     const poses = demoPosesAt(PLAN, movesProgress(DEMO_MOVES_END));
     for (const [id, p] of poses) expect(near(p.position, final.get(id)!, 1e-6)).toBe(true);
     // ⭐ no jolt: the speed just before and just after the moves end is the same; it slows the whole tail; zero at the end

@@ -6,8 +6,7 @@
 import { setWorldPlacement } from "../core/object_model";
 import { advanceDemo, DEMO_LEAD_IN_S, demoCamera, demoDistanceM, demoFramePointsM, demoMoveAt, demoPosesAt, fitPointsDistanceM } from "../input/demo_playback";
 import { orbitOffset } from "../input/orbit";
-import { ORBIT_START_YAW_RAD } from "../core/scene_dims";
-import { movesProgress } from "../core/demo_plan";
+import { demoYawAt, movesProgress } from "../core/demo_plan";
 import { applyCamera } from "./camera_rig";
 import { type SceneState } from "./scene_state";
 
@@ -21,7 +20,8 @@ export function startDemo(st: SceneState): void {
   // ⭐ `D171`: the distance at which the whole cube is on screen from the BOOT view, on this screen's aspect —
   // ⭐ `D174`: and the floor grid, the start configuration, which lies outside the cube toward that camera.
   const unitM = st.sceneSpec.unitM ?? 1;
-  const off = orbitOffset(st.cfg, ORBIT_START_YAW_RAD, st.bootElevation, 1).offsetM;
+  // ⭐ `D175`: from where the demo's camera STARTS — 15° before the boot yaw.
+  const off = orbitOffset(st.cfg, demoYawAt(0), st.bootElevation, 1).offsetM;
   const len = Math.hypot(off[0], off[1], off[2]) || 1;
   const aspect = st.canvas.clientWidth / Math.max(1, st.canvas.clientHeight);
   const fitM = fitPointsDistanceM(demoFramePointsM(plan, unitM), [off[0] / len, off[1] / len, off[2] / len], st.camera.fov, aspect);

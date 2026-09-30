@@ -1,7 +1,7 @@
 # DEMO_SCENE — a scene that assembles itself
 
 > **STATUS** · 🔨 specified and built 2026-09-29 (`D170`, revised by `D171` the same day; ⭐ the start is a floor grid
-> since `D174`, 2026-09-30), ⛔ unjudged by a hand ·
+> since `D174`, 2026-09-30; lengthwise in one rank, the camera 15° earlier, `D175` the same day), ⛔ unjudged by a hand ·
 > **OWNS** · what a demo scene is, how its disassembly is computed, how it plays, and `Scene1_demo`
 > **READ IF** · you are making a demo from another scene, changing how moves are generated or played, or changing
 > the demo's camera
@@ -32,6 +32,10 @@
 > descending size. Once lifted,each part shall reach a position which blends into the current build (piece position
 > matching camera orbit movement not to occlude the movement)"* — and, asked: which pieces → *"only the 30 moved"*;
 > where → *"in front, just outside the demo cube"*; size → *"volume"* — the owner, 2026-09-30 (`D174`)
+>
+> *"when they sit on the floor at the start, the parts shall present their longest dimension towards the depth axis and
+> their bottom surfaces on depth axis shall be aligned on x axis. Also, start the camera 15degrees orbit yaw before
+> current start camera position"* — the owner, 2026-09-30 (`D175`)
 
 ## 1. The idea
 
@@ -77,10 +81,12 @@ all vectored (`tests/d174.test.ts`):
 3. **The build's own moves stay in the cube** (`ALIGN`, `APPROACH`, `SNAP`); only the lift and the carry reach over
    the grid.
 
-⚠ The carry is the long move — **5.8 to 14.9 units, 35 % of the moves' time** — and while the camera is on the grid's
-side it crosses in front of it, from the floor to the spot before its slot. **11 of 30 go OVER the build** (played
+⚠ The carry is the long move — **7.5 to 16.8 units** (`D175`; 5.8–14.9 at `D174`) — and while the camera is on the grid's
+side it crosses in front of it, from the floor to the spot before its slot. **10 of 30 go OVER the build** (played
 forwards: up from the cell to a height above the painting, across, and straight down onto the spot) — every piece put
-back while the camera is behind the painting, where its spot is, and a few others.
+back while the camera is behind the painting, where its spot is, and a few others. ⭐ `D175`: **one** of them ends with
+a level step IN to its spot — a piece laid lengthwise beside the painting's edge cannot come straight down onto it,
+the painting's side column is over it; the generator tries a step of 1–3 units out first (found by the generator).
 
 ⭐ **Which piece comes off next**: one that has a **seat it can leave** — a face in contact with a neighbour (the
 Pioneer), overlapping it by at least `minContact`, such that sliding `snapGap` straight away from it collides with
@@ -95,7 +101,8 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
 * ⛔ **Scatter** (a spot on the camera's side, at least `facing` 1.5 units out) — **deleted by `D174`** with the
   scatter itself: the pieces start on the grid.
 * ✅ Measured on seed 1: the old `−z`-first rule sent **16 of 30** pieces out behind the assembly (worst: straight away,
-  −1.00); `D171`'s plan **1**, slightly past square (−0.29); `D174`'s **1**, exactly across the view (−0.00).
+  −1.00); `D171`'s plan **1**, slightly past square (−0.29); `D174`'s **1**, exactly across the view (−0.00); `D175`'s
+  worst −0.15 (9° past square).
 * ⚠ **What it does not remove**: sampled from the real camera path, **41 of 450** moments (9 %) had the moving piece's
   centre behind another body in `D171`'s plan. ⭐ `D174`, re-measured with one instrument for both (`D171`'s plan reads
   46 on it, 10.2 %): **38 of 450 (8.4 %)** — 29 of them `SNAP`s, the last 3 cm into a slot while the camera sees the
@@ -104,30 +111,35 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
 
 ## 2bis. ⭐⭐⭐ The start configuration — a floor grid (`D174`)
 
-* **Flat** (*"aligned with the floor"*): each piece rests on its **largest face** — its smallest side vertical, its
-  longest along world `x`, its middle one along `z`, square to the floor's axes, its bottom face ON the floor (contact,
-  `D136`). Of the four orientations that do that (the half-turns), the one nearest its final orientation that is not
+* **Flat** (*"aligned with the floor"*): each piece rests on its **largest face** — its smallest side vertical, ⭐
+  **its longest along DEPTH, world `z`** (`D175`; along `x` at `D174`), its middle one along `x`, square to the floor's
+  axes, its bottom face ON the floor (contact, `D136`). Of the four orientations that do that (the half-turns), the one nearest its final orientation that is not
   the final one itself (above).
-* **Where** (*"in front, just outside the demo cube"*): on the boot camera's side (`−z`), the first row **3 cm**
-  (`gridOffset` 0.3) outside the cube's front face (`z = −5`), the rows **as wide as the cube** and centred on it — the
-  grid is the cube's front, extended toward the camera.
+* **Where** (*"in front, just outside the demo cube"*): on the boot camera's side (`−z`). ⭐⭐ `D175`
+  (*"their bottom surfaces on depth axis shall be aligned on x axis"*): **ONE RANK** — every piece's NEAR end (its lowest
+  `z`, toward the boot camera) flush on one line parallel to `x`, the pieces side by side, centred across the cube. The
+  line lies as close to the cube as the longest piece allows (its far end `gridOffset` 3 cm out) but never off the
+  floor — for `Scene_1` the 4.83-unit bars decide: **the line is half a gutter in from the floor's edge** (`z −9.95`)
+  and the longest reaches `z −5.12`, 1.2 cm outside the cube. ⚠ The near end is the reading that FITS: flush far ends
+  3 cm out would put the long bars' near ends 13 cm past the floor's edge. It is one choice in `demoGrid` if the owner
+  meant the far ends.
 * **The order** (*"ordered by color and inside the color groups by descending size"*): **white, black, yellow, red,
   blue** — the painting's slot order, `MAT_A`–`MAT_E` (`SCENE1_DEMO_OPTIONS`) — each group by the CORE's **volume**,
-  largest first (ties: the table's order). ⭐ In **reading order as the boot camera sees it**: left to right (`+x`,
-  the camera's right), then row after row toward the camera. ⭐ The groups follow on in the rows; a colour does not
-  start its own row (below).
-* **The grid** (*"a virtual grid"*): a **5 mm** pitch (`gridPitch` 0.05); a piece takes a whole number of cells — its
-  footprint and a **1 cm** gutter (`gridGap` 0.1) — and sits at the middle of its cells across and of its row in depth.
+  largest first (ties: the table's order). ⭐ In **reading order as the boot camera sees it**: left to right along the
+  rank (`+x`, the camera's right).
+* **The grid** (*"a virtual grid"*): a **5 mm** pitch (`gridPitch` 0.05); a piece takes a whole number of cells ACROSS
+  — its width and a **1 cm** gutter (`gridGap` 0.1) — and sits at their middle; the line is on the pitch too.
   ⛔ **Nothing is drawn** — the demo scene has exactly `Scene_1`'s bodies (a vector).
-* ⭐⭐ **Why the colours flow on — measured**: between the cube's front face and the floor's edge there are **4.7
-  units** of depth. The 30 laid flat cover **17.9 units²**; flowing, at the cube's width, they take **5 rows, 3.35
-  units** (`x −4.95 → 4.95`, `z −5.3 → −8.65`). A row per colour costs a row per group and the black group alone is 3
-  rows. ⚠ The width fits THIS set: an earlier estimate on `D171`'s 30 (more long pieces) did not fit at 10 and needed
-  12 — so `gridWidth` is an option, and ⛔ a grid that would leave the floor **throws**, as every other refusal does.
-* **Seed 1**, far row first, left to right — white: Piece9, Piece4, Piece15, Piece11 | Piece18, Piece14, Piece20,
-  Piece1, Piece3, Piece5, Piece16; black: Piece30, Piece32 | Piece27, Piece35, Piece22, Piece29, Piece25, Piece34 |
-  Piece37, Piece23, Piece24, Piece28, Piece36, Piece40; yellow: Piece17, Piece6; red: Piece12, Piece21, Piece7. (The
-  blue square is not among the 30; two of the three 4.8-unit bars are, and fill the third row.)
+* ⭐⭐ **Why one rank — measured**: between the cube's front face and the floor's edge there are **5.0 units** of depth
+  and the longest piece is 4.83 — lengthwise, there is room for ONE rank, no second. So the rank is as wide as the 30
+  side by side: **18.25 units (1.8 m), `x −9.10 → 9.15`** on seed 1 — wider than the cube (10), within the floor (20).
+  ⛔ A rank that would leave the floor, or a piece that would reach into the cube from the floor's edge, **throws**.
+  ⛔ `gridWidth` and the rows are deleted (`D175`).
+* **Seed 1**, left to right — white: Piece9, Piece4, Piece8, Piece15, Piece11, Piece14, Piece20, Piece1, Piece5,
+  Piece16; black: Piece32, Piece27, Piece35, Piece39, Piece22, Piece26, Piece25, Piece34, Piece37, Piece23, Piece24,
+  Piece28, Piece36, Piece40; yellow: Piece17, Piece6; red: Piece2, Piece21, Piece7; blue: Piece10. ⚠ Not `D174`'s set:
+  laying pieces lengthwise changes which spots let them lie down, so the peeling draws other pieces (the blue square is
+  among them now).
 
 ### 2ter. How it is generated — three phases
 
@@ -176,8 +188,9 @@ and the generation throws — the tighter-cube vector uses side 7. A carry AROUN
 | `snapGap` | **0.3** (3 cm) | inside the snap's reach at the boot camera (`captureOffsetMm` 10 mm on the glass ≈ 4 cm) |
 | estrange | 1.0–1.6, up to 3× (`D174`; 2× before) | clear of the painting's 0.33 depth, and room to lie down |
 | `clearance` | **0.15** | a piece pulled clear is not still in a hole of the assembly; ⭐ `D174`: the carry's lowest height clears the grid by it |
-| `gridPitch` / `gridGap` / `gridOffset` | **0.05 / 0.1 / 0.3** (5 mm / 1 cm / 3 cm) | `D174` — a virtual grid, a gutter, just outside the cube |
-| `gridWidth` | the cube's (10) | `D174` — measured to fit the seed-1 set (§2bis) |
+| `gridPitch` / `gridGap` / `gridOffset` | **0.05 / 0.1 / 0.3** (5 mm / 1 cm / 3 cm) | `D174` — a virtual grid, a gutter, just outside the cube (`D175`: when the floor allows) |
+| ⛔ `gridWidth` | deleted (`D175`) | one rank, as wide as the pieces |
+| camera start | **15° before** the boot yaw (`D175`) | the orbit is 375°, ending where it did |
 | colour order | white, black, yellow, red, blue | `D174`, `SCENE1_DEMO_OPTIONS` |
 | ⛔ `facing`, unalign angles, yaw | deleted (`D174`) | they went with the scatter |
 | `segment` / skin | 0.1 / 0.003 (0.3 mm, the game's skin) | |
@@ -186,7 +199,7 @@ and the generation throws — the tighter-cube vector uses side 7. A carry AROUN
 ## 5. The demo start configuration is DATA
 
 ⭐ The plan — the 150 moves and the start pose of every piece that moved — is **generated once by a script and
-committed** (`src/content/scene1_demo_plan.ts`, 33 KB since `D174` — 3.5 KB compressed — by `scripts/gen_demo_plan.ts`, ~22 s), so it can be read,
+committed** (`src/content/scene1_demo_plan.ts`, 33.5 KB since `D175` — 3.6 KB compressed — by `scripts/gen_demo_plan.ts`, ~45 s), so it can be read,
 reviewed and diffed. ⛔ A vector regenerates it and fails if the committed file differs.
 
 ⭐⭐ **And it is LOADED ONLY BY THE DEMO LEVEL** (`D173`, the owner, 2026-09-29: *"load the demo's move plan only in the
@@ -207,24 +220,29 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 * ⭐ **The speed slider**: SCENE › *demo duration (s)*, **10–60 s**, default **23 s** (`demoDurationS`; the owner, 2026-09-29 — 30 s, then 20 s) — the WHOLE run,
   from the first move to the camera's stop (the lead-in not counted). A move's share of the moves' time is
   proportional to `0.5 + √travel` (`travel` = distance + angle × the piece's half-diagonal). ⚠ With 150 moves a move
-  takes **0.36 %–1.51 %** of the moves' time (`D174`; 0.3–1.25 % before): 0.08–0.32 s at the default 23 s, 0.03–0.14 s at 10 s, 0.2–0.83 s at 60 s. ⭐ Moving the slider mid-demo changes the
+  takes **0.35 %–1.54 %** of the moves' time (`D175`; 0.3–1.25 % at `D171`): 0.07–0.33 s at the default 23 s, 0.03–0.14 s at 10 s, 0.2–0.85 s at 60 s. ⭐ Moving the slider mid-demo changes the
   SPEED from then on — nothing jumps.
 * ⛔ **Nothing is pickable while it plays** (a demo is watched; a grip would fight the replay). The episode count stays 0.
 * ⚠ **It is a replay of poses, not of gestures**: no alignment, cursor or seat is created, and no highlight is drawn.
 
 ## 7. How it plays — the camera (`D170`, `D171`, `D174`)
 
-* **Yaw**: it **orbits to the right** — one full turn. ⭐⭐ **The goal is reached with 15° of orbit LEFT**: the camera
-  turns at a steady rate while the moves play (345°), then **slows uniformly to rest** over the last 15° — reaching the
-  final yaw at zero speed as the demo ends, with no jolt where the moves end (the speed is continuous). Arriving at rest
-  from the steady rate takes `2 × 15° / ω`, so the **moves take 345 / 375 = 92 % of the run** and the settling 8 %
+* **Yaw**: it **orbits to the right**. ⭐⭐ `D175`: it **STARTS 15° before the boot yaw** (to the left) and still ENDS
+  where it did — the boot yaw a turn on, the level's own front view — so it turns **375°** (`DEMO_START_BEFORE_DEG`).
+  ⚠ Kept the end, not the whole path, because the end is where the player takes over; shifting the whole orbit is one
+  constant. ⭐⭐ **The goal is reached with 15° of orbit LEFT**: the camera turns at a steady rate while the moves play
+  (360°), then **slows uniformly to rest** over the last 15° — reaching the final yaw at zero speed as the demo ends, with
+  no jolt where the moves end (the speed is continuous). Arriving at rest from the steady rate takes `2 × 15° / ω`, so
+  the **moves take 360 / 390 = 92.3 % of the run** (345 / 375 before `D175`) and the settling the rest
   (`DEMO_MOVES_END`, `demoYawAt` in `core/demo_plan.ts` — the generator aims with the same law).
 * **Elevation**: rises **linearly** from the boot elevation to the top of the rig (`v = 1`), reached at the end.
 * **Zoom**: ⭐ at the start, the camera is placed at the **smallest distance at which the whole demo cube is on screen**
   — every corner inside the vertical AND the horizontal field of view, from the boot view, on this screen's aspect
   (a portrait tablet at fov 0.8: **2.25 m**). ⭐ `D174`: **and the floor grid** — the start configuration, off-centre
-  toward the camera (`demoFramePointsM`, `fitPointsDistanceM`): **2.60 m** on the tablet's 882 × 1304 portrait;
-  landscape, the cube still decides (1.68 m). It then **draws back linearly to the rig's maximum**
+  toward the camera (`demoFramePointsM`, `fitPointsDistanceM`), from the demo's START yaw (`D175`).
+  ⛔⛔ **`D175`'s rank does NOT fit in portrait**: 18.25 units wide, it needs **4.73 m** on the tablet's 882 × 1304 and the
+  camera is held at the rig's **3 m** maximum — so at the start, in portrait, both ends of the rank are off the screen
+  (landscape 1304 × 882: **2.56 m**, all in view). §9. It then **draws back linearly to the rig's maximum**
   (`cameraRadiusMaxM`, 3 m), reached at the end. ⛔ A cube that cannot fit within the maximum is shown from the
   maximum. ⚠ The demo drives the zoom while it plays; the pinch and the wheel are the player's again at the end.
 * ✅ Measured headless (`D171`; Chrome, 882 × 1304, `demoDurationS=20`): the scattered pieces all on screen at the start
@@ -242,16 +260,20 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 * `Scene_1`'s floor, lights, rig and final configuration; its pieces start at the plan's start poses — the 30 on the
   floor grid (`D174`), the 11 no move touches in the painting. `SceneDescriptor.demo` carries the plan once loaded
   (`D173`, §5).
-* **The result, seed 1** (`D174`) — the pieces in PLAY order (the first one put back first): `Piece24, Piece29,
-  Piece20, Piece12, Piece18, Piece30, Piece6, Piece15, Piece9, Piece7, Piece22, Piece35, Piece32, Piece40, Piece16,
-  Piece27, Piece25, Piece4, Piece21, Piece37, Piece23, Piece11, Piece1, Piece28, Piece3, Piece5, Piece14, Piece17,
-  Piece34, Piece36`; the grid's order is §2bis. Every pose: `src/content/scene1_demo_plan.ts`.
+* **The result, seed 1** (`D175`) — the pieces in PLAY order (the first one put back first): `Piece20, Piece8,
+  Piece35, Piece17, Piece26, Piece15, Piece39, Piece10, Piece32, Piece6, Piece9, Piece37, Piece28, Piece24, Piece7,
+  Piece27, Piece4, Piece23, Piece16, Piece14, Piece2, Piece21, Piece22, Piece11, Piece1, Piece5, Piece40, Piece25,
+  Piece34, Piece36`; the rank's order is §2bis. Every pose: `src/content/scene1_demo_plan.ts`.
 
 ## 9. For later
 
 * **Occlusion by the assembly itself** (§2): 8.4 % of sampled moments hide the moving piece (`D174`; 10.2 % on the same
   instrument before), mostly the `SNAP` into a slot while the camera is edge-on. A camera that eases toward the face of
   the slot being filled — or a plan that puts pieces back while the camera faces the painting — would remove most.
+* ⛔ **The rank cut off in portrait at the start** (`D175`, §7): a start distance past the rig's maximum (the zoom then
+  drawing IN to 3 m, which reverses `D171`'s *"the most out when the demo finishes"*), a wider field of view for the
+  demo, or fewer pieces on the floor. The owner's to choose.
+* ⚠ The occlusion count (§2) was measured on `D174`'s plan and not re-measured for `D175`.
 * ⭐ **The grid seen edge-on at the start** (`D174`, §7): a demo that boots a little higher (not `LEVEL`) would show the
   rows; the elevation still rises to the top by the end. ⛔ Not changed: the boot view is `Scene_1`'s, the owner's.
 * **A carry AROUND the painting** (§3): a cube barely taller than the painting leaves no room to carry a piece over it.
