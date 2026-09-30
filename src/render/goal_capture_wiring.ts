@@ -20,7 +20,7 @@ import { captureOffsetM } from "../input/highlight";
 import { collisionSetup } from "./collision_wiring";
 import { releaseAlignmentOf } from "./alignment_wiring";
 import { setModelPose } from "./bodies";
-import { showGoalPopup } from "./goal_popup";
+import { commitGoal } from "./goal_commit_wiring";
 import { offsetRadiusM } from "./seat_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -139,9 +139,9 @@ function advancePulls(st: SceneState, nowMs: number): void {
       continue;
     }
     if (!step.done) continue;
-    const placed = placedReport(st);
     st.lastVerdict = `goal: ${step.id} is in place`;
     st.hudDirty = true;
-    showGoalPopup(st, `✅ ${step.id} reached its goal  ·  ${placed?.inPlace ?? "?"}/${placed?.total ?? "?"}`);
+    // ⭐ `D189`: a pull LANDING completes an action — the goal is committed, and only a piece not placed before pops up.
+    commitGoal(st);
   }
 }

@@ -190,7 +190,10 @@ describe("⭐⭐ `D183` — wired: before the seats, a press grabs, an undo re-s
   });
 
   it("⭐ one set of margins everywhere: the HUD, the dissolve and the level end read `goalTolOf`", () => {
-    for (const f of ["hud_paint.ts", "goal_dissolve_wiring.ts", "level_end_wiring.ts"]) expect(src(f)).toMatch(/goalTolOf\(st\)/);
+    for (const f of ["goal_dissolve_wiring.ts", "level_end_wiring.ts"]) expect(src(f)).toMatch(/goalTolOf\(st\)/);
+    // ⭐ `D188`: the HUD reads `placedReport`, the same margins, shared with the score bar.
+    expect(src("hud_paint.ts")).toMatch(/placedReport\(st\)/);
+    expect(src("goal_capture_wiring.ts")).toMatch(/looseTolerance\(st\), goalTolOf\(st\)/);
     expect(src("level_end_wiring.ts")).toMatch(/st\.goalPulls\.size > 0/);
   });
 

@@ -26,8 +26,10 @@ import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig
 import { paint } from "./hud_paint";
 import { syncSeats } from "./seat_wiring";
 import { dissolveOnGoal } from "./goal_dissolve_wiring";
+import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
 import { levelEndFrame } from "./level_end_wiring";
+import { gestureChangedSoFar } from "./undo_wiring";
 
 export function startRenderLoop(st: SceneState): void {
 
@@ -262,6 +264,8 @@ export function startRenderLoop(st: SceneState): void {
     syncSeats(st, now);
     // ⭐⭐ `D142`: a seated follower in its goal pose lets go of its Pioneer (with a pop-up).
     dissolveOnGoal(st);
+    // ⭐⭐ `D189`: the goal is COMMITTED when the scene comes to rest after a change — never midway through a movement.
+    goalCommitFrame(st);
     // ⭐⭐ `D180`: the level end — asked only while the scene is at rest; once, it freezes the scene and tells `main.ts`.
     levelEndFrame(st, now);
 
@@ -675,6 +679,8 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame. ⛔ On the wall clock, not the
     // score's: counted from the first press, it never ticked before a touch — and the `frame` line
     // (and `D138`'s shadow verdict) sat at `—` on an untouched page.
+    // ⭐⭐ `D187`: an episode lands the frame its action changes the model — a drag's first step, a snap, an undo.
+    if (st.gestureBefore !== null && st.episodes.sync(gestureChangedSoFar(st)) > 0) st.hudDirty = true;
     const second = Math.floor(performance.now() / 1000);
     if (second !== st.hudSecond) {
       st.hudSecond = second;

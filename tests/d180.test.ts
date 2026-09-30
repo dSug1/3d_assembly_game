@@ -146,7 +146,7 @@ describe("⭐⭐⭐ `D180` — the UI theme: a graphics style is DATA", () => {
   });
 
   it("⭐⭐ NO screen carries a style of its own: no colour, font or size literal outside the theme — so a swap restyles all", () => {
-    for (const f of ["screens.ts", "level_end_ui.ts", "goal_popup.ts"]) {
+    for (const f of ["screens.ts", "level_end_ui.ts", "goal_popup.ts", "score_overlay.ts"]) {
       const src = readFileSync(new URL(`../src/render/${f}`, import.meta.url), "utf8")
         .split("\n")
         .filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)) // comments may name colours

@@ -8,7 +8,7 @@ import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
@@ -19,7 +19,7 @@ import { translatesOnDrag } from "../input/highlight";
 import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { episodeCounts } from "../input/episode_ledger";
-import { beginGesture, endGesture, undoLast } from "./undo_wiring";
+import { beginGesture, endGesture, gestureChangedSoFar, undoLast } from "./undo_wiring";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
 import { nextDxSign } from "../input/hold_pinch";
 import { seatLockAllows } from "../input/seat_lock";
@@ -27,7 +27,7 @@ import { holdPinchStep } from "./hold_pinch_wiring";
 import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state";
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
 import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
-import { awaySignNow, axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
+import { axesOf, gizmoClientX, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers } from "./sway_pass";
@@ -211,6 +211,24 @@ export function installPointerHandler(st: SceneState): void {
         heldAtPress: heldBefore.length,
         pressedAnotherBody: rawHitId !== undefined && !heldBefore.includes(rawHitId),
       });
+      // ⭐⭐ `D187`: classified NOW with what the press knows — so the episode can land the moment the action is
+      // triggered (the render loop's `sync`), not at the release. ⛔ Counting is not landing: a press alone lands nothing.
+      {
+        const key = ++st.episodeSeq;
+        st.episodeKey.set(e.pointerId, key);
+        st.episodes.touch(
+          key,
+          st.cfg.pioneerCursorDrag !== 1 &&
+            episodeCounts({
+              role: routed.role,
+              heldAtPress: heldBefore.length,
+              pressedAnotherBody: rawHitId !== undefined && !heldBefore.includes(rawHitId),
+              unaligned: false,
+              continuesAnother: st.episodeContinued.has(e.pointerId),
+            }),
+          heldBefore.length > 0,
+        );
+      }
       if (rayHit !== null && hit === null) {
         st.lastVerdict = steers
           ? `${hitId ?? "?"} — the second touch STEERS (a tap on it aligns, D124)`
@@ -369,6 +387,8 @@ export function installPointerHandler(st: SceneState): void {
         holdPinch: null,
         seatLocked: false,
         seatSeq: -1,
+        // ⭐ `D185`: latched at the press — the maroon pitch turns like a wheel seen from the camera.
+        pressSide: pressSideFrom(e.clientX, gizmoClientX(st, st.idOf.get(mesh))),
         depthSway: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm),
         // ⛔ THE FLOOR IS DERIVED FROM THE MEASURED NOISE, not chosen: pointer jitter
         // reaches the pose multiplied by the rotation gain, so 0.761 mm becomes ~3.05°
@@ -750,8 +770,6 @@ export function installPointerHandler(st: SceneState): void {
           st.cfg.gainTranslateScreen,
           st.cfg.gainTranslateDepth,
           st.cfg.axisTrackingConeDeg,
-          // ⭐ `D145`/`D148`: the depth sign — the camera's height against the gizmo's, read NOW.
-          { awaySign: awaySignNow(st, grip.mesh) },
         );
         noteAxisTravel(st, tid, travel);
         st.lastTrackGain = travel.trackGain;
@@ -923,6 +941,8 @@ export function installPointerHandler(st: SceneState): void {
         // ⭐ `rotationFrameOf` picks the frame (the boot-latched `WorldAxisB`, the only one since
         // `D109`). ⚠ ONE lookup for the lines, the tally and the turn — they restate each other's axes.
         const turnFrame = rotationFrameOf(st, grip.frame);
+        // ⭐⭐ `D185`: the pitch's sense — the pressed side follows the finger, as a wheel seen from the camera does.
+        const pitchSign = pitchSense(turnFrame.right, screenFrame(st), grip.pressSide, st.cfg.pitchSideConeDeg);
         if (grip.rec.step.dx !== 0)
           noteTurnAxis(st, freeId, TURN_YAW, turnFrame.up);
         if (grip.rec.step.dy !== 0)
@@ -944,7 +964,7 @@ export function installPointerHandler(st: SceneState): void {
             freeId,
             "pitch",
             turnFrame.right,
-            -grip.rec.step.dy * radPerPx,
+            -grip.rec.step.dy * radPerPx * pitchSign,
           );
         } else
           setModelOrientation(st, 
@@ -962,6 +982,7 @@ export function installPointerHandler(st: SceneState): void {
               // into production. Carried rule `L1`: a tuning value living in both a debug
               // tool and production silently drifted.
               st.cfg.gainRotateFree / mmToPx(1),
+              pitchSign,
             ),
           );
       }
@@ -1034,9 +1055,12 @@ export function installPointerHandler(st: SceneState): void {
     st.episodeFacts.delete(e.pointerId);
     const unaligned = st.episodeUnaligned.delete(e.pointerId);
     // ⛔ Free Flow escapes the score (`D101`): nothing is counted while the cursor drag is on.
-    // ⭐⭐ `D115`: classified NOW, counted when the gesture's LAST touch lifts — so a two-touch action
-    // (an alignment, an unalign, an unsnap) lands on the HUD once, at its end.
-    st.episodes.note(
+    // ⭐⭐ `D115`: a two-touch action (an alignment, an unalign, an unsnap) costs ONE; ⭐ `D187`: it lands when triggered.
+    // ⭐ `D187`: the same touch, RE-classified with what its release did (an unalign), under its press key.
+    const key = st.episodeKey.get(e.pointerId) ?? --st.episodeSeq;
+    st.episodeKey.delete(e.pointerId);
+    st.episodes.touch(
+      key,
       st.cfg.pioneerCursorDrag !== 1 &&
       episodeCounts({
         role: facts?.role ?? null,
@@ -1048,6 +1072,8 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐ Pressed while a body was held: it completes a two-touch action, and uses up that hold.
       (facts?.heldAtPress ?? 0) > 0,
     );
+    // ⭐ `D187`: a tap's action (an unalign, an alignment) is triggered BY this release — it lands now.
+    st.episodes.sync(gestureChangedSoFar(st));
     st.hudDirty = true;
     // ⭐⭐ `D159`: a Space freeze's drag release does NOT end the gesture — the action it becomes lands once.
     if (st.gestureSpan.release(e.pointerId) && !st.freezeCarry) {

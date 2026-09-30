@@ -107,10 +107,35 @@ const CSS = `
   box-shadow: var(--ui-shadow); pointer-events: none; user-select: none; white-space: nowrap;
   opacity: 0; transition: opacity var(--ui-enter) ease;
 }
+/* ⭐ \`D188\`: the score bar — top centre, glanceable, never a touch target; below the ☰ / HUD buttons on a narrow screen. */
+.ui-scorebar {
+  position: fixed; z-index: 120; left: 50%; top: calc(6px + env(safe-area-inset-top)); transform: translateX(-50%);
+  display: flex; align-items: stretch; padding: calc(var(--ui-unit) * 0.5) calc(var(--ui-unit) * 0.5);
+  font: var(--ui-size)/1.15 var(--ui-font); color: var(--ui-text);
+  background: var(--ui-surface); border: var(--ui-border) solid var(--ui-surface-border); border-radius: 999px;
+  box-shadow: var(--ui-shadow); opacity: 0.94; pointer-events: none; user-select: none; -webkit-user-select: none;
+}
+.ui-scorebar[hidden], .ui-score-chip[hidden] { display: none; }
+@media (max-width: 520px) { .ui-scorebar { top: calc(54px + env(safe-area-inset-top)); } }
+.ui-score-chip {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-width: 4.4em; padding: 0 calc(var(--ui-unit) * 0.9);
+}
+.ui-score-chip + .ui-score-chip { border-left: var(--ui-border) solid var(--ui-surface-border); }
+.ui-score-value { font-size: calc(var(--ui-size) * 1.3); font-weight: var(--ui-bold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ui-score-label { font-size: calc(var(--ui-size) * 0.66); color: var(--ui-text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.ui-score-meter { display: block; width: 100%; height: 3px; margin-top: 2px; border-radius: 999px; overflow: hidden; background: var(--ui-surface-border); }
+.ui-score-meter-fill {
+  display: block; height: 100%; background: var(--ui-accent);
+  transform-origin: left center; transform: scaleX(var(--ui-fill, 0)); transition: transform var(--ui-enter) var(--ui-ease);
+}
+.ui-score-chip--done .ui-score-meter-fill { background: var(--ui-success); }
+.ui-score--bump { display: inline-block; animation: ui-bump var(--ui-enter) var(--ui-ease); }
+@keyframes ui-bump { 0% { transform: scale(1); } 35% { transform: scale(1.3); } 100% { transform: scale(1); } }
 @keyframes ui-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ui-pop-in { from { opacity: 0; transform: translateY(12px) scale(0.94); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .ui-overlay, .ui-card, .ui-button, .ui-toast { animation: none !important; transition: none !important; }
+  .ui-overlay, .ui-card, .ui-button, .ui-toast, .ui-score--bump, .ui-score-meter-fill { animation: none !important; transition: none !important; }
 }
 `;
 

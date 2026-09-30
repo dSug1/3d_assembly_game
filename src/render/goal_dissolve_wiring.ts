@@ -13,7 +13,7 @@ import { faceWorld, worldPlacementOf } from "../core/object_model";
 import { followersToDissolve, mateSpin } from "../input/goal_dissolve";
 import { setModelPose } from "./bodies";
 import { releaseAlignmentOf } from "./alignment_wiring";
-import { showGoalPopup } from "./goal_popup";
+import { commitGoal } from "./goal_commit_wiring";
 import { goalTolOf, looseTolerance } from "./goal_capture_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -25,6 +25,7 @@ export function dissolveOnGoal(st: SceneState): void {
   // ⭐ `D183`: PLACED — the snap's margins, or the never-grabbed ones. ⚠ A seated piece whose goal capture was BLOCKED lands here:
   // released, and only its spin mated, as before `D183`.
   const report = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
+  let dissolved = false;
   for (const f of followersToDissolve(seated, new Set(report.inPlaceIds))) {
     const pioneer = st.links.pioneerFor(f)?.objectId ?? "?";
     // ⚠ Read the FollowerFace BEFORE the release: it is derived from the constraint the release evicts.
@@ -38,6 +39,8 @@ export function dissolveOnGoal(st: SceneState): void {
     const mesh = st.meshOf.get(f);
     if (face && pose && target && mesh) setModelPose(st, mesh, mateSpin(pose, face.centre, face.normal, target), false);
     st.lastVerdict = `goal: ${f} is in place — its couple with ${pioneer} dissolved`;
-    showGoalPopup(st, `✅ ${f} reached its goal  ·  ${report.inPlace}/${report.total}`);
+    dissolved = true;
   }
+  // ⭐ `D189`: a dissolve completes an action — committed; a piece already placed before says nothing.
+  if (dissolved) commitGoal(st);
 }

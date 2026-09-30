@@ -41,6 +41,7 @@
  */
 import { attachShadows, buildLighting } from "./lighting";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
+import { GoalCommit } from "../input/goal_commit";
 import { levelElevation } from "../input/orbit";
 import { EpisodeTally } from "../input/episode_ledger";
 import { GestureSpan, UndoHistory } from "../core/undo_history";
@@ -77,6 +78,7 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
+import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
@@ -546,6 +548,8 @@ export function createScene(
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
   // actually be SEEN on the glass. ⚠ Role latching (§4) is `IN2`, not this.
   st.hud = createHud();
+  // ⭐ `D188`: the score bar, painted with the HUD.
+  st.scoreOverlay = createScoreOverlay();
   // ⭐ `D113`: a faint dashed line at the edge band's inner edge, so a hand can SEE the strip that
   // is always empty space. ⛔ `pointer-events: none` — the readout must not take the touches it shows.
   st.edgeBandEl = document.createElement("div");
@@ -672,6 +676,9 @@ export function createScene(
   st.goalCapture = new GoalCapture();
   st.goalPulls = new GoalPulls();
   st.goalLastPose = new Map();
+  st.goalCommit = new GoalCommit();
+  st.goalCommitWorld = null;
+  st.goalCommitQuiet = false;
   st.grabbed = new Set();
   st.playVolume = playVolumeOf(st.sceneSpec);
   st.onLevelEnd = null;
@@ -681,6 +688,9 @@ export function createScene(
   st.inheritPressFace = null;
   st.freezeCarry = false;
   st.episodeContinued = new Set<number>();
+  st.episodeKey = new Map();
+  st.episodeSeq = 0;
+  st.gestureChanged = false;
   st.lastVerdict = "—";
 
   /**

@@ -2125,7 +2125,7 @@ world pose, and a pop-up names it (`render/goal_popup.ts`). ⚠ Scenes with a go
 |---|---|---|---|
 | 1B | **`dx` → the camera's right, flattened**, in the finger's sense and exactly under it (no camera roll exists, so the flattening changes nothing) | `axesOf` = `axesFromFrame(requireGestureFrame)`; `axisTravel`'s `xM` | a push that went *right* before an orbit goes a different world way after it |
 | 1A | **`dy` → the view, flattened**: tracked at `1/|shadow|` (`D76`'s *no cosine loss*) outside `axisTrackingConeDeg`, the judged fixed rate inside (a level camera — `Scene_1` boots there) | `axisTravel`'s `depthM`, `planeEdgeOn` | the rate step at the cone's edge is unchanged |
-| 1Aa/1Ab | **finger up = AWAY when the camera is at or above the gizmo's height, TOWARD when below** — everywhere, not only edge-on | `awaySign` from `toAnchor[1]` (camera → gizmo) | ⭐ it is also perspective's answer: the old sign was the VIEW's pitch, which disagrees for a body above eye level while the camera looks down |
+| 1Aa/1Ab | ⛔ **superseded by `D184` (§25): finger up is ALWAYS away.** Was: **finger up = AWAY when the camera is at or above the gizmo's height, TOWARD when below** — everywhere, not only edge-on | `awaySign` from `toAnchor[1]` (camera → gizmo) | ⭐ it is also perspective's answer: the old sign was the VIEW's pitch, which disagrees for a body above eye level while the camera looks down |
 | 2 | **red AND blue light together** as soon as `dx` or `dy` leaves the deadband (reverses 2026-09-23's *both only when both*) | `axisTravel`'s `driven` | — |
 
 ⚠ **Not changed**: the second touch's gravity lift and spin (`D123`), the depth clamp (`A5`), and a free body's TURN, which keeps the boot frame (`D84`, `rotationFrame`) — the owner named the translation only. ⭐ The HUD's `axes` line reads `camera PLANE` and prints the live axes. ✅ 35 vectors in `tests/axis_translate.test.ts` (the boot-axis round trip, `D127`/`D132` and the red-alone/blue-alone vectors went with their rule); the old mapping fails 5; four mutants (the *at* height, the channel map, the tracking rate, the height sign) each red; a headless boot and drag threw nothing. ⛔ Rule 5: a hand is owed.
@@ -2274,3 +2274,39 @@ Piece22** after a dissolve. ⭐ `D136` (contact allowed, only a deeper push refu
 
 ✅ 9 vectors (`tests/d182.test.ts`) + the sway vectors restated (5 deleted with the radius); mutants RED (a path never
 blocked, a hold that never ends). ⛔ Unjudged by a hand.
+
+## 25 — ⭐⭐⭐ FINGER UP IS ALWAYS AWAY (`D184`, 2026-09-30)
+
+> *"currently, if the camera is above the gizmo dy towards top translates the part away from the camera, if the camera
+> is below the gizmo, dy towards top translates the part towards the camera. I want to change: in both cases, dy towards
+> top translates the part away from the camera."* — the owner, 2026-09-30
+
+* ⭐ The holder's `dy` up moves the part along the view, flattened, AWAY from the camera — at every camera height, looking
+  down, level or up. Finger down brings it toward. The rate is unchanged (§19 row 1A).
+* ⛔ It reverses §19 row 1Aa/1Ab (`D145`'s *toward when below*) and `D147`/`D148`'s re-reading of that sign at every
+  step, which has nothing left to read: `awaySignFrom`, `AwaySign`, `awaySignNow`, `cameraToGizmo` deleted.
+* ⚠ **Cost, named**: with the camera below a part, moving it away sinks it toward the horizon — DOWN on the glass — so
+  there the part moves down the screen while the finger moves up (the perspective argument `D145` made, given up).
+* ✅ Vectors (`tests/axis_translate.test.ts`): every camera pose, finger up away and down toward; a camera below the part
+  — RED on the old code (toward, −0.139); a level camera; no render file reads a height (comments stripped).
+  ⛔ Unjudged by a hand.
+
+## 26 — ⭐⭐⭐ THE MAROON PITCH TURNS LIKE A WHEEL SEEN FROM THE CAMERA (`D185`, 2026-09-30)
+
+> *"rotation around the red axis: if the part is touched or clicked on the left of the gizmo, a dy towards the top should
+> rotate in hourly direction, if the part is touched or clicked on the right of the gizmo, a dy towards the top should
+> rotate in counter-hourly direction."* — the owner, 2026-09-30; then: the axis is the **maroon pitch** (a free part in
+> rotation, the first touch's `dy`), clockwise **seen from the camera**, the side **latched at the press**.
+
+* ⭐ **The rule is one statement**: the pressed side of the part moves UP the glass with the finger. Left of the gizmo →
+  clockwise (9 o'clock rises); right → counter-clockwise (3 o'clock rises). `pitchSense` (`input/screen_rotate.ts`):
+  `sign(side · axis·(right × up))` on the live camera's screen axes; the side is `pressSideFrom` — the press's `clientX`
+  against the gizmo's centre projected on the glass, latched on the grip (`pressSide`).
+* ⚠ **The pitch axis is frozen at boot** (`D84`): at the boot view it lies ACROSS the glass, where *clockwise* has no
+  meaning on screen — within `pitchSideConeDeg` (30°, a slider in OBJECT ROTATION) of the screen plane, and for a press
+  exactly on the centre, the pitch keeps today's sign. The wheel rule takes over as an orbit swings the axis toward or
+  away from the camera. ⚠ Cost: crossing the cone mid-orbit flips the sense for one side — unjudged.
+* ⭐ The same sense goes to the turn and to the rotation-increment tally (`D73`), so a detent lands the same way.
+* ✅ 7 vectors (`tests/d185.test.ts`), measured on the TURN: the pressed side rises; 12 o'clock moves right for a left press
+  (clockwise) and left for a right one; today's sign inside the cone; the side; the tunable; the wiring. ⛔ Mutants RED:
+  *always today's sign* (the old code), *flipped*. ⛔ Unjudged by a hand.

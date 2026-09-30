@@ -56,7 +56,7 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 ## Where it stands
 
 ✅ **Scenes are DATA**: `Scene_0` (the workbench) and `Scene_1` (`D117`) in `src/content/`, listed by
-`content/scenes.ts` and chosen by a scene slider that reboots. ⚠ `Scene_0`'s parts are deliberately
+`content/scenes.ts` and chosen from the level menu or `?sceneIndex=` (the slider deleted, `D186`). ⚠ `Scene_0`'s parts are deliberately
 **off-axis and off-plane** — collinear objects put every barycentre on one line.
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this

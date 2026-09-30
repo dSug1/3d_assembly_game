@@ -40,7 +40,7 @@
  * ⚠ At a LEVEL camera the two frames coincide, so every sign declared below is unchanged —
  * which is why the vectors that pin them still read the same.
  */
-import { qFromAxisAngle, qmul, type Quat, type Vec3 } from "../core/vec";
+import { cross, dot, normalize, qFromAxisAngle, qmul, type Quat, type Vec3 } from "../core/vec";
 import type { GravityFrame } from "./gravity_frame";
 
 /**
@@ -57,6 +57,45 @@ export interface ScreenFrame {
   readonly viewAxis: Vec3;
 }
 
+/** ⭐ `D185`: where the press landed against the gizmo's centre on the glass — `-1` left, `1` right. */
+export type PressSide = -1 | 1;
+export type PitchSign = 1 | -1;
+
+/** ⭐ `D185`: the press's side of the gizmo, CSS px on the glass — `null` exactly on its centre (or unknown). */
+export function pressSideFrom(pressX: number, gizmoX: number | null): PressSide | null {
+  if (gizmoX === null || !Number.isFinite(pressX) || !Number.isFinite(gizmoX) || pressX === gizmoX) return null;
+  return pressX < gizmoX ? -1 : 1;
+}
+
+/**
+ * ⭐⭐⭐ `D185` — **THE PITCH TURNS LIKE A WHEEL SEEN FROM THE CAMERA** (the owner, 2026-09-30: *"rotation around the red
+ * axis: if the part is touched or clicked on the left of the gizmo, a dy towards the top should rotate in hourly
+ * direction, if the part is touched or clicked on the right of the gizmo, a dy towards the top should rotate in
+ * counter-hourly direction"* — the maroon pitch axis, seen from the camera, the side latched at the press).
+ *
+ * ⭐ Both halves are one statement: **the pressed side moves UP the glass with the finger** (clockwise lifts 9 o'clock,
+ * counter-clockwise lifts 3 o'clock). A point at `side × right` from the gizmo, turned by `θ` about `axis`, moves by
+ * `θ (axis × side·right)`, whose screen-up part is `θ · side · axis·(right × up)` — so the sign that lifts it for a
+ * finger going up is `sign(side · axis·(right × up))`.
+ * ⚠ Inside `coneDeg` of the screen plane the axis lies ACROSS the glass (the boot view: it IS the camera's right) and
+ * *clockwise* has no meaning on screen there — the pitch keeps today's sign (`1`). ⛔ So does a grip with no side.
+ * `right`/`up` are the LIVE camera's screen axes, world.
+ */
+export function pitchSense(
+  axis: Vec3,
+  screen: { readonly right: Vec3; readonly up: Vec3 },
+  side: PressSide | null,
+  coneDeg: number,
+): PitchSign {
+  if (side === null) return 1;
+  const a = normalize(axis);
+  const n = normalize(cross(screen.right, screen.up));
+  if (!a || !n) return 1;
+  const c = dot(a, n);
+  if (!(Math.abs(c) > Math.sin(Math.max(0, coneDeg) * (Math.PI / 180)))) return 1;
+  return side * c > 0 ? 1 : -1;
+}
+
 /**
  * Yaw + pitch from a screen-space finger delta, in CSS pixels, applied on top of
  * `base`. `dyPx` is positive DOWNWARD, as screen coordinates are.
@@ -71,12 +110,14 @@ export function screenPlaneRotation(
   dxPx: number,
   dyPx: number,
   radPerPx: number,
+  /** ⭐ `D185`: `pitchSense`'s answer for this step — `1` is the sign below, unchanged. */
+  pitchSign: PitchSign = 1,
 ): Quat {
   // ⛔ NEGATED, both. Deduced from the device — the first build rotated the cube
   // AGAINST the finger on both axes — and pinned by vectors that rotate a marker
   // and check which way it actually went.
   const yaw = qFromAxisAngle(frame.up, -dxPx * radPerPx);
-  const pitch = qFromAxisAngle(frame.right, -dyPx * radPerPx);
+  const pitch = qFromAxisAngle(frame.right, -dyPx * radPerPx * pitchSign);
   // Apply base, then pitch, then yaw — every term about a WORLD axis.
   return qmul(yaw, qmul(pitch, base));
 }
