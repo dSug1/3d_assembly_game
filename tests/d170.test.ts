@@ -14,7 +14,7 @@ import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
 import { formatDemoPlan } from "../src/content/demo_plan_format";
 import { SCENES } from "../src/content/scenes";
 import { GAME_CONTENT } from "../src/content/worlds";
-import { withDemoPlan, demoGrid, DEMO_CHAIN, DEMO_DEFAULTS, DEMO_MOVES_END, demoReach, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
+import { withDemoPlan, DEMO_CHAIN, DEMO_DEFAULTS, DEMO_MOVES_END, demoReach, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
 import { contourDims, parseSceneDescriptor, serializeSceneDescriptor, type SceneDescriptor } from "@core/game_structure";
 import { boxShape, gapBetween } from "@core/collision_shape";
 import { boundsFromShapes, hullAtSpawn, poseFree } from "@core/collision";
@@ -36,7 +36,8 @@ const near = (a: readonly number[], b: readonly number[], eps = 1e-5) => a.every
 const turn = (a: DemoPose, b: DemoPose) => qAngle(qmul([...b.orientation], qconj([...a.orientation])));
 
 describe("⭐⭐⭐ `D170` — the plan is data, and the data is the generator's", () => {
-  it("⭐ the committed `scene1_demo_plan.ts` is exactly what the generator writes today (seed 1)", { timeout: 120_000 }, () => {
+  // ⚠ `D191`: the heaps' settling made the generation ~2 minutes (was ~45 s) — the timeouts below grew with it.
+  it("⭐ the committed `scene1_demo_plan.ts` is exactly what the generator writes today (seed 1)", { timeout: 600_000 }, () => {
     const committed = readFileSync(new URL("../src/content/scene1_demo_plan.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
     expect(committed).toBe(formatDemoPlan(generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, seed: DEMO_DEFAULTS.seed })));
   });
@@ -187,7 +188,7 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
     expect(violations(PLAN, SCENE_1, 120)).toEqual([]);
   });
 
-  it("⭐ `D171`: every piece is truly CLEAR where its APPROACH starts — at least `clearance` from every other body", { timeout: 120_000 }, () => {
+  it("⭐ `D171`: every piece is truly CLEAR where its APPROACH starts — at least `clearance` from every other body", { timeout: 600_000 }, () => {
     expect(leastApproachClearance(PLAN)).toBeGreaterThanOrEqual(DEMO_DEFAULTS.clearance - 1e-5);
     // ⭐ and on a fresh 100-move plan, where the rule before `D171` pulled four pieces sideways INSIDE the painting
     expect(leastApproachClearance(generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, moveCount: 100 }))).toBeGreaterThanOrEqual(DEMO_DEFAULTS.clearance - 1e-5);
@@ -211,29 +212,21 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
 
   // ⚠ `D174`: 14, not 12 — a side-6 cube is 0.3 units taller than the painting, so a piece put back from BEHIND has no
   // room to be carried over it, and the generator throws (correctly: it never ships a colliding plan). Side 7 leaves 0.8.
-  it("⭐ a TIGHTER cube (a 14-unit floor → side 7) is honoured too — the check, not the luck of the draw", { timeout: 120_000 }, () => {
+  it("⭐ a TIGHTER cube (a 14-unit floor → side 7) is honoured too — the check, not the luck of the draw", { timeout: 600_000 }, () => {
     const tight: SceneDescriptor = {
       ...SCENE_1,
       bodies: SCENE_1.bodies.map((b) => (b.frozen ? { ...b, dims: [14, b.dims[1], 14] as const } : b)),
     };
     const plan = generateDemoPlan(tight, { ...SCENE1_DEMO_OPTIONS, moveCount: 30 });
     expect(plan.volume).toEqual({ min: [-3.5, -1.2, -3.5], max: [3.5, 5.8, 3.5] });
-    expect(plan.stage.max[2]).toBeLessThan(-3.5); // ⭐ its grid outside ITS cube
+    expect(Object.values(plan.start).every((p) => p.position[2] < plan.volume.min[2])).toBe(true); // ⭐ its heaps outside ITS cube
     expect(violations(plan, tight, 100)).toEqual([]);
   });
 
   it("⛔ a generation that cannot be completed THROWS — it never ships a shorter plan", () => {
     expect(() => generateDemoPlan(SCENE_1, { moveCount: 3 })).toThrow(/cannot be split into chains of 5/);
     expect(() => generateDemoPlan(SCENE_1, { moveCount: 151 })).toThrow(/cannot be split/);
-    // ⭐ `D174`–`D176`: a grid that cannot lie on the floor outside the cube — all 41 in two rows are wider than a floor
-    // 6 units across; a 4.83-unit bar from the floor's edge reaches into a cube whose front is 4 units in (z −6)
-    const v = demoVolume(SCENE_1);
-    const all = SCENE_1.bodies.filter((b) => !b.frozen).map((b) => b.id);
-    const narrow = { ...SCENE_1, bodies: SCENE_1.bodies.map((b) => (b.frozen ? { ...b, dims: [6, b.dims[1], 20] as const } : b)) };
-    expect(() => demoGrid(narrow, all, v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).toThrow(/leaves the floor/);
-    expect(() => demoGrid(SCENE_1, Object.keys(PLAN.start), v, { ...DEMO_DEFAULTS, ...SCENE1_DEMO_OPTIONS })).not.toThrow(); // the plan's 30 fit
-    expect(() => demoGrid(SCENE_1, ["Piece30"], { min: [-5, -2.7, -6], max: [5, 7.3, 4] }, DEMO_DEFAULTS)).toThrow(/cannot lie between the floor.s edge and the cube/);
-    expect(() => demoGrid(SCENE_1, ["Piece30"], v, DEMO_DEFAULTS)).not.toThrow();
+    // ⭐ `D191`: heaps that cannot lie on the floor outside the cube throw too → `tests/d191.test.ts`
     expect(() => generateDemoPlan({ ...SCENE_1, final: null })).toThrow(/final configuration/);
   });
 });
