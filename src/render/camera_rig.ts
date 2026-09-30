@@ -142,6 +142,13 @@ export function applyCamera(st: SceneState) {
   const wanted = pose.radiusM;
   const allowed = clampCameraRadiusM(wanted, st.cfg);
   const k = wanted > 1e-9 ? allowed / wanted : 1;
+  // ⭐ Prototype: with a green box, the rig puts the BOX where it put the camera — the camera follows it
+  // (`green_box_wiring.ts`). Without one (`Scene_0`), the camera as before.
+  if (st.greenBox !== null) {
+    const c = st.orbitCentreM;
+    st.greenBoxRigM = [c.x + pose.offsetM[0] * k, c.y + pose.offsetM[1] * k, c.z + pose.offsetM[2] * k];
+    return;
+  }
   st.camera.setPosition(
     st.orbitCentreM.add(
       new Vector3(

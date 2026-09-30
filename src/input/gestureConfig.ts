@@ -459,6 +459,14 @@ export interface GestureConfig {
    * ⛔ `0` snaps, which is the behaviour before this existed.
    */
   cameraResetMs: number;
+  /** ⭐ Prototype (`input/follow_camera.ts`): degrees the green box may orbit away from the camera, per axis, before it drags the camera. */
+  cameraLeashDeg: number;
+  /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
+  boxSmoothMs: number;
+  /** ⭐ Prototype: once an axis stops, the camera's settle onto the box on it — an exponential time constant, ms (0 = at once). */
+  cameraSettleMs: number;
+  /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
+  cameraSettleDelayMs: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -881,6 +889,13 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A GUESS, with a slider. Long enough to read as a movement rather than a cut, short
   // enough not to feel like waiting for a cutscene.
   cameraResetMs: 450,
+  // ⚠ Prototype guesses, with sliders in CAMERA.
+  cameraLeashDeg: 15,
+  // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
+  boxSmoothMs: 60,
+  cameraSettleMs: 250,
+  // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
+  cameraSettleDelayMs: 0,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
@@ -999,6 +1014,15 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
+  if (!(cfg.boxSmoothMs >= 0 && cfg.boxSmoothMs <= 1000)) {
+    throw new Error(`boxSmoothMs (${cfg.boxSmoothMs}) must be in [0, 1000] ms.`);
+  }
+  if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
+    throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
+  }
+  if (!(cfg.cameraSettleMs >= 0 && cfg.cameraSettleMs <= 5000) || !(cfg.cameraSettleDelayMs >= 0 && cfg.cameraSettleDelayMs <= 2000)) {
+    throw new Error(`cameraSettleMs / cameraSettleDelayMs (${cfg.cameraSettleMs} / ${cfg.cameraSettleDelayMs}) must be in [0, 5000] / [0, 2000] ms.`);
+  }
   if (!(cfg.pitchSideConeDeg >= 0 && cfg.pitchSideConeDeg <= 80)) {
     throw new Error(`pitchSideConeDeg (${cfg.pitchSideConeDeg}) must be in [0, 80]°: past 80 the side never decides.`);
   }

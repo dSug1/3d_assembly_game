@@ -514,7 +514,11 @@ export function installPointerHandler(st: SceneState): void {
           // §2 rule 1: ONE touchpoint, no hit — orbit.
           const dx = s.x - prev.x;
           const dy = s.y - prev.y;
-          st.orbit.drag(dx, dy);
+          // ⭐ Prototype (the owner: *"invert the inputs direction for the box"* — *"and invert input directions for the
+          // camera orbit as well"*): with a green box, the orbit drag turns the other way — the camera follows the box, so
+          // both orbits invert together. ⚠ The zoom (pinch, wheel) is unchanged.
+          if (st.greenBox !== null) st.orbit.drag(-dx, -dy);
+          else st.orbit.drag(dx, dy);
           // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so
           // the camera arrives as the gesture progresses rather than on a timer.
           st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));

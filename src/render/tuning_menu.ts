@@ -86,6 +86,11 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐ `D114`: the width it opens to when NO empty space is left on the glass — 0 otherwise.
       sliders: [
         tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
+        // ⭐ Prototype: the camera orbits after the green box — its leash, and how it settles once an input stops.
+        tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
+        tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 1),
+        tunable(st, "camera settle (ms, 0 = at once)", "cameraSettleMs", 0, 2000, 50),
+        tunable(st, "camera settle delay after an input stops (ms)", "cameraSettleDelayMs", 0, 1000, 10),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
         tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
         // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.

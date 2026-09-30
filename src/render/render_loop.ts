@@ -30,6 +30,7 @@ import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
 import { levelEndFrame } from "./level_end_wiring";
 import { gestureChangedSoFar } from "./undo_wiring";
+import { greenBoxFrame } from "./green_box_wiring";
 
 export function startRenderLoop(st: SceneState): void {
 
@@ -691,6 +692,8 @@ export function startRenderLoop(st: SceneState): void {
       paint(st);
     }
 
+    // ⭐ `D191`: the green box, midway between the yellow target and the camera — after everything that moved either.
+    greenBoxFrame(st, dtSec);
     st.scene.render();
     st.frames++;
   }));

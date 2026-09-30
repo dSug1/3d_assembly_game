@@ -78,12 +78,13 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
+import { createGreenBox } from "./green_box_wiring";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
-import { applyCamera, requireGestureFrame } from "./camera_rig";
+import { applyCamera, requireGestureFrame, syncCentre } from "./camera_rig";
 import { shiftTapTogglesMode, toggleBehaviour } from "../input/mode_toggle";
 import { alignedFaceOf } from "../core/face_pick";
 import { paint } from "./hud_paint";
@@ -543,6 +544,11 @@ export function createScene(
   // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
   // exists to display.
   st.centreMarker.isPickable = false;
+  // ⭐ `D191`: the green box — the orbit rig drives it now, and the camera follows it (prototype).
+  st.greenBoxRigM = null;
+  st.cameraOrbit = null;
+  st.boxOrbit = null;
+  createGreenBox(st);
 
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
@@ -769,6 +775,10 @@ export function createScene(
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   const bootCentre = st.centreBlend.centreM;
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);
+  // ⛔⛔ `D191`: and the YELLOW MARKER goes there too — it was never placed at boot, so it sat at its creation point, the
+  // origin, until the first orbit or reset. Invisible while the orbit centre WAS the origin; `D169` lifted it 0.23 m and the
+  // marker has shown the wrong point at boot since (the green box, midway to it, exposed it: its face was 8.7° off the view).
+  syncCentre(st);
 
   // ⛔ The approach camera swing's latch and travel records stood here; the swing is deleted (`D120`).
 
