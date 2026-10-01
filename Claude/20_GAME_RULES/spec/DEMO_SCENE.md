@@ -386,6 +386,14 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
   the floor, the grid whole in frame at `r = 2.50 m`. ⚠ **Seen from the boot view the grid is nearly EDGE-ON**: the
   camera boots level, 23 cm above the floor, so a piece 3.3 cm thick reads as a strip and the rows behind the first are
   mostly hidden. The order reads left to right; the rows do not. §9.
+* ⛔⛔ **ON THE LOCAL PROTOTYPE BRANCH `1.0.58-Trial-with-double-orbit` ONLY — THE PATH ABOVE DRIVES THE GREEN BOX, NOT THE
+  CAMERA** (the owner, 2026-10-01: *"to be fixed later on if we continue developing this prototype"*). On that branch the
+  orbit rig places a green proxy box, and the camera follows it on its own orbit: twice the box's radius and height, looking
+  at the orbit centre, held inside a 7° leash and gliding onto the box once the input stops (`input/follow_camera.ts`,
+  `render/green_box_wiring.ts`). ⚠ The demo writes its yaw, elevation and zoom through the rig (`demo_wiring.ts` →
+  `applyCamera`), so on that branch they move the BOX — and the camera trails it by the leash and the glide instead of
+  showing the planned path: the 410° turn, the rise to the top ring and the draw-back to 3 m reach the camera late and
+  softened. ⭐ Every other branch is unaffected. The fixes are in §9.
 
 ## 8. `Scene1_demo` — the specification applied to `Scene_1`
 
@@ -417,6 +425,11 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 * With 150 moves, 10 s is 0.03–0.12 s a move — too fast to read; the range may want to grow with the move count.
 * Loop the demo, or end it on the level's own start. A demo generated at boot from a random seed.
 * Pieces never in contact (free-standing parts) need a seat-free first move; the generator refuses them today.
+* ⛔ **If the double-orbit prototype is developed further** (`1.0.58-`, §7): the demo's planned path must reach the CAMERA
+  again. Either the demo writes the camera directly while it plays (the green box and its follow suspended, and resumed
+  aligned at the end, so the player takes over without a jump), or the demo plans the BOX's path so that the camera's
+  follow — leash, ×2 orbit, glide — lands on the planned camera views. The first is the small change; the second keeps
+  one camera behaviour everywhere. The owner's to choose.
 
 ## 10. ⭐ Why a scripted replay and not a recorded video (the owner asked: *"is it lighter to display a frame capture animation or to run the movements through a script and render the scene? (I am interested in portability and light weight)"*)
 
