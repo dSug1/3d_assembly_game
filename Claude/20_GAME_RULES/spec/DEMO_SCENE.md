@@ -1,7 +1,7 @@
 # DEMO_SCENE — a scene that assembles itself
 
 > **STATUS** · 🔨 specified and built 2026-09-29 (`D170`, revised by `D171` the same day; ⭐ the start is a floor grid
-> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, then a median law, `D179`, the same day); ⭐⭐ **the start is SMALL HEAPS, ONE PER COLOUR, since `D191`** (2026-09-30, §2bis — the grid is §2quater, the record), ⛔ unjudged by a hand ·
+> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, then a median law, `D179`, the same day); ⭐⭐ **the start is SMALL HEAPS, ONE PER COLOUR, since `D191`** (2026-09-30, §2bis — the grid is §2quater, the record), ⭐ three pieces stacked at most and the camera 50° earlier, `D192` (2026-10-01), ⛔ unjudged by a hand ·
 > **OWNS** · what a demo scene is, how its disassembly is computed, how it plays, and `Scene1_demo`
 > **READ IF** · you are making a demo from another scene, changing how moves are generated or played, or changing
 > the demo's camera
@@ -59,6 +59,10 @@
 > rotation of the piece (same as what is shown for the longest black piece in the artefact E.). rebuild the demo scene.
 > deploy"* — the owner, 2026-09-30 (`D191`), after ten layouts were proposed as snapshots (E: *small heaps, one per
 > colour*)
+>
+> *"limit the heaps height to max three pieces stacked on top of each other"* · *"camera should start from current from
+> 50degrees yaw to the left. Therefore, total yaw rotation of the camera during demo = 410 degrees"* — the owner,
+> 2026-10-01 (`D192`)
 
 ## 1. The idea
 
@@ -157,14 +161,20 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
 * **The long bars** (48 cm; the strip is 46.5 cm deep): a piece longer than 80 % of the strip's depth lies ACROSS it,
   within 20°, and the spot it is pulled out to must have room for THAT turn (phase A). ⛔ Found by the generator: a bar
   pulled out sideways beside the painting could lie flat only pointing in depth there, which no strip holds.
+* ⭐⭐ **THREE PIECES STACKED AT MOST** (`D192`): a piece's LAYER is 1 on the floor, else one more than the highest layer
+  of the heap pieces it RESTS ON — those it touches (a gap under 1 mm) whose centre is lower than its own; a side-by-side
+  neighbour holds nothing up. A rest above layer 3 (`heapMaxLayers`) is refused and the piece goes lower. ⚠ Measured on
+  `D191`'s plan: a white stack **7** deep — the vector fails on it. ⚠ It caps LAYERS, not height: a bar leaning at 38°
+  still rises 12 cm.
 * **The fallback**: after 30 of its 60 tries, a piece that finds no rest on its heap lies flat on free floor beside it,
-  within a heap and a half of its centre. Seed 1: one (Piece9, a white plate).
+  within a heap and a half of its centre (`D191`'s plan: one, Piece9; `D192`'s: none).
 * **The stage** (what the start view frames, and what the reach adds to the cube): every corner outside the cube of every
   piece on its heap and along every carry and lift, from the floor to the heaps' top.
-* ⭐ **Measured, seed 1** (the committed plan): four heaps — 10 white, 14 black, 2 yellow, 4 red (the blue plate stays in
-  the painting) — across **1.17 m**; **9** pieces tilted more than 5°, **11** resting wholly on other pieces, **3**
-  leaning with an end on the floor, among them **Piece32, a 48 cm bar, at 10°** (the snapshot's longest black piece);
-  the highest point **15 cm**. ⚠ Generating the plan takes ~2 min (~45 s before).
+* ⭐ **Measured, seed 1** (the committed plan, `D192`): five heaps — 10 white, 14 black, 2 yellow, 3 red, 1 blue —
+  across **1.44 m** (the stage 1.51 m); stacked **3** deep at most; **6** pieces tilted more than 5°, **10** resting
+  wholly on other pieces, **4** leaning with an end on the floor, among them **Piece32, a 48 cm bar, at 11°** (the
+  snapshot's longest black piece); the highest point **14.8 cm** (a white bar leaning at 38°); no piece needed the
+  fallback. (`D191`'s: four heaps, 1.17 m, 7 deep, 15 cm.) ⚠ Generating the plan takes ~2 min (~45 s before).
 * ⛔ **Nothing is drawn**: the demo scene has exactly `Scene_1`'s bodies (a vector).
 
 ## 2quater. ⛔ SUPERSEDED BY `D191` — the floor grid (`D174`–`D179`), kept as the record
@@ -286,8 +296,9 @@ and the generation throws — the tighter-cube vector uses side 7. A carry AROUN
 | `heapOffset` / `heapFloorMargin` | **0.3 / 0.05** (3 cm / 5 mm) | `D191` — outside the cube, inside the floor |
 | `heapPitchDeg` / `heapRollDeg` | **40° / 6°**, steps **2.5° / 2°**, refined to 0.1° | `D191` — how far a piece may tilt as it settles |
 | `heapTries` | **60** (the floor fallback after 30) | `D191` |
+| `heapMaxLayers` | **3** | `D192` — three pieces stacked at most |
 | ⛔ `gridPitch`, `gridGap`, `gridOffset`, `gridWidth` | deleted (`D191`; `gridWidth` at `D175`) | the grid |
-| camera start | **15° before** the boot yaw (`D175`) | the orbit is 375°, ending where it did |
+| camera start | **50° before** the boot yaw (`D192`; 15° at `D175`) | the orbit is **410°** (375° at `D175`), ending where it did |
 | ⛔ `startYawDeg` / `startShiftFrac` | deleted (`D191`) — were 0–4°, median 2.5° / 0–5 %, median 3 % (`D179`) | the grid's natural feel |
 | colour order | white, black, yellow, red, blue | `D174`, `SCENE1_DEMO_OPTIONS` |
 | ⛔ `facing`, unalign angles, yaw | deleted (`D174`) | they went with the scatter |
@@ -325,13 +336,14 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 
 ## 7. How it plays — the camera (`D170`, `D171`, `D174`)
 
-* **Yaw**: it **orbits to the right**. ⭐⭐ `D175`: it **STARTS 15° before the boot yaw** (to the left) and still ENDS
-  where it did — the boot yaw a turn on, the level's own front view — so it turns **375°** (`DEMO_START_BEFORE_DEG`).
+* **Yaw**: it **orbits to the right**. ⭐⭐ `D192`: it **STARTS 50° before the boot yaw** (to the left; 15° at `D175`)
+  and still ENDS where it did — the boot yaw a turn on, the level's own front view — so it turns **410°** (375° at
+  `D175`; `DEMO_START_BEFORE_DEG`).
   ⚠ Kept the end, not the whole path, because the end is where the player takes over; shifting the whole orbit is one
   constant. ⭐⭐ **The goal is reached with 15° of orbit LEFT**: the camera turns at a steady rate while the moves play
   (360°), then **slows uniformly to rest** over the last 15° — reaching the final yaw at zero speed as the demo ends, with
   no jolt where the moves end (the speed is continuous). Arriving at rest from the steady rate takes `2 × 15° / ω`, so
-  the **moves take 360 / 390 = 92.3 % of the run** (345 / 375 before `D175`) and the settling the rest
+  the **moves take 395 / 425 = 92.9 % of the run** (`D192`; 360 / 390 at `D175`, 345 / 375 before) and the settling the rest
   (`DEMO_MOVES_END`, `demoYawAt` in `core/demo_plan.ts` — the generator aims with the same law).
 * **Elevation**: rises **linearly** from the boot elevation to the top of the rig (`v = 1`), reached at the end.
 * **Zoom**: ⭐ at the start, the camera is placed at the **smallest distance at which the whole demo cube is on screen**
