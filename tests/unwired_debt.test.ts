@@ -82,7 +82,7 @@ const PENDING: Record<string, string> = {
   // ⭐ `D182`: its two product callers went with the Pioneer-sway radius and the unsnap grace.
   surfaceGap: "`D49`'s surface gap — the clearance instrument of the collision and highlight vectors; no product caller since `D182`",
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
-  // product plays, and `d170.test.ts` regenerates it to prove the data is still the generator's.
+  // product plays, and `d170_regenerate.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.

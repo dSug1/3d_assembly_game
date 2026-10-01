@@ -146,14 +146,49 @@ export function rootOf(world: World, id: ObjectId): ObjectId {
   return cur;
 }
 
+/**
+ * ⭐⭐ **A STILL BODY'S WORLD SHAPE IS COMPUTED ONCE** (2026-10-01: the demo-plan generator spent ~40 % of its 280 s
+ * re-deriving the boxes and hulls of bodies that had not moved — `worldBox` and its `qRotate` — and the suite with it).
+ * ⭐ A `World` is immutable, and a write keeps every UNCHANGED body's record by reference (`withObject`), so a ROOT
+ * body's world box and world parts are a function of its own record: remembered per record, a moved body (a new record)
+ * is recomputed. ⛔ Only for a body with no parent — a seated child's pose also reads its ancestors'. ⚠ The seams must
+ * answer from the body's own record (both today's do); a source reading anything else must not be memoised.
+ * ⛔ The values are the same arithmetic, so every verdict is unchanged (the committed demo plan, regenerated, is
+ * byte-identical — `d170`).
+ */
+const boxMemo = new WeakMap<BoundsSource, WeakMap<object, Aabb | null>>();
+const partsMemo = new WeakMap<CollisionShapeSource, WeakMap<object, Vec3[][] | null>>();
+
+function memoFor<S extends object, V>(memo: WeakMap<S, WeakMap<object, V>>, source: S): WeakMap<object, V> {
+  let m = memo.get(source);
+  if (m === undefined) {
+    m = new WeakMap();
+    memo.set(source, m);
+  }
+  return m;
+}
+
 function worldParts(world: World, id: ObjectId, shapes: CollisionShapeSource): Vec3[][] | null {
+  const rec = world.objects.get(id);
+  const memo = rec !== undefined && rec.parent === null ? memoFor(partsMemo, shapes) : null;
+  if (memo !== null && memo.has(rec!)) return memo.get(rec!)!;
   const parts = shapes.partsOf(world, id);
   const at = worldPlacementOf(world, id);
-  if (!parts || !at) return null;
-  return parts.map((part) => part.map((p) => add(at.position, qRotate(at.orientation, p))));
+  const out = !parts || !at ? null : parts.map((part) => part.map((p) => add(at.position, qRotate(at.orientation, p))));
+  memo?.set(rec!, out);
+  return out;
 }
 
 function worldBox(world: World, id: ObjectId, bounds: BoundsSource): Aabb | null {
+  const rec = world.objects.get(id);
+  const memo = rec !== undefined && rec.parent === null ? memoFor(boxMemo, bounds) : null;
+  if (memo !== null && memo.has(rec!)) return memo.get(rec!)!;
+  const out = worldBoxOnce(world, id, bounds);
+  memo?.set(rec!, out);
+  return out;
+}
+
+function worldBoxOnce(world: World, id: ObjectId, bounds: BoundsSource): Aabb | null {
   const b = bounds.boundsOf(world, id);
   const at = worldPlacementOf(world, id);
   if (!b || !at) return null;
