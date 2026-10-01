@@ -126,13 +126,14 @@ file.
 | `D187` | ⭐⭐ **AN EPISODE LANDS WHEN TRIGGERED** | 2026-09-30 | → `SCORE.md` §3.4 |
 | `D188` | ⭐⭐ **THE SCORE BAR** | 2026-09-30 | → `LEVEL_END.md` §6 |
 | `D189` | ⭐⭐ **THE GOAL MOVES ONLY WHEN AN ACTION ENDS** | 2026-09-30 | → `LEVEL_END` §5bis |
-| `D190` | ⭐⭐ **ONLY MOVED PIECES ARE RE-JUDGED; THE FRAME FIT FIXED** | 2026-09-30 | → §5ter |
+| `D190` | ⭐⭐ **ONLY MOVED PIECES RE-JUDGED; FIT FIXED** | 2026-09-30 | → §5ter |
 | `D191`–`D194` | ⭐⭐ **DEMO: COLOUR HEAPS, 3 HIGH; CAMERA 50° EARLIER** | 2026-10-01 | → `DEMO_SCENE` |
+| `D195` | ⭐⭐ **NO DEPTH CEILING IN A PLAY VOLUME** | 2026-10-01 | → `COLLISION.md` §10bis |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
-| `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
+| `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT; edge-on never dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
-| `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside the capture zone is the same as outside** | 2026-09-23 | ⭐ Binding, ⚠ → history |
-| `D84` | ⭐⭐⭐ **`WorldAxisB` NOW GOVERNS A FREE BODY'S *ROTATION* BASIS TOO** | 2026-09-23 | ⭐ Binding — the flag is deleted (`D109`), the boot frame is the only frame. ⚠ → history |
+| `D82` | ⛔⛔⛔ **THE IN-ZONE BASIS IS DELETED — inside = outside** | 2026-09-23 | ⭐ Binding, ⚠ → history |
+| `D84` | ⭐⭐⭐ **`WorldAxisB` NOW GOVERNS A FREE BODY'S *ROTATION* BASIS TOO** | 2026-09-23 | ⭐ Binding; the flag is deleted (`D109`). ⚠ → history |
 | `D74` | ⭐⭐⭐ **`WorldAxisB` — THE OBJECT AXES ARE FIXED AT SCENE BOOT** | 2026-09-22 | ⭐ Binding, ⚠ → history |
 | `D73` | ⭐⭐⭐ **A ROTATION IS ALWAYS ON AN INCREMENT** — ✅✅ **CLOSED BY A DEVICE LOOK** | 2026-09-22 | ⭐ Binding, ⚠ → history |
 | `D72` | ⭐⭐⭐ **THE RIGHT-HAND BODY IS A TRAPEZOIDAL PYRAMID, AND HALF AGAIN AS THICK** | 2026-09-22 | ⭐ Binding, ⚠ → history |

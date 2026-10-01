@@ -59,7 +59,7 @@ export function applyWorldStep(st: SceneState, grip: Held, step: Vec3) : void {
   // ⛔⛔ THE DEPTH RANGE STILL BINDS — `A5`'s derived bounds: twice the near plane, and the
   // camera's own maximum orbit radius. A body through the near plane renders *a black page with
   // no error at all*, and one past the ceiling cannot be brought back by any zoom.
-  const limits = depthLimits(st.cfg);
+  const limits = depthLimits(st.cfg, st.playVolume !== null); // ⭐ `D195`: no ceiling inside a play volume
   setModelPose(st, targetMesh, {
     position: clampDepthRange(
       asVec3(st.camera.position),
