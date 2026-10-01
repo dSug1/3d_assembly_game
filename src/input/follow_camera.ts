@@ -310,3 +310,24 @@ export function easeOrbit(cur: OrbitZoom, target: OrbitZoom, dtMs: number, tauMs
     zoom: cur.zoom * Math.pow(target.zoom / cur.zoom, k),
   };
 }
+
+/**
+ * ⭐⭐ prototype (green box) — **THE BOX IS SLOWER INSIDE THE LEASH** (the owner, 2026-10-01: *"reduce the gains while the green
+ * box is within the leash zone because the green box is orbiting too fast, but maintain the orbit speed when it is beyond the
+ * leash zone"*). Per axis, from how far the box is from the camera on that axis: `inside` with the box right in front of the
+ * camera, ramped SMOOTHLY (smoothstep) to 1 at the leash edge and beyond. ⛔ Not a step at the edge — a gain that switched there
+ * would lurch the box the moment the camera starts following. A leash of 0 has no inside: 1.
+ */
+export function leashGain(gapRad: number, leashRad: number, inside: number): number {
+  if (!(leashRad > 0)) return 1;
+  const t = Math.min(1, Math.abs(gapRad) / leashRad);
+  return inside + (1 - inside) * t * t * (3 - 2 * t);
+}
+
+/** ⭐ Both axes' gains for the box's drag, from the box and the camera as they stand (yaw the short way, pitch in angle). */
+export function boxDragGains(cfg: GestureConfig, box: OrbitAt, cam: OrbitAt, leashRad: number, inside: number): { yaw: number; pitch: number } {
+  return {
+    yaw: leashGain(wrapPi(box.yaw - cam.yaw), leashRad, inside),
+    pitch: leashGain(pitchOf(cfg, box.v) - pitchOf(cfg, cam.v), leashRad, inside),
+  };
+}

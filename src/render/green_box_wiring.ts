@@ -31,7 +31,8 @@ export function createGreenBox(st: SceneState): void {
   const mat = new StandardMaterial("green-box-mat", st.scene);
   mat.diffuseColor = GREEN;
   box.material = mat;
-  box.isPickable = false;
+  // ⭐ prototype (green box), 2026-10-01: PICKABLE, so it stops the ray — a press on it is empty space (`throughGreenBox`).
+  box.isPickable = true;
   // ⭐ prototype (green box) (the owner: *"the green cube shall billboard the camera"*): it always turns its 65 × 37 face to the camera.
   // ⛔ Safe only because it has NO parent — a billboarded child keeps its parent's scale and translation and drops its
   // rotation (the PioneerFaceCursor's lesson, `CLAUDE.md`).

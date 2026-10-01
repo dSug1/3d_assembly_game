@@ -7,6 +7,8 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
+import { throughGreenBox } from "../input/green_box";
+import { boxDragGains } from "../input/follow_camera";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
@@ -156,7 +158,8 @@ export function installPointerHandler(st: SceneState): void {
         st.canvas.getBoundingClientRect(),
         mmToPx(bandMmNow(st)),
       );
-      const rayHit = !inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
+      // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughGreenBox`).
+      const rayHit = throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
       // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
       // only, the owner 2026-09-23: *"therefore, this second touch could for example move another
       // object"*). ⛔ Filtered on the way IN, before the latch, so every rule downstream sees a
@@ -427,7 +430,7 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔⛔ `D108`: a tap on the held body itself no longer toggles — only empty space does.
         noteTap(st, routed.pressed, s, e.pointerId, false);
       } else {
-        st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
         // ⭐ A second touch on a seated Follower (redirected to its root) is the UNSNAP's.
         st.lastFedPointer = e.pointerId;
         feedUnsnap(st, s);
@@ -471,7 +474,7 @@ export function installPointerHandler(st: SceneState): void {
       if (info.type === PointerEventTypes.POINTERUP) {
         forgetAnchor(st, routed.seq);
         st.router.release(e.pointerId);
-      } else st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      } else st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
       st.hudDirty = true;
       return;
     }
@@ -481,7 +484,7 @@ export function installPointerHandler(st: SceneState): void {
         const prev = routed.last;
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
-        st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
         // ⭐⭐ THIS IS THE FINGER THAT DRIVES DEPTH OR ROLL, and this branch is the only place
         // either is applied. ✅ **SIMULTANEOUS SINCE 2026-09-17** (owner): the holder's own
         // x/y keep running in their own handler while this one adds its axis, and the two SUM.
@@ -519,7 +522,12 @@ export function installPointerHandler(st: SceneState): void {
           // both orbits invert together. ⚠ The zoom (pinch, wheel) is unchanged.
           // ⭐ And its own gains, yaw and pitch (the owner: *"the green box orbits too fast"*).
           if (st.greenBox !== null) {
-            st.orbit.drag(-dx * st.cfg.boxGainYaw, -dy * st.cfg.boxGainPitch);
+            // ⭐ prototype (green box): slower while the box is inside the camera's leash, full speed beyond (`boxDragGains`).
+            const g =
+              st.boxOrbit === null || st.cameraOrbit === null
+                ? { yaw: 1, pitch: 1 }
+                : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+            st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, -dy * st.cfg.boxGainPitch * g.pitch);
             // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
             if (st.orbitMotion === null || st.orbitMotion.pointerId !== e.pointerId)
               st.orbitMotion = { pointerId: e.pointerId, tracker: new MotionTracker(st.cfg) };
@@ -655,7 +663,7 @@ export function installPointerHandler(st: SceneState): void {
       feedUnsnap(st, s);
       // ⚠ Handed the live hit, which the router discards: a finger that presses on a
       // part and slides off is still holding it (§4).
-      st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
 
       // ⛔⛔ `D51`'s PINNED PIONEER IS DELETED (`D109`): a Pioneer held beside its Follower translates
       // like any held body, and the Follower's second finger drives both axes wherever it lands (`D108`).

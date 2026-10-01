@@ -231,15 +231,16 @@ export const SCENE_1: SceneDescriptor = {
     ],
   },
   // ⭐ `D131` (the owner, 2026-09-28): radii top 1.8 m, middle 1 m, bottom 1.5 m; heights as `Scene_0`'s.
+  // ⭐ prototype (green box), the owner 2026-10-01: top 0.9 / 0.5, middle 0.2 / 0, bottom 0.9 / −0.4 m (radius / height).
   orbit: {
     // ⭐ `D169`: the orbit rings travel with the scene — the boot centre is where the world origin was.
     centreM: [0, SCENE_1_SHIFT_Y * 0.1, 0],
-    topRadiusM: 1.8,
-    topHeightM: 0.55,
-    middleRadiusM: 1.0,
-    middleHeightM: 0.1,
-    bottomRadiusM: 1.5,
-    bottomHeightM: -1.2, // ⭐ the owner, 2026-09-28 (was −0.5)
+    topRadiusM: 0.9,
+    topHeightM: 0.5,
+    middleRadiusM: 0.2,
+    middleHeightM: 0,
+    bottomRadiusM: 0.9,
+    bottomHeightM: -0.4,
   },
   final: SCENE_1_FINAL,
 };

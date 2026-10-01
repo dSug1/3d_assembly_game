@@ -6,8 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { sizeM, smallestOfColour } from "@input/green_box";
-import { cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
+import { sizeM, smallestOfColour, throughGreenBox } from "@input/green_box";
+import { boxDragGains, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
 import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
@@ -297,7 +297,7 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(Math.abs(wrapPi(s.cam.yaw - 180 * DEG))).toBeLessThan(1e-9);
   });
 
-  it("⭐ wired: the rig drives the box, the camera follows every frame before the draw; never pickable, billboarded, no parent", () => {
+  it("⭐ wired: the rig drives the box, the camera follows every frame before the draw; billboarded, no parent", () => {
     expect(code("scene.ts")).toMatch(/createGreenBox\(st\)/);
     expect(code("camera_rig.ts")).toMatch(/st\.greenBoxRigM = \[/);
     const loop = code("render_loop.ts");
@@ -308,9 +308,53 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).toMatch(/easeOrbit\(st\.boxOrbit, rig, dtSec \* 1000, st\.cfg\.boxSmoothMs\)/);
     // ⭐ the owner: the camera looks at the yellow target — the orbit centre
     expect(w).toMatch(/st\.camera\.setTarget\(c\.clone\(\)\)/);
-    expect(w).toMatch(/box\.isPickable = false/);
     expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
     expect(w).not.toMatch(/\.parent\s*=/);
+  });
+
+  it("⭐⭐ prototype: a press on the green box is EMPTY SPACE — the box stops the ray, and its hit is a miss (the owner: *\"the raycast hits the piece behind\"*)", () => {
+    const box = { name: "green-box" };
+    const piece = { name: "Piece10" };
+    expect(throughGreenBox(box, box)).toBeNull(); // the box in front: a miss, never the piece behind
+    expect(throughGreenBox(piece, box)).toBe(piece); // a piece hit first is still a piece
+    expect(throughGreenBox(null, box)).toBeNull();
+    expect(throughGreenBox(piece, null)).toBe(piece); // a scene with no box
+    // ⭐ wired: the box is PICKABLE (so the ray stops on it), and every pick the router reads goes through the filter
+    expect(code("green_box_wiring.ts")).toMatch(/box\.isPickable = true/);
+    const p = code("pointer_wiring.ts");
+    expect(p).toMatch(/const rayHit = throughGreenBox\(/);
+    expect(p).not.toMatch(/st\.router\.move\(e\.pointerId, s, info\.pickInfo\?\.pickedMesh \?\? null\)/);
+    expect((p.match(/throughGreenBox\(info\.pickInfo\?\.pickedMesh \?\? null, st\.greenBox\)/g) ?? []).length).toBe(4);
+  });
+
+  it("⭐⭐ prototype: the box is SLOWER inside the leash and at full speed beyond — a smooth ramp, no step at the edge", () => {
+    const L = 3 * DEG;
+    expect(leashGain(0, L, 0.5)).toBeCloseTo(0.5, 12); // right in front of the camera: the inside gain
+    expect(leashGain(L, L, 0.5)).toBeCloseTo(1, 12); // at the edge: full
+    expect(leashGain(10 * DEG, L, 0.5)).toBe(1); // beyond: full — the orbit speed is kept
+    expect(leashGain(-1.5 * DEG, L, 0.5)).toBeCloseTo(leashGain(1.5 * DEG, L, 0.5), 12); // either side
+    let prev = 0;
+    for (let i = 0; i <= 100; i++) {
+      const g = leashGain((i / 100) * L, L, 0.2);
+      expect(g).toBeGreaterThanOrEqual(prev - 1e-12); // never faster nearer the camera
+      if (i > 0) expect(g - prev).toBeLessThan(0.02); // no step anywhere, the edge included
+      prev = g;
+    }
+    expect(leashGain(0, 0, 0.2)).toBe(1); // no leash, no inside
+    // per axis: a box off in yaw only is slowed in pitch, not in yaw
+    const g = boxDragGains(CFG, { yaw: 20 * DEG, v: 0.5 }, { yaw: 0, v: 0.5 }, L, 0.5);
+    expect(g.yaw).toBe(1);
+    expect(g.pitch).toBeCloseTo(0.5, 12);
+    // ⭐ wired: the orbit drag multiplies each axis by its gain, and the slider has the owner's range
+    expect(code("pointer_wiring.ts")).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw, -dy \* st\.cfg\.boxGainPitch \* g\.pitch\)/);
+    expect(code("tuning_menu.ts")).toMatch(/"boxGainInsideLeash", 0\.05, 1, 0\.05\)/);
+  });
+
+  it("⭐ prototype: the scene BOOTS at zoom 1.5 (the owner: *\"set the default zoom at 1.5\"*) — the derived half-radius rule only at 0", () => {
+    expect(DEFAULT_CONFIG.bootZoom).toBe(1.5);
+    const scene = code("scene.ts");
+    expect(scene).toMatch(/if \(st\.cfg\.bootZoom > 0\) return st\.cfg\.bootZoom;/);
+    expect(scene.indexOf("if (st.cfg.bootZoom > 0)")).toBeLessThan(scene.indexOf("st.cfg.cameraRadiusMaxM / 2 / base"));
   });
 
   it("⛔⛔ the yellow marker is placed at BOOT, on the orbit centre — it sat at the origin until the first orbit (since `D169`)", () => {

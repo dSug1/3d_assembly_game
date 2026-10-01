@@ -90,6 +90,7 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
         tunable(st, "green box orbit gain — yaw (×)", "boxGainYaw", 0.05, 2, 0.05),
         tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
+        tunable(st, "green box gain inside the leash (×)", "boxGainInsideLeash", 0.05, 1, 0.05),
         tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 1),
         tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
         tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 100),

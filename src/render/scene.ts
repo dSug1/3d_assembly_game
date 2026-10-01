@@ -762,6 +762,8 @@ export function createScene(
    * the rig's own surface, which is what the orbit was designed around.
    */
   st.orbitStartZoom = (() => {
+    // ⭐ prototype (green box): the owner's literal boot zoom (`bootZoom`, 1.5) — your rings × 1.5 — unless 0.
+    if (st.cfg.bootZoom > 0) return st.cfg.bootZoom;
     const base = st.orbit.pose(1).radiusM;
     if (!(base > 1e-9)) return 1;
     return Math.max(1, st.cfg.cameraRadiusMaxM / 2 / base);

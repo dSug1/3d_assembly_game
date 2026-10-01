@@ -21,13 +21,25 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   `applyCamera` (`render/camera_rig.ts`) writes the box's place and NOT the camera when a box exists.
 * **Inverted inputs, per-axis gains** — the orbit drag is `drag(−dx · boxGainYaw, −dy · boxGainPitch)`
   (`render/pointer_wiring.ts`). ⭐ Defaults: **yaw 1.65**, **pitch 0.5** (sliders 0.05–2).
+* ⭐ **Slower inside the leash** (2026-10-01: *"reduce the gains while the green box is within the leash zone … but maintain
+  the orbit speed when it is beyond"*): per axis, both gains × `leashGain` — `boxGainInsideLeash` (**0.5**, slider 0.05–1 step
+  0.05) with the box right in front of the camera, ramped smoothly (smoothstep) to ×1 at the leash edge and beyond; no step at
+  the edge (`input/follow_camera.ts` `boxDragGains`). ⚠ With a 3° leash the slow zone is ~0.6 mm of finger at full gain.
 * **Eased after the rig** — the box approaches the rig's pose exponentially (`easeOrbit`, `boxSmoothMs` **60 ms**): the
   pointer events come every 47–68 ms on the tablet against 16–40 ms frames, so a box written straight from the rig moved in
   steps while the camera, smoothed, did not (*"why is the camera fluid and the box jerky?"*).
-* **Billboarded** (`BILLBOARDMODE_ALL`), not pickable, no parent.
+* **Billboarded** (`BILLBOARDMODE_ALL`), no parent.
+* ⭐ **Solid to the finger** (2026-10-01): *"when I click on the green box, the raycast hits the piece behind"* — it was
+  unpickable, so the ray went through it. Now it is PICKABLE, so the ray stops on it, and `throughGreenBox`
+  (`input/green_box.ts`) turns that hit into a MISS at every pick the router reads: a press on the box is empty space —
+  it orbits — and the box is never held, aligned or steered.
 
 ## 3. The camera's orbit
 
+* ⭐ **`Scene_1`'s rings on this branch** (the owner, 2026-10-01): top 0.9 / 0.5 m, middle 0.2 / 0 m, bottom 0.9 / −0.4 m
+  (radius / height), and the scene **boots at zoom 1.5** (`bootZoom`; `0` restores the derived half-radius rule, which made
+  ×7.5 here and capped the box at 3 m over most of its travel). At 1.5 the box is 1.55 m from the centre on the top ring,
+  0.30 m on the middle, 1.48 m on the bottom; a zoom keeps it within 0.15–3 m (`clampCameraRadiusM`).
 * **Its own angles** (`input/follow_camera.ts`, `CameraOrbitState`), stepped every frame before the draw
   (`render/green_box_wiring.ts` `greenBoxFrame`).
 * **Its distance = the box's CURRENT distance + `cameraRadiusOffsetMm`** (**1500 mm**, slider 100–2000 step 100). ⛔ It was
@@ -69,6 +81,12 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 
 ## 5. Known gaps
 
+* ⏳ **COMBINE THE FOUR GAINS — later** (the owner, 2026-10-01: *"write in the md files to combine the four gains later on"*).
+  The box's yaw is `gainOrbitYaw` (CAMERA, 0.054 rad/mm) × `boxGainYaw` (1.65), its elevation `gainOrbitElevation` (0.02/mm,
+  along the ring surface) × `boxGainPitch` (0.5): two sliders per axis that do ONE job, and the camera has no gain of its own
+  (it follows the box). ⭐ To do: one gain per axis for the box — yaw in °/mm (today 5.1), pitch in °/mm of ANGLE rather than
+  of the ring surface (the top of `Scene_1`'s surface is nearly flat in pitch: v 0.7 → 0.95 is 15.8° → 16.5°) — and the
+  main-line orbit gains left to the main line. `boxGainInsideLeash` stays a multiplier on top.
 * ⛔ **The demo's camera path drives the BOX, not the camera** — `20_GAME_RULES/spec/DEMO_SCENE.md` §7 and its fixes §9.
 * ⚠ Every default above is a guess with a slider unless the owner set it: the owner set the yaw gain, both offsets, the
   leash and the settle delay; the pitch gain, the radius offset, the box smoothing, `COAST_MS` and the catch-up are mine.

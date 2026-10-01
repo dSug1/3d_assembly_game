@@ -471,6 +471,13 @@ export interface GestureConfig {
   boxGainYaw: number;
   /** ⭐ Prototype: the green box orbit's PITCH gain, a multiplier on `gainOrbitElevation`. */
   boxGainPitch: number;
+  /**
+   * ⭐ Prototype: the box's gain while it is INSIDE the camera leash, a multiplier ramped up to 1 at the leash edge (the owner,
+   * 2026-10-01: *"reduce the gains while the green box is within the leash zone … but maintain the orbit speed beyond"*).
+   */
+  boxGainInsideLeash: number;
+  /** ⭐ Prototype: the zoom the scene BOOTS at (the owner, 2026-10-01: *"set the default zoom at 1.5"*). `0` = the derived rule (half the maximum radius). */
+  bootZoom: number;
   /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
   boxSmoothMs: number;
   /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
@@ -909,6 +916,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraRadiusOffsetMm: 1500,
   boxGainYaw: 1.65,
   boxGainPitch: 0.5,
+  // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
+  boxGainInsideLeash: 0.5,
+  bootZoom: 1.5,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
   // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
@@ -1044,6 +1054,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.boxGainYaw > 0 && cfg.boxGainYaw <= 4) || !(cfg.boxGainPitch > 0 && cfg.boxGainPitch <= 4)) {
     throw new Error(`boxGainYaw / boxGainPitch (${cfg.boxGainYaw} / ${cfg.boxGainPitch}) must be in (0, 4].`);
+  }
+  if (!(cfg.bootZoom === 0 || (cfg.bootZoom >= 0.1 && cfg.bootZoom <= 20))) {
+    throw new Error(`bootZoom (${cfg.bootZoom}) must be 0 (derived) or in [0.1, 20].`);
+  }
+  if (!(cfg.boxGainInsideLeash >= 0.05 && cfg.boxGainInsideLeash <= 1)) {
+    throw new Error(`boxGainInsideLeash (${cfg.boxGainInsideLeash}) must be in [0.05, 1].`);
   }
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);

@@ -140,10 +140,10 @@ describe("⭐⭐⭐ `D130` — a box's face OR its opposite: the four half-turns
 });
 
 describe("⭐⭐⭐ `D131` — each scene carries its own orbit rig", () => {
-  it("⭐ Scene_1: radii top 1.8, middle 1.0, bottom 1.5 m — and the rig validates (one waist)", () => {
+  it("⭐ Scene_1: radii top 0.9, middle 0.2, bottom 0.9 m (prototype, the owner 2026-10-01) — and the rig validates (one waist)", () => {
     const c = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-    expect([c.orbitTopRadiusM, c.orbitMiddleRadiusM, c.orbitBottomRadiusM]).toEqual([1.8, 1.0, 1.5]);
-    expect([c.orbitTopHeightM, c.orbitMiddleHeightM, c.orbitBottomHeightM]).toEqual([0.55, 0.1, -1.2]);
+    expect([c.orbitTopRadiusM, c.orbitMiddleRadiusM, c.orbitBottomRadiusM]).toEqual([0.9, 0.2, 0.9]);
+    expect([c.orbitTopHeightM, c.orbitMiddleHeightM, c.orbitBottomHeightM]).toEqual([0.5, 0, -0.4]);
     expect(() => validateGestureConfig(c)).not.toThrow();
   });
 
