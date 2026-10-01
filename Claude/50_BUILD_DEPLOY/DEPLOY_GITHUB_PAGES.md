@@ -160,10 +160,15 @@ each other. ⭐ So one run builds both: the triggering branch into the ROOT, and
 * **Switching it on, in order**: push the prototype branch (`git push -u origin <branch>` the first time) → set
   `PROTO_BRANCH` → **Run workflow** on `main`, or simply the next push to `main`. Until a branch is named,
   `/proto/version.json` answers **404** — that is the slot empty, not a failure.
-* ⚠ **A deploy takes minutes, not seconds**: the first one with this step went live **~7 min** after the push to `main`
-  (2026-10-01; two installs, two suites, two builds). Check each URL's HUD `build` line, or `<url>/version.json`.
-* **Both are gated**: the prototype runs its own `npm run verify` after the root's; a red one fails the run and nothing
-  is deployed — the site stays as it was.
+* ⚠ **A deploy takes minutes, not seconds** — and it had grown to **~10 min** (2026-10-01): the suite alone took 4–6 min on
+  GitHub's runner (one vector — the demo plan regenerated — was ~90 % of it), run twice, one after the other. ✅ Two fixes
+  the same day: the two builds run as **PARALLEL jobs** (`site`, `proto` → `package` → `deploy`), so a run lasts as long as
+  the slower one; and the suite is ~3× faster (a still body's collision box is computed once — `core/collision.ts`; the two
+  demo generations in files of their own, so they overlap the rest — `d170_regenerate`, `d170_fresh_plan`): `verify`
+  **6½ → 2 min** locally. Check each URL's HUD `build` line, or `<url>/version.json`.
+* **Both are gated**: each job runs its own `npm run verify`; a red one skips `package`, so nothing is deployed — the site
+  stays as it was. A prototype not named is SKIPPED, and the root deploys alone.
+* ⚠ Two pushes to `main` in quick succession QUEUE (`concurrency: pages`, never cancelled): the second waits for the first.
 * **Updating the prototype online**: push the prototype branch, then **Run workflow** on `main` (a push to the prototype
   branch deploys nothing by itself — every deploy is made from `main`, so the environment's branch policy is untouched).
 * ⭐ It works because the build is relative: `base: "./"`, and the page finds its `version.json` beside itself. The HUD's

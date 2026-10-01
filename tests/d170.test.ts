@@ -7,16 +7,14 @@
  * (`demoPosesAt`), not the generator's own segments — a second route to the same claim.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { SCENE_1 } from "../src/content/scene_1";
 import { SCENE1_DEMO as SHELL, SCENE1_DEMO_OPTIONS } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
-import { formatDemoPlan } from "../src/content/demo_plan_format";
 import { SCENES } from "../src/content/scenes";
 import { GAME_CONTENT } from "../src/content/worlds";
 import { withDemoPlan, DEMO_CHAIN, DEMO_DEFAULTS, DEMO_MOVES_END, demoReach, demoVolume, demoYawAt, generateDemoPlan, movesProgress, seatsOf, towardCamera, type DemoPlan, type DemoPose } from "@core/demo_plan";
 import { contourDims, parseSceneDescriptor, serializeSceneDescriptor, type SceneDescriptor } from "@core/game_structure";
-import { boxShape, gapBetween } from "@core/collision_shape";
+import { boxShape } from "@core/collision_shape";
 import { boundsFromShapes, hullAtSpawn, poseFree } from "@core/collision";
 import { makeWorld, setWorldPlacement, type World } from "@core/object_model";
 import { add, cross, dot, IDENTITY, length, normalize, qAngle, qconj, qmul, qRotate, sub, type Vec3 } from "@core/vec";
@@ -24,6 +22,7 @@ import { advanceDemo, DEMO_LEAD_IN_S, demoCamera, demoDistanceM, demoFramePoints
 import { orbitOffset } from "@input/orbit";
 import { sceneConfig } from "@input/scene_rig";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
+import { leastApproachClearance } from "./helpers/demo_clearance";
 
 /** ⭐ The distance that fits a centred box of half-extents `h` — its eight corners (`D174` made the fit take points). */
 const fitDistanceM = (h: Vec3, toCam: Vec3, fov: number, aspect: number) =>
@@ -36,11 +35,8 @@ const near = (a: readonly number[], b: readonly number[], eps = 1e-5) => a.every
 const turn = (a: DemoPose, b: DemoPose) => qAngle(qmul([...b.orientation], qconj([...a.orientation])));
 
 describe("⭐⭐⭐ `D170` — the plan is data, and the data is the generator's", () => {
-  // ⚠ `D191`: the heaps' settling made the generation ~2 minutes (was ~45 s) — the timeouts below grew with it.
-  it("⭐ the committed `scene1_demo_plan.ts` is exactly what the generator writes today (seed 1)", { timeout: 600_000 }, () => {
-    const committed = readFileSync(new URL("../src/content/scene1_demo_plan.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
-    expect(committed).toBe(formatDemoPlan(generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, seed: DEMO_DEFAULTS.seed })));
-  });
+  // ⭐ The regeneration itself — the committed plan is exactly what the generator writes — is `d170_regenerate.test.ts`,
+  // a file of its own so the runner overlaps the slowest vector with the rest (2026-10-01).
 
   it("⭐ `D171`: 150 moves — 30 pieces, 5 moves each (the owner's hypothesis)", () => {
     expect(PLAN.moves).toHaveLength(150);
@@ -150,25 +146,6 @@ function violations(plan: DemoPlan, scene: SceneDescriptor, samples: number): st
   return [...new Set(bad)];
 }
 
-/** ⭐ `D171`: the least gap, over every APPROACH's start, from the approaching piece to any other body then. */
-function leastApproachClearance(plan: DemoPlan): number {
-  const poses = new Map<string, { position: Vec3; orientation: readonly number[] }>();
-  for (const b of SCENE_1.bodies) poses.set(b.id, { position: [...(b.frozen ? b.position : final.get(b.id)!)] as Vec3, orientation: [1, 0, 0, 0] });
-  for (const [id, p] of Object.entries(plan.start)) poses.set(id, { position: [...p.position] as Vec3, orientation: p.orientation });
-  const dims = new Map(SCENE_1.bodies.map((b) => [b.id, contourDims(b)]));
-  const box = (id: string) => {
-    const p = poses.get(id)!;
-    const h = dims.get(id)!.map((v) => v / 2);
-    return [0, 1, 2, 3, 4, 5, 6, 7].map((c) => add(p.position, qRotate([...p.orientation] as never, [c & 1 ? h[0]! : -h[0]!, c & 2 ? h[1]! : -h[1]!, c & 4 ? h[2]! : -h[2]!])));
-  };
-  let least = Infinity;
-  for (const m of plan.moves) {
-    if (m.kind === "APPROACH")
-      for (const other of poses.keys()) if (other !== m.body) least = Math.min(least, gapBetween(box(m.body), box(other))!);
-    poses.set(m.body, { position: [...m.to.position] as Vec3, orientation: m.to.orientation });
-  }
-  return least;
-}
 
 describe("⭐⭐⭐ played forwards, the moves chain from the start configuration to the goal — and collide with nothing", () => {
   it("⭐ each move starts where its piece last was; every piece ends at its final pose", () => {
@@ -190,8 +167,7 @@ describe("⭐⭐⭐ played forwards, the moves chain from the start configuratio
 
   it("⭐ `D171`: every piece is truly CLEAR where its APPROACH starts — at least `clearance` from every other body", { timeout: 600_000 }, () => {
     expect(leastApproachClearance(PLAN)).toBeGreaterThanOrEqual(DEMO_DEFAULTS.clearance - 1e-5);
-    // ⭐ and on a fresh 100-move plan, where the rule before `D171` pulled four pieces sideways INSIDE the painting
-    expect(leastApproachClearance(generateDemoPlan(SCENE_1, { ...SCENE1_DEMO_OPTIONS, moveCount: 100 }))).toBeGreaterThanOrEqual(DEMO_DEFAULTS.clearance - 1e-5);
+    // ⭐ and on a fresh 100-move plan → `d170_fresh_plan.test.ts` (its own file, so it runs alongside the rest)
   });
 
   it("⭐⭐ `D171` — the pieces come apart TOWARD the camera that will watch them go back (the real playback's camera)", () => {
