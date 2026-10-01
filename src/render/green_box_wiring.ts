@@ -44,10 +44,9 @@ export function createGreenBox(st: SceneState): void {
   box.material = mat;
   // ⭐ prototype (green box), 2026-10-01: PICKABLE, so it stops the ray — a press on it is empty space (`throughGreenBox`).
   box.isPickable = true;
-  // ⭐ prototype (green box) (the owner: *"the green cube shall billboard the camera"*): it always turns its 65 × 37 face to the camera.
-  // ⛔ Safe only because it has NO parent — a billboarded child keeps its parent's scale and translation and drops its
-  // rotation (the PioneerFaceCursor's lesson, `CLAUDE.md`).
-  box.billboardMode = Mesh.BILLBOARDMODE_ALL;
+  // ⭐ prototype (green box): NOT billboarded (the owner, 2026-10-02: *"remove the billboarding"* — it had been since *"the green
+  // cube shall billboard the camera"*). It keeps the world's axes: its width along x, its tapered height up y, its depth along z.
+  box.billboardMode = Mesh.BILLBOARDMODE_NONE;
   st.greenBox = box;
   // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
   // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).

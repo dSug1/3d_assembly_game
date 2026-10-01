@@ -30,7 +30,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * **Eased after the rig** — the box approaches the rig's pose exponentially (`easeOrbit`, `boxSmoothMs` **60 ms**): the
   pointer events come every 47–68 ms on the tablet against 16–40 ms frames, so a box written straight from the rig moved in
   steps while the camera, smoothed, did not (*"why is the camera fluid and the box jerky?"*).
-* **Billboarded** (`BILLBOARDMODE_ALL`), no parent.
+* ~~Billboarded~~ — ⛔ **no longer billboarded** (2026-10-02, §6: *"remove the billboarding"*); no parent.
 * ⭐ **Solid to the finger** (2026-10-01): *"when I click on the green box, the raycast hits the piece behind"* — it was
   unpickable, so the ray went through it. Now it is PICKABLE, so the ray stops on it, and `throughGreenBox`
   (`input/green_box.ts`) turns that hit into a MISS at every pick the router reads: a press on the box is empty space —
@@ -145,8 +145,11 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   type as the one in scene 0). Dimensions = 150 % dimensions of the piece 17"*, then *"divide the height of the green piece by
   2"*, then *"reduce the length of the green piece by 25%"* — read as its longest side, the width): Piece17's core
   (92 × 55 × 30 mm) × 1.5, the height halved, the length −25 % → **103.5 × 41.25 × 45 mm**, its top tapered to half
-  (`OBJECT_TOP_SCALE`, `taperMesh` — `Scene_0`'s pyramid; `greenPyramidSizeM`). Still billboarded, still a press-through-to-
-  empty-space. A scene with no Piece17 has none. ⛔ `smallestOfColour` (the first box) is declared unwired.
+  (`OBJECT_TOP_SCALE`, `taperMesh` — `Scene_0`'s pyramid; `greenPyramidSizeM`). ⭐ **Not billboarded** (*"remove the
+  billboarding"*, 2026-10-02): it keeps the world's axes — width along x, the tapered height up y, depth along z. Still a
+  press on it is empty space. A scene with no Piece17 has none. ⛔ `smallestOfColour` (the first box) is declared unwired.
 * ⭐ **The HUD's `green` line**, right after `motion` (the owner, 2026-10-02): the green piece's distance to the YELLOW target
   (the marker — where the centre is going, not the blend in progress), `greenReadout`.
+* ⭐ **The yellow orbit centre is HIDDEN** (the owner, 2026-10-02: *"hide the yellow orbit center"*) — the pink ring marks
+  the target. Only hidden: it still moves to every new target, and the target itself is unchanged.
 * Vectors: `tests/proto_pink_ring.test.ts`.

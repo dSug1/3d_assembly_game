@@ -36,6 +36,15 @@ describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
   });
 });
 
+describe("⭐ prototype — the yellow orbit centre is HIDDEN (the owner, 2026-10-02: *\"hide the yellow orbit center\"*)", () => {
+  it("⭐ hidden at boot, and nothing turns it back on — the pink ring marks the target", () => {
+    expect(code("render/scene.ts")).toContain("st.centreMarker.isVisible = false;");
+    for (const f of ["render/camera_rig.ts", "render/render_loop.ts", "render/green_box_wiring.ts", "render/pointer_wiring.ts"]) {
+      expect(code(f)).not.toMatch(/centreMarker\.isVisible = true/);
+    }
+  });
+});
+
 describe("⭐⭐ prototype — the green piece is a PYRAMID, Piece17 × 150 %, its height halved, its length cut by 25 %", () => {
   it("⭐ 103.5 × 41.25 × 45 mm in Scene_1, its top tapered to half (Scene_0's pyramid); none without a Piece17", () => {
     const p17 = bodyNamed(SCENE_1.bodies, "Piece17")!;

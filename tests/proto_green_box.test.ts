@@ -298,7 +298,7 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(Math.abs(wrapPi(s.cam.yaw - 180 * DEG))).toBeLessThan(1e-9);
   });
 
-  it("⭐ wired: the rig drives the box, the camera follows every frame before the draw; billboarded, no parent", () => {
+  it("⭐ wired: the rig drives the box, the camera follows every frame before the draw; NOT billboarded (2026-10-02), no parent", () => {
     expect(code("scene.ts")).toMatch(/createGreenBox\(st\)/);
     expect(code("camera_rig.ts")).toMatch(/st\.greenBoxRigM = \[/);
     const loop = code("render_loop.ts");
@@ -309,7 +309,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).toMatch(/easeOrbit\(st\.boxOrbit, rig, dtSec \* 1000, st\.cfg\.boxSmoothMs\)/);
     // ⭐ the owner: the camera looks at the yellow target — the orbit centre
     expect(w).toMatch(/st\.camera\.setTarget\(c\.clone\(\)\)/);
-    expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
+    // ⭐ the owner, 2026-10-02: *"remove the billboarding"*
+    expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_NONE/);
+    expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
     expect(w).not.toMatch(/\.parent\s*=/);
   });
 
