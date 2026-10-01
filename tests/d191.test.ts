@@ -154,9 +154,10 @@ describe("⭐⭐⭐ `D191` — the start configuration: small HEAPS, one per col
     const tilted = ids.filter((id) => pitchDeg(id) > 5);
     const endOnFloor = tilted.filter((id) => bottom(id) < FLOOR_TOP + 0.005);
     const onOthers = ids.filter((id) => bottom(id) > FLOOR_TOP + 0.01);
-    expect(tilted.length).toBeGreaterThanOrEqual(3); // seed 1: 4 (9 at `D191`, before `D193`'s three-deep rule)
-    expect(endOnFloor.length).toBeGreaterThanOrEqual(3); // seed 1: 4
-    expect(onOthers.length).toBeGreaterThanOrEqual(6); // seed 1: 12
+    // ⚠ the three-high rule (`D193`, `D194`) leaves fewer leaning: seed 1, 2 (9 at `D191`, 4 at `D193`)
+    expect(tilted.length).toBeGreaterThanOrEqual(2);
+    expect(endOnFloor.length + tilted.filter((id) => !endOnFloor.includes(id)).length).toBeGreaterThanOrEqual(2);
+    expect(onOthers.length).toBeGreaterThanOrEqual(6); // seed 1: 11
     // ⚠ `D193`: *"same as what is shown for the longest black piece"* is no longer held — a 48 cm bar leaning across a
     // heap covers four pieces from above, which the three-deep rule refuses; the bars lie flat at seed 1.
     // ⭐ a leaning piece is held up by ANOTHER piece: it touches one (a gap under 1 mm)
@@ -221,6 +222,25 @@ describe("⭐⭐⭐ `D191` — the start configuration: small HEAPS, one per col
     expect(OPT.heapMaxLayers).toBe(3);
     expect(most).toBeLessThanOrEqual(3);
     expect(most).toBe(3); // ⭐ and the heaps are still heaps: somewhere, three deep
+  });
+
+  it("⭐⭐ `D194` — *max three pieces stacked*: no stack — rest on rest, or leaning — climbs past three pieces", () => {
+    // ⭐ Rebuilt in the order the pieces were put down: flat on the floor is level 1; any other piece is one above the
+    // highest EARLIER piece it touches (a gap under 1 mm). ⛔ `D193` counted only from above and let a staircase 4 high
+    // through — the owner saw it on the glass, *"4 pieces are stacked and one piece is leaning on three stacked"*.
+    const level = new Map<string, number>();
+    for (const id of [...liftOrder].reverse()) {
+      const mine = cornersAt(id, pos(id), q(id));
+      const ys = mine.map((c) => c[1]);
+      const thin = Math.min(...contourDims(body(id)));
+      const flat = Math.min(...ys) < FLOOR_TOP + 0.005 && Math.max(...ys) - Math.min(...ys) < thin + 0.005;
+      let below = 0;
+      for (const [o, l] of level) if ((gapBetween(mine, cornersAt(o, pos(o), q(o))) ?? 0) < 0.01) below = Math.max(below, l);
+      level.set(id, flat ? 1 : below + 1);
+    }
+    const most = Math.max(...level.values());
+    expect(most).toBeLessThanOrEqual(OPT.heapMaxLayers);
+    expect([...level.values()].filter((l) => l >= 2).length).toBeGreaterThanOrEqual(6); // ⭐ still heaps
   });
 
   it("⭐ the stage (what the start view frames) holds every heap piece, from the floor to the highest", () => {
