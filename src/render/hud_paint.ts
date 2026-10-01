@@ -53,7 +53,7 @@ export function depthReadout(st: SceneState) : string {
       mp.position[2] - c[2],
     ];
     const d = r[0] * push[0] + r[1] * push[1] + r[2] * push[2];
-    const { minM, maxM } = depthLimits(st.cfg);
+    const { minM, maxM } = depthLimits(st.cfg, st.playVolume !== null);
     const at =
       d <= minM + 1e-4 ? "  ⛔MIN" : d >= maxM - 1e-4 ? "  ⛔MAX" : "";
     // ⭐⭐ A10'S GATE, ON THE GLASS. The rule is invisible otherwise: a hand that gets
@@ -79,7 +79,7 @@ export function depthReadout(st: SceneState) : string {
       `${grip.mode ?? "—"} obj=${st.router.objects().length} out=${st.router.outside().length}` +
       `${secondFingerOf(st, grip).present ? " 2nd" : ""}` +
       `${grip.rec.motionState === "STATIONARY" ? ` ready ${corridor}` : ""}`;
-    return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${maxM.toFixed(1)}]${at} ${mode}`;
+    return `  depth=${d.toFixed(2)}m [${minM.toFixed(2)}–${Number.isFinite(maxM) ? maxM.toFixed(1) : "∞"}]${at} ${mode}`;
   }
   return "";
 }
