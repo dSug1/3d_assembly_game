@@ -135,3 +135,18 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   don't delete the method"*): `showHitFaceContour` ships **0**; **FACE ALIGNMENT › FOLLOWERFACE › *HitFace fuchsia contour***
   (1 / 0) draws it again. Only the DRAWING is gated (`render_loop.ts`) — the HitFace itself, its alignment and the HUD's
   readout are unchanged.
+* ⭐⭐ **THE PINK RING AT THE YELLOW TARGET** (the owner, 2026-10-02; ⛔ unjudged by a hand): billboarded, the amber gizmo
+  ring's size on the glass (`GIZMO_RING_PX`), at the target (`pinkRingFrame`, `render/green_box_wiring.ts`). Drawn on top, and
+  WHAT hides it is decided each frame by the camera's ray to the target (`pinkRingVisibility`, `input/green_box.ts`): a piece
+  in front HIDES it, only the green piece in front makes it TRANSLUCENT (alpha 0.35), frozen bodies never count, and the piece
+  the target sits on (met within 2 mm of it) does not hide it. ⚠ All or nothing — a piece covering half the ring hides or
+  shows it whole, by its centre.
+* ⭐⭐ **THE GREEN PIECE IS A PYRAMID** (the owner, 2026-10-02: *"replace the green box by a green trapezoidal pyramid (same
+  type as the one in scene 0). Dimensions = 150 % dimensions of the piece 17"*, then *"divide the height of the green piece by
+  2"*, then *"reduce the length of the green piece by 25%"* — read as its longest side, the width): Piece17's core
+  (92 × 55 × 30 mm) × 1.5, the height halved, the length −25 % → **103.5 × 41.25 × 45 mm**, its top tapered to half
+  (`OBJECT_TOP_SCALE`, `taperMesh` — `Scene_0`'s pyramid; `greenPyramidSizeM`). Still billboarded, still a press-through-to-
+  empty-space. A scene with no Piece17 has none. ⛔ `smallestOfColour` (the first box) is declared unwired.
+* ⭐ **The HUD's `green` line**, right after `motion` (the owner, 2026-10-02): the green piece's distance to the YELLOW target
+  (the marker — where the centre is going, not the blend in progress), `greenReadout`.
+* Vectors: `tests/proto_pink_ring.test.ts`.

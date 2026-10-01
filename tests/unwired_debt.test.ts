@@ -79,6 +79,8 @@ const PENDING: Record<string, string> = {
   // ⭐ `boxShape` LEFT this list 2026-09-29 (`D170`): the demo generator builds its world from box shapes.
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
+  // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).
+  smallestOfColour: "the green proxy's first size (the smallest yellow piece) — replaced on the prototype by Piece17 × 150 %",
   // ⭐ prototype (green box), 2026-10-01: the empty-space press reads `nearestPairCentre` on this branch only.
   orbitCentre: "§2 rule 1's subset barycentre — replaced on the prototype branch by `nearestPairCentre`; the main line still calls it",
   // ⭐ `D182`: its two product callers went with the Pioneer-sway radius and the unsnap grace.

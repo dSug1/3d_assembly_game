@@ -552,6 +552,8 @@ export function createScene(
   st.cameraOrbit = null;
   st.orbitMotion = null;
   st.boxOrbit = null;
+  st.pinkRing = null;
+  st.greenBoxDistM = null;
   createGreenBox(st);
 
   // ───────────────────────────────────────────────────────────────────

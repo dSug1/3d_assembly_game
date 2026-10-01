@@ -148,6 +148,7 @@ export function paint(st: SceneState) {
     // disagree with the product while showing green. See `METHOD`.
     phase: first ? first.rec.currentPhase : "—",
     motion: first ? first.rec.motionState : "—",
+    green: greenReadout(st),
     lastVerdict: st.lastVerdict,
     // ⚠ Shown so a session can never be spent testing a value that was not in
     // force — including a typo'd key, which is REPORTED rather than ignored.
@@ -352,4 +353,10 @@ return ({
   y: e.clientY,
   t: performance.now(),
 });
+}
+
+/** ⭐ prototype (green box) — the HUD's `green` line: the green piece's distance to the YELLOW target (the marker). */
+export function greenReadout(st: SceneState): string {
+  if (st.greenBox === null || st.greenBoxDistM === null) return "—";
+  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target`;
 }

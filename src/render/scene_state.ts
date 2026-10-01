@@ -390,6 +390,10 @@ export interface SceneState {
   centreMarker: Mesh;
   /** ⭐ prototype (green box): the green box, midway between the yellow target and the camera — `null` in a scene with no yellow body. */
   greenBox: Mesh | null;
+  /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
+  pinkRing: LinesMesh | null;
+  /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */
+  greenBoxDistM: number | null;
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */
   greenBoxRigM: Vec3 | null;
   cameraOrbit: CameraOrbitState | null;

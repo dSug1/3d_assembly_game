@@ -42,3 +42,50 @@ export function sizeM(dims: Triple, unitM: number): Vec3 {
 export function throughGreenBox<M>(hit: M | null, greenBox: M | null): M | null {
   return hit !== null && greenBox !== null && hit === greenBox ? null : hit;
 }
+
+/**
+ * ⭐ prototype (green box) — **THE GREEN PYRAMID'S SOURCE** (the owner, 2026-10-02: *"replace the green box by a green trapezoidal
+ * pyramid (same type as the one in scene 0). Dimensions = 150 % dimensions of the piece 17"*): the body named `id`, or `null`
+ * when the scene has none (then there is no green piece at all).
+ */
+export function bodyNamed(bodies: readonly BodySpec[], id: string): BodySpec | null {
+  return bodies.find((b) => b.id === id) ?? null;
+}
+
+/**
+ * ⭐ The green pyramid's size, metres: the body's core `dims` × `unitM` × 150 % on every side (the owner, 2026-10-02), then
+ * the HEIGHT halved (*"divide the height of the green piece by 2"*, the same day) — so the height is × 0.75 — and the LENGTH
+ * (its longest side, the width) cut by 25 % (*"reduce the length of the green piece by 25%"*) — so the width is × 1.125.
+ */
+export function greenPyramidSizeM(dims: Triple, unitM: number): Vec3 {
+  const [w, h, d] = sizeM(dims, unitM);
+  return [w * 1.5 * 0.75, (h * 1.5) / 2, d * 1.5];
+}
+
+/** One hit along the camera's ray to the yellow target: how far, and whether it is the green piece. */
+export interface RingHit {
+  readonly distanceM: number;
+  readonly isGreenBox: boolean;
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE PINK RING'S OCCLUSION** (the owner, 2026-10-02: *"The pink gizmo ring is occludable by any
+ * other object except frozen object. If the green box occludes the pink gizmo ring, the pink gizmo ring becomes slightly
+ * translucent (to show that it is masked by the green box but still visible)"*). `hits` are what the camera's ray meets on
+ * the way to the target — frozen bodies already left out by the caller. A hit counts only if it is NEARER than the target by
+ * more than `epsM`: the piece the target sits ON is met right at it, and must not hide it.
+ * * any piece in front → `HIDDEN`; * only the green piece → `TRANSLUCENT`; * nothing → `VISIBLE`.
+ */
+export function pinkRingVisibility(
+  hits: readonly RingHit[],
+  targetDistM: number,
+  epsM: number,
+): "VISIBLE" | "TRANSLUCENT" | "HIDDEN" {
+  let green = false;
+  for (const h of hits) {
+    if (!(h.distanceM < targetDistM - epsM)) continue;
+    if (!h.isGreenBox) return "HIDDEN";
+    green = true;
+  }
+  return green ? "TRANSLUCENT" : "VISIBLE";
+}

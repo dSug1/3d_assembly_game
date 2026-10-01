@@ -9,26 +9,36 @@ import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { sizeM, smallestOfColour } from "../input/green_box";
+import { bodyNamed, greenPyramidSizeM, pinkRingVisibility } from "../input/green_box";
+import { trackingMetresPerPx } from "../input";
+import { OBJECT_TOP_SCALE } from "../core/scene_dims";
+import { taperMesh } from "./bodies";
+import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { Ray } from "@babylonjs/core/Culling/ray";
+import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
 import { cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { SCENE_1_PALETTE } from "../content/scene_1";
 import type { SceneState } from "./scene_state";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
 
 export function createGreenBox(st: SceneState): void {
-  const yellow = smallestOfColour(st.sceneSpec.bodies, SCENE_1_PALETTE.MAT_C);
-  if (yellow === null) {
+  // ⭐⭐ prototype (green box), the owner 2026-10-02: *"replace the green box by a green trapezoidal pyramid (same type as the one
+  // in scene 0). Dimensions = 150 % dimensions of the piece 17"*, then *"divide the height of the green piece by 2"* — Piece17's
+  // core × 1.5, the height halved, the length cut by 25 % (103.5 × 41.25 × 45 mm in `Scene_1`, `greenPyramidSizeM`), its
+  // top tapered to half (`OBJECT_TOP_SCALE`, `Scene_0`'s pyramid) by `taperMesh`. ⛔ It was the smallest yellow piece's box.
+  const piece17 = bodyNamed(st.sceneSpec.bodies, "Piece17");
+  if (piece17 === null) {
     st.greenBox = null;
     return;
   }
-  const [w, h, d] = sizeM(yellow.dims, st.sceneSpec.unitM ?? 1);
+  const [w, h, d] = greenPyramidSizeM(piece17.dims, st.sceneSpec.unitM ?? 1);
   const box = CreateBox("green-box", { width: w, height: h, depth: d }, st.scene);
+  if (!taperMesh(box, OBJECT_TOP_SCALE)) st.untaperedBodies.push("green-box");
   const mat = new StandardMaterial("green-box-mat", st.scene);
   mat.diffuseColor = GREEN;
   box.material = mat;
@@ -39,6 +49,54 @@ export function createGreenBox(st: SceneState): void {
   // rotation (the PioneerFaceCursor's lesson, `CLAUDE.md`).
   box.billboardMode = Mesh.BILLBOARDMODE_ALL;
   st.greenBox = box;
+  // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
+  // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).
+  const ring = CreateLines("pink-target-ring", { points: RING_POINTS }, st.scene);
+  ring.color = PINK.clone();
+  ring.isPickable = false;
+  ring.metadata = { orbitCandidate: false };
+  ring.billboardMode = Mesh.BILLBOARDMODE_ALL;
+  ring.renderingGroupId = 2;
+  st.pinkRing = ring;
+}
+
+/** ⭐ The pink. */
+const PINK = new Color3(1, 0.42, 0.78);
+/** ⭐ The ring's alpha when only the green piece is in front of it — *"slightly translucent"*. */
+const PINK_MASKED_ALPHA = 0.35;
+/** ⭐ A hit counts as IN FRONT only if nearer than the target by more than this — the piece it sits on is met right at it. */
+const PINK_EPS_M = 0.002;
+
+/**
+ * ⭐⭐ prototype (green box) — **THE PINK RING, EACH FRAME**: at the yellow target, the amber ring's size on the glass, and
+ * hidden / translucent / visible by what the camera's ray meets before the target (`pinkRingVisibility`). ⛔ Frozen bodies
+ * (the floor) never hide it; the ring itself and the markers are not pickable, so they are never met.
+ */
+export function pinkRingFrame(st: SceneState): void {
+  const ring = st.pinkRing;
+  if (ring === null) return;
+  const t = st.centreBlend.targetM;
+  const cam = st.camera.position;
+  const dir = new Vector3(t[0] - cam.x, t[1] - cam.y, t[2] - cam.z);
+  const dist = dir.length();
+  if (!(dist > 1e-6)) {
+    ring.isVisible = false;
+    return;
+  }
+  const hits = (
+    st.scene.multiPickWithRay(new Ray(cam.clone(), dir.scale(1 / dist), dist), (m) => {
+      if (!m.isPickable || !m.isVisible || !m.isEnabled()) return false;
+      if (m === st.greenBox) return true;
+      const id = st.idOf.get(m);
+      return id !== undefined && st.world.objects.get(id)?.frozen !== true;
+    }) ?? []
+  ).map((h) => ({ distanceM: h.distance, isGreenBox: h.pickedMesh === st.greenBox }));
+  const v = pinkRingVisibility(hits, dist, PINK_EPS_M);
+  ring.isVisible = v !== "HIDDEN";
+  ring.alpha = v === "TRANSLUCENT" ? PINK_MASKED_ALPHA : 1;
+  const m = trackingMetresPerPx(dist, st.camera.fov, st.canvas.clientHeight) * GIZMO_RING_PX;
+  ring.scaling.set(m, m, m);
+  ring.position.set(t[0], t[1], t[2]);
 }
 
 /**
@@ -106,4 +164,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   st.camera.setPosition(new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]));
   st.camera.setTarget(c.clone());
+  // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
+  // the blend in progress), for the HUD's `green` line (the owner, 2026-10-02).
+  const tgt = st.centreBlend.targetM;
+  st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
+  pinkRingFrame(st);
 }
