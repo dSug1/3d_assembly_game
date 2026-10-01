@@ -165,7 +165,7 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
   within 20°, and the spot it is pulled out to must have room for THAT turn (phase A). ⛔ Found by the generator: a bar
   pulled out sideways beside the painting could lie flat only pointing in depth there, which no strip holds.
 * ⭐⭐⭐ **THREE PIECES STACKED AT MOST — BOTH WAYS THE EYE COUNTS** (`D194`), and a rest that breaks either is refused:
-  * **up the support chain**: a piece lying FLAT ON THE FLOOR is level 1 (a neighbour it touches side by side holds
+  * **Up the support chain**: a piece lying FLAT ON THE FLOOR is level 1 (a neighbour it touches side by side holds
     nothing up); any other piece is one level above the highest EARLIER heap piece it touches — rests on or LEANS on (a
     gap under 1 mm; a piece put down later can only come to rest on or against earlier ones). No piece above level 3.
   * **from above**, below.
