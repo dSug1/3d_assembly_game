@@ -81,9 +81,16 @@ import { pxToMm } from "../core/units";
  *
  * ⚠ Whether the ceiling ever BINDS is on the HUD rather than asserted here — the owner
  * looked for it and could not see it, and a claim a device cannot check is an assertion.
+ *
+ * ⛔⛔ **`D195` (2026-10-01): A LEVEL WITH A PLAY VOLUME HAS NO CEILING.** *"I am trying to push the piece 1 … the
+ * pieces do not translate further"* — the HUD read `depth=3.00m ⛔MAX`: a piece behind the painting was 3 m from a camera
+ * zoomed out (or, on the double-orbit prototype, held 1.5 m behind its box), so a push AWAY was refused in the middle of the
+ * floor. ⭐ The ceiling's reason — *a body the user cannot bring back* — is answered by `D181`'s play volume, which keeps
+ * every piece on the floor the camera orbits. The floor (the near plane) stays everywhere; a scene with no volume
+ * (`Scene_0`) keeps the ceiling.
  */
-export function depthLimits(cfg: GestureConfig): { minM: number; maxM: number } {
-  return { minM: 2 * CAMERA_NEAR_PLANE_M, maxM: cfg.cameraRadiusMaxM };
+export function depthLimits(cfg: GestureConfig, hasPlayVolume = false): { minM: number; maxM: number } {
+  return { minM: 2 * CAMERA_NEAR_PLANE_M, maxM: hasPlayVolume ? Infinity : cfg.cameraRadiusMaxM };
 }
 
 

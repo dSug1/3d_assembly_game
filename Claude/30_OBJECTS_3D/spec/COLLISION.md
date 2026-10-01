@@ -231,3 +231,16 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   (its turned corner on the 1 m edge), `Piece41` pushed 5 m toward the camera at z −0.985 m, `Piece17` lifted 3 m is
   stopped by `Piece2` above it — the walls and the bodies in one rule.
 * ✅✅ **Closed by a device look** — the owner, 2026-09-30, build `18584ed`: *"Tested OK"*.
+
+## 10bis. ⭐⭐ `D195` — NO DEPTH CEILING INSIDE A PLAY VOLUME (2026-10-01, ⛔ unjudged by a hand)
+
+* ⛔ *"I am trying to push the piece 1 … or the piece 17 … but the pieces do not translate further"* — the HUD read
+  `depth=3.00m [0.02–3.0] ⛔MAX`. Not a body, not a wall: `A5`'s DEPTH CEILING (`depthLimits`, `clampDepthRange`) caps a
+  piece's distance from the CAMERA, along the push, at the orbit's maximum radius (3 m) — *"beyond it the object cannot be
+  brought back into view"*. A piece behind the painting, with the camera zoomed out (or held 1.5 m behind the double-orbit
+  prototype's box), was refused any push AWAY in the middle of the floor.
+* ✅ The ceiling's reason is answered by §10: the play volume keeps every piece on the floor the camera orbits and looks
+  at. So a scene WITH a volume has no ceiling; a scene without one (`Scene_0`) keeps it; the FLOOR (twice the near plane —
+  a body through it is *a black page*) binds everywhere. The HUD prints `[0.02–∞]`.
+* ✅ 2 vectors (`tests/depth_translate.test.ts`): a piece 3.55 m from the camera goes away untouched, the near bound still
+  binds, no volume keeps 3 m; and the wiring passes the scene's volume. Both RED on the old code (clamped back to 3 m).

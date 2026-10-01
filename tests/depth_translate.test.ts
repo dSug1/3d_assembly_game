@@ -37,6 +37,8 @@ import {
 } from "../src/input/depth_translate";
 import { DEFAULT_CONFIG, CAMERA_NEAR_PLANE_M } from "../src/input/gestureConfig";
 import { mmToPx } from "../src/core/units";
+import { clampDepthRange } from "../src/input/axis_translate";
+import { readFileSync } from "node:fs";
 
 const { minM, maxM } = depthLimits(DEFAULT_CONFIG);
 
@@ -73,6 +75,23 @@ describe("⭐ the depth bounds — still read by the axis translation", () => {
   it("⭐ both bounds are DERIVED — no new tunable to measure", () => {
     expect(minM).toBe(2 * CAMERA_NEAR_PLANE_M);
     expect(maxM).toBe(DEFAULT_CONFIG.cameraRadiusMaxM);
+  });
+
+  it("⛔⛔ `D195`: inside a PLAY VOLUME there is no ceiling — a piece 3.5 m from the camera still goes AWAY (the owner: *\"the pieces do not translate further\"*)", () => {
+    // the HUD read `depth=3.00m ⛔MAX`: piece 1 behind the painting, the camera 3.3 m from the centre
+    const lim = depthLimits(DEFAULT_CONFIG, true);
+    const cam: [number, number, number] = [0, 0.5, -3.3];
+    const push: [number, number, number] = [0, 0, 1];
+    expect(clampDepthRange(cam, [0.1, 0.1, 0.25], push, lim.minM, lim.maxM)).toEqual([0.1, 0.1, 0.25]); // 3.55 m away: unchanged
+    // ⭐ the near plane still binds — a piece is never pushed onto the camera
+    expect(clampDepthRange(cam, [0, 0.5, -3.295], push, lim.minM, lim.maxM)[2]).toBeCloseTo(-3.3 + lim.minM, 9);
+    // ⭐ a scene with NO volume keeps the ceiling
+    expect(depthLimits(DEFAULT_CONFIG, false).maxM).toBe(DEFAULT_CONFIG.cameraRadiusMaxM);
+  });
+
+  it("⭐ `D195` wired: the translation step asks for the bounds WITH the scene's play volume", () => {
+    const src = readFileSync(new URL("../src/render/drive.ts", import.meta.url), "utf8");
+    expect(src).toContain("depthLimits(st.cfg, st.playVolume !== null)");
   });
 });
 
