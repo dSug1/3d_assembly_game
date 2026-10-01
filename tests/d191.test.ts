@@ -204,6 +204,27 @@ describe("⭐⭐⭐ `D191` — the start configuration: small HEAPS, one per col
     expect(poseFree(lifted, setWorldPlacement(lifted, first, at(top, tilt)), [first], first, setup).free).toBe(true);
   });
 
+  it("⭐⭐ `D192` — *max three pieces stacked on top of each other*: no piece above the third layer", () => {
+    // ⭐ A piece's LAYER, rebuilt in the order the pieces were put down: 1 on the floor, else one more than the highest
+    // layer of the heap pieces it RESTS ON — those it touches (a gap under 1 mm) whose centre is lower than its own.
+    const layer = new Map<string, number>();
+    for (const id of [...liftOrder].reverse()) {
+      let below = 0;
+      for (const [o, l] of layer) {
+        if (pos(o)[1] >= pos(id)[1] - 1e-6) continue;
+        const g = gapBetween(cornersAt(id, pos(id), q(id)), cornersAt(o, pos(o), q(o))) ?? 0;
+        if (g < 0.01) below = Math.max(below, l);
+      }
+      layer.set(id, below + 1);
+    }
+    const most = Math.max(...layer.values());
+    expect(most).toBeLessThanOrEqual(OPT.heapMaxLayers);
+    expect(OPT.heapMaxLayers).toBe(3);
+    // ⭐ and the heaps still have height: some piece on the third layer, several on the second
+    expect(most).toBe(3);
+    expect([...layer.values()].filter((l) => l >= 2).length).toBeGreaterThanOrEqual(6);
+  });
+
   it("⭐ the stage (what the start view frames) holds every heap piece, from the floor to the highest", () => {
     for (const id of ids)
       for (const c of cornersAt(id, pos(id), q(id))) {

@@ -265,14 +265,14 @@ describe("⭐⭐ the playback — timing, speed, camera (`input/demo_playback.ts
 
   it("⭐⭐ the camera: a turn to the RIGHT, steady while the moves play, rising linearly to the top ring", () => {
     const boot = -Math.PI / 2;
-    const start = boot - Math.PI / 12; // ⭐ `D175`: 15° before the boot yaw
+    const start = boot - (50 * Math.PI) / 180; // ⭐ `D192`: 50° before the boot yaw (15° at `D175`)
     const deg = (r: number) => (r * 180) / Math.PI;
     const c0 = demoCamera(0.45, 0);
     const c1 = demoCamera(0.45, 1);
     expect(c0.yawRad).toBeCloseTo(start, 12);
     expect(c0.elevation).toBe(0.45);
-    expect(deg(c1.yawRad - boot)).toBeCloseTo(360, 9); // ⭐ it still ENDS a turn on from the boot yaw — 375° in all
-    expect(deg(c1.yawRad - c0.yawRad)).toBeCloseTo(375, 9);
+    expect(deg(c1.yawRad - boot)).toBeCloseTo(360, 9); // ⭐ it still ENDS a turn on from the boot yaw — 410° in all
+    expect(deg(c1.yawRad - c0.yawRad)).toBeCloseTo(410, 9); // ⭐ `D192` (375° at `D175`)
     expect(c1.elevation).toBe(1);
     expect(demoCamera(0.45, 0.5).elevation).toBeCloseTo(0.725, 12);
     // ⭐ steady: equal steps of progress, equal turns, up to the end of the moves
@@ -288,11 +288,11 @@ describe("⭐⭐ the playback — timing, speed, camera (`input/demo_playback.ts
 
   it("⭐⭐ `D171` — the goal is reached with 15° of orbit LEFT; the camera then slows, with no jolt, to rest at the end", () => {
     const deg = (r: number) => (r * 180) / Math.PI;
-    expect(DEMO_MOVES_END).toBeCloseTo(360 / 390, 12); // `D175`'s 375° orbit (345 / 375 before)
+    expect(DEMO_MOVES_END).toBeCloseTo(395 / 425, 12); // `D192`'s 410° orbit (360 / 390 at `D175`, 345 / 375 before)
     // ⭐ the last move lands exactly when 15° remain
     expect(movesProgress(DEMO_MOVES_END)).toBe(1);
     expect(movesProgress(DEMO_MOVES_END - 1e-6)).toBeLessThan(1);
-    expect(deg(demoYawAt(DEMO_MOVES_END) - demoYawAt(0))).toBeCloseTo(360, 9);
+    expect(deg(demoYawAt(DEMO_MOVES_END) - demoYawAt(0))).toBeCloseTo(395, 9);
     expect(deg(demoYawAt(1) - demoYawAt(DEMO_MOVES_END))).toBeCloseTo(15, 9);
     const poses = demoPosesAt(PLAN, movesProgress(DEMO_MOVES_END));
     for (const [id, p] of poses) expect(near(p.position, final.get(id)!, 1e-6)).toBe(true);

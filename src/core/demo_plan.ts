@@ -106,6 +106,11 @@ export interface DemoOptions {
   readonly heapRollStepDeg: number;
   /** ⭐ `D191`: how many spots on its heap a piece is offered before the generation throws. */
   readonly heapTries: number;
+  /**
+   * ⭐ `D192` (the owner: *"limit the heaps height to max three pieces stacked on top of each other"*): a piece's LAYER is
+   * 1 on the floor, else one more than the highest layer of the pieces it rests on; no piece above this layer.
+   */
+  readonly heapMaxLayers: number;
 }
 
 /** ⭐ The owner: *"the camera shall orbit uniformly towards the right"* — one full turn over the demo. */
@@ -117,9 +122,11 @@ export const DEMO_TAIL_DEG = 15;
 /**
  * ⭐ `D175` (the owner, 2026-09-30: *"start the camera 15degrees orbit yaw before current start camera position"*): the
  * demo's camera starts this far BEFORE the boot yaw — to the left, since it orbits to the right — and still ENDS where it
- * did, at the boot yaw a turn on (the level's own front view, where the player takes over). So it turns 375°.
+ * did, at the boot yaw a turn on (the level's own front view, where the player takes over). So it turned 375°.
+ * ⭐ `D192` (the owner, 2026-10-01: *"camera should start from current from 50degrees yaw to the left. Therefore, total
+ * yaw rotation of the camera during demo = 410 degrees"*): 50° before, the same end — 410°.
  */
-export const DEMO_START_BEFORE_DEG = 15;
+export const DEMO_START_BEFORE_DEG = 50;
 
 /** ⭐ `D175`: the whole orbit, degrees — one turn and the 15° it starts before. */
 const DEMO_ORBIT_DEG = 360 * DEMO_ORBIT_TURNS + DEMO_START_BEFORE_DEG;
@@ -127,8 +134,8 @@ const DEMO_ORBIT_DEG = 360 * DEMO_ORBIT_TURNS + DEMO_START_BEFORE_DEG;
 /**
  * ⭐⭐ `D171` — **WHERE THE MOVES END, as a fraction of the demo**. The camera turns at a steady rate `ω` while the
  * moves play (the orbit less 15°), then DECELERATES uniformly to rest over the last 15° — which, arriving at zero
- * speed, takes `2 × 15° / ω`. So the moves take `(orbit − 15) / (orbit + 15)` of the demo: 360 / 390 = 0.923 since
- * `D175`'s 375° orbit (345 / 375 = 0.92 before).
+ * speed, takes `2 × 15° / ω`. So the moves take `(orbit − 15) / (orbit + 15)` of the demo: 395 / 425 = 0.929 since
+ * `D192`'s 410° orbit (360 / 390 at `D175`'s 375°, 345 / 375 before).
  */
 export const DEMO_MOVES_END = (DEMO_ORBIT_DEG - DEMO_TAIL_DEG) / (DEMO_ORBIT_DEG + DEMO_TAIL_DEG);
 
@@ -146,7 +153,7 @@ export function demoYawAt(progress: number): number {
   const p = Math.min(1, Math.max(0, progress));
   const total = (DEMO_ORBIT_DEG * Math.PI) / 180;
   const tail = (DEMO_TAIL_DEG * Math.PI) / 180;
-  const start = ORBIT_START_YAW_RAD - (DEMO_START_BEFORE_DEG * Math.PI) / 180; // ⭐ `D175`
+  const start = ORBIT_START_YAW_RAD - (DEMO_START_BEFORE_DEG * Math.PI) / 180; // ⭐ `D175`, `D192`
   const omega = (total - tail) / DEMO_MOVES_END; // rad per unit of progress
   if (p <= DEMO_MOVES_END) return start + omega * p;
   const u = p - DEMO_MOVES_END;
@@ -186,6 +193,8 @@ export const DEMO_DEFAULTS: DemoOptions = {
   heapPitchStepDeg: 2.5,
   heapRollStepDeg: 2,
   heapTries: 60,
+  // ⭐ `D192`: three pieces stacked at most.
+  heapMaxLayers: 3,
 };
 
 /** ⭐ `D174`/`D191`: the box that holds the cube AND the heaps — every move of the plan stays inside it. */
@@ -615,6 +624,24 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     return true;
   };
 
+  /** ⭐ `D192`: each heap piece's LAYER — 1 on the floor, else one more than the highest of the pieces it rests on. */
+  const layers = new Map<string, number>();
+  /**
+   * ⭐ The layer `id` would have at `at`: the pieces it RESTS ON are the heap pieces it touches (a gap under 1 mm) whose
+   * centre is lower than its own — a neighbour touching it side by side holds nothing up.
+   */
+  const layerAt = (w: World, id: string, at: Placed): number => {
+    const mine = corners(setWorldPlacement(w, id, at), id);
+    let below = 0;
+    for (const [q, l] of layers) {
+      const other = worldPlacementOf(w, q);
+      if (!other || other.position[1] >= at.position[1] - 1e-6) continue;
+      const g = gapBetween(mine, corners(w, q));
+      if ((g ?? 0) < 0.01) below = Math.max(below, l);
+    }
+    return below + 1;
+  };
+
   const settle = (w: World, id: string, x: number, z: number, base: Quat, floorOnly: boolean): Placed | null => {
     const d = dimsOf.get(id)!;
     const longI = [0, 1, 2].sort((a, b) => d[b]! - d[a]! || a - b)[0]!;
@@ -689,6 +716,8 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
       // there, and a spot whose rest leaves it is refused.
       const cs = corners(setWorldPlacement(w, id, best.at), id);
       if (cs.some((c) => c[0] < region.min[0] || c[0] > region.max[0] || c[2] < region.min[2] || c[2] > region.max[2])) return null;
+      // ⭐ `D192`: no more than `heapMaxLayers` pieces stacked — a rest higher up is refused, and the piece goes lower.
+      if (layerAt(w, id, best.at) > opt.heapMaxLayers) return null;
       return stable(setWorldPlacement(w, id, best.at), id, best.at) ? best.at : null;
     };
     const first = rest(coarse);
@@ -789,6 +818,7 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
         const travel = pts.slice(1).reduce((s, p, i) => s + length(sub(p.position, pts[i]!.position)), 0);
         reverse.push({ kind: "TRANSLATE", body: id, from: T, to: L, travel, ...(legs.length > 1 ? { via: legs.slice(0, -1).map((p) => p.position) } : {}) });
         reverse.push({ kind: "LIFT", body: id, from: L, to: rest, travel: travelOf(w, id, L, rest) });
+        layers.set(id, layerAt(world, id, rest));
         world = down;
         heapTop = Math.max(heapTop, ...corners(world, id).map((c) => c[1]));
         done = true;
