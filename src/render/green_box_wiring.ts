@@ -71,12 +71,16 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
           },
           { yaw: rig.yaw, v: rig.v },
         );
-  // ⭐ At twice the box's distance (the box as placed, clamp included), at the camera's angles plus the owner's offsets.
+  // ⭐ At the box's distance (the box as placed, clamp included) + the radius offset, at the camera's angles plus the
+  // owner's offsets.
   const D = Math.PI / 180;
-  const o = cameraOffset(st.cfg, st.cameraOrbit.cam, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], {
-    yawRad: st.cfg.cameraYawOffsetDeg * D,
-    pitchRad: st.cfg.cameraPitchOffsetDeg * D,
-  });
+  const o = cameraOffset(
+    st.cfg,
+    st.cameraOrbit.cam,
+    [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k],
+    { yawRad: st.cfg.cameraYawOffsetDeg * D, pitchRad: st.cfg.cameraPitchOffsetDeg * D },
+    st.cfg.cameraRadiusOffsetMm / 1000,
+  );
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   st.camera.setPosition(new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]));
   st.camera.setTarget(c.clone());

@@ -465,6 +465,8 @@ export interface GestureConfig {
   cameraYawOffsetDeg: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
+  /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
+  cameraRadiusOffsetMm: number;
   /** ⭐ Prototype: the green box orbit's YAW gain, a multiplier on `gainOrbitYaw` (the owner: *"the green box orbits too fast"*). */
   boxGainYaw: number;
   /** ⭐ Prototype: the green box orbit's PITCH gain, a multiplier on `gainOrbitElevation`. */
@@ -898,8 +900,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ Prototype guesses, with sliders in CAMERA.
   cameraLeashDeg: 7,
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
-  cameraYawOffsetDeg: 10,
-  cameraPitchOffsetDeg: 5,
+  // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
+  cameraYawOffsetDeg: 3,
+  cameraPitchOffsetDeg: 2,
+  // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
+  cameraRadiusOffsetMm: 1500,
   boxGainYaw: 0.5,
   boxGainPitch: 0.5,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
@@ -1029,6 +1034,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(Math.abs(cfg.cameraYawOffsetDeg) <= 90) || !(Math.abs(cfg.cameraPitchOffsetDeg) <= 60)) {
     throw new Error(`cameraYawOffsetDeg / cameraPitchOffsetDeg (${cfg.cameraYawOffsetDeg} / ${cfg.cameraPitchOffsetDeg}) must be within ±90° / ±60°.`);
+  }
+  if (!(cfg.cameraRadiusOffsetMm >= 100 && cfg.cameraRadiusOffsetMm <= 2000)) {
+    throw new Error(`cameraRadiusOffsetMm (${cfg.cameraRadiusOffsetMm}) must be in [100, 2000] mm.`);
   }
   if (!(cfg.boxGainYaw > 0 && cfg.boxGainYaw <= 4) || !(cfg.boxGainPitch > 0 && cfg.boxGainPitch <= 4)) {
     throw new Error(`boxGainYaw / boxGainPitch (${cfg.boxGainYaw} / ${cfg.boxGainPitch}) must be in (0, 4].`);

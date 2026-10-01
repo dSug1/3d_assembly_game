@@ -92,6 +92,7 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
         tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 1),
         tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
+        tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 100),
         tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 1),
         tunable(st, "camera settle delay after an input stops (ms)", "cameraSettleDelayMs", 0, 1000, 10),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
