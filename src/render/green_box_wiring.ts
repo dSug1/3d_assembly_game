@@ -62,11 +62,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ The finger leaving the orbit (lifted, or a second finger down) is a RELEASE: the camera realigns.
   const released = st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting;
   if (released) st.orbitMotion = null;
-  let finger: { yaw: boolean; pitch: boolean } | null = null;
+  let finger: { yaw: boolean; pitch: boolean; holdMs: number } | null = null;
   if (st.orbitMotion !== null) {
     st.orbitMotion.tracker.tick(now);
     const ax = st.orbitMotion.tracker.axes;
-    finger = { yaw: ax.x === "MOVING", pitch: ax.y === "MOVING" };
+    finger = { yaw: ax.x === "MOVING", pitch: ax.y === "MOVING", holdMs: st.orbitMotion.tracker.restMs };
   }
   st.cameraOrbit =
     st.cameraOrbit === null

@@ -201,7 +201,7 @@ describe("⭐⭐ prototype — the green box", () => {
     // ⭐ What the eye sees is the GAP box − camera: the box's place on the glass. The box eases after the input as in the
     // product (60 ms); the input moves every 3rd or 4th frame, steadily, past the 3° leash.
     const P0 = { leashRad: 3 * DEG, settleDelayMs: 0, restTauMs: 120 };
-    const gapSpan = (finger: { yaw: boolean; pitch: boolean } | null, every: number) => {
+    const gapSpan = (finger: { yaw: boolean; pitch: boolean; holdMs: number } | null, every: number) => {
       let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
       let rig = 0;
       let box = { yaw: 0, v: 0.5, zoom: 1 };
@@ -218,21 +218,21 @@ describe("⭐⭐ prototype — the green box", () => {
       // ⛔ read per frame (no finger): the gap swings ~2° at the input's rhythm — the box jitters on the glass
       expect(gapSpan(null, every)).toBeGreaterThan(1);
       // ⭐ the finger's own verdict: the box holds exactly at the leash — no jitter
-      expect(gapSpan({ yaw: true, pitch: false }, every)).toBeLessThan(0.01);
+      expect(gapSpan({ yaw: true, pitch: false, holdMs: 150 }, every)).toBeLessThan(0.01);
     }
   });
 
   it("⭐ prototype: the polish — inside the leash, a camera carrying speed sheds it smoothly and never passes the box", () => {
     const P0 = { ...P, settleDelayMs: 0 };
     let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
-    for (let i = 1; i <= 10; i++) s = cameraOrbitStep(s, { yaw: i * 3 * DEG, v: 0.5 }, i * 16, 16, CFG, P0, { yaw: i * 3 * DEG, v: 0.5 }, { yaw: true, pitch: false });
+    for (let i = 1; i <= 10; i++) s = cameraOrbitStep(s, { yaw: i * 3 * DEG, v: 0.5 }, i * 16, 16, CFG, P0, { yaw: i * 3 * DEG, v: 0.5 }, { yaw: true, pitch: false, holdMs: 150 });
     const v0 = s.yawVel;
     expect(v0).toBeGreaterThan(0);
     // the box stops; the finger still MOVING for a while (its rest window not yet out): no stop dead — the speed decays
     let prev = v0;
     let t = 160;
     for (let i = 0; i < 20; i++) {
-      s = cameraOrbitStep(s, { yaw: 30 * DEG, v: 0.5 }, (t += 16), 16, CFG, P0, { yaw: 30 * DEG, v: 0.5 }, { yaw: true, pitch: false });
+      s = cameraOrbitStep(s, { yaw: 30 * DEG, v: 0.5 }, (t += 16), 16, CFG, P0, { yaw: 30 * DEG, v: 0.5 }, { yaw: true, pitch: false, holdMs: 150 });
       expect(s.yawVel).toBeLessThanOrEqual(prev + 1e-12);
       expect(30 * DEG - s.cam.yaw).toBeGreaterThanOrEqual(-1e-12);
       prev = s.yawVel;
@@ -247,7 +247,7 @@ describe("⭐⭐ prototype — the green box", () => {
     let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
     const box = { yaw: 10 * DEG, v: 0.4 }; // 10° < 15° in yaw, a pitch gap too — the camera stays while the finger is down
     let t = 0;
-    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box, (t += 16), 16, CFG, P0, box, { yaw: false, pitch: false });
+    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box, (t += 16), 16, CFG, P0, box, { yaw: false, pitch: false, holdMs: 150 });
     expect(s.cam.yaw).toBe(0);
     // the finger lifts: both axes realign
     s = cameraOrbitStep(s, box, (t += 16), 16, CFG, P0, box, null, true);
@@ -265,9 +265,30 @@ describe("⭐⭐ prototype — the green box", () => {
     // ⭐ a new input stops the realignment: with no release, a camera at rest inside the leash stays put again
     const box2 = { yaw: 15 * DEG, v: 0.4 };
     const at = s.cam.yaw;
-    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box2, (t += 16), 16, CFG, P0, box2, { yaw: true, pitch: false });
-    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box2, (t += 16), 16, CFG, P0, box2, { yaw: false, pitch: false });
+    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box2, (t += 16), 16, CFG, P0, box2, { yaw: true, pitch: false, holdMs: 150 });
+    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box2, (t += 16), 16, CFG, P0, box2, { yaw: false, pitch: false, holdMs: 150 });
     expect(s.cam.yaw).toBe(at);
+  });
+
+  it("⛔⛔ prototype: the box turning while the finger is still INSIDE its deadband does not leave the camera behind, then jump", () => {
+    // the owner, 2026-10-01: *"dx sends the green box flying towards the limit of the screen and then there is a big jump and
+    // it recenters horizontally"*. The rig turns on the RAW finger (~5° of yaw per mm); the finger's verdict is deadbanded
+    // (3.5 mm), so for ~18° of turn it said STATIONARY, and then MOVING.
+    const P0 = { leashRad: 3 * DEG, settleDelayMs: 0, restTauMs: 120 };
+    let s = cameraOrbitAt({ yaw: 0, v: 1 }, 0, CFG);
+    let rig = 0;
+    let maxGap = 0;
+    let maxStep = 0;
+    for (let f = 1; f <= 60; f++) {
+      if (f % 4 === 0) rig += 1.5 * DEG; // a pointer event every 4th frame
+      const inBand = rig < 18 * DEG; // the deadband has not tripped yet
+      const before = s.cam.yaw;
+      s = cameraOrbitStep(s, { yaw: rig, v: 1 }, f * 16, 16, CFG, P0, { yaw: rig, v: 1 }, { yaw: !inBand, pitch: false, holdMs: 150 });
+      maxGap = Math.max(maxGap, Math.abs(rig - s.cam.yaw));
+      maxStep = Math.max(maxStep, Math.abs(s.cam.yaw - before));
+    }
+    expect(maxGap).toBeLessThanOrEqual(3 * DEG + 1e-9); // held on the leash all along
+    expect(maxStep).toBeLessThan(2 * DEG); // ⛔ was ~15° in one frame
   });
 
   it("⭐ prototype: yaw is compared the short way round", () => {

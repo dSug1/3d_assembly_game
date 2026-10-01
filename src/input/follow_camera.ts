@@ -156,8 +156,15 @@ function axisStep(
    * ⛔⛔ Read per FRAME, the input's change made every frame between two pointer events (they come every 47–68 ms on the
    * tablet, the frames every 16–40) an input that had STOPPED: the camera glided toward the box, the next event put it
    * back on the leash, stopped dead — at some speeds a steady drag made the box jitter (the owner, 2026-10-01).
+   * ⛔⛔ AND THE VERDICT ALONE IS NOT ENOUGH: the rig turns on the RAW finger, the verdict is DEADBANDED (3.5 mm per axis, at
+   * ~5° of box yaw per mm). Inside the band the camera saw a still finger and stayed while the box turned ~18°; when the
+   * band tripped, the leash pulled the camera ~15° in ONE frame (the owner, 2026-10-01: *"a big jump and the green box
+   * recenters horizontally"* — at the top and bottom rings, where the box's radius is largest and nothing else moves).
+   * ✅ So with a finger down, the axis is moving if the finger says so OR the input CHANGED within `holdMs` — the finger's
+   * own rest window, which also bridges the gaps between pointer events.
    */
   fingerMoving: boolean | null,
+  holdMs: number,
   /**
    * ⭐⭐ The finger driving the orbit was LIFTED this frame (the owner, 2026-10-01: *"when the input touch/click is released,
    * the camera shall catch up to the original offset even if the green box is inside the camera leash range"*): this axis
@@ -165,9 +172,10 @@ function axisStep(
    */
   released: boolean,
 ): { next: AxisState; move: number } {
-  const changed = fingerMoving === null ? Math.abs(driverDelta) > 1e-9 : fingerMoving;
+  const changed = Math.abs(driverDelta) > 1e-9 || fingerMoving === true;
   const movedAt = changed ? nowMs : a.movedAt;
-  const moving = movedAt === nowMs || nowMs - movedAt < p.settleDelayMs;
+  const window = fingerMoving === null ? p.settleDelayMs : Math.max(p.settleDelayMs, holdMs);
+  const moving = movedAt === nowMs || nowMs - movedAt < window;
   const aligning = released || a.aligning;
   const base = { movedAt, lastDriver: driverAngle, lastBox: boxAngle, aligning };
   if (dtMs <= 0) return { next: { ...a, ...base }, move: 0 };
@@ -220,7 +228,7 @@ export function cameraOrbitStep(
   p: CameraOrbitParams,
   driver: OrbitAt = box,
   /** ⭐ The orbit FINGER's own verdict per axis (yaw ← its x, pitch ← its y); `null` when no finger drives the orbit. */
-  finger: { readonly yaw: boolean; readonly pitch: boolean } | null = null,
+  finger: { readonly yaw: boolean; readonly pitch: boolean; readonly holdMs: number } | null = null,
   /** ⭐ The orbit finger was lifted THIS frame: both axes realign, even from rest inside the leash. */
   released = false,
 ): CameraOrbitState {
@@ -235,12 +243,13 @@ export function cameraOrbitStep(
     dtMs,
     p,
     finger === null ? null : finger.yaw,
+    finger === null ? 0 : finger.holdMs,
     released,
   );
   const pc = pitchOf(cfg, s.cam.v);
   const pb = pitchOf(cfg, box.v);
   const pd = pitchOf(cfg, driver.v);
-  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p, finger === null ? null : finger.pitch, released);
+  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p, finger === null ? null : finger.pitch, finger === null ? 0 : finger.holdMs, released);
   return {
     cam: { yaw: s.cam.yaw + y.move, v: q.move === 0 ? s.cam.v : vForPitch(cfg, pc + q.move) },
     yaw: y.next,

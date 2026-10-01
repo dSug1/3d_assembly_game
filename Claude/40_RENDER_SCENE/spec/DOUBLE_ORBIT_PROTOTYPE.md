@@ -47,6 +47,10 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
    between two pointer events looked like a STOP: the camera glided toward the box, the next event put it back on the leash,
    and at some drag speeds **the box jittered** (the owner, 2026-10-01). With no finger (a reset, the demo, a pinch) the
    rig's own change is read.
+   ⛔⛔ **And a change of the rig counts too**, held for the finger's rest window: the rig turns on the RAW finger (~5° of
+   yaw per mm), the verdict is deadbanded (3.5 mm), so inside the band the camera stood still while the box turned ~18°,
+   then the leash pulled it ~15° in one frame — *"a big jump and the green box recenters horizontally"* (the owner,
+   2026-10-01, at the top and bottom rings, where the box's radius is largest and nothing else moves).
 3. **Inside the leash, a camera still carrying speed SHEDS it** (`COAST_MS` 80 ms, exponential) and never passes the box —
    the polish: an interrupted glide does not stop dead.
 4. **When the input STOPS: the glide** — the camera continues the speed it had and brakes **exponentially** onto where the
