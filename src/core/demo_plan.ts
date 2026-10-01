@@ -657,6 +657,24 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
    * bar — so a pile 4 deep from above passed as 3.
    */
   const footprints = new Map<string, Vec2[]>();
+  /**
+   * ⭐⭐ `D194` — **AND HOW HIGH A STACK CLIMBS**, the other way the eye counts: a piece lying FLAT ON THE FLOOR is level
+   * 1 (a neighbour it touches side by side holds nothing up); any other piece is one level above the highest of the
+   * earlier heap pieces it TOUCHES — rests on or leans on (a gap under 1 mm; a piece put down later can only come to
+   * rest on or against earlier ones). ⛔⛔ FOUND BY THE OWNER'S EYE, A SECOND TIME: `D193` counted only from above, and a
+   * STAIRCASE — each piece on the one below, shifted — is 4 high with no spot under 4 (*"4 pieces are stacked and one
+   * piece is leaning on three stacked"*). Both counts now bind.
+   */
+  const levels = new Map<string, number>();
+  const levelAt = (w: World, id: string, at: Placed): number => {
+    const mine = corners(setWorldPlacement(w, id, at), id);
+    const ys = mine.map((c) => c[1]);
+    const thin = Math.min(...dimsOf.get(id)!);
+    if (Math.min(...ys) < heaps.floorTop + 0.005 && Math.max(...ys) - Math.min(...ys) < thin + 0.005) return 1;
+    let below = 0;
+    for (const [q, l] of levels) if ((gapBetween(mine, corners(w, q)) ?? 0) < 0.01) below = Math.max(below, l);
+    return below + 1;
+  };
   const footprintOf = (w: World, id: string, at: Placed): Vec2[] => hull2(corners(setWorldPlacement(w, id, at), id).map((c) => [c[0], c[2]] as Vec2));
   const stackedUnder = (w: World, id: string, at: Placed): number => {
     const mine = footprintOf(w, id, at);
@@ -762,6 +780,8 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
       if (cs.some((c) => c[0] < region.min[0] || c[0] > region.max[0] || c[2] < region.min[2] || c[2] > region.max[2])) return null;
       // ⭐ `D192`/`D193`: no more than `heapMaxLayers` pieces one above another, seen from above — refused, it goes elsewhere.
       if (stackedUnder(w, id, best.at) + 1 > opt.heapMaxLayers) return null;
+      // ⭐ `D194`: nor more than `heapMaxLayers` pieces high, rest on rest or leaning — refused, it goes elsewhere.
+      if (levelAt(w, id, best.at) > opt.heapMaxLayers) return null;
       return stable(setWorldPlacement(w, id, best.at), id, best.at) ? best.at : null;
     };
     const first = rest(coarse);
@@ -863,6 +883,7 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
         reverse.push({ kind: "TRANSLATE", body: id, from: T, to: L, travel, ...(legs.length > 1 ? { via: legs.slice(0, -1).map((p) => p.position) } : {}) });
         reverse.push({ kind: "LIFT", body: id, from: L, to: rest, travel: travelOf(w, id, L, rest) });
         footprints.set(id, footprintOf(world, id, rest));
+        levels.set(id, levelAt(world, id, rest));
         world = down;
         heapTop = Math.max(heapTop, ...corners(world, id).map((c) => c[1]));
         done = true;

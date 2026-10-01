@@ -1,7 +1,7 @@
 # DEMO_SCENE — a scene that assembles itself
 
 > **STATUS** · 🔨 specified and built 2026-09-29 (`D170`, revised by `D171` the same day; ⭐ the start is a floor grid
-> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, then a median law, `D179`, the same day); ⭐⭐ **the start is SMALL HEAPS, ONE PER COLOUR, since `D191`** (2026-09-30, §2bis — the grid is §2quater, the record), ⭐ three pieces stacked at most and the camera 50° earlier, `D192` (2026-10-01), the stack counted from above, `D193`, ⛔ unjudged by a hand ·
+> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, then a median law, `D179`, the same day); ⭐⭐ **the start is SMALL HEAPS, ONE PER COLOUR, since `D191`** (2026-09-30, §2bis — the grid is §2quater, the record), ⭐ three pieces stacked at most and the camera 50° earlier, `D192` (2026-10-01), the stack counted from above, `D193`, and up its support chain too, `D194`, ⛔ unjudged by a hand ·
 > **OWNS** · what a demo scene is, how its disassembly is computed, how it plays, and `Scene1_demo`
 > **READ IF** · you are making a demo from another scene, changing how moves are generated or played, or changing
 > the demo's camera
@@ -63,7 +63,9 @@
 > *"limit the heaps height to max three pieces stacked on top of each other"* · *"camera should start from current from
 > 50degrees yaw to the left. Therefore, total yaw rotation of the camera during demo = 410 degrees"* — the owner,
 > 2026-10-01 (`D192`) · *"There are more than 3 pieces stacked in the white heap"* — the owner, on the deployed build
-> (`D193`)
+> (`D193`) · *"There is something wrong. The white heap is still more than 3 pieces stacked: 4 pieces are stacked and one
+> piece is leaning on three stacked. This is the second time you are breaking the rule i gave you"* — the owner, on the
+> deployed `D193` build (`D194`)
 
 ## 1. The idea
 
@@ -162,6 +164,17 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
 * **The long bars** (48 cm; the strip is 46.5 cm deep): a piece longer than 80 % of the strip's depth lies ACROSS it,
   within 20°, and the spot it is pulled out to must have room for THAT turn (phase A). ⛔ Found by the generator: a bar
   pulled out sideways beside the painting could lie flat only pointing in depth there, which no strip holds.
+* ⭐⭐⭐ **THREE PIECES STACKED AT MOST — BOTH WAYS THE EYE COUNTS** (`D194`), and a rest that breaks either is refused:
+  * **up the support chain**: a piece lying FLAT ON THE FLOOR is level 1 (a neighbour it touches side by side holds
+    nothing up); any other piece is one level above the highest EARLIER heap piece it touches — rests on or LEANS on (a
+    gap under 1 mm; a piece put down later can only come to rest on or against earlier ones). No piece above level 3.
+  * **from above**, below.
+  ⛔⛔⛔ **THE OWNER'S RULE WAS BROKEN TWICE, AND BOTH TIMES BY THE SAME MISTAKE**: I chose a count that was easy to
+  compute instead of the count the owner makes when looking at the heap, and closed it on a green suite without looking.
+  `D192` counted support but only through lower centres (a piece over a leaning bar was not on it); `D193` counted only
+  from above, and a STAIRCASE — each piece on the one below, shifted — is 4 high with no spot under 4. ⭐ *A rule about
+  what the eye sees is checked by every way the eye counts, and by looking.* Measured by the chain: `D193`'s plan **7**
+  high (the vector fails on it), white 4 — the owner's report.
 * ⭐⭐ **THREE PIECES STACKED AT MOST, COUNTED FROM ABOVE** (`D192`, `D193`): each heap piece's outline on the floor is
   the hull of its corners; a rest is refused if any point of its outline (a 2.5 mm grid, its corners 1 mm in) already
   lies under three outlines (`heapMaxLayers`), and the piece goes elsewhere. ⛔⛔ **`D192` counted LAYERS OF SUPPORT**
@@ -178,11 +191,12 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
   piece on its heap and along every carry and lift, from the floor to the heaps' top — padded 0.1 mm across and in depth
   (`D193`: fitted exactly, a piece at its edge poked past it by the saved plan's 1e-6 rounding; found by the playback
   vector).
-* ⭐ **Measured, seed 1** (the committed plan, `D193`): five heaps — 10 white, 14 black, 2 yellow, 3 red, 1 blue —
-  across **1.44 m** (the stage 1.51 m); **3** deep at most from above; **4** pieces leaning with an end on the floor
-  (white Piece4 at 35°, black Piece29 at 32°, the blue plate at 13°, black Piece27 at 10°), **12** resting wholly on
-  other pieces; the highest point **13.9 cm**; **3** white pieces needed the fallback. (`D192`'s: 4 deep from above, the
-  48 cm bar leaning at 11°; `D191`'s: four heaps, 1.17 m, 7 deep, 15 cm.) ⚠ Generating the plan takes ~2 min (~45 s before).
+* ⭐ **Measured, seed 1** (the committed plan, `D194`): five heaps — 10 white, 14 black, 2 yellow, 3 red, 1 blue;
+  every heap **3 high at most** by the chain (17 pieces on level 1, 8 on level 2, 5 on level 3) and from above; **2**
+  pieces leaning (white Piece15 at 28°, yellow Piece17 at 23°), **11** resting wholly on other pieces; the highest point
+  **12.1 cm**; **2** pieces needed the fallback (Piece4, Piece32). A headless look at the start frame: no tall pile.
+  (`D193`'s: 7 high by the chain, 4 leaning, 13.9 cm; `D192`'s: 4 deep from above; `D191`'s: 7 deep, 15 cm.)
+  ⚠ The cost, again: the stricter the stack, the fewer pieces lean (9 at `D191`, 2 now). ⚠ Generating the plan takes ~2 min (~45 s before).
 * ⛔ **Nothing is drawn**: the demo scene has exactly `Scene_1`'s bodies (a vector).
 
 ## 2quater. ⛔ SUPERSEDED BY `D191` — the floor grid (`D174`–`D179`), kept as the record
@@ -304,7 +318,7 @@ and the generation throws — the tighter-cube vector uses side 7. A carry AROUN
 | `heapOffset` / `heapFloorMargin` | **0.3 / 0.05** (3 cm / 5 mm) | `D191` — outside the cube, inside the floor |
 | `heapPitchDeg` / `heapRollDeg` | **40° / 6°**, steps **2.5° / 2°**, refined to 0.1° | `D191` — how far a piece may tilt as it settles |
 | `heapTries` | **60** (the floor fallback after 30) | `D191` |
-| `heapMaxLayers` | **3** | `D192`/`D193` — three pieces over any point, seen from above |
+| `heapMaxLayers` | **3** | `D192`–`D194` — three pieces high up the support chain, and over any point seen from above |
 | ⛔ `gridPitch`, `gridGap`, `gridOffset`, `gridWidth` | deleted (`D191`; `gridWidth` at `D175`) | the grid |
 | camera start | **50° before** the boot yaw (`D192`; 15° at `D175`) | the orbit is **410°** (375° at `D175`), ending where it did |
 | ⛔ `startYawDeg` / `startShiftFrac` | deleted (`D191`) — were 0–4°, median 2.5° / 0–5 %, median 3 % (`D179`) | the grid's natural feel |
