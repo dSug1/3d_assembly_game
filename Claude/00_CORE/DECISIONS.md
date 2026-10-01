@@ -127,7 +127,7 @@ file.
 | `D188` | ⭐⭐ **THE SCORE BAR** | 2026-09-30 | → `LEVEL_END.md` §6 |
 | `D189` | ⭐⭐ **THE GOAL MOVES ONLY WHEN AN ACTION ENDS** | 2026-09-30 | → `LEVEL_END` §5bis |
 | `D190` | ⭐⭐ **ONLY MOVED PIECES ARE RE-JUDGED; THE FRAME FIT FIXED** | 2026-09-30 | → §5ter |
-| `D191`–`D192` | ⭐⭐ **DEMO: COLOUR HEAPS, 3 HIGH; CAMERA 50° EARLIER** | 2026-10-01 | → `DEMO_SCENE` |
+| `D191`–`D193` | ⭐⭐ **DEMO: COLOUR HEAPS, 3 DEEP; CAMERA 50° EARLIER** | 2026-10-01 | → `DEMO_SCENE` |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT, and the edge-on case must not go dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |

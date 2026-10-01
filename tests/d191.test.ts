@@ -154,14 +154,11 @@ describe("⭐⭐⭐ `D191` — the start configuration: small HEAPS, one per col
     const tilted = ids.filter((id) => pitchDeg(id) > 5);
     const endOnFloor = tilted.filter((id) => bottom(id) < FLOOR_TOP + 0.005);
     const onOthers = ids.filter((id) => bottom(id) > FLOOR_TOP + 0.01);
-    expect(tilted.length).toBeGreaterThanOrEqual(6); // seed 1: 9
-    expect(endOnFloor.length).toBeGreaterThanOrEqual(3); // seed 1: 3
-    expect(onOthers.length).toBeGreaterThanOrEqual(6); // seed 1: 11
-    // ⭐ *same as what is shown for the longest black piece*: one of the longest pieces on the heaps (the 48 cm bars)
-    // leans, an end on the floor
-    const length = (id: string) => Math.max(...contourDims(body(id)));
-    const most = Math.max(...ids.map(length));
-    expect(endOnFloor.some((id) => length(id) > most - 1e-9)).toBe(true);
+    expect(tilted.length).toBeGreaterThanOrEqual(3); // seed 1: 4 (9 at `D191`, before `D193`'s three-deep rule)
+    expect(endOnFloor.length).toBeGreaterThanOrEqual(3); // seed 1: 4
+    expect(onOthers.length).toBeGreaterThanOrEqual(6); // seed 1: 12
+    // ⚠ `D193`: *"same as what is shown for the longest black piece"* is no longer held — a 48 cm bar leaning across a
+    // heap covers four pieces from above, which the three-deep rule refuses; the bars lie flat at seed 1.
     // ⭐ a leaning piece is held up by ANOTHER piece: it touches one (a gap under 1 mm)
     const gapTo = (a: string, b: string) => gapBetween(cornersAt(a, pos(a), q(a)), cornersAt(b, pos(b), q(b))) ?? 0;
     for (const id of endOnFloor) expect(Math.min(...ids.filter((o) => o !== id).map((o) => gapTo(id, o)))).toBeLessThan(0.01);
@@ -204,25 +201,26 @@ describe("⭐⭐⭐ `D191` — the start configuration: small HEAPS, one per col
     expect(poseFree(lifted, setWorldPlacement(lifted, first, at(top, tilt)), [first], first, setup).free).toBe(true);
   });
 
-  it("⭐⭐ `D192` — *max three pieces stacked on top of each other*: no piece above the third layer", () => {
-    // ⭐ A piece's LAYER, rebuilt in the order the pieces were put down: 1 on the floor, else one more than the highest
-    // layer of the heap pieces it RESTS ON — those it touches (a gap under 1 mm) whose centre is lower than its own.
-    const layer = new Map<string, number>();
-    for (const id of [...liftOrder].reverse()) {
-      let below = 0;
-      for (const [o, l] of layer) {
-        if (pos(o)[1] >= pos(id)[1] - 1e-6) continue;
-        const g = gapBetween(cornersAt(id, pos(id), q(id)), cornersAt(o, pos(o), q(o))) ?? 0;
-        if (g < 0.01) below = Math.max(below, l);
-      }
-      layer.set(id, below + 1);
-    }
-    const most = Math.max(...layer.values());
-    expect(most).toBeLessThanOrEqual(OPT.heapMaxLayers);
+  it("⭐⭐ `D192`/`D193` — *max three pieces stacked on top of each other*: seen from above, no spot under more than three", () => {
+    // ⭐ The count the eye makes: each heap piece's outline on the floor (the hull of its corners), and a 1 cm scan of
+    // the whole strip. ⛔ `D193`: `D192`'s first rule counted layers of SUPPORT and let a spot 4 deep through.
+    const outline = (id: string) => {
+      const pts = cornersAt(id, pos(id), q(id)).map((c) => [c[0], c[2]] as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const cr = (o: number[], a: number[], b: number[]) => (a[0]! - o[0]!) * (b[1]! - o[1]!) - (a[1]! - o[1]!) * (b[0]! - o[0]!);
+      const lo: number[][] = [], up: number[][] = [];
+      for (const p of pts) { while (lo.length >= 2 && cr(lo[lo.length - 2]!, lo[lo.length - 1]!, p) <= 0) lo.pop(); lo.push(p); }
+      for (const p of [...pts].reverse()) { while (up.length >= 2 && cr(up[up.length - 2]!, up[up.length - 1]!, p) <= 0) up.pop(); up.push(p); }
+      return lo.slice(0, -1).concat(up.slice(0, -1));
+    };
+    const under = (h: number[][], x: number, z: number) =>
+      h.every((a, i) => { const b = h[(i + 1) % h.length]!; return (b[0]! - a[0]!) * (z - a[1]!) - (b[1]! - a[1]!) * (x - a[0]!) > 0; });
+    const outlines = ids.map(outline);
+    let most = 0;
+    for (let x = PLAN.stage.min[0]; x <= PLAN.stage.max[0]; x += 0.1)
+      for (let z = PLAN.stage.min[2]; z <= PLAN.stage.max[2]; z += 0.1) most = Math.max(most, outlines.filter((h) => under(h, x, z)).length);
     expect(OPT.heapMaxLayers).toBe(3);
-    // ⭐ and the heaps still have height: some piece on the third layer, several on the second
-    expect(most).toBe(3);
-    expect([...layer.values()].filter((l) => l >= 2).length).toBeGreaterThanOrEqual(6);
+    expect(most).toBeLessThanOrEqual(3);
+    expect(most).toBe(3); // ⭐ and the heaps are still heaps: somewhere, three deep
   });
 
   it("⭐ the stage (what the start view frames) holds every heap piece, from the floor to the highest", () => {

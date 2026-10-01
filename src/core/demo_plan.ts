@@ -107,8 +107,9 @@ export interface DemoOptions {
   /** ⭐ `D191`: how many spots on its heap a piece is offered before the generation throws. */
   readonly heapTries: number;
   /**
-   * ⭐ `D192` (the owner: *"limit the heaps height to max three pieces stacked on top of each other"*): a piece's LAYER is
-   * 1 on the floor, else one more than the highest layer of the pieces it rests on; no piece above this layer.
+   * ⭐ `D192` (the owner: *"limit the heaps height to max three pieces stacked on top of each other"*): seen from above,
+   * no point of the floor has more than this many heap pieces over it (`D193`: counted from above — `D192`'s first rule
+   * counted layers of support and missed a piece lying over a steeply leaning bar).
    */
   readonly heapMaxLayers: number;
 }
@@ -475,6 +476,30 @@ function gauss(rnd: () => number): number {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd());
 }
 
+type Vec2 = [number, number];
+/** ⭐ `D193`: the convex hull of points on the floor (monotone chain), counter-clockwise. */
+function hull2(pts: readonly Vec2[]): Vec2[] {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o: Vec2, a: Vec2, b: Vec2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: Vec2[] = [], up: Vec2[] = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cr(lo[lo.length - 2]!, lo[lo.length - 1]!, q) <= 1e-12) lo.pop();
+    lo.push(q);
+  }
+  for (const q of [...p].reverse()) {
+    while (up.length >= 2 && cr(up[up.length - 2]!, up[up.length - 1]!, q) <= 1e-12) up.pop();
+    up.push(q);
+  }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+/** ⭐ `D193`: is `q` strictly inside the counter-clockwise hull `h`? */
+function inHull2(h: readonly Vec2[], q: Vec2): boolean {
+  return h.length >= 3 && h.every((a, i) => {
+    const b = h[(i + 1) % h.length]!;
+    return (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]) > 1e-12;
+  });
+}
+
 /** ⭐ `D191`: how far a box of `dims` reaches up and down from its centre at `q`. */
 function verticalHalf(dims: Vec3, q: Quat): number {
   return [0, 1, 2].reduce((s, i) => s + (Math.abs(qRotate(q, [i === 0 ? 1 : 0, i === 1 ? 1 : 0, i === 2 ? 1 : 0])[1]) * dims[i]!) / 2, 0);
@@ -624,22 +649,41 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     return true;
   };
 
-  /** ⭐ `D192`: each heap piece's LAYER — 1 on the floor, else one more than the highest of the pieces it rests on. */
-  const layers = new Map<string, number>();
   /**
-   * ⭐ The layer `id` would have at `at`: the pieces it RESTS ON are the heap pieces it touches (a gap under 1 mm) whose
-   * centre is lower than its own — a neighbour touching it side by side holds nothing up.
+   * ⭐⭐ `D193` — **HOW MANY PIECES ARE STACKED**, the way the eye counts them: seen from above. Each heap piece's
+   * footprint is its outline on the floor (the hull of its corners); a new rest is refused if any point of ITS footprint
+   * already lies under `heapMaxLayers` pieces. ⛔ FOUND BY THE OWNER'S EYE on the glass: `D192`'s count followed the
+   * pieces a rest TOUCHES with a lower centre, and a piece lying over a steeply leaning bar has a lower centre than the
+   * bar — so a pile 4 deep from above passed as 3.
    */
-  const layerAt = (w: World, id: string, at: Placed): number => {
-    const mine = corners(setWorldPlacement(w, id, at), id);
-    let below = 0;
-    for (const [q, l] of layers) {
-      const other = worldPlacementOf(w, q);
-      if (!other || other.position[1] >= at.position[1] - 1e-6) continue;
-      const g = gapBetween(mine, corners(w, q));
-      if ((g ?? 0) < 0.01) below = Math.max(below, l);
+  const footprints = new Map<string, Vec2[]>();
+  const footprintOf = (w: World, id: string, at: Placed): Vec2[] => hull2(corners(setWorldPlacement(w, id, at), id).map((c) => [c[0], c[2]] as Vec2));
+  const stackedUnder = (w: World, id: string, at: Placed): number => {
+    const mine = footprintOf(w, id, at);
+    // ⭐ the points checked: its outline's corners pulled 1 mm in, and a 2.5 mm grid over its outline's box that falls inside
+    // it. ⛔ FOUND BY THE VECTOR: a 9 × 9 grid let a thin sliver four deep slip between its points.
+    const xs = mine.map((p) => p[0]), zs = mine.map((p) => p[1]);
+    const pts: Vec2[] = [];
+    const cx = xs.reduce((a, v) => a + v, 0) / xs.length, cz = zs.reduce((a, v) => a + v, 0) / zs.length;
+    for (const p of mine) {
+      const dx = cx - p[0], dz = cz - p[1], l = Math.hypot(dx, dz) || 1;
+      pts.push([p[0] + (dx / l) * 0.01, p[1] + (dz / l) * 0.01]);
     }
-    return below + 1;
+    const step = 0.025;
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x += step)
+      for (let z = Math.min(...zs); z <= Math.max(...zs); z += step) {
+        const q: Vec2 = [x, z];
+        if (inHull2(mine, q)) pts.push(q);
+      }
+    // (only the outlines that can reach it)
+    const near = [...footprints.values()].filter((f) => f.some((v) => v[0] >= Math.min(...xs) - 5 && v[0] <= Math.max(...xs) + 5));
+    let most = 0;
+    for (const q of pts) {
+      let n = 0;
+      for (const f of near) if (inHull2(f, q)) n++;
+      most = Math.max(most, n);
+    }
+    return most;
   };
 
   const settle = (w: World, id: string, x: number, z: number, base: Quat, floorOnly: boolean): Placed | null => {
@@ -716,8 +760,8 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
       // there, and a spot whose rest leaves it is refused.
       const cs = corners(setWorldPlacement(w, id, best.at), id);
       if (cs.some((c) => c[0] < region.min[0] || c[0] > region.max[0] || c[2] < region.min[2] || c[2] > region.max[2])) return null;
-      // ⭐ `D192`: no more than `heapMaxLayers` pieces stacked — a rest higher up is refused, and the piece goes lower.
-      if (layerAt(w, id, best.at) > opt.heapMaxLayers) return null;
+      // ⭐ `D192`/`D193`: no more than `heapMaxLayers` pieces one above another, seen from above — refused, it goes elsewhere.
+      if (stackedUnder(w, id, best.at) + 1 > opt.heapMaxLayers) return null;
       return stable(setWorldPlacement(w, id, best.at), id, best.at) ? best.at : null;
     };
     const first = rest(coarse);
@@ -818,7 +862,7 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
         const travel = pts.slice(1).reduce((s, p, i) => s + length(sub(p.position, pts[i]!.position)), 0);
         reverse.push({ kind: "TRANSLATE", body: id, from: T, to: L, travel, ...(legs.length > 1 ? { via: legs.slice(0, -1).map((p) => p.position) } : {}) });
         reverse.push({ kind: "LIFT", body: id, from: L, to: rest, travel: travelOf(w, id, L, rest) });
-        layers.set(id, layerAt(world, id, rest));
+        footprints.set(id, footprintOf(world, id, rest));
         world = down;
         heapTop = Math.max(heapTop, ...corners(world, id).map((c) => c[1]));
         done = true;
@@ -835,9 +879,12 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     if (r.kind === "TRANSLATE" || r.kind === "LIFT")
       for (const at of [r.from, r.to, ...(r.via ?? []).map((v) => ({ position: v, orientation: r.from.orientation }))])
         outside.push(...corners(setWorldPlacement(world, r.body, at), r.body).filter((c) => c[0] < volume.min[0] || c[0] > volume.max[0] || c[2] < volume.min[2] || c[2] > volume.max[2]));
+  // ⛔ FOUND BY THE PLAYBACK VECTOR (`D193`): fitted exactly, a piece at the stage's edge poked past it by the saved plan's
+  // 1e-6 rounding of its pose (a corner 2.4 units out moves ~2e-6). ⭐ Padded 0.1 mm outward, across and in depth.
+  const pad = 0.001;
   const stage: Aabb = {
-    min: [Math.min(...outside.map((c) => c[0])), heaps.floorTop, Math.min(...outside.map((c) => c[2]))],
-    max: [Math.max(...outside.map((c) => c[0])), heapTop, Math.max(...outside.map((c) => c[2]))],
+    min: [Math.min(...outside.map((c) => c[0])) - pad, heaps.floorTop, Math.min(...outside.map((c) => c[2])) - pad],
+    max: [Math.max(...outside.map((c) => c[0])) + pad, heapTop, Math.max(...outside.map((c) => c[2])) + pad],
   };
 
   // ⭐ Forwards: reversed, each move from its end back to its start (a path's corners in the other order).

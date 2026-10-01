@@ -20,7 +20,7 @@ record. **A status changes in BOTH places or neither.**
 holds; no Pioneer sway → `ALIGNMENT_RULES.md` §24. **`D183`** (`1.0.57-`) the goal capture; PLACED = the snap's margins
 (1 mm / 1° never grabbed); twins swap → `LEVEL_END.md` §5. **`D184`** finger up always away → §25. **`D185`** the pitch, a
 wheel from the press side → §26. **`D186`–`D188`** HUD button, live episodes, score bar → `LEVEL_END` §6. **`D189`** the goal
-count and its pop-up move only when an action completes → §5bis. **`D190`** only moved pieces re-judged; 3 fit defects → §5ter. **`D191`–`D192`** the demo: colour heaps, 3 high; camera 50° earlier → `DEMO_SCENE`. ⛔ `D182`–`D192` unjudged. Next: `3D2`.
+count and its pop-up move only when an action completes → §5bis. **`D190`** only moved pieces re-judged; 3 fit defects → §5ter. **`D191`–`D193`** the demo: colour heaps, 3 deep; camera 50° earlier → `DEMO_SCENE`. ⛔ `D182`–`D193` unjudged. Next: `3D2`.
 
 ⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
 (played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
