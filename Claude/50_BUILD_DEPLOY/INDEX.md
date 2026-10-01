@@ -16,7 +16,7 @@ and its router still reads *"no amount of building advances it."* See
 
 ⭐ **The full deploy procedure, and the troubleshooting table, are in**
 [`DEPLOY_GITHUB_PAGES.md`](DEPLOY_GITHUB_PAGES.md) — including the dark-page
-near-plane trap that cost the first deploy.
+near-plane trap that cost the first deploy. ⭐ A prototype branch can be deployed BESIDE `main`, at `/proto/` (its §).
 
 ✅ **The USB device loop WORKS, and the procedure is in**
 [`DEVICE_TESTING_USB.md`](DEVICE_TESTING_USB.md) — two commands, plus the three traps
