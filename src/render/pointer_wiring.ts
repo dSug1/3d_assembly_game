@@ -8,6 +8,8 @@ import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { throughGreenBox } from "../input/green_box";
+import { goalLocked, orbitTargetOnPress } from "../input/goal_lock";
+import type { Sample } from "../input";
 import { boxDragGains } from "../input/follow_camera";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker } from "../input";
@@ -329,6 +331,21 @@ export function installPointerHandler(st: SceneState): void {
       }
 
       const mesh = routed.object!;
+      // ⭐⭐ prototype (green box) — **A FIRST PRESS ON A PIECE IN ITS GOAL MOVES THE ORBIT TARGET THERE** (the owner, 2026-10-01:
+      // *"when first touch or left button is pressed and hold on a placed piece, the yellow orbit target moves to the point
+      // where the raycast hits the face of the placed piece"*). ⭐ The decision is `orbitTargetOnPress`'s; the press point is the
+      // pick's. ⚠ The RIGHT button is the mouse adapter's own re-issued press (`isTrusted` false) — it does not move it.
+      const hitAt = pick?.hit && pick.pickedPoint ? ([pick.pickedPoint.x, pick.pickedPoint.y, pick.pickedPoint.z] as Vec3) : null;
+      const newTarget = orbitTargetOnPress(
+        routed.role === "OBJECT" && st.router.all().length === 1,
+        e.pointerType !== "mouse" || e.isTrusted,
+        goalLocked(st.idOf.get(mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1),
+        hitAt,
+      );
+      if (newTarget !== null) {
+        st.centreBlend.retarget(newTarget);
+        syncCentre(st);
+      }
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*
       //
       // ⛔⛔ FROM THE PICKED **NORMAL**, never from `pickInfo.faceId`: that is a TRIANGLE
@@ -515,30 +532,7 @@ export function installPointerHandler(st: SceneState): void {
           st.router.objects().length === 0
         ) {
           // §2 rule 1: ONE touchpoint, no hit — orbit.
-          const dx = s.x - prev.x;
-          const dy = s.y - prev.y;
-          // ⭐ Prototype (the owner: *"invert the inputs direction for the box"* — *"and invert input directions for the
-          // camera orbit as well"*): with a green box, the orbit drag turns the other way — the camera follows the box, so
-          // both orbits invert together. ⚠ The zoom (pinch, wheel) is unchanged.
-          // ⭐ And its own gains, yaw and pitch (the owner: *"the green box orbits too fast"*).
-          if (st.greenBox !== null) {
-            // ⭐ prototype (green box): slower while the box is inside the camera's leash, full speed beyond (`boxDragGains`).
-            const g =
-              st.boxOrbit === null || st.cameraOrbit === null
-                ? { yaw: 1, pitch: 1 }
-                : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
-            st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, -dy * st.cfg.boxGainPitch * g.pitch);
-            // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
-            if (st.orbitMotion === null || st.orbitMotion.pointerId !== e.pointerId)
-              st.orbitMotion = { pointerId: e.pointerId, tracker: new MotionTracker(st.cfg) };
-            st.orbitMotion.tracker.push(s);
-          }
-          else st.orbit.drag(dx, dy);
-          // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so
-          // the camera arrives as the gesture progresses rather than on a timer.
-          st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
-          syncCentre(st);
-          applyCamera(st);
+          orbitDragStep(st, e.pointerId, s, prev);
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {
         // ⭐⭐ DOUBLE-TAP OUTSIDE ANY OBJECT RESETS THE CAMERA. ⛔ Judged BEFORE the
@@ -714,7 +708,16 @@ export function installPointerHandler(st: SceneState): void {
       }
       // ⭐⭐ `D139`: a grip whose Follower just SEATED drives nothing with this finger until it lifts.
       // ⭐⭐ `D182`: nor one that is half of an unsnap couple — the Pioneer holds still until a finger lifts.
-      if (unsnapHolds(st, e.pointerId) || !seatLockAllows(grip.seatLocked, grip.mode === "ROTATE" ? "ROTATE" : "TRANSLATE")) {
+      // ⭐⭐ prototype (green box): nor one whose piece is IN ITS GOAL — no translation, no rotation (`goal_lock.ts`).
+      const lockedInGoal = goalLocked(st.idOf.get(grip.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1);
+      if (lockedInGoal) st.lastVerdict = `${st.idOf.get(grip.mesh)} is in its goal — locked`;
+      // ⭐⭐ prototype (green box) — **AND ITS DRAG ORBITS** (the owner, 2026-10-01: *"allow the orbit to occur when first touch
+      // or left click is pressed and hold on placed piece"*): the one finger on a locked piece drives the orbit exactly as on
+      // empty space (`orbitDragStep`); the piece stays pressed — a HitFace, a Pioneer, an undo.
+      if (lockedInGoal && st.router.objects().length === 1 && st.router.outside().length === 0) {
+        orbitDragStep(st, e.pointerId, s, grip.prev);
+      }
+      if (lockedInGoal || unsnapHolds(st, e.pointerId) || !seatLockAllows(grip.seatLocked, grip.mode === "ROTATE" ? "ROTATE" : "TRANSLATE")) {
         grip.prev = s;
         st.hudDirty = true;
         return;
@@ -1100,4 +1103,33 @@ export function installPointerHandler(st: SceneState): void {
       st.episodes.gestureEnded(endGesture(st));
     }
   });
+}
+
+
+/**
+ * ⭐ §2 rule 1's ORBIT DRAG, one step — from empty space, and (prototype (green box)) from a finger on a piece locked in its goal.
+ * ⭐ Prototype (the owner: *"invert the inputs direction for the box"* — *"and invert input directions for the camera orbit as
+ * well"*): with a green box, the orbit drag turns the other way — the camera follows the box, so both orbits invert together;
+ * its own gains, yaw and pitch (*"the green box orbits too fast"*), slower inside the leash (`boxDragGains`). ⚠ The zoom (pinch,
+ * wheel) is unchanged.
+ */
+export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): void {
+  const dx = s.x - prev.x;
+  const dy = s.y - prev.y;
+  if (st.greenBox !== null) {
+    const g =
+      st.boxOrbit === null || st.cameraOrbit === null
+        ? { yaw: 1, pitch: 1 }
+        : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+    st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, -dy * st.cfg.boxGainPitch * g.pitch);
+    // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
+    if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId)
+      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
+    st.orbitMotion.tracker.push(s);
+  } else st.orbit.drag(dx, dy);
+  // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so the camera arrives as the gesture progresses
+  // rather than on a timer.
+  st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+  syncCentre(st);
+  applyCamera(st);
 }

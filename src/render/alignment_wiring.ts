@@ -13,6 +13,7 @@ import { IDENTITY, qmul } from "../core/vec";
 import { assemblyRoot } from "../input/assembly";
 import { ALIGN_SNAP_FRACTION, type Held, type SceneState } from "./scene_state";
 import { modelOrientation, setModelOrientation } from "./bodies";
+import { goalLocked } from "../input/goal_lock";
 
 /**
  * ⭐⭐ `D119` — the alignment with its Pioneer NAMED, not found among the held grips: a TAP on the
@@ -42,6 +43,13 @@ export function alignFollowerTo(
     st.lastVerdict = `align: ${followerId} is FROZEN — it cannot be a follower`;
     // ⚠ `false`: nothing was aligned. ⛔ Unlike the cycle case there is nothing to undo here,
     // and a tap that did absolutely nothing would be the readout-that-lies shape again.
+    return false;
+  }
+
+  // ⭐⭐ prototype (green box): **A PIECE IN ITS GOAL CANNOT BE A FOLLOWER** — the turn would take it out (`goal_lock.ts`).
+  // ⭐ It stays a perfectly good PIONEER, as a frozen body does.
+  if (goalLocked(followerId, st.goalCommit, st.cfg.lockPlacedPieces === 1)) {
+    st.lastVerdict = `align: ${followerId} is in its goal — it cannot be a follower`;
     return false;
   }
 

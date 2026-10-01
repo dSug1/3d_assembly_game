@@ -564,7 +564,9 @@ export function startRenderLoop(st: SceneState): void {
       // says *this face moved* (the Follower); a CONTOUR says *this face is the one being aimed*.
       // ⛔ It joins `wantedPioneerKeys` rather than getting a pool of its own: one set, one retire,
       // the same discipline the fills are under.
-      if (hitFace !== null) {
+      // ⭐ prototype (green box), the owner 2026-10-01: *"toggle off the fuchsia highlight (hitface) - don't delete the method"* —
+      // drawn only when `showHitFaceContour` is 1 (it ships 0). The HitFace itself is unchanged: it still aligns.
+      if (hitFace !== null && st.cfg.showHitFaceContour === 1) {
         const key = `${hitFace.objectId}/${hitFace.faceId}`;
         const m = faceMarkerFor(st, hitFace.objectId, hitFace.faceId);
         if (m !== null) {

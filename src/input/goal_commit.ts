@@ -56,6 +56,11 @@ export class GoalCommit {
     return this.totalCount;
   }
 
+  /** ⭐ prototype (green box): is `id` placed at the last commit? — what `goal_lock.ts` locks. */
+  has(id: string): boolean {
+    return this.placed?.has(id) ?? false;
+  }
+
   /**
    * ⭐ Commit the pieces placed NOW; returns the ones that REACHED their goal (not placed at the previous commit).
    * ⛔ The first commit returns none: a piece placed at boot reached nothing.

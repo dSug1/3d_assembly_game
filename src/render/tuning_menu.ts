@@ -159,6 +159,8 @@ export function installTuningMenu(st: SceneState): void {
     {
       title: "OBJECT TRANSLATION",
       sliders: [
+        // ⭐ prototype (green box): a piece in its goal cannot be moved or turned — 0 re-enables it (`goal_lock.ts`).
+        tunable(st, "lock pieces in their goal (1 = locked, 0 = free)", "lockPlacedPieces", 0, 1, 1),
         // ⭐ `D136`: how far a body may SINK into another (mm on the glass) — contact is allowed; the
         // margin a hand must line a piece up within to slide it into a zero-clearance slot.
         tunable(st, "collision allowance — how far a body may sink into another (mm on glass)", "collisionSkinMm", 0.05, 3, 0.05),
@@ -347,6 +349,8 @@ export function installTuningMenu(st: SceneState): void {
         {
           title: "FOLLOWERFACE",
           sliders: [
+            // ⭐ prototype (green box): the HitFace's fuchsia contour, off by default (the owner, 2026-10-01).
+            tunable(st, "HitFace fuchsia contour (1 = shown, 0 = hidden)", "showHitFaceContour", 0, 1, 1),
             // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
             // the flag; anything above draws an x-ray twin at that opacity.
             tunable(st, 

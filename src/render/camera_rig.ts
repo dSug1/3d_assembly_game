@@ -7,7 +7,7 @@
 import { pinchAllowed } from "../input/pinch";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { clampCameraRadiusM, orbitCentre, gravityFrame, CameraResetAnimation, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
+import { clampCameraRadiusM, nearestPairCentre, gravityFrame, CameraResetAnimation, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
 import { WORLD_DOWN } from "../core/object_model";
 import { ORBIT_START_YAW_RAD, type SceneState } from "./scene_state";
@@ -26,6 +26,11 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
       (m) =>
         m.isEnabled() && m.isVisible && m.metadata?.orbitCandidate === true,
     )
+    // ⭐ prototype (green box): frozen bodies (the floor) are not candidates — `nearestPairCentre`.
+    .filter((m) => {
+      const id = st.idOf.get(m);
+      return id === undefined || st.world.objects.get(id)?.frozen !== true;
+    })
     // ⛔⛔ THE HOME POSITION, WITH THE SWAY TAKEN BACK OFF. The sympathetic sway is a
     // decoration: it must not move what the scene MEANS. Reading `mesh.position`
     // directly would let the barycentre — and so where the camera orbits — depend on
@@ -41,14 +46,13 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
         ? mp.position
         : ([m.position.x, m.position.y, m.position.z] as Vec3);
     });
-  const c = orbitCentre(
-    visible,
-    {
+  // ⭐⭐ prototype (green box): the MIDPOINT of the two piece centres nearest the ray (the owner, 2026-10-01) — it replaces
+  // `orbitCentre`'s subset barycentres here. ⭐ No piece: the target stays where it is.
+  const c =
+    nearestPairCentre(visible, {
       origin: [ray.origin.x, ray.origin.y, ray.origin.z],
       direction: [ray.direction.x, ray.direction.y, ray.direction.z],
-    },
-    st.cfg,
-  );
+    }) ?? st.centreBlend.targetM;
   // ⚠ RETARGET, never assign. The blend starts from wherever the centre actually is,
   // so interrupting a half-finished migration does not put the jump back.
   st.centreBlend.retarget(c);

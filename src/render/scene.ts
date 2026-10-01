@@ -544,6 +544,9 @@ export function createScene(
   // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
   // exists to display.
   st.centreMarker.isPickable = false;
+  // ⭐ prototype (green box), the owner 2026-10-01: *"make the yellow orbit center always visible (not occluded by any object)"* —
+  // drawn in rendering group 2, after the bodies with the depth cleared (as the cursor rings are), so nothing hides it.
+  st.centreMarker.renderingGroupId = 2;
   // ⭐ prototype (green box): the green box — the orbit rig drives it now, and the camera follows it (prototype).
   st.greenBoxRigM = null;
   st.cameraOrbit = null;

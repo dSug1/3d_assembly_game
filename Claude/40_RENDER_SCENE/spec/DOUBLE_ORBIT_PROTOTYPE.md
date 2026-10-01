@@ -1,7 +1,9 @@
-# The double-orbit camera — a PROTOTYPE (branch `1.0.58a-` only)
+# The double-orbit camera — a PROTOTYPE (branch `1.0.58b-` only)
 
-⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCH ONLY.** `1.0.58a-` (from `1.0.58-Trial-with-double-orbit`) is never merged
-into `main` or the fork; the main line is merged INTO it, one way. It is deployed beside the main line at
+⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself
+from `1.0.58-Trial-with-double-orbit`); never merged into `main` or the fork — the main line is merged INTO it, one way.
+⭐ `/proto/` builds the branch the repository variable `PROTO_BRANCH` names (`1.0.58b-` since 2026-10-01); a deploy is
+**Run workflow** on `main` (or any push to `main`), never a push to the prototype branch. It is deployed beside the main line at
 **https://dsug1.github.io/3d_assembly_game/proto/** (`50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`, *A second build at /proto/*).
 ⛔ Its work takes **no `D`-number** (the fork's run on); its vectors are `tests/proto_green_box.test.ts`, its comments say
 *prototype (green box)*. ⛔ **Unjudged by a hand except where marked.**
@@ -37,10 +39,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 ## 3. The camera's orbit
 
 * ⭐ **`Scene_1`'s rings on this branch** (the owner, 2026-10-01): top 0.9 / 0.5 m, middle 0.2 / 0 m, bottom 0.9 / −0.4 m
-  (radius / height), and the scene **boots at zoom 1.5** (`bootZoom`, slider *boot zoom* in CAMERA 0.5–10 step 0.1, applied
-  at once and kept as the camera reset's view; `0` restores the derived half-radius rule, which made
-  ×7.5 here and capped the box at 3 m over most of its travel). At 1.5 the box is 1.55 m from the centre on the top ring,
-  0.30 m on the middle, 1.48 m on the bottom; ⭐ it boots on the TOP ring (`bootView: "TOP"`, *"boot scene 1 on the top ring"*); a zoom keeps it within 0.15–3 m (`clampCameraRadiusM`).
+  (radius / height) — pitch −24° at the bottom, 0° at the middle, +29° at the top.
+* ⭐ **It BOOTS on the TOP ring** (`bootView: "TOP"`, *"boot scene 1 on the top ring"*) **at zoom 1.5** (`bootZoom`, slider
+  *boot zoom* at the top of CAMERA, 0.5–10 step 0.1 — applied at once, and the camera reset's view; `0` restores the derived
+  half-radius rule, which made ×7.5 with these rings and capped the box at 3 m over most of its travel).
+* **The box's distance from the centre** at zoom 1.5: **1.55 m** on the top ring, **0.30 m** on the middle, **1.48 m** on
+  the bottom. A zoom scales the whole surface, and the box is always kept within **0.15–3 m** (`clampCameraRadiusM`); each
+  ring can reach both ends, but not under one zoom (out fully on the top ring is ×2.9 — the middle ring then 0.58 m).
 * **Its own angles** (`input/follow_camera.ts`, `CameraOrbitState`), stepped every frame before the draw
   (`render/green_box_wiring.ts` `greenBoxFrame`).
 * **Its distance = the box's CURRENT distance + `cameraRadiusOffsetMm`** (**1250 mm**, the owner 2026-10-01; slider 100–2000 step 50). ⛔ It was
@@ -86,8 +91,47 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   The box's yaw is `gainOrbitYaw` (CAMERA, 0.054 rad/mm) × `boxGainYaw` (1.65), its elevation `gainOrbitElevation` (0.02/mm,
   along the ring surface) × `boxGainPitch` (0.5): two sliders per axis that do ONE job, and the camera has no gain of its own
   (it follows the box). ⭐ To do: one gain per axis for the box — yaw in °/mm (today 5.1), pitch in °/mm of ANGLE rather than
-  of the ring surface (the top of `Scene_1`'s surface is nearly flat in pitch: v 0.7 → 0.95 is 15.8° → 16.5°) — and the
+  of the ring surface (a pitch per `v` that varies with the rings: on `D131`'s rings v 0.7 → 0.95 was only 15.8° → 16.5°) — and the
   main-line orbit gains left to the main line. `boxGainInsideLeash` stays a multiplier on top.
 * ⛔ **The demo's camera path drives the BOX, not the camera** — `20_GAME_RULES/spec/DEMO_SCENE.md` §7 and its fixes §9.
-* ⚠ Every default above is a guess with a slider unless the owner set it: the owner set the yaw gain, both offsets, the
-  leash and the settle delay; the pitch gain, the radius offset, the box smoothing, `COAST_MS` and the catch-up are mine.
+* ⚠ Every default above is a guess with a slider unless the owner set it: the owner set the yaw gain, both angle offsets,
+  the radius offset (1250 mm), the leash, the settle delay, the inside-leash gain (0.35), the rings, the boot ring and zoom;
+  the pitch gain, the box smoothing, `COAST_MS` and the catch-up are mine.
+* ⭐ **Judged on the device**: the deadband fix only (`ffe66d6`). Built and deployed, ⛔ unjudged: the release catch-up, the
+  box solid to the finger, the inside-leash gain, the rings, the boot ring and zoom (`/proto/` at `40aa812`, 2026-10-01).
+* ⭐ The main line's `D195` (no depth ceiling inside a play volume) is merged in — it mattered more here, where the camera
+  sits the radius offset behind the box and a piece behind the painting was beyond 3 m.
+
+## 6. Game rules tried on this branch only
+
+* ⭐⭐⭐ **A PIECE IN ITS GOAL CANNOT BE MOVED** (the owner, 2026-10-01: *"any piece which is in its goal transform cannot be
+  moved (translation or rotation) … don't delete the methods, just disable them, as we may re-enable them later on"*;
+  ⛔ unjudged by a hand). "In its goal" is the COMMITTED status (`D189`'s `GoalCommit`, the `goal n/41` the player reads):
+  a piece dragged into its goal is free until its action completes, then locked — so in `Scene_1` the 36 pieces placed at
+  boot are locked from the start. ⭐ The owner's answers:
+  * a drag ON it — first finger, second finger, steering, mouse — moves and turns nothing (`pointer_wiring.ts`'s holder
+    gate, `drive.ts`'s `applyDepthDrag`); the HUD says `PieceN is in its goal — locked`; no model change, so no episode;
+  * ⛔ it cannot be a FOLLOWER (`alignment_wiring.ts`) — the turn would take it out; it stays a PIONEER;
+  * it can still be pressed (a HitFace, a Pioneer) and undone (a double tap may take it out — then it is free again);
+  * it is still CARRIED by its seated assembly when another member is dragged — only a drag on it is refused.
+  ⭐ The rule is `input/goal_lock.ts` (`goalLocked`); **OBJECT TRANSLATION › *lock pieces in their goal*** (`lockPlacedPieces`,
+  1 / 0) re-enables every gated method. Vectors: `tests/proto_goal_lock.test.ts`.
+* ⭐⭐ **WHERE A PRESS PUTS THE YELLOW ORBIT TARGET** (the owner, 2026-10-01; ⛔ unjudged by a hand) — vectors
+  `tests/proto_orbit_target.test.ts`:
+  * **First touch or LEFT button on a piece locked in its goal** → the target jumps to the point where the ray hits it
+    (`orbitTargetOnPress`, `input/goal_lock.ts`). ⛔ Not the right button (the mouse's HitFace — the adapter's own re-issued
+    press, `isTrusted` false), not a second touch, not a free piece; tied to the lock (`lockPlacedPieces = 0`: it drags).
+  * **On empty space or a frozen body** → the MIDPOINT of the two piece centres (frozen bodies excluded) nearest the finger's
+    ray, each measured to the RAY (`nearestPairCentre`, `input/barycentre.ts`). ⛔ It replaces §2 rule 1's subset
+    barycentres here; `orbitCentre` is kept (declared unwired debt) for the main line. No piece: the target stays.
+  * As before, the marker JUMPS and the camera MIGRATES to it by the orbit finger's travel (`OrbitCentreBlend`).
+* ⭐ **And a drag from a piece locked in its goal ORBITS** (*"allow the orbit to occur when first touch or left click is
+  pressed and hold on placed piece"*): the one finger on it drives the orbit exactly as on empty space (`orbitDragStep`,
+  shared by both); the piece stays pressed (a HitFace, a Pioneer, an undo). The green box's camera hears that finger as
+  the orbit finger (`green_box_wiring.ts`), or every frame would read as a release.
+* ⭐ **The yellow target is always visible** (*"not occluded by any object"*): drawn in rendering group 2 — after the
+  bodies, the depth cleared, as the cursor rings are.
+* ⭐ **The HitFace's fuchsia contour is toggled OFF** (the owner, 2026-10-01: *"toggle off the fuchsia highlight (hitface) -
+  don't delete the method"*): `showHitFaceContour` ships **0**; **FACE ALIGNMENT › FOLLOWERFACE › *HitFace fuchsia contour***
+  (1 / 0) draws it again. Only the DRAWING is gated (`render_loop.ts`) — the HitFace itself, its alignment and the HUD's
+  readout are unchanged.

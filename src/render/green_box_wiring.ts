@@ -13,6 +13,7 @@ import { sizeM, smallestOfColour } from "../input/green_box";
 import { cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
+import { goalLocked } from "../input/goal_lock";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import type { SceneState } from "./scene_state";
@@ -59,7 +60,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
   const out = st.router.outside();
-  const orbiting = out.length === 1 && st.router.objects().length === 0 ? out[0]!.id : null;
+  const objs = st.router.objects();
+  // ⭐ prototype (green box): or ONE finger on a piece locked in its goal — its drag orbits too (`orbitDragStep`).
+  const lockedHolder =
+    out.length === 0 && objs.length === 1 && st.held.get(objs[0]!.id) !== undefined &&
+    goalLocked(st.idOf.get(st.held.get(objs[0]!.id)!.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1);
+  const orbiting = out.length === 1 && objs.length === 0 ? out[0]!.id : lockedHolder ? objs[0]!.id : null;
   // ⭐ The finger leaving the orbit (lifted, or a second finger down) is a RELEASE: the camera realigns.
   const released = st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting;
   if (released) st.orbitMotion = null;

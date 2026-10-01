@@ -478,6 +478,10 @@ export interface GestureConfig {
   boxGainInsideLeash: number;
   /** ⭐ Prototype: the zoom the scene BOOTS at (the owner, 2026-10-01: *"set the default zoom at 1.5"*). `0` = the derived rule (half the maximum radius). */
   bootZoom: number;
+  /** ⭐ Prototype: `1` — a piece in its goal cannot be moved or turned (`goal_lock.ts`); `0` re-enables it. */
+  lockPlacedPieces: number;
+  /** ⭐ Prototype: `1` draws the HitFace's fuchsia contour; `0` (the owner's default) hides it — the HitFace still works. */
+  showHitFaceContour: number;
   /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
   boxSmoothMs: number;
   /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
@@ -919,6 +923,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
   boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
   bootZoom: 1.5,
+  lockPlacedPieces: 1,
+  showHitFaceContour: 0,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
   // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
@@ -1054,6 +1060,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.boxGainYaw > 0 && cfg.boxGainYaw <= 4) || !(cfg.boxGainPitch > 0 && cfg.boxGainPitch <= 4)) {
     throw new Error(`boxGainYaw / boxGainPitch (${cfg.boxGainYaw} / ${cfg.boxGainPitch}) must be in (0, 4].`);
+  }
+  if (!(cfg.showHitFaceContour === 0 || cfg.showHitFaceContour === 1)) {
+    throw new Error(`showHitFaceContour (${cfg.showHitFaceContour}) must be 0 or 1.`);
+  }
+  if (!(cfg.lockPlacedPieces === 0 || cfg.lockPlacedPieces === 1)) {
+    throw new Error(`lockPlacedPieces (${cfg.lockPlacedPieces}) must be 0 or 1.`);
   }
   if (!(cfg.bootZoom === 0 || (cfg.bootZoom >= 0.1 && cfg.bootZoom <= 20))) {
     throw new Error(`bootZoom (${cfg.bootZoom}) must be 0 (derived) or in [0.1, 20].`);

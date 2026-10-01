@@ -18,6 +18,7 @@ import { asVec3, modelOrientation, requirePose, setModelOrientation, setModelPos
 import { driveBodyOf } from "./alignment_wiring";
 import { axesOf, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { screenFrame } from "./camera_rig";
+import { goalLocked } from "../input/goal_lock";
 import { noteSpin, nudgeOthersWorld } from "./sway_pass";
 
 // ⛔ History: `A6` (depth by a common vertical drag) and `A10` (the anchor drives depth) stood
@@ -150,6 +151,12 @@ export function applyDepthDrag(st: SceneState, grip: Held,
   anchorSeq: number,
   anchorSample: Sample,
   bothAxes = false,) {
+  // ⭐⭐ prototype (green box): a piece IN ITS GOAL is not lifted, spun or rolled by a second finger (`goal_lock.ts`).
+  if (goalLocked(st.idOf.get(grip.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1)) {
+    st.lastVerdict = `${st.idOf.get(grip.mesh)} is in its goal — locked`;
+    st.hudDirty = true;
+    return;
+  }
   // ⭐ The anchor gets a tracker of its own — the SAME §1.1 machine every other rule
   // reads, never a speed invented here. A second definition of "moving" would be free
   // to disagree with the one the holder is judged by.
