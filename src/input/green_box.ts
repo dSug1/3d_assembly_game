@@ -1,5 +1,5 @@
 /**
- * ⭐⭐ **THE GREEN BOX** (`D191`, the owner, 2026-09-30: *"add a green box in the scene. same dimensions as the smallest
+ * ⭐⭐ **THE GREEN BOX** (prototype (green box), the owner, 2026-09-30: *"add a green box in the scene. same dimensions as the smallest
  * yellow box. the green box shall always be positioned midway between the yellow target and the camera"*).
  *
  * ⭐ The *yellow target* is the orbit-centre marker (the barycentre the camera orbits, `camera_rig.ts`'s `syncCentre`); the

@@ -692,7 +692,7 @@ export function startRenderLoop(st: SceneState): void {
       paint(st);
     }
 
-    // ⭐ `D191`: the green box, midway between the yellow target and the camera — after everything that moved either.
+    // ⭐ prototype (green box): the green box, midway between the yellow target and the camera — after everything that moved either.
     greenBoxFrame(st, dtSec);
     st.scene.render();
     st.frames++;

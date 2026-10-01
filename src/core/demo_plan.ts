@@ -15,18 +15,18 @@
  */
 import { contourDims, resolveBootOrientation, type SceneDescriptor, type Triple } from "./game_structure";
 import { boxShape, gapBetween } from "./collision_shape";
-import { boundsFromShapes, hullAtSpawn, resolveMove, type Aabb, type CollisionSetup } from "./collision";
+import { boundsFromShapes, hullAtSpawn, poseFree, resolveMove, type Aabb, type CollisionSetup } from "./collision";
 import { makeWorld, setWorldPlacement, worldPlacementOf, type SceneObject, type World } from "./object_model";
 import type { Placed } from "./mate_connector";
 import { mulberry32 } from "./random_pose";
 import { ORBIT_START_YAW_RAD } from "./scene_dims";
-import { add, dot, IDENTITY, length, normalize, qAngle, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "./vec";
+import { add, cross, dot, IDENTITY, length, normalize, qAngle, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "./vec";
 
 /** ⭐ What a player does, as the demo plays it (forwards). ⛔ `YAW` is gone with the scatter (`D174`). */
 export type DemoMoveKind = "SNAP" | "APPROACH" | "ALIGN" | "TRANSLATE" | "LIFT";
 
 /**
- * ⭐⭐ `D174` — **A PIECE'S CHAIN, PLAYED FORWARDS**: lifted off its grid cell, carried to the spot in front of its slot,
+ * ⭐⭐ `D174` — **A PIECE'S CHAIN, PLAYED FORWARDS**: lifted off its heap (`D191`), carried to the spot in front of its slot,
  * turned upright there, approached, seated. 150 moves = 30 pieces × these 5.
  */
 export const DEMO_CHAIN: readonly DemoMoveKind[] = ["LIFT", "TRANSLATE", "ALIGN", "APPROACH", "SNAP"];
@@ -58,9 +58,9 @@ export interface DemoPlan {
   /** ⭐ The cube the build's moves stay inside (`DEMO_SCENE.md` §3). */
   readonly volume: Aabb;
   /**
-   * ⭐ `D174`: the floor GRID's box — where the start configuration lies, just outside the cube toward the boot camera,
-   * from the floor to the thickest flat piece's top, its cells' gutters included. A move may use the cube and this,
-   * never more (`demoReach`).
+   * ⭐ `D174`/`D191`: the HEAPS' box — where the start configuration lies, just outside the cube toward the boot camera,
+   * with every carry and lift outside the cube, from the floor to the top of the heaps. A move may use the cube and
+   * this, never more (`demoReach`).
    */
   readonly stage: Aabb;
   /** ⭐ PLAY order: the first move is played first. */
@@ -82,49 +82,36 @@ export interface DemoOptions {
   readonly minContact: number;
   /** ⭐ `D171`: after its estrangement a piece is at least this far from every other body — truly CLEAR. */
   readonly clearance: number;
-  /** ⭐ `D174`: the grid's cell — every piece takes a whole number of cells, gutter included. */
-  readonly gridPitch: number;
-  /** ⭐ `D174`: the least gutter between two pieces on the grid, and between two rows. */
-  readonly gridGap: number;
-  /** ⭐ `D174`/`D175`: how far outside the cube's front face the longest piece's far end lies, when the floor allows. */
-  readonly gridOffset: number;
   /**
-   * ⭐ `D174`: the colour groups' order on the grid, as body colours; a colour not listed follows, in the order of its
-   * first body in the scene. `Scene_1`: white, black, yellow, red, blue (`SCENE1_DEMO_OPTIONS`).
+   * ⭐ `D174`/`D191`: the colour groups' order — the heaps, left to right as the boot camera sees them — as body colours;
+   * a colour not listed follows, in the order of its first body in the scene. `Scene_1`: white, black, yellow, red, blue
+   * (`SCENE1_DEMO_OPTIONS`).
    */
   readonly colourOrder?: readonly Triple[];
+  /** ⭐ `D191`: a heap's width across = `heapWidthK × √(its pieces' flat area) + heapWidthPad`. */
+  readonly heapWidthK: number;
+  readonly heapWidthPad: number;
+  /** ⭐ `D191`: the gap between two heaps' strips, across. */
+  readonly heapGap: number;
+  /** ⭐ `D191`: a piece's centre is drawn around its heap's centre — σ across = `heapSpread` × the heap's width; σ in depth. */
+  readonly heapSpread: number;
+  readonly heapSpreadDepth: number;
+  /** ⭐ `D191`: the heaps lie at least this far outside the cube's front face, and `heapFloorMargin` in from the floor's edge. */
+  readonly heapOffset: number;
+  readonly heapFloorMargin: number;
+  /** ⭐ `D191`: how far a piece may tilt as it settles — about its width (pitch) and about its length (roll), and the steps. */
+  readonly heapPitchDeg: number;
+  readonly heapRollDeg: number;
+  readonly heapPitchStepDeg: number;
+  readonly heapRollStepDeg: number;
+  /** ⭐ `D191`: how many spots on its heap a piece is offered before the generation throws. */
+  readonly heapTries: number;
   /**
-   * ⭐ `D179` (the owner: *"random between 0 to 4 degrees negative or positive yaw absolute value median 2.5 degrees"*;
-   * 5°–10° at `D178`, ±1.5° at `D177`, first built as a roll — *"I was meaning yaw, not roll"*): each piece on the grid
-   * is turned about the VERTICAL by a random angle of either sign whose SIZE lies in `[0, max]` degrees with that
-   * MEDIAN (`sizeWithMedian`). It stays flat on the floor.
+   * ⭐ `D192` (the owner: *"limit the heaps height to max three pieces stacked on top of each other"*): seen from above,
+   * no point of the floor has more than this many heap pieces over it (`D193`: counted from above — `D192`'s first rule
+   * counted layers of support and missed a piece lying over a steeply leaning bar).
    */
-  readonly startYawDeg: SizeLaw;
-  /**
-   * ⭐ `D179` (the owner: *"random between 0 to 5 % of longest dimension of each part negative or positive for part
-   * misalignment on depth for the row alignments, absolute value median 3%"*; 5–10 % at `D178`, ±1 pixel at `D177`):
-   * each piece's aligned face sits off its row's line along depth by a random amount of either sign whose SIZE, as a
-   * fraction of its longest side, lies in `[0, max]` with that MEDIAN.
-   */
-  readonly startShiftFrac: SizeLaw;
-}
-
-/** ⭐ `D179`: a random SIZE in `[0, max]` whose median is `median`. */
-export interface SizeLaw {
-  readonly max: number;
-  readonly median: number;
-}
-
-/**
- * ⭐ `D179` — **A SIZE IN `[0, max]` WITH A GIVEN MEDIAN**, from a uniform `u ∈ [0, 1]`: `max × u^k`, with
- * `k = ln(median / max) / ln ½`, so `u = ½` gives exactly the median, `0` gives 0 and `1` the max, and it rises
- * monotonically between. (4° with a median of 2.5°: `k` = 0.678; 5 % with a median of 3 %: `k` = 0.737.) ⛔ A median
- * outside `(0, max)` has no such law and throws.
- */
-export function sizeWithMedian(law: SizeLaw, u: number): number {
-  if (!(law.median > 0 && law.median < law.max)) throw new Error(`a size law needs 0 < median < max, got ${law.median} of ${law.max}`);
-  const k = Math.log(law.median / law.max) / Math.log(0.5);
-  return law.max * Math.pow(Math.min(1, Math.max(0, u)), k);
+  readonly heapMaxLayers: number;
 }
 
 /** ⭐ The owner: *"the camera shall orbit uniformly towards the right"* — one full turn over the demo. */
@@ -136,9 +123,11 @@ export const DEMO_TAIL_DEG = 15;
 /**
  * ⭐ `D175` (the owner, 2026-09-30: *"start the camera 15degrees orbit yaw before current start camera position"*): the
  * demo's camera starts this far BEFORE the boot yaw — to the left, since it orbits to the right — and still ENDS where it
- * did, at the boot yaw a turn on (the level's own front view, where the player takes over). So it turns 375°.
+ * did, at the boot yaw a turn on (the level's own front view, where the player takes over). So it turned 375°.
+ * ⭐ `D192` (the owner, 2026-10-01: *"camera should start from current from 50degrees yaw to the left. Therefore, total
+ * yaw rotation of the camera during demo = 410 degrees"*): 50° before, the same end — 410°.
  */
-export const DEMO_START_BEFORE_DEG = 15;
+export const DEMO_START_BEFORE_DEG = 50;
 
 /** ⭐ `D175`: the whole orbit, degrees — one turn and the 15° it starts before. */
 const DEMO_ORBIT_DEG = 360 * DEMO_ORBIT_TURNS + DEMO_START_BEFORE_DEG;
@@ -146,8 +135,8 @@ const DEMO_ORBIT_DEG = 360 * DEMO_ORBIT_TURNS + DEMO_START_BEFORE_DEG;
 /**
  * ⭐⭐ `D171` — **WHERE THE MOVES END, as a fraction of the demo**. The camera turns at a steady rate `ω` while the
  * moves play (the orbit less 15°), then DECELERATES uniformly to rest over the last 15° — which, arriving at zero
- * speed, takes `2 × 15° / ω`. So the moves take `(orbit − 15) / (orbit + 15)` of the demo: 360 / 390 = 0.923 since
- * `D175`'s 375° orbit (345 / 375 = 0.92 before).
+ * speed, takes `2 × 15° / ω`. So the moves take `(orbit − 15) / (orbit + 15)` of the demo: 395 / 425 = 0.929 since
+ * `D192`'s 410° orbit (360 / 390 at `D175`'s 375°, 345 / 375 before).
  */
 export const DEMO_MOVES_END = (DEMO_ORBIT_DEG - DEMO_TAIL_DEG) / (DEMO_ORBIT_DEG + DEMO_TAIL_DEG);
 
@@ -165,7 +154,7 @@ export function demoYawAt(progress: number): number {
   const p = Math.min(1, Math.max(0, progress));
   const total = (DEMO_ORBIT_DEG * Math.PI) / 180;
   const tail = (DEMO_TAIL_DEG * Math.PI) / 180;
-  const start = ORBIT_START_YAW_RAD - (DEMO_START_BEFORE_DEG * Math.PI) / 180; // ⭐ `D175`
+  const start = ORBIT_START_YAW_RAD - (DEMO_START_BEFORE_DEG * Math.PI) / 180; // ⭐ `D175`, `D192`
   const omega = (total - tail) / DEMO_MOVES_END; // rad per unit of progress
   if (p <= DEMO_MOVES_END) return start + omega * p;
   const u = p - DEMO_MOVES_END;
@@ -190,34 +179,26 @@ export const DEMO_DEFAULTS: DemoOptions = {
   tries: 60,
   minContact: 0.02,
   clearance: 0.15,
-  // ⭐ `D174`: a 5 mm grid, 1 cm gutters, 3 cm outside the cube (`D175`: one rank, lengthwise in depth).
-  gridPitch: 0.05,
-  gridGap: 0.1,
-  gridOffset: 0.3,
-  // ⭐ `D179`: a natural feel — a yaw of 0°–4° (median 2.5°) and a shift along depth of 0–5 % of the piece's length
-  // (median 3 %), either sign.
-  startYawDeg: { max: 4, median: 2.5 },
-  startShiftFrac: { max: 0.05, median: 0.03 },
+  // ⭐ `D191`: five small heaps, the snapshot the owner chose (E) — a heap as wide as 1.2 √area + 3 cm, 4 cm apart; a
+  // piece dropped within σ = 15 % of its heap across and 5 cm in depth, 3 cm outside the cube; it settles tilted by
+  // up to 40° (pitch, 2.5° steps) and 6° (roll, 2° steps) — a pose AT either limit is refused (it would tip further).
+  heapWidthK: 1.2,
+  heapWidthPad: 0.3,
+  heapGap: 0.4,
+  heapSpread: 0.15,
+  heapSpreadDepth: 0.5,
+  heapOffset: 0.3,
+  heapFloorMargin: 0.05,
+  heapPitchDeg: 40,
+  heapRollDeg: 6,
+  heapPitchStepDeg: 2.5,
+  heapRollStepDeg: 2,
+  heapTries: 60,
+  // ⭐ `D192`: three pieces stacked at most.
+  heapMaxLayers: 3,
 };
 
-/**
- * ⭐ `D177`/`D178` — **EACH PIECE'S NATURAL IMPERFECTION** on the grid, as DRAWN: a yaw about the vertical (radians) and
- * a shift of its aligned face along depth (authored units), each a size by its law with a random sign — drawn from the
- * seed AND the piece, its own stream, so the draw does not depend on which pieces come off or in what order and the rest
- * of the generator's random sequence is untouched. ⚠ `demoGrid` may flip the SHIFT's sign to keep a piece on the floor
- * and out of the cube (`DemoGrid.shift` is the final one); the yaw is always this.
- */
-export function naturalOf(scene: SceneDescriptor, id: string, opt: Pick<DemoOptions, "seed" | "startYawDeg" | "startShiftFrac">): { yaw: number; shift: number } {
-  const i = scene.bodies.findIndex((b) => b.id === id);
-  const r = mulberry32(opt.seed * 7919 + 104729 * (i + 1));
-  const size = (law: SizeLaw) => sizeWithMedian(law, r());
-  const sign = () => (r() < 0.5 ? -1 : 1);
-  const yaw = (sign() * size(opt.startYawDeg) * Math.PI) / 180;
-  const shift = sign() * size(opt.startShiftFrac) * Math.max(...contourDims(scene.bodies[i]!));
-  return { yaw, shift };
-}
-
-/** ⭐ `D174`: the box that holds the cube AND the floor grid — every move of the plan stays inside it. */
+/** ⭐ `D174`/`D191`: the box that holds the cube AND the heaps — every move of the plan stays inside it. */
 export function demoReach(plan: Pick<DemoPlan, "volume" | "stage">): Aabb {
   const { volume: v, stage: s } = plan;
   return {
@@ -253,186 +234,79 @@ export function flatOrientations(dims: Vec3): Quat[] {
   return [...seen.values()].sort((p, q) => qAngle(p) - qAngle(q) || p.join(",").localeCompare(q.join(",")));
 }
 
-/** ⭐ `D175`: the half-sizes of a piece laid flat, in world axes — `[middle, smallest, longest] / 2`. */
-function flatHalf(dims: Vec3): Vec3 {
-  const s = [...dims].sort((a, b) => b - a);
-  return [s[1]! / 2, s[2]! / 2, s[0]! / 2];
-}
-
 const sameColour = (a: Triple, b: Triple): boolean => a.every((v, i) => Math.abs(v - b[i]!) < 1e-9);
 
 /**
- * ⭐⭐⭐ `D174` — **THE FLOOR GRID** (the owner: *"set on the floor on a virtual grid (do not show any grid), ordered by
- * color and inside the color groups by descending size"*, *"in front, just outside the demo cube"*). Where each of
- * `ids` rests at the start, laid flat, and the grid's box. Colour groups in `colourOrder`, each by CORE volume, largest
- * first (ties: the scene's order). ⭐ `D175`: each piece LENGTHWISE in depth, between the floor's edge and the cube.
- * ⭐⭐ `D176` (the owner: *"make two or three rows of parts instead of one unique row. If required to fit the parts,
- * reverse the order of alignment along longest dimension every second row. The rows do not need to be justified"*):
- * **TWO ROWS THAT INTERLOCK** in that one strip —
- * * **row 1**, left to right, its NEAR end faces (toward the boot camera) on a line as near the floor's edge as it can;
- * * **row 2**, the order continuing RIGHT TO LEFT, its FAR end faces on a line `gridOffset` outside the cube (nearer the
- *   floor's edge if its pieces need it): each piece slid from where the one before ended to the first place where it
- *   clears row 1 by a gutter — a long piece opposite short ones. So the rows are ragged, not justified.
- * ⭐⭐ `D177`/`D178` (the owner: *"random between 5 to 10 degrees negative or positive yaw, random between 5 to 10% of
- * longest dimension of each part negative or positive for part misalignment on depth for the row alignments"*): each
- * piece is turned about the vertical by its `naturalOf` yaw, and its aligned face sits OFF its row's line by its shift.
- * ⚠ The strip is ~4.9 units deep and the longest pieces 4.83, so a shift's SIGN cannot always be kept: where the drawn
- * sign would put a piece off the floor or into the cube, it is FLIPPED (its size, 5–10 %, is kept) and the row's line
- * moves to make room. The yaw is always kept.
- * The split between the rows is the one that makes the whole narrowest; the whole is centred across the cube. Each
- * piece takes a whole number of `gridPitch` cells across — its turned footprint and a `gridGap` gutter.
- * ⚠ A THIRD row cannot interlock: it would share row 1's line. ⛔ Nothing is drawn. ⛔ A grid that leaves the floor, or
- * a row that cannot keep its pieces between the floor's edge and the cube, THROWS.
+ * ⭐⭐⭐ `D191` — **THE HEAPS** (the owner, 2026-09-30: *"the start configuration is small heaps one per color"*). The
+ * strip in front of the cube is cut ACROSS into one heap per colour, in `colourOrder` left to right as the boot camera
+ * sees it, each as wide as its pieces need (`heapWidthK × √area + heapWidthPad`), `heapGap` apart, the whole centred on
+ * the cube. A heap's pieces are dropped around its centre (`demoGenerate`, phase C); their CENTRES stay inside its strip.
+ * `region` is the box every heap piece must lie in: across the heaps, in depth from `heapFloorMargin` inside the floor's
+ * edge to `heapOffset` outside the cube, from the floor up to the cube's top. ⛔ Heaps wider than the floor THROW.
  */
-export function demoGrid(
-  scene: SceneDescriptor,
-  ids: readonly string[],
-  volume: Aabb,
-  opt: Pick<DemoOptions, "gridPitch" | "gridGap" | "gridOffset" | "colourOrder" | "seed" | "startYawDeg" | "startShiftFrac">,
-): DemoGrid {
-  const floor = [...scene.bodies].filter((b) => b.frozen).sort((a, b) => Math.max(...contourDims(b)) - Math.max(...contourDims(a)))[0];
-  if (!floor) throw new Error(`${scene.id}: a demo grid needs a floor (a frozen body)`);
-  const fd = contourDims(floor);
-  const floorTop = floor.position[1] + fd[1] / 2;
+export function demoHeaps(scene: SceneDescriptor, ids: readonly string[], volume: Aabb, opt: Pick<DemoOptions, "colourOrder" | "heapWidthK" | "heapWidthPad" | "heapGap" | "heapOffset" | "heapFloorMargin">): DemoHeaps {
+  const { floorTop, fx, z0, z1 } = heapStrip(scene, volume, opt);
   const order: Triple[] = [...(opt.colourOrder ?? [])];
   for (const b of scene.bodies) if (!b.frozen && !order.some((c) => sameColour(c, b.colour))) order.push(b.colour);
-  const index = new Map(scene.bodies.map((b, i) => [b.id, i]));
   const spec = (id: string) => scene.bodies.find((b) => b.id === id) ?? (() => { throw new Error(`${scene.id}: no body ${id}`); })();
-  const sorted = [...ids].sort((a, b) => {
-    const A = spec(a), B = spec(b);
-    const ga = order.findIndex((c) => sameColour(c, A.colour)), gb = order.findIndex((c) => sameColour(c, B.colour));
-    const va = A.dims[0] * A.dims[1] * A.dims[2], vb = B.dims[0] * B.dims[1] * B.dims[2];
-    return ga - gb || vb - va || index.get(a)! - index.get(b)!;
-  });
-  const p = opt.gridPitch;
-  const n = sorted.length;
-  const halves = sorted.map((id) => flatHalf(contourDims(spec(id)) as unknown as Vec3));
-  const nat = sorted.map((id) => naturalOf(scene, id, opt));
-  // ⭐ A turned piece: its footprint across (its width turned, plus its length × |sin yaw|), how far its end faces'
-  // centres lie from its centre along depth (half its length × cos yaw), and how far their corners pass them (half its
-  // width × |sin yaw|). All paid for here, so the gutters stay whole.
-  const across = (i: number) => 2 * halves[i]![0] * Math.cos(nat[i]!.yaw) + 2 * halves[i]![2] * Math.abs(Math.sin(nat[i]!.yaw));
-  const halfLong = (i: number) => halves[i]![2] * Math.cos(nat[i]!.yaw);
-  const corner = (i: number) => halves[i]![0] * Math.abs(Math.sin(nat[i]!.yaw));
-  const cells = sorted.map((_, i) => Math.ceil((across(i) + opt.gridGap) / p - 1e-9));
-  const fx = [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2];
-  const fz = [floor.position[2] - fd[2] / 2, floor.position[2] + fd[2] / 2];
-  const front = volume.min[2];
-  const floorLo = fz[0]! + opt.gridGap / 2; // ⭐ half a gutter in from the floor's edge
-  const cubeHi = front - 0.02; // ⭐ strictly outside the cube — and the grid box's 1 cm margin with it
-
-  /**
-   * ⭐ A row's line and its pieces' final shifts. `near`: the NEAR faces sit at `line + shift`; `far`: the FAR faces.
-   * Each piece allows the line an interval; a drawn sign that empties the intersection is flipped, the piece that binds
-   * first, once each. `prefer` picks the line inside what is left. `null` if nothing is left.
-   */
-  const fitRow = (members: number[], align: "near" | "far", prefer: (lo: number, hi: number) => number): { line: number; shift: Map<number, number> } | null => {
-    const sign = new Map(members.map((i) => [i, Math.sign(nat[i]!.shift) || 1]));
-    const flipped = new Set<number>();
-    for (;;) {
-      let lo = -Infinity, hi = Infinity, loBy = -1, hiBy = -1;
-      for (const i of members) {
-        const s = sign.get(i)! * Math.abs(nat[i]!.shift);
-        const L = 2 * halfLong(i), g = corner(i);
-        // near: the piece spans [line + s − g, line + s + L + g]; far: [line + s − L − g, line + s + g]
-        const a = align === "near" ? floorLo + g - s : floorLo + L + g - s;
-        const b = align === "near" ? cubeHi - L - g - s : cubeHi - g - s;
-        if (a > lo) [lo, loBy] = [a, i];
-        if (b < hi) [hi, hiBy] = [b, i];
-      }
-      if (lo <= hi) {
-        const line = prefer(lo, hi);
-        return { line, shift: new Map(members.map((i) => [i, sign.get(i)! * Math.abs(nat[i]!.shift)])) };
-      }
-      // ⭐ the piece that pushes the line up is shifted toward the camera; the one that pulls it down, toward the cube
-      // ⭐ Of the two pieces in conflict, the LONGER is flipped first: it is the one with no room to spare, and flipping
-      // the short ones instead flipped 9 of 30 at seed 1 (`D179`); this flips 1, the 4.83-unit bar.
-      const flip = [loBy, hiBy]
-        .filter((i) => i >= 0 && !flipped.has(i) && sign.get(i) === (i === loBy ? -1 : 1))
-        .sort((x, y) => halfLong(y) - halfLong(x))[0];
-      if (flip === undefined) return null;
-      flipped.add(flip);
-      sign.set(flip, -sign.get(flip)!);
-    }
+  const groups = order
+    .map((colour) => ({ colour, ids: ids.filter((id) => sameColour(spec(id).colour, colour)) }))
+    .filter((g) => g.ids.length > 0);
+  const flatArea = (id: string) => {
+    const s = [...contourDims(spec(id))].sort((a, b) => b - a);
+    return s[0]! * s[1]!;
   };
-  const up = (z: number) => Math.ceil(z / p - 1e-9) * p;
-  const down = (z: number) => Math.floor(z / p + 1e-9) * p;
-
-  type Laid = { i: number; x0: number; z0: number; z1: number; shift: number; row: 0 | 1 };
-  type Layout = { laid: Laid[]; width: number; lines: [number, number] };
-  const layout = (split: number): Layout | null => {
-    const r1 = [...Array(split).keys()];
-    const r2 = [...Array(n - split).keys()].map((k) => split + k);
-    // ⭐ row 1 as near the floor's edge as it can; row 2 `gridOffset` outside the cube if it can, else nearer the edge
-    const f1 = fitRow(r1, "near", (lo, hi) => Math.min(up(lo), hi));
-    const f2 = r2.length ? fitRow(r2, "far", (lo, hi) => Math.max(Math.min(down(hi), down(front - opt.gridOffset)), lo)) : { line: 0, shift: new Map() };
-    if (!f1 || !f2) return null;
-    const laid: Laid[] = [];
-    let x = 0;
-    for (const i of r1) {
-      const s = f1.shift.get(i)!;
-      laid.push({ i, x0: x, z0: f1.line + s - corner(i), z1: f1.line + s + 2 * halfLong(i) + corner(i), shift: s, row: 0 });
-      x += cells[i]!;
-    }
-    // ⭐ Row 2, right to left, each piece at the first place from the cursor that clears row 1 by a gutter.
-    let cursor = x;
-    for (const i of r2) {
-      const s = f2.shift.get(i)!;
-      const z0 = f2.line + s - 2 * halfLong(i) - corner(i), z1 = f2.line + s + corner(i);
-      let right = cursor;
-      for (;;) {
-        const left = right - cells[i]!;
-        const hit = laid.filter((l) => l.row === 0 && l.x0 < right && l.x0 + cells[l.i]! > left && !(l.z1 + opt.gridGap <= z0 + 1e-9 || z1 + opt.gridGap <= l.z0 + 1e-9));
-        if (hit.length === 0) break;
-        right = Math.min(...hit.map((l) => l.x0));
-      }
-      laid.push({ i, x0: right - cells[i]!, z0, z1, shift: s, row: 1 });
-      cursor = right - cells[i]!;
-    }
-    const lo = Math.min(...laid.map((l) => l.x0));
-    const hi = Math.max(...laid.map((l) => l.x0 + cells[l.i]!));
-    return { laid, width: hi - lo, lines: [f1.line, f2.line] };
-  };
-  let best: Layout | null = null;
-  for (let split = 1; split <= Math.max(1, n - 1); split++) {
-    const l = layout(split);
-    if (l && (!best || l.width < best.width)) best = l;
-  }
-  if (!best) throw new Error(`${scene.id}: the demo grid's pieces cannot lie between the floor's edge and the cube`);
-  const minCell = Math.min(...best.laid.map((l) => l.x0));
+  const widths = groups.map((g) => opt.heapWidthK * Math.sqrt(g.ids.reduce((s, id) => s + flatArea(id), 0)) + opt.heapWidthPad);
+  const total = widths.reduce((s, w) => s + w, 0) + opt.heapGap * (groups.length - 1);
   const centreX = (volume.min[0] + volume.max[0]) / 2;
-  const originX = Math.round((centreX - (best.width * p) / 2) / p) * p - minCell * p;
-  const rest = new Map<string, Vec3>();
-  const shift = new Map<string, number>();
-  const lo: [number, number, number] = [Infinity, floorTop, Infinity];
-  const hi: [number, number, number] = [-Infinity, floorTop, -Infinity];
-  for (const l of best.laid) {
-    const h = halves[l.i]!;
-    rest.set(sorted[l.i]!, [originX + (l.x0 + cells[l.i]! / 2) * p, floorTop + h[1], (l.z0 + l.z1) / 2]);
-    shift.set(sorted[l.i]!, l.shift);
-    lo[0] = Math.min(lo[0], originX + l.x0 * p);
-    hi[0] = Math.max(hi[0], originX + (l.x0 + cells[l.i]!) * p);
-    hi[1] = Math.max(hi[1], floorTop + 2 * h[1]);
-    lo[2] = Math.min(lo[2], l.z0 - 0.01);
-    hi[2] = Math.max(hi[2], l.z1 + 0.01);
-  }
-  lo[2] = Math.max(lo[2], fz[0]!);
-  if (lo[0] < fx[0]! || hi[0] > fx[1]!)
-    throw new Error(`${scene.id}: the demo grid (x ${lo[0].toFixed(2)}…${hi[0].toFixed(2)}) leaves the floor`);
-  const rows = [0, 1].map((r) => best!.laid.filter((l) => l.row === r).map((l) => sorted[l.i]!));
-  return { rest, shift, rows: [rows[0]!, rows[1]!], lines: best.lines, stage: { min: lo, max: hi } };
+  let x = centreX - total / 2;
+  const heaps: DemoHeap[] = groups.map((g, i) => {
+    const h: DemoHeap = { colour: g.colour, ids: g.ids, x0: x, x1: x + widths[i]!, centre: [x + widths[i]! / 2, (z0 + z1) / 2] };
+    x += widths[i]! + opt.heapGap;
+    return h;
+  });
+  const lo = heaps[0]!.x0, hi = heaps[heaps.length - 1]!.x1;
+  if (lo < fx[0] || hi > fx[1]) throw new Error(`${scene.id}: the demo heaps (x ${lo.toFixed(2)}…${hi.toFixed(2)}) leave the floor`);
+  // ⭐ A piece's centre stays in its heap's strip, and its body may reach half its length beyond — within the floor.
+  const reachOut = Math.max(0, ...ids.map((id) => Math.max(...contourDims(spec(id))) / 2));
+  const region: Aabb = {
+    min: [Math.max(fx[0] + opt.heapFloorMargin, lo - reachOut), floorTop, z0],
+    max: [Math.min(fx[1] - opt.heapFloorMargin, hi + reachOut), volume.max[1], z1],
+  };
+  const of = new Map<string, number>();
+  heaps.forEach((h, i) => h.ids.forEach((id) => of.set(id, i)));
+  return { heaps, of, region, floorTop };
 }
 
-/** ⭐ `D176`–`D178`: the grid — where each piece rests, its final depth shift, its two rows (in reading order) and their lines. */
-export interface DemoGrid {
-  readonly rest: Map<string, Vec3>;
-  /** ⭐ `D178`: each piece's shift off its row's line, authored units — its drawn size, its sign perhaps flipped. */
-  readonly shift: Map<string, number>;
-  /** ⭐ Row 1 left to right, row 2 right to left — the reading order. */
-  readonly rows: readonly [readonly string[], readonly string[]];
-  /** ⭐ Row 1's NEAR-face line and row 2's FAR-face line, `z`. */
-  readonly lines: readonly [number, number];
-  readonly stage: Aabb;
+/**
+ * ⭐ `D191`: the STRIP the heaps lie in — in depth from `heapFloorMargin` inside the floor's edge to `heapOffset` outside
+ * the cube (`z0`–`z1`), the floor's extent across (`fx`) and its top. ⛔ No room between them THROWS.
+ */
+export function heapStrip(scene: SceneDescriptor, volume: Aabb, opt: Pick<DemoOptions, "heapOffset" | "heapFloorMargin">): { floorTop: number; fx: readonly [number, number]; z0: number; z1: number } {
+  const floor = [...scene.bodies].filter((b) => b.frozen).sort((a, b) => Math.max(...contourDims(b)) - Math.max(...contourDims(a)))[0];
+  if (!floor) throw new Error(`${scene.id}: demo heaps need a floor (a frozen body)`);
+  const fd = contourDims(floor);
+  const z0 = floor.position[2] - fd[2] / 2 + opt.heapFloorMargin;
+  const z1 = volume.min[2] - opt.heapOffset;
+  if (z1 <= z0) throw new Error(`${scene.id}: no room for the demo heaps between the floor's edge and the cube`);
+  return { floorTop: floor.position[1] + fd[1] / 2, fx: [floor.position[0] - fd[0] / 2, floor.position[0] + fd[0] / 2], z0, z1 };
+}
+
+/** ⭐ `D191`: one heap — its colour, its pieces, its strip across (`x0`–`x1`) and its centre `[x, z]`. */
+export interface DemoHeap {
+  readonly colour: Triple;
+  readonly ids: readonly string[];
+  readonly x0: number;
+  readonly x1: number;
+  readonly centre: readonly [number, number];
+}
+
+/** ⭐ `D191`: the heaps, which heap each piece belongs to, the box they lie in and the floor's top. */
+export interface DemoHeaps {
+  readonly heaps: readonly DemoHeap[];
+  readonly of: Map<string, number>;
+  readonly region: Aabb;
+  readonly floorTop: number;
 }
 
 /**
@@ -596,17 +470,54 @@ function shuffled<T>(rnd: () => number, xs: readonly T[]): T[] {
 /** ⭐ `D174`: how a piece leaves the painting — found in phase A, replayed in phase C. */
 type Exit = { id: string; pioneer: string; unsnap: Placed; estrange: Placed; flat: Placed };
 
+/** ⭐ A normal draw (Box–Muller) from the generator's stream. */
+function gauss(rnd: () => number): number {
+  const u = Math.max(1e-12, rnd());
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd());
+}
+
+type Vec2 = [number, number];
+/** ⭐ `D193`: the convex hull of points on the floor (monotone chain), counter-clockwise. */
+function hull2(pts: readonly Vec2[]): Vec2[] {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o: Vec2, a: Vec2, b: Vec2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: Vec2[] = [], up: Vec2[] = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cr(lo[lo.length - 2]!, lo[lo.length - 1]!, q) <= 1e-12) lo.pop();
+    lo.push(q);
+  }
+  for (const q of [...p].reverse()) {
+    while (up.length >= 2 && cr(up[up.length - 2]!, up[up.length - 1]!, q) <= 1e-12) up.pop();
+    up.push(q);
+  }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+/** ⭐ `D193`: is `q` strictly inside the counter-clockwise hull `h`? */
+function inHull2(h: readonly Vec2[], q: Vec2): boolean {
+  return h.length >= 3 && h.every((a, i) => {
+    const b = h[(i + 1) % h.length]!;
+    return (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]) > 1e-12;
+  });
+}
+
+/** ⭐ `D191`: how far a box of `dims` reaches up and down from its centre at `q`. */
+function verticalHalf(dims: Vec3, q: Quat): number {
+  return [0, 1, 2].reduce((s, i) => s + (Math.abs(qRotate(q, [i === 0 ? 1 : 0, i === 1 ? 1 : 0, i === 2 ? 1 : 0])[1]) * dims[i]!) / 2, 0);
+}
+
 /**
  * ⭐⭐ Take `scene`'s final configuration apart in `opt.moveCount` checked reverse moves; return the plan.
  *
- * ⭐⭐⭐ `D174` — **THREE PHASES**, because the grid's order depends on WHICH pieces come off, and that is known only
+ * ⭐⭐⭐ `D174` — **THREE PHASES**, because the heaps' layout depends on WHICH pieces come off, and that is known only
  * once they have:
  * * **A — who, and how each leaves** (inside the cube): an unsnap off a seat, an estrangement toward the camera that
- *   will watch it go back, and a turn there to lie FLAT. The piece is then parked far away.
- * * **B — the grid**, for that set (`demoGrid`).
- * * **C — the replay**: A's three steps again, then a path from the estrangement spot down onto the piece's cell —
- *   straight, or over the build — and the lowering. ⭐ The grid lies outside the cube and A's steps inside it, so a
- *   piece already on the grid cannot block a replayed step.
+ *   will watch it go back, and a check that it has room to turn flat there. The piece is then parked far away.
+ * * **B — the heaps**, for that set (`demoHeaps`, `D191`).
+ * * **C — the replay**: A's two moves again; then a spot on the piece's heap and the pose it SETTLES in there
+ *   (`settle`), the turn at the estrangement spot into that pose, a path down onto it — straight, or over the build —
+ *   and the lowering. ⭐⭐ The pieces reach their heaps IN THE ORDER THEY COME OFF, each settling onto the ones already
+ *   there: played forwards, the last one down is the first one lifted, so every piece is lifted from the top of its
+ *   heap — the lowering it reverses was checked against exactly the pieces then on the heaps.
  */
 export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOptions> = {}): DemoPlan {
   const opt: DemoOptions = { ...DEMO_DEFAULTS, ...options };
@@ -620,12 +531,16 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
   const setup: CollisionSetup = { shapes: hullAtSpawn, bounds: boundsFromShapes(hullAtSpawn), skinM: opt.skin };
   const dimsOf = new Map(scene.bodies.map((b) => [b.id, contourDims(b) as unknown as Vec3]));
   const placedAt = (w: World, id: string): Placed => worldPlacementOf(w, id)!;
+  const strip = heapStrip(scene, volume, opt);
+  /** ⭐ `D191`: a piece longer than 80 % of the heaps' strip is deep — it can lie only ACROSS it. */
+  const isLong = (id: string): boolean => Math.max(...dimsOf.get(id)!) > 0.8 * (strip.z1 - strip.z0);
   const shifted = (w: World, id: string, d: Vec3): Placed => ({ position: add(placedAt(w, id).position, d), orientation: placedAt(w, id).orientation });
 
   /**
-   * ⭐ ESTRANGE, then turn FLAT there: along one world axis, most camera-facing first (`D171`), each at 1×–3× the range
-   * and truly clear (`clearance`); then the nearest flat orientation the piece can turn to about its centre, inside
-   * the cube. `null` if no spot allows both.
+   * ⭐ ESTRANGE, then check it can turn FLAT there: along one world axis, most camera-facing first (`D171`), each at
+   * 1×–3× the range and truly clear (`clearance`); then the nearest flat orientation the piece can turn to about its
+   * centre, inside the cube. `null` if no spot allows both. ⭐ `D191`: the turn actually played is into its HEAP pose
+   * (phase C) — this one proves the spot has room for a turn of that kind.
    */
   const leave = (w1: World, id: string, toCam: Vec3): { estrange: Placed; flat: Placed; world: World } | null => {
     const axes: Vec3[] = ([[0, 0, -1], [0, 0, 1], [1, 0, 0], [-1, 0, 0], [0, 1, 0]] as Vec3[])
@@ -635,12 +550,11 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     // ⛔ FOUND BY THE SHAPE VECTOR: a piece that already lies flat in the painting (a horizontal bar) had an ALIGN of
     // 0° — an empty move, a pause in the demo. ⭐ It is laid down a HALF-TURN away instead: its goal all the same
     // (`D130`: a box's face or its opposite), and the ALIGN is a turn a player would make.
-    // ⭐ `D177`: the piece is turned straight into its flat pose AND its little yaw, so the carry and the lift keep one
-    // orientation all the way down onto the floor.
-    const yaw = naturalOf(scene, id, opt).yaw;
-    const flats = flatOrientations(dimsOf.get(id)!)
-      .filter((q) => qAngle(q) > 1e-6)
-      .map((q) => canonical(qmul(qFromAxisAngle([0, 1, 0], yaw), q)));
+    const flats = flatOrientations(dimsOf.get(id)!).filter((q) => qAngle(q) > 1e-6);
+    // ⛔ FOUND BY THE GENERATOR (`D191`): the 48 cm bar, pulled out SIDEWAYS beside the painting, could lie flat only
+    // pointing in depth there — which no heap strip 46.5 cm deep holds. ⭐ A piece longer than 80 % of the strip's depth
+    // lies ACROSS it (phase C), so the spot it is pulled to must have room for THAT turn.
+    const across = isLong(id) ? qFromAxisAngle([0, 1, 0], Math.PI / 2) : IDENTITY;
     for (const axis of axes)
       for (const far of [1, 1.5, 2, 2.5, 3])
         for (let t = 0; t < 4; t++) {
@@ -648,9 +562,9 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
           const wE = tryPath(w1, id, estrange, setup, volume, opt);
           if (!wE || clearanceOf(wE, id) < opt.clearance) continue;
           for (const q of flats) {
-            const flat: Placed = { position: estrange.position, orientation: q };
-            const wT = tryPath(wE, id, flat, setup, volume, opt);
-            if (wT) return { estrange, flat, world: wT };
+            const wT = tryPath(wE, id, { position: estrange.position, orientation: canonical(qmul(across, q)) }, setup, volume, opt);
+            // ⭐ the flat face-down kept is the un-turned one: phase C adds the turn across itself
+            if (wT) return { estrange, flat: { position: estrange.position, orientation: q }, world: wT };
           }
         }
     return null;
@@ -679,16 +593,216 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     }
     if (!found) throw new Error(`${scene.id}: no piece can leave its seat and lie flat after ${exits.length} pieces`);
     exits.push(found.exit);
-    // ⭐ Parked far away, where nothing can meet it, until phase C puts it on its cell.
+    // ⭐ Parked far away, where nothing can meet it, until phase C puts it on its heap.
     world = setWorldPlacement(found.world, found.exit.id, { position: [1e4 * (k + 1), -1e4, 0], orientation: IDENTITY });
   }
 
-  // ⭐ B — the grid, for the pieces that came off.
-  const grid = demoGrid(scene, exits.map((e) => e.id), volume, opt);
-  const stage = grid.stage;
-  const reach = demoReach({ volume, stage });
+  // ⭐ B — the heaps, for the pieces that came off. ⭐ Their region is the stage while the plan is made, so every move
+  // is checked inside the reach the plan will carry.
+  const heaps = demoHeaps(scene, exits.map((e) => e.id), volume, opt);
+  const region = heaps.region;
+  const reach = demoReach({ volume, stage: region });
+  let heapTop = heaps.floorTop;
 
-  // ⭐ C — the replay, and each piece's way down onto its cell.
+  const isFree = (w: World, id: string, at: Placed): boolean => poseFree(w, setWorldPlacement(w, id, at), [id], id, setup).free;
+  const tilts = (max: number, step: number): number[] => {
+    const out: number[] = [];
+    for (let a = 0; a <= max + 1e-9; a += step) out.push(...(a === 0 ? [0] : [a, -a]));
+    return out.map((a) => (a * Math.PI) / 180);
+  };
+  const pitches = tilts(opt.heapPitchDeg, opt.heapPitchStepDeg);
+  const rolls = tilts(opt.heapRollDeg, opt.heapRollStepDeg);
+  const pitchMax = Math.max(...pitches.map(Math.abs));
+  const rollMax = Math.max(...rolls.map(Math.abs));
+
+  /**
+   * ⭐⭐ `D191` — **HOW A PIECE SETTLES ON ITS HEAP**: dropped straight down at `(x, z)` in its flat pose `base`, tilted
+   * about its WIDTH (a pitch, up to `heapPitchDeg`) and its LENGTH (a roll, up to `heapRollDeg`); for each tilt it comes
+   * down from above the heaps until it first TOUCHES the floor or a piece already there (`poseFree`, contact allowed —
+   * `D136`), and of all the tilts it keeps the one whose CENTRE ends LOWEST — where a rigid body comes to rest: one end
+   * on the floor and the other on a piece, flat on a piece that holds it whole, or flat on the floor. Every corner inside
+   * the heaps' region. `null` if no tilt lands there.
+   */
+  /**
+   * ⭐⭐ `D191` — **A REST THAT HOLDS**: ⛔ FOUND BY THE VECTOR — the lowest landing at a FIXED centre is not physics: a
+   * piece could balance on one edge of another, its other half over nothing, and a real one would tip. ⭐ So a landing is
+   * kept only if a small turn about its centre, either way about its WIDTH and either way about its LENGTH, presses into
+   * something (`poseFree` refuses it, deeper than the skin) — whatever side of it goes down is held. A piece flat on the
+   * floor, flat on a piece under its centre, or leaning with an end on the floor and its high side on a piece, holds.
+   */
+  const stable = (rest: World, id: string, at: Placed): boolean => {
+    const d = dimsOf.get(id)!;
+    const order = [0, 1, 2].sort((a, b) => d[b]! - d[a]! || a - b);
+    const axis = (i: number): Vec3 => qRotate(at.orientation, [i === 0 ? 1 : 0, i === 1 ? 1 : 0, i === 2 ? 1 : 0]);
+    // about the WIDTH the lever is half the length; about the LENGTH, half the width — each turn 3 skins deep at its end
+    const turns: [number, number][] = [
+      [order[1]!, d[order[0]!]! / 2],
+      [order[0]!, d[order[1]!]! / 2],
+    ];
+    for (const [about, lever] of turns) {
+      const delta = Math.min((10 * Math.PI) / 180, Math.asin(Math.min(1, (3 * opt.skin) / lever)));
+      for (const s of [1, -1]) {
+        const turned: Placed = { position: at.position, orientation: qmul(qFromAxisAngle(axis(about), s * delta), at.orientation) };
+        if (poseFree(rest, setWorldPlacement(rest, id, turned), [id], id, setup).free) return false;
+      }
+    }
+    return true;
+  };
+
+  /**
+   * ⭐⭐ `D193` — **HOW MANY PIECES ARE STACKED**, the way the eye counts them: seen from above. Each heap piece's
+   * footprint is its outline on the floor (the hull of its corners); a new rest is refused if any point of ITS footprint
+   * already lies under `heapMaxLayers` pieces. ⛔ FOUND BY THE OWNER'S EYE on the glass: `D192`'s count followed the
+   * pieces a rest TOUCHES with a lower centre, and a piece lying over a steeply leaning bar has a lower centre than the
+   * bar — so a pile 4 deep from above passed as 3.
+   */
+  const footprints = new Map<string, Vec2[]>();
+  /**
+   * ⭐⭐ `D194` — **AND HOW HIGH A STACK CLIMBS**, the other way the eye counts: a piece lying FLAT ON THE FLOOR is level
+   * 1 (a neighbour it touches side by side holds nothing up); any other piece is one level above the highest of the
+   * earlier heap pieces it TOUCHES — rests on or leans on (a gap under 1 mm; a piece put down later can only come to
+   * rest on or against earlier ones). ⛔⛔ FOUND BY THE OWNER'S EYE, A SECOND TIME: `D193` counted only from above, and a
+   * STAIRCASE — each piece on the one below, shifted — is 4 high with no spot under 4 (*"4 pieces are stacked and one
+   * piece is leaning on three stacked"*). Both counts now bind.
+   */
+  const levels = new Map<string, number>();
+  const levelAt = (w: World, id: string, at: Placed): number => {
+    const mine = corners(setWorldPlacement(w, id, at), id);
+    const ys = mine.map((c) => c[1]);
+    const thin = Math.min(...dimsOf.get(id)!);
+    if (Math.min(...ys) < heaps.floorTop + 0.005 && Math.max(...ys) - Math.min(...ys) < thin + 0.005) return 1;
+    let below = 0;
+    for (const [q, l] of levels) if ((gapBetween(mine, corners(w, q)) ?? 0) < 0.01) below = Math.max(below, l);
+    return below + 1;
+  };
+  const footprintOf = (w: World, id: string, at: Placed): Vec2[] => hull2(corners(setWorldPlacement(w, id, at), id).map((c) => [c[0], c[2]] as Vec2));
+  const stackedUnder = (w: World, id: string, at: Placed): number => {
+    const mine = footprintOf(w, id, at);
+    // ⭐ the points checked: its outline's corners pulled 1 mm in, and a 2.5 mm grid over its outline's box that falls inside
+    // it. ⛔ FOUND BY THE VECTOR: a 9 × 9 grid let a thin sliver four deep slip between its points.
+    const xs = mine.map((p) => p[0]), zs = mine.map((p) => p[1]);
+    const pts: Vec2[] = [];
+    const cx = xs.reduce((a, v) => a + v, 0) / xs.length, cz = zs.reduce((a, v) => a + v, 0) / zs.length;
+    for (const p of mine) {
+      const dx = cx - p[0], dz = cz - p[1], l = Math.hypot(dx, dz) || 1;
+      pts.push([p[0] + (dx / l) * 0.01, p[1] + (dz / l) * 0.01]);
+    }
+    const step = 0.025;
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x += step)
+      for (let z = Math.min(...zs); z <= Math.max(...zs); z += step) {
+        const q: Vec2 = [x, z];
+        if (inHull2(mine, q)) pts.push(q);
+      }
+    // (only the outlines that can reach it)
+    const near = [...footprints.values()].filter((f) => f.some((v) => v[0] >= Math.min(...xs) - 5 && v[0] <= Math.max(...xs) + 5));
+    let most = 0;
+    for (const q of pts) {
+      let n = 0;
+      for (const f of near) if (inHull2(f, q)) n++;
+      most = Math.max(most, n);
+    }
+    return most;
+  };
+
+  const settle = (w: World, id: string, x: number, z: number, base: Quat, floorOnly: boolean): Placed | null => {
+    const d = dimsOf.get(id)!;
+    const longI = [0, 1, 2].sort((a, b) => d[b]! - d[a]! || a - b)[0]!;
+    const longW = qRotate(base, [longI === 0 ? 1 : 0, longI === 1 ? 1 : 0, longI === 2 ? 1 : 0]);
+    const widthW = normalize(cross([0, 1, 0], longW)) ?? ([1, 0, 0] as Vec3);
+    type Landing = { at: Placed; y: number; p: number; r: number };
+    /** ⭐ Drop the piece at tilt (`p`, `r`) from above the heaps until it first touches; `null` if it cannot land in the region. */
+    const drop = (p: number, r: number, beat: number): Landing | null => {
+      const q = canonical(qmul(qFromAxisAngle(widthW, p), qmul(qFromAxisAngle(longW, r), base)));
+      const vh = verticalHalf(d, q);
+      const yLow = heaps.floorTop + vh;
+      if (yLow >= beat - 1e-9) return null; // ⭐ it cannot come to rest lower than on the floor
+      const at = (y: number): Placed => ({ position: [x, y, z], orientation: q });
+      const yTop = heapTop + vh + opt.clearance;
+      if (!isFree(w, id, at(yTop))) return null;
+      let free = yTop;
+      let blocked: number | null = null;
+      for (let y = yTop - opt.segment; y > yLow; y -= opt.segment) {
+        if (isFree(w, id, at(y))) free = y;
+        else {
+          blocked = y;
+          break;
+        }
+      }
+      if (blocked === null) {
+        if (isFree(w, id, at(yLow))) free = yLow;
+        else blocked = yLow;
+      }
+      if (blocked !== null) {
+        let lo: number = blocked;
+        for (let i = 0; i < 16; i++) {
+          const mid: number = (free + lo) / 2;
+          if (isFree(w, id, at(mid))) free = mid;
+          else lo = mid;
+        }
+      }
+      // ⛔ FOUND BY THE VECTOR: the drop stops where the contact rule's tolerance runs out — the piece a SKIN deep in
+      // what holds it, and the saved plan's rounding then tipped one past it. ⭐ It rests a skin higher: touching.
+      free += opt.skin;
+      if (free >= beat - 1e-9) return null;
+      return { at: at(free), y: free, p, r };
+    };
+    // ⭐ `floorOnly`: the fallback — flat, and only where it lies ON THE FLOOR (beside the heap, not on it).
+    const pairs = floorOnly
+      ? [[0, 0] as const]
+      : pitches
+          .flatMap((p) => rolls.map((r) => [p, r] as const))
+          .sort((a, b) => Math.abs(a[0]) + Math.abs(a[1]) - Math.abs(b[0]) - Math.abs(b[1]));
+    let coarse: Landing | null = null;
+    for (const [p, r] of pairs) {
+      const l: Landing | null = drop(p, r, coarse ? coarse.y : Infinity);
+      if (l) coarse = l;
+    }
+    if (!coarse) return null;
+    if (floorOnly && coarse.y > heaps.floorTop + verticalHalf(d, coarse.at.orientation) + 2 * opt.skin) return null;
+    const isEdge = (l: Landing) => Math.abs(l.p) >= pitchMax - 1e-9 || Math.abs(l.r) >= rollMax - 1e-9;
+    // ⭐ A lowest pose AT a tilt limit is not a rest: the piece would tip further than the search looks — refused.
+    if (isEdge(coarse)) return null;
+    const pStep = (opt.heapPitchStepDeg * Math.PI) / 180, rStep = (opt.heapRollStepDeg * Math.PI) / 180;
+    const fine = 0.1 * (Math.PI / 180);
+    /** ⭐ A landing made exact and judged: its rest, or `null` if it leaves the strip or does not hold. */
+    const rest = (from: Landing): Placed | null => {
+      // ⛔ FOUND BY THE VECTOR: on the coarse steps a leaning piece could stop with its support 11 mm away — the true
+      // rest lies between two steps. ⭐ So the tilt is searched again finely around the coarse one, pitch then roll.
+      let best = from;
+      const p0 = best.p;
+      for (let t = -pStep; t <= pStep + 1e-12; t += fine) best = drop(p0 + t, best.r, best.y) ?? best;
+      const r0 = best.r;
+      for (let t = -rStep; t <= rStep + 1e-12; t += fine) best = drop(best.p, r0 + t, best.y) ?? best;
+      // ⛔ FOUND BY THE VECTOR: the heaps' strip was a filter INSIDE the search, so a 48 cm bar that did not fit lying
+      // flat was tilted until it did — standing at 37° against nothing. ⭐ The rest is found as if the strip were not
+      // there, and a spot whose rest leaves it is refused.
+      const cs = corners(setWorldPlacement(w, id, best.at), id);
+      if (cs.some((c) => c[0] < region.min[0] || c[0] > region.max[0] || c[2] < region.min[2] || c[2] > region.max[2])) return null;
+      // ⭐ `D192`/`D193`: no more than `heapMaxLayers` pieces one above another, seen from above — refused, it goes elsewhere.
+      if (stackedUnder(w, id, best.at) + 1 > opt.heapMaxLayers) return null;
+      // ⭐ `D194`: nor more than `heapMaxLayers` pieces high, rest on rest or leaning — refused, it goes elsewhere.
+      if (levelAt(w, id, best.at) > opt.heapMaxLayers) return null;
+      return stable(setWorldPlacement(w, id, best.at), id, best.at) ? best.at : null;
+    };
+    const first = rest(coarse);
+    if (first) return first;
+    // ⛔ FOUND BY THE GENERATOR: a bar balanced on ONE support at its lowest landing tips, and the pose it tips into — an
+    // end down, resting on that support — lands its centre no lower, so the lowest-first search never reached it. ⭐ When
+    // the lowest landing does not hold, the next-lowest are tried in order, and the first that holds is its rest.
+    // (the pitches alone, rolled 0: the tip is about the width)
+    const others = pitches
+      .map((p) => drop(p, 0, Infinity))
+      .filter((l): l is Landing => l !== null && !isEdge(l) && (l.p !== coarse.p || l.r !== coarse.r))
+      .sort((x, y) => x.y - y.y)
+      .slice(0, 6);
+    for (const l of others) {
+      const at = rest(l);
+      if (at) return at;
+    }
+    return null;
+  };
+
+  // ⭐ C — the replay; each piece settles on its heap, in the order it comes off.
   world = assembled;
   const reverse: Reverse[] = [];
   const push = (kind: DemoMoveKind, id: string, to: Placed, box: Aabb, pioneer?: string): void => {
@@ -703,52 +817,96 @@ export function generateDemoPlan(scene: SceneDescriptor, options: Partial<DemoOp
     const id = e.id;
     push("SNAP", id, e.unsnap, volume, e.pioneer);
     push("APPROACH", id, e.estrange, volume);
-    push("ALIGN", id, e.flat, volume);
     const E = placedAt(world, id);
-    const rest: Placed = { position: grid.rest.get(id)!, orientation: E.orientation };
-    const half = flatHalf(dimsOf.get(id)!);
-    // ⭐ The lowest height from which the piece clears every piece that can lie on the grid.
-    const clear = stage.max[1] + opt.clearance + half[1];
-    const top = reach.max[1] - half[1] - 0.01;
-    const lifted = (y: number): Placed => ({ position: [rest.position[0], y, rest.position[2]], orientation: E.orientation });
-    // ⭐ Routes, tried in order: straight from the spot to just above the cell; straight at the spot's own height;
-    // then OVER the build — up from the spot, across, and down onto the cell — at rising heights.
-    const routes: Placed[][] = [[lifted(clear)]];
-    if (E.position[1] > clear) routes.push([lifted(E.position[1])]);
-    for (let i = 0; i <= 8; i++) {
-      const y = clear + ((top - clear) * i) / 8;
-      if (y > E.position[1]) routes.push([{ position: [E.position[0], y, E.position[2]], orientation: E.orientation }, lifted(y)]);
-    }
-    // ⭐ `D175`, FOUND BY THE GENERATOR: a piece laid flat LENGTHWISE beside the painting's edge cannot rise straight
-    // from its spot — the painting's side column is over it. So: first a step straight AWAY from its slot (the way it
-    // was pulled out, flattened), then up, across, and down — at 1 to 3 units out, at rising heights.
-    const fin = final.get(id)!.position;
-    const away = normalize([E.position[0] - fin[0], 0, E.position[2] - fin[2]]) ?? ([0, 0, -1] as Vec3);
-    for (const out of [1, 2, 3]) {
-      const P: Vec3 = add(E.position, scale(away, out));
-      routes.push([{ position: P, orientation: E.orientation }, lifted(clear)]);
+    const heap = heaps.heaps[heaps.of.get(id)!]!;
+    const width = heap.x1 - heap.x0;
+    const flats = [e.flat.orientation, ...flatOrientations(dimsOf.get(id)!).filter((q) => qAngle(qmul(q, qconj(e.flat.orientation))) > 1e-6)];
+    const long = isLong(id);
+    let done = false;
+    for (let attempt = 0; attempt < opt.heapTries && !done; attempt++) {
+      // ⭐ A spot on its heap: the centre drawn around the heap's, kept inside its strip; any yaw. ⭐ After half its
+      // tries, a piece that finds no rest ON its heap lies flat on free FLOOR beside it — anywhere in the strip's depth,
+      // within a heap and a half of its heap's centre (the 48 cm bar, longer than the strip is deep, needed it: found
+      // by the generator).
+      const beside = attempt >= opt.heapTries / 2;
+      const x = beside
+        ? heap.centre[0] + (rnd() * 2 - 1) * 1.5 * width
+        : Math.min(heap.x1, Math.max(heap.x0, heap.centre[0] + gauss(rnd) * opt.heapSpread * width));
+      const z = beside ? between(rnd, region.min[2], region.max[2]) : heap.centre[1] + gauss(rnd) * opt.heapSpreadDepth;
+      // ⭐ Beside its heap — or on it, for a piece longer than 80 % of the strip's depth, which fits no other way — a piece
+      // lies ACROSS the strip, along the row of heaps, within 20°. ⭐ Each try lays it on the next of its four flat
+      // faces-down (the half-turns), so a turn at its estrangement spot that one blocks, another may not.
+      const across = beside || long;
+      const yaw = across ? Math.PI / 2 + (rnd() * 2 - 1) * ((20 * Math.PI) / 180) : rnd() * Math.PI;
+      const base = canonical(qmul(qFromAxisAngle([0, 1, 0], yaw), flats[attempt % flats.length]!));
+      const rest = settle(world, id, x, z, base, beside);
+      if (!rest) continue;
+      // ⭐ The ALIGN (played: from the heap pose to upright) — about the centre, at the estrangement spot, in the cube.
+      const T: Placed = { position: E.position, orientation: rest.orientation };
+      const wA = tryPath(world, id, T, setup, volume, opt);
+      if (!wA) continue;
+      const vh = verticalHalf(dimsOf.get(id)!, rest.orientation);
+      // ⭐ The lowest height from which the piece clears every piece on the heaps now.
+      const clear = Math.max(heapTop + opt.clearance + vh, rest.position[1]);
+      const top = reach.max[1] - vh - 0.01;
+      const lifted = (y: number): Placed => ({ position: [rest.position[0], y, rest.position[2]], orientation: rest.orientation });
+      // ⭐ Routes, tried in order: straight from the spot to just above its place on the heap; straight at the spot's
+      // own height; then OVER the build — up from the spot, across, and down — at rising heights.
+      const routes: Placed[][] = [[lifted(clear)]];
+      if (T.position[1] > clear) routes.push([lifted(T.position[1])]);
       for (let i = 0; i <= 8; i++) {
         const y = clear + ((top - clear) * i) / 8;
-        if (y > P[1]) routes.push([{ position: P, orientation: E.orientation }, { position: [P[0], y, P[2]], orientation: E.orientation }, lifted(y)]);
+        if (y > T.position[1]) routes.push([{ position: [T.position[0], y, T.position[2]], orientation: T.orientation }, lifted(y)]);
+      }
+      // ⭐ `D175`, FOUND BY THE GENERATOR: a piece beside the painting's edge cannot rise straight from its spot — the
+      // painting's side column is over it. So: first a step straight AWAY from its slot (the way it was pulled out,
+      // flattened), then up, across, and down — at 1 to 3 units out, at rising heights.
+      const fin = final.get(id)!.position;
+      const away = normalize([T.position[0] - fin[0], 0, T.position[2] - fin[2]]) ?? ([0, 0, -1] as Vec3);
+      for (const out of [1, 2, 3]) {
+        const P: Vec3 = add(T.position, scale(away, out));
+        routes.push([{ position: P, orientation: T.orientation }, lifted(clear)]);
+        for (let i = 0; i <= 8; i++) {
+          const y = clear + ((top - clear) * i) / 8;
+          if (y > P[1]) routes.push([{ position: P, orientation: T.orientation }, { position: [P[0], y, P[2]], orientation: T.orientation }, lifted(y)]);
+        }
+      }
+      for (const legs of routes) {
+        let w: World | null = wA;
+        for (const to of legs) w = w && tryPath(w, id, to, setup, reach, opt);
+        const down = w && tryPath(w, id, rest, setup, reach, opt);
+        if (!w || !down) continue;
+        push("ALIGN", id, T, volume);
+        const L = legs[legs.length - 1]!;
+        const pts = [T, ...legs];
+        const travel = pts.slice(1).reduce((s, p, i) => s + length(sub(p.position, pts[i]!.position)), 0);
+        reverse.push({ kind: "TRANSLATE", body: id, from: T, to: L, travel, ...(legs.length > 1 ? { via: legs.slice(0, -1).map((p) => p.position) } : {}) });
+        reverse.push({ kind: "LIFT", body: id, from: L, to: rest, travel: travelOf(w, id, L, rest) });
+        footprints.set(id, footprintOf(world, id, rest));
+        levels.set(id, levelAt(world, id, rest));
+        world = down;
+        heapTop = Math.max(heapTop, ...corners(world, id).map((c) => c[1]));
+        done = true;
+        break;
       }
     }
-    let done = false;
-    for (const legs of routes) {
-      let w: World | null = world;
-      for (const to of legs) w = w && tryPath(w, id, to, setup, reach, opt);
-      const down = w && tryPath(w, id, rest, setup, reach, opt);
-      if (!w || !down) continue;
-      const L = legs[legs.length - 1]!;
-      const pts = [E, ...legs];
-      const travel = pts.slice(1).reduce((s, p, i) => s + length(sub(p.position, pts[i]!.position)), 0);
-      reverse.push({ kind: "TRANSLATE", body: id, from: E, to: L, travel, ...(legs.length > 1 ? { via: legs.slice(0, -1).map((p) => p.position) } : {}) });
-      reverse.push({ kind: "LIFT", body: id, from: L, to: rest, travel: travelOf(w, id, L, rest) });
-      world = down;
-      done = true;
-      break;
-    }
-    if (!done) throw new Error(`${scene.id}: ${id} finds no free way down onto its grid cell (from ${E.position.map((v) => v.toFixed(2))}, flat ${E.orientation.map((v) => v.toFixed(2))} to ${rest.position.map((v) => v.toFixed(2))}, clear ${clear.toFixed(2)}, piece ${exits.indexOf(e) + 1}/${K})`);
+    if (!done) throw new Error(`${scene.id}: ${id} finds no place on its heap it can be put down on (piece ${exits.indexOf(e) + 1}/${K}, ${opt.heapTries} tries)`);
   }
+  // ⭐ The stage — what the camera frames at the start and what the reach adds to the cube: across and in depth, every
+  // corner OUTSIDE the cube of every piece on its heap and along every carry and lift (straight legs, so their ends
+  // bound them); in height, the floor to the top of the heaps.
+  const outside: Vec3[] = [];
+  for (const r of reverse)
+    if (r.kind === "TRANSLATE" || r.kind === "LIFT")
+      for (const at of [r.from, r.to, ...(r.via ?? []).map((v) => ({ position: v, orientation: r.from.orientation }))])
+        outside.push(...corners(setWorldPlacement(world, r.body, at), r.body).filter((c) => c[0] < volume.min[0] || c[0] > volume.max[0] || c[2] < volume.min[2] || c[2] > volume.max[2]));
+  // ⛔ FOUND BY THE PLAYBACK VECTOR (`D193`): fitted exactly, a piece at the stage's edge poked past it by the saved plan's
+  // 1e-6 rounding of its pose (a corner 2.4 units out moves ~2e-6). ⭐ Padded 0.1 mm outward, across and in depth.
+  const pad = 0.001;
+  const stage: Aabb = {
+    min: [Math.min(...outside.map((c) => c[0])) - pad, heaps.floorTop, Math.min(...outside.map((c) => c[2])) - pad],
+    max: [Math.max(...outside.map((c) => c[0])) + pad, heapTop, Math.max(...outside.map((c) => c[2])) + pad],
+  };
 
   // ⭐ Forwards: reversed, each move from its end back to its start (a path's corners in the other order).
   const moves: DemoMove[] = reverse.reverse().map((r) => ({

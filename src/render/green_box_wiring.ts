@@ -1,5 +1,5 @@
 /**
- * ⭐⭐ **THE GREEN BOX, WIRED** (`D191`) — built once at boot from `input/green_box.ts`'s answer (the smallest yellow body's
+ * ⭐⭐ **THE GREEN BOX, WIRED** (prototype (green box)) — built once at boot from `input/green_box.ts`'s answer (the smallest yellow body's
  * size), and placed every frame, just before the scene is drawn, midway between the yellow orbit-centre marker and the
  * camera — after everything that moves either (an orbit, a pinch, the wheel, the reset, a demo's camera, the marker's
  * jump to a new barycentre). ⛔ No rule here.
@@ -32,7 +32,7 @@ export function createGreenBox(st: SceneState): void {
   mat.diffuseColor = GREEN;
   box.material = mat;
   box.isPickable = false;
-  // ⭐ `D191` (the owner: *"the green cube shall billboard the camera"*): it always turns its 65 × 37 face to the camera.
+  // ⭐ prototype (green box) (the owner: *"the green cube shall billboard the camera"*): it always turns its 65 × 37 face to the camera.
   // ⛔ Safe only because it has NO parent — a billboarded child keeps its parent's scale and translation and drops its
   // rotation (the PioneerFaceCursor's lesson, `CLAUDE.md`).
   box.billboardMode = Mesh.BILLBOARDMODE_ALL;

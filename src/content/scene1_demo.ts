@@ -13,7 +13,7 @@ import type { DemoOptions, DemoPlan } from "../core/demo_plan";
 import { SCENE_1, SCENE_1_PALETTE } from "./scene_1";
 
 /**
- * ⭐ `D174` (the owner: *"ordered by color"*): the grid's colour groups in the painting's own order — white, black,
+ * ⭐ `D174`/`D191` (the owner: *"ordered by color"*, *"small heaps one per color"*): the heaps, left to right, in the painting's own order — white, black,
  * yellow, red, blue (the slots `MAT_A`–`MAT_E`, as `SCENE_1.md` §4 counts them). What the generator is given for
  * `Scene_1`, by the script that writes the plan and by the vector that checks it.
  */

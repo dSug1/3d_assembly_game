@@ -388,7 +388,7 @@ export interface SceneState {
   sceneSpec: SceneDescriptor;
   tuning: ReturnType<typeof parseConfigOverrides>;
   centreMarker: Mesh;
-  /** ⭐ `D191`: the green box, midway between the yellow target and the camera — `null` in a scene with no yellow body. */
+  /** ⭐ prototype (green box): the green box, midway between the yellow target and the camera — `null` in a scene with no yellow body. */
   greenBox: Mesh | null;
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */
   greenBoxRigM: Vec3 | null;

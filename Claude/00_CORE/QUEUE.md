@@ -20,7 +20,7 @@ record. **A status changes in BOTH places or neither.**
 holds; no Pioneer sway → `ALIGNMENT_RULES.md` §24. **`D183`** (`1.0.57-`) the goal capture; PLACED = the snap's margins
 (1 mm / 1° never grabbed); twins swap → `LEVEL_END.md` §5. **`D184`** finger up always away → §25. **`D185`** the pitch, a
 wheel from the press side → §26. **`D186`–`D188`** HUD button, live episodes, score bar → `LEVEL_END` §6. **`D189`** the goal
-count and its pop-up move only when an action completes → §5bis. **`D190`** only moved pieces re-judged; 3 fit defects → §5ter. ⛔ `D182`–`D189` unjudged. Next: `3D2`.
+count and its pop-up move only when an action completes → §5bis. **`D190`** only moved pieces re-judged; 3 fit defects → §5ter. **`D191`–`D194`** the demo: colour heaps, 3 high; camera 50° earlier → `DEMO_SCENE`. ⛔ `D182`–`D194` unjudged. Next: `3D2`.
 
 ⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
 (played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
@@ -42,7 +42,7 @@ axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
 ✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1611 golden vectors,
-all passing** (37 → … → 1606 → **1611**, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D183`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+all passing** (37 → … → 1610 → **1611**, `D191`: − 10 + 8, `D192`: + 1, `D194`: + 1, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D183`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to

@@ -1,7 +1,7 @@
 # DEMO_SCENE — a scene that assembles itself
 
 > **STATUS** · 🔨 specified and built 2026-09-29 (`D170`, revised by `D171` the same day; ⭐ the start is a floor grid
-> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, then a median law, `D179`, the same day), ⛔ unjudged by a hand ·
+> since `D174`, 2026-09-30; lengthwise, the camera 15° earlier, `D175`; in two interlocking rows, `D176`; a natural feel, `D177`, made bolder, `D178`, then a median law, `D179`, the same day); ⭐⭐ **the start is SMALL HEAPS, ONE PER COLOUR, since `D191`** (2026-09-30, §2bis — the grid is §2quater, the record), ⭐ three pieces stacked at most and the camera 50° earlier, `D192` (2026-10-01), the stack counted from above, `D193`, and up its support chain too, `D194`, ⛔ unjudged by a hand ·
 > **OWNS** · what a demo scene is, how its disassembly is computed, how it plays, and `Scene1_demo`
 > **READ IF** · you are making a demo from another scene, changing how moves are generated or played, or changing
 > the demo's camera
@@ -51,11 +51,26 @@
 > *"random between 0 to 4 degrees negative or positive yaw absolute value median 2.5 degrees, random between 0 to 5 % of
 > longest dimension of each part negative or positive for part misalignment on depth for the row alignments, absolute
 > value median 3%"* — the owner, 2026-09-30 (`D179`)
+>
+> *"modify the specification so that the start configuration is small heaps one per color (E. in the artefact). Make
+> sure that the parts are disassembled and added to the heap in the correct order so later they can be reassembled
+> without colliding with any when they are picked from the heap. pieces in the heap can lay on top of each other at
+> different elevations (for example one end on floor and one end on top of another piece) which creates natural
+> rotation of the piece (same as what is shown for the longest black piece in the artefact E.). rebuild the demo scene.
+> deploy"* — the owner, 2026-09-30 (`D191`), after ten layouts were proposed as snapshots (E: *small heaps, one per
+> colour*)
+>
+> *"limit the heaps height to max three pieces stacked on top of each other"* · *"camera should start from current from
+> 50degrees yaw to the left. Therefore, total yaw rotation of the camera during demo = 410 degrees"* — the owner,
+> 2026-10-01 (`D192`) · *"There are more than 3 pieces stacked in the white heap"* — the owner, on the deployed build
+> (`D193`) · *"There is something wrong. The white heap is still more than 3 pieces stacked: 4 pieces are stacked and one
+> piece is leaning on three stacked. This is the second time you are breaking the rule i gave you"* — the owner, on the
+> deployed `D193` build (`D194`)
 
 ## 1. The idea
 
-A **demo scene** is a level that plays itself: it opens on the pieces laid out on the floor (`D174`; scattered in the
-air before) and, move by move,
+A **demo scene** is a level that plays itself: it opens on the pieces in small heaps on the floor (`D191`; a floor grid
+at `D174`, scattered in the air before) and, move by move,
 **assembles them into the level's final configuration** (`SceneDescriptor.final`, `D129`), while the camera circles
 it, rises and draws back. It shows a player what the level asks for and what the moves look like.
 
@@ -71,16 +86,16 @@ The plan stores the moves in PLAY order (forwards). The generator produces their
 |---|---|---|---|
 | **`SNAP`** | brings a face within capture of its Pioneer face; the snap lerps it home (`D100`) | **unsnap**: slide the piece off its seat along the seat face's normal, away from the Pioneer | a straight translation of `snapGap`, perpendicular to the seat face; ends in contact with its **Pioneer** (named in the move) |
 | **`APPROACH`** | slides the aligned piece toward its seat (one finger, or Shift / second finger for gravity) | **estrange**: pull it CLEAR of the assembly | a straight translation along ONE world axis — horizontal (`±x`, `±z`) or gravity (`+y`); it must end `clearance` away from every other body |
-| **`ALIGN`** | taps the Pioneer face while holding the piece: it turns to face it (`D87`/`D106`); the mate sets its spin (`D143`) | **unalign**: lay it FLAT (`D174`) | a rotation about the piece's own centre, from lying flat to the piece's goal orientation |
-| **`TRANSLATE`** | drags the piece — one finger, and the second at once for gravity (`D43`: they sum) | **the carry** (`D174`): from the spot in front of its slot to above its grid cell | straight legs, orientation unchanged — ONE leg, or up / across / down OVER the build (`via`) |
-| **`LIFT`** | second finger / Shift + drag on gravity | **the lowering** (`D174`): straight down onto its grid cell | a straight VERTICAL translation, orientation unchanged |
+| **`ALIGN`** | taps the Pioneer face while holding the piece: it turns to face it (`D87`/`D106`); the mate sets its spin (`D143`) | **unalign**: turn it into its HEAP pose (`D191`; flat at `D174`) | a rotation about the piece's own centre, from its heap pose to the piece's goal orientation |
+| **`TRANSLATE`** | drags the piece — one finger, and the second at once for gravity (`D43`: they sum) | **the carry** (`D174`): from the spot in front of its slot to above its place on its heap (`D191`) | straight legs, orientation unchanged — ONE leg, or up / across / down OVER the build (`via`) |
+| **`LIFT`** | second finger / Shift + drag on gravity | **the lowering** (`D174`): straight down onto its heap (`D191`) | a straight VERTICAL translation, orientation unchanged |
 
 ⛔ `YAW` is **deleted** (`D174`): it spun a piece in the air at its scatter spot, and there is no scatter spot now.
 
 ⭐⭐ **A piece's chain — 5 moves, always the same** (`D171`'s *"30 pieces, 5 movements each"*; the order `D174`'s):
-played forwards **`LIFT → TRANSLATE → ALIGN → APPROACH → SNAP`** — *lifted* off the grid, carried to the spot in front
-of its slot, turned upright there, slid in, seated. Backwards: unsnap → estrange → lay flat → carry to the cell →
-lower. So **150 moves take 30 of the 41 pieces out**; the other 11 stay in the painting — the seed of the build.
+played forwards **`LIFT → TRANSLATE → ALIGN → APPROACH → SNAP`** — *lifted* off its heap (`D191`), carried to the spot
+in front of its slot, turned upright there, slid in, seated. Backwards: unsnap → estrange → turn into its heap pose →
+carry above its heap → lower onto it. So **150 moves take 30 of the 41 pieces out**; the other 11 stay in the painting — the seed of the build.
 ⛔ A piece that already lies flat in the painting (a horizontal bar, a flat white piece) is laid down a **half-turn**
 away (`D130`: a box's face or its opposite is its goal all the same), so its `ALIGN` is a real turn — found by the
 shape vector: 11 of the first plan's `ALIGN`s turned by 0°, empty moves. Seed 1: every `ALIGN` turns 90°–180°.
@@ -94,7 +109,7 @@ all vectored (`tests/d174.test.ts`):
    carry ends on is out from its slot **toward the camera at the moment it goes back** (`D171`'s rule, below), so it
    turns and slides in on the side being watched, not behind the assembly.
 3. **The build's own moves stay in the cube** (`ALIGN`, `APPROACH`, `SNAP`); only the lift and the carry reach over
-   the grid.
+   the heaps.
 
 ⚠ The carry is the long move — **4.3 to 14.9 units** (`D176`; 7.5–16.8 at `D175`) — and while the camera is on the grid's
 side it crosses in front of it, from the floor to the spot before its slot. **8 of 30 go OVER the build** (played
@@ -124,7 +139,71 @@ be **when that piece is re-assembled** — so each move plays in front of the ca
   painting nearly edge-on and the slot's neighbours hide it; 6 `LIFT`s off the grid behind a piece of the build.
   ⚠ The instrument recomputes the camera from the playback's own laws; it is not the product's frame. §9.
 
-## 2bis. ⭐⭐⭐ The start configuration — a floor grid (`D174`)
+## 2bis. ⭐⭐⭐ The start configuration — small HEAPS, one per colour (`D191`, ⛔ unjudged by a hand)
+
+* **One heap per colour** (`demoHeaps`), left to right as the boot camera sees them, in `colourOrder` — white, black,
+  yellow, red, blue, for the colours the 30 include — in the strip between the floor's edge (5 mm in) and the cube
+  (3 cm out, `heapStrip`). A heap is `1.2 × √(its pieces' flat area) + 3 cm` wide, 4 cm from the next, the row centred
+  on the cube.
+* **Dropped, not placed** (`settle`): a piece falls straight down, face-down flat, at a spot drawn around its heap's
+  centre (σ = 15 % of the heap's width across, 5 cm in depth), at any yaw; it is tried at every tilt about its WIDTH
+  (±40°, 2.5° steps) and its LENGTH (±6°, 2° steps), comes down at each until it first touches the floor or a piece
+  already there (the game's own collision rule, `D136`), and the tilt whose CENTRE ends lowest wins — refined to 0.1°.
+  So it lies flat on the floor, flat on a piece, or LEANS: *"one end on floor and one end on top of another piece"*.
+  ⛔ Found by the vectors: on the coarse steps a leaning piece stopped 11 mm short of its support (hence the
+  refinement), and the drop stops a SKIN (0.3 mm) deep in what holds it — it rests a skin higher, touching.
+* ⭐⭐ **A REST THAT HOLDS**: a landing is kept only if a small turn about its centre, either way about its width and
+  either way about its length, presses into something. ⛔ Found by the vectors: the lowest landing at a fixed centre is
+  not physics — a piece balanced on one edge of another, its other half over nothing, would tip. ⭐ When the lowest
+  landing does not hold, the next-lowest are tried; a lowest landing AT the tilt limit is refused (it would tip further).
+* ⭐⭐⭐ **THE ORDER** (*"added to the heap in the correct order so later they can be reassembled without colliding"*):
+  the pieces reach their heaps IN THE ORDER THEY COME OFF the painting, each settling on those already there — so,
+  played forwards, **the last one down is the first one lifted**: every `LIFT` starts from the top of what is left, and
+  the lowering it reverses was checked against exactly the pieces then on the heaps. ⭐ Vectored both ways
+  (`tests/d191.test.ts`): lifted in play order, no lift meets anything; lifted in the order they were put down, some do.
+* **The long bars** (48 cm; the strip is 46.5 cm deep): a piece longer than 80 % of the strip's depth lies ACROSS it,
+  within 20°, and the spot it is pulled out to must have room for THAT turn (phase A). ⛔ Found by the generator: a bar
+  pulled out sideways beside the painting could lie flat only pointing in depth there, which no strip holds.
+* ⭐⭐⭐ **THREE PIECES STACKED AT MOST — BOTH WAYS THE EYE COUNTS** (`D194`), and a rest that breaks either is refused:
+  * **Up the support chain**: a piece lying FLAT ON THE FLOOR is level 1 (a neighbour it touches side by side holds
+    nothing up); any other piece is one level above the highest EARLIER heap piece it touches — rests on or LEANS on (a
+    gap under 1 mm; a piece put down later can only come to rest on or against earlier ones). No piece above level 3.
+  * **from above**, below.
+  ⛔⛔⛔ **THE OWNER'S RULE WAS BROKEN TWICE, AND BOTH TIMES BY THE SAME MISTAKE**: I chose a count that was easy to
+  compute instead of the count the owner makes when looking at the heap, and closed it on a green suite without looking.
+  `D192` counted support but only through lower centres (a piece over a leaning bar was not on it); `D193` counted only
+  from above, and a STAIRCASE — each piece on the one below, shifted — is 4 high with no spot under 4. ⭐ *A rule about
+  what the eye sees is checked by every way the eye counts, and by looking.* Measured by the chain: `D193`'s plan **7**
+  high (the vector fails on it), white 4 — the owner's report.
+* ⭐⭐ **THREE PIECES STACKED AT MOST, COUNTED FROM ABOVE** (`D192`, `D193`): each heap piece's outline on the floor is
+  the hull of its corners; a rest is refused if any point of its outline (a 2.5 mm grid, its corners 1 mm in) already
+  lies under three outlines (`heapMaxLayers`), and the piece goes elsewhere. ⛔⛔ **`D192` counted LAYERS OF SUPPORT**
+  (one more than the highest piece a rest touches with a lower centre) and the owner saw a pile deeper than three on the
+  glass: a piece lying over a steeply leaning bar has a LOWER centre than the bar, so the bar was not counted — 4 deep
+  from above, passed as 3. ⛔ And a 9 × 9 sample of the outline let a thin sliver four deep through (found by the
+  vector, which scans the strip every 1 cm). ⭐ *Count what the eye counts.* Measured: `D191`'s plan 7 deep by layers,
+  `D192`'s 4 deep from above — the vector fails on both.
+  ⚠⚠ **COST**: a 48 cm bar leaning across a heap covers four pieces from above, so the bars no longer lean — `D191`'s
+  *"same as what is shown for the longest black piece"* is no longer held (its vector is dropped, the reason kept).
+* **The fallback**: after 30 of its 60 tries, a piece that finds no rest on its heap lies flat on free floor beside it,
+  within a heap and a half of its centre (`D191`'s plan: one, Piece9; `D192`'s: none; `D193`'s: three white).
+* **The stage** (what the start view frames, and what the reach adds to the cube): every corner outside the cube of every
+  piece on its heap and along every carry and lift, from the floor to the heaps' top — padded 0.1 mm across and in depth
+  (`D193`: fitted exactly, a piece at its edge poked past it by the saved plan's 1e-6 rounding; found by the playback
+  vector).
+* ⭐ **Measured, seed 1** (the committed plan, `D194`): five heaps — 10 white, 14 black, 2 yellow, 3 red, 1 blue;
+  every heap **3 high at most** by the chain (17 pieces on level 1, 8 on level 2, 5 on level 3) and from above; **2**
+  pieces leaning (white Piece15 at 28°, yellow Piece17 at 23°), **11** resting wholly on other pieces; the highest point
+  **12.1 cm**; **2** pieces needed the fallback (Piece4, Piece32). A headless look at the start frame: no tall pile.
+  (`D193`'s: 7 high by the chain, 4 leaning, 13.9 cm; `D192`'s: 4 deep from above; `D191`'s: 7 deep, 15 cm.)
+  ⚠ The cost, again: the stricter the stack, the fewer pieces lean (9 at `D191`, 2 now). ⚠ Generating the plan takes ~2 min (~45 s before).
+* ⛔ **Nothing is drawn**: the demo scene has exactly `Scene_1`'s bodies (a vector).
+
+## 2quater. ⛔ SUPERSEDED BY `D191` — the floor grid (`D174`–`D179`), kept as the record
+
+⛔ `demoGrid`, `naturalOf`, `sizeWithMedian` and their options (`gridPitch`, `gridGap`, `gridOffset`, `startYawDeg`,
+`startShiftFrac`) are deleted with their vectors. ⭐ What stands of it: the chain (§2), the camera 15° earlier (`D175`,
+§7), the colour order. What follows is the grid as it was built.
 
 * **Flat** (*"aligned with the floor"*): each piece rests on its **largest face** — its smallest side vertical, ⭐
   **its longest along DEPTH, world `z`** (`D175`; along `x` at `D174`), its middle one along `x`, square to the floor's
@@ -191,9 +270,11 @@ The grid's ORDER depends on WHICH pieces come off, known only once they have —
 * **A — who, and how each leaves**, inside the cube: an unsnap off a seat, an estrangement toward the camera (at 1× to
   **3×** the range now: a piece must have room to lie down there), and the turn to lie flat. The piece is then parked
   far away.
-* **B — the grid** for that set (`demoGrid`).
-* **C — the replay**: A's three steps again (the grid is outside the cube and A's steps inside it, so a piece already
-  lying on the grid cannot block one — a refusal there throws as a defect), then the carry and the lowering. The carry
+* **B — the heaps** for that set (`demoHeaps`, `D191`; the grid, `demoGrid`, before).
+* **C — the replay**: A's unsnap and estrangement again (the heaps are outside the cube and those steps inside it, so a
+  piece already on a heap cannot block one — a refusal there throws as a defect); then, `D191`, a spot on its heap and
+  the rest it settles in there (§2bis), the turn into that pose, the carry and the lowering — the spot re-drawn until
+  all four are free. The carry
   tries, in order: straight to just above the cell; straight at the spot's own height; then **over the build** at
   rising heights.
 
@@ -232,10 +313,15 @@ and the generation throws — the tighter-cube vector uses side 7. A carry AROUN
 | `snapGap` | **0.3** (3 cm) | inside the snap's reach at the boot camera (`captureOffsetMm` 10 mm on the glass ≈ 4 cm) |
 | estrange | 1.0–1.6, up to 3× (`D174`; 2× before) | clear of the painting's 0.33 depth, and room to lie down |
 | `clearance` | **0.15** | a piece pulled clear is not still in a hole of the assembly; ⭐ `D174`: the carry's lowest height clears the grid by it |
-| `gridPitch` / `gridGap` / `gridOffset` | **0.05 / 0.1 / 0.3** (5 mm / 1 cm / 3 cm) | `D174` — a virtual grid, a gutter, just outside the cube (`D175`: when the floor allows) |
-| ⛔ `gridWidth` | deleted (`D175`) | one rank, as wide as the pieces |
-| camera start | **15° before** the boot yaw (`D175`) | the orbit is 375°, ending where it did |
-| `startYawDeg` / `startShiftFrac` | **0–4°, median 2.5° / 0–5 % of the longest side, median 3 %**, either sign | `D179` — a natural feel on the grid (5–10° / 5–10 % at `D178`; ±1.5° / ±1 pixel at `D177`) |
+| `heapWidthK` / `heapWidthPad` / `heapGap` | **1.2 / 0.3 / 0.4** (3 cm / 4 cm) | `D191` — a heap as wide as its pieces need |
+| `heapSpread` / `heapSpreadDepth` | **15 % of the heap / 0.5** (5 cm) | `D191` — where a piece is dropped |
+| `heapOffset` / `heapFloorMargin` | **0.3 / 0.05** (3 cm / 5 mm) | `D191` — outside the cube, inside the floor |
+| `heapPitchDeg` / `heapRollDeg` | **40° / 6°**, steps **2.5° / 2°**, refined to 0.1° | `D191` — how far a piece may tilt as it settles |
+| `heapTries` | **60** (the floor fallback after 30) | `D191` |
+| `heapMaxLayers` | **3** | `D192`–`D194` — three pieces high up the support chain, and over any point seen from above |
+| ⛔ `gridPitch`, `gridGap`, `gridOffset`, `gridWidth` | deleted (`D191`; `gridWidth` at `D175`) | the grid |
+| camera start | **50° before** the boot yaw (`D192`; 15° at `D175`) | the orbit is **410°** (375° at `D175`), ending where it did |
+| ⛔ `startYawDeg` / `startShiftFrac` | deleted (`D191`) — were 0–4°, median 2.5° / 0–5 %, median 3 % (`D179`) | the grid's natural feel |
 | colour order | white, black, yellow, red, blue | `D174`, `SCENE1_DEMO_OPTIONS` |
 | ⛔ `facing`, unalign angles, yaw | deleted (`D174`) | they went with the scatter |
 | `segment` / skin | 0.1 / 0.003 (0.3 mm, the game's skin) | |
@@ -272,19 +358,22 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 
 ## 7. How it plays — the camera (`D170`, `D171`, `D174`)
 
-* **Yaw**: it **orbits to the right**. ⭐⭐ `D175`: it **STARTS 15° before the boot yaw** (to the left) and still ENDS
-  where it did — the boot yaw a turn on, the level's own front view — so it turns **375°** (`DEMO_START_BEFORE_DEG`).
+* **Yaw**: it **orbits to the right**. ⭐⭐ `D192`: it **STARTS 50° before the boot yaw** (to the left; 15° at `D175`)
+  and still ENDS where it did — the boot yaw a turn on, the level's own front view — so it turns **410°** (375° at
+  `D175`; `DEMO_START_BEFORE_DEG`).
   ⚠ Kept the end, not the whole path, because the end is where the player takes over; shifting the whole orbit is one
   constant. ⭐⭐ **The goal is reached with 15° of orbit LEFT**: the camera turns at a steady rate while the moves play
   (360°), then **slows uniformly to rest** over the last 15° — reaching the final yaw at zero speed as the demo ends, with
   no jolt where the moves end (the speed is continuous). Arriving at rest from the steady rate takes `2 × 15° / ω`, so
-  the **moves take 360 / 390 = 92.3 % of the run** (345 / 375 before `D175`) and the settling the rest
+  the **moves take 395 / 425 = 92.9 % of the run** (`D192`; 360 / 390 at `D175`, 345 / 375 before) and the settling the rest
   (`DEMO_MOVES_END`, `demoYawAt` in `core/demo_plan.ts` — the generator aims with the same law).
 * **Elevation**: rises **linearly** from the boot elevation to the top of the rig (`v = 1`), reached at the end.
 * **Zoom**: ⭐ at the start, the camera is placed at the **smallest distance at which the whole demo cube is on screen**
   — every corner inside the vertical AND the horizontal field of view, from the boot view, on this screen's aspect
   (a portrait tablet at fov 0.8: **2.25 m**). ⭐ `D174`: **and the floor grid** — the start configuration, off-centre
-  toward the camera (`demoFramePointsM`, `fitPointsDistanceM`), from the demo's START yaw (`D175`).
+  toward the camera (`demoFramePointsM`, `fitPointsDistanceM`), from the demo's START yaw (`D175`). ⭐ `D191`: the
+  heaps' stage instead (1.17 m across at seed 1, against the grid's 1.15 m); ⚠ the portrait figure below is the grid's,
+  not re-measured.
   ⚠⚠ **In portrait it is still too wide**: the two rows need **3.65 m** on the tablet's 882 × 1304 (`D179`; 3.91 at
   `D178`, 3.43 at `D176`, `D175`'s one rank 4.73 m) and the camera is held at the rig's **3 m** maximum — so at the
   start, in portrait, the outer ends of the rows are cut (landscape 1304 × 882: **2.11 m**, all in view). §9. It then **draws back linearly to the rig's maximum**
@@ -305,6 +394,8 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
 * `Scene_1`'s floor, lights, rig and final configuration; its pieces start at the plan's start poses — the 30 on the
   floor grid (`D174`), the 11 no move touches in the painting. `SceneDescriptor.demo` carries the plan once loaded
   (`D173`, §5).
+* ⚠ `D191` drew another set of 30 (the blue plate stays in the painting, Piece12 comes off); the order below is
+  `D175`'s, and the current one is the plan file's `LIFT` moves.
 * **The result, seed 1** (`D175`) — the pieces in PLAY order (the first one put back first): `Piece20, Piece8,
   Piece35, Piece17, Piece26, Piece15, Piece39, Piece10, Piece32, Piece6, Piece9, Piece37, Piece28, Piece24, Piece7,
   Piece27, Piece4, Piece23, Piece16, Piece14, Piece2, Piece21, Piece22, Piece11, Piece1, Piece5, Piece40, Piece25,

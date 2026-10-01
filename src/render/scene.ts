@@ -544,7 +544,7 @@ export function createScene(
   // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
   // exists to display.
   st.centreMarker.isPickable = false;
-  // ⭐ `D191`: the green box — the orbit rig drives it now, and the camera follows it (prototype).
+  // ⭐ prototype (green box): the green box — the orbit rig drives it now, and the camera follows it (prototype).
   st.greenBoxRigM = null;
   st.cameraOrbit = null;
   st.boxOrbit = null;
@@ -775,7 +775,7 @@ export function createScene(
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   const bootCentre = st.centreBlend.centreM;
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);
-  // ⛔⛔ `D191`: and the YELLOW MARKER goes there too — it was never placed at boot, so it sat at its creation point, the
+  // ⛔⛔ prototype (green box): and the YELLOW MARKER goes there too — it was never placed at boot, so it sat at its creation point, the
   // origin, until the first orbit or reset. Invisible while the orbit centre WAS the origin; `D169` lifted it 0.23 m and the
   // marker has shown the wrong point at boot since (the green box, midway to it, exposed it: its face was 8.7° off the view).
   syncCentre(st);
