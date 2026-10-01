@@ -56,6 +56,16 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
   box.position.set(c.x + bo.offsetM[0] * k, c.y + bo.offsetM[1] * k, c.z + bo.offsetM[2] * k);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
+  // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
+  const out = st.router.outside();
+  const orbiting = out.length === 1 && st.router.objects().length === 0 ? out[0]!.id : null;
+  if (st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting) st.orbitMotion = null;
+  let finger: { yaw: boolean; pitch: boolean } | null = null;
+  if (st.orbitMotion !== null) {
+    st.orbitMotion.tracker.tick(now);
+    const ax = st.orbitMotion.tracker.axes;
+    finger = { yaw: ax.x === "MOVING", pitch: ax.y === "MOVING" };
+  }
   st.cameraOrbit =
     st.cameraOrbit === null
       ? cameraOrbitAt(at, now, st.cfg)
@@ -70,6 +80,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
             settleDelayMs: st.cfg.cameraSettleDelayMs,
           },
           { yaw: rig.yaw, v: rig.v },
+          finger,
         );
   // ⭐ At the box's distance (the box as placed, clamp included) + the radius offset, at the camera's angles plus the
   // owner's offsets.

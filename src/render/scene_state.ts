@@ -393,6 +393,8 @@ export interface SceneState {
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */
   greenBoxRigM: Vec3 | null;
   cameraOrbit: CameraOrbitState | null;
+  /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
+  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker } | null;
   /** ⭐ Prototype: the green box's eased orbit (it chases the rig every frame). */
   boxOrbit: OrbitZoom | null;
   mouseLayer: MouseSecondTouchHandle;

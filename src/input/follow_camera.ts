@@ -115,6 +115,9 @@ function glideStep(g: Glide, dtMs: number): { glide: Glide | null; move: number;
  * ⭐⭐ ONE AXIS, ONE FRAME. `gapToBox` / `gapToEnd`: signed, from the camera to the box and to where the box will end (the
  * input); `boxDelta`: the box's move this frame; `driverDelta`: the input's.
  */
+/** ⭐ How fast a camera inside the leash sheds the speed it carries — an exponential time constant, ms. */
+const COAST_MS = 80;
+
 function axisStep(
   a: AxisState,
   gapToBox: number,
@@ -125,18 +128,33 @@ function axisStep(
   nowMs: number,
   dtMs: number,
   p: CameraOrbitParams,
+  /**
+   * ⭐⭐ Is the FINGER driving this axis moving? — its own §1.1 verdict (`MotionTracker`: the deadband and the device-derived
+   * rest window, `D86`). `null`: no finger drives the orbit (a reset, the demo, a pinch) — then the input's own change is read.
+   * ⛔⛔ Read per FRAME, the input's change made every frame between two pointer events (they come every 47–68 ms on the
+   * tablet, the frames every 16–40) an input that had STOPPED: the camera glided toward the box, the next event put it
+   * back on the leash, stopped dead — at some speeds a steady drag made the box jitter (the owner, 2026-10-01).
+   */
+  fingerMoving: boolean | null,
 ): { next: AxisState; move: number } {
-  const movedAt = Math.abs(driverDelta) > 1e-9 ? nowMs : a.movedAt;
+  const changed = fingerMoving === null ? Math.abs(driverDelta) > 1e-9 : fingerMoving;
+  const movedAt = changed ? nowMs : a.movedAt;
   const moving = movedAt === nowMs || nowMs - movedAt < p.settleDelayMs;
   const base = { movedAt, lastDriver: driverAngle, lastBox: boxAngle };
   if (dtMs <= 0) return { next: { ...a, ...base }, move: 0 };
 
   if (moving) {
-    // ⭐ The LEASH. ⚠ Its speed is re-measured only on a frame the INPUT changed (or the leash moved the camera): a frame
-    // inside the settle delay with no new input keeps the last speed, or the glide would find a camera "at rest".
-    // ⛔ A camera pinned EXACTLY at the leash reads `leash + rounding`: under a nanoradian past it is no move at all.
-    const move = Math.abs(gapToBox) > p.leashRad + 1e-9 ? gapToBox - Math.sign(gapToBox) * p.leashRad : 0;
-    const vel = movedAt === nowMs || move !== 0 ? move / dtMs : a.vel;
+    // ⭐ The LEASH. ⛔ A camera pinned EXACTLY at the leash reads `leash + rounding`: under a nanoradian past it is no move.
+    if (Math.abs(gapToBox) > p.leashRad + 1e-9) {
+      const move = gapToBox - Math.sign(gapToBox) * p.leashRad;
+      return { next: { ...base, vel: move / dtMs, glide: null }, move };
+    }
+    // ⭐⭐ Inside it, a camera still carrying SPEED — a glide the input interrupted, or the leash's own pull a moment ago —
+    // SHEDS it (`COAST_MS`) instead of stopping dead (the owner: *"build the fix and polish"*); it never passes the box.
+    const vel = a.vel * Math.exp(-dtMs / COAST_MS);
+    if (Math.abs(vel) < 1e-7) return { next: { ...base, vel: 0, glide: null }, move: 0 };
+    const move = vel * dtMs;
+    if (move * gapToBox > 0 && Math.abs(move) >= Math.abs(gapToBox)) return { next: { ...base, vel: 0, glide: null }, move: gapToBox };
     return { next: { ...base, vel, glide: null }, move };
   }
 
@@ -166,6 +184,8 @@ export function cameraOrbitStep(
   cfg: GestureConfig,
   p: CameraOrbitParams,
   driver: OrbitAt = box,
+  /** ⭐ The orbit FINGER's own verdict per axis (yaw ← its x, pitch ← its y); `null` when no finger drives the orbit. */
+  finger: { readonly yaw: boolean; readonly pitch: boolean } | null = null,
 ): CameraOrbitState {
   const y = axisStep(
     s.yaw,
@@ -177,11 +197,12 @@ export function cameraOrbitStep(
     nowMs,
     dtMs,
     p,
+    finger === null ? null : finger.yaw,
   );
   const pc = pitchOf(cfg, s.cam.v);
   const pb = pitchOf(cfg, box.v);
   const pd = pitchOf(cfg, driver.v);
-  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p);
+  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p, finger === null ? null : finger.pitch);
   return {
     cam: { yaw: s.cam.yaw + y.move, v: q.move === 0 ? s.cam.v : vForPitch(cfg, pc + q.move) },
     yaw: y.next,

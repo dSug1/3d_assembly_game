@@ -8,7 +8,7 @@ import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
@@ -518,7 +518,13 @@ export function installPointerHandler(st: SceneState): void {
           // camera orbit as well"*): with a green box, the orbit drag turns the other way — the camera follows the box, so
           // both orbits invert together. ⚠ The zoom (pinch, wheel) is unchanged.
           // ⭐ And its own gains, yaw and pitch (the owner: *"the green box orbits too fast"*).
-          if (st.greenBox !== null) st.orbit.drag(-dx * st.cfg.boxGainYaw, -dy * st.cfg.boxGainPitch);
+          if (st.greenBox !== null) {
+            st.orbit.drag(-dx * st.cfg.boxGainYaw, -dy * st.cfg.boxGainPitch);
+            // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
+            if (st.orbitMotion === null || st.orbitMotion.pointerId !== e.pointerId)
+              st.orbitMotion = { pointerId: e.pointerId, tracker: new MotionTracker(st.cfg) };
+            st.orbitMotion.tracker.push(s);
+          }
           else st.orbit.drag(dx, dy);
           // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so
           // the camera arrives as the gesture progresses rather than on a timer.

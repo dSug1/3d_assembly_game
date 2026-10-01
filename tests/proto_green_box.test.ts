@@ -87,9 +87,11 @@ describe("⭐⭐ prototype — the green box", () => {
   it("⭐⭐ prototype: once an axis STOPS, the camera keeps orbiting on it until aligned — the other axis is untouched", () => {
     let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
     s = cameraOrbitStep(s, { yaw: 40 * DEG, v: 0.5 }, 16, 16, CFG, P); // dragged to 25°
-    // still inside the settle delay: nothing moves yet
+    // still inside the settle delay: the camera does not stop dead — it COASTS on the speed it had (the polish), and never
+    // passes the box
     s = cameraOrbitStep(s, { yaw: 40 * DEG, v: 0.5 }, 16 + 60, 60, CFG, P);
-    expect(s.cam.yaw).toBeCloseTo(25 * DEG, 12);
+    expect(s.cam.yaw).toBeGreaterThan(25 * DEG);
+    expect(s.cam.yaw).toBeLessThanOrEqual(40 * DEG + 1e-12);
     // past it: it settles toward the box's yaw
     let t = 16 + 60;
     for (let i = 0; i < 200; i++) s = cameraOrbitStep(s, { yaw: 40 * DEG, v: 0.5 }, (t += 16), 16, CFG, P);
@@ -191,6 +193,51 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(seen).toBe(true);
     for (let i = 0; i < 400; i++) s = cameraOrbitStep(s, { yaw: box, v: 0.5 }, (t += 16), 16, CFG, P0);
     expect(Math.abs(wrapPi(box - s.cam.yaw))).toBeLessThan(1e-4);
+  });
+
+  it("⛔⛔ prototype: a steady drag whose input arrives every few frames does NOT flip between leash and glide — the finger says it is moving", () => {
+    // ⭐ the box moves only on input frames (every 4th, like pointer events at ~60 ms against 16 ms frames); between them
+    // the input does not change. ⛔ Read per frame, those frames were "stopped": the camera glided, then stopped dead.
+    // ⭐ What the eye sees is the GAP box − camera: the box's place on the glass. The box eases after the input as in the
+    // product (60 ms); the input moves every 3rd or 4th frame, steadily, past the 3° leash.
+    const P0 = { leashRad: 3 * DEG, settleDelayMs: 0 };
+    const gapSpan = (finger: { yaw: boolean; pitch: boolean } | null, every: number) => {
+      let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
+      let rig = 0;
+      let box = { yaw: 0, v: 0.5, zoom: 1 };
+      const gaps: number[] = [];
+      for (let f = 1; f <= 160; f++) {
+        if (f % every === 0) rig += 1.2 * DEG;
+        box = easeOrbit(box, { yaw: rig, v: 0.5, zoom: 1 }, 16, 60);
+        s = cameraOrbitStep(s, { yaw: box.yaw, v: 0.5 }, f * 16, 16, CFG, P0, { yaw: rig, v: 0.5 }, finger);
+        if (f > 60) gaps.push(wrapPi(box.yaw - s.cam.yaw) / DEG);
+      }
+      return Math.max(...gaps) - Math.min(...gaps);
+    };
+    for (const every of [3, 4]) {
+      // ⛔ read per frame (no finger): the gap swings ~2° at the input's rhythm — the box jitters on the glass
+      expect(gapSpan(null, every)).toBeGreaterThan(1);
+      // ⭐ the finger's own verdict: the box holds exactly at the leash — no jitter
+      expect(gapSpan({ yaw: true, pitch: false }, every)).toBeLessThan(0.01);
+    }
+  });
+
+  it("⭐ prototype: the polish — inside the leash, a camera carrying speed sheds it smoothly and never passes the box", () => {
+    const P0 = { ...P, settleDelayMs: 0 };
+    let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
+    for (let i = 1; i <= 10; i++) s = cameraOrbitStep(s, { yaw: i * 3 * DEG, v: 0.5 }, i * 16, 16, CFG, P0, { yaw: i * 3 * DEG, v: 0.5 }, { yaw: true, pitch: false });
+    const v0 = s.yawVel;
+    expect(v0).toBeGreaterThan(0);
+    // the box stops; the finger still MOVING for a while (its rest window not yet out): no stop dead — the speed decays
+    let prev = v0;
+    let t = 160;
+    for (let i = 0; i < 20; i++) {
+      s = cameraOrbitStep(s, { yaw: 30 * DEG, v: 0.5 }, (t += 16), 16, CFG, P0, { yaw: 30 * DEG, v: 0.5 }, { yaw: true, pitch: false });
+      expect(s.yawVel).toBeLessThanOrEqual(prev + 1e-12);
+      expect(30 * DEG - s.cam.yaw).toBeGreaterThanOrEqual(-1e-12);
+      prev = s.yawVel;
+    }
+    expect(s.yawVel).toBeLessThan(v0);
   });
 
   it("⭐ prototype: yaw is compared the short way round", () => {

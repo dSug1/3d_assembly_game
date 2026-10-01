@@ -547,6 +547,7 @@ export function createScene(
   // ⭐ prototype (green box): the green box — the orbit rig drives it now, and the camera follows it (prototype).
   st.greenBoxRigM = null;
   st.cameraOrbit = null;
+  st.orbitMotion = null;
   st.boxOrbit = null;
   createGreenBox(st);
 
