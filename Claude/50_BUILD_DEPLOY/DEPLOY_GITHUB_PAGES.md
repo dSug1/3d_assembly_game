@@ -168,13 +168,20 @@ each other. ⭐ So one run builds both: the triggering branch into the ROOT, and
   branch deploys nothing by itself — every deploy is made from `main`, so the environment's branch policy is untouched).
 * ⭐ It works because the build is relative: `base: "./"`, and the page finds its `version.json` beside itself. The HUD's
   `build` line says which build is on screen.
+* ⛔ **Each build is labelled with ITS OWN commit.** The build id comes from `GITHUB_SHA` (`vite.config.ts`), which is the
+  commit that TRIGGERED the run — `main`'s — so the first `/proto/` deploy (2026-10-01) carried `main`'s sha on a bundle
+  that was the prototype's: the code was right, the label wrong. ✅ The prototype step builds with `GITHUB_SHA` set to its
+  own checkout's commit. ⭐ To check what each URL serves: `<url>/version.json` — the root reports `main`'s commit,
+  `/proto/version.json` the prototype branch's.
 * ⚠ Both builds share one origin (`dsug1.github.io`), so they share the browser's storage — the HUD's open/collapsed state
   and the menu's open sections. Harmless.
 * ⛔ **The prototype stays a prototype**: the main line is merged INTO it to keep pace, never the reverse. The main line
   knows only that a `/proto/` slot exists.
 * 📍 **The slot today (2026-10-01)**: `1.0.58a-` — the double-orbit camera prototype (a green proxy box on the orbit rig,
-  the camera following it; local notes on that branch: `DEMO_SCENE.md` §7/§9). Pushed to `origin/1.0.58a-`; deployed
-  once `PROTO_BRANCH` is set. ⚠ A status line — update it when the slot changes.
+  the camera following it; local notes on that branch: `DEMO_SCENE.md` §7/§9). ✅ **LIVE** at
+  `https://dsug1.github.io/3d_assembly_game/proto/` since 2026-10-01: `PROTO_BRANCH` = `1.0.58a-` set by the owner on the
+  website, the branch pushed to `origin/1.0.58a-`, deployed by the next push to `main`. ⚠ A status line — update it when
+  the slot changes.
 
 ## ⛔ The deploy is GATED on the golden vectors
 

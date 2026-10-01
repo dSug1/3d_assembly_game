@@ -415,7 +415,7 @@ module. ⚠ Checked by the typecheck, the suite, the build and a headless Chrome
 workbench, now DATA in `content/scene_0.ts` that `scene.ts` boots from — and a JSON seam for the
 scene. `?flow=1` shows the shell; the default boots `Scene_0` directly (⭐ `Scene_1` since `D144`). ⛔ `GM6`–`GM8` populate it →
 [`Claude/20_GAME_RULES/spec/GAME_STRUCTURE.md`](Claude/20_GAME_RULES/spec/GAME_STRUCTURE.md).
-✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/** — ⭐ and a prototype branch, when one is named (`PROTO_BRANCH`), at `/proto/` → `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`
+✅ Deployed and live: **https://dsug1.github.io/3d_assembly_game/** — ⭐ and the prototype branch named by `PROTO_BRANCH` at **https://dsug1.github.io/3d_assembly_game/proto/** (today `1.0.58a-`, the double-orbit camera) → `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`
 
 ⛔⛔⛔ **THE OBJECT AXES CAME BACK FROM THE GLASS WITH THREE REPORTS, AND ALL THREE WERE ONE
 ARITHMETIC** (`D76`, 2026-09-23): the mapping multiplied each input **by** its axis's screen
