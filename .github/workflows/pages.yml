@@ -79,7 +79,10 @@ jobs:
         run: |
           npm ci
           npm run verify
-          npm run build
+          # ⛔ The build id is read from GITHUB_SHA (vite.config.ts), which is the TRIGGERING
+          # commit -- main's -- so /proto/ was labelled with main's sha (seen live, 2026-10-01).
+          # Its own checkout's commit, so the HUD's `build` line names the code on screen.
+          GITHUB_SHA="$(git rev-parse HEAD)" npm run build
           mkdir -p ../dist/proto
           cp -r dist/. ../dist/proto/
 
