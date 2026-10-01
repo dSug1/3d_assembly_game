@@ -58,6 +58,27 @@ return ({
 });
 }
 
+/**
+ * ⭐ prototype (green box) — **THE BOOT ZOOM SLIDER** (the owner, 2026-10-01: *"add the slider boot zoom and set it at 1.5"*).
+ * ⭐ Applied AT ONCE, not at the next boot: the zoom jumps to it, and it is where the camera reset (double tap on empty space)
+ * returns — the boot view, as if the scene had booted with it.
+ */
+export function bootZoomSlider(st: SceneState): MenuSlider {
+  const base = tunable(st, "boot zoom (×, the rings × this)", "bootZoom", 0.5, 10, 0.1);
+  return {
+    ...base,
+    set: (value) => {
+      const err = base.set(value);
+      if (err !== null) return err;
+      st.orbitStartZoom = value;
+      st.zoom = value;
+      st.zoomAtPinchStart = value;
+      applyCamera(st);
+      return null;
+    },
+  };
+}
+
 export function installTuningMenu(st: SceneState): void {
 
   createMenu([
@@ -87,13 +108,14 @@ export function installTuningMenu(st: SceneState): void {
       sliders: [
         tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
         // ⭐ Prototype: the camera orbits after the green box — its leash, and how it settles once an input stops.
+        bootZoomSlider(st),
         tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
         tunable(st, "green box orbit gain — yaw (×)", "boxGainYaw", 0.05, 2, 0.05),
         tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
         tunable(st, "green box gain inside the leash (×)", "boxGainInsideLeash", 0.05, 1, 0.05),
         tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 1),
         tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
-        tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 100),
+        tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 50),
         tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 1),
         tunable(st, "camera settle delay after an input stops (ms)", "cameraSettleDelayMs", 0, 1000, 10),
         tunable(st, "camera catch-up after release, from rest (ms)", "cameraCatchUpMs", 20, 1000, 10),

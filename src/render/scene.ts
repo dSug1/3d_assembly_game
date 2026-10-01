@@ -735,8 +735,9 @@ export function createScene(
    */
   st.cameraReset = null;
   // ⭐ `Scene_1`'s LEVEL view, found on the rig; every other scene keeps the rig's own start.
+  // ⭐ prototype (green box): `"TOP"` boots on the top ring.
   st.bootElevation =
-    st.sceneSpec.bootView === "LEVEL" ? levelElevation(st.cfg) : ORBIT_START_ELEVATION;
+    st.sceneSpec.bootView === "LEVEL" ? levelElevation(st.cfg) : st.sceneSpec.bootView === "TOP" ? 1 : ORBIT_START_ELEVATION;
   st.orbit = new OrbitController(
     st.cfg,
     ORBIT_START_YAW_RAD,

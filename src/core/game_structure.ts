@@ -136,8 +136,11 @@ export interface SceneDescriptor {
    * ⛔ Applied to body positions and sizes and to light positions and ranges — never to angles.
    */
   readonly unitM?: number;
-  /** ⭐ `"LEVEL"`: the boot camera looks along `+z` from the height of the orbit centre. Default: the rig's. */
-  readonly bootView?: "LEVEL";
+  /**
+   * ⭐ `"LEVEL"`: the boot camera looks along `+z` from the height of the orbit centre. `"TOP"` (prototype (green box), the
+   * owner 2026-10-01: *"boot scene 1 on the top ring"*): the boot elevation is the TOP ring (`v = 1`). Default: the rig's.
+   */
+  readonly bootView?: "LEVEL" | "TOP";
   /** ⭐ The scene's own lights and background; absent → the one hemispheric light `Scene_0` has. */
   readonly lighting?: LightingSpec;
   /** ⭐ `D131`: the scene's own orbit rings; absent → the config's defaults. */
@@ -347,7 +350,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
   });
   if (o.unitM !== undefined && !(typeof o.unitM === "number" && o.unitM > 0 && Number.isFinite(o.unitM)))
     throw new Error(`scene ${o.id}: unitM must be a positive number`);
-  if (o.bootView !== undefined && o.bootView !== "LEVEL") throw new Error(`scene ${o.id}: unknown bootView`);
+  if (o.bootView !== undefined && o.bootView !== "LEVEL" && o.bootView !== "TOP") throw new Error(`scene ${o.id}: unknown bootView`);
   if (o.lighting !== undefined) {
     const l = o.lighting as Record<string, unknown> | null;
     if (typeof l !== "object" || l === null || !isTriple(l.background) || !Array.isArray(l.lights))
@@ -380,7 +383,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     title: o.title,
     bodies,
     ...(o.unitM !== undefined ? { unitM: o.unitM as number } : {}),
-    ...(o.bootView !== undefined ? { bootView: "LEVEL" as const } : {}),
+    ...(o.bootView !== undefined ? { bootView: o.bootView as "LEVEL" | "TOP" } : {}),
     ...(o.lighting !== undefined ? { lighting: o.lighting as LightingSpec } : {}),
     ...(o.orbit !== undefined ? { orbit: o.orbit as OrbitRig } : {}),
     ...(o.playVolume !== undefined ? { playVolume: { aboveFloor: (o.playVolume as { aboveFloor: number }).aboveFloor } } : {}),

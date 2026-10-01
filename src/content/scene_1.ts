@@ -188,7 +188,8 @@ export const SCENE_1: SceneDescriptor = {
   playVolume: { aboveFloor: 10 },
   // ⭐ One authored unit = 0.1 m, so the 4.9-unit painting is 0.49 m and the rig frames it.
   unitM: 0.1,
-  bootView: "LEVEL",
+  // ⭐ prototype (green box), the owner 2026-10-01: *"boot scene 1 on the top ring"* (was "LEVEL").
+  bootView: "TOP",
   bodies: [...pieces, FLOOR],
   lighting: {
     background: [0.0087, 0.1465, 0.2138],

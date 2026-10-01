@@ -12,6 +12,7 @@ import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
 import { SCENE_0 } from "../src/content/scene_0";
+import { parseSceneDescriptor, serializeSceneDescriptor } from "../src/core/game_structure";
 
 const code = (f: string) =>
   readFileSync(new URL(`../src/render/${f}`, import.meta.url), "utf8")
@@ -352,9 +353,24 @@ describe("⭐⭐ prototype — the green box", () => {
 
   it("⭐ prototype: the scene BOOTS at zoom 1.5 (the owner: *\"set the default zoom at 1.5\"*) — the derived half-radius rule only at 0", () => {
     expect(DEFAULT_CONFIG.bootZoom).toBe(1.5);
+    expect(DEFAULT_CONFIG.cameraRadiusOffsetMm).toBe(1250); // the owner: *"set the camera radius offset at 1250 mm"*
     const scene = code("scene.ts");
     expect(scene).toMatch(/if \(st\.cfg\.bootZoom > 0\) return st\.cfg\.bootZoom;/);
     expect(scene.indexOf("if (st.cfg.bootZoom > 0)")).toBeLessThan(scene.indexOf("st.cfg.cameraRadiusMaxM / 2 / base"));
+  });
+
+  it("⭐ prototype: the boot zoom has a SLIDER in CAMERA, applied at once and kept for the camera reset (the owner: *\"add the slider boot zoom\"*)", () => {
+    const m = code("tuning_menu.ts");
+    expect(m).toMatch(/tunable\(st, "boot zoom \(×, the rings × this\)", "bootZoom", 0\.5, 10, 0\.1\)/);
+    expect(m.indexOf("bootZoomSlider(st),")).toBeGreaterThan(m.indexOf('title: "CAMERA"'));
+    const body = m.slice(m.indexOf("export function bootZoomSlider"), m.indexOf("export function installTuningMenu"));
+    for (const w of ["st.orbitStartZoom = value", "st.zoom = value", "st.zoomAtPinchStart = value", "applyCamera(st)"]) expect(body).toContain(w);
+  });
+
+  it("⭐ prototype: Scene_1 boots on the TOP ring (the owner: *\"boot scene 1 on the top ring\"*)", () => {
+    expect(SCENE_1.bootView).toBe("TOP");
+    expect(code("scene.ts")).toMatch(/st\.sceneSpec\.bootView === "TOP" \? 1 :/);
+    expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_1)).bootView).toBe("TOP"); // the JSON seam keeps it
   });
 
   it("⛔⛔ the yellow marker is placed at BOOT, on the orbit centre — it sat at the origin until the first orbit (since `D169`)", () => {

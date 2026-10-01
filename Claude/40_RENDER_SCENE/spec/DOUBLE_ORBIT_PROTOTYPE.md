@@ -37,12 +37,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 ## 3. The camera's orbit
 
 * ⭐ **`Scene_1`'s rings on this branch** (the owner, 2026-10-01): top 0.9 / 0.5 m, middle 0.2 / 0 m, bottom 0.9 / −0.4 m
-  (radius / height), and the scene **boots at zoom 1.5** (`bootZoom`; `0` restores the derived half-radius rule, which made
+  (radius / height), and the scene **boots at zoom 1.5** (`bootZoom`, slider *boot zoom* in CAMERA 0.5–10 step 0.1, applied
+  at once and kept as the camera reset's view; `0` restores the derived half-radius rule, which made
   ×7.5 here and capped the box at 3 m over most of its travel). At 1.5 the box is 1.55 m from the centre on the top ring,
-  0.30 m on the middle, 1.48 m on the bottom; a zoom keeps it within 0.15–3 m (`clampCameraRadiusM`).
+  0.30 m on the middle, 1.48 m on the bottom; ⭐ it boots on the TOP ring (`bootView: "TOP"`, *"boot scene 1 on the top ring"*); a zoom keeps it within 0.15–3 m (`clampCameraRadiusM`).
 * **Its own angles** (`input/follow_camera.ts`, `CameraOrbitState`), stepped every frame before the draw
   (`render/green_box_wiring.ts` `greenBoxFrame`).
-* **Its distance = the box's CURRENT distance + `cameraRadiusOffsetMm`** (**1500 mm**, slider 100–2000 step 100). ⛔ It was
+* **Its distance = the box's CURRENT distance + `cameraRadiusOffsetMm`** (**1250 mm**, the owner 2026-10-01; slider 100–2000 step 50). ⛔ It was
   twice the box's ring point, then twice the box's distance: lagging in pitch, the box could come near the camera and leave
   the screen.
 * **Offset angles** — the camera sits at its own angles **plus** `cameraYawOffsetDeg` **3°** and `cameraPitchOffsetDeg`

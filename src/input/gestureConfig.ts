@@ -913,7 +913,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraYawOffsetDeg: 3,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
-  cameraRadiusOffsetMm: 1500,
+  cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)
   boxGainYaw: 1.65,
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
