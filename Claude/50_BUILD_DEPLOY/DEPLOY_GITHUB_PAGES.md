@@ -154,6 +154,14 @@ each other. ⭐ So one run builds both: the triggering branch into the ROOT, and
     (or set `none`) to stop.
   * or, for one run: **Actions → Deploy to GitHub Pages → Run workflow** (on `main`) → the `proto_branch` field. It wins
     over the variable; `none` skips `/proto/`.
+  * ⚠ **The variable needs the WEBSITE** — the GitHub mobile app has no repository settings (as far as we know). On a
+    phone: `github.com/dSug1/3d_assembly_game` in the browser (*Desktop site* if the page is cut down) → **Settings** →
+    the same path. ⚠ `gh` (GitHub CLI) is not installed on the dev PC, so a session cannot set it either.
+* **Switching it on, in order**: push the prototype branch (`git push -u origin <branch>` the first time) → set
+  `PROTO_BRANCH` → **Run workflow** on `main`, or simply the next push to `main`. Until a branch is named,
+  `/proto/version.json` answers **404** — that is the slot empty, not a failure.
+* ⚠ **A deploy takes minutes, not seconds**: the first one with this step went live **~7 min** after the push to `main`
+  (2026-10-01; two installs, two suites, two builds). Check each URL's HUD `build` line, or `<url>/version.json`.
 * **Both are gated**: the prototype runs its own `npm run verify` after the root's; a red one fails the run and nothing
   is deployed — the site stays as it was.
 * **Updating the prototype online**: push the prototype branch, then **Run workflow** on `main` (a push to the prototype
@@ -164,6 +172,9 @@ each other. ⭐ So one run builds both: the triggering branch into the ROOT, and
   and the menu's open sections. Harmless.
 * ⛔ **The prototype stays a prototype**: the main line is merged INTO it to keep pace, never the reverse. The main line
   knows only that a `/proto/` slot exists.
+* 📍 **The slot today (2026-10-01)**: `1.0.58a-` — the double-orbit camera prototype (a green proxy box on the orbit rig,
+  the camera following it; local notes on that branch: `DEMO_SCENE.md` §7/§9). Pushed to `origin/1.0.58a-`; deployed
+  once `PROTO_BRANCH` is set. ⚠ A status line — update it when the slot changes.
 
 ## ⛔ The deploy is GATED on the golden vectors
 
