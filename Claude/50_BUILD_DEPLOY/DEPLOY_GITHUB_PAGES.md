@@ -135,6 +135,36 @@ environment's deployment-branch policy, not the workflow:
 **Settings → Environments → `github-pages` → Deployment branches and tags** → allow
 all branches, or add a `1.*` pattern.
 
+⚠ Since 2026-10-01 the run also rebuilds `/proto/` (next section) — but only if the dispatched branch's own `pages.yml`
+has that step. A branch older than it deploys its root ALONE, and the site loses `/proto/` until the next run from `main`.
+
+## ⭐⭐ A second build at `/proto/` — testing a prototype branch beside the main line (2026-10-01)
+
+A repository has ONE Pages site and every deploy replaces it whole, so two branches deploying in turn would overwrite
+each other. ⭐ So one run builds both: the triggering branch into the ROOT, and a second branch into `/proto/`:
+
+| URL | built from |
+|---|---|
+| `https://dsug1.github.io/3d_assembly_game/` | the branch that triggered the run — `main` on a push |
+| `https://dsug1.github.io/3d_assembly_game/proto/` | the PROTOTYPE branch, if one is named |
+
+* **Naming the prototype branch** — outside the code, so the main line never carries a prototype's name:
+  * **Settings → Secrets and variables → Actions → Variables → New repository variable**: `PROTO_BRANCH` = the
+    branch (e.g. `1.0.58a-`). Every run then builds it into `/proto/`. Change it when the prototype moves on; delete it
+    (or set `none`) to stop.
+  * or, for one run: **Actions → Deploy to GitHub Pages → Run workflow** (on `main`) → the `proto_branch` field. It wins
+    over the variable; `none` skips `/proto/`.
+* **Both are gated**: the prototype runs its own `npm run verify` after the root's; a red one fails the run and nothing
+  is deployed — the site stays as it was.
+* **Updating the prototype online**: push the prototype branch, then **Run workflow** on `main` (a push to the prototype
+  branch deploys nothing by itself — every deploy is made from `main`, so the environment's branch policy is untouched).
+* ⭐ It works because the build is relative: `base: "./"`, and the page finds its `version.json` beside itself. The HUD's
+  `build` line says which build is on screen.
+* ⚠ Both builds share one origin (`dsug1.github.io`), so they share the browser's storage — the HUD's open/collapsed state
+  and the menu's open sections. Harmless.
+* ⛔ **The prototype stays a prototype**: the main line is merged INTO it to keep pace, never the reverse. The main line
+  knows only that a `/proto/` slot exists.
+
 ## ⛔ The deploy is GATED on the golden vectors
 
 `pages.yml` runs `npm run verify` (typecheck + vectors) **before** it builds. A red
