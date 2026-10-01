@@ -898,14 +898,14 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // enough not to feel like waiting for a cutscene.
   cameraResetMs: 450,
   // ⚠ Prototype guesses, with sliders in CAMERA.
-  cameraLeashDeg: 7,
+  cameraLeashDeg: 3,
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
   // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
   cameraYawOffsetDeg: 3,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1500,
-  boxGainYaw: 0.5,
+  boxGainYaw: 1.65,
   boxGainPitch: 0.5,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
