@@ -917,7 +917,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   boxGainYaw: 1.65,
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
-  boxGainInsideLeash: 0.5,
+  boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
   bootZoom: 1.5,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,

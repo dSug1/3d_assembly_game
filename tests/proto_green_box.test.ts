@@ -353,7 +353,8 @@ describe("⭐⭐ prototype — the green box", () => {
 
   it("⭐ prototype: the scene BOOTS at zoom 1.5 (the owner: *\"set the default zoom at 1.5\"*) — the derived half-radius rule only at 0", () => {
     expect(DEFAULT_CONFIG.bootZoom).toBe(1.5);
-    expect(DEFAULT_CONFIG.cameraRadiusOffsetMm).toBe(1250); // the owner: *"set the camera radius offset at 1250 mm"*
+    expect(DEFAULT_CONFIG.cameraRadiusOffsetMm).toBe(1250);
+    expect(DEFAULT_CONFIG.boxGainInsideLeash).toBe(0.35); // the owner: *"set green box gain inside the leash to 0.35"* // the owner: *"set the camera radius offset at 1250 mm"*
     const scene = code("scene.ts");
     expect(scene).toMatch(/if \(st\.cfg\.bootZoom > 0\) return st\.cfg\.bootZoom;/);
     expect(scene.indexOf("if (st.cfg.bootZoom > 0)")).toBeLessThan(scene.indexOf("st.cfg.cameraRadiusMaxM / 2 / base"));
