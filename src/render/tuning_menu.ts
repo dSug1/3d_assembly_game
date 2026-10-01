@@ -88,6 +88,10 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
         // ⭐ Prototype: the camera orbits after the green box — its leash, and how it settles once an input stops.
         tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
+        tunable(st, "green box orbit gain — yaw (×)", "boxGainYaw", 0.05, 2, 0.05),
+        tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
+        tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 1),
+        tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
         tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 1),
         tunable(st, "camera settle delay after an input stops (ms)", "cameraSettleDelayMs", 0, 1000, 10),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).

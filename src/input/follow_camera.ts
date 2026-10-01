@@ -191,10 +191,29 @@ export function cameraOrbitStep(
   };
 }
 
-/** ⭐ The camera's offset from the orbit centre: TWICE the rig's — twice the radius and the height. */
-export function cameraOffset(cfg: GestureConfig, cam: OrbitAt, zoom: number): Vec3 {
-  const o = orbitOffset(cfg, cam.yaw, cam.v, zoom).offsetM;
-  return [o[0] * 2, o[1] * 2, o[2] * 2];
+/** ⭐ The camera's own offset from its orbit position, so the box does not hide the yellow target (the owner: *"Offset the
+ * camera from green box so the user can see the yellow target"*), radians. */
+export interface CameraAngleOffset {
+  readonly yawRad: number;
+  readonly pitchRad: number;
+}
+
+/**
+ * ⭐⭐ The camera's offset from the orbit centre: at ITS orbit angles (yaw, and the true pitch of its ring point) plus the
+ * owner's offsets, at TWICE THE BOX's current distance from the centre.
+ * ⛔⛔ Not twice its OWN ring point (the first build): the rings are not a sphere — `Scene_1`'s middle ring is 1.0 m out,
+ * its top ring 1.8 m and 0.55 m up — so a box pitching up moved from 1.50 to 2.79 m from the centre within a few degrees
+ * while the lagging camera stayed near 3 m: the box came almost to the camera, and a 7° lag became an offset of 2.6
+ * half-screens (measured, 2026-10-01) — off the top, while yaw (the distance never changes) stayed at 0.45. ⭐ At twice
+ * the box's distance the box is always halfway, so a lag in pitch reads on screen like the same lag in yaw. When aligned
+ * it is exactly *"twice the radius and the height"*.
+ */
+export function cameraOffset(cfg: GestureConfig, cam: OrbitAt, boxOffset: Vec3, off: CameraAngleOffset = { yawRad: 0, pitchRad: 0 }): Vec3 {
+  const lim = (89 * Math.PI) / 180;
+  const pitch = Math.max(-lim, Math.min(lim, pitchOf(cfg, cam.v) + off.pitchRad));
+  const yaw = cam.yaw + off.yawRad;
+  const d = 2 * Math.hypot(boxOffset[0], boxOffset[1], boxOffset[2]);
+  return [d * Math.cos(pitch) * Math.cos(yaw), d * Math.sin(pitch), d * Math.cos(pitch) * Math.sin(yaw)];
 }
 
 /** ⭐ An orbit position with its zoom — what the green box eases along. */

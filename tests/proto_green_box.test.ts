@@ -39,11 +39,30 @@ describe("⭐⭐ prototype — the green box", () => {
   const P = { leashRad: LEASH, settleTauMs: 250, settleDelayMs: 120 };
   const DEG = Math.PI / 180;
 
-  it("⭐⭐ prototype: the camera's orbit is TWICE the box's — twice the radius, twice the height", () => {
+  it("⭐⭐ prototype: aligned, the camera is TWICE the box's offset — twice the radius, twice the height", () => {
     const at: OrbitAt = { yaw: 0.7, v: 0.3 };
     const o = orbitOffset(CFG, at.yaw, at.v, 1.4).offsetM;
-    const c = cameraOffset(CFG, at, 1.4);
+    const c = cameraOffset(CFG, at, o);
     [0, 1, 2].forEach((i) => expect(c[i]).toBeCloseTo(2 * o[i]!, 12));
+  });
+
+  it("⛔⛔ prototype: LAGGING in pitch, the camera stays at twice the box's DISTANCE — the box never comes near it", () => {
+    // ⭐ the box pitched up to the top ring (far out), the camera still at the middle ring's pitch: the rings are not a
+    // sphere, so twice the camera's OWN ring point would sit barely past the box (measured: box 2.79 m, camera ~3 m)
+    const box = orbitOffset(CFG, 0, 1, 1.48).offsetM;
+    const c = cameraOffset(CFG, { yaw: 0, v: 0.5 }, box);
+    const len = (v: readonly number[]) => Math.hypot(v[0]!, v[1]!, v[2]!);
+    expect(len(c)).toBeCloseTo(2 * len(box), 12);
+    const own = orbitOffset(CFG, 0, 0.5, 1.48).offsetM;
+    expect(len(own) * 2).toBeLessThan(len(box) * 1.5); // the old rule's camera: barely past the box
+  });
+
+  it("⭐ prototype: the owner's offsets turn the camera's angles — yaw about the vertical, pitch up", () => {
+    const at: OrbitAt = { yaw: 0, v: 0.5 };
+    const box = orbitOffset(CFG, 0, 0.5, 1).offsetM;
+    const c = cameraOffset(CFG, at, box, { yawRad: 10 * DEG, pitchRad: 5 * DEG });
+    expect((Math.atan2(c[2], c[0]) * 180) / Math.PI).toBeCloseTo(10, 9);
+    expect((Math.atan2(c[1], Math.hypot(c[0], c[2])) * 180) / Math.PI).toBeCloseTo((pitchOf(CFG, 0.5) * 180) / Math.PI + 5, 9);
   });
 
   it("⭐⭐ prototype: within 15° the camera STAYS; past it, it is dragged along 15° behind — yaw and pitch alike", () => {

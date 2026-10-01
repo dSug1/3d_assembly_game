@@ -517,7 +517,8 @@ export function installPointerHandler(st: SceneState): void {
           // ⭐ Prototype (the owner: *"invert the inputs direction for the box"* — *"and invert input directions for the
           // camera orbit as well"*): with a green box, the orbit drag turns the other way — the camera follows the box, so
           // both orbits invert together. ⚠ The zoom (pinch, wheel) is unchanged.
-          if (st.greenBox !== null) st.orbit.drag(-dx, -dy);
+          // ⭐ And its own gains, yaw and pitch (the owner: *"the green box orbits too fast"*).
+          if (st.greenBox !== null) st.orbit.drag(-dx * st.cfg.boxGainYaw, -dy * st.cfg.boxGainPitch);
           else st.orbit.drag(dx, dy);
           // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so
           // the camera arrives as the gesture progresses rather than on a timer.

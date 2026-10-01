@@ -461,6 +461,14 @@ export interface GestureConfig {
   cameraResetMs: number;
   /** ⭐ Prototype (`input/follow_camera.ts`): degrees the green box may orbit away from the camera, per axis, before it drags the camera. */
   cameraLeashDeg: number;
+  /** ⭐ Prototype: the camera's yaw offset from its orbit position, degrees — so the green box does not hide the yellow target. */
+  cameraYawOffsetDeg: number;
+  /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
+  cameraPitchOffsetDeg: number;
+  /** ⭐ Prototype: the green box orbit's YAW gain, a multiplier on `gainOrbitYaw` (the owner: *"the green box orbits too fast"*). */
+  boxGainYaw: number;
+  /** ⭐ Prototype: the green box orbit's PITCH gain, a multiplier on `gainOrbitElevation`. */
+  boxGainPitch: number;
   /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
   boxSmoothMs: number;
   /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
@@ -889,6 +897,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraResetMs: 450,
   // ⚠ Prototype guesses, with sliders in CAMERA.
   cameraLeashDeg: 7,
+  // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
+  cameraYawOffsetDeg: 10,
+  cameraPitchOffsetDeg: 5,
+  boxGainYaw: 0.5,
+  boxGainPitch: 0.5,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
   // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
@@ -1013,6 +1026,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
 
   if (!(cfg.boxSmoothMs >= 0 && cfg.boxSmoothMs <= 1000)) {
     throw new Error(`boxSmoothMs (${cfg.boxSmoothMs}) must be in [0, 1000] ms.`);
+  }
+  if (!(Math.abs(cfg.cameraYawOffsetDeg) <= 90) || !(Math.abs(cfg.cameraPitchOffsetDeg) <= 60)) {
+    throw new Error(`cameraYawOffsetDeg / cameraPitchOffsetDeg (${cfg.cameraYawOffsetDeg} / ${cfg.cameraPitchOffsetDeg}) must be within ±90° / ±60°.`);
+  }
+  if (!(cfg.boxGainYaw > 0 && cfg.boxGainYaw <= 4) || !(cfg.boxGainPitch > 0 && cfg.boxGainPitch <= 4)) {
+    throw new Error(`boxGainYaw / boxGainPitch (${cfg.boxGainYaw} / ${cfg.boxGainPitch}) must be in (0, 4].`);
   }
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
