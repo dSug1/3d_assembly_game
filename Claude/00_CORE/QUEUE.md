@@ -63,7 +63,7 @@ and the in-zone basis are deleted, `D82`/`D109`).
 1. ⛔⛔ **The playability program above** — `GM1` ✅ (`D180`), `3D7` ✅ (`D181`, the play volume); `3D2` (the approach) next.
 2. ✅ **~~A device look on everything since `D106`~~** — *"Checked and all closed"*, the owner, 2026-09-30; ✅ and `D180`'s own (*"Tested, ok"*).
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
-4. ⚠ **Local prototype `1.0.58-`**: the demo camera path drives the green box → `DEMO_SCENE.md` §7, §9.
+4. ⚠ **Prototype `1.0.58a-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
 ### ⛔⛔⛔ THE 2026-09-17 AUDIT### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed

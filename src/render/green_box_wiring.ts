@@ -59,7 +59,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
   const out = st.router.outside();
   const orbiting = out.length === 1 && st.router.objects().length === 0 ? out[0]!.id : null;
-  if (st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting) st.orbitMotion = null;
+  // ⭐ The finger leaving the orbit (lifted, or a second finger down) is a RELEASE: the camera realigns.
+  const released = st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting;
+  if (released) st.orbitMotion = null;
   let finger: { yaw: boolean; pitch: boolean } | null = null;
   if (st.orbitMotion !== null) {
     st.orbitMotion.tracker.tick(now);
@@ -78,9 +80,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
           {
             leashRad: (st.cfg.cameraLeashDeg * Math.PI) / 180,
             settleDelayMs: st.cfg.cameraSettleDelayMs,
+            restTauMs: st.cfg.cameraCatchUpMs,
           },
           { yaw: rig.yaw, v: rig.v },
           finger,
+          released,
         );
   // ⭐ At the box's distance (the box as placed, clamp included) + the radius offset, at the camera's angles plus the
   // owner's offsets.

@@ -35,6 +35,13 @@ interface Glide {
   readonly distance: number;
   readonly travelled: number;
   readonly tauMs: number;
+  /**
+   * `"carry"`: a moving camera continues its speed, braking exponentially (`τ = D / v₀`). `"rest"`: a camera AT REST at a
+   * release starts from zero speed — a critically damped spring, `s = D(1 − (1 + u)e^(−u))`, `u = t / τ` — so it neither
+   * jumps to a speed nor overshoots. `elapsed` is its clock.
+   */
+  readonly kind: "carry" | "rest";
+  readonly elapsed: number;
 }
 
 interface AxisState {
@@ -45,6 +52,8 @@ interface AxisState {
   readonly lastDriver: number;
   readonly lastBox: number;
   readonly glide: Glide | null;
+  /** ⭐ A release asked this axis to realign — even a camera at rest inside the leash. Cleared once aligned or moving. */
+  readonly aligning: boolean;
 }
 
 export interface CameraOrbitState {
@@ -59,6 +68,8 @@ export interface CameraOrbitState {
 export interface CameraOrbitParams {
   readonly leashRad: number;
   readonly settleDelayMs: number;
+  /** ⭐ A release's catch-up from REST: the spring's time constant, ms. */
+  readonly restTauMs: number;
 }
 
 /** ⭐ The short way round, in (−π, π]. */
@@ -94,7 +105,7 @@ export function vForPitch(cfg: GestureConfig, pitch: number): number {
 const ease = (dtMs: number, tauMs: number): number => (tauMs > 0 ? 1 - Math.exp(-Math.max(0, dtMs) / tauMs) : 1);
 
 function axisAt(angle: number, nowMs: number): AxisState {
-  return { vel: 0, movedAt: nowMs, lastDriver: angle, lastBox: angle, glide: null };
+  return { vel: 0, movedAt: nowMs, lastDriver: angle, lastBox: angle, glide: null, aligning: false };
 }
 
 /** ⭐ The camera orbit starts aligned with the box, at rest. */
@@ -106,6 +117,17 @@ export function cameraOrbitAt(box: OrbitAt, nowMs: number, cfg: GestureConfig): 
 /** ⭐ One step of a glide, integrated EXACTLY: `s = D − (D − s)·e^(−dt/τ)`; within a millidegree it lands. */
 function glideStep(g: Glide, dtMs: number): { glide: Glide | null; move: number; vel: number } {
   const left = g.distance - g.travelled;
+  if (g.kind === "rest") {
+    const elapsed = g.elapsed + dtMs;
+    const u = elapsed / g.tauMs;
+    const travelled = g.distance * (1 - (1 + u) * Math.exp(-u));
+    if (g.distance - travelled < 2e-5) return { glide: null, move: g.dir * left, vel: 0 };
+    return {
+      glide: { ...g, travelled, elapsed },
+      move: g.dir * (travelled - g.travelled),
+      vel: (g.dir * g.distance * u * Math.exp(-u)) / g.tauMs,
+    };
+  }
   const leftAfter = left * Math.exp(-dtMs / g.tauMs);
   if (leftAfter < 2e-5) return { glide: null, move: g.dir * left, vel: 0 };
   return { glide: { ...g, travelled: g.distance - leftAfter }, move: g.dir * (left - leftAfter), vel: (g.dir * leftAfter) / g.tauMs };
@@ -136,40 +158,53 @@ function axisStep(
    * back on the leash, stopped dead — at some speeds a steady drag made the box jitter (the owner, 2026-10-01).
    */
   fingerMoving: boolean | null,
+  /**
+   * ⭐⭐ The finger driving the orbit was LIFTED this frame (the owner, 2026-10-01: *"when the input touch/click is released,
+   * the camera shall catch up to the original offset even if the green box is inside the camera leash range"*): this axis
+   * realigns whatever its speed — from rest, a smooth spring (`restTauMs`).
+   */
+  released: boolean,
 ): { next: AxisState; move: number } {
   const changed = fingerMoving === null ? Math.abs(driverDelta) > 1e-9 : fingerMoving;
   const movedAt = changed ? nowMs : a.movedAt;
   const moving = movedAt === nowMs || nowMs - movedAt < p.settleDelayMs;
-  const base = { movedAt, lastDriver: driverAngle, lastBox: boxAngle };
+  const aligning = released || a.aligning;
+  const base = { movedAt, lastDriver: driverAngle, lastBox: boxAngle, aligning };
   if (dtMs <= 0) return { next: { ...a, ...base }, move: 0 };
 
-  if (moving) {
-    // ⭐ The LEASH. ⛔ A camera pinned EXACTLY at the leash reads `leash + rounding`: under a nanoradian past it is no move.
+  if (moving && !released) {
+    // ⭐ The LEASH. (A new input ends a realignment the release asked for.) ⛔ A camera pinned EXACTLY at the leash reads `leash + rounding`: under a nanoradian past it is no move.
     if (Math.abs(gapToBox) > p.leashRad + 1e-9) {
       const move = gapToBox - Math.sign(gapToBox) * p.leashRad;
-      return { next: { ...base, vel: move / dtMs, glide: null }, move };
+      return { next: { ...base, aligning: false, vel: move / dtMs, glide: null }, move };
     }
     // ⭐⭐ Inside it, a camera still carrying SPEED — a glide the input interrupted, or the leash's own pull a moment ago —
     // SHEDS it (`COAST_MS`) instead of stopping dead (the owner: *"build the fix and polish"*); it never passes the box.
     const vel = a.vel * Math.exp(-dtMs / COAST_MS);
-    if (Math.abs(vel) < 1e-7) return { next: { ...base, vel: 0, glide: null }, move: 0 };
+    if (Math.abs(vel) < 1e-7) return { next: { ...base, aligning: false, vel: 0, glide: null }, move: 0 };
     const move = vel * dtMs;
-    if (move * gapToBox > 0 && Math.abs(move) >= Math.abs(gapToBox)) return { next: { ...base, vel: 0, glide: null }, move: gapToBox };
-    return { next: { ...base, vel, glide: null }, move };
+    if (move * gapToBox > 0 && Math.abs(move) >= Math.abs(gapToBox)) return { next: { ...base, aligning: false, vel: 0, glide: null }, move: gapToBox };
+    return { next: { ...base, aligning: false, vel, glide: null }, move };
   }
 
   let glide = a.glide;
+  if (Math.abs(gapToEnd) < 1e-9) return { next: { ...base, aligning: false, vel: 0, glide: null }, move: gapToEnd };
   if (glide === null) {
-    // ⭐ The owner: *"when the box is still inside the leash, do not rotate the camera"* — a camera at rest stays; so does
-    // one heading away from where the box ends.
-    if (Math.abs(a.vel) < 1e-9 || Math.sign(a.vel) !== Math.sign(gapToEnd) || Math.abs(gapToEnd) < 1e-9) {
+    const carrying = Math.abs(a.vel) >= 1e-9 && Math.sign(a.vel) === Math.sign(gapToEnd);
+    if (carrying) {
+      // ⭐ τ = D / v₀: the exponential that starts at the camera's speed covers exactly the distance.
+      glide = { dir: Math.sign(gapToEnd), distance: Math.abs(gapToEnd), travelled: 0, tauMs: Math.abs(gapToEnd) / Math.abs(a.vel), kind: "carry", elapsed: 0 };
+    } else if (aligning) {
+      // ⭐ A release realigns even a camera at rest — from zero speed, a spring (no jump in speed).
+      glide = { dir: Math.sign(gapToEnd), distance: Math.abs(gapToEnd), travelled: 0, tauMs: Math.max(1, p.restTauMs), kind: "rest", elapsed: 0 };
+    } else {
+      // ⭐ The owner: *"when the box is still inside the leash, do not rotate the camera"* — a camera at rest stays (until a
+      // release); so does one heading away from where the box ends.
       return { next: { ...base, vel: 0, glide: null }, move: 0 };
     }
-    // ⭐ τ = D / v₀: the exponential that starts at the camera's speed covers exactly the distance.
-    glide = { dir: Math.sign(gapToEnd), distance: Math.abs(gapToEnd), travelled: 0, tauMs: Math.abs(gapToEnd) / Math.abs(a.vel) };
   }
   const g = glideStep(glide, dtMs);
-  return { next: { ...base, vel: g.vel, glide: g.glide }, move: g.move };
+  return { next: { ...base, aligning: g.glide === null ? false : aligning, vel: g.vel, glide: g.glide }, move: g.move };
 }
 
 /**
@@ -186,6 +221,8 @@ export function cameraOrbitStep(
   driver: OrbitAt = box,
   /** ⭐ The orbit FINGER's own verdict per axis (yaw ← its x, pitch ← its y); `null` when no finger drives the orbit. */
   finger: { readonly yaw: boolean; readonly pitch: boolean } | null = null,
+  /** ⭐ The orbit finger was lifted THIS frame: both axes realign, even from rest inside the leash. */
+  released = false,
 ): CameraOrbitState {
   const y = axisStep(
     s.yaw,
@@ -198,11 +235,12 @@ export function cameraOrbitStep(
     dtMs,
     p,
     finger === null ? null : finger.yaw,
+    released,
   );
   const pc = pitchOf(cfg, s.cam.v);
   const pb = pitchOf(cfg, box.v);
   const pd = pitchOf(cfg, driver.v);
-  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p, finger === null ? null : finger.pitch);
+  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p, finger === null ? null : finger.pitch, released);
   return {
     cam: { yaw: s.cam.yaw + y.move, v: q.move === 0 ? s.cam.v : vForPitch(cfg, pc + q.move) },
     yaw: y.next,

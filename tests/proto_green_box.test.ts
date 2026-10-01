@@ -36,7 +36,7 @@ describe("⭐⭐ prototype — the green box", () => {
 
   const CFG = DEFAULT_CONFIG;
   const LEASH = (15 * Math.PI) / 180;
-  const P = { leashRad: LEASH, settleTauMs: 250, settleDelayMs: 120 };
+  const P = { leashRad: LEASH, settleTauMs: 250, settleDelayMs: 120, restTauMs: 120 };
   const DEG = Math.PI / 180;
 
   const len = (v: readonly number[]) => Math.hypot(v[0]!, v[1]!, v[2]!);
@@ -200,7 +200,7 @@ describe("⭐⭐ prototype — the green box", () => {
     // the input does not change. ⛔ Read per frame, those frames were "stopped": the camera glided, then stopped dead.
     // ⭐ What the eye sees is the GAP box − camera: the box's place on the glass. The box eases after the input as in the
     // product (60 ms); the input moves every 3rd or 4th frame, steadily, past the 3° leash.
-    const P0 = { leashRad: 3 * DEG, settleDelayMs: 0 };
+    const P0 = { leashRad: 3 * DEG, settleDelayMs: 0, restTauMs: 120 };
     const gapSpan = (finger: { yaw: boolean; pitch: boolean } | null, every: number) => {
       let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
       let rig = 0;
@@ -238,6 +238,36 @@ describe("⭐⭐ prototype — the green box", () => {
       prev = s.yawVel;
     }
     expect(s.yawVel).toBeLessThan(v0);
+  });
+
+  it("⭐⭐ prototype: a RELEASE realigns the camera even at rest inside the leash — from zero speed, no jump, no overshoot", () => {
+    // the owner: *"when the input touch/click is released, the camera shall catch up to the original offset even if the
+    // green box is inside the camera leash range"*
+    const P0 = { ...P, settleDelayMs: 0 };
+    let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, CFG);
+    const box = { yaw: 10 * DEG, v: 0.4 }; // 10° < 15° in yaw, a pitch gap too — the camera stays while the finger is down
+    let t = 0;
+    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box, (t += 16), 16, CFG, P0, box, { yaw: false, pitch: false });
+    expect(s.cam.yaw).toBe(0);
+    // the finger lifts: both axes realign
+    s = cameraOrbitStep(s, box, (t += 16), 16, CFG, P0, box, null, true);
+    expect(s.cam.yaw).toBeGreaterThan(0);
+    expect(s.cam.yaw).toBeLessThan(0.1 * DEG); // starts from rest: a spring, no jump
+    let prev = s.cam.yaw;
+    for (let i = 0; i < 200; i++) {
+      s = cameraOrbitStep(s, box, (t += 16), 16, CFG, P0, box, null);
+      expect(s.cam.yaw).toBeGreaterThanOrEqual(prev - 1e-12);
+      expect(s.cam.yaw).toBeLessThanOrEqual(10 * DEG + 1e-12); // never passes the box
+      prev = s.cam.yaw;
+    }
+    expect(Math.abs(s.cam.yaw - 10 * DEG)).toBeLessThan(1e-4);
+    expect(Math.abs(s.cam.v - 0.4)).toBeLessThan(1e-4);
+    // ⭐ a new input stops the realignment: with no release, a camera at rest inside the leash stays put again
+    const box2 = { yaw: 15 * DEG, v: 0.4 };
+    const at = s.cam.yaw;
+    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box2, (t += 16), 16, CFG, P0, box2, { yaw: true, pitch: false });
+    for (let i = 0; i < 30; i++) s = cameraOrbitStep(s, box2, (t += 16), 16, CFG, P0, box2, { yaw: false, pitch: false });
+    expect(s.cam.yaw).toBe(at);
   });
 
   it("⭐ prototype: yaw is compared the short way round", () => {

@@ -95,6 +95,7 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 100),
         tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 1),
         tunable(st, "camera settle delay after an input stops (ms)", "cameraSettleDelayMs", 0, 1000, 10),
+        tunable(st, "camera catch-up after release, from rest (ms)", "cameraCatchUpMs", 20, 1000, 10),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
         tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
         // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.
