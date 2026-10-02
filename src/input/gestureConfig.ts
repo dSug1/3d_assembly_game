@@ -469,6 +469,8 @@ export interface GestureConfig {
   cameraRadiusOffsetMm: number;
   /** ⭐ Prototype: the green box orbit's YAW gain, a multiplier on `gainOrbitYaw` (the owner: *"the green box orbits too fast"*). */
   boxGainYaw: number;
+  /** ⭐ Prototype: the share of the yaw gain left while the green piece is OUTSIDE the guide sphere (`outsideYawShare`). */
+  boxGainYawOutsideShare: number;
   /** ⭐ Prototype: the green box orbit's PITCH gain, a multiplier on `gainOrbitElevation`. */
   boxGainPitch: number;
   /**
@@ -943,6 +945,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)
   boxGainYaw: 1.65,
+  boxGainYawOutsideShare: 0.4, // ⭐ prototype (green box), the owner 2026-10-02: *"reduce the green box yaw orbit gain to 40% of its value"*
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
   boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
@@ -965,7 +968,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSwayKind: 0,
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
-  guideSphereAlpha: 0.08, // ⭐ prototype (green box), 2026-10-02: *"almost translucent"*
+  guideSphereAlpha: 0, // ⭐ prototype (green box), the owner 2026-10-02: hidden by default (was 0.08, *"almost translucent"*)
   yawFaceAlignSpanDeg: 180, // ⭐ prototype (green box), the owner 2026-10-02
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
@@ -1095,6 +1098,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.cameraRadiusOffsetMm >= 100 && cfg.cameraRadiusOffsetMm <= 2000)) {
     throw new Error(`cameraRadiusOffsetMm (${cfg.cameraRadiusOffsetMm}) must be in [100, 2000] mm.`);
+  }
+  if (!(cfg.boxGainYawOutsideShare > 0 && cfg.boxGainYawOutsideShare <= 1)) {
+    throw new Error(`boxGainYawOutsideShare (${cfg.boxGainYawOutsideShare}) must be in (0, 1].`);
   }
   if (!(cfg.boxGainYaw > 0 && cfg.boxGainYaw <= 4) || !(cfg.boxGainPitch > 0 && cfg.boxGainPitch <= 4)) {
     throw new Error(`boxGainYaw / boxGainPitch (${cfg.boxGainYaw} / ${cfg.boxGainPitch}) must be in (0, 4].`);

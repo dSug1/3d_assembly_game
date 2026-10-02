@@ -117,6 +117,27 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
     }
   });
 
+  it("⭐⭐ outside the guide sphere the YAW orbit gain is 40 % — and DeltaXYawPerFace grows with it (the owner: *\"reduce the green box yaw orbit gain to 40% of its value\"*)", async () => {
+    const { outsideYawShare } = await import("../src/input/green_box");
+    expect(DEFAULT_CONFIG.boxGainYawOutsideShare).toBe(0.4);
+    expect(code("render/tuning_menu.ts")).toContain('"boxGainYawOutsideShare", 0.05, 1, 0.05)');
+    expect(outsideYawShare(true, 0.4)).toBe(0.4);
+    expect(outsideYawShare(false, 0.4)).toBe(1);
+    const inside = orbitDegPerMm(DEFAULT_CONFIG, 0.5, { yaw: outsideYawShare(false, 0.4), pitch: 1 }).yawDegPerMm;
+    const outside = orbitDegPerMm(DEFAULT_CONFIG, 0.5, { yaw: outsideYawShare(true, 0.4), pitch: 1 }).yawDegPerMm;
+    expect(outside).toBeCloseTo(0.4 * inside, 12);
+    // 30° per face: 5.88 mm of dx inside the rate, 14.7 mm at the outside rate
+    expect(deltaXYawPerFace(30, inside)).toBeCloseTo(5.88, 2);
+    expect(deltaXYawPerFace(30, outside)).toBeCloseTo(14.69, 2);
+    // ⭐ ONE home for the gains: the drag, the face stepping's yaw rate and the HUD all read `greenDragGains`
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/return \{ yaw: g\.yaw \* outsideYawShare\(outside, st\.cfg\.boxGainYawOutsideShare\), pitch: g\.pitch \};/);
+    expect(w).toMatch(/const outside = st\.greenBox !== null && st\.faceTracks\.get\(st\.greenBox\)\?\.outside === true;/);
+    expect(w).toMatch(/const g = greenDragGains\(st\);\s*const yawDegPerMm = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\)\.yawDegPerMm;/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/const g = greenDragGains\(st\);[\s\S]{0,200}st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw,/);
+    expect(code("render/hud_paint.ts")).toMatch(/const g = greenDragGains\(st\);\s*const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\);/);
+  });
+
   it("⭐ wired: START anti-aligns the most anti-aligned face; the yaw as finger mm steps the order; the pink face's change slerps; nothing inside", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/order = pink === null \? \[\] : faceOrder\(faces, mostAntiAligned\(faces, cur, pink\)\);/);

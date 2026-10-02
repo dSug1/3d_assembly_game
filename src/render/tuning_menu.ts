@@ -117,6 +117,8 @@ export function installTuningMenu(st: SceneState): void {
           title: "GREEN PIECE ORBIT",
           sliders: [
             tunable(st, "green box orbit gain — yaw (×)", "boxGainYaw", 0.05, 2, 0.05),
+            // ⭐ 2026-10-02: the share of it left while the green piece is outside the guide sphere.
+            tunable(st, "yaw gain share outside the guide sphere", "boxGainYawOutsideShare", 0.05, 1, 0.05),
             tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
             tunable(st, "green box gain inside the leash (×)", "boxGainInsideLeash", 0.05, 1, 0.05),
             tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),

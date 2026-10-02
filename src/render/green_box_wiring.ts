@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, faceOrder, mostAntiAligned, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, faceOrder, mostAntiAligned, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -366,10 +366,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
   const t = st.centreBlend.targetM;
   const radius = GUIDE_SPHERE_SHARE * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
   const yaw = st.orbit.yaw;
-  const g =
-    st.boxOrbit === null || st.cameraOrbit === null
-      ? { yaw: 1, pitch: 1 }
-      : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+  const g = greenDragGains(st);
   const yawDegPerMm = orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm;
   const pink = st.pinkFaceNormal;
   for (const m of st.orbitedPieces) {
@@ -435,4 +432,18 @@ function greenTurnFrame(st: SceneState, now: number): void {
     m.rotationQuaternion = toBabylon(qSlerp(turn.from, turn.to, u * u * (3 - 2 * u)));
     if (u >= 1) st.pieceTurns.delete(m);
   }
+}
+
+/**
+ * ⭐ prototype (green box): the gains the green piece's orbit drag runs at NOW — the inside-the-leash factors (`boxDragGains`) and,
+ * on yaw, the share left while it is outside the guide sphere (`outsideYawShare`, the face tracking's own outside state). ⭐ ONE
+ * home: the drag, the face stepping's yaw rate and the HUD read it, so the dx per face is the dx the drag needs.
+ */
+export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
+  const g =
+    st.boxOrbit === null || st.cameraOrbit === null
+      ? { yaw: 1, pitch: 1 }
+      : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+  const outside = st.greenBox !== null && st.faceTracks.get(st.greenBox)?.outside === true;
+  return { yaw: g.yaw * outsideYawShare(outside, st.cfg.boxGainYawOutsideShare), pitch: g.pitch };
 }

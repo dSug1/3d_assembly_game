@@ -225,7 +225,7 @@ describe("⭐ prototype — the pink ring is thicker and brighter (the owner, 20
 describe("⭐ prototype — the GUIDE SPHERE on the yellow target (the owner, 2026-10-02: *\"for prototyping purpose and will not be shown in the final game\"*)", () => {
   it("⭐ 75 % of the top ring's radius, on the target, almost transparent, touching nothing; a slider hides it", async () => {
     const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
-    expect(DEFAULT_CONFIG.guideSphereAlpha).toBe(0.08);
+    expect(DEFAULT_CONFIG.guideSphereAlpha).toBe(0); // the owner, 2026-10-02: hidden by default (was 0.08)
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/export const GUIDE_SPHERE_SHARE = 0\.75;/);
     expect(w).toMatch(/const r = GUIDE_SPHERE_SHARE \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM;/);

@@ -278,7 +278,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * ⭐ **A GUIDE SPHERE on the yellow target — for prototyping only** (the owner, 2026-10-02: *"draw a sphere of 75% of the top ring
   radius, centered on the yellow orbit center. it shall be almost translucent so I can see through. This is for prototyping
   purpose and will not be shown in the final game"*): radius `GUIDE_SPHERE_SHARE` (0.75) × the top ring's (1.91 m today),
-  following the target and the slider each frame (`guideSphereFrame`); unlit, both faces drawn, `guideSphereAlpha` **0.08**
+  following the target and the slider each frame (`guideSphereFrame`); unlit, both faces drawn, `guideSphereAlpha` **0** — hidden by default (the owner, 2026-10-02; was 0.08)
   (CAMERA › RENDERING › *guide sphere opacity*, 0 = hidden). Not pickable, not an orbit candidate: it blocks no press, no
   occlusion ray, and never sways. ⛔ Not for the final game — remove with the rest of the prototype.
 * ⭐ **The green piece's WHITE CONTOUR outside the guide sphere** (the owner, 2026-10-02: *"when the green piece is outside of this
@@ -330,3 +330,8 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   (`cameraResetMs × ALIGN_SNAP_FRACTION`, smoothstep). ⛔ Inside the sphere nothing turns (a turn already in flight lands); the
   next exit starts again from the face anti-aligned then. HUD `green`: `faces 6 tracked, 30.0°/face = 5.88 mm dx, face 1/6 (dx … mm)`.
   `tests/proto_face_steps.test.ts`.
+* ⭐ **The yaw orbit is slower outside the guide sphere** (the owner, 2026-10-02: *"when the green piece is outside the white sphere:
+  reduce the green box yaw orbit gain to 40% of its value"*): `boxGainYawOutsideShare` **0.4** (CAMERA, beside the yaw gain), applied
+  by `outsideYawShare` on the face tracking's own outside state. ⭐ ONE home for the drag's gains, `greenDragGains` (the leash factors
+  and this share): the drag, the face stepping's yaw rate and the HUD read it — so outside, the yaw rate is **2.04°/mm** and
+  `DeltaXYawPerFace` **14.7 mm** of dx (5.88 inside the rate). The pitch is unchanged.

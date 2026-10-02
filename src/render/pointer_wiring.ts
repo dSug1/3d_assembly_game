@@ -11,7 +11,7 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { boxDragGains } from "../input/follow_camera";
+import { greenDragGains } from "./green_box_wiring";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
@@ -1126,10 +1126,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   const dx = s.x - prev.x;
   const dy = s.y - prev.y;
   if (st.greenBox !== null) {
-    const g =
-      st.boxOrbit === null || st.cameraOrbit === null
-        ? { yaw: 1, pitch: 1 }
-        : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+    // ⭐ 2026-10-02: the yaw slower outside the guide sphere too (`greenDragGains`).
+    const g = greenDragGains(st);
     const yaw0 = st.orbit.yaw;
     const v0 = st.orbit.elevation;
     st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, -dy * st.cfg.boxGainPitch * g.pitch);

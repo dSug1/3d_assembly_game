@@ -364,3 +364,12 @@ export function antiAlignedOrientation(faces: readonly PieceFace[], faceIndex: n
   if (f === undefined) return q;
   return qmul(shortestArc(qRotate(q, f.normal), [-target[0], -target[1], -target[2]]), q);
 }
+
+/**
+ * ⭐ prototype (green box) — **THE YAW ORBIT IS SLOWER OUTSIDE THE GUIDE SPHERE** (the owner, 2026-10-02: *"when the green piece is
+ * outside the white sphere: reduce the green box yaw orbit gain to 40% of its value"*): the factor on the yaw gain — `share` outside,
+ * 1 inside. ⭐ It is part of the yaw RATE, so `DeltaXYawPerFace` grows with it (more dx per face outside).
+ */
+export function outsideYawShare(outside: boolean, share: number): number {
+  return outside ? share : 1;
+}
