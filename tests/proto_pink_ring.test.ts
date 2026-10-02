@@ -23,6 +23,9 @@ describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
     expect(pinkRingVisibility([{ distanceM: 0.9995, isGreenBox: false }], at, eps)).toBe("VISIBLE");
     // a piece BEHIND the target never hides it
     expect(pinkRingVisibility([{ distanceM: 1.3, isGreenBox: false }], at, eps)).toBe("VISIBLE");
+    // ⭐ the BOOT target (the owner, 2026-10-02: *"display the pink ring at the boot"*): pieces in front make it translucent, never hide it
+    expect(pinkRingVisibility([{ distanceM: 0.6, isGreenBox: false }], at, eps, true)).toBe("TRANSLUCENT");
+    expect(pinkRingVisibility([], at, eps, true)).toBe("VISIBLE");
   });
 
   it("⭐ wired: at the yellow target, the amber ring's size on the glass, billboarded, drawn on top; frozen bodies never hide it", () => {
@@ -32,6 +35,8 @@ describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
     expect(w).toMatch(/ring\.billboardMode = Mesh\.BILLBOARDMODE_ALL;/);
     expect(w).toMatch(/st\.world\.objects\.get\(id\)\?\.frozen !== true/);
     expect(w).toMatch(/ring\.alpha = v === "TRANSLUCENT" \? PINK_MASKED_ALPHA : 1;/);
+    expect(w).toMatch(/pinkRingVisibility\(hits, dist, PINK_EPS_M, !st\.targetSetByPress\)/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/st\.centreBlend\.retarget\(newTarget\);[\s\S]{0,200}st\.targetSetByPress = true;/);
     expect(w.indexOf("pinkRingFrame(st);")).toBeGreaterThan(w.indexOf("st.camera.setTarget(c.clone());"));
   });
 });

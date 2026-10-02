@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { sizeM, smallestOfColour, throughGreenBox } from "@input/green_box";
-import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
+import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, springOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
 import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
@@ -323,6 +323,42 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(Math.abs(shown.yaw - want.yaw)).toBeLessThan(1e-6);
   });
 
+  it("⭐⭐ prototype: the box rides a SPRING — no speed jump at an event, so a time-lagged camera no longer shows a pulse (2026-10-02)", () => {
+    // the owner: *"the camera lag at 30 ms create jitter in the green box visualization. can you improve"*
+    const target = { yaw: 10 * DEG, v: 0.5, zoom: 1 };
+    // ⭐ a step in the target starts it from REST: its first-frame speed is far below the exponential's
+    const s1 = springOrbit({ at: { yaw: 0, v: 0.5, zoom: 1 }, velYaw: 0, velV: 0, velLnZoom: 0 }, target, 16, 30);
+    const e1 = easeOrbit({ yaw: 0, v: 0.5, zoom: 1 }, target, 16, 60);
+    expect(s1.at.yaw).toBeLessThan(e1.yaw / 2);
+    // converges, the short way round, zoom in log space
+    let s = s1;
+    for (let i = 0; i < 200; i++) s = springOrbit(s, target, 16, 30);
+    expect(Math.abs(s.at.yaw - target.yaw)).toBeLessThan(1e-6);
+    const w = springOrbit({ at: { yaw: 175 * DEG, v: 0.5, zoom: 1 }, velYaw: 0, velV: 0, velLnZoom: 0 }, { yaw: -175 * DEG, v: 0.5, zoom: 2 }, 16, 30);
+    expect(wrapPi(w.at.yaw - 175 * DEG)).toBeGreaterThan(0); // toward −175° the short way: forward through 180°
+    expect(w.at.zoom).toBeGreaterThan(1);
+    // ⭐⭐ the point: a steady drag (an event every 4 frames), a 30 ms camera lag — the gap box − camera ripples far less
+    const ripple = (spring: boolean) => {
+      let rig = 0;
+      let box = { yaw: 0, v: 0.5, zoom: 1 };
+      let sp = { at: box, velYaw: 0, velV: 0, velLnZoom: 0 };
+      let cam: OrbitAt = { yaw: 0, v: 0.5 };
+      const gaps: number[] = [];
+      for (let f = 1; f <= 400; f++) {
+        if (f % 4 === 0) rig += 1.2 * DEG;
+        const t = { yaw: rig, v: 0.5, zoom: 1 };
+        if (spring) {
+          sp = springOrbit(sp, t, 16, 30);
+          box = sp.at;
+        } else box = easeOrbit(box, t, 16, 60);
+        cam = cameraLag(cam, box, 16, 30);
+        if (f > 200) gaps.push(box.yaw - cam.yaw);
+      }
+      return Math.max(...gaps) - Math.min(...gaps);
+    };
+    expect(ripple(true)).toBeLessThan(0.5 * ripple(false));
+  });
+
   it("⭐ wired: the camera is placed from the LAGGED angles; a slider (0–1000 ms) in CAMERA", () => {
     const w = code("green_box_wiring.ts");
     expect(w).toMatch(/cameraLag\(st\.cameraLagged, st\.cameraOrbit\.cam, dtSec \* 1000, st\.cfg\.cameraFollowMs\)/);
@@ -344,7 +380,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(loop.indexOf("greenBoxFrame(st, dtSec)")).toBeLessThan(loop.indexOf("st.scene.render()"));
     const w = code("green_box_wiring.ts");
     expect(w).toMatch(/cameraOrbitStep\(\s*st\.cameraOrbit,\s*at,/);
-    expect(w).toMatch(/easeOrbit\(st\.boxOrbit, rig, dtSec \* 1000, st\.cfg\.boxSmoothMs\)/);
+    // ⭐ 2026-10-02: on a critically damped spring (it was `easeOrbit`, one exponential)
+    expect(w).toMatch(/springOrbit\(st\.boxSpring, rig, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\)/);
+    expect(w).toMatch(/st\.boxOrbit = st\.boxSpring\.at;/);
     // ⭐ the owner: the camera looks at the yellow target — the orbit centre
     expect(w).toMatch(/st\.camera\.setTarget\(c\.clone\(\)\)/);
     // ⭐ the owner, 2026-10-02: *"remove the billboarding"*

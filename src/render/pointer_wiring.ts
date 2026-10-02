@@ -8,7 +8,7 @@ import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { throughGreenBox } from "../input/green_box";
-import { goalLocked, orbitTargetOnPress } from "../input/goal_lock";
+import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { boxDragGains } from "../input/follow_camera";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -308,11 +308,13 @@ export function installPointerHandler(st: SceneState): void {
           // ⚠ The PRESS coordinates are kept, not re-read later: rule 1 chooses what to
           // orbit around from the ray of the finger that STARTED it, and a finger that
           // has drifted 120 ms' worth would choose a different barycentre.
+          // ⭐⭐ prototype (green box), 2026-10-02: an empty-space press (the floor and the green piece are empty space here) does
+          // NOT move the yellow target — only a press on a placed piece does (`EMPTY_PRESS_MOVES_TARGET`, switched off).
           st.pendingCentre =
-            st.cfg.orbitCentreGraceMs > 0
+            EMPTY_PRESS_MOVES_TARGET && st.cfg.orbitCentreGraceMs > 0
               ? { x: e.clientX, y: e.clientY, at: s.t }
               : null;
-          if (!st.pendingCentre) recomputeOrbitCentre(st, e);
+          if (EMPTY_PRESS_MOVES_TARGET && !st.pendingCentre) recomputeOrbitCentre(st, e);
         } else {
           // ⛔ A SECOND ONE ARRIVED: this is a pinch. Drop the pending retarget entirely
           // — the camera keeps orbiting whatever it was already orbiting.
@@ -344,6 +346,8 @@ export function installPointerHandler(st: SceneState): void {
       );
       if (newTarget !== null) {
         st.centreBlend.retarget(newTarget);
+        // ⭐ prototype (green box): the target is no longer the boot one — the pink ring's normal occlusion applies from now.
+        st.targetSetByPress = true;
         syncCentre(st);
       }
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*

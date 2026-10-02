@@ -80,12 +80,18 @@ export function pinkRingVisibility(
   hits: readonly RingHit[],
   targetDistM: number,
   epsM: number,
+  /**
+   * ⭐ prototype (green box), the owner 2026-10-02: *"display the pink ring at the boot"* — the BOOT target (the scene's orbit
+   * centre, behind the painting's panel) has pieces in front from the boot camera, so it was hidden. Until the target is first
+   * set by a press on a placed piece, a piece in front makes it TRANSLUCENT instead: it is always displayed at boot.
+   */
+  bootTarget = false,
 ): "VISIBLE" | "TRANSLUCENT" | "HIDDEN" {
-  let green = false;
+  let masked = false;
   for (const h of hits) {
     if (!(h.distanceM < targetDistM - epsM)) continue;
-    if (!h.isGreenBox) return "HIDDEN";
-    green = true;
+    if (!h.isGreenBox && !bootTarget) return "HIDDEN";
+    masked = true;
   }
-  return green ? "TRANSLUCENT" : "VISIBLE";
+  return masked ? "TRANSLUCENT" : "VISIBLE";
 }

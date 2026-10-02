@@ -16,7 +16,7 @@ import { taperMesh } from "./bodies";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
-import { cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit } from "../input/follow_camera";
+import { cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
@@ -90,7 +90,8 @@ export function pinkRingFrame(st: SceneState): void {
       return id !== undefined && st.world.objects.get(id)?.frozen !== true;
     }) ?? []
   ).map((h) => ({ distanceM: h.distance, isGreenBox: h.pickedMesh === st.greenBox }));
-  const v = pinkRingVisibility(hits, dist, PINK_EPS_M);
+  // ⭐ At the BOOT target (no placed-piece press yet), never hidden — translucent behind pieces (the owner, 2026-10-02).
+  const v = pinkRingVisibility(hits, dist, PINK_EPS_M, !st.targetSetByPress);
   ring.isVisible = v !== "HIDDEN";
   ring.alpha = v === "TRANSLUCENT" ? PINK_MASKED_ALPHA : 1;
   const m = trackingMetresPerPx(dist, st.camera.fov, st.canvas.clientHeight) * GIZMO_RING_PX;
@@ -109,7 +110,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const c = st.orbitCentreM;
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
   const rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: st.zoom };
-  st.boxOrbit = st.boxOrbit === null ? rig : easeOrbit(st.boxOrbit, rig, dtSec * 1000, st.cfg.boxSmoothMs);
+  // ⭐ prototype (green box), 2026-10-02: on a critically damped SPRING (`springOrbit`) — no speed jump at a pointer event, so
+  // the camera's time lag no longer shows a pulse (it was `easeOrbit`, one exponential). Same response: τ = boxSmoothMs / 2.
+  st.boxSpring =
+    st.boxSpring === null
+      ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
+      : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
+  st.boxOrbit = st.boxSpring.at;
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
   // ⛔ The same near-plane guard the rig's pose had (`applyCamera`): the clamp only shortens.
   const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;

@@ -32,6 +32,14 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     expect(orbitTargetOnPress(true, true, true, null)).toBeNull();
   });
 
+  it("⭐⭐ ONLY a press on a placed piece moves the target — empty space, the floor, the green piece do not (the owner, 2026-10-02)", async () => {
+    const { EMPTY_PRESS_MOVES_TARGET } = await import("../src/input/goal_lock");
+    expect(EMPTY_PRESS_MOVES_TARGET).toBe(false); // switched off, not deleted
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toMatch(/EMPTY_PRESS_MOVES_TARGET && st\.cfg\.orbitCentreGraceMs > 0/);
+    expect(p).toMatch(/if \(EMPTY_PRESS_MOVES_TARGET && !st\.pendingCentre\) recomputeOrbitCentre\(st, e\);/);
+  });
+
   it("⭐ wired: empty space reads nearestPairCentre over the non-frozen pieces; a press on a piece retargets at the hit", () => {
     const c = code("render/camera_rig.ts");
     expect(c).toMatch(/nearestPairCentre\(visible,/);
@@ -39,7 +47,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     expect(c).not.toMatch(/const c = orbitCentre\(/);
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/orbitTargetOnPress\(\s*routed\.role === "OBJECT" && st\.router\.all\(\)\.length === 1,\s*e\.pointerType !== "mouse" \|\| e\.isTrusted,/);
-    expect(p).toMatch(/st\.centreBlend\.retarget\(newTarget\);\s*syncCentre\(st\);/);
+    expect(p).toMatch(/st\.centreBlend\.retarget\(newTarget\);[\s\S]{0,300}?syncCentre\(st\);/);
   });
 
   it("⭐ the yellow target is ALWAYS VISIBLE — drawn in rendering group 2, after the bodies, the depth cleared (the owner: *\"not occluded by any object\"*)", () => {

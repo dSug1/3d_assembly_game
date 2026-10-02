@@ -332,6 +332,45 @@ export function boxDragGains(cfg: GestureConfig, box: OrbitAt, cam: OrbitAt, lea
   };
 }
 
+/** ⭐ The green box's spring state: where it is, and how fast each channel moves (yaw rad/ms, `v` /ms, ln zoom /ms). */
+export interface OrbitSpring {
+  readonly at: OrbitZoom;
+  readonly velYaw: number;
+  readonly velV: number;
+  readonly velLnZoom: number;
+}
+
+/** One critically damped channel: `x` relative to the target (0 is the target), its velocity, one step of `dt`. */
+function springChannel(x: number, vel: number, dtMs: number, tauMs: number): { x: number; vel: number } {
+  if (!(tauMs > 0)) return { x: 0, vel: 0 };
+  const w = 1 / tauMs;
+  const e = Math.exp(-w * dtMs);
+  const t = (vel + w * x) * dtMs;
+  return { x: (x + t) * e, vel: (vel - w * t) * e };
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE BOX FOLLOWS THE RIG ON A CRITICALLY DAMPED SPRING** (the owner, 2026-10-02: *"the camera lag
+ * at 30 ms create jitter in the green box visualization. can you improve"*). ⛔ `easeOrbit` (one exponential) moves the box at a
+ * speed that JUMPS at every pointer event — the rig steps once per event (47–68 ms on the tablet) — so its speed pulses at the
+ * event rhythm. Pinned to the box (leash 0, no lag) the camera hid it; with a time lag, the gap box − camera is that speed × the
+ * lag, and the box wobbled on the glass. ⭐ A critically damped spring has NO speed jump, so an event starts no pulse:
+ * simulated on a steady drag (an event every 3–4 frames), the gap's ripple drops ~2.5–3× at every lag (30, 60, 150 ms) —
+ * while a smoother CAMERA made it slightly WORSE (it only shows the box's pulse more faithfully). ⭐ `tauMs` is the spring's
+ * time constant — `boxSmoothMs / 2`, the same response time the single exponential had. Yaw the short way; zoom in log space.
+ */
+export function springOrbit(s: OrbitSpring, target: OrbitZoom, dtMs: number, tauMs: number): OrbitSpring {
+  const y = springChannel(wrapPi(s.at.yaw - target.yaw), s.velYaw, dtMs, tauMs);
+  const v = springChannel(s.at.v - target.v, s.velV, dtMs, tauMs);
+  const z = springChannel(Math.log(s.at.zoom / target.zoom), s.velLnZoom, dtMs, tauMs);
+  return {
+    at: { yaw: target.yaw + y.x, v: target.v + v.x, zoom: target.zoom * Math.exp(z.x) },
+    velYaw: y.vel,
+    velV: v.vel,
+    velLnZoom: z.vel,
+  };
+}
+
 /**
  * ⭐⭐ prototype (green box) — **THE CAMERA'S TIME LAG, ON TOP OF THE LEASH** (the owner, 2026-10-02: *"lag the camera orbit
  * behind the green piece orbit in whichever orbit direction … create time lag with slider on top of leash"*). The leash says

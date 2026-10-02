@@ -37,3 +37,12 @@ export function orbitTargetOnPress(
   if (!firstTouch || !touchOrLeftButton || !locked || hitPoint === null) return null;
   return [hitPoint[0], hitPoint[1], hitPoint[2]];
 }
+
+/**
+ * ⭐⭐ prototype (green box) — **ONLY A PRESS ON A PLACED PIECE MOVES THE YELLOW TARGET** (the owner, 2026-10-02: *"a press on
+ * empty space or frozen object or green piece does not change the yellow orbit center position. Only a press on placed object
+ * changes the yellow orbit center position."*). ⛔ So the empty-space press — the frozen floor and the green piece are empty
+ * space to the router — no longer retargets (§2 rule 1's barycentre, `nearestPairCentre`); its drag still orbits. ⭐ Switched
+ * OFF, not deleted: `true` restores it.
+ */
+export const EMPTY_PRESS_MOVES_TARGET = false;

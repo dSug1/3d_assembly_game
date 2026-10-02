@@ -30,6 +30,11 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * **Eased after the rig** — the box approaches the rig's pose exponentially (`easeOrbit`, `boxSmoothMs` **60 ms**): the
   pointer events come every 47–68 ms on the tablet against 16–40 ms frames, so a box written straight from the rig moved in
   steps while the camera, smoothed, did not (*"why is the camera fluid and the box jerky?"*).
+  ⭐⭐ **Now on a critically damped SPRING** (2026-10-02: *"the camera lag at 30 ms create jitter in the green box
+  visualization"*): one exponential gave the box a speed that JUMPS at every pointer event, so its speed pulsed at the event
+  rhythm; with a camera time lag the gap box − camera is that speed × the lag, and the box wobbled on the glass. A spring has
+  no speed jump (`springOrbit`, τ = `boxSmoothMs` / 2 — the same response time). Simulated, steady drag, an event every 3–4
+  frames: the gap's ripple drops ~2.5–3× at every lag; a smoother CAMERA made it slightly worse. `easeOrbit` is kept, unwired.
 * ~~Billboarded~~ — ⛔ **no longer billboarded** (2026-10-02, §6: *"remove the billboarding"*); no parent.
 * ⭐ **Solid to the finger** (2026-10-01): *"when I click on the green box, the raycast hits the piece behind"* — it was
   unpickable, so the ray went through it. Now it is PICKABLE, so the ray stops on it, and `throughGreenBox`
@@ -128,9 +133,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   * **First touch or LEFT button on a piece locked in its goal** → the target jumps to the point where the ray hits it
     (`orbitTargetOnPress`, `input/goal_lock.ts`). ⛔ Not the right button (the mouse's HitFace — the adapter's own re-issued
     press, `isTrusted` false), not a second touch, not a free piece; tied to the lock (`lockPlacedPieces = 0`: it drags).
-  * **On empty space or a frozen body** → the MIDPOINT of the two piece centres (frozen bodies excluded) nearest the finger's
-    ray, each measured to the RAY (`nearestPairCentre`, `input/barycentre.ts`). ⛔ It replaces §2 rule 1's subset
-    barycentres here; `orbitCentre` is kept (declared unwired debt) for the main line. No piece: the target stays.
+  * ~~On empty space or a frozen body → the midpoint of the two piece centres nearest the ray (`nearestPairCentre`)~~ —
+    ⛔ **switched OFF 2026-10-02** (*"a press on empty space or frozen object or green piece does not change the yellow orbit
+    center position. Only a press on placed object changes the yellow orbit center position."*): `EMPTY_PRESS_MOVES_TARGET =
+    false` (`input/goal_lock.ts`) — the code stays, `true` restores it. Such a press still orbits.
+  * ⭐ **The pink ring at the BOOT target** (*"display the pink ring at the boot"*, 2026-10-02): the boot target sits behind the
+    painting's panel, so pieces in front hid it. Until a press on a placed piece first sets the target (`targetSetByPress`),
+    a piece in front makes it TRANSLUCENT instead of hiding it (`pinkRingVisibility`'s `bootTarget`).
   * As before, the marker JUMPS and the camera MIGRATES to it by the orbit finger's travel (`OrbitCentreBlend`).
 * ⭐ **And a drag from a piece locked in its goal ORBITS** (*"allow the orbit to occur when first touch or left click is
   pressed and hold on placed piece"*): the one finger on it drives the orbit exactly as on empty space (`orbitDragStep`,

@@ -8,7 +8,7 @@ import { type EpisodeTally } from "../input/episode_ledger";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
 import type { PressSide } from "../input/screen_rotate";
-import type { CameraOrbitState, OrbitZoom } from "../input/follow_camera";
+import type { CameraOrbitState, OrbitSpring, OrbitZoom } from "../input/follow_camera";
 import type { Pose } from "../core/goal";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -392,6 +392,8 @@ export interface SceneState {
   greenBox: Mesh | null;
   /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
   pinkRing: LinesMesh | null;
+  /** ⭐ Prototype: has a press on a placed piece set the yellow target yet? Until then it is the BOOT target (`pinkRingVisibility`). */
+  targetSetByPress: boolean;
   /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */
   greenBoxDistM: number | null;
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */
@@ -403,6 +405,8 @@ export interface SceneState {
   orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker } | null;
   /** ⭐ Prototype: the green box's eased orbit (it chases the rig every frame). */
   boxOrbit: OrbitZoom | null;
+  /** ⭐ Prototype: the box's spring (`springOrbit`) — `boxOrbit` is its `at`. */
+  boxSpring: OrbitSpring | null;
   mouseLayer: MouseSecondTouchHandle;
   orbitStartZoom: number;
   engine: Engine;
