@@ -31,7 +31,7 @@ describe("⭐⭐ prototype — the green piece's orbit has inertia", () => {
     expect(inertiaTauMs(182e-6, 1)).toBeCloseTo(182, 9);
     expect(inertiaTauMs(182e-6, 2)).toBeCloseTo(364, 9);
     expect(inertiaTauMs(182e-6, 0)).toBe(0);
-    expect(DEFAULT_CONFIG.orbitInertiaGain).toBe(0.45); // the owner, 2026-10-02: *"set orbit inertia default to 0.45"*
+    expect(DEFAULT_CONFIG.orbitInertiaGain).toBe(0.15); // the owner, 2026-10-02: 0.45, then *"set the default orbit inertia gain to 0.150"*
   });
 
   it("⭐⭐ released moving: it coasts on, slowing, for EXACTLY the release speed × τ — at any frame rate", () => {

@@ -466,3 +466,76 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(sync).toBeGreaterThan(blend);
   });
 });
+
+describe("⭐ prototype — the CAMERA menu has subsections (the owner, 2026-10-02: *\"too many rows directly under CAMERA menu\"*)", () => {
+  it("⭐ only the edge band sits directly under CAMERA; each slider under the subject it tunes", () => {
+    const m = readFileSync(new URL("../src/render/tuning_menu.ts", import.meta.url), "utf8");
+    const cam = m.slice(m.indexOf('title: "CAMERA"'), m.indexOf('title: "OBJECT TRANSLATION"'));
+    const top = cam.slice(0, cam.indexOf("subsections:"));
+    expect(top).toContain('"edgeBandMm"');
+    expect((top.match(/tunable\(|Slider\(st\)/g) ?? []).length).toBe(1);
+    const under = (title: string, keys: string[]) => {
+      const at = cam.indexOf(`title: "${title}"`);
+      expect(at).toBeGreaterThan(0);
+      const body = cam.slice(at, cam.indexOf("title:", at + 10) > 0 ? cam.indexOf("title:", at + 10) : undefined);
+      for (const k of keys) expect(body).toContain(k);
+    };
+    under("GREEN PIECE ORBIT", ['"boxGainYaw"', '"boxGainPitch"', '"boxGainInsideLeash"', '"boxSmoothMs"', '"orbitInertiaGain"']);
+    under("CAMERA OFFSET", ["bootZoomSlider(st)", '"cameraYawOffsetDeg"', '"cameraPitchOffsetDeg"', '"cameraRadiusOffsetMm"']);
+    under("CAMERA FOLLOW", ['"cameraLeashDeg"', '"cameraFollowMs"', '"cameraSettleDelayMs"', '"cameraCatchUpMs"']);
+    under("ORBIT SWAY", ['"orbitSwayKind"', '"orbitSwayDeg"', '"orbitSlideMm"', '"orbitSwayTauMs"']);
+    under("RENDERING", ['"pieceContourAlpha"', '"shadowsOn"', '"autoShadowBudgetMs"']);
+    under("CAMERA ORBIT", ['"orbitTopRadiusM"', '"gainOrbitYaw"']);
+  });
+});
+
+describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 2026-10-02: *\"the shape shall be a waist … propose the three missing parameters so that the 2D curve … can be smooth\"*)", () => {
+  it("⭐ the two reasons for the numbers: the middle ring clears the painting, the outer rings stay under the 3 m clamp — at the boot zoom", async () => {
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const zoom = DEFAULT_CONFIG.bootZoom;
+    const u = SCENE_1.unitM!;
+    const c = SCENE_1.orbit!.centreM as readonly number[];
+    // the painting's farthest horizontal reach from the orbit's axis
+    let reach = 0;
+    for (const b of SCENE_1.bodies) {
+      if (b.frozen) continue;
+      const p = b.position as readonly number[];
+      for (const sx of [-1, 1]) for (const sz of [-1, 1])
+        reach = Math.max(reach, Math.hypot(p[0]! * u + (sx * b.dims[0] * u) / 2 - c[0]!, p[2]! * u + (sz * b.dims[2] * u) / 2 - c[2]!));
+    }
+    expect(cfg.orbitMiddleRadiusM * zoom).toBeGreaterThan(reach + 0.05); // the green piece clears it on the middle ring
+    for (const v of [0, 1]) expect(orbitOffset(cfg, 0, v, zoom).radiusM).toBeLessThanOrEqual(cfg.cameraRadiusMaxM + 1e-9); // no clamp
+    // symmetric: the height runs evenly through the middle ring
+    expect(cfg.orbitTopHeightM).toBeCloseTo(-cfg.orbitBottomHeightM, 12);
+    expect(cfg.orbitTopRadiusM).toBe(cfg.orbitBottomRadiusM);
+  });
+
+  it("⭐⭐ smoother than the stair it replaces: the tightest turn is ~4× wider, and the speed varies ~2× instead of ~4×", async () => {
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const measure = (cfg: typeof DEFAULT_CONFIG) => {
+      let tightest = Infinity;
+      let lo = Infinity;
+      let hi = 0;
+      let prev: number | null = null;
+      const N = 200;
+      for (let i = 0; i < N; i++) {
+        const v = i / N;
+        const a = orbitOffset(cfg, 0, v, 1).offsetM;
+        const b = orbitOffset(cfg, 0, v + 1 / N, 1).offsetM;
+        const ds = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        if (prev !== null) tightest = Math.min(tightest, ds / Math.max(1e-12, Math.abs(ang - prev)));
+        prev = ang;
+        lo = Math.min(lo, ds * N);
+        hi = Math.max(hi, ds * N);
+      }
+      return { radius: tightest, speedRatio: hi / lo };
+    };
+    const now = measure(sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit));
+    const stair = measure({ ...DEFAULT_CONFIG, orbitTopRadiusM: 1.7, orbitTopHeightM: 0.5, orbitMiddleRadiusM: 0.2, orbitMiddleHeightM: 0, orbitBottomRadiusM: 0.9, orbitBottomHeightM: -0.4 });
+    expect(now.radius).toBeGreaterThan(4 * stair.radius);
+    expect(now.speedRatio).toBeLessThan(2.2);
+    expect(stair.speedRatio).toBeGreaterThan(3.5);
+  });
+});

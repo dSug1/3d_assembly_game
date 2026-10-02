@@ -43,13 +43,26 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 
 ## 3. The camera's orbit
 
-* ⭐ **`Scene_1`'s rings on this branch** (the owner, 2026-10-01): top **1.7** / 0.5 m (2026-10-02, was 0.9), middle 0.2 / 0 m, bottom 0.9 / −0.4 m
-  (radius / height) — pitch −24° at the bottom, 0° at the middle, +29° at the top.
+* ⭐⭐ **`Scene_1`'s rings on this branch — a symmetric WAIST** (the owner, 2026-10-02: *"the shape shall be a waist: top ring =
+  1.7 m radius, … middle ring = smallest possible radius, height = 0, bottom ring = 1.7 m radius … propose the three missing
+  parameters so that the 2D curve through the three ring points can be smooth"* → *"apply"*): top **1.7 / +1.05 m**, middle
+  **0.25 / 0 m**, bottom **1.7 / −1.05 m** (radius / height) — pitch ±31.7° at the outer rings.
+  * ⛔ **Why the old rings made a STAIR** (top 1.7 / 0.5, middle 0.2 / 0, bottom 0.9 / −0.4): the path left the middle ring
+    straight UP, turned ~65° within a tenth of the climb, then ran out on a shallow straight ramp — and 4.5× faster. The waist
+    forces a vertical tangent at the middle ring (the radius turns there), and a 1.5 m radius change over 0.5 m of height
+    leaves no room to turn gently. No ellipse can pass through a waist (on an ellipse the radius never dips in the middle).
+  * ⭐ **0.25 m** — the smallest that keeps the green piece out of the painting at boot zoom 1.5 (1.5 × 0.25 = 0.375 m from the
+    axis; the painting reaches 0.30 m, the piece ~0.06 m more). ⭐ **±1.05 m** — smoothness comes almost all from the HEIGHTS
+    (a taller waist turns more gently), and 1.05 is the tallest under the 3 m camera clamp at zoom 1.5 (√(1.7² + 1.05²) = 2.00 m
+    × 1.5): a clamped ring would be a corner of its own. Symmetric, so the height runs evenly through the middle.
+  * Measured: the tightest turn has a curvature radius ~0.19 m (0.04 m before), the speed varies ~2.1× along the path (4.2×
+    before). ⚠ ±1.45 m would turn twice as gently but needs the boot zoom ≤ 1.34. ⚠ The bottom ring at zoom 1.5 is 1.6 m below
+    the centre — far below the floor (hidden; `D196`'s contour). Vectors in `tests/proto_green_box.test.ts`.
 * ⭐ **It BOOTS on the TOP ring** (`bootView: "TOP"`, *"boot scene 1 on the top ring"*) **at zoom 1.5** (`bootZoom`, slider
   *boot zoom* at the top of CAMERA, 0.5–10 step 0.1 — applied at once, and the camera reset's view; `0` restores the derived
   half-radius rule, which made ×7.5 with these rings and capped the box at 3 m over most of its travel).
-* **The box's distance from the centre** at zoom 1.5: **1.55 m** on the top ring, **0.30 m** on the middle, **1.48 m** on
-  the bottom. A zoom scales the whole surface, and the box is always kept within **0.15–3 m** (`clampCameraRadiusM`); each
+* **The box's distance from the centre** at zoom 1.5: **3.00 m** on the top and bottom rings, **0.375 m** on the middle (with
+  the waist; it was 1.55 / 0.30 / 1.48 m). A zoom scales the whole surface, and the box is always kept within **0.15–3 m** (`clampCameraRadiusM`); each
   ring can reach both ends, but not under one zoom (out fully on the top ring is ×2.9 — the middle ring then 0.58 m).
 * **Its own angles** (`input/follow_camera.ts`, `CameraOrbitState`), stepped every frame before the draw
   (`render/green_box_wiring.ts` `greenBoxFrame`).
@@ -205,10 +218,16 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   rings (`OrbitController.nudge` clamps), the yaw coasts on. The box and the camera follow it as they follow a drag.
   ⚠ The first build counted the window's samples at BOTH ends — 6 steps (96 ms of motion) into 80 ms, a coast 20 % too fast —
   caught by its own vector; the window is now strictly `(t − 80, t]`. Vectors: `tests/proto_orbit_inertia.test.ts`.
-  ⭐ Default gain **0.45** (the owner, 2026-10-02; was 1): τ ≈ 84 ms for the green piece.
+  ⭐ Default gain **0.15** (the owner, 2026-10-02; 1, then 0.45, then 0.15): τ ≈ 28 ms for the green piece.
   ⛔⛔ **AND A JUMP AT THE LIFT, FIXED** (*"sometimes, when the inertia is big and there is a large orbit, there is a jump of the
   green piece back and forth at one point of the orbit"*): the lift reached the camera at once while the orbit coasted, so for
   that one frame the camera ran its "input stopped" rule — a glide toward the coasting rig, ahead of the eased piece — and the
   next frame the leash pinned it back: ~0.15–0.36° on the glass and back, at the point where the finger lifted. ✅ A coasting
   orbit is a MOVING input to the camera, and the release is held until the coast ends (`cameraRelease`). Replayed in the real
   frame order: the old way jumps > 0.1°, the new < 0.01°.
+* ⭐ **The pink ring is thicker and brighter** (the owner, 2026-10-02: *"make the pink ring slightly thicker and brighter so I can
+  see it better"*): WebGL draws a line one pixel wide whatever is asked, so it is five concentric loops ±1 px around the ring,
+  half a pixel apart (`PINK_RING_LOOPS`, one line system — a ~3 px band), in a brighter pink (1, 0.6, 0.9; was 1, 0.42, 0.78).
+  Its occlusion and translucency are unchanged.
+* ⭐ **The CAMERA menu has subsections** (*"there are too many rows directly under CAMERA menu"*): only the edge band sits
+  directly under it; GREEN PIECE ORBIT, CAMERA OFFSET, CAMERA FOLLOW, ORBIT SWAY, RENDERING, CAMERA ORBIT.

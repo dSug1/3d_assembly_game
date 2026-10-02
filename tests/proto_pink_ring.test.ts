@@ -209,3 +209,13 @@ describe("⭐ prototype — the HUD's green line (the owner: *\"after motion, ad
     expect(w).toMatch(/st\.greenBoxDistM = Math\.hypot\(box\.position\.x - tgt\[0\], box\.position\.y - tgt\[1\], box\.position\.z - tgt\[2\]\);/);
   });
 });
+
+describe("⭐ prototype — the pink ring is thicker and brighter (the owner, 2026-10-02: *\"so I can see it better\"*)", () => {
+  it("⭐ five concentric loops ±1 px around the ring (one line system, ~3 px), and a brighter pink", () => {
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/const PINK_RING_LOOPS = \[-1, -0\.5, 0, 0\.5, 1\]\.map\(\(px\) => 1 \+ \(px \* 2\) \/ GIZMO_RING_PX\);/);
+    expect(w).toMatch(/CreateLineSystem\(\s*"pink-target-ring",\s*\{ lines: PINK_RING_LOOPS\.map\(\(k\) => RING_POINTS\.map\(\(p\) => p\.scale\(k\)\)\) \}/);
+    expect(w).toMatch(/const PINK = new Color3\(1, 0\.6, 0\.9\);/);
+    // ⭐ the 1 px step in the ring's own scale: it is GIZMO_RING_PX across, so its RADIUS is half that — 2 / GIZMO_RING_PX per px
+  });
+});

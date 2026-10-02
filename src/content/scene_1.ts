@@ -236,12 +236,19 @@ export const SCENE_1: SceneDescriptor = {
   orbit: {
     // ⭐ `D169`: the orbit rings travel with the scene — the boot centre is where the world origin was.
     centreM: [0, SCENE_1_SHIFT_Y * 0.1, 0],
-    topRadiusM: 1.7, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.9)
-    topHeightM: 0.5,
-    middleRadiusM: 0.2,
+    // ⭐⭐ prototype (green box), the owner 2026-10-02: a symmetric WAIST — *"top ring = 1.7 m radius, … middle ring = smallest
+    // possible radius, height = 0, bottom ring = 1.7 m radius"*, the three others proposed and applied:
+    // * middle 0.25 m — the smallest that keeps the green piece out of the painting at boot zoom 1.5 (1.5 × 0.25 = 0.375 m from
+    //   the axis; the painting reaches 0.30 m, the piece ~0.06 m more);
+    // * ±1.05 m — the tallest that stays under the 3 m camera clamp at boot zoom 1.5 (√(1.7² + 1.05²) = 2.00 m × 1.5 = 3.00 m):
+    //   a taller waist turns more gently, but a clamped ring is a corner of its own. Symmetric, so the height runs evenly
+    //   through the middle ring. (Was top 1.7 / 0.5, middle 0.2 / 0, bottom 0.9 / −0.4 — the stair.)
+    topRadiusM: 1.7,
+    topHeightM: 1.05,
+    middleRadiusM: 0.25,
     middleHeightM: 0,
-    bottomRadiusM: 0.9,
-    bottomHeightM: -0.4,
+    bottomRadiusM: 1.7,
+    bottomHeightM: -1.05,
   },
   final: SCENE_1_FINAL,
 };

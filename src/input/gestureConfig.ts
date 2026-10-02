@@ -956,7 +956,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSwayKind: 0,
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
-  orbitInertiaGain: 0.45, // ⭐ the owner, 2026-10-02 (was 1) — τ ≈ 84 ms for the green piece
+  orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to

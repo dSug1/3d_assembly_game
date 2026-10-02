@@ -14,7 +14,7 @@ import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_ine
 import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
-import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
 import { cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
@@ -53,7 +53,14 @@ export function createGreenBox(st: SceneState): void {
   st.greenBox = box;
   // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
   // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).
-  const ring = CreateLines("pink-target-ring", { points: RING_POINTS }, st.scene);
+  // ⭐ prototype (green box), the owner 2026-10-02: *"make the pink ring slightly thicker and brighter so I can see it better"*.
+  // ⛔ WebGL draws a line ONE pixel wide whatever is asked, so the band is `PINK_RING_LOOPS` concentric loops half a pixel apart
+  // (~3 px), one line system — still billboarded, unpickable, and hidden / translucent by the same rule.
+  const ring = CreateLineSystem(
+    "pink-target-ring",
+    { lines: PINK_RING_LOOPS.map((k) => RING_POINTS.map((p) => p.scale(k))) },
+    st.scene,
+  );
   ring.color = PINK.clone();
   ring.isPickable = false;
   ring.metadata = { orbitCandidate: false };
@@ -62,8 +69,13 @@ export function createGreenBox(st: SceneState): void {
   st.pinkRing = ring;
 }
 
-/** ⭐ The pink. */
-const PINK = new Color3(1, 0.42, 0.78);
+/** ⭐ The pink — brighter since 2026-10-02 (it was 1, 0.42, 0.78). */
+const PINK = new Color3(1, 0.6, 0.9);
+/**
+ * ⭐ The band's loops, as scales of the ring: the ring is `GIZMO_RING_PX` (11 px) across, so 1 px of radius is 2/11 ≈ 0.18 of its
+ * radius; loops ±1 px around it, half a pixel apart — a ~3 px band centred on the old line.
+ */
+const PINK_RING_LOOPS = [-1, -0.5, 0, 0.5, 1].map((px) => 1 + (px * 2) / GIZMO_RING_PX);
 /** ⭐ The ring's alpha when only the green piece is in front of it — *"slightly translucent"*. */
 const PINK_MASKED_ALPHA = 0.35;
 /** ⭐ A hit counts as IN FRONT only if nearer than the target by more than this — the piece it sits on is met right at it. */
