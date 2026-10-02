@@ -448,6 +448,8 @@ export interface SceneState {
   sceneStartMs: number | null;
   /** ⭐ `3D7` (`D181`): the play volume, world metres — `null` for a scene that declares none (unbounded). */
   playVolume: Aabb | null;
+  /** ⭐ `D196`: each frozen body's top-face contour, shown while it is hidden from below (`null`: none can be drawn). */
+  topOutlines: Map<string, LinesMesh | null>;
   /** ⭐ `D183`: the goal capture's arming, its pulls in flight, and each piece's pose last frame (what MOVED). */
   goalCapture: GoalCapture;
   goalPulls: GoalPulls;

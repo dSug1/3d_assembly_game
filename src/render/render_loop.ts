@@ -5,7 +5,12 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { advanceDemoFrame } from "./demo_wiring";
-import { hiddenFromBelow } from "../core/underside";
+import { hiddenFromBelow, topFaceOutline } from "../core/underside";
+import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
+import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { autoShadowVerdict } from "../core/auto_shadow";
 import { FrameMeter } from "../core/frame_meter";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
@@ -16,7 +21,7 @@ import { planeEdgeOn } from "../input/axis_translate";
 import { alignedFaceOf } from "../core/face_pick";
 import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
 import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
-import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
+import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, shapeOfBody, writePose } from "./bodies";
 import { faceMarkerFor, hitFaceNow, liftHighlights, outlinesFor, syncPioneerCursors } from "./markers";
 import { pressedPioneerFaceKeys } from "../input/pioneer_press";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
@@ -621,6 +626,10 @@ export function startRenderLoop(st: SceneState): void {
         if (mesh.isVisible !== want) mesh.isVisible = want;
         const core = mesh.metadata?.core as { isVisible: boolean } | undefined;
         if (core && core.isVisible !== want) core.isVisible = want;
+        // ⭐⭐ `D196`: hidden from below, its TOP FACE's contour shows instead — in its own colour (the floor's sand yellow),
+        // never pickable, never an orbit candidate: it can touch nothing.
+        const outline = topOutlineFor(st, fid, mesh);
+        if (outline !== null && outline.isVisible === want) outline.isVisible = !want;
       }
     }
     // ⭐ The shadow switch (shadowsOn, CAMERA): three soft shadow maps redraw every piece each frame
@@ -694,4 +703,26 @@ export function startRenderLoop(st: SceneState): void {
     st.scene.render();
     st.frames++;
   }));
+}
+
+/**
+ * ⭐⭐ `D196` — a frozen body's TOP-FACE contour (`topFaceOutline`, `core/underside.ts`), built once from its own hull and pose
+ * — a frozen body never moves — in its own colour; hidden until the body is. `null`: no top face, or a body with no shape.
+ */
+export function topOutlineFor(st: SceneState, id: string, mesh: AbstractMesh): LinesMesh | null {
+  if (st.topOutlines.has(id)) return st.topOutlines.get(id)!;
+  const pose = worldPlacementOf(st.world, id);
+  const ring = pose === null ? null : topFaceOutline(shapeOfBody(st, mesh).points, pose);
+  if (ring === null) {
+    st.topOutlines.set(id, null);
+    return null;
+  }
+  const lines = CreateLines(`top-outline-${id}`, { points: ring.map((p) => new Vector3(p[0], p[1], p[2])) }, st.scene);
+  const c = st.sceneSpec.bodies.find((b) => b.id === id)?.colour ?? [0.84, 0.74, 0.52];
+  lines.color = new Color3(c[0], c[1], c[2]);
+  lines.isPickable = false;
+  lines.metadata = { orbitCandidate: false };
+  lines.isVisible = false;
+  st.topOutlines.set(id, lines);
+  return lines;
 }

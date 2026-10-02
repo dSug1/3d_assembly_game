@@ -681,6 +681,7 @@ export function createScene(
   st.goalCommitQuiet = false;
   st.grabbed = new Set();
   st.playVolume = playVolumeOf(st.sceneSpec);
+  st.topOutlines = new Map();
   st.onLevelEnd = null;
   st.hudSecond = -1;
   st.episodeFacts = new Map();
