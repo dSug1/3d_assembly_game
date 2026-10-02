@@ -62,7 +62,7 @@ file.
 | `D113` | ⭐⭐ **THE EDGE BAND IS ALWAYS EMPTY SPACE** — the camera reset stays reachable | 2026-09-27 | → §13 |
 | `D114` | ⭐⭐ **THE EDGE BAND OPENS ONLY WHEN NO EMPTY SPACE IS LEFT** | 2026-09-27 | → §13 |
 | `D115` | ⭐⭐ **A TWO-TOUCH ACTION IS ONE EPISODE, COUNTED WHEN ITS LAST TOUCH LIFTS** | 2026-09-27 | → §13 |
-| `D116` | ⛔⛔⛔ **BUILD THE PLAYABILITY PROGRAM FIRST; COLLISION: STOP+SLIDE ON TRANSLATION, SAME-AXIS CLAMP ON ROTATION** | 2026-09-27 | ✅ `3D6` built → `COLLISION.md` |
+| `D116` | ⛔⛔⛔ **PLAYABILITY FIRST; COLLISION: STOP+SLIDE MOVES, SAME-AXIS CLAMP TURNS** | 2026-09-27 | ✅ `3D6` built → `COLLISION.md` |
 | `D117` | ⭐⭐ **`Scene_1`, THE PAINTING; A SCENE SLIDER REBOOTS ON THE CHOSEN SCENE** | 2026-09-27 | → `SCENE_1.md` |
 | `D118` | ⭐ **A PINCH IS TWO REAL FINGERS — the mouse never pinches** | 2026-09-27 | → §14 |
 | `D119` | ⭐⭐⭐ **THE SECOND TOUCH ALIGNS ONLY ON A RELEASED TAP; A FROZEN BODY IS EMPTY SPACE TO A PRESS** | 2026-09-27 | → §14 |
@@ -129,6 +129,7 @@ file.
 | `D190` | ⭐⭐ **ONLY MOVED PIECES RE-JUDGED; FIT FIXED** | 2026-09-30 | → §5ter |
 | `D191`–`D194` | ⭐⭐ **DEMO: COLOUR HEAPS, 3 HIGH; CAMERA 50° EARLIER** | 2026-10-01 | → `DEMO_SCENE` |
 | `D195` | ⭐⭐ **NO DEPTH CEILING IN A PLAY VOLUME** | 2026-10-01 | → `COLLISION.md` §10bis |
+| `D196` | ⭐ **FLOOR HIDDEN FROM BELOW: TOP CONTOUR** | 2026-10-02 | → §16 |
 | `D77` | ⭐⭐ **A FROZEN BODY SHOWS NO GIZMO, AND ONE OF ITS TOUCHES IS A MISS** | 2026-09-23 | ⚠ → history |
 | `D76` | ⭐⭐⭐ **A TRANSLATION TRACKS THE FINGER — the cosine loss is a DEFECT; edge-on never dead** | 2026-09-23 | ⭐ Binding, ⚠ → history |
 | `D75` | ⭐⭐⭐ **A TRANSLATION IS PROJECTED ONTO THE BODY'S OWN AXES, AND THE CHANNELS ARE REMAPPED** | 2026-09-22 | ⭐ Binding. ⚠ → history |
@@ -179,7 +180,7 @@ file.
 | `D31` | ⭐⭐⭐ **THE ONE-TOUCHPOINT ROLL IS DELETED, NOT PARKED** | 2026-09-16 | ⭐ Binding |
 | `D30` | ⭐⭐⭐ **A FLICK PUSHES AN ALIGNMENT ONLY WHILE THE MODE IS `ROTATE`** | 2026-09-16 | ⛔ Flick deleted (`D110`). ⚠ → history |
 | `D29` | ⭐⭐⭐ **THREE ANCHOR-RULE FORKS BEHIND ONE FLAG, and `IN3` is built in fork B** | 2026-09-16 | ⭐ Binding |
-| `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding — the toggle NARROWED by `D108`: one tablet tap, none on desktop |
+| `D28` | ⭐⭐⭐ **FORKS A AND B ARE DELETED — the tap toggle is THE input model** | 2026-09-16 | ⭐ Binding — narrowed by `D108` |
 | `D27` | ⭐⭐⭐ **ANY SINGLE TAP toggles the movement behaviour; a PRESS keeps every meaning it has** | 2026-09-16 | ⛔ Narrowed by `D108` |
 | `D26` | ⭐⭐ **THE ASSIGNMENTS WERE A FLAG, NOT A FORK** — ⚠ **CLOSED BY `D28`** | 2026-09-16 | ⚠ → history |
 | `D25` | ⚠ **REVERSED BY `D54`** | 2026-09-16 | ⚠ → history |
