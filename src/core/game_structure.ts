@@ -85,6 +85,12 @@ export interface OrbitRig {
   readonly bottomRadiusM: number;
   readonly bottomHeightM: number;
   /**
+   * ⭐ prototype (green box), 2026-10-02: an optional FOURTH ring between the bottom and the middle (the owner: *"add a fourth ring
+   * between the middle ring and the bottom ring"*). Both or neither; absent = the three rings.
+   */
+  readonly lowerRadiusM?: number;
+  readonly lowerHeightM?: number;
+  /**
    * ⭐ `D169`: where the orbit is CENTRED at boot, metres — the rings' heights are measured from it, so moving
    * it moves the rings. Absent: the world origin. ⛔ Not a config field: it is the scene's, like its bodies.
    */
@@ -361,6 +367,9 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     for (const k of ORBIT_KEYS)
       if (typeof r !== "object" || r === null || typeof r[k] !== "number" || !Number.isFinite(r[k]))
         throw new Error(`scene ${o.id}: orbit.${k} must be a finite number`);
+    if (r !== null && (r.lowerRadiusM !== undefined || r.lowerHeightM !== undefined))
+      for (const k of ["lowerRadiusM", "lowerHeightM"] as const)
+        if (typeof r[k] !== "number" || !Number.isFinite(r[k])) throw new Error(`scene ${o.id}: orbit.${k} must be a finite number`);
     if (r !== null && r.centreM !== undefined && !isTriple(r.centreM))
       throw new Error(`scene ${o.id}: orbit.centreM is not three finite numbers`);
   }

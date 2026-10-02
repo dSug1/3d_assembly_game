@@ -342,3 +342,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   within 0.14 m of the target, THROUGH the painting (0.375 m cleared its 0.30 m; it has no collision). The rings' speed ratio is 2.37
   (was < 2.2) — still far smoother than the stair. The vectors that pinned the old ring now say so (`proto_green_box`,
   `proto_orbit_rates`, `goal.test.ts`'s rig).
+* ⭐⭐ **A FOURTH ORBIT RING** (the owner, 2026-10-02: *"add a fourth ring between the middle ring and the bottom ring, with radius
+  same as middle ring and height the negative opposite of middle ring's height"*): `Scene_1` **0.09 m at −0.15 m** (`OrbitRig.lowerRadiusM`
+  / `lowerHeightM`, optional — a scene without them keeps its three rings exactly; `Scene_0` = the defaults). Config
+  `orbitLowerRingOn` / `orbitLowerRadiusM` / `orbitLowerHeightM`, sliders in CAMERA › CAMERA ORBIT; validated (between the bottom and
+  the middle, a positive radius). The monotone cubic now runs through N rings evenly spaced in `v` (`throughKnots`; three rings = exactly
+  `throughThree` as it was): bottom 0, fourth ⅓, middle ⅔, top 1. Measured: a symmetric waist — pitch −31.7° → −61° → 0° (v = ½, the
+  piece 0.09 m from the target) → +61° → +31.7°, at most **5.3°/mm** (v = 0.4 / 0.6; 13°/mm with the middle ring alone); the distance
+  turns once. ⚠⚠ **A slow PLATEAU in the waist**: evenly spaced knots leave the short waist segment almost flat in the middle — the
+  piece climbs ~7 cm between v = 0.4 and 0.6, the rings' speed ratio ~190 (2.37 before). The fix on offer: space the rings in `v` by
+  their distance apart. `tests/proto_fourth_ring.test.ts`.

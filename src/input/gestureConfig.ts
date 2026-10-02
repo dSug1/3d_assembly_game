@@ -425,6 +425,15 @@ export interface GestureConfig {
   orbitMiddleRadiusM: number;
   /** Metres. Height of the MIDDLE ring. `0` puts it level with the orbit centre. */
   orbitMiddleHeightM: number;
+  /**
+   * ⭐ Prototype (green box), 2026-10-02: a FOURTH ring between the bottom and the middle (`orbitLower…`), on when 1 — four rings
+   * evenly spaced in the elevation parameter (bottom 0, lower ⅓, middle ⅔, top 1). 0: the three rings as ever.
+   */
+  orbitLowerRingOn: number;
+  /** Metres. Radius of the LOWER ring (the fourth, between the bottom and the middle), when on. */
+  orbitLowerRadiusM: number;
+  /** Metres. Height of the LOWER ring, when on — between the bottom's and the middle's. */
+  orbitLowerHeightM: number;
   /** Metres. Radius of the TOP ring. ⚠ `0` is legal: directly overhead. */
   orbitTopRadiusM: number;
   /** Metres. Height of the TOP ring — the highest the camera may orbit. */
@@ -926,6 +935,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitBottomHeightM: -1.2,
   orbitMiddleRadiusM: 0.36,
   orbitMiddleHeightM: 0.1,
+  // ⭐ prototype (green box), 2026-10-02: no fourth ring by default — a scene turns it on (`OrbitRig.lowerRadiusM`).
+  orbitLowerRingOn: 0,
+  orbitLowerRadiusM: 0.36,
+  orbitLowerHeightM: -0.1,
   orbitTopRadiusM: 1.0,
   orbitTopHeightM: 0.55,
   // ⭐ Chosen on the device by the owner, 2026-09-14. ⚠ `0` reproduces the old jump.
@@ -1307,6 +1320,20 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // the surface folds back through itself, and the elevation parameter stops meaning
   // "how high the camera is" — it would move the camera DOWN over part of its range,
   // which no amount of gain tuning can fix because the geometry is wrong.
+  if (cfg.orbitLowerRingOn !== 0 && cfg.orbitLowerRingOn !== 1) {
+    throw new Error(`orbitLowerRingOn (${cfg.orbitLowerRingOn}) must be 0 or 1.`);
+  }
+  // ⭐ With the fourth ring on, it must sit BETWEEN the bottom and the middle too.
+  if (
+    cfg.orbitLowerRingOn === 1 &&
+    !(cfg.orbitBottomHeightM < cfg.orbitLowerHeightM && cfg.orbitLowerHeightM < cfg.orbitMiddleHeightM)
+  ) {
+    throw new Error(
+      `orbit ring heights must increase bottom → lower → middle → top, got ` +
+        `${cfg.orbitBottomHeightM} / ${cfg.orbitLowerHeightM} / ${cfg.orbitMiddleHeightM} / ${cfg.orbitTopHeightM} m: ` +
+        "the orbit surface would fold back through itself.",
+    );
+  }
   if (!(
     cfg.orbitBottomHeightM < cfg.orbitMiddleHeightM &&
     cfg.orbitMiddleHeightM < cfg.orbitTopHeightM
@@ -1350,6 +1377,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   for (const [name, r] of [
     ["orbitBottomRadiusM", cfg.orbitBottomRadiusM],
     ["orbitMiddleRadiusM", cfg.orbitMiddleRadiusM],
+    ["orbitLowerRadiusM", cfg.orbitLowerRingOn === 1 ? cfg.orbitLowerRadiusM : 1],
     ["orbitTopRadiusM", cfg.orbitTopRadiusM],
   ] as const) {
     if (!(r > 0)) {

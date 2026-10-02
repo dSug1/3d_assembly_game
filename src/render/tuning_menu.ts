@@ -184,6 +184,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "top height (m)", "orbitTopHeightM", -3, 3, 0.01),
             tunable(st, "middle radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
             tunable(st, "middle height (m)", "orbitMiddleHeightM", -3, 3, 0.01),
+            // ⭐ prototype (green box), 2026-10-02: the fourth ring, between the middle and the bottom (on = 1).
+            tunable(st, "fourth ring on (0 / 1)", "orbitLowerRingOn", 0, 1, 1),
+            tunable(st, "fourth ring radius (m)", "orbitLowerRadiusM", 0, 3, 0.01),
+            tunable(st, "fourth ring height (m)", "orbitLowerHeightM", -3, 3, 0.01),
             tunable(st, "bottom radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
             tunable(st, "bottom height (m)", "orbitBottomHeightM", -3, 3, 0.01),
             // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.

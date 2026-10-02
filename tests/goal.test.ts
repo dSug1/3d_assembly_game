@@ -159,8 +159,9 @@ describe("⭐⭐⭐ `D131` — each scene carries its own orbit rig", () => {
   it("⛔ no rig → the defaults, untouched; everything else in the config is never touched", () => {
     expect(sceneConfig(DEFAULT_CONFIG, undefined)).toBe(DEFAULT_CONFIG);
     const c = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-    expect({ ...c, orbitTopRadiusM: 0, orbitMiddleRadiusM: 0, orbitBottomRadiusM: 0, orbitTopHeightM: 0, orbitMiddleHeightM: 0, orbitBottomHeightM: 0 })
-      .toEqual({ ...DEFAULT_CONFIG, orbitTopRadiusM: 0, orbitMiddleRadiusM: 0, orbitBottomRadiusM: 0, orbitTopHeightM: 0, orbitMiddleHeightM: 0, orbitBottomHeightM: 0 });
+    // ⭐ the ring keys — the fourth ring's three included (prototype, 2026-10-02) — and nothing else
+    const rings = { orbitTopRadiusM: 0, orbitMiddleRadiusM: 0, orbitBottomRadiusM: 0, orbitTopHeightM: 0, orbitMiddleHeightM: 0, orbitBottomHeightM: 0, orbitLowerRingOn: 0, orbitLowerRadiusM: 0, orbitLowerHeightM: 0 };
+    expect({ ...c, ...rings }).toEqual({ ...DEFAULT_CONFIG, ...rings });
   });
 
   it("⛔ the JSON seam keeps a rig and refuses a broken one by name", () => {

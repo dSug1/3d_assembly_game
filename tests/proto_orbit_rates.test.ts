@@ -33,11 +33,14 @@ describe("⭐ prototype — orbit degrees per millimetre of finger", () => {
 
   it("⭐ `Scene_1` today: yaw 5.10°/mm everywhere; pitch fastest just below the waist, slow near the outer rings, its sign flipping past the peak", () => {
     expect(orbitDegPerMm(cfg, 0.5).yawDegPerMm).toBeCloseTo(0.054 * 1.65 * DEG, 9);
-    // ⚠ the owner's middle ring, 0.09 m at 0.15 m (2026-10-02): the pitch swings −33° → +66° across the waist (~13°/mm at v = 0.45),
-    // peaks near v = 0.55, then comes DOWN to the top ring's 31.7° (was: a peak near v = 0.75 on the 0.375 m / 0 m ring)
-    expect(orbitDegPerMm(cfg, 0.45).pitchDegPerMm).toBeGreaterThan(10);
-    expect(orbitDegPerMm(cfg, 0.45).pitchDegPerMm).toBeGreaterThan(Math.abs(orbitDegPerMm(cfg, 0.9).pitchDegPerMm));
-    expect(orbitDegPerMm(cfg, 0.6).pitchDegPerMm).toBeLessThan(0);
+    // ⚠ the owner's waist, 2026-10-02: middle ring 0.09 m at +0.15 m and a FOURTH ring 0.09 m at −0.15 m — symmetric: the pitch runs
+    // −61° → 0° → +61° through the waist, fastest (~5.3°/mm) at v = 0.4 / 0.6, then back to ±31.7° at the outer rings (the sign
+    // flips past ±61°, near v = 0.3 / 0.7). (With the middle ring alone it peaked ~13°/mm at v = 0.45.)
+    expect(orbitDegPerMm(cfg, 0.4).pitchDegPerMm).toBeGreaterThan(5);
+    expect(orbitDegPerMm(cfg, 0.4).pitchDegPerMm).toBeLessThan(6);
+    expect(orbitDegPerMm(cfg, 0.6).pitchDegPerMm).toBeCloseTo(orbitDegPerMm(cfg, 0.4).pitchDegPerMm, 6);
+    expect(orbitDegPerMm(cfg, 0.75).pitchDegPerMm).toBeLessThan(0);
+    expect(orbitDegPerMm(cfg, 0.25).pitchDegPerMm).toBeLessThan(0);
     expect(orbitDegPerMm(cfg, 0.9).pitchDegPerMm).toBeLessThan(0);
     // inside the leash, the box's gains scale both
     const slow = orbitDegPerMm(cfg, 0.5, { yaw: 0.5, pitch: 0.25 });

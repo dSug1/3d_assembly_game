@@ -64,33 +64,35 @@ export interface OrbitPose {
  * three rigs and therefore two transitions."*
  */
 function throughThree(atBottom: number, atMiddle: number, atTop: number, v: number): number {
-  const h = 0.5;
-  const d1 = (atMiddle - atBottom) / h;
-  const d2 = (atTop - atMiddle) / h;
+  return throughKnots([atBottom, atMiddle, atTop], v);
+}
 
-  // ⛔⛔ THE MIDDLE TANGENT IS ZERO WHEN THE DATA TURNS. That single line is what
-  // puts the extremum exactly AT the middle ring instead of somewhere between rings,
-  // and it is the whole of "three rigs, therefore two transitions".
-  let m1 = 0;
-  if (d1 * d2 > 0) {
-    const avg = (d1 + d2) / 2;
-    // Fritsch–Carlson's limiter: a tangent steeper than three times the shallower
-    // secant makes the cubic overshoot, which would carry the camera OUTSIDE the
-    // rings it is supposed to stop at.
-    const cap = 3 * Math.min(Math.abs(d1), Math.abs(d2));
-    m1 = Math.sign(avg) * Math.min(Math.abs(avg), cap);
-  }
-
-  const [y0, y1, m0, mEnd] = v <= h ? [atBottom, atMiddle, d1, m1] : [atMiddle, atTop, m1, d2];
-  const t = v <= h ? v / h : (v - h) / h;
+/**
+ * ⭐ prototype (green box), 2026-10-02 — **THE SAME MONOTONE CUBIC THROUGH ANY NUMBER OF RINGS**, evenly spaced in `v` (the owner:
+ * *"add a fourth ring between the middle ring and the bottom ring"*). Fritsch–Carlson as above, knot by knot: an interior tangent is
+ * ZERO where the data turns (the extremum AT a ring), else the secants' mean capped at 3 × the shallower; the end tangents are the
+ * end secants. ⭐ With three knots it is EXACTLY `throughThree` as it was.
+ */
+function throughKnots(ys: readonly number[], v: number): number {
+  const n = ys.length - 1;
+  if (n < 1) return ys[0] ?? 0;
+  const h = 1 / n;
+  const d = Array.from({ length: n }, (_, k) => (ys[k + 1]! - ys[k]!) / h);
+  const m = ys.map((_, k) => {
+    if (k === 0) return d[0]!;
+    if (k === n) return d[n - 1]!;
+    const a = d[k - 1]!;
+    const b = d[k]!;
+    if (!(a * b > 0)) return 0;
+    const avg = (a + b) / 2;
+    return Math.sign(avg) * Math.min(Math.abs(avg), 3 * Math.min(Math.abs(a), Math.abs(b)));
+  });
+  // the segment — the LOWER one at a knot, as `throughThree`'s `v <= h` did
+  const k = Math.min(n - 1, Math.max(0, Math.ceil(v / h - 1e-12) - 1));
+  const t = (v - k * h) / h;
   const t2 = t * t;
   const t3 = t2 * t;
-  return (
-    (2 * t3 - 3 * t2 + 1) * y0! +
-    (t3 - 2 * t2 + t) * h * m0! +
-    (-2 * t3 + 3 * t2) * y1! +
-    (t3 - t2) * h * mEnd!
-  );
+  return (2 * t3 - 3 * t2 + 1) * ys[k]! + (t3 - 2 * t2 + t) * h * m[k]! + (-2 * t3 + 3 * t2) * ys[k + 1]! + (t3 - t2) * h * m[k + 1]!;
 }
 
 export function rigsOf(cfg: GestureConfig): {
@@ -168,10 +170,17 @@ export function orbitOffset(
   // has no overshoot, so the surface is BOUNDED BY THE RINGS — which is the owner's
   // requirement in their words: *"define height and radius of top and bottom rigs and
   // not exceed these."*
+  // ⭐ prototype (green box), 2026-10-02: a FOURTH ring between the bottom and the middle when the scene gives one
+  // (`orbitLowerRingOn`) — four knots at v = 0, ⅓, ⅔, 1; else the three rings exactly as before.
+  const lower = cfg.orbitLowerRingOn === 1 ? { radiusM: cfg.orbitLowerRadiusM, heightM: cfg.orbitLowerHeightM } : null;
   const radius =
-    throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped) * zoom;
+    (lower === null
+      ? throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped)
+      : throughKnots([bottom.radiusM, lower.radiusM, middle.radiusM, top.radiusM], clamped)) * zoom;
   const height =
-    throughThree(bottom.heightM, middle.heightM, top.heightM, clamped) * zoom;
+    (lower === null
+      ? throughThree(bottom.heightM, middle.heightM, top.heightM, clamped)
+      : throughKnots([bottom.heightM, lower.heightM, middle.heightM, top.heightM], clamped)) * zoom;
 
   return {
     offsetM: [radius * Math.cos(yawRad), height, radius * Math.sin(yawRad)],

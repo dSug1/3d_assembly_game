@@ -252,6 +252,10 @@ export const SCENE_1: SceneDescriptor = {
     // (was 0.375 / 0 — 0.375 kept the green piece out of the painting, which reaches 0.30 m; at 0.09 it passes through it).
     middleRadiusM: 0.09,
     middleHeightM: 0.15,
+    // ⭐ prototype (green box), the owner 2026-10-02: *"add a fourth ring between the middle ring and the bottom ring, with radius same
+    // as middle ring and height the negative opposite of middle ring's height"* — 0.09 m at −0.15 m: a symmetric waist again.
+    lowerRadiusM: 0.09,
+    lowerHeightM: -0.15,
     bottomRadiusM: 2.55,
     bottomHeightM: -1.575,
   },
