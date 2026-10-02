@@ -10,6 +10,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { bodyNamed, greenPyramidSizeM, pinkRingVisibility } from "../input/green_box";
+import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
 import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
@@ -37,6 +38,8 @@ export function createGreenBox(st: SceneState): void {
     return;
   }
   const [w, h, d] = greenPyramidSizeM(piece17.dims, st.sceneSpec.unitM ?? 1);
+  // ⭐ Its volume (the frustum, not its bounding box) — what the orbit's inertia is sized by (`inertiaTauMs`).
+  st.greenPieceVolumeM3 = frustumVolumeM3(w, h, d, OBJECT_TOP_SCALE);
   const box = CreateBox("green-box", { width: w, height: h, depth: d }, st.scene);
   if (!taperMesh(box, OBJECT_TOP_SCALE)) st.untaperedBodies.push("green-box");
   const mat = new StandardMaterial("green-box-mat", st.scene);
@@ -109,6 +112,14 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const now = performance.now();
   const c = st.orbitCentreM;
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
+  // ⭐⭐ prototype (green box), 2026-10-02: the orbit's INERTIA — with no finger down it coasts on, slowing with τ = the gain × the
+  // green piece's volume (`OrbitInertia`, `inertiaTauMs`); a NEW touch stops it at once.
+  if (st.router.size > 0) {
+    if (st.orbitMotion === null) st.orbitInertia.stop();
+  } else if (st.orbitInertia.coasting) {
+    const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
+    st.orbit.nudge(d.dYaw, d.dV);
+  }
   const rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: st.zoom };
   // ⭐ prototype (green box), 2026-10-02: on a critically damped SPRING (`springOrbit`) — no speed jump at a pointer event, so
   // the camera's time lag no longer shows a pulse (it was `easeOrbit`, one exponential). Same response: τ = boxSmoothMs / 2.
@@ -132,13 +143,24 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const orbiting = out.length === 1 && objs.length === 0 ? out[0]!.id : lockedHolder ? objs[0]!.id : null;
   // ⭐ The finger leaving the orbit (lifted, or a second finger down) is a RELEASE: the camera realigns.
   const released = st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting;
-  if (released) st.orbitMotion = null;
+  if (released) {
+    st.orbitMotion = null;
+    // ⭐ The finger lifted: the coast starts at the orbit's rate over the last moments of the drag.
+    st.orbitInertia.release(now);
+  }
   let finger: { yaw: boolean; pitch: boolean; holdMs: number } | null = null;
   if (st.orbitMotion !== null) {
     st.orbitMotion.tracker.tick(now);
     const ax = st.orbitMotion.tracker.axes;
     finger = { yaw: ax.x === "MOVING", pitch: ax.y === "MOVING", holdMs: st.orbitMotion.tracker.restMs };
+  } else if (st.orbitInertia.coasting) {
+    // ⭐⭐ prototype (green box), 2026-10-02: a COASTING orbit is an input still MOVING — the camera follows it exactly as a drag
+    // (⛔ read as stopped, the lift frame ran the camera's glide ahead of the green piece and the leash pinned it back: a jump).
+    finger = { yaw: true, pitch: true, holdMs: 0 };
   }
+  // ⭐ …and the release reaches the camera only once the coast is over (`cameraRelease`) — its catch-up then, not mid-coast.
+  const rel = cameraRelease(released, st.orbitInertia.coasting, st.cameraReleasePending);
+  st.cameraReleasePending = rel.pending;
   st.cameraOrbit =
     st.cameraOrbit === null
       ? cameraOrbitAt(at, now, st.cfg)
@@ -155,7 +177,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
           },
           { yaw: rig.yaw, v: rig.v },
           finger,
-          released,
+          rel.release,
         );
   // ⭐⭐ prototype (green box), the owner 2026-10-02: the TIME LAG on top of the leash — the camera eases toward where the leash
   // puts it (`cameraLag`, `cameraFollowMs`; 0 = none).

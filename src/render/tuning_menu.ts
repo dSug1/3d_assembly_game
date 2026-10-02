@@ -127,6 +127,8 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ prototype (green box), 2026-10-02: option 1 (swing), option 2 (slide), or both.
         tunable(st, "orbit sway kind (0 = swing, 1 = slide, 2 = both)", "orbitSwayKind", 0, 2, 1),
         tunable(st, "orbit slide — the pieces translate the way the green box orbits (mm)", "orbitSlideMm", 0, 20, 0.5),
+        // ⭐ prototype (green box), 2026-10-02: the orbit coasts after the finger lifts — τ = this × the green piece's volume.
+        tunable(st, "orbit inertia gain (ms per cm³ of the green piece, 0 = none)", "orbitInertiaGain", 0, 10, 0.1),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
         tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
         // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.

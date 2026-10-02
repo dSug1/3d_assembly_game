@@ -9,6 +9,7 @@ import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
 import type { PressSide } from "../input/screen_rotate";
 import type { CameraOrbitState, OrbitSpring, OrbitZoom } from "../input/follow_camera";
+import type { OrbitInertia } from "../input/orbit_inertia";
 import type { Pose } from "../core/goal";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -414,6 +415,11 @@ export interface SceneState {
   orbitSway: { readonly pointerId: number; readonly watcher: SwayWatcher } | null;
   /** ⭐ Prototype: how many orbit swings have been kicked — the HUD's check that the trigger fires. */
   orbitSwayKicks: number;
+  /** ⭐ Prototype: the green piece's orbit INERTIA after the finger lifts (`OrbitInertia`), and the volume that sizes it (m³). */
+  orbitInertia: OrbitInertia;
+  greenPieceVolumeM3: number;
+  /** ⭐ Prototype: the finger lifted while the orbit coasted — the camera gets the release when the coast ends (`cameraRelease`). */
+  cameraReleasePending: boolean;
   /** ⭐ Prototype: the green box's eased orbit (it chases the rig every frame). */
   boxOrbit: OrbitZoom | null;
   /** ⭐ Prototype: the box's spring (`springOrbit`) — `boxOrbit` is its `at`. */

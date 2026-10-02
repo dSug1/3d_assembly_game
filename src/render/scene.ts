@@ -93,6 +93,7 @@ import { installPointerHandler } from "./pointer_wiring";
 import { startRenderLoop } from "./render_loop";
 import { LevelEnd, type LevelResult } from "../core/level_end";
 import { playVolumeOf } from "../core/play_volume";
+import { OrbitInertia } from "../input/orbit_inertia";
 
 export interface SceneHandle {
   readonly scene: Scene;
@@ -557,6 +558,9 @@ export function createScene(
   st.orbitMotion = null;
   st.orbitSway = null;
   st.orbitSwayKicks = 0;
+  st.orbitInertia = new OrbitInertia();
+  st.greenPieceVolumeM3 = 0;
+  st.cameraReleasePending = false;
   st.boxOrbit = null;
   st.boxSpring = null;
   st.pinkRing = null;

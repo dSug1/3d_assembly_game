@@ -195,3 +195,20 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   piece's push (`nudgeOthersWorld`), ~6× larger and quicker. ⭐ CAMERA › *orbit sway kind*: **0 the swing** (the default),
   1 the slide, 2 both (`orbitSwayKinds`). ⭐ Each body's slide springs back on the softness its kick was sized with
   (`Follow.swayTransTauMs`), as the swing does — a dragged piece keeps `translateSwayTauMs`.
+* ⭐⭐ **THE GREEN PIECE'S ORBIT HAS INERTIA** (the owner, 2026-10-02: *"give some inertia to the orbit based on the piece overall
+  volume. add a slider for orbit inertia gain"* — asked which: *"the green piece's orbit"*; ⛔ unjudged by a hand). Each orbit
+  step of the finger is recorded (`OrbitInertia`, `input/orbit_inertia.ts`); when the finger LIFTS, the orbit goes on at its
+  rate over the last 80 ms (`RELEASE_WINDOW_MS` — a finger that had stopped carries nothing) and slows exponentially with
+  **τ = `orbitInertiaGain` × the green piece's volume** (the frustum's, `frustumVolumeM3` — ~187 cm³ for 103.5 × 41.25 × 45 mm at a
+  half top): a heavier piece coasts further, `v₀·τ` in all, at any frame rate. CAMERA › *orbit inertia gain (ms per cm³)*, 0–10,
+  **1** by default (a guess: τ ≈ 190 ms, a ~1 s coast); 0 = none. Any new touch stops it at once; the elevation stops at its
+  rings (`OrbitController.nudge` clamps), the yaw coasts on. The box and the camera follow it as they follow a drag.
+  ⚠ The first build counted the window's samples at BOTH ends — 6 steps (96 ms of motion) into 80 ms, a coast 20 % too fast —
+  caught by its own vector; the window is now strictly `(t − 80, t]`. Vectors: `tests/proto_orbit_inertia.test.ts`.
+  ⭐ Default gain **0.45** (the owner, 2026-10-02; was 1): τ ≈ 84 ms for the green piece.
+  ⛔⛔ **AND A JUMP AT THE LIFT, FIXED** (*"sometimes, when the inertia is big and there is a large orbit, there is a jump of the
+  green piece back and forth at one point of the orbit"*): the lift reached the camera at once while the orbit coasted, so for
+  that one frame the camera ran its "input stopped" rule — a glide toward the coasting rig, ahead of the eased piece — and the
+  next frame the leash pinned it back: ~0.15–0.36° on the glass and back, at the point where the finger lifted. ✅ A coasting
+  orbit is a MOVING input to the camera, and the release is held until the coast ends (`cameraRelease`). Replayed in the real
+  frame order: the old way jumps > 0.1°, the new < 0.01°.

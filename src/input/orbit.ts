@@ -209,6 +209,15 @@ export class OrbitController {
    * `OrbitCentreBlend`), and a double-tap supplies none — a reset that eased would
    * simply never arrive.
    */
+  /**
+   * ⭐ prototype (green box), 2026-10-02: move the orbit by an ANGLE and an elevation step directly — the orbit's inertia after
+   * the finger lifts (`OrbitInertia`). ⛔ The elevation is clamped to its rings, as a drag's is.
+   */
+  nudge(dYawRad: number, dV: number): void {
+    this.yawRad += dYawRad;
+    this.v = Math.min(1, Math.max(0, this.v + dV));
+  }
+
   reset(yawRad: number, v: number): void {
     this.yawRad = yawRad;
     this.v = Math.min(1, Math.max(0, v));

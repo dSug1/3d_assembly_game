@@ -501,6 +501,8 @@ export interface GestureConfig {
   orbitSwayKind: number;
   /** ⭐ Prototype: the orbit SLIDE's peak, mm on the glass, at the reference finger speed (scaled by it like every sway). */
   orbitSlideMm: number;
+  /** ⭐ Prototype: the green piece's ORBIT INERTIA — its coast's time constant per cm³ of its volume, ms (`inertiaTauMs`); 0 = none. */
+  orbitInertiaGain: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -953,6 +955,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ Option 1 (the swing) unless switched; option 2's slide a guess, with a slider.
   orbitSwayKind: 0,
   orbitSlideMm: 5,
+  // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
+  orbitInertiaGain: 0.45, // ⭐ the owner, 2026-10-02 (was 1) — τ ≈ 84 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
@@ -1097,6 +1101,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
+  }
+  if (!(cfg.orbitInertiaGain >= 0 && cfg.orbitInertiaGain <= 50)) {
+    throw new Error(`orbitInertiaGain (${cfg.orbitInertiaGain}) must be in [0, 50] ms/cm³.`);
   }
   if (!(cfg.orbitSwayKind === 0 || cfg.orbitSwayKind === 1 || cfg.orbitSwayKind === 2)) {
     throw new Error(`orbitSwayKind (${cfg.orbitSwayKind}) must be 0, 1 or 2.`);

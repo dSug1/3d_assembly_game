@@ -1126,7 +1126,11 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
       st.boxOrbit === null || st.cameraOrbit === null
         ? { yaw: 1, pitch: 1 }
         : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+    const yaw0 = st.orbit.yaw;
+    const v0 = st.orbit.elevation;
     st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, -dy * st.cfg.boxGainPitch * g.pitch);
+    // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
+    st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
     // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId)
       st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
