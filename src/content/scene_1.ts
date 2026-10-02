@@ -243,12 +243,15 @@ export const SCENE_1: SceneDescriptor = {
     // * ±1.05 m — the tallest that stays under the 3 m camera clamp at boot zoom 1.5 (√(1.7² + 1.05²) = 2.00 m × 1.5 = 3.00 m):
     //   a taller waist turns more gently, but a clamped ring is a corner of its own. Symmetric, so the height runs evenly
     //   through the middle ring. (Was top 1.7 / 0.5, middle 0.2 / 0, bottom 0.9 / −0.4 — the stair.)
-    topRadiusM: 1.7,
-    topHeightM: 1.05,
-    middleRadiusM: 0.25,
+    // ⭐ prototype (green box), the owner 2026-10-02: *"I want to set the zoom at 1.00 but the scene shall be exactly the same"* —
+    // every ring ×1.5 and the boot zoom 1.5 → 1.00 (`bootZoom`): the green piece sits at rings × zoom, so nothing moves.
+    // (Was 1.7 / ±1.05, 0.25 / 0 at zoom 1.5.)
+    topRadiusM: 2.55,
+    topHeightM: 1.575,
+    middleRadiusM: 0.375,
     middleHeightM: 0,
-    bottomRadiusM: 1.7,
-    bottomHeightM: -1.05,
+    bottomRadiusM: 2.55,
+    bottomHeightM: -1.575,
   },
   final: SCENE_1_FINAL,
 };

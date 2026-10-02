@@ -97,6 +97,29 @@ export function orbitSwingAxis(centre: Vec3, box: Vec3, rig: Vec3): Vec3 | null 
   return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : null;
 }
 
+/**
+ * ⭐⭐ prototype (green box) — **THE BOOT ORBIT CENTRE: THE BLUE PIECE'S FACE TOWARD THE GREEN PIECE** (the owner, 2026-10-02: *"at
+ * boot, place the orbit center to center of the face of the blue piece which faces the green piece"*). Of the blue piece's
+ * faces (world centres and outward normals), the one whose normal points most along `towardGreen` — the green piece's boot
+ * direction from the orbit (it sits metres away, so its direction from the face is the same to within a degree or two).
+ * `null` with no face.
+ */
+export function faceToward(
+  faces: readonly { readonly centre: Vec3; readonly normal: Vec3 }[],
+  towardGreen: Vec3,
+): { readonly centre: Vec3; readonly normal: Vec3 } | null {
+  let best: { readonly centre: Vec3; readonly normal: Vec3 } | null = null;
+  let bestDot = -Infinity;
+  for (const f of faces) {
+    const d = f.normal[0] * towardGreen[0] + f.normal[1] * towardGreen[1] + f.normal[2] * towardGreen[2];
+    if (d > bestDot) {
+      bestDot = d;
+      best = f;
+    }
+  }
+  return best;
+}
+
 /** One hit along the camera's ray to the yellow target: how far, and whether it is the green piece. */
 export interface RingHit {
   readonly distanceM: number;

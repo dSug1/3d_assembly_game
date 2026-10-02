@@ -241,3 +241,14 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   and the box (`leashInV`, bisection). At leash 0 the camera now sits exactly on the green piece's pitch (error < 0.01°; 2.41°
   before — the vector). `vForPitch` is kept, declared unwired. ⚠ What remains is the waist's own shape: near the middle ring the
   view angle changes fast (0 → 31° over the first fifth of the climb), then hardly at all — that is the geometry, not a jump.
+* ⭐⭐ **ZOOM 1.00, THE SAME SCENE** (the owner, 2026-10-02: *"I want to set the zoom at 1.00 but the scene shall be exactly the
+  same: therefore, update all the values"*): the green piece sits at rings × zoom, and every other zoom reader (the wheel's and
+  the pinch's limits, the camera reset) is relative to the rings — so the rings ×1.5 and `bootZoom` 1.5 → **1.00** move nothing:
+  top **2.55 / +1.575 m**, middle **0.375 / 0 m**, bottom **2.55 / −1.575 m**. The camera's radius offset (1250 mm) and its 3 m
+  limit are absolute, unchanged. The CAMERA ORBIT height sliders now reach ±3 m. A vector checks the green piece's position at
+  zoom 1.00 on the new rings against zoom 1.5 on the old, all over the surface.
+* ⭐⭐ **THE BOOT ORBIT CENTRE IS THE BLUE PIECE'S FACE TOWARD THE GREEN PIECE** (the owner, 2026-10-02: *"at boot, place the orbit
+  center to center of the face of the blue piece which faces the green piece"*): Piece10 (the one blue body); of its faces, the
+  one whose normal points most toward the green piece's boot direction (`faceToward`, `bootTargetOnBlueFace`) — at boot (top
+  ring, boot yaw) that direction is (0, 0.53, −0.85), so it is Piece10's FRONT face (−z), its centre ≈ (0.104, 0.279, −0.05) m.
+  (It was the scene's boot centre, (0, 0.23, 0) — behind the painting's panel.) No blue piece: the scene's own boot centre.

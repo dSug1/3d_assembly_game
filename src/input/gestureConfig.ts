@@ -937,7 +937,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
   boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
-  bootZoom: 1.5,
+  bootZoom: 1, // ⭐ the owner, 2026-10-02: 1.00, with Scene_1's rings ×1.5 so the scene is unchanged (was 1.5)
   lockPlacedPieces: 1,
   showHitFaceContour: 0,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.

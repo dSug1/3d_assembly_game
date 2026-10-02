@@ -432,7 +432,8 @@ describe("⭐⭐ prototype — the green box", () => {
   });
 
   it("⭐ prototype: the scene BOOTS at zoom 1.5 (the owner: *\"set the default zoom at 1.5\"*) — the derived half-radius rule only at 0", () => {
-    expect(DEFAULT_CONFIG.bootZoom).toBe(1.5);
+    // the owner: 1.5, then *"I want to set the zoom at 1.00 but the scene shall be exactly the same"* (the rings ×1.5)
+    expect(DEFAULT_CONFIG.bootZoom).toBe(1);
     // the owner, 2026-10-02: *"set camera leash behind the green box to 1.5 degrees"*, corrected to 0.5, then to *"0 degrees"*
     // … then *"set the camera leash to 0.05"* (the slider reaches it, step 0.05), then *"revert the camera leash to 0"*
     expect(DEFAULT_CONFIG.cameraLeashDeg).toBe(0);
@@ -562,5 +563,49 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
     expect(now.radius).toBeGreaterThan(4 * stair.radius);
     expect(now.speedRatio).toBeLessThan(2.2);
     expect(stair.speedRatio).toBeGreaterThan(3.5);
+  });
+});
+
+describe("⭐⭐ prototype — zoom 1.00, the SAME scene (the owner, 2026-10-02: *\"set the zoom at 1.00 but the scene shall be exactly the same\"*)", () => {
+  it("⭐ everywhere on the surface, the green piece at zoom 1.00 on the new rings is where it was at zoom 1.5 on the old ones", async () => {
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const now = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const before = { ...now, orbitTopRadiusM: 1.7, orbitTopHeightM: 1.05, orbitMiddleRadiusM: 0.25, orbitMiddleHeightM: 0, orbitBottomRadiusM: 1.7, orbitBottomHeightM: -1.05 };
+    expect(DEFAULT_CONFIG.bootZoom).toBe(1);
+    for (const yaw of [0, 1.3, -2.7]) {
+      for (let i = 0; i <= 20; i++) {
+        const v = i / 20;
+        const a = orbitOffset(now, yaw, v, DEFAULT_CONFIG.bootZoom).offsetM;
+        const b = orbitOffset(before, yaw, v, 1.5).offsetM;
+        a.forEach((x, k) => expect(x).toBeCloseTo(b[k]!, 12));
+      }
+    }
+  });
+});
+
+describe("⭐⭐ prototype — the boot orbit centre is the blue piece's face toward the green piece (the owner, 2026-10-02)", () => {
+  it("⭐ of the faces, the one whose normal points most toward the green piece — and its CENTRE", async () => {
+    const { faceToward } = await import("../src/input/green_box");
+    const faces = [
+      { centre: [0, 0, 0.15] as const, normal: [0, 0, 1] as const },
+      { centre: [0, 0, -0.15] as const, normal: [0, 0, -1] as const },
+      { centre: [0, 1.2, 0] as const, normal: [0, 1, 0] as const },
+      { centre: [0.95, 0, 0] as const, normal: [1, 0, 0] as const },
+    ];
+    // the green piece up and in front (+z), mostly in front: the FRONT face, not the top
+    expect(faceToward(faces, [0.2, 0.53, 0.85])!.centre).toEqual([0, 0, 0.15]);
+    // seen from behind: the back face; from above: the top
+    expect(faceToward(faces, [0, 0.3, -0.9])!.centre).toEqual([0, 0, -0.15]);
+    expect(faceToward(faces, [0.1, 0.95, 0.1])!.centre).toEqual([0, 1.2, 0]);
+    expect(faceToward([], [0, 0, 1])).toBeNull();
+  });
+
+  it("⭐ Scene_1 has ONE blue piece (Piece10); the boot centre is wired to its face, the scene's own centre only without one", () => {
+    const blue = SCENE_1.bodies.filter((b) => b.colour.every((c, i) => c === SCENE_1_PALETTE.MAT_E[i]));
+    expect(blue.map((b) => b.id)).toEqual(["Piece10"]);
+    expect(code("scene.ts")).toMatch(/new OrbitCentreBlend\(st\.cfg, bootTargetOnBlueFace\(st\) \?\? bootOrbitCentre\(/);
+    const w = code("green_box_wiring.ts");
+    expect(w).toMatch(/orbitOffset\(st\.cfg, st\.orbit\.yaw, st\.orbit\.elevation, st\.orbitStartZoom\)\.offsetM;/);
+    expect(w).toMatch(/const face = faceToward\(faces, toward\);/);
   });
 });

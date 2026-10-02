@@ -169,11 +169,11 @@ export function installTuningMenu(st: SceneState): void {
           title: "CAMERA ORBIT",
           sliders: [
             tunable(st, "top radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
-            tunable(st, "top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
+            tunable(st, "top height (m)", "orbitTopHeightM", -3, 3, 0.01),
             tunable(st, "middle radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
-            tunable(st, "middle height (m)", "orbitMiddleHeightM", -1.5, 1.5, 0.01),
+            tunable(st, "middle height (m)", "orbitMiddleHeightM", -3, 3, 0.01),
             tunable(st, "bottom radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
-            tunable(st, "bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
+            tunable(st, "bottom height (m)", "orbitBottomHeightM", -3, 3, 0.01),
             // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
             tunable(st, "centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
             // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.

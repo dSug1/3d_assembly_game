@@ -78,7 +78,7 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
-import { createGreenBox } from "./green_box_wiring";
+import { bootTargetOnBlueFace, createGreenBox } from "./green_box_wiring";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
@@ -793,7 +793,7 @@ export function createScene(
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
-  st.centreBlend = new OrbitCentreBlend(st.cfg, bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
+  st.centreBlend = new OrbitCentreBlend(st.cfg, bootTargetOnBlueFace(st) ?? bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   const bootCentre = st.centreBlend.centreM;
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);

@@ -9,7 +9,9 @@ import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, greenPyramidSizeM, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, faceToward, greenPyramidSizeM, pinkRingVisibility } from "../input/green_box";
+import { SCENE_1_PALETTE } from "../content/scene_1";
+import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
 import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
@@ -215,4 +217,22 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
+}
+
+/**
+ * ⭐⭐ prototype (green box), the owner 2026-10-02: *"at boot, place the orbit center to center of the face of the blue piece which
+ * faces the green piece"* — the boot yellow target (`faceToward`): the blue piece's face whose normal points most toward the
+ * green piece's boot direction (the rig's boot yaw and elevation, at the boot zoom), at that face's centre. `null` with no blue
+ * piece (the scene's own boot centre then).
+ */
+export function bootTargetOnBlueFace(st: SceneState): [number, number, number] | null {
+  const blue = st.sceneSpec.bodies.find((b) => b.colour.every((c, i) => c === SCENE_1_PALETTE.MAT_E[i]));
+  const o = blue === undefined ? undefined : st.world.objects.get(blue.id);
+  if (blue === undefined || o === undefined) return null;
+  const faces = o.faces
+    .map((f) => faceWorld(st.world, blue.id, f.id))
+    .filter((f): f is NonNullable<typeof f> => f !== null);
+  const toward = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, st.orbitStartZoom).offsetM;
+  const face = faceToward(faces, toward);
+  return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }
