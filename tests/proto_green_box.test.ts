@@ -543,7 +543,7 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
     expect(cfg.orbitTopRadiusM).toBe(cfg.orbitBottomRadiusM);
   });
 
-  it("⭐⭐ against the stair it replaced: the tightest turn over 2× wider; ⚠ the four-ring waist has a slow PLATEAU (speed ratio ~190)", async () => {
+  it("⭐⭐ against the stair it replaced: the tightest turn over 2× wider; the speed varies ~4× (the waist's plateau removed)", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
     const measure = (cfg: typeof DEFAULT_CONFIG) => {
       let tightest = Infinity;
@@ -569,10 +569,9 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
     // ⚠ was > 4× with three rings; the owner's fourth ring (2026-10-02) makes a short vertical cylinder at the waist, entered
     // and left more sharply — still over 2× the stair's tightest turn
     expect(now.radius).toBeGreaterThan(2 * stair.radius);
-    // ⚠⚠ MEASURED, NOT A GUARANTEE ANY MORE: < 2.2 with the 0.375 m / 0 m middle ring, 2.37 with 0.09 m / 0.15 m — and ~190 with the
-    // owner's FOURTH ring (0.09 m at −0.15 m, 2026-10-02): four rings evenly spaced in v leave the short waist segment a near-PLATEAU
-    // (the piece climbs ~7 cm between v = 0.4 and 0.6). Pinned so a fix (rings spaced by their distance apart) shows here.
-    expect(now.speedRatio).toBeGreaterThan(100);
+    // ⚠ < 2.2 with the 0.375 m / 0 m middle ring, 2.37 with 0.09 m / 0.15 m, ~190 with the FOURTH ring evenly spaced (a plateau in the
+    // waist) — and 4.24 with the waist re-spanned, the outer transitions kept (the owner, 2026-10-02)
+    expect(now.speedRatio).toBeLessThan(4.5);
     expect(stair.speedRatio).toBeGreaterThan(3.5);
   });
 });

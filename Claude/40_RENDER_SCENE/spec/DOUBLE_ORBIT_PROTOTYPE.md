@@ -352,3 +352,15 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   turns once. ⚠⚠ **A slow PLATEAU in the waist**: evenly spaced knots leave the short waist segment almost flat in the middle — the
   piece climbs ~7 cm between v = 0.4 and 0.6, the rings' speed ratio ~190 (2.37 before). The fix on offer: space the rings in `v` by
   their distance apart. `tests/proto_fourth_ring.test.ts`.
+* ⭐⭐ **THE RINGS ARE NAMED 1st, 2nd, 3rd, 4th FROM THE TOP** (the owner, 2026-10-02): 1st = top (`orbitTop…`), 2nd = middle
+  (`orbitMiddle…`), 3rd = the fourth ring added (`orbitLower…`), 4th = bottom (`orbitBottom…`) — in the menu and these notes; the
+  config keys keep their names (`Scene_0` and the URL overrides read them).
+* ⭐⭐ **THE WAIST WITHOUT ITS PLATEAU, THE OUTER TRANSITIONS KEPT** (the owner, 2026-10-02: *"do it. However, maintain the relationship
+  between top ring and middle ring and between fourth ring and bottom ring as I like the camera move at the transitions"*):
+  `fourRingLayout` keeps the 1st ↔ 2nd and 3rd ↔ 4th segments EXACTLY (their spans and the tangents at all four rings — the same curves),
+  and gives only the WAIST (2nd ↔ 3rd) a new span: its height step ÷ the mean of its end tangents (0.30 m ÷ 2.59 = 0.116 of the old ⅓
+  spans), so it climbs at the speed it is entered at (linear in height, no plateau). `v` = that parameter ÷ its total (⅔ + 0.116 =
+  0.783), and the drag's elevation gain is ÷ the same total (`elevationGainScale`, read by `OrbitController.drag` and `orbitDegPerMm`):
+  **a millimetre of dy moves the outer segments exactly as before** (checked against an independent re-implementation of the even
+  layout). The 3rd ring now sits at v = 0.426, the 2nd at 0.574. Speed ratio **4.24** (≈190 evenly spaced). ⚠ The cost, measured: the
+  waist is short, so the camera's pitch sweeps −59° → +59° in ~12 mm of dy, **~16.5°/mm at its centre**.

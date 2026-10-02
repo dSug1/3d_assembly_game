@@ -76,9 +76,16 @@ function throughThree(atBottom: number, atMiddle: number, atTop: number, v: numb
 function throughKnots(ys: readonly number[], v: number): number {
   const n = ys.length - 1;
   if (n < 1) return ys[0] ?? 0;
+  const knots = ys.map((_, k) => k / n);
+  return hermiteAt(knots, ys, evenTangents(ys), v);
+}
+
+/** ⭐ Fritsch–Carlson tangents (per unit of the parameter) for knots evenly spaced over [0, 1]. */
+function evenTangents(ys: readonly number[]): number[] {
+  const n = ys.length - 1;
   const h = 1 / n;
   const d = Array.from({ length: n }, (_, k) => (ys[k + 1]! - ys[k]!) / h);
-  const m = ys.map((_, k) => {
+  return ys.map((_, k) => {
     if (k === 0) return d[0]!;
     if (k === n) return d[n - 1]!;
     const a = d[k - 1]!;
@@ -87,12 +94,52 @@ function throughKnots(ys: readonly number[], v: number): number {
     const avg = (a + b) / 2;
     return Math.sign(avg) * Math.min(Math.abs(avg), 3 * Math.min(Math.abs(a), Math.abs(b)));
   });
-  // the segment — the LOWER one at a knot, as `throughThree`'s `v <= h` did
-  const k = Math.min(n - 1, Math.max(0, Math.ceil(v / h - 1e-12) - 1));
-  const t = (v - k * h) / h;
+}
+
+/** ⭐ The cubic Hermite through `ys` at `knots` (increasing) with tangents `ms`, at `s` — the LOWER segment at a knot. */
+function hermiteAt(knots: readonly number[], ys: readonly number[], ms: readonly number[], s: number): number {
+  const n = knots.length - 1;
+  let k = 0;
+  while (k < n - 1 && s > knots[k + 1]! + 1e-12) k++;
+  const h = knots[k + 1]! - knots[k]!;
+  const t = h > 0 ? (s - knots[k]!) / h : 0;
   const t2 = t * t;
   const t3 = t2 * t;
-  return (2 * t3 - 3 * t2 + 1) * ys[k]! + (t3 - 2 * t2 + t) * h * m[k]! + (-2 * t3 + 3 * t2) * ys[k + 1]! + (t3 - t2) * h * m[k + 1]!;
+  return (2 * t3 - 3 * t2 + 1) * ys[k]! + (t3 - 2 * t2 + t) * h * ms[k]! + (-2 * t3 + 3 * t2) * ys[k + 1]! + (t3 - t2) * h * ms[k + 1]!;
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE FOUR RINGS, THE WAIST WITHOUT ITS PLATEAU** (the owner, 2026-10-02: *"do it. However, maintain the
+ * relationship between top ring and middle ring and between fourth ring and bottom ring as I like the camera move at the transitions
+ * between those two couple of rings"*). Evenly spaced, the short waist (2nd ↔ 3rd ring, middle ↔ fourth) was entered at the steep
+ * tangent its long neighbours give and went nearly FLAT in its middle (the piece climbed ~7 cm over v = 0.4 → 0.6). ⭐ The two OUTER
+ * segments keep everything — their spans (⅓ of the old `v`) and the tangents at all four rings, so each is the same curve as before;
+ * only the WAIST's span changes: `Δ = its height step ÷ the mean of its end tangents`, so it runs at the speed it is entered at
+ * (`Scene_1`: 0.30 m ÷ 2.59 = 0.116, linear in height). The parameter `s` runs over [0, `total`] = [0, ⅔ + Δ]; `v` = `s` ÷ `total`,
+ * and the drag's elevation gain is ÷ `total` (`elevationGainScale`) — so a millimetre of dy moves the outer segments EXACTLY as before.
+ */
+export function fourRingLayout(cfg: GestureConfig): {
+  readonly knots: readonly number[];
+  readonly radius: readonly number[];
+  readonly height: readonly number[];
+  readonly mRadius: readonly number[];
+  readonly mHeight: readonly number[];
+  readonly total: number;
+} {
+  const radius = [cfg.orbitBottomRadiusM, cfg.orbitLowerRadiusM, cfg.orbitMiddleRadiusM, cfg.orbitTopRadiusM];
+  const height = [cfg.orbitBottomHeightM, cfg.orbitLowerHeightM, cfg.orbitMiddleHeightM, cfg.orbitTopHeightM];
+  const mRadius = evenTangents(radius);
+  const mHeight = evenTangents(height);
+  const meanM = (mHeight[1]! + mHeight[2]!) / 2;
+  const step = height[2]! - height[1]!;
+  const waist = meanM > 0 && step > 0 && Number.isFinite(step / meanM) ? step / meanM : 1 / 3;
+  const knots = [0, 1 / 3, 1 / 3 + waist, 2 / 3 + waist];
+  return { knots, radius, height, mRadius, mHeight, total: knots[3]! };
+}
+
+/** ⭐ prototype (green box): the factor on the drag's elevation gain — 1 ÷ the four-ring layout's `total`, 1 with three rings. */
+export function elevationGainScale(cfg: GestureConfig): number {
+  return cfg.orbitLowerRingOn === 1 ? 1 / fourRingLayout(cfg).total : 1;
 }
 
 export function rigsOf(cfg: GestureConfig): {
@@ -171,16 +218,17 @@ export function orbitOffset(
   // requirement in their words: *"define height and radius of top and bottom rigs and
   // not exceed these."*
   // ⭐ prototype (green box), 2026-10-02: a FOURTH ring between the bottom and the middle when the scene gives one
-  // (`orbitLowerRingOn`) — four knots at v = 0, ⅓, ⅔, 1; else the three rings exactly as before.
-  const lower = cfg.orbitLowerRingOn === 1 ? { radiusM: cfg.orbitLowerRadiusM, heightM: cfg.orbitLowerHeightM } : null;
+  // (`orbitLowerRingOn`); else the three rings exactly as before.
+  // ⭐ …the waist re-spanned so it has no plateau, the outer segments as they were (`fourRingLayout`).
+  const four = cfg.orbitLowerRingOn === 1 ? fourRingLayout(cfg) : null;
   const radius =
-    (lower === null
+    (four === null
       ? throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped)
-      : throughKnots([bottom.radiusM, lower.radiusM, middle.radiusM, top.radiusM], clamped)) * zoom;
+      : hermiteAt(four.knots, four.radius, four.mRadius, clamped * four.total)) * zoom;
   const height =
-    (lower === null
+    (four === null
       ? throughThree(bottom.heightM, middle.heightM, top.heightM, clamped)
-      : throughKnots([bottom.heightM, lower.heightM, middle.heightM, top.heightM], clamped)) * zoom;
+      : hermiteAt(four.knots, four.height, four.mHeight, clamped * four.total)) * zoom;
 
   return {
     offsetM: [radius * Math.cos(yawRad), height, radius * Math.sin(yawRad)],
@@ -270,7 +318,8 @@ export class OrbitController {
     // ⚠ `dyPx` is positive DOWNWARD, so `+dyMm` here means a finger moving UP lowers
     // the camera — the same inversion, in the axis where screen coordinates already
     // point the other way.
-    this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation));
+    // ⭐ prototype (green box), 2026-10-02: × `elevationGainScale` — with four rings, a mm moves the outer segments as before.
+    this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation * elevationGainScale(this.cfg)));
   }
 
   // ⛔ The approach swing's yaw / elevation OFFSETS and `absorb` are deleted with the swing (`D120`).

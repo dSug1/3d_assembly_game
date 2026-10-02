@@ -21,7 +21,7 @@
  */
 import type { Vec3 } from "../core/vec";
 import type { GestureConfig } from "./gestureConfig";
-import { orbitOffset } from "./orbit";
+import { orbitOffset, elevationGainScale } from "./orbit";
 
 /** One orbit position: yaw (radians) and the ring parameter `v` in [0, 1]. */
 export interface OrbitAt {
@@ -437,7 +437,7 @@ export function orbitDegPerMm(
   gains: { readonly yaw: number; readonly pitch: number } = { yaw: 1, pitch: 1 },
 ): { readonly yawDegPerMm: number; readonly pitchDegPerMm: number } {
   const DEG = 180 / Math.PI;
-  const dvPerMm = cfg.gainOrbitElevation * cfg.boxGainPitch * gains.pitch;
+  const dvPerMm = cfg.gainOrbitElevation * elevationGainScale(cfg) * cfg.boxGainPitch * gains.pitch;
   const h = 1e-4;
   const lo = Math.max(0, v - h);
   const hi = Math.min(1, v + h);

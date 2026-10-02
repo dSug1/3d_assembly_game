@@ -180,16 +180,17 @@ export function installTuningMenu(st: SceneState): void {
         {
           title: "CAMERA ORBIT",
           sliders: [
-            tunable(st, "top radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
-            tunable(st, "top height (m)", "orbitTopHeightM", -3, 3, 0.01),
-            tunable(st, "middle radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
-            tunable(st, "middle height (m)", "orbitMiddleHeightM", -3, 3, 0.01),
-            // ⭐ prototype (green box), 2026-10-02: the fourth ring, between the middle and the bottom (on = 1).
-            tunable(st, "fourth ring on (0 / 1)", "orbitLowerRingOn", 0, 1, 1),
-            tunable(st, "fourth ring radius (m)", "orbitLowerRadiusM", 0, 3, 0.01),
-            tunable(st, "fourth ring height (m)", "orbitLowerHeightM", -3, 3, 0.01),
-            tunable(st, "bottom radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
-            tunable(st, "bottom height (m)", "orbitBottomHeightM", -3, 3, 0.01),
+            tunable(st, "1st ring (top) radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
+            tunable(st, "1st ring (top) height (m)", "orbitTopHeightM", -3, 3, 0.01),
+            tunable(st, "2nd ring radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
+            tunable(st, "2nd ring height (m)", "orbitMiddleHeightM", -3, 3, 0.01),
+            // ⭐ prototype (green box), 2026-10-02: the rings named 1st … 4th from the TOP (the owner); the 3rd sits between the 2nd and the
+            // 4th, on = 1 (a three-ring scene has none).
+            tunable(st, "3rd ring on (0 / 1)", "orbitLowerRingOn", 0, 1, 1),
+            tunable(st, "3rd ring radius (m)", "orbitLowerRadiusM", 0, 3, 0.01),
+            tunable(st, "3rd ring height (m)", "orbitLowerHeightM", -3, 3, 0.01),
+            tunable(st, "4th ring (bottom) radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
+            tunable(st, "4th ring (bottom) height (m)", "orbitBottomHeightM", -3, 3, 0.01),
             // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
             tunable(st, "centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
             // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
