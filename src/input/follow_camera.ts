@@ -331,3 +331,15 @@ export function boxDragGains(cfg: GestureConfig, box: OrbitAt, cam: OrbitAt, lea
     pitch: leashGain(pitchOf(cfg, box.v) - pitchOf(cfg, cam.v), leashRad, inside),
   };
 }
+
+/**
+ * ⭐⭐ prototype (green box) — **THE CAMERA'S TIME LAG, ON TOP OF THE LEASH** (the owner, 2026-10-02: *"lag the camera orbit
+ * behind the green piece orbit in whichever orbit direction … create time lag with slider on top of leash"*). The leash says
+ * where the camera SHOULD be (`cameraOrbitStep`'s `cam`); the camera then EASES toward that, exponentially with time constant
+ * `tauMs` (`cameraFollowMs`) — yaw the short way, in whichever direction it is moving. So a fast orbit opens a wider gap than
+ * a slow one, and the gap closes by itself once the orbit stops. `tauMs = 0`: no lag, the camera is where the leash says.
+ */
+export function cameraLag(shown: OrbitAt, wanted: OrbitAt, dtMs: number, tauMs: number): OrbitAt {
+  const k = ease(dtMs, tauMs);
+  return { yaw: shown.yaw + wrapPi(wanted.yaw - shown.yaw) * k, v: shown.v + (wanted.v - shown.v) * k };
+}

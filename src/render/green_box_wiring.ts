@@ -16,7 +16,7 @@ import { taperMesh } from "./bodies";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
-import { cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit } from "../input/follow_camera";
+import { cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
@@ -150,12 +150,18 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
           finger,
           released,
         );
+  // ⭐⭐ prototype (green box), the owner 2026-10-02: the TIME LAG on top of the leash — the camera eases toward where the leash
+  // puts it (`cameraLag`, `cameraFollowMs`; 0 = none).
+  st.cameraLagged =
+    st.cameraLagged === null
+      ? st.cameraOrbit.cam
+      : cameraLag(st.cameraLagged, st.cameraOrbit.cam, dtSec * 1000, st.cfg.cameraFollowMs);
   // ⭐ At the box's distance (the box as placed, clamp included) + the radius offset, at the camera's angles plus the
   // owner's offsets.
   const D = Math.PI / 180;
   const o = cameraOffset(
     st.cfg,
-    st.cameraOrbit.cam,
+    st.cameraLagged,
     [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k],
     { yawRad: st.cfg.cameraYawOffsetDeg * D, pitchRad: st.cfg.cameraPitchOffsetDeg * D },
     st.cfg.cameraRadiusOffsetMm / 1000,

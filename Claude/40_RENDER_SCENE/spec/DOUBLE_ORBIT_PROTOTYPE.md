@@ -58,7 +58,14 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 
 ## 4. How the camera follows — per axis, yaw and pitch alike
 
-1. **While the input MOVES: the LEASH** (`cameraLeashDeg`, **3°**, slider 0–60). Inside it the camera does not turn; past
+1. **While the input MOVES: the LEASH** (`cameraLeashDeg`, **0°** — the owner, 2026-10-02: 1.5°, then 0.5°, then 0°; was 3°; slider 0–60 step 0.5).
+   ⚠ At 0 the camera is pinned straight behind the box while the input moves: the box never drifts on the glass, the
+   inside-leash gain has no zone to act in (×1), and only the glide after a stop and the release catch-up remain.
+   ⭐⭐ **AND A TIME LAG ON TOP** (the owner, 2026-10-02: *"lag the camera orbit behind the green piece orbit in whichever orbit
+   direction … create time lag with slider on top of leash"*): the leash (and the glide, the catch-up) says where the camera
+   SHOULD be; the camera EASES toward that, exponentially (`cameraLag`, `input/follow_camera.ts`; CAMERA › *camera time lag
+   behind the green box*, `cameraFollowMs`, **150 ms**, 0–1000, 0 = none). A faster orbit opens a wider gap, in whichever
+   direction, and it closes by itself once the orbit stops. Inside it the camera does not turn; past
    it, it is dragged along exactly the leash behind the box.
 2. ⭐⭐ **"Moving" is the FINGER's own verdict**, per axis — the orbit finger's `MotionTracker` (§1.1's deadband and the
    device-derived rest window, `D86`): its x drives yaw, its y pitch. ⛔ Read per frame from the rig's change, every frame

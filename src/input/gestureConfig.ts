@@ -488,6 +488,8 @@ export interface GestureConfig {
   cameraSettleDelayMs: number;
   /** ⭐ Prototype: when the orbit finger is LIFTED, a camera at rest realigns on a spring of this time constant, ms. */
   cameraCatchUpMs: number;
+  /** ⭐ Prototype: the camera's TIME LAG on top of the leash — its follow time constant, ms (`cameraLag`); 0 = none. */
+  cameraFollowMs: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -911,7 +913,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // enough not to feel like waiting for a cutscene.
   cameraResetMs: 450,
   // ⚠ Prototype guesses, with sliders in CAMERA.
-  cameraLeashDeg: 3,
+  cameraLeashDeg: 0, // ⭐ the owner, 2026-10-02: 1.5, then 0.5, then 0 (was 3) — the camera stays right behind the box
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
   // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
   cameraYawOffsetDeg: 3,
@@ -931,6 +933,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraSettleDelayMs: 0,
   // ⚠ A guess with a slider: ~0.5 s to arrive (a critically damped spring covers 95 % in ~4.7 τ).
   cameraCatchUpMs: 120,
+  // ⚠ A guess with a slider (the owner, 2026-10-02: *"create time lag with slider on top of leash"*): ~0.5 s to close 95 %.
+  cameraFollowMs: 150,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
@@ -1075,6 +1079,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
+  }
+  if (!(cfg.cameraFollowMs >= 0 && cfg.cameraFollowMs <= 2000)) {
+    throw new Error(`cameraFollowMs (${cfg.cameraFollowMs}) must be in [0, 2000] ms.`);
   }
   if (!(cfg.cameraCatchUpMs >= 10 && cfg.cameraCatchUpMs <= 2000)) {
     throw new Error(`cameraCatchUpMs (${cfg.cameraCatchUpMs}) must be in [10, 2000] ms.`);

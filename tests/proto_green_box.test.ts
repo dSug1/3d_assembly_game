@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { sizeM, smallestOfColour, throughGreenBox } from "@input/green_box";
-import { boxDragGains, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
+import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
 import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
@@ -292,6 +292,44 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(maxStep).toBeLessThan(2 * DEG); // ⛔ was ~15° in one frame
   });
 
+  it("⭐⭐ prototype: the TIME LAG on top of the leash — a faster orbit opens a wider gap, which closes once it stops; 0 = none", () => {
+    // the owner, 2026-10-02: *"lag the camera orbit behind the green piece orbit in whichever orbit direction"* →
+    // *"create time lag with slider on top of leash"*
+    const want = { yaw: 30 * DEG, v: 0.7 };
+    const none = cameraLag({ yaw: 0, v: 0.5 }, want, 16, 0); // 0: no lag
+    expect(none.yaw).toBeCloseTo(want.yaw, 12);
+    expect(none.v).toBeCloseTo(want.v, 12);
+    const half = cameraLag({ yaw: 0, v: 0.5 }, want, 150 * Math.LN2, 150); // one half-life: half way
+    expect(half.yaw).toBeCloseTo(15 * DEG, 9);
+    expect(half.v).toBeCloseTo(0.6, 9);
+    // the short way round: from 175° toward −175° is +10°, not −350°
+    expect(cameraLag({ yaw: 175 * DEG, v: 0.5 }, { yaw: -175 * DEG, v: 0.5 }, 1e9, 150).yaw).toBeCloseTo(185 * DEG, 9);
+    // a steady orbit, either direction: the gap behind it grows with its speed
+    const gapAt = (degPerFrame: number) => {
+      let shown: OrbitAt = { yaw: 0, v: 0.5 };
+      let wanted = 0;
+      for (let f = 0; f < 120; f++) {
+        wanted += degPerFrame * DEG;
+        shown = cameraLag(shown, { yaw: wanted, v: 0.5 }, 16, 150);
+      }
+      return wanted - shown.yaw;
+    };
+    expect(gapAt(1)).toBeGreaterThan(0); // behind, going one way
+    expect(gapAt(-1)).toBeLessThan(0); // behind, going the other way
+    expect(gapAt(2)).toBeGreaterThan(1.9 * gapAt(1)); // twice as fast, about twice the gap
+    // and once the orbit stops, it closes
+    let shown: OrbitAt = { yaw: 0, v: 0.5 };
+    for (let f = 0; f < 200; f++) shown = cameraLag(shown, want, 16, 150);
+    expect(Math.abs(shown.yaw - want.yaw)).toBeLessThan(1e-6);
+  });
+
+  it("⭐ wired: the camera is placed from the LAGGED angles; a slider (0–1000 ms) in CAMERA", () => {
+    const w = code("green_box_wiring.ts");
+    expect(w).toMatch(/cameraLag\(st\.cameraLagged, st\.cameraOrbit\.cam, dtSec \* 1000, st\.cfg\.cameraFollowMs\)/);
+    expect(w).toMatch(/const o = cameraOffset\(\s*st\.cfg,\s*st\.cameraLagged,/);
+    expect(code("tuning_menu.ts")).toContain('"cameraFollowMs", 0, 1000, 10)');
+  });
+
   it("⭐ prototype: yaw is compared the short way round", () => {
     const s = cameraOrbitStep(cameraOrbitAt({ yaw: 175 * DEG, v: 0.5 }, 0, CFG), { yaw: -165 * DEG, v: 0.5 }, 16, 16, CFG, P);
     // −165° is 20° PAST 175°, not 340° before it: dragged forward to 180°
@@ -355,6 +393,9 @@ describe("⭐⭐ prototype — the green box", () => {
 
   it("⭐ prototype: the scene BOOTS at zoom 1.5 (the owner: *\"set the default zoom at 1.5\"*) — the derived half-radius rule only at 0", () => {
     expect(DEFAULT_CONFIG.bootZoom).toBe(1.5);
+    // the owner, 2026-10-02: *"set camera leash behind the green box to 1.5 degrees"*, corrected to 0.5, then to *"0 degrees"*
+    expect(DEFAULT_CONFIG.cameraLeashDeg).toBe(0);
+    expect(code("tuning_menu.ts")).toContain('"cameraLeashDeg", 0, 60, 0.5)');
     expect(DEFAULT_CONFIG.cameraRadiusOffsetMm).toBe(1250);
     expect(DEFAULT_CONFIG.boxGainInsideLeash).toBe(0.35); // the owner: *"set green box gain inside the leash to 0.35"* // the owner: *"set the camera radius offset at 1250 mm"*
     const scene = code("scene.ts");
