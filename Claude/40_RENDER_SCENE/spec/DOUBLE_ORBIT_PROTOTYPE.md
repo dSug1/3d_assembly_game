@@ -38,7 +38,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 
 ## 3. The camera's orbit
 
-* ⭐ **`Scene_1`'s rings on this branch** (the owner, 2026-10-01): top 0.9 / 0.5 m, middle 0.2 / 0 m, bottom 0.9 / −0.4 m
+* ⭐ **`Scene_1`'s rings on this branch** (the owner, 2026-10-01): top **1.7** / 0.5 m (2026-10-02, was 0.9), middle 0.2 / 0 m, bottom 0.9 / −0.4 m
   (radius / height) — pitch −24° at the bottom, 0° at the middle, +29° at the top.
 * ⭐ **It BOOTS on the TOP ring** (`bootView: "TOP"`, *"boot scene 1 on the top ring"*) **at zoom 1.5** (`bootZoom`, slider
   *boot zoom* at the top of CAMERA, 0.5–10 step 0.1 — applied at once, and the camera reset's view; `0` restores the derived

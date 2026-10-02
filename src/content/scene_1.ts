@@ -236,7 +236,7 @@ export const SCENE_1: SceneDescriptor = {
   orbit: {
     // ⭐ `D169`: the orbit rings travel with the scene — the boot centre is where the world origin was.
     centreM: [0, SCENE_1_SHIFT_Y * 0.1, 0],
-    topRadiusM: 0.9,
+    topRadiusM: 1.7, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.9)
     topHeightM: 0.5,
     middleRadiusM: 0.2,
     middleHeightM: 0,
