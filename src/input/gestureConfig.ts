@@ -505,6 +505,11 @@ export interface GestureConfig {
   orbitInertiaGain: number;
   /** ⭐ Prototype: the share of the half-view the green piece is kept inside (`minGreenZoom`) — 0.9 = the central 90 % (the owner, 2026-10-02; was 0.8). */
   greenKeepInViewMargin: number;
+  /**
+   * ⭐ Prototype: the YAW span over which an orbited piece outside the guide sphere steps through ALL its faces, one anti-alignment
+   * per `span ÷ faces` degrees of orbit (`DegreesYawPerFace`, `trackOrbitedFaces`).
+   */
+  yawFaceAlignSpanDeg: number;
   /** ⭐ Prototype: the guide sphere's opacity (0 = hidden) — for prototyping only, never in the final game. */
   guideSphereAlpha: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
@@ -961,6 +966,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
   guideSphereAlpha: 0.08, // ⭐ prototype (green box), 2026-10-02: *"almost translucent"*
+  yawFaceAlignSpanDeg: 180, // ⭐ prototype (green box), the owner 2026-10-02
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
@@ -1110,6 +1116,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.guideSphereAlpha >= 0 && cfg.guideSphereAlpha <= 1)) {
     throw new Error(`guideSphereAlpha (${cfg.guideSphereAlpha}) must be in [0, 1].`);
+  }
+  if (!(cfg.yawFaceAlignSpanDeg > 0 && cfg.yawFaceAlignSpanDeg <= 720)) {
+    throw new Error(`yawFaceAlignSpanDeg (${cfg.yawFaceAlignSpanDeg}) must be in (0, 720].`);
   }
   if (!(cfg.greenKeepInViewMargin > 0 && cfg.greenKeepInViewMargin <= 1)) {
     throw new Error(`greenKeepInViewMargin (${cfg.greenKeepInViewMargin}) must be in (0, 1].`);

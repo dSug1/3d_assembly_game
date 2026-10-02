@@ -23,6 +23,25 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
+import type { PieceFace } from "../input/green_box";
+
+/**
+ * ⭐ Prototype: one orbited piece's face tracking (`trackOrbitedFaces`) — whether it was outside the guide sphere last frame and,
+ * while it is outside, its faces (own frame), where they are now (world), the order they are anti-aligned in and where it stands
+ * in it, `DegreesYawPerFace` and `DeltaXYawPerFace`, the dx accumulated since the last step, and the orbit yaw last frame.
+ */
+export interface FaceTrack {
+  readonly outside: boolean;
+  readonly faces: readonly PieceFace[] | null;
+  readonly world: readonly { readonly normal: Vec3; readonly centre: Vec3 }[];
+  readonly order: readonly number[];
+  readonly at: number;
+  readonly degPerFace: number;
+  readonly dxPerFaceMm: number;
+  readonly accMm: number;
+  readonly yaw: number;
+  readonly pink: Vec3 | null;
+}
 import { type FrameMeter } from "../core/frame_meter";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -404,6 +423,17 @@ export interface SceneState {
   guideSphere: Mesh | null;
   /** ⭐ Prototype: the green piece's white contour (its edges, offset like the part outlines) and the offset it was built at. */
   greenOutline: { readonly lines: LinesMesh; readonly topo: MeshTopology; builtM: number | null } | null;
+  /** ⭐ Prototype: the pieces the orbit carries — today the green piece alone; another joins by being pushed here. */
+  orbitedPieces: Mesh[];
+  /**
+   * ⭐ Prototype: each orbited piece's face tracking (`faceTracking`) — whether it was outside the guide sphere last frame, and
+   * while it is outside, its faces (own frame) and where they are now (world).
+   */
+  faceTracks: Map<Mesh, FaceTrack>;
+  /** ⭐ Prototype: each orbited piece's anti-alignment turn in flight (an eased slerp), if any. */
+  pieceTurns: Map<Mesh, { readonly from: Quat; readonly to: Quat; readonly t0: number }>;
+  /** ⭐ Prototype: the WORLD normal of the face holding the pink ring — set at boot and by a press that moves the target. */
+  pinkFaceNormal: Vec3 | null;
   /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */
   greenBoxDistM: number | null;
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */

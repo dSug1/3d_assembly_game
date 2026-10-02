@@ -15,6 +15,7 @@ import { boxDragGains } from "../input/follow_camera";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
+import { faceWorld } from "../core/object_model";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
@@ -378,6 +379,11 @@ export function installPointerHandler(st: SceneState): void {
               faceNormal.z,
             ] as Vec3)
           : null;
+      // ⭐ prototype (green box), 2026-10-02: a press that moved the target puts the pink ring on THIS face — the one the orbited
+      // pieces outside the guide sphere anti-align with (`trackOrbitedFaces`).
+      if (newTarget !== null && faceHit && pickedId !== undefined) {
+        st.pinkFaceNormal = faceWorld(st.world, pickedId, faceHit.faceId)?.normal ?? st.pinkFaceNormal;
+      }
       let pressFace = faceHit
         ? { faceId: faceHit.faceId, cos: faceHit.cos }
         : null;

@@ -420,3 +420,30 @@ export function cameraLag(shown: OrbitAt, wanted: OrbitAt, dtMs: number, tauMs: 
   const k = ease(dtMs, tauMs);
   return { yaw: shown.yaw + wrapPi(wanted.yaw - shown.yaw) * k, v: shown.v + (wanted.v - shown.v) * k };
 }
+
+/**
+ * ⭐ prototype (green box) — **HOW MANY DEGREES OF ORBIT ONE MILLIMETRE OF FINGER GIVES** (the owner, 2026-10-02: *"compute somewhere
+ * the delta yaw and pitch orbit degrees that a delta x or delta y position input provides"*). The orbit drag (`orbitDragStep`)
+ * turns `dx` mm into `dx × gainOrbitYaw × boxGainYaw` rad of YAW — the same anywhere on the rings — and `dy` mm into
+ * `dy × gainOrbitElevation × boxGainPitch` of the RING PARAMETER `v`, whose PITCH (`pitchOf`) is not linear in `v`: so the pitch
+ * rate is the slope there (a central difference; one-sided at a ring's end — the slope going back inward, the only way `v` can move). `gains` are the
+ * inside-the-leash factors (`boxDragGains`; 1 with no leash). Degrees per mm of `|dx|` and per mm of `v` increase (a finger moving
+ * DOWN on the glass, the box's inverted orbit): yaw positive; pitch SIGNED — ⚠ the pitch is not monotone along `Scene_1`'s waist
+ * rings (it peaks at ±33.5° near v = 0.25 / 0.75 and comes back to ±31.7° at the outer rings), so near a ring's end the sign flips.
+ */
+export function orbitDegPerMm(
+  cfg: GestureConfig,
+  v: number,
+  gains: { readonly yaw: number; readonly pitch: number } = { yaw: 1, pitch: 1 },
+): { readonly yawDegPerMm: number; readonly pitchDegPerMm: number } {
+  const DEG = 180 / Math.PI;
+  const dvPerMm = cfg.gainOrbitElevation * cfg.boxGainPitch * gains.pitch;
+  const h = 1e-4;
+  const lo = Math.max(0, v - h);
+  const hi = Math.min(1, v + h);
+  const slope = hi > lo ? (pitchOf(cfg, hi) - pitchOf(cfg, lo)) / (hi - lo) : 0;
+  return {
+    yawDegPerMm: cfg.gainOrbitYaw * cfg.boxGainYaw * gains.yaw * DEG,
+    pitchDegPerMm: slope * dvPerMm * DEG,
+  };
+}

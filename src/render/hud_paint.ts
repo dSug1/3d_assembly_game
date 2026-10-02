@@ -21,6 +21,7 @@ import { asVec3, modelPose } from "./bodies";
 import { hitFaceNow } from "./markers";
 import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
+import { boxDragGains, orbitDegPerMm } from "../input/follow_camera";
 
 export function describe(v: ReleaseVerdict) : string {
   // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16), and the
@@ -360,5 +361,19 @@ return ({
 /** ⭐ prototype (green box) — the HUD's `green` line: the green piece's distance to the YELLOW target (the marker). */
 export function greenReadout(st: SceneState): string {
   if (st.greenBox === null || st.greenBoxDistM === null) return "—";
-  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target`;
+  // ⭐ …and what one millimetre of finger orbits HERE (the owner, 2026-10-02): yaw per mm of dx, pitch per mm of dy (`orbitDegPerMm`).
+  const g =
+    st.boxOrbit === null || st.cameraOrbit === null
+      ? { yaw: 1, pitch: 1 }
+      : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+  const r = orbitDegPerMm(st.cfg, st.orbit.elevation, g);
+  // ⭐ …and the faces tracked while it is outside the guide sphere (`trackOrbitedFaces`).
+  // ⭐ …with DegreesYawPerFace, DeltaXYawPerFace, the face anti-aligned now in the order, and the dx accumulated toward the next.
+  const ft = st.faceTracks.get(st.greenBox);
+  const tr = ft?.faces;
+  const faces =
+    ft === undefined || tr === null || tr === undefined
+      ? "faces —"
+      : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/face = ${ft.dxPerFaceMm.toFixed(2)} mm dx, face ${ft.at + 1}/${ft.order.length} (dx ${ft.accMm.toFixed(1)} mm)`;
+  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }

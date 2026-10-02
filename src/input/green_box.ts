@@ -11,7 +11,7 @@
  * ⛔ ENGINE-FREE.
  */
 import type { BodySpec, Triple } from "../core/game_structure";
-import type { Vec3 } from "../core/vec";
+import { cross, dot, length, qmul, qRotate, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The smallest body of `colour` (by volume) — `null` when the scene has none. Frozen bodies are not candidates. */
 export function smallestOfColour(bodies: readonly BodySpec[], colour: readonly [number, number, number]): BodySpec | null {
@@ -247,4 +247,120 @@ export function pinkRingVisibility(
     masked = true;
   }
   return masked ? "TRANSLUCENT" : "VISIBLE";
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE FACES OF A PIECE OUTSIDE THE GUIDE SPHERE ARE TRACKED** (the owner, 2026-10-02: *"when a piece
+ * goes outside the white sphere, compute its number of faces and track them. This is valid for the green piece or any other piece
+ * which will later be orbited"* — *"also at boot, if any piece is outside the white sphere"*). What one frame does for one orbited
+ * piece, from whether it was outside last frame (`null` = never seen: the boot) and whether it is now:
+ * * `START` — it crossed outward, or it is outside at its first frame: compute its faces;
+ * * `KEEP` — still outside: update them;
+ * * `STOP` — back inside: drop them (the next exit computes them again);
+ * * `NONE` — inside, and was.
+ */
+export type FaceTracking = "START" | "KEEP" | "STOP" | "NONE";
+export function faceTracking(wasOutside: boolean | null, isOutside: boolean): FaceTracking {
+  if (isOutside) return wasOutside === true ? "KEEP" : "START";
+  return wasOutside === true ? "STOP" : "NONE";
+}
+
+/** ⭐ One face of a piece, in its own frame: outward normal, area centroid, area. */
+export interface PieceFace {
+  readonly normal: Vec3;
+  readonly centre: Vec3;
+  readonly areaM2: number;
+}
+
+/** ⭐ A face's area from its triangles (welded positions, 3 indices per triangle). */
+export function faceAreaM2(positions: readonly Vec3[], triangles: readonly number[]): number {
+  let a = 0;
+  for (let i = 0; i + 2 < triangles.length; i += 3) {
+    const p0 = positions[triangles[i]!]!;
+    a += length(cross(sub(positions[triangles[i + 1]!]!, p0), sub(positions[triangles[i + 2]!]!, p0))) / 2;
+  }
+  return a;
+}
+
+/** ⭐ A piece's faces from its mesh topology (the logical faces — a box's six, not its twelve triangles). */
+export function pieceFaces(
+  positions: readonly Vec3[],
+  faces: readonly { readonly normal: Vec3; readonly centre: Vec3; readonly triangles: readonly number[] }[],
+): PieceFace[] {
+  return faces.map((f) => ({ normal: f.normal, centre: f.centre, areaM2: faceAreaM2(positions, f.triangles) }));
+}
+
+/** ⭐ `DegreesYawPerFace` — the yaw face alignment span shared among the piece's faces (the owner, 2026-10-02). 0 with no face. */
+export function degreesYawPerFace(spanDeg: number, faceCount: number): number {
+  return faceCount > 0 ? spanDeg / faceCount : 0;
+}
+
+/** ⭐ `DeltaXYawPerFace` — the finger's dx (mm) that orbits one `DegreesYawPerFace`, at the yaw rate (`orbitDegPerMm`). */
+export function deltaXYawPerFace(degPerFace: number, yawDegPerMm: number): number {
+  return yawDegPerMm > 0 ? degPerFace / yawDegPerMm : Infinity;
+}
+
+/**
+ * ⭐ The dx accumulated since the faces were taken (`START`), and the face steps this frame's dx makes. The face is the accumulated
+ * dx ROUNDED to whole `DeltaXYawPerFace`s — so the face anti-aligned at `START` holds for half a step either way, every boundary
+ * sits at a fixed yaw, orbiting the whole span one way makes exactly one step per face, and orbiting back retraces them at the
+ * same places. ⛔ Not a remainder carried from step to step: that put the way back a whole step farther than the way forward.
+ */
+export function accumulateFaceSteps(accMm: number, dxMm: number, stepMm: number): { readonly accMm: number; readonly steps: number } {
+  if (!(stepMm > 0) || !Number.isFinite(stepMm)) return { accMm: 0, steps: 0 };
+  const a = accMm + dxMm;
+  const face = (x: number): number => Math.floor(x / stepMm + 0.5);
+  return { accMm: a, steps: face(a) - face(accMm) };
+}
+
+/** ⭐ The index of the face whose WORLD normal (under `q`) most anti-aligns with `target` — the lowest dot. -1 with no face. */
+export function mostAntiAligned(faces: readonly PieceFace[], q: Quat, target: Vec3): number {
+  let best = -1;
+  let bestDot = Infinity;
+  for (let i = 0; i < faces.length; i++) {
+    const d = dot(qRotate(q, faces[i]!.normal), target);
+    if (d < bestDot) {
+      bestDot = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * ⭐⭐ **THE ORDER THE FACES ARE ANTI-ALIGNED IN** (the owner, 2026-10-02: *"if the piece has more than 4 faces, select an order to
+ * anti-align the faces. all the faces should be anti-aligned once if the piece orbits in yaw over the full yaw face alignment
+ * span"*). A chain of SMALLEST TURNS: from `start` (the face anti-aligned now), each next face is the unused one whose normal is
+ * closest to the current one's (the least turn), ties to the lower index — every face exactly once. One rule for any count.
+ */
+export function faceOrder(faces: readonly PieceFace[], start: number): number[] {
+  if (start < 0 || start >= faces.length) return [];
+  const order = [start];
+  const used = new Set(order);
+  while (order.length < faces.length) {
+    const cur = faces[order[order.length - 1]!]!.normal;
+    let best = -1;
+    let bestDot = -Infinity;
+    for (let i = 0; i < faces.length; i++) {
+      if (used.has(i)) continue;
+      const d = dot(cur, faces[i]!.normal);
+      if (d > bestDot + 1e-9) {
+        bestDot = d;
+        best = i;
+      }
+    }
+    order.push(best);
+    used.add(best);
+  }
+  return order;
+}
+
+/**
+ * ⭐ The orientation that turns face `faceIndex` (under `q`) exactly ANTI-PARALLEL to `target` by the MINIMAL turn (`shortestArc`,
+ * applied on the world side), so nothing turns that need not. A face already anti-parallel returns `q`.
+ */
+export function antiAlignedOrientation(faces: readonly PieceFace[], faceIndex: number, q: Quat, target: Vec3): Quat {
+  const f = faces[faceIndex];
+  if (f === undefined) return q;
+  return qmul(shortestArc(qRotate(q, f.normal), [-target[0], -target[1], -target[2]]), q);
 }

@@ -125,6 +125,11 @@ export function installTuningMenu(st: SceneState): void {
           ],
         },
         {
+          // ⭐ prototype (green box), 2026-10-02: an orbited piece outside the guide sphere steps through its faces as it orbits.
+          title: "FACE ALIGNMENT IN YAW",
+          sliders: [tunable(st, "yaw face alignment span (deg, all faces once)", "yawFaceAlignSpanDeg", 30, 720, 15)],
+        },
+        {
           // ⭐ Where the camera sits relative to the green piece, and the zoom it boots at.
           title: "CAMERA OFFSET",
           sliders: [

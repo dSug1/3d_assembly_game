@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, faceOrder, mostAntiAligned, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -24,11 +24,13 @@ import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
-import { cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
+import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, orbitDegPerMm, springOrbit, wrapPi } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { ALIGN_SNAP_FRACTION } from "./scene_state";
+import { add, qRotate, qSlerp, type Quat } from "../core/vec";
 import type { SceneState } from "./scene_state";
 
 /** ⭐ The green. */
@@ -58,6 +60,9 @@ export function createGreenBox(st: SceneState): void {
   // cube shall billboard the camera"*). It keeps the world's axes: its width along x, its tapered height up y, its depth along z.
   box.billboardMode = Mesh.BILLBOARDMODE_NONE;
   st.greenBox = box;
+  // ⭐ prototype (green box), 2026-10-02: the first orbited piece — its faces are tracked outside the guide sphere (`trackOrbitedFaces`).
+  st.orbitedPieces.push(box);
+  box.rotationQuaternion = Quaternion.Identity();
   // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
   // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).
   // ⭐ prototype (green box), the owner 2026-10-02: *"make the pink ring slightly thicker and brighter so I can see it better"*.
@@ -278,6 +283,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
   guideSphereFrame(st);
+  trackOrbitedFaces(st, now);
 }
 
 /**
@@ -295,6 +301,8 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
     .filter((f): f is NonNullable<typeof f> => f !== null);
   const toward = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, GREEN_PIECE_ORBIT_ZOOM).offsetM;
   const face = faceToward(faces, toward);
+  // ⭐ …and that face's normal is the one the pink ring sits on — what an orbited piece anti-aligns with (`trackOrbitedFaces`).
+  if (face !== null) st.pinkFaceNormal = face.normal;
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }
 
@@ -336,4 +344,95 @@ export function guideSphereFrame(st: SceneState): void {
   s.scaling.set(r, r, r);
   const t = st.centreBlend.targetM;
   s.position.set(t[0], t[1], t[2]);
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **AN ORBITED PIECE'S FACES, TRACKED OUTSIDE THE GUIDE SPHERE** (the owner, 2026-10-02: *"when a piece
+ * goes outside the white sphere, compute its number of faces and track them. This is valid for the green piece or any other piece
+ * which will later be orbited"* — *"also at boot, if any piece is outside the white sphere"*). Each frame, for each orbited piece
+ * (`orbitedPieces`), the decision is `faceTracking`'s: on `START` (an outward crossing, or outside at its first frame — the boot)
+ * its logical faces are read off its mesh (`topologyFromMesh`, `pieceFaces`); while it stays outside, their world normals and
+ * centres follow it; back inside, they are dropped. The test is the white contour's own (`outsideSphere`, its centre).
+ * ⭐⭐ **AND IT STEPS THROUGH THEM AS IT ORBITS IN YAW** (the owner, 2026-10-02): `DegreesYawPerFace` = the yaw face alignment span ÷
+ * its faces, and `DeltaXYawPerFace` = the finger dx that orbits that much, at the yaw rate (`orbitDegPerMm`). On `START` the face
+ * most anti-aligned with the pink ring's face is turned exactly anti-parallel — the first of the order (`faceOrder`). Then the
+ * orbit's yaw each frame, as finger mm (the drag's dx; the inertia coast's too, so the faces never fall out of step with the
+ * yaw), accumulates since `START` (`accumulateFaceSteps`): rounded to whole `DeltaXYawPerFace`s it names the face — one step one
+ * way anti-aligns the NEXT face of the order, the other way the previous one, at the same yaw going and coming back. A change of the pink face's normal re-anti-aligns the current face. Every turn is the minimal one
+ * (`antiAlignedOrientation`), eased like an alignment's (`greenTurnFrame`). ⛔ Inside the sphere nothing turns (a turn already in
+ * flight lands): the face anti-aligned is kept.
+ */
+export function trackOrbitedFaces(st: SceneState, now: number): void {
+  const t = st.centreBlend.targetM;
+  const radius = GUIDE_SPHERE_SHARE * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
+  const yaw = st.orbit.yaw;
+  const g =
+    st.boxOrbit === null || st.cameraOrbit === null
+      ? { yaw: 1, pitch: 1 }
+      : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
+  const yawDegPerMm = orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm;
+  const pink = st.pinkFaceNormal;
+  for (const m of st.orbitedPieces) {
+    const p = m.getAbsolutePosition();
+    const out = outsideSphere([p.x, p.y, p.z], [t[0], t[1], t[2]], radius);
+    const prev = st.faceTracks.get(m);
+    const step = faceTracking(prev === undefined ? null : prev.outside, out);
+    if (step === "NONE" || step === "STOP") {
+      st.faceTracks.set(m, { outside: out, faces: null, world: [], order: [], at: 0, degPerFace: 0, dxPerFaceMm: Infinity, accMm: 0, yaw, pink });
+      if (step === "STOP") st.hudDirty = true;
+      continue;
+    }
+    const cur = fromBabylon(m.rotationQuaternion ?? Quaternion.Identity());
+    let faces = prev?.faces ?? null;
+    let order = prev?.order ?? [];
+    let at = prev?.at ?? 0;
+    let accMm = prev?.accMm ?? 0;
+    let turnTo: number | null = null;
+    if (step === "START" || faces === null) {
+      const topo = topologyFromMesh(m);
+      faces = topo === null ? [] : pieceFaces(topo.positions, topo.faces);
+      order = pink === null ? [] : faceOrder(faces, mostAntiAligned(faces, cur, pink));
+      at = 0;
+      accMm = 0;
+      turnTo = order[0] ?? null;
+      st.hudDirty = true;
+    }
+    const degPerFace = degreesYawPerFace(st.cfg.yawFaceAlignSpanDeg, faces.length);
+    const dxPerFaceMm = deltaXYawPerFace(degPerFace, yawDegPerMm);
+    if (step === "KEEP" && prev !== undefined && order.length > 0) {
+      // the orbit's yaw this frame, as the finger mm that would make it (a drag's dx exactly; a coast's equivalent)
+      const dYawDeg = (wrapPi(yaw - prev.yaw) * 180) / Math.PI;
+      const a = accumulateFaceSteps(accMm, yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0, dxPerFaceMm);
+      accMm = a.accMm;
+      if (a.steps !== 0) {
+        at = (((at + a.steps) % order.length) + order.length) % order.length;
+        turnTo = order[at]!;
+        st.hudDirty = true;
+      } else if (pink !== null && prev.pink !== pink) turnTo = order[at]!; // the pink face changed: slerp onto it
+    }
+    if (turnTo !== null && pink !== null) {
+      // ⭐ from where the piece IS (a turn in flight is retargeted, never queued)
+      st.pieceTurns.set(m, { from: cur, to: antiAlignedOrientation(faces, turnTo, cur, pink), t0: now });
+    }
+    // ⚠ The topology already carries the mesh's SCALE (`topologyFromMesh`), so only its rotation and position place the faces.
+    m.computeWorldMatrix(true);
+    const r = m.absoluteRotationQuaternion;
+    const q: Quat = [r.w, r.x, r.y, r.z];
+    const world = faces.map((f) => ({ normal: qRotate(q, f.normal), centre: add([p.x, p.y, p.z], qRotate(q, f.centre)) }));
+    st.faceTracks.set(m, { outside: out, faces, world, order, at, degPerFace, dxPerFaceMm, accMm, yaw, pink });
+  }
+  greenTurnFrame(st, now);
+}
+
+const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]);
+const fromBabylon = (q: Quaternion): Quat => [q.w, q.x, q.y, q.z];
+
+/** ⭐ prototype (green box): each orbited piece's anti-alignment turn, one frame — a smoothstep slerp over an alignment's time. */
+function greenTurnFrame(st: SceneState, now: number): void {
+  const ms = st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+  for (const [m, turn] of st.pieceTurns) {
+    const u = ms > 0 ? Math.min(1, Math.max(0, (now - turn.t0) / ms)) : 1;
+    m.rotationQuaternion = toBabylon(qSlerp(turn.from, turn.to, u * u * (3 - 2 * u)));
+    if (u >= 1) st.pieceTurns.delete(m);
+  }
 }

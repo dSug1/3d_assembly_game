@@ -296,3 +296,37 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   ⚠ Still the worst ring: between the rings the exact limit is far lower (0.28 at 1.4 m, 0.09 at the waist) — a limit from the
   CURRENT ring position would release it, at the cost of the zoom being pushed out while orbiting outward.
 * ⭐ **Keep-in-view margin 0.9** (the owner, 2026-10-02; was 0.8): portrait (0.53) **0.60 → 0.53**, landscape **0.25 → 0.22**.
+* ⭐ **Orbit degrees per millimetre of finger** (the owner, 2026-10-02: *"compute somewhere the delta yaw and pitch orbit degrees that
+  a delta x or delta y position input provides"* — *"we will use that in the code"*): `orbitDegPerMm(cfg, v, gains)` in
+  `input/follow_camera.ts`, on the HUD's `green` line (`orbit 5.11°/mm dx, …°/mm dy`). YAW = `gainOrbitYaw × boxGainYaw` — **5.11°/mm**
+  anywhere on the rings. PITCH = the slope of `pitchOf` at the ring position × `gainOrbitElevation × boxGainPitch` (0.01 of `v` per
+  mm), SIGNED, per mm of finger down: `Scene_1` **4.81°/mm at the waist**, 1.11 at v = 0.4 / 0.6, ~0.1 near the outer rings.
+  ⚠⚠ **The pitch is NOT monotone along `Scene_1`'s rings**: it peaks at ±33.5° near v = 0.25 / 0.75 and comes back to ±31.7° at
+  the outer rings, so past the peak a finger the same way turns the pitch back (the rate's sign flips). The inside-leash `gains`
+  (`boxDragGains`) scale both; with no leash they are 1. Checked against `OrbitController.drag` itself, `tests/proto_orbit_rates.test.ts`.
+* ⭐⭐ **An orbited piece's faces are tracked outside the guide sphere** (the owner, 2026-10-02: *"when a piece goes outside the white
+  sphere, compute its number of faces and track them. This is valid for the green piece or any other piece which will later be
+  orbited"* — *"also at boot, if any piece is outside the white sphere"*). The orbited pieces are a list (`orbitedPieces`, the green
+  piece today). Each frame (`trackOrbitedFaces`, deciding by `faceTracking`): on an outward crossing — or outside at its first
+  frame, the boot — its LOGICAL faces are read off its mesh (`topologyFromMesh`, `pieceFaces`: normal, centre, area — a box's six,
+  not its twelve triangles); while it stays outside their world normals and centres follow it (rotation + position only: the
+  topology already carries the mesh's scale); back inside they are dropped. The HUD's `green` line: `faces 6 tracked` / `faces —`.
+  `tests/proto_face_tracking.test.ts`.
+* ⭐⭐ **AN ORBITED PIECE STEPS THROUGH ITS FACES AS IT ORBITS IN YAW** (the owner, 2026-10-02: *"set the yaw face alignment span to 180
+  degrees … divide [it] by the number of faces … DegreesYawPerFace … compute the delta x position required (DeltaXYawPerFace) based
+  on the yaw rate … every time delta x position accumulates beyond DeltaXYawPerFace, rotate the piece so that the next face is
+  anti-aligned with the normal of the face holding the pink gizmo. If the pink gizmo face normal changes, slerp the piece … all the
+  faces should be anti-aligned once if the piece orbits in yaw over the full yaw face alignment span … inside the white sphere, the
+  anti-aligned face shall be maintained and no rotation shall take place"*). `yawFaceAlignSpanDeg` **180** (CAMERA › FACE ALIGNMENT
+  IN YAW, 30–720). On `START` (out of the sphere, or outside at boot): `DegreesYawPerFace` = span ÷ faces (the green piece: 6 →
+  **30°**), `DeltaXYawPerFace` = that ÷ the yaw rate (**5.88 mm** of dx at 5.11°/mm), and the face most anti-aligned with the pink
+  ring's face (`pinkFaceNormal`: the blue piece's face at boot, then the face a press moved the target to) is turned exactly
+  anti-parallel — the first of the ORDER, a chain of smallest turns (`faceOrder`: each next face the unused one closest to the
+  current; every face once). The orbit's yaw each frame, as finger mm (a drag's dx; the inertia coast's equivalent, so the faces
+  stay in step with the yaw), accumulates from `START`; ROUNDED to whole `DeltaXYawPerFace`s it names the face
+  (`accumulateFaceSteps`) — the START face holds ±½ step, the boundaries sit at fixed yaws, and orbiting back retraces them at the
+  same places (⛔ a remainder carried from step to step put the way back a whole step farther). A change of the pink face's normal
+  slerps the current face onto it. Every turn is the minimal one (`antiAlignedOrientation`), eased over an alignment's time
+  (`cameraResetMs × ALIGN_SNAP_FRACTION`, smoothstep). ⛔ Inside the sphere nothing turns (a turn already in flight lands); the
+  next exit starts again from the face anti-aligned then. HUD `green`: `faces 6 tracked, 30.0°/face = 5.88 mm dx, face 1/6 (dx … mm)`.
+  `tests/proto_face_steps.test.ts`.
