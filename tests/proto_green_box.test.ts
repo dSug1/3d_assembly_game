@@ -489,6 +489,31 @@ describe("⭐ prototype — the CAMERA menu has subsections (the owner, 2026-10-
   });
 });
 
+describe("⛔⛔ prototype — NO STAIR between the rings: the camera's pitch axis runs on the ring position (the owner, 2026-10-02: *\"there is still a 'stair' effect at the transitions between rings\"*)", () => {
+  const DEG = Math.PI / 180;
+  it("⛔ on the waist the pitch angle is NOT monotone — it overshoots the top ring's pitch, then comes back", async () => {
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const peak = Math.max(...Array.from({ length: 101 }, (_, i) => pitchOf(cfg, 0.5 + i * 0.005)));
+    expect(peak).toBeGreaterThan(pitchOf(cfg, 1) + 1 * DEG); // 34.06° against 31.7°
+  });
+
+  it("⭐⭐ with the leash at 0, a dy sweep middle → top → middle: the camera sits EXACTLY on the green piece's pitch all the way", async () => {
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const P0 = { leashRad: 0, settleDelayMs: 0, restTauMs: 120 };
+    let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, cfg);
+    let worst = 0;
+    const path = [...Array.from({ length: 100 }, (_, i) => 0.5 + (i + 1) * 0.005), ...Array.from({ length: 100 }, (_, i) => 1 - (i + 1) * 0.005)];
+    path.forEach((v, f) => {
+      const box = { yaw: 0, v };
+      s = cameraOrbitStep(s, box, (f + 1) * 16, 16, cfg, P0, box, { yaw: false, pitch: true, holdMs: 150 });
+      worst = Math.max(worst, Math.abs(pitchOf(cfg, s.cam.v) - pitchOf(cfg, v)));
+    });
+    expect(worst / DEG).toBeLessThan(0.01); // ⛔ was 2.4° — the camera clamped at the top ring's pitch, then snapped back
+  });
+});
+
 describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 2026-10-02: *\"the shape shall be a waist … propose the three missing parameters so that the 2D curve … can be smooth\"*)", () => {
   it("⭐ the two reasons for the numbers: the middle ring clears the painting, the outer rings stay under the 3 m clamp — at the boot zoom", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");

@@ -83,6 +83,8 @@ const PENDING: Record<string, string> = {
   smallestOfColour: "the green proxy's first size (the smallest yellow piece) — replaced on the prototype by Piece17 × 150 %",
   // ⭐ prototype (green box), 2026-10-02: the box follows the rig on a spring now (`springOrbit`) — no speed jump per event.
   easeOrbit: "the green box's first ease (one exponential) — replaced by `springOrbit`; kept as the vectors' reference for the jitter it caused",
+  // ⭐ prototype (green box), 2026-10-02: the camera's pitch axis runs on the ring position `v` now — the angle is not monotone.
+  vForPitch: "pitch → ring position by a search that assumes the pitch rises monotonically — false on a waist (the stair); kept for its vectors",
   // ⭐ prototype (green box), 2026-10-01: the empty-space press reads `nearestPairCentre` on this branch only.
   orbitCentre: "§2 rule 1's subset barycentre — replaced on the prototype branch by `nearestPairCentre`; the main line still calls it",
   // ⭐ `D182`: its two product callers went with the Pioneer-sway radius and the unsnap grace.

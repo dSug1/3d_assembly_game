@@ -110,8 +110,29 @@ function axisAt(angle: number, nowMs: number): AxisState {
 
 /** ⭐ The camera orbit starts aligned with the box, at rest. */
 export function cameraOrbitAt(box: OrbitAt, nowMs: number, cfg: GestureConfig): CameraOrbitState {
-  const pitch = pitchOf(cfg, box.v);
-  return { cam: box, yaw: axisAt(box.yaw, nowMs), pitch: axisAt(pitch, nowMs), yawVel: 0, pitchVel: 0 };
+  void cfg; // ⭐ 2026-10-02: the pitch axis runs on the ring position `v` (`cameraOrbitStep`), so no angle is needed to start it
+  return { cam: box, yaw: axisAt(box.yaw, nowMs), pitch: axisAt(box.v, nowMs), yawVel: 0, pitchVel: 0 };
+}
+
+/**
+ * ⭐ The pitch LEASH (an angle) as a distance in ring position `v`, for a camera at `camV` behind a box at `boxV`: how far from the
+ * box, toward the camera, the pitch first differs from the box's by `leashRad` — found on that stretch (bisection), so it is exact
+ * whatever the rings' shape. ⭐ If the whole stretch stays within the leash, the camera is inside it: the stretch itself (plus a
+ * hair). `0` for no leash.
+ */
+export function leashInV(cfg: GestureConfig, boxV: number, camV: number, leashRad: number): number {
+  if (!(leashRad > 0)) return 0;
+  const pb = pitchOf(cfg, boxV);
+  const off = (v: number) => Math.abs(pitchOf(cfg, v) - pb);
+  if (off(camV) <= leashRad) return Math.abs(boxV - camV) + 1e-9;
+  let near = boxV; // within the leash
+  let far = camV; // beyond it
+  for (let i = 0; i < 50; i++) {
+    const mid = (near + far) / 2;
+    if (off(mid) < leashRad) near = mid;
+    else far = mid;
+  }
+  return Math.abs(boxV - (near + far) / 2);
 }
 
 /** ⭐ One step of a glide, integrated EXACTLY: `s = D − (D − s)·e^(−dt/τ)`; within a millidegree it lands. */
@@ -246,12 +267,29 @@ export function cameraOrbitStep(
     finger === null ? 0 : finger.holdMs,
     released,
   );
-  const pc = pitchOf(cfg, s.cam.v);
-  const pb = pitchOf(cfg, box.v);
-  const pd = pitchOf(cfg, driver.v);
-  const q = axisStep(s.pitch, pb - pc, pd - pc, pd - s.pitch.lastDriver, pb, pd, nowMs, dtMs, p, finger === null ? null : finger.pitch, finger === null ? 0 : finger.holdMs, released);
+  // ⛔⛔ prototype (green box), 2026-10-02 (the owner: *"there is still a 'stair' effect at the transitions between rings"*): the
+  // pitch axis runs on the RING POSITION `v`, not on the pitch ANGLE. ⛔ The angle is not monotone along the rings — on the waist it
+  // rises to 34.06° at v = 0.70, then falls back to 31.5° — and `vForPitch`'s search assumed it was: the camera could not reach
+  // any pitch above the top ring's 31.7°, clamped there, lagged the green piece by up to 2.4° even at leash 0, then snapped
+  // back — the stair. `v` always moves one way. ⭐ The leash stays an ANGLE, converted to `v` EXACTLY on the stretch between the
+  // camera and the box (`leashInV`).
+  const leashV = leashInV(cfg, box.v, s.cam.v, p.leashRad);
+  const q = axisStep(
+    s.pitch,
+    box.v - s.cam.v,
+    driver.v - s.cam.v,
+    driver.v - s.pitch.lastDriver,
+    box.v,
+    driver.v,
+    nowMs,
+    dtMs,
+    { ...p, leashRad: leashV },
+    finger === null ? null : finger.pitch,
+    finger === null ? 0 : finger.holdMs,
+    released,
+  );
   return {
-    cam: { yaw: s.cam.yaw + y.move, v: q.move === 0 ? s.cam.v : vForPitch(cfg, pc + q.move) },
+    cam: { yaw: s.cam.yaw + y.move, v: Math.min(1, Math.max(0, s.cam.v + q.move)) },
     yaw: y.next,
     pitch: q.next,
     yawVel: y.next.vel,

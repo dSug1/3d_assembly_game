@@ -231,3 +231,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   Its occlusion and translucency are unchanged.
 * ⭐ **The CAMERA menu has subsections** (*"there are too many rows directly under CAMERA menu"*): only the edge band sits
   directly under it; GREEN PIECE ORBIT, CAMERA OFFSET, CAMERA FOLLOW, ORBIT SWAY, RENDERING, CAMERA ORBIT.
+* ⛔⛔ **THE STAIR BETWEEN THE RINGS WAS THE CAMERA, NOT ONLY THE RINGS** (the owner, 2026-10-02, after the waist: *"there is still
+  a 'stair' effect at the transitions between rings"*). The camera's pitch axis ran on the pitch ANGLE and turned it back into a
+  ring position with `vForPitch`, a search that assumes the angle rises monotonically from the bottom ring to the top. ⛔ It does
+  not: on the waist the angle climbs to **34.06° at v = 0.70, then falls back to 31.5°** (the top ring is 31.7°). The camera could
+  not reach any pitch above the top ring's, clamped there, lagged the green piece by **up to 2.4° even at leash 0**, then snapped
+  back — the stair (the old rings had a smaller hump, the same flaw). ✅ The pitch axis now runs on the ring position `v`, which
+  always moves one way (`cameraOrbitStep`); the leash stays an angle, converted to `v` exactly on the stretch between the camera
+  and the box (`leashInV`, bisection). At leash 0 the camera now sits exactly on the green piece's pitch (error < 0.01°; 2.41°
+  before — the vector). `vForPitch` is kept, declared unwired. ⚠ What remains is the waist's own shape: near the middle ring the
+  view angle changes fast (0 → 31° over the first fifth of the climb), then hardly at all — that is the geometry, not a jump.
