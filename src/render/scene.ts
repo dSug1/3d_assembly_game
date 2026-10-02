@@ -79,6 +79,7 @@ import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
 import { bootTargetOnBlueFace, createGreenBox } from "./green_box_wiring";
+import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
@@ -561,10 +562,11 @@ export function createScene(
   st.orbitInertia = new OrbitInertia();
   st.greenPieceVolumeM3 = 0;
   st.cameraReleasePending = false;
+  st.greenZoomMin = 0.1;
+  st.greenZoomMinKey = "";
   st.boxOrbit = null;
   st.boxSpring = null;
   st.pinkRing = null;
-  st.targetSetByPress = false;
   st.greenBoxDistM = null;
   createGreenBox(st);
 
@@ -600,12 +602,11 @@ export function createScene(
     // the camera will never show (`input/mouse_wheel_zoom.ts`).
     const base = st.orbit.pose(1).radiusM;
     if (!(base > 1e-9)) return;
-    st.zoom = wheelZoom(
-      st.zoom,
-      notches,
-      st.cfg.cameraRadiusMinM / base,
-      st.cfg.cameraRadiusMaxM / base,
-    );
+    // ⭐ prototype (green box), 2026-10-02: with a green piece the zoom is the CAMERA's distance behind it — its own range, 0.1–2.
+    st.zoom =
+      st.greenBox !== null
+        ? wheelZoom(st.zoom, notches, Math.max(GREEN_ZOOM_MIN, st.greenZoomMin), GREEN_ZOOM_MAX)
+        : wheelZoom(st.zoom, notches, st.cfg.cameraRadiusMinM / base, st.cfg.cameraRadiusMaxM / base);
     st.zoomAtPinchStart = st.zoom;
     applyCamera(st);
   },

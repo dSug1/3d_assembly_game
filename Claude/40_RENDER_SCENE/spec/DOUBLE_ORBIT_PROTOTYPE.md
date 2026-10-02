@@ -252,3 +252,26 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   one whose normal points most toward the green piece's boot direction (`faceToward`, `bootTargetOnBlueFace`) — at boot (top
   ring, boot yaw) that direction is (0, 0.53, −0.85), so it is Piece10's FRONT face (−z), its centre ≈ (0.104, 0.279, −0.05) m.
   (It was the scene's boot centre, (0, 0.23, 0) — behind the painting's panel.) No blue piece: the scene's own boot centre.
+* ⭐ **The pink ring occludes from boot** (the owner, 2026-10-02: *"the pink ring shall occlude already from boot because it sits
+  on the blue piece face"*): the boot exemption (translucent behind pieces until a placed-piece press) is switched off — the
+  boot target is on Piece10's face now, so the one rule applies from the first frame. `pinkRingVisibility`'s `bootTarget`
+  parameter stays (`true` restores it); `targetSetByPress` is deleted.
+* ⭐⭐ **THE ZOOM MOVES THE CAMERA, NOT THE GREEN PIECE** (the owner, 2026-10-02: *"the zoom shall bring the camera closer to or
+  further away from the green piece. zoom from 0.1 to 2, with 1.00 corresponding to the current distance"*). ⛔ It scaled the
+  RINGS — the green piece's own orbit. Now the green piece rides the rings as they are (`GREEN_PIECE_ORBIT_ZOOM` = 1, also for
+  the orbit swing's axis and the boot face), and the zoom scales the camera's distance BEHIND it: `cameraRadiusOffsetMm ×
+  zoom` (`cameraGapM`; 1.00 = 1.25 m, 0.1 = 0.125 m, 2 = 2.5 m), held to **0.1–2** every frame (`clampGreenZoom`). The wheel uses
+  that range with a green piece; the pinch's factor is clamped the next frame; the *boot zoom* slider (CAMERA OFFSET) is now
+  that zoom, 0.1–2 step 0.05. Spreading two fingers still brings the camera closer, as before.
+* ⭐⭐ **THE ZOOM NEVER BRINGS THE CAMERA SO CLOSE THE GREEN PIECE LEAVES THE SCREEN** (the owner, 2026-10-02: *"make sure that given
+  the yaw and pitch offset, a close zoom cannot result in the green piece being out of the screen"* → option A, *"not recomputed
+  at each frame"*). The camera sits δ (an offset) off the green piece's direction and looks at the target, so seen from it the
+  piece is `atan(d·sin δ / (g + d·(1 − cos δ)))` off-centre — 90° as the gap g → 0. `minGreenZoom` gives the closest zoom that
+  keeps it inside `greenKeepInViewMargin` (**0.8** of the half-view; CAMERA OFFSET slider 0.3–1): the yaw offset against the
+  HORIZONTAL half-angle (`tan(h/2) = tan(v/2) × aspect` — ±15.1° in portrait, the binding one), the pitch against the vertical
+  (±22.9°, Babylon's default 0.8 rad). ⭐ For the FARTHEST the piece can be (the outer rings, capped at the 3 m limit) — the worst
+  case, so it holds on every ring and is recomputed only when an offset, the margin, the radius offset, the rings, the field of
+  view or the screen's shape changes (a key compared each frame), never while orbiting or zooming. The zoom (and the wheel) is
+  held to it: with 3° / 2° it is **0.55 in portrait, 0.26 in landscape**; the HUD's camera line shows it (`zoom=1.00(≥0.55)`).
+  ⚠ The cost: on the middle ring the camera could come closer; the limit is the outer rings'. ⚠ An offset so large it needs
+  more than zoom 2 (12° in portrait needs 2.33) is capped at 2, and the piece then sits outside the margin.

@@ -9,7 +9,7 @@ import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, faceToward, greenPyramidSizeM, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -107,8 +107,10 @@ export function pinkRingFrame(st: SceneState): void {
       return id !== undefined && st.world.objects.get(id)?.frozen !== true;
     }) ?? []
   ).map((h) => ({ distanceM: h.distance, isGreenBox: h.pickedMesh === st.greenBox }));
-  // ⭐ At the BOOT target (no placed-piece press yet), never hidden — translucent behind pieces (the owner, 2026-10-02).
-  const v = pinkRingVisibility(hits, dist, PINK_EPS_M, !st.targetSetByPress);
+  // ⭐ The owner, 2026-10-02: *"the pink ring shall occlude already from boot because it sits on the blue piece face"* — the
+  // boot exemption (translucent behind pieces until a placed-piece press, `bootTarget`) is switched OFF: the boot target is on a
+  // face now, so the one rule applies from the first frame.
+  const v = pinkRingVisibility(hits, dist, PINK_EPS_M);
   ring.isVisible = v !== "HIDDEN";
   ring.alpha = v === "TRANSLUCENT" ? PINK_MASKED_ALPHA : 1;
   const m = trackingMetresPerPx(dist, st.camera.fov, st.canvas.clientHeight) * GIZMO_RING_PX;
@@ -134,7 +136,37 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
     st.orbit.nudge(d.dYaw, d.dV);
   }
-  const rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: st.zoom };
+  // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
+  // one zoom (wheel, pinch, boot) is held to its range here (`clampGreenZoom`), every frame.
+  // ⭐⭐ …never closer than keeps the green piece on screen (`minGreenZoom`, the worst case over the rings) — RECOMPUTED ONLY when
+  // what it depends on changes (an offset, the margin, the radius offset, the rings, the field of view, the screen's shape):
+  // the owner, *"not recomputed at each frame"*. The key is compared each frame; the limit is computed on a change only.
+  const cfg = st.cfg;
+  const farthestM = Math.min(
+    cfg.cameraRadiusMaxM,
+    Math.max(
+      Math.hypot(cfg.orbitTopRadiusM, cfg.orbitTopHeightM),
+      Math.hypot(cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM),
+      Math.hypot(cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM),
+    ) * GREEN_PIECE_ORBIT_ZOOM,
+  );
+  const aspect = st.canvas.clientHeight > 0 ? st.canvas.clientWidth / st.canvas.clientHeight : 1;
+  const key = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.greenKeepInViewMargin, cfg.cameraRadiusOffsetMm, farthestM, st.camera.fov, aspect].join("|");
+  if (key !== st.greenZoomMinKey) {
+    st.greenZoomMinKey = key;
+    st.greenZoomMin = minGreenZoom({
+      yawOffsetRad: (cfg.cameraYawOffsetDeg * Math.PI) / 180,
+      pitchOffsetRad: (cfg.cameraPitchOffsetDeg * Math.PI) / 180,
+      farthestM,
+      radiusOffsetM: cfg.cameraRadiusOffsetMm / 1000,
+      fovVerticalRad: st.camera.fov,
+      aspect,
+      margin: cfg.greenKeepInViewMargin,
+    });
+    st.hudDirty = true;
+  }
+  st.zoom = clampGreenZoom(st.zoom, st.greenZoomMin);
+  const rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
   // ⭐ prototype (green box), 2026-10-02: on a critically damped SPRING (`springOrbit`) — no speed jump at a pointer event, so
   // the camera's time lag no longer shows a pulse (it was `easeOrbit`, one exponential). Same response: τ = boxSmoothMs / 2.
   st.boxSpring =
@@ -207,7 +239,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.cameraLagged,
     [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k],
     { yawRad: st.cfg.cameraYawOffsetDeg * D, pitchRad: st.cfg.cameraPitchOffsetDeg * D },
-    st.cfg.cameraRadiusOffsetMm / 1000,
+    // ⭐ …and the ZOOM scales the camera's distance behind the green piece (`cameraGapM`) — 1.00 the radius offset itself.
+    cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom),
   );
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   st.camera.setPosition(new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]));
@@ -232,7 +265,7 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
   const faces = o.faces
     .map((f) => faceWorld(st.world, blue.id, f.id))
     .filter((f): f is NonNullable<typeof f> => f !== null);
-  const toward = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, st.orbitStartZoom).offsetM;
+  const toward = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, GREEN_PIECE_ORBIT_ZOOM).offsetM;
   const face = faceToward(faces, toward);
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }

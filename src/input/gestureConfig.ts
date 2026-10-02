@@ -503,6 +503,8 @@ export interface GestureConfig {
   orbitSlideMm: number;
   /** ⭐ Prototype: the green piece's ORBIT INERTIA — its coast's time constant per cm³ of its volume, ms (`inertiaTauMs`); 0 = none. */
   orbitInertiaGain: number;
+  /** ⭐ Prototype: the share of the half-view the green piece is kept inside (`minGreenZoom`) — 0.8 = the central 80 %. */
+  greenKeepInViewMargin: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -956,6 +958,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSwayKind: 0,
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
+  greenKeepInViewMargin: 0.8, // ⭐ prototype (green box), 2026-10-02 — a guess with a slider
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
@@ -1101,6 +1104,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
+  }
+  if (!(cfg.greenKeepInViewMargin > 0 && cfg.greenKeepInViewMargin <= 1)) {
+    throw new Error(`greenKeepInViewMargin (${cfg.greenKeepInViewMargin}) must be in (0, 1].`);
   }
   if (!(cfg.orbitInertiaGain >= 0 && cfg.orbitInertiaGain <= 50)) {
     throw new Error(`orbitInertiaGain (${cfg.orbitInertiaGain}) must be in [0, 50] ms/cm³.`);

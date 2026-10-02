@@ -7,7 +7,7 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
@@ -347,8 +347,6 @@ export function installPointerHandler(st: SceneState): void {
       );
       if (newTarget !== null) {
         st.centreBlend.retarget(newTarget);
-        // ⭐ prototype (green box): the target is no longer the boot one — the pink ring's normal occlusion applies from now.
-        st.targetSetByPress = true;
         syncCentre(st);
       }
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*
@@ -1144,7 +1142,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const kick = st.orbitSway.watcher.push(s, st.orbitMotion.tracker.current === "MOVING", true);
     if (kick) {
       const kinds = orbitSwayKinds(st.cfg.orbitSwayKind);
-      const pose = st.orbit.pose(st.zoom);
+      const pose = st.orbit.pose(GREEN_PIECE_ORBIT_ZOOM); // ⭐ the rings as they are — the zoom moves the camera only
       const k = pose.radiusM > 1e-9 ? clampCameraRadiusM(pose.radiusM, st.cfg) / pose.radiusM : 1;
       const c = st.orbitCentreM;
       const t = st.centreBlend.targetM;

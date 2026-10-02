@@ -64,7 +64,8 @@ return ({
  * returns — the boot view, as if the scene had booted with it.
  */
 export function bootZoomSlider(st: SceneState): MenuSlider {
-  const base = tunable(st, "boot zoom (×, the rings × this)", "bootZoom", 0.5, 10, 0.1);
+  // ⭐ 2026-10-02: the zoom is the CAMERA's distance behind the green piece (× the radius offset), 0.1–2.
+  const base = tunable(st, "boot zoom (× the camera's distance behind the green piece)", "bootZoom", 0.1, 2, 0.05);
   return {
     ...base,
     set: (value) => {
@@ -131,6 +132,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 1),
             tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
             tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 50),
+            // ⭐ 2026-10-02: the zoom never comes closer than keeps the green piece inside this share of the view.
+            tunable(st, "green piece keep-in-view margin (share of the half-view)", "greenKeepInViewMargin", 0.3, 1, 0.05),
           ],
         },
         {

@@ -35,8 +35,10 @@ describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
     expect(w).toMatch(/ring\.billboardMode = Mesh\.BILLBOARDMODE_ALL;/);
     expect(w).toMatch(/st\.world\.objects\.get\(id\)\?\.frozen !== true/);
     expect(w).toMatch(/ring\.alpha = v === "TRANSLUCENT" \? PINK_MASKED_ALPHA : 1;/);
-    expect(w).toMatch(/pinkRingVisibility\(hits, dist, PINK_EPS_M, !st\.targetSetByPress\)/);
-    expect(code("render/pointer_wiring.ts")).toMatch(/st\.centreBlend\.retarget\(newTarget\);[\s\S]{0,200}st\.targetSetByPress = true;/);
+    // ⭐ the owner, 2026-10-02: *"the pink ring shall occlude already from boot because it sits on the blue piece face"* — one
+    // rule from the first frame; the boot exemption is switched off (the parameter stays, `true` would restore it)
+    expect(w).toMatch(/const v = pinkRingVisibility\(hits, dist, PINK_EPS_M\);/);
+    expect(w).not.toMatch(/targetSetByPress/);
     expect(w.indexOf("pinkRingFrame(st);")).toBeGreaterThan(w.indexOf("st.camera.setTarget(c.clone());"));
   });
 });

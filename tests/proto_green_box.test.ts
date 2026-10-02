@@ -447,7 +447,8 @@ describe("⭐⭐ prototype — the green box", () => {
 
   it("⭐ prototype: the boot zoom has a SLIDER in CAMERA, applied at once and kept for the camera reset (the owner: *\"add the slider boot zoom\"*)", () => {
     const m = code("tuning_menu.ts");
-    expect(m).toMatch(/tunable\(st, "boot zoom \(×, the rings × this\)", "bootZoom", 0\.5, 10, 0\.1\)/);
+    // ⭐ 2026-10-02: the zoom is the camera's distance behind the green piece — its range 0.1–2
+    expect(m).toContain(`tunable(st, "boot zoom (× the camera's distance behind the green piece)", "bootZoom", 0.1, 2, 0.05)`);
     expect(m.indexOf("bootZoomSlider(st),")).toBeGreaterThan(m.indexOf('title: "CAMERA"'));
     const body = m.slice(m.indexOf("export function bootZoomSlider"), m.indexOf("export function installTuningMenu"));
     for (const w of ["st.orbitStartZoom = value", "st.zoom = value", "st.zoomAtPinchStart = value", "applyCamera(st)"]) expect(body).toContain(w);
@@ -605,7 +606,87 @@ describe("⭐⭐ prototype — the boot orbit centre is the blue piece's face to
     expect(blue.map((b) => b.id)).toEqual(["Piece10"]);
     expect(code("scene.ts")).toMatch(/new OrbitCentreBlend\(st\.cfg, bootTargetOnBlueFace\(st\) \?\? bootOrbitCentre\(/);
     const w = code("green_box_wiring.ts");
-    expect(w).toMatch(/orbitOffset\(st\.cfg, st\.orbit\.yaw, st\.orbit\.elevation, st\.orbitStartZoom\)\.offsetM;/);
+    // ⭐ the green piece's orbit is the rings as they are (the zoom moves the camera only, 2026-10-02)
+    expect(w).toMatch(/orbitOffset\(st\.cfg, st\.orbit\.yaw, st\.orbit\.elevation, GREEN_PIECE_ORBIT_ZOOM\)\.offsetM;/);
     expect(w).toMatch(/const face = faceToward\(faces, toward\);/);
+  });
+});
+
+describe("⭐⭐ prototype — the ZOOM moves the CAMERA, not the green piece (the owner, 2026-10-02: *\"the zoom shall bring the camera closer to or further away from the green piece. zoom from 0.1 to 2, with 1.00 corresponding to the current distance\"*)", () => {
+  it("⭐ the camera's gap behind the green piece = the radius offset × the zoom, held to 0.1–2; 1.00 is today's 1.25 m", async () => {
+    const { cameraGapM, clampGreenZoom, GREEN_ZOOM_MIN, GREEN_ZOOM_MAX, GREEN_PIECE_ORBIT_ZOOM } = await import("../src/input/green_box");
+    expect([GREEN_ZOOM_MIN, GREEN_ZOOM_MAX, GREEN_PIECE_ORBIT_ZOOM]).toEqual([0.1, 2, 1]);
+    const off = DEFAULT_CONFIG.cameraRadiusOffsetMm / 1000;
+    expect(cameraGapM(off, 1)).toBeCloseTo(1.25, 12); // today's distance
+    expect(cameraGapM(off, 2)).toBeCloseTo(2.5, 12);
+    expect(cameraGapM(off, 0.1)).toBeCloseTo(0.125, 12);
+    expect(cameraGapM(off, 5)).toBeCloseTo(2.5, 12); // held to 2
+    expect(cameraGapM(off, 0.01)).toBeCloseTo(0.125, 12); // held to 0.1
+    expect(clampGreenZoom(Number.NaN)).toBe(1);
+  });
+
+  it("⭐⭐ the green piece rides the rings as they are, whatever the zoom; the camera's gap and the wheel follow the zoom", async () => {
+    // the camera at zoom 0.5 and 2: the green piece's distance from the centre is the same, only the camera moves
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const { GREEN_PIECE_ORBIT_ZOOM, cameraGapM } = await import("../src/input/green_box");
+    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const box = orbitOffset(cfg, 0.3, 0.8, GREEN_PIECE_ORBIT_ZOOM).offsetM;
+    const near = cameraOffset(cfg, { yaw: 0.3, v: 0.8 }, box, NO_OFFSET_CAM, cameraGapM(1.25, 0.5));
+    const far = cameraOffset(cfg, { yaw: 0.3, v: 0.8 }, box, NO_OFFSET_CAM, cameraGapM(1.25, 2));
+    const len = (v: readonly number[]) => Math.hypot(v[0]!, v[1]!, v[2]!);
+    expect(len(far) - len(near)).toBeCloseTo(2.5 - 0.625, 9);
+    const w = code("green_box_wiring.ts");
+    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);\s*const rig = \{ yaw: st\.orbit\.yaw, v: st\.orbit\.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM \};/);
+    expect(w).toMatch(/cameraGapM\(st\.cfg\.cameraRadiusOffsetMm \/ 1000, st\.zoom\),/);
+    expect(code("scene.ts")).toMatch(/st\.greenBox !== null\s*\? wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
+  });
+});
+const NO_OFFSET_CAM = { yawRad: 0, pitchRad: 0 };
+
+describe("⭐⭐ prototype — the zoom never brings the camera so close the green piece leaves the screen (the owner, 2026-10-02)", () => {
+  const D = Math.PI / 180;
+  const base = { yawOffsetRad: 3 * D, pitchOffsetRad: 2 * D, farthestM: 3, radiusOffsetM: 1.25, fovVerticalRad: 0.8, margin: 0.8 };
+
+  it("⭐ the yaw offset is checked against the HORIZONTAL half-view — so portrait needs a farther camera than landscape", async () => {
+    const { minGreenZoom } = await import("../src/input/green_box");
+    const portrait = minGreenZoom({ ...base, aspect: 0.676 });
+    const landscape = minGreenZoom({ ...base, aspect: 1.48 });
+    expect(portrait).toBeCloseTo(0.55, 2);
+    expect(landscape).toBeCloseTo(0.26, 2);
+    expect(minGreenZoom({ ...base, yawOffsetRad: 0, pitchOffsetRad: 0, aspect: 0.676 })).toBe(0.1); // no offset: no limit
+    expect(minGreenZoom({ ...base, margin: 0.5, aspect: 0.676 })).toBeGreaterThan(portrait); // a tighter margin, farther
+    // ⭐ the same angle as yaw needs more than as pitch in portrait (the horizontal half-view is the narrower)
+    const asYaw = minGreenZoom({ ...base, yawOffsetRad: 3 * D, pitchOffsetRad: 0, aspect: 0.676 });
+    const asPitch = minGreenZoom({ ...base, yawOffsetRad: 0, pitchOffsetRad: 3 * D, aspect: 0.676 });
+    expect(asYaw).toBeGreaterThan(asPitch);
+  });
+
+  it("⭐⭐ at the limit, the green piece sits EXACTLY on the margin's edge of the view — the geometry, not the formula, checked", async () => {
+    const { minGreenZoom } = await import("../src/input/green_box");
+    for (const [yaw, aspect] of [[3, 0.676], [8, 1.48], [12, 0.676]] as const) {
+      const z = minGreenZoom({ ...base, yawOffsetRad: yaw * D, pitchOffsetRad: 0, aspect });
+      if (z <= 0.1) continue;
+      // the camera at distance d + g from the target, δ off the green piece's direction, looking at the target
+      const d = base.farthestM;
+      const R = d + z * base.radiusOffsetM;
+      const cam = [R * Math.cos(yaw * D), R * Math.sin(yaw * D)];
+      const toTarget = [-cam[0]!, -cam[1]!];
+      const toBox = [d - cam[0]!, -cam[1]!];
+      const ang = Math.acos((toTarget[0]! * toBox[0]! + toTarget[1]! * toBox[1]!) / (Math.hypot(...toTarget) * Math.hypot(...toBox)));
+      const halfH = Math.atan(Math.tan(base.fovVerticalRad / 2) * aspect);
+      // ⭐ reachable: exactly on the margin's edge. ⚠ An offset so large it needs more than zoom 2 (12° in portrait needs 2.33) is
+      // CAPPED at 2 — the piece then sits OUTSIDE the margin: stated, not hidden (it stays on screen only while the angle fits the view).
+      if (z < 2) expect(ang).toBeCloseTo(halfH * base.margin, 9);
+      else expect(ang).toBeGreaterThan(halfH * base.margin);
+    }
+  });
+
+  it("⭐ wired: recomputed only when what it depends on changes; the zoom and the wheel are held to it", () => {
+    const w = code("green_box_wiring.ts");
+    expect(w).toMatch(/if \(key !== st\.greenZoomMinKey\) \{/);
+    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);/);
+    expect(code("scene.ts")).toMatch(/wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
+    expect(code("tuning_menu.ts")).toContain('"greenKeepInViewMargin", 0.3, 1, 0.05)');
+    expect(DEFAULT_CONFIG.greenKeepInViewMargin).toBe(0.8);
   });
 });

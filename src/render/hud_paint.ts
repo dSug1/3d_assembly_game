@@ -155,7 +155,7 @@ export function paint(st: SceneState) {
     camera:
       `c=(${st.orbitCentreM.x.toFixed(2)},${st.orbitCentreM.y.toFixed(2)},${st.orbitCentreM.z.toFixed(2)}) ` +
       `${st.centreBlend.isBlending ? `→${(st.centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
-      `r=${st.camera.radius.toFixed(3)}m zoom=${st.zoom.toFixed(2)} ` +
+      `r=${st.camera.radius.toFixed(3)}m zoom=${st.zoom.toFixed(2)}${st.greenBox !== null ? `(≥${st.greenZoomMin.toFixed(2)})` : ""} ` +
       `elev=${st.orbit.elevation.toFixed(2)}${st.orbit.atLimit ? "⛔LIMIT" : ""}` +
       `${st.pinch.isZooming ? "  ZOOMING" : ""}` +
       // ⭐ prototype (green box): the orbit swings kicked so far — it climbs at each start, resume or turn of an orbit drag.

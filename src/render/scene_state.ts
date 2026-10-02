@@ -400,8 +400,6 @@ export interface SceneState {
   greenBox: Mesh | null;
   /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
   pinkRing: LinesMesh | null;
-  /** ⭐ Prototype: has a press on a placed piece set the yellow target yet? Until then it is the BOOT target (`pinkRingVisibility`). */
-  targetSetByPress: boolean;
   /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */
   greenBoxDistM: number | null;
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */
@@ -420,6 +418,9 @@ export interface SceneState {
   greenPieceVolumeM3: number;
   /** ⭐ Prototype: the finger lifted while the orbit coasted — the camera gets the release when the coast ends (`cameraRelease`). */
   cameraReleasePending: boolean;
+  /** ⭐ Prototype: the closest zoom that keeps the green piece on screen (`minGreenZoom`), and what it was computed from. */
+  greenZoomMin: number;
+  greenZoomMinKey: string;
   /** ⭐ Prototype: the green box's eased orbit (it chases the rig every frame). */
   boxOrbit: OrbitZoom | null;
   /** ⭐ Prototype: the box's spring (`springOrbit`) — `boxOrbit` is its `at`. */
