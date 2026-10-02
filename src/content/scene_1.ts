@@ -248,8 +248,10 @@ export const SCENE_1: SceneDescriptor = {
     // (Was 1.7 / ±1.05, 0.25 / 0 at zoom 1.5.)
     topRadiusM: 2.55,
     topHeightM: 1.575,
-    middleRadiusM: 0.375,
-    middleHeightM: 0,
+    // ⭐ prototype (green box), the owner 2026-10-02: *"set the default middle ring radius to 0.09 and middle ring height to 0.15"*
+    // (was 0.375 / 0 — 0.375 kept the green piece out of the painting, which reaches 0.30 m; at 0.09 it passes through it).
+    middleRadiusM: 0.09,
+    middleHeightM: 0.15,
     bottomRadiusM: 2.55,
     bottomHeightM: -1.575,
   },

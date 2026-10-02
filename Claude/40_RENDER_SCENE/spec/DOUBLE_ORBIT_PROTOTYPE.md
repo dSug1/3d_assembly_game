@@ -335,3 +335,10 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   by `outsideYawShare` on the face tracking's own outside state. ⭐ ONE home for the drag's gains, `greenDragGains` (the leash factors
   and this share): the drag, the face stepping's yaw rate and the HUD read it — so outside, the yaw rate is **2.04°/mm** and
   `DeltaXYawPerFace` **14.7 mm** of dx (5.88 inside the rate). The pitch is unchanged.
+* ⭐⭐ **`Scene_1`'s middle ring: 0.09 m at 0.15 m** (the owner, 2026-10-02: *"set the default middle ring radius to 0.09 and middle
+  ring height to 0.15"*; was 0.375 m at 0). ⚠⚠ What it does to the vertical orbit, measured: the pitch swings **−33.4° (v = 0.4) →
+  −4.3° (0.45) → +59.0° (0.5) → +65.8° (0.55)**, then comes back DOWN to the top ring's 31.7° — ~100° of pitch in ~15 mm of finger,
+  **~13°/mm at v = 0.45**; above the middle ring the camera looks down more steeply than from the top ring. The green piece passes
+  within 0.14 m of the target, THROUGH the painting (0.375 m cleared its 0.30 m; it has no collision). The rings' speed ratio is 2.37
+  (was < 2.2) — still far smoother than the stair. The vectors that pinned the old ring now say so (`proto_green_box`,
+  `proto_orbit_rates`, `goal.test.ts`'s rig).

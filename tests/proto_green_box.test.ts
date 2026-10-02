@@ -520,7 +520,7 @@ describe("⛔⛔ prototype — NO STAIR between the rings: the camera's pitch ax
 });
 
 describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 2026-10-02: *\"the shape shall be a waist … propose the three missing parameters so that the 2D curve … can be smooth\"*)", () => {
-  it("⭐ the two reasons for the numbers: the middle ring clears the painting, the outer rings stay under the 3 m clamp — at the boot zoom", async () => {
+  it("⭐ the outer rings stay under the 3 m clamp at the boot zoom; ⛔ the middle ring NO LONGER clears the painting (the owner's 0.09 m, 2026-10-02)", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
     const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
     const zoom = DEFAULT_CONFIG.bootZoom;
@@ -534,14 +534,16 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
       for (const sx of [-1, 1]) for (const sz of [-1, 1])
         reach = Math.max(reach, Math.hypot(p[0]! * u + (sx * b.dims[0] * u) / 2 - c[0]!, p[2]! * u + (sz * b.dims[2] * u) / 2 - c[2]!));
     }
-    expect(cfg.orbitMiddleRadiusM * zoom).toBeGreaterThan(reach + 0.05); // the green piece clears it on the middle ring
+    // ⛔ was `> reach + 0.05` (0.375 m cleared the painting's 0.30 m): the owner, *"set the default middle ring radius to 0.09 and middle
+    // ring height to 0.15"* — on the middle ring the green piece now passes THROUGH the painting (it has no collision)
+    expect(cfg.orbitMiddleRadiusM * zoom).toBeLessThan(reach);
     for (const v of [0, 1]) expect(orbitOffset(cfg, 0, v, zoom).radiusM).toBeLessThanOrEqual(cfg.cameraRadiusMaxM + 1e-9); // no clamp
     // symmetric: the height runs evenly through the middle ring
     expect(cfg.orbitTopHeightM).toBeCloseTo(-cfg.orbitBottomHeightM, 12);
     expect(cfg.orbitTopRadiusM).toBe(cfg.orbitBottomRadiusM);
   });
 
-  it("⭐⭐ smoother than the stair it replaces: the tightest turn is ~4× wider, and the speed varies ~2× instead of ~4×", async () => {
+  it("⭐⭐ smoother than the stair it replaces: the tightest turn is ~4× wider, and the speed varies under ~2.5× instead of ~4×", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
     const measure = (cfg: typeof DEFAULT_CONFIG) => {
       let tightest = Infinity;
@@ -565,20 +567,21 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
     const now = measure(sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit));
     const stair = measure({ ...DEFAULT_CONFIG, orbitTopRadiusM: 1.7, orbitTopHeightM: 0.5, orbitMiddleRadiusM: 0.2, orbitMiddleHeightM: 0, orbitBottomRadiusM: 0.9, orbitBottomHeightM: -0.4 });
     expect(now.radius).toBeGreaterThan(4 * stair.radius);
-    expect(now.speedRatio).toBeLessThan(2.2);
+    // ⚠ was < 2.2 with the 0.375 m / 0 m middle ring; the owner's 0.09 m / 0.15 m (2026-10-02) measures 2.37
+    expect(now.speedRatio).toBeLessThan(2.5);
     expect(stair.speedRatio).toBeGreaterThan(3.5);
   });
 });
 
 describe("⭐⭐ prototype — zoom 1.00, the SAME scene (the owner, 2026-10-02: *\"set the zoom at 1.00 but the scene shall be exactly the same\"*)", () => {
-  it("⭐ everywhere on the surface, the green piece at zoom 1.00 on the new rings is where it was at zoom 1.5 on the old ones", async () => {
+  it("⭐ on the OUTER rings, the green piece at zoom 1.00 is where it was at zoom 1.5 on the old ones (the middle ring changed after, by the owner)", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
     const now = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
     const before = { ...now, orbitTopRadiusM: 1.7, orbitTopHeightM: 1.05, orbitMiddleRadiusM: 0.25, orbitMiddleHeightM: 0, orbitBottomRadiusM: 1.7, orbitBottomHeightM: -1.05 };
     expect(DEFAULT_CONFIG.bootZoom).toBe(1);
+    // ⚠ The whole surface matched until the owner set the middle ring to 0.09 m at 0.15 m (2026-10-02); the outer rings still do.
     for (const yaw of [0, 1.3, -2.7]) {
-      for (let i = 0; i <= 20; i++) {
-        const v = i / 20;
+      for (const v of [0, 1]) {
         const a = orbitOffset(now, yaw, v, DEFAULT_CONFIG.bootZoom).offsetM;
         const b = orbitOffset(before, yaw, v, 1.5).offsetM;
         a.forEach((x, k) => expect(x).toBeCloseTo(b[k]!, 12));

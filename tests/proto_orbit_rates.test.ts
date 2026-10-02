@@ -25,15 +25,19 @@ describe("⭐ prototype — orbit degrees per millimetre of finger", () => {
       o.drag(-mm * mmToPx(1) * cfg.boxGainYaw, -mm * mmToPx(1) * cfg.boxGainPitch);
       expect(Math.abs(o.yaw * DEG) / mm).toBeCloseTo(r.yawDegPerMm, 6);
       // signed: per mm of finger DOWN (`v` up, the box's inverted orbit) — here the drag sent the finger UP, so `v` went down
-      expect(((pitchOf(cfg, v) - pitchOf(cfg, o.elevation)) * DEG) / mm).toBeCloseTo(r.pitchDegPerMm, 3);
+      // (relative: on the owner's 0.09 m / 0.15 m waist the rate reaches ~13°/mm, where 0.001 mm already bends)
+      const measured = ((pitchOf(cfg, v) - pitchOf(cfg, o.elevation)) * DEG) / mm;
+      expect(Math.abs(measured - r.pitchDegPerMm)).toBeLessThan(1e-3 * Math.max(1, Math.abs(r.pitchDegPerMm)));
     }
   });
 
-  it("⭐ `Scene_1` today: yaw 5.10°/mm everywhere; pitch fastest at the waist, slowest near the outer rings, and its sign flips past the peak", () => {
+  it("⭐ `Scene_1` today: yaw 5.10°/mm everywhere; pitch fastest just below the waist, slow near the outer rings, its sign flipping past the peak", () => {
     expect(orbitDegPerMm(cfg, 0.5).yawDegPerMm).toBeCloseTo(0.054 * 1.65 * DEG, 9);
-    expect(orbitDegPerMm(cfg, 0.5).pitchDegPerMm).toBeGreaterThan(Math.abs(orbitDegPerMm(cfg, 0.9).pitchDegPerMm));
-    // ⚠ not monotone: past the pitch's peak near v = 0.75 the sign flips
-    expect(orbitDegPerMm(cfg, 0.6).pitchDegPerMm).toBeGreaterThan(0);
+    // ⚠ the owner's middle ring, 0.09 m at 0.15 m (2026-10-02): the pitch swings −33° → +66° across the waist (~13°/mm at v = 0.45),
+    // peaks near v = 0.55, then comes DOWN to the top ring's 31.7° (was: a peak near v = 0.75 on the 0.375 m / 0 m ring)
+    expect(orbitDegPerMm(cfg, 0.45).pitchDegPerMm).toBeGreaterThan(10);
+    expect(orbitDegPerMm(cfg, 0.45).pitchDegPerMm).toBeGreaterThan(Math.abs(orbitDegPerMm(cfg, 0.9).pitchDegPerMm));
+    expect(orbitDegPerMm(cfg, 0.6).pitchDegPerMm).toBeLessThan(0);
     expect(orbitDegPerMm(cfg, 0.9).pitchDegPerMm).toBeLessThan(0);
     // inside the leash, the box's gains scale both
     const slow = orbitDegPerMm(cfg, 0.5, { yaw: 0.5, pitch: 0.25 });
