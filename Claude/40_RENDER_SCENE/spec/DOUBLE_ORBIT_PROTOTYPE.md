@@ -63,13 +63,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 
 ## 4. How the camera follows — per axis, yaw and pitch alike
 
-1. **While the input MOVES: the LEASH** (`cameraLeashDeg`, **0°** — the owner, 2026-10-02: 1.5°, then 0.5°, then 0°; was 3°; slider 0–60 step 0.5).
+1. **While the input MOVES: the LEASH** (`cameraLeashDeg`, **0°** — the owner, 2026-10-02: 1.5°, then 0.5°, 0°, 0.05°, back to 0°; was 3°; slider 0–60 step 0.05).
    ⚠ At 0 the camera is pinned straight behind the box while the input moves: the box never drifts on the glass, the
    inside-leash gain has no zone to act in (×1), and only the glide after a stop and the release catch-up remain.
    ⭐⭐ **AND A TIME LAG ON TOP** (the owner, 2026-10-02: *"lag the camera orbit behind the green piece orbit in whichever orbit
    direction … create time lag with slider on top of leash"*): the leash (and the glide, the catch-up) says where the camera
    SHOULD be; the camera EASES toward that, exponentially (`cameraLag`, `input/follow_camera.ts`; CAMERA › *camera time lag
-   behind the green box*, `cameraFollowMs`, **150 ms**, 0–1000, 0 = none). A faster orbit opens a wider gap, in whichever
+   behind the green box*, `cameraFollowMs`, **0** by default — the owner, 2026-10-02, was 150 ms; 0–1000, 0 = none). A faster orbit opens a wider gap, in whichever
    direction, and it closes by itself once the orbit stops. Inside it the camera does not turn; past
    it, it is dragged along exactly the leash behind the box.
 2. ⭐⭐ **"Moving" is the FINGER's own verdict**, per axis — the orbit finger's `MotionTracker` (§1.1's deadband and the
@@ -169,3 +169,29 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * ⭐ **The yellow orbit centre is HIDDEN** (the owner, 2026-10-02: *"hide the yellow orbit center"*) — the pink ring marks
   the target. Only hidden: it still moves to every new target, and the target itself is unchanged.
 * Vectors: `tests/proto_pink_ring.test.ts`.
+* ⭐⭐ **THE PAINTING SWINGS WHEN THE GREEN PIECE ORBITS** (the owner, 2026-10-02: *"apply the sway to other objects when the
+  green piece orbits"*, then *"I can't see any sway … I want the same effect … as when I translate the piece 17"* → *"build
+  1-3"*; ⛔ unjudged by a hand). ⛔ The first build PUSHED the pieces along the green piece's heading, with the dragged piece's
+  0.8 mm: with the leash at 0 the camera turns with the green piece, the whole view sweeps at the orbit's speed (~5° per mm of
+  finger), and that push — in the direction the view already slides — could not be seen. ⭐ Now the scene SWINGS as a block
+  about the yellow target (`swingBlock`, split out of the rotation sway's `spinOthers`), in the sense the green piece orbits
+  (`orbitSwingAxis`: a yaw orbit about the vertical, an elevation orbit about a horizontal axis) — the frozen floor does not
+  swing, so the painting turns visibly against it. TRIGGER: the held body's own (`SwayWatcher` on the orbit finger — it starts
+  or resumes moving, or its drag turns by `swayTurnDeg`). AMPLITUDE: `orbitSwayDeg` (**8°** — the owner, 2026-10-02, was 2°; CAMERA › *orbit sway*,
+  0–10, 0 = none) × the finger's speed / `swayReferenceSpeedMmPerS` (×0.3–×4.5), on ITS OWN spring: `orbitSwayTauMs`
+  (**65 ms** — the owner, 2026-10-02, was 60; CAMERA › *orbit sway softness*, 10–300) — *"I want the sway to resolve quickly"*: the same angle, peaking 3×
+  sooner and settled in ~0.3 s instead of ~1 s (a held piece's turn keeps `rotateSwayTauMs`, 180 ms). ⚠ Each body's swing now
+  springs back on the τ its kick was sized with (`Follow.swayRotTauMs`); before, every swing sprang back on the TRANSLATION
+  softness while `spinOthers` sized it with the rotation one — equal by default, so nothing changed for a held piece.
+  The usual exclusions hold: frozen bodies, a pressed piece, assemblies. ⭐ The HUD's `camera` line counts the kicks
+  (`orbitSway×N`) — it must climb at each start, resume or turn of an orbit drag.
+  ⭐ **In pitch too** (the owner, 2026-10-02: *"make sure the sway also applies in pitch when green piece orbits in pitch"*):
+  the axis is the rotation that carries the green piece toward the rig, so an elevation orbit swings the painting about a
+  HORIZONTAL axis across the view — vectored on `Scene_1`'s own rings at three yaws, up and down; a yaw-only mutant goes red.
+  ⚠ Pinned on the top or bottom ring, a dy drag moves nothing, so nothing swings.
+  ⭐⭐ **OPTION 2, THE SLIDE** (the owner, 2026-10-02: *"build also option 2"*): the pieces TRANSLATE the way the green piece
+  is heading (`orbitSlideDirection`, from where it is to where the rig puts it), `orbitSlideMm` (**5 mm** on the glass, a guess;
+  CAMERA › *orbit slide*, 0–20) × the finger's speed factor, on the same quick softness (`orbitSwayTauMs`) — the dragged
+  piece's push (`nudgeOthersWorld`), ~6× larger and quicker. ⭐ CAMERA › *orbit sway kind*: **0 the swing** (the default),
+  1 the slide, 2 both (`orbitSwayKinds`). ⭐ Each body's slide springs back on the softness its kick was sized with
+  (`Follow.swayTransTauMs`), as the swing does — a dragged piece keeps `translateSwayTauMs`.

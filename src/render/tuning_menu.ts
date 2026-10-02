@@ -116,11 +116,17 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 1),
         tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
         tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 50),
-        tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 0.5),
+        tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 0.05),
         tunable(st, "camera settle delay after an input stops (ms)", "cameraSettleDelayMs", 0, 1000, 10),
         tunable(st, "camera catch-up after release, from rest (ms)", "cameraCatchUpMs", 20, 1000, 10),
         // ⭐ prototype (green box), the owner 2026-10-02: the TIME LAG on top of the leash (0 = none).
         tunable(st, "camera time lag behind the green box (ms, 0 = none)", "cameraFollowMs", 0, 1000, 10),
+        // ⭐ prototype (green box), the owner 2026-10-02: the scene swings when the green piece orbits (0 = none).
+        tunable(st, "orbit sway — the scene swings when the green box orbits (deg)", "orbitSwayDeg", 0, 10, 0.1),
+        tunable(st, "orbit sway softness — how quickly it resolves (ms)", "orbitSwayTauMs", 10, 300, 5),
+        // ⭐ prototype (green box), 2026-10-02: option 1 (swing), option 2 (slide), or both.
+        tunable(st, "orbit sway kind (0 = swing, 1 = slide, 2 = both)", "orbitSwayKind", 0, 2, 1),
+        tunable(st, "orbit slide — the pieces translate the way the green box orbits (mm)", "orbitSlideMm", 0, 20, 0.5),
         // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
         tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
         // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.

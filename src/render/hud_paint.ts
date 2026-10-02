@@ -158,6 +158,8 @@ export function paint(st: SceneState) {
       `r=${st.camera.radius.toFixed(3)}m zoom=${st.zoom.toFixed(2)} ` +
       `elev=${st.orbit.elevation.toFixed(2)}${st.orbit.atLimit ? "⛔LIMIT" : ""}` +
       `${st.pinch.isZooming ? "  ZOOMING" : ""}` +
+      // ⭐ prototype (green box): the orbit swings kicked so far — it climbs at each start, resume or turn of an orbit drag.
+      `${st.greenBox !== null ? `  orbitSway×${st.orbitSwayKicks}` : ""}` +
       depthReadout(st),
     tuning:
       st.tuning.applied.length === 0 ? "defaults" : st.tuning.applied.join(" "),

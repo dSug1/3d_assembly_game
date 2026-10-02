@@ -41,6 +41,138 @@ describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
   });
 });
 
+describe("⭐⭐ prototype — the painting SWINGS when the green piece orbits (the owner, 2026-10-02: *\"build 1-3\"*)", () => {
+  it("⭐⭐ the axis carries the green piece the way it orbits, about the target: a yaw orbit swings about the vertical, an elevation orbit about a horizontal", async () => {
+    const { orbitSwingAxis } = await import("../src/input/green_box");
+    const { qFromAxisAngle, qRotate } = await import("../src/core/vec");
+    const c: [number, number, number] = [0, 0.2, 0];
+    // the box on +x, the rig ahead of it toward +z (a yaw orbit): turning by a small +angle about the axis carries it toward the rig
+    const box: [number, number, number] = [1, 0.2, 0];
+    const rig: [number, number, number] = [Math.cos(0.1), 0.2, Math.sin(0.1)];
+    const a = orbitSwingAxis(c, box, rig)!;
+    expect(Math.abs(a[1])).toBeCloseTo(1, 9); // vertical
+    const moved = qRotate(qFromAxisAngle(a, 0.1), [box[0] - c[0], box[1] - c[1], box[2] - c[2]]);
+    [rig[0] - c[0], rig[1] - c[1], rig[2] - c[2]].forEach((x, i) => expect(moved[i]!).toBeCloseTo(x, 9)); // carried along
+    // the other way round: the opposite axis
+    const back = orbitSwingAxis(c, box, [Math.cos(-0.1), 0.2, Math.sin(-0.1)])!;
+    expect(back[1]).toBeCloseTo(-a[1], 9);
+    // an elevation orbit: a horizontal axis
+    const up = orbitSwingAxis(c, box, [Math.cos(0.1), 0.2 + Math.sin(0.1), 0])!;
+    expect(Math.abs(up[1])).toBeLessThan(1e-9);
+    expect(orbitSwingAxis(c, box, box)).toBeNull(); // not moving
+  });
+
+  it("⭐⭐ IN PITCH TOO (the owner, 2026-10-02: *\"make sure the sway also applies in pitch when green piece orbits in pitch\"*) — on Scene_1's own rings", async () => {
+    const { orbitSwingAxis } = await import("../src/input/green_box");
+    const { orbitOffset } = await import("../src/input/orbit");
+    const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const { qFromAxisAngle, qRotate, dot, cross, normalize } = await import("../src/core/vec");
+    const { SCENE_1 } = await import("../src/content/scene_1");
+    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const c: [number, number, number] = [0, 0.23, 0];
+    const at = (yaw: number, v: number) => {
+      const o = orbitOffset(cfg, yaw, v, 1.5).offsetM;
+      return [c[0] + o[0], c[1] + o[1], c[2] + o[2]] as [number, number, number];
+    };
+    for (const yaw of [0.3, 1.9, -2.4]) {
+      for (const [v0, v1] of [[0.4, 0.45], [0.8, 0.75]]) {
+        // a PITCH-only orbit: same yaw, the elevation moving (up, then down)
+        const box = at(yaw, v0!);
+        const rig = at(yaw, v1!);
+        const a = orbitSwingAxis(c, box, rig)!;
+        expect(Math.abs(a[1])).toBeLessThan(1e-9); // a HORIZONTAL axis …
+        const r = normalize([box[0] - c[0], 0, box[2] - c[2]])!;
+        expect(Math.abs(dot(a, r))).toBeLessThan(1e-9); // … across the view (square to the piece's bearing)
+        // ⭐ and turning about it carries the green piece toward where the rig puts it — the way it is orbiting
+        const rel: [number, number, number] = [box[0] - c[0], box[1] - c[1], box[2] - c[2]];
+        const toward: [number, number, number] = [rig[0] - box[0], rig[1] - box[1], rig[2] - box[2]];
+        const moved = qRotate(qFromAxisAngle(a, 0.01), rel);
+        expect(dot([moved[0] - rel[0], moved[1] - rel[1], moved[2] - rel[2]], toward)).toBeGreaterThan(0);
+        expect(Math.hypot(...cross(a, [0, 1, 0]))).toBeGreaterThan(0.99);
+      }
+    }
+  });
+
+  it("⭐ wired: the held body's own TRIGGER on the orbit finger; a block SWING about the yellow target; counted on the HUD", () => {
+    const p = code("render/pointer_wiring.ts");
+    const step = p.slice(p.indexOf("export function orbitDragStep"));
+    expect(step).toMatch(/new SwayWatcher\(st\.cfg\.swayTurnDeg, st\.cfg\.pointerNoiseMm\)/);
+    expect(step).toMatch(/st\.orbitSway\.watcher\.push\(s, st\.orbitMotion\.tracker\.current === "MOVING", true\)/);
+    expect(step).toMatch(/st\.cfg\.orbitSwayDeg \* Math\.PI\) \/ 180\) \* swayScale\(kick\.speedMmPerS, st\.cfg\.swayReferenceSpeedMmPerS\)/);
+    expect(step).toMatch(/swingBlock\(st, st\.greenBox, \{ x: t\[0\], y: t\[1\], z: t\[2\] \}, axis, impulse, st\.cfg\.orbitSwayTauMs\);/);
+    expect(step).toMatch(/if \(kicked\) \{\s*st\.orbitSwayKicks\+\+;/);
+    // ⭐ sized with its OWN softness — the same τ it springs back on
+    expect(step).toMatch(/impulseForPeak\(peakRad, st\.cfg\.orbitSwayTauMs \/ 1000\)/);
+    // ⭐ option 2's slide: the push, but far larger (`orbitSlideMm`) and on the swing's quick softness — never the dragged piece's 0.8 mm
+    expect(step).toMatch(/nudgeOthersWorld\(st, st\.greenBox, dir, kick\.speedMmPerS, st\.cfg\.orbitSlideMm, st\.cfg\.orbitSwayTauMs\)/);
+    expect(step).toMatch(/if \(kinds\.swing && st\.cfg\.orbitSwayDeg > 0\)/);
+    expect(step).toMatch(/if \(kinds\.slide && st\.cfg\.orbitSlideMm > 0\)/);
+    expect(code("render/hud_paint.ts")).toContain("orbitSway×${st.orbitSwayKicks}");
+    expect(code("render/tuning_menu.ts")).toContain('"orbitSwayDeg", 0, 10, 0.1)');
+    // ⭐ the rotation sway of a held piece goes through the SAME block swing
+    expect(code("render/sway_pass.ts")).toMatch(/swingBlock\(st, grip\.mesh, grip\.mesh\.position, kick\.axis, impulse, st\.cfg\.rotateSwayTauMs\);/);
+    expect(code("render/sway_pass.ts")).toMatch(/f\.swayRotTauMs = tauMs;/);
+    expect(code("render/render_loop.ts")).toMatch(/const rotTau = f\.swayRotTauMs \/ 1000;/);
+  });
+
+  it("⭐⭐ the orbit swing RESOLVES QUICKLY (the owner: *\"I want the sway to resolve quickly\"*): same peak, ~3× sooner, settled ~3× sooner", async () => {
+    const { advanceFollow, impulseForPeak } = await import("../src/input");
+    const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+    // the owner, 2026-10-02: *"set the default orbit sway to 8 degrees, default orbit sway softness to 65 ms"*
+    expect(DEFAULT_CONFIG.orbitSwayTauMs).toBe(65);
+    expect(DEFAULT_CONFIG.orbitSwayDeg).toBe(8);
+    // one kick of `peak` on a spring of softness τ: when does it peak, and when is it back under 5 % of that?
+    const run = (tauMs: number) => {
+      const peak = 2 * (Math.PI / 180);
+      let s = { x: 0, v: impulseForPeak(peak, tauMs / 1000) };
+      let max = 0;
+      let peakAt = 0;
+      let settledAt = 0;
+      for (let t = 4; t <= 3000; t += 4) {
+        s = advanceFollow(s, 0, tauMs / 1000, 1, 0.004);
+        if (s.x > max) {
+          max = s.x;
+          peakAt = t;
+        }
+        if (Math.abs(s.x) > 0.05 * peak) settledAt = t;
+      }
+      return { max, peakAt, settledAt };
+    };
+    const quick = run(DEFAULT_CONFIG.orbitSwayTauMs);
+    const held = run(180);
+    expect(quick.max).toBeCloseTo(held.max, 3); // the same angle
+    expect(quick.peakAt).toBeLessThan(held.peakAt / 2.5);
+    expect(quick.settledAt).toBeLessThan(held.settledAt / 2.5);
+    expect(quick.settledAt).toBeLessThan(400); // gone in well under half a second
+    expect(code("render/tuning_menu.ts")).toContain('"orbitSwayTauMs", 10, 300, 5)');
+  });
+});
+
+describe("⭐⭐ prototype — option 2, the SLIDE (the owner, 2026-10-02: *\"build also option 2\"*)", () => {
+  it("⭐ a switch: 0 the swing, 1 the slide, 2 both — swing by default; the slide along the green piece's heading", async () => {
+    const { orbitSwayKinds, orbitSlideDirection } = await import("../src/input/green_box");
+    const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+    expect(orbitSwayKinds(0)).toEqual({ swing: true, slide: false });
+    expect(orbitSwayKinds(1)).toEqual({ swing: false, slide: true });
+    expect(orbitSwayKinds(2)).toEqual({ swing: true, slide: true });
+    expect(DEFAULT_CONFIG.orbitSwayKind).toBe(0);
+    expect(DEFAULT_CONFIG.orbitSlideMm).toBe(5);
+    expect(orbitSlideDirection([1, 0, 0], [1, 0, 2])).toEqual([0, 0, 1]);
+    expect(orbitSlideDirection([1, 2, 3], [1, 2, 3])).toBeNull();
+    const m = code("render/tuning_menu.ts");
+    expect(m).toContain('"orbitSwayKind", 0, 2, 1)');
+    expect(m).toContain('"orbitSlideMm", 0, 20, 0.5)');
+  });
+
+  it("⭐ each body's slide springs back on the softness its kick was sized with — a dragged piece's 180 ms, the orbit's quick one", () => {
+    const s = code("render/sway_pass.ts");
+    expect(s).toMatch(/const impulse = impulseForPeak\(peakM, tauMs \/ 1000\);/);
+    expect(s).toMatch(/f\.swayTransTauMs = tauMs;/);
+    expect(code("render/render_loop.ts")).toMatch(/const transTau = f\.swayTransTauMs \/ 1000;/);
+  });
+});
+
 describe("⭐ prototype — the yellow orbit centre is HIDDEN (the owner, 2026-10-02: *\"hide the yellow orbit center\"*)", () => {
   it("⭐ hidden at boot, and nothing turns it back on — the pink ring marks the target", () => {
     expect(code("render/scene.ts")).toContain("st.centreMarker.isVisible = false;");

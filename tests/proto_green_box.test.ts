@@ -364,6 +364,8 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).toMatch(/cameraLag\(st\.cameraLagged, st\.cameraOrbit\.cam, dtSec \* 1000, st\.cfg\.cameraFollowMs\)/);
     expect(w).toMatch(/const o = cameraOffset\(\s*st\.cfg,\s*st\.cameraLagged,/);
     expect(code("tuning_menu.ts")).toContain('"cameraFollowMs", 0, 1000, 10)');
+    // the owner, 2026-10-02: *"set the default camera lag to 0"*
+    expect(DEFAULT_CONFIG.cameraFollowMs).toBe(0);
   });
 
   it("⭐ prototype: yaw is compared the short way round", () => {
@@ -432,8 +434,9 @@ describe("⭐⭐ prototype — the green box", () => {
   it("⭐ prototype: the scene BOOTS at zoom 1.5 (the owner: *\"set the default zoom at 1.5\"*) — the derived half-radius rule only at 0", () => {
     expect(DEFAULT_CONFIG.bootZoom).toBe(1.5);
     // the owner, 2026-10-02: *"set camera leash behind the green box to 1.5 degrees"*, corrected to 0.5, then to *"0 degrees"*
+    // … then *"set the camera leash to 0.05"* (the slider reaches it, step 0.05), then *"revert the camera leash to 0"*
     expect(DEFAULT_CONFIG.cameraLeashDeg).toBe(0);
-    expect(code("tuning_menu.ts")).toContain('"cameraLeashDeg", 0, 60, 0.5)');
+    expect(code("tuning_menu.ts")).toContain('"cameraLeashDeg", 0, 60, 0.05)');
     expect(DEFAULT_CONFIG.cameraRadiusOffsetMm).toBe(1250);
     expect(DEFAULT_CONFIG.boxGainInsideLeash).toBe(0.35); // the owner: *"set green box gain inside the leash to 0.35"* // the owner: *"set the camera radius offset at 1250 mm"*
     const scene = code("scene.ts");

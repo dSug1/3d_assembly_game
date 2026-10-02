@@ -374,13 +374,17 @@ export function startRenderLoop(st: SceneState): void {
       );
       // ⭐ The sway springs home on its own clock — slower and softer than the object's
       // own inertia, and CRITICALLY damped so it returns without wobbling about.
-      const swayTau = st.cfg.translateSwayTauMs / 1000;
-      f.swayX = advanceFollow(f.swayX, 0, swayTau, 1, dtSec);
-      f.swayY = advanceFollow(f.swayY, 0, swayTau, 1, dtSec);
-      f.swayZ = advanceFollow(f.swayZ, 0, swayTau, 1, dtSec);
-      f.swayRotX = advanceFollow(f.swayRotX, 0, swayTau, 1, dtSec);
-      f.swayRotY = advanceFollow(f.swayRotY, 0, swayTau, 1, dtSec);
-      f.swayRotZ = advanceFollow(f.swayRotZ, 0, swayTau, 1, dtSec);
+      // ⭐ prototype (green box), 2026-10-02: on the softness its kick was sized with (`swayTransTauMs`).
+      const transTau = f.swayTransTauMs / 1000;
+      f.swayX = advanceFollow(f.swayX, 0, transTau, 1, dtSec);
+      f.swayY = advanceFollow(f.swayY, 0, transTau, 1, dtSec);
+      f.swayZ = advanceFollow(f.swayZ, 0, transTau, 1, dtSec);
+      // ⭐ prototype (green box), 2026-10-02: the swing springs back on the softness its kick was sized with (`swayRotTauMs`) —
+      // ⚠ before, it always used the TRANSLATION softness while `spinOthers` sized its impulse with `rotateSwayTauMs` (equal by default).
+      const rotTau = f.swayRotTauMs / 1000;
+      f.swayRotX = advanceFollow(f.swayRotX, 0, rotTau, 1, dtSec);
+      f.swayRotY = advanceFollow(f.swayRotY, 0, rotTau, 1, dtSec);
+      f.swayRotZ = advanceFollow(f.swayRotZ, 0, rotTau, 1, dtSec);
 
       // ⭐ The block's swing, as a rotation about the pivot. ⛔ RIGID: the object both
       // ⭐⭐ THE WHOLE CHAIN, IN ONE EXPRESSION, AND IT LIVES OUTSIDE THIS FILE.

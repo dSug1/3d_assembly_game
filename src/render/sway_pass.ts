@@ -76,7 +76,11 @@ export function isGrasped(st: SceneState, id: ObjectId) : boolean {
 
 export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
   dir: Vec3,
-  speedMmPerS: number,) : void {
+  speedMmPerS: number,
+  /** ⭐ prototype (green box), 2026-10-02: the peak, mm on the glass — a dragged piece's `translateSwayMm` unless given. */
+  amplitudeMm: number = st.cfg.translateSwayMm,
+  /** ⭐ …and the softness it is sized with AND springs back on (`Follow.swayTransTauMs`) — `translateSwayTauMs` unless given. */
+  tauMs: number = st.cfg.translateSwayTauMs,) : void {
   const perPx = trackingMetresPerPx(
     st.camera.radius,
     st.camera.fov,
@@ -86,8 +90,8 @@ export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
   // quicker — it still peaks at the same time constant, so a larger excursion covers
   // that ground faster. See `swayScale`, which clamps the ratio.
   const scale = swayScale(speedMmPerS, st.cfg.swayReferenceSpeedMmPerS);
-  const peakM = mmToPx(st.cfg.translateSwayMm) * perPx * scale;
-  const impulse = impulseForPeak(peakM, st.cfg.translateSwayTauMs / 1000);
+  const peakM = mmToPx(amplitudeMm) * perPx * scale;
+  const impulse = impulseForPeak(peakM, tauMs / 1000);
   if (!(impulse > 0)) return;
 
   const heldId = st.idOf.get(heldMesh) ?? null;
@@ -125,6 +129,7 @@ export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
     f.swayX = { x: f.swayX.x, v: f.swayX.v + dir[0] * impulse };
     f.swayY = { x: f.swayY.x, v: f.swayY.v + dir[1] * impulse };
     f.swayZ = { x: f.swayZ.x, v: f.swayZ.v + dir[2] * impulse };
+    f.swayTransTauMs = tauMs;
   }
 }
 
@@ -158,15 +163,30 @@ export function spinOthers(st: SceneState, grip: Held, kick: SpinSwayKick) : voi
   const peakRad = ((st.cfg.rotateSwayDeg * Math.PI) / 180) * scale;
   const impulse = impulseForPeak(peakRad, st.cfg.rotateSwayTauMs / 1000);
   if (!(impulse > 0)) return;
+  swingBlock(st, grip.mesh, grip.mesh.position, kick.axis, impulse, st.cfg.rotateSwayTauMs);
+}
 
-  const pivot = grip.mesh.position;
-  const heldId = st.idOf.get(grip.mesh) ?? null;
+/**
+ * ⭐ The block swing itself — every other body (the usual exclusions) kicked about `pivot` on `axis` by `impulse`.
+ * ⭐ prototype (green box), 2026-10-02: split out of `spinOthers` so the green piece's ORBIT can swing the scene about the
+ * yellow target with the same spring (`swingOthersForOrbit`). `mover` is the body that set it off (`null`: none held).
+ */
+export function swingBlock(
+  st: SceneState,
+  mover: AbstractMesh | null,
+  pivot: { readonly x: number; readonly y: number; readonly z: number },
+  axis: Vec3,
+  impulse: number,
+  /** ⭐ The softness it springs back on, ms (`Follow.swayRotTauMs`) — the SAME τ the impulse was sized with, or the peak is wrong. */
+  tauMs: number,
+): void {
+  const heldId = mover === null ? null : (st.idOf.get(mover) ?? null);
   // ⭐ …and does not swing either — a follower TURNING is moving too.
   const pioneerOfMover =
     heldId === null ? null : (st.links.pioneerFor(heldId)?.objectId ?? null);
   for (const mesh of st.scene.meshes) {
     if (mesh.metadata?.orbitCandidate !== true) continue;
-    if (mesh === grip.mesh) continue;
+    if (mesh === mover) continue;
     // ⛔⛔ A frozen body does not swing about the held one either — the same rule, the same
     // predicate. ⚠ This is the writer that made the base plate SWING rather than rock, which
     // is the more obvious of the two on the glass.
@@ -191,18 +211,19 @@ export function spinOthers(st: SceneState, grip: Held, kick: SpinSwayKick) : voi
     // ⚠ The pivot is captured per kick and shared by the block. A kick arriving while
     // an older one is still decaying moves the pivot; for the sub-degree swings this
     // produces, the difference is second-order and invisible.
-    f.swayPivot.copyFrom(pivot);
+    f.swayPivot.set(pivot.x, pivot.y, pivot.z);
+    f.swayRotTauMs = tauMs;
     f.swayRotX = {
       x: f.swayRotX.x,
-      v: f.swayRotX.v + kick.axis[0] * impulse,
+      v: f.swayRotX.v + axis[0] * impulse,
     };
     f.swayRotY = {
       x: f.swayRotY.x,
-      v: f.swayRotY.v + kick.axis[1] * impulse,
+      v: f.swayRotY.v + axis[1] * impulse,
     };
     f.swayRotZ = {
       x: f.swayRotZ.x,
-      v: f.swayRotZ.v + kick.axis[2] * impulse,
+      v: f.swayRotZ.v + axis[2] * impulse,
     };
   }
 }

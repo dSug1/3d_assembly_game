@@ -555,6 +555,8 @@ export function createScene(
   st.cameraOrbit = null;
   st.cameraLagged = null;
   st.orbitMotion = null;
+  st.orbitSway = null;
+  st.orbitSwayKicks = 0;
   st.boxOrbit = null;
   st.boxSpring = null;
   st.pinkRing = null;

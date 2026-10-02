@@ -490,6 +490,17 @@ export interface GestureConfig {
   cameraCatchUpMs: number;
   /** ⭐ Prototype: the camera's TIME LAG on top of the leash — its follow time constant, ms (`cameraLag`); 0 = none. */
   cameraFollowMs: number;
+  /**
+   * ⭐ Prototype: how far the scene SWINGS about the yellow target when the green piece orbits, degrees — at the reference finger
+   * speed; scaled by it like every sway (`swayScale`), on the sway's spring (`translateSwayTauMs`). 0 = none.
+   */
+  orbitSwayDeg: number;
+  /** ⭐ Prototype: the orbit swing's softness, ms — when it peaks, and how fast it springs back (~5× this to settle). */
+  orbitSwayTauMs: number;
+  /** ⭐ Prototype: which orbit sway — 0 the swing, 1 the slide, 2 both (`orbitSwayKinds`). */
+  orbitSwayKind: number;
+  /** ⭐ Prototype: the orbit SLIDE's peak, mm on the glass, at the reference finger speed (scaled by it like every sway). */
+  orbitSlideMm: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -913,7 +924,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // enough not to feel like waiting for a cutscene.
   cameraResetMs: 450,
   // ⚠ Prototype guesses, with sliders in CAMERA.
-  cameraLeashDeg: 0, // ⭐ the owner, 2026-10-02: 1.5, then 0.5, then 0 (was 3) — the camera stays right behind the box
+  cameraLeashDeg: 0, // ⭐ the owner, 2026-10-02: 1.5, then 0.5, 0, 0.05, then back to 0 (was 3) — the camera right behind the box
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
   // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
   cameraYawOffsetDeg: 3,
@@ -933,8 +944,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraSettleDelayMs: 0,
   // ⚠ A guess with a slider: ~0.5 s to arrive (a critically damped spring covers 95 % in ~4.7 τ).
   cameraCatchUpMs: 120,
-  // ⚠ A guess with a slider (the owner, 2026-10-02: *"create time lag with slider on top of leash"*): ~0.5 s to close 95 %.
-  cameraFollowMs: 150,
+  // ⭐ The owner, 2026-10-02: *"set the default camera lag to 0"* (was 150 ms, a guess) — no lag; the slider still adds one.
+  cameraFollowMs: 0,
+  // ⚠ A guess with a slider (the owner, 2026-10-02: *"build 1-3"*) — the rotation sway's 0.3° is lost against an orbit.
+  orbitSwayDeg: 8, // ⭐ the owner, 2026-10-02 (was 2)
+  // ⭐ The owner, 2026-10-02: *"I want the sway to resolve quickly"* — a third of the held piece's 180 ms (a guess, with a slider).
+  orbitSwayTauMs: 65, // ⭐ the owner, 2026-10-02 (was 60)
+  // ⭐ Option 1 (the swing) unless switched; option 2's slide a guess, with a slider.
+  orbitSwayKind: 0,
+  orbitSlideMm: 5,
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
@@ -1079,6 +1097,18 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
+  }
+  if (!(cfg.orbitSwayKind === 0 || cfg.orbitSwayKind === 1 || cfg.orbitSwayKind === 2)) {
+    throw new Error(`orbitSwayKind (${cfg.orbitSwayKind}) must be 0, 1 or 2.`);
+  }
+  if (!(cfg.orbitSlideMm >= 0 && cfg.orbitSlideMm <= 50)) {
+    throw new Error(`orbitSlideMm (${cfg.orbitSlideMm}) must be in [0, 50] mm.`);
+  }
+  if (!(cfg.orbitSwayTauMs >= 10 && cfg.orbitSwayTauMs <= 1000)) {
+    throw new Error(`orbitSwayTauMs (${cfg.orbitSwayTauMs}) must be in [10, 1000] ms.`);
+  }
+  if (!(cfg.orbitSwayDeg >= 0 && cfg.orbitSwayDeg <= 20)) {
+    throw new Error(`orbitSwayDeg (${cfg.orbitSwayDeg}) must be in [0, 20]°.`);
   }
   if (!(cfg.cameraFollowMs >= 0 && cfg.cameraFollowMs <= 2000)) {
     throw new Error(`cameraFollowMs (${cfg.cameraFollowMs}) must be in [0, 2000] ms.`);

@@ -62,6 +62,41 @@ export function greenPyramidSizeM(dims: Triple, unitM: number): Vec3 {
   return [w * 1.5 * 0.75, (h * 1.5) / 2, d * 1.5];
 }
 
+/**
+ * ⭐⭐ prototype (green box) — **THE PAINTING SWINGS WHEN THE GREEN PIECE ORBITS** (the owner, 2026-10-02: *"apply the sway to other
+ * objects when the green piece orbits"*, then *"I can't see any sway … I want the same effect when I orbit the green piece as when
+ * I translate the piece 17"* → *"build 1-3"*). ⛔ A PUSH along the green piece's heading was invisible: with the leash at 0 the
+ * camera turns with the green piece, the whole view sweeps at the orbit's speed (~5° per mm of finger), and a sub-millimetre
+ * push in the direction the view is already sliding cannot be seen. ⭐ So the scene SWINGS instead, as a block, about the yellow
+ * target, in the SAME sense the green piece is orbiting (carried along, as a dragged piece's sway carries the scene) — the floor
+ * is frozen and does not swing, so the painting visibly turns against it even while the view rotates.
+ * The axis: the rotation that carries the green piece from where it is toward where the rig now puts it (it eases after the
+ * rig), about the target — `(box − centre) × (rig − box)`, normalised. A yaw orbit gives the vertical; an elevation orbit a
+ * horizontal axis. `null` when it is not moving, or sits on the centre.
+ */
+export function orbitSlideDirection(box: Vec3, rig: Vec3): Vec3 | null {
+  const d: Vec3 = [rig[0] - box[0], rig[1] - box[1], rig[2] - box[2]];
+  const l = Math.hypot(d[0], d[1], d[2]);
+  return l > 1e-12 ? [d[0] / l, d[1] / l, d[2] / l] : null;
+}
+
+/**
+ * ⭐ prototype (green box) — WHICH orbit sway (`orbitSwayKind`): `0` the SWING (option 1), `1` the SLIDE (option 2 — the pieces
+ * translate the way the green piece is heading, `orbitSlideDirection`, by `orbitSlideMm` on the glass; the owner, 2026-10-02:
+ * *"build also option 2"*), `2` both.
+ */
+export function orbitSwayKinds(kind: number): { swing: boolean; slide: boolean } {
+  return { swing: kind === 0 || kind === 2, slide: kind === 1 || kind === 2 };
+}
+
+export function orbitSwingAxis(centre: Vec3, box: Vec3, rig: Vec3): Vec3 | null {
+  const r: Vec3 = [box[0] - centre[0], box[1] - centre[1], box[2] - centre[2]];
+  const h: Vec3 = [rig[0] - box[0], rig[1] - box[1], rig[2] - box[2]];
+  const a: Vec3 = [r[1] * h[2] - r[2] * h[1], r[2] * h[0] - r[0] * h[2], r[0] * h[1] - r[1] * h[0]];
+  const l = Math.hypot(a[0], a[1], a[2]);
+  return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : null;
+}
+
 /** One hit along the camera's ray to the yellow target: how far, and whether it is the green piece. */
 export interface RingHit {
   readonly distanceM: number;

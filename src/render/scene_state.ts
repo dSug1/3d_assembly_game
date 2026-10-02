@@ -372,6 +372,13 @@ export interface Follow {
   /** What the block swings AROUND: the held object's centre, captured at the kick. */
   swayPivot: Vector3;
   /**
+   * ⭐ prototype (green box), 2026-10-02: the SOFTNESS the block swing springs back on, ms — set by the kick that made it (a held
+   * piece's turn: `rotateSwayTauMs`; the green piece's orbit: `orbitSwayTauMs`, quicker — *"I want the sway to resolve quickly"*).
+   */
+  swayRotTauMs: number;
+  /** ⭐ prototype (green box), 2026-10-02: the same for the translation sway — a dragged piece: `translateSwayTauMs`; the orbit slide: `orbitSwayTauMs`. */
+  swayTransTauMs: number;
+  /**
    * The orientation this object would have with no sway at all. ⛔ Kept because the
    * sway is applied ON TOP every frame; reading the mesh back would compound it.
    */
@@ -403,6 +410,10 @@ export interface SceneState {
   cameraLagged: { readonly yaw: number; readonly v: number } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
   orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker } | null;
+  /** ⭐ Prototype: the orbit finger's sway trigger — the other pieces sway when the green piece orbits (`greenPieceHeading`). */
+  orbitSway: { readonly pointerId: number; readonly watcher: SwayWatcher } | null;
+  /** ⭐ Prototype: how many orbit swings have been kicked — the HUD's check that the trigger fires. */
+  orbitSwayKicks: number;
   /** ⭐ Prototype: the green box's eased orbit (it chases the rig every frame). */
   boxOrbit: OrbitZoom | null;
   /** ⭐ Prototype: the box's spring (`springOrbit`) — `boxOrbit` is its `at`. */

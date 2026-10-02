@@ -350,6 +350,8 @@ export function followerFor(st: SceneState, mesh: AbstractMesh) : Follow {
       swayRotY: { x: 0, v: 0 },
       swayRotZ: { x: 0, v: 0 },
       swayPivot: p.clone(),
+      swayRotTauMs: st.cfg.rotateSwayTauMs,
+      swayTransTauMs: st.cfg.translateSwayTauMs,
       qHome: mp ? mp.orientation : readPose(mesh),
     };
     st.followers.set(mesh, f);

@@ -7,12 +7,13 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { throughGreenBox } from "../input/green_box";
+import { orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { boxDragGains } from "../input/follow_camera";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
@@ -34,7 +35,7 @@ import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./
 import { axesOf, gizmoClientX, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, sampleOf } from "./hud_paint";
-import { noteSpin, nudgeOthers } from "./sway_pass";
+import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
 
@@ -1130,6 +1131,48 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId)
       st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
     st.orbitMotion.tracker.push(s);
+    // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
+    // 1-3"*: the held body's own TRIGGER (`SwayWatcher` on the orbit finger) — but a SWING of the scene, as a block, about the
+    // yellow target, in the sense the green piece orbits (`orbitSwingAxis`), `orbitSwayDeg` × the finger's speed factor, on the
+    // sway's own spring (`swingBlock`). Each kick is counted for the HUD (`orbitSwayKicks`).
+    if (st.orbitSway === null || st.orbitSway.pointerId !== pointerId)
+      st.orbitSway = { pointerId, watcher: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm) };
+    const kick = st.orbitSway.watcher.push(s, st.orbitMotion.tracker.current === "MOVING", true);
+    if (kick) {
+      const kinds = orbitSwayKinds(st.cfg.orbitSwayKind);
+      const pose = st.orbit.pose(st.zoom);
+      const k = pose.radiusM > 1e-9 ? clampCameraRadiusM(pose.radiusM, st.cfg) / pose.radiusM : 1;
+      const c = st.orbitCentreM;
+      const t = st.centreBlend.targetM;
+      const p = st.greenBox.position;
+      const box: Vec3 = [p.x, p.y, p.z];
+      const rig: Vec3 = [c.x + pose.offsetM[0] * k, c.y + pose.offsetM[1] * k, c.z + pose.offsetM[2] * k];
+      let kicked = false;
+      // ⭐ Option 1, the SWING about the yellow target.
+      if (kinds.swing && st.cfg.orbitSwayDeg > 0) {
+        const axis = orbitSwingAxis([c.x, c.y, c.z], box, rig);
+        const peakRad = ((st.cfg.orbitSwayDeg * Math.PI) / 180) * swayScale(kick.speedMmPerS, st.cfg.swayReferenceSpeedMmPerS);
+        // ⭐ Its OWN softness (`orbitSwayTauMs`) — quicker than a held piece's, *"I want the sway to resolve quickly"*.
+        const impulse = impulseForPeak(peakRad, st.cfg.orbitSwayTauMs / 1000);
+        if (axis !== null && impulse > 0) {
+          swingBlock(st, st.greenBox, { x: t[0], y: t[1], z: t[2] }, axis, impulse, st.cfg.orbitSwayTauMs);
+          kicked = true;
+        }
+      }
+      // ⭐ Option 2 (the owner, 2026-10-02: *"build also option 2"*), the SLIDE — the pieces translate the way the green piece
+      // is heading, `orbitSlideMm` on the glass × the finger's speed factor, on the same quick softness.
+      if (kinds.slide && st.cfg.orbitSlideMm > 0) {
+        const dir = orbitSlideDirection(box, rig);
+        if (dir !== null) {
+          nudgeOthersWorld(st, st.greenBox, dir, kick.speedMmPerS, st.cfg.orbitSlideMm, st.cfg.orbitSwayTauMs);
+          kicked = true;
+        }
+      }
+      if (kicked) {
+        st.orbitSwayKicks++;
+        st.hudDirty = true;
+      }
+    }
   } else st.orbit.drag(dx, dy);
   // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so the camera arrives as the gesture progresses
   // rather than on a timer.
