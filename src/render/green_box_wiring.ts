@@ -6,10 +6,15 @@
  * ⛔ Not pickable (a touch goes through it to what is behind), not in the model: no collision, no goal, no score.
  */
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
+import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
+import { edgeLines } from "./markers";
+import { topologyFromMesh } from "./bodies";
+import { offsetPositions } from "../core/mesh_topology";
+import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -69,6 +74,31 @@ export function createGreenBox(st: SceneState): void {
   ring.billboardMode = Mesh.BILLBOARDMODE_ALL;
   ring.renderingGroupId = 2;
   st.pinkRing = ring;
+  // ⭐ prototype (green box), the owner 2026-10-02: *"draw a sphere of 75% of the top ring radius, centered on the yellow orbit
+  // center. it shall be almost translucent so I can see through. This is for prototyping purpose and will not be shown in the
+  // final game"* — a guide, nothing more: unit radius, scaled each frame (`guideSphereFrame`); not pickable, not an orbit
+  // candidate (it can block no press and no occlusion ray); both faces drawn, so it reads the same from inside.
+  const sphere = CreateSphere("guide-sphere", { diameter: 2, segments: 32 }, st.scene);
+  const sm = new StandardMaterial("guide-sphere-mat", st.scene);
+  sm.disableLighting = true;
+  sm.emissiveColor = new Color3(0.75, 0.85, 1);
+  sm.backFaceCulling = false;
+  sm.alpha = st.cfg.guideSphereAlpha;
+  sphere.material = sm;
+  sphere.isPickable = false;
+  // ⭐ The green piece's white CONTOUR — its crease edges, offset like the part outlines — shown while it is outside the sphere
+  // (`guideSphereFrame`). Parented to it (it is not billboarded), so it turns and moves with it.
+  const topo = topologyFromMesh(box);
+  if (topo !== null && topo.edges.length > 0) {
+    const lines = edgeLines(st, "green-outline", topo, offsetPositions(topo, 0), new Color3(1, 1, 1), null);
+    lines.parent = box;
+    lines.isPickable = false;
+    lines.metadata = { orbitCandidate: false };
+    lines.isVisible = false;
+    st.greenOutline = { lines, topo, builtM: null };
+  }
+  sphere.metadata = { orbitCandidate: false };
+  st.guideSphere = sphere;
 }
 
 /** ⭐ The pink — brighter since 2026-10-02 (it was 1, 0.42, 0.78). */
@@ -139,25 +169,22 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
   // one zoom (wheel, pinch, boot) is held to its range here (`clampGreenZoom`), every frame.
   // ⭐⭐ …never closer than keeps the green piece on screen (`minGreenZoom`, the worst case over the rings) — RECOMPUTED ONLY when
-  // what it depends on changes (an offset, the margin, the radius offset, the rings, the field of view, the screen's shape):
-  // the owner, *"not recomputed at each frame"*. The key is compared each frame; the limit is computed on a change only.
+  // what it depends on changes (an offset, the margin, the radius offset, the rings, the field of view, the screen's shape — a
+  // turn between portrait and landscape): the owner, *"not recomputed at each frame"*. The key is compared each frame; the limit
+  // (exact, over 33 positions along the rings, the box's distance clamp included) is computed on a change only.
   const cfg = st.cfg;
-  const farthestM = Math.min(
-    cfg.cameraRadiusMaxM,
-    Math.max(
-      Math.hypot(cfg.orbitTopRadiusM, cfg.orbitTopHeightM),
-      Math.hypot(cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM),
-      Math.hypot(cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM),
-    ) * GREEN_PIECE_ORBIT_ZOOM,
-  );
   const aspect = st.canvas.clientHeight > 0 ? st.canvas.clientWidth / st.canvas.clientHeight : 1;
-  const key = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.greenKeepInViewMargin, cfg.cameraRadiusOffsetMm, farthestM, st.camera.fov, aspect].join("|");
+  const key = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.greenKeepInViewMargin, cfg.cameraRadiusOffsetMm, cfg.cameraRadiusMaxM, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, st.camera.fov, aspect].join("|");
   if (key !== st.greenZoomMinKey) {
     st.greenZoomMinKey = key;
+    const ring = Array.from({ length: 33 }, (_, i) => {
+      const o = orbitOffset(cfg, 0, i / 32, GREEN_PIECE_ORBIT_ZOOM);
+      return { distanceM: clampCameraRadiusM(o.radiusM, cfg), pitchRad: Math.atan2(o.offsetM[1], Math.hypot(o.offsetM[0], o.offsetM[2])) };
+    });
     st.greenZoomMin = minGreenZoom({
       yawOffsetRad: (cfg.cameraYawOffsetDeg * Math.PI) / 180,
       pitchOffsetRad: (cfg.cameraPitchOffsetDeg * Math.PI) / 180,
-      farthestM,
+      ring,
       radiusOffsetM: cfg.cameraRadiusOffsetMm / 1000,
       fovVerticalRad: st.camera.fov,
       aspect,
@@ -250,6 +277,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
+  guideSphereFrame(st);
 }
 
 /**
@@ -268,4 +296,44 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
   const toward = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, GREEN_PIECE_ORBIT_ZOOM).offsetM;
   const face = faceToward(faces, toward);
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
+}
+
+/** ⭐ The guide sphere's radius: 75 % of the top ring's — the owner's *"75% of the top ring radius"*. */
+export const GUIDE_SPHERE_SHARE = 0.75;
+
+/**
+ * ⭐ prototype (green box): the guide sphere, each frame — on the yellow target, radius `GUIDE_SPHERE_SHARE` × the top ring's
+ * radius (the green piece's own orbit, `GREEN_PIECE_ORBIT_ZOOM`), at `guideSphereAlpha` (0 hides it).
+ */
+export function guideSphereFrame(st: SceneState): void {
+  // ⭐ prototype (green box), 2026-10-02: *"when the green piece is outside of this sphere, highlight its contour in white"* —
+  // *"(same offset of contour highlights as the rest of the pioneer / follower parts)"*: its own crease edges, pushed out by the
+  // highlight offset (`highlightLiftMm` on the glass, at its camera distance) and rebuilt only when that goes stale — exactly
+  // the part outlines' machinery (`edgeLines`, `offsetPositions`, `outlineOffsetStale`). Shown while its centre is beyond the
+  // sphere, the sphere shown or not.
+  const box = st.greenBox;
+  const o = st.greenOutline;
+  if (box !== null && o !== null) {
+    const t0 = st.centreBlend.targetM;
+    const radius = GUIDE_SPHERE_SHARE * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
+    const out = outsideSphere([box.position.x, box.position.y, box.position.z], [t0[0], t0[1], t0[2]], radius);
+    o.lines.isVisible = out;
+    if (out) {
+      const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
+      if (outlineOffsetStale(o.builtM, h)) {
+        edgeLines(st, "green-outline", o.topo, offsetPositions(o.topo, h), o.lines.color, o.lines);
+        o.builtM = h;
+      }
+    }
+  }
+  const s = st.guideSphere;
+  if (s === null) return;
+  const a = st.cfg.guideSphereAlpha;
+  s.isVisible = a > 0;
+  if (!(a > 0)) return;
+  (s.material as StandardMaterial).alpha = a;
+  const r = GUIDE_SPHERE_SHARE * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
+  s.scaling.set(r, r, r);
+  const t = st.centreBlend.targetM;
+  s.position.set(t[0], t[1], t[2]);
 }

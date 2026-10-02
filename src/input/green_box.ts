@@ -140,39 +140,79 @@ export function clampGreenZoom(zoom: number, lower: number = GREEN_ZOOM_MIN): nu
 /**
  * ⭐⭐ prototype (green box) — **THE CLOSEST ZOOM THAT KEEPS THE GREEN PIECE ON SCREEN** (the owner, 2026-10-02: *"make sure that
  * given the yaw and pitch offset, a close zoom cannot result in the green piece being out of the screen"* → A, *"not recomputed
- * at each frame"*). The camera sits `δ` (the yaw / pitch offset) off the green piece's direction and looks at the TARGET, so seen
- * from the camera the piece is `atan(d·sin δ / (g + d·(1 − cos δ)))` off-centre (`d` its distance from the target, `g` the
- * camera's gap behind it) — 90° as `g` → 0. ⭐ Each offset against ITS half-angle: yaw against the HORIZONTAL one
- * (`tan(h/2) = tan(v/2) × aspect`, narrower in portrait), pitch against the vertical; both × `margin` (the piece kept inside that
- * share of the half-view). ⭐ For the FARTHEST the piece can be (`farthestM`) — the worst case, so the limit holds on every
- * ring and need only be recomputed when an offset, the margin or the screen changes, never while orbiting.
+ * at each frame"*). The camera sits the yaw / pitch offset off the green piece's direction, `g` behind it, and looks at the
+ * TARGET; the piece's centre must stay inside `margin` of each half-view — horizontal (`tan(h/2) = tan(v/2) × aspect`, narrower
+ * in portrait) and vertical.
+ * ⭐⭐ **EXACT, PER RING POSITION** (the owner, 2026-10-02: *"in portrait the min zoom can go further low than today's limit 0.72
+ * … there is still a lot of margin"* — *"same for landscape"*): the piece is PROJECTED from the camera as `cameraOffset` places
+ * it — elevated rings included. ⛔ The earlier closed form treated the yaw offset as if the camera were level, while on the top
+ * ring (~32° up) a 3° yaw about the vertical is only ~3° × cos 32° across the glass: 0.70 where 0.60 is exact (portrait 0.53).
+ * ⛔ A piece-size term tried the same day pushed the limit the wrong way and is gone. ⭐ The worst over `ring` (each sample the
+ * piece's distance from the target and its elevation) — so it holds on every ring and is recomputed only when the offsets, the
+ * margin, the rings or the screen change, never while orbiting.
  * Returns the zoom (gap ÷ `radiusOffsetM`), never below `GREEN_ZOOM_MIN`, never above `GREEN_ZOOM_MAX`.
  */
 export function minGreenZoom(p: {
   readonly yawOffsetRad: number;
   readonly pitchOffsetRad: number;
-  readonly farthestM: number;
+  readonly ring: readonly { readonly distanceM: number; readonly pitchRad: number }[];
   readonly radiusOffsetM: number;
   readonly fovVerticalRad: number;
   readonly aspect: number;
   readonly margin: number;
 }): number {
-  const gap = (delta: number, halfAngle: number): number => {
-    const t = Math.tan(halfAngle * p.margin);
-    const d = p.farthestM;
-    const a = Math.abs(delta);
-    return t > 0 ? Math.max(0, d * (Math.cos(a) - 1) + (d * Math.sin(a)) / t) : Infinity;
-  };
+  if (!(p.radiusOffsetM > 0)) return GREEN_ZOOM_MAX;
   const halfV = p.fovVerticalRad / 2;
   const halfH = Math.atan(Math.tan(halfV) * p.aspect);
-  const need = Math.max(gap(p.yawOffsetRad, halfH), gap(p.pitchOffsetRad, halfV));
-  if (!(p.radiusOffsetM > 0)) return GREEN_ZOOM_MAX;
+  const limH = halfH * p.margin;
+  const limV = halfV * p.margin;
+  const gMax = GREEN_ZOOM_MAX * p.radiusOffsetM;
+  const lim89 = (89 * Math.PI) / 180;
+  let need = 0;
+  for (const s of p.ring) {
+    const d = s.distanceM;
+    const box = [d * Math.cos(s.pitchRad), d * Math.sin(s.pitchRad), 0];
+    const pitch = Math.max(-lim89, Math.min(lim89, s.pitchRad + p.pitchOffsetRad));
+    // the piece's centre, seen from the camera `g` behind it (as `cameraOffset` places it, looking at the target, up = world up)
+    const fits = (g: number): boolean => {
+      const R = d + g;
+      const c = [R * Math.cos(pitch) * Math.cos(p.yawOffsetRad), R * Math.sin(pitch), R * Math.cos(pitch) * Math.sin(p.yawOffsetRad)];
+      const f = [-c[0]! / R, -c[1]! / R, -c[2]! / R];
+      const rl = Math.hypot(f[0]!, f[2]!);
+      const r = [-f[2]! / rl, 0, f[0]! / rl];
+      const u = [r[1]! * f[2]! - r[2]! * f[1]!, r[2]! * f[0]! - r[0]! * f[2]!, r[0]! * f[1]! - r[1]! * f[0]!];
+      const q = [box[0]! - c[0]!, box[1]! - c[1]!, box[2]! - c[2]!];
+      const z = q[0]! * f[0]! + q[1]! * f[1]! + q[2]! * f[2]!;
+      if (!(z > 0)) return false;
+      const x = (q[0]! * r[0]! + q[1]! * r[1]! + q[2]! * r[2]!) / z;
+      const y = (q[0]! * u[0]! + q[1]! * u[1]! + q[2]! * u[2]!) / z;
+      return Math.atan(Math.abs(x)) <= limH && Math.atan(Math.abs(y)) <= limV;
+    };
+    if (fits(0)) continue;
+    if (!fits(gMax)) return GREEN_ZOOM_MAX;
+    let lo = 0;
+    let hi = gMax;
+    for (let i = 0; i < 50; i++) {
+      const mid = (lo + hi) / 2;
+      if (fits(mid)) hi = mid;
+      else lo = mid;
+    }
+    need = Math.max(need, hi);
+  }
   return Math.min(GREEN_ZOOM_MAX, Math.max(GREEN_ZOOM_MIN, need / p.radiusOffsetM));
 }
 
 /** ⭐ The camera's distance behind the green piece, metres: the radius offset × the zoom (held to its range). */
 export function cameraGapM(radiusOffsetM: number, zoom: number): number {
   return Math.max(0, radiusOffsetM) * clampGreenZoom(zoom);
+}
+
+/**
+ * ⭐ prototype (green box) — **IS THE GREEN PIECE OUTSIDE THE GUIDE SPHERE?** (the owner, 2026-10-02: *"when the green piece is
+ * outside of this sphere, highlight its contour in white"*): its CENTRE farther from the yellow target than the sphere's radius.
+ */
+export function outsideSphere(piece: Vec3, centre: Vec3, radiusM: number): boolean {
+  return Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]) > radiusM;
 }
 
 /** One hit along the camera's ray to the yellow target: how far, and whether it is the green piece. */

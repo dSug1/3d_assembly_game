@@ -390,7 +390,10 @@ describe("⭐⭐ prototype — the green box", () => {
     // ⭐ the owner, 2026-10-02: *"remove the billboarding"*
     expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_NONE/);
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
-    expect(w).not.toMatch(/\.parent\s*=/);
+    // the box itself has no parent; only its white contour rides it (2026-10-02)
+    expect(w).not.toMatch(/box\.parent\s*=/);
+    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(1);
+    expect(w).toMatch(/lines\.parent = box;/);
   });
 
   it("⭐⭐ prototype: a press on the green box is EMPTY SPACE — the box stops the ray, and its hit is a miss (the owner: *\"the raycast hits the piece behind\"*)", () => {
@@ -645,7 +648,7 @@ const NO_OFFSET_CAM = { yawRad: 0, pitchRad: 0 };
 
 describe("⭐⭐ prototype — the zoom never brings the camera so close the green piece leaves the screen (the owner, 2026-10-02)", () => {
   const D = Math.PI / 180;
-  const base = { yawOffsetRad: 3 * D, pitchOffsetRad: 2 * D, farthestM: 3, radiusOffsetM: 1.25, fovVerticalRad: 0.8, margin: 0.8 };
+  const base = { yawOffsetRad: 3 * D, pitchOffsetRad: 2 * D, ring: [{ distanceM: 3, pitchRad: 0 }], radiusOffsetM: 1.25, fovVerticalRad: 0.8, margin: 0.8 };
 
   it("⭐ the yaw offset is checked against the HORIZONTAL half-view — so portrait needs a farther camera than landscape", async () => {
     const { minGreenZoom } = await import("../src/input/green_box");
@@ -667,7 +670,7 @@ describe("⭐⭐ prototype — the zoom never brings the camera so close the gre
       const z = minGreenZoom({ ...base, yawOffsetRad: yaw * D, pitchOffsetRad: 0, aspect });
       if (z <= 0.1) continue;
       // the camera at distance d + g from the target, δ off the green piece's direction, looking at the target
-      const d = base.farthestM;
+      const d = base.ring[0]!.distanceM;
       const R = d + z * base.radiusOffsetM;
       const cam = [R * Math.cos(yaw * D), R * Math.sin(yaw * D)];
       const toTarget = [-cam[0]!, -cam[1]!];
@@ -681,12 +684,53 @@ describe("⭐⭐ prototype — the zoom never brings the camera so close the gre
     }
   });
 
+  it("⭐⭐ EXACT on an elevated ring — the owner: *\"the min zoom can go further low than today's limit 0.72 … same for landscape\"*", async () => {
+    const { minGreenZoom } = await import("../src/input/green_box");
+    const { orbitOffset } = await import("../src/input/orbit");
+    const { cameraOffset } = await import("../src/input/follow_camera");
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const { SCENE_1 } = await import("../src/content/scene_1");
+    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const vs = Array.from({ length: 33 }, (_, i) => i / 32);
+    const ring = vs.map((v) => {
+      const o = orbitOffset(cfg, 0, v, 1);
+      return { distanceM: Math.min(o.radiusM, cfg.cameraRadiusMaxM), pitchRad: Math.atan2(o.offsetM[1], Math.hypot(o.offsetM[0], o.offsetM[2])) };
+    });
+    // the piece's centre seen from the camera, placed by the PRODUCT's own `orbitOffset` + `cameraOffset` (an independent path)
+    const seen = (v: number, zoom: number, aspect: number): number => {
+      const b = orbitOffset(cfg, 0, v, 1).offsetM;
+      const c = cameraOffset(cfg, { yaw: 0, v }, b, { yawRad: base.yawOffsetRad, pitchRad: base.pitchOffsetRad }, base.radiusOffsetM * zoom);
+      const n = Math.hypot(...c);
+      const f = [-c[0] / n, -c[1] / n, -c[2] / n];
+      const rl = Math.hypot(f[0]!, f[2]!);
+      const r = [-f[2]! / rl, 0, f[0]! / rl];
+      const u = [r[1]! * f[2]! - r[2]! * f[1]!, r[2]! * f[0]! - r[0]! * f[2]!, r[0]! * f[1]! - r[1]! * f[0]!];
+      const q = [b[0] - c[0], b[1] - c[1], b[2] - c[2]];
+      const z = q[0]! * f[0]! + q[1]! * f[1]! + q[2]! * f[2]!;
+      const halfV = base.fovVerticalRad / 2;
+      const halfH = Math.atan(Math.tan(halfV) * aspect);
+      const ax = Math.atan(Math.abs((q[0]! * r[0]! + q[1]! * r[1]! + q[2]! * r[2]!) / z)) / halfH;
+      const ay = Math.atan(Math.abs((q[0]! * u[0]! + q[1]! * u[1]! + q[2]! * u[2]!) / z)) / halfV;
+      return Math.max(ax, ay); // the share of the half-view the centre uses, the tighter axis
+    };
+    // ⛔ portrait: the level-camera closed form gave ~0.70 (the owner's 0.72 on the tablet) — the yaw offset is foreshortened by the
+    // top ring's elevation. Landscape is bound by the PITCH offset, vertical on every ring: ~0.25, as before (the size term's 0.40 gone).
+    for (const [aspect, lo, hi] of [[0.53, 0.55, 0.65], [1.6, 0.24, 0.27]] as const) {
+      const z = minGreenZoom({ ...base, ring, aspect });
+      expect(z).toBeGreaterThan(lo);
+      expect(z).toBeLessThan(hi);
+      // at the limit, the WORST ring position puts the centre exactly on the margin; every other one inside it
+      const shares = vs.map((v) => seen(v, z, aspect));
+      expect(Math.max(...shares)).toBeCloseTo(base.margin, 6);
+    }
+  });
+
   it("⭐ wired: recomputed only when what it depends on changes; the zoom and the wheel are held to it", () => {
     const w = code("green_box_wiring.ts");
     expect(w).toMatch(/if \(key !== st\.greenZoomMinKey\) \{/);
     expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);/);
     expect(code("scene.ts")).toMatch(/wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
     expect(code("tuning_menu.ts")).toContain('"greenKeepInViewMargin", 0.3, 1, 0.05)');
-    expect(DEFAULT_CONFIG.greenKeepInViewMargin).toBe(0.8);
+    expect(DEFAULT_CONFIG.greenKeepInViewMargin).toBe(0.9); // the owner, 2026-10-02 (was 0.8)
   });
 });

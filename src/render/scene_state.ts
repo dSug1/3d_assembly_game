@@ -400,6 +400,10 @@ export interface SceneState {
   greenBox: Mesh | null;
   /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
   pinkRing: LinesMesh | null;
+  /** ⭐ Prototype: the guide sphere on the yellow target (`guideSphereFrame`) — for prototyping only. */
+  guideSphere: Mesh | null;
+  /** ⭐ Prototype: the green piece's white contour (its edges, offset like the part outlines) and the offset it was built at. */
+  greenOutline: { readonly lines: LinesMesh; readonly topo: MeshTopology; builtM: number | null } | null;
   /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */
   greenBoxDistM: number | null;
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */

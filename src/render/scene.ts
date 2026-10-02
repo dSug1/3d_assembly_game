@@ -567,6 +567,8 @@ export function createScene(
   st.boxOrbit = null;
   st.boxSpring = null;
   st.pinkRing = null;
+  st.guideSphere = null;
+  st.greenOutline = null;
   st.greenBoxDistM = null;
   createGreenBox(st);
 

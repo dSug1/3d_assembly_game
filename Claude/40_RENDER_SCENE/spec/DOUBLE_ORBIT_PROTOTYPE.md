@@ -275,3 +275,24 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   held to it: with 3° / 2° it is **0.55 in portrait, 0.26 in landscape**; the HUD's camera line shows it (`zoom=1.00(≥0.55)`).
   ⚠ The cost: on the middle ring the camera could come closer; the limit is the outer rings'. ⚠ An offset so large it needs
   more than zoom 2 (12° in portrait needs 2.33) is capped at 2, and the piece then sits outside the margin.
+* ⭐ **A GUIDE SPHERE on the yellow target — for prototyping only** (the owner, 2026-10-02: *"draw a sphere of 75% of the top ring
+  radius, centered on the yellow orbit center. it shall be almost translucent so I can see through. This is for prototyping
+  purpose and will not be shown in the final game"*): radius `GUIDE_SPHERE_SHARE` (0.75) × the top ring's (1.91 m today),
+  following the target and the slider each frame (`guideSphereFrame`); unlit, both faces drawn, `guideSphereAlpha` **0.08**
+  (CAMERA › RENDERING › *guide sphere opacity*, 0 = hidden). Not pickable, not an orbit candidate: it blocks no press, no
+  occlusion ray, and never sways. ⛔ Not for the final game — remove with the rest of the prototype.
+* ⭐ **The green piece's WHITE CONTOUR outside the guide sphere** (the owner, 2026-10-02: *"when the green piece is outside of this
+  sphere, highlight its contour in white"* — *"(same offset of contour highlights as the rest of the pioneer / follower parts)"*):
+  its crease edges (`topologyFromMesh`, `edgeLines` — the part outlines' own machinery), lifted off its faces by
+  `highlightLiftMm` at the camera's distance (`highlightLiftM`, rebuilt when `outlineOffsetStale`), parented to the piece, shown
+  while its CENTRE is farther from the yellow target than the sphere's radius (`outsideSphere`).
+* ⛔⛔ **The keep-in-view limit is EXACT now** (the owner, 2026-10-02: *"in portrait, the min zoom can go further low than today's
+  limit 0.72 on my tablet. there is still a lot of margin"* — *"same for landscape"*). The closed form treated the yaw offset as if
+  the camera were LEVEL; on the top ring (~32° up) a 3° yaw about the vertical is only ~3° × cos 32° across the glass. Now the
+  piece's centre is projected as `cameraOffset` places the camera, at 33 positions along the rings (the box's 3 m clamp
+  included), and the limit is the worst of them — still recomputed only when its key changes (a turn portrait ↔ landscape
+  included). With 3° / 2°: portrait (0.53) **0.70 → 0.60**; landscape stays **~0.25**, bound by the 2° PITCH offset, which is
+  vertical on every ring. ⛔ A piece-size term built the same day raised both (portrait 0.83, landscape 0.40) and was removed.
+  ⚠ Still the worst ring: between the rings the exact limit is far lower (0.28 at 1.4 m, 0.09 at the waist) — a limit from the
+  CURRENT ring position would release it, at the cost of the zoom being pushed out while orbiting outward.
+* ⭐ **Keep-in-view margin 0.9** (the owner, 2026-10-02; was 0.8): portrait (0.53) **0.60 → 0.53**, landscape **0.25 → 0.22**.
