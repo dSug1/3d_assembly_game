@@ -364,3 +364,22 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   **a millimetre of dy moves the outer segments exactly as before** (checked against an independent re-implementation of the even
   layout). The 3rd ring now sits at v = 0.426, the 2nd at 0.574. Speed ratio **4.24** (≈190 evenly spaced). ⚠ The cost, measured: the
   waist is short, so the camera's pitch sweeps −59° → +59° in ~12 mm of dy, **~16.5°/mm at its centre**.
+* ⭐⭐ **A YAW CYCLE, THEN A PITCH CYCLE** (the owner, 2026-10-03: *"on start, order the logical faces as a chain of yaw turns starting
+  from the face that points most against the pink normal and when the cycle of yaw turns has finished (once the initial face came
+  back) switch to a cycle of pitch turns, and when the cycle of pitch turns has finished, go back to yaw turns, etc."*). Replaces the
+  smallest-turn chain (`faceOrder`, deleted). Axes (`turnAxes`): YAW about the world vertical made perpendicular to the pink normal,
+  PITCH about the horizontal across it (a vertical pink normal: the camera's view stands in). At START the start face is anti-aligned;
+  each face then goes by the piece's OWN axis it mostly faces (so the START tilt moves no face between cycles): along the yaw axis →
+  the pitch cycle only (top, bottom); along the pitch axis → yaw only (sides); along the pink normal → both (the start face and its
+  opposite). Each cycle runs by angle about its axis (`faceCycles`). The frustum: **yaw = start, a side, the opposite face, the other
+  side; pitch = start, the top, the opposite face, the bottom.** Steps go through the yaw cycle until the start face is back, then the
+  pitch cycle, then yaw again; the other way retraces (`cycleStep`). ⭐ Every face's orientation is computed ONCE at START from the
+  START pose — a turn about its cycle's axis, then the small correction to exact anti-parallel (`turnAbout`, `cycleTargets`) — so a
+  half-turn goes about the cycle's axis (⛔ the smallest turn picks any perpendicular), and every lap comes back exactly (⛔ step upon
+  step, a slanted side's correction tilted the piece and the next yaw ran on it: an axis moved 66° in one step). The turn on screen is
+  the slerp from where the piece is to the step's orientation. A pink face change STARTS the cycles again from the face anti-aligned
+  then. DegreesYawPerFace is unchanged (span ÷ faces, 30°): one yaw + pitch period is 8 steps = 240°. HUD `yaw 2/4` / `pitch 1/4`.
+* ⭐ **The span covers ONE yaw + pitch period** (the owner, 2026-10-03: *"span to cover one full period"*): DegreesYawPerFace = the span ÷
+  the period's steps (`cycles.yaw.length + cycles.pitch.length`) — the frustum 180° ÷ 8 = **22.5° per step**, so 180° of orbit runs the
+  whole yaw cycle and the whole pitch cycle and lands on the start face. Outside the sphere (2.04°/mm): **11.0 mm of dx per step**.
+  HUD `…°/step`.

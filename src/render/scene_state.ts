@@ -23,19 +23,20 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
-import type { PieceFace } from "../input/green_box";
+import type { CycleTargets, FaceCycles, PieceFace } from "../input/green_box";
 
 /**
  * ⭐ Prototype: one orbited piece's face tracking (`trackOrbitedFaces`) — whether it was outside the guide sphere last frame and,
- * while it is outside, its faces (own frame), where they are now (world), the order they are anti-aligned in and where it stands
- * in it, `DegreesYawPerFace` and `DeltaXYawPerFace`, the dx accumulated since the last step, and the orbit yaw last frame.
+ * while it is outside, its faces (own frame), where they are now (world), its yaw and pitch cycles and the step it stands at
+ * (from START), `DegreesYawPerFace` and `DeltaXYawPerFace`, the dx accumulated since the last step, and the orbit yaw last frame.
  */
 export interface FaceTrack {
   readonly outside: boolean;
   readonly faces: readonly PieceFace[] | null;
   readonly world: readonly { readonly normal: Vec3; readonly centre: Vec3 }[];
-  readonly order: readonly number[];
-  readonly at: number;
+  readonly cycles: FaceCycles;
+  readonly targets: CycleTargets;
+  readonly step: number;
   readonly degPerFace: number;
   readonly dxPerFaceMm: number;
   readonly accMm: number;

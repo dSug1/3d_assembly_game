@@ -23,6 +23,7 @@ import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
 import { orbitDegPerMm } from "../input/follow_camera";
 import { greenDragGains } from "./green_box_wiring";
+import { cycleStep, type FaceCycles } from "../input/green_box";
 
 export function describe(v: ReleaseVerdict) : string {
   // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16), and the
@@ -366,12 +367,19 @@ export function greenReadout(st: SceneState): string {
   const g = greenDragGains(st);
   const r = orbitDegPerMm(st.cfg, st.orbit.elevation, g);
   // ⭐ …and the faces tracked while it is outside the guide sphere (`trackOrbitedFaces`).
-  // ⭐ …with DegreesYawPerFace, DeltaXYawPerFace, the face anti-aligned now in the order, and the dx accumulated toward the next.
+  // ⭐ …with DegreesYawPerFace (per STEP of a yaw + pitch period), DeltaXYawPerFace, the cycle and step now, and the dx accumulated.
   const ft = st.faceTracks.get(st.greenBox);
   const tr = ft?.faces;
   const faces =
     ft === undefined || tr === null || tr === undefined
       ? "faces —"
-      : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/face = ${ft.dxPerFaceMm.toFixed(2)} mm dx, face ${ft.at + 1}/${ft.order.length} (dx ${ft.accMm.toFixed(1)} mm)`;
+      : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
   return `${st.greenBoxDistM.toFixed(3)} m to the yellow target | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
+}
+
+/** ⭐ prototype (green box): which cycle the face anti-aligned now is in, and where — `yaw 2/4`, `pitch 1/4` (`cycleStep`). */
+function hudCycle(ft: { readonly cycles: FaceCycles; readonly step: number }): string {
+  const c = cycleStep(ft.cycles, ft.step);
+  const len = c.cycle === "YAW" ? ft.cycles.yaw.length : ft.cycles.pitch.length;
+  return `${c.cycle === "YAW" ? "yaw" : "pitch"} ${c.index + 1}/${len}`;
 }

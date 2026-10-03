@@ -11,7 +11,7 @@
  * ⛔ ENGINE-FREE.
  */
 import type { BodySpec, Triple } from "../core/game_structure";
-import { cross, dot, length, qmul, qRotate, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
+import { cross, dot, length, normalize, qFromAxisAngle, qmul, qRotate, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The smallest body of `colour` (by volume) — `null` when the scene has none. Frozen bodies are not candidates. */
 export function smallestOfColour(bodies: readonly BodySpec[], colour: readonly [number, number, number]): BodySpec | null {
@@ -328,31 +328,131 @@ export function mostAntiAligned(faces: readonly PieceFace[], q: Quat, target: Ve
 }
 
 /**
- * ⭐⭐ **THE ORDER THE FACES ARE ANTI-ALIGNED IN** (the owner, 2026-10-02: *"if the piece has more than 4 faces, select an order to
- * anti-align the faces. all the faces should be anti-aligned once if the piece orbits in yaw over the full yaw face alignment
- * span"*). A chain of SMALLEST TURNS: from `start` (the face anti-aligned now), each next face is the unused one whose normal is
- * closest to the current one's (the least turn), ties to the lower index — every face exactly once. One rule for any count.
+ * ⭐⭐ prototype (green box) — **THE TWO AXES THE FACES ARE TURNED ABOUT** (the owner, 2026-10-03: *"order the logical faces as a chain
+ * of yaw turns … when the cycle of yaw turns has finished … switch to a cycle of pitch turns"*). With the pink normal `n`: YAW about
+ * the world vertical (made exactly perpendicular to `n`), PITCH about the horizontal axis across `n` (`n × yaw`). Both are
+ * perpendicular to `n`, so a turn about either brings another face to face it. A vertical `n` (the pink ring on a top face) has
+ * no vertical to yaw about: `fallback` (the camera's view) stands in. `null` only when both are along `n`.
  */
-export function faceOrder(faces: readonly PieceFace[], start: number): number[] {
-  if (start < 0 || start >= faces.length) return [];
-  const order = [start];
-  const used = new Set(order);
-  while (order.length < faces.length) {
-    const cur = faces[order[order.length - 1]!]!.normal;
-    let best = -1;
-    let bestDot = -Infinity;
+export function turnAxes(n: Vec3, up: Vec3, fallback: Vec3): { readonly yaw: Vec3; readonly pitch: Vec3 } | null {
+  const perp = (v: Vec3): Vec3 | null => normalize(sub(v, [n[0] * dot(v, n), n[1] * dot(v, n), n[2] * dot(v, n)]));
+  const yaw = perp(up) ?? perp(fallback);
+  if (yaw === null) return null;
+  const pitch = normalize(cross(n, yaw));
+  return pitch === null ? null : { yaw, pitch };
+}
+
+/** ⭐ The two cycles of faces, each starting with the face anti-aligned at START: `yaw` (turned about the vertical) and `pitch`. */
+export interface FaceCycles {
+  readonly yaw: readonly number[];
+  readonly pitch: readonly number[];
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **WHICH FACES A YAW TURN AND A PITCH TURN REACH, AND IN WHAT ORDER** (the owner, 2026-10-03). At START,
+ * with face `start` anti-aligned (orientation `q`), each face is put by the piece's OWN axis it mostly faces — so a START turn that
+ * tilts the piece does not move a face from one cycle to the other: the piece's axis nearest the yaw axis, the one nearest `n` (of
+ * the two left), and the last (the pitch's). A face mostly along the YAW axis (a top, a bottom) is reached only by pitching; one along
+ * the PITCH axis (a side) only by yawing; one along `n` — `start` and the face opposite it — by both. Each cycle runs in the order
+ * of its faces' angle about its axis from `start`'s (one sense of turn), `start` first. ⭐ The frustum: yaw = start, a side, the
+ * opposite face, the other side; pitch = start, the top, the opposite face, the bottom.
+ */
+export function faceCycles(
+  faces: readonly PieceFace[],
+  q: Quat,
+  start: number,
+  n: Vec3,
+  axes: { readonly yaw: Vec3; readonly pitch: Vec3 },
+): FaceCycles {
+  if (faces[start] === undefined) return { yaw: [], pitch: [] };
+  const E: Vec3[] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  const argmax = (ks: readonly number[], f: (k: number) => number): number => ks.reduce((b, k) => (f(k) > f(b) ? k : b), ks[0]!);
+  const yawLocal = argmax([0, 1, 2], (k) => Math.abs(dot(qRotate(q, E[k]!), axes.yaw)));
+  const rest = [0, 1, 2].filter((k) => k !== yawLocal);
+  const nLocal = argmax(rest, (k) => Math.abs(dot(qRotate(q, E[k]!), n)));
+  const pitchLocal = rest.find((k) => k !== nLocal)!;
+  const mostly = (i: number): number => argmax([0, 1, 2], (k) => Math.abs(faces[i]!.normal[k]!));
+  const down: Vec3 = [-n[0], -n[1], -n[2]];
+  const cycle = (axis: Vec3, excluded: number): number[] => {
+    const angle = (i: number): number | null => {
+      const w = qRotate(q, faces[i]!.normal);
+      const p = sub(w, [axis[0] * dot(w, axis), axis[1] * dot(w, axis), axis[2] * dot(w, axis)]);
+      if (length(p) < 1e-6) return null;
+      const a = Math.atan2(dot(axis, cross(down, p)), dot(down, p));
+      return a < -1e-9 ? a + 2 * Math.PI : Math.max(0, a);
+    };
+    const members: { i: number; a: number }[] = [];
     for (let i = 0; i < faces.length; i++) {
-      if (used.has(i)) continue;
-      const d = dot(cur, faces[i]!.normal);
-      if (d > bestDot + 1e-9) {
-        bestDot = d;
-        best = i;
-      }
+      if (i === start || mostly(i) === excluded) continue;
+      const a = angle(i);
+      if (a !== null) members.push({ i, a: a < 1e-9 ? 2 * Math.PI : a });
     }
-    order.push(best);
-    used.add(best);
-  }
-  return order;
+    members.sort((x, y) => x.a - y.a || x.i - y.i);
+    return [start, ...members.map((m) => m.i)];
+  };
+  return { yaw: cycle(axes.yaw, yawLocal), pitch: cycle(axes.pitch, pitchLocal) };
+}
+
+/**
+ * ⭐ Where step `s` (whole steps from START, either sign) stands: the yaw cycle until `start` comes back, then the pitch cycle until it
+ * comes back, then yaw again — period `yaw.length + pitch.length`.
+ */
+export function cycleStep(c: FaceCycles, s: number): { readonly face: number; readonly cycle: "YAW" | "PITCH"; readonly index: number } {
+  const m = c.yaw.length;
+  const P = m + c.pitch.length;
+  if (P === 0) return { face: -1, cycle: "YAW", index: 0 };
+  const r = ((s % P) + P) % P;
+  return r < m ? { face: c.yaw[r]!, cycle: "YAW", index: r } : { face: c.pitch[r - m]!, cycle: "PITCH", index: r - m };
+}
+
+/** ⭐ The orientation for each face of each cycle, index 0 the START pose itself (`cycleTargets`). */
+export interface CycleTargets {
+  readonly yaw: readonly Quat[];
+  readonly pitch: readonly Quat[];
+}
+
+/**
+ * ⭐⭐ **EVERY FACE'S ORIENTATION, COMPUTED ONCE AT START FROM THE START POSE** (`q0`): a yaw-cycle face is `q0` turned about the yaw
+ * axis, a pitch-cycle face `q0` turned about the pitch axis (`turnAbout`). ⛔ Not step upon step: a slanted face's correction tilts the
+ * piece, and the next yaw turn about the vertical then ran on a tilted piece — the corrections piled up (an axis moved 66° in one
+ * step) and the cycle did not come back. From `q0`, nothing compounds: the start face's orientation IS `q0`, exactly, every lap.
+ */
+export function cycleTargets(
+  faces: readonly PieceFace[],
+  q0: Quat,
+  n: Vec3,
+  axes: { readonly yaw: Vec3; readonly pitch: Vec3 },
+  c: FaceCycles,
+): CycleTargets {
+  const along = (cycle: readonly number[], axis: Vec3): Quat[] => cycle.map((f, k) => (k === 0 ? q0 : turnAbout(faces, f, q0, n, axis, true)));
+  return { yaw: along(c.yaw, axes.yaw), pitch: along(c.pitch, axes.pitch) };
+}
+
+/** ⭐ The orientation step `s` stands at (`cycleStep`'s face, from `cycleTargets`) — `null` with no cycle. */
+export function targetAtStep(c: FaceCycles, t: CycleTargets, s: number): Quat | null {
+  const at = cycleStep(c, s);
+  if (at.face < 0) return null;
+  return (at.cycle === "YAW" ? t.yaw[at.index] : t.pitch[at.index]) ?? null;
+}
+
+/**
+ * ⭐⭐ **ONE FACE'S TURN FROM `q`** (the START pose, `cycleTargets`): about `axis` (the yaw's or the pitch's), by the angle that brings face `faceIndex`'s normal (its part across
+ * the axis) onto `−n` — `forward` in the cycles' sense, else back — then the small correction that makes it EXACTLY anti-parallel
+ * (`antiAlignedOrientation`; a face tilted off the axis's plane). ⛔ Not the minimal turn alone: a half-turn's minimal axis is any
+ * perpendicular, which would flip the piece about the wrong one.
+ */
+export function turnAbout(faces: readonly PieceFace[], faceIndex: number, q: Quat, n: Vec3, axis: Vec3, forward: boolean): Quat {
+  const f = faces[faceIndex];
+  if (f === undefined) return q;
+  const w = qRotate(q, f.normal);
+  const p = sub(w, [axis[0] * dot(w, axis), axis[1] * dot(w, axis), axis[2] * dot(w, axis)]);
+  if (length(p) < 1e-9) return antiAlignedOrientation(faces, faceIndex, q, n);
+  const down: Vec3 = [-n[0], -n[1], -n[2]];
+  const phi = Math.atan2(dot(axis, cross(down, p)), dot(down, p));
+  const twoPi = 2 * Math.PI;
+  const fwd = ((phi % twoPi) + twoPi) % twoPi;
+  const ahead = fwd < 1e-9 ? 0 : forward ? fwd : fwd - twoPi;
+  return antiAlignedOrientation(faces, faceIndex, qmul(qFromAxisAngle(axis, -ahead), q), n);
 }
 
 /**

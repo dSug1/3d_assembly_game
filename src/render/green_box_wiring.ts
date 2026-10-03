@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, faceOrder, mostAntiAligned, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, mostAntiAligned, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -355,11 +355,14 @@ export function guideSphereFrame(st: SceneState): void {
  * centres follow it; back inside, they are dropped. The test is the white contour's own (`outsideSphere`, its centre).
  * ⭐⭐ **AND IT STEPS THROUGH THEM AS IT ORBITS IN YAW** (the owner, 2026-10-02): `DegreesYawPerFace` = the yaw face alignment span ÷
  * its faces, and `DeltaXYawPerFace` = the finger dx that orbits that much, at the yaw rate (`orbitDegPerMm`). On `START` the face
- * most anti-aligned with the pink ring's face is turned exactly anti-parallel — the first of the order (`faceOrder`). Then the
+ * most anti-aligned with the pink ring's face is turned exactly anti-parallel; from that pose its faces fall into a YAW cycle and a
+ * PITCH cycle (`faceCycles`, the owner 2026-10-03: *"a chain of yaw turns … then … a cycle of pitch turns … then yaw again"*). Then the
  * orbit's yaw each frame, as finger mm (the drag's dx; the inertia coast's too, so the faces never fall out of step with the
  * yaw), accumulates since `START` (`accumulateFaceSteps`): rounded to whole `DeltaXYawPerFace`s it names the face — one step one
- * way anti-aligns the NEXT face of the order, the other way the previous one, at the same yaw going and coming back. A change of the pink face's normal re-anti-aligns the current face. Every turn is the minimal one
- * (`antiAlignedOrientation`), eased like an alignment's (`greenTurnFrame`). ⛔ Inside the sphere nothing turns (a turn already in
+ * way anti-aligns the NEXT face — through the yaw cycle until the start face is back, then the pitch cycle, then yaw again
+ * (`cycleStep`) — each face's orientation its cycle's turn from the START pose (`cycleTargets`); the other way retraces it, at the
+ * same yaws. A change of the pink face starts the cycles again from the face anti-aligned then. Every turn is eased like an
+ * alignment's (`greenTurnFrame`, a slerp from where the piece is to the step's orientation). ⛔ Inside the sphere nothing turns (a turn already in
  * flight lands): the face anti-aligned is kept.
  */
 export function trackOrbitedFaces(st: SceneState, now: number): void {
@@ -375,51 +378,79 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
     const prev = st.faceTracks.get(m);
     const step = faceTracking(prev === undefined ? null : prev.outside, out);
     if (step === "NONE" || step === "STOP") {
-      st.faceTracks.set(m, { outside: out, faces: null, world: [], order: [], at: 0, degPerFace: 0, dxPerFaceMm: Infinity, accMm: 0, yaw, pink });
+      st.faceTracks.set(m, { outside: out, faces: null, world: [], cycles: NO_CYCLES, targets: NO_TARGETS, step: 0, degPerFace: 0, dxPerFaceMm: Infinity, accMm: 0, yaw, pink });
       if (step === "STOP") st.hudDirty = true;
       continue;
     }
     const cur = fromBabylon(m.rotationQuaternion ?? Quaternion.Identity());
     let faces = prev?.faces ?? null;
-    let order = prev?.order ?? [];
-    let at = prev?.at ?? 0;
+    let cycles = prev?.cycles ?? NO_CYCLES;
+    let targets = prev?.targets ?? NO_TARGETS;
+    let s = prev?.step ?? 0;
     let accMm = prev?.accMm ?? 0;
-    let turnTo: number | null = null;
+    // ⭐ the orientation turns are computed FROM: where a turn in flight is going, else where the piece is
+    const base = st.pieceTurns.get(m)?.to ?? cur;
+    let target: Quat | null = null;
+    const cam = st.camera.getDirection(new Vector3(0, 0, 1));
+    const axes = pink === null ? null : turnAxes(pink, [0, 1, 0], [cam.x, cam.y, cam.z]);
     if (step === "START" || faces === null) {
       const topo = topologyFromMesh(m);
       faces = topo === null ? [] : pieceFaces(topo.positions, topo.faces);
-      order = pink === null ? [] : faceOrder(faces, mostAntiAligned(faces, cur, pink));
-      at = 0;
+      s = 0;
       accMm = 0;
-      turnTo = order[0] ?? null;
+      if (pink !== null && faces.length > 0) {
+        // ⭐ the face most anti-aligned turned onto the pink face, then the two cycles and every face's orientation read off that pose
+        const start = mostAntiAligned(faces, cur, pink);
+        target = antiAlignedOrientation(faces, start, cur, pink);
+        cycles = axes === null ? { yaw: [start], pitch: [start] } : faceCycles(faces, target, start, pink, axes);
+        targets = axes === null ? { yaw: [target], pitch: [target] } : cycleTargets(faces, target, pink, axes, cycles);
+      } else {
+        cycles = NO_CYCLES;
+        targets = NO_TARGETS;
+      }
       st.hudDirty = true;
     }
-    const degPerFace = degreesYawPerFace(st.cfg.yawFaceAlignSpanDeg, faces.length);
+    // ⭐ the owner, 2026-10-03: *"span to cover one full period"* — the span shared among the STEPS of one yaw + pitch period
+    // (the frustum: 4 + 4 = 8 → 22.5°), not among the faces (6 → 30°, a period then took 240°)
+    const degPerFace = degreesYawPerFace(st.cfg.yawFaceAlignSpanDeg, cycles.yaw.length + cycles.pitch.length);
     const dxPerFaceMm = deltaXYawPerFace(degPerFace, yawDegPerMm);
-    if (step === "KEEP" && prev !== undefined && order.length > 0) {
+    if (step === "KEEP" && prev !== undefined && cycles.yaw.length + cycles.pitch.length > 0 && pink !== null) {
       // the orbit's yaw this frame, as the finger mm that would make it (a drag's dx exactly; a coast's equivalent)
       const dYawDeg = (wrapPi(yaw - prev.yaw) * 180) / Math.PI;
       const a = accumulateFaceSteps(accMm, yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0, dxPerFaceMm);
       accMm = a.accMm;
       if (a.steps !== 0) {
-        at = (((at + a.steps) % order.length) + order.length) % order.length;
-        turnTo = order[at]!;
+        // ⭐ the step's face and its orientation, computed at START (`targetAtStep`) — a fast frame crossing several lands on the last
+        s += a.steps;
+        target = targetAtStep(cycles, targets, s);
         st.hudDirty = true;
-      } else if (pink !== null && prev.pink !== pink) turnTo = order[at]!; // the pink face changed: slerp onto it
+      } else if (prev.pink !== pink) {
+        // ⭐ the pink face changed: the face anti-aligned now slerps onto it, and the cycles START again from there
+        const now0 = cycleStep(cycles, s).face;
+        target = antiAlignedOrientation(faces, now0, base, pink);
+        cycles = axes === null ? { yaw: [now0], pitch: [now0] } : faceCycles(faces, target, now0, pink, axes);
+        targets = axes === null ? { yaw: [target], pitch: [target] } : cycleTargets(faces, target, pink, axes, cycles);
+        s = 0;
+        accMm = 0;
+        st.hudDirty = true;
+      }
     }
-    if (turnTo !== null && pink !== null) {
+    if (target !== null) {
       // ⭐ from where the piece IS (a turn in flight is retargeted, never queued)
-      st.pieceTurns.set(m, { from: cur, to: antiAlignedOrientation(faces, turnTo, cur, pink), t0: now });
+      st.pieceTurns.set(m, { from: cur, to: target, t0: now });
     }
     // ⚠ The topology already carries the mesh's SCALE (`topologyFromMesh`), so only its rotation and position place the faces.
     m.computeWorldMatrix(true);
     const r = m.absoluteRotationQuaternion;
     const q: Quat = [r.w, r.x, r.y, r.z];
     const world = faces.map((f) => ({ normal: qRotate(q, f.normal), centre: add([p.x, p.y, p.z], qRotate(q, f.centre)) }));
-    st.faceTracks.set(m, { outside: out, faces, world, order, at, degPerFace, dxPerFaceMm, accMm, yaw, pink });
+    st.faceTracks.set(m, { outside: out, faces, world, cycles, targets, step: s, degPerFace, dxPerFaceMm, accMm, yaw, pink });
   }
   greenTurnFrame(st, now);
 }
+
+const NO_CYCLES = { yaw: [], pitch: [] } as const;
+const NO_TARGETS = { yaw: [], pitch: [] } as const;
 
 const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]);
 const fromBabylon = (q: Quaternion): Quat => [q.w, q.x, q.y, q.z];
