@@ -383,3 +383,8 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   the period's steps (`cycles.yaw.length + cycles.pitch.length`) — the frustum 180° ÷ 8 = **22.5° per step**, so 180° of orbit runs the
   whole yaw cycle and the whole pitch cycle and lands on the start face. Outside the sphere (2.04°/mm): **11.0 mm of dx per step**.
   HUD `…°/step`.
+* ⭐ **OBJECT ROTATION has two submenus** (the owner, 2026-10-03): *ROTATION IN WORLD COORDINATES* (every slider it had, unchanged) and
+  *DOUBLE ORBIT MODE* with the toggle **`FacesRotateByIncrement`** (`facesRotateByIncrement`, **1** by default): on = the current rule
+  (the yaw / pitch cycles stepped by increments of the yaw orbit); off = no dx counted and no face stepped — the owner's rule for it is
+  to come. Either way the START anti-alignment and the pink face's change (the face anti-aligned now turned onto the new normal, the
+  cycles started again) still apply.

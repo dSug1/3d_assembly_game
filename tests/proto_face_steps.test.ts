@@ -179,6 +179,20 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
     expect(code("render/hud_paint.ts")).toMatch(/const g = greenDragGains\(st\);\s*const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\);/);
   });
 
+  it("⭐ OBJECT ROTATION holds two submenus — every old slider under ROTATION IN WORLD COORDINATES, the FacesRotateByIncrement toggle under DOUBLE ORBIT MODE (the owner, 2026-10-03)", () => {
+    const menu = code("render/tuning_menu.ts");
+    const sec = menu.slice(menu.indexOf('title: "OBJECT ROTATION"'), menu.indexOf('title: "FACE ALIGNMENT"'));
+    expect(sec).toMatch(/title: "OBJECT ROTATION",[\s\S]*?sliders: \[\],\s*subsections: \[/);
+    const world = sec.slice(sec.indexOf('"ROTATION IN WORLD COORDINATES"'), sec.indexOf('"DOUBLE ORBIT MODE"'));
+    for (const key of ["gainRotateFree", "pitchSideConeDeg", "gainRotateConstrained", "rotationIncrementDeg", "rotateSwayDeg", "rotateSwayTauMs", "rotateSwayTurnDeg", "rotateSwayReferenceDegPerS"])
+      expect(world).toContain(`"${key}"`);
+    expect(sec.slice(sec.indexOf('"DOUBLE ORBIT MODE"'))).toContain('"facesRotateByIncrement", 0, 1, 1)');
+    expect(DEFAULT_CONFIG.facesRotateByIncrement).toBe(1); // on: the current rule
+    // off: no dx counted, no face stepped — the pink face's change still turns the face onto it
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/const byIncrement = st\.cfg\.facesRotateByIncrement === 1;\s*const a = byIncrement \? accumulateFaceSteps\([^)]*\) : \{ accMm, steps: 0 \};/);
+  });
+
   it("⭐ wired: START anti-aligns the most anti-aligned face; the yaw as finger mm steps the order; the pink face's change slerps; nothing inside", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const start = mostAntiAligned\(faces, cur, pink\);\s*target = antiAlignedOrientation\(faces, start, cur, pink\);\s*cycles = axes === null \? \{ yaw: \[start\], pitch: \[start\] \} : faceCycles\(faces, target, start, pink, axes\);/);

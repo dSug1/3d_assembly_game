@@ -313,53 +313,70 @@ export function installTuningMenu(st: SceneState): void {
     },
     {
       title: "OBJECT ROTATION",
-      sliders: [
-        // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
-        // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
-        tunable(st, 
-          "yaw/pitch gain (rad/mm)",
-          "gainRotateFree",
-          0.005,
-          0.15,
-          0.005,
-        ),
-        // ⭐ `D185`: past this angle out of the glass the maroon pitch turns like a wheel seen from the camera — the
-        // pressed side follows the finger up.
-        tunable(st, "pitch: wheel past (deg out of screen)", "pitchSideConeDeg", 0, 80, 5),
-        // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
-        // gain so one DOF does not feel like a different control from three — a guess, and
-        // the range is the same as the free gain's so a hand can compare them directly.
-        tunable(st, 
-          "anchored twist gain (rad/mm)",
-          "gainRotateConstrained",
-          0.005,
-          0.15,
-          0.005,
-        ),
-        // ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — a turn ENDS on a multiple of
-        // this, slerped into place. ⛔ **`0` is the current build, no change.** ⚠ Only the END
-        // is quantised: the drag itself keeps every gain, deadband and smoothing it has now,
-        // because the earlier formulation that quantised the turn as it happened was rejected
-        // on the device for lagging the finger.
-        tunable(st, 
-          "rotation increment (deg, 0=off)",
-          "rotationIncrementDeg",
-          0,
-          45,
-          5,
-        ),
-        // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
-        // object's centre when it starts turning or turns the other way.
-        tunable(st, "sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
-        tunable(st, "sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
-        tunable(st, "sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
-        tunable(st, 
-          "sway reference turn (deg/s)",
-          "rotateSwayReferenceDegPerS",
-          20,
-          400,
-          10,
-        ),
+      // ⭐ prototype (green box), the owner 2026-10-03: *"Create in menu Object Rotation the submenu Rotation in World coordinates and
+      // move every existing slider into this submenu; the submenu Double Orbit mode"*. No slider changed.
+      sliders: [],
+      subsections: [
+        {
+          title: "ROTATION IN WORLD COORDINATES",
+          sliders: [
+            // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
+            // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
+            tunable(st, 
+              "yaw/pitch gain (rad/mm)",
+              "gainRotateFree",
+              0.005,
+              0.15,
+              0.005,
+            ),
+            // ⭐ `D185`: past this angle out of the glass the maroon pitch turns like a wheel seen from the camera — the
+            // pressed side follows the finger up.
+            tunable(st, "pitch: wheel past (deg out of screen)", "pitchSideConeDeg", 0, 80, 5),
+            // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
+            // gain so one DOF does not feel like a different control from three — a guess, and
+            // the range is the same as the free gain's so a hand can compare them directly.
+            tunable(st, 
+              "anchored twist gain (rad/mm)",
+              "gainRotateConstrained",
+              0.005,
+              0.15,
+              0.005,
+            ),
+            // ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — a turn ENDS on a multiple of
+            // this, slerped into place. ⛔ **`0` is the current build, no change.** ⚠ Only the END
+            // is quantised: the drag itself keeps every gain, deadband and smoothing it has now,
+            // because the earlier formulation that quantised the turn as it happened was rejected
+            // on the device for lagging the finger.
+            tunable(st, 
+              "rotation increment (deg, 0=off)",
+              "rotationIncrementDeg",
+              0,
+              45,
+              5,
+            ),
+            // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
+            // object's centre when it starts turning or turns the other way.
+            tunable(st, "sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
+            tunable(st, "sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
+            tunable(st, "sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
+            tunable(st, 
+              "sway reference turn (deg/s)",
+              "rotateSwayReferenceDegPerS",
+              20,
+              400,
+              10,
+            ),
+          ],
+        },
+        {
+          // ⭐ The green piece outside the guide sphere, in the double orbit (`trackOrbitedFaces`).
+          title: "DOUBLE ORBIT MODE",
+          sliders: [
+            // ⭐ the owner, 2026-10-03: on (1) = the faces step by increments of the yaw orbit (the yaw / pitch cycles) — the current
+            // rule; off (0) = no stepping (its own rule to be specified by the owner).
+            tunable(st, "FacesRotateByIncrement (0 / 1)", "facesRotateByIncrement", 0, 1, 1),
+          ],
+        },
       ],
     },
     {

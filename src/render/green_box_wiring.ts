@@ -417,7 +417,10 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
     if (step === "KEEP" && prev !== undefined && cycles.yaw.length + cycles.pitch.length > 0 && pink !== null) {
       // the orbit's yaw this frame, as the finger mm that would make it (a drag's dx exactly; a coast's equivalent)
       const dYawDeg = (wrapPi(yaw - prev.yaw) * 180) / Math.PI;
-      const a = accumulateFaceSteps(accMm, yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0, dxPerFaceMm);
+      // ⭐ the owner, 2026-10-03: `FacesRotateByIncrement` off — no dx counted, no face stepped (its own rule to come); the pink
+      // face's change below still turns the face anti-aligned now onto it
+      const byIncrement = st.cfg.facesRotateByIncrement === 1;
+      const a = byIncrement ? accumulateFaceSteps(accMm, yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0, dxPerFaceMm) : { accMm, steps: 0 };
       accMm = a.accMm;
       if (a.steps !== 0) {
         // ⭐ the step's face and its orientation, computed at START (`targetAtStep`) — a fast frame crossing several lands on the last
