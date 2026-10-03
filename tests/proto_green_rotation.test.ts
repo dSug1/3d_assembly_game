@@ -132,7 +132,8 @@ describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in
     expect(w).toMatch(/if \(stored === undefined\) \{\s*const q0 = levelHeading\(cur\);/);
     // an exit continues the stored turn (only its speed clock restarts)
     expect(w).toMatch(/\}\s*else if \(entering\) free = \{ \.\.\.stored, lastT: now \};/);
-    expect(w).toMatch(/: stored\.sDeg \+ dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\)/);
+    expect(w).toMatch(/const dTurnDeg = dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\);/);
+    expect(w).toMatch(/: stored\.sDeg \+ dTurnDeg,/);
     // the angles from the staircase (snapped or not, below), the pose from them
     expect(w).toMatch(/const ang = staircaseAngles\(free\.sDeg, st\.cfg\.greenRotateBlendDeg\);/);
     expect(w).toMatch(/: staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\);/);

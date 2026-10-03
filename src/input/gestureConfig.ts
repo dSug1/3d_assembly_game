@@ -997,9 +997,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ The owner, 2026-10-02: *"set the default camera lag to 0"* (was 150 ms, a guess) — no lag; the slider still adds one.
   cameraFollowMs: 0,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"build 1-3"*) — the rotation sway's 0.3° is lost against an orbit.
-  orbitSwayDeg: 8, // ⭐ the owner, 2026-10-02 (was 2)
+  orbitSwayDeg: 4.5, // ⭐ the owner, 2026-10-03 (was 8; 2 before)
   // ⭐ The owner, 2026-10-02: *"I want the sway to resolve quickly"* — a third of the held piece's 180 ms (a guess, with a slider).
-  orbitSwayTauMs: 65, // ⭐ the owner, 2026-10-02 (was 60)
+  orbitSwayTauMs: 70, // ⭐ the owner, 2026-10-03 (was 65; 60 before)
   // ⭐ Option 1 (the swing) unless switched; option 2's slide a guess, with a slider.
   orbitSwayKind: 0,
   orbitSlideMm: 5,

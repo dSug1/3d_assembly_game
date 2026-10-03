@@ -457,3 +457,10 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * ⭐ **…and the too-fast dx is IGNORED, not caught up** (the owner, 2026-10-03: *"let's not snap at the end and simply ignore the rotation
   when dx is too fast"*): while frozen (snapping on), the orbit's yaw is not accumulated at all, so on release the piece simply resumes
   from the snap it froze on. ⚠ So a fast swipe turns the orbit but not the piece: the piece's face no longer follows the orbit 1:1.
+* ⭐ **The snap freeze's limit is in DEGREES OF THE PIECE'S ROTATION per second** (the owner, 2026-10-03: *"it should not be in mm/s of
+  input, but it should be in degrees of rotation / sec. Because this shall include the influence of yaw gain share outside the guide
+  sphere. with a very small yaw gain share, the piece has time to snap even if the dx translation is fast"*): `maxSnapTurnDegPerS` = the
+  smaller increment per snap's ease — 90° / 128.6 ms ≈ **700°/s**, computed once at boot (it reads no gain and no cycle, so no
+  recompute). The MEASURED rate is the piece's own turn — the orbit's yaw (the outside yaw gain share in it) × the cycle's turn per orbit
+  degree — smoothed over 120 ms. A 50 mm/s finger freezes it at the 40 % share, not at 10 %. HUD `· turn 120/700°/s ⏸FROZEN`.
+* ⭐ **Orbit sway 4.5°, softness 70 ms** (the owner, 2026-10-03; were 8° and 65 ms).

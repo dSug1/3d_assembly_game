@@ -122,8 +122,8 @@ describe("⭐⭐ prototype — the painting SWINGS when the green piece orbits (
     const { advanceFollow, impulseForPeak } = await import("../src/input");
     const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
     // the owner, 2026-10-02: *"set the default orbit sway to 8 degrees, default orbit sway softness to 65 ms"*
-    expect(DEFAULT_CONFIG.orbitSwayTauMs).toBe(65);
-    expect(DEFAULT_CONFIG.orbitSwayDeg).toBe(8);
+    expect(DEFAULT_CONFIG.orbitSwayTauMs).toBe(70); // the owner, 2026-10-03 (was 65)
+    expect(DEFAULT_CONFIG.orbitSwayDeg).toBe(4.5); // the owner, 2026-10-03 (was 8)
     // one kick of `peak` on a spring of softness τ: when does it peak, and when is it back under 5 % of that?
     const run = (tauMs: number) => {
       const peak = 2 * (Math.PI / 180);
@@ -144,9 +144,9 @@ describe("⭐⭐ prototype — the painting SWINGS when the green piece orbits (
     const quick = run(DEFAULT_CONFIG.orbitSwayTauMs);
     const held = run(180);
     expect(quick.max).toBeCloseTo(held.max, 3); // the same angle
-    expect(quick.peakAt).toBeLessThan(held.peakAt / 2.5);
-    expect(quick.settledAt).toBeLessThan(held.settledAt / 2.5);
-    expect(quick.settledAt).toBeLessThan(400); // gone in well under half a second
+    expect(quick.peakAt).toBeLessThan(held.peakAt / 2.4); // ⚠ 2.5 until 70 ms (the owner, 2026-10-03): 180 / 70 = 2.57
+    expect(quick.settledAt).toBeLessThan(held.settledAt / 2.4);
+    expect(quick.settledAt).toBeLessThan(450); // gone in under half a second (⚠ 400 until 70 ms: it settles at 400 now)
     expect(code("render/tuning_menu.ts")).toContain('"orbitSwayTauMs", 10, 300, 5)');
   });
 });

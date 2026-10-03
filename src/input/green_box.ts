@@ -604,17 +604,16 @@ export function crossDeadbandScales(
 }
 
 /**
- * ⭐⭐ prototype (green box) — **THE FASTEST dx THE SNAPS CAN FOLLOW** (the owner, 2026-10-03: *"when the dx is too high, the rotation is
- * too fast for the snap to have the time to happens … compute the maximum dx speed in this configuration at boot time"*). Each snap is
- * eased over `easeMs`; the snaps come closest where the faces are most (`cycle ÷ (2 × max(yawFaces, pitchFaces))` of orbit yaw — half
- * the cycle each for the yaw and the pitch); at `yawDegPerMm` of orbit per mm of dx, the dx between two snaps over the ease time is the
- * most a finger may go and still see every snap land. mm of dx per second; `Infinity` when nothing snaps.
+ * ⭐⭐ prototype (green box) — **THE FASTEST TURN THE SNAPS CAN FOLLOW, IN DEGREES OF THE PIECE'S ROTATION PER SECOND** (the owner,
+ * 2026-10-03: *"compute the maximum … speed … at boot time"* — then *"it should not be in mm/s of input, but it should be in degrees of
+ * rotation / sec. Because this shall include the influence of yaw gain share outside the guide sphere"*). One snap is the smaller of the
+ * two increments, eased over `easeMs`: the piece may turn one increment per ease and still see every snap land. It reads no gain and no
+ * cycle: the MEASURED turn rate (the orbit's yaw × the cycle's turn per orbit degree) carries both. `Infinity` when nothing snaps.
  */
-export function maxSnapDxMmPerS(cycleOrbitYawDeg: number, yawFaces: number, pitchFaces: number, yawDegPerMm: number, easeMs: number): number {
-  const faces = Math.max(yawFaces, pitchFaces);
-  if (!(faces > 0) || !(yawDegPerMm > 0) || !(easeMs > 0) || !(cycleOrbitYawDeg > 0)) return Infinity;
-  const stepDxMm = cycleOrbitYawDeg / (2 * faces) / yawDegPerMm;
-  return stepDxMm / (easeMs / 1000);
+export function maxSnapTurnDegPerS(yawStepDeg: number, pitchStepDeg: number, easeMs: number): number {
+  const step = Math.min(yawStepDeg, pitchStepDeg);
+  if (!(step > 0) || !(easeMs > 0)) return Infinity;
+  return step / (easeMs / 1000);
 }
 
 /**
