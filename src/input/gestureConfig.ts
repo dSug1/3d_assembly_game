@@ -979,7 +979,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype (green box), the owner 2026-10-03: one axis moving widens the other's deadband, outside the sphere (300 %: a first guess)
   orbitCrossDeadbandOn: 1,
   orbitCrossDeadbandFactor: 3,
-  boxGainYawOutsideShare: 0.2, // ⭐ prototype (green box), the owner 2026-10-03 (was 0.4, *"reduce the green box yaw orbit gain to 40% of its value"*)
+  boxGainYawOutsideShare: 0.4, // ⭐ prototype (green box), the owner 2026-10-03: back to 0.4 (0.2 for a while; 0.4 first, *"reduce … to 40% of its value"*)
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
   boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)

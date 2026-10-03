@@ -492,3 +492,5 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   clipped), the rest DISCARDED (never caught up). The freeze, its 85 % relatch and `snapFrozen` are deleted. ⚠ Above the limit a span of
   orbit no longer completes a cycle in this mode — below it the span still sets the turn per orbit degree; the face cycles keep it exact.
   HUD `· turn …/720°/s ⏩CAPPED`.
+* ⭐ **Yaw gain share outside the sphere back to 0.4** (the owner, 2026-10-03; 0.2 for a while): outside, the orbit yaws **2.04°/mm** and the
+  piece turns ~19.6°/mm (75° span) — the 720°/s cap is reached at ~37 mm/s of finger.

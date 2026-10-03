@@ -160,7 +160,7 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
 
   it("⭐⭐ outside the guide sphere the YAW orbit gain is 40 % — and DeltaXYawPerFace grows with it (the owner: *\"reduce the green box yaw orbit gain to 40% of its value\"*)", async () => {
     const { outsideYawShare } = await import("../src/input/green_box");
-    expect(DEFAULT_CONFIG.boxGainYawOutsideShare).toBe(0.2); // the owner, 2026-10-03 (was 0.4)
+    expect(DEFAULT_CONFIG.boxGainYawOutsideShare).toBe(0.4); // the owner, 2026-10-03: back to 0.4 (0.2 for a while)
     expect(code("render/tuning_menu.ts")).toContain('"boxGainYawOutsideShare", 0.05, 1, 0.05)');
     expect(outsideYawShare(true, 0.4)).toBe(0.4);
     expect(outsideYawShare(false, 0.4)).toBe(1);
