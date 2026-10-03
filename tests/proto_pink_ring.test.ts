@@ -227,8 +227,13 @@ describe("⭐ prototype — the GUIDE SPHERE on the yellow target (the owner, 20
     const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
     expect(DEFAULT_CONFIG.guideSphereAlpha).toBe(0); // the owner, 2026-10-02: hidden by default (was 0.08)
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/export const GUIDE_SPHERE_SHARE = 0\.75;/);
-    expect(w).toMatch(/const r = GUIDE_SPHERE_SHARE \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM;/);
+    // ⭐ 75 % of the top ring — a slider since 2026-10-03 (the owner: *"make one from 1% to 100% with 5% increments"*)
+    expect(DEFAULT_CONFIG.guideSphereShare).toBe(0.75);
+    expect(code("render/tuning_menu.ts")).toContain('"guideSphereShare", 0.05, 1, 0.05)');
+    expect(w).toMatch(/const r = st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM;/);
+    // ONE radius for every "outside the sphere": the contour, the face tracking (and all that reads it)
+    expect(w.match(/st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM/g)).toHaveLength(3);
+    expect(w).not.toMatch(/GUIDE_SPHERE_SHARE/);
     expect(w).toMatch(/const t = st\.centreBlend\.targetM;\s*s\.position\.set\(t\[0\], t\[1\], t\[2\]\);/);
     expect(w).toMatch(/sphere\.isPickable = false;/); // ⛔ never blocks a press or the pink ring's occlusion ray
     expect(w).toMatch(/sphere\.metadata = \{ orbitCandidate: false \};/); // ⛔ never sways, never a barycentre candidate

@@ -438,3 +438,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   travel, as ever. CAMERA › GREEN PIECE ORBIT: the toggle (`orbitCrossDeadbandOn`, **1**) and the factor (`orbitCrossDeadbandFactor`,
   **3** = 300 %, a first guess; 1–10). `tests/proto_cross_deadband.test.ts`.
 * ⭐ **The full yaw + pitch cycle: 75° of orbit yaw** (the owner, 2026-10-03; was 70°): a face step every **9.4°** of orbit yaw (~4.6 mm of dx).
+* ⭐ **The guide sphere's radius has a slider** (the owner, 2026-10-03: *"make one from 1% to 100% with 5% increments"*): `guideSphereShare`
+  (CAMERA › RENDERING, *guide sphere radius (share of the 1st ring)*), **0.75**, 5 %–100 % in 5 % steps (from 1 % the 5 % grid would
+  miss 75 % and 100 %). It replaces the constant `GUIDE_SPHERE_SHARE`; the one radius every "outside the sphere" reads — the white
+  contour, the face tracking, and through it the outside yaw share, the cross deadband, the green piece's turn.

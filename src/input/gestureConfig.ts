@@ -541,6 +541,8 @@ export interface GestureConfig {
   greenRotateBlendDeg: number;
   /** ⭐ Prototype: the guide sphere's opacity (0 = hidden) — for prototyping only, never in the final game. */
   guideSphereAlpha: number;
+  /** ⭐ Prototype: the guide sphere's radius as a share of the 1st (top) ring's — everything "outside the sphere" reads it. */
+  guideSphereShare: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -1002,6 +1004,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSwayKind: 0,
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
+  guideSphereShare: 0.75, // ⭐ prototype (green box), the owner 2026-10-02: *"75% of the top ring radius"* — a slider since 2026-10-03
   guideSphereAlpha: 0, // ⭐ prototype (green box), the owner 2026-10-02: hidden by default (was 0.08, *"almost translucent"*)
   // ⭐ prototype (green box), the owner 2026-10-03: one full yaw + pitch cycle per turn of the orbit (it was 4°/mm of dx — ~368° of
   // orbit yaw outside the sphere); a blend of 0 (a hard switch; was 60°)
@@ -1162,6 +1165,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
     throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
+  }
+  if (!(cfg.guideSphereShare > 0 && cfg.guideSphereShare <= 1)) {
+    throw new Error(`guideSphereShare (${cfg.guideSphereShare}) must be in (0, 1].`);
   }
   if (!(cfg.guideSphereAlpha >= 0 && cfg.guideSphereAlpha <= 1)) {
     throw new Error(`guideSphereAlpha (${cfg.guideSphereAlpha}) must be in [0, 1].`);

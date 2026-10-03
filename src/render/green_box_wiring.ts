@@ -306,11 +306,9 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }
 
-/** ⭐ The guide sphere's radius: 75 % of the top ring's — the owner's *"75% of the top ring radius"*. */
-export const GUIDE_SPHERE_SHARE = 0.75;
 
 /**
- * ⭐ prototype (green box): the guide sphere, each frame — on the yellow target, radius `GUIDE_SPHERE_SHARE` × the top ring's
+ * ⭐ prototype (green box): the guide sphere, each frame — on the yellow target, radius `guideSphereShare` (the slider) × the top ring's
  * radius (the green piece's own orbit, `GREEN_PIECE_ORBIT_ZOOM`), at `guideSphereAlpha` (0 hides it).
  */
 export function guideSphereFrame(st: SceneState): void {
@@ -323,7 +321,7 @@ export function guideSphereFrame(st: SceneState): void {
   const o = st.greenOutline;
   if (box !== null && o !== null) {
     const t0 = st.centreBlend.targetM;
-    const radius = GUIDE_SPHERE_SHARE * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
+    const radius = st.cfg.guideSphereShare * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
     const out = outsideSphere([box.position.x, box.position.y, box.position.z], [t0[0], t0[1], t0[2]], radius);
     o.lines.isVisible = out;
     if (out) {
@@ -340,7 +338,7 @@ export function guideSphereFrame(st: SceneState): void {
   s.isVisible = a > 0;
   if (!(a > 0)) return;
   (s.material as StandardMaterial).alpha = a;
-  const r = GUIDE_SPHERE_SHARE * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
+  const r = st.cfg.guideSphereShare * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
   s.scaling.set(r, r, r);
   const t = st.centreBlend.targetM;
   s.position.set(t[0], t[1], t[2]);
@@ -367,7 +365,7 @@ export function guideSphereFrame(st: SceneState): void {
  */
 export function trackOrbitedFaces(st: SceneState, now: number): void {
   const t = st.centreBlend.targetM;
-  const radius = GUIDE_SPHERE_SHARE * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
+  const radius = st.cfg.guideSphereShare * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
   const yaw = st.orbit.yaw;
   const g = greenDragGains(st);
   const yawDegPerMm = orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm;
