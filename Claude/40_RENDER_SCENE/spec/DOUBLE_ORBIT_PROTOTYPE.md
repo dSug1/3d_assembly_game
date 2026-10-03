@@ -416,3 +416,12 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   the orbit's own yaw (a drag's, a coast's) feeds the turn at one lap of the staircase per that angle (`staircasePerOrbitDeg`: 720° of
   turn per 360° of orbit with no blend), so it no longer reads the dx gain or the 40 % outside share. With a hard switch: the first
   180° of orbit yaw is the piece's 360° yaw, the next 180° its 360° pitch. (Was `greenRotateGainDegPerMm` 4°/mm ≈ 368° of orbit.)
+* ⭐⭐ **The green piece's turn SNAPS to its face increments** (the owner, 2026-10-03: *"identify the number of primary faces which scroll
+  during a 360 degree yaw and … during a 360 degree pitch, and divide 360 degree by these two … snap the green piece yaw and pitch
+  rotations onto these angle increments during the yaw orbit, so the rotation of the green piece is not continuous but incremented"*).
+  Counted ONCE when the continuous turn starts (at boot), from its level pose, by the face cycles' own rule (`scrollIncrements` over
+  `faceCycles`: a face mostly along the yaw axis never comes round in a yaw, one along the pitch axis never in a pitch). The frustum: **4
+  and 4 → 90° and 90°**. Each frame the staircase's yaw and pitch angles are snapped to the NEAREST increment (`snapAngle`) and each new
+  increment is eased in like an alignment (~129 ms). With the cycle at 360° of orbit and no blend: a face step every 45° of orbit yaw.
+  Slider *snap to face increments* (`greenRotateSnap`, **1**) in OBJECT ROTATION › GREEN PIECE ROTATION; 0 = the continuous turn. HUD
+  `· steps 90° (4 faces) / 90° (4)`.

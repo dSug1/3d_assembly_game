@@ -38,6 +38,11 @@ export interface FreeTurn {
   readonly q0: Quat;
   readonly sDeg: number;
   readonly pitchAxis: Vec3;
+  /** ⭐ The primary faces that scroll past in a 360° yaw / pitch, counted once at the start (`scrollIncrements`), and 360° ÷ each. */
+  readonly yawFaces: number;
+  readonly pitchFaces: number;
+  readonly yawStepDeg: number;
+  readonly pitchStepDeg: number;
 }
 
 export interface FaceTrack {

@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, mostAntiAligned, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -30,7 +30,7 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { ALIGN_SNAP_FRACTION } from "./scene_state";
-import { add, qAngle, qconj, qmul, qRotate, qSlerp, type Quat } from "../core/vec";
+import { add, qAngle, qconj, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 import type { FreeTurn, SceneState } from "./scene_state";
 
 /** ⭐ The green. */
@@ -411,7 +411,12 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
       // yaw phase is a level piece about the vertical. The pitch axis is frozen with it (a later pink face does not move it).
       const stored = st.freeTurns.get(m);
       const entering = step !== "KEEP" || prev === undefined || prev.free === null; // an exit, the switch, or the first frame
-      if (stored === undefined) free = { q0: levelHeading(cur), sDeg: 0, pitchAxis: axes?.pitch ?? [1, 0, 0] };
+      if (stored === undefined) {
+        const q0 = levelHeading(cur);
+        const pitchAxis: Vec3 = axes?.pitch ?? [1, 0, 0];
+        // ⭐ the owner, 2026-10-03: the faces that scroll past in a 360° yaw and a 360° pitch, counted ONCE (at boot) — the increments
+        free = { q0, sDeg: 0, pitchAxis, ...scrollIncrements(faces, q0, [0, 1, 0], pitchAxis) };
+      }
       else if (entering) free = stored;
       else {
         // the orbit's yaw this frame (a drag's, a coast's): one full cycle per `greenRotateCycleOrbitYawDeg` of it (the owner, 2026-10-03)
@@ -419,9 +424,22 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         free = { ...stored, sDeg: stored.sDeg + dYawDeg * staircasePerOrbitDeg(st.cfg.greenRotateBlendDeg, st.cfg.greenRotateCycleOrbitYawDeg) };
       }
       st.freeTurns.set(m, free);
-      const want = staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis);
+      // ⭐⭐ the owner, 2026-10-03: *"snap the green piece yaw and pitch rotations onto these angle increments during the yaw orbit,
+      // so the rotation of the green piece is not continuous but incremented"* — each angle to its NEAREST increment
+      // (`greenRotateSnap`, on), each new increment reached by an alignment's ease (`greenTurnFrame`)
+      const ang = staircaseAngles(free.sDeg, st.cfg.greenRotateBlendDeg);
+      const snapped = st.cfg.greenRotateSnap === 1;
+      const want = snapped
+        ? orientationAt(free.q0, snapAngle(ang.yawDeg, free.yawStepDeg), snapAngle(ang.pitchDeg, free.pitchStepDeg), [0, 1, 0], free.pitchAxis)
+        : staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis);
       const easing = st.pieceTurns.get(m);
-      if (entering && qAngle(qmul(want, qconj(cur))) > 1e-3) {
+      if (snapped) {
+        // a new increment: eased there from where the piece is; the same one: nothing (a turn in flight lands)
+        if (qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
+          st.pieceTurns.set(m, { from: cur, to: want, t0: now });
+          st.hudDirty = true;
+        }
+      } else if (entering && qAngle(qmul(want, qconj(cur))) > 1e-3) {
         // a different pose than the turn's (the face cycles, a first level-out): eased there, as an alignment's turn
         st.pieceTurns.set(m, { from: cur, to: want, t0: now });
         st.hudDirty = true;

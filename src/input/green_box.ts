@@ -540,8 +540,39 @@ export function staircasePerOrbitDeg(blendDeg: number, cycleOrbitYawDeg: number)
  */
 export function staircaseOrientation(q0: Quat, sDeg: number, blendDeg: number, yawAxis: Vec3, pitchAxis: Vec3): Quat {
   const a = staircaseAngles(sDeg, blendDeg);
+  return orientationAt(q0, a.yawDeg, a.pitchDeg, yawAxis, pitchAxis);
+}
+
+/** ⭐ `Pitch(β) · Yaw(α) · q0` — the yaw first, about `yawAxis`; the pitch after, about `pitchAxis`. Degrees. */
+export function orientationAt(q0: Quat, yawDeg: number, pitchDeg: number, yawAxis: Vec3, pitchAxis: Vec3): Quat {
   const D = Math.PI / 180;
-  return qmul(qFromAxisAngle(pitchAxis, a.pitchDeg * D), qmul(qFromAxisAngle(yawAxis, a.yawDeg * D), q0));
+  return qmul(qFromAxisAngle(pitchAxis, pitchDeg * D), qmul(qFromAxisAngle(yawAxis, yawDeg * D), q0));
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **HOW MANY PRIMARY FACES SCROLL PAST IN A 360° YAW, AND IN A 360° PITCH** (the owner, 2026-10-03: *"based
+ * on the numbers of primary faces computed at boot for the green piece, identify the number of primary faces which scroll during a 360
+ * degree yaw and the number … during a 360 degree pitch, and divide 360 degree by these two: this gives the angle increment for yaw and
+ * the angle increment for pitch"*). From the level start pose `q0`, the face cycles' own rule (`faceCycles`): a face mostly along the
+ * yaw axis (a top, a bottom) never comes round in a yaw, one mostly along the pitch axis never in a pitch. The face toward the pink side
+ * (`n`, across both axes) starts both. The frustum: 4 and 4 → 90° and 90°. 0 faces → a whole turn.
+ */
+export function scrollIncrements(
+  faces: readonly PieceFace[],
+  q0: Quat,
+  yawAxis: Vec3,
+  pitchAxis: Vec3,
+): { readonly yawFaces: number; readonly pitchFaces: number; readonly yawStepDeg: number; readonly pitchStepDeg: number } {
+  const n = normalize(cross(yawAxis, pitchAxis));
+  if (faces.length === 0 || n === null) return { yawFaces: 0, pitchFaces: 0, yawStepDeg: 360, pitchStepDeg: 360 };
+  const c = faceCycles(faces, q0, mostAntiAligned(faces, q0, n), n, { yaw: yawAxis, pitch: pitchAxis });
+  const step = (k: number): number => (k > 0 ? 360 / k : 360);
+  return { yawFaces: c.yaw.length, pitchFaces: c.pitch.length, yawStepDeg: step(c.yaw.length), pitchStepDeg: step(c.pitch.length) };
+}
+
+/** ⭐ An angle snapped to the NEAREST whole increment (degrees) — the same going and coming back. */
+export function snapAngle(deg: number, stepDeg: number): number {
+  return stepDeg > 0 ? Math.round(deg / stepDeg) * stepDeg : deg;
 }
 
 /**

@@ -129,11 +129,66 @@ describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const freeMode = st\.cfg\.facesRotateByIncrement === 0;/);
     expect(w).toMatch(/const stored = st\.freeTurns\.get\(m\);/);
-    expect(w).toMatch(/if \(stored === undefined\) free = \{ q0: levelHeading\(cur\), sDeg: 0, pitchAxis: axes\?\.pitch \?\? \[1, 0, 0\] \};\s*else if \(entering\) free = stored;/);
+    expect(w).toMatch(/if \(stored === undefined\) \{\s*const q0 = levelHeading\(cur\);/);
+    expect(w).toMatch(/\}\s*else if \(entering\) free = stored;/);
     expect(w).toMatch(/sDeg: stored\.sDeg \+ dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\)/);
-    expect(w).toMatch(/const want = staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\);/);
+    // the angles from the staircase (snapped or not, below), the pose from them
+    expect(w).toMatch(/const ang = staircaseAngles\(free\.sDeg, st\.cfg\.greenRotateBlendDeg\);/);
+    expect(w).toMatch(/: staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\);/);
     expect(w).toMatch(/else m\.rotationQuaternion = toBabylon\(want\);/);
     // the switch turned back on (or a START): the cycles start again
     expect(w).toMatch(/const cyclesStart = !freeMode && \(step === "START" \|\| prev\?\.free !== null \|\| cycles\.yaw\.length \+ cycles\.pitch\.length === 0\);/);
+  });
+});
+
+describe("⭐⭐ prototype — the turn SNAPPED to the face increments (the owner, 2026-10-03: *\"not continuous but incremented\"*)", () => {
+  // the green piece's frustum (base 0.1035 × 0.045, top half of it, 0.04125 high), upright
+  const frustum = async () => {
+    const { pieceFaces } = await import("../src/input/green_box");
+    const { meshTopology } = await import("../src/core/mesh_topology");
+    const Wd = 0.1035 / 2, H = 0.04125 / 2, D = 0.045 / 2;
+    const c: Vec3[] = [
+      [-Wd, -H, -D], [Wd, -H, -D], [Wd / 2, H, -D / 2], [-Wd / 2, H, -D / 2],
+      [-Wd, -H, D], [Wd, -H, D], [Wd / 2, H, D / 2], [-Wd / 2, H, D / 2],
+    ];
+    const tris = [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 3, 7, 6, 3, 6, 2, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5];
+    const t = meshTopology(new Float32Array(c.flat()), tris);
+    return pieceFaces(t.positions, t.faces);
+  };
+
+  it("⭐⭐ the frustum: 4 faces scroll past in a 360° yaw (its sides), 4 in a 360° pitch (top, bottom and the two across the pink side) → 90° and 90°", async () => {
+    const { scrollIncrements } = await import("../src/input/green_box");
+    const faces = await frustum();
+    for (const [q0, pitch] of [[[1, 0, 0, 0] as Quat, [1, 0, 0] as Vec3], [qFromAxisAngle(UP, 0.6), [0, 0, 1] as Vec3]] as const) {
+      const r = scrollIncrements(faces, q0, UP, pitch);
+      expect([r.yawFaces, r.pitchFaces]).toEqual([4, 4]);
+      expect([r.yawStepDeg, r.pitchStepDeg]).toEqual([90, 90]);
+    }
+    expect(scrollIncrements([], [1, 0, 0, 0], UP, PITCH).yawStepDeg).toBe(360);
+  });
+
+  it("⭐⭐ each angle snaps to its NEAREST increment — the piece rests on whole face steps, the same going and coming back", async () => {
+    const { snapAngle } = await import("../src/input/green_box");
+    expect(snapAngle(44, 90)).toBe(0);
+    expect(snapAngle(46, 90)).toBe(90);
+    expect(snapAngle(-46, 90)).toBe(-90);
+    expect(snapAngle(359, 90)).toBe(360);
+    expect(snapAngle(37.5, 0)).toBe(37.5); // no increment: unchanged
+    // over a lap at 90/90, only 4 + 4 distinct poses are shown
+    const seen = new Set<string>();
+    for (let s = 0; s < 720; s += 1) {
+      const a = staircaseAngles(s, 0);
+      seen.add(`${((snapAngle(a.yawDeg, 90) % 360) + 360) % 360}/${((snapAngle(a.pitchDeg, 90) % 360) + 360) % 360}`);
+    }
+    expect(seen.size).toBe(8 - 1); // the start pose is shared by the yaw's and the pitch's start
+  });
+
+  it("⭐ wired: counted ONCE when the turn starts (at boot); each frame both angles snapped, each new increment eased in; a slider turns it off", () => {
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/free = \{ q0, sDeg: 0, pitchAxis, \.\.\.scrollIncrements\(faces, q0, \[0, 1, 0\], pitchAxis\) \};/);
+    expect(w).toMatch(/\? orientationAt\(free\.q0, snapAngle\(ang\.yawDeg, free\.yawStepDeg\), snapAngle\(ang\.pitchDeg, free\.pitchStepDeg\), \[0, 1, 0\], free\.pitchAxis\)/);
+    expect(w).toMatch(/if \(qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{\s*st\.pieceTurns\.set\(m, \{ from: cur, to: want, t0: now \}\);/);
+    expect(DEFAULT_CONFIG.greenRotateSnap).toBe(1);
+    expect(code("render/tuning_menu.ts")).toContain('"greenRotateSnap", 0, 1, 1)');
   });
 });

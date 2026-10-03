@@ -383,6 +383,8 @@ export function installTuningMenu(st: SceneState): void {
           sliders: [
             tunable(st, "full yaw + pitch cycle (deg of orbit yaw)", "greenRotateCycleOrbitYawDeg", 45, 1440, 15),
             tunable(st, "yaw ↔ pitch blend (deg of rotation)", "greenRotateBlendDeg", 0, 180, 5),
+            // ⭐ the owner, 2026-10-03: the turn snapped to 360° ÷ the faces scrolling past in a yaw / a pitch (0 = continuous).
+            tunable(st, "snap to face increments (0 / 1)", "greenRotateSnap", 0, 1, 1),
           ],
         },
       ],

@@ -374,7 +374,7 @@ export function greenReadout(st: SceneState): string {
     ft === undefined || tr === null || tr === undefined
       ? "faces —"
       : ft.free !== null
-        ? `faces ${tr.length} tracked, turning ${hudFree(ft.free.sDeg, st.cfg.greenRotateBlendDeg)}`
+        ? `faces ${tr.length} tracked, turning ${hudFree(ft.free.sDeg, st.cfg.greenRotateBlendDeg)}${st.cfg.greenRotateSnap === 1 ? ` · steps ${ft.free.yawStepDeg.toFixed(0)}° (${ft.free.yawFaces} faces) / ${ft.free.pitchStepDeg.toFixed(0)}° (${ft.free.pitchFaces})` : ""}`
         : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
   return `${st.greenBoxDistM.toFixed(3)} m to the yellow target | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }

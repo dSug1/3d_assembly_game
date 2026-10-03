@@ -531,6 +531,8 @@ export interface GestureConfig {
    * `FacesRotateByIncrement` off (`staircasePerOrbitDeg`). The owner, 2026-10-03 (it was a gain in degrees per mm of dx).
    */
   greenRotateCycleOrbitYawDeg: number;
+  /** ⭐ Prototype: 1 = the green piece's yaw and pitch snap to the face increments (`scrollIncrements`); 0 = the continuous turn. */
+  greenRotateSnap: number;
   /** ⭐ Prototype: the blend window between its yaw and pitch, degrees of that turn (`staircaseAngles`). */
   greenRotateBlendDeg: number;
   /** ⭐ Prototype: the guide sphere's opacity (0 = hidden) — for prototyping only, never in the final game. */
@@ -997,6 +999,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype (green box), the owner 2026-10-03: one full yaw + pitch cycle per turn of the orbit (it was 4°/mm of dx — ~368° of
   // orbit yaw outside the sphere); a blend of 0 (a hard switch; was 60°)
   greenRotateCycleOrbitYawDeg: 360,
+  greenRotateSnap: 1, // ⭐ prototype (green box), the owner 2026-10-03: *"not continuous but incremented"*
   greenRotateBlendDeg: 0,
   facesRotateByIncrement: 0, // ⭐ prototype (green box), the owner 2026-10-03: OFF by default — the continuous turn (was 1, the face cycles)
   yawFaceAlignSpanDeg: 180, // ⭐ prototype (green box), the owner 2026-10-02
@@ -1152,6 +1155,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.guideSphereAlpha >= 0 && cfg.guideSphereAlpha <= 1)) {
     throw new Error(`guideSphereAlpha (${cfg.guideSphereAlpha}) must be in [0, 1].`);
+  }
+  if (cfg.greenRotateSnap !== 0 && cfg.greenRotateSnap !== 1) {
+    throw new Error(`greenRotateSnap (${cfg.greenRotateSnap}) must be 0 or 1.`);
   }
   if (!(cfg.greenRotateCycleOrbitYawDeg > 0 && cfg.greenRotateCycleOrbitYawDeg <= 3600) || !(cfg.greenRotateBlendDeg >= 0 && cfg.greenRotateBlendDeg <= 180)) {
     throw new Error(`greenRotateCycleOrbitYawDeg (${cfg.greenRotateCycleOrbitYawDeg}) must be in (0, 3600] and greenRotateBlendDeg (${cfg.greenRotateBlendDeg}) in [0, 180].`);
