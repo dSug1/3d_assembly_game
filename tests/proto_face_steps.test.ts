@@ -187,7 +187,7 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
     for (const key of ["gainRotateFree", "pitchSideConeDeg", "gainRotateConstrained", "rotationIncrementDeg", "rotateSwayDeg", "rotateSwayTauMs", "rotateSwayTurnDeg", "rotateSwayReferenceDegPerS"])
       expect(world).toContain(`"${key}"`);
     expect(sec.slice(sec.indexOf('"DOUBLE ORBIT MODE"'))).toContain('"facesRotateByIncrement", 0, 1, 1)');
-    expect(DEFAULT_CONFIG.facesRotateByIncrement).toBe(1); // on: the current rule
+    expect(DEFAULT_CONFIG.facesRotateByIncrement).toBe(0); // the owner, 2026-10-03: off by default (the continuous turn); on = the face cycles
     // ⭐ off: the face cycles do not run — dx turns the piece continuously instead (`tests/proto_green_rotation.test.ts`)
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/if \(!freeMode && !cyclesStart && step === "KEEP"/);

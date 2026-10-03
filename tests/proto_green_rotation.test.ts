@@ -27,9 +27,9 @@ const lapLength = (w: number): number => {
 };
 
 describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in the (yaw, pitch) plane, its corners rounded", () => {
-  it("⭐ the gain and the blend have sliders in OBJECT ROTATION › GREEN PIECE ROTATION; 4°/mm (gainRotateFree's 0.07 rad/mm), 60°", () => {
+  it("⭐ the gain and the blend have sliders in OBJECT ROTATION › GREEN PIECE ROTATION; 4°/mm (gainRotateFree’s 0.07 rad/mm), blend 0 by default", () => {
     expect(DEFAULT_CONFIG.greenRotateGainDegPerMm).toBe(4);
-    expect(DEFAULT_CONFIG.greenRotateBlendDeg).toBe(60);
+    expect(DEFAULT_CONFIG.greenRotateBlendDeg).toBe(0); // the owner, 2026-10-03: a hard switch by default (was 60)
     const menu = code("render/tuning_menu.ts");
     const sec = menu.slice(menu.indexOf('title: "GREEN PIECE ROTATION"'));
     expect(sec).toContain('"greenRotateGainDegPerMm", 0.5, 20, 0.5)');
@@ -88,12 +88,38 @@ describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in
     expect((qAngle(q) * 180) / Math.PI).toBeGreaterThan(14);
   });
 
-  it("⭐ wired: OFF turns the piece by the staircase from the pose at START (no snap), dx as the orbit's yaw × the gain; ON keeps the face cycles", () => {
+  it("⭐⭐ NO PITCH IN THE YAW (the owner: *\"there is no pitch mixed with yaw when rotation is on yaw\"*): from a LEVEL start pose the piece's own up stays vertical through every yaw phase — ⛔ from a tilted one it circled the vertical", async () => {
+    const { levelHeading } = await import("../src/input/green_box");
+    const tilted = qmul(qFromAxisAngle([1, 0, 0], 0.4), qFromAxisAngle(UP, 0.8)); // left the sphere part-pitched
+    const P = lapLength(0);
+    const upOf = (q: Quat): Vec3 => {
+      const [w, x, y, z] = q; // rotate (0,1,0)
+      return [2 * (x * y - w * z), 1 - 2 * (x * x + z * z), 2 * (y * z + w * x)];
+    };
+    const level = levelHeading(tilted);
+    expect(upOf(level)[1]).toBeCloseTo(1, 9); // level
+    // the heading kept: the same direction of the piece's x across the floor
+    expect(qAngle(qmul(levelHeading(qFromAxisAngle(UP, 0.8)), qconj(qFromAxisAngle(UP, 0.8))))).toBeCloseTo(0, 9);
+    for (const lap of [0, 1, 2]) {
+      for (const s of [10, 120, 250, 350]) {
+        expect(upOf(staircaseOrientation(level, lap * P + s, 0, UP, PITCH))[1]).toBeCloseTo(1, 9); // pure yaw: still upright
+      }
+    }
+    // ⛔ the old start (the pose as it was): its up is tilted 23° AND moves around the vertical as it yaws — a pitch riding on the yaw
+    const a = upOf(staircaseOrientation(tilted, 10, 0, UP, PITCH));
+    const b = upOf(staircaseOrientation(tilted, 190, 0, UP, PITCH));
+    expect(a[1]).toBeLessThan(0.95);
+    expect(Math.hypot(a[0] - b[0], a[2] - b[2])).toBeGreaterThan(0.5);
+  });
+
+  it("⭐ wired: OFF turns the piece by the staircase — its state kept for the session (paused inside, continued at the next exit), started LEVEL; ON keeps the face cycles", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const freeMode = st\.cfg\.facesRotateByIncrement === 0;/);
-    expect(w).toMatch(/free = \{ q0: cur, sDeg: 0, pitchAxis: axes\?\.pitch \?\? \[1, 0, 0\] \};/);
-    expect(w).toMatch(/sDeg: kept\.sDeg \+ \(yawDegPerMm > 0 \? dYawDeg \/ yawDegPerMm : 0\) \* st\.cfg\.greenRotateGainDegPerMm/);
-    expect(w).toMatch(/m\.rotationQuaternion = toBabylon\(staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\)\);/);
+    expect(w).toMatch(/const stored = st\.freeTurns\.get\(m\);/);
+    expect(w).toMatch(/if \(stored === undefined\) free = \{ q0: levelHeading\(cur\), sDeg: 0, pitchAxis: axes\?\.pitch \?\? \[1, 0, 0\] \};\s*else if \(entering\) free = stored;/);
+    expect(w).toMatch(/sDeg: stored\.sDeg \+ \(yawDegPerMm > 0 \? dYawDeg \/ yawDegPerMm : 0\) \* st\.cfg\.greenRotateGainDegPerMm/);
+    expect(w).toMatch(/const want = staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\);/);
+    expect(w).toMatch(/else m\.rotationQuaternion = toBabylon\(want\);/);
     // the switch turned back on (or a START): the cycles start again
     expect(w).toMatch(/const cyclesStart = !freeMode && \(step === "START" \|\| prev\?\.free !== null \|\| cycles\.yaw\.length \+ cycles\.pitch\.length === 0\);/);
   });

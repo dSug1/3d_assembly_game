@@ -443,6 +443,8 @@ export interface SceneState {
    */
   faceTracks: Map<Mesh, FaceTrack>;
   /** ⭐ Prototype: each orbited piece's anti-alignment turn in flight (an eased slerp), if any. */
+  /** ⭐ Prototype: each orbited piece's continuous turn (`FacesRotateByIncrement` off), kept for the session — it pauses inside the sphere. */
+  freeTurns: Map<Mesh, FreeTurn>;
   pieceTurns: Map<Mesh, { readonly from: Quat; readonly to: Quat; readonly t0: number }>;
   /** ⭐ Prototype: the WORLD normal of the face holding the pink ring — set at boot and by a press that moves the target. */
   pinkFaceNormal: Vec3 | null;

@@ -399,3 +399,14 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   START pose**; dx back retraces exactly. ⛔ Blending the turning axis frame by frame — the obvious way — drifted 14.7° a lap (60°
   window). START (an exit, the switch, a new pink face) takes the pose as it is: no snap, `s` = 0, pure yaw first. Inside the sphere
   nothing turns. Sliders: OBJECT ROTATION › GREEN PIECE ROTATION. HUD `turning yaw …° pitch …°`. `tests/proto_green_rotation.test.ts`.
+* ⭐ **Defaults** (the owner, 2026-10-03): `FacesRotateByIncrement` **0** — the continuous turn ships, the face cycles are the switch's
+  other side — and the yaw ↔ pitch blend **0**: a hard switch, 360° of yaw then 360° of pitch, a lap of 720° of `s` (180 mm of dx at
+  4°/mm). Both sliders as before.
+* ⛔⛔ **No pitch in the yaw** (the owner, 2026-10-03: *"make sure that there is no pitch mixed with yaw when rotation is on yaw. It looks
+  like one axis pollutes the other"*). The rule was pure (mid-yaw, the turn is about the vertical alone); the WIRING was not: the
+  continuous turn restarted at every exit from the pose as it was, so a piece that left the sphere part-pitched — or came from the face
+  cycles — yawed TILTED about the vertical, its own up circling the vertical (a 23° tilt: the up moves > 0.5 across a half-turn). ⭐ Now
+  the turn's state is kept for the session (`freeTurns`: it pauses inside the sphere, the next exit continues it) and starts from a
+  LEVEL pose with the piece's heading (`levelHeading`) — every yaw phase is an upright piece about the vertical. A pose that differs
+  (the face cycles, the first level-out) is eased onto the turn like an alignment. ⚠ The pitch axis is frozen with the first START: a
+  later pink face no longer moves it.

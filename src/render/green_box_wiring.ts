@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, mostAntiAligned, staircaseOrientation, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, mostAntiAligned, staircaseOrientation, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -30,7 +30,7 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { ALIGN_SNAP_FRACTION } from "./scene_state";
-import { add, qRotate, qSlerp, type Quat } from "../core/vec";
+import { add, qAngle, qconj, qmul, qRotate, qSlerp, type Quat } from "../core/vec";
 import type { FreeTurn, SceneState } from "./scene_state";
 
 /** ⭐ The green. */
@@ -404,17 +404,29 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
     let free: FreeTurn | null = null;
     const freeMode = st.cfg.facesRotateByIncrement === 0;
     if (freeMode) {
-      const kept = step === "KEEP" && prev !== undefined && prev.free !== null && prev.pink === pink ? prev.free : null;
-      if (kept === null) {
-        free = { q0: cur, sDeg: 0, pitchAxis: axes?.pitch ?? [1, 0, 0] };
-        st.hudDirty = true;
-      } else {
+      // ⛔⛔ the owner, 2026-10-03: *"make sure that there is no pitch mixed with yaw when rotation is on yaw"* — the turn RESTARTED at
+      // every exit from the pose as it was, so a piece that left the sphere part-pitched (or came from the face cycles) yawed TILTED
+      // about the vertical: its own axis circled the vertical, a pitch riding on the yaw. ⭐ Now the turn's state is kept for the
+      // session (`freeTurns`; inside the sphere it pauses, an exit continues it) and its start pose is LEVEL (`levelHeading`): every
+      // yaw phase is a level piece about the vertical. The pitch axis is frozen with it (a later pink face does not move it).
+      const stored = st.freeTurns.get(m);
+      const entering = step !== "KEEP" || prev === undefined || prev.free === null; // an exit, the switch, or the first frame
+      if (stored === undefined) free = { q0: levelHeading(cur), sDeg: 0, pitchAxis: axes?.pitch ?? [1, 0, 0] };
+      else if (entering) free = stored;
+      else {
         // the orbit's yaw this frame as finger mm (a drag's dx exactly; a coast's equivalent) × the green piece's own gain
         const dYawDeg = (wrapPi(yaw - prev!.yaw) * 180) / Math.PI;
-        free = { ...kept, sDeg: kept.sDeg + (yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0) * st.cfg.greenRotateGainDegPerMm };
+        free = { ...stored, sDeg: stored.sDeg + (yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0) * st.cfg.greenRotateGainDegPerMm };
       }
-      st.pieceTurns.delete(m); // nothing else writes the orientation in this mode
-      m.rotationQuaternion = toBabylon(staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis));
+      st.freeTurns.set(m, free);
+      const want = staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis);
+      const easing = st.pieceTurns.get(m);
+      if (entering && qAngle(qmul(want, qconj(cur))) > 1e-3) {
+        // a different pose than the turn's (the face cycles, a first level-out): eased there, as an alignment's turn
+        st.pieceTurns.set(m, { from: cur, to: want, t0: now });
+        st.hudDirty = true;
+      } else if (easing !== undefined) st.pieceTurns.set(m, { ...easing, to: want }); // still easing in: it chases the turn
+      else m.rotationQuaternion = toBabylon(want);
       cycles = NO_CYCLES;
       targets = NO_TARGETS;
       s = 0;

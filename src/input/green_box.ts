@@ -529,3 +529,15 @@ export function staircaseOrientation(q0: Quat, sDeg: number, blendDeg: number, y
   const D = Math.PI / 180;
   return qmul(qFromAxisAngle(pitchAxis, a.pitchDeg * D), qmul(qFromAxisAngle(yawAxis, a.yawDeg * D), q0));
 }
+
+/**
+ * ⭐ prototype (green box) — **THE LEVEL POSE WITH `q`'s HEADING** (the owner, 2026-10-03: *"no pitch mixed with yaw when rotation is on
+ * yaw"*): a turn about the world vertical only, by the heading of the piece's own x axis (its z when x stands vertical) — the rest pose
+ * (identity, the piece upright) turned to face where `q` faces. The continuous turn starts from it, so a yaw is never a tilted spin.
+ */
+export function levelHeading(q: Quat): Quat {
+  const x = qRotate(q, [1, 0, 0]);
+  const z = qRotate(q, [0, 0, 1]);
+  const psi = Math.hypot(x[0], x[2]) > 1e-6 ? Math.atan2(-x[2], x[0]) : Math.atan2(z[0], z[2]);
+  return qFromAxisAngle([0, 1, 0], psi);
+}

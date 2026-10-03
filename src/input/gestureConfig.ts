@@ -991,10 +991,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
   guideSphereAlpha: 0, // ⭐ prototype (green box), the owner 2026-10-02: hidden by default (was 0.08, *"almost translucent"*)
-  // ⭐ prototype (green box), the owner 2026-10-03: `gainRotateFree`'s 0.07 rad/mm (360° in 90 mm of dx), and a 60° blend
+  // ⭐ prototype (green box), the owner 2026-10-03: `gainRotateFree`'s 0.07 rad/mm (360° in 90 mm of dx), a blend of 0 (the owner, 2026-10-03: a hard switch; was 60°)
   greenRotateGainDegPerMm: 4,
-  greenRotateBlendDeg: 60,
-  facesRotateByIncrement: 1, // ⭐ prototype (green box), the owner 2026-10-03: the current rule, on by default
+  greenRotateBlendDeg: 0,
+  facesRotateByIncrement: 0, // ⭐ prototype (green box), the owner 2026-10-03: OFF by default — the continuous turn (was 1, the face cycles)
   yawFaceAlignSpanDeg: 180, // ⭐ prototype (green box), the owner 2026-10-02
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
