@@ -44,7 +44,7 @@ function frustumFaces(): PieceFace[] {
 
 describe("⭐⭐ prototype — stepping through the faces as the piece orbits in yaw", () => {
   it("⭐ the span ships at 180° with a slider; DegreesYawPerFace = span ÷ faces; DeltaXYawPerFace = that ÷ the yaw rate", () => {
-    expect(DEFAULT_CONFIG.yawFaceAlignSpanDeg).toBe(180);
+    expect(DEFAULT_CONFIG.yawFaceAlignSpanDeg).toBe(75); // the owner, 2026-10-03: one span for both modes (was 180)
     expect(code("render/tuning_menu.ts")).toContain('"yawFaceAlignSpanDeg", 30, 720, 15)');
     expect(degreesYawPerFace(180, 6)).toBe(30);
     expect(degreesYawPerFace(180, 0)).toBe(0);

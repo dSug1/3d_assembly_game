@@ -524,19 +524,17 @@ export interface GestureConfig {
    * ⭐ Prototype: the YAW span over which an orbited piece outside the guide sphere steps through ALL its faces, one anti-alignment
    * per `span ÷ faces` degrees of orbit (`DegreesYawPerFace`, `trackOrbitedFaces`).
    */
+  /** ⭐ …and, since 2026-10-03, the continuous (snapped) turn's full yaw + pitch cycle too (`staircasePerOrbitDeg`). */
   yawFaceAlignSpanDeg: number;
   /**
    * ⭐ Prototype: 1 = an orbited piece outside the guide sphere steps through its faces by increments of the yaw orbit (the yaw / pitch
    * cycles, `trackOrbitedFaces`); 0 = no stepping — the owner's rule for it is to come (2026-10-03).
    */
   facesRotateByIncrement: number;
-  /**
-   * ⭐ Prototype: the ORBIT YAW, degrees, over which the green piece completes its full cycle — 360° of yaw then 360° of pitch — with
-   * `FacesRotateByIncrement` off (`staircasePerOrbitDeg`). The owner, 2026-10-03 (it was a gain in degrees per mm of dx).
-   */
-  greenRotateCycleOrbitYawDeg: number;
   /** ⭐ Prototype: 1 = the green piece's yaw and pitch snap to the face increments (`scrollIncrements`); 0 = the continuous turn. */
   greenRotateSnap: number;
+  /** ⭐ Prototype: how long one snap of the green piece's turn takes to land, ms — and so the fastest turn it can follow (`maxSnapTurnDegPerS`). */
+  greenSnapEaseMs: number;
   /** ⭐ Prototype: the blend window between its yaw and pitch, degrees of that turn (`staircaseAngles`). */
   greenRotateBlendDeg: number;
   /** ⭐ Prototype: the guide sphere's opacity (0 = hidden) — for prototyping only, never in the final game. */
@@ -1006,13 +1004,18 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
   guideSphereShare: 0.97, // ⭐ prototype (green box), the owner 2026-10-03 (was 0.75, *"75% of the top ring radius"*, 2026-10-02)
   guideSphereAlpha: 0, // ⭐ prototype (green box), the owner 2026-10-02: hidden by default (was 0.08, *"almost translucent"*)
-  // ⭐ prototype (green box), the owner 2026-10-03: one full yaw + pitch cycle per turn of the orbit (it was 4°/mm of dx — ~368° of
-  // orbit yaw outside the sphere); a blend of 0 (a hard switch; was 60°)
-  greenRotateCycleOrbitYawDeg: 75, // the owner, 2026-10-03 (was 70; 360 before, a cycle per orbit turn)
+  // ⭐ prototype (green box), the owner 2026-10-03: a blend of 0 (a hard switch; was 60°). ⛔ The full yaw + pitch cycle is the YAW FACE
+  // ALIGNMENT SPAN now (`yawFaceAlignSpanDeg`, *"make sure that yaw face alignment span also applies in this current case"*)
+  // ⭐ prototype (green box), the owner 2026-10-03: *"recompute everything so the snap is 125 ms"* — a 90° snap per 125 ms: the piece may
+  // turn 720°/s before it freezes. At a 0.2 share and a 75° span it turns ~9.8° per mm of dx: ~73 mm/s of finger; at the 0.4 share,
+  // ~37 mm/s. (90 ms before: 1000°/s; 60 ms: 1500°/s; an alignment's 129 ms first: 700°/s.)
+  greenSnapEaseMs: 125,
   greenRotateSnap: 1, // ⭐ prototype (green box), the owner 2026-10-03: *"not continuous but incremented"*
   greenRotateBlendDeg: 0,
   facesRotateByIncrement: 0, // ⭐ prototype (green box), the owner 2026-10-03: OFF by default — the continuous turn (was 1, the face cycles)
-  yawFaceAlignSpanDeg: 180, // ⭐ prototype (green box), the owner 2026-10-02
+  // ⭐ prototype (green box): the orbit yaw of ONE full yaw + pitch period, in BOTH modes — the face cycles' steps and the continuous
+  // (snapped) turn's cycle (the owner, 2026-10-03, *"also applies in this current case"*; 75° — the turn's cycle then; was 180°)
+  yawFaceAlignSpanDeg: 75,
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
@@ -1172,11 +1175,14 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.guideSphereAlpha >= 0 && cfg.guideSphereAlpha <= 1)) {
     throw new Error(`guideSphereAlpha (${cfg.guideSphereAlpha}) must be in [0, 1].`);
   }
+  if (!(cfg.greenSnapEaseMs >= 10 && cfg.greenSnapEaseMs <= 500)) {
+    throw new Error(`greenSnapEaseMs (${cfg.greenSnapEaseMs}) must be in [10, 500].`);
+  }
   if (cfg.greenRotateSnap !== 0 && cfg.greenRotateSnap !== 1) {
     throw new Error(`greenRotateSnap (${cfg.greenRotateSnap}) must be 0 or 1.`);
   }
-  if (!(cfg.greenRotateCycleOrbitYawDeg > 0 && cfg.greenRotateCycleOrbitYawDeg <= 3600) || !(cfg.greenRotateBlendDeg >= 0 && cfg.greenRotateBlendDeg <= 180)) {
-    throw new Error(`greenRotateCycleOrbitYawDeg (${cfg.greenRotateCycleOrbitYawDeg}) must be in (0, 3600] and greenRotateBlendDeg (${cfg.greenRotateBlendDeg}) in [0, 180].`);
+  if (!(cfg.greenRotateBlendDeg >= 0 && cfg.greenRotateBlendDeg <= 180)) {
+    throw new Error(`greenRotateBlendDeg (${cfg.greenRotateBlendDeg}) must be in [0, 180].`);
   }
   if (cfg.facesRotateByIncrement !== 0 && cfg.facesRotateByIncrement !== 1) {
     throw new Error(`facesRotateByIncrement (${cfg.facesRotateByIncrement}) must be 0 or 1.`);

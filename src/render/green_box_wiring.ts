@@ -416,14 +416,14 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         const inc = scrollIncrements(faces, q0, [0, 1, 0], pitchAxis);
         // ⭐ the owner, 2026-10-03: the fastest TURN the snaps can follow (°/s of the piece's rotation), computed ONCE — one increment
         // per alignment's ease. It reads no gain and no cycle: the measured turn rate carries them
-        const maxTurnDegPerS = maxSnapTurnDegPerS(inc.yawStepDeg, inc.pitchStepDeg, st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION);
-        free = { q0, sDeg: 0, pitchAxis, ...inc, maxTurnDegPerS, turnDegPerS: 0, lastT: now, frozen: false };
+        const maxTurnDegPerS = maxSnapTurnDegPerS(inc.yawStepDeg, inc.pitchStepDeg, st.cfg.greenSnapEaseMs);
+        free = { q0, sDeg: 0, pitchAxis, ...inc, maxTurnDegPerS, maxForEaseMs: st.cfg.greenSnapEaseMs, turnDegPerS: 0, lastT: now, frozen: false };
       }
       else if (entering) free = { ...stored, lastT: now };
       else {
-        // the orbit's yaw this frame (a drag's, a coast's): one full cycle per `greenRotateCycleOrbitYawDeg` of it (the owner, 2026-10-03)
+        // the orbit's yaw this frame (a drag's, a coast's): one full cycle per `yawFaceAlignSpanDeg` of it — the span, as for the face cycles (the owner, 2026-10-03)
         const dYawDeg = (wrapPi(yaw - prev!.yaw) * 180) / Math.PI;
-        const dTurnDeg = dYawDeg * staircasePerOrbitDeg(st.cfg.greenRotateBlendDeg, st.cfg.greenRotateCycleOrbitYawDeg);
+        const dTurnDeg = dYawDeg * staircasePerOrbitDeg(st.cfg.greenRotateBlendDeg, st.cfg.yawFaceAlignSpanDeg);
         // ⭐ the PIECE's turn rate (°/s) — the orbit's yaw (the outside yaw gain share in it) × the cycle's turn per orbit degree —
         // smoothed over `SNAP_SPEED_TAU_MS`: the rig steps per pointer EVENT, 15–20 a second
         const dtMs = stored.lastT === null ? 0 : now - stored.lastT;
@@ -442,6 +442,12 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         };
         if (free.frozen !== stored.frozen) st.hudDirty = true;
       }
+      // ⭐ the owner, 2026-10-03: *"recompute and speed up the snap movement"* — the snap has its OWN ease (`greenSnapEaseMs`, 60 ms); the
+      // limit is recomputed only when that slider differs from the value it was computed from (one comparison a frame)
+      if (free.maxForEaseMs !== st.cfg.greenSnapEaseMs) {
+        free = { ...free, maxTurnDegPerS: maxSnapTurnDegPerS(free.yawStepDeg, free.pitchStepDeg, st.cfg.greenSnapEaseMs), maxForEaseMs: st.cfg.greenSnapEaseMs };
+        st.hudDirty = true;
+      }
       st.freeTurns.set(m, free);
       // ⭐⭐ the owner, 2026-10-03: *"snap the green piece yaw and pitch rotations onto these angle increments during the yaw orbit,
       // so the rotation of the green piece is not continuous but incremented"* — each angle to its NEAREST increment
@@ -457,7 +463,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         // ⭐⭐ the owner, 2026-10-03: FROZEN on the last snap while dx is too fast to follow (`snapFrozen`) — and that dx is IGNORED
         // (not accumulated above), so it resumes from the same snap once dx slows to half the limit
         if (!free.frozen && qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
-          st.pieceTurns.set(m, { from: cur, to: want, t0: now });
+          st.pieceTurns.set(m, { from: cur, to: want, t0: now, ms: st.cfg.greenSnapEaseMs });
           st.hudDirty = true;
         }
       } else if (entering && qAngle(qmul(want, qconj(cur))) > 1e-3) {
@@ -537,8 +543,9 @@ const fromBabylon = (q: Quaternion): Quat => [q.w, q.x, q.y, q.z];
 
 /** ⭐ prototype (green box): each orbited piece's anti-alignment turn, one frame — a smoothstep slerp over an alignment's time. */
 function greenTurnFrame(st: SceneState, now: number): void {
-  const ms = st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+  const alignMs = st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
   for (const [m, turn] of st.pieceTurns) {
+    const ms = turn.ms ?? alignMs; // ⭐ a snap of the green piece's turn eases over its own time (`greenSnapEaseMs`)
     const u = ms > 0 ? Math.min(1, Math.max(0, (now - turn.t0) / ms)) : 1;
     m.rotationQuaternion = toBabylon(qSlerp(turn.from, turn.to, u * u * (3 - 2 * u)));
     if (u >= 1) st.pieceTurns.delete(m);

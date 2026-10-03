@@ -28,11 +28,14 @@ const lapLength = (w: number): number => {
 
 describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in the (yaw, pitch) plane, its corners rounded", () => {
   it("⭐ the gain and the blend have sliders in OBJECT ROTATION › GREEN PIECE ROTATION; 4°/mm (gainRotateFree’s 0.07 rad/mm), blend 0 by default", () => {
-    expect(DEFAULT_CONFIG.greenRotateCycleOrbitYawDeg).toBe(75); // the owner, 2026-10-03 (was 70; 360 before; 4°/mm before that)
+    // ⭐ the cycle IS the yaw face alignment span now (the owner, 2026-10-03), 75°; its own slider is gone
+    expect(DEFAULT_CONFIG.yawFaceAlignSpanDeg).toBe(75);
+    expect(DEFAULT_CONFIG).not.toHaveProperty("greenRotateCycleOrbitYawDeg");
     expect(DEFAULT_CONFIG.greenRotateBlendDeg).toBe(0); // the owner, 2026-10-03: a hard switch by default (was 60)
     const menu = code("render/tuning_menu.ts");
     const sec = menu.slice(menu.indexOf('title: "GREEN PIECE ROTATION"'));
-    expect(sec).toContain('"greenRotateCycleOrbitYawDeg", 45, 1440, 15)');
+    expect(menu).toContain('"yawFaceAlignSpanDeg", 30, 720, 15)');
+    expect(menu).not.toContain("greenRotateCycleOrbitYawDeg");
     expect(sec).toContain('"greenRotateBlendDeg", 0, 180, 5)');
   });
 
@@ -132,7 +135,7 @@ describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in
     expect(w).toMatch(/if \(stored === undefined\) \{\s*const q0 = levelHeading\(cur\);/);
     // an exit continues the stored turn (only its speed clock restarts)
     expect(w).toMatch(/\}\s*else if \(entering\) free = \{ \.\.\.stored, lastT: now \};/);
-    expect(w).toMatch(/const dTurnDeg = dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\);/);
+    expect(w).toMatch(/const dTurnDeg = dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.yawFaceAlignSpanDeg\);/);
     expect(w).toMatch(/: stored\.sDeg \+ dTurnDeg,/);
     // the angles from the staircase (snapped or not, below), the pose from them
     expect(w).toMatch(/const ang = staircaseAngles\(free\.sDeg, st\.cfg\.greenRotateBlendDeg\);/);
@@ -190,7 +193,7 @@ describe("⭐⭐ prototype — the turn SNAPPED to the face increments (the owne
     expect(w).toMatch(/const inc = scrollIncrements\(faces, q0, \[0, 1, 0\], pitchAxis\);/);
     expect(w).toMatch(/free = \{ q0, sDeg: 0, pitchAxis, \.\.\.inc,/);
     expect(w).toMatch(/\? orientationAt\(free\.q0, snapAngle\(ang\.yawDeg, free\.yawStepDeg\), snapAngle\(ang\.pitchDeg, free\.pitchStepDeg\), \[0, 1, 0\], free\.pitchAxis\)/);
-    expect(w).toMatch(/if \(!free\.frozen && qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{\s*st\.pieceTurns\.set\(m, \{ from: cur, to: want, t0: now \}\);/);
+    expect(w).toMatch(/if \(!free\.frozen && qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{\s*st\.pieceTurns\.set\(m, \{ from: cur, to: want, t0: now, ms: st\.cfg\.greenSnapEaseMs \}\);/);
     expect(DEFAULT_CONFIG.greenRotateSnap).toBe(1);
     expect(code("render/tuning_menu.ts")).toContain('"greenRotateSnap", 0, 1, 1)');
   });

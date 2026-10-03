@@ -27,7 +27,7 @@ describe("⭐⭐ prototype — the snapped turn freezes above the turn rate its 
 
   it("⭐⭐ the YAW GAIN SHARE outside the sphere is in it (the owner's reason): a smaller share, a slower turn for the same dx — no freeze", () => {
     const max = maxSnapTurnDegPerS(90, 90, DEFAULT_CONFIG.cameraResetMs * ALIGN_SNAP_FRACTION);
-    const perOrbit = staircasePerOrbitDeg(DEFAULT_CONFIG.greenRotateBlendDeg, DEFAULT_CONFIG.greenRotateCycleOrbitYawDeg); // 720 / 75
+    const perOrbit = staircasePerOrbitDeg(DEFAULT_CONFIG.greenRotateBlendDeg, DEFAULT_CONFIG.yawFaceAlignSpanDeg); // 720 / 75
     const turnAt = (dxMmPerS: number, share: number): number =>
       dxMmPerS * orbitDegPerMm(DEFAULT_CONFIG, 0.5, { yaw: outsideYawShare(true, share), pitch: 1 }).yawDegPerMm * perOrbit;
     // the same fast finger, 50 mm/s: over the limit at the 40 % share, well under it at 10 %
@@ -35,6 +35,19 @@ describe("⭐⭐ prototype — the snapped turn freezes above the turn rate its 
     expect(turnAt(50, 0.1)).toBeLessThan(max);
     // and the cycle slider is in it too: a longer cycle, a slower turn per orbit degree
     expect(staircasePerOrbitDeg(0, 300)).toBeCloseTo(perOrbit / 4, 9);
+  });
+
+  it("⭐⭐ the snap has its OWN duration, 125 ms (the owner: *\"recompute everything so the snap is 125 ms\"*): a limit of 720°/s — ~73 mm/s of finger at a 0.2 share and a 75° span, ~37 mm/s at 0.4", () => {
+    expect(DEFAULT_CONFIG.greenSnapEaseMs).toBe(125);
+    expect(code("render/tuning_menu.ts")).toContain('"greenSnapEaseMs", 10, 300, 5)');
+    const max = maxSnapTurnDegPerS(90, 90, DEFAULT_CONFIG.greenSnapEaseMs);
+    expect(max).toBeCloseTo(720, 9);
+    const perMm = (share: number): number =>
+      orbitDegPerMm(DEFAULT_CONFIG, 0.5, { yaw: outsideYawShare(true, share), pitch: 1 }).yawDegPerMm * staircasePerOrbitDeg(0, DEFAULT_CONFIG.yawFaceAlignSpanDeg);
+    expect(perMm(0.2)).toBeCloseTo(9.8, 1); // ° of the piece per mm of dx
+    expect(max / perMm(0.2)).toBeCloseTo(73.5, 0); // the fastest finger, mm/s, at a 0.2 share
+    expect(max / perMm(0.4)).toBeCloseTo(36.7, 0); // …and at the 0.4 share
+    expect(max).toBeGreaterThan(maxSnapTurnDegPerS(90, 90, DEFAULT_CONFIG.cameraResetMs * ALIGN_SNAP_FRACTION)); // the alignment's 128.6 ms: 700°/s — barely
   });
 
   it("⭐ hysteresis: frozen ABOVE the limit, released only at or below HALF of it", () => {
@@ -46,9 +59,14 @@ describe("⭐⭐ prototype — the snapped turn freezes above the turn rate its 
 
   it("⭐ wired: the limit computed ONCE at the start from the increments; the PIECE's turn rate measured; frozen → the turn ignored", () => {
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const maxTurnDegPerS = maxSnapTurnDegPerS\(inc\.yawStepDeg, inc\.pitchStepDeg, st\.cfg\.cameraResetMs \* ALIGN_SNAP_FRACTION\);/);
-    expect(w.match(/maxSnapTurnDegPerS\(/g)).toHaveLength(1); // computed once — no per-frame, no per-slider recompute (it reads neither)
-    expect(w).toMatch(/const dTurnDeg = dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\);/);
+    expect(w).toMatch(/const maxTurnDegPerS = maxSnapTurnDegPerS\(inc\.yawStepDeg, inc\.pitchStepDeg, st\.cfg\.greenSnapEaseMs\);/);
+    // ⭐ and again ONLY when the snap duration slider changes — at boot and on that change, nowhere else
+    expect(w).toMatch(/if \(free\.maxForEaseMs !== st\.cfg\.greenSnapEaseMs\) \{/);
+    expect(w.match(/maxSnapTurnDegPerS\(/g)).toHaveLength(2);
+    // the snap itself eases over that time
+    expect(w).toMatch(/st\.pieceTurns\.set\(m, \{ from: cur, to: want, t0: now, ms: st\.cfg\.greenSnapEaseMs \}\);/);
+    expect(w).toMatch(/const ms = turn\.ms \?\? alignMs;/);
+    expect(w).toMatch(/const dTurnDeg = dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.yawFaceAlignSpanDeg\);/);
     expect(w).toMatch(/const inst = dtMs > 0 \? Math\.abs\(dTurnDeg\) \/ \(dtMs \/ 1000\) : stored\.turnDegPerS;/);
     expect(w).toMatch(/const frozen = snapFrozen\(stored\.frozen, turnDegPerS, stored\.maxTurnDegPerS\);/);
     expect(w).toMatch(/const ignored = frozen && st\.cfg\.greenRotateSnap === 1;/);

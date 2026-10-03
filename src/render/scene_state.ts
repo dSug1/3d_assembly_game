@@ -45,6 +45,8 @@ export interface FreeTurn {
   readonly pitchStepDeg: number;
   /** ⭐ The fastest turn the snaps can follow (° of the piece's rotation per second), computed once at the start (`maxSnapTurnDegPerS`). */
   readonly maxTurnDegPerS: number;
+  /** ⭐ The snap ease (ms) that limit was computed from — recomputed only when the slider differs. */
+  readonly maxForEaseMs: number;
   /** ⭐ The piece's turn rate now (°/s, smoothed), and when it was measured. */
   readonly turnDegPerS: number;
   readonly lastT: number | null;
@@ -457,7 +459,7 @@ export interface SceneState {
   /** ⭐ Prototype: each orbited piece's anti-alignment turn in flight (an eased slerp), if any. */
   /** ⭐ Prototype: each orbited piece's continuous turn (`FacesRotateByIncrement` off), kept for the session — it pauses inside the sphere. */
   freeTurns: Map<Mesh, FreeTurn>;
-  pieceTurns: Map<Mesh, { readonly from: Quat; readonly to: Quat; readonly t0: number }>;
+  pieceTurns: Map<Mesh, { readonly from: Quat; readonly to: Quat; readonly t0: number; /** its ease (ms); absent: an alignment's */ readonly ms?: number }>;
   /** ⭐ Prototype: the WORLD normal of the face holding the pink ring — set at boot and by a press that moves the target. */
   pinkFaceNormal: Vec3 | null;
   /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */

@@ -132,7 +132,8 @@ export function installTuningMenu(st: SceneState): void {
         {
           // ⭐ prototype (green box), 2026-10-02: an orbited piece outside the guide sphere steps through its faces as it orbits.
           title: "FACE ALIGNMENT IN YAW",
-          sliders: [tunable(st, "yaw face alignment span (deg, all faces once)", "yawFaceAlignSpanDeg", 30, 720, 15)],
+          // ⭐ the owner, 2026-10-03: ONE span for both modes — the face cycles' steps and the green piece's full yaw + pitch cycle.
+          sliders: [tunable(st, "yaw face alignment span (deg of orbit yaw: one full yaw + pitch period)", "yawFaceAlignSpanDeg", 30, 720, 15)],
         },
         {
           // ⭐ Where the camera sits relative to the green piece, and the zoom it boots at.
@@ -386,10 +387,11 @@ export function installTuningMenu(st: SceneState): void {
           // ⭐ the owner, 2026-10-03: the green piece's continuous turn with FacesRotateByIncrement off — yaw 360°, blend, pitch 360°.
           title: "GREEN PIECE ROTATION",
           sliders: [
-            tunable(st, "full yaw + pitch cycle (deg of orbit yaw)", "greenRotateCycleOrbitYawDeg", 45, 1440, 15),
             tunable(st, "yaw ↔ pitch blend (deg of rotation)", "greenRotateBlendDeg", 0, 180, 5),
             // ⭐ the owner, 2026-10-03: the turn snapped to 360° ÷ the faces scrolling past in a yaw / a pitch (0 = continuous).
             tunable(st, "snap to face increments (0 / 1)", "greenRotateSnap", 0, 1, 1),
+            // ⭐ the owner, 2026-10-03: how fast a snap lands — and so how fast the piece may turn before it freezes.
+            tunable(st, "snap duration (ms)", "greenSnapEaseMs", 10, 300, 5),
           ],
         },
       ],

@@ -464,3 +464,19 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   recompute). The MEASURED rate is the piece's own turn — the orbit's yaw (the outside yaw gain share in it) × the cycle's turn per orbit
   degree — smoothed over 120 ms. A 50 mm/s finger freezes it at the 40 % share, not at 10 %. HUD `· turn 120/700°/s ⏸FROZEN`.
 * ⭐ **Orbit sway 4.5°, softness 70 ms** (the owner, 2026-10-03; were 8° and 65 ms).
+* ⭐⭐ **The snap has its OWN duration, 60 ms** (the owner, 2026-10-03: *"recompute and speed up the snap movement so that i can increase
+  yaw gain share outside the guide sphere to 0.2 and reduce yaw face alignment span to 75"*): `greenSnapEaseMs` (OBJECT ROTATION › GREEN
+  PIECE ROTATION, *snap duration (ms)*, 10–300) — it was an alignment's 128.6 ms (`cameraResetMs × ALIGN_SNAP_FRACTION`), which held the
+  limit at 700°/s. Sized for a 0.2 share and a 75° span: the piece turns ~9.8° per mm of dx, a brisk 150 mm/s swipe ~1470°/s, so a 90°
+  snap must land in ~61 ms → 60 ms, a limit of **1500°/s**. The limit is recomputed only when that slider changes. Other piece turns (the
+  face cycles, an ease onto the turn) keep the alignment's time.
+* ⭐⭐ **ONE span for both modes** (the owner, 2026-10-03: *"make sure that yaw face alignment span also applies in this current case"*):
+  the continuous (snapped) turn's full yaw + pitch cycle IS `yawFaceAlignSpanDeg` now — the separate `greenRotateCycleOrbitYawDeg` and
+  its slider are deleted. Default **75°** (the turn's cycle as it was; the face cycles' span was 180°). Slider: CAMERA › FACE ALIGNMENT
+  IN YAW, *yaw face alignment span (deg of orbit yaw: one full yaw + pitch period)*.
+* ⭐ **Snap duration 90 ms** (the owner, 2026-10-03: *"recompute everything for snap in 90 ms"*; 60 ms before): the limit is **1000°/s** of
+  the piece's turn. With the 75° span the piece turns ~9.8° per mm of dx at a 0.2 yaw share (the fastest finger ~**102 mm/s**) and ~19.6°
+  per mm at the 0.4 default (~**51 mm/s**); release below half of it.
+* ⭐ **Snap duration 125 ms** (the owner, 2026-10-03: *"recompute everything so the snap is 125 ms"*; 90 ms before): the limit is **720°/s**
+  of the piece's turn — the fastest finger ~**73 mm/s** at a 0.2 yaw share, ~**37 mm/s** at the 0.4 default (75° span); release below
+  360°/s. (Almost the alignment's own 128.6 ms again.)
