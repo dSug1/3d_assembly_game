@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, snapFrozen, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -417,7 +417,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         // ⭐ the owner, 2026-10-03: the fastest TURN the snaps can follow (°/s of the piece's rotation), computed ONCE — one increment
         // per alignment's ease. It reads no gain and no cycle: the measured turn rate carries them
         const maxTurnDegPerS = maxSnapTurnDegPerS(inc.yawStepDeg, inc.pitchStepDeg, st.cfg.greenSnapEaseMs);
-        free = { q0, sDeg: 0, pitchAxis, ...inc, maxTurnDegPerS, maxForEaseMs: st.cfg.greenSnapEaseMs, turnDegPerS: 0, lastT: now, frozen: false };
+        free = { q0, sDeg: 0, pitchAxis, ...inc, maxTurnDegPerS, maxForEaseMs: st.cfg.greenSnapEaseMs, turnDegPerS: 0, lastT: now, pendingDeg: 0, capped: false };
       }
       else if (entering) free = { ...stored, lastT: now };
       else {
@@ -429,18 +429,22 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         const dtMs = stored.lastT === null ? 0 : now - stored.lastT;
         const inst = dtMs > 0 ? Math.abs(dTurnDeg) / (dtMs / 1000) : stored.turnDegPerS;
         const turnDegPerS = stored.turnDegPerS + (inst - stored.turnDegPerS) * (dtMs > 0 ? 1 - Math.exp(-dtMs / SNAP_SPEED_TAU_MS) : 0);
-        const frozen = snapFrozen(stored.frozen, turnDegPerS, stored.maxTurnDegPerS);
-        // ⭐⭐ the owner, 2026-10-03: *"let's not snap at the end and simply ignore the rotation when dx is too fast"* — while frozen
-        // (snapping on) the orbit's yaw turns the piece NOT AT ALL: nothing accumulates, so on release there is nothing to catch up
-        const ignored = frozen && st.cfg.greenRotateSnap === 1;
+        // ⭐⭐ the owner, 2026-10-03: *"cap the rotation speed (maintaining the snap duration) instead of freezing the rotation"* — with
+        // the snaps on, the turn goes on at most at the limit (one snap per snap duration), a short burst spread, the excess discarded
+        // (`capTurn`). ⚠ So above the limit a span of orbit no longer makes a full cycle — the span stays exact for the face cycles.
+        const cap =
+          st.cfg.greenRotateSnap === 1
+            ? capTurn(stored.pendingDeg, dTurnDeg, stored.maxTurnDegPerS, dtMs, SNAP_SPEED_TAU_MS)
+            : { applied: dTurnDeg, pending: 0, capped: false };
         free = {
           ...stored,
-          sDeg: ignored ? stored.sDeg : stored.sDeg + dTurnDeg,
+          sDeg: stored.sDeg + cap.applied,
           turnDegPerS,
           lastT: now,
-          frozen,
+          pendingDeg: cap.pending,
+          capped: cap.capped,
         };
-        if (free.frozen !== stored.frozen) st.hudDirty = true;
+        if (free.capped !== stored.capped) st.hudDirty = true;
       }
       // ⭐ the owner, 2026-10-03: *"recompute and speed up the snap movement"* — the snap has its OWN ease (`greenSnapEaseMs`, 60 ms); the
       // limit is recomputed only when that slider differs from the value it was computed from (one comparison a frame)
@@ -460,9 +464,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
       const easing = st.pieceTurns.get(m);
       if (snapped) {
         // a new increment: eased there from where the piece is; the same one: nothing (a turn in flight lands).
-        // ⭐⭐ the owner, 2026-10-03: FROZEN on the last snap while dx is too fast to follow (`snapFrozen`) — and that dx is IGNORED
-        // (not accumulated above), so it resumes from the same snap once the turn slows to 85 % of the limit
-        if (!free.frozen && qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
+        if (qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
           st.pieceTurns.set(m, { from: cur, to: want, t0: now, ms: st.cfg.greenSnapEaseMs });
           st.hudDirty = true;
         }

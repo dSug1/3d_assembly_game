@@ -50,8 +50,9 @@ export interface FreeTurn {
   /** ⭐ The piece's turn rate now (°/s, smoothed), and when it was measured. */
   readonly turnDegPerS: number;
   readonly lastT: number | null;
-  /** ⭐ Frozen on the last snap — too fast to follow (`snapFrozen`). */
-  readonly frozen: boolean;
+  /** ⭐ The turn still waiting under the cap (°), and whether the cap held the turn back this frame (`capTurn`). */
+  readonly pendingDeg: number;
+  readonly capped: boolean;
 }
 
 export interface FaceTrack {

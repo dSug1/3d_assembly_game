@@ -3,11 +3,12 @@
  * 2026-10-03: *"when the dx is too high, the rotation is too fast for the snap to have the time to happens … compute the maximum … at boot
  * time and then if [it] exceeds this value, the rotation is frozen in the last snap until [it] goes down to 50 % of this value
  * (hysteresis)"* — *"let's not snap at the end and simply ignore the rotation when dx is too fast"* — *"it should not be in mm/s of input,
- * but it should be in degrees of rotation / sec. Because this shall include the influence of yaw gain share outside the guide sphere"*).
+ * but it should be in degrees of rotation / sec. Because this shall include the influence of yaw gain share outside the guide sphere"* —
+ * and since *"cap the rotation speed (maintaining the snap duration) instead of freezing the rotation and restarting it at 85%"*: CAPPED).
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { maxSnapTurnDegPerS, outsideYawShare, snapFrozen, staircasePerOrbitDeg } from "../src/input/green_box";
+import { capTurn, maxSnapTurnDegPerS, outsideYawShare, staircasePerOrbitDeg } from "../src/input/green_box";
 import { orbitDegPerMm } from "../src/input/follow_camera";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { ALIGN_SNAP_FRACTION } from "../src/render/scene_state";
@@ -50,15 +51,38 @@ describe("⭐⭐ prototype — the snapped turn freezes above the turn rate its 
     expect(max).toBeGreaterThan(maxSnapTurnDegPerS(90, 90, DEFAULT_CONFIG.cameraResetMs * ALIGN_SNAP_FRACTION)); // the alignment's 128.6 ms: 700°/s — barely
   });
 
-  it("⭐ hysteresis: frozen ABOVE the limit, released (the snap relatches) at or below 85 % of it (the owner, 2026-10-03; was 50 %)", () => {
-    expect(snapFrozen(false, 690, 700)).toBe(false);
-    expect(snapFrozen(false, 710, 700)).toBe(true);
-    expect(snapFrozen(true, 600, 700)).toBe(true); // 86 %: still frozen
-    expect(snapFrozen(true, 595, 700)).toBe(false); // 85 %: released
-    expect(snapFrozen(true, 400, 700)).toBe(false); // ⛔ under the old 50 % rule this was still frozen
+  it("⭐⭐ CAPPED, not frozen (the owner: *\"cap the rotation speed (maintaining the snap duration) instead of freezing\"*): too fast, it turns AT the limit — a burst spread, the excess discarded", () => {
+    const max = 720; // °/s
+    // under the limit: all of it, now
+    expect(capTurn(0, 5, max, 16, 120)).toEqual({ applied: 5, pending: 0, capped: false });
+    // ⭐ too fast, sustained: each frame exactly the limit's share — the piece keeps turning, one snap per snap duration
+    let pending = 0;
+    let turned = 0;
+    for (let f = 0; f < 60; f++) {
+      const r = capTurn(pending, 40, max, 16, 120); // 40° a 16 ms frame: 2500°/s
+      expect(r.applied).toBeCloseTo(max * 0.016, 9);
+      expect(r.capped).toBe(true);
+      pending = r.pending;
+      turned += r.applied;
+    }
+    expect(turned).toBeCloseTo(60 * max * 0.016, 6); // never stopped (⛔ the freeze turned it 0°)
+    // ⛔ the excess is DISCARDED: at most 120 ms of the limit waits (86.4°) — it does not keep turning long after the finger
+    expect(Math.abs(pending)).toBeLessThanOrEqual(max * 0.12 + 1e-9);
+    // ⭐ a BURST (one pointer event: 24° in one frame, then nothing) at an average UNDER the limit is spread, not clipped
+    let p2 = 0;
+    let got = 0;
+    for (let f = 0; f < 10; f++) {
+      const r = capTurn(p2, f === 0 ? 24 : 0, max, 16, 120);
+      p2 = r.pending;
+      got += r.applied;
+    }
+    expect(got).toBeCloseTo(24, 9); // all of it, within a few frames
+    // either way round
+    expect(capTurn(0, -40, max, 16, 120).applied).toBeCloseTo(-max * 0.016, 9);
+    expect(capTurn(0, 40, Infinity, 16, 120)).toEqual({ applied: 40, pending: 0, capped: false });
   });
 
-  it("⭐ wired: the limit computed ONCE at the start from the increments; the PIECE's turn rate measured; frozen → the turn ignored", () => {
+  it("⭐ wired: the limit computed ONCE at the start from the increments; the PIECE's turn rate measured; too fast → CAPPED (snapping on)", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const maxTurnDegPerS = maxSnapTurnDegPerS\(inc\.yawStepDeg, inc\.pitchStepDeg, st\.cfg\.greenSnapEaseMs\);/);
     // ⭐ and again ONLY when the snap duration slider changes — at boot and on that change, nowhere else
@@ -69,10 +93,10 @@ describe("⭐⭐ prototype — the snapped turn freezes above the turn rate its 
     expect(w).toMatch(/const ms = turn\.ms \?\? alignMs;/);
     expect(w).toMatch(/const dTurnDeg = dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.yawFaceAlignSpanDeg\);/);
     expect(w).toMatch(/const inst = dtMs > 0 \? Math\.abs\(dTurnDeg\) \/ \(dtMs \/ 1000\) : stored\.turnDegPerS;/);
-    expect(w).toMatch(/const frozen = snapFrozen\(stored\.frozen, turnDegPerS, stored\.maxTurnDegPerS\);/);
-    expect(w).toMatch(/const ignored = frozen && st\.cfg\.greenRotateSnap === 1;/);
-    expect(w).toMatch(/sDeg: ignored \? stored\.sDeg : stored\.sDeg \+ dTurnDeg,/);
-    expect(w).toMatch(/if \(!free\.frozen && qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{/);
+    expect(w).toMatch(/\? capTurn\(stored\.pendingDeg, dTurnDeg, stored\.maxTurnDegPerS, dtMs, SNAP_SPEED_TAU_MS\)/);
+    expect(w).toMatch(/sDeg: stored\.sDeg \+ cap\.applied,/);
+    expect(w).not.toMatch(/snapFrozen|free\.frozen|ignored/); // ⛔ the freeze and its 85 % relatch are gone
+    expect(w).toMatch(/if \(qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{/);
     expect(w).not.toMatch(/maxDxMmPerS|speedMmPerS/);
   });
 });

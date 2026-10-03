@@ -484,3 +484,11 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   `snapFrozen`'s release — with the 125 ms snap, frozen above 720°/s, relatched at or below **612°/s**.
 * ⭐ **Yaw gain share outside the sphere: 0.2** (the owner, 2026-10-03; was 0.4): outside, the orbit yaws **1.02°/mm** of dx and the piece
   turns ~9.8°/mm (75° span) — the 720°/s snap limit is reached at ~**73 mm/s** of finger, relatched at ~62 mm/s.
+* ⭐⭐ **The snapped turn is CAPPED, not frozen** (the owner, 2026-10-03: *"when the angle speed of the rotation becomes too high, cap the
+  rotation speed (maintaining the snap duration) instead of freezing the rotation and restarting it at 85%. Consequently, this will get rid
+  of the yaw face alignment span for this configuration (it stays for the other configuration where FacesRotateByIncrement is on)"*).
+  `capTurn`: the frame's turn joins what waits; at most the limit × dt is applied (one snap per snap duration — 720°/s with 125 ms); what
+  is left waits at most 120 ms of the limit (the orbit moves in bursts, one per pointer event, so a burst under the limit is spread, not
+  clipped), the rest DISCARDED (never caught up). The freeze, its 85 % relatch and `snapFrozen` are deleted. ⚠ Above the limit a span of
+  orbit no longer completes a cycle in this mode — below it the span still sets the turn per orbit degree; the face cycles keep it exact.
+  HUD `· turn …/720°/s ⏩CAPPED`.

@@ -617,10 +617,26 @@ export function maxSnapTurnDegPerS(yawStepDeg: number, pitchStepDeg: number, eas
 }
 
 /**
- * ⭐ **FROZEN ON THE LAST SNAP, WITH HYSTERESIS** (the owner, 2026-10-03: *"if dx exceeds this value, the rotation is frozen in the last snap
- * until dx goes down to 50 % of this value"* — then *"instead of 50%, set the reset to 85% for the snap to relatch"*): it freezes ABOVE
- * `max`, and stays frozen until the speed is at or below `release × max` (85 %).
+ * ⭐⭐ prototype (green box) — **THE TURN CAPPED AT THE SPEED ITS SNAPS CAN FOLLOW** (the owner, 2026-10-03: *"when the angle speed of the
+ * rotation becomes too high, cap the rotation speed (maintaining the snap duration) instead of freezing the rotation and restarting it at
+ * 85%"*). This frame's turn joins what is still waiting (`pendingDeg`); at most `maxDegPerS × dt` of it is applied; what is left waits —
+ * but never more than `windowMs` of the limit, the rest DISCARDED. ⭐ The wait is because the orbit moves in BURSTS, one per pointer event
+ * (15–20 a second): capped frame by frame, a burst would be clipped even when the average is under the limit; with a short wait it is
+ * spread over the next frames. ⛔ The discard is because a turn faster than the snaps is not to be caught up later. `capped`: the limit
+ * held this frame back.
  */
-export function snapFrozen(frozen: boolean, speed: number, max: number, release = 0.85): boolean {
-  return frozen ? speed > release * max : speed > max;
+export function capTurn(
+  pendingDeg: number,
+  dTurnDeg: number,
+  maxDegPerS: number,
+  dtMs: number,
+  windowMs: number,
+): { readonly applied: number; readonly pending: number; readonly capped: boolean } {
+  const want = pendingDeg + dTurnDeg;
+  if (!Number.isFinite(maxDegPerS)) return { applied: want, pending: 0, capped: false };
+  const step = Math.max(0, maxDegPerS * (dtMs / 1000));
+  const applied = Math.max(-step, Math.min(step, want));
+  const keep = Math.max(0, maxDegPerS * (windowMs / 1000));
+  const pending = Math.max(-keep, Math.min(keep, want - applied));
+  return { applied, pending, capped: Math.abs(want - applied) > 1e-9 };
 }
