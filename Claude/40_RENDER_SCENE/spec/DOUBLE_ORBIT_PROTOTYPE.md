@@ -425,3 +425,5 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   increment is eased in like an alignment (~129 ms). With the cycle at 360° of orbit and no blend: a face step every 45° of orbit yaw.
   Slider *snap to face increments* (`greenRotateSnap`, **1**) in OBJECT ROTATION › GREEN PIECE ROTATION; 0 = the continuous turn. HUD
   `· steps 90° (4 faces) / 90° (4)`.
+* ⭐ **The full yaw + pitch cycle: 70° of orbit yaw** (the owner, 2026-10-03; was 360°). Snapped at 90° / 90°: a face step every **8.75°
+  of orbit yaw** — ~4.3 mm of dx outside the sphere (2.04°/mm).

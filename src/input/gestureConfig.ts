@@ -998,7 +998,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   guideSphereAlpha: 0, // ⭐ prototype (green box), the owner 2026-10-02: hidden by default (was 0.08, *"almost translucent"*)
   // ⭐ prototype (green box), the owner 2026-10-03: one full yaw + pitch cycle per turn of the orbit (it was 4°/mm of dx — ~368° of
   // orbit yaw outside the sphere); a blend of 0 (a hard switch; was 60°)
-  greenRotateCycleOrbitYawDeg: 360,
+  greenRotateCycleOrbitYawDeg: 70, // the owner, 2026-10-03 (was 360: a cycle per orbit turn)
   greenRotateSnap: 1, // ⭐ prototype (green box), the owner 2026-10-03: *"not continuous but incremented"*
   greenRotateBlendDeg: 0,
   facesRotateByIncrement: 0, // ⭐ prototype (green box), the owner 2026-10-03: OFF by default — the continuous turn (was 1, the face cycles)
