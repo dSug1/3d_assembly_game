@@ -1,10 +1,39 @@
-# Green piece — the assembly phases (prototype spec, draft 3)
+# Green piece — the assembly phases (prototype spec, draft 3 — agreed)
 
-**Status:** draft 3, 2026-10-03. Not built. Prototype branch only (`1.0.59k-…`), not the main line, which already has world-coordinate
+**Status:** draft 3, **agreed by the owner** 2026-10-03 (*"I am OK with this proposal"*). Not built. Prototype branch only (`1.0.59k-…`), not the main line, which already has world-coordinate
 translation. Marked **AGREED** where the owner confirmed it, **PROPOSED** where it still needs the owner's yes.
 
 **Goal:** make the held green piece follow the way a child assembles two bricks: pick the face → commit → approach along the insertion
 axis while rolling the long axis into line → hover → fine roll → contact → seat. Each phase frees only the degrees of freedom it needs.
+
+## 0. FIRST — the start pose: the heading rounded to the pink face (PROPOSED; worked on first)
+
+The owner, 2026-10-03: *"capture your suggestion as the first point of the specification. we will work on that first"*.
+
+**The problem, measured from the code.** When the snapped turn starts, the start pose `q0` is made LEVEL (`levelHeading`): the piece's
+tilt and roll are dropped, its HEADING (the direction of its own x across the floor) is kept. The snaps are then
+`Pitch(β) · Yaw(α) · q0`, α and β multiples of the increment (90° for the frustum) counted from that heading, not from the pink face.
+- The faces themselves (`topologyFromMesh` → `pieceFaces`, in the piece's own frame) and their counts (`scrollIncrements`: 4 and 4
+  for the frustum) do not depend on the start quaternion.
+- But with an arbitrary heading ψ, every yaw snap shows the pink face a side that is off by `ψ mod 90°`, on top of the side's own slant.
+  At ψ ≈ 45° the piece faces the pink face EDGE-FIRST, between two sides, on every yaw snap; the commit's settle (§3a) would then be a
+  turn of up to 45° plus the slant, not a small correction, and choosing a face in `COARSE` would be hard.
+
+**The rule.** When the snapped turn's start pose is made (`q0`, once per session), its heading is also **rounded to the grid relative to
+the pink face**: after the level-out, the yaw (at most half an increment, ≤ 45° for the frustum) that turns the start face's
+horizontal normal to face exactly against the pink face's horizontal normal. The start face is the one most anti-aligned with the pink
+normal (`mostAntiAligned`, as today).
+- Applied once, with the level-out, and EASED like it (the snap duration). Automatic, like the level-out: it chooses no face for the
+  user, it only squares the grid onto the pink face.
+- Then every yaw snap shows a side SQUARELY (only its own slant left: 15° or 32° on the frustum), and the settle at the commit stays
+  the small correction §3a describes.
+- A vertical pink normal (no horizontal part): no rounding (the heading is kept as today).
+
+**Open questions — answered when step 0 is built (§6):**
+- **Q0.1 A pink face changed during the session.** Today the start pose and the pitch axis are frozen at the first start. Should the
+  rounding (and the pitch axis) be redone for the new pink face?
+- **Q0.2 A pink face facing up or down.** Its normal has no horizontal part, so the start face is the TOP or the BOTTOM. Does that case
+  need its own rounding about the vertical (squaring the piece's sides onto the pink face's edges), or nothing?
 
 ## 1. Scope
 
@@ -53,7 +82,7 @@ neither orbits nor advances the snaps, so that pose is exactly the one left. `CO
 **Feedback:** a short vibration on entering `CONTACT`; at `SEATED` a vibration and a pop-up like the goal's. Vibration only where
 supported (Android `navigator.vibrate`; iOS has none).
 
-### 3a. `COMMIT`: the face settles onto exact anti-parallel (PROPOSED)
+### 3a. `COMMIT`: the face settles onto exact anti-parallel (AGREED)
 
 The owner, 2026-10-03: *"I prefer to keep the 90 degrees rotation (or whatever the angle is based on the green piece geometry) and then
 find a way to anti-align the normals"*. ⛔ The exact face targets (`cycleTargets`) are rejected for `COARSE` (*"very difficult for the
@@ -66,7 +95,7 @@ user to predict which face will show at next snap"*).
 - **Optional preview** (`greenSettlePreviewMs`, 0 = off): in `COARSE`, once dx has rested that long, the shown face settles the same way,
   and goes back to the grid as soon as dx moves. The next snap is still computed on the grid.
 
-### 3b. The roll: long axis, then fine (AGREED; the timing slider PROPOSED)
+### 3b. The roll: long axis, then fine (AGREED)
 
 The owner, 2026-10-03: *"at one point, long axis of the mating faces appear and dx rolls the green piece mating face so the user tries
 to align the long axis — then fine roll"*. Long-axis alignment is a **deliberate** action (*"not something the game automatically
@@ -80,7 +109,7 @@ does"*); a tap was rejected (*"it has to be a more precise action"*): dx is that
 **The control:**
 1. **The lines** (a pink line on the pink face's long axis, a green line on the mating face's) appear once `p ≥ greenLongAxisFromP`,
    and disappear below it minus `greenLongAxisHysteresisP`. ⭐ The owner: *"not zero, but somewhere along the way to 0.6"* —
-   PROPOSED **0.2**: early enough to roll the long axis roughly while most of the approach is still ahead, late enough that the
+   AGREED **0.2**: early enough to roll the long axis roughly while most of the approach is still ahead, late enough that the
    commit and the lines are two distinct moments. The roll starts with the lines.
 2. **dx rolls** the piece about `n`, freely through 360°. Rolling 180° further chooses the other parallel orientation: the roll
    disambiguation, done by the same finger.
@@ -91,7 +120,7 @@ does"*); a tap was rejected (*"it has to be a more precise action"*): dx is that
 5. A face with no clear long axis (sides within `greenLongAxisMinRatio`) draws no line and has no magnet: the roll starts at the same
    progress, fine-only.
 
-### 3c. Deadbands, thresholds and hysteresis (PROPOSED)
+### 3c. Deadbands, thresholds and hysteresis (AGREED; the numbers to tune on the glass)
 
 The owner, 2026-10-03: *"we have to define properly the deadbands, the ratios"* — and NO axis latch (*"stiffer deadbands and trigger
 thresholds shall do the job if correctly tuned. Ignoring axis may create noise if the first to leave is not the one the user
@@ -144,22 +173,36 @@ and the long-axis magnet (`greenLongAxisMagnetDeg`) holding an alignment against
 
 On the `green` line: `phase APPROACH u=14.2 mm (commit 8 / 3) p=0.16 r=1.84 m axial=… lateral=… roll=…° (long axis ±3°) bands x 10.5 / y 3.5`.
 
-## 6. Build order (each with vectors, pure in `src/input/`)
+## 6. Build order (each with vectors, pure in `src/input/`), with the questions each step needs answered
 
-1. The phase machine (state, entry and exit, the dx/dy routing) and the HUD readout.
-2. `COMMIT`'s settle (§3a).
-3. The approach funnel and the standoff.
-4. The roll: the gain schedule, then the long-axis lines and the magnet (§3b).
-5. Contact and slide.
-6. Seat, with vibration and pop-up.
+⛔ **Do not build until the owner says so** (the owner, 2026-10-03: *"Do not start to build. I will instruct you when to start"* — *"I will
+answer them as we build the respective steps"*). Each step's questions are answered when that step is built.
 
-## 7. Open questions for the owner
+**Step 0. ⭐ FIRST — the start pose's heading rounded to the pink face (§0).**
+- Q0.1 and Q0.2, in §0.
 
-1. **dy while held:** it moves the orbit ring today; the spec gives it to the push, so the ring cannot change while held. Acceptable?
-2. **The numbers of §3c:** commit 8 mm, un-commit 3 mm, lines at 0.2 — a first proposal, to be tuned on the glass.
-3. **Piece behind the face** (`P₀` on the wrong side of the pink face's plane): refuse the approach (HUD `behind`), or route the funnel
-   around?
-4. **Lift before the seat:** ease back to the orbit (spec), or leave the piece where it is?
-5. **Camera from `COMMIT` on:** hold (spec), or keep following a slow yaw?
-6. **The PROPOSED parts:** the settle at the commit and its preview (§3a); the thresholds and hysteresis (§3c).
-7. **Later, not in this spec:** the second touch as the "dominant hand".
+**Step 1. The phase machine** (state, entry and exit, the dx/dy routing) **and the HUD readout.**
+- **Q1.1 dy while held.** Today dy moves the orbit between the rings. The spec gives dy to the push as soon as the piece is held, so the
+  orbit ring cannot change while held. Acceptable?
+- **Q1.2 A lift before the seat.** Ease the piece back to its orbit position (as spec'd), or leave it where it is?
+- **Q1.3 The camera from `COMMIT` on.** Hold still (as spec'd), or keep following with a slow yaw?
+
+**Step 2. `COMMIT`'s settle (§3a).** — no open question.
+
+**Step 3. The approach funnel and the standoff.**
+- **Q3.1 A piece behind the pink face** (`P₀` on the wrong side of the pink face's plane at the press). Refuse the approach (the HUD says
+  `behind`), or route the funnel around the face?
+
+**Step 4. The roll:** the gain schedule, then the long-axis lines and the magnet (§3b). — no open question.
+
+**Step 5. Contact and slide.** — no open question.
+
+**Step 6. Seat, with vibration and pop-up.** — no open question.
+
+## 7. Settled, and later
+
+**Settled, for the record:** the numbers of §3c (commit 8 mm, un-commit 3 mm, the lines at 0.2), the settle at the commit (§3a; its
+preview off by default), the un-commit by the push alone back to the grid quaternion (§3), no axis latch (§3c), no second finger and no
+lift during the motion.
+
+**Later, not in this spec:** the second touch as the "dominant hand" (the owner: no other finger for now).
