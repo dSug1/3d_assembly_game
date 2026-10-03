@@ -28,12 +28,25 @@ const lapLength = (w: number): number => {
 
 describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in the (yaw, pitch) plane, its corners rounded", () => {
   it("⭐ the gain and the blend have sliders in OBJECT ROTATION › GREEN PIECE ROTATION; 4°/mm (gainRotateFree’s 0.07 rad/mm), blend 0 by default", () => {
-    expect(DEFAULT_CONFIG.greenRotateGainDegPerMm).toBe(4);
+    expect(DEFAULT_CONFIG.greenRotateCycleOrbitYawDeg).toBe(360); // the owner, 2026-10-03: a cycle per orbit turn (was 4°/mm)
     expect(DEFAULT_CONFIG.greenRotateBlendDeg).toBe(0); // the owner, 2026-10-03: a hard switch by default (was 60)
     const menu = code("render/tuning_menu.ts");
     const sec = menu.slice(menu.indexOf('title: "GREEN PIECE ROTATION"'));
-    expect(sec).toContain('"greenRotateGainDegPerMm", 0.5, 20, 0.5)');
+    expect(sec).toContain('"greenRotateCycleOrbitYawDeg", 45, 1440, 15)');
     expect(sec).toContain('"greenRotateBlendDeg", 0, 180, 5)');
+  });
+
+  it("⭐⭐ the cycle is set in ORBIT YAW (the owner: *\"orbit rotation yaw angle required to complete the full cycle\"*): that much orbit completes exactly 360° of yaw AND 360° of pitch", async () => {
+    const { staircasePerOrbitDeg } = await import("../src/input/green_box");
+    for (const [w, cycle] of [[0, 360], [60, 360], [0, 180], [90, 1000]] as const) {
+      const s = cycle * staircasePerOrbitDeg(w, cycle);
+      const a = staircaseAngles(s, w);
+      expect(a.yawDeg).toBeCloseTo(360, 6);
+      expect(a.pitchDeg).toBeCloseTo(360, 6);
+      // half of it: the yaw done, no pitch yet (a hard switch)
+      if (w === 0) expect(staircaseAngles(s / 2, 0)).toEqual({ yawDeg: 360, pitchDeg: 0 });
+    }
+    expect(staircasePerOrbitDeg(0, 360)).toBe(2); // 720° of turn per 360° of orbit
   });
 
   it("⭐⭐ pure YAW from s = 0, then the blend, then pure PITCH, then the blend — and each lap adds EXACTLY 360° to both", () => {
@@ -117,7 +130,7 @@ describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in
     expect(w).toMatch(/const freeMode = st\.cfg\.facesRotateByIncrement === 0;/);
     expect(w).toMatch(/const stored = st\.freeTurns\.get\(m\);/);
     expect(w).toMatch(/if \(stored === undefined\) free = \{ q0: levelHeading\(cur\), sDeg: 0, pitchAxis: axes\?\.pitch \?\? \[1, 0, 0\] \};\s*else if \(entering\) free = stored;/);
-    expect(w).toMatch(/sDeg: stored\.sDeg \+ \(yawDegPerMm > 0 \? dYawDeg \/ yawDegPerMm : 0\) \* st\.cfg\.greenRotateGainDegPerMm/);
+    expect(w).toMatch(/sDeg: stored\.sDeg \+ dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\)/);
     expect(w).toMatch(/const want = staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\);/);
     expect(w).toMatch(/else m\.rotationQuaternion = toBabylon\(want\);/);
     // the switch turned back on (or a START): the cycles start again

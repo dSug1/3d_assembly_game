@@ -494,19 +494,16 @@ function blendIntegral(f: (a: number) => number, t: number): number {
  * ⭐⭐ prototype (green box) — **THE STAIRCASE IN THE (YAW, PITCH) PLANE, ITS CORNERS ROUNDED** (the owner, 2026-10-03: *"Dx rotates the
  * green piece around yaw in world axis and then, once the yaw has done 360 degrees, transitions to rotation in pitch and then, once
  * pitch has done 360 degrees, transitions to rotation in yaw again … The transitions shall be done as per a 2D curve … so that there is
- * a smooth blend between yaw / pitch rotations"* — the proposal accepted: *"build"*). \`sDeg\` is the accumulated rotation; the yaw
- * angle α and the pitch angle β run a staircase — pure yaw, a blend, pure pitch, a blend — and in each blend window of \`blendDeg\` of
- * \`s\` the speed is shared cos θ to the outgoing angle and sin θ to the incoming one, θ easing 0 → 90° on a smootherstep: the total
+ * a smooth blend between yaw / pitch rotations"* — the proposal accepted: *"build"*). `sDeg` is the accumulated rotation; the yaw
+ * angle α and the pitch angle β run a staircase — pure yaw, a blend, pure pitch, a blend — and in each blend window of `blendDeg` of
+ * `s` the speed is shared cos θ to the outgoing angle and sin θ to the incoming one, θ easing 0 → 90° on a smootherstep: the total
  * turn speed is constant and the turning axis glides with continuous speed and acceleration. (Linear segments with smooth blends —
  * Craig, *Introduction to Robotics*; CNC corner rounding — with α and β as the two joints.) ⭐ Each pure segment is shortened by
- * exactly what the two windows give its angle (\`L = 360 − 2·W·C\`, C = the window's share), so EACH LAP ADDS EXACTLY 360° TO BOTH:
- * the piece comes back to its START pose every period, and \`s\` going back retraces it exactly. \`s = 0\` starts the pure yaw.
+ * exactly what the two windows give its angle (`L = 360 − 2·W·C`, C = the window's share), so EACH LAP ADDS EXACTLY 360° TO BOTH:
+ * the piece comes back to its START pose every period, and `s` going back retraces it exactly. `s = 0` starts the pure yaw.
  */
 export function staircaseAngles(sDeg: number, blendDeg: number): { readonly yawDeg: number; readonly pitchDeg: number } {
-  const C = blendIntegral(Math.cos, 1); // = the sin share too: smootherstep is symmetric
-  const W = Math.min(Math.max(0, blendDeg), 180 / C); // the pure segments never go negative
-  const L = 360 - 2 * W * C;
-  const P = 2 * L + 2 * W;
+  const { C, W, L, P } = staircaseLap(blendDeg);
   const k = Math.floor(sDeg / P);
   const m = sDeg - k * P;
   const lap = 360 * k;
@@ -520,9 +517,26 @@ export function staircaseAngles(sDeg: number, blendDeg: number): { readonly yawD
   return { yawDeg: lap + L + W * C + W * blendIntegral(Math.sin, t), pitchDeg: lap + W * C + L + W * blendIntegral(Math.cos, t) };
 }
 
+/** ⭐ The staircase's lap: the window's share `C`, the window `W`, the pure segment `L` and the lap `P` = 2L + 2W (all in `s`). */
+function staircaseLap(blendDeg: number): { readonly C: number; readonly W: number; readonly L: number; readonly P: number } {
+  const C = blendIntegral(Math.cos, 1); // = the sin share too: smootherstep is symmetric
+  const W = Math.min(Math.max(0, blendDeg), 180 / C); // the pure segments never go negative
+  const L = 360 - 2 * W * C;
+  return { C, W, L, P: 2 * L + 2 * W };
+}
+
 /**
- * ⭐ The orientation at \`sDeg\`: \`Pitch(β) · Yaw(α) · q0\` — yaw about \`yawAxis\` (the world vertical) applied first, the pitch about
- * \`pitchAxis\` after. In a pure segment the other angle sits on a whole number of turns, so the motion is pure world yaw or pure pitch.
+ * ⭐ prototype (green box) — **THE TURN PER DEGREE OF ORBIT YAW** (the owner, 2026-10-03: *"green piece rotation gain: instead of deg per
+ * input mm, do it in orbit rotation yaw angle required to complete the full cycle (yaw and pitch 360 degree rotation of the green
+ * piece)"*): one lap of the staircase (`2L + 2W` of `s`: 720 with no blend) over `cycleOrbitYawDeg` of orbit yaw.
+ */
+export function staircasePerOrbitDeg(blendDeg: number, cycleOrbitYawDeg: number): number {
+  return cycleOrbitYawDeg > 0 ? staircaseLap(blendDeg).P / cycleOrbitYawDeg : 0;
+}
+
+/**
+ * ⭐ The orientation at `sDeg`: `Pitch(β) · Yaw(α) · q0` — yaw about `yawAxis` (the world vertical) applied first, the pitch about
+ * `pitchAxis` after. In a pure segment the other angle sits on a whole number of turns, so the motion is pure world yaw or pure pitch.
  */
 export function staircaseOrientation(q0: Quat, sDeg: number, blendDeg: number, yawAxis: Vec3, pitchAxis: Vec3): Quat {
   const a = staircaseAngles(sDeg, blendDeg);

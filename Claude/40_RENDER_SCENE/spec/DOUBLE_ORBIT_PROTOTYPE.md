@@ -410,3 +410,9 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   LEVEL pose with the piece's heading (`levelHeading`) — every yaw phase is an upright piece about the vertical. A pose that differs
   (the face cycles, the first level-out) is eased onto the turn like an alignment. ⚠ The pitch axis is frozen with the first START: a
   later pink face no longer moves it.
+* ⭐ **The continuous turn is set in ORBIT YAW** (the owner, 2026-10-03: *"green piece rotation gain: instead of deg per input mm, do it
+  in orbit rotation yaw angle required to complete the full cycle (yaw and pitch 360 degree rotation of the green piece)"*):
+  `greenRotateCycleOrbitYawDeg` **360°** (OBJECT ROTATION › GREEN PIECE ROTATION, *full yaw + pitch cycle (deg of orbit yaw)*, 45–1440) —
+  the orbit's own yaw (a drag's, a coast's) feeds the turn at one lap of the staircase per that angle (`staircasePerOrbitDeg`: 720° of
+  turn per 360° of orbit with no blend), so it no longer reads the dx gain or the 40 % outside share. With a hard switch: the first
+  180° of orbit yaw is the piece's 360° yaw, the next 180° its 360° pitch. (Was `greenRotateGainDegPerMm` 4°/mm ≈ 368° of orbit.)

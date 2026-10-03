@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, mostAntiAligned, staircaseOrientation, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, mostAntiAligned, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -414,9 +414,9 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
       if (stored === undefined) free = { q0: levelHeading(cur), sDeg: 0, pitchAxis: axes?.pitch ?? [1, 0, 0] };
       else if (entering) free = stored;
       else {
-        // the orbit's yaw this frame as finger mm (a drag's dx exactly; a coast's equivalent) × the green piece's own gain
+        // the orbit's yaw this frame (a drag's, a coast's): one full cycle per `greenRotateCycleOrbitYawDeg` of it (the owner, 2026-10-03)
         const dYawDeg = (wrapPi(yaw - prev!.yaw) * 180) / Math.PI;
-        free = { ...stored, sDeg: stored.sDeg + (yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0) * st.cfg.greenRotateGainDegPerMm };
+        free = { ...stored, sDeg: stored.sDeg + dYawDeg * staircasePerOrbitDeg(st.cfg.greenRotateBlendDeg, st.cfg.greenRotateCycleOrbitYawDeg) };
       }
       st.freeTurns.set(m, free);
       const want = staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis);
