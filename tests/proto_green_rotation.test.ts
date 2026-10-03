@@ -28,7 +28,7 @@ const lapLength = (w: number): number => {
 
 describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in the (yaw, pitch) plane, its corners rounded", () => {
   it("⭐ the gain and the blend have sliders in OBJECT ROTATION › GREEN PIECE ROTATION; 4°/mm (gainRotateFree’s 0.07 rad/mm), blend 0 by default", () => {
-    expect(DEFAULT_CONFIG.greenRotateCycleOrbitYawDeg).toBe(70); // the owner, 2026-10-03 (was 360, a cycle per orbit turn; before that 4°/mm)
+    expect(DEFAULT_CONFIG.greenRotateCycleOrbitYawDeg).toBe(75); // the owner, 2026-10-03 (was 70; 360 before; 4°/mm before that)
     expect(DEFAULT_CONFIG.greenRotateBlendDeg).toBe(0); // the owner, 2026-10-03: a hard switch by default (was 60)
     const menu = code("render/tuning_menu.ts");
     const sec = menu.slice(menu.indexOf('title: "GREEN PIECE ROTATION"'));

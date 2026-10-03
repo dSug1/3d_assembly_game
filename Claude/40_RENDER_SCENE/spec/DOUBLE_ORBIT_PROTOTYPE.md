@@ -437,3 +437,4 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   held piece. A yaw swipe drifting 6 mm up: pitch leaks 2.5 mm at 100 %, none at 300 %. Inside the sphere or switched off: the raw
   travel, as ever. CAMERA › GREEN PIECE ORBIT: the toggle (`orbitCrossDeadbandOn`, **1**) and the factor (`orbitCrossDeadbandFactor`,
   **3** = 300 %, a first guess; 1–10). `tests/proto_cross_deadband.test.ts`.
+* ⭐ **The full yaw + pitch cycle: 75° of orbit yaw** (the owner, 2026-10-03; was 70°): a face step every **9.4°** of orbit yaw (~4.6 mm of dx).
