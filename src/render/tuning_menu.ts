@@ -178,8 +178,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "auto shadows: frame budget (ms, median)", "autoShadowBudgetMs", 10, 100, 1),
             // ⭐ prototype (green box), 2026-10-02: the guide sphere on the yellow target — for prototyping only (0 = hidden).
             tunable(st, "guide sphere opacity (0 = hidden)", "guideSphereAlpha", 0, 0.5, 0.01),
-            // ⭐ the owner, 2026-10-03: its radius, a share of the 1st ring's (5 % steps; 75 % and 100 % on the grid).
-            tunable(st, "guide sphere radius (share of the 1st ring)", "guideSphereShare", 0.05, 1, 0.05),
+            // ⭐ the owner, 2026-10-03: its radius, a share of the 1st ring's — 1 % to 100 %, in 1 % steps.
+            tunable(st, "guide sphere radius (share of the 1st ring)", "guideSphereShare", 0.01, 1, 0.01),
           ],
         },
         {

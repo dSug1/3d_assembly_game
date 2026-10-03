@@ -1004,7 +1004,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSwayKind: 0,
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
-  guideSphereShare: 0.75, // ⭐ prototype (green box), the owner 2026-10-02: *"75% of the top ring radius"* — a slider since 2026-10-03
+  guideSphereShare: 0.97, // ⭐ prototype (green box), the owner 2026-10-03 (was 0.75, *"75% of the top ring radius"*, 2026-10-02)
   guideSphereAlpha: 0, // ⭐ prototype (green box), the owner 2026-10-02: hidden by default (was 0.08, *"almost translucent"*)
   // ⭐ prototype (green box), the owner 2026-10-03: one full yaw + pitch cycle per turn of the orbit (it was 4°/mm of dx — ~368° of
   // orbit yaw outside the sphere); a blend of 0 (a hard switch; was 60°)

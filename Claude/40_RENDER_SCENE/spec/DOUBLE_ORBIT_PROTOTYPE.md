@@ -442,3 +442,4 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   (CAMERA › RENDERING, *guide sphere radius (share of the 1st ring)*), **0.75**, 5 %–100 % in 5 % steps (from 1 % the 5 % grid would
   miss 75 % and 100 %). It replaces the constant `GUIDE_SPHERE_SHARE`; the one radius every "outside the sphere" reads — the white
   contour, the face tracking, and through it the outside yaw share, the cross deadband, the green piece's turn.
+* ⭐ **Guide sphere radius 97 %, in 1 % steps from 1 %** (the owner, 2026-10-03; was 75 %, 5 % steps): 2.47 m with the 2.55 m 1st ring.

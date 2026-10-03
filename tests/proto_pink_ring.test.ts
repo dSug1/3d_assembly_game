@@ -228,8 +228,8 @@ describe("⭐ prototype — the GUIDE SPHERE on the yellow target (the owner, 20
     expect(DEFAULT_CONFIG.guideSphereAlpha).toBe(0); // the owner, 2026-10-02: hidden by default (was 0.08)
     const w = code("render/green_box_wiring.ts");
     // ⭐ 75 % of the top ring — a slider since 2026-10-03 (the owner: *"make one from 1% to 100% with 5% increments"*)
-    expect(DEFAULT_CONFIG.guideSphereShare).toBe(0.75);
-    expect(code("render/tuning_menu.ts")).toContain('"guideSphereShare", 0.05, 1, 0.05)');
+    expect(DEFAULT_CONFIG.guideSphereShare).toBe(0.97); // the owner, 2026-10-03 (was 0.75)
+    expect(code("render/tuning_menu.ts")).toContain('"guideSphereShare", 0.01, 1, 0.01)');
     expect(w).toMatch(/const r = st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM;/);
     // ONE radius for every "outside the sphere": the contour, the face tracking (and all that reads it)
     expect(w.match(/st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM/g)).toHaveLength(3);
