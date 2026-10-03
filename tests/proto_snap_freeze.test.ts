@@ -50,11 +50,12 @@ describe("⭐⭐ prototype — the snapped turn freezes above the turn rate its 
     expect(max).toBeGreaterThan(maxSnapTurnDegPerS(90, 90, DEFAULT_CONFIG.cameraResetMs * ALIGN_SNAP_FRACTION)); // the alignment's 128.6 ms: 700°/s — barely
   });
 
-  it("⭐ hysteresis: frozen ABOVE the limit, released only at or below HALF of it", () => {
+  it("⭐ hysteresis: frozen ABOVE the limit, released (the snap relatches) at or below 85 % of it (the owner, 2026-10-03; was 50 %)", () => {
     expect(snapFrozen(false, 690, 700)).toBe(false);
     expect(snapFrozen(false, 710, 700)).toBe(true);
-    expect(snapFrozen(true, 400, 700)).toBe(true);
-    expect(snapFrozen(true, 350, 700)).toBe(false);
+    expect(snapFrozen(true, 600, 700)).toBe(true); // 86 %: still frozen
+    expect(snapFrozen(true, 595, 700)).toBe(false); // 85 %: released
+    expect(snapFrozen(true, 400, 700)).toBe(false); // ⛔ under the old 50 % rule this was still frozen
   });
 
   it("⭐ wired: the limit computed ONCE at the start from the increments; the PIECE's turn rate measured; frozen → the turn ignored", () => {

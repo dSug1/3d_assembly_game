@@ -618,8 +618,9 @@ export function maxSnapTurnDegPerS(yawStepDeg: number, pitchStepDeg: number, eas
 
 /**
  * ⭐ **FROZEN ON THE LAST SNAP, WITH HYSTERESIS** (the owner, 2026-10-03: *"if dx exceeds this value, the rotation is frozen in the last snap
- * until dx goes down to 50 % of this value"*): it freezes ABOVE `max`, and stays frozen until the speed is at or below `release × max`.
+ * until dx goes down to 50 % of this value"* — then *"instead of 50%, set the reset to 85% for the snap to relatch"*): it freezes ABOVE
+ * `max`, and stays frozen until the speed is at or below `release × max` (85 %).
  */
-export function snapFrozen(frozen: boolean, speed: number, max: number, release = 0.5): boolean {
+export function snapFrozen(frozen: boolean, speed: number, max: number, release = 0.85): boolean {
   return frozen ? speed > release * max : speed > max;
 }

@@ -480,3 +480,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * ⭐ **Snap duration 125 ms** (the owner, 2026-10-03: *"recompute everything so the snap is 125 ms"*; 90 ms before): the limit is **720°/s**
   of the piece's turn — the fastest finger ~**73 mm/s** at a 0.2 yaw share, ~**37 mm/s** at the 0.4 default (75° span); release below
   360°/s. (Almost the alignment's own 128.6 ms again.)
+* ⭐ **The snap relatches at 85 % of the limit** (the owner, 2026-10-03: *"instead of 50%, set the reset to 85% for the snap to relatch"*):
+  `snapFrozen`'s release — with the 125 ms snap, frozen above 720°/s, relatched at or below **612°/s**.
+* ⭐ **Yaw gain share outside the sphere: 0.2** (the owner, 2026-10-03; was 0.4): outside, the orbit yaws **1.02°/mm** of dx and the piece
+  turns ~9.8°/mm (75° span) — the 720°/s snap limit is reached at ~**73 mm/s** of finger, relatched at ~62 mm/s.

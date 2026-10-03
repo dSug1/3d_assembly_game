@@ -461,7 +461,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
       if (snapped) {
         // a new increment: eased there from where the piece is; the same one: nothing (a turn in flight lands).
         // ⭐⭐ the owner, 2026-10-03: FROZEN on the last snap while dx is too fast to follow (`snapFrozen`) — and that dx is IGNORED
-        // (not accumulated above), so it resumes from the same snap once dx slows to half the limit
+        // (not accumulated above), so it resumes from the same snap once the turn slows to 85 % of the limit
         if (!free.frozen && qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
           st.pieceTurns.set(m, { from: cur, to: want, t0: now, ms: st.cfg.greenSnapEaseMs });
           st.hudDirty = true;
