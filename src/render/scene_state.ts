@@ -30,6 +30,16 @@ import type { CycleTargets, FaceCycles, PieceFace } from "../input/green_box";
  * while it is outside, its faces (own frame), where they are now (world), its yaw and pitch cycles and the step it stands at
  * (from START), `DegreesYawPerFace` and `DeltaXYawPerFace`, the dx accumulated since the last step, and the orbit yaw last frame.
  */
+/**
+ * ⭐ Prototype: the continuous turn with `FacesRotateByIncrement` off (`staircaseOrientation`) — the pose it started from, the rotation
+ * accumulated since (degrees), and the pitch axis frozen then.
+ */
+export interface FreeTurn {
+  readonly q0: Quat;
+  readonly sDeg: number;
+  readonly pitchAxis: Vec3;
+}
+
 export interface FaceTrack {
   readonly outside: boolean;
   readonly faces: readonly PieceFace[] | null;
@@ -42,6 +52,7 @@ export interface FaceTrack {
   readonly accMm: number;
   readonly yaw: number;
   readonly pink: Vec3 | null;
+  readonly free: FreeTurn | null;
 }
 import { type FrameMeter } from "../core/frame_meter";
 import { type SceneDescriptor } from "../core/game_structure";

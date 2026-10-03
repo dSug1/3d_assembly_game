@@ -179,7 +179,7 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
     expect(code("render/hud_paint.ts")).toMatch(/const g = greenDragGains\(st\);\s*const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\);/);
   });
 
-  it("⭐ OBJECT ROTATION holds two submenus — every old slider under ROTATION IN WORLD COORDINATES, the FacesRotateByIncrement toggle under DOUBLE ORBIT MODE (the owner, 2026-10-03)", () => {
+  it("⭐ OBJECT ROTATION holds three submenus — every old slider under ROTATION IN WORLD COORDINATES, the FacesRotateByIncrement toggle under DOUBLE ORBIT MODE, then GREEN PIECE ROTATION (the owner, 2026-10-03)", () => {
     const menu = code("render/tuning_menu.ts");
     const sec = menu.slice(menu.indexOf('title: "OBJECT ROTATION"'), menu.indexOf('title: "FACE ALIGNMENT"'));
     expect(sec).toMatch(/title: "OBJECT ROTATION",[\s\S]*?sliders: \[\],\s*subsections: \[/);
@@ -188,9 +188,11 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
       expect(world).toContain(`"${key}"`);
     expect(sec.slice(sec.indexOf('"DOUBLE ORBIT MODE"'))).toContain('"facesRotateByIncrement", 0, 1, 1)');
     expect(DEFAULT_CONFIG.facesRotateByIncrement).toBe(1); // on: the current rule
-    // off: no dx counted, no face stepped — the pink face's change still turns the face onto it
+    // ⭐ off: the face cycles do not run — dx turns the piece continuously instead (`tests/proto_green_rotation.test.ts`)
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const byIncrement = st\.cfg\.facesRotateByIncrement === 1;\s*const a = byIncrement \? accumulateFaceSteps\([^)]*\) : \{ accMm, steps: 0 \};/);
+    expect(w).toMatch(/if \(!freeMode && !cyclesStart && step === "KEEP"/);
+    // ⭐ and a third submenu, GREEN PIECE ROTATION, for that continuous turn
+    expect(sec.indexOf('"GREEN PIECE ROTATION"')).toBeGreaterThan(sec.indexOf('"DOUBLE ORBIT MODE"'));
   });
 
   it("⭐ wired: START anti-aligns the most anti-aligned face; the yaw as finger mm steps the order; the pink face's change slerps; nothing inside", () => {

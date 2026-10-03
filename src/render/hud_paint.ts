@@ -23,7 +23,7 @@ import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
 import { orbitDegPerMm } from "../input/follow_camera";
 import { greenDragGains } from "./green_box_wiring";
-import { cycleStep, type FaceCycles } from "../input/green_box";
+import { cycleStep, staircaseAngles, type FaceCycles } from "../input/green_box";
 
 export function describe(v: ReleaseVerdict) : string {
   // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16), and the
@@ -373,7 +373,9 @@ export function greenReadout(st: SceneState): string {
   const faces =
     ft === undefined || tr === null || tr === undefined
       ? "faces —"
-      : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
+      : ft.free !== null
+        ? `faces ${tr.length} tracked, turning ${hudFree(ft.free.sDeg, st.cfg.greenRotateBlendDeg)}`
+        : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
   return `${st.greenBoxDistM.toFixed(3)} m to the yellow target | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 
@@ -382,4 +384,11 @@ function hudCycle(ft: { readonly cycles: FaceCycles; readonly step: number }): s
   const c = cycleStep(ft.cycles, ft.step);
   const len = c.cycle === "YAW" ? ft.cycles.yaw.length : ft.cycles.pitch.length;
   return `${c.cycle === "YAW" ? "yaw" : "pitch"} ${c.index + 1}/${len}`;
+}
+
+/** ⭐ prototype (green box): the continuous turn — the yaw and pitch angles of this lap, `yaw 123° pitch 0°` (`staircaseAngles`). */
+function hudFree(sDeg: number, blendDeg: number): string {
+  const a = staircaseAngles(sDeg, blendDeg);
+  const lap = (x: number): number => ((x % 360) + 360) % 360;
+  return `yaw ${lap(a.yawDeg).toFixed(0)}° pitch ${lap(a.pitchDeg).toFixed(0)}°`;
 }

@@ -1,0 +1,100 @@
+/**
+ * ⭐⭐ prototype (green box) — with `FacesRotateByIncrement` OFF, dx turns the green piece continuously: yaw 360°, a smooth blend,
+ * pitch 360°, a blend, yaw again (the owner, 2026-10-03: *"Dx rotates the green piece around yaw in world axis and then, once the yaw
+ * has done 360 degrees, transitions to rotation in pitch … The transitions shall be done as per a 2D curve … a smooth blend"*).
+ */
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { staircaseAngles, staircaseOrientation } from "../src/input/green_box";
+import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
+import { qAngle, qconj, qFromAxisAngle, qmul, type Quat, type Vec3 } from "../src/core/vec";
+
+const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
+const UP: Vec3 = [0, 1, 0];
+const PITCH: Vec3 = [1, 0, 0];
+const Q0 = qFromAxisAngle([0.3, 1, 0.2], 0.7);
+const W = 60;
+// the lap's length in s, read off the rule: find where both angles reach 360
+const lapLength = (w: number): number => {
+  let lo = 360, hi = 1000;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    const a = staircaseAngles(mid, w);
+    if (a.yawDeg >= 360 - 1e-9 && a.pitchDeg >= 360 - 1e-9) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+};
+
+describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in the (yaw, pitch) plane, its corners rounded", () => {
+  it("⭐ the gain and the blend have sliders in OBJECT ROTATION › GREEN PIECE ROTATION; 4°/mm (gainRotateFree's 0.07 rad/mm), 60°", () => {
+    expect(DEFAULT_CONFIG.greenRotateGainDegPerMm).toBe(4);
+    expect(DEFAULT_CONFIG.greenRotateBlendDeg).toBe(60);
+    const menu = code("render/tuning_menu.ts");
+    const sec = menu.slice(menu.indexOf('title: "GREEN PIECE ROTATION"'));
+    expect(sec).toContain('"greenRotateGainDegPerMm", 0.5, 20, 0.5)');
+    expect(sec).toContain('"greenRotateBlendDeg", 0, 180, 5)');
+  });
+
+  it("⭐⭐ pure YAW from s = 0, then the blend, then pure PITCH, then the blend — and each lap adds EXACTLY 360° to both", () => {
+    const P = lapLength(W);
+    for (const s of [0, 50, 200]) expect(staircaseAngles(s, W)).toEqual({ yawDeg: s, pitchDeg: 0 }); // pure yaw
+    const a = staircaseAngles(P * 0.75, W); // mid pure pitch: the yaw parked
+    const b = staircaseAngles(P * 0.75 + 30, W);
+    expect(b.yawDeg).toBeCloseTo(a.yawDeg, 9);
+    expect(b.pitchDeg - a.pitchDeg).toBeCloseTo(30, 9);
+    for (const k of [1, 2, -1]) {
+      const e = staircaseAngles(k * P, W);
+      expect(e.yawDeg).toBeCloseTo(360 * k, 6);
+      expect(e.pitchDeg).toBeCloseTo(360 * k, 6);
+    }
+    // the hard switch (W = 0): 360 of yaw then 360 of pitch, a lap of 720
+    expect(lapLength(0)).toBeCloseTo(720, 6);
+    expect(staircaseAngles(500, 0)).toEqual({ yawDeg: 360, pitchDeg: 140 });
+  });
+
+  it("⭐⭐ smooth: the turn speed is constant (cos θ + sin θ shares) and changes direction gradually across a blend", () => {
+    const P = lapLength(W);
+    const h = 1e-3;
+    let prev: [number, number] | null = null;
+    for (let s = 0; s < 2 * P; s += 0.5) {
+      const a = staircaseAngles(s, W), b = staircaseAngles(s + h, W);
+      const v: [number, number] = [(b.yawDeg - a.yawDeg) / h, (b.pitchDeg - a.pitchDeg) / h];
+      expect(Math.hypot(...v)).toBeCloseTo(1, 3); // constant turn speed
+      if (prev !== null) expect(Math.hypot(v[0] - prev[0], v[1] - prev[1])).toBeLessThan(0.05); // no kink at a corner
+      prev = v;
+    }
+  });
+
+  it("⭐⭐ the piece comes back to its START pose every lap, and s going back retraces it — ⛔ blending the turning axis frame by frame drifted 14.7° a lap", () => {
+    const P = lapLength(W);
+    for (const k of [1, 3, -2]) expect(qAngle(qmul(staircaseOrientation(Q0, k * P, W, UP, PITCH), qconj(Q0)))).toBeCloseTo(0, 6);
+    // pure segments are pure world turns: mid-yaw about UP, mid-pitch about PITCH
+    const turn = (s: number): Quat => qmul(staircaseOrientation(Q0, s + 1, W, UP, PITCH), qconj(staircaseOrientation(Q0, s, W, UP, PITCH)));
+    const axisOf = (q: Quat): Vec3 => { const n = Math.hypot(q[1], q[2], q[3]); return [q[1] / n, q[2] / n, q[3] / n]; };
+    expect(Math.abs(axisOf(turn(100))[1])).toBeCloseTo(1, 6);
+    expect(Math.abs(axisOf(turn(P * 0.75))[0])).toBeCloseTo(1, 6);
+    // ⛔ the obvious way: rotate about an axis blended by the same window, frame by frame — it does not close
+    const mul = qmul;
+    let q: Quat = [1, 0, 0, 0];
+    const N = 20000;
+    for (let i = 0; i < N; i++) {
+      const s = ((i + 0.5) / N) * 720; // that scheme's lap: 360 + 360
+      const ss = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * t * (t * (6 * t - 15) + 10));
+      const m = s;
+      const th = m < 360 - W / 2 ? (m < W / 2 ? (Math.PI / 2) * (1 - ss((m + W / 2) / W)) : 0) : m < 360 + W / 2 ? (Math.PI / 2) * ss((m - 360 + W / 2) / W) : m < 720 - W / 2 ? Math.PI / 2 : (Math.PI / 2) * (1 - ss((m - 720 + W / 2) / W));
+      q = mul(qFromAxisAngle([Math.sin(th), Math.cos(th), 0], ((720 / N) * Math.PI) / 180), q);
+    }
+    expect((qAngle(q) * 180) / Math.PI).toBeGreaterThan(14);
+  });
+
+  it("⭐ wired: OFF turns the piece by the staircase from the pose at START (no snap), dx as the orbit's yaw × the gain; ON keeps the face cycles", () => {
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/const freeMode = st\.cfg\.facesRotateByIncrement === 0;/);
+    expect(w).toMatch(/free = \{ q0: cur, sDeg: 0, pitchAxis: axes\?\.pitch \?\? \[1, 0, 0\] \};/);
+    expect(w).toMatch(/sDeg: kept\.sDeg \+ \(yawDegPerMm > 0 \? dYawDeg \/ yawDegPerMm : 0\) \* st\.cfg\.greenRotateGainDegPerMm/);
+    expect(w).toMatch(/m\.rotationQuaternion = toBabylon\(staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\)\);/);
+    // the switch turned back on (or a START): the cycles start again
+    expect(w).toMatch(/const cyclesStart = !freeMode && \(step === "START" \|\| prev\?\.free !== null \|\| cycles\.yaw\.length \+ cycles\.pitch\.length === 0\);/);
+  });
+});

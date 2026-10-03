@@ -388,3 +388,14 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   (the yaw / pitch cycles stepped by increments of the yaw orbit); off = no dx counted and no face stepped — the owner's rule for it is
   to come. Either way the START anti-alignment and the pink face's change (the face anti-aligned now turned onto the new normal, the
   cycles started again) still apply.
+* ⭐⭐ **`FacesRotateByIncrement` OFF: dx turns the green piece CONTINUOUSLY — yaw 360°, a smooth blend, pitch 360°, a blend, yaw again**
+  (the owner, 2026-10-03, the proposal accepted: *"build"*). `staircaseOrientation`: the orientation is a FUNCTION of the accumulated
+  rotation `s` (dx as the orbit's yaw in finger mm — the coast included — × `greenRotateGainDegPerMm`, **4°/mm**, `gainRotateFree`'s
+  0.07 rad/mm): `Pitch(β) · Yaw(α) · q0`, yaw about the world vertical, pitch about the horizontal across the pink normal (frozen at
+  START). In the (α, β) plane the path is a staircase whose corners are rounded over `greenRotateBlendDeg` (**60°** of `s`): there the
+  speed is shared cos θ / sin θ, θ easing 0 → 90° on Perlin's smootherstep — constant turn speed, a gliding axis (linear segments with
+  smooth blends, Craig's *Introduction to Robotics*; CNC corner rounding). Each pure segment is shortened by what the windows give its
+  angle (289.4° pure, a lap 698.8° of `s` = **175 mm of dx**), so **every lap adds exactly 360° to both and the piece comes back to its
+  START pose**; dx back retraces exactly. ⛔ Blending the turning axis frame by frame — the obvious way — drifted 14.7° a lap (60°
+  window). START (an exit, the switch, a new pink face) takes the pose as it is: no snap, `s` = 0, pure yaw first. Inside the sphere
+  nothing turns. Sliders: OBJECT ROTATION › GREEN PIECE ROTATION. HUD `turning yaw …° pitch …°`. `tests/proto_green_rotation.test.ts`.

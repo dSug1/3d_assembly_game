@@ -526,6 +526,10 @@ export interface GestureConfig {
    * cycles, `trackOrbitedFaces`); 0 = no stepping — the owner's rule for it is to come (2026-10-03).
    */
   facesRotateByIncrement: number;
+  /** ⭐ Prototype: the green piece's own turn, degrees per mm of dx, with `FacesRotateByIncrement` off (`staircaseOrientation`). */
+  greenRotateGainDegPerMm: number;
+  /** ⭐ Prototype: the blend window between its yaw and pitch, degrees of that turn (`staircaseAngles`). */
+  greenRotateBlendDeg: number;
   /** ⭐ Prototype: the guide sphere's opacity (0 = hidden) — for prototyping only, never in the final game. */
   guideSphereAlpha: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
@@ -987,6 +991,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
   guideSphereAlpha: 0, // ⭐ prototype (green box), the owner 2026-10-02: hidden by default (was 0.08, *"almost translucent"*)
+  // ⭐ prototype (green box), the owner 2026-10-03: `gainRotateFree`'s 0.07 rad/mm (360° in 90 mm of dx), and a 60° blend
+  greenRotateGainDegPerMm: 4,
+  greenRotateBlendDeg: 60,
   facesRotateByIncrement: 1, // ⭐ prototype (green box), the owner 2026-10-03: the current rule, on by default
   yawFaceAlignSpanDeg: 180, // ⭐ prototype (green box), the owner 2026-10-02
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
@@ -1141,6 +1148,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.guideSphereAlpha >= 0 && cfg.guideSphereAlpha <= 1)) {
     throw new Error(`guideSphereAlpha (${cfg.guideSphereAlpha}) must be in [0, 1].`);
+  }
+  if (!(cfg.greenRotateGainDegPerMm > 0 && cfg.greenRotateGainDegPerMm <= 60) || !(cfg.greenRotateBlendDeg >= 0 && cfg.greenRotateBlendDeg <= 180)) {
+    throw new Error(`greenRotateGainDegPerMm (${cfg.greenRotateGainDegPerMm}) must be in (0, 60] and greenRotateBlendDeg (${cfg.greenRotateBlendDeg}) in [0, 180].`);
   }
   if (cfg.facesRotateByIncrement !== 0 && cfg.facesRotateByIncrement !== 1) {
     throw new Error(`facesRotateByIncrement (${cfg.facesRotateByIncrement}) must be 0 or 1.`);

@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, mostAntiAligned, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, mostAntiAligned, staircaseOrientation, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -31,7 +31,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { ALIGN_SNAP_FRACTION } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat } from "../core/vec";
-import type { SceneState } from "./scene_state";
+import type { FreeTurn, SceneState } from "./scene_state";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -378,7 +378,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
     const prev = st.faceTracks.get(m);
     const step = faceTracking(prev === undefined ? null : prev.outside, out);
     if (step === "NONE" || step === "STOP") {
-      st.faceTracks.set(m, { outside: out, faces: null, world: [], cycles: NO_CYCLES, targets: NO_TARGETS, step: 0, degPerFace: 0, dxPerFaceMm: Infinity, accMm: 0, yaw, pink });
+      st.faceTracks.set(m, { outside: out, faces: null, world: [], cycles: NO_CYCLES, targets: NO_TARGETS, step: 0, degPerFace: 0, dxPerFaceMm: Infinity, accMm: 0, yaw, pink, free: null });
       if (step === "STOP") st.hudDirty = true;
       continue;
     }
@@ -396,6 +396,33 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
     if (step === "START" || faces === null) {
       const topo = topologyFromMesh(m);
       faces = topo === null ? [] : pieceFaces(topo.positions, topo.faces);
+      st.hudDirty = true;
+    }
+    // ⭐⭐ the owner, 2026-10-03: `FacesRotateByIncrement` OFF — dx turns the piece CONTINUOUSLY: yaw for 360°, a smooth blend, pitch
+    // for 360°, a blend, yaw again (`staircaseOrientation`). START (or the switch, or a new pink face) takes the pose AS IT IS (no
+    // snap) and s = 0; the yaw axis is the world vertical, the pitch axis the horizontal across the pink normal, both frozen then.
+    let free: FreeTurn | null = null;
+    const freeMode = st.cfg.facesRotateByIncrement === 0;
+    if (freeMode) {
+      const kept = step === "KEEP" && prev !== undefined && prev.free !== null && prev.pink === pink ? prev.free : null;
+      if (kept === null) {
+        free = { q0: cur, sDeg: 0, pitchAxis: axes?.pitch ?? [1, 0, 0] };
+        st.hudDirty = true;
+      } else {
+        // the orbit's yaw this frame as finger mm (a drag's dx exactly; a coast's equivalent) × the green piece's own gain
+        const dYawDeg = (wrapPi(yaw - prev!.yaw) * 180) / Math.PI;
+        free = { ...kept, sDeg: kept.sDeg + (yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0) * st.cfg.greenRotateGainDegPerMm };
+      }
+      st.pieceTurns.delete(m); // nothing else writes the orientation in this mode
+      m.rotationQuaternion = toBabylon(staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis));
+      cycles = NO_CYCLES;
+      targets = NO_TARGETS;
+      s = 0;
+      accMm = 0;
+    }
+    // ⭐ ON: the face cycles. A START — or the switch turned back on (no cycles yet) — anti-aligns and reads the cycles.
+    const cyclesStart = !freeMode && (step === "START" || prev?.free !== null || cycles.yaw.length + cycles.pitch.length === 0);
+    if (cyclesStart) {
       s = 0;
       accMm = 0;
       if (pink !== null && faces.length > 0) {
@@ -414,13 +441,10 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
     // (the frustum: 4 + 4 = 8 → 22.5°), not among the faces (6 → 30°, a period then took 240°)
     const degPerFace = degreesYawPerFace(st.cfg.yawFaceAlignSpanDeg, cycles.yaw.length + cycles.pitch.length);
     const dxPerFaceMm = deltaXYawPerFace(degPerFace, yawDegPerMm);
-    if (step === "KEEP" && prev !== undefined && cycles.yaw.length + cycles.pitch.length > 0 && pink !== null) {
+    if (!freeMode && !cyclesStart && step === "KEEP" && prev !== undefined && cycles.yaw.length + cycles.pitch.length > 0 && pink !== null) {
       // the orbit's yaw this frame, as the finger mm that would make it (a drag's dx exactly; a coast's equivalent)
       const dYawDeg = (wrapPi(yaw - prev.yaw) * 180) / Math.PI;
-      // ⭐ the owner, 2026-10-03: `FacesRotateByIncrement` off — no dx counted, no face stepped (its own rule to come); the pink
-      // face's change below still turns the face anti-aligned now onto it
-      const byIncrement = st.cfg.facesRotateByIncrement === 1;
-      const a = byIncrement ? accumulateFaceSteps(accMm, yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0, dxPerFaceMm) : { accMm, steps: 0 };
+      const a = accumulateFaceSteps(accMm, yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0, dxPerFaceMm);
       accMm = a.accMm;
       if (a.steps !== 0) {
         // ⭐ the step's face and its orientation, computed at START (`targetAtStep`) — a fast frame crossing several lands on the last
@@ -447,7 +471,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
     const r = m.absoluteRotationQuaternion;
     const q: Quat = [r.w, r.x, r.y, r.z];
     const world = faces.map((f) => ({ normal: qRotate(q, f.normal), centre: add([p.x, p.y, p.z], qRotate(q, f.centre)) }));
-    st.faceTracks.set(m, { outside: out, faces, world, cycles, targets, step: s, degPerFace, dxPerFaceMm, accMm, yaw, pink });
+    st.faceTracks.set(m, { outside: out, faces, world, cycles, targets, step: s, degPerFace, dxPerFaceMm, accMm, yaw, pink, free });
   }
   greenTurnFrame(st, now);
 }

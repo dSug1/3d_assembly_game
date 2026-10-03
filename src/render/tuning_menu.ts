@@ -377,6 +377,14 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "FacesRotateByIncrement (0 / 1)", "facesRotateByIncrement", 0, 1, 1),
           ],
         },
+        {
+          // ⭐ the owner, 2026-10-03: the green piece's continuous turn with FacesRotateByIncrement off — yaw 360°, blend, pitch 360°.
+          title: "GREEN PIECE ROTATION",
+          sliders: [
+            tunable(st, "green piece rotation gain (deg per mm of dx)", "greenRotateGainDegPerMm", 0.5, 20, 0.5),
+            tunable(st, "yaw ↔ pitch blend (deg of rotation)", "greenRotateBlendDeg", 0, 180, 5),
+          ],
+        },
       ],
     },
     {
