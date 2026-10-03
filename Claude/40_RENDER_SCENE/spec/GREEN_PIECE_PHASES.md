@@ -1,20 +1,19 @@
-# Green piece — the assembly phases (prototype spec, draft)
+# Green piece — the assembly phases (prototype spec, draft 3)
 
-**Status:** draft for the owner's review, 2026-10-03. Not built. Prototype branch only (`1.0.59k-`), not the main line, which
-already has world-coordinate translation.
+**Status:** draft 3, 2026-10-03. Not built. Prototype branch only (`1.0.59k-…`), not the main line, which already has world-coordinate
+translation. Marked **AGREED** where the owner confirmed it, **PROPOSED** where it still needs the owner's yes.
 
-**Goal:** make the held green piece follow the way a child assembles two bricks: coarse orient → commit to a face → approach along
-the insertion axis → hover → fine yaw → contact → seat. Each phase frees only the degrees of freedom it needs, and the next phase
-removes more.
+**Goal:** make the held green piece follow the way a child assembles two bricks: pick the face → commit → approach along the insertion
+axis while rolling the long axis into line → hover → fine roll → contact → seat. Each phase frees only the degrees of freedom it needs.
 
 ## 1. Scope
 
 - Applies only while the green piece is **held for orbit** (`greenHeldForOrbit`). Not held: the orbit as today, phase `FREE`.
-- **Target:** the pink ring. `T` = its centre (the yellow target), `n` = the pink face's outward normal. The **insertion axis** is
-  the line through `T` along `n`.
-- **Male face:** the green face currently anti-aligned with `n`, as chosen by the snapped turn.
-- The green piece stays a display proxy, with no collision and no goal. "Contact" and "seat" are computed from its own hull against
-  the pink face's plane and extent.
+- **Target:** the pink ring. `T` = its centre (the yellow target), `n` = the pink face's outward normal. The **insertion axis** is the
+  line through `T` along `n`.
+- **Mating face:** the green face shown toward the pink face, chosen in `COARSE`.
+- The green piece stays a display proxy, with no collision and no goal. "Contact" and "seat" come from its own hull against the pink
+  face's plane and extent.
 
 ## 2. Quantities
 
@@ -23,7 +22,8 @@ removes more.
 | `P₀` | green piece position at the press (on the orbit surface) |
 | `r₀` | `|P₀ − T|`, already stored as `greenPressRadialM` |
 | `S` | the **standoff point**: `T + n · (standoffM + h)`, where `h` is the green piece's half-depth along `n` |
-| `p` | approach progress, 0 at the press, 1 at `S` |
+| `u` | the **push**: the DEADBANDED dy accumulated since the press, mm (finger up positive), never below 0 (§3c) |
+| `p` | approach progress: `clamp((u − greenCommitMm) ÷ greenPushTravelMm, 0, 1)` — 0 until the commit, 1 at `S` |
 | `G` | green piece position |
 
 ## 3. Phases
@@ -31,90 +31,135 @@ removes more.
 | Phase | Entry | dx | dy (finger up = toward target) | Rotation | Camera |
 |---|---|---|---|---|---|
 | `FREE` | not held | orbit yaw (full gain) | orbit ring | none | follows |
-| `COARSE` | press on the piece | orbit yaw + the snapped face turn (as today) | **push**: the first push commits → `APPROACH` | snaps (90°/90°) | follows |
-| `APPROACH` | `0 < p < 1` | ignored | push / pull: `p += dy_mm ÷ pushTravelMm` | **locked** on the committed face | holds its yaw, keeps the piece in view |
-| `STANDOFF` | `p = 1` | **fine yaw** about `n` | a further push past `S` → `CONTACT`; a pull → back to `APPROACH` | twist only | holds |
-| `CONTACT` | the male face touches the pink face's plane | slide along the face's first in-plane axis | slide along the second in-plane axis | twist only | holds |
-| `SEATED` | in `CONTACT`, lateral offset < `captureOffsetMm` (on the glass) and twist error < `snapConeDeg` | — | — | lerped onto the exact seat | holds |
+| `COARSE` | press on the piece | orbit yaw + the snapped face turn (90° grid) | builds `u`; the pink ring fills as a commit meter; `u ≥ greenCommitMm` → `COMMIT` | grid snaps, **predictable** | follows |
+| `COMMIT` | `u ≥ greenCommitMm` (§3c) | — | — | **settle**: the chosen face eases onto exact anti-parallel (§3a) | holds |
+| `APPROACH` | committed, `p < 1` | nothing until the lines show; then **roll** about `n` (§3b) | push / pull along the funnel; a pull below `greenUncommitMm` → un-commit | face locked; roll only | holds, keeps the piece in view |
+| `STANDOFF` | `p = 1` | roll (fine by now) | a further push → `CONTACT`; a pull → `APPROACH` | roll only | holds |
+| `CONTACT` | the mating face touches the pink face's plane | slide along the face's first in-plane axis | slide along the second | roll only | holds |
+| `SEATED` | in `CONTACT`: lateral offset < `captureOffsetMm` (on the glass), roll error < `snapConeDeg` | — | — | lerped onto the exact seat | holds |
 
-**Approach path (the "funnel"):** `G(p) = S + axial(P₀ − S)·(1 − p) + lateral(P₀ − S)·(1 − p)²`. The axial part closes linearly. The
-lateral part (perpendicular to `n`) closes quadratically, so the piece lines up with the axis before it arrives. The user never steers
-laterally.
+**The funnel (AGREED):** `G(p) = S + axial(P₀ − S)·(1 − p) + lateral(P₀ − S)·(1 − p)²`. The axial part closes linearly. The lateral part
+(perpendicular to `n`) closes quadratically, so the piece lines up with the axis before it arrives. The user never steers laterally.
 
-**Backing out:** a pull reduces `p`, back through `STANDOFF` to `APPROACH`. At `p = 0` the face unlocks and the phase is `COARSE` again.
-`CONTACT` is left only by the lift, because dy slides there.
+**Backing out (no lift, no other finger — the owner: *"the kid does not release the part during the motion"*):** a pull reduces `u`,
+back along the funnel through `STANDOFF` to `APPROACH`, to `p = 0` at the commit point, and further down. Below `greenUncommitMm` the
+commit is undone (§3c): the piece eases back to **the exact quaternion it had on the snap grid before the commit** — the settle and the
+roll DROPPED (the owner: *"if the roll of the long axis is brought back into the snapped rotation, this will create a very difficult
+quaternion for the user to understand"*) — and the phase is `COARSE` again, its snaps continuing from that pose. While committed, dx
+neither orbits nor advances the snaps, so that pose is exactly the one left. `CONTACT` is left only by the lift, because dy slides there.
 
-**Lift before `SEATED`:** the piece eases back to its orbit position (`P₀` + whatever orbit happened), and the phase becomes `FREE`.
+**Lift before `SEATED`:** the piece eases back to its orbit position, and the phase becomes `FREE`.
 
-**`SEATED`:** the piece rests seated until the lift, then returns to the orbit (for now). Seat feedback: a short vibration where
-supported (Android `navigator.vibrate`; iOS has none) and a pop-up like the goal's.
+**Feedback:** a short vibration on entering `CONTACT`; at `SEATED` a vibration and a pop-up like the goal's. Vibration only where
+supported (Android `navigator.vibrate`; iOS has none).
 
-**Contact feedback:** a short vibration pulse on entering `CONTACT`.
+### 3a. `COMMIT`: the face settles onto exact anti-parallel (PROPOSED)
 
-## 3bis. `ALIGN` — the long axes, a DELIBERATE action (concept agreed; execution to be redesigned)
+The owner, 2026-10-03: *"I prefer to keep the 90 degrees rotation (or whatever the angle is based on the green piece geometry) and then
+find a way to anti-align the normals"*. ⛔ The exact face targets (`cycleTargets`) are rejected for `COARSE` (*"very difficult for the
+user to predict which face will show at next snap"*).
 
-The owner, 2026-10-03: *"long axis identification and alignments shall be a deliberate action by the user, not something the game
-automatically does"* → *"the concept is OK"*, but *"I am not happy with a tap, it has to be a more precise action"*.
+- `COARSE` snaps on its grid. Because the frustum's sides are slanted (32° and 15°), the face shown is off anti-parallel by that slant.
+- **At the commit** (the first push beyond the deadband), the shown face eases onto exact anti-parallel with `n`: the smallest turn,
+  over one snap duration (`greenSnapEaseMs`). The face does not change, only its slant. It is a correction like the seat's magnet, not
+  a choice made for the user.
+- **Optional preview** (`greenSettlePreviewMs`, 0 = off): in `COARSE`, once dx has rested that long, the shown face settles the same way,
+  and goes back to the grid as soon as dx moves. The next snap is still computed on the grid.
 
-**Long axis:** the longest in-plane direction of a MATING face (not of the whole body), because only the face plane matters for the
-match.
-- Green piece (103.5 × 41.25 × 45 mm): its body long axis is its own x (2.3× the next, unambiguous). Its other two sides are almost
-  equal (41 / 45 mm), so its "across" is nearly a toss-up.
-- Piece 10 (190 × 241 × 30 mm): the pink face is its big face (190 × 241), whose long axis is the painting's vertical. It is only
-  1.27× the width: a weak cue.
-- ⚠ The two long axes start PERPENDICULAR (the green one horizontal, Piece 10's vertical). A yaw about the vertical cannot align them:
-  it is a turn about the insertion axis `n`. So long-axis alignment cannot live in the yaw snaps.
+### 3b. The roll: long axis, then fine (AGREED; the timing slider PROPOSED)
 
-**Why deliberate:** it is the child's visual "kill the biggest mismatch" decision; automated, the game would pick parallel or
-antiparallel on the user's behalf; and a weak cue (1.27×) would be aligned with confidence. Cost: one more input (one more scored episode
-in the full game), accepted.
+The owner, 2026-10-03: *"at one point, long axis of the mating faces appear and dx rolls the green piece mating face so the user tries
+to align the long axis — then fine roll"*. Long-axis alignment is a **deliberate** action (*"not something the game automatically
+does"*); a tap was rejected (*"it has to be a more precise action"*): dx is that action.
 
-**Where:** after the face is committed and before the fine yaw — during `APPROACH` or `STANDOFF`. It turns the piece about `n` only.
-1. **Show both long axes** from `APPROACH` on: a pink line along the pink face's in-plane long axis, a green line along the male
-   face's. The user cannot align what they cannot see.
-2. **The action** turns the green line parallel to the pink one. Of the two parallel orientations, the user chooses which: a second
-   action of the same kind turns it 180°, the child's roll disambiguation.
-3. The **fine yaw** at the standoff then removes what is left.
-4. A face with no clear long axis (sides within `greenLongAxisMinRatio`, e.g. 1.1) draws no line, and the action does nothing.
+**Long axis:** the longest in-plane direction of a MATING face (not of the whole body).
+- Green piece (103.5 × 41.25 × 45 mm): body long axis its own x (2.3× the next); its other two sides almost equal (41 / 45 mm).
+- Piece 10 (190 × 241 × 30 mm): the pink face is its big face (190 × 241), long axis the painting's vertical, only 1.27× the width.
+- ⚠ The two long axes start PERPENDICULAR, and a yaw about the vertical cannot align them: it is a turn about `n`.
 
-**Execution: OPEN.** A tap was proposed and REJECTED as not precise enough. Candidates for the owner:
-- a second-finger DRAG that turns the green line about `n` directly (an angle under the finger), snapping onto the pink line when it
-  comes within a few degrees: precise, and the user both sees and chooses the alignment and its sense;
-- a press-and-hold on the pink line, then a drag to "lay" the green line onto it;
-- on desktop: right-drag, or a modifier with the wheel.
+**The control:**
+1. **The lines** (a pink line on the pink face's long axis, a green line on the mating face's) appear once `p ≥ greenLongAxisFromP`,
+   and disappear below it minus `greenLongAxisHysteresisP`. ⭐ The owner: *"not zero, but somewhere along the way to 0.6"* —
+   PROPOSED **0.2**: early enough to roll the long axis roughly while most of the approach is still ahead, late enough that the
+   commit and the lines are two distinct moments. The roll starts with the lines.
+2. **dx rolls** the piece about `n`, freely through 360°. Rolling 180° further chooses the other parallel orientation: the roll
+   disambiguation, done by the same finger.
+3. **The gain falls with progress**, coarse far, fine near: `rollDegPerMm(p) = coarse · (1 − p) + fine · p`. So the long-axis roll and
+   the fine roll are ONE control, with no mode switch.
+4. **The long-axis magnet:** within `greenLongAxisMagnetDeg` of a long-axis alignment (parallel or antiparallel), the roll settles onto
+   it; dx beyond the magnet leaves it.
+5. A face with no clear long axis (sides within `greenLongAxisMinRatio`) draws no line and has no magnet: the roll starts at the same
+   progress, fine-only.
+
+### 3c. Deadbands, thresholds and hysteresis (PROPOSED)
+
+The owner, 2026-10-03: *"we have to define properly the deadbands, the ratios"* — and NO axis latch (*"stiffer deadbands and trigger
+thresholds shall do the job if correctly tuned. Ignoring axis may create noise if the first to leave is not the one the user
+intends"*). Every number below is in the code's millimetres (CSS reference mm: ~0.6 of a real mm on the tablet and the iPhone).
+
+**The base.** §1.1's per-axis position deadband `motionDeadbandMm` **3.5 mm** (4.6 × the measured pointer noise, 0.761 mm), widened
+× `orbitCrossDeadbandFactor` **3** on one axis while the other moves (10.5 mm). Only DEADBANDED travel counts below: the raw jitter never
+reaches `u` or the roll.
+
+**The push `u`** (dy). It accumulates the deadbanded dy, never below 0. The commit and the un-commit are two thresholds on it, with a
+band between:
+
+| Threshold | Default | Finger travel straight up (from rest) | With dx moving |
+|---|---|---|---|
+| `greenCommitMm` — commit | **8** | 3.5 + 8 = **11.5 mm** | 10.5 + 8 = **18.5 mm** |
+| `greenUncommitMm` — un-commit | **3** | a pull back to `u ≤ 3` | |
+
+- **The hysteresis band** (8 − 3 = 5 mm, ≈ 6.6 × the noise) means a finger hovering near the commit point cannot toggle the state.
+- **The commit meter:** the pink ring fills with `u ÷ greenCommitMm` in `COARSE`, so the user sees the commit coming and can stop.
+- **A sideways swipe cannot commit:** its dy needs 10.5 + 8 = 18.5 mm against a mostly horizontal motion.
+
+**The snaps in `COARSE`** (dx). Unchanged: deadbanded dx, the orbit and the snap cap. While dy is moving (filling the meter), dx's
+band is 10.5 mm: a push slightly off vertical does not snap.
+
+**The roll after the lines** (dx). Deadbanded dx (10.5 mm while dy moves, so a push does not roll), the roll gain falling with `p`,
+and the long-axis magnet (`greenLongAxisMagnetDeg`) holding an alignment against small dx.
+
+**The lines** (§3b): shown at `p ≥ greenLongAxisFromP` (0.2), hidden below `greenLongAxisFromP − greenLongAxisHysteresisP` (0.15).
+
+⚠ All of it is to be tuned on the glass; the HUD shows `u`, the meter and each axis's band.
 
 ## 4. Tunables (sliders in OBJECT ROTATION › GREEN PIECE ROTATION)
 
 | Key | Default | Note |
 |---|---|---|
-| `greenPushTravelMm` | 40 | finger travel from the press to the standoff |
+| `greenCommitMm` | 8 | deadbanded dy that commits (§3c) |
+| `greenUncommitMm` | 3 | the pull below which the commit is undone (§3c) |
+| `greenPushTravelMm` | 40 | deadbanded dy from the commit to the standoff |
 | `greenStandoffM` | 0.01 | hover gap above the pink face, metres (world) |
-| `greenFineYawDegPerMm` | 1.0 | fine yaw in `STANDOFF` / `CONTACT` |
-| `captureOffsetMm`, `snapConeDeg` | 10, 15° | reused: the seat's lateral and twist tolerance |
-| `greenLongAxisMinRatio` | 1.1 | below it a face has no long axis: no line, no `ALIGN` |
+| `greenRollCoarseDegPerMm` | 3.0 | roll at `p = 0` |
+| `greenRollFineDegPerMm` | 0.5 | roll at the standoff |
+| `greenLongAxisFromP` | 0.2 | the lines (and the roll) from this progress — the owner: not 0, short of 0.6 |
+| `greenLongAxisHysteresisP` | 0.05 | the lines hide below `greenLongAxisFromP` minus this |
+| `greenLongAxisMagnetDeg` | 5 | the long-axis magnet's reach |
+| `greenLongAxisMinRatio` | 1.1 | below it a face has no long axis |
+| `greenSettlePreviewMs` | 0 | the settle preview in `COARSE` (0 = off) |
+| `captureOffsetMm`, `snapConeDeg` | 10, 15° | reused: the seat's lateral and roll tolerance |
 
 ## 5. HUD
 
-On the `green` line: `phase APPROACH p=0.62 r=1.84 m axial=… lateral=…`.
+On the `green` line: `phase APPROACH u=14.2 mm (commit 8 / 3) p=0.16 r=1.84 m axial=… lateral=… roll=…° (long axis ±3°) bands x 10.5 / y 3.5`.
 
 ## 6. Build order (each with vectors, pure in `src/input/`)
 
 1. The phase machine (state, entry and exit, the dx/dy routing) and the HUD readout.
-2. The approach funnel and the standoff.
-3. Fine yaw.
-4. Contact and slide.
-5. Seat, with vibration and pop-up.
-6. `ALIGN`: the two long-axis lines first (visible); the action once its execution is decided (§3bis).
+2. `COMMIT`'s settle (§3a).
+3. The approach funnel and the standoff.
+4. The roll: the gain schedule, then the long-axis lines and the magnet (§3b).
+5. Contact and slide.
+6. Seat, with vibration and pop-up.
 
 ## 7. Open questions for the owner
 
-1. **dy while held:** today it moves the orbit ring. The spec gives it to the push as soon as the piece is held, so the orbit ring
-   can't change while held. Acceptable, or should the push only take dy after a commit gesture?
-2. **Commit:** the first push commits the face (rotation before translation). Or should a deliberate gesture commit (a second-finger
-   tap, or a pause)?
+1. **dy while held:** it moves the orbit ring today; the spec gives it to the push, so the ring cannot change while held. Acceptable?
+2. **The numbers of §3c:** commit 8 mm, un-commit 3 mm, lines at 0.2 — a first proposal, to be tuned on the glass.
 3. **Piece behind the face** (`P₀` on the wrong side of the pink face's plane): refuse the approach (HUD `behind`), or route the funnel
    around?
 4. **Lift before the seat:** ease back to the orbit (spec), or leave the piece where it is?
-5. **Camera from `APPROACH` on:** hold, as spec'd; or keep following a slow yaw?
-6. **`ALIGN`'s execution** (§3bis): which precise action turns the green long axis onto the pink one (not a tap).
+5. **Camera from `COMMIT` on:** hold (spec), or keep following a slow yaw?
+6. **The PROPOSED parts:** the settle at the commit and its preview (§3a); the thresholds and hysteresis (§3c).
 7. **Later, not in this spec:** the second touch as the "dominant hand".
