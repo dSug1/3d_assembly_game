@@ -504,3 +504,6 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   coast after the lift is not held: full gain, no turn. ⭐ At the press, the piece's distance to the pink ring (the yellow target) is kept
   (`greenPressRadialM`, *"we will use this radial distance at press later on"*); HUD `· held, r at press 2.947 m`.
   `tests/proto_green_held.test.ts`.
+* 📝 **Draft spec — the green piece's assembly phases** (the owner, 2026-10-03: *"I am trying to reproduce the way kids assemble a toy"* →
+  *"write the short spec. This shall apply to the prototype"*): COARSE → APPROACH (a funnel to a standoff on the insertion axis) →
+  STANDOFF (fine yaw) → CONTACT (slide in the face plane) → SEATED, while the green piece is held → `GREEN_PIECE_PHASES.md`. Not built.
