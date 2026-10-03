@@ -173,7 +173,8 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
     // ⭐ ONE home for the gains: the drag, the face stepping's yaw rate and the HUD all read `greenDragGains`
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/return \{ yaw: g\.yaw \* outsideYawShare\(outside, st\.cfg\.boxGainYawOutsideShare\), pitch: g\.pitch \};/);
-    expect(w).toMatch(/const outside = st\.greenBox !== null && st\.faceTracks\.get\(st\.greenBox\)\?\.outside === true;/);
+    // ⭐ since 2026-10-03: while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`)
+    expect(w).toMatch(/const outside = st\.greenBox !== null && greenHeldForOrbit\(st\.greenOrbitPointer\);/);
     expect(w).toMatch(/const g = greenDragGains\(st\);\s*const yawDegPerMm = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\)\.yawDegPerMm;/);
     expect(code("render/pointer_wiring.ts")).toMatch(/const g = greenDragGains\(st\);[\s\S]{0,200}st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw,/);
     expect(code("render/hud_paint.ts")).toMatch(/const g = greenDragGains\(st\);\s*const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\);/);

@@ -450,6 +450,10 @@ export interface SceneState {
   guideSphere: Mesh | null;
   /** ⭐ Prototype: the green piece's white contour (its edges, offset like the part outlines) and the offset it was built at. */
   greenOutline: { readonly lines: LinesMesh; readonly topo: MeshTopology; builtM: number | null } | null;
+  /** ⭐ Prototype: the pointer that pressed the green piece, while it is down — the "outside" behaviours run then (`greenHeldForOrbit`). */
+  greenOrbitPointer: number | null;
+  /** ⭐ Prototype: the green piece's distance to the pink ring (the yellow target) AT THAT PRESS, metres — kept for later use. */
+  greenPressRadialM: number | null;
   /** ⭐ Prototype: the pieces the orbit carries — today the green piece alone; another joins by being pushed here. */
   orbitedPieces: Mesh[];
   /**

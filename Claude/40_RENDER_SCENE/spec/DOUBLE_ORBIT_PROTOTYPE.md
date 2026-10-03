@@ -494,3 +494,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   HUD `· turn …/720°/s ⏩CAPPED`.
 * ⭐ **Yaw gain share outside the sphere back to 0.4** (the owner, 2026-10-03; 0.2 for a while): outside, the orbit yaws **2.04°/mm** and the
   piece turns ~19.6°/mm (75° span) — the 720°/s cap is reached at ~37 mm/s of finger.
+* ⭐⭐⭐ **"OUTSIDE THE SPHERE" IS NOW "THE GREEN PIECE HELD FOR ORBIT", WHEREVER IT IS** (the owner, 2026-10-03, branch `1.0.59j-`: *"where
+  ever the green piece is, the orbit remains with the same parameters values as if the green piece was inside the white sphere … unless:
+  if the green piece is pressed and hold for orbit (wherever the green piece is): in this case, the orbit is as if the green piece was
+  outside the white sphere (yaw gain share, rotation snaps, highlight of contours, etc.)"*). `greenHeldForOrbit`: the pointer that pressed
+  the green piece (`greenOrbitPointer`, set at the press, cleared at that finger's lift) — read by the white contour, the face tracking
+  and the snapped turn on it, the outside yaw share and the cross deadband. ⭐ The finger is LATCHED: drifting off the piece keeps it held
+  (*"this is still OK and the green piece snapped rotation continues"*). The guide sphere only DRAWS now; `outsideSphere` is deleted. A
+  coast after the lift is not held: full gain, no turn. ⭐ At the press, the piece's distance to the pink ring (the yellow target) is kept
+  (`greenPressRadialM`, *"we will use this radial distance at press later on"*); HUD `· held, r at press 2.947 m`.
+  `tests/proto_green_held.test.ts`.

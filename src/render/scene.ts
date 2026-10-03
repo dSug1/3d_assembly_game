@@ -569,6 +569,8 @@ export function createScene(
   st.pinkRing = null;
   st.guideSphere = null;
   st.greenOutline = null;
+  st.greenOrbitPointer = null;
+  st.greenPressRadialM = null;
   st.orbitedPieces = [];
   st.faceTracks = new Map();
   st.pieceTurns = new Map();

@@ -232,7 +232,8 @@ describe("⭐ prototype — the GUIDE SPHERE on the yellow target (the owner, 20
     expect(code("render/tuning_menu.ts")).toContain('"guideSphereShare", 0.01, 1, 0.01)');
     expect(w).toMatch(/const r = st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM;/);
     // ONE radius for every "outside the sphere": the contour, the face tracking (and all that reads it)
-    expect(w.match(/st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM/g)).toHaveLength(3);
+    // ⭐ since 2026-10-03 the sphere only DRAWS: nothing reads its radius to decide "outside" (the green piece held does, `greenHeldForOrbit`)
+    expect(w.match(/st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM/g)).toHaveLength(1);
     expect(w).not.toMatch(/GUIDE_SPHERE_SHARE/);
     expect(w).toMatch(/const t = st\.centreBlend\.targetM;\s*s\.position\.set\(t\[0\], t\[1\], t\[2\]\);/);
     expect(w).toMatch(/sphere\.isPickable = false;/); // ⛔ never blocks a press or the pink ring's occlusion ray
@@ -242,13 +243,7 @@ describe("⭐ prototype — the GUIDE SPHERE on the yellow target (the owner, 20
   });
 });
 
-describe("⭐ prototype — the green piece's WHITE CONTOUR outside the guide sphere (the owner, 2026-10-02)", () => {
-  it("⭐ outside = its centre farther from the target than the sphere's radius", async () => {
-    const { outsideSphere } = await import("../src/input/green_box");
-    expect(outsideSphere([2, 0, 0], [0, 0, 0], 1.9)).toBe(true);
-    expect(outsideSphere([1.5, 0, 0], [0, 0, 0], 1.9)).toBe(false);
-    expect(outsideSphere([1.9, 0, 0], [0, 0, 0], 1.9)).toBe(false); // on the sphere: not outside
-  });
+describe("⭐ prototype — the green piece's WHITE CONTOUR while it is held for orbit (the owner, 2026-10-02; since 2026-10-03 held, not outside the sphere)", () => {
 
   it("⭐⭐ *same offset as the pioneer / follower contours*: its edges pushed out by the highlight offset, rebuilt when stale — the part outlines' own machinery", () => {
     const w = code("render/green_box_wiring.ts");

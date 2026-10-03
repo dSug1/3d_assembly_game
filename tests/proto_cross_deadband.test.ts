@@ -46,7 +46,8 @@ describe("⭐⭐ prototype — one orbit axis moving widens the other's deadband
 
   it("⭐ wired: outside + on, the tracker is pushed FIRST with the scales and the orbit reads its DEADBANDED travel; sliders; on, 300 %", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/const cross = st\.cfg\.orbitCrossDeadbandOn === 1 && st\.faceTracks\.get\(st\.greenBox\)\?\.outside === true;/);
+    // ⭐ since 2026-10-03: while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`)
+    expect(p).toMatch(/const cross = st\.cfg\.orbitCrossDeadbandOn === 1 && greenHeldForOrbit\(st\.greenOrbitPointer\);/);
     expect(p).toMatch(/st\.orbitMotion\.tracker\.push\(s, crossDeadbandScales\(before\.x === "MOVING", before\.y === "MOVING", cross, st\.cfg\.orbitCrossDeadbandFactor\)\);\s*if \(cross\) \{\s*dx = st\.orbitMotion\.tracker\.step\.dx;\s*dy = st\.orbitMotion\.tracker\.step\.dy;/);
     // the push comes BEFORE the orbit is driven
     expect(p.indexOf("tracker.push(s, crossDeadbandScales(")).toBeLessThan(p.indexOf("st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw"));

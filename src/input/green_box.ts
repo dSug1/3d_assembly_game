@@ -207,13 +207,6 @@ export function cameraGapM(radiusOffsetM: number, zoom: number): number {
   return Math.max(0, radiusOffsetM) * clampGreenZoom(zoom);
 }
 
-/**
- * ⭐ prototype (green box) — **IS THE GREEN PIECE OUTSIDE THE GUIDE SPHERE?** (the owner, 2026-10-02: *"when the green piece is
- * outside of this sphere, highlight its contour in white"*): its CENTRE farther from the yellow target than the sphere's radius.
- */
-export function outsideSphere(piece: Vec3, centre: Vec3, radiusM: number): boolean {
-  return Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]) > radiusM;
-}
 
 /** One hit along the camera's ray to the yellow target: how far, and whether it is the green piece. */
 export interface RingHit {
@@ -639,4 +632,15 @@ export function capTurn(
   const keep = Math.max(0, maxDegPerS * (windowMs / 1000));
   const pending = Math.max(-keep, Math.min(keep, want - applied));
   return { applied, pending, capped: Math.abs(want - applied) > 1e-9 };
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE "OUTSIDE" BEHAVIOURS RUN WHILE THE GREEN PIECE IS HELD, NOT WHERE IT IS** (the owner, 2026-10-03:
+ * *"where ever the green piece is, the orbit remains with the same parameters values as if the green piece was inside the white sphere …
+ * unless: if the green piece is pressed and hold for orbit (wherever the green piece is): in this case, the orbit is as if the green
+ * piece was outside the white sphere (yaw gain share, rotation snaps, highlight of contours, etc.)"*). The pointer that pressed the green
+ * piece, while it is down (`null` otherwise): that is the whole test — the sphere's radius no longer decides anything.
+ */
+export function greenHeldForOrbit(greenOrbitPointer: number | null): boolean {
+  return greenOrbitPointer !== null;
 }

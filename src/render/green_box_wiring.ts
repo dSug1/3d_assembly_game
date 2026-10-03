@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenHeldForOrbit, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -320,9 +320,8 @@ export function guideSphereFrame(st: SceneState): void {
   const box = st.greenBox;
   const o = st.greenOutline;
   if (box !== null && o !== null) {
-    const t0 = st.centreBlend.targetM;
-    const radius = st.cfg.guideSphereShare * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
-    const out = outsideSphere([box.position.x, box.position.y, box.position.z], [t0[0], t0[1], t0[2]], radius);
+    // ⭐ the owner, 2026-10-03: shown while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`; it was: outside the sphere)
+    const out = greenHeldForOrbit(st.greenOrbitPointer);
     o.lines.isVisible = out;
     if (out) {
       const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
@@ -350,7 +349,7 @@ export function guideSphereFrame(st: SceneState): void {
  * which will later be orbited"* — *"also at boot, if any piece is outside the white sphere"*). Each frame, for each orbited piece
  * (`orbitedPieces`), the decision is `faceTracking`'s: on `START` (an outward crossing, or outside at its first frame — the boot)
  * its logical faces are read off its mesh (`topologyFromMesh`, `pieceFaces`); while it stays outside, their world normals and
- * centres follow it; back inside, they are dropped. The test is the white contour's own (`outsideSphere`, its centre).
+ * centres follow it; back inside, they are dropped. ⭐ Since 2026-10-03 "outside" is the green piece HELD for orbit, wherever it is (`greenHeldForOrbit`).
  * ⭐⭐ **AND IT STEPS THROUGH THEM AS IT ORBITS IN YAW** (the owner, 2026-10-02): `DegreesYawPerFace` = the yaw face alignment span ÷
  * its faces, and `DeltaXYawPerFace` = the finger dx that orbits that much, at the yaw rate (`orbitDegPerMm`). On `START` the face
  * most anti-aligned with the pink ring's face is turned exactly anti-parallel; from that pose its faces fall into a YAW cycle and a
@@ -364,15 +363,14 @@ export function guideSphereFrame(st: SceneState): void {
  * flight lands): the face anti-aligned is kept.
  */
 export function trackOrbitedFaces(st: SceneState, now: number): void {
-  const t = st.centreBlend.targetM;
-  const radius = st.cfg.guideSphereShare * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
   const yaw = st.orbit.yaw;
   const g = greenDragGains(st);
   const yawDegPerMm = orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm;
   const pink = st.pinkFaceNormal;
   for (const m of st.orbitedPieces) {
     const p = m.getAbsolutePosition();
-    const out = outsideSphere([p.x, p.y, p.z], [t[0], t[1], t[2]], radius);
+    // ⭐ the owner, 2026-10-03: "outside" = the green piece HELD for orbit, wherever it is (`greenHeldForOrbit`; it was the sphere's radius)
+    const out = greenHeldForOrbit(st.greenOrbitPointer);
     const prev = st.faceTracks.get(m);
     const step = faceTracking(prev === undefined ? null : prev.outside, out);
     if (step === "NONE" || step === "STOP") {
@@ -564,6 +562,6 @@ export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
     st.boxOrbit === null || st.cameraOrbit === null
       ? { yaw: 1, pitch: 1 }
       : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
-  const outside = st.greenBox !== null && st.faceTracks.get(st.greenBox)?.outside === true;
+  const outside = st.greenBox !== null && greenHeldForOrbit(st.greenOrbitPointer);
   return { yaw: g.yaw * outsideYawShare(outside, st.cfg.boxGainYawOutsideShare), pitch: g.pitch };
 }

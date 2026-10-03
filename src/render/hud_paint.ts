@@ -376,7 +376,9 @@ export function greenReadout(st: SceneState): string {
       : ft.free !== null
         ? `faces ${tr.length} tracked, turning ${hudFree(ft.free.sDeg, st.cfg.greenRotateBlendDeg)}${st.cfg.greenRotateSnap === 1 ? ` · steps ${ft.free.yawStepDeg.toFixed(0)}° (${ft.free.yawFaces} faces) / ${ft.free.pitchStepDeg.toFixed(0)}° (${ft.free.pitchFaces}) · turn ${ft.free.turnDegPerS.toFixed(0)}/${ft.free.maxTurnDegPerS.toFixed(0)}°/s${ft.free.capped ? " ⏩CAPPED" : ""}` : ""}`
         : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
-  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
+  // ⭐ …and, while it is HELD for orbit, its distance to the pink ring at the press (`greenPressRadialM`).
+  const held = st.greenOrbitPointer !== null && st.greenPressRadialM !== null ? ` · held, r at press ${st.greenPressRadialM.toFixed(3)} m` : "";
+  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target${held} | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 
 /** ⭐ prototype (green box): which cycle the face anti-aligned now is in, and where — `yaw 2/4`, `pitch 1/4` (`cycleStep`). */
