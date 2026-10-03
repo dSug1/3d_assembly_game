@@ -443,3 +443,17 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   miss 75 % and 100 %). It replaces the constant `GUIDE_SPHERE_SHARE`; the one radius every "outside the sphere" reads — the white
   contour, the face tracking, and through it the outside yaw share, the cross deadband, the green piece's turn.
 * ⭐ **Guide sphere radius 97 %, in 1 % steps from 1 %** (the owner, 2026-10-03; was 75 %, 5 % steps): 2.47 m with the 2.55 m 1st ring.
+* ⭐⭐ **The snapped turn FREEZES when dx is too fast for its snaps** (the owner, 2026-10-03: *"when the dx is too high, the rotation is too
+  fast for the snap to have the time to happens … compute the maximum dx speed in this configuration at boot time and then if dx exceeds
+  this value, the rotation is frozen in the last snap until dx goes down to 50 % of this value (hysteresis) : when it reaches this value,
+  the rotation snaps to the value it should have been based on the accumulated dx"* — *"recompute if the full yaw + pitch cycle angle
+  slider value changes but not every frame"*). The limit (`maxSnapDxMmPerS`): the dx between the two closest snaps (cycle ÷ (2 × the
+  larger face count) of orbit yaw, at the outside yaw rate) over one snap's ease (`cameraResetMs × ALIGN_SNAP_FRACTION`) — today 75° ÷ 8
+  ÷ 2.04°/mm = 4.6 mm in 129 ms ≈ **36 mm/s**. Computed once when the turn starts (boot), again only when the cycle slider's value differs
+  from the one it was computed from (the faces, the rate and the ease stay the boot's). The dx speed is the orbit's yaw as dx, smoothed
+  over 120 ms (the rig steps per pointer event). Above the limit: frozen on the last snap (`snapFrozen`), the dx still accumulating;
+  at or below half of it: released, eased straight to the snap the accumulated dx calls for. HUD `· dx 12/36 mm/s ⏸FROZEN`.
+  `tests/proto_snap_freeze.test.ts`.
+* ⭐ **…and the too-fast dx is IGNORED, not caught up** (the owner, 2026-10-03: *"let's not snap at the end and simply ignore the rotation
+  when dx is too fast"*): while frozen (snapping on), the orbit's yaw is not accumulated at all, so on release the piece simply resumes
+  from the snap it froze on. ⚠ So a fast swipe turns the orbit but not the piece: the piece's face no longer follows the orbit 1:1.

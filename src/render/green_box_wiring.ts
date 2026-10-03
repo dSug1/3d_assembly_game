@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, levelHeading, maxSnapDxMmPerS, mostAntiAligned, snapFrozen, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, outsideSphere, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -413,13 +413,44 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         const q0 = levelHeading(cur);
         const pitchAxis: Vec3 = axes?.pitch ?? [1, 0, 0];
         // ⭐ the owner, 2026-10-03: the faces that scroll past in a 360° yaw and a 360° pitch, counted ONCE (at boot) — the increments
-        free = { q0, sDeg: 0, pitchAxis, ...scrollIncrements(faces, q0, [0, 1, 0], pitchAxis) };
+        const inc = scrollIncrements(faces, q0, [0, 1, 0], pitchAxis);
+        // ⭐ the owner, 2026-10-03: the fastest dx the snaps can follow, computed ONCE — the outside yaw rate, an alignment's ease
+        const outsideRate = orbitDegPerMm(st.cfg, st.orbit.elevation, { yaw: outsideYawShare(true, st.cfg.boxGainYawOutsideShare), pitch: 1 }).yawDegPerMm;
+        const easeMs = st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
+        const maxDxMmPerS = maxSnapDxMmPerS(st.cfg.greenRotateCycleOrbitYawDeg, inc.yawFaces, inc.pitchFaces, outsideRate, easeMs);
+        free = { q0, sDeg: 0, pitchAxis, ...inc, maxDxMmPerS, maxForCycleDeg: st.cfg.greenRotateCycleOrbitYawDeg, outsideRateDegPerMm: outsideRate, easeMs, speedMmPerS: 0, lastT: now, frozen: false };
       }
-      else if (entering) free = stored;
+      else if (entering) free = { ...stored, lastT: now };
       else {
         // the orbit's yaw this frame (a drag's, a coast's): one full cycle per `greenRotateCycleOrbitYawDeg` of it (the owner, 2026-10-03)
         const dYawDeg = (wrapPi(yaw - prev!.yaw) * 180) / Math.PI;
-        free = { ...stored, sDeg: stored.sDeg + dYawDeg * staircasePerOrbitDeg(st.cfg.greenRotateBlendDeg, st.cfg.greenRotateCycleOrbitYawDeg) };
+        // ⭐ its speed as dx (mm/s), smoothed over `SNAP_SPEED_TAU_MS` — the rig steps per pointer EVENT, 15–20 a second
+        const dtMs = stored.lastT === null ? 0 : now - stored.lastT;
+        const inst = dtMs > 0 && yawDegPerMm > 0 ? Math.abs(dYawDeg) / yawDegPerMm / (dtMs / 1000) : stored.speedMmPerS;
+        const speedMmPerS = stored.speedMmPerS + (inst - stored.speedMmPerS) * (dtMs > 0 ? 1 - Math.exp(-dtMs / SNAP_SPEED_TAU_MS) : 0);
+        const frozen = snapFrozen(stored.frozen, speedMmPerS, stored.maxDxMmPerS);
+        // ⭐⭐ the owner, 2026-10-03: *"let's not snap at the end and simply ignore the rotation when dx is too fast"* — while frozen
+        // (snapping on) the orbit's yaw turns the piece NOT AT ALL: nothing accumulates, so on release there is nothing to catch up
+        const ignored = frozen && st.cfg.greenRotateSnap === 1;
+        free = {
+          ...stored,
+          sDeg: ignored ? stored.sDeg : stored.sDeg + dYawDeg * staircasePerOrbitDeg(st.cfg.greenRotateBlendDeg, st.cfg.greenRotateCycleOrbitYawDeg),
+          speedMmPerS,
+          lastT: now,
+          frozen,
+        };
+        if (free.frozen !== stored.frozen) st.hudDirty = true;
+      }
+      // ⭐ the owner, 2026-10-03: *"recompute if the full yaw + pitch cycle angle slider value changes but not every frame"* — the limit
+      // is recomputed only when that slider's value differs from the one it was computed from (a menu choice, not a runtime input);
+      // the faces, the outside rate and the ease stay the boot's
+      if (free.maxForCycleDeg !== st.cfg.greenRotateCycleOrbitYawDeg) {
+        free = {
+          ...free,
+          maxDxMmPerS: maxSnapDxMmPerS(st.cfg.greenRotateCycleOrbitYawDeg, free.yawFaces, free.pitchFaces, free.outsideRateDegPerMm, free.easeMs),
+          maxForCycleDeg: st.cfg.greenRotateCycleOrbitYawDeg,
+        };
+        st.hudDirty = true;
       }
       st.freeTurns.set(m, free);
       // ⭐⭐ the owner, 2026-10-03: *"snap the green piece yaw and pitch rotations onto these angle increments during the yaw orbit,
@@ -432,8 +463,10 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         : staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis);
       const easing = st.pieceTurns.get(m);
       if (snapped) {
-        // a new increment: eased there from where the piece is; the same one: nothing (a turn in flight lands)
-        if (qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
+        // a new increment: eased there from where the piece is; the same one: nothing (a turn in flight lands).
+        // ⭐⭐ the owner, 2026-10-03: FROZEN on the last snap while dx is too fast to follow (`snapFrozen`) — and that dx is IGNORED
+        // (not accumulated above), so it resumes from the same snap once dx slows to half the limit
+        if (!free.frozen && qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
           st.pieceTurns.set(m, { from: cur, to: want, t0: now });
           st.hudDirty = true;
         }
@@ -505,6 +538,8 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
 }
 
 const NO_CYCLES = { yaw: [], pitch: [] } as const;
+/** ⭐ prototype (green box): the smoothing of the dx speed the snap freeze reads, ms — over a few pointer events. */
+const SNAP_SPEED_TAU_MS = 120;
 const NO_TARGETS = { yaw: [], pitch: [] } as const;
 
 const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]);

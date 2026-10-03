@@ -43,6 +43,16 @@ export interface FreeTurn {
   readonly pitchFaces: number;
   readonly yawStepDeg: number;
   readonly pitchStepDeg: number;
+  /** ⭐ The fastest dx the snaps can follow (mm/s), computed once at the start (`maxSnapDxMmPerS`); the dx speed now, smoothed; when it was. */
+  readonly maxDxMmPerS: number;
+  /** ⭐ What that limit was computed from: the cycle slider's value, and the boot's outside yaw rate (°/mm) and ease (ms). */
+  readonly maxForCycleDeg: number;
+  readonly outsideRateDegPerMm: number;
+  readonly easeMs: number;
+  readonly speedMmPerS: number;
+  readonly lastT: number | null;
+  /** ⭐ Frozen on the last snap — too fast to follow (`snapFrozen`). */
+  readonly frozen: boolean;
 }
 
 export interface FaceTrack {

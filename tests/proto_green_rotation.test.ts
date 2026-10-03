@@ -130,8 +130,9 @@ describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in
     expect(w).toMatch(/const freeMode = st\.cfg\.facesRotateByIncrement === 0;/);
     expect(w).toMatch(/const stored = st\.freeTurns\.get\(m\);/);
     expect(w).toMatch(/if \(stored === undefined\) \{\s*const q0 = levelHeading\(cur\);/);
-    expect(w).toMatch(/\}\s*else if \(entering\) free = stored;/);
-    expect(w).toMatch(/sDeg: stored\.sDeg \+ dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\)/);
+    // an exit continues the stored turn (only its speed clock restarts)
+    expect(w).toMatch(/\}\s*else if \(entering\) free = \{ \.\.\.stored, lastT: now \};/);
+    expect(w).toMatch(/: stored\.sDeg \+ dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.greenRotateCycleOrbitYawDeg\)/);
     // the angles from the staircase (snapped or not, below), the pose from them
     expect(w).toMatch(/const ang = staircaseAngles\(free\.sDeg, st\.cfg\.greenRotateBlendDeg\);/);
     expect(w).toMatch(/: staircaseOrientation\(free\.q0, free\.sDeg, st\.cfg\.greenRotateBlendDeg, \[0, 1, 0\], free\.pitchAxis\);/);
@@ -185,9 +186,10 @@ describe("⭐⭐ prototype — the turn SNAPPED to the face increments (the owne
 
   it("⭐ wired: counted ONCE when the turn starts (at boot); each frame both angles snapped, each new increment eased in; a slider turns it off", () => {
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/free = \{ q0, sDeg: 0, pitchAxis, \.\.\.scrollIncrements\(faces, q0, \[0, 1, 0\], pitchAxis\) \};/);
+    expect(w).toMatch(/const inc = scrollIncrements\(faces, q0, \[0, 1, 0\], pitchAxis\);/);
+    expect(w).toMatch(/free = \{ q0, sDeg: 0, pitchAxis, \.\.\.inc,/);
     expect(w).toMatch(/\? orientationAt\(free\.q0, snapAngle\(ang\.yawDeg, free\.yawStepDeg\), snapAngle\(ang\.pitchDeg, free\.pitchStepDeg\), \[0, 1, 0\], free\.pitchAxis\)/);
-    expect(w).toMatch(/if \(qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{\s*st\.pieceTurns\.set\(m, \{ from: cur, to: want, t0: now \}\);/);
+    expect(w).toMatch(/if \(!free\.frozen && qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{\s*st\.pieceTurns\.set\(m, \{ from: cur, to: want, t0: now \}\);/);
     expect(DEFAULT_CONFIG.greenRotateSnap).toBe(1);
     expect(code("render/tuning_menu.ts")).toContain('"greenRotateSnap", 0, 1, 1)');
   });

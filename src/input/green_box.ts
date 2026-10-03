@@ -602,3 +602,25 @@ export function crossDeadbandScales(
   const f = active && factor > 1 ? factor : 1;
   return { x: yMoving ? f : 1, y: xMoving ? f : 1 };
 }
+
+/**
+ * ⭐⭐ prototype (green box) — **THE FASTEST dx THE SNAPS CAN FOLLOW** (the owner, 2026-10-03: *"when the dx is too high, the rotation is
+ * too fast for the snap to have the time to happens … compute the maximum dx speed in this configuration at boot time"*). Each snap is
+ * eased over `easeMs`; the snaps come closest where the faces are most (`cycle ÷ (2 × max(yawFaces, pitchFaces))` of orbit yaw — half
+ * the cycle each for the yaw and the pitch); at `yawDegPerMm` of orbit per mm of dx, the dx between two snaps over the ease time is the
+ * most a finger may go and still see every snap land. mm of dx per second; `Infinity` when nothing snaps.
+ */
+export function maxSnapDxMmPerS(cycleOrbitYawDeg: number, yawFaces: number, pitchFaces: number, yawDegPerMm: number, easeMs: number): number {
+  const faces = Math.max(yawFaces, pitchFaces);
+  if (!(faces > 0) || !(yawDegPerMm > 0) || !(easeMs > 0) || !(cycleOrbitYawDeg > 0)) return Infinity;
+  const stepDxMm = cycleOrbitYawDeg / (2 * faces) / yawDegPerMm;
+  return stepDxMm / (easeMs / 1000);
+}
+
+/**
+ * ⭐ **FROZEN ON THE LAST SNAP, WITH HYSTERESIS** (the owner, 2026-10-03: *"if dx exceeds this value, the rotation is frozen in the last snap
+ * until dx goes down to 50 % of this value"*): it freezes ABOVE `max`, and stays frozen until the speed is at or below `release × max`.
+ */
+export function snapFrozen(frozen: boolean, speed: number, max: number, release = 0.5): boolean {
+  return frozen ? speed > release * max : speed > max;
+}
