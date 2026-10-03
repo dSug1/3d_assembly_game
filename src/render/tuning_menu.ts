@@ -119,6 +119,9 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "green box orbit gain — yaw (×)", "boxGainYaw", 0.05, 2, 0.05),
             // ⭐ 2026-10-02: the share of it left while the green piece is outside the guide sphere.
             tunable(st, "yaw gain share outside the guide sphere", "boxGainYawOutsideShare", 0.05, 1, 0.05),
+            // ⭐ 2026-10-03: outside the sphere, one axis moving widens the other's deadband (on = 1), by this factor (1 = 100 %).
+            tunable(st, "outside: one axis moving widens the other's deadband (0 / 1)", "orbitCrossDeadbandOn", 0, 1, 1),
+            tunable(st, "outside: that widening (× deadband, 1 = 100 %)", "orbitCrossDeadbandFactor", 1, 10, 0.25),
             tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
             tunable(st, "green box gain inside the leash (×)", "boxGainInsideLeash", 0.05, 1, 0.05),
             tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),

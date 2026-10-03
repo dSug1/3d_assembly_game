@@ -586,3 +586,19 @@ export function levelHeading(q: Quat): Quat {
   const psi = Math.hypot(x[0], x[2]) > 1e-6 ? Math.atan2(-x[2], x[0]) : Math.atan2(z[0], z[2]);
   return qFromAxisAngle([0, 1, 0], psi);
 }
+
+/**
+ * ⭐⭐ prototype (green box) — **ONE ORBIT AXIS MOVING WIDENS THE OTHER'S DEADBAND** (the owner, 2026-10-03: *"when the green piece is
+ * outside the white sphere: when dx is outside the deadband, increase the deadband for dy. Revert back when dx is inside the deadband.
+ * When dy is outside the deadband, increase the deadband for dx …"*). The factor on each axis's dead radius for the next sample: `factor`
+ * on y while x is MOVING, on x while y is MOVING, else 1 — and 1 on both unless `active` (outside the sphere, the switch on).
+ */
+export function crossDeadbandScales(
+  xMoving: boolean,
+  yMoving: boolean,
+  active: boolean,
+  factor: number,
+): { readonly x: number; readonly y: number } {
+  const f = active && factor > 1 ? factor : 1;
+  return { x: yMoving ? f : 1, y: xMoving ? f : 1 };
+}

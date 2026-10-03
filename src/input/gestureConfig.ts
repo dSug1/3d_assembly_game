@@ -480,6 +480,10 @@ export interface GestureConfig {
   boxGainYaw: number;
   /** ⭐ Prototype: the share of the yaw gain left while the green piece is OUTSIDE the guide sphere (`outsideYawShare`). */
   boxGainYawOutsideShare: number;
+  /** ⭐ Prototype: 1 = outside the guide sphere, one orbit axis moving widens the other's deadband (`crossDeadbandScales`). */
+  orbitCrossDeadbandOn: number;
+  /** ⭐ Prototype: that widening, a factor on `motionDeadbandMm` (1 = 100 %, today's; up to 10 = 1000 %). */
+  orbitCrossDeadbandFactor: number;
   /** ⭐ Prototype: the green box orbit's PITCH gain, a multiplier on `gainOrbitElevation`. */
   boxGainPitch: number;
   /**
@@ -972,6 +976,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)
   boxGainYaw: 1.65,
+  // ⭐ prototype (green box), the owner 2026-10-03: one axis moving widens the other's deadband, outside the sphere (300 %: a first guess)
+  orbitCrossDeadbandOn: 1,
+  orbitCrossDeadbandFactor: 3,
   boxGainYawOutsideShare: 0.4, // ⭐ prototype (green box), the owner 2026-10-02: *"reduce the green box yaw orbit gain to 40% of its value"*
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
@@ -1131,6 +1138,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.cameraRadiusOffsetMm >= 100 && cfg.cameraRadiusOffsetMm <= 2000)) {
     throw new Error(`cameraRadiusOffsetMm (${cfg.cameraRadiusOffsetMm}) must be in [100, 2000] mm.`);
+  }
+  if ((cfg.orbitCrossDeadbandOn !== 0 && cfg.orbitCrossDeadbandOn !== 1) || !(cfg.orbitCrossDeadbandFactor >= 1 && cfg.orbitCrossDeadbandFactor <= 10)) {
+    throw new Error(`orbitCrossDeadbandOn (${cfg.orbitCrossDeadbandOn}) must be 0 or 1 and orbitCrossDeadbandFactor (${cfg.orbitCrossDeadbandFactor}) in [1, 10].`);
   }
   if (!(cfg.boxGainYawOutsideShare > 0 && cfg.boxGainYawOutsideShare <= 1)) {
     throw new Error(`boxGainYawOutsideShare (${cfg.boxGainYawOutsideShare}) must be in (0, 1].`);

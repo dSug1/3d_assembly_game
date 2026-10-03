@@ -427,3 +427,13 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   `· steps 90° (4 faces) / 90° (4)`.
 * ⭐ **The full yaw + pitch cycle: 70° of orbit yaw** (the owner, 2026-10-03; was 360°). Snapped at 90° / 90°: a face step every **8.75°
   of orbit yaw** — ~4.3 mm of dx outside the sphere (2.04°/mm).
+* ⭐⭐ **Outside the guide sphere, one orbit axis moving widens the other's deadband** (the owner, 2026-10-03: *"when dx is outside the
+  deadband, increase the deadband for dy. Revert back when dx is inside the deadband. When dy is outside the deadband, increase the
+  deadband for dx …"* — *"make a toggle slider and a slider for this increase of deadband from 100 % (current) to 1000 %"*). The orbit
+  finger's tracker (§1.1's per-axis position deadband, `motionDeadbandMm` 3.5 mm) takes a per-axis band factor (`MotionTracker.push`'s
+  `bandScale`): × `orbitCrossDeadbandFactor` on y while x is MOVING, on x while y is MOVING, back to 1 when the other rests
+  (`crossDeadbandScales`). It is pushed BEFORE the orbit is driven, and outside the sphere the orbit reads its DEADBANDED travel
+  (⚠ it read the raw travel before: the band would have changed nothing) — so the first 3.5 mm of each axis's start is eaten, as for a
+  held piece. A yaw swipe drifting 6 mm up: pitch leaks 2.5 mm at 100 %, none at 300 %. Inside the sphere or switched off: the raw
+  travel, as ever. CAMERA › GREEN PIECE ORBIT: the toggle (`orbitCrossDeadbandOn`, **1**) and the factor (`orbitCrossDeadbandFactor`,
+  **3** = 300 %, a first guess; 1–10). `tests/proto_cross_deadband.test.ts`.

@@ -7,7 +7,7 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { crossDeadbandScales, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
@@ -1123,9 +1123,22 @@ export function installPointerHandler(st: SceneState): void {
  * wheel) is unchanged.
  */
 export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): void {
-  const dx = s.x - prev.x;
-  const dy = s.y - prev.y;
+  let dx = s.x - prev.x;
+  let dy = s.y - prev.y;
   if (st.greenBox !== null) {
+    // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
+    if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId)
+      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
+    // ⭐⭐ prototype (green box), the owner 2026-10-03: OUTSIDE the guide sphere, one axis moving (beyond its deadband) widens the
+    // OTHER's deadband (`crossDeadbandScales`, from the axes as they stood before this sample), and the orbit then reads the
+    // DEADBANDED travel — so a yaw drag does not leak pitch, nor a pitch drag yaw. Inside, or switched off: the raw travel, as ever.
+    const cross = st.cfg.orbitCrossDeadbandOn === 1 && st.faceTracks.get(st.greenBox)?.outside === true;
+    const before = st.orbitMotion.tracker.axes;
+    st.orbitMotion.tracker.push(s, crossDeadbandScales(before.x === "MOVING", before.y === "MOVING", cross, st.cfg.orbitCrossDeadbandFactor));
+    if (cross) {
+      dx = st.orbitMotion.tracker.step.dx;
+      dy = st.orbitMotion.tracker.step.dy;
+    }
     // ⭐ 2026-10-02: the yaw slower outside the guide sphere too (`greenDragGains`).
     const g = greenDragGains(st);
     const yaw0 = st.orbit.yaw;
@@ -1133,10 +1146,6 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, -dy * st.cfg.boxGainPitch * g.pitch);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
-    // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
-    if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId)
-      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
-    st.orbitMotion.tracker.push(s);
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
     // 1-3"*: the held body's own TRIGGER (`SwayWatcher` on the orbit finger) — but a SWING of the scene, as a block, about the
     // yellow target, in the sense the green piece orbits (`orbitSwingAxis`), `orbitSwayDeg` × the finger's speed factor, on the
