@@ -132,7 +132,10 @@ describe("⭐⭐ prototype — the green piece's continuous turn: a staircase in
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const freeMode = st\.cfg\.facesRotateByIncrement === 0;/);
     expect(w).toMatch(/const stored = st\.freeTurns\.get\(m\);/);
-    expect(w).toMatch(/if \(stored === undefined\) \{\s*const q0 = levelHeading\(cur\);/);
+    // ⭐ the level-out only when switched on (the owner, 2026-10-04: OFF by default — gravity is the user's own alignment)
+    expect(w).toMatch(/if \(stored === undefined\) \{\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*const q0 = st\.cfg\.greenLevelOutOn === 1 \? levelHeading\(cur\) : cur;/);
+    expect(DEFAULT_CONFIG.greenLevelOutOn).toBe(0);
+    expect(code("render/tuning_menu.ts")).toContain('"greenLevelOutOn", 0, 1, 1)');
     // an exit continues the stored turn (only its speed clock restarts)
     expect(w).toMatch(/\}\s*else if \(entering\) free = \{ \.\.\.stored, lastT: now \};/);
     expect(w).toMatch(/const dTurnDeg = dYawDeg \* staircasePerOrbitDeg\(st\.cfg\.greenRotateBlendDeg, st\.cfg\.yawFaceAlignSpanDeg\);/);

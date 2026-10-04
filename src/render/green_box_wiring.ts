@@ -409,7 +409,9 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
       const stored = st.freeTurns.get(m);
       const entering = step !== "KEEP" || prev === undefined || prev.free === null; // an exit, the switch, or the first frame
       if (stored === undefined) {
-        const q0 = levelHeading(cur);
+        // ⭐ the owner, 2026-10-04: the level-out only when switched on (`greenLevelOutOn`, OFF) — *"The alignment on gravity shall be the
+        // user's own action, not a game compute"*: by default the turn starts from the pose AS IT IS, the tumbled one surviving the hold
+        const q0 = st.cfg.greenLevelOutOn === 1 ? levelHeading(cur) : cur;
         const pitchAxis: Vec3 = axes?.pitch ?? [1, 0, 0];
         // ⭐ the owner, 2026-10-03: the faces that scroll past in a 360° yaw and a 360° pitch, counted ONCE (at boot) — the increments
         const inc = scrollIncrements(faces, q0, [0, 1, 0], pitchAxis);

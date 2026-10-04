@@ -511,3 +511,9 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   at boot"*): `greenBootOrientation` — `Scene_1` (w, x, y, z) = (1, 2, 3, 4) normalized ≈ (0.183, 0.365, 0.548, 0.730), ~159° about
   (2, 3, 4); any other scene the identity. ⚠ At the first hold the level-out keeps only its heading (`levelHeading`), so the tilt eases
   away then. `tests/proto_green_boot_quat.test.ts`.
+* ⭐⭐ **The level-out is a switch, OFF by default** (the owner, 2026-10-04: *"Make a slider in green piece rotation menu to toggle on or
+  off the level-out when the green piece is pressed upon. Set default level-out off, so the tumbled pose survive the hold. The alignment
+  on gravity shall be the user's own action, not a game compute"*): `greenLevelOutOn` **0** (OBJECT ROTATION › GREEN PIECE ROTATION,
+  *level-out at the first hold*). Off, the snapped turn starts from the pose AS IT IS — `Scene_1`'s tumbled (1,2,3,4) survives the hold.
+  ⚠ The cost, chosen: a yaw of a tilted piece is a tilted spin about the vertical (its own up circles the vertical) — the "pitch mixed
+  with yaw" the level start pose was made to remove; on (1) brings that back.

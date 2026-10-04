@@ -537,6 +537,8 @@ export interface GestureConfig {
   greenSnapEaseMs: number;
   /** ⭐ Prototype: the blend window between its yaw and pitch, degrees of that turn (`staircaseAngles`). */
   greenRotateBlendDeg: number;
+  /** ⭐ Prototype: 1 = the green piece's turn starts LEVEL (`levelHeading`, its tilt dropped at the first hold); 0 = from its pose as it is. */
+  greenLevelOutOn: number;
   /** ⭐ Prototype: the guide sphere's opacity (0 = hidden) — for prototyping only, never in the final game. */
   guideSphereAlpha: number;
   /** ⭐ Prototype: the guide sphere's radius as a share of the 1st (top) ring's — everything "outside the sphere" reads it. */
@@ -1012,6 +1014,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   greenSnapEaseMs: 125,
   greenRotateSnap: 1, // ⭐ prototype (green box), the owner 2026-10-03: *"not continuous but incremented"*
   greenRotateBlendDeg: 0,
+  // ⭐ prototype (green box), the owner 2026-10-04: OFF — *"The alignment on gravity shall be the user's own action, not a game compute"*
+  greenLevelOutOn: 0,
   facesRotateByIncrement: 0, // ⭐ prototype (green box), the owner 2026-10-03: OFF by default — the continuous turn (was 1, the face cycles)
   // ⭐ prototype (green box): the orbit yaw of ONE full yaw + pitch period, in BOTH modes — the face cycles' steps and the continuous
   // (snapped) turn's cycle (the owner, 2026-10-03, *"also applies in this current case"*; 75° — the turn's cycle then; was 180°)
@@ -1180,6 +1184,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (cfg.greenRotateSnap !== 0 && cfg.greenRotateSnap !== 1) {
     throw new Error(`greenRotateSnap (${cfg.greenRotateSnap}) must be 0 or 1.`);
+  }
+  if (cfg.greenLevelOutOn !== 0 && cfg.greenLevelOutOn !== 1) {
+    throw new Error(`greenLevelOutOn (${cfg.greenLevelOutOn}) must be 0 or 1.`);
   }
   if (!(cfg.greenRotateBlendDeg >= 0 && cfg.greenRotateBlendDeg <= 180)) {
     throw new Error(`greenRotateBlendDeg (${cfg.greenRotateBlendDeg}) must be in [0, 180].`);
