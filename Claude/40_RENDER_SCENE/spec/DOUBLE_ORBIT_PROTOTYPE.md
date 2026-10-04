@@ -507,3 +507,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * 📝 **Draft spec — the green piece's assembly phases** (the owner, 2026-10-03: *"I am trying to reproduce the way kids assemble a toy"* →
   *"write the short spec. This shall apply to the prototype"*): COARSE → APPROACH (a funnel to a standoff on the insertion axis) →
   STANDOFF (fine yaw) → CONTACT (slide in the face plane) → SEATED, while the green piece is held → `GREEN_PIECE_PHASES.md`. Not built.
+* ⭐ **The green piece boots at the scene's quaternion** (the owner, 2026-10-04: *"For this specific scene, make the quaternion (1,2,3,4)
+  at boot"*): `greenBootOrientation` — `Scene_1` (w, x, y, z) = (1, 2, 3, 4) normalized ≈ (0.183, 0.365, 0.548, 0.730), ~159° about
+  (2, 3, 4); any other scene the identity. ⚠ At the first hold the level-out keeps only its heading (`levelHeading`), so the tilt eases
+  away then. `tests/proto_green_boot_quat.test.ts`.

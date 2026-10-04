@@ -644,3 +644,16 @@ export function capTurn(
 export function greenHeldForOrbit(greenOrbitPointer: number | null): boolean {
   return greenOrbitPointer !== null;
 }
+
+/**
+ * ⭐ prototype (green box) — **THE GREEN PIECE'S BOOT ORIENTATION, PER SCENE** (the owner, 2026-10-04: *"For this specific scene, make the
+ * quaternion (1,2,3,4) at boot"*). (w, x, y, z) as given, NORMALIZED (its length is √30): ≈ (0.183, 0.365, 0.548, 0.730), a turn of ~159°
+ * about (2, 3, 4). Any other scene: the identity. ⚠ The first hold's level-out (`levelHeading`) keeps only its heading.
+ */
+const GREEN_BOOT_QUAT: Readonly<Record<string, Quat>> = { Scene_1: [1, 2, 3, 4] };
+export function greenBootOrientation(sceneId: string): Quat {
+  const q = GREEN_BOOT_QUAT[sceneId];
+  if (q === undefined) return [1, 0, 0, 0];
+  const n = Math.hypot(q[0], q[1], q[2], q[3]);
+  return n > 0 ? [q[0] / n, q[1] / n, q[2] / n, q[3] / n] : [1, 0, 0, 0];
+}

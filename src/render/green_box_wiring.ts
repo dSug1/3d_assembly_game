@@ -14,7 +14,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenHeldForOrbit, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -62,7 +62,8 @@ export function createGreenBox(st: SceneState): void {
   st.greenBox = box;
   // ⭐ prototype (green box), 2026-10-02: the first orbited piece — its faces are tracked outside the guide sphere (`trackOrbitedFaces`).
   st.orbitedPieces.push(box);
-  box.rotationQuaternion = Quaternion.Identity();
+  // ⭐ the owner, 2026-10-04: the boot orientation is the scene's (`greenBootOrientation`: Scene_1 (1,2,3,4) normalized; else the identity)
+  box.rotationQuaternion = toBabylon(greenBootOrientation(st.sceneSpec.id));
   // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
   // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).
   // ⭐ prototype (green box), the owner 2026-10-02: *"make the pink ring slightly thicker and brighter so I can see it better"*.
