@@ -520,3 +520,10 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * ⭐ **The orbit's dy sense inverted** (the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"*): the green
   piece's orbit drag takes dy with its own sign now (`st.orbit.drag(-dx …, dy …)`; it was `-dy`) — finger DOWN raises the piece on the
   rings, finger UP lowers it (the reverse of before). dx unchanged; the inertia follows the drag.
+* ⭐⭐ **Approach step 1 — selection, the double tap, the coarse push** (`GREEN_PIECE_PHASES.md` §3.1, §2; ⛔ unjudged by a hand). A press on
+  a face of the green piece SELECTS it (`pickedFace`: the pick's world normal into the piece's own frame, so a tumbled piece picks right)
+  with a WHITE fill (double-sided, alpha 0.6, parented to the piece, lifted by the highlight offset); the press still orbits. A double tap
+  ON the green piece UNSELECTS (`greenDoubleTap`) — no camera reset — and counts one episode. The whole-piece white contour is OFF
+  (`GREEN_CONTOUR_ON`, the code kept). The coarse push `w` (`greenPushMm`): reset at every press outside a seated piece, it accumulates the
+  orbit finger's DEADBANDED dy, signed toward the target by `towardSign` (the slope of the green piece's distance along the rings, read at
+  that press and kept). HUD `· w=+4.1 mm F=f3`. `tests/proto_approach_step1.test.ts`.

@@ -390,10 +390,11 @@ describe("⭐⭐ prototype — the green box", () => {
     // ⭐ the owner, 2026-10-02: *"remove the billboarding"*
     expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_NONE/);
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
-    // the box itself has no parent; only its white contour rides it (2026-10-02)
+    // the box itself has no parent; only its white contour (2026-10-02) and its selected face's fill (2026-10-04) ride it
     expect(w).not.toMatch(/box\.parent\s*=/);
-    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(1);
+    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(2);
     expect(w).toMatch(/lines\.parent = box;/);
+    expect(w).toMatch(/fill\.parent = box;/);
   });
 
   it("⭐⭐ prototype: a press on the green box is EMPTY SPACE — the box stops the ray, and its hit is a miss (the owner: *\"the raycast hits the piece behind\"*)", () => {

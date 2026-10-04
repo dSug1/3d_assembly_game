@@ -7,16 +7,16 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { crossDeadbandScales, greenHeldForOrbit, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { crossDeadbandScales, greenDoubleTap, greenHeldForOrbit, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { greenDragGains } from "./green_box_wiring";
+import { greenDragGains, resetGreenPush, selectGreenFace, unselectGreenFace } from "./green_box_wiring";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
 import { faceWorld } from "../core/object_model";
-import { mmToPx } from "../core/units";
+import { mmToPx, pxToMm } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
 import { rotationChannel } from "../core/constraint_stack";
@@ -172,6 +172,10 @@ export function installPointerHandler(st: SceneState): void {
       // piece snapped rotation continues"*) — only the lift ends it.
       if (!inBand && st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox) {
         st.greenOrbitPointer = e.pointerId;
+        // ⭐ approach step 1 (the owner, 2026-10-04): the press selects the face under it (white); a double tap on the piece unselects
+        st.greenPressedPointers.add(e.pointerId);
+        const nrm = pick.getNormal(true);
+        if (nrm) selectGreenFace(st, [nrm.x, nrm.y, nrm.z]);
         // ⭐ the owner, 2026-10-03: *"when the green piece is pressed, compute and track the radial distance to the pink gizmo, as we will
         // use this radial distance at press later on"* — the piece's distance to the pink ring (the yellow target), at the press
         const gp = st.greenBox.position;
@@ -185,6 +189,8 @@ export function installPointerHandler(st: SceneState): void {
       // touchpoint that landed on nothing. ⭐ The one exception: a frozen body carrying a SEATED
       // follower (the unsnap's first touch). ⚠ The DECISION is `frozen_pick.ts`'s; this obeys.
       const rawHitId = rayHit === null ? undefined : st.idOf.get(rayHit);
+      // ⭐ approach step 1: EVERY press outside a seated piece resets the coarse push `w` (and reads which way is toward the target)
+      if (!goalLocked(rawHitId, st.goalCommit, st.cfg.lockPlacedPieces === 1)) resetGreenPush(st);
       // ⛔⛔ **THE PRESS HOLDS THE BODY IT TOUCHED — `D102`'s redirect moved to the TRANSLATION
       // STEP** (the owner, 2026-09-26: *"now I cannot roll any longer the follower object around
       // the followerface normal axis … restore the behavior as it was in 389eaa2"*). ⚠ Redirecting
@@ -661,8 +667,16 @@ export function installPointerHandler(st: SceneState): void {
             }),
           ) === "DOUBLE_TAP"
         ) {
-          resetCamera(st);
-          st.lastVerdict = "DOUBLE_TAP → camera reset";
+          // ⭐ approach step 1 (the owner, 2026-10-04): a double tap ON THE GREEN PIECE unselects its face — no camera reset — and
+          // counts as an episode (`greenDoubleTap`)
+          const dt = greenDoubleTap(st.greenPressedPointers.has(e.pointerId), st.greenSelectedFace !== null);
+          if (dt === "RESET_CAMERA") {
+            resetCamera(st);
+            st.lastVerdict = "DOUBLE_TAP → camera reset";
+          } else if (dt === "UNSELECT") {
+            unselectGreenFace(st);
+            st.greenUnselectPointers.add(e.pointerId);
+          } else st.lastVerdict = "DOUBLE_TAP on the green piece — nothing selected";
         }
       }
       st.hudDirty = true;
@@ -1100,6 +1114,10 @@ export function installPointerHandler(st: SceneState): void {
     const facts = st.episodeFacts.get(e.pointerId);
     st.episodeFacts.delete(e.pointerId);
     const unaligned = st.episodeUnaligned.delete(e.pointerId);
+    // ⭐ approach step 1: a double tap that unselected the green piece's face COUNTS (the owner: *"Count as an episode"*)
+    const greenUnselected = st.greenUnselectPointers.delete(e.pointerId);
+    st.greenPressedPointers.delete(e.pointerId);
+    if (greenUnselected) st.gestureChanged = true;
     // ⛔ Free Flow escapes the score (`D101`): nothing is counted while the cursor drag is on.
     // ⭐⭐ `D115`: a two-touch action (an alignment, an unalign, an unsnap) costs ONE; ⭐ `D187`: it lands when triggered.
     // ⭐ `D187`: the same touch, RE-classified with what its release did (an unalign), under its press key.
@@ -1108,13 +1126,13 @@ export function installPointerHandler(st: SceneState): void {
     st.episodes.touch(
       key,
       st.cfg.pioneerCursorDrag !== 1 &&
-      episodeCounts({
+      (greenUnselected || episodeCounts({
         role: facts?.role ?? null,
         heldAtPress: facts?.heldAtPress ?? 0,
         pressedAnotherBody: facts?.pressedAnotherBody ?? false,
         unaligned,
         continuesAnother: st.episodeContinued.delete(e.pointerId),
-      }),
+      })),
       // ⭐ Pressed while a body was held: it completes a two-touch action, and uses up that hold.
       (facts?.heldAtPress ?? 0) > 0,
     );
@@ -1154,6 +1172,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
       dx = st.orbitMotion.tracker.step.dx;
       dy = st.orbitMotion.tracker.step.dy;
     }
+    // ⭐ approach step 1: the coarse push `w` — the DEADBANDED dy, toward the target positive (the sign read at the last press)
+    st.greenPushMm += st.greenTowardSign * pxToMm(st.orbitMotion.tracker.step.dy);
     // ⭐ 2026-10-02: the yaw slower outside the guide sphere too (`greenDragGains`).
     const g = greenDragGains(st);
     const yaw0 = st.orbit.yaw;

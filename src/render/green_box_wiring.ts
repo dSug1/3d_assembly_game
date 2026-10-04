@@ -12,9 +12,10 @@ import { topologyFromMesh } from "./bodies";
 import { offsetPositions } from "../core/mesh_topology";
 import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pickedFace, towardSign, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -284,6 +285,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
   guideSphereFrame(st);
+  greenSelectionFrame(st);
   trackOrbitedFaces(st, now);
 }
 
@@ -321,8 +323,9 @@ export function guideSphereFrame(st: SceneState): void {
   const box = st.greenBox;
   const o = st.greenOutline;
   if (box !== null && o !== null) {
-    // ⭐ the owner, 2026-10-03: shown while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`; it was: outside the sphere)
-    const out = greenHeldForOrbit(st.greenOrbitPointer);
+    // ⭐ the owner, 2026-10-03: shown while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`; it was: outside the sphere).
+    // ⛔ 2026-10-04 (the approach spec, §1): REPLACED by the white highlight of the SELECTED face — switched off, the code kept.
+    const out = GREEN_CONTOUR_ON && greenHeldForOrbit(st.greenOrbitPointer);
     o.lines.isVisible = out;
     if (out) {
       const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
@@ -567,4 +570,94 @@ export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
       : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
   const outside = st.greenBox !== null && greenHeldForOrbit(st.greenOrbitPointer);
   return { yaw: g.yaw * outsideYawShare(outside, st.cfg.boxGainYawOutsideShare), pitch: g.pitch };
+}
+
+/** ⭐ prototype (green box): the whole-piece white contour — OFF since the approach spec (§1): the SELECTED face's white fill replaces it. */
+const GREEN_CONTOUR_ON = false;
+
+/**
+ * ⭐⭐ prototype (green box) — **APPROACH STEP 1: A PRESS ON A FACE OF THE GREEN PIECE SELECTS IT** (`GREEN_PIECE_PHASES.md` §3.1, the owner,
+ * 2026-10-04: *"If a face of the green piece is pressed upon, it is selected and highlighted in white"*). The face is `pickedFace`'s
+ * (the pick's world normal into the piece's frame); its WHITE fill replaces any earlier one. ⭐ The press still orbits, as anywhere.
+ */
+export function selectGreenFace(st: SceneState, worldNormal: Vec3): void {
+  const box = st.greenBox;
+  const topo = st.greenOutline?.topo;
+  if (box === null || topo === undefined) return;
+  const r = box.rotationQuaternion ?? Quaternion.Identity();
+  const face = pickedFace(topo.faces, [r.w, r.x, r.y, r.z], worldNormal);
+  if (face < 0) return;
+  st.greenSelectedFace = face;
+  st.greenSelectMesh?.dispose();
+  const f = topo.faces[face]!;
+  const local = new Map<number, number>();
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (const vi of f.triangles) {
+    let li = local.get(vi);
+    if (li === undefined) {
+      li = local.size;
+      local.set(vi, li);
+      const p = topo.positions[vi]!;
+      positions.push(p[0], p[1], p[2]);
+    }
+    indices.push(li);
+  }
+  const fill = new Mesh("green-selected-face", st.scene);
+  const data = new VertexData();
+  data.positions = positions;
+  // ⚠ Double-sided, as the face markers: it must read from either side
+  data.indices = [...indices, ...indices.slice().reverse()];
+  data.applyToMesh(fill, false);
+  const mat = new StandardMaterial("green-selected-face-mat", st.scene);
+  mat.emissiveColor = new Color3(1, 1, 1);
+  mat.disableLighting = true;
+  mat.backFaceCulling = false;
+  mat.alpha = GREEN_SELECT_ALPHA;
+  fill.material = mat;
+  fill.parent = box;
+  fill.isPickable = false;
+  fill.metadata = { orbitCandidate: false };
+  st.greenSelectMesh = fill;
+  st.lastVerdict = `green piece: face f${face} selected`;
+  st.hudDirty = true;
+}
+
+/** ⭐ The selected face's white fill alpha: white, readable, the face still visible under it. */
+const GREEN_SELECT_ALPHA = 0.6;
+
+/** ⭐ prototype (green box), approach step 1: unselect (§3.1: *"Double tap on green piece unselects any face if not null"*). */
+export function unselectGreenFace(st: SceneState): void {
+  st.greenSelectMesh?.dispose();
+  st.greenSelectMesh = null;
+  st.greenSelectedFace = null;
+  st.lastVerdict = "green piece: face unselected (double tap)";
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐ prototype (green box), approach step 1: the selected face's fill floats the highlight offset off its face (`highlightLiftMm` on the
+ * glass, at the camera distance) — the same lift as every other highlight, so it never z-fights the face.
+ */
+function greenSelectionFrame(st: SceneState): void {
+  const fill = st.greenSelectMesh;
+  const box = st.greenBox;
+  const f = st.greenSelectedFace === null ? undefined : st.greenOutline?.topo.faces[st.greenSelectedFace];
+  if (fill === null || box === null || f === undefined) return;
+  const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
+  fill.position.set(f.normal[0] * h, f.normal[1] * h, f.normal[2] * h);
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **APPROACH STEP 1: THE COARSE PUSH `w` STARTS AGAIN** at every press outside a seated piece (§2, the owner,
+ * 2026-10-04: *"Yes to both"* — the reference is the last such press, and every new press resets `w` to 0). The sign that makes dy
+ * "toward the target" is read NOW (`towardSign`, from the slope of the green piece's distance along the rings) and kept.
+ */
+export function resetGreenPush(st: SceneState): void {
+  st.greenPushMm = 0;
+  const v = st.orbit.elevation;
+  const h = 1e-3;
+  const dist = (x: number): number => orbitOffset(st.cfg, st.orbit.yaw, Math.min(1, Math.max(0, x)), GREEN_PIECE_ORBIT_ZOOM).radiusM;
+  st.greenTowardSign = towardSign((dist(v + h) - dist(v - h)) / (2 * h));
+  st.hudDirty = true;
 }

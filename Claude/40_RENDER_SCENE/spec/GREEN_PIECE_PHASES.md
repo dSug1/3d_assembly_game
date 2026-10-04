@@ -161,7 +161,7 @@ On the `green` line: `phase COARSE w=+4.1 mm (off 6 · fwd 10 · back −6) d=1.
 
 ⛔ **Do not build until the owner says so** — *"I will answer them as we build the respective steps"*.
 
-**Step 1. Selection** (§3.1): the press on a face selects it (white), the double tap unselects (no camera reset; an episode); `w` tracked
+✅ **BUILT 2026-10-04 (⛔ unjudged by a hand)** — **Step 1. Selection** (§3.1): the press on a face selects it (white), the double tap unselects (no camera reset; an episode); `w` tracked
 from the reference; the HUD. — no open question.
 
 **Step 2. `COARSE` and the commits** (§3.2, §3.4): `w` and its sign, the snaps off at 6 mm, the forward commit at 10 (the settle, the

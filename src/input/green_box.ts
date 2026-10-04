@@ -11,7 +11,7 @@
  * ⛔ ENGINE-FREE.
  */
 import type { BodySpec, Triple } from "../core/game_structure";
-import { cross, dot, length, normalize, qFromAxisAngle, qmul, qRotate, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
+import { cross, dot, length, normalize, qconj, qFromAxisAngle, qmul, qRotate, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The smallest body of `colour` (by volume) — `null` when the scene has none. Frozen bodies are not candidates. */
 export function smallestOfColour(bodies: readonly BodySpec[], colour: readonly [number, number, number]): BodySpec | null {
@@ -656,4 +656,45 @@ export function greenBootOrientation(sceneId: string): Quat {
   if (q === undefined) return [1, 0, 0, 0];
   const n = Math.hypot(q[0], q[1], q[2], q[3]);
   return n > 0 ? [q[0] / n, q[1] / n, q[2] / n, q[3] / n] : [1, 0, 0, 0];
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **STEP 1 OF THE APPROACH SPEC: THE FACE A PRESS SELECTS** (`GREEN_PIECE_PHASES.md` §3.1, the owner,
+ * 2026-10-04: *"If a face of the green piece is pressed upon, it is selected and highlighted in white"*). The pick's WORLD normal is
+ * brought into the piece's own frame (`q` its orientation), and the logical face whose normal is closest to it is the one pressed.
+ * ⛔ From the picked NORMAL, never the triangle index (a box face is two triangles; an imported face, many). -1 with no face.
+ */
+export function pickedFace(faces: readonly { readonly normal: Vec3 }[], q: Quat, worldNormal: Vec3): number {
+  const local = qRotate(qconj(q), worldNormal);
+  let best = -1;
+  let bestDot = -Infinity;
+  for (let i = 0; i < faces.length; i++) {
+    const d = dot(faces[i]!.normal, local);
+    if (d > bestDot) {
+      bestDot = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * ⭐ prototype (green box) — **WHICH WAY OF dy IS "TOWARD THE TARGET"** (§2's `w`, the owner, 2026-10-04: *"signed so that toward the
+ * target is positive"*). A positive (downward, since the dy inversion) finger dy raises the orbit's ring parameter `v`; if the green
+ * piece's distance to the target FALLS as `v` rises (`dDistdV < 0`), positive dy is toward (+1), else away (−1). Read at the reference
+ * moment and KEPT until the next one — so the push stays monotone even where the rings turn back past the waist. A flat slope (the
+ * waist itself): +1.
+ */
+export function towardSign(dDistdV: number): 1 | -1 {
+  return dDistdV > 0 ? -1 : 1;
+}
+
+/**
+ * ⭐ prototype (green box) — **A DOUBLE TAP ON THE GREEN PIECE UNSELECTS, IT DOES NOT RESET THE CAMERA** (§3.1, the owner, 2026-10-04:
+ * *"Double tap on green piece unselects any face if not null"* — *"no camera reset. Count as an episode"*). What a double tap does:
+ * on the green piece, `UNSELECT` (or `NOTHING` with no face selected); anywhere else empty, `RESET_CAMERA` as ever.
+ */
+export function greenDoubleTap(onGreenPiece: boolean, faceSelected: boolean): "UNSELECT" | "NOTHING" | "RESET_CAMERA" {
+  if (!onGreenPiece) return "RESET_CAMERA";
+  return faceSelected ? "UNSELECT" : "NOTHING";
 }

@@ -51,7 +51,8 @@ describe("⭐⭐ prototype — an orbited piece's faces, tracked outside the gui
   it("⭐ wired: the green piece is the first orbited piece; each frame after the sphere; faces placed WITHOUT a second scale; on the HUD", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/st\.greenBox = box;\s*\/\/[^\n]*\n\s*st\.orbitedPieces\.push\(box\);/);
-    expect(w).toMatch(/guideSphereFrame\(st\);\s*trackOrbitedFaces\(st, now\);/);
+    // (the selected face's lift runs between them since approach step 1, 2026-10-04)
+    expect(w).toMatch(/guideSphereFrame\(st\);\s*greenSelectionFrame\(st\);\s*trackOrbitedFaces\(st, now\);/);
     expect(w).toMatch(/const step = faceTracking\(prev === undefined \? null : prev\.outside, out\);/);
     expect(w).toMatch(/faces = topo === null \? \[\] : pieceFaces\(topo\.positions, topo\.faces\);/);
     // ⚠ `topologyFromMesh` already carries the mesh's scale: rotation + position only, never the world matrix's scale again

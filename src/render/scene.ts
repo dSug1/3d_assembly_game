@@ -571,6 +571,12 @@ export function createScene(
   st.greenOutline = null;
   st.greenOrbitPointer = null;
   st.greenPressRadialM = null;
+  st.greenSelectedFace = null;
+  st.greenSelectMesh = null;
+  st.greenPushMm = 0;
+  st.greenTowardSign = 1;
+  st.greenPressedPointers = new Set<number>();
+  st.greenUnselectPointers = new Set<number>();
   st.orbitedPieces = [];
   st.faceTracks = new Map();
   st.pieceTurns = new Map();
