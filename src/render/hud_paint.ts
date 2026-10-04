@@ -368,13 +368,13 @@ export function greenReadout(st: SceneState): string {
   const r = orbitDegPerMm(st.cfg, st.orbit.elevation, g);
   // ⭐ …and the faces tracked while it is outside the guide sphere (`trackOrbitedFaces`).
   // ⭐ …with DegreesYawPerFace (per STEP of a yaw + pitch period), DeltaXYawPerFace, the cycle and step now, and the dx accumulated.
-  const ft = st.faceTracks.get(st.greenBox);
+  const ft = st.faceTracks.get(st.orbitHeldPiece ?? st.greenBox); // ⭐ the piece last pressed (green or turquoise)
   const tr = ft?.faces;
   const faces =
     ft === undefined || tr === null || tr === undefined
       ? "faces —"
       : ft.free !== null
-        ? `faces ${tr.length} tracked, turning ${hudFree(ft.free.sDeg, st.cfg.greenRotateBlendDeg)}${st.cfg.greenRotateSnap === 1 ? ` · steps ${ft.free.yawStepDeg.toFixed(0)}° (${ft.free.yawFaces} faces) / ${ft.free.pitchStepDeg.toFixed(0)}° (${ft.free.pitchFaces}) · turn ${ft.free.turnDegPerS.toFixed(0)}/${ft.free.maxTurnDegPerS.toFixed(0)}°/s${ft.free.capped ? " ⏩CAPPED" : ""}` : ""}`
+        ? `faces ${tr.length} tracked, turning ${hudFree(ft.free.sDeg, st.cfg.greenRotateBlendDeg)}${st.cfg.greenRotateSnap === 1 ? ` · stops yaw ${ft.free.yawFaces} [${hudStops(ft.free.yawStopsDeg)}] / pitch ${ft.free.pitchFaces} [${hudStops(ft.free.pitchStopsDeg)}] · turn ${ft.free.turnDegPerS.toFixed(0)}/${ft.free.maxTurnDegPerS.toFixed(0)}°/s${ft.free.capped ? " ⏩CAPPED" : ""}` : ""}`
         : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
   // ⭐ …and, while it is HELD for orbit, its distance to the pink ring at the press (`greenPressRadialM`).
   const held = st.greenOrbitPointer !== null && st.greenPressRadialM !== null ? ` · held, r at press ${st.greenPressRadialM.toFixed(3)} m` : "";
@@ -395,4 +395,9 @@ function hudFree(sDeg: number, blendDeg: number): string {
   const a = staircaseAngles(sDeg, blendDeg);
   const lap = (x: number): number => ((x % 360) + 360) % 360;
   return `yaw ${lap(a.yawDeg).toFixed(0)}° pitch ${lap(a.pitchDeg).toFixed(0)}°`;
+}
+
+/** ⭐ prototype: a turn's stops on the HUD, whole degrees — `0 60 120 …`. */
+function hudStops(stopsDeg: readonly number[]): string {
+  return stopsDeg.map((d) => d.toFixed(0)).join(" ");
 }

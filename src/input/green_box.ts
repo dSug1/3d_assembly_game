@@ -544,29 +544,116 @@ export function orientationAt(q0: Quat, yawDeg: number, pitchDeg: number, yawAxi
 }
 
 /**
- * ⭐⭐ prototype (green box) — **HOW MANY PRIMARY FACES SCROLL PAST IN A 360° YAW, AND IN A 360° PITCH** (the owner, 2026-10-03: *"based
- * on the numbers of primary faces computed at boot for the green piece, identify the number of primary faces which scroll during a 360
- * degree yaw and the number … during a 360 degree pitch, and divide 360 degree by these two: this gives the angle increment for yaw and
- * the angle increment for pitch"*). From the level start pose `q0`, the face cycles' own rule (`faceCycles`): a face mostly along the
- * yaw axis (a top, a bottom) never comes round in a yaw, one mostly along the pitch axis never in a pitch. The face toward the pink side
- * (`n`, across both axes) starts both. The frustum: 4 and 4 → 90° and 90°. 0 faces → a whole turn.
+ * ⭐⭐ prototype — **THE SNAP STOPS OF A 360° TURN, FROM THE PIECE'S REAL GEOMETRY** (the owner, 2026-10-04: *"change the rule so that the
+ * true count coming from the piece's real geometry is implemented for the green piece and the turquoise piece"* — it replaces the count
+ * by local axes, 2026-10-03, which gave a hexagonal prism 4 to 7 steps depending on its pose). Turning the piece (at pose `q`) about
+ * `axis`, a face FACES the target direction `t` (⊥ `axis`) best at the one angle that brings its normal's projection onto `t`. That
+ * angle is a STOP when, there, no other face faces `t` better — the face really is the one presented. A face along the axis never comes
+ * round (no projection); a face that comes round but always behind a broader neighbour is not a stop; faces with the same projection
+ * (twins) are one stop. ⭐ A hexagonal prism: 6 about its own axis (60° apart), 4 across it (side, end, side, end); the green frustum
+ * upright: 4 in yaw, 4 in pitch (its slanted sides' stops off the 90° marks). Degrees in [0, 360), ascending.
  */
-export function scrollIncrements(
+export function geometricStops(faces: readonly { readonly normal: Vec3 }[], q: Quat, axis: Vec3, t: Vec3): number[] {
+  const a = normalize(axis);
+  if (a === null) return [];
+  const proj = (v: Vec3): Vec3 => sub(v, [a[0] * dot(v, a), a[1] * dot(v, a), a[2] * dot(v, a)]);
+  const w = faces.map((f) => qRotate(q, f.normal));
+  const facing = (i: number, th: number): number => dot(qRotate(qFromAxisAngle(a, th), w[i]!), t);
+  const stops: number[] = [];
+  for (let i = 0; i < w.length; i++) {
+    const p = proj(w[i]!);
+    if (length(p) < 1e-6) continue; // along the axis: it never comes round
+    const th = Math.atan2(dot(a, cross(p, t)), dot(p, t));
+    const mine = facing(i, th);
+    let best = true;
+    for (let j = 0; j < w.length && best; j++) if (j !== i && facing(j, th) > mine + 1e-9) best = false;
+    if (!best) continue;
+    const deg = (((th * 180) / Math.PI) % 360 + 360) % 360;
+    if (!stops.some((d) => Math.abs(d - deg) < 1e-6 || Math.abs(Math.abs(d - deg) - 360) < 1e-6)) stops.push(deg); // a twin: one stop
+  }
+  return stops.sort((x, y) => x - y);
+}
+
+/** ⭐ The angle (degrees, any number of turns) moved to the NEAREST stop — the same going and coming back. No stops: unchanged. */
+export function snapToStops(deg: number, stopsDeg: readonly number[]): number {
+  if (stopsDeg.length === 0) return deg;
+  const base = Math.floor(deg / 360) * 360;
+  let best = deg;
+  let bestD = Infinity;
+  for (const k of [base - 360, base, base + 360])
+    for (const s of stopsDeg) {
+      const d = Math.abs(k + s - deg);
+      if (d < bestD - 1e-9) {
+        bestD = d;
+        best = k + s;
+      }
+    }
+  return best;
+}
+
+/** ⭐ The smallest gap between consecutive stops around the turn (degrees); 360 with one stop or none. */
+export function smallestStopGap(stopsDeg: readonly number[]): number {
+  if (stopsDeg.length < 2) return 360;
+  let g = 360 - stopsDeg[stopsDeg.length - 1]! + stopsDeg[0]!;
+  for (let i = 1; i < stopsDeg.length; i++) g = Math.min(g, stopsDeg[i]! - stopsDeg[i - 1]!);
+  return g;
+}
+
+/**
+ * ⭐⭐ prototype — **THE SNAPPED TURN'S STOPS, YAW AND PITCH** (`geometricStops`), from the pose `q0` the turn starts at. The target `t`
+ * is the direction across both axes, toward the pink side (`−n`, `n = yaw × pitch`) — what a face must face. The yaw stops are read at
+ * `q0`; the pitch stops at the pose the piece holds while it pitches: `q0` yawed to the yaw stop nearest 0 (`yaw0Deg`), because the
+ * staircase pitches only between whole yaw laps. `yawStepDeg` / `pitchStepDeg`: the smallest gaps (what the turn-rate cap reads).
+ */
+export function turnStops(
   faces: readonly PieceFace[],
   q0: Quat,
   yawAxis: Vec3,
   pitchAxis: Vec3,
-): { readonly yawFaces: number; readonly pitchFaces: number; readonly yawStepDeg: number; readonly pitchStepDeg: number } {
+): {
+  readonly yawStopsDeg: readonly number[];
+  readonly pitchStopsDeg: readonly number[];
+  readonly yaw0Deg: number;
+  readonly yawFaces: number;
+  readonly pitchFaces: number;
+  readonly yawStepDeg: number;
+  readonly pitchStepDeg: number;
+} {
   const n = normalize(cross(yawAxis, pitchAxis));
-  if (faces.length === 0 || n === null) return { yawFaces: 0, pitchFaces: 0, yawStepDeg: 360, pitchStepDeg: 360 };
-  const c = faceCycles(faces, q0, mostAntiAligned(faces, q0, n), n, { yaw: yawAxis, pitch: pitchAxis });
-  const step = (k: number): number => (k > 0 ? 360 / k : 360);
-  return { yawFaces: c.yaw.length, pitchFaces: c.pitch.length, yawStepDeg: step(c.yaw.length), pitchStepDeg: step(c.pitch.length) };
+  if (faces.length === 0 || n === null)
+    return { yawStopsDeg: [], pitchStopsDeg: [], yaw0Deg: 0, yawFaces: 0, pitchFaces: 0, yawStepDeg: 360, pitchStepDeg: 360 };
+  const t: Vec3 = [-n[0], -n[1], -n[2]];
+  const yawStopsDeg = geometricStops(faces, q0, yawAxis, t);
+  const yaw0Deg = snapToStops(0, yawStopsDeg);
+  const qp = qmul(qFromAxisAngle(yawAxis, (yaw0Deg * Math.PI) / 180), q0);
+  const pitchStopsDeg = geometricStops(faces, qp, pitchAxis, t);
+  return {
+    yawStopsDeg,
+    pitchStopsDeg,
+    yaw0Deg,
+    yawFaces: yawStopsDeg.length,
+    pitchFaces: pitchStopsDeg.length,
+    yawStepDeg: smallestStopGap(yawStopsDeg),
+    pitchStepDeg: smallestStopGap(pitchStopsDeg),
+  };
 }
 
-/** ⭐ An angle snapped to the NEAREST whole increment (degrees) — the same going and coming back. */
-export function snapAngle(deg: number, stepDeg: number): number {
-  return stepDeg > 0 ? Math.round(deg / stepDeg) * stepDeg : deg;
+/**
+ * ⭐ prototype — the SNAPPED angles of the staircase (`staircaseAngles`): each to its nearest stop, but a WHOLE number of turns is left as
+ * it is — it is the other axis's lap (the yaw stands still while the piece pitches, and the reverse), and snapping it would mix a pitch
+ * into the yaw. ⚠ With no blend (the default) a lap's resting angle is exactly a whole turn.
+ */
+export function snapTurnAngles(
+  yawDeg: number,
+  pitchDeg: number,
+  stops: { readonly yawStopsDeg: readonly number[]; readonly pitchStopsDeg: readonly number[] },
+): { readonly yawDeg: number; readonly pitchDeg: number } {
+  const whole = (d: number): boolean => Math.abs(d / 360 - Math.round(d / 360)) < 1e-9;
+  const pitching = !whole(pitchDeg);
+  return {
+    yawDeg: snapToStops(yawDeg, stops.yawStopsDeg),
+    pitchDeg: pitching ? snapToStops(pitchDeg, stops.pitchStopsDeg) : pitchDeg,
+  };
 }
 
 /**

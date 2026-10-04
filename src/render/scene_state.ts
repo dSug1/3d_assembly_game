@@ -38,7 +38,11 @@ export interface FreeTurn {
   readonly q0: Quat;
   readonly sDeg: number;
   readonly pitchAxis: Vec3;
-  /** ⭐ The primary faces that scroll past in a 360° yaw / pitch, counted once at the start (`scrollIncrements`), and 360° ÷ each. */
+  /** ⭐ The STOPS of a 360° yaw / pitch from the piece's real geometry, read once at the start (`turnStops`): their angles (°, [0, 360)), the
+   * yaw stop nearest 0 (the pitch's stops are read there), their counts, and the smallest gap of each (`yawStepDeg`, `pitchStepDeg`). */
+  readonly yawStopsDeg: readonly number[];
+  readonly pitchStopsDeg: readonly number[];
+  readonly yaw0Deg: number;
   readonly yawFaces: number;
   readonly pitchFaces: number;
   readonly yawStepDeg: number;

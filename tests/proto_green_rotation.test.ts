@@ -164,38 +164,63 @@ describe("⭐⭐ prototype — the turn SNAPPED to the face increments (the owne
     return pieceFaces(t.positions, t.faces);
   };
 
-  it("⭐⭐ the frustum: 4 faces scroll past in a 360° yaw (its sides), 4 in a 360° pitch (top, bottom and the two across the pink side) → 90° and 90°", async () => {
-    const { scrollIncrements } = await import("../src/input/green_box");
+  it("⭐⭐ the stops from the REAL geometry (the owner, 2026-10-04): the frustum upright, 4 in yaw (its sides, 90° apart) and 4 in pitch (side, top, side, bottom — off the 90° marks, the sides being slanted)", async () => {
+    const { turnStops } = await import("../src/input/green_box");
     const faces = await frustum();
-    for (const [q0, pitch] of [[[1, 0, 0, 0] as Quat, [1, 0, 0] as Vec3], [qFromAxisAngle(UP, 0.6), [0, 0, 1] as Vec3]] as const) {
-      const r = scrollIncrements(faces, q0, UP, pitch);
-      expect([r.yawFaces, r.pitchFaces]).toEqual([4, 4]);
-      expect([r.yawStepDeg, r.pitchStepDeg]).toEqual([90, 90]);
-    }
-    expect(scrollIncrements([], [1, 0, 0, 0], UP, PITCH).yawStepDeg).toBe(360);
+    const r = turnStops(faces, [1, 0, 0, 0], UP, PITCH);
+    expect([r.yawFaces, r.pitchFaces]).toEqual([4, 4]);
+    expect(r.yawStopsDeg.map((d) => Math.round(d))).toEqual([0, 90, 180, 270]);
+    expect(r.yawStepDeg).toBeCloseTo(90, 9);
+    // pitch: the slanted sides face the pink side best tilted by their slant — the gaps are NOT all 90°
+    expect(r.pitchStepDeg).toBeLessThan(89);
+    expect(turnStops([], [1, 0, 0, 0], UP, PITCH).yawStepDeg).toBe(360);
   });
 
-  it("⭐⭐ each angle snaps to its NEAREST increment — the piece rests on whole face steps, the same going and coming back", async () => {
-    const { snapAngle } = await import("../src/input/green_box");
-    expect(snapAngle(44, 90)).toBe(0);
-    expect(snapAngle(46, 90)).toBe(90);
-    expect(snapAngle(-46, 90)).toBe(-90);
-    expect(snapAngle(359, 90)).toBe(360);
-    expect(snapAngle(37.5, 0)).toBe(37.5); // no increment: unchanged
-    // over a lap at 90/90, only 4 + 4 distinct poses are shown
-    const seen = new Set<string>();
-    for (let s = 0; s < 720; s += 1) {
-      const a = staircaseAngles(s, 0);
-      seen.add(`${((snapAngle(a.yawDeg, 90) % 360) + 360) % 360}/${((snapAngle(a.pitchDeg, 90) % 360) + 360) % 360}`);
+  it("⭐⭐ a hexagonal prism: 6 stops about its own axis (60° apart), 4 across it — whichever way it is turned about that axis", async () => {
+    const { geometricStops } = await import("../src/input/green_box");
+    // the 6 side normals at 30° + k·60° about y, the ends ±y (Babylon's 6-sided cylinder, flat shaded)
+    const D = Math.PI / 180;
+    const faces = [
+      ...[30, 90, 150, 210, 270, 330].map((d) => ({ normal: [Math.cos(d * D), 0, Math.sin(d * D)] as Vec3 })),
+      { normal: [0, 1, 0] as Vec3 },
+      { normal: [0, -1, 0] as Vec3 },
+    ];
+    const t: Vec3 = [0, 0, 1];
+    for (const spin of [0, 0.3, 1.1]) {
+      const q = qFromAxisAngle(UP, spin);
+      const own = geometricStops(faces, q, UP, t); // about its own axis
+      expect(own).toHaveLength(6);
+      for (let i = 1; i < 6; i++) expect(own[i]! - own[i - 1]!).toBeCloseTo(60, 6);
+      expect(geometricStops(faces, q, [1, 0, 0], t)).toHaveLength(4); // across it: side, end, side, end (twins one stop)
     }
-    expect(seen.size).toBe(8 - 1); // the start pose is shared by the yaw's and the pitch's start
+    // ⛔ the old rule (local axes) gave this prism 4 to 7 depending on its pose; tilted 25°, the geometry still finds the 6 sides in yaw
+    // (the ends come round but always behind a broader side)
+    const tilted = qFromAxisAngle([1, 0, 0], 25 * D);
+    expect(geometricStops(faces, tilted, UP, t)).toHaveLength(6);
   });
 
-  it("⭐ wired: counted ONCE when the turn starts (at boot); each frame both angles snapped, each new increment eased in; a slider turns it off", () => {
+  it("⭐⭐ the snapped angles: each to its NEAREST stop, the same going and back — but a whole turn (the other axis's lap) is left alone", async () => {
+    const { snapToStops, snapTurnAngles, smallestStopGap } = await import("../src/input/green_box");
+    const stops = [10, 100, 200, 300];
+    expect(snapToStops(54, stops)).toBe(10);
+    expect(snapToStops(56, stops)).toBe(100);
+    expect(snapToStops(-50, stops)).toBe(-60); // 300 − 360
+    expect(snapToStops(365, stops)).toBe(370);
+    expect(snapToStops(37.5, [])).toBe(37.5);
+    expect(smallestStopGap(stops)).toBe(70); // 300 → 370
+    expect(smallestStopGap([5])).toBe(360);
+    // the yaw lap: the pitch sits on a whole turn and is NOT snapped (no pitch mixed into the yaw); the pitch lap: the reverse for the yaw?
+    // ⭐ no — the yaw IS snapped there (to the yaw stop nearest 0, where the pitch's stops were read)
+    const s = { yawStopsDeg: stops, pitchStopsDeg: [20, 110, 200, 290] };
+    expect(snapTurnAngles(140, 360, s)).toEqual({ yawDeg: 100, pitchDeg: 360 });
+    expect(snapTurnAngles(360, 400, s)).toEqual({ yawDeg: 370, pitchDeg: 380 });
+  });
+
+  it("⭐ wired: the stops read ONCE when the turn starts; each frame both angles snapped to them, each new stop eased in; a slider turns it off", () => {
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const inc = scrollIncrements\(faces, q0, \[0, 1, 0\], pitchAxis\);/);
+    expect(w).toMatch(/const inc = turnStops\(faces, q0, \[0, 1, 0\], pitchAxis\);/);
     expect(w).toMatch(/free = \{ q0, sDeg: 0, pitchAxis, \.\.\.inc,/);
-    expect(w).toMatch(/\? orientationAt\(free\.q0, snapAngle\(ang\.yawDeg, free\.yawStepDeg\), snapAngle\(ang\.pitchDeg, free\.pitchStepDeg\), \[0, 1, 0\], free\.pitchAxis\)/);
+    expect(w).toMatch(/\? \(\(a\) => orientationAt\(free\.q0, a\.yawDeg, a\.pitchDeg, \[0, 1, 0\], free\.pitchAxis\)\)\(snapTurnAngles\(ang\.yawDeg, ang\.pitchDeg, free\)\)/);
     expect(w).toMatch(/if \(qAngle\(qmul\(want, qconj\(easing\?\.to \?\? cur\)\)\) > 1e-6\) \{\s*st\.pieceTurns\.set\(m, \{ from: cur, to: want, t0: now, ms: st\.cfg\.greenSnapEaseMs \}\);/);
     expect(DEFAULT_CONFIG.greenRotateSnap).toBe(1);
     expect(code("render/tuning_menu.ts")).toContain('"greenRotateSnap", 0, 1, 1)');

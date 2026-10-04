@@ -15,7 +15,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pieceFaces, rightOfGreenM, turquoiseSizeM, turquoiseYawOffsetRad, uniformQuat, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pieceFaces, rightOfGreenM, turquoiseSizeM, turquoiseYawOffsetRad, uniformQuat, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, turnStops, snapTurnAngles, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -416,8 +416,9 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
         // user's own action, not a game compute"*: by default the turn starts from the pose AS IT IS, the tumbled one surviving the hold
         const q0 = st.cfg.greenLevelOutOn === 1 ? levelHeading(cur) : cur;
         const pitchAxis: Vec3 = axes?.pitch ?? [1, 0, 0];
-        // ⭐ the owner, 2026-10-03: the faces that scroll past in a 360° yaw and a 360° pitch, counted ONCE (at boot) — the increments
-        const inc = scrollIncrements(faces, q0, [0, 1, 0], pitchAxis);
+        // ⭐ the owner, 2026-10-04: the STOPS of a 360° yaw and a 360° pitch from the piece's REAL geometry (`turnStops`: where each face
+        // presented to the pink side faces it best), read ONCE when the turn starts (it was a count by local axes, 2026-10-03)
+        const inc = turnStops(faces, q0, [0, 1, 0], pitchAxis);
         // ⭐ the owner, 2026-10-03: the fastest TURN the snaps can follow (°/s of the piece's rotation), computed ONCE — one increment
         // per alignment's ease. It reads no gain and no cycle: the measured turn rate carries them
         const maxTurnDegPerS = maxSnapTurnDegPerS(inc.yawStepDeg, inc.pitchStepDeg, st.cfg.greenSnapEaseMs);
@@ -463,7 +464,7 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
       const ang = staircaseAngles(free.sDeg, st.cfg.greenRotateBlendDeg);
       const snapped = st.cfg.greenRotateSnap === 1;
       const want = snapped
-        ? orientationAt(free.q0, snapAngle(ang.yawDeg, free.yawStepDeg), snapAngle(ang.pitchDeg, free.pitchStepDeg), [0, 1, 0], free.pitchAxis)
+        ? ((a) => orientationAt(free.q0, a.yawDeg, a.pitchDeg, [0, 1, 0], free.pitchAxis))(snapTurnAngles(ang.yawDeg, ang.pitchDeg, free))
         : staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis);
       const easing = st.pieceTurns.get(m);
       if (snapped) {
