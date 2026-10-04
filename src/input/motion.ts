@@ -440,11 +440,7 @@ export class MotionTracker {
     return this.current;
   }
 
-  /**
-   * ⭐ `bandScale` — prototype (green box), 2026-10-03: a factor on each axis's dead radius for THIS sample (1 = `motionDeadbandMm`),
-   * so one axis can be made harder to start while the other moves (`crossDeadbandScales`).
-   */
-  push(s: Sample, bandScale: { readonly x: number; readonly y: number } = { x: 1, y: 1 }): MotionState {
+  push(s: Sample): MotionState {
     // ⭐ Record this pointer's own dispatch interval BEFORE the bands read the derived window, so
     // a tracker adapts on the sample that proves the rate rather than one late.
     if (this.lastPushT !== null) {
@@ -458,8 +454,8 @@ export class MotionTracker {
     this.lastPushT = s.t;
     const rest = this.restMs;
     const band = mmToPx(this.cfg.motionDeadbandMm);
-    const dx = this.ax.push(s.x, s.t, band * bandScale.x, rest);
-    const dy = this.ay.push(s.y, s.t, band * bandScale.y, rest);
+    const dx = this.ax.push(s.x, s.t, band, rest);
+    const dy = this.ay.push(s.y, s.t, band, rest);
     this.lastStep = { dx, dy };
     // ⭐ The RAW sample feeds the speed window — the deadband is a travel rule, and subtracting
     // it here would make this finger read slower than the same finger on a Recognizer.

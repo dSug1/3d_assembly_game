@@ -222,38 +222,13 @@ describe("⭐ prototype — the pink ring is thicker and brighter (the owner, 20
   });
 });
 
-describe("⭐ prototype — the GUIDE SPHERE on the yellow target (the owner, 2026-10-02: *\"for prototyping purpose and will not be shown in the final game\"*)", () => {
-  it("⭐ 75 % of the top ring's radius, on the target, almost transparent, touching nothing; a slider hides it", async () => {
+describe("⭐ prototype — the GUIDE SPHERE is REMOVED (the owner, 2026-10-04: *\"Remove the white sphere and whatever it controls\"*)", () => {
+  it("⭐ no sphere, no frame step, no sliders, no settings", async () => {
     const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
-    expect(DEFAULT_CONFIG.guideSphereAlpha).toBe(0); // the owner, 2026-10-02: hidden by default (was 0.08)
-    const w = code("render/green_box_wiring.ts");
-    // ⭐ 75 % of the top ring — a slider since 2026-10-03 (the owner: *"make one from 1% to 100% with 5% increments"*)
-    expect(DEFAULT_CONFIG.guideSphereShare).toBe(0.97); // the owner, 2026-10-03 (was 0.75)
-    expect(code("render/tuning_menu.ts")).toContain('"guideSphereShare", 0.01, 1, 0.01)');
-    expect(w).toMatch(/const r = st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM;/);
-    // ONE radius for every "outside the sphere": the contour, the face tracking (and all that reads it)
-    // ⭐ since 2026-10-03 the sphere only DRAWS: nothing reads its radius to decide "outside" (the green piece held does, `greenHeldForOrbit`)
-    expect(w.match(/st\.cfg\.guideSphereShare \* st\.cfg\.orbitTopRadiusM \* GREEN_PIECE_ORBIT_ZOOM/g)).toHaveLength(1);
-    expect(w).not.toMatch(/GUIDE_SPHERE_SHARE/);
-    expect(w).toMatch(/const t = st\.centreBlend\.targetM;\s*s\.position\.set\(t\[0\], t\[1\], t\[2\]\);/);
-    expect(w).toMatch(/sphere\.isPickable = false;/); // ⛔ never blocks a press or the pink ring's occlusion ray
-    expect(w).toMatch(/sphere\.metadata = \{ orbitCandidate: false \};/); // ⛔ never sways, never a barycentre candidate
-    expect(w).toMatch(/s\.isVisible = a > 0;/);
-    expect(code("render/tuning_menu.ts")).toContain('"guideSphereAlpha", 0, 0.5, 0.01)');
-  });
-});
-
-describe("⭐ prototype — the green piece's WHITE CONTOUR while it is held for orbit (the owner, 2026-10-02; since 2026-10-03 held, not outside the sphere)", () => {
-
-  it("⭐⭐ *same offset as the pioneer / follower contours*: its edges pushed out by the highlight offset, rebuilt when stale — the part outlines' own machinery", () => {
-    const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const h = highlightLiftM\(st\.cfg\.highlightLiftMm, Vector3\.Distance\(st\.camera\.position, box\.position\), st\.camera\.fov, st\.canvas\.clientHeight\);/);
-    expect(w).toMatch(/if \(outlineOffsetStale\(o\.builtM, h\)\) \{\s*edgeLines\(st, "green-outline", o\.topo, offsetPositions\(o\.topo, h\), o\.lines\.color, o\.lines\);/);
-    expect(w).toMatch(/o\.lines\.isVisible = out;/);
-    expect(w).toMatch(/edgeLines\(st, "green-outline", topo, offsetPositions\(topo, 0\), new Color3\(1, 1, 1\), null\)/); // white
-    expect(w).toMatch(/lines\.isPickable = false;/);
-    expect(w).not.toMatch(/renderOutline/); // ⛔ not the silhouette renderer — the part outlines' look and offset
-    // the part outlines read the same lift
-    expect(code("render/markers.ts")).toMatch(/return highlightLiftM\(st\.cfg\.highlightLiftMm, d, st\.camera\.fov, st\.canvas\.clientHeight\);/);
+    expect("guideSphereAlpha" in DEFAULT_CONFIG).toBe(false);
+    expect("guideSphereShare" in DEFAULT_CONFIG).toBe(false);
+    expect(code("render/green_box_wiring.ts")).not.toMatch(/guide-sphere|guideSphere/);
+    expect(code("render/tuning_menu.ts")).not.toMatch(/guideSphere/);
+    expect(code("render/scene_state.ts")).not.toMatch(/guideSphere/);
   });
 });

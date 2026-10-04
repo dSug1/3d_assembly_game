@@ -17,7 +17,7 @@ describe("⭐ prototype — the green piece's boot quaternion", () => {
     expect(greenBootOrientation("Scene_0")).toEqual([1, 0, 0, 0]);
   });
 
-  it("⭐ wired: the box is created with it", () => {
-    expect(code("render/green_box_wiring.ts")).toMatch(/box\.rotationQuaternion = toBabylon\(greenBootOrientation\(st\.sceneSpec\.id\)\);/);
+  it("⭐ wired: the piece in use is SPAWNED with it — at boot and at each switch between the green and the turquoise piece (2026-10-04)", () => {
+    expect(code("render/green_box_wiring.ts")).toMatch(/p\.mesh\.rotationQuaternion = toBabylon\(greenBootOrientation\(st\.sceneSpec\.id\)\);/);
   });
 });

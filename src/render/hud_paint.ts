@@ -23,7 +23,6 @@ import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
 import { orbitDegPerMm } from "../input/follow_camera";
 import { greenDragGains } from "./green_box_wiring";
-import { cycleStep, staircaseAngles, type FaceCycles } from "../input/green_box";
 
 export function describe(v: ReleaseVerdict) : string {
   // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16), and the
@@ -366,31 +365,8 @@ export function greenReadout(st: SceneState): string {
   // ⭐ …and what one millimetre of finger orbits HERE (the owner, 2026-10-02): yaw per mm of dx, pitch per mm of dy (`orbitDegPerMm`).
   const g = greenDragGains(st);
   const r = orbitDegPerMm(st.cfg, st.orbit.elevation, g);
-  // ⭐ …and the faces tracked while it is outside the guide sphere (`trackOrbitedFaces`).
-  // ⭐ …with DegreesYawPerFace (per STEP of a yaw + pitch period), DeltaXYawPerFace, the cycle and step now, and the dx accumulated.
-  const ft = st.faceTracks.get(st.greenBox);
-  const tr = ft?.faces;
-  const faces =
-    ft === undefined || tr === null || tr === undefined
-      ? "faces —"
-      : ft.free !== null
-        ? `faces ${tr.length} tracked, turning ${hudFree(ft.free.sDeg, st.cfg.greenRotateBlendDeg)}${st.cfg.greenRotateSnap === 1 ? ` · steps ${ft.free.yawStepDeg.toFixed(0)}° (${ft.free.yawFaces} faces) / ${ft.free.pitchStepDeg.toFixed(0)}° (${ft.free.pitchFaces}) · turn ${ft.free.turnDegPerS.toFixed(0)}/${ft.free.maxTurnDegPerS.toFixed(0)}°/s${ft.free.capped ? " ⏩CAPPED" : ""}` : ""}`
-        : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
-  // ⭐ …and, while it is HELD for orbit, its distance to the pink ring at the press (`greenPressRadialM`).
-  const held = st.greenOrbitPointer !== null && st.greenPressRadialM !== null ? ` · held, r at press ${st.greenPressRadialM.toFixed(3)} m` : "";
-  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target${held} | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
+  // ⭐ the orbited piece (green or turquoise, the SCENE menu's switch) and its logical faces, read when it was created
+  const piece = `${st.orbitPieceKind === 1 ? "turquoise" : "green"}, ${st.orbitPieceFaces} faces`;
+  return `${piece}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 
-/** ⭐ prototype (green box): which cycle the face anti-aligned now is in, and where — `yaw 2/4`, `pitch 1/4` (`cycleStep`). */
-function hudCycle(ft: { readonly cycles: FaceCycles; readonly step: number }): string {
-  const c = cycleStep(ft.cycles, ft.step);
-  const len = c.cycle === "YAW" ? ft.cycles.yaw.length : ft.cycles.pitch.length;
-  return `${c.cycle === "YAW" ? "yaw" : "pitch"} ${c.index + 1}/${len}`;
-}
-
-/** ⭐ prototype (green box): the continuous turn — the yaw and pitch angles of this lap, `yaw 123° pitch 0°` (`staircaseAngles`). */
-function hudFree(sDeg: number, blendDeg: number): string {
-  const a = staircaseAngles(sDeg, blendDeg);
-  const lap = (x: number): number => ((x % 360) + 360) % 360;
-  return `yaw ${lap(a.yawDeg).toFixed(0)}° pitch ${lap(a.pitchDeg).toFixed(0)}°`;
-}

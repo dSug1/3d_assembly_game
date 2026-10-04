@@ -126,7 +126,9 @@ describe("⭐⭐ prototype — the green piece's orbit has inertia", () => {
     expect(w).toMatch(/if \(st\.orbitMotion === null\) st\.orbitInertia\.stop\(\);/);
     expect(w).toMatch(/st\.orbitInertia\.step\(dtSec \* 1000, inertiaTauMs\(st\.greenPieceVolumeM3, st\.cfg\.orbitInertiaGain\)\)/);
     expect(w).toMatch(/st\.orbit\.nudge\(d\.dYaw, d\.dV\);/);
-    expect(w).toMatch(/st\.greenPieceVolumeM3 = frustumVolumeM3\(w, h, d, OBJECT_TOP_SCALE\);/);
+    // ⭐ the piece in use's volume (2026-10-04: the green frustum's, or the turquoise prism's), set when it is spawned
+    expect(w).toMatch(/st\.orbitPieces\.push\(\{ mesh: box, faces: piecesFacesOf\(box\), volumeM3: frustumVolumeM3\(w, h, d, OBJECT_TOP_SCALE\) \}\);/);
+    expect(w).toMatch(/st\.greenPieceVolumeM3 = p\.volumeM3;/);
     // ⭐ the coast is applied BEFORE the rig is read, so the box and the camera follow it the same frame
     expect(w.indexOf("st.orbit.nudge(")).toBeLessThan(w.indexOf("const rig = { yaw: st.orbit.yaw"));
     expect(code("render/tuning_menu.ts")).toContain('"orbitInertiaGain", 0, 10, 0.1)');

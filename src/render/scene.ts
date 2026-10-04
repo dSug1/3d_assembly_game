@@ -567,15 +567,9 @@ export function createScene(
   st.boxOrbit = null;
   st.boxSpring = null;
   st.pinkRing = null;
-  st.guideSphere = null;
-  st.greenOutline = null;
-  st.greenOrbitPointer = null;
-  st.greenPressRadialM = null;
-  st.orbitedPieces = [];
-  st.faceTracks = new Map();
-  st.pieceTurns = new Map();
-  st.freeTurns = new Map();
-  st.pinkFaceNormal = null;
+  st.orbitPieces = [];
+  st.orbitPieceKind = 0;
+  st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;
   createGreenBox(st);
 

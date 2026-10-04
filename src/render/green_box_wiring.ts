@@ -6,15 +6,13 @@
  * ⛔ Not pickable (a touch goes through it to what is behind), not in the model: no collision, no goal, no score.
  */
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
-import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import { edgeLines } from "./markers";
+import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
+import { OrbitController } from "../input";
 import { topologyFromMesh } from "./bodies";
-import { offsetPositions } from "../core/mesh_topology";
-import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -23,18 +21,54 @@ import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Ray } from "@babylonjs/core/Culling/ray";
-import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
-import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, orbitDegPerMm, springOrbit, wrapPi } from "../input/follow_camera";
+import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
+import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { ALIGN_SNAP_FRACTION } from "./scene_state";
-import { add, qAngle, qconj, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import type { FreeTurn, SceneState } from "./scene_state";
+import type { SceneState } from "./scene_state";
+import type { Quat } from "../core/vec";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
+/** ⭐ The turquoise. */
+const TURQUOISE = new Color3(0.19, 0.84, 0.78);
+
+/** ⭐ prototype: a piece's logical faces, read off its mesh (`topologyFromMesh`, `pieceFaces`) — a hexagonal prism 8, the frustum 6. */
+function piecesFacesOf(m: Mesh): number {
+  const topo = topologyFromMesh(m);
+  return topo === null ? 0 : pieceFaces(topo.positions, topo.faces).length;
+}
+
+/**
+ * ⭐⭐ prototype — **THE ORBITED PIECE, SPAWNED AS AT BOOT** (the owner, 2026-10-04: *"Create a slider in scene menu to choose between the
+ * green piece or the turquoise piece. When toggled, the piece shall be spawn as per boot"*). The piece `kind` names (0 green, 1 turquoise)
+ * is the one the orbit carries (`st.greenBox`), shown and pickable; the other is hidden. Its orientation is the boot one
+ * (`greenBootOrientation`, Scene_1 (1,2,3,4)); its position is the rig's boot pose — so a switch puts the rig back there too (yaw, ring,
+ * zoom; the yellow target stays where it is, as a camera reset keeps it), the spring and the camera starting again from it, no coast.
+ */
+export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): void {
+  const p = st.orbitPieces[kind] ?? st.orbitPieces[0];
+  if (p === undefined) return;
+  for (const o of st.orbitPieces) o.mesh.setEnabled(o === p);
+  st.greenBox = p.mesh;
+  st.orbitPieceKind = kind;
+  st.orbitPieceFaces = p.faces;
+  st.greenPieceVolumeM3 = p.volumeM3;
+  p.mesh.rotationQuaternion = toBabylon(greenBootOrientation(st.sceneSpec.id));
+  if (!atBoot) {
+    st.orbit = new OrbitController(st.cfg, ORBIT_START_YAW_RAD, st.bootElevation);
+    st.zoom = st.orbitStartZoom;
+    st.cameraReset = null;
+    st.orbitInertia.stop();
+    st.orbitMotion = null;
+    st.boxSpring = null;
+    st.cameraOrbit = null;
+    st.cameraLagged = null;
+  }
+  st.hudDirty = true;
+}
 
 export function createGreenBox(st: SceneState): void {
   // ⭐⭐ prototype (green box), the owner 2026-10-02: *"replace the green box by a green trapezoidal pyramid (same type as the one
@@ -47,8 +81,6 @@ export function createGreenBox(st: SceneState): void {
     return;
   }
   const [w, h, d] = greenPyramidSizeM(piece17.dims, st.sceneSpec.unitM ?? 1);
-  // ⭐ Its volume (the frustum, not its bounding box) — what the orbit's inertia is sized by (`inertiaTauMs`).
-  st.greenPieceVolumeM3 = frustumVolumeM3(w, h, d, OBJECT_TOP_SCALE);
   const box = CreateBox("green-box", { width: w, height: h, depth: d }, st.scene);
   if (!taperMesh(box, OBJECT_TOP_SCALE)) st.untaperedBodies.push("green-box");
   const mat = new StandardMaterial("green-box-mat", st.scene);
@@ -59,11 +91,22 @@ export function createGreenBox(st: SceneState): void {
   // ⭐ prototype (green box): NOT billboarded (the owner, 2026-10-02: *"remove the billboarding"* — it had been since *"the green
   // cube shall billboard the camera"*). It keeps the world's axes: its width along x, its tapered height up y, its depth along z.
   box.billboardMode = Mesh.BILLBOARDMODE_NONE;
-  st.greenBox = box;
-  // ⭐ prototype (green box), 2026-10-02: the first orbited piece — its faces are tracked outside the guide sphere (`trackOrbitedFaces`).
-  st.orbitedPieces.push(box);
-  // ⭐ the owner, 2026-10-04: the boot orientation is the scene's (`greenBootOrientation`: Scene_1 (1,2,3,4) normalized; else the identity)
-  box.rotationQuaternion = toBabylon(greenBootOrientation(st.sceneSpec.id));
+  // ⭐ Its volume (the frustum, not its bounding box) — what the orbit's inertia is sized by (`inertiaTauMs`).
+  st.orbitPieces.push({ mesh: box, faces: piecesFacesOf(box), volumeM3: frustumVolumeM3(w, h, d, OBJECT_TOP_SCALE) });
+  // ⭐⭐ prototype, the owner 2026-10-04: *"Create the turquoise hexagonal piece as previous. Set the same transform as the green piece
+  // (quaternion =(1,2,3,4) and position) at boot"* — a 6-sided prism as long as the green piece's longest side, half that across its
+  // corners (`turquoiseSizeM`), FLAT shaded (⛔ a smooth-shaded hexagon reads as a cylinder — defect 68's lesson); the orbit carries
+  // whichever one the SCENE menu's switch names (`orbitPieceKind`), the other one hidden.
+  const ts = turquoiseSizeM([w, h, d]);
+  const hex = CreateCylinder("turquoise-piece", { height: ts.lengthM, diameter: ts.diameterM, tessellation: 6 }, st.scene);
+  hex.convertToFlatShadedMesh();
+  const hm = new StandardMaterial("turquoise-piece-mat", st.scene);
+  hm.diffuseColor = TURQUOISE;
+  hex.material = hm;
+  hex.isPickable = true; // as the green piece: a press on it is empty space (`throughGreenBox`, the piece in use)
+  hex.billboardMode = Mesh.BILLBOARDMODE_NONE;
+  st.orbitPieces.push({ mesh: hex, faces: piecesFacesOf(hex), volumeM3: hexPrismVolumeM3(ts.diameterM, ts.lengthM) });
+  spawnOrbitPiece(st, st.cfg.orbitPieceKind, true);
   // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
   // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).
   // ⭐ prototype (green box), the owner 2026-10-02: *"make the pink ring slightly thicker and brighter so I can see it better"*.
@@ -80,31 +123,6 @@ export function createGreenBox(st: SceneState): void {
   ring.billboardMode = Mesh.BILLBOARDMODE_ALL;
   ring.renderingGroupId = 2;
   st.pinkRing = ring;
-  // ⭐ prototype (green box), the owner 2026-10-02: *"draw a sphere of 75% of the top ring radius, centered on the yellow orbit
-  // center. it shall be almost translucent so I can see through. This is for prototyping purpose and will not be shown in the
-  // final game"* — a guide, nothing more: unit radius, scaled each frame (`guideSphereFrame`); not pickable, not an orbit
-  // candidate (it can block no press and no occlusion ray); both faces drawn, so it reads the same from inside.
-  const sphere = CreateSphere("guide-sphere", { diameter: 2, segments: 32 }, st.scene);
-  const sm = new StandardMaterial("guide-sphere-mat", st.scene);
-  sm.disableLighting = true;
-  sm.emissiveColor = new Color3(0.75, 0.85, 1);
-  sm.backFaceCulling = false;
-  sm.alpha = st.cfg.guideSphereAlpha;
-  sphere.material = sm;
-  sphere.isPickable = false;
-  // ⭐ The green piece's white CONTOUR — its crease edges, offset like the part outlines — shown while it is outside the sphere
-  // (`guideSphereFrame`). Parented to it (it is not billboarded), so it turns and moves with it.
-  const topo = topologyFromMesh(box);
-  if (topo !== null && topo.edges.length > 0) {
-    const lines = edgeLines(st, "green-outline", topo, offsetPositions(topo, 0), new Color3(1, 1, 1), null);
-    lines.parent = box;
-    lines.isPickable = false;
-    lines.metadata = { orbitCandidate: false };
-    lines.isVisible = false;
-    st.greenOutline = { lines, topo, builtM: null };
-  }
-  sphere.metadata = { orbitCandidate: false };
-  st.guideSphere = sphere;
 }
 
 /** ⭐ The pink — brighter since 2026-10-02 (it was 1, 0.42, 0.78). */
@@ -161,6 +179,8 @@ export function pinkRingFrame(st: SceneState): void {
 export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const box = st.greenBox;
   if (box === null || st.greenBoxRigM === null) return;
+  // ⭐ the SCENE menu's switch moved: the other piece, spawned as at boot (`spawnOrbitPiece`)
+  if (st.cfg.orbitPieceKind !== st.orbitPieceKind) spawnOrbitPiece(st, st.cfg.orbitPieceKind, false);
   const now = performance.now();
   const c = st.orbitCentreM;
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
@@ -283,8 +303,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
-  guideSphereFrame(st);
-  trackOrbitedFaces(st, now);
 }
 
 /**
@@ -302,269 +320,20 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
     .filter((f): f is NonNullable<typeof f> => f !== null);
   const toward = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, GREEN_PIECE_ORBIT_ZOOM).offsetM;
   const face = faceToward(faces, toward);
-  // ⭐ …and that face's normal is the one the pink ring sits on — what an orbited piece anti-aligns with (`trackOrbitedFaces`).
-  if (face !== null) st.pinkFaceNormal = face.normal;
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }
 
 
 /**
- * ⭐ prototype (green box): the guide sphere, each frame — on the yellow target, radius `guideSphereShare` (the slider) × the top ring's
- * radius (the green piece's own orbit, `GREEN_PIECE_ORBIT_ZOOM`), at `guideSphereAlpha` (0 hides it).
- */
-export function guideSphereFrame(st: SceneState): void {
-  // ⭐ prototype (green box), 2026-10-02: *"when the green piece is outside of this sphere, highlight its contour in white"* —
-  // *"(same offset of contour highlights as the rest of the pioneer / follower parts)"*: its own crease edges, pushed out by the
-  // highlight offset (`highlightLiftMm` on the glass, at its camera distance) and rebuilt only when that goes stale — exactly
-  // the part outlines' machinery (`edgeLines`, `offsetPositions`, `outlineOffsetStale`). Shown while its centre is beyond the
-  // sphere, the sphere shown or not.
-  const box = st.greenBox;
-  const o = st.greenOutline;
-  if (box !== null && o !== null) {
-    // ⭐ the owner, 2026-10-03: shown while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`; it was: outside the sphere)
-    const out = greenHeldForOrbit(st.greenOrbitPointer);
-    o.lines.isVisible = out;
-    if (out) {
-      const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
-      if (outlineOffsetStale(o.builtM, h)) {
-        edgeLines(st, "green-outline", o.topo, offsetPositions(o.topo, h), o.lines.color, o.lines);
-        o.builtM = h;
-      }
-    }
-  }
-  const s = st.guideSphere;
-  if (s === null) return;
-  const a = st.cfg.guideSphereAlpha;
-  s.isVisible = a > 0;
-  if (!(a > 0)) return;
-  (s.material as StandardMaterial).alpha = a;
-  const r = st.cfg.guideSphereShare * st.cfg.orbitTopRadiusM * GREEN_PIECE_ORBIT_ZOOM;
-  s.scaling.set(r, r, r);
-  const t = st.centreBlend.targetM;
-  s.position.set(t[0], t[1], t[2]);
-}
-
-/**
- * ⭐⭐ prototype (green box) — **AN ORBITED PIECE'S FACES, TRACKED OUTSIDE THE GUIDE SPHERE** (the owner, 2026-10-02: *"when a piece
- * goes outside the white sphere, compute its number of faces and track them. This is valid for the green piece or any other piece
- * which will later be orbited"* — *"also at boot, if any piece is outside the white sphere"*). Each frame, for each orbited piece
- * (`orbitedPieces`), the decision is `faceTracking`'s: on `START` (an outward crossing, or outside at its first frame — the boot)
- * its logical faces are read off its mesh (`topologyFromMesh`, `pieceFaces`); while it stays outside, their world normals and
- * centres follow it; back inside, they are dropped. ⭐ Since 2026-10-03 "outside" is the green piece HELD for orbit, wherever it is (`greenHeldForOrbit`).
- * ⭐⭐ **AND IT STEPS THROUGH THEM AS IT ORBITS IN YAW** (the owner, 2026-10-02): `DegreesYawPerFace` = the yaw face alignment span ÷
- * its faces, and `DeltaXYawPerFace` = the finger dx that orbits that much, at the yaw rate (`orbitDegPerMm`). On `START` the face
- * most anti-aligned with the pink ring's face is turned exactly anti-parallel; from that pose its faces fall into a YAW cycle and a
- * PITCH cycle (`faceCycles`, the owner 2026-10-03: *"a chain of yaw turns … then … a cycle of pitch turns … then yaw again"*). Then the
- * orbit's yaw each frame, as finger mm (the drag's dx; the inertia coast's too, so the faces never fall out of step with the
- * yaw), accumulates since `START` (`accumulateFaceSteps`): rounded to whole `DeltaXYawPerFace`s it names the face — one step one
- * way anti-aligns the NEXT face — through the yaw cycle until the start face is back, then the pitch cycle, then yaw again
- * (`cycleStep`) — each face's orientation its cycle's turn from the START pose (`cycleTargets`); the other way retraces it, at the
- * same yaws. A change of the pink face starts the cycles again from the face anti-aligned then. Every turn is eased like an
- * alignment's (`greenTurnFrame`, a slerp from where the piece is to the step's orientation). ⛔ Inside the sphere nothing turns (a turn already in
- * flight lands): the face anti-aligned is kept.
- */
-export function trackOrbitedFaces(st: SceneState, now: number): void {
-  const yaw = st.orbit.yaw;
-  const g = greenDragGains(st);
-  const yawDegPerMm = orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm;
-  const pink = st.pinkFaceNormal;
-  for (const m of st.orbitedPieces) {
-    const p = m.getAbsolutePosition();
-    // ⭐ the owner, 2026-10-03: "outside" = the green piece HELD for orbit, wherever it is (`greenHeldForOrbit`; it was the sphere's radius)
-    const out = greenHeldForOrbit(st.greenOrbitPointer);
-    const prev = st.faceTracks.get(m);
-    const step = faceTracking(prev === undefined ? null : prev.outside, out);
-    if (step === "NONE" || step === "STOP") {
-      st.faceTracks.set(m, { outside: out, faces: null, world: [], cycles: NO_CYCLES, targets: NO_TARGETS, step: 0, degPerFace: 0, dxPerFaceMm: Infinity, accMm: 0, yaw, pink, free: null });
-      if (step === "STOP") st.hudDirty = true;
-      continue;
-    }
-    const cur = fromBabylon(m.rotationQuaternion ?? Quaternion.Identity());
-    let faces = prev?.faces ?? null;
-    let cycles = prev?.cycles ?? NO_CYCLES;
-    let targets = prev?.targets ?? NO_TARGETS;
-    let s = prev?.step ?? 0;
-    let accMm = prev?.accMm ?? 0;
-    // ⭐ the orientation turns are computed FROM: where a turn in flight is going, else where the piece is
-    const base = st.pieceTurns.get(m)?.to ?? cur;
-    let target: Quat | null = null;
-    const cam = st.camera.getDirection(new Vector3(0, 0, 1));
-    const axes = pink === null ? null : turnAxes(pink, [0, 1, 0], [cam.x, cam.y, cam.z]);
-    if (step === "START" || faces === null) {
-      const topo = topologyFromMesh(m);
-      faces = topo === null ? [] : pieceFaces(topo.positions, topo.faces);
-      st.hudDirty = true;
-    }
-    // ⭐⭐ the owner, 2026-10-03: `FacesRotateByIncrement` OFF — dx turns the piece CONTINUOUSLY: yaw for 360°, a smooth blend, pitch
-    // for 360°, a blend, yaw again (`staircaseOrientation`). START (or the switch, or a new pink face) takes the pose AS IT IS (no
-    // snap) and s = 0; the yaw axis is the world vertical, the pitch axis the horizontal across the pink normal, both frozen then.
-    let free: FreeTurn | null = null;
-    const freeMode = st.cfg.facesRotateByIncrement === 0;
-    if (freeMode) {
-      // ⛔⛔ the owner, 2026-10-03: *"make sure that there is no pitch mixed with yaw when rotation is on yaw"* — the turn RESTARTED at
-      // every exit from the pose as it was, so a piece that left the sphere part-pitched (or came from the face cycles) yawed TILTED
-      // about the vertical: its own axis circled the vertical, a pitch riding on the yaw. ⭐ Now the turn's state is kept for the
-      // session (`freeTurns`; inside the sphere it pauses, an exit continues it) and its start pose is LEVEL (`levelHeading`): every
-      // yaw phase is a level piece about the vertical. The pitch axis is frozen with it (a later pink face does not move it).
-      const stored = st.freeTurns.get(m);
-      const entering = step !== "KEEP" || prev === undefined || prev.free === null; // an exit, the switch, or the first frame
-      if (stored === undefined) {
-        // ⭐ the owner, 2026-10-04: the level-out only when switched on (`greenLevelOutOn`, OFF) — *"The alignment on gravity shall be the
-        // user's own action, not a game compute"*: by default the turn starts from the pose AS IT IS, the tumbled one surviving the hold
-        const q0 = st.cfg.greenLevelOutOn === 1 ? levelHeading(cur) : cur;
-        const pitchAxis: Vec3 = axes?.pitch ?? [1, 0, 0];
-        // ⭐ the owner, 2026-10-03: the faces that scroll past in a 360° yaw and a 360° pitch, counted ONCE (at boot) — the increments
-        const inc = scrollIncrements(faces, q0, [0, 1, 0], pitchAxis);
-        // ⭐ the owner, 2026-10-03: the fastest TURN the snaps can follow (°/s of the piece's rotation), computed ONCE — one increment
-        // per alignment's ease. It reads no gain and no cycle: the measured turn rate carries them
-        const maxTurnDegPerS = maxSnapTurnDegPerS(inc.yawStepDeg, inc.pitchStepDeg, st.cfg.greenSnapEaseMs);
-        free = { q0, sDeg: 0, pitchAxis, ...inc, maxTurnDegPerS, maxForEaseMs: st.cfg.greenSnapEaseMs, turnDegPerS: 0, lastT: now, pendingDeg: 0, capped: false };
-      }
-      else if (entering) free = { ...stored, lastT: now };
-      else {
-        // the orbit's yaw this frame (a drag's, a coast's): one full cycle per `yawFaceAlignSpanDeg` of it — the span, as for the face cycles (the owner, 2026-10-03)
-        const dYawDeg = (wrapPi(yaw - prev!.yaw) * 180) / Math.PI;
-        const dTurnDeg = dYawDeg * staircasePerOrbitDeg(st.cfg.greenRotateBlendDeg, st.cfg.yawFaceAlignSpanDeg);
-        // ⭐ the PIECE's turn rate (°/s) — the orbit's yaw (the outside yaw gain share in it) × the cycle's turn per orbit degree —
-        // smoothed over `SNAP_SPEED_TAU_MS`: the rig steps per pointer EVENT, 15–20 a second
-        const dtMs = stored.lastT === null ? 0 : now - stored.lastT;
-        const inst = dtMs > 0 ? Math.abs(dTurnDeg) / (dtMs / 1000) : stored.turnDegPerS;
-        const turnDegPerS = stored.turnDegPerS + (inst - stored.turnDegPerS) * (dtMs > 0 ? 1 - Math.exp(-dtMs / SNAP_SPEED_TAU_MS) : 0);
-        // ⭐⭐ the owner, 2026-10-03: *"cap the rotation speed (maintaining the snap duration) instead of freezing the rotation"* — with
-        // the snaps on, the turn goes on at most at the limit (one snap per snap duration), a short burst spread, the excess discarded
-        // (`capTurn`). ⚠ So above the limit a span of orbit no longer makes a full cycle — the span stays exact for the face cycles.
-        const cap =
-          st.cfg.greenRotateSnap === 1
-            ? capTurn(stored.pendingDeg, dTurnDeg, stored.maxTurnDegPerS, dtMs, SNAP_SPEED_TAU_MS)
-            : { applied: dTurnDeg, pending: 0, capped: false };
-        free = {
-          ...stored,
-          sDeg: stored.sDeg + cap.applied,
-          turnDegPerS,
-          lastT: now,
-          pendingDeg: cap.pending,
-          capped: cap.capped,
-        };
-        if (free.capped !== stored.capped) st.hudDirty = true;
-      }
-      // ⭐ the owner, 2026-10-03: *"recompute and speed up the snap movement"* — the snap has its OWN ease (`greenSnapEaseMs`, 60 ms); the
-      // limit is recomputed only when that slider differs from the value it was computed from (one comparison a frame)
-      if (free.maxForEaseMs !== st.cfg.greenSnapEaseMs) {
-        free = { ...free, maxTurnDegPerS: maxSnapTurnDegPerS(free.yawStepDeg, free.pitchStepDeg, st.cfg.greenSnapEaseMs), maxForEaseMs: st.cfg.greenSnapEaseMs };
-        st.hudDirty = true;
-      }
-      st.freeTurns.set(m, free);
-      // ⭐⭐ the owner, 2026-10-03: *"snap the green piece yaw and pitch rotations onto these angle increments during the yaw orbit,
-      // so the rotation of the green piece is not continuous but incremented"* — each angle to its NEAREST increment
-      // (`greenRotateSnap`, on), each new increment reached by an alignment's ease (`greenTurnFrame`)
-      const ang = staircaseAngles(free.sDeg, st.cfg.greenRotateBlendDeg);
-      const snapped = st.cfg.greenRotateSnap === 1;
-      const want = snapped
-        ? orientationAt(free.q0, snapAngle(ang.yawDeg, free.yawStepDeg), snapAngle(ang.pitchDeg, free.pitchStepDeg), [0, 1, 0], free.pitchAxis)
-        : staircaseOrientation(free.q0, free.sDeg, st.cfg.greenRotateBlendDeg, [0, 1, 0], free.pitchAxis);
-      const easing = st.pieceTurns.get(m);
-      if (snapped) {
-        // a new increment: eased there from where the piece is; the same one: nothing (a turn in flight lands).
-        if (qAngle(qmul(want, qconj(easing?.to ?? cur))) > 1e-6) {
-          st.pieceTurns.set(m, { from: cur, to: want, t0: now, ms: st.cfg.greenSnapEaseMs });
-          st.hudDirty = true;
-        }
-      } else if (entering && qAngle(qmul(want, qconj(cur))) > 1e-3) {
-        // a different pose than the turn's (the face cycles, a first level-out): eased there, as an alignment's turn
-        st.pieceTurns.set(m, { from: cur, to: want, t0: now });
-        st.hudDirty = true;
-      } else if (easing !== undefined) st.pieceTurns.set(m, { ...easing, to: want }); // still easing in: it chases the turn
-      else m.rotationQuaternion = toBabylon(want);
-      cycles = NO_CYCLES;
-      targets = NO_TARGETS;
-      s = 0;
-      accMm = 0;
-    }
-    // ⭐ ON: the face cycles. A START — or the switch turned back on (no cycles yet) — anti-aligns and reads the cycles.
-    const cyclesStart = !freeMode && (step === "START" || prev?.free !== null || cycles.yaw.length + cycles.pitch.length === 0);
-    if (cyclesStart) {
-      s = 0;
-      accMm = 0;
-      if (pink !== null && faces.length > 0) {
-        // ⭐ the face most anti-aligned turned onto the pink face, then the two cycles and every face's orientation read off that pose
-        const start = mostAntiAligned(faces, cur, pink);
-        target = antiAlignedOrientation(faces, start, cur, pink);
-        cycles = axes === null ? { yaw: [start], pitch: [start] } : faceCycles(faces, target, start, pink, axes);
-        targets = axes === null ? { yaw: [target], pitch: [target] } : cycleTargets(faces, target, pink, axes, cycles);
-      } else {
-        cycles = NO_CYCLES;
-        targets = NO_TARGETS;
-      }
-      st.hudDirty = true;
-    }
-    // ⭐ the owner, 2026-10-03: *"span to cover one full period"* — the span shared among the STEPS of one yaw + pitch period
-    // (the frustum: 4 + 4 = 8 → 22.5°), not among the faces (6 → 30°, a period then took 240°)
-    const degPerFace = degreesYawPerFace(st.cfg.yawFaceAlignSpanDeg, cycles.yaw.length + cycles.pitch.length);
-    const dxPerFaceMm = deltaXYawPerFace(degPerFace, yawDegPerMm);
-    if (!freeMode && !cyclesStart && step === "KEEP" && prev !== undefined && cycles.yaw.length + cycles.pitch.length > 0 && pink !== null) {
-      // the orbit's yaw this frame, as the finger mm that would make it (a drag's dx exactly; a coast's equivalent)
-      const dYawDeg = (wrapPi(yaw - prev.yaw) * 180) / Math.PI;
-      const a = accumulateFaceSteps(accMm, yawDegPerMm > 0 ? dYawDeg / yawDegPerMm : 0, dxPerFaceMm);
-      accMm = a.accMm;
-      if (a.steps !== 0) {
-        // ⭐ the step's face and its orientation, computed at START (`targetAtStep`) — a fast frame crossing several lands on the last
-        s += a.steps;
-        target = targetAtStep(cycles, targets, s);
-        st.hudDirty = true;
-      } else if (prev.pink !== pink) {
-        // ⭐ the pink face changed: the face anti-aligned now slerps onto it, and the cycles START again from there
-        const now0 = cycleStep(cycles, s).face;
-        target = antiAlignedOrientation(faces, now0, base, pink);
-        cycles = axes === null ? { yaw: [now0], pitch: [now0] } : faceCycles(faces, target, now0, pink, axes);
-        targets = axes === null ? { yaw: [target], pitch: [target] } : cycleTargets(faces, target, pink, axes, cycles);
-        s = 0;
-        accMm = 0;
-        st.hudDirty = true;
-      }
-    }
-    if (target !== null) {
-      // ⭐ from where the piece IS (a turn in flight is retargeted, never queued)
-      st.pieceTurns.set(m, { from: cur, to: target, t0: now });
-    }
-    // ⚠ The topology already carries the mesh's SCALE (`topologyFromMesh`), so only its rotation and position place the faces.
-    m.computeWorldMatrix(true);
-    const r = m.absoluteRotationQuaternion;
-    const q: Quat = [r.w, r.x, r.y, r.z];
-    const world = faces.map((f) => ({ normal: qRotate(q, f.normal), centre: add([p.x, p.y, p.z], qRotate(q, f.centre)) }));
-    st.faceTracks.set(m, { outside: out, faces, world, cycles, targets, step: s, degPerFace, dxPerFaceMm, accMm, yaw, pink, free });
-  }
-  greenTurnFrame(st, now);
-}
-
-const NO_CYCLES = { yaw: [], pitch: [] } as const;
-/** ⭐ prototype (green box): the smoothing of the dx speed the snap freeze reads, ms — over a few pointer events. */
-const SNAP_SPEED_TAU_MS = 120;
-const NO_TARGETS = { yaw: [], pitch: [] } as const;
-
-const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]);
-const fromBabylon = (q: Quaternion): Quat => [q.w, q.x, q.y, q.z];
-
-/** ⭐ prototype (green box): each orbited piece's anti-alignment turn, one frame — a smoothstep slerp over an alignment's time. */
-function greenTurnFrame(st: SceneState, now: number): void {
-  const alignMs = st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION;
-  for (const [m, turn] of st.pieceTurns) {
-    const ms = turn.ms ?? alignMs; // ⭐ a snap of the green piece's turn eases over its own time (`greenSnapEaseMs`)
-    const u = ms > 0 ? Math.min(1, Math.max(0, (now - turn.t0) / ms)) : 1;
-    m.rotationQuaternion = toBabylon(qSlerp(turn.from, turn.to, u * u * (3 - 2 * u)));
-    if (u >= 1) st.pieceTurns.delete(m);
-  }
-}
-
-/**
- * ⭐ prototype (green box): the gains the green piece's orbit drag runs at NOW — the inside-the-leash factors (`boxDragGains`) and,
- * on yaw, the share left while it is outside the guide sphere (`outsideYawShare`, the face tracking's own outside state). ⭐ ONE
- * home: the drag, the face stepping's yaw rate and the HUD read it, so the dx per face is the dx the drag needs.
+ * ⭐ prototype (green box): the gains the green piece's orbit drag runs at NOW — the inside-the-leash factors (`boxDragGains`). ⭐ ONE
+ * home: the drag and the HUD read it. (The yaw share while held went with the rotation, 2026-10-04.)
  */
 export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
   const g =
     st.boxOrbit === null || st.cameraOrbit === null
       ? { yaw: 1, pitch: 1 }
       : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
-  const outside = st.greenBox !== null && greenHeldForOrbit(st.greenOrbitPointer);
-  return { yaw: g.yaw * outsideYawShare(outside, st.cfg.boxGainYawOutsideShare), pitch: g.pitch };
+  return g;
 }
+
+const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]);

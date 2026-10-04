@@ -97,6 +97,9 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "never-grabbed goal (°)", "ungrabbedGoalDeg", 0.5, 15, 0.5),
         // ⭐ `D170`: how long a demo scene takes, first move to last — changing it mid-demo changes the speed.
         tunable(st, "demo duration (s)", "demoDurationS", 10, 60, 5),
+        // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece. When
+        // toggled, the piece shall be spawn as per boot"*
+        tunable(st, "orbited piece (0 = green, 1 = turquoise)", "orbitPieceKind", 0, 1, 1),
       ],
     },
     {
@@ -117,23 +120,12 @@ export function installTuningMenu(st: SceneState): void {
           title: "GREEN PIECE ORBIT",
           sliders: [
             tunable(st, "green box orbit gain — yaw (×)", "boxGainYaw", 0.05, 2, 0.05),
-            // ⭐ 2026-10-02: the share of it left while the green piece is outside the guide sphere.
-            tunable(st, "yaw gain share outside the guide sphere", "boxGainYawOutsideShare", 0.05, 1, 0.05),
-            // ⭐ 2026-10-03: outside the sphere, one axis moving widens the other's deadband (on = 1), by this factor (1 = 100 %).
-            tunable(st, "outside: one axis moving widens the other's deadband (0 / 1)", "orbitCrossDeadbandOn", 0, 1, 1),
-            tunable(st, "outside: that widening (× deadband, 1 = 100 %)", "orbitCrossDeadbandFactor", 1, 10, 0.25),
             tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
             tunable(st, "green box gain inside the leash (×)", "boxGainInsideLeash", 0.05, 1, 0.05),
             tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
             // ⭐ The orbit coasts after the finger lifts — τ = this × the green piece's volume.
             tunable(st, "orbit inertia gain (ms per cm³ of the green piece, 0 = none)", "orbitInertiaGain", 0, 10, 0.1),
           ],
-        },
-        {
-          // ⭐ prototype (green box), 2026-10-02: an orbited piece outside the guide sphere steps through its faces as it orbits.
-          title: "FACE ALIGNMENT IN YAW",
-          // ⭐ the owner, 2026-10-03: ONE span for both modes — the face cycles' steps and the green piece's full yaw + pitch cycle.
-          sliders: [tunable(st, "yaw face alignment span (deg of orbit yaw: one full yaw + pitch period)", "yawFaceAlignSpanDeg", 30, 720, 15)],
         },
         {
           // ⭐ Where the camera sits relative to the green piece, and the zoom it boots at.
@@ -177,10 +169,6 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.
             tunable(st, "shadows (0 = off, 1 = on, 2 = auto)", "shadowsOn", 0, 2, 1),
             tunable(st, "auto shadows: frame budget (ms, median)", "autoShadowBudgetMs", 10, 100, 1),
-            // ⭐ prototype (green box), 2026-10-02: the guide sphere on the yellow target — for prototyping only (0 = hidden).
-            tunable(st, "guide sphere opacity (0 = hidden)", "guideSphereAlpha", 0, 0.5, 0.01),
-            // ⭐ the owner, 2026-10-03: its radius, a share of the 1st ring's — 1 % to 100 %, in 1 % steps.
-            tunable(st, "guide sphere radius (share of the 1st ring)", "guideSphereShare", 0.01, 1, 0.01),
           ],
         },
         {
@@ -372,28 +360,6 @@ export function installTuningMenu(st: SceneState): void {
               400,
               10,
             ),
-          ],
-        },
-        {
-          // ⭐ The green piece outside the guide sphere, in the double orbit (`trackOrbitedFaces`).
-          title: "DOUBLE ORBIT MODE",
-          sliders: [
-            // ⭐ the owner, 2026-10-03: on (1) = the faces step by increments of the yaw orbit (the yaw / pitch cycles) — the current
-            // rule; off (0) = no stepping (its own rule to be specified by the owner).
-            tunable(st, "FacesRotateByIncrement (0 / 1)", "facesRotateByIncrement", 0, 1, 1),
-          ],
-        },
-        {
-          // ⭐ the owner, 2026-10-03: the green piece's continuous turn with FacesRotateByIncrement off — yaw 360°, blend, pitch 360°.
-          title: "GREEN PIECE ROTATION",
-          sliders: [
-            tunable(st, "yaw ↔ pitch blend (deg of rotation)", "greenRotateBlendDeg", 0, 180, 5),
-            // ⭐ the owner, 2026-10-04: the level-out at the first hold, OFF by default — gravity is the user's own alignment.
-            tunable(st, "level-out at the first hold (0 / 1)", "greenLevelOutOn", 0, 1, 1),
-            // ⭐ the owner, 2026-10-03: the turn snapped to 360° ÷ the faces scrolling past in a yaw / a pitch (0 = continuous).
-            tunable(st, "snap to face increments (0 / 1)", "greenRotateSnap", 0, 1, 1),
-            // ⭐ the owner, 2026-10-03: how fast a snap lands — and so how fast the piece may turn before it freezes.
-            tunable(st, "snap duration (ms)", "greenSnapEaseMs", 10, 300, 5),
           ],
         },
       ],

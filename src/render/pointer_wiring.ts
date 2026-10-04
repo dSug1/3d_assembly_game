@@ -7,7 +7,7 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { crossDeadbandScales, greenHeldForOrbit, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
@@ -15,7 +15,6 @@ import { greenDragGains } from "./green_box_wiring";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
-import { faceWorld } from "../core/object_model";
 import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
@@ -110,7 +109,6 @@ export function installPointerHandler(st: SceneState): void {
     }
     if (info.type === PointerEventTypes.POINTERUP) {
       // ⭐ prototype (green box), 2026-10-03: the green piece is no longer held once its finger lifts
-      if (e.pointerId === st.greenOrbitPointer) st.greenOrbitPointer = null;
       st.eventGaps.delete(e.pointerId);
       st.rawPressedBody.delete(e.pointerId);
       st.pointerTypeOf.delete(e.pointerId);
@@ -166,19 +164,6 @@ export function installPointerHandler(st: SceneState): void {
       );
       // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughGreenBox`).
       const rayHit = throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
-      // ⭐⭐ prototype (green box), the owner 2026-10-03: a press ON the green piece (it still orbits, as empty space) is what turns on
-      // the "outside the sphere" behaviours, while it is held — wherever the piece is (`greenHeldForOrbit`)
-      // ⭐ The finger is LATCHED: drifting off the piece while still down keeps it held (the owner: *"this is still OK and the green
-      // piece snapped rotation continues"*) — only the lift ends it.
-      if (!inBand && st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox) {
-        st.greenOrbitPointer = e.pointerId;
-        // ⭐ the owner, 2026-10-03: *"when the green piece is pressed, compute and track the radial distance to the pink gizmo, as we will
-        // use this radial distance at press later on"* — the piece's distance to the pink ring (the yellow target), at the press
-        const gp = st.greenBox.position;
-        const tg = st.centreBlend.targetM;
-        st.greenPressRadialM = Math.hypot(gp.x - tg[0], gp.y - tg[1], gp.z - tg[2]);
-        st.hudDirty = true;
-      }
       // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
       // only, the owner 2026-09-23: *"therefore, this second touch could for example move another
       // object"*). ⛔ Filtered on the way IN, before the latch, so every rule downstream sees a
@@ -394,11 +379,6 @@ export function installPointerHandler(st: SceneState): void {
               faceNormal.z,
             ] as Vec3)
           : null;
-      // ⭐ prototype (green box), 2026-10-02: a press that moved the target puts the pink ring on THIS face — the one the orbited
-      // pieces outside the guide sphere anti-align with (`trackOrbitedFaces`).
-      if (newTarget !== null && faceHit && pickedId !== undefined) {
-        st.pinkFaceNormal = faceWorld(st.world, pickedId, faceHit.faceId)?.normal ?? st.pinkFaceNormal;
-      }
       let pressFace = faceHit
         ? { faceId: faceHit.faceId, cos: faceHit.cos }
         : null;
@@ -1138,23 +1118,14 @@ export function installPointerHandler(st: SceneState): void {
  * wheel) is unchanged.
  */
 export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): void {
-  let dx = s.x - prev.x;
-  let dy = s.y - prev.y;
+  const dx = s.x - prev.x;
+  const dy = s.y - prev.y;
   if (st.greenBox !== null) {
     // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId)
       st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
-    // ⭐⭐ prototype (green box), the owner 2026-10-03: OUTSIDE the guide sphere, one axis moving (beyond its deadband) widens the
-    // OTHER's deadband (`crossDeadbandScales`, from the axes as they stood before this sample), and the orbit then reads the
-    // DEADBANDED travel — so a yaw drag does not leak pitch, nor a pitch drag yaw. Inside, or switched off: the raw travel, as ever.
-    const cross = st.cfg.orbitCrossDeadbandOn === 1 && greenHeldForOrbit(st.greenOrbitPointer);
-    const before = st.orbitMotion.tracker.axes;
-    st.orbitMotion.tracker.push(s, crossDeadbandScales(before.x === "MOVING", before.y === "MOVING", cross, st.cfg.orbitCrossDeadbandFactor));
-    if (cross) {
-      dx = st.orbitMotion.tracker.step.dx;
-      dy = st.orbitMotion.tracker.step.dy;
-    }
-    // ⭐ 2026-10-02: the yaw slower outside the guide sphere too (`greenDragGains`).
+    st.orbitMotion.tracker.push(s);
+    // ⭐ the inside-the-leash gains (`greenDragGains`).
     const g = greenDragGains(st);
     const yaw0 = st.orbit.yaw;
     const v0 = st.orbit.elevation;

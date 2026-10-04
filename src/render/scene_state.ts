@@ -23,52 +23,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
-import type { CycleTargets, FaceCycles, PieceFace } from "../input/green_box";
 
-/**
- * ⭐ Prototype: one orbited piece's face tracking (`trackOrbitedFaces`) — whether it was outside the guide sphere last frame and,
- * while it is outside, its faces (own frame), where they are now (world), its yaw and pitch cycles and the step it stands at
- * (from START), `DegreesYawPerFace` and `DeltaXYawPerFace`, the dx accumulated since the last step, and the orbit yaw last frame.
- */
-/**
- * ⭐ Prototype: the continuous turn with `FacesRotateByIncrement` off (`staircaseOrientation`) — the pose it started from, the rotation
- * accumulated since (degrees), and the pitch axis frozen then.
- */
-export interface FreeTurn {
-  readonly q0: Quat;
-  readonly sDeg: number;
-  readonly pitchAxis: Vec3;
-  /** ⭐ The primary faces that scroll past in a 360° yaw / pitch, counted once at the start (`scrollIncrements`), and 360° ÷ each. */
-  readonly yawFaces: number;
-  readonly pitchFaces: number;
-  readonly yawStepDeg: number;
-  readonly pitchStepDeg: number;
-  /** ⭐ The fastest turn the snaps can follow (° of the piece's rotation per second), computed once at the start (`maxSnapTurnDegPerS`). */
-  readonly maxTurnDegPerS: number;
-  /** ⭐ The snap ease (ms) that limit was computed from — recomputed only when the slider differs. */
-  readonly maxForEaseMs: number;
-  /** ⭐ The piece's turn rate now (°/s, smoothed), and when it was measured. */
-  readonly turnDegPerS: number;
-  readonly lastT: number | null;
-  /** ⭐ The turn still waiting under the cap (°), and whether the cap held the turn back this frame (`capTurn`). */
-  readonly pendingDeg: number;
-  readonly capped: boolean;
-}
-
-export interface FaceTrack {
-  readonly outside: boolean;
-  readonly faces: readonly PieceFace[] | null;
-  readonly world: readonly { readonly normal: Vec3; readonly centre: Vec3 }[];
-  readonly cycles: FaceCycles;
-  readonly targets: CycleTargets;
-  readonly step: number;
-  readonly degPerFace: number;
-  readonly dxPerFaceMm: number;
-  readonly accMm: number;
-  readonly yaw: number;
-  readonly pink: Vec3 | null;
-  readonly free: FreeTurn | null;
-}
 import { type FrameMeter } from "../core/frame_meter";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -446,27 +401,12 @@ export interface SceneState {
   greenBox: Mesh | null;
   /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
   pinkRing: LinesMesh | null;
-  /** ⭐ Prototype: the guide sphere on the yellow target (`guideSphereFrame`) — for prototyping only. */
-  guideSphere: Mesh | null;
-  /** ⭐ Prototype: the green piece's white contour (its edges, offset like the part outlines) and the offset it was built at. */
-  greenOutline: { readonly lines: LinesMesh; readonly topo: MeshTopology; builtM: number | null } | null;
-  /** ⭐ Prototype: the pointer that pressed the green piece, while it is down — the "outside" behaviours run then (`greenHeldForOrbit`). */
-  greenOrbitPointer: number | null;
-  /** ⭐ Prototype: the green piece's distance to the pink ring (the yellow target) AT THAT PRESS, metres — kept for later use. */
-  greenPressRadialM: number | null;
-  /** ⭐ Prototype: the pieces the orbit carries — today the green piece alone; another joins by being pushed here. */
-  orbitedPieces: Mesh[];
-  /**
-   * ⭐ Prototype: each orbited piece's face tracking (`faceTracking`) — whether it was outside the guide sphere last frame, and
-   * while it is outside, its faces (own frame) and where they are now (world).
-   */
-  faceTracks: Map<Mesh, FaceTrack>;
-  /** ⭐ Prototype: each orbited piece's anti-alignment turn in flight (an eased slerp), if any. */
-  /** ⭐ Prototype: each orbited piece's continuous turn (`FacesRotateByIncrement` off), kept for the session — it pauses inside the sphere. */
-  freeTurns: Map<Mesh, FreeTurn>;
-  pieceTurns: Map<Mesh, { readonly from: Quat; readonly to: Quat; readonly t0: number; /** its ease (ms); absent: an alignment's */ readonly ms?: number }>;
-  /** ⭐ Prototype: the WORLD normal of the face holding the pink ring — set at boot and by a press that moves the target. */
-  pinkFaceNormal: Vec3 | null;
+  /** ⭐ Prototype: the pieces the orbit can carry — [0] the green frustum, [1] the turquoise hexagonal prism — each with its logical
+   * face count (read at creation) and volume (the inertia's); the one in use is `greenBox` (`spawnOrbitPiece`). */
+  orbitPieces: { readonly mesh: Mesh; readonly faces: number; readonly volumeM3: number }[];
+  /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
+  orbitPieceKind: number;
+  orbitPieceFaces: number;
   /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */
   greenBoxDistM: number | null;
   /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */
