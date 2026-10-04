@@ -392,9 +392,10 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
     // the box itself has no parent; only its white contour (2026-10-02) and its selected face's fill (2026-10-04) ride it
     expect(w).not.toMatch(/box\.parent\s*=/);
-    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(2);
+    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(3);
     expect(w).toMatch(/lines\.parent = box;/);
     expect(w).toMatch(/fill\.parent = box;/);
+    expect(w).toMatch(/xray\.parent = fill;/); // the selected face's x-ray twin rides its fill
   });
 
   it("⭐⭐ prototype: a press on the green box is EMPTY SPACE — the box stops the ray, and its hit is a miss (the owner: *\"the raycast hits the piece behind\"*)", () => {

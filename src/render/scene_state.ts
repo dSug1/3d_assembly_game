@@ -458,6 +458,8 @@ export interface SceneState {
   greenSelectedFace: number | null;
   /** ⭐ Prototype, approach step 1: the selected face's white fill (parented to the green piece), or none. */
   greenSelectMesh: Mesh | null;
+  /** ⭐ Prototype: the selected face's x-ray twin (a child of the fill, rendering group 1). */
+  greenSelectXray: Mesh | null;
   /** ⭐ Prototype, approach step 1: the coarse push `w`, mm — deadbanded dy since the last press outside a seated piece, toward `T` positive. */
   greenPushMm: number;
   /** ⭐ Prototype, approach step 1: the sign that makes dy "toward the target", the ring half's (`towardSignAt`), re-read every drag step. */

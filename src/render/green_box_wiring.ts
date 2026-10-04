@@ -633,6 +633,24 @@ function selectGreenFaceIndex(st: SceneState, face: number): void {
   fill.parent = box;
   fill.isPickable = false;
   fill.metadata = { orbitCandidate: false };
+  // ⭐ the owner, 2026-10-04: *"display the white highlight in transparency as well so that it is not occluded completely: it shall be
+  // less opaque when it is occluded"* — the FollowerFace's x-ray pattern: a TWIN in rendering group 1 (the depth buffer is cleared before
+  // it), so nothing hides it, at `greenSelectXrayAlpha`. Where the face is in view the two add; where it is hidden only the twin shows.
+  // A child of the fill: it takes the fill's lift, and goes with it when the fill is disposed.
+  const xray = new Mesh("green-selected-face-xray", st.scene);
+  data.applyToMesh(xray, false);
+  const xmat = new StandardMaterial("green-selected-face-xray-mat", st.scene);
+  xmat.emissiveColor = new Color3(1, 1, 1);
+  xmat.disableLighting = true;
+  xmat.backFaceCulling = false;
+  xmat.alpha = st.cfg.greenSelectXrayAlpha;
+  xray.material = xmat;
+  xray.renderingGroupId = 1;
+  xray.parent = fill;
+  xray.isPickable = false;
+  xray.metadata = { orbitCandidate: false };
+  xray.isVisible = st.cfg.greenSelectXrayAlpha > 0;
+  st.greenSelectXray = xray;
   st.greenSelectMesh = fill;
   st.lastVerdict = `green piece: face f${face} selected`;
   st.hudDirty = true;
@@ -643,8 +661,9 @@ const GREEN_SELECT_ALPHA = 0.6;
 
 /** ⭐ prototype (green box), approach step 1: unselect (§3.1: *"Double tap on green piece unselects any face if not null"*). */
 export function unselectGreenFace(st: SceneState): void {
-  st.greenSelectMesh?.dispose();
+  st.greenSelectMesh?.dispose(); // its x-ray twin with it (a child)
   st.greenSelectMesh = null;
+  st.greenSelectXray = null;
   st.greenSelectedFace = null;
   st.lastVerdict = "green piece: face unselected (double tap)";
   st.hudDirty = true;
@@ -661,6 +680,12 @@ function greenSelectionFrame(st: SceneState): void {
   if (fill === null || box === null || f === undefined) return;
   const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
   fill.position.set(f.normal[0] * h, f.normal[1] * h, f.normal[2] * h);
+  // ⭐ the x-ray twin's opacity is a slider: written every frame so it acts under the finger
+  const x = st.greenSelectXray;
+  if (x !== null && x.material !== null) {
+    x.material.alpha = st.cfg.greenSelectXrayAlpha;
+    x.isVisible = st.cfg.greenSelectXrayAlpha > 0;
+  }
 }
 
 /**

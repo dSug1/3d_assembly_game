@@ -66,6 +66,17 @@ describe("⭐⭐ prototype — approach step 1: selection, the double tap, the c
     expect(DEFAULT_CONFIG.greenCommitBackMm).toBe(6);
   });
 
+  it("⭐ the selected face's white is seen THROUGH what hides it, fainter (the owner: *\"less opaque when it is occluded\"*)", () => {
+    expect(DEFAULT_CONFIG.greenSelectXrayAlpha).toBe(0.2);
+    expect(DEFAULT_CONFIG.greenSelectXrayAlpha).toBeLessThan(0.6); // the visible white's
+    const w = code("render/green_box_wiring.ts");
+    // a twin of the same vertex data, over everything (group 1), a child of the fill (its lift, its disposal)
+    expect(w).toMatch(/const xray = new Mesh\("green-selected-face-xray", st\.scene\);\s*data\.applyToMesh\(xray, false\);/);
+    expect(w).toMatch(/xray\.renderingGroupId = 1;\s*xray\.parent = fill;/);
+    expect(w).toMatch(/x\.material\.alpha = st\.cfg\.greenSelectXrayAlpha;/);
+    expect(code("render/tuning_menu.ts")).toMatch(/"greenSelectXrayAlpha", 0, 1, 0\.05\)/);
+  });
+
   it("⭐⭐ wired: the press on the piece selects (white, parented, lifted); every press outside a seated piece resets `w`; `w` is the DEADBANDED dy, signed; the double tap unselects and COUNTS", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/st\.greenPressedPointers\.add\(e\.pointerId\);\s*const nrm = pick\.getNormal\(true\);\s*if \(nrm\) selectGreenFace\(st, \[nrm\.x, nrm\.y, nrm\.z\]\);/);

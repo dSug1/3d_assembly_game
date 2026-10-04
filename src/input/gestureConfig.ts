@@ -541,6 +541,8 @@ export interface GestureConfig {
   greenSnapOffMm: number;
   /** ⭐ Prototype, the approach (§3c): `−w` of the backward commit, mm — and the bottom of `w`'s range. */
   greenCommitBackMm: number;
+  /** ⭐ Prototype: the selected face's white where it is OCCLUDED (its x-ray twin, over everything), opacity 0–1; 0 = not drawn. */
+  greenSelectXrayAlpha: number;
   /** ⭐ Prototype: the blend window between its yaw and pitch, degrees of that turn (`staircaseAngles`). */
   greenRotateBlendDeg: number;
   /** ⭐ Prototype: 1 = the green piece's turn starts LEVEL (`levelHeading`, its tilt dropped at the first hold); 0 = from its pose as it is. */
@@ -1022,6 +1024,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   greenCommitFwdMm: 10,
   greenSnapOffMm: 6,
   greenCommitBackMm: 6,
+  greenSelectXrayAlpha: 0.2, // ⭐ the owner, 2026-10-04: *"less opaque when it is occluded"* (the visible white is 0.6)
   greenRotateSnap: 1, // ⭐ prototype (green box), the owner 2026-10-03: *"not continuous but incremented"*
   greenRotateBlendDeg: 0,
   // ⭐ prototype (green box), the owner 2026-10-04: OFF — *"The alignment on gravity shall be the user's own action, not a game compute"*
@@ -1194,6 +1197,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.greenCommitFwdMm > 0 && cfg.greenCommitFwdMm <= 60) || !(cfg.greenCommitBackMm > 0 && cfg.greenCommitBackMm <= 60)) {
     throw new Error(`greenCommitFwdMm (${cfg.greenCommitFwdMm}) and greenCommitBackMm (${cfg.greenCommitBackMm}) must be in (0, 60].`);
+  }
+  if (!(cfg.greenSelectXrayAlpha >= 0 && cfg.greenSelectXrayAlpha <= 1)) {
+    throw new Error(`greenSelectXrayAlpha (${cfg.greenSelectXrayAlpha}) must be in [0, 1]: it is an opacity.`);
   }
   if (!(cfg.greenSnapEaseMs >= 10 && cfg.greenSnapEaseMs <= 500)) {
     throw new Error(`greenSnapEaseMs (${cfg.greenSnapEaseMs}) must be in [10, 500].`);

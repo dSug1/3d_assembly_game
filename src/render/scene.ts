@@ -573,6 +573,7 @@ export function createScene(
   st.greenPressRadialM = null;
   st.greenSelectedFace = null;
   st.greenSelectMesh = null;
+  st.greenSelectXray = null;
   st.greenPushMm = 0;
   st.greenTowardSign = 1;
   st.greenPressedPointers = new Set<number>();

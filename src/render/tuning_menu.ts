@@ -398,6 +398,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "backward commit (mm of push away)", "greenCommitBackMm", 2, 40, 1),
             // ⭐ the owner, 2026-10-03: how fast a snap lands — and so how fast the piece may turn before it freezes.
             tunable(st, "snap duration (ms)", "greenSnapEaseMs", 10, 300, 5),
+            // ⭐ the owner, 2026-10-04: the selected face's white, seen THROUGH what hides it, fainter
+            tunable(st, "selected face seen through (opacity)", "greenSelectXrayAlpha", 0, 1, 0.05),
           ],
         },
       ],
