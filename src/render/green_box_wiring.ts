@@ -625,7 +625,7 @@ function selectGreenFaceIndex(st: SceneState, face: number): void {
   data.indices = [...indices, ...indices.slice().reverse()];
   data.applyToMesh(fill, false);
   const mat = new StandardMaterial("green-selected-face-mat", st.scene);
-  mat.emissiveColor = new Color3(1, 1, 1);
+  mat.emissiveColor = PINK.clone(); // ⭐ the owner, 2026-10-04: *"highlight the selected face in pink (same color as gizmo) instead of white"*
   mat.disableLighting = true;
   mat.backFaceCulling = false;
   mat.alpha = GREEN_SELECT_ALPHA;
@@ -640,7 +640,7 @@ function selectGreenFaceIndex(st: SceneState, face: number): void {
   const xray = new Mesh("green-selected-face-xray", st.scene);
   data.applyToMesh(xray, false);
   const xmat = new StandardMaterial("green-selected-face-xray-mat", st.scene);
-  xmat.emissiveColor = new Color3(1, 1, 1);
+  xmat.emissiveColor = PINK.clone();
   xmat.disableLighting = true;
   xmat.backFaceCulling = false;
   xmat.alpha = st.cfg.greenSelectXrayAlpha;

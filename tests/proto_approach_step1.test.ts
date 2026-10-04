@@ -89,7 +89,11 @@ describe("⭐⭐ prototype — approach step 1: selection, the double tap, the c
     expect(p).toMatch(/\(greenUnselected \|\| episodeCounts\(\{/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const face = pickedFace\(topo\.faces, \[r\.w, r\.x, r\.y, r\.z\], worldNormal\);/);
-    expect(w).toMatch(/mat\.emissiveColor = new Color3\(1, 1, 1\);/);
+    // ⭐ the owner, 2026-10-04: *"in pink (same color as gizmo) instead of white"* — the fill and its x-ray twin, the gizmo ring's PINK
+    expect(w).toMatch(/ mat\.emissiveColor = PINK\.clone\(\);/);
+    expect(w).toMatch(/xmat\.emissiveColor = PINK\.clone\(\);/);
+    expect(w).toMatch(/ring\.color = PINK\.clone\(\);/);
+    expect(w).not.toMatch(/mat\.emissiveColor = new Color3\(1, 1, 1\);/);
     expect(w).toMatch(/fill\.parent = box;/);
     // the whole-piece contour is OFF (§1: replaced by the selected face's white)
     expect(w).toMatch(/const GREEN_CONTOUR_ON = false;/);
