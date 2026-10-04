@@ -535,6 +535,12 @@ export interface GestureConfig {
   greenRotateSnap: number;
   /** ⭐ Prototype: how long one snap of the green piece's turn takes to land, ms — and so the fastest turn it can follow (`maxSnapTurnDegPerS`). */
   greenSnapEaseMs: number;
+  /** ⭐ Prototype, the approach (§3c): the coarse push `w` of the forward commit, mm — and the top of `w`'s range (`accumulatePush`). */
+  greenCommitFwdMm: number;
+  /** ⭐ Prototype, the approach (§3.2): the coarse push `w` at which the snapped rotation turns OFF (`greenSnapsOn`); below it, back on. */
+  greenSnapOffMm: number;
+  /** ⭐ Prototype, the approach (§3c): `−w` of the backward commit, mm — and the bottom of `w`'s range. */
+  greenCommitBackMm: number;
   /** ⭐ Prototype: the blend window between its yaw and pitch, degrees of that turn (`staircaseAngles`). */
   greenRotateBlendDeg: number;
   /** ⭐ Prototype: 1 = the green piece's turn starts LEVEL (`levelHeading`, its tilt dropped at the first hold); 0 = from its pose as it is. */
@@ -1012,6 +1018,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // turn 720°/s before it freezes. At a 0.2 share and a 75° span it turns ~9.8° per mm of dx: ~73 mm/s of finger; at the 0.4 share,
   // ~37 mm/s. (90 ms before: 1000°/s; 60 ms: 1500°/s; an alignment's 129 ms first: 700°/s.)
   greenSnapEaseMs: 125,
+  // ⭐ prototype (green box), the approach spec §3c (the owner, 2026-10-04): the commits, first proposal — and `w`'s range
+  greenCommitFwdMm: 10,
+  greenSnapOffMm: 6,
+  greenCommitBackMm: 6,
   greenRotateSnap: 1, // ⭐ prototype (green box), the owner 2026-10-03: *"not continuous but incremented"*
   greenRotateBlendDeg: 0,
   // ⭐ prototype (green box), the owner 2026-10-04: OFF — *"The alignment on gravity shall be the user's own action, not a game compute"*
@@ -1178,6 +1188,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.guideSphereAlpha >= 0 && cfg.guideSphereAlpha <= 1)) {
     throw new Error(`guideSphereAlpha (${cfg.guideSphereAlpha}) must be in [0, 1].`);
+  }
+  if (!(cfg.greenSnapOffMm > 0 && cfg.greenSnapOffMm <= cfg.greenCommitFwdMm)) {
+    throw new Error(`greenSnapOffMm (${cfg.greenSnapOffMm}) must be in (0, greenCommitFwdMm = ${cfg.greenCommitFwdMm}]: the snaps go off before the forward commit.`);
+  }
+  if (!(cfg.greenCommitFwdMm > 0 && cfg.greenCommitFwdMm <= 60) || !(cfg.greenCommitBackMm > 0 && cfg.greenCommitBackMm <= 60)) {
+    throw new Error(`greenCommitFwdMm (${cfg.greenCommitFwdMm}) and greenCommitBackMm (${cfg.greenCommitBackMm}) must be in (0, 60].`);
   }
   if (!(cfg.greenSnapEaseMs >= 10 && cfg.greenSnapEaseMs <= 500)) {
     throw new Error(`greenSnapEaseMs (${cfg.greenSnapEaseMs}) must be in [10, 500].`);

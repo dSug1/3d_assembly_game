@@ -527,3 +527,24 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   (`GREEN_CONTOUR_ON`, the code kept). The coarse push `w` (`greenPushMm`): reset at every press outside a seated piece, it accumulates the
   orbit finger's DEADBANDED dy, signed toward the target by `towardSign` (the slope of the green piece's distance along the rings, read at
   that press and kept). HUD `· w=+4.1 mm F=f3`. `tests/proto_approach_step1.test.ts`.
+* ⛔ **`w` saturates at the commits** (the owner, 2026-10-04, on the glass: *"I can bring w to a very negative value by pushing backwards and
+  then push the piece towards the pink gizmo: all the w values stay negative"* → *"Ok for saturation"*): `accumulatePush` keeps `w` in
+  [−`greenCommitBackMm` 6, +`greenCommitFwdMm` 10] — it was unbounded (counting on with the orbit stopped at the rings' end), so a push
+  toward first had to pay back every millimetre pulled. The two commits are sliders now (OBJECT ROTATION › GREEN PIECE ROTATION).
+* ⭐⭐ **The snapped rotation follows the coarse push, not the hold** (the owner, 2026-10-04: *"When a green piece comes back and un-commit,
+  the snapped rotation shall resume. This will enable snapped rotation for a green piece which has never been pressed upon"*):
+  `greenSnapsOn(w, greenSnapOffMm)` — ON while `w` < **6 mm** (slider *snaps off at*, validated ≤ the forward commit), OFF from 6 on, back ON
+  below. ⛔ It replaces `greenHeldForOrbit` everywhere it switched something: the face tracking and the snapped turn, the outside yaw share,
+  the cross deadband. `w` is 0 at boot and after every press outside a seated piece, so a never-pressed piece snaps as it orbits. The press
+  on the piece still latches its finger (for the radial distance at the press). The commits themselves are still to build (step 2).
+* ⭐⭐⭐ **Approach step 2 — the commits** (`GREEN_PIECE_PHASES.md` §3.2, §3.4; ⛔ unjudged by a hand). `nextCommit` on the coarse push `w`,
+  once a frame (`greenCommitFrame`): **forward** at `w` ≥ 10 mm — the selected face, or with none the face most AGAINST the pink normal,
+  eases onto exact anti-parallel (the settle, the smallest turn, `greenSnapEaseMs`) and is latched as the mating face; **backward** at
+  `w` ≤ −6 — the face opposite the selected one (`oppositeFace`), or with none the face most ALONG the pink normal, turns to face it,
+  becomes the selected face (white) and is latched, the snaps off until `w` reaches the forward commit; **un-commit** when `w` falls back
+  below the snap-off (6): the quaternion KEPT, the snapped turn restarting from the pose as it is. `snapsActive` (COARSE, above the minimum
+  distance, `w` < 6) is the one answer every "snaps on" reader uses. **`d_coarseMin`** (`coarseMinDistance`: the distance 10 mm of dy before
+  the waist, the larger side) is **0.32 m** on `Scene_1`'s rings (the waist 0.09 m, the outer rings 3 m), computed at boot and again only
+  when the rings, the elevation gains or the forward commit change; closer, `COARSE` takes no commit and does not snap. At a ring's END a
+  pull away moves the piece outward by up to 3 % (`GREEN_BACK_EXTENSION`, visual). HUD `· w=… F=… FORWARD M=f2 snaps off (coarse ≥ 0.32 m)`.
+  `tests/proto_approach_step2.test.ts`.

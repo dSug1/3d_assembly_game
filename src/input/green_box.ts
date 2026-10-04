@@ -635,14 +635,15 @@ export function capTurn(
 }
 
 /**
- * ⭐⭐ prototype (green box) — **THE "OUTSIDE" BEHAVIOURS RUN WHILE THE GREEN PIECE IS HELD, NOT WHERE IT IS** (the owner, 2026-10-03:
- * *"where ever the green piece is, the orbit remains with the same parameters values as if the green piece was inside the white sphere …
- * unless: if the green piece is pressed and hold for orbit (wherever the green piece is): in this case, the orbit is as if the green
- * piece was outside the white sphere (yaw gain share, rotation snaps, highlight of contours, etc.)"*). The pointer that pressed the green
- * piece, while it is down (`null` otherwise): that is the whole test — the sphere's radius no longer decides anything.
+ * ⭐⭐ prototype (green box) — **THE SNAPPED ROTATION IS ON WHILE THE COARSE PUSH `w` IS BELOW THE SNAP-OFF** (the approach spec §3.2; the
+ * owner, 2026-10-04: *"When a green piece comes back and un-commit, the snapped rotation shall resume. This will enable snapped rotation
+ * for a green piece which has never been pressed upon"*). ⛔ It REPLACES `greenHeldForOrbit` (2026-10-03: the "outside" behaviours while
+ * the green piece was held): no press on the piece is needed any more. `w` is 0 at boot and after every press outside a seated piece, so
+ * the snaps are ON then; pushing toward the target past `snapOffMm` turns them off; coming back below turns them on again. Everything the
+ * hold used to switch reads this: the face tracking and the snapped turn, the outside yaw share, the cross deadband.
  */
-export function greenHeldForOrbit(greenOrbitPointer: number | null): boolean {
-  return greenOrbitPointer !== null;
+export function greenSnapsOn(wMm: number, snapOffMm: number): boolean {
+  return wMm < snapOffMm;
 }
 
 /**
@@ -679,17 +680,6 @@ export function pickedFace(faces: readonly { readonly normal: Vec3 }[], q: Quat,
 }
 
 /**
- * ⭐ prototype (green box) — **WHICH WAY OF dy IS "TOWARD THE TARGET"** (§2's `w`, the owner, 2026-10-04: *"signed so that toward the
- * target is positive"*). A positive (downward, since the dy inversion) finger dy raises the orbit's ring parameter `v`; if the green
- * piece's distance to the target FALLS as `v` rises (`dDistdV < 0`), positive dy is toward (+1), else away (−1). Read at the reference
- * moment and KEPT until the next one — so the push stays monotone even where the rings turn back past the waist. A flat slope (the
- * waist itself): +1.
- */
-export function towardSign(dDistdV: number): 1 | -1 {
-  return dDistdV > 0 ? -1 : 1;
-}
-
-/**
  * ⭐ prototype (green box) — **A DOUBLE TAP ON THE GREEN PIECE UNSELECTS, IT DOES NOT RESET THE CAMERA** (§3.1, the owner, 2026-10-04:
  * *"Double tap on green piece unselects any face if not null"* — *"no camera reset. Count as an episode"*). What a double tap does:
  * on the green piece, `UNSELECT` (or `NOTHING` with no face selected); anywhere else empty, `RESET_CAMERA` as ever.
@@ -697,4 +687,112 @@ export function towardSign(dDistdV: number): 1 | -1 {
 export function greenDoubleTap(onGreenPiece: boolean, faceSelected: boolean): "UNSELECT" | "NOTHING" | "RESET_CAMERA" {
   if (!onGreenPiece) return "RESET_CAMERA";
   return faceSelected ? "UNSELECT" : "NOTHING";
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE COARSE PUSH `w` SATURATES AT THE COMMITS** (the owner, 2026-10-04, on the glass: *"I can bring w to a
+ * very negative value by pushing backwards and then push the piece towards the pink gizmo: all the w values stay negative"*). ⛔ It was
+ * unbounded: travel kept accumulating even with the orbit stopped at the rings' end, and a push toward had to pay it all back first.
+ * Now it stays within [−`backMm`, +`fwdMm`] — beyond either commit there is nothing left to decide — so a reversal answers at once.
+ */
+export function accumulatePush(wMm: number, dMm: number, backMm: number, fwdMm: number): number {
+  return Math.max(-Math.max(0, backMm), Math.min(Math.max(0, fwdMm), wMm + dMm));
+}
+
+/** ⭐ prototype (green box), the approach spec §3.2: where the commits stand — none, latched by a forward commit, or by a backward one. */
+export type CommitMode = "COARSE" | "FORWARD" | "BACKWARD";
+
+/** ⭐ What a frame's commit step decided: the new mode, and the event to apply this frame (if any). */
+export interface CommitStep {
+  readonly mode: CommitMode;
+  readonly event: "NONE" | "FORWARD" | "BACKWARD" | "UNCOMMIT";
+}
+
+/**
+ * ⭐⭐⭐ prototype (green box) — **APPROACH STEP 2: THE COMMITS, ON THE COARSE PUSH `w`** (`GREEN_PIECE_PHASES.md` §3.2, the owner,
+ * 2026-10-04). From `COARSE`: `w ≥ fwdMm` → a FORWARD commit; `w ≤ −backMm` → a BACKWARD commit. A forward commit is undone when `w`
+ * comes back below `snapOffMm` (the un-commit — the quaternion is KEPT). A backward commit stays latched, snaps off, until `w` reaches
+ * the forward commit (*"until the green piece returns to … and then back to …"*): that is a forward commit of the face it flipped to,
+ * undone in its turn below `snapOffMm`. ⭐ Below the minimum distance (`coarseEnabled` false) `COARSE` takes no commit at all.
+ * ⭐ `w` saturates at `[−backMm, fwdMm]` (`accumulatePush`), so each threshold is reached exactly and a reversal answers at once.
+ */
+export function nextCommit(
+  mode: CommitMode,
+  wMm: number,
+  t: { readonly snapOffMm: number; readonly fwdMm: number; readonly backMm: number },
+  coarseEnabled: boolean,
+): CommitStep {
+  switch (mode) {
+    case "COARSE":
+      if (!coarseEnabled) return { mode, event: "NONE" };
+      if (wMm >= t.fwdMm) return { mode: "FORWARD", event: "FORWARD" };
+      if (wMm <= -t.backMm) return { mode: "BACKWARD", event: "BACKWARD" };
+      return { mode, event: "NONE" };
+    case "FORWARD":
+      return wMm < t.snapOffMm ? { mode: "COARSE", event: "UNCOMMIT" } : { mode, event: "NONE" };
+    case "BACKWARD":
+      return wMm >= t.fwdMm ? { mode: "FORWARD", event: "FORWARD" } : { mode, event: "NONE" };
+  }
+}
+
+/** ⭐ The snapped rotation is on only in `COARSE`, above the minimum distance, with `w` below the snap-off (`greenSnapsOn`). */
+export function snapsActive(mode: CommitMode, wMm: number, snapOffMm: number, coarseEnabled: boolean): boolean {
+  return mode === "COARSE" && coarseEnabled && greenSnapsOn(wMm, snapOffMm);
+}
+
+/** ⭐ The face opposite face `i`: the one whose normal is most ANTI-parallel to its own (the piece's frame). -1 with none. */
+export function oppositeFace(faces: readonly { readonly normal: Vec3 }[], i: number): number {
+  const f = faces[i];
+  if (f === undefined) return -1;
+  let best = -1;
+  let bestDot = Infinity;
+  for (let k = 0; k < faces.length; k++) {
+    if (k === i) continue;
+    const d = dot(faces[k]!.normal, f.normal);
+    if (d < bestDot) {
+      bestDot = d;
+      best = k;
+    }
+  }
+  return best;
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE MINIMUM DISTANCE FOR `COARSE` AND THE COMMITS** (§3.2, the owner, 2026-10-04: *"there is a min
+ * distance d under which this is not possible any longer based on orbit radius/height configuration and this should toggle off the coarse
+ * and commit … This min distance to be computed once at boot and updated only if tuning change the orbit parameters"*). Along the rings
+ * the green piece comes closest to the target at the waist (`v*`, the minimum of `distAt`), and past it "toward" turns back; so a forward
+ * commit needs `fwdMm` of dy before the waist. The distance at `fwdMm × vPerMm` of ring parameter before the waist, the LARGER of its two
+ * sides, is the limit: closer than that, there is no room left for the commit.
+ */
+export function coarseMinDistance(distAt: (v: number) => number, vPerMm: number, fwdMm: number, samples = 400): number {
+  const vStar = waistParam(distAt, samples);
+  const dv = Math.max(0, fwdMm * vPerMm);
+  return Math.max(distAt(Math.max(0, vStar - dv)), distAt(Math.min(1, vStar + dv)));
+}
+
+/** ⭐ prototype (green box): the WAIST — the ring parameter `v` (0 bottom … 1 top) where the green piece comes closest to the target. */
+export function waistParam(distAt: (v: number) => number, samples = 400): number {
+  let vStar = 0;
+  let dStar = Infinity;
+  for (let i = 0; i <= samples; i++) {
+    const v = i / samples;
+    const d = distAt(v);
+    if (d < dStar) {
+      dStar = d;
+      vStar = v;
+    }
+  }
+  return vStar;
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **WHICH WAY OF dy IS "TOWARD", BY RING HALF** (the owner, 2026-10-04: *"dy towards top pushes the green
+ * part towards the pink gizmo if camera is on 1st and 2nd rings and away if on 3rd and 4th rings. Take that into consideration for the
+ * commits/uncommits"*). Above the waist (the 1st and 2nd rings) the distance RISES with `v`, and a positive dy raises `v`: away (−1),
+ * so finger UP is toward. Below it (the 3rd and 4th) the reverse (+1). At the waist itself: +1. It replaces the slope read at the press
+ * (the slope it replaced), which was flat and noisy at the waist and never re-read when the orbit carried the piece across it.
+ */
+export function towardSignAt(v: number, vWaist: number): 1 | -1 {
+  return v > vWaist ? -1 : 1;
 }

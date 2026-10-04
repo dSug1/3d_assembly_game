@@ -18,7 +18,7 @@ approach along the insertion axis while rolling the long axis into line → hove
 - **The green piece's pose:** TUMBLED, as booted (`Scene_1` (1,2,3,4)); no level-out (`greenLevelOutOn` 0) — *"the alignment on gravity
   shall be the user's own action, not a game compute"*. The old step 0 (rounding the heading to the pink face) is REMOVED: there is no
   level-out, and the snapped rotation turns the tumbled piece.
-- **The "held" behaviours** (the 0.4 yaw gain share, the cross deadband, the snap cap) apply WHENEVER the snapped rotation is active;
+- **The "held" behaviours** (the 0.4 yaw gain share, the snap cap) apply WHENEVER the snapped rotation is active (the cross deadband: coarse AND commit, §3.2);
   the whole-piece white contour is replaced by the white highlight of the SELECTED face.
 - The green piece stays a display proxy, with no collision and no goal. "Contact" and "seat" come from its own hull against the pink
   face's plane and extent.
@@ -60,6 +60,15 @@ approach along the insertion axis while rolling the long axis into line → hove
   waist profile its ±3–5 % bands were 0.4–2 mm of finger (under one deadband), and past the waist pushing "toward" made it grow again.
   `w` counts only deadbanded travel, so each threshold sits at least one deadband (3.5 mm) beyond the press, and the bands between them
   (snap-off 6 ↔ forward 10: 4 mm; 6 ↔ −6: 12 mm) are wider than the measured noise (0.761 mm) many times over.
+- **"Toward" is the RING HALF's, re-read at every drag step** (the owner, 2026-10-04: *"dy towards top pushes the green part towards the
+  pink gizmo if camera is on 1st and 2nd rings and away if on 3rd and 4th rings. Take that into consideration for the commits/uncommits"*).
+  Above the waist (1st, 2nd rings) finger UP adds to `w`; below it (3rd, 4th) finger DOWN does (`towardSignAt`; the waist `v*` is computed
+  with `d_coarseMin`, on the same key). ⭐ **Carried across the waist, `w` STAYS and the sense is mirrored** (*"It shall stay but sense is
+  mirrored"*): a finger going on the same way past the waist now pulls `w` back down. It replaces the slope read once at the press, which
+  was flat at the waist and never re-read when the orbit carried the piece across it.
+- **The cross deadband applies to coarse AND commit** (the owner, 2026-10-04: *"This shall apply for coarse and commit"*): whenever
+  `d ≥ d_coarseMin`, or a commit is latched — no longer only while the snaps are on, so a sideways swipe cannot leak dy into `w` and
+  un-commit. Below `d_coarseMin` with nothing latched: the raw travel, as before.
 - **The quaternion at a crossing back below 6 mm is conserved**: the snaps resume from the pose as it is (the settle and any roll included).
 - **The outer ring:** `w` keeps counting even where the orbit is at the rings' end, so the backward commit is always reachable. The owner's
   *"increase momentarily the radius of the ring"* is KEPT as VISUAL feedback: at the rings' maximum radius, a pull away moves the green
@@ -164,7 +173,7 @@ On the `green` line: `phase COARSE w=+4.1 mm (off 6 · fwd 10 · back −6) d=1.
 ✅ **BUILT 2026-10-04 (⛔ unjudged by a hand)** — **Step 1. Selection** (§3.1): the press on a face selects it (white), the double tap unselects (no camera reset; an episode); `w` tracked
 from the reference; the HUD. — no open question.
 
-**Step 2. `COARSE` and the commits** (§3.2, §3.4): `w` and its sign, the snaps off at 6 mm, the forward commit at 10 (the settle, the
+✅ **BUILT 2026-10-04 (⛔ unjudged by a hand)** — **Step 2. `COARSE` and the commits** (§3.2, §3.4): `w` and its sign, the snaps off at 6 mm, the forward commit at 10 (the settle, the
 latch), the backward commit at −6 (the opposite face), the un-commit keeping the quaternion, the outer-ring visual extension,
 `d_coarseMin` (at boot, and on an orbit tuning change), the three sliders.
 - ~~Q2.1~~ ANSWERED: "closest" = the face whose normal points most against the pink face's normal.

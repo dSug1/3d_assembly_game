@@ -7,7 +7,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { greenDoubleTap, pickedFace, pieceFaces, towardSign } from "../src/input/green_box";
+import { accumulatePush, greenDoubleTap, pickedFace, pieceFaces, towardSignAt } from "../src/input/green_box";
+import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { meshTopology } from "../src/core/mesh_topology";
 import { qFromAxisAngle, qRotate, type Vec3 } from "../src/core/vec";
 
@@ -46,17 +47,30 @@ describe("⭐⭐ prototype — approach step 1: selection, the double tap, the c
     expect(greenDoubleTap(false, false)).toBe("RESET_CAMERA");
   });
 
-  it("⭐ 'toward the target' is the dy that brings the piece nearer: + where the distance falls as the ring parameter rises, − where it grows", () => {
-    expect(towardSign(-0.8)).toBe(1);
-    expect(towardSign(0.8)).toBe(-1);
-    expect(towardSign(0)).toBe(1); // the waist itself
+  it("⭐ 'toward the target' is the ring half's: above the waist (1st, 2nd rings) a positive dy is away (−1), below (3rd, 4th) toward (+1)", () => {
+    expect(towardSignAt(0.8, 0.5)).toBe(-1);
+    expect(towardSignAt(0.2, 0.5)).toBe(1);
+    expect(towardSignAt(0.5, 0.5)).toBe(1); // the waist itself
+  });
+
+  it("⭐⭐ `w` SATURATES at the commits (the owner, on the glass: *\"I can bring w to a very negative value by pushing backwards … all the w values stay negative\"*)", () => {
+    // pulled back 40 mm (the orbit stopped at the rings' end), then pushed toward 12 mm
+    let w = 0;
+    for (let i = 0; i < 40; i++) w = accumulatePush(w, -1, 6, 10);
+    expect(w).toBe(-6); // ⛔ unbounded it was −40
+    for (let i = 0; i < 12; i++) w = accumulatePush(w, 1, 6, 10);
+    expect(w).toBe(6); // ⛔ unbounded it was still −28
+    for (let i = 0; i < 20; i++) w = accumulatePush(w, 1, 6, 10);
+    expect(w).toBe(10); // and no further than the forward commit
+    expect(DEFAULT_CONFIG.greenCommitFwdMm).toBe(10);
+    expect(DEFAULT_CONFIG.greenCommitBackMm).toBe(6);
   });
 
   it("⭐⭐ wired: the press on the piece selects (white, parented, lifted); every press outside a seated piece resets `w`; `w` is the DEADBANDED dy, signed; the double tap unselects and COUNTS", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/st\.greenPressedPointers\.add\(e\.pointerId\);\s*const nrm = pick\.getNormal\(true\);\s*if \(nrm\) selectGreenFace\(st, \[nrm\.x, nrm\.y, nrm\.z\]\);/);
     expect(p).toMatch(/if \(!goalLocked\(rawHitId, st\.goalCommit, st\.cfg\.lockPlacedPieces === 1\)\) resetGreenPush\(st\);/);
-    expect(p).toMatch(/st\.greenPushMm \+= st\.greenTowardSign \* pxToMm\(st\.orbitMotion\.tracker\.step\.dy\);/);
+    expect(p).toMatch(/st\.greenPushMm = accumulatePush\(st\.greenPushMm, st\.greenTowardSign \* pxToMm\(st\.orbitMotion\.tracker\.step\.dy\), st\.cfg\.greenCommitBackMm, st\.cfg\.greenCommitFwdMm\);/);
     expect(p).toMatch(/const dt = greenDoubleTap\(st\.greenPressedPointers\.has\(e\.pointerId\), st\.greenSelectedFace !== null\);/);
     expect(p).toMatch(/if \(dt === "RESET_CAMERA"\) \{\s*resetCamera\(st\);/);
     // the episode: the unselecting double tap counts, and lands (the model itself is unchanged)
@@ -68,7 +82,7 @@ describe("⭐⭐ prototype — approach step 1: selection, the double tap, the c
     expect(w).toMatch(/fill\.parent = box;/);
     // the whole-piece contour is OFF (§1: replaced by the selected face's white)
     expect(w).toMatch(/const GREEN_CONTOUR_ON = false;/);
-    expect(w).toMatch(/st\.greenTowardSign = towardSign\(\(dist\(v \+ h\) - dist\(v - h\)\) \/ \(2 \* h\)\);/);
+    expect(w).toMatch(/st\.greenPushMm = 0;\s*st\.greenTowardSign = towardSignAt\(st\.orbit\.elevation, st\.greenWaistV\);/);
     expect(code("render/hud_paint.ts")).toMatch(/w=\$\{st\.greenPushMm >= 0 \? "\+" : ""\}\$\{st\.greenPushMm\.toFixed\(1\)\} mm F=/);
   });
 });

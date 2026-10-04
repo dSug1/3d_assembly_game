@@ -8,26 +8,34 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { greenHeldForOrbit } from "../src/input/green_box";
+import { greenSnapsOn } from "../src/input/green_box";
+import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
 describe("⭐⭐ prototype — the green piece HELD for orbit is what turns the 'outside' behaviours on", () => {
-  it("⭐ the test is the press alone — no radius", () => {
-    expect(greenHeldForOrbit(3)).toBe(true);
-    expect(greenHeldForOrbit(null)).toBe(false);
+  it("⭐⭐ since 2026-10-04 the SNAPPED ROTATION decides, not the hold (the owner: *\"This will enable snapped rotation for a green piece which has never been pressed upon\"*): on while `w` is below the snap-off", () => {
+    expect(greenSnapsOn(0, 6)).toBe(true); // at boot / after any press: never pressed, it snaps
+    expect(greenSnapsOn(5.9, 6)).toBe(true);
+    expect(greenSnapsOn(6, 6)).toBe(false); // pushed toward the target: off
+    expect(greenSnapsOn(-6, 6)).toBe(true); // pulled away: on
+    expect(DEFAULT_CONFIG.greenSnapOffMm).toBe(6);
   });
 
-  it("⭐⭐ wired: the press ON the green piece latches the finger (a drift off it keeps it), the LIFT ends it; every 'outside' reads it", () => {
+  it("⭐⭐ wired: the press ON the green piece latches the finger (a drift off it keeps it), the LIFT ends it; every 'outside' reads the snaps' state", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/if \(!inBand && st\.greenBox !== null && pick\?\.hit === true && pick\.pickedMesh === st\.greenBox\) \{\s*st\.greenOrbitPointer = e\.pointerId;/);
     expect(p).toMatch(/if \(e\.pointerId === st\.greenOrbitPointer\) st\.greenOrbitPointer = null;/);
     // ⭐ only the press and the lift write it: a move never re-checks the hit (the drift is fine)
     expect(p.match(/st\.greenOrbitPointer = /g)).toHaveLength(2);
     const w = code("render/green_box_wiring.ts");
-    // the contour, the face tracking (and the snapped turn on it), the yaw share — and the cross deadband in the drag
-    expect(w.match(/greenHeldForOrbit\(st\.greenOrbitPointer\)/g)).toHaveLength(3);
-    expect(p).toMatch(/greenHeldForOrbit\(st\.greenOrbitPointer\)/);
+    // the contour (off), the face tracking (and the snapped turn on it), the yaw share — and the cross deadband in the drag: `greenSnapsOn`
+    // ⭐ step 2: one answer a frame, `st.greenSnapsActive` (`snapsActive`), read by the contour (off), the face tracking, the yaw share
+    // and — in the drag — the cross deadband
+    expect(w.match(/st\.greenSnapsActive/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    expect(w).toMatch(/st\.greenSnapsActive = snapsActive\(step\.mode, st\.greenPushMm, cfg\.greenSnapOffMm, coarseEnabled\);/);
+    expect(p).toMatch(/st\.greenCommitMode !== "COARSE"/); // the cross deadband reads the commits now, not the snaps
+    expect(w + p).not.toMatch(/greenHeldForOrbit\(/);
     expect(w).not.toMatch(/outsideSphere/);
   });
 

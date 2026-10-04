@@ -392,6 +392,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "level-out at the first hold (0 / 1)", "greenLevelOutOn", 0, 1, 1),
             // ⭐ the owner, 2026-10-03: the turn snapped to 360° ÷ the faces scrolling past in a yaw / a pitch (0 = continuous).
             tunable(st, "snap to face increments (0 / 1)", "greenRotateSnap", 0, 1, 1),
+            // ⭐ 2026-10-04, the approach (§3c): the commits — and the coarse push w's range.
+            tunable(st, "snaps off at (mm of push toward the target)", "greenSnapOffMm", 1, 40, 1),
+            tunable(st, "forward commit (mm of push toward the target)", "greenCommitFwdMm", 2, 40, 1),
+            tunable(st, "backward commit (mm of push away)", "greenCommitBackMm", 2, 40, 1),
             // ⭐ the owner, 2026-10-03: how fast a snap lands — and so how fast the piece may turn before it freezes.
             tunable(st, "snap duration (ms)", "greenSnapEaseMs", 10, 300, 5),
           ],

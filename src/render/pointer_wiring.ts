@@ -7,7 +7,7 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { crossDeadbandScales, greenDoubleTap, greenHeldForOrbit, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { accumulatePush, crossDeadbandScales, greenDoubleTap, towardSignAt, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
@@ -167,7 +167,7 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughGreenBox`).
       const rayHit = throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
       // ⭐⭐ prototype (green box), the owner 2026-10-03: a press ON the green piece (it still orbits, as empty space) is what turns on
-      // the "outside the sphere" behaviours, while it is held — wherever the piece is (`greenHeldForOrbit`)
+      // the "outside the sphere" behaviours, while it is held — wherever the piece is (`greenHeldForOrbit`, since 2026-10-04 the snapped rotation instead: `greenSnapsOn`)
       // ⭐ The finger is LATCHED: drifting off the piece while still down keeps it held (the owner: *"this is still OK and the green
       // piece snapped rotation continues"*) — only the lift ends it.
       if (!inBand && st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox) {
@@ -1165,7 +1165,9 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐ prototype (green box), the owner 2026-10-03: OUTSIDE the guide sphere, one axis moving (beyond its deadband) widens the
     // OTHER's deadband (`crossDeadbandScales`, from the axes as they stood before this sample), and the orbit then reads the
     // DEADBANDED travel — so a yaw drag does not leak pitch, nor a pitch drag yaw. Inside, or switched off: the raw travel, as ever.
-    const cross = st.cfg.orbitCrossDeadbandOn === 1 && greenHeldForOrbit(st.greenOrbitPointer);
+    // ⭐ the owner, 2026-10-04: *"This shall apply for coarse and commit"* — wherever the commits are in play: above the minimum
+    // distance (COARSE, snaps on or off), and for as long as a commit is latched
+    const cross = st.cfg.orbitCrossDeadbandOn === 1 && (st.greenCoarseEnabled || st.greenCommitMode !== "COARSE");
     const before = st.orbitMotion.tracker.axes;
     st.orbitMotion.tracker.push(s, crossDeadbandScales(before.x === "MOVING", before.y === "MOVING", cross, st.cfg.orbitCrossDeadbandFactor));
     if (cross) {
@@ -1173,7 +1175,12 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
       dy = st.orbitMotion.tracker.step.dy;
     }
     // ⭐ approach step 1: the coarse push `w` — the DEADBANDED dy, toward the target positive (the sign read at the last press)
-    st.greenPushMm += st.greenTowardSign * pxToMm(st.orbitMotion.tracker.step.dy);
+    // ⭐ …SATURATED at the commits (`accumulatePush`): pulled past the backward commit, it digs no hole a push must fill first
+    // ⭐⭐ the owner, 2026-10-04: *"dy towards top pushes the green part towards the pink gizmo if camera is on 1st and 2nd rings and away
+    // if on 3rd and 4th rings"* — the sign is the ring half's, re-read every step; carried ACROSS the waist, `w` STAYS and only the
+    // sense of dy is mirrored (the owner: *"It shall stay but sense is mirrored"*)
+    st.greenTowardSign = towardSignAt(st.orbit.elevation, st.greenWaistV);
+    st.greenPushMm = accumulatePush(st.greenPushMm, st.greenTowardSign * pxToMm(st.orbitMotion.tracker.step.dy), st.cfg.greenCommitBackMm, st.cfg.greenCommitFwdMm);
     // ⭐ 2026-10-02: the yaw slower outside the guide sphere too (`greenDragGains`).
     const g = greenDragGains(st);
     const yaw0 = st.orbit.yaw;

@@ -46,8 +46,10 @@ describe("⭐⭐ prototype — one orbit axis moving widens the other's deadband
 
   it("⭐ wired: outside + on, the tracker is pushed FIRST with the scales and the orbit reads its DEADBANDED travel; sliders; on, 300 %", () => {
     const p = code("render/pointer_wiring.ts");
-    // ⭐ since 2026-10-03: while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`)
-    expect(p).toMatch(/const cross = st\.cfg\.orbitCrossDeadbandOn === 1 && greenHeldForOrbit\(st\.greenOrbitPointer\);/);
+    // ⭐ since 2026-10-04: while the snapped rotation is ON (`greenSnapsOn`; held for orbit 2026-10-03)
+    // ⭐ step 2: the frame's `snapsActive` (COARSE, above the minimum distance, `w` below the snap-off)
+    // ⭐ the owner, 2026-10-04: *"This shall apply for coarse and commit"* — not only while the snaps are on
+    expect(p).toMatch(/const cross = st\.cfg\.orbitCrossDeadbandOn === 1 && \(st\.greenCoarseEnabled \|\| st\.greenCommitMode !== "COARSE"\);/);
     expect(p).toMatch(/st\.orbitMotion\.tracker\.push\(s, crossDeadbandScales\(before\.x === "MOVING", before\.y === "MOVING", cross, st\.cfg\.orbitCrossDeadbandFactor\)\);\s*if \(cross\) \{\s*dx = st\.orbitMotion\.tracker\.step\.dx;\s*dy = st\.orbitMotion\.tracker\.step\.dy;/);
     // the push comes BEFORE the orbit is driven
     expect(p.indexOf("tracker.push(s, crossDeadbandScales(")).toBeLessThan(p.indexOf("st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw"));

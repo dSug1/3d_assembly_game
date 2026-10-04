@@ -379,7 +379,7 @@ export function greenReadout(st: SceneState): string {
   // ⭐ …and, while it is HELD for orbit, its distance to the pink ring at the press (`greenPressRadialM`).
   const held = st.greenOrbitPointer !== null && st.greenPressRadialM !== null ? ` · held, r at press ${st.greenPressRadialM.toFixed(3)} m` : "";
   // ⭐ approach step 1: the coarse push `w` and the selected face
-  const sel = ` · w=${st.greenPushMm >= 0 ? "+" : ""}${st.greenPushMm.toFixed(1)} mm F=${st.greenSelectedFace === null ? "—" : `f${st.greenSelectedFace}`}`;
+  const sel = ` · w=${st.greenPushMm >= 0 ? "+" : ""}${st.greenPushMm.toFixed(1)} mm F=${st.greenSelectedFace === null ? "—" : `f${st.greenSelectedFace}`} ${st.greenCommitMode} M=${st.greenMatingFace === null ? "—" : `f${st.greenMatingFace}`} snaps ${st.greenSnapsActive ? "on" : "off"} (coarse ≥ ${st.greenCoarseMinM.toFixed(2)} m)`;
   return `${st.greenBoxDistM.toFixed(3)} m to the yellow target${held}${sel} | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 

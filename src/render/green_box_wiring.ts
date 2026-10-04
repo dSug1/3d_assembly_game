@@ -15,7 +15,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pickedFace, towardSign, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, coarseMinDistance, nextCommit, towardSignAt, waistParam, oppositeFace, snapsActive, pickedFace, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -26,7 +26,7 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, orbitDegPerMm, springOrbit, wrapPi } from "../input/follow_camera";
-import { orbitOffset } from "../input/orbit";
+import { elevationGainScale, orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -210,7 +210,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   st.boxOrbit = st.boxSpring.at;
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
   // ⛔ The same near-plane guard the rig's pose had (`applyCamera`): the clamp only shortens.
-  const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
+  let k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
+  // ⭐ approach step 2 (the owner, 2026-10-04: *"increase momentarily the radius of the ring to be able to reach this if the piece is already
+  // at the max radius"*): at a ring's END, a pull away (`w` < 0) moves the piece outward by up to `GREEN_BACK_EXTENSION` of its distance —
+  // VISUAL: `w` itself counts there anyway (§3.2)
+  const atRingEnd = st.orbit.elevation <= 1e-6 || st.orbit.elevation >= 1 - 1e-6;
+  if (atRingEnd && st.greenPushMm < 0) k *= 1 + GREEN_BACK_EXTENSION * Math.min(1, -st.greenPushMm / Math.max(1e-6, st.cfg.greenCommitBackMm));
   box.position.set(c.x + bo.offsetM[0] * k, c.y + bo.offsetM[1] * k, c.z + bo.offsetM[2] * k);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
@@ -286,6 +291,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   pinkRingFrame(st);
   guideSphereFrame(st);
   greenSelectionFrame(st);
+  greenCommitFrame(st, now);
   trackOrbitedFaces(st, now);
 }
 
@@ -325,7 +331,7 @@ export function guideSphereFrame(st: SceneState): void {
   if (box !== null && o !== null) {
     // ⭐ the owner, 2026-10-03: shown while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`; it was: outside the sphere).
     // ⛔ 2026-10-04 (the approach spec, §1): REPLACED by the white highlight of the SELECTED face — switched off, the code kept.
-    const out = GREEN_CONTOUR_ON && greenHeldForOrbit(st.greenOrbitPointer);
+    const out = GREEN_CONTOUR_ON && st.greenSnapsActive;
     o.lines.isVisible = out;
     if (out) {
       const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
@@ -353,7 +359,7 @@ export function guideSphereFrame(st: SceneState): void {
  * which will later be orbited"* — *"also at boot, if any piece is outside the white sphere"*). Each frame, for each orbited piece
  * (`orbitedPieces`), the decision is `faceTracking`'s: on `START` (an outward crossing, or outside at its first frame — the boot)
  * its logical faces are read off its mesh (`topologyFromMesh`, `pieceFaces`); while it stays outside, their world normals and
- * centres follow it; back inside, they are dropped. ⭐ Since 2026-10-03 "outside" is the green piece HELD for orbit, wherever it is (`greenHeldForOrbit`).
+ * centres follow it; back inside, they are dropped. ⭐ Since 2026-10-04 "outside" is the snapped rotation ON (`greenSnapsOn`; held for orbit 2026-10-03; `greenHeldForOrbit`).
  * ⭐⭐ **AND IT STEPS THROUGH THEM AS IT ORBITS IN YAW** (the owner, 2026-10-02): `DegreesYawPerFace` = the yaw face alignment span ÷
  * its faces, and `DeltaXYawPerFace` = the finger dx that orbits that much, at the yaw rate (`orbitDegPerMm`). On `START` the face
  * most anti-aligned with the pink ring's face is turned exactly anti-parallel; from that pose its faces fall into a YAW cycle and a
@@ -373,8 +379,9 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
   const pink = st.pinkFaceNormal;
   for (const m of st.orbitedPieces) {
     const p = m.getAbsolutePosition();
-    // ⭐ the owner, 2026-10-03: "outside" = the green piece HELD for orbit, wherever it is (`greenHeldForOrbit`; it was the sphere's radius)
-    const out = greenHeldForOrbit(st.greenOrbitPointer);
+    // ⭐ the owner, 2026-10-04: "outside" = the SNAPPED ROTATION ON — the coarse push `w` below the snap-off (`greenSnapsOn`; it was the
+    // green piece HELD, `greenHeldForOrbit`, 2026-10-03; the sphere's radius before). ⛔ was: radius)
+    const out = st.greenSnapsActive; // ⭐ step 2: `snapsActive` — COARSE, above the minimum distance, `w` below the snap-off
     const prev = st.faceTracks.get(m);
     const step = faceTracking(prev === undefined ? null : prev.outside, out);
     if (step === "NONE" || step === "STOP") {
@@ -568,7 +575,7 @@ export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
     st.boxOrbit === null || st.cameraOrbit === null
       ? { yaw: 1, pitch: 1 }
       : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
-  const outside = st.greenBox !== null && greenHeldForOrbit(st.greenOrbitPointer);
+  const outside = st.greenBox !== null && st.greenSnapsActive;
   return { yaw: g.yaw * outsideYawShare(outside, st.cfg.boxGainYawOutsideShare), pitch: g.pitch };
 }
 
@@ -587,6 +594,14 @@ export function selectGreenFace(st: SceneState, worldNormal: Vec3): void {
   const r = box.rotationQuaternion ?? Quaternion.Identity();
   const face = pickedFace(topo.faces, [r.w, r.x, r.y, r.z], worldNormal);
   if (face < 0) return;
+  selectGreenFaceIndex(st, face);
+}
+
+/** ⭐ prototype (green box), the approach: select face `face` (its index in the topology's faces) with the white fill. */
+function selectGreenFaceIndex(st: SceneState, face: number): void {
+  const box = st.greenBox;
+  const topo = st.greenOutline?.topo;
+  if (box === null || topo === undefined || topo.faces[face] === undefined) return;
   st.greenSelectedFace = face;
   st.greenSelectMesh?.dispose();
   const f = topo.faces[face]!;
@@ -651,13 +666,78 @@ function greenSelectionFrame(st: SceneState): void {
 /**
  * ⭐⭐ prototype (green box) — **APPROACH STEP 1: THE COARSE PUSH `w` STARTS AGAIN** at every press outside a seated piece (§2, the owner,
  * 2026-10-04: *"Yes to both"* — the reference is the last such press, and every new press resets `w` to 0). The sign that makes dy
- * "toward the target" is read NOW (`towardSign`, from the slope of the green piece's distance along the rings) and kept.
+ * "toward the target" is the RING HALF's (`towardSignAt`, above or below the waist) — and it is re-read at every drag step: carried across the
+ * waist, `w` stays and the sense of dy is mirrored (`orbitDragStep`).
  */
 export function resetGreenPush(st: SceneState): void {
   st.greenPushMm = 0;
-  const v = st.orbit.elevation;
-  const h = 1e-3;
-  const dist = (x: number): number => orbitOffset(st.cfg, st.orbit.yaw, Math.min(1, Math.max(0, x)), GREEN_PIECE_ORBIT_ZOOM).radiusM;
-  st.greenTowardSign = towardSign((dist(v + h) - dist(v - h)) / (2 * h));
+  st.greenTowardSign = towardSignAt(st.orbit.elevation, st.greenWaistV);
   st.hudDirty = true;
+}
+
+/** ⭐ prototype (green box): the outer-ring visual extension's reach — the owner's *"1.03"*, kept as 3 % of the distance. */
+const GREEN_BACK_EXTENSION = 0.03;
+
+/**
+ * ⭐⭐⭐ prototype (green box) — **APPROACH STEP 2: THE COMMITS, EACH FRAME** (`GREEN_PIECE_PHASES.md` §3.2, §3.4; the owner, 2026-10-04).
+ * - The minimum distance (`coarseMinDistance`) — computed at boot and again only when the rings, the elevation gains or the forward
+ *   commit change (a key compared each frame, never recomputed otherwise); below it, `COARSE` takes no commit and does not snap.
+ * - The commit step (`nextCommit`) on the coarse push `w`, and its event:
+ *   · FORWARD — the selected face, or with none the face whose normal points most AGAINST the pink face's (Q2.1), eases onto exact
+ *     anti-parallel by the smallest turn (the settle, `greenSnapEaseMs`); it is latched as the MATING face;
+ *   · BACKWARD — the face opposite the selected one, or with none the face whose normal ALIGNS most with the pink face's (Q2.2), turns
+ *     to face it; it becomes the selected face (white) and is latched;
+ *   · UNCOMMIT — the quaternion is KEPT: the snapped turn starts again FROM THE POSE AS IT IS (its stored state dropped, so the next
+ *     frame's start pose is the current one).
+ * - `greenSnapsActive` (`snapsActive`) for every reader of "the snaps are on": the face tracking, the yaw share, the cross deadband.
+ */
+function greenCommitFrame(st: SceneState, now: number): void {
+  const box = st.greenBox;
+  if (box === null) return;
+  const cfg = st.cfg;
+  const key = [cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, cfg.orbitLowerRingOn, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, cfg.gainOrbitElevation, cfg.boxGainPitch, cfg.greenCommitFwdMm].join("|");
+  if (key !== st.greenCoarseMinKey) {
+    st.greenCoarseMinKey = key;
+    st.greenWaistV = waistParam((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM);
+    st.greenCoarseMinM = coarseMinDistance(
+      (v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM,
+      cfg.gainOrbitElevation * elevationGainScale(cfg) * cfg.boxGainPitch,
+      cfg.greenCommitFwdMm,
+    );
+    st.hudDirty = true;
+  }
+  const t = st.centreBlend.targetM;
+  const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
+  const coarseEnabled = d >= st.greenCoarseMinM;
+  st.greenCoarseEnabled = coarseEnabled;
+  const step = nextCommit(st.greenCommitMode, st.greenPushMm, { snapOffMm: cfg.greenSnapOffMm, fwdMm: cfg.greenCommitFwdMm, backMm: cfg.greenCommitBackMm }, coarseEnabled);
+  const topo = st.greenOutline?.topo;
+  const n = st.pinkFaceNormal;
+  if (step.event === "UNCOMMIT") {
+    st.freeTurns.delete(box); // ⭐ the quaternion KEPT: the snapped turn restarts from the pose as it is
+    st.greenMatingFace = null;
+    st.lastVerdict = "green piece: un-committed — the snapped rotation resumes from this pose";
+    st.hudDirty = true;
+  } else if ((step.event === "FORWARD" || step.event === "BACKWARD") && topo !== undefined && n !== null) {
+    const faces = pieceFaces(topo.positions, topo.faces);
+    const cur = fromBabylon(box.rotationQuaternion ?? Quaternion.Identity());
+    const base = st.pieceTurns.get(box)?.to ?? cur;
+    const F = st.greenSelectedFace;
+    const face =
+      step.event === "FORWARD"
+        ? (F ?? mostAntiAligned(faces, base, n))
+        : F !== null
+          ? oppositeFace(faces, F)
+          : mostAntiAligned(faces, base, [-n[0], -n[1], -n[2]]);
+    if (face >= 0) {
+      st.pieceTurns.set(box, { from: cur, to: antiAlignedOrientation(faces, face, base, n), t0: now, ms: cfg.greenSnapEaseMs });
+      st.greenMatingFace = face;
+      if (step.event === "BACKWARD") selectGreenFaceIndex(st, face);
+      st.lastVerdict = `green piece: ${step.event === "FORWARD" ? "forward" : "backward"} commit — f${face} latched`;
+      st.hudDirty = true;
+    }
+  }
+  if (step.mode !== st.greenCommitMode) st.hudDirty = true;
+  st.greenCommitMode = step.mode;
+  st.greenSnapsActive = snapsActive(step.mode, st.greenPushMm, cfg.greenSnapOffMm, coarseEnabled);
 }

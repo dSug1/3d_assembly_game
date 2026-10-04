@@ -23,7 +23,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
-import type { CycleTargets, FaceCycles, PieceFace } from "../input/green_box";
+import type { CommitMode, CycleTargets, FaceCycles, PieceFace } from "../input/green_box";
 
 /**
  * ⭐ Prototype: one orbited piece's face tracking (`trackOrbitedFaces`) — whether it was outside the guide sphere last frame and,
@@ -450,7 +450,7 @@ export interface SceneState {
   guideSphere: Mesh | null;
   /** ⭐ Prototype: the green piece's white contour (its edges, offset like the part outlines) and the offset it was built at. */
   greenOutline: { readonly lines: LinesMesh; readonly topo: MeshTopology; builtM: number | null } | null;
-  /** ⭐ Prototype: the pointer that pressed the green piece, while it is down — the "outside" behaviours run then (`greenHeldForOrbit`). */
+  /** ⭐ Prototype: the pointer that pressed the green piece, while it is down — kept for the press's radial distance (the "outside" behaviours follow `greenSnapsOn` since 2026-10-04). */
   greenOrbitPointer: number | null;
   /** ⭐ Prototype: the green piece's distance to the pink ring (the yellow target) AT THAT PRESS, metres — kept for later use. */
   greenPressRadialM: number | null;
@@ -460,10 +460,20 @@ export interface SceneState {
   greenSelectMesh: Mesh | null;
   /** ⭐ Prototype, approach step 1: the coarse push `w`, mm — deadbanded dy since the last press outside a seated piece, toward `T` positive. */
   greenPushMm: number;
-  /** ⭐ Prototype, approach step 1: the sign that makes dy "toward the target", read at that press (`towardSign`). */
+  /** ⭐ Prototype, approach step 1: the sign that makes dy "toward the target", the ring half's (`towardSignAt`), re-read every drag step. */
   greenTowardSign: 1 | -1;
   /** ⭐ Prototype, approach step 1: the pointers that pressed the green piece (a double tap on it unselects), and those whose double tap did. */
   greenPressedPointers: Set<number>;
+  /** ⭐ Prototype, approach step 2: where the commits stand (`nextCommit`), the latched MATING face, and whether the snaps are on now. */
+  greenCommitMode: CommitMode;
+  greenMatingFace: number | null;
+  greenSnapsActive: boolean;
+  /** ⭐ Prototype, approach step 2: the minimum distance for `COARSE` and the commits (`coarseMinDistance`), and the settings it came from. */
+  greenCoarseMinM: number;
+  greenCoarseMinKey: string;
+  /** ⭐ Prototype: the waist's ring parameter (`waistParam`, with the minimum distance) and whether `COARSE` is enabled this frame. */
+  greenWaistV: number;
+  greenCoarseEnabled: boolean;
   greenUnselectPointers: Set<number>;
   /** ⭐ Prototype: the pieces the orbit carries — today the green piece alone; another joins by being pushed here. */
   orbitedPieces: Mesh[];

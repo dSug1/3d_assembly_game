@@ -576,6 +576,13 @@ export function createScene(
   st.greenPushMm = 0;
   st.greenTowardSign = 1;
   st.greenPressedPointers = new Set<number>();
+  st.greenCommitMode = "COARSE";
+  st.greenMatingFace = null;
+  st.greenSnapsActive = true;
+  st.greenCoarseMinM = 0;
+  st.greenCoarseMinKey = "";
+  st.greenWaistV = 0.5;
+  st.greenCoarseEnabled = false;
   st.greenUnselectPointers = new Set<number>();
   st.orbitedPieces = [];
   st.faceTracks = new Map();
