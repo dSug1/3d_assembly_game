@@ -517,3 +517,6 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   *level-out at the first hold*). Off, the snapped turn starts from the pose AS IT IS — `Scene_1`'s tumbled (1,2,3,4) survives the hold.
   ⚠ The cost, chosen: a yaw of a tilted piece is a tilted spin about the vertical (its own up circles the vertical) — the "pitch mixed
   with yaw" the level start pose was made to remove; on (1) brings that back.
+* ⭐ **The orbit's dy sense inverted** (the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"*): the green
+  piece's orbit drag takes dy with its own sign now (`st.orbit.drag(-dx …, dy …)`; it was `-dy`) — finger DOWN raises the piece on the
+  rings, finger UP lowers it (the reverse of before). dx unchanged; the inertia follows the drag.

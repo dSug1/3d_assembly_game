@@ -430,7 +430,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(g.yaw).toBe(1);
     expect(g.pitch).toBeCloseTo(0.5, 12);
     // ⭐ wired: the orbit drag multiplies each axis by its gain, and the slider has the owner's range
-    expect(code("pointer_wiring.ts")).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw, -dy \* st\.cfg\.boxGainPitch \* g\.pitch\)/);
+    // ⭐ dy's sense inverted for the orbit (the owner, 2026-10-04): dy enters with its own sign; dx still negated
+    expect(code("pointer_wiring.ts")).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw, dy \* st\.cfg\.boxGainPitch \* g\.pitch\)/);
+    expect(code("pointer_wiring.ts")).not.toMatch(/-dy \* st\.cfg\.boxGainPitch/);
     expect(code("tuning_menu.ts")).toMatch(/"boxGainInsideLeash", 0\.05, 1, 0\.05\)/);
   });
 

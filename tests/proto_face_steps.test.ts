@@ -176,7 +176,7 @@ describe("⭐⭐ prototype — stepping through the faces as the piece orbits in
     // ⭐ since 2026-10-03: while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`)
     expect(w).toMatch(/const outside = st\.greenBox !== null && greenHeldForOrbit\(st\.greenOrbitPointer\);/);
     expect(w).toMatch(/const g = greenDragGains\(st\);\s*const yawDegPerMm = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\)\.yawDegPerMm;/);
-    expect(code("render/pointer_wiring.ts")).toMatch(/const g = greenDragGains\(st\);[\s\S]{0,200}st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw,/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/const g = greenDragGains\(st\);[\s\S]{0,500}st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw,/); // 500: the dy-inversion comment sits between
     expect(code("render/hud_paint.ts")).toMatch(/const g = greenDragGains\(st\);\s*const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\);/);
   });
 

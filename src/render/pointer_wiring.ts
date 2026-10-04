@@ -1158,7 +1158,9 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const g = greenDragGains(st);
     const yaw0 = st.orbit.yaw;
     const v0 = st.orbit.elevation;
-    st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, -dy * st.cfg.boxGainPitch * g.pitch);
+    // ⭐ the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"* — dy enters with its own sign now
+    // (it was negated: finger UP raised the green piece on the rings; now finger DOWN does). dx unchanged.
+    st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw, dy * st.cfg.boxGainPitch * g.pitch);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build

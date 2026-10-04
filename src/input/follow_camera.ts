@@ -428,7 +428,7 @@ export function cameraLag(shown: OrbitAt, wanted: OrbitAt, dtMs: number, tauMs: 
  * `dy × gainOrbitElevation × boxGainPitch` of the RING PARAMETER `v`, whose PITCH (`pitchOf`) is not linear in `v`: so the pitch
  * rate is the slope there (a central difference; one-sided at a ring's end — the slope going back inward, the only way `v` can move). `gains` are the
  * inside-the-leash factors (`boxDragGains`; 1 with no leash). Degrees per mm of `|dx|` and per mm of `v` increase (a finger moving
- * DOWN on the glass, the box's inverted orbit): yaw positive; pitch SIGNED — ⚠ the pitch is not monotone along `Scene_1`'s waist
+ * DOWN on the glass since the owner's dy inversion, 2026-10-04 — UP before): yaw positive; pitch SIGNED — ⚠ the pitch is not monotone along `Scene_1`'s waist
  * rings (it peaks at ±33.5° near v = 0.25 / 0.75 and comes back to ±31.7° at the outer rings), so near a ring's end the sign flips.
  */
 export function orbitDegPerMm(
