@@ -20,7 +20,11 @@ describe("⭐⭐ prototype — the green piece HELD for orbit is what turns the 
 
   it("⭐⭐ wired: the press ON the green piece latches the finger (a drift off it keeps it), the LIFT ends it; every 'outside' reads it", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/if \(!inBand && st\.greenBox !== null && pick\?\.hit === true && pick\.pickedMesh === st\.greenBox\) \{\s*st\.greenOrbitPointer = e\.pointerId;/);
+    // ⭐ since 2026-10-04 any ORBITED piece (the turquoise one too, *"make it snap rotate when pressed upon"*), and WHICH one is latched
+    expect(p).toMatch(/const pressedPiece = !inBand && pick\?\.hit === true && pick\.pickedMesh !== null \? st\.orbitedPieces\.find\(\(m\) => m === pick\.pickedMesh\) : undefined;\s*if \(pressedPiece !== undefined\) \{\s*st\.greenOrbitPointer = e\.pointerId;\s*st\.orbitHeldPiece = pressedPiece;/);
+    // ⭐ only the piece held turns; the green contour only for the green piece
+    expect(code("render/green_box_wiring.ts")).toMatch(/const out = greenHeldForOrbit\(st\.greenOrbitPointer\) && st\.orbitHeldPiece === m;/);
+    expect(code("render/green_box_wiring.ts")).toMatch(/const out = greenHeldForOrbit\(st\.greenOrbitPointer\) && st\.orbitHeldPiece === box;/);
     expect(p).toMatch(/if \(e\.pointerId === st\.greenOrbitPointer\) st\.greenOrbitPointer = null;/);
     // ⭐ only the press and the lift write it: a move never re-checks the hit (the drift is fine)
     expect(p.match(/st\.greenOrbitPointer = /g)).toHaveLength(2);

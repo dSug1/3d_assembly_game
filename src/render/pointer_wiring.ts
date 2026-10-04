@@ -7,7 +7,7 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { crossDeadbandScales, greenHeldForOrbit, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { crossDeadbandScales, greenHeldForOrbit, GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughOrbitedPieces } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
@@ -164,17 +164,21 @@ export function installPointerHandler(st: SceneState): void {
         st.canvas.getBoundingClientRect(),
         mmToPx(bandMmNow(st)),
       );
-      // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughGreenBox`).
-      const rayHit = throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
+      // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughOrbitedPieces`).
+      const rayHit = throughOrbitedPieces(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.orbitedPieces);
       // ⭐⭐ prototype (green box), the owner 2026-10-03: a press ON the green piece (it still orbits, as empty space) is what turns on
       // the "outside the sphere" behaviours, while it is held — wherever the piece is (`greenHeldForOrbit`)
       // ⭐ The finger is LATCHED: drifting off the piece while still down keeps it held (the owner: *"this is still OK and the green
       // piece snapped rotation continues"*) — only the lift ends it.
-      if (!inBand && st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox) {
+      // ⭐ the owner, 2026-10-04: *"make it snap rotate when pressed upon"* — ANY orbited piece (the green one, the turquoise one): the one
+      // pressed is the one HELD (`orbitHeldPiece`), and only it turns
+      const pressedPiece = !inBand && pick?.hit === true && pick.pickedMesh !== null ? st.orbitedPieces.find((m) => m === pick.pickedMesh) : undefined;
+      if (pressedPiece !== undefined) {
         st.greenOrbitPointer = e.pointerId;
+        st.orbitHeldPiece = pressedPiece;
         // ⭐ the owner, 2026-10-03: *"when the green piece is pressed, compute and track the radial distance to the pink gizmo, as we will
         // use this radial distance at press later on"* — the piece's distance to the pink ring (the yellow target), at the press
-        const gp = st.greenBox.position;
+        const gp = pressedPiece.position;
         const tg = st.centreBlend.targetM;
         st.greenPressRadialM = Math.hypot(gp.x - tg[0], gp.y - tg[1], gp.z - tg[2]);
         st.hudDirty = true;
@@ -471,7 +475,7 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔⛔ `D108`: a tap on the held body itself no longer toggles — only empty space does.
         noteTap(st, routed.pressed, s, e.pointerId, false);
       } else {
-        st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
+        st.router.move(e.pointerId, s, throughOrbitedPieces(info.pickInfo?.pickedMesh ?? null, st.orbitedPieces));
         // ⭐ A second touch on a seated Follower (redirected to its root) is the UNSNAP's.
         st.lastFedPointer = e.pointerId;
         feedUnsnap(st, s);
@@ -515,7 +519,7 @@ export function installPointerHandler(st: SceneState): void {
       if (info.type === PointerEventTypes.POINTERUP) {
         forgetAnchor(st, routed.seq);
         st.router.release(e.pointerId);
-      } else st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
+      } else st.router.move(e.pointerId, s, throughOrbitedPieces(info.pickInfo?.pickedMesh ?? null, st.orbitedPieces));
       st.hudDirty = true;
       return;
     }
@@ -525,7 +529,7 @@ export function installPointerHandler(st: SceneState): void {
         const prev = routed.last;
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
-        st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
+        st.router.move(e.pointerId, s, throughOrbitedPieces(info.pickInfo?.pickedMesh ?? null, st.orbitedPieces));
         // ⭐⭐ THIS IS THE FINGER THAT DRIVES DEPTH OR ROLL, and this branch is the only place
         // either is applied. ✅ **SIMULTANEOUS SINCE 2026-09-17** (owner): the holder's own
         // x/y keep running in their own handler while this one adds its axis, and the two SUM.
@@ -681,7 +685,7 @@ export function installPointerHandler(st: SceneState): void {
       feedUnsnap(st, s);
       // ⚠ Handed the live hit, which the router discards: a finger that presses on a
       // part and slides off is still holding it (§4).
-      st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
+      st.router.move(e.pointerId, s, throughOrbitedPieces(info.pickInfo?.pickedMesh ?? null, st.orbitedPieces));
 
       // ⛔⛔ `D51`'s PINNED PIONEER IS DELETED (`D109`): a Pioneer held beside its Follower translates
       // like any held body, and the Follower's second finger drives both axes wherever it lands (`D108`).

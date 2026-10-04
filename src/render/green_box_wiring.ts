@@ -7,6 +7,7 @@
  */
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
+import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { edgeLines } from "./markers";
 import { topologyFromMesh } from "./bodies";
 import { offsetPositions } from "../core/mesh_topology";
@@ -14,7 +15,7 @@ import { highlightLiftM, outlineOffsetStale } from "../input/highlight_lift";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pieceFaces, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, faceTracking, greenBootOrientation, greenHeldForOrbit, pieceFaces, rightOfGreenM, turquoiseSizeM, turquoiseYawOffsetRad, uniformQuat, outsideYawShare, accumulateFaceSteps, antiAlignedOrientation, degreesYawPerFace, deltaXYawPerFace, cycleStep, cycleTargets, faceCycles, capTurn, levelHeading, maxSnapTurnDegPerS, mostAntiAligned, orientationAt, scrollIncrements, snapAngle, staircaseAngles, staircaseOrientation, staircasePerOrbitDeg, targetAtStep, turnAxes, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -54,7 +55,7 @@ export function createGreenBox(st: SceneState): void {
   const mat = new StandardMaterial("green-box-mat", st.scene);
   mat.diffuseColor = GREEN;
   box.material = mat;
-  // ⭐ prototype (green box), 2026-10-01: PICKABLE, so it stops the ray — a press on it is empty space (`throughGreenBox`).
+  // ⭐ prototype (green box), 2026-10-01: PICKABLE, so it stops the ray — a press on it is empty space (`throughOrbitedPieces`).
   box.isPickable = true;
   // ⭐ prototype (green box): NOT billboarded (the owner, 2026-10-02: *"remove the billboarding"* — it had been since *"the green
   // cube shall billboard the camera"*). It keeps the world's axes: its width along x, its tapered height up y, its depth along z.
@@ -278,6 +279,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   st.camera.setPosition(new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]));
   st.camera.setTarget(c.clone());
+  turquoiseFrame(st, k); // ⭐ beside the green piece on the rings, every frame (its side chosen once, at the first)
   // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
   // the blend in progress), for the HUD's `green` line (the owner, 2026-10-02).
   const tgt = st.centreBlend.targetM;
@@ -322,7 +324,7 @@ export function guideSphereFrame(st: SceneState): void {
   const o = st.greenOutline;
   if (box !== null && o !== null) {
     // ⭐ the owner, 2026-10-03: shown while the green piece is HELD for orbit, wherever it is (`greenHeldForOrbit`; it was: outside the sphere)
-    const out = greenHeldForOrbit(st.greenOrbitPointer);
+    const out = greenHeldForOrbit(st.greenOrbitPointer) && st.orbitHeldPiece === box; // ⭐ the GREEN piece held (not the turquoise)
     o.lines.isVisible = out;
     if (out) {
       const h = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, box.position), st.camera.fov, st.canvas.clientHeight);
@@ -371,7 +373,8 @@ export function trackOrbitedFaces(st: SceneState, now: number): void {
   for (const m of st.orbitedPieces) {
     const p = m.getAbsolutePosition();
     // ⭐ the owner, 2026-10-03: "outside" = the green piece HELD for orbit, wherever it is (`greenHeldForOrbit`; it was the sphere's radius)
-    const out = greenHeldForOrbit(st.greenOrbitPointer);
+    // ⭐ the owner, 2026-10-04: and only the piece HELD (`orbitHeldPiece`) — the turquoise one turns when it is the one pressed
+    const out = greenHeldForOrbit(st.greenOrbitPointer) && st.orbitHeldPiece === m;
     const prev = st.faceTracks.get(m);
     const step = faceTracking(prev === undefined ? null : prev.outside, out);
     if (step === "NONE" || step === "STOP") {
@@ -567,4 +570,75 @@ export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
       : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
   const outside = st.greenBox !== null && greenHeldForOrbit(st.greenOrbitPointer);
   return { yaw: g.yaw * outsideYawShare(outside, st.cfg.boxGainYawOutsideShare), pitch: g.pitch };
+}
+
+/** ⭐ The turquoise. */
+const TURQUOISE = new Color3(0.19, 0.84, 0.78);
+/** ⭐ The clear gap between the green piece and the turquoise one at boot, m. */
+const TURQUOISE_GAP_M = 0.02;
+
+/**
+ * ⭐⭐ prototype — **THE TURQUOISE PIECE** (the owner, 2026-10-04: *"in the scene, create a turquoise piece: an hexagone, extruded by twice
+ * its diameter, height the same as the longest dimension of the green piece. Place it to the right of the green piece, in random
+ * quaternion. When importing in scene, compute the faces, etc. as for the green piece"*). A 6-sided prism (`turquoiseSizeM`), FLAT
+ * shaded (⛔ a smooth-shaded hexagon reads as a cylinder — defect 68's lesson), at a uniformly random orientation (`uniformQuat`, a new
+ * one each boot), to the right of the green piece as the boot camera sees it — and, the same day, *"make it orbit like the green piece"*:
+ * it rides the same rings beside it (`turquoiseFrame`). Its topology and logical faces are read at creation, as the green piece's
+ * (`topologyFromMesh`, `pieceFaces`), and their world normals and centres follow it every frame.
+ * ⭐ Pressed and held, it snaps-rotates as the green piece does (it is in `orbitedPieces`). ⛔ Not in the model: no collision, no goal.
+ */
+export function createTurquoisePiece(st: SceneState): void {
+  const piece17 = bodyNamed(st.sceneSpec.bodies, "Piece17");
+  if (piece17 === null || st.greenBox === null) return;
+  const { diameterM, lengthM } = turquoiseSizeM(greenPyramidSizeM(piece17.dims, st.sceneSpec.unitM ?? 1));
+  const mesh = CreateCylinder("turquoise-piece", { height: lengthM, diameter: diameterM, tessellation: 6 }, st.scene);
+  mesh.convertToFlatShadedMesh();
+  const mat = new StandardMaterial("turquoise-piece-mat", st.scene);
+  mat.diffuseColor = TURQUOISE;
+  mesh.material = mat;
+  // ⭐ the owner, 2026-10-04: *"make it snap rotate when pressed upon"* — PICKABLE (a press on it is empty space: `throughOrbitedPieces`)
+  // and ORBITED: held, its faces are tracked and it takes the green piece's snapped turn (`trackOrbitedFaces`)
+  mesh.isPickable = true;
+  mesh.metadata = { orbitCandidate: false };
+  st.orbitedPieces.push(mesh);
+  mesh.rotationQuaternion = toBabylon(uniformQuat(Math.random(), Math.random(), Math.random()));
+  mesh.setEnabled(false); // until placed, the first frame the green piece and the camera are
+  const topo = topologyFromMesh(mesh);
+  const faces = topo === null ? [] : pieceFaces(topo.positions, topo.faces);
+  st.turquoise = { mesh, topo, faces, world: [], halfDiagonalM: Math.hypot(diameterM, lengthM) / 2, placed: false, chordM: 0, side: 1 };
+}
+
+/**
+ * ⭐ prototype: the turquoise piece, each frame — on the green piece's rings, its spring and its distance clamp (`k`), its yaw ahead by
+ * `turquoiseYawOffsetRad` (a constant chord). The FIRST frame chooses the chord (`rightOfGreenM`) and the side that is the camera's
+ * RIGHT; then its faces follow it.
+ */
+function turquoiseFrame(st: SceneState, k: number): void {
+  const t = st.turquoise;
+  const box = st.greenBox;
+  if (t === null || box === null || st.boxOrbit === null) return;
+  const { yaw, v, zoom } = st.boxOrbit;
+  const ringR = (bo: { offsetM: readonly number[] }): number => Math.hypot(bo.offsetM[0]!, bo.offsetM[2]!) * k;
+  const at = (dPsi: number): Vector3 => {
+    const o = orbitOffset(st.cfg, yaw + dPsi, v, zoom);
+    const c = st.orbitCentreM;
+    return new Vector3(c.x + o.offsetM[0] * k, c.y + o.offsetM[1] * k, c.z + o.offsetM[2] * k);
+  };
+  const dPsi = (): number => turquoiseYawOffsetRad(t.chordM, ringR(orbitOffset(st.cfg, yaw, v, zoom)));
+  if (!t.placed) {
+    const piece17 = bodyNamed(st.sceneSpec.bodies, "Piece17");
+    if (piece17 === null) return;
+    t.chordM = rightOfGreenM(greenPyramidSizeM(piece17.dims, st.sceneSpec.unitM ?? 1), t.halfDiagonalM, TURQUOISE_GAP_M);
+    const right = st.camera.getDirection(new Vector3(1, 0, 0));
+    t.side = Vector3.Dot(at(dPsi()).subtract(box.position), right) >= 0 ? 1 : -1;
+    t.placed = true;
+    t.mesh.setEnabled(true);
+    st.hudDirty = true;
+  }
+  t.mesh.position.copyFrom(at(t.side * dPsi()));
+  t.mesh.computeWorldMatrix(true);
+  const r = t.mesh.absoluteRotationQuaternion;
+  const q: Quat = [r.w, r.x, r.y, r.z];
+  const p = t.mesh.position;
+  t.world = t.faces.map((f) => ({ normal: qRotate(q, f.normal), centre: add([p.x, p.y, p.z], qRotate(q, f.centre)) }));
 }

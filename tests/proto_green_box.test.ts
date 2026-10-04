@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { sizeM, smallestOfColour, throughGreenBox } from "@input/green_box";
+import { sizeM, smallestOfColour, throughOrbitedPieces } from "@input/green_box";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, springOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
 import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
@@ -399,16 +399,19 @@ describe("⭐⭐ prototype — the green box", () => {
   it("⭐⭐ prototype: a press on the green box is EMPTY SPACE — the box stops the ray, and its hit is a miss (the owner: *\"the raycast hits the piece behind\"*)", () => {
     const box = { name: "green-box" };
     const piece = { name: "Piece10" };
-    expect(throughGreenBox(box, box)).toBeNull(); // the box in front: a miss, never the piece behind
-    expect(throughGreenBox(piece, box)).toBe(piece); // a piece hit first is still a piece
-    expect(throughGreenBox(null, box)).toBeNull();
-    expect(throughGreenBox(piece, null)).toBe(piece); // a scene with no box
+    // ⭐ since 2026-10-04, every ORBITED piece (the green one, the turquoise one): `throughOrbitedPieces`
+    const turquoise = { name: "turquoise-piece" };
+    expect(throughOrbitedPieces(box, [box, turquoise])).toBeNull(); // the box in front: a miss, never the piece behind
+    expect(throughOrbitedPieces(turquoise, [box, turquoise])).toBeNull();
+    expect(throughOrbitedPieces(piece, [box, turquoise])).toBe(piece); // a piece hit first is still a piece
+    expect(throughOrbitedPieces(null, [box])).toBeNull();
+    expect(throughOrbitedPieces(piece, [])).toBe(piece); // a scene with no box
     // ⭐ wired: the box is PICKABLE (so the ray stops on it), and every pick the router reads goes through the filter
     expect(code("green_box_wiring.ts")).toMatch(/box\.isPickable = true/);
     const p = code("pointer_wiring.ts");
-    expect(p).toMatch(/const rayHit = throughGreenBox\(/);
+    expect(p).toMatch(/const rayHit = throughOrbitedPieces\(!inBand && pick\?\.hit && pick\.pickedMesh \? pick\.pickedMesh : null, st\.orbitedPieces\);/);
     expect(p).not.toMatch(/st\.router\.move\(e\.pointerId, s, info\.pickInfo\?\.pickedMesh \?\? null\)/);
-    expect((p.match(/throughGreenBox\(info\.pickInfo\?\.pickedMesh \?\? null, st\.greenBox\)/g) ?? []).length).toBe(4);
+    expect((p.match(/throughOrbitedPieces\(info\.pickInfo\?\.pickedMesh \?\? null, st\.orbitedPieces\)/g) ?? []).length).toBe(4);
   });
 
   it("⭐⭐ prototype: the box is SLOWER inside the leash and at full speed beyond — a smooth ramp, no step at the edge", () => {

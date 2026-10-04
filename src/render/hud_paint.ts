@@ -378,7 +378,9 @@ export function greenReadout(st: SceneState): string {
         : `faces ${tr.length} tracked, ${ft.degPerFace.toFixed(1)}°/step = ${ft.dxPerFaceMm.toFixed(2)} mm dx, ${hudCycle(ft)} (dx ${ft.accMm.toFixed(1)} mm)`;
   // ⭐ …and, while it is HELD for orbit, its distance to the pink ring at the press (`greenPressRadialM`).
   const held = st.greenOrbitPointer !== null && st.greenPressRadialM !== null ? ` · held, r at press ${st.greenPressRadialM.toFixed(3)} m` : "";
-  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target${held} | ${faces} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
+  // ⭐ prototype: the turquoise piece's faces, read at creation (a hexagonal prism: 8)
+  const tq = st.turquoise === null ? "" : ` | turquoise ${st.turquoise.faces.length} faces${st.turquoise.placed ? "" : " (not placed)"}`;
+  return `${st.greenBoxDistM.toFixed(3)} m to the yellow target${held} | ${faces}${tq} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 
 /** ⭐ prototype (green box): which cycle the face anti-aligned now is in, and where — `yaw 2/4`, `pitch 1/4` (`cycleStep`). */

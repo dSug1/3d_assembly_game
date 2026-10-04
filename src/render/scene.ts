@@ -78,7 +78,7 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
-import { bootTargetOnBlueFace, createGreenBox } from "./green_box_wiring";
+import { bootTargetOnBlueFace, createGreenBox, createTurquoisePiece } from "./green_box_wiring";
 import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
@@ -570,6 +570,7 @@ export function createScene(
   st.guideSphere = null;
   st.greenOutline = null;
   st.greenOrbitPointer = null;
+  st.orbitHeldPiece = null;
   st.greenPressRadialM = null;
   st.orbitedPieces = [];
   st.faceTracks = new Map();
@@ -578,6 +579,8 @@ export function createScene(
   st.pinkFaceNormal = null;
   st.greenBoxDistM = null;
   createGreenBox(st);
+  st.turquoise = null;
+  createTurquoisePiece(st);
 
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can

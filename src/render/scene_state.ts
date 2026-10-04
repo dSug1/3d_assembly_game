@@ -452,10 +452,24 @@ export interface SceneState {
   greenOutline: { readonly lines: LinesMesh; readonly topo: MeshTopology; builtM: number | null } | null;
   /** ⭐ Prototype: the pointer that pressed the green piece, while it is down — the "outside" behaviours run then (`greenHeldForOrbit`). */
   greenOrbitPointer: number | null;
+  /** ⭐ Prototype: WHICH orbited piece that finger pressed (the green one, the turquoise one) — the one whose snapped turn runs. */
+  orbitHeldPiece: Mesh | null;
   /** ⭐ Prototype: the green piece's distance to the pink ring (the yellow target) AT THAT PRESS, metres — kept for later use. */
   greenPressRadialM: number | null;
   /** ⭐ Prototype: the pieces the orbit carries — today the green piece alone; another joins by being pushed here. */
   orbitedPieces: Mesh[];
+  /** ⭐ Prototype: the turquoise piece — its mesh, topology and logical faces (read at creation), their world normals and centres (at placement). */
+  turquoise: {
+    readonly mesh: Mesh;
+    readonly topo: MeshTopology | null;
+    readonly faces: readonly PieceFace[];
+    world: readonly { readonly normal: Vec3; readonly centre: Vec3 }[];
+    readonly halfDiagonalM: number;
+    placed: boolean;
+    /** the distance kept from the green piece along the ring (a chord), m, and the side it is on (+1 / −1) — both chosen at the first frame */
+    chordM: number;
+    side: 1 | -1;
+  } | null;
   /**
    * ⭐ Prototype: each orbited piece's face tracking (`faceTracking`) — whether it was outside the guide sphere last frame, and
    * while it is outside, its faces (own frame) and where they are now (world).

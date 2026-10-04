@@ -6,7 +6,7 @@
  * box sits at the MIDPOINT of that marker and the camera, every frame, whatever moved either. ⭐ Its size is the smallest
  * yellow body's own `dims` (the coloured core, not its transparent contour), by volume — read from the scene's data, so a
  * scene with no yellow body has no box. ⛔ A display object: not a piece, no collision, not in the goal — and since
- * 2026-10-01 SOLID to the finger: a press on it is EMPTY SPACE (`throughGreenBox`).
+ * 2026-10-01 SOLID to the finger: a press on it is EMPTY SPACE (`throughOrbitedPieces`).
  *
  * ⛔ ENGINE-FREE.
  */
@@ -38,9 +38,10 @@ export function sizeM(dims: Triple, unitM: number): Vec3 {
  * box, the raycast hits the piece behind"* → *"option 1: implement"*). ⛔ The box was unpickable, so the ray went THROUGH it
  * and grabbed the piece behind. ✅ It is pickable now, so the ray STOPS there — and this turns that hit into a MISS before
  * any rule reads it: the finger orbits, as on empty space, and the box is never held, aligned or steered like a piece.
+ * ⭐ Since 2026-10-04 for EVERY orbited piece — the turquoise one too (*"make it snap rotate when pressed upon"*).
  */
-export function throughGreenBox<M>(hit: M | null, greenBox: M | null): M | null {
-  return hit !== null && greenBox !== null && hit === greenBox ? null : hit;
+export function throughOrbitedPieces<M>(hit: M | null, pieces: readonly M[]): M | null {
+  return hit !== null && pieces.includes(hit) ? null : hit;
 }
 
 /**
@@ -656,4 +657,46 @@ export function greenBootOrientation(sceneId: string): Quat {
   if (q === undefined) return [1, 0, 0, 0];
   const n = Math.hypot(q[0], q[1], q[2], q[3]);
   return n > 0 ? [q[0] / n, q[1] / n, q[2] / n, q[3] / n] : [1, 0, 0, 0];
+}
+
+/**
+ * ⭐⭐ prototype — **THE TURQUOISE PIECE'S SIZE** (the owner, 2026-10-04: *"create an hexagone — extrude the hexagone by twice its diameter —
+ * height shall be the same as the longest dimension of the green piece"*): a hexagonal prism whose length (the extrusion, its "height")
+ * is the green piece's longest side, and whose hexagon is half that across its CORNERS (the circumscribed diameter — a hexagon's usual
+ * diameter, and what Babylon's 6-sided cylinder takes).
+ */
+export function turquoiseSizeM(greenSizeM: Vec3): { readonly diameterM: number; readonly lengthM: number } {
+  const lengthM = Math.max(greenSizeM[0], greenSizeM[1], greenSizeM[2]);
+  return { diameterM: lengthM / 2, lengthM };
+}
+
+/**
+ * ⭐ A UNIFORMLY random rotation (Shoemake's subgroup algorithm), from three numbers in [0, 1) — `[w, x, y, z]`, unit length. ⚠ Not a
+ * random Euler triple, which bunches rotations near the poles.
+ */
+export function uniformQuat(u1: number, u2: number, u3: number): Quat {
+  const a = Math.sqrt(1 - u1);
+  const b = Math.sqrt(u1);
+  const t2 = 2 * Math.PI * u2;
+  const t3 = 2 * Math.PI * u3;
+  return [b * Math.cos(t3), a * Math.sin(t2), a * Math.cos(t2), b * Math.sin(t3)];
+}
+
+/**
+ * ⭐ prototype — how far to the RIGHT of the green piece the turquoise one is placed, centre to centre: both pieces' half diagonals
+ * (whatever their orientations, they cannot overlap) plus a clear gap.
+ */
+export function rightOfGreenM(greenSizeM: Vec3, turquoiseHalfDiagonalM: number, gapM: number): number {
+  return length(greenSizeM) / 2 + turquoiseHalfDiagonalM + gapM;
+}
+
+/**
+ * ⭐⭐ prototype — **THE TURQUOISE PIECE ORBITS BESIDE THE GREEN ONE** (the owner, 2026-10-04: *"make it orbit like the green piece"*): on
+ * the same rings, at the same height, the yaw AHEAD of the green piece's that keeps a constant CHORD between them — so it stays as far to
+ * the side wherever the rings narrow (the waist is 0.09 m across: a fixed yaw offset would put both pieces in one place there). Where the
+ * ring is too narrow for the chord, half a turn (the far side). Radians, ≥ 0; the side (±) is the caller's.
+ */
+export function turquoiseYawOffsetRad(chordM: number, ringRadiusM: number): number {
+  if (!(ringRadiusM > 1e-9)) return Math.PI;
+  return 2 * Math.asin(Math.min(1, chordM / (2 * ringRadiusM)));
 }
