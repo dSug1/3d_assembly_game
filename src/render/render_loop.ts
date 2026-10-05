@@ -36,6 +36,7 @@ import { goalCaptureFrame } from "./goal_capture_wiring";
 import { levelEndFrame } from "./level_end_wiring";
 import { gestureChangedSoFar } from "./undo_wiring";
 import { greenBoxFrame } from "./green_box_wiring";
+import { restingFaceFrame } from "./resting_face_wiring";
 
 export function startRenderLoop(st: SceneState): void {
 
@@ -272,6 +273,8 @@ export function startRenderLoop(st: SceneState): void {
     dissolveOnGoal(st);
     // ⭐⭐ `D189`: the goal is COMMITTED when the scene comes to rest after a change — never midway through a movement.
     goalCommitFrame(st);
+    // ⭐⭐ the resting faces: the boot pass once the goal's baseline exists, then every part the frame UNSEATED (`resting_face_wiring.ts`).
+    restingFaceFrame(st);
     // ⭐⭐ `D180`: the level end — asked only while the scene is at rest; once, it freezes the scene and tells `main.ts`.
     levelEndFrame(st, now);
 

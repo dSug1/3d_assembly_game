@@ -1,0 +1,382 @@
+/**
+ * ⭐⭐⭐ **THE RESTING-FACE SELECTOR** — which face a part is instinctively laid on, and its principal axis.
+ *
+ * Design of record: [`Claude/40_RENDER_SCENE/spec/RESTING_FACE.md`] (the owner, 2026-10-04/05). In the part's OWN frame, from its
+ * welded mesh, uniform density. ⛔ It moves nothing: it answers which face is a stable REFERENCE for the rotation to start from.
+ *
+ * The order of the rule (§3–§6):
+ * 1. **Candidates** — the logical faces, coplanar ones merged; each one's support polygon (the 2D hull of the vertices on its
+ *    plane), the centre of mass's height `h` above it and projection `c` on it, the distances `d_min` / `d_max` from `c` to the
+ *    lines of the polygon's edges. ⛔ `c` outside the polygon, or the face not a supporting plane (a non-convex part): discarded.
+ * 2. **The gate** — the tipping angle `θ = atan2(d_min, h)` below `thetaFloorDeg` (15°): rejected.
+ * 3. **`M` FIRST** — the mirror planes of the solid that CONTAIN the face's normal (the owner: *"the face which maximizes the number
+ *    of plane symmetries in the vertical direction shall be preferred: this way, a bottle stands up"*).
+ * 4. **Then the score** `wS·S + wC·C + wI·I`; inside `ambiguityBand` of the best, the LOWER centre of mass wins.
+ * 5. **Equivalence groups** — faces the rule cannot tell apart are ONE answer (the prism's two ends); the face chosen from the
+ *    winning group is the one needing the smallest turn from the part's pose (`chooseInGroup`).
+ *
+ * ⛔ ENGINE-FREE (rule 1).
+ */
+import { add, cross, dot, length, normalize, qRotate, scale, sub, type Quat, type Vec3 } from "./vec";
+
+/** ⭐ Every tolerance and weight of the rule (§10), lengths as shares of the bounding-box diagonal. */
+export interface RestingConfig {
+  readonly coplanarAngleDeg: number;
+  readonly coplanarDistShare: number;
+  readonly contactShare: number;
+  readonly thetaFloorDeg: number;
+  readonly symShare: number;
+  readonly symAngleDeg: number;
+  readonly wS: number;
+  readonly wC: number;
+  readonly wI: number;
+  readonly ambiguityBand: number;
+  readonly axisDegenerateTol: number;
+}
+
+/** ⭐ The agreed values (§10, §12: `thetaFloorDeg` FIXED at 15° — *"fix. we can later make a slider"*). */
+export const RESTING_DEFAULTS: RestingConfig = {
+  coplanarAngleDeg: 1,
+  coplanarDistShare: 0.01,
+  contactShare: 0.005,
+  thetaFloorDeg: 15,
+  symShare: 0.005,
+  symAngleDeg: 1,
+  wS: 0.55,
+  wC: 0.2,
+  wI: 0.15,
+  ambiguityBand: 0.05,
+  axisDegenerateTol: 0.05,
+};
+
+/** ⭐ One candidate support plane (one face, or coplanar faces merged): its metrics. Lengths in the mesh's own units. */
+export interface RestingCandidate {
+  /** The indices of the input faces it merges. */
+  readonly faces: readonly number[];
+  /** Its OUTWARD normal, in the part's frame — the direction that points DOWN when the part rests on it. */
+  readonly normal: Vec3;
+  readonly h: number;
+  readonly dMin: number;
+  readonly dMax: number;
+  readonly thetaDeg: number;
+  /** ⭐ `M` — the solid's mirror planes containing the normal. */
+  readonly mirrors: number;
+  readonly S: number;
+  readonly C: number;
+  readonly I: number;
+  readonly score: number;
+}
+
+/** ⭐ Candidates the rule cannot tell apart — the same `M`, the same score, the same `h` (§6). */
+export interface RestingGroup {
+  readonly members: readonly RestingCandidate[];
+  readonly mirrors: number;
+  readonly score: number;
+  readonly h: number;
+}
+
+export interface RestingResult {
+  /** The centre of mass (the volume centroid), in the part's frame. */
+  readonly com: Vec3;
+  /** The groups that pass the gate, best first (the winner first). */
+  readonly groups: readonly RestingGroup[];
+  /** The candidates refused by the gate (θ below the floor) — reported, never chosen. */
+  readonly rejected: readonly RestingCandidate[];
+  /** `groups[0]`, or `null` when the part has no face at all. */
+  readonly winner: RestingGroup | null;
+  /**
+   * ⚠ No face passed the gate — a ROUND part lying down: a faceted cylinder's side tips at half its facet angle (7.5° for 24
+   * sides). Then the groups are the refused faces ranked by the tipping angle, the least tippable first (a fallback the spec did not
+   * cover — to be confirmed by the owner).
+   */
+  readonly belowGate: boolean;
+  /** The runner-up, when it was within the ambiguity band of the winner (same `M`) — reported, never chosen. */
+  readonly ambiguous: RestingGroup | null;
+  /** ⭐ The direction of the largest extent (the smallest moment of inertia), or `null` when it is not distinguished (§7). */
+  readonly principalAxis: Vec3 | null;
+}
+
+/** ⭐ The volume, the centre of mass and the second moment `∫ x xᵀ dV` about the centre of mass, by signed tetrahedra. */
+export function massProperties(
+  positions: readonly Vec3[],
+  triangles: readonly number[],
+): { readonly volume: number; readonly com: Vec3; readonly second: readonly (readonly number[])[] } {
+  let det6 = 0;
+  let g: Vec3 = [0, 0, 0];
+  const C = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
+  for (let t = 0; t + 2 < triangles.length; t += 3) {
+    const a = positions[triangles[t]!]!;
+    const b = positions[triangles[t + 1]!]!;
+    const c = positions[triangles[t + 2]!]!;
+    const det = dot(a, cross(b, c));
+    det6 += det;
+    const s = add(add(a, b), c);
+    g = add(g, scale(s, det));
+    // ⭐ the tetrahedron (0, a, b, c): ∫ x xᵀ = det/120 · (a aᵀ + b bᵀ + c cᵀ + s sᵀ)
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++) C[i]![j]! += (det / 120) * (a[i]! * a[j]! + b[i]! * b[j]! + c[i]! * c[j]! + s[i]! * s[j]!);
+  }
+  // ⚠ An inward winding gives a negative volume: the ratios are unchanged, the moments flip — so the sign is taken out.
+  const sign = det6 < 0 ? -1 : 1;
+  const volume = (sign * det6) / 6;
+  const com: Vec3 = det6 === 0 ? [0, 0, 0] : scale(g, 1 / (4 * det6));
+  const second = C.map((row, i) => row.map((v, j) => sign * v - volume * com[i]! * com[j]!));
+  return { volume, com, second };
+}
+
+/** ⭐ The eigenvalues and unit eigenvectors of a symmetric 3×3 matrix (cyclic Jacobi), eigenvalues ascending. */
+export function symmetricEigen3(m: readonly (readonly number[])[]): { readonly values: readonly number[]; readonly vectors: readonly Vec3[] } {
+  const a = m.map((r) => [...r]);
+  const v = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+  ];
+  for (let sweep = 0; sweep < 50; sweep++) {
+    const off = a[0]![1]! ** 2 + a[0]![2]! ** 2 + a[1]![2]! ** 2;
+    if (off < 1e-30) break;
+    for (const [p, q] of [
+      [0, 1],
+      [0, 2],
+      [1, 2],
+    ] as const) {
+      if (Math.abs(a[p]![q]!) < 1e-300) continue;
+      const theta = (a[q]![q]! - a[p]![p]!) / (2 * a[p]![q]!);
+      const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+      const c = 1 / Math.sqrt(t * t + 1);
+      const s = t * c;
+      for (let k = 0; k < 3; k++) {
+        const akp = a[k]![p]!;
+        const akq = a[k]![q]!;
+        a[k]![p] = c * akp - s * akq;
+        a[k]![q] = s * akp + c * akq;
+      }
+      for (let k = 0; k < 3; k++) {
+        const apk = a[p]![k]!;
+        const aqk = a[q]![k]!;
+        a[p]![k] = c * apk - s * aqk;
+        a[q]![k] = s * apk + c * aqk;
+      }
+      for (let k = 0; k < 3; k++) {
+        const vkp = v[k]![p]!;
+        const vkq = v[k]![q]!;
+        v[k]![p] = c * vkp - s * vkq;
+        v[k]![q] = s * vkp + c * vkq;
+      }
+    }
+  }
+  const order = [0, 1, 2].sort((i, j) => a[i]![i]! - a[j]![j]!);
+  return {
+    values: order.map((i) => a[i]![i]!),
+    vectors: order.map((i) => [v[0]![i]!, v[1]![i]!, v[2]![i]!] as Vec3),
+  };
+}
+
+/**
+ * ⭐⭐ **THE SOLID'S MIRROR PLANES THROUGH ITS CENTRE OF MASS** (§4) — each as its unit normal `m` (`m` and `−m` one plane).
+ * Candidates: the direction between every pair of vertices (any mirror plane that is not the identity maps some vertex onto
+ * another, and that pair's difference IS its normal); merged within `angleDeg`. A candidate is a mirror plane when every vertex,
+ * reflected across it, lands within `tol` of a vertex. ⚠ It reads the VERTEX SET, not the surface, and is all-or-nothing beyond
+ * `tol` (a chamfer larger than `tol` removes a plane) — the cost the owner accepted.
+ */
+export function mirrorPlanes(positions: readonly Vec3[], com: Vec3, tol: number, angleDeg: number): Vec3[] {
+  const cosA = Math.cos((angleDeg * Math.PI) / 180);
+  const cands: Vec3[] = [];
+  for (let i = 0; i < positions.length; i++)
+    for (let j = i + 1; j < positions.length; j++) {
+      const d = sub(positions[i]!, positions[j]!);
+      if (length(d) < tol) continue;
+      const m = normalize(d)!;
+      if (!cands.some((c) => Math.abs(dot(c, m)) > cosA)) cands.push(m);
+    }
+  return cands.filter((m) =>
+    positions.every((p) => {
+      const r = sub(p, scale(m, 2 * dot(sub(p, com), m)));
+      return positions.some((q) => length(sub(r, q)) <= tol);
+    }),
+  );
+}
+
+/** ⭐ `M` for a face normal `n`: the mirror planes CONTAINING it — their normals perpendicular to `n` (within `angleDeg`). */
+export function mirrorsContaining(planes: readonly Vec3[], n: Vec3, angleDeg: number): number {
+  const sinA = Math.sin((angleDeg * Math.PI) / 180);
+  return planes.filter((m) => Math.abs(dot(m, n)) <= sinA).length;
+}
+
+/** ⭐ The 2D convex hull (Andrew's monotone chain), counter-clockwise, collinear points dropped. */
+export function hull2(points: readonly (readonly [number, number])[]): [number, number][] {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((q) => [q[0], q[1]] as [number, number]);
+  if (p.length < 3) return p;
+  const x = (o: readonly number[], a: readonly number[], b: readonly number[]): number =>
+    (a[0]! - o[0]!) * (b[1]! - o[1]!) - (a[1]! - o[1]!) * (b[0]! - o[0]!);
+  const lower: [number, number][] = [];
+  for (const q of p) {
+    while (lower.length >= 2 && x(lower[lower.length - 2]!, lower[lower.length - 1]!, q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  const upper: [number, number][] = [];
+  for (let i = p.length - 1; i >= 0; i--) {
+    const q = p[i]!;
+    while (upper.length >= 2 && x(upper[upper.length - 2]!, upper[upper.length - 1]!, q) <= 0) upper.pop();
+    upper.push(q);
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}
+
+/**
+ * ⭐ The winner among ranked groups (best `M`, then best score, first): inside `band` of the best score — the SAME `M` — the
+ * LOWER centre of mass wins (§5: the source spec's shared-edge shortcut, without its precondition). The runner-up inside the band
+ * is reported as `ambiguous`.
+ */
+export function pickWinner(
+  ranked: readonly RestingGroup[],
+  band: number,
+): { readonly groups: readonly RestingGroup[]; readonly ambiguous: RestingGroup | null } {
+  const [first, second] = ranked;
+  if (first === undefined || second === undefined || second.mirrors !== first.mirrors || first.score - second.score >= band)
+    return { groups: ranked, ambiguous: null };
+  const winner = second.h < first.h ? second : first;
+  const other = winner === first ? second : first;
+  return { groups: [winner, other, ...ranked.slice(2)], ambiguous: other };
+}
+
+/**
+ * ⭐⭐⭐ **THE SELECTOR** — the ranked resting faces of a part from its welded mesh (`meshTopology`'s positions and logical
+ * faces, in its own frame).
+ */
+export function restingFaces(
+  positions: readonly Vec3[],
+  faces: readonly { readonly normal: Vec3; readonly centre: Vec3; readonly triangles: readonly number[] }[],
+  cfg: RestingConfig = RESTING_DEFAULTS,
+): RestingResult {
+  const empty: RestingResult = { com: [0, 0, 0], groups: [], rejected: [], winner: null, belowGate: false, ambiguous: null, principalAxis: null };
+  if (positions.length < 4 || faces.length === 0) return empty;
+  const lo = [0, 1, 2].map((k) => Math.min(...positions.map((p) => p[k]!)));
+  const hi = [0, 1, 2].map((k) => Math.max(...positions.map((p) => p[k]!)));
+  const diag = Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!);
+  const coplanarDist = cfg.coplanarDistShare * diag;
+  const contactTol = cfg.contactShare * diag;
+  const symTol = cfg.symShare * diag;
+  const mp = massProperties(positions, faces.flatMap((f) => f.triangles));
+  const G = mp.com;
+
+  // ⭐ the principal axis (§7): the inertia tensor's smallest moment = the covariance's largest spread
+  const eig = symmetricEigen3(mp.second);
+  const [, l2, l3] = eig.values;
+  const principalAxis = l3! > 0 && (l3! - l2!) / l3! >= cfg.axisDegenerateTol ? eig.vectors[2]! : null;
+
+  // ⭐ candidates: coplanar faces merged (normals within the angle, planes within the distance)
+  const cosA = Math.cos((cfg.coplanarAngleDeg * Math.PI) / 180);
+  const merged: { faces: number[]; normal: Vec3 }[] = [];
+  faces.forEach((f, i) => {
+    const g = merged.find((m) => dot(m.normal, f.normal) >= cosA && Math.abs(dot(sub(f.centre, faces[m.faces[0]!]!.centre), m.normal)) <= coplanarDist);
+    if (g) g.faces.push(i);
+    else merged.push({ faces: [i], normal: f.normal });
+  });
+
+  const planes = mirrorPlanes(positions, G, symTol, cfg.symAngleDeg);
+  const passed: RestingCandidate[] = [];
+  const rejected: RestingCandidate[] = [];
+  for (const m of merged) {
+    const n = m.normal;
+    // ⛔ a face that is not a supporting plane (a pocket of a non-convex part) cannot carry the part — the hull seam (§3)
+    const support = Math.max(...positions.map((p) => dot(p, n)));
+    const offset = dot(faces[m.faces[0]!]!.centre, n);
+    if (offset < support - contactTol) continue;
+    const e1 = normalize(Math.abs(n[0]) < 0.9 ? cross(n, [1, 0, 0]) : cross(n, [0, 1, 0]))!;
+    const e2 = cross(n, e1);
+    const to2 = (p: Vec3): [number, number] => [dot(p, e1), dot(p, e2)];
+    const P = hull2(positions.filter((p) => Math.abs(dot(p, n) - support) <= contactTol).map(to2));
+    if (P.length < 3) continue;
+    const h = support - dot(G, n);
+    const c = to2(G);
+    // c inside P (counter-clockwise): on the left of every edge; and the perpendicular distances to the edges' lines
+    const ds: number[] = [];
+    let inside = true;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i]!;
+      const b = P[(i + 1) % P.length]!;
+      const ex = b[0] - a[0];
+      const ey = b[1] - a[1];
+      const el = Math.hypot(ex, ey);
+      const left = (ex * (c[1] - a[1]) - ey * (c[0] - a[0])) / el;
+      if (left < -1e-12 * diag) inside = false;
+      ds.push(Math.abs(left));
+    }
+    if (!inside) continue;
+    const dMin = Math.min(...ds);
+    const dMax = Math.max(...ds);
+    // the support polygon's area centroid
+    let A = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i]!;
+      const b = P[(i + 1) % P.length]!;
+      const k = a[0] * b[1] - b[0] * a[1];
+      A += k;
+      cx += (a[0] + b[0]) * k;
+      cy += (a[1] + b[1]) * k;
+    }
+    const centroid: [number, number] = [cx / (3 * A), cy / (3 * A)];
+    const thetaDeg = (Math.atan2(dMin, h) * 180) / Math.PI;
+    const S = thetaDeg / 90;
+    const C = dMin > 0 ? 1 - Math.min(1, Math.hypot(c[0] - centroid[0], c[1] - centroid[1]) / dMin) : 0;
+    const I = dMax > 0 ? dMin / dMax : 0;
+    const cand: RestingCandidate = {
+      faces: m.faces,
+      normal: n,
+      h,
+      dMin,
+      dMax,
+      thetaDeg,
+      mirrors: mirrorsContaining(planes, n, cfg.symAngleDeg),
+      S,
+      C,
+      I,
+      score: cfg.wS * S + cfg.wC * C + cfg.wI * I,
+    };
+    (thetaDeg < cfg.thetaFloorDeg ? rejected : passed).push(cand);
+  }
+
+  // ⭐ ranked: M first, then the score, then the lower centre of mass — and the equivalence groups (§6)
+  const group = (list: readonly RestingCandidate[]): RestingGroup[] => {
+    const groups: RestingGroup[] = [];
+    for (const c of list) {
+      const g = groups[groups.length - 1];
+      if (g && g.mirrors === c.mirrors && Math.abs(g.score - c.score) < 1e-6 && Math.abs(g.h - c.h) <= contactTol)
+        (g.members as RestingCandidate[]).push(c);
+      else groups.push({ members: [c], mirrors: c.mirrors, score: c.score, h: c.h });
+    }
+    return groups;
+  };
+  if (passed.length === 0) {
+    // ⚠ nothing stable enough (a round part lying down): the least tippable face — the largest θ — reported `belowGate`
+    const fallback = group([...rejected].sort((a, b) => b.thetaDeg - a.thetaDeg || b.mirrors - a.mirrors || b.score - a.score));
+    return { com: G, groups: fallback, rejected, winner: fallback[0] ?? null, belowGate: fallback.length > 0, ambiguous: null, principalAxis };
+  }
+  passed.sort((a, b) => b.mirrors - a.mirrors || b.score - a.score || a.h - b.h);
+  const picked = pickWinner(group(passed), cfg.ambiguityBand);
+  return { com: G, groups: picked.groups, rejected, winner: picked.groups[0] ?? null, belowGate: false, ambiguous: picked.ambiguous, principalAxis };
+}
+
+/**
+ * ⭐ The face chosen from a group (§6, the owner: *"agreed"*): the one needing the SMALLEST TURN from the pose `q` to point its
+ * outward normal DOWN — the member whose world normal is most aligned with `down`.
+ */
+export function chooseInGroup(group: RestingGroup, q: Quat, down: Vec3 = [0, -1, 0]): RestingCandidate {
+  let best = group.members[0]!;
+  let bestDot = -Infinity;
+  for (const m of group.members) {
+    const d = dot(qRotate(q, m.normal), down);
+    if (d > bestDot + 1e-12) {
+      bestDot = d;
+      best = m;
+    }
+  }
+  return best;
+}

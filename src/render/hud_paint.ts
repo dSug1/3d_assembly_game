@@ -23,6 +23,7 @@ import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
 import { orbitDegPerMm } from "../input/follow_camera";
 import { greenDragGains } from "./green_box_wiring";
+import type { RestingCandidate, RestingResult } from "../core/resting_face";
 
 export function describe(v: ReleaseVerdict) : string {
   // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16), and the
@@ -366,7 +367,16 @@ export function greenReadout(st: SceneState): string {
   const g = greenDragGains(st);
   const r = orbitDegPerMm(st.cfg, st.orbit.elevation, g);
   // ⭐ the orbited piece (green or turquoise, the SCENE menu's switch) and its logical faces, read when it was created
-  const piece = `${st.orbitPieceKind === 1 ? "turquoise" : "green"}, ${st.orbitPieceFaces} faces`;
-  return `${piece}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
+  const piece = `${st.orbitPieceKind === 1 ? "turquoise" : "green"}, ${st.orbitPieceFaces} faces${restingHud(st.orbitPieces.find((o) => o.mesh === st.greenBox)?.resting ?? null, st.orbitPieces.find((o) => o.mesh === st.greenBox)?.restingFace ?? null)}`;
+  // ⭐ …and the scene's parts: how many have a resting face, and the one asked last (at boot, or the moment it was unseated)
+  const last = st.restingLast === null ? undefined : st.restingFaces.get(st.restingLast);
+  const parts = ` | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
+  return `${piece}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target${parts} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 
+
+/** ⭐ prototype: a resting face on the HUD — ` · rests on f3 (M 2, θ 54°)`, flagged when below the gate or ambiguous. */
+function restingHud(r: RestingResult | null, chosen: RestingCandidate | null): string {
+  if (r === null || chosen === null) return " · rests on —";
+  return ` · rests on f${chosen.faces.join("+")} (M ${chosen.mirrors}, θ ${chosen.thetaDeg.toFixed(0)}°)${r.belowGate ? " ⚠BELOW-GATE" : ""}${r.ambiguous !== null ? " ⚠AMBIGUOUS" : ""}`;
+}

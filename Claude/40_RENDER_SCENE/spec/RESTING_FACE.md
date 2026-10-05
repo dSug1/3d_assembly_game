@@ -1,6 +1,7 @@
 # Resting-face selector — specification (prototype)
 
-> **Status:** agreed spec, every question answered (§12), ⛔ not built. Branch `1.0.59p-from1.0.59m-`, 2026-10-04.
+> **Status:** ✅ BUILT 2026-10-05 (⛔ unjudged by a hand) — `src/core/resting_face.ts`, `src/render/resting_face_wiring.ts`; one gap found
+> while building is open (§14). Branch `1.0.59p-from1.0.59m-`, 2026-10-04.
 > **Source:** the owner's `resting-face-selection.md`, amended by the review of 2026-10-04 (§9) and the owner's decision on
 > symmetry: *"the face which maximizes the number of plane symmetries in the vertical direction shall be preferred: this way, a
 > bottle stands up, a simplified conical pine tree stands up, etc."*
@@ -197,11 +198,10 @@ axisDegenerateTol    0.05 (relative eigenvalue gap)
 |---|---|---|
 | **boot** | every part of the scene that is **not seated** — neither seated on a Pioneer (`st.links`) nor **placed in its goal** (§13.2) — and not frozen (§13.1) | once the bodies, the links and the goal status exist (`scene.ts`) |
 | **boot** | the orbited pieces (green, turquoise) | at their creation (`createGreenBox`) |
-| **unseat** | the part just released from its Pioneer | `unseatWorld` (`alignment_wiring.ts`) — ⭐ the ONE funnel every unseat already passes through (the unsnap gesture, an unalign, the render loop's release), so no unseat path can miss it |
-| **leaves its goal** | a part whose PLACED status goes from placed to not placed (§13.2) | where that status is re-judged (`D189`/`D190`: only when an action completes, only the parts it moved) |
+| **unseated / leaves its goal** | a part that was seated last frame and is not any more | ⭐ AS BUILT: the seated set (on a Pioneer, or placed in its goal) is DIFFED every frame, after the goal commit (`restingFaceFrame`) — one funnel for EVERY path that frees a part: the unsnap, an unalign, a dissolve, and an UNDO that restores the links or the goal wholesale. ⛔ The first plan (a call in `unseatWorld`) would have missed the undo. |
 
-⚠ To check when it is built: an **undo** that takes a seat back must reach `unseatWorld` too (`undo_wiring.ts` restores a whole action) —
-if it restores the tree directly, it is a second path and needs the same call.
+⭐ The boot pass waits for the goal's BASELINE commit (its first frame): a part placed in its goal at boot is seated, so it must be known
+first. In `Scene_1` that leaves the 5 parts that boot out of the goal (36 of 41 are placed).
 
 **What is cached:** everything except the face chosen inside the winning group (§6) depends on the mesh alone, so it is computed once
 per SHAPE and kept (`Scene_1`'s identical pieces share it). At an unseat only §6 runs again — the smallest turn from the pose the part
@@ -231,3 +231,12 @@ HUD — the held part's resting face, `M` and axis; the orbited piece's on the g
    undo that takes the placing back, which must reach the same call.
 3. **A Pioneer whose Follower is seated on it** — **its own resting face**, on its OWN mesh, not the assembly's (*"agreed"*), until
    assemblies get a rule of their own.
+
+## 14. Found while building (2026-10-05) — ⛔ open, for the owner
+
+**A ROUND part lying down has NO face above the gate.** A faceted cylinder's side tips at HALF its facet angle — 7.5° for 24 sides —
+so a round bottle 4× as tall as wide has its ends refused (13.9°) AND its sides (7.5°): no candidate at all. §3's *"one of 4× lies
+down"* is true for a SQUARE-section bottle (its side tips at 45°), not a round one. ⭐ **As built, a fallback:** when nothing passes,
+the least tippable face (the largest θ) is taken and the result is flagged `belowGate` (the HUD reads `⚠BELOW-GATE`) — so the round
+4:1 bottle STANDS. ⚠ To decide: keep it; or treat a ROUND side as one support (the cylinder lies down, rolling being the table's
+business); or lower the gate for such parts. Neither of today's two pieces reaches it.

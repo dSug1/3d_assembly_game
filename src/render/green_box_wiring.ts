@@ -10,6 +10,9 @@ import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder"
 import { OrbitController } from "../input";
 import { topologyFromMesh } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import { chooseInGroup, restingFaces, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
@@ -39,6 +42,63 @@ const TURQUOISE = new Color3(0.19, 0.84, 0.78);
 function piecesFacesOf(m: Mesh): number {
   const topo = topologyFromMesh(m);
   return topo === null ? 0 : pieceFaces(topo.positions, topo.faces).length;
+}
+
+/** ⭐ The yellow of a resting face. */
+const RESTING_YELLOW = new Color3(1, 0.85, 0.1);
+/** ⭐ Its fill's opacity — the face still visible under it, as the other face fills. */
+const RESTING_ALPHA = 0.6;
+
+/**
+ * ⭐⭐ prototype — **THE ORBITED PIECE'S RESTING FACE, IN YELLOW** (the owner, 2026-10-05: *"For the green and turquoise pieces,
+ * highlight the resting face in yellow"*). The selector (`core/resting_face.ts`) on the piece's own mesh, at creation; the face
+ * chosen from its winning group is the one needing the smallest turn from the BOOT pose (`chooseInGroup`, the boot quaternion both
+ * pieces spawn at). Its fill: that face's triangles, double-sided, a child of the piece (it turns and hides with it), lifted along its
+ * normal each frame by the highlight offset (`restingFillFrame`).
+ */
+function restingOf(st: SceneState, m: Mesh): { resting: RestingResult; restingFace: RestingCandidate | null; restingFill: Mesh | null } {
+  const topo = topologyFromMesh(m);
+  const resting = topo === null ? restingFaces([], []) : restingFaces(topo.positions, topo.faces);
+  const restingFace = resting.winner === null ? null : chooseInGroup(resting.winner, greenBootOrientation(st.sceneSpec.id));
+  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null };
+  const local = new Map<number, number>();
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (const f of restingFace.faces)
+    for (const vi of topo.faces[f]!.triangles) {
+      let li = local.get(vi);
+      if (li === undefined) {
+        li = local.size;
+        local.set(vi, li);
+        const p = topo.positions[vi]!;
+        positions.push(p[0], p[1], p[2]);
+      }
+      indices.push(li);
+    }
+  const fill = new Mesh(`${m.name}-resting-face`, st.scene);
+  const data = new VertexData();
+  data.positions = positions;
+  data.indices = [...indices, ...indices.slice().reverse()]; // ⚠ double-sided: it must read from either side
+  data.applyToMesh(fill, false);
+  const mat = new StandardMaterial(`${m.name}-resting-face-mat`, st.scene);
+  mat.emissiveColor = RESTING_YELLOW.clone();
+  mat.disableLighting = true;
+  mat.backFaceCulling = false;
+  mat.alpha = RESTING_ALPHA;
+  fill.material = mat;
+  fill.parent = m;
+  fill.isPickable = false;
+  fill.metadata = { orbitCandidate: false };
+  return { resting, restingFace, restingFill: fill };
+}
+
+/** ⭐ The piece in use's yellow fill, lifted off its face by the highlight offset (`highlightLiftMm` on the glass, at its distance). */
+function restingFillFrame(st: SceneState): void {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFill === null || p.restingFace === null) return;
+  const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, p.mesh.position), st.camera.fov, st.canvas.clientHeight);
+  const n = p.restingFace.normal;
+  p.restingFill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);
 }
 
 /**
@@ -92,7 +152,7 @@ export function createGreenBox(st: SceneState): void {
   // cube shall billboard the camera"*). It keeps the world's axes: its width along x, its tapered height up y, its depth along z.
   box.billboardMode = Mesh.BILLBOARDMODE_NONE;
   // ⭐ Its volume (the frustum, not its bounding box) — what the orbit's inertia is sized by (`inertiaTauMs`).
-  st.orbitPieces.push({ mesh: box, faces: piecesFacesOf(box), volumeM3: frustumVolumeM3(w, h, d, OBJECT_TOP_SCALE) });
+  st.orbitPieces.push({ mesh: box, faces: piecesFacesOf(box), volumeM3: frustumVolumeM3(w, h, d, OBJECT_TOP_SCALE), ...restingOf(st, box) });
   // ⭐⭐ prototype, the owner 2026-10-04: *"Create the turquoise hexagonal piece as previous. Set the same transform as the green piece
   // (quaternion =(1,2,3,4) and position) at boot"* — a 6-sided prism as long as the green piece's longest side, half that across its
   // corners (`turquoiseSizeM`), FLAT shaded (⛔ a smooth-shaded hexagon reads as a cylinder — defect 68's lesson); the orbit carries
@@ -105,7 +165,7 @@ export function createGreenBox(st: SceneState): void {
   hex.material = hm;
   hex.isPickable = true; // as the green piece: a press on it is empty space (`throughGreenBox`, the piece in use)
   hex.billboardMode = Mesh.BILLBOARDMODE_NONE;
-  st.orbitPieces.push({ mesh: hex, faces: piecesFacesOf(hex), volumeM3: hexPrismVolumeM3(ts.diameterM, ts.lengthM) });
+  st.orbitPieces.push({ mesh: hex, faces: piecesFacesOf(hex), volumeM3: hexPrismVolumeM3(ts.diameterM, ts.lengthM), ...restingOf(st, hex) });
   spawnOrbitPiece(st, st.cfg.orbitPieceKind, true);
   // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
   // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).
@@ -303,6 +363,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
+  restingFillFrame(st);
 }
 
 /**

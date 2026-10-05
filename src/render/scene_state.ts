@@ -25,6 +25,8 @@ import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, 
 import { type Quat, type Vec3 } from "../core/vec";
 
 import { type FrameMeter } from "../core/frame_meter";
+import type { RestingCandidate, RestingResult } from "../core/resting_face";
+import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
 import { RotationFollower, RotationTally } from "../input/rotation_increment";
@@ -403,7 +405,22 @@ export interface SceneState {
   pinkRing: LinesMesh | null;
   /** ⭐ Prototype: the pieces the orbit can carry — [0] the green frustum, [1] the turquoise hexagonal prism — each with its logical
    * face count (read at creation) and volume (the inertia's); the one in use is `greenBox` (`spawnOrbitPiece`). */
-  orbitPieces: { readonly mesh: Mesh; readonly faces: number; readonly volumeM3: number }[];
+  orbitPieces: {
+    readonly mesh: Mesh;
+    readonly faces: number;
+    readonly volumeM3: number;
+    /** ⭐ its resting face (`core/resting_face.ts`, at creation): the rule's answer, the face chosen from the boot pose, and its
+     * YELLOW fill (a child of the piece, lifted each frame like every highlight) — the owner, 2026-10-05. */
+    readonly resting: RestingResult;
+    readonly restingFace: RestingCandidate | null;
+    readonly restingFill: Mesh | null;
+  }[];
+  /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
+   * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */
+  restingFaces: Map<ObjectId, RestingEntry>;
+  restingShapes: Map<string, RestingResult>;
+  restingSeated: Set<ObjectId> | null;
+  restingLast: ObjectId | null;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;
