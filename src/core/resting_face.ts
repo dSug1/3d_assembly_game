@@ -486,3 +486,104 @@ export function restAlignTarget(q: Quat, restNormal: Vec3, axes: readonly Vec3[]
   const angle = Math.atan2(dot(up, cross(best, t)), dot(best, t));
   return qmul(qFromAxisAngle(up, angle), q1);
 }
+
+/** ⭐ A segment's ends. */
+export type Edge = readonly [Vec3, Vec3];
+
+/**
+ * ⭐ A planar face's EDGES, from its points and its normal: the edges of their 2D convex hull in the face's plane, each as its two
+ * original 3D points (collinear points dropped — a box face is four edges whatever its triangulation).
+ */
+export function faceEdges(points: readonly Vec3[], normal: Vec3): Edge[] {
+  const n = normalize(normal);
+  if (n === null || points.length < 3) return [];
+  const e1 = normalize(Math.abs(n[0]) < 0.9 ? cross(n, [1, 0, 0]) : cross(n, [0, 1, 0]))!;
+  const e2 = cross(n, e1);
+  const flat = points.map((p) => [dot(p, e1), dot(p, e2)] as [number, number]);
+  const H = hull2(flat);
+  const back = H.map((h) => points[flat.findIndex((f) => f[0] === h[0] && f[1] === h[1])]!);
+  return back.map((a, i) => [a, back[(i + 1) % back.length]!] as Edge);
+}
+
+/** ⭐ The distance from a point to a segment. */
+export function segmentDistance(p: Vec3, e: Edge): number {
+  const ab = sub(e[1], e[0]);
+  const l2 = dot(ab, ab);
+  const t = l2 > 0 ? Math.min(1, Math.max(0, dot(sub(p, e[0]), ab) / l2)) : 0;
+  return length(sub(p, add(e[0], scale(ab, t))));
+}
+
+/**
+ * ⭐⭐ prototype — **THE MATING EDGE** (`RESTING_FACE_ALIGNMENT.md` §2, the owner, 2026-10-05: *"the edge of the pink face which is
+ * closest to be in horizontal plane and among those which are closest to be in horizontal plane, the edge which is closest to the
+ * camera"*). Of the pink face's edges (world): those within `tolDeg` of the most horizontal one (the angle of each to the horizontal
+ * plane), then the one nearest the camera. `-1` with none.
+ */
+export function matingEdgeIndex(edges: readonly Edge[], camera: Vec3, up: Vec3 = [0, 1, 0], tolDeg = 1): number {
+  const tilt = edges.map((e) => {
+    const d = normalize(sub(e[1], e[0]));
+    return d === null ? Infinity : Math.asin(Math.min(1, Math.abs(dot(d, up))));
+  });
+  const flattest = Math.min(...tilt);
+  let best = -1;
+  let bestD = Infinity;
+  edges.forEach((e, i) => {
+    if (!(tilt[i]! <= flattest + (tolDeg * Math.PI) / 180)) return;
+    const d = segmentDistance(camera, e);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/** ⭐ The edge nearest a point — THE LEADING EDGE when the point is the pink ring (`-1` with none). */
+export function nearestEdgeIndex(edges: readonly Edge[], p: Vec3): number {
+  let best = -1;
+  let bestD = Infinity;
+  edges.forEach((e, i) => {
+    const d = segmentDistance(p, e);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE RESTING-FACE ALIGNMENT, PRIORITY 1 BY EDGES** (`RESTING_FACE_ALIGNMENT.md` §2; the owner, 2026-10-05, on
+ * `1.0.59q-`: *"identify the edge of the resting face which is closest to the pink gizmo (the leading edge) — identify the edge of the
+ * pink face which is closest to be in horizontal plane and … closest to the camera (the mating edge) — the resting face goes to bottom
+ * (no change) — rotate the piece so that the leading edge most align with the mating edge"*).
+ * From the pose `q` (the piece at `at`, its resting face's normal `restNormal` and edges `faceEdgesLocal` in its own frame):
+ * (1) the resting face DOWN — the smallest turn (unchanged); (2) the LEADING edge — the resting face's edge nearest `pink`, the face
+ * down; (3) a turn about the vertical, the SMALLEST, making the leading edge parallel to the mating edge's horizontal direction (either
+ * way along it). A mating edge with no horizontal part (vertical): (1) alone.
+ */
+export function restAlignToEdge(
+  q: Quat,
+  at: Vec3,
+  restNormal: Vec3,
+  faceEdgesLocal: readonly Edge[],
+  pink: Vec3,
+  mating: Edge,
+  down: Vec3 = [0, -1, 0],
+): { readonly q: Quat; readonly leading: number } {
+  const q1 = qmul(shortestArc(qRotate(q, restNormal), down), q);
+  const toWorld = (p: Vec3): Vec3 => add(at, qRotate(q1, p));
+  const edgesWorld = faceEdgesLocal.map((e) => [toWorld(e[0]), toWorld(e[1])] as Edge);
+  const leading = nearestEdgeIndex(edgesWorld, pink);
+  if (leading < 0) return { q: q1, leading };
+  const up: Vec3 = [-down[0], -down[1], -down[2]];
+  const flat = (v: Vec3): Vec3 | null => normalize(sub(v, scale(up, dot(v, up))));
+  const d = flat(sub(edgesWorld[leading]![1], edgesWorld[leading]![0]));
+  const m = flat(sub(mating[1], mating[0]));
+  if (d === null || m === null) return { q: q1, leading };
+  // the smallest yaw onto ±m: an edge has no direction of its own
+  let angle = Math.atan2(dot(up, cross(d, m)), dot(d, m));
+  if (angle > Math.PI / 2) angle -= Math.PI;
+  else if (angle < -Math.PI / 2) angle += Math.PI;
+  return { q: qmul(qFromAxisAngle(up, angle), q1), leading };
+}

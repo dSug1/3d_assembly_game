@@ -396,6 +396,8 @@ export function installPointerHandler(st: SceneState): void {
               faceNormal.z,
             ] as Vec3)
           : null;
+      // ⭐ `1.0.59q-`: a press that MOVED the target puts the pink ring on THIS face — the mating edge's face (`pinkFaceEdges`)
+      if (newTarget !== null && faceHit && pickedId !== undefined) st.pinkFace = { objectId: pickedId, faceId: faceHit.faceId };
       let pressFace = faceHit
         ? { faceId: faceHit.faceId, cos: faceHit.cos }
         : null;
@@ -1249,7 +1251,7 @@ export function orbitTapped(st: SceneState, now: number): void {
   if (r.aligns && alignRestingFace(st, now)) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
-    st.lastVerdict = "orbit: tap 1 — the resting face aligned (down, its long axis toward the pink ring)";
+    // ⭐ the verdict is the alignment's own (its leading and mating edges, `alignRestingFace`)
   } else {
     st.lastVerdict = `orbit: tap ${ot.count} — counted (nothing defined yet)`;
   }

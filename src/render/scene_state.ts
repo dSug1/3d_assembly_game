@@ -25,7 +25,7 @@ import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, 
 import { type Quat, type Vec3 } from "../core/vec";
 
 import { type FrameMeter } from "../core/frame_meter";
-import type { RestingCandidate, RestingResult } from "../core/resting_face";
+import type { Edge, RestingCandidate, RestingResult } from "../core/resting_face";
 import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -417,6 +417,8 @@ export interface SceneState {
     /** ⭐ its resting face's LONG AXES (`faceLongAxes`), the piece's frame — and whether they are the odd-sided fallback. */
     readonly restingAxes: readonly Vec3[];
     readonly restingAxesFallback: boolean;
+    /** ⭐ its resting face's EDGES (`faceEdges`), its own frame — the leading edge is one of them (`1.0.59q-`). */
+    readonly restingEdges: readonly Edge[];
   }[];
   /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
    * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */
@@ -437,6 +439,9 @@ export interface SceneState {
   orbitHeadingPrev: number | null;
   /** ⭐ Prototype (§2bis): the orbited piece's resting face has been ALIGNED (a tap) — it no longer turns against the orbit. A respawn clears it. */
   restAligned: boolean;
+  /** ⭐ Prototype (`1.0.59q-`): the face holding the pink ring — at boot the blue face toward the green piece, then the face a press on a
+   * placed piece moves the target to. Its edges give the alignment's MATING edge. */
+  pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;

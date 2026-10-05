@@ -28,11 +28,19 @@ While the **first touch** (or the **left button**) is down and **orbiting** — 
 
 1. **The resting face down** — its outward normal along gravity (the piece sits on it). The face is the selector's
    (`RESTING_FACE.md`), the member of its winning group chosen there.
-2. **Its long axis toward the pink ring** — then a turn about the vertical so that the resting face's **long axis** (§3) points along
-   the **horizontal direction from the piece toward the pink ring**. Of the candidate axes (each with its two directions), the one
-   already **closest** to that direction is taken.
-   ⭐ Always defined: the piece is never directly above the ring (the closest it comes horizontally is the waist rings' radius,
-   0.09 m in `Scene_1`) — so there is no second priority.
+2. ⭐⭐ **PRIORITY 1, BY EDGES** (`1.0.59q-`, the owner, 2026-10-05: *"identify the edge of the resting face which is closest to the pink
+   gizmo (the leading edge) — identify the edge of the pink face which is closest to be in horizontal plane and among those which are
+   closest to be in horizontal plane, the edge which is closest to the camera (the mating edge) — the resting face goes to bottom (no
+   change) — rotate the piece so that the leading edge most align with the mating edge"*):
+   - **the LEADING edge** — of the resting face's edges (the hull of its points in its plane), the one nearest the pink ring — measured
+     with the face already DOWN (after step 1, before the yaw);
+   - **the MATING edge** — of the PINK FACE's edges (the face holding the pink ring: at boot the blue face toward the green piece, then
+     the face a press on a placed piece moves the target to — `st.pinkFace`), those within **1°** of the most horizontal, then the one
+     nearest the **camera**;
+   - **the turn** — the SMALLEST yaw (≤ 90°: an edge has no direction of its own) making the leading edge **parallel** to the mating
+     edge's horizontal direction. Rotation only: the piece stays where the orbit puts it.
+   - No pink face known, or a vertical mating edge: step 1 alone.
+   ⛔ ~~*The long axis toward the horizontal direction to the ring*~~ — superseded (built on `1.0.59p-`).
 
 **The motion:** ONE rotation, from the pose to the target, eased over **125 ms** (a constant — the snap slider left with the rotation
 removal; a slider later if wanted). If the orbit moves during those 125 ms, the turn CHASES the moving target (never lands and then
@@ -62,7 +70,13 @@ aligned, the piece will rotate in yaw around the resting face normal"*)
 
 ---
 
-## 3. The long axis of the resting face
+## 3. The long axis of the resting face — ⛔ NOT USED on `1.0.59q-`
+
+⏳ **TO REMOVE LATER, FOR ALL THE PARTS** (the owner, 2026-10-05: *"capture in the md file to remove the long axis calculations for all
+the parts later on, as this is not used in this branch"*): `faceLongAxes` (`core/resting_face.ts`), `restAlignTarget`'s long-axis step,
+the orbited pieces' `restingAxes` / `restingAxesFallback` (`restingOf`), and their vectors (`proto_resting_align.test.ts`). Kept for now,
+computed and unused — the alignment is by EDGES (§2).
+
 
 The face's **axes of symmetry that run EDGE TO EDGE, perpendicular to both edges** — the longest of them.
 
@@ -138,3 +152,10 @@ Driven over Chrome's debugging protocol on the real page (synthetic multi-touch 
 - **left drag + a right click (mouse)**: `taps 1 · aligned`, 1 episode, reset at the left release.
 ⚠ A synthetic second finger held ~250 ms (the protocol's round trips under software rendering) was correctly NOT a tap — the 200 ms
 limit is real: a slow tap on the glass will miss it too (the slider is in SCENE).
+
+## 9. Priority 1 by edges — checked headless (2026-10-05, `1.0.59q-`)
+
+Orbit + a quick second-finger tap on `Scene_1`: *"orbit: tap 1 — aligned: the resting face down, its leading edge e1 parallel to the
+mating edge e3 of Piece10/f1"* (Piece10 is the blue piece; f1 the face toward the green piece). Vectors: `proto_resting_edges.test.ts`
+(the edges of a face, the mating edge — the flattest within 1°, then the nearest the camera —, the leading edge, the face down and the
+edges parallel from a tumbled pose, the yaw never past 90°), each failing on a mutant.

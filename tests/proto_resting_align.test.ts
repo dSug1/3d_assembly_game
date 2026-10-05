@@ -163,7 +163,8 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(p).toMatch(/if \(!isOrbitTap\(0, heldMs, st\.cfg\.tapMaxDuration, false, true\)\) return;/);
     const w = code("render/green_box_wiring.ts");
     // the target, the ease (125 ms), the follow by the orbit's heading until the finger lifts
-    expect(w).toMatch(/const base = restAlignTarget\(q, p\.restingFace\.normal, p\.restingAxes, \[t\[0\] - pos\.x, t\[1\] - pos\.y, t\[2\] - pos\.z\]\);/);
+    // ⭐ `1.0.59q-`: the target is by EDGES now (`proto_resting_edges.test.ts`); the long axes align nothing
+    expect(w).toMatch(/const r = restAlignToEdge\(/);
     expect(w).toMatch(/const REST_ALIGN_MS = 125;/);
     expect(w).toMatch(/const q = u < 1 \? qSlerp\(a\.from, a\.base, u \* u \* \(3 - 2 \* u\)\) : a\.base;/);
     expect(w).toMatch(/return Math\.atan2\(o\[0\], o\[2\]\);/);
