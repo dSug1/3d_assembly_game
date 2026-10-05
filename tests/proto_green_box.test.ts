@@ -392,8 +392,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
     // the box itself has no parent — only its yellow RESTING FACE rides it (2026-10-05; its white contour went with the rotation)
     expect(w).not.toMatch(/box\.parent\s*=/);
-    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(1);
+    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(2);
     expect(w).toMatch(/fill\.parent = m;/);
+    expect(w).toMatch(/twin\.parent = fill;/); // its faint twin rides the fill (2026-10-05)
   });
 
   it("⭐⭐ prototype: a press on the green box is EMPTY SPACE — the box stops the ray, and its hit is a miss (the owner: *\"the raycast hits the piece behind\"*)", () => {

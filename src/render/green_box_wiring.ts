@@ -14,6 +14,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { chooseInGroup, restingFaces, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
@@ -89,8 +90,60 @@ function restingOf(st: SceneState, m: Mesh): { resting: RestingResult; restingFa
   fill.parent = m;
   fill.isPickable = false;
   fill.metadata = { orbitCandidate: false };
+  restingXray(st, m, fill, data);
   return { resting, restingFace, restingFill: fill };
 }
+
+/**
+ * ⭐⭐ prototype — **THE YELLOW FACE SEEN THROUGH ITS OWN PIECE, NEVER THROUGH ANOTHER** (the owner, 2026-10-05: *"Make the yellow face not
+ * occluded entirely but slightly translucent if occluded by the piece which owns it. It can be occluded entirely by other pieces"*).
+ * ⭐ Draw ORDER, in the transparent pass (after every opaque body, which has written its depth), by `alphaIndex`:
+ * 1. **the piece** — its colour, but NO depth written (convex, back faces culled: it needs none to draw itself right);
+ * 2. **the yellow twin** — faint (`RESTING_XRAY_ALPHA`), depth-tested against the OTHER bodies only (the piece wrote none): hidden by
+ *    another piece, seen through its own;
+ * 3. **the piece's depth** — a colourless clone writing depth only, so whatever is drawn after (the yellow fill, other transparents)
+ *    is hidden by the piece as usual;
+ * 4. the yellow fill (`RESTING_ALPHA`, the default index — after all three): full where the face is in view.
+ * ⚠ The cost: a TRANSPARENT body of another piece in front of this one (`Scene_1`'s contours) is drawn after it and tints it as it
+ * should; one BEHIND it is hidden by step 3 — both right. What step 1 gives up is only the piece hiding itself, which a convex body
+ * with culled back faces never needs.
+ */
+function restingXray(st: SceneState, m: Mesh, fill: Mesh, data: VertexData): void {
+  const own = m.material as StandardMaterial;
+  own.transparencyMode = Material.MATERIAL_ALPHABLEND; // ⭐ into the transparent pass, after every opaque body (alpha 1: unchanged)
+  own.disableDepthWrite = true;
+  m.alphaIndex = RESTING_ORDER;
+  const twin = new Mesh(`${m.name}-resting-face-xray`, st.scene);
+  data.applyToMesh(twin, false);
+  const tm = new StandardMaterial(`${m.name}-resting-face-xray-mat`, st.scene);
+  tm.emissiveColor = RESTING_YELLOW.clone();
+  tm.disableLighting = true;
+  tm.backFaceCulling = false;
+  tm.alpha = RESTING_XRAY_ALPHA;
+  tm.disableDepthWrite = true;
+  twin.material = tm;
+  twin.parent = fill; // ⭐ its lift
+  twin.alphaIndex = RESTING_ORDER + 1;
+  twin.isPickable = false;
+  twin.metadata = { orbitCandidate: false };
+  const depth = m.clone(`${m.name}-depth`, m, true);
+  if (depth === null) return;
+  depth.position.set(0, 0, 0);
+  depth.rotationQuaternion = Quaternion.Identity();
+  const dm = new StandardMaterial(`${m.name}-depth-mat`, st.scene);
+  dm.disableColorWrite = true;
+  dm.forceDepthWrite = true; // ⚠ the transparent pass writes no depth unless forced
+  dm.transparencyMode = Material.MATERIAL_ALPHABLEND;
+  depth.material = dm;
+  depth.alphaIndex = RESTING_ORDER + 2;
+  depth.isPickable = false;
+  depth.metadata = { orbitCandidate: false };
+}
+
+/** ⭐ The faint yellow seen THROUGH its own piece. */
+const RESTING_XRAY_ALPHA = 0.25;
+/** ⭐ The transparent-pass order of the piece, its yellow twin and its depth (below the default index, so all three come first). */
+const RESTING_ORDER = 1000;
 
 /** ⭐ The piece in use's yellow fill, lifted off its face by the highlight offset (`highlightLiftMm` on the glass, at its distance). */
 function restingFillFrame(st: SceneState): void {

@@ -205,6 +205,21 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(w).toMatch(/pinkRingFrame\(st\);\s*restingFillFrame\(st\);/);
   });
 
+  it("⭐⭐ the yellow face is seen faintly THROUGH its own piece, never through another (the owner, 2026-10-05) — by draw order", () => {
+    const w = code("render/green_box_wiring.ts");
+    // 1. the piece: in the transparent pass (after every opaque body), writing NO depth
+    expect(w).toMatch(/own\.transparencyMode = Material\.MATERIAL_ALPHABLEND;[^\n]*\n\s*own\.disableDepthWrite = true;\s*m\.alphaIndex = RESTING_ORDER;/);
+    // 2. the faint twin: depth-tested against the other bodies only, after the piece
+    expect(w).toMatch(/tm\.alpha = RESTING_XRAY_ALPHA;\s*tm\.disableDepthWrite = true;/);
+    expect(w).toMatch(/twin\.alphaIndex = RESTING_ORDER \+ 1;/);
+    expect(w).toMatch(/const RESTING_XRAY_ALPHA = 0\.25;/);
+    // 3. the piece's depth, restored after the twin — FORCED, the transparent pass writes none otherwise (seen on a screenshot)
+    expect(w).toMatch(/dm\.disableColorWrite = true;\s*dm\.forceDepthWrite = true;/);
+    expect(w).toMatch(/depth\.alphaIndex = RESTING_ORDER \+ 2;/);
+    // 4. the full fill keeps the default index: after all three
+    expect(w).not.toMatch(/fill\.alphaIndex/);
+  });
+
   it("⭐⭐ engine-free (rule 1)", () => {
     expect(code("core/resting_face.ts")).not.toMatch(/@babylonjs/);
   });
