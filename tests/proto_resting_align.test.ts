@@ -130,12 +130,14 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(dot(qRotate(counterYaw(q0, 0.7), n), n)).toBeCloseTo(1, 12);
   });
 
-  it("⭐⭐ wired: every frame, in all cases — from the spring's heading; an alignment in flight turns with it; a respawn reads it afresh", () => {
+  it("⭐⭐ wired: every frame from the spring's heading, at boot and before the alignment; STOPPED once aligned; a respawn starts again", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const d = wrapAngle\(h - prev\);\s*if \(d === 0\) return;\s*const r = box\.rotationQuaternion \?\? Quaternion\.Identity\(\);\s*const q = counterYaw\(\[r\.w, r\.x, r\.y, r\.z\], d\);/);
-    expect(w).toMatch(/if \(a !== null\) st\.restAlign = \{ \.\.\.a, from: counterYaw\(a\.from, d\), base: counterYaw\(a\.base, d\) \};/);
-    expect(w).toMatch(/st\.restAlign = null;\s*st\.orbitHeadingPrev = null;/); // the respawn
-    // ⛔ no gate on a finger, on an alignment: the frame step runs whatever the state
+    // ⛔ the owner, 2026-10-05: *"remove the rotation when the resting piece is aligned"* — it stops at the tap, and stays stopped
+    expect(w).toMatch(/if \(prev === null \|\| st\.restAligned\) return;/);
+    expect(w).toMatch(/st\.restAlign = \{ from: q, t0: now, base \};\s*st\.restAligned = true;/);
+    expect(w).toMatch(/st\.restAlign = null;\s*st\.orbitHeadingPrev = null;\s*st\.restAligned = false;/); // the respawn clears it
+    // ⛔ no gate on a finger: before the alignment the frame step runs whatever the finger does
     expect(w).toMatch(/function counterYawFrame\(st: SceneState\): void \{\s*const box = st\.greenBox;\s*if \(box === null \|\| st\.boxOrbit === null\) return;/);
   });
 

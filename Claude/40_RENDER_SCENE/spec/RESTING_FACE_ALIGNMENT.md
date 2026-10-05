@@ -56,6 +56,9 @@ aligned, the piece will rotate in yaw around the resting face normal"*)
 - ⚠ **A consequence, stated:** the long axis points at the ring only at the moment of the tap. Relative to the direction to the ring the
   piece turns by `−2d` as the orbit goes on (it turned by `0` with the superseded follow).
 - The orbit finger's lift only resets the tap count.
+- ⛔ **AMENDED the same day — it STOPS once the resting face is aligned** (the owner: *"remove the rotation when the resting piece is
+  aligned"* → *"The counter-yaw once aligned"*): from the first tap on, the piece holds its aligned pose while it orbits; before that
+  (at boot, no tap yet) it turns against the orbit as above. A respawn (the SCENE switch) clears it. HUD: `aligned (no counter-yaw)`.
 
 ---
 

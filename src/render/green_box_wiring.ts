@@ -166,8 +166,8 @@ function orbitHeading(st: SceneState): number {
 /**
  * ⭐⭐⭐ prototype — **THE RESTING-FACE ALIGNMENT** (`RESTING_FACE_ALIGNMENT.md` §2; the owner, 2026-10-05): the first second-finger tap
  * while orbiting. The target (`restAlignTarget`): the resting face DOWN, then its long axis onto the horizontal direction from the piece
- * to the pink ring. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is — its start and its target turned against the orbit
- * like the piece itself while it eases (`counterYawFrame`), so the ease never fights the counter-yaw.
+ * to the pink ring. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is; the counter-yaw stops at this tap (§2bis), so nothing
+ * fights the ease, and the piece holds the aligned pose afterwards.
  */
 export function alignRestingFace(st: SceneState, now: number): boolean {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
@@ -178,14 +178,16 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
   const pos = p.mesh.position;
   const base = restAlignTarget(q, p.restingFace.normal, p.restingAxes, [t[0] - pos.x, t[1] - pos.y, t[2] - pos.z]);
   st.restAlign = { from: q, t0: now, base };
+  st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
   st.hudDirty = true;
   return true;
 }
 
 /**
  * ⭐⭐ Each frame: the orbited piece turned AGAINST the orbit (`counterYaw`, §2bis) — by the change of its heading about the ring since the
- * last frame, read from the spring (what is drawn). In ALL cases: at boot, before and after an alignment, the finger down or not (a
- * coast too). An alignment in flight turns with it (its start and its target). ⭐ A respawn or the first frame starts the reading again.
+ * last frame, read from the spring (what is drawn): at boot, the finger down or not, a coast too — ⛔ UNTIL its resting face is ALIGNED
+ * (the owner, 2026-10-05: *"remove the rotation when the resting piece is aligned"* → *"The counter-yaw once aligned"*): from the tap on,
+ * it holds its aligned pose while it orbits (a respawn clears it). ⭐ A respawn or the first frame starts the reading again.
  */
 function counterYawFrame(st: SceneState): void {
   const box = st.greenBox;
@@ -193,17 +195,15 @@ function counterYawFrame(st: SceneState): void {
   const h = orbitHeading(st);
   const prev = st.orbitHeadingPrev;
   st.orbitHeadingPrev = h;
-  if (prev === null) return;
+  if (prev === null || st.restAligned) return;
   const d = wrapAngle(h - prev);
   if (d === 0) return;
   const r = box.rotationQuaternion ?? Quaternion.Identity();
   const q = counterYaw([r.w, r.x, r.y, r.z], d);
   box.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
-  const a = st.restAlign;
-  if (a !== null) st.restAlign = { ...a, from: counterYaw(a.from, d), base: counterYaw(a.base, d) };
 }
 
-/** ⭐ Each frame: the alignment's single ease toward its target (both turned against the orbit by `counterYawFrame`); landed, it ends. */
+/** ⭐ Each frame: the alignment's single ease toward its target (the counter-yaw stopped at the tap); landed, it ends. */
 function restAlignFrame(st: SceneState, now: number): void {
   const a = st.restAlign;
   if (a === null || st.greenBox === null) return;
@@ -252,6 +252,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.cameraLagged = null;
     st.restAlign = null;
     st.orbitHeadingPrev = null;
+    st.restAligned = false;
   }
   st.hudDirty = true;
 }

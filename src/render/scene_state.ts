@@ -435,6 +435,8 @@ export interface SceneState {
   restAlign: { readonly from: Quat; readonly t0: number; readonly base: Quat } | null;
   /** ⭐ Prototype (§2bis): the orbited piece's heading about the ring last frame — the counter-yaw turns by its change. `null`: read afresh. */
   orbitHeadingPrev: number | null;
+  /** ⭐ Prototype (§2bis): the orbited piece's resting face has been ALIGNED (a tap) — it no longer turns against the orbit. A respawn clears it. */
+  restAligned: boolean;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;

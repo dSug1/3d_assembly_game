@@ -575,6 +575,7 @@ export function createScene(
   st.orbitTap = null;
   st.restAlign = null;
   st.orbitHeadingPrev = null;
+  st.restAligned = false;
   st.orbitPieceKind = 0;
   st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;
