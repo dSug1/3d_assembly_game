@@ -90,7 +90,7 @@ import { shiftTapTogglesMode, toggleBehaviour } from "../input/mode_toggle";
 import { alignedFaceOf } from "../core/face_pick";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
-import { installPointerHandler } from "./pointer_wiring";
+import { installPointerHandler, orbitRightTap } from "./pointer_wiring";
 import { startRenderLoop } from "./render_loop";
 import { LevelEnd, type LevelResult } from "../core/level_end";
 import { playVolumeOf } from "../core/play_volume";
@@ -572,6 +572,8 @@ export function createScene(
   st.restingShapes = new Map();
   st.restingSeated = null;
   st.restingLast = null;
+  st.orbitTap = null;
+  st.restAlign = null;
   st.orbitPieceKind = 0;
   st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;
@@ -668,7 +670,9 @@ export function createScene(
     st.lastVerdict = `Shift tap → ${st.behaviour}`;
     st.hudDirty = true;
   },
-  st.cfg.tapMaxDuration);
+  st.cfg.tapMaxDuration,
+  // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right tap while the left button orbits — counted, the first one aligns the resting face
+  (heldMs) => orbitRightTap(st, heldMs));
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config

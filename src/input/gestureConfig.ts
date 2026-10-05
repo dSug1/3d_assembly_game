@@ -896,7 +896,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // a noise can only make that rule stricter.
   pointerNoiseMm: 0.761,
 
-  tapMaxDuration: 250,
+  // ⭐ the owner, 2026-10-05 (option 1): Unity's default tap time, for EVERY tap in the game (was 250) — a slider in SCENE
+  tapMaxDuration: 200,
   doubleTapWindow: 300,
   doubleTapSlop: 8,
   // ⛔ Fork A — today's behaviour, the only set a hand has closed. 1 = `IN3`,

@@ -11,11 +11,12 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { greenDragGains } from "./green_box_wiring";
+import { alignRestingFace, greenDragGains, stopRestFollow } from "./green_box_wiring";
+import { isOrbitTap, orbitTapCount, secondPinches } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
-import { mmToPx } from "../core/units";
+import { mmToPx, pxToMm } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
 import { rotationChannel } from "../core/constraint_stack";
@@ -163,7 +164,17 @@ export function installPointerHandler(st: SceneState): void {
         mmToPx(bandMmNow(st)),
       );
       // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughGreenBox`).
-      const rayHit = throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
+      // ⭐⭐ `RESTING_FACE_ALIGNMENT.md` §5 (the owner, 2026-10-05: *"Today a second touch on a piece can grab it: remove this
+      // possibility"*): a SECOND touch while the first one orbits (one finger on empty space, nothing held) is EMPTY SPACE — it
+      // taps or pinches, never grabs. ⚠ A real touch only: the mouse's right button has its own tap (`orbitRightTap`), and its
+      // Shift-made second touch keeps its anchor role.
+      const orbitFinger =
+        st.greenBox !== null && e.pointerType !== "mouse" && e.pointerId !== MOUSE_SECOND_ID &&
+        st.router.outside().length === 1 && st.router.objects().length === 0
+          ? st.router.outside()[0]!.id
+          : null;
+      const rayHit =
+        orbitFinger !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
       // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
       // only, the owner 2026-09-23: *"therefore, this second touch could for example move another
       // object"*). ⛔ Filtered on the way IN, before the latch, so every rule downstream sees a
@@ -321,6 +332,12 @@ export function installPointerHandler(st: SceneState): void {
           // ⛔ A SECOND ONE ARRIVED: this is a pinch. Drop the pending retarget entirely
           // — the camera keeps orbiting whatever it was already orbiting.
           st.pendingCentre = null;
+        }
+        // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: the second touch while orbiting — a tap or a pinch, decided by its travel and its release.
+        // The count belongs to the orbit finger (a new orbit finger starts again at zero).
+        if (orbitFinger !== null) {
+          if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbitFinger) st.orbitTap = { orbitPointer: orbitFinger, count: 0, second: null };
+          st.orbitTap.second = { pointerId: e.pointerId, pressT: s.t, pressX: s.x, pressY: s.y, pinched: false };
         }
         const p = pinchPair(st);
         if (p) {
@@ -529,6 +546,22 @@ export function installPointerHandler(st: SceneState): void {
           st.hudDirty = true;
           return;
         }
+        const ot = st.orbitTap;
+        const sec = ot?.second;
+        if (ot && sec && !sec.pinched && st.router.outside().length === 2 && st.router.objects().length === 0) {
+          if (e.pointerId === sec.pointerId) {
+            // ⭐ beyond the deadband: a PINCH, at once (the zoom measured from the press — no travel lost), and never a tap
+            if (secondPinches(pxToMm(Math.hypot(s.x - sec.pressX, s.y - sec.pressY)), st.cfg.motionDeadbandMm)) {
+              sec.pinched = true;
+              updatePinch(st);
+            }
+          } else if (e.pointerId === ot.orbitPointer) {
+            // ⭐ no pause for a tap: the first finger keeps orbiting
+            orbitDragStep(st, e.pointerId, s, prev);
+          }
+          st.hudDirty = true;
+          return;
+        }
         if (st.router.outside().length === 2) {
           updatePinch(st);
         } else if (
@@ -549,6 +582,25 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         st.pinch.end();
+        // ⭐⭐ `RESTING_FACE_ALIGNMENT.md` §1, §4: the second touch released — a TAP if quick, never a pinch, the orbit finger still
+        // down. ⛔ Consumed here: it is not a camera-reset tap, nor a mode toggle.
+        {
+          const ot = st.orbitTap;
+          if (ot !== null && ot.second?.pointerId === e.pointerId) {
+            const sec = ot.second;
+            ot.second = null;
+            const stillDown = st.router.all().some((q) => q.id === ot.orbitPointer);
+            if (isOrbitTap(sec.pressT, s.t, st.cfg.tapMaxDuration, sec.pinched, stillDown)) orbitTapped(st, performance.now());
+            st.hudDirty = true;
+            return;
+          }
+          if (ot !== null && e.pointerId === ot.orbitPointer) {
+            // ⭐ the orbit finger lifted: the count resets, and the piece stops following the orbit (it keeps its orientation)
+            st.orbitTap = null;
+            stopRestFollow(st);
+            st.hudDirty = true;
+          }
+        }
         // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms the
         // pending toggle. ⛔ A DOUBLE tap here is the camera reset, and cancels the pending
         // toggle rather than being consumed by it.
@@ -1182,4 +1234,38 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
   syncCentre(st);
   applyCamera(st);
+}
+
+/**
+ * ⭐⭐⭐ prototype — **A TAP COUNTED WHILE ORBITING** (`RESTING_FACE_ALIGNMENT.md` §1, §6; the owner, 2026-10-05): the count goes up; the
+ * FIRST tap is the resting-face alignment (`alignRestingFace`) and costs ONE episode (*"The first tap shall cost one episode count"*),
+ * landed now (`D187`) — straight into the ledger, the model being unchanged (the orbited piece is not in it: no undo entry either).
+ * The later taps do nothing yet.
+ */
+export function orbitTapped(st: SceneState, now: number): void {
+  const ot = st.orbitTap;
+  if (ot === null) return;
+  const r = orbitTapCount(ot.count);
+  ot.count = r.count;
+  if (r.aligns && alignRestingFace(st, now)) {
+    st.episodes.touch(--st.episodeSeq, true, true);
+    st.episodes.sync(true);
+    st.lastVerdict = "orbit: tap 1 — the resting face aligned (down, its long axis toward the pink ring)";
+  } else {
+    st.lastVerdict = `orbit: tap ${ot.count} — counted (nothing defined yet)`;
+  }
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐ prototype — **THE MOUSE'S RIGHT TAP WHILE THE LEFT BUTTON ORBITS** (§4): judged on TIME only (`heldMs`, the press to the release —
+ * the cursor moves with the orbit). It counts if the left button is the one orbit finger (on empty space, nothing held).
+ */
+export function orbitRightTap(st: SceneState, heldMs: number): void {
+  const out = st.router.outside();
+  const orbit = st.greenBox !== null && out.length === 1 && st.router.objects().length === 0 ? out[0]! : null;
+  if (orbit === null || st.pointerTypeOf.get(orbit.id) !== "mouse") return;
+  if (!isOrbitTap(0, heldMs, st.cfg.tapMaxDuration, false, true)) return;
+  if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbit.id) st.orbitTap = { orbitPointer: orbit.id, count: 0, second: null };
+  orbitTapped(st, performance.now());
 }

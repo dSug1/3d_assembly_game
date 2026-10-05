@@ -71,8 +71,10 @@ describe("⭐⭐ prototype — the turquoise piece", () => {
   it("⭐⭐ and NO rotation left on the orbited piece (the owner: *\"the piece shall not move during its orbit, for the moment\"*)", () => {
     const w = code("render/green_box_wiring.ts");
     // the only orientation it is ever given is the boot one (the other write is its depth clone's LOCAL identity, 2026-10-05)
-    expect(w.match(/rotationQuaternion\s*=/g)).toHaveLength(2);
+    // ⭐ 2026-10-05: and the resting-face ALIGNMENT, the one turn it is given since (a tap while orbiting, `restAlignFrame`)
+    expect(w.match(/rotationQuaternion\s*=/g)).toHaveLength(3);
     expect(w).toMatch(/depth\.rotationQuaternion = Quaternion\.Identity\(\);/);
+    expect(w).toMatch(/st\.greenBox\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
     expect(w).not.toMatch(/trackOrbitedFaces|pieceTurns|freeTurns|greenHeldForOrbit/);
     const p = code("render/pointer_wiring.ts");
     expect(p).not.toMatch(/greenOrbitPointer|crossDeadbandScales|pinkFaceNormal/);

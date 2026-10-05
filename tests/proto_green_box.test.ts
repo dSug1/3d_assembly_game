@@ -407,7 +407,8 @@ describe("⭐⭐ prototype — the green box", () => {
     // ⭐ wired: the box is PICKABLE (so the ray stops on it), and every pick the router reads goes through the filter
     expect(code("green_box_wiring.ts")).toMatch(/box\.isPickable = true/);
     const p = code("pointer_wiring.ts");
-    expect(p).toMatch(/const rayHit = throughGreenBox\(/);
+    // ⭐ 2026-10-05: unless it is a second touch while the first orbits — then empty space outright (it never grabs)
+    expect(p).toMatch(/const rayHit =\s*orbitFinger !== null \? null : throughGreenBox\(/);
     expect(p).not.toMatch(/st\.router\.move\(e\.pointerId, s, info\.pickInfo\?\.pickedMesh \?\? null\)/);
     expect((p.match(/throughGreenBox\(info\.pickInfo\?\.pickedMesh \?\? null, st\.greenBox\)/g) ?? []).length).toBe(4);
   });

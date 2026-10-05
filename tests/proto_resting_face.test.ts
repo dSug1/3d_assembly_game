@@ -202,7 +202,7 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(w).toMatch(/mat\.emissiveColor = RESTING_YELLOW\.clone\(\);/);
     expect(w).toMatch(/\.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/\.\.\.restingOf\(st, hex\) \}\);/);
-    expect(w).toMatch(/pinkRingFrame\(st\);\s*restingFillFrame\(st\);/);
+    expect(w).toMatch(/pinkRingFrame\(st\);\s*restAlignFrame\(st, now\);\s*restingFillFrame\(st\);/);
   });
 
   it("⭐⭐ the yellow face is seen faintly THROUGH its own piece, never through another (the owner, 2026-10-05) — by draw order", () => {

@@ -17,7 +17,7 @@
  *
  * ⛔ ENGINE-FREE (rule 1).
  */
-import { add, cross, dot, length, normalize, qRotate, scale, sub, type Quat, type Vec3 } from "./vec";
+import { add, cross, dot, length, normalize, qFromAxisAngle, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "./vec";
 
 /** ⭐ Every tolerance and weight of the rule (§10), lengths as shares of the bounding-box diagonal. */
 export interface RestingConfig {
@@ -379,4 +379,110 @@ export function chooseInGroup(group: RestingGroup, q: Quat, down: Vec3 = [0, -1,
     }
   }
   return best;
+}
+
+/**
+ * ⭐⭐ prototype — **THE LONG AXIS OF A FACE** (`RESTING_FACE_ALIGNMENT.md` §3, the owner, 2026-10-05: *"the axis of symetry which is
+ * the longest edge to edge and perpendicular to these edges (therefore, it cannot be the corner of the hexagone)"*). From the face's
+ * points (its own frame, coplanar) and its normal: the face polygon (their 2D hull); a candidate is an edge's in-plane NORMAL `d`
+ * whose opposite edge is parallel (a normal `−d`) and about whose line through the centroid the polygon is MIRROR-symmetric — the
+ * axis then runs edge to edge, crossing both at right angles. The LONGEST (its extent along `d`) wins; equal ones are all returned
+ * (a hexagon's three), one direction each. ⚠ A face with an ODD number of sides has none (every mirror axis runs corner to edge):
+ * then its longest mirror axis of any kind, `fallback` set; and with no mirror axis at all, its longest extent across an edge.
+ */
+export function faceLongAxes(
+  points: readonly Vec3[],
+  normal: Vec3,
+  tol: number,
+): { readonly axes: readonly Vec3[]; readonly length: number; readonly fallback: boolean } {
+  const n = normalize(normal);
+  if (n === null || points.length < 3) return { axes: [], length: 0, fallback: true };
+  const e1 = normalize(Math.abs(n[0]) < 0.9 ? cross(n, [1, 0, 0]) : cross(n, [0, 1, 0]))!;
+  const e2 = cross(n, e1);
+  const P = hull2(points.map((p) => [dot(p, e1), dot(p, e2)] as [number, number]));
+  if (P.length < 3) return { axes: [], length: 0, fallback: true };
+  // the polygon's area centroid
+  let A = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i]!;
+    const b = P[(i + 1) % P.length]!;
+    const k = a[0] * b[1] - b[0] * a[1];
+    A += k;
+    cx += (a[0] + b[0]) * k;
+    cy += (a[1] + b[1]) * k;
+  }
+  const c: [number, number] = [cx / (3 * A), cy / (3 * A)];
+  // the outward normals of the edges (counter-clockwise polygon)
+  const edgeNormals = P.map((a, i) => {
+    const b = P[(i + 1) % P.length]!;
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    return [(b[1] - a[1]) / l, -(b[0] - a[0]) / l] as [number, number];
+  });
+  const symmetricAbout = (d: readonly [number, number]): boolean =>
+    P.every((p) => {
+      const vx = p[0] - c[0];
+      const vy = p[1] - c[1];
+      const along = vx * d[0] + vy * d[1];
+      // reflected across the line through c along d: the component across it flips
+      const rx = c[0] + 2 * along * d[0] - vx;
+      const ry = c[1] + 2 * along * d[1] - vy;
+      return P.some((q) => Math.hypot(q[0] - rx, q[1] - ry) <= tol);
+    });
+  const extent = (d: readonly [number, number]): number => {
+    const s = P.map((p) => p[0] * d[0] + p[1] * d[1]);
+    return Math.max(...s) - Math.min(...s);
+  };
+  const dedupe = (ds: readonly (readonly [number, number])[]): (readonly [number, number])[] => {
+    const out: (readonly [number, number])[] = [];
+    for (const d of ds) if (!out.some((o) => Math.abs(o[0] * d[0] + o[1] * d[1]) > 1 - 1e-9)) out.push(d);
+    return out;
+  };
+  const longest = (ds: readonly (readonly [number, number])[], fallback: boolean) => {
+    const L = Math.max(...ds.map(extent));
+    const keep = ds.filter((d) => extent(d) >= L - tol);
+    return { axes: keep.map((d) => normalize(add(scale(e1, d[0]), scale(e2, d[1])))!), length: L, fallback };
+  };
+  // ⭐ edge to edge: an edge normal with a parallel opposite edge, the polygon symmetric about it
+  const edgeToEdge = dedupe(
+    edgeNormals.filter((d) => edgeNormals.some((o) => o[0] * d[0] + o[1] * d[1] < -1 + 1e-9) && symmetricAbout(d)),
+  );
+  if (edgeToEdge.length > 0) return longest(edgeToEdge, false);
+  // ⚠ fallback: any mirror axis (through a corner too), else the longest extent across an edge
+  const corners = P.map((p) => {
+    const l = Math.hypot(p[0] - c[0], p[1] - c[1]);
+    return [(p[0] - c[0]) / l, (p[1] - c[1]) / l] as [number, number];
+  });
+  const mirrors = dedupe([...edgeNormals, ...corners].filter(symmetricAbout));
+  return longest(mirrors.length > 0 ? mirrors : dedupe(edgeNormals), true);
+}
+
+/**
+ * ⭐⭐ prototype — **THE RESTING-FACE ALIGNMENT'S TARGET** (`RESTING_FACE_ALIGNMENT.md` §2, the owner, 2026-10-05): from the pose `q`,
+ * (1) the resting face DOWN — the smallest turn bringing its outward normal (`restNormal`, the piece's frame) along `down`; then (2) a
+ * turn about the vertical bringing the face's long axis onto `toward` (the horizontal direction to the pink ring) — of the long axes
+ * (`axes`, each with its two directions) the one ALREADY closest to it. `toward` with no horizontal part: (1) alone.
+ */
+export function restAlignTarget(q: Quat, restNormal: Vec3, axes: readonly Vec3[], toward: Vec3, down: Vec3 = [0, -1, 0]): Quat {
+  const q1 = qmul(shortestArc(qRotate(q, restNormal), down), q);
+  const up: Vec3 = [-down[0], -down[1], -down[2]];
+  const flat = (v: Vec3): Vec3 | null => normalize(sub(v, scale(up, dot(v, up))));
+  const t = flat(toward);
+  if (t === null || axes.length === 0) return q1;
+  let best: Vec3 | null = null;
+  let bestDot = -Infinity;
+  for (const a of axes)
+    for (const s of [1, -1]) {
+      const w = flat(scale(qRotate(q1, a), s));
+      if (w === null) continue;
+      const d = dot(w, t);
+      if (d > bestDot) {
+        bestDot = d;
+        best = w;
+      }
+    }
+  if (best === null) return q1;
+  const angle = Math.atan2(dot(up, cross(best, t)), dot(best, t));
+  return qmul(qFromAxisAngle(up, angle), q1);
 }

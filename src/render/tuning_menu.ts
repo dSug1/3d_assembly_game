@@ -100,6 +100,8 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece. When
         // toggled, the piece shall be spawn as per boot"*
         tunable(st, "orbited piece (0 = green, 1 = turquoise)", "orbitPieceKind", 0, 1, 1),
+        // ⭐ the owner, 2026-10-05: the ONE tap time (every tap: the undo, the unalign, the align, the orbit tap) — Unity's 200 ms
+        tunable(st, "tap max duration (ms)", "tapMaxDuration", 100, 400, 10),
       ],
     },
     {

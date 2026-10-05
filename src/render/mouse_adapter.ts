@@ -83,6 +83,8 @@ export function attachMouseSecondTouch(
   onShiftTap?: () => void,
   /** ⭐ `D167`: the longest Shift press that is still a tap — the scene's `tapMaxDuration`. */
   tapMaxMs = 250,
+  /** ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right press made while the left button was down, released after `heldMs` — the scene judges it. */
+  onRightTap?: (heldMs: number) => void,
 ): MouseSecondTouchHandle {
   const model = new MouseSecondTouch(tapMaxMs);
   let seen = 0;
@@ -139,6 +141,7 @@ export function attachMouseSecondTouch(
     if (v.emit.some((a) => a.inherit === true)) beginFreeze?.(realId);
     // ⭐ `D167`: a Shift tap — the scene toggles the mode if a free part is held.
     if (v.toggleMode === true) onShiftTap?.();
+    if (v.rightTapMs !== undefined) onRightTap?.(v.rightTapMs);
     // ⭐ Delivered FIRST: this runs before Babylon processes the real event, so a lift the model
     // owes reaches the scene before the event that revealed it.
     for (const a of v.emit) deliver(a);
@@ -169,6 +172,7 @@ export function attachMouseSecondTouch(
         x: e.clientX,
         y: e.clientY,
         space,
+        t: performance.now(),
         // ⭐ `D159`: on EVERY press — a plain click completes a latched HitFace's action too.
         ...(type === "DOWN" && bodyAt !== undefined ? { onBody: bodyAt(e.clientX, e.clientY) } : {}),
       },

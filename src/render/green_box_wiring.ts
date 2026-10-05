@@ -11,7 +11,7 @@ import { OrbitController } from "../input";
 import { topologyFromMesh } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { chooseInGroup, restingFaces, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { chooseInGroup, faceLongAxes, restAlignTarget, restingFaces, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -32,7 +32,7 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
-import type { Quat } from "../core/vec";
+import { qFromAxisAngle, qmul, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -57,11 +57,19 @@ const RESTING_ALPHA = 0.6;
  * pieces spawn at). Its fill: that face's triangles, double-sided, a child of the piece (it turns and hides with it), lifted along its
  * normal each frame by the highlight offset (`restingFillFrame`).
  */
-function restingOf(st: SceneState, m: Mesh): { resting: RestingResult; restingFace: RestingCandidate | null; restingFill: Mesh | null } {
+function restingOf(
+  st: SceneState,
+  m: Mesh,
+): { resting: RestingResult; restingFace: RestingCandidate | null; restingFill: Mesh | null; restingAxes: readonly Vec3[]; restingAxesFallback: boolean } {
   const topo = topologyFromMesh(m);
   const resting = topo === null ? restingFaces([], []) : restingFaces(topo.positions, topo.faces);
   const restingFace = resting.winner === null ? null : chooseInGroup(resting.winner, greenBootOrientation(st.sceneSpec.id));
-  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null };
+  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true };
+  // ⭐ the resting face's LONG AXES (`faceLongAxes`, `RESTING_FACE_ALIGNMENT.md` §3) — edge to edge, perpendicular to both edges
+  const facePoints = [...new Set(restingFace.faces.flatMap((f) => topo.faces[f]!.triangles))].map((i) => topo.positions[i]!);
+  const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((p) => p[k]!)));
+  const hi = [0, 1, 2].map((k) => Math.max(...topo.positions.map((p) => p[k]!)));
+  const long = faceLongAxes(facePoints, restingFace.normal, 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!));
   const local = new Map<number, number>();
   const positions: number[] = [];
   const indices: number[] = [];
@@ -91,7 +99,7 @@ function restingOf(st: SceneState, m: Mesh): { resting: RestingResult; restingFa
   fill.isPickable = false;
   fill.metadata = { orbitCandidate: false };
   restingXray(st, m, fill, data);
-  return { resting, restingFace, restingFill: fill };
+  return { resting, restingFace, restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback };
 }
 
 /**
@@ -145,6 +153,56 @@ const RESTING_XRAY_ALPHA = 0.25;
 /** ⭐ The transparent-pass order of the piece, its yellow twin and its depth (below the default index, so all three come first). */
 const RESTING_ORDER = 1000;
 
+/** ⭐ The resting-face alignment's single turn, ms (`RESTING_FACE_ALIGNMENT.md` §2: *"snap in one single rotation in 125 ms"*). */
+const REST_ALIGN_MS = 125;
+
+/** ⭐ The horizontal heading of the piece about the ring (radians about +y): its offset's, at the spring's yaw — what the follow turns by. */
+function orbitHeading(st: SceneState): number {
+  if (st.boxOrbit === null) return 0;
+  const o = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom).offsetM;
+  return Math.atan2(o[0], o[2]);
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE RESTING-FACE ALIGNMENT** (`RESTING_FACE_ALIGNMENT.md` §2; the owner, 2026-10-05): the first second-finger tap
+ * while orbiting. The target (`restAlignTarget`): the resting face DOWN, then its long axis onto the horizontal direction from the piece
+ * to the pink ring. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is; then, while the orbit finger stays down, the target
+ * turns about the vertical by the orbit's own heading change (`restAlignFrame`).
+ */
+export function alignRestingFace(st: SceneState, now: number): boolean {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null || st.greenBox === null) return false;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const q: Quat = [r.w, r.x, r.y, r.z];
+  const t = st.centreBlend.targetM;
+  const pos = p.mesh.position;
+  const base = restAlignTarget(q, p.restingFace.normal, p.restingAxes, [t[0] - pos.x, t[1] - pos.y, t[2] - pos.z]);
+  st.restAlign = { from: q, t0: now, base, headingRef: orbitHeading(st), follow: true };
+  st.hudDirty = true;
+  return true;
+}
+
+/** ⭐ The orbit finger lifted: the follow STOPS — the piece keeps the orientation it has reached (its turn, if still easing, lands there). */
+export function stopRestFollow(st: SceneState): void {
+  const a = st.restAlign;
+  if (a === null || !a.follow) return;
+  st.restAlign = { ...a, base: qmul(qFromAxisAngle([0, 1, 0], orbitHeading(st) - a.headingRef), a.base), follow: false };
+}
+
+/** ⭐ Each frame: the alignment's ease toward its target, the target following the orbit's heading while the finger is down. */
+function restAlignFrame(st: SceneState, now: number): void {
+  const a = st.restAlign;
+  if (a === null || st.greenBox === null) return;
+  const target = a.follow ? qmul(qFromAxisAngle([0, 1, 0], orbitHeading(st) - a.headingRef), a.base) : a.base;
+  const u = Math.min(1, Math.max(0, (now - a.t0) / REST_ALIGN_MS));
+  const q = u < 1 ? qSlerp(a.from, target, u * u * (3 - 2 * u)) : target;
+  st.greenBox.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
+  if (u >= 1 && !a.follow) {
+    st.restAlign = null; // ⭐ landed and no longer following: the pose stays as it is
+    st.hudDirty = true;
+  }
+}
+
 /** ⭐ The piece in use's yellow fill, lifted off its face by the highlight offset (`highlightLiftMm` on the glass, at its distance). */
 function restingFillFrame(st: SceneState): void {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
@@ -179,6 +237,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.boxSpring = null;
     st.cameraOrbit = null;
     st.cameraLagged = null;
+    st.restAlign = null;
   }
   st.hudDirty = true;
 }
@@ -352,7 +411,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const lockedHolder =
     out.length === 0 && objs.length === 1 && st.held.get(objs[0]!.id) !== undefined &&
     goalLocked(st.idOf.get(st.held.get(objs[0]!.id)!.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1);
-  const orbiting = out.length === 1 && objs.length === 0 ? out[0]!.id : lockedHolder ? objs[0]!.id : null;
+  // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a second touch still inside its deadband (a tap, maybe) does not stop the orbit finger
+  const pendingSecond = st.orbitTap !== null && st.orbitTap.second !== null && !st.orbitTap.second.pinched && out.length === 2 && objs.length === 0;
+  const orbiting = pendingSecond
+    ? st.orbitTap!.orbitPointer
+    : out.length === 1 && objs.length === 0
+      ? out[0]!.id
+      : lockedHolder
+        ? objs[0]!.id
+        : null;
   // ⭐ The finger leaving the orbit (lifted, or a second finger down) is a RELEASE: the camera realigns.
   const released = st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting;
   if (released) {
@@ -416,6 +483,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
+  restAlignFrame(st, now);
   restingFillFrame(st);
 }
 

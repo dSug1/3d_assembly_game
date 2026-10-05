@@ -414,6 +414,9 @@ export interface SceneState {
     readonly resting: RestingResult;
     readonly restingFace: RestingCandidate | null;
     readonly restingFill: Mesh | null;
+    /** ⭐ its resting face's LONG AXES (`faceLongAxes`), the piece's frame — and whether they are the odd-sided fallback. */
+    readonly restingAxes: readonly Vec3[];
+    readonly restingAxesFallback: boolean;
   }[];
   /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
    * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */
@@ -421,6 +424,16 @@ export interface SceneState {
   restingShapes: Map<string, RestingResult>;
   restingSeated: Set<ObjectId> | null;
   restingLast: ObjectId | null;
+  /** ⭐ Prototype (`RESTING_FACE_ALIGNMENT.md` §1, §4): the second-finger taps counted while one orbit finger is down — that finger, the
+   * count, and the second touch in flight (its press, and whether it has become a pinch). `null` when no orbit finger has a count. */
+  orbitTap: {
+    readonly orbitPointer: number;
+    count: number;
+    second: { readonly pointerId: number; readonly pressT: number; readonly pressX: number; readonly pressY: number; pinched: boolean } | null;
+  } | null;
+  /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose and time, its target at the reference heading, and
+   * whether it still follows the orbit's heading (the finger down). */
+  restAlign: { readonly from: Quat; readonly t0: number; readonly base: Quat; readonly headingRef: number; readonly follow: boolean } | null;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;

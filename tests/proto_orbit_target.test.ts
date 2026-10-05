@@ -57,11 +57,15 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
   it("⭐⭐ a drag from a piece LOCKED in its goal ORBITS — the same step as empty space, and the green box's camera hears that finger", () => {
     const p = code("render/pointer_wiring.ts");
     // one step, two callers: empty space and the locked piece
-    expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(2);
+    // (a third since 2026-10-05: the orbit finger keeps orbiting while a second touch is still a possible tap)
+    expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(3);
     expect(p).toMatch(/if \(lockedInGoal && st\.router\.objects\(\)\.length === 1 && st\.router\.outside\(\)\.length === 0\) \{\s*orbitDragStep\(st, e\.pointerId, s, grip\.prev\);/);
     // its locked-piece call comes BEFORE the gate returns
     expect(p.indexOf("orbitDragStep(st, e.pointerId, s, grip.prev)")).toBeLessThan(p.indexOf("if (lockedInGoal || unsnapHolds("));
     // ⛔ without this the green box would read every frame of that drag as a RELEASE
-    expect(code("render/green_box_wiring.ts")).toContain("const orbiting = out.length === 1 && objs.length === 0 ? out[0]!.id : lockedHolder ? objs[0]!.id : null;");
+    // ⭐ 2026-10-05: first a second touch still pending (a possible tap) keeps the orbit finger orbiting
+    expect(code("render/green_box_wiring.ts")).toMatch(
+      /const orbiting = pendingSecond\s*\? st\.orbitTap!\.orbitPointer\s*: out\.length === 1 && objs\.length === 0\s*\? out\[0\]!\.id\s*: lockedHolder\s*\? objs\[0\]!\.id\s*: null;/,
+    );
   });
 });

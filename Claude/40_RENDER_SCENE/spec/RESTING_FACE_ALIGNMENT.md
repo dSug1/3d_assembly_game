@@ -1,6 +1,8 @@
 # Resting-face alignment of the orbited piece — specification (prototype)
 
-> **Status:** agreed 2026-10-05, ⛔ not built — the owner gives the go. Branch `1.0.59p-from1.0.59m-`.
+> **Status:** ✅ BUILT 2026-10-05 (⛔ unjudged by a hand) — `core/resting_face.ts` (`faceLongAxes`, `restAlignTarget`),
+> `input/orbit_tap.ts`, `render/pointer_wiring.ts` (`orbitTapped`, `orbitRightTap`), `render/green_box_wiring.ts` (`alignRestingFace`,
+> `restAlignFrame`), the mouse model's right tap. Branch `1.0.59p-from1.0.59m-`.
 > **Builds on:** [`RESTING_FACE.md`](RESTING_FACE.md) (the selector: which face, and its group).
 > **Scope:** the orbited piece — the green frustum or the turquoise prism, whichever the SCENE switch names.
 
@@ -86,8 +88,9 @@ lifted does nothing.
 
 ## 5. Pieces under the second touch
 
-- ⛔ **A second touch never GRABS a piece** — today a second touch landing on a piece while the first finger orbits can grab it; removed:
-  it is empty space (it counts as a tap, or pinches). ⚠ To confirm in the code before removing. When the first finger holds a body,
+- ⛔ **A second touch never GRABS a piece** — confirmed in the code: a second touch landing on a piece while the first finger orbited
+  was routed as a holder (`pressSteers` only steers when a body is ALREADY held). Removed: it is empty space (a tap, or a pinch).
+  ⚠ Only where the orbited piece exists (`Scene_1`); `Scene_0`, with no green piece, keeps the old routing. When the first finger holds a body,
   nothing changes (a second press on another body already steers it and never grabs it).
 - **The right button on a piece** — a plain right click (no left button) still latches the face to align (the HitFace, `D161`),
   unchanged. ⭐ **Left held + right tap** is the alignment ONLY: it does not latch a HitFace.
@@ -111,3 +114,13 @@ cost an episode. Accepted for now; making it undoable means putting the orbited 
 - `tapMaxDuration` 200 ms + its slider;
 - the grab removal (§5), the HitFace suppression with the left held, the episode (§6);
 - the HUD: the tap counter and the alignment's target.
+
+## 8. As built — checked headless (2026-10-05)
+
+Driven over Chrome's debugging protocol on the real page (synthetic multi-touch and mouse), the HUD read back:
+- **orbit + a quick second-finger tap**: `taps 1 · aligned, following the orbit`, the score 1 episode; after the lift the count reset
+  and the piece kept its pose (on a screenshot: the green piece standing on its bottom, its length toward the pink ring);
+- **orbit + a second finger that spreads**: `+pinch`, the zoom 0.60 → 0.56, no tap, no episode; the orbit resumed once it lifted;
+- **left drag + a right click (mouse)**: `taps 1 · aligned`, 1 episode, reset at the left release.
+⚠ A synthetic second finger held ~250 ms (the protocol's round trips under software rendering) was correctly NOT a tap — the 200 ms
+limit is real: a slow tap on the glass will miss it too (the slider is in SCENE).

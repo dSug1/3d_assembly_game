@@ -445,9 +445,9 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
     // hardest kind of defect to report from a device.
     //
     // ⭐ THE FIXTURE SPLITS THE TWO READINGS ON PURPOSE: press at 300 (240 ms after the
-    // first release — inside the 300 ms window) and release at 500, so release-to-release is
-    // **440 ms** and outside it. ⚠ 200 ms of press is still inside `tapMaxDuration` (250 ms),
-    // so the second gesture is genuinely a tap and not a HOLD.
+    // first release — inside the 300 ms window) and release at 450, so release-to-release is
+    // **390 ms** and outside it. ⚠ 150 ms of press is inside `tapMaxDuration` (200 ms since 2026-10-05; it was a 200 ms
+    // press against 250, and would now sit exactly on the boundary), so the second gesture is genuinely a tap and not a HOLD.
     const pose = recordingPose();
     const taps = new TapHistory(cfg);
     expect(
@@ -458,7 +458,7 @@ describe("recognizer — taps, and the double-tap §1.4 needs", () => {
     ).toBe("TAP");
     const second = gesture(new Recognizer(cfg, pose.port, taps), [
       { x: 100, y: 100, t: 300 },
-      { x: 100, y: 100, t: 500 },
+      { x: 100, y: 100, t: 450 },
     ]);
     expect(second.kind).toBe("DOUBLE_TAP");
     expect(second.kind).toBe("DOUBLE_TAP");

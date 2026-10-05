@@ -81,7 +81,7 @@ export interface MouseInput {
   readonly y: number;
   /** ⭐ `D154`: is Space held at this event? */
   readonly space?: boolean;
-  /** ⭐ `D167`: the event's time in ms — read for `SHIFT_DOWN` / `SHIFT_UP` only. */
+  /** ⭐ `D167`: the event's time in ms — read for `SHIFT_DOWN` / `SHIFT_UP`, and (`RESTING_FACE_ALIGNMENT.md` §4) a right DOWN / UP. */
   readonly t?: number;
   /**
    * ⭐ `D154`: the body under the cursor at a DOWN, resolved by the adapter (a pick) — `null` for
@@ -124,6 +124,11 @@ export interface Verdict {
   readonly emit: readonly MouseAction[];
   /** ⭐ `D167`: a Shift TAP while the left button holds a part — the scene toggles translation / rotation. */
   readonly toggleMode?: boolean;
+  /**
+   * ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a RIGHT press made while the LEFT button was down, released — how long it was held (ms). The
+   * scene judges the tap (time only: the cursor moves with the orbit) and whether the left button is orbiting.
+   */
+  readonly rightTapMs?: number;
 }
 
 const PASS: Verdict = { skip: false, emit: [] };
@@ -162,6 +167,8 @@ export class MouseSecondTouch {
   private spaceUsed = false;
   /** ⭐ `D167`: Shift went down at `t`; `used` once a Shift drag made the second touch — then it is a HOLD. */
   private shiftTap: { t: number; used: boolean } | null = null;
+  /** ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right press made while the left button was down — when (ms). */
+  private rightWhileLeft: { t: number } | null = null;
 
   /** @param tapMaxMs the longest press that is still a tap — `tapMaxDuration`, the recognizer's own. */
   constructor(private readonly tapMaxMs = 250) {}
@@ -271,6 +278,10 @@ export class MouseSecondTouch {
                 ? { x: ev.x, y: ev.y, shiftMade: false, rightBody: on.id }
                 : { x: ev.x, y: ev.y, shiftMade: false };
             emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
+          } else if (this.real !== null) {
+            // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: refused as a HitFace (it would arrive second), but TIMED — released quickly it is the
+            // right TAP the left button's orbit counts (the scene decides; a plain right click is untouched)
+            this.rightWhileLeft = { t: ev.t ?? 0 };
           }
           skip = true;
         } else if (ev.button === LEFT_BUTTON && this.real === null) {
@@ -286,6 +297,11 @@ export class MouseSecondTouch {
       }
 
       case "UP":
+        if (this.rightWhileLeft !== null && ev.button === RIGHT_BUTTON) {
+          const heldMs = (ev.t ?? 0) - this.rightWhileLeft.t;
+          this.rightWhileLeft = null;
+          return { skip: true, emit: [], rightTapMs: heldMs };
+        }
         // ⭐ `D154`: the Pioneer tap lifts WHERE IT PRESSED, then the latched HitFace — in that order, so
         // the tap releases while the Follower is still held (`D119`: it aligns on the released tap).
         if (this.tap !== null && ev.button === this.tap.button) {

@@ -370,7 +370,9 @@ export function greenReadout(st: SceneState): string {
   const piece = `${st.orbitPieceKind === 1 ? "turquoise" : "green"}, ${st.orbitPieceFaces} faces${restingHud(st.orbitPieces.find((o) => o.mesh === st.greenBox)?.resting ?? null, st.orbitPieces.find((o) => o.mesh === st.greenBox)?.restingFace ?? null)}`;
   // ⭐ …and the scene's parts: how many have a resting face, and the one asked last (at boot, or the moment it was unseated)
   const last = st.restingLast === null ? undefined : st.restingFaces.get(st.restingLast);
-  const parts = ` | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
+  // ⭐ `RESTING_FACE_ALIGNMENT.md`: the orbit taps counted, and the alignment (turning / following the orbit)
+  const taps = `${st.orbitTap === null ? "" : ` · taps ${st.orbitTap.count}${st.orbitTap.second === null ? "" : st.orbitTap.second.pinched ? " +pinch" : " +2nd"}`}${st.restAlign === null ? "" : st.restAlign.follow ? " · aligned, following the orbit" : " · aligning"}`;
+  const parts = `${taps} | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
   return `${piece}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target${parts} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 
