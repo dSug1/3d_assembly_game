@@ -1,8 +1,9 @@
 # Resting-face alignment of the orbited piece — specification (prototype)
 
-> **Status:** ✅ BUILT 2026-10-05 (⛔ unjudged by a hand) — `core/resting_face.ts` (`faceLongAxes`, `restAlignTarget`),
+> **Status:** ✅ BUILT 2026-10-05 (⛔ unjudged by a hand) — `core/resting_face.ts` (`faceLongAxes`, `restAlignToFace`),
 > `input/orbit_tap.ts`, `render/pointer_wiring.ts` (`orbitTapped`, `orbitRightTap`), `render/green_box_wiring.ts` (`alignRestingFace`,
-> `restAlignFrame`), the mouse model's right tap. Branch `1.0.59p-from1.0.59m-`.
+> `alignFaceOf`, `restAlignFrame`, `counterYawFrame`), the mouse model's right tap. Built on `1.0.59p-from1.0.59m-`; priority 1 rewritten
+> twice on `1.0.59q-` (§2); carried to **`1.0.59r-`** (2026-10-05).
 > **Builds on:** [`RESTING_FACE.md`](RESTING_FACE.md) (the selector: which face, and its group).
 > **Scope:** the orbited piece — the green frustum or the turquoise prism, whichever the SCENE switch names.
 
@@ -137,7 +138,7 @@ cost an episode. Accepted for now; making it undoable means putting the orbited 
 
 ---
 
-## 7. To build (when the owner says so)
+## 7. To build — ✅ all built (2026-10-05)
 
 - pure, engine-free: the long axis of a face (§3), the alignment target (§2), the tap classification (§4) — with vectors failing on
   the old code first;

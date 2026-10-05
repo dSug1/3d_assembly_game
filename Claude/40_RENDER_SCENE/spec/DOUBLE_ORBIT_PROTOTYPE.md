@@ -1,7 +1,8 @@
 # The double-orbit camera — a PROTOTYPE (branch `1.0.58b-` only)
 
-⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself
-from `1.0.58-Trial-with-double-orbit`); never merged into `main` or the fork — the main line is merged INTO it, one way.
+⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59r-`** (2026-10-05 — the chain since `1.0.58b-` is in §7);
+first `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself from `1.0.58-Trial-with-double-orbit`); never merged into `main` or
+the fork — the main line is merged INTO it, one way.
 ⭐ `/proto/` builds the branch the repository variable `PROTO_BRANCH` names (`1.0.58b-` since 2026-10-01); a deploy is
 **Run workflow** on `main` (or any push to `main`), never a push to the prototype branch. It is deployed beside the main line at
 **https://dsug1.github.io/3d_assembly_game/proto/** (`50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`, *A second build at /proto/*).
@@ -520,3 +521,32 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
 * ⭐ **The orbit's dy sense inverted** (the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"*): the green
   piece's orbit drag takes dy with its own sign now (`st.orbit.drag(-dx …, dy …)`; it was `-dy`) — finger DOWN raises the piece on the
   rings, finger UP lowers it (the reverse of before). dx unchanged; the inertia follows the drag.
+
+## 7. `1.0.59p-` → `1.0.59r-` (2026-10-04/05) — the rotation stripped, the turquoise piece, the resting face
+
+⭐ The owner restarted twice from `1.0.59m-` (the approach spec): `1.0.59n-` (approach steps 1–2) and `1.0.59o-` (geometric snap stops)
+were set aside (*"not satisfied"*). `1.0.59p-from1.0.59m-` → `1.0.59q-` → **`1.0.59r-`** carry what follows. ⛔ All unjudged by a hand.
+
+* ⛔⛔ **THE ROTATION IS STRIPPED** (the owner, 2026-10-04: *"Remove all the rotation from the green piece … the piece shall not move during
+  its orbit, for the moment"*) — and with it what only served it: the snapped yaw/pitch turn and its increments, the face cycles, the face
+  tracking, the turn cap and the level-out; the press-and-hold latch (`greenHeldForOrbit`) and its behaviours — the white contour, the
+  0.4 yaw share, the cross deadband (and the motion tracker's band scale); the pink face's normal. Their sliders went too (OBJECT ROTATION ›
+  DOUBLE ORBIT MODE / GREEN PIECE ROTATION; CAMERA › FACE ALIGNMENT IN YAW; the yaw share and cross-deadband rows). ⛔ So §6's entries on
+  *outside the sphere*, the snapped turn, the turn cap, the yaw share, the held latch and the level-out are **SUPERSEDED**.
+* ⛔ **THE WHITE GUIDE SPHERE IS REMOVED** (*"Remove the white sphere and whatever it controls"*) — it controlled nothing any more.
+* ⭐⭐ **THE TURQUOISE PIECE AND THE SWITCH** — a flat-shaded hexagonal prism, as long as the green piece's longest side (103.5 mm), half
+  that across its corners; 8 logical faces. **SCENE › *orbited piece (0 = green, 1 = turquoise)*** (`orbitPieceKind`): the piece in use
+  is the one the orbit carries (`st.greenBox`), the other hidden; a switch **respawns it as at boot** — the boot quaternion, the rig back at
+  its boot yaw / ring / zoom, the camera and the spring from there (`spawnOrbitPiece`). `tests/proto_turquoise.test.ts`.
+* ⭐⭐⭐ **THE RESTING-FACE SELECTOR** → [`RESTING_FACE.md`](RESTING_FACE.md): every part not seated (on a Pioneer, or placed in its goal) gets
+  the face it rests on and its principal axis — at boot, and the frame it is unseated; the orbited pieces at creation, their resting face
+  **filled yellow**, seen faintly **through its own piece** (never through another — draw order, `restingXray`).
+* ⭐⭐⭐ **THE RESTING-FACE ALIGNMENT** → [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md): while the first touch / left button
+  orbits, a **second-finger tap / right tap** is counted; the FIRST turns the piece in 125 ms — **its resting face against the PINK FACE**
+  (or the first frozen body's face toward it), **the two faces' long axes parallel** by the smallest turn (§2, `1.0.59q-`; two earlier
+  versions superseded the same day). A second finger that moves beyond the deadband is a **pinch** at once; the orbit pauses only then.
+  A second touch never grabs a piece while orbiting. The first tap costs one episode.
+* ⭐ **The piece turns AGAINST the orbit** (the same amount, about the vertical) — at boot and until it is aligned; ⛔ **not after**
+  (*"remove the rotation when the resting piece is aligned"*). A respawn starts it again.
+* ⭐ **`tapMaxDuration` 200 ms for EVERY tap** (Unity's default; it was 250), with a slider in SCENE.
+* ⭐ **The camera's yaw offset 2.5°** (it was 3°; the slider in 0.5° steps).

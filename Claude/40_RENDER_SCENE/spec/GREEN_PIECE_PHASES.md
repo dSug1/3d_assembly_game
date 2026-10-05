@@ -3,6 +3,12 @@
 **Status:** draft 5, 2026-10-04. Not built — ⛔ **build only when the owner says so**, step by step (§6). Prototype branch only
 (`1.0.59m-…`), not the main line. Marked **AGREED** where the owner confirmed it.
 
+⚠⚠ **ON HOLD — ITS GROUND MOVED (2026-10-05).** Steps 1–2 were built on `1.0.59n-` and that branch was set aside by the owner (*"not
+satisfied"*); `1.0.59o-` likewise. From `1.0.59p-` on, the green piece's snapped rotation, the face tracking, the "held" latch and its
+behaviours (the contour, the yaw share, the cross deadband), the pink face's normal and the guide sphere were **REMOVED** — this spec's
+coarse / commit stages read several of them. The orbited piece's orientation is now the RESTING FACE's (`RESTING_FACE.md`) and its
+alignment a second-finger tap while orbiting (`RESTING_FACE_ALIGNMENT.md`). ⛔ Re-read against those two before building any step here.
+
 **Goal:** make the green piece follow the way a child assembles two bricks: pick the face → commit by bringing it toward the target →
 approach along the insertion axis while rolling the long axis into line → hover → fine roll → contact → seat.
 
