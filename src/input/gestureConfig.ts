@@ -947,7 +947,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraLeashDeg: 0, // ⭐ the owner, 2026-10-02: 1.5, then 0.5, 0, 0.05, then back to 0 (was 3) — the camera right behind the box
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
   // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
-  cameraYawOffsetDeg: 3,
+  cameraYawOffsetDeg: 2.5, // ⭐ the owner, 2026-10-05 (was 3)
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)

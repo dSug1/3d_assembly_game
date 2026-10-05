@@ -38,6 +38,12 @@ import { join } from "node:path";
  * up, which is `config_debt.test.ts`'s own warning about itself.
  */
 const PENDING: Record<string, string> = {
+  // ── prototype `1.0.59q-` (2026-10-05): priority 1 of the resting-face alignment, SUPERSEDED twice in a day — kept until the
+  // owner settles the rule (`RESTING_FACE_ALIGNMENT.md` §2), then deleted with their vectors. ──────────────────────────────
+  restAlignTarget:
+    "superseded — priority 1 as the long axis toward the horizontal direction to the pink ring (`1.0.59p-`); now by the pink face",
+  restAlignToEdge: "superseded — priority 1 by the leading and mating EDGES (`1.0.59q-`, the same day); now by the pink face",
+  matingEdgeIndex: "superseded with `restAlignToEdge` — the pink face's mating edge",
   // ── Retired 2026-09-22, and KEPT until a hand judges the change that retired it. ─────
   // ⛔⛔ A THIRD CATEGORY THIS FILE'S HEADER DOES NOT NAME, and it is worth naming: not
   // *pending* a row, not *stale* from a settled deletion, but **superseded by a change that

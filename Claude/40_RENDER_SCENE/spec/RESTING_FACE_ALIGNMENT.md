@@ -26,21 +26,27 @@ While the **first touch** (or the **left button**) is down and **orbiting** — 
 
 **The target orientation**, from the piece's pose at that moment:
 
-1. **The resting face down** — its outward normal along gravity (the piece sits on it). The face is the selector's
-   (`RESTING_FACE.md`), the member of its winning group chosen there.
-2. ⭐⭐ **PRIORITY 1, BY EDGES** (`1.0.59q-`, the owner, 2026-10-05: *"identify the edge of the resting face which is closest to the pink
-   gizmo (the leading edge) — identify the edge of the pink face which is closest to be in horizontal plane and among those which are
-   closest to be in horizontal plane, the edge which is closest to the camera (the mating edge) — the resting face goes to bottom (no
-   change) — rotate the piece so that the leading edge most align with the mating edge"*):
-   - **the LEADING edge** — of the resting face's edges (the hull of its points in its plane), the one nearest the pink ring — measured
-     with the face already DOWN (after step 1, before the yaw);
-   - **the MATING edge** — of the PINK FACE's edges (the face holding the pink ring: at boot the blue face toward the green piece, then
-     the face a press on a placed piece moves the target to — `st.pinkFace`), those within **1°** of the most horizontal, then the one
-     nearest the **camera**;
-   - **the turn** — the SMALLEST yaw (≤ 90°: an edge has no direction of its own) making the leading edge **parallel** to the mating
-     edge's horizontal direction. Rotation only: the piece stays where the orbit puts it.
-   - No pink face known, or a vertical mating edge: step 1 alone.
-   ⛔ ~~*The long axis toward the horizontal direction to the ring*~~ — superseded (built on `1.0.59p-`).
+⭐⭐⭐ **PRIORITY 1, BY THE PINK FACE** (`1.0.59q-`, the owner, 2026-10-05: *"the resting face goes to anti-align with the normal of the
+pink face (if no pink face, anti-align with the normal of the first frozen object) — identify the long axis of the resting face (if more
+than one, identify the one which is most aligned with the long axis of the pink face) — identify the long axis of the pink face (if more
+than one, identify the one which is most aligned with the long axis of the resting face) — if there is a tie, pick up the long axis which
+end vertices are closest — rotate the piece so that the long axis are aligned"* — then *"if there is a tie, pick up the two long axis
+which nullify or minimize the rotation"*):
+
+1. **The resting face ANTI-ALIGNED with the pink face** — the smallest turn bringing its outward normal along the pink face's INWARD
+   normal (the two faces facing each other). The pink face is the face holding the pink ring (`st.pinkFace`: at boot the blue face toward
+   the green piece; then the face a press on a placed piece moves the target to). ⭐ **No pink face:** the FIRST FROZEN body's face that
+   points most toward the piece (the floor's top — the resting face then goes DOWN).
+2. **The pair of long axes** (§3; one of the resting face's, one of the pink face's), judged with the face anti-aligned (both then lie
+   across the pink normal): the pair needing the **SMALLEST turn** to be parallel — the most parallel pair, the same measure (the owner:
+   *"which nullify or minimize the rotation"*). ⚠ An EXACT tie (the same angle — two pairs already parallel, or one turn's two senses):
+   the pair whose **END points are closest** (where each axis meets its edges), so the answer is never arbitrary.
+3. **The turn** — about the pink normal, the SMALLEST (≤ 90°: an axis has no direction of its own), making the two axes parallel.
+   Rotation only: the piece stays where the orbit puts it. A face with no long axis: step 1 alone.
+
+⛔ Superseded, the same day, and kept as declared debt until the rule settles (`unwired_debt.test.ts`): ~~the long axis toward the
+horizontal direction to the ring~~ (`restAlignTarget`, `1.0.59p-`) and ~~the leading edge parallel to the mating edge~~ (`restAlignToEdge`,
+`matingEdgeIndex`, `1.0.59q-` — it settled only after several taps, the turn itself changing which edge was nearest the ring).
 
 **The motion:** ONE rotation, from the pose to the target, eased over **125 ms** (a constant — the snap slider left with the rotation
 removal; a slider later if wanted). If the orbit moves during those 125 ms, the turn CHASES the moving target (never lands and then
@@ -70,13 +76,10 @@ aligned, the piece will rotate in yaw around the resting face normal"*)
 
 ---
 
-## 3. The long axis of the resting face — ⛔ NOT USED on `1.0.59q-`
+## 3. The long axis of a face — USED again (the resting face's AND the pink face's)
 
-⏳ **TO REMOVE LATER, FOR ALL THE PARTS** (the owner, 2026-10-05: *"capture in the md file to remove the long axis calculations for all
-the parts later on, as this is not used in this branch"*): `faceLongAxes` (`core/resting_face.ts`), `restAlignTarget`'s long-axis step,
-the orbited pieces' `restingAxes` / `restingAxesFallback` (`restingOf`), and their vectors (`proto_resting_align.test.ts`). Kept for now,
-computed and unused — the alignment is by EDGES (§2).
-
+⛔ ~~*To remove later, for all the parts — not used in this branch*~~ (the owner, 2026-10-05, earlier the same day): **withdrawn** — the
+pink-face rule (§2) reads the long axes of both faces. `faceLongAxes` now also returns each axis's two END points (§2's tie-break).
 
 The face's **axes of symmetry that run EDGE TO EDGE, perpendicular to both edges** — the longest of them.
 
@@ -159,3 +162,11 @@ Orbit + a quick second-finger tap on `Scene_1`: *"orbit: tap 1 — aligned: the 
 mating edge e3 of Piece10/f1"* (Piece10 is the blue piece; f1 the face toward the green piece). Vectors: `proto_resting_edges.test.ts`
 (the edges of a face, the mating edge — the flattest within 1°, then the nearest the camera —, the leading edge, the face down and the
 edges parallel from a tumbled pose, the yaw never past 90°), each failing on a mutant.
+
+## 10. Priority 1 by the pink face — checked headless (2026-10-05, `1.0.59q-`)
+
+Orbit + a quick second-finger tap on `Scene_1`: *"orbit: tap 1 — aligned: the resting face against Piece10/f1, long axes a0 ∥ a0"* — on
+a screenshot the green piece stands with its bottom turned to the painting's blue face. Vectors: `proto_resting_face_align.test.ts` (the
+axes' end points; anti-parallel to a vertical pink face from the tumbled boot pose; the floor when there is no pink face; the most
+parallel pair and the ends' tie-break; a hexagon end never turned past 30°; the turn never past 90°), each failing on a mutant
+(gravity instead of the pink face, the farthest ends, no fold, the largest turn).

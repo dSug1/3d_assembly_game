@@ -25,7 +25,7 @@ import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, 
 import { type Quat, type Vec3 } from "../core/vec";
 
 import { type FrameMeter } from "../core/frame_meter";
-import type { Edge, RestingCandidate, RestingResult } from "../core/resting_face";
+import type { Edge, LongAxes, RestingCandidate, RestingResult } from "../core/resting_face";
 import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -419,6 +419,8 @@ export interface SceneState {
     readonly restingAxesFallback: boolean;
     /** ⭐ its resting face's EDGES (`faceEdges`), its own frame — the leading edge is one of them (`1.0.59q-`). */
     readonly restingEdges: readonly Edge[];
+    /** ⭐ its resting face's LONG AXES with their end points (`faceLongAxes`), its own frame — what aligns (`1.0.59q-`). */
+    readonly restingLong: LongAxes;
   }[];
   /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
    * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */

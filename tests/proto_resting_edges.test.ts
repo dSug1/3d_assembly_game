@@ -77,12 +77,8 @@ describe("⭐⭐⭐ prototype — the resting-face alignment by edges", () => {
     }
   });
 
-  it("⭐⭐ wired: the pink face known at boot and moved by a press; the alignment by edges; the long axes no longer used for it", () => {
-    const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/st\.pinkFace = at < 0 \? null : \{ objectId: blue\.id, faceId: o\.faces\[at\]!\.id \};/);
-    expect(code("render/pointer_wiring.ts")).toMatch(/if \(newTarget !== null && faceHit && pickedId !== undefined\) st\.pinkFace = \{ objectId: pickedId, faceId: faceHit\.faceId \};/);
-    expect(w).toMatch(/const m = mating\.length === 0 \? -1 : matingEdgeIndex\(mating, \[st\.camera\.position\.x, st\.camera\.position\.y, st\.camera\.position\.z\]\);/);
-    expect(w).toMatch(/const r = restAlignToEdge\(q, \[pos\.x, pos\.y, pos\.z\], p\.restingFace\.normal, p\.restingEdges, \[t\[0\], t\[1\], t\[2\]\], mating\[m\]!\);/);
-    expect(w).not.toMatch(/restAlignTarget\(q, p\.restingFace\.normal, p\.restingAxes/); // ⛔ the long axis no longer aligns anything
+  it("⭐ wired: the pink face known at boot and moved by a press (the edges version itself is superseded — `proto_resting_face_align`)", () => {
+    expect(code("render/green_box_wiring.ts")).toContain("st.pinkFace = at < 0 ? null : { objectId: blue.id, faceId: o.faces[at]!.id };");
+    expect(code("render/pointer_wiring.ts")).toContain("if (newTarget !== null && faceHit && pickedId !== undefined) st.pinkFace = { objectId: pickedId, faceId: faceHit.faceId };");
   });
 });

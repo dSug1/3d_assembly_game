@@ -11,14 +11,14 @@ import { OrbitController } from "../input";
 import { topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { chooseInGroup, faceEdges, faceLongAxes, matingEdgeIndex, restAlignTarget, restAlignToEdge, restingFaces, type Edge, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
-import { faceWorld, worldPlacementOf } from "../core/object_model";
+import { faceWorld, worldPlacementOf, type ObjectId } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
 import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
@@ -67,11 +67,12 @@ function restingOf(
   restingAxes: readonly Vec3[];
   restingAxesFallback: boolean;
   restingEdges: readonly Edge[];
+  restingLong: LongAxes;
 } {
   const topo = topologyFromMesh(m);
   const resting = topo === null ? restingFaces([], []) : restingFaces(topo.positions, topo.faces);
   const restingFace = resting.winner === null ? null : chooseInGroup(resting.winner, greenBootOrientation(st.sceneSpec.id));
-  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [] };
+  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [], restingLong: { axes: [], ends: [] } };
   // ⭐ the resting face's LONG AXES (`faceLongAxes`, `RESTING_FACE_ALIGNMENT.md` §3) — edge to edge, perpendicular to both edges
   const facePoints = [...new Set(restingFace.faces.flatMap((f) => topo.faces[f]!.triangles))].map((i) => topo.positions[i]!);
   const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((p) => p[k]!)));
@@ -106,7 +107,7 @@ function restingOf(
   fill.isPickable = false;
   fill.metadata = { orbitCandidate: false };
   restingXray(st, m, fill, data);
-  return { resting, restingFace, restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal) };
+  return { resting, restingFace, restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends } };
 }
 
 /**
@@ -161,21 +162,46 @@ const RESTING_XRAY_ALPHA = 0.25;
 const RESTING_ORDER = 1000;
 
 /**
- * ⭐ prototype — the pink face's EDGES, in the world (`1.0.59q-`): the face holding the pink ring (`st.pinkFace`), read off its body's
- * topology — the hull of its points in its plane — and placed by the body's pose. Empty with no pink face.
+ * ⭐ prototype — **THE FACE THE PIECE ALIGNS TO**, in the world (`1.0.59q-`): the PINK face (`st.pinkFace`: at boot the blue face toward
+ * the green piece, then the face a press on a placed piece moves the target to) — or, with none, the FIRST FROZEN body's face that
+ * points most toward the piece (the owner: *"if no pink face, anti-align with the normal of the first frozen object"* — the floor's
+ * top). Its outward normal and its long axes (`faceLongAxes`, with their end points), read off its body's topology and placed by its pose.
  */
-function pinkFaceEdges(st: SceneState): Edge[] {
-  const pf = st.pinkFace;
-  if (pf === null) return [];
-  const mesh = st.meshOf.get(pf.objectId);
-  const pose = worldPlacementOf(st.world, pf.objectId);
-  if (mesh === undefined || pose === null) return [];
-  const topo = st.topoOf.get(pf.objectId) ?? topologyOfBody(st, mesh);
-  const face = topo.faces.find((f) => f.id === pf.faceId);
-  if (face === undefined) return [];
+function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; readonly normal: Vec3; readonly long: LongAxes } | null {
+  let id: ObjectId | null = st.pinkFace?.objectId ?? null;
+  let faceId: string | null = st.pinkFace?.faceId ?? null;
+  if (id === null) {
+    for (const [oid, o] of st.world.objects) {
+      if (o.frozen !== true) continue;
+      const faces = o.faces.map((f) => faceWorld(st.world, oid, f.id)).filter((f): f is NonNullable<typeof f> => f !== null);
+      const toward = faceToward(
+        faces.map((f) => ({ centre: f.centre, normal: f.normal })),
+        faces.length > 0 ? [piece[0] - faces[0]!.centre[0], piece[1] - faces[0]!.centre[1], piece[2] - faces[0]!.centre[2]] : [0, 1, 0],
+      );
+      const at = toward === null ? -1 : faces.findIndex((f) => f.normal === toward.normal);
+      if (at < 0) continue;
+      id = oid;
+      faceId = o.faces[at]!.id;
+      break;
+    }
+  }
+  if (id === null || faceId === null) return null;
+  const mesh = st.meshOf.get(id);
+  const pose = worldPlacementOf(st.world, id);
+  if (mesh === undefined || pose === null) return null;
+  const topo = st.topoOf.get(id) ?? topologyOfBody(st, mesh);
+  const face = topo.faces.find((f) => f.id === faceId);
+  if (face === undefined) return null;
   const pts = [...new Set(face.triangles)].map((i) => topo.positions[i]!);
+  const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((p) => p[k]!)));
+  const hi = [0, 1, 2].map((k) => Math.max(...topo.positions.map((p) => p[k]!)));
+  const long = faceLongAxes(pts, face.normal, 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!));
   const w = (v: Vec3): Vec3 => add(pose.position, qRotate(pose.orientation, v));
-  return faceEdges(pts, face.normal).map((e) => [w(e[0]), w(e[1])] as Edge);
+  return {
+    label: `${st.pinkFace === null ? "frozen " : ""}${id}/${faceId}`,
+    normal: qRotate(pose.orientation, face.normal),
+    long: { axes: long.axes.map((a) => qRotate(pose.orientation, a)), ends: long.ends.map((e) => [w(e[0]), w(e[1])] as const) },
+  };
 }
 
 /** ⭐ The resting-face alignment's single turn, ms (`RESTING_FACE_ALIGNMENT.md` §2: *"snap in one single rotation in 125 ms"*). */
@@ -190,8 +216,8 @@ function orbitHeading(st: SceneState): number {
 
 /**
  * ⭐⭐⭐ prototype — **THE RESTING-FACE ALIGNMENT** (`RESTING_FACE_ALIGNMENT.md` §2; the owner, 2026-10-05): the first second-finger tap
- * while orbiting. The target (`restAlignTarget`): the resting face DOWN, then its long axis onto the horizontal direction from the piece
- * to the pink ring. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is; the counter-yaw stops at this tap (§2bis), so nothing
+ * while orbiting. The target (`restAlignToFace`, `1.0.59q-`): the resting face ANTI-ALIGNED with the pink face, then the two faces' long
+ * axes made parallel. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is; the counter-yaw stops at this tap (§2bis), so nothing
  * fights the ease, and the piece holds the aligned pose afterwards.
  */
 export function alignRestingFace(st: SceneState, now: number): boolean {
@@ -199,20 +225,19 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
   if (p === undefined || p.restingFace === null || st.greenBox === null) return false;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
   const q: Quat = [r.w, r.x, r.y, r.z];
-  const t = st.centreBlend.targetM;
   const pos = p.mesh.position;
-  // ⭐ `1.0.59q-` (the owner, 2026-10-05): priority 1 BY EDGES — the resting face's LEADING edge (nearest the pink ring, the face down)
-  // made parallel to the pink face's MATING edge (the most horizontal, then the nearest the camera). No pink face: the face down alone.
-  const mating = pinkFaceEdges(st);
-  const m = mating.length === 0 ? -1 : matingEdgeIndex(mating, [st.camera.position.x, st.camera.position.y, st.camera.position.z]);
-  let base: Quat;
-  if (m < 0) {
-    base = restAlignTarget(q, p.restingFace.normal, [], [0, 0, 0]);
-    st.lastVerdict = "orbit: tap 1 — aligned: the resting face down (no pink face known: no mating edge)";
+  // ⭐ `1.0.59q-` (the owner, 2026-10-05): priority 1 BY THE PINK FACE — the resting face anti-aligned with it, then the two faces' long
+  // axes parallel (the most parallel pair; a tie to the closest ends) by a turn about its normal. No face at all: the pose as it is.
+  const target = alignFaceOf(st, [pos.x, pos.y, pos.z]);
+  let base: Quat = q;
+  if (target === null) {
+    st.lastVerdict = "orbit: tap 1 — nothing to align to (no pink face, no frozen body)";
   } else {
-    const r = restAlignToEdge(q, [pos.x, pos.y, pos.z], p.restingFace.normal, p.restingEdges, [t[0], t[1], t[2]], mating[m]!);
+    const r = restAlignToFace(q, [pos.x, pos.y, pos.z], p.restingFace.normal, p.restingLong, target.normal, target.long);
     base = r.q;
-    st.lastVerdict = `orbit: tap 1 — aligned: the resting face down, its leading edge e${r.leading} parallel to the mating edge e${m} of ${st.pinkFace!.objectId}/${st.pinkFace!.faceId}`;
+    st.lastVerdict =
+      `orbit: tap 1 — aligned: the resting face against ${target.label}` +
+      (r.restAxis < 0 ? " (no long axes to pair)" : `, long axes a${r.restAxis} ∥ a${r.pinkAxis}`);
   }
   st.restAlign = { from: q, t0: now, base };
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)

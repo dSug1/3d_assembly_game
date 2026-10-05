@@ -394,13 +394,13 @@ export function faceLongAxes(
   points: readonly Vec3[],
   normal: Vec3,
   tol: number,
-): { readonly axes: readonly Vec3[]; readonly length: number; readonly fallback: boolean } {
+): { readonly axes: readonly Vec3[]; readonly ends: readonly (readonly [Vec3, Vec3])[]; readonly length: number; readonly fallback: boolean } {
   const n = normalize(normal);
-  if (n === null || points.length < 3) return { axes: [], length: 0, fallback: true };
+  if (n === null || points.length < 3) return { axes: [], ends: [], length: 0, fallback: true };
   const e1 = normalize(Math.abs(n[0]) < 0.9 ? cross(n, [1, 0, 0]) : cross(n, [0, 1, 0]))!;
   const e2 = cross(n, e1);
   const P = hull2(points.map((p) => [dot(p, e1), dot(p, e2)] as [number, number]));
-  if (P.length < 3) return { axes: [], length: 0, fallback: true };
+  if (P.length < 3) return { axes: [], ends: [], length: 0, fallback: true };
   // the polygon's area centroid
   let A = 0;
   let cx = 0;
@@ -439,10 +439,19 @@ export function faceLongAxes(
     for (const d of ds) if (!out.some((o) => Math.abs(o[0] * d[0] + o[1] * d[1]) > 1 - 1e-9)) out.push(d);
     return out;
   };
+  const plane = dot(points[0]!, n);
+  const to3 = (x: number, y: number): Vec3 => add(add(scale(e1, x), scale(e2, y)), scale(n, plane));
+  // ⭐ an axis's two END points — where it meets its two edges: the line through the centroid along d, at the polygon's extent along d
+  const endsOf = (d: readonly [number, number]): [Vec3, Vec3] => {
+    const s = P.map((p) => p[0] * d[0] + p[1] * d[1]);
+    const c0 = c[0] * d[0] + c[1] * d[1];
+    const at = (t: number): Vec3 => to3(c[0] + d[0] * (t - c0), c[1] + d[1] * (t - c0));
+    return [at(Math.min(...s)), at(Math.max(...s))];
+  };
   const longest = (ds: readonly (readonly [number, number])[], fallback: boolean) => {
     const L = Math.max(...ds.map(extent));
     const keep = ds.filter((d) => extent(d) >= L - tol);
-    return { axes: keep.map((d) => normalize(add(scale(e1, d[0]), scale(e2, d[1])))!), length: L, fallback };
+    return { axes: keep.map((d) => normalize(add(scale(e1, d[0]), scale(e2, d[1])))!), ends: keep.map(endsOf), length: L, fallback };
   };
   // ⭐ edge to edge: an edge normal with a parallel opposite edge, the polygon symmetric about it
   const edgeToEdge = dedupe(
@@ -586,4 +595,67 @@ export function restAlignToEdge(
   if (angle > Math.PI / 2) angle -= Math.PI;
   else if (angle < -Math.PI / 2) angle += Math.PI;
   return { q: qmul(qFromAxisAngle(up, angle), q1), leading };
+}
+
+/** ⭐ A face's long axes, ready for the alignment: their directions and their two end points (where each meets its edges). */
+export interface LongAxes {
+  readonly axes: readonly Vec3[];
+  readonly ends: readonly (readonly [Vec3, Vec3])[];
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE RESTING-FACE ALIGNMENT, PRIORITY 1 BY THE PINK FACE** (`RESTING_FACE_ALIGNMENT.md` §2; the owner, 2026-10-05,
+ * `1.0.59q-`: *"the resting face goes to anti-align with the normal of the pink face (if no pink face, anti-align with the normal of the
+ * first frozen object) — identify the long axis of the resting face (if more than one, identify the one which is most aligned with the
+ * long axis of the pink face) — identify the long axis of the pink face (if more than one, … most aligned with the long axis of the
+ * resting face) — if there is a tie, pick up the long axis which end vertices are closest — rotate the piece so that the long axis are
+ * aligned"*). From the pose `q` (the piece at `at`; its resting face's normal and long axes in its own frame; the pink face's normal and
+ * long axes in the world):
+ * 1. the resting face ANTI-ALIGNED with the pink face — the smallest turn bringing its outward normal along `−pinkNormal`;
+ * 2. the PAIR of long axes (one of the resting face's, one of the pink face's) most PARALLEL in that pose — both lie across the pink
+ *    normal; a tie (within 1e-9) goes to the pair whose END points are closest (the nearest end of one to the nearest end of the other);
+ * 3. a turn about the pink normal, the smallest (either way along an axis: ≤ 90°), making them parallel.
+ * Rotation only: the piece stays where the orbit puts it. No long axis on either face: (1) alone.
+ */
+export function restAlignToFace(
+  q: Quat,
+  at: Vec3,
+  restNormal: Vec3,
+  restLong: LongAxes,
+  pinkNormal: Vec3,
+  pinkLong: LongAxes,
+): { readonly q: Quat; readonly restAxis: number; readonly pinkAxis: number } {
+  const pn = normalize(pinkNormal);
+  if (pn === null) return { q, restAxis: -1, pinkAxis: -1 };
+  const q1 = qmul(shortestArc(qRotate(q, restNormal), [-pn[0], -pn[1], -pn[2]]), q);
+  const toWorld = (p: Vec3): Vec3 => add(at, qRotate(q1, p));
+  const across = (v: Vec3): Vec3 | null => normalize(sub(v, scale(pn, dot(v, pn))));
+  // ⭐ the turn about the pink normal making two axes parallel — the SMALLEST (either way along an axis: ≤ 90°)
+  const turnFor = (rd: Vec3, pd: Vec3): number => {
+    let angle = Math.atan2(dot(pn, cross(rd, pd)), dot(rd, pd));
+    if (angle > Math.PI / 2) angle -= Math.PI;
+    else if (angle < -Math.PI / 2) angle += Math.PI;
+    return angle;
+  };
+  // ⭐ the pair whose turn is the smallest (the owner: *"pick up the two long axis which nullify or minimize the rotation"* — the most
+  // parallel pair, the same measure); an EXACT tie (the same angle — the two senses of one turn, or two pairs already parallel) to the
+  // pair whose ends are closest, so the answer is never arbitrary
+  let best: { r: number; p: number; turn: number; gap: number } | null = null;
+  restLong.axes.forEach((ra, r) => {
+    const rd = across(qRotate(q1, ra));
+    if (rd === null) return;
+    pinkLong.axes.forEach((pa, p) => {
+      const pd = across(pa);
+      if (pd === null) return;
+      const turn = Math.abs(turnFor(rd, pd));
+      const re = restLong.ends[r]!.map(toWorld);
+      const pe = pinkLong.ends[p]!;
+      const gap = Math.min(...re.flatMap((a) => pe.map((b) => length(sub(a, b)))));
+      if (best === null || turn < best.turn - 1e-9 || (Math.abs(turn - best.turn) <= 1e-9 && gap < best.gap)) best = { r, p, turn, gap };
+    });
+  });
+  if (best === null) return { q: q1, restAxis: -1, pinkAxis: -1 };
+  const { r, p } = best as { r: number; p: number };
+  const angle = turnFor(across(qRotate(q1, restLong.axes[r]!))!, across(pinkLong.axes[p]!)!);
+  return { q: qmul(qFromAxisAngle(pn, angle), q1), restAxis: r, pinkAxis: p };
 }
