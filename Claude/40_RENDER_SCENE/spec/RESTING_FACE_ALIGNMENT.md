@@ -38,13 +38,24 @@ While the **first touch** (or the **left button**) is down and **orbiting** — 
 removal; a slider later if wanted). If the orbit moves during those 125 ms, the turn CHASES the moving target (never lands and then
 jumps).
 
-**Then, until the first touch lifts:** the piece turns about the vertical by exactly the orbit's yaw, **in the same direction**, so the
-long axis keeps pointing at the ring as the piece goes round. ⭐ The horizontal direction to the ring depends only on the orbit's yaw
-(not on the ring height), so the follow is the yaw itself — read from the piece's displayed (spring-smoothed) yaw, in step with what
-is drawn.
+⛔ ~~**Then, until the first touch lifts:** the piece turns with the orbit's yaw, in the same direction, its long axis pointing at the
+ring; after the lift it keeps its orientation.~~ — **superseded the same day by §2bis** (built, then replaced before any device look).
 
-**After the first touch lifts:** the orbit works as today (the piece does not turn), the piece **keeping the orientation** the
-alignment gave it. A new gesture's first tap aligns again.
+## 2bis. The piece turns AGAINST the orbit — in all cases
+
+(the owner, 2026-10-05: *"in all cases, the green piece and the turquoise pieces rotate in yaw in the opposite direction of the orbit yaw
+by the same amount. This is valid if the resting face has been aligned or not (therefore, also at boot)"* — *"once the resting face is
+aligned, the piece will rotate in yaw around the resting face normal"*)
+
+- Every frame, the piece's heading about the ring changes by `d` (the orbit's yaw, read from the spring — what is drawn); the piece
+  turns by **`−d` about the world vertical**, through its own centre (`counterYaw`, `counterYawFrame`).
+- **In all cases:** at boot, before and after an alignment, the finger down or lifted, the orbit's coast too. A tumbled piece keeps its
+  tilt (only its heading turns). An alignment in flight turns with it (its start and its target), so the 125 ms ease never fights it.
+- ⭐ **Once aligned**, the resting face's normal IS the vertical, so the turn is about that normal; both pieces turn about their centre,
+  which lies on that normal through the face's centre (a symmetric piece — ⚠ an asymmetric one would need its turn moved to the face).
+- ⚠ **A consequence, stated:** the long axis points at the ring only at the moment of the tap. Relative to the direction to the ring the
+  piece turns by `−2d` as the orbit goes on (it turned by `0` with the superseded follow).
+- The orbit finger's lift only resets the tap count.
 
 ---
 

@@ -431,9 +431,10 @@ export interface SceneState {
     count: number;
     second: { readonly pointerId: number; readonly pressT: number; readonly pressX: number; readonly pressY: number; pinched: boolean } | null;
   } | null;
-  /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose and time, its target at the reference heading, and
-   * whether it still follows the orbit's heading (the finger down). */
-  restAlign: { readonly from: Quat; readonly t0: number; readonly base: Quat; readonly headingRef: number; readonly follow: boolean } | null;
+  /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose, its start time, its target (both turned against the orbit). */
+  restAlign: { readonly from: Quat; readonly t0: number; readonly base: Quat } | null;
+  /** ⭐ Prototype (§2bis): the orbited piece's heading about the ring last frame — the counter-yaw turns by its change. `null`: read afresh. */
+  orbitHeadingPrev: number | null;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;

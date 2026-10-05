@@ -11,7 +11,7 @@ import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { meshTopology } from "../src/core/mesh_topology";
 import { chooseInGroup, faceLongAxes, restAlignTarget, restingFaces } from "../src/core/resting_face";
 import { dot, qRotate, type Quat, type Vec3 } from "../src/core/vec";
-import { greenBootOrientation } from "../src/input/green_box";
+import { counterYaw, greenBootOrientation, wrapAngle } from "../src/input/green_box";
 import { isOrbitTap, orbitTapCount, secondPinches } from "../src/input/orbit_tap";
 import { MouseSecondTouch } from "../src/input/mouse_second_touch";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -110,6 +110,35 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(plain.step({ type: "UP", button: 2, buttons: 0, shift: false, x: 0, y: 0, t: 100 }).rightTapMs).toBeUndefined();
   });
 
+  it("⭐⭐⭐ the piece turns AGAINST the orbit, the same amount, about the vertical (the owner: *\"in all cases … also at boot\"*)", () => {
+    // the orbit moved the piece's heading by +0.3 rad about +y: the piece turns by −0.3 about +y
+    const q0: Quat = [1, 0, 0, 0];
+    const q = counterYaw(q0, 0.3);
+    const x = qRotate(q, [1, 0, 0]);
+    expect(Math.atan2(-x[2], x[0])).toBeCloseTo(-0.3, 12); // a turn of −0.3 about +y takes x to (cos, 0, sin(0.3))
+    expect(x[1]).toBeCloseTo(0, 12); // about the vertical only
+    // a tumbled piece: its vertical tilt is untouched, its heading turns by −d
+    const t = greenBootOrientation("Scene_1");
+    const up = (r: Quat) => qRotate(r, [0, 1, 0])[1];
+    expect(up(counterYaw(t, 1.1))).toBeCloseTo(up(t), 12);
+    // the heading's change across the ±π seam is the short way round
+    expect(wrapAngle(3.1 - -3.1)).toBeCloseTo(6.2 - 2 * Math.PI, 12);
+    expect(wrapAngle(-0.2)).toBeCloseTo(-0.2, 12);
+    expect(wrapAngle(Math.PI)).toBeCloseTo(Math.PI, 12);
+    // ⭐ once aligned, the resting face's normal IS the vertical: the turn is about it
+    const n: Vec3 = [0, -1, 0];
+    expect(dot(qRotate(counterYaw(q0, 0.7), n), n)).toBeCloseTo(1, 12);
+  });
+
+  it("⭐⭐ wired: every frame, in all cases — from the spring's heading; an alignment in flight turns with it; a respawn reads it afresh", () => {
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/const d = wrapAngle\(h - prev\);\s*if \(d === 0\) return;\s*const r = box\.rotationQuaternion \?\? Quaternion\.Identity\(\);\s*const q = counterYaw\(\[r\.w, r\.x, r\.y, r\.z\], d\);/);
+    expect(w).toMatch(/if \(a !== null\) st\.restAlign = \{ \.\.\.a, from: counterYaw\(a\.from, d\), base: counterYaw\(a\.base, d\) \};/);
+    expect(w).toMatch(/st\.restAlign = null;\s*st\.orbitHeadingPrev = null;/); // the respawn
+    // ⛔ no gate on a finger, on an alignment: the frame step runs whatever the state
+    expect(w).toMatch(/function counterYawFrame\(st: SceneState\): void \{\s*const box = st\.greenBox;\s*if \(box === null \|\| st\.boxOrbit === null\) return;/);
+  });
+
   it("⭐⭐ wired: the second touch while orbiting never grabs; the orbit goes on until it pinches; its tap is consumed; the lift resets", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/const rayHit =\s*orbitFinger !== null \? null : throughGreenBox\(/);
@@ -122,7 +151,9 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(i0).toBeGreaterThan(0);
     expect(i1).toBeGreaterThan(i0);
     expect(p.indexOf("noteTap(", i0)).toBeGreaterThan(i1); // the release branch's camera-reset / toggle tap comes after
-    expect(p).toMatch(/st\.orbitTap = null;\s*stopRestFollow\(st\);/);
+    // the lift resets the count — and nothing else (the piece turns against the orbit in ALL cases, §2bis)
+    expect(p).toMatch(/st\.orbitTap = null;\s*st\.hudDirty = true;\s*\}/);
+    expect(p).not.toMatch(/stopRestFollow/);
     // the first tap aligns and costs ONE episode
     expect(p).toMatch(/if \(r\.aligns && alignRestingFace\(st, now\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);\s*st\.episodes\.sync\(true\);/);
     // the mouse's right tap
@@ -132,7 +163,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     // the target, the ease (125 ms), the follow by the orbit's heading until the finger lifts
     expect(w).toMatch(/const base = restAlignTarget\(q, p\.restingFace\.normal, p\.restingAxes, \[t\[0\] - pos\.x, t\[1\] - pos\.y, t\[2\] - pos\.z\]\);/);
     expect(w).toMatch(/const REST_ALIGN_MS = 125;/);
-    expect(w).toMatch(/const target = a\.follow \? qmul\(qFromAxisAngle\(\[0, 1, 0\], orbitHeading\(st\) - a\.headingRef\), a\.base\) : a\.base;/);
+    expect(w).toMatch(/const q = u < 1 \? qSlerp\(a\.from, a\.base, u \* u \* \(3 - 2 \* u\)\) : a\.base;/);
     expect(w).toMatch(/return Math\.atan2\(o\[0\], o\[2\]\);/);
   });
 });

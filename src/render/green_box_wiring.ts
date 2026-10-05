@@ -16,7 +16,7 @@ import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -32,7 +32,7 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
-import { qFromAxisAngle, qmul, qSlerp, type Quat, type Vec3 } from "../core/vec";
+import { qSlerp, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -156,7 +156,7 @@ const RESTING_ORDER = 1000;
 /** ⭐ The resting-face alignment's single turn, ms (`RESTING_FACE_ALIGNMENT.md` §2: *"snap in one single rotation in 125 ms"*). */
 const REST_ALIGN_MS = 125;
 
-/** ⭐ The horizontal heading of the piece about the ring (radians about +y): its offset's, at the spring's yaw — what the follow turns by. */
+/** ⭐ The horizontal heading of the piece about the ring (radians about +y): its offset's, at the spring's yaw — what the counter-yaw reads. */
 function orbitHeading(st: SceneState): number {
   if (st.boxOrbit === null) return 0;
   const o = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom).offsetM;
@@ -166,8 +166,8 @@ function orbitHeading(st: SceneState): number {
 /**
  * ⭐⭐⭐ prototype — **THE RESTING-FACE ALIGNMENT** (`RESTING_FACE_ALIGNMENT.md` §2; the owner, 2026-10-05): the first second-finger tap
  * while orbiting. The target (`restAlignTarget`): the resting face DOWN, then its long axis onto the horizontal direction from the piece
- * to the pink ring. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is; then, while the orbit finger stays down, the target
- * turns about the vertical by the orbit's own heading change (`restAlignFrame`).
+ * to the pink ring. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is — its start and its target turned against the orbit
+ * like the piece itself while it eases (`counterYawFrame`), so the ease never fights the counter-yaw.
  */
 export function alignRestingFace(st: SceneState, now: number): boolean {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
@@ -177,28 +177,41 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
   const t = st.centreBlend.targetM;
   const pos = p.mesh.position;
   const base = restAlignTarget(q, p.restingFace.normal, p.restingAxes, [t[0] - pos.x, t[1] - pos.y, t[2] - pos.z]);
-  st.restAlign = { from: q, t0: now, base, headingRef: orbitHeading(st), follow: true };
+  st.restAlign = { from: q, t0: now, base };
   st.hudDirty = true;
   return true;
 }
 
-/** ⭐ The orbit finger lifted: the follow STOPS — the piece keeps the orientation it has reached (its turn, if still easing, lands there). */
-export function stopRestFollow(st: SceneState): void {
+/**
+ * ⭐⭐ Each frame: the orbited piece turned AGAINST the orbit (`counterYaw`, §2bis) — by the change of its heading about the ring since the
+ * last frame, read from the spring (what is drawn). In ALL cases: at boot, before and after an alignment, the finger down or not (a
+ * coast too). An alignment in flight turns with it (its start and its target). ⭐ A respawn or the first frame starts the reading again.
+ */
+function counterYawFrame(st: SceneState): void {
+  const box = st.greenBox;
+  if (box === null || st.boxOrbit === null) return;
+  const h = orbitHeading(st);
+  const prev = st.orbitHeadingPrev;
+  st.orbitHeadingPrev = h;
+  if (prev === null) return;
+  const d = wrapAngle(h - prev);
+  if (d === 0) return;
+  const r = box.rotationQuaternion ?? Quaternion.Identity();
+  const q = counterYaw([r.w, r.x, r.y, r.z], d);
+  box.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
   const a = st.restAlign;
-  if (a === null || !a.follow) return;
-  st.restAlign = { ...a, base: qmul(qFromAxisAngle([0, 1, 0], orbitHeading(st) - a.headingRef), a.base), follow: false };
+  if (a !== null) st.restAlign = { ...a, from: counterYaw(a.from, d), base: counterYaw(a.base, d) };
 }
 
-/** ⭐ Each frame: the alignment's ease toward its target, the target following the orbit's heading while the finger is down. */
+/** ⭐ Each frame: the alignment's single ease toward its target (both turned against the orbit by `counterYawFrame`); landed, it ends. */
 function restAlignFrame(st: SceneState, now: number): void {
   const a = st.restAlign;
   if (a === null || st.greenBox === null) return;
-  const target = a.follow ? qmul(qFromAxisAngle([0, 1, 0], orbitHeading(st) - a.headingRef), a.base) : a.base;
   const u = Math.min(1, Math.max(0, (now - a.t0) / REST_ALIGN_MS));
-  const q = u < 1 ? qSlerp(a.from, target, u * u * (3 - 2 * u)) : target;
+  const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;
   st.greenBox.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
-  if (u >= 1 && !a.follow) {
-    st.restAlign = null; // ⭐ landed and no longer following: the pose stays as it is
+  if (u >= 1) {
+    st.restAlign = null; // ⭐ landed: the pose stays as it is (and goes on turning against the orbit)
     st.hudDirty = true;
   }
 }
@@ -238,6 +251,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.cameraOrbit = null;
     st.cameraLagged = null;
     st.restAlign = null;
+    st.orbitHeadingPrev = null;
   }
   st.hudDirty = true;
 }
@@ -483,6 +497,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
+  counterYawFrame(st);
   restAlignFrame(st, now);
   restingFillFrame(st);
 }

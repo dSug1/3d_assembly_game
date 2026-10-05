@@ -11,7 +11,7 @@
  * ⛔ ENGINE-FREE.
  */
 import type { BodySpec, Triple } from "../core/game_structure";
-import { cross, length, sub, type Quat, type Vec3 } from "../core/vec";
+import { cross, length, qFromAxisAngle, qmul, sub, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The smallest body of `colour` (by volume) — `null` when the scene has none. Frozen bodies are not candidates. */
 export function smallestOfColour(bodies: readonly BodySpec[], colour: readonly [number, number, number]): BodySpec | null {
@@ -295,4 +295,22 @@ export function turquoiseSizeM(greenSizeM: Vec3): { readonly diameterM: number; 
 export function hexPrismVolumeM3(diameterM: number, lengthM: number): number {
   const r = diameterM / 2;
   return ((3 * Math.sqrt(3)) / 2) * r * r * lengthM;
+}
+
+/** ⭐ An angle wrapped into (−π, π] — a heading's change across the ±π seam is the short way round. */
+export function wrapAngle(a: number): number {
+  const w = a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+  return w <= -Math.PI ? w + 2 * Math.PI : w;
+}
+
+/**
+ * ⭐⭐ prototype — **THE ORBITED PIECE TURNS AGAINST THE ORBIT** (`RESTING_FACE_ALIGNMENT.md` §2bis; the owner, 2026-10-05: *"in all cases,
+ * the green piece and the turquoise pieces rotate in yaw in the opposite direction of the orbit yaw by the same amount. This is valid if
+ * the resting face has been aligned or not (therefore, also at boot)"* — *"once the resting face is aligned, the piece will rotate in yaw
+ * around the resting face normal"*). The orbit moved the piece's heading about the ring by `dHeading` (about +y); the piece turns by
+ * `−dHeading` about the world vertical, through its own centre. ⭐ Once aligned, its resting face's normal IS the vertical — the same
+ * turn, about that normal.
+ */
+export function counterYaw(q: Quat, dHeading: number): Quat {
+  return qmul(qFromAxisAngle([0, 1, 0], -dHeading), q);
 }

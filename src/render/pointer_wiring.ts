@@ -11,7 +11,7 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, greenDragGains, stopRestFollow } from "./green_box_wiring";
+import { alignRestingFace, greenDragGains } from "./green_box_wiring";
 import { isOrbitTap, orbitTapCount, secondPinches } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -595,9 +595,8 @@ export function installPointerHandler(st: SceneState): void {
             return;
           }
           if (ot !== null && e.pointerId === ot.orbitPointer) {
-            // ⭐ the orbit finger lifted: the count resets, and the piece stops following the orbit (it keeps its orientation)
+            // ⭐ the orbit finger lifted: the count resets (the piece goes on turning against the orbit, as always — §2bis)
             st.orbitTap = null;
-            stopRestFollow(st);
             st.hudDirty = true;
           }
         }

@@ -68,11 +68,12 @@ describe("⭐⭐ prototype — the turquoise piece", () => {
     expect(code("render/hud_paint.ts")).toMatch(/st\.orbitPieceKind === 1 \? "turquoise" : "green"\}, \$\{st\.orbitPieceFaces\} faces/);
   });
 
-  it("⭐⭐ and NO rotation left on the orbited piece (the owner: *\"the piece shall not move during its orbit, for the moment\"*)", () => {
+  it("⭐⭐ the orbited piece's orientation: the boot one, the alignment, and the counter-yaw — nothing of the old rotation", () => {
     const w = code("render/green_box_wiring.ts");
-    // the only orientation it is ever given is the boot one (the other write is its depth clone's LOCAL identity, 2026-10-05)
-    // ⭐ 2026-10-05: and the resting-face ALIGNMENT, the one turn it is given since (a tap while orbiting, `restAlignFrame`)
-    expect(w.match(/rotationQuaternion\s*=/g)).toHaveLength(3);
+    // the boot one; its depth clone's LOCAL identity; the resting-face ALIGNMENT (`restAlignFrame`); and since 2026-10-05 the yaw AGAINST
+    // the orbit (`counterYawFrame`) — ⛔ *"the piece shall not move during its orbit"* (2026-10-04) is superseded by it
+    expect(w.match(/rotationQuaternion\s*=/g)).toHaveLength(4);
+    expect(w).toMatch(/box\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
     expect(w).toMatch(/depth\.rotationQuaternion = Quaternion\.Identity\(\);/);
     expect(w).toMatch(/st\.greenBox\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
     expect(w).not.toMatch(/trackOrbitedFaces|pieceTurns|freeTurns|greenHeldForOrbit/);
