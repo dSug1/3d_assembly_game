@@ -153,6 +153,17 @@ export function ringRelativePose(cfg: GestureConfig, v: number, gapM: number, of
   return f === null ? null : toAround(cam, piece, f);
 }
 
+/**
+ * ⭐⭐ The ELEVATION around the piece that puts a camera `r` from it at the world height `camY` (the piece at `pieceY`) — the owner,
+ * 2026-10-06: *"during the plateau 2, stay at the same height as at start of path"*, *"divide by two the increase of height between start
+ * and plateau 1"*. ⛔ Out of reach (more than `r` above or below), held at ±`maxRad`.
+ */
+export function elevForHeight(camY: number, pieceY: number, r: number, maxRad = (85 * Math.PI) / 180): number {
+  if (!(r > 0)) return 0;
+  const s = Math.min(Math.sin(maxRad), Math.max(-Math.sin(maxRad), (camY - pieceY) / r));
+  return Math.asin(s);
+}
+
 /** ⭐ A straight blend of two poses (`k` 0 → `a`, 1 → `b`). */
 export function lerpPose(a: PathPose, b: PathPose, k: number): PathPose {
   // ⭐ exactly the key at the ends — a plateau is CONSTANT, not the key plus a rounding

@@ -525,6 +525,7 @@ export interface GestureConfig {
   pathRightYawDeg: number;
   pathAboveFromVerticalDeg: number;
   pathHoldLook: number;
+  pathAboveRise: number;
   /** ⭐ Prototype: WHICH piece the orbit carries — 0 the green frustum, 1 the turquoise hexagonal prism (the SCENE menu); a change respawns it as at boot. */
   orbitPieceKind: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
@@ -996,6 +997,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pathRightYawDeg: 30,
   pathAboveFromVerticalDeg: 30,
   pathHoldLook: 0.5,
+  pathAboveRise: 0.5,
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
@@ -1156,6 +1158,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     }
   }
   if (!(cfg.pathRightYawDeg >= 0 && cfg.pathRightYawDeg <= 180)) throw new Error(`pathRightYawDeg (${cfg.pathRightYawDeg}) must be in [0, 180]°.`);
+  if (!(cfg.pathAboveRise >= 0 && cfg.pathAboveRise <= 1)) throw new Error(`pathAboveRise (${cfg.pathAboveRise}) must be in [0, 1].`);
   if (!(cfg.pathHoldLook >= 0 && cfg.pathHoldLook <= 1)) throw new Error(`pathHoldLook (${cfg.pathHoldLook}) must be in [0, 1].`);
   if (!(cfg.pathAboveFromVerticalDeg >= 0 && cfg.pathAboveFromVerticalDeg <= 90)) throw new Error(`pathAboveFromVerticalDeg (${cfg.pathAboveFromVerticalDeg}) must be in [0, 90]°.`);
   if (!(cfg.greenKeepInViewMargin > 0 && cfg.greenKeepInViewMargin <= 1)) {

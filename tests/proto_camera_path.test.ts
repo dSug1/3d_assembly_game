@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { easeInOut, edgeMarker, fromAround, lerpPose, pathCurve, pathFade, pathParam, pieceFrame, pushedAway, ringRelativePose, toAround, type PathPose } from "../src/input/camera_path";
+import { easeInOut, edgeMarker, elevForHeight, fromAround, lerpPose, pathCurve, pathFade, pathParam, pieceFrame, pushedAway, ringRelativePose, toAround, type PathPose } from "../src/input/camera_path";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { sceneConfig } from "../src/input/scene_rig";
 import { fourRingLayout, orbitOffset } from "../src/input/orbit";
@@ -115,6 +115,17 @@ describe("⭐⭐⭐ prototype — the camera's approach path", () => {
     expect(w).toMatch(/Object\.assign\(box\.style, \{ position: "fixed", overflow: "hidden", pointerEvents: "none"/); // clipped: a HALF ring, never a touch target
   });
 
+  it("⭐⭐ a camera HEIGHT as an elevation around the piece: exact in reach, held at ±85° out of it", () => {
+    const P: Vec3 = [0.8, -0.4, 0.3];
+    const f = pieceFrame([0, 0, 0], P, 1)!;
+    for (const y of [-0.9, -0.4, 0, 0.6]) {
+      const cam = fromAround({ elev: elevForHeight(y, P[1], 1.25), azim: 0.5, r: 1.25 }, P, f);
+      expect(cam[1]).toBeCloseTo(y, 12); // the camera AT that height, wherever it is around the piece
+    }
+    expect(elevForHeight(5, 0, 1.25)).toBeCloseTo((85 * Math.PI) / 180, 12);
+    expect(elevForHeight(-5, 0, 1.25)).toBeCloseTo((-85 * Math.PI) / 180, 12);
+  });
+
   it("⭐ around the piece and back: the angles round-trip, the distance kept", () => {
     const P: Vec3 = [1, 1.2, -1.5];
     const f = pieceFrame([0, 0, 0], P, 1)!;
@@ -125,24 +136,34 @@ describe("⭐⭐⭐ prototype — the camera's approach path", () => {
   it("⭐⭐ wired: the latch beyond the start; the pose and the LOOK point on the camera; pushed away → the fade; sliders and defaults", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/st\.restAligned = true;[^\n]*\n\s*latchCameraPath\(st\);/);
-    expect(w).toMatch(/if \(!\(d > st\.cfg\.pathStartM\) \|\| f === null\) \{\s*st\.camPath = null;\s*return;\s*\}/);
+    // ⭐⭐ the owner: *"keep the latch on a realignment inside the band"* — inside, NOTHING is cleared (no latch dropped, no fade cut)
+    expect(w).toMatch(/if \(!\(d > st\.cfg\.pathStartM\) \|\| f === null\) return;\s*st\.camPathFade = null;/);
+    const latch = w.slice(w.indexOf("function latchCameraPath"), w.indexOf("function cameraPathPosition"));
+    expect(latch).not.toMatch(/st\.camPath = null/);
     expect(w).toMatch(/st\.camera\.setPosition\(onPath\?\.pos \?\? normalCam\);\s*st\.camera\.setTarget\(onPath\?\.look \?\? c\.clone\(\)\);/);
     expect(w).toMatch(/if \(pushedAway\(d, lp\.closestM, PATH_AWAY_EPS_M\)\) \{\s*st\.camPath = null;/);
-    expect(w).toMatch(/st\.camPathFade = \{ from: currentPathPose\(st, d, band, live\), t0: now, side: lp\.side \};/);
+    expect(w).toMatch(/st\.camPathFade = \{ from: currentPathPose\(st, d, band, live, lp\.startCamY, p\.y\), t0: now, side: lp\.side \};/);
     expect(w).toMatch(/const v2 = lay\.knots\[2\]! \/ lay\.total;/);
     expect(w).toMatch(/const v23 = \(lay\.knots\[1\]! \+ lay\.knots\[2\]!\) \/ 2 \/ lay\.total;/);
-    expect(w).toMatch(/azim: w\.azim \+ \(cfg\.pathRightYawDeg \* Math\.PI\) \/ 180, r: gap, look: cfg\.pathHoldLook \};/); // ⭐ the owner: *"the midway between pink ring and piece"* on the holds
+    expect(w).toMatch(/azim: w\.azim \+ \(cfg\.pathRightYawDeg \* Math\.PI\) \/ 180,\s*r: gap,\s*look: cfg\.pathHoldLook,/); // ⭐ the owner: *"the midway between pink ring and piece"* on the holds
+    // ⭐⭐ the owner: *"during the plateau 2, stay at the same height as at start of path"*; *"divide by two the increase of height between start and plateau 1"*
+    expect(w).toMatch(/elev: startCamY === null \? w\.elev : elevForHeight\(startCamY, pieceY, gap\),/);
+    expect(w).toMatch(/const aboveY = startCamY === null \? null : startCamY \+ cfg\.pathAboveRise \* \(pieceY \+ gap \* Math\.sin\(aboveFull\) - startCamY\);/);
+    expect(w).toMatch(/startCamY: lp\.startCamY \?\? \(t !== null \? normal\.y : null\)/); // the height on the path's first frame, kept
+    expect(w).toMatch(/st\.camPath = \{ side, closestM: d, startCamY: null \};/);
     expect(w).toMatch(/const PATH_FADE_MS = 400;/);
-    expect(w).toMatch(/const above: PathPose = \{ elev: \(\(90 - cfg\.pathAboveFromVerticalDeg\) \* Math\.PI\) \/ 180, azim: a\.azim, r: gap, look: cfg\.pathHoldLook \};/);
+    expect(w).toMatch(/const above: PathPose = \{ elev: aboveY === null \? aboveFull : elevForHeight\(aboveY, pieceY, gap\), azim: a\.azim, r: gap, look: cfg\.pathHoldLook \};/);
     expect(w).toMatch(/return pathCurve\(d, band, live, above, right\) \?\? live;/);
     expect(w).toMatch(/st\.restAligned = false;\s*st\.camPath = null;[^\n]*\n\s*st\.camPathFade = null;/); // the respawn
     expect([DEFAULT_CONFIG.pathStartM, DEFAULT_CONFIG.pathAboveM, DEFAULT_CONFIG.pathRightM, DEFAULT_CONFIG.pathEndM]).toEqual([2.7, 2.0, 1.0, 0.3]);
     expect([DEFAULT_CONFIG.pathPlateauM, DEFAULT_CONFIG.pathRightYawDeg, DEFAULT_CONFIG.pathAboveFromVerticalDeg]).toEqual([0.6, 30, 30]);
     expect(DEFAULT_CONFIG.pathHoldLook).toBe(0.5);
+    expect(DEFAULT_CONFIG.pathAboveRise).toBe(0.5);
     const menu = code("render/tuning_menu.ts");
     expect(menu).toContain('"pathPlateauM", 0, 1.2, 0.05)');
     expect(menu).toContain('"pathRightYawDeg", 0, 180, 5)');
     expect(menu).toContain('"pathAboveFromVerticalDeg", 0, 90, 5)');
     expect(menu).toContain('"pathHoldLook", 0, 1, 0.05)');
+    expect(menu).toContain('"pathAboveRise", 0, 1, 0.05)');
   });
 });

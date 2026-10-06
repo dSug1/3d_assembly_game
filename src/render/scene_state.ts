@@ -447,7 +447,7 @@ export interface SceneState {
    * placed piece moves the target to. Its edges give the alignment's MATING edge. */
   pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;
   /** ⭐ Prototype (`CAMERA_APPROACH_PATH.md`): the path's latch — the side it swings to (frozen) and the closest the piece has come; `null` unlatched. */
-  camPath: { readonly side: 1 | -1; readonly closestM: number } | null;
+  camPath: { readonly side: 1 | -1; readonly closestM: number; readonly startCamY: number | null } | null;
   /** ⭐ …the unlatch's ease back in progress: the pose it starts from, when, the side. */
   camPathFade: { readonly from: PathPose; readonly t0: number; readonly side: 1 | -1 } | null;
   /** ⭐ …and where it stands this frame (the HUD): the stretch's name and `t` (0–3; −1 easing back). */

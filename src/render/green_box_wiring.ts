@@ -13,7 +13,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
-import { edgeMarker, fromAround, pathCurve, pathFade, pathParam, pieceFrame, pushedAway, ringRelativePose, toAround, type PathBand, type PathPose } from "../input/camera_path";
+import { edgeMarker, elevForHeight, fromAround, pathCurve, pathFade, pathParam, pieceFrame, pushedAway, ringRelativePose, toAround, type PathBand, type PathPose } from "../input/camera_path";
 import { fourRingLayout } from "../input/orbit";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -211,7 +211,10 @@ function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; rea
 /**
  * ⭐⭐ prototype — **THE CAMERA PATH'S LATCH** (`CAMERA_APPROACH_PATH.md` §2; the owner, 2026-10-06): at the resting-face alignment, the
  * piece beyond the band's start → LATCHED, with the side the camera swings to (the camera's right at this moment, frozen) and the closest
- * the piece has come so far (its distance now); inside the band → NO path. A new alignment latches afresh; a fade in progress is dropped.
+ * the piece has come so far (its distance now); inside the band → NO NEW path. A new alignment beyond the start latches afresh (a fade in
+ * progress dropped). ⭐⭐ The owner, 2026-10-06: *"keep the latch on a realignment inside the band"* — a re-alignment inside the band changes
+ * NOTHING: a latch already there goes on (its side, its closest, its start height), a fade in progress goes on — clearing them cut the camera
+ * back to its normal pose in one frame, which read as the piece jumping toward the pink gizmo.
  */
 function latchCameraPath(st: SceneState): void {
   const box = st.greenBox;
@@ -221,14 +224,11 @@ function latchCameraPath(st: SceneState): void {
   const centre: Vec3 = [c.x, c.y, c.z];
   const d = Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]);
   const f = pieceFrame(centre, piece, 1);
+  if (!(d > st.cfg.pathStartM) || f === null) return;
   st.camPathFade = null;
-  if (!(d > st.cfg.pathStartM) || f === null) {
-    st.camPath = null;
-    return;
-  }
   const r = st.camera.getDirection(new Vector3(1, 0, 0));
   const side: 1 | -1 = r.x * f.right[0] + r.y * f.right[1] + r.z * f.right[2] >= 0 ? 1 : -1;
-  st.camPath = { side, closestM: d };
+  st.camPath = { side, closestM: d, startCamY: null };
   st.hudDirty = true;
 }
 
@@ -278,14 +278,15 @@ function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vect
   if (pushedAway(d, lp.closestM, PATH_AWAY_EPS_M)) {
     st.camPath = null;
     if (t !== null) {
-      st.camPathFade = { from: currentPathPose(st, d, band, live), t0: now, side: lp.side };
+      st.camPathFade = { from: currentPathPose(st, d, band, live, lp.startCamY, p.y), t0: now, side: lp.side };
       return cameraPathPosition(st, normal, c, p, now);
     }
     st.camPathNow = null;
     st.hudDirty = true;
     return null;
   }
-  st.camPath = { ...lp, closestM: Math.min(lp.closestM, d) };
+  // ⭐ the camera's world height on the path's FIRST frame (the pose is still the normal one there) — RIGHT stays at it, ABOVE rises from it
+  st.camPath = { ...lp, closestM: Math.min(lp.closestM, d), startCamY: lp.startCamY ?? (t !== null ? normal.y : null) };
   if (t === null) {
     if (st.camPathNow !== null) st.hudDirty = true;
     st.camPathNow = null;
@@ -293,7 +294,7 @@ function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vect
   }
   st.camPathNow = { label: t < 1 ? "→ above" : t === 1 ? "ABOVE" : t < 2 ? "→ right" : t === 2 ? "RIGHT" : "→ normal", t };
   st.hudDirty = true;
-  return place(currentPathPose(st, d, band, live));
+  return place(currentPathPose(st, d, band, live, st.camPath.startCamY, p.y));
 }
 
 /**
@@ -301,7 +302,7 @@ function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vect
  * `pathAboveFromVerticalDeg` from the vertical, RIGHT `pathRightYawDeg` to the right (the owner, 2026-10-06: *"Go 30 degrees from the
  * vertical for the above and 30 degrees to the right for the right"*), each from the rings' own pose for its azimuth / elevation.
  */
-function currentPathPose(st: SceneState, d: number, band: PathBand, live: PathPose): PathPose {
+function currentPathPose(st: SceneState, d: number, band: PathBand, live: PathPose, startCamY: number | null, pieceY: number): PathPose {
   const cfg = st.cfg;
   const gap = cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.zoom);
   const off = { yawRad: (cfg.cameraYawOffsetDeg * Math.PI) / 180, pitchRad: (cfg.cameraPitchOffsetDeg * Math.PI) / 180 };
@@ -314,8 +315,18 @@ function currentPathPose(st: SceneState, d: number, band: PathBand, live: PathPo
   const w = ringRelativePose(cfg, v23, gap, off) ?? live;
   // ⭐ the owner, 2026-10-06: *"keep the camera looking at the orbit center"* (the pink gizmo), then *"during the plateau 1 and 2 the
   // camera look at the midway between pink ring and piece"* — `pathHoldLook` (0.5) on both holds, eased in and out with the pose
-  const above: PathPose = { elev: ((90 - cfg.pathAboveFromVerticalDeg) * Math.PI) / 180, azim: a.azim, r: gap, look: cfg.pathHoldLook };
-  const right: PathPose = { elev: w.elev, azim: w.azim + (cfg.pathRightYawDeg * Math.PI) / 180, r: gap, look: cfg.pathHoldLook };
+  // ⭐⭐ the owner, 2026-10-06: *"divide by two the increase of height between start and plateau 1"* — ABOVE's camera height is the start's
+  // plus `pathAboveRise` (0.5) of its climb at `pathAboveFromVerticalDeg`; *"during the plateau 2, stay at the same height as at start of
+  // path"* — RIGHT's camera height IS the start's. Both re-solved for the piece's height each frame, so the camera's height holds.
+  const aboveFull = ((90 - cfg.pathAboveFromVerticalDeg) * Math.PI) / 180;
+  const aboveY = startCamY === null ? null : startCamY + cfg.pathAboveRise * (pieceY + gap * Math.sin(aboveFull) - startCamY);
+  const above: PathPose = { elev: aboveY === null ? aboveFull : elevForHeight(aboveY, pieceY, gap), azim: a.azim, r: gap, look: cfg.pathHoldLook };
+  const right: PathPose = {
+    elev: startCamY === null ? w.elev : elevForHeight(startCamY, pieceY, gap),
+    azim: w.azim + (cfg.pathRightYawDeg * Math.PI) / 180,
+    r: gap,
+    look: cfg.pathHoldLook,
+  };
   return pathCurve(d, band, live, above, right) ?? live;
 }
 
