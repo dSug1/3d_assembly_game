@@ -260,7 +260,8 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
 }
 
 /**
- * ⭐⭐ Each frame: the orbited piece turned AGAINST the orbit (`counterYaw`, §2bis) — by the change of its heading about the ring since the
+ * ⭐⭐ Each frame: the orbited piece turned WITH the orbit (the owner, 2026-10-06: *"when in orbit around center, yaw rotate the piece in
+ * the other direction"* — it turned AGAINST it, `counterYaw` with the orbit's sign, §2bis) — by the change of its heading about the ring since the
  * last frame, read from the spring (what is drawn): at boot, the finger down or not, a coast too — ⛔ UNTIL its resting face is ALIGNED
  * (the owner, 2026-10-05: *"remove the rotation when the resting piece is aligned"* → *"The counter-yaw once aligned"*): from the tap on,
  * it holds its aligned pose while it orbits (a respawn clears it). ⭐ A respawn or the first frame starts the reading again.
@@ -275,7 +276,9 @@ function counterYawFrame(st: SceneState): void {
   const d = wrapAngle(h - prev);
   if (d === 0) return;
   const r = box.rotationQuaternion ?? Quaternion.Identity();
-  const q = counterYaw([r.w, r.x, r.y, r.z], d);
+  // ⭐ the orbit's own sense: −k·d to `counterYaw` turns the piece by +k·d — k = `orbitPieceYawFactor`, 3 (*"rotate twice faster"*, then 3):
+  // it turns on itself three times what the orbit carries it round
+  const q = counterYaw([r.w, r.x, r.y, r.z], -st.cfg.orbitPieceYawFactor * d);
   box.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
 }
 

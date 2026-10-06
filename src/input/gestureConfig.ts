@@ -473,6 +473,7 @@ export interface GestureConfig {
   /** ⭐ Prototype: the camera's yaw offset from its orbit position, degrees — so the green box does not hide the yellow target. */
   cameraYawOffsetDeg: number;
   pieceOrbitGapMinPct: number;
+  orbitPieceYawFactor: number;
   pieceOrbitFadeMm: number;
   pieceOrbitSlerpMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
@@ -954,6 +955,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-06: around the piece, the gap at the rings' closest, % of the camera's distance from the piece at the
   // resting-face alignment (`scaledGap`)
   pieceOrbitGapMinPct: 50,
+  // ⭐ prototype, the owner 2026-10-06: *"when in orbit around center, yaw rotate the piece in the other direction"*, *"rotate twice
+  // faster"* — before the alignment the piece turns on itself this many times the orbit's turn, in its sense (−1 was the old "against")
+  orbitPieceYawFactor: 3, // the owner, 2026-10-06: 3 (was 2)
   // ⭐ prototype, the owner 2026-10-06: *"fade out the starting angle offset"* — over this much finger travel (`pieceCamera`)
   pieceOrbitFadeMm: 60,
   // ⭐ prototype, the owner 2026-10-06: *"make the camera slerp faster (put a slider)"* — the view axis turns to the piece over this much

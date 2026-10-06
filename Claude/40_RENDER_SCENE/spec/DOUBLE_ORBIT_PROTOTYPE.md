@@ -548,7 +548,8 @@ were set aside (*"not satisfied"*). `1.0.59p-from1.0.59m-` → `1.0.59q-` → **
   versions superseded the same day). A second finger that moves beyond the deadband is a **pinch** at once; the orbit pauses only then.
   A second touch never grabs a piece while orbiting. The first tap costs one episode.
 * ⭐ **The piece turns AGAINST the orbit** (the same amount, about the vertical) — at boot and until it is aligned; ⛔ **not after**
-  (*"remove the rotation when the resting piece is aligned"*). A respawn starts it again.
+  (*"remove the rotation when the resting piece is aligned"*). A respawn starts it again. ⛔ **Reversed 2026-10-06** — WITH the orbit,
+  ×3 (§8).
 * ⭐ **`tapMaxDuration` 200 ms for EVERY tap** (Unity's default; it was 250), with a slider in SCENE.
 * ⭐ **The camera's yaw offset 2.5°** (it was 3°; the slider in 0.5° steps).
 * ⭐⭐ **A pinch zooms only while BOTH fingers move** (the owner, 2026-10-06: *"zoom can be triggered only if both delta positions are
@@ -577,3 +578,7 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
   computed from the sliders (×0.74 today). ⛔ No way back to the centre yet but a respawn.
 * ⭐ **CAMERA › CAMERA ORBIT is renamed CAMERA ORBIT AROUND CENTER**; a new **CAMERA ORBIT AROUND PIECE** holds three sliders: the gap %, the fade-out and the slerp.
 * ⭐ The HUD's `camera` line reads `r=… to the piece` in that mode; the `green` line `around the piece, yaw gain ×…`.
+* ⭐⭐ **Before the alignment the piece turns WITH the orbit, three times as far** (*"when in orbit around center, yaw rotate the piece in
+  the other direction"*, *"rotate twice faster"*, *"set the default piece yaw per orbit yaw to 3"*): carried `d` round the centre, it turns
+  `+3d` on itself — `(k − 1)·d` = 2d as seen from the camera. The factor is a slider, CAMERA › GREEN PIECE ORBIT › *piece yaw per orbit
+  yaw* (`orbitPieceYawFactor`, −3…3; −1 = the old "against"). Still stopped once aligned → `RESTING_FACE_ALIGNMENT.md` §2bis.

@@ -127,6 +127,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
             // ⭐ The orbit coasts after the finger lifts — τ = this × the green piece's volume.
             tunable(st, "orbit inertia gain (ms per cm³ of the green piece, 0 = none)", "orbitInertiaGain", 0, 10, 0.1),
+            // ⭐ 2026-10-06: before the alignment, the piece's own yaw per orbit yaw (2 = twice, with the orbit; −1 = against, as before)
+            tunable(st, "piece yaw per orbit yaw (× , − = against)", "orbitPieceYawFactor", -3, 3, 0.25),
           ],
         },
         {

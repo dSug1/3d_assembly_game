@@ -82,6 +82,12 @@ aligned, the piece will rotate in yaw around the resting face normal"*)
 - ⛔ **AMENDED the same day — it STOPS once the resting face is aligned** (the owner: *"remove the rotation when the resting piece is
   aligned"* → *"The counter-yaw once aligned"*): from the first tap on, the piece holds its aligned pose while it orbits; before that
   (at boot, no tap yet) it turns against the orbit as above. A respawn (the SCENE switch) clears it. HUD: `aligned (no counter-yaw)`.
+- ⛔⛔ **AMENDED 2026-10-06 — before the alignment it turns WITH the orbit, THREE times as far** (the owner, `1.0.59u-from1.0.59s-Orbit-around-piece`:
+  *"when in orbit around center, yaw rotate the piece in the other direction"*, then *"rotate twice faster"*, then *"set the default
+  piece yaw per orbit yaw to 3"*): the piece turns by **`+k·d`** about the vertical, `k` = **`orbitPieceYawFactor`** (default **3**; the
+  slider *piece yaw per orbit yaw (×, − = against)* in CAMERA › GREEN PIECE ORBIT, −3…3; **−1 is the old "against"**, +1 keeps the same
+  side toward the camera). Relative to the camera, which goes round with the orbit, it turns by `(k − 1)·d` — 2× the orbit's turn at 3.
+  Still stopped once aligned. Vectors: `proto_resting_align.test.ts` (the sign and the factor wired, each failing on its mutant).
 
 ---
 

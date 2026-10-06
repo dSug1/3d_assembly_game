@@ -132,7 +132,15 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
 
   it("⭐⭐ wired: every frame from the spring's heading, at boot and before the alignment; STOPPED once aligned; a respawn starts again", () => {
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const d = wrapAngle\(h - prev\);\s*if \(d === 0\) return;\s*const r = box\.rotationQuaternion \?\? Quaternion\.Identity\(\);\s*const q = counterYaw\(\[r\.w, r\.x, r\.y, r\.z\], d\);/);
+    // ⭐⭐ the owner, 2026-10-06: *"when in orbit around center, yaw rotate the piece in the other direction"*, *"rotate twice faster"* —
+    // WITH the orbit now, × `orbitPieceYawFactor` (2)
+    expect(w).toMatch(/const d = wrapAngle\(h - prev\);\s*if \(d === 0\) return;\s*const r = box\.rotationQuaternion \?\? Quaternion\.Identity\(\);\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*const q = counterYaw\(\[r\.w, r\.x, r\.y, r\.z\], -st\.cfg\.orbitPieceYawFactor \* d\);/);
+    expect(DEFAULT_CONFIG.orbitPieceYawFactor).toBe(3); // the owner, 2026-10-06 (was 2)
+    expect(code("render/tuning_menu.ts")).toContain('"orbitPieceYawFactor", -3, 3, 0.25)');
+    // carried +d about the vertical, the piece turns +3d on itself
+    const carried = counterYaw([1, 0, 0, 0], -DEFAULT_CONFIG.orbitPieceYawFactor * 0.4);
+    const x = qRotate(carried, [1, 0, 0]);
+    expect(Math.atan2(-x[2], x[0])).toBeCloseTo(1.2, 12);
     // ⛔ the owner, 2026-10-05: *"remove the rotation when the resting piece is aligned"* — it stops at the tap, and stays stopped
     expect(w).toMatch(/if \(prev === null \|\| st\.restAligned\) return;/);
     expect(w).toMatch(/st\.restAlign = \{ from: q, t0: now, base \};\s*st\.restAligned = true;/);
