@@ -37,8 +37,9 @@ describe("⭐ prototype — orbit degrees per millimetre of finger", () => {
     // plateau (its 30 cm climbed at constant speed): the pitch runs −59° → 0° → +59° across it in ~12 mm of dy, FASTEST at its
     // centre (~16.5°/mm at v = ½), then back to ±31.7° at the 1st / 4th rings; the sign flips past ±59° (near v = 0.4 / 0.6).
     // (Evenly spaced: ~5.3°/mm at v = 0.4 / 0.6 over a plateau; the 2nd ring alone: ~13°/mm at v = 0.45.)
-    expect(orbitDegPerMm(cfg, 0.5).pitchDegPerMm).toBeGreaterThan(15);
-    expect(orbitDegPerMm(cfg, 0.5).pitchDegPerMm).toBeLessThan(18);
+    // ⚠ the owner's ±1.0 m outer rings (2026-10-06): a gentler entry tangent spans the waist over more of v — ~11.0°/mm at v = ½
+    expect(orbitDegPerMm(cfg, 0.5).pitchDegPerMm).toBeGreaterThan(10);
+    expect(orbitDegPerMm(cfg, 0.5).pitchDegPerMm).toBeLessThan(12);
     expect(orbitDegPerMm(cfg, 0.45).pitchDegPerMm).toBeCloseTo(orbitDegPerMm(cfg, 0.55).pitchDegPerMm, 6);
     expect(orbitDegPerMm(cfg, 0.3).pitchDegPerMm).toBeLessThan(0);
     expect(orbitDegPerMm(cfg, 0.7).pitchDegPerMm).toBeLessThan(0);

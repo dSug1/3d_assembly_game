@@ -572,17 +572,19 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
     const now = measure(sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit));
     const stair = measure({ ...DEFAULT_CONFIG, orbitTopRadiusM: 1.7, orbitTopHeightM: 0.5, orbitMiddleRadiusM: 0.2, orbitMiddleHeightM: 0, orbitBottomRadiusM: 0.9, orbitBottomHeightM: -0.4 });
     // ⚠ was > 4× with three rings; the owner's fourth ring (2026-10-02) makes a short vertical cylinder at the waist, entered
-    // and left more sharply — still over 2× the stair's tightest turn
-    expect(now.radius).toBeGreaterThan(2 * stair.radius);
+    // and left more sharply — still over 2× the stair's tightest turn; ⚠ with the owner's ±1.0 m outer rings (2026-10-06) only ~1.1×:
+    // the lower outer rings meet the waist at a sharper bend
+    expect(now.radius).toBeGreaterThan(1.1 * stair.radius);
     // ⚠ < 2.2 with the 0.375 m / 0 m middle ring, 2.37 with 0.09 m / 0.15 m, ~190 with the FOURTH ring evenly spaced (a plateau in the
     // waist) — and 4.24 with the waist re-spanned, the outer transitions kept (the owner, 2026-10-02)
-    expect(now.speedRatio).toBeLessThan(4.5);
+    // ⚠ ~5.9 with the owner's ±1.0 m outer rings (2026-10-06): the outer rings come closer, the waist's speed stays
+    expect(now.speedRatio).toBeLessThan(6);
     expect(stair.speedRatio).toBeGreaterThan(3.5);
   });
 });
 
 describe("⭐⭐ prototype — zoom 1.00, the SAME scene (the owner, 2026-10-02: *\"set the zoom at 1.00 but the scene shall be exactly the same\"*)", () => {
-  it("⭐ on the OUTER rings, the green piece at zoom 1.00 is where it was at zoom 1.5 on the old ones (the middle ring changed after, by the owner)", async () => {
+  it("⭐ on the OUTER rings, the green piece at zoom 1.00 is as far OUT as it was at zoom 1.5 on the old ones (the middle ring, then the outer heights, changed after, by the owner)", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
     const now = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
     const before = { ...now, orbitTopRadiusM: 1.7, orbitTopHeightM: 1.05, orbitMiddleRadiusM: 0.25, orbitMiddleHeightM: 0, orbitBottomRadiusM: 1.7, orbitBottomHeightM: -1.05 };
@@ -592,7 +594,9 @@ describe("⭐⭐ prototype — zoom 1.00, the SAME scene (the owner, 2026-10-02:
       for (const v of [0, 1]) {
         const a = orbitOffset(now, yaw, v, DEFAULT_CONFIG.bootZoom).offsetM;
         const b = orbitOffset(before, yaw, v, 1.5).offsetM;
-        a.forEach((x, k) => expect(x).toBeCloseTo(b[k]!, 12));
+        // ⚠ the owner set the outer heights to ±1.0 m (2026-10-06, were ±1.575 = ±1.05 × 1.5): the radius still matches
+        expect(Math.hypot(a[0], a[2])).toBeCloseTo(Math.hypot(b[0], b[2]), 12);
+        expect(a[1]).toBeCloseTo(v === 0 ? -1.0 : 1.0, 12);
       }
     }
   });
@@ -726,7 +730,8 @@ describe("⭐⭐ prototype — the zoom never brings the camera so close the gre
     };
     // ⛔ portrait: the level-camera closed form gave ~0.70 (the owner's 0.72 on the tablet) — the yaw offset is foreshortened by the
     // top ring's elevation. Landscape is bound by the PITCH offset, vertical on every ring: ~0.25, as before (the size term's 0.40 gone).
-    for (const [aspect, lo, hi] of [[0.53, 0.55, 0.65], [1.6, 0.24, 0.27]] as const) {
+    // ⚠ landscape ~0.23 with the owner's ±1.0 m outer rings (2026-10-06; ~0.25 at ±1.575)
+    for (const [aspect, lo, hi] of [[0.53, 0.55, 0.65], [1.6, 0.21, 0.27]] as const) {
       const z = minGreenZoom({ ...base, ring, aspect });
       expect(z).toBeGreaterThan(lo);
       expect(z).toBeLessThan(hi);

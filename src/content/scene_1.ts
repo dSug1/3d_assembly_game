@@ -247,7 +247,8 @@ export const SCENE_1: SceneDescriptor = {
     // every ring ×1.5 and the boot zoom 1.5 → 1.00 (`bootZoom`): the green piece sits at rings × zoom, so nothing moves.
     // (Was 1.7 / ±1.05, 0.25 / 0 at zoom 1.5.)
     topRadiusM: 2.55,
-    topHeightM: 1.575,
+    // ⭐ prototype, the owner 2026-10-06: *"set the default height of the 1st ring to 1.0 and of the 4th ring to -1.0"* (was ±1.575)
+    topHeightM: 1.0,
     // ⭐ prototype (green box), the owner 2026-10-02: *"set the default middle ring radius to 0.09 and middle ring height to 0.15"*
     // (was 0.375 / 0 — 0.375 kept the green piece out of the painting, which reaches 0.30 m; at 0.09 it passes through it).
     middleRadiusM: 0.09,
@@ -257,7 +258,7 @@ export const SCENE_1: SceneDescriptor = {
     lowerRadiusM: 0.09,
     lowerHeightM: -0.15,
     bottomRadiusM: 2.55,
-    bottomHeightM: -1.575,
+    bottomHeightM: -1.0,
   },
   final: SCENE_1_FINAL,
 };

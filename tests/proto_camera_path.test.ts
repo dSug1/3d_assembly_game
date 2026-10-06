@@ -131,15 +131,15 @@ describe("⭐⭐⭐ prototype — the camera's approach path", () => {
     expect(w).toMatch(/st\.camPathFade = \{ from: currentPathPose\(st, d, band, live\), t0: now, side: lp\.side \};/);
     expect(w).toMatch(/const v2 = lay\.knots\[2\]! \/ lay\.total;/);
     expect(w).toMatch(/const v23 = \(lay\.knots\[1\]! \+ lay\.knots\[2\]!\) \/ 2 \/ lay\.total;/);
-    expect(w).toMatch(/azim: w\.azim \+ \(cfg\.pathRightYawDeg \* Math\.PI\) \/ 180, r: gap, look: 1/);
+    expect(w).toMatch(/azim: w\.azim \+ \(cfg\.pathRightYawDeg \* Math\.PI\) \/ 180, r: gap, look: 0 \};/); // ⭐ the owner: *"keep the camera looking at the orbit center"*
     expect(w).toMatch(/const PATH_FADE_MS = 400;/);
-    expect(w).toMatch(/const above: PathPose = \{ elev: \(\(90 - cfg\.pathAboveFromVerticalDeg\) \* Math\.PI\) \/ 180, azim: a\.azim, r: gap, look: 1 \};/);
+    expect(w).toMatch(/const above: PathPose = \{ elev: \(\(90 - cfg\.pathAboveFromVerticalDeg\) \* Math\.PI\) \/ 180, azim: a\.azim, r: gap, look: 0 \};/);
     expect(w).toMatch(/return pathCurve\(d, band, live, above, right\) \?\? live;/);
     expect(w).toMatch(/st\.restAligned = false;\s*st\.camPath = null;[^\n]*\n\s*st\.camPathFade = null;/); // the respawn
-    expect([DEFAULT_CONFIG.pathStartM, DEFAULT_CONFIG.pathAboveM, DEFAULT_CONFIG.pathRightM, DEFAULT_CONFIG.pathEndM]).toEqual([2.7, 2.2, 1.7, 1.2]);
-    expect([DEFAULT_CONFIG.pathPlateauM, DEFAULT_CONFIG.pathRightYawDeg, DEFAULT_CONFIG.pathAboveFromVerticalDeg]).toEqual([0, 30, 30]);
+    expect([DEFAULT_CONFIG.pathStartM, DEFAULT_CONFIG.pathAboveM, DEFAULT_CONFIG.pathRightM, DEFAULT_CONFIG.pathEndM]).toEqual([2.7, 2.0, 1.0, 0.3]);
+    expect([DEFAULT_CONFIG.pathPlateauM, DEFAULT_CONFIG.pathRightYawDeg, DEFAULT_CONFIG.pathAboveFromVerticalDeg]).toEqual([0.6, 30, 30]);
     const menu = code("render/tuning_menu.ts");
-    expect(menu).toContain('"pathPlateauM", 0, 0.6, 0.05)');
+    expect(menu).toContain('"pathPlateauM", 0, 1.2, 0.05)');
     expect(menu).toContain('"pathRightYawDeg", 0, 180, 5)');
     expect(menu).toContain('"pathAboveFromVerticalDeg", 0, 90, 5)');
   });

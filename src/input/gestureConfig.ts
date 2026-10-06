@@ -988,10 +988,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-06 (`CAMERA_APPROACH_PATH.md`): milestones 2.7 → 2.2 → 1.7 → 1.2 m, plateaus of 0.3 m, RIGHT 90° of yaw
   pathOn: 1,
   pathStartM: 2.7,
-  pathAboveM: 2.2,
-  pathRightM: 1.7,
-  pathEndM: 1.2,
-  pathPlateauM: 0,
+  pathAboveM: 2.0,
+  pathRightM: 1.0,
+  pathEndM: 0.3,
+  pathPlateauM: 0.6,
   pathRightYawDeg: 30,
   pathAboveFromVerticalDeg: 30,
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)

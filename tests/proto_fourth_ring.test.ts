@@ -115,7 +115,8 @@ describe("⭐⭐ prototype — the waist without its plateau; the outer transiti
 
   it("⭐⭐ the waist (2nd ↔ 3rd) has NO plateau any more: it runs at the speed it is entered at — linear in height", () => {
     const L = fourRingLayout(cfg);
-    expect(L.total).toBeCloseTo(2 / 3 + 0.3 / 2.5875, 3); // ⅔ + its height step ÷ its entry tangent
+    // ⅔ + its height step ÷ its entry tangent — 1.725 with the owner's ±1.0 m outer rings (2026-10-06; 2.5875 at ±1.575)
+    expect(L.total).toBeCloseTo(2 / 3 + 0.3 / 1.725, 3);
     const v1 = L.knots[1]! / L.total;
     const v2 = L.knots[2]! / L.total;
     for (let i = 0; i <= 10; i++) {
@@ -124,8 +125,8 @@ describe("⭐⭐ prototype — the waist without its plateau; the outer transiti
       expect(o[1]).toBeCloseTo(cfg.orbitLowerHeightM + ((cfg.orbitMiddleHeightM - cfg.orbitLowerHeightM) * i) / 10, 9);
       expect(Math.hypot(o[0], o[2])).toBeCloseTo(0.09, 9);
     }
-    // ⛔ the even layout's plateau: ~7 cm climbed between v = 0.4 and 0.6; now the waist's 30 cm in ~0.15 of v
-    expect(even(H, 0.6) - even(H, 0.4)).toBeLessThan(0.08);
-    expect(v2 - v1).toBeLessThan(0.16);
+    // ⛔ the even layout's plateau: ~7 cm climbed between v = 0.4 and 0.6; now the waist's 30 cm in ~0.21 of v (~0.15 at ±1.575)
+    expect(even(H, 0.6) - even(H, 0.4)).toBeLessThan(0.13); // ⚠ ~12.7 cm with the owner's ±1.0 m outer rings (2026-10-06; ~7 at ±1.575)
+    expect(v2 - v1).toBeLessThan(0.21);
   });
 });
