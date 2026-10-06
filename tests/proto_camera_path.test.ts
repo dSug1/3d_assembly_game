@@ -1,126 +1,118 @@
 /**
- * ⭐⭐⭐ prototype — THE CAMERA'S APPROACH PATH (`input/camera_path.ts`; `Claude/40_RENDER_SCENE/spec/CAMERA_APPROACH_PATH.md`, agreed
- * 2026-10-06).
+ * ⭐⭐⭐ prototype — THE CAMERA'S APPROACH PATH (`input/camera_path.ts`; `Claude/40_RENDER_SCENE/spec/CAMERA_APPROACH_PATH.md`; the owner,
+ * 2026-10-06): milestones 2.7 → 2.2 → 1.7 → 1.2 m, plateaus of 0.3 m, ABOVE and RIGHT the rings' own camera poses, the look on the piece on
+ * the plateaus, the unlatch when pushed away with an ease back.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { catmullRom4, fromAround, pathAngles, pathCamera, pathParam, pieceFrame, pieceInFrame, toAround } from "../src/input/camera_path";
-import { orbitOffset } from "../src/input/orbit";
+import { easeInOut, edgeMarker, fromAround, lerpPose, pathFade, pathParam, pathPose, pieceFrame, pushedAway, ringRelativePose, toAround, type PathPose } from "../src/input/camera_path";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { sceneConfig } from "../src/input/scene_rig";
+import { fourRingLayout, orbitOffset } from "../src/input/orbit";
+import { cameraOffset } from "../src/input/follow_camera";
 import { SCENE_1 } from "../src/content/scene_1";
 import type { Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
-const BAND = { startM: 2.7, aboveM: 2.4, rightM: 2.1, endM: 1.8 };
+const BAND = { startM: 2.7, aboveM: 2.2, rightM: 1.7, endM: 1.2, plateauM: 0.3 };
 const D = Math.PI / 180;
-const C: Vec3 = [0, 0, 0];
-
-/** The piece on Scene_1's rings at distance `d` from the centre, on the upper or the lower half. */
-function pieceAt(d: number, half: "upper" | "lower"): Vec3 {
-  const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-  const r = (v: number) => orbitOffset(cfg, 0, v, 1).radiusM;
-  let lo = half === "upper" ? 0.5 : 0;
-  let hi = half === "upper" ? 1 : 0.5;
-  for (let i = 0; i < 60; i++) {
-    const m = (lo + hi) / 2;
-    if (half === "upper" ? r(m) < d : r(m) > d) lo = m;
-    else hi = m;
-  }
-  const o = orbitOffset(cfg, 0, (lo + hi) / 2, 1).offsetM;
-  return [o[0], o[1], o[2]];
-}
 
 describe("⭐⭐⭐ prototype — the camera's approach path", () => {
-  it("⭐ the path is a function of the piece's distance alone: 2.7 → 0, 2.4 → 1 (ABOVE), 2.1 → 2 (RIGHT), 1.8 → 3; outside the band, none", () => {
+  it("⭐⭐ the milestones and the PLATEAUS: t = 1 held from 2.35 to 2.05 m, t = 2 from 1.85 to 1.55 m; the ends 2.7 and 1.2; none outside", () => {
     expect(pathParam(2.7, BAND)).toBeCloseTo(0, 12);
-    expect(pathParam(2.55, BAND)).toBeCloseTo(0.5, 12);
-    expect(pathParam(2.4, BAND)).toBeCloseTo(1, 12);
-    expect(pathParam(2.1, BAND)).toBeCloseTo(2, 12);
-    expect(pathParam(1.8, BAND)).toBeCloseTo(3, 12);
+    for (const d of [2.35, 2.3, 2.2, 2.1, 2.05]) expect(pathParam(d, BAND)).toBe(1);
+    for (const d of [1.85, 1.8, 1.7, 1.6, 1.55]) expect(pathParam(d, BAND)).toBe(2);
+    expect(pathParam(1.2, BAND)).toBeCloseTo(3, 12);
     expect(pathParam(2.71, BAND)).toBeNull();
-    expect(pathParam(1.79, BAND)).toBeNull();
+    expect(pathParam(1.19, BAND)).toBeNull();
+    // the transitions eased: halfway in distance is halfway in t (the ease is symmetric), and it moves at its middle
+    expect(pathParam((2.7 + 2.35) / 2, BAND)).toBeCloseTo(0.5, 12);
+    expect(pathParam((2.05 + 1.85) / 2, BAND)).toBeCloseTo(1.5, 12);
+    // entering a plateau without a kink: zero speed at its edge
+    expect(easeInOut(1) - easeInOut(1 - 1e-3)).toBeLessThan(1e-6);
   });
 
-  it("⭐⭐ the key poses: up 25° at ABOVE, right 50° at RIGHT, the normal pose at both ends; the offsets faded out (w 1) at ABOVE and RIGHT", () => {
-    const at = (t: number) => pathAngles(t, 25, 50);
-    expect(at(0)).toEqual({ upDeg: 0, rightDeg: 0, w: 0 });
-    expect(at(3)).toEqual({ upDeg: 0, rightDeg: 0, w: 0 });
-    expect(at(1).upDeg).toBeCloseTo(25, 12);
-    expect(at(1).rightDeg).toBeCloseTo(0, 12);
-    expect(at(1).w).toBe(1);
-    expect(at(2).rightDeg).toBeCloseTo(50, 12);
-    expect(at(2).upDeg).toBeCloseTo(0, 12);
-    expect(at(2).w).toBe(1);
+  it("⭐⭐ ABOVE and RIGHT are the rings' OWN camera poses relative to the piece — the 2nd ring's (above it), the waist's swung 90°", () => {
+    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const lay = fourRingLayout(cfg);
+    const off = { yawRad: 2.5 * D, pitchRad: 2 * D };
+    const a = ringRelativePose(cfg, lay.knots[2]! / lay.total, 1.25, off)!;
+    const w = ringRelativePose(cfg, (lay.knots[1]! + lay.knots[2]!) / 2 / lay.total, 1.25, off)!;
+    expect(a.elev / D).toBeGreaterThan(30); // the camera ABOVE the piece on the 2nd ring
+    expect(Math.abs(w.elev / D)).toBeLessThan(15); // level with it at the waist
+    // the same as placing them by hand: the piece on the 2nd ring, the camera by cameraOffset, read around the piece
+    const v2 = lay.knots[2]! / lay.total;
+    const box = orbitOffset(cfg, 0, v2, 1).offsetM;
+    const P: Vec3 = [box[0], box[1], box[2]];
+    const cam = cameraOffset(cfg, { yaw: 0, v: v2 }, P, off, 1.25);
+    const byHand = toAround(cam, P, pieceFrame([0, 0, 0], P, 1)!);
+    expect(a.elev).toBeCloseTo(byHand.elev, 12);
+    expect(a.azim).toBeCloseTo(byHand.azim, 12);
   });
 
-  it("⭐⭐ the camera NEVER rests at a key pose (a Catmull-Rom curve): at ABOVE and RIGHT it is still moving", () => {
-    const speed = (t: number) => {
-      const a = pathAngles(t - 1e-4, 25, 50);
-      const b = pathAngles(t + 1e-4, 25, 50);
-      return Math.hypot(b.upDeg - a.upDeg, b.rightDeg - a.rightDeg) / 2e-4;
-    };
-    expect(speed(1)).toBeGreaterThan(5);
-    expect(speed(2)).toBeGreaterThan(5);
-    expect(catmullRom4([0, 1, 2, 3], 1.5)).toBeCloseTo(1.5, 12); // a line stays a line
+  it("⭐ the pose through its keys: the normal one (look 0) → ABOVE (look 1) → RIGHT (look 1) → the normal one; exact at each key", () => {
+    const normal: PathPose = { elev: 0.5, azim: 0.04, r: 1.25, look: 0 };
+    const above: PathPose = { elev: 1.1, azim: 0.04, r: 1.25, look: 1 };
+    const right: PathPose = { elev: 0.05, azim: Math.PI / 2, r: 1.25, look: 1 };
+    expect(pathPose(0, normal, above, right)).toEqual(normal);
+    expect(pathPose(1, normal, above, right)).toEqual(above);
+    expect(pathPose(2, normal, above, right)).toEqual(right);
+    expect(pathPose(3, normal, above, right)).toEqual(normal);
+    expect(pathPose(1.5, normal, above, right).look).toBe(1); // between the two plateaus the camera keeps looking at the piece
+    expect(pathPose(0.5, normal, above, right).look).toBeCloseTo(0.5, 12);
+    // the distance to the piece kept
+    for (const t of [0, 0.3, 1, 1.4, 2, 2.6, 3]) expect(pathPose(t, normal, above, right).r).toBeCloseTo(1.25, 12);
+  });
+
+  it("⭐⭐ pushed AWAY (beyond the closest it came, by more than 1 cm): unlatched — and the camera EASES back to its normal pose", () => {
+    expect(pushedAway(2.30, 2.30, 0.01)).toBe(false);
+    expect(pushedAway(2.305, 2.30, 0.01)).toBe(false); // the spring's noise
+    expect(pushedAway(2.32, 2.30, 0.01)).toBe(true);
+    const from: PathPose = { elev: 1.1, azim: 0.04, r: 1.25, look: 1 };
+    const normal: PathPose = { elev: 0.5, azim: 0.04, r: 1.25, look: 0 };
+    expect(pathFade(from, normal, 0, 400)).toEqual({ pose: from, done: false });
+    expect(pathFade(from, normal, 200, 400).pose).toEqual(lerpPose(from, normal, 0.5));
+    expect(pathFade(from, normal, 400, 400)).toEqual({ pose: normal, done: true });
+  });
+
+  it("⭐⭐ the pink ring OFF the screen: its marker on the border in its direction (the owner: *\"a half ring at the border of the screen\"*)", () => {
+    expect(edgeMarker(400, 300, false, 800, 600)).toBeNull(); // on the screen: no marker
+    expect(edgeMarker(1200, 300, false, 800, 600)).toEqual({ x: 800, y: 300 }); // to the right: the right edge, at its height
+    expect(edgeMarker(400, -300, false, 800, 600)).toEqual({ x: 400, y: 0 }); // above: the top edge
+    const m = edgeMarker(1600, 1200, false, 800, 600)!; // down-right, beyond the corner's diagonal
+    expect(m.x).toBeCloseTo(800, 9);
+    expect(m.y).toBeCloseTo(600, 9);
+    // behind the camera: its projection mirrored — a point projected to the LEFT is shown on the RIGHT
+    expect(edgeMarker(300, 300, true, 800, 600)).toEqual({ x: 800, y: 300 });
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/pinkRingFrame\(st\);\s*pinkEdgeFrame\(st\);/);
+    expect(w).toMatch(/const active = st\.camPathNow !== null;/); // only while the path (or its ease back) moves the camera
+    expect(w).toMatch(/Object\.assign\(box\.style, \{ position: "fixed", overflow: "hidden", pointerEvents: "none"/); // clipped: a HALF ring, never a touch target
   });
 
   it("⭐ around the piece and back: the angles round-trip, the distance kept", () => {
     const P: Vec3 = [1, 1.2, -1.5];
-    const f = pieceFrame(C, P, 1)!;
-    const a = { elev: 0.4, azim: -0.7, r: 1.25 };
-    const back = toAround(fromAround(a, P, f), P, f);
-    expect(back.elev).toBeCloseTo(a.elev, 12);
-    expect(back.azim).toBeCloseTo(a.azim, 12);
-    expect(back.r).toBeCloseTo(1.25, 12);
+    const f = pieceFrame([0, 0, 0], P, 1)!;
+    const back = toAround(fromAround({ elev: 0.4, azim: -0.7, r: 1.25 }, P, f), P, f);
+    expect([back.elev, back.azim, back.r].map((x) => Number(x.toFixed(12)))).toEqual([0.4, -0.7, 1.25]);
   });
 
-  it("⭐⭐⭐ on Scene_1's rings, the defaults keep the piece IN THE FRAME (both halves, landscape, zoom 1) — and its distance", () => {
-    for (const half of ["upper", "lower"] as const)
-      for (const d of [2.7, 2.55, 2.4, 2.25, 2.1, 1.95, 1.8]) {
-        const P = pieceAt(d, half);
-        const f = pieceFrame(C, P, 1)!;
-        const rel = [P[0] - C[0], P[1] - C[1], P[2] - C[2]];
-        const base = { elev: Math.atan2(rel[1]!, Math.hypot(rel[0]!, rel[2]!)), azim: 0, r: 1.25 };
-        const a = pathAngles(pathParam(d, BAND)!, 25, 50);
-        const r = pathCamera(base, a.upDeg, a.rightDeg, P, C, f, { halfVRad: 0.4, aspect: 1.6, margin: 0.9 });
-        expect(pieceInFrame(r.at, C, P, 0.4, 1.6, 0.9)).toBe(true);
-        expect(Math.hypot(r.at[0] - P[0], r.at[1] - P[1], r.at[2] - P[2])).toBeCloseTo(1.25, 9); // ⭐ the distance to the piece kept
-        expect(r.share).toBe(1); // the defaults are inside the reach: nothing clamped
-      }
-  });
-
-  it("⭐⭐ beyond the reach (Q3): the angles CLAMPED — 80° above or 90° to the right still keep the piece in the frame", () => {
-    const P = pieceAt(2.4, "upper");
-    const f = pieceFrame(C, P, 1)!;
-    const base = { elev: Math.atan2(P[1], Math.hypot(P[0], P[2])), azim: 0, r: 1.25 };
-    for (const [up, right] of [[80, 0], [0, 90]] as const) {
-      const r = pathCamera(base, up, right, P, C, f, { halfVRad: 0.4, aspect: 1.6, margin: 0.9 });
-      expect(r.share).toBeLessThan(1);
-      expect(r.share).toBeGreaterThan(0);
-      expect(pieceInFrame(r.at, C, P, 0.4, 1.6, 0.9)).toBe(true);
-    }
-    // portrait: 50° to the right is out of reach, 20° is not
-    const d21 = pieceAt(2.1, "upper");
-    const f21 = pieceFrame(C, d21, 1)!;
-    const b21 = { elev: Math.atan2(d21[1], Math.hypot(d21[0], d21[2])), azim: 0, r: 1.25 };
-    expect(pathCamera(b21, 0, 50, d21, C, f21, { halfVRad: 0.4, aspect: 1 / 1.6, margin: 0.9 }).share).toBeLessThan(1);
-    expect(pathCamera(b21, 0, 20, d21, C, f21, { halfVRad: 0.4, aspect: 1 / 1.6, margin: 0.9 }).share).toBe(1);
-    void D;
-  });
-
-  it("⭐⭐ wired: latched at the alignment beyond the start (inside: none); unlatched by a respawn; the camera's position on the path; sliders", () => {
+  it("⭐⭐ wired: the latch beyond the start; the pose and the LOOK point on the camera; pushed away → the fade; sliders and defaults", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/st\.restAligned = true;[^\n]*\n\s*latchCameraPath\(st\);/);
     expect(w).toMatch(/if \(!\(d > st\.cfg\.pathStartM\) \|\| f === null\) \{\s*st\.camPath = null;\s*return;\s*\}/);
-    expect(w).toMatch(/st\.camPath = \{ side, rightDeg: landscape \? st\.cfg\.pathRightDegLandscape : st\.cfg\.pathRightDegPortrait \};/);
-    expect(w).toMatch(/st\.restAligned = false;\s*st\.camPath = null;/); // the respawn
-    expect(w).toMatch(/st\.camera\.setPosition\(cameraPathPosition\(st, normalCam, c, box\.position\) \?\? normalCam\);\s*st\.camera\.setTarget\(c\.clone\(\)\);/);
-    expect(w).toMatch(/const t = pathParam\(d, \{ startM: cfg\.pathStartM, aboveM: cfg\.pathAboveM, rightM: cfg\.pathRightM, endM: cfg\.pathEndM \}\);/);
-    expect(w).toMatch(/const gap = cameraGapM\(cfg\.cameraRadiusOffsetMm \/ 1000, st\.zoom\);/);
-    expect(DEFAULT_CONFIG.pathStartM).toBe(2.7);
-    expect([DEFAULT_CONFIG.pathAboveM, DEFAULT_CONFIG.pathRightM, DEFAULT_CONFIG.pathEndM]).toEqual([2.4, 2.1, 1.8]);
-    expect([DEFAULT_CONFIG.pathAboveDeg, DEFAULT_CONFIG.pathRightDegLandscape, DEFAULT_CONFIG.pathRightDegPortrait]).toEqual([25, 50, 20]);
-    expect(code("render/tuning_menu.ts")).toContain('title: "CAMERA APPROACH PATH"');
+    expect(w).toMatch(/st\.camera\.setPosition\(onPath\?\.pos \?\? normalCam\);\s*st\.camera\.setTarget\(onPath\?\.look \?\? c\.clone\(\)\);/);
+    expect(w).toMatch(/if \(pushedAway\(d, lp\.closestM, PATH_AWAY_EPS_M\)\) \{\s*st\.camPath = null;/);
+    expect(w).toMatch(/st\.camPathFade = \{ from: currentPathPose\(st, t, live\), t0: now, side: lp\.side \};/);
+    expect(w).toMatch(/const v2 = lay\.knots\[2\]! \/ lay\.total;/);
+    expect(w).toMatch(/const v23 = \(lay\.knots\[1\]! \+ lay\.knots\[2\]!\) \/ 2 \/ lay\.total;/);
+    expect(w).toMatch(/azim: w\.azim \+ \(cfg\.pathRightYawDeg \* Math\.PI\) \/ 180, r: gap, look: 1/);
+    expect(w).toMatch(/const PATH_FADE_MS = 400;/);
+    expect(w).toMatch(/st\.restAligned = false;\s*st\.camPath = null;[^\n]*\n\s*st\.camPathFade = null;/); // the respawn
+    expect([DEFAULT_CONFIG.pathStartM, DEFAULT_CONFIG.pathAboveM, DEFAULT_CONFIG.pathRightM, DEFAULT_CONFIG.pathEndM]).toEqual([2.7, 2.2, 1.7, 1.2]);
+    expect([DEFAULT_CONFIG.pathPlateauM, DEFAULT_CONFIG.pathRightYawDeg]).toEqual([0.3, 90]);
+    const menu = code("render/tuning_menu.ts");
+    expect(menu).toContain('"pathPlateauM", 0, 0.6, 0.05)');
+    expect(menu).toContain('"pathRightYawDeg", 0, 180, 5)');
   });
 });

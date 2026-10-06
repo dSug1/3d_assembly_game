@@ -579,7 +579,9 @@ export function createScene(
   st.restAligned = false;
   st.pinkFace = null; // set by the boot target (`bootTargetOnBlueFace`), below
   st.camPath = null;
+  st.camPathFade = null;
   st.camPathNow = null;
+  st.pinkEdgeEl = null;
   st.orbitPieceKind = 0;
   st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;

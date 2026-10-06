@@ -13,7 +13,8 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
-import { pathAngles, pathCamera, pathParam, pieceFrame, toAround } from "../input/camera_path";
+import { edgeMarker, fromAround, pathFade, pathParam, pathPose, pieceFrame, pushedAway, ringRelativePose, toAround, type PathPose } from "../input/camera_path";
+import { fourRingLayout } from "../input/orbit";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -31,7 +32,7 @@ import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, 
 import { orbitOffset } from "../input/orbit";
 import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
-import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
@@ -209,8 +210,8 @@ function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; rea
 
 /**
  * ⭐⭐ prototype — **THE CAMERA PATH'S LATCH** (`CAMERA_APPROACH_PATH.md` §2; the owner, 2026-10-06): at the resting-face alignment, the
- * piece beyond the band's start → LATCHED, with the side the camera swings to (the camera's right at this moment) and the swing for the
- * screen's orientation now (landscape / portrait), both frozen; inside the band → NO path (Q1). A new alignment latches afresh (Q2).
+ * piece beyond the band's start → LATCHED, with the side the camera swings to (the camera's right at this moment, frozen) and the closest
+ * the piece has come so far (its distance now); inside the band → NO path. A new alignment latches afresh; a fade in progress is dropped.
  */
 function latchCameraPath(st: SceneState): void {
   const box = st.greenBox;
@@ -220,61 +221,160 @@ function latchCameraPath(st: SceneState): void {
   const centre: Vec3 = [c.x, c.y, c.z];
   const d = Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]);
   const f = pieceFrame(centre, piece, 1);
+  st.camPathFade = null;
   if (!(d > st.cfg.pathStartM) || f === null) {
     st.camPath = null;
     return;
   }
   const r = st.camera.getDirection(new Vector3(1, 0, 0));
   const side: 1 | -1 = r.x * f.right[0] + r.y * f.right[1] + r.z * f.right[2] >= 0 ? 1 : -1;
-  const landscape = st.canvas.clientWidth >= st.canvas.clientHeight;
-  st.camPath = { side, rightDeg: landscape ? st.cfg.pathRightDegLandscape : st.cfg.pathRightDegPortrait };
+  st.camPath = { side, closestM: d };
   st.hudDirty = true;
 }
 
 /**
- * ⭐⭐⭐ prototype — **THE CAMERA ON ITS APPROACH PATH** (`CAMERA_APPROACH_PATH.md` §3–§6), this frame, or `null` (today's camera: not
- * latched, switched off, or the piece outside the band). From the piece's distance `d` to the orbit centre (`pathParam`): the base pose
- * goes from the LIVE normal one (its leash, its offsets) toward the IDEAL one (straight behind the piece at the zoom's distance, no offsets)
- * by `w`, the rise and the swing are applied (`pathAngles`), clamped to keep the piece in the frame (`pathCamera`, Q3). The distance to
- * the piece is kept; the camera looks at the orbit centre (the caller's `setTarget`).
+ * ⭐⭐⭐ prototype — **THE CAMERA ON ITS APPROACH PATH** (`CAMERA_APPROACH_PATH.md` §3–§6), this frame — its position and the point it looks
+ * at — or `null` (today's camera). Latched, the piece coming IN through the band: the pose blends from the LIVE normal one (look 0, the
+ * orbit centre) to ABOVE and RIGHT (look 1, the piece; `ringRelativePose`), held on the plateaus, back to the normal one (`pathParam`,
+ * `pathPose`). ⭐ Pushed AWAY (`pushedAway`): unlatched, and the camera EASES back from where it was to its normal pose (`pathFade`).
  */
-function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vector3): Vector3 | null {
-  const lp = st.camPath;
+function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vector3, now: number): { pos: Vector3; look: Vector3 } | null {
   const cfg = st.cfg;
+  const centre: Vec3 = [c.x, c.y, c.z];
+  const piece: Vec3 = [p.x, p.y, p.z];
+  const d = Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]);
+  const lp = st.camPath;
+  const f = pieceFrame(centre, piece, lp?.side ?? st.camPathFade?.side ?? 1);
+  if (f === null) return null;
+  const liveA = toAround([normal.x, normal.y, normal.z], piece, f);
+  const live: PathPose = { ...liveA, look: 0 };
+  const place = (pose: PathPose): { pos: Vector3; look: Vector3 } => {
+    const at = fromAround(pose, piece, f);
+    const k = pose.look;
+    return { pos: new Vector3(at[0], at[1], at[2]), look: new Vector3(c.x + (p.x - c.x) * k, c.y + (p.y - c.y) * k, c.z + (p.z - c.z) * k) };
+  };
+  // the ease back after an unlatch
+  const fade = st.camPathFade;
+  if (fade !== null) {
+    const r = pathFade(fade.from, live, now - fade.t0, PATH_FADE_MS);
+    if (r.done) {
+      st.camPathFade = null;
+      st.camPathNow = null;
+      st.hudDirty = true;
+      return null;
+    }
+    st.camPathNow = { label: "easing back", t: -1 };
+    st.hudDirty = true;
+    return place(r.pose);
+  }
   if (lp === null || cfg.pathOn !== 1) {
     if (st.camPathNow !== null) st.hudDirty = true;
     st.camPathNow = null;
     return null;
   }
-  const centre: Vec3 = [c.x, c.y, c.z];
-  const piece: Vec3 = [p.x, p.y, p.z];
-  const d = Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]);
-  const t = pathParam(d, { startM: cfg.pathStartM, aboveM: cfg.pathAboveM, rightM: cfg.pathRightM, endM: cfg.pathEndM });
-  const f = pieceFrame(centre, piece, lp.side);
-  if (t === null || f === null) {
+  const t = pathParam(d, { startM: cfg.pathStartM, aboveM: cfg.pathAboveM, rightM: cfg.pathRightM, endM: cfg.pathEndM, plateauM: cfg.pathPlateauM });
+  // ⭐ the owner: *"if the piece is pushed away from the orbit center, the path unlatches and the camera does not follow the path"*
+  if (pushedAway(d, lp.closestM, PATH_AWAY_EPS_M)) {
+    st.camPath = null;
+    if (t !== null) {
+      st.camPathFade = { from: currentPathPose(st, t, live), t0: now, side: lp.side };
+      return cameraPathPosition(st, normal, c, p, now);
+    }
+    st.camPathNow = null;
+    st.hudDirty = true;
+    return null;
+  }
+  st.camPath = { ...lp, closestM: Math.min(lp.closestM, d) };
+  if (t === null) {
     if (st.camPathNow !== null) st.hudDirty = true;
     st.camPathNow = null;
     return null;
   }
-  const live = toAround([normal.x, normal.y, normal.z], piece, f);
-  const rel = [piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]];
-  const idealElev = Math.atan2(rel[1]!, Math.hypot(rel[0]!, rel[2]!));
-  const a = pathAngles(t, cfg.pathAboveDeg, lp.rightDeg);
-  const gap = cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.zoom);
-  const base = {
-    elev: live.elev + (idealElev - live.elev) * a.w,
-    azim: live.azim * (1 - a.w),
-    r: live.r + (gap - live.r) * a.w,
-  };
-  const aspect = st.canvas.clientHeight > 0 ? st.canvas.clientWidth / st.canvas.clientHeight : 1;
-  const r = pathCamera(base, a.upDeg, a.rightDeg, piece, centre, f, { halfVRad: st.camera.fov / 2, aspect, margin: PATH_FRAME_MARGIN });
-  st.camPathNow = { t, share: r.share, upDeg: a.upDeg * r.share, rightDeg: a.rightDeg * r.share };
+  st.camPathNow = { label: t < 1 ? "→ above" : t === 1 ? "ABOVE" : t < 2 ? "→ right" : t === 2 ? "RIGHT" : "→ normal", t };
   st.hudDirty = true;
-  return new Vector3(r.at[0], r.at[1], r.at[2]);
+  return place(currentPathPose(st, t, live));
 }
 
-/** ⭐ The share of the half field of view the piece's centre must stay inside on the path (`CAMERA_APPROACH_PATH.md` §4: 90 %). */
-const PATH_FRAME_MARGIN = 0.9;
+/** ⭐ The path's pose at `t`: the live normal pose and the two keys (ABOVE, RIGHT) of the rings' own camera, at the zoom's distance. */
+function currentPathPose(st: SceneState, t: number, live: PathPose): PathPose {
+  const cfg = st.cfg;
+  const gap = cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.zoom);
+  const off = { yawRad: (cfg.cameraYawOffsetDeg * Math.PI) / 180, pitchRad: (cfg.cameraPitchOffsetDeg * Math.PI) / 180 };
+  const lay = fourRingLayout(cfg);
+  // ⭐ the owner: ABOVE *"as when the piece enters the 2nd ring"*; RIGHT *"as when the piece is between the 2nd and 3rd rings, with 90
+  // degree yaw between camera and piece"*
+  const v2 = lay.knots[2]! / lay.total;
+  const v23 = (lay.knots[1]! + lay.knots[2]!) / 2 / lay.total;
+  const a = ringRelativePose(cfg, v2, gap, off) ?? live;
+  const w = ringRelativePose(cfg, v23, gap, off) ?? live;
+  const above: PathPose = { elev: a.elev, azim: a.azim, r: gap, look: 1 };
+  const right: PathPose = { elev: w.elev, azim: w.azim + (cfg.pathRightYawDeg * Math.PI) / 180, r: gap, look: 1 };
+  return pathPose(t, live, above, right);
+}
+
+/**
+ * ⭐⭐ prototype — **THE PINK RING'S HALF RING AT THE SCREEN'S BORDER** (`CAMERA_APPROACH_PATH.md` §11bis; the owner, 2026-10-06: *"if the pink
+ * ring is beyond the screen during the camera path, feature a half ring at the border of the screen in prolongation of which the pink ring
+ * would be"*). While the path (or its ease back) moves the camera and the ring's projection falls off the screen, a ring the pink ring's
+ * size (`GIZMO_RING_PX`) is drawn CENTRED ON THE BORDER in its direction (`edgeMarker`) inside a box clipped to the canvas — so the border
+ * cuts it into a half ring (a quarter in a corner). ⛔ A DOM overlay, never a touch target (`pointer-events: none`).
+ */
+function pinkEdgeFrame(st: SceneState): void {
+  const el = pinkEdgeEl(st);
+  const t = st.centreBlend.targetM;
+  const active = st.camPathNow !== null;
+  const w = st.canvas.clientWidth;
+  const h = st.canvas.clientHeight;
+  if (!active || w <= 0 || h <= 0) {
+    el.box.style.display = "none";
+    return;
+  }
+  const target = new Vector3(t[0], t[1], t[2]);
+  const view = st.camera.getViewMatrix(true);
+  const proj = st.camera.getProjectionMatrix(true);
+  const sp = Vector3.Project(target, Matrix.Identity(), view.multiply(proj), st.camera.viewport.toGlobal(w, h));
+  const fwd = st.camera.getDirection(new Vector3(0, 0, 1));
+  const behind = Vector3.Dot(fwd, target.subtract(st.camera.position)) < 0;
+  const m = edgeMarker(sp.x, sp.y, behind, w, h);
+  if (m === null) {
+    el.box.style.display = "none";
+    return;
+  }
+  const r = st.canvas.getBoundingClientRect();
+  el.box.style.display = "block";
+  el.box.style.left = `${r.left}px`;
+  el.box.style.top = `${r.top}px`;
+  el.box.style.width = `${w}px`;
+  el.box.style.height = `${h}px`;
+  el.ring.style.left = `${m.x - GIZMO_RING_PX / 2}px`;
+  el.ring.style.top = `${m.y - GIZMO_RING_PX / 2}px`;
+}
+
+/** ⭐ The half ring's two elements, made once: a box over the canvas that clips, and the ring in it. */
+function pinkEdgeEl(st: SceneState): { box: HTMLDivElement; ring: HTMLDivElement } {
+  if (st.pinkEdgeEl !== null) return st.pinkEdgeEl;
+  const box = document.createElement("div");
+  box.setAttribute("data-role", "pink-edge");
+  Object.assign(box.style, { position: "fixed", overflow: "hidden", pointerEvents: "none", display: "none", zIndex: "5" });
+  const ring = document.createElement("div");
+  Object.assign(ring.style, {
+    position: "absolute",
+    width: `${GIZMO_RING_PX}px`,
+    height: `${GIZMO_RING_PX}px`,
+    boxSizing: "border-box",
+    borderRadius: "50%",
+    border: `3px solid rgb(${Math.round(PINK.r * 255)}, ${Math.round(PINK.g * 255)}, ${Math.round(PINK.b * 255)})`,
+  });
+  box.appendChild(ring);
+  document.body.appendChild(box);
+  st.pinkEdgeEl = { box, ring };
+  return st.pinkEdgeEl;
+}
+
+/** ⭐ The unlatch's ease back to the normal pose, ms (the owner: *"confirmed unlatch ease-back"* — ~0.4 s). */
+const PATH_FADE_MS = 400;
+/** ⭐ How much farther than its closest the piece must be to count as pushed AWAY, m — above the spring's noise. */
+const PATH_AWAY_EPS_M = 0.01;
 
 /** ⭐ The resting-face alignment's single turn, ms (`RESTING_FACE_ALIGNMENT.md` §2: *"snap in one single rotation in 125 ms"*). */
 const REST_ALIGN_MS = 125;
@@ -389,6 +489,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.orbitHeadingPrev = null;
     st.restAligned = false;
     st.camPath = null; // ⭐ `CAMERA_APPROACH_PATH.md` Q2: a respawn unlatches
+    st.camPathFade = null;
   }
   st.hudDirty = true;
 }
@@ -627,13 +728,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   // ⭐⭐ `CAMERA_APPROACH_PATH.md`: once latched, inside the band, the camera on its approach path (`cameraPathPosition`) — else today's
   const normalCam = new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]);
-  st.camera.setPosition(cameraPathPosition(st, normalCam, c, box.position) ?? normalCam);
-  st.camera.setTarget(c.clone());
+  const onPath = cameraPathPosition(st, normalCam, c, box.position, now);
+  st.camera.setPosition(onPath?.pos ?? normalCam);
+  st.camera.setTarget(onPath?.look ?? c.clone());
   // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
   // the blend in progress), for the HUD's `green` line (the owner, 2026-10-02).
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
+  pinkEdgeFrame(st);
   counterYawFrame(st);
   restAlignFrame(st, now);
   restingFillFrame(st);

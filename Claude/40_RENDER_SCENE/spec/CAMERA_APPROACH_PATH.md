@@ -1,9 +1,9 @@
 # The camera's approach path — specification (prototype)
 
-> **Status:** AGREED and ✅ BUILT 2026-10-06 (⛔ unjudged by a hand) — `input/camera_path.ts` (the rule: `pathParam`, `pathAngles`,
-> `pathCamera`, `pieceInFrame`), `render/green_box_wiring.ts` (`latchCameraPath`, `cameraPathPosition`), CAMERA › CAMERA APPROACH PATH;
-> vectors `tests/proto_camera_path.test.ts`. Checked headless (§10). Branch `1.0.59t-`. Prototype only (the
-> double-orbit camera, `DOUBLE_ORBIT_PROTOTYPE.md`), not the main line.
+> **Status:** ✅ BUILT, then ⭐ **AMENDED AND REBUILT 2026-10-06 — §11 SUPERSEDES §3–§6 and §9's Q2–Q4 where they differ** (⛔ unjudged by a
+> hand). `input/camera_path.ts`, `render/green_box_wiring.ts` (`latchCameraPath`, `cameraPathPosition`, `pinkEdgeFrame`); vectors
+> `tests/proto_camera_path.test.ts`.
+> **Scope:** the prototype (the double-orbit camera, `DOUBLE_ORBIT_PROTOTYPE.md`), not the main line.
 > **Source:** the owner, 2026-10-06: *"I want to create a new path for the camera. There is no change for the piece orbit (4 rings, dx = yaw
 > orbit, dy pushes the piece towards or away from orbit center and moves the piece to respective rings). The new camera path latches when the
 > piece is beyond 2.7m distance and resting face alignment triggered. From 2.7 m to 2.4m the camera moves on a path which brings the camera
@@ -156,3 +156,53 @@ the band, today's camera (`path latched`). No error. ⚠ The Catmull-Rom curve o
 ↑−2° on the way back) — inside the reach. On a screenshot at RIGHT (2.06 m, →48°): the piece on the left, its pink face toward the painting,
 the target centred — the approach seen from the side. ⭐ The base pose blends from the LIVE normal one (leash and offsets included) at the
 band's ends to the IDEAL one (straight behind the piece, no offsets) at ABOVE and RIGHT — so entering and leaving the band never jumps.
+
+## 11. AMENDMENT 2026-10-06 — milestones, plateaus, the rings' own poses, the look on the piece, the unlatch (built)
+
+The owner: *"if the piece is pushed away from the orbit center, the path unlatches and the camera does not follow the path. The camera follows
+the path only if the piece goes towards the orbit center (including if the piece is on the 3rd or 4th ring) — milestones: 2.7 -> 2.2 -> 1.7
+-> 1.2 — there shall be a plateau of 0.3 around 2.2 and 1.7 during which the camera position vs. the piece remains constant — at 2.2 +/- 0.15
+the camera is almost above the object and looks at the object … — at 1.7 +/- 0.15 the camera is almost to the right of the object and looks
+at the object"* — then *"confirmed unlatch ease-back — above: same relative position of the camera vs. piece as when the piece enters the 2nd
+ring — right: same relative position of the camera vs. piece as when the piece is between the 2nd and 3rd rings, with 90 degree yaw between
+camera and piece — release the constraints related to orbit center look"*.
+
+| `d` | the camera |
+|---|---|
+| 2.7 → 2.35 m | eases from its NORMAL pose (looking at the centre) to ABOVE (looking at the piece) |
+| **2.35 → 2.05 m** | **ABOVE, held** — fixed relative to the piece |
+| 2.05 → 1.85 m | eases from ABOVE to RIGHT (looking at the piece) |
+| **1.85 → 1.55 m** | **RIGHT, held** |
+| 1.55 → 1.2 m | eases back to its NORMAL pose (looking at the centre) |
+
+- **ABOVE** = the normal camera's pose relative to the piece when the piece is ON THE 2ND RING (`ringRelativePose`: the piece where the rings
+  put it, the camera where `cameraOffset` puts it — its ring pitch, the yaw and pitch offsets — at the zoom's distance).
+- **RIGHT** = the same with the piece BETWEEN THE 2ND AND 3RD RINGS (the waist, level with the centre), swung **90° about the vertical**
+  (`pathRightYawDeg`) to the side latched (the camera's right at the latch).
+- **The look** goes from the orbit centre (the normal pose) to the PIECE (the plateaus) with the pose, in the same eases. ⛔ The reach clamp
+  of §4 is RELEASED — the pink ring may leave the screen; then a **HALF RING on the screen's border** shows where it is (§11bis).
+- **The transitions** ease in and out (smootherstep) — a plateau is entered and left without a kink; on a plateau the pose is EXACTLY
+  constant.
+- **The distance to the piece** is kept (the zoom's).
+- ⛔⛔ **PUSHED AWAY → UNLATCHED**: the path follows the piece only while it comes IN (on any ring: the distance to the centre falls on the
+  3rd and 4th too). Farther than the closest it has come since the latch, by more than 1 cm (the spring's noise), it unlatches — and the
+  camera **EASES BACK** to its normal pose over 0.4 s (`pathFade`); only a new alignment beyond 2.7 m latches it again. ⛔ It replaces §3's
+  *"reversing `dy` reverses the path"*.
+- **Settings:** `pathStartM` 2.7, `pathAboveM` 2.2, `pathRightM` 1.7, `pathEndM` 1.2, `pathPlateauM` 0.3, `pathRightYawDeg` 90 (CAMERA › CAMERA
+  APPROACH PATH). ⛔ `pathAboveDeg`, `pathRightDegLandscape` / `Portrait` are deleted.
+
+### 11bis. The pink ring's half ring
+
+The owner: *"if the pink ring is beyond the screen during the camera path, feature a half ring at the border of the screen in prolongation of
+which the pink ring would be"*. While the path (or its ease back) moves the camera and the ring projects off the screen, a ring of the pink
+ring's size is drawn CENTRED ON THE BORDER in its direction from the screen's centre (`edgeMarker`; behind the camera, the direction
+mirrored) inside a box clipped to the canvas — the border cuts it into a half ring (a quarter in a corner). A DOM overlay, never a touch
+target.
+
+### 11ter. Checked headless (2026-10-06)
+
+Latched at boot (2.997 m), pushed in: `→ above` from 2.67 m; **ABOVE held 2.34 → 2.12 m** (the HUD's camera radius — now to the piece —
+**1.250 m**); `→ right`; **RIGHT held 1.74 → 1.63 m** (1.250 m); `→ normal` to 1.21 m; then today's camera. Pulled back from the ABOVE
+plateau: `easing back` over ~0.4 s (the radius 1.25 → 1.90 → 3.53 m), then the normal camera, unlatched. No error. On screenshots: ABOVE
+looks down on the piece, the floor and the painting toward the top; ⚠ RIGHT is the piece edge-on against empty space — the ring off the
+screen, its half ring at the border. ⛔ A device look is owed.

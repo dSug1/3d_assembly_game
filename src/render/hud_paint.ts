@@ -372,9 +372,9 @@ export function greenReadout(st: SceneState): string {
   const last = st.restingLast === null ? undefined : st.restingFaces.get(st.restingLast);
   // ⭐ `RESTING_FACE_ALIGNMENT.md`: the orbit taps counted, and the alignment (turning / following the orbit)
   const taps = `${st.orbitTap === null ? "" : ` · taps ${st.orbitTap.count}${st.orbitTap.second === null ? "" : st.orbitTap.second.moved ? " +2nd moved" : " +2nd on piece"}`}${st.restAlign !== null ? " · aligning" : st.restAligned ? " · aligned (no counter-yaw)" : ""}`;
-  // ⭐ `CAMERA_APPROACH_PATH.md`: the path — where it stands (t 0–3), the rise and the swing applied, and the share the frame allowed
+  // ⭐ `CAMERA_APPROACH_PATH.md`: the path — its stretch (→ above, ABOVE, → right, RIGHT, → normal, easing back) and `t` (0–3)
   const pn = st.camPathNow;
-  const path = st.camPath === null ? "" : pn === null ? " · path latched" : ` · path t=${pn.t.toFixed(2)} ↑${pn.upDeg.toFixed(0)}° →${pn.rightDeg.toFixed(0)}°${pn.share < 1 ? ` (${(pn.share * 100).toFixed(0)} %)` : ""}`;
+  const path = pn !== null ? ` · path ${pn.label}${pn.t >= 0 ? ` t=${pn.t.toFixed(2)}` : ""}` : st.camPath !== null ? " · path latched" : "";
   const parts = `${taps}${path} | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
   return `${piece}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target${parts} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }

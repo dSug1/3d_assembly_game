@@ -27,6 +27,7 @@ import { type Quat, type Vec3 } from "../core/vec";
 import { type FrameMeter } from "../core/frame_meter";
 import type { Edge, LongAxes, RestingCandidate, RestingResult } from "../core/resting_face";
 import type { PinchMotion } from "../input/pinch_gate";
+import type { PathPose } from "../input/camera_path";
 import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -445,10 +446,14 @@ export interface SceneState {
   /** ⭐ Prototype (`1.0.59q-`): the face holding the pink ring — at boot the blue face toward the green piece, then the face a press on a
    * placed piece moves the target to. Its edges give the alignment's MATING edge. */
   pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;
-  /** ⭐ Prototype (`CAMERA_APPROACH_PATH.md`): the path's latch — the side it swings to and the swing, frozen at the latch; `null` unlatched. */
-  camPath: { readonly side: 1 | -1; readonly rightDeg: number } | null;
-  /** ⭐ …and where it stands this frame (the HUD): `t` (0–3), the share of the angles the frame allowed, the rise and the swing applied. */
-  camPathNow: { readonly t: number; readonly share: number; readonly upDeg: number; readonly rightDeg: number } | null;
+  /** ⭐ Prototype (`CAMERA_APPROACH_PATH.md`): the path's latch — the side it swings to (frozen) and the closest the piece has come; `null` unlatched. */
+  camPath: { readonly side: 1 | -1; readonly closestM: number } | null;
+  /** ⭐ …the unlatch's ease back in progress: the pose it starts from, when, the side. */
+  camPathFade: { readonly from: PathPose; readonly t0: number; readonly side: 1 | -1 } | null;
+  /** ⭐ …and where it stands this frame (the HUD): the stretch's name and `t` (0–3; −1 easing back). */
+  camPathNow: { readonly label: string; readonly t: number } | null;
+  /** ⭐ Prototype (2026-10-06): the pink ring's half ring at the screen's border (`pinkEdgeFrame`) — made at its first use. */
+  pinkEdgeEl: { readonly box: HTMLDivElement; readonly ring: HTMLDivElement } | null;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;

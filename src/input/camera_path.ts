@@ -1,65 +1,63 @@
 /**
- * ⭐⭐⭐ prototype — **THE CAMERA'S APPROACH PATH** (`Claude/40_RENDER_SCENE/spec/CAMERA_APPROACH_PATH.md`; the owner, 2026-10-06, agreed).
- * Once latched (the resting-face alignment beyond the band's start), while the orbited piece is inside the band — 2.7 → 2.4 → 2.1 → 1.8 m
- * from the orbit centre — the camera leaves its normal pose: up ABOVE the piece, then to its RIGHT, then back, **as a function of the
- * piece's distance alone** (so reversing `dy` reverses it exactly). It keeps its distance to the piece and always looks at the orbit centre;
- * the angles are clamped to what keeps the piece in the frame (§4).
+ * ⭐⭐⭐ prototype — **THE CAMERA'S APPROACH PATH** (`Claude/40_RENDER_SCENE/spec/CAMERA_APPROACH_PATH.md`; the owner, 2026-10-06).
+ * Once latched (the resting-face alignment beyond the band's start), while the orbited piece comes IN toward the orbit centre through the
+ * band — 2.7 → 2.2 → 1.7 → 1.2 m — the camera leaves its normal pose: to ABOVE the piece (a PLATEAU of 0.3 m around 2.2, the camera fixed
+ * relative to the piece), to its RIGHT (a plateau around 1.7), and back. On the plateaus it LOOKS AT THE PIECE; at the band's ends, at the
+ * orbit centre — the look point blends between the two with the pose. The camera keeps its distance to the piece. Pushed AWAY, the path
+ * unlatches and the camera eases back to its normal pose (the caller's state; `pathFade`).
+ * ⭐ ABOVE and RIGHT are the NORMAL camera's own poses relative to the piece (`ringRelativePose`) — ABOVE as when the piece enters the 2nd
+ * ring, RIGHT as when it is between the 2nd and 3rd rings, swung 90° about the vertical to the latched side.
  *
  * ⛔ ENGINE-FREE.
  */
 import { add, cross, dot, length, normalize, scale, sub, type Vec3 } from "../core/vec";
+import { cameraOffset, type CameraAngleOffset } from "./follow_camera";
+import { orbitOffset } from "./orbit";
+import type { GestureConfig } from "./gestureConfig";
 
-/** ⭐ The band's four distances, metres: the start, ABOVE, RIGHT, the end (decreasing). */
+/** ⭐ The band: its start, the ABOVE and RIGHT milestones, its end (metres, decreasing), and the plateau's width around each milestone. */
 export interface PathBand {
   readonly startM: number;
   readonly aboveM: number;
   readonly rightM: number;
   readonly endM: number;
+  readonly plateauM: number;
+}
+
+/** ⭐ An ease in and out (smootherstep: zero speed AND zero acceleration at both ends — a plateau is entered and left without a kink). */
+export function easeInOut(x: number): number {
+  const u = Math.min(1, Math.max(0, x));
+  return u * u * u * (u * (u * 6 - 15) + 10);
 }
 
 /**
- * ⭐ Where the piece's distance `d` puts the path: `t` from 0 (the start) through 1 (ABOVE) and 2 (RIGHT) to 3 (the end), each segment
- * linear in `d`. `null` outside the band — the camera is today's there.
+ * ⭐⭐ Where the piece's distance `d` puts the path: `t` from 0 (the band's start: the normal pose) to 1 (ABOVE), 2 (RIGHT), 3 (the end: the
+ * normal pose again) — **exactly 1 on the ABOVE plateau and exactly 2 on the RIGHT one**, each transition eased in and out between them.
+ * `null` outside the band.
  */
 export function pathParam(d: number, b: PathBand): number | null {
   if (!(d <= b.startM && d >= b.endM)) return null;
-  if (d >= b.aboveM) return (b.startM - d) / Math.max(1e-9, b.startM - b.aboveM);
-  if (d >= b.rightM) return 1 + (b.aboveM - d) / Math.max(1e-9, b.aboveM - b.rightM);
-  return 2 + (b.rightM - d) / Math.max(1e-9, b.rightM - b.endM);
+  const h = b.plateauM / 2;
+  const a1 = b.aboveM + h;
+  const a2 = b.aboveM - h;
+  const r1 = b.rightM + h;
+  const r2 = b.rightM - h;
+  if (d >= a1) return easeInOut((b.startM - d) / Math.max(1e-9, b.startM - a1));
+  if (d >= a2) return 1;
+  if (d >= r1) return 1 + easeInOut((a2 - d) / Math.max(1e-9, a2 - r1));
+  if (d >= r2) return 2;
+  return 2 + easeInOut((r2 - d) / Math.max(1e-9, r2 - b.endM));
 }
 
-/** ⭐ A uniform Catmull-Rom curve through four key values at t = 0, 1, 2, 3 (the ends repeated) — smooth, and never at rest at a key. */
-export function catmullRom4(k: readonly [number, number, number, number], t: number): number {
-  const u = Math.min(3, Math.max(0, t));
-  const i = Math.min(2, Math.floor(u));
-  const s = u - i;
-  const p = (j: number): number => k[Math.min(3, Math.max(0, j))]!;
-  const p0 = p(i - 1);
-  const p1 = p(i);
-  const p2 = p(i + 1);
-  const p3 = p(i + 2);
-  return 0.5 * (2 * p1 + (-p0 + p2) * s + (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s + (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s);
-}
-
-/**
- * ⭐⭐ The path at `t`: the rise ABOVE the normal pose (degrees of elevation around the piece), the swing to the RIGHT (degrees of azimuth),
- * and `w` — how far the base pose has gone from the LIVE normal one (its leash, its yaw and pitch offsets) to the IDEAL one (straight behind
- * the piece, no offsets): 0 at the band's ends, 1 at ABOVE and RIGHT (*"If the camera is not on the existing rings, the yaw and pitch
- * offsets are ignored"* — faded, never switched).
- */
-export function pathAngles(t: number, aboveDeg: number, rightDeg: number): { readonly upDeg: number; readonly rightDeg: number; readonly w: number } {
-  return {
-    upDeg: catmullRom4([0, aboveDeg, 0, 0], t),
-    rightDeg: catmullRom4([0, 0, rightDeg, 0], t),
-    w: Math.min(1, Math.max(0, catmullRom4([0, 1, 1, 0], t))),
-  };
-}
-
-/** ⭐ A point AROUND the piece: its elevation and azimuth (radians) and its distance, in the frame `behind` / `right` / `up`. */
+/** ⭐ A camera pose relative to the piece: elevation and azimuth around it (radians, the piece's frame), its distance, and its LOOK — 0 the
+ * orbit centre, 1 the piece. */
 export interface AroundPiece {
   readonly elev: number;
   readonly azim: number;
   readonly r: number;
+}
+export interface PathPose extends AroundPiece {
+  readonly look: number;
 }
 
 /** ⭐ The frame at the piece: `behind` (horizontal, from the centre out through the piece), `right` (the latched side), `up`. */
@@ -84,46 +82,66 @@ export function fromAround(a: AroundPiece, piece: Vec3, f: { readonly behind: Ve
 }
 
 /**
- * ⭐ Is the piece in the frame of a camera at `cam` LOOKING AT `centre`? — its direction inside `margin` of the half fields of view
- * (vertical `halfVRad`; horizontal from the aspect).
+ * ⭐⭐ The NORMAL camera's pose relative to the piece with the piece at ring parameter `v` (the camera settled on it — no leash, no lag):
+ * the piece where the rings put it, the camera where `cameraOffset` puts it (its ring pitch, the yaw and pitch offsets, the zoom's
+ * distance), read as angles around the piece in the piece's own frame. ⭐ The frame turns with the yaw, so the pose does not depend on it.
  */
-export function pieceInFrame(cam: Vec3, centre: Vec3, piece: Vec3, halfVRad: number, aspect: number, margin: number, up: Vec3 = [0, 1, 0]): boolean {
-  const f = normalize(sub(centre, cam));
-  const q = normalize(sub(piece, cam));
-  if (f === null || q === null) return false;
-  const x = normalize(cross(f, up));
-  if (x === null) return false;
-  const u = cross(x, f);
-  const fz = dot(q, f);
-  if (fz <= 0) return false;
-  const halfH = Math.atan(Math.tan(halfVRad) * aspect);
-  return Math.abs(Math.atan2(dot(q, u), fz)) <= halfVRad * margin && Math.abs(Math.atan2(dot(q, x), fz)) <= halfH * margin;
+export function ringRelativePose(cfg: GestureConfig, v: number, gapM: number, off: CameraAngleOffset): AroundPiece | null {
+  const box = orbitOffset(cfg, 0, v, 1).offsetM;
+  const piece: Vec3 = [box[0], box[1], box[2]];
+  const cam = cameraOffset(cfg, { yaw: 0, v }, piece, off, gapM);
+  const f = pieceFrame([0, 0, 0], piece, 1);
+  return f === null ? null : toAround(cam, piece, f);
+}
+
+/** ⭐ A straight blend of two poses (`k` 0 → `a`, 1 → `b`). */
+export function lerpPose(a: PathPose, b: PathPose, k: number): PathPose {
+  // ⭐ exactly the key at the ends — a plateau is CONSTANT, not the key plus a rounding
+  if (k <= 0) return a;
+  if (k >= 1) return b;
+  const m = (x: number, y: number): number => x + (y - x) * k;
+  return { elev: m(a.elev, b.elev), azim: m(a.azim, b.azim), r: m(a.r, b.r), look: m(a.look, b.look) };
+}
+
+/** ⭐⭐ The path's pose at `t` through its four keys: the normal pose (live), ABOVE, RIGHT, the normal pose again. */
+export function pathPose(t: number, normal: PathPose, above: PathPose, right: PathPose): PathPose {
+  if (t <= 1) return lerpPose(normal, above, t);
+  if (t <= 2) return lerpPose(above, right, t - 1);
+  return lerpPose(right, normal, t - 2);
 }
 
 /**
- * ⭐⭐ The path's camera position (Q3: *"clamp the angles to the reach at the current zoom"*): from the `base` angles, the rise and the swing
- * (degrees) applied, then scaled back toward the base — the largest share (to 1/64) keeping the piece in the frame. Returns the position
- * and the share applied.
+ * ⭐ The UNLATCH's ease back (the owner, 2026-10-06: *"confirmed unlatch ease-back"*): from the pose the path had when the piece was pushed
+ * away, to the live normal pose, over `ms` — eased in and out. `done` once there.
  */
-export function pathCamera(
-  base: AroundPiece,
-  upDeg: number,
-  rightDeg: number,
-  piece: Vec3,
-  centre: Vec3,
-  frame: { readonly behind: Vec3; readonly right: Vec3; readonly up: Vec3 },
-  view: { readonly halfVRad: number; readonly aspect: number; readonly margin: number },
-): { readonly at: Vec3; readonly share: number } {
-  const D = Math.PI / 180;
-  const at = (k: number): Vec3 => fromAround({ elev: base.elev + k * upDeg * D, azim: base.azim + k * rightDeg * D, r: base.r }, piece, frame);
-  const ok = (k: number): boolean => pieceInFrame(at(k), centre, piece, view.halfVRad, view.aspect, view.margin, frame.up);
-  if (ok(1)) return { at: at(1), share: 1 };
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 6; i++) {
-    const m = (lo + hi) / 2;
-    if (ok(m)) lo = m;
-    else hi = m;
+export function pathFade(from: PathPose, normal: PathPose, elapsedMs: number, ms: number): { readonly pose: PathPose; readonly done: boolean } {
+  const u = ms > 0 ? elapsedMs / ms : 1;
+  return { pose: lerpPose(from, normal, easeInOut(u)), done: u >= 1 };
+}
+
+/** ⭐ Pushed AWAY from the centre: farther than the closest the piece has come since the latch, by more than `epsM` (the spring's noise). */
+export function pushedAway(d: number, closestM: number, epsM: number): boolean {
+  return d > closestM + epsM;
+}
+
+/**
+ * ⭐⭐ prototype — **WHERE THE PINK RING IS, WHEN IT IS OFF THE SCREEN** (the owner, 2026-10-06: *"if the pink ring is beyond the screen during
+ * the camera path, feature a half ring at the border of the screen in prolongation of which the pink ring would be"*). From the ring's
+ * projected point (`px`, `py`, screen pixels; `behind` when it is behind the camera — its projection is then mirrored), the point ON THE
+ * SCREEN'S BORDER in its direction from the screen's centre — a ring drawn there is cut by the border into a half ring. `null` when the
+ * ring is on the screen.
+ */
+export function edgeMarker(px: number, py: number, behind: boolean, w: number, h: number): { readonly x: number; readonly y: number } | null {
+  const cx = w / 2;
+  const cy = h / 2;
+  if (!behind && px >= 0 && px <= w && py >= 0 && py <= h) return null;
+  let dx = px - cx;
+  let dy = py - cy;
+  if (behind) {
+    dx = -dx;
+    dy = -dy;
   }
-  return { at: at(lo), share: lo };
+  if (dx === 0 && dy === 0) dy = h; // straight behind: the bottom edge
+  const k = Math.min(dx !== 0 ? cx / Math.abs(dx) : Infinity, dy !== 0 ? cy / Math.abs(dy) : Infinity);
+  return { x: cx + dx * k, y: cy + dy * k };
 }

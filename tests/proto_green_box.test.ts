@@ -386,7 +386,8 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).toMatch(/springOrbit\(st\.boxSpring, rig, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\)/);
     expect(w).toMatch(/st\.boxOrbit = st\.boxSpring\.at;/);
     // ⭐ the owner: the camera looks at the yellow target — the orbit centre
-    expect(w).toMatch(/st\.camera\.setTarget\(c\.clone\(\)\)/);
+    // (2026-10-06: on the approach path's plateaus it looks at the piece instead — `CAMERA_APPROACH_PATH.md`)
+    expect(w).toMatch(/st\.camera\.setTarget\(onPath\?\.look \?\? c\.clone\(\)\)/);
     // ⭐ the owner, 2026-10-02: *"remove the billboarding"*
     expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_NONE/);
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);

@@ -139,9 +139,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "ABOVE at piece distance (m)", "pathAboveM", 1, 3.5, 0.05),
             tunable(st, "RIGHT at piece distance (m)", "pathRightM", 1, 3.5, 0.05),
             tunable(st, "path end: piece distance (m)", "pathEndM", 0.5, 3.5, 0.05),
-            tunable(st, "above: rise over the normal pose (°)", "pathAboveDeg", 0, 89, 1),
-            tunable(st, "right: swing, landscape (°)", "pathRightDegLandscape", 0, 179, 1),
-            tunable(st, "right: swing, portrait (°)", "pathRightDegPortrait", 0, 179, 1),
+            tunable(st, "plateau width around ABOVE and RIGHT (m)", "pathPlateauM", 0, 0.6, 0.05),
+            tunable(st, "right: yaw from the rings' pose (°)", "pathRightYawDeg", 0, 180, 5),
           ],
         },
         {
