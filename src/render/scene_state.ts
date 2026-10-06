@@ -434,7 +434,7 @@ export interface SceneState {
   orbitTap: {
     readonly orbitPointer: number;
     count: number;
-    second: { readonly pointerId: number; readonly pressT: number; readonly pressX: number; readonly pressY: number; pinched: boolean } | null;
+    second: { readonly pointerId: number; readonly pressT: number; readonly pressX: number; readonly pressY: number; moved: boolean } | null;
   } | null;
   /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose, its start time, its target (both turned against the orbit). */
   restAlign: { readonly from: Quat; readonly t0: number; readonly base: Quat } | null;

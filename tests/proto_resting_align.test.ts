@@ -12,7 +12,7 @@ import { meshTopology } from "../src/core/mesh_topology";
 import { chooseInGroup, faceLongAxes, restAlignTarget, restingFaces } from "../src/core/resting_face";
 import { dot, qRotate, type Quat, type Vec3 } from "../src/core/vec";
 import { counterYaw, greenBootOrientation, wrapAngle } from "../src/input/green_box";
-import { isOrbitTap, orbitTapCount, secondPinches } from "../src/input/orbit_tap";
+import { isOrbitTap, orbitTapCount, secondMoved } from "../src/input/orbit_tap";
 import { MouseSecondTouch } from "../src/input/mouse_second_touch";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 
@@ -87,9 +87,9 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(yaw / D).toBeLessThanOrEqual(30 + 1e-6); // three axes 60° apart (six directions): never more than 30°
   });
 
-  it("⭐⭐ the second touch: a PINCH the moment it passes the deadband; a TAP released within the time, never pinched, the orbit still down", () => {
-    expect(secondPinches(3.4, 3.5)).toBe(false);
-    expect(secondPinches(3.6, 3.5)).toBe(true);
+  it("⭐⭐ the second touch ON the piece: MOVED once past the deadband (no longer a tap); a TAP released within the time, never moved, the orbit still down", () => {
+    expect(secondMoved(3.4, 3.5)).toBe(false);
+    expect(secondMoved(3.6, 3.5)).toBe(true);
     expect(isOrbitTap(1000, 1150, 200, false, true)).toBe(true);
     expect(isOrbitTap(1000, 1250, 200, false, true)).toBe(false); // held too long
     expect(isOrbitTap(1000, 1100, 200, true, true)).toBe(false); // it pinched
@@ -141,13 +141,19 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(w).toMatch(/function counterYawFrame\(st: SceneState\): void \{\s*const box = st\.greenBox;\s*if \(box === null \|\| st\.boxOrbit === null\) return;/);
   });
 
-  it("⭐⭐ wired: the second touch while orbiting never grabs; the orbit goes on until it pinches; its tap is consumed; the lift resets", () => {
+  it("⭐⭐ wired: never grabs; ON the piece a tap candidate (never a zoom, the orbit goes on), OFF it a pinch at once; the tap consumed; the lift resets", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/const rayHit =\s*orbitFinger !== null \? null : throughGreenBox\(/);
-    expect(p).toMatch(/if \(secondPinches\(pxToMm\(Math\.hypot\(s\.x - sec\.pressX, s\.y - sec\.pressY\)\), st\.cfg\.motionDeadbandMm\)\) \{\s*sec\.pinched = true;\s*updatePinch\(st\);/);
+    // ⭐ 2026-10-06 (the owner): *"Zoom is triggered by second touch outside the piece, resting face alignment triggered by second touch
+    // tap on the piece"* — only a second touch ON the piece is a tap candidate
+    expect(p).toMatch(/const secondOnPiece = orbitFinger !== null && !inBand && pick\?\.hit === true && pick\.pickedMesh === st\.greenBox;/);
+    expect(p).toMatch(/if \(orbitFinger !== null && secondOnPiece\) \{/);
+    // beyond the deadband it is no longer a tap — and NEVER a pinch (no updatePinch in that branch)
+    expect(p).toMatch(/if \(secondMoved\(pxToMm\(Math\.hypot\(s\.x - sec\.pressX, s\.y - sec\.pressY\)\), st\.cfg\.motionDeadbandMm\)\) sec\.moved = true;\s*\} else if/);
+    expect(p).not.toMatch(/sec\.pinched/);
     expect(p).toMatch(/\} else if \(e\.pointerId === ot\.orbitPointer\) \{\s*\/\/[^\n]*\n\s*orbitDragStep\(st, e\.pointerId, s, prev\);/);
     // the tap is judged and CONSUMED before the camera-reset / mode-toggle taps
-    expect(p).toMatch(/if \(isOrbitTap\(sec\.pressT, s\.t, st\.cfg\.tapMaxDuration, sec\.pinched, stillDown\)\) orbitTapped\(st, performance\.now\(\)\);\s*st\.hudDirty = true;\s*return;/);
+    expect(p).toMatch(/if \(isOrbitTap\(sec\.pressT, s\.t, st\.cfg\.tapMaxDuration, sec\.moved, stillDown\)\) orbitTapped\(st, performance\.now\(\)\);\s*st\.hudDirty = true;\s*return;/);
     const i0 = p.indexOf("the second touch released — a TAP if quick");
     const i1 = p.indexOf("orbitTapped(st, performance.now())");
     expect(i0).toBeGreaterThan(0);

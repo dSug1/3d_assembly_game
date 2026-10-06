@@ -540,7 +540,8 @@ were set aside (*"not satisfied"*). `1.0.59p-from1.0.59m-` → `1.0.59q-` → **
   its boot yaw / ring / zoom, the camera and the spring from there (`spawnOrbitPiece`). `tests/proto_turquoise.test.ts`.
 * ⭐⭐⭐ **THE RESTING-FACE SELECTOR** → [`RESTING_FACE.md`](RESTING_FACE.md): every part not seated (on a Pioneer, or placed in its goal) gets
   the face it rests on and its principal axis — at boot, and the frame it is unseated; the orbited pieces at creation, their resting face
-  **filled yellow**, seen faintly **through its own piece** (never through another — draw order, `restingXray`).
+  **filled pink** (the pink ring's colour since 2026-10-06; yellow before), seen faintly **through its own piece** (never through another —
+  draw order, `restingXray`).
 * ⭐⭐⭐ **THE RESTING-FACE ALIGNMENT** → [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md): while the first touch / left button
   orbits, a **second-finger tap / right tap** is counted; the FIRST turns the piece in 125 ms — **its resting face against the PINK FACE**
   (or the first frozen body's face toward it), **the two faces' long axes parallel** by the smallest turn (§2, `1.0.59q-`; two earlier
@@ -550,3 +551,11 @@ were set aside (*"not satisfied"*). `1.0.59p-from1.0.59m-` → `1.0.59q-` → **
   (*"remove the rotation when the resting piece is aligned"*). A respawn starts it again.
 * ⭐ **`tapMaxDuration` 200 ms for EVERY tap** (Unity's default; it was 250), with a slider in SCENE.
 * ⭐ **The camera's yaw offset 2.5°** (it was 3°; the slider in 0.5° steps).
+* ⭐⭐ **A pinch zooms only while BOTH fingers move** (the owner, 2026-10-06: *"zoom can be triggered only if both delta positions are
+  outside deadband. If one of the two is inside deadband, no zoom"*): each pinching finger's own motion state (`PinchMotion`,
+  `input/pinch_gate.ts`, §1.1's tracker per finger); one still → no zoom, the pinch rebased (no jump on resume). ⛔ A per-event test never
+  zooms (the browser sends one finger at a time) — found headless. → `RESTING_FACE_ALIGNMENT.md` §4. Deployed `5fdf351`.
+* ⭐⭐ **The alignment tap is a second touch ON the piece; a second touch OFF it zooms** (the owner, 2026-10-06: *"Zoom is triggered by
+  second touch outside the piece, resting face alignment triggered by second touch tap on the piece. For desktop, no change"*). It removes
+  the jump at a pinch's start (the first finger orbited while a second finger anywhere waited to be judged a tap). A second finger on the
+  piece never zooms; the orbit goes on. → `RESTING_FACE_ALIGNMENT.md` §1, §4.

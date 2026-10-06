@@ -12,7 +12,7 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, greenDragGains } from "./green_box_wiring";
-import { isOrbitTap, orbitTapCount, secondPinches } from "../input/orbit_tap";
+import { isOrbitTap, orbitTapCount, secondMoved } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
@@ -173,6 +173,10 @@ export function installPointerHandler(st: SceneState): void {
         st.router.outside().length === 1 && st.router.objects().length === 0
           ? st.router.outside()[0]!.id
           : null;
+      // ⭐⭐ the owner, 2026-10-06: *"Zoom is triggered by second touch outside the piece, resting face alignment triggered by second touch
+      // tap on the piece"* — a second touch ON the orbited piece is the alignment's tap candidate (it never zooms; the first finger keeps
+      // orbiting); ANYWHERE ELSE it is a pinch from the moment it lands (no tap to wait for — nothing held back, no jump)
+      const secondOnPiece = orbitFinger !== null && !inBand && pick?.hit === true && pick.pickedMesh === st.greenBox;
       const rayHit =
         orbitFinger !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
       // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
@@ -333,11 +337,11 @@ export function installPointerHandler(st: SceneState): void {
           // — the camera keeps orbiting whatever it was already orbiting.
           st.pendingCentre = null;
         }
-        // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: the second touch while orbiting — a tap or a pinch, decided by its travel and its release.
-        // The count belongs to the orbit finger (a new orbit finger starts again at zero).
-        if (orbitFinger !== null) {
+        // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a second touch ON the piece while orbiting — a tap candidate, decided by its travel and its
+        // release. The count belongs to the orbit finger (a new orbit finger starts again at zero). Off the piece: a pinch (below).
+        if (orbitFinger !== null && secondOnPiece) {
           if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbitFinger) st.orbitTap = { orbitPointer: orbitFinger, count: 0, second: null };
-          st.orbitTap.second = { pointerId: e.pointerId, pressT: s.t, pressX: s.x, pressY: s.y, pinched: false };
+          st.orbitTap.second = { pointerId: e.pointerId, pressT: s.t, pressX: s.x, pressY: s.y, moved: false };
         }
         const p = pinchPair(st);
         if (p) {
@@ -552,15 +556,12 @@ export function installPointerHandler(st: SceneState): void {
         }
         const ot = st.orbitTap;
         const sec = ot?.second;
-        if (ot && sec && !sec.pinched && st.router.outside().length === 2 && st.router.objects().length === 0) {
+        if (ot && sec && st.router.outside().length === 2 && st.router.objects().length === 0) {
           if (e.pointerId === sec.pointerId) {
-            // ⭐ beyond the deadband: a PINCH, at once (the zoom measured from the press — no travel lost), and never a tap
-            if (secondPinches(pxToMm(Math.hypot(s.x - sec.pressX, s.y - sec.pressY)), st.cfg.motionDeadbandMm)) {
-              sec.pinched = true;
-              updatePinch(st);
-            }
+            // ⭐ beyond the deadband: no longer a tap — and ⛔ NEVER a pinch (it landed on the piece: the zoom is a second touch OFF it)
+            if (secondMoved(pxToMm(Math.hypot(s.x - sec.pressX, s.y - sec.pressY)), st.cfg.motionDeadbandMm)) sec.moved = true;
           } else if (e.pointerId === ot.orbitPointer) {
-            // ⭐ no pause for a tap: the first finger keeps orbiting
+            // ⭐ the first finger keeps orbiting for as long as this second touch is down
             orbitDragStep(st, e.pointerId, s, prev);
           }
           st.hudDirty = true;
@@ -594,7 +595,7 @@ export function installPointerHandler(st: SceneState): void {
             const sec = ot.second;
             ot.second = null;
             const stillDown = st.router.all().some((q) => q.id === ot.orbitPointer);
-            if (isOrbitTap(sec.pressT, s.t, st.cfg.tapMaxDuration, sec.pinched, stillDown)) orbitTapped(st, performance.now());
+            if (isOrbitTap(sec.pressT, s.t, st.cfg.tapMaxDuration, sec.moved, stillDown)) orbitTapped(st, performance.now());
             st.hudDirty = true;
             return;
           }

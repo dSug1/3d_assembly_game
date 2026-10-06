@@ -1,7 +1,8 @@
 # Resting-face selector — specification (prototype)
 
 > **Status:** ✅ BUILT 2026-10-05 (⛔ unjudged by a hand) — `src/core/resting_face.ts`, `src/render/resting_face_wiring.ts`; one gap found
-> while building is open (§14). Built on `1.0.59p-from1.0.59m-`; carried to **`1.0.59r-`** (2026-10-05). The orbited pieces' resting face
+> while building is open (§14). ⭐ The orbited pieces' resting face is filled **PINK** — the pink ring's own colour (2026-10-06; it was
+> yellow) — and seen faintly through its own piece. Built on `1.0.59p-from1.0.59m-`; carried to **`1.0.59r-`** (2026-10-05). The orbited pieces' resting face
 > drives the alignment gesture → [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md).
 > **Source:** the owner's `resting-face-selection.md`, amended by the review of 2026-10-04 (§9) and the owner's decision on
 > symmetry: *"the face which maximizes the number of plane symmetries in the vertical direction shall be preferred: this way, a

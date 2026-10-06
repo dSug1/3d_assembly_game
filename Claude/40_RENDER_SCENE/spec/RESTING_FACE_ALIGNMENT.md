@@ -12,7 +12,14 @@
 ## 1. The gesture
 
 While the **first touch** (or the **left button**) is down and **orbiting** — pressed outside any seated piece, as today — the
-**second-touch TAPS** (or **right-button taps**) are **counted**, anywhere on the glass.
+**second-touch TAPS ON THE ORBITED PIECE** (or **right-button taps anywhere**) are **counted**.
+⭐⭐ **AMENDED 2026-10-06** (the owner: *"Zoom is triggered by second touch outside the piece, resting face alignment triggered by second
+touch tap on the piece. For desktop, no change (right click anywhere while left click is held)"*): a second touch ON the piece is the tap
+candidate — it never zooms, the first finger orbiting on; a second touch OFF the piece is a PINCH from the moment it lands. ⛔ It
+replaces *"anywhere on the glass"*: a second finger anywhere had to be held back as a possible tap, so the first finger went on orbiting
+during a pinch's start — the piece **jumped** forward or back along the rings before the zoom took over (reproduced headless: the
+elevation 1.00 → 0.96, the piece 0.29 m nearer, before the first zoom step). ⚠ Cost: a pinch begun with its second finger ON the piece
+does not zoom.
 
 | tap | what it does |
 |---|---|
@@ -107,11 +114,21 @@ the desktop's Shift tap. ⚠ A still press released between 200 and 250 ms was a
 sit exactly on the boundary).
 
 **The pinch:** as soon as the second finger moves **beyond the deadband**, it is a pinch — at once, no wait — and that touch can no
-longer be a tap. The zoom is measured from the fingers' distance at the second PRESS (the deadband's travel is not lost).
+longer be a tap. ~~The zoom is measured from the fingers' distance at the second PRESS (the deadband's travel is not lost).~~
+⭐⭐ **AMENDED 2026-10-06 — THE ZOOM ONLY WHILE BOTH FINGERS MOVE** (the owner: *"zoom can be triggered only if both delta positions are
+outside deadband. If one of the two is inside deadband, no zoom"*), for EVERY pinch (`camera_rig.ts` `updatePinch`): each pinching
+finger has its own motion state (`PinchMotion`, `input/pinch_gate.ts` — §1.1's `MotionTracker` per finger: MOVING beyond the deadband,
+STATIONARY after the device-derived rest window). Both MOVING: the zoom; one STATIONARY: no zoom, the pinch REBASED (its start where the
+fingers are, at the zoom as it is — no jump when both move again). ⛔ Not a per-event test: the browser sends one finger at a time, so
+"both moved this step" never holds (found headless — the first build never zoomed). Checked headless: one finger moving → no zoom (0.60);
+both spreading → 0.60 → 0.52. `tests/proto_pinch_gate.test.ts`.
 
-**The orbit with a second finger down:** ⛔ today the orbit STOPS the moment a second finger lands (two fingers on empty space are handed
-to the pinch rule). ✅ Now: while the second finger is inside its deadband, the **first finger keeps orbiting** — no pause for a tap; the
-orbit pauses **only once the pinch starts**; when the second finger lifts, the first finger **resumes** orbiting without a new press.
+**The orbit with a second finger down** (2026-10-06): a second finger **ON the piece** — the first finger **keeps orbiting** for as long
+as it is down (moving beyond the deadband only makes it no longer a tap — ⛔ never a pinch); a second finger **OFF the piece** — a pinch:
+the orbit **stops at once** (no coast while fingers are down), and resumes with the first finger once the second lifts. Checked headless:
+a vertical spread off the piece keeps the elevation (0.84) from the second finger's landing — no jump; a tap on the piece aligns (1
+episode); the same tap off it does nothing. ~~*While the second finger is inside its deadband, the first finger keeps orbiting … the orbit
+pauses only once the pinch starts*~~ (2026-10-05) — superseded: it was the jump.
 
 **A tap counts only** if it starts AND ends while the first touch is down and orbiting; a second finger released after the first has
 lifted does nothing.

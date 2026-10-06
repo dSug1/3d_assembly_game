@@ -488,8 +488,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const lockedHolder =
     out.length === 0 && objs.length === 1 && st.held.get(objs[0]!.id) !== undefined &&
     goalLocked(st.idOf.get(st.held.get(objs[0]!.id)!.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1);
-  // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a second touch still inside its deadband (a tap, maybe) does not stop the orbit finger
-  const pendingSecond = st.orbitTap !== null && st.orbitTap.second !== null && !st.orbitTap.second.pinched && out.length === 2 && objs.length === 0;
+  // ⭐ (2026-10-06) a second touch ON the piece — never a pinch — leaves the orbit finger orbiting for as long as it is down
+  const pendingSecond = st.orbitTap !== null && st.orbitTap.second !== null && out.length === 2 && objs.length === 0;
   const orbiting = pendingSecond
     ? st.orbitTap!.orbitPointer
     : out.length === 1 && objs.length === 0
