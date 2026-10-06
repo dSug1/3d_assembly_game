@@ -10,7 +10,7 @@ import { mmToPx } from "../src/core/units";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
-describe("⭐⭐ prototype — the pinch zooms only while both fingers move", () => {
+describe("⭐⭐ prototype — the pinch zooms while a finger moves", () => {
   it("⭐⭐⭐ each finger's motion PERSISTS between its own events — the browser sends one finger at a time (found headless)", () => {
     const m = new PinchMotion(DEFAULT_CONFIG);
     const band = mmToPx(DEFAULT_CONFIG.motionDeadbandMm);
@@ -20,7 +20,8 @@ describe("⭐⭐ prototype — the pinch zooms only while both fingers move", ()
     expect(m.moving([A, B], 0)).toEqual([false, false]); // both still
     // A's event: A moves two bands; B has sent nothing — B still
     const A1 = { id: 1, last: { x: 500 + 2 * band, y: 300, t: 16 } };
-    expect(m.moving([A1, B], 16)).toEqual([true, false]); // ⛔ no zoom: B is inside its deadband
+    expect(m.moving([A1, B], 16)).toEqual([true, false]); // ⭐ A alone is moving — enough to zoom since 2026-10-06
+    expect(pinchZooms(true, false)).toBe(true);
     // B's event, the next one: B moves too — A, with no new event, is STILL MOVING (its rest window has not passed)
     const B1 = { id: 2, last: { x: 100 - 2 * band, y: 300, t: 24 } };
     expect(m.moving([A1, B1], 24)).toEqual([true, true]); // ⭐ the zoom
@@ -29,11 +30,12 @@ describe("⭐⭐ prototype — the pinch zooms only while both fingers move", ()
     expect(m.moving([A1, B1], 5000)).toEqual([false, false]);
   });
 
-  it("⭐⭐ the zoom only with BOTH moving", () => {
+  it("⭐⭐ the zoom with EITHER finger moving; both still, none", () => {
+    // ⭐ the owner, 2026-10-06: *"The zoom can be triggered by only one delta position outside its deadband"* (it was both, the same day)
     expect(pinchZooms(true, true)).toBe(true);
-    expect(pinchZooms(true, false)).toBe(false);
-    expect(pinchZooms(false, true)).toBe(false);
-    expect(pinchZooms(false, false)).toBe(false);
+    expect(pinchZooms(true, false)).toBe(true);
+    expect(pinchZooms(false, true)).toBe(true);
+    expect(pinchZooms(false, false)).toBe(false); // both still: no zoom
   });
 
   it("⭐⭐ wired: each finger's motion state at every pinch step; one STATIONARY → the pinch REBASED, no zoom; the states start at the pinch", () => {

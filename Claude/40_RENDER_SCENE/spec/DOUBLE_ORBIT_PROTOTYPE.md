@@ -559,3 +559,6 @@ were set aside (*"not satisfied"*). `1.0.59p-from1.0.59m-` → `1.0.59q-` → **
   second touch outside the piece, resting face alignment triggered by second touch tap on the piece. For desktop, no change"*). It removes
   the jump at a pinch's start (the first finger orbited while a second finger anywhere waited to be judged a tap). A second finger on the
   piece never zooms; the orbit goes on. → `RESTING_FACE_ALIGNMENT.md` §1, §4.
+* ⭐ **…and one finger moving is enough to zoom again** (`1.0.59s-`, the owner, 2026-10-06: *"The zoom can be triggered by only one delta
+  position outside its deadband (no need for two … as we have removed the uncertainty on the zoom inputs)"*): `pinchZooms` = either finger
+  MOVING; both still, no zoom. → `RESTING_FACE_ALIGNMENT.md` §4.

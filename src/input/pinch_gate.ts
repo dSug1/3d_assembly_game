@@ -1,21 +1,26 @@
 /**
- * ⭐⭐ prototype — **A PINCH ZOOMS ONLY WHILE BOTH FINGERS MOVE** (the owner, 2026-10-06: *"zoom can be triggered only if both delta
- * positions are outside deadband. If one of the two is inside deadband, no zoom"*).
+ * ⭐⭐ prototype — **A PINCH ZOOMS WHILE A FINGER MOVES** (the owner, 2026-10-06 — first *"zoom can be triggered only if both delta positions
+ * are outside deadband"*, then, the alignment tap moved onto the piece, *"The zoom can be triggered by only one delta position outside its
+ * deadband"*: see `pinchZooms`).
  * Each pinching finger has its OWN motion state — §1.1's `MotionTracker`: MOVING once it passes its deadband (`motionDeadbandMm`, mm on the
  * glass), STATIONARY again only after the rest window (derived from the device's own event interval). ⛔ Not a per-EVENT test: the browser
  * delivers each finger's move as its own event, so at any one event only one finger has just moved — a "both moved this step" test never
- * holds and the pinch would never zoom (found headless, 2026-10-06). The zoom applies only while BOTH are MOVING; otherwise the pinch is
- * REBASED (its start where the fingers are now, at the zoom as it is), so when both move again it continues from there — never a jump
- * made of what one finger did alone.
+ * holds (found headless, 2026-10-06). The zoom applies while a finger is MOVING (`pinchZooms`); with both still the pinch is REBASED (its
+ * start where the fingers are now, at the zoom as it is), so a zoom resumed later continues from there — never a jump.
  *
  * ⛔ ENGINE-FREE.
  */
 import { MotionTracker, type Sample } from "./motion";
 import type { GestureConfig } from "./gestureConfig";
 
-/** ⭐ Does this step zoom? Only with BOTH fingers MOVING. */
+/**
+ * ⭐ Does this step zoom? With EITHER finger MOVING (the owner, 2026-10-06: *"The zoom can be triggered by only one delta position outside
+ * its deadband (no need for two outside their deadbands as we have removed the uncertainty on the zoom inputs)"* — a second touch OFF the
+ * piece is always a pinch now). ⛔ It was BOTH (the same day), while a second touch anywhere could still turn out to be a tap. Both still:
+ * no zoom (the pinch rebased — jitter inside the deadbands never zooms).
+ */
 export function pinchZooms(aMoving: boolean, bMoving: boolean): boolean {
-  return aMoving && bMoving;
+  return aMoving || bMoving;
 }
 
 /**

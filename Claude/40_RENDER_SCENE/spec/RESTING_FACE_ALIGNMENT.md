@@ -122,6 +122,11 @@ STATIONARY after the device-derived rest window). Both MOVING: the zoom; one STA
 fingers are, at the zoom as it is — no jump when both move again). ⛔ Not a per-event test: the browser sends one finger at a time, so
 "both moved this step" never holds (found headless — the first build never zoomed). Checked headless: one finger moving → no zoom (0.60);
 both spreading → 0.60 → 0.52. `tests/proto_pinch_gate.test.ts`.
+⭐⭐ **AMENDED AGAIN 2026-10-06 (`1.0.59s-`) — ONE FINGER MOVING IS ENOUGH** (the owner: *"The zoom can be triggered by only one delta
+position outside its deadband (no need for two outside their deadbands as we have removed the uncertainty on the zoom inputs)"*): once the
+alignment tap moved ONTO the piece (§1), a second touch OFF it is always a pinch — the both-fingers condition guarded an ambiguity that is
+gone. `pinchZooms` is now EITHER finger MOVING; both still → no zoom, the pinch rebased (jitter inside the deadbands never zooms). The
+per-finger motion states stay (`PinchMotion`). Checked headless: one finger moving → 0.60 → 0.56.
 
 **The orbit with a second finger down** (2026-10-06): a second finger **ON the piece** — the first finger **keeps orbiting** for as long
 as it is down (moving beyond the deadband only makes it no longer a tap — ⛔ never a pinch); a second finger **OFF the piece** — a pinch:
