@@ -514,6 +514,16 @@ export interface GestureConfig {
   orbitInertiaGain: number;
   /** ⭐ Prototype: the share of the half-view the green piece is kept inside (`minGreenZoom`) — 0.9 = the central 90 % (the owner, 2026-10-02; was 0.8). */
   greenKeepInViewMargin: number;
+  /** ⭐ Prototype (`CAMERA_APPROACH_PATH.md` §7): the camera's approach path — on (1) / off; the band's four distances (m, decreasing); the rise
+   * ABOVE the normal pose (°); the swing to the RIGHT (°), landscape and portrait. */
+  pathOn: number;
+  pathStartM: number;
+  pathAboveM: number;
+  pathRightM: number;
+  pathEndM: number;
+  pathAboveDeg: number;
+  pathRightDegLandscape: number;
+  pathRightDegPortrait: number;
   /** ⭐ Prototype: WHICH piece the orbit carries — 0 the green frustum, 1 the turquoise hexagonal prism (the SCENE menu); a change respawns it as at boot. */
   orbitPieceKind: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
@@ -975,6 +985,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
   orbitPieceKind: 0, // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece"*
+  // ⭐ prototype, the owner 2026-10-06 (`CAMERA_APPROACH_PATH.md`, agreed): the band 2.7 → 2.4 → 2.1 → 1.8 m; 25° above; 50° / 20° to the right
+  pathOn: 1,
+  pathStartM: 2.7,
+  pathAboveM: 2.4,
+  pathRightM: 2.1,
+  pathEndM: 1.8,
+  pathAboveDeg: 25,
+  pathRightDegLandscape: 50,
+  pathRightDegPortrait: 20,
   greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
@@ -1124,6 +1143,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (cfg.orbitPieceKind !== 0 && cfg.orbitPieceKind !== 1) {
     throw new Error(`orbitPieceKind (${cfg.orbitPieceKind}) must be 0 (green) or 1 (turquoise).`);
+  }
+  if (cfg.pathOn !== 0 && cfg.pathOn !== 1) throw new Error(`pathOn (${cfg.pathOn}) must be 0 or 1.`);
+  if (!(cfg.pathStartM > cfg.pathAboveM && cfg.pathAboveM > cfg.pathRightM && cfg.pathRightM > cfg.pathEndM && cfg.pathEndM > 0)) {
+    throw new Error(`the camera path's distances (${cfg.pathStartM} > ${cfg.pathAboveM} > ${cfg.pathRightM} > ${cfg.pathEndM} > 0) must DECREASE.`);
+  }
+  if (!(cfg.pathAboveDeg >= 0 && cfg.pathAboveDeg <= 89) || !(cfg.pathRightDegLandscape >= 0 && cfg.pathRightDegLandscape <= 179) || !(cfg.pathRightDegPortrait >= 0 && cfg.pathRightDegPortrait <= 179)) {
+    throw new Error(`the camera path's angles must be in [0, 89]° above and [0, 179]° to the right.`);
   }
   if (!(cfg.greenKeepInViewMargin > 0 && cfg.greenKeepInViewMargin <= 1)) {
     throw new Error(`greenKeepInViewMargin (${cfg.greenKeepInViewMargin}) must be in (0, 1].`);

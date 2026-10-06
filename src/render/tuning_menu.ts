@@ -131,6 +131,20 @@ export function installTuningMenu(st: SceneState): void {
         },
         {
           // ⭐ Where the camera sits relative to the green piece, and the zoom it boots at.
+          // ⭐ prototype, the owner 2026-10-06 (`CAMERA_APPROACH_PATH.md` §7): the path once the alignment latches it beyond the band
+          title: "CAMERA APPROACH PATH",
+          sliders: [
+            tunable(st, "approach path (0 / 1)", "pathOn", 0, 1, 1),
+            tunable(st, "path start: piece distance (m)", "pathStartM", 1, 3.5, 0.05),
+            tunable(st, "ABOVE at piece distance (m)", "pathAboveM", 1, 3.5, 0.05),
+            tunable(st, "RIGHT at piece distance (m)", "pathRightM", 1, 3.5, 0.05),
+            tunable(st, "path end: piece distance (m)", "pathEndM", 0.5, 3.5, 0.05),
+            tunable(st, "above: rise over the normal pose (°)", "pathAboveDeg", 0, 89, 1),
+            tunable(st, "right: swing, landscape (°)", "pathRightDegLandscape", 0, 179, 1),
+            tunable(st, "right: swing, portrait (°)", "pathRightDegPortrait", 0, 179, 1),
+          ],
+        },
+        {
           title: "CAMERA OFFSET",
           sliders: [
             bootZoomSlider(st),

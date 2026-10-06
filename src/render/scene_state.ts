@@ -445,6 +445,10 @@ export interface SceneState {
   /** ⭐ Prototype (`1.0.59q-`): the face holding the pink ring — at boot the blue face toward the green piece, then the face a press on a
    * placed piece moves the target to. Its edges give the alignment's MATING edge. */
   pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;
+  /** ⭐ Prototype (`CAMERA_APPROACH_PATH.md`): the path's latch — the side it swings to and the swing, frozen at the latch; `null` unlatched. */
+  camPath: { readonly side: 1 | -1; readonly rightDeg: number } | null;
+  /** ⭐ …and where it stands this frame (the HUD): `t` (0–3), the share of the angles the frame allowed, the rise and the swing applied. */
+  camPathNow: { readonly t: number; readonly share: number; readonly upDeg: number; readonly rightDeg: number } | null;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;

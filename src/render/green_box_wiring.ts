@@ -13,6 +13,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
+import { pathAngles, pathCamera, pathParam, pieceFrame, toAround } from "../input/camera_path";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -206,6 +207,75 @@ function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; rea
   };
 }
 
+/**
+ * ⭐⭐ prototype — **THE CAMERA PATH'S LATCH** (`CAMERA_APPROACH_PATH.md` §2; the owner, 2026-10-06): at the resting-face alignment, the
+ * piece beyond the band's start → LATCHED, with the side the camera swings to (the camera's right at this moment) and the swing for the
+ * screen's orientation now (landscape / portrait), both frozen; inside the band → NO path (Q1). A new alignment latches afresh (Q2).
+ */
+function latchCameraPath(st: SceneState): void {
+  const box = st.greenBox;
+  if (box === null) return;
+  const c = st.orbitCentreM;
+  const piece: Vec3 = [box.position.x, box.position.y, box.position.z];
+  const centre: Vec3 = [c.x, c.y, c.z];
+  const d = Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]);
+  const f = pieceFrame(centre, piece, 1);
+  if (!(d > st.cfg.pathStartM) || f === null) {
+    st.camPath = null;
+    return;
+  }
+  const r = st.camera.getDirection(new Vector3(1, 0, 0));
+  const side: 1 | -1 = r.x * f.right[0] + r.y * f.right[1] + r.z * f.right[2] >= 0 ? 1 : -1;
+  const landscape = st.canvas.clientWidth >= st.canvas.clientHeight;
+  st.camPath = { side, rightDeg: landscape ? st.cfg.pathRightDegLandscape : st.cfg.pathRightDegPortrait };
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE CAMERA ON ITS APPROACH PATH** (`CAMERA_APPROACH_PATH.md` §3–§6), this frame, or `null` (today's camera: not
+ * latched, switched off, or the piece outside the band). From the piece's distance `d` to the orbit centre (`pathParam`): the base pose
+ * goes from the LIVE normal one (its leash, its offsets) toward the IDEAL one (straight behind the piece at the zoom's distance, no offsets)
+ * by `w`, the rise and the swing are applied (`pathAngles`), clamped to keep the piece in the frame (`pathCamera`, Q3). The distance to
+ * the piece is kept; the camera looks at the orbit centre (the caller's `setTarget`).
+ */
+function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vector3): Vector3 | null {
+  const lp = st.camPath;
+  const cfg = st.cfg;
+  if (lp === null || cfg.pathOn !== 1) {
+    if (st.camPathNow !== null) st.hudDirty = true;
+    st.camPathNow = null;
+    return null;
+  }
+  const centre: Vec3 = [c.x, c.y, c.z];
+  const piece: Vec3 = [p.x, p.y, p.z];
+  const d = Math.hypot(piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]);
+  const t = pathParam(d, { startM: cfg.pathStartM, aboveM: cfg.pathAboveM, rightM: cfg.pathRightM, endM: cfg.pathEndM });
+  const f = pieceFrame(centre, piece, lp.side);
+  if (t === null || f === null) {
+    if (st.camPathNow !== null) st.hudDirty = true;
+    st.camPathNow = null;
+    return null;
+  }
+  const live = toAround([normal.x, normal.y, normal.z], piece, f);
+  const rel = [piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]];
+  const idealElev = Math.atan2(rel[1]!, Math.hypot(rel[0]!, rel[2]!));
+  const a = pathAngles(t, cfg.pathAboveDeg, lp.rightDeg);
+  const gap = cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.zoom);
+  const base = {
+    elev: live.elev + (idealElev - live.elev) * a.w,
+    azim: live.azim * (1 - a.w),
+    r: live.r + (gap - live.r) * a.w,
+  };
+  const aspect = st.canvas.clientHeight > 0 ? st.canvas.clientWidth / st.canvas.clientHeight : 1;
+  const r = pathCamera(base, a.upDeg, a.rightDeg, piece, centre, f, { halfVRad: st.camera.fov / 2, aspect, margin: PATH_FRAME_MARGIN });
+  st.camPathNow = { t, share: r.share, upDeg: a.upDeg * r.share, rightDeg: a.rightDeg * r.share };
+  st.hudDirty = true;
+  return new Vector3(r.at[0], r.at[1], r.at[2]);
+}
+
+/** ⭐ The share of the half field of view the piece's centre must stay inside on the path (`CAMERA_APPROACH_PATH.md` §4: 90 %). */
+const PATH_FRAME_MARGIN = 0.9;
+
 /** ⭐ The resting-face alignment's single turn, ms (`RESTING_FACE_ALIGNMENT.md` §2: *"snap in one single rotation in 125 ms"*). */
 const REST_ALIGN_MS = 125;
 
@@ -243,6 +313,7 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
   }
   st.restAlign = { from: q, t0: now, base };
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
+  latchCameraPath(st); // ⭐ `CAMERA_APPROACH_PATH.md` §2: beyond the band's start it latches; inside it, no path (Q1)
   st.hudDirty = true;
   return true;
 }
@@ -317,6 +388,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.restAlign = null;
     st.orbitHeadingPrev = null;
     st.restAligned = false;
+    st.camPath = null; // ⭐ `CAMERA_APPROACH_PATH.md` Q2: a respawn unlatches
   }
   st.hudDirty = true;
 }
@@ -553,7 +625,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom),
   );
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
-  st.camera.setPosition(new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]));
+  // ⭐⭐ `CAMERA_APPROACH_PATH.md`: once latched, inside the band, the camera on its approach path (`cameraPathPosition`) — else today's
+  const normalCam = new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]);
+  st.camera.setPosition(cameraPathPosition(st, normalCam, c, box.position) ?? normalCam);
   st.camera.setTarget(c.clone());
   // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
   // the blend in progress), for the HUD's `green` line (the owner, 2026-10-02).
