@@ -5,6 +5,7 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { pinchAllowed } from "../input/pinch";
+import { pinchZooms } from "../input/pinch_gate";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, CameraResetAnimation, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
@@ -182,6 +183,15 @@ export function pinchPair(st: SceneState) : [Sample, Sample] | null {
 export function updatePinch(st: SceneState) {
   const p = pinchPair(st);
   if (!p) return;
+  // ⭐⭐ prototype (the owner, 2026-10-06: *"zoom can be triggered only if both delta positions are outside deadband. If one of the two is
+  // inside deadband, no zoom"*): each finger's OWN motion state (`PinchMotion`, §1.1's tracker per finger — it persists between that
+  // finger's events); one STATIONARY → the pinch REBASED, no zoom
+  const moving = st.pinchMotion.moving(st.router.outside(), performance.now());
+  if (!pinchZooms(moving[0] === true, moving[1] === true)) {
+    st.pinch.begin(p[0], p[1]);
+    st.zoomAtPinchStart = st.zoom;
+    return;
+  }
   const factor = st.pinch.scale(p[0], p[1]);
   if (factor === null) return; // still inside the deadband: leave the camera alone
   st.zoom = st.zoomAtPinchStart * factor;

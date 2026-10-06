@@ -342,6 +342,8 @@ export function installPointerHandler(st: SceneState): void {
         const p = pinchPair(st);
         if (p) {
           st.pinch.begin(p[0], p[1]);
+          // ⭐ each finger's motion state starts here (`pinch_gate.ts`: the zoom only while BOTH are MOVING)
+          st.pinchMotion.begin(st.router.outside());
           // ⚠ Captured HERE, once. The zoom is a ratio against the gesture's start,
           // never an accumulation — so a pinch out and back returns exactly where it
           // began. See input/pinch.ts.

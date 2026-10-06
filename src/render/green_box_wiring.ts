@@ -45,8 +45,10 @@ function piecesFacesOf(m: Mesh): number {
   return topo === null ? 0 : pieceFaces(topo.positions, topo.faces).length;
 }
 
-/** ⭐ The yellow of a resting face. */
-const RESTING_YELLOW = new Color3(1, 0.85, 0.1);
+/** ⭐ The pink — brighter since 2026-10-02 (it was 1, 0.42, 0.78). */
+const PINK = new Color3(1, 0.6, 0.9);
+/** ⭐ The colour of a resting face — the PINK ring's (the owner, 2026-10-06: *"resting face highlight in pink (same as pink ring) instead of yellow"*; it was yellow). */
+const RESTING_COLOUR = PINK;
 /** ⭐ Its fill's opacity — the face still visible under it, as the other face fills. */
 const RESTING_ALPHA = 0.6;
 
@@ -98,7 +100,7 @@ function restingOf(
   data.indices = [...indices, ...indices.slice().reverse()]; // ⚠ double-sided: it must read from either side
   data.applyToMesh(fill, false);
   const mat = new StandardMaterial(`${m.name}-resting-face-mat`, st.scene);
-  mat.emissiveColor = RESTING_YELLOW.clone();
+  mat.emissiveColor = RESTING_COLOUR.clone();
   mat.disableLighting = true;
   mat.backFaceCulling = false;
   mat.alpha = RESTING_ALPHA;
@@ -132,7 +134,7 @@ function restingXray(st: SceneState, m: Mesh, fill: Mesh, data: VertexData): voi
   const twin = new Mesh(`${m.name}-resting-face-xray`, st.scene);
   data.applyToMesh(twin, false);
   const tm = new StandardMaterial(`${m.name}-resting-face-xray-mat`, st.scene);
-  tm.emissiveColor = RESTING_YELLOW.clone();
+  tm.emissiveColor = RESTING_COLOUR.clone();
   tm.disableLighting = true;
   tm.backFaceCulling = false;
   tm.alpha = RESTING_XRAY_ALPHA;
@@ -374,8 +376,6 @@ export function createGreenBox(st: SceneState): void {
   st.pinkRing = ring;
 }
 
-/** ⭐ The pink — brighter since 2026-10-02 (it was 1, 0.42, 0.78). */
-const PINK = new Color3(1, 0.6, 0.9);
 /**
  * ⭐ The band's loops, as scales of the ring: the ring is `GIZMO_RING_PX` (11 px) across, so 1 px of radius is 2/11 ≈ 0.18 of its
  * radius; loops ±1 px around it, half a pixel apart — a ~3 px band centred on the old line.

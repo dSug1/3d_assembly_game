@@ -91,6 +91,7 @@ import { alignedFaceOf } from "../core/face_pick";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler, orbitRightTap } from "./pointer_wiring";
+import { PinchMotion } from "../input/pinch_gate";
 import { startRenderLoop } from "./render_loop";
 import { LevelEnd, type LevelResult } from "../core/level_end";
 import { playVolumeOf } from "../core/play_volume";
@@ -804,6 +805,7 @@ export function createScene(
   })();
 
   st.zoom = st.orbitStartZoom;
+  st.pinchMotion = new PinchMotion(st.cfg);
   st.zoomAtPinchStart = st.orbitStartZoom;
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.

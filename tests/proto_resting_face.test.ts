@@ -198,8 +198,12 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(loop).toMatch(/goalCommitFrame\(st\);\s*\/\/[^\n]*\n\s*restingFaceFrame\(st\);/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const restingFace = resting\.winner === null \? null : chooseInGroup\(resting\.winner, greenBootOrientation\(st\.sceneSpec\.id\)\);/);
-    expect(w).toMatch(/const RESTING_YELLOW = new Color3\(1, 0\.85, 0\.1\);/);
-    expect(w).toMatch(/mat\.emissiveColor = RESTING_YELLOW\.clone\(\);/);
+    // ⭐ 2026-10-06: PINK, the pink ring's own constant (it was yellow) — the fill and its see-through twin
+    expect(w).toMatch(/const RESTING_COLOUR = PINK;/);
+    expect(w).not.toMatch(/RESTING_YELLOW/);
+    expect(w).toMatch(/ mat\.emissiveColor = RESTING_COLOUR\.clone\(\);/);
+    expect(w).toMatch(/tm\.emissiveColor = RESTING_COLOUR\.clone\(\);/);
+    expect(w.indexOf("const PINK = new Color3(1, 0.6, 0.9);")).toBeLessThan(w.indexOf("const RESTING_COLOUR = PINK;"));
     expect(w).toMatch(/\.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/\.\.\.restingOf\(st, hex\) \}\);/);
     expect(w).toMatch(/pinkRingFrame\(st\);\s*counterYawFrame\(st\);\s*restAlignFrame\(st, now\);\s*restingFillFrame\(st\);/);
