@@ -10,7 +10,8 @@
  *   before, dx no longer moves it;
  * - ⭐⭐ the CAMERA DOES NOT MOVE at the alignment (the owner: *"Why not simply slerp rotating the view axis of the camera to align with the
  *   piece and catch the orbit from there?"*): its VIEW AXIS slerps from the orbit centre to the piece, by FINGER TRAVEL over
- *   `orbitBlendDistanceMm` (the scene's own centre move: *"the view-axis slerp runs with finger travel like the centre move"*); it orbits
+ *   `pieceOrbitSlerpMm` (*"the view-axis slerp runs with finger travel like the centre move"* — then *"make the camera slerp faster (put
+ *   a slider)"*: its own travel, 10 mm; it shared the centre move's 30 mm); it orbits
  *   the piece FROM WHERE IT IS — its angles around the piece the rings' (dx yaw, dy pitch, the offsets) plus the difference it had at the
  *   alignment, that difference FADING OUT with finger travel over `fadeMm` (*"fade out the starting angle offset"*); its distance the one
  *   it had, scaled as the piece comes in (`scaledGap`).

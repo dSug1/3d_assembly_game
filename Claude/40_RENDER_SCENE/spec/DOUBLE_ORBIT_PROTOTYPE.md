@@ -572,8 +572,8 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
 * ⭐⭐⭐ **THE ORBIT AROUND THE PIECE** → [`PIECE_ORBIT.md`](PIECE_ORBIT.md) (`d3e0c07`, `68b4584`, `f98b584`): from the first resting-face
   alignment the camera orbits the PIECE — dx turns the camera around it (the piece stays), dy moves the camera through the rings' pitches
   and pushes the piece on a straight line through the pink gizmo, which stays where it is. At the alignment the camera does not move: its
-  view axis slerps to the piece with finger travel, and the difference from the rings' angles fades out (`pieceOrbitFadeMm`). The gap
+  view axis slerps to the piece with finger travel (`pieceOrbitSlerpMm`, 10 mm), and the difference from the rings' angles fades out (`pieceOrbitFadeMm`). The gap
   scales from the alignment's distance to x % at the rings' closest (`pieceOrbitGapMinPct`). The yaw is slower by ONE game-wide gain
   computed from the sliders (×0.74 today). ⛔ No way back to the centre yet but a respawn.
-* ⭐ **CAMERA › CAMERA ORBIT is renamed CAMERA ORBIT AROUND CENTER**; a new **CAMERA ORBIT AROUND PIECE** holds the two sliders above.
+* ⭐ **CAMERA › CAMERA ORBIT is renamed CAMERA ORBIT AROUND CENTER**; a new **CAMERA ORBIT AROUND PIECE** holds three sliders: the gap %, the fade-out and the slerp.
 * ⭐ The HUD's `camera` line reads `r=… to the piece` in that mode; the `green` line `around the piece, yaw gain ×…`.

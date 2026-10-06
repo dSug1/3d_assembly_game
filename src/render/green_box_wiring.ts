@@ -569,7 +569,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ prototype (2026-10-06): AROUND THE PIECE (`piece_orbit.ts`) — the camera does not move at the alignment; it orbits the piece from
   // where it is: the rings' angles around it (`cameraOffset`'s, dx yaw, dy pitch, the offsets) plus the starting difference, FADING OUT
   // with finger travel (`pieceOrbitFadeMm`); its distance the one it had, scaled as the piece comes in (`scaledGap`); its VIEW AXIS
-  // slerped from the orbit centre to the piece with finger travel (`orbitBlendDistanceMm`, as the centre move).
+  // slerped from the orbit centre to the piece with finger travel (`pieceOrbitSlerpMm`, its own slider: *"make the camera slerp faster"*).
   let camAt: Vec3;
   let lookAt: Vec3;
   if (po === null) {
@@ -580,7 +580,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
     const gapPiece = scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct);
     camAt = pieceCamera(po, pp, ring, gapPiece, cfg.pieceOrbitFadeMm);
-    const ax = viewAxis(camAt, [c.x, c.y, c.z], pp, pieceOrbitProgress(po, cfg.orbitBlendDistanceMm));
+    const ax = viewAxis(camAt, [c.x, c.y, c.z], pp, pieceOrbitProgress(po, cfg.pieceOrbitSlerpMm));
     lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
   }
   // ⭐⭐ prototype (2026-10-06): *"the gain shall be unique during the whole game, and computed based on the camera position dictated by

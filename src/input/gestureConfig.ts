@@ -474,6 +474,7 @@ export interface GestureConfig {
   cameraYawOffsetDeg: number;
   pieceOrbitGapMinPct: number;
   pieceOrbitFadeMm: number;
+  pieceOrbitSlerpMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
   /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
@@ -955,6 +956,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pieceOrbitGapMinPct: 50,
   // ⭐ prototype, the owner 2026-10-06: *"fade out the starting angle offset"* — over this much finger travel (`pieceCamera`)
   pieceOrbitFadeMm: 60,
+  // ⭐ prototype, the owner 2026-10-06: *"make the camera slerp faster (put a slider)"* — the view axis turns to the piece over this much
+  // finger travel (it shared the centre move's `orbitBlendDistanceMm`, 30 mm)
+  pieceOrbitSlerpMm: 10,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)

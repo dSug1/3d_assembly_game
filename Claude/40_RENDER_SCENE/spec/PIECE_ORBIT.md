@@ -1,7 +1,7 @@
 # The orbit around the piece — specification (prototype)
 
 > **Status:** ✅ BUILT 2026-10-06 on `1.0.59u-from1.0.59s-Orbit-around-piece` — commits `d3e0c07` (*orbit center on piece*), `68b4584` (*orbit around the
-> piece*), `f98b584` (*frozen gain*). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free), `render/green_box_wiring.ts`
+> piece*), `f98b584` (*frozen gain*); the slerp's own slider after. ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free), `render/green_box_wiring.ts`
 > (`alignRestingFace`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`), `render/pointer_wiring.ts` (`orbitDragStep`, the finger
 > travel); vectors `tests/proto_piece_orbit.test.ts`.
 > **Builds on:** [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md) (the tap that starts it) and the double orbit
@@ -36,8 +36,10 @@ The owner: *"Why not simply slerp rotating the view axis of the camera to align 
 *"the view-axis slerp runs with finger travel like the centre move"* and *"fade out the starting angle offset"*.
 
 - **On the alignment's frame nothing moves** — the camera where it was, looking where it looked.
-- **The VIEW AXIS slerps** from the orbit centre to the piece, from where the camera is, by **finger travel** over `orbitBlendDistanceMm`
-  (30 mm, the scene's own centre move; smoothstep) — `viewAxis`.
+- **The VIEW AXIS slerps** from the orbit centre to the piece, from where the camera is, by **finger travel** over `pieceOrbitSlerpMm`
+  (**10 mm**; smoothstep) — `viewAxis`. ⭐ The owner: *"make the camera slerp faster (put a slider)"* — it had shared the scene's centre
+  move's `orbitBlendDistanceMm` (30 mm). ⛔ A fixed-time slerp (400 ms, then a quintic ease) was built and DISCARDED by the owner the same
+  day; the slerp stays on finger travel.
 - **The orbit starts from where the camera is**: at the alignment, the camera's angles around the piece are recorded AGAINST the rings'
   angles (`startPieceOrbit` → `dAzRad`, `dElRad`). The camera then sits at the rings' angles (`cameraOffset`'s: the rig's yaw + the yaw
   offset, the ring pitch + the pitch offset) **plus that difference, fading out with finger travel** over `pieceOrbitFadeMm` (60 mm) —
@@ -86,7 +88,7 @@ sliders values"*.
 |---|---|---|
 | gap at the closest ring (% of the gap at alignment) — `pieceOrbitGapMinPct` | 50 | CAMERA › **CAMERA ORBIT AROUND PIECE** |
 | starting angle offset fade-out (mm of finger travel, 0 = at once) — `pieceOrbitFadeMm` | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
-| centre blend (mm) — `orbitBlendDistanceMm` (the view-axis slerp's travel) | 30 | CAMERA › CAMERA ORBIT AROUND CENTER |
+| view axis slerp to the piece (mm of finger travel, 0 = at once) — `pieceOrbitSlerpMm` | 10 | CAMERA › CAMERA ORBIT AROUND PIECE |
 
 ⭐ The owner: *"x% slider shall be in a CAMERA/CAMERA ORBIT AROUND PIECE menu"*, *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT
 AROUND CENTER"*. The HUD's `camera` line: `r=` is the distance **to the piece** in this mode (the camera looks along an axis, not at a

@@ -198,7 +198,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/: pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\);/);
     expect(w).toMatch(/const gapPiece = scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
     expect(w).toMatch(/camAt = pieceCamera\(po, pp, ring, gapPiece, cfg\.pieceOrbitFadeMm\);/);
-    expect(w).toMatch(/const ax = viewAxis\(camAt, \[c\.x, c\.y, c\.z\], pp, pieceOrbitProgress\(po, cfg\.orbitBlendDistanceMm\)\);/);
+    expect(w).toMatch(/const ax = viewAxis\(camAt, \[c\.x, c\.y, c\.z\], pp, pieceOrbitProgress\(po, cfg\.pieceOrbitSlerpMm\)\);/); // its own slider (*"make the camera slerp faster"*)
     expect(w).toMatch(/st\.camera\.setPosition\(new Vector3\(camAt\[0\], camAt\[1\], camAt\[2\]\)\);\s*st\.camera\.setTarget\(new Vector3\(lookAt\[0\], lookAt\[1\], lookAt\[2\]\)\);/);
     // ⭐⭐ the owner: *"the gain shall be unique during the whole game, and computed based on the camera position dictated by the sliders
     // values"* — recomputed ONLY when its sliders change (the key), from the sliders' camera (the boot zoom, not the live one)
@@ -214,10 +214,12 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
     expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \? st\.pieceYawGain : 1;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);
-    expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitFadeMm]).toEqual([50, 60]);
+    expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitFadeMm, DEFAULT_CONFIG.pieceOrbitSlerpMm]).toEqual([50, 60, 10]);
+    expect(DEFAULT_CONFIG.pieceOrbitSlerpMm).toBeLessThan(DEFAULT_CONFIG.orbitBlendDistanceMm); // FASTER than the centre move it shared
     const menu = code("render/tuning_menu.ts");
     expect(menu).toContain('"pieceOrbitGapMinPct", 10, 100, 5)');
     expect(menu).toContain('"pieceOrbitFadeMm", 0, 300, 5)');
+    expect(menu).toContain('"pieceOrbitSlerpMm", 0, 100, 1)');
     // ⭐ the pink ring stays at the old centre: it still reads the centre blend's target, which nothing here retargets
     expect(w).toMatch(/const t = st\.centreBlend\.targetM;/);
     expect(w.slice(w.indexOf("export function alignRestingFace"), w.indexOf("function counterYawFrame"))).not.toMatch(/retarget/);
