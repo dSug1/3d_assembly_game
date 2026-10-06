@@ -158,7 +158,8 @@ export function paint(st: SceneState) {
     camera:
       `c=(${st.orbitCentreM.x.toFixed(2)},${st.orbitCentreM.y.toFixed(2)},${st.orbitCentreM.z.toFixed(2)}) ` +
       `${st.centreBlend.isBlending ? `→${(st.centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
-      `r=${st.camera.radius.toFixed(3)}m zoom=${st.zoom.toFixed(2)}${st.greenBox !== null ? `(≥${st.greenZoomMin.toFixed(2)})` : ""} ` +
+      // ⭐ prototype (2026-10-06): around the piece the camera looks along an axis, not at a target — r is its distance to the PIECE
+      `r=${(st.pieceOrbit !== null && st.greenBox !== null ? st.camera.position.subtract(st.greenBox.position).length() : st.camera.radius).toFixed(3)}m${st.pieceOrbit !== null ? " to the piece" : ""} zoom=${st.zoom.toFixed(2)}${st.greenBox !== null ? `(≥${st.greenZoomMin.toFixed(2)})` : ""} ` +
       `elev=${st.orbit.elevation.toFixed(2)}${st.orbit.atLimit ? "⛔LIMIT" : ""}` +
       `${st.pinch.isZooming ? "  ZOOMING" : ""}` +
       // ⭐ prototype (green box): the orbit swings kicked so far — it climbs at each start, resume or turn of an orbit drag.

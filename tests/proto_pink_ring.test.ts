@@ -39,7 +39,7 @@ describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
     // rule from the first frame; the boot exemption is switched off (the parameter stays, `true` would restore it)
     expect(w).toMatch(/const v = pinkRingVisibility\(hits, dist, PINK_EPS_M\);/);
     expect(w).not.toMatch(/targetSetByPress/);
-    const setTarget = w.indexOf("st.camera.setTarget(new Vector3(cc[0], cc[1], cc[2]));");
+    const setTarget = w.indexOf("st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));");
     expect(setTarget).toBeGreaterThan(0); // ⚠ the line must EXIST, or the order below passes on -1
     expect(w.indexOf("pinkRingFrame(st);")).toBeGreaterThan(setTarget);
   });

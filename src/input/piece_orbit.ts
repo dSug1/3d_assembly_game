@@ -1,41 +1,73 @@
 /**
  * ⭐⭐⭐ prototype — **THE ORBIT AROUND THE PIECE** (the owner, 2026-10-06: *"when resting face is aligned, the orbit center moves to the
  * piece, the rest orbit around the piece"*; then: the piece *"still pushed by dy"*; dx / dy drive the *"camera on rings"* — dx turns it
- * around the piece, dy moves it through the rings' pitches — *"dy also pushes"* the piece toward the pink gizmo; the move *"the same as
- * when the orbit center is moved in the scene (camera catches up while orbiting, etc.)"*; the pink ring *"stays at the old centre"*; back
- * *"never automatically"*).
+ * around the piece, dy moves it through the rings' pitches — *"dy also pushes"* the piece toward the pink gizmo; the pink ring *"stays at
+ * the old centre"*; back *"never automatically"*).
  *
  * From the resting-face alignment on:
  * - the PIECE is pushed along a STRAIGHT LINE through the orbit centre (the pink gizmo) — the direction it had at the alignment, frozen —
  *   at the distance the rings give it at the rig's ring parameter (`orbitOffset`'s length, as today): dy moves it exactly as fast as
  *   before, dx no longer moves it;
- * - the CAMERA's orbit centre glides from the old centre to the piece, by FINGER TRAVEL over `orbitBlendDistanceMm` (eased — the scene's
- *   own centre move, `OrbitCentreBlend`), and then follows the piece; the camera orbits it at the rings' angles (dx yaw, dy pitch) and
- *   looks at it.
+ * - ⭐⭐ the CAMERA DOES NOT MOVE at the alignment (the owner: *"Why not simply slerp rotating the view axis of the camera to align with the
+ *   piece and catch the orbit from there?"*): its VIEW AXIS slerps from the orbit centre to the piece, by FINGER TRAVEL over
+ *   `orbitBlendDistanceMm` (the scene's own centre move: *"the view-axis slerp runs with finger travel like the centre move"*); it orbits
+ *   the piece FROM WHERE IT IS — its angles around the piece the rings' (dx yaw, dy pitch, the offsets) plus the difference it had at the
+ *   alignment, that difference FADING OUT with finger travel over `fadeMm` (*"fade out the starting angle offset"*); its distance the one
+ *   it had, scaled as the piece comes in (`scaledGap`).
  *
  * ⛔ ENGINE-FREE.
  */
 import type { Vec3 } from "../core/vec";
 
-/** ⭐ The mode's state: the frozen push direction (unit, from the orbit centre out to the piece), where the camera's centre glides from,
- * the finger travel fed to that glide so far, and — at the alignment — the camera's distance from the piece (`gap0M`) and the piece's
- * distance from the centre (`ring0M`), the gap's reference (`scaledGap`). */
+/** ⭐ The mode's state: the frozen push direction (unit, from the orbit centre out to the piece), the finger travel since the alignment,
+ * and — at the alignment — the camera's distance from the piece (`gap0M`), the piece's distance from the centre (`ring0M`), and the
+ * camera's angles around the piece MINUS the rings' (`dAzRad`, `dElRad`: the starting offset that fades out). */
 export interface PieceOrbit {
   readonly dir: Vec3;
-  readonly fromM: Vec3;
   readonly travelledMm: number;
   readonly gap0M: number;
   readonly ring0M: number;
+  readonly dAzRad: number;
+  readonly dElRad: number;
 }
 
-/** ⭐ At the alignment: the push direction from the orbit centre to the piece (`fallbackDir` when the piece sits ON the centre), the
- * glide starting at the orbit centre itself — so nothing moves on the frame it starts — and the camera's distance from the piece then. */
-export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, camera: Vec3): PieceOrbit {
+/** ⭐ Angles around a point of a direction from it — azimuth in the x–z plane (`cameraOffset`'s convention: x = cos az, z = sin az) and
+ * elevation. */
+export interface AroundAngles {
+  readonly az: number;
+  readonly el: number;
+}
+
+/** ⭐ A direction's angles (it need not be unit). */
+export function anglesOf(d: Vec3): AroundAngles {
+  const n = Math.hypot(d[0], d[1], d[2]) || 1;
+  return { az: Math.atan2(d[2], d[0]), el: Math.asin(Math.max(-1, Math.min(1, d[1] / n))) };
+}
+
+/** ⭐ …and back: the unit direction at those angles. */
+export function dirOf(a: AroundAngles): Vec3 {
+  const c = Math.cos(a.el);
+  return [c * Math.cos(a.az), Math.sin(a.el), c * Math.sin(a.az)];
+}
+
+const wrap = (a: number): number => {
+  const w = a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+  return w <= -Math.PI ? w + 2 * Math.PI : w;
+};
+
+/**
+ * ⭐ At the alignment: the push direction from the orbit centre to the piece (`fallbackDir` when the piece sits ON the centre); the camera's
+ * distance from the piece; and its angles around the piece against the rings' (`ring`) — so the camera is EXACTLY where it was on the
+ * frame the mode starts.
+ */
+export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, camera: Vec3, ring: AroundAngles): PieceOrbit {
   const v: Vec3 = [piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]];
   const n = Math.hypot(v[0], v[1], v[2]);
   const dir: Vec3 = n > 1e-9 ? [v[0] / n, v[1] / n, v[2] / n] : fallbackDir;
-  const gap0M = Math.hypot(camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]);
-  return { dir, fromM: centre, travelledMm: 0, gap0M, ring0M: n };
+  const rel: Vec3 = [camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]];
+  const gap0M = Math.hypot(rel[0], rel[1], rel[2]);
+  const a = anglesOf(rel);
+  return { dir, travelledMm: 0, gap0M, ring0M: n, dAzRad: wrap(a.az - ring.az), dElRad: a.el - ring.el };
 }
 
 /** ⭐ One step of finger travel, millimetres (the drag that drives the orbit). */
@@ -43,7 +75,7 @@ export function advancePieceOrbit(p: PieceOrbit, travelMm: number): PieceOrbit {
   return travelMm > 0 ? { ...p, travelledMm: p.travelledMm + travelMm } : p;
 }
 
-/** ⭐ The glide's share, eased in and out (smoothstep, as `OrbitCentreBlend`); a budget of zero is no glide. */
+/** ⭐ A share of finger travel over `budgetMm`, eased in and out (smoothstep, as `OrbitCentreBlend`); a budget of zero is all at once. */
 export function pieceOrbitProgress(p: PieceOrbit, budgetMm: number): number {
   if (budgetMm <= 0) return 1;
   const t = Math.min(1, p.travelledMm / budgetMm);
@@ -55,10 +87,32 @@ export function pushedPiece(centre: Vec3, dir: Vec3, distM: number): Vec3 {
   return [centre[0] + dir[0] * distM, centre[1] + dir[1] * distM, centre[2] + dir[2] * distM];
 }
 
-/** ⭐ The camera's orbit centre: from where the glide started to the piece AS IT IS NOW — so once there it follows the piece. */
-export function cameraCentre(p: PieceOrbit, piece: Vec3, budgetMm: number): Vec3 {
-  const t = pieceOrbitProgress(p, budgetMm);
-  return [p.fromM[0] + (piece[0] - p.fromM[0]) * t, p.fromM[1] + (piece[1] - p.fromM[1]) * t, p.fromM[2] + (piece[2] - p.fromM[2]) * t];
+/** ⭐⭐ The camera around the piece: at the rings' angles plus the starting offset still left (it fades out over `fadeMm` of finger
+ * travel), `gapM` from it. ⛔ The elevation held inside ±89° (as `cameraOffset`). */
+export function pieceCamera(p: PieceOrbit, piece: Vec3, ring: AroundAngles, gapM: number, fadeMm: number): Vec3 {
+  const left = 1 - pieceOrbitProgress(p, fadeMm);
+  const lim = (89 * Math.PI) / 180;
+  const d = dirOf({ az: ring.az + p.dAzRad * left, el: Math.max(-lim, Math.min(lim, ring.el + p.dElRad * left)) });
+  return [piece[0] + d[0] * gapM, piece[1] + d[1] * gapM, piece[2] + d[2] * gapM];
+}
+
+/** ⭐⭐ The camera's VIEW AXIS: slerped from toward the orbit centre (`t` 0) to toward the piece (`t` 1), from where the camera is — a unit
+ * direction. */
+export function viewAxis(camera: Vec3, centre: Vec3, piece: Vec3, t: number): Vec3 {
+  const unit = (v: Vec3): Vec3 => {
+    const n = Math.hypot(v[0], v[1], v[2]) || 1;
+    return [v[0] / n, v[1] / n, v[2] / n];
+  };
+  const a = unit([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]);
+  const b = unit([piece[0] - camera[0], piece[1] - camera[1], piece[2] - camera[2]]);
+  const k = Math.min(1, Math.max(0, t));
+  const cos = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
+  const om = Math.acos(cos);
+  if (om < 1e-6) return b;
+  const s = Math.sin(om);
+  const wa = Math.sin((1 - k) * om) / s;
+  const wb = Math.sin(k * om) / s;
+  return unit([a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb]);
 }
 
 /**
@@ -120,23 +174,53 @@ export function meanSweep(a: { readonly cam: Vec3; readonly look: Vec3 }, b: { r
 }
 
 /**
- * ⭐⭐⭐ prototype — **THE YAW GAIN AROUND THE PIECE, COMPUTED** (the owner, 2026-10-06: *"lower gain while orbiting. Compute the lower gain
- * based on the geometry and the parameters already set by slider (camera position, etc.)"*). Orbiting the PIECE, close to the camera, the
- * rest of the scene SLIDES across the screen, two to three times what it did turning in place about the centre — the same smoothing, so
- * larger steps per frame. The gain is the ratio of the scene's mean sweep for one small yaw step about the CENTRE (the camera where the
- * rings and its sliders put it: the piece's distance + the full gap, the yaw and pitch offsets) to that same step about the PIECE (the
- * camera at its own gap) — so a millimetre of finger slides the scene as far as it did. `pose(mode, yaw)` gives each camera; ⛔ never above
- * 1 (it only LOWERS), never below `floor`.
+ * ⭐⭐⭐ prototype — **THE YAW GAIN AROUND THE PIECE, ONE FOR THE WHOLE GAME** (the owner, 2026-10-06: *"lower gain while orbiting. Compute the
+ * lower gain based on the geometry and the parameters already set by slider (camera position, etc.)"* — then *"the gain shall be unique
+ * during the whole game, and computed based on the camera position dictated by the sliders values"*). Orbiting the PIECE, close to the
+ * camera, the rest of the scene SLIDES across the screen, two to three times what it did turning in place about the centre — the same
+ * smoothing, so larger steps per frame. The gain is the ratio of the scene's sweep (`points`, the play volume) for one small yaw step about
+ * the CENTRE — the camera where the rings and the sliders put it (`gapM`: the radius offset at the boot zoom; the yaw and pitch offsets in
+ * `camOffset`) — to that step about the PIECE at the gap the sliders give it there (`scaledGap`: `gapM` aligned at the rings' farthest,
+ * `minPct` % at their closest), SUMMED over `vSamples` positions along the whole ring path and `yawSamples` yaws of a full turn. ⭐ It reads
+ * no live state — recomputed only when a slider it depends on changes. ⛔ Never above 1 (it only LOWERS), never below `floor`.
  */
-export function pieceYawGain(
-  pose: (aroundPiece: boolean, yaw: number) => { readonly cam: Vec3; readonly look: Vec3 },
-  yaw: number,
-  points: readonly Vec3[],
-  floor = 0.1,
-): number {
-  const dy = 1e-3;
-  const centre = meanSweep(pose(false, yaw), pose(false, yaw + dy), points);
-  const piece = meanSweep(pose(true, yaw), pose(true, yaw + dy), points);
-  if (!(piece > 1e-12) || !(centre > 1e-12)) return 1; // nothing in view to compare: no change
-  return Math.min(1, Math.max(floor, centre / piece));
+export function referenceYawGain(p: {
+  readonly centre: Vec3;
+  readonly ring: (yaw: number, v: number) => { readonly offsetM: Vec3; readonly radiusM: number };
+  readonly camOffset: (yaw: number, v: number, rel: Vec3, gapM: number) => Vec3;
+  readonly gapM: number;
+  readonly minPct: number;
+  readonly points: readonly Vec3[];
+  readonly vSamples?: number;
+  readonly yawSamples?: number;
+  readonly floor?: number;
+}): number {
+  const nv = p.vSamples ?? 33;
+  const ny = p.yawSamples ?? 8;
+  const range = ringDistanceRange((v) => p.ring(0, v).radiusM, 64);
+  const c = p.centre;
+  const step = 1e-3;
+  let aroundCentre = 0;
+  let aroundPiece = 0;
+  for (let j = 0; j < ny; j++) {
+    const yaw = (2 * Math.PI * j) / ny;
+    for (let i = 0; i < nv; i++) {
+      const v = i / (nv - 1);
+      const r = p.ring(yaw, v);
+      const piece: Vec3 = [c[0] + r.offsetM[0], c[1] + r.offsetM[1], c[2] + r.offsetM[2]];
+      const gapP = scaledGap(p.gapM, r.radiusM, range.maxM, range.minM, p.minPct);
+      const centrePose = (y: number) => {
+        const o = p.camOffset(y, v, p.ring(y, v).offsetM, p.gapM);
+        return { cam: [c[0] + o[0], c[1] + o[1], c[2] + o[2]] as Vec3, look: c };
+      };
+      const piecePose = (y: number) => {
+        const o = p.camOffset(y, v, [0, 0, 0], gapP);
+        return { cam: [piece[0] + o[0], piece[1] + o[1], piece[2] + o[2]] as Vec3, look: piece };
+      };
+      aroundCentre += meanSweep(centrePose(yaw), centrePose(yaw + step), p.points);
+      aroundPiece += meanSweep(piecePose(yaw), piecePose(yaw + step), p.points);
+    }
+  }
+  if (!(aroundPiece > 1e-12) || !(aroundCentre > 1e-12)) return 1; // nothing in view to compare: no change
+  return Math.min(1, Math.max(p.floor ?? 0.1, aroundCentre / aroundPiece));
 }

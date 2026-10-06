@@ -387,8 +387,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).toMatch(/st\.boxOrbit = st\.boxSpring\.at;/);
     // ⭐ the owner: the camera looks at the yellow target — the orbit centre
     // ⭐ (2026-10-06) the camera looks at ITS centre — the orbit centre, or the piece once orbiting around it (`piece_orbit.ts`)
-    expect(w).toMatch(/st\.camera\.setTarget\(new Vector3\(cc\[0\], cc\[1\], cc\[2\]\)\)/);
-    expect(w).toMatch(/const cc: Vec3 = po === null \? \[c\.x, c\.y, c\.z\] : cameraCentre\(po, pp, st\.cfg\.orbitBlendDistanceMm\);/);
+    expect(w).toMatch(/st\.camera\.setTarget\(new Vector3\(lookAt\[0\], lookAt\[1\], lookAt\[2\]\)\)/);
+    // around the centre as before: the camera at its offset from the centre, looking at it (`piece_orbit.ts` takes over after an alignment)
+    expect(w).toMatch(/camAt = \[c\.x \+ o\[0\], c\.y \+ o\[1\], c\.z \+ o\[2\]\];\s*lookAt = \[c\.x, c\.y, c\.z\];/);
     // ⭐ the owner, 2026-10-02: *"remove the billboarding"*
     expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_NONE/);
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
@@ -435,7 +436,7 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(g.pitch).toBeCloseTo(0.5, 12);
     // ⭐ wired: the orbit drag multiplies each axis by its gain, and the slider has the owner's range
     // ⭐ dy's sense inverted for the orbit (the owner, 2026-10-04): dy enters with its own sign; dx still negated
-    expect(code("pointer_wiring.ts")).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGain, dy \* st\.cfg\.boxGainPitch \* g\.pitch\)/); // (2026-10-06: × the gain around the piece, 1 otherwise)
+    expect(code("pointer_wiring.ts")).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag, dy \* st\.cfg\.boxGainPitch \* g\.pitch\)/); // (2026-10-06: × the gain around the piece, 1 otherwise)
     expect(code("pointer_wiring.ts")).not.toMatch(/-dy \* st\.cfg\.boxGainPitch/);
     expect(code("tuning_menu.ts")).toMatch(/"boxGainInsideLeash", 0\.05, 1, 0\.05\)/);
   });

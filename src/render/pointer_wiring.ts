@@ -1179,8 +1179,12 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   const dy = s.y - prev.y;
   if (st.greenBox !== null) {
     // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
-    if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId)
+    if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {
       st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
+      // ⭐ prototype (2026-10-06): the yaw gain around the piece (`referenceYawGain`, one for the game) applies to a drag that STARTS
+      // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end
+      st.pieceYawGainDrag = st.pieceOrbit !== null ? st.pieceYawGain : 1;
+    }
     st.orbitMotion.tracker.push(s);
     // ⭐ the inside-the-leash gains (`greenDragGains`).
     const g = greenDragGains(st);
@@ -1188,8 +1192,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const v0 = st.orbit.elevation;
     // ⭐ the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"* — dy enters with its own sign now
     // (it was negated: finger UP raised the green piece on the rings; now finger DOWN does). dx unchanged.
-    // ⭐ prototype (2026-10-06): orbiting around the piece, the yaw gain is LOWERED so the scene slides as far as before (`pieceYawGain`)
-    st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGain, dy * st.cfg.boxGainPitch * g.pitch);
+    // ⭐ prototype (2026-10-06): orbiting around the piece, the yaw gain is LOWERED so the scene slides as far as before (`referenceYawGain`)
+    st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, dy * st.cfg.boxGainPitch * g.pitch);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build

@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { cameraCentre, pieceOrbitProgress, pieceYawGain, pushedPiece, ringDistanceRange, scaledGap, startPieceOrbit } from "../input/piece_orbit";
+import { anglesOf, pieceCamera, pieceOrbitProgress, pushedPiece, referenceYawGain, ringDistanceRange, scaledGap, startPieceOrbit, viewAxis } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -251,7 +251,9 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
     const out = orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM;
     const h = Math.hypot(out[0], out[2]) || 1;
     const cam = st.camera.position;
-    st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h], [cam.x, cam.y, cam.z]);
+    // ⭐ the rings' angles around the piece now — the camera's own are kept against them, so it starts EXACTLY where it is
+    const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
+    st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h], [cam.x, cam.y, cam.z], ring);
   }
   st.hudDirty = true;
   return true;
@@ -561,45 +563,51 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       : cameraLag(st.cameraLagged, st.cameraOrbit.cam, dtSec * 1000, st.cfg.cameraFollowMs);
   // ⭐ At the box's distance (the box as placed, clamp included) + the radius offset, at the camera's angles plus the
   // owner's offsets.
-  const D = Math.PI / 180;
-  // ⭐⭐ …and the camera orbits ITS centre — the piece once the glide is done (`cameraCentre`), the orbit centre before — at the rings'
-  // angles, its distance the piece's from that centre + the gap: the same pose as before on the alignment's frame, the gap alone at the end
-  const cc: Vec3 = po === null ? [c.x, c.y, c.z] : cameraCentre(po, pp, st.cfg.orbitBlendDistanceMm);
-  const off = { yawRad: st.cfg.cameraYawOffsetDeg * D, pitchRad: st.cfg.cameraPitchOffsetDeg * D };
+  const off = pieceOrbitAngleOffset(st);
   // ⭐ …and the ZOOM scales the camera's distance behind the green piece (`cameraGapM`) — 1.00 the radius offset itself.
   const gapFull = cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom);
-  // ⭐⭐ prototype (2026-10-06): around the piece, the gap SCALES as the piece comes in — the camera's distance from it at the alignment,
-  // down to `pieceOrbitGapMinPct` % of that at the rings' closest (`scaledGap`); blended in with the glide so nothing jumps
-  const glide = po === null ? 0 : pieceOrbitProgress(po, st.cfg.orbitBlendDistanceMm);
-  const gapPiece =
-    po === null
-      ? gapFull
-      : scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct);
-  const gap = gapFull + (gapPiece - gapFull) * glide;
-  const o = cameraOffset(st.cfg, st.cameraLagged, [pp[0] - cc[0], pp[1] - cc[1], pp[2] - cc[2]], off, gap);
-  // ⭐⭐ prototype (2026-10-06): *"lower gain while orbiting"* — the yaw gain around the piece (`pieceYawGain`): the scene (the play volume's
-  // corners and centre) slides across the screen as far per millimetre as it did turning about the centre, at this ring, zoom and offsets;
-  // blended in with the glide. Read by the next orbit drag (`orbitDragStep`).
-  st.pieceYawGain =
-    po === null
-      ? 1
-      : 1 +
-        (pieceYawGain(
-          (aroundPiece, y) => {
-            const at = { yaw: y, v: st.cameraLagged!.v };
-            if (aroundPiece) return { cam: add(pp, cameraOffset(cfg, at, [0, 0, 0], off, gapPiece)), look: pp };
-            const b = orbitOffset(cfg, y, st.boxOrbit!.v, st.boxOrbit!.zoom).offsetM;
-            const rel: Vec3 = [b[0] * k, b[1] * k, b[2] * k];
-            return { cam: add([c.x, c.y, c.z], cameraOffset(cfg, at, rel, off, gapFull)), look: [c.x, c.y, c.z] };
-          },
-          st.cameraLagged.yaw,
-          sweepPoints(st, [c.x, c.y, c.z]),
-        ) -
-          1) *
-          glide;
+  // ⭐⭐ prototype (2026-10-06): AROUND THE PIECE (`piece_orbit.ts`) — the camera does not move at the alignment; it orbits the piece from
+  // where it is: the rings' angles around it (`cameraOffset`'s, dx yaw, dy pitch, the offsets) plus the starting difference, FADING OUT
+  // with finger travel (`pieceOrbitFadeMm`); its distance the one it had, scaled as the piece comes in (`scaledGap`); its VIEW AXIS
+  // slerped from the orbit centre to the piece with finger travel (`orbitBlendDistanceMm`, as the centre move).
+  let camAt: Vec3;
+  let lookAt: Vec3;
+  if (po === null) {
+    const o = cameraOffset(st.cfg, st.cameraLagged, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], off, gapFull);
+    camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
+    lookAt = [c.x, c.y, c.z];
+  } else {
+    const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
+    const gapPiece = scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct);
+    camAt = pieceCamera(po, pp, ring, gapPiece, cfg.pieceOrbitFadeMm);
+    const ax = viewAxis(camAt, [c.x, c.y, c.z], pp, pieceOrbitProgress(po, cfg.orbitBlendDistanceMm));
+    lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
+  }
+  // ⭐⭐ prototype (2026-10-06): *"the gain shall be unique during the whole game, and computed based on the camera position dictated by
+  // the sliders values"* — the yaw gain around the piece (`referenceYawGain`), RECOMPUTED ONLY when a slider it reads changes (the
+  // offsets, the radius offset, the boot zoom, the gap's %, the rings) — never from the live camera. Read at each orbit drag's start.
+  const gainKey = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.cameraRadiusOffsetMm, st.orbitStartZoom, cfg.pieceOrbitGapMinPct, cfg.cameraRadiusMaxM, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, cfg.orbitLowerRingOn, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM].join("|");
+  if (gainKey !== st.pieceYawGainKey) {
+    st.pieceYawGainKey = gainKey;
+    const pv = st.playVolume;
+    const centre: Vec3 = pv !== null ? [(pv.min[0] + pv.max[0]) / 2, c.y, (pv.min[2] + pv.max[2]) / 2] : [c.x, c.y, c.z];
+    st.pieceYawGain = referenceYawGain({
+      centre,
+      ring: (y, v) => {
+        const r = orbitOffset(cfg, y, v, GREEN_PIECE_ORBIT_ZOOM);
+        const kk = r.radiusM > 1e-9 ? clampCameraRadiusM(r.radiusM, cfg) / r.radiusM : 1;
+        return { offsetM: [r.offsetM[0] * kk, r.offsetM[1] * kk, r.offsetM[2] * kk], radiusM: r.radiusM * kk };
+      },
+      camOffset: (y, v, rel, g) => cameraOffset(cfg, { yaw: y, v }, rel, off, g),
+      gapM: cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.orbitStartZoom),
+      minPct: cfg.pieceOrbitGapMinPct,
+      points: sweepPoints(st, centre),
+    });
+    st.hudDirty = true;
+  }
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
-  st.camera.setPosition(new Vector3(cc[0] + o[0], cc[1] + o[1], cc[2] + o[2]));
-  st.camera.setTarget(new Vector3(cc[0], cc[1], cc[2]));
+  st.camera.setPosition(new Vector3(camAt[0], camAt[1], camAt[2]));
+  st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));
   // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
   // the blend in progress), for the HUD's `green` line (the owner, 2026-10-02).
   const tgt = st.centreBlend.targetM;
@@ -608,6 +616,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   counterYawFrame(st);
   restAlignFrame(st, now);
   restingFillFrame(st);
+}
+
+/** ⭐ The camera's yaw and pitch offsets (the CAMERA OFFSET sliders), radians. */
+function pieceOrbitAngleOffset(st: SceneState): { yawRad: number; pitchRad: number } {
+  return { yawRad: (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, pitchRad: (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180 };
 }
 
 /** ⭐ The scene points whose on-screen sweep sets the yaw gain around the piece: the play volume's eight corners and its centre — or, with
