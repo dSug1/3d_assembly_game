@@ -143,16 +143,19 @@ describe("⭐⭐⭐ prototype — the camera's approach path", () => {
     expect(w).toMatch(/st\.camera\.setPosition\(onPath\?\.pos \?\? normalCam\);\s*st\.camera\.setTarget\(onPath\?\.look \?\? c\.clone\(\)\);/);
     expect(w).toMatch(/if \(pushedAway\(d, lp\.closestM, PATH_AWAY_EPS_M\)\) \{\s*st\.camPath = null;/);
     expect(w).toMatch(/st\.camPathFade = \{ from: currentPathPose\(st, d, band, live, lp\.startCamY, p\.y\), t0: now, side: lp\.side \};/);
-    expect(w).toMatch(/const v2 = lay\.knots\[2\]! \/ lay\.total;/);
     expect(w).toMatch(/const v23 = \(lay\.knots\[1\]! \+ lay\.knots\[2\]!\) \/ 2 \/ lay\.total;/);
     expect(w).toMatch(/azim: w\.azim \+ \(cfg\.pathRightYawDeg \* Math\.PI\) \/ 180,\s*r: gap,\s*look: cfg\.pathHoldLook,/); // ⭐ the owner: *"the midway between pink ring and piece"* on the holds
     // ⭐⭐ the owner: *"during the plateau 2, stay at the same height as at start of path"*; *"divide by two the increase of height between start and plateau 1"*
-    expect(w).toMatch(/elev: startCamY === null \? w\.elev : elevForHeight\(startCamY, pieceY, gap\),/);
+    // ⭐⭐ then *"go back to the ring 1 height in plateau 2"* — the 1st (top) ring's world height, as the rings scale with the zoom
+    expect(w).toMatch(/const ring1Y = st\.orbitCentreM\.y \+ orbitOffset\(cfg, 0, 1, st\.zoom\)\.offsetM\[1\];/);
+    expect(w).toMatch(/elev: elevForHeight\(ring1Y, pieceY, gap\),/);
+    const cfg1 = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    expect(orbitOffset(cfg1, 0, 1, 1).offsetM[1]).toBeCloseTo(1.0, 12); // v = 1 IS the 1st ring, at the owner's +1.0 m
     expect(w).toMatch(/const aboveY = startCamY === null \? null : startCamY \+ cfg\.pathAboveRise \* \(pieceY \+ gap \* Math\.sin\(aboveFull\) - startCamY\);/);
     expect(w).toMatch(/startCamY: lp\.startCamY \?\? \(t !== null \? normal\.y : null\)/); // the height on the path's first frame, kept
     expect(w).toMatch(/st\.camPath = \{ side, closestM: d, startCamY: null \};/);
     expect(w).toMatch(/const PATH_FADE_MS = 400;/);
-    expect(w).toMatch(/const above: PathPose = \{ elev: aboveY === null \? aboveFull : elevForHeight\(aboveY, pieceY, gap\), azim: a\.azim, r: gap, look: cfg\.pathHoldLook \};/);
+    expect(w).toMatch(/const above: PathPose = \{ elev: aboveY === null \? aboveFull : elevForHeight\(aboveY, pieceY, gap\), azim: live\.azim, r: gap, look: cfg\.pathHoldLook \};/);
     expect(w).toMatch(/return pathCurve\(d, band, live, above, right\) \?\? live;/);
     expect(w).toMatch(/st\.restAligned = false;\s*st\.camPath = null;[^\n]*\n\s*st\.camPathFade = null;/); // the respawn
     expect([DEFAULT_CONFIG.pathStartM, DEFAULT_CONFIG.pathAboveM, DEFAULT_CONFIG.pathRightM, DEFAULT_CONFIG.pathEndM]).toEqual([2.7, 2.0, 1.0, 0.3]);

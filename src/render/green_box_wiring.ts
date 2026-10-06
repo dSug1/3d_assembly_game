@@ -307,22 +307,23 @@ function currentPathPose(st: SceneState, d: number, band: PathBand, live: PathPo
   const gap = cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.zoom);
   const off = { yawRad: (cfg.cameraYawOffsetDeg * Math.PI) / 180, pitchRad: (cfg.cameraPitchOffsetDeg * Math.PI) / 180 };
   const lay = fourRingLayout(cfg);
-  // ⭐ the owner: ABOVE *"as when the piece enters the 2nd ring"*, now *"30 degrees from the vertical"* — its azimuth stays the ring's;
+  // ⭐ the owner: ABOVE *"as when the piece enters the 2nd ring"*, now *"30 degrees from the vertical"*, its azimuth the LIVE normal camera's
+  // (2026-10-06: *"maintain the camera yaw offset during plateau 1"* — the 2nd ring's, read near the centre, was not the yaw offset);
   // RIGHT *"as when the piece is between the 2nd and 3rd rings"*, now *"30 degrees to the right"* (was 90)
-  const v2 = lay.knots[2]! / lay.total;
   const v23 = (lay.knots[1]! + lay.knots[2]!) / 2 / lay.total;
-  const a = ringRelativePose(cfg, v2, gap, off) ?? live;
   const w = ringRelativePose(cfg, v23, gap, off) ?? live;
   // ⭐ the owner, 2026-10-06: *"keep the camera looking at the orbit center"* (the pink gizmo), then *"during the plateau 1 and 2 the
   // camera look at the midway between pink ring and piece"* — `pathHoldLook` (0.5) on both holds, eased in and out with the pose
   // ⭐⭐ the owner, 2026-10-06: *"divide by two the increase of height between start and plateau 1"* — ABOVE's camera height is the start's
   // plus `pathAboveRise` (0.5) of its climb at `pathAboveFromVerticalDeg`; *"during the plateau 2, stay at the same height as at start of
-  // path"* — RIGHT's camera height IS the start's. Both re-solved for the piece's height each frame, so the camera's height holds.
+  // path"*, then *"go back to the ring 1 height in plateau 2"* — RIGHT's camera height is the 1ST RING's (the orbit centre + the top ring's
+  // height × the zoom, as the rings scale). Both re-solved for the piece's height each frame, so the camera's height holds.
+  const ring1Y = st.orbitCentreM.y + orbitOffset(cfg, 0, 1, st.zoom).offsetM[1];
   const aboveFull = ((90 - cfg.pathAboveFromVerticalDeg) * Math.PI) / 180;
   const aboveY = startCamY === null ? null : startCamY + cfg.pathAboveRise * (pieceY + gap * Math.sin(aboveFull) - startCamY);
-  const above: PathPose = { elev: aboveY === null ? aboveFull : elevForHeight(aboveY, pieceY, gap), azim: a.azim, r: gap, look: cfg.pathHoldLook };
+  const above: PathPose = { elev: aboveY === null ? aboveFull : elevForHeight(aboveY, pieceY, gap), azim: live.azim, r: gap, look: cfg.pathHoldLook };
   const right: PathPose = {
-    elev: startCamY === null ? w.elev : elevForHeight(startCamY, pieceY, gap),
+    elev: elevForHeight(ring1Y, pieceY, gap),
     azim: w.azim + (cfg.pathRightYawDeg * Math.PI) / 180,
     r: gap,
     look: cfg.pathHoldLook,
