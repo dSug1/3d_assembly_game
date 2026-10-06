@@ -6,6 +6,7 @@
 > twice on `1.0.59q-` (§2); carried to **`1.0.59r-`** (2026-10-05).
 > **Builds on:** [`RESTING_FACE.md`](RESTING_FACE.md) (the selector: which face, and its group).
 > **Scope:** the orbited piece — the green frustum or the turquoise prism, whichever the SCENE switch names.
+> ⭐ **Since 2026-10-06 (`1.0.59u-from1.0.59s-Orbit-around-piece`) the first alignment also starts THE ORBIT AROUND THE PIECE** → [`PIECE_ORBIT.md`](PIECE_ORBIT.md).
 
 ---
 

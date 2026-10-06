@@ -1,6 +1,6 @@
 # The double-orbit camera — a PROTOTYPE (branch `1.0.58b-` only)
 
-⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59r-`** (2026-10-05 — the chain since `1.0.58b-` is in §7);
+⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59u-from1.0.59s-Orbit-around-piece`** (2026-10-06 — the chain since `1.0.58b-` is in §7–§8);
 first `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself from `1.0.58-Trial-with-double-orbit`); never merged into `main` or
 the fork — the main line is merged INTO it, one way.
 ⭐ `/proto/` builds the branch the repository variable `PROTO_BRANCH` names (`1.0.58b-` since 2026-10-01); a deploy is
@@ -562,3 +562,18 @@ were set aside (*"not satisfied"*). `1.0.59p-from1.0.59m-` → `1.0.59q-` → **
 * ⭐ **…and one finger moving is enough to zoom again** (`1.0.59s-`, the owner, 2026-10-06: *"The zoom can be triggered by only one delta
   position outside its deadband (no need for two … as we have removed the uncertainty on the zoom inputs)"*): `pinchZooms` = either finger
   MOVING; both still, no zoom. → `RESTING_FACE_ALIGNMENT.md` §4.
+
+## 8. `1.0.59s-Zoom` → `1.0.59u-from1.0.59s-Orbit-around-piece` (2026-10-06) — the orbit around the piece
+
+⭐ `1.0.59s-Zoom` closed with one finger moving enough to zoom (§7). `1.0.59t-` built a CAMERA APPROACH PATH (the camera above, then to
+the right of the piece as it came in; its spec `CAMERA_APPROACH_PATH.md` lives on that branch) — set aside (*"I am not satisfied of this
+implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s-Orbit-around-piece`**. ⛔ All unjudged by a hand.
+
+* ⭐⭐⭐ **THE ORBIT AROUND THE PIECE** → [`PIECE_ORBIT.md`](PIECE_ORBIT.md) (`d3e0c07`, `68b4584`, `f98b584`): from the first resting-face
+  alignment the camera orbits the PIECE — dx turns the camera around it (the piece stays), dy moves the camera through the rings' pitches
+  and pushes the piece on a straight line through the pink gizmo, which stays where it is. At the alignment the camera does not move: its
+  view axis slerps to the piece with finger travel, and the difference from the rings' angles fades out (`pieceOrbitFadeMm`). The gap
+  scales from the alignment's distance to x % at the rings' closest (`pieceOrbitGapMinPct`). The yaw is slower by ONE game-wide gain
+  computed from the sliders (×0.74 today). ⛔ No way back to the centre yet but a respawn.
+* ⭐ **CAMERA › CAMERA ORBIT is renamed CAMERA ORBIT AROUND CENTER**; a new **CAMERA ORBIT AROUND PIECE** holds the two sliders above.
+* ⭐ The HUD's `camera` line reads `r=… to the piece` in that mode; the `green` line `around the piece, yaw gain ×…`.
