@@ -386,7 +386,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).toMatch(/springOrbit\(st\.boxSpring, rig, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\)/);
     expect(w).toMatch(/st\.boxOrbit = st\.boxSpring\.at;/);
     // ⭐ the owner: the camera looks at the yellow target — the orbit centre
-    expect(w).toMatch(/st\.camera\.setTarget\(c\.clone\(\)\)/);
+    // ⭐ (2026-10-06) the camera looks at ITS centre — the orbit centre, or the piece once orbiting around it (`piece_orbit.ts`)
+    expect(w).toMatch(/st\.camera\.setTarget\(new Vector3\(cc\[0\], cc\[1\], cc\[2\]\)\)/);
+    expect(w).toMatch(/const cc: Vec3 = po === null \? \[c\.x, c\.y, c\.z\] : cameraCentre\(po, pp, st\.cfg\.orbitBlendDistanceMm\);/);
     // ⭐ the owner, 2026-10-02: *"remove the billboarding"*
     expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_NONE/);
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);

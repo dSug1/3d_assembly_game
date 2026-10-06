@@ -50,6 +50,7 @@ import { type SceneSnapshot } from "./undo_wiring";
 import { type DemoPlan } from "../core/demo_plan";
 import { type LevelEnd, type LevelResult } from "../core/level_end";
 import { type Aabb } from "../core/collision";
+import { type PieceOrbit } from "../input/piece_orbit";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -442,6 +443,9 @@ export interface SceneState {
   orbitHeadingPrev: number | null;
   /** ⭐ Prototype (§2bis): the orbited piece's resting face has been ALIGNED (a tap) — it no longer turns against the orbit. A respawn clears it. */
   restAligned: boolean;
+  /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
+   * respawn. `null`: the orbit around the centre as before. */
+  pieceOrbit: PieceOrbit | null;
   /** ⭐ Prototype (`1.0.59q-`): the face holding the pink ring — at boot the blue face toward the green piece, then the face a press on a
    * placed piece moves the target to. Its edges give the alignment's MATING edge. */
   pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;

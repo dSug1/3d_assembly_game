@@ -577,6 +577,7 @@ export function createScene(
   st.restAlign = null;
   st.orbitHeadingPrev = null;
   st.restAligned = false;
+  st.pieceOrbit = null;
   st.pinkFace = null; // set by the boot target (`bootTargetOnBlueFace`), below
   st.orbitPieceKind = 0;
   st.orbitPieceFaces = 0;

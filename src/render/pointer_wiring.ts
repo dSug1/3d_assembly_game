@@ -39,6 +39,7 @@ import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
+import { advancePieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
 function unsnapHolds(st: SceneState, pointerId: number): boolean {
@@ -1236,6 +1237,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so the camera arrives as the gesture progresses
   // rather than on a timer.
   st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+  // ⭐ prototype (2026-10-06): …and the camera's glide to the piece, once orbiting around it (`piece_orbit.ts`) — the same travel
+  if (st.pieceOrbit !== null) st.pieceOrbit = advancePieceOrbit(st.pieceOrbit, Math.hypot(dx, dy) / mmToPx(1));
   syncCentre(st);
   applyCamera(st);
 }

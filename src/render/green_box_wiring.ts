@@ -33,6 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
+import { cameraCentre, pushedPiece, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -243,6 +244,14 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
   }
   st.restAlign = { from: q, t0: now, base };
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
+  // ⭐⭐ prototype (2026-10-06): *"when resting face is aligned, the orbit center moves to the piece, the rest orbit around the piece"* —
+  // from the FIRST alignment on (`piece_orbit.ts`); a re-alignment keeps it, only a respawn ends it (*"never automatically"*)
+  if (st.pieceOrbit === null) {
+    const c = st.orbitCentreM;
+    const out = orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM;
+    const h = Math.hypot(out[0], out[2]) || 1;
+    st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h]);
+  }
   st.hudDirty = true;
   return true;
 }
@@ -317,6 +326,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.restAlign = null;
     st.orbitHeadingPrev = null;
     st.restAligned = false;
+    st.pieceOrbit = null;
   }
   st.hudDirty = true;
 }
@@ -479,7 +489,14 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
   // ⛔ The same near-plane guard the rig's pose had (`applyCamera`): the clamp only shortens.
   const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
-  box.position.set(c.x + bo.offsetM[0] * k, c.y + bo.offsetM[1] * k, c.z + bo.offsetM[2] * k);
+  // ⭐⭐ prototype (2026-10-06): orbiting AROUND THE PIECE (`piece_orbit.ts`), the piece is pushed along its frozen line through the
+  // centre at the rings' distance (dy as fast as before; dx no longer moves it) — else on the rings as before
+  const po = st.pieceOrbit;
+  const pp: Vec3 =
+    po === null
+      ? [c.x + bo.offsetM[0] * k, c.y + bo.offsetM[1] * k, c.z + bo.offsetM[2] * k]
+      : pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k);
+  box.position.set(pp[0], pp[1], pp[2]);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
   const out = st.router.outside();
@@ -544,17 +561,20 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ At the box's distance (the box as placed, clamp included) + the radius offset, at the camera's angles plus the
   // owner's offsets.
   const D = Math.PI / 180;
+  // ⭐⭐ …and the camera orbits ITS centre — the piece once the glide is done (`cameraCentre`), the orbit centre before — at the rings'
+  // angles, its distance the piece's from that centre + the gap: the same pose as before on the alignment's frame, the gap alone at the end
+  const cc: Vec3 = po === null ? [c.x, c.y, c.z] : cameraCentre(po, pp, st.cfg.orbitBlendDistanceMm);
   const o = cameraOffset(
     st.cfg,
     st.cameraLagged,
-    [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k],
+    [pp[0] - cc[0], pp[1] - cc[1], pp[2] - cc[2]],
     { yawRad: st.cfg.cameraYawOffsetDeg * D, pitchRad: st.cfg.cameraPitchOffsetDeg * D },
     // ⭐ …and the ZOOM scales the camera's distance behind the green piece (`cameraGapM`) — 1.00 the radius offset itself.
     cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom),
   );
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
-  st.camera.setPosition(new Vector3(c.x + o[0], c.y + o[1], c.z + o[2]));
-  st.camera.setTarget(c.clone());
+  st.camera.setPosition(new Vector3(cc[0] + o[0], cc[1] + o[1], cc[2] + o[2]));
+  st.camera.setTarget(new Vector3(cc[0], cc[1], cc[2]));
   // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
   // the blend in progress), for the HUD's `green` line (the owner, 2026-10-02).
   const tgt = st.centreBlend.targetM;
