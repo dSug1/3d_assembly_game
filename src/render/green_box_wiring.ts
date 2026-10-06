@@ -13,7 +13,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
-import { edgeMarker, fromAround, pathFade, pathParam, pathPose, pieceFrame, pushedAway, ringRelativePose, toAround, type PathPose } from "../input/camera_path";
+import { edgeMarker, fromAround, pathCurve, pathFade, pathParam, pieceFrame, pushedAway, ringRelativePose, toAround, type PathBand, type PathPose } from "../input/camera_path";
 import { fourRingLayout } from "../input/orbit";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -272,12 +272,13 @@ function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vect
     st.camPathNow = null;
     return null;
   }
-  const t = pathParam(d, { startM: cfg.pathStartM, aboveM: cfg.pathAboveM, rightM: cfg.pathRightM, endM: cfg.pathEndM, plateauM: cfg.pathPlateauM });
+  const band: PathBand = { startM: cfg.pathStartM, aboveM: cfg.pathAboveM, rightM: cfg.pathRightM, endM: cfg.pathEndM, plateauM: cfg.pathPlateauM };
+  const t = pathParam(d, band);
   // ⭐ the owner: *"if the piece is pushed away from the orbit center, the path unlatches and the camera does not follow the path"*
   if (pushedAway(d, lp.closestM, PATH_AWAY_EPS_M)) {
     st.camPath = null;
     if (t !== null) {
-      st.camPathFade = { from: currentPathPose(st, t, live), t0: now, side: lp.side };
+      st.camPathFade = { from: currentPathPose(st, d, band, live), t0: now, side: lp.side };
       return cameraPathPosition(st, normal, c, p, now);
     }
     st.camPathNow = null;
@@ -292,24 +293,28 @@ function cameraPathPosition(st: SceneState, normal: Vector3, c: Vector3, p: Vect
   }
   st.camPathNow = { label: t < 1 ? "→ above" : t === 1 ? "ABOVE" : t < 2 ? "→ right" : t === 2 ? "RIGHT" : "→ normal", t };
   st.hudDirty = true;
-  return place(currentPathPose(st, t, live));
+  return place(currentPathPose(st, d, band, live));
 }
 
-/** ⭐ The path's pose at `t`: the live normal pose and the two keys (ABOVE, RIGHT) of the rings' own camera, at the zoom's distance. */
-function currentPathPose(st: SceneState, t: number, live: PathPose): PathPose {
+/**
+ * ⭐ The path's pose at the piece's distance `d` (`pathCurve`): the live normal pose and its two keys at the zoom's distance — ABOVE
+ * `pathAboveFromVerticalDeg` from the vertical, RIGHT `pathRightYawDeg` to the right (the owner, 2026-10-06: *"Go 30 degrees from the
+ * vertical for the above and 30 degrees to the right for the right"*), each from the rings' own pose for its azimuth / elevation.
+ */
+function currentPathPose(st: SceneState, d: number, band: PathBand, live: PathPose): PathPose {
   const cfg = st.cfg;
   const gap = cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.zoom);
   const off = { yawRad: (cfg.cameraYawOffsetDeg * Math.PI) / 180, pitchRad: (cfg.cameraPitchOffsetDeg * Math.PI) / 180 };
   const lay = fourRingLayout(cfg);
-  // ⭐ the owner: ABOVE *"as when the piece enters the 2nd ring"*; RIGHT *"as when the piece is between the 2nd and 3rd rings, with 90
-  // degree yaw between camera and piece"*
+  // ⭐ the owner: ABOVE *"as when the piece enters the 2nd ring"*, now *"30 degrees from the vertical"* — its azimuth stays the ring's;
+  // RIGHT *"as when the piece is between the 2nd and 3rd rings"*, now *"30 degrees to the right"* (was 90)
   const v2 = lay.knots[2]! / lay.total;
   const v23 = (lay.knots[1]! + lay.knots[2]!) / 2 / lay.total;
   const a = ringRelativePose(cfg, v2, gap, off) ?? live;
   const w = ringRelativePose(cfg, v23, gap, off) ?? live;
-  const above: PathPose = { elev: a.elev, azim: a.azim, r: gap, look: 1 };
+  const above: PathPose = { elev: ((90 - cfg.pathAboveFromVerticalDeg) * Math.PI) / 180, azim: a.azim, r: gap, look: 1 };
   const right: PathPose = { elev: w.elev, azim: w.azim + (cfg.pathRightYawDeg * Math.PI) / 180, r: gap, look: 1 };
-  return pathPose(t, live, above, right);
+  return pathCurve(d, band, live, above, right) ?? live;
 }
 
 /**

@@ -7,12 +7,18 @@
  * unlatches and the camera eases back to its normal pose (the caller's state; `pathFade`).
  * ⭐ ABOVE and RIGHT are the NORMAL camera's own poses relative to the piece (`ringRelativePose`) — ABOVE as when the piece enters the 2nd
  * ring, RIGHT as when it is between the 2nd and 3rd rings, swung 90° about the vertical to the latched side.
+ * ⭐⭐ AMENDED 2026-10-06 (the owner: *"the camera movements are too abrupt. I want a curve transition which is as smooth as the transition
+ * between the 1st and 2nd ring … Go 30 degrees from the vertical for the above and 30 degrees to the right for the right"*): the pose is the
+ * RINGS' OWN CURVE through its keys — their monotone cubic (Fritsch–Carlson, `hermiteAt`) over the piece's distance, passing THROUGH ABOVE
+ * and RIGHT without stopping (flat only where a number turns back), each transition spread over the whole gap (`pathCurve`); the owner:
+ * *"the same type of transition as between 1st and 2 rings, with camera going above and to the right of the piece before resuming the normal
+ * orbit course, starting from piece at 2.7 m"*. ABOVE 30° from the vertical, RIGHT 30° to the right.
  *
  * ⛔ ENGINE-FREE.
  */
 import { add, cross, dot, length, normalize, scale, sub, type Vec3 } from "../core/vec";
 import { cameraOffset, type CameraAngleOffset } from "./follow_camera";
-import { orbitOffset } from "./orbit";
+import { hermiteAt, orbitOffset } from "./orbit";
 import type { GestureConfig } from "./gestureConfig";
 
 /** ⭐ The band: its start, the ABOVE and RIGHT milestones, its end (metres, decreasing), and the plateau's width around each milestone. */
@@ -31,9 +37,9 @@ export function easeInOut(x: number): number {
 }
 
 /**
- * ⭐⭐ Where the piece's distance `d` puts the path: `t` from 0 (the band's start: the normal pose) to 1 (ABOVE), 2 (RIGHT), 3 (the end: the
- * normal pose again) — **exactly 1 on the ABOVE plateau and exactly 2 on the RIGHT one**, each transition eased in and out between them.
- * `null` outside the band.
+ * ⭐ Where the piece's distance `d` is in the band — the HUD's stage: `t` from 0 (the band's start) to 1 (ABOVE), 2 (RIGHT), 3 (the end),
+ * **exactly 1 on the ABOVE hold and exactly 2 on the RIGHT one**, linear in `d` between. `null` outside the band. ⛔ The camera's pose does
+ * not read it (`pathCurve` does, from `d`).
  */
 export function pathParam(d: number, b: PathBand): number | null {
   if (!(d <= b.startM && d >= b.endM)) return null;
@@ -42,11 +48,64 @@ export function pathParam(d: number, b: PathBand): number | null {
   const a2 = b.aboveM - h;
   const r1 = b.rightM + h;
   const r2 = b.rightM - h;
-  if (d >= a1) return easeInOut((b.startM - d) / Math.max(1e-9, b.startM - a1));
-  if (d >= a2) return 1;
-  if (d >= r1) return 1 + easeInOut((a2 - d) / Math.max(1e-9, a2 - r1));
-  if (d >= r2) return 2;
-  return 2 + easeInOut((r2 - d) / Math.max(1e-9, r2 - b.endM));
+  const lin = (x: number): number => Math.min(1, Math.max(0, x));
+  const eps = 1e-9;
+  if (d >= a1 + eps) return lin((b.startM - d) / Math.max(1e-9, b.startM - a1));
+  if (d >= a2 - eps) return 1;
+  if (d >= r1 + eps) return 1 + lin((a2 - d) / Math.max(1e-9, a2 - r1));
+  if (d >= r2 - eps) return 2;
+  return 2 + lin((r2 - d) / Math.max(1e-9, r2 - b.endM));
+}
+
+/**
+ * ⭐⭐ Fritsch–Carlson tangents for UNEVENLY spaced knots — the rings' rule (`orbit.ts`'s `evenTangents`) where the spacing differs: an
+ * interior tangent is ZERO where the number turns back or stays (an extremum AT a key, a hold — never an overshoot between keys), else the
+ * weighted harmonic mean of its two secants (Fritsch–Butland: never more than 3 × the shallower). ⭐ The END tangents are ZERO — the path
+ * leaves the normal camera and rejoins it without a kink.
+ */
+export function unevenTangents(knots: readonly number[], ys: readonly number[]): number[] {
+  const n = ys.length - 1;
+  const h = Array.from({ length: n }, (_, k) => knots[k + 1]! - knots[k]!);
+  const s = h.map((hk, k) => (ys[k + 1]! - ys[k]!) / hk);
+  return ys.map((_, k) => {
+    if (k === 0 || k === n) return 0;
+    const a = s[k - 1]!;
+    const b = s[k]!;
+    if (!(a * b > 0)) return 0;
+    const h0 = h[k - 1]!;
+    const h1 = h[k]!;
+    return (3 * (h0 + h1)) / ((2 * h1 + h0) / a + (h1 + 2 * h0) / b);
+  });
+}
+
+/**
+ * ⭐⭐⭐ THE PATH'S POSE at the piece's distance `d` (the owner, 2026-10-06: *"a curve transition which is as smooth as the transition between
+ * the 1st and 2nd ring"*): each of the pose's four numbers on the rings' monotone cubic over `d` through its keys — the LIVE normal pose at
+ * the band's start, ABOVE held over its plateau (if any), RIGHT held over its own, the live normal pose at the end — Fritsch–Carlson
+ * (`unevenTangents`): with no plateau (the default) the camera passes THROUGH each key without stopping, flat only where a number turns
+ * back (the climb at ABOVE, the swing to the right at RIGHT), and never beyond a key. `null` outside.
+ */
+export function pathCurve(d: number, b: PathBand, normal: PathPose, above: PathPose, right: PathPose): PathPose | null {
+  if (!(d <= b.startM && d >= b.endM)) return null;
+  const h = b.plateauM / 2;
+  // ⭐ in INCREASING distance (the end first); a plateau of zero width is one knot, not two
+  const keys: { x: number; p: PathPose }[] = [{ x: b.endM, p: normal }];
+  const put = (x: number, p: PathPose): void => {
+    if (x > keys[keys.length - 1]!.x + 1e-9) keys.push({ x, p });
+  };
+  put(b.rightM - h, right);
+  put(b.rightM + h, right);
+  put(b.aboveM - h, above);
+  put(b.aboveM + h, above);
+  put(b.startM, normal);
+  // ⭐ exactly the key ON a hold — a plateau is CONSTANT, not the key plus a rounding
+  for (let k = 0; k + 1 < keys.length; k++) if (keys[k]!.p === keys[k + 1]!.p && d >= keys[k]!.x && d <= keys[k + 1]!.x) return keys[k]!.p;
+  const xs = keys.map((k) => k.x);
+  const at = (f: (p: PathPose) => number): number => {
+    const ys = keys.map((k) => f(k.p));
+    return hermiteAt(xs, ys, unevenTangents(xs, ys), d);
+  };
+  return { elev: at((p) => p.elev), azim: at((p) => p.azim), r: at((p) => p.r), look: at((p) => p.look) };
 }
 
 /** ⭐ A camera pose relative to the piece: elevation and azimuth around it (radians, the piece's frame), its distance, and its LOOK — 0 the
@@ -101,13 +160,6 @@ export function lerpPose(a: PathPose, b: PathPose, k: number): PathPose {
   if (k >= 1) return b;
   const m = (x: number, y: number): number => x + (y - x) * k;
   return { elev: m(a.elev, b.elev), azim: m(a.azim, b.azim), r: m(a.r, b.r), look: m(a.look, b.look) };
-}
-
-/** ⭐⭐ The path's pose at `t` through its four keys: the normal pose (live), ABOVE, RIGHT, the normal pose again. */
-export function pathPose(t: number, normal: PathPose, above: PathPose, right: PathPose): PathPose {
-  if (t <= 1) return lerpPose(normal, above, t);
-  if (t <= 2) return lerpPose(above, right, t - 1);
-  return lerpPose(right, normal, t - 2);
 }
 
 /**

@@ -1,11 +1,12 @@
 /**
  * ⭐⭐⭐ prototype — THE CAMERA'S APPROACH PATH (`input/camera_path.ts`; `Claude/40_RENDER_SCENE/spec/CAMERA_APPROACH_PATH.md`; the owner,
  * 2026-10-06): milestones 2.7 → 2.2 → 1.7 → 1.2 m, plateaus of 0.3 m, ABOVE and RIGHT the rings' own camera poses, the look on the piece on
- * the plateaus, the unlatch when pushed away with an ease back.
+ * the plateaus, the unlatch when pushed away with an ease back — then (*"too abrupt"*) the RINGS' OWN CURVE through the keys, ABOVE 30° from
+ * the vertical, RIGHT 30° to the right.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { easeInOut, edgeMarker, fromAround, lerpPose, pathFade, pathParam, pathPose, pieceFrame, pushedAway, ringRelativePose, toAround, type PathPose } from "../src/input/camera_path";
+import { easeInOut, edgeMarker, fromAround, lerpPose, pathCurve, pathFade, pathParam, pieceFrame, pushedAway, ringRelativePose, toAround, type PathPose } from "../src/input/camera_path";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { sceneConfig } from "../src/input/scene_rig";
 import { fourRingLayout, orbitOffset } from "../src/input/orbit";
@@ -25,7 +26,7 @@ describe("⭐⭐⭐ prototype — the camera's approach path", () => {
     expect(pathParam(1.2, BAND)).toBeCloseTo(3, 12);
     expect(pathParam(2.71, BAND)).toBeNull();
     expect(pathParam(1.19, BAND)).toBeNull();
-    // the transitions eased: halfway in distance is halfway in t (the ease is symmetric), and it moves at its middle
+    // the HUD's stage: linear between the holds
     expect(pathParam((2.7 + 2.35) / 2, BAND)).toBeCloseTo(0.5, 12);
     expect(pathParam((2.05 + 1.85) / 2, BAND)).toBeCloseTo(1.5, 12);
     // entering a plateau without a kink: zero speed at its edge
@@ -50,18 +51,42 @@ describe("⭐⭐⭐ prototype — the camera's approach path", () => {
     expect(a.azim).toBeCloseTo(byHand.azim, 12);
   });
 
-  it("⭐ the pose through its keys: the normal one (look 0) → ABOVE (look 1) → RIGHT (look 1) → the normal one; exact at each key", () => {
-    const normal: PathPose = { elev: 0.5, azim: 0.04, r: 1.25, look: 0 };
-    const above: PathPose = { elev: 1.1, azim: 0.04, r: 1.25, look: 1 };
-    const right: PathPose = { elev: 0.05, azim: Math.PI / 2, r: 1.25, look: 1 };
-    expect(pathPose(0, normal, above, right)).toEqual(normal);
-    expect(pathPose(1, normal, above, right)).toEqual(above);
-    expect(pathPose(2, normal, above, right)).toEqual(right);
-    expect(pathPose(3, normal, above, right)).toEqual(normal);
-    expect(pathPose(1.5, normal, above, right).look).toBe(1); // between the two plateaus the camera keeps looking at the piece
-    expect(pathPose(0.5, normal, above, right).look).toBeCloseTo(0.5, 12);
-    // the distance to the piece kept
-    for (const t of [0, 0.3, 1, 1.4, 2, 2.6, 3]) expect(pathPose(t, normal, above, right).r).toBeCloseTo(1.25, 12);
+  it("⭐⭐⭐ the pose is the RINGS' CURVE through its keys (*\"as smooth as the transition between the 1st and 2nd ring\"*): exact at the keys, flat there, no overshoot, THROUGH the keys where it goes on, flat where it turns back, no overshoot, from and back to the normal camera without a kink", () => {
+    const soft = { ...BAND, plateauM: 0 };
+    const normal: PathPose = { elev: -0.45, azim: -0.12, r: 1.25, look: 0 };
+    const above: PathPose = { elev: (60 * Math.PI) / 180, azim: -0.11, r: 1.25, look: 1 };
+    const right: PathPose = { elev: 0.04, azim: 0.48, r: 1.25, look: 1 };
+    const at = (d: number) => pathCurve(d, soft, normal, above, right)!;
+    expect(at(2.7)).toEqual(normal);
+    expect(at(2.2)).toEqual(above);
+    expect(at(1.7)).toEqual(right);
+    expect(at(1.2)).toEqual(normal);
+    expect(pathCurve(2.71, soft, normal, above, right)).toBeNull();
+    // ⭐ flat where a number TURNS BACK — the climb at ABOVE, the swing to the right at RIGHT: within 5 cm, under 4 % of the way
+    expect(Math.abs(at(2.25).elev - above.elev)).toBeLessThan(0.04 * Math.abs(above.elev - normal.elev));
+    expect(Math.abs(at(2.15).elev - above.elev)).toBeLessThan(0.04 * Math.abs(above.elev - right.elev));
+    expect(Math.abs(at(1.65).azim - right.azim)).toBeLessThan(0.04 * Math.abs(right.azim - normal.azim));
+    // ⭐⭐ …and THROUGH a key where it goes on (the rings' kind): the elevation falls through RIGHT's without stopping
+    const through = (at(1.7 + 1e-4).elev - at(1.7 - 1e-4).elev) / 2e-4;
+    expect(through).toBeGreaterThan(0.5 * ((right.elev - normal.elev) / 0.5));
+    // ⭐ and it leaves the normal camera without a kink: flat at the band's ends
+    expect(Math.abs(at(2.68).elev - normal.elev)).toBeLessThan(0.01 * Math.abs(above.elev - normal.elev));
+    expect(Math.abs(at(1.22).azim - normal.azim)).toBeLessThan(0.01 * Math.abs(right.azim - normal.azim));
+    // ⭐ never beyond its keys (shape-preserving) — the look between the two holds stays on the piece; the distance kept
+    for (let d = 2.7; d >= 1.2; d -= 0.01) {
+      const p = at(d);
+      expect(p.elev).toBeLessThanOrEqual(above.elev + 1e-12);
+      expect(p.elev).toBeGreaterThanOrEqual(normal.elev - 1e-12);
+      expect(p.r).toBeCloseTo(1.25, 12);
+      if (d <= 2.2 && d >= 1.7) expect(p.look).toBeCloseTo(1, 12);
+    }
+    // ⭐ a transition spreads over the whole gap — its steepest slope at most the cubic's 1.5 × the mean, never a squeeze between two holds
+    let steepest = 0;
+    for (let d = 2.19; d > 1.71; d -= 0.005) steepest = Math.max(steepest, Math.abs((at(d + 1e-4).elev - at(d - 1e-4).elev) / 2e-4));
+    expect(steepest).toBeLessThanOrEqual((1.5 * (above.elev - right.elev)) / 0.5 + 1e-6);
+    // ⭐ an exact hold when the slider asks for one
+    for (const d of [2.35, 2.2, 2.05]) expect(pathCurve(d, BAND, normal, above, right)).toEqual(above);
+    for (const d of [1.85, 1.7, 1.55]) expect(pathCurve(d, BAND, normal, above, right)).toEqual(right);
   });
 
   it("⭐⭐ pushed AWAY (beyond the closest it came, by more than 1 cm): unlatched — and the camera EASES back to its normal pose", () => {
@@ -103,16 +128,19 @@ describe("⭐⭐⭐ prototype — the camera's approach path", () => {
     expect(w).toMatch(/if \(!\(d > st\.cfg\.pathStartM\) \|\| f === null\) \{\s*st\.camPath = null;\s*return;\s*\}/);
     expect(w).toMatch(/st\.camera\.setPosition\(onPath\?\.pos \?\? normalCam\);\s*st\.camera\.setTarget\(onPath\?\.look \?\? c\.clone\(\)\);/);
     expect(w).toMatch(/if \(pushedAway\(d, lp\.closestM, PATH_AWAY_EPS_M\)\) \{\s*st\.camPath = null;/);
-    expect(w).toMatch(/st\.camPathFade = \{ from: currentPathPose\(st, t, live\), t0: now, side: lp\.side \};/);
+    expect(w).toMatch(/st\.camPathFade = \{ from: currentPathPose\(st, d, band, live\), t0: now, side: lp\.side \};/);
     expect(w).toMatch(/const v2 = lay\.knots\[2\]! \/ lay\.total;/);
     expect(w).toMatch(/const v23 = \(lay\.knots\[1\]! \+ lay\.knots\[2\]!\) \/ 2 \/ lay\.total;/);
     expect(w).toMatch(/azim: w\.azim \+ \(cfg\.pathRightYawDeg \* Math\.PI\) \/ 180, r: gap, look: 1/);
     expect(w).toMatch(/const PATH_FADE_MS = 400;/);
+    expect(w).toMatch(/const above: PathPose = \{ elev: \(\(90 - cfg\.pathAboveFromVerticalDeg\) \* Math\.PI\) \/ 180, azim: a\.azim, r: gap, look: 1 \};/);
+    expect(w).toMatch(/return pathCurve\(d, band, live, above, right\) \?\? live;/);
     expect(w).toMatch(/st\.restAligned = false;\s*st\.camPath = null;[^\n]*\n\s*st\.camPathFade = null;/); // the respawn
     expect([DEFAULT_CONFIG.pathStartM, DEFAULT_CONFIG.pathAboveM, DEFAULT_CONFIG.pathRightM, DEFAULT_CONFIG.pathEndM]).toEqual([2.7, 2.2, 1.7, 1.2]);
-    expect([DEFAULT_CONFIG.pathPlateauM, DEFAULT_CONFIG.pathRightYawDeg]).toEqual([0.3, 90]);
+    expect([DEFAULT_CONFIG.pathPlateauM, DEFAULT_CONFIG.pathRightYawDeg, DEFAULT_CONFIG.pathAboveFromVerticalDeg]).toEqual([0, 30, 30]);
     const menu = code("render/tuning_menu.ts");
     expect(menu).toContain('"pathPlateauM", 0, 0.6, 0.05)');
     expect(menu).toContain('"pathRightYawDeg", 0, 180, 5)');
+    expect(menu).toContain('"pathAboveFromVerticalDeg", 0, 90, 5)');
   });
 });

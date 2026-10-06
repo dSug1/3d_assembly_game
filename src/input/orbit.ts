@@ -96,8 +96,9 @@ function evenTangents(ys: readonly number[]): number[] {
   });
 }
 
-/** ⭐ The cubic Hermite through `ys` at `knots` (increasing) with tangents `ms`, at `s` — the LOWER segment at a knot. */
-function hermiteAt(knots: readonly number[], ys: readonly number[], ms: readonly number[], s: number): number {
+/** ⭐ The cubic Hermite through `ys` at `knots` (increasing) with tangents `ms`, at `s` — the LOWER segment at a knot. ⭐ Exported for the
+ * camera's approach path (`camera_path.ts`), so its curve is the rings' own. */
+export function hermiteAt(knots: readonly number[], ys: readonly number[], ms: readonly number[], s: number): number {
   const n = knots.length - 1;
   let k = 0;
   while (k < n - 1 && s > knots[k + 1]! + 1e-12) k++;
