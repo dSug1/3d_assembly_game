@@ -435,7 +435,7 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(g.pitch).toBeCloseTo(0.5, 12);
     // ⭐ wired: the orbit drag multiplies each axis by its gain, and the slider has the owner's range
     // ⭐ dy's sense inverted for the orbit (the owner, 2026-10-04): dy enters with its own sign; dx still negated
-    expect(code("pointer_wiring.ts")).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw, dy \* st\.cfg\.boxGainPitch \* g\.pitch\)/);
+    expect(code("pointer_wiring.ts")).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGain, dy \* st\.cfg\.boxGainPitch \* g\.pitch\)/); // (2026-10-06: × the gain around the piece, 1 otherwise)
     expect(code("pointer_wiring.ts")).not.toMatch(/-dy \* st\.cfg\.boxGainPitch/);
     expect(code("tuning_menu.ts")).toMatch(/"boxGainInsideLeash", 0\.05, 1, 0\.05\)/);
   });
@@ -496,7 +496,8 @@ describe("⭐ prototype — the CAMERA menu has subsections (the owner, 2026-10-
     under("CAMERA FOLLOW", ['"cameraLeashDeg"', '"cameraFollowMs"', '"cameraSettleDelayMs"', '"cameraCatchUpMs"']);
     under("ORBIT SWAY", ['"orbitSwayKind"', '"orbitSwayDeg"', '"orbitSlideMm"', '"orbitSwayTauMs"']);
     under("RENDERING", ['"pieceContourAlpha"', '"shadowsOn"', '"autoShadowBudgetMs"']);
-    under("CAMERA ORBIT", ['"orbitTopRadiusM"', '"gainOrbitYaw"']);
+    under("CAMERA ORBIT AROUND CENTER", ['"orbitTopRadiusM"', '"gainOrbitYaw"']); // ⭐ renamed by the owner, 2026-10-06
+    under("CAMERA ORBIT AROUND PIECE", ['"pieceOrbitGapMinPct"']);
   });
 });
 
@@ -652,7 +653,7 @@ describe("⭐⭐ prototype — the ZOOM moves the CAMERA, not the green piece (t
     expect(len(far) - len(near)).toBeCloseTo(2.5 - 0.625, 9);
     const w = code("green_box_wiring.ts");
     expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);\s*const rig = \{ yaw: st\.orbit\.yaw, v: st\.orbit\.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM \};/);
-    expect(w).toMatch(/cameraGapM\(st\.cfg\.cameraRadiusOffsetMm \/ 1000, st\.zoom\),/);
+    expect(w).toMatch(/const gapFull = cameraGapM\(st\.cfg\.cameraRadiusOffsetMm \/ 1000, st\.zoom\);/); // (2026-10-06: scaled around the piece, `scaledGap`)
     expect(code("scene.ts")).toMatch(/st\.greenBox !== null\s*\? wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
   });
 });

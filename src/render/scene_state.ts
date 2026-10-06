@@ -446,6 +446,8 @@ export interface SceneState {
   /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
    * respawn. `null`: the orbit around the centre as before. */
   pieceOrbit: PieceOrbit | null;
+  /** ⭐ …and the yaw gain while orbiting around the piece (`pieceYawGain`, set each frame; 1 otherwise). */
+  pieceYawGain: number;
   /** ⭐ Prototype (`1.0.59q-`): the face holding the pink ring — at boot the blue face toward the green piece, then the face a press on a
    * placed piece moves the target to. Its edges give the alignment's MATING edge. */
   pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;

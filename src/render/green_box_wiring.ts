@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { cameraCentre, pushedPiece, startPieceOrbit } from "../input/piece_orbit";
+import { cameraCentre, pieceOrbitProgress, pieceYawGain, pushedPiece, ringDistanceRange, scaledGap, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -250,7 +250,8 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
     const c = st.orbitCentreM;
     const out = orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM;
     const h = Math.hypot(out[0], out[2]) || 1;
-    st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h]);
+    const cam = st.camera.position;
+    st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h], [cam.x, cam.y, cam.z]);
   }
   st.hudDirty = true;
   return true;
@@ -564,14 +565,38 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ …and the camera orbits ITS centre — the piece once the glide is done (`cameraCentre`), the orbit centre before — at the rings'
   // angles, its distance the piece's from that centre + the gap: the same pose as before on the alignment's frame, the gap alone at the end
   const cc: Vec3 = po === null ? [c.x, c.y, c.z] : cameraCentre(po, pp, st.cfg.orbitBlendDistanceMm);
-  const o = cameraOffset(
-    st.cfg,
-    st.cameraLagged,
-    [pp[0] - cc[0], pp[1] - cc[1], pp[2] - cc[2]],
-    { yawRad: st.cfg.cameraYawOffsetDeg * D, pitchRad: st.cfg.cameraPitchOffsetDeg * D },
-    // ⭐ …and the ZOOM scales the camera's distance behind the green piece (`cameraGapM`) — 1.00 the radius offset itself.
-    cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom),
-  );
+  const off = { yawRad: st.cfg.cameraYawOffsetDeg * D, pitchRad: st.cfg.cameraPitchOffsetDeg * D };
+  // ⭐ …and the ZOOM scales the camera's distance behind the green piece (`cameraGapM`) — 1.00 the radius offset itself.
+  const gapFull = cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom);
+  // ⭐⭐ prototype (2026-10-06): around the piece, the gap SCALES as the piece comes in — the camera's distance from it at the alignment,
+  // down to `pieceOrbitGapMinPct` % of that at the rings' closest (`scaledGap`); blended in with the glide so nothing jumps
+  const glide = po === null ? 0 : pieceOrbitProgress(po, st.cfg.orbitBlendDistanceMm);
+  const gapPiece =
+    po === null
+      ? gapFull
+      : scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct);
+  const gap = gapFull + (gapPiece - gapFull) * glide;
+  const o = cameraOffset(st.cfg, st.cameraLagged, [pp[0] - cc[0], pp[1] - cc[1], pp[2] - cc[2]], off, gap);
+  // ⭐⭐ prototype (2026-10-06): *"lower gain while orbiting"* — the yaw gain around the piece (`pieceYawGain`): the scene (the play volume's
+  // corners and centre) slides across the screen as far per millimetre as it did turning about the centre, at this ring, zoom and offsets;
+  // blended in with the glide. Read by the next orbit drag (`orbitDragStep`).
+  st.pieceYawGain =
+    po === null
+      ? 1
+      : 1 +
+        (pieceYawGain(
+          (aroundPiece, y) => {
+            const at = { yaw: y, v: st.cameraLagged!.v };
+            if (aroundPiece) return { cam: add(pp, cameraOffset(cfg, at, [0, 0, 0], off, gapPiece)), look: pp };
+            const b = orbitOffset(cfg, y, st.boxOrbit!.v, st.boxOrbit!.zoom).offsetM;
+            const rel: Vec3 = [b[0] * k, b[1] * k, b[2] * k];
+            return { cam: add([c.x, c.y, c.z], cameraOffset(cfg, at, rel, off, gapFull)), look: [c.x, c.y, c.z] };
+          },
+          st.cameraLagged.yaw,
+          sweepPoints(st, [c.x, c.y, c.z]),
+        ) -
+          1) *
+          glide;
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   st.camera.setPosition(new Vector3(cc[0] + o[0], cc[1] + o[1], cc[2] + o[2]));
   st.camera.setTarget(new Vector3(cc[0], cc[1], cc[2]));
@@ -583,6 +608,17 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   counterYawFrame(st);
   restAlignFrame(st, now);
   restingFillFrame(st);
+}
+
+/** ⭐ The scene points whose on-screen sweep sets the yaw gain around the piece: the play volume's eight corners and its centre — or, with
+ * none, a 2 m cube about the orbit centre. */
+function sweepPoints(st: SceneState, c: Vec3): Vec3[] {
+  const pv = st.playVolume;
+  const lo: Vec3 = pv !== null ? pv.min : [c[0] - 1, c[1] - 1, c[2] - 1];
+  const hi: Vec3 = pv !== null ? pv.max : [c[0] + 1, c[1] + 1, c[2] + 1];
+  const pts: Vec3[] = [[(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2]];
+  for (const x of [lo[0], hi[0]]) for (const y of [lo[1], hi[1]]) for (const z of [lo[2], hi[2]]) pts.push([x, y, z]);
+  return pts;
 }
 
 /**

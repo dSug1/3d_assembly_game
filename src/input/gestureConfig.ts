@@ -472,6 +472,7 @@ export interface GestureConfig {
   cameraLeashDeg: number;
   /** ⭐ Prototype: the camera's yaw offset from its orbit position, degrees — so the green box does not hide the yellow target. */
   cameraYawOffsetDeg: number;
+  pieceOrbitGapMinPct: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
   /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
@@ -948,6 +949,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
   // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
   cameraYawOffsetDeg: 2.5, // ⭐ the owner, 2026-10-05 (was 3)
+  // ⭐ prototype, the owner 2026-10-06: around the piece, the gap at the rings' closest, % of the camera's distance from the piece at the
+  // resting-face alignment (`scaledGap`)
+  pieceOrbitGapMinPct: 50,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)

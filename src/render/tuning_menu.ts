@@ -174,7 +174,14 @@ export function installTuningMenu(st: SceneState): void {
           ],
         },
         {
-          title: "CAMERA ORBIT",
+          // ⭐ prototype, the owner 2026-10-06: *"x% slider shall be in a CAMERA/CAMERA ORBIT AROUND PIECE menu"* — the orbit around the piece
+          // after the resting-face alignment (`piece_orbit.ts`)
+          title: "CAMERA ORBIT AROUND PIECE",
+          sliders: [tunable(st, "gap at the closest ring (% of the gap at alignment)", "pieceOrbitGapMinPct", 10, 100, 5)],
+        },
+        {
+          // ⭐ prototype, the owner 2026-10-06: *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT AROUND CENTER"*
+          title: "CAMERA ORBIT AROUND CENTER",
           sliders: [
             tunable(st, "1st ring (top) radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
             tunable(st, "1st ring (top) height (m)", "orbitTopHeightM", -3, 3, 0.01),
