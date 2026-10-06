@@ -312,9 +312,10 @@ function currentPathPose(st: SceneState, d: number, band: PathBand, live: PathPo
   const v23 = (lay.knots[1]! + lay.knots[2]!) / 2 / lay.total;
   const a = ringRelativePose(cfg, v2, gap, off) ?? live;
   const w = ringRelativePose(cfg, v23, gap, off) ?? live;
-  // ⭐ the owner, 2026-10-06: *"keep the camera looking at the orbit center"* (the pink gizmo) — look 0 at every key
-  const above: PathPose = { elev: ((90 - cfg.pathAboveFromVerticalDeg) * Math.PI) / 180, azim: a.azim, r: gap, look: 0 };
-  const right: PathPose = { elev: w.elev, azim: w.azim + (cfg.pathRightYawDeg * Math.PI) / 180, r: gap, look: 0 };
+  // ⭐ the owner, 2026-10-06: *"keep the camera looking at the orbit center"* (the pink gizmo), then *"during the plateau 1 and 2 the
+  // camera look at the midway between pink ring and piece"* — `pathHoldLook` (0.5) on both holds, eased in and out with the pose
+  const above: PathPose = { elev: ((90 - cfg.pathAboveFromVerticalDeg) * Math.PI) / 180, azim: a.azim, r: gap, look: cfg.pathHoldLook };
+  const right: PathPose = { elev: w.elev, azim: w.azim + (cfg.pathRightYawDeg * Math.PI) / 180, r: gap, look: cfg.pathHoldLook };
   return pathCurve(d, band, live, above, right) ?? live;
 }
 

@@ -141,6 +141,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "path end: piece distance (m)", "pathEndM", 0.1, 3.5, 0.05),
             tunable(st, "exact hold around ABOVE and RIGHT (m; 0 = soft)", "pathPlateauM", 0, 1.2, 0.05),
             tunable(st, "above: from the vertical (°)", "pathAboveFromVerticalDeg", 0, 90, 5),
+            tunable(st, "holds: look from the pink ring (0) to the piece (1)", "pathHoldLook", 0, 1, 0.05),
             tunable(st, "right: yaw from the rings' pose (°)", "pathRightYawDeg", 0, 180, 5),
           ],
         },
