@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { anglesOf, pieceCamera, pieceOrbitProgress, pushedPiece, referenceYawGain, ringDistanceRange, scaledGap, startPieceOrbit, viewAxis } from "../input/piece_orbit";
+import { anglesOf, pieceCamera, pieceOrbitEnds, pieceOrbitProgress, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, startCentreReturn, startPieceOrbit, viewAxis } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -265,9 +265,49 @@ export function enterPieceOrbit(st: SceneState): boolean {
   const cam = st.camera.position;
   // ⭐ the rings' angles around the piece now — the camera's own are kept against them, so it starts EXACTLY where it is
   const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
-  st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h], [cam.x, cam.y, cam.z], ring);
+  // ⭐ the PINK GIZMO's distance now — the orbit ends itself when the piece comes within `pieceOrbitEndPct` % of it (`pieceOrbitEnds`)
+  st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h], [cam.x, cam.y, cam.z], ring, st.centreBlend.targetM);
+  st.centreReturn = null; // a way back in progress gives way
   st.hudDirty = true;
   return true;
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE WAY BACK TO THE ORBIT AROUND THE CENTRE** (`PIECE_ORBIT.md`; the owner, 2026-10-07: *"When it ends (in this case or
+ * at respawn), the camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece orbit"*).
+ * The orbit around the piece ends; on this frame nothing moves — the camera where it is, looking where it looks, recorded against the
+ * centre orbit's own camera (`startCentreReturn`); the frame then fades the difference out with finger travel (`returnCamera`,
+ * `returnLook`). `rebase` (the end by distance): the rig's yaw is put back on the piece's own direction from the centre — dx turned only the
+ * camera around the piece, so the rig had drifted from it — the springs and the camera starting again from there, and the piece's
+ * difference from the rings fades out too; a respawn (`rebase` false) has already put the rig and the piece back at boot.
+ */
+function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
+  const box = st.greenBox;
+  if (box === null) return;
+  const c = st.orbitCentreM;
+  const cam = st.camera.position;
+  const tg = st.camera.getTarget();
+  const lk: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
+  const ln = Math.hypot(lk[0], lk[1], lk[2]) || 1;
+  if (rebase) {
+    const p = box.position;
+    st.orbit = new OrbitController(st.cfg, Math.atan2(p.z - c.z, p.x - c.x), st.orbit.elevation);
+    st.orbitInertia.stop();
+    st.boxSpring = null;
+    st.cameraOrbit = null;
+    st.cameraLagged = null;
+    st.orbitHeadingPrev = null;
+  }
+  // ⭐ where the rings put the piece and the camera at the rig as it now is
+  const bo = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, GREEN_PIECE_ORBIT_ZOOM);
+  const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
+  const rel: Vec3 = [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k];
+  const ringCam = cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: st.orbit.elevation }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
+  const p = box.position;
+  const pieceOff: Vec3 = rebase ? [p.x - (c.x + rel[0]), p.y - (c.y + rel[1]), p.z - (c.z + rel[2])] : [0, 0, 0];
+  st.centreReturn = startCentreReturn([c.x, c.y, c.z], [cam.x, cam.y, cam.z], [lk[0] / ln, lk[1] / ln, lk[2] / ln], ringCam, pieceOff);
+  st.pieceOrbit = null;
+  st.hudDirty = true;
 }
 
 /**
@@ -325,6 +365,7 @@ function restingFillFrame(st: SceneState): void {
 export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): void {
   const p = st.orbitPieces[kind] ?? st.orbitPieces[0];
   if (p === undefined) return;
+  const wasAround = st.pieceOrbit !== null || st.centreReturn !== null;
   for (const o of st.orbitPieces) o.mesh.setEnabled(o === p);
   st.greenBox = p.mesh;
   st.orbitPieceKind = kind;
@@ -344,6 +385,9 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.orbitHeadingPrev = null;
     st.restAligned = false;
     st.pieceOrbit = null;
+    // ⭐ (2026-10-07) around the piece: back to the centre orbit as the way in reversed, from the camera as it is; else nothing to undo
+    if (wasAround) returnToCentreOrbit(st, false);
+    else st.centreReturn = null;
   }
   st.hudDirty = true;
 }
@@ -459,6 +503,16 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (st.cfg.orbitPieceKind !== st.orbitPieceKind) spawnOrbitPiece(st, st.cfg.orbitPieceKind, false);
   const now = performance.now();
   const c = st.orbitCentreM;
+  // ⭐⭐ prototype (2026-10-07): *"Automatically end it when the distance crosses initial distance * x%"* — the piece within
+  // `pieceOrbitEndPct` % of its distance to the pink gizmo at the start: back to the orbit around the centre (`returnToCentreOrbit`)
+  if (st.pieceOrbit !== null) {
+    const t = st.centreBlend.targetM;
+    const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
+    if (pieceOrbitEnds(d, st.pieceOrbit.pink0M, st.cfg.pieceOrbitEndPct)) {
+      st.lastVerdict = `orbit: the piece within ${st.cfg.pieceOrbitEndPct} % of its start distance to the pink gizmo — back to the centre orbit`;
+      returnToCentreOrbit(st, true);
+    }
+  }
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
   // ⭐⭐ prototype (green box), 2026-10-02: the orbit's INERTIA — with no finger down it coasts on, slowing with τ = the gain × the
   // green piece's volume (`OrbitInertia`, `inertiaTauMs`); a NEW touch stops it at once.
@@ -509,9 +563,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ prototype (2026-10-06): orbiting AROUND THE PIECE (`piece_orbit.ts`), the piece is pushed along its frozen line through the
   // centre at the rings' distance (dy as fast as before; dx no longer moves it) — else on the rings as before
   const po = st.pieceOrbit;
+  const cr = st.centreReturn;
+  // ⭐ (2026-10-07) on the way back to the centre orbit, the piece's difference from the rings fades out (`returnPieceOffset`)
+  const back: Vec3 = cr === null ? [0, 0, 0] : returnPieceOffset(cr, cfg.pieceOrbitFadeMm);
   const pp: Vec3 =
     po === null
-      ? [c.x + bo.offsetM[0] * k, c.y + bo.offsetM[1] * k, c.z + bo.offsetM[2] * k]
+      ? [c.x + bo.offsetM[0] * k + back[0], c.y + bo.offsetM[1] * k + back[1], c.z + bo.offsetM[2] * k + back[2]]
       : pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k);
   box.position.set(pp[0], pp[1], pp[2]);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
@@ -590,6 +647,17 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const o = cameraOffset(st.cfg, st.cameraLagged, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], off, gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
     lookAt = [c.x, c.y, c.z];
+    if (cr !== null) {
+      // ⭐⭐ (2026-10-07) the way back, the way in reversed: from where the camera was, its difference from this pose fading out, its view
+      // axis slerping back to the centre — both with finger travel, over the way in's own settings
+      camAt = returnCamera(cr, [c.x, c.y, c.z], o, cfg.pieceOrbitFadeMm);
+      const ax = returnLook(cr, camAt, [c.x, c.y, c.z], cfg.pieceOrbitSlerpMm);
+      lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
+      if (returnProgress(cr, cfg.pieceOrbitFadeMm) >= 1 && returnProgress(cr, cfg.pieceOrbitSlerpMm) >= 1) {
+        st.centreReturn = null; // home: the centre orbit as it always was
+        st.hudDirty = true;
+      }
+    }
   } else {
     const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
     const gapPiece = scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct);

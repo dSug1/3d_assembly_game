@@ -50,7 +50,7 @@ import { type SceneSnapshot } from "./undo_wiring";
 import { type DemoPlan } from "../core/demo_plan";
 import { type LevelEnd, type LevelResult } from "../core/level_end";
 import { type Aabb } from "../core/collision";
-import { type PieceOrbit } from "../input/piece_orbit";
+import { type CentreReturn, type PieceOrbit } from "../input/piece_orbit";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -446,6 +446,8 @@ export interface SceneState {
   /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
    * respawn. `null`: the orbit around the centre as before. */
   pieceOrbit: PieceOrbit | null;
+  /** ⭐ Prototype (2026-10-07): the way BACK to the orbit around the centre in progress (`returnToCentreOrbit`); `null` once home. */
+  centreReturn: CentreReturn | null;
   /** ⭐ …and the yaw gain while orbiting around the piece — ONE for the game (`referenceYawGain`), recomputed only when its sliders change
    * (`pieceYawGainKey`). */
   pieceYawGain: number;

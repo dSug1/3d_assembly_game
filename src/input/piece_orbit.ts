@@ -28,6 +28,8 @@ export interface PieceOrbit {
   readonly travelledMm: number;
   readonly gap0M: number;
   readonly ring0M: number;
+  /** ⭐ The piece's distance from the PINK GIZMO when it started (`pieceOrbitEnds`). */
+  readonly pink0M: number;
   readonly dAzRad: number;
   readonly dElRad: number;
 }
@@ -61,14 +63,15 @@ const wrap = (a: number): number => {
  * distance from the piece; and its angles around the piece against the rings' (`ring`) — so the camera is EXACTLY where it was on the
  * frame the mode starts.
  */
-export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, camera: Vec3, ring: AroundAngles): PieceOrbit {
+export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, camera: Vec3, ring: AroundAngles, pink: Vec3 = centre): PieceOrbit {
   const v: Vec3 = [piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]];
   const n = Math.hypot(v[0], v[1], v[2]);
   const dir: Vec3 = n > 1e-9 ? [v[0] / n, v[1] / n, v[2] / n] : fallbackDir;
   const rel: Vec3 = [camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]];
   const gap0M = Math.hypot(rel[0], rel[1], rel[2]);
   const a = anglesOf(rel);
-  return { dir, travelledMm: 0, gap0M, ring0M: n, dAzRad: wrap(a.az - ring.az), dElRad: a.el - ring.el };
+  const pink0M = Math.hypot(piece[0] - pink[0], piece[1] - pink[1], piece[2] - pink[2]);
+  return { dir, travelledMm: 0, gap0M, ring0M: n, dAzRad: wrap(a.az - ring.az), dElRad: a.el - ring.el, pink0M };
 }
 
 /** ⭐ One step of finger travel, millimetres (the drag that drives the orbit). */
@@ -224,4 +227,95 @@ export function referenceYawGain(p: {
   }
   if (!(aroundPiece > 1e-12) || !(aroundCentre > 1e-12)) return 1; // nothing in view to compare: no change
   return Math.min(1, Math.max(p.floor ?? 0.1, aroundCentre / aroundPiece));
+}
+
+/** ⭐ A slerp between two unit directions (`t` 0 → `a`, 1 → `b`). */
+export function slerpDir(a: Vec3, b: Vec3, t: number): Vec3 {
+  const k = Math.min(1, Math.max(0, t));
+  const cos = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
+  const om = Math.acos(cos);
+  if (om < 1e-6) return k < 1 ? a : b;
+  const s = Math.sin(om);
+  const wa = Math.sin((1 - k) * om) / s;
+  const wb = Math.sin(k * om) / s;
+  const v: Vec3 = [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb];
+  const n = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / n, v[1] / n, v[2] / n];
+}
+
+/**
+ * ⭐⭐ prototype — **THE ORBIT AROUND THE PIECE ENDS BY ITSELF** (the owner, 2026-10-07: *"Track the initial distance of the piece to pink
+ * gizmo when orbit around the piece is triggered. Automatically end it when the distance crosses initial distance * x%"*): the piece now
+ * closer to the pink gizmo than `endPct` % of its distance then (`pink0M`). ⛔ A start distance of zero never ends it.
+ */
+export function pieceOrbitEnds(pieceToPinkM: number, pink0M: number, endPct: number): boolean {
+  return pink0M > 0 && pieceToPinkM < (pink0M * endPct) / 100;
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE WAY BACK TO THE ORBIT AROUND THE CENTRE, THE WAY IN REVERSED** (the owner, 2026-10-07: *"When it ends (in this
+ * case or at respawn), the camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece
+ * orbit"*). As the way in: on the frame it ends NOTHING MOVES — the camera where it was, looking where it looked; then, with FINGER TRAVEL,
+ * its VIEW AXIS slerps from where it looked (`look0`) to the orbit centre (over the way in's `slerpMm`), and its difference from the centre
+ * orbit's own pose — angles around the centre and distance from it (`dAzRad`, `dElRad`, `dRM`) — fades out (over the way in's `fadeMm`);
+ * the PIECE likewise, its difference from where the rings put it (`pieceOff`; zero at a respawn, which puts it back at boot).
+ */
+export interface CentreReturn {
+  readonly look0: Vec3;
+  readonly dAzRad: number;
+  readonly dElRad: number;
+  readonly dRM: number;
+  readonly pieceOff: Vec3;
+  readonly travelledMm: number;
+}
+
+/** ⭐ At the end: from the camera as it is (`camera`, looking along `look0`) against the centre orbit's camera (`ringCam`, an offset from
+ * the centre), and the piece as it is against where the rings put it. */
+export function startCentreReturn(centre: Vec3, camera: Vec3, look0: Vec3, ringCam: Vec3, pieceOff: Vec3): CentreReturn {
+  const rel: Vec3 = [camera[0] - centre[0], camera[1] - centre[1], camera[2] - centre[2]];
+  const a = anglesOf(rel);
+  const r = anglesOf(ringCam);
+  return {
+    look0,
+    dAzRad: wrap(a.az - r.az),
+    dElRad: a.el - r.el,
+    dRM: Math.hypot(rel[0], rel[1], rel[2]) - Math.hypot(ringCam[0], ringCam[1], ringCam[2]),
+    pieceOff,
+    travelledMm: 0,
+  };
+}
+
+/** ⭐ One step of finger travel, millimetres. */
+export function advanceCentreReturn(r: CentreReturn, travelMm: number): CentreReturn {
+  return travelMm > 0 ? { ...r, travelledMm: r.travelledMm + travelMm } : r;
+}
+
+/** ⭐ A share of finger travel over `budgetMm`, eased (smoothstep, as the way in); a budget of zero is at once. */
+export function returnProgress(r: CentreReturn, budgetMm: number): number {
+  if (budgetMm <= 0) return 1;
+  const t = Math.min(1, r.travelledMm / budgetMm);
+  return t * t * (3 - 2 * t);
+}
+
+/** ⭐⭐ The camera on its way back: the centre orbit's camera (`ringCam`, from the centre) plus the difference still left. ⛔ ±89°. */
+export function returnCamera(r: CentreReturn, centre: Vec3, ringCam: Vec3, fadeMm: number): Vec3 {
+  const left = 1 - returnProgress(r, fadeMm);
+  const a = anglesOf(ringCam);
+  const lim = (89 * Math.PI) / 180;
+  const d = dirOf({ az: a.az + r.dAzRad * left, el: Math.max(-lim, Math.min(lim, a.el + r.dElRad * left)) });
+  const dist = Math.hypot(ringCam[0], ringCam[1], ringCam[2]) + r.dRM * left;
+  return [centre[0] + d[0] * dist, centre[1] + d[1] * dist, centre[2] + d[2] * dist];
+}
+
+/** ⭐⭐ Its view axis: from where it looked (`look0`) to the orbit centre, from where the camera is. */
+export function returnLook(r: CentreReturn, camera: Vec3, centre: Vec3, slerpMm: number): Vec3 {
+  const b: Vec3 = [centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]];
+  const n = Math.hypot(b[0], b[1], b[2]) || 1;
+  return slerpDir(r.look0, [b[0] / n, b[1] / n, b[2] / n], returnProgress(r, slerpMm));
+}
+
+/** ⭐ The piece's difference from the rings, still left. */
+export function returnPieceOffset(r: CentreReturn, fadeMm: number): Vec3 {
+  const left = 1 - returnProgress(r, fadeMm);
+  return [r.pieceOff[0] * left, r.pieceOff[1] * left, r.pieceOff[2] * left];
 }

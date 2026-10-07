@@ -8,16 +8,23 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
+  advanceCentreReturn,
   advancePieceOrbit,
   anglesOf,
   dirOf,
   meanSweep,
   pieceCamera,
+  pieceOrbitEnds,
   pieceOrbitProgress,
   pushedPiece,
   referenceYawGain,
+  returnCamera,
+  returnLook,
+  returnPieceOffset,
+  returnProgress,
   ringDistanceRange,
   scaledGap,
+  startCentreReturn,
   startPieceOrbit,
   viewAxis,
   type PieceOrbit,
@@ -184,6 +191,43 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(meanSweep(a, b, [[0.002, 0, 5.01]])).toBe(0);
   });
 
+  it("⭐⭐ it ENDS by itself (*\"when the distance crosses initial distance * x%\"*): the start distance to the pink gizmo recorded, the end below x %", () => {
+    const pink: Vec3 = [0.5, 0.3, -0.1];
+    const f = frame(null, 0.3, 0.1);
+    const po = startPieceOrbit(C, f.piece, [1, 0, 0], f.cam, ringAngles(0.3, 0.1), pink);
+    expect(po.pink0M).toBeCloseTo(len(sub(f.piece, pink)), 12);
+    expect(pieceOrbitEnds(po.pink0M * 0.51, po.pink0M, 50)).toBe(false);
+    expect(pieceOrbitEnds(po.pink0M * 0.49, po.pink0M, 50)).toBe(true);
+    expect(pieceOrbitEnds(po.pink0M * 1.2, po.pink0M, 50)).toBe(false); // pushed away: never
+    expect(pieceOrbitEnds(0, 0, 50)).toBe(false); // started ON the gizmo: never
+  });
+
+  it("⭐⭐⭐ the WAY BACK is the way in reversed: nothing moves when it ends; the view axis slerps back to the centre and the difference fades, with finger travel", () => {
+    // the camera somewhere around the piece, looking at it; the centre orbit's own camera elsewhere
+    const camera: Vec3 = [1.9, 1.4, 0.6];
+    const piece: Vec3 = [1.2, 0.5, 0.2];
+    const look0 = unit(sub(piece, camera));
+    const ringCam: Vec3 = cameraOffset(cfg, { yaw: 0.2, v: 0.15 }, orbitOffset(cfg, 0.2, 0.15, 1).offsetM as Vec3, OFF, GAP);
+    const pieceOff: Vec3 = [0, 0.07, 0];
+    let r = startCentreReturn(C, camera, look0, ringCam, pieceOff);
+    const at = (rr: typeof r) => returnCamera(rr, C, ringCam, FADE);
+    for (const k of [0, 1, 2]) expect(at(r)[k]).toBeCloseTo(camera[k]!, 12); // nothing moves
+    for (const k of [0, 1, 2]) expect(returnLook(r, camera, C, 10)[k]).toBeCloseTo(look0[k]!, 12); // looking where it looked
+    expect(returnPieceOffset(r, FADE)).toEqual(pieceOff);
+    r = advanceCentreReturn(r, 5); // half the slerp's travel
+    const cam5 = at(r);
+    const toC = unit(sub(C, cam5));
+    const ax = returnLook(r, cam5, C, 10);
+    const whole = Math.acos(look0[0] * toC[0] + look0[1] * toC[1] + look0[2] * toC[2]);
+    const done = Math.acos(Math.min(1, ax[0] * look0[0] + ax[1] * look0[1] + ax[2] * look0[2]));
+    expect(done / whole).toBeCloseTo(0.5, 9); // a SLERP, half at half
+    r = advanceCentreReturn(r, FADE);
+    for (const k of [0, 1, 2]) expect(at(r)[k]).toBeCloseTo(C[k]! + ringCam[k]!, 12); // home: the centre orbit's own camera
+    for (const k of [0, 1, 2]) expect(returnLook(r, at(r), C, 10)[k]).toBeCloseTo(unit(sub(C, at(r)))[k]!, 12); // looking at the centre
+    expect(returnPieceOffset(r, FADE).map((x) => Math.abs(x))).toEqual([0, 0, 0]);
+    expect(returnProgress(r, FADE)).toBe(1);
+  });
+
   it("⭐ the piece ON the centre: the fallback direction, never a NaN", () => {
     const po = startPieceOrbit(C, C, [0, 0, 1], [0, 0, 3], { az: 0, el: 0 });
     expect(po.dir).toEqual([0, 0, 1]);
@@ -201,7 +245,15 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(enter).not.toMatch(/restAlign|restingFace/); // nor the orbit the alignment
     const tap = code("render/pointer_wiring.ts");
     expect(tap).toMatch(/const aligned = r\.aligns && alignRestingFace\(st, now\);\s*const orbiting = r\.aligns && enterPieceOrbit\(st\);\s*if \(aligned \|\| orbiting\) \{/);
-    expect(w).toMatch(/st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[out\[0\] \/ h, 0, out\[2\] \/ h\], \[cam\.x, cam\.y, cam\.z\], ring\);/);
+    expect(w).toMatch(/st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[out\[0\] \/ h, 0, out\[2\] \/ h\], \[cam\.x, cam\.y, cam\.z\], ring, st\.centreBlend\.targetM\);/);
+    // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
+    expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceOrbit\.pink0M, st\.cfg\.pieceOrbitEndPct\)\) \{[\s\S]{0,300}?returnToCentreOrbit\(st, true\);/);
+    expect(w).toMatch(/if \(wasAround\) returnToCentreOrbit\(st, false\);/); // …and at a respawn
+    expect(w).toMatch(/camAt = returnCamera\(cr, \[c\.x, c\.y, c\.z\], o, cfg\.pieceOrbitFadeMm\);\s*const ax = returnLook\(cr, camAt, \[c\.x, c\.y, c\.z\], cfg\.pieceOrbitSlerpMm\);/);
+    expect(w).toMatch(/\? \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\], c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\], c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\]\]/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
+    expect(DEFAULT_CONFIG.pieceOrbitEndPct).toBe(50);
+    expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitEndPct", 0, 100, 5)');
     expect(w).toMatch(/st\.restAligned = false;\s*st\.pieceOrbit = null;/); // the respawn
     expect(w).toMatch(/: pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\);/);
     expect(w).toMatch(/const gapPiece = scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
