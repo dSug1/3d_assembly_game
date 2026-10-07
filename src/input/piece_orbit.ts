@@ -307,11 +307,33 @@ export function returnCamera(r: CentreReturn, centre: Vec3, ringCam: Vec3, fadeM
   return [centre[0] + d[0] * dist, centre[1] + d[1] * dist, centre[2] + d[2] * dist];
 }
 
-/** ⭐⭐ Its view axis: from where it looked (`look0`) to the orbit centre, from where the camera is. */
-export function returnLook(r: CentreReturn, camera: Vec3, centre: Vec3, slerpMm: number): Vec3 {
-  const b: Vec3 = [centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]];
-  const n = Math.hypot(b[0], b[1], b[2]) || 1;
-  return slerpDir(r.look0, [b[0] / n, b[1] / n, b[2] / n], returnProgress(r, slerpMm));
+/**
+ * ⭐⭐ Its view axis, in TWO PHASES (the owner, 2026-10-07: *"When the orbit around piece ends, first replace the camera in its initial
+ * offset position watching at the piece and then slerp the watch towards the pink gizmo. This will take twice the time as current"*):
+ * - **phase 1** — the first `fadeMm` of finger travel, while the camera fades back to its place (`returnCamera`): it WATCHES THE PIECE —
+ *   from where it looked (`look0`, the piece orbit's own axis, onto the piece by then or nearly) to the piece, so nothing jumps;
+ * - **phase 2** — the next `fadeMm`, the camera in place: the watch slerps from the PIECE to the orbit centre (the pink gizmo).
+ * Each eased (smoothstep). ⛔ It was one slerp from `look0` to the centre over `slerpMm`, beside the fade.
+ */
+export function returnLook(r: CentreReturn, camera: Vec3, piece: Vec3, centre: Vec3, fadeMm: number): Vec3 {
+  const unit = (v: Vec3): Vec3 => {
+    const n = Math.hypot(v[0], v[1], v[2]) || 1;
+    return [v[0] / n, v[1] / n, v[2] / n];
+  };
+  const toPiece = unit([piece[0] - camera[0], piece[1] - camera[1], piece[2] - camera[2]]);
+  const toCentre = unit([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]);
+  const ease = (x: number): number => {
+    const t = Math.min(1, Math.max(0, x));
+    return t * t * (3 - 2 * t);
+  };
+  if (fadeMm <= 0) return toCentre;
+  const phase = r.travelledMm / fadeMm;
+  return phase < 1 ? slerpDir(r.look0, toPiece, ease(phase)) : slerpDir(toPiece, toCentre, ease(phase - 1));
+}
+
+/** ⭐ The way back is done: both phases' travel (2 × `fadeMm`). */
+export function returnDone(r: CentreReturn, fadeMm: number): boolean {
+  return r.travelledMm >= 2 * Math.max(0, fadeMm);
 }
 
 /** ⭐ The piece's difference from the rings, still left. */
