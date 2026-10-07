@@ -476,6 +476,7 @@ export interface GestureConfig {
   orbitPieceYawFactor: number;
   pieceOrbitFadeMm: number;
   pieceOrbitEndPct: number;
+  pieceOrbitReturnMm: number;
   pieceOrbitSlerpMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
@@ -964,6 +965,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-07: *"Automatically end it when the distance crosses initial distance * x% (make a slider … default
   // to 50%)"* — the orbit around the piece ends when the piece is this close to the pink gizmo, % of its distance at the start
   pieceOrbitEndPct: 50,
+  // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
+  // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`)
+  pieceOrbitReturnMm: 60,
   // ⭐ prototype, the owner 2026-10-06: *"make the camera slerp faster (put a slider)"* — the view axis turns to the piece over this much
   // finger travel (it shared the centre move's `orbitBlendDistanceMm`, 30 mm)
   pieceOrbitSlerpMm: 10,

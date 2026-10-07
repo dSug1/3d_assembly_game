@@ -593,3 +593,5 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
 * ⭐⭐ **The start and end transitions ease every frame, as the orbit does** (*"Smooth the movement of the camera at start and end of
   piece orbit"*): they read the finger's travel through the orbit's own spring (`boxSmoothMs`) instead of in steps at each pointer
   event → `PIECE_ORBIT.md` §6bis.
+* ⭐⭐ **The way back moves AROUND THE PIECE, its view tied to the move, one value** (`pieceOrbitReturnMm`, 60 mm; the piece was lost from
+  view when the camera started between it and the gizmo) → `PIECE_ORBIT.md` §6.

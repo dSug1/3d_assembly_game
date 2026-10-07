@@ -283,15 +283,24 @@ export function pieceOrbitEnds(pieceToPinkM: number, pink0M: number, endPct: num
 }
 
 /**
- * ⭐⭐⭐ prototype — **THE WAY BACK TO THE ORBIT AROUND THE CENTRE, THE WAY IN REVERSED** (the owner, 2026-10-07: *"When it ends (in this
- * case or at respawn), the camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece
- * orbit"*). As the way in: on the frame it ends NOTHING MOVES — the camera where it was, looking where it looked; then, with FINGER TRAVEL,
- * its VIEW AXIS slerps from where it looked (`look0`) to the orbit centre (over the way in's `slerpMm`), and its difference from the centre
- * orbit's own pose — angles around the centre and distance from it (`dAzRad`, `dElRad`, `dRM`) — fades out (over the way in's `fadeMm`);
- * the PIECE likewise, its difference from where the rings put it (`pieceOff`; zero at a respawn, which puts it back at boot).
+ * ⭐⭐⭐ prototype — **THE WAY BACK TO THE ORBIT AROUND THE CENTRE** (the owner, 2026-10-07: *"When it ends (in this case or at respawn), the
+ * camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece orbit"* — then, the piece
+ * lost from view on the way back when the camera started between it and the gizmo: *"both together"* — moving AROUND THE PIECE, the view
+ * TIED to the move — *"with 10mm and 60mm merged into one single value"*, 60 mm).
+ * On the frame it ends NOTHING MOVES — the camera where it was, looking where it looked. Then ONE progress, by finger travel over
+ * `returnMm` (eased), drives everything:
+ * - the CAMERA moves AROUND THE PIECE — its angles around the piece and its distance from it (`dAzRad`, `dElRad`, `dRM`, against the centre
+ *   orbit's home camera seen from the piece) fading out — so it keeps its distance from the piece and never swings round the gizmo;
+ * - its VIEW aims at a point sliding from the PIECE to the ORBIT CENTRE (the pink gizmo) at that same progress — it reaches the gizmo only
+ *   when the camera is home, the piece in view all the way;
+ * - the PIECE's difference from where the rings put it (`pieceOff`; zero at a respawn, which puts it back at boot) fades out with it.
+ * ⛔ It moved around the CENTRE, its view on the gizmo after 10 mm and its place after 60 — the piece behind the camera in between.
  */
 export interface CentreReturn {
   readonly look0: Vec3;
+  /** ⭐ The view's start as a TURN off the direction to the piece (axis, angle) — it fades out, so it follows the camera as it moves. */
+  readonly lookAxis: Vec3;
+  readonly lookAngleRad: number;
   readonly dAzRad: number;
   readonly dElRad: number;
   readonly dRM: number;
@@ -301,17 +310,24 @@ export interface CentreReturn {
   readonly velMm: number;
 }
 
-/** ⭐ At the end: from the camera as it is (`camera`, looking along `look0`) against the centre orbit's camera (`ringCam`, an offset from
- * the centre), and the piece as it is against where the rings put it. */
-export function startCentreReturn(centre: Vec3, camera: Vec3, look0: Vec3, ringCam: Vec3, pieceOff: Vec3): CentreReturn {
-  const rel: Vec3 = [camera[0] - centre[0], camera[1] - centre[1], camera[2] - centre[2]];
+/** ⭐ At the end: the camera as it is (`camera`, looking along `look0`) seen from the piece (`piece`), against the centre orbit's home camera
+ * seen from the piece (`homeRel`), and the piece as it is against where the rings put it (`pieceOff`). */
+export function startCentreReturn(piece: Vec3, camera: Vec3, look0: Vec3, homeRel: Vec3, pieceOff: Vec3): CentreReturn {
+  const rel: Vec3 = [camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]];
   const a = anglesOf(rel);
-  const r = anglesOf(ringCam);
+  const h = anglesOf(homeRel);
+  // ⭐ where it looked, as a turn off the direction to the piece — never a fixed world direction (it went stale as dx carried the camera)
+  const u = unitOf([piece[0] - camera[0], piece[1] - camera[1], piece[2] - camera[2]]);
+  const ax: Vec3 = [u[1] * look0[2] - u[2] * look0[1], u[2] * look0[0] - u[0] * look0[2], u[0] * look0[1] - u[1] * look0[0]];
+  const sinA = Math.hypot(ax[0], ax[1], ax[2]);
+  const cosA = u[0] * look0[0] + u[1] * look0[1] + u[2] * look0[2];
   return {
     look0,
-    dAzRad: wrap(a.az - r.az),
-    dElRad: a.el - r.el,
-    dRM: Math.hypot(rel[0], rel[1], rel[2]) - Math.hypot(ringCam[0], ringCam[1], ringCam[2]),
+    lookAxis: sinA > 1e-9 ? [ax[0] / sinA, ax[1] / sinA, ax[2] / sinA] : [0, 1, 0],
+    lookAngleRad: Math.atan2(sinA, cosA),
+    dAzRad: wrap(a.az - h.az),
+    dElRad: a.el - h.el,
+    dRM: Math.hypot(rel[0], rel[1], rel[2]) - Math.hypot(homeRel[0], homeRel[1], homeRel[2]),
     pieceOff,
     travelledMm: 0,
     rawMm: 0,
@@ -319,37 +335,60 @@ export function startCentreReturn(centre: Vec3, camera: Vec3, look0: Vec3, ringC
   };
 }
 
-/** ⭐ One step of finger travel, millimetres. */
+/** ⭐ One step of finger travel, millimetres — into the raw count (`smoothTravel` eases what is read). */
 export function advanceCentreReturn(r: CentreReturn, travelMm: number): CentreReturn {
   return travelMm > 0 ? { ...r, rawMm: r.rawMm + travelMm } : r;
 }
 
-/** ⭐ A share of finger travel over `budgetMm`, eased (smoothstep, as the way in); a budget of zero is at once. */
-export function returnProgress(r: CentreReturn, budgetMm: number): number {
-  if (budgetMm <= 0) return 1;
-  const t = Math.min(1, r.travelledMm / budgetMm);
+/** ⭐ The ONE progress of the way back: the travel over `returnMm`, eased (smoothstep); a budget of zero is at once. */
+export function returnProgress(r: CentreReturn, returnMm: number): number {
+  if (returnMm <= 0) return 1;
+  const t = Math.min(1, r.travelledMm / returnMm);
   return t * t * (3 - 2 * t);
 }
 
-/** ⭐⭐ The camera on its way back: the centre orbit's camera (`ringCam`, from the centre) plus the difference still left. ⛔ ±89°. */
-export function returnCamera(r: CentreReturn, centre: Vec3, ringCam: Vec3, fadeMm: number): Vec3 {
-  const left = 1 - returnProgress(r, fadeMm);
-  const a = anglesOf(ringCam);
+/** ⭐⭐ The camera on its way back, AROUND THE PIECE: the home camera seen from the piece (`homeRel`) plus the difference still left. ⛔ ±89°. */
+export function returnCamera(r: CentreReturn, piece: Vec3, homeRel: Vec3, returnMm: number): Vec3 {
+  const left = 1 - returnProgress(r, returnMm);
+  const h = anglesOf(homeRel);
   const lim = (89 * Math.PI) / 180;
-  const d = dirOf({ az: a.az + r.dAzRad * left, el: Math.max(-lim, Math.min(lim, a.el + r.dElRad * left)) });
-  const dist = Math.hypot(ringCam[0], ringCam[1], ringCam[2]) + r.dRM * left;
-  return [centre[0] + d[0] * dist, centre[1] + d[1] * dist, centre[2] + d[2] * dist];
+  const d = dirOf({ az: h.az + r.dAzRad * left, el: Math.max(-lim, Math.min(lim, h.el + r.dElRad * left)) });
+  const dist = Math.hypot(homeRel[0], homeRel[1], homeRel[2]) + r.dRM * left;
+  return [piece[0] + d[0] * dist, piece[1] + d[1] * dist, piece[2] + d[2] * dist];
 }
 
-/** ⭐⭐ Its view axis: from where it looked (`look0`) to the orbit centre, from where the camera is. */
-export function returnLook(r: CentreReturn, camera: Vec3, centre: Vec3, slerpMm: number): Vec3 {
-  const b: Vec3 = [centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]];
-  const n = Math.hypot(b[0], b[1], b[2]) || 1;
-  return slerpDir(r.look0, [b[0] / n, b[1] / n, b[2] / n], returnProgress(r, slerpMm));
+/**
+ * ⭐⭐ Its view, TIED TO THE MOVE: toward a point sliding from the piece to the orbit centre at the same progress `t`, turned off it by what
+ * is LEFT of the start's turn (`lookAxis`, `lookAngleRad` × (1 − `t`)) — so at the start it looks exactly where it looked, and the turn
+ * follows the camera wherever dx carries it (⛔ a slerp from the fixed world direction `look0` pointed off the scene after a long drag).
+ * At `t` 1 it looks at the centre, the camera home.
+ */
+export function returnLook(r: CentreReturn, camera: Vec3, piece: Vec3, centre: Vec3, returnMm: number): Vec3 {
+  const t = returnProgress(r, returnMm);
+  const aim: Vec3 = [piece[0] + (centre[0] - piece[0]) * t, piece[1] + (centre[1] - piece[1]) * t, piece[2] + (centre[2] - piece[2]) * t];
+  // ⭐ from the LIVE direction to the piece toward that point by `t` too — the piece kept nearer the middle of the view on the way
+  const toPiece = unitOf([piece[0] - camera[0], piece[1] - camera[1], piece[2] - camera[2]]);
+  const b = slerpDir(toPiece, unitOf([aim[0] - camera[0], aim[1] - camera[1], aim[2] - camera[2]]), t);
+  return unitOf(rotateAbout(b, r.lookAxis, r.lookAngleRad * (1 - t)));
+}
+
+/** ⭐ A unit vector (a zero one stays zero). */
+function unitOf(v: Vec3): Vec3 {
+  const n = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / n, v[1] / n, v[2] / n];
+}
+
+/** ⭐ `v` turned about the unit `axis` by `angle` (Rodrigues). */
+function rotateAbout(v: Vec3, axis: Vec3, angle: number): Vec3 {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const d = axis[0] * v[0] + axis[1] * v[1] + axis[2] * v[2];
+  const x: Vec3 = [axis[1] * v[2] - axis[2] * v[1], axis[2] * v[0] - axis[0] * v[2], axis[0] * v[1] - axis[1] * v[0]];
+  return [v[0] * c + x[0] * s + axis[0] * d * (1 - c), v[1] * c + x[1] * s + axis[1] * d * (1 - c), v[2] * c + x[2] * s + axis[2] * d * (1 - c)];
 }
 
 /** ⭐ The piece's difference from the rings, still left. */
-export function returnPieceOffset(r: CentreReturn, fadeMm: number): Vec3 {
-  const left = 1 - returnProgress(r, fadeMm);
+export function returnPieceOffset(r: CentreReturn, returnMm: number): Vec3 {
+  const left = 1 - returnProgress(r, returnMm);
   return [r.pieceOff[0] * left, r.pieceOff[1] * left, r.pieceOff[2] * left];
 }

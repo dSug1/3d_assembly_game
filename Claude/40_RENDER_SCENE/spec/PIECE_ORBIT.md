@@ -2,7 +2,7 @@
 
 > **Status:** ✅ BUILT 2026-10-06 on `1.0.59u-from1.0.59s-Orbit-around-piece` — commits `d3e0c07` (*orbit center on piece*), `68b4584` (*orbit around the
 > piece*), `f98b584` (*frozen gain*), `864c6f2` (the slerp's own slider); then on **`1.0.59v-`** (2026-10-07): `86afd21` (§1bis, an action of
-> its own), `f8beaf5` (§6, the end by itself and the way back), and the transitions' smoothing (§6bis). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
+> its own), `f8beaf5` (§6, the end by itself and the way back), the transitions' smoothing (§6bis), and the way back around the piece (§6). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
 > `render/green_box_wiring.ts` (`enterPieceOrbit`, `returnToCentreOrbit`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`),
 > `render/pointer_wiring.ts` (`orbitTapped`, `orbitDragStep`, the finger travel); vectors `tests/proto_piece_orbit.test.ts`.
 > **Builds on:** [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md) (the tap that starts it) and the double orbit
@@ -100,9 +100,10 @@ sliders values"*.
 | Slider | Default | Menu |
 |---|---|---|
 | gap at the closest ring (% of the gap at alignment) — `pieceOrbitGapMinPct` | 50 | CAMERA › **CAMERA ORBIT AROUND PIECE** |
-| starting angle offset fade-out (mm of finger travel, 0 = at once) — `pieceOrbitFadeMm` | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
-| view axis slerp to the piece (mm of finger travel, 0 = at once) — `pieceOrbitSlerpMm` (the way back's too) | 10 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| starting angle offset fade-out (mm of finger travel, 0 = at once) — `pieceOrbitFadeMm` (the way IN) | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| view axis slerp to the piece (mm of finger travel, 0 = at once) — `pieceOrbitSlerpMm` (the way IN) | 10 | CAMERA › CAMERA ORBIT AROUND PIECE |
 | ends when the piece is this close to the pink gizmo (% of its start distance) — `pieceOrbitEndPct` | 50 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| way back to the centre orbit (mm of finger travel, 0 = at once) — `pieceOrbitReturnMm` (the way BACK: move and view, ONE value) | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
 
 ⭐ The owner: *"x% slider shall be in a CAMERA/CAMERA ORBIT AROUND PIECE menu"*, *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT
 AROUND CENTER"*. The HUD's `camera` line: `r=` is the distance **to the piece** in this mode (the camera looks along an axis, not at a
@@ -118,12 +119,23 @@ orbit."*
 - **The start distance** to the pink gizmo (`centreBlend.targetM`) is recorded when the orbit starts (`pink0M`).
 - **The end, by itself**: checked at each frame's start — the piece closer than **`pieceOrbitEndPct` %** (50) of it (`pieceOrbitEnds`;
   pushed away, never). ⭐ It replaces *"never automatically"* (§1).
-- **The way back, the way in reversed** (`returnToCentreOrbit`, `startCentreReturn`): on the frame it ends **nothing moves** — the camera
-  where it is, looking where it looks; then, with **finger travel**, its **view axis slerps back to the orbit centre** (`returnLook`, over
-  `pieceOrbitSlerpMm`), and its difference from the centre orbit's own camera — angles around the centre AND distance from it — **fades
-  out** (`returnCamera`, over `pieceOrbitFadeMm`). Home, the state is dropped: the centre orbit as it always was.
+- **The way back — AROUND THE PIECE, the view TIED to the move, ONE value** (`returnToCentreOrbit`, `startCentreReturn`; 2026-10-07). The
+  owner: *"Explain how the camera exits … if the camera is in between the piece and the gizmo due to some piece orbit, when the camera
+  moves to center orbit there are moments when the piece is not seen any longer"* — the cause: the camera moved AROUND THE GIZMO (its
+  angles and distance about the centre, over 60 mm) while its view reached the gizmo after only 10 mm, so from between the piece and
+  the gizmo the piece sat BEHIND the camera for most of the way; then *"both together … with 10mm and 60mm merged into one single
+  value"* — *"60 mm"*. On the frame it ends **nothing moves** — the camera where it is, looking where it looks; then ONE eased progress,
+  finger travel over **`pieceOrbitReturnMm` (60 mm)**, drives everything:
+  - **the camera moves AROUND THE PIECE** — its angles around the piece and its distance from it, against the centre orbit's home camera
+    seen from the piece, fade out (`returnCamera`) — so it never swings round the gizmo;
+  - **its view aims at a point sliding from the piece to the gizmo** at that same progress (`returnLook`; blended from the LIVE direction
+    to the piece by it too, and the start's own turn off that direction fading out) — it reaches the gizmo only when the camera is home;
+  - the piece's offset from the rings fades with it (below).
+  Home, the state is dropped: the centre orbit as it always was. ⛔ The start's view is held as a TURN off the direction to the piece,
+  never a fixed world direction — the first build kept `look0` fixed, and a long dx during the way back pointed the view off the scene
+  (seen headless). The way IN is unchanged (*"For the way in, we will advise later on"*).
 - ⛔ A TWO-PHASE way back (`b80111a`: the camera home watching the piece, then the watch to the gizmo, twice the travel) was built and
-  REVERTED by the owner (`bb0b79b`, back to `4539a2b`) — the way back is the one above.
+  REVERTED by the owner (`bb0b79b`, back to `4539a2b`); the one-slerp way back around the gizmo (`f8beaf5`) is replaced by the one above.
 - **The piece**: dx turned only the camera around the piece, so the rig's yaw had drifted from the piece's real direction — at the end
   the rig's yaw is put back on it (the springs and the camera started again from there), and the piece's small difference from the ring
   curve (its frozen line is straight, the rings are not) fades out the same way (`returnPieceOffset`).
@@ -173,3 +185,9 @@ travel needed); no error. Vectors: the start distance and the threshold (pushed 
 moves at its start, the slerp half at half, home exactly the centre orbit's camera looking at the centre, the piece's offset gone —; the
 two actions apart (the alignment never starts the orbit, the orbit never reads the alignment); each failing on a mutant (never ending,
 the distance not faded, the coupled tap).
+
+⭐ 2026-10-07, the way back around the piece: the end at 1.50 m, then a 160-pixel dx during the way back — the piece and the painting
+in the middle of the view (the first build, its start view a fixed world direction, looked down at the floor there). Vectors: from BETWEEN
+the piece and the gizmo, the camera's distance to the piece stays between its two ends and the piece within 25° of the view axis ALL the
+way; home exactly the centre orbit's camera looking at the gizmo; a big dx early on keeps the piece within 30° — failing on mutants (the
+view straight to the gizmo; the fixed world start direction).

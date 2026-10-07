@@ -305,7 +305,10 @@ function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   const ringCam = cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: st.orbit.elevation }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
   const p = box.position;
   const pieceOff: Vec3 = rebase ? [p.x - (c.x + rel[0]), p.y - (c.y + rel[1]), p.z - (c.z + rel[2])] : [0, 0, 0];
-  st.centreReturn = startCentreReturn([c.x, c.y, c.z], [cam.x, cam.y, cam.z], [lk[0] / ln, lk[1] / ln, lk[2] / ln], ringCam, pieceOff);
+  // ⭐ seen from the PIECE as it is drawn (where the rings put it + its offset): the home camera and the camera as it is
+  const piece: Vec3 = [c.x + rel[0] + pieceOff[0], c.y + rel[1] + pieceOff[1], c.z + rel[2] + pieceOff[2]];
+  const homeRel: Vec3 = [c.x + ringCam[0] - piece[0], c.y + ringCam[1] - piece[1], c.z + ringCam[2] - piece[2]];
+  st.centreReturn = startCentreReturn(piece, [cam.x, cam.y, cam.z], [lk[0] / ln, lk[1] / ln, lk[2] / ln], homeRel, pieceOff);
   st.pieceOrbit = null;
   st.hudDirty = true;
 }
@@ -569,7 +572,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const po = st.pieceOrbit;
   const cr = st.centreReturn;
   // ⭐ (2026-10-07) on the way back to the centre orbit, the piece's difference from the rings fades out (`returnPieceOffset`)
-  const back: Vec3 = cr === null ? [0, 0, 0] : returnPieceOffset(cr, cfg.pieceOrbitFadeMm);
+  const back: Vec3 = cr === null ? [0, 0, 0] : returnPieceOffset(cr, cfg.pieceOrbitReturnMm);
   const pp: Vec3 =
     po === null
       ? [c.x + bo.offsetM[0] * k + back[0], c.y + bo.offsetM[1] * k + back[1], c.z + bo.offsetM[2] * k + back[2]]
@@ -652,12 +655,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
     lookAt = [c.x, c.y, c.z];
     if (cr !== null) {
-      // ⭐⭐ (2026-10-07) the way back, the way in reversed: from where the camera was, its difference from this pose fading out, its view
-      // axis slerping back to the centre — both with finger travel, over the way in's own settings
-      camAt = returnCamera(cr, [c.x, c.y, c.z], o, cfg.pieceOrbitFadeMm);
-      const ax = returnLook(cr, camAt, [c.x, c.y, c.z], cfg.pieceOrbitSlerpMm);
+      // ⭐⭐ (2026-10-07) the way back: AROUND THE PIECE, its difference from this home pose (seen from the piece) fading out, its view
+      // aimed at a point sliding from the piece to the centre — ONE progress, finger travel over `pieceOrbitReturnMm` (60 mm)
+      const homeRel: Vec3 = [c.x + o[0] - pp[0], c.y + o[1] - pp[1], c.z + o[2] - pp[2]];
+      camAt = returnCamera(cr, pp, homeRel, cfg.pieceOrbitReturnMm);
+      const ax = returnLook(cr, camAt, pp, [c.x, c.y, c.z], cfg.pieceOrbitReturnMm);
       lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
-      if (returnProgress(cr, cfg.pieceOrbitFadeMm) >= 1 && returnProgress(cr, cfg.pieceOrbitSlerpMm) >= 1) {
+      if (returnProgress(cr, cfg.pieceOrbitReturnMm) >= 1) {
         st.centreReturn = null; // home: the centre orbit as it always was
         st.hudDirty = true;
       }
