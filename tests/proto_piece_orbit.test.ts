@@ -27,7 +27,7 @@ import {
   smoothTravel,
   startCentreReturn,
   startPieceOrbit,
-  viewAxis,
+  enterLook,
   type PieceOrbit,
 } from "../src/input/piece_orbit";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -43,8 +43,7 @@ const D = Math.PI / 180;
 const OFF = { yawRad: 2.5 * D, pitchRad: 2 * D };
 const GAP = 1.25;
 const PCT = 50;
-const FADE = 60;
-const BLEND = 30;
+const FADE = 60; // the way in's ONE value, `pieceOrbitEnterMm`
 const C: Vec3 = [0.1, 0.23, -0.2];
 const MIN_RING = ringDistanceRange((v) => orbitOffset(cfg, 0, v, 1).radiusM).minM;
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -67,7 +66,7 @@ function frame(po: PieceOrbit | null, yaw: number, v: number) {
   const piece = pushedPiece(C, po.dir, bo.radiusM);
   const gap = scaledGap(po.gap0M, bo.radiusM, po.ring0M, MIN_RING, PCT);
   const cam = pieceCamera(po, piece, ringAngles(yaw, v), gap, FADE);
-  return { piece, cam, axis: viewAxis(cam, C, piece, pieceOrbitProgress(po, BLEND)) };
+  return { piece, cam, axis: enterLook(po, cam, C, piece, FADE) };
 }
 const aligned = (yaw: number, v: number): PieceOrbit => {
   const f = frame(null, yaw, v);
@@ -87,23 +86,38 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     }
   });
 
-  it("⭐⭐⭐ the VIEW AXIS slerps from the orbit centre to the piece with FINGER TRAVEL — the camera does not swing out and back", () => {
-    let po = aligned(0.3, 0.1);
-    const start = frame(po, 0.3, 0.1);
-    po = adv(po, BLEND / 2);
-    expect(pieceOrbitProgress(po, BLEND)).toBeCloseTo(0.5, 12); // eased, its middle
-    const mid = frame(po, 0.3, 0.1);
-    po = adv(po, BLEND);
-    const done = frame(po, 0.3, 0.1);
-    const toCentre = unit(sub(C, mid.cam));
-    const toPiece = unit(sub(mid.piece, mid.cam));
-    const between = Math.acos(toCentre[0] * toPiece[0] + toCentre[1] * toPiece[1] + toCentre[2] * toPiece[2]);
-    const fromCentre = Math.acos(Math.min(1, mid.axis[0] * toCentre[0] + mid.axis[1] * toCentre[1] + mid.axis[2] * toCentre[2]));
-    expect(fromCentre / between).toBeCloseTo(0.5, 9); // a SLERP: half the angle at half the progress
-    for (const k of [0, 1, 2]) expect(done.axis[k]).toBeCloseTo(unit(sub(done.piece, done.cam))[k]!, 12); // done: at the piece
-    // ⛔ the camera's distance from the piece never leaves the gap through the glide (it swung out and back with the old centre glide)
-    for (const f of [start, mid, done]) expect(len(sub(f.cam, f.piece))).toBeCloseTo(aligned(0.3, 0.1).gap0M, 12);
+  it("⭐⭐⭐ the WAY IN as the way back (*\"Build the same for the way in\"*): ONE value — the view on a point sliding from the gizmo to the piece, landing on it as the camera lands on the rings' angles", () => {
+    for (const [yaw, v] of [[0.3, 0.1], [0.3, 0.8], [-1.2, 0.35]] as const) {
+      const po0 = aligned(yaw, v);
+      const start = frame(po0, yaw, v);
+      // all the way: the distance kept, and the view BETWEEN the gizmo and the piece (in the plane they span from the camera, never past)
+      for (let mm = 0; mm <= FADE; mm += 5) {
+        const f = frame(adv(po0, mm), yaw, v);
+        expect(len(sub(f.cam, f.piece))).toBeCloseTo(po0.gap0M, 12);
+        const toC = unit(sub(C, f.cam));
+        const toP = unit(sub(f.piece, f.cam));
+        const ang = (x: Vec3, y: Vec3) => Math.acos(Math.max(-1, Math.min(1, x[0] * y[0] + x[1] * y[1] + x[2] * y[2])));
+        expect(ang(f.axis, toC) + ang(f.axis, toP)).toBeCloseTo(ang(toC, toP), 6);
+      }
+      // ONE value: at the end of it the view is ON the piece AND the camera on the rings' angles — together
+      const done = frame(adv(po0, FADE), yaw, v);
+      for (const k of [0, 1, 2]) expect(done.axis[k]).toBeCloseTo(unit(sub(done.piece, done.cam))[k]!, 12);
+      const ring = ringAngles(yaw, v);
+      const got = anglesOf(sub(done.cam, done.piece));
+      expect(got.el).toBeCloseTo(ring.el, 12);
+      // …and not before: half-way, neither is there
+      const half = frame(adv(po0, FADE / 2), yaw, v);
+      const offPiece = Math.acos(Math.min(1, half.axis[0] * unit(sub(half.piece, half.cam))[0] + half.axis[1] * unit(sub(half.piece, half.cam))[1] + half.axis[2] * unit(sub(half.piece, half.cam))[2]));
+      expect(offPiece).toBeGreaterThan(1e-3);
+      void start;
+    }
     expect(pieceOrbitProgress(aligned(0.3, 0.1), 0)).toBe(1); // a zero budget: at once
+    // ⭐ a start view off the centre (a way back cut short): kept on the alignment's frame, gone at the end — never a jump
+    const f0 = frame(null, 0.3, 0.1);
+    const tilted = unit(add(unit(sub(C, f0.cam)), [0, 0.3, 0]));
+    const pt = startPieceOrbit(C, f0.piece, [1, 0, 0], f0.cam, ringAngles(0.3, 0.1), C, tilted);
+    const s0 = enterLook(pt, f0.cam, C, f0.piece, FADE);
+    for (const k of [0, 1, 2]) expect(s0[k]).toBeCloseTo(tilted[k]!, 12);
   });
 
   it("⭐⭐ the STARTING ANGLE OFFSET fades out with finger travel: from where the camera was, onto the rings' own angles", () => {
@@ -300,7 +314,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(enter).not.toMatch(/restAlign|restingFace/); // nor the orbit the alignment
     const tap = code("render/pointer_wiring.ts");
     expect(tap).toMatch(/const aligned = r\.aligns && alignRestingFace\(st, now\);\s*const orbiting = r\.aligns && enterPieceOrbit\(st\);\s*if \(aligned \|\| orbiting\) \{/);
-    expect(w).toMatch(/st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[out\[0\] \/ h, 0, out\[2\] \/ h\], \[cam\.x, cam\.y, cam\.z\], ring, st\.centreBlend\.targetM\);/);
+    expect(w).toMatch(/st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[out\[0\] \/ h, 0, out\[2\] \/ h\], \[cam\.x, cam\.y, cam\.z\], ring, st\.centreBlend\.targetM, \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\]\);/);
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
     expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceOrbit\.pink0M, st\.cfg\.pieceOrbitEndPct\)\) \{[\s\S]{0,300}?returnToCentreOrbit\(st, true\);/);
     expect(w).toMatch(/if \(wasAround\) returnToCentreOrbit\(st, false\);/); // …and at a respawn
@@ -314,8 +328,8 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/st\.restAligned = false;\s*st\.pieceOrbit = null;/); // the respawn
     expect(w).toMatch(/: pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\);/);
     expect(w).toMatch(/const gapPiece = scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
-    expect(w).toMatch(/camAt = pieceCamera\(po, pp, ring, gapPiece, cfg\.pieceOrbitFadeMm\);/);
-    expect(w).toMatch(/const ax = viewAxis\(camAt, \[c\.x, c\.y, c\.z\], pp, pieceOrbitProgress\(po, cfg\.pieceOrbitSlerpMm\)\);/); // its own slider (*"make the camera slerp faster"*)
+    expect(w).toMatch(/camAt = pieceCamera\(po, pp, ring, gapPiece, cfg\.pieceOrbitEnterMm\);/);
+    expect(w).toMatch(/const ax = enterLook\(po, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm\);/); // ONE value for the way in (2026-10-07)
     expect(w).toMatch(/st\.camera\.setPosition\(new Vector3\(camAt\[0\], camAt\[1\], camAt\[2\]\)\);\s*st\.camera\.setTarget\(new Vector3\(lookAt\[0\], lookAt\[1\], lookAt\[2\]\)\);/);
     // ⭐⭐ the owner: *"the gain shall be unique during the whole game, and computed based on the camera position dictated by the sliders
     // values"* — recomputed ONLY when its sliders change (the key), from the sliders' camera (the boot zoom, not the live one)
@@ -331,12 +345,11 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
     expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \? st\.pieceYawGain : 1;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);
-    expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitFadeMm, DEFAULT_CONFIG.pieceOrbitSlerpMm]).toEqual([50, 60, 10]);
-    expect(DEFAULT_CONFIG.pieceOrbitSlerpMm).toBeLessThan(DEFAULT_CONFIG.orbitBlendDistanceMm); // FASTER than the centre move it shared
+    expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitEnterMm]).toEqual([50, 60]);
     const menu = code("render/tuning_menu.ts");
     expect(menu).toContain('"pieceOrbitGapMinPct", 10, 100, 5)');
-    expect(menu).toContain('"pieceOrbitFadeMm", 0, 300, 5)');
-    expect(menu).toContain('"pieceOrbitSlerpMm", 0, 100, 1)');
+    expect(menu).toContain('"pieceOrbitEnterMm", 0, 300, 5)');
+    expect(menu).not.toMatch(/pieceOrbitSlerpMm|pieceOrbitFadeMm/); // the two way-in values are merged
     // ⭐ the pink ring stays at the old centre: it still reads the centre blend's target, which nothing here retargets
     expect(w).toMatch(/const t = st\.centreBlend\.targetM;/);
     expect(w.slice(w.indexOf("export function alignRestingFace"), w.indexOf("function counterYawFrame"))).not.toMatch(/retarget/);

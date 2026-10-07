@@ -474,10 +474,9 @@ export interface GestureConfig {
   cameraYawOffsetDeg: number;
   pieceOrbitGapMinPct: number;
   orbitPieceYawFactor: number;
-  pieceOrbitFadeMm: number;
+  pieceOrbitEnterMm: number;
   pieceOrbitEndPct: number;
   pieceOrbitReturnMm: number;
-  pieceOrbitSlerpMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
   /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
@@ -960,17 +959,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-06: *"when in orbit around center, yaw rotate the piece in the other direction"*, *"rotate twice
   // faster"* — before the alignment the piece turns on itself this many times the orbit's turn, in its sense (−1 was the old "against")
   orbitPieceYawFactor: 3, // the owner, 2026-10-06: 3 (was 2)
-  // ⭐ prototype, the owner 2026-10-06: *"fade out the starting angle offset"* — over this much finger travel (`pieceCamera`)
-  pieceOrbitFadeMm: 60,
+  // ⭐ prototype, the owner 2026-10-07: *"Build the same for the way in"* — the way in to the orbit around the piece, ONE value for the move
+  // (the starting angle offset fading) and the view (on a point sliding from the gizmo to the piece); it replaced a 60 mm fade and a 10 mm slerp
+  pieceOrbitEnterMm: 60,
   // ⭐ prototype, the owner 2026-10-07: *"Automatically end it when the distance crosses initial distance * x% (make a slider … default
   // to 50%)"* — the orbit around the piece ends when the piece is this close to the pink gizmo, % of its distance at the start
   pieceOrbitEndPct: 50,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`)
   pieceOrbitReturnMm: 60,
-  // ⭐ prototype, the owner 2026-10-06: *"make the camera slerp faster (put a slider)"* — the view axis turns to the piece over this much
-  // finger travel (it shared the centre move's `orbitBlendDistanceMm`, 30 mm)
-  pieceOrbitSlerpMm: 10,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)

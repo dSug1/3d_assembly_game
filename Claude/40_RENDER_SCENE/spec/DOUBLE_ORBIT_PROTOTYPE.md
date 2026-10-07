@@ -595,3 +595,6 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
   event → `PIECE_ORBIT.md` §6bis.
 * ⭐⭐ **The way back moves AROUND THE PIECE, its view tied to the move, one value** (`pieceOrbitReturnMm`, 60 mm; the piece was lost from
   view when the camera started between it and the gizmo) → `PIECE_ORBIT.md` §6.
+* ⭐⭐ **…and the way IN the same** (*"Build the same for the way in"*): one value (`pieceOrbitEnterMm`, 60 mm) for the camera's move onto
+  the rings' angles around the piece and its view, on a point sliding from the gizmo to the piece; the 10 mm slerp and 60 mm fade sliders
+  are gone → `PIECE_ORBIT.md` §2.
